@@ -28,4 +28,3 @@ static PyObject* cgpt_create_grid(PyObject* self, PyObject* args) {
   char* test = new char[12];
   return PyLong_FromVoidPtr(test);
 }
-

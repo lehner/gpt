@@ -6,8 +6,10 @@
 #include "convert.h"
 #include "delete.h"
 #include "grid.h"
+#include "init.h"
 
 static PyMethodDef module_functions[] = {
+  {"init", cgpt_init, METH_VARARGS, "Initializes gpt"},
   {"create_grid", cgpt_create_grid, METH_VARARGS, "Creates a grid"},
   {"delete", cgpt_delete, METH_VARARGS, "Deletes an object"},
   {NULL, NULL, 0, NULL}

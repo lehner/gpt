@@ -11,5 +11,3 @@ class grid:
 
     def __del__(self):
         cgpt.delete(self.obj)
-
-
