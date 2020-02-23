@@ -18,7 +18,7 @@ grid.barrier()
 # create a complex lattice on the grid
 src=g.complex(grid)
 
-# zero out all points and set the value at global position 0,0,0,0 to 1
+# zero out all points and set the value at global position 0,0,0,0 to 2
 src[:]=0
 src[0,0,0,0]=2
 
