@@ -22,5 +22,13 @@ static PyObject* cgpt_init(PyObject* self, PyObject* args) {
   int argc = (int)sargs.size();
   char** argv = &cargs[0];
 
+  Grid_init(&argc,&argv);
+
+  std::cout << std::endl <<
+    "=============================================" << std::endl <<
+    "               Initialized GPT               " << std::endl <<
+    "    Copyright (C) 2020 Christoph Lehner      " << std::endl <<
+    "=============================================" << std::endl;
+
   return PyLong_FromLong(0);
 }

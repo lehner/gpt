@@ -1,2 +1,11 @@
 #!/bin/bash
-icpc --std=c++11 --shared -fPIC -O3 $(python3-config --includes) cgpt.cc -o ../cgpt.so
+GRID=/sdcc/u/clehner/Grid/build
+
+echo "Linking against Grid in ${GRID}"
+
+CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
+CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID}/Grid"
+LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
+LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
+
+${CXX} --shared -fPIC -O3 $(python3-config --includes) ${CXXFLAGS} cgpt.cc ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so

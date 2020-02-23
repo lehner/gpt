@@ -13,6 +13,4 @@ src=g.complex(grid)
 src[:]=0
 src[0,0,0,0]=1
 
-print(src)
-
-
+g.message("Feld: ", src)

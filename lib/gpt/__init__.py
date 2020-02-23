@@ -14,3 +14,12 @@ cgpt.init(sys.argv)
 # short-hand lattice definitions
 def complex(grid):
     return lattice(grid, otype.complex)
+
+# global rank
+def rank():
+    return cgpt.global_rank()
+
+# log a message
+def message(*a):
+    if rank() == 0:
+        print(*a)
