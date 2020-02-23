@@ -5,9 +5,11 @@
 #
 from gpt.grid import grid
 from gpt.precision import single
-from gpt.lattice import lattice
+from gpt.lattice import lattice, meminfo
 from gpt.log import message
-import gpt.otype, cgpt, sys
+from gpt.transform import cshift, copy, mul
+from gpt.expr_linear_combination import expr_linear_combination, eval
+import gpt.otype, gpt.default, gpt.util, cgpt, sys, types
 
 # initialize cgpt when gpt is loaded
 cgpt.init(sys.argv)

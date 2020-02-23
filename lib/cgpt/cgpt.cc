@@ -11,6 +11,8 @@ using namespace Grid;
 #include "lib/grid.h"
 #include "lib/peekpoke.h"
 #include "lib/lattice.h"
+#include "lib/mul.h"
+#include "lib/transform.h"
 #include "lib/init.h"
 #include "lib/mpi.h"
 
@@ -23,6 +25,10 @@ static PyMethodDef module_functions[] = {
   {"delete_lattice", cgpt_delete_lattice, METH_VARARGS, "Deletes a lattice"},
   {"lattice_set_val", cgpt_lattice_set_val, METH_VARARGS, "Set a value within a lattice"},
   {"lattice_to_str", cgpt_lattice_to_str, METH_VARARGS, "Get a string representation of the lattice"},
+  {"lattice_mul", cgpt_lattice_mul, METH_VARARGS, "Multiply two lattices"},
+  {"cshift", cgpt_cshift, METH_VARARGS, "Cshift"},
+  {"copy", cgpt_copy, METH_VARARGS, "Copy"},
+  {"eval", cgpt_eval, METH_VARARGS, "Evaluate linear combinations"},
   {"global_rank", cgpt_global_rank, METH_VARARGS, "Rank within global MPI"},
   {NULL, NULL, 0, NULL}
 };

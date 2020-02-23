@@ -4,13 +4,43 @@
 # Authors: Christoph Lehner 2020
 #
 import cgpt
+import gpt
+
+mem_book = {
+}
+
+def meminfo():
+    gpt.message("=============================================")
+    gpt.message("            GPT Memory report                ")
+    gpt.message("=============================================")
+    for page in mem_book:
+        gpt.message(" %X -> grid = %s, prec = %s, otype = %s" % 
+                    (page,mem_book[page][0].gdimensions,
+                     mem_book[page][0].precision,
+                     mem_book[page][1]))
+    gpt.message("=============================================")
+
+
+
 class lattice:
-    def __init__(self, grid, otype):
-        self.grid = grid
-        self.otype = otype
-        self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
+    def __init__(self, first, second = None):
+        if type(first) == gpt.grid and not second is None:
+            grid = first
+            otype = second
+            self.grid = grid
+            self.otype = otype
+            self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
+        elif type(first) == gpt.lattice:
+            # Note that copy constructor only creates a compatible lattice but does not copy its contents!
+            self.grid = first.grid
+            self.otype = first.otype
+            self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
+        else:
+            raise Exception("Unknown lattice constructor")
+        mem_book[self.obj] = (self.grid,self.otype)
 
     def __del__(self):
+        del mem_book[self.obj]
         cgpt.delete_lattice(self.obj)
 
     def __setitem__(self, key, value):
@@ -22,3 +52,37 @@ class lattice:
 
     def __str__(self):
         return cgpt.lattice_to_str(self.obj)
+
+    def __rmul__(self, l):
+        if (gpt.util.isnum(l)):
+            return gpt.expr_linear_combination([ (l,self) ])
+        elif type(l) == lattice:
+            return gpt.mul(l,self)
+        else:
+            raise Exception("Unknown type")
+
+    def __mul__(self, l):
+        if (gpt.util.isnum(l)):
+            return gpt.expr_linear_combination([ (l,self) ])
+        elif type(l) == lattice:
+            return gpt.mul(self,l)
+        else:
+            raise Exception("Unknown type")
+
+    def __truediv__(self, l):
+        assert(gpt.util.isnum(l))
+        return gpt.expr_linear_combination([ (1.0/l,self) ])
+
+    def __add__(self, l):
+        if type(l) == gpt.lattice:
+            return gpt.expr_linear_combination([ (1,self), (1,l) ])
+        elif type(l) == gpt.expr_linear_combination:
+            return gpt.expr_linear_combination([ (1,self) ] + l.val)
+        else:
+            raise Exception("Unknown type")
+
+    def __sub__(self, l):
+        return self.__add__(l.__neg__())
+
+    def __neg__(self):
+        return gpt.expr_linear_combination([ (-1,self) ])

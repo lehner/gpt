@@ -8,6 +8,11 @@ public:
   virtual ~cgpt_Lattice_base() { };
   virtual void set_val(std::vector<int>& coor, ComplexD& val) = 0;
   virtual PyObject* to_str() = 0;
+  virtual void copy_from(cgpt_Lattice_base* src) = 0;
+  virtual void mul_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b) = 0;
+  virtual void cshift_from(cgpt_Lattice_base* src, int dir, int off) = 0;
+  virtual void eval(std::vector<ComplexD>& f, std::vector<cgpt_Lattice_base*>& l) = 0;
+  virtual std::string type() = 0;
 };
 
 template<class T>
@@ -25,6 +30,59 @@ public:
 
   virtual ~cgpt_Lattice() {
     //std::cout << "Deallocate" << std::endl;
+  }
+
+  virtual std::string type() {
+    return typeid(T).name();
+  }
+
+  virtual cgpt_Lattice<T>* compatible(cgpt_Lattice_base* other) {
+    assert(type() == other->type());
+    return (cgpt_Lattice<T>*)other;
+  }
+
+  virtual void mul_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b) {
+    (void)cgpt_lattice_mul_from(l,a,b);
+  }
+
+  virtual void eval(std::vector<ComplexD>& f, std::vector<cgpt_Lattice_base*>& a) {
+    int n = (int)f.size();
+    assert(f.size() == a.size());
+#define EF(i) ((Coeff_t)f[i]) * compatible(a[i])->l
+    if (n == 0) {
+      l = Zero();
+    } else if (n == 1) {
+      l = EF(0);
+    } else if (n == 2) {
+      l = EF(0) + EF(1);
+    } else if (n == 3) {
+      l = EF(0) + EF(1) + EF(2);
+    } else if (n == 4) {
+      l = EF(0) + EF(1) + EF(2) + EF(3);
+    } else if (n == 5) {
+      l = EF(0) + EF(1) + EF(2) + EF(3) + EF(4);
+    } else if (n == 6) {
+      l = EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5);
+    } else if (n == 7) {
+      l = EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5) + EF(6);
+    } else if (n == 8) {
+      l = EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5) + EF(6) + EF(7);
+    } else if (n == 9) {
+      l = EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5) + EF(6) + EF(7) + EF(8);
+    } else {
+      std::cerr << "Need to hard-code linear combination with n = " << n << std::endl;
+      assert(0);
+    }
+  }
+
+  virtual void copy_from(cgpt_Lattice_base* _src) {
+    cgpt_Lattice<T>* src = compatible(_src);
+    l = src->l;
+  }
+
+  virtual void cshift_from(cgpt_Lattice_base* _src, int dir, int off) {
+    cgpt_Lattice<T>* src = compatible(_src);
+    l = Cshift(src->l, dir, off);
   }
 
   virtual void set_val(std::vector<int>& coor, ComplexD& val) {
