@@ -49,6 +49,7 @@ def CG(mat,src,psi,tol,maxit):
         b = cp / c
         g.eval(psi,a*p+psi)
         g.eval(p,b*p+r)
+        # TODO: expose multiple simultaneous evals as g.eval([psi,p],[a*p+psi,b*p+r])
         g.message("Iter %d -> %g" % (k,cp))
         if cp <= rsq:
             g.message("Converged")
