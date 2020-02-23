@@ -6,6 +6,7 @@
 from gpt.grid import grid
 from gpt.precision import single
 from gpt.lattice import lattice
+from gpt.log import message
 import gpt.otype, cgpt, sys
 
 # initialize cgpt when gpt is loaded
@@ -18,8 +19,3 @@ def complex(grid):
 # global rank
 def rank():
     return cgpt.global_rank()
-
-# log a message
-def message(*a):
-    if rank() == 0:
-        print(*a)

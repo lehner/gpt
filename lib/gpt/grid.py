@@ -12,3 +12,6 @@ class grid:
 
     def __del__(self):
         cgpt.delete_grid(self.obj)
+
+    def barrier(self):
+        cgpt.grid_barrier(self.obj)

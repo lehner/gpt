@@ -8,9 +8,12 @@ import gpt as g
 
 grid=g.grid([ 4,4,4,4 ], g.single)
 
+grid.barrier()
+
 src=g.complex(grid)
 
 src[:]=0
 src[0,0,0,0]=1
 
-g.message("Feld: ", src)
+g.message("Feld: ")
+g.message(src)

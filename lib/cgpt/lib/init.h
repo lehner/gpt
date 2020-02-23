@@ -26,7 +26,7 @@ static PyObject* cgpt_init(PyObject* self, PyObject* args) {
 
   std::cout << std::endl <<
     "=============================================" << std::endl <<
-    "               Initialized GPT               " << std::endl <<
+    "              Initialized GPT                " << std::endl <<
     "    Copyright (C) 2020 Christoph Lehner      " << std::endl <<
     "=============================================" << std::endl;
 

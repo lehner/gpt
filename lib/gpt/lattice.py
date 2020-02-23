@@ -20,8 +20,5 @@ class lattice:
         assert(type(key) == tuple)
         cgpt.lattice_set_val(self.obj, key, value)
 
-    def to_dict(self):
-        return cgpt.lattice_to_dict(self.obj)
-
     def __str__(self):
-        return str(self.to_dict())
+        return cgpt.lattice_to_str(self.obj)

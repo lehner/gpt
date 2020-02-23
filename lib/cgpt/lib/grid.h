@@ -55,6 +55,17 @@ static PyObject* cgpt_delete_grid(PyObject* self, PyObject* args) {
     return NULL;
   }
 
+  ((GridCartesian*)p)->Barrier(); // before a grid goes out of life, we need to synchronize
   delete ((GridCartesian*)p);
+  return PyLong_FromLong(0);
+}
+
+static PyObject* cgpt_grid_barrier(PyObject* self, PyObject* args) {
+  void* p;
+  if (!PyArg_ParseTuple(args, "l", &p)) {
+    return NULL;
+  }
+
+  ((GridCartesian*)p)->Barrier();
   return PyLong_FromLong(0);
 }

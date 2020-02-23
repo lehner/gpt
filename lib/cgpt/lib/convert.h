@@ -8,6 +8,19 @@ void cgpt_convert(PyObject* in, int& out) {
   out = PyLong_AsLong(in);
 }
 
+void cgpt_convert(PyObject* in, ComplexD& out) {
+  if (PyLong_Check(in)) {
+    out = PyLong_AsLong(in);
+  } else if (PyFloat_Check(in)) {
+    out = PyFloat_AsDouble(in);
+  } else if (PyComplex_Check(in)) {
+    out = ComplexD(PyComplex_RealAsDouble(in),
+		   PyComplex_ImagAsDouble(in));
+  } else {
+    assert(0);
+  }
+}
+
 void cgpt_convert(PyObject* in,  std::string& s) {
   if (PyType_Check(in)) {
     s=((PyTypeObject*)in)->tp_name;
@@ -25,8 +38,15 @@ void cgpt_convert(PyObject* in,  std::string& s) {
 
 template<typename t>
 void cgpt_convert(PyObject* in, std::vector<t>& out) {
-  assert(PyList_Check(in));
-  out.resize(PyList_Size(in));
-  for (size_t i = 0; i < out.size(); i++)
-    cgpt_convert(PyList_GetItem(in,i),out[i]);
+  if (PyList_Check(in)) {
+    out.resize(PyList_Size(in));
+    for (size_t i = 0; i < out.size(); i++)
+      cgpt_convert(PyList_GetItem(in,i),out[i]);
+  } else if (PyTuple_Check(in)) {
+    out.resize(PyTuple_Size(in));
+    for (size_t i = 0; i < out.size(); i++)
+      cgpt_convert(PyTuple_GetItem(in,i),out[i]);
+  } else {
+    assert(0);
+  }
 }
