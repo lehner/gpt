@@ -41,6 +41,9 @@ class expr_linear_combination:
     def __sub__(self, l):
         return self.__add__(l.__neg__())
 
+    def __neg__(self):
+        return gpt.expr_linear_combination([ (-a[0],a[1]) for a in self.val ])
+
 def eval(first, second = None):
     if type(first) == gpt.lattice:
         t = first

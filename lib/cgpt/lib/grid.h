@@ -69,3 +69,17 @@ static PyObject* cgpt_grid_barrier(PyObject* self, PyObject* args) {
   ((GridCartesian*)p)->Barrier();
   return PyLong_FromLong(0);
 }
+
+static PyObject* cgpt_grid_globalsum(PyObject* self, PyObject* args) {
+  void* p;
+  PyObject* o;
+  if (!PyArg_ParseTuple(args, "lO", &p,&o)) {
+    return NULL;
+  }
+
+  GridCartesian* grid = (GridCartesian*)p;
+  assert(0); // not yet implemented
+  // need to act on floats, complex, and numpy arrays PyArrayObject
+  //PyArrayObject* p;
+  return PyLong_FromLong(0);
+}

@@ -20,7 +20,7 @@ src=g.complex(grid)
 
 # zero out all points and set the value at global position 0,0,0,0 to 2
 src[:]=0
-src[0,0,0,0]=2
+src[0,0,0,0]=complex(2,1)
 
 # create a new lattice that is compatible with another
 new=g.lattice(src)
@@ -55,3 +55,6 @@ g.eval(dst,expr)
 
 # print lattice
 g.message(new)
+
+# print adjungated field
+g.message(g.adj(new))

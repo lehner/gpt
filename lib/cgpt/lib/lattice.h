@@ -8,6 +8,10 @@ public:
   virtual ~cgpt_Lattice_base() { };
   virtual void set_val(std::vector<int>& coor, ComplexD& val) = 0;
   virtual PyObject* to_str() = 0;
+  virtual RealD norm2() = 0;
+  virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
+  virtual ComplexD innerProduct(cgpt_Lattice_base* other) = 0;
+  virtual void adj_from(cgpt_Lattice_base* other) = 0;
   virtual void copy_from(cgpt_Lattice_base* src) = 0;
   virtual void mul_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b) = 0;
   virtual void cshift_from(cgpt_Lattice_base* src, int dir, int off) = 0;
@@ -39,6 +43,22 @@ public:
   virtual cgpt_Lattice<T>* compatible(cgpt_Lattice_base* other) {
     assert(type() == other->type());
     return (cgpt_Lattice<T>*)other;
+  }
+
+  virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
+    return ::axpy_norm(l,(Coeff_t)a,compatible(x)->l,compatible(y)->l);
+  }
+
+  virtual RealD norm2() {
+    return ::norm2(l);
+  }
+
+  virtual ComplexD innerProduct(cgpt_Lattice_base* other) {
+    return ::innerProduct(l,compatible(other)->l);
+  }
+
+  virtual void adj_from(cgpt_Lattice_base* other) {
+    l = adj(compatible(other)->l);
   }
 
   virtual void mul_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b) {

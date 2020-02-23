@@ -15,3 +15,6 @@ class grid:
 
     def barrier(self):
         cgpt.grid_barrier(self.obj)
+
+    def globalsum(self, x):
+        return cgpt.grid_globalsum(self.obj,x)
