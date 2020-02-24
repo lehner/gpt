@@ -78,7 +78,37 @@ static PyObject* cgpt_grid_globalsum(PyObject* self, PyObject* args) {
   }
 
   GridCartesian* grid = (GridCartesian*)p;
-  assert(0); // not yet implemented
+  if (PyComplex_Check(o)) {
+    ComplexD c;
+    cgpt_convert(o,c);
+    grid->GlobalSum(c);
+    return PyComplex_FromDoubles(c.real(),c.imag());
+  } else if (PyFloat_Check(o)) {
+    RealD c;
+    cgpt_convert(o,c);
+    grid->GlobalSum(c);
+    return PyFloat_FromDouble(c);
+  } else if (PyLong_Check(o)) {
+    uint64_t c;
+    cgpt_convert(o,c);
+    grid->GlobalSum(c);
+    return PyLong_FromLong(c);
+  } else if (PyArray_Check(o)) {
+    PyArrayObject* ao = (PyArrayObject*)o;
+    int dt = PyArray_TYPE(ao);
+    void* data = PyArray_DATA(ao);
+    size_t nbytes = PyArray_NBYTES(ao);
+    if (dt == NPY_FLOAT32 || dt == NPY_COMPLEX64) {
+      grid->GlobalSumVector((RealF*)data, nbytes / 4);
+    } else if (dt == NPY_FLOAT64 || NPY_COMPLEX128) {
+      grid->GlobalSumVector((RealD*)data, nbytes / 8);
+    } else {
+      std::cerr << "Unsupported numy data type (single, double, csingle, cdouble currently allowed)" << std::endl;
+      assert(0);
+    }
+  } else {
+    assert(0);
+  }
   // need to act on floats, complex, and numpy arrays PyArrayObject
   //PyArrayObject* p;
   return PyLong_FromLong(0);

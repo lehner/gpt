@@ -3,7 +3,7 @@
 #
 # Authors: Christoph Lehner 2020
 #
-import gpt
+import gpt, sys
 
 def message(*a):
     # conversion to string can be an mpi process (i.e. for lattice),
@@ -11,3 +11,4 @@ def message(*a):
     s=[ str(x) for x in a ]
     if gpt.rank() == 0:
         print(*s)
+        sys.stdout.flush()

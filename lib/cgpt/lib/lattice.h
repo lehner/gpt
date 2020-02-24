@@ -141,6 +141,8 @@ static PyObject* cgpt_create_lattice(PyObject* self, PyObject* args) {
   if (otype == "complex") {
     if (prec == "single") {
       plat = new cgpt_Lattice<vTComplexF>(grid);
+    } else if (prec == "double") {
+      plat = new cgpt_Lattice<vTComplexD>(grid);
     }
   }
 

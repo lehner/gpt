@@ -6,3 +6,7 @@
 class single:
     def __init__(self):
         pass
+
+class double:
+    def __init__(self):
+        pass

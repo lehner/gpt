@@ -66,4 +66,3 @@ CG(lambda i,o: A(o,i,m0),src,psi,1e-8,1000)
 # Test CG
 A(tmp,psi,m0)
 g.message("True residuum:", g.norm2(g.eval(tmp - src)))
-

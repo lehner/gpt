@@ -22,7 +22,11 @@ static PyObject* cgpt_init(PyObject* self, PyObject* args) {
   int argc = (int)sargs.size();
   char** argv = &cargs[0];
 
+  // initialize Grid
   Grid_init(&argc,&argv);
+
+  // initialize numpy as well
+  import_array();
 
   std::cout << std::endl <<
     "=============================================" << std::endl <<

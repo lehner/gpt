@@ -5,6 +5,7 @@
 # Desc.: Illustrate core concepts and features
 #
 import gpt as g
+import numpy as np
 
 # gpt messaging system, only prints on g.rank() == 0
 g.message("Using grid: ", g.default.grid)
@@ -14,6 +15,12 @@ grid=g.grid(g.default.grid, g.single)
 
 # perform a barrier
 grid.barrier()
+
+# and a global sum over a number and a single-precision numpy array
+nodes=grid.globalsum(1)
+a=np.array([ [ 1.0, 2.0, 3.0 ], [ 4,5,6j] ],dtype=np.csingle)
+grid.globalsum(a)
+g.message(nodes,a)
 
 # create a complex lattice on the grid
 src=g.complex(grid)
