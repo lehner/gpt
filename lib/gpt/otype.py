@@ -4,6 +4,7 @@
 # Authors: Christoph Lehner 2020
 #
 class complex:
+    nfloats=2
     def __init__(self):
         pass
 

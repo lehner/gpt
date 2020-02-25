@@ -13,13 +13,17 @@ def meminfo():
     gpt.message("=============================================")
     gpt.message("            GPT Memory report                ")
     gpt.message("=============================================")
+    tot_gb = 0.0
     for page in mem_book:
-        gpt.message(" %X -> grid = %s, prec = %s, otype = %s" % 
-                    (page,mem_book[page][0].gdimensions,
-                     mem_book[page][0].precision,
-                     mem_book[page][1]))
+        grid = mem_book[page][0]
+        otype = mem_book[page][1]
+        gb = grid.gsites * grid.precision.nbytes * otype.nfloats / 1024.**3.
+        tot_gb += gb
+        gpt.message(" %X -> grid = %s, prec = %s, otype = %s | %g GB" % 
+                    (page,grid.gdimensions,grid.precision,otype,gb))
     gpt.message("=============================================")
-
+    gpt.message("   Total: %g GB " % tot_gb)
+    gpt.message("=============================================")
 
 
 class lattice:

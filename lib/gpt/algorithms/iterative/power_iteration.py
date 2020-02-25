@@ -21,7 +21,7 @@ def power_iteration(mat, src,tol,maxit,verbose=True):
             if abs(ev - ev_prev) < tol*ev:
                 if verbose:
                     g.message("Converged")
-                return ev
+                return (ev,tmp,True)
         ev_prev=ev
 
-    return None
+    return (ev,tmp,False)

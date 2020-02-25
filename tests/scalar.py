@@ -24,12 +24,14 @@ def A(dst,src,mass):
         g.eval(dst, dst + g.cshift(src, i, 1) + g.cshift(src, i, -1) - 2*src )
 
 # find largest eigenvalue
-g.message("Largest eigenvalue: ", powit(lambda i,o: A(o,i,m0),src,1e-6,100))
+g.message("Largest eigenvalue: ", powit(lambda i,o: A(o,i,m0),src,1e-6,100)[0])
 
 # Perform CG
 psi=g.lattice(src)
 psi[:]=0
 cg(lambda i,o: A(o,i,m0),src,psi,1e-8,1000)
+
+g.meminfo()
 
 # Test CG
 tmp=g.lattice(psi)
