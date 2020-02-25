@@ -9,7 +9,11 @@ from gpt.lattice import lattice, meminfo
 from gpt.log import message
 from gpt.transform import cshift, copy, mul, norm2, innerProduct, adj, axpy_norm
 from gpt.expr_linear_combination import expr_linear_combination, eval
-import gpt.otype, gpt.default, gpt.util, cgpt, sys, types, algorithms
+import gpt.otype
+import gpt.default
+import gpt.util
+import gpt.algorithms
+import cgpt, sys
 
 # initialize cgpt when gpt is loaded
 cgpt.init(sys.argv)

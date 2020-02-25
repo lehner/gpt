@@ -3,4 +3,4 @@
 #
 # Authors: Christoph Lehner 2020
 #
-import iterative
+import gpt.algorithms.iterative
