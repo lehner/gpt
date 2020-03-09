@@ -4,7 +4,7 @@
   Authors: Christoph Lehner 2020
 */
 void cgpt_convert(PyObject* in, int& out) {
-  assert(PyLong_Check(in));
+  ASSERT(PyLong_Check(in));
   out = PyLong_AsLong(in);
 }
 
@@ -17,7 +17,7 @@ void cgpt_convert(PyObject* in, ComplexD& out) {
     out = ComplexD(PyComplex_RealAsDouble(in),
 		   PyComplex_ImagAsDouble(in));
   } else {
-    assert(0);
+    ASSERT(0);
   }
 }
 
@@ -27,7 +27,7 @@ void cgpt_convert(PyObject* in, RealD& out) {
   } else if (PyFloat_Check(in)) {
     out = PyFloat_AsDouble(in);
   } else {
-    assert(0);
+    ASSERT(0);
   }
 }
 
@@ -35,7 +35,7 @@ void cgpt_convert(PyObject* in, uint64_t& out) {
   if (PyLong_Check(in)) {
     out = PyLong_AsLong(in);
   } else {
-    assert(0);
+    ASSERT(0);
   }
 }
 
@@ -46,11 +46,11 @@ void cgpt_convert(PyObject* in,  std::string& s) {
     s=PyBytes_AsString(in);
   } else if (PyUnicode_Check(in)) {
     PyObject* temp = PyUnicode_AsEncodedString(in, "UTF-8", "strict");
-    assert(temp);
+    ASSERT(temp);
     s=PyBytes_AS_STRING(temp);
     Py_DECREF(temp);
   } else {
-    assert(0);
+    ASSERT(0);
   }
 }
 
@@ -65,6 +65,6 @@ void cgpt_convert(PyObject* in, std::vector<t>& out) {
     for (size_t i = 0; i < out.size(); i++)
       cgpt_convert(PyTuple_GetItem(in,i),out[i]);
   } else {
-    assert(0);
+    ASSERT(0);
   }
 }

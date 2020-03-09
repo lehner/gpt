@@ -7,14 +7,16 @@
 #define castas(a,at) ( ((cgpt_Lattice<at>*)a)->l )
 #define LAT_MUL_IMPL(at,bt) if (typeis(a,at) && typeis(b,bt)) { l = castas(a,at) * castas(b,bt); return; }
 
-void cgpt_lattice_mul_from(Lattice<vTComplexF>& l,cgpt_Lattice_base* a,cgpt_Lattice_base* b) {
-  LAT_MUL_IMPL(vTComplexF,vTComplexF);
+template<typename vtype>
+void cgpt_lattice_mul_from(Lattice< iSinglet<vtype> >& l,cgpt_Lattice_base* a,cgpt_Lattice_base* b) {
+  LAT_MUL_IMPL(iSinglet<vtype>,iSinglet<vtype>);
   std::cerr << "Not implemented" << std::endl;
-  assert(0);
+  ASSERT(0);
 }
 
-void cgpt_lattice_mul_from(Lattice<vTComplexD>& l,cgpt_Lattice_base* a,cgpt_Lattice_base* b) {
-  LAT_MUL_IMPL(vTComplexD,vTComplexD);
+template<typename vtype>
+void cgpt_lattice_mul_from(Lattice< iColourMatrix<vtype> >& l,cgpt_Lattice_base* a,cgpt_Lattice_base* b) {
+  LAT_MUL_IMPL(iColourMatrix<vtype>,iColourMatrix<vtype>);
   std::cerr << "Not implemented" << std::endl;
-  assert(0);
+  ASSERT(0);
 }

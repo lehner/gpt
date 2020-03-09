@@ -3,7 +3,7 @@
 
   Authors: Christoph Lehner 2020
 */
-static PyObject* cgpt_cshift(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(cshift) {
 
   void* _dst,* _src;
   PyObject* _dir,* _off;
@@ -21,9 +21,9 @@ static PyObject* cgpt_cshift(PyObject* self, PyObject* args) {
   dst->cshift_from(src,dir,off);
 
   return PyLong_FromLong(0);
-}
+} EXPORT_END();
 
-static PyObject* cgpt_copy(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(copy) {
 
   void* _dst,* _src;
   if (!PyArg_ParseTuple(args, "ll", &_dst, &_src)) {
@@ -36,15 +36,19 @@ static PyObject* cgpt_copy(PyObject* self, PyObject* args) {
   dst->copy_from(src);
 
   return PyLong_FromLong(0);
-}
+} EXPORT_END();
 
-static PyObject* cgpt_eval(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(eval) {
 
   void* _dst;
   PyObject* _list;
-  if (!PyArg_ParseTuple(args, "lO", &_dst, &_list)) {
+  int _unary;
+  if (!PyArg_ParseTuple(args, "lOi", &_dst, &_list, &_unary)) {
     return NULL;
   }
+
+  // TODO: assemble linear combinations, if there is a non-trivial field
+  // operation, for now apply immediately
 
   cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
   assert(PyList_Check(_list));
@@ -62,43 +66,14 @@ static PyObject* cgpt_eval(PyObject* self, PyObject* args) {
     p[i] = (cgpt_Lattice_base*)PyLong_AsVoidPtr(ll);
   }
 
+  // for each unary pick different eval
+  assert(0);
   dst->eval(f,p);
 
   return PyLong_FromLong(0);
-}
+} EXPORT_END();
 
-static PyObject* cgpt_lattice_mul(PyObject* self, PyObject* args) {
-
-  void* _dst,* _a,* _b;
-  if (!PyArg_ParseTuple(args, "lll", &_dst, &_a, &_b)) {
-    return NULL;
-  }
-
-  cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-  cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
-  cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
-
-  dst->mul_from(a,b);
-
-  return PyLong_FromLong(0);
-}
-
-static PyObject* cgpt_lattice_adj(PyObject* self, PyObject* args) {
-
-  void* _dst,* _src;
-  if (!PyArg_ParseTuple(args, "ll", &_dst, &_src)) {
-    return NULL;
-  }
-
-  cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-  cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
-
-  dst->adj_from(src);
-
-  return PyLong_FromLong(0);
-}
-
-static PyObject* cgpt_lattice_innerProduct(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(lattice_innerProduct) {
 
   void* _a,* _b;
   if (!PyArg_ParseTuple(args, "ll", &_a, &_b)) {
@@ -110,9 +85,9 @@ static PyObject* cgpt_lattice_innerProduct(PyObject* self, PyObject* args) {
 
   ComplexD c = a->innerProduct(b);
   return PyComplex_FromDoubles(c.real(),c.imag());
-}
+} EXPORT_END();
 
-static PyObject* cgpt_lattice_norm2(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(lattice_norm2) {
 
   void* _a;
   if (!PyArg_ParseTuple(args, "l", &_a)) {
@@ -121,9 +96,9 @@ static PyObject* cgpt_lattice_norm2(PyObject* self, PyObject* args) {
 
   cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
   return PyFloat_FromDouble(a->norm2());
-}
+} EXPORT_END();
 
-static PyObject* cgpt_lattice_axpy_norm(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(lattice_axpy_norm) {
 
   void* _r,*_x,*_y;
   PyObject* _a;
@@ -139,4 +114,4 @@ static PyObject* cgpt_lattice_axpy_norm(PyObject* self, PyObject* args) {
   cgpt_convert(_a,a);
 
   return PyFloat_FromDouble(r->axpy_norm(a,x,y));
-}
+} EXPORT_END();

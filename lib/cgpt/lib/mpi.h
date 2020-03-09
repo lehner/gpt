@@ -3,7 +3,7 @@
 
   Authors: Christoph Lehner 2020
 */
-static PyObject* cgpt_global_rank(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(global_rank) {
   return PyLong_FromLong(CartesianCommunicator::RankWorld());
-}
+} END_EXPORT();
 

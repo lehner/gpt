@@ -58,35 +58,20 @@ class lattice:
         return cgpt.lattice_to_str(self.obj)
 
     def __rmul__(self, l):
-        if (gpt.util.isnum(l)):
-            return gpt.expr_linear_combination([ (l,self) ])
-        elif type(l) == lattice:
-            return gpt.mul(l,self)
-        else:
-            raise Exception("Unknown type")
+        return gpt.expr(l) * gpt.expr(self)
 
     def __mul__(self, l):
-        if (gpt.util.isnum(l)):
-            return gpt.expr_linear_combination([ (l,self) ])
-        elif type(l) == lattice:
-            return gpt.mul(self,l)
-        else:
-            raise Exception("Unknown type")
+        return gpt.expr(self) * gpt.expr(l)
 
     def __truediv__(self, l):
         assert(gpt.util.isnum(l))
-        return gpt.expr_linear_combination([ (1.0/l,self) ])
+        return gpt.expr(self) * (1.0/l)
 
     def __add__(self, l):
-        if type(l) == gpt.lattice:
-            return gpt.expr_linear_combination([ (1,self), (1,l) ])
-        elif type(l) == gpt.expr_linear_combination:
-            return gpt.expr_linear_combination([ (1,self) ] + l.val)
-        else:
-            raise Exception("Unknown type")
+        return gpt.expr(self) + gpt.expr(l)
 
     def __sub__(self, l):
-        return self.__add__(l.__neg__())
+        return gpt.expr(self) - gpt.expr(l)
 
     def __neg__(self):
-        return gpt.expr_linear_combination([ (-1,self) ])
+        return gpt.expr(self) * (-1.0)

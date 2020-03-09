@@ -65,6 +65,7 @@ public:
     (void)cgpt_lattice_mul_from(l,a,b);
   }
 
+  // In current model need eval, evalTrace, evalSpinTrace, evalColorTrace; maybe do this with templates?
   virtual void eval(std::vector<ComplexD>& f, std::vector<cgpt_Lattice_base*>& a) {
     int n = (int)f.size();
     assert(f.size() == a.size());
@@ -122,7 +123,7 @@ public:
   
 };
 
-static PyObject* cgpt_create_lattice(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(create_lattice) {
 
   void* _grid;
   PyObject* _otype, * _prec;
@@ -138,13 +139,20 @@ static PyObject* cgpt_create_lattice(PyObject* self, PyObject* args) {
   cgpt_convert(_prec,prec);
 
   void* plat = 0;
-  if (otype == "complex") {
+  if (otype == "ot_complex") {
     if (prec == "single") {
       plat = new cgpt_Lattice<vTComplexF>(grid);
     } else if (prec == "double") {
       plat = new cgpt_Lattice<vTComplexD>(grid);
     }
+  } else if (otype == "ot_mcolor") {
+    if (prec == "single") {
+      plat = new cgpt_Lattice<vColourMatrixF>(grid);
+    } else if (prec == "double") {
+      plat = new cgpt_Lattice<vColourMatrixD>(grid);
+    }
   }
+
 
   if (!plat) {
     std::cerr << "Unknown field type: " << otype << "," << prec << std::endl;  
@@ -152,10 +160,10 @@ static PyObject* cgpt_create_lattice(PyObject* self, PyObject* args) {
   }
 
   return PyLong_FromVoidPtr(plat);
-}
+} EXPORT_END();
 
 
-static PyObject* cgpt_delete_lattice(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(delete_lattice) {
   void* p;
   if (!PyArg_ParseTuple(args, "l", &p)) {
     return NULL;
@@ -163,9 +171,9 @@ static PyObject* cgpt_delete_lattice(PyObject* self, PyObject* args) {
 
   delete ((cgpt_Lattice_base*)p);
   return PyLong_FromLong(0);
-}
+} EXPORT_END();
 
-static PyObject* cgpt_lattice_set_val(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(lattice_set_val) {
   void* p;
   PyObject* _coor,* _val;
   if (!PyArg_ParseTuple(args, "lOO", &p, &_coor,&_val)) {
@@ -182,9 +190,9 @@ static PyObject* cgpt_lattice_set_val(PyObject* self, PyObject* args) {
   l->set_val(coor,val);
 
   return PyLong_FromLong(0);
-}
+} EXPORT_END();
 
-static PyObject* cgpt_lattice_to_str(PyObject* self, PyObject* args) {
+EXPORT_BEGIN(lattice_to_str) {
   void* p;
   if (!PyArg_ParseTuple(args, "l", &p)) {
     return NULL;
@@ -192,4 +200,4 @@ static PyObject* cgpt_lattice_to_str(PyObject* self, PyObject* args) {
 
   cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
   return l->to_str();
-}
+} EXPORT_END();

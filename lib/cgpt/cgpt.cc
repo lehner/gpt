@@ -9,6 +9,7 @@
 
 using namespace Grid;
 
+#include "lib/exception.h"
 #include "lib/convert.h"
 #include "lib/grid.h"
 #include "lib/peekpoke.h"
@@ -28,7 +29,6 @@ static PyMethodDef module_functions[] = {
   {"delete_lattice", cgpt_delete_lattice, METH_VARARGS, "Deletes a lattice"},
   {"lattice_set_val", cgpt_lattice_set_val, METH_VARARGS, "Set a value within a lattice"},
   {"lattice_to_str", cgpt_lattice_to_str, METH_VARARGS, "Get a string representation of the lattice"},
-  {"lattice_mul", cgpt_lattice_mul, METH_VARARGS, "Multiply two lattices"},
   {"lattice_axpy_norm", cgpt_lattice_axpy_norm, METH_VARARGS, "axpy_norm"},
   {"lattice_adj", cgpt_lattice_adj, METH_VARARGS, "Adjungate"},
   {"lattice_norm2", cgpt_lattice_norm2, METH_VARARGS, "Norm2"},

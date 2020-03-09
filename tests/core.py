@@ -50,7 +50,7 @@ g.meminfo()
 g.cshift(dst, src, 0, 1)
 
 # create a lattice expression
-expr=-(dst*dst) + 2*dst + 0.5*(g.cshift(src, 0, 1)*dst + g.cshift(src, 0, -1))/3 - dst + dst/2
+expr=g.trace(-(dst*dst) + 2*dst) + 0.5*(g.cshift(src, 0, 1)*dst + g.cshift(src, 0, -1))/3 - g.adj(dst + dst/2)
 
 # and convert the expression to a new lattice or an existing one,
 # later will allow for lists of expressions to be assigned to lists
