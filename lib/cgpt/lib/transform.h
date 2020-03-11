@@ -38,41 +38,6 @@ EXPORT_BEGIN(copy) {
   return PyLong_FromLong(0);
 } EXPORT_END();
 
-EXPORT_BEGIN(eval) {
-
-  void* _dst;
-  PyObject* _list;
-  int _unary;
-  if (!PyArg_ParseTuple(args, "lOi", &_dst, &_list, &_unary)) {
-    return NULL;
-  }
-
-  // TODO: assemble linear combinations, if there is a non-trivial field
-  // operation, for now apply immediately
-
-  cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-  assert(PyList_Check(_list));
-  int n = (int)PyList_Size(_list);
-  std::vector<ComplexD> f(n);
-  std::vector<cgpt_Lattice_base*> p(n);
-
-  for (int i=0;i<n;i++) {
-    PyObject* tp = PyList_GetItem(_list,i);
-    assert(PyTuple_Check(tp) && PyTuple_Size(tp) == 2);
-    cgpt_convert(PyTuple_GetItem(tp,0),f[i]);
-
-    PyObject* ll = PyTuple_GetItem(tp,1);
-    assert(PyLong_Check(ll));
-    p[i] = (cgpt_Lattice_base*)PyLong_AsVoidPtr(ll);
-  }
-
-  // for each unary pick different eval
-  assert(0);
-  dst->eval(f,p);
-
-  return PyLong_FromLong(0);
-} EXPORT_END();
-
 EXPORT_BEGIN(lattice_innerProduct) {
 
   void* _a,* _b;

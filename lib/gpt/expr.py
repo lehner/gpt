@@ -6,13 +6,10 @@
 import cgpt
 import gpt
 
-class field_unary:
+class factor_unary:
     NONE = 0
     BIT_TRANS = 1
     BIT_CONJ = 2
-    ADJ = 3
-    CONJ = 2
-    TRANS = 1
 
 class expr_unary:
     NONE = 0
@@ -20,17 +17,21 @@ class expr_unary:
     BIT_COLORTRACE = 2
 
 # expr:
-# - can have global unary operation such as trace
-# - has linear combination of terms
-# - each term is a non-commutative product of field_expr
-# - each field_expr is a lattice with optional field_unary operation applied
+# - each expression can have a unary operation such as trace
+# - each expression has linear combination of terms
+# - each term is a non-commutative product of factors
+# - each factor is a lattice/object with optional factor_unary operation applied
+# - an object could be a spin or a gauge matrix
 
 class expr:
     def __init__(self, val, unary = expr_unary.NONE):
         if type(val) == gpt.lattice:
-            self.val = [ (1.0, [ (field_unary.NONE,val) ]) ]
+            self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
+        #elif type(val) == gpt.gamma:
+        #    self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
         elif type(val) == expr:
             self.val = val.val
+            unary = unary | val.unary
         elif type(val) == list:
             self.val = val
         elif gpt.util.isnum(val):
@@ -41,8 +42,18 @@ class expr:
 
     def __mul__(self, l):
         if type(l) == expr:
-            l = apply_unary(l)
-            return expr( [ (a[0]*b[0],a[1] + b[1]) for a in self.val for b in l.val ], self.unary )
+            lhs = apply_unary(self)
+            rhs = apply_unary(l)
+            # need to avoid exponential growth of terms, so close before multiplying
+            # strategy: close the expr with more terms since it likely can be evaluated
+            #           more efficiently
+            if len(lhs.val) > 1 and len(rhs.val) > 1:
+                if len(lhs.val) >= len(rhs.val):
+                    lhs=expr(gpt.eval(lhs))
+                else:
+                    rhs=expr(gpt.eval(rhs))
+            assert(len(lhs.val) == 1 or len(rhs.val) == 1)
+            return expr( [ (a[0]*b[0], a[1] + b[1]) for a in lhs.val for b in rhs.val ] )
         else:
             return self.__mul__(expr(l))
 
@@ -60,9 +71,9 @@ class expr:
     def __add__(self, l):
         if type(l) == expr:
             if self.unary == l.unary:
-                return expr( self.val + l.val , self.unary )
+                return expr( self.val + l.val, self.unary )
             else:
-                return expr( apply_unary(self) + apply_unary(l), expr_unary.NONE )
+                return expr( apply_unary(self).val + apply_unary(l).val )
         else:
             return self.__add__(expr(l))
 
@@ -74,65 +85,53 @@ class expr:
 
     def __str__(self):
         ret=""
+
         if self.unary & expr_unary.BIT_SPINTRACE:
             ret=ret + "spinTrace("
         if self.unary & expr_unary.BIT_COLORTRACE:
             ret=ret + "colorTrace("
+
         for t in self.val:
             ret=ret + " + (" + str(t[0]) + ")"
             for f in t[1]:
                 ret = ret + "*"
-                if f[0] == field_unary.NONE:
+                if f[0] == factor_unary.NONE:
                     ret = ret + repr(f[1])
-                elif f[0] == field_unary.ADJ:
+                elif f[0] == factor_unary.CONJ|factor_unary.TRANS:
                     ret = ret + "adj(" + repr(f[1]) + ")"
-                elif f[0] == field_unary.CONJ:
+                elif f[0] == factor_unary.CONJ:
                     ret = ret + "conjugate(" + repr(f[1]) + ")"
-                elif f[0] == field_unary.TRANS:
+                elif f[0] == factor_unary.TRANS:
                     ret = ret + "transpose(" + repr(f[1]) + ")"
                 else:
                     ret = ret + "??"
+
         if self.unary & expr_unary.BIT_SPINTRACE:
             ret=ret + ")"
         if self.unary & expr_unary.BIT_COLORTRACE:
             ret=ret + ")"
         return ret
 
-    def lattice(self):
-        if (len(self.val) == 0 or len(self.val[0][1]) == 0):
-            raise Exception("Expression's lattice type is yet undefined")
-        lat=self.val[0][1][0][1]
-        grid=lat.grid
-        otype=lat.otype
-        if self.unary & expr_unary.BIT_SPINTRACE:
-            otype=otype.SPINTRACE_OTYPE
-        if self.unary & expr_unary.BIT_COLORTRACE:
-            otype=otype.COLORTRACE_OTYPE
-        return gpt.lattice(grid,otype)
-
 def adj(l):
     if type(l) == expr:
-        return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (field_unary.BIT_TRANS|field_unary.BIT_CONJ),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
+        return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_TRANS|factor_unary.BIT_CONJ),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
     else:
         return adj(expr(l))
 
 def conj(l):
     if type(l) == expr:
-        return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (field_unary.BIT_CONJ),x[1]) for x in a[1] ]) for a in l.val ] )
+        return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_CONJ),x[1]) for x in a[1] ]) for a in l.val ] )
     else:
         return adj(expr(l))
 
 def transpose(l):
     if type(l) == expr:
-        return expr( [ (a[0],[ (x[0] ^ (field_unary.BIT_TRANS),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
+        return expr( [ (a[0],[ (x[0] ^ (factor_unary.BIT_TRANS),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
     else:
         return adj(expr(l))
 
 def trace(l, t = expr_unary.BIT_SPINTRACE|expr_unary.BIT_COLORTRACE):
-    if type(l) == expr:
-        return expr( l.val, l.unary | t )
-    else:
-        return expr( l, t )
+    return expr( l, t )
 
 def apply_unary(l):
     if l.unary == expr_unary.NONE:
@@ -141,12 +140,15 @@ def apply_unary(l):
 
 def eval(first, second = None):
     if not second is None:
-        t = first
+        t_obj = first.obj
         e = second
-        assert(len(e.val) > 0)
     else:
         e = first
-        t = e.lattice()
+        t_obj = 0
 
-    cgpt.eval(t.obj, e.val, e.unary)
-    return t
+    if "eval" in gpt.default.verbose:
+        gpt.message("GPT::verbose::eval: " + str(e))
+
+    o_obj = cgpt.eval(t_obj, e.val, e.unary)
+    #if o_obj != 0:
+    #return gpt.lattice(

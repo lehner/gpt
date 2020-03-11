@@ -5,5 +5,5 @@
 */
 EXPORT_BEGIN(global_rank) {
   return PyLong_FromLong(CartesianCommunicator::RankWorld());
-} END_EXPORT();
+} EXPORT_END();
 

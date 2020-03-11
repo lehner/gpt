@@ -31,3 +31,18 @@ def get_ivec(tag, default):
     return default
 
 grid = get_ivec("--grid",[4,4,4,4])
+verbose = get("--verbose","").split(",")
+
+if "--help" in sys.argv:
+    print("--------------------------------------------------------------------------------")
+    print(" GPT Help")
+    print("--------------------------------------------------------------------------------")
+    print("")
+    print(" --grid X.Y.Z.T")
+    print("")
+    print("   sets the default grid for gpt")
+    print("")
+    print(" --verbose opt1,opt2,...")
+    print("")
+    print("   sets verbosity options.  candidates: eval")
+    print("--------------------------------------------------------------------------------")

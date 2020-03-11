@@ -1,3 +1,8 @@
+/*
+  CGPT
+
+  Authors: Christoph Lehner 2020
+*/
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION 
 #include <numpy/arrayobject.h>
@@ -14,7 +19,7 @@ using namespace Grid;
 #include "lib/grid.h"
 #include "lib/peekpoke.h"
 #include "lib/lattice.h"
-#include "lib/mul.h"
+#include "lib/expression.h"
 #include "lib/transform.h"
 #include "lib/init.h"
 #include "lib/mpi.h"
@@ -30,7 +35,6 @@ static PyMethodDef module_functions[] = {
   {"lattice_set_val", cgpt_lattice_set_val, METH_VARARGS, "Set a value within a lattice"},
   {"lattice_to_str", cgpt_lattice_to_str, METH_VARARGS, "Get a string representation of the lattice"},
   {"lattice_axpy_norm", cgpt_lattice_axpy_norm, METH_VARARGS, "axpy_norm"},
-  {"lattice_adj", cgpt_lattice_adj, METH_VARARGS, "Adjungate"},
   {"lattice_norm2", cgpt_lattice_norm2, METH_VARARGS, "Norm2"},
   {"lattice_innerProduct", cgpt_lattice_innerProduct, METH_VARARGS, "innerProduct"},
   {"cshift", cgpt_cshift, METH_VARARGS, "Cshift"},
