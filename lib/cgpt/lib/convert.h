@@ -8,6 +8,11 @@ void cgpt_convert(PyObject* in, int& out) {
   out = PyLong_AsLong(in);
 }
 
+void cgpt_convert(PyObject* in, bool& out) {
+  ASSERT(PyBool_Check(in));
+  out = in == Py_True;
+}
+
 void cgpt_convert(PyObject* in, ComplexD& out) {
   if (PyLong_Check(in)) {
     out = PyLong_AsLong(in);

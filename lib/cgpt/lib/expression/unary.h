@@ -3,8 +3,6 @@
 
   Authors: Christoph Lehner 2020
 */
-#define BIT_SPINTRACE 1
-#define BIT_COLORTRACE 2
 
 template<typename A>
 cgpt_Lattice_base* lattice_expr(cgpt_Lattice_base* dst, bool ac, const A& expr) {
@@ -39,3 +37,5 @@ cgpt_Lattice_base* lattice_unary(cgpt_Lattice_base* dst, bool ac, const A& la,in
   }
   ERR("Not implemented");
 }
+
+

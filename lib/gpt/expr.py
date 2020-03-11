@@ -153,7 +153,7 @@ def apply_unary(l):
         return l
     return expr(gpt.eval(l))
 
-def expr_eval(first, second = None):
+def expr_eval(first, second = None, ac = False):
     if not second is None:
         t_obj = first.obj
         e = second
@@ -165,9 +165,10 @@ def expr_eval(first, second = None):
         gpt.message("GPT::verbose::eval: " + str(e))
 
     if t_obj != 0:
-        assert(0 == cgpt.eval(t_obj, e.val, e.unary))
+        assert(0 == cgpt.eval(t_obj, e.val, e.unary, ac))
         return first
     else:
-        t_obj,s_ot,s_pr=cgpt.eval(t_obj, e.val, e.unary)
+        assert(ac == False)
+        t_obj,s_ot,s_pr=cgpt.eval(t_obj, e.val, e.unary, False)
         grid=get_grid(e)
         return gpt.lattice(grid,eval("gpt.otype." + s_ot),t_obj)

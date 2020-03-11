@@ -96,7 +96,7 @@ cgpt_Lattice_base* eval_term(std::vector<_eval_factor_>& factors, int term_unary
   return factors[0].lattice;
 }
 
-cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>& terms,int unary) {
+cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>& terms,int unary,bool ac) {
 
   // class A)
   // first separate all terms that are a pure linear combination:
@@ -106,7 +106,7 @@ cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>
   // for all other terms, create terms and apply unary operators before summing
   //   result_class_b = unary(B*C*D) + unary(E*F)
 
-  std::vector< cgpt_lattice_term > terms_a, terms_b;
+  std::vector< cgpt_lattice_term > terms_a[NUM_FACTOR_UNARY], terms_b;
 
   for (size_t i=0;i<terms.size();i++) {
     auto& term = terms[i];
@@ -114,23 +114,22 @@ cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>
     if (term.factors.size() == 1) {
       auto& factor = term.factors[0];
       ASSERT(factor.type == _eval_factor_::LATTICE);
-      terms_a.push_back( cgpt_lattice_term( term.coefficient, factor.lattice, false ) );
+      ASSERT(factor.unary >= 0 && factor.unary < NUM_FACTOR_UNARY);
+      terms_a[factor.unary].push_back( cgpt_lattice_term( term.coefficient, factor.lattice, false ) );
     } else {
       terms_b.push_back( cgpt_lattice_term( term.coefficient, eval_term(term.factors, unary), true ) );
     }
   }
 
-  if (terms_a.size() > 0) {
-    dst = terms_a[0].get_lat()->compatible_linear_combination(dst,false, terms_a, unary);
-    if (terms_b.size() > 0) {
-      dst = terms_b[0].get_lat()->compatible_linear_combination(dst,true, terms_b, 0); // unary operators have been applied above
+  for (int j=0;j<NUM_FACTOR_UNARY;j++) {
+    if (terms_a[j].size() > 0) {
+      dst = terms_a[j][0].get_lat()->compatible_linear_combination(dst,ac, terms_a[j], j, unary);
+      ac=true;
     }
-  } else {
-    if (terms_b.size() > 0) {
-      dst = terms_b[0].get_lat()->compatible_linear_combination(dst,false, terms_b, 0); // unary operators have been applied above
-    } else {
-      ERR("no terms to be added!");
-    }
+  }
+
+  if (terms_b.size() > 0) {
+    dst = terms_b[0].get_lat()->compatible_linear_combination(dst,ac, terms_b, 0, 0); // unary operators have been applied above
   }
 
   for (auto& term : terms_b)
@@ -142,11 +141,15 @@ cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>
 EXPORT_BEGIN(eval) {
 
   void* _dst;
-  PyObject* _list;
+  PyObject* _list,* _ac;
   int _unary;
-  if (!PyArg_ParseTuple(args, "lOi", &_dst, &_list, &_unary)) {
+  if (!PyArg_ParseTuple(args, "lOiO", &_dst, &_list, &_unary, &_ac)) {
     return NULL;
   }
+
+  ASSERT(PyBool_Check(_ac));
+  bool ac;
+  cgpt_convert(_ac,ac);
 
   cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
   bool new_lattice = dst == 0;
@@ -154,7 +157,7 @@ EXPORT_BEGIN(eval) {
   std::vector<_eval_term_> terms;
   eval_convert_factors(_list,terms);
 
-  dst=eval_general(dst,terms,_unary);
+  dst=eval_general(dst,terms,_unary,ac);
 
   if (new_lattice)
     return dst->to_decl();

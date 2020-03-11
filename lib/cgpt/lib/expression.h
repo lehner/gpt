@@ -8,8 +8,14 @@
 #define typeOpen(a,at) if (typeis(a,at)) { auto& l ## a = castas(a,at);
 #define typeClose() }
 
+// factor unary
 #define BIT_TRANS 1
 #define BIT_CONJ 2
+#define NUM_FACTOR_UNARY 4
+
+// term unary
+#define BIT_SPINTRACE 1
+#define BIT_COLORTRACE 2
 
 #include "expression/unary.h"
 #include "expression/mul.h"

@@ -65,3 +65,9 @@ g.message(new)
 
 # print adjungated field
 g.message(g.eval(g.adj(new)))
+
+# color matrix
+cm=g.mcolor(grid)
+cm[:]=0
+cm[0,0,0,0,1,2]=1
+g.message(cm)

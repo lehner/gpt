@@ -60,8 +60,8 @@ public:
     return cgpt_lattice_mul(dst,ac,unary_a,l,unary_b,b,unary_expr);
   }
 
-  virtual cgpt_Lattice_base* compatible_linear_combination(cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_expr) {
-    return cgpt_compatible_linear_combination(l,dst,ac,f,unary_expr);
+  virtual cgpt_Lattice_base* compatible_linear_combination(cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr) {
+    return cgpt_compatible_linear_combination(l,dst,ac,f,unary_factor,unary_expr);
   }
 
   virtual void copy_from(cgpt_Lattice_base* _src) {
