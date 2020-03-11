@@ -57,8 +57,14 @@ expr=g.trace(-(dst*dst) + 2*dst) + 0.5*(g.cshift(src, 0, 1)*dst + g.cshift(src, 
 # of target lattices
 new=g.eval(expr)
 
+# alternative notation
+new@=expr
+
 # or re-use existing lattice object as target
 g.eval(dst,expr)
+
+# accumulate
+dst+=expr
 
 # print lattice
 g.message(new)
@@ -71,3 +77,5 @@ cm=g.mcolor(grid)
 cm[:]=0
 cm[0,0,0,0,1,2]=1
 g.message(cm)
+
+g.message(g.eval(g.trace(cm)))

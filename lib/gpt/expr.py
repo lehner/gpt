@@ -156,9 +156,9 @@ def apply_unary(l):
 def expr_eval(first, second = None, ac = False):
     if not second is None:
         t_obj = first.obj
-        e = second
+        e = expr(second)
     else:
-        e = first
+        e = expr(first)
         t_obj = 0
 
     if "eval" in gpt.default.verbose:

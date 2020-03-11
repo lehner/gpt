@@ -85,3 +85,11 @@ class lattice:
 
     def __neg__(self):
         return gpt.expr(self) * (-1.0)
+
+    def __iadd__(self, expr):
+        gpt.eval(self,expr,ac=True)
+        return self
+
+    def __imatmul__(self, expr):
+        gpt.eval(self,expr,ac=False)
+        return self
