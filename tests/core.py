@@ -64,4 +64,4 @@ g.eval(dst,expr)
 g.message(new)
 
 # print adjungated field
-g.message(g.adj(new))
+g.message(g.eval(g.adj(new)))

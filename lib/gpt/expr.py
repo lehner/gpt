@@ -44,9 +44,12 @@ class expr:
         if type(l) == expr:
             lhs = apply_unary(self)
             rhs = apply_unary(l)
+            
             # need to avoid exponential growth of terms, so close before multiplying
             # strategy: close the expr with more terms since it likely can be evaluated
             #           more efficiently
+
+            # TODO: maybe even close both?
             if len(lhs.val) > 1 and len(rhs.val) > 1:
                 if len(lhs.val) >= len(rhs.val):
                     lhs=expr(gpt.eval(lhs))
@@ -97,11 +100,11 @@ class expr:
                 ret = ret + "*"
                 if f[0] == factor_unary.NONE:
                     ret = ret + repr(f[1])
-                elif f[0] == factor_unary.CONJ|factor_unary.TRANS:
+                elif f[0] == factor_unary.BIT_CONJ|factor_unary.BIT_TRANS:
                     ret = ret + "adj(" + repr(f[1]) + ")"
-                elif f[0] == factor_unary.CONJ:
+                elif f[0] == factor_unary.BIT_CONJ:
                     ret = ret + "conjugate(" + repr(f[1]) + ")"
-                elif f[0] == factor_unary.TRANS:
+                elif f[0] == factor_unary.BIT_TRANS:
                     ret = ret + "transpose(" + repr(f[1]) + ")"
                 else:
                     ret = ret + "??"
@@ -111,6 +114,18 @@ class expr:
         if self.unary & expr_unary.BIT_COLORTRACE:
             ret=ret + ")"
         return ret
+
+def get_grid(e):
+    if type(e) == expr:
+        assert(len(e.val) > 0)
+        return get_grid(e.val[0][1])
+    elif type(e) == list:
+        for i in e:
+            if type(i[1]) == gpt.lattice:
+                return i[1].grid
+        assert(0) # should never happen for a properly formed expression
+    else:
+        assert(0)
 
 def adj(l):
     if type(l) == expr:
@@ -136,9 +151,9 @@ def trace(l, t = expr_unary.BIT_SPINTRACE|expr_unary.BIT_COLORTRACE):
 def apply_unary(l):
     if l.unary == expr_unary.NONE:
         return l
-    return gpt.eval(l)
+    return expr(gpt.eval(l))
 
-def eval(first, second = None):
+def expr_eval(first, second = None):
     if not second is None:
         t_obj = first.obj
         e = second
@@ -149,6 +164,10 @@ def eval(first, second = None):
     if "eval" in gpt.default.verbose:
         gpt.message("GPT::verbose::eval: " + str(e))
 
-    o_obj = cgpt.eval(t_obj, e.val, e.unary)
-    #if o_obj != 0:
-    #return gpt.lattice(
+    if t_obj != 0:
+        assert(0 == cgpt.eval(t_obj, e.val, e.unary))
+        return first
+    else:
+        t_obj,s_ot,s_pr=cgpt.eval(t_obj, e.val, e.unary)
+        grid=get_grid(e)
+        return gpt.lattice(grid,eval("gpt.otype." + s_ot),t_obj)

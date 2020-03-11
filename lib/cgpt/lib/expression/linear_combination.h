@@ -5,6 +5,9 @@
 */
 #define EF(i) ((Coeff_t)f[i].get_coef()) * compatible<T>(f[i].get_lat())->l
 
+// TODO: do unary f[i].unary here!! need to setup similar to mul, maybe can go to 4 or 5 terms;
+// add a fallback option for more terms!
+
 template<typename T>
 cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T>& _compatible,cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_expr) {
   typedef typename Lattice<T>::scalar_type Coeff_t;

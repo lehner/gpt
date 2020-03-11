@@ -27,8 +27,15 @@ def meminfo():
 
 
 class lattice:
-    def __init__(self, first, second = None):
-        if type(first) == gpt.grid and not second is None:
+    def __init__(self, first, second = None, third = None):
+        if type(first) == gpt.grid and not second is None and not third is None:
+            grid = first
+            otype = second
+            obj = third
+            self.grid = grid
+            self.otype = otype
+            self.obj = obj
+        elif type(first) == gpt.grid and not second is None:
             grid = first
             otype = second
             self.grid = grid

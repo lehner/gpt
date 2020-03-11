@@ -8,7 +8,7 @@ from gpt.precision import single, double
 from gpt.lattice import lattice, meminfo
 from gpt.log import message
 from gpt.transform import cshift, copy, mul, norm2, innerProduct, axpy_norm
-from gpt.expr import expr, eval, adj, transpose, conj, trace
+from gpt.expr import expr, expr_eval, adj, transpose, conj, trace
 from gpt.otype import *
 import gpt.default
 import gpt.util
@@ -17,6 +17,9 @@ import cgpt, sys
 
 # initialize cgpt when gpt is loaded
 cgpt.init(sys.argv)
+
+# synonyms
+eval=expr_eval
 
 # global rank
 def rank():
