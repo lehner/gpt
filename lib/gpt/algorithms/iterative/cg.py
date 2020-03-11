@@ -11,8 +11,8 @@ def cg(mat,src,psi,tol,maxit,verbose=True):
     mat(psi,mmp) # in, out
     d=g.innerProduct(psi,mmp).real
     b=g.norm2(mmp)
-    g.eval(r,src - mmp)
-    g.copy(p,r)
+    r @= src - mmp
+    p @= r
     a = g.norm2(p)
     cp = a
     ssq = g.norm2(src)
@@ -25,9 +25,8 @@ def cg(mat,src,psi,tol,maxit,verbose=True):
         a = c / d
         cp=g.axpy_norm(r, -a, mmp, r)
         b = cp / c
-        g.eval(psi,a*p+psi)
-        g.eval(p,b*p+r)
-        # TODO: expose multiple simultaneous evals as g.eval([psi,p],[a*p+psi,b*p+r])
+        psi += a*p
+        p @= b*p+r
         if verbose:
             g.message("Iter %d -> %g" % (k,cp))
         if cp <= rsq:

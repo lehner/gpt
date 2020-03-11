@@ -58,7 +58,7 @@ expr=g.trace(-(dst*dst) + 2*dst) + 0.5*(g.cshift(src, 0, 1)*dst + g.cshift(src, 
 new=g.eval(expr)
 
 # alternative notation
-new@=expr
+new @= expr
 
 # or re-use existing lattice object as target
 g.eval(dst,expr)

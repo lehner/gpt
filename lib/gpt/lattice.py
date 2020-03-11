@@ -90,6 +90,22 @@ class lattice:
         gpt.eval(self,expr,ac=True)
         return self
 
+    def __isub__(self, expr):
+        gpt.eval(self,-expr,ac=True)
+        return self
+
     def __imatmul__(self, expr):
         gpt.eval(self,expr,ac=False)
+        return self
+
+    def __imul__(self, expr):
+        gpt.eval(self,self * expr,ac=False)
+        return self
+
+    def __imul__(self, expr):
+        gpt.eval(self,self * expr,ac=False)
+        return self
+
+    def __itruediv__(self, expr):
+        gpt.eval(self,self / expr,ac=False)
         return self

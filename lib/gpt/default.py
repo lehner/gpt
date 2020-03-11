@@ -3,7 +3,7 @@
 #
 # Authors: Christoph Lehner 2020
 #
-import sys
+import sys, gpt
 
 def get(tag,default):
     if tag in sys.argv:
@@ -31,6 +31,7 @@ def get_ivec(tag, default):
     return default
 
 grid = get_ivec("--grid",[4,4,4,4])
+precision = { "single" : gpt.single, "double" : gpt.double }[get("--precision","double")]
 verbose = get("--verbose","").split(",")
 
 if "--help" in sys.argv:
@@ -41,6 +42,10 @@ if "--help" in sys.argv:
     print(" --grid X.Y.Z.T")
     print("")
     print("   sets the default grid for gpt")
+    print("")
+    print(" --precision single/double")
+    print("")
+    print("   sets the default precision for gpt")
     print("")
     print(" --verbose opt1,opt2,...")
     print("")

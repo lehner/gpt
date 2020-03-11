@@ -154,10 +154,14 @@ def apply_unary(l):
     return expr(gpt.eval(l))
 
 def expr_eval(first, second = None, ac = False):
+
     if not second is None:
         t_obj = first.obj
         e = expr(second)
     else:
+        if type(first) == gpt.lattice:
+            return first
+
         e = expr(first)
         t_obj = 0
 

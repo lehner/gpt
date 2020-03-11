@@ -157,11 +157,13 @@ EXPORT_BEGIN(eval) {
   std::vector<_eval_term_> terms;
   eval_convert_factors(_list,terms);
 
+  cgpt_Lattice_base* dst_orig = dst;
   dst=eval_general(dst,terms,_unary,ac);
 
   if (new_lattice)
     return dst->to_decl();
 
+  assert(dst == dst_orig);
   return PyLong_FromLong(0);
 
 } EXPORT_END();

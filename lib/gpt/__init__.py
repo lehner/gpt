@@ -7,7 +7,7 @@ from gpt.grid import grid
 from gpt.precision import single, double
 from gpt.lattice import lattice, meminfo
 from gpt.log import message
-from gpt.transform import cshift, copy, mul, norm2, innerProduct, axpy_norm
+from gpt.transform import cshift, copy, norm2, innerProduct, axpy_norm
 from gpt.expr import expr, expr_eval, adj, transpose, conj, trace
 from gpt.otype import *
 import gpt.default

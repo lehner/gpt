@@ -17,17 +17,18 @@ src[0,0,0,0]=1
 
 # Create a free Klein-Gordon operator (spectrum from mass^2-16 .. mass^2)
 def A(dst,src,mass):
-    g.eval(dst,(mass**2.)*src)
+    assert(dst != src)
+    dst @= (mass**2.)*src
     for i in range(4):
-        g.eval(dst, dst + g.cshift(src, i, 1) + g.cshift(src, i, -1) - 2*src )
+        dst += g.cshift(src, i, 1) + g.cshift(src, i, -1) - 2*src
 
 # find largest eigenvalue
 dst,tmp=g.lattice(src),g.copy(src)
 for it in range(50):
-    tmp = g.eval( (1.0/g.norm2(tmp)**0.5) * tmp )
+    tmp /= g.norm2(tmp)**0.5
     A(dst,tmp,0.0)
     g.message("Iteration %d %g" % (it,g.norm2(dst)**0.5))
-    tmp=dst
+    tmp @= dst
 
 # CG
 def CG(mat,src,psi,tol,maxit):
@@ -36,8 +37,8 @@ def CG(mat,src,psi,tol,maxit):
     mat(psi,mmp) # in, out
     d=g.innerProduct(psi,mmp).real
     b=g.norm2(mmp)
-    g.eval(r,src - mmp)
-    g.copy(p,r)
+    r @= src - mmp
+    p @= r
     a = g.norm2(p)
     cp = a
     ssq = g.norm2(src)
@@ -50,9 +51,8 @@ def CG(mat,src,psi,tol,maxit):
         a = c / d
         cp=g.axpy_norm(r, -a, mmp, r)
         b = cp / c
-        g.eval(psi,a*p+psi)
-        g.eval(p,b*p+r)
-        # TODO: expose multiple simultaneous evals as g.eval([psi,p],[a*p+psi,b*p+r])
+        psi += a*p
+        p @= b*p+r
         g.message("Iter %d -> %g" % (k,cp))
         if cp <= rsq:
             g.message("Converged")
@@ -65,4 +65,4 @@ CG(lambda i,o: A(o,i,m0),src,psi,1e-8,1000)
 
 # Test CG
 A(tmp,psi,m0)
-g.message("True residuum:", g.norm2(g.eval(tmp - src)))
+g.message("True residuum:", g.norm2( tmp - src ))
