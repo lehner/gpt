@@ -61,7 +61,7 @@ new=g.eval(expr)
 g.eval(dst,expr)
 
 # alternative notation
-new @= expr
+dst @= expr
 
 # accumulate
 dst+=expr
