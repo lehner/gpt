@@ -18,8 +18,11 @@ grid.barrier()
 
 # and a global sum over a number and a single-precision numpy array
 nodes=grid.globalsum(1)
+
 a=np.array([ [ 1.0, 2.0, 3.0 ], [ 4,5,6j] ],dtype=np.csingle)
+
 grid.globalsum(a)
+
 g.message(nodes,a)
 
 # create a complex lattice on the grid

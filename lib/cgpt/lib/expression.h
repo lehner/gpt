@@ -17,7 +17,7 @@
 #define BIT_SPINTRACE 1
 #define BIT_COLORTRACE 2
 
+template<typename T> cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la,int unary_b, cgpt_Lattice_base* b, int unary_expr);
+template<typename T> cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T>& _compatible,cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr);
+
 #include "expression/unary.h"
-#include "expression/mul.h"
-#include "expression/linear_combination.h"
-#include "expression/eval.h"

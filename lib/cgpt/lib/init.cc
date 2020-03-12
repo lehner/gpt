@@ -3,6 +3,9 @@
 
   Authors: Christoph Lehner 2020
 */
+#define _THIS_IS_INIT_ // needed for numpy array
+#include "lib.h"
+
 EXPORT_BEGIN(init) {
        
   PyObject* _args;

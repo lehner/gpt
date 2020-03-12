@@ -3,6 +3,8 @@
 
   Authors: Christoph Lehner 2020
 */
+#include "lib.h"
+
 struct _eval_factor_ {
   enum { LATTICE, GAMMA } type;
   int unary;

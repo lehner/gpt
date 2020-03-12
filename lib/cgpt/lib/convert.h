@@ -3,17 +3,17 @@
 
   Authors: Christoph Lehner 2020
 */
-void cgpt_convert(PyObject* in, int& out) {
+static void cgpt_convert(PyObject* in, int& out) {
   ASSERT(PyLong_Check(in));
   out = PyLong_AsLong(in);
 }
 
-void cgpt_convert(PyObject* in, bool& out) {
+static void cgpt_convert(PyObject* in, bool& out) {
   ASSERT(PyBool_Check(in));
   out = in == Py_True;
 }
 
-void cgpt_convert(PyObject* in, ComplexD& out) {
+static void cgpt_convert(PyObject* in, ComplexD& out) {
   if (PyLong_Check(in)) {
     out = PyLong_AsLong(in);
   } else if (PyFloat_Check(in)) {
@@ -26,7 +26,7 @@ void cgpt_convert(PyObject* in, ComplexD& out) {
   }
 }
 
-void cgpt_convert(PyObject* in, RealD& out) {
+static void cgpt_convert(PyObject* in, RealD& out) {
   if (PyLong_Check(in)) {
     out = PyLong_AsLong(in);
   } else if (PyFloat_Check(in)) {
@@ -36,7 +36,7 @@ void cgpt_convert(PyObject* in, RealD& out) {
   }
 }
 
-void cgpt_convert(PyObject* in, uint64_t& out) {
+static void cgpt_convert(PyObject* in, uint64_t& out) {
   if (PyLong_Check(in)) {
     out = PyLong_AsLong(in);
   } else {
@@ -44,7 +44,7 @@ void cgpt_convert(PyObject* in, uint64_t& out) {
   }
 }
 
-void cgpt_convert(PyObject* in,  std::string& s) {
+static void cgpt_convert(PyObject* in,  std::string& s) {
   if (PyType_Check(in)) {
     s=((PyTypeObject*)in)->tp_name;
   } else if (PyBytes_Check(in)) {

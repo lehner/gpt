@@ -3,6 +3,8 @@
 
   Authors: Christoph Lehner 2020
 */
+#include "lib.h"
+
 EXPORT_BEGIN(cshift) {
 
   void* _dst,* _src;

@@ -1,11 +1,46 @@
 #!/bin/bash
 GRID=/sdcc/u/clehner/Grid/build
+NPARALLEL=8
+N=0
 
-echo "Linking against Grid in ${GRID}"
+echo "================================================================================"
+echo "  Compiling CGPT against Grid in ${GRID}"
+echo "================================================================================"
 
 CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
 CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID}/Grid"
 LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
 LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
 
-${CXX} --shared -fPIC -O3 $(python3-config --includes) ${CXXFLAGS} cgpt.cc ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
+echo "CXX = $CXX"
+echo "CXXFLAGS = $CXXFLAGS"
+echo "LDFLAGS = $LDFLAGS"
+echo "LIBS = $LIBS"
+
+echo "================================================================================"
+
+for src in lib/*.cc
+do
+    bn=$(basename $src .cc)
+    dst=build/${bn}.o
+    if [ $src -nt $dst ];
+    then
+	(
+	    echo "Compiling $bn ..."
+	    time ${CXX} --shared -fPIC -O3 $(python3-config --includes) ${CXXFLAGS} -c $src -o $dst
+	    echo "$bn complete"
+	) &
+	N=$((N+1))
+	if ((N==NPARALLEL))
+	then
+	    wait
+	    N=0
+	fi
+    fi
+done
+
+wait
+
+# linking
+echo "Linking"
+${CXX} --shared -fPIC -O3 build/*.o ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so

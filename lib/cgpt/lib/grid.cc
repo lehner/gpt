@@ -3,6 +3,7 @@
 
   Authors: Christoph Lehner 2020
 */
+#include "lib.h"
 
 EXPORT_BEGIN(create_grid) {
   
@@ -89,6 +90,8 @@ EXPORT_BEGIN(grid_globalsum) {
     return NULL;
   }
 
+  printf("Global sum %p\n",p);
+
   GridCartesian* grid = (GridCartesian*)p;
   if (PyComplex_Check(o)) {
     ComplexD c;
@@ -125,4 +128,3 @@ EXPORT_BEGIN(grid_globalsum) {
   //PyArrayObject* p;
   return PyLong_FromLong(0);
 } EXPORT_END();
-
