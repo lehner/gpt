@@ -5,39 +5,38 @@
 #
 import gpt
 
-###
-# Complex
 class ot_complex:
     nfloats=2
 
-ot_complex.SPINTRACE_OTYPE=ot_complex
-ot_complex.COLORTRACE_OTYPE=ot_complex
-
-###
-# MColor
-class ot_mcolor:
-    nfloats=2*3*3
-
-ot_mcolor.SPINTRACE_OTYPE=ot_mcolor
-ot_mcolor.COLORTRACE_OTYPE=ot_complex
-
-###
-# VColor
-class ot_vcolor:
-    nfloats=2*3
-
-ot_vcolor.SPINTRACE_OTYPE=None
-ot_vcolor.COLORTRACE_OTYPE=None
-
-###
-# Short-hand lattice definitions
 def complex(grid):
     return gpt.lattice(grid, ot_complex)
+
+
+class ot_mcolor:
+    nfloats=2*3*3
 
 def mcolor(grid):
     return gpt.lattice(grid, ot_mcolor)
 
+
+class ot_vcolor:
+    nfloats=2*3
+
 def vcolor(grid):
     return gpt.lattice(grid, ot_vcolor)
 
-# mspin, vspin, mspincolor, vspincolor
+
+class ot_mspincolor:
+    nfloats=2*3*3*4*4
+
+def mspincolor(grid):
+    return gpt.lattice(grid, ot_mspincolor)
+
+
+class ot_vspincolor:
+    nfloats=2*3*4
+
+def vspincolor(grid):
+    return gpt.lattice(grid, ot_vspincolor)
+
+# mspin, vspin
