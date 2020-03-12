@@ -16,7 +16,17 @@ grid=g.grid(g.default.grid, g.single)
 cm=g.mcolor(grid)
 cv=g.vcolor(grid)
 
-cv @= cm * cv
+cv[:]=0
+cv[0,0,0,0,0]=1
+cv[0,0,0,0,1]=2
 
-cm @= g.adj(cv) * cv
+cm @= cv * g.adj(cv)
+
+g.message(cm)
+
+res = g.eval(cv * g.adj(cv) * cm * cv)
+
+g.message(res)
+
+
 

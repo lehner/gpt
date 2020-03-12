@@ -3,6 +3,8 @@ GRID=/sdcc/u/clehner/Grid/build
 NPARALLEL=8
 N=0
 
+mkdir -p build
+
 echo "================================================================================"
 echo "  Compiling CGPT against Grid in ${GRID}"
 echo "================================================================================"

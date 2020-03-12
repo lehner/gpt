@@ -70,9 +70,14 @@ cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a
 #endif
 }
 
+#define _OUTER_PRODUCT_(t) if (unary_a == 0 && unary_b == BIT_TRANS|BIT_CONJ) { typeOpen(b,t) { return lattice_unary_lat(dst,ac, outerProduct(la,lb), unary_expr); } typeClose(); }
+#define _INNER_PRODUCT_(t) if (unary_a == BIT_TRANS|BIT_CONJ && unary_b == 0) { typeOpen(b,t) { return lattice_unary_lat(dst, ac, localInnerProduct(la,lb), unary_expr ); } typeClose(); }
+
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourVector<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
   _COMPATIBLE_(iSinglet);
+  _OUTER_PRODUCT_(iColourVector);
+  _INNER_PRODUCT_(iColourVector);
   ERR("Not implemented");
 }
 
@@ -89,9 +94,10 @@ cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourVector<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
   _COMPATIBLE_(iSinglet);
+  _OUTER_PRODUCT_(iSpinColourVector);
+  _INNER_PRODUCT_(iSpinColourVector);
   ERR("Not implemented");
 }
-
 
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourMatrix<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
