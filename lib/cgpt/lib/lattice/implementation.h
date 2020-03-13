@@ -83,6 +83,10 @@ public:
     }
   }
 
+  virtual PyObject* sum() {
+    return cgpt_numpy_export( ::sum(l) );
+  }
+
   virtual PyObject* to_str() {
     std::stringstream st;
     st << l;

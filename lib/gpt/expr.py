@@ -176,3 +176,7 @@ def expr_eval(first, second = None, ac = False):
         t_obj,s_ot,s_pr=cgpt.eval(t_obj, e.val, e.unary, False)
         grid=get_grid(e)
         return gpt.lattice(grid,eval("gpt.otype." + s_ot),t_obj)
+
+def sum(e):
+    l=gpt.eval(e)
+    return cgpt.lattice_sum(l.obj)

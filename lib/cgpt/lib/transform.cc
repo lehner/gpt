@@ -82,3 +82,15 @@ EXPORT_BEGIN(lattice_axpy_norm) {
 
   return PyFloat_FromDouble(r->axpy_norm(a,x,y));
 } EXPORT_END();
+
+EXPORT_BEGIN(lattice_sum) {
+
+  void* _a;
+  if (!PyArg_ParseTuple(args, "l", &_a)) {
+    return NULL;
+  }
+
+  cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
+  return a->sum();
+
+} EXPORT_END();

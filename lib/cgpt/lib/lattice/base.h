@@ -10,6 +10,7 @@ public:
   virtual cgpt_Lattice_base* create_lattice_of_same_type() = 0;
   virtual void set_val(std::vector<int>& coor, ComplexD& val) = 0;
   virtual PyObject* to_str() = 0;
+  virtual PyObject* sum() = 0;
   virtual RealD norm2() = 0;
   virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
   virtual ComplexD innerProduct(cgpt_Lattice_base* other) = 0;
