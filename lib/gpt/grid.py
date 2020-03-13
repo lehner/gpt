@@ -7,11 +7,14 @@ import cgpt
 import numpy as np
 
 class grid:
-    def __init__(self, gdimensions, precision):
+    def __init__(self, gdimensions, precision, obj = None):
         self.gdimensions = gdimensions
         self.gsites = np.prod(self.gdimensions)
         self.precision = precision
-        self.obj = cgpt.create_grid(gdimensions, precision)
+        if obj == None:
+            self.obj = cgpt.create_grid(gdimensions, precision)
+        else:
+            self.obj = obj
 
     def __del__(self):
         cgpt.delete_grid(self.obj)

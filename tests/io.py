@@ -10,7 +10,20 @@ import numpy as np
 # load configuration
 U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
 
-g.message(g.innerProduct(U,U))
+g.message(U[0].metadata)
+
+def plaquette(U):
+    # U[mu](x)*U[nu](x+mu)*adj(U[mu](x+nu))*adj(U[nu](x))
+    tr=0.0
+    for mu in range(4):
+        for nu in range(4):
+            if mu != nu:
+                tr += g.sum( g.trace(U[mu] * g.cshift( U[nu], mu, 1) * g.adj( g.cshift( U[mu], nu, 1 ) ) * g.adj( U[nu] )) )
+    return tr/6.
+
+g.message(plaquette(U))
+
+g.message(g.innerProduct(U[0],U[0]))
 
 
 

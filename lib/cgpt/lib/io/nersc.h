@@ -68,6 +68,18 @@ static PyObject* load_nersc(PyObject* args) {
       lat->l = PeekIndex<LorentzIndex>(Umu,mu);
       U[mu] = lat;
     }
+
+    // build metadata
+    PyObject* metadata = PyDict_New();
+    for (auto& k : fields) {
+      PyDict_SetItemString(metadata,k.first.c_str(),PyUnicode_FromString(k.second.c_str()));
+    }
+
+    // return
+    vComplexD vScalar = 0;
+    return Py_BuildValue("([(l,[i,i,i,i],s,[O,O,O,O])],O)", grid, gdimension[0], gdimension[1], gdimension[2],
+			 gdimension[3], get_prec(vScalar), U[0]->to_decl(), U[1]->to_decl(), U[2]->to_decl(),
+			 U[3]->to_decl(),metadata);
   }
 
   return NULL;
