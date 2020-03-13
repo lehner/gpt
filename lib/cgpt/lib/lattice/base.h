@@ -8,7 +8,8 @@ class cgpt_Lattice_base {
 public:
   virtual ~cgpt_Lattice_base() { };
   virtual cgpt_Lattice_base* create_lattice_of_same_type() = 0;
-  virtual void set_val(std::vector<int>& coor, ComplexD& val) = 0;
+  virtual void set_val(const std::vector<int>& coor, PyObject* val) = 0;
+  virtual PyObject* get_val(const std::vector<int>& coor) = 0;
   virtual PyObject* to_str() = 0;
   virtual PyObject* sum() = 0;
   virtual RealD norm2() = 0;

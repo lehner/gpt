@@ -14,6 +14,7 @@ from gpt.io import load
 import gpt.default
 import gpt.util
 import gpt.algorithms
+import gpt.qcd
 import cgpt, sys
 
 # initialize cgpt when gpt is loaded

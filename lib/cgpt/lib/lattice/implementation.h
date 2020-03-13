@@ -74,9 +74,16 @@ public:
     l = Cshift(src->l, dir, off);
   }
 
-  virtual void set_val(std::vector<int>& coor, ComplexD& val) {
+  virtual PyObject* get_val(const std::vector<int>& coor) {
+    return cgpt_lattice_peek_value(l,coor);
+  }
+
+  virtual void set_val(const std::vector<int>& coor, PyObject* val) {
     int nc = (int)coor.size();
-    if (!nc && abs(val) == 0.0) {
+    if (!nc) {
+      ComplexD cv;
+      cgpt_convert(val,cv);
+      ASSERT( abs(cv) == 0.0 );
       l = Zero();
     } else {
       cgpt_lattice_poke_value(l,coor,val);

@@ -16,6 +16,7 @@ DECLARE_FUNCTION(grid_globalsum);
 DECLARE_FUNCTION(create_lattice);
 DECLARE_FUNCTION(delete_lattice);
 DECLARE_FUNCTION(lattice_set_val);
+DECLARE_FUNCTION(lattice_get_val);
 DECLARE_FUNCTION(lattice_to_str);
 DECLARE_FUNCTION(lattice_axpy_norm);
 DECLARE_FUNCTION(lattice_norm2);
@@ -37,6 +38,7 @@ static PyMethodDef module_functions[] = {
   EXPORT_FUNCTION(create_lattice),
   EXPORT_FUNCTION(delete_lattice),
   EXPORT_FUNCTION(lattice_set_val),
+  EXPORT_FUNCTION(lattice_get_val),
   EXPORT_FUNCTION(lattice_to_str),
   EXPORT_FUNCTION(lattice_axpy_norm),
   EXPORT_FUNCTION(lattice_norm2),

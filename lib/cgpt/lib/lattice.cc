@@ -76,13 +76,25 @@ EXPORT_BEGIN(lattice_set_val) {
   std::vector<int> coor;
   cgpt_convert(_coor,coor);
 
-  ComplexD val;
-  cgpt_convert(_val,val);
-
   cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-  l->set_val(coor,val);
+  l->set_val(coor,_val);
 
   return PyLong_FromLong(0);
+} EXPORT_END();
+
+EXPORT_BEGIN(lattice_get_val) {
+  void* p;
+  PyObject* _coor;
+  if (!PyArg_ParseTuple(args, "lO", &p, &_coor)) {
+    return NULL;
+  }
+
+  std::vector<int> coor;
+  cgpt_convert(_coor,coor);
+
+  cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
+  return l->get_val(coor);
+
 } EXPORT_END();
 
 EXPORT_BEGIN(lattice_to_str) {
