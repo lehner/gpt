@@ -10,6 +10,7 @@ from gpt.log import message
 from gpt.transform import cshift, copy, norm2, innerProduct, axpy_norm
 from gpt.expr import expr, expr_eval, adj, transpose, conj, trace
 from gpt.otype import *
+from gpt.io import load
 import gpt.default
 import gpt.util
 import gpt.algorithms

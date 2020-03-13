@@ -49,5 +49,5 @@ if "--help" in sys.argv:
     print("")
     print(" --verbose opt1,opt2,...")
     print("")
-    print("   sets verbosity options.  candidates: eval")
+    print("   sets verbosity options.  candidates: eval,io")
     print("--------------------------------------------------------------------------------")

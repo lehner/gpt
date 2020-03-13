@@ -24,6 +24,7 @@ DECLARE_FUNCTION(cshift);
 DECLARE_FUNCTION(copy);
 DECLARE_FUNCTION(eval);
 DECLARE_FUNCTION(global_rank);
+DECLARE_FUNCTION(load);
 
 static PyMethodDef module_functions[] = {
   EXPORT_FUNCTION(init),
@@ -42,6 +43,7 @@ static PyMethodDef module_functions[] = {
   EXPORT_FUNCTION(copy),
   EXPORT_FUNCTION(eval),
   EXPORT_FUNCTION(global_rank),
+  EXPORT_FUNCTION(load),
   {NULL, NULL, 0, NULL}
 };
 
