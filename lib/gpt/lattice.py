@@ -62,6 +62,10 @@ class lattice:
         assert(type(key) == tuple)
         cgpt.lattice_set_val(self.obj, key, value)
 
+    def __getitem__(self, key):
+        assert(type(key) == tuple)
+        return cgpt.lattice_get_val(self.obj, key)
+
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype,self.grid.precision)
 
