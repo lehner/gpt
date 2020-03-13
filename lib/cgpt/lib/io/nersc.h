@@ -34,6 +34,7 @@ static PyObject* load_nersc(PyObject* args) {
     cgpt_convert(PyTuple_GetItem(args,0),filename);
     cgpt_convert(PyTuple_GetItem(args,1),verbose);
 
+    // get metadata
     std::map<std::string,std::string> fields;
     if (!read_nersc_header(filename,fields)) {
       if (verbose)
@@ -49,20 +50,24 @@ static PyObject* load_nersc(PyObject* args) {
       if (verbose)
 	std::cout << GridLogMessage << "GPT::IO: gdimension[" << i << "] = " << gdimension[i] << std::endl;
     }
-    
-      // get metadata from header
-      /*      
-	      LatticeGaugeField Umu(&Fine);
-	      std::vector<LatticeColourMatrix> U(4,&Fine);
-	      
-	      FieldMetaData header;
-	      std::string file("./ckpoint_lat");
-	      NerscIO::readConfiguration(Umu,header,file);
-	      
-	      for(int mu=0;mu<Nd;mu++){
-	      U[mu] = PeekIndex<LorentzIndex>(Umu,mu);
-	      }
-      */
+
+    // construct Grid
+    assert(Nd == 4);
+    GridCartesian* grid = 
+      SpaceTimeGrid::makeFourDimGrid(gdimension, GridDefaultSimd(4,vComplexD::Nsimd()), GridDefaultMpi());
+
+    // load gauge field
+    LatticeGaugeFieldD Umu(grid);
+
+    FieldMetaData header;
+    NerscIO::readConfiguration(Umu,header,filename);
+
+    std::vector< cgpt_Lattice_base* > U(4);
+    for (int mu=0;mu<4;mu++) {
+      auto lat = new cgpt_Lattice< iColourMatrix< vComplexD > >(grid);
+      lat->l = PeekIndex<LorentzIndex>(Umu,mu);
+      U[mu] = lat;
+    }
   }
 
   return NULL;

@@ -1,4 +1,4 @@
-# GPT - Grid production tools
+# GPT - Grid Python Toolkit
 
 GPT is a Python3 measurement interface for [Grid](https://github.com/paboyle/Grid).
 
