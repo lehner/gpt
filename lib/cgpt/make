@@ -1,3 +1,4 @@
+
 #!/bin/bash
 GRID=/sdcc/u/clehner/Grid/build
 NPARALLEL=8
@@ -43,6 +44,4 @@ done
 
 wait
 
-# linking
-echo "Linking"
 ${CXX} --shared -fPIC -O3 build/*.o ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so

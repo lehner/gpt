@@ -5,6 +5,7 @@
 #
 import cgpt
 import gpt
+import numpy
 
 class factor_unary:
     NONE = 0
@@ -24,11 +25,14 @@ class expr_unary:
 # - an object could be a spin or a gauge matrix
 
 class expr:
+    __array_priority__ = 10000 # make sure we take precendence over numpy operators
     def __init__(self, val, unary = expr_unary.NONE):
         if type(val) == gpt.lattice:
             self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
         #elif type(val) == gpt.gamma:
         #    self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
+        elif type(val) == numpy.ndarray:
+            self.val = [ (1.0, [ (factor_unary.NONE,val.astype(numpy.complex128)) ]) ]
         elif type(val) == expr:
             self.val = val.val
             unary = unary | val.unary
@@ -127,21 +131,27 @@ def get_grid(e):
     else:
         assert(0)
 
-def adj(l):
-    if type(l) == expr:
-        return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_TRANS|factor_unary.BIT_CONJ),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
-    else:
-        return adj(expr(l))
-
 def conj(l):
     if type(l) == expr:
         return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_CONJ),x[1]) for x in a[1] ]) for a in l.val ] )
+    elif type(l) == numpy.ndarray:
+        return numpy.conjugate(l)
     else:
         return adj(expr(l))
 
 def transpose(l):
     if type(l) == expr:
         return expr( [ (a[0],[ (x[0] ^ (factor_unary.BIT_TRANS),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
+    elif type(l) == numpy.ndarray:
+        return numpy.transpose(l)
+    else:
+        return adj(expr(l))
+
+def adj(l):
+    if type(l) == expr:
+        return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_TRANS|factor_unary.BIT_CONJ),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
+    elif type(l) == numpy.ndarray:
+        return conj(transpose(l))
     else:
         return adj(expr(l))
 

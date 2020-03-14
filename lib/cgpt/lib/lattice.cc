@@ -5,23 +5,18 @@
 */
 #include "lib.h"
 
-// also update:
-// lattice/types.h
-// peekpoke.h
-// expression/mul.h
 template<typename vtype> 
 void create_lattice_prec(void* & plat, GridCartesian* grid, const vtype& t, const std::string& otype) {
-  if (otype == "ot_complex") {
-    plat = new cgpt_Lattice< iSinglet< vtype > >(grid);
-  } else if (otype == "ot_mcolor") {
-    plat = new cgpt_Lattice< iColourMatrix< vtype > >(grid);
-  } else if (otype == "ot_vcolor") {
-    plat = new cgpt_Lattice< iColourVector< vtype > >(grid);
-  } else if (otype == "ot_mspincolor") {
-    plat = new cgpt_Lattice< iSpinColourMatrix< vtype > >(grid);
-  } else if (otype == "ot_vspincolor") {
-    plat = new cgpt_Lattice< iSpinColourVector< vtype > >(grid);
-  }
+
+#define PER_TENSOR_TYPE(T) if (otype == get_otype(T<vtype>())) {	\
+    plat = new cgpt_Lattice< T< vtype > >(grid);			\
+    return;								\
+  } else 
+
+#include "tensors.h"
+
+#undef PER_TENSOR_TYPE
+  { ERR("Unknown type"); }
 }
 
 EXPORT_BEGIN(create_lattice) {

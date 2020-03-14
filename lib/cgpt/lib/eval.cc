@@ -6,16 +6,20 @@
 #include "lib.h"
 
 struct _eval_factor_ {
-  enum { LATTICE, GAMMA } type;
+  enum { LATTICE, ARRAY, GAMMA } type;
   int unary;
   union {
     cgpt_Lattice_base* lattice;
+    PyArrayObject* array;
     int gamma;
   };
 
   void release() {
-    if (type == LATTICE)
+    if (type == LATTICE) {
       delete lattice;
+    } else if (type == ARRAY) {
+      Py_DECREF(array);
+    }
   }
 };
 
@@ -51,6 +55,9 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms) {
       if (PyObject_HasAttrString(f,"obj")) {
 	factor.lattice = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyObject_GetAttrString(f,"obj"));
 	factor.type = _eval_factor_::LATTICE;
+      } else if (PyArray_Check(f)) {
+	factor.array = (PyArrayObject*)f;
+	factor.type = _eval_factor_::ARRAY;
       } else {
 	ASSERT(0);
       }
@@ -67,6 +74,18 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
     if (rhs.type == _eval_factor_::LATTICE) {
       dst.type = _eval_factor_::LATTICE;
       dst.lattice = lhs.lattice->mul( 0, false, rhs.lattice, lhs.unary, rhs.unary, unary);
+    } else if (rhs.type == _eval_factor_::ARRAY) {
+      ASSERT(rhs.unary == 0);
+      dst.type = _eval_factor_::LATTICE;
+      dst.lattice = lhs.lattice->matmul( 0, false, rhs.array, lhs.unary, unary, false);
+    } else {
+      ASSERT(0);
+    }
+  } else if (lhs.type == _eval_factor_::ARRAY) {
+    ASSERT(lhs.unary == 0);
+    if (rhs.type == _eval_factor_::LATTICE) {
+      dst.type = _eval_factor_::LATTICE;
+      dst.lattice = rhs.lattice->matmul( 0, false, lhs.array, rhs.unary, unary, true);
     } else {
       ASSERT(0);
     }
@@ -160,6 +179,13 @@ EXPORT_BEGIN(eval) {
   eval_convert_factors(_list,terms);
 
   cgpt_Lattice_base* dst_orig = dst;
+
+  // TODO: need a faster code path for dst = A*B*C*D*... ; in this case I could avoid one copy
+  // if (expr_class_prod()) 
+  //   eval_prod()
+  // else
+
+  // General code path:
   dst=eval_general(dst,terms,_unary,ac);
 
   if (new_lattice)

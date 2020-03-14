@@ -38,4 +38,17 @@ g.message(m)
 U[0][0,1,2,3]=m
 g.message(U[0][0,1,2,3])
 
+# Expression including numpy array
+r=g.eval( m*U[0] + U[1]*m )
+g.message(g.norm2(r))
 
+# test
+tg=g.grid([2,2,2,2], g.single)
+cf=g.complex(tg)
+cf[:]=0
+cf[0,0,0,0]=2
+g.message(cf)
+
+# todo: add explicit type conversion
+# g.vspincolor([[0,1,-2],[0,1,0],[0,0,0],[0,0,0]])
+g.message(g.eval(np.array([[0,1,-2],[0,1,0],[0,0,0],[0,0,0]])*cf))

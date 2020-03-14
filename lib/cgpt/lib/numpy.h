@@ -52,27 +52,56 @@ PyObject* cgpt_numpy_export(const sobj& v) {
 }
 
 template<typename sobj>
+bool cgpt_numpy_import(sobj& dst,PyArrayObject* src,std::vector<long>& dim) {
+  typedef typename sobj::scalar_type t;
+
+  int nd = PyArray_NDIM(src);
+  if (nd != (int)dim.size())
+    return false;
+  long* tdim = PyArray_DIMS(src);
+  int n = 1;
+  for (int i=0;i<nd;i++) {
+    if (tdim[i] != dim[i])
+      return false;
+    n *= dim[i];
+  }
+
+  t* c = (t*)&dst;
+
+  int dt = PyArray_TYPE(src);
+  if (dt == NPY_COMPLEX64) {
+    ComplexF* s = (ComplexF*)PyArray_DATA(src);
+#pragma omp parallel for
+    for (int i=0;i<n;i++)
+      c[i] = (t)s[i];
+  } else if (dt == NPY_COMPLEX128) {
+    ComplexD* s = (ComplexD*)PyArray_DATA(src);
+#pragma omp parallel for
+    for (int i=0;i<n;i++)
+      c[i] = (t)s[i];
+  } else {
+    ERR("Incompatible numpy type");
+  }
+
+  return true;
+}
+
+template<typename sobj>
 void cgpt_numpy_import(sobj& dst,PyObject* _src) {
   typedef typename sobj::scalar_type t;
   std::vector<long> dim;
   cgpt_numpy_data_layout(dst,dim);
 
-  t* c = (t*)&dst;
-
   if (dim.empty()) {
     ComplexD src;
     cgpt_convert(_src,src);
+    t* c = (t*)&dst;
     c[0] = src;
   } else {
     ASSERT(PyArray_Check(_src));
     PyArrayObject* src = (PyArrayObject*)_src;
-    int nd = PyArray_NDIM(src);
-    ASSERT(nd == (int)dim.size());
-    long* tdim = PyArray_DIMS(src);
-    for (int i=0;i<nd;i++)
-      ASSERT(tdim[i] == dim[i]);
-
-    memcpy(c,PyArray_DATA(src),sizeof(sobj));    
+    if (!cgpt_numpy_import(dst,src,dim))
+      ERR("Incompatible types");
   }
 }
 

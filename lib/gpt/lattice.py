@@ -27,6 +27,7 @@ def meminfo():
 
 
 class lattice:
+    __array_priority__ = 10000 # make sure we take precendence over numpy operators
     def __init__(self, first, second = None, third = None):
         self.metadata={}
         if type(first) == gpt.grid and not second is None and not third is None:

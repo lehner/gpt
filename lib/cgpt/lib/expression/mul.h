@@ -3,6 +3,10 @@
 
   Authors: Christoph Lehner 2020
 */
+#define typeis(a,at) ( a->type() == typeid(at<vtype>).name() )
+#define castas(a,at) ( ((cgpt_Lattice<at<vtype> >*)a)->l )
+#define typeOpen(a,at) if (typeis(a,at)) { auto& l ## a = castas(a,at);
+#define typeClose() }
 
 template<typename A, typename B>
   cgpt_Lattice_base* lattice_mul(cgpt_Lattice_base* dst, bool ac, const A& la, const B& lb,int unary_expr) {
@@ -39,27 +43,14 @@ template<typename A, typename B>
 
 #define _COMPATIBLE_(t) typeOpen(b,t) { return lattice_mul(dst,ac, unary_a,la,unary_b,lb,unary_expr); } typeClose();
 
-///////////////////////////
-// Legal multiplication table (Grid/tensors/Tensor_arith_mac.h)
-///////////////////////////
-// scal x scal = scal
-// mat x  mat  = mat
-// mat  x scal = mat
-// scal x mat  = mat
-// mat  x vec  = vec
-// vec  x scal = vec
-// scal x vec  = vec
-///////////////////////////
-
-// need to supplement this for current Grid
-template<class vtype,int N> accelerator_inline iVector<vtype,N> transpose(const iVector<vtype,N>&r) { return r; }
-
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSinglet<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
   //print(adj(Gamma::Algebra::Gamma5));
   _COMPATIBLE_(iSinglet);
   _COMPATIBLE_(iColourVector);
   _COMPATIBLE_(iColourMatrix);
+  _COMPATIBLE_(iSpinColourVector);
+  _COMPATIBLE_(iSpinColourMatrix);
   ERR("Not implemented");
 
 #if 0
@@ -99,6 +90,7 @@ cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a
   ERR("Not implemented");
 }
 
+// TODO: explicitly instantiate exact templates
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourMatrix<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
   _COMPATIBLE_(iSinglet);
@@ -108,5 +100,11 @@ cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a
   ERR("Not implemented");
 }
 
+#undef typeClose
+#undef typeOpen
+#undef castas
+#undef typeis
+#undef _OUTER_PRODUCT_
+#undef _INNER_PRODUCT_
 #undef _COMPATIBLE_
 
