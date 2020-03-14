@@ -40,19 +40,11 @@ template<typename A, typename B>
 
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSinglet<vtype> >& la, PyArrayObject* b, int unary_expr, bool rev) {
-  //print(adj(Gamma::Algebra::Gamma5));
   _COMPATIBLE_RL_(iColourVector);
   _COMPATIBLE_RL_(iColourMatrix);
   _COMPATIBLE_RL_(iSpinColourVector);
   _COMPATIBLE_RL_(iSpinColourMatrix);
   ERR("Not implemented");
-
-#if 0
-    GridCartesian* grid;
-    Lattice< iColourVector<vComplexF> > a(grid),b(grid);
-    Lattice< iColourMatrix<vComplexF> > m(grid);
-    print( adj(a)*m );
-#endif
 }
 
 #define _INNER_OUTER_PRODUCT_(t) ERR("Not implemented"); return 0;
@@ -60,41 +52,8 @@ cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unar
 //    if (rev) { return lattice_unary_lat(dst, ac, outerProduct(ab,la), unary_expr ); } else \
 //      { return lattice_unary_lat(dst, ac, localInnerProduct(la,ab), unary_expr ); } } typeClose(); }
 
-template<class ll,class rr>
-  inline auto outerProduct (const Lattice<ll> &lhs,const rr &rhs) -> Lattice<decltype(outerProduct(ll(),rr()))>
-{
-  typedef decltype(coalescedRead(ll())) sll;
-  typedef decltype(coalescedRead(rr())) srr;
-  Lattice<decltype(outerProduct(ll(),rr()))> ret(rhs.Grid());
-  auto lhs_v = lhs.View();
-  auto ret_v = ret.View();
-  accelerator_for(ss,lhs_v.size(),1,{
-      // FIXME had issues with scalar version of outer 
-      // Use vector [] operator and don't read coalesce this loop
-      ret_v[ss]=outerProduct(lhs_v[ss],rhs);
-    });
-  return ret;
-}
-
-template<class ll,class rr>
-  inline auto outerProduct (const ll &lhs,const Lattice<rr> &rhs) -> Lattice<decltype(outerProduct(ll(),rr()))>
-{
-  typedef decltype(coalescedRead(ll())) sll;
-  typedef decltype(coalescedRead(rr())) srr;
-  Lattice<decltype(outerProduct(ll(),rr()))> ret(rhs.Grid());
-  auto rhs_v = rhs.View();
-  auto ret_v = ret.View();
-  accelerator_for(ss,rhs_v.size(),1,{
-      // FIXME had issues with scalar version of outer 
-      // Use vector [] operator and don't read coalesce this loop
-      ret_v[ss]=outerProduct(lhs,rhs_v[ss]);
-    });
-  return ret;
-}
-
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourVector<vtype> >& la, PyArrayObject* b, int unary_expr, bool rev) {
-  _COMPATIBLE_RL_(iSinglet);
   _INNER_OUTER_PRODUCT_(iColourVector);
   ERR("Not implemented");
 }
