@@ -1,0 +1,71 @@
+#
+# GPT
+#
+# Authors: Christoph Lehner 2020
+#
+import cgpt
+import gpt
+import numpy as np
+
+class tensor:
+
+    def __init__(self, array, otype):
+        self.array = array
+        self.otype = otype
+        assert(self.array.shape == otype.shape)
+
+    def __repr__(self):
+        return "tensor(%s,%s)" % (str(self.array),self.otype)
+
+    def __getitem__(self, a):
+        return self.array.__getitem__(a)
+
+    def __setitem__(self, a, b):
+        return self.array.__setitem__(a,b)
+
+    def transposable(self):
+        return not (self.otype.transposed is None)
+
+    def transpose(self):
+        if not self.transposable():
+            return gpt.transpose( gpt.expr(self) )
+        return tensor( np.transpose(self.array, self.otype.transposed), self.otype )
+
+    def conj(self):
+        return tensor( self.array.conj(), self.otype )
+
+    def adj(self):
+        if not self.transposable():
+            return gpt.adj( gpt.expr(self) )
+        return tensor( np.transpose(self.array.conj(), self.otype.transposed), self.otype )
+
+    def trace(self, t):
+        res = self
+        if (t & gpt.expr_unary.BIT_SPINTRACE):
+            st=res.otype.spintrace
+            assert(not st is None)
+            if not st[0] is None:
+                res= tensor( np.trace( res.array, offset = 0, axis1 = st[0], axis2 = st[1]), st[2] )
+        if (t & gpt.expr_unary.BIT_COLORTRACE):
+            ct=res.otype.colortrace
+            assert(not ct is None)
+            if not ct[0] is None:
+                res= tensor( np.trace( res.array, offset = 0, axis1 = ct[0], axis2 = ct[1]), ct[2] )
+        if res.otype == gpt.ot_complex:
+            res = complex(res.array)
+        return res
+
+    def norm2(self):
+        return np.linalg.norm(self.array) ** 2.0
+
+    def __mul__(self, other):
+        if type(other) == gpt.tensor:
+            tag = (self.otype,other.otype)
+            assert(tag in gpt.otype.mtab)
+            mt=gpt.otype.mtab[tag]
+            return tensor( np.tensordot(self.array, other.array, axes = mt[1]), mt[0])
+        elif type(other) == gpt.expr and other.is_single(gpt.tensor):
+            ue,uf=other.get_single_unaries()
+            assert(0)
+        else:
+            return other.__rmul__(self)

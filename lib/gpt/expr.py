@@ -31,8 +31,8 @@ class expr:
             self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
         #elif type(val) == gpt.gamma:
         #    self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
-        elif type(val) == numpy.ndarray:
-            self.val = [ (1.0, [ (factor_unary.NONE,val.astype(numpy.complex128)) ]) ]
+        elif type(val) == gpt.tensor:
+            self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
         elif type(val) == expr:
             self.val = val.val
             unary = unary | val.unary
@@ -43,6 +43,16 @@ class expr:
         else:
             raise Exception("Unknown type " + str(type(val)))
         self.unary = unary
+
+    def is_single(self, t = None):
+        b=(len(self.val) == 1 and self.val[0][0] == 1.0 and
+           len(self.val[0][1]) == 1)
+        if not t is None:
+            b = b and type(self.val[0][1][1]) == t
+        return b
+
+    def get_single_unaries(self):
+        return (self.unary, self.val[0][1][0])
 
     def __mul__(self, l):
         if type(l) == expr:
@@ -134,28 +144,30 @@ def get_grid(e):
 def conj(l):
     if type(l) == expr:
         return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_CONJ),x[1]) for x in a[1] ]) for a in l.val ] )
-    elif type(l) == numpy.ndarray:
-        return numpy.conjugate(l)
+    elif type(l) == gpt.tensor:
+        return l.conj()
     else:
-        return adj(expr(l))
+        return conj(expr(l))
 
 def transpose(l):
     if type(l) == expr:
         return expr( [ (a[0],[ (x[0] ^ (factor_unary.BIT_TRANS),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
-    elif type(l) == numpy.ndarray:
-        return numpy.transpose(l)
+    elif type(l) == gpt.tensor and l.transposable():
+        return l.transpose()
     else:
-        return adj(expr(l))
+        return transpose(expr(l))
 
 def adj(l):
     if type(l) == expr:
         return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_TRANS|factor_unary.BIT_CONJ),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
-    elif type(l) == numpy.ndarray:
-        return conj(transpose(l))
+    elif type(l) == gpt.tensor and l.transposable():
+        return l.adj()
     else:
         return adj(expr(l))
 
 def trace(l, t = expr_unary.BIT_SPINTRACE|expr_unary.BIT_COLORTRACE):
+    if type(l) == gpt.tensor:
+        return l.trace(t)
     return expr( l, t )
 
 def apply_unary(l):
@@ -189,4 +201,8 @@ def expr_eval(first, second = None, ac = False):
 
 def sum(e):
     l=gpt.eval(e)
-    return cgpt.lattice_sum(l.obj)
+    val= cgpt.lattice_sum(l.obj)
+    if type(val) == complex:
+        return val
+    return gpt.tensor(val, l.otype)
+

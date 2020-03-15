@@ -34,10 +34,14 @@ def copy(first, second = None):
     return t
 
 def norm2(l):
+    if type(l) == gpt.tensor:
+        return l.norm2()
     l=gpt.eval(l)
     return cgpt.lattice_norm2(l.obj)
 
 def innerProduct(a,b):
+    if type(a) == gpt.tensor and type(b) == gpt.tensor:
+        return gpt.adj(a) * b
     a=gpt.eval(a)
     b=gpt.eval(b)
     return cgpt.lattice_innerProduct(a.obj,b.obj)

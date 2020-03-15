@@ -64,8 +64,8 @@ public:
     return cgpt_compatible_linear_combination(l,dst,ac,f,unary_factor,unary_expr);
   }
 
-  virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, int unary_a, int unary_expr, bool reverse) {
-    return cgpt_lattice_matmul(dst,ac,unary_a,l,b,unary_expr,reverse);
+  virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse) {
+    return cgpt_lattice_matmul(dst,ac,unary_a,l,b,bot,unary_b,unary_expr,reverse);
   }
 
   virtual void copy_from(cgpt_Lattice_base* _src) {

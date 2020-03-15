@@ -20,7 +20,7 @@ template<typename T> cgpt_Lattice_base* cgpt_compatible_linear_combination(Latti
 
 #define PER_TENSOR_TYPE(T) \
   template<typename vtype> cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la,int unary_b, cgpt_Lattice_base* b, int unary_expr); \
-  template<typename vtype> cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la, PyArrayObject* b, int unary_expr, bool reverse);
+  template<typename vtype> cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool reverse);
 
 #include "tensors.h"
 

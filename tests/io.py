@@ -6,6 +6,7 @@
 #
 import gpt as g
 import numpy as np
+import sys
 
 # load configuration
 U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
@@ -22,33 +23,34 @@ def plaquette(U):
             tr += g.sum( g.trace(U[mu] * g.cshift( U[nu], mu, 1) * g.adj( g.cshift( U[mu], nu, 1 ) ) * g.adj( U[nu] )) )
     return 2.*tr.real/vol/4./3./3.
 
+g.message(g.sum(U[0]))
+sys.exit(0)
+
 # Calculate Plaquette
 g.message(g.qcd.gauge.plaquette(U))
 g.message(plaquette(U))
 
 # Calculate U^\dag U
-u = np.matrix(U[0][0,1,2,3])
-g.message( u.getH() * u )
+u = U[0][0,1,2,3]
 
-# Manipulate entire matrix and reassign to point in field
-m=U[0][0,1,2,3]
-g.message(m)
-m[0][1] = 2
-g.message(m)
-U[0][0,1,2,3]=m
-g.message(U[0][0,1,2,3])
+v = g.vcolor([0,1,0])
+
+g.message(g.adj(v))
+g.message(g.adj(u) * u * v) 
+
+
+gr=g.grid([2,2,2,2],g.single)
+g.message(g.mspincolor(gr)[0,0,0,0] * g.vspincolor(gr)[0,0,0,0])
+
+g.message(g.trace(g.mspincolor(gr)[0,0,0,0]))
 
 # Expression including numpy array
-r=g.eval( m*U[0] + U[1]*m )
+r=g.eval( u*U[0] + U[1]*u )
 g.message(g.norm2(r))
 
-# test
-tg=g.grid([2,2,2,2], g.single)
-cf=g.complex(tg)
-cf[:]=0
-cf[0,0,0,0]=2
-g.message(cf)
+# test inner and outer products
+v=g.vspincolor([[0,1,0],[1,0,0],[1,1,0],[1,1,1j]])
+g.message(g.norm2(v))
 
-# todo: add explicit type conversion
-# g.vspincolor([[0,1,-2],[0,1,0],[0,0,0],[0,0,0]])
-g.message(g.eval(np.array([[0,1,-2],[0,1,0],[0,0,0],[0,0,0]])*cf))
+g.message(g.adj(v) * v)
+g.message(v * g.adj(v))

@@ -4,39 +4,79 @@
 # Authors: Christoph Lehner 2020
 #
 import gpt
+import numpy
+
+###
+# Helper
+def gpt_object(first, ot):
+    if type(first) == gpt.grid:
+        return gpt.lattice(first, ot)
+    elif type(first) == list or type(first) == numpy.ndarray:
+        return gpt.tensor(numpy.array(first, dtype=numpy.complex128), ot)
+
+###
+# Types below
 
 class ot_complex:
     nfloats=2
+    shape=()
+    transposed=None
+    spintrace=(None,None,None) # do nothing
+    colortrace=(None,None,None)
 
 def complex(grid):
-    return gpt.lattice(grid, ot_complex)
+    return gpt_object(grid, ot_complex)
 
 
 class ot_mcolor:
     nfloats=2*3*3
+    shape=(3,3)
+    transposed=(1,0)
+    spintrace=(None,None,None) # do nothing
+    colortrace=(0,1,ot_complex)
 
 def mcolor(grid):
-    return gpt.lattice(grid, ot_mcolor)
+    return gpt_object(grid, ot_mcolor)
 
 
 class ot_vcolor:
     nfloats=2*3
+    shape=(3,)
+    transposed=None
+    spintrace=None # not supported
+    colortrace=None
 
 def vcolor(grid):
-    return gpt.lattice(grid, ot_vcolor)
+    return gpt_object(grid, ot_vcolor)
 
 
 class ot_mspincolor:
     nfloats=2*3*3*4*4
+    shape=(4,4,3,3)
+    transposed=(1,0,3,2)
+    spintrace=(0,1,ot_mcolor)
+    colortrace=None # not supported, due to current lack of ot_mspin
 
 def mspincolor(grid):
-    return gpt.lattice(grid, ot_mspincolor)
+    return gpt_object(grid, ot_mspincolor)
 
 
 class ot_vspincolor:
     nfloats=2*3*4
+    shape=(4,3)
+    transposed=None
+    spintrace=None
+    colortrace=None
 
 def vspincolor(grid):
-    return gpt.lattice(grid, ot_vspincolor)
+    return gpt_object(grid, ot_vspincolor)
 
-# mspin, vspin
+
+###
+# Multiplication table
+mtab = {
+    (ot_mcolor,ot_mcolor) : (ot_mcolor,(1,0)),
+    (ot_mcolor,ot_vcolor) : (ot_vcolor,(1,0)),
+    (ot_mspincolor,ot_mspincolor) : (ot_mspincolor,([1,3],[0,2])),
+    (ot_mspincolor,ot_vspincolor) : (ot_vspincolor,([1,3],[0,1]))
+}

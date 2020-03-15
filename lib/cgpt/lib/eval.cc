@@ -14,6 +14,8 @@ struct _eval_factor_ {
     int gamma;
   };
 
+  std::string otype;
+
   void release() {
     if (type == LATTICE) {
       delete lattice;
@@ -55,8 +57,9 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms) {
       if (PyObject_HasAttrString(f,"obj")) {
 	factor.lattice = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyObject_GetAttrString(f,"obj"));
 	factor.type = _eval_factor_::LATTICE;
-      } else if (PyArray_Check(f)) {
-	factor.array = (PyArrayObject*)f;
+      } else if (PyObject_HasAttrString(f,"array")) {
+	factor.array = (PyArrayObject*)PyObject_GetAttrString(f,"array");
+	cgpt_convert(PyObject_GetAttrString(f,"otype"),factor.otype);
 	factor.type = _eval_factor_::ARRAY;
       } else {
 	ASSERT(0);
@@ -77,7 +80,7 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
     } else if (rhs.type == _eval_factor_::ARRAY) {
       ASSERT(rhs.unary == 0);
       dst.type = _eval_factor_::LATTICE;
-      dst.lattice = lhs.lattice->matmul( 0, false, rhs.array, lhs.unary, unary, false);
+      dst.lattice = lhs.lattice->matmul( 0, false, rhs.array, rhs.otype, rhs.unary, lhs.unary, unary, false);
     } else {
       ASSERT(0);
     }
@@ -85,7 +88,7 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
     ASSERT(lhs.unary == 0);
     if (rhs.type == _eval_factor_::LATTICE) {
       dst.type = _eval_factor_::LATTICE;
-      dst.lattice = rhs.lattice->matmul( 0, false, lhs.array, rhs.unary, unary, true);
+      dst.lattice = rhs.lattice->matmul( 0, false, lhs.array, lhs.otype, lhs.unary, rhs.unary, unary, true);
     } else {
       ASSERT(0);
     }

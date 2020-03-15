@@ -3,7 +3,7 @@
 
   Authors: Christoph Lehner 2020
 */
-#define typeOpen(a,at) { at< typename vtype::scalar_type > ab; std::vector<long> dim; cgpt_numpy_data_layout(ab,dim); if (cgpt_numpy_import(ab,a,dim)) {
+#define typeOpen(a,at) { at< typename vtype::scalar_type > ab; if (bot == get_otype(ab)) { cgpt_numpy_import(ab,(PyObject*)a);
 #define typeClose() }}
 
 template<typename A, typename B>
@@ -39,11 +39,13 @@ template<typename A, typename B>
 #define _COMPATIBLE_L_(t) typeOpen(b,t) { if (rev) { ERR("Not supported"); } else { return lattice_matmul(dst,ac, unary_a,la,ab,unary_expr); } } typeClose();
 
 template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSinglet<vtype> >& la, PyArrayObject* b, int unary_expr, bool rev) {
-  _COMPATIBLE_RL_(iColourVector);
-  _COMPATIBLE_RL_(iColourMatrix);
-  _COMPATIBLE_RL_(iSpinColourVector);
-  _COMPATIBLE_RL_(iSpinColourMatrix);
+cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSinglet<vtype> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
+  if (unary_b == 0) {
+    _COMPATIBLE_RL_(iColourVector);
+    _COMPATIBLE_RL_(iColourMatrix);
+    _COMPATIBLE_RL_(iSpinColourVector);
+    _COMPATIBLE_RL_(iSpinColourMatrix);
+  }
   ERR("Not implemented");
 }
 
@@ -53,31 +55,35 @@ cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unar
 //      { return lattice_unary_lat(dst, ac, localInnerProduct(la,ab), unary_expr ); } } typeClose(); }
 
 template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourVector<vtype> >& la, PyArrayObject* b, int unary_expr, bool rev) {
+cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourVector<vtype> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
   _INNER_OUTER_PRODUCT_(iColourVector);
   ERR("Not implemented");
 }
 
 template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourMatrix<vtype> >& la, PyArrayObject* b, int unary_expr, bool rev) {
-  _COMPATIBLE_RL_(iColourMatrix);
-  _COMPATIBLE_RL_(iSpinColourMatrix);
-  _COMPATIBLE_L_(iColourVector);
-  _COMPATIBLE_L_(iSpinColourVector);
+cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourMatrix<vtype> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
+  if (unary_b == 0) {
+    _COMPATIBLE_RL_(iColourMatrix);
+    _COMPATIBLE_RL_(iSpinColourMatrix);
+    _COMPATIBLE_L_(iColourVector);
+    _COMPATIBLE_L_(iSpinColourVector);
+  }
   ERR("Not implemented");
 }
 
 template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourVector<vtype> >& la, PyArrayObject* b, int unary_expr, bool rev) {
+cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourVector<vtype> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
   _INNER_OUTER_PRODUCT_(iSpinColourVector);
   ERR("Not implemented");
 }
 
 template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourMatrix<vtype> >& la, PyArrayObject* b, int unary_expr, bool rev) {
-  _COMPATIBLE_RL_(iColourMatrix);
-  _COMPATIBLE_RL_(iSpinColourMatrix);
-  _COMPATIBLE_L_(iSpinColourVector);
+cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourMatrix<vtype> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
+  if (unary_b == 0) {
+    _COMPATIBLE_RL_(iColourMatrix);
+    _COMPATIBLE_RL_(iSpinColourMatrix);
+    _COMPATIBLE_L_(iSpinColourVector);
+  }
   ERR("Not implemented");
 }
 

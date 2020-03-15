@@ -65,7 +65,10 @@ class lattice:
 
     def __getitem__(self, key):
         assert(type(key) == tuple)
-        return cgpt.lattice_get_val(self.obj, key)
+        val = cgpt.lattice_get_val(self.obj, key)
+        if type(val) == complex:
+            return val
+        return gpt.tensor(val, self.otype)
 
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype,self.grid.precision)
