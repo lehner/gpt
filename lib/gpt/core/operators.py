@@ -43,15 +43,17 @@ def adj(l):
     else:
         return adj(gpt.expr(l))
 
-def trace(l, t = gpt.expr_unary.BIT_SPINTRACE|gpt.expr_unary.BIT_COLORTRACE):
-    if type(l) == gpt.tensor:
-        return l.trace(t)
-    return gpt.expr( l, t )
-
 def apply_expr_unary(l):
     if l.unary == gpt.expr_unary.NONE:
         return l
     return gpt.expr(gpt.eval(l))
+
+def trace(l, t = None):
+    if t is None:
+        t = gpt.expr_unary.BIT_SPINTRACE|gpt.expr_unary.BIT_COLORTRACE
+    if type(l) == gpt.tensor:
+        return l.trace(t)
+    return gpt.expr( l, t )
 
 def expr_eval(first, second = None, ac = False):
 
