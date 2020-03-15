@@ -60,6 +60,8 @@ class lattice:
             key = ()
         
         assert(type(key) == tuple)
+        if type(value) == gpt.tensor:
+            value = value.array
         cgpt.lattice_set_val(self.obj, key, value)
 
     def __getitem__(self, key):

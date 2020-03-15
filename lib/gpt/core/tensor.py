@@ -64,6 +64,8 @@ class tensor:
             assert(tag in gpt.otype.mtab)
             mt=gpt.otype.mtab[tag]
             return tensor( np.tensordot(self.array, other.array, axes = mt[1]), mt[0])
+        elif type(other) == complex:
+            return tensor( self.array * other, self.otype )
         elif type(other) == gpt.expr and other.is_single(gpt.tensor):
             ue,uf,to=other.get_single()
             if ue == 0 and uf & gpt.factor_unary.BIT_TRANS != 0:
@@ -80,3 +82,32 @@ class tensor:
             assert(0)
         else:
             return other.__rmul__(self)
+
+    def __rmul__(self, other):
+        if type(other) == complex:
+            return tensor( self.array * other, self.otype )
+        else:
+            return other.__mul__(self)
+
+    def __add__(self, other):
+        assert(self.otype == other.otype)
+        return tensor( self.array + other.array, self.otype)
+
+    def __sub__(self, other):
+        assert(self.otype == other.otype)
+        return tensor( self.array - other.array, self.otype)
+
+    def __iadd__(self, other):
+        assert(self.otype == other.otype)
+        self.array += other.array
+        return self
+
+    def __isub__(self, other):
+        assert(self.otype == other.otype)
+        self.array -= other.array
+        return self
+
+    def __itruediv__(self, other):
+        assert(type(other) == complex)
+        self.array /= other
+        return self

@@ -7,6 +7,7 @@ from gpt.core.grid import grid
 from gpt.core.precision import single, double
 from gpt.core.lattice import lattice, meminfo
 from gpt.core.tensor import tensor
+from gpt.core.gamma import gamma, gamma_base
 from gpt.core.log import message
 from gpt.core.transform import cshift, copy, norm2, innerProduct, axpy_norm
 from gpt.core.expr import expr, expr_unary, factor_unary

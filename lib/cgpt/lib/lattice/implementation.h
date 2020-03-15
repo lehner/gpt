@@ -68,6 +68,10 @@ public:
     return cgpt_lattice_matmul(dst,ac,unary_a,l,b,bot,unary_b,unary_expr,reverse);
   }
 
+  virtual cgpt_Lattice_base* gammamul(cgpt_Lattice_base* dst, bool ac, int gamma, int unary_a, int unary_expr, bool reverse) {
+    return cgpt_lattice_gammamul(dst,ac,unary_a,l,gamma,unary_expr,reverse);
+  }
+
   virtual void copy_from(cgpt_Lattice_base* _src) {
     cgpt_Lattice<T>* src = compatible<T>(_src);
     l = src->l;

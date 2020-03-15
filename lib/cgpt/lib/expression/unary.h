@@ -68,4 +68,30 @@ cgpt_Lattice_base* lattice_unary_lat(cgpt_Lattice_base* dst, bool ac, const A& l
   ERR("Not implemented");
 }
 
+template<typename A, typename B>
+  cgpt_Lattice_base* lattice_unary_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr) {
+  if (unary_a == 0) {
+    return lattice_unary(dst,ac, la*ab,unary_expr);
+  } else if (unary_a == BIT_TRANS) {
+    return lattice_unary(dst,ac, transpose(la)*ab,unary_expr);
+  } else if (unary_a == BIT_CONJ) {
+    return lattice_unary(dst,ac, conjugate(la)*ab,unary_expr);
+  } else if (unary_a == BIT_CONJ|BIT_TRANS) {
+    return lattice_unary(dst,ac, adj(la)*ab,unary_expr);
+  }
+  ERR("Not implemented");
+}
 
+template<typename A, typename B>
+  cgpt_Lattice_base* lattice_unary_rmul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr) {
+  if (unary_a == 0) {
+    return lattice_unary(dst,ac, ab*la, unary_expr);
+  } else if (unary_a == BIT_TRANS) {
+    return lattice_unary(dst,ac, ab*transpose(la), unary_expr);
+  } else if (unary_a == BIT_CONJ) {
+    return lattice_unary(dst,ac, ab*conjugate(la), unary_expr);
+  } else if (unary_a == BIT_CONJ|BIT_TRANS) {
+    return lattice_unary(dst,ac, ab*adj(la), unary_expr);
+  }
+  ERR("Not implemented");
+}

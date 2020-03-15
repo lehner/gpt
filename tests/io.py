@@ -49,7 +49,31 @@ g.message(g.norm2(r))
 v=g.vspincolor([[0,0,0],[0,0,2],[0,0,0],[0,0,0]])
 w=g.vspincolor([[0,0,0],[0,0,0],[0,0,0],[1,0,0]])
 xx=v * g.adj(w)
-print(xx[1][3][2][0])
+g.message(xx[1][3][2][0])
 g.message(xx)
 g.message(g.adj(v) * v)
+
+g.message(g.transpose(v) * v)
+
+u += g.adj(u)
+g.message(u)
+
+
+v=g.vspincolor([[1,2,3],[1,2,3],[1,2,3],[1,2,3]])
+l=g.vspincolor(gr)
+l[:]=0
+l[0,0,0,0]=v
+
+g.message(l)
+
+for mu in [ 0,1,2,3,5]:
+    for nu in [0,1,2,3,5]:
+        g.message(mu,nu,g.norm2(g.gamma[mu] * g.gamma[nu] * l + g.gamma[nu] * g.gamma[mu] * l)/g.norm2(l))
+
+g.message(l)
+
+m=g.mspincolor(gr)
+m[0,0,0,0]=xx
+m @= g.gamma[5] * m * g.gamma[5]
+g.message(m)
 

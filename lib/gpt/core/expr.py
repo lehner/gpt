@@ -26,11 +26,7 @@ class expr_unary:
 
 class expr:
     def __init__(self, val, unary = expr_unary.NONE):
-        if type(val) == gpt.lattice:
-            self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
-        #elif type(val) == gpt.gamma:
-        #    self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
-        elif type(val) == gpt.tensor:
+        if type(val) in [ gpt.lattice, gpt.gamma_base, gpt.tensor ]:
             self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
         elif type(val) == expr:
             self.val = val.val

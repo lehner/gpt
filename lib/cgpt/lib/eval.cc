@@ -61,6 +61,9 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms) {
 	factor.array = (PyArrayObject*)PyObject_GetAttrString(f,"array");
 	cgpt_convert(PyObject_GetAttrString(f,"otype"),factor.otype);
 	factor.type = _eval_factor_::ARRAY;
+      } else if (PyObject_HasAttrString(f,"gamma")) {
+	factor.gamma = (int)PyLong_AsLong(PyObject_GetAttrString(f,"gamma"));
+	factor.type = _eval_factor_::GAMMA;
       } else {
 	ASSERT(0);
       }
@@ -81,6 +84,10 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
       ASSERT(rhs.unary == 0);
       dst.type = _eval_factor_::LATTICE;
       dst.lattice = lhs.lattice->matmul( 0, false, rhs.array, rhs.otype, rhs.unary, lhs.unary, unary, false);
+    } else if (rhs.type == _eval_factor_::GAMMA) {
+      ASSERT(rhs.unary == 0);
+      dst.type = _eval_factor_::LATTICE;
+      dst.lattice = lhs.lattice->gammamul( 0, false, rhs.gamma, lhs.unary, unary, false);
     } else {
       ASSERT(0);
     }
@@ -89,6 +96,14 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
     if (rhs.type == _eval_factor_::LATTICE) {
       dst.type = _eval_factor_::LATTICE;
       dst.lattice = rhs.lattice->matmul( 0, false, lhs.array, lhs.otype, lhs.unary, rhs.unary, unary, true);
+    } else {
+      ASSERT(0);
+    }
+  } else if (lhs.type == _eval_factor_::GAMMA) {
+    ASSERT(lhs.unary == 0);
+    if (rhs.type == _eval_factor_::LATTICE) {
+      dst.type = _eval_factor_::LATTICE;
+      dst.lattice = rhs.lattice->gammamul( 0, false, lhs.gamma, rhs.unary, unary, true);
     } else {
       ASSERT(0);
     }

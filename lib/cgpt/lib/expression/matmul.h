@@ -6,37 +6,9 @@
 #define typeOpen(a,at) { at< typename vtype::scalar_type > ab; if (bot == get_otype(ab)) { cgpt_numpy_import(ab,(PyObject*)a);
 #define typeClose() }}
 
-template<typename A, typename B>
-  cgpt_Lattice_base* lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr) {
-  if (unary_a == 0) {
-    return lattice_unary(dst,ac, la*ab,unary_expr);
-  } else if (unary_a == BIT_TRANS) {
-    return lattice_unary(dst,ac, transpose(la)*ab,unary_expr);
-  } else if (unary_a == BIT_CONJ) {
-    return lattice_unary(dst,ac, conjugate(la)*ab,unary_expr);
-  } else if (unary_a == BIT_CONJ|BIT_TRANS) {
-    return lattice_unary(dst,ac, adj(la)*ab,unary_expr);
-  }
-  ERR("Not implemented");
-}
-
-template<typename A, typename B>
-  cgpt_Lattice_base* lattice_rmatmul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr) {
-  if (unary_a == 0) {
-    return lattice_unary(dst,ac, ab*la, unary_expr);
-  } else if (unary_a == BIT_TRANS) {
-    return lattice_unary(dst,ac, ab*transpose(la), unary_expr);
-  } else if (unary_a == BIT_CONJ) {
-    return lattice_unary(dst,ac, ab*conjugate(la), unary_expr);
-  } else if (unary_a == BIT_CONJ|BIT_TRANS) {
-    return lattice_unary(dst,ac, ab*adj(la), unary_expr);
-  }
-  ERR("Not implemented");
-}
-
-#define _COMPATIBLE_RL_(t) typeOpen(b,t) { if (rev) { return lattice_rmatmul(dst,ac, unary_a,la,ab,unary_expr); } else { return lattice_matmul(dst,ac,unary_a,la,ab,unary_expr); } } typeClose();
-#define _COMPATIBLE_R_(t) typeOpen(b,t) { if (rev) { return lattice_rmatmul(dst,ac, unary_a,la,ab,unary_expr); } else { ERR("Not supported"); } } typeClose();
-#define _COMPATIBLE_L_(t) typeOpen(b,t) { if (rev) { ERR("Not supported"); } else { return lattice_matmul(dst,ac, unary_a,la,ab,unary_expr); } } typeClose();
+#define _COMPATIBLE_RL_(t) typeOpen(b,t) { if (rev) { return lattice_unary_rmul(dst,ac, unary_a,la,ab,unary_expr); } else { return lattice_unary_mul(dst,ac,unary_a,la,ab,unary_expr); } } typeClose();
+#define _COMPATIBLE_R_(t) typeOpen(b,t) { if (rev) { return lattice_unary_rmul(dst,ac, unary_a,la,ab,unary_expr); } else { ERR("Not supported"); } } typeClose();
+#define _COMPATIBLE_L_(t) typeOpen(b,t) { if (rev) { ERR("Not supported"); } else { return lattice_unary_mul(dst,ac, unary_a,la,ab,unary_expr); } } typeClose();
 
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSinglet<vtype> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
