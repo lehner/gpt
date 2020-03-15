@@ -5,7 +5,7 @@
 #
 import cgpt
 import gpt
-import numpy
+import numpy as np
 
 class factor_unary:
     NONE = 0
@@ -25,7 +25,6 @@ class expr_unary:
 # - an object could be a spin or a gauge matrix
 
 class expr:
-    __array_priority__ = 10000 # make sure we take precendence over numpy operators
     def __init__(self, val, unary = expr_unary.NONE):
         if type(val) == gpt.lattice:
             self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
@@ -48,29 +47,37 @@ class expr:
         b=(len(self.val) == 1 and self.val[0][0] == 1.0 and
            len(self.val[0][1]) == 1)
         if not t is None:
-            b = b and type(self.val[0][1][1]) == t
+            b = b and type(self.val[0][1][0][1]) == t
         return b
 
-    def get_single_unaries(self):
-        return (self.unary, self.val[0][1][0])
+    def get_single(self):
+        return (self.unary, self.val[0][1][0][0],self.val[0][1][0][1])
 
     def __mul__(self, l):
         if type(l) == expr:
-            lhs = apply_unary(self)
-            rhs = apply_unary(l)
-            
-            # need to avoid exponential growth of terms, so close before multiplying
-            # strategy: close the expr with more terms since it likely can be evaluated
-            #           more efficiently
-
-            # TODO: maybe even close both?
-            if len(lhs.val) > 1 and len(rhs.val) > 1:
-                if len(lhs.val) >= len(rhs.val):
-                    lhs=expr(gpt.eval(lhs))
-                else:
-                    rhs=expr(gpt.eval(rhs))
+            lhs = gpt.apply_expr_unary(self)
+            rhs = gpt.apply_expr_unary(l)
+            # close before product to avoid exponential growth of terms
+            if len(lhs.val) > 1:
+                lhs=expr(gpt.eval(lhs))
+            if len(rhs.val) > 1:
+                rhs=expr(gpt.eval(rhs))
             assert(len(lhs.val) == 1 or len(rhs.val) == 1)
             return expr( [ (a[0]*b[0], a[1] + b[1]) for a in lhs.val for b in rhs.val ] )
+        elif type(l) == gpt.tensor and self.is_single(gpt.tensor):
+            ue,uf,to=self.get_single()
+            if ue == 0 and uf & factor_unary.BIT_TRANS != 0:
+                tag = (to.otype,l.otype)
+                assert(tag in gpt.otype.itab)
+                mt=gpt.otype.itab[tag]
+                lhs=to.array
+                if uf & gpt.factor_unary.BIT_CONJ != 0:
+                    lhs=lhs.conj()
+                res=gpt.tensor( np.tensordot(lhs, l.array, axes = mt[1]), mt[0])
+                if res.otype == gpt.ot_complex:
+                    res = complex(res.array)
+                return res
+            assert(0)
         else:
             return self.__mul__(expr(l))
 
@@ -90,7 +97,7 @@ class expr:
             if self.unary == l.unary:
                 return expr( self.val + l.val, self.unary )
             else:
-                return expr( apply_unary(self).val + apply_unary(l).val )
+                return expr( gpt.apply_expr_unary(self).val + gpt.apply_expr_unary(l).val )
         else:
             return self.__add__(expr(l))
 
@@ -128,81 +135,3 @@ class expr:
         if self.unary & expr_unary.BIT_COLORTRACE:
             ret=ret + ")"
         return ret
-
-def get_grid(e):
-    if type(e) == expr:
-        assert(len(e.val) > 0)
-        return get_grid(e.val[0][1])
-    elif type(e) == list:
-        for i in e:
-            if type(i[1]) == gpt.lattice:
-                return i[1].grid
-        assert(0) # should never happen for a properly formed expression
-    else:
-        assert(0)
-
-def conj(l):
-    if type(l) == expr:
-        return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_CONJ),x[1]) for x in a[1] ]) for a in l.val ] )
-    elif type(l) == gpt.tensor:
-        return l.conj()
-    else:
-        return conj(expr(l))
-
-def transpose(l):
-    if type(l) == expr:
-        return expr( [ (a[0],[ (x[0] ^ (factor_unary.BIT_TRANS),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
-    elif type(l) == gpt.tensor and l.transposable():
-        return l.transpose()
-    else:
-        return transpose(expr(l))
-
-def adj(l):
-    if type(l) == expr:
-        return expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (factor_unary.BIT_TRANS|factor_unary.BIT_CONJ),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
-    elif type(l) == gpt.tensor and l.transposable():
-        return l.adj()
-    else:
-        return adj(expr(l))
-
-def trace(l, t = expr_unary.BIT_SPINTRACE|expr_unary.BIT_COLORTRACE):
-    if type(l) == gpt.tensor:
-        return l.trace(t)
-    return expr( l, t )
-
-def apply_unary(l):
-    if l.unary == expr_unary.NONE:
-        return l
-    return expr(gpt.eval(l))
-
-def expr_eval(first, second = None, ac = False):
-
-    if not second is None:
-        t_obj = first.obj
-        e = expr(second)
-    else:
-        if type(first) == gpt.lattice:
-            return first
-
-        e = expr(first)
-        t_obj = 0
-
-    if "eval" in gpt.default.verbose:
-        gpt.message("GPT::verbose::eval: " + str(e))
-
-    if t_obj != 0:
-        assert(0 == cgpt.eval(t_obj, e.val, e.unary, ac))
-        return first
-    else:
-        assert(ac == False)
-        t_obj,s_ot,s_pr=cgpt.eval(t_obj, e.val, e.unary, False)
-        grid=get_grid(e)
-        return gpt.lattice(grid,eval("gpt.otype." + s_ot),t_obj)
-
-def sum(e):
-    l=gpt.eval(e)
-    val= cgpt.lattice_sum(l.obj)
-    if type(val) == complex:
-        return val
-    return gpt.tensor(val, l.otype)
-

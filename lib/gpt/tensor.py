@@ -65,7 +65,18 @@ class tensor:
             mt=gpt.otype.mtab[tag]
             return tensor( np.tensordot(self.array, other.array, axes = mt[1]), mt[0])
         elif type(other) == gpt.expr and other.is_single(gpt.tensor):
-            ue,uf=other.get_single_unaries()
+            ue,uf,to=other.get_single()
+            if ue == 0 and uf & gpt.factor_unary.BIT_TRANS != 0:
+                tag = (self.otype,to.otype)
+                assert(tag in gpt.otype.otab)
+                mt=gpt.otype.otab[tag]
+                rhs=to.array
+                if uf & gpt.factor_unary.BIT_CONJ != 0:
+                    rhs=rhs.conj()
+                x=np.multiply.outer(self.array,rhs)
+                for swp in mt[1]:
+                    x=np.swapaxes(x,swp[0],swp[1])
+                return tensor( x, mt[0])
             assert(0)
         else:
             return other.__rmul__(self)

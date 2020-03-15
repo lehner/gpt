@@ -23,9 +23,6 @@ def plaquette(U):
             tr += g.sum( g.trace(U[mu] * g.cshift( U[nu], mu, 1) * g.adj( g.cshift( U[mu], nu, 1 ) ) * g.adj( U[nu] )) )
     return 2.*tr.real/vol/4./3./3.
 
-g.message(g.sum(U[0]))
-sys.exit(0)
-
 # Calculate Plaquette
 g.message(g.qcd.gauge.plaquette(U))
 g.message(plaquette(U))
@@ -49,8 +46,10 @@ r=g.eval( u*U[0] + U[1]*u )
 g.message(g.norm2(r))
 
 # test inner and outer products
-v=g.vspincolor([[0,1,0],[1,0,0],[1,1,0],[1,1,1j]])
-g.message(g.norm2(v))
-
+v=g.vspincolor([[0,0,0],[0,0,2],[0,0,0],[0,0,0]])
+w=g.vspincolor([[0,0,0],[0,0,0],[0,0,0],[1,0,0]])
+xx=v * g.adj(w)
+print(xx[1][3][2][0])
+g.message(xx)
 g.message(g.adj(v) * v)
-g.message(v * g.adj(v))
+

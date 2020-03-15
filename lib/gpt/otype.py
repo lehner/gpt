@@ -78,5 +78,19 @@ mtab = {
     (ot_mcolor,ot_mcolor) : (ot_mcolor,(1,0)),
     (ot_mcolor,ot_vcolor) : (ot_vcolor,(1,0)),
     (ot_mspincolor,ot_mspincolor) : (ot_mspincolor,([1,3],[0,2])),
-    (ot_mspincolor,ot_vspincolor) : (ot_vspincolor,([1,3],[0,1]))
+    (ot_mspincolor,ot_vspincolor) : (ot_vspincolor,([1,3],[0,1])),
+}
+
+###
+# Outer product table
+otab = {
+    (ot_vcolor,ot_vcolor) : (ot_mcolor,[]),
+    (ot_vspincolor,ot_vspincolor) : (ot_mspincolor,[(1,2)])
+}
+
+###
+# Inner product table
+itab = {
+    (ot_vcolor,ot_vcolor) : (ot_complex,(0,0)),
+    (ot_vspincolor,ot_vspincolor) : (ot_complex,([0,1],[0,1])),
 }
