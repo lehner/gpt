@@ -29,7 +29,7 @@ DECLARE_FUNCTION(convert);
 DECLARE_FUNCTION(eval);
 DECLARE_FUNCTION(global_rank);
 DECLARE_FUNCTION(load);
-
+DECLARE_FUNCTION(util_ferm2prop);
 
 static PyMethodDef module_functions[] = {
   EXPORT_FUNCTION(init),
@@ -53,6 +53,7 @@ static PyMethodDef module_functions[] = {
   EXPORT_FUNCTION(eval),
   EXPORT_FUNCTION(global_rank),
   EXPORT_FUNCTION(load),
+  EXPORT_FUNCTION(util_ferm2prop),
   {NULL, NULL, 0, NULL}
 };
 

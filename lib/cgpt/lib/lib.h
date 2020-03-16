@@ -24,4 +24,5 @@ using namespace Grid;
 #include "peekpoke.h"
 #include "lattice.h"
 #include "transform.h"
+#include "util.h"
 #include "expression.h"

@@ -81,7 +81,6 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
       dst.type = _eval_factor_::LATTICE;
       dst.lattice = lhs.lattice->mul( 0, false, rhs.lattice, lhs.unary, rhs.unary, unary);
     } else if (rhs.type == _eval_factor_::ARRAY) {
-      ASSERT(rhs.unary == 0);
       dst.type = _eval_factor_::LATTICE;
       dst.lattice = lhs.lattice->matmul( 0, false, rhs.array, rhs.otype, rhs.unary, lhs.unary, unary, false);
     } else if (rhs.type == _eval_factor_::GAMMA) {

@@ -115,5 +115,9 @@ public:
   virtual PyObject* slice(int dim) {
     return cgpt_lattice_slice(l,dim);
   }
+
+  virtual void ferm_to_prop(cgpt_Lattice_base* prop, int spin, int color, bool f2p) {
+    cgpt_ferm_to_prop(l,prop,spin,color,f2p);
+  }
   
 };

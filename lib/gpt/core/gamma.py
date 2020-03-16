@@ -12,6 +12,9 @@ class gamma_base:
     def __mul__(self, other):
         return gpt.expr(self).__mul__(other)
 
+    def __rmul__(self, other):
+        return gpt.expr(other).__mul__(self)
+
 gamma = {
     0 : gamma_base(0),
     1 : gamma_base(1),

@@ -45,6 +45,9 @@ cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unar
 
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourVector<vtype> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
+  //if (!rev && unary_b == BIT_TRANS|BIT_CONJ && unary_a == 0) {
+  //  typeOpen(b,iSpinColourVector) { return lattice_unary_lat(dst,ac, outerProduct(la,ab), unary_expr); } typeClose();
+  //}
   _INNER_OUTER_PRODUCT_(iSpinColourVector);
   ERR("Not implemented");
 }
