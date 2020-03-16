@@ -40,6 +40,22 @@ EXPORT_BEGIN(copy) {
   return PyLong_FromLong(0);
 } EXPORT_END();
 
+
+EXPORT_BEGIN(convert) {
+
+  void* _dst,* _src;
+  if (!PyArg_ParseTuple(args, "ll", &_dst,&_src)) {
+    return NULL;
+  }
+
+  cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+  cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
+
+  dst->convert_from(src);
+
+  return PyLong_FromLong(0);
+} EXPORT_END();
+
 EXPORT_BEGIN(lattice_innerProduct) {
 
   void* _a,* _b;
@@ -92,5 +108,18 @@ EXPORT_BEGIN(lattice_sum) {
 
   cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
   return a->sum();
+
+} EXPORT_END();
+
+EXPORT_BEGIN(lattice_slice) {
+
+  void* _a;
+  long dim;
+  if (!PyArg_ParseTuple(args, "ll", &_a,&dim)) {
+    return NULL;
+  }
+
+  cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
+  return a->slice((int)dim);
 
 } EXPORT_END();

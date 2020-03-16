@@ -33,6 +33,26 @@ def copy(first, second = None):
     cgpt.copy(t.obj,l.obj)
     return t
 
+def convert(first, second):
+    if type(first) == gpt.lattice and type(second) == gpt.lattice:
+        cgpt.convert(first.obj,second.obj)
+        return first
+    elif second == gpt.single or second == gpt.double:
+        if type(first) == list:
+            src_grid=first[0].grid
+        else:
+            src_grid=first.grid
+        dst_prec=second
+        dst_grid=gpt.grid(src_grid.gdimensions,dst_prec)
+        if type(first) == list:
+            dst = [ convert(gpt.lattice(dst_grid, src.otype),src) for src in first ]
+        else:
+            src = first
+            dst = convert(gpt.lattice(dst_grid, src.otype),src)
+        return dst
+    else:
+        assert(0)
+
 def norm2(l):
     if type(l) == gpt.tensor:
         return l.norm2()
@@ -50,3 +70,7 @@ def axpy_norm(d, a, x, y):
     x=gpt.eval(x)
     y=gpt.eval(y)
     return cgpt.lattice_axpy_norm(d.obj,a,x.obj,y.obj)
+
+def slice(x,dim):
+    x=gpt.eval(x)
+    return [ gpt.util.value_to_tensor(v,x.otype) for v in cgpt.lattice_slice(x.obj,dim) ]

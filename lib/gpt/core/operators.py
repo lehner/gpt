@@ -81,7 +81,4 @@ def expr_eval(first, second = None, ac = False):
 
 def sum(e):
     l=gpt.eval(e)
-    val= cgpt.lattice_sum(l.obj)
-    if type(val) == complex:
-        return val
-    return gpt.tensor(val, l.otype)
+    return gpt.util.value_to_tensor( cgpt.lattice_sum(l.obj), l.otype )

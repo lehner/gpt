@@ -27,6 +27,23 @@ def plaquette(U):
 g.message(g.qcd.gauge.plaquette(U))
 g.message(plaquette(U))
 
+# Precision change
+Uf = g.convert(U, g.single)
+g.message(g.qcd.gauge.plaquette(Uf))
+
+Uf0 = g.convert(U[0], g.single)
+g.message(g.norm2(Uf0))
+
+del Uf0
+g.meminfo()
+
+# Slice
+x=g.sum(Uf[0])
+
+print(x)
+
+sys.exit(0)
+
 # Calculate U^\dag U
 u = U[0][0,1,2,3]
 

@@ -90,8 +90,6 @@ EXPORT_BEGIN(grid_globalsum) {
     return NULL;
   }
 
-  printf("Global sum %p\n",p);
-
   GridCartesian* grid = (GridCartesian*)p;
   if (PyComplex_Check(o)) {
     ComplexD c;

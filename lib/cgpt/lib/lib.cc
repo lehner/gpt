@@ -22,8 +22,10 @@ DECLARE_FUNCTION(lattice_axpy_norm);
 DECLARE_FUNCTION(lattice_norm2);
 DECLARE_FUNCTION(lattice_innerProduct);
 DECLARE_FUNCTION(lattice_sum);
+DECLARE_FUNCTION(lattice_slice);
 DECLARE_FUNCTION(cshift);
 DECLARE_FUNCTION(copy);
+DECLARE_FUNCTION(convert);
 DECLARE_FUNCTION(eval);
 DECLARE_FUNCTION(global_rank);
 DECLARE_FUNCTION(load);
@@ -44,8 +46,10 @@ static PyMethodDef module_functions[] = {
   EXPORT_FUNCTION(lattice_norm2),
   EXPORT_FUNCTION(lattice_innerProduct),
   EXPORT_FUNCTION(lattice_sum),
+  EXPORT_FUNCTION(lattice_slice),
   EXPORT_FUNCTION(cshift),
   EXPORT_FUNCTION(copy),
+  EXPORT_FUNCTION(convert),
   EXPORT_FUNCTION(eval),
   EXPORT_FUNCTION(global_rank),
   EXPORT_FUNCTION(load),

@@ -107,5 +107,13 @@ public:
     st << l;
     return PyUnicode_FromString(st.str().c_str());
   }
+
+  virtual void convert_from(cgpt_Lattice_base* src) {
+    cgpt_lattice_convert_from(l,src);
+  }
+
+  virtual PyObject* slice(int dim) {
+    return cgpt_lattice_slice(l,dim);
+  }
   
 };

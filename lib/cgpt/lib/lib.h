@@ -23,4 +23,5 @@ using namespace Grid;
 #include "numpy.h"
 #include "peekpoke.h"
 #include "lattice.h"
+#include "transform.h"
 #include "expression.h"

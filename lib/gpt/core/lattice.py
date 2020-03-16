@@ -60,16 +60,11 @@ class lattice:
             key = ()
         
         assert(type(key) == tuple)
-        if type(value) == gpt.tensor:
-            value = value.array
-        cgpt.lattice_set_val(self.obj, key, value)
+        cgpt.lattice_set_val(self.obj, key, gpt.util.tensor_to_value(value))
 
     def __getitem__(self, key):
         assert(type(key) == tuple)
-        val = cgpt.lattice_get_val(self.obj, key)
-        if type(val) == complex:
-            return val
-        return gpt.tensor(val, self.otype)
+        return gpt.util.value_to_tensor(cgpt.lattice_get_val(self.obj, key), self.otype)
 
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype,self.grid.precision)

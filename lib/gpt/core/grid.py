@@ -4,6 +4,7 @@
 # Authors: Christoph Lehner 2020
 #
 import cgpt
+import gpt
 import numpy as np
 
 class grid:
@@ -23,4 +24,8 @@ class grid:
         cgpt.grid_barrier(self.obj)
 
     def globalsum(self, x):
-        return cgpt.grid_globalsum(self.obj,x)
+        if type(x) == gpt.tensor:
+            otype=x.otype
+            cgpt.grid_globalsum(self.obj,x.array)
+        else:
+            return cgpt.grid_globalsum(self.obj,x)
