@@ -9,6 +9,7 @@ Welcome to GPT - Grid Python Toolkit's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
    gpt
 
 
