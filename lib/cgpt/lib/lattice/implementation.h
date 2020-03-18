@@ -119,5 +119,13 @@ public:
   virtual void ferm_to_prop(cgpt_Lattice_base* prop, int spin, int color, bool f2p) {
     cgpt_ferm_to_prop(l,prop,spin,color,f2p);
   }
+
+  virtual void pick_checkerboard_from(int cb, cgpt_Lattice_base* src) {
+    pickCheckerboard(cb, l, compatible<T>(src)->l);
+  }
+
+  virtual void set_checkerboard_from(cgpt_Lattice_base* src) {
+    setCheckerboard(l, compatible<T>(src)->l);
+  }
   
 };

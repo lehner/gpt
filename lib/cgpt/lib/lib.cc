@@ -5,59 +5,20 @@
 */
 #include "lib.h"
 
-#define EXPORT_FUNCTION(name) {# name, cgpt_ ## name, METH_VARARGS, # name}
-#define DECLARE_FUNCTION(name) extern PyObject* cgpt_ ## name(PyObject* self, PyObject* args);
+// declare
+#define EXPORT_FUNCTION(name) extern PyObject* cgpt_ ## name(PyObject* self, PyObject* args);
+#include "exports.h"
+#undef EXPORT_FUNCTION
 
-DECLARE_FUNCTION(init);
-DECLARE_FUNCTION(create_grid);
-DECLARE_FUNCTION(delete_grid);
-DECLARE_FUNCTION(grid_barrier);
-DECLARE_FUNCTION(grid_globalsum);
-DECLARE_FUNCTION(create_lattice);
-DECLARE_FUNCTION(delete_lattice);
-DECLARE_FUNCTION(lattice_set_val);
-DECLARE_FUNCTION(lattice_get_val);
-DECLARE_FUNCTION(lattice_to_str);
-DECLARE_FUNCTION(lattice_axpy_norm);
-DECLARE_FUNCTION(lattice_norm2);
-DECLARE_FUNCTION(lattice_innerProduct);
-DECLARE_FUNCTION(lattice_sum);
-DECLARE_FUNCTION(lattice_slice);
-DECLARE_FUNCTION(cshift);
-DECLARE_FUNCTION(copy);
-DECLARE_FUNCTION(convert);
-DECLARE_FUNCTION(eval);
-DECLARE_FUNCTION(global_rank);
-DECLARE_FUNCTION(load);
-DECLARE_FUNCTION(util_ferm2prop);
-
+// add to module functions
+#define EXPORT_FUNCTION(name) {# name, cgpt_ ## name, METH_VARARGS, # name},
 static PyMethodDef module_functions[] = {
-  EXPORT_FUNCTION(init),
-  EXPORT_FUNCTION(create_grid),
-  EXPORT_FUNCTION(delete_grid),
-  EXPORT_FUNCTION(grid_barrier),
-  EXPORT_FUNCTION(grid_globalsum),
-  EXPORT_FUNCTION(create_lattice),
-  EXPORT_FUNCTION(delete_lattice),
-  EXPORT_FUNCTION(lattice_set_val),
-  EXPORT_FUNCTION(lattice_get_val),
-  EXPORT_FUNCTION(lattice_to_str),
-  EXPORT_FUNCTION(lattice_axpy_norm),
-  EXPORT_FUNCTION(lattice_norm2),
-  EXPORT_FUNCTION(lattice_innerProduct),
-  EXPORT_FUNCTION(lattice_sum),
-  EXPORT_FUNCTION(lattice_slice),
-  EXPORT_FUNCTION(cshift),
-  EXPORT_FUNCTION(copy),
-  EXPORT_FUNCTION(convert),
-  EXPORT_FUNCTION(eval),
-  EXPORT_FUNCTION(global_rank),
-  EXPORT_FUNCTION(load),
-  EXPORT_FUNCTION(util_ferm2prop),
+#include "exports.h"
   {NULL, NULL, 0, NULL}
 };
+#undef EXPORT_FUNCTION
 
-// Module definition
+// module definition
 static struct PyModuleDef module_def = {
   PyModuleDef_HEAD_INIT,
   "cgpt",     /* m_name */
@@ -70,7 +31,7 @@ static struct PyModuleDef module_def = {
   NULL,                /* m_free */
 };
 
-// Export module creation
+// export module creation
 PyMODINIT_FUNC PyInit_cgpt(void){
   PyModule_Create(&module_def);
 }

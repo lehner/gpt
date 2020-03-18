@@ -176,39 +176,39 @@ cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>
   return dst;
 }
 
-EXPORT_BEGIN(eval) {
-
-  void* _dst;
-  PyObject* _list,* _ac;
-  int _unary;
-  if (!PyArg_ParseTuple(args, "lOiO", &_dst, &_list, &_unary, &_ac)) {
-    return NULL;
-  }
-
-  ASSERT(PyBool_Check(_ac));
-  bool ac;
-  cgpt_convert(_ac,ac);
-
-  cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-  bool new_lattice = dst == 0;
-
-  std::vector<_eval_term_> terms;
-  eval_convert_factors(_list,terms);
-
-  cgpt_Lattice_base* dst_orig = dst;
-
-  // TODO: need a faster code path for dst = A*B*C*D*... ; in this case I could avoid one copy
-  // if (expr_class_prod()) 
-  //   eval_prod()
-  // else
-
-  // General code path:
-  dst=eval_general(dst,terms,_unary,ac);
-
-  if (new_lattice)
-    return dst->to_decl();
-
-  assert(dst == dst_orig);
-  return PyLong_FromLong(0);
-
-} EXPORT_END();
+EXPORT(eval,{
+    
+    void* _dst;
+    PyObject* _list,* _ac;
+    int _unary;
+    if (!PyArg_ParseTuple(args, "lOiO", &_dst, &_list, &_unary, &_ac)) {
+      return NULL;
+    }
+    
+    ASSERT(PyBool_Check(_ac));
+    bool ac;
+    cgpt_convert(_ac,ac);
+    
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    bool new_lattice = dst == 0;
+    
+    std::vector<_eval_term_> terms;
+    eval_convert_factors(_list,terms);
+    
+    cgpt_Lattice_base* dst_orig = dst;
+    
+    // TODO: need a faster code path for dst = A*B*C*D*... ; in this case I could avoid one copy
+    // if (expr_class_prod()) 
+    //   eval_prod()
+    // else
+    
+    // General code path:
+    dst=eval_general(dst,terms,_unary,ac);
+    
+    if (new_lattice)
+      return dst->to_decl();
+    
+    assert(dst == dst_orig);
+    return PyLong_FromLong(0);
+    
+  });

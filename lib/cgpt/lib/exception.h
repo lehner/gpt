@@ -12,13 +12,12 @@
 #define ERR(x)								\
   { throw x " in file " __FILE__ ":"  STR(__LINE__); };
 
-#define EXPORT_BEGIN(name)				    \
-  PyObject* cgpt_ ## name(PyObject* self, PyObject* args) { \
-  try {								   
-
-#define EXPORT_END()						   \
-  } catch (const char* err) {					   \
-    PyErr_SetString(PyExc_RuntimeError,err);			   \
-    return NULL;						   \
+#define EXPORT(name,...)					   \
+  PyObject* cgpt_ ## name(PyObject* self, PyObject* args) {	   \
+    try {							   \
+      __VA_ARGS__;						   \
+    } catch (const char* err) {					   \
+      PyErr_SetString(PyExc_RuntimeError,err);			   \
+      return NULL;						   \
     }								   \
   }

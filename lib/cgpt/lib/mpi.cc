@@ -5,7 +5,7 @@
 */
 #include "lib.h"
 
-EXPORT_BEGIN(global_rank) {
-  return PyLong_FromLong(CartesianCommunicator::RankWorld());
-} EXPORT_END();
+EXPORT(global_rank,{
+    return PyLong_FromLong(CartesianCommunicator::RankWorld());
+  });
 
