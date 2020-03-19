@@ -20,6 +20,7 @@ using namespace Grid;
 
 #include "exception.h"
 #include "convert.h"
+#include "parameters.h"
 #include "numpy.h"
 #include "peekpoke.h"
 #include "lattice.h"
