@@ -11,9 +11,9 @@ struct _eval_factor_ {
   union {
     cgpt_Lattice_base* lattice;
     PyArrayObject* array;
-    int gamma;
   };
 
+  Gamma::Algebra gamma;
   std::string otype;
 
   void release() {
@@ -23,6 +23,16 @@ struct _eval_factor_ {
       Py_DECREF(array);
     }
   }
+};
+
+static int gamma_algebra_map_max = 5;
+
+static Gamma::Algebra gamma_algebra_map[] = {
+  Gamma::Algebra::GammaX, // 0
+  Gamma::Algebra::GammaY, // 1
+  Gamma::Algebra::GammaZ, // 2
+  Gamma::Algebra::GammaT, // 3
+  Gamma::Algebra::Gamma5  // 4
 };
 
 struct _eval_term_ {
@@ -62,7 +72,9 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms) {
 	cgpt_convert(PyObject_GetAttrString(f,"otype"),factor.otype);
 	factor.type = _eval_factor_::ARRAY;
       } else if (PyObject_HasAttrString(f,"gamma")) {
-	factor.gamma = (int)PyLong_AsLong(PyObject_GetAttrString(f,"gamma"));
+	int gamma = (int)PyLong_AsLong(PyObject_GetAttrString(f,"gamma"));
+	ASSERT(gamma >= 0 && gamma < gamma_algebra_map_max);
+	factor.gamma = gamma_algebra_map[gamma];
 	factor.type = _eval_factor_::GAMMA;
       } else {
 	ASSERT(0);
@@ -176,6 +188,26 @@ cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>
   return dst;
 }
 
+static inline void simplify(_eval_term_& term) {
+  auto& factors = term.factors;
+  for (size_t i=0;i<factors.size()-1;) {
+    if ((factors[i  ].type == _eval_factor_::GAMMA) &&
+	(factors[i+1].type == _eval_factor_::GAMMA)) {
+      factors[i].gamma = Gamma::mul[factors[i].gamma][factors[i+1].gamma];
+      factors.erase(factors.begin()+i+1);
+      continue;
+    }
+    i++;
+  }
+}
+
+static void simplify(std::vector<_eval_term_>& terms) {
+  for (size_t i=0;i<terms.size();i++) {
+    auto& term = terms[i];
+    simplify(term);
+  }
+}
+
 EXPORT(eval,{
     
     void* _dst;
@@ -196,7 +228,10 @@ EXPORT(eval,{
     eval_convert_factors(_list,terms);
     
     cgpt_Lattice_base* dst_orig = dst;
-    
+
+    // do a first pass that, e.g., combines gamma algebra
+    simplify(terms);
+
     // TODO: need a faster code path for dst = A*B*C*D*... ; in this case I could avoid one copy
     // if (expr_class_prod()) 
     //   eval_prod()

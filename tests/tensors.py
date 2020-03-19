@@ -29,4 +29,11 @@ res = g.eval(cv * g.adj(cv) * cm * cv)
 g.message(res)
 
 
+sc=g.vspincolor(grid)
+sc[:]=0
+sc[0,0,0,0]=g.vspincolor([[1,0,0],[0,1,0],[0,0,1],[0,0,0]])
+scA=g.eval( g.gamma[0] * g.gamma[1] * sc)
+scB=g.eval( g.gamma[0] * g.eval( g.gamma[1] * sc ) )
+g.message(scA)
+g.message(g.norm2(scA-scB))
 
