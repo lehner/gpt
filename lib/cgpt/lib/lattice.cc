@@ -105,7 +105,7 @@ EXPORT(lattice_to_str,{
 EXPORT(lattice_pick_checkerboard,{
     void* _src, *_dst;
     long cb;
-    if (!PyArg_ParseTuple(args, "lOO", &cb, &_src,&_dst)) {
+    if (!PyArg_ParseTuple(args, "lll", &cb, &_src,&_dst)) {
       return NULL;
     }
     cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
@@ -117,12 +117,24 @@ EXPORT(lattice_pick_checkerboard,{
 
 EXPORT(lattice_set_checkerboard,{
     void* _src, *_dst;
-    if (!PyArg_ParseTuple(args, "OO", &_src,&_dst)) {
+    if (!PyArg_ParseTuple(args, "ll", &_src,&_dst)) {
       return NULL;
     }
     cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
     cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
     dst->set_checkerboard_from(src);
+    
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(lattice_change_checkerboard,{
+    void* _dst;
+    long cb;
+    if (!PyArg_ParseTuple(args, "ll", &_dst,&cb)) {
+      return NULL;
+    }
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    dst->change_checkerboard(cb == 0 ? Even : Odd);
     
     return PyLong_FromLong(0);
   });

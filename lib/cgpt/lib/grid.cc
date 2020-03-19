@@ -7,16 +7,17 @@
 
 EXPORT(create_grid,{
     
-    PyObject* _gdimension, * _precision;
-    if (!PyArg_ParseTuple(args, "OO", &_gdimension, &_precision)) {
+    PyObject* _gdimension, * _precision, * _type;
+    if (!PyArg_ParseTuple(args, "OOO", &_gdimension, &_precision,&_type)) {
       return NULL;
     }
     
     std::vector<int> gdimension;
-    std::string precision;
+    std::string precision, type;
     
     cgpt_convert(_gdimension,gdimension);
     cgpt_convert(_precision,precision);
+    cgpt_convert(_type,type);
     
     int nd = (int)gdimension.size();
     int Nsimd;
@@ -26,23 +27,39 @@ EXPORT(create_grid,{
     } else if (precision == "double") {
       Nsimd = vComplexD::Nsimd();
     } else {
-      std::cerr << "Unknown precision: " << precision << std::endl;
-      assert(0);
+      ERR("Unknown precision");
     }
     
-    GridCartesian* grid;
+    GridBase* grid;
     if (nd >= 4) {
       std::vector<int> gdimension4d = gdimension; gdimension4d.resize(4);
       GridCartesian* grid4d = SpaceTimeGrid::makeFourDimGrid(gdimension4d, GridDefaultSimd(4,Nsimd), GridDefaultMpi());
       if (nd == 4) {
-	grid = grid4d;
+	if (type == "redblack") {
+	  grid = SpaceTimeGrid::makeFourDimRedBlackGrid(grid4d);
+	  delete grid4d;
+	} else if (type == "full") {
+	  grid = grid4d;
+	} else {
+	  ERR("Unknown grid type");
+	}
       } else if (nd == 5) {
-	grid = SpaceTimeGrid::makeFiveDimGrid(gdimension[5],grid4d);
+	if (type == "redblack") {
+	  grid = SpaceTimeGrid::makeFiveDimRedBlackGrid(gdimension[5],grid4d);
+	  delete grid4d;
+	} else if (type == "full") {
+	  grid = SpaceTimeGrid::makeFiveDimGrid(gdimension[5],grid4d);
+	  delete grid4d;
+	} else {
+	  ERR("Unknown grid type");
+	}	
       } else if (nd > 5) {
-	std::cerr << "Unknown dimension " << nd << std::endl;
-	assert(0);
+	ERR("Unknown dimension");
       }
+
     } else {
+      // TODO: give gpt full control over mpi,simd,cbmask?
+      // OR: at least give user option to make certain dimensions not simd/mpi directions
       std::cerr << "Unknown dimension " << nd << std::endl;
       assert(0);
     }
@@ -116,11 +133,10 @@ EXPORT(grid_globalsum,{
       } else if (dt == NPY_FLOAT64 || NPY_COMPLEX128) {
 	grid->GlobalSumVector((RealD*)data, nbytes / 8);
       } else {
-	std::cerr << "Unsupported numy data type (single, double, csingle, cdouble currently allowed)" << std::endl;
-	assert(0);
+	ERR("Unsupported numy data type (single, double, csingle, cdouble currently allowed)");
       }
     } else {
-      assert(0);
+      ERR("Unsupported object");
     }
     // need to act on floats, complex, and numpy arrays PyArrayObject
     //PyArrayObject* p;

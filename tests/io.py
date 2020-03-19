@@ -42,6 +42,27 @@ x=g.sum(Uf[0])
 
 print(x)
 
+grid=g.grid([4,4,4,4],g.single)
+gr=g.complex(grid)
+
+gr[0,0,0,0]=2
+gr[1,0,0,0]=3
+
+gride=g.grid([4,4,4,4],g.single,g.redblack)
+gre=g.complex(gride)
+g.pick_cb(g.even,gre,gr)
+gre[2,0,0,0]=4
+g.set_cb(gr,gre)
+g.meminfo()
+
+
+print(gre)
+
+g.change_cb(gre,g.odd)
+
+print(gre)
+
+
 sys.exit(0)
 
 # Calculate U^\dag U

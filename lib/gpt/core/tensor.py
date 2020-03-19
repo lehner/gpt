@@ -15,7 +15,7 @@ class tensor:
         assert(self.array.shape == otype.shape)
 
     def __repr__(self):
-        return "tensor(%s,%s)" % (str(self.array),self.otype)
+        return "tensor(%s,%s)" % (str(self.array),self.otype.__name__)
 
     def __getitem__(self, a):
         return self.array.__getitem__(a)

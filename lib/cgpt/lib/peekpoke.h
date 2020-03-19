@@ -47,11 +47,14 @@ void cgpt_lattice_poke_value_internal(iScalar<sobj>& val, const std::vector<int>
   }
 }
 
-static void split_position_and_internal(GridBase* grid, const std::vector<int>& coor, std::vector<int>& pos, std::vector<int>& in) {
+template<typename T>
+void split_position_and_internal(Lattice<T>& l, const std::vector<int>& coor, Coordinate& pos, std::vector<int>& in) {
+  GridBase* grid = l.Grid();
   pos.resize( grid->Nd() );
   ASSERT( coor.size() >= pos.size() );
   for (size_t j=0;j<pos.size();j++)
     pos[j] = coor[j];
+  ASSERT( l.Checkerboard() == grid->CheckerBoard(pos) );
   for (size_t j=pos.size();j<coor.size();j++)
     in.push_back(coor[j]);
 }
@@ -62,9 +65,9 @@ void cgpt_lattice_poke_value(Lattice<T>& l,const std::vector<int>& coor,PyObject
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
 
-  std::vector<int> _pos, in;
-  split_position_and_internal(l.Grid(), coor, _pos, in);
-  Coordinate pos(_pos);
+  std::vector<int> in;
+  Coordinate pos;
+  split_position_and_internal(l, coor, pos, in);
 
   sobj val;
   if (!in.size()) {
@@ -124,17 +127,17 @@ PyObject* cgpt_lattice_peek_value(Lattice<T>& l,const std::vector<int>& coor) {
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
 
-  std::vector<int> _pos, in;
-  split_position_and_internal(l.Grid(), coor, _pos, in);
-  Coordinate pos(_pos);
+  std::vector<int> in;
+  Coordinate pos;
+  split_position_and_internal(l, coor, pos, in);
+
 
   sobj val;
+  peekSite(val,l,pos);
+  
   if (!in.size()) {
-    peekSite(val,l,pos);
     return cgpt_numpy_export(val);
   } else {
-    ComplexD cv;
-    peekSite(val,l,pos);
     return cgpt_lattice_peek_value_internal(val,in,0);
   }
 

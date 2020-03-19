@@ -77,8 +77,8 @@ static PyObject* load_nersc(PyObject* args) {
 
     // return
     vComplexD vScalar = 0;
-    return Py_BuildValue("([(l,[i,i,i,i],s,[O,O,O,O])],O)", grid, gdimension[0], gdimension[1], gdimension[2],
-			 gdimension[3], get_prec(vScalar), U[0]->to_decl(), U[1]->to_decl(), U[2]->to_decl(),
+    return Py_BuildValue("([(l,[i,i,i,i],s,s,[O,O,O,O])],O)", grid, gdimension[0], gdimension[1], gdimension[2],
+			 gdimension[3], get_prec(vScalar), "full", U[0]->to_decl(), U[1]->to_decl(), U[2]->to_decl(),
 			 U[3]->to_decl(),metadata);
   }
 

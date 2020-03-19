@@ -103,9 +103,7 @@ public:
   }
 
   virtual PyObject* to_str() {
-    std::stringstream st;
-    st << l;
-    return PyUnicode_FromString(st.str().c_str());
+    return PyUnicode_FromString(cgpt_lattice_to_str(l).c_str());
   }
 
   virtual void convert_from(cgpt_Lattice_base* src) {
@@ -127,5 +125,8 @@ public:
   virtual void set_checkerboard_from(cgpt_Lattice_base* src) {
     setCheckerboard(l, compatible<T>(src)->l);
   }
-  
+
+  virtual void change_checkerboard(int cb) {
+    l.Checkerboard() = cb;
+  }
 };

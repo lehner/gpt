@@ -6,5 +6,6 @@
 #include "lattice/types.h"
 #include "lattice/base.h"
 #include "lattice/term.h"
+#include "lattice/tostring.h"
 #include "lattice/implementation.h"
 

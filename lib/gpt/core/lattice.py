@@ -17,10 +17,11 @@ def meminfo():
     for page in mem_book:
         grid = mem_book[page][0]
         otype = mem_book[page][1]
-        gb = grid.gsites * grid.precision.nbytes * otype.nfloats / 1024.**3.
+        gb = grid.gsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
         tot_gb += gb
-        gpt.message(" %X -> grid = %s, prec = %s, otype = %s | %g GB" % 
-                    (page,grid.gdimensions,grid.precision,otype,gb))
+        gpt.message(" %X -> grid = %s, prec = %s, otype = %s, cbtype = %s | %g GB" % 
+                    (page,grid.gdimensions,grid.precision.__name__,
+                     otype.__name__,grid.cb.__name__,gb))
     gpt.message("=============================================")
     gpt.message("   Total: %g GB " % tot_gb)
     gpt.message("=============================================")
