@@ -23,7 +23,7 @@ U = g.convert(U, g.single)
 # use the gauge configuration grid
 grid=U[0].grid
 
-# wilson operator
+# wilson
 class wilson:
     # M = sum_mu gamma[mu]*D[mu] + m0 - 1/2 sum_mu D^2[mu]
     # m0 + 4 = 1/2/kappa
@@ -32,7 +32,7 @@ class wilson:
         self.U = U
         self.Udag = [ g.eval(g.adj(u)) for u in U ]
 
-    def Meooe(self, dst, src):
+    def Meooe(self, src, dst):
         assert(dst != src)
         dst[:]=0
         for mu in range(4):
@@ -42,27 +42,27 @@ class wilson:
             src_minus = g.cshift(self.Udag[mu]*src,mu,-1)
             dst += -1./2.*g.gamma[mu]*src_minus - 1./2.*src_minus
 
-    def Mooee(self, dst, src):
+    def Mooee(self, src, dst):
         assert(dst != src)
         dst @= 1./2.*1./self.kappa * src
 
-    def M(self, dst, src):
+    def M(self, src, dst):
         assert(dst != src)
         t=g.lattice(dst)
-        self.Meooe(t,src)
-        self.Mooee(dst,src)
+        self.Meooe(src,t)
+        self.Mooee(src,dst)
         dst += t
 
-    def G5M(self, dst, src):
+    def G5M(self, src, dst):
         assert(dst != src)
-        self.M(dst,src)
+        self.M(src,dst)
         dst @= g.gamma[5] * dst
 
-    def G5Msqr(self, dst, src):
+    def G5Msqr(self, src, dst):
         assert(dst != src)
         t=g.lattice(dst)
-        self.G5M(t,src)
-        self.G5M(dst,t)
+        self.G5M(src,t)
+        self.G5M(t,dst)
 
 # create point source
 src=g.mspincolor(grid)
@@ -84,11 +84,11 @@ for s in range(4):
         g.qcd.prop_to_ferm(src_sc,src,s,c)
 
         dst_sc @= g.gamma[5] * src_sc
-        w.G5M(src_sc,dst_sc)        
+        w.G5M(dst_sc,src_sc)        
 
         dst_sc[:]=0
 
-        cg(lambda i,o: w.G5Msqr(o,i),src_sc,dst_sc,1e-6,1000)
+        cg(lambda i,o: w.G5Msqr(i,o),src_sc,dst_sc,1e-6,1000)
         
         g.qcd.ferm_to_prop(dst,dst_sc,s,c)
 
@@ -98,4 +98,3 @@ correlator=g.slice(g.trace(dst*g.adj(dst)),3)
 # output
 for t,c in enumerate(correlator):
     print(t,c.real)
-

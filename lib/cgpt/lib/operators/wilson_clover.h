@@ -36,5 +36,6 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
   }
 
   auto f = new WilsonCloverFermion<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,wac,wp);
+
   return new cgpt_fermion_operator<WilsonCloverFermion<WI>>(f);
 }

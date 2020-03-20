@@ -24,10 +24,10 @@ class g5m:
                 g.qcd.prop_to_ferm(src_sc,src,s,c)
 
                 dst_sc @= g.gamma[5] * src_sc
-                w.G5M(src_sc,dst_sc)        
+                w.G5M(dst_sc,src_sc)
 
                 dst_sc[:]=0
 
-                cg(lambda i,o: w.G5Msqr(o,i),src_sc,dst_sc,self.eps,self.maxiter)
+                cg(lambda i,o: w.G5Msqr(i,o),src_sc,dst_sc,self.eps,self.maxiter)
         
                 g.qcd.ferm_to_prop(dst,dst_sc,s,c)

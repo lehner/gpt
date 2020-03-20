@@ -13,7 +13,7 @@ class wilson:
         self.U = U
         self.Udag = [ g.eval(g.adj(u)) for u in U ]
 
-    def Meooe(self, dst, src):
+    def Meooe(self, src, dst):
         assert(dst != src)
         dst[:]=0
         for mu in range(4):
@@ -23,24 +23,24 @@ class wilson:
             src_minus = g.cshift(self.Udag[mu]*src,mu,-1)
             dst += -1./2.*g.gamma[mu]*src_minus - 1./2.*src_minus
 
-    def Mooee(self, dst, src):
+    def Mooee(self, src, dst):
         assert(dst != src)
         dst @= 1./2.*1./self.kappa * src
 
-    def M(self, dst, src):
+    def M(self, src, dst):
         assert(dst != src)
         t=g.lattice(dst)
-        self.Meooe(t,src)
-        self.Mooee(dst,src)
+        self.Meooe(src,t)
+        self.Mooee(src,dst)
         dst += t
 
-    def G5M(self, dst, src):
+    def G5M(self, src, dst):
         assert(dst != src)
-        self.M(dst,src)
+        self.M(src,dst)
         dst @= g.gamma[5] * dst
 
-    def G5Msqr(self, dst, src):
+    def G5Msqr(self, src, dst):
         assert(dst != src)
         t=g.lattice(dst)
-        self.G5M(t,src)
-        self.G5M(dst,t)
+        self.G5M(src,t)
+        self.G5M(t,dst)
