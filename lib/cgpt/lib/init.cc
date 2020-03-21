@@ -6,8 +6,10 @@
 #define _THIS_IS_INIT_ // needed for numpy array
 #include "lib.h"
 
+static bool cgpt_initialized = false;
+
 EXPORT(init,{
-    
+
     PyObject* _args;
     if (!PyArg_ParseTuple(args, "O", &_args)) {
       return NULL;
@@ -36,7 +38,28 @@ EXPORT(init,{
       "              Initialized GPT                " << std::endl <<
       "    Copyright (C) 2020 Christoph Lehner      " << std::endl <<
       "=============================================" << std::endl;
+
+    cgpt_initialized = true;    
+    return PyLong_FromLong(0);
     
+  });
+
+
+EXPORT(exit,{
+
+    if (cgpt_initialized) {
+
+      std::cout <<
+	"=============================================" << std::endl <<
+	"               Finalized GPT                 " << std::endl <<
+	"=============================================" << std::endl;
+
+      Grid_finalize();
+      cgpt_initialized = false;
+
+    }
+
+
     return PyLong_FromLong(0);
     
   });

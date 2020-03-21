@@ -18,6 +18,11 @@ static PyMethodDef module_functions[] = {
 };
 #undef EXPORT_FUNCTION
 
+// on exit
+void free_module(void* self) {
+  cgpt_exit((PyObject*)self,0);
+}
+
 // module definition
 static struct PyModuleDef module_def = {
   PyModuleDef_HEAD_INIT,
@@ -28,7 +33,7 @@ static struct PyModuleDef module_def = {
   NULL,                /* m_reload */
   NULL,                /* m_traverse */
   NULL,                /* m_clear */
-  NULL,                /* m_free */
+  free_module,         /* m_free */
 };
 
 // export module creation
