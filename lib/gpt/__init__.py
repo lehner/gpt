@@ -4,6 +4,7 @@
 # Authors: Christoph Lehner 2020
 #
 from gpt.core import *
+from gpt.params import params
 import gpt.default
 import gpt.create
 import gpt.algorithms

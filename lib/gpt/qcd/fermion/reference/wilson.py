@@ -8,8 +8,14 @@ import gpt as g
 class wilson:
     # M = sum_mu gamma[mu]*D[mu] + m0 - 1/2 sum_mu D^2[mu]
     # m0 + 4 = 1/2/kappa
-    def __init__(self, kappa, U):
-        self.kappa = kappa
+    def __init__(self, U, params):
+
+        if "mass" in params:
+            assert(not "kappa" in params)
+            self.kappa = 1./(params["mass"] + 4.)/2.
+        else:
+            self.kappa = params["kappa"]
+
         self.U = U
         self.Udag = [ g.eval(g.adj(u)) for u in U ]
 
@@ -38,9 +44,3 @@ class wilson:
         assert(dst != src)
         self.M(src,dst)
         dst @= g.gamma[5] * dst
-
-    def G5Msqr(self, src, dst):
-        assert(dst != src)
-        t=g.lattice(dst)
-        self.G5M(src,t)
-        self.G5M(t,dst)

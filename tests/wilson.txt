@@ -1,0 +1,10 @@
+# Parameter file
+{
+    "kappa" : gpt.default.get_float("--kappa",0.137),
+    "csw_r" : 0,
+    "csw_t" : 0,
+    "xi_0" : 1,
+    "nu" : 1,
+    "isAnisotropic" : False,
+    "boundary_phases" : [ 1.0, 1.0, 1.0, 1.0 ]
+}

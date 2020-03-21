@@ -30,3 +30,9 @@ class operator:
 
     def unary(self, opcode, i, o):
         return cgpt.apply_fermion_operator(self.obj,opcode,i.obj,o.obj)
+
+    def G5M(self, i, o):
+        self.M(i,o)
+        o @= gpt.gamma[5] * o
+
+    
