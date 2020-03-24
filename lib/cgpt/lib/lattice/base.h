@@ -29,4 +29,14 @@ public:
   virtual void pick_checkerboard_from(int cb, cgpt_Lattice_base* src) = 0;
   virtual void set_checkerboard_from(cgpt_Lattice_base* src) = 0;
   virtual void change_checkerboard(int cb) = 0;
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) = 0;
+  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt) = 0;
 };
+
+template<class T> class cgpt_Lattice;
+
+template<typename T>
+cgpt_Lattice<T>* compatible(cgpt_Lattice_base* other) {
+  ASSERT(typeid(T).name() == other->type());
+  return (cgpt_Lattice<T>*)other;
+}

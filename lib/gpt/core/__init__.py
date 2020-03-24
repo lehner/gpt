@@ -15,5 +15,5 @@ from gpt.core.expr import expr, expr_unary, factor_unary
 from gpt.core.operators import expr_eval, adj, transpose, conj, trace, sum, apply_expr_unary
 from gpt.core.otype import *
 from gpt.core.io import load
-from gpt.core.basis import orthogonalize, rotateJ, rotate
+from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomp
 import gpt.core.util

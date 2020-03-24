@@ -37,7 +37,7 @@ irl=g.algorithms.iterative.irl({
     "Nstop" : 60,
     "Nm" : 80,
     "resid" : 1e-8,
-    "betastp" : 1e-8,
+    "betastp" : 0.0,
     "maxiter" : 20,
     "Nminres" : 7,
 })
@@ -47,8 +47,7 @@ start=g.vspincolor(w.grid_eo)
 start[:]=g.vspincolor([[1,1,1],[1,1,1],[1,1,1],[1,1,1]])
 
 # generate eigenvectors
-ok,evec,ev=irl(c(w.NDagN), start)
-assert(ok)
+evec,ev=irl(c(w.NDagN), start)
 
 # memory info
 g.meminfo()
@@ -56,4 +55,5 @@ g.meminfo()
 # print eigenvalues of NDagN as well
 for i,v in enumerate(evec):
     w.NDagN(v,start)
-    g.message("%d %g %g" % (i,g.innerProduct(v,start).real,ev[i]))
+    l=g.innerProduct(v,start).real
+    g.message("%d %g %g %g" % (i,l,ev[i],c(l)))

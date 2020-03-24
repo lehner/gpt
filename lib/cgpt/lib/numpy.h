@@ -105,4 +105,23 @@ void cgpt_numpy_import(sobj& dst,PyObject* _src) {
   }
 }
 
+static void cgpt_numpy_import_matrix(PyObject* _Qt, RealD* & data, int & Nm) {
+  ASSERT(PyArray_Check(_Qt));
+  PyArrayObject* Qt = (PyArrayObject*)_Qt;
+  ASSERT(PyArray_NDIM(Qt)==2);
+  Nm = PyArray_DIM(Qt,0);
+  ASSERT(Nm == PyArray_DIM(Qt,1));
+  // TODO: check and at least forbid strides
+  ASSERT(PyArray_TYPE(Qt) == NPY_FLOAT64);
+  data = (RealD*)PyArray_DATA(Qt);
+}
 
+static void cgpt_numpy_import_vector(PyObject* _Qt, RealD* & data, int & Nm) {
+  ASSERT(PyArray_Check(_Qt));
+  PyArrayObject* Qt = (PyArrayObject*)_Qt;
+  ASSERT(PyArray_NDIM(Qt)==1);
+  Nm = PyArray_DIM(Qt,0);
+  // TODO: check and at least forbid strides
+  ASSERT(PyArray_TYPE(Qt) == NPY_FLOAT64);
+  data = (RealD*)PyArray_DATA(Qt);
+}

@@ -4,14 +4,6 @@
   Authors: Christoph Lehner 2020
 */
 
-template<class T> class cgpt_Lattice;
-
-template<typename T>
-cgpt_Lattice<T>* compatible(cgpt_Lattice_base* other) {
-  ASSERT(typeid(T).name() == other->type());
-  return (cgpt_Lattice<T>*)other;
-}
-
 template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
@@ -132,4 +124,17 @@ public:
   virtual void change_checkerboard(int cb) {
     l.Checkerboard() = cb;
   }
+
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) {
+    std::vector<Lattice<T>*> basis(_basis.size());
+    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
+  }
+
+  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt) {
+    std::vector<Lattice<T>*> basis(_basis.size());
+    cgpt_basis_fill(basis,_basis);
+    cgpt_linear_combination(l,basis,Qt);
+  }
 };
+

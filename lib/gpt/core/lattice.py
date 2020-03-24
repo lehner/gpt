@@ -11,20 +11,21 @@ mem_book = {
 }
 
 def meminfo():
-    gpt.message("=============================================")
-    gpt.message("            GPT Memory report                ")
-    gpt.message("=============================================")
+    fmt=" %-8s %-30s %-12s %-15s %-12s %-16s %-20s"
+    gpt.message("==========================================================================================")
+    gpt.message("                                 GPT Memory Report                ")
+    gpt.message("==========================================================================================")
+    gpt.message(fmt % ("Index","Grid","Precision","OType", "CBType", "Size/GB", "Created at time"))
     tot_gb = 0.0
     for i,page in enumerate(mem_book):
         grid,otype,created = mem_book[page]
         gb = grid.gsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
         tot_gb += gb
-        gpt.message(" %-16s: grid = %s, prec = %s, otype = %s, cbtype = %s, %g GB, created at time %.6f" % 
-                    ("lattice[%d]" % i,grid.gdimensions,grid.precision.__name__,
-                     otype.__name__,grid.cb.__name__,gb,created))
-    gpt.message("=============================================")
+        gpt.message(fmt % (i,grid.gdimensions,grid.precision.__name__,
+                           otype.__name__,grid.cb.__name__,gb,"%.6f s" % created))
+    gpt.message("==========================================================================================")
     gpt.message("   Total: %g GB " % tot_gb)
-    gpt.message("=============================================")
+    gpt.message("==========================================================================================")
 
 
 class lattice:
