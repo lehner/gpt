@@ -4,6 +4,7 @@
 # Authors: Christoph Lehner 2020
 #
 import gpt as g
+from time import time
 
 class cg:
 
@@ -14,6 +15,7 @@ class cg:
 
     def __call__(self, mat, src, psi):
         verbose="cg" in g.default.verbose
+        t0=time()
         p,mmp,r=g.copy(src),g.copy(src),g.copy(src)
         guess=g.norm2(psi)
         mat(psi,mmp) # in, out
@@ -36,8 +38,9 @@ class cg:
             psi += a*p
             p @= b*p+r
             if verbose:
-                g.message("gpt::cg::iter %d has residuum %g" % (k,cp))
+                g.message("res^2[ %d ] = %g" % (k,cp))
             if cp <= rsq:
                 if verbose:
-                    g.message("gpt::cg converged")
+                    t1=time()
+                    g.message("Converged in %g s" % (t1-t0))
                 break

@@ -13,6 +13,12 @@ static void cgpt_convert(PyObject* in, bool& out) {
   out = in == Py_True;
 }
 
+static bool cgpt_is_zero(PyObject* in) {
+  return ((PyLong_Check(in) && PyLong_AsLong(in) == 0) ||
+	  (PyFloat_Check(in) && PyFloat_AsDouble(in) == 0.0) ||
+	  (PyComplex_Check(in) && PyComplex_RealAsDouble(in) == 0.0 && PyComplex_ImagAsDouble(in) == 0.0));
+}
+
 static void cgpt_convert(PyObject* in, ComplexD& out) {
   if (PyLong_Check(in)) {
     out = PyLong_AsLong(in);

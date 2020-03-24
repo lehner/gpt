@@ -5,6 +5,7 @@
 #
 import cgpt
 import gpt
+from time import time
 
 mem_book = {
 }
@@ -14,20 +15,20 @@ def meminfo():
     gpt.message("            GPT Memory report                ")
     gpt.message("=============================================")
     tot_gb = 0.0
-    for page in mem_book:
-        grid = mem_book[page][0]
-        otype = mem_book[page][1]
+    for i,page in enumerate(mem_book):
+        grid,otype,created = mem_book[page]
         gb = grid.gsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
         tot_gb += gb
-        gpt.message(" %X -> grid = %s, prec = %s, otype = %s, cbtype = %s | %g GB" % 
-                    (page,grid.gdimensions,grid.precision.__name__,
-                     otype.__name__,grid.cb.__name__,gb))
+        gpt.message(" %-16s: grid = %s, prec = %s, otype = %s, cbtype = %s, %g GB, created at time %.6f" % 
+                    ("lattice[%d]" % i,grid.gdimensions,grid.precision.__name__,
+                     otype.__name__,grid.cb.__name__,gb,created))
     gpt.message("=============================================")
     gpt.message("   Total: %g GB " % tot_gb)
     gpt.message("=============================================")
 
 
 class lattice:
+    __array_priority__=1000000
     def __init__(self, first, second = None, third = None):
         self.metadata={}
         if type(first) == gpt.grid and not second is None and not third is None:
@@ -50,7 +51,7 @@ class lattice:
             self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
         else:
             raise Exception("Unknown lattice constructor")
-        mem_book[self.obj] = (self.grid,self.otype)
+        mem_book[self.obj] = (self.grid,self.otype,gpt.time())
 
     def __del__(self):
         del mem_book[self.obj]

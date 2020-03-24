@@ -34,7 +34,7 @@ class expr:
         elif type(val) == list:
             self.val = val
         elif gpt.util.isnum(val):
-            self.val = [ (val, []) ]
+            self.val = [ (complex(val), []) ]
         else:
             raise Exception("Unknown type " + str(type(val)))
         self.unary = unary

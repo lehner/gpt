@@ -86,15 +86,18 @@ public:
     return cgpt_lattice_peek_value(l,coor);
   }
 
-  virtual void set_val(const std::vector<int>& coor, PyObject* val) {
+  virtual void set_val(const std::vector<int>& coor, PyObject* _val) {
     int nc = (int)coor.size();
     if (!nc) {
-      ComplexD cv;
-      cgpt_convert(val,cv);
-      ASSERT( abs(cv) == 0.0 );
-      l = Zero();
+      if (cgpt_is_zero(_val)) {
+	l = Zero();
+      } else {
+	sobj val;
+	cgpt_numpy_import(val,_val);
+	l = val;
+      }
     } else {
-      cgpt_lattice_poke_value(l,coor,val);
+      cgpt_lattice_poke_value(l,coor,_val);
     }
   }
 

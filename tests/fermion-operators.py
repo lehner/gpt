@@ -88,6 +88,3 @@ correlator=g.slice(g.trace(dst*g.adj(dst)),3)
 # output
 for t,c in enumerate(correlator):
     print(t,c.real)
-
-# set exit code
-sys.exit(0)

@@ -5,8 +5,6 @@
 # Desc.: Illustrate core concepts and features
 #
 import gpt as g
-cg=g.algorithms.iterative.cg
-powit=g.algorithms.iterative.power_iteration
 
 m0crit=4.0
 m0=g.default.get_float("--mass",0.1) + m0crit
@@ -25,12 +23,15 @@ def A(dst,src,mass):
         dst += g.cshift(src, i, 1) + g.cshift(src, i, -1) - 2*src
 
 # find largest eigenvalue
-g.message("Largest eigenvalue: ", powit(lambda i,o: A(o,i,m0),src,1e-6,100)[0])
+powit=g.algorithms.iterative.power_iteration({"eps":1e-6,"maxiter":100})
+g.message("Largest eigenvalue: ", powit(lambda i,o: A(o,i,m0),src)[0])
 
-# Perform CG
+# perform CG
 psi=g.lattice(src)
 psi[:]=0
-cg(lambda i,o: A(o,i,m0),src,psi,1e-8,1000)
+
+cg=g.algorithms.iterative.cg({"eps":1e-8,"maxiter":1000})
+cg(lambda i,o: A(o,i,m0),src,psi)
 
 g.meminfo()
 
