@@ -47,14 +47,13 @@ start=g.vspincolor(w.grid_eo)
 start[:]=g.vspincolor([[1,1,1],[1,1,1],[1,1,1],[1,1,1]])
 
 # generate eigenvectors
-op=c(w.NDagN)
-ok,evec,ev=irl(op, start)
+ok,evec,ev=irl(c(w.NDagN), start)
 assert(ok)
 
+# memory info
 g.meminfo()
 
+# print eigenvalues of NDagN as well
 for i,v in enumerate(evec):
     w.NDagN(v,start)
     g.message("%d %g %g" % (i,g.innerProduct(v,start).real,ev[i]))
-
-
