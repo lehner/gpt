@@ -26,3 +26,8 @@ def wilson_clover(U, params):
 def zmobius(U, params):
     params = copy.deepcopy(params) # save current parameters
     return operator("zmobius", U, params, len(params["omega"]))
+
+
+def mobius(U, params):
+    params = copy.deepcopy(params) # save current parameters
+    return operator("mobius", U, params, params["Ls"])

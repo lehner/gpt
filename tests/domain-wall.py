@@ -19,16 +19,15 @@ U = g.convert(U, g.single)
 grid=U[0].grid
 
 # zmobius domain wall quark
-q=g.qcd.fermion.zmobius(U,{
+q=g.qcd.fermion.mobius(U,{
     "mass"  : 0.01,
     "M5"    : 1.8,
-    "b"     : 1.0,
-    "c"     : 0.0,
-    "omega" : [ 0.5 ] * 12, # Mobius
+    "b"     : 1.5, #1.0
+    "c"     : 0.5, #0.0
+    #"omega" : [ 0.5 ] * 12, # Mobius
+    "Ls" : 12,
     "boundary_phases" : [ 1.0, 1.0, 1.0, 1.0 ]
 })
-
-print("Source")
 
 # create point source
 src=g.mspincolor(grid)
