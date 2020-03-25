@@ -37,9 +37,16 @@ import gpt
 class eo2:
     def __init__(self, op):
         self.op = op
-        self.grid_eo = op.grid_eo
-        self.tmp = gpt.vspincolor(op.grid_eo)
-        self.tmp2 = gpt.vspincolor(op.grid_eo)
+        self.F_grid_eo = op.F_grid_eo
+        self.F_grid = op.F_grid
+        self.tmp = gpt.vspincolor(self.F_grid_eo)
+        self.tmp2 = gpt.vspincolor(self.F_grid_eo)
+
+    def import_physical(self, src, dst):
+        self.op.ImportPhysicalFermionSource(src,dst)
+
+    def export_physical(self, src, dst):
+        self.op.ExportPhysicalFermionSolution(src,dst)
 
     def R(self, ie, io, oe):
         self.op.MooeeInv(io,self.tmp)

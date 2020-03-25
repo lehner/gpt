@@ -45,10 +45,10 @@ EXPORT(create_grid,{
 	}
       } else if (nd == 5) {
 	if (type == "redblack") {
-	  grid = SpaceTimeGrid::makeFiveDimRedBlackGrid(gdimension[5],grid4d);
+	  grid = SpaceTimeGrid::makeFiveDimRedBlackGrid(gdimension[4],grid4d);
 	  delete grid4d;
 	} else if (type == "full") {
-	  grid = SpaceTimeGrid::makeFiveDimGrid(gdimension[5],grid4d);
+	  grid = SpaceTimeGrid::makeFiveDimGrid(gdimension[4],grid4d);
 	  delete grid4d;
 	} else {
 	  ERR("Unknown grid type");

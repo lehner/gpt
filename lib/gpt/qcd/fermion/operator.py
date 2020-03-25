@@ -7,20 +7,31 @@ import gpt
 import cgpt
 
 class operator:
-    def __init__(self, name, U, params):
+    def __init__(self, name, U, params, Ls = None):
         self.name = name
         self.U = U
-        self.grid = U[0].grid
-        self.grid_eo = gpt.grid(self.grid.gdimensions,self.grid.precision,gpt.redblack)
+        self.U_grid = U[0].grid
+        self.U_grid_eo = gpt.grid(self.U_grid.gdimensions,self.U_grid.precision,gpt.redblack)
+        if Ls is None:
+            self.F_grid = self.U_grid
+            self.F_grid_eo = self.U_grid_eo
+        else:
+            self.F_grid = gpt.grid(self.U_grid.gdimensions + [ Ls ],self.U_grid.precision)
+            self.F_grid_eo = gpt.grid(self.F_grid.gdimensions,self.U_grid.precision,gpt.redblack)
+
         self.params = {
-            "grid" : self.grid.obj,
-            "grid_rb" : self.grid_eo.obj,
+            "U_grid" : self.U_grid.obj,
+            "U_grid_rb" : self.U_grid_eo.obj,
+            "F_grid" : self.F_grid.obj,
+            "F_grid_rb" : self.F_grid_eo.obj,
             "U" : [ u.obj for u in self.U ]
         }
+
         for k in params:
-            assert(not k in [ "grid", "grid_rb", "U" ])
+            assert(not k in [ "U_grid", "U_grid_rb", "F_grid", "F_grid_rb", "U" ])
             self.params[k] = params[k]
-        self.obj = cgpt.create_fermion_operator(name,self.grid.precision,self.params)
+
+        self.obj = cgpt.create_fermion_operator(name,self.U_grid.precision,self.params)
 
         # register matrix operations
         gpt.qcd.fermion.register(self)

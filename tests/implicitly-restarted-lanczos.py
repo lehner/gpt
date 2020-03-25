@@ -44,7 +44,7 @@ irl=g.algorithms.iterative.irl({
 })
 
 # start vector
-start=g.vspincolor(w.grid_eo)
+start=g.vspincolor(w.F_grid_eo)
 start[:]=g.vspincolor([[1,1,1],[1,1,1],[1,1,1],[1,1,1]])
 
 # generate eigenvectors

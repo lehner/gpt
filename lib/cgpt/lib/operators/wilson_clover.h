@@ -12,8 +12,8 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
   WilsonAnisotropyCoefficients wac;
   typename WI::ImplParams wp;
 
-  auto grid = get_pointer<GridCartesian>(args,"grid");
-  auto grid_rb = get_pointer<GridRedBlackCartesian>(args,"grid_rb");
+  auto grid = get_pointer<GridCartesian>(args,"U_grid");
+  auto grid_rb = get_pointer<GridRedBlackCartesian>(args,"U_grid_rb");
   RealD mass = get_float(args,"mass");
   RealD csw_r = get_float(args,"csw_r");
   RealD csw_t = get_float(args,"csw_t");

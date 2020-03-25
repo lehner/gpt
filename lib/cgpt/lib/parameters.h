@@ -55,3 +55,18 @@ AcceleratorVector<ComplexD,N> get_complex_vec(PyObject* dict, const char* key) {
   }
   return ret;
 }
+
+static std::vector<ComplexD> get_complex_vec_gen(PyObject* dict, const char* key) {
+  PyObject* val = get_key(dict,key);
+  ASSERT(PyList_Check(val));
+  int N = (int)PyList_Size(val);
+
+  std::vector<ComplexD> ret(N);
+  for (int i=0;i<N;i++) {
+    PyObject* _lv = PyList_GetItem(val,i);
+    ComplexD lv;
+    cgpt_convert(_lv,lv);
+    ret[i] = lv;
+  }
+  return ret;
+}

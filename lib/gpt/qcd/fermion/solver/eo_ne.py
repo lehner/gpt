@@ -10,18 +10,23 @@ class eo_ne:
         self.matrix = matrix
         self.inverter = inverter
 
-        self.grid_eo = matrix.grid_eo
-        self.ie=gpt.vspincolor(self.grid_eo)
-        self.io=gpt.vspincolor(self.grid_eo)
-        self.t1=gpt.vspincolor(self.grid_eo)
-        self.t2=gpt.vspincolor(self.grid_eo)
-        self.oe=gpt.vspincolor(self.grid_eo)
-        self.oo=gpt.vspincolor(self.grid_eo)
+        self.F_grid_eo=matrix.F_grid_eo
+        self.F_grid=matrix.F_grid
+
+        self.ie=gpt.vspincolor(self.F_grid_eo)
+        self.io=gpt.vspincolor(self.F_grid_eo)
+        self.t1=gpt.vspincolor(self.F_grid_eo)
+        self.t2=gpt.vspincolor(self.F_grid_eo)
+        self.oe=gpt.vspincolor(self.F_grid_eo)
+        self.oo=gpt.vspincolor(self.F_grid_eo)
+        self.ftmp=gpt.vspincolor(self.F_grid)
 
     def __call__(self, src_sc, dst_sc):
 
-        gpt.pick_cb(gpt.even,self.ie,src_sc)
-        gpt.pick_cb(gpt.odd,self.io,src_sc)
+        self.matrix.import_physical(src_sc, self.ftmp)
+
+        gpt.pick_cb(gpt.even,self.ie,self.ftmp)
+        gpt.pick_cb(gpt.odd,self.io,self.ftmp)
 
         # D^-1 = L NDagN^-1 R + S
 
@@ -39,6 +44,8 @@ class eo_ne:
         self.oe += self.t1
         self.oo += self.t2
 
-        gpt.set_cb(dst_sc,self.oe)
-        gpt.set_cb(dst_sc,self.oo)
+        gpt.set_cb(self.ftmp,self.oe)
+        gpt.set_cb(self.ftmp,self.oo)
+
+        self.matrix.export_physical(self.ftmp,dst_sc)
 
