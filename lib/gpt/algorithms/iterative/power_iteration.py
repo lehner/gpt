@@ -13,7 +13,7 @@ class power_iteration:
         self.maxit = params["maxiter"]
 
     def __call__(self,mat,src):
-        verbose="power_iteration" in g.default.verbose
+        verbose=g.default.is_verbose("power_iteration")
 
         dst,tmp=g.lattice(src),g.copy(src)
 

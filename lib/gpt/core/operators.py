@@ -67,7 +67,7 @@ def expr_eval(first, second = None, ac = False):
         e = gpt.expr(first)
         t_obj = 0
 
-    if "eval" in gpt.default.verbose:
+    if gpt.default.is_verbose("eval"):
         gpt.message("GPT::verbose::eval: " + str(e))
 
     if t_obj != 0:

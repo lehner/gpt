@@ -40,6 +40,7 @@ irl=g.algorithms.iterative.irl({
     "betastp" : 0.0,
     "maxiter" : 20,
     "Nminres" : 7,
+#    "maxapply" : 100
 })
 
 # start vector
@@ -47,7 +48,7 @@ start=g.vspincolor(w.grid_eo)
 start[:]=g.vspincolor([[1,1,1],[1,1,1],[1,1,1],[1,1,1]])
 
 # generate eigenvectors
-evec,ev=irl(c(w.NDagN), start)
+evec,ev=irl(c(w.NDagN), start) # , g.checkpointer("checkpoint")
 
 # memory info
 g.meminfo()

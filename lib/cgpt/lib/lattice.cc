@@ -92,6 +92,16 @@ EXPORT(lattice_get_val,{
     
   });
 
+EXPORT(lattice_memory_view,{
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
+    return l->memory_view();
+  });
+
 EXPORT(lattice_to_str,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {

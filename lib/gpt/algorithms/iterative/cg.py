@@ -14,7 +14,7 @@ class cg:
         self.maxiter = params["maxiter"]
 
     def __call__(self, mat, src, psi):
-        verbose="cg" in g.default.verbose
+        verbose=g.default.is_verbose("cg")
         t0=time()
         p,mmp,r=g.copy(src),g.copy(src),g.copy(src)
         guess=g.norm2(psi)

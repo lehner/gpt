@@ -136,5 +136,11 @@ public:
     cgpt_basis_fill(basis,_basis);
     cgpt_linear_combination(l,basis,Qt);
   }
+
+  virtual PyObject* memory_view() {
+    auto v = l.View();
+    return PyMemoryView_FromMemory((char*)&v[0],v.size()*sizeof(v[0]),PyBUF_WRITE);
+  }
+
 };
 

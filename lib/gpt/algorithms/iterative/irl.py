@@ -10,6 +10,7 @@
 #
 import gpt as g
 import numpy as np
+import sys
 from time import time
 
 # Implicitly Restarted Lanczos
@@ -17,9 +18,18 @@ class irl:
 
     def __init__(self, params):
         self.params = params
+        self.napply = 0
         
-    def __call__(self,mat,src):
-        verbose="irl" in g.default.verbose
+    def __call__(self, mat, src, ckpt = None):
+
+        # verbosity
+        verbose=g.default.is_verbose("irl")
+
+        # checkpointer
+        if ckpt is None:
+            ckpt = g.checkpointer_none()
+        ckpt.grid = src.grid
+        self.ckpt = ckpt
 
         # first approximate largest eigenvalue
         pit=g.algorithms.iterative.power_iteration({"eps" : 0.05,"maxiter": 10})
@@ -185,37 +195,53 @@ class irl:
     def step(self,mat,lmd,lme,evec,w,Nm,k):
         assert(k<Nm)
 
-        verbose="irl" in g.default.verbose
+        verbose=g.default.is_verbose("irl")
+        ckpt=self.ckpt
 
         alph=0.0
         beta=0.0
 
         evec_k=evec[k]
 
-        t0=time()
-        mat(evec_k,w)
-        t1=time()
+        results=[w,alph,beta]
+        if ckpt.load(results):
+            w,alph,beta=results # use checkpoint
+        else:
+            # compute
+            t0=time()
+            mat(evec_k,w)
+            t1=time()
 
-        if k > 0:
-            w -= lme[k-1]*evec[k-1]
+            # allow to restrict maximal number of applications within run
+            self.napply += 1
+            if "maxapply" in self.params:
+                if self.napply == self.params["maxapply"]:
+                    if verbose:
+                        g.message("Maximal number of matrix applications reached")
+                    sys.exit(0)
 
-        zalph=g.innerProduct(evec_k,w)
-        alph=zalph.real
+            if k > 0:
+                w -= lme[k-1]*evec[k-1]
+
+            zalph=g.innerProduct(evec_k,w)
+            alph=zalph.real
         
-        w -= alph * evec_k
+            w -= alph * evec_k
 
-        beta=g.norm2(w)**0.5
-        w /= beta
+            beta=g.norm2(w)**0.5
+            w /= beta
 
-        t2=time()
-        if k>0:
-            g.orthogonalize(w,evec[0:k])
-        t3=time()
+            t2=time()
+            if k>0:
+                g.orthogonalize(w,evec[0:k])
+            t3=time()
 
-        if verbose:
-            g.message("%-65s %-45s %-50s" % ("alpha[ %d ] = %s" % (k,zalph),
-                                          "beta[ %d ] = %s" % (k,beta),
-                                          " timing: %g s (matrix), %g s (ortho)" % (t1-t0,t3-t2)))
+            ckpt.save([w,alph,beta])
+
+            if verbose:
+                g.message("%-65s %-45s %-50s" % ("alpha[ %d ] = %s" % (k,zalph),
+                                                 "beta[ %d ] = %s" % (k,beta),
+                                                 " timing: %g s (matrix), %g s (ortho)" % (t1-t0,t3-t2)))
         
         lmd[k]=alph
         lme[k]=beta

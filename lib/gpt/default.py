@@ -30,10 +30,19 @@ def get_ivec(tag, default):
         return [ int(x) for x in res.split(".") ]
     return default
 
+# grid and precision
 grid = get_ivec("--grid",[4,4,4,4])
 precision = { "single" : gpt.single, "double" : gpt.double }[get("--precision","double")]
-verbose = get("--verbose","").split(",")
 
+# verbosity
+verbose_default="io,cg,irl,power_iteration,checkpointer"
+verbose_additional="eval"
+verbose = get("--verbose",verbose_default).split(",")
+verbose_candidates=",".join(sorted((verbose_default + "," + verbose_additional).split(",")))
+def is_verbose(x):
+    return x in verbose
+
+# help
 if "--help" in sys.argv:
     print("--------------------------------------------------------------------------------")
     print(" GPT Help")
@@ -49,5 +58,5 @@ if "--help" in sys.argv:
     print("")
     print(" --verbose opt1,opt2,...")
     print("")
-    print("   sets verbosity options.  candidates: eval,io")
+    print("   sets verbosity options.  candidates: %s" % verbose_candidates)
     print("--------------------------------------------------------------------------------")

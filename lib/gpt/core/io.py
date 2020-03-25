@@ -8,7 +8,7 @@ import gpt
 
 def load(*a):
     result=[]
-    r,metadata=cgpt.load(*a, "io" in gpt.default.verbose)
+    r,metadata=cgpt.load(*a, gpt.default.is_verbose("io"))
     for gr in r:
         grid=gpt.grid(gr[1],eval("gpt.precision." + gr[2]),eval("gpt." + gr[3]),gr[0])
         result_grid=[]
@@ -23,3 +23,5 @@ def load(*a):
     return result
 
 
+def crc32(view):
+    return cgpt.util_crc32(view)

@@ -69,6 +69,9 @@ class lattice:
         assert(type(key) == tuple)
         return gpt.util.value_to_tensor(cgpt.lattice_get_val(self.obj, key), self.otype)
 
+    def mview(self):
+        return cgpt.lattice_memory_view(self.obj)
+
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype,self.grid.precision)
 
