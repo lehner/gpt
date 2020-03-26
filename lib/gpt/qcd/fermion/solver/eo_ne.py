@@ -23,7 +23,7 @@ class eo_ne:
 
     def __call__(self, src_sc, dst_sc):
 
-        self.matrix.import_physical(src_sc, self.ftmp)
+        self.matrix.ImportPhysicalFermionSource(src_sc, self.ftmp)
 
         gpt.pick_cb(gpt.even,self.ie,self.ftmp)
         gpt.pick_cb(gpt.odd,self.io,self.ftmp)
@@ -47,5 +47,5 @@ class eo_ne:
         gpt.set_cb(self.ftmp,self.oe)
         gpt.set_cb(self.ftmp,self.oo)
 
-        self.matrix.export_physical(self.ftmp,dst_sc)
+        self.matrix.ExportPhysicalFermionSolution(self.ftmp,dst_sc)
 

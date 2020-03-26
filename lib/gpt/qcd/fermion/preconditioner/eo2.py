@@ -42,10 +42,10 @@ class eo2:
         self.tmp = gpt.vspincolor(self.F_grid_eo)
         self.tmp2 = gpt.vspincolor(self.F_grid_eo)
 
-    def import_physical(self, src, dst):
+    def ImportPhysicalFermionSource(self, src, dst):
         self.op.ImportPhysicalFermionSource(src,dst)
 
-    def export_physical(self, src, dst):
+    def ExportPhysicalFermionSolution(self, src, dst):
         self.op.ExportPhysicalFermionSolution(src,dst)
 
     def R(self, ie, io, oe):
@@ -63,7 +63,6 @@ class eo2:
     def S(self, ie, io, oe, oo):
         self.op.MooeeInv(io,oo)
         oe[:]=0
-        oo @= io
 
     def NDagN(self, ie, oe):
         self.N(ie,self.tmp)
