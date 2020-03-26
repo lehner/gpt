@@ -3,6 +3,9 @@
 GPT is a Python3 measurement interface for [Grid](https://github.com/paboyle/Grid).
 
 ## Installation
+GPT is developed with the feature/gpt branch of https://github.com/lehner/Grid.
+
+## Setting up the runtime
 ```bash
 source gpt/scripts/source.sh
 ```
