@@ -16,26 +16,47 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-static bool read_nersc_header(std::string filename, std::map<std::string,std::string>& fields) {
-  // use Grid's removeWhitespace
-  std::string ln;
-  std::ifstream f(filename);
-  getline(f,ln); removeWhitespace(ln);
-  if (ln != "BEGIN_HEADER")
+static bool read_openQCD_header(std::string filename, std::map<std::string,std::string>& fields) {
+  FILE* f = fopen(filename.c_str(),"rb");
+  if (!f)
     return false;
-  do {
-    getline(f,ln); removeWhitespace(ln);
-    int i = ln.find("=");
-    if(i>0) {
-      auto k=ln.substr(0,i); removeWhitespace(k);
-      auto v=ln.substr(i+1); removeWhitespace(v);
-      fields[k] = v;
-    }
-  } while( ln != "END_HEADER" );
+  OpenQcdHeader header;
+  if (fread(&header,sizeof(header),1,f)!=1)
+    return false;
+  char buf[64];
+
+  // since header is minimal, decide if this is openQCD file by very weak standards
+#define CHECK_EXTENT(L) if (L<1 || L > 10000)return false;
+  CHECK_EXTENT(header.Nx);
+  CHECK_EXTENT(header.Ny);
+  CHECK_EXTENT(header.Nz);
+  CHECK_EXTENT(header.Nt);
+#undef CHECK_EXTENT
+
+  if (header.plaq < -100.0 || header.plaq > 100.0)
+    return false;
+
+  // keep metadata
+  sprintf(buf,"%d",header.Nx); 
+  fields["DIMENSION_1"] = buf;
+
+  sprintf(buf,"%d",header.Ny);
+  fields["DIMENSION_2"] = buf;
+
+  sprintf(buf,"%d",header.Nz);
+  fields["DIMENSION_3"] = buf;
+
+  sprintf(buf,"%d",header.Nt);
+  fields["DIMENSION_4"] = buf;
+
+  sprintf(buf,"%.15f",header.plaq);
+  fields["PLAQUETTE"] = buf;
+
+
   return true;
 }
 
-static PyObject* load_nersc(PyObject* args) { 
+static PyObject* load_openQCD(PyObject* args) { 
 
   ASSERT(PyTuple_Check(args));
 
@@ -49,7 +70,7 @@ static PyObject* load_nersc(PyObject* args) {
 
     // get metadata
     std::map<std::string,std::string> fields;
-    if (!read_nersc_header(filename,fields)) {
+    if (!read_openQCD_header(filename,fields)) {
       return NULL;
     }
 
@@ -71,7 +92,7 @@ static PyObject* load_nersc(PyObject* args) {
     LatticeGaugeFieldD Umu(grid);
 
     FieldMetaData header;
-    NerscIO::readConfiguration(Umu,header,filename);
+    OpenQcdIO::readConfiguration(Umu,header,filename);
 
     std::vector< cgpt_Lattice_base* > U(4);
     for (int mu=0;mu<4;mu++) {

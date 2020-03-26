@@ -18,12 +18,23 @@
 */
 #include "lib.h"
 #include "io/nersc.h"
+#include "io/openQCD.h"
 
 EXPORT(load,{
     PyObject* ret;
-    
+
+    bool verbose;
+    cgpt_convert(PyTuple_GetItem(args,1),verbose);
+
     if (ret = load_nersc(args))
       return ret;
+
+    // openQCD file format is minimal, so not distinctive, test last
+    if (ret = load_openQCD(args))
+      return ret;
+
+    if (verbose)
+      std::cout << GridLogMessage << "GPT::IO: Unknown file format!" << std::endl;
     
     Py_RETURN_NONE;
     
