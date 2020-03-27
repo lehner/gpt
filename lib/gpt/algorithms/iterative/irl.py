@@ -162,7 +162,9 @@ class irl:
                         j=Nstop-jj
                         g.linear_combination(B,evec[0:Nk],Qt[j,0:Nk])
                         B *= 1.0/g.norm2(B)**0.5
-                        mat(B,v)
+                        if not ckpt.load(v):
+                            mat(B,v)
+                            ckpt.save(v)
                         ev_test=g.innerProduct(B,v).real
                         eps2 = g.norm2(v - ev_test*B) / lambda_max**2.0
                         if verbose:

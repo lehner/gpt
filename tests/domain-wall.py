@@ -50,4 +50,4 @@ correlator=g.slice(g.trace(dst*g.adj(dst)),3)
 
 # output
 for t,c in enumerate(correlator):
-    print(t,c.real)
+    g.message(t,c.real)

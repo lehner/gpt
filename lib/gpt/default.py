@@ -48,7 +48,7 @@ grid = get_ivec("--grid",[4,4,4,4])
 precision = { "single" : gpt.single, "double" : gpt.double }[get("--precision","double")]
 
 # verbosity
-verbose_default="io,cg,irl,power_iteration,checkpointer"
+verbose_default="io,cg,irl,power_iteration,checkpointer,deflate"
 verbose_additional="eval"
 verbose = get("--verbose",verbose_default).split(",")
 verbose_candidates=",".join(sorted((verbose_default + "," + verbose_additional).split(",")))

@@ -50,7 +50,7 @@ dst_ref,dst=g.lattice(src),g.lattice(src)
 w_ref.M(src,dst_ref)
 w.M(src,dst)
 
-print(g.norm2(dst-dst_ref)," / ",g.norm2(dst))
+g.message(g.norm2(dst-dst_ref)," / ",g.norm2(dst))
 
 # now timing
 t0 = time.time()
@@ -61,8 +61,8 @@ for i in range(100):
     w.M(src,dst)
 t2 = time.time()
 
-print("Reference time/s: ", t1-t0)
-print("Grid time/s: ", t2-t1)
+g.message("Reference time/s: ", t1-t0)
+g.message("Grid time/s: ", t2-t1)
 
 # create point source
 src=g.mspincolor(grid)
@@ -87,4 +87,4 @@ correlator=g.slice(g.trace(dst*g.adj(dst)),3)
 
 # output
 for t,c in enumerate(correlator):
-    print(t,c.real)
+    g.message(t,c.real)

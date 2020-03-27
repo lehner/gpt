@@ -16,5 +16,19 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.algorithms.iterative
-import gpt.algorithms.approx
+import gpt as g
+
+def evals(matrix, evec, check = False):
+    assert(len(evec) > 0)
+    tmp=g.lattice(evec[0])
+    ev=[]
+    for i,v in enumerate(evec):
+        matrix(v,tmp)
+        # M |v> = l |v> -> <v|M|v> / <v|v>
+        l=g.innerProduct(v,tmp).real / g.norm2(v)
+        ev.append(l)
+        if check:
+            eps2=g.norm2(tmp - l*v)
+            g.message("eval[ %d ] = %g, eps^2 = %g" % (i,l,eps2))
+
+    return ev

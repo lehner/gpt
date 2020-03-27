@@ -16,5 +16,25 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.polynomials.chebyshev import chebyshev
+# Note: we use the proper order of the chebyshev_t
+#       in contrast to current Grid
+#
+import gpt as g
 
+class deflate:
+    def __init__(self,inverter, evec, ev):
+        self.inverter = inverter
+        self.evec = evec
+        self.ev = ev
+
+    def __call__(self, matrix, src, dst):
+        verbose=g.default.is_verbose("deflate")
+        # |dst> = sum_n 1/ev[n] |n><n|src>
+        t0=g.time()
+        dst[:]=0
+        for i,n in enumerate(self.evec):
+            dst += n*g.innerProduct(n,src)/self.ev[i]
+        t1=g.time()
+        if verbose:
+            g.message("Deflated in %g s" % (t1-t0))
+        return self.inverter(matrix, src, dst)

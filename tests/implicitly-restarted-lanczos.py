@@ -25,7 +25,7 @@ w=g.qcd.fermion.preconditioner.eo2(g.qcd.fermion.wilson_clover(U,{
 }))
 
 # cheby
-c=g.algorithms.polynomials.chebyshev({
+c=g.algorithms.approx.chebyshev({
     "low"   : 0.08,
     "high"  : 2.0,
     "order" : 10,

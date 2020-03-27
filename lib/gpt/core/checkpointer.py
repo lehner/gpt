@@ -100,6 +100,8 @@ class checkpointer:
                 return res
         elif type(obj) == memoryview:
             return self.read_view(obj)
+        elif type(obj) == gpt.lattice:
+            return self.load(obj.mview())
         else:
             assert(0)
 
