@@ -35,7 +35,7 @@ cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unar
 }
 
 #define _INNER_OUTER_PRODUCT_(t) ERR("Not implemented"); return 0;
-//if (unary_a == BIT_TRANS|BIT_CONJ) { typeOpen(b,t) {			\
+//if (unary_a == (BIT_TRANS|BIT_CONJ)) { typeOpen(b,t) {			\
 //    if (rev) { return lattice_unary_lat(dst, ac, outerProduct(ab,la), unary_expr ); } else \
 //      { return lattice_unary_lat(dst, ac, localInnerProduct(la,ab), unary_expr ); } } typeClose(); }
 
@@ -58,7 +58,7 @@ cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unar
 
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourVector<vtype> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
-  //if (!rev && unary_b == BIT_TRANS|BIT_CONJ && unary_a == 0) {
+  //if (!rev && unary_b == (BIT_TRANS|BIT_CONJ) && unary_a == 0) {
   //  typeOpen(b,iSpinColourVector) { return lattice_unary_lat(dst,ac, outerProduct(la,ab), unary_expr); } typeClose();
   //}
   _INNER_OUTER_PRODUCT_(iSpinColourVector);

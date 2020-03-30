@@ -45,7 +45,7 @@ template<typename A>
 cgpt_Lattice_base* lattice_unary(cgpt_Lattice_base* dst, bool ac, const A& la,int unary_expr) {
   if (unary_expr == 0) {
     return lattice_expr(dst, ac, la);
-  } else if (unary_expr == BIT_SPINTRACE|BIT_COLORTRACE) {
+  } else if (unary_expr == (BIT_SPINTRACE|BIT_COLORTRACE)) {
     return lattice_expr(dst, ac, trace(la));
   }
   ERR("Not implemented");
@@ -75,7 +75,7 @@ template<typename A>
 cgpt_Lattice_base* lattice_unary_lat(cgpt_Lattice_base* dst, bool ac, const A& la,int unary_expr) {
   if (unary_expr == 0) {
     return lattice_lat(dst, ac, la);
-  } else if (unary_expr == BIT_SPINTRACE|BIT_COLORTRACE) {
+  } else if (unary_expr == (BIT_SPINTRACE|BIT_COLORTRACE)) {
     return lattice_expr(dst, ac, trace(la));
   }
   ERR("Not implemented");
@@ -89,7 +89,7 @@ template<typename A, typename B>
     return lattice_unary(dst,ac, transpose(la)*ab,unary_expr);
   } else if (unary_a == BIT_CONJ) {
     return lattice_unary(dst,ac, conjugate(la)*ab,unary_expr);
-  } else if (unary_a == BIT_CONJ|BIT_TRANS) {
+  } else if (unary_a == (BIT_CONJ|BIT_TRANS)) {
     return lattice_unary(dst,ac, adj(la)*ab,unary_expr);
   }
   ERR("Not implemented");
@@ -103,7 +103,7 @@ template<typename A, typename B>
     return lattice_unary(dst,ac, ab*transpose(la), unary_expr);
   } else if (unary_a == BIT_CONJ) {
     return lattice_unary(dst,ac, ab*conjugate(la), unary_expr);
-  } else if (unary_a == BIT_CONJ|BIT_TRANS) {
+  } else if (unary_a == (BIT_CONJ|BIT_TRANS)) {
     return lattice_unary(dst,ac, ab*adj(la), unary_expr);
   }
   ERR("Not implemented");
