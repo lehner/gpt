@@ -55,7 +55,7 @@ cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T>& _compatible,cg
     _LC_(EF_transpose);
   } else if (unary_factor == BIT_CONJ) {
     _LC_(EF_conj);
-  } else if (unary_factor == BIT_TRANS|BIT_CONJ) {
+  } else if (unary_factor == (BIT_TRANS|BIT_CONJ)) {
     _LC_(EF_adj);
   } else {
     ERR("Not implemented");
