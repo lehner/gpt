@@ -47,6 +47,17 @@ make
 cd ..
 
 #
+# OpenSSL
+#
+wget https://www.openssl.org/source/openssl-1.1.1f.tar.gz
+tar xzf openssl-1.1.1f.tar.gz
+rm openssl-1.1.1f.tar.gz
+mv openssl* openssl
+cd openssl
+./config
+make -j 4
+
+#
 # Grid
 #
 git clone https://github.com/lehner/Grid.git
@@ -55,7 +66,7 @@ git checkout feature/gpt
 ./bootstrap.sh
 mkdir build
 cd build
-../configure --enable-precision=double --enable-simd=AVX2 --enable-comms=none --enable-mkl CXXFLAGS=-fPIC --with-lime=$(realpath ../../lime)
+../configure --enable-precision=double --enable-simd=AVX2 --enable-comms=none CXXFLAGS=-fPIC --with-lime=${dep}/lime --with-openssl=${dep}/openssl
 cd Grid
 make -j 4
 

@@ -2,3 +2,4 @@
 *~
 *.so
 /lib/cgpt/build
+/dependencies
