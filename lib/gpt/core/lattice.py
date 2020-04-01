@@ -18,6 +18,7 @@
 #
 import cgpt
 import gpt
+import numpy
 from time import time
 
 mem_book = {
@@ -72,15 +73,24 @@ class lattice:
         cgpt.delete_lattice(self.obj)
 
     def __setitem__(self, key, value):
-        if key == slice(None,None,None):
-            key = ()
-        
-        assert(type(key) == tuple)
-        cgpt.lattice_set_val(self.obj, key, gpt.util.tensor_to_value(value))
+        if type(key) == slice:
+            if key == slice(None,None,None):
+                key = ()
+
+        if type(key) == tuple:
+            cgpt.lattice_set_val(self.obj, key, gpt.util.tensor_to_value(value))
+        elif type(key) == numpy.ndarray:
+            cgpt.lattice_import(self.obj, key, value)
+        else:
+            assert(0)
 
     def __getitem__(self, key):
-        assert(type(key) == tuple)
-        return gpt.util.value_to_tensor(cgpt.lattice_get_val(self.obj, key), self.otype)
+        if type(key) == tuple:
+            return gpt.util.value_to_tensor(cgpt.lattice_get_val(self.obj, key), self.otype)
+        elif type(key) == numpy.ndarray:
+            return cgpt.lattice_export(self.obj,key)
+        else:
+            assert(0)
 
     def mview(self):
         return cgpt.lattice_memory_view(self.obj)

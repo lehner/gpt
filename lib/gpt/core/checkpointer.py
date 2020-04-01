@@ -69,6 +69,8 @@ class checkpointer:
             t2=gpt.time()
             if self.verbose:
                 gpt.message("Checkpoint %g GB on head node at %g GB/s for crc32 and %g GB/s for write in %g s total" % (szGB,szGB/(t1-t0),szGB/(t2-t1),t2-t0))
+            #if not self.grid is None:
+            #    self.grid.barrier() # barrier to allow FS to sync, this is performance relevant, e.g., on the BNL KNL
         else:
             assert(0)
 
@@ -134,7 +136,7 @@ class checkpointer:
             # report status
             if self.verbose:
                 if flags[0] != flags[1]:
-                    gpt.message("Checkpoint %g GB per node read failed on %g out of %g nodes",szGB,flags[0],flags[1])
+                    gpt.message("Checkpoint %g GB per node read failed on %g out of %g nodes" % (szGB,flags[1] - flags[0],flags[1]))
                 else:
                     gpt.message("Checkpoint %g GB on head node at %g GB/s for crc32 and %g GB/s for read in %g s total" % (szGB,szGB/(t2-t1),szGB/(t1-t0),t2-t0))
 

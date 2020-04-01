@@ -60,8 +60,11 @@ start=g.vspincolor(w.F_grid_eo)
 start[:]=g.vspincolor([[1,1,1],[1,1,1],[1,1,1],[1,1,1]])
 
 # generate eigenvectors
-evec,ev_cheby=irl(c(eo.NDagN), start, g.checkpointer("/hpcgpfs01/scratch/clehner/openQCD"))
+evec,ev_cheby=irl(c(eo.NDagN), start, g.checkpointer("/hpcgpfs01/scratch/clehner/openQCD/checkpoint"))
 ev=g.algorithms.approx.evals(eo.NDagN,evec, check = True)
+
+# save eigenvectors
+g.save("/hpcgpfs01/scratch/clehner/openQCD/evec",[evec,ev])
 
 # build solver
 s=g.qcd.fermion.solver

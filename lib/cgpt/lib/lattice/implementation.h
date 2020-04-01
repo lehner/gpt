@@ -16,7 +16,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-
 template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
@@ -45,7 +44,7 @@ public:
   virtual PyObject* to_decl() {   
     return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
 			PyUnicode_FromString(::get_otype(l)),
-			PyUnicode_FromString(::get_prec(l)));
+			PyUnicode_FromString(::get_prec(l))); // TODO: add l.Checkerboard()
   }
 
   virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
@@ -154,6 +153,15 @@ public:
     auto v = l.View();
     return PyMemoryView_FromMemory((char*)&v[0],v.size()*sizeof(v[0]),PyBUF_WRITE);
   }
+
+  virtual PyArrayObject* export_data(PyArrayObject* coordinates) {
+    return cgpt_export(l,coordinates);
+  }
+
+  virtual void import_data(PyArrayObject* coordinates, PyArrayObject* data) {
+    cgpt_import(l,coordinates,data);
+  }
+
 
 };
 

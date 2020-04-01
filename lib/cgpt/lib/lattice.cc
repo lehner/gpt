@@ -115,6 +115,35 @@ EXPORT(lattice_memory_view,{
     return l->memory_view();
   });
 
+EXPORT(lattice_export,{
+    PyObject* a;
+    void* p;
+    if (!PyArg_ParseTuple(args, "lO", &p, &a)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
+    ASSERT(PyArray_Check(a));
+    
+    return (PyObject*)l->export_data((PyArrayObject*)a);
+  });
+
+EXPORT(lattice_import,{
+    PyObject* a, * d;
+    void* p;
+    if (!PyArg_ParseTuple(args, "lOO", &p, &a, &d)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
+    ASSERT(PyArray_Check(a));
+    ASSERT(PyArray_Check(d));
+    
+    l->import_data((PyArrayObject*)a,(PyArrayObject*)d);
+
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(lattice_to_str,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {

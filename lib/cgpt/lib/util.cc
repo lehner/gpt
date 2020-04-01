@@ -51,17 +51,7 @@ EXPORT(util_crc32,{
     unsigned char* data = (unsigned char*)buf->buf;
     int64_t len = (int64_t)buf->len;
 
-    // crc32 of zlib was incorrect for very large sizes, so do it block-wise
-    uint32_t crc = 0x0;
-    off_t blk = 0;
-    off_t step = 1024*1024*1024;
-    while (len > step) {
-      crc = crc32(crc,&data[blk],step);
-      blk += step;
-      len -= step;
-    }
-
-    crc = crc32(crc,&data[blk],len);
+    uint32_t crc = cgpt_crc32(data,len);
     
     return PyLong_FromLong(crc);
   });

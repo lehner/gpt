@@ -21,6 +21,11 @@ static void cgpt_convert(PyObject* in, int& out) {
   out = PyLong_AsLong(in);
 }
 
+static void cgpt_convert(PyObject* in, long& out) {
+  ASSERT(PyLong_Check(in));
+  out = PyLong_AsLong(in);
+}
+
 static void cgpt_convert(PyObject* in, bool& out) {
   ASSERT(PyBool_Check(in));
   out = in == Py_True;
@@ -91,4 +96,11 @@ void cgpt_convert(PyObject* in, std::vector<t>& out) {
   } else {
     ASSERT(0);
   }
+}
+
+static PyObject* cgpt_convert(const Coordinate & coor) {
+  PyObject* ret = PyList_New(coor.size());
+  for (long i=0;i<coor.size();i++)
+    PyList_SetItem(ret,i,PyLong_FromLong(coor[i]));
+  return ret;
 }

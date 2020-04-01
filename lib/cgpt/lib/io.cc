@@ -29,12 +29,34 @@ EXPORT(load,{
     if (ret = load_nersc(args))
       return ret;
 
-    // openQCD file format is minimal, so not distinctive, test last
+    // openQCD file format is minimal, not distinctive, test last
     if (ret = load_openQCD(args))
       return ret;
 
-    if (verbose)
-      std::cout << GridLogMessage << "GPT::IO: Unknown file format!" << std::endl;
+    ERR("Unknown file format!");
+    
+    Py_RETURN_NONE;
+    
+  });
+
+EXPORT(save,{
+
+    std::string dest, format;
+    bool verbose;
+    PyObject* _dest,* _objs,* _format,* _verbose;
+    if (!PyArg_ParseTuple(args, "OOOO", &_dest, &_objs, &_format, &_verbose)) {
+      return NULL;
+    }
+
+    cgpt_convert(_dest,dest);
+    cgpt_convert(_format,format);
+    cgpt_convert(_verbose,verbose);
+
+    //if (format == "gpt") {
+    //  return save_gpt(dest,_objs,verbose);
+    //}
+
+    ERR("Unknown format: %s", format.c_str());
     
     Py_RETURN_NONE;
     

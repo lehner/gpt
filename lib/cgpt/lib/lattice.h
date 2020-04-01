@@ -20,6 +20,6 @@
 #include "lattice/base.h"
 #include "lattice/basis.h"
 #include "lattice/term.h"
+#include "lattice/importexport.h"
 #include "lattice/tostring.h"
 #include "lattice/implementation.h"
-

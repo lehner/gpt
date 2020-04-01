@@ -19,6 +19,15 @@
 import cgpt
 import gpt
 
+# file formats
+class format:
+    class gpt:
+        pass
+    class cevec:
+        pass
+
+
+# input
 def load(*a):
     result=[]
     r,metadata=cgpt.load(*a, gpt.default.is_verbose("io"))
@@ -36,5 +45,11 @@ def load(*a):
     return result
 
 
+# output
+def save(filename,objs,fmt = format.gpt):
+    return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
+
+
+# helper
 def crc32(view):
     return cgpt.util_crc32(view)

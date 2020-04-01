@@ -90,8 +90,8 @@ EXPORT(delete_grid,{
       return NULL;
     }
     
-    ((GridCartesian*)p)->Barrier(); // before a grid goes out of life, we need to synchronize
-    delete ((GridCartesian*)p);
+    ((GridBase*)p)->Barrier(); // before a grid goes out of life, we need to synchronize
+    delete ((GridBase*)p);
     return PyLong_FromLong(0);
     
   });
@@ -105,7 +105,7 @@ EXPORT(grid_barrier,{
       return NULL;
     }
     
-    ((GridCartesian*)p)->Barrier();
+    ((GridBase*)p)->Barrier();
     return PyLong_FromLong(0);
     
   });
@@ -120,7 +120,7 @@ EXPORT(grid_globalsum,{
       return NULL;
     }
     
-    GridCartesian* grid = (GridCartesian*)p;
+    GridBase* grid = (GridBase*)p;
     if (PyComplex_Check(o)) {
       ComplexD c;
       cgpt_convert(o,c);
@@ -155,3 +155,20 @@ EXPORT(grid_globalsum,{
     //PyArrayObject* p;
     return PyLong_FromLong(0);
   });
+
+EXPORT(grid_get_processor,{
+    
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+    
+    GridBase* grid = (GridBase*)p;
+    long rank = grid->_processor;
+    long ranks = grid->_Nprocessors;
+    PyObject* coor = cgpt_convert(grid->_processor_coor);
+    PyObject* ldims = cgpt_convert(grid->_ldimensions);
+    return Py_BuildValue("(l,l,O,O)",rank,ranks,coor,ldims);
+    
+  });
+  
