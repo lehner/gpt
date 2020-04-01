@@ -32,12 +32,16 @@ cgpt_distribute::cgpt_distribute(int _rank, void* _local,
   comm = MPI_COMM_WORLD;
   MPI_Comm_size(comm,&mpi_ranks);
   MPI_Comm_rank(comm,&mpi_rank);
+  mpi_rank_map.resize(mpi_ranks,0);
+  ASSERT(rank < mpi_ranks);
+  mpi_rank_map[rank] = mpi_rank;
+  ASSERT(MPI_SUCCESS == MPI_Allreduce(MPI_IN_PLACE,&mpi_rank_map[0],mpi_ranks,MPI_INT,MPI_SUM,comm));
 #else
   mpi_ranks=1;
   mpi_rank=0;
+  mpi_rank_map.push_back(0);
 #endif
 
-  ASSERT(rank == mpi_rank); // in future, this interface can support general case
   ASSERT(word % simd_word == 0);
 }
 
@@ -114,7 +118,7 @@ void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map
     w.resize(dest_n);
 
     MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],dest_n,MPI_LONG,dest_rank,0x3,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],dest_n,MPI_LONG,mpi_rank_map[dest_rank],0x3,comm,&r));
     req.push_back(r);
 
   }
@@ -123,7 +127,7 @@ void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map
     if (dest_rank != rank) {
       auto & off = f.second.src;
       MPI_Request r;
-      ASSERT(MPI_SUCCESS == MPI_Isend(&off[0],off.size(),MPI_LONG,dest_rank,0x3,comm,&r));
+      ASSERT(MPI_SUCCESS == MPI_Isend(&off[0],off.size(),MPI_LONG,mpi_rank_map[dest_rank],0x3,comm,&r));
       req.push_back(r);
     }
   }
@@ -162,7 +166,7 @@ void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map
 
     MPI_Request r;
     ASSERT(w.size() < INT_MAX);
-    ASSERT(MPI_SUCCESS == MPI_Isend(&w[0],(int)w.size(),MPI_CHAR,dest_rank,0x2,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Isend(&w[0],(int)w.size(),MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
     req.push_back(r);
   }
 
@@ -176,7 +180,7 @@ void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map
       w.resize(dest_n * word);
       MPI_Request r;
       ASSERT(w.size() < INT_MAX);
-      ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],(int)w.size(),MPI_CHAR,dest_rank,0x2,comm,&r));
+      ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],(int)w.size(),MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
       req.push_back(r);
     }
   }
@@ -223,7 +227,7 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
     w.resize(dest_n);
 
     MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],dest_n,MPI_LONG,dest_rank,0x3,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],dest_n,MPI_LONG,mpi_rank_map[dest_rank],0x3,comm,&r));
     req.push_back(r);
 
   }
@@ -232,7 +236,7 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
     if (dest_rank != rank) {
       auto & off = f.second.src; // OK
       MPI_Request r;
-      ASSERT(MPI_SUCCESS == MPI_Isend(&off[0],off.size(),MPI_LONG,dest_rank,0x3,comm,&r));
+      ASSERT(MPI_SUCCESS == MPI_Isend(&off[0],off.size(),MPI_LONG,mpi_rank_map[dest_rank],0x3,comm,&r));
       req.push_back(r);
     }
   }
@@ -262,7 +266,7 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
       
       MPI_Request r;
       ASSERT(w.size() < INT_MAX);
-      ASSERT(MPI_SUCCESS == MPI_Isend(&w[0],(int)w.size(),MPI_CHAR,dest_rank,0x2,comm,&r));
+      ASSERT(MPI_SUCCESS == MPI_Isend(&w[0],(int)w.size(),MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
       req.push_back(r);
     }
   }
@@ -278,7 +282,7 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
     
     MPI_Request r;
     ASSERT(w.size() < INT_MAX);
-    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],(int)w.size(),MPI_CHAR,dest_rank,0x2,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],(int)w.size(),MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
     req.push_back(r);
   }
   {
@@ -371,7 +375,7 @@ void cgpt_distribute::send_tasks_to_ranks(const std::map<int, std::vector<long> 
   std::vector<long> lens(mpi_ranks);
   long len;
 
-  if (!mpi_rank) {
+  if (!rank) {
 
     std::map< int, std::vector<long> > rank_tasks;
     for (int i=1;i<mpi_ranks;i++) {
@@ -382,13 +386,13 @@ void cgpt_distribute::send_tasks_to_ranks(const std::map<int, std::vector<long> 
     for (int i=1;i<mpi_ranks;i++)
       lens[i] = rank_tasks[i].size();
 
-    ASSERT(MPI_SUCCESS == MPI_Scatter(&lens[0], 1, MPI_LONG, &len, 1, MPI_LONG, 0, comm));
+    ASSERT(MPI_SUCCESS == MPI_Scatter(&lens[0], 1, MPI_LONG, &len, 1, MPI_LONG, mpi_rank_map[0], comm));
 
     std::vector<MPI_Request> req;
     for (int i=1;i<mpi_ranks;i++) {
       if (lens[i] != 0) {
 	MPI_Request r;
-	ASSERT(MPI_SUCCESS == MPI_Isend(&rank_tasks[i][0], lens[i], MPI_LONG,i,0x5,comm,&r));
+	ASSERT(MPI_SUCCESS == MPI_Isend(&rank_tasks[i][0], lens[i], MPI_LONG,mpi_rank_map[i],0x5,comm,&r));
 	req.push_back(r);
       }
     }
@@ -399,12 +403,12 @@ void cgpt_distribute::send_tasks_to_ranks(const std::map<int, std::vector<long> 
     get_send_tasks_for_rank(0,wishlists,tasks); // overwrite mine with my tasks
   } else {
 
-    ASSERT(MPI_SUCCESS == MPI_Scatter(&lens[0], 1, MPI_LONG, &len, 1, MPI_LONG, 0, comm));
+    ASSERT(MPI_SUCCESS == MPI_Scatter(&lens[0], 1, MPI_LONG, &len, 1, MPI_LONG, mpi_rank_map[0], comm));
     // receive
     tasks.resize(len);
     MPI_Status status;
     if (len != 0)
-      ASSERT(MPI_SUCCESS == MPI_Recv(&tasks[0],len,MPI_LONG,0,0x5,comm,&status));
+      ASSERT(MPI_SUCCESS == MPI_Recv(&tasks[0],len,MPI_LONG,mpi_rank_map[0],0x5,comm,&status));
   }
 #else
   get_send_tasks_for_rank(0,wishlists,tasks); // overwrite mine with my tasks
@@ -415,10 +419,10 @@ void cgpt_distribute::wishlists_to_root(const std::vector<long>& wishlist, std::
 #ifdef USE_MPI
   long size = wishlist.size();
   std::vector<long> rank_size(mpi_ranks);
-  ASSERT(MPI_SUCCESS == MPI_Gather(&size, 1, MPI_LONG, &rank_size[0], 1, MPI_LONG, 0, comm));
-  if (mpi_rank != 0) {
+  ASSERT(MPI_SUCCESS == MPI_Gather(&size, 1, MPI_LONG, &rank_size[0], 1, MPI_LONG, mpi_rank_map[0], comm));
+  if (rank != 0) {
     if (size)
-      ASSERT(MPI_SUCCESS == MPI_Send(&wishlist[0], size, MPI_LONG,0,0x4,comm));
+      ASSERT(MPI_SUCCESS == MPI_Send(&wishlist[0], size, MPI_LONG,mpi_rank_map[0],0x4,comm));
   } else {
     wishlists[0] = wishlist; // my own wishlist can stay
 
@@ -429,7 +433,7 @@ void cgpt_distribute::wishlists_to_root(const std::vector<long>& wishlist, std::
 	w.resize(rank_size[i]);
 
 	MPI_Request r;
-	ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],rank_size[i],MPI_LONG,i,0x4,comm,&r));
+	ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],rank_size[i],MPI_LONG,mpi_rank_map[i],0x4,comm,&r));
 	req.push_back(r);
       }
     }

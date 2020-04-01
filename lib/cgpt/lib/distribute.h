@@ -38,6 +38,7 @@ class cgpt_distribute {
   void split(const std::vector<coor>& c, std::map<int,mp>& s);
   MPI_Comm comm;
   int mpi_ranks, mpi_rank;
+  std::vector<int> mpi_rank_map;
 
   void packet_prepare_need(std::vector<long>& data, const std::map<int,mp>& cr);
   void wishlists_to_root(const std::vector<long>& wishlist, std::map<int, std::vector<long> >& wishlists);
