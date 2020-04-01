@@ -440,7 +440,6 @@ void cgpt_distribute::wishlists_to_root(const std::vector<long>& wishlist, std::
 
     std::vector<MPI_Status> stat(req.size());
     ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
-
   }
 #endif
 }
