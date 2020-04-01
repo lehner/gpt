@@ -47,6 +47,9 @@ def get_ivec(tag, default):
 grid = get_ivec("--grid",[4,4,4,4])
 precision = { "single" : gpt.single, "double" : gpt.double }[get("--precision","double")]
 
+# IO parameters
+nwriter=get_int("--nwriter",64)
+
 # verbosity
 verbose_default="io,cg,irl,power_iteration,checkpointer,deflate"
 verbose_additional="eval"
@@ -72,4 +75,8 @@ if "--help" in sys.argv:
     print(" --verbose opt1,opt2,...")
     print("")
     print("   sets verbosity options.  candidates: %s" % verbose_candidates)
+    print("")
+    print(" --nwriter n")
+    print("")
+    print("   set number of writer nodes for IO")
     print("--------------------------------------------------------------------------------")

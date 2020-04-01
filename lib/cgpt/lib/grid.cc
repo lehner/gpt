@@ -143,10 +143,12 @@ EXPORT(grid_globalsum,{
       size_t nbytes = PyArray_NBYTES(ao);
       if (dt == NPY_FLOAT32 || dt == NPY_COMPLEX64) {
 	grid->GlobalSumVector((RealF*)data, nbytes / 4);
-      } else if (dt == NPY_FLOAT64 || NPY_COMPLEX128) {
+      } else if (dt == NPY_FLOAT64 || dt == NPY_COMPLEX128) {
 	grid->GlobalSumVector((RealD*)data, nbytes / 8);
+      } else if (dt == NPY_UINT64) {
+	grid->GlobalSumVector((uint64_t*)data, nbytes / 8);
       } else {
-	ERR("Unsupported numy data type (single, double, csingle, cdouble currently allowed)");
+	ERR("Unsupported numy data type (single, double, csingle, cdouble, uint64 currently allowed)");
       }
     } else {
       ERR("Unsupported object");

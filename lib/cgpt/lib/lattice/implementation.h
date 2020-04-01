@@ -137,6 +137,10 @@ public:
     l.Checkerboard() = cb;
   }
 
+  virtual int get_checkerboard() {
+    return l.Checkerboard();
+  }
+
   virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) {
     std::vector<Lattice<T>*> basis(_basis.size());
     cgpt_basis_fill(basis,_basis);

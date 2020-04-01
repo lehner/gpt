@@ -46,7 +46,7 @@ class eo_ne:
         self.matrix.R(self.ie, self.io, self.t1)
 
         self.t2[:]=0
-        gpt.change_cb(self.t2,gpt.even)
+        self.t2.checkerboard(gpt.even)
 
         self.inverter(lambda i,o: self.matrix.NDagN(i,o),self.t1,self.t2)
 

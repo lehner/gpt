@@ -190,3 +190,12 @@ EXPORT(lattice_change_checkerboard,{
     
     return PyLong_FromLong(0);
   });
+
+EXPORT(lattice_get_checkerboard,{
+    void* _dst;
+    if (!PyArg_ParseTuple(args, "ll", &_dst)) {
+      return NULL;
+    }
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    return PyLong_FromLong(dst->get_checkerboard() == Even ? 0 : 1);
+  });

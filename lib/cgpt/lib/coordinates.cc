@@ -53,3 +53,22 @@ EXPORT(coordinates_form_cartesian_view,{
     }
     return (PyObject*)a;
   });
+
+EXPORT(mview,{
+
+    PyObject* _a;
+    if (!PyArg_ParseTuple(args, "O", &_a)) {
+      return NULL;
+    }
+
+    if (PyArray_Check(_a)) {
+      char* data = (char*)PyArray_DATA((PyArrayObject*)_a);
+      long nbytes = PyArray_NBYTES((PyArrayObject*)_a);
+      return PyMemoryView_FromMemory(data,nbytes,PyBUF_WRITE);
+    } else {
+      ERR("Unsupported type");
+    }
+
+    return NULL;
+
+  });

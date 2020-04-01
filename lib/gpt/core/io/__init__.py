@@ -18,6 +18,7 @@
 #
 import cgpt
 import gpt
+import gpt.core.io.gpt_io
 
 # file formats
 class format:
@@ -25,7 +26,6 @@ class format:
         pass
     class cevec:
         pass
-
 
 # input
 def load(*a):
@@ -47,6 +47,10 @@ def load(*a):
 
 # output
 def save(filename,objs,fmt = format.gpt):
+
+    if fmt == format.gpt:
+        return gpt_io.save(filename, objs)
+
     return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
 
 

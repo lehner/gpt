@@ -16,6 +16,20 @@ U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.
 # Show metadata of field
 g.message("Metadata", U[0].metadata)
 
+# save
+g.save("out",{ 
+    "val" : [0,1,3,"test",3.123456789123456789,1.123456789123456789e-7,1+3.1231251251234123413j], # fundamental data types
+    "np" : g.coordinates(U[0].grid), # write numpy arrays
+    "U" : U # write list of lattices
+})
+
+#
+# load function should take grid or list of existing grids to look to re-use for later compatibility
+#
+
+
+sys.exit(0)
+
 def plaquette(U):
     # U[mu](x)*U[nu](x+mu)*adj(U[mu](x+nu))*adj(U[nu](x))
     tr=0.0
@@ -60,7 +74,7 @@ g.meminfo()
 
 print(gre)
 
-g.change_cb(gre,g.odd)
+gre.checkerboard(g.odd)
 
 print(gre)
 

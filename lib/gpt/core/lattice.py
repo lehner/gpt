@@ -72,6 +72,26 @@ class lattice:
         del mem_book[self.obj]
         cgpt.delete_lattice(self.obj)
 
+    def checkerboard(self, val = None):
+        if val is None:
+            if self.grid.cb != gpt.redblack:
+                return gpt.none
+
+            cb=cgpt.get_checkerboard(self.obj)
+            if cb == gpt.even.tag:
+                return gpt.even
+            elif cb == gpt.odd.tag:
+                return gpt.odd
+            else:
+                assert(0)
+        else:
+            assert(self.grid.cb == gpt.redblack)
+            cgpt.lattice_change_checkerboard(dst.obj,val.tag)
+
+    def describe(self):
+        # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
+        return self.otype.__name__ + "," + self.checkerboard().__name__
+
     def __setitem__(self, key, value):
         if type(key) == slice:
             if key == slice(None,None,None):
