@@ -29,7 +29,8 @@ cgpt_distribute::cgpt_distribute(int _rank, void* _local,
 						    simd_word(_simd_word) {
 
 #ifdef USE_MPI
-  comm = MPI_COMM_WORLD;
+  //MPI_COMM_WORLD
+  comm = CartesianCommunicator::communicator_world;
   MPI_Comm_size(comm,&mpi_ranks);
   MPI_Comm_rank(comm,&mpi_rank);
   mpi_rank_map.resize(mpi_ranks,0);
