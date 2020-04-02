@@ -90,7 +90,7 @@ class lattice:
 
     def describe(self):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
-        return self.otype.__name__ + "," + self.checkerboard().__name__
+        return self.otype.__name__ + ";" + self.checkerboard().__name__
 
     def __setitem__(self, key, value):
         if type(key) == slice:

@@ -16,12 +16,21 @@ U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.
 # Show metadata of field
 g.message("Metadata", U[0].metadata)
 
-# save
+# save in default gpt format
 g.save("out",{ 
     "val" : [0,1,3,"test",3.123456789123456789,1.123456789123456789e-7,1+3.1231251251234123413j], # fundamental data types
     "np" : g.coordinates(U[0].grid), # write numpy arrays
     "U" : U # write list of lattices
 })
+
+# save in custom gpt format with different mpi distribution of local views
+g.save("out2",{ 
+    "val" : [0,1,3,"test",3.123456789123456789,1.123456789123456789e-7,1+3.1231251251234123413j], # fundamental data types
+    "np" : g.coordinates(U[0].grid), # write numpy arrays
+    "U" : U # write list of lattices
+},g.format.gpt({
+    "mpi" : [ 2, 2, 1, 1 ]
+}))
 
 #
 # load function should take grid or list of existing grids to look to re-use for later compatibility

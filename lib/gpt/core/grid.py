@@ -40,8 +40,8 @@ class grid:
 
         self.processor,self.Nprocessors,self.processor_coor,self.ldimensions=cgpt.grid_get_processor(self.obj)
 
-    def describe(self): # creates a string without spaces that can be used to construct it again
-        return (str(self.gdimensions)+","+self.precision.__name__+","+self.cb.__name__).replace(" ","")
+    def describe(self): # creates a string without spaces that can be used to construct it again, this should only describe the grid geometry not the mpi/simd
+        return (str(self.gdimensions)+";"+self.precision.__name__+";"+self.cb.__name__).replace(" ","")
 
     def __del__(self):
         cgpt.delete_grid(self.obj)

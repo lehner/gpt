@@ -25,3 +25,7 @@ def coordinates(o):
         top=[ o.processor_coor[i]*o.ldimensions[i] for i in range(dim) ]
         bottom=[ top[i] + o.ldimensions[i] for i in range(dim) ]
         return cgpt.coordinates_form_cartesian_view(top,bottom)
+    elif type(o) == gpt.cartesian_view:
+        return cgpt.coordinates_form_cartesian_view(o.top,o.bottom)
+    else:
+        assert(0)

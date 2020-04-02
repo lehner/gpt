@@ -16,13 +16,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, os, io, numpy
+import cgpt, gpt, os, io, numpy, sys
 from time import time
 
 # get local dir an filename
-def get_local_name(root, grid):
-    ntotal=grid.Nprocessors
-    rank=grid.processor
+def get_local_name(root, cv):
+    ntotal=cv.ranks
+    rank=cv.rank
     dirs=32
     nperdir = ntotal // dirs
     if nperdir < 1:
@@ -34,23 +34,24 @@ def get_local_name(root, grid):
 
 # gpt io class
 class gpt_io:
-    def __init__(self, root):
+    def __init__(self, root, params):
         self.root = root
+        self.params = params
         self.verbose = gpt.default.is_verbose("io")
         os.makedirs(self.root, exist_ok=True)
         if gpt.rank() == 0:
             self.glb = open(root + "/global","wb")
         else:
             self.glb = None
-        self.loc = None
+        self.loc = {}
 
     def __del__(self):
         self.close()
 
     def close(self):
-        if not self.loc is None:
-            self.loc.close()
-            self.loc = None
+        for x in self.loc:
+            self.loc[x].close()
+        self.loc={}
         if not self.glb is None:
             self.glb.close()
             self.glb = None
@@ -64,23 +65,38 @@ class gpt_io:
             nwriter=g.Nprocessors
         ngroups = g.Nprocessors // nwriter
 
+        # create cartesian view for writing
+        if "mpi" in self.params:
+            cv=gpt.cartesian_view(g.processor,self.params["mpi"],g.gdimensions)
+
+            # make sure that we do not want a cv with more processors than we have in g,
+            # this is not yet supported
+            assert(cv.ranks <= g.Nprocessors)
+        else:
+            cv=gpt.cartesian_view(g)
+
         # directories and files
-        dn,fn=get_local_name(self.root,g)
-        if self.loc is None:
-            os.makedirs(dn, exist_ok=True)
-            self.loc = open(fn,"wb")
+        if cv.rank < cv.ranks:
+            dn,fn=get_local_name(self.root,cv)
+            if fn not in self.loc:
+                os.makedirs(dn, exist_ok=True)
+                self.loc[fn] = open(fn,"wb")
+            f = self.loc[fn]
+        else:
+            f = None
 
         # description and data
-        res=g.describe() + " " + l.describe()
+        res=g.describe() + " " + cv.describe() + " " + l.describe()
         t0=time()
-        data=cgpt.mview(l[gpt.coordinates(g)])
+        data=cgpt.mview(l[gpt.coordinates(cv)])
         t1=time()
         crc=gpt.crc32(data)
         t2=time()
 
         # file positions
         pos=numpy.array([ 0 ] * g.Nprocessors,dtype=numpy.uint64)
-        pos[g.processor]=self.loc.tell()
+        if not f is None:
+            pos[g.processor]=f.tell()
         g.globalsum(pos)
         tag=(ctx + "\0").encode("utf-8")
         ntag=len(tag)
@@ -88,31 +104,30 @@ class gpt_io:
 
         for group in range(ngroups):
             g.barrier()
+            szGB=0.0
             tg0=time()
-            if g.processor % ngroups == group:
-                self.loc.write(ntag.to_bytes(4,byteorder='little'))
-                self.loc.write(tag)
-                self.loc.write(crc.to_bytes(4,byteorder='little'))
-                self.loc.write(nd.to_bytes(4,byteorder='little'))
+            if g.processor % ngroups == group and not f is None:
+                f.write(ntag.to_bytes(4,byteorder='little'))
+                f.write(tag)
+                f.write(crc.to_bytes(4,byteorder='little'))
+                f.write(nd.to_bytes(4,byteorder='little'))
                 for i in range(nd):
-                    self.loc.write(g.gdimensions[i].to_bytes(4,byteorder='little'))
+                    f.write(g.gdimensions[i].to_bytes(4,byteorder='little'))
                 for i in range(nd):
-                    self.loc.write(( g.gdimensions[i] // g.ldimensions[i]).to_bytes(4,byteorder='little'))
-                self.loc.write(len(data).to_bytes(8,byteorder='little'))
+                    f.write(( g.gdimensions[i] // g.ldimensions[i]).to_bytes(4,byteorder='little'))
+                f.write(len(data).to_bytes(8,byteorder='little'))
                 t3=time()
-                self.loc.write(data)
-                self.loc.flush()
+                f.write(data)
+                f.flush()
                 t4=time()
                 szGB=len(data) / 1024.**3.
                 if self.verbose:
                     gpt.message("Write %g GB on root node at %g GB /s for distribute, %g GB / s for checksum, %g GB / s for writing" % (szGB,szGB/(t1-t0),szGB/(t2-t1),szGB/(t4-t3)))
-            else:
-                szGB=0.0
             szGB=g.globalsum(szGB)
             tg1=time()
             if self.verbose:
                 gpt.message("Globally wrote %g GB in group %d / %d at %g GB / s" % (szGB,group+1,ngroups,szGB/(tg1-tg0)))
-        return res + " " + " ".join([ "%d" % x for x in pos ])
+        return res + " " + " ".join([ "%d" % x for x in pos[0:cv.ranks] ])
 
     def write_numpy(self, a):
         if not self.glb is None:
@@ -154,10 +169,12 @@ class gpt_io:
             assert(0)
 
 
-def save(filename, objs):
-    
+def save(filename, objs, params):
+
+    t0=time()
+
     # create io
-    x=gpt_io(filename)
+    x=gpt_io(filename,params)
 
     # create index
     f=io.StringIO("")
@@ -172,4 +189,9 @@ def save(filename, objs):
 
     # close
     x.close()
-    
+
+    # goodbye
+    if x.verbose:
+        t1=time()
+        gpt.message("Completed writing %s in %g s" % (filename,t1-t0))
+

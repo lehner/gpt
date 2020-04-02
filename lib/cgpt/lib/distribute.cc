@@ -64,7 +64,7 @@ void cgpt_distribute::copy_to(const std::vector<coor>& c,void* dest) {
   // head node needs to learn all the remote requirements
   std::vector<long> wishlist;
   packet_prepare_need(wishlist,cr);
-  
+
   // head node collects the wishlists
   std::map< int, std::vector<long> > wishlists;
   wishlists_to_root(wishlist,wishlists);
@@ -385,21 +385,24 @@ void cgpt_distribute::send_tasks_to_ranks(const std::map<int, std::vector<long> 
 
     // vector of lengths
     for (int i=1;i<mpi_ranks;i++)
-      lens[i] = rank_tasks[i].size();
+      lens[mpi_rank_map[i]] = rank_tasks[i].size();
 
     ASSERT(MPI_SUCCESS == MPI_Scatter(&lens[0], 1, MPI_LONG, &len, 1, MPI_LONG, mpi_rank_map[0], comm));
 
     std::vector<MPI_Request> req;
     for (int i=1;i<mpi_ranks;i++) {
-      if (lens[i] != 0) {
+      long li = lens[mpi_rank_map[i]];
+      if (li != 0) {
 	MPI_Request r;
-	ASSERT(MPI_SUCCESS == MPI_Isend(&rank_tasks[i][0], lens[i], MPI_LONG,mpi_rank_map[i],0x5,comm,&r));
+	ASSERT(MPI_SUCCESS == MPI_Isend(&rank_tasks[i][0], li, MPI_LONG,mpi_rank_map[i],0x5,comm,&r));
 	req.push_back(r);
       }
     }
 
-    std::vector<MPI_Status> stat(req.size());
-    ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
+    if (req.size() != 0) {
+      std::vector<MPI_Status> stat(req.size());
+      ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
+    }
 
     get_send_tasks_for_rank(0,wishlists,tasks); // overwrite mine with my tasks
   } else {
@@ -421,6 +424,7 @@ void cgpt_distribute::wishlists_to_root(const std::vector<long>& wishlist, std::
   long size = wishlist.size();
   std::vector<long> rank_size(mpi_ranks);
   ASSERT(MPI_SUCCESS == MPI_Gather(&size, 1, MPI_LONG, &rank_size[0], 1, MPI_LONG, mpi_rank_map[0], comm));
+
   if (rank != 0) {
     if (size)
       ASSERT(MPI_SUCCESS == MPI_Send(&wishlist[0], size, MPI_LONG,mpi_rank_map[0],0x4,comm));
@@ -429,18 +433,23 @@ void cgpt_distribute::wishlists_to_root(const std::vector<long>& wishlist, std::
 
     std::vector<MPI_Request> req;
     for (int i=1;i<mpi_ranks;i++) { // gather wishes from all others
-      if (rank_size[i] != 0) {
+      long rs = rank_size[mpi_rank_map[i]];
+      if (rs != 0) {
 	auto & w = wishlists[i];
-	w.resize(rank_size[i]);
+	w.resize(rs);
 
-	MPI_Request r;
-	ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],rank_size[i],MPI_LONG,mpi_rank_map[i],0x4,comm,&r));
-	req.push_back(r);
+	if (rs != 0) {
+	  MPI_Request r;
+	  ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],rs,MPI_LONG,mpi_rank_map[i],0x4,comm,&r));
+	  req.push_back(r);
+	}
       }
     }
-
-    std::vector<MPI_Status> stat(req.size());
-    ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
+    
+    if (req.size() != 0) {
+      std::vector<MPI_Status> stat(req.size());
+      ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
+    }
   }
 #endif
 }

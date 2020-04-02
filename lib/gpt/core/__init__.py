@@ -30,5 +30,6 @@ from gpt.core.otype import *
 from gpt.core.io import load, crc32, save, format
 from gpt.core.checkpointer import checkpointer, checkpointer_none
 from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomp
+from gpt.core.cartesian import cartesian_view
 from gpt.core.coordinates import coordinates
 import gpt.core.util

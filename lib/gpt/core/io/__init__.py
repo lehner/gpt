@@ -23,9 +23,11 @@ import gpt.core.io.gpt_io
 # file formats
 class format:
     class gpt:
-        pass
+        def __init__(self, params = {}):
+            self.params = params
     class cevec:
-        pass
+        def __init__(self, params = {}):
+            self.params = params
 
 # input
 def load(*a):
@@ -46,10 +48,10 @@ def load(*a):
 
 
 # output
-def save(filename,objs,fmt = format.gpt):
+def save(filename,objs,fmt = format.gpt()):
 
-    if fmt == format.gpt:
-        return gpt_io.save(filename, objs)
+    if type(fmt) == format.gpt:
+        return gpt_io.save(filename, objs, fmt.params)
 
     return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
 
