@@ -19,7 +19,9 @@
 #define PER_TENSOR_TYPE(T)						\
   template<typename vtype>						\
   void cgpt_lattice_convert_from(Lattice< T<vtype> >& dst,cgpt_Lattice_base* src) { \
-    if (src->type() == typeid(T<vComplexD>).name()) {			\
+    if (src->type() == typeid(T<vtype>).name()) {			\
+      localConvert(((cgpt_Lattice<T<vtype>>*)src)->l,dst);		\
+    } else if (src->type() == typeid(T<vComplexD>).name()) {		\
       precisionChange(dst, ((cgpt_Lattice<T<vComplexD>>*)src)->l );	\
     } else if (src->type() == typeid(T<vComplexF>).name()) {		\
       precisionChange(dst, ((cgpt_Lattice<T<vComplexF>>*)src)->l );	\

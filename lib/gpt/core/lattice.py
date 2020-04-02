@@ -86,7 +86,7 @@ class lattice:
                 assert(0)
         else:
             assert(self.grid.cb == gpt.redblack)
-            cgpt.lattice_change_checkerboard(dst.obj,val.tag)
+            cgpt.lattice_change_checkerboard(self.obj,val.tag)
 
     def describe(self):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
