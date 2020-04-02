@@ -1,6 +1,19 @@
 #!/bin/bash
-GRID=/sdcc/u/clehner/Grid/build
+# Configure
+root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
+GRID=${root}/dependencies/Grid/build
+if [ ! -d ${GRID} ];
+then
+    GRID=${root}/../Grid/build
+fi
+if [ ! -d ${GRID} ];
+then
+    echo "Could not detect Grid location"
+    exit 2
+fi
 NPARALLEL=8
+
+# Start
 N=0
 
 mkdir -p build

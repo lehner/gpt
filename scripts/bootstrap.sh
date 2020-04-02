@@ -56,6 +56,7 @@ mv openssl* openssl
 cd openssl
 ./config
 make -j 4
+ln -s ${dep}/openssl lib # quick "install"
 
 #
 # Grid
@@ -70,3 +71,8 @@ cd build
 cd Grid
 make -j 4
 
+#
+# cgpt
+#
+cd ${root}/cgpt
+./make # still may need numpy headers
