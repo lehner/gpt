@@ -25,3 +25,11 @@ class double:
     nbytes=8
     def __init__(self):
         pass
+
+def str_to_precision(s):
+    if s == "single":
+        return single
+    elif s == "double":
+        return double
+    else:
+        assert(0)

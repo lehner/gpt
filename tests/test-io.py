@@ -16,25 +16,44 @@ U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.
 # Show metadata of field
 g.message("Metadata", U[0].metadata)
 
+# to single precision
+U = g.convert(U, g.single)
+
 # save in default gpt format
 g.save("out",{ 
-    "val" : [0,1,3,"test",3.123456789123456789,1.123456789123456789e-7,1+3.1231251251234123413j], # fundamental data types
-    "np" : g.coordinates(U[0].grid), # write numpy arrays
+    "va\nl" : [0,1,3,"tes\n\0t",3.123456789123456789,1.123456789123456789e-7,1+3.1231251251234123413j], # fundamental data types
+    "np" : g.coordinates(U[0].grid), # write numpy array from root node
     "U" : U # write list of lattices
 })
 
 # save in custom gpt format with different mpi distribution of local views
 g.save("out2",{ 
     "val" : [0,1,3,"test",3.123456789123456789,1.123456789123456789e-7,1+3.1231251251234123413j], # fundamental data types
-    "np" : g.coordinates(U[0].grid), # write numpy arrays
+    "np" : g.coordinates(U[0].grid), # write numpy array from root node
     "U" : U # write list of lattices
 },g.format.gpt({
-    "mpi" : [ 2, 2, 1, 1 ]
+    "mpi" : [ 2, 2, 1, 1 ] # save fields in 2 x 2 x 1 x 1 processor grid instead of --mpi grid
 }))
 
 #
-# load function should take grid or list of existing grids to look to re-use for later compatibility
+# load function
 #
+# - g.load(fn)          loads everything in fn and creates new grids as needed
+# - g.load(fn,{ "grids" : ..., "paths" :  ... })  both grids and paths are optional parameters and may be lists, 
+#                                                 grids are re-used when loading, paths restricts which items to load (allows for glob.glob syntax /U/*)
+res=g.load("out",{ 
+    "grids" : U[0].grid
+})
+
+for i in range(4):
+    g.message("Test first restore of U[%d]:" % i,g.norm2(res["U"][i] - U[i]))
+
+res=g.load("out2",{ 
+    "grids" : U[0].grid, 
+    "paths" : "/U/*"
+})
+for i in range(4):
+    g.message("Test second restore of U[%d]:" % i,g.norm2(res["U"][i] - U[i]))
 
 
 sys.exit(0)

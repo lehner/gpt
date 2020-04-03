@@ -64,7 +64,10 @@ EXPORT(mview,{
     if (PyArray_Check(_a)) {
       char* data = (char*)PyArray_DATA((PyArrayObject*)_a);
       long nbytes = PyArray_NBYTES((PyArrayObject*)_a);
-      return PyMemoryView_FromMemory(data,nbytes,PyBUF_WRITE);
+      PyObject* r = PyMemoryView_FromMemory(data,nbytes,PyBUF_WRITE);
+      Py_XINCREF(_a);
+      PyMemoryView_GET_BASE(r) = _a;
+      return r;
     } else {
       ERR("Unsupported type");
     }

@@ -47,7 +47,7 @@ public:
   virtual void linear_combination(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt) = 0;
   virtual PyObject* memory_view() = 0; // access to internal memory storage, can be simd format
   virtual PyArrayObject* export_data(PyArrayObject* coordinates) = 0;
-  virtual void import_data(PyArrayObject* coordinates, PyArrayObject* data) = 0;
+  virtual void import_data(PyArrayObject* coordinates, PyObject* data) = 0;
 };
 
 template<class T> class cgpt_Lattice;

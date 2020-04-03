@@ -34,11 +34,13 @@ for tr in range(10):
         for j in range(4):
             c[i][j] = (c[i][j] + shift[j]) % grid.gdimensions[j]
     data=src[c] # test global uniform memory system
+    mvrestore=gpt.mview(data)
     err2=0.0
     for i,pos in enumerate(c):
         err2+=(data[i][0].real - pos[0])**2.0 + (data[i][1].real - pos[1])**2.0 + (data[i][2].real - pos[2])**2.0
     print(g.rank(),"found error",err2)
-    dst[c]=data
+    dst[c]=mvrestore
+    #data
 
     g.message(g.norm2(src-dst))
 

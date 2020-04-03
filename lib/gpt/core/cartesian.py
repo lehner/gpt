@@ -25,7 +25,14 @@ class cartesian_view:
             g=first
             rank=g.processor
             gdimensions=g.gdimensions
-            mpi=[ g.gdimensions[i] // g.ldimensions[i] for i in range(len(g.gdimensions)) ]
+            if second is None:
+                mpi=[ g.gdimensions[i] // g.ldimensions[i] for i in range(len(g.gdimensions)) ]
+            else:
+                assert(0)
+        elif type(second) == str:
+            rank=first
+            mpi=[ int(x) for x in second.strip("[]").split(",") ]
+            gdimensions=third
         else:
             rank, mpi, gdimensions = first, second, third
         assert(len(mpi) == len(gdimensions))

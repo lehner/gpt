@@ -86,6 +86,17 @@ def vspincolor(grid):
 
 
 ###
+# String conversion for safe file input
+def str_to_otype(s):
+    return { 
+        "ot_complex" : ot_complex,
+        "ot_mcolor" : ot_mcolor,
+        "ot_vcolor" : ot_vcolor,
+        "ot_mspincolor" : ot_mspincolor,
+        "ot_vspincolor" : ot_vspincolor,
+        }[s]
+
+###
 # Multiplication table
 mtab = {
     (ot_mcolor,ot_mcolor) : (ot_mcolor,(1,0)),
@@ -107,3 +118,4 @@ itab = {
     (ot_vcolor,ot_vcolor) : (ot_complex,(0,0)),
     (ot_vspincolor,ot_vspincolor) : (ot_complex,([0,1],[0,1])),
 }
+

@@ -137,9 +137,8 @@ EXPORT(lattice_import,{
 
     cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
     ASSERT(PyArray_Check(a));
-    ASSERT(PyArray_Check(d));
     
-    l->import_data((PyArrayObject*)a,(PyArrayObject*)d);
+    l->import_data((PyArrayObject*)a,d);
 
     return PyLong_FromLong(0);
   });

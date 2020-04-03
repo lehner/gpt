@@ -82,7 +82,7 @@ PyArrayObject* cgpt_export(Lattice<T>& l, PyArrayObject* coordinates) {
 }
 
 template<typename T> 
-void cgpt_import(Lattice<T>& l, PyArrayObject* coordinates, PyArrayObject* bytes) {
+void cgpt_import(Lattice<T>& l, PyArrayObject* coordinates, PyObject* data) {
 
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
@@ -103,14 +103,34 @@ void cgpt_import(Lattice<T>& l, PyArrayObject* coordinates, PyArrayObject* bytes
   cgpt_numpy_data_layout(sobj(),dim);
 
   // check compatibility
-  ASSERT(PyArray_NDIM(bytes) == dim.size());
-  long* tdim = PyArray_DIMS(bytes);
-  for (int i=0;i<(int)dim.size();i++)
-    ASSERT(tdim[i] == dim[i]);
-  ASSERT(infer_numpy_type(Coeff_t()) == PyArray_TYPE(bytes));
-  sobj* s = (sobj*)PyArray_DATA(bytes);
+  if (fc.size() != 0) {
 
-  // fill data
-  dist.copy_from(fc,s);
+    if (PyArray_Check(data)) {
+      PyArrayObject* bytes = (PyArrayObject*)data;
+      ASSERT(PyArray_NDIM(bytes) == dim.size());
+      long* tdim = PyArray_DIMS(bytes);
+      for (int i=0;i<(int)dim.size();i++)
+	ASSERT(tdim[i] == dim[i]);
+      ASSERT(infer_numpy_type(Coeff_t()) == PyArray_TYPE(bytes));
+      sobj* s = (sobj*)PyArray_DATA(bytes);
+
+      // fill data
+      dist.copy_from(fc,s);
+    } else if (PyMemoryView_Check(data)) {
+      Py_buffer* buf = PyMemoryView_GET_BUFFER(data);
+      ASSERT(PyBuffer_IsContiguous(buf,'C'));
+      sobj* s = (sobj*)buf->buf;
+      int64_t len = (int64_t)buf->len;
+      ASSERT(len == sizeof(sobj)*fc.size());
+
+      // fill data
+      dist.copy_from(fc,s);
+    } else {
+      ERR("Incompatible type");
+    }
+
+  } else {
+    dist.copy_from(fc,0);
+  }
 
 }

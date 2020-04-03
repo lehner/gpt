@@ -162,7 +162,7 @@ public:
     return cgpt_export(l,coordinates);
   }
 
-  virtual void import_data(PyArrayObject* coordinates, PyArrayObject* data) {
+  virtual void import_data(PyArrayObject* coordinates, PyObject* data) {
     cgpt_import(l,coordinates,data);
   }
 

@@ -46,19 +46,21 @@ class lattice:
     __array_priority__=1000000
     def __init__(self, first, second = None, third = None):
         self.metadata={}
-        if type(first) == gpt.grid and not second is None and not third is None:
-            grid = first
-            otype = second
-            obj = third
-            self.grid = grid
-            self.otype = otype
-            self.obj = obj
-        elif type(first) == gpt.grid and not second is None:
-            grid = first
-            otype = second
-            self.grid = grid
-            self.otype = otype
-            self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
+        cb=None
+        if type(first) == gpt.grid:
+            self.grid = first
+            if type(second) == str:
+                # from desc
+                p=second.split(";")
+                self.otype=gpt.str_to_otype(p[0])
+                cb=gpt.str_to_cb(p[1])
+                self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
+            else:
+                self.otype = second
+                if not third is None:
+                    self.obj = third
+                else:
+                    self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
         elif type(first) == gpt.lattice:
             # Note that copy constructor only creates a compatible lattice but does not copy its contents!
             self.grid = first.grid
@@ -67,6 +69,8 @@ class lattice:
         else:
             raise Exception("Unknown lattice constructor")
         mem_book[self.obj] = (self.grid,self.otype,gpt.time())
+        if not cb is None:
+            self.checkerboard(cb)
 
     def __del__(self):
         del mem_book[self.obj]
@@ -85,8 +89,9 @@ class lattice:
             else:
                 assert(0)
         else:
-            assert(self.grid.cb == gpt.redblack)
-            cgpt.lattice_change_checkerboard(self.obj,val.tag)
+            if val != gpt.none:
+                assert(self.grid.cb == gpt.redblack)
+                cgpt.lattice_change_checkerboard(self.obj,val.tag)
 
     def describe(self):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
