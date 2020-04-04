@@ -26,11 +26,11 @@ EXPORT(load,{
     bool verbose;
     cgpt_convert(PyTuple_GetItem(args,1),verbose);
 
-    if (ret = load_nersc(args))
+    if ((ret = load_nersc(args)))
       return ret;
 
     // openQCD file format is minimal, not distinctive, test last
-    if (ret = load_openQCD(args))
+    if ((ret = load_openQCD(args)))
       return ret;
 
     ERR("Unknown file format!");
