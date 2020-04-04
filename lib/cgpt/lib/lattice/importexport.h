@@ -35,18 +35,19 @@ static void cgpt_to_full_coor(GridBase* grid, int cb,
 
   fc.resize(nc);
 
-  thread_region {
-    Coordinate site(grid->Nd());
-    thread_for_in_region (i,nc,{
-	memcpy(&site[0],&coor[stride*i],4*stride);
-	ASSERT( cb == grid->CheckerBoard(site) );
-	
-	cgpt_distribute::coor& c = fc[i];
-	int odx, idx;
-	grid->GlobalCoorToRankIndex(c.rank,odx,idx,site);
-	c.offset = odx*Nsimd + idx;
-      });
-  }
+  thread_region 
+    {
+      Coordinate site(grid->Nd());
+      thread_for_in_region (i,nc,{
+	  memcpy(&site[0],&coor[stride*i],4*stride);
+	  ASSERT( cb == grid->CheckerBoard(site) );
+	  
+	  cgpt_distribute::coor& c = fc[i];
+	  int odx, idx;
+	  grid->GlobalCoorToRankIndex(c.rank,odx,idx,site);
+	  c.offset = odx*Nsimd + idx;
+	});
+    }
 }
 
 
@@ -74,10 +75,9 @@ PyArrayObject* cgpt_export(Lattice<T>& l, PyArrayObject* coordinates) {
   cgpt_numpy_data_layout(sobj(),dim);
   PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], infer_numpy_type(Coeff_t()));
   sobj* s = (sobj*)PyArray_DATA(a);
-
+  
   // fill data
   dist.copy_to(fc,s);
-
   return a;
 }
 

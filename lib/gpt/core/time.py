@@ -16,17 +16,9 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core import *
-from gpt.params import params
-import gpt.default
-import gpt.create
-import gpt.algorithms
-import gpt.qcd
-import cgpt, sys
+import cgpt
 
-# initialize cgpt when gpt is loaded
-cgpt.init(sys.argv)
+t0=cgpt.time()
 
-# synonyms
-eval=expr_eval
-
+def time():
+    return cgpt.time() - t0

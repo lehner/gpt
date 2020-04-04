@@ -16,17 +16,16 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core import *
-from gpt.params import params
-import gpt.default
-import gpt.create
-import gpt.algorithms
-import gpt.qcd
-import cgpt, sys
+import cgpt
 
-# initialize cgpt when gpt is loaded
-cgpt.init(sys.argv)
+# global rank
+def rank():
+    return cgpt.global_rank()
 
-# synonyms
-eval=expr_eval
+# broadcast
+def broadcast(root,data):
+    return cgpt.broadcast(root,data)
 
+# barrier
+def barrier():
+    return cgpt.barrier()

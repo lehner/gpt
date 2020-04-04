@@ -16,31 +16,10 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include <Python.h>
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION 
-#define PY_ARRAY_UNIQUE_SYMBOL cgpt_ARRAY_API
-#ifndef _THIS_IS_INIT_
-#define NO_IMPORT_ARRAY
-#endif
-#include <numpy/arrayobject.h>
-#include <vector>
-#include <string>
-#include <iostream>
+static double cgpt_time() {
+  timespec t;
+  clock_gettime(CLOCK_REALTIME, &t);
+  return t.tv_sec + t.tv_nsec / 1000000000.;
+}
 
-#include <Grid/Grid.h>
-
-using namespace Grid;
-
-#include "time.h"
-#include "exception.h"
-#include "convert.h"
-#include "checksums.h"
-#include "parameters.h"
-#include "numpy.h"
-#include "distribute.h"
-#include "peekpoke.h"
-#include "transform.h"
-#include "lattice.h"
-#include "precision.h"
-#include "util.h"
-#include "expression.h"
+#define TIME(t,...) double t(0.0); t-=cgpt_time(); __VA_ARGS__; t+=cgpt_time();

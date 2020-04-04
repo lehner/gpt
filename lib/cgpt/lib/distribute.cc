@@ -58,43 +58,40 @@ void cgpt_distribute::split(const std::vector<coor>& c, std::map<int,mp>& s) {
 void cgpt_distribute::copy_to(const std::vector<coor>& c,void* dest) {
   std::map<int,mp> cr;
 
-  GridStopWatch gsw0,gsw1,gsw2,gsw3,gsw4,gsw5;
-
-  gsw0.Start();
   // split mapping by rank
-  split(c,cr);
-  gsw0.Stop();
+  TIME(dt0,
+       split(c,cr);
+       );
 
-  gsw1.Start();
+  TIME(dt1,
   // head node needs to learn all the remote requirements
   std::vector<long> wishlist;
   packet_prepare_need(wishlist,cr);
-  gsw1.Stop();
-  gsw2.Start();
+       );
+
+  TIME(dt2,
   // head node collects the wishlists
   std::map< int, std::vector<long> > wishlists;
   wishlists_to_root(wishlist,wishlists);
-  gsw2.Stop();
-  gsw3.Start();
+       );
+
+  TIME(dt3,
   // now root tells every node which other nodes needs how much of its data
   std::vector<long> tasks;
   send_tasks_to_ranks(wishlists,tasks);
-  gsw3.Stop();
-  gsw4.Start();
+       );
+
   // copy local data
+  TIME(dt4,
   copy_data(cr[rank],local,dest);
-  gsw4.Stop();
-  gsw5.Start();
+       );
+
   // receive the requested wishlist from my task ranks
+  TIME(dt5,
   copy_remote(tasks,cr,dest);
-  gsw5.Stop();
-  std::cout << GridLogMessage << "Timing:" 
-	    << gsw0.Elapsed() << ", " 
-	    << gsw1.Elapsed() << ", " 
-	    << gsw2.Elapsed() << ", " 
-	    << gsw3.Elapsed() << ", " 
-	    << gsw4.Elapsed() << ", " 
-	    << gsw5.Elapsed() << std::endl;
+       );
+
+  //printf("Timing %g %g %g %g %g %g\n",dt0,dt1,dt2,dt3,dt4,dt5);
 }
 
 void cgpt_distribute::copy_from(const std::vector<coor>& c,void* src) {

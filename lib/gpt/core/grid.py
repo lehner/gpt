@@ -55,16 +55,25 @@ class grid:
         self.gsites = np.prod(self.gdimensions)
         self.precision = precision
         self.cb = cb
+        self.nd=len(self.gdimensions)
         
         if obj == None:
             self.obj = cgpt.create_grid(gdimensions, precision, cb)
         else:
             self.obj = obj
 
+        # processor is mpi rank, may not be lexicographical (cartesian) rank
         self.processor,self.Nprocessors,self.processor_coor,self.ldimensions=cgpt.grid_get_processor(self.obj)
+        self.mpi = [ self.gdimensions[i] // self.ldimensions[i] for i in range(self.nd) ]
 
     def describe(self): # creates a string without spaces that can be used to construct it again, this should only describe the grid geometry not the mpi/simd
         return (str(self.gdimensions)+";"+self.precision.__name__+";"+self.cb.__name__).replace(" ","")
+
+    def cartesian_rank(self):
+        rank=0
+        for i in reversed(range(self.nd)):
+            rank = rank*self.mpi[i] + self.processor_coor[i]
+        return rank
 
     def __del__(self):
         cgpt.delete_grid(self.obj)

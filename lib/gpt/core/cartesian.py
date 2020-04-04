@@ -26,7 +26,7 @@ class cartesian_view:
             rank=g.processor
             gdimensions=g.gdimensions
             if second is None:
-                mpi=[ g.gdimensions[i] // g.ldimensions[i] for i in range(len(g.gdimensions)) ]
+                mpi=g.mpi
             else:
                 assert(0)
         elif type(second) == str:
@@ -61,7 +61,3 @@ class cartesian_view:
     def describe(self):
         return str(self.mpi).replace(" ","")
 
-    def optimal_rank_map(self, grid):
-        # return which_processor_of_grid_should_do_IO_for_cv_rank[rank]
-        # Do timing of distribute
-        pass

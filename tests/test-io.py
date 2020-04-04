@@ -11,13 +11,13 @@ import random
 import cgpt
 
 # load configuration
-U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
+U = g.load("/hpcgpfs01/work/clehner/configs/32IDfine/ckpoint_lat.200")
 
 # Show metadata of field
 g.message("Metadata", U[0].metadata)
 
 # to single precision
-U = g.convert(U, g.single)
+#U = g.convert(U, g.single)
 
 # save in default gpt format
 g.save("out",{ 

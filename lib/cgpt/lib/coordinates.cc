@@ -43,14 +43,15 @@ EXPORT(coordinates_form_cartesian_view,{
 
     PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_INT32);
     int32_t* d = (int32_t*)PyArray_DATA(a);
-    thread_region {
-      std::vector<int32_t> coor(Nd);
-      thread_for_in_region(idx,points,{
-	  Lexicographic::CoorFromIndex(coor,idx,size);
-	  for (int i=0;i<Nd;i++)
-	    d[Nd*idx + i] = top[i] + coor[i];
-	});
-    }
+    thread_region 
+      {
+	std::vector<int32_t> coor(Nd);
+	thread_for_in_region(idx,points,{
+	    Lexicographic::CoorFromIndex(coor,idx,size);
+	    for (int i=0;i<Nd;i++)
+	      d[Nd*idx + i] = top[i] + coor[i];
+	  });
+      }
     return (PyObject*)a;
   });
 

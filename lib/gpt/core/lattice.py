@@ -19,7 +19,6 @@
 import cgpt
 import gpt
 import numpy
-from time import time
 
 mem_book = {
 }

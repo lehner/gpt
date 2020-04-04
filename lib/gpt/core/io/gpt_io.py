@@ -16,8 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, os, io, numpy, sys, fnmatch, glob
-from time import time
+import cgpt, gpt, os, io, numpy, sys, fnmatch, glob, math
 
 # get local dir an filename
 def get_local_name(root, cv):
@@ -67,6 +66,28 @@ class gpt_io:
             self.glb.close()
             self.glb = None
 
+    def views_for_node(self,cv,grid):
+        # need to have same length on each node but can have None entry if node does not participate
+        grid_rank=grid.cartesian_rank()
+        grid_stride=grid.Nprocessors
+        views_per_node=int(math.ceil(cv.ranks / grid.Nprocessors))
+
+        # number of writer groups
+        ngroups=int(math.ceil(cv.ranks / gpt.default.nwriter))
+
+        # first group
+        views=[]
+        for igroup in range(ngroups):
+            for idx in range(views_per_node):
+                iview=grid_rank + idx*grid_stride
+                if iview % ngroups == igroup and iview < cv.ranks:
+                    iv=iview
+                else:
+                    iv=None
+                views.append(iv)
+        return views
+
+
     def write_lattice(self, ctx, l):
         g=l.grid
         tag=(ctx + "\0").encode("utf-8")
@@ -77,10 +98,8 @@ class gpt_io:
         if "mpi" in self.params:
             mpi=self.params["mpi"]
         else:
-            mpi=[ g.gdimensions[i] // g.ldimensions[i] for i in range(nd) ]
+            mpi=g.mpi
         cv0=gpt.cartesian_view(-1,mpi,g.gdimensions)
-        rank_map=cv0.optimal_rank_map(g)
-        print(rank_map)
 
         # file positions
         pos=numpy.array([ 0 ] * cv0.ranks,dtype=numpy.uint64)
@@ -88,71 +107,64 @@ class gpt_io:
         # describe
         res=g.describe() + " " + cv0.describe() + " " + l.describe()
 
-        # configure writer
-        nwriter=gpt.default.nwriter
-        if nwriter > g.Nprocessors:
-            nwriter = g.Nprocessors
+        # find tasks for my node
+        views_for_node=self.views_for_node(cv0,g)
 
         # performance
         dt_distr,dt_crc,dt_write=0.0,0.0,0.0
-        t0=time()
+        #g.barrier()
+        t0=gpt.time()
         szGB=0.0
 
         # need to write all views
-        for iview0 in range(0,cv0.ranks,nwriter):
-            # do I save the view?
-            for iwrite in range(nwriter):
-                iview = iview0 + iwrite
-                if iwrite == g.processor and iview < cv0.ranks:
-                    cv=gpt.cartesian_view(iview,mpi,g.gdimensions)
-                    p=gpt.coordinates(cv)
+        for iview in views_for_node:
+            if not iview is None:
+                cv=gpt.cartesian_view(iview,mpi,g.gdimensions)
+                p=gpt.coordinates(cv)
+                dn,fn=get_local_name(self.root,cv)
+                os.makedirs(dn, exist_ok=True)
+                dt_write-=gpt.time()
+                f=open(fn,"ab")
+                dt_write+=gpt.time()
+                pos[iview]=f.tell()
+                #print(p[0],cv.rank,gpt.coordinates(g)[0],g.processor)
+            else:
+                p=gpt.coordinates(cv0) # empty view
+                cv=None
+                assert(len(p) == 0)
 
-                    dn,fn=get_local_name(self.root,cv)
-                    os.makedirs(dn, exist_ok=True)
-                    f=open(fn,"ab")
-                    pos[iview]=f.tell()
-                    print(p[0],cv.rank,gpt.coordinates(g)[0],g.processor)
-                else:
-                    p=gpt.coordinates(cv0) # empty view
-                    cv=None
-                    assert(len(p) == 0)
+            # all nodes are needed to communicate
+            dt_distr-=gpt.time()
+            mv=gpt.mview(l[p])
+            dt_distr+=gpt.time()
 
-                gpt.barrier() # for proper timing, we need to synchronize
+            # write data
+            if not cv is None:
+                # description and data
+                dt_crc-=gpt.time()
+                crc=gpt.crc32(mv)
+                dt_crc+=gpt.time()
+                dt_write-=gpt.time()
+                f.write(ntag.to_bytes(4,byteorder='little'))
+                f.write(tag)
+                f.write(crc.to_bytes(4,byteorder='little'))
+                f.write(nd.to_bytes(4,byteorder='little'))
+                for i in range(nd):
+                    f.write(g.gdimensions[i].to_bytes(4,byteorder='little'))
+                for i in range(nd):
+                    f.write(( g.gdimensions[i] // g.ldimensions[i]).to_bytes(4,byteorder='little'))
+                f.write(len(mv).to_bytes(8,byteorder='little'))
+                f.write(mv)
+                f.close()
+                dt_write+=gpt.time()
+                szGB+=len(mv) / 1024.**3.
 
-                # all nodes are needed to communicate
-                dt_distr-=time()
-                mv=gpt.mview(l[p])
-                dt_distr+=time()
-
-                gpt.barrier()
-
-                # write data
-                if not cv is None:
-                    # description and data
-                    dt_crc-=time()
-                    crc=gpt.crc32(mv)
-                    dt_crc+=time()
-                    dt_write-=time()
-                    f.write(ntag.to_bytes(4,byteorder='little'))
-                    f.write(tag)
-                    f.write(crc.to_bytes(4,byteorder='little'))
-                    f.write(nd.to_bytes(4,byteorder='little'))
-                    for i in range(nd):
-                        f.write(g.gdimensions[i].to_bytes(4,byteorder='little'))
-                    for i in range(nd):
-                        f.write(( g.gdimensions[i] // g.ldimensions[i]).to_bytes(4,byteorder='little'))
-                    f.write(len(mv).to_bytes(8,byteorder='little'))
-                    f.write(mv)
-                    f.close()
-                    dt_write+=time()
-                    szGB+=len(mv) / 1024.**3.
-
-        t1=time()
+        t1=gpt.time()
 
         szGB=g.globalsum(szGB)
         if self.verbose and dt_crc != 0.0:
-            gpt.message("Wrote %g GB at %g GB / s (single node %g GB / s for distribution, %g GB / s for checksum, %g GB / S for writing)" % 
-                        (szGB,szGB/(t1-t0),szGB/dt_distr,szGB/dt_crc,szGB/dt_write))
+            gpt.message("Wrote %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for checksum, %g GB/s for writing, %d views per node)" % 
+                        (szGB,szGB/(t1-t0),szGB/dt_distr,szGB/dt_crc,szGB/dt_write,len(views_for_node)))
         g.globalsum(pos)
         return res + " " + " ".join([ "%d" % x for x in pos ])
 
@@ -171,43 +183,59 @@ class gpt_io:
         cv0=gpt.cartesian_view(-1,cv_desc,g.gdimensions)
         l=gpt.lattice(g,l_desc)
 
-        # configure reader
-        nreader=gpt.default.nwriter
-        if nreader > g.Nprocessors:
-            nreader = g.Nprocessors
+        # find tasks for my node
+        views_for_node=self.views_for_node(cv0,g)
+
+        # performance
+        dt_distr,dt_crc,dt_read=0.0,0.0,0.0
+        szGB=0.0
+        t0=gpt.time()
 
         # need to load all views
-        for iview0 in range(0,cv0.ranks,nreader):
-            # do I load the view?
-            for iread in range(nreader):
-                iview = iview0 + iread
-                if iread == g.processor and iview < cv0.ranks:
-                    cv=gpt.cartesian_view(iview,cv_desc,g.gdimensions)
-                    pos=gpt.coordinates(cv)
-                    # read data
-                    dn,fn=get_local_name(self.root,cv)
-                    f=open(fn,"r+b")
-                    f.seek(filepos[iview],0)
-                    ntag=int.from_bytes(f.read(4),byteorder='little')
-                    f.read(ntag) # not needed if index is present
-                    crc_exp=int.from_bytes(f.read(4),byteorder='little')
-                    nd=int.from_bytes(f.read(4),byteorder='little')
-                    f.read(8*nd) # not needed if index is present
-                    sz=int.from_bytes(f.read(8),byteorder='little')
-                    data=memoryview(f.read(sz))
-                    f.close()
-                    crc_comp=gpt.crc32(data)
-                    assert(crc_comp == crc_exp)
-                    sys.stdout.flush()
-                else:
-                    pos=gpt.coordinates(cv0) # empty view
-                    assert(len(pos) == 0)
-                    data=None
-                l[pos]=data
+        for iview in views_for_node:
+            if not iview is None:
+                cv=gpt.cartesian_view(iview,cv_desc,g.gdimensions)
+                pos=gpt.coordinates(cv)
+                # read data
+                dn,fn=get_local_name(self.root,cv)
+                dt_read-=gpt.time()
+                f=open(fn,"r+b")
+                f.seek(filepos[iview],0)
+                ntag=int.from_bytes(f.read(4),byteorder='little')
+                f.read(ntag) # not needed if index is present
+                crc_exp=int.from_bytes(f.read(4),byteorder='little')
+                nd=int.from_bytes(f.read(4),byteorder='little')
+                f.read(8*nd) # not needed if index is present
+                sz=int.from_bytes(f.read(8),byteorder='little')
+                data=memoryview(f.read(sz))
+                f.close()
+                dt_read+=gpt.time()
+                dt_crc-=gpt.time()
+                crc_comp=gpt.crc32(data)
+                dt_crc+=gpt.time()
+                assert(crc_comp == crc_exp)
+                sys.stdout.flush()
+                szGB+=len(data) / 1024.**3.
+            else:
+                pos=gpt.coordinates(cv0) # empty view
+                assert(len(pos) == 0)
+                data=None
+            dt_distr-=gpt.time()
+            l[pos]=data
+            dt_distr+=gpt.time()
 
-        # TODO: spread out writer nodes better,
+        t1=gpt.time()
+
+        szGB=g.globalsum(szGB)
+        if self.verbose and dt_crc != 0.0:
+            gpt.message("Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for checksum, %g GB/s for reading, %d views per node)" % 
+                        (szGB,szGB/(t1-t0),szGB/dt_distr,szGB/dt_crc,szGB/dt_read,len(views_for_node)))
+
+        # TODO:
+        # performance of writing/reading in out2 case is very slow, why?
         # split grid exposure, allow cgpt_distribute to be given a communicator
         # and take it in importexport.h, add debug info here
+        # more benchmarks, useful to create a plan for cgpt_distribute and cache?
         return l
 
     def write_numpy(self, a):
@@ -342,7 +370,7 @@ class index_parser:
     
 def save(filename, objs, params):
 
-    t0=time()
+    t0=gpt.time()
 
     # create io
     x=gpt_io(filename,params,True)
@@ -363,7 +391,7 @@ def save(filename, objs, params):
 
     # goodbye
     if x.verbose:
-        t1=time()
+        t1=gpt.time()
         gpt.message("Completed writing %s in %g s" % (filename,t1-t0))
 
 
@@ -380,7 +408,7 @@ def load(filename, *a):
         params=a[0]
 
     # timing
-    t0=time()
+    t0=gpt.time()
 
     # create io
     x=gpt_io(filename,params,False)
@@ -399,7 +427,7 @@ def load(filename, *a):
 
     # goodbye
     if x.verbose:
-        t1=time()
+        t1=gpt.time()
         gpt.message("Completed reading %s in %g s" % (filename,t1-t0))
 
     return res
