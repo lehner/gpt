@@ -36,7 +36,9 @@ class cgpt_distribute {
  protected:
   struct mp { std::vector<long> src; std::vector<long> dst; };
   void split(const std::vector<coor>& c, std::map<int,mp>& s);
+  #if defined (GRID_COMMS_MPI3)
   MPI_Comm comm;
+  #endif
   int mpi_ranks, mpi_rank;
   std::vector<int> mpi_rank_map;
 
