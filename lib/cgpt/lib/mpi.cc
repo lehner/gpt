@@ -55,3 +55,12 @@ EXPORT(broadcast,{
 
   });
 
+EXPORT(barrier,{
+
+    #if defined (GRID_COMMS_MPI3)
+    MPI_Barrier(CartesianCommunicator::communicator_world);
+    #endif
+
+    return PyLong_FromLong(0);
+
+  });

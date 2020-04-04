@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, os, io, numpy, sys, fnmatch
+import cgpt, gpt, os, io, numpy, sys, fnmatch, glob
 from time import time
 
 # get local dir an filename
@@ -44,99 +44,117 @@ class gpt_io:
                 self.params["grids"] = [ self.params["grids"] ]
             self.params["grids"] = dict([ (g.describe(),g) for g in self.params["grids"] ])
         self.verbose = gpt.default.is_verbose("io")
-        os.makedirs(self.root, exist_ok=True)
+
         if gpt.rank() == 0:
+            os.makedirs(self.root, exist_ok=True)
             if write:
                 self.glb = open(root + "/global","wb")
+                for f in glob.glob("%s/??/*.field" % self.root):
+                    os.unlink(f)
             else:
                 self.glb = open(root + "/global","r+b")
         else:
             self.glb = None
-        self.loc = {}
+
+        # now sync since only root has created directory
+        gpt.barrier()
 
     def __del__(self):
         self.close()
 
     def close(self):
-        for x in self.loc:
-            self.loc[x].close()
-        self.loc={}
         if not self.glb is None:
             self.glb.close()
             self.glb = None
 
     def write_lattice(self, ctx, l):
         g=l.grid
-
-        # writer configuration
-        nwriter=gpt.default.nwriter
-        if nwriter > g.Nprocessors:
-            nwriter=g.Nprocessors
-        ngroups = g.Nprocessors // nwriter
+        tag=(ctx + "\0").encode("utf-8")
+        ntag=len(tag)
+        nd=len(g.gdimensions)
 
         # create cartesian view for writing
         if "mpi" in self.params:
-            cv=gpt.cartesian_view(g.processor,self.params["mpi"],g.gdimensions)
-
-            # make sure that we do not want a cv with more processors than we have in g,
-            # this is not yet supported
-            assert(cv.ranks <= g.Nprocessors)
+            mpi=self.params["mpi"]
         else:
-            cv=gpt.cartesian_view(g)
-
-        # directories and files
-        if cv.rank < cv.ranks:
-            dn,fn=get_local_name(self.root,cv)
-            if fn not in self.loc:
-                os.makedirs(dn, exist_ok=True)
-                self.loc[fn] = open(fn,"wb")
-            f = self.loc[fn]
-        else:
-            f = None
-
-        # description and data
-        res=g.describe() + " " + cv.describe() + " " + l.describe()
-        t0=time()
-        mv=gpt.mview(l[gpt.coordinates(cv)])
-        t1=time()
-        crc=gpt.crc32(mv)
-        t2=time()
+            mpi=[ g.gdimensions[i] // g.ldimensions[i] for i in range(nd) ]
+        cv0=gpt.cartesian_view(-1,mpi,g.gdimensions)
+        rank_map=cv0.optimal_rank_map(g)
+        print(rank_map)
 
         # file positions
-        pos=numpy.array([ 0 ] * g.Nprocessors,dtype=numpy.uint64)
-        if not f is None:
-            pos[g.processor]=f.tell()
-        g.globalsum(pos)
-        tag=(ctx + "\0").encode("utf-8")
-        ntag=len(tag)
-        nd=len(l.grid.gdimensions)
+        pos=numpy.array([ 0 ] * cv0.ranks,dtype=numpy.uint64)
 
-        for group in range(ngroups):
-            g.barrier()
-            szGB=0.0
-            tg0=time()
-            if g.processor % ngroups == group and not f is None:
-                f.write(ntag.to_bytes(4,byteorder='little'))
-                f.write(tag)
-                f.write(crc.to_bytes(4,byteorder='little'))
-                f.write(nd.to_bytes(4,byteorder='little'))
-                for i in range(nd):
-                    f.write(g.gdimensions[i].to_bytes(4,byteorder='little'))
-                for i in range(nd):
-                    f.write(( g.gdimensions[i] // g.ldimensions[i]).to_bytes(4,byteorder='little'))
-                f.write(len(mv).to_bytes(8,byteorder='little'))
-                t3=time()
-                f.write(mv)
-                f.flush()
-                t4=time()
-                szGB=len(mv) / 1024.**3.
-                if self.verbose:
-                    gpt.message("Write %g GB on root node at %g GB /s for distribute, %g GB / s for checksum, %g GB / s for writing" % (szGB,szGB/(t1-t0),szGB/(t2-t1),szGB/(t4-t3)))
-            szGB=g.globalsum(szGB)
-            tg1=time()
-            if self.verbose:
-                gpt.message("Globally wrote %g GB in group %d / %d at %g GB / s" % (szGB,group+1,ngroups,szGB/(tg1-tg0)))
-        return res + " " + " ".join([ "%d" % x for x in pos[0:cv.ranks] ])
+        # describe
+        res=g.describe() + " " + cv0.describe() + " " + l.describe()
+
+        # configure writer
+        nwriter=gpt.default.nwriter
+        if nwriter > g.Nprocessors:
+            nwriter = g.Nprocessors
+
+        # performance
+        dt_distr,dt_crc,dt_write=0.0,0.0,0.0
+        t0=time()
+        szGB=0.0
+
+        # need to write all views
+        for iview0 in range(0,cv0.ranks,nwriter):
+            # do I save the view?
+            for iwrite in range(nwriter):
+                iview = iview0 + iwrite
+                if iwrite == g.processor and iview < cv0.ranks:
+                    cv=gpt.cartesian_view(iview,mpi,g.gdimensions)
+                    p=gpt.coordinates(cv)
+
+                    dn,fn=get_local_name(self.root,cv)
+                    os.makedirs(dn, exist_ok=True)
+                    f=open(fn,"ab")
+                    pos[iview]=f.tell()
+                    print(p[0],cv.rank,gpt.coordinates(g)[0],g.processor)
+                else:
+                    p=gpt.coordinates(cv0) # empty view
+                    cv=None
+                    assert(len(p) == 0)
+
+                gpt.barrier() # for proper timing, we need to synchronize
+
+                # all nodes are needed to communicate
+                dt_distr-=time()
+                mv=gpt.mview(l[p])
+                dt_distr+=time()
+
+                gpt.barrier()
+
+                # write data
+                if not cv is None:
+                    # description and data
+                    dt_crc-=time()
+                    crc=gpt.crc32(mv)
+                    dt_crc+=time()
+                    dt_write-=time()
+                    f.write(ntag.to_bytes(4,byteorder='little'))
+                    f.write(tag)
+                    f.write(crc.to_bytes(4,byteorder='little'))
+                    f.write(nd.to_bytes(4,byteorder='little'))
+                    for i in range(nd):
+                        f.write(g.gdimensions[i].to_bytes(4,byteorder='little'))
+                    for i in range(nd):
+                        f.write(( g.gdimensions[i] // g.ldimensions[i]).to_bytes(4,byteorder='little'))
+                    f.write(len(mv).to_bytes(8,byteorder='little'))
+                    f.write(mv)
+                    f.close()
+                    dt_write+=time()
+                    szGB+=len(mv) / 1024.**3.
+
+        t1=time()
+
+        szGB=g.globalsum(szGB)
+        if self.verbose and dt_crc != 0.0:
+            gpt.message("Wrote %g GB at %g GB / s (single node %g GB / s for distribution, %g GB / s for checksum, %g GB / S for writing)" % 
+                        (szGB,szGB/(t1-t0),szGB/dt_distr,szGB/dt_crc,szGB/dt_write))
+        g.globalsum(pos)
+        return res + " " + " ".join([ "%d" % x for x in pos ])
 
     def read_lattice(self, a):
         g_desc=a[0]
@@ -186,7 +204,10 @@ class gpt_io:
                     assert(len(pos) == 0)
                     data=None
                 l[pos]=data
-            
+
+        # TODO: spread out writer nodes better,
+        # split grid exposure, allow cgpt_distribute to be given a communicator
+        # and take it in importexport.h, add debug info here
         return l
 
     def write_numpy(self, a):

@@ -37,3 +37,7 @@ def rank():
 # broadcast
 def broadcast(root,data):
     return cgpt.broadcast(root,data)
+
+# barrier
+def barrier():
+    return cgpt.barrier()

@@ -51,5 +51,5 @@ static struct PyModuleDef module_def = {
 
 // export module creation
 PyMODINIT_FUNC PyInit_cgpt(void){
-  PyModule_Create(&module_def);
+  return PyModule_Create(&module_def);
 }
