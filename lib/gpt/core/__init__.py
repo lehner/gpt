@@ -29,7 +29,7 @@ from gpt.core.expr import expr, expr_unary, factor_unary
 from gpt.core.operators import expr_eval, adj, transpose, conj, trace, sum, apply_expr_unary
 from gpt.core.otype import *
 from gpt.core.mpi import *
-from gpt.core.io import load, crc32, save, format, mview
+from gpt.core.io import load, crc32, save, format, mview, FILE
 from gpt.core.checkpointer import checkpointer, checkpointer_none
 from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomp
 from gpt.core.cartesian import cartesian_view

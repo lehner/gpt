@@ -19,12 +19,17 @@
 import cgpt
 import gpt
 import gpt.core.io.gpt_io
+from gpt.core.io.FILE import FILE
 
 # expose fast memoryview for numpy arrays
 def mview(data):
     mv=cgpt.mview(data)
     assert(mv.obj is data)
     return mv
+
+# fast threaded checksum of memoryviews
+def crc32(view):
+    return cgpt.util_crc32(view)
 
 # file formats
 class format:
@@ -70,6 +75,3 @@ def save(filename,objs,fmt = format.gpt()):
 
     return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
 
-# helper
-def crc32(view):
-    return cgpt.util_crc32(view)
