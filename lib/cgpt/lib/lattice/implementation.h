@@ -59,6 +59,12 @@ public:
     return ::innerProduct(l,compatible<T>(other)->l);
   }
 
+  virtual void innerProduct_norm(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
+    // TODO: fuse these two operations
+    ip = ::innerProduct(l,compatible<T>(other)->l);
+    a2 = ::norm2(l);
+  }
+
   // ac == { true : add result to dst, false : replace dst }
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) {
     return cgpt_lattice_mul(dst,ac,unary_a,l,unary_b,b,unary_expr);
