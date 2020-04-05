@@ -259,10 +259,9 @@ class gpt_io:
                         (szGB,szGB/(t1-t0),szGB/dt_distr,szGB/dt_crc,szGB/dt_read,len(views_for_node)))
 
         # TODO:
-        # performance of writing/reading in out2 case is very slow, why?
         # split grid exposure, allow cgpt_distribute to be given a communicator
         # and take it in importexport.h, add debug info here
-        # more benchmarks, useful to create a plan for cgpt_distribute and cache?
+        # more benchmarks, useful to create a plan for cgpt_distribute and cache? immutable numpy array returned from coordinates, attach plan
         return l
 
     def write_numpy(self, a):
