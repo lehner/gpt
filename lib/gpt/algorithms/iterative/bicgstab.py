@@ -60,7 +60,12 @@ class bicgstab:
             s @= r - alpha * mmp
 
             mat(s, mms)
-            omega = g.innerProduct(mms, s).real / g.innerProduct(mms, mms).real
+            ip, mms2 = g.innerProduct_norm(mms, s)
+
+            if mms2 == 0.:
+                continue
+
+            omega = ip.real / mms2
 
             psi += alpha * p + omega * s
 

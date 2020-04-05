@@ -45,8 +45,12 @@ class mr:
 
         for k in range(self.maxiter):
             mat(r, mmr)
-            alpha = g.innerProduct(mmr, r).real / g.norm2(mmr)
-            alpha *= self.relax
+            ip, mmr2 = g.innerProduct_norm(mmr, r)
+
+            if mmr2 == 0.:
+                continue
+
+            alpha = ip.real / mmr2 * self.relax
 
             psi += alpha * r
             r2 = g.axpy_norm(r, -alpha, mmr, r)

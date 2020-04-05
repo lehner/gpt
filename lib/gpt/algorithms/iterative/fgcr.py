@@ -82,14 +82,15 @@ class fgcr:
             t5 = time()
 
             t6 = time()
-            gamma[i] = g.norm2(mmp[i])**0.5
+            ip, mmp2 = g.innerProduct_norm(mmp[i], r)
+            gamma[i] = mmp2**0.5
 
             if gamma[i] == 0.:
                 g.message("fgcr breakdown, gamma[%d] = 0" % (i))
                 break
 
             mmp[i] /= gamma[i]
-            alpha[i] = g.innerProduct(mmp[i], r)
+            alpha[i] = ip / gamma[i]
             r2 = g.axpy_norm(r, -alpha[i], mmp[i], r)
             t7 = time()
 
