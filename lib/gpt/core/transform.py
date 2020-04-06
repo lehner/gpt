@@ -79,6 +79,13 @@ def innerProduct(a,b):
     b=gpt.eval(b)
     return cgpt.lattice_innerProduct(a.obj,b.obj)
 
+def innerProduct_norm(a,b):
+    if type(a) == gpt.tensor and type(b) == gpt.tensor:
+        return gpt.adj(a) * b, a.norm2()
+    a=gpt.eval(a)
+    b=gpt.eval(b)
+    return cgpt.lattice_innerProduct_norm(a.obj,b.obj)
+
 def axpy_norm(d, a, x, y):
     x=gpt.eval(x)
     y=gpt.eval(y)

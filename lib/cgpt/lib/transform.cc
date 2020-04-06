@@ -82,6 +82,26 @@ EXPORT(lattice_innerProduct,{
     ComplexD c = a->innerProduct(b);
     return PyComplex_FromDoubles(c.real(),c.imag());
   });
+
+EXPORT(lattice_innerProduct_norm,{
+
+    void* _a,* _b;
+    if (!PyArg_ParseTuple(args, "ll", &_a, &_b)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
+    cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
+
+    ComplexD ip;
+    RealD a2;
+
+    a->innerProduct_norm(ip,a2,b);
+
+    return PyTuple_Pack(2,
+                        PyComplex_FromDoubles(ip.real(),ip.imag()),
+                        PyFloat_FromDouble(a2));
+  });
   
 EXPORT(lattice_norm2,{
     

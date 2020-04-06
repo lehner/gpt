@@ -51,7 +51,7 @@ precision = { "single" : gpt.single, "double" : gpt.double }[get("--precision","
 nwriter=get_int("--nwriter",64)
 
 # verbosity
-verbose_default="io,cg,irl,power_iteration,checkpointer,deflate"
+verbose_default="io,bicgstab,cg,fgcr,fgmres,mr,irl,power_iteration,checkpointer,deflate"
 verbose_additional="eval"
 verbose = get("--verbose",verbose_default).split(",")
 verbose_candidates=",".join(sorted((verbose_default + "," + verbose_additional).split(",")))

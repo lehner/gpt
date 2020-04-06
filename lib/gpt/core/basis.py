@@ -20,10 +20,12 @@
 import gpt
 import cgpt
 
-def orthogonalize(w,basis):
-    for v in basis:
+def orthogonalize(w,basis,ips=None):
+    for j, v in enumerate(basis):
         ip=gpt.innerProduct(v,w)
         w -= ip*v
+        if ips is not None:
+            ips[j]=ip
 
 def linear_combination(r,basis,Qt):
     return cgpt.linear_combination(r.obj,basis,Qt)

@@ -17,5 +17,9 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.algorithms.iterative.cg import cg
+from gpt.algorithms.iterative.bicgstab import bicgstab
+from gpt.algorithms.iterative.fgcr import fgcr
+from gpt.algorithms.iterative.fgmres import fgmres
 from gpt.algorithms.iterative.irl import irl
+from gpt.algorithms.iterative.mr import mr
 from gpt.algorithms.iterative.power_iteration import power_iteration
