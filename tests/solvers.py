@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 # Authors: Daniel Richtmann 2020
+#          Christoph Lehner 2020
 #
 # Desc.: Exercise linear solvers
 #
@@ -11,8 +12,9 @@ import time
 import os.path
 
 # load configuration
-homedir = os.path.expanduser("~")
-U = g.load(homedir + "/configs/openqcd/test_16x8_pbcn6")
+#homedir = os.path.expanduser("~")
+#U = g.load(homedir + "/configs/openqcd/test_16x8_pbcn6")
+U = g.load("/hpcgpfs01/work/clehner/configs/32IDfine/ckpoint_lat.200") # TODO: add parallel RNG so we can do tests from random gauge configs
 
 # do everything in single-precision
 U = g.convert(U, g.single)
@@ -23,8 +25,8 @@ grid=U[0].grid
 # quark
 w=g.qcd.fermion.wilson_clover(U,{
     "kappa" : 0.13565,
-    "csw_r" : 2.0171,
-    "csw_t" : 2.0171,
+    "csw_r" : 2.0171 / 2., # for now test with very heavy quark
+    "csw_t" : 2.0171 / 2.,
     "xi_0" : 1,
     "nu" : 1,
     "isAnisotropic" : False,
@@ -83,12 +85,12 @@ dst_fgmres=g.mspincolor(grid)
 
 # perform solves
 slv_cg(src, dst_cg)
-print("CG finished")
+g.message("CG finished")
 slv_mr(src, dst_mr)
-print("MR finished")
+g.message("MR finished: eps^2(CG) = %g" % g.norm2(dst_cg-dst_mr))
 slv_bicgstab(src, dst_bicgstab)
-print("BICGSTAB finished")
+g.message("BICGSTAB finished: eps^2(CG) = %g" % g.norm2(dst_cg-dst_bicgstab))
 slv_fgcr(src, dst_fgcr)
-print("FGCR finished")
+g.message("FGCR finished: eps^2(CG) = %g" % g.norm2(dst_cg-dst_fgcr))
 slv_fgmres(src, dst_fgmres)
-print("FGMRES finished")
+g.message("FGMRES finished: eps^2(CG) = %g" % g.norm2(dst_cg-dst_fgmres))
