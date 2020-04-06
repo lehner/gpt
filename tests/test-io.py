@@ -32,7 +32,7 @@ g.save("out2",{
     "np" : g.coordinates(U[0].grid), # write numpy array from root node
     "U" : U # write list of lattices
 },g.format.gpt({
-    "mpi" : [ 2, 2, 1, 1 ] # save fields in 2 x 2 x 1 x 1 processor grid instead of --mpi grid
+    "mpi" : [ 2, 2, 2, 1 ] # save fields in 2 x 2 x 1 x 1 processor grid instead of --mpi grid
 }))
 
 #

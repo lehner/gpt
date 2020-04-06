@@ -159,11 +159,11 @@ public:
   }
 
   virtual PyArrayObject* export_data(PyArrayObject* coordinates) {
-    return cgpt_export(l,coordinates);
+    return cgpt_importexport(l,coordinates,0);
   }
 
   virtual void import_data(PyArrayObject* coordinates, PyObject* data) {
-    cgpt_import(l,coordinates,data);
+    cgpt_importexport(l,coordinates,data);
   }
 
 

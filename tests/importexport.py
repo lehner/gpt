@@ -25,7 +25,7 @@ for x in range(4):
                 src[x,y,z,t,2]=z + t*1j
 
 # now create a random partition of this lattice distributed over all nodes
-c=g.coordinates(grid)
+c=g.coordinates(grid).copy() # copy to make it writeable
 random.seed(13)
 for tr in range(10):
     shift=[ random.randint(0,8) for i in range(4) ]
@@ -34,7 +34,7 @@ for tr in range(10):
         for j in range(4):
             c[i][j] = (c[i][j] + shift[j]) % grid.gdimensions[j]
     data=src[c] # test global uniform memory system
-    mvrestore=gpt.mview(data)
+    mvrestore=g.mview(data)
     err2=0.0
     for i,pos in enumerate(c):
         err2+=(data[i][0].real - pos[0])**2.0 + (data[i][1].real - pos[1])**2.0 + (data[i][2].real - pos[2])**2.0

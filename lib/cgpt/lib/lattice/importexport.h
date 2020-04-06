@@ -16,8 +16,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-
-
 static void cgpt_to_full_coor(GridBase* grid, int cb,
 			      PyArrayObject* coordinates, 
 			      std::vector<cgpt_distribute::coor>& fc) {
@@ -50,11 +48,10 @@ static void cgpt_to_full_coor(GridBase* grid, int cb,
     }
 }
 
-
 // Coordinates in the list may differ from node to node,
 // in general they create a full map of the lattice.
 template<typename T>
-PyArrayObject* cgpt_export(Lattice<T>& l, PyArrayObject* coordinates) {
+PyArrayObject* cgpt_importexport(Lattice<T>& l, PyArrayObject* coordinates, PyObject* data) {
 
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
@@ -64,47 +61,43 @@ PyArrayObject* cgpt_export(Lattice<T>& l, PyArrayObject* coordinates) {
   GridBase* grid = l.Grid();
   auto l_v = l.View();
   int Nsimd = grid->Nsimd();
-  std::vector<cgpt_distribute::coor> fc;
-  cgpt_distribute dist(grid->_processor,&l_v[0],sizeof(sobj),Nsimd,sizeof(Coeff_t));
+  cgpt_distribute dist(grid->_processor,&l_v[0],sizeof(sobj),Nsimd,sizeof(Coeff_t),grid->communicator);
 
-  // first get full coordinates
-  cgpt_to_full_coor(grid,l.Checkerboard(),coordinates,fc);
+  // distribution plan
+  grid_cached<cgpt_distribute::plan> plan(grid,coordinates);
+  if (!plan.filled()) {
+    
+    // first get full coordinates
+    std::vector<cgpt_distribute::coor> fc;
+    cgpt_to_full_coor(grid,l.Checkerboard(),coordinates,fc);
 
-  // create target data
-  std::vector<long> dim(1,fc.size());
+    // new plan
+    dist.create_plan(fc,plan.fill_ref());
+  }
+
+  // create target data layout
+  long fc_size = PyArray_DIMS(coordinates)[0]; // already checked above, no need to check again
+  std::vector<long> dim(1,fc_size);
   cgpt_numpy_data_layout(sobj(),dim);
-  PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], infer_numpy_type(Coeff_t()));
-  sobj* s = (sobj*)PyArray_DATA(a);
+
+  if (!data) {
+    // create target
+    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], infer_numpy_type(Coeff_t()));
+    sobj* s = (sobj*)PyArray_DATA(a);
   
-  // fill data
-  dist.copy_to(fc,s);
-  return a;
-}
+    // fill data
+    dist.copy_to(plan,s);
+    return a;
 
-template<typename T> 
-void cgpt_import(Lattice<T>& l, PyArrayObject* coordinates, PyObject* data) {
+  } else {
 
-  typedef typename Lattice<T>::vector_object vobj;
-  typedef typename vobj::scalar_object sobj;
-  typedef typename Lattice<T>::scalar_type Coeff_t;
+    if (fc_size == 0) {
+      dist.copy_from(plan,0);
+      return 0;
+    }
 
-  // infrastructure
-  GridBase* grid = l.Grid();
-  auto l_v = l.View();
-  int Nsimd = grid->Nsimd();
-  std::vector<cgpt_distribute::coor> fc;
-  cgpt_distribute dist(grid->_processor,&l_v[0],sizeof(sobj),Nsimd,sizeof(Coeff_t));
-
-  // first get full coordinates
-  cgpt_to_full_coor(grid,l.Checkerboard(),coordinates,fc);
-
-  // create target format
-  std::vector<long> dim(1,fc.size());
-  cgpt_numpy_data_layout(sobj(),dim);
-
-  // check compatibility
-  if (fc.size() != 0) {
-
+    // check compatibility
+    sobj* s;
     if (PyArray_Check(data)) {
       PyArrayObject* bytes = (PyArrayObject*)data;
       ASSERT(PyArray_NDIM(bytes) == dim.size());
@@ -112,25 +105,18 @@ void cgpt_import(Lattice<T>& l, PyArrayObject* coordinates, PyObject* data) {
       for (int i=0;i<(int)dim.size();i++)
 	ASSERT(tdim[i] == dim[i]);
       ASSERT(infer_numpy_type(Coeff_t()) == PyArray_TYPE(bytes));
-      sobj* s = (sobj*)PyArray_DATA(bytes);
-
-      // fill data
-      dist.copy_from(fc,s);
+      s = (sobj*)PyArray_DATA(bytes);
     } else if (PyMemoryView_Check(data)) {
       Py_buffer* buf = PyMemoryView_GET_BUFFER(data);
       ASSERT(PyBuffer_IsContiguous(buf,'C'));
-      sobj* s = (sobj*)buf->buf;
+      s = (sobj*)buf->buf;
       int64_t len = (int64_t)buf->len;
-      ASSERT(len == sizeof(sobj)*fc.size());
-
-      // fill data
-      dist.copy_from(fc,s);
+      ASSERT(len == sizeof(sobj)*fc_size);
     } else {
       ERR("Incompatible type");
     }
 
-  } else {
-    dist.copy_from(fc,0);
+    dist.copy_from(plan,s);
+    return 0;
   }
-
 }

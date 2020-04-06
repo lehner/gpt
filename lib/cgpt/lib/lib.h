@@ -33,6 +33,7 @@ using namespace Grid;
 
 #include "time.h"
 #include "exception.h"
+#include "cached.h"
 #include "convert.h"
 #include "checksums.h"
 #include "parameters.h"

@@ -20,6 +20,8 @@ import cgpt, gpt, os, io, numpy, sys, fnmatch, glob, math
 
 # get local dir an filename
 def get_local_name(root, cv):
+    if cv.rank < 0:
+        return None,None
     ntotal=cv.ranks
     rank=cv.rank
     dirs=32
@@ -56,6 +58,7 @@ class gpt_io:
             self.glb = None
 
         self.loc = {}
+        self.pos = {}
         self.loc_desc = ""
 
         # now sync since only root has created directory
@@ -66,8 +69,10 @@ class gpt_io:
 
     def close_views(self):
         for f in self.loc:
-            self.loc[f].close()
+            if not self.loc[f] is None:
+                self.loc[f].close()
         self.loc={}
+        self.pos={}
         self.loc_desc = ""
 
     def close_global(self):
@@ -79,7 +84,7 @@ class gpt_io:
         self.close_global()
         self.close_views()
 
-    def open_view(self, cv, write):
+    def open_view(self, cv, write): # this should also cache positions
         dn,fn=get_local_name(self.root,cv)
         loc_desc = cv.describe() + "/" + ("Write" if write  else "Read")
 
@@ -90,13 +95,14 @@ class gpt_io:
                 gpt.message("Switching view to %s" % self.loc_desc)
 
         if not fn in self.loc:
-            if write:
+            if write and not dn is None:
                 os.makedirs(dn, exist_ok=True)
-            self.loc[fn]=gpt.FILE(fn,"a+b" if write else "r+b")
+            self.loc[fn]=gpt.FILE(fn,"a+b" if write else "r+b") if not fn is None else None
+            self.pos[fn]=gpt.coordinates(cv)
 
         #print("Rank %d (%s) processes %s" % (gpt.rank(),gpt.hostname,fn))
-        sys.stdout.flush()
-        return self.loc[fn]
+        #sys.stdout.flush()
+        return self.loc[fn],self.pos[fn]
 
     def views_for_node(self,cv,grid):
         # need to have same length on each node but can have None entry if node does not participate
@@ -152,13 +158,12 @@ class gpt_io:
         for iview in views_for_node:
             if not iview is None:
                 cv=gpt.cartesian_view(iview,mpi,g.gdimensions)
-                p=gpt.coordinates(cv)
                 dt_write-=gpt.time()
-                f=self.open_view(cv,True)
+                f,p=self.open_view(cv,True)
                 dt_write+=gpt.time()
                 pos[iview]=f.tell()
             else:
-                p=gpt.coordinates(cv0) # empty view
+                f,p=self.open_view(cv0,True) # empty view
                 cv=None
                 assert(len(p) == 0)
 
@@ -224,10 +229,9 @@ class gpt_io:
         for iview in views_for_node:
             if not iview is None:
                 cv=gpt.cartesian_view(iview,cv_desc,g.gdimensions)
-                pos=gpt.coordinates(cv)
                 # read data
                 dt_read-=gpt.time()
-                f=self.open_view(cv,False)
+                f,pos=self.open_view(cv,False)
                 f.seek(filepos[iview],0)
                 ntag=int.from_bytes(f.read(4),byteorder='little')
                 f.read(ntag) # not needed if index is present
@@ -244,7 +248,7 @@ class gpt_io:
                 sys.stdout.flush()
                 szGB+=len(data) / 1024.**3.
             else:
-                pos=gpt.coordinates(cv0) # empty view
+                f,pos=self.open_view(cv0,False) # empty view
                 assert(len(pos) == 0)
                 data=None
             dt_distr-=gpt.time()

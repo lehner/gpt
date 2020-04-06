@@ -52,6 +52,8 @@ EXPORT(coordinates_form_cartesian_view,{
 	      d[Nd*idx + i] = top[i] + coor[i];
 	  });
       }
+
+    PyArray_CLEARFLAGS(a,NPY_ARRAY_WRITEABLE); // read-only, so we can cache distribute plans
     return (PyObject*)a;
   });
 

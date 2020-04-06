@@ -24,13 +24,14 @@
 
 cgpt_distribute::cgpt_distribute(int _rank, void* _local, 
 				 long _word, int _Nsimd, 
-				 long _simd_word) : rank(_rank), local(_local), 
-						    word(_word), Nsimd(_Nsimd), 
-						    simd_word(_simd_word) {
+				 long _simd_word, 
+				 Grid_MPI_Comm _comm) : rank(_rank), local(_local), 
+							word(_word), Nsimd(_Nsimd), 
+							simd_word(_simd_word),
+							comm(_comm) {
 
 #ifdef USE_MPI
   //MPI_COMM_WORLD
-  comm = CartesianCommunicator::communicator_world;
   MPI_Comm_size(comm,&mpi_ranks);
   MPI_Comm_rank(comm,&mpi_rank);
   mpi_rank_map.resize(mpi_ranks,0);
@@ -55,68 +56,46 @@ void cgpt_distribute::split(const std::vector<coor>& c, std::map<int,mp>& s) {
   }
 }
 
-void cgpt_distribute::copy_to(const std::vector<coor>& c,void* dest) {
-  std::map<int,mp> cr;
+void cgpt_distribute::create_plan(const std::vector<coor>& c, plan& p) {
 
   // split mapping by rank
-  TIME(dt0,
-       split(c,cr);
-       );
-
-  TIME(dt1,
-  // head node needs to learn all the remote requirements
-  std::vector<long> wishlist;
-  packet_prepare_need(wishlist,cr);
-       );
-
-  TIME(dt2,
-  // head node collects the wishlists
-  std::map< int, std::vector<long> > wishlists;
-  wishlists_to_root(wishlist,wishlists);
-       );
-
-  TIME(dt3,
-  // now root tells every node which other nodes needs how much of its data
-  std::vector<long> tasks;
-  send_tasks_to_ranks(wishlists,tasks);
-       );
-
-  // copy local data
-  TIME(dt4,
-  copy_data(cr[rank],local,dest);
-       );
-
-  // receive the requested wishlist from my task ranks
-  TIME(dt5,
-  copy_remote(tasks,cr,dest);
-       );
-
-  //printf("Timing %g %g %g %g %g %g\n",dt0,dt1,dt2,dt3,dt4,dt5);
-}
-
-void cgpt_distribute::copy_from(const std::vector<coor>& c,void* src) {
-  std::map<int,mp> cr;
-
-  // split mapping by rank
-  split(c,cr);
+  split(c,p.cr);
 
   // head node needs to learn all the remote requirements
   std::vector<long> wishlist;
-  packet_prepare_need(wishlist,cr);
+  packet_prepare_need(wishlist,p.cr);
   
   // head node collects the wishlists
   std::map< int, std::vector<long> > wishlists;
   wishlists_to_root(wishlist,wishlists);
 
   // now root tells every node which other nodes needs how much of its data
-  std::vector<long> tasks;
-  send_tasks_to_ranks(wishlists,tasks);
+  send_tasks_to_ranks(wishlists,p.tasks);
 
+}
+
+void cgpt_distribute::copy_to(const plan& p,void* dest) {
+  
   // copy local data
-  copy_data_rev(cr[rank],local,src);
+  const auto& ld = p.cr.find(rank);
+  if (ld != p.cr.cend())
+    copy_data(ld->second,local,dest);
 
   // receive the requested wishlist from my task ranks
-  copy_remote_rev(tasks,cr,src);
+  copy_remote(p.tasks,p.cr,dest);
+
+}
+
+void cgpt_distribute::copy_from(const plan& p,void* src) {
+
+  // copy local data
+  const auto& ld = p.cr.find(rank);
+  if (ld != p.cr.cend())
+    copy_data_rev(ld->second,local,src);
+
+  // receive the requested wishlist from my task ranks
+  copy_remote_rev(p.tasks,p.cr,src);
+
 }
 
 void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map<int,mp>& cr,void* _dst) {
