@@ -60,9 +60,7 @@ public:
   }
 
   virtual void innerProduct_norm(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
-    // TODO: fuse these two operations
-    ip = ::innerProduct(l,compatible<T>(other)->l);
-    a2 = ::norm2(l);
+    ::innerProduct_norm(ip,a2,l,compatible<T>(other)->l);
   }
 
   // ac == { true : add result to dst, false : replace dst }
