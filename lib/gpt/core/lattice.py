@@ -120,7 +120,7 @@ class lattice:
         return cgpt.lattice_memory_view(self.obj)
 
     def __repr__(self):
-        return "lattice(%s,%s)" % (self.otype,self.grid.precision)
+        return "lattice(%s,%s)" % (self.otype.__name__,self.grid.precision.__name__)
 
     def __str__(self):
         return cgpt.lattice_to_str(self.obj)

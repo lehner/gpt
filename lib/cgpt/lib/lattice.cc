@@ -18,18 +18,19 @@
 */
 #include "lib.h"
 
-template<typename vtype> 
-void create_lattice_prec(void* & plat, GridCartesian* grid, const vtype& t, const std::string& otype) {
+typedef void* (* create_lattice_prec_otype)(GridBase* grid);
+static std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
-#define PER_TENSOR_TYPE(T) if (otype == get_otype(T<vtype>())) {	\
-    plat = new cgpt_Lattice< T< vtype > >(grid);			\
-    return;								\
-  } else 
-
+template<typename vtype>
+void lattice_init_prec(const vtype& t, const std::string& prec) {
+#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<vtype>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< vtype > >(grid); };
 #include "tensors.h"
-
 #undef PER_TENSOR_TYPE
-  { ERR("Unknown type"); }
+}
+  
+void lattice_init() {
+  lattice_init_prec(vComplexF(),"single");
+  lattice_init_prec(vComplexD(),"double");
 }
 
 EXPORT(create_lattice,{
@@ -40,7 +41,7 @@ EXPORT(create_lattice,{
       return NULL;
     }
     
-    GridCartesian* grid = (GridCartesian*)_grid;
+    GridBase* grid = (GridBase*)_grid;
     std::string otype;
     std::string prec;
     
@@ -48,20 +49,13 @@ EXPORT(create_lattice,{
     cgpt_convert(_prec,prec);
     
     void* plat = 0;
-    if (prec == "single") {
-      vComplexF t;
-      create_lattice_prec(plat,grid,t,otype);
-    } else if (prec == "double") {
-      vComplexD t;
-      create_lattice_prec(plat,grid,t,otype);
+    std::string tag = prec + ":" + otype;
+    auto f = _create_otype_.find(tag);
+    if (f == _create_otype_.end()) {
+      ERR("Unknown field type: %s, %s", otype.c_str(), prec.c_str());
     }
     
-    if (!plat) {
-      std::cerr << "Unknown field type: " << otype << "," << prec << std::endl;  
-      ASSERT(0);
-    }
-    
-    return PyLong_FromVoidPtr(plat);
+    return PyLong_FromVoidPtr(f->second(grid));
   });
 
 EXPORT(delete_lattice,{

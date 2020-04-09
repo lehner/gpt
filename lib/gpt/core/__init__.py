@@ -19,6 +19,7 @@
 from gpt.core.grid import grid, full, redblack, str_to_checkerboarding
 from gpt.core.precision import single, double, str_to_precision
 from gpt.core.lattice import lattice, meminfo
+from gpt.core.vlattice import vlattice
 from gpt.core.tensor import tensor
 from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time

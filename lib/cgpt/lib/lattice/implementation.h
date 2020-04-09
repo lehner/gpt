@@ -26,7 +26,7 @@ public:
   typedef typename Lattice<T>::vector_type vCoeff_t;
   typedef typename Lattice<T>::scalar_type Coeff_t;
 
-  cgpt_Lattice(GridCartesian* grid) : l(grid) {
+  cgpt_Lattice(GridBase* grid) : l(grid) {
   }
 
   virtual ~cgpt_Lattice() {
@@ -34,7 +34,7 @@ public:
   }
 
   cgpt_Lattice_base* create_lattice_of_same_type() {
-    return new cgpt_Lattice<T>((GridCartesian*)l.Grid());
+    return new cgpt_Lattice<T>(l.Grid());
   }
 
   virtual std::string type() {
@@ -43,8 +43,8 @@ public:
 
   virtual PyObject* to_decl() {   
     return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
-			PyUnicode_FromString(::get_otype(l)),
-			PyUnicode_FromString(::get_prec(l))); // TODO: add l.Checkerboard()
+			PyUnicode_FromString(get_otype(l).c_str()),
+			PyUnicode_FromString(get_prec(l).c_str())); // TODO: add l.Checkerboard()
   }
 
   virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
@@ -170,6 +170,16 @@ public:
     cgpt_importexport(l,coordinates,data);
   }
 
+  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
+    cgpt_block_project(coarse,l,basis);
+  }
 
+  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
+    cgpt_block_promote(coarse,l,basis);
+  }
+
+  virtual void block_orthogonalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
+    cgpt_block_orthogonalize(coarse,l,basis);
+  }
 };
 

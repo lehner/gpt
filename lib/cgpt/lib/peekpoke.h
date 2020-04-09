@@ -93,6 +93,9 @@ void cgpt_lattice_poke_value(Lattice<T>& l,const std::vector<int>& coor,PyObject
   }
 }
 
+template<typename sobj>
+PyObject* cgpt_lattice_peek_value_internal(const iScalar<sobj>& val, const std::vector<int>& in, int idx);
+
 static PyObject* cgpt_lattice_peek_value_internal(const ComplexD& val, const std::vector<int>& in, int idx) {
   ASSERT(idx == (int)in.size());
   return PyComplex_FromDoubles(val.real(),val.imag());

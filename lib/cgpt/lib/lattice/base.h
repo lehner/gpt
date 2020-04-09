@@ -49,6 +49,9 @@ public:
   virtual PyObject* memory_view() = 0; // access to internal memory storage, can be simd format
   virtual PyArrayObject* export_data(PyArrayObject* coordinates) = 0;
   virtual void import_data(PyArrayObject* coordinates, PyObject* data) = 0;
+  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_orthogonalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
 };
 
 template<class T> class cgpt_Lattice;

@@ -16,34 +16,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include <Python.h>
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION 
-#define PY_ARRAY_UNIQUE_SYMBOL cgpt_ARRAY_API
-#ifndef _THIS_IS_INIT_
-#define NO_IMPORT_ARRAY
-#endif
-#include <numpy/arrayobject.h>
-#include <vector>
-#include <string>
-#include <iostream>
-
-#include <Grid/Grid.h>
-
-using namespace Grid;
-
-#include "time.h"
-#include "exception.h"
-#include "cached.h"
-#include "convert.h"
-#include "checksums.h"
-#include "parameters.h"
-#include "numpy.h"
-#include "distribute.h"
-#include "peekpoke.h"
-#include "transform.h"
-#include "lattice.h"
-#include "precision.h"
-#include "util.h"
-#include "expression.h"
-#include "singlet.h"
-#include "block.h"
+BASIS_SIZE(10)
+BASIS_SIZE(20)
+BASIS_SIZE(40)
+BASIS_SIZE(80)
+// 50=10+40, 60=20+40, 150=80+40+20+10, 250=3*80+10, 400=5*80
