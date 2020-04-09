@@ -44,8 +44,8 @@ class vlattice:
         self.grid = grid
         self.decomposition = decompose(n, fundamental.keys())
         self.n0,self.n1 = get_range(self.decomposition)
+        self.idx=range(len(self.n0))
         self.v = [ fundamental[x](grid) for x in self.decomposition ]
-        print(self.n0,self.n1)
 
     def __repr__(self):
         return "vlattice(%s,%s)" % ([ l.otype.__name__ for l in self.v ],self.grid.precision.__name__)
