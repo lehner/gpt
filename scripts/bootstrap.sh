@@ -1,6 +1,7 @@
 #
 # Install python3 if it is not yet there
 #
+# brew install wget autoconf
 echo "Checking numpy"
 hasNumpy=$(python3 -c "import numpy2" 2>&1 | grep -c ModuleNotFound)
 if [[ "$hasNumpy" == "0" ]];
@@ -57,6 +58,7 @@ cd openssl
 ./config
 make -j 4
 ln -s ${dep}/openssl lib # quick "install"
+cd ..
 
 #
 # Grid
