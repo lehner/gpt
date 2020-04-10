@@ -68,7 +68,7 @@ static bool get_bool(PyObject* dict, const char* key) {
   return (val == Py_True);
 }
 
-std::vector<long> get_long_vec(PyObject* dict, const char* key) {
+static std::vector<long> get_long_vec(PyObject* dict, const char* key) {
   PyObject* val = get_key(dict,key);
   ASSERT(PyList_Check(val));
   long N = PyList_Size(val);

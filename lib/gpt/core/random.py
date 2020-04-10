@@ -29,18 +29,18 @@ def sample(t,p):
     if type(t) == list:
         for x in t:
             sample(x,p)
-    elif t is None or type(t) == numpy.ndarray:
-        x=cgpt.random_sample(t,p)
-        return x
+    elif t is None:
+        return cgpt.random_sample(t,p)
     elif type(t) == gpt.lattice:
-        pos=gpt.coordinates(t.grid)
-        t[pos]=sample(pos,{**p,**{"shape": list(t.otype.shape)} })
+        if "pos" in p:
+            pos=p["pos"]
+        else:
+            pos=gpt.coordinates(t.grid)
+        t[pos]=cgpt.random_sample(pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj} })
         return t
     elif type(t) == gpt.vlattice:
         for x in t.v:
             sample(x,p)
-    elif type(t) == gpt.grid or type(t) == gpt.cartesian_view:
-        return sample(gpt.coordinates(t),p)
     else:
         assert(0)
 

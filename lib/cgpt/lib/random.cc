@@ -65,25 +65,27 @@ EXPORT(random_sample,{
     ASSERT(PyDict_Check(_param));
     std::string dist = get_str(_param,"distribution");
     std::vector<long> shape;
+    GridBase* grid = 0;
     if (PyDict_GetItemString(_param,"shape")) {
       shape = get_long_vec(_param,"shape");
+      grid = get_pointer<GridBase>(_param,"grid");
     }
 
     if (dist == "normal") {
       std::normal_distribution<double> distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid);
     } else if (dist == "cnormal") {
       cgpt_cnormal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid);
     } else if (dist == "uniform_real") {
       std::uniform_real_distribution<double> distribution(get_float(_param,"min"),get_float(_param,"max"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid);
     } else if (dist == "uniform_int") {
       std::uniform_int_distribution<int> distribution(get_int(_param,"min"),get_int(_param,"max"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid);
     } else if (dist == "zn") {
       cgpt_zn_distribution distribution(get_int(_param,"n"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid);
     } else {
       ERR("Unknown distribution: %s", dist.c_str());
     }

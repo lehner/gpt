@@ -42,27 +42,33 @@ public:
   }
 };
 
-static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& hashes) {
+static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& hashes,GridBase* grid) {
   ASSERT(PyArray_NDIM(coordinates) == 2);
   long* tdim = PyArray_DIMS(coordinates);
   long nc = tdim[0];
   long nd = tdim[1];
 
-  const int STRIDE = 512;
   const int block = 2;
-  ASSERT(nd*9 < sizeof(long)*8); // make sure long is sufficient to hash
+  ASSERT(nd == grid->Nd());
 
   ASSERT(PyArray_TYPE(coordinates)==NPY_INT32);
   int32_t* coor = (int32_t*)PyArray_DATA(coordinates);
 
+  for (long j=0;j<nd;j++) {
+    ASSERT(grid->_gdimensions[j] % block == 0);
+    ASSERT(grid->_ldimensions[j] % block == 0); 
+    // make sure points within a block are always on same node
+    // irrespective of MPI setup
+  }
+
   hashes.resize(nc);
   thread_for(i, nc, {
-      long t = 0, s = 1;
-      for (int j=0;j<nd;j++) {
+      long t = 0;
+      for (long j=0;j<nd;j++) {
 	int32_t c = coor[nd*i+j] / block;
-	t+=s*c;
-	ASSERT(c < STRIDE);
-	s*=STRIDE;
+	ASSERT((c >= (grid->_lstart[j]/block)) && (c < ((grid->_lend[j]+1)/block)));
+	t*=grid->_gdimensions[j] / block;
+	t+=c;
       }
       hashes[i] = t;
     });
@@ -70,6 +76,7 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
 
 template<typename T>
 void cgpt_hash_offsets(std::vector<T>& h, std::map<T,std::vector<long>>& u) {
+  // This is a candidate for optimization; for ranlux48 not dominant but not negligible
   for (long off=0;off<h.size();off++)
     u[h[off]].push_back(off);
 }
@@ -96,29 +103,34 @@ template<typename sRNG,typename pRNG>
   }
 }
 
-static void cgpt_check_global_uniqueness(std::vector<long> & unique_hashes) {
-  // TODO: add this and fix block.py
-  assert(0);
-}
 
 template<typename DIST,typename sRNG,typename pRNG>
-  PyObject* cgpt_random_sample(DIST & dist,PyObject* _target,sRNG& srng,pRNG& prng,std::vector<long> & shape,std::vector<long> & seed) {
+  PyObject* cgpt_random_sample(DIST & dist,PyObject* _target,sRNG& srng,pRNG& prng,std::vector<long> & shape,std::vector<long> & seed,GridBase* grid) {
 
   if (PyArray_Check(_target)) {
 
-    std::vector<long> hashes;
-    cgpt_random_to_hash((PyArrayObject*)_target,hashes);
+    //TIME(t0,
 
+    std::vector<long> hashes;
+    cgpt_random_to_hash((PyArrayObject*)_target,hashes,grid);
+
+    //	 );
+
+    //TIME(t1,
     std::map<long,std::vector<long>> hash_offsets;
     cgpt_hash_offsets(hashes,hash_offsets);
+    //	 );
 
+    //TIME(t2,
     std::vector<long> unique_hashes;
     cgpt_hash_unique(hash_offsets,unique_hashes);
+    //	 );
 
-    cgpt_check_global_uniqueness(unique_hashes);
-    
+    //TIME(t3,
     cgpt_random_setup(unique_hashes,srng,prng,seed);
+    //	 );
 
+    //TIME(t4,
     long n = 1;
     std::vector<long> dims;
     dims.push_back(hashes.size());
@@ -129,6 +141,7 @@ template<typename DIST,typename sRNG,typename pRNG>
     PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_COMPLEX128);
     ComplexD* d = (ComplexD*)PyArray_DATA(a);
     thread_for(i, unique_hashes.size(), {
+	// all the previous effort allows the prng to act in parallel
 	auto h = unique_hashes[i];
 	auto & uhi = hash_offsets[h];
 	for (auto & x : uhi) {
@@ -136,6 +149,10 @@ template<typename DIST,typename sRNG,typename pRNG>
 	    d[n*x+j] = dist(prng[h]);
 	}
       });
+
+    //	 );
+
+    //std::cout << GridLogMessage << "Timing: " << t0 << ", " << t1 << ", " << t2 << ", " << t3 << ", " << t4 << std::endl;
     return (PyObject*)a;
 
   } else if (_target == Py_None) {

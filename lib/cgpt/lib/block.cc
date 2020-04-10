@@ -34,6 +34,7 @@ EXPORT(block_project,{
 
     fine->block_project(coarse,basis);
 
+    return PyLong_FromLong(0);
   });
 
 EXPORT(block_promote,{
@@ -52,6 +53,7 @@ EXPORT(block_promote,{
 
     fine->block_promote(coarse,basis);
 
+    return PyLong_FromLong(0);
   });
 
 EXPORT(block_orthogonalize,{
@@ -70,5 +72,6 @@ EXPORT(block_orthogonalize,{
     ASSERT(basis.size() > 0);
     basis[0]->block_orthogonalize(coarse,basis);
 
+    return PyLong_FromLong(0);
   });
 
