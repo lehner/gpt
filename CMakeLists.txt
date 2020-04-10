@@ -34,11 +34,11 @@ macro(pythonconfig var flag)
 	endif()
 endmacro()
 
-#lib/cgpt/lib/expression_gammamul.cc
-#lib/cgpt/lib/expression_linear_combination.cc
-#lib/cgpt/lib/expression_mul.cc
-#lib/cgpt/lib/operators.cc
 add_library(cgpt MODULE
+lib/cgpt/lib/expression_gammamul.cc
+lib/cgpt/lib/expression_linear_combination.cc
+lib/cgpt/lib/expression_mul.cc
+lib/cgpt/lib/operators.cc
 lib/cgpt/lib/basis.cc
 lib/cgpt/lib/eval.cc
 lib/cgpt/lib/init.cc
@@ -72,23 +72,25 @@ separate_arguments(glibs)
 separate_arguments(gldflags)
 
 
+
 if(SKBUILD)
 	target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags}")
 	target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs}")
+	target_link_libraries(cgpt "Grid;${glibs}")
 	python_extension_module(cgpt)
-	message(STATUS "site absolute dir: ${PYTHON_SITE_PACKAGES_DIR}")
+        message(STATUS "installing cgpt to  ${CMAKE_INSTALL_PREFIX}/${PYTHON_RELATIVE_SITE_PACKAGES_DIR}")
 	install(TARGETS cgpt LIBRARY DESTINATION ${PYTHON_RELATIVE_SITE_PACKAGES_DIR})
 else()
-	set_target_properties(cgpt PROPERTIES PREFIX "")
-	target_include_directories(cgpt PRIVATE ${PYTHON_INCLUDE_DIRS})
 	pythonconfig(pycflags   --includes)
-        pythonconfig(pyldflags  --ldflags)
-        pythonconfig(pylibs     --libs)
+	pythonconfig(pyldflags  --ldflags)
+	pythonconfig(pylibs     --libs)
 	separate_arguments(pycflags)
 	separate_arguments(pyldflags)
 	separate_arguments(pylibs)
+	set_target_properties(cgpt PROPERTIES PREFIX "")
+	target_include_directories(cgpt PRIVATE ${PYTHON_INCLUDE_DIRS})
 	target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags};${pycflags}")
 	target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs};${pyldflags};${pylibs}")
-	target_link_libraries(cgpt PRIVATE ${PYTHON_LIBRARIES})
+	target_link_libraries(cgpt "Grid;${glibs};${pyldflags};${pylibs}")
 	install(TARGETS cgpt LIBRARY DESTINATION ".")
 endif()
