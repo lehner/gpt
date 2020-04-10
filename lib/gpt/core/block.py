@@ -16,22 +16,25 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-
 import gpt
 import cgpt
 
-def orthogonalize(w,basis,ips=None):
-    for j, v in enumerate(basis):
-        ip=gpt.innerProduct(v,w)
-        w -= ip*v
-        if ips is not None:
-            ips[j]=ip
+def project(coarse, fine, basis):
+    for i in coarse.idx:
+        cgpt.block_project(coarse.v[i].obj,fine.obj,basis[coarse.n0[i]:coarse.n1[i]])
 
-def linear_combination(r,basis,Qt):
-    return cgpt.linear_combination(r.obj,basis,Qt)
+def promote(coarse, fine, basis):
+    fine[:]=0
+    tmp=gpt.lattice(fine)
+    for i in coarse.idx:
+        cgpt.block_promote(coarse.v[i].obj,tmp.obj,basis[coarse.n0[i]:coarse.n1[i]])
+        fine += tmp
 
-def rotate(basis,Qt,j0,j1,k0,k1):
-    return cgpt.rotate(basis,Qt,j0,j1,k0,k1)
+def orthogonalize(coarse_grid, basis):
+    assert(type(coarse_grid) == gpt.grid)
+    coarse_tmp=gpt.complex(coarse_grid)
+    cgpt.block_orthogonalize(coarse_tmp.obj,basis)
 
-def qr_decomp(lmd,lme,Nk,Nm,Qt,Dsh,kmin,kmax):
-    return cgpt.qr_decomp(lmd,lme,Nk,Nm,Qt,Dsh,kmin,kmax)
+
+
+

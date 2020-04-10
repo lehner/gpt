@@ -28,6 +28,7 @@ public:
   virtual RealD norm2() = 0;
   virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
   virtual ComplexD innerProduct(cgpt_Lattice_base* other) = 0;
+  virtual void innerProduct_norm(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;
   virtual void copy_from(cgpt_Lattice_base* src) = 0;
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) = 0; // unary_expr(unary_a(this) * unary_b(b))
   virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse) = 0;
@@ -48,6 +49,9 @@ public:
   virtual PyObject* memory_view() = 0; // access to internal memory storage, can be simd format
   virtual PyArrayObject* export_data(PyArrayObject* coordinates) = 0;
   virtual void import_data(PyArrayObject* coordinates, PyObject* data) = 0;
+  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_orthogonalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
 };
 
 template<class T> class cgpt_Lattice;

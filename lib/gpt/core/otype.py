@@ -86,6 +86,46 @@ def vspincolor(grid):
 
 
 ###
+# Basic vectors for coarse grid
+class ot_vcomplex10:
+    nfloats=2*10
+    shape=(10,)
+    transposed=None
+    spintrace=None # not supported
+    colortrace=None
+
+class ot_vcomplex20:
+    nfloats=2*20
+    shape=(20,)
+    transposed=None
+    spintrace=None # not supported
+    colortrace=None
+
+class ot_vcomplex40:
+    nfloats=2*40
+    shape=(40,)
+    transposed=None
+    spintrace=None # not supported
+    colortrace=None
+
+class ot_vcomplex80:
+    nfloats=2*80
+    shape=(80,)
+    transposed=None
+    spintrace=None # not supported
+    colortrace=None
+
+fvcomplex={
+    10 : lambda grid: gpt_object(grid, ot_vcomplex10),
+    20 : lambda grid: gpt_object(grid, ot_vcomplex20),
+    40 : lambda grid: gpt_object(grid, ot_vcomplex40),
+    80 : lambda grid: gpt_object(grid, ot_vcomplex80),
+}
+
+def vcomplex(grid, n):
+    return gpt.vlattice(grid, n, fvcomplex)
+
+###
 # String conversion for safe file input
 def str_to_otype(s):
     return { 
@@ -94,6 +134,10 @@ def str_to_otype(s):
         "ot_vcolor" : ot_vcolor,
         "ot_mspincolor" : ot_mspincolor,
         "ot_vspincolor" : ot_vspincolor,
+        "ot_vcomplex10" : ot_vcomplex10,
+        "ot_vcomplex20" : ot_vcomplex20,
+        "ot_vcomplex40" : ot_vcomplex40,
+        "ot_vcomplex80" : ot_vcomplex80,
         }[s]
 
 ###

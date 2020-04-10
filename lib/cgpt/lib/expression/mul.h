@@ -64,6 +64,9 @@ cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a
   _COMPATIBLE_(iColourMatrix);
   _COMPATIBLE_(iSpinColourVector);
   _COMPATIBLE_(iSpinColourMatrix);
+  //#define BASIS_SIZE(n) _COMPATIBLE_(iComplexV ## n);
+  //#include "../basis_size.h"
+  //#undef BASIS_SIZE
   ERR("Not implemented");
 
 #if 0
@@ -112,6 +115,14 @@ cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a
   _COMPATIBLE_(iSpinColourMatrix);
   ERR("Not implemented");
 }
+
+#define BASIS_SIZE(n)							\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iComplexV ## n<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) { \
+    ERR("Not implemented");						\
+  }
+#include "../basis_size.h"
+#undef BASIS_SIZE
 
 #undef typeClose
 #undef typeOpen

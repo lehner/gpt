@@ -20,6 +20,8 @@ class cgpt_distribute {
  public:
 
   struct coor { int rank; long offset; };
+  struct mp { std::vector<long> src; std::vector<long> dst; };
+  struct plan { std::map<int,mp> cr; std::vector<long> tasks; };
 
   int rank;
   long word, simd_word;
@@ -27,18 +29,18 @@ class cgpt_distribute {
   int Nsimd;
 
   // word == sizeof(sobj), simd_word == sizeof(Coeff_t)
-  cgpt_distribute(int rank, void* local, long word, int Nsimd, long simd_word);
+  cgpt_distribute(int rank, void* local, long word, int Nsimd, long simd_word, Grid_MPI_Comm comm);
 
-  void copy_to(const std::vector<coor>& c,void* dest);
+  void create_plan(const std::vector<coor>& c, plan& plan);
 
-  void copy_from(const std::vector<coor>& c,void* src);
+  void copy_to(const plan& p,void* dest);
+
+  void copy_from(const plan& p,void* src);
 
  protected:
-  struct mp { std::vector<long> src; std::vector<long> dst; };
   void split(const std::vector<coor>& c, std::map<int,mp>& s);
-  #if defined (GRID_COMMS_MPI3)
-  MPI_Comm comm;
-  #endif
+  Grid_MPI_Comm comm;
+
   int mpi_ranks, mpi_rank;
   std::vector<int> mpi_rank_map;
 

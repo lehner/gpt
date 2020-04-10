@@ -15,24 +15,18 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-    Description:  We need to fail gracefully since we also run in an interpreter; infrastructure goes here
 */
-#define STRX(x) #x
-#define STR(x) STRX(x)
-#define ASSERT(x)				\
-  { if ( !(x) )throw "Assert " #x " failed in file " __FILE__ ":"  STR(__LINE__); };
-#define ERR(...)							\
-  { char msg[1024]; snprintf(msg,sizeof(msg)-100,__VA_ARGS__);		\
-    strcat(msg, " in file " __FILE__ ":"  STR(__LINE__)); throw (const char*)msg; };
 
-#define EXPORT(name,...)					   \
-  PyObject* cgpt_ ## name(PyObject* self, PyObject* args) {	   \
-    try {							   \
-      __VA_ARGS__;						   \
-      return NULL;						   \
-    } catch (const char* err) {					   \
-      PyErr_SetString(PyExc_RuntimeError,err);			   \
-      return NULL;						   \
-    }								   \
-  }
+template<int N>
+class TensorPromote {
+ public:
+  template<typename T> static accelerator_inline auto ToSinglet(const T& arg) -> decltype(TensorPromote<N-1>::ToSinglet(iScalar<T>())) { iScalar<T> sa; sa._internal=arg; return TensorPromote<N-1>::ToSinglet(sa); };
+};
+
+template<>
+class TensorPromote<0> {
+ public:
+  template<typename T> static accelerator_inline const T & ToSinglet(const T& arg) { return arg; };
+};
+
+#define ConformSinglet(a,b) TensorPromote<b::TensorLevel>::ToSinglet(TensorRemove(a))

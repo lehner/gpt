@@ -15,24 +15,9 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-    Description:  We need to fail gracefully since we also run in an interpreter; infrastructure goes here
 */
-#define STRX(x) #x
-#define STR(x) STRX(x)
-#define ASSERT(x)				\
-  { if ( !(x) )throw "Assert " #x " failed in file " __FILE__ ":"  STR(__LINE__); };
-#define ERR(...)							\
-  { char msg[1024]; snprintf(msg,sizeof(msg)-100,__VA_ARGS__);		\
-    strcat(msg, " in file " __FILE__ ":"  STR(__LINE__)); throw (const char*)msg; };
-
-#define EXPORT(name,...)					   \
-  PyObject* cgpt_ ## name(PyObject* self, PyObject* args) {	   \
-    try {							   \
-      __VA_ARGS__;						   \
-      return NULL;						   \
-    } catch (const char* err) {					   \
-      PyErr_SetString(PyExc_RuntimeError,err);			   \
-      return NULL;						   \
-    }								   \
-  }
+BASIS_SIZE(10)
+BASIS_SIZE(20)
+BASIS_SIZE(40)
+BASIS_SIZE(80)
+// 50=10+40, 60=20+40, 150=80+40+20+10, 250=3*80+10, 400=5*80

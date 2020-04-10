@@ -48,10 +48,38 @@ static RealD get_float(PyObject* dict, const char* key) {
   return val;
 }
 
+static int get_int(PyObject* dict, const char* key) {
+  PyObject* _val = get_key(dict,key);
+  int val;
+  cgpt_convert(_val,val);
+  return val;
+}
+
+static std::string get_str(PyObject* dict, const char* key) {
+  PyObject* _val = get_key(dict,key);
+  std::string val;
+  cgpt_convert(_val,val);
+  return val;
+}
+
 static bool get_bool(PyObject* dict, const char* key) {
   PyObject* val = get_key(dict,key);
   ASSERT(PyBool_Check(val));
   return (val == Py_True);
+}
+
+static std::vector<long> get_long_vec(PyObject* dict, const char* key) {
+  PyObject* val = get_key(dict,key);
+  ASSERT(PyList_Check(val));
+  long N = PyList_Size(val);
+  std::vector<long> ret(N);
+  for (int i=0;i<N;i++) {
+    PyObject* _lv = PyList_GetItem(val,i);
+    long lv;
+    cgpt_convert(_lv,lv);
+    ret[i] = lv;
+  }
+  return ret;
 }
 
 template<int N>
