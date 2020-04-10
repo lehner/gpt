@@ -1,37 +1,37 @@
 cmake_minimum_required(VERSION 3.14)
 project(cgpt)
 if(SKBUILD)
-	message(STATUS "we are building with scikit-build")
-  	find_package(PythonExtensions REQUIRED)
+    message(STATUS "we are building with scikit-build")
+    find_package(PythonExtensions REQUIRED)
 endif()
 
 
 macro(gridconfig var flag)
-	execute_process(COMMAND "grid-config" "${flag}"
-		RESULT_VARIABLE gridresult
-		OUTPUT_VARIABLE ${var}
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-		ERROR_STRIP_TRAILING_WHITESPACE)
-	if(${gridresult} EQUAL 0)
-		message(STATUS "grid-config ${flag} ok")
-		message(STATUS "     yields ${${var}}")
-	else()
-		message(FATAL_ERROR "grid-config ${flag} failed")
-	endif()
+    execute_process(COMMAND "grid-config" "${flag}"
+        RESULT_VARIABLE gridresult
+        OUTPUT_VARIABLE ${var}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE)
+    if(${gridresult} EQUAL 0)
+        message(STATUS "grid-config ${flag} ok")
+        message(STATUS "     yields ${${var}}")
+    else()
+        message(FATAL_ERROR "grid-config ${flag} failed")
+    endif()
 endmacro()
 
 macro(pythonconfig var flag)
-	execute_process(COMMAND "python3-config" "${flag}"
-		RESULT_VARIABLE pyresult
-		OUTPUT_VARIABLE ${var}
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-		ERROR_STRIP_TRAILING_WHITESPACE)
-	if(${pyresult} EQUAL 0)
-		message(STATUS "python3-config ${flag} ok")
-		message(STATUS "        yields ${${var}}")
-	else()
-		message(FATAL_ERROR "python3-config ${flag} failed")
-	endif()
+    execute_process(COMMAND "python3-config" "${flag}"
+        RESULT_VARIABLE pyresult
+        OUTPUT_VARIABLE ${var}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE)
+    if(${pyresult} EQUAL 0)
+        message(STATUS "python3-config ${flag} ok")
+        message(STATUS "        yields ${${var}}")
+    else()
+        message(FATAL_ERROR "python3-config ${flag} failed")
+    endif()
 endmacro()
 
 add_library(cgpt MODULE
@@ -76,23 +76,24 @@ separate_arguments(gldflags)
 
 
 if(SKBUILD)
-	target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags}")
-	target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs}")
-	target_link_libraries(cgpt "Grid;${glibs}")
-	python_extension_module(cgpt)
+    target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags}")
+    target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs}")
+    target_link_libraries(cgpt "Grid;${glibs}")
+    python_extension_module(cgpt)
         message(STATUS "installing cgpt to  ${CMAKE_INSTALL_PREFIX}/${PYTHON_RELATIVE_SITE_PACKAGES_DIR}")
-	install(TARGETS cgpt LIBRARY DESTINATION ${PYTHON_RELATIVE_SITE_PACKAGES_DIR})
+    install(TARGETS cgpt LIBRARY DESTINATION ${PYTHON_RELATIVE_SITE_PACKAGES_DIR})
 else()
-	pythonconfig(pycflags   --includes)
-	pythonconfig(pyldflags  --ldflags)
-	pythonconfig(pylibs     --libs)
-	separate_arguments(pycflags)
-	separate_arguments(pyldflags)
-	separate_arguments(pylibs)
-	set_target_properties(cgpt PROPERTIES PREFIX "")
-	target_include_directories(cgpt PRIVATE ${PYTHON_INCLUDE_DIRS})
-	target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags};${pycflags}")
-	target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs};${pyldflags};${pylibs}")
-	target_link_libraries(cgpt "Grid;${glibs};${pyldflags};${pylibs}")
-	install(TARGETS cgpt LIBRARY DESTINATION ".")
+    pythonconfig(pycflags   --includes)
+    pythonconfig(pyldflags  --ldflags)
+    pythonconfig(pylibs     --libs)
+    separate_arguments(pycflags)
+    separate_arguments(pyldflags)
+    separate_arguments(pylibs)
+    set_target_properties(cgpt PROPERTIES PREFIX "")
+    target_include_directories(cgpt PRIVATE ${PYTHON_INCLUDE_DIRS})
+    target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags};${pycflags}")
+    target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs};${pyldflags};${pylibs}")
+    target_link_libraries(cgpt "Grid;${glibs};${pyldflags};${pylibs}")
+    install(TARGETS cgpt LIBRARY DESTINATION ".")
 endif()
+# vim:expandtab:sts=4:shiftwidth=4
