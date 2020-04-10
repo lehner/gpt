@@ -35,6 +35,8 @@ macro(pythonconfig var flag)
 endmacro()
 
 add_library(cgpt MODULE
+lib/cgpt/lib/block.cc
+lib/cgpt/lib/random.cc
 lib/cgpt/lib/expression_gammamul.cc
 lib/cgpt/lib/expression_linear_combination.cc
 lib/cgpt/lib/expression_mul.cc
