@@ -3,6 +3,7 @@ project(cgpt)
 if(SKBUILD)
     message(STATUS "we are building with scikit-build")
     find_package(PythonExtensions REQUIRED)
+    find_package(NumPy REQUIRED)
 endif()
 
 
@@ -76,7 +77,7 @@ separate_arguments(gldflags)
 
 
 if(SKBUILD)
-    target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags}")
+    target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags};-I${NumPy_INCLUDE_DIRS}")
     target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs}")
     target_link_libraries(cgpt "Grid;${glibs}")
     python_extension_module(cgpt)
