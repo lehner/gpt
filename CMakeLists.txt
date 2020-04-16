@@ -35,6 +35,20 @@ macro(pythonconfig var flag)
     endif()
 endmacro()
 
+macro(pythoninter var cmd)
+    execute_process(COMMAND "python3" "-c" "${cmd}"
+        RESULT_VARIABLE pyresult
+        OUTPUT_VARIABLE ${var}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE)
+    if(${pyresult} EQUAL 0)
+        message(STATUS "python3 ${cmd} ok")
+        message(STATUS " yields ${${var}}")
+    else()
+        message(FATAL_ERROR "python3 ${cmd} failed")
+    endif()
+endmacro()
+
 add_library(cgpt MODULE
 lib/cgpt/lib/block.cc
 lib/cgpt/lib/random.cc
@@ -81,18 +95,26 @@ if(SKBUILD)
     target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs}")
     target_link_libraries(cgpt "Grid;${glibs}")
     python_extension_module(cgpt)
+    if(${CMAKE_INSTALL_PREFIX} MATCHES "^.*${PYTHON_RELATIVE_SITE_PACKAGES_DIR}.*")
+        message(STATUS "installing cgpt to  ${CMAKE_INSTALL_PREFIX}")
+        install(TARGETS cgpt LIBRARY DESTINATION ".")
+    else()
         message(STATUS "installing cgpt to  ${CMAKE_INSTALL_PREFIX}/${PYTHON_RELATIVE_SITE_PACKAGES_DIR}")
-    install(TARGETS cgpt LIBRARY DESTINATION ${PYTHON_RELATIVE_SITE_PACKAGES_DIR})
+        install(TARGETS cgpt LIBRARY DESTINATION ${PYTHON_RELATIVE_SITE_PACKAGES_DIR})
+    endif()
 else()
     pythonconfig(pycflags   --includes)
     pythonconfig(pyldflags  --ldflags)
     pythonconfig(pylibs     --libs)
+    pythoninter(numpyinclude "import numpy; print('-I'+numpy.__path__[0]+'/core/include')")
     separate_arguments(pycflags)
     separate_arguments(pyldflags)
     separate_arguments(pylibs)
     set_target_properties(cgpt PROPERTIES PREFIX "")
     target_include_directories(cgpt PRIVATE ${PYTHON_INCLUDE_DIRS})
-    target_compile_options(cgpt PRIVATE "-I${gprefix}/include;${gcxxflags};${pycflags}")
+    target_compile_options(cgpt PRIVATE
+        "-I${gprefix}/include;${gcxxflags};${pycflags}"
+        ${numpyinclude})
     target_link_options(cgpt PRIVATE "-L${gprefix}/lib;-lGrid;${gldflags};${glibs};${pyldflags};${pylibs}")
     target_link_libraries(cgpt "Grid;${glibs};${pyldflags};${pylibs}")
     install(TARGETS cgpt LIBRARY DESTINATION ".")
