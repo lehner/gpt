@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.13.4)
 project(cgpt)
 if(SKBUILD)
     message(STATUS "we are building with scikit-build")
