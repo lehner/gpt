@@ -17,6 +17,14 @@ necessary dependencies (like skbuild, ninja, numpy)
 
     pip install --user --verbose `pwd`
 
+Even more comfortable, you can have pip pull the source from github.
+Use the syntax:
+
+    pip install [<regular options>] [vcs+protocol]://<url>@<revsion>
+
+For example:
+
+    pip install --user --upgrade git+https://github.com/ssolbUR/gpt@feature/setup
 
 ## Python default with setuptools
 
