@@ -90,24 +90,21 @@ def innerProduct(a,b):
     assert(len(a.otype.v_idx) == len(b.otype.v_idx))
     return sum([ cgpt.lattice_innerProduct(a.v_obj[i],b.v_obj[i]) for i in a.otype.v_idx ])
 
-# TODO: think about naming conventions:
-# consistently use norm2(x) = x_i^2, norm(x) = norm2(x)**0.5
-# For historical reasons Grid sometimes uses norm=norm2 (axpy_norm), sometimes norm2 (norm2)
-def innerProduct_norm(a,b):
+def innerProductNorm2(a,b):
     if type(a) == gpt.tensor and type(b) == gpt.tensor:
         return gpt.adj(a) * b, a.norm2()
     a=gpt.eval(a)
     b=gpt.eval(b)
     assert(len(a.otype.v_idx) == len(b.otype.v_idx))
-    r=[ cgpt.lattice_innerProduct_norm(a.v_obj[i],b.v_obj[i]) for i in a.otype.v_idx ]
+    r=[ cgpt.lattice_innerProductNorm2(a.v_obj[i],b.v_obj[i]) for i in a.otype.v_idx ]
     return sum([ x[0] for x in r ]), sum([ x[1] for x in r ])
 
-def axpy_norm(d, a, x, y):
+def axpy_norm2(d, a, x, y):
     x=gpt.eval(x)
     y=gpt.eval(y)
     assert(len(y.otype.v_idx) == len(x.otype.v_idx))
     assert(len(d.otype.v_idx) == len(x.otype.v_idx))
-    return sum([ cgpt.lattice_axpy_norm(d.v_obj[i],a,x.v_obj[i],y.v_obj[i]) for i in x.otype.v_idx ])
+    return sum([ cgpt.lattice_axpy_norm2(d.v_obj[i],a,x.v_obj[i],y.v_obj[i]) for i in x.otype.v_idx ])
 
 def slice(x,dim):
     x=gpt.eval(x)

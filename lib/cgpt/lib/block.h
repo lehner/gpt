@@ -235,7 +235,7 @@ template<class vobj,class CComplex>
 }
 
 template<class vobj,class CComplex>
-  inline void cgpt_blockOrthogonalise(Lattice<CComplex> &ip,std::vector<Lattice<vobj>* > &Basis)
+  inline void cgpt_blockOrthonormalize(Lattice<CComplex> &ip,std::vector<Lattice<vobj>* > &Basis)
 {
   GridBase *coarse = ip.Grid();
   GridBase *fine   = Basis[0]->Grid();
@@ -310,7 +310,7 @@ void cgpt_block_promote(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vecto
 }
 
 template<typename T>
-void cgpt_block_orthogonalize(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _basis) { // fine argument just to automatically detect type
+void cgpt_block_orthonormalize(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _basis) { // fine argument just to automatically detect type
 
   typedef typename Lattice<T>::vector_type vCoeff_t;
 
@@ -318,5 +318,5 @@ void cgpt_block_orthogonalize(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std:
   for (long i=0;i<_basis.size();i++)
     basis[i] = &compatible<T>(_basis[i])->l;
 
-  cgpt_blockOrthogonalise(compatible< iSinglet<vCoeff_t> >(_coarse)->l,basis);
+  cgpt_blockOrthonormalize(compatible< iSinglet<vCoeff_t> >(_coarse)->l,basis);
 }

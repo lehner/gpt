@@ -45,7 +45,7 @@ class cg:
             dc=g.innerProduct(p,mmp)
             d=dc.real
             a = c / d
-            cp=g.axpy_norm(r, -a, mmp, r)
+            cp=g.axpy_norm2(r, -a, mmp, r)
             b = cp / c
             psi += a*p
             p @= b*p+r

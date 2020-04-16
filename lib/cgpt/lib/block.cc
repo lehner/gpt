@@ -58,7 +58,7 @@ EXPORT(block_promote,{
     return PyLong_FromLong(0);
   });
 
-EXPORT(block_orthogonalize,{
+EXPORT(block_orthonormalize,{
 
     PyObject* _basis;
     void* _coarse;
@@ -72,7 +72,7 @@ EXPORT(block_orthogonalize,{
     cgpt_basis_fill(basis,_basis,0); // TODO: generalize
 
     ASSERT(basis.size() > 0);
-    basis[0]->block_orthogonalize(coarse,basis);
+    basis[0]->block_orthonormalize(coarse,basis);
 
     return PyLong_FromLong(0);
   });

@@ -51,7 +51,7 @@ public:
   virtual int get_numpy_dtype() = 0;
   virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
   virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
-  virtual void block_orthogonalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
   virtual GridBase* get_grid() = 0;
 };
 
