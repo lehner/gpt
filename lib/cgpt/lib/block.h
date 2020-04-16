@@ -62,10 +62,29 @@ inline void cgpt_blockSum(Lattice<vobj> &coarseData,const Lattice<vobj> &fineDat
   return;
 }
 
+template<class vobj>
+inline auto localInnerProductD(const Lattice<vobj> &lhs,const Lattice<vobj> &rhs)
+-> Lattice<iScalar<decltype(TensorRemove(innerProductD2(lhs.View()(0),rhs.View()(0))))>>
+{
+  auto lhs_v = lhs.View();
+  auto rhs_v = rhs.View();
+
+  typedef decltype(TensorRemove(innerProductD2(lhs_v(0),rhs_v(0)))) t_inner;
+  Lattice<iScalar<t_inner>> ret(lhs.Grid());
+  auto ret_v = ret.View();
+
+  accelerator_for(ss,rhs_v.size(),vobj::Nsimd(),{
+      auto d2 = TensorPromote<1>::ToSinglet(TensorRemove(innerProductD2(lhs_v(ss),rhs_v(ss))));
+      coalescedWrite(ret_v[ss],d2);
+    });
+
+  return ret;
+}
+
 template<class vobj,class CComplex>
   inline void cgpt_blockInnerProduct(Lattice<CComplex> &CoarseInner,
-				     const Lattice<vobj> &fineX,
-				     const Lattice<vobj> &fineY)
+				      const Lattice<vobj> &fineX,
+				      const Lattice<vobj> &fineY)
 {
   typedef decltype(innerProduct(vobj(),vobj())) dotp;
 
@@ -86,25 +105,46 @@ template<class vobj,class CComplex>
     });
 }
 
-template<class vobj,class CComplex,int nbasis>
-  inline void cgpt_blockProject(Lattice<iVector<CComplex,nbasis > > &coarseData,
-			   const             Lattice<vobj>   &fineData,
-			   const std::vector<Lattice<vobj>* > &Basis)
+static void precisionDemote(vComplexF & out, const vComplexD2 & in) {
+  out.v = Optimization::PrecisionChange::DtoS(in._internal[0].v,in._internal[1].v);
+}
+
+template<typename vobj,typename T>
+void precisionDemote(iScalar<vobj> & out, const T & in) {
+  precisionDemote(out._internal,in);
+}
+
+static void precisionDemote(vComplexF & out, const vComplexF & in) {
+  out = in;
+}
+
+static void precisionDemote(vComplexD & out, const vComplexD & in) {
+  out = in;
+}
+
+template<class vobj,class CComplex>
+  inline void cgpt_blockInnerProductD(Lattice<CComplex> &CoarseInner,
+				      const Lattice<vobj> &fineX,
+				      const Lattice<vobj> &fineY)
 {
-  GridBase * fine  = fineData.Grid();
-  GridBase * coarse= coarseData.Grid();
+  typedef iScalar<decltype(TensorRemove(innerProductD2(vobj(),vobj())))> dotp;
 
-  Lattice<CComplex> ip(coarse);
+  GridBase *coarse(CoarseInner.Grid());
+  GridBase *fine  (fineX.Grid());
 
-  //  auto fineData_   = fineData.View();
-  auto coarseData_ = coarseData.View();
-  auto ip_         = ip.View();
-  for(int v=0;v<nbasis;v++) {
-    cgpt_blockInnerProduct(ip,*Basis[v],fineData);
-    accelerator_for( sc, coarse->oSites(), vobj::Nsimd(), {
-	coalescedWrite(coarseData_[sc](v),ip_(sc));
-      });
-  }
+  Lattice<dotp> fine_inner(fine); fine_inner.Checkerboard() = fineX.Checkerboard();
+  Lattice<dotp> coarse_inner(coarse);
+
+  // Precision promotion?
+  auto CoarseInner_  = CoarseInner.View();
+  auto coarse_inner_ = coarse_inner.View();
+
+  fine_inner = localInnerProductD(fineX,fineY);
+  cgpt_blockSum(coarse_inner,fine_inner);
+  accelerator_for(ss, coarse->oSites(), 1, {
+      precisionDemote(CoarseInner_[ss], TensorRemove(coarse_inner_[ss]));
+    });
+ 
 }
 
 template<class vobj,class CComplex>
@@ -155,12 +195,41 @@ template<class vobj,class CComplex>
   return;
 }
 
+template<class vobj,class CComplex,int nbasis>
+  inline void cgpt_blockProject(Lattice<iVector<CComplex,nbasis > > &coarseData,
+			   const             Lattice<vobj>   &fineData,
+			   const std::vector<Lattice<vobj>* > &Basis)
+{
+  GridBase * fine  = fineData.Grid();
+  GridBase * coarse= coarseData.Grid();
+
+  Lattice<iScalar<CComplex>> ip(coarse);
+  Lattice<vobj>     fineDataRed = fineData;
+
+  //  auto fineData_   = fineData.View();
+  auto coarseData_ = coarseData.View();
+  auto ip_         = ip.View();
+  for(int v=0;v<nbasis;v++) {
+    cgpt_blockInnerProductD(ip,*Basis[v],fineDataRed); // ip = <basis|fine>
+    accelerator_for( sc, coarse->oSites(), vobj::Nsimd(), {
+	coalescedWrite(coarseData_[sc](v),TensorRemove(ip_(sc)));
+      });
+
+    // needed for numerical stability (crucial at single precision)
+    // |fine> = |fine> - <basis|fine> |basis>
+    ip=-ip;
+    cgpt_blockZAXPY<vobj,iScalar<CComplex>> (fineDataRed,ip,*Basis[v],fineDataRed); 
+
+  }
+}
+
+
 template<class vobj,class CComplex>
   inline void cgpt_blockNormalise(Lattice<CComplex> &ip,Lattice<vobj> &fineX)
 {
   GridBase *coarse = ip.Grid();
   Lattice<vobj> zz(fineX.Grid()); zz=Zero(); zz.Checkerboard()=fineX.Checkerboard();
-  cgpt_blockInnerProduct(ip,fineX,fineX);
+  cgpt_blockInnerProductD(ip,fineX,fineX);
   ip = pow(ip,-0.5);
   cgpt_blockZAXPY(fineX,ip,fineX,zz);
 }
@@ -182,7 +251,7 @@ template<class vobj,class CComplex>
   for(int v=0;v<nbasis;v++) {
     for(int u=0;u<v;u++) {
       //Inner product & remove component
-      cgpt_blockInnerProduct(ip,*Basis[u],*Basis[v]);
+      cgpt_blockInnerProductD(ip,*Basis[u],*Basis[v]);
       ip = -ip;
       cgpt_blockZAXPY<vobj,CComplex> (*Basis[v],ip,*Basis[u],*Basis[v]);
     }
@@ -201,13 +270,8 @@ template<class vobj,class CComplex,int nbasis>
   fineData=Zero();
   for(int i=0;i<nbasis;i++) {
     Lattice<iScalar<CComplex> > ip = PeekIndex<0>(coarseData,i);
-    Lattice<CComplex> cip(coarse);
-    auto cip_ = cip.View();
     auto  ip_ =  ip.View();
-    accelerator_forNB(sc,coarse->oSites(),CComplex::Nsimd(),{
-	coalescedWrite(cip_[sc], ip_(sc)());
-      });
-    cgpt_blockZAXPY<vobj,CComplex >(fineData,cip,*Basis[i],fineData);
+    cgpt_blockZAXPY<vobj,iScalar<CComplex> >(fineData,ip,*Basis[i],fineData);
   }
 }
 

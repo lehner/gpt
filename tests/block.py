@@ -9,14 +9,14 @@ import sys
 
 # load configuration
 fine_grid=g.grid([8,8,8,16],g.single)
-coarse_grid=g.grid([2,2,2,4],g.single)
+coarse_grid=g.grid([2,2,2,4],fine_grid.precision)
 
 # basis
 n=30
 basis=[ g.vcolor(fine_grid) for i in range(n) ]
 g.random.seed("block_seed_string_13")
 g.random.cnormal(basis)
-for i in range(2):
+for i in range(1):
     g.message("Ortho step %d" % i)
     g.block.orthogonalize(coarse_grid,basis)
 
@@ -34,3 +34,4 @@ g.block.project(lcoarse2,tmpf,basis)
 
 # report error
 g.message(g.norm2(lcoarse-lcoarse2))
+

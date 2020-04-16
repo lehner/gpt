@@ -47,7 +47,8 @@ public:
 			PyUnicode_FromString(get_prec(l).c_str()));
   }
 
-  virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
+  // use norm2 convention for squared norm, talked to Peter, Grid may also change to this cleaner notation
+  virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
     return ::axpy_norm(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
   }
 
@@ -59,8 +60,8 @@ public:
     return ::innerProduct(l,compatible<T>(other)->l);
   }
 
-  virtual void innerProduct_norm(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
-    ::innerProduct_norm(ip,a2,l,compatible<T>(other)->l);
+  virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
+    ::innerProductNorm(ip,a2,l,compatible<T>(other)->l);
   }
 
   // ac == { true : add result to dst, false : replace dst }
