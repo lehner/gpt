@@ -23,8 +23,10 @@ subs = (
 for sub in subs:
     pkgs.update({'gpt.'+sub.replace('/','.'): 'lib/gpt/'+sub})
 
+pkgs.update( {'cgpt' : 'lib/wrap'} )
+
 setup(name='gpt',
-    version='0.0',
+    version='0.0.1',
     description='Python Measurements with Grid',
     package_dir=pkgs,
     packages=pkgs.keys())
