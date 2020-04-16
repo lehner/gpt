@@ -18,7 +18,7 @@ g.random.seed("block_seed_string_13")
 g.random.cnormal(basis)
 for i in range(1):
     g.message("Ortho step %d" % i)
-    g.block.orthogonalize(coarse_grid,basis)
+    g.block.orthonormalize(coarse_grid,basis)
 
 # test coarse vector
 lcoarse=g.vcomplex(coarse_grid,n)

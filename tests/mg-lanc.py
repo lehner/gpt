@@ -87,11 +87,9 @@ start[:]=g.vcomplex([ 1 ] * 50,50)
 # basis
 basis=evec
 g.message("Ortho round 1")
-g.block.orthogonalize(grid_coarse,basis)
+g.block.orthonormalize(grid_coarse,basis)
 g.message("Ortho round 2")
-g.block.orthogonalize(grid_coarse,basis)
-g.message("Ortho round 3")
-g.block.orthogonalize(grid_coarse,basis)
+g.block.orthonormalize(grid_coarse,basis)
 
 # now define coarse-grid operator
 cop=g.block.operator(c(w.NDagN),grid_coarse,basis)
