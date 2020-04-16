@@ -53,7 +53,7 @@ struct _eval_term_ {
   std::vector<_eval_factor_> factors;
 };
 
-void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms) {
+void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms,int idx) {
   ASSERT(PyList_Check(_list));
   int n = (int)PyList_Size(_list);
 
@@ -77,8 +77,12 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms) {
 
       factor.unary = PyLong_AsLong(PyTuple_GetItem(jj,0));
       PyObject* f = PyTuple_GetItem(jj,1);
-      if (PyObject_HasAttrString(f,"obj")) {
-	factor.lattice = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyObject_GetAttrString(f,"obj"));
+      if (PyObject_HasAttrString(f,"v_obj")) {
+	PyObject* v_obj = PyObject_GetAttrString(f,"v_obj");
+	ASSERT(v_obj);
+	ASSERT(PyList_Check(v_obj));
+	ASSERT(idx < PyList_Size(v_obj) && idx >= 0);
+	factor.lattice = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(v_obj,idx));
 	factor.type = _eval_factor_::LATTICE;
       } else if (PyObject_HasAttrString(f,"array")) {
 	factor.array = (PyArrayObject*)PyObject_GetAttrString(f,"array");
@@ -222,11 +226,11 @@ static void simplify(std::vector<_eval_term_>& terms) {
 }
 
 EXPORT(eval,{
-    
+
     void* _dst;
     PyObject* _list,* _ac;
-    int _unary;
-    if (!PyArg_ParseTuple(args, "lOiO", &_dst, &_list, &_unary, &_ac)) {
+    int unary, idx;
+    if (!PyArg_ParseTuple(args, "lOiOi", &_dst, &_list, &unary, &_ac, &idx)) {
       return NULL;
     }
     
@@ -238,7 +242,7 @@ EXPORT(eval,{
     bool new_lattice = dst == 0;
     
     std::vector<_eval_term_> terms;
-    eval_convert_factors(_list,terms);
+    eval_convert_factors(_list,terms,idx);
     
     cgpt_Lattice_base* dst_orig = dst;
 
@@ -251,7 +255,7 @@ EXPORT(eval,{
     // else
     
     // General code path:
-    dst=eval_general(dst,terms,_unary,ac);
+    dst=eval_general(dst,terms,unary,ac);
     
     if (new_lattice)
       return dst->to_decl();

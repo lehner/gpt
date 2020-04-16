@@ -19,6 +19,16 @@
 
 static int infer_numpy_type(const ComplexD& v) { return NPY_COMPLEX128; }
 static int infer_numpy_type(const ComplexF& v) { return NPY_COMPLEX64; }
+static int infer_numpy_type(const std::string & precision) {
+  if (precision == "single") {
+    return NPY_COMPLEX64;
+  } else if (precision == "double") {
+    return NPY_COMPLEX128;
+  } else {
+    ERR("Unknown precision %s",precision.c_str());
+  }
+}
+
 static void cgpt_numpy_data_layout(const ComplexF& v, std::vector<long>& dim) {}
 static void cgpt_numpy_data_layout(const ComplexD& v, std::vector<long>& dim) {}
 

@@ -44,7 +44,7 @@ public:
   virtual PyObject* to_decl() {   
     return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
 			PyUnicode_FromString(get_otype(l).c_str()),
-			PyUnicode_FromString(get_prec(l).c_str())); // TODO: add l.Checkerboard()
+			PyUnicode_FromString(get_prec(l).c_str()));
   }
 
   virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
@@ -162,12 +162,17 @@ public:
     return PyMemoryView_FromMemory((char*)&v[0],v.size()*sizeof(v[0]),PyBUF_WRITE);
   }
 
-  virtual PyArrayObject* export_data(PyArrayObject* coordinates) {
-    return cgpt_importexport(l,coordinates,0);
+  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) {
+    GridBase* grid = l.Grid();
+    Nsimd = grid->Nsimd();
+    word = sizeof(sobj);
+    simd_word = sizeof(Coeff_t);
+    ishape.resize(0);
+    cgpt_numpy_data_layout(sobj(),ishape);
   }
-
-  virtual void import_data(PyArrayObject* coordinates, PyObject* data) {
-    cgpt_importexport(l,coordinates,data);
+  
+  virtual int get_numpy_dtype() {
+    return infer_numpy_type(Coeff_t());
   }
 
   virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
@@ -181,5 +186,10 @@ public:
   virtual void block_orthogonalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
     cgpt_block_orthogonalize(coarse,l,basis);
   }
+
+  virtual GridBase* get_grid() {
+    return l.Grid();
+  }
+
 };
 

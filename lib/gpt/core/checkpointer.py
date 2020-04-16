@@ -40,9 +40,9 @@ class checkpointer:
         os.makedirs(directory, exist_ok=True)
         self.filename = "%s/%10.10d" % (directory,gpt.rank())
         try:
-            self.f = open(self.filename,"r+b")
+            self.f = gpt.FILE(self.filename,"r+b")
         except:
-            self.f = open(self.filename,"w+b")
+            self.f = gpt.FILE(self.filename,"w+b")
         self.f.seek(0,1)
         self.verbose = gpt.default.is_verbose("checkpointer")
 
@@ -68,9 +68,11 @@ class checkpointer:
             self.f.flush()
             t2=gpt.time()
             if self.verbose:
-                gpt.message("Checkpoint %g GB on head node at %g GB/s for crc32 and %g GB/s for write in %g s total" % (szGB,szGB/(t1-t0),szGB/(t2-t1),t2-t0))
-            #if not self.grid is None:
-            #    self.grid.barrier() # barrier to allow FS to sync, this is performance relevant, e.g., on the BNL KNL
+                if self.grid is None:
+                    gpt.message("Checkpoint %g GB on head node at %g GB/s for crc32 and %g GB/s for write in %g s total" % (szGB,szGB/(t1-t0),szGB/(t2-t1),t2-t0))
+                else:
+                    szGB=self.grid.globalsum(szGB)
+                    gpt.message("Checkpoint %g GB at %g GB/s for crc32 and %g GB/s for write in %g s total" % (szGB,szGB/(t1-t0),szGB/(t2-t1),t2-t0))
         else:
             assert(0)
 
@@ -93,10 +95,12 @@ class checkpointer:
                     v=memoryview(bytearray(8))
                     res=self.load(v)
                     obj[0]=struct.unpack("d",v)[0]
-                elif type(obj) == complex:
+                elif type(obj[0]) == complex:
                     v=memoryview(bytearray(16))
                     res=self.load(v)
                     obj[0]=complex(*struct.unpack("dd",v)[0,1])
+                elif type(obj[0]) == memoryview:
+                    return self.read_view(obj[0])
                 else:
                     assert(0)
                 return res
@@ -110,41 +114,40 @@ class checkpointer:
     def read_view(self, obj):
         pos=self.f.tell()
         self.f.seek(0,2)
-        flags=numpy.array([0.0,1.0],dtype=numpy.float64)
+        flags=numpy.array([0.0,1.0,0.0],dtype=numpy.float64)
+        t0=gpt.time()
         if self.f.tell() != pos:
             self.f.seek(pos,0)
-                
             # try to read
             sz=int.from_bytes(self.f.read(8),'little')
             szGB=sz/1024.**3
+            flags[2]=szGB
             crc32_expected=int.from_bytes(self.f.read(4),'little')
             if len(obj) == sz:
-                t0=gpt.time()
                 data=self.f.read(sz)
-                t1=gpt.time()
                 if len(data) == sz:
                     obj[:]=data
                     crc32=gpt.crc32(obj)
-                    t2=gpt.time()
                     if crc32 == crc32_expected:
                         flags[0]=1.0 # flag success on this node
 
-            # compare global
-            assert(not self.grid is None)
-            self.grid.globalsum(flags)
+        # compare global
+        assert(not self.grid is None)
+        self.grid.globalsum(flags)
+        t1=gpt.time()
 
-            # report status
-            if self.verbose:
-                if flags[0] != flags[1]:
-                    gpt.message("Checkpoint %g GB per node read failed on %g out of %g nodes" % (szGB,flags[1] - flags[0],flags[1]))
-                else:
-                    gpt.message("Checkpoint %g GB on head node at %g GB/s for crc32 and %g GB/s for read in %g s total" % (szGB,szGB/(t2-t1),szGB/(t1-t0),t2-t0))
+        # report status
+        if self.verbose and flags[2] != 0.0:
+            if flags[0] != flags[1]:
+                gpt.message("Checkpoint %g GB failed on %g out of %g nodes" % (flags[2],flags[1] - flags[0],flags[1]))
+            else:
+                gpt.message("Checkpoint %g GB at %g GB/s for crc32 and read combined in %g s total" % (flags[2],flags[2]/(t1-t0),t1-t0))
 
-            # all nodes OK?
-            if flags[0] == flags[1]:
-                return True
+        # all nodes OK?
+        if flags[0] == flags[1]:
+            return True
                 
-            # reset position to overwrite corruption
-            self.f.seek(pos,0)
+        # reset position to overwrite corruption
+        self.f.seek(pos,0)
         
         return False

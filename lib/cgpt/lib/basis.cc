@@ -111,13 +111,13 @@ EXPORT(qr_decomp,{
 EXPORT(rotate,{
 
     PyObject* _basis,* _Qt;
-    int j0,j1,k0,k1;
-    if (!PyArg_ParseTuple(args, "OOiiii", &_basis, &_Qt, &j0, &j1, &k0, &k1)) {
+    int j0,j1,k0,k1,idx;
+    if (!PyArg_ParseTuple(args, "OOiiiii", &_basis, &_Qt, &j0, &j1, &k0, &k1, &idx)) {
       return NULL;
     }
     
     std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_fill(basis,_basis,idx);
 
     ASSERT(basis.size() > 0);
 
@@ -137,12 +137,13 @@ EXPORT(linear_combination,{
 
     PyObject* _basis,* _Qt;
     void* _dst;
-    if (!PyArg_ParseTuple(args, "lOO", &_dst, &_basis, &_Qt)) {
+    int idx;
+    if (!PyArg_ParseTuple(args, "lOOi", &_dst, &_basis, &_Qt, &idx)) {
       return NULL;
     }
     
     std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_fill(basis,_basis,idx);
 
     cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
 
