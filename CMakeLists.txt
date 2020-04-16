@@ -104,7 +104,7 @@ else()
     pythonconfig(pyldflags  --ldflags)
     pythonconfig(pylibs     --libs)
     pythoninter(numpyinclude
-        "import numpy; print('-I'+numpy.__path__[0]+'/core/include')")
+        "import numpy; print('-I'+numpy.get_include())")
     separate_arguments(pycflags)
     separate_arguments(pyldflags)
     separate_arguments(pylibs)
