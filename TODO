@@ -1,0 +1,9 @@
+- Precision promotion in block...
+- Use cgpt_sha256 to seed prng
+- Replace sample distributions by own (random bits -> uniform/normal)
+- Replace ranlux from c++11 by own
+- momentum phase
+- sources
+- random gauge field (hot gauge field)
+- sym1
+- verbose=eval -> Bytes/s & Flops/s for expression evaluation
