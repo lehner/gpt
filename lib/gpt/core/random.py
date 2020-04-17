@@ -67,3 +67,15 @@ class random:
 
     def zn(self,t = None,p = { "n" : 2 }):
         return self.sample(t,{**{ "distribution" : "zn" }, **p})
+
+
+# sha256
+def sha256(mv):
+    if type(mv) == memoryview:
+        a=cgpt.util_sha256(mv)
+        r=a[0]
+        for i in range(7):
+            r=r*(2**32) + a[1+i]
+        return r
+    else:
+        return sha256(memoryview(mv))

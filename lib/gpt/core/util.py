@@ -32,5 +32,3 @@ def tensor_to_value(value):
     if type(value) == gpt.tensor:
         value = value.array
     return value
-
-

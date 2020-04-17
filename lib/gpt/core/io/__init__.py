@@ -29,7 +29,10 @@ def mview(data):
 
 # fast threaded checksum of memoryviews
 def crc32(view):
-    return cgpt.util_crc32(view)
+    if type(view) == memoryview:
+        return cgpt.util_crc32(view)
+    else:
+        return crc32(memoryview(view))
 
 # file formats
 class format:
