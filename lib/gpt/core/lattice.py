@@ -19,16 +19,15 @@
 import cgpt
 import gpt
 import numpy
-from time import time
 
 mem_book = {
 }
 
 def meminfo():
-    fmt=" %-8s %-30s %-12s %-15s %-12s %-16s %-20s"
-    gpt.message("==========================================================================================")
-    gpt.message("                                 GPT Memory Report                ")
-    gpt.message("==========================================================================================")
+    fmt=" %-8s %-30s %-12s %-20s %-12s %-16s %-20s"
+    gpt.message("==========================================================================================================================")
+    gpt.message("                                                 GPT Memory Report                ")
+    gpt.message("==========================================================================================================================")
     gpt.message(fmt % ("Index","Grid","Precision","OType", "CBType", "Size/GB", "Created at time"))
     tot_gb = 0.0
     for i,page in enumerate(mem_book):
@@ -36,48 +35,55 @@ def meminfo():
         gb = grid.gsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
         tot_gb += gb
         gpt.message(fmt % (i,grid.gdimensions,grid.precision.__name__,
-                           otype.__name__,grid.cb.__name__,gb,"%.6f s" % created))
-    gpt.message("==========================================================================================")
+                           otype.__name__,grid.cb.__name__,"%g" % gb,"%.6f s" % created))
+    gpt.message("==========================================================================================================================")
     gpt.message("   Total: %g GB " % tot_gb)
-    gpt.message("==========================================================================================")
+    gpt.message("==========================================================================================================================")
 
 
 class lattice:
     __array_priority__=1000000
     def __init__(self, first, second = None, third = None):
         self.metadata={}
-        if type(first) == gpt.grid and not second is None and not third is None:
-            grid = first
-            otype = second
-            obj = third
-            self.grid = grid
-            self.otype = otype
-            self.obj = obj
-        elif type(first) == gpt.grid and not second is None:
-            grid = first
-            otype = second
-            self.grid = grid
-            self.otype = otype
-            self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
+        cb=None
+        if type(first) == gpt.grid:
+            self.grid = first
+            if type(second) == str:
+                # from desc
+                p=second.split(";")
+                self.otype=gpt.str_to_otype(p[0])
+                cb=gpt.str_to_cb(p[1])
+                self.v_obj = [ cgpt.create_lattice(self.grid.obj, t, self.grid.precision) for t in self.otype.v_otype ]
+            else:
+                self.otype = second
+                if not third is None:
+                    self.v_obj = third
+                else:
+                    self.v_obj = [ cgpt.create_lattice(self.grid.obj, t, self.grid.precision) for t in self.otype.v_otype ]
         elif type(first) == gpt.lattice:
             # Note that copy constructor only creates a compatible lattice but does not copy its contents!
             self.grid = first.grid
             self.otype = first.otype
-            self.obj = cgpt.create_lattice(self.grid.obj, self.otype, self.grid.precision)
+            self.v_obj = [ cgpt.create_lattice(self.grid.obj, t, self.grid.precision) for t in self.otype.v_otype ]
+            cb = first.checkerboard()
         else:
             raise Exception("Unknown lattice constructor")
-        mem_book[self.obj] = (self.grid,self.otype,gpt.time())
+        # use first pointer to index page in memory book
+        mem_book[self.v_obj[0]] = (self.grid,self.otype,gpt.time())
+        if not cb is None:
+            self.checkerboard(cb)
 
     def __del__(self):
-        del mem_book[self.obj]
-        cgpt.delete_lattice(self.obj)
+        del mem_book[self.v_obj[0]]
+        for o in self.v_obj:
+            cgpt.delete_lattice(o)
 
     def checkerboard(self, val = None):
         if val is None:
             if self.grid.cb != gpt.redblack:
                 return gpt.none
 
-            cb=cgpt.get_checkerboard(self.obj)
+            cb=cgpt.lattice_get_checkerboard(self.v_obj[0]) # all have same cb, use 0
             if cb == gpt.even.tag:
                 return gpt.even
             elif cb == gpt.odd.tag:
@@ -85,12 +91,14 @@ class lattice:
             else:
                 assert(0)
         else:
-            assert(self.grid.cb == gpt.redblack)
-            cgpt.lattice_change_checkerboard(dst.obj,val.tag)
+            if val != gpt.none:
+                assert(self.grid.cb == gpt.redblack)
+                for o in self.v_obj:
+                    cgpt.lattice_change_checkerboard(o,val.tag)
 
     def describe(self):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
-        return self.otype.__name__ + "," + self.checkerboard().__name__
+        return self.otype.__name__ + ";" + self.checkerboard().__name__
 
     def __setitem__(self, key, value):
         if type(key) == slice:
@@ -98,28 +106,48 @@ class lattice:
                 key = ()
 
         if type(key) == tuple:
-            cgpt.lattice_set_val(self.obj, key, gpt.util.tensor_to_value(value))
+            if len(self.v_obj) == 1:
+                cgpt.lattice_set_val(self.v_obj[0], key, gpt.util.tensor_to_value(value))
+            elif type(value) == int and value == 0:
+                for i in self.otype.v_idx:
+                    cgpt.lattice_set_val(self.v_obj[i], key, 0)
+            else:
+                for i in self.otype.v_idx:
+                    cgpt.lattice_set_val(self.v_obj[i], key, gpt.tensor(value.array[self.otype.v_n0[i]:self.otype.v_n1[i]],self.otype.v_otype[i]).array)
         elif type(key) == numpy.ndarray:
-            cgpt.lattice_import(self.obj, key, value)
+            cgpt.lattice_import(self.v_obj, key, value)
         else:
             assert(0)
 
     def __getitem__(self, key):
         if type(key) == tuple:
-            return gpt.util.value_to_tensor(cgpt.lattice_get_val(self.obj, key), self.otype)
+            if len(self.v_obj) == 1:
+                return gpt.util.value_to_tensor(cgpt.lattice_get_val(self.v_obj[0], key), self.otype)
+            else:
+                val=cgpt.lattice_get_val(self.v_obj[0], key)
+                for i in self.otype.v_idx[1:]:
+                    val=numpy.append(val,cgpt.lattice_get_val(self.v_obj[i], key))
+                return gpt.util.value_to_tensor(val, self.otype)
         elif type(key) == numpy.ndarray:
-            return cgpt.lattice_export(self.obj,key)
+            return cgpt.lattice_export(self.v_obj,key)
         else:
             assert(0)
 
     def mview(self):
-        return cgpt.lattice_memory_view(self.obj)
+        return [ cgpt.lattice_memory_view(o) for o in self.v_obj ]
 
     def __repr__(self):
-        return "lattice(%s,%s)" % (self.otype,self.grid.precision)
+        return "lattice(%s,%s)" % (self.otype.__name__,self.grid.precision.__name__)
 
     def __str__(self):
-        return cgpt.lattice_to_str(self.obj)
+        if len(self.v_obj) == 1:
+            return self.__repr__() + "\n" + cgpt.lattice_to_str(self.v_obj[0])
+        else:
+            s=self.__repr__() + "\n"
+            for i,x in enumerate(self.v_obj):
+                s+="-------- %d to %d --------\n" % (self.otype.v_n0[i],self.otype.v_n1[i])
+                s+=cgpt.lattice_to_str(x)
+            return s
 
     def __rmul__(self, l):
         return gpt.expr(l) * gpt.expr(self)

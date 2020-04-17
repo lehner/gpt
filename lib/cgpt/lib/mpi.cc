@@ -22,3 +22,45 @@ EXPORT(global_rank,{
     return PyLong_FromLong(CartesianCommunicator::RankWorld());
   });
 
+EXPORT(broadcast,{
+
+    long root;
+    PyObject* data;
+    if (!PyArg_ParseTuple(args, "lO", &root,&data)) {
+      return NULL;
+    }
+
+    long rank = CartesianCommunicator::RankWorld();
+    if (root == rank) {
+      ASSERT(PyBytes_Check(data));
+      long sz = PyBytes_Size(data);
+      char* p = PyBytes_AsString(data);
+      ASSERT(sz < INT_MAX);
+      CartesianCommunicator::BroadcastWorld((int)root,&sz,sizeof(long));
+      CartesianCommunicator::BroadcastWorld((int)root,(void*)p,(int)sz);
+
+      Py_XINCREF(data);
+      return data;
+
+    } else {
+      long sz;
+      CartesianCommunicator::BroadcastWorld((int)root,&sz,sizeof(long));
+      char* p = new char[sz];
+      CartesianCommunicator::BroadcastWorld((int)root,(void*)p,(int)sz);
+
+      PyObject* ret = PyBytes_FromStringAndSize(p,sz);
+      delete[] p; // inefficient but do not know how to construct bytes object with my memory
+      return ret;
+    }
+
+  });
+
+EXPORT(barrier,{
+
+    #if defined (GRID_COMMS_MPI3)
+    MPI_Barrier(CartesianCommunicator::communicator_world);
+    #endif
+
+    return PyLong_FromLong(0);
+
+  });

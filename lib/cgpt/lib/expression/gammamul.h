@@ -40,6 +40,14 @@ cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int un
   ERR("Not implemented");
 }
 
+#define BASIS_SIZE(n)							\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iComplexV ## n<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
+    ERR("Not implemented");						\
+  }
+#include "../basis_size.h"
+#undef BASIS_SIZE
+
 template<typename vtype>
 cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourMatrix<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
   if (rev) {

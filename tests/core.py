@@ -6,12 +6,26 @@
 #
 import gpt as g
 import numpy as np
+import sys
 
-# gpt messaging system, only prints on g.rank() == 0
-g.message("Using grid: ", g.default.grid)
+# grid
+grid=g.grid([2,2,2,2], g.single)
 
-# create a single precision grid with dimensions taken from "--grid ..."
-grid=g.grid(g.default.grid, g.single)
+# test different lattice types
+vc=g.vcolor(grid)
+g.message(vc)
+
+vz30=g.vcomplex(grid,30)
+g.message(vz30)
+
+vz30c=g.lattice(grid,vz30.describe())
+vz30c[:]=g.vcomplex([ 1 ] * 15 + [0.5] * 15,30)
+g.message(vz30c)
+
+vz30b=g.lattice(vz30c)
+vz30b[:]=g.vcomplex([ 0.5 ] * 5 + [ 1.0 ] * 20 + [0.2] * 5,30)
+
+g.message(g.eval(vz30c + 0.3* vz30b))
 
 # perform a barrier
 grid.barrier()
@@ -78,7 +92,10 @@ g.message(g.eval(g.adj(new)))
 # color matrix
 cm=g.mcolor(grid)
 cm[:]=0
+cm[0,0,0,0,2,2]=1
 cm[0,0,0,0,1,2]=1
 g.message(cm)
 
 g.message(g.eval(g.trace(cm)))
+
+g.message(g.innerProduct_norm(src,src),g.norm2(src))

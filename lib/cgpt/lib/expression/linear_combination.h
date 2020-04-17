@@ -32,13 +32,13 @@
     return lattice_unary(dst,ac, EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5), unary_expr ); \
   } else if (n == 7) {							\
     return lattice_unary(dst,ac, EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5) + EF(6), unary_expr ); \
-  } else if (n == 8) {							\
+  } else {								\
+    ERR("Need to hard-code linear combination n > 7");			\
+  }
+  /*} else if (n == 8) {						\
     return lattice_unary(dst,ac, EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5) + EF(6) + EF(7), unary_expr ); \
   } else if (n == 9) {							\
-    return lattice_unary(dst,ac, EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5) + EF(6) + EF(7) + EF(8), unary_expr ); \
-  } else {								\
-    ERR("Need to hard-code linear combination n > 9");			\
-  }
+  return lattice_unary(dst,ac, EF(0) + EF(1) + EF(2) + EF(3) + EF(4) + EF(5) + EF(6) + EF(7) + EF(8), unary_expr ); \*/
 
 #define EF(i) ((Coeff_t)f[i].get_coef()) * compatible<T>(f[i].get_lat())->l
 #define EF_transpose(i) ((Coeff_t)f[i].get_coef()) * transpose(compatible<T>(f[i].get_lat())->l)

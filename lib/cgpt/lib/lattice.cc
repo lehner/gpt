@@ -18,18 +18,19 @@
 */
 #include "lib.h"
 
-template<typename vtype> 
-void create_lattice_prec(void* & plat, GridCartesian* grid, const vtype& t, const std::string& otype) {
+typedef void* (* create_lattice_prec_otype)(GridBase* grid);
+static std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
-#define PER_TENSOR_TYPE(T) if (otype == get_otype(T<vtype>())) {	\
-    plat = new cgpt_Lattice< T< vtype > >(grid);			\
-    return;								\
-  } else 
-
+template<typename vtype>
+void lattice_init_prec(const vtype& t, const std::string& prec) {
+#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<vtype>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< vtype > >(grid); };
 #include "tensors.h"
-
 #undef PER_TENSOR_TYPE
-  { ERR("Unknown type"); }
+}
+  
+void lattice_init() {
+  lattice_init_prec(vComplexF(),"single");
+  lattice_init_prec(vComplexD(),"double");
 }
 
 EXPORT(create_lattice,{
@@ -40,7 +41,7 @@ EXPORT(create_lattice,{
       return NULL;
     }
     
-    GridCartesian* grid = (GridCartesian*)_grid;
+    GridBase* grid = (GridBase*)_grid;
     std::string otype;
     std::string prec;
     
@@ -48,20 +49,13 @@ EXPORT(create_lattice,{
     cgpt_convert(_prec,prec);
     
     void* plat = 0;
-    if (prec == "single") {
-      vComplexF t;
-      create_lattice_prec(plat,grid,t,otype);
-    } else if (prec == "double") {
-      vComplexD t;
-      create_lattice_prec(plat,grid,t,otype);
+    std::string tag = prec + ":" + otype;
+    auto f = _create_otype_.find(tag);
+    if (f == _create_otype_.end()) {
+      ERR("Unknown field type: %s, %s", otype.c_str(), prec.c_str());
     }
     
-    if (!plat) {
-      std::cerr << "Unknown field type: " << otype << "," << prec << std::endl;  
-      ASSERT(0);
-    }
-    
-    return PyLong_FromVoidPtr(plat);
+    return PyLong_FromVoidPtr(f->second(grid));
   });
 
 EXPORT(delete_lattice,{
@@ -116,31 +110,35 @@ EXPORT(lattice_memory_view,{
   });
 
 EXPORT(lattice_export,{
-    PyObject* a;
-    void* p;
-    if (!PyArg_ParseTuple(args, "lO", &p, &a)) {
+    PyObject* pos, * vlat;
+    if (!PyArg_ParseTuple(args, "OO", &vlat, &pos)) {
       return NULL;
     }
 
-    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    ASSERT(PyArray_Check(a));
-    
-    return (PyObject*)l->export_data((PyArrayObject*)a);
+    ASSERT(PyArray_Check(pos));
+    std::vector<cgpt_distribute::data_simd> data;
+    std::vector<long> shape;
+    GridBase* grid;
+    int cb,dt;
+    cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
+
+    return (PyObject*)cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,0);
   });
 
 EXPORT(lattice_import,{
-    PyObject* a, * d;
-    void* p;
-    if (!PyArg_ParseTuple(args, "lOO", &p, &a, &d)) {
+    PyObject* pos, *vlat, * d;
+    if (!PyArg_ParseTuple(args, "OOO", &vlat, &pos, &d)) {
       return NULL;
     }
 
-    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    ASSERT(PyArray_Check(a));
-    ASSERT(PyArray_Check(d));
+    ASSERT(PyArray_Check(pos));
+    std::vector<cgpt_distribute::data_simd> data;
+    std::vector<long> shape;
+    GridBase* grid;
+    int cb,dt;
+    cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
     
-    l->import_data((PyArrayObject*)a,(PyArrayObject*)d);
-
+    cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,d);
     return PyLong_FromLong(0);
   });
 
@@ -193,7 +191,7 @@ EXPORT(lattice_change_checkerboard,{
 
 EXPORT(lattice_get_checkerboard,{
     void* _dst;
-    if (!PyArg_ParseTuple(args, "ll", &_dst)) {
+    if (!PyArg_ParseTuple(args, "l", &_dst)) {
       return NULL;
     }
     cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;

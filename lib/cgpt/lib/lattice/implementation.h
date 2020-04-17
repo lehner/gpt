@@ -26,7 +26,7 @@ public:
   typedef typename Lattice<T>::vector_type vCoeff_t;
   typedef typename Lattice<T>::scalar_type Coeff_t;
 
-  cgpt_Lattice(GridCartesian* grid) : l(grid) {
+  cgpt_Lattice(GridBase* grid) : l(grid) {
   }
 
   virtual ~cgpt_Lattice() {
@@ -34,7 +34,7 @@ public:
   }
 
   cgpt_Lattice_base* create_lattice_of_same_type() {
-    return new cgpt_Lattice<T>((GridCartesian*)l.Grid());
+    return new cgpt_Lattice<T>(l.Grid());
   }
 
   virtual std::string type() {
@@ -43,11 +43,12 @@ public:
 
   virtual PyObject* to_decl() {   
     return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
-			PyUnicode_FromString(::get_otype(l)),
-			PyUnicode_FromString(::get_prec(l))); // TODO: add l.Checkerboard()
+			PyUnicode_FromString(get_otype(l).c_str()),
+			PyUnicode_FromString(get_prec(l).c_str()));
   }
 
-  virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
+  // use norm2 convention for squared norm, talked to Peter, Grid may also change to this cleaner notation
+  virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
     return ::axpy_norm(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
   }
 
@@ -57,6 +58,10 @@ public:
 
   virtual ComplexD innerProduct(cgpt_Lattice_base* other) {
     return ::innerProduct(l,compatible<T>(other)->l);
+  }
+
+  virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
+    ::innerProductNorm(ip,a2,l,compatible<T>(other)->l);
   }
 
   // ac == { true : add result to dst, false : replace dst }
@@ -158,14 +163,34 @@ public:
     return PyMemoryView_FromMemory((char*)&v[0],v.size()*sizeof(v[0]),PyBUF_WRITE);
   }
 
-  virtual PyArrayObject* export_data(PyArrayObject* coordinates) {
-    return cgpt_export(l,coordinates);
+  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) {
+    GridBase* grid = l.Grid();
+    Nsimd = grid->Nsimd();
+    word = sizeof(sobj);
+    simd_word = sizeof(Coeff_t);
+    ishape.resize(0);
+    cgpt_numpy_data_layout(sobj(),ishape);
+  }
+  
+  virtual int get_numpy_dtype() {
+    return infer_numpy_type(Coeff_t());
   }
 
-  virtual void import_data(PyArrayObject* coordinates, PyArrayObject* data) {
-    cgpt_import(l,coordinates,data);
+  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
+    cgpt_block_project(coarse,l,basis);
   }
 
+  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
+    cgpt_block_promote(coarse,l,basis);
+  }
+
+  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
+    cgpt_block_orthonormalize(coarse,l,basis);
+  }
+
+  virtual GridBase* get_grid() {
+    return l.Grid();
+  }
 
 };
 

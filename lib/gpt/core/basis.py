@@ -20,16 +20,21 @@
 import gpt
 import cgpt
 
-def orthogonalize(w,basis):
-    for v in basis:
+def orthogonalize(w,basis,ips=None):
+    for j, v in enumerate(basis):
         ip=gpt.innerProduct(v,w)
         w -= ip*v
+        if ips is not None:
+            ips[j]=ip
 
 def linear_combination(r,basis,Qt):
-    return cgpt.linear_combination(r.obj,basis,Qt)
+    assert(len(basis[0].v_obj) == len(r.v_obj))
+    for i in r.otype.v_idx:
+        return cgpt.linear_combination(r.v_obj[i],basis,Qt,i)
 
 def rotate(basis,Qt,j0,j1,k0,k1):
-    return cgpt.rotate(basis,Qt,j0,j1,k0,k1)
+    for i in basis[0].otype.v_idx:
+        cgpt.rotate(basis,Qt,j0,j1,k0,k1,i)
 
 def qr_decomp(lmd,lme,Nk,Nm,Qt,Dsh,kmin,kmax):
     return cgpt.qr_decomp(lmd,lme,Nk,Nm,Qt,Dsh,kmin,kmax)

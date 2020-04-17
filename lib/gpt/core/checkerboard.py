@@ -28,8 +28,22 @@ class odd:
 class none:
     tag=None
 
+def str_to_cb(s):
+    if s == "even":
+        return even
+    elif s == "odd":
+        return odd
+    elif s == "none":
+        return none
+    else:
+        assert(0)
+
 def pick_cb(cb, dst, src):
-    cgpt.lattice_pick_checkerboard(cb.tag,src.obj,dst.obj)
+    assert(len(src.v_obj) == len(dst.v_obj))
+    for i in src.otype.v_idx:
+        cgpt.lattice_pick_checkerboard(cb.tag,src.v_obj[i],dst.v_obj[i])
 
 def set_cb(dst, src):
-    cgpt.lattice_set_checkerboard(src.obj,dst.obj)
+    assert(len(src.v_obj) == len(dst.v_obj))
+    for i in src.otype.v_idx:
+        cgpt.lattice_set_checkerboard(src.v_obj[i],dst.v_obj[i])

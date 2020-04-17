@@ -24,7 +24,6 @@
 import gpt as g
 import numpy as np
 import sys
-from time import time
 
 # Implicitly Restarted Lanczos
 class irl:
@@ -94,10 +93,10 @@ class irl:
                 lme2[k] = lme[k+k1-1]
 
             # diagonalize
-            t0=time()
+            t0=g.time()
             Qt=np.identity(Nm,dtype)
             self.diagonalize(ev2,lme2,Nm,Qt)
-            t1=time()
+            t1=g.time()
 
             if verbose:
                 g.message("Diagonalization took %g s" % (t1-t0))
@@ -108,18 +107,18 @@ class irl:
 
             # implicitly shifted QR transformations
             Qt=np.identity(Nm,dtype)
-            t0=time()
+            t0=g.time()
             for ip in range(k2,Nm):
                 g.qr_decomp(ev,lme,Nm,Nm,Qt,ev2[ip],k1,Nm)
-            t1=time()
+            t1=g.time()
 
             if verbose:
                 g.message("QR took %g s" % (t1-t0))
 
             # rotate
-            t0=time()
+            t0=g.time()
             g.rotate(evec,Qt,k1-1,k2+1,0,Nm)
-            t1=time()
+            t1=g.time()
 
             if verbose:
                 g.message("Basis rotation took %g s" % (t1-t0))
@@ -146,9 +145,9 @@ class irl:
                     lme2[k] = lme[k]
                 Qt = np.identity(Nm,dtype)
 
-                t0=time()
+                t0=g.time()
                 self.diagonalize(ev2,lme2,Nk,Qt)
-                t1=time()
+                t1=g.time()
 
                 if verbose:
                     g.message("Diagonalization took %g s" % (t1-t0))
@@ -181,9 +180,9 @@ class irl:
                     if verbose:
                         g.message("Converged in %d iterations" % it)
 
-                    t0=time()
+                    t0=g.time()
                     g.rotate(evec,Qt,0,Nstop,0,Nk)
-                    t1=time()
+                    t1=g.time()
 
                     if verbose:
                         g.message("Final basis rotation took %g s" % (t1-t0))
@@ -221,11 +220,16 @@ class irl:
         results=[w,alph,beta]
         if ckpt.load(results):
             w,alph,beta=results # use checkpoint
+
+            if verbose:
+                g.message("%-65s %-45s" % ("alpha[ %d ] = %s" % (k,alph),
+                                           "beta[ %d ] = %s" % (k,beta)))
+
         else:
             # compute
-            t0=time()
+            t0=g.time()
             mat(evec_k,w)
-            t1=time()
+            t1=g.time()
 
             # allow to restrict maximal number of applications within run
             self.napply += 1
@@ -246,10 +250,10 @@ class irl:
             beta=g.norm2(w)**0.5
             w /= beta
 
-            t2=time()
+            t2=g.time()
             if k>0:
                 g.orthogonalize(w,evec[0:k])
-            t3=time()
+            t3=g.time()
 
             ckpt.save([w,alph,beta])
 

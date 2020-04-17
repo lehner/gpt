@@ -30,6 +30,7 @@
   PyObject* cgpt_ ## name(PyObject* self, PyObject* args) {	   \
     try {							   \
       __VA_ARGS__;						   \
+      return NULL;						   \
     } catch (const char* err) {					   \
       PyErr_SetString(PyExc_RuntimeError,err);			   \
       return NULL;						   \

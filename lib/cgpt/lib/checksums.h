@@ -16,16 +16,49 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-static uint32_t cgpt_crc32(unsigned char* data, int64_t len) {
-  // crc32 of zlib was incorrect for very large sizes, so do it block-wise
-  uint32_t crc = 0x0;
-  off_t blk = 0;
+static uint32_t cgpt_crc32(unsigned char* data, int64_t len, uint32_t start_crc = 0) {
+
   off_t step = 1024*1024*1024;
-  while (len > step) {
-    crc = crc32(crc,&data[blk],step);
-    blk += step;
-    len -= step;
+
+  if (len <= step) {
+
+    //uint32_t ref = crc32(start_crc,data,len);
+
+    // parallel version
+    int64_t block_size = 512*1024;
+    int64_t blocks = ( len % block_size == 0 ) ? ( len / block_size ) : ( len / block_size + 1 );
+    std::vector<uint32_t> pcrcs(blocks);
+    thread_for(iblk, blocks, {
+	int64_t block_start = block_size * iblk;
+	int64_t block_len = std::min(block_size, len - block_start);
+	pcrcs[iblk] = crc32(iblk == 0 ? start_crc : 0,&data[block_start],block_len);
+    });
+
+    // crc
+    uint32_t crc = pcrcs[0];
+    // reduce
+    for (int iblk=1;iblk<blocks;iblk++) {
+      int64_t block_start = block_size * iblk;
+      int64_t block_len = std::min(block_size, len - block_start);
+      crc = crc32_combine(crc,pcrcs[iblk],block_len);
+    }
+
+    //assert(crc == ref);
+
+    return crc;
+
+  } else {
+
+    // crc32 of zlib was incorrect for very large sizes, so do it block-wise
+    uint32_t crc = 0x0;
+    off_t blk = 0;
+    
+    while (len > step) {
+      crc = cgpt_crc32(&data[blk],step,crc);
+      blk += step;
+      len -= step;
+    }
+    
+    return cgpt_crc32(&data[blk],len,crc);
   }
-  
-  return crc32(crc,&data[blk],len);
 }

@@ -48,10 +48,10 @@ grid = get_ivec("--grid",[4,4,4,4])
 precision = { "single" : gpt.single, "double" : gpt.double }[get("--precision","double")]
 
 # IO parameters
-nwriter=get_int("--nwriter",64)
+max_io_nodes=get_int("--max_io_nodes",256)
 
 # verbosity
-verbose_default="io,cg,irl,power_iteration,checkpointer,deflate"
+verbose_default="io,bicgstab,cg,fgcr,fgmres,mr,irl,power_iteration,checkpointer,deflate,block_operator"
 verbose_additional="eval"
 verbose = get("--verbose",verbose_default).split(",")
 verbose_candidates=",".join(sorted((verbose_default + "," + verbose_additional).split(",")))
@@ -76,7 +76,7 @@ if "--help" in sys.argv:
     print("")
     print("   sets verbosity options.  candidates: %s" % verbose_candidates)
     print("")
-    print(" --nwriter n")
+    print(" --max_io_nodes n")
     print("")
-    print("   set number of writer nodes for IO")
+    print("   set maximal number of simultaneous IO nodes")
     print("--------------------------------------------------------------------------------")

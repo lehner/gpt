@@ -26,11 +26,11 @@ EXPORT(load,{
     bool verbose;
     cgpt_convert(PyTuple_GetItem(args,1),verbose);
 
-    if (ret = load_nersc(args))
+    if ((ret = load_nersc(args)))
       return ret;
 
     // openQCD file format is minimal, not distinctive, test last
-    if (ret = load_openQCD(args))
+    if ((ret = load_openQCD(args)))
       return ret;
 
     ERR("Unknown file format!");
@@ -60,4 +60,96 @@ EXPORT(save,{
     
     Py_RETURN_NONE;
     
+  });
+
+EXPORT(fopen,{
+    PyObject* _fn,* _md;
+    std::string fn, md;
+    if (!PyArg_ParseTuple(args, "OO", &_fn,&_md)) {
+      return NULL;
+    }
+    cgpt_convert(_fn,fn);
+    cgpt_convert(_md,md);
+
+    return PyLong_FromVoidPtr(fopen(fn.c_str(),md.c_str()));
+  });
+
+EXPORT(fclose,{
+    void* _file;
+    if (!PyArg_ParseTuple(args, "l", &_file)) {
+      return NULL;
+    }
+    fclose((FILE*)_file);
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(ftell,{
+    void* _file;
+    if (!PyArg_ParseTuple(args, "l", &_file)) {
+      return NULL;
+    }
+    return PyLong_FromLong((long)ftello((FILE*)_file));
+  });
+
+EXPORT(fflush,{
+    void* _file;
+    if (!PyArg_ParseTuple(args, "l", &_file)) {
+      return NULL;
+    }
+    return PyLong_FromLong((long)fflush((FILE*)_file));
+  });
+
+EXPORT(fseek,{
+    void* _file;
+    long offset, _whence;
+    int whence;
+    if (!PyArg_ParseTuple(args, "lll", &_file,&offset,&_whence)) {
+      return NULL;
+    }
+    switch(_whence) {
+    case 0:
+      whence=SEEK_SET;
+      break;
+    case 1:
+      whence=SEEK_CUR;
+      break;
+    case 2:
+      whence=SEEK_END;
+      break;
+    default:
+      ERR("Unknown seek whence");
+    }
+    return PyLong_FromLong((long)fseeko((FILE*)_file,offset,whence));
+  });
+
+EXPORT(fread,{
+    void* _file;
+    long size;
+    PyObject* dst;
+    if (!PyArg_ParseTuple(args, "llO", &_file,&size,&dst)) {
+      return NULL;
+    }
+    ASSERT(PyMemoryView_Check(dst));
+    Py_buffer* buf = PyMemoryView_GET_BUFFER(dst);
+    ASSERT(PyBuffer_IsContiguous(buf,'C'));
+    void* d = buf->buf;
+    long len = buf->len;
+    ASSERT(len >= size);
+    return PyLong_FromLong(fread(d,size,1,(FILE*)_file));
+  });
+
+EXPORT(fwrite,{
+    void* _file;
+    long size;
+    PyObject* src;
+    if (!PyArg_ParseTuple(args, "llO", &_file,&size,&src)) {
+      return NULL;
+    }
+    ASSERT(PyMemoryView_Check(src));
+    Py_buffer* buf = PyMemoryView_GET_BUFFER(src);
+    ASSERT(PyBuffer_IsContiguous(buf,'C'));
+    void* s = buf->buf;
+    long len = buf->len;
+    ASSERT(len >= size);
+    return PyLong_FromLong(fwrite(s,size,1,(FILE*)_file));
   });

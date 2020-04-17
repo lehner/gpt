@@ -23,13 +23,14 @@ import gpt.create
 import gpt.algorithms
 import gpt.qcd
 import cgpt, sys
+import socket
 
 # initialize cgpt when gpt is loaded
 cgpt.init(sys.argv)
 
+# save my hostname
+hostname=socket.gethostname()
+
 # synonyms
 eval=expr_eval
 
-# global rank
-def rank():
-    return cgpt.global_rank()

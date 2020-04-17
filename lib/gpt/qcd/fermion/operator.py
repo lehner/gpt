@@ -29,7 +29,7 @@ class operator:
             self.F_grid = self.U_grid
             self.F_grid_eo = self.U_grid_eo
         else:
-            self.F_grid = gpt.grid(self.U_grid.gdimensions + [ Ls ],self.U_grid.precision)
+            self.F_grid = gpt.grid([ Ls ] + self.U_grid.gdimensions,self.U_grid.precision)
             self.F_grid_eo = gpt.grid(self.F_grid.gdimensions,self.U_grid.precision,gpt.redblack)
 
         self.params = {
@@ -37,7 +37,7 @@ class operator:
             "U_grid_rb" : self.U_grid_eo.obj,
             "F_grid" : self.F_grid.obj,
             "F_grid_rb" : self.F_grid_eo.obj,
-            "U" : [ u.obj for u in self.U ]
+            "U" : [ u.v_obj[0] for u in self.U ]
         }
 
         for k in params:
@@ -53,7 +53,9 @@ class operator:
         cgpt.delete_fermion_operator(self.obj)
 
     def unary(self, opcode, i, o):
-        return cgpt.apply_fermion_operator(self.obj,opcode,i.obj,o.obj)
+        assert(len(i.v_obj) == 1)
+        assert(len(o.v_obj) == 1)
+        return cgpt.apply_fermion_operator(self.obj,opcode,i.v_obj[0],o.v_obj[0])
 
     def G5M(self, i, o):
         self.M(i,o)

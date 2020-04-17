@@ -16,19 +16,24 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core.grid import grid, full, redblack
-from gpt.core.precision import single, double
+from gpt.core.grid import grid, full, redblack, str_to_checkerboarding
+from gpt.core.precision import single, double, str_to_precision
 from gpt.core.lattice import lattice, meminfo
 from gpt.core.tensor import tensor
 from gpt.core.gamma import gamma, gamma_base
-from gpt.core.log import message, time
-from gpt.core.transform import cshift, copy, convert, norm2, innerProduct, axpy_norm, slice
-from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none
+from gpt.core.time import time
+from gpt.core.log import message
+from gpt.core.transform import cshift, copy, convert, norm2, innerProduct, innerProductNorm2, axpy_norm2, slice
+from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
 from gpt.core.expr import expr, expr_unary, factor_unary
 from gpt.core.operators import expr_eval, adj, transpose, conj, trace, sum, apply_expr_unary
 from gpt.core.otype import *
-from gpt.core.io import load, crc32, save, format
+from gpt.core.mpi import *
+from gpt.core.io import load, crc32, save, format, mview, FILE
 from gpt.core.checkpointer import checkpointer, checkpointer_none
 from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomp
+from gpt.core.cartesian import cartesian_view
 from gpt.core.coordinates import coordinates
 import gpt.core.util
+import gpt.core.block
+import gpt.core.random

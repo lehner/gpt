@@ -26,8 +26,9 @@ public:
   virtual PyObject* to_str() = 0;
   virtual PyObject* sum() = 0;
   virtual RealD norm2() = 0;
-  virtual RealD axpy_norm(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
+  virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
   virtual ComplexD innerProduct(cgpt_Lattice_base* other) = 0;
+  virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;
   virtual void copy_from(cgpt_Lattice_base* src) = 0;
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) = 0; // unary_expr(unary_a(this) * unary_b(b))
   virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse) = 0;
@@ -46,8 +47,12 @@ public:
   virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) = 0;
   virtual void linear_combination(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt) = 0;
   virtual PyObject* memory_view() = 0; // access to internal memory storage, can be simd format
-  virtual PyArrayObject* export_data(PyArrayObject* coordinates) = 0;
-  virtual void import_data(PyArrayObject* coordinates, PyArrayObject* data) = 0;
+  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) = 0;
+  virtual int get_numpy_dtype() = 0;
+  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual GridBase* get_grid() = 0;
 };
 
 template<class T> class cgpt_Lattice;
