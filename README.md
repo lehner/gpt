@@ -1,4 +1,4 @@
-![GPT Logo](/documentation/logo/logo.pdf)
+![GPT Logo](/documentation/logo/logo-360dpi.png)
 
 # GPT - Grid Python Toolkit
 
