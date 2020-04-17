@@ -43,12 +43,12 @@
   \pgfmathsetmacro{\l}{(\L/\n-\gap/\n/2.)}
 
   % outer outline
-  \draw[thick,outer] (0,-\L) -- (\L,-0.5*\L);
-  \draw[thick,outer] (0,-\L) -- (-\L,-0.5*\L);
-  \draw[thick,outer] (\L,-0.5*\L) -- (\L,0.5*\L);
-  \draw[thick,outer] (-\L,-0.5*\L) -- (-\L,0.5*\L);
-  \draw[thick,outer] (\L,0.5*\L) -- (0,\L);
-  \draw[thick,outer] (-\L,0.5*\L) -- (0,\L);
+  %\draw[thick,outer] (0,-\L) -- (\L,-0.5*\L);
+  %\draw[thick,outer] (0,-\L) -- (-\L,-0.5*\L);
+  %\draw[thick,outer] (\L,-0.5*\L) -- (\L,0.5*\L);
+  %\draw[thick,outer] (-\L,-0.5*\L) -- (-\L,0.5*\L);
+  %\draw[thick,outer] (\L,0.5*\L) -- (0,\L);
+  %\draw[thick,outer] (-\L,0.5*\L) -- (0,\L);
 
   % tiles
   \foreach \i in {0,1,2}
@@ -159,6 +159,6 @@
 
   % python
   \node[inner sep=0pt] (python) at (0,0)
-    {\includegraphics[width=3cm]{input/python-color-crop}};
+    {\includegraphics[width=3.5cm]{input/python-color-crop}};
 \end{tikzpicture}
 \end{document}

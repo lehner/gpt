@@ -25,7 +25,7 @@ public:
 
   template<typename RNG>
   ComplexD operator()(RNG& r) {
-    return exp( distribution(r) * ComplexD(0.0,2.0*M_PI/(double)_n) );
+    return exp( ((ComplexD)distribution(r)) * ComplexD(0.0,2.0*M_PI/(double)_n) );
   }
 };
 

@@ -1,0 +1,5 @@
+#!/bin/bash
+pdflatex logo
+convert -background white -density 360 logo.pdf -scale 50% -flatten logo.png
+convert logo.png -gravity center -background white -extent 1280x640 logo-1280-640.png
+

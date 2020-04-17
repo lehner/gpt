@@ -98,4 +98,4 @@ g.message(cm)
 
 g.message(g.eval(g.trace(cm)))
 
-g.message(g.innerProduct_norm(src,src),g.norm2(src))
+g.message(g.innerProductNorm2(src,src),g.norm2(src))

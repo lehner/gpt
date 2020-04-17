@@ -52,5 +52,10 @@ static struct PyModuleDef module_def = {
 // export module creation
 PyMODINIT_FUNC PyInit_cgpt(void){
   lattice_init();
-  return PyModule_Create(&module_def);
+  printf("Before\n");
+  fflush(stdout);
+  PyObject* r = PyModule_Create(&module_def);
+  printf("After\n");
+  fflush(stdout);
+  return r;
 }
