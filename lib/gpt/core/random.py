@@ -18,45 +18,52 @@
 #
 import gpt, cgpt, numpy, sys
 
-_seeded=False
+class random:
 
-def seed(s):
-    global _seeded
-    cgpt.random_seed(s)
-    _seeded=True
+    def __init__(self, first, second = None):
 
-def sample(t,p):
-    if type(t) == list:
-        for x in t:
-            sample(x,p)
-    elif t is None:
-        return cgpt.random_sample(t,p)
-    elif type(t) == gpt.lattice:
-        if "pos" in p:
-            pos=p["pos"]
+        if type(first) == dict and second is None:
+            s=first["seed"]
+            engine=first["engine"]
         else:
-            pos=gpt.coordinates(t.grid)
-        t[pos]=cgpt.random_sample(pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj, "precision" : t.grid.precision} })
-        return t
-    else:
-        assert(0)
+            s=first
+            engine=second
+            if engine is None:
+                engine="ranlux48"
 
-def normal(t = None,p = { "mu" : 0.0, "sigma" : 1.0 }):
-    assert(_seeded)
-    return sample(t,{**{ "distribution" : "normal" }, **p})
+        self.obj = cgpt.create_random(engine)
+        cgpt.random_seed(self.obj,s)
 
-def cnormal(t = None,p = { "mu" : 0.0, "sigma" : 1.0 }):
-    assert(_seeded)
-    return sample(t,{**{ "distribution" : "cnormal" }, **p})
+    def __del__(self):
+        cgpt.delete_random(self.obj)
 
-def uniform_real(t = None,p = { "min" : 0.0, "max" : 1.0 }):
-    assert(_seeded)
-    return sample(t,{**{ "distribution" : "uniform_real" }, **p})
+    def sample(self,t,p):
+        if type(t) == list:
+            for x in t:
+                self.sample(x,p)
+        elif t is None:
+            return cgpt.random_sample(self.obj,t,p)
+        elif type(t) == gpt.lattice:
+            if "pos" in p:
+                pos=p["pos"]
+            else:
+                pos=gpt.coordinates(t.grid)
+            t[pos]=cgpt.random_sample(self.obj,pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj, "precision" : t.grid.precision} })
+            return t
+        else:
+            assert(0)
 
-def uniform_int(t = None,p = { "min" : 0, "max" : 1 }):
-    assert(_seeded)
-    return sample(t,{**{ "distribution" : "uniform_int" }, **p})
+    def normal(self,t = None,p = { "mu" : 0.0, "sigma" : 1.0 }):
+        return self.sample(t,{**{ "distribution" : "normal" }, **p})
 
-def zn(t = None,p = { "n" : 2 }):
-    assert(_seeded)
-    return sample(t,{**{ "distribution" : "zn" }, **p})
+    def cnormal(self,t = None,p = { "mu" : 0.0, "sigma" : 1.0 }):
+        return self.sample(t,{**{ "distribution" : "cnormal" }, **p})
+
+    def uniform_real(self,t = None,p = { "min" : 0.0, "max" : 1.0 }):
+        return self.sample(t,{**{ "distribution" : "uniform_real" }, **p})
+
+    def uniform_int(self,t = None,p = { "min" : 0, "max" : 1 }):
+        return self.sample(t,{**{ "distribution" : "uniform_int" }, **p})
+
+    def zn(self,t = None,p = { "n" : 2 }):
+        return self.sample(t,{**{ "distribution" : "zn" }, **p})

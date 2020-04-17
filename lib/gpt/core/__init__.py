@@ -34,6 +34,6 @@ from gpt.core.checkpointer import checkpointer, checkpointer_none
 from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomp
 from gpt.core.cartesian import cartesian_view
 from gpt.core.coordinates import coordinates
+from gpt.core.random import random
 import gpt.core.util
 import gpt.core.block
-import gpt.core.random

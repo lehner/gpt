@@ -17,7 +17,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
-#include "random.h"
+#include "random/distribution.h"
+#include "random/engine.h"
 
 /*
   rng[hash[pos]]
@@ -29,27 +30,52 @@
 
 	      when do we send all hashes do root to check for duplicates
 */
-typedef std::ranlux48 cgpt_rng_engine;
-static cgpt_rng_engine cgpt_srng;
-static std::map<long,cgpt_rng_engine> cgpt_prng;
-static std::vector<long> cgpt_seed;
+
+EXPORT(create_random,{
+
+    PyObject* _type;
+    std::string type;
+    if (!PyArg_ParseTuple(args, "O", &_type)) {
+      return NULL;
+    }
+    cgpt_convert(_type,type);
+
+    if (type == "ranlux48") {
+      return PyLong_FromVoidPtr(new cgpt_random_engine<std::ranlux48>());
+    } else {
+      ERR("Unknown rng engine type %s",type.c_str());
+    }
+
+    return PyLong_FromLong(0);
+    
+  });
+
+EXPORT(delete_random,{
+
+    void* _p;
+    if (!PyArg_ParseTuple(args,"l", &_p)) {
+      return NULL;
+    }
+
+    cgpt_random_engine_base* p = (cgpt_random_engine_base*)_p;
+    delete p;
+
+    return PyLong_FromLong(0);
+  });
 
 EXPORT(random_seed,{
 
     PyObject* _seed_str;
-    if (!PyArg_ParseTuple(args, "O", &_seed_str)) {
+    void* _p;
+    if (!PyArg_ParseTuple(args, "lO", &_p,&_seed_str)) {
       return NULL;
     }
 
     std::string seed_str;
     cgpt_convert(_seed_str,seed_str);
-    cgpt_seed.resize(0);
-    for (auto x : seed_str)
-      cgpt_seed.push_back(x);
 
-    std::seed_seq seed (cgpt_seed.begin(),cgpt_seed.end());
-
-    cgpt_srng.seed(seed);
+    cgpt_random_engine_base* p = (cgpt_random_engine_base*)_p;
+    p->seed(seed_str);
 
     return PyLong_FromLong(0);
 
@@ -58,40 +84,12 @@ EXPORT(random_seed,{
 EXPORT(random_sample,{
 
     PyObject* _target, *_param;
-    if (!PyArg_ParseTuple(args, "OO", &_target,&_param)) {
+    void* _p;
+    if (!PyArg_ParseTuple(args, "lOO", &_p,&_target,&_param)) {
       return NULL;
     }
 
-    ASSERT(PyDict_Check(_param));
-    std::string dist = get_str(_param,"distribution"), precision;
-    std::vector<long> shape;
-    GridBase* grid = 0;
-    int dtype = NPY_COMPLEX128;
-    if (PyDict_GetItemString(_param,"shape")) {
-      shape = get_long_vec(_param,"shape");
-      grid = get_pointer<GridBase>(_param,"grid");
-      dtype = infer_numpy_type(get_str(_param,"precision"));
-    }
-
-    // always generate in double first regardless of type casting to ensure that numbers are the same up to rounding errors
-    // (rng could use random bits to result in different next float/double sampling)
-    if (dist == "normal") {
-      std::normal_distribution<double> distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
-    } else if (dist == "cnormal") {
-      cgpt_cnormal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
-    } else if (dist == "uniform_real") {
-      std::uniform_real_distribution<double> distribution(get_float(_param,"min"),get_float(_param,"max"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
-    } else if (dist == "uniform_int") {
-      std::uniform_int_distribution<int> distribution(get_int(_param,"min"),get_int(_param,"max"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
-    } else if (dist == "zn") {
-      cgpt_zn_distribution distribution(get_int(_param,"n"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
-    } else {
-      ERR("Unknown distribution: %s", dist.c_str());
-    }
+    cgpt_random_engine_base* p = (cgpt_random_engine_base*)_p;
+    return p->sample(_target,_param);
 
   });
