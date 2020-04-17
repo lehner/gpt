@@ -24,15 +24,18 @@ void cgpt_basis_fill(std::vector<Lattice<T>*>& basis, std::vector<cgpt_Lattice_b
     basis[i] = &compatible<T>(_basis[i])->l;
 }
 
-static void cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _basis) {
+static void cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _basis, int idx) {
   ASSERT(PyList_Check(_basis));
   Py_ssize_t size = PyList_Size(_basis);
   basis.resize(size);
   for (Py_ssize_t i=0;i<size;i++) {
     PyObject* li = PyList_GetItem(_basis,i);
-    PyObject* obj = PyObject_GetAttrString(li,"obj");
-    ASSERT(obj);
+    PyObject* v_obj = PyObject_GetAttrString(li,"v_obj");
+    ASSERT(v_obj && PyList_Check(v_obj));
+    ASSERT(idx >= 0 && idx < PyList_Size(v_obj));
+    PyObject* obj = PyList_GetItem(v_obj,idx);
     ASSERT(PyLong_Check(obj));
     basis[i] = (cgpt_Lattice_base*)PyLong_AsVoidPtr(obj);
   }
 }
+

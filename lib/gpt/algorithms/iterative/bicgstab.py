@@ -61,7 +61,7 @@ class bicgstab:
             s @= r - alpha * mmp
 
             mat(s, mms)
-            ip, mms2 = g.innerProduct_norm(mms, s)
+            ip, mms2 = g.innerProductNorm2(mms, s)
 
             if mms2 == 0.:
                 continue
@@ -70,7 +70,7 @@ class bicgstab:
 
             psi += alpha * p + omega * s
 
-            r2 = g.axpy_norm(r, -omega, mms, s)
+            r2 = g.axpy_norm2(r, -omega, mms, s)
 
             if verbose:
                 g.message("res^2[ %d ] = %g" % (k, r2))

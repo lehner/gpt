@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt, numpy
+import gpt, cgpt, numpy, sys
 
 _seeded=False
 
@@ -36,11 +36,8 @@ def sample(t,p):
             pos=p["pos"]
         else:
             pos=gpt.coordinates(t.grid)
-        t[pos]=cgpt.random_sample(pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj} })
+        t[pos]=cgpt.random_sample(pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj, "precision" : t.grid.precision} })
         return t
-    elif type(t) == gpt.vlattice:
-        for x in t.v:
-            sample(x,p)
     else:
         assert(0)
 

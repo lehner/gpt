@@ -22,6 +22,9 @@ class FILE:
     def __init__(self, fn, md):
         t0=gpt.time()
         self.f = cgpt.fopen(fn,md)
+        if self.f == 0:
+            self.f = None
+            raise FileNotFoundError("Can not open file %s" % fn)
         t1=gpt.time()
         #print("OPEN %g" % (t1-t0))
 
@@ -41,6 +44,7 @@ class FILE:
         #print("CLOSE %g" % (t1-t0))
 
     def tell(self):
+        assert(not self.f is None)
         t0=gpt.time()
         r=cgpt.ftell(self.f)
         t1=gpt.time()
@@ -48,6 +52,7 @@ class FILE:
         return r
 
     def seek(self, offset, whence):
+        assert(not self.f is None)
         t0=gpt.time()
         r=cgpt.fseek(self.f, offset, whence)
         t1=gpt.time()
@@ -55,6 +60,7 @@ class FILE:
         return r
 
     def read(self, sz):
+        assert(not self.f is None)
         t0=gpt.time()
         t=bytes(sz)
         assert(cgpt.fread(self.f,sz,memoryview(t))==1)
@@ -63,6 +69,7 @@ class FILE:
         return t
 
     def write(self, d):
+        assert(not self.f is None)
         t0=gpt.time()
         if type(d) != memoryview:
             d=memoryview(d)
@@ -71,6 +78,7 @@ class FILE:
         #print("WRITE %g s, %g GB" % (t1-t0,len(d)/1024.**3.))
 
     def flush(self):
+        assert(not self.f is None)
         t0=gpt.time()
         cgpt.fflush(self.f)
         t1=gpt.time()

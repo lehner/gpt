@@ -18,7 +18,7 @@
 #
 import gpt as g
 
-def evals(matrix, evec, check = False):
+def evals(matrix, evec, check_eps2 = None):
     assert(len(evec) > 0)
     tmp=g.lattice(evec[0])
     ev=[]
@@ -27,8 +27,10 @@ def evals(matrix, evec, check = False):
         # M |v> = l |v> -> <v|M|v> / <v|v>
         l=g.innerProduct(v,tmp).real / g.norm2(v)
         ev.append(l)
-        if check:
+        if not check_eps2 is None:
             eps2=g.norm2(tmp - l*v)
             g.message("eval[ %d ] = %g, eps^2 = %g" % (i,l,eps2))
+            if eps2 > check_eps2:
+                assert(0)
 
     return ev

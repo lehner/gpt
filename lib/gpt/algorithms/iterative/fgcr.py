@@ -83,7 +83,7 @@ class fgcr:
             t5 = time()
 
             t6 = time()
-            ip, mmp2 = g.innerProduct_norm(mmp[i], r)
+            ip, mmp2 = g.innerProductNorm2(mmp[i], r)
             gamma[i] = mmp2**0.5
 
             if gamma[i] == 0.:
@@ -92,7 +92,7 @@ class fgcr:
 
             mmp[i] /= gamma[i]
             alpha[i] = ip / gamma[i]
-            r2 = g.axpy_norm(r, -alpha[i], mmp[i], r)
+            r2 = g.axpy_norm2(r, -alpha[i], mmp[i], r)
             t7 = time()
 
             if verbose:
@@ -143,4 +143,4 @@ class fgcr:
 
     def calc_res(self, mat, psi, mmpsi, src, r):
         mat(psi, mmpsi)
-        return g.axpy_norm(r, -1., mmpsi, src)
+        return g.axpy_norm2(r, -1., mmpsi, src)

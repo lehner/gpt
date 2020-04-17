@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, os, io, numpy, sys, fnmatch, glob, math
+import cgpt, gpt, os, io, numpy, sys, fnmatch, glob
 
 # get local dir an filename
 def get_local_name(root, cv):
@@ -84,9 +84,12 @@ class gpt_io:
         self.close_global()
         self.close_views()
 
-    def open_view(self, cv, write): # this should also cache positions
+    def open_view(self, xk, iview, write, mpi, fdimensions, g_cb, l_cb):
+        cv=gpt.cartesian_view(iview if not iview is None else -1,mpi,fdimensions,g_cb,l_cb)
         dn,fn=get_local_name(self.root,cv)
         loc_desc = cv.describe() + "/" + ("Write" if write  else "Read")
+
+        tag="%d-%s" % (xk,str(iview))
 
         if loc_desc != self.loc_desc:
             self.close_views()
@@ -94,50 +97,29 @@ class gpt_io:
             if self.verbose:
                 gpt.message("Switching view to %s" % self.loc_desc)
 
-        if not fn in self.loc:
+        if not tag in self.loc:
             if write and not dn is None:
                 os.makedirs(dn, exist_ok=True)
-            self.loc[fn]=gpt.FILE(fn,"a+b" if write else "r+b") if not fn is None else None
-            self.pos[fn]=gpt.coordinates(cv)
+            self.loc[tag]=gpt.FILE(fn,"a+b" if write else "r+b") if not fn is None else None
+            self.pos[tag]=gpt.coordinates(cv)
 
-        #print("Rank %d (%s) processes %s" % (gpt.rank(),gpt.hostname,fn))
-        #sys.stdout.flush()
-        return self.loc[fn],self.pos[fn]
+        return self.loc[tag],self.pos[tag]
 
     def views_for_node(self,cv,grid):
-        # need to have same length on each node but can have None entry if node does not participate
-        grid_rank=grid.cartesian_rank()
-        grid_stride=grid.Nprocessors
-        views_per_node=int(math.ceil(cv.ranks / grid.Nprocessors))
-
-        # number of writer groups
-        ngroups=int(math.ceil(cv.ranks / gpt.default.nwriter))
-
-        # first group
-        views=[]
-        for igroup in range(ngroups):
-            for idx in range(views_per_node):
-                iview=grid_rank + idx*grid_stride
-                if iview % ngroups == igroup and iview < cv.ranks:
-                    iv=iview
-                else:
-                    iv=None
-                views.append(iv)
-        return views
-
+        return cv.views_for_node(grid)
 
     def write_lattice(self, ctx, l):
         g=l.grid
         tag=(ctx + "\0").encode("utf-8")
         ntag=len(tag)
-        nd=len(g.gdimensions)
+        nd=len(g.fdimensions)
 
         # create cartesian view for writing
         if "mpi" in self.params:
             mpi=self.params["mpi"]
         else:
             mpi=g.mpi
-        cv0=gpt.cartesian_view(-1,mpi,g.gdimensions)
+        cv0=gpt.cartesian_view(-1,mpi,g.fdimensions,g.cb,l.checkerboard())
 
         # file positions
         pos=numpy.array([ 0 ] * cv0.ranks,dtype=numpy.uint64)
@@ -155,17 +137,9 @@ class gpt_io:
         szGB=0.0
 
         # need to write all views
-        for iview in views_for_node:
-            if not iview is None:
-                cv=gpt.cartesian_view(iview,mpi,g.gdimensions)
-                dt_write-=gpt.time()
-                f,p=self.open_view(cv,True)
-                dt_write+=gpt.time()
-                pos[iview]=f.tell()
-            else:
-                f,p=self.open_view(cv0,True) # empty view
-                cv=None
-                assert(len(p) == 0)
+        for xk,iview in enumerate(views_for_node):
+
+            f,p=self.open_view(xk,iview,True,mpi,g.fdimensions,g.cb,l.checkerboard())
 
             # all nodes are needed to communicate
             dt_distr-=gpt.time()
@@ -173,12 +147,13 @@ class gpt_io:
             dt_distr+=gpt.time()
 
             # write data
-            if not cv is None:
+            if not f is None:
                 # description and data
                 dt_crc-=gpt.time()
                 crc=gpt.crc32(mv)
                 dt_crc+=gpt.time()
                 dt_write-=gpt.time()
+                pos[iview]=f.tell()
                 f.write(ntag.to_bytes(4,byteorder='little'))
                 f.write(tag)
                 f.write(crc.to_bytes(4,byteorder='little'))
@@ -186,7 +161,7 @@ class gpt_io:
                 for i in range(nd):
                     f.write(g.gdimensions[i].to_bytes(4,byteorder='little'))
                 for i in range(nd):
-                    f.write(( g.gdimensions[i] // g.ldimensions[i]).to_bytes(4,byteorder='little'))
+                    f.write(g.mpi[i].to_bytes(4,byteorder='little'))
                 f.write(len(mv).to_bytes(8,byteorder='little'))
                 f.write(mv)
                 f.flush()
@@ -214,24 +189,26 @@ class gpt_io:
         g=self.params["grids"][g_desc]
 
         # create a cartesian view and lattice to load
-        cv0=gpt.cartesian_view(-1,cv_desc,g.gdimensions)
         l=gpt.lattice(g,l_desc)
+        cv0=gpt.cartesian_view(-1,cv_desc,g.fdimensions,g.cb,l.checkerboard())
 
         # find tasks for my node
         views_for_node=self.views_for_node(cv0,g)
 
         # performance
-        dt_distr,dt_crc,dt_read=0.0,0.0,0.0
+        dt_distr,dt_crc,dt_read,dt_misc=0.0,0.0,0.0,0.0
         szGB=0.0
+        g.barrier()
         t0=gpt.time()
 
         # need to load all views
-        for iview in views_for_node:
-            if not iview is None:
-                cv=gpt.cartesian_view(iview,cv_desc,g.gdimensions)
-                # read data
-                dt_read-=gpt.time()
-                f,pos=self.open_view(cv,False)
+        for xk,iview in enumerate(views_for_node):
+            g.barrier()
+            dt_read-=gpt.time()
+
+            f,pos=self.open_view(xk,iview,False,cv_desc,g.fdimensions,g.cb,l.checkerboard())
+
+            if not f is None:
                 f.seek(filepos[iview],0)
                 ntag=int.from_bytes(f.read(4),byteorder='little')
                 f.read(ntag) # not needed if index is present
@@ -240,7 +217,6 @@ class gpt_io:
                 f.read(8*nd) # not needed if index is present
                 sz=int.from_bytes(f.read(8),byteorder='little')
                 data=memoryview(f.read(sz))
-                dt_read+=gpt.time()
                 dt_crc-=gpt.time()
                 crc_comp=gpt.crc32(data)
                 dt_crc+=gpt.time()
@@ -248,24 +224,29 @@ class gpt_io:
                 sys.stdout.flush()
                 szGB+=len(data) / 1024.**3.
             else:
-                f,pos=self.open_view(cv0,False) # empty view
                 assert(len(pos) == 0)
                 data=None
+
+            g.barrier()
+            dt_read+=gpt.time()
             dt_distr-=gpt.time()
             l[pos]=data
+            g.barrier()
             dt_distr+=gpt.time()
 
+        g.barrier()
         t1=gpt.time()
 
         szGB=g.globalsum(szGB)
         if self.verbose and dt_crc != 0.0:
-            gpt.message("Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for checksum, %g GB/s for reading, %d views per node)" % 
-                        (szGB,szGB/(t1-t0),szGB/dt_distr,szGB/dt_crc,szGB/dt_read,len(views_for_node)))
+            gpt.message("Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for reading + checksum, %g GB/s for checksum, %d views per node)" % 
+                        (szGB,szGB/(t1-t0),szGB/dt_distr,szGB/dt_read,szGB/dt_crc,len(views_for_node)))
 
         # TODO:
         # split grid exposure, allow cgpt_distribute to be given a communicator
         # and take it in importexport.h, add debug info here
         # more benchmarks, useful to create a plan for cgpt_distribute and cache? immutable numpy array returned from coordinates, attach plan
+
         return l
 
     def write_numpy(self, a):
@@ -301,11 +282,18 @@ class gpt_io:
                 f.write(x.encode("unicode_escape").decode("utf-8") + "\n")
                 self.create_index(f,"%s/%s" % (ctx,x),objs[x])
             f.write("}\n")
+        elif type(objs) == numpy.ndarray: # needs to be above list for proper precedence
+            f.write("array %d %d\n" % self.write_numpy(objs))
         elif type(objs) == list:
             f.write("[\n")
             for i,x in enumerate(objs):
                 self.create_index(f,"%s/%d" % (ctx,i),x)
             f.write("]\n")
+        elif type(objs) == tuple:
+            f.write("(\n")
+            for i,x in enumerate(objs):
+                self.create_index(f,"%s/%d" % (ctx,i),x)
+            f.write(")\n")
         elif type(objs) == float:
             f.write("float %.16g\n" % objs)
         elif type(objs) == int:
@@ -314,11 +302,12 @@ class gpt_io:
             f.write("str " + objs.encode("unicode_escape").decode("utf-8") + "\n")
         elif type(objs) == complex:
             f.write("complex %.16g %.16g\n" % (objs.real,objs.imag))
-        elif type(objs) == numpy.ndarray:
-            f.write("array %d %d\n" % self.write_numpy(objs))
         elif type(objs) == gpt.lattice:
              f.write("lattice %s\n" % self.write_lattice(ctx,objs))
+        elif type(objs) == numpy.float64:
+            f.write("float %.16g\n" % float(objs)) # improve: avoid implicit type conversion
         else:
+            print("Unknown type: ",type(objs))
             assert(0)
 
     def keep_context(self, ctx):
@@ -352,6 +341,16 @@ class gpt_io:
                     break
                 res.append(self.read_index(p,ctx + ("/%d" % len(res))))
             return res
+        elif cmd == "(":
+            p.skip()
+            res=[]
+            while True:
+                cmd=p.cmd()
+                if cmd == ")":
+                    p.skip()
+                    break
+                res.append(self.read_index(p,ctx + ("/%d" % len(res))))
+            return tuple(res)
         elif cmd == "int":
             return int(p.get()[1])
         elif cmd == "float":
@@ -442,6 +441,8 @@ def load(filename, *a):
 
     # create io
     x=gpt_io(filename,params,False)
+    if x.verbose:
+        gpt.message("Reading %s" % filename)
 
     # read index
     idx=open(filename + "/index","rb").read()

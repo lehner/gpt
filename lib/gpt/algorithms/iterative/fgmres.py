@@ -174,4 +174,4 @@ class fgmres:
 
     def calc_res(self, mat, psi, mmpsi, src, r):
         mat(psi, mmpsi)
-        return g.axpy_norm(r, -1., mmpsi, src)
+        return g.axpy_norm2(r, -1., mmpsi, src)

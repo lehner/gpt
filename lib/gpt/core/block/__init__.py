@@ -16,25 +16,38 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt
-import cgpt
+import gpt,cgpt,sys
+from gpt.core.block.operator import operator
+
+def grid(fgrid, nblock):
+    assert(fgrid.nd == len(nblock))
+    for i in range(fgrid.nd):
+        assert(fgrid.gdimensions[i] % nblock[i] == 0)
+    # coarse grid will always be a full grid
+    return gpt.grid([ fgrid.gdimensions[i] // nblock[i] for i in range(fgrid.nd) ],fgrid.precision,gpt.full)
 
 def project(coarse, fine, basis):
-    for i in coarse.idx:
-        cgpt.block_project(coarse.v[i].obj,fine.obj,basis[coarse.n0[i]:coarse.n1[i]])
+    cot=coarse.otype
+    fot=fine.otype
+    tmp=gpt.lattice(coarse)
+    coarse[:]=0
+    for j in fot.v_idx:
+        for i in cot.v_idx:
+            cgpt.block_project(tmp.v_obj[i],fine.v_obj[j],basis[cot.v_n0[i]:cot.v_n1[i]],j)
+        coarse += tmp
 
 def promote(coarse, fine, basis):
-    fine[:]=0
+    cot=coarse.otype
+    fot=fine.otype
     tmp=gpt.lattice(fine)
-    for i in coarse.idx:
-        cgpt.block_promote(coarse.v[i].obj,tmp.obj,basis[coarse.n0[i]:coarse.n1[i]])
+    fine[:]=0
+    for i in cot.v_idx:
+        for j in fot.v_idx:
+            cgpt.block_promote(coarse.v_obj[i],tmp.v_obj[j],basis[cot.v_n0[i]:cot.v_n1[i]],j)
         fine += tmp
 
-def orthogonalize(coarse_grid, basis):
+def orthonormalize(coarse_grid, basis):
     assert(type(coarse_grid) == gpt.grid)
+    assert(len(basis[0].v_obj) == 1) # for now
     coarse_tmp=gpt.complex(coarse_grid)
-    cgpt.block_orthogonalize(coarse_tmp.obj,basis)
-
-
-
-
+    cgpt.block_orthonormalize(coarse_tmp.v_obj[0],basis)

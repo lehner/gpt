@@ -105,7 +105,9 @@ template<typename sRNG,typename pRNG>
 
 
 template<typename DIST,typename sRNG,typename pRNG>
-  PyObject* cgpt_random_sample(DIST & dist,PyObject* _target,sRNG& srng,pRNG& prng,std::vector<long> & shape,std::vector<long> & seed,GridBase* grid) {
+  PyObject* cgpt_random_sample(DIST & dist,PyObject* _target,sRNG& srng,pRNG& prng,
+			       std::vector<long> & shape,std::vector<long> & seed,
+			       GridBase* grid,int dtype) {
 
   if (PyArray_Check(_target)) {
 
@@ -138,18 +140,26 @@ template<typename DIST,typename sRNG,typename pRNG>
       n *= s;
       dims.push_back(s);
     }
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_COMPLEX128);
-    ComplexD* d = (ComplexD*)PyArray_DATA(a);
-    thread_for(i, unique_hashes.size(), {
-	// all the previous effort allows the prng to act in parallel
-	auto h = unique_hashes[i];
-	auto & uhi = hash_offsets[h];
-	for (auto & x : uhi) {
-	  for (long j=0;j<n;j++)
-	    d[n*x+j] = dist(prng[h]);
-	}
-      });
 
+    // all the previous effort allows the prng to act in parallel
+    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], dtype);
+    if (dtype == NPY_COMPLEX64) {
+      ComplexF* d = (ComplexF*)PyArray_DATA(a);
+      thread_for(i, unique_hashes.size(), {
+	  auto h = unique_hashes[i];
+	  auto & uhi = hash_offsets[h];
+	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = (ComplexF)dist(prng[h]);
+	});
+    } else if (dtype == NPY_COMPLEX128) {
+      ComplexD* d = (ComplexD*)PyArray_DATA(a);
+      thread_for(i, unique_hashes.size(), {
+	  auto h = unique_hashes[i];
+	  auto & uhi = hash_offsets[h];
+	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = dist(prng[h]);
+	});
+    } else {
+      ERR("Unknown dtype");
+    }
     //	 );
 
     //std::cout << GridLogMessage << "Timing: " << t0 << ", " << t1 << ", " << t2 << ", " << t3 << ", " << t4 << std::endl;

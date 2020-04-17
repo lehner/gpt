@@ -1,0 +1,164 @@
+%
+%    GPT - Grid Python Toolkit
+%    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+%                        Veronica Fama
+%
+%    This program is free software; you can redistribute it and/or modify
+%    it under the terms of the GNU General Public License as published by
+%    the Free Software Foundation; either version 2 of the License, or
+%    (at your option) any later version.
+%
+%    This program is distributed in the hope that it will be useful,
+%    but WITHOUT ANY WARRANTY; without even the implied warranty of
+%    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%    GNU General Public License for more details.
+%
+%    You should have received a copy of the GNU General Public License along
+%    with this program; if not, write to the Free Software Foundation, Inc.,
+%    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+%
+%    The Python logo was modified from the GPL-published version
+%    at https://commons.wikimedia.org/wiki/File:Python-logo-notext.svg (April 17, 2020)
+%
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{graphicx}
+
+\def \L {4.}
+\def \gap {0.15}
+\def \n {3.}
+
+% fix for bug in color.sty
+% see: http://tex.stackexchange.com/questions/274524/definecolorset-of-xcolor-problem-with-color-values-starting-with-f
+\makeatletter
+\def\@hex@@Hex#1%
+ {\if a#1A\else \if b#1B\else \if c#1C\else \if d#1D\else
+  \if e#1E\else \if f#1F\else #1\fi\fi\fi\fi\fi\fi \@hex@Hex}
+\makeatother
+
+%\definecolor{outer}{HTML}{006622}
+\definecolor{outer}{HTML}{366994}
+
+\begin{document}
+\begin{tikzpicture}
+  \pgfmathsetmacro{\l}{(\L/\n-\gap/\n/2.)}
+
+  % outer outline
+  \draw[thick,outer] (0,-\L) -- (\L,-0.5*\L);
+  \draw[thick,outer] (0,-\L) -- (-\L,-0.5*\L);
+  \draw[thick,outer] (\L,-0.5*\L) -- (\L,0.5*\L);
+  \draw[thick,outer] (-\L,-0.5*\L) -- (-\L,0.5*\L);
+  \draw[thick,outer] (\L,0.5*\L) -- (0,\L);
+  \draw[thick,outer] (-\L,0.5*\L) -- (0,\L);
+
+  % tiles
+  \foreach \i in {0,1,2}
+  {
+  \foreach \j in {0}
+  {
+    \pgfmathsetmacro{\xa}{0 + \gap/2 + \i*\l};
+    \pgfmathsetmacro{\xb}{\xa + \l - \gap};
+    \pgfmathsetmacro{\ya}{-\L+\gap + \xa*0.5 + \j*\l};
+    \pgfmathsetmacro{\yb}{-\L+\gap + \xb*0.5 + \j*\l};
+    \draw[thick,outer,fill]
+    (\xa,\ya) --
+    (\xb,\yb) --
+    (\xb,\yb + \l - \gap) --
+    (\xa,\ya + \l - \gap) --
+    (\xa,\ya);
+  }
+  }
+
+  \foreach \i in {0,1,2}
+  {
+  \foreach \j in {0}
+  {
+    \pgfmathsetmacro{\xa}{0 + \gap/2 + \i*\l};
+    \pgfmathsetmacro{\xb}{\xa + \l - \gap};
+    \pgfmathsetmacro{\ya}{-\L+\gap + \xa*0.5 + \j*\l};
+    \pgfmathsetmacro{\yb}{-\L+\gap + \xb*0.5 + \j*\l};
+    \draw[thick,outer,fill]
+    (-\xa,\ya) --
+    (-\xb,\yb) --
+    (-\xb,\yb + \l - \gap) --
+    (-\xa,\ya + \l - \gap) --
+    (-\xa,\ya);
+  }
+  }
+
+  \foreach \i in {2}
+  {
+  \foreach \j in {1,2}
+  {
+    \pgfmathsetmacro{\xa}{0 + \gap/2 + \i*\l};
+    \pgfmathsetmacro{\xb}{\xa + \l - \gap};
+    \pgfmathsetmacro{\ya}{-\L+\gap + \xa*0.5 + \j*\l};
+    \pgfmathsetmacro{\yb}{-\L+\gap + \xb*0.5 + \j*\l};
+    \draw[thick,outer,fill]
+    (\xa,\ya) --
+    (\xb,\yb) --
+    (\xb,\yb + \l - \gap) --
+    (\xa,\ya + \l - \gap) --
+    (\xa,\ya);
+  }
+  }
+
+  \foreach \i in {2}
+  {
+  \foreach \j in {1,2}
+  {
+    \pgfmathsetmacro{\xa}{0 + \gap/2 + \i*\l};
+    \pgfmathsetmacro{\xb}{\xa + \l - \gap};
+    \pgfmathsetmacro{\ya}{-\L+\gap + \xa*0.5 + \j*\l};
+    \pgfmathsetmacro{\yb}{-\L+\gap + \xb*0.5 + \j*\l};
+    \draw[thick,outer,fill]
+    (-\xa,\ya) --
+    (-\xb,\yb) --
+    (-\xb,\yb + \l - \gap) --
+    (-\xa,\ya + \l - \gap) --
+    (-\xa,\ya);
+  }
+  }
+
+  \foreach \i in {0,1,2}
+  {
+  \foreach \j in {0}
+  {
+    \pgfmathsetmacro{\xa}{\i*\l};
+    \pgfmathsetmacro{\xb}{\i*\l + \l - \gap};
+    \pgfmathsetmacro{\xc}{\i*\l - \l + \gap};
+    \pgfmathsetmacro{\ya}{\L - \gap - \xa*0.5}
+    \pgfmathsetmacro{\yb}{\L - \gap - \xb*0.5}
+    \pgfmathsetmacro{\yc}{\L - \gap - \xc*0.5 -\l + \gap}
+    \draw[thick,outer,fill]
+    (\xa,\ya) --
+    (\xb,\yb) --
+    (\xa,\ya - \l + \gap) --
+    (\xc,\yc) --
+    (\xa,\ya);
+  }
+  }
+
+  \foreach \i in {1,2}
+  {
+  \foreach \j in {0}
+  {
+    \pgfmathsetmacro{\xa}{\i*\l};
+    \pgfmathsetmacro{\xb}{\i*\l + \l - \gap};
+    \pgfmathsetmacro{\xc}{\i*\l - \l + \gap};
+    \pgfmathsetmacro{\ya}{\L - \gap - \xa*0.5}
+    \pgfmathsetmacro{\yb}{\L - \gap - \xb*0.5}
+    \pgfmathsetmacro{\yc}{\L - \gap - \xc*0.5 -\l + \gap}
+    \draw[thick,outer,fill]
+    (-\xa,\ya) --
+    (-\xb,\yb) --
+    (-\xa,\ya - \l + \gap) --
+    (-\xc,\yc) --
+    (-\xa,\ya);
+  }
+  }
+
+  % python
+  \node[inner sep=0pt] (python) at (0,0)
+    {\includegraphics[width=3cm]{input/python-color-crop}};
+\end{tikzpicture}
+\end{document}

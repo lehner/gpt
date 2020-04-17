@@ -83,7 +83,7 @@ EXPORT(lattice_innerProduct,{
     return PyComplex_FromDoubles(c.real(),c.imag());
   });
 
-EXPORT(lattice_innerProduct_norm,{
+EXPORT(lattice_innerProductNorm2,{
 
     void* _a,* _b;
     if (!PyArg_ParseTuple(args, "ll", &_a, &_b)) {
@@ -96,7 +96,7 @@ EXPORT(lattice_innerProduct_norm,{
     ComplexD ip;
     RealD a2;
 
-    a->innerProduct_norm(ip,a2,b);
+    a->innerProductNorm2(ip,a2,b);
 
     return PyTuple_Pack(2,
                         PyComplex_FromDoubles(ip.real(),ip.imag()),
@@ -114,7 +114,7 @@ EXPORT(lattice_norm2,{
     return PyFloat_FromDouble(a->norm2());
   });
 
-EXPORT(lattice_axpy_norm,{
+EXPORT(lattice_axpy_norm2,{
     
     void* _r,*_x,*_y;
     PyObject* _a;
@@ -129,7 +129,7 @@ EXPORT(lattice_axpy_norm,{
     ComplexD a;
     cgpt_convert(_a,a);
     
-    return PyFloat_FromDouble(r->axpy_norm(a,x,y));
+    return PyFloat_FromDouble(r->axpy_norm2(a,x,y));
   });
 
 EXPORT(lattice_sum,{

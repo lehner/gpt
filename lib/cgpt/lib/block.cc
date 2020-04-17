@@ -22,7 +22,8 @@ EXPORT(block_project,{
 
     PyObject* _basis;
     void* _coarse,* _fine;
-    if (!PyArg_ParseTuple(args, "llO", &_coarse,&_fine,&_basis)) {
+    int idx;
+    if (!PyArg_ParseTuple(args, "llOi", &_coarse,&_fine,&_basis,&idx)) {
       return NULL;
     }
 
@@ -30,7 +31,7 @@ EXPORT(block_project,{
     cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
 
     std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_fill(basis,_basis,idx);
 
     fine->block_project(coarse,basis);
 
@@ -41,7 +42,8 @@ EXPORT(block_promote,{
 
     PyObject* _basis;
     void* _coarse,* _fine;
-    if (!PyArg_ParseTuple(args, "llO", &_coarse,&_fine,&_basis)) {
+    int idx;
+    if (!PyArg_ParseTuple(args, "llOi", &_coarse,&_fine,&_basis,&idx)) {
       return NULL;
     }
 
@@ -49,14 +51,14 @@ EXPORT(block_promote,{
     cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
 
     std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_fill(basis,_basis,idx);
 
     fine->block_promote(coarse,basis);
 
     return PyLong_FromLong(0);
   });
 
-EXPORT(block_orthogonalize,{
+EXPORT(block_orthonormalize,{
 
     PyObject* _basis;
     void* _coarse;
@@ -67,10 +69,10 @@ EXPORT(block_orthogonalize,{
     cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
 
     std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_fill(basis,_basis,0); // TODO: generalize
 
     ASSERT(basis.size() > 0);
-    basis[0]->block_orthogonalize(coarse,basis);
+    basis[0]->block_orthonormalize(coarse,basis);
 
     return PyLong_FromLong(0);
   });

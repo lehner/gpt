@@ -28,7 +28,6 @@ static void cgpt_to_full_coor(GridBase* grid, int cb,
   int32_t* coor = (int32_t*)PyArray_DATA(coordinates);
   long stride = grid->Nd();
 
-  int Nsimd = grid->Nsimd();
   ASSERT(sizeof(Coordinate::value) == 4);
 
   fc.resize(nc);
@@ -43,25 +42,56 @@ static void cgpt_to_full_coor(GridBase* grid, int cb,
 	  cgpt_distribute::coor& c = fc[i];
 	  int odx, idx;
 	  grid->GlobalCoorToRankIndex(c.rank,odx,idx,site);
-	  c.offset = odx*Nsimd + idx;
+	  c.offset = cgpt_distribute::offset(odx,idx);
 	});
     }
 }
 
+static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
+					       std::vector<cgpt_distribute::data_simd> & data,
+					       std::vector<long> & shape,
+					       GridBase* & grid, int & cb, int & dtype) {
+  ASSERT(PyList_Check(vlat));
+  long nlat=PyList_Size(vlat);
+
+  data.resize(nlat);
+  shape.resize(0);
+
+  for (long i=0;i<nlat;i++) {
+    cgpt_distribute::data_simd & d = data[i];
+    cgpt_Lattice_base* l = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(vlat,i));
+    std::vector<long> ishape;
+    PyObject* _mem = l->memory_view();
+    Py_buffer* buf = PyMemoryView_GET_BUFFER(_mem);
+    d.local = buf->buf;
+    l->describe_data_layout(d.Nsimd,d.word,d.simd_word,ishape);
+    ASSERT(ishape.size() > 0);
+    
+    if (i == 0) {
+      shape = ishape;
+      grid = l->get_grid();
+      cb = l->get_checkerboard();
+      dtype = l->get_numpy_dtype();
+    } else {
+      shape[0] += ishape[0];
+      ASSERT(shape.size() == ishape.size());
+      for (long j=1;j<ishape.size();j++)
+	ASSERT(ishape[j]==shape[j]);
+      ASSERT(grid == l->get_grid()); // only works if all lattices live on same Grid
+      ASSERT(cb == l->get_checkerboard());
+      ASSERT(dtype == l->get_numpy_dtype());
+    }
+  }
+}
+
 // Coordinates in the list may differ from node to node,
 // in general they create a full map of the lattice.
-template<typename T>
-PyArrayObject* cgpt_importexport(Lattice<T>& l, PyArrayObject* coordinates, PyObject* data) {
+static PyArrayObject* cgpt_importexport(GridBase* grid, int cb, int dtype,
+					std::vector<cgpt_distribute::data_simd>& l, 
+					std::vector<long> & ishape, 
+					PyArrayObject* coordinates, PyObject* data) {
 
-  typedef typename Lattice<T>::vector_object vobj;
-  typedef typename vobj::scalar_object sobj;
-  typedef typename Lattice<T>::scalar_type Coeff_t;
-
-  // infrastructure
-  GridBase* grid = l.Grid();
-  auto l_v = l.View();
-  int Nsimd = grid->Nsimd();
-  cgpt_distribute dist(grid->_processor,&l_v[0],sizeof(sobj),Nsimd,sizeof(Coeff_t),grid->communicator);
+  cgpt_distribute dist(grid->_processor,grid->communicator);
 
   // distribution plan
   grid_cached<cgpt_distribute::plan> plan(grid,coordinates);
@@ -69,7 +99,7 @@ PyArrayObject* cgpt_importexport(Lattice<T>& l, PyArrayObject* coordinates, PyOb
     
     // first get full coordinates
     std::vector<cgpt_distribute::coor> fc;
-    cgpt_to_full_coor(grid,l.Checkerboard(),coordinates,fc);
+    cgpt_to_full_coor(grid,cb,coordinates,fc);
 
     // new plan
     dist.create_plan(fc,plan.fill_ref());
@@ -78,45 +108,45 @@ PyArrayObject* cgpt_importexport(Lattice<T>& l, PyArrayObject* coordinates, PyOb
   // create target data layout
   long fc_size = PyArray_DIMS(coordinates)[0]; // already checked above, no need to check again
   std::vector<long> dim(1,fc_size);
-  cgpt_numpy_data_layout(sobj(),dim);
+  for (auto s : ishape) {
+    dim.push_back(s);
+  }
 
   if (!data) {
     // create target
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], infer_numpy_type(Coeff_t()));
-    sobj* s = (sobj*)PyArray_DATA(a);
+    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], dtype);
+    void* s = (void*)PyArray_DATA(a);
   
     // fill data
-    dist.copy_to(plan,s);
+    dist.copy_to(plan,l,s);
     return a;
 
   } else {
 
     if (fc_size == 0) {
-      dist.copy_from(plan,0);
+      dist.copy_from(plan,0,l);
       return 0;
     }
 
     // check compatibility
-    sobj* s;
+    void* s;
     if (PyArray_Check(data)) {
       PyArrayObject* bytes = (PyArrayObject*)data;
       ASSERT(PyArray_NDIM(bytes) == dim.size());
       long* tdim = PyArray_DIMS(bytes);
       for (int i=0;i<(int)dim.size();i++)
 	ASSERT(tdim[i] == dim[i]);
-      ASSERT(infer_numpy_type(Coeff_t()) == PyArray_TYPE(bytes));
-      s = (sobj*)PyArray_DATA(bytes);
+      ASSERT(PyArray_TYPE(bytes) == dtype);
+      s = (void*)PyArray_DATA(bytes);
     } else if (PyMemoryView_Check(data)) {
       Py_buffer* buf = PyMemoryView_GET_BUFFER(data);
       ASSERT(PyBuffer_IsContiguous(buf,'C'));
-      s = (sobj*)buf->buf;
-      int64_t len = (int64_t)buf->len;
-      ASSERT(len == sizeof(sobj)*fc_size);
+      s = (void*)buf->buf;
     } else {
       ERR("Incompatible type");
     }
 
-    dist.copy_from(plan,s);
+    dist.copy_from(plan,s,l);
     return 0;
   }
 }

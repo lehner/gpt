@@ -220,6 +220,11 @@ class irl:
         results=[w,alph,beta]
         if ckpt.load(results):
             w,alph,beta=results # use checkpoint
+
+            if verbose:
+                g.message("%-65s %-45s" % ("alpha[ %d ] = %s" % (k,alph),
+                                           "beta[ %d ] = %s" % (k,beta)))
+
         else:
             # compute
             t0=g.time()

@@ -16,21 +16,28 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt
+import gpt,sys
 
-# test if of number type
-def isnum(x):
-    return isinstance(x, (int, float, complex)) and not isinstance(x, bool)
+class operator_on_fine:
+    def __init__(self, op, cgrid, basis):
+        self.op = op
+        self.src_fine=gpt.lattice(basis[0])
+        self.dst_fine=gpt.lattice(basis[0])
+        self.basis=basis
+        self.verbose=gpt.default.is_verbose("block_operator")
 
-# tensor
-def value_to_tensor(val, otype):
-    if otype == gpt.ot_complex:
-        return complex(val)
-    return gpt.tensor(val, otype)
+    def __call__(self, src_coarse, dst_coarse):
+        t0=gpt.time()
+        gpt.block.promote(src_coarse,self.src_fine,self.basis)
+        t1=gpt.time()
+        self.op(self.src_fine,self.dst_fine)
+        t2=gpt.time()
+        gpt.block.project(dst_coarse,self.dst_fine,self.basis)
+        t3=gpt.time()
+        if self.verbose:
+            gpt.message("Timing: %g s (promote), %g s (matrix), %g s (project)" % (t1-t0,t2-t1,t3-t2))
 
-def tensor_to_value(value):
-    if type(value) == gpt.tensor:
-        value = value.array
-    return value
 
-
+def operator(op, cgrid, basis):
+    # If possible, directly implement op
+    return operator_on_fine(op,cgrid,basis)

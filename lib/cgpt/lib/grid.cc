@@ -45,7 +45,9 @@ EXPORT(create_grid,{
     
     GridBase* grid;
     if (nd >= 4) {
-      std::vector<int> gdimension4d = gdimension; gdimension4d.resize(4);
+      std::vector<int> gdimension4d(4);
+      for (long i=0;i<4;i++)
+	gdimension4d[i]=gdimension[nd-4+i];
       GridCartesian* grid4d = SpaceTimeGrid::makeFourDimGrid(gdimension4d, GridDefaultSimd(4,Nsimd), GridDefaultMpi());
       if (nd == 4) {
 	if (type == "redblack") {
@@ -58,10 +60,10 @@ EXPORT(create_grid,{
 	}
       } else if (nd == 5) {
 	if (type == "redblack") {
-	  grid = SpaceTimeGrid::makeFiveDimRedBlackGrid(gdimension[4],grid4d);
+	  grid = SpaceTimeGrid::makeFiveDimRedBlackGrid(gdimension[0],grid4d);
 	  delete grid4d;
 	} else if (type == "full") {
-	  grid = SpaceTimeGrid::makeFiveDimGrid(gdimension[4],grid4d);
+	  grid = SpaceTimeGrid::makeFiveDimGrid(gdimension[0],grid4d);
 	  delete grid4d;
 	} else {
 	  ERR("Unknown grid type");
@@ -170,7 +172,8 @@ EXPORT(grid_get_processor,{
     long ranks = grid->_Nprocessors;
     PyObject* coor = cgpt_convert(grid->_processor_coor);
     PyObject* ldims = cgpt_convert(grid->_ldimensions);
-    return Py_BuildValue("(l,l,O,O)",rank,ranks,coor,ldims);
+    PyObject* gdims = cgpt_convert(grid->_gdimensions);
+    return Py_BuildValue("(l,l,O,O,O)",rank,ranks,coor,gdims,ldims);
     
   });
   
