@@ -1,3 +1,5 @@
+![GPT Logo](/documentation/logo/logo.pdf)
+
 # GPT - Grid Python Toolkit
 
 GPT is a Python3 measurement interface for [Grid](https://github.com/paboyle/Grid).
