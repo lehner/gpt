@@ -1,14 +1,18 @@
 #
 # Install python3 if it is not yet there
 #
-# brew install wget autoconf
 echo "Checking numpy"
-hasNumpy=$(python3 -c "import numpy2" 2>&1 | grep -c ModuleNotFound)
-if [[ "$hasNumpy" == "0" ]];
+hasNumpy=$(python3 -c "import numpy" 2>&1 | grep -c ModuleNotFound)
+if [[ "$hasNumpy" == "1" ]];
 then
     echo "Install numpy"
     python3 -m pip install --user numpy
 fi
+
+#
+# Default libraries
+#
+brew install wget autoconf automake openssl
 
 #
 # Get root directory
@@ -48,19 +52,6 @@ make
 cd ..
 
 #
-# OpenSSL
-#
-wget https://www.openssl.org/source/openssl-1.1.1f.tar.gz
-tar xzf openssl-1.1.1f.tar.gz
-rm openssl-1.1.1f.tar.gz
-mv openssl* openssl
-cd openssl
-./config
-make -j 4
-ln -s ${dep}/openssl lib # quick "install"
-cd ..
-
-#
 # Grid
 #
 git clone https://github.com/lehner/Grid.git
@@ -69,9 +60,12 @@ git checkout feature/gpt
 ./bootstrap.sh
 mkdir build
 cd build
-../configure --enable-precision=double --enable-simd=AVX2 --enable-comms=none CXXFLAGS=-fPIC --with-lime=${dep}/lime --with-openssl=${dep}/openssl
+../configure --enable-precision=double --enable-simd=AVX2 --enable-comms=none CXXFLAGS=-fPIC --with-lime=${dep}/lime
+#--with-openssl=${dep}/openssl
 cd Grid
 make -j 4
+
+exit
 
 #
 # cgpt

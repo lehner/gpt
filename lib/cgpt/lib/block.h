@@ -109,17 +109,17 @@ static void precisionDemote(vComplexF & out, const vComplexD2 & in) {
   out.v = Optimization::PrecisionChange::DtoS(in._internal[0].v,in._internal[1].v);
 }
 
-template<typename vobj,typename T>
-void precisionDemote(iScalar<vobj> & out, const T & in) {
-  precisionDemote(out._internal,in);
-}
-
 static void precisionDemote(vComplexF & out, const vComplexF & in) {
   out = in;
 }
 
 static void precisionDemote(vComplexD & out, const vComplexD & in) {
   out = in;
+}
+
+template<typename vobj,typename T>
+void precisionDemote(iScalar<vobj> & out, const T & in) {
+  precisionDemote(out._internal,in);
 }
 
 template<class vobj,class CComplex>
@@ -287,7 +287,7 @@ void cgpt_block_project(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vecto
 #define BASIS_SIZE(n) if (n == basis.size()) { cgpt_blockProject(compatible< iComplexV ## n<vCoeff_t> >(_coarse)->l,fine,basis); } else
 #include "basis_size.h"
 #undef BASIS_SIZE
-  { ERR("Unknown basis size %d",basis.size()); }
+  { ERR("Unknown basis size %d",(int)basis.size()); }
 
 }
 
@@ -305,7 +305,7 @@ void cgpt_block_promote(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vecto
 #define BASIS_SIZE(n) if (n == basis.size()) { cgpt_blockPromote(compatible< iComplexV ## n<vCoeff_t> >(_coarse)->l,fine,basis); } else
 #include "basis_size.h"
 #undef BASIS_SIZE
-  { ERR("Unknown basis size %d",basis.size()); }
+  { ERR("Unknown basis size %d",(int)basis.size()); }
 
 }
 

@@ -14,15 +14,15 @@ coarse_grid=g.grid([2,2,2,4],fine_grid.precision)
 # basis
 n=30
 basis=[ g.vcolor(fine_grid) for i in range(n) ]
-g.random.seed("block_seed_string_13")
-g.random.cnormal(basis)
+rng=g.random("block_seed_string_13")
+rng.cnormal(basis)
 for i in range(1):
     g.message("Ortho step %d" % i)
     g.block.orthonormalize(coarse_grid,basis)
 
 # test coarse vector
 lcoarse=g.vcomplex(coarse_grid,n)
-g.random.cnormal(lcoarse)
+rng.cnormal(lcoarse)
 
 # temporary fine and coarse vectors
 tmpf=g.lattice(basis[0])
