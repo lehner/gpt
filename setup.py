@@ -10,6 +10,7 @@ subs = (
         'algorithms',
         'algorithms/approx',
         'core',
+        'core/block',
         'core/io',
         'create',
         'qcd',
