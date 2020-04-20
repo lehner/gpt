@@ -1,0 +1,7 @@
+#!/bin/bash
+root=TestU01-1.2.3/build
+if [ ! -f libcgpt.so ];
+then
+    ln -s ../../lib/cgpt.so libcgpt.so
+fi
+icpc -std=c++11 -o big_crush -I${root}/include big_crush.cc ${root}/lib/libtestu01.a ${root}/lib/libprobdist.a ${root}/lib/libmylib.a -L. -lcgpt $(python3-config --ldflags)

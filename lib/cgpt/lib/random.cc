@@ -17,7 +17,10 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include "random/ranlux.h"
+#include "random/vector.h"
 #include "random/distribution.h"
+#include "random/parallel.h"
 #include "random/engine.h"
 
 /*
@@ -33,15 +36,47 @@
 
 EXPORT(create_random,{
 
-    PyObject* _type;
-    std::string type;
-    if (!PyArg_ParseTuple(args, "O", &_type)) {
+#if 0
+    {
+      std::vector<long> seed = { 1,2,3 };
+      cgpt_vrng_ranlux24_794_64 vtest(seed);
+      cgpt_rng_ranlux24_794_64 stest(seed);
+      
+      for (int i=0;i<1024*100;i++) {
+	long a = vtest();
+	long b = stest();
+	assert(a == b);
+      }
+      
+      double t0 = cgpt_time();
+      for (int i=0;i<1024*100;i++) {
+	long a = vtest();
+      }
+      double t1 = cgpt_time();
+      for (int i=0;i<1024*100;i++) {
+	long a = stest();
+      }
+      double t2 = cgpt_time();
+      std::cout << GridLogMessage << "Timing: " << (t1-t0) << " and " << (t2-t1) << std::endl;
+      
+      cgpt_random_vectorized_ranlux24_794_64 rnd(seed);
+      std::cout << GridLogMessage << rnd.get_normal() << std::endl;
+    }
+#endif
+
+
+
+    PyObject* _type,* _seed;
+    std::string type, seed;
+    if (!PyArg_ParseTuple(args, "OO", &_type,&_seed)) {
       return NULL;
     }
     cgpt_convert(_type,type);
+    cgpt_convert(_seed,seed);
 
-    if (type == "ranlux48") {
-      return PyLong_FromVoidPtr(new cgpt_random_engine<std::ranlux48>());
+    if (type == "vectorized_ranlux24_389_64") {
+      //std::cout << "Before: " << seed << std::endl;
+      return PyLong_FromVoidPtr(new cgpt_random_engine< cgpt_random_vectorized_ranlux24_389_64 >(seed));
     } else {
       ERR("Unknown rng engine type %s",type.c_str());
     }
@@ -63,24 +98,6 @@ EXPORT(delete_random,{
     return PyLong_FromLong(0);
   });
 
-EXPORT(random_seed,{
-
-    PyObject* _seed_str;
-    void* _p;
-    if (!PyArg_ParseTuple(args, "lO", &_p,&_seed_str)) {
-      return NULL;
-    }
-
-    std::string seed_str;
-    cgpt_convert(_seed_str,seed_str);
-
-    cgpt_random_engine_base* p = (cgpt_random_engine_base*)_p;
-    p->seed(seed_str);
-
-    return PyLong_FromLong(0);
-
-  });
-
 EXPORT(random_sample,{
 
     PyObject* _target, *_param;
@@ -93,3 +110,71 @@ EXPORT(random_sample,{
     return p->sample(_target,_param);
 
   });
+
+// the following allow the bigcrush test to link directly against this
+struct cgpt_rng_test {
+  std::vector<cgpt_random_engine_base*> engines;
+  std::vector<uint32_t> buf_bits;
+  std::vector<double> buf_double;
+};
+
+void* cgpt_rng_test_create(int iengine) {
+  if (iengine == 0) {
+    cgpt_rng_test* p = new cgpt_rng_test();
+    p->engines.resize(64);
+    thread_for(i,p->engines.size(), {
+	char buf[256];
+	sprintf(buf,"big crush test %d",i);
+	(p->engines)[i] = new cgpt_random_engine< cgpt_random_vectorized_ranlux24_389_64 >(buf);
+      });
+    return (void*)p;
+  }
+  return 0;
+}
+
+void cgpt_rng_test_destroy(void* t) {
+  cgpt_rng_test* p = (cgpt_rng_test*)t;
+  for (auto x : p->engines)
+    delete x;
+  delete p;
+}
+
+double cgpt_rng_test_GetU01(void* param, void* state) {
+  cgpt_rng_test* p = (cgpt_rng_test*)state;
+  long n = p->buf_double.size();
+  if (n == 0) {
+    p->buf_double.resize(p->engines.size());
+    thread_for(i,p->engines.size(), {
+	p->buf_double[i]=p->engines[i]->test_U01();
+      });
+    n=p->buf_double.size();
+  }
+
+  double r=p->buf_double[n-1];
+  p->buf_double.resize(n-1);
+  return r;
+}
+
+unsigned long cgpt_rng_test_GetBits(void* param, void* state) {
+  cgpt_rng_test* p = (cgpt_rng_test*)state;
+  long n = p->buf_bits.size();
+  if (n == 0) {
+    p->buf_bits.resize(p->engines.size());
+    thread_for(i,p->engines.size(), {
+	p->buf_bits[i]=p->engines[i]->test_bits();
+      });
+    n=p->buf_bits.size();
+  }
+
+  unsigned long r=p->buf_bits[n-1];
+  p->buf_bits.resize(n-1);
+  return r;
+}
+
+
+void cgpt_rng_test_Write(void* state) {
+}
+
+
+
+

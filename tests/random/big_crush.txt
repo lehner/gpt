@@ -1,0 +1,371 @@
+
+
+================================================================================
+
+ Run tests for cgpt engine = 0
+
+
+================================================================================
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                 Starting SmallCrush
+                 Version: TestU01 1.2.3
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_BirthdaySpacings test:
+-----------------------------------------------
+   N =  1,  n = 5000000,  r =  0,    d = 1073741824,    t = 2,    p = 1
+
+
+      Number of cells = d^t = 1152921504606846976
+      Lambda = Poisson mean =      27.1051
+
+
+----------------------------------------------------
+Total expected number = N*Lambda      :      27.11
+Total observed number                 :      20
+p-value of test                       :    0.90
+
+
+-----------------------------------------------
+CPU time used                    :  00:02:53.68
+
+Generator state:
+
+
+
+
+***********************************************************
+Test sknuth_Collision calling smultin_Multinomial
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smultin_Multinomial test:
+-----------------------------------------------
+   N =  1,  n = 5000000,  r =  0,   d = 65536,   t =  2,
+       Sparse =   TRUE
+
+       GenerCell = smultin_GenerCellSerial
+       Number of cells = d^t =         4294967296
+       Expected number per cell =  1 /  858.99346
+       EColl = n^2 / (2k) =  2910.383046
+       Hashing =   TRUE
+
+       Collision test,    Mu =      2909.2534,    Sigma =    53.8957
+
+-----------------------------------------------
+Test Results for Collisions
+
+Expected number of collisions = Mu    :     2909.25
+Observed number of collisions         :     2912
+p-value of test                       :    0.48
+
+-----------------------------
+Total number of cells containing j balls
+
+  j =  0                              :       4289970208
+  j =  1                              :          4994178
+  j =  2                              :             2908
+  j =  3                              :                2
+  j =  4                              :                0
+  j =  5                              :                0
+
+-----------------------------------------------
+CPU time used                    :  00:04:59.27
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+sknuth_Gap test:
+-----------------------------------------------
+   N =  1,  n = 200000,  r = 22,   Alpha =        0,   Beta  = 0.00390625
+
+
+-----------------------------------------------
+Number of degrees of freedom          : 1114
+Chi-square statistic                  : 1092.56
+p-value of test                       :    0.67
+
+-----------------------------------------------
+CPU time used                    :  00:13:40.78
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+sknuth_SimpPoker test:
+-----------------------------------------------
+   N =  1,  n = 400000,  r = 24,   d =   64,   k =   64
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   19
+Chi-square statistic                  :   27.26
+p-value of test                       :    0.10
+
+-----------------------------------------------
+CPU time used                    :  00:07:06.57
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+sknuth_CouponCollector test:
+-----------------------------------------------
+   N =  1,  n = 500000,  r = 26,   d =   16
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   44
+Chi-square statistic                  :   35.72
+p-value of test                       :    0.81
+
+-----------------------------------------------
+CPU time used                    :  00:06:56.30
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+sknuth_MaxOft test:
+-----------------------------------------------
+   N =  1,  n = 2000000,  r =  0,   d = 100000,   t =  6
+
+      Number of categories = 100000
+      Expected number per category  = 20.00
+
+
+-----------------------------------------------
+Number of degrees of freedom          : 99999
+Chi-square statistic                  :99238.40
+p-value of test                       :    0.96
+
+
+-----------------------------------------------
+Anderson-Darling statistic            :    0.31
+p-value of test                       :    0.69
+
+
+-----------------------------------------------
+CPU time used                    :  00:03:47.59
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+svaria_WeightDistrib test:
+-----------------------------------------------
+   N =  1,  n = 200000,  r = 27,  k = 256,  Alpha =      0,  Beta =  0.125
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   41
+Chi-square statistic                  :   24.57
+p-value of test                       :    0.98
+
+-----------------------------------------------
+CPU time used                    :  00:13:33.80
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_MatrixRank test:
+-----------------------------------------------
+   N =  1,  n = 20000,  r = 20,    s = 10,    L = 60,    k = 60
+
+
+-----------------------------------------------
+Number of degrees of freedom          :    3
+Chi-square statistic                  :    0.23
+p-value of test                       :    0.97
+
+-----------------------------------------------
+CPU time used                    :  00:03:05.92
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+sstring_HammingIndep test:
+-----------------------------------------------
+   N =  1,  n = 500000,  r = 20,   s = 10,   L = 300,   d = 0
+
+
+
+Counters with expected numbers >= 10
+-----------------------------------------------
+Number of degrees of freedom          : 2209
+Chi-square statistic                  : 2081.88
+p-value of test                       :    0.97
+
+-----------------------------------------------
+CPU time used                    :  00:08:25.98
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+swalk_RandomWalk1 test:
+-----------------------------------------------
+   N =  1,  n = 1000000,  r =  0,   s = 30,   L0 =  150,   L1 =  150
+
+
+
+-----------------------------------------------
+Test on the values of the Statistic H
+
+Number of degrees of freedom          :   52
+ChiSquare statistic                   :   49.07
+p-value of test                       :    0.59
+
+
+-----------------------------------------------
+Test on the values of the Statistic M
+
+Number of degrees of freedom          :   52
+ChiSquare statistic                   :   58.20
+p-value of test                       :    0.26
+
+
+-----------------------------------------------
+Test on the values of the Statistic J
+
+Number of degrees of freedom          :   75
+ChiSquare statistic                   :   71.89
+p-value of test                       :    0.58
+
+
+-----------------------------------------------
+Test on the values of the Statistic R
+
+Number of degrees of freedom          :   44
+ChiSquare statistic                   :   28.10
+p-value of test                       :    0.97
+
+
+-----------------------------------------------
+Test on the values of the Statistic C
+
+Number of degrees of freedom          :   26
+ChiSquare statistic                   :   23.24
+p-value of test                       :    0.62
+
+
+-----------------------------------------------
+CPU time used                    :  00:05:01.51
+
+Generator state:
+
+
+
+
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        cgpt_ranlux
+ Number of statistics:  15
+ Total CPU time:   01:09:31.84
+
+ All tests were passed
+
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                 Starting BigCrush
+                 Version: TestU01 1.2.3
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+***********************************************************
+Test smarsa_SerialOver calling smultin_MultinomialOver
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smultin_MultinomialOver test:
+-----------------------------------------------
+   N =  1,  n = 1000000000,  r =  0,   d =  256,   t =  3,
+       Sparse =  FALSE
+
+       GenerCell = smultin_GenerCellSerial
+       Number of cells = d^t =           16777216
+       Expected number per cell =   59.604645
+       Hashing =  FALSE
+
+   For Delta > -1, we use the ChiSquare approximation
+   Correction factor of the ChiSquare: 
+       Delta =     1,    Mu =   0.0083558402,    Sigma =          1
+
