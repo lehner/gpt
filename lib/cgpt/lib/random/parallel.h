@@ -21,6 +21,14 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
   long* tdim = PyArray_DIMS(coordinates);
   long nc = tdim[0];
   long nd = tdim[1];
+  std::vector<bool> mpi_dim(nd);
+  if (nd == 4) {
+    mpi_dim = {true,true,true,true};
+  } else if (nd == 5) {
+    mpi_dim = {false,true,true,true,true};
+  } else {
+    ERR("Nd = %d not yet supported for random interface",nd);
+  }
 
   const int block = 2;
   ASSERT(nd == grid->Nd());
@@ -39,10 +47,12 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
   thread_for(i, nc, {
       long t = 0;
       for (long j=0;j<nd;j++) {
-	int32_t c = coor[nd*i+j] / block;
-	ASSERT((c >= (grid->_lstart[j]/block)) && (c < ((grid->_lend[j]+1)/block)));
-	t*=grid->_gdimensions[j] / block;
-	t+=c;
+	if (mpi_dim[j]) {
+	  int32_t c = coor[nd*i+j] / block;
+	  ASSERT((c >= (grid->_lstart[j]/block)) && (c < ((grid->_lend[j]+1)/block)));
+	  t*=grid->_gdimensions[j] / block;
+	  t+=c;
+	}
       }
       hashes[i] = t;
     });
@@ -59,6 +69,7 @@ template<typename T>
 void cgpt_hash_unique(std::map<T,std::vector<long>>& u, std::vector<T>& h) {
   for (auto&k : u)
     h.push_back(k.first);
+  //std::cout << GridLogMessage << h.size() << " unique parallel RNGs" << std::endl;
 }
 
 template<typename sRNG,typename pRNG>
@@ -70,6 +81,8 @@ template<typename sRNG,typename pRNG>
       need.push_back(x);
     }
   }
+
+  //std::cout << GridLogMessage << need.size() << " new parallel RNGs" << std::endl;
 
   thread_for(i, need.size(), {
 
