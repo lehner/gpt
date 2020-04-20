@@ -20,6 +20,8 @@ class cgpt_random_engine_base {
 public:
   virtual ~cgpt_random_engine_base() { };
   virtual PyObject* sample(PyObject* target, PyObject* param) = 0;
+  virtual double test_U01() = 0;
+  virtual uint32_t test_bits() = 0;
 };
 
 template<typename cgpt_rng_engine>
@@ -76,6 +78,14 @@ class cgpt_random_engine : public cgpt_random_engine_base {
       ERR("Unknown distribution: %s", dist.c_str());
     }
 
+  }
+
+  virtual double test_U01() {
+    return cgpt_srng.get_double();
+  }
+
+  virtual uint32_t test_bits() {
+    return cgpt_srng.get_uint32_t();
   }
 
 };

@@ -110,3 +110,34 @@ EXPORT(random_sample,{
     return p->sample(_target,_param);
 
   });
+
+// the following allow the bigcrush test to link directly against this
+void* cgpt_rng_test_create(int iengine) {
+  if (iengine == 0) {
+    std::string seed = "big crush test";
+    return new cgpt_random_engine< cgpt_random_vectorized_ranlux24_794_64 >(seed);
+  }
+  return 0;
+}
+
+void cgpt_rng_test_destroy(void* t) {
+  cgpt_random_engine_base* p = (cgpt_random_engine_base*)t;
+  delete p;
+}
+
+double cgpt_rng_test_GetU01(void* param, void* state) {
+  cgpt_random_engine_base* p = (cgpt_random_engine_base*)state;
+  return p->test_U01();
+}
+
+unsigned long cgpt_rng_test_GetBits(void* param, void* state) {
+  cgpt_random_engine_base* p = (cgpt_random_engine_base*)state;
+  return p->test_bits();
+}
+
+void cgpt_rng_test_Write(void* state) {
+}
+
+
+
+

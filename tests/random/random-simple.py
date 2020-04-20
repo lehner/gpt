@@ -15,7 +15,7 @@ for i in range(n):
         res[z] = 0
     res[z] += 1
 
-print(res)
+g.message(res)
 
 
 n=10000
@@ -26,7 +26,7 @@ for i in range(n):
         res[z] = 0
     res[z] += 1
 
-print(res)
+g.message(res)
 
 
 n=10000
@@ -39,4 +39,10 @@ for i in range(n):
     res[3]+=z**3
     res[4]+=z**4
 
-print(res[1] / res[0], res[2] / res[0], res[3] / res[0], res[4] / res[0])
+g.message(res[1] / res[0], res[2] / res[0], res[3] / res[0], res[4] / res[0])
+
+grid=g.grid([4,4,4,4],g.double)
+v=g.complex(grid)
+rng.normal(v)
+
+g.message(v)
