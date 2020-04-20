@@ -39,8 +39,8 @@ EXPORT(create_random,{
 #if 0
     {
       std::vector<long> seed = { 1,2,3 };
-      cgpt_vrng_ranlux24_794_256 vtest(seed);
-      cgpt_rng_ranlux24_794_256 stest(seed);
+      cgpt_vrng_ranlux24_794_64 vtest(seed);
+      cgpt_rng_ranlux24_794_64 stest(seed);
       
       for (int i=0;i<1024*100;i++) {
 	long a = vtest();
@@ -59,7 +59,7 @@ EXPORT(create_random,{
       double t2 = cgpt_time();
       std::cout << GridLogMessage << "Timing: " << (t1-t0) << " and " << (t2-t1) << std::endl;
       
-      cgpt_random_vectorized_ranlux24_794_256 rnd(seed);
+      cgpt_random_vectorized_ranlux24_794_64 rnd(seed);
       std::cout << GridLogMessage << rnd.get_normal() << std::endl;
     }
 #endif
@@ -74,9 +74,9 @@ EXPORT(create_random,{
     cgpt_convert(_type,type);
     cgpt_convert(_seed,seed);
 
-    if (type == "vectorized_ranlux24_794_256") {
+    if (type == "vectorized_ranlux24_794_64") {
       //std::cout << "Before: " << seed << std::endl;
-      return PyLong_FromVoidPtr(new cgpt_random_engine< cgpt_random_vectorized_ranlux24_794_256 >(seed));
+      return PyLong_FromVoidPtr(new cgpt_random_engine< cgpt_random_vectorized_ranlux24_794_64 >(seed));
     } else {
       ERR("Unknown rng engine type %s",type.c_str());
     }

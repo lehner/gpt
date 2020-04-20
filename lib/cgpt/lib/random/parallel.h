@@ -62,7 +62,7 @@ void cgpt_hash_unique(std::map<T,std::vector<long>>& u, std::vector<T>& h) {
 }
 
 template<typename sRNG,typename pRNG>
-  void cgpt_random_setup(std::vector<long>& h,sRNG & srng,std::map<long,pRNG> & prng,std::vector<long> & seed) {
+  void cgpt_random_setup(std::vector<long>& h,sRNG & srng,std::map<long,pRNG> & prng,std::vector<uint64_t> & seed) {
   std::vector<long> need;
   for (auto x : h) {
     auto p = prng.find(x);
@@ -74,7 +74,7 @@ template<typename sRNG,typename pRNG>
   thread_for(i, need.size(), {
 
       long x = need[i];
-      std::vector<long> _seed = seed;
+      std::vector<uint64_t> _seed = seed;
       _seed.push_back(x);
 
       auto pr = pRNG(_seed);
@@ -89,7 +89,7 @@ template<typename sRNG,typename pRNG>
 
 template<typename DIST,typename sRNG,typename pRNG>
   PyObject* cgpt_random_sample(DIST & dist,PyObject* _target,sRNG& srng,pRNG& prng,
-			       std::vector<long> & shape,std::vector<long> & seed,
+			       std::vector<long> & shape,std::vector<uint64_t> & seed,
 			       GridBase* grid,int dtype) {
 
   if (PyArray_Check(_target)) {

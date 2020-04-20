@@ -27,10 +27,10 @@ class cgpt_random_engine : public cgpt_random_engine_base {
  public:
   cgpt_rng_engine cgpt_srng;
   std::map<long,cgpt_rng_engine> cgpt_prng;
-  std::vector<long> cgpt_seed;
+  std::vector<uint64_t> cgpt_seed;
 
-  std::vector<long> str_to_seed(const std::string & seed_str) {
-    std::vector<long> r;
+  std::vector<uint64_t> str_to_seed(const std::string & seed_str) {
+    std::vector<uint64_t> r;
     for (auto x : seed_str)
       r.push_back(x);
     return r;

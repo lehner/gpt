@@ -33,7 +33,7 @@ protected:
   long nbuffer;
 
   // first seed rng using sha256(s)
-  std::vector<int_type> seed(const std::vector<long> & s) {
+  std::vector<int_type> seed(const std::vector<uint64_t> & s) {
     assert(rng.seed_size * sizeof(int_type) % sizeof(uint32_t) == 0);
     long nwords = rng.seed_size * sizeof(int_type) / sizeof(uint32_t);
     std::vector<int_type> r(nwords);
@@ -41,11 +41,11 @@ protected:
     long idx = 0;
     while (rw.size() < nwords) {
 
-      std::vector<long> tmp = s;
+      std::vector<uint64_t> tmp = s;
       tmp.push_back(idx++);
 
       uint32_t sha256_seed[8];
-      cgpt_sha256(sha256_seed,&tmp[0],sizeof(long) * tmp.size());
+      cgpt_sha256(sha256_seed,&tmp[0],sizeof(uint64_t) * tmp.size());
 
       for (int w=0;w<8;w++)
 	rw.push_back(sha256_seed[w]);
@@ -71,7 +71,7 @@ protected:
 
 public:
 
-  cgpt_vector_rng(const std::vector<long> & _seed) : rng(seed(_seed)), buffer(vlen * nvrng) {
+  cgpt_vector_rng(const std::vector<uint64_t> & _seed) : rng(seed(_seed)), buffer(vlen * nvrng) {
     for (long i=0;i<nvrng;i++)
       vrng.push_back(base_vrng(vseed()));
     populate();
@@ -105,5 +105,5 @@ public:
 
 };
 
-typedef cgpt_vector_rng< cgpt_base_vrng_ranlux24_794, cgpt_base_rng_ranlux24_794, 256 > cgpt_vrng_ranlux24_794_256;
-typedef cgpt_vector_rng< cgpt_base_rng_ranlux24_794, cgpt_base_rng_ranlux24_794, 256 > cgpt_rng_ranlux24_794_256;
+typedef cgpt_vector_rng< cgpt_base_vrng_ranlux24_794, cgpt_base_rng_ranlux24_794, 64 > cgpt_vrng_ranlux24_794_64;
+typedef cgpt_vector_rng< cgpt_base_rng_ranlux24_794, cgpt_base_rng_ranlux24_794, 64 > cgpt_rng_ranlux24_794_64;

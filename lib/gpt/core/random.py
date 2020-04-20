@@ -29,7 +29,7 @@ class random:
             s=first
             engine=second
             if engine is None:
-                engine="vectorized_ranlux24_794_256"
+                engine="vectorized_ranlux24_794_64"
 
         self.verbose = gpt.default.is_verbose("random")
         t0=gpt.time()
@@ -37,7 +37,7 @@ class random:
         t1=gpt.time()
 
         if self.verbose:
-            gpt.message("Initializing gpt.random(%s) took %g s" % (s,t1-t0))
+            gpt.message("Initializing gpt.random(%s,%s) took %g s" % (s,engine,t1-t0))
 
     def __del__(self):
         cgpt.delete_random(self.obj)

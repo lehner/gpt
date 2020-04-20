@@ -18,6 +18,9 @@
 
 
     Works for Integer and vInteger.
+
+    
+    For details, see http://luscher.web.cern.ch/luscher/ranlux/notes.pdf (*) .
 */
 template<typename T,int l2b,int r,int s,int p>
 class cgpt_ranlux {

@@ -30,7 +30,7 @@ protected:
   }
 
 public:
-  cgpt_random(const std::vector<long> & seed) : rng(seed), state(0), nbits(0) {
+  cgpt_random(const std::vector<uint64_t> & seed) : rng(seed), state(0), nbits(0) {
     populate();
   }
 
@@ -113,7 +113,7 @@ public:
 
 };
 
-typedef cgpt_random< cgpt_vrng_ranlux24_794_256, uint64_t > cgpt_random_vectorized_ranlux24_794_256;
+typedef cgpt_random< cgpt_vrng_ranlux24_794_64, uint64_t > cgpt_random_vectorized_ranlux24_794_64;
 
 // distribution interface
 class cgpt_normal_distribution {
