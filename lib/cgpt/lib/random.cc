@@ -74,9 +74,9 @@ EXPORT(create_random,{
     cgpt_convert(_type,type);
     cgpt_convert(_seed,seed);
 
-    if (type == "vectorized_ranlux24_794_64") {
+    if (type == "vectorized_ranlux24_389_64") {
       //std::cout << "Before: " << seed << std::endl;
-      return PyLong_FromVoidPtr(new cgpt_random_engine< cgpt_random_vectorized_ranlux24_794_64 >(seed));
+      return PyLong_FromVoidPtr(new cgpt_random_engine< cgpt_random_vectorized_ranlux24_389_64 >(seed));
     } else {
       ERR("Unknown rng engine type %s",type.c_str());
     }
@@ -125,7 +125,7 @@ void* cgpt_rng_test_create(int iengine) {
     thread_for(i,p->engines.size(), {
 	char buf[256];
 	sprintf(buf,"big crush test %d",i);
-	(p->engines)[i] = new cgpt_random_engine< cgpt_random_vectorized_ranlux24_794_64 >(buf);
+	(p->engines)[i] = new cgpt_random_engine< cgpt_random_vectorized_ranlux24_389_64 >(buf);
       });
     return (void*)p;
   }

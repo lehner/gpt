@@ -105,5 +105,5 @@ public:
 
 };
 
-typedef cgpt_vector_rng< cgpt_base_vrng_ranlux24_794, cgpt_base_rng_ranlux24_794, 64 > cgpt_vrng_ranlux24_794_64;
-typedef cgpt_vector_rng< cgpt_base_rng_ranlux24_794, cgpt_base_rng_ranlux24_794, 64 > cgpt_rng_ranlux24_794_64;
+typedef cgpt_vector_rng< cgpt_base_vrng_ranlux24_389, cgpt_base_rng_ranlux24_389, 64 > cgpt_vrng_ranlux24_389_64;
+typedef cgpt_vector_rng< cgpt_base_rng_ranlux24_389, cgpt_base_rng_ranlux24_389, 64 > cgpt_rng_ranlux24_389_64;

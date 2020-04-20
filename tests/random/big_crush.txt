@@ -30,12 +30,12 @@ smarsa_BirthdaySpacings test:
 
 ----------------------------------------------------
 Total expected number = N*Lambda      :      27.11
-Total observed number                 :      31
-p-value of test                       :    0.25
+Total observed number                 :      20
+p-value of test                       :    0.90
 
 
 -----------------------------------------------
-CPU time used                    :  00:02:56.52
+CPU time used                    :  00:02:53.68
 
 Generator state:
 
@@ -68,21 +68,21 @@ smultin_Multinomial test:
 Test Results for Collisions
 
 Expected number of collisions = Mu    :     2909.25
-Observed number of collisions         :     2890
-p-value of test                       :    0.63
+Observed number of collisions         :     2912
+p-value of test                       :    0.48
 
 -----------------------------
 Total number of cells containing j balls
 
-  j =  0                              :       4289970186
-  j =  1                              :          4994220
-  j =  2                              :             2890
-  j =  3                              :                0
+  j =  0                              :       4289970208
+  j =  1                              :          4994178
+  j =  2                              :             2908
+  j =  3                              :                2
   j =  4                              :                0
   j =  5                              :                0
 
 -----------------------------------------------
-CPU time used                    :  00:04:54.97
+CPU time used                    :  00:04:59.27
 
 Generator state:
 
@@ -102,11 +102,11 @@ sknuth_Gap test:
 
 -----------------------------------------------
 Number of degrees of freedom          : 1114
-Chi-square statistic                  : 1145.13
-p-value of test                       :    0.25
+Chi-square statistic                  : 1092.56
+p-value of test                       :    0.67
 
 -----------------------------------------------
-CPU time used                    :  00:13:52.72
+CPU time used                    :  00:13:40.78
 
 Generator state:
 
@@ -126,11 +126,11 @@ sknuth_SimpPoker test:
 
 -----------------------------------------------
 Number of degrees of freedom          :   19
-Chi-square statistic                  :   15.85
-p-value of test                       :    0.67
+Chi-square statistic                  :   27.26
+p-value of test                       :    0.10
 
 -----------------------------------------------
-CPU time used                    :  00:07:14.47
+CPU time used                    :  00:07:06.57
 
 Generator state:
 
@@ -150,11 +150,11 @@ sknuth_CouponCollector test:
 
 -----------------------------------------------
 Number of degrees of freedom          :   44
-Chi-square statistic                  :   43.24
-p-value of test                       :    0.50
+Chi-square statistic                  :   35.72
+p-value of test                       :    0.81
 
 -----------------------------------------------
-CPU time used                    :  00:07:01.19
+CPU time used                    :  00:06:56.30
 
 Generator state:
 
@@ -177,17 +177,17 @@ sknuth_MaxOft test:
 
 -----------------------------------------------
 Number of degrees of freedom          : 99999
-Chi-square statistic                  : 1.01e+5
-p-value of test                       :    0.03
+Chi-square statistic                  :99238.40
+p-value of test                       :    0.96
 
 
 -----------------------------------------------
-Anderson-Darling statistic            :    0.63
-p-value of test                       :    0.37
+Anderson-Darling statistic            :    0.31
+p-value of test                       :    0.69
 
 
 -----------------------------------------------
-CPU time used                    :  00:03:45.98
+CPU time used                    :  00:03:47.59
 
 Generator state:
 
@@ -207,11 +207,11 @@ svaria_WeightDistrib test:
 
 -----------------------------------------------
 Number of degrees of freedom          :   41
-Chi-square statistic                  :   51.33
-p-value of test                       :    0.13
+Chi-square statistic                  :   24.57
+p-value of test                       :    0.98
 
 -----------------------------------------------
-CPU time used                    :  00:13:49.34
+CPU time used                    :  00:13:33.80
 
 Generator state:
 
@@ -231,11 +231,11 @@ smarsa_MatrixRank test:
 
 -----------------------------------------------
 Number of degrees of freedom          :    3
-Chi-square statistic                  :    3.51
-p-value of test                       :    0.32
+Chi-square statistic                  :    0.23
+p-value of test                       :    0.97
 
 -----------------------------------------------
-CPU time used                    :  00:03:07.67
+CPU time used                    :  00:03:05.92
 
 Generator state:
 
@@ -257,11 +257,11 @@ sstring_HammingIndep test:
 Counters with expected numbers >= 10
 -----------------------------------------------
 Number of degrees of freedom          : 2209
-Chi-square statistic                  : 2151.87
-p-value of test                       :    0.80
+Chi-square statistic                  : 2081.88
+p-value of test                       :    0.97
 
 -----------------------------------------------
-CPU time used                    :  00:08:25.34
+CPU time used                    :  00:08:25.98
 
 Generator state:
 
@@ -284,44 +284,44 @@ swalk_RandomWalk1 test:
 Test on the values of the Statistic H
 
 Number of degrees of freedom          :   52
-ChiSquare statistic                   :   50.13
-p-value of test                       :    0.55
+ChiSquare statistic                   :   49.07
+p-value of test                       :    0.59
 
 
 -----------------------------------------------
 Test on the values of the Statistic M
 
 Number of degrees of freedom          :   52
-ChiSquare statistic                   :   52.44
-p-value of test                       :    0.46
+ChiSquare statistic                   :   58.20
+p-value of test                       :    0.26
 
 
 -----------------------------------------------
 Test on the values of the Statistic J
 
 Number of degrees of freedom          :   75
-ChiSquare statistic                   :   99.06
-p-value of test                       :    0.03
+ChiSquare statistic                   :   71.89
+p-value of test                       :    0.58
 
 
 -----------------------------------------------
 Test on the values of the Statistic R
 
 Number of degrees of freedom          :   44
-ChiSquare statistic                   :   47.14
-p-value of test                       :    0.35
+ChiSquare statistic                   :   28.10
+p-value of test                       :    0.97
 
 
 -----------------------------------------------
 Test on the values of the Statistic C
 
 Number of degrees of freedom          :   26
-ChiSquare statistic                   :   24.74
-p-value of test                       :    0.53
+ChiSquare statistic                   :   23.24
+p-value of test                       :    0.62
 
 
 -----------------------------------------------
-CPU time used                    :  00:05:05.25
+CPU time used                    :  00:05:01.51
 
 Generator state:
 
@@ -334,7 +334,7 @@ Generator state:
  Version:          TestU01 1.2.3
  Generator:        cgpt_ranlux
  Number of statistics:  15
- Total CPU time:   01:10:13.89
+ Total CPU time:   01:09:31.84
 
  All tests were passed
 
@@ -368,292 +368,4 @@ smultin_MultinomialOver test:
    For Delta > -1, we use the ChiSquare approximation
    Correction factor of the ChiSquare: 
        Delta =     1,    Mu =   0.0083558402,    Sigma =          1
-
------------------------------------------------
-Test Results for Delta =   1.0000
-
-Number of degrees of freedom          : 16711680
-Value of the statistic                : 1.67e+7
-p-value of test                       :    0.70
-
-
------------------------------------------------
-CPU time used                    :  07:44:39.93
-
-Generator state:
-
-
-
-
-***********************************************************
-Test smarsa_SerialOver calling smultin_MultinomialOver
-
-***********************************************************
-HOST = knlhost054.sdcc.bnl.local, Linux
-
-cgpt_ranlux
-
-
-smultin_MultinomialOver test:
------------------------------------------------
-   N =  1,  n = 1000000000,  r = 22,   d =  256,   t =  3,
-       Sparse =  FALSE
-
-       GenerCell = smultin_GenerCellSerial
-       Number of cells = d^t =           16777216
-       Expected number per cell =   59.604645
-       Hashing =  FALSE
-
-   For Delta > -1, we use the ChiSquare approximation
-   Correction factor of the ChiSquare: 
-       Delta =     1,    Mu =   0.0083558402,    Sigma =          1
-
------------------------------------------------
-Test Results for Delta =   1.0000
-
-Number of degrees of freedom          : 16711680
-Value of the statistic                : 1.67e+7
-p-value of test                       :    0.94
-
-
------------------------------------------------
-CPU time used                    :  08:01:12.37
-
-Generator state:
-
-
-
-
-***********************************************************
-Test smarsa_CollisionOver calling smultin_MultinomialOver
-
-***********************************************************
-HOST = knlhost054.sdcc.bnl.local, Linux
-
-cgpt_ranlux
-
-
-smultin_MultinomialOver test:
------------------------------------------------
-   N = 30,  n = 20000000,  r =  0,   d = 2097152,   t =  2,
-       Sparse =   TRUE
-
-       GenerCell = smultin_GenerCellSerial
-       Number of cells = d^t =      4398046511104
-       Expected number per cell =  1 /  219902.33
-       EColl = n^2 / (2k) =  45.47473509
-       Hashing =   TRUE
-
-       Collision test
-
-       CollisionOver:   density = n / k =  1 /  219902.33
-       Expected number of collisions = Mu =      45.47
-
-
------------------------------------------------
-Results of CollisionOver test:
-
-POISSON approximation                 :
-Expected number of collisions = N*Mu  :     1364.24
-Observed number of collisions         :     1324
-p-value of test                       :    0.86
-
------------------------------
-Total number of cells containing j balls
-
-  j =  0                              :  131940795334444
-  j =  1                              :        599997352
-  j =  2                              :             1324
-  j =  3                              :                0
-  j =  4                              :                0
-  j =  5                              :                0
-
------------------------------------------------
-CPU time used                    :  10:41:51.10
-
-Generator state:
-
-
-
-
-***********************************************************
-Test smarsa_CollisionOver calling smultin_MultinomialOver
-
-***********************************************************
-HOST = knlhost054.sdcc.bnl.local, Linux
-
-cgpt_ranlux
-
-
-smultin_MultinomialOver test:
------------------------------------------------
-   N = 30,  n = 20000000,  r =  9,   d = 2097152,   t =  2,
-       Sparse =   TRUE
-
-       GenerCell = smultin_GenerCellSerial
-       Number of cells = d^t =      4398046511104
-       Expected number per cell =  1 /  219902.33
-       EColl = n^2 / (2k) =  45.47473509
-       Hashing =   TRUE
-
-       Collision test
-
-       CollisionOver:   density = n / k =  1 /  219902.33
-       Expected number of collisions = Mu =      45.47
-
-
------------------------------------------------
-Results of CollisionOver test:
-
-POISSON approximation                 :
-Expected number of collisions = N*Mu  :     1364.24
-Observed number of collisions         :     1338
-p-value of test                       :    0.76
-
------------------------------
-Total number of cells containing j balls
-
-  j =  0                              :  131940795334458
-  j =  1                              :        599997324
-  j =  2                              :             1338
-  j =  3                              :                0
-  j =  4                              :                0
-  j =  5                              :                0
-
------------------------------------------------
-CPU time used                    :  10:56:49.07
-
-Generator state:
-
-
-
-
-***********************************************************
-Test smarsa_CollisionOver calling smultin_MultinomialOver
-
-***********************************************************
-HOST = knlhost054.sdcc.bnl.local, Linux
-
-cgpt_ranlux
-
-
-smultin_MultinomialOver test:
------------------------------------------------
-   N = 30,  n = 20000000,  r =  0,   d = 16384,   t =  3,
-       Sparse =   TRUE
-
-       GenerCell = smultin_GenerCellSerial
-       Number of cells = d^t =      4398046511104
-       Expected number per cell =  1 /  219902.33
-       EColl = n^2 / (2k) =  45.47473509
-       Hashing =   TRUE
-
-       Collision test
-
-       CollisionOver:   density = n / k =  1 /  219902.33
-       Expected number of collisions = Mu =      45.47
-
-
------------------------------------------------
-Results of CollisionOver test:
-
-POISSON approximation                 :
-Expected number of collisions = N*Mu  :     1364.24
-Observed number of collisions         :     1406
-p-value of test                       :    0.13
-
------------------------------
-Total number of cells containing j balls
-
-  j =  0                              :  131940795334526
-  j =  1                              :        599997188
-  j =  2                              :             1406
-  j =  3                              :                0
-  j =  4                              :                0
-  j =  5                              :                0
-
------------------------------------------------
-CPU time used                    :  13:08:33.27
-
-Generator state:
-
-
-
-
-***********************************************************
-Test smarsa_CollisionOver calling smultin_MultinomialOver
-
-***********************************************************
-HOST = knlhost054.sdcc.bnl.local, Linux
-
-cgpt_ranlux
-
-
-smultin_MultinomialOver test:
------------------------------------------------
-   N = 30,  n = 20000000,  r = 16,   d = 16384,   t =  3,
-       Sparse =   TRUE
-
-       GenerCell = smultin_GenerCellSerial
-       Number of cells = d^t =      4398046511104
-       Expected number per cell =  1 /  219902.33
-       EColl = n^2 / (2k) =  45.47473509
-       Hashing =   TRUE
-
-       Collision test
-
-       CollisionOver:   density = n / k =  1 /  219902.33
-       Expected number of collisions = Mu =      45.47
-
-
------------------------------------------------
-Results of CollisionOver test:
-
-POISSON approximation                 :
-Expected number of collisions = N*Mu  :     1364.24
-Observed number of collisions         :     1448
-p-value of test                       :    0.01
-
------------------------------
-Total number of cells containing j balls
-
-  j =  0                              :  131940795334568
-  j =  1                              :        599997104
-  j =  2                              :             1448
-  j =  3                              :                0
-  j =  4                              :                0
-  j =  5                              :                0
-
------------------------------------------------
-CPU time used                    :  13:16:44.27
-
-Generator state:
-
-
-
-
-***********************************************************
-Test smarsa_CollisionOver calling smultin_MultinomialOver
-
-***********************************************************
-HOST = knlhost054.sdcc.bnl.local, Linux
-
-cgpt_ranlux
-
-
-smultin_MultinomialOver test:
------------------------------------------------
-   N = 30,  n = 20000000,  r =  0,   d =   64,   t =  7,
-       Sparse =   TRUE
-
-       GenerCell = smultin_GenerCellSerial
-       Number of cells = d^t =      4398046511104
-       Expected number per cell =  1 /  219902.33
-       EColl = n^2 / (2k) =  45.47473509
-       Hashing =   TRUE
-
-       Collision test
-
-       CollisionOver:   density = n / k =  1 /  219902.33
-       Expected number of collisions = Mu =      45.47
 

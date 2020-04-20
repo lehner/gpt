@@ -89,5 +89,5 @@ public:
 #undef _X_
 };
 
-typedef cgpt_ranlux<vInteger,24,24,10,794> cgpt_base_vrng_ranlux24_794;
-typedef cgpt_ranlux<Integer,24,24,10,794> cgpt_base_rng_ranlux24_794;
+typedef cgpt_ranlux<vInteger,24,24,10,389> cgpt_base_vrng_ranlux24_389;
+typedef cgpt_ranlux<Integer,24,24,10,389> cgpt_base_rng_ranlux24_389;

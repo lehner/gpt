@@ -47,7 +47,8 @@ v=g.complex(grid)
 rng.normal(v)
 
 test_sequence_comp=np.array([ v[0,0,0,0].real, v[2,0,0,0].real, v[0,2,0,0].real, v[1,3,1,3].real, v[3,2,1,0].real ])
-test_sequence_ref =np.array([ -1.11423690141998, -0.590684470804368, 1.87872413138069, -0.941747191206284, 0.401453969380243 ],np.float64)
+#print([ v[0,0,0,0].real, v[2,0,0,0].real, v[0,2,0,0].real, v[1,3,1,3].real, v[3,2,1,0].real ])
+test_sequence_ref =np.array([ 1.0336693180495347, -0.23474901515559715, -0.26622475825072717, 1.0175124089453662, 0.9519248978004753 ],np.float64)
 
 g.message(test_sequence_comp)
 
@@ -60,7 +61,8 @@ for i in range(1000):
     rng.normal(v)
 
 test_sequence_comp=np.array([ v[0,0,0,0].real, v[2,0,0,0].real, v[0,2,0,0].real, v[1,3,1,3].real, v[3,2,1,0].real ])
-test_sequence_ref =np.array([-1.5706136517721871, 1.7722882929869317, 0.8038700620055343, 0.49599980242832614, -0.382106175985525],np.float64)
+#print([ v[0,0,0,0].real, v[2,0,0,0].real, v[0,2,0,0].real, v[1,3,1,3].real, v[3,2,1,0].real ])
+test_sequence_ref =np.array([-0.3194228736274878, -0.4211727874061459, 0.7680875563790006, -0.18697640758578687, 0.3276024231946795],np.float64)
 g.message(test_sequence_comp)
 
 err=np.linalg.norm(test_sequence_comp - test_sequence_ref)

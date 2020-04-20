@@ -29,7 +29,7 @@ class random:
             s=first
             engine=second
             if engine is None:
-                engine="vectorized_ranlux24_794_64"
+                engine="vectorized_ranlux24_389_64"
 
         self.verbose = gpt.default.is_verbose("random")
         t0=gpt.time()
