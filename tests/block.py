@@ -8,12 +8,12 @@ import gpt as g
 import sys
 
 # load configuration
-fine_grid=g.grid([8,8,8,16],g.single)
+fine_grid=g.grid([8,8,8,16],g.double)
 coarse_grid=g.grid([2,2,2,4],fine_grid.precision)
 
 # basis
 n=30
-basis=[ g.vcolor(fine_grid) for i in range(n) ]
+basis=[ g.vspincolor(fine_grid) for i in range(n) ]
 rng=g.random("block_seed_string_13")
 rng.cnormal(basis)
 for i in range(1):

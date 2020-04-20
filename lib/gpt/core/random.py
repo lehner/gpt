@@ -29,10 +29,15 @@ class random:
             s=first
             engine=second
             if engine is None:
-                engine="ranlux48"
+                engine="vectorized_ranlux24_794_256"
 
-        self.obj = cgpt.create_random(engine)
-        cgpt.random_seed(self.obj,s)
+        self.verbose = gpt.default.is_verbose("random")
+        t0=gpt.time()
+        self.obj = cgpt.create_random(engine,s)
+        t1=gpt.time()
+
+        if self.verbose:
+            gpt.message("Initializing gpt.random(%s) took %g s" % (s,t1-t0))
 
     def __del__(self):
         cgpt.delete_random(self.obj)
@@ -48,7 +53,13 @@ class random:
                 pos=p["pos"]
             else:
                 pos=gpt.coordinates(t.grid)
-            t[pos]=cgpt.random_sample(self.obj,pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj, "precision" : t.grid.precision} })
+            t0=gpt.time()
+            mv=cgpt.random_sample(self.obj,pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj, "precision" : t.grid.precision} })
+            t1=gpt.time()
+            t[pos]=mv
+            if self.verbose:
+                szGB=mv.size * mv.itemsize / 1024.**3.
+                gpt.message("Generated %g GB of random data at %g GB/s" % (szGB,szGB/(t1-t0)))
             return t
         else:
             assert(0)

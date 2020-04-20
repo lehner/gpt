@@ -16,160 +16,137 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-class cgpt_zn_distribution {
-public:
-  std::uniform_int_distribution<int> distribution;
-  int _n;
-  cgpt_zn_distribution(int n) : distribution(1,n), _n(n) {
+template<typename RNG,typename T>
+class cgpt_random {
+protected:
+  RNG rng;
+  T state;
+  int nbits;
+
+  std::vector<RealD> stack_normal;
+
+  static constexpr T log2(T n) {
+    return (n > 1) ? 1 + log2(n >> 1) : 0;
   }
 
-  template<typename RNG>
-  ComplexD operator()(RNG& r) {
-    return exp( ((ComplexD)distribution(r)) * ComplexD(0.0,2.0*M_PI/(double)_n) );
+public:
+  cgpt_random(const std::vector<long> & seed) : rng(seed), state(0), nbits(0) {
+    populate();
   }
+
+  void populate() {
+    state = state * rng.size() + rng();
+    nbits += rng.l2size();
+    if (nbits > sizeof(T) * 8)
+      nbits=sizeof(T) * 8;
+  }
+
+  T get_bits(int bits) {
+    while (bits > nbits)
+      populate();
+    T base = ((T)1) << bits;
+    T res = state & (base - 1);
+    state /= base;
+    nbits-=bits;
+    return res;
+  }
+
+  uint32_t get_uint32_t() {
+    return get_bits(32);
+  }
+
+  RealD get_double() { // uniform in [0,1[
+    return (RealD)get_bits(53) / (RealD)( ((T)1) << 53 );
+  }
+
+  T get_uniform_int(T max) { // uniform in {0,1,...,max}
+
+    if (max == 0)
+      return 0;
+
+    int bits = (int)log2(max)+1;
+    do {
+      T res = get_bits(bits);
+      if (res <= max)
+	return res;
+    } while(true);
+
+    return 0;
+  }
+
+  T get_uniform_int(T min, T max) { // uniform in {min,...,max}
+    return get_uniform_int(max - min) + min;
+  }
+
+  RealD get_normal() {
+    static const RealD epsilon = std::numeric_limits<RealD>::min();
+    static const RealD two_pi = 2.0*3.14159265358979323846;
+    
+    long n_stack = stack_normal.size();
+    if (n_stack > 0) {
+      RealD ret = stack_normal[n_stack - 1];
+      stack_normal.resize(n_stack - 1);
+      return ret;
+    }
+
+    // Box-Muller
+    RealD u1, u2;
+    do {
+      u1 = get_double();
+      u2 = get_double();
+    } while (u1 <= epsilon);
+
+    RealD z0, z1;
+    z0 = ::sqrt(-2.0 * ::log(u1)) * ::cos(two_pi * u2);
+    z1 = ::sqrt(-2.0 * ::log(u1)) * ::sin(two_pi * u2);
+    stack_normal.push_back(z1);
+    return z0;      
+  }
+
+  RealD get_normal(RealD mu, RealD sigma) {
+    return get_normal() * sigma + mu;
+  }
+
+  ComplexD get_zn(int n) {
+    return exp( ((ComplexD)get_uniform_int(n-1)) * ComplexD(0.0,2.0*M_PI/(RealD)n) );
+  }
+
+};
+
+typedef cgpt_random< cgpt_vrng_ranlux24_794_256, uint64_t > cgpt_random_vectorized_ranlux24_794_256;
+
+// distribution interface
+class cgpt_normal_distribution {
+ public:
+  RealD mu,sigma;
+  cgpt_normal_distribution(RealD _mu, RealD _sigma) : mu(_mu), sigma(_sigma) {};
+  template<typename R> RealD operator()(R & r) { return r.get_normal(mu,sigma); };
 };
 
 class cgpt_cnormal_distribution {
-public:
-  std::normal_distribution<double> distribution;
-  double mu, sigma;
-  cgpt_cnormal_distribution(double _mu, double _sigma) : distribution(_mu,_sigma), mu(_mu), sigma(_sigma) {
-  }
-
-  template<typename RNG>
-  ComplexD operator()(RNG& r) {
-    return ComplexD( distribution(r), distribution(r) );
-  }
+ public:
+  RealD mu,sigma;
+  cgpt_cnormal_distribution(RealD _mu, RealD _sigma) : mu(_mu), sigma(_sigma) {};
+  template<typename R> ComplexD operator()(R & r) { return ComplexD(r.get_normal(mu,sigma),r.get_normal(mu,sigma)); };
 };
 
-static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& hashes,GridBase* grid) {
-  ASSERT(PyArray_NDIM(coordinates) == 2);
-  long* tdim = PyArray_DIMS(coordinates);
-  long nc = tdim[0];
-  long nd = tdim[1];
+class cgpt_uniform_real_distribution {
+ public:
+  RealD min,max;
+  cgpt_uniform_real_distribution(RealD _min, RealD _max) : min(_min), max(_max) {};
+  template<typename R> RealD operator()(R & r) { return r.get_double() * (max-min) + min; };
+};
 
-  const int block = 2;
-  ASSERT(nd == grid->Nd());
+class cgpt_uniform_int_distribution {
+ public:
+  int min,max;
+  cgpt_uniform_int_distribution(int _min, int _max) : min(_min), max(_max) {};
+  template<typename R> int operator()(R & r) { return r.get_uniform_int(max - min) + min; };
+};
 
-  ASSERT(PyArray_TYPE(coordinates)==NPY_INT32);
-  int32_t* coor = (int32_t*)PyArray_DATA(coordinates);
-
-  for (long j=0;j<nd;j++) {
-    ASSERT(grid->_gdimensions[j] % block == 0);
-    ASSERT(grid->_ldimensions[j] % block == 0); 
-    // make sure points within a block are always on same node
-    // irrespective of MPI setup
-  }
-
-  hashes.resize(nc);
-  thread_for(i, nc, {
-      long t = 0;
-      for (long j=0;j<nd;j++) {
-	int32_t c = coor[nd*i+j] / block;
-	ASSERT((c >= (grid->_lstart[j]/block)) && (c < ((grid->_lend[j]+1)/block)));
-	t*=grid->_gdimensions[j] / block;
-	t+=c;
-      }
-      hashes[i] = t;
-    });
-}
-
-template<typename T>
-void cgpt_hash_offsets(std::vector<T>& h, std::map<T,std::vector<long>>& u) {
-  // This is a candidate for optimization; for ranlux48 not dominant but not negligible
-  for (long off=0;off<h.size();off++)
-    u[h[off]].push_back(off);
-}
-
-template<typename T>
-void cgpt_hash_unique(std::map<T,std::vector<long>>& u, std::vector<T>& h) {
-  for (auto&k : u)
-    h.push_back(k.first);
-}
-
-template<typename sRNG,typename pRNG>
-  void cgpt_random_setup(std::vector<long>& h,sRNG & srng,std::map<long,pRNG> & prng,std::vector<long> & seed) {
-  for (auto x : h) {
-    auto p = prng.find(x);
-    if (p == prng.end()) {
-      auto & n = prng[x];
-      std::vector<long> _seed = seed;
-      _seed.push_back(x);
-      std::seed_seq seed( _seed.begin(), _seed.end() );
-      n.seed(seed);
-      for (int therm = 0;therm < 10;therm++)
-	n();
-    }
-  }
-}
-
-
-template<typename DIST,typename sRNG,typename pRNG>
-  PyObject* cgpt_random_sample(DIST & dist,PyObject* _target,sRNG& srng,pRNG& prng,
-			       std::vector<long> & shape,std::vector<long> & seed,
-			       GridBase* grid,int dtype) {
-
-  if (PyArray_Check(_target)) {
-
-    //TIME(t0,
-
-    std::vector<long> hashes;
-    cgpt_random_to_hash((PyArrayObject*)_target,hashes,grid);
-
-    //	 );
-
-    //TIME(t1,
-    std::map<long,std::vector<long>> hash_offsets;
-    cgpt_hash_offsets(hashes,hash_offsets);
-    //	 );
-
-    //TIME(t2,
-    std::vector<long> unique_hashes;
-    cgpt_hash_unique(hash_offsets,unique_hashes);
-    //	 );
-
-    //TIME(t3,
-    cgpt_random_setup(unique_hashes,srng,prng,seed);
-    //	 );
-
-    //TIME(t4,
-    long n = 1;
-    std::vector<long> dims;
-    dims.push_back(hashes.size());
-    for (auto s : shape) {
-      n *= s;
-      dims.push_back(s);
-    }
-
-    // all the previous effort allows the prng to act in parallel
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], dtype);
-    if (dtype == NPY_COMPLEX64) {
-      ComplexF* d = (ComplexF*)PyArray_DATA(a);
-      thread_for(i, unique_hashes.size(), {
-	  auto h = unique_hashes[i];
-	  auto & uhi = hash_offsets[h];
-	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = (ComplexF)dist(prng[h]);
-	});
-    } else if (dtype == NPY_COMPLEX128) {
-      ComplexD* d = (ComplexD*)PyArray_DATA(a);
-      thread_for(i, unique_hashes.size(), {
-	  auto h = unique_hashes[i];
-	  auto & uhi = hash_offsets[h];
-	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = dist(prng[h]);
-	});
-    } else {
-      ERR("Unknown dtype");
-    }
-    //	 );
-
-    //std::cout << GridLogMessage << "Timing: " << t0 << ", " << t1 << ", " << t2 << ", " << t3 << ", " << t4 << std::endl;
-    return (PyObject*)a;
-
-  } else if (_target == Py_None) {
-    ComplexD val = (ComplexD)dist(srng);
-    return PyComplex_FromDoubles(val.real(),val.imag());
-  } else {
-    ERR("_target type not implemented");
-  }
-
-}
+class cgpt_zn_distribution {
+ public:
+  int n;
+  cgpt_zn_distribution(int _n) : n(_n) {};
+  template<typename R> ComplexD operator()(R & r) { return r.get_zn(n); };
+};

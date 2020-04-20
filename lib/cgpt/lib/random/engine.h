@@ -19,7 +19,6 @@
 class cgpt_random_engine_base {
 public:
   virtual ~cgpt_random_engine_base() { };
-  virtual void seed(const std::string & s) = 0;
   virtual PyObject* sample(PyObject* target, PyObject* param) = 0;
 };
 
@@ -30,22 +29,17 @@ class cgpt_random_engine : public cgpt_random_engine_base {
   std::map<long,cgpt_rng_engine> cgpt_prng;
   std::vector<long> cgpt_seed;
 
-  cgpt_random_engine() {
+  std::vector<long> str_to_seed(const std::string & seed_str) {
+    std::vector<long> r;
+    for (auto x : seed_str)
+      r.push_back(x);
+    return r;
+  }
+
+  cgpt_random_engine(const std::string & seed_str) : cgpt_seed(str_to_seed(seed_str)), cgpt_srng(str_to_seed(seed_str)) {
   }
   
   virtual ~cgpt_random_engine() {
-  }
-
-  virtual void seed(const std::string & seed_str) {
-  
-    cgpt_seed.resize(0);
-    for (auto x : seed_str)
-      cgpt_seed.push_back(x);
-    
-    std::seed_seq seed (cgpt_seed.begin(),cgpt_seed.end());
-
-    cgpt_srng.seed(seed);
-
   }
 
   virtual PyObject* sample(PyObject* _target, PyObject* _param) {
@@ -64,16 +58,16 @@ class cgpt_random_engine : public cgpt_random_engine_base {
     // always generate in double first regardless of type casting to ensure that numbers are the same up to rounding errors
     // (rng could use random bits to result in different next float/double sampling)
     if (dist == "normal") {
-      std::normal_distribution<double> distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
+      cgpt_normal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
       return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
     } else if (dist == "cnormal") {
       cgpt_cnormal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
       return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
     } else if (dist == "uniform_real") {
-      std::uniform_real_distribution<double> distribution(get_float(_param,"min"),get_float(_param,"max"));
+      cgpt_uniform_real_distribution distribution(get_float(_param,"min"),get_float(_param,"max"));
       return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
     } else if (dist == "uniform_int") {
-      std::uniform_int_distribution<int> distribution(get_int(_param,"min"),get_int(_param,"max"));
+      cgpt_uniform_int_distribution distribution(get_int(_param,"min"),get_int(_param,"max"));
       return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
     } else if (dist == "zn") {
       cgpt_zn_distribution distribution(get_int(_param,"n"));

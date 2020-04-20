@@ -17,7 +17,10 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include "random/ranlux.h"
+#include "random/vector.h"
 #include "random/distribution.h"
+#include "random/parallel.h"
 #include "random/engine.h"
 
 /*
@@ -33,15 +36,47 @@
 
 EXPORT(create_random,{
 
-    PyObject* _type;
-    std::string type;
-    if (!PyArg_ParseTuple(args, "O", &_type)) {
+#if 0
+    {
+      std::vector<long> seed = { 1,2,3 };
+      cgpt_vrng_ranlux24_794_256 vtest(seed);
+      cgpt_rng_ranlux24_794_256 stest(seed);
+      
+      for (int i=0;i<1024*100;i++) {
+	long a = vtest();
+	long b = stest();
+	assert(a == b);
+      }
+      
+      double t0 = cgpt_time();
+      for (int i=0;i<1024*100;i++) {
+	long a = vtest();
+      }
+      double t1 = cgpt_time();
+      for (int i=0;i<1024*100;i++) {
+	long a = stest();
+      }
+      double t2 = cgpt_time();
+      std::cout << GridLogMessage << "Timing: " << (t1-t0) << " and " << (t2-t1) << std::endl;
+      
+      cgpt_random_vectorized_ranlux24_794_256 rnd(seed);
+      std::cout << GridLogMessage << rnd.get_normal() << std::endl;
+    }
+#endif
+
+
+
+    PyObject* _type,* _seed;
+    std::string type, seed;
+    if (!PyArg_ParseTuple(args, "OO", &_type,&_seed)) {
       return NULL;
     }
     cgpt_convert(_type,type);
+    cgpt_convert(_seed,seed);
 
-    if (type == "ranlux48") {
-      return PyLong_FromVoidPtr(new cgpt_random_engine<std::ranlux48>());
+    if (type == "vectorized_ranlux24_794_256") {
+      //std::cout << "Before: " << seed << std::endl;
+      return PyLong_FromVoidPtr(new cgpt_random_engine< cgpt_random_vectorized_ranlux24_794_256 >(seed));
     } else {
       ERR("Unknown rng engine type %s",type.c_str());
     }
@@ -61,24 +96,6 @@ EXPORT(delete_random,{
     delete p;
 
     return PyLong_FromLong(0);
-  });
-
-EXPORT(random_seed,{
-
-    PyObject* _seed_str;
-    void* _p;
-    if (!PyArg_ParseTuple(args, "lO", &_p,&_seed_str)) {
-      return NULL;
-    }
-
-    std::string seed_str;
-    cgpt_convert(_seed_str,seed_str);
-
-    cgpt_random_engine_base* p = (cgpt_random_engine_base*)_p;
-    p->seed(seed_str);
-
-    return PyLong_FromLong(0);
-
   });
 
 EXPORT(random_sample,{
