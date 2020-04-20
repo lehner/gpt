@@ -112,28 +112,65 @@ EXPORT(random_sample,{
   });
 
 // the following allow the bigcrush test to link directly against this
+struct cgpt_rng_test {
+  std::vector<cgpt_random_engine_base*> engines;
+  std::vector<uint32_t> buf_bits;
+  std::vector<double> buf_double;
+};
+
 void* cgpt_rng_test_create(int iengine) {
   if (iengine == 0) {
-    std::string seed = "big crush test";
-    return new cgpt_random_engine< cgpt_random_vectorized_ranlux24_794_64 >(seed);
+    cgpt_rng_test* p = new cgpt_rng_test();
+    p->engines.resize(64);
+    thread_for(i,p->engines.size(), {
+	char buf[256];
+	sprintf(buf,"big crush test %d",i);
+	(p->engines)[i] = new cgpt_random_engine< cgpt_random_vectorized_ranlux24_794_64 >(buf);
+      });
+    return (void*)p;
   }
   return 0;
 }
 
 void cgpt_rng_test_destroy(void* t) {
-  cgpt_random_engine_base* p = (cgpt_random_engine_base*)t;
+  cgpt_rng_test* p = (cgpt_rng_test*)t;
+  for (auto x : p->engines)
+    delete x;
   delete p;
 }
 
 double cgpt_rng_test_GetU01(void* param, void* state) {
-  cgpt_random_engine_base* p = (cgpt_random_engine_base*)state;
-  return p->test_U01();
+  cgpt_rng_test* p = (cgpt_rng_test*)state;
+  long n = p->buf_double.size();
+  if (n == 0) {
+    p->buf_double.resize(p->engines.size());
+    thread_for(i,p->engines.size(), {
+	p->buf_double[i]=p->engines[i]->test_U01();
+      });
+    n=p->buf_double.size();
+  }
+
+  double r=p->buf_double[n-1];
+  p->buf_double.resize(n-1);
+  return r;
 }
 
 unsigned long cgpt_rng_test_GetBits(void* param, void* state) {
-  cgpt_random_engine_base* p = (cgpt_random_engine_base*)state;
-  return p->test_bits();
+  cgpt_rng_test* p = (cgpt_rng_test*)state;
+  long n = p->buf_bits.size();
+  if (n == 0) {
+    p->buf_bits.resize(p->engines.size());
+    thread_for(i,p->engines.size(), {
+	p->buf_bits[i]=p->engines[i]->test_bits();
+      });
+    n=p->buf_bits.size();
+  }
+
+  unsigned long r=p->buf_bits[n-1];
+  p->buf_bits.resize(n-1);
+  return r;
 }
+
 
 void cgpt_rng_test_Write(void* state) {
 }
