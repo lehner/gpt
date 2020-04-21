@@ -5,3 +5,5 @@ then
     ln -s ../../lib/cgpt.so libcgpt.so
 fi
 icpc -std=c++11 -o big_crush -I${root}/include big_crush.cc ${root}/lib/libtestu01.a ${root}/lib/libprobdist.a ${root}/lib/libmylib.a -L. -lcgpt $(python3-config --ldflags)
+icpc -std=c++11 -o die_harder -I${root}/include die_harder.cc -L. -lcgpt $(python3-config --ldflags)
+
