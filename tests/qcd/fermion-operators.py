@@ -76,11 +76,20 @@ cg=g.algorithms.iterative.cg({
 })
 #slv=s.propagator(s.g5m_ne(w, cg))
 
-slv=s.propagator(s.eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
+slv_eo1=s.propagator(s.eo_ne(g.qcd.fermion.preconditioner.eo1(w), cg))
+slv_eo2=s.propagator(s.eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
 
 # propagator
-dst=g.mspincolor(grid)
-slv(src,dst)
+dst_eo1=g.mspincolor(grid)
+dst_eo2=g.mspincolor(grid)
+slv_eo1(src,dst_eo1)
+iter_eo1=len(cg.history)
+slv_eo2(src,dst_eo2)
+iter_eo2=len(cg.history)
+eps2=g.norm2(dst_eo1 - dst_eo2) / g.norm2(dst_eo1)
+assert(eps2 < 1e-12)
+g.message("Result of test EO1 versus EO2 preconditioning: eps2=",eps2, " iter1 = ",iter_eo1," iter2 = ",iter_eo2)
+dst=dst_eo2
 
 # two-point
 correlator=g.slice(g.trace(dst*g.adj(dst)),3)
@@ -89,6 +98,6 @@ correlator=g.slice(g.trace(dst*g.adj(dst)),3)
 for t,c in enumerate(correlator):
     g.message(t,c.real)
 
-correlator=g.slice(dst*g.adj(dst),3)
-g.message(correlator[0])
+#correlator=g.slice(dst*g.adj(dst),3)
+#g.message(correlator[0])
 
