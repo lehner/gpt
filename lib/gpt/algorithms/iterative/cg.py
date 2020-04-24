@@ -24,8 +24,11 @@ class cg:
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
+        self.history = None
 
     def __call__(self, mat, src, psi):
+        assert(src != psi)
+        self.history = []
         verbose=g.default.is_verbose("cg")
         t0=g.time()
         p,mmp,r=g.copy(src),g.copy(src),g.copy(src)
@@ -49,6 +52,7 @@ class cg:
             b = cp / c
             psi += a*p
             p @= b*p+r
+            self.history.append(cp)
             if verbose:
                 g.message("res^2[ %d ] = %g" % (k,cp))
             if cp <= rsq:

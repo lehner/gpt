@@ -45,5 +45,4 @@ using namespace Grid;
 #include "precision.h"
 #include "util.h"
 #include "expression.h"
-#include "singlet.h"
 #include "block.h"

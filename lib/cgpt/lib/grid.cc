@@ -173,7 +173,7 @@ EXPORT(grid_get_processor,{
     PyObject* coor = cgpt_convert(grid->_processor_coor);
     PyObject* ldims = cgpt_convert(grid->_ldimensions);
     PyObject* gdims = cgpt_convert(grid->_gdimensions);
-    return Py_BuildValue("(l,l,O,O,O)",rank,ranks,coor,gdims,ldims);
+    return Py_BuildValue("(l,l,N,N,N)",rank,ranks,coor,gdims,ldims);
     
   });
   

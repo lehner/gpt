@@ -16,7 +16,18 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.approx.chebyshev import chebyshev
-from gpt.algorithms.approx.deflate import deflate
-from gpt.algorithms.approx.coarse_deflate import coarse_deflate
-from gpt.algorithms.approx.evals import evals
+import cgpt
+
+# expose fast memoryview for numpy arrays
+def mview(data):
+    mv=cgpt.mview(data)
+    assert(mv.obj is data)
+    return mv
+
+# fast threaded checksum of memoryviews
+def crc32(view):
+    if type(view) == memoryview:
+        return cgpt.util_crc32(view)
+    else:
+        return crc32(memoryview(view))
+

@@ -23,9 +23,6 @@
 EXPORT(load,{
     PyObject* ret;
 
-    bool verbose;
-    cgpt_convert(PyTuple_GetItem(args,1),verbose);
-
     if ((ret = load_nersc(args)))
       return ret;
 
@@ -33,9 +30,7 @@ EXPORT(load,{
     if ((ret = load_openQCD(args)))
       return ret;
 
-    ERR("Unknown file format!");
-    
-    Py_RETURN_NONE;
+    return Py_BuildValue("(NN)",Py_None,Py_None);
     
   });
 

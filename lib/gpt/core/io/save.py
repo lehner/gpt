@@ -16,7 +16,24 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.approx.chebyshev import chebyshev
-from gpt.algorithms.approx.deflate import deflate
-from gpt.algorithms.approx.coarse_deflate import coarse_deflate
-from gpt.algorithms.approx.evals import evals
+import gpt, cgpt
+
+# format
+class format:
+
+    class gpt:
+        def __init__(self, params = {}):
+            self.params = params
+
+    class cevec:
+        def __init__(self, params = {}):
+            self.params = params
+
+# output
+def save(filename,objs,fmt = format.gpt()):
+
+    if type(fmt) == format.gpt:
+        return gpt.core.io.gpt_io.save(filename, objs, fmt.params)
+
+    return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
+

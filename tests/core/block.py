@@ -5,6 +5,7 @@
 # Desc.: Illustrate core concepts and features
 #
 import gpt as g
+import numpy as np
 import sys
 
 # load configuration
@@ -16,7 +17,7 @@ n=30
 basis=[ g.mspincolor(fine_grid) for i in range(n) ]
 rng=g.random("block_seed_string_13")
 rng.cnormal(basis)
-for i in range(1):
+for i in range(2):
     g.message("Ortho step %d" % i)
     g.block.orthonormalize(coarse_grid,basis)
 
@@ -33,5 +34,4 @@ g.block.promote(lcoarse,tmpf,basis)
 g.block.project(lcoarse2,tmpf,basis)
 
 # report error
-g.message(g.norm2(lcoarse-lcoarse2))
-
+g.message(g.norm2(lcoarse-lcoarse2) / g.norm2(lcoarse))

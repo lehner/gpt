@@ -2535,3 +2535,920 @@ svaria_WeightDistrib test:
 -----------------------------------------------
    N =  1,  n = 20000000,  r = 28,  k = 256,  Alpha =      0,  Beta =   0.25
 
+
+-----------------------------------------------
+Number of degrees of freedom          :   67
+Chi-square statistic                  :   70.71
+p-value of test                       :    0.35
+
+-----------------------------------------------
+CPU time used                    :  22:45:26.37
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+svaria_WeightDistrib test:
+-----------------------------------------------
+   N =  1,  n = 20000000,  r =  0,  k = 256,  Alpha =      0,  Beta = 0.0625
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   37
+Chi-square statistic                  :   33.82
+p-value of test                       :    0.62
+
+-----------------------------------------------
+CPU time used                    :  21:24:49.20
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+svaria_WeightDistrib test:
+-----------------------------------------------
+   N =  1,  n = 20000000,  r = 10,  k = 256,  Alpha =      0,  Beta = 0.0625
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   37
+Chi-square statistic                  :   37.66
+p-value of test                       :    0.44
+
+-----------------------------------------------
+CPU time used                    :  22:50:55.12
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+svaria_WeightDistrib test:
+-----------------------------------------------
+   N =  1,  n = 20000000,  r = 26,  k = 256,  Alpha =      0,  Beta = 0.0625
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   37
+Chi-square statistic                  :   31.28
+p-value of test                       :    0.73
+
+-----------------------------------------------
+CPU time used                    :  22:43:51.50
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+svaria_SumCollector test:
+-----------------------------------------------
+   N =  1,  n = 500000000,  r =  0,   g = 10
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   29
+Chi-square statistic                  :   26.01
+p-value of test                       :    0.62
+
+-----------------------------------------------
+CPU time used                    :  42:01:15.98
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_MatrixRank test:
+-----------------------------------------------
+   N = 10,  n = 1000000,  r =  0,    s = 5,    L = 30,    k = 30
+
+
+-----------------------------------------------
+
+Kolmogorov-Smirnov+ statistic = D+    :    0.16
+p-value of test                       :    0.55
+
+Kolmogorov-Smirnov- statistic = D-    :    0.17
+p-value of test                       :    0.52
+
+Anderson-Darling statistic = A2       :    0.44
+p-value of test                       :    0.80
+
+Test on the sum of all N observations
+Number of degrees of freedom          :   40
+Chi-square statistic                  :   37.38
+p-value of test                       :    0.59
+
+-----------------------------------------------
+CPU time used                    :  10:26:13.29
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_MatrixRank test:
+-----------------------------------------------
+   N = 10,  n = 1000000,  r = 25,    s = 5,    L = 30,    k = 30
+
+
+-----------------------------------------------
+
+Kolmogorov-Smirnov+ statistic = D+    :    0.32
+p-value of test                       :    0.11
+
+Kolmogorov-Smirnov- statistic = D-    :    0.16
+p-value of test                       :    0.55
+
+Anderson-Darling statistic = A2       :    1.29
+p-value of test                       :    0.23
+
+Test on the sum of all N observations
+Number of degrees of freedom          :   40
+Chi-square statistic                  :   28.36
+p-value of test                       :    0.92
+
+-----------------------------------------------
+CPU time used                    :  10:26:06.50
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_MatrixRank test:
+-----------------------------------------------
+   N =  1,  n = 5000,  r =  0,    s = 4,    L = 1000,    k = 1000
+
+
+-----------------------------------------------
+Number of degrees of freedom          :    3
+Chi-square statistic                  :    5.99
+p-value of test                       :    0.11
+
+-----------------------------------------------
+CPU time used                    :  12:01:37.36
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_MatrixRank test:
+-----------------------------------------------
+   N =  1,  n = 5000,  r = 26,    s = 4,    L = 1000,    k = 1000
+
+
+-----------------------------------------------
+Number of degrees of freedom          :    3
+Chi-square statistic                  :    5.62
+p-value of test                       :    0.13
+
+-----------------------------------------------
+CPU time used                    :  12:01:04.20
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_MatrixRank test:
+-----------------------------------------------
+   N =  1,  n = 80,  r = 15,    s = 15,    L = 5000,    k = 5000
+
+
+-----------------------------------------------
+Number of degrees of freedom          :    2
+Chi-square statistic                  :    0.42
+p-value of test                       :    0.81
+
+-----------------------------------------------
+CPU time used                    :  02:36:34.96
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_MatrixRank test:
+-----------------------------------------------
+   N =  1,  n = 80,  r =  0,    s = 30,    L = 5000,    k = 5000
+
+
+-----------------------------------------------
+Number of degrees of freedom          :    2
+Chi-square statistic                  :    0.21
+p-value of test                       :    0.90
+
+-----------------------------------------------
+CPU time used                    :  01:29:16.19
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_Savir2 test:
+-----------------------------------------------
+   N = 10,  n = 10000000,  r = 10,    m = 1048576,    t = 30
+
+
+-----------------------------------------------
+
+Kolmogorov-Smirnov+ statistic = D+    :    0.34
+p-value of test                       :    0.07
+
+Kolmogorov-Smirnov- statistic = D-    :   0.065
+p-value of test                       :    0.88
+
+Anderson-Darling statistic = A2       :    1.60
+p-value of test                       :    0.16
+
+Test on the sum of all N observations
+Number of degrees of freedom          :  130
+Chi-square statistic                  :  108.35
+p-value of test                       :    0.92
+
+-----------------------------------------------
+CPU time used                    :  13:16:29.91
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+smarsa_GCD test:
+-----------------------------------------------
+   N = 10,  n = 50000000,  r =  0,   s = 30
+
+
+-----------------------------------------------
+Test results for GCD values:
+
+Kolmogorov-Smirnov+ statistic = D+    :    0.12
+p-value of test                       :    0.71
+
+Kolmogorov-Smirnov- statistic = D-    :    0.14
+p-value of test                       :    0.61
+
+Anderson-Darling statistic = A2       :    0.29
+p-value of test                       :    0.95
+
+Test on the sum of all N observations
+Number of degrees of freedom          : 17430
+Chi-square statistic                  :17518.16
+p-value of test                       :    0.32
+
+
+
+-----------------------------------------------
+CPU time used                    :  08:40:42.11
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+swalk_RandomWalk1 test:
+-----------------------------------------------
+   N =  1,  n = 100000000,  r =  0,   s = 5,   L0 =   50,   L1 =   50
+
+
+
+-----------------------------------------------
+Test on the values of the Statistic H
+
+Number of degrees of freedom          :   36
+ChiSquare statistic                   :   34.68
+p-value of test                       :    0.53
+
+
+-----------------------------------------------
+Test on the values of the Statistic M
+
+Number of degrees of freedom          :   35
+ChiSquare statistic                   :   32.53
+p-value of test                       :    0.59
+
+
+-----------------------------------------------
+Test on the values of the Statistic J
+
+Number of degrees of freedom          :   25
+ChiSquare statistic                   :   26.01
+p-value of test                       :    0.41
+
+
+-----------------------------------------------
+Test on the values of the Statistic R
+
+Number of degrees of freedom          :   24
+ChiSquare statistic                   :   20.66
+p-value of test                       :    0.66
+
+
+-----------------------------------------------
+Test on the values of the Statistic C
+
+Number of degrees of freedom          :   17
+ChiSquare statistic                   :   17.77
+p-value of test                       :    0.40
+
+
+-----------------------------------------------
+CPU time used                    :  06:55:19.71
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+swalk_RandomWalk1 test:
+-----------------------------------------------
+   N =  1,  n = 100000000,  r = 25,   s = 5,   L0 =   50,   L1 =   50
+
+
+
+-----------------------------------------------
+Test on the values of the Statistic H
+
+Number of degrees of freedom          :   36
+ChiSquare statistic                   :   39.10
+p-value of test                       :    0.33
+
+
+-----------------------------------------------
+Test on the values of the Statistic M
+
+Number of degrees of freedom          :   35
+ChiSquare statistic                   :   28.98
+p-value of test                       :    0.75
+
+
+-----------------------------------------------
+Test on the values of the Statistic J
+
+Number of degrees of freedom          :   25
+ChiSquare statistic                   :   13.04
+p-value of test                       :    0.98
+
+
+-----------------------------------------------
+Test on the values of the Statistic R
+
+Number of degrees of freedom          :   24
+ChiSquare statistic                   :   21.81
+p-value of test                       :    0.59
+
+
+-----------------------------------------------
+Test on the values of the Statistic C
+
+Number of degrees of freedom          :   17
+ChiSquare statistic                   :   18.45
+p-value of test                       :    0.36
+
+
+-----------------------------------------------
+CPU time used                    :  06:58:30.95
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+swalk_RandomWalk1 test:
+-----------------------------------------------
+   N =  1,  n = 10000000,  r =  0,   s = 10,   L0 = 1000,   L1 = 1000
+
+
+
+-----------------------------------------------
+Test on the values of the Statistic H
+
+Number of degrees of freedom          :  146
+ChiSquare statistic                   :  171.71
+p-value of test                       :    0.07
+
+
+-----------------------------------------------
+Test on the values of the Statistic M
+
+Number of degrees of freedom          :  146
+ChiSquare statistic                   :  160.99
+p-value of test                       :    0.19
+
+
+-----------------------------------------------
+Test on the values of the Statistic J
+
+Number of degrees of freedom          :  500
+ChiSquare statistic                   :  570.23
+p-value of test                       :    0.02
+
+
+-----------------------------------------------
+Test on the values of the Statistic R
+
+Number of degrees of freedom          :  136
+ChiSquare statistic                   :  126.56
+p-value of test                       :    0.71
+
+
+-----------------------------------------------
+Test on the values of the Statistic C
+
+Number of degrees of freedom          :   74
+ChiSquare statistic                   :   72.32
+p-value of test                       :    0.53
+
+
+-----------------------------------------------
+CPU time used                    :  08:37:51.24
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+swalk_RandomWalk1 test:
+-----------------------------------------------
+   N =  1,  n = 10000000,  r = 20,   s = 10,   L0 = 1000,   L1 = 1000
+
+
+
+-----------------------------------------------
+Test on the values of the Statistic H
+
+Number of degrees of freedom          :  146
+ChiSquare statistic                   :  164.17
+p-value of test                       :    0.14
+
+
+-----------------------------------------------
+Test on the values of the Statistic M
+
+Number of degrees of freedom          :  146
+ChiSquare statistic                   :  159.30
+p-value of test                       :    0.21
+
+
+-----------------------------------------------
+Test on the values of the Statistic J
+
+Number of degrees of freedom          :  500
+ChiSquare statistic                   :  502.19
+p-value of test                       :    0.46
+
+
+-----------------------------------------------
+Test on the values of the Statistic R
+
+Number of degrees of freedom          :  136
+ChiSquare statistic                   :  130.91
+p-value of test                       :    0.61
+
+
+-----------------------------------------------
+Test on the values of the Statistic C
+
+Number of degrees of freedom          :   74
+ChiSquare statistic                   :   72.92
+p-value of test                       :    0.51
+
+
+-----------------------------------------------
+CPU time used                    :  08:47:49.03
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+swalk_RandomWalk1 test:
+-----------------------------------------------
+   N =  1,  n = 1000000,  r =  0,   s = 15,   L0 = 10000,   L1 = 10000
+
+
+
+-----------------------------------------------
+Test on the values of the Statistic H
+
+Number of degrees of freedom          :  384
+ChiSquare statistic                   :  390.63
+p-value of test                       :    0.40
+
+
+-----------------------------------------------
+Test on the values of the Statistic M
+
+Number of degrees of freedom          :  384
+ChiSquare statistic                   :  410.61
+p-value of test                       :    0.17
+
+
+-----------------------------------------------
+Test on the values of the Statistic J
+
+Number of degrees of freedom          : 5000
+ChiSquare statistic                   : 5059.06
+p-value of test                       :    0.28
+
+
+-----------------------------------------------
+Test on the values of the Statistic R
+
+Number of degrees of freedom          :  378
+ChiSquare statistic                   :  351.46
+p-value of test                       :    0.83
+
+
+-----------------------------------------------
+Test on the values of the Statistic C
+
+Number of degrees of freedom          :  200
+ChiSquare statistic                   :  202.88
+p-value of test                       :    0.43
+
+
+-----------------------------------------------
+CPU time used                    :  07:06:43.34
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+swalk_RandomWalk1 test:
+-----------------------------------------------
+   N =  1,  n = 1000000,  r = 15,   s = 15,   L0 = 10000,   L1 = 10000
+
+
+
+-----------------------------------------------
+Test on the values of the Statistic H
+
+Number of degrees of freedom          :  384
+ChiSquare statistic                   :  378.74
+p-value of test                       :    0.57
+
+
+-----------------------------------------------
+Test on the values of the Statistic M
+
+Number of degrees of freedom          :  384
+ChiSquare statistic                   :  425.42
+p-value of test                       :    0.07
+
+
+-----------------------------------------------
+Test on the values of the Statistic J
+
+Number of degrees of freedom          : 5000
+ChiSquare statistic                   : 4935.30
+p-value of test                       :    0.74
+
+
+-----------------------------------------------
+Test on the values of the Statistic R
+
+Number of degrees of freedom          :  378
+ChiSquare statistic                   :  387.68
+p-value of test                       :    0.35
+
+
+-----------------------------------------------
+Test on the values of the Statistic C
+
+Number of degrees of freedom          :  200
+ChiSquare statistic                   :  201.34
+p-value of test                       :    0.46
+
+
+-----------------------------------------------
+CPU time used                    :  07:09:01.71
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+scomp_LinearComp test:
+-----------------------------------------------
+   N =  1,  n = 400020,  r =  0,    s = 1
+
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   12
+Chi2 statistic for size of jumps      :   10.34
+p-value of test                       :    0.59
+
+
+-----------------------------------------------
+Normal statistic for number of jumps  :    1.67
+p-value of test                       :    0.05
+
+
+
+-----------------------------------------------
+CPU time used                    :  00:06:58.53
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+scomp_LinearComp test:
+-----------------------------------------------
+   N =  1,  n = 400020,  r = 29,    s = 1
+
+
+
+-----------------------------------------------
+Number of degrees of freedom          :   12
+Chi2 statistic for size of jumps      :   16.35
+p-value of test                       :    0.18
+
+
+-----------------------------------------------
+Normal statistic for number of jumps  :   -0.78
+p-value of test                       :    0.78
+
+
+
+-----------------------------------------------
+CPU time used                    :  00:06:55.96
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+scomp_LempelZiv test:
+-----------------------------------------------
+   N = 10,  n = 134217728,  r =  0,   s =   30,   k =   27
+
+
+-----------------------------------------------
+
+Kolmogorov-Smirnov+ statistic = D+    :    0.19
+p-value of test                       :    0.43
+
+Kolmogorov-Smirnov- statistic = D-    :    0.22
+p-value of test                       :    0.34
+
+Anderson-Darling statistic = A2       :    0.84
+p-value of test                       :    0.45
+
+Tests on the sum of all N observations
+Standardized normal statistic         :    0.47
+p-value of test                       :    0.32
+
+Sample variance                       :    0.36
+p-value of test                       :    0.95
+
+-----------------------------------------------
+CPU time used                    :  04:00:42.51
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+scomp_LempelZiv test:
+-----------------------------------------------
+   N = 10,  n = 134217728,  r = 15,   s =   15,   k =   27
+
+
+-----------------------------------------------
+
+Kolmogorov-Smirnov+ statistic = D+    :    0.25
+p-value of test                       :    0.24
+
+Kolmogorov-Smirnov- statistic = D-    :    0.17
+p-value of test                       :    0.52
+
+Anderson-Darling statistic = A2       :    1.16
+p-value of test                       :    0.28
+
+Tests on the sum of all N observations
+Standardized normal statistic         :   -1.26
+p-value of test                       :    0.90
+
+Sample variance                       :    1.73
+p-value of test                       :    0.08
+
+-----------------------------------------------
+CPU time used                    :  04:24:01.73
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+sspectral_Fourier3 test:
+-----------------------------------------------
+   N = 100000,  n = 16384,  r =  0,   s =    3,   k =   14
+
+
+-----------------------------------------------
+
+Kolmogorov-Smirnov+ statistic = D+    :   0.016
+p-value of test                       :    0.12
+
+Kolmogorov-Smirnov- statistic = D-    : 7.58e-3
+p-value of test                       :    0.62
+
+Anderson-Darling statistic = A2       :    0.98
+p-value of test                       :    0.37
+
+-----------------------------------------------
+CPU time used                    :  03:55:10.38
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+sspectral_Fourier3 test:
+-----------------------------------------------
+   N = 100000,  n = 16384,  r = 27,   s =    3,   k =   14
+
+
+-----------------------------------------------
+
+Kolmogorov-Smirnov+ statistic = D+    : 3.21e-3
+p-value of test                       :    0.92
+
+Kolmogorov-Smirnov- statistic = D-    :   0.012
+p-value of test                       :    0.30
+
+Anderson-Darling statistic = A2       :    0.74
+p-value of test                       :    0.53
+
+-----------------------------------------------
+CPU time used                    :  03:56:57.19
+
+Generator state:
+
+
+
+
+***********************************************************
+HOST = knlhost054.sdcc.bnl.local, Linux
+
+cgpt_ranlux
+
+
+sstring_LongestHeadRun test:
+-----------------------------------------------
+   N =  1,  n = 1000,  r =  0,   s = 3,   L = 10000020
+

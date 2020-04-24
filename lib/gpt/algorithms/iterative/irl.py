@@ -117,7 +117,14 @@ class irl:
 
             # rotate
             t0=g.time()
+            #test0=g.copy(evec[0])
+            #test60=g.copy(evec[60])
             g.rotate(evec,Qt,k1-1,k2+1,0,Nm)
+            #g.rotate(evec,np.linalg.inv(Qt),k1-1,k2+1,0,Nm)
+            #g.message(np.linalg.norm(np.linalg.inv(Qt) @ Qt - np.identity(Nm,dtype)))
+            #g.message(g.norm2(test0-evec[0])/g.norm2(test0),k1-1,k2+1,Nm)
+            #g.message(g.norm2(test60-evec[60])/g.norm2(test60))
+            #sys.exit(0)
             t1=g.time()
 
             if verbose:
@@ -179,20 +186,17 @@ class irl:
                 if allconv:
                     if verbose:
                         g.message("Converged in %d iterations" % it)
+                        break
 
-                    t0=g.time()
-                    g.rotate(evec,Qt,0,Nstop,0,Nk)
-                    t1=g.time()
+        t0=g.time()
+        g.rotate(evec,Qt,0,Nstop,0,Nk)
+        t1=g.time()
 
-                    if verbose:
-                        g.message("Final basis rotation took %g s" % (t1-t0))
-
-                    return (evec[0:Nstop],ev2_copy[0:Nstop])
-                    
         if verbose:
-            g.message("Did not converge")
-        return (None,None)
+            g.message("Final basis rotation took %g s" % (t1-t0))
 
+        return (evec[0:Nstop],ev2_copy[0:Nstop])
+        
     def diagonalize(self,lmd,lme,Nk,Qt):
         TriDiag = np.zeros((Nk,Nk),dtype=Qt.dtype)
         for i in range(Nk):
