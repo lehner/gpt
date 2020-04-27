@@ -7,6 +7,12 @@
 import gpt as g
 import sys
 
+# load configuration
+#/hpcgpfs01/work/clehner/runs/tune-lanc-48c/job-strange-01000/lanczos.output
+#basis,cevec,feval = g.load("/hpcgpfs01/work/lqcd/k2pipipbc/chulwoo/32ID/0.0001/evecs/job-900/lanczos.output",{
+#    "grids" : g.grid([12,32,32,32,64],g.single,g.redblack)
+#})
+
 # test SYM1
 U = g.load("/hpcgpfs01/work/clehner/configs/96I/test/ckpoint_lat.2000")
 U = g.convert(U, g.single)
@@ -32,8 +38,12 @@ for i in range(4):
     g.algorithms.approx.evals(q.NDagN,[ tmp ],check_eps2=1e-5)
     g.message(feval[i])
 
-sys.exit(0)
+# save in different layout
+g.save("/hpcgpfs01/work/clehner/configs/96I/test/checkpoint2",
+       [basis,cevec,feval], g.format.cevec())
 
+
+# test eigenvectors
 c=g.algorithms.approx.chebyshev({
     "low"   : 0.01,
     "high"  : 6.25,
@@ -43,8 +53,6 @@ c=g.algorithms.approx.chebyshev({
 cop=g.block.operator(c(q.NDagN),cevec[0].grid,basis)
 
 ev_basis=g.algorithms.approx.evals(cop,cevec,check_eps2 = 1000.0,skip = 10)
-
-sys.exit(0)
 
 
 # test SYM2

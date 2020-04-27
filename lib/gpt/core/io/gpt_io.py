@@ -53,7 +53,7 @@ class gpt_io:
                 for f in glob.glob("%s/??/*.field" % self.root):
                     os.unlink(f)
             else:
-                self.glb = gpt.FILE(root + "/global","r+b")
+                self.glb = gpt.FILE(root + "/global","rb")
         else:
             self.glb = None
 
@@ -100,7 +100,7 @@ class gpt_io:
         if not tag in self.loc:
             if write and not dn is None:
                 os.makedirs(dn, exist_ok=True)
-            self.loc[tag]=gpt.FILE(fn,"a+b" if write else "r+b") if not fn is None else None
+            self.loc[tag]=gpt.FILE(fn,"a+b" if write else "rb") if not fn is None else None
             self.pos[tag]=gpt.coordinates(cv)
 
         return self.loc[tag],self.pos[tag]

@@ -34,6 +34,8 @@ def save(filename,objs,fmt = format.gpt()):
 
     if type(fmt) == format.gpt:
         return gpt.core.io.gpt_io.save(filename, objs, fmt.params)
+    elif type(fmt) == format.cevec:
+        return gpt.core.io.cevec_io.save(filename, objs, fmt.params)
 
     return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
 
