@@ -17,12 +17,14 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include "io/common.h"
 #include "io/nersc.h"
 #include "io/openQCD.h"
 
 EXPORT(load,{
     PyObject* ret;
 
+    // nersc gauge configuration
     if ((ret = load_nersc(args)))
       return ret;
 

@@ -41,7 +41,8 @@ EXPORT(util_ferm2prop,{
 EXPORT(util_crc32,{
     
     PyObject* _mem;
-    if (!PyArg_ParseTuple(args, "O", &_mem)) {
+    long crc32_prev;
+    if (!PyArg_ParseTuple(args, "Ol", &_mem,&crc32_prev)) {
       return NULL;
     }
 
@@ -51,7 +52,7 @@ EXPORT(util_crc32,{
     unsigned char* data = (unsigned char*)buf->buf;
     int64_t len = (int64_t)buf->len;
 
-    uint32_t crc = cgpt_crc32(data,len);
+    uint32_t crc = cgpt_crc32(data,len,(uint32_t)crc32_prev);
     
     return PyLong_FromLong(crc);
   });

@@ -82,10 +82,13 @@ slv_eo2=s.propagator(s.eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
 # propagator
 dst_eo1=g.mspincolor(grid)
 dst_eo2=g.mspincolor(grid)
+
 slv_eo1(src,dst_eo1)
 iter_eo1=len(cg.history)
+
 slv_eo2(src,dst_eo2)
 iter_eo2=len(cg.history)
+
 eps2=g.norm2(dst_eo1 - dst_eo2) / g.norm2(dst_eo1)
 assert(eps2 < 1e-12)
 g.message("Result of test EO1 versus EO2 preconditioning: eps2=",eps2, " iter1 = ",iter_eo1," iter2 = ",iter_eo2)

@@ -24,4 +24,3 @@ def params(fn):
     r=eval(open(fn).read(),globals())
     assert( type(r) == dict )
     return r
-

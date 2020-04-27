@@ -20,6 +20,9 @@ static uint32_t cgpt_crc32(unsigned char* data, int64_t len, uint32_t start_crc 
 
   off_t step = 1024*1024*1024;
 
+  if (len == 0)
+    return start_crc;
+
   if (len <= step) {
 
     //uint32_t ref = crc32(start_crc,data,len);

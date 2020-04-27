@@ -16,10 +16,17 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.core.io.gpt_io
-import gpt.core.io.cevec_io
-from gpt.core.io.FILE import FILE
-from gpt.core.io.error import LoadError
-from gpt.core.io.util import mview, crc32
-from gpt.core.io.load import load
-from gpt.core.io.save import format, save
+import gpt, cgpt, sys
+
+def poke(target,key,value, cache = None):
+
+    assert(type(value) == memoryview)
+
+    if type(target) == gpt.lattice:
+        target[key]=value
+    elif type(target) == list:
+        v_obj=[ y for x in target for y in x.v_obj ]
+        cgpt.lattice_import(v_obj, key, value)
+    else:
+        assert(0)
+

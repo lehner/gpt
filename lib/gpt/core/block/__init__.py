@@ -22,9 +22,9 @@ from gpt.core.block.operator import operator
 def grid(fgrid, nblock):
     assert(fgrid.nd == len(nblock))
     for i in range(fgrid.nd):
-        assert(fgrid.gdimensions[i] % nblock[i] == 0)
+        assert(fgrid.fdimensions[i] % nblock[i] == 0)
     # coarse grid will always be a full grid
-    return gpt.grid([ fgrid.gdimensions[i] // nblock[i] for i in range(fgrid.nd) ],fgrid.precision,gpt.full)
+    return gpt.grid([ fgrid.fdimensions[i] // nblock[i] for i in range(fgrid.nd) ],fgrid.precision,gpt.full)
 
 def project(coarse, fine, basis):
     cot=coarse.otype

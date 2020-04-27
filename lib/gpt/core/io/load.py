@@ -18,7 +18,7 @@
 #
 import gpt, cgpt
 
-# load through cgpt backend (NerscIO, openQCD, cevec, ...)
+# load through cgpt backend (NerscIO, openQCD, ...)
 def load_cgpt(*a):
     result=[]
     r,metadata=cgpt.load(*a, gpt.default.is_verbose("io"))
@@ -40,9 +40,15 @@ def load_cgpt(*a):
 # input
 def load(*a):
 
-    try:
-        return gpt.core.io.gpt_io.load(*a)
-    except NotImplementedError:
-        pass
+    supported = [
+        gpt.core.io.gpt_io,
+        gpt.core.io.cevec_io
+    ]
+
+    for fmt in supported:
+        try:
+            return fmt.load(*a)
+        except NotImplementedError:
+            pass
 
     return load_cgpt(*a)

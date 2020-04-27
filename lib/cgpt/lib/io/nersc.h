@@ -47,6 +47,10 @@ static PyObject* load_nersc(PyObject* args) {
     cgpt_convert(PyTuple_GetItem(args,0),filename);
     cgpt_convert(PyTuple_GetItem(args,1),verbose);
 
+    // check is file
+    if (!cgpt_is_file(filename))
+      return NULL;
+
     // get metadata
     std::map<std::string,std::string> fields;
     if (!read_nersc_header(filename,fields)) {

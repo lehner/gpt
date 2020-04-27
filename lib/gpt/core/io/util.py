@@ -25,9 +25,9 @@ def mview(data):
     return mv
 
 # fast threaded checksum of memoryviews
-def crc32(view):
+def crc32(view, crc32_prev = 0):
     if type(view) == memoryview:
-        return cgpt.util_crc32(view)
+        return cgpt.util_crc32(view, crc32_prev)
     else:
-        return crc32(memoryview(view))
+        return crc32(memoryview(view), crc32_prev)
 
