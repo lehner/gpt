@@ -78,7 +78,13 @@ gridconfig(glibs      --libs)
 gridconfig(gldflags   --ldflags)
 gridconfig(gcxx       --cxx)
 
-set(CMAKE_CXX_COMPILER ${gcxx})
+# gcxx may be a list, so split it and use only its head as
+# compiler name.
+# If the path to the compiler binary (or the binary itself) contains
+# spaces, they have to be escaped.
+separate_arguments(gcxx)
+list(GET gcxx 0 thecompiler)
+set(CMAKE_CXX_COMPILER ${thecompiler})
 
 message(STATUS "configuring with this grid:\n${gsummary}")
 message(STATUS "grid git revision is: ${ggit}")
