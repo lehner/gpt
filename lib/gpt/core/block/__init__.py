@@ -37,10 +37,12 @@ def project(coarse, fine, basis):
         coarse += tmp
 
 def promote(coarse, fine, basis):
+    assert(len(basis)>0)
     cot=coarse.otype
     fot=fine.otype
     tmp=gpt.lattice(fine)
     fine[:]=0
+    fine.checkerboard(basis[0].checkerboard())
     for i in cot.v_idx:
         for j in fot.v_idx:
             cgpt.block_promote(coarse.v_obj[i],tmp.v_obj[j],basis[cot.v_n0[i]:cot.v_n1[i]],j)

@@ -21,9 +21,18 @@ q=g.qcd.fermion.preconditioner.eo1(g.qcd.fermion.mobius(U,{
 }))
 
 # load configuration
-basis,cevec,feval = g.load("/hpcgpfs01/work/clehner/configs/96I/test/lanczos.output", {
+basis,cevec,feval = g.load("/hpcgpfs01/work/clehner/configs/96I/test/checkpoint", { #lanczos.output
     "grids" : q.F_grid_eo
 })
+
+# test fine evec of basis
+tmp=g.vspincolor(q.F_grid_eo)
+for i in range(4):
+    g.block.promote(cevec[i],tmp,basis)
+    g.algorithms.approx.evals(q.NDagN,[ tmp ],check_eps2=1e-5)
+    g.message(feval[i])
+
+sys.exit(0)
 
 c=g.algorithms.approx.chebyshev({
     "low"   : 0.01,
