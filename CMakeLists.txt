@@ -67,7 +67,8 @@ lib/cgpt/lib/lattice.cc
 lib/cgpt/lib/lib.cc
 lib/cgpt/lib/mpi.cc
 lib/cgpt/lib/time.cc
-lib/cgpt/lib/transform.cc)
+lib/cgpt/lib/transform.cc
+)
 
 
 gridconfig(gsummary   --summary)
@@ -78,14 +79,6 @@ gridconfig(glibs      --libs)
 gridconfig(gldflags   --ldflags)
 gridconfig(gcxx       --cxx)
 
-# gcxx may be a list, so split it and use only its head as
-# compiler name.
-# If the path to the compiler binary (or the binary itself) contains
-# spaces, they have to be escaped.
-separate_arguments(gcxx)
-list(GET gcxx 0 thecompiler)
-set(CMAKE_CXX_COMPILER ${thecompiler})
-
 message(STATUS "configuring with this grid:\n${gsummary}")
 message(STATUS "grid git revision is: ${ggit}")
 
@@ -93,7 +86,51 @@ separate_arguments(gcxxflags)
 separate_arguments(glibs)
 separate_arguments(gldflags)
 
-
+# Super ugly hack to work around problems with Cmake, Grid and nvcc:
+# Cmake appends -fPIC for libaries, but nvcc does not understand -fPIC
+# python appends -fopenmp to flags, but nvcc does not unterstand -fopenmp
+# Cmake uses compiler for linking, but grids adds "-x cu" to compiler flags,
+# that prevents nvcc from using object files.  Solution:
+# Write a custom compiler script, that filters command line options.
+# Beware: breaks easily
+set(compname "${CMAKE_BINARY_DIR}/customcc")
+file(WRITE  ${compname} "#!/bin/bash\n")
+file(APPEND ${compname} "x=\"\$@\"\n")
+file(APPEND ${compname} "subs=\"\"\n")
+file(APPEND ${compname} "skipnext=0\n")
+file(APPEND ${compname} "for name in \"\$@\"; do\n")
+file(APPEND ${compname} "    if test \$skipnext -eq 1\n")
+file(APPEND ${compname} "    then subs=\"\$subs \$name\"\n")
+file(APPEND ${compname} "    else\n")
+file(APPEND ${compname} "        if test \"\$name\" = '-fPIC'\n")
+file(APPEND ${compname} "        then subs=\"$subs -Xcompiler -fPIC\"\n")
+file(APPEND ${compname} "        else\n")
+file(APPEND ${compname} "            if test \"\$name\" = '-fopenmp'\n")
+file(APPEND ${compname} "            then\n")
+file(APPEND ${compname} "                subs=\"\$subs -Xcompiler -fopenmp\"\n")
+file(APPEND ${compname} "            else\n")
+file(APPEND ${compname} "                subs=\"\$subs \$name\"\n")
+file(APPEND ${compname} "            fi\n")
+file(APPEND ${compname} "        fi\n")
+file(APPEND ${compname} "    fi\n")
+file(APPEND ${compname} "    if test \"\$name\" = '-Xcompiler'\n")
+file(APPEND ${compname} "    then skipnext=1\n")
+file(APPEND ${compname} "    else skipnext=0\n")
+file(APPEND ${compname} "    fi\n")
+file(APPEND ${compname} "    \n")
+file(APPEND ${compname} "    \n")
+file(APPEND ${compname} "done\n")
+file(APPEND ${compname} "if expr \"\$subs\" : \".* -c \"; then\n")
+file(APPEND ${compname} "    xpr=\"${gcxx} \$subs\"\n")
+file(APPEND ${compname} "else\n")
+file(APPEND ${compname} "    xpr=\$( echo \"${gcxx} \$subs\" | sed -e 's/-x .*cu//'g)\n")
+file(APPEND ${compname} "fi\n")
+file(APPEND ${compname} "echo \"CUSTOM COMPILING \$subs\" 1>&2\n")
+file(APPEND ${compname} "eval \"\${xpr}\"\n")
+execute_process(COMMAND chmod u+x ${compname})
+if(${gcxx} MATCH "^nvcc")
+    set(CMAKE_CXX_COMPILER ${compname})
+endif()
 
 if(SKBUILD)
     target_compile_options(cgpt PRIVATE
