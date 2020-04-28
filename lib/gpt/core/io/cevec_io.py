@@ -41,6 +41,15 @@ def get_local_name(root, cv):
     filename="%s/%10.10d.compressed" % (directory,rank)
     return directory,filename
 
+def get_param(params,a,v):
+    if a in params:
+        return params[a]
+    return v
+
+def conformDiv(a,b):
+    assert(a % b == 0)
+    return a // b
+
 def FP_16_SIZE(a,b):
     assert(a % b == 0)
     return (( (a) + (a//b) )*2)
@@ -179,7 +188,7 @@ def load(filename, *a):
         # group blocks
         read_blocks=blocks
         block_reduce=1
-        max_read_blocks=8
+        max_read_blocks=get_param(params,"max_read_blocks",8)
         while read_blocks > max_read_blocks and read_blocks % 2 == 0:
             pos=[ numpy.concatenate( (pos[2*i+0],pos[2*i+1]) ) for i in range(read_blocks // 2) ]
             block_data_size_single *= 2
@@ -252,7 +261,9 @@ def load(filename, *a):
                 totalSizeGB+=globalReadGB
 
                 if not f is None:
+                    dt_crc-=gpt.time()
                     crc32_comp=gpt.crc32(data,crc32_comp)
+                    dt_crc+=gpt.time()
                     dt_fp16-=gpt.time()
                     cgpt.fp16_to_fp32(data_fp32,data,24)
                     dt_fp16+=gpt.time()
@@ -352,115 +363,94 @@ def save(filename, objs, params):
     gpt.barrier()
 
     # write eigenvalues
-    f=open("%s/eigen-values.txt" % filename,"wt")
-    f.write("%d\n" % len(ev))
-    for v in ev:
-        f.write("%.15E\n" % v)
-    f.close()
-
-    # write metadata
-    fmeta=open("%s/metadata.txt" % filename,"wt")
-    #s[0] = 16
-    #s[1] = 16
-    #s[2] = 16
-    #s[3] = 8
-    #s[4] = 12
-    #b[0] = 2
-    #b[1] = 2
-    #b[2] = 2
-    #b[3] = 2
-    #b[4] = 12
-    #nb[0] = 8
-    #nb[1] = 8
-    #nb[2] = 8
-    #nb[3] = 4
-    #nb[4] = 1
-    #neig = 60
-    #nkeep = 60
-    #nkeep_single = 30
-    #blocks = 2048
-    #FP16_COEF_EXP_SHARE_FLOATS = 10
-    #crc32[0] = 89F7E201
-
-
-    return
-
+    if gpt.rank() == 0:
+        f=open("%s/eigen-values.txt" % filename,"wt")
+        f.write("%d\n" % len(ev))
+        for v in ev:
+            f.write("%.15E\n" % v)
+        f.close()
 
     # site checkerboard
     # only odd is used in this file format but
     # would be easy to generalize here
     site_cb = gpt.odd
 
-    # need grids parameter
-    assert("grids" in params)
-    assert(type(params["grids"]) == gpt.grid)
-    fgrid=params["grids"]
-    assert(fgrid.precision == gpt.single)
-    fdimensions=fgrid.fdimensions
-
-    # read metadata
-    metadata=read_metadata(filename + "/metadata.txt")
-    s=get_ivec(metadata,"s")
-    ldimensions=[ s[4] ] + s[:4]
-    blocksize=get_ivec(metadata,"b")
-    blocksize=[ blocksize[4] ] + blocksize[:4]
-    nb=get_ivec(metadata,"nb")
-    nb=[ nb[4] ] + nb[:4]
-    crc32=get_xvec(metadata,"crc32")
-    neigen=int(metadata["neig"])
-    nbasis=int(metadata["nkeep"])
-    nsingle=int(metadata["nkeep_single"])
-    blocks=int(metadata["blocks"])
-    FP16_COEF_EXP_SHARE_FLOATS=int(metadata["FP16_COEF_EXP_SHARE_FLOATS"])
-    nsingleCap=min([nsingle,nbasis])
-	
-    # check
-    nd=len(ldimensions)
-    assert(nd == 5)
-    assert(nd == len(fdimensions))
-    assert(nd == len(blocksize))
-    assert(fgrid.cb == gpt.redblack)
-
-    # create coarse grid
-    cgrid=gpt.block.grid(fgrid,blocksize)
-
-    # allocate all lattices
-    basis=[ gpt.vspincolor(fgrid) for i in range(nbasis) ]
-    cevec=[ gpt.vcomplex(cgrid,nbasis) for i in range(neigen) ]
-
-    # fix checkerboard of basis
-    for i in range(nbasis):
-        basis[i].checkerboard(site_cb)
+    # grids
+    assert(len(basis) > 0)
+    assert(len(cevec) > 0)
+    fgrid=basis[0].grid
+    cgrid=cevec[0].grid
 
     # mpi layout
-    mpi=[]
-    for i in range(nd):
-        assert(fdimensions[i] % ldimensions[i] == 0)
-        mpi.append(fdimensions[i] // ldimensions[i])
+    if "mpi" in params:
+        mpi=params["mpi"]
+    else:
+        mpi=fgrid.mpi
     assert(mpi[0] == 1) # assert no mpi in 5th direction
+
+    # params
+    assert(basis[0].checkerboard() == site_cb)
+    nd=5
+    assert(len(fgrid.ldimensions) == nd)
+    fdimensions=fgrid.fdimensions
+    ldimensions=[ conformDiv(fdimensions[i],mpi[i]) for i in range(nd) ]
+    assert(fgrid.precision == gpt.single)
+    s=ldimensions
+    b=[ conformDiv(fgrid.fdimensions[i],cgrid.fdimensions[i]) for i in range(nd) ]
+    nb=[ conformDiv(s[i],b[i]) for i in range(nd) ]
+    neigen=len(cevec)
+    nbasis=len(basis)
+    if "nsingle" in params:
+        nsingle=params["nsingle"]
+        assert(nsingle <= nbasis)
+    else:
+        nsingle=nbasis
+    nsingleCap=min([nsingle,nbasis])
+    blocks=numpy.prod(nb)
+    FP16_COEF_EXP_SHARE_FLOATS=10
+
+    # write metadata
+    if gpt.rank() == 0:
+        fmeta=open("%s/metadata.txt" % filename,"wt")
+        for i in range(nd):
+            fmeta.write("s[%d] = %d\n" % (i,s[(i+1) % nd]))
+        for i in range(nd):
+            fmeta.write("b[%d] = %d\n" % (i,b[(i+1) % nd]))
+        for i in range(nd):
+            fmeta.write("nb[%d] = %d\n" % (i,nb[(i+1) % nd]))
+        fmeta.write("neig = %d\n" % neigen)
+        fmeta.write("nkeep = %d\n" % nbasis)
+        fmeta.write("nkeep_single = %d\n" % nsingle)
+        fmeta.write("blocks = %d\n" % blocks)
+        fmeta.write("FP16_COEF_EXP_SHARE_FLOATS = %d\n" % FP16_COEF_EXP_SHARE_FLOATS)
+        fmeta.flush() # write crc32 later
 
     # create cartesian view on fine grid
     cv0=gpt.cartesian_view(-1,mpi,fdimensions,fgrid.cb,site_cb)
     views=cv0.views_for_node(fgrid)
-
+    crc32=numpy.array([ 0 ] * cv0.ranks,dtype=numpy.uint64)
     # timing
     t0=gpt.time()
     totalSizeGB=0
-    dt_fp16=0.0
-    nb_fp16=0.0
-    dt_file=0.0
-    dt_distr_c=0.0
-    dt_distr_f=0.0
+    dt_fp16=1e-30
+    dt_distr=1e-30
+    dt_munge=1e-30
+    dt_crc=1e-30
+    dt_fwrite=1e-30
+    t0=gpt.time()
 
     # load all views
     if verbose:
-        gpt.message("Loading %s with %d views per node" % (filename,len(views)))
+        gpt.message("Saving %s with %d views per node" % (filename,len(views)))
+
     for i,v in enumerate(views):
         cv=gpt.cartesian_view(v if not v is None else -1,mpi,fdimensions,fgrid.cb,site_cb)
         cvc=gpt.cartesian_view(v if not v is None else -1,mpi,cgrid.fdimensions,gpt.full,gpt.none)
         pos_coarse=gpt.coordinates(cvc,"canonical")
 
         dn,fn=get_local_name(filename,cv)
+        if not fn is None:
+            os.makedirs(dn, exist_ok=True)
 
         # sizes
         slot_lsites=numpy.prod(cv.view_dimensions)
@@ -478,7 +468,7 @@ def save(filename, objs, params):
         crc32_comp=0
         
         # file
-        f=gpt.FILE(fn,"r+b") if not fn is None else None
+        f=gpt.FILE(fn,"wb") if not fn is None else None
 
         # block positions
         pos=[ cgpt.coordinates_from_block(cv.top,cv.bottom,b,nb,"canonicalOdd") for b in range(blocks) ]
@@ -486,7 +476,7 @@ def save(filename, objs, params):
         # group blocks
         read_blocks=blocks
         block_reduce=1
-        max_read_blocks=16
+        max_read_blocks=get_param(params,"max_read_blocks",8)
         while read_blocks > max_read_blocks and read_blocks % 2 == 0:
             pos=[ numpy.concatenate( (pos[2*i+0],pos[2*i+1]) ) for i in range(read_blocks // 2) ]
             block_data_size_single *= 2
@@ -502,88 +492,135 @@ def save(filename, objs, params):
         data0=memoryview(bytes())
 
         # single-precision data
-        data_munged=memoryview(bytearray(block_data_size_single*nsingleCap))
-        reduced_size=len(data_munged) // block_reduce
+        data=memoryview(bytearray(block_data_size_single*nsingleCap))
+        reduced_size=len(data) // block_reduce
+
         for b in range(read_blocks):
+            fgrid.barrier()
+            dt_distr-=gpt.time()
+            data_munged=cgpt.mview(gpt.peek(basis[0:nsingleCap],pos[b]))
+            dt_distr+=gpt.time()
+
             if not f is None:
-                data=memoryview(f.read(block_data_size_single * nsingleCap))
-                crc32_comp=gpt.crc32(data,crc32_comp)
+                dt_munge-=gpt.time()
                 for l in range(block_reduce):
-                    cgpt.munge_inner_outer(data_munged[reduced_size*l:reduced_size*(l+1)],
-                                           data[reduced_size*l:reduced_size*(l+1)],
-                                           len(pos[b]) // block_reduce,
-                                           nsingleCap)
+                    cgpt.munge_inner_outer(data[reduced_size*l:reduced_size*(l+1)],
+                                           data_munged[reduced_size*l:reduced_size*(l+1)],
+                                           nsingleCap,
+                                           len(pos[b]) // block_reduce)
+                dt_munge+=gpt.time()
+                dt_crc-=gpt.time()
+                crc32_comp=gpt.crc32(data,crc32_comp)
+                dt_crc+=gpt.time()
+
+            fgrid.barrier()
+            dt_fwrite-=gpt.time()
+            if not f is None:
+                f.write(data)
+                globalWriteGB=len(data) / 1024.**3.
             else:
-                data_munged=data0
-            dt_distr_f-=gpt.time()
-            gpt.poke(basis[0:nsingleCap],pos[b],data_munged)
-            dt_distr_f+=gpt.time()
+                globalWriteGB=0.0
+            globalWriteGB=fgrid.globalsum(globalWriteGB)
+            dt_fwrite+=gpt.time()
+            totalSizeGB+=globalWriteGB
+
+            if verbose:
+                gpt.message("* write %g GB: fwrite at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s" % 
+                            (totalSizeGB,totalSizeGB/dt_fwrite,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr))
 
         # fp16 data
         if nbasis != nsingleCap:
             # allocate data buffer
             data_fp32 = memoryview(bytearray(block_data_size_single * (nbasis-nsingleCap)))
-            data_munged= memoryview(bytearray(block_data_size_single * (nbasis-nsingleCap)))
-            reduced_size=len(data_munged) // block_reduce
+            data= memoryview(bytearray(block_data_size_fp16 * (nbasis-nsingleCap)))
+            reduced_size=len(data_fp32) // block_reduce
             for b in range(read_blocks):
+                fgrid.barrier()
+                dt_distr-=gpt.time()
+                data_munged=cgpt.mview(gpt.peek(basis[nsingleCap:nbasis],pos[b]))
+                dt_distr+=gpt.time()
+
                 if not f is None:
-                    data=memoryview(f.read(block_data_size_fp16 * (nbasis-nsingleCap)))
-                    crc32_comp=gpt.crc32(data,crc32_comp)
-                    dt_fp16-=gpt.time()
-                    cgpt.fp16_to_fp32(data_fp32,data,24)
-                    dt_fp16+=gpt.time()
-                    nb_fp16+=block_data_size_fp16 * (nbasis-nsingleCap) * 2
-
+                    dt_munge-=gpt.time()
                     for l in range(block_reduce):
-                        cgpt.munge_inner_outer(data_munged[reduced_size*l:reduced_size*(l+1)],
-                                               data_fp32[reduced_size*l:reduced_size*(l+1)],
-                                               len(pos[b]) // block_reduce,
-                                               nsingleCap)
-
+                        cgpt.munge_inner_outer(data_fp32[reduced_size*l:reduced_size*(l+1)],
+                                               data_munged[reduced_size*l:reduced_size*(l+1)],
+                                               nsingleCap,
+                                               len(pos[b]) // block_reduce
+                                               )
+                    dt_munge+=gpt.time()
+                    dt_fp16-=gpt.time()
+                    cgpt.fp32_to_fp16(data,data_fp32,24)
+                    dt_fp16+=gpt.time()
+                    dt_crc-=gpt.time()
+                    crc32_comp=gpt.crc32(data,crc32_comp)
+                    dt_crc+=gpt.time()
+                    
+                fgrid.barrier()
+                dt_fwrite-=gpt.time()
+                if not f is None:
+                    f.write(data)
+                    globalWriteGB=len(data) / 1024.**3.
                 else:
-                    data_munged=data0
-                dt_distr_f-=gpt.time()
-                gpt.poke(basis[nsingleCap:nbasis],pos[b],data_munged)
-                dt_distr_f+=gpt.time()
+                    globalWriteGB=0.0
+                globalWriteGB=fgrid.globalsum(globalWriteGB)
+                dt_fwrite+=gpt.time()
+                totalSizeGB+=globalWriteGB
+            
+                if verbose:
+                    gpt.message("* write %g GB: fwrite at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s" % 
+                                (totalSizeGB,totalSizeGB/dt_fwrite,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16))
 
         # coarse grid data
-        data_fp32=memoryview(bytearray(coarse_fp32_vector_size))
+        data=memoryview(bytearray(coarse_vector_size))
         for j in range(neigen):
-            if not f is None:
-                data=memoryview(f.read(coarse_vector_size))
-                crc32_comp=gpt.crc32(data,crc32_comp)
-                cgpt.mixed_fp32fp16_to_fp32(data_fp32,data,coarse_block_size_part_fp32,coarse_block_size_part_fp16,
-                                            FP16_COEF_EXP_SHARE_FLOATS)
-                data=data_fp32
-            else:
-                data=data0
-            dt_distr_c-=gpt.time()
-            cevec[j][pos_coarse]=data
-            dt_distr_c+=gpt.time()
+            fgrid.barrier()
+            dt_distr-=gpt.time()
+            data_fp32=cgpt.mview(cevec[j][pos_coarse])
+            dt_distr+=gpt.time()
 
-        # crc checks
-        if not f is None:
-            assert(crc32_comp == crc32[cv.rank])
+
+            if not f is None:
+                dt_fp16-=gpt.time()
+                cgpt.fp32_to_mixed_fp32fp16(data,data_fp32,coarse_block_size_part_fp32,coarse_block_size_part_fp16,
+                                        FP16_COEF_EXP_SHARE_FLOATS)
+                dt_fp16+=gpt.time()
+                dt_crc-=gpt.time()
+                crc32_comp=gpt.crc32(data,crc32_comp)
+                dt_crc+=gpt.time()
+
+
+            fgrid.barrier()
+            dt_fwrite-=gpt.time()
+            if not f is None:
+                f.write(data)
+                globalWriteGB=len(data) / 1024.**3.
+            else:
+                globalWriteGB=0.0
+            globalWriteGB=fgrid.globalsum(globalWriteGB)
+            dt_fwrite+=gpt.time()
+            totalSizeGB+=globalWriteGB
+            
+            if verbose and j % (neigen // 10) == 0:
+                gpt.message("* write %g GB: fwrite at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s" % 
+                            (totalSizeGB,totalSizeGB/dt_fwrite,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16))
+
+        # save crc
+        crc32[cv.rank] = crc32_comp
+
+    # synchronize crc32
+    fgrid.globalsum(crc32)
 
     # timing
     t1=gpt.time()
-    totalSizeGB=fgrid.globalsum(totalSizeGB)
 
-    # test
-    #for j in range(len(basis)):
-    #    gpt.message(j,gpt.norm2(basis[j]),cv0.ranks,blocks)
-            
+    # write crc to metadata
+    if gpt.rank() == 0:
+        for i in range(len(crc32)):
+            fmeta.write("crc32[%d] = %X\n" % (i,crc32[i]))
+        fmeta.close()
+
     # verbosity
     if verbose:
-        gpt.message("* load %g GB at %g GB/s" % (totalSizeGB,totalSizeGB/(t1-t0)))
-        gpt.message("* total: %g s, distribute coarse: %g s, distribute fine: %g s" % (t1-t0,dt_distr_c,dt_distr_f))
-        nb_fp16GB=fgrid.globalsum(nb_fp16) / 1024.**3.
-        if nb_fp16GB != 0.0 and dt_fp16 != 0.0:
-            gpt.message("* converted FP16 to FP32 at %g GB/s" % (nb_fp16GB/dt_fp16))
+        gpt.message("* save %g GB at %g GB/s" % (totalSizeGB,totalSizeGB/(t1-t0)))
 
-    # eigenvalues
-    evln=list(filter(lambda x: x!="",open(filename + "/eigen-values.txt").read().split("\n")))
-    nev=int(evln[0])
-    ev=[ float(x) for x in evln[1:] ]
-    assert(len(ev) == nev)
-    return (basis,cevec,ev)

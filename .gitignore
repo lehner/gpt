@@ -3,3 +3,5 @@
 *.so
 /lib/cgpt/build
 /dependencies
+*pycache*
+/tests/run-*

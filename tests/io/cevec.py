@@ -6,12 +6,13 @@
 #
 import gpt as g
 import sys
+import numpy as np
 
 # load configuration
 #/hpcgpfs01/work/clehner/runs/tune-lanc-48c/job-strange-01000/lanczos.output
-#basis,cevec,feval = g.load("/hpcgpfs01/work/lqcd/k2pipipbc/chulwoo/32ID/0.0001/evecs/job-900/lanczos.output",{
-#    "grids" : g.grid([12,32,32,32,64],g.single,g.redblack)
-#})
+basis,cevec,feval = g.load("/hpcgpfs01/work/lqcd/k2pipipbc/chulwoo/32ID/0.0001/evecs/job-900/lanczos.output",{
+    "grids" : g.grid([12,32,32,32,64],g.single,g.redblack)
+})
 
 # test SYM1
 U = g.load("/hpcgpfs01/work/clehner/configs/96I/test/ckpoint_lat.2000")
@@ -40,8 +41,44 @@ for i in range(4):
 
 # save in different layout
 g.save("/hpcgpfs01/work/clehner/configs/96I/test/checkpoint2",
-       [basis,cevec,feval], g.format.cevec())
+       [basis,cevec,feval], 
+       g.format.cevec({
+           "nsingle" : len(basis) // 2,
+           "max_read_blocks" : 16,
+#           "mpi" : [ 1, 2,2,2,2 ]
+       }))
 
+# and load again to verify
+basis2,cevec2,feval2 = g.load("/hpcgpfs01/work/clehner/configs/96I/test/checkpoint2", {
+    "grids" : q.F_grid_eo
+})
+
+assert(len(basis) == len(basis2))
+assert(len(cevec) == len(cevec2))
+assert(len(feval) == len(feval2))
+
+pos=g.coordinates(basis[i])
+eps=0.0
+for i in range(len(basis)):
+    A=basis[i][pos]
+    B=basis2[i][pos]
+    eps+=q.F_grid_eo.globalsum(float(np.linalg.norm(A-B)))
+g.message("Test basis: %g" % (eps))
+
+pos=g.coordinates(cevec[i])
+eps=0.0
+for i in range(len(cevec)):
+    A=cevec[i][pos]
+    B=cevec2[i][pos]
+    eps+=q.F_grid_eo.globalsum(float(np.linalg.norm(A-B)))
+g.message("Test cevec: %g" % (eps))
+
+eps=0.0
+for i in range(len(feval)):
+    eps+=(feval[i] - feval2[i])**2.0
+g.message("Test eval: %g" % (eps))
+
+sys.exit(0)
 
 # test eigenvectors
 c=g.algorithms.approx.chebyshev({

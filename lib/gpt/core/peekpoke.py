@@ -18,7 +18,20 @@
 #
 import gpt, cgpt, sys
 
-def poke(target,key,value, cache = None):
+def peek(target,key):
+
+    if type(target) == gpt.lattice:
+        return target[key]
+
+    elif type(target) == list:
+        v_obj=[ y for x in target for y in x.v_obj ]
+        return cgpt.lattice_export(v_obj, key)
+
+    else:
+        assert(0)
+
+
+def poke(target,key,value):
 
     assert(type(value) == memoryview)
 
