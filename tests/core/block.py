@@ -10,7 +10,7 @@ import sys
 
 # load configuration
 fine_grid=g.grid([8,8,8,16],g.single)
-coarse_grid=g.grid([2,2,2,4],fine_grid.precision)
+coarse_grid=g.grid([2,2,2,8],fine_grid.precision)
 
 # basis
 n=30

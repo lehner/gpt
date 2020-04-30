@@ -36,13 +36,14 @@ EXPORT(init,{
     for (auto& a : sargs) {
       cargs.push_back((char*)a.c_str());
     }
+    cargs.push_back(0);
     
     int argc = (int)sargs.size();
     char** argv = &cargs[0];
-    
+
     // initialize Grid
     Grid_init(&argc,&argv);
-    
+
     // initialize numpy as well
     import_array();
     

@@ -63,6 +63,26 @@ inline void cgpt_blockSum(Lattice<vobj> &coarseData,const Lattice<vobj> &fineDat
 }
 
 
+accelerator_inline void convertType(ComplexD & out, const std::complex<double> & in) {
+  out = in;
+}
+
+accelerator_inline void convertType(ComplexF & out, const std::complex<float> & in) {
+  out = in;
+}
+
+#ifdef __CUDA_ARCH__
+accelerator_inline void convertType(vComplexF & out, const ComplexF & in) {
+  ((ComplexF*)&out)[SIMTlane(vComplexF::Nsimd())] = in;
+}
+accelerator_inline void convertType(vComplexD & out, const ComplexD & in) {
+  ((ComplexD*)&out)[SIMTlane(vComplexD::Nsimd())] = in;
+}
+accelerator_inline void convertType(vComplexD2 & out, const ComplexD & in) {
+  ((ComplexD*)&out)[SIMTlane(vComplexD::Nsimd()*2)] = in;
+}
+#endif
+
 accelerator_inline void convertType(vComplexF & out, const vComplexD2 & in) {
   out.v = Optimization::PrecisionChange::DtoS(in._internal[0].v,in._internal[1].v);
 }
@@ -71,17 +91,22 @@ accelerator_inline void convertType(vComplexD2 & out, const vComplexF & in) {
   Optimization::PrecisionChange::StoD(in.v,out._internal[0].v,out._internal[1].v);
 }
 
-template<typename T1,typename T2>
-accelerator_inline void convertType(iScalar<T1> & out, const T2 & in) {
-  convertType(out._internal,in);
-}
+template<typename T1,typename T2,int N>
+  accelerator_inline void convertType(iMatrix<T1,N> & out, const iMatrix<T2,N> & in);
+template<typename T1,typename T2,int N>
+  accelerator_inline void convertType(iVector<T1,N> & out, const iVector<T2,N> & in);
 
 template<typename T1,typename T2, typename std::enable_if<!isGridScalar<T1>::value, T1>::type* = nullptr>
 accelerator_inline void convertType(T1 & out, const iScalar<T2> & in) {
   convertType(out,in._internal);
 }
 
-  template<typename T1,typename T2,int N>
+template<typename T1,typename T2>
+accelerator_inline void convertType(iScalar<T1> & out, const T2 & in) {
+  convertType(out._internal,in);
+}
+
+template<typename T1,typename T2,int N>
 accelerator_inline void convertType(iMatrix<T1,N> & out, const iMatrix<T2,N> & in) {
   for (int i=0;i<N;i++)
     for (int j=0;j<N;j++)
@@ -105,27 +130,25 @@ accelerator_inline void convertType(Lattice<T1> & out, const Lattice<T2> & in) {
   auto in_v  = in.View();
 
   accelerator_for(ss,out_v.size(),T1::Nsimd(),{
-      convertType(out_v[ss],in_v[ss]);
+      convertType(out_v[ss],in_v(ss));
     });
 }
 
+void print(char* t);
 
 template<class vobj>
 inline auto localInnerProductD(const Lattice<vobj> &lhs,const Lattice<vobj> &rhs)
--> Lattice<iScalar<decltype(TensorRemove(innerProductD2(lhs.View()(0),rhs.View()(0))))>>
+-> Lattice<iScalar<decltype(TensorRemove(innerProductD2(lhs.View()[0],rhs.View()[0])))>>
 {
   auto lhs_v = lhs.View();
   auto rhs_v = rhs.View();
 
-  typedef decltype(TensorRemove(innerProductD2(lhs_v(0),rhs_v(0)))) t_inner;
+  typedef decltype(TensorRemove(innerProductD2(lhs_v[0],rhs_v[0]))) t_inner;
   Lattice<iScalar<t_inner>> ret(lhs.Grid());
   auto ret_v = ret.View();
 
   accelerator_for(ss,rhs_v.size(),vobj::Nsimd(),{
-      auto d2 = TensorRemove(innerProductD2(lhs_v(ss),rhs_v(ss)));
-      iScalar<t_inner> d1;
-      convertType(d1,d2);
-      coalescedWrite(ret_v[ss],d1);
+      convertType(ret_v[ss],innerProductD2(lhs_v(ss),rhs_v(ss)));
     });
 
   return ret;
@@ -197,8 +220,13 @@ template<class vobj,class vobj2,class CComplex>
       Lexicographic::IndexFromCoor(coor_c,sc,coarse->_rdimensions);
 
       // z = A x + y
+#ifdef __CUDA_ARCH__
+      typename vobj2::tensor_reduced::scalar_object cA;
+      typename vobj::scalar_object cAx;
+#else
       typename vobj2::tensor_reduced cA;
       vobj cAx;
+#endif
       convertType(cA,TensorRemove(coarseA_(sc)));
       auto prod = cA*fineX_(sf);
       convertType(cAx,prod);
@@ -226,7 +254,7 @@ template<class vobj,class CComplex,int nbasis>
   for(int v=0;v<nbasis;v++) {
     cgpt_blockInnerProductD(ip,*Basis[v],fineDataRed); // ip = <basis|fine>
     accelerator_for( sc, coarse->oSites(), vobj::Nsimd(), {
-	coalescedWrite(coarseData_[sc](v),TensorRemove(ip_(sc)));
+	convertType(coarseData_[sc](v),ip_[sc]);
       });
 
     // needed for numerical stability (crucial at single precision)

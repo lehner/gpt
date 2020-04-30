@@ -3,3 +3,4 @@
 #
 lib="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../lib" >/dev/null 2>&1 && pwd )"
 export PYTHONPATH=${lib}${PYTHONPATH:+:${PYTHONPATH}}
+module load python/3.7.0

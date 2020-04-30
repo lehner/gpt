@@ -19,7 +19,7 @@
 
 template<typename A>
 cgpt_Lattice_base* lattice_expr(cgpt_Lattice_base* dst, bool ac, const A& expr) {
-  GridBase* grid;
+  GridBase* grid = 0;
   GridFromExpression(grid,expr);
   typedef decltype(eval(0,expr)) const_vobj;
   typedef typename std::remove_const<const_vobj>::type vobj;
