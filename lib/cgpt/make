@@ -16,14 +16,15 @@ NPARALLEL=8
 # Start
 N=0
 
-mkdir -p build
+mkdir -p build logs
 
 echo "================================================================================"
 echo "  Compiling CGPT against Grid in ${GRID}"
 echo "================================================================================"
 
+NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
 CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
-CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID}/Grid"
+CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID}/Grid -I${NUMPY_INCLUDE} $(python3-config --includes)"
 LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
 LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
 
@@ -78,9 +79,16 @@ do
     if [ $src -nt $dst ];
     then
 	(
-	    echo "Compiling $bn ..."
-	    time ${CXX} --shared -fPIC -O3 $(python3-config --includes) ${CXXFLAGS} -c $src -o $dst
-	    echo "$bn complete"
+	    echo " [CXX] $bn"
+	    start=$SECONDS
+	    ${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> logs/${bn}.out 2> logs/${bn}.err
+	    elapsed=$((SECONDS-start))
+	    if [[ "$?" == "0" ]];
+	    then
+		printf "%-50s %s\n" " [OK ] $bn " "($elapsed s)"
+	    else
+		printf "%-50s %-30s %s\n" " [ERR] $bn " "($elapsed s)" "logs/${bn}.err"
+	    fi
 	) &
 	N=$((N+1))
 	if ((N==NPARALLEL))
@@ -94,4 +102,4 @@ done
 wait
 
 # Link
-${CXX} --shared -fPIC -O3 build/*.o ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
+${CXX} --shared build/*.o ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so

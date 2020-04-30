@@ -185,7 +185,7 @@ class gpt_io:
 
         # first find grid
         if not g_desc in self.params["grids"]:
-            self.params["grids"][g_desc]=gpt.grid(g_cesc)
+            self.params["grids"][g_desc]=gpt.grid(g_desc)
         g=self.params["grids"][g_desc]
 
         # create a cartesian view and lattice to load
