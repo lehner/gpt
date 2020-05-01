@@ -75,7 +75,7 @@ def get_xvec(d,n):
     return get_vec(d,n,lambda x: int(x,16))
 
 def truncate(data,ndata,ntruncate,nelements):
-    if ndata == ntruncate:
+    if ndata == ntruncate or (ndata*nelements) == 0:
         return data
     ntotal=len(data)
     assert(ntotal % (nelements*ndata) == 0)
