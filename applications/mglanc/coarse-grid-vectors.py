@@ -9,6 +9,9 @@ import gpt as g
 import sys
 import numpy as np
 
+# show available memory
+g.meminfo()
+
 # parameters
 fn=g.default.get("params","params.txt")
 params=g.params(fn,verbose = True)
@@ -16,12 +19,16 @@ params=g.params(fn,verbose = True)
 # load configuration
 U = params["config"]
 
+# show available memory
+g.meminfo()
+
 # mobius fermion
 q=params["fmatrix"](U)
 
 # load basis vectors
+nbasis=params["nbasis"]
 fg_basis,fg_cevec,fg_feval = g.load(params["basis"],{
-    "grids" : q.F_grid_eo
+    "grids" : q.F_grid_eo, "nmax" : nbasis
 })
 
 # memory info
@@ -29,7 +36,6 @@ g.meminfo()
 
 # prepare and test basis
 basis=[]
-nbasis=params["nbasis"]
 for i in range(nbasis):
     basis.append( g.vspincolor(q.F_grid_eo) )
     g.block.promote(fg_cevec[i],basis[i],fg_basis)

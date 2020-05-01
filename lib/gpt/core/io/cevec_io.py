@@ -74,6 +74,23 @@ def get_ivec(d,n):
 def get_xvec(d,n):
     return get_vec(d,n,lambda x: int(x,16))
 
+def truncate(data,ndata,ntruncate,nelements):
+    if ndata == ntruncate:
+        return data
+    ntotal=len(data)
+    assert(ntotal % (nelements*ndata) == 0)
+    szblock=ntotal // (nelements*ndata)
+    szelement=szblock*ndata
+    sztruncate=szblock*ntruncate
+    res=memoryview(bytearray(nelements*sztruncate))
+    #t0=gpt.time()
+    for j in range(nelements):
+        # memview copy internally uses memcpy and should be performant as long as szelement is sufficiently large
+        res[j*sztruncate:(j+1)*sztruncate]=data[j*szelement:(j*szelement + sztruncate)]
+    #t1=gpt.time()
+    #gpt.message("Truncate at %g GB/s" % (ntotal / 1024.**3 / (t1-t0)))
+    return res
+
 def load(filename, *a):
 
     # first check if this is right file format
@@ -128,12 +145,23 @@ def load(filename, *a):
     # create coarse grid
     cgrid=gpt.block.grid(fgrid,blocksize)
 
+    # allow for partial loading of data
+    if "nmax" in params:
+        nmax=params["nmax"]
+        nbasis_max=min([nmax,nbasis])
+        neigen_max=min([nmax,neigen])
+        nsingleCap_max=min([nmax,nsingleCap])
+    else:
+        nbasis_max=nbasis
+        neigen_max=neigen
+        nsingleCap_max=nsingleCap
+
     # allocate all lattices
-    basis=[ gpt.vspincolor(fgrid) for i in range(nbasis) ]
-    cevec=[ gpt.vcomplex(cgrid,nbasis) for i in range(neigen) ]
+    basis=[ gpt.vspincolor(fgrid) for i in range(nbasis_max) ]
+    cevec=[ gpt.vcomplex(cgrid,nbasis_max) for i in range(neigen_max) ]
 
     # fix checkerboard of basis
-    for i in range(nbasis):
+    for i in range(nbasis_max):
         basis[i].checkerboard(site_cb)
 
     # mpi layout
@@ -234,12 +262,12 @@ def load(filename, *a):
 
             fgrid.barrier()
             dt_distr-=gpt.time()
-            gpt.poke(basis[0:nsingleCap],pos[b],data_munged)
+            gpt.poke(basis[0:nsingleCap_max],pos[b],truncate(data_munged,nsingleCap,nsingleCap_max,len(pos[b])))
             dt_distr+=gpt.time()
 
             if verbose:
-                gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s" % 
-                            (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr))
+                gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s; available = %g GB" % 
+                            (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,gpt.memavail()))
 
 
         # fp16 data
@@ -279,12 +307,13 @@ def load(filename, *a):
 
                 fgrid.barrier()
                 dt_distr-=gpt.time()
-                gpt.poke(basis[nsingleCap:nbasis],pos[b],data_munged)
+                if nsingleCap < nbasis_max:
+                    gpt.poke(basis[nsingleCap:nbasis_max],pos[b],truncate(data_munged,nbasis-nsingleCap,nbasis_max-nsingleCap,len(pos[b])))
                 dt_distr+=gpt.time()
 
                 if verbose:
-                    gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s" % 
-                                (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16))
+                    gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s; available = %g GB" % 
+                                (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16,gpt.memavail()))
 
 
         # coarse grid data
@@ -315,12 +344,13 @@ def load(filename, *a):
 
             fgrid.barrier()
             dt_distr-=gpt.time()
-            cevec[j][pos_coarse]=data
+            if j < neigen_max:
+                cevec[j][pos_coarse]=truncate(data,nbasis,nbasis_max,len(pos_coarse))
             dt_distr+=gpt.time()
 
             if verbose and j % (neigen // 10) == 0:
-                gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s" % 
-                            (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16))
+                gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s; available = %g GB" % 
+                            (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16,gpt.memavail()))
 
         # crc checks
         if not f is None:

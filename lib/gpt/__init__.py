@@ -26,7 +26,7 @@ import cgpt, sys
 import socket
 
 # initialize cgpt when gpt is loaded
-cgpt.init(sys.argv)
+cgpt.init(sys.argv + [ "--debug-signals" ])
 
 # save my hostname
 hostname=socket.gethostname()
