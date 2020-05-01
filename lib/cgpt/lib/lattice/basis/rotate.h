@@ -30,8 +30,7 @@ void cgpt_basis_rotate(std::vector<Field*> &basis,RealD* Qt,int j0, int j1, int 
     basis_v[k] = basis[k]->View();
   }
 
-  //#ifndef GPU_VEC
-#if 0
+#ifndef GRID_NVCC
   thread_region
   {
     std::vector < vobj > B(Nm); // Thread private
@@ -50,12 +49,11 @@ void cgpt_basis_rotate(std::vector<Field*> &basis,RealD* Qt,int j0, int j1, int 
   }
 #else
   int nrot = j1-j0;
-
+  if (!nrot) // edge case not handled gracefully by Cuda
+    return;
 
   uint64_t oSites   =grid->oSites();
   uint64_t siteBlock=(grid->oSites()+nrot-1)/nrot; // Maximum 1 additional vector overhead
-
-  //  printf("BasisRotate %d %d nrot %d siteBlock %d\n",j0,j1,nrot,siteBlock);
 
   Vector <vobj> Bt(siteBlock * nrot); 
   auto Bp=&Bt[0];
@@ -77,7 +75,7 @@ void cgpt_basis_rotate(std::vector<Field*> &basis,RealD* Qt,int j0, int j1, int 
 
     // zero out the accumulators
     accelerator_for(ss,siteBlock*nrot,vobj::Nsimd(),{
-	auto z=coalescedRead(Bp[ss]);
+	decltype(coalescedRead(Bp[ss])) z;
 	z=Zero();
 	coalescedWrite(Bp[ss],z);
       });
@@ -116,8 +114,7 @@ void cgpt_linear_combination(Field &result,std::vector<Field*> &basis,RealD* Qt)
 
   int N = (int)basis.size();
 
-  //#ifndef GPU_VEC
-#if 0
+#ifndef GRID_NVCC
   thread_for(ss, grid->oSites(),{
       vobj B = Zero();
       for(int k=0; k<N; ++k){
@@ -136,7 +133,7 @@ void cgpt_linear_combination(Field &result,std::vector<Field*> &basis,RealD* Qt)
   double * Qt_j = & Qt_jv[0];
   for(int k=0;k<N;++k) Qt_j[k]=Qt[k];
   accelerator_for(ss, grid->oSites(),vobj::Nsimd(),{
-      auto B=coalescedRead(basis_v[0][ss]);
+      decltype(coalescedRead(basis_v[0][ss])) B;
       B=Zero();
       for(int k=0; k<N; ++k){
 	B +=Qt_j[k] * coalescedRead(basis_v[k][ss]);
