@@ -18,6 +18,7 @@
 */
 #include "lib.h"
 
+// swap axes
 EXPORT(munge_inner_outer,{
     PyObject* _src,* _dst;
     long inner, outer;

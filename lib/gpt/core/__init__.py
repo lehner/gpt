@@ -18,7 +18,7 @@
 #
 from gpt.core.grid import grid, full, redblack, str_to_checkerboarding
 from gpt.core.precision import single, double, str_to_precision
-from gpt.core.lattice import lattice, meminfo
+from gpt.core.lattice import lattice, get_mem_book
 from gpt.core.peekpoke import poke, peek
 from gpt.core.tensor import tensor
 from gpt.core.gamma import gamma, gamma_base
@@ -36,5 +36,6 @@ from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomp
 from gpt.core.cartesian import cartesian_view
 from gpt.core.coordinates import coordinates
 from gpt.core.random import random, sha256
+from gpt.core.mem import maxrss, meminfo, memavail
 import gpt.core.util
 import gpt.core.block
