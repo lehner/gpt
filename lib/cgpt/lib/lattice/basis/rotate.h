@@ -22,7 +22,7 @@ template<class Field>
 void cgpt_basis_rotate(std::vector<Field*> &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) {
   typedef decltype(basis[0]->View()) View;
   auto tmp_v = basis[0]->View();
-  std::vector<View> basis_v(basis.size(),tmp_v);
+  Vector<View> basis_v(basis.size(),tmp_v);
   typedef typename Field::vector_object vobj;
   GridBase* grid = basis[0]->Grid();
       
@@ -61,8 +61,8 @@ void cgpt_basis_rotate(std::vector<Field*> &basis,RealD* Qt,int j0, int j1, int 
   // GPU readable copy of matrix
   Vector<double> Qt_jv(Nm*Nm);
   double *Qt_p = & Qt_jv[0];
-  for(int k=k0;k<k1;++k){
-    for(int j=j0;j<j1;++j){
+  for(int k=0;k<Nm;++k){
+    for(int j=0;j<Nm;++j){
       Qt_p[j*Nm+k]=Qt[j*Nm+k];
     }
   }

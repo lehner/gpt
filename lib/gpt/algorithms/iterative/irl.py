@@ -117,14 +117,7 @@ class irl:
 
             # rotate
             t0=g.time()
-            #test0=g.copy(evec[0])
-            #test60=g.copy(evec[60])
             g.rotate(evec,Qt,k1-1,k2+1,0,Nm)
-            #g.rotate(evec,np.linalg.inv(Qt),k1-1,k2+1,0,Nm)
-            #g.message(np.linalg.norm(np.linalg.inv(Qt) @ Qt - np.identity(Nm,dtype)))
-            #g.message(g.norm2(test0-evec[0])/g.norm2(test0),k1-1,k2+1,Nm)
-            #g.message(g.norm2(test60-evec[60])/g.norm2(test60))
-            #sys.exit(0)
             t1=g.time()
 
             if verbose:
