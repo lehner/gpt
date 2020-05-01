@@ -10,13 +10,13 @@ import sys
 import numpy as np
 
 # parameters
-fn=g.default.get("params","params.txt")
+fn=g.default.get("--params","params.txt")
 params=g.params(fn,verbose = True)
 
 # load configuration
 U = params["config"]
 
-# mobius fermion
+# fermion
 q=params["fmatrix"](U)
 
 # load basis vectors

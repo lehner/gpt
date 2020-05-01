@@ -22,8 +22,8 @@ import gpt.default
 import gpt.create
 import gpt.algorithms
 import gpt.qcd
-import cgpt, sys
 import socket
+import cgpt, sys
 
 # initialize cgpt when gpt is loaded
 cgpt.init(sys.argv)

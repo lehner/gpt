@@ -31,7 +31,7 @@ void cgpt_basis_rotate(std::vector<Field*> &basis,RealD* Qt,int j0, int j1, int 
   }
 
   //#ifndef GPU_VEC
-#if 1
+#if 0
   thread_region
   {
     std::vector < vobj > B(Nm); // Thread private
@@ -63,7 +63,7 @@ void cgpt_basis_rotate(std::vector<Field*> &basis,RealD* Qt,int j0, int j1, int 
   // GPU readable copy of matrix
   Vector<double> Qt_jv(Nm*Nm);
   double *Qt_p = & Qt_jv[0];
-  for(int k0=0;k<k1;++k){
+  for(int k=k0;k<k1;++k){
     for(int j=j0;j<j1;++j){
       Qt_p[j*Nm+k]=Qt[j*Nm+k];
     }
@@ -117,7 +117,7 @@ void cgpt_linear_combination(Field &result,std::vector<Field*> &basis,RealD* Qt)
   int N = (int)basis.size();
 
   //#ifndef GPU_VEC
-#if 1
+#if 0
   thread_for(ss, grid->oSites(),{
       vobj B = Zero();
       for(int k=0; k<N; ++k){

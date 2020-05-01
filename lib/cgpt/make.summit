@@ -82,8 +82,9 @@ do
 	    echo " [CXX] $bn"
 	    start=$SECONDS
 	    ${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> logs/${bn}.out 2> logs/${bn}.err
+	    success=$?
 	    elapsed=$((SECONDS-start))
-	    if [[ "$?" == "0" ]];
+	    if [[ "$success" == "0" ]];
 	    then
 		printf "%-50s %s\n" " [OK ] $bn " "($elapsed s)"
 	    else
