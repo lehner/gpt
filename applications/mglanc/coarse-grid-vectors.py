@@ -31,6 +31,9 @@ fg_basis,fg_cevec,fg_feval = g.load(params["basis"],{
     "grids" : q.F_grid_eo, "nmax" : nbasis
 })
 
+# advise against caching bulk storage
+g.advise([fg_basis,fg_cevec],g.infrequent_use)
+
 # memory info
 g.meminfo()
 
@@ -44,7 +47,7 @@ for i in range(nbasis):
 # prepare and test basis
 basis=[]
 for i in range(nbasis):
-    basis.append( g.vspincolor(q.F_grid_eo) )
+    basis.append( g.advise(g.vspincolor(q.F_grid_eo),g.infrequent_use) )
     g.block.promote(fg_cevec[i],basis[i],fg_basis)
     g.algorithms.approx.evals(q.NDagN,[ basis[i] ],check_eps2=1e-4)
     g.message("Compare to: %g" % fg_feval[i])

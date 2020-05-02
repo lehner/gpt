@@ -53,6 +53,7 @@ class lattice:
             cb = first.checkerboard()
         else:
             raise Exception("Unknown lattice constructor")
+
         # use first pointer to index page in memory book
         mem_book[self.v_obj[0]] = (self.grid,self.otype,gpt.time())
         if not cb is None:
@@ -62,6 +63,13 @@ class lattice:
         del mem_book[self.v_obj[0]]
         for o in self.v_obj:
             cgpt.delete_lattice(o)
+
+    def advise(self, t):
+        if type(t) != str:
+            t=t.tag
+        for o in self.v_obj:
+            cgpt.lattice_advise(o,t)
+        return self
 
     def checkerboard(self, val = None):
         if val is None:
