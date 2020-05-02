@@ -34,6 +34,13 @@ fg_basis,fg_cevec,fg_feval = g.load(params["basis"],{
 # memory info
 g.meminfo()
 
+# norms
+for i in range(nbasis):
+    g.message("Norm2 of basis[%d] = %g" % (i,g.norm2(fg_basis[i])))
+
+for i in range(nbasis):
+    g.message("Norm2 of cevec[%d] = %g" % (i,g.norm2(fg_cevec[i])))
+
 # prepare and test basis
 basis=[]
 for i in range(nbasis):

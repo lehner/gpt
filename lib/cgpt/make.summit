@@ -103,6 +103,8 @@ done
 wait
 
 # Link
-OBS="build/basis.o  build/coordinates.o  build/eval.o build/expression_linear_combination.o build/fp16.o  build/init.o build/mpi.o    build/operators.o  build/time.o  build/util.o
-build/block.o  build/distribute.o   build/expression_gammamul.o  build/expression_mul.o build/grid.o  build/io.o    build/lib.o      build/munge.o  build/random.o     build/transform.o"
-nvcc --link --shared build/lattice.o ${OBS} ${CXXFLAGS} ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
+#OBS="build/basis.o  build/coordinates.o  build/eval.o build/expression_linear_combination.o build/fp16.o  build/init.o build/mpi.o    build/operators.o  build/time.o  build/util.o
+#build/block.o  build/distribute.o   build/expression_gammamul.o  build/expression_mul.o build/grid.o  build/io.o    build/lib.o      build/munge.o  build/random.o     build/transform.o"
+#nvcc --link --shared build/lattice.o ${OBS} ${CXXFLAGS} ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
+
+nvcc --link --shared build/*.o ${CXXFLAGS} ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so

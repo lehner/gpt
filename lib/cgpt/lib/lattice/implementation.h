@@ -192,5 +192,14 @@ public:
     return l.Grid();
   }
 
+  virtual PyObject* advise(std::string type) {
+    if (type == "infrequent_use") {
+      l.AdviseInfrequentUse();
+    } else {
+      ERR("Unknown advise %s",type.c_str());
+    }
+    return PyLong_FromLong(0);
+  }
+
 };
 
