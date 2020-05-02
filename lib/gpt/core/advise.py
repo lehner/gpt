@@ -23,7 +23,7 @@ def advise(o,t):
     if type(o) == list:
         return [ advise(i,t) for i in o ]
     elif type(o) == tuple:
-        return tuple(advise(list(o),t)
+        return tuple(advise(list(o),t))
     elif type(o) == dict:
         return { i : advise(o[i],t) for i in o }
     else:
