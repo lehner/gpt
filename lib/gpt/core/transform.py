@@ -73,22 +73,23 @@ def convert(first, second):
     else:
         assert(0)
 
-def norm2(l):
-    if type(l) == gpt.tensor:
-        return l.norm2()
-    l=gpt.eval(l)
-    if type(l) == gpt.lattice:
-        return sum([ cgpt.lattice_norm2(o) for o in l.v_obj ])
-    else:
-        assert(0)
-    
-def innerProduct(a,b):
+def innerProduct(a,b, rank_only = False):
     if type(a) == gpt.tensor and type(b) == gpt.tensor:
         return gpt.adj(a) * b
     a=gpt.eval(a)
     b=gpt.eval(b)
     assert(len(a.otype.v_idx) == len(b.otype.v_idx))
-    return sum([ cgpt.lattice_innerProduct(a.v_obj[i],b.v_obj[i]) for i in a.otype.v_idx ])
+    r=sum([ cgpt.lattice_rankInnerProduct(a.v_obj[i],b.v_obj[i]) for i in a.otype.v_idx ])
+    if rank_only:
+        return r
+    # do global sum only once not for each v_idx
+    return a.grid.globalsum(rankInnerProduct(a,b))
+
+def rankInnerProduct(a,b):
+    return innerProduct(a,b, rank_only = True)
+
+def norm2(l):
+    return innerProduct(l,l).real
 
 def innerProductNorm2(a,b):
     if type(a) == gpt.tensor and type(b) == gpt.tensor:
@@ -97,7 +98,7 @@ def innerProductNorm2(a,b):
     b=gpt.eval(b)
     assert(len(a.otype.v_idx) == len(b.otype.v_idx))
     r=[ cgpt.lattice_innerProductNorm2(a.v_obj[i],b.v_obj[i]) for i in a.otype.v_idx ]
-    return sum([ x[0] for x in r ]), sum([ x[1] for x in r ])
+    return sum([ x[0] for x in r ]), sum([ x[1] for x in r ]) # todo, make local version of this too
 
 def axpy_norm2(d, a, x, y):
     x=gpt.eval(x)

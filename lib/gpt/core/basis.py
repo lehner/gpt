@@ -19,14 +19,34 @@
 
 import gpt
 import cgpt
+import numpy
 
-def orthogonalize(w,basis,ips=None):
-    for j, v in enumerate(basis):
-        ip=gpt.innerProduct(v,w)
-        w -= ip*v
+def orthogonalize(w,basis,ips=None,nblock = 4):
+    n=len(basis)
+    if n == 0:
+        return
+    grid=basis[0].grid
+    lip=numpy.array([ 0.0 ] * nblock,dtype=numpy.complex128)
+    i=0
+    while i+nblock <= n:
+        for j in range(nblock):
+            lip[j]=gpt.rankInnerProduct(basis[i+j],w)
+        grid.globalsum(lip)
         if ips is not None:
-            ips[j]=ip
-
+            for j in range(nblock):
+                ips[i+j]=lip[j]
+        expr=w - lip[0]*basis[i+0]
+        for j in range(1,nblock):
+            expr -= lip[j]*basis[i+j]
+        w @= expr
+        i+=nblock
+    while i < n:
+        ip=gpt.innerProduct(basis[i],w)
+        w -= ip*basis[i]
+        if ips is not None:
+            ips[i]=ip
+        i+=1
+        
 def linear_combination(r,basis,Qt):
     assert(len(basis[0].v_obj) == len(r.v_obj))
     for i in r.otype.v_idx:

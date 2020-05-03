@@ -60,6 +60,10 @@ public:
     return ::innerProduct(l,compatible<T>(other)->l);
   }
 
+  virtual ComplexD rankInnerProduct(cgpt_Lattice_base* other) {
+    return ::rankInnerProduct(l,compatible<T>(other)->l);
+  }
+
   virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
     ::innerProductNorm(ip,a2,l,compatible<T>(other)->l);
   }
@@ -193,11 +197,13 @@ public:
   }
 
   virtual PyObject* advise(std::string type) {
+    int advise;
     if (type == "infrequent_use") {
-      l.AdviseInfrequentUse();
+      advise = AdviseInfrequentUse;
     } else {
       ERR("Unknown advise %s",type.c_str());
     }
+    l.Advise(advise);
     return PyLong_FromLong(0);
   }
 
