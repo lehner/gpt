@@ -427,7 +427,7 @@ def save(filename, objs, params):
 def load(filename, *a):
 
     # first check if this is right file format
-    if not os.path.exists(filename + "/index.crc32"):
+    if not (os.path.exists(filename + "/index.crc32") and os.path.exists(filename + "/global")):
         raise NotImplementedError()
 
     # parameters

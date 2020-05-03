@@ -80,3 +80,4 @@ if "--help" in sys.argv:
     print("")
     print("   set maximal number of simultaneous IO nodes")
     print("--------------------------------------------------------------------------------")
+    sys.stdout.flush()

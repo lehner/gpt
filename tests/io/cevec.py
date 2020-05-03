@@ -10,9 +10,9 @@ import numpy as np
 
 # load configuration
 #/hpcgpfs01/work/clehner/runs/tune-lanc-48c/job-strange-01000/lanczos.output
-basis,cevec,feval = g.load("/hpcgpfs01/work/lqcd/k2pipipbc/chulwoo/32ID/0.0001/evecs/job-900/lanczos.output",{
-    "grids" : g.grid([12,32,32,32,64],g.single,g.redblack)
-})
+#basis,cevec,feval = g.load("/hpcgpfs01/work/lqcd/k2pipipbc/chulwoo/32ID/0.0001/evecs/job-900/lanczos.output",{
+#    "grids" : g.grid([12,32,32,32,64],g.single,g.redblack)
+#})
 
 # test SYM1
 U = g.load("/hpcgpfs01/work/clehner/configs/96I/test/ckpoint_lat.2000")
@@ -45,7 +45,7 @@ g.save("/hpcgpfs01/work/clehner/configs/96I/test/checkpoint2",
        g.format.cevec({
            "nsingle" : len(basis) // 2,
            "max_read_blocks" : 16,
-#           "mpi" : [ 1, 2,2,2,2 ]
+           "mpi" : [ 1, 2,2,2,2 ]
        }))
 
 # and load again to verify
