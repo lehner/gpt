@@ -51,7 +51,7 @@ for i in range(nbasis):
     g.block.promote(fg_cevec[i],basis[i],fg_basis)
     g.algorithms.approx.evals(q.NDagN,[ basis[i] ],check_eps2=1e-4)
     g.message("Compare to: %g" % fg_feval[i])
-    g.advise(basis[i],g.infrequent_use) # TODO: make parameter, only advise against HBM for fraction?
+    g.advise(basis[i],g.infrequent_use)
 
 # now discard original basis
 del fg_basis
