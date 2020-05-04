@@ -207,5 +207,17 @@ public:
     return PyLong_FromLong(0);
   }
 
+  virtual PyObject* prefetch(std::string type) {
+    int advise;
+    if (type == "accelerator") {
+      l.AcceleratorPrefetch();
+    } else if (type == "host") {
+      l.HostPrefetch();
+    } else {
+      ERR("Unknown prefetch %s",type.c_str());
+    }
+    return PyLong_FromLong(0);
+  }
+
 };
 
