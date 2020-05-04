@@ -67,8 +67,8 @@ class irl:
         evec=[ g.lattice(src) for i in range(Nm) ]
 
         # advice memory storage
-        if "advice" in self.params:
-            g.advice(evec,self.params["advice"])
+        if "advise" in self.params:
+            g.advise(evec,self.params["advise"])
 
         # scalars
         k1=1
