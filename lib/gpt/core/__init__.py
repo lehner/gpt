@@ -18,7 +18,7 @@
 #
 from gpt.core.grid import grid, full, redblack, str_to_checkerboarding
 from gpt.core.precision import single, double, str_to_precision
-from gpt.core.advise import advise, infrequent_use
+from gpt.core.advise import advise, prefetch, infrequent_use, to_host, to_accelerator
 from gpt.core.lattice import lattice, get_mem_book
 from gpt.core.peekpoke import poke, peek
 from gpt.core.tensor import tensor

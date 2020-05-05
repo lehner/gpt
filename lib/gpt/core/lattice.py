@@ -71,6 +71,13 @@ class lattice:
             cgpt.lattice_advise(o,t)
         return self
 
+    def prefetch(self, t):
+        if type(t) != str:
+            t=t.tag
+        for o in self.v_obj:
+            cgpt.lattice_prefetch(o,t)
+        return self
+
     def checkerboard(self, val = None):
         if val is None:
             if self.grid.cb != gpt.redblack:

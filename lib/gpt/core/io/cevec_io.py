@@ -159,6 +159,10 @@ def load(filename, *a):
     # allocate all lattices
     basis=[ gpt.vspincolor(fgrid) for i in range(nbasis_max) ]
     cevec=[ gpt.vcomplex(cgrid,nbasis_max) for i in range(neigen_max) ]
+    if "advise_basis" in params:
+        gpt.advise(basis,params["advise_basis"])
+    if "advise_cevec" in params:
+        gpt.advise(cevec,params["advise_cevec"])
 
     # fix checkerboard of basis
     for i in range(nbasis_max):

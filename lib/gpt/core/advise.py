@@ -19,12 +19,25 @@
 class infrequent_use:
     tag="infrequent_use"
 
-def advise(o,t):
+class to_host:
+    tag="host"
+
+class to_accelerator:
+    tag="accelerator"
+
+def distribute(o,f):
     if type(o) == list:
-        return [ advise(i,t) for i in o ]
+        return [ distribute(i,f) for i in o ]
     elif type(o) == tuple:
-        return tuple(advise(list(o),t))
+        return tuple(distribute(list(o),f))
     elif type(o) == dict:
-        return { i : advise(o[i],t) for i in o }
+        return { i : distribute(o[i],f) for i in o }
     else:
-        return o.advise(t)
+        return f(o)
+
+def advise(o,t):
+    return distribute(o, lambda x: x.advise(t))
+
+def prefetch(o,t):
+    return distribute(o, lambda x: x.prefetch(t))
+

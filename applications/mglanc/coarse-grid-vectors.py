@@ -28,11 +28,10 @@ q=params["fmatrix"](U)
 # load basis vectors
 nbasis=params["nbasis"]
 fg_basis,fg_cevec,fg_feval = g.load(params["basis"],{
-    "grids" : q.F_grid_eo, "nmax" : nbasis
+    "grids" : q.F_grid_eo, "nmax" : nbasis, 
+    "advise_basis" : g.infrequent_use,
+    "advise_cevec" : g.infrequent_use
 })
-
-# advise against caching bulk storage
-g.advise([fg_basis,fg_cevec],g.infrequent_use)
 
 # memory info
 g.meminfo()
@@ -46,12 +45,22 @@ for i in range(nbasis):
 
 # prepare and test basis
 basis=[]
+assert(nbasis > 0)
+g.prefetch(fg_cevec[0],g.to_accelerator)
 for i in range(nbasis):
-    basis.append( g.vspincolor(q.F_grid_eo) )
+
+    if i+1 < nbasis:
+        g.prefetch(fg_cevec[i+1],g.to_accelerator) # already move next ones
+
+    basis.append( g.vspincolor(q.F_grid_eo) ) # don't advise yet, let it be first touched on accelerator
     g.block.promote(fg_cevec[i],basis[i],fg_basis)
     g.algorithms.approx.evals(q.NDagN,[ basis[i] ],check_eps2=1e-4)
+
+    g.prefetch(fg_cevec[i],g.to_host) # move back used fg_evec
+
     g.message("Compare to: %g" % fg_feval[i])
     g.advise(basis[i],g.infrequent_use)
+    g.prefetch(basis[i],g.to_host) # move basis to host
 
 # now discard original basis
 del fg_basis
