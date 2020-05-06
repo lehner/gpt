@@ -18,10 +18,10 @@
 */
 
 template<typename T>
-void cgpt_basis_fill(std::vector<Lattice<T>*>& basis, std::vector<cgpt_Lattice_base*>& _basis) {
+void cgpt_basis_fill(PVector<Lattice<T>>& basis, std::vector<cgpt_Lattice_base*>& _basis) {
   basis.resize(_basis.size());
   for (size_t i=0;i<basis.size();i++)
-    basis[i] = &compatible<T>(_basis[i])->l;
+    basis(i) = &compatible<T>(_basis[i])->l;
 }
 
 static void cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _basis, int idx) {

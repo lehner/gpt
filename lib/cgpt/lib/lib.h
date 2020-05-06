@@ -31,6 +31,7 @@
 
 using namespace Grid;
 
+#include "pvector.h"
 #include "time.h"
 #include "exception.h"
 #include "cached.h"
