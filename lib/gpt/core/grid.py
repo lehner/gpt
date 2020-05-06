@@ -59,7 +59,7 @@ class grid:
             obj=fourth
 
         self.fdimensions = fdimensions
-        self.gsites = np.prod(self.fdimensions)
+        self.fsites = np.prod(self.fdimensions)
         self.precision = precision
         self.cb = cb
         self.nd=len(self.fdimensions)
@@ -72,7 +72,6 @@ class grid:
         # processor is mpi rank, may not be lexicographical (cartesian) rank
         self.processor,self.Nprocessors,self.processor_coor,self.gdimensions,self.ldimensions=cgpt.grid_get_processor(self.obj)
         self.mpi = [ self.gdimensions[i] // self.ldimensions[i] for i in range(self.nd) ]
-        self.lsites = np.prod(self.ldimensions)
 
     def describe(self): # creates a string without spaces that can be used to construct it again, this should only describe the grid geometry not the mpi/simd
         return (str(self.fdimensions)+";"+self.precision.__name__+";"+self.cb.__name__).replace(" ","")

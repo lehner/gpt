@@ -28,18 +28,28 @@ def orthogonalize(w,basis,ips=None,nblock = 4):
     grid=basis[0].grid
     lip=numpy.array([ 0.0 ] * nblock,dtype=numpy.complex128)
     i=0
+    t_rankInnerProduct=0.0
+    t_globalSum=0.0
+    t_linearCombination=0.0
     while i+nblock <= n:
+        t_rankInnerProduct-=gpt.time()
         for j in range(nblock):
             lip[j]=gpt.rankInnerProduct(basis[i+j],w)
+        t_rankInnerProduct+=gpt.time()
+        t_globalSum-=gpt.time()
         grid.globalsum(lip)
+        t_globalSum+=gpt.time()
         if ips is not None:
             for j in range(nblock):
                 ips[i+j]=lip[j]
         expr=w - lip[0]*basis[i+0]
         for j in range(1,nblock):
             expr -= lip[j]*basis[i+j]
+        t_linearCombination-=gpt.time()
         w @= expr
+        t_linearCombination+=gpt.time()
         i+=nblock
+    gpt.message("Timing Ortho: %g rankInnerProduct, %g globalsum, %g lc" % (t_rankInnerProduct,t_globalSum,t_linearCombination))
     while i < n:
         ip=gpt.innerProduct(basis[i],w)
         w -= ip*basis[i]

@@ -40,8 +40,8 @@ def meminfo():
         gpt.message(fmt % ("Index","Grid","Precision","OType", "CBType", "Size/GB", "Created at time"))
         for i,page in enumerate(mem_book):
             grid,otype,created = mem_book[page]
-            g_gb = grid.gsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
-            l_gb = grid.lsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
+            g_gb = grid.fsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
+            l_gb = g_gb // grid.Nprocessors
             g_tot_gb += g_gb
             l_tot_gb += l_gb
             gpt.message(fmt % (i,grid.gdimensions,grid.precision.__name__,
