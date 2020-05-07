@@ -59,8 +59,9 @@ for i in range(nbasis):
     g.prefetch(fg_cevec[i],g.to_host) # move back used fg_evec
 
     g.message("Compare to: %g" % fg_feval[i])
-    #g.advise(basis[i],g.infrequent_use)  # for 480 job these lines were active and gave no perf fluctuations but Timing: 1.08138 s (promote), 8.30313 s (matrix), 1.95476 s (project)
-    #g.prefetch(basis[i],g.to_host) # move basis to host
+    g.advise(basis[i],g.infrequent_use)  # KEEP this in, without it the job was very slow!
+    # for 480 job these lines were active and gave no perf fluctuations but Timing: 1.08138 s (promote), 8.30313 s (matrix), 1.95476 s (project)
+    g.prefetch(basis[i],g.to_host) # move basis to host
 
 # now discard original basis
 del fg_basis

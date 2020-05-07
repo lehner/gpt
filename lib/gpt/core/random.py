@@ -52,8 +52,9 @@ class random:
             if "pos" in p:
                 pos=p["pos"]
             else:
-                pos=gpt.coordinates(t.grid)
+                pos=gpt.coordinates(t)
             t0=gpt.time()
+            print("Before sample"); sys.stdout.flush()
             mv=cgpt.random_sample(self.obj,pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj, "precision" : t.grid.precision} })
             t1=gpt.time()
             t[pos]=mv
