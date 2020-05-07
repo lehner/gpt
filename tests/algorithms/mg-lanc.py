@@ -8,26 +8,26 @@ import gpt as g
 import sys
 
 # load configuration
-U = g.load("/hpcgpfs01/work/clehner/configs/24I_0p005/ckpoint_lat.IEEE64BIG.5000")
+U = g.load("/hpcgpfs01/work/clehner/configs/96I/test/ckpoint_lat.2000")
 
 # do everything in single-precision
 U = g.convert(U, g.single)
 
 # dwf, eo prec
-w=g.qcd.fermion.preconditioner.eo2(g.qcd.fermion.zmobius(U,{
-    "mass"  : 0.005,
+w=g.qcd.fermion.preconditioner.eo1(g.qcd.fermion.mobius(U,{
+    "mass"  : 0.01,
     "M5"    : 1.8,
-    "b"     : 1.0,
-    "c"     : 0.0,
-    "omega" : [ 1.0 ] * 16, # Mobius
-    "boundary_phases" : [ 1.0, 1.0, 1.0, 1.0 ]
+    "b"     : 1.5,
+    "c"     : 0.5,
+    "Ls"    : 12,
+    "boundary_phases" : [ 1.0, 1.0, 1.0, -1.0 ]
 }))
 
 # cheby on fine grid
 c=g.algorithms.approx.chebyshev({
-    "low"   : 1e-4,
-    "high"  : 5.5,
-    "order" : 230,
+    "low"   : 0.01,
+    "high"  : 6.25,
+    "order" : 50,
 })
 
 # implicitly restarted lanczos on fine grid
@@ -53,7 +53,7 @@ try:
 except g.LoadError:
     # generate eigenvectors
     evec,ev_cheb=irl(c(w.NDagN), start, g.checkpointer("/hpcgpfs01/scratch/clehner/checkpointOdd"))
-    g.save("/hpcgpfs01/scratch/clehner/basis",(evec,ev))
+    g.save("/hpcgpfs01/scratch/clehner/basis",(evec,ev_cheb))
 
 ev_basis=g.algorithms.approx.evals(w.NDagN,evec,check_eps2 = 1e-8)
 
@@ -62,9 +62,9 @@ g.meminfo()
 
 # cheby on coarse grid
 c=g.algorithms.approx.chebyshev({
-    "low"   : 4.2e-4,
-    "high"  : 5.5,
-    "order" : 150,
+    "low"   : 0.01,
+    "high"  : 6.25,
+    "order" : 50,
 })
 
 # implicitly restarted lanczos on coarse grid
@@ -80,7 +80,7 @@ irl=g.algorithms.iterative.irl({
 })
 
 # coarse-grid
-grid_coarse=g.block.grid(w.F_grid_eo,[16,2,2,2,2])
+grid_coarse=g.block.grid(w.F_grid_eo,[12,2,2,2,2])
 cstart=g.vcomplex(grid_coarse,50)
 cstart[:]=g.vcomplex([ 1 ] * 50,50)
 
