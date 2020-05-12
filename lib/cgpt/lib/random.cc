@@ -75,8 +75,9 @@ EXPORT(create_random,{
     cgpt_convert(_seed,seed);
 
     if (type == "vectorized_ranlux24_389_64") {
-      //std::cout << "Before: " << seed << std::endl;
       return PyLong_FromVoidPtr(new cgpt_random_engine< cgpt_random_vectorized_ranlux24_389_64 >(seed));
+    } else if (type == "vectorized_ranlux24_24_64") {
+      return PyLong_FromVoidPtr(new cgpt_random_engine< cgpt_random_vectorized_ranlux24_24_64 >(seed));
     } else {
       ERR("Unknown rng engine type %s",type.c_str());
     }

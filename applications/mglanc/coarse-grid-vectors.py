@@ -10,7 +10,7 @@ import sys
 import numpy as np
 
 # show available memory
-g.meminfo()
+g.mem_report()
 
 # parameters
 fn=g.default.get("--params","params.txt")
@@ -20,7 +20,7 @@ params=g.params(fn,verbose = True)
 U = params["config"]
 
 # show available memory
-g.meminfo()
+g.mem_report()
 
 # fermion
 q=params["fmatrix"](U)
@@ -34,7 +34,7 @@ fg_basis,fg_cevec,fg_feval = g.load(params["basis"],{
 })
 
 # memory info
-g.meminfo()
+g.mem_report()
 
 # norms
 for i in range(nbasis):
@@ -43,31 +43,24 @@ for i in range(nbasis):
 for i in range(nbasis):
     g.message("Norm2 of cevec[%d] = %g" % (i,g.norm2(fg_cevec[i])))
 
+g.mem_report()
+
 # prepare and test basis
 basis=[]
 assert(nbasis > 0)
-g.prefetch(fg_cevec[0],g.to_accelerator)
 for i in range(nbasis):
-
-    if i+1 < nbasis:
-        g.prefetch(fg_cevec[i+1],g.to_accelerator) # already move next ones
-
     basis.append( g.vspincolor(q.F_grid_eo) ) # don't advise yet, let it be first touched on accelerator
     g.block.promote(fg_cevec[i],basis[i],fg_basis)
     g.algorithms.approx.evals(q.NDagN,[ basis[i] ],check_eps2=1e-4)
-
-    g.prefetch(fg_cevec[i],g.to_host) # move back used fg_evec
-
     g.message("Compare to: %g" % fg_feval[i])
-    g.advise(basis[i],g.infrequent_use)  # KEEP this in, without it the job was very slow!
-    # for 480 job these lines were active and gave no perf fluctuations but Timing: 1.08138 s (promote), 8.30313 s (matrix), 1.95476 s (project)
-    g.prefetch(basis[i],g.to_host) # move basis to host
+
+    g.mem_report()
 
 # now discard original basis
 del fg_basis
 del fg_cevec
 g.message("Memory information after discarding original basis:")
-g.meminfo()
+g.mem_report()
 
 # coarse grid
 cgrid=params["cgrid"](q.F_grid_eo)
@@ -82,11 +75,15 @@ irl=params["method_evec"]
 cstart=g.vcomplex(cgrid,nbasis)
 cstart[:]=g.vcomplex([ 1 ] * nbasis,nbasis)
 
+g.mem_report()
+
 # basis
 northo=params["northo"]
 for i in range(northo):
     g.message("Orthonormalization round %d" % i)
     g.block.orthonormalize(cgrid,basis)
+
+g.mem_report()
 
 # now define coarse-grid operator
 ftmp=g.lattice(basis[0])
@@ -94,6 +91,8 @@ ctmp=g.lattice(cstart)
 g.block.promote(cstart,ftmp,basis)
 g.block.project(ctmp,ftmp,basis)
 g.message("Test precision of promote-project chain: %g" % (g.norm2(cstart-ctmp)/g.norm2(cstart)))
+
+g.mem_report()
 
 try:
     cevec,cev=g.load("cevec", { "grids" : cgrid })

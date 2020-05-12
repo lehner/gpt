@@ -58,7 +58,7 @@ except g.LoadError:
 ev_basis=g.algorithms.approx.evals(w.NDagN,evec,check_eps2 = 1e-8)
 
 # memory info
-g.meminfo()
+g.mem_report()
 
 # cheby on coarse grid
 c=g.algorithms.approx.chebyshev({

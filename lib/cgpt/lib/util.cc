@@ -84,3 +84,17 @@ EXPORT(util_sha256,{
 			PyLong_FromLong(sha256[7])
                         );
   });
+
+EXPORT(util_mem,{
+
+    size_t accelerator_available = 0x0;
+    size_t accelerator_total = 0x0;
+
+#ifdef GRID_NVCC
+    cudaMemGetInfo(&accelerator_available,&accelerator_total);
+#endif
+
+    return Py_BuildValue("{s:k,s:k}",
+			 "accelerator_available", (unsigned long)accelerator_available,
+			 "accelerator_total", (unsigned long)accelerator_total);
+  });

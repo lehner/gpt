@@ -59,9 +59,9 @@ g.copy(new,src)
 dst = g.cshift(src, 0, 1)
 
 # show current memory usage
-g.meminfo()
+g.mem_report()
 del original # free lattice and remove from scope
-g.meminfo()
+g.mem_report()
 
 # or re-use an existing lattice object as target
 g.cshift(dst, src, 0, 1)

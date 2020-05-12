@@ -89,5 +89,10 @@ public:
 #undef _X_
 };
 
+// slow, ideal generator with full decorrelation
 typedef cgpt_ranlux<vInteger,24,24,10,389> cgpt_base_vrng_ranlux24_389;
 typedef cgpt_ranlux<Integer,24,24,10,389> cgpt_base_rng_ranlux24_389;
+
+// fast, imperfect generator for testing
+typedef cgpt_ranlux<vInteger,24,24,10,24> cgpt_base_vrng_ranlux24_24;
+typedef cgpt_ranlux<Integer,24,24,10,24> cgpt_base_rng_ranlux24_24;

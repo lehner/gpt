@@ -33,7 +33,7 @@ psi[:]=0
 cg=g.algorithms.iterative.cg({"eps":1e-8,"maxiter":1000})
 cg(lambda i,o: A(o,i,m0),src,psi)
 
-g.meminfo()
+g.mem_report()
 
 # Test CG
 tmp=g.lattice(psi)

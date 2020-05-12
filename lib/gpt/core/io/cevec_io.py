@@ -46,6 +46,9 @@ def get_param(params,a,v):
         return params[a]
     return v
 
+def mem_avail():
+    return gpt.mem_info()["host_available"]/1024**3.
+
 def conformDiv(a,b):
     assert(a % b == 0)
     return a // b
@@ -271,7 +274,7 @@ def load(filename, *a):
 
             if verbose:
                 gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s; available = %g GB" % 
-                            (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,gpt.memavail()))
+                            (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,mem_avail()))
 
 
         # fp16 data
@@ -317,7 +320,7 @@ def load(filename, *a):
 
                 if verbose:
                     gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s; available = %g GB" % 
-                                (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16,gpt.memavail()))
+                                (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16,mem_avail()))
 
 
         # coarse grid data
@@ -354,7 +357,7 @@ def load(filename, *a):
 
             if verbose and j % (neigen // 10) == 0:
                 gpt.message("* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s; available = %g GB" % 
-                            (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16,gpt.memavail()))
+                            (totalSizeGB,totalSizeGB/dt_fread,totalSizeGB/dt_crc,totalSizeGB/dt_munge,totalSizeGB/dt_distr,totalSizeGB/dt_fp16,mem_avail()))
 
         # crc checks
         if not f is None:

@@ -106,4 +106,4 @@ public:
 };
 
 typedef cgpt_vector_rng< cgpt_base_vrng_ranlux24_389, cgpt_base_rng_ranlux24_389, 64 > cgpt_vrng_ranlux24_389_64;
-typedef cgpt_vector_rng< cgpt_base_rng_ranlux24_389, cgpt_base_rng_ranlux24_389, 64 > cgpt_rng_ranlux24_389_64;
+typedef cgpt_vector_rng< cgpt_base_vrng_ranlux24_24, cgpt_base_rng_ranlux24_24, 64 > cgpt_vrng_ranlux24_24_64;
