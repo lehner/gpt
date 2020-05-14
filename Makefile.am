@@ -51,8 +51,10 @@ cgpt_la_LDFLAGS = -avoid-version -module -export-dynamic -shared
 # ..._LIBADD    are flags for linking
 # cgpt_la_CFLAGS = $(PYTHON_CFLAGS) $(GRID_CFLAGS)
 cgpt_la_CXXFLAGS = $(PYTHON_CFLAGS) $(GRID_CXXFLAGS)
-cgpt_la_CPPFLAGS = $(PYTHON_CPPFLAGS) $(GRID_CPPFLAGS)
-cgpt_la_LIBADD = $(GRID_LDFLAGS) $(GRID_LIBS)
+cgpt_la_CPPFLAGS = $(PYTHON_CPPFLAGS) $(GRID_CPPFLAGS) \
+		   -I$(GRID_PREFIX)/include
+cgpt_la_LIBADD = -L$(GRID_PREFIX)/lib -lGrid \
+		 $(GRID_LDFLAGS) $(GRID_LIBS)
 
 # link dependencies go into <programname>_LDADD
 # libtool figures out all the -l  and -L compiler flags for you

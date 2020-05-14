@@ -39,6 +39,7 @@ AC_SUBST([GRID_LDFLAGS],[`${gridconfig} --ldflags`])
 AC_SUBST([GRID_CXX],[`${gridconfig} --cxx`])
 AC_SUBST([GRID_CXXLD],[`${gridconfig} --cxxld`])
 AC_SUBST([GRID_LIBS],  [`${gridconfig} --libs`])
+AC_SUBST([GRID_PREFIX],[`${gridconfig} --prefix`])
 
 # Unfortunately, not all versions of Grid have --cxxld and it does
 # not print to stderr in case of an error. So detect error by
