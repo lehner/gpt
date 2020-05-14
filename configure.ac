@@ -40,9 +40,17 @@ AC_SUBST([GRID_CXX],[`${gridconfig} --cxx`])
 AC_SUBST([GRID_CXXLD],[`${gridconfig} --cxxld`])
 AC_SUBST([GRID_LIBS],  [`${gridconfig} --libs`])
 
+# Unfortunately, not all versions of Grid have --cxxld and it does
+# not print to stderr in case of an error. So detect error by
+# matching the output to Usage:
+
+AS_IF([expr "${GRID_CXXLD}" : ".*Usage:"],
+      [GRID_CXXLD=])
+
 # If GRID_CXXLD is unset or null, use GRID_CXX.
 # Set CXX to GRID_CXX if CXX is unset or null. This means, by default
 # use Grid's CXX, but user can override it.  Same for GRID_CXXLD.
+
 : ${GRID_CXXLD:=${GRID_CXX}}
 : ${CXX:=${GRID_CXX}}
 : ${CXXLD:=${GRID_CXXLD}}
@@ -58,7 +66,7 @@ AC_PROG_CXX
 AC_PROG_SED
 define([fixxer],[# The FiXXer
 AS_IF([expr "${$1}" : ".*$2 "],
-      [$1=`echo "${$1}" | ${SED} -e 's/$2 /$2 $2 $2 /g'`])])
+      [$1=`echo "${$1}" | ${SED} -e "s/$2 /$2 $2 $2 /g"`])])
 
 for token in -Xlinker -Xcompiler; do
 fixxer([GRID_CXXFLAGS],${token})
