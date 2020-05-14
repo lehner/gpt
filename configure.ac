@@ -26,9 +26,18 @@ LT_INIT
 # If you change them minimal Python version, do it in line line
 # below (m4 syntax!) in order to change it consistently for the
 # interpreter and the header files.
-define([my_python_version],[3.6])
-AM_PATH_PYTHON # (my_python_version)
+AC_DEFUN([my_python_version],[3.6])
+AM_PATH_PYTHON(my_python_version)
 AX_PYTHON_DEVEL([>=']my_python_version['])
+
+# Numpy include dir
+AC_DEFUN([numpy_includer],["${PYTHON}" -c 'import numpy; print(numpy.get_include())'])
+AC_SUBST([NUMPY_INCLUDE])
+AC_MSG_CHECKING([if we can find numpy headers])
+AS_IF([numpy_includer > /dev/null 2>&1 ],
+      [NUMPY_INCLUDE="$(numpy_includer)"
+       AC_MSG_RESULT([${NUMPY_INCLUDE}])],
+      [AC_MSG_ERROR([no.])])
 
 AC_CHECK_PROG([gridconfig], [grid-config],[grid-config],[])
 AS_IF([test "x${gridconfig}" = "xgrid-config"],
@@ -45,7 +54,7 @@ AC_SUBST([GRID_PREFIX],[`${gridconfig} --prefix`])
 # not print to stderr in case of an error. So detect error by
 # matching the output to Usage:
 
-AS_IF([expr "${GRID_CXXLD}" : ".*Usage:"],
+AS_IF([expr "${GRID_CXXLD}" : ".*Usage:" > /dev/null],
       [GRID_CXXLD=])
 
 # If GRID_CXXLD is unset or null, use GRID_CXX.
@@ -65,8 +74,8 @@ AC_PROG_CXX
 # Fix the conflict by 'escaping' the problematic flags.
 
 AC_PROG_SED
-define([fixxer],[# The FiXXer
-AS_IF([expr "${$1}" : ".*$2 "],
+AC_DEFUN([fixxer],[# The FiXXer
+AS_IF([expr "${$1}" : ".*$2 " > /dev/null],
       [$1=`echo "${$1}" | ${SED} -e "s/$2 /$2 $2 $2 /g"`])])
 
 for token in -Xlinker -Xcompiler; do
@@ -78,7 +87,7 @@ done
 # First argument is the minimal automake version. foreign means that
 # you don't follow GNU standards (ChangeLog COPYING files etc.)
 # and -Wall turns on all automake warnings.
-AM_INIT_AUTOMAKE([1.13.1 foreign subdir-objects -Wall])
+AM_INIT_AUTOMAKE([1.16.1 foreign subdir-objects -Wall])
 
 # Makefiles to be generated. These are all *.in  files.
 # We have to use subdirs, because for the python files I need to
