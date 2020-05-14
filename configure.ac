@@ -27,7 +27,7 @@ LT_INIT
 # below (m4 syntax!) in order to change it consistently for the
 # interpreter and the header files.
 define([my_python_version],[3.6])
-AM_PATH_PYTHON (my_python_version)
+AM_PATH_PYTHON # (my_python_version)
 AX_PYTHON_DEVEL([>=']my_python_version['])
 
 AC_CHECK_PROG([gridconfig], [grid-config],[grid-config],[])
@@ -50,12 +50,26 @@ AC_SUBST([GRID_LIBS],  [`${gridconfig} --libs`])
 # C++ -Compiler
 AC_PROG_CXX
 
+# The following code tries to fix nvcc (and possibly other weird
+# compilers) that take an -Xcompiler or -Xlinker argument flag.
+# These flags are also used by GNU libtool, hence a conflict arises.
+# Fix the conflict by 'escaping' the problematic flags.
+
+AC_PROG_SED
+define([fixxer],[# The FiXXer
+AS_IF([expr "${$1}" : ".*$2 "],
+      [$1=`echo "${$1}" | ${SED} -e 's/$2 /$2 $2 $2 /g'`])])
+
+for token in -Xlinker -Xcompiler; do
+fixxer([GRID_CXXFLAGS],${token})
+done
+
 # Use automake
 # the next macro takes a space separated list of arguments.
 # First argument is the minimal automake version. foreign means that
 # you don't follow GNU standards (ChangeLog COPYING files etc.)
 # and -Wall turns on all automake warnings.
-AM_INIT_AUTOMAKE([1.16.1 foreign subdir-objects -Wall])
+AM_INIT_AUTOMAKE([1.13.1 foreign subdir-objects -Wall])
 
 # Makefiles to be generated. These are all *.in  files.
 # We have to use subdirs, because for the python files I need to
