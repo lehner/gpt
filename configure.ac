@@ -42,7 +42,7 @@ AS_IF([numpy_includer > /dev/null 2>&1 ],
 AC_CHECK_PROG([gridconfig], [grid-config],[grid-config],[])
 AS_IF([test "x${gridconfig}" = "xgrid-config"],
       [],
-      [AC_MSG_ERROR([cannot find gsl-config])])
+      [AC_MSG_ERROR([cannot find grid-config])])
 AC_SUBST([GRID_CXXFLAGS],[`${gridconfig} --cxxflags`])
 AC_SUBST([GRID_LDFLAGS],[`${gridconfig} --ldflags`])
 AC_SUBST([GRID_CXX],[`${gridconfig} --cxx`])
