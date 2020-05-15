@@ -11,6 +11,7 @@ Welcome to GPT - Grid Python Toolkit's documentation!
    :caption: Contents:
 
    gpt
+   scalar
 
 
 
