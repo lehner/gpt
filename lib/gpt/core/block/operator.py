@@ -27,6 +27,8 @@ class operator_on_fine:
         self.verbose=gpt.default.is_verbose("block_operator")
 
     def __call__(self, src_coarse, dst_coarse):
+        tpf=gpt.time()
+        gpt.prefetch([src_coarse,dst_coarse,self.src_fine,self.dst_fine,self.basis],gpt.to_accelerator)
         t0=gpt.time()
         gpt.block.promote(src_coarse,self.src_fine,self.basis)
         t1=gpt.time()
@@ -35,7 +37,7 @@ class operator_on_fine:
         gpt.block.project(dst_coarse,self.dst_fine,self.basis)
         t3=gpt.time()
         if self.verbose:
-            gpt.message("Timing: %g s (promote), %g s (matrix), %g s (project)" % (t1-t0,t2-t1,t3-t2))
+            gpt.message("Timing: %g s (promote), %g s (matrix), %g s (project), %g s (prefetch)" % (t1-t0,t2-t1,t3-t2,t0-tpf))
 
 
 def operator(op, cgrid, basis):

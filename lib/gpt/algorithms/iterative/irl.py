@@ -227,6 +227,9 @@ class irl:
                                            "beta[ %d ] = %s" % (k,beta)))
 
         else:
+            # memreport for summit for now
+            g.mem_report(details = False)
+
             # compute
             t0=g.time()
             mat(evec_k,w)

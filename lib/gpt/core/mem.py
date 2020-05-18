@@ -31,7 +31,7 @@ def mem_info():
         "host_available" : mem_host_available(),
     }, **cgpt.util_mem() }
 
-def mem_report():
+def mem_report(details = True):
     info = mem_info()
     mem_book = gpt.get_mem_book()
     fmt=" %-8s %-30s %-12s %-20s %-12s %-16s %-20s"
@@ -40,16 +40,18 @@ def mem_report():
     g_tot_gb = 0.0
     l_tot_gb = 0.0
     if len(mem_book) > 0:
-        gpt.message("==========================================================================================================================")
-        gpt.message(fmt % ("Index","Grid","Precision","OType", "CBType", "Size/GB", "Created at time"))
+        if details:
+            gpt.message("==========================================================================================================================")
+            gpt.message(fmt % ("Index","Grid","Precision","OType", "CBType", "Size/GB", "Created at time"))
         for i,page in enumerate(mem_book):
             grid,otype,created = mem_book[page]
             g_gb = grid.fsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
             l_gb = g_gb / grid.Nprocessors
             g_tot_gb += g_gb
             l_tot_gb += l_gb
-            gpt.message(fmt % (i,grid.gdimensions,grid.precision.__name__,
-                               otype.__name__,grid.cb.__name__,"%g" % g_gb,"%.6f s" % created))
+            if details:
+                gpt.message(fmt % (i,grid.gdimensions,grid.precision.__name__,
+                                   otype.__name__,grid.cb.__name__,"%g" % g_gb,"%.6f s" % created))
     gpt.message("==========================================================================================================================")
     gpt.message(" %-39s %g GB" % ("Lattice fields on all ranks",g_tot_gb))
     gpt.message(" %-39s %g GB" % ("Lattice fields per rank",l_tot_gb))
