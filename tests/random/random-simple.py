@@ -7,6 +7,16 @@
 import gpt as g
 import numpy as np
 
+grid_dp=g.grid([4,4,4,4],g.double)
+grid_sp=g.grid([4,4,4,4],g.single)
+
+rng=g.random("block_seed_string_13")
+for grid,prec in [ (grid_dp,1e-25), (grid_sp,1e-12) ]:
+    U=g.qcd.gauge.random(grid_dp,rng)
+    for i in range(4):
+        test=g.norm2( g.adj(U[i])*U[i] - g.qcd.gauge.unit(grid_dp)[0] ) / g.norm2(U[i])
+        assert(test < prec)
+
 rng=g.random("block_seed_string_13")
 n=10000
 res={}
@@ -42,8 +52,7 @@ for i in range(n):
 
 g.message(res[1] / res[0], res[2] / res[0], res[3] / res[0], res[4] / res[0])
 
-grid=g.grid([4,4,4,4],g.double)
-v=g.complex(grid)
+v=g.complex(grid_dp)
 rng.normal(v)
 
 test_sequence_comp=np.array([ v[0,0,0,0].real, v[2,0,0,0].real, v[0,2,0,0].real, v[1,3,1,3].real, v[3,2,1,0].real ])

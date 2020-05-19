@@ -12,7 +12,8 @@ for f in \
     core/scalar.py \
     core/checksums.py \
     core/importexport.py \
-    core/orthogonalize.py
+    core/orthogonalize.py \
+    random/random-simple.py
 do
 
 printf "%-60s" " [TEST] $f"

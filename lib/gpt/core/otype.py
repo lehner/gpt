@@ -77,7 +77,16 @@ class ot_mcolor(ot_base):
     transposed=(1,0)
     spintrace=(None,None,None) # do nothing
     colortrace=(0,1,ot_complex)
-    ngenerators=8
+    generators=lambda dt: [
+        numpy.array([[ 0, 1, 0 ], [ 1, 0, 0 ], [ 0, 0, 0 ]], dtype=dt) / 2.0,
+        numpy.array([[ 0, -1j, 0 ], [ 1j, 0, 0 ], [ 0, 0, 0 ]], dtype=dt) / 2.0,
+        numpy.array([[ 1, 0, 0 ], [ 0, -1, 0 ], [ 0, 0, 0 ]], dtype=dt) / 2.0,
+        numpy.array([[ 0, 0, 1 ], [ 0, 0, 0 ], [ 1, 0, 0 ]], dtype=dt) / 2.0,
+        numpy.array([[ 0, 0, -1j ], [ 0, 0, 0 ], [ 1j, 0, 0 ]], dtype=dt) / 2.0,
+        numpy.array([[ 0, 0, 0 ], [ 0, 0, 1 ], [ 0, 1, 0 ]], dtype=dt) / 2.0,
+        numpy.array([[ 0, 0, 0 ], [ 0, 0, -1j ], [ 0, 1j, 0 ]], dtype=dt) / 2.0,
+        numpy.array([[ 1, 0, 0 ], [ 0, 1, 0 ], [ 0, 0, -2 ]], dtype=dt) / ( 3.0 ) ** 0.5 / 2.0,
+    ]
     v_otype=[ "ot_mcolor" ]
 
 def mcolor(grid):

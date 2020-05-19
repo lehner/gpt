@@ -40,3 +40,4 @@ from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report
 import gpt.core.util
 import gpt.core.block
+import gpt.core.matrix

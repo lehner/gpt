@@ -40,3 +40,16 @@ def unit(first):
         first[:]=g.mcolor(np.identity(3,dtype=first.grid.precision.complex_dtype))
     else:
         assert(0)
+
+def random(first, rng, scale = 1.0):
+    if type(first) == g.grid:
+        U=[ g.mcolor(first) for i in range(4) ]
+        random(U, rng, scale)
+        return U
+    elif type(first) == list:
+        for x in first:
+            random(x, rng, scale)
+    elif type(first) == g.lattice:
+        rng.lie(first, scale)
+    else:
+        assert(0)
