@@ -91,7 +91,6 @@ class random:
             ta[:]=g
             lie += scale * 1j * ca * ta
         out @= gpt.matrix.exp(lie)
-        # TODO: re-unitarize
 
 # sha256
 def sha256(mv):

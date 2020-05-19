@@ -6,16 +6,20 @@
 #
 import gpt as g
 import numpy as np
+import sys
 
 grid_dp=g.grid([4,4,4,4],g.double)
 grid_sp=g.grid([4,4,4,4],g.single)
 
 rng=g.random("block_seed_string_13")
-for grid,prec in [ (grid_dp,1e-25), (grid_sp,1e-12) ]:
-    U=g.qcd.gauge.random(grid_dp,rng)
+for grid,prec in [ (grid_dp,1e-28), (grid_sp,1e-14) ]:
+    U=g.qcd.gauge.random(grid,rng,scale=10)
+    g.message(g.qcd.gauge.plaquette(U))
     for i in range(4):
-        test=g.norm2( g.adj(U[i])*U[i] - g.qcd.gauge.unit(grid_dp)[0] ) / g.norm2(U[i])
+        test=g.norm2( g.adj(U[i])*U[i] - g.qcd.gauge.unit(grid)[0] ) / g.norm2(U[i])
+        g.message(test)
         assert(test < prec)
+
 
 rng=g.random("block_seed_string_13")
 n=10000

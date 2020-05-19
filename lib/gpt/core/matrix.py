@@ -19,15 +19,31 @@
 import gpt, numpy
 
 # matrix exponential
-def exp(x,order = 12):
+def exp(i):
+    x=i
+    if i.grid.precision != gpt.double:
+        x=gpt.convert(x, gpt.double)
+    n=gpt.norm2(x)**0.5 / x.grid.fsites
+    order=19
+    maxn=0.05
+    ns=0
+    if n > maxn:
+        ns=int(numpy.log2(n/maxn))
+        x /= 2**ns
     o=gpt.lattice(x)
     o[:]=0
     nfac=1.0
     xn=gpt.copy(x)
     o[:]=numpy.identity(o.otype.shape[0],o.grid.precision.complex_dtype)
     o += xn
-    for i in range(2,order + 1):
-        nfac /= i
+    for j in range(2,order + 1):
+        nfac /= j
         xn @= xn * x
         o += xn * nfac
+    for j in range(ns):
+        o @= o*o
+    if i.grid.precision != gpt.double:
+        r=gpt.lattice(i)
+        gpt.convert(r,o)
+        o=r
     return o
