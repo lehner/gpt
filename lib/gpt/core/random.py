@@ -79,6 +79,22 @@ class random:
     def zn(self,t = None,p = { "n" : 2 }):
         return self.sample(t,{**{ "distribution" : "zn" }, **p})
 
+    def lie(out, scale = 1.0):
+        grid=out.grid
+        ca=gpt.complex(grid)
+        lie=gpt.lattice(out)
+        la=gpt.lattice(out)
+        ci=complex(0.0,scale)
+
+        lie[:]=0
+        for a in range(out.otype.ngenerators):
+            rng.uniform_real(ca,{"min" : -0.5,"max" : 0.5})
+            # generator(a, ta);
+            # la = ci * ca * ta;
+            # lie = lie + la;  // e^{i la ta}
+            #taExp(lie, out);
+
+        # TODO: re-unitarize
 
 # sha256
 def sha256(mv):

@@ -34,4 +34,7 @@ g.block.promote(lcoarse,tmpf,basis)
 g.block.project(lcoarse2,tmpf,basis)
 
 # report error
-g.message(g.norm2(lcoarse-lcoarse2) / g.norm2(lcoarse))
+err2=g.norm2(lcoarse-lcoarse2) / g.norm2(lcoarse)
+g.message(err2)
+assert(err2 < 1e-12)
+

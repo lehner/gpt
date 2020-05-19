@@ -1,0 +1,40 @@
+#!/bin/bash
+runner=$1
+if [[ "$runner" != "" ]];
+then
+    echo "Using runner = $runner"
+fi
+
+LOG=$(mktemp)
+
+for f in \
+    core/block.py \
+    core/scalar.py \
+    core/checksums.py \
+    core/importexport.py \
+    core/orthogonalize.py
+do
+
+printf "%-60s" " [TEST] $f"
+
+start=$SECONDS
+${runner} $f 2>&1 > ${LOG}
+res=$?
+elapsed=$((SECONDS-start))
+
+if [[ "$res" == "0" ]];
+then
+    echo "OK  ($elapsed s)"
+else
+    echo "ERR ($elapsed s)"
+    cat ${LOG}
+fi
+
+done
+
+if [ -f ${LOG} ];
+then
+    rm -f ${LOG}
+fi
+
+

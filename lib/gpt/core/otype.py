@@ -77,6 +77,7 @@ class ot_mcolor(ot_base):
     transposed=(1,0)
     spintrace=(None,None,None) # do nothing
     colortrace=(0,1,ot_complex)
+    ngenerators=8
     v_otype=[ "ot_mcolor" ]
 
 def mcolor(grid):
