@@ -15,7 +15,8 @@ for f in \
     core/importexport.py \
     core/orthogonalize.py \
     core/matrix.py \
-    random/random-simple.py
+    random/random-simple.py \
+    algorithms/solvers.py
 do
 
 printf "%-60s" " [TEST] $f"
