@@ -16,6 +16,7 @@ for f in \
     core/orthogonalize.py \
     core/matrix.py \
     random/random-simple.py \
+    algorithms/implicitly-restarted-lanczos.py \
     algorithms/solvers.py
 do
 
