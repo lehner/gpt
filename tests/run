@@ -14,6 +14,7 @@ for f in \
     core/checksums.py \
     core/importexport.py \
     core/orthogonalize.py \
+    core/matrix.py \
     random/random-simple.py
 do
 

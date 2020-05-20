@@ -20,10 +20,11 @@ import gpt, numpy
 
 # matrix exponential
 def exp(i):
-    x=i
     if i.grid.precision != gpt.double:
-        x=gpt.convert(x, gpt.double)
-    n=gpt.norm2(x)**0.5 / x.grid.fsites
+        x=gpt.convert(i, gpt.double)
+    else:
+        x=gpt.copy(i)
+    n=gpt.norm2(x)**0.5 / x.grid.gsites
     order=19
     maxn=0.05
     ns=0
@@ -42,6 +43,35 @@ def exp(i):
         o += xn * nfac
     for j in range(ns):
         o @= o*o
+    if i.grid.precision != gpt.double:
+        r=gpt.lattice(i)
+        gpt.convert(r,o)
+        o=r
+    return o
+
+def log(i, convergence_threshold = 0.5):
+    # i = n*(1 + x), log(i) = log(n) + log(1+x)
+    # x = i/n - 1, |x|^2 = <i/n - 1, i/n - 1> = |i|^2/n^2 + |1|^2 - (<i,1> + <1,i>)/n
+    # d/dn |x|^2 = -2 |i|^2/n^3 + (<i,1> + <1,i>)/n^2 = 0 -> 2|i|^2 == n (<i,1> + <1,i>)
+    if i.grid.precision != gpt.double:
+        x=gpt.convert(i, gpt.double)
+    else:
+        x=gpt.copy(i)
+    I=numpy.identity(x.otype.shape[0],x.grid.precision.complex_dtype)
+    lI=gpt.lattice(x)
+    lI[:]=I
+    n=gpt.norm2(x) / gpt.innerProduct(x,lI).real
+    x /= n
+    x -= lI
+    n2=gpt.norm2(x)**0.5 / x.grid.gsites
+    order=8*int(16/(-numpy.log10(n2)))
+    assert(n2 < convergence_threshold)
+    o=gpt.copy(x)
+    xn=gpt.copy(x)
+    for j in range(2,order + 1):
+        xn @= xn * x
+        o -= xn * ( (-1.)**j / j )
+    o += lI * numpy.log(n)
     if i.grid.precision != gpt.double:
         r=gpt.lattice(i)
         gpt.convert(r,o)
