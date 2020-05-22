@@ -11,6 +11,8 @@ SUBDIRS = lib
 pyexec_LTLIBRARIES = cgpt.la
 
 cgpt_la_SOURCES = \
+	lib/cgpt/lib/fp16.cc \
+	lib/cgpt/lib/munge.cc \
 	lib/cgpt/lib/operators.cc \
 	lib/cgpt/lib/init.cc \
 	lib/cgpt/lib/eval.cc \

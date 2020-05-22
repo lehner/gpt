@@ -18,4 +18,5 @@
 #
 from gpt.algorithms.approx.chebyshev import chebyshev
 from gpt.algorithms.approx.deflate import deflate
+from gpt.algorithms.approx.coarse_deflate import coarse_deflate
 from gpt.algorithms.approx.evals import evals

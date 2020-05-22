@@ -59,7 +59,7 @@ irl=g.algorithms.iterative.irl({
 path_to_evec="/hpcgpfs01/scratch/clehner/openQCD/evec"
 try:
     evec,ev=g.load(path_to_evec,{ "grids" : w.F_grid_eo })
-except:
+except g.LoadError:
     start=g.vspincolor(w.F_grid_eo)
     start[:]=g.vspincolor([[1,1,1],[1,1,1],[1,1,1],[1,1,1]])
 

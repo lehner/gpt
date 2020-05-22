@@ -60,6 +60,10 @@ public:
     return ::innerProduct(l,compatible<T>(other)->l);
   }
 
+  virtual ComplexD rankInnerProduct(cgpt_Lattice_base* other) {
+    return ::rankInnerProduct(l,compatible<T>(other)->l);
+  }
+
   virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
     ::innerProductNorm(ip,a2,l,compatible<T>(other)->l);
   }
@@ -147,13 +151,13 @@ public:
   }
 
   virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) {
-    std::vector<Lattice<T>*> basis(_basis.size());
+    PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis,_basis);
     cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
   }
 
   virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt) {
-    std::vector<Lattice<T>*> basis(_basis.size());
+    PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis,_basis);
     cgpt_linear_combination(l,basis,Qt);
   }
@@ -190,6 +194,29 @@ public:
 
   virtual GridBase* get_grid() {
     return l.Grid();
+  }
+
+  virtual PyObject* advise(std::string type) {
+    int advise;
+    if (type == "infrequent_use") {
+      advise = AdviseInfrequentUse;
+    } else {
+      ERR("Unknown advise %s",type.c_str());
+    }
+    l.Advise(advise);
+    return PyLong_FromLong(0);
+  }
+
+  virtual PyObject* prefetch(std::string type) {
+    int advise;
+    if (type == "accelerator") {
+      l.AcceleratorPrefetch();
+    } else if (type == "host") {
+      l.HostPrefetch();
+    } else {
+      ERR("Unknown prefetch %s",type.c_str());
+    }
+    return PyLong_FromLong(0);
   }
 
 };

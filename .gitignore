@@ -18,3 +18,5 @@ ltmain.sh
 /m4/
 missing
 /py-compile
+*pycache*
+/tests/run-*

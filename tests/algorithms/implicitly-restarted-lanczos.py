@@ -51,7 +51,7 @@ start[:]=g.vspincolor([[1,1,1],[1,1,1],[1,1,1],[1,1,1]])
 evec,ev=irl(c(w.NDagN), start) # , g.checkpointer("checkpoint")
 
 # memory info
-g.meminfo()
+g.mem_report()
 
 # print eigenvalues of NDagN as well
 for i,v in enumerate(evec):

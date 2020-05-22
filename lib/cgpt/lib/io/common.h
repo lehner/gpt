@@ -16,17 +16,17 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+static bool cgpt_is_file(std::string filename) {
+  struct stat buffer;   
+  if (stat(filename.c_str(), &buffer))
+    return false;
+  return ((buffer.st_mode & S_IFMT) == S_IFREG);
+}
 
-template<int N>
-class TensorPromote {
- public:
-  template<typename T> static accelerator_inline auto ToSinglet(const T& arg) -> decltype(TensorPromote<N-1>::ToSinglet(iScalar<T>())) { iScalar<T> sa; sa._internal=arg; return TensorPromote<N-1>::ToSinglet(sa); };
-};
+static bool cgpt_is_directory(std::string filename) {
+  struct stat buffer;   
+  if (stat(filename.c_str(), &buffer))
+    return false;
+  return ((buffer.st_mode & S_IFMT) == S_IFDIR);
+}
 
-template<>
-class TensorPromote<0> {
- public:
-  template<typename T> static accelerator_inline const T & ToSinglet(const T& arg) { return arg; };
-};
-
-#define ConformSinglet(a,b) TensorPromote<b::TensorLevel>::ToSinglet(TensorRemove(a))

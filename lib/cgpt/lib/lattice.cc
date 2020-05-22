@@ -197,3 +197,27 @@ EXPORT(lattice_get_checkerboard,{
     cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
     return PyLong_FromLong(dst->get_checkerboard() == Even ? 0 : 1);
   });
+
+EXPORT(lattice_advise,{
+    void* _dst;
+    PyObject* _type;
+    if (!PyArg_ParseTuple(args, "lO", &_dst,&_type)) {
+      return NULL;
+    }
+    std::string type;
+    cgpt_convert(_type,type);
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    return dst->advise(type);
+  });
+
+EXPORT(lattice_prefetch,{
+    void* _dst;
+    PyObject* _type;
+    if (!PyArg_ParseTuple(args, "lO", &_dst,&_type)) {
+      return NULL;
+    }
+    std::string type;
+    cgpt_convert(_type,type);
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    return dst->prefetch(type);
+  });

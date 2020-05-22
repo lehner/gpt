@@ -79,7 +79,7 @@ Uf0 = g.convert(U[0], g.single)
 g.message(g.norm2(Uf0))
 
 del Uf0
-g.meminfo()
+g.mem_report()
 
 # Slice
 x=g.sum(Uf[0])
@@ -97,7 +97,7 @@ gre=g.complex(gride)
 g.pick_cb(g.even,gre,gr)
 gre[2,0,0,0]=4
 g.set_cb(gr,gre)
-g.meminfo()
+g.mem_report()
 
 
 print(gre)

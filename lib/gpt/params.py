@@ -19,9 +19,14 @@
 import os
 import gpt
 
-def params(fn):
+def params(fn, verbose = False):
     fn=os.path.expanduser(fn)
-    r=eval(open(fn).read(),globals())
+    dat=open(fn).read()
+    if verbose:
+        gpt.message("********************************************************************************")
+        gpt.message("   Load %s:" % fn)
+        gpt.message("********************************************************************************\n%s" % dat.strip())
+        gpt.message("********************************************************************************")
+    r=eval(dat,globals())
     assert( type(r) == dict )
     return r
-

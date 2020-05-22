@@ -53,7 +53,7 @@ class gpt_io:
                 for f in glob.glob("%s/??/*.field" % self.root):
                     os.unlink(f)
             else:
-                self.glb = gpt.FILE(root + "/global","r+b")
+                self.glb = gpt.FILE(root + "/global","rb")
         else:
             self.glb = None
 
@@ -100,7 +100,7 @@ class gpt_io:
         if not tag in self.loc:
             if write and not dn is None:
                 os.makedirs(dn, exist_ok=True)
-            self.loc[tag]=gpt.FILE(fn,"a+b" if write else "r+b") if not fn is None else None
+            self.loc[tag]=gpt.FILE(fn,"a+b" if write else "rb") if not fn is None else None
             self.pos[tag]=gpt.coordinates(cv)
 
         return self.loc[tag],self.pos[tag]
@@ -185,7 +185,7 @@ class gpt_io:
 
         # first find grid
         if not g_desc in self.params["grids"]:
-            self.params["grids"][g_desc]=gpt.grid(g_cesc)
+            self.params["grids"][g_desc]=gpt.grid(g_desc)
         g=self.params["grids"][g_desc]
 
         # create a cartesian view and lattice to load
@@ -427,7 +427,7 @@ def save(filename, objs, params):
 def load(filename, *a):
 
     # first check if this is right file format
-    if not os.path.exists(filename + "/index.crc32"):
+    if not (os.path.exists(filename + "/index.crc32") and os.path.exists(filename + "/global")):
         raise NotImplementedError()
 
     # parameters

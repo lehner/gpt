@@ -48,6 +48,7 @@ class grid:
             fdimensions=[ int(x) for x in p[0].strip("[]").split(",") ]
             precision=gpt.str_to_precision(p[1])
             cb=str_to_checkerboarding(p[2])
+            obj=None
         else:
             fdimensions=first
             precision=second
@@ -58,12 +59,12 @@ class grid:
             obj=fourth
 
         self.fdimensions = fdimensions
-        self.gsites = np.prod(self.fdimensions)
+        self.fsites = np.prod(self.fdimensions)
         self.precision = precision
         self.cb = cb
         self.nd=len(self.fdimensions)
         
-        if obj == None:
+        if obj is None:
             self.obj = cgpt.create_grid(fdimensions, precision, cb)
         else:
             self.obj = obj

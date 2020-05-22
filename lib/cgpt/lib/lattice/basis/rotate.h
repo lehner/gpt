@@ -17,50 +17,48 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-// need functions that accept list of Field *pointer* and tensor pointers, cannot re-use Grid functions
-template<class Field>
-void cgpt_basis_rotate(std::vector<Field*> &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) {
-  typedef decltype(basis[0]->View()) View;
-  auto tmp_v = basis[0]->View();
-  std::vector<View> basis_v(basis.size(),tmp_v);
-  typedef typename Field::vector_object vobj;
-  GridBase* grid = basis[0]->Grid();
-      
-  for(int k=0;k<basis.size();k++){
-    basis_v[k] = basis[k]->View();
-  }
-
-  thread_region
-  {
-    std::vector < vobj > B(Nm); // Thread private
-    thread_for_in_region(ss, grid->oSites(),{
-	for(int j=j0; j<j1; ++j) B[j]=0.;
-      
-	for(int j=j0; j<j1; ++j){
-	  for(int k=k0; k<k1; ++k){
-	    B[j] +=Qt[j*Nm+k] * basis_v[k][ss];
-	  }
-	}
-	for(int j=j0; j<j1; ++j){
-	  basis_v[j][ss] = B[j];
-	}
-      });
-  }
+template<class VLattice>
+void cgpt_basis_rotate(VLattice &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) {
+  PMatrix<RealD> _Qt(Qt,Nm);
+  basisRotate(basis,_Qt,j0,j1,k0,k1,Nm);
 }
 
-template<class Field>
-void cgpt_linear_combination(Field &result,std::vector<Field*> &basis,RealD* Qt) {
+template<class Field,class VLattice>
+void cgpt_linear_combination(Field &result,VLattice &basis,RealD* Qt) {
   typedef typename Field::vector_object vobj;
-  GridBase* grid = basis[0]->Grid();
+  GridBase* grid = basis[0].Grid();
+
+  // TODO: map to basisRotateJ
+  result.Checkerboard() = basis[0].Checkerboard();
+  auto result_v=result.AcceleratorView(ViewWrite);
+
   int N = (int)basis.size();
-  result.Checkerboard() = basis[0]->Checkerboard();
-  auto result_v=result.View();
+
+#ifndef GRID_NVCC
   thread_for(ss, grid->oSites(),{
       vobj B = Zero();
       for(int k=0; k<N; ++k){
-	auto basis_k = basis[k]->View();
+	auto basis_k = basis[k].View();
 	B += Qt[k] * basis_k[ss];
       }
       result_v[ss] = B;
     });
+#else
+  typedef decltype(basis[0].View()) View;
+  Vector<View> basis_v(N,result_v);
+  for(int k=0;k<N;k++){
+    basis_v[k] = basis[k].AcceleratorView(ViewRead);
+  }
+  Vector<double> Qt_jv(N);
+  double * Qt_j = & Qt_jv[0];
+  for(int k=0;k<N;++k) Qt_j[k]=Qt[k];
+  accelerator_for(ss, grid->oSites(),vobj::Nsimd(),{
+      decltype(coalescedRead(basis_v[0][ss])) B;
+      B=Zero();
+      for(int k=0; k<N; ++k){
+	B +=Qt_j[k] * coalescedRead(basis_v[k][ss]);
+      }
+      coalescedWrite(result_v[ss], B);
+    });
+#endif
 }

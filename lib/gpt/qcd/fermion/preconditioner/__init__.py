@@ -17,4 +17,5 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+from gpt.qcd.fermion.preconditioner.eo1 import eo1
 from gpt.qcd.fermion.preconditioner.eo2 import eo2

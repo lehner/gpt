@@ -66,6 +66,10 @@ class irl:
         v=g.lattice(src)
         evec=[ g.lattice(src) for i in range(Nm) ]
 
+        # advice memory storage
+        if "advise" in self.params:
+            g.advise(evec,self.params["advise"])
+
         # scalars
         k1=1
         k2=Nk
@@ -179,20 +183,17 @@ class irl:
                 if allconv:
                     if verbose:
                         g.message("Converged in %d iterations" % it)
+                        break
 
-                    t0=g.time()
-                    g.rotate(evec,Qt,0,Nstop,0,Nk)
-                    t1=g.time()
+        t0=g.time()
+        g.rotate(evec,Qt,0,Nstop,0,Nk)
+        t1=g.time()
 
-                    if verbose:
-                        g.message("Final basis rotation took %g s" % (t1-t0))
-
-                    return (evec[0:Nstop],ev2_copy[0:Nstop])
-                    
         if verbose:
-            g.message("Did not converge")
-        return (None,None)
+            g.message("Final basis rotation took %g s" % (t1-t0))
 
+        return (evec[0:Nstop],ev2_copy[0:Nstop])
+        
     def diagonalize(self,lmd,lme,Nk,Qt):
         TriDiag = np.zeros((Nk,Nk),dtype=Qt.dtype)
         for i in range(Nk):

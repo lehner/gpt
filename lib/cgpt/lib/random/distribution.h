@@ -114,6 +114,7 @@ public:
 };
 
 typedef cgpt_random< cgpt_vrng_ranlux24_389_64, uint64_t > cgpt_random_vectorized_ranlux24_389_64;
+typedef cgpt_random< cgpt_vrng_ranlux24_24_64, uint64_t > cgpt_random_vectorized_ranlux24_24_64;
 
 // distribution interface
 class cgpt_normal_distribution {

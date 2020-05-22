@@ -41,7 +41,8 @@ EXPORT(util_ferm2prop,{
 EXPORT(util_crc32,{
     
     PyObject* _mem;
-    if (!PyArg_ParseTuple(args, "O", &_mem)) {
+    long crc32_prev;
+    if (!PyArg_ParseTuple(args, "Ol", &_mem,&crc32_prev)) {
       return NULL;
     }
 
@@ -51,7 +52,7 @@ EXPORT(util_crc32,{
     unsigned char* data = (unsigned char*)buf->buf;
     int64_t len = (int64_t)buf->len;
 
-    uint32_t crc = cgpt_crc32(data,len);
+    uint32_t crc = cgpt_crc32(data,len,(uint32_t)crc32_prev);
     
     return PyLong_FromLong(crc);
   });
@@ -82,4 +83,18 @@ EXPORT(util_sha256,{
 			PyLong_FromLong(sha256[6]),
 			PyLong_FromLong(sha256[7])
                         );
+  });
+
+EXPORT(util_mem,{
+
+    size_t accelerator_available = 0x0;
+    size_t accelerator_total = 0x0;
+
+#ifdef GRID_NVCC
+    cudaMemGetInfo(&accelerator_available,&accelerator_total);
+#endif
+
+    return Py_BuildValue("{s:k,s:k}",
+			 "accelerator_available", (unsigned long)accelerator_available,
+			 "accelerator_total", (unsigned long)accelerator_total);
   });

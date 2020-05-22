@@ -47,6 +47,10 @@ static PyObject* load_nersc(PyObject* args) {
     cgpt_convert(PyTuple_GetItem(args,0),filename);
     cgpt_convert(PyTuple_GetItem(args,1),verbose);
 
+    // check is file
+    if (!cgpt_is_file(filename))
+      return NULL;
+
     // get metadata
     std::map<std::string,std::string> fields;
     if (!read_nersc_header(filename,fields)) {
@@ -88,7 +92,7 @@ static PyObject* load_nersc(PyObject* args) {
 
     // return
     vComplexD vScalar = 0; // TODO: grid->to_decl()
-    return Py_BuildValue("([(l,[i,i,i,i],s,s,[O,O,O,O])],O)", grid, gdimension[0], gdimension[1], gdimension[2],
+    return Py_BuildValue("([(l,[i,i,i,i],s,s,[N,N,N,N])],N)", grid, gdimension[0], gdimension[1], gdimension[2],
 			 gdimension[3], get_prec(vScalar).c_str(), "full", U[0]->to_decl(), U[1]->to_decl(), U[2]->to_decl(),
 			 U[3]->to_decl(),metadata);
   }

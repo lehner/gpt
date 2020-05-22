@@ -63,7 +63,8 @@ class FILE:
         assert(not self.f is None)
         t0=gpt.time()
         t=bytes(sz)
-        assert(cgpt.fread(self.f,sz,memoryview(t))==1)
+        if sz > 0:
+            assert(cgpt.fread(self.f,sz,memoryview(t))==1)
         t1=gpt.time()
         #print("READ %g s, %g GB" % (t1-t0,sz/1024.**3.))
         return t

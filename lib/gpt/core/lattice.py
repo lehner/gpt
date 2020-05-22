@@ -23,23 +23,8 @@ import numpy
 mem_book = {
 }
 
-def meminfo():
-    fmt=" %-8s %-30s %-12s %-20s %-12s %-16s %-20s"
-    gpt.message("==========================================================================================================================")
-    gpt.message("                                                 GPT Memory Report                ")
-    gpt.message("==========================================================================================================================")
-    gpt.message(fmt % ("Index","Grid","Precision","OType", "CBType", "Size/GB", "Created at time"))
-    tot_gb = 0.0
-    for i,page in enumerate(mem_book):
-        grid,otype,created = mem_book[page]
-        gb = grid.gsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.**3.
-        tot_gb += gb
-        gpt.message(fmt % (i,grid.gdimensions,grid.precision.__name__,
-                           otype.__name__,grid.cb.__name__,"%g" % gb,"%.6f s" % created))
-    gpt.message("==========================================================================================================================")
-    gpt.message("   Total: %g GB " % tot_gb)
-    gpt.message("==========================================================================================================================")
-
+def get_mem_book():
+    return mem_book
 
 class lattice:
     __array_priority__=1000000
@@ -68,6 +53,7 @@ class lattice:
             cb = first.checkerboard()
         else:
             raise Exception("Unknown lattice constructor")
+
         # use first pointer to index page in memory book
         mem_book[self.v_obj[0]] = (self.grid,self.otype,gpt.time())
         if not cb is None:
@@ -77,6 +63,20 @@ class lattice:
         del mem_book[self.v_obj[0]]
         for o in self.v_obj:
             cgpt.delete_lattice(o)
+
+    def advise(self, t):
+        if type(t) != str:
+            t=t.tag
+        for o in self.v_obj:
+            cgpt.lattice_advise(o,t)
+        return self
+
+    def prefetch(self, t):
+        if type(t) != str:
+            t=t.tag
+        for o in self.v_obj:
+            cgpt.lattice_prefetch(o,t)
+        return self
 
     def checkerboard(self, val = None):
         if val is None:

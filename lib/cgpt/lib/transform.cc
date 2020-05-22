@@ -83,6 +83,20 @@ EXPORT(lattice_innerProduct,{
     return PyComplex_FromDoubles(c.real(),c.imag());
   });
 
+EXPORT(lattice_rankInnerProduct,{
+    
+    void* _a,* _b;
+    if (!PyArg_ParseTuple(args, "ll", &_a, &_b)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
+    cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
+    
+    ComplexD c = a->rankInnerProduct(b);
+    return PyComplex_FromDoubles(c.real(),c.imag());
+  });
+
 EXPORT(lattice_innerProductNorm2,{
 
     void* _a,* _b;

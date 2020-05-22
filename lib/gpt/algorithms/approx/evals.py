@@ -18,11 +18,12 @@
 #
 import gpt as g
 
-def evals(matrix, evec, check_eps2 = None):
+def evals(matrix, evec, check_eps2 = None, skip = 1):
     assert(len(evec) > 0)
     tmp=g.lattice(evec[0])
     ev=[]
-    for i,v in enumerate(evec):
+    for i in range(0,len(evec),skip):
+        v=evec[i]
         matrix(v,tmp)
         # M |v> = l |v> -> <v|M|v> / <v|v>
         l=g.innerProduct(v,tmp).real / g.norm2(v)

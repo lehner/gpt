@@ -36,11 +36,13 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
   ASSERT(PyArray_TYPE(coordinates)==NPY_INT32);
   int32_t* coor = (int32_t*)PyArray_DATA(coordinates);
 
+  std::vector<int> cb_dim(nd);
   for (long j=0;j<nd;j++) {
     ASSERT(grid->_gdimensions[j] % block == 0);
     ASSERT(grid->_ldimensions[j] % block == 0); 
     // make sure points within a block are always on same node
     // irrespective of MPI setup
+    cb_dim[j] = grid->_fdimensions[j] / grid->_gdimensions[j];
   }
 
   hashes.resize(nc);
@@ -48,7 +50,7 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
       long t = 0;
       for (long j=0;j<nd;j++) {
 	if (mpi_dim[j]) {
-	  int32_t c = coor[nd*i+j] / block;
+	  int32_t c = coor[nd*i+j] / cb_dim[j] / block;
 	  ASSERT((c >= (grid->_lstart[j]/block)) && (c < ((grid->_lend[j]+1)/block)));
 	  t*=grid->_gdimensions[j] / block;
 	  t+=c;
