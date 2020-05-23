@@ -1,0 +1,23 @@
+name: Trigger RQCD CI
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        cluster: ['master', 'qp4']
+
+    steps:
+    - name: Trigger CI Job
+      uses: pjgeorg/gitlab-trigger-ci@v2
+      with:
+        host: "rqcd.ur.de"
+        port: 8443
+        ca-bundle: ${{ secrets.RQCD_CA_BUNDLE }}
+        project-id: 888
+        token: ${{ secrets.RQCD_TRIGGER_TOKEN }}
+        ref:  ${{ matrix.cluster }}
