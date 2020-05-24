@@ -99,10 +99,11 @@ jobs:
         python --version
         cp ../../.github/make_cgpt.sh . && ./make_cgpt.sh
 
-    - name: Run scalar test
+    - name: Run tests
       run: |
         cd gpt
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GITHUB_WORKSPACE}/gpt/lib
         source scripts/source.sh
         echo ${PYTHONPATH}
-        python ./tests/core/scalar.py
+        cd tests
+        ./run python
