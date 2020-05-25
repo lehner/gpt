@@ -174,6 +174,8 @@ public:
     simd_word = sizeof(Coeff_t);
     ishape.resize(0);
     cgpt_numpy_data_layout(sobj(),ishape);
+    if (ishape.size() == 0) // treat complex numbers as 1d array with one element
+      ishape.push_back(1);
   }
   
   virtual int get_numpy_dtype() {

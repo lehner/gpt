@@ -41,20 +41,16 @@ g.save("out2",{
 # - g.load(fn)          loads everything in fn and creates new grids as needed
 # - g.load(fn,{ "grids" : ..., "paths" :  ... })  both grids and paths are optional parameters and may be lists, 
 #                                                 grids are re-used when loading, paths restricts which items to load (allows for glob.glob syntax /U/*)
-res=g.load("out",{ 
-    "grids" : U[0].grid
-})
+res=g.load("out")
 
 for i in range(4):
     g.message("Test first restore of U[%d]:" % i,g.norm2(res["U"][i] - U[i]))
 
 res=g.load("out2",{ 
-    "grids" : U[0].grid, 
     "paths" : "/U/*"
 })
 for i in range(4):
     g.message("Test second restore of U[%d]:" % i,g.norm2(res["U"][i] - U[i]))
-
 
 sys.exit(0)
 

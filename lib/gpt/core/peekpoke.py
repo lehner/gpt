@@ -21,11 +21,11 @@ import gpt, cgpt, sys
 def peek(target,key):
 
     if type(target) == gpt.lattice:
-        return target[key]
+        return gpt.mview(target[key])
 
     elif type(target) == list:
         v_obj=[ y for x in target for y in x.v_obj ]
-        return cgpt.lattice_export(v_obj, key)
+        return gpt.mview(cgpt.lattice_export(v_obj, key))
 
     else:
         assert(0)

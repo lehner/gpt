@@ -98,9 +98,45 @@ void cgpt_convert(PyObject* in, std::vector<t>& out) {
   }
 }
 
+static void cgpt_convert(PyObject* in, Coordinate& out) {
+  if (PyList_Check(in)) {
+    out.resize(PyList_Size(in));
+    for (size_t i = 0; i < out.size(); i++)
+      cgpt_convert(PyList_GetItem(in,i),out[i]);
+  } else if (PyTuple_Check(in)) {
+    out.resize(PyTuple_Size(in));
+    for (size_t i = 0; i < out.size(); i++)
+      cgpt_convert(PyTuple_GetItem(in,i),out[i]);
+  } else {
+    ASSERT(0);
+  }
+}
+
 static PyObject* cgpt_convert(const Coordinate & coor) {
   PyObject* ret = PyList_New(coor.size());
   for (long i=0;i<coor.size();i++)
     PyList_SetItem(ret,i,PyLong_FromLong(coor[i]));
+  return ret;
+}
+
+static Coordinate cgpt_to_coordinate(const std::vector<int>& in) {
+  Coordinate out(in.size());
+  for (long i=0;i<in.size();i++)
+    out[i] = in[i];
+  return out;
+}
+
+static std::string cgpt_str(long l) {
+  char buf[64];
+  sprintf(buf,"%ld",l);
+  return buf;
+}
+
+static std::string cgpt_str(const Coordinate& c) {
+  if (c.size() == 0)
+    return "";
+  std::string ret = cgpt_str(c[0]);
+  for (long i=1;i<c.size();i++)
+    ret += "." + cgpt_str(c[i]);
   return ret;
 }

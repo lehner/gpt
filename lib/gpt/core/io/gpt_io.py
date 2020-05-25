@@ -38,12 +38,7 @@ class gpt_io:
     def __init__(self, root, params, write):
         self.root = root
         self.params = params
-        if not "grids" in self.params:
-            self.params["grids"] = {}
-        else:
-            if type(self.params["grids"]) == gpt.grid:
-                self.params["grids"] = [ self.params["grids"] ]
-            self.params["grids"] = dict([ (g.describe(),g) for g in self.params["grids"] ])
+        self.params["grids"] = {}
         self.verbose = gpt.default.is_verbose("io")
 
         if gpt.rank() == 0:
@@ -185,7 +180,7 @@ class gpt_io:
 
         # first find grid
         if not g_desc in self.params["grids"]:
-            self.params["grids"][g_desc]=gpt.grid(g_desc)
+            self.params["grids"][g_desc]=gpt.grid_from_description(g_desc)
         g=self.params["grids"][g_desc]
 
         # create a cartesian view and lattice to load

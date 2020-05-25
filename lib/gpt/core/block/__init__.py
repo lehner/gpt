@@ -24,7 +24,9 @@ def grid(fgrid, nblock):
     for i in range(fgrid.nd):
         assert(fgrid.fdimensions[i] % nblock[i] == 0)
     # coarse grid will always be a full grid
-    return gpt.grid([ fgrid.fdimensions[i] // nblock[i] for i in range(fgrid.nd) ],fgrid.precision,gpt.full)
+    return gpt.grid([ fgrid.fdimensions[i] // nblock[i] for i in range(fgrid.nd) ],
+                    fgrid.precision,gpt.full,
+                    parent = fgrid.parent)
 
 def project(coarse, fine, basis):
     cot=coarse.otype

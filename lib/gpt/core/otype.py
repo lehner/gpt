@@ -62,7 +62,7 @@ class ot_base:
 
 class ot_complex(ot_base):
     nfloats=2
-    shape=()
+    shape=(1,)
     spintrace=(None,None,None) # do nothing
     colortrace=(None,None,None)
     v_otype=[ "ot_complex" ]

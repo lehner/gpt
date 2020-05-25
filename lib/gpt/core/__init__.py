@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core.grid import grid, full, redblack, str_to_checkerboarding
+from gpt.core.grid import grid, grid_from_description, full, redblack
 from gpt.core.precision import single, double, str_to_precision
 from gpt.core.advise import advise, prefetch, infrequent_use, to_host, to_accelerator
 from gpt.core.lattice import lattice, get_mem_book
@@ -38,6 +38,8 @@ from gpt.core.cartesian import cartesian_view
 from gpt.core.coordinates import coordinates
 from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report
+from gpt.core.merge import *
+from gpt.core.split import *
 import gpt.core.util
 import gpt.core.block
 import gpt.core.matrix

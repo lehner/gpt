@@ -20,6 +20,8 @@ import cgpt
 
 # expose fast memoryview for numpy arrays
 def mview(data):
+    if type(data) == memoryview:
+        return data
     mv=cgpt.mview(data)
     assert(mv.obj is data)
     return mv
