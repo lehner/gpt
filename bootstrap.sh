@@ -20,4 +20,4 @@ sed -e '$s, \\$,,' \
 > gpt_pyfiles.inc
 
 # Generate all autotools files
-#autoreconf -fvi -Wall
+autoreconf -fvi -Wall
