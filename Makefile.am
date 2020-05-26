@@ -55,7 +55,9 @@ cgpt_la_LIBADD = -L$(GRID_PREFIX)/lib -lGrid \
 
 # to make a tarball, try "make dist"
 # and to check for errors/forgotten files, use "make distcheck".
-#
+
+all: gen_versions
+
 .PHONY: gen_versions
 
 gen_versions:
