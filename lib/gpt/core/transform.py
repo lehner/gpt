@@ -63,7 +63,7 @@ def convert(first, second):
         else:
             src_grid=first.grid
         dst_prec=second
-        dst_grid=gpt.grid(src_grid.fdimensions,dst_prec,src_grid.cb)
+        dst_grid=src_grid.converted(dst_prec)
         if type(first) == list:
             dst = [ convert(gpt.lattice(dst_grid, src.otype),src) for src in first ]
         else:

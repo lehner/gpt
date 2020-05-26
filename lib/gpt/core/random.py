@@ -79,6 +79,18 @@ class random:
     def zn(self,t = None,p = { "n" : 2 }):
         return self.sample(t,{**{ "distribution" : "zn" }, **p})
 
+    def lie(self, out, scale = 1.0):
+        grid=out.grid
+        ca=gpt.complex(grid)
+        lie=gpt.lattice(out)
+        ta=gpt.mcolor(grid)
+
+        lie[:]=0
+        for g in out.otype.generators(grid.precision.complex_dtype):
+            self.uniform_real(ca,{"min" : -0.5,"max" : 0.5})
+            ta[:]=g
+            lie += scale * 1j * ca * ta
+        out @= gpt.matrix.exp(lie)
 
 # sha256
 def sha256(mv):

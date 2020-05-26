@@ -91,7 +91,7 @@ EXPORT(util_mem,{
     size_t accelerator_total = 0x0;
 
 #ifdef GRID_NVCC
-    cudaMemGetInfo(&accelerator_available,&accelerator_total);
+    gridMemGetInfo(&accelerator_available,&accelerator_total);
 #endif
 
     return Py_BuildValue("{s:k,s:k}",

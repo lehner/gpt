@@ -10,10 +10,12 @@ import sys
 import time
 
 # load configuration
-U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
+#U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
+U=g.qcd.gauge.random(g.grid([8,8,8,8],g.double),g.random("test"),scale = 0.5)
+g.message("Plaquette:",g.qcd.gauge.plaquette(U))
 
 # do everything in single-precision
-U = g.convert(U, g.single)
+#U = g.convert(U, g.single)
 
 # use the gauge configuration grid
 grid=U[0].grid
@@ -28,22 +30,55 @@ qm=g.qcd.fermion.mobius(U,{
     "boundary_phases" : [ 1.0, 1.0, 1.0, 1.0 ]
 })
 
+w=g.qcd.fermion.wilson_clover(U,{
+    "mass" : -1.8,
+    "csw_r" : 0,
+    "csw_t" : 0,
+    "xi_0" : 1,
+    "nu" : 1,
+    "isAnisotropic" : False,
+    "boundary_phases" : [ 1.0, 1.0, 1.0, 1.0 ]
+})
+
+def H(s,d):
+    w.M(s,d)
+    g.eval(d,g.gamma[5]*d / 2.0)
+
+# find largest eigenvalue of overlap kernel
+pi=g.algorithms.iterative.power_iteration({ "eps" : 1e-3, "maxiter" : 30 })
+st=g.vspincolor(grid)
+g.random("test").cnormal(st)
+pi(H,st)
+
 qz=g.qcd.fermion.zmobius(U,{
     "mass"  : 0.04,
     "M5"    : 1.8,
     "b"     : 1.0,
     "c"     : 0.0,
     "omega" : [
-        1.45806438985048,
-        1.18231318389348,
-        0.830951166685955,
-        0.542352409156791,
-        0.341985020453729,
-        0.21137902619029,
-        0.126074299502912,
-        0.0990136651962626,
-        0.0686324988446592 + 0.0550658530827402j,
-        0.0686324988446592 - 0.0550658530827402j
+1.8530255403075104 + 1j*(0),
+
+1.593983619964445 + 1j*(0),
+
+1.2127961700946597 + 1j*(0),
+
+0.8619627395089003 + 1j*(0),
+
+0.5906659797999617 + 1j*(0),
+
+0.39706365411914263 + 1j*(0),
+
+0.26344003875987015 + 1j*(0),
+
+0.17207275433484948 + 1j*(0),
+
+0.11348176576169644 + 1j*(0.01959818142922749),
+
+0.11348176576169644 + 1j*(-0.01959818142922749),
+
+0.07479396293100343 + 1j*(0.07180640088469024),
+
+0.07479396293100343 + 1j*(-0.07180640088469024),
     ],
     "boundary_phases" : [ 1.0, 1.0, 1.0, 1.0 ]
 })
@@ -55,7 +90,7 @@ g.create.point(src, [0,0,0,0])
 # solver
 s=g.qcd.fermion.solver
 cg=g.algorithms.iterative.cg({
-    "eps" : 1e-6,
+    "eps" : 1e-8,
     "maxiter" : 1000
 })
 slv_qm=s.propagator(s.eo_ne(g.qcd.fermion.preconditioner.eo2(qm), cg))
@@ -86,23 +121,6 @@ correlator_ref=[
     0.0004973784671165049,
     0.0003497783036436885,
     0.0002569338248576969,
-    0.00018832855857908726,
-    0.00016109236457850784,
-    0.00017106340965256095,
-    0.00020944568677805364,
-    0.00029460625955834985,
-    0.00045832418254576623,
-    0.000751025159843266,
-    0.001192546333186328,
-    0.001964164897799492,
-    0.003390846075490117,
-    0.005769025068730116,
-    0.008645612746477127,
-    0.0126266498118639,
-    0.0183967035263776,
-    0.0275730341672897,
-    0.0572328567504882,
-    0.2176910340785980
 ]
 
 # output

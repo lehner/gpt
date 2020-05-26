@@ -1,0 +1,52 @@
+#!/bin/bash
+runner=$1
+fail=0
+if [[ "$runner" != "" ]];
+then
+    echo "Using runner = $runner"
+fi
+
+LOG=$(mktemp)
+
+for f in \
+    core/block.py \
+    core/scalar.py \
+    core/checksums.py \
+    core/importexport.py \
+    core/orthogonalize.py \
+    core/matrix.py \
+    random/random-simple.py \
+    algorithms/implicitly-restarted-lanczos.py \
+    algorithms/solvers.py
+do
+
+printf "%-60s" " [TEST] $f"
+
+start=$SECONDS
+${runner} $f 2>&1 > ${LOG}
+res=$?
+elapsed=$((SECONDS-start))
+
+if [[ "$res" == "0" ]];
+then
+    echo "OK  ($elapsed s)"
+else
+    echo "ERR ($elapsed s)"
+    cat ${LOG}
+    fail=$((fail+1))
+fi
+
+done
+
+if [ -f ${LOG} ];
+then
+    rm -f ${LOG}
+fi
+
+if ((fail != 0))
+then
+    echo "$fail tests failed"
+    exit 1
+else
+    echo "All tests successful"
+fi

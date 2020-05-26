@@ -42,6 +42,7 @@ using namespace Grid;
 #include "distribute.h"
 #include "peekpoke.h"
 #include "transform.h"
+#include "grid.h"
 #include "lattice.h"
 #include "precision.h"
 #include "util.h"

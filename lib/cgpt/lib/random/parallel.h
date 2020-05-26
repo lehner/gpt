@@ -38,8 +38,10 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
 
   std::vector<int> cb_dim(nd);
   for (long j=0;j<nd;j++) {
-    ASSERT(grid->_gdimensions[j] % block == 0);
-    ASSERT(grid->_ldimensions[j] % block == 0); 
+    if (mpi_dim[j]) {
+      ASSERT(grid->_gdimensions[j] % block == 0);
+      ASSERT(grid->_ldimensions[j] % block == 0); 
+    }
     // make sure points within a block are always on same node
     // irrespective of MPI setup
     cb_dim[j] = grid->_fdimensions[j] / grid->_gdimensions[j];

@@ -196,6 +196,47 @@ EXPORT(coordinates_from_block,{
     }
   });
 
+EXPORT(coordinates_inserted_dimension,{
+
+    PyObject* _coordinates, * _xdim;
+    long idim;
+    if (!PyArg_ParseTuple(args, "OlO", &_coordinates,&idim, &_xdim)) {
+      return NULL;
+    }
+
+    std::vector<long> xdim;
+    cgpt_convert(_xdim,xdim);
+    ASSERT(PyArray_Check(_coordinates));
+    PyArrayObject* coordinates = (PyArrayObject*)_coordinates;
+    ASSERT(PyArray_TYPE(coordinates)==NPY_INT32);
+    ASSERT(PyArray_NDIM(coordinates) == 2);
+    long* tdim = PyArray_DIMS(coordinates);
+    long nc    = tdim[0];
+    long nd0   = tdim[1];
+    ASSERT( 0 <= idim && idim <= nd0);
+    long nd    = nd0 + 1;
+    std::vector<long> dims(2);
+    long xds = xdim.size();
+    dims[0] = nc * xds;
+    dims[1] = nd;
+    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_INT32);
+    int32_t* d = (int32_t*)PyArray_DATA(a);
+    int32_t* s = (int32_t*)PyArray_DATA(coordinates);
+
+    thread_for(ii,nc*xds,{
+	long i = ii % nc;
+	long l = ii / nc;
+	for (long j=0;j<idim;j++)
+	  d[ii*nd+j]=s[i*nd0+j];
+	d[ii*nd+idim]=xdim[l];
+	for (long j=idim;j<nd0;j++)
+	  d[ii*nd+j+1]=s[i*nd0+j];
+      });
+
+    PyArray_CLEARFLAGS(a,NPY_ARRAY_WRITEABLE); // read-only, so we can cache distribute plans
+    return (PyObject*)a;
+  });
+
 EXPORT(mview,{
 
     PyObject* _a;

@@ -80,7 +80,7 @@ class lattice:
 
     def checkerboard(self, val = None):
         if val is None:
-            if self.grid.cb != gpt.redblack:
+            if self.grid.cb.n == 1:
                 return gpt.none
 
             cb=cgpt.lattice_get_checkerboard(self.v_obj[0]) # all have same cb, use 0
@@ -92,7 +92,7 @@ class lattice:
                 assert(0)
         else:
             if val != gpt.none:
-                assert(self.grid.cb == gpt.redblack)
+                assert(self.grid.cb.n != 1)
                 for o in self.v_obj:
                     cgpt.lattice_change_checkerboard(o,val.tag)
 

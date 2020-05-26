@@ -16,8 +16,8 @@ g.mem_report()
 fn=g.default.get("--params","params.txt")
 params=g.params(fn,verbose = True)
 
-# load configuration
-U = params["config"]
+# load configuration; 
+U = g.qcd.gauge.unit(g.grid([48,24,24,24],g.single))
 
 # show available memory
 g.mem_report()
@@ -27,11 +27,34 @@ q=params["fmatrix"](U)
 
 # load basis vectors
 nbasis=params["nbasis"]
-fg_basis,fg_cevec,fg_feval = g.load(params["basis"],{
-    "grids" : q.F_grid_eo, "nmax" : nbasis, 
-    "advise_basis" : g.infrequent_use,
-    "advise_cevec" : g.infrequent_use
-})
+#fg_basis,fg_cevec,fg_feval = g.load(params["basis"],{
+#    "grids" : q.F_grid_eo, "nmax" : nbasis, 
+#    "advise_basis" : g.infrequent_use,
+#    "advise_cevec" : g.infrequent_use
+#})
+rng=g.random("test")
+
+try:
+    fg_basis = g.load("basis", { "grids" : q.F_grid_eo })[0]
+except:
+    fg_basis=g.advise([ g.vspincolor(q.F_grid_eo) for i in range(nbasis) ],g.infrequent_use)
+    rng.zn(fg_basis)
+    g.save("basis",[fg_basis])
+
+#g.mem_report()
+#g.prefetch( fg_basis, g.to_accelerator)
+#g.mem_report()
+
+#w=fg_basis[-1]
+#g.orthogonalize(w,fg_basis[0:1])
+#g.orthogonalize(w,fg_basis[0:15])
+
+fg_basis=g.advise( fg_basis, g.infrequent_use)
+tg=g.block.grid(q.F_grid_eo,[12,2,2,2,2])
+fg_cevec=g.advise([ g.vcomplex(tg,150) for i in range(nbasis) ],g.infrequent_use)
+rng.zn(fg_cevec)
+fg_feval=[ 0.0 for i in range(nbasis) ]
+
 
 # memory info
 g.mem_report()
@@ -54,9 +77,8 @@ for i in range(nbasis):
     if i < params["nbasis_on_host"]:
         g.message("marked as infrequent use")
         basis[i].advise( g.infrequent_use )
-
     g.block.promote(fg_cevec[i],basis[i],fg_basis)
-    g.algorithms.approx.evals(q.NDagN,[ basis[i] ],check_eps2=1e-4)
+    g.algorithms.approx.evals(q.NDagN,[ basis[i] ],check_eps2=1e10)
     g.message("Compare to: %g" % fg_feval[i])
 
     g.mem_report(details = False)

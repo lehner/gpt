@@ -16,65 +16,139 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt
-import gpt
+import cgpt, gpt, sys
 import numpy as np
 
 class full:
-    n=1
-    def dim_mask(nd):
-        return [ 0 ] * nd
+    def __init__(self, nd):
+        self.n = 1
+        self.cb_mask = [ 0 ] * nd
+        self.simd_mask = [ 1 ] * nd
+        self.__name__ = "full"
 
 class redblack:
-    n=2
-    def dim_mask(nd):
-        # four-dimensional red-black
+    def __init__(self, nd):
+        self.n = 2
         rbd=min([nd,4])
-        return [ 0 ] * (nd-rbd) + [ 1 ] * rbd
+        self.cb_mask = [ 0 ] * (nd-rbd) + [ 1 ] * rbd
+        self.simd_mask = [ 1 ] * nd
+        self.__name__ = "redblack"
 
-def str_to_checkerboarding(s):
+class general:
+    def __init__(self, n, cb_mask, simd_mask):
+        self.n = n
+        self.cb_mask = cb_mask
+        self.simd_mask = simd_mask
+        self.__name__="general_%d_%s_%s" % (n,cb_mask,simd_mask)
+
+def str_to_checkerboarding(s,nd):
     if s == "full":
-        return full
+        return full(nd)
     elif s == "redblack":
-        return redblack
+        return redblack(nd)
     else:
+        a=s.split("_")
+        if a[0] == "general":
+            print("TODO: implement"); sys.stdout.flush()
         assert(0)
 
+def grid_from_description(description):
+    p=description.split(";")
+    fdimensions=[ int(x) for x in p[0].strip("[]").split(",") ]
+    precision=gpt.str_to_precision(p[1])
+    cb=str_to_checkerboarding(p[2],len(fdimensions))
+    obj=None
+    return grid(fdimensions,precision,cb,obj)
+
+def grid_get_mpi(tag,fdimensions,cb):
+    nd=len(fdimensions)
+    tag_nd=tag % ("%d" % nd)
+    mpi=gpt.default.get_ivec(tag_nd,None)
+    if mpi is None:
+        # use dimension-independent mpi selection
+        tag_default=tag % ""
+        mpi=gpt.default.get_ivec(tag_default,[1,1,1,1])
+        if nd > 4:
+            mpi = [ 1 ] * (nd - 4) + mpi
+        elif nd < 4:
+            raise Exception("Need command line argument for %s" % tag_nd)
+    return mpi
+
 class grid:
-    def __init__(self, first, second = None, third = None, fourth = None):
-        if type(first) == str:
-            # create from description
-            p=first.split(";")
-            fdimensions=[ int(x) for x in p[0].strip("[]").split(",") ]
-            precision=gpt.str_to_precision(p[1])
-            cb=str_to_checkerboarding(p[2])
-            obj=None
-        else:
-            fdimensions=first
-            precision=second
-            if third is None:
-                cb=full
-            else:
-                cb=third
-            obj=fourth
+    def __init__(self, fdimensions, precision, cb = None, obj = None, mpi = None, parent = None):
 
         self.fdimensions = fdimensions
         self.fsites = np.prod(self.fdimensions)
         self.precision = precision
+        self.nd = len(self.fdimensions)
+
+        if cb is None:
+            cb=full
+
+        if isinstance(cb,type):
+            cb=cb(self.nd)
+
         self.cb = cb
-        self.nd=len(self.fdimensions)
+        if mpi is None:
+            self.mpi = grid_get_mpi("--mpi%s",self.fdimensions,self.cb)
+        else:
+            self.mpi = mpi
+
+        self.parent = parent
+        if parent is None:
+            parent_obj = 0
+        else:
+            parent_obj = parent.obj
         
         if obj is None:
-            self.obj = cgpt.create_grid(fdimensions, precision, cb)
+            self.obj = cgpt.create_grid(fdimensions, precision, cb.cb_mask, cb.simd_mask, self.mpi, parent_obj)
         else:
             self.obj = obj
 
         # processor is mpi rank, may not be lexicographical (cartesian) rank
-        self.processor,self.Nprocessors,self.processor_coor,self.gdimensions,self.ldimensions=cgpt.grid_get_processor(self.obj)
-        self.mpi = [ self.gdimensions[i] // self.ldimensions[i] for i in range(self.nd) ]
+        self.processor,self.Nprocessors,self.processor_coor,self.gdimensions,self.ldimensions,self.srank,self.sranks=cgpt.grid_get_processor(self.obj)
+        self.gsites = np.prod(self.gdimensions)
 
-    def describe(self): # creates a string without spaces that can be used to construct it again, this should only describe the grid geometry not the mpi/simd
+    def describe(self): # creates a string without spaces that can be used to construct it again, this should only describe the grid geometry not the mpi
+        assert(self.sranks == 1) # for now do not support split grids
         return (str(self.fdimensions)+";"+self.precision.__name__+";"+self.cb.__name__).replace(" ","")
+
+    def converted(self, dst_precision):
+        if dst_precision == self.precision:
+            return self
+        if self.parent is None:
+            parent=None
+        else:
+            parent=self.parent.converted(dst_precision)
+        return grid(self.fdimensions, dst_precision,
+                    cb = self.cb, obj = None,
+                    mpi = self.mpi, parent = parent)
+
+    def split(self, mpi_split, fdimensions):
+        return grid(fdimensions,self.precision,self.cb,None,mpi_split,self)
+
+    def inserted_dimension(self, dimension, extent):
+        cb=general(self.cb.n,
+                   self.cb.cb_mask[0:dimension] + [0] + self.cb.cb_mask[dimension:],
+                   self.cb.simd_mask[0:dimension] + [0] + self.cb.simd_mask[dimension:])
+        if self.parent is None:
+            parent=None
+        else:
+            parent=self.parent.inserted_dimension(dimension,extent)
+        return grid(self.fdimensions[0:dimension] + [ extent ] + self.fdimensions[dimension:],self.precision,cb=cb,obj=None,
+                    mpi=self.mpi[0:dimension] + [ 1 ] + self.mpi[dimension:],parent = parent)
+
+    def removed_dimension(self, dimension):
+        assert(0 <= dimension and dimension < self.nd)
+        cb=general(self.cb.n,
+                   self.cb.cb_mask[0:dimension] + self.cb.cb_mask[dimension+1:],
+                   self.cb.simd_mask[0:dimension] + self.cb.simd_mask[dimension+1:])
+        if self.parent is None:
+            parent=None
+        else:
+            parent=self.parent.removed_dimension(dimension)
+        return grid(self.fdimensions[0:dimension] + self.fdimensions[dimension+1:],self.precision,cb=cb,obj=None,
+                    mpi=self.mpi[0:dimension] + self.mpi[dimension+1:],parent = parent)
 
     def cartesian_rank(self):
         rank=0

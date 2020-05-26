@@ -8,7 +8,8 @@ import gpt as g
 import sys
 
 # load configuration
-U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
+#U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
+U=g.qcd.gauge.random(g.grid([8,8,8,8],g.double),g.random("test"))
 
 # do everything in single-precision
 U = g.convert(U, g.single)
@@ -26,7 +27,7 @@ w=g.qcd.fermion.preconditioner.eo2(g.qcd.fermion.wilson_clover(U,{
 
 # cheby
 c=g.algorithms.approx.chebyshev({
-    "low"   : 0.08,
+    "low"   : 0.5,
     "high"  : 2.0,
     "order" : 10,
 })
@@ -54,7 +55,4 @@ evec,ev=irl(c(w.NDagN), start) # , g.checkpointer("checkpoint")
 g.mem_report()
 
 # print eigenvalues of NDagN as well
-for i,v in enumerate(evec):
-    w.NDagN(v,start)
-    l=g.innerProduct(v,start).real
-    g.message("%d %g %g %g" % (i,l,ev[i],c(l)))
+g.algorithms.approx.evals(w.NDagN,evec,check_eps2=1e-11)

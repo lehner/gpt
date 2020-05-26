@@ -107,4 +107,7 @@ def expr_eval(first, second = None, ac = False):
 
 def sum(e):
     l=gpt.eval(e)
-    return gpt.util.value_to_tensor( cgpt.lattice_sum(l.obj), l.otype )
+    val=cgpt.lattice_sum(l.v_obj[0])
+    for i in l.otype.v_idx[1:]:
+        val=numpy.append(val,cgpt.lattice_sum(l.v_obj[i]))
+    return gpt.util.value_to_tensor( val, l.otype )

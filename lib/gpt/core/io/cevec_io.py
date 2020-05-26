@@ -143,7 +143,8 @@ def load(filename, *a):
     assert(nd == 5)
     assert(nd == len(fdimensions))
     assert(nd == len(blocksize))
-    assert(fgrid.cb == gpt.redblack)
+    assert(fgrid.cb.n == 2)
+    assert(fgrid.cb.cb_mask == [0,1,1,1,1])
 
     # create coarse grid
     cgrid=gpt.block.grid(fgrid,blocksize)
@@ -535,7 +536,7 @@ def save(filename, objs, params):
         for b in range(read_blocks):
             fgrid.barrier()
             dt_distr-=gpt.time()
-            data_munged=cgpt.mview(gpt.peek(basis[0:nsingleCap],pos[b]))
+            data_munged=gpt.peek(basis[0:nsingleCap],pos[b])
             dt_distr+=gpt.time()
 
             if not f is None:
@@ -574,7 +575,7 @@ def save(filename, objs, params):
             for b in range(read_blocks):
                 fgrid.barrier()
                 dt_distr-=gpt.time()
-                data_munged=cgpt.mview(gpt.peek(basis[nsingleCap:nbasis],pos[b]))
+                data_munged=gpt.peek(basis[nsingleCap:nbasis],pos[b])
                 dt_distr+=gpt.time()
 
                 if not f is None:

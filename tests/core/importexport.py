@@ -38,4 +38,7 @@ for tr in range(10):
             err2+=(data[i][3*n+0].real - pos[0])**2.0 + (data[i][3*n+1].real - pos[1])**2.0 + (data[i][3*n+2].real - pos[2])**2.0
     dst[c]=mvrestore
     err2=grid.globalsum(err2)
-    g.message("Test shift",tr,"/ 10 :",shift,"difference norm/e2:",g.norm2(src-dst),err2)
+    err1=g.norm2(src-dst)
+    g.message("Test shift",tr,"/ 10 :",shift,"difference norm/e2:",err1,err2)
+    assert(err1 == 0.0 and err2 == 0.0)
+

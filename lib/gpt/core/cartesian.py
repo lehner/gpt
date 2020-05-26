@@ -49,14 +49,17 @@ class cartesian_view:
                 mpi=second
         assert(len(mpi) == len(fdimensions))
         self.nd=len(mpi)
+
+        if isinstance(g_cb,type):
+            g_cb=g_cb(self.nd)
+
         self.rank=rank
         self.mpi=mpi
         self.fdimensions=fdimensions
         self.ranks=1
         self.processor_coor=[ 0 ] * self.nd
         self.view_dimensions = [ fdimensions[i] // mpi[i] for i in range(self.nd) ]
-
-        self.checker_dim_mask = g_cb.dim_mask(self.nd)
+        self.checker_dim_mask = g_cb.cb_mask
         self.cb = l_cb.tag
 
         for i in range(self.nd):

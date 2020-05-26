@@ -18,23 +18,28 @@
 */
 #include "lib.h"
 
+std::map<std::string,_grid_cache_entry_> cgpt_grid_cache;
+std::map<GridBase*,std::string> cgpt_grid_cache_tag;
+
 EXPORT(create_grid,{
     
-    PyObject* _gdimension, * _precision, * _type;
-    if (!PyArg_ParseTuple(args, "OOO", &_gdimension, &_precision,&_type)) {
+    PyObject* _fdimensions, * _precision, * _cb_mask, * _simd_mask, * _mpi;
+    void* _parent_grid;
+    if (!PyArg_ParseTuple(args, "OOOOOl", &_fdimensions, &_precision,&_cb_mask,&_simd_mask,&_mpi,&_parent_grid)) {
       return NULL;
     }
     
-    std::vector<int> gdimension;
-    std::string precision, type;
+    Coordinate fdimensions, mpi, cb_mask, simd_mask;
+    GridBase* parent_grid = (GridBase*)_parent_grid;
+    std::string precision;
     
-    cgpt_convert(_gdimension,gdimension);
+    cgpt_convert(_fdimensions,fdimensions);
+    cgpt_convert(_mpi,mpi);
     cgpt_convert(_precision,precision);
-    cgpt_convert(_type,type);
+    cgpt_convert(_cb_mask,cb_mask);
+    cgpt_convert(_simd_mask,simd_mask);
     
-    int nd = (int)gdimension.size();
     int Nsimd;
-    
     if (precision == "single") {
       Nsimd = vComplexF::Nsimd();
     } else if (precision == "double") {
@@ -42,43 +47,27 @@ EXPORT(create_grid,{
     } else {
       ERR("Unknown precision");
     }
-    
-    GridBase* grid;
-    if (nd >= 4) {
-      std::vector<int> gdimension4d(4);
-      for (long i=0;i<4;i++)
-	gdimension4d[i]=gdimension[nd-4+i];
-      GridCartesian* grid4d = SpaceTimeGrid::makeFourDimGrid(gdimension4d, GridDefaultSimd(4,Nsimd), GridDefaultMpi());
-      if (nd == 4) {
-	if (type == "redblack") {
-	  grid = SpaceTimeGrid::makeFourDimRedBlackGrid(grid4d);
-	  delete grid4d;
-	} else if (type == "full") {
-	  grid = grid4d;
-	} else {
-	  ERR("Unknown grid type");
-	}
-      } else if (nd == 5) {
-	if (type == "redblack") {
-	  grid = SpaceTimeGrid::makeFiveDimRedBlackGrid(gdimension[0],grid4d);
-	  delete grid4d;
-	} else if (type == "full") {
-	  grid = SpaceTimeGrid::makeFiveDimGrid(gdimension[0],grid4d);
-	  delete grid4d;
-	} else {
-	  ERR("Unknown grid type");
-	}	
-      } else if (nd > 5) {
-	ERR("Unknown dimension");
-      }
 
-    } else {
-      // TODO: give gpt full control over mpi,simd,cbmask?
-      // OR: at least give user option to make certain dimensions not simd/mpi directions
-      std::cerr << "Unknown dimension " << nd << std::endl;
-      assert(0);
+    long nd = cb_mask.size();
+    ASSERT(nd == fdimensions.size());
+    ASSERT(nd == simd_mask.size());
+    ASSERT(nd == mpi.size());
+    Coordinate simd(nd,1);
+
+    int nn=Nsimd;
+    int i=nd-1;
+    while (nn > 1) {
+      if (simd_mask[i]) {
+	simd[i]*=2;
+	nn/=2;
+      }
+      i--;
+      if (i<0)
+	i=nd-1;
     }
-    
+
+    GridBase* grid;
+    grid = cgpt_create_grid(fdimensions,simd,cb_mask,mpi,parent_grid);
     return PyLong_FromVoidPtr(grid);
     
   });
@@ -93,7 +82,7 @@ EXPORT(delete_grid,{
     }
     
     ((GridBase*)p)->Barrier(); // before a grid goes out of life, we need to synchronize
-    delete ((GridBase*)p);
+    cgpt_delete_grid((GridBase*)p);
     return PyLong_FromLong(0);
     
   });
@@ -168,12 +157,14 @@ EXPORT(grid_get_processor,{
     }
     
     GridBase* grid = (GridBase*)p;
+    long srank,sranks;
+    cgpt_grid_get_info(grid,srank,sranks);
     long rank = grid->_processor;
     long ranks = grid->_Nprocessors;
     PyObject* coor = cgpt_convert(grid->_processor_coor);
     PyObject* ldims = cgpt_convert(grid->_ldimensions);
     PyObject* gdims = cgpt_convert(grid->_gdimensions);
-    return Py_BuildValue("(l,l,N,N,N)",rank,ranks,coor,gdims,ldims);
+    return Py_BuildValue("(l,l,N,N,N,l,l)",rank,ranks,coor,gdims,ldims,srank,sranks);
     
   });
-  
+ 

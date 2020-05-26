@@ -74,7 +74,7 @@ static PyObject* load_openQCD(PyObject* args) {
       return NULL;
     }
 
-    std::vector<int> gdimension(4);
+    std::vector<int> gdimension(4), cb_mask(4,0);
     for (int i=0;i<4;i++) {
       char buf[32];
       sprintf(buf,"DIMENSION_%d",i+1);
@@ -86,7 +86,7 @@ static PyObject* load_openQCD(PyObject* args) {
     // construct Grid
     assert(Nd == 4);
     GridCartesian* grid = 
-      SpaceTimeGrid::makeFourDimGrid(gdimension, GridDefaultSimd(4,vComplexD::Nsimd()), GridDefaultMpi());
+      (GridCartesian*)cgpt_create_grid(cgpt_to_coordinate(gdimension),GridDefaultSimd(4,vComplexD::Nsimd()), cb_mask, GridDefaultMpi(),0);
 
     // load gauge field
     LatticeGaugeFieldD Umu(grid);
