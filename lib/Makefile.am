@@ -1,5 +1,5 @@
 
-# List all python files here. 
+# List all python files here.
 # They will be byte-compiles upon "make install"
 include $(top_srcdir)/gpt_pyfiles.inc
 
