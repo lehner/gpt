@@ -5,9 +5,8 @@ echo "Generate list of cc files..."
 find lib/cgpt/lib -type f -name '*.cc' | \
 sed -e '1i\
 CGPT_CCFILES = \\' \
--e 's,$, \\,'  \
--e '$a\
-# do not remove this line' \
+-e 's,$, \\,' | \
+sed -e '$s, \\$,,' \
 > cgpt_ccfiles.inc
 
 # Generate list of python files in lib/gpt
@@ -16,10 +15,9 @@ find lib/gpt -type f -name '*.py' | \
 sed -e '1i\
 GPT_PYFILES = \\' \
 -e 's,$, \\,'  \
--e 's,^lib/,,' \
--e '$a\
-# do not remove this line' \
+-e 's,^lib/,,' | \
+sed -e '$s, \\$,,' \
 > gpt_pyfiles.inc
 
 # Generate all autotools files
-autoreconf -fvi -Wall
+#autoreconf -fvi -Wall
