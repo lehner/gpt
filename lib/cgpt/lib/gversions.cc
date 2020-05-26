@@ -28,7 +28,7 @@
 #define GITHASH "Grid/Version.h does not define GITHASH"
 #endif
 
-#include "gversions.h"
+#include <gversions.h>
 
 EXPORT(grid_version,{
 

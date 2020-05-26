@@ -36,6 +36,7 @@ cgpt_la_LDFLAGS = -avoid-version -module -export-dynamic -shared
 # cgpt_la_CFLAGS = $(PYTHON_CFLAGS) $(GRID_CFLAGS)
 cgpt_la_CXXFLAGS = $(PYTHON_CFLAGS) $(GRID_CXXFLAGS)
 cgpt_la_CPPFLAGS = $(PYTHON_CPPFLAGS) $(GRID_CPPFLAGS) \
+		   -I$(top_builddir)/lib/cgpt/lib \
 		   -I$(GRID_PREFIX)/include \
 		   -I$(NUMPY_INCLUDE)
 cgpt_la_LIBADD = -L$(GRID_PREFIX)/lib -lGrid \
@@ -67,7 +68,7 @@ gen_versions:
         fi; \
 	git -C "$(top_srcdir)" \
 	    log -n 1 \
-	    --format=format:'#define GPT_GIT_HASH "%H:%d $$a"%n' \
+	    --format=format:"#define GPT_GIT_HASH \"%H:%d $$a\"%n" \
 	    HEAD \
 	    > lib/cgpt/lib/gversions.h
 
