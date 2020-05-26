@@ -55,3 +55,21 @@ cgpt_la_LIBADD = -L$(GRID_PREFIX)/lib -lGrid \
 # to make a tarball, try "make dist"
 # and to check for errors/forgotten files, use "make distcheck".
 #
+.PHONY: gen_versions
+
+gen_versions:
+	@if [ `git -C "$(top_srcdir)" status --porcelain | grep -v '??'\
+	    | wc -l` -gt 0 ];\
+	then \
+                a="uncommited changes";\
+        else \
+                a="clean"; \
+        fi; \
+	git -C "$(top_srcdir)" \
+	    log -n 1 \
+	    --format=format:'#define GPT_GIT_HASH "%H:%d $$a"%n' \
+	    HEAD \
+	    > lib/cgpt/lib/gversions.h
+
+
+lib/cgpt/lib/gversions.h: gen_versions
