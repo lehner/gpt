@@ -89,3 +89,15 @@ gen_versions:
 lib/cgpt/lib/gversions.h: gen_versions
 
 CLEANFILES = lib/cgpt/lib/gversions.h
+EXTRA_DIST = LICENSE \
+	     README.setup.md
+dist-hook: gen_versions
+	chmod u+w \
+	    $(distdir)/lib/cgpt/lib/ \
+	    $(distdir)/lib/cgpt/lib/gversions.h
+	cp  $(top_builddir)/lib/cgpt/lib/gversions.h \
+	    $(distdir)/lib/cgpt/lib/gversions.h
+
+# Note: currently tests, docs, etc. are not listed here.
+# Possibly use dist_doc_DATA for documentation.
+# Tests: can use TAP harness.
