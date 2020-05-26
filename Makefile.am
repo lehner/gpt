@@ -94,9 +94,11 @@ EXTRA_DIST = LICENSE \
 dist-hook: gen_versions
 	chmod u+w \
 	    $(distdir)/lib/cgpt/lib/ \
-	    $(distdir)/lib/cgpt/lib/gversions.h
+	    $(distdir)/lib/cgpt/lib/gversions.h; \
+	echo '#define GPT_FROM_DIST "beware! from autotools dist."' \
+	    >> $(top_builddir)/lib/cgpt/lib/gversions.h; \
 	cp  $(top_builddir)/lib/cgpt/lib/gversions.h \
-	    $(distdir)/lib/cgpt/lib/gversions.h
+	    $(distdir)/lib/cgpt/lib/gversions.h;
 
 # Note: currently tests, docs, etc. are not listed here.
 # Possibly use dist_doc_DATA for documentation.
