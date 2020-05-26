@@ -12,6 +12,9 @@ AC_CONFIG_MACRO_DIR([m4])
 # you have to list one file that does already exist. Can be any file.
 AC_CONFIG_SRCDIR([lib/gpt/__init__.py])
 
+# use configure header
+AC_CONFIG_HEADERS([gpt_config.h])
+
 # Trick to set empty default value for CXXFLAGS
 : ${CXXFLAGS=""}
 
