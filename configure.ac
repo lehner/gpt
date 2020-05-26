@@ -33,6 +33,13 @@ AC_DEFUN([my_python_version],[3.6])
 AM_PATH_PYTHON(my_python_version)
 AX_PYTHON_DEVEL([>=']my_python_version['])
 
+AC_ARG_ENABLE([fake-grid],
+              [AS_HELP_STRING([--enable-fake-grid],
+                              [Fake grid-config. Useful if you just want
+                               to do a 'make dist'])],
+              [ac_fake_grid=yes],
+              [ac_fake_grid=no])
+
 # Numpy include dir
 AC_DEFUN([numpy_includer],["${PYTHON}" -c 'import numpy; print(numpy.get_include())'])
 AC_SUBST([NUMPY_INCLUDE])
@@ -42,6 +49,16 @@ AS_IF([numpy_includer > /dev/null 2>&1 ],
        AC_MSG_RESULT([${NUMPY_INCLUDE}])],
       [AC_MSG_ERROR([no.])])
 
+AS_IF([test "x${ac_fake_grid}" = "xyes"],
+[
+    AC_SUBST([GRID_CXXFLAGS],[-DFAKEGRID])
+    AC_SUBST([GRID_LDFLAGS],[-LFAKEGRID])
+    AC_SUBST([GRID_CXX],[gcc])
+    AC_SUBST([GRID_CXXLD],[gcc])
+    AC_SUBST([GRID_LIBS],  [-lFAKEGRID])
+    AC_SUBST([GRID_PREFIX],[FAKEGRID])
+],
+[
 AC_CHECK_PROG([gridconfig], [grid-config],[grid-config],[])
 AS_IF([test "x${gridconfig}" = "xgrid-config"],
       [],
@@ -52,6 +69,7 @@ AC_SUBST([GRID_CXX],[`${gridconfig} --cxx`])
 AC_SUBST([GRID_CXXLD],[`${gridconfig} --cxxld`])
 AC_SUBST([GRID_LIBS],  [`${gridconfig} --libs`])
 AC_SUBST([GRID_PREFIX],[`${gridconfig} --prefix`])
+])
 
 # Unfortunately, not all versions of Grid have --cxxld and it does
 # not print to stderr in case of an error. So detect error by
