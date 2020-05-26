@@ -20,3 +20,6 @@ missing
 /py-compile
 *pycache*
 /tests/run-*
+/gpt_config.h.in
+gpt_pyfiles.inc
+cgpt_ccfiles.inc

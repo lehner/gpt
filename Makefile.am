@@ -10,28 +10,10 @@ SUBDIRS = lib
 
 pyexec_LTLIBRARIES = cgpt.la
 
-cgpt_la_SOURCES = \
-	lib/cgpt/lib/fp16.cc \
-	lib/cgpt/lib/munge.cc \
-	lib/cgpt/lib/operators.cc \
-	lib/cgpt/lib/init.cc \
-	lib/cgpt/lib/eval.cc \
-	lib/cgpt/lib/block.cc \
-	lib/cgpt/lib/coordinates.cc \
-	lib/cgpt/lib/expression_gammamul.cc \
-	lib/cgpt/lib/mpi.cc \
-	lib/cgpt/lib/lattice.cc \
-	lib/cgpt/lib/transform.cc \
-	lib/cgpt/lib/expression_linear_combination.cc \
-	lib/cgpt/lib/io.cc \
-	lib/cgpt/lib/expression_mul.cc \
-	lib/cgpt/lib/util.cc \
-	lib/cgpt/lib/random.cc \
-	lib/cgpt/lib/grid.cc \
-	lib/cgpt/lib/distribute.cc \
-	lib/cgpt/lib/basis.cc \
-	lib/cgpt/lib/time.cc \
-	lib/cgpt/lib/lib.cc
+include $(top_srcdir)/cgpt_ccfiles.inc
+include $(top_srcdir)/gpt_pyfiles.inc
+
+cgpt_la_SOURCES = $(CGPT_CCFILES)
 
 # The flags in ..._LDFLAGS are __not__ linker flags, but flags for
 # GNU libtool. It takes care of all the platform specific stuff when
