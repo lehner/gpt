@@ -30,6 +30,10 @@
 
 #include <gversions.h>
 
+#ifndef GPT_FROM_DIST
+#define GPT_FROM_DIST ""
+#endif
+
 EXPORT(grid_version,{
 
     return PyUnicode_FromString(GITHASH);
@@ -37,5 +41,5 @@ EXPORT(grid_version,{
 
 EXPORT(gpt_version,{
 
-    return PyUnicode_FromString(GPT_GIT_HASH);
+    return PyUnicode_FromString(GPT_GIT_HASH GPT_FROM_DIST);
   });

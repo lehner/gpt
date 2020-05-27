@@ -12,8 +12,13 @@ pyexec_LTLIBRARIES = cgpt.la
 
 include $(top_srcdir)/cgpt_ccfiles.inc
 include $(top_srcdir)/gpt_pyfiles.inc
+include $(top_srcdir)/cgpt_hfiles.inc
 
-cgpt_la_SOURCES = $(CGPT_CCFILES)
+# Automake docu says to list convenience headers together with the
+# sources.  noinst_HEADERS would also be possible, but manual
+# (https://www.gnu.org/software/automake/manual/automake.html)
+# recommends to use sources in our case.
+cgpt_la_SOURCES = $(CGPT_CCFILES) $(CGPT_HFILES)
 
 # The flags in ..._LDFLAGS are __not__ linker flags, but flags for
 # GNU libtool. It takes care of all the platform specific stuff when
@@ -61,7 +66,9 @@ all: gen_versions
 .PHONY: gen_versions
 
 gen_versions:
-	@if [ `git -C "$(top_srcdir)" status --porcelain | grep -v '??'\
+	@if ( git -C $(top_srcdir) status --porcelain  > /dev/null 2>&1  ); \
+	then \
+	if [ `git -C "$(top_srcdir)" status --porcelain | grep -v '??'\
 	    | wc -l` -gt 0 ];\
 	then \
                 a="uncommited changes";\
@@ -72,7 +79,27 @@ gen_versions:
 	    log -n 1 \
 	    --format=format:"#define GPT_GIT_HASH \"%H:%d $$a\"%n" \
 	    HEAD \
-	    > lib/cgpt/lib/gversions.h
+	    > lib/cgpt/lib/gversions.h; \
+	else \
+	cp "$(top_srcdir)/lib/cgpt/lib/gversions.h" \
+	   "$(top_builddir)/lib/cgpt/lib"; \
+	fi;
 
 
 lib/cgpt/lib/gversions.h: gen_versions
+
+CLEANFILES = lib/cgpt/lib/gversions.h
+EXTRA_DIST = LICENSE \
+	     README.setup.md
+dist-hook: gen_versions
+	chmod u+w \
+	    $(distdir)/lib/cgpt/lib/ \
+	    $(distdir)/lib/cgpt/lib/gversions.h; \
+	echo '#define GPT_FROM_DIST "beware! from autotools dist."' \
+	    >> $(top_builddir)/lib/cgpt/lib/gversions.h; \
+	cp  $(top_builddir)/lib/cgpt/lib/gversions.h \
+	    $(distdir)/lib/cgpt/lib/gversions.h;
+
+# Note: currently tests, docs, etc. are not listed here.
+# Possibly use dist_doc_DATA for documentation.
+# Tests: can use TAP harness.

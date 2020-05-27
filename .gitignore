@@ -21,5 +21,6 @@ missing
 *pycache*
 /tests/run-*
 /gpt_config.h.in
-gpt_pyfiles.inc
-cgpt_ccfiles.inc
+/gpt_pyfiles.inc
+/cgpt_ccfiles.inc
+/cgpt_hfiles.inc
