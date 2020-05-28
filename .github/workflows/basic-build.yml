@@ -54,7 +54,7 @@ jobs:
       id: c-lime-package-cache
       with:
         path: c-lime-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}.deb
-        key: ${{ runner.os }}-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
+        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
 
     - name: Build and package c-lime
       if: steps.c-lime-package-cache.outputs.cache-hit != 'true'
@@ -98,7 +98,7 @@ jobs:
       id: grid-package-cache
       with:
         path: grid-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}.deb
-        key: ${{ runner.os }}-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
+        key: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
 
     - name: Build and package Grid
       if: steps.grid-package-cache.outputs.cache-hit != 'true'
@@ -142,14 +142,14 @@ jobs:
       id: c-lime-package-cache
       with:
         path: c-lime.deb
-        key: ${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
+        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
 
     - name: Grid package cache
       uses: actions/cache@v2
       id: grid-package-cache
       with:
         path: grid.deb
-        key: ${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}
+        key: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}
 
     - name: Install Ubuntu packages
       run: |
