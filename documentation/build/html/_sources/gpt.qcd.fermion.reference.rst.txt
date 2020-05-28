@@ -1,0 +1,22 @@
+gpt.qcd.fermion.reference package
+=================================
+
+Submodules
+----------
+
+gpt.qcd.fermion.reference.wilson module
+---------------------------------------
+
+.. automodule:: gpt.qcd.fermion.reference.wilson
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: gpt.qcd.fermion.reference
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,30 @@
+gpt.qcd package
+===============
+
+Subpackages
+-----------
+
+.. toctree::
+
+   gpt.qcd.fermion
+   gpt.qcd.gauge
+
+Submodules
+----------
+
+gpt.qcd.utils module
+--------------------
+
+.. automodule:: gpt.qcd.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: gpt.qcd
+   :members:
+   :undoc-members:
+   :show-inheritance:

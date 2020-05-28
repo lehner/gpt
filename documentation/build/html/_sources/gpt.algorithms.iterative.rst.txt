@@ -1,0 +1,70 @@
+gpt.algorithms.iterative package
+================================
+
+Submodules
+----------
+
+gpt.algorithms.iterative.bicgstab module
+----------------------------------------
+
+.. automodule:: gpt.algorithms.iterative.bicgstab
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.iterative.cg module
+----------------------------------
+
+.. automodule:: gpt.algorithms.iterative.cg
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.iterative.fgcr module
+------------------------------------
+
+.. automodule:: gpt.algorithms.iterative.fgcr
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.iterative.fgmres module
+--------------------------------------
+
+.. automodule:: gpt.algorithms.iterative.fgmres
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.iterative.irl module
+-----------------------------------
+
+.. automodule:: gpt.algorithms.iterative.irl
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.iterative.mr module
+----------------------------------
+
+.. automodule:: gpt.algorithms.iterative.mr
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.iterative.power\_iteration module
+------------------------------------------------
+
+.. automodule:: gpt.algorithms.iterative.power_iteration
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: gpt.algorithms.iterative
+   :members:
+   :undoc-members:
+   :show-inheritance:

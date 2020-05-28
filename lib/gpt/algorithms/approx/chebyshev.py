@@ -54,6 +54,22 @@ def coeffs_order(orders):
     return [ [ 0.0 ] * (order-1) + [ 1.0 ] for order in orders ]
 
 class chebyshev:
+    """The Chebyshev Algorithm.
+
+    Args:
+        params (dict): A dictionary containing the in input parameters to be saved as attributes.
+
+    Attributes:
+        params (dict): A copy of the argument dictionary.
+        hi (int): Something High
+        lo (int): Something Low
+        order (list of int): I have no idea what this is
+        morder (int): the maximum of order
+        n (int): The length of order
+        func (list of func): A list of functions for something
+        coeffs (list of int): list of coefficients for something
+
+    """
     def __init__(self, params):
         self.params = params
         self.hi = params["high"]
@@ -156,4 +172,3 @@ class chebyshev:
                 return lambda i,o: self.__call__(mat, i, o)
             else:
                 self.evalOp(mat, src, dst)
-

@@ -1,0 +1,46 @@
+gpt.algorithms.approx package
+=============================
+
+Submodules
+----------
+
+gpt.algorithms.approx.chebyshev module
+--------------------------------------
+
+.. automodule:: gpt.algorithms.approx.chebyshev
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.approx.coarse\_deflate module
+--------------------------------------------
+
+.. automodule:: gpt.algorithms.approx.coarse_deflate
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.approx.deflate module
+------------------------------------
+
+.. automodule:: gpt.algorithms.approx.deflate
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.algorithms.approx.evals module
+----------------------------------
+
+.. automodule:: gpt.algorithms.approx.evals
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: gpt.algorithms.approx
+   :members:
+   :undoc-members:
+   :show-inheritance:

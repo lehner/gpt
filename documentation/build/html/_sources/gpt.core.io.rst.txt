@@ -1,0 +1,70 @@
+gpt.core.io package
+===================
+
+Submodules
+----------
+
+gpt.core.io.FILE module
+-----------------------
+
+.. automodule:: gpt.core.io.FILE
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.core.io.cevec\_io module
+----------------------------
+
+.. automodule:: gpt.core.io.cevec_io
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.core.io.error module
+------------------------
+
+.. automodule:: gpt.core.io.error
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.core.io.gpt\_io module
+--------------------------
+
+.. automodule:: gpt.core.io.gpt_io
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.core.io.load module
+-----------------------
+
+.. automodule:: gpt.core.io.load
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.core.io.save module
+-----------------------
+
+.. automodule:: gpt.core.io.save
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gpt.core.io.util module
+-----------------------
+
+.. automodule:: gpt.core.io.util
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: gpt.core.io
+   :members:
+   :undoc-members:
+   :show-inheritance:

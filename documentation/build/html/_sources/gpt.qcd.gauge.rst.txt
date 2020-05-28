@@ -1,0 +1,10 @@
+gpt.qcd.gauge package
+=====================
+
+Module contents
+---------------
+
+.. automodule:: gpt.qcd.gauge
+   :members:
+   :undoc-members:
+   :show-inheritance:
