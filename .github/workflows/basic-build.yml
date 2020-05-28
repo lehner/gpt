@@ -50,7 +50,7 @@ jobs:
         echo "::set-output name=key::$(git rev-parse HEAD)"
 
     - name: c-lime package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       id: c-lime-package-cache
       with:
         path: c-lime_package
@@ -95,7 +95,7 @@ jobs:
         echo "::set-output name=key::$(sha256sum version-cache|cut -f 1 -d " ")"
 
     - name: Grid package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       id: grid-package-cache
       with:
         path: grid_package
@@ -140,14 +140,14 @@ jobs:
 
     steps:
     - name: c-lime package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       id: c-lime-package-cache
       with:
         path: c-lime_package
         key: ${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
 
     - name: Grid package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       id: grid-package-cache
       with:
         path: grid_package
