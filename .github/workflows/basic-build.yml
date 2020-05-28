@@ -53,7 +53,7 @@ jobs:
       uses: actions/cache@v1
       id: c-lime-package-cache
       with:
-        path: c-lime-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}.deb
+        path: c-lime_package
         key: ${{ runner.os }}-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
 
     - name: Build and package c-lime
@@ -71,11 +71,12 @@ jobs:
         sed -e 's/%pkgname%/c-lime/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/C-LIME/g'  -i ./DEBIAN/control
         cd ..
         dpkg-deb --build c-lime-${CLIME_VERSION}
+        mkdir c-lime_package && mv c-lime-${CLIME_VERSION}.deb c-lime_package/c-lime.deb
 
     - name: Install c-lime
       env:
         CLIME_VERSION: ${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
-      run: sudo dpkg -i c-lime-${CLIME_VERSION}.deb
+      run: sudo dpkg -i c-lime_package/c-lime.deb
 
     - name: Clone Grid
       uses: actions/checkout@v2
@@ -97,7 +98,7 @@ jobs:
       uses: actions/cache@v1
       id: grid-package-cache
       with:
-        path: grid-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}.deb
+        path: grid_package
         key: ${{ runner.os }}-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
 
     - name: Build and package Grid
@@ -120,11 +121,12 @@ jobs:
         sed -e 's/%pkgname%/grid/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/Grid/g'  -i ./DEBIAN/control
         cd ..
         dpkg-deb --build grid-${GRID_VERSION}
+        mkdir grid_package && mv grid-${GRID_VERSION}.deb grid_package/grid.deb
 
     - name: Install Grid
       env:
         GRID_VERSION: ${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
-      run: sudo dpkg -i grid-${GRID_VERSION}.deb
+      run: sudo dpkg -i grid_package/grid.deb
 
 
   build-cgpt:
@@ -141,21 +143,21 @@ jobs:
       uses: actions/cache@v1
       id: c-lime-package-cache
       with:
-        path: c-lime.deb
+        path: c-lime_package
         key: ${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
 
     - name: Grid package cache
       uses: actions/cache@v1
       id: grid-package-cache
       with:
-        path: grid.deb
+        path: grid_package
         key: ${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}
 
     - name: Install Ubuntu packages
       run: |
         sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libopenmpi-dev
-        sudo dpkg -i c-lime.deb
-        sudo dpkg -i grid.deb
+        sudo dpkg -i c-lime_package/c-lime.deb
+        sudo dpkg -i grid_package/grid.deb
 
     - name: Clone gpt
       uses: actions/checkout@v2
