@@ -1,21 +1,24 @@
-name: Build gpt
+name: Build and Basic test gpt
 
 on:
   push:
   pull_request:
 
+env:
+  MAKE_BUILD_FLAGS: -j2
+  GRID_REPOSITORY_REF: feature/gpt
+
 jobs:
-  build:
+  build-grid:
     runs-on: ubuntu-18.04
 
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8']
         compiler: ['gcc', 'clang']
 
-    env:
-      MAKE_BUILD_FLAGS: -j2
-      GRID_REPOSITORY_REF: feature/gpt
+    outputs:
+      clime-version: ${{ steps.c-lime-version.outputs.key }}
+      grid-version: ${{ steps.grid-version.outputs.key }}
 
     steps:
     - name: Install Ubuntu packages
@@ -34,23 +37,54 @@ jobs:
         echo '::set-env name=CC::clang-9'
         echo '::set-env name=CXX::clang++-9'
 
-    - name: Clone C-LIME
+    - name: Clone c-lime
       uses: actions/checkout@v2
       with:
         repository: usqcd-software/c-lime
         path: c-lime
 
-    - name: Build and install C-LIME
-      run: cd c-lime && ./autogen.sh && ./configure && make ${MAKE_BUILD_FLAGS} && sudo make install
+    - name: Get c-lime cache key
+      id: c-lime-version
+      run: |
+        cd "c-lime"
+        echo "::set-output name=key::$(git rev-parse HEAD)"
 
-    - name: Clone Grid for cache check
+    - name: c-lime package cache
+      uses: actions/cache@v1
+      id: c-lime-package-cache
+      with:
+        path: c-lime-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}.deb
+        key: ${{ runner.os }}-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
+
+    - name: Build and package c-lime
+      if: steps.c-lime-package-cache.outputs.cache-hit != 'true'
+      env:
+        CLIME_VERSION: ${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
+      run: |
+        mkdir c-lime-${CLIME_VERSION}
+        cd c-lime && ./autogen.sh && ./configure && make ${MAKE_BUILD_FLAGS}
+        DESTDIR="../c-lime-${CLIME_VERSION}" make install
+        cd ../c-lime-${CLIME_VERSION}
+        mkdir DEBIAN
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
+
+        sed -e 's/%pkgname%/c-lime/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/C-LIME/g'  -i ./DEBIAN/control
+        cd ..
+        dpkg-deb --build c-lime-${CLIME_VERSION}
+
+    - name: Install c-lime
+      env:
+        CLIME_VERSION: ${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
+      run: sudo dpkg -i c-lime-${CLIME_VERSION}.deb
+
+    - name: Clone Grid
       uses: actions/checkout@v2
       with:
         repository: lehner/Grid
         ref: ${{ env.GRID_REPOSITORY_REF }}
         path: Grid
 
-    - name: Get grid cache key
+    - name: Get Grid cache key
       id: grid-version
       run: |
         cd Grid && ./bootstrap.sh
@@ -59,24 +93,69 @@ jobs:
         cd Grid && make version-cache Version.h
         echo "::set-output name=key::$(sha256sum version-cache|cut -f 1 -d " ")"
 
-    - uses: actions/cache@v1
-      id: grid-build-cache
+    - name: Grid package cache
+      uses: actions/cache@v1
+      id: grid-package-cache
       with:
-        path: Grid
+        path: grid-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}.deb
         key: ${{ runner.os }}-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
 
-    - name: Build Grid
-      if: steps.grid-build-cache.outputs.cache-hit != 'true'
+    - name: Build and package Grid
+      if: steps.grid-package-cache.outputs.cache-hit != 'true'
+      env:
+        GRID_VERSION: ${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
       run: |
-        cd Grid/build/Grid
-        make ${MAKE_BUILD_FLAGS}
+        mkdir grid-${GRID_VERSION}
+        export GRID_PACKAGE_DIR=$(cd grid-${GRID_VERSION} && pwd)
+
+        cd Grid/build/Grid && make ${MAKE_BUILD_FLAGS}
+
+        DESTDIR="${GRID_PACKAGE_DIR}" make install
+        cd .. && install -D -m755 grid-config ${GRID_PACKAGE_DIR}/usr/bin/grid-config || return 1
+
+        cd ${GRID_PACKAGE_DIR}
+        mkdir DEBIAN
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
+
+        sed -e 's/%pkgname%/grid/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/Grid/g'  -i ./DEBIAN/control
+        cd ..
+        dpkg-deb --build grid-${GRID_VERSION}
 
     - name: Install Grid
+      env:
+        GRID_VERSION: ${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
+      run: sudo dpkg -i grid-${GRID_VERSION}.deb
+
+
+  build-cgpt:
+    needs: build-grid
+    runs-on: ubuntu-18.04
+
+    strategy:
+      matrix:
+        python-version: ['3.6', '3.7', '3.8']
+        compiler: ['gcc', 'clang']
+
+    steps:
+    - name: c-lime package cache
+      uses: actions/cache@v1
+      id: c-lime-package-cache
+      with:
+        path: c-lime.deb
+        key: ${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
+
+    - name: Grid package cache
+      uses: actions/cache@v1
+      id: grid-package-cache
+      with:
+        path: grid.deb
+        key: ${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}
+
+    - name: Install Ubuntu packages
       run: |
-        cd Grid/build
-        sudo install -D -m755 grid-config /usr/bin/grid-config || return 1
-        cd Grid
-        sudo make ${MAKE_BUILD_FLAGS} install
+        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libopenmpi-dev
+        sudo dpkg -i c-lime.deb
+        sudo dpkg -i grid.deb
 
     - name: Clone gpt
       uses: actions/checkout@v2
@@ -106,4 +185,4 @@ jobs:
         source scripts/source.sh
         echo ${PYTHONPATH}
         cd tests
-        ./run python
+        ./run "mpirun -N2"
