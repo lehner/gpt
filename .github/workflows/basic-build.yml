@@ -17,7 +17,7 @@ jobs:
         compiler: ['gcc', 'clang']
 
     outputs:
-      clime-version: ${{ steps.c-lime-version.outputs.key }}
+      c-lime-version: ${{ steps.c-lime-version.outputs.key }}
       grid-version: ${{ steps.grid-version.outputs.key }}
 
     steps:
@@ -141,21 +141,24 @@ jobs:
       uses: actions/cache@v2
       id: c-lime-package-cache
       with:
-        path: c-lime.deb
+        path: c-lime-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}.deb
         key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
 
     - name: Grid package cache
       uses: actions/cache@v2
       id: grid-package-cache
       with:
-        path: grid.deb
+        path: grid-${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}.deb
         key: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}
 
     - name: Install Ubuntu packages
+      env:
+        GRID_VERSION: ${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}
+        CLIME_VERSION: ${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
       run: |
         sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libopenmpi-dev
-        sudo dpkg -i c-lime.deb
-        sudo dpkg -i grid.deb
+        sudo dpkg -i c-lime-${CLIME_VERSION}.deb
+        sudo dpkg -i grid-${GRID_VERSION}.deb
 
     - name: Clone gpt
       uses: actions/checkout@v2
