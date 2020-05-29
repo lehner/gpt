@@ -188,4 +188,4 @@ jobs:
         source scripts/source.sh
         echo ${PYTHONPATH}
         cd tests
-        ./run "mpirun -n2 python"
+        ./run "mpirun python"
