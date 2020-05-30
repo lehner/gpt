@@ -141,7 +141,7 @@ done
 # First argument is the minimal automake version. foreign means that
 # you don't follow GNU standards (ChangeLog COPYING files etc.)
 # and -Wall turns on all automake warnings.
-AM_INIT_AUTOMAKE([1.16.1 foreign subdir-objects -Wall])
+AM_INIT_AUTOMAKE([1.15.1 foreign subdir-objects -Wall])
 
 # Makefiles to be generated. These are all *.in  files.
 # We have to use subdirs, because for the python files I need to
