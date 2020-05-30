@@ -33,6 +33,14 @@ AC_DEFUN([my_python_version],[3.6])
 AM_PATH_PYTHON(my_python_version)
 AX_PYTHON_DEVEL([>=']my_python_version['])
 
+AC_ARG_WITH(grid,
+    AS_HELP_STRING(
+        [--with-grid=DIR],
+        [Specify grid installation directory DIR]
+  ),
+  [GRID_HOME="$with_grid"]
+)
+
 AC_ARG_ENABLE([fake-grid],
               [AS_HELP_STRING([--enable-fake-grid],
                               [Fake grid-config. Useful if you just want
@@ -59,16 +67,18 @@ AS_IF([test "x${ac_fake_grid}" = "xyes"],
     AC_SUBST([GRID_PREFIX],[FAKEGRID])
 ],
 [
-AC_CHECK_PROG([gridconfig], [grid-config],[grid-config],[])
-AS_IF([test "x${gridconfig}" = "xgrid-config"],
-      [],
-      [AC_MSG_ERROR([cannot find grid-config])])
-AC_SUBST([GRID_CXXFLAGS],[`${gridconfig} --cxxflags`])
-AC_SUBST([GRID_LDFLAGS],[`${gridconfig} --ldflags`])
-AC_SUBST([GRID_CXX],[`${gridconfig} --cxx`])
-AC_SUBST([GRID_CXXLD],[`${gridconfig} --cxxld`])
-AC_SUBST([GRID_LIBS],  [`${gridconfig} --libs`])
-AC_SUBST([GRID_PREFIX],[`${gridconfig} --prefix`])
+AS_IF([test "x${GRID_HOME}x" = "xx"],
+    [AC_PATH_PROG(GRID_CONFIG, [grid-config], [])],
+    [AC_PATH_PROG(GRID_CONFIG, [grid-config], [], [${GRID_HOME}/bin:${PATH}])])
+AS_IF([test "x${GRID_CONFIG}x" = "xx"],
+      [AC_MSG_ERROR([cannot find grid-config])],
+      [])
+AC_SUBST([GRID_CXXFLAGS],[`${GRID_CONFIG} --cxxflags`])
+AC_SUBST([GRID_LDFLAGS],[`${GRID_CONFIG} --ldflags`])
+AC_SUBST([GRID_CXX],[`${GRID_CONFIG} --cxx`])
+AC_SUBST([GRID_CXXLD],[`${GRID_CONFIG} --cxxld`])
+AC_SUBST([GRID_LIBS],  [`${GRID_CONFIG} --libs`])
+AC_SUBST([GRID_PREFIX],[`${GRID_CONFIG} --prefix`])
 ])
 
 # Unfortunately, not all versions of Grid have --cxxld and it does

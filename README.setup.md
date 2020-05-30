@@ -4,9 +4,6 @@
 
 All the methods listed below rely on:
 
-* a `grid-config` in your path, from a Grid that was
-  built with the `-fPIC` flag, (probably set with the
-  --enable-pic option, if available).
 * a `python3-config` or a python3 installation that
   autotools can find
 
@@ -18,7 +15,7 @@ The build follows the default procedure:
     ./bootstrap.sh
     mkdir /path/to/builddir
     cd    /path/to/builddir
-    /path/to/source/configure --prefix=/path/to/installdir
+    /path/to/source/configure --with-grid=/path/to/grid/installdir --prefix=/path/to/installdir
     make -j7
     make install
 
