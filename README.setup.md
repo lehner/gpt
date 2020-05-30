@@ -4,6 +4,8 @@
 
 All the methods listed below rely on:
 
+* Specified Grid installation (--with-grid) has to be built with the `-fPIC` flag
+  (probably set with the --enable-pic option, if available)
 * a `python3-config` or a python3 installation that
   autotools can find
 
