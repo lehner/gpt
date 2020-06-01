@@ -392,6 +392,7 @@ jobs:
       run: |
         cd gpt/tests
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
+        export LD_PRELOAD=libmpi.so
         ./run "mpirun -np 1 --mca btl self,sm --mca pml ob1 python"
         ./run "mpirun -np 2 --mca btl self,sm --mca pml ob1 python"
 
