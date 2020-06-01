@@ -47,15 +47,28 @@ fi
 
 AM_PATH_PYTHON([PYTHON_MIN_VERSION])
 
-AC_PATH_PROG([PYTHON_CONFIG],["$PYTHON-config"],[])
-AS_IF([test x"${PYTHON_CONFIG}" = x],
-      [AC_MSG_ERROR([cannot find $PYTHON-config])],
-      [])
+AC_MSG_CHECKING([for the sysconfig Python module])
+ac_distutils_result=``
+if $PYTHON -c "import sysconfig"
+then
+    AC_MSG_RESULT([yes])
+else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([cannot import Python module "sysconfig"])
+fi
 
-AC_SUBST([PYTHON_INCLUDES],[`$PYTHON_CONFIG --includes`])
-AC_SUBST([PYTHON_CFLAGS],[`$PYTHON_CONFIG --cflags`])
-AC_SUBST([PYTHON_LDFLAGS],[`$PYTHON_CONFIG --ldflags`])
-AC_SUBST([PYTHON_LIBS],  [`$PYTHON_CONFIG --libs`])
+AC_MSG_CHECKING([for Python include paths])
+PYTHON_INCLUDES=`$PYTHON -c "import sysconfig; \
+    print(*{'-I'+sysconfig.get_path('include'), '-I'+sysconfig.get_path('platinclude')});"`
+AC_MSG_RESULT([$PYTHON_INCLUDES])
+AC_SUBST([PYTHON_INCLUDES])
+
+ac_save_CPPFLAGS="$CFLAGS"
+CPPFLAGS="$ac_save_CPPFLAGS $PYTHON_INCLUDES"
+AC_CHECK_HEADER(Python.h,
+                [],
+                [AC_MSG_ERROR([Missing Python.h])])
+CPPFLAGS="$ac_save_CPPFLAGS"
 
 # Numpy include dir
 AC_DEFUN([numpy_includer],["${PYTHON}" -c 'import numpy; print(numpy.get_include())'])
