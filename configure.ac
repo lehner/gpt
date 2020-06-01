@@ -8,6 +8,7 @@ AC_DEFUN([PYTHON_MIN_VERSION],[3.6])
 
 # project name, version and maintainer's address
 AC_INIT([gpt],[0.1],[stefan.solbrig@ur.de])
+AM_INIT_AUTOMAKE
 
 # separate directory for m4 stuff (libtools prefers this)
 AC_CONFIG_MACRO_DIR([m4])
