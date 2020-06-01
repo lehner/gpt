@@ -2,31 +2,24 @@
 
 # Generate list of *.cc
 echo "Generate list of cc files..."
-find lib/cgpt/lib -type f -name '*.cc' | \
-sed -e '1i\
-CGPT_CCFILES = \\' \
--e 's,$, \\,' | \
-sed -e '$s, \\$,,' \
-> cgpt_ccfiles.inc
+find lib/cgpt/lib -type f -name '*.cc' -printf 'lib/%P \\\n' | \
+    sed '1s/^/CGPT_CCFILES = \\\n/' | \
+    sed -e '$ s/ \\$//' \
+    > lib/cgpt/ccfiles.inc
 
-# Generate list of *.cc
+# Generate list of *.h
 echo "Generate list of header files..."
-find lib/cgpt/lib -type f -name '*.h' | \
-sed -e '1i\
-CGPT_HFILES = \\' \
--e 's,$, \\,' | \
-sed -e '$s, \\$,,' \
-> cgpt_hfiles.inc
+find lib/cgpt/lib -type f -name '*.h' -printf 'lib/%P \\\n' | \
+    sed '1s/^/CGPT_HFILES = \\\n/' | \
+    sed -e '$ s/ \\$//' \
+    > lib/cgpt/hfiles.inc
 
 # Generate list of python files in lib/gpt
 echo "Generate list of py files..."
-find lib/gpt -type f -name '*.py' | \
-sed -e '1i\
-GPT_PYFILES = \\' \
--e 's,$, \\,'  \
--e 's,^lib/,,' | \
-sed -e '$s, \\$,,' \
-> gpt_pyfiles.inc
+find lib/gpt -type f -name '*.py' -printf '%P \\\n' | \
+    sed '1s/^/GPT_PYFILES = \\\n/' | \
+    sed -e '$ s/ \\$//' \
+    > lib/gpt/pyfiles.inc
 
 # Generate all autotools files
 autoreconf -fvi -Wall

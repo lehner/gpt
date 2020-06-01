@@ -12,15 +12,11 @@ AC_INIT([gpt],[0.1],[stefan.solbrig@ur.de])
 # separate directory for m4 stuff (libtools prefers this)
 AC_CONFIG_MACRO_DIR([m4])
 
-# you have to list one file that does already exist. Can be any file.
-AC_CONFIG_SRCDIR([lib/gpt/__init__.py])
-
 # use configure header
-AC_CONFIG_HEADERS([gpt_config.h])
+AC_CONFIG_HEADERS([config.h])
 
 # Trick to set empty default value for CXXFLAGS
 : ${CXXFLAGS=""}
-
 
 # archiver (Automake needs this for libraries)
 AM_PROG_AR
@@ -94,10 +90,10 @@ AS_IF([test "x${ac_fake_grid}" = "xyes"],
     AC_SUBST([GRID_PREFIX],[FAKEGRID])
 ],
 [
-AS_IF([test "x${GRID_HOME}x" = "xx"],
+AS_IF([test x"${GRID_HOME}" = x],
     [AC_PATH_PROG(GRID_CONFIG, [grid-config], [])],
     [AC_PATH_PROG(GRID_CONFIG, [grid-config], [], [${GRID_HOME}/bin:${PATH}])])
-AS_IF([test "x${GRID_CONFIG}x" = "xx"],
+AS_IF([test x"${GRID_CONFIG}" = x],
       [AC_MSG_ERROR([cannot find grid-config])],
       [])
 AC_SUBST([GRID_CXXFLAGS],[`${GRID_CONFIG} --cxxflags`])
@@ -150,7 +146,15 @@ AM_INIT_AUTOMAKE([1.16.1 foreign subdir-objects -Wall])
 # Makefiles to be generated. These are all *.in  files.
 # We have to use subdirs, because for the python files I need to
 # use nobase_XYZ.
-AC_CONFIG_FILES([Makefile lib/Makefile])
+AC_CONFIG_FILES([Makefile lib/cgpt/Makefile lib/gpt/Makefile])
+
+AC_ARG_ENABLE([cgpt],
+    AS_HELP_STRING([--disable-cgpt], [Disable building cgpt]))
+AM_CONDITIONAL([ENABLE_CGPT], [test x$enable_cgpt != xno])
+
+AC_ARG_ENABLE([gpt],
+    AS_HELP_STRING([--disable-gpt], [Disable instaling gpt]))
+AM_CONDITIONAL([ENABLE_GPT], [test x$enable_gpt != xno])
 
 # Generate output. This has to be the last command!
 AC_OUTPUT
