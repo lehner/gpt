@@ -1,4 +1,4 @@
-name: Build and Basic test gpt
+name: Github Runners
 
 on:
   push:
@@ -13,17 +13,23 @@ jobs:
     runs-on: ubuntu-18.04
 
     strategy:
+      fail-fast: false
       matrix:
         compiler: ['gcc', 'clang']
+        mpi: ['none', 'mpich', 'openmpi']
 
     outputs:
       c-lime-version: ${{ steps.c-lime-version.outputs.key }}
       grid-version: ${{ steps.grid-version.outputs.key }}
 
     steps:
+    - name: Check Hardware
+      run: |
+        cat /proc/cpuinfo | grep avx2
+
     - name: Install Ubuntu packages
       run: |
-        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libopenmpi-dev
+        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Set Compiler Variables GCC
       if: matrix.compiler == 'gcc'
@@ -37,6 +43,12 @@ jobs:
         echo '::set-env name=CC::clang-9'
         echo '::set-env name=CXX::clang++-9'
 
+    - name: Set MPI alternatives to mpich
+      if: matrix.mpi == 'mpich'
+      run: |
+        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
+
     - name: Clone c-lime
       uses: actions/checkout@v2
       with:
@@ -46,36 +58,37 @@ jobs:
     - name: Get c-lime cache key
       id: c-lime-version
       run: |
-        cd "c-lime"
+        cd c-lime
         echo "::set-output name=key::$(git rev-parse HEAD)"
 
     - name: c-lime package cache
       uses: actions/cache@v2
       id: c-lime-package-cache
       with:
-        path: c-lime-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}.deb
+        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
         key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
 
     - name: Build and package c-lime
       if: steps.c-lime-package-cache.outputs.cache-hit != 'true'
-      env:
-        CLIME_VERSION: ${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
       run: |
-        mkdir c-lime-${CLIME_VERSION}
-        cd c-lime && ./autogen.sh && ./configure && make ${MAKE_BUILD_FLAGS}
-        DESTDIR="../c-lime-${CLIME_VERSION}" make install
-        cd ../c-lime-${CLIME_VERSION}
-        mkdir DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
+        PKGDIR=$PWD/c-lime-${{ runner.os }}-${{ matrix.compiler }}
+        mkdir -p $PKGDIR
+        cd c-lime
+        ./autogen.sh
+        ./configure
+        make ${MAKE_BUILD_FLAGS}
+        DESTDIR=$PKGDIR make install
 
+        cd $PKGDIR
+        mkdir -p DEBIAN
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
         sed -e 's/%pkgname%/c-lime/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/C-LIME/g'  -i ./DEBIAN/control
-        cd ..
-        dpkg-deb --build c-lime-${CLIME_VERSION}
+        cd -
+        dpkg-deb --build $PKGDIR
 
     - name: Install c-lime
-      env:
-        CLIME_VERSION: ${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
-      run: sudo dpkg -i c-lime-${CLIME_VERSION}.deb
+      run: |
+        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
 
     - name: Clone Grid
       uses: actions/checkout@v2
@@ -87,83 +100,88 @@ jobs:
     - name: Get Grid cache key
       id: grid-version
       run: |
-        cd Grid && ./bootstrap.sh
-        mkdir -p build && cd build
-        ../configure CXXFLAGS=-fPIC --enable-precision=double --enable-simd=AVX --enable-comms=mpi-auto
-        cd Grid && make version-cache Version.h
+        cd Grid
+        ./bootstrap.sh
+        mkdir -p build
+        cd build
+
+        if [ "${{ matrix.mpi }}" == "none" ]
+        then
+            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2
+        else
+            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 --enable-comms=mpi-auto
+        fi
+
+        cd Grid
+        make version-cache Version.h
         echo "::set-output name=key::$(sha256sum version-cache|cut -f 1 -d " ")"
 
     - name: Grid package cache
       uses: actions/cache@v2
       id: grid-package-cache
       with:
-        path: grid-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}.deb
-        key: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
+        path: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.grid-version.outputs.key }}
 
     - name: Build and package Grid
       if: steps.grid-package-cache.outputs.cache-hit != 'true'
-      env:
-        GRID_VERSION: ${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
       run: |
-        mkdir grid-${GRID_VERSION}
-        export GRID_PACKAGE_DIR=$(cd grid-${GRID_VERSION} && pwd)
+        PKGDIR=$PWD/grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}
+        mkdir -p $PKGDIR
+        cd Grid/build/Grid
+        make ${MAKE_BUILD_FLAGS}
+        DESTDIR=$PKGDIR make install
+        cd .. && install -D -m755 grid-config ${PKGDIR}/usr/bin/grid-config || return 1
 
-        cd Grid/build/Grid && make ${MAKE_BUILD_FLAGS}
-
-        DESTDIR="${GRID_PACKAGE_DIR}" make install
-        cd .. && install -D -m755 grid-config ${GRID_PACKAGE_DIR}/usr/bin/grid-config || return 1
-
-        cd ${GRID_PACKAGE_DIR}
-        mkdir DEBIAN
+        cd $PKGDIR
+        mkdir -p DEBIAN
         wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
-
         sed -e 's/%pkgname%/grid/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/Grid/g'  -i ./DEBIAN/control
-        cd ..
-        dpkg-deb --build grid-${GRID_VERSION}
+        cd -
+        dpkg-deb --build $PKGDIR
 
     - name: Install Grid
-      env:
-        GRID_VERSION: ${{ matrix.compiler }}-${{ steps.grid-version.outputs.key }}
-      run: sudo dpkg -i grid-${GRID_VERSION}.deb
+      run: |
+        sudo dpkg -i grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
 
-  build-cgpt:
+  build-gpt:
     needs: build-grid
     runs-on: ubuntu-18.04
 
     strategy:
+      fail-fast: false
       matrix:
         python-version: ['3.6', '3.7', '3.8']
         compiler: ['gcc', 'clang']
+        mpi: ['none', 'mpich', 'openmpi']
 
     steps:
-    - name: c-lime package cache
-      uses: actions/cache@v2
-      id: c-lime-package-cache
-      with:
-        path: c-lime-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}.deb
-        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
-
-    - name: Grid package cache
-      uses: actions/cache@v2
-      id: grid-package-cache
-      with:
-        path: grid-${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}.deb
-        key: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}
+    - name: Check Hardware
+      run: |
+        cat /proc/cpuinfo | grep avx2
 
     - name: Install Ubuntu packages
-      env:
-        GRID_VERSION: ${{ matrix.compiler }}-${{ needs.build-grid.outputs.grid-version }}
-        CLIME_VERSION: ${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
       run: |
-        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libopenmpi-dev
-        sudo dpkg -i c-lime-${CLIME_VERSION}.deb
-        sudo dpkg -i grid-${GRID_VERSION}.deb
+        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
-    - name: Clone gpt
-      uses: actions/checkout@v2
-      with:
-        path: gpt
+    - name: Set Compiler Variables GCC
+      if: matrix.compiler == 'gcc'
+      run: |
+        echo '::set-env name=CC::gcc'
+        echo '::set-env name=CXX::g++'
+
+    - name: Set Compiler Variables CLANG
+      if: matrix.compiler == 'clang'
+      run: |
+        echo '::set-env name=CC::clang-9'
+        echo '::set-env name=CXX::clang++-9'
+
+    - name: Set MPI alternatives to mpich
+      if: matrix.mpi == 'mpich'
+      run: |
+        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
 
     - name: Setup python
       uses: actions/setup-python@v2
@@ -175,17 +193,212 @@ jobs:
       run: |
         pip install numpy
 
-    - name: Build cgpt
+    - name: c-lime package cache
+      uses: actions/cache@v2
+      id: c-lime-package-cache
+      with:
+        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
+        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
+
+    - name: Install c-lime
       run: |
-        cd gpt/lib/cgpt
-        python --version
-        cp ../../.github/make_cgpt.sh . && ./make_cgpt.sh
+        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
+
+    - name: Grid package cache
+      uses: actions/cache@v2
+      id: grid-package-cache
+      with:
+        path: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-grid.outputs.grid-version }}
+
+    - name: Install Grid
+      run: |
+        sudo dpkg -i grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+
+    - name: Clone gpt
+      uses: actions/checkout@v2
+      with:
+        path: gpt
+
+    - name: cgpt package cache
+      uses: actions/cache@v2
+      id: cgpt-package-cache
+      with:
+        path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ hashFiles('gpt/lib/cgpt/lib/**') }}
+
+    - name: gpt package cache
+      uses: actions/cache@v2
+      id: gpt-package-cache
+      with:
+        path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ hashFiles('gpt/lib/gpt/**') }}
+
+    - name: Build and package cgpt
+      if: steps.cgpt-package-cache.outputs.cache-hit != 'true'
+      run: |
+        PKGDIR=$PWD/cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}
+        mkdir -p $PKGDIR
+        cd gpt
+        ./bootstrap.sh
+        mkdir -p build
+        cd build
+        ../configure --disable-gpt
+        make ${MAKE_BUILD_FLAGS}
+        DESTDIR=$PKGDIR make install
+
+        cd $PKGDIR
+        mkdir -p DEBIAN
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
+        sed -e 's/%pkgname%/cgpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/cgpt/g'  -i ./DEBIAN/control
+        cd -
+        dpkg-deb --build $PKGDIR
+
+    - name: Install cgpt
+      run: |
+        sudo dpkg -i cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+
+    - name: Build and package gpt
+      if: steps.gpt-package-cache.outputs.cache-hit != 'true'
+      run: |
+        PKGDIR=$PWD/gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}
+        mkdir -p $PKGDIR
+        cd gpt
+        ./bootstrap.sh
+        mkdir -p build
+        cd build
+        ../configure --disable-cgpt
+        make ${MAKE_BUILD_FLAGS}
+        DESTDIR=$PKGDIR make install
+
+        cd $PKGDIR
+        mkdir -p DEBIAN
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
+        sed -e 's/%pkgname%/gpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/gpt/g'  -i ./DEBIAN/control
+        cd -
+        dpkg-deb --build $PKGDIR
+
+    - name: Install gpt
+      run: |
+        sudo dpkg -i gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+
+
+  test-gpt:
+    needs: [build-grid, build-gpt]
+    runs-on: ubuntu-18.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.6', '3.7', '3.8']
+        compiler: ['gcc', 'clang']
+        mpi: ['none', 'mpich', 'openmpi']
+
+    steps:
+    - name: Check Hardware
+      run: |
+        cat /proc/cpuinfo | grep avx2
+
+    - name: Install Ubuntu packages
+      run: |
+        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+
+    - name: Set Compiler Variables GCC
+      if: matrix.compiler == 'gcc'
+      run: |
+        echo '::set-env name=CC::gcc'
+        echo '::set-env name=CXX::g++'
+
+    - name: Set Compiler Variables CLANG
+      if: matrix.compiler == 'clang'
+      run: |
+        echo '::set-env name=CC::clang-9'
+        echo '::set-env name=CXX::clang++-9'
+
+    - name: Set MPI alternatives to mpich
+      if: matrix.mpi == 'mpich'
+      run: |
+        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
+
+    - name: Setup python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: x64
+
+    - name: Setup python dependencies
+      run: |
+        pip install numpy
+
+    - name: c-lime package cache
+      uses: actions/cache@v2
+      id: c-lime-package-cache
+      with:
+        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
+        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
+
+    - name: Install c-lime
+      run: |
+        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
+
+    - name: Grid package cache
+      uses: actions/cache@v2
+      id: grid-package-cache
+      with:
+        path: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-grid.outputs.grid-version }}
+
+    - name: Install Grid
+      run: |
+        sudo dpkg -i grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+
+    - name: Clone gpt
+      uses: actions/checkout@v2
+      with:
+        path: gpt
+
+    - name: cgpt package cache
+      uses: actions/cache@v2
+      id: cgpt-package-cache
+      with:
+        path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ hashFiles('gpt/lib/cgpt/lib/**') }}
+
+    - name: Install cgpt
+      run: |
+        sudo dpkg -i cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+
+    - name: gpt package cache
+      uses: actions/cache@v2
+      id: gpt-package-cache
+      with:
+        path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ hashFiles('gpt/lib/gpt/**') }}
+
+    - name: Install gpt
+      run: |
+        sudo dpkg -i gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Run tests
+      if: matrix.mpi == 'none'
       run: |
-        cd gpt
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${GITHUB_WORKSPACE}/gpt/lib
-        source scripts/source.sh
-        echo ${PYTHONPATH}
-        cd tests
-        ./run "mpirun -n 2 python"
+        cd gpt/tests
+        export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
+        ./run
+
+    - name: Run tests
+      if: matrix.mpi == 'openmpi'
+      run: |
+        cd gpt/tests
+        export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
+        ./run "mpirun -np 1 --mca btl self,sm --mca pml ob1 python"
+        ./run "mpirun -np 2 --mca btl self,sm --mca pml ob1 python"
+
+    - name: Run tests
+      if: matrix.mpi == 'mpich'
+      run: |
+        export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
+        cd gpt/tests
+        ./run "mpirun -np 1 python"
+        ./run "mpirun -np 2 python"
