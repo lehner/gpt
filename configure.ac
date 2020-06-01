@@ -3,6 +3,9 @@
 # You can specifiy a minimal autoconf version here, but you don't have to
 AC_PREREQ([2.69])
 
+# Specifiy a minimal python version here
+AC_DEFUN([PYTHON_MIN_VERSION],[3.6])
+
 # project name, version and maintainer's address
 AC_INIT([gpt],[0.1],[stefan.solbrig@ur.de])
 
@@ -25,13 +28,46 @@ AM_PROG_AR
 # need for dynamic libraries (no need for ranlib)
 LT_INIT
 
-# check for Python
-# If you change them minimal Python version, do it in line line
-# below (m4 syntax!) in order to change it consistently for the
-# interpreter and the header files.
-AC_DEFUN([my_python_version],[3.6])
-AM_PATH_PYTHON(my_python_version)
-AX_PYTHON_DEVEL([>=']my_python_version['])
+AC_ARG_WITH(python,
+            AS_HELP_STRING([--with-python=PATH],[Path to Python interpreter. Searches $PATH if only a program name is given]),
+            [PYTHON="$withval"], [])
+
+if test x"$PYTHON" = xyes
+then
+    AC_MSG_ERROR([--with-python option requires a path or program argument])
+fi
+
+if test x"$PYTHON" = x
+then
+    PYTHON="python3"
+fi
+
+AC_MSG_CHECKING(for Python interpreter)
+if ! which "$PYTHON"
+then
+    AC_MSG_ERROR([Python interpreter $PYTHON does not exist])
+fi
+
+AM_PATH_PYTHON([PYTHON_MIN_VERSION])
+
+AC_PATH_PROG([PYTHON_CONFIG],["$PYTHON-config"],[])
+AS_IF([test x"${PYTHON_CONFIG}" = x],
+      [AC_MSG_ERROR([cannot find $PYTHON-config])],
+      [])
+
+AC_SUBST([PYTHON_INCLUDES],[`$PYTHON_CONFIG --includes`])
+AC_SUBST([PYTHON_CFLAGS],[`$PYTHON_CONFIG --cflags`])
+AC_SUBST([PYTHON_LDFLAGS],[`$PYTHON_CONFIG --ldflags`])
+AC_SUBST([PYTHON_LIBS],  [`$PYTHON_CONFIG --libs`])
+
+# Numpy include dir
+AC_DEFUN([numpy_includer],["${PYTHON}" -c 'import numpy; print(numpy.get_include())'])
+AC_SUBST([NUMPY_INCLUDE])
+AC_MSG_CHECKING([for numpy headers])
+AS_IF([numpy_includer > /dev/null 2>&1 ],
+      [NUMPY_INCLUDE="$(numpy_includer)"
+       AC_MSG_RESULT([${NUMPY_INCLUDE}])],
+      [AC_MSG_ERROR([no.])])
 
 AC_ARG_WITH(grid,
     AS_HELP_STRING(
@@ -47,15 +83,6 @@ AC_ARG_ENABLE([fake-grid],
                                to do a 'make dist'])],
               [ac_fake_grid=yes],
               [ac_fake_grid=no])
-
-# Numpy include dir
-AC_DEFUN([numpy_includer],["${PYTHON}" -c 'import numpy; print(numpy.get_include())'])
-AC_SUBST([NUMPY_INCLUDE])
-AC_MSG_CHECKING([if we can find numpy headers])
-AS_IF([numpy_includer > /dev/null 2>&1 ],
-      [NUMPY_INCLUDE="$(numpy_includer)"
-       AC_MSG_RESULT([${NUMPY_INCLUDE}])],
-      [AC_MSG_ERROR([no.])])
 
 AS_IF([test "x${ac_fake_grid}" = "xyes"],
 [

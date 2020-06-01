@@ -39,8 +39,8 @@ cgpt_la_LDFLAGS = -avoid-version -module -export-dynamic -shared
 # ..._CPPFLAGS  is set only for compiling (not for linking)
 # ..._LIBADD    are flags for linking
 # cgpt_la_CFLAGS = $(PYTHON_CFLAGS) $(GRID_CFLAGS)
-cgpt_la_CXXFLAGS = $(PYTHON_CFLAGS) $(GRID_CXXFLAGS)
-cgpt_la_CPPFLAGS = $(PYTHON_CPPFLAGS) $(GRID_CPPFLAGS) \
+cgpt_la_CXXFLAGS = $(PYTHON_INCLUDES) $(GRID_CXXFLAGS)
+cgpt_la_CPPFLAGS = $(PYTHON_INCLUDES) $(GRID_CPPFLAGS) \
 		   -I$(top_builddir)/lib/cgpt/lib \
 		   -I$(GRID_PREFIX)/include \
 		   -I$(NUMPY_INCLUDE)
