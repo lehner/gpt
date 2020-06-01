@@ -42,6 +42,7 @@ jobs:
       run: |
         echo '::set-env name=CC::clang-9'
         echo '::set-env name=CXX::clang++-9'
+        echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -176,6 +177,7 @@ jobs:
       run: |
         echo '::set-env name=CC::clang-9'
         echo '::set-env name=CXX::clang++-9'
+        echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -314,6 +316,7 @@ jobs:
       run: |
         echo '::set-env name=CC::clang-9'
         echo '::set-env name=CXX::clang++-9'
+        echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
