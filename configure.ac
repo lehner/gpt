@@ -48,7 +48,6 @@ fi
 AM_PATH_PYTHON([PYTHON_MIN_VERSION])
 
 AC_MSG_CHECKING([for the sysconfig Python module])
-ac_distutils_result=``
 if $PYTHON -c "import sysconfig"
 then
     AC_MSG_RESULT([yes])
