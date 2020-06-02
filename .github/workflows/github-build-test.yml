@@ -157,6 +157,10 @@ jobs:
         compiler: ['gcc', 'clang']
         mpi: ['none', 'mpich', 'openmpi']
 
+    outputs:
+      cgpt-version: ${{ steps.cgpt-version.outputs.key }}
+      gpt-version: ${{ steps.gpt-version.outputs.key }}
+
     steps:
     - name: Check Hardware
       run: |
@@ -222,19 +226,22 @@ jobs:
       with:
         path: gpt
 
+    - name: Get cgpt cache key
+      id: cgpt-version
+      run: |
+        echo "::set-output name=key::${{ hashFiles('gpt/lib/cgpt/lib/**') }}"
+
+    - name: Get gpt cache key
+      id: gpt-version
+      run: |
+        echo "::set-output name=key::${{ hashFiles('gpt/lib/gpt/**') }}"
+
     - name: cgpt package cache
       uses: actions/cache@v2
       id: cgpt-package-cache
       with:
         path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        key: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ hashFiles('gpt/lib/cgpt/lib/**') }}
-
-    - name: gpt package cache
-      uses: actions/cache@v2
-      id: gpt-package-cache
-      with:
-        path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        key: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ hashFiles('gpt/lib/gpt/**') }}
+        key: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.cgpt-version.outputs.key }}
 
     - name: Build and package cgpt
       if: steps.cgpt-package-cache.outputs.cache-hit != 'true'
@@ -259,6 +266,13 @@ jobs:
     - name: Install cgpt
       run: |
         sudo dpkg -i cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+
+    - name: gpt package cache
+      uses: actions/cache@v2
+      id: gpt-package-cache
+      with:
+        path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.gpt-version.outputs.key }}
 
     - name: Build and package gpt
       if: steps.gpt-package-cache.outputs.cache-hit != 'true'
@@ -356,17 +370,12 @@ jobs:
       run: |
         sudo dpkg -i grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
-    - name: Clone gpt
-      uses: actions/checkout@v2
-      with:
-        path: gpt
-
     - name: cgpt package cache
       uses: actions/cache@v2
       id: cgpt-package-cache
       with:
         path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        key: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ hashFiles('gpt/lib/cgpt/lib/**') }}
+        key: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.cgpt-version }}
 
     - name: Install cgpt
       run: |
@@ -377,11 +386,16 @@ jobs:
       id: gpt-package-cache
       with:
         path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        key: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ hashFiles('gpt/lib/gpt/**') }}
+        key: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.gpt-version }}
 
     - name: Install gpt
       run: |
         sudo dpkg -i gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+
+    - name: Clone gpt
+      uses: actions/checkout@v2
+      with:
+        path: gpt
 
     - name: Run tests
       if: matrix.mpi == 'none'
