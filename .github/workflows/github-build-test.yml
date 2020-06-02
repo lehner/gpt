@@ -409,9 +409,8 @@ jobs:
       run: |
         cd gpt/tests
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
-        export LD_PRELOAD=libmpi.so
-        mpirun -np 2 -bind-to core python core/scalar.py --mpi 1.1.1.2
-        ./run "mpirun -np 1 python" "--mpi 1.1.1.1" && ./run "mpirun -np 2 -bind-to core python" "--mpi 1.1.1.2"
+        mpirun -np 2 --mca btl_base_warn_component_unused 0 -bind-to core python core/scalar.py --mpi 1.1.1.2
+        ./run "mpirun -np 1 --mca btl_base_warn_component_unused 0 python" "--mpi 1.1.1.1" && ./run "mpirun -np 2 -bind-to core --mca btl_base_warn_component_unused 0 python" "--mpi 1.1.1.2"
 
     - name: Run tests
       if: matrix.mpi == 'mpich'
