@@ -82,8 +82,8 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
-        sed -e 's/%pkgname%/c-lime/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/C-LIME/g'  -i ./DEBIAN/control
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/9fefc5385076a7d5757f056617505a97/raw/7184121d624251d733de80b0a811fe206f5e9095/deb.general.control
+        sed -e 's/%pkgname%/c-lime/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/C-LIME/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
 
@@ -136,8 +136,8 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
-        sed -e 's/%pkgname%/grid/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/Grid/g'  -i ./DEBIAN/control
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/9fefc5385076a7d5757f056617505a97/raw/7184121d624251d733de80b0a811fe206f5e9095/deb.general.control
+        sed -e 's/%pkgname%/grid/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/Grid/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
 
@@ -258,8 +258,8 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
-        sed -e 's/%pkgname%/cgpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/cgpt/g'  -i ./DEBIAN/control
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/9fefc5385076a7d5757f056617505a97/raw/7184121d624251d733de80b0a811fe206f5e9095/deb.general.control
+        sed -e 's/%pkgname%/cgpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/cgpt/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
 
@@ -289,8 +289,8 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/aragon999/e516b1ec3dcc9073a821ed9c7990e61c/raw/2a8e08beedcd9db4bc3a48ff6542c9fd3ea7c3e1/control
-        sed -e 's/%pkgname%/gpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/Max/g' -e 's/%description%/gpt/g'  -i ./DEBIAN/control
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/9fefc5385076a7d5757f056617505a97/raw/7184121d624251d733de80b0a811fe206f5e9095/deb.general.control
+        sed -e 's/%pkgname%/gpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/gpt/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
 
