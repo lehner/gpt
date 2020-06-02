@@ -1,5 +1,7 @@
 #                                               -*- Autoconf -*-
-
+#
+# Authors: Stefan Solbrig 2020
+#
 # You can specifiy a minimal autoconf version here, but you don't have to
 AC_PREREQ([2.69])
 
@@ -7,7 +9,7 @@ AC_PREREQ([2.69])
 AC_DEFUN([PYTHON_MIN_VERSION],[3.6])
 
 # project name, version and maintainer's address
-AC_INIT([gpt],[0.1],[stefan.solbrig@ur.de])
+AC_INIT([gpt],[0.1],[christoph.lehner@ur.de])
 AM_INIT_AUTOMAKE
 
 # separate directory for m4 stuff (libtools prefers this)
