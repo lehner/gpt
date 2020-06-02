@@ -1,4 +1,4 @@
-name: Github Runners
+name: Build/Test
 
 on:
   push:
