@@ -410,19 +410,11 @@ jobs:
         cd gpt/tests
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         export LD_PRELOAD=libmpi.so
-        ./run "mpirun -np 1 --mca btl self,sm --mca pml ob1 python" "--mpi 1.1.1.1"
-        ./run "mpirun -np 2 --mca btl self,sm --mca pml ob1 python" "--mpi 1.1.1.2"
-        ./run "mpirun -np 2 --mca btl self,sm --mca pml ob1 python" "--mpi 1.1.2.1"
-        ./run "mpirun -np 2 --mca btl self,sm --mca pml ob1 python" "--mpi 1.2.1.1"
-        ./run "mpirun -np 2 --mca btl self,sm --mca pml ob1 python" "--mpi 2.1.1.1"
+        ./run "mpirun -np 1 --mca btl self,sm --mca pml ob1 python" "--mpi 1.1.1.1" && ./run "mpirun -np 2 --mca btl self,sm --mca pml ob1 python" "--mpi 1.1.1.2"
 
     - name: Run tests
       if: matrix.mpi == 'mpich'
       run: |
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         cd gpt/tests
-        ./run "mpirun -np 1 python" "--mpi 1.1.1.1"
-        ./run "mpirun -np 2 python" "--mpi 1.1.1.2"
-        ./run "mpirun -np 2 python" "--mpi 1.1.2.1"
-        ./run "mpirun -np 2 python" "--mpi 1.2.1.1"
-        ./run "mpirun -np 2 python" "--mpi 2.1.1.1"
+        ./run "mpirun -np 1 python" "--mpi 1.1.1.1" && ./run "mpirun -np 2 python" "--mpi 1.1.1.2"
