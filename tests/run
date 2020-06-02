@@ -9,6 +9,7 @@ fi
 LOG=$(mktemp)
 
 for f in \
+    core/gamma.py \
     core/block.py \
     core/scalar.py \
     core/checksums.py \

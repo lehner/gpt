@@ -109,6 +109,58 @@ EXPORT(lattice_memory_view,{
     return l->memory_view();
   });
 
+EXPORT(lattice_memory_view_coordinates,{
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
+    GridBase* grid = l->get_grid();
+    int cb = l->get_checkerboard();
+    int Nd = grid->Nd();
+    std::vector<long> dim(2);
+    dim[0] = (long)grid->iSites() * (long)grid->oSites();
+    dim[1] = Nd;
+    int cb_dim = -1;
+    for (int i=0;i<Nd;i++)
+      if (grid->CheckerBoarded(i)) { // always first cb direction is cb direction
+	cb_dim=i;
+	break;
+      }
+
+    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], NPY_INT32);
+    int32_t* s = (int32_t*)PyArray_DATA(a);
+    
+    if (cb_dim == -1) {
+      thread_for(osite,grid->oSites(),{
+	  Coordinate gcoor(Nd);
+	  for (long isite=0;isite<grid->iSites();isite++) {
+	    long idx = osite * grid->iSites() + isite;
+	    grid->RankIndexToGlobalCoor(grid->_processor,osite,isite,gcoor);
+	    for (int i=0;i<Nd;i++)
+	      s[Nd*idx + i] = gcoor[i];
+	  }
+	});
+    } else {
+      thread_for(osite,grid->oSites(),{
+	  Coordinate gcoor(Nd), cbo(Nd,0);
+	  for (long isite=0;isite<grid->iSites();isite++) {
+	    long idx = osite * grid->iSites() + isite;
+	    grid->RankIndexToGlobalCoor(grid->_processor,osite,isite,gcoor);
+	    gcoor[cb_dim] *= 2;
+	    if ( cb != grid->CheckerBoard(gcoor) )
+	      gcoor[cb_dim] += 1;
+	    for (int i=0;i<Nd;i++)
+	      s[Nd*idx + i] = gcoor[i];
+	  }
+	});
+    }
+
+    PyArray_CLEARFLAGS(a,NPY_ARRAY_WRITEABLE); // read-only, so we can cache distribute plans
+    return (PyObject*)a;
+  });
+
 EXPORT(lattice_export,{
     PyObject* pos, * vlat;
     if (!PyArg_ParseTuple(args, "OO", &vlat, &pos)) {
@@ -120,8 +172,8 @@ EXPORT(lattice_export,{
     std::vector<long> shape;
     GridBase* grid;
     int cb,dt;
-    cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
 
+    cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
     return (PyObject*)cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,0);
   });
 
@@ -136,6 +188,7 @@ EXPORT(lattice_import,{
     std::vector<long> shape;
     GridBase* grid;
     int cb,dt;
+
     cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
     
     cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,d);

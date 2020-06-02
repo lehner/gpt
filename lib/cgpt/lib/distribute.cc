@@ -333,11 +333,12 @@ void cgpt_distribute::copy_data(const mp& m, std::vector<data_simd>& _src, void*
   unsigned char* dst = (unsigned char*)_dst;
   long _word_total = word_total(_src);
 
+  //double t0 =cgpt_time();
   thread_for(idx, len, {
       long offset = m.src[idx];
       long _odx = offset / SIMD_BASE;
       long _idx = offset % SIMD_BASE;
-
+      
       long si_base = 0;
       for (long ni = 0; ni < _src.size(); ni++) {
 	char* src = (char*)_src[ni].local;
@@ -347,7 +348,7 @@ void cgpt_distribute::copy_data(const mp& m, std::vector<data_simd>& _src, void*
 	long N_ni = word / simd_word;
 	long si_stride = Nsimd * simd_word;
 	long o_stride = Nsimd * word;
-
+	
 	for (long si = 0; si < N_ni; si++) {
 	  memcpy(&dst[_word_total*m.dst[idx] + (si_base + si)*simd_word],&src[si_stride*si + simd_word*_idx + o_stride*_odx],simd_word);
 	}
@@ -355,13 +356,18 @@ void cgpt_distribute::copy_data(const mp& m, std::vector<data_simd>& _src, void*
 	si_base += N_ni;
       }
     });
+
+  //double t1=cgpt_time();
+  //double GB = _src[0].word * _src.size() * len / 1024. / 1024. /1024.;
+  //printf("%g GB/s %g\n",2*GB/(t1-t0),t1-t0);
 }
 
 void cgpt_distribute::copy_data_rev(const mp& m, void* _src, std::vector<data_simd>& _dst) {
   long len = m.src.size();
   unsigned char* src = (unsigned char*)_src;
   long _word_total = word_total(_dst);
- 
+
+  //double t0 =cgpt_time(); 
   thread_for(idx, len, {
       long offset = m.src[idx];
       long _odx = offset / SIMD_BASE;
@@ -384,6 +390,11 @@ void cgpt_distribute::copy_data_rev(const mp& m, void* _src, std::vector<data_si
 	si_base += N_ni;
       }
     });
+
+
+  //double t1=cgpt_time();
+  //double GB = _dst[0].word * _dst.size() * len / 1024. / 1024. /1024.;
+  //printf("rev %g GB/s %g\n",2*GB/(t1-t0),t1-t0);
 }
 
 void cgpt_distribute::get_send_tasks_for_rank(int i, const std::map<int, std::vector<long> >& wishlists, std::vector<long>& tasks) {

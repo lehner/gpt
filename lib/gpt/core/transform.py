@@ -89,6 +89,8 @@ def rankInnerProduct(a,b):
     return innerProduct(a,b, rank_only = True)
 
 def norm2(l):
+    if type(l) == gpt.tensor:
+        return l.norm2()
     return innerProduct(l,l).real
 
 def innerProductNorm2(a,b):

@@ -7,9 +7,11 @@ import numpy as np
 import sys
 
 rng=g.random("test")
-grid=g.grid([8,8,8,16],g.single)
+grid=g.grid([16,16,16,32],g.single,g.redblack)
 
-l=[ g.complex(grid) for i in range(8) ]
+l=[ g.mspincolor(grid) for i in range(8) ]
+for i in range(8):
+    l[i].checkerboard(g.odd)
 rng.cnormal(l)
 
 ################################################################################
@@ -24,7 +26,7 @@ assert(len(m) == 2)
 for i in range(len(m)):
     for j in range(4):
         k = i*4 + j
-        assert(l[k][1,2,1,0] == m[i][1,2,1,0,j])
+        assert(g.norm2(l[k][1,2,0,0] - m[i][1,2,0,0,j]) == 0.0)
 
 # Test merging slices along a new 2nd dimension in groups of 4
 m=g.merge(l,4,1)
@@ -33,10 +35,16 @@ assert(len(m) == 2)
 for i in range(len(m)):
     for j in range(4):
         k = i*4 + j
-        assert(l[k][1,2,1,0] == m[i][1,j,2,1,0])
+        assert(g.norm2(l[k][1,2,0,0] - m[i][1,j,2,0,0]) == 0.0)
 
 test=g.separate(m,1)
+
 assert(len(test) == 8)
+for i in range(len(l)):
+    assert(g.norm2(l[i] - test[i]) == 0.0)
+
+# default arguments should be compatible
+test=g.separate(g.merge(l))
 for i in range(len(l)):
     assert(g.norm2(l[i] - test[i]) == 0.0)
 

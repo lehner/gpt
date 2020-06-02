@@ -38,4 +38,10 @@ gamma = {
     "Y" : gamma_base(1),
     "Z" : gamma_base(2),
     "T" : gamma_base(3),
+    "SigmaXY" : gamma_base(5),
+    "SigmaXZ" : gamma_base(6),
+    "SigmaXT" : gamma_base(7),
+    "SigmaYZ" : gamma_base(8),
+    "SigmaYT" : gamma_base(9),
+    "SigmaZT" : gamma_base(10)
 }
