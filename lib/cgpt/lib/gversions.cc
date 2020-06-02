@@ -28,7 +28,7 @@
 #define GITHASH "Grid/Version.h does not define GITHASH"
 #endif
 
-#include <gversions.h>
+#include "gversions.h"
 
 #ifndef GPT_FROM_DIST
 #define GPT_FROM_DIST ""

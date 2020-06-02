@@ -27,7 +27,7 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
   } else if (nd == 5) {
     mpi_dim = {false,true,true,true,true};
   } else {
-    ERR("Nd = %d not yet supported for random interface",nd);
+    ERR("Nd = %ld not yet supported for random interface",nd);
   }
 
   const int block = 2;

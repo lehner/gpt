@@ -1,9 +1,10 @@
 #!/bin/bash
 runner=$1
+extra=$2
 fail=0
 if [[ "$runner" != "" ]];
 then
-    echo "Using runner = $runner"
+    echo "Using runner = $runner with extra arguments = $extra"
 fi
 
 LOG=$(mktemp)
@@ -24,7 +25,7 @@ do
 printf "%-60s" " [TEST] $f"
 
 start=$SECONDS
-${runner} $f 2>&1 > ${LOG}
+${runner} $f ${extra} 2>&1 > ${LOG}
 res=$?
 elapsed=$((SECONDS-start))
 

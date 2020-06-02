@@ -125,7 +125,7 @@ void* cgpt_rng_test_create(int iengine) {
     p->engines.resize(64);
     thread_for(i,p->engines.size(), {
 	char buf[256];
-	sprintf(buf,"big crush test %d",i);
+	sprintf(buf,"big crush test %d",(int)i);
 	(p->engines)[i] = new cgpt_random_engine< cgpt_random_vectorized_ranlux24_389_64 >(buf);
       });
     return (void*)p;
