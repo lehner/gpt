@@ -8,7 +8,6 @@ l=g.vspincolor(g.grid([4,4,4,4],g.double))
 
 g.random("test").cnormal(l)
 
-src=g.copy(l)
 dst=g.lattice(l)
 ref=g.lattice(l)
 
