@@ -60,7 +60,7 @@ jobs:
       id: c-lime-version
       run: |
         cd c-lime
-        echo "::set-output name=key::$(git rev-parse HEAD)"
+        echo "::set-output name=key::$(git rev-parse HEAD)-v1"
 
     - name: c-lime package cache
       uses: actions/cache@v2
@@ -115,7 +115,7 @@ jobs:
 
         cd Grid
         make version-cache Version.h
-        echo "::set-output name=key::$(sha256sum version-cache|cut -f 1 -d " ")"
+        echo "::set-output name=key::$(sha256sum version-cache|cut -f 1 -d " ")-v1"
 
     - name: Grid package cache
       uses: actions/cache@v2
@@ -229,12 +229,12 @@ jobs:
     - name: Get cgpt cache key
       id: cgpt-version
       run: |
-        echo "::set-output name=key::${{ hashFiles('gpt/lib/cgpt/lib/**') }}"
+        echo "::set-output name=key::${{ hashFiles('gpt/lib/cgpt/lib/**') }}-v1"
 
     - name: Get gpt cache key
       id: gpt-version
       run: |
-        echo "::set-output name=key::${{ hashFiles('gpt/lib/gpt/**') }}"
+        echo "::set-output name=key::${{ hashFiles('gpt/lib/gpt/**') }}-v1"
 
     - name: cgpt package cache
       uses: actions/cache@v2
