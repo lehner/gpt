@@ -82,7 +82,7 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/9fefc5385076a7d5757f056617505a97/raw/7184121d624251d733de80b0a811fe206f5e9095/deb.general.control
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
         sed -e 's/%pkgname%/c-lime/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/C-LIME/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
@@ -136,7 +136,7 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/9fefc5385076a7d5757f056617505a97/raw/7184121d624251d733de80b0a811fe206f5e9095/deb.general.control
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
         sed -e 's/%pkgname%/grid/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/Grid/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
@@ -258,7 +258,7 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/9fefc5385076a7d5757f056617505a97/raw/7184121d624251d733de80b0a811fe206f5e9095/deb.general.control
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
         sed -e 's/%pkgname%/cgpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/cgpt/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
@@ -289,7 +289,7 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/9fefc5385076a7d5757f056617505a97/raw/7184121d624251d733de80b0a811fe206f5e9095/deb.general.control
+        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
         sed -e 's/%pkgname%/gpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/gpt/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
