@@ -29,7 +29,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
-        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Set Compiler Variables GCC
       if: matrix.compiler == 'gcc'
@@ -168,7 +168,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
-        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Set Compiler Variables GCC
       if: matrix.compiler == 'gcc'
@@ -317,7 +317,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
-        sudo apt-get install -y cmake clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Set Compiler Variables GCC
       if: matrix.compiler == 'gcc'
