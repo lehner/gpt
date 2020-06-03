@@ -496,7 +496,7 @@ jobs:
       uses: actions/cache@v2
       id: gpt-package-cache
       with:
-        path: gpt-${{ runner.os }}-python-python-3.8-gcc-none.deb
+        path: gpt-${{ runner.os }}-python-3.8-gcc-none.deb
         key: gpt-${{ runner.os }}-python-3.8-gcc-none-${{ needs.build-gpt.outputs.gpt-version }}
 
     - name: Install gpt
