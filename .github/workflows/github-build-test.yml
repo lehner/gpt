@@ -7,6 +7,12 @@ on:
 env:
   MAKE_BUILD_FLAGS: -j2
   GRID_REPOSITORY_REF: feature/gpt
+  CC: mpicc
+  CXX: mpic++
+  OMPI_CC: cc
+  OMPI_CXX: c++
+  MPICH_CC: cc
+  MPICH_CXX: c++
 
 jobs:
   build-grid:
@@ -41,6 +47,12 @@ jobs:
         sudo update-alternatives --set c++ /usr/bin/clang++-9
 
         echo '::set-env name=LDFLAGS::-lomp'
+
+    - name: Set compiler to cc and c++
+      if: matrix.mpi == 'none'
+      run: |
+        echo '::set-env name=CC::cc'
+        echo '::set-env name=CXX::c++'
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
