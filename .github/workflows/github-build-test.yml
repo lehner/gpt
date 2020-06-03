@@ -438,3 +438,88 @@ jobs:
         cd gpt/tests
         ./run "mpirun -np 1 python"
         ./run "mpirun -np 2 -bind-to core python" "--mpi 1.1.1.2 --mpi 1.1.2"
+
+
+  build-gpt-doc:
+    needs: [build-grid, build-gpt]
+    runs-on: ubuntu-18.04
+
+    steps:
+    - name: Install Ubuntu packages
+      run: |
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+
+    - name: Setup python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+        architecture: x64
+
+    - name: Setup python dependencies
+      run: |
+        pip install numpy sphinx
+
+    - name: c-lime package cache
+      uses: actions/cache@v2
+      id: c-lime-package-cache
+      with:
+        path: c-lime-${{ runner.os }}-gcc.deb
+        key: c-lime-${{ runner.os }}-gcc-${{ needs.build-grid.outputs.c-lime-version }}
+
+    - name: Install c-lime
+      run: |
+        sudo dpkg -i c-lime-${{ runner.os }}-gcc.deb
+
+    - name: Grid package cache
+      uses: actions/cache@v2
+      id: grid-package-cache
+      with:
+        path: grid-${{ runner.os }}-gcc-none.deb
+        key: grid-${{ runner.os }}-gcc-none-${{ needs.build-grid.outputs.grid-version }}
+
+    - name: Install Grid
+      run: |
+        sudo dpkg -i grid-${{ runner.os }}-gcc-none.deb
+
+    - name: cgpt package cache
+      uses: actions/cache@v2
+      id: cgpt-package-cache
+      with:
+        path: cgpt-${{ runner.os }}-python-3.8-gcc-none.deb
+        key: cgpt-${{ runner.os }}-python-3.8-gcc-none-${{ needs.build-gpt.outputs.cgpt-version }}
+
+    - name: Install cgpt
+      run: |
+        sudo dpkg -i cgpt-${{ runner.os }}-python-3.8-gcc-none.deb
+
+    - name: gpt package cache
+      uses: actions/cache@v2
+      id: gpt-package-cache
+      with:
+        path: gpt-${{ runner.os }}-python-python-3.8-gcc-none.deb
+        key: gpt-${{ runner.os }}-python-3.8-gcc-none-${{ needs.build-gpt.outputs.gpt-version }}
+
+    - name: Install gpt
+      run: |
+        sudo dpkg -i gpt-${{ runner.os }}-python-3.8-gcc-none.deb
+
+    - name: Clone gpt
+      uses: actions/checkout@v2
+      with:
+        path: gpt
+
+    - name: Build documentation
+      id: build-documentation
+      run: |
+        cd gpt/doc
+        make html
+        cd ..
+        git diff > documentation.patch
+
+        echo "::set-output name=doc-lines-changed::$(wc -l < documentation.patch)"
+
+    - uses: actions/upload-artifact@v2
+      if: steps.build-documentation.outputs.doc-lines-changed > 0
+      with:
+        name: documentation.patch
+        path: gpt/documentation.patch
