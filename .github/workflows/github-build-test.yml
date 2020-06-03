@@ -412,6 +412,8 @@ jobs:
 
     - name: Run tests
       if: matrix.mpi == 'openmpi'
+      env:
+        LD_PRELOAD: libmpi.so
       run: |
         cd gpt/tests
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
