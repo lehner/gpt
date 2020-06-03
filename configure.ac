@@ -31,7 +31,7 @@ AC_CONFIG_HEADERS([config.h])
 AM_PROG_AR
 
 # need for dynamic libraries (no need for ranlib)
-LT_INIT
+LT_INIT([disable-static])
 
 AC_ARG_WITH(python,
             AS_HELP_STRING([--with-python=PATH],[Path to Python interpreter. Searches $PATH if only a program name is given]),
