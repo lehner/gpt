@@ -10,7 +10,13 @@ AC_DEFUN([PYTHON_MIN_VERSION],[3.6])
 
 # project name, version and maintainer's address
 AC_INIT([gpt],[0.1],[christoph.lehner@ur.de])
-AM_INIT_AUTOMAKE
+
+# Use automake
+# the next macro takes a space separated list of arguments.
+# First argument is the minimal automake version. foreign means that
+# you don't follow GNU standards (ChangeLog COPYING files etc.)
+# and -Wall turns on all automake warnings.
+AM_INIT_AUTOMAKE([1.15.1 foreign subdir-objects -Wall])
 
 # separate directory for m4 stuff (libtools prefers this)
 AC_CONFIG_MACRO_DIR([m4])
@@ -150,13 +156,6 @@ AS_IF([expr "${$1}" : ".*$2 " > /dev/null],
 for token in -Xlinker -Xcompiler; do
 fixxer([GRID_CXXFLAGS],${token})
 done
-
-# Use automake
-# the next macro takes a space separated list of arguments.
-# First argument is the minimal automake version. foreign means that
-# you don't follow GNU standards (ChangeLog COPYING files etc.)
-# and -Wall turns on all automake warnings.
-AM_INIT_AUTOMAKE([1.15.1 foreign subdir-objects -Wall])
 
 # Makefiles to be generated. These are all *.in  files.
 # We have to use subdirs, because for the python files I need to
