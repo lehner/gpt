@@ -86,7 +86,7 @@ jobs:
         mkdir -p $PKGDIR
         cd c-lime
         ./autogen.sh
-        ./configure
+        ./configure || cat config.log
         make ${MAKE_BUILD_FLAGS}
         DESTDIR=$PKGDIR make install
 
@@ -118,9 +118,9 @@ jobs:
 
         if [ "${{ matrix.mpi }}" == "none" ]
         then
-            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2
+            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 || cat config.log
         else
-            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 --enable-comms=mpi-auto
+            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 --enable-comms=mpi-auto || cat config.log
         fi
 
         cd Grid
@@ -259,7 +259,7 @@ jobs:
         ./bootstrap.sh
         mkdir -p build
         cd build
-        ../configure --disable-gpt
+        ../configure --disable-gpt || cat config.log
         make ${MAKE_BUILD_FLAGS}
         DESTDIR=$PKGDIR make install
 
@@ -290,7 +290,7 @@ jobs:
         ./bootstrap.sh
         mkdir -p build
         cd build
-        ../configure --disable-cgpt
+        ../configure --disable-cgpt || cat config.log
         make ${MAKE_BUILD_FLAGS}
         DESTDIR=$PKGDIR make install
 
