@@ -510,11 +510,14 @@ jobs:
 
     - name: Build documentation
       id: build-documentation
+      env:
+        PYTHONPATH: /usr/local/lib/python3.8/site-packages:/usr/local/lib64/python3.8/site-packages
       run: |
         cd gpt/doc
         make html
         cd ..
-        git diff > documentation.patch
+        git add docs
+        git diff --cached --text > documentation.patch
 
         echo "::set-output name=doc-lines-changed::$(wc -l < documentation.patch)"
 
