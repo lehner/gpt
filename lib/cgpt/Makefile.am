@@ -38,7 +38,6 @@ cgpt_la_LDFLAGS = -avoid-version -module -export-dynamic -shared
 # cgpt_la_CFLAGS = $(PYTHON_CFLAGS) $(GRID_CFLAGS)
 cgpt_la_CXXFLAGS = $(PYTHON_INCLUDES) $(GRID_CXXFLAGS)
 cgpt_la_CPPFLAGS = $(PYTHON_INCLUDES) $(GRID_CPPFLAGS) \
-		   -I$(builddir)/lib \
 		   -I$(GRID_PREFIX)/include \
 		   -I$(NUMPY_INCLUDE)
 cgpt_la_LIBADD = -L$(GRID_PREFIX)/lib -lGrid \
