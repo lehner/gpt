@@ -31,17 +31,15 @@ jobs:
       run: |
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
-    - name: Set Compiler Variables GCC
-      if: matrix.compiler == 'gcc'
-      run: |
-        echo '::set-env name=CC::gcc'
-        echo '::set-env name=CXX::g++'
-
-    - name: Set Compiler Variables CLANG
+    - name: Set compiler alternatives to clang-9
       if: matrix.compiler == 'clang'
       run: |
-        echo '::set-env name=CC::clang-9'
-        echo '::set-env name=CXX::clang++-9'
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-9 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 1
+
+        sudo update-alternatives --set cc /usr/bin/clang-9
+        sudo update-alternatives --set c++ /usr/bin/clang++-9
+
         echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
@@ -170,17 +168,14 @@ jobs:
       run: |
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
-    - name: Set Compiler Variables GCC
-      if: matrix.compiler == 'gcc'
-      run: |
-        echo '::set-env name=CC::gcc'
-        echo '::set-env name=CXX::g++'
-
-    - name: Set Compiler Variables CLANG
+    - name: Set compiler alternatives to clang-9
       if: matrix.compiler == 'clang'
       run: |
-        echo '::set-env name=CC::clang-9'
-        echo '::set-env name=CXX::clang++-9'
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-9 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 1
+
+        sudo update-alternatives --set cc /usr/bin/clang-9
+        sudo update-alternatives --set c++ /usr/bin/clang++-9
         echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
@@ -319,17 +314,14 @@ jobs:
       run: |
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
-    - name: Set Compiler Variables GCC
-      if: matrix.compiler == 'gcc'
-      run: |
-        echo '::set-env name=CC::gcc'
-        echo '::set-env name=CXX::g++'
-
-    - name: Set Compiler Variables CLANG
+    - name: Set compiler alternatives to clang-9
       if: matrix.compiler == 'clang'
       run: |
-        echo '::set-env name=CC::clang-9'
-        echo '::set-env name=CXX::clang++-9'
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-9 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 1
+
+        sudo update-alternatives --set cc /usr/bin/clang-9
+        sudo update-alternatives --set c++ /usr/bin/clang++-9
         echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
