@@ -167,6 +167,10 @@ public:
     return PyMemoryView_FromMemory((char*)&v[0],v.size()*sizeof(v[0]),PyBUF_WRITE);
   }
 
+  virtual PyObject* memory_view_coordinates() {
+    return cgpt_memory_view_coordinates(l.Grid(),l.Checkerboard());
+  }
+
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) {
     GridBase* grid = l.Grid();
     Nsimd = grid->Nsimd();

@@ -7,12 +7,42 @@ import numpy as np
 import sys
 
 rng=g.random("test")
-grid=g.grid([16,16,16,32],g.single,g.redblack)
+vol=[8,8,8,16]
+grid_rb=g.grid(vol,g.single,g.redblack)
+grid=g.grid(vol,g.single)
+field=g.vcolor
 
-l=[ g.mspincolor(grid) for i in range(8) ]
+################################################################################
+# Setup lattices
+################################################################################
+l_rb=[ field(grid_rb) for i in range(8) ]
+l=[ field(grid) for i in range(8) ]
 for i in range(8):
-    l[i].checkerboard(g.odd)
+    l_rb[i].checkerboard(g.odd)
+rng.cnormal(l_rb)
 rng.cnormal(l)
+
+################################################################################
+# Reverse lattice in time order in two ways and cross-check
+################################################################################
+def lattice_reverse_check(lat):
+    grid=lat.grid
+    l_rev_ref=g.lattice(lat)
+    l_rev_ref.checkerboard(lat.checkerboard().inv())
+    T=grid.fdimensions[3]
+    for t in range(T):
+        # 31 <- 0 => interchange even and odd sites
+        l_rev_ref[:,:,:,T-t-1]=lat[:,:,:,t]
+
+    l_rev=g.merge(list(reversed(g.separate(lat,3))),3)
+    eps=g.norm2(l_rev - l_rev_ref)
+    g.message("Temporal inverse lattice test: ",eps)
+    assert(eps==0.0)
+
+lattice_reverse_check(l_rb[0])
+lattice_reverse_check(l[0])
+
+sys.exit(0)
 
 ################################################################################
 # Test merge/separate here

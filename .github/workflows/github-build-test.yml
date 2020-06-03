@@ -311,7 +311,7 @@ jobs:
         mpi: ['none', 'mpich', 'openmpi']
 
     steps:
-    - name: Check Hardware
+    - name: Report Hardware
       run: |
         cat /proc/cpuinfo
 

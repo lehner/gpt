@@ -71,7 +71,8 @@ def grid_get_mpi(tag,fdimensions,cb):
         if nd > 4:
             mpi = [ 1 ] * (nd - 4) + mpi
         elif nd < 4:
-            raise Exception("Need command line argument for %s" % tag_nd)
+            raise Exception("Need to define %s" % tag_nd)
+    assert(nd == len(mpi))
     return mpi
 
 class grid:
@@ -127,28 +128,40 @@ class grid:
     def split(self, mpi_split, fdimensions):
         return grid(fdimensions,self.precision,self.cb,None,mpi_split,self)
 
-    def inserted_dimension(self, dimension, extent):
+    def inserted_dimension(self, dimension, extent, cb_mask = None, simd_mask = 1):
+        if cb_mask is None and self.cb.n == 1:
+            cb_mask=0
+        assert(not cb_mask is None)
         cb=general(self.cb.n,
-                   self.cb.cb_mask[0:dimension] + [0] + self.cb.cb_mask[dimension:],
-                   self.cb.simd_mask[0:dimension] + [0] + self.cb.simd_mask[dimension:])
+                   self.cb.cb_mask[0:dimension] + [ cb_mask ] + self.cb.cb_mask[dimension:],
+                   self.cb.simd_mask[0:dimension] + [ simd_mask ] + self.cb.simd_mask[dimension:])
+
         if self.parent is None:
             parent=None
         else:
             parent=self.parent.inserted_dimension(dimension,extent)
+
         return grid(self.fdimensions[0:dimension] + [ extent ] + self.fdimensions[dimension:],self.precision,cb=cb,obj=None,
-                    mpi=self.mpi[0:dimension] + [ 1 ] + self.mpi[dimension:],parent = parent)
+                    mpi=None,parent = parent)
 
     def removed_dimension(self, dimension):
         assert(0 <= dimension and dimension < self.nd)
         cb=general(self.cb.n,
                    self.cb.cb_mask[0:dimension] + self.cb.cb_mask[dimension+1:],
                    self.cb.simd_mask[0:dimension] + self.cb.simd_mask[dimension+1:])
+
         if self.parent is None:
             parent=None
         else:
             parent=self.parent.removed_dimension(dimension)
+
+        if self.mpi[dimension] == 1:
+            mpi=self.mpi[0:dimension] + self.mpi[dimension+1:]
+        else:
+            mpi=None
+
         return grid(self.fdimensions[0:dimension] + self.fdimensions[dimension+1:],self.precision,cb=cb,obj=None,
-                    mpi=self.mpi[0:dimension] + self.mpi[dimension+1:],parent = parent)
+                    mpi=mpi,parent=parent)
 
     def cartesian_rank(self):
         rank=0

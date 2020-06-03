@@ -21,12 +21,18 @@ import gpt
 
 class even:
     tag=0
+    def inv():
+        return gpt.odd
 
 class odd:
     tag=1
+    def inv():
+        return gpt.even
 
 class none:
     tag=None
+    def inv():
+        return gpt.none
 
 def str_to_cb(s):
     if s == "even":

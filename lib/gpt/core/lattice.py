@@ -100,11 +100,22 @@ class lattice:
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
         return self.otype.__name__ + ";" + self.checkerboard().__name__
 
-    def __setitem__(self, key, value):
-        if type(key) == slice:
-            if key == slice(None,None,None):
-                key = ()
+    def map_key(self, key):
+        # slices without specified start/stop corresponds to memory view limitation for this rank
+        if type(key) == slice and key == slice(None,None,None):
+            return ()
+        if type(key) == tuple and not all([ type(k) == int for k in key ]):
+            key = tuple([ k if type(k) == slice else slice(k,k+1) for k in key ])
+            grid=self.grid
+            assert(all([ k.step is None for k in key ]))
+            assert(len(key) == grid.nd)
+            top=[ grid.fdimensions[i] // grid.mpi[i] * grid.processor_coor[i] if k.start is None else k.start for i,k in enumerate(key) ]
+            bottom=[ grid.fdimensions[i] // grid.mpi[i] * (1+grid.processor_coor[i]) if k.stop is None else k.stop for i,k in enumerate(key) ]
+            key=cgpt.coordinates_from_cartesian_view(top,bottom,self.grid.cb.cb_mask,self.checkerboard().tag,"grid")
+        return key
 
+    def __setitem__(self, key, value):
+        key = self.map_key(key)
         if type(key) == tuple:
             if len(self.v_obj) == 1:
                 cgpt.lattice_set_val(self.v_obj[0], key, gpt.util.tensor_to_value(value))
@@ -120,6 +131,7 @@ class lattice:
             assert(0)
 
     def __getitem__(self, key):
+        key = self.map_key(key)
         if type(key) == tuple:
             if len(self.v_obj) == 1:
                 return gpt.util.value_to_tensor(cgpt.lattice_get_val(self.v_obj[0], key), self.otype)
