@@ -18,6 +18,7 @@
 */
 static PyObject* cgpt_memory_view_coordinates(GridBase* grid, int cb) {
   int Nd = grid->Nd();
+  int rank = grid->_processor;
   std::vector<long> dim(2);
   dim[0] = (long)grid->iSites() * (long)grid->oSites();
   dim[1] = Nd;
