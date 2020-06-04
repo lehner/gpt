@@ -78,13 +78,13 @@ jobs:
       uses: actions/cache@v2
       id: c-lime-package-cache
       with:
-        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
-        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ steps.c-lime-version.outputs.key }}
+        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.c-lime-version.outputs.key }}
 
     - name: Build and package c-lime
       if: steps.c-lime-package-cache.outputs.cache-hit != 'true'
       run: |
-        PKGDIR=$PWD/c-lime-${{ runner.os }}-${{ matrix.compiler }}
+        PKGDIR=$PWD/c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}
         mkdir -p $PKGDIR
         cd c-lime
         ./autogen.sh
@@ -101,7 +101,7 @@ jobs:
 
     - name: Install c-lime
       run: |
-        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
+        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Clone Grid
       uses: actions/checkout@v2
@@ -212,12 +212,12 @@ jobs:
       uses: actions/cache@v2
       id: c-lime-package-cache
       with:
-        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
-        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
+        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-grid.outputs.c-lime-version }}
 
     - name: Install c-lime
       run: |
-        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
+        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Grid package cache
       uses: actions/cache@v2
@@ -358,12 +358,12 @@ jobs:
       uses: actions/cache@v2
       id: c-lime-package-cache
       with:
-        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
-        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ needs.build-grid.outputs.c-lime-version }}
+        path: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        key: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-grid.outputs.c-lime-version }}
 
     - name: Install c-lime
       run: |
-        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}.deb
+        sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Grid package cache
       uses: actions/cache@v2
