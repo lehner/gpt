@@ -333,8 +333,8 @@ EXPORT(coordinates_momentum_phase,{
 	  long j;
 	  ComplexF arg = 0.0;
 	  for (j=0;j<nd;j++) {
-	    auto & x = s[i*nd+j];
-	    arg+=x * mom[j];
+	    RealF x = s[i*nd+j];
+	    arg+=x * (ComplexF)mom[j];
 	  }
 	  d[i] = exp( ComplexF(0.0,1.0)*arg );
 	});
@@ -346,8 +346,8 @@ EXPORT(coordinates_momentum_phase,{
 	  long j;
 	  ComplexD arg = 0.0;
 	  for (j=0;j<nd;j++) {
-	    auto & x = s[i*nd+j];
-	    arg+=x * mom[j];
+	    RealD x = s[i*nd+j];
+	    arg+=x * (ComplexD)mom[j];
 	  }
 	  d[i] = exp( ComplexD(0.0,1.0)*arg );
 	});
