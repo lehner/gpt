@@ -412,13 +412,13 @@ jobs:
         cd gpt/tests
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         mpirun -np 2 -mca btl ^openib -bind-to core python core/scalar.py --mpi 1.1.1.2
-        ./run "mpirun -np 1 -mca btl ^openib python" "--mpi 1.1.1.1"
-        ./run "mpirun -np 2 -bind-to core -mca btl ^openib python" "--mpi 1.1.1.2"
+        ./run "mpirun -np 1 -mca btl ^openib python" "--mpi 1.1.1.1 --mpi 1.1.1"
+        ./run "mpirun -np 2 -bind-to core -mca btl ^openib python" "--mpi 1.1.1.2 --mpi 1.1.2"
 
     - name: Run tests
       if: matrix.mpi == 'mpich'
       run: |
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         cd gpt/tests
-        ./run "mpirun -np 1 python" "--mpi 1.1.1.1"
-        ./run "mpirun -np 2 -bind-to core python" "--mpi 1.1.1.2"
+        ./run "mpirun -np 1 python" "--mpi 1.1.1.1 --mpi 1.1.1.1"
+        ./run "mpirun -np 2 -bind-to core python" "--mpi 1.1.1.2 --mpi 1.1.2"
