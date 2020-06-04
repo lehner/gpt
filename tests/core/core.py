@@ -9,6 +9,21 @@ import numpy as np
 import sys
 
 # grid
+grid=g.grid([2,2,2,8], g.double)
+L=np.array(grid.fdimensions)
+
+# complex unit field
+l=g.complex(grid)
+l[:]=1
+
+# multiply momentum phase in l
+g.momentum_phase(l, 2.0*np.pi*np.array([ 0, 0, 0, 1 ]) / L ) # the parameter is momentum p, not
+
+# show
+g.message(l)
+sys.exit(0)
+
+# grid
 grid=g.grid([2,2,2,2], g.single)
 
 # test different lattice types
