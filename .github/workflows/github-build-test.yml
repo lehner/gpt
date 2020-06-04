@@ -94,7 +94,7 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
+        wget -nv -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
         sed -e 's/%pkgname%/c-lime/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/C-LIME/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
@@ -148,7 +148,7 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
+        wget -nv -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
         sed -e 's/%pkgname%/grid/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/Grid/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
@@ -172,6 +172,7 @@ jobs:
     outputs:
       cgpt-version: ${{ steps.cgpt-version.outputs.key }}
       gpt-version: ${{ steps.gpt-version.outputs.key }}
+      python-gpt-version: ${{ steps.python-gpt-version.outputs.version }}
 
     steps:
     - name: Check Hardware
@@ -245,6 +246,12 @@ jobs:
       run: |
         echo "::set-output name=key::${{ hashFiles('gpt/lib/gpt/**') }}-${CACHE_KEY}"
 
+    - name: Get python-gpt version
+      id: python-gpt-version
+      run: |
+        gpt_version=$(printf "0.0.0r%s" "$(cd gpt && git rev-parse --short HEAD)")
+        echo "::set-output name=version::${gpt_version}"
+
     - name: cgpt package cache
       uses: actions/cache@v2
       id: cgpt-package-cache
@@ -267,7 +274,7 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
+        wget -nv -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
         sed -e 's/%pkgname%/cgpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/cgpt/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
@@ -275,12 +282,6 @@ jobs:
     - name: Install cgpt
       run: |
         sudo dpkg -i cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-
-    - name: Create artifact for cgpt package
-      uses: actions/upload-artifact@v1
-      with:
-        path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        name: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.cgpt-version.outputs.key }}
 
     - name: gpt package cache
       uses: actions/cache@v2
@@ -304,7 +305,7 @@ jobs:
 
         cd $PKGDIR
         mkdir -p DEBIAN
-        wget -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
+        wget -nv -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
         sed -e 's/%pkgname%/gpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/gpt/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
@@ -313,11 +314,28 @@ jobs:
       run: |
         sudo dpkg -i gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
-    - name: Create artifact for gpt package
+    - name: Create combined package
+      run: |
+        PKGDIR=$PWD/python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}
+
+        dpkg-deb -X gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb ${PKGDIR}
+        dpkg-deb -X cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb ${PKGDIR}
+
+        cd ${PKGDIR}
+        mkdir -p DEBIAN
+        wget -nv -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
+        sed -e 's/%pkgname%/python-gpt/g' \
+          -e "s/%version%/${{ steps.python-gpt-version.outputs.version }}/g" \
+          -e "s/%size%/$(du -sk .|grep --color=never -E '[0-9]+' -o)/g" \
+          -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/gpt/g' -i ./DEBIAN/control
+        cd -
+        dpkg-deb --build $PKGDIR
+
+    - name: Create artifact for python-gpt package
       uses: actions/upload-artifact@v1
       with:
-        path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        name: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.gpt-version.outputs.key }}
+        path: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        name: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.python-gpt-version.outputs.version }}
 
   test-gpt:
     needs: [build-grid, build-gpt]
@@ -365,27 +383,14 @@ jobs:
       run: |
         pip install numpy
 
-    - name: cgpt package cache
-      uses: actions/cache@v2
-      id: cgpt-package-cache
+    - name: Download prebuild python-gpt
+      uses: actions/download-artifact@v2
       with:
-        path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        key: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.cgpt-version }}
+        name: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
 
-    - name: Install cgpt
+    - name: Install python-gpt
       run: |
-        sudo dpkg -i cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-
-    - name: gpt package cache
-      uses: actions/cache@v2
-      id: gpt-package-cache
-      with:
-        path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        key: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.gpt-version }}
-
-    - name: Install gpt
-      run: |
-        sudo dpkg -i gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
+        sudo dpkg -i python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Clone gpt
       uses: actions/checkout@v2
