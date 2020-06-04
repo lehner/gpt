@@ -324,7 +324,10 @@ jobs:
         cd ${PKGDIR}
         mkdir -p DEBIAN
         wget -nv -O ./DEBIAN/control https://gist.githubusercontent.com/lehner/a0feb168a9cb2068e0345a94b2df2eb9/raw/79dd47ef34aa7166191c7d8293372bcb4b9a5533/deb.general.control
-        sed -e 's/%pkgname%/python-gpt/g' -e "s/%version%/${{ steps.python-gpt-version.outputs.version }}/g" -e "s/%size%/$(du -sk .|grep --color=never -E '[0-9]+' -o)/g" -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/gpt/g' -i ./DEBIAN/control
+        sed -e 's/%pkgname%/python-gpt/g' \
+          -e "s/%version%/${{ steps.python-gpt-version.outputs.version }}/g" \
+          -e "s/%size%/$(du -sk .|grep --color=never -E '[0-9]+' -o)/g" \
+          -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/gpt/g' -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
 
