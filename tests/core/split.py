@@ -7,7 +7,7 @@ import numpy as np
 import sys
 
 rng=g.random("test")
-vol=[8,8,8,16]
+vol=[16,16,16,32]
 grid_rb=g.grid(vol,g.single,g.redblack)
 grid=g.grid(vol,g.single)
 field=g.vcolor
@@ -42,15 +42,13 @@ def lattice_reverse_check(lat):
 lattice_reverse_check(l_rb[0])
 lattice_reverse_check(l[0])
 
-sys.exit(0)
-
 ################################################################################
 # Test merge/separate here
 ################################################################################
 assert(all([ g.norm2(x) > 0 for x in l ]))
 
-# Test merging slices along a new last dimension in groups of 4
-m=g.merge(l,4)
+# Test merging slices along a new last dimension 4 at a time
+m=g.merge(l,N=4)
 assert(len(m) == 2)
 
 for i in range(len(m)):
@@ -58,8 +56,8 @@ for i in range(len(m)):
         k = i*4 + j
         assert(g.norm2(l[k][1,2,0,0] - m[i][1,2,0,0,j]) == 0.0)
 
-# Test merging slices along a new 2nd dimension in groups of 4
-m=g.merge(l,4,1)
+# Test merging slices along a new 2nd dimension 4 at a time
+m=g.merge(l,1,N=4)
 assert(len(m) == 2)
 
 for i in range(len(m)):
@@ -79,7 +77,6 @@ for i in range(len(l)):
     assert(g.norm2(l[i] - test[i]) == 0.0)
 
 sys.exit(0)
-
 ################################################################################
 # multi-vector (as in right-hand sides) splitting
 # test split CG both speed and correctness against original

@@ -66,12 +66,13 @@ class expr:
         if type(l) == expr:
             lhs = gpt.apply_expr_unary(self)
             rhs = gpt.apply_expr_unary(l)
-            # close before product to avoid exponential growth of terms
+            # Attempt to close before product to avoid exponential growth of terms.
+            # This does not work for sub-expressions without lattice fields, so
+            # lhs and rhs may still contain multiple terms.
             if len(lhs.val) > 1:
                 lhs=expr(gpt.eval(lhs))
             if len(rhs.val) > 1:
                 rhs=expr(gpt.eval(rhs))
-            assert(len(lhs.val) == 1 or len(rhs.val) == 1)
             return expr( [ (a[0]*b[0], a[1] + b[1]) for a in lhs.val for b in rhs.val ] )
         elif type(l) == gpt.tensor and self.is_single(gpt.tensor):
             ue,uf,to=self.get_single()

@@ -60,18 +60,17 @@ def grid_from_description(description):
     obj=None
     return grid(fdimensions,precision,cb,obj)
 
-def grid_get_mpi(tag,fdimensions,cb):
+def grid_get_mpi(fdimensions,cb):
     nd=len(fdimensions)
-    tag_nd=tag % ("%d" % nd)
-    mpi=gpt.default.get_ivec(tag_nd,None)
+    tag="--mpi"
+    mpi=gpt.default.get_ivec(tag,None,nd)
     if mpi is None:
         # use dimension-independent mpi selection
-        tag_default=tag % ""
-        mpi=gpt.default.get_ivec(tag_default,[1,1,1,1])
+        mpi=gpt.default.get_ivec(tag,[1,1,1,1],4)
         if nd > 4:
             mpi = [ 1 ] * (nd - 4) + mpi
         elif nd < 4:
-            raise Exception("Need to define %s" % tag_nd)
+            raise Exception("Need to define --mpi layout for dimension %d" % nd)
     assert(nd == len(mpi))
     return mpi
 
@@ -91,7 +90,7 @@ class grid:
 
         self.cb = cb
         if mpi is None:
-            self.mpi = grid_get_mpi("--mpi%s",self.fdimensions,self.cb)
+            self.mpi = grid_get_mpi(self.fdimensions,self.cb)
         else:
             self.mpi = mpi
 
@@ -155,13 +154,8 @@ class grid:
         else:
             parent=self.parent.removed_dimension(dimension)
 
-        if self.mpi[dimension] == 1:
-            mpi=self.mpi[0:dimension] + self.mpi[dimension+1:]
-        else:
-            mpi=None
-
         return grid(self.fdimensions[0:dimension] + self.fdimensions[dimension+1:],self.precision,cb=cb,obj=None,
-                    mpi=mpi,parent=parent)
+                    mpi=None,parent=parent)
 
     def cartesian_rank(self):
         rank=0

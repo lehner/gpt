@@ -28,12 +28,13 @@ def get_lattice(e):
         for i in e:
             if type(i[1]) == gpt.lattice:
                 return i[1]
-        assert(0) # should never happen for a properly formed expression
-    else:
-        assert(0)
+    return None
 
 def get_grid(e):
-    return get_lattice(e).grid
+    l=get_lattice(e)
+    if l is None:
+        return None
+    return l.grid
 
 def conj(l):
     if type(l) == gpt.expr:
@@ -82,6 +83,8 @@ def expr_eval(first, second = None, ac = False):
 
         e = gpt.expr(first)
         lat = get_lattice(e)
+        if lat is None:
+            return first
         grid = lat.grid
         otype = lat.otype
         n = len(otype.v_idx)

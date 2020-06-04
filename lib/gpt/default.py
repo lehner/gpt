@@ -19,33 +19,41 @@
 import sys, gpt
 
 def get(tag,default):
-    if tag in sys.argv:
-        i = sys.argv.index(tag)
-        if i+1 < len(sys.argv):
-            return sys.argv[i+1]
-    return default
+    res=[]
+    for i,x in enumerate(sys.argv):
+        if x == tag:
+            if i+1 < len(sys.argv):
+                res.append(sys.argv[i+1])
+    if len(res) == 0:
+        res=[ default ]
+    return res
+
+def get_single(tag,default):
+    r=get(tag,default)
+    assert(len(r) == 1)
+    return r[0]
 
 def get_float(tag, default = float("nan")):
-    res=get(tag,None)
+    res=get_single(tag,None)
     if not res is None:
         return float(res)
     return default
 
 def get_int(tag, default):
-    res=get(tag,None)
+    res=get_single(tag,None)
     if not res is None:
         return int(res)
     return default
 
-def get_ivec(tag, default):
+def get_ivec(tag, default, ndim):
     res=get(tag,None)
-    if not res is None:
-        return [ int(x) for x in res.split(".") ]
+    if res[0] is None:
+        return default
+    for x in res:
+        v=[ int(y) for y in x.split(".") ]
+        if len(v) == ndim:
+            return v
     return default
-
-# grid and precision
-grid = get_ivec("--grid",[4,4,4,4])
-precision = { "single" : gpt.single, "double" : gpt.double }[get("--precision","double")]
 
 # IO parameters
 max_io_nodes=get_int("--max_io_nodes",256)
@@ -53,7 +61,7 @@ max_io_nodes=get_int("--max_io_nodes",256)
 # verbosity
 verbose_default="io,bicgstab,cg,fgcr,fgmres,mr,irl,power_iteration,checkpointer,deflate,block_operator,random"
 verbose_additional="eval,merge"
-verbose = get("--verbose",verbose_default).split(",")
+verbose = get_single("--verbose",verbose_default).split(",")
 verbose_candidates=",".join(sorted((verbose_default + "," + verbose_additional).split(",")))
 def is_verbose(x):
     return x in verbose
@@ -64,20 +72,20 @@ if "--help" in sys.argv:
     print(" GPT Help")
     print("--------------------------------------------------------------------------------")
     print("")
-    print(" --grid X.Y.Z.T")
+    print(" --mpi X.Y.Z.T")
     print("")
-    print("   sets the default grid for gpt")
-    print("")
-    print(" --precision single/double")
-    print("")
-    print("   sets the default precision for gpt")
+    print("   Set the mpi layout for four-dimensional grids.")
+    print("   The layout for other dimensions can be specified")
+    print("   by additional parameters such as --mpi X.Y.Z for")
+    print("   the mpi layout for three-dimensional grids.")
     print("")
     print(" --verbose opt1,opt2,...")
     print("")
-    print("   sets verbosity options.  candidates: %s" % verbose_candidates)
+    print("   Set verbosity options.")
+    print("   Candidates: %s" % verbose_candidates)
     print("")
     print(" --max_io_nodes n")
     print("")
-    print("   set maximal number of simultaneous IO nodes")
+    print("   Set maximal number of simultaneous IO nodes.")
     print("--------------------------------------------------------------------------------")
     sys.stdout.flush()

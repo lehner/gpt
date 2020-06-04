@@ -9,7 +9,7 @@ import gpt as g
 m0crit=4.0
 m0=g.default.get_float("--mass",0.1) + m0crit
 
-grid=g.grid(g.default.grid, g.default.precision)
+grid=g.grid([4,4,4,4], g.double)
 
 src=g.complex(grid)
 src[:]=0

@@ -17,6 +17,7 @@ for f in \
     core/importexport.py \
     core/orthogonalize.py \
     core/matrix.py \
+    core/split.py \
     random/random-simple.py \
     algorithms/implicitly-restarted-lanczos.py \
     algorithms/solvers.py

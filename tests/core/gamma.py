@@ -32,6 +32,17 @@ eps = g.norm2(dst - ref) / g.norm2(l)
 g.message("Test Gamma5: ",eps)
 assert(eps == 0.0)
 
+# test creating spinor projections as expession templates
+P=g.gamma[0]*g.gamma[1] - g.gamma[2]*g.gamma[3]
+
+dst @= P * l
+ref @= g.gamma[0]*g.gamma[1]*l - g.gamma[2]*g.gamma[3]*l
+eps = g.norm2(dst - ref) / g.norm2(l)
+g.message("Test Regular Expression: ",eps)
+assert(eps == 0.0)
+
+
+
 g.message("All tests passed")
 
 
