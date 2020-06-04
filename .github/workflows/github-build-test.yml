@@ -280,7 +280,7 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        name: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.cgpt-version }}
+        name: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.cgpt-version.outputs.key }}
 
     - name: gpt package cache
       uses: actions/cache@v2
@@ -317,7 +317,7 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-        name: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.cgpt-version }}
+        name: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.gpt-version.outputs.key }}
 
   test-gpt:
     needs: [build-grid, build-gpt]
