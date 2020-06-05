@@ -480,14 +480,8 @@ jobs:
       run: |
         cd gpt/doc
         make html
-        cd ..
-        git add docs
-        git diff --cached --text > documentation.patch
-
-        echo "::set-output name=doc-lines-changed::$(wc -l < documentation.patch)"
 
     - uses: actions/upload-artifact@v2
-      if: steps.build-documentation.outputs.doc-lines-changed > 0
       with:
-        name: documentation.patch
-        path: gpt/documentation.patch
+        name: documentation
+        path: gpt/docs
