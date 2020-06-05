@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cluster: ['master', 'qp4']
+        cluster: ['x86/avx2', 'x86/avx512', 'x86/cuda', 'arm/sve',]
 
     steps:
     - name: Check for secrets
