@@ -33,6 +33,11 @@ AM_PROG_AR
 # need for dynamic libraries (no need for ranlib)
 LT_INIT([disable-static])
 
+AC_ARG_ENABLE([cgpt],
+    AS_HELP_STRING([--disable-cgpt], [Disable building cgpt]))
+AC_ARG_ENABLE([gpt],
+    AS_HELP_STRING([--disable-gpt], [Disable instaling gpt]))
+
 AC_ARG_WITH(python,
             AS_HELP_STRING([--with-python=PATH],[Path to Python interpreter. Searches $PATH if only a program name is given]),
             [PYTHON="$withval"], [])
@@ -40,6 +45,11 @@ AC_ARG_WITH(python,
 if test x"$PYTHON" = xyes
 then
     AC_MSG_ERROR([--with-python option requires a path or program argument])
+fi
+
+if test x"$PYTHON" = xno
+then
+    AC_MSG_ERROR([Python is non-optional])
 fi
 
 if test x"$PYTHON" = x
@@ -74,7 +84,11 @@ ac_save_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$ac_save_CPPFLAGS $PYTHON_INCLUDES"
 AC_CHECK_HEADER(Python.h,
                 [],
-                [AC_MSG_ERROR([Missing Python.h])])
+                [if test x$enable_cgpt != xno
+                 then
+                     AC_MSG_ERROR([Missing Python.h])
+                 fi
+                 ])
 CPPFLAGS="$ac_save_CPPFLAGS"
 
 # Numpy include dir
@@ -84,7 +98,13 @@ AC_MSG_CHECKING([for numpy headers])
 AS_IF([numpy_includer > /dev/null 2>&1 ],
       [NUMPY_INCLUDE="$(numpy_includer)"
        AC_MSG_RESULT([${NUMPY_INCLUDE}])],
-      [AC_MSG_ERROR([no.])])
+      [if test x$enable_cgpt != xno
+       then
+           AC_MSG_ERROR([no])
+       else
+           AC_MSG_RESULT([no])
+       fi
+       ])
 
 AC_ARG_WITH(grid,
     AS_HELP_STRING(
@@ -114,15 +134,21 @@ AS_IF([test "x${ac_fake_grid}" = "xyes"],
 AS_IF([test x"${GRID_HOME}" = x],
     [AC_PATH_PROG(GRID_CONFIG, [grid-config], [])],
     [AC_PATH_PROG(GRID_CONFIG, [grid-config], [], [${GRID_HOME}/bin:${PATH}])])
-AS_IF([test x"${GRID_CONFIG}" = x],
-      [AC_MSG_ERROR([cannot find grid-config])],
-      [])
-AC_SUBST([GRID_CXXFLAGS],[`${GRID_CONFIG} --cxxflags`])
-AC_SUBST([GRID_LDFLAGS],[`${GRID_CONFIG} --ldflags`])
-AC_SUBST([GRID_CXX],[`${GRID_CONFIG} --cxx`])
-AC_SUBST([GRID_CXXLD],[`${GRID_CONFIG} --cxxld`])
-AC_SUBST([GRID_LIBS],  [`${GRID_CONFIG} --libs`])
-AC_SUBST([GRID_PREFIX],[`${GRID_CONFIG} --prefix`])
+
+if test x"${GRID_CONFIG}" = x
+then
+    if test x$enable_cgpt != xno
+    then
+      AC_MSG_ERROR([cannot find grid-config])
+    fi
+else
+    AC_SUBST([GRID_CXXFLAGS],[`${GRID_CONFIG} --cxxflags`])
+    AC_SUBST([GRID_LDFLAGS],[`${GRID_CONFIG} --ldflags`])
+    AC_SUBST([GRID_CXX],[`${GRID_CONFIG} --cxx`])
+    AC_SUBST([GRID_CXXLD],[`${GRID_CONFIG} --cxxld`])
+    AC_SUBST([GRID_LIBS],  [`${GRID_CONFIG} --libs`])
+    AC_SUBST([GRID_PREFIX],[`${GRID_CONFIG} --prefix`])
+fi
 ])
 
 # Unfortunately, not all versions of Grid have --cxxld and it does
@@ -162,12 +188,7 @@ done
 # use nobase_XYZ.
 AC_CONFIG_FILES([Makefile lib/cgpt/Makefile lib/gpt/Makefile])
 
-AC_ARG_ENABLE([cgpt],
-    AS_HELP_STRING([--disable-cgpt], [Disable building cgpt]))
 AM_CONDITIONAL([ENABLE_CGPT], [test x$enable_cgpt != xno])
-
-AC_ARG_ENABLE([gpt],
-    AS_HELP_STRING([--disable-gpt], [Disable instaling gpt]))
 AM_CONDITIONAL([ENABLE_GPT], [test x$enable_gpt != xno])
 
 # Generate output. This has to be the last command!
