@@ -5,5 +5,6 @@ Approx
 ------
 
 The Chebyshev algorithm
-.. autoclass:: gpt.Algorithms.approx.chebyshev
+
+.. autoclass:: gpt.algorithms.approx.chebyshev
    :members:

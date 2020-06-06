@@ -7,11 +7,16 @@ Welcome to GPT - Grid Python Toolkit's documentation!
 =====================================================
 
 .. toctree::
+   :glob:
    :maxdepth: 2
    :caption: Contents:
 
    gpt
    scalar
+   Core/*
+   Algorithms/*
+   QCD/*
+   Create/*
 
 
 
