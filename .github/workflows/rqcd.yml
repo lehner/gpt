@@ -7,18 +7,34 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ca-bundle: ${{ secrets.RQCD_CA_BUNDLE }}
+      token: ${{ secrets.RQCD_TRIGGER_TOKEN }}
+
     strategy:
       fail-fast: false
       matrix:
-        cluster: ['master', 'qp4']
+        cluster: ['x86/avx2', 'x86/avx512', 'x86/cuda', 'arm/sve',]
 
     steps:
+    - name: Check for secrets
+      id: check
+      shell: bash
+      run: |
+        if [ "${{ env.ca-bundle }}" != "" ] && [ "${{ env.token }}" != "" ]
+        then
+          echo ::set-output name=secrets::'true'
+        else
+          echo "Do not trigger RQCD CI as at least one of the secrets is missing."
+        fi
+
     - name: Trigger CI Job
+      if: ${{ steps.check.outputs.secrets }}
       uses: pjgeorg/gitlab-trigger-ci@v2
       with:
         host: "rqcd.ur.de"
         port: 8443
-        ca-bundle: ${{ secrets.RQCD_CA_BUNDLE }}
+        ca-bundle: ${{ env.ca-bundle }}
         project-id: 888
-        token: ${{ secrets.RQCD_TRIGGER_TOKEN }}
+        token: ${{ env.token }}
         ref:  ${{ matrix.cluster }}
