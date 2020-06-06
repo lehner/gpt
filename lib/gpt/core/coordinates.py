@@ -40,15 +40,26 @@ def coordinates(o, order = "grid"):
     else:
         assert(0)
 
-def momentum_phase(l, k):
+def apply_exp_ixp(dst,src,p):
     # TODO: add sparse field support (x.internal_coordinates(), x.coordinates())
-    x=l.mview_coordinates()
-    g=l.grid
-    cb=l.checkerboard()
-    field=gpt.complex(g)
-    field.checkerboard(cb)
-    if type(k) == numpy.ndarray:
-        k=k.tolist()
-    field[x]=cgpt.coordinates_momentum_phase(x,k,g.precision)
-    l @= field * l
-    return l
+    x=src.mview_coordinates()
+
+    # create phase field
+    phase=gpt.complex(src.grid)
+    phase.checkerboard(src.checkerboard())
+    phase[x]=cgpt.coordinates_momentum_phase(x,p,src.grid.precision)
+    dst @= phase * src
+
+def exp_ixp(p):
+
+    if type(p) == list:
+        return [ momentum_phase(x) for x in p ]
+    elif type(p) == numpy.ndarray:
+        p=p.tolist()
+
+    mat=lambda dst,src: apply_exp_ixp(dst,src,p)
+    inv_mat=lambda dst,src: apply_exp_ixp(dst,src,[ -x for x in p ])
+    return gpt.matrix_operator(mat = mat,
+                               adj_mat = inv_mat,
+                               inv_mat = inv_mat,
+                               adj_inv_mat = mat)

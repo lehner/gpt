@@ -16,8 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt
-import gpt
+import cgpt, gpt, sys
 import numpy as np
 
 class factor_unary:
@@ -39,7 +38,7 @@ class expr_unary:
 
 class expr:
     def __init__(self, val, unary = expr_unary.NONE):
-        if type(val) in [ gpt.lattice, gpt.gamma_base, gpt.tensor ]:
+        if isinstance(val, gpt.factor) or type(val) in [ gpt.tensor ]:
             self.val = [ (1.0, [ (factor_unary.NONE,val) ]) ]
         elif type(val) == expr:
             self.val = val.val
@@ -145,3 +144,103 @@ class expr:
         if self.unary & expr_unary.BIT_COLORTRACE:
             ret=ret + ")"
         return ret
+
+
+class factor:
+
+    def __rmul__(self, l):
+        return expr(l) * expr(self)
+
+    def __mul__(self, l):
+        return expr(self) * expr(l)
+
+    def __truediv__(self, l):
+        assert(gpt.util.isnum(l))
+        return expr(self) * (1.0/l)
+
+    def __add__(self, l):
+        return expr(self) + expr(l)
+
+    def __sub__(self, l):
+        return expr(self) - expr(l)
+
+    def __neg__(self):
+        return expr(self) * (-1.0)
+
+
+def get_lattice(e):
+    if type(e) == expr:
+        assert(len(e.val) > 0)
+        return get_lattice(e.val[0][1])
+    elif type(e) == list:
+        for i in e:
+            if type(i[1]) == gpt.lattice:
+                return i[1]
+    return None
+
+def get_grid(e):
+    l=get_lattice(e)
+    if l is None:
+        return None
+    return l.grid
+
+def apply_type_right_to_left(e,t):
+    if type(e) == expr:
+        return expr([ (x[0],apply_type_right_to_left(x[1],t)) for x in e.val ], e.unary)
+    elif type(e) == list:
+        n=len(e)
+        for i in reversed(range(n)):
+            if type(e[i][1]) == t:
+
+                # create operator
+                operator=e[i][1].unary(e[i][0])
+
+                # apply operator
+                e=e[0:i] + [ (factor_unary.NONE,operator(expr_eval(expr([ (1.0, e[i+1:]) ])))) ]
+
+        return e
+    assert(0)
+
+def expr_eval(first, second = None, ac = False):
+
+    # this will always evaluate to a lattice object
+    # or remain an expression if it cannot do so
+
+    if not second is None:
+        t_obj = first.v_obj
+        e = expr(second)
+    else:
+        if type(first) == gpt.lattice:
+            return first
+
+        e = expr(first)
+        lat = get_lattice(e)
+        if lat is None:
+            # cannot evaluate to a lattice object, leave expression unevaluated
+            return first
+        grid = lat.grid
+        otype = lat.otype
+        n = len(otype.v_idx)
+        t_obj = None
+
+    # apply matrix_operators
+    e = apply_type_right_to_left(e,gpt.matrix_operator)
+
+    # verbose output
+    if gpt.default.is_verbose("eval"):
+        gpt.message("GPT::verbose::eval: " + str(e))
+
+    if not t_obj is None:
+        for i,t in enumerate(t_obj):
+            assert(0 == cgpt.eval(t, e.val, e.unary, ac,i))
+        return first
+    else:
+        assert(ac == False)
+        t_obj,s_ot,s_pr=[0]*n,[0]*n,[0]*n
+        for i in otype.v_idx:
+            t_obj[i],s_ot[i],s_pr[i]=cgpt.eval(t_obj[i], e.val, e.unary, False,i)
+        if len(s_ot) == 1:
+            otype=eval("gpt.otype." + s_ot[0])
+        else:
+            otype=gpt.otype.from_v_otype(s_ot)
+        return gpt.lattice(grid,otype,t_obj)

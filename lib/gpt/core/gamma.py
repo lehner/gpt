@@ -17,16 +17,11 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
+from gpt.core.expr import factor
 
-class gamma_base:
+class gamma_base(factor):
     def __init__(self, gamma):
         self.gamma = gamma
-
-    def __mul__(self, other):
-        return gpt.expr(self).__mul__(other)
-
-    def __rmul__(self, other):
-        return gpt.expr(other).__mul__(self)
 
 gamma = {
     0 : gamma_base(0),
@@ -43,5 +38,6 @@ gamma = {
     "SigmaXT" : gamma_base(7),
     "SigmaYZ" : gamma_base(8),
     "SigmaYT" : gamma_base(9),
-    "SigmaZT" : gamma_base(10)
+    "SigmaZT" : gamma_base(10),
+    "I" : gamma_base(11) # identity matrix
 }

@@ -16,9 +16,8 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt
-import gpt
-import numpy
+import cgpt, gpt, numpy
+from gpt.core.expr import factor
 
 mem_book = {
 }
@@ -26,7 +25,8 @@ mem_book = {
 def get_mem_book():
     return mem_book
 
-class lattice:
+
+class lattice(factor):
     __array_priority__=1000000
     def __init__(self, first, second = None, third = None):
         self.metadata={}
@@ -164,25 +164,6 @@ class lattice:
                 s+="-------- %d to %d --------\n" % (self.otype.v_n0[i],self.otype.v_n1[i])
                 s+=cgpt.lattice_to_str(x)
             return s
-
-    def __rmul__(self, l):
-        return gpt.expr(l) * gpt.expr(self)
-
-    def __mul__(self, l):
-        return gpt.expr(self) * gpt.expr(l)
-
-    def __truediv__(self, l):
-        assert(gpt.util.isnum(l))
-        return gpt.expr(self) * (1.0/l)
-
-    def __add__(self, l):
-        return gpt.expr(self) + gpt.expr(l)
-
-    def __sub__(self, l):
-        return gpt.expr(self) - gpt.expr(l)
-
-    def __neg__(self):
-        return gpt.expr(self) * (-1.0)
 
     def __iadd__(self, expr):
         gpt.eval(self,expr,ac=True)

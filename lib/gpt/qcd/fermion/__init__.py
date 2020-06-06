@@ -28,6 +28,7 @@ import copy
 ###
 # instantiate fermion operators
 
+@gpt.params_convention(1)
 def wilson_clover(U, params):
     params = copy.deepcopy(params) # save current parameters
     if "kappa" in params:
@@ -35,12 +36,12 @@ def wilson_clover(U, params):
         params["mass"] = (1./params["kappa"]/2. - 4.)
     return operator("wilson_clover", U, params)
 
-
+@gpt.params_convention(1)
 def zmobius(U, params):
     params = copy.deepcopy(params) # save current parameters
     return operator("zmobius", U, params, len(params["omega"]))
 
-
+@gpt.params_convention(1)
 def mobius(U, params):
     params = copy.deepcopy(params) # save current parameters
     return operator("mobius", U, params, params["Ls"])

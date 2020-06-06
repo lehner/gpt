@@ -36,7 +36,7 @@ p={
 w_ref=g.qcd.fermion.reference.wilson(U,p)
 
 # and fast Grid version
-w=g.qcd.fermion.wilson_clover(U,p)
+w=g.qcd.fermion.wilson_clover(U,p,kappa = 0.137) # demonstrate params convention
 
 # create point source
 src=g.vspincolor(grid)

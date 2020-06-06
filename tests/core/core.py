@@ -9,18 +9,46 @@ import numpy as np
 import sys
 
 # grid
-grid=g.grid([2,2,2,8], g.double)
-L=np.array(grid.fdimensions)
+grid_dp=g.grid([8,8,8,16], g.double)
+grid_sp=g.grid([8,8,8,16], g.single)
+L=np.array(grid_sp.fdimensions)
 
-# complex unit field
-l=g.complex(grid)
-l[:]=1
+# test fields
+l_dp=g.random("test").cnormal(g.vcolor(grid_dp))
+l_sp=g.convert( l_dp, g.single )
+
 
 # multiply momentum phase in l
-g.momentum_phase(l, 2.0*np.pi*np.array([ 0, 0, 0, 1 ]) / L ) # the parameter is momentum p, not
+p=2.0*np.pi*np.array([ 1, 2, 3, 4 ]) / L
+exp_ixp=g.exp_ixp(p)
 
+# Test one component
+xc=(2,3,1,5)
+x=np.array(list(xc))
+ref=np.exp(1j*np.dot(p,x)) * l_dp[xc]
+
+val=g.eval( exp_ixp*l_dp )[xc]
+eps=g.norm2(ref-val)
+g.message("Reference value test: ",eps)
+assert(eps<1e-25)
+
+# single/double
+eps=g.norm2( exp_ixp*l_sp - g.convert( exp_ixp*l_dp , g.single ) ) / g.norm2(l_sp)
+g.message("Momentum phase test single/double: ",eps)
+assert(eps < 1e-10)
+
+eps=g.norm2(g.inv(exp_ixp) * exp_ixp * l_dp - l_dp)
+g.message("Momentum inverse test: ",eps)
+assert(eps < 1e-25)
+
+eps=g.norm2(g.adj(exp_ixp)*exp_ixp*l_dp - l_dp)
+g.message("Momentum adj test: ",eps)
+assert(eps < 1e-25)
+
+
+
+# dst = Inv*Mat*src
 # show
-g.message(l)
 sys.exit(0)
 
 # grid
