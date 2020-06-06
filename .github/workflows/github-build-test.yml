@@ -248,7 +248,7 @@ jobs:
         echo ${{ hashFiles('gpt/Makefile.am') }} >> cgpt_cache_key_file
         echo ${{ hashFiles('gpt/cgpt/Makefile.am') }} >> cgpt_cache_key_file
 
-        echo "::set-output name=key::${{ hashFiles('cgpt_cache_key_file') }}-${CACHE_KEY}"
+        echo "::set-output name=key::$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
     - name: Get gpt cache key
       id: gpt-version
@@ -260,7 +260,7 @@ jobs:
         echo ${{ hashFiles('gpt/configure.ac') }} >> gpt_cache_key_file
         echo ${{ hashFiles('gpt/Makefile.am') }} >> gpt_cache_key_file
 
-        echo "::set-output name=key::${{ hashFiles('gpt_cache_key_file') }}-${CACHE_KEY}"
+        echo "::set-output name=key::$(sha256sum gpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
     - name: Get python-gpt version
       id: python-gpt-version
