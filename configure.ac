@@ -127,7 +127,9 @@ AS_IF([test x"${ac_fake_grid}" = x"yes"],
               AC_SUBST([GRID_CXX],[`${GRID_CONFIG} --cxx`])
               AC_SUBST([GRID_CXXLD],[`${GRID_CONFIG} --cxxld`])
               AC_SUBST([GRID_LIBS],  [`${GRID_CONFIG} --libs`])
-              AC_SUBST([GRID_PREFIX],[`${GRID_CONFIG} --prefix`])
+              AS_IF([test x"$GRID_PREFIX" = x || test x"$GRID_PREFIX" = x"yes"],
+                    [AC_SUBST([GRID_PREFIX],[`${GRID_CONFIG} --prefix`])],
+                    [])
              ])
        ])
 
