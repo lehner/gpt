@@ -86,6 +86,16 @@ class chebyshev:
             self.coeffs = coeffs_order(self.order)
 
     def eval(self, x):
+        """Summary of eval
+
+        Some additonal explanation of the eval function
+
+        Args:
+            x (float): Input x
+
+        Returns:
+            Some return value which was a list
+        """
         y=( x - 0.5 * (self.hi + self.lo) ) / ( 0.5 * (self.hi - self.lo) )
         T0=1
         T1=y
