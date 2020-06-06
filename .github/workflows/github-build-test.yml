@@ -457,7 +457,7 @@ jobs:
 
     - name: Setup python dependencies
       run: |
-        pip install numpy sphinx
+        pip install numpy sphinx ipython sphinxcontrib-napoleon
 
     - name: Download prebuild python-gpt
       uses: actions/download-artifact@v2
