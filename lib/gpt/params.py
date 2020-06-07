@@ -20,15 +20,18 @@ import os
 import gpt
 
 class params_convention:
-   def __init__(self, nargs):
-       self.nargs = nargs
-   def __call__(self,f):
-       def wrap(*args,**kwargs):
-           assert(len(args) >= self.nargs)
-           positional=args[:self.nargs]
-           params={**{k: v for d in args[self.nargs:] for k, v in d.items()}, **kwargs}
-           return f(*positional,params)
-       return wrap
+    def __init__(self, nargs):
+        self.nargs = nargs
+
+    def __call__(self, f):
+        def wrap(*args, **kwargs):
+            assert len(args) >= self.nargs
+            positional = args[: self.nargs]
+            params = {**{k: v for d in args[self.nargs :] for k, v in d.items()}, **kwargs}
+            return f(*positional, params)
+
+        return wrap
+
 
 def params(fn, verbose = False):
     fn=os.path.expanduser(fn)
