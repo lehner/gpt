@@ -6,11 +6,15 @@
 #
 import gpt as g
 import numpy as np
-import sys
+import os
 import time
 
-# load configuration
-U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
+# load/generate configuration
+conf_path = "/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100"
+if os.path.isfile(conf_path):
+    U = g.load(conf_path)
+else:
+    U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), g.random("test"))
 
 # do everything in single-precision
 U = g.convert(U, g.single)

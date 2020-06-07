@@ -20,7 +20,8 @@ for f in \
     core/split.py \
     random/random-simple.py \
     algorithms/implicitly-restarted-lanczos.py \
-    algorithms/solvers.py
+    algorithms/solvers.py \
+    qcd/fermion-operators.py
 do
 
 printf "%-60s" " [TEST] $f"
