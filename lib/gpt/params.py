@@ -16,14 +16,27 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import os
+import os, inspect
 import gpt
 
 class params_convention:
-    def __init__(self, nargs):
+    def __init__(self, nargs=None):
         self.nargs = nargs
 
     def __call__(self, f):
+        if self.nargs is None:
+            fparams = inspect.signature(f).parameters
+
+            # Get last defined parameter (which should be the params dict)
+            last_fparam = next(reversed(list(fparams.values())))
+
+            # If an annotation is of the last parameter is given, it should be a dict
+            assert (
+                last_fparam.annotation == inspect._empty or last_fparam.annotation == dict
+            )
+
+            self.nargs = len(fparams) - 1
+
         def wrap(*args, **kwargs):
             assert len(args) >= self.nargs
             positional = args[: self.nargs]
