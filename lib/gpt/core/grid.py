@@ -63,16 +63,20 @@ def grid_from_description(description):
 def grid_get_mpi(fdimensions,cb):
     nd=len(fdimensions)
     tag="--mpi"
+
+    # first try to find mpi layout for dimension nd
     mpi=gpt.default.get_ivec(tag,None,nd)
-    if mpi is None:
-        # use dimension-independent mpi selection
+    if mpi is None and nd > 4:
+
+        # if not found but dimension is larger than four, we try to extend the four-dimensional grid
         mpi=gpt.default.get_ivec(tag,None,4)
-        if mpi is None:
-            return [ 1 ] * nd
-        if nd > 4:
+        if not mpi is None:
             mpi = [ 1 ] * (nd - 4) + mpi
-        elif nd < 4:
-            raise Exception("Need to define --mpi layout for dimension %d in %s" % (nd,sys.argv))
+
+    if mpi is None:
+        # try trivial layout
+        mpi=[ 1 ] * nd
+
     assert(nd == len(mpi))
     return mpi
 

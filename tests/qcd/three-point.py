@@ -37,14 +37,18 @@ cg=g.algorithms.iterative.cg({
     "eps" : 1e-6,
     "maxiter" : 1000
 })
-slv=s.propagator(s.eo_ne(eo, cg))
+propagator=s.propagator(s.eo_ne(eo, cg))
 
 # propagator
 dst=g.mspincolor(grid)
-slv(src,dst)
+propagator(src,dst)
+
+# TODO: test interface dst=propagator*src
+# Vote on June 5: go with matrix(dst,src) more natural
+# use this also for exp_ixp, fft, propagator, ...
 
 # operators
-G_src=g.gamma[5]
+G_src=g.gamma[5]*P
 G_snk=g.gamma[5]
 G_op=g.gamma["T"]
 
@@ -60,7 +64,7 @@ src_seq[:,:,:,t_op]=dst[:,:,:,t_op]
 # create seq prop with gamma_T operator
 dst_seq=g.lattice(src_seq)
 src_seq @= G_op * src_seq
-slv(src_seq,dst_seq)
+propagator(src_seq,dst_seq)
 
 # 3pt
 correlator_3pt=g.slice(g.trace(dst_seq*G_src*g.gamma[5]*g.adj(dst_seq)*g.gamma[5]*G_snk),3)

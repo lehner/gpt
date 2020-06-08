@@ -16,21 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core import *
-from gpt.params import params, params_convention
-import gpt.default
-import gpt.create
-import gpt.algorithms
-import gpt.qcd
-import socket
-import cgpt, sys
-
-# initialize cgpt when gpt is loaded
-cgpt.init(sys.argv)
-
-# save my hostname
-hostname=socket.gethostname()
-
-# synonyms
-eval=expr_eval
-
+from gpt.core.operator.matrix_operator import matrix_operator
+from gpt.core.operator.unary import adj, inv, transpose, conj, trace, sum, apply_expr_unary

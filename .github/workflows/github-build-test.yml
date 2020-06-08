@@ -238,13 +238,29 @@ jobs:
 
     - name: Get cgpt cache key
       id: cgpt-version
+      # Currently it is not possible to use multiple patterns with hashFiles, therefore we use our own hashing, see:
+      # https://github.community/t/hashfiles-with-multiple-patterns/17168
       run: |
-        echo "::set-output name=key::${{ hashFiles('gpt/lib/cgpt/lib/**') }}-${CACHE_KEY}"
+        # TODO: if the make and make.summit files are removed from ./gpt/lib/cgpt we can use the complete folder for hashing
+        echo ${{ hashFiles('gpt/lib/cgpt/lib/**') }} >> cgpt_cache_key_file
+        echo ${{ hashFiles('gpt/bootstrap.sh') }} >> cgpt_cache_key_file
+        echo ${{ hashFiles('gpt/configure.ac') }} >> cgpt_cache_key_file
+        echo ${{ hashFiles('gpt/Makefile.am') }} >> cgpt_cache_key_file
+        echo ${{ hashFiles('gpt/cgpt/Makefile.am') }} >> cgpt_cache_key_file
+
+        echo "::set-output name=key::$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
     - name: Get gpt cache key
       id: gpt-version
+      # Currently it is not possible to use multiple patterns with hashFiles, therefore we use our own hashing, see:
+      # https://github.community/t/hashfiles-with-multiple-patterns/17168
       run: |
-        echo "::set-output name=key::${{ hashFiles('gpt/lib/gpt/**') }}-${CACHE_KEY}"
+        echo ${{ hashFiles('gpt/lib/gpt/**') }} >> gpt_cache_key_file
+        echo ${{ hashFiles('gpt/bootstrap.sh') }} >> gpt_cache_key_file
+        echo ${{ hashFiles('gpt/configure.ac') }} >> gpt_cache_key_file
+        echo ${{ hashFiles('gpt/Makefile.am') }} >> gpt_cache_key_file
+
+        echo "::set-output name=key::$(sha256sum gpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
     - name: Get python-gpt version
       id: python-gpt-version

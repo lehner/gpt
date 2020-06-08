@@ -52,24 +52,28 @@ def copy(first, second = None):
         assert(0)
 
 def convert(first, second):
-    if type(first) == gpt.lattice and type(second) == gpt.lattice:
+    if second == gpt.single or second == gpt.double:
+
+        # if first is a list, distribute
+        if type(first) == list:
+            return [ convert(x,second) for x in first ]
+
+        # if first is no list, evaluate
+        src=gpt.eval(first)
+        dst_grid=src.grid.converted(second)
+        return convert(gpt.lattice(dst_grid, src.otype),src)
+
+    elif type(first) == gpt.lattice:
+
+        # second may be expression
+        second=gpt.eval(second)
+
+        # now second is lattice
         assert(len(first.otype.v_idx) == len(second.otype.v_idx))
         for i in first.otype.v_idx:
             cgpt.convert(first.v_obj[i],second.v_obj[i])
         return first
-    elif second == gpt.single or second == gpt.double:
-        if type(first) == list:
-            src_grid=first[0].grid
-        else:
-            src_grid=first.grid
-        dst_prec=second
-        dst_grid=src_grid.converted(dst_prec)
-        if type(first) == list:
-            dst = [ convert(gpt.lattice(dst_grid, src.otype),src) for src in first ]
-        else:
-            src = first
-            dst = convert(gpt.lattice(dst_grid, src.otype),src)
-        return dst
+
     else:
         assert(0)
 
@@ -91,6 +95,7 @@ def rankInnerProduct(a,b):
 def norm2(l):
     if type(l) == gpt.tensor:
         return l.norm2()
+    l=gpt.eval(l) # otherwise it gets evaluated twice below
     return innerProduct(l,l).real
 
 def innerProductNorm2(a,b):
