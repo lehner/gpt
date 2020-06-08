@@ -29,7 +29,7 @@ echo "Generate list of py files..."
 find lib/gpt -type f -name '*.py' | \
     sed                   \
     -e '1i                \
-    CGPT_PYFILES =       \\
+    GPT_PYFILES =        \\
     '                     \
     -e 's,lib/gpt/,,'     \
     -e 's,$, \\,'         \
