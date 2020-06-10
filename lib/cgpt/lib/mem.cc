@@ -20,7 +20,7 @@
 
 //#define MEM_DEBUG 1
 
-void* operator new(size_t size) noexcept {
+void* operator new(size_t size) {
   // makes sure SIMD types are properly aligned
   // negligible overhead for other data
   void* r = aligned_alloc(sizeof(vInteger),size);
@@ -32,7 +32,7 @@ void* operator new(size_t size) noexcept {
   return r;
 }
 
-void operator delete(void* p) noexcept {
+void operator delete(void* p) {
 #ifdef MEM_DEBUG  
   printf("Delete %p\n",p);
 #endif
