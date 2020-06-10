@@ -1,6 +1,8 @@
-- implement calling convention for matrices mat(dst,src) voted June 5
-- do the above through new matrix_operator class, also can be used to combine
-  matrices with Dag Inv versions so that we can define adj(mat), inv(mat) !!  Neat!
+- peek/poke spin/color
+- spin/color trace
+- vspin
+- vspin4gauge3, vspin1gauge2
+- test applications on summit with new version + new Grid
 - A2A, HVP
 - Complete sparse/split grid implementation
 - sources

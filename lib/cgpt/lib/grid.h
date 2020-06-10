@@ -42,6 +42,7 @@ static std::string cgpt_grid_tag(const Coordinate& fdimensions,
     ASSERT(parent_tag.size() > 0);
     tag = tag + ":" + parent_tag;
   }
+  //std::cout << GridLogMessage << "Tag:" << tag << std::endl;
   return tag;
 
 }
@@ -60,6 +61,7 @@ static GridBase* cgpt_create_grid(const Coordinate& fdimensions,
   auto rg = cgpt_grid_cache.find(tag);
   if (rg != cgpt_grid_cache.end()) {
     rg->second.ref++;
+    //std::cout << GridLogMessage << "Reuse" << rg->second.grid << std::endl;
     return rg->second.grid;
   }
 
@@ -99,18 +101,21 @@ static GridBase* cgpt_create_grid(const Coordinate& fdimensions,
   c.srank = srank;
   c.sranks = sranks;
 
+  //std::cout << GridLogMessage << "New Grid" << grid << std::endl;
+
   cgpt_grid_cache_tag[grid] = tag;
 
   return grid;
 }
 
 static void cgpt_delete_grid(GridBase* grid) {
-  auto & tag = cgpt_grid_cache_tag[grid];
-  auto & c = cgpt_grid_cache[tag];
-  c.ref--;
-  if (c.ref == 0) {
+  auto tag = cgpt_grid_cache_tag.find(grid);
+  auto c = cgpt_grid_cache.find(tag->second);
+  c->second.ref--;
+  if (c->second.ref == 0) {
+    //std::cout << GridLogMessage << "Delete" << grid << std::endl;
     delete grid;
-    cgpt_grid_cache_tag.erase(grid);
-    cgpt_grid_cache.erase(tag);
+    cgpt_grid_cache_tag.erase(tag);
+    cgpt_grid_cache.erase(c);
   }
 }

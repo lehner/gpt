@@ -60,6 +60,10 @@ eps=g.norm2(g.adj(exp_ixp)*exp_ixp*l_dp - l_dp) / g.norm2(l_dp)
 g.message("Momentum adj test: ",eps)
 assert(eps < 1e-20)
 
+eps=g.norm2(g.adj(exp_ixp*exp_ixp)*exp_ixp*exp_ixp*l_dp - l_dp) / g.norm2(l_dp)
+g.message("Momentum adj test (2): ",eps)
+assert(eps < 1e-20)
+
 
 ################################################################################
 # Test vcomplex
