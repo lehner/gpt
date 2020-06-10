@@ -114,6 +114,14 @@ def axpy_norm2(d, a, x, y):
     assert(len(d.otype.v_idx) == len(x.otype.v_idx))
     return sum([ cgpt.lattice_axpy_norm2(d.v_obj[i],a,x.v_obj[i],y.v_obj[i]) for i in x.otype.v_idx ])
 
+def axpy(d, a, x, y):
+    x=gpt.eval(x)
+    y=gpt.eval(y)
+    assert(len(y.otype.v_idx) == len(x.otype.v_idx))
+    assert(len(d.otype.v_idx) == len(x.otype.v_idx))
+    for i in x.otype.v_idx:
+        cgpt.lattice_axpy(d.v_obj[i],a,x.v_obj[i],y.v_obj[i])
+
 def slice(x,dim):
     x=gpt.eval(x)
     r=sum([ numpy.array(cgpt.lattice_slice(o,dim)) for o in x.v_obj ])

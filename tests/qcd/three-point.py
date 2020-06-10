@@ -3,6 +3,7 @@
 # Authors: Christoph Lehner 2020
 #
 import gpt as g
+import numpy as np
 
 # load configuration
 U = g.load("/hpcgpfs01/work/clehner/configs/openQCD/A250t000n54")
@@ -12,6 +13,7 @@ U = g.convert(U, g.single)
 
 # use the gauge configuration grid
 grid=U[0].grid
+L = np.array(grid.fdimensions)
 
 # quark
 w=g.qcd.fermion.wilson_clover(U,{
@@ -37,23 +39,23 @@ cg=g.algorithms.iterative.cg({
     "eps" : 1e-6,
     "maxiter" : 1000
 })
-propagator=s.propagator(s.eo_ne(eo, cg))
+propagator=s.propagator(s.inv_eo_ne(eo, cg))
 
 # propagator
 dst=g.mspincolor(grid)
-propagator(src,dst)
+dst @= propagator * src
 
-# TODO: test interface dst=propagator*src
-# Vote on June 5: go with matrix(dst,src) more natural
-# use this also for exp_ixp, fft, propagator, ...
+# momentum
+p=2.0*np.pi*np.array([ 1, 0, 0, 0 ]) / L
+P=g.exp_ixp(p)
 
 # operators
 G_src=g.gamma[5]*P
-G_snk=g.gamma[5]
+G_snk=g.gamma[5]*g.adj(P)
 G_op=g.gamma["T"]
 
 # 2pt
-correlator_2pt=g.slice(g.trace(dst*G_src*g.gamma[5]*g.adj(dst)*g.gamma[5]*G_snk),3)
+correlator_2pt=g.slice(g.trace(G_src*g.gamma[5]*g.adj(dst)*g.gamma[5]*G_snk*dst),3)
 
 # sequential solve through t=8
 t_op=8
@@ -64,10 +66,10 @@ src_seq[:,:,:,t_op]=dst[:,:,:,t_op]
 # create seq prop with gamma_T operator
 dst_seq=g.lattice(src_seq)
 src_seq @= G_op * src_seq
-propagator(src_seq,dst_seq)
+dst_seq @= propagator * src_seq
 
 # 3pt
-correlator_3pt=g.slice(g.trace(dst_seq*G_src*g.gamma[5]*g.adj(dst_seq)*g.gamma[5]*G_snk),3)
+correlator_3pt=g.slice(g.trace(G_src*g.gamma[5]*g.adj(dst_seq)*g.gamma[5]*G_snk*dst_seq),3)
 
 # output
 for t in range(len(correlator_2pt)):

@@ -7,10 +7,9 @@
 import gpt as g
 import numpy as np
 import sys
-import time
 
 # load configuration
-U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
+U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), g.random("test"))
 
 # do everything in single-precision
 U = g.convert(U, g.single)
@@ -36,7 +35,7 @@ p={
 w_ref=g.qcd.fermion.reference.wilson(U,p)
 
 # and fast Grid version
-w=g.qcd.fermion.wilson_clover(U,p,kappa = 0.137) # demonstrate params convention
+w=g.qcd.fermion.wilson_clover(U,p,kappa = 0.137)
 
 # create point source
 src=g.vspincolor(grid)
@@ -47,26 +46,36 @@ src[1,0,0,0]=g.vspincolor([[1,0,0],[1,0,0],[0,0,0],[0,0,0]])
 dst_ref,dst=g.lattice(src),g.lattice(src)
 
 # correctness
-w_ref.M(src,dst_ref)
-w.M(src,dst)
+dst_ref @= w_ref.M * src
+dst @= w.M * src
 
-g.message(g.norm2(dst-dst_ref)," / ",g.norm2(dst))
+eps=g.norm2(dst-dst_ref)/g.norm2(dst)
+g.message("Test wilson versus reference:", eps)
+assert(eps<1e-13)
 
 # now timing
-t0 = time.time()
+t0 = g.time()
 for i in range(100):
-    w_ref.M(src,dst_ref)
-t1 = time.time()
+    w_ref.M(dst_ref,src)
+t1 = g.time()
 for i in range(100):
-    w.M(src,dst)
-t2 = time.time()
+    w.M(dst,src)
+t2 = g.time()
+for i in range(100):
+    dst = w.M(src)
+t3 = g.time()
+for i in range(100):
+    dst @= w.M * src
+t4 = g.time()
 
 g.message("Reference time/s: ", t1-t0)
-g.message("Grid time/s: ", t2-t1)
+g.message("Grid time/s (reuse lattices): ", t2-t1)
+g.message("Grid time/s (with temporaries): ", t3-t2)
+g.message("Grid time/s (with expressions): ", t4-t3)
 
 # create point source
 src=g.mspincolor(grid)
-g.create.point(src, [0,0,0,0])
+g.create.point(src, [1,0,0,0]) # pick point 1 so that "S" in preconditioner contributes to test
 
 # build solver using g5m and cg
 s=g.qcd.fermion.solver
@@ -74,33 +83,67 @@ cg=g.algorithms.iterative.cg({
     "eps" : 1e-6,
     "maxiter" : 1000
 })
-#slv=s.propagator(s.g5m_ne(w, cg))
 
-slv_eo1=s.propagator(s.eo_ne(g.qcd.fermion.preconditioner.eo1(w), cg))
-slv_eo2=s.propagator(s.eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
+slv=s.propagator(s.inv_g5m_ne(w, cg))
+slv_eo1=s.propagator(s.inv_eo_ne(g.qcd.fermion.preconditioner.eo1(w), cg))
+slv_eo2=s.propagator(s.inv_eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
 
 # propagator
 dst_eo1=g.mspincolor(grid)
 dst_eo2=g.mspincolor(grid)
 
-slv_eo1(src,dst_eo1)
+dst_eo1 @= slv_eo1 * src
 iter_eo1=len(cg.history)
 
-slv_eo2(src,dst_eo2)
+dst_eo2 @= slv_eo2 * src
 iter_eo2=len(cg.history)
 
 eps2=g.norm2(dst_eo1 - dst_eo2) / g.norm2(dst_eo1)
+g.message("Result of test EO1 versus EO2 preconditioning: eps2=", eps2, " iter1 = ", iter_eo1," iter2 = ", iter_eo2)
 assert(eps2 < 1e-12)
-g.message("Result of test EO1 versus EO2 preconditioning: eps2=",eps2, " iter1 = ",iter_eo1," iter2 = ",iter_eo2)
+
+# true residuum
+eps2=g.norm2(w.M * dst_eo1 - src) / g.norm2(src)
+g.message("Result of M M^-1 = 1 test: eps2=",eps2)
+assert(eps2 < 1e-10)
+
+# and a reference
+if True:
+    dst=g.mspincolor(grid)
+    dst @= slv * src
+    eps2=g.norm2(dst_eo1 - dst) / g.norm2(dst_eo1)
+    g.message("Result of test EO1 versus G5M: eps2=",eps2)
+    assert(eps2 < 1e-10)
+
 dst=dst_eo2
 
 # two-point
 correlator=g.slice(g.trace(dst*g.adj(dst)),3)
 
+# test value of correlator
+correlator_ref=[ 
+    1.0546983480453491,
+    0.0998765230178833,
+    0.025004267692565918,
+    0.011589723639190197,
+    0.00749758817255497,
+    0.005506048444658518,
+    0.004403159022331238,
+    0.0037863601464778185,
+    0.0035988222807645798,
+    0.0037808315828442574,
+    0.004377239849418402,
+    0.005479663610458374,
+    0.007462657522410154,
+    0.011665372177958488,
+    0.025306591764092445,
+    0.09926138073205948
+]
+
 # output
 for t,c in enumerate(correlator):
-    g.message(t,c.real)
+    g.message(t,c.real,correlator_ref[t])
 
-#correlator=g.slice(dst*g.adj(dst),3)
-#g.message(correlator[0])
-
+eps=np.linalg.norm(np.array(correlator) - np.array(correlator_ref))
+g.message("Expected correlator eps: ", eps)
+assert(eps<1e-5)

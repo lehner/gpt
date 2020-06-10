@@ -124,36 +124,29 @@ class chebyshev:
             x-=eps / self.evalD(x)
         return float("nan")
 
-    def evalOp(self, mat, src, dst):
-        dst=make_list(dst)
-        xscale=2.0/(self.hi - self.lo)
-        mscale=-(self.hi + self.lo) / (self.hi - self.lo)
-        T0,T1,T2,y=g.copy(src),g.lattice(src),g.lattice(src),g.lattice(src)
-        Tnm,Tn,Tnp=T0,T1,T2
-        mat(T0,y)
-        T1 @= y*xscale + src*mscale
-        for i in range(self.n):
-            dst[i] @= (0.5*self.coeffs[i][0])*T0 + self.coeffs[i][1]*T1
-        for n in range(2,self.morder):
-            mat(Tn,y)
-            y @= xscale*y + mscale*Tn
-            Tnp @= 2.0*y - Tnm
-            for i in range(self.n):
-                if len(self.coeffs[i]) > n:
-                    dst[i] += self.coeffs[i][n]*Tnp
-            Tnm,Tn,Tnp=Tn,Tnp,Tnm
+    def __call__(self, mat):
 
-    def __call__(self, mat, src = None, dst = None):
         if type(mat) == float or type(mat) == complex or type(mat) == int:
-            if src is None:
-                return self.eval(mat)
-            elif src == 1:
-                return self.evalD(mat)
-            else:
-                assert(0)
+            return self.eval(mat)
         else:
-            if src is None:
-                return lambda i,o: self.__call__(mat, i, o)
-            else:
-                self.evalOp(mat, src, dst)
 
+            def evalOp(dst, src):
+                dst=make_list(dst)
+                xscale=2.0/(self.hi - self.lo)
+                mscale=-(self.hi + self.lo) / (self.hi - self.lo)
+                T0,T1,T2,y=g.copy(src),g.lattice(src),g.lattice(src),g.lattice(src)
+                Tnm,Tn,Tnp=T0,T1,T2
+                mat(y,T0)
+                T1 @= y*xscale + src*mscale
+                for i in range(self.n):
+                    dst[i] @= (0.5*self.coeffs[i][0])*T0 + self.coeffs[i][1]*T1
+                for n in range(2,self.morder):
+                    mat(y,Tn)
+                    y @= xscale*y + mscale*Tn
+                    Tnp @= 2.0*y - Tnm
+                    for i in range(self.n):
+                        if len(self.coeffs[i]) > n:
+                            dst[i] += self.coeffs[i][n]*Tnp
+                    Tnm,Tn,Tnp=Tn,Tnp,Tnm
+
+            return g.matrix_operator(evalOp)

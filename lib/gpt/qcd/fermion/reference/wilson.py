@@ -23,6 +23,7 @@ class wilson:
     # m0 + 4 = 1/2/kappa
     def __init__(self, U, params):
 
+        otype = g.ot_vspincolor
         if "mass" in params:
             assert(not "kappa" in params)
             self.kappa = 1./(params["mass"] + 4.)/2.
@@ -32,7 +33,12 @@ class wilson:
         self.U = U
         self.Udag = [ g.eval(g.adj(u)) for u in U ]
 
-    def Meooe(self, src, dst):
+        self.Meooe = g.matrix_operator(lambda dst, src: self._Meooe(dst,src), otype = otype)
+        self.Mooee = g.matrix_operator(lambda dst, src: self._Mooee(dst,src), otype = otype)
+        self.M = g.matrix_operator(lambda dst, src: self._M(dst,src), otype = otype)
+        self.G5M = g.matrix_operator(lambda dst, src: self._G5M(dst,src), otype = otype)
+
+    def _Meooe(self, dst, src):
         assert(dst != src)
         dst[:]=0
         for mu in range(4):
@@ -42,18 +48,14 @@ class wilson:
             src_minus = g.cshift(self.Udag[mu]*src,mu,-1)
             dst += -1./2.*g.gamma[mu]*src_minus - 1./2.*src_minus
 
-    def Mooee(self, src, dst):
+    def _Mooee(self, dst, src):
         assert(dst != src)
         dst @= 1./2.*1./self.kappa * src
 
-    def M(self, src, dst):
+    def _M(self, dst, src):
         assert(dst != src)
-        t=g.lattice(dst)
-        self.Meooe(src,t)
-        self.Mooee(src,dst)
-        dst += t
+        dst @= self.Meooe * src + self.Mooee * src
 
-    def G5M(self, src, dst):
+    def _G5M(self, dst, src):
         assert(dst != src)
-        self.M(src,dst)
-        dst @= g.gamma[5] * dst
+        dst @= g.gamma[5] * self.M * src

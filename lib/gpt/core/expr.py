@@ -210,6 +210,7 @@ def expr_eval(first, second = None, ac = False):
         t_obj = first.v_obj
         e = expr(second)
     else:
+        assert(ac == False)
         if type(first) == gpt.lattice:
             return first
 
@@ -225,6 +226,13 @@ def expr_eval(first, second = None, ac = False):
 
     # apply matrix_operators
     e = apply_type_right_to_left(e,gpt.matrix_operator)
+
+    # fast return if already a lattice
+    if t_obj is None:
+        if e.is_single(gpt.lattice):
+            ue,uf,v=e.get_single()
+            if uf == factor_unary.NONE and ue == expr_unary.NONE:
+                return v
 
     # verbose output
     if gpt.default.is_verbose("eval"):

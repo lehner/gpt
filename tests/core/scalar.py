@@ -22,23 +22,25 @@ def A(dst,src,mass):
     for i in range(4):
         dst += g.cshift(src, i, 1) + g.cshift(src, i, -1) - 2*src
 
+# Matrix
+M = g.matrix_operator(lambda d,s: A(d,s,m0))
+
 # find largest eigenvalue
 powit=g.algorithms.iterative.power_iteration({"eps":1e-6,"maxiter":100})
-g.message("Largest eigenvalue: ", powit(lambda i,o: A(o,i,m0),src)[0])
+g.message("Largest eigenvalue: ", powit(M,src)[0])
 
 # perform CG
 psi=g.lattice(src)
 psi[:]=0
 
 cg=g.algorithms.iterative.cg({"eps":1e-8,"maxiter":1000})
-cg(lambda i,o: A(o,i,m0),src,psi)
+
+psi @= cg(M) * src
 
 g.mem_report()
 
 # Test CG
-tmp=g.lattice(psi)
-A(tmp,psi,m0)
-eps2=g.norm2( tmp - src )
+eps2=g.norm2( M * psi - src )
 g.message("True residuum:", eps2)
 assert(eps2 < 1e-25)
 

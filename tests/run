@@ -10,6 +10,7 @@ fi
 LOG=$(mktemp)
 
 for f in \
+    core/core.py \
     core/gamma.py \
     core/block.py \
     core/scalar.py \
@@ -19,6 +20,7 @@ for f in \
     core/matrix.py \
     core/split.py \
     random/random-simple.py \
+    qcd/fermion-operators.py \
     algorithms/implicitly-restarted-lanczos.py \
     algorithms/solvers.py
 do

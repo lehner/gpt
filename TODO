@@ -1,10 +1,7 @@
-- Precision promotion in block...
-- Use cgpt_sha256 to seed prng
-- Replace sample distributions by own (random bits -> uniform/normal)
-- Replace ranlux from c++11 by own
-- momentum phase
+- implement calling convention for matrices mat(dst,src) voted June 5
+- do the above through new matrix_operator class, also can be used to combine
+  matrices with Dag Inv versions so that we can define adj(mat), inv(mat) !!  Neat!
+- A2A, HVP
+- Complete sparse/split grid implementation
 - sources
-- random gauge field (hot gauge field)
-- Random state save/load
-- sym1
 - verbose=eval -> Bytes/s & Flops/s for expression evaluation

@@ -20,6 +20,7 @@ import gpt as g
 
 class power_iteration:
 
+    @g.params_convention(1)
     def __init__(self, params):
         self.params = params
         self.tol = params["eps"]
@@ -34,7 +35,7 @@ class power_iteration:
 
         ev_prev=None
         for it in range(self.maxit):
-            mat(tmp,dst)
+            mat(dst,tmp)
             ev=g.norm2(dst)**0.5
             if verbose:
                 g.message("eval_max[ %d ] = %g" % (it,ev))

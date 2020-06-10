@@ -118,7 +118,7 @@ except g.LoadError:
         g.block.promote(v,v_fine,basis)
         for j in range(nsmoother):
             v_fine_smooth[:]=0
-            smoother(q.NDagN,v_fine,v_fine_smooth)
+            smoother(q.NDagN)(v_fine_smooth,v_fine)
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth)**0.5
         ev_smooth=g.algorithms.approx.evals(q.NDagN,[ v_fine ],check_eps2 = 1e-2)
         ev3[i] = ev_smooth[0]
@@ -138,17 +138,17 @@ def save_history(fn,history):
 
 solver=g.algorithms.approx.coarse_deflate(params["test_solver"], cevec,basis,ev3)
 v_fine[:]=0
-solver(q.NDagN,start,v_fine)
+solver(q.NDagN)(v_fine,start)
 save_history("cg_test.defl_all_ev3",solver.inverter.history)
 
 solver=g.algorithms.approx.coarse_deflate(params["test_solver"], cevec[0:len(basis)],basis,ev3[0:len(basis)])
 v_fine[:]=0
-solver(q.NDagN,start,v_fine)
+solver(q.NDagN)(v_fine,start)
 save_history("cg_test.defl_full",solver.inverter.history)
 
 solver=params["test_solver"]
 v_fine[:]=0
-solver(q.NDagN,start,v_fine)
+solver(q.NDagN)(v_fine,start)
 save_history("cg_test.undefl",solver.history)
 
 # save in rbc format

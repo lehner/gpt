@@ -28,6 +28,7 @@ import sys
 # Implicitly Restarted Lanczos
 class irl:
 
+    @g.params_convention(1)
     def __init__(self, params):
         self.params = params
         self.napply = 0
@@ -166,7 +167,7 @@ class irl:
                         g.linear_combination(B,evec[0:Nk],Qt[j,0:Nk])
                         B *= 1.0/g.norm2(B)**0.5
                         if not ckpt.load(v):
-                            mat(B,v)
+                            mat(v,B)
                             ckpt.save(v)
                         ev_test=g.innerProduct(B,v).real
                         eps2 = g.norm2(v - ev_test*B) / lambda_max**2.0
@@ -227,12 +228,12 @@ class irl:
                                            "beta[ %d ] = %s" % (k,beta)))
 
         else:
-            # memreport for summit for now
-            g.mem_report(details = False)
+            if "mem_report" in self.params:
+                g.mem_report(details = False)
 
             # compute
             t0=g.time()
-            mat(evec_k,w)
+            mat(w,evec_k)
             t1=g.time()
 
             # allow to restrict maximal number of applications within run

@@ -40,7 +40,7 @@ def transpose(l):
 def adj(l):
     if type(l) == gpt.expr:
         return gpt.expr( [ (complex(a[0]).conjugate(),[ (x[0] ^ (gpt.factor_unary.BIT_TRANS|gpt.factor_unary.BIT_CONJ),x[1]) for x in reversed(a[1]) ]) for a in l.val ] )
-    elif type(l) == gpt.tensor and l.transposable():
+    elif (type(l) == gpt.tensor and l.transposable()) or type(l) == gpt.matrix_operator:
         return l.adj()
     else:
         return adj(gpt.expr(l))

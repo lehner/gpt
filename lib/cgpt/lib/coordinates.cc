@@ -356,24 +356,3 @@ EXPORT(coordinates_momentum_phase,{
     return (PyObject*)a;
   });
 
-EXPORT(mview,{
-
-    PyObject* _a;
-    if (!PyArg_ParseTuple(args, "O", &_a)) {
-      return NULL;
-    }
-
-    if (PyArray_Check(_a)) {
-      char* data = (char*)PyArray_DATA((PyArrayObject*)_a);
-      long nbytes = PyArray_NBYTES((PyArrayObject*)_a);
-      PyObject* r = PyMemoryView_FromMemory(data,nbytes,PyBUF_WRITE);
-      Py_XINCREF(_a);
-      PyMemoryView_GET_BASE(r) = _a;
-      return r;
-    } else {
-      ERR("Unsupported type");
-    }
-
-    return NULL;
-
-  });

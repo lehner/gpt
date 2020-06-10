@@ -146,6 +146,26 @@ EXPORT(lattice_axpy_norm2,{
     return PyFloat_FromDouble(r->axpy_norm2(a,x,y));
   });
 
+EXPORT(lattice_axpy,{
+    
+    void* _r,*_x,*_y;
+    PyObject* _a;
+    if (!PyArg_ParseTuple(args, "lOll", &_r,&_a,&_x,&_y)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* x = (cgpt_Lattice_base*)_x;
+    cgpt_Lattice_base* y = (cgpt_Lattice_base*)_y;
+    cgpt_Lattice_base* r = (cgpt_Lattice_base*)_r;
+    
+    ComplexD a;
+    cgpt_convert(_a,a);
+
+    r->axpy(a,x,y);
+    
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(lattice_sum,{
     
     void* _a;
