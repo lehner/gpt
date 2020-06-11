@@ -31,7 +31,7 @@ p={
 #pf=g.params("~/gpt/tests/wilson.txt")
 #print(pf)
 
-# take slow reference implementation of wilson (kappa = 1/2/(m0 + 4) ) ; 
+# take slow reference implementation of wilson (kappa = 1/2/(m0 + 4) ) ;
 w_ref=g.qcd.fermion.reference.wilson(U,p)
 
 # and fast Grid version
@@ -99,7 +99,7 @@ dst_eo2 @= slv_eo2 * src
 iter_eo2=len(cg.history)
 
 eps2=g.norm2(dst_eo1 - dst_eo2) / g.norm2(dst_eo1)
-g.message("Result of test EO1 versus EO2 preconditioning: eps2=", eps2, " iter1 = ", iter_eo1," iter2 = ", iter_eo2)
+g.message(f"Result of test EO1 versus EO2 preconditioning: eps2={eps2} iter1={iter_eo1} iter2={iter_eo2}")
 assert(eps2 < 1e-12)
 
 # true residuum
