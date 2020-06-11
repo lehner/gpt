@@ -23,6 +23,7 @@ from time import time
 
 class bicgstab:
 
+    @g.params_convention(eps = 1e-15, maxiter = 1000000)
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]

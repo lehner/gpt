@@ -54,6 +54,7 @@ def coeffs_order(orders):
     return [ [ 0.0 ] * (order-1) + [ 1.0 ] for order in orders ]
 
 class chebyshev:
+    @g.params_convention()
     def __init__(self, params):
         self.params = params
         self.hi = params["high"]

@@ -20,7 +20,7 @@ import gpt as g
 
 class power_iteration:
 
-    @g.params_convention(1)
+    @g.params_convention()
     def __init__(self, params):
         self.params = params
         self.tol = params["eps"]

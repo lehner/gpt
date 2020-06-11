@@ -28,7 +28,7 @@ import sys
 # Implicitly Restarted Lanczos
 class irl:
 
-    @g.params_convention(1)
+    @g.params_convention(advise = None, mem_report = False)
     def __init__(self, params):
         self.params = params
         self.napply = 0
@@ -68,7 +68,7 @@ class irl:
         evec=[ g.lattice(src) for i in range(Nm) ]
 
         # advice memory storage
-        if "advise" in self.params:
+        if not self.params["advise"] is None:
             g.advise(evec,self.params["advise"])
 
         # scalars
@@ -228,7 +228,7 @@ class irl:
                                            "beta[ %d ] = %s" % (k,beta)))
 
         else:
-            if "mem_report" in self.params:
+            if self.params["mem_report"]:
                 g.mem_report(details = False)
 
             # compute

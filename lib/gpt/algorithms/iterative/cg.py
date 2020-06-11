@@ -20,7 +20,7 @@ import gpt as g
 
 class cg:
 
-    @g.params_convention(1)
+    @g.params_convention(eps = 1e-15, maxiter = 1000000)
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]

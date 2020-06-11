@@ -16,31 +16,49 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import os, inspect
-import gpt
+import os, inspect, gpt, cgpt
 
 class params_convention:
-    def __init__(self, nargs=None):
-        self.nargs = nargs
+
+    # Allows for definition of default parameters and allows for
+    # convenient calling with combination of dict (as, e.g., from
+    # gpt.params("txt")) and kwargs.  params must be last parameter
+    # and a dictionary in receiving function.
+    #
+    # Guidelines:
+    #
+    # - Avoid defining default arguments if possible, it is better
+    #   to force the user to be aware of the chosen parameters.
+    #
+    # - If you define default parameters, make them a conservative
+    #   choice, e.g., stopping conditions to machine precision.
+    #
+    # - A good candidate for default parameters is optional uncritical
+    #   behavior such as additional reporting or memory advices.
+    def __init__(self, default = {}, **kwdefault):
+        self.default = {**default, **kwdefault}
 
     def __call__(self, f):
-        if self.nargs is None:
-            fparams = inspect.signature(f).parameters
+        fparams = inspect.signature(f).parameters
 
-            # Get last defined parameter (which should be the params dict)
-            last_fparam = next(reversed(list(fparams.values())))
+        # Get last defined parameter (which should be the params dict)
+        last_fparam = next(reversed(fparams.values()))
 
-            # If an annotation is of the last parameter is given, it should be a dict
-            assert (
-                last_fparam.annotation == inspect._empty or last_fparam.annotation == dict
-            )
+        # If an annotation is of the last parameter is given, it should be a dict
+        assert (
+            last_fparam.annotation == inspect._empty or last_fparam.annotation == dict
+        )
 
-            self.nargs = len(fparams) - 1
+        # Last argument is params
+        nargs = len(fparams) - 1
 
         def wrap(*args, **kwargs):
-            assert len(args) >= self.nargs
-            positional = args[: self.nargs]
-            params = {**{k: v for d in args[self.nargs :] for k, v in d.items()}, **kwargs}
+            assert(len(args) >= nargs)
+            positional = args[: nargs]
+            params = {**{k: v for d in args[nargs :] for k, v in d.items()}, **kwargs}
+            for p,v in self.default.items():
+                if not p in params:
+                    params[p]=v
             return f(*positional, params)
 
         return wrap
