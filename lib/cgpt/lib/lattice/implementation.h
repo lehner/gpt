@@ -52,6 +52,10 @@ public:
     return ::axpy_norm(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
   }
 
+  virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
+    return ::axpy(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
+  }
+
   virtual RealD norm2() {
     return ::norm2(l);
   }

@@ -8,14 +8,10 @@ import gpt as g
 import sys
 
 # load configuration
-#U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
-U=g.qcd.gauge.random(g.grid([8,8,8,8],g.double),g.random("test"))
-
-# do everything in single-precision
-U = g.convert(U, g.single)
+U=g.qcd.gauge.random(g.grid([8,8,8,8],g.single),g.random("test"))
 
 # wilson, eo prec
-w=g.qcd.fermion.preconditioner.eo2(g.qcd.fermion.wilson_clover(U,{
+w=g.qcd.fermion.preconditioner.eo1(g.qcd.fermion.wilson_clover(U,{
     "kappa" : 0.137,
     "csw_r" : 0,
     "csw_t" : 0,
@@ -55,4 +51,26 @@ evec,ev=irl(c(w.NDagN), start) # , g.checkpointer("checkpoint")
 g.mem_report()
 
 # print eigenvalues of NDagN as well
-g.algorithms.approx.evals(w.NDagN,evec,check_eps2=1e-11)
+evals=g.algorithms.approx.evals(w.NDagN,evec,check_eps2=1e-11)
+
+# deflated solver
+cg=g.algorithms.iterative.cg({ "eps" : 1e-6, "maxiter" : 1000 })
+defl=g.algorithms.approx.deflate(cg,evec,evals)
+
+sol_cg = g.eval( cg(w.NDagN) * start )
+eps2=g.norm2( w.NDagN * sol_cg - start ) / g.norm2(start)
+niter_cg=len(cg.history)
+g.message("Test resid/iter cg: ",eps2,niter_cg)
+assert(eps2 < 1e-8)
+
+sol_defl = g.eval( defl(w.NDagN) * start )
+eps2=g.norm2( w.NDagN * sol_defl - start ) / g.norm2(start)
+niter_defl=len(cg.history)
+g.message("Test resid/iter deflated cg: ",eps2,niter_defl)
+assert(eps2 < 1e-8)
+
+assert(niter_defl < niter_cg)
+
+
+
+

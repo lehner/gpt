@@ -23,17 +23,32 @@ from gpt.core.expr import factor
 # (A^dag)^-1 = (A^-1)^dag
 class matrix_operator(factor):
 
-    def __init__(self, mat, adj_mat = None, inv_mat = None, adj_inv_mat = None):
+    def __init__(self, mat, adj_mat = None, inv_mat = None, adj_inv_mat = None,
+                 otype = None, zero_lhs = False, grid_lhs = None):
+
         self.mat = mat
         self.adj_mat = adj_mat
         self.inv_mat = inv_mat
         self.adj_inv_mat = adj_inv_mat
 
+        # matrices act on otype, this allows for automatic application of tensor versions
+        # also should handle lists of lattices
+        self.otype = otype
+
+        # do we request the lhs of lhs = A rhs to be initialized to zero
+        # if it is not given?
+        self.zero_lhs = zero_lhs
+
+        # does the lhs of lhs = A rhs live on a different grid?
+        self.grid_lhs = grid_lhs
+
     def inv(self):
-        return matrix_operator(self.inv_mat,self.adj_inv_mat,self.mat,self.adj_mat)
+        return matrix_operator(self.inv_mat, self.adj_inv_mat, self.mat, self.adj_mat,
+                               otype=self.otype, zero_lhs=self.zero_lhs, grid_lhs=self.grid_lhs)
 
     def adj(self):
-        return matrix_operator(self.adj_mat,self.mat,self.adj_inv_mat,self.inv_mat)
+        return matrix_operator(self.adj_mat, self.mat, self.adj_inv_mat, self.inv_mat,
+                               otype=self.otype, zero_lhs=self.zero_lhs, grid_lhs=self.grid_lhs)
 
     def unary(self, u):
         if u == gpt.factor_unary.BIT_TRANS|gpt.factor_unary.BIT_CONJ:
@@ -44,11 +59,24 @@ class matrix_operator(factor):
 
     def __call__(self, first, second = None):
         assert(not self.mat is None)
+
         if second is None:
+
             src=first
-            dst=gpt.lattice(src)
+            if self.grid_lhs is None:
+                dst=gpt.lattice(src)
+            else:
+                dst=gpt.lattice(self.grid_lhs, self.otype)
+
+            if self.zero_lhs:
+                dst[:]=0
         else:
             dst=first
             src=second
-        self.mat(dst,src)
+
+        if self.otype is None or self.otype.__name__ == first.otype.__name__:
+            self.mat(dst,src)
+        else:
+            self.otype.distribute(self.mat, dst, src, zero_lhs = self.zero_lhs)
+
         return dst

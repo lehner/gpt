@@ -50,47 +50,48 @@ import gpt
 class eo2:
     def __init__(self, op):
         self.op = op
+        self.otype = op.otype
         self.F_grid_eo = op.F_grid_eo
         self.F_grid = op.F_grid
-        self.tmp = gpt.vspincolor(self.F_grid_eo)
-        self.tmp2 = gpt.vspincolor(self.F_grid_eo)
+        self.tmp = gpt.lattice(self.F_grid_eo,self.otype)
+        self.tmp2 = gpt.lattice(self.F_grid_eo,self.otype)
+        self.ImportPhysicalFermionSource = self.op.ImportPhysicalFermionSource
+        self.ExportPhysicalFermionSolution = self.op.ExportPhysicalFermionSolution
 
-    def ImportPhysicalFermionSource(self, src, dst):
-        self.op.ImportPhysicalFermionSource(src,dst)
+        def _N(oe, ie):
+            self.op.Mooee.inv()(self.tmp2,ie)
+            self.op.Meooe(oe,self.tmp2)
+            self.op.Mooee.inv()(self.tmp2,oe)
+            self.op.Meooe(oe,self.tmp2)
+            oe @= ie - oe
 
-    def ExportPhysicalFermionSolution(self, src, dst):
-        self.op.ExportPhysicalFermionSolution(src,dst)
+        def _NDag(oe, ie):
+            self.op.Meooe.adj()(self.tmp2,ie)
+            self.op.Mooee.inv().adj()(oe,self.tmp2)
+            self.op.Meooe.adj()(self.tmp2,oe)
+            self.op.Mooee.inv().adj()(oe,self.tmp2)
+            oe @= ie - oe
 
-    def R(self, ie, io, oe):
-        self.op.MooeeInv(io,self.tmp)
-        self.op.Meooe(self.tmp,oe)
-        self.tmp @= ie - oe
-        self.NDag(self.tmp,oe)
+        def _NDagN(oe, ie):
+            _N(self.tmp,ie)
+            _NDag(oe,self.tmp)
 
-    def L(self, ie, oe, oo):
-        self.op.MooeeInv(ie,oe)
+        self.N = gpt.matrix_operator(mat = _N, adj_mat = _NDag, otype = op.otype)
+        self.NDagN = gpt.matrix_operator(mat = _NDagN, adj_mat = _NDagN, otype = op.otype)
+
+    def R(self, oe, ie, io):
+        self.op.Mooee.inv()(self.tmp,io)
         self.op.Meooe(oe,self.tmp)
-        self.op.MooeeInv(self.tmp,oo)
+        self.tmp @= ie - oe
+        self.N.adj()(oe,self.tmp)
+
+    def L(self, oe, oo, ie):
+        self.op.Mooee.inv()(oe,ie)
+        self.op.Meooe(self.tmp,oe)
+        self.op.Mooee.inv()(oo,self.tmp)
         oo @= - oo
 
-    def S(self, ie, io, oe, oo):
-        self.op.MooeeInv(io,oo)
+    def S(self, oe, oo, ie, io):
+        self.op.Mooee.inv()(oo,io)
         oe[:]=0
 
-    def NDagN(self, ie, oe):
-        self.N(ie,self.tmp)
-        self.NDag(self.tmp,oe)
-
-    def N(self, ie, oe):
-        self.op.MooeeInv(ie,self.tmp2)
-        self.op.Meooe(self.tmp2,oe)
-        self.op.MooeeInv(oe,self.tmp2)
-        self.op.Meooe(self.tmp2,oe)
-        oe @= ie - oe
-
-    def NDag(self, ie, oe):
-        self.op.MeooeDag(ie,self.tmp2)
-        self.op.MooeeInvDag(self.tmp2,oe)
-        self.op.MeooeDag(oe,self.tmp2)
-        self.op.MooeeInvDag(self.tmp2,oe)
-        oe @= ie - oe

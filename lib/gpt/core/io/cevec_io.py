@@ -614,9 +614,8 @@ def save(filename, objs, params):
         for j in range(neigen):
             fgrid.barrier()
             dt_distr-=gpt.time()
-            data_fp32=cgpt.mview(cevec[j][pos_coarse])
+            data_fp32=gpt.mview(cevec[j][pos_coarse])
             dt_distr+=gpt.time()
-
 
             if not f is None:
                 dt_fp16-=gpt.time()

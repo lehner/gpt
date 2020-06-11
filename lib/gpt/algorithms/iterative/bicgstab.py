@@ -28,55 +28,64 @@ class bicgstab:
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
 
-    def __call__(self, mat, src, psi):
-        verbose=g.default.is_verbose("bicgstab")
-        t0 = time()
+    def __call__(self, mat):
 
-        r, rhat, p, s = g.copy(src), g.copy(src), g.copy(src), g.copy(src)
-        mmpsi, mmp, mms = g.copy(src), g.copy(src), g.copy(src)
+        def inv(psi, src):
+            verbose=g.default.is_verbose("bicgstab")
+            t0 = time()
 
-        rho, rhoprev, alpha, omega = 1., 1., 1., 1.
+            r, rhat, p, s = g.copy(src), g.copy(src), g.copy(src), g.copy(src)
+            mmpsi, mmp, mms = g.copy(src), g.copy(src), g.copy(src)
 
-        mat(psi, mmpsi)
-        r @= src - mmpsi
+            rho, rhoprev, alpha, omega = 1., 1., 1., 1.
 
-        rhat @= r
-        p @= r
-        mmp @= r
+            mat(mmpsi, psi)
+            r @= src - mmpsi
 
-        ssq = g.norm2(src)
-        rsq = self.eps**2. * ssq
+            rhat @= r
+            p @= r
+            mmp @= r
 
-        for k in range(self.maxiter):
-            rhoprev = rho
-            rho = g.innerProduct(rhat, r).real
+            ssq = g.norm2(src)
+            rsq = self.eps**2. * ssq
 
-            beta = (rho / rhoprev) * (alpha / omega)
+            for k in range(self.maxiter):
+                rhoprev = rho
+                rho = g.innerProduct(rhat, r).real
 
-            p @= r + beta * p - beta * omega * mmp
+                beta = (rho / rhoprev) * (alpha / omega)
 
-            mat(p, mmp)
-            alpha = rho / g.innerProduct(rhat, mmp).real
+                p @= r + beta * p - beta * omega * mmp
 
-            s @= r - alpha * mmp
+                mat(mmp, p)
+                alpha = rho / g.innerProduct(rhat, mmp).real
 
-            mat(s, mms)
-            ip, mms2 = g.innerProductNorm2(mms, s)
+                s @= r - alpha * mmp
 
-            if mms2 == 0.:
-                continue
+                mat(mms, s)
+                ip, mms2 = g.innerProductNorm2(mms, s)
 
-            omega = ip.real / mms2
+                if mms2 == 0.:
+                    continue
 
-            psi += alpha * p + omega * s
+                omega = ip.real / mms2
 
-            r2 = g.axpy_norm2(r, -omega, mms, s)
+                psi += alpha * p + omega * s
 
-            if verbose:
-                g.message("res^2[ %d ] = %g" % (k, r2))
+                r2 = g.axpy_norm2(r, -omega, mms, s)
 
-            if r2 <= rsq:
                 if verbose:
-                    t1 = time()
-                    g.message("Converged in %g s" % (t1 - t0))
-                break
+                    g.message("res^2[ %d ] = %g" % (k, r2))
+
+                if r2 <= rsq:
+                    if verbose:
+                        t1 = time()
+                        g.message("Converged in %g s" % (t1 - t0))
+                    break
+        
+        otype = None
+        if type(mat) == g.matrix_operator:
+            otype = mat.otype
+
+        return g.matrix_operator(mat = inv, inv_mat = mat, otype = otype, zero_lhs = True)
+

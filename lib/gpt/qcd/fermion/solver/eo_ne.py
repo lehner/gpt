@@ -18,47 +18,49 @@
 #
 import gpt
 
-class eo_ne:
-    def __init__(self, matrix, inverter):
-        self.matrix = matrix
-        self.inverter = inverter
+def inv_eo_ne(matrix, inverter):
 
-        self.F_grid_eo=matrix.F_grid_eo
-        self.F_grid=matrix.F_grid
+    F_grid_eo=matrix.F_grid_eo
+    otype=matrix.otype
 
-        self.ie=gpt.vspincolor(self.F_grid_eo)
-        self.io=gpt.vspincolor(self.F_grid_eo)
-        self.t1=gpt.vspincolor(self.F_grid_eo)
-        self.t2=gpt.vspincolor(self.F_grid_eo)
-        self.oe=gpt.vspincolor(self.F_grid_eo)
-        self.oo=gpt.vspincolor(self.F_grid_eo)
-        self.ftmp=gpt.vspincolor(self.F_grid)
+    ie=gpt.lattice(F_grid_eo,otype)
+    io=gpt.lattice(F_grid_eo,otype)
+    t1=gpt.lattice(F_grid_eo,otype)
+    t2=gpt.lattice(F_grid_eo,otype)
+    
+    def inv(dst_sc, src_sc):
 
-    def __call__(self, src_sc, dst_sc):
+        oe=gpt.lattice(F_grid_eo,otype)
+        oo=gpt.lattice(F_grid_eo,otype)
 
-        self.matrix.ImportPhysicalFermionSource(src_sc, self.ftmp)
-
-        gpt.pick_cb(gpt.even,self.ie,self.ftmp)
-        gpt.pick_cb(gpt.odd,self.io,self.ftmp)
+        gpt.pick_cb(gpt.even,ie,src_sc)
+        gpt.pick_cb(gpt.odd,io,src_sc)
 
         # D^-1 = L NDagN^-1 R + S
 
-        self.matrix.R(self.ie, self.io, self.t1)
+        matrix.R(t1, ie, io)
 
-        self.t2[:]=0
-        self.t2.checkerboard(gpt.even)
+        t2[:]=0
+        t2.checkerboard(gpt.even)
 
-        self.inverter(lambda i,o: self.matrix.NDagN(i,o),self.t1,self.t2)
+        inverter(matrix.NDagN)(t2,t1)
 
-        self.matrix.L(self.t2, self.oe, self.oo)
+        matrix.L(oe, oo, t2)
 
-        self.matrix.S(self.ie,self.io,self.t1,self.t2)
+        matrix.S(t1,t2,ie,io)
 
-        self.oe += self.t1
-        self.oo += self.t2
+        oe += t1
+        oo += t2
 
-        gpt.set_cb(self.ftmp,self.oe)
-        gpt.set_cb(self.ftmp,self.oo)
+        gpt.set_cb(dst_sc,oe)
+        gpt.set_cb(dst_sc,oo)
 
-        self.matrix.ExportPhysicalFermionSolution(self.ftmp,dst_sc)
+    m=gpt.matrix_operator(mat = inv, inv_mat = matrix.op.M,
+                          adj_inv_mat = matrix.op.M.adj(),
+                          adj_mat = None, # implement adj_mat when needed
+                          otype = otype, zero_lhs = True)
+    
+    m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
+    m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution
 
+    return m

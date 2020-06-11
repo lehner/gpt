@@ -98,3 +98,27 @@ EXPORT(util_mem,{
 			 "accelerator_available", (unsigned long)accelerator_available,
 			 "accelerator_total", (unsigned long)accelerator_total);
   });
+
+EXPORT(mview,{
+
+    // default python memoryview(ndarray()) too slow, below faster
+    PyObject* _a;
+    if (!PyArg_ParseTuple(args, "O", &_a)) {
+      return NULL;
+    }
+
+    if (PyArray_Check(_a)) {
+      char* data = (char*)PyArray_DATA((PyArrayObject*)_a);
+      long nbytes = PyArray_NBYTES((PyArrayObject*)_a);
+      PyObject* r = PyMemoryView_FromMemory(data,nbytes,PyBUF_WRITE);
+      Py_XINCREF(_a);
+      ASSERT(!((PyMemoryViewObject*)r)->mbuf->master.obj);
+      ((PyMemoryViewObject*)r)->mbuf->master.obj = _a;
+      return r;
+    } else {
+      ERR("Unsupported type");
+    }
+
+    return NULL;
+
+  });

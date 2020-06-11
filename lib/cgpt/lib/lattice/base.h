@@ -27,6 +27,7 @@ public:
   virtual PyObject* sum() = 0;
   virtual RealD norm2() = 0;
   virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
+  virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
   virtual ComplexD innerProduct(cgpt_Lattice_base* other) = 0;
   virtual ComplexD rankInnerProduct(cgpt_Lattice_base* other) = 0;
   virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;

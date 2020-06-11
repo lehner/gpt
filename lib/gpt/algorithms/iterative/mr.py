@@ -32,35 +32,44 @@ class mr:
         self.maxiter = params["maxiter"]
         self.relax = params["relax"]
 
-    def __call__(self, mat, src, psi):
-        verbose = g.default.is_verbose("mr")
-        t0 = time()
+    def __call__(self, mat):
 
-        r, mmr = g.copy(src), g.copy(src)
+        def inv(psi, src):
+            verbose = g.default.is_verbose("mr")
+            t0 = time()
 
-        mat(psi, mmr)
-        r @= src - mmr
+            r, mmr = g.copy(src), g.copy(src)
 
-        ssq = g.norm2(src)
-        rsq = self.eps**2. * ssq
+            mat(mmr, psi)
+            r @= src - mmr
 
-        for k in range(self.maxiter):
-            mat(r, mmr)
-            ip, mmr2 = g.innerProductNorm2(mmr, r)
+            ssq = g.norm2(src)
+            rsq = self.eps**2. * ssq
 
-            if mmr2 == 0.:
-                continue
+            for k in range(self.maxiter):
+                mat(mmr, r)
+                ip, mmr2 = g.innerProductNorm2(mmr, r)
 
-            alpha = ip.real / mmr2 * self.relax
+                if mmr2 == 0.:
+                    continue
 
-            psi += alpha * r
-            r2 = g.axpy_norm2(r, -alpha, mmr, r)
+                alpha = ip.real / mmr2 * self.relax
 
-            if verbose:
-                g.message("res^2[ %d ] = %g" % (k, r2))
+                psi += alpha * r
+                r2 = g.axpy_norm2(r, -alpha, mmr, r)
 
-            if r2 <= rsq:
                 if verbose:
-                    t1 = time()
-                    g.message("Converged in %g s" % (t1 - t0))
-                break
+                    g.message("res^2[ %d ] = %g" % (k, r2))
+
+                if r2 <= rsq:
+                    if verbose:
+                        t1 = time()
+                        g.message("Converged in %g s" % (t1 - t0))
+                    break
+
+        otype = None
+        if type(mat) == g.matrix_operator:
+            otype = mat.otype
+
+        return g.matrix_operator(mat = inv, inv_mat = mat, otype = otype, zero_lhs = True)
+

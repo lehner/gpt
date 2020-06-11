@@ -15,10 +15,7 @@ import os.path
 #homedir = os.path.expanduser("~")
 #U = g.load(homedir + "/configs/openqcd/test_16x8_pbcn6")
 #U = g.load("/hpcgpfs01/work/clehner/configs/32IDfine/ckpoint_lat.200") 
-U=g.qcd.gauge.random(g.grid([8,8,8,16],g.double),g.random("test"))
-
-# do everything in single-precision
-U = g.convert(U, g.single)
+U=g.qcd.gauge.random(g.grid([8,8,8,16],g.single),g.random("test"))
 
 # use the gauge configuration grid
 grid=U[0].grid
@@ -35,19 +32,19 @@ w=g.qcd.fermion.wilson_clover(U,{
 })
 
 # create point source
-src=g.mspincolor(grid)
-g.create.point(src, [0,0,0,0])
+src=g.vspincolor(grid)
+src[0,1,0,0]=g.vspincolor([ [1]*3 ] * 4)
 
 # build solvers
 s = g.qcd.fermion.solver
 slv_cg = s.propagator(
-    s.eo_ne(g.qcd.fermion.preconditioner.eo2(w),
+    s.inv_eo_ne(g.qcd.fermion.preconditioner.eo2(w),
             g.algorithms.iterative.cg({
                 "eps": 1e-6,
                 "maxiter": 1000
             })))
 slv_mr = s.propagator(
-    s.eo_ne(
+    s.inv_eo_ne(
         g.qcd.fermion.preconditioner.eo2(w),
         g.algorithms.iterative.mr({
             "eps": 1e-6,
@@ -55,13 +52,13 @@ slv_mr = s.propagator(
             "relax": 1.0
         })))
 slv_bicgstab = s.propagator(
-    s.eo_ne(g.qcd.fermion.preconditioner.eo2(w),
+    s.inv_eo_ne(g.qcd.fermion.preconditioner.eo2(w),
             g.algorithms.iterative.bicgstab({
                 "eps": 1e-6,
                 "maxiter": 1000
             })))
 slv_fgcr = s.propagator(
-    s.eo_ne(
+    s.inv_eo_ne(
         g.qcd.fermion.preconditioner.eo2(w),
         g.algorithms.iterative.fgcr({
             "eps": 1e-6,
@@ -69,7 +66,7 @@ slv_fgcr = s.propagator(
             "restartlen": 20
         })))
 slv_fgmres = s.propagator(
-    s.eo_ne(
+    s.inv_eo_ne(
         g.qcd.fermion.preconditioner.eo2(w),
         g.algorithms.iterative.fgmres({
             "eps": 1e-6,
@@ -78,28 +75,29 @@ slv_fgmres = s.propagator(
         })))
 
 # rhs vectors
-dst_cg=g.mspincolor(grid)
-dst_mr=g.mspincolor(grid)
-dst_bicgstab=g.mspincolor(grid)
-dst_fgcr=g.mspincolor(grid)
-dst_fgmres=g.mspincolor(grid)
+dst_cg=g.vspincolor(grid)
+dst_mr=g.vspincolor(grid)
+dst_bicgstab=g.vspincolor(grid)
+dst_fgcr=g.vspincolor(grid)
+dst_fgmres=g.vspincolor(grid)
+
 
 # perform solves
-slv_cg(src, dst_cg)
+dst_cg @= slv_cg * src
 g.message("CG finished")
-slv_mr(src, dst_mr)
+dst_mr @= slv_mr * src
 eps=g.norm2(dst_cg-dst_mr) / g.norm2(dst_cg)
 g.message("MR finished: eps^2(CG) = %g" % eps)
 assert(eps < 1e-7)
-slv_bicgstab(src, dst_bicgstab)
+dst_bicgstab @= slv_bicgstab * src
 eps=g.norm2(dst_cg-dst_bicgstab) / g.norm2(dst_cg)
 g.message("BICGSTAB finished: eps^2(CG) = %g" % eps)
 assert(eps < 1e-7)
-slv_fgcr(src, dst_fgcr)
+dst_fgcr @= slv_fgcr * src
 eps=g.norm2(dst_cg-dst_fgcr) / g.norm2(dst_cg)
 g.message("FGCR finished: eps^2(CG) = %g" % eps)
 assert(eps < 1e-7)
-slv_fgmres(src, dst_fgmres)
+dst_fgmres @= slv_fgmres * src
 eps=g.norm2(dst_cg-dst_fgmres) / g.norm2(dst_cg)
 g.message("FGMRES finished: eps^2(CG) = %g" % eps)
 assert(eps < 1e-7)

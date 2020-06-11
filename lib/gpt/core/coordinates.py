@@ -62,4 +62,5 @@ def exp_ixp(p):
     return gpt.matrix_operator(mat = mat,
                                adj_mat = inv_mat,
                                inv_mat = inv_mat,
-                               adj_inv_mat = mat)
+                               adj_inv_mat = mat,
+                               otype = None) # accept all otypes

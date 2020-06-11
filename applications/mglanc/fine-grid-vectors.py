@@ -8,7 +8,7 @@ import gpt as g
 
 # parameters
 fn=g.default.get("--params","params.txt")
-params=g.params(fn,verbose = True)
+params=g.params(fn, verbose = True)
 
 # load configuration
 U = params["config"]

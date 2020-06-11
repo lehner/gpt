@@ -16,11 +16,11 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt
-import cgpt
+import gpt, cgpt
 
 class operator:
-    def __init__(self, name, U, params, Ls = None):
+    def __init__(self, name, U, params, Ls = None, otype = None):
+        self.otype = otype
         self.name = name
         self.U = U
         self.U_grid = U[0].grid
@@ -46,19 +46,40 @@ class operator:
 
         self.obj = cgpt.create_fermion_operator(name,self.U_grid.precision,self.params)
 
-        # register matrix operations
-        gpt.qcd.fermion.register(self)
+        # register matrix operators
+        class registry:
+            pass
+
+        gpt.qcd.fermion.register(registry,self)
+
+        # map Grid matrix operations to clean matrix_operator structure
+        self.M = gpt.matrix_operator(mat = registry.M, adj_mat = registry.Mdag, otype = otype)
+        self.Meooe = gpt.matrix_operator(mat = registry.Meooe, adj_mat = registry.MeooeDag, otype = otype)
+        self.Mooee = gpt.matrix_operator(mat = registry.Mooee,
+                                         adj_mat = registry.MooeeDag,
+                                         inv_mat = registry.MooeeInv,
+                                         adj_inv_mat = registry.MooeeInvDag,
+                                         otype = otype)
+        self.Mdiag = gpt.matrix_operator(registry.Mdiag, otype = otype)
+        self.Dminus = gpt.matrix_operator(mat = registry.Dminus, adj_mat = registry.DminusDag, otype = otype)
+        self.ImportPhysicalFermionSource = gpt.matrix_operator(registry.ImportPhysicalFermionSource, otype = otype, grid_lhs = self.F_grid)
+        self.ImportUnphysicalFermion = gpt.matrix_operator(registry.ImportUnphysicalFermion, otype = otype)
+        self.ExportPhysicalFermionSolution = gpt.matrix_operator(registry.ExportPhysicalFermionSolution, 
+                                                                 otype = otype, grid_lhs = self.U_grid)
+        self.ExportPhysicalFermionSource = gpt.matrix_operator(registry.ExportPhysicalFermionSource, otype = otype)
+        self.G5M = gpt.matrix_operator(lambda dst, src: self._G5M(dst,src), otype = otype)
 
     def __del__(self):
         cgpt.delete_fermion_operator(self.obj)
 
-    def unary(self, opcode, i, o):
+    def unary(self, opcode, o, i):
         assert(len(i.v_obj) == 1)
         assert(len(o.v_obj) == 1)
+        # Grid has different calling conventions which we adopt in cgpt:
         return cgpt.apply_fermion_operator(self.obj,opcode,i.v_obj[0],o.v_obj[0])
 
-    def G5M(self, i, o):
-        self.M(i,o)
-        o @= gpt.gamma[5] * o
+    def _G5M(self, dst, src):
+        self.M(dst,src)
+        dst @= gpt.gamma[5] * dst
 
     

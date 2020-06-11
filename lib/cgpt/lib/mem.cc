@@ -27,14 +27,14 @@ void* operator new(size_t size) {
   if (!r) // may happen on some implementations for size < sizeof(vInteger)
     r = malloc(size);
 #ifdef MEM_DEBUG
-  std::cout << GridLogMessage << "operator::new(" << size << ") = " << r << std::endl;
+  printf("Alloc %p\n",r);
 #endif
   return r;
 }
 
 void operator delete(void* p) {
-#ifdef MEM_DEBUG
-  std::cout << GridLogMessage << "operator::delete(" << p << ")" << std::endl;
+#ifdef MEM_DEBUG  
+  printf("Delete %p\n",p);
 #endif
   free(p);
 }
