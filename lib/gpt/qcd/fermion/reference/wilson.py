@@ -24,6 +24,7 @@ class wilson:
     def __init__(self, U, params):
 
         otype = g.ot_vspincolor
+        grid = U[0].grid
         if "mass" in params:
             assert(not "kappa" in params)
             self.kappa = 1./(params["mass"] + 4.)/2.
@@ -33,10 +34,10 @@ class wilson:
         self.U = U
         self.Udag = [ g.eval(g.adj(u)) for u in U ]
 
-        self.Meooe = g.matrix_operator(lambda dst, src: self._Meooe(dst,src), otype = otype)
-        self.Mooee = g.matrix_operator(lambda dst, src: self._Mooee(dst,src), otype = otype)
-        self.M = g.matrix_operator(lambda dst, src: self._M(dst,src), otype = otype)
-        self.G5M = g.matrix_operator(lambda dst, src: self._G5M(dst,src), otype = otype)
+        self.Meooe = g.matrix_operator(lambda dst, src: self._Meooe(dst,src), otype = otype, grid = grid)
+        self.Mooee = g.matrix_operator(lambda dst, src: self._Mooee(dst,src), otype = otype, grid = grid)
+        self.M = g.matrix_operator(lambda dst, src: self._M(dst,src), otype = otype, grid = grid)
+        self.G5M = g.matrix_operator(lambda dst, src: self._G5M(dst,src), otype = otype, grid = grid)
 
     def _Meooe(self, dst, src):
         assert(dst != src)

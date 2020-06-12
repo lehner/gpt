@@ -18,9 +18,18 @@
 #
 import gpt
 
-def propagator(inv_matrix):
+def propagator(inv_matrix, w = None):
+
+    if w is None:
+        exp = inv_matrix.ExportPhysicalFermionSolution
+        imp = inv_matrix.ImportPhysicalFermionSource
+    else:
+        exp = w.ExportPhysicalFermionSolution
+        imp = w.ImportPhysicalFermionSource
 
     def prop(dst_sc, src_sc):
-        dst_sc @= inv_matrix.ExportPhysicalFermionSolution * inv_matrix * inv_matrix.ImportPhysicalFermionSource * src_sc
+        dst_sc @= exp * inv_matrix * imp * src_sc
 
-    return gpt.matrix_operator(prop, otype = inv_matrix.otype)
+    return gpt.matrix_operator(prop, 
+                               otype = (exp.otype[0],imp.otype[1]),
+                               grid = (exp.grid[0],imp.grid[1]))

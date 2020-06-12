@@ -29,6 +29,14 @@ class cg:
         
     def __call__(self, mat):
 
+        otype = None
+        grid = None
+        if type(mat) == g.matrix_operator:
+            otype = mat.otype
+            grid = mat.grid
+            mat = mat.mat 
+            # remove wrapper for performance benefits
+
         def inv(psi, src):
             assert(src != psi)
             self.history = []
@@ -64,8 +72,6 @@ class cg:
                         g.message("Converged in %g s" % (t1-t0))
                     break
         
-        otype = None
-        if type(mat) == g.matrix_operator:
-            otype = mat.otype
-
-        return g.matrix_operator(mat = inv, inv_mat = mat, otype = otype, zero_lhs = True)
+        return g.matrix_operator(mat = inv, inv_mat = mat, 
+                                 otype = otype, zero = (True,False),
+                                 grid = grid)

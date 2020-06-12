@@ -26,19 +26,18 @@ class operator_on_fine:
         self.basis=basis
         self.verbose=gpt.default.is_verbose("block_operator")
 
-    def __call__(self, src_coarse, dst_coarse):
+    def __call__(self, dst_coarse, src_coarse):
         tpf=gpt.time()
         gpt.prefetch([src_coarse,dst_coarse,self.src_fine,self.dst_fine,self.basis],gpt.to_accelerator)
         t0=gpt.time()
-        gpt.block.promote(src_coarse,self.src_fine,self.basis)
+        gpt.block.promote(src_coarse,self.src_fine,self.basis) # TODO: src/dst ordering!!!
         t1=gpt.time()
-        self.op(self.src_fine,self.dst_fine)
+        self.op(self.dst_fine,self.src_fine)
         t2=gpt.time()
         gpt.block.project(dst_coarse,self.dst_fine,self.basis)
         t3=gpt.time()
         if self.verbose:
             gpt.message("Timing: %g s (promote), %g s (matrix), %g s (project), %g s (prefetch)" % (t1-t0,t2-t1,t3-t2,t0-tpf))
-
 
 def operator(op, cgrid, basis):
     # If possible, directly implement op

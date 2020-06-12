@@ -59,39 +59,39 @@ class eo1:
         self.ExportPhysicalFermionSolution = self.op.ExportPhysicalFermionSolution
 
         def _N(oe, ie):
-            self.op.Meooe(self.tmp2,ie)
-            self.op.Mooee.inv()(oe,self.tmp2)
-            self.op.Meooe(self.tmp2,oe)
-            self.op.Mooee.inv()(oe,self.tmp2)
+            self.op.Meooe.mat(self.tmp2,ie)
+            self.op.Mooee.inv_mat(oe,self.tmp2)
+            self.op.Meooe.mat(self.tmp2,oe)
+            self.op.Mooee.inv_mat(oe,self.tmp2)
             oe @= ie - oe
 
         def _NDag(oe, ie):
-            self.op.Mooee.inv().adj()(self.tmp2,ie)
-            self.op.Meooe.adj()(oe,self.tmp2)
-            self.op.Mooee.inv().adj()(self.tmp2,oe)
-            self.op.Meooe.adj()(oe,self.tmp2)
+            self.op.Mooee.adj_inv_mat(self.tmp2,ie)
+            self.op.Meooe.adj_mat(oe,self.tmp2)
+            self.op.Mooee.adj_inv_mat(self.tmp2,oe)
+            self.op.Meooe.adj_mat(oe,self.tmp2)
             oe @= ie - oe
 
         def _NDagN(oe, ie):
             _N(self.tmp,ie)
             _NDag(oe,self.tmp)
 
-        self.N = gpt.matrix_operator(mat = _N, adj_mat = _NDag, otype = op.otype)
-        self.NDagN = gpt.matrix_operator(mat = _NDagN, adj_mat = _NDagN, otype = op.otype)
+        self.N = gpt.matrix_operator(mat = _N, adj_mat = _NDag, otype = op.otype, grid = self.F_grid_eo)
+        self.NDagN = gpt.matrix_operator(mat = _NDagN, adj_mat = _NDagN, otype = op.otype, grid = self.F_grid_eo)
 
     def R(self, oe, ie, io):
-        self.op.Mooee.inv()(self.tmp,io)
-        self.op.Meooe(oe,self.tmp)
+        self.op.Mooee.inv_mat(self.tmp,io)
+        self.op.Meooe.mat(oe,self.tmp)
         oe @= ie - oe
-        self.op.Mooee.inv()(self.tmp,oe)
-        self.N.adj()(oe,self.tmp)
+        self.op.Mooee.inv_mat(self.tmp,oe)
+        self.N.adj_mat(oe,self.tmp)
 
     def L(self, oe, oo, ie):
         oe @= ie
-        self.op.Meooe(self.tmp,ie)
-        self.op.Mooee.inv()(oo,self.tmp)
+        self.op.Meooe.mat(self.tmp,ie)
+        self.op.Mooee.inv_mat(oo,self.tmp)
         oo @= - oo
 
     def S(self, oe, oo, ie, io):
-        self.op.Mooee.inv()(oo,io)
+        self.op.Mooee.inv_mat(oo,io)
         oe[:]=0

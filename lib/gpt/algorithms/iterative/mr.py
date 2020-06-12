@@ -69,8 +69,11 @@ class mr:
                     break
 
         otype = None
+        grid = None
         if type(mat) == g.matrix_operator:
             otype = mat.otype
+            grid = mat.grid
 
-        return g.matrix_operator(mat = inv, inv_mat = mat, otype = otype, zero_lhs = True)
-
+        return g.matrix_operator(mat = inv, inv_mat = mat, 
+                                 otype = otype, zero = (True,False),
+                                 grid = grid)

@@ -131,6 +131,13 @@ class chebyshev:
             return self.eval(mat)
         else:
 
+            otype = None
+            grid = None
+            if type(mat) == g.matrix_operator:
+                otype = mat.otype
+                grid = mat.grid
+                mat=mat.mat # unwrap for performance benefit
+
             def evalOp(dst, src):
                 dst=make_list(dst)
                 xscale=2.0/(self.hi - self.lo)
@@ -150,4 +157,4 @@ class chebyshev:
                             dst[i] += self.coeffs[i][n]*Tnp
                     Tnm,Tn,Tnp=Tn,Tnp,Tnm
 
-            return g.matrix_operator(evalOp)
+            return g.matrix_operator(evalOp, grid = grid, otype = otype)

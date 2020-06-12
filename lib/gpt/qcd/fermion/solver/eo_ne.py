@@ -55,10 +55,11 @@ def inv_eo_ne(matrix, inverter):
         gpt.set_cb(dst_sc,oe)
         gpt.set_cb(dst_sc,oo)
 
+
     m=gpt.matrix_operator(mat = inv, inv_mat = matrix.op.M,
                           adj_inv_mat = matrix.op.M.adj(),
                           adj_mat = None, # implement adj_mat when needed
-                          otype = otype, zero_lhs = True)
+                          otype = otype, zero = (True,False), grid = matrix.F_grid)
     
     m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
     m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution

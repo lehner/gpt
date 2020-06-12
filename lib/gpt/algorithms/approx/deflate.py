@@ -42,7 +42,9 @@ class deflate:
             return self.inverter(matrix)(dst, src)
 
         otype = None
+        grid = None
         if type(matrix) == g.matrix_operator:
             otype = matrix.otype
+            grid = matrix.grid
 
         return g.matrix_operator(mat = inv, inv_mat = matrix, otype = otype)

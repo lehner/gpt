@@ -27,7 +27,9 @@ def inv_g5m_ne(matrix, inverter):
         #(G5 M G5 M)^-1 G5 M G5 = M^-1 G5 M^-1 G5^2 M G5 = M^-1
         dst_sc @= i * matrix.G5M * gpt.gamma[5] * src_sc
 
-    m = gpt.matrix_operator(mat = inv, inv_mat = matrix, otype=matrix.otype)
+    m = gpt.matrix_operator(mat = inv, inv_mat = matrix, otype=matrix.otype,
+                            grid = F_grid)
+
     m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
     m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution
         
