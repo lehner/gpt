@@ -18,7 +18,7 @@
 #
 import sys, gpt
 
-def get(tag,default):
+def get_all(tag,default):
     res=[]
     for i,x in enumerate(sys.argv):
         if x == tag:
@@ -29,7 +29,7 @@ def get(tag,default):
     return res
 
 def get_single(tag,default):
-    r=get(tag,default)
+    r=get_all(tag,default)
     assert(len(r) == 1)
     return r[0]
 
@@ -46,7 +46,7 @@ def get_int(tag, default):
     return default
 
 def get_ivec(tag, default, ndim):
-    res=get(tag,None)
+    res=get_all(tag,None)
     if res[0] is None:
         return default
     for x in res:
@@ -54,6 +54,9 @@ def get_ivec(tag, default, ndim):
         if len(v) == ndim:
             return v
     return default
+
+# Alias
+get=get_single
 
 # IO parameters
 max_io_nodes=get_int("--max_io_nodes",256)
