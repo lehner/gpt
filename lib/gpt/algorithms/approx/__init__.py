@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.algorithms.approx.chebyshev import chebyshev
+from gpt.algorithms.approx.modes import modes
 from gpt.algorithms.approx.deflate import deflate
 from gpt.algorithms.approx.coarse_deflate import coarse_deflate
 from gpt.algorithms.approx.evals import evals

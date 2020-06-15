@@ -65,3 +65,54 @@ def inv_eo_ne(matrix, inverter):
     m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution
 
     return m
+
+
+
+class a2a_eo_ne:
+
+    def __init__(self, matrix):
+        self.matrix = matrix
+        self.F_grid_eo=matrix.F_grid_eo
+        self.F_grid=matrix.F_grid
+        self.U_grid=matrix.U_grid
+        self.otype=matrix.otype
+
+        self.oe=gpt.lattice(self.F_grid_eo,self.otype)
+        self.oo=gpt.lattice(self.F_grid_eo,self.otype)
+        self.F_tmp=gpt.lattice(self.F_grid,self.otype)
+        self.F_tmp_2=gpt.lattice(self.F_grid,self.otype)
+
+        def _v_unphysical(dst, evec):
+            self.matrix.L(self.oe, self.oo, evec)
+            gpt.set_cb(dst,self.oe)
+            gpt.set_cb(dst,self.oo)
+
+        def _w_unphysical(dst, evec):
+            self.matrix.RDag(self.oe, self.oo, evec)
+            gpt.set_cb(dst,self.oe)
+            gpt.set_cb(dst,self.oo)
+            
+        def _v(dst, evec):
+            _v_unphysical(self.F_tmp,evec)
+            self.matrix.ExportPhysicalFermionSolution(dst,self.F_tmp)
+
+        def _w(dst, evec):
+            _w_unphysical(self.F_tmp,evec)
+            self.matrix.Dminus.adj_mat(self.F_tmp_2,self.F_tmp)
+            self.matrix.ExportPhysicalFermionSource(dst,self.F_tmp_2)
+
+        self.v=gpt.matrix_operator(mat = _v,
+                                   otype = self.otype, zero = (False,False), 
+                                   grid = (self.U_grid,self.F_grid_eo))
+
+        self.w=gpt.matrix_operator(mat = _w,
+                                   otype = self.otype, zero = (False,False), 
+                                   grid = (self.U_grid,self.F_grid_eo))
+        
+        self.v_unphysical=gpt.matrix_operator(mat = _v_unphysical,
+                                              otype = self.otype, zero = (False,False), 
+                                              grid = (self.F_grid,self.F_grid_eo))
+
+        self.w_unphysical=gpt.matrix_operator(mat = _w_unphysical,
+                                              otype = self.otype, zero = (False,False), 
+                                              grid = (self.F_grid,self.F_grid_eo))

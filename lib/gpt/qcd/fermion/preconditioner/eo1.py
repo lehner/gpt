@@ -38,13 +38,17 @@ import gpt, sys
 #
 # M^-1 = L (N^dag N)^-1 R + S
 #
-# R = N^dag EE^-1 ( 1   - EO OO^-1 )
+# R = N^dag EE^-1 ( 1   - EO OO^-1 )  ;  R^dag = ( 1   - EO OO^-1 )^dag EE^-1^dag N
 #
 #     ( 1         ) 
 # L = ( -OO^-1 OE )
 #
 #     ( 0   0     )
 # S = ( 0   OO^-1 )
+#
+# A2A:
+#
+# M^-1 = L |n><n| R + S = v w^dag + S ;  -> v = L |n>, w = R^dag |n>
 #
 
 class eo1:
@@ -53,11 +57,14 @@ class eo1:
         self.otype = op.otype
         self.F_grid_eo = op.F_grid_eo
         self.F_grid = op.F_grid
+        self.U_grid = op.U_grid
         self.tmp = gpt.lattice(self.F_grid_eo,self.otype)
         self.tmp2 = gpt.lattice(self.F_grid_eo,self.otype) # need for nested call in R
         self.ImportPhysicalFermionSource = self.op.ImportPhysicalFermionSource
         self.ExportPhysicalFermionSolution = self.op.ExportPhysicalFermionSolution
-
+        self.Dminus = self.op.Dminus
+        self.ExportPhysicalFermionSource = self.op.ExportPhysicalFermionSource
+        
         def _N(oe, ie):
             self.op.Meooe.mat(self.tmp2,ie)
             self.op.Mooee.inv_mat(oe,self.tmp2)
@@ -85,6 +92,14 @@ class eo1:
         oe @= ie - oe
         self.op.Mooee.inv_mat(self.tmp,oe)
         self.N.adj_mat(oe,self.tmp)
+        
+    def RDag(self, oe, oo, ie):
+        # R^dag = ( 1   - EO OO^-1 )^dag EE^-1^dag N
+        self.N.mat(oo,ie)
+        self.op.Mooee.adj_inv_mat(oe,oo)
+        self.op.Meooe.adj_mat(self.tmp,oe)
+        self.op.Mooee.adj_inv_mat(oo,self.tmp)
+        oo @= -oo
 
     def L(self, oe, oo, ie):
         oe @= ie

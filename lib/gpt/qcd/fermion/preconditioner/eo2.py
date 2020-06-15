@@ -38,7 +38,7 @@ import gpt
 #
 # M^-1 = L (N^dag N)^-1 R + S
 #
-# R = N^dag ( 1   - EO OO^-1 )
+# R = N^dag ( 1   - EO OO^-1 ) ; R^dag = (1 - EO OO^-1)^dag N
 #
 #     ( EE^-1           ) 
 # L = ( -OO^-1 OE EE^-1 )
@@ -53,10 +53,13 @@ class eo2:
         self.otype = op.otype
         self.F_grid_eo = op.F_grid_eo
         self.F_grid = op.F_grid
+        self.U_grid = op.U_grid
         self.tmp = gpt.lattice(self.F_grid_eo,self.otype)
         self.tmp2 = gpt.lattice(self.F_grid_eo,self.otype)
         self.ImportPhysicalFermionSource = self.op.ImportPhysicalFermionSource
         self.ExportPhysicalFermionSolution = self.op.ExportPhysicalFermionSolution
+        self.Dminus = self.op.Dminus
+        self.ExportPhysicalFermionSource = self.op.ExportPhysicalFermionSource
 
         def _N(oe, ie):
             self.op.Mooee.inv_mat(self.tmp2,ie)
@@ -84,6 +87,13 @@ class eo2:
         self.op.Meooe.mat(oe,self.tmp)
         self.tmp @= ie - oe
         self.N.adj_mat(oe,self.tmp)
+
+    def RDag(self, oe, oo, ie):
+        # R^dag = (1 - EO OO^-1)^dag N
+        self.N.mat(oo,ie)
+        self.op.Meooe.adj_mat(self.tmp,oo)
+        self.op.Mooee.adj_inv_mat(oe,self.tmp)
+        oe @= -oe
 
     def L(self, oe, oo, ie):
         self.op.Mooee.inv_mat(oe,ie)
