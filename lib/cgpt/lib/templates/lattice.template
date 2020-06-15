@@ -16,6 +16,14 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "tensors_group0.h"
-#include "tensors_group1.h"
-#include "tensors_group2.h"
+#include "lib.h"
+
+typedef void* (* create_lattice_prec_otype)(GridBase* grid);
+extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
+
+void lattice_init_{precision_tag}_{tensor_group}() {
+     std::string prec = "{precision_tag}";
+#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<{precision_vector}>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< {precision_vector} > >(grid); };
+#include "tensors_group{tensor_group}.h"
+#undef PER_TENSOR_TYPE
+}

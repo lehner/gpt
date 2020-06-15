@@ -19,18 +19,16 @@
 #include "lib.h"
 
 typedef void* (* create_lattice_prec_otype)(GridBase* grid);
-static std::map<std::string,create_lattice_prec_otype> _create_otype_;
+std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
-template<typename vtype>
-void lattice_init_prec(const vtype& t, const std::string& prec) {
-#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<vtype>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< vtype > >(grid); };
-#include "tensors.h"
-#undef PER_TENSOR_TYPE
-}
-  
+#define INSTANTIATE(v,t,n) void lattice_init_ ## t ## _ ## n();
+#include "instantiate.h"
+#undef INSTANTIATE
+
 void lattice_init() {
-  lattice_init_prec(vComplexF(),"single");
-  lattice_init_prec(vComplexD(),"double");
+#define INSTANTIATE(v,t,n) lattice_init_ ## t ## _ ## n();
+#include "instantiate.h"
+#undef INSTANTIATE
 }
 
 EXPORT(create_lattice,{

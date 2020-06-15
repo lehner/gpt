@@ -14,6 +14,9 @@ U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), g.random("test"))
 # do everything in single-precision
 U = g.convert(U, g.single)
 
+# plaquette
+g.message("Plaquette:",g.qcd.gauge.plaquette(U))
+
 # use the gauge configuration grid
 grid=U[0].grid
 

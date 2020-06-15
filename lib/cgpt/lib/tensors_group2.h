@@ -16,6 +16,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "tensors_group0.h"
-#include "tensors_group1.h"
-#include "tensors_group2.h"
+#define BASIS_SIZE(n) PER_TENSOR_TYPE(iComplexV ## n)
+#include "basis_size.h"
+#undef BASIS_SIZE
