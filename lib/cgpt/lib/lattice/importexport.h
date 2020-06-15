@@ -65,6 +65,7 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
     Py_buffer* buf = PyMemoryView_GET_BUFFER(_mem);
     d.local = buf->buf;
     l->describe_data_layout(d.Nsimd,d.word,d.simd_word,ishape);
+    Py_XDECREF(_mem);
     
     if (i == 0) {
       shape = ishape;

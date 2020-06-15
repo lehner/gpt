@@ -19,7 +19,7 @@
 #include "lib.h"
 
 //#define MEM_DEBUG 1
-
+#if 0
 void* operator new(size_t size) {
   // makes sure SIMD types are properly aligned
   // negligible overhead for other data
@@ -38,3 +38,4 @@ void operator delete(void* p) {
 #endif
   free(p);
 }
+#endif

@@ -29,6 +29,13 @@ class deflate:
 
     def __call__(self, matrix):
 
+        otype = None
+        grid = None
+        if type(matrix) == g.matrix_operator:
+            otype = matrix.otype
+            grid = matrix.grid
+            matrix = matrix.mat
+
         def inv(dst, src):
             verbose=g.default.is_verbose("deflate")
             # |dst> = sum_n 1/ev[n] |n><n|src>
@@ -40,11 +47,5 @@ class deflate:
             if verbose:
                 g.message("Deflated in %g s" % (t1-t0))
             return self.inverter(matrix)(dst, src)
-
-        otype = None
-        grid = None
-        if type(matrix) == g.matrix_operator:
-            otype = matrix.otype
-            grid = matrix.grid
 
         return g.matrix_operator(mat = inv, inv_mat = matrix, otype = otype)

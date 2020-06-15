@@ -11,7 +11,7 @@ then
     echo "Could not detect Grid location"
     exit 2
 fi
-NPARALLEL=16
+NPARALLEL=32
 
 # Start
 N=0
@@ -24,7 +24,7 @@ echo "==========================================================================
 
 NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
 CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
-CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID}/Grid -I${NUMPY_INCLUDE} $(python3-config --includes)"
+CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID} -I${GRID}/Grid -I${NUMPY_INCLUDE} $(python3-config --includes)"
 LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
 LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
 
@@ -103,7 +103,7 @@ done
 wait
 
 # Link
-OBS="build/basis.o  build/coordinates.o  build/eval.o build/expression_linear_combination.o build/fp16.o  build/init.o build/mpi.o    build/operators.o  build/time.o  build/util.o
+OBS="build/gversions.o build/basis.o  build/coordinates.o  build/eval.o build/expression_linear_combination.o build/fp16.o  build/init.o build/mpi.o    build/operators.o  build/time.o  build/util.o
 build/block.o  build/distribute.o   build/expression_gammamul.o  build/expression_mul.o build/grid.o  build/io.o    build/lib.o      build/munge.o  build/random.o     build/transform.o"
 nvcc --link --shared build/lattice.o ${OBS} ${CXXFLAGS} ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
 

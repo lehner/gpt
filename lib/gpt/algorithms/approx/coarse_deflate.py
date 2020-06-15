@@ -30,19 +30,30 @@ class coarse_deflate:
         self.csrc     = g.lattice(cevec[0])
         self.cdst     = g.lattice(cevec[0])
 
-    def __call__(self, matrix, src, dst):
-        verbose=g.default.is_verbose("deflate")
-        # |dst> = sum_n 1/ev[n] |n><n|src>
-        t0=g.time()
-        g.block.project(self.csrc,src,self.basis)
-        t1=g.time()
-        self.cdst[:]=0
-        for i,n in enumerate(self.cevec):
-            self.cdst += n*g.innerProduct(n,self.csrc)/self.fev[i]
-        t2=g.time()
-        g.block.promote(self.cdst,dst,self.basis)
-        t3=g.time()
-        if verbose:
-            g.message("Coarse-grid deflated in %g s (project %g s, coarse deflate %g s, promote %g s)" % 
-                      (t3-t0,t1-t0,t2-t1,t3-t2))
-        return self.inverter(matrix, src, dst)
+    def __call__(self, matrix):
+
+        otype = None
+        grid = None
+        if type(matrix) == g.matrix_operator:
+            otype = matrix.otype
+            grid = matrix.grid
+            matrix = matrix.mat
+
+        def inv(dst, src):
+            verbose=g.default.is_verbose("deflate")
+            # |dst> = sum_n 1/ev[n] |n><n|src>
+            t0=g.time()
+            g.block.project(self.csrc,src,self.basis)
+            t1=g.time()
+            self.cdst[:]=0
+            for i,n in enumerate(self.cevec):
+                self.cdst += n*g.innerProduct(n,self.csrc)/self.fev[i]
+            t2=g.time()
+            g.block.promote(self.cdst,dst,self.basis)
+            t3=g.time()
+            if verbose:
+                g.message("Coarse-grid deflated in %g s (project %g s, coarse deflate %g s, promote %g s)" % 
+                          (t3-t0,t1-t0,t2-t1,t3-t2))
+            return self.inverter(matrix)(dst,src)
+
+        return g.matrix_operator(mat = inv, inv_mat = matrix, otype = otype)

@@ -90,9 +90,18 @@ EXPORT(util_mem,{
     size_t accelerator_available = 0x0;
     size_t accelerator_total = 0x0;
 
-#ifdef GRID_NVCC
-    gridMemGetInfo(&accelerator_available,&accelerator_total);
+#ifdef GRID_CUDA
+    cudaMemGetInfo(&accelerator_available,&accelerator_total);
 #endif
+
+    // TODO: add more information out of MemoryManager::
+    //static uint64_t     DeviceBytes;
+    //static uint64_t     DeviceLRUBytes;
+    //static uint64_t     DeviceMaxBytes;
+    //static uint64_t     HostToDeviceBytes;
+    //static uint64_t     DeviceToHostBytes;
+    //static uint64_t     HostToDeviceXfer;
+    //static uint64_t     DeviceToHostXfer;
 
     return Py_BuildValue("{s:k,s:k}",
 			 "accelerator_available", (unsigned long)accelerator_available,

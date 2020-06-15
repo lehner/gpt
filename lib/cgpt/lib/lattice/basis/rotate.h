@@ -23,8 +23,54 @@ void cgpt_basis_rotate(VLattice &basis,RealD* Qt,int j0, int j1, int k0,int k1,i
   basisRotate(basis,_Qt,j0,j1,k0,k1,Nm);
 }
 
+#ifdef _GRID_FUTURE_
+
 template<class Field,class VLattice>
 void cgpt_linear_combination(Field &result,VLattice &basis,RealD* Qt) {
+  typedef typename Field::vector_object vobj;
+  GridBase* grid = basis[0].Grid();
+
+  // TODO: map to basisRotateJ
+  result.Checkerboard() = basis[0].Checkerboard();
+
+  autoView( result_v , result, AcceleratorWriteDiscard);
+  int N = (int)basis.size();
+
+  typedef decltype(basis[0].View(AcceleratorRead)) View;
+  Vector<View> basis_v; basis_v.reserve(basis.size());
+  for(int k=0;k<basis.size();k++){
+    basis_v.push_back(basis[k].View(AcceleratorRead));
+  }
+
+#ifndef GRID_HAS_ACCELERATOR
+  thread_for(ss, grid->oSites(),{
+      vobj B = Zero();
+      for(int k=0; k<N; ++k){
+	B += Qt[k] * basis_v[k][ss];
+      }
+      result_v[ss] = B;
+    });
+#else
+  Vector<double> Qt_jv(N);
+  double * Qt_j = & Qt_jv[0];
+  for(int k=0;k<N;++k) Qt_j[k]=Qt[k];
+  accelerator_for(ss, grid->oSites(),vobj::Nsimd(),{
+      decltype(coalescedRead(basis_v[0][ss])) B;
+      B=Zero();
+      for(int k=0; k<N; ++k){
+	B +=Qt_j[k] * coalescedRead(basis_v[k][ss]);
+      }
+      coalescedWrite(result_v[ss], B);
+    });
+#endif
+
+  for(int k=0;k<basis.size();k++) basis_v[k].ViewClose();
+}
+
+#else
+
+template<class Field,class VLattice>
+  void cgpt_linear_combination(Field &result,VLattice &basis,RealD* Qt) {
   typedef typename Field::vector_object vobj;
   GridBase* grid = basis[0].Grid();
 
@@ -62,3 +108,5 @@ void cgpt_linear_combination(Field &result,VLattice &basis,RealD* Qt) {
     });
 #endif
 }
+
+#endif

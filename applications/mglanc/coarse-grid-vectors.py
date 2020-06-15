@@ -53,7 +53,7 @@ for i in range(nbasis):
     g.message(i)
     if i < params["nbasis_on_host"]:
         g.message("marked as infrequent use")
-        basis[i].advise( g.infrequent_use )
+        #basis[i].advise( g.infrequent_use )
 
     g.block.promote(fg_cevec[i],basis[i],fg_basis)
     g.algorithms.approx.evals(q.NDagN,[ basis[i] ],check_eps2=1e-4)
