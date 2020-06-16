@@ -3,6 +3,8 @@
 *.swp
 *.swo
 *.so
+*.err
+*.out
 /configure
 /build
 /dependencies
