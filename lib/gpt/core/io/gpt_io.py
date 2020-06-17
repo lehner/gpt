@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import cgpt, gpt, os, io, numpy, sys, fnmatch, glob
+from gpt.params import params_convention
 
 # get local dir an filename
 def get_local_name(root, cv):
@@ -35,7 +36,8 @@ def get_local_name(root, cv):
 
 # gpt io class
 class gpt_io:
-    def __init__(self, root, params, write):
+    @params_convention()
+    def __init__(self, root, write, params):
         self.root = root
         self.params = params
         self.params["grids"] = {}
@@ -56,8 +58,29 @@ class gpt_io:
         self.pos = {}
         self.loc_desc = ""
 
+        # If we write, keep an index buffer
+        self.index_file=io.StringIO("") if write else None
+
         # now sync since only root has created directory
         gpt.barrier()
+
+    def flush(self):
+        # if we read, no need to flush
+        if self.index_file is None:
+            return
+
+        # get memoryview of current index
+        mvidx=memoryview(self.index_file.getvalue().encode("utf-8"))
+
+        # write index to fs
+        index_crc=gpt.crc32(mvidx)
+        if gpt.rank() == 0:
+            f=open(self.root + "/index","wb")
+            f.write(mvidx)
+            f.close()
+            f=open(self.root + "/index.crc32","wt")
+            f.write("%X\n" % index_crc)
+            f.close()
 
     def __del__(self):
         self.close()
@@ -76,6 +99,10 @@ class gpt_io:
             self.glb = None
 
     def close(self):
+        if not self.index_file is None:
+            self.flush()
+            self.index_file = None 
+            # no more writing after close
         self.close_global()
         self.close_views()
 
@@ -270,24 +297,29 @@ class gpt_io:
             assert(crc32_computed == crc32_compare)
         return numpy.load(io.BytesIO(data))
 
-    def create_index(self, f, ctx, objs):
+    def write(self, objs):
+        self.create_index("",objs)
+
+    def create_index(self, ctx, objs):
+        f=self.index_file
+        assert(not f is None)
         if type(objs) == dict:
             f.write("{\n")
             for x in objs:
                 f.write(x.encode("unicode_escape").decode("utf-8") + "\n")
-                self.create_index(f,"%s/%s" % (ctx,x),objs[x])
+                self.create_index("%s/%s" % (ctx,x),objs[x])
             f.write("}\n")
         elif type(objs) == numpy.ndarray: # needs to be above list for proper precedence
             f.write("array %d %d\n" % self.write_numpy(objs))
         elif type(objs) == list:
             f.write("[\n")
             for i,x in enumerate(objs):
-                self.create_index(f,"%s/%d" % (ctx,i),x)
+                self.create_index("%s/%d" % (ctx,i),x)
             f.write("]\n")
         elif type(objs) == tuple:
             f.write("(\n")
             for i,x in enumerate(objs):
-                self.create_index(f,"%s/%d" % (ctx,i),x)
+                self.create_index("%s/%d" % (ctx,i),x)
             f.write(")\n")
         elif type(objs) == float:
             f.write("float %.16g\n" % objs)
@@ -391,24 +423,23 @@ class index_parser:
         self.skip()
         return r
 
-    
+    def eof(self):
+        assert(self.line < len(self.lines))
+        return self.line == (len(self.lines) - 1)
+
+@params_convention()
+def writer(filename, params):
+    return gpt_io(filename,True,params)
+
 def save(filename, objs, params):
 
     t0=gpt.time()
 
     # create io
-    x=gpt_io(filename,params,True)
+    x=gpt_io(filename,True,params)
 
     # create index
-    f=io.StringIO("")
-    x.create_index(f,"",objs)
-    mvidx=memoryview(f.getvalue().encode("utf-8"))
-
-    # write index to fs
-    index_crc=gpt.crc32(mvidx)
-    if gpt.rank() == 0:
-        open(filename + "/index","wb").write(mvidx)
-        open(filename + "/index.crc32","wt").write("%X\n" % index_crc)
+    x.write(objs)
 
     # close
     x.close()
@@ -419,23 +450,17 @@ def save(filename, objs, params):
         gpt.message("Completed writing %s in %g s" % (filename,t1-t0))
 
 
-def load(filename, *a):
+def load(filename, params):
 
     # first check if this is right file format
     if not (os.path.exists(filename + "/index.crc32") and os.path.exists(filename + "/global")):
         raise NotImplementedError()
 
-    # parameters
-    if len(a) == 0:
-        params={}
-    else:
-        params=a[0]
-
     # timing
     t0=gpt.time()
 
     # create io
-    x=gpt_io(filename,params,False)
+    x=gpt_io(filename,False,params)
     if x.verbose:
         gpt.message("Reading %s" % filename)
 
@@ -447,6 +472,12 @@ def load(filename, *a):
 
     p=index_parser(idx.decode("utf-8","strict").split("\n"))
     res=x.read_index(p)
+
+    # if multiple chunks are available, return them as a list
+    if not p.eof():
+        res=[res]
+        while not p.eof():
+            res.append(x.read_index(p))
 
     # close
     x.close()

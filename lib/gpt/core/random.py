@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt, numpy, sys
+from gpt.params import params_convention
 
 class random:
 
@@ -64,22 +65,35 @@ class random:
         else:
             assert(0)
 
-    def normal(self,t = None,p = { "mu" : 0.0, "sigma" : 1.0 }):
+    @params_convention(mu=0.0,sigma=1.0)
+    def normal(self,t = None,p = {}):
         return self.sample(t,{**{ "distribution" : "normal" }, **p})
 
-    def cnormal(self,t = None,p = { "mu" : 0.0, "sigma" : 1.0 }):
+    @params_convention(mu=0.0,sigma=1.0)
+    def cnormal(self,t = None,p = {}):
         return self.sample(t,{**{ "distribution" : "cnormal" }, **p})
 
-    def uniform_real(self,t = None,p = { "min" : 0.0, "max" : 1.0 }):
-        return self.sample(t,{**{ "distribution" : "uniform_real" }, **p})
+    @params_convention(min=0.0,max=1.0)
+    def uniform_real(self,t = None,p = {}):
+        r=self.sample(t,{**{ "distribution" : "uniform_real" }, **p})
+        if t is None:
+            r=r.real
+        return r
 
-    def uniform_int(self,t = None,p = { "min" : 0, "max" : 1 }):
-        return self.sample(t,{**{ "distribution" : "uniform_int" }, **p})
+    @params_convention(min=0,max=1)
+    def uniform_int(self,t = None,p = {}):
+        r=self.sample(t,{**{ "distribution" : "uniform_int" }, **p})
+        if t is None:
+            r=int(r.real)
+        return r
 
-    def zn(self,t = None,p = { "n" : 2 }):
+    @params_convention(n=2)
+    def zn(self,t = None,p = {}):
         return self.sample(t,{**{ "distribution" : "zn" }, **p})
 
-    def lie(self, out, scale = 1.0):
+    @params_convention(scale=1.0)
+    def lie(self, out, p = {}):
+        scale=p["scale"]
         grid=out.grid
         ca=gpt.complex(grid)
         lie=gpt.lattice(out)

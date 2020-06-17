@@ -19,10 +19,6 @@
 #include "lib.h"
 
 //#define MEM_DEBUG 1
-//#ifndef GRID_HAS_ACCELERATOR
-// TODO: once new memorymanager infrastructure is stable,
-// change this to using this (needs to be thread-safe so
-// drop to acceleraterAllocShared)
 
 void* operator new(size_t size) {
 #ifdef _GRID_FUTURE_
@@ -50,5 +46,3 @@ void operator delete(void* p) {
 #endif
   free(p);
 }
-
-//#endif

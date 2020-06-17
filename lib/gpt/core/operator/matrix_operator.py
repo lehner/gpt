@@ -33,7 +33,8 @@ class matrix_operator(factor):
     #
     def __init__(self, 
                  mat, adj_mat = None, inv_mat = None, adj_inv_mat = None,
-                 otype = (None,None), grid = (None,None), zero = (False,False)):
+                 otype = (None,None), grid = (None,None), zero = (False,False),
+                 cb = (None,None)):
 
         self.mat = mat
         self.adj_mat = adj_mat
@@ -51,6 +52,9 @@ class matrix_operator(factor):
         # the grids we expect
         self.grid = grid if type(grid) == tuple else (grid,grid)
 
+        # the checkerboards we expect
+        self.cb = cb if type(cb) == tuple else (cb,cb)
+
     def inv(self):
         return matrix_operator(mat = self.inv_mat, 
                                adj_mat = self.adj_inv_mat, 
@@ -58,7 +62,8 @@ class matrix_operator(factor):
                                adj_inv_mat = self.adj_mat,
                                otype = tuple(reversed(self.otype)),
                                grid = tuple(reversed(self.grid)),
-                               zero = tuple(reversed(self.zero)))
+                               zero = tuple(reversed(self.zero)),
+                               cb = tuple(reversed(self.cb)))
 
     def adj(self):
         return matrix_operator(mat = self.adj_mat, 
@@ -67,7 +72,8 @@ class matrix_operator(factor):
                                adj_inv_mat = self.inv_mat,
                                otype = tuple(reversed(self.otype)),
                                grid = tuple(reversed(self.grid)),
-                               zero = tuple(reversed(self.zero)))
+                               zero = tuple(reversed(self.zero)),
+                               cb = tuple(reversed(self.cb)))
 
     def __mul__(self, other):
 
@@ -88,7 +94,8 @@ class matrix_operator(factor):
                                    adj_inv_mat = lambda dst,src: adj_inv_self(dst,adj_inv_other(src)),
                                    otype = (self.otype[0],other.otype[1]),
                                    grid = (self.grid[0],other.grid[1]),
-                                   zero = (self.zero[0],other.zero[1]))
+                                   zero = (self.zero[0],other.zero[1]),
+                                   cb = (self.cb[0],other.cb[1]))
         else:
             return other.__rmul__(self)
 
@@ -98,6 +105,7 @@ class matrix_operator(factor):
         grid = tuple([ g.converted(to_precision) for g in self.grid ])
         otype = self.otype
         zero = self.zero
+        cb = self.cb
 
         def _converted(dst, src, mat, l, r):
             t0=gpt.time()
@@ -112,7 +120,8 @@ class matrix_operator(factor):
             gpt.convert(dst,conv_dst)
             t3=gpt.time()
             if verbose:
-                gpt.message("Cost for conversion:",t3-t2+t1-t0,"Cost for matrix:",t2-t1)
+                gpt.message("Converted to",to_precision.__name__,"in",
+                            t3-t2+t1-t0,"s, matrix application in",t2-t1,"s")
 
         return matrix_operator(mat = lambda dst,src: _converted(dst,src,self.mat,0,1),
                                adj_mat = lambda dst,src: _converted(dst,src,self.adj_mat,1,0),
@@ -120,7 +129,8 @@ class matrix_operator(factor):
                                adj_inv_mat = lambda dst,src: _converted(dst,src,self.adj_inv_mat,0,1),
                                otype = otype,
                                grid = grid,
-                               zero = zero)
+                               zero = zero,
+                               cb = cb)
 
     def unary(self, u):
         if u == gpt.factor_unary.BIT_TRANS|gpt.factor_unary.BIT_CONJ:
@@ -142,6 +152,8 @@ class matrix_operator(factor):
                 dst=gpt.lattice(src)
             else:
                 dst=gpt.lattice(self.grid[0], self.otype[0])
+                if not self.cb[0] is None:
+                    dst.checkerboard(self.cb[0])
 
             if self.zero[0]:
                 dst[:]=0

@@ -32,11 +32,9 @@ class coarse_deflate:
 
     def __call__(self, matrix):
 
-        otype = None
-        grid = None
+        otype,grid,cb=None,None,None
         if type(matrix) == g.matrix_operator:
-            otype = matrix.otype
-            grid = matrix.grid
+            otype,grid,cb=matrix.otype,matrix.grid,matrix.cb
             matrix = matrix.mat
 
         def inv(dst, src):
@@ -56,4 +54,5 @@ class coarse_deflate:
                           (t3-t0,t1-t0,t2-t1,t3-t2))
             return self.inverter(matrix)(dst,src)
 
-        return g.matrix_operator(mat = inv, inv_mat = matrix, otype = otype)
+        return g.matrix_operator(mat = inv, inv_mat = matrix, otype = otype,
+                                 grid = grid, cb = cb)

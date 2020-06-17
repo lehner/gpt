@@ -72,6 +72,9 @@ def convert(first, second):
         assert(len(first.otype.v_idx) == len(second.otype.v_idx))
         for i in first.otype.v_idx:
             cgpt.convert(first.v_obj[i],second.v_obj[i])
+
+        # set checkerboard
+        first.checkerboard(second.checkerboard())
         return first
 
     else:

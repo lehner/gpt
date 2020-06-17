@@ -39,10 +39,11 @@ class params_convention:
         self.default = {**default, **kwdefault}
 
     def __call__(self, f):
-        fparams = inspect.signature(f).parameters
-
+        fparams = list(inspect.signature(f).parameters.values())
+        
         # Get last defined parameter (which should be the params dict)
-        last_fparam = next(reversed(fparams.values()))
+        assert(len(fparams) > 0)
+        last_fparam = fparams[-1]
 
         # If an annotation is of the last parameter is given, it should be a dict
         assert (
@@ -51,10 +52,27 @@ class params_convention:
 
         # Last argument is params
         nargs = len(fparams) - 1
+        nargs_min = nargs
 
+        # Allow for positional default arguments
+        for i in reversed(range(nargs)):
+            if fparams[i].default is inspect.Parameter.empty:
+                nargs_min=i+1
+                break
+
+        # Wrapper
         def wrap(*args, **kwargs):
-            assert(len(args) >= nargs)
+            nargs_given=len(args)
+            assert(nargs_given >= nargs_min)
+
+            # allow for positional default arguments to be used
+            for i in range(nargs_given,nargs):
+                args = args + (fparams[i].default,)
+
+            # positional arguments
             positional = args[: nargs]
+
+            # merged params
             params = {**{k: v for d in args[nargs :] for k, v in d.items()}, **kwargs}
             for p,v in self.default.items():
                 if not p in params:

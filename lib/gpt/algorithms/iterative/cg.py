@@ -29,11 +29,9 @@ class cg:
         
     def __call__(self, mat):
 
-        otype = None
-        grid = None
+        otype,grid,cb=None,None,None
         if type(mat) == g.matrix_operator:
-            otype = mat.otype
-            grid = mat.grid
+            otype,grid,cb=mat.otype,mat.grid,mat.cb
             mat = mat.mat 
             # remove wrapper for performance benefits
 
@@ -74,4 +72,4 @@ class cg:
         
         return g.matrix_operator(mat = inv, inv_mat = mat, 
                                  otype = otype, zero = (True,False),
-                                 grid = grid)
+                                 grid = grid, cb = cb)

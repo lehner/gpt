@@ -44,12 +44,12 @@ def unit(first):
 def random(first, rng, scale = 1.0):
     if type(first) == g.grid:
         U=[ g.mcolor(first) for i in range(4) ]
-        random(U, rng, scale)
+        random(U, rng, scale = scale)
         return U
     elif type(first) == list:
         for x in first:
             random(x, rng, scale)
     elif type(first) == g.lattice:
-        rng.lie(first, scale)
+        rng.lie(first, scale = scale)
     else:
         assert(0)

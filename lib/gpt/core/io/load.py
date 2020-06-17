@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
+from gpt.params import params_convention
 
 # load through cgpt backend (NerscIO, openQCD, ...)
 def load_cgpt(*a):
@@ -38,7 +39,8 @@ def load_cgpt(*a):
     return result
 
 # input
-def load(*a):
+@params_convention()
+def load(fn,p={}):
 
     supported = [
         gpt.core.io.gpt_io,
@@ -47,8 +49,11 @@ def load(*a):
 
     for fmt in supported:
         try:
-            return fmt.load(*a)
+            return fmt.load(fn,p)
         except NotImplementedError:
             pass
 
+    a=[fn]
+    if len(p) > 0:
+        a.append(p)
     return load_cgpt(*a)

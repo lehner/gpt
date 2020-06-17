@@ -105,12 +105,10 @@ class defect_correcting_inverter:
                         g.message("Defect-correcting inverter: converged at iteration",i,"after",g.time() - t_start,"s")
                     break
         
-        otype = None
-        grid = None
+        otype,grid,cb=None,None,None
         if type(outer_mat) == g.matrix_operator:
-            otype = outer_mat.otype
-            grid = outer_mat.grid
+            otype,grid,cb=outer_mat.otype,outer_mat.grid,outer_mat.cb
 
         return g.matrix_operator(mat = inv, inv_mat = outer_mat, 
                                  otype = otype, zero = (True,False),
-                                 grid = grid)
+                                 grid = grid, cb = cb)
