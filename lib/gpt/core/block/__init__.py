@@ -29,6 +29,7 @@ def grid(fgrid, nblock):
                     parent = fgrid.parent)
 
 def project(coarse, fine, basis):
+    assert(fine.checkerboard().__name__ == basis[0].checkerboard().__name__)
     cot=coarse.otype
     fot=fine.otype
     tmp=gpt.lattice(coarse)
@@ -42,9 +43,9 @@ def promote(coarse, fine, basis):
     assert(len(basis)>0)
     cot=coarse.otype
     fot=fine.otype
+    fine.checkerboard(basis[0].checkerboard())
     tmp=gpt.lattice(fine)
     fine[:]=0
-    fine.checkerboard(basis[0].checkerboard())
     for i in cot.v_idx:
         for j in fot.v_idx:
             cgpt.block_promote(coarse.v_obj[i],tmp.v_obj[j],basis[cot.v_n0[i]:cot.v_n1[i]],j)

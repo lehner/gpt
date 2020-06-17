@@ -36,9 +36,15 @@ src[0,1,0,0]=g.vspincolor([ [1]*3 ] * 4)
 # build solvers
 s = g.qcd.fermion.solver
 a = g.algorithms.iterative
-eo2=g.qcd.fermion.preconditioner.eo2(w)
 w_sp=w.converted(g.single)
-eo2_sp=g.qcd.fermion.preconditioner.eo2(w_sp)
+eo2_odd=g.qcd.fermion.preconditioner.eo2(w, parity = g.odd)
+eo2_even=g.qcd.fermion.preconditioner.eo2(w, parity = g.even)
+eo1_odd=g.qcd.fermion.preconditioner.eo1(w, parity = g.odd)
+eo1_even=g.qcd.fermion.preconditioner.eo1(w, parity = g.even)
+eo2_odd_sp=g.qcd.fermion.preconditioner.eo2(w_sp, parity = g.odd)
+# default
+eo2=eo2_odd
+eo2_sp=eo2_odd_sp
 
 # run with higher stopping condition since it will be the reference run
 slv_cg = s.propagator(
@@ -47,6 +53,33 @@ slv_cg = s.propagator(
                 "eps": 1e-8,
                 "maxiter": 1000
             })))
+# other pc and parity
+slv_cg_eo2_even = s.propagator(
+    s.inv_eo_ne(eo2_even,
+            a.cg({
+                "eps": 1e-8,
+                "maxiter": 1000
+            })))
+slv_cg_eo1_odd = s.propagator(
+    s.inv_eo_ne(eo1_odd,
+            a.cg({
+                "eps": 1e-8,
+                "maxiter": 1000
+            })))
+slv_cg_eo1_even = s.propagator(
+    s.inv_eo_ne(eo1_even,
+            a.cg({
+                "eps": 1e-8,
+                "maxiter": 1000
+            })))
+# other parity/pc
+slv_cg = s.propagator(
+    s.inv_eo_ne(eo2,
+            a.cg({
+                "eps": 1e-8,
+                "maxiter": 1000
+            })))
+
 # solvers to test against CG
 slv_mr = s.propagator(
     s.inv_eo_ne(eo2,
@@ -125,7 +158,9 @@ def test(slv,name):
     resid[name] = eps2 ** 0.5
     assert(eps2 < 1e-7)
 
-
+test(slv_cg_eo2_even,"CG eo2_even")
+test(slv_cg_eo1_even,"CG eo1_even")
+test(slv_cg_eo1_odd,"CG eo1_odd")
 test(slv_dci,"Defect-correcting solver")
 test(slv_dci_eo,"Defect-correcting (eo)")
 test(slv_dci_mp,"Defect-correcting (mixed-precision)")

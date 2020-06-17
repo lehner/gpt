@@ -11,6 +11,7 @@ import sys
 U=g.qcd.gauge.random(g.grid([8,8,8,8],g.single),g.random("test"))
 
 # wilson, eo prec
+parity=g.odd
 w=g.qcd.fermion.preconditioner.eo1(g.qcd.fermion.wilson_clover(U,{
     "kappa" : 0.137,
     "csw_r" : 0,
@@ -19,7 +20,7 @@ w=g.qcd.fermion.preconditioner.eo1(g.qcd.fermion.wilson_clover(U,{
     "nu" : 1,
     "isAnisotropic" : False,
     "boundary_phases" : [ 1.0, 1.0, 1.0, 1.0 ]
-}))
+}), parity = parity)
 
 # cheby
 c=g.algorithms.approx.chebyshev({
@@ -43,6 +44,7 @@ irl=g.algorithms.iterative.irl({
 # start vector
 start=g.vspincolor(w.F_grid_eo)
 start[:]=g.vspincolor([[1,1,1],[1,1,1],[1,1,1],[1,1,1]])
+start.checkerboard(parity)
 
 # generate eigenvectors
 evec,ev=irl(c(w.NDagN), start) # , g.checkpointer("checkpoint")

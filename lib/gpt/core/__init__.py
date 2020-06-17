@@ -31,7 +31,7 @@ from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
 from gpt.core.operator import *
 from gpt.core.otype import *
 from gpt.core.mpi import *
-from gpt.core.io import load, crc32, save, format, mview, FILE, LoadError
+from gpt.core.io import load, crc32, save, format, mview, FILE, LoadError, gpt_io, corr_io
 from gpt.core.checkpointer import checkpointer, checkpointer_none
 from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomp
 from gpt.core.cartesian import cartesian_view

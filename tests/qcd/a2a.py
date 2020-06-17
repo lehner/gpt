@@ -59,22 +59,31 @@ ie,io,oe,oo=tuple([ g.vspincolor(q.F_grid_eo) for i in range(4) ])
 exp = q.ExportPhysicalFermionSolution
 imp = q.ImportPhysicalFermionSource
 
-for p,tag in [ (g.qcd.fermion.preconditioner.eo1(q),"eo1"), (g.qcd.fermion.preconditioner.eo2(q),"eo2") ]:
+for p,tag in [ 
+        (g.qcd.fermion.preconditioner.eo1(q, parity=g.odd),"eo1-odd"), 
+        (g.qcd.fermion.preconditioner.eo2(q, parity=g.odd),"eo2-odd"),
+        (g.qcd.fermion.preconditioner.eo1(q, parity=g.even),"eo1-even"), 
+        (g.qcd.fermion.preconditioner.eo2(q, parity=g.even),"eo2-even"),
+]:
     g.message("Test",tag)
+    
+    for x in evec:
+        x.checkerboard(p.parity)
+
     a2a=s.a2a_eo_ne(p)
     lma_unphysical=s.inv_eo_ne(p, g.algorithms.approx.modes(evec,evec,evals, lambda x: 1.0/x))
-    lma_physical=s.propagator(s.inv_eo_ne(p, g.algorithms.approx.modes(evec,evec,evals, lambda x: 1.0/x)))
+    lma_physical=s.propagator(lma_unphysical)
 
     #########
     # unphysical test (5d for domain wall)
     dst_lma = g.eval( lma_unphysical * F_src )
-
+    
     # reconstruct by hand
     a2a_unphysical = g.algorithms.approx.modes([ a2a.v_unphysical(x) for x in evec ],
                                                [ a2a.w_unphysical(x) for x in evec ],
                                                evals, lambda x: 1.0/x)()
     dst_a2a = g.eval( a2a_unphysical * F_src )
-
+    
     # add the contact term
     g.pick_cb(g.even,ie,F_src)
     g.pick_cb(g.odd,io,F_src)
@@ -83,35 +92,35 @@ for p,tag in [ (g.qcd.fermion.preconditioner.eo1(q),"eo1"), (g.qcd.fermion.preco
     g.set_cb(S_dst,oe)
     g.set_cb(S_dst,oo)
     dst_a2a+=S_dst
-
+    
     eps2=g.norm2(dst_lma - dst_a2a) / g.norm2(dst_lma)
     g.message("Test 5d",eps2,"with contact term contribution of size",g.norm2(S_dst)/g.norm2(dst_lma))
     assert(eps2 < 1e-25)
-
+    
     #########
     # physical test
     dst_lma = g.eval( lma_physical * U_src )
-
+    
     # reconstruct by hand
     a2a_physical = g.algorithms.approx.modes([ a2a.v(x) for x in evec ],
                                              [ a2a.w(x) for x in evec ],
                                              evals, lambda x: 1.0/x)()
     dst_a2a = g.eval( a2a_physical * U_src )
-
+    
     # add the contact term
-    F_src = g.eval( imp * U_src )
-    g.pick_cb(g.even,ie,F_src)
-    g.pick_cb(g.odd,io,F_src)
+    F_src_inner = g.eval( imp * U_src )
+    g.pick_cb(g.even,ie,F_src_inner)
+    g.pick_cb(g.odd,io,F_src_inner)
     p.S(oe,oo,ie,io)
     g.set_cb(S_dst,oe)
     g.set_cb(S_dst,oo)
     S_dst = g.eval( exp * S_dst)
     dst_a2a+=S_dst
-
+    
     eps2=g.norm2(dst_lma - dst_a2a) / g.norm2(dst_lma)
     g.message("Test 4d",eps2,"with contact term contribution of size",g.norm2(S_dst)/g.norm2(dst_lma))
     assert(eps2 < 1e-25)
-
+    
 # v and w (and unphysical versions) are tested at this point
 # in IRL test, we have actual eigenvectors of wilson
 # and should add a test of long-distance agreement

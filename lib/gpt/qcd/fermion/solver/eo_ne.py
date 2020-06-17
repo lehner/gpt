@@ -27,7 +27,7 @@ def inv_eo_ne(matrix, inverter):
     io=gpt.lattice(F_grid_eo,otype)
     t1=gpt.lattice(F_grid_eo,otype)
     t2=gpt.lattice(F_grid_eo,otype)
-    
+
     def inv(dst_sc, src_sc):
 
         oe=gpt.lattice(F_grid_eo,otype)
@@ -41,7 +41,7 @@ def inv_eo_ne(matrix, inverter):
         matrix.R(t1, ie, io)
 
         t2[:]=0
-        t2.checkerboard(gpt.even)
+        t2.checkerboard(t1.checkerboard())
 
         inverter(matrix.NDagN)(t2,t1)
 
@@ -59,7 +59,8 @@ def inv_eo_ne(matrix, inverter):
     m=gpt.matrix_operator(mat = inv, inv_mat = matrix.op.M,
                           adj_inv_mat = matrix.op.M.adj(),
                           adj_mat = None, # implement adj_mat when needed
-                          otype = otype, zero = (True,False), grid = matrix.F_grid)
+                          otype = otype, zero = (True,False), grid = matrix.F_grid,
+                          cb = None)
     
     m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
     m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution

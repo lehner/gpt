@@ -44,6 +44,7 @@ class modes:
 
         otype = (left[0].otype,right[0].otype)
         grid = (left[0].grid,right[0].grid)
+        cb = (left[0].checkerboard(),right[0].checkerboard())
 
         def approx(dst, src):
             assert(src != dst)
@@ -58,4 +59,4 @@ class modes:
         
         return g.matrix_operator(mat = approx,
                                  otype = otype, zero = (False,False),
-                                 grid = grid)
+                                 grid = grid, cb = cb)

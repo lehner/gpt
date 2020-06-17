@@ -94,18 +94,12 @@ def truncate(data,ndata,ntruncate,nelements):
     #gpt.message("Truncate at %g GB/s" % (ntotal / 1024.**3 / (t1-t0)))
     return res
 
-def load(filename, *a):
+def load(filename, params):
 
     # first check if this is right file format
     if (not os.path.exists(filename + "/00/0000000000.compressed") or
         not os.path.exists(filename + "/metadata.txt")):
         raise NotImplementedError()
-
-    # parameters
-    if len(a) == 0:
-        params={}
-    else:
-        params=a[0]
 
     # verbosity
     verbose = gpt.default.is_verbose("io")
