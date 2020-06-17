@@ -5,6 +5,8 @@
 *.so
 *.err
 *.out
+/.clangd
+/.vscode
 /configure
 /build
 /dependencies
