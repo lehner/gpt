@@ -220,7 +220,9 @@ public:
 
   virtual PyObject* advise(std::string type) {
     if (type == "infrequent_use") {
+#ifdef _GRID_FUTURE_
       l.Advise() = AdviseInfrequentUse;
+#endif
     } else {
       ERR("Unknown advise %s",type.c_str());
     }    

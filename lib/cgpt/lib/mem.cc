@@ -19,12 +19,15 @@
 #include "lib.h"
 
 //#define MEM_DEBUG 1
-#ifndef GRID_HAS_ACCELERATOR
+//#ifndef GRID_HAS_ACCELERATOR
 // TODO: once new memorymanager infrastructure is stable,
 // change this to using this (needs to be thread-safe so
 // drop to acceleraterAllocShared)
 
 void* operator new(size_t size) {
+#ifdef _GRID_FUTURE_
+  return acceleratorAllocShared(size);
+#endif
   // makes sure SIMD types are properly aligned
   // negligible overhead for other data
   void* r = aligned_alloc(sizeof(vInteger),size);
@@ -37,10 +40,15 @@ void* operator new(size_t size) {
 }
 
 void operator delete(void* p) {
+#ifdef _GRID_FUTURE_
+  acceleratorFreeShared(p);
+  return;
+#endif
+
 #ifdef MEM_DEBUG  
   printf("Delete %p\n",p);
 #endif
   free(p);
 }
 
-#endif
+//#endif
