@@ -18,7 +18,7 @@
 */
 void lattice_init();
 
-#define BASIS_SIZE(n) template<typename vtype> using iComplexV ## n = iVector<vtype,n>;
+#define BASIS_SIZE(n) template<typename vtype> using iComplexV ## n = iVector<iSinglet<vtype>,n>;
 #include "../basis_size.h"
 #undef BASIS_SIZE
 
