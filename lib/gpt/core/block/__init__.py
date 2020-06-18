@@ -63,6 +63,15 @@ def promote(coarse, fine, basis):
         fine += tmp
     return fine
 
+def maskedInnerProduct(coarse, fineMask, fineX, fineY):
+    assert(fineX.checkerboard().__name__ == fineY.checkerboard().__name__)
+    fot = fineX.otype
+    tmp = gpt.lattice(coarse)
+    coarse[:] = 0
+    for i in fot.v_idx:
+        cgpt.block_maskedInnerProduct(tmp.v_obj[0],fineMask.v_obj[i],fineX.v_obj[i],fineY.v_obj[i])
+        coarse += tmp
+    return coarse
 
 def orthonormalize(coarse_grid, basis):
     assert type(coarse_grid) == gpt.grid

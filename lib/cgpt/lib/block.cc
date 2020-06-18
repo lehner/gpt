@@ -77,3 +77,20 @@ EXPORT(block_orthonormalize,{
     return PyLong_FromLong(0);
   });
 
+
+EXPORT(block_maskedInnerProduct,{
+
+    void* _coarse,* _fineMask,* _fineX,* _fineY;
+    if (!PyArg_ParseTuple(args, "llll", &_coarse,&_fineMask,&_fineX,&_fineY)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
+    cgpt_Lattice_base* fineMask = (cgpt_Lattice_base*)_fineMask;
+    cgpt_Lattice_base* fineX = (cgpt_Lattice_base*)_fineX;
+    cgpt_Lattice_base* fineY = (cgpt_Lattice_base*)_fineY;
+
+    fineX->block_maskedInnerProduct(coarse,fineMask,fineY);
+
+    return PyLong_FromLong(0);
+  });

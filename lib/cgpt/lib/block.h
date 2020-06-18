@@ -60,3 +60,12 @@ void cgpt_block_orthonormalize(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std
   blockOrthonormalize(compatible< iSinglet<vCoeff_t> >(_coarse)->l,basis);
 }
 
+template<typename T>
+void cgpt_block_masked_inner_product(cgpt_Lattice_base* _coarse, cgpt_Lattice_base* fineMask, Lattice<T>& fineX, Lattice<T>& fineY) {
+
+  typedef typename Lattice<T>::vector_type vCoeff_t;
+
+  blockMaskedInnerProductGPT(compatible< iSinglet<vCoeff_t> >(_coarse)->l,
+                             compatible< iSinglet<vCoeff_t> >(fineMask)->l,
+                             fineX, fineY);
+}
