@@ -21,6 +21,8 @@ PER_TENSOR_TYPE(iColourMatrix)
 PER_TENSOR_TYPE(iColourVector)
 PER_TENSOR_TYPE(iSpinColourMatrix)
 PER_TENSOR_TYPE(iSpinColourVector)
-#define BASIS_SIZE(n) PER_TENSOR_TYPE(iComplexV ## n)
+#define BASIS_SIZE(n) \
+  PER_TENSOR_TYPE(iComplexV ## n) \
+  PER_TENSOR_TYPE(iComplexM ## n) 
 #include "basis_size.h"
 #undef BASIS_SIZE

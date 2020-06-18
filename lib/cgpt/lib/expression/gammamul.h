@@ -44,6 +44,10 @@ cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int un
   template<typename vtype>						\
   cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iComplexV ## n<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
     ERR("Not implemented");						\
+  }									\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iComplexM ## n<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
+    ERR("Not implemented");						\
   }
 #include "../basis_size.h"
 #undef BASIS_SIZE
