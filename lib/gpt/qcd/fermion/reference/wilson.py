@@ -17,11 +17,16 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.params import params_convention
+from gpt.core.covariant import covariant_shift
 
-class wilson:
+class wilson(covariant_shift):
     # M = sum_mu gamma[mu]*D[mu] + m0 - 1/2 sum_mu D^2[mu]
     # m0 + 4 = 1/2/kappa
+    @params_convention()
     def __init__(self, U, params):
+
+        super().__init__(U,params)
 
         otype = g.ot_vspincolor
         grid = U[0].grid
@@ -30,9 +35,6 @@ class wilson:
             self.kappa = 1./(params["mass"] + 4.)/2.
         else:
             self.kappa = params["kappa"]
-
-        self.U = U
-        self.Udag = [ g.eval(g.adj(u)) for u in U ]
 
         self.Meooe = g.matrix_operator(lambda dst, src: self._Meooe(dst,src), otype = otype, grid = grid)
         self.Mooee = g.matrix_operator(lambda dst, src: self._Mooee(dst,src), otype = otype, grid = grid)
@@ -43,11 +45,9 @@ class wilson:
         assert(dst != src)
         dst[:]=0
         for mu in range(4):
-            src_plus = self.U[mu]*g.cshift(src,mu,+1)
-            dst += 1./2.*g.gamma[mu]*src_plus - 1./2.*src_plus
-
-            src_minus = g.cshift(self.Udag[mu]*src,mu,-1)
-            dst += -1./2.*g.gamma[mu]*src_minus - 1./2.*src_minus
+            src_plus = g.eval( self.forward[mu]*src )
+            src_minus = g.eval( self.backward[mu]*src )
+            dst += 1./2.*(g.gamma[mu] - g.gamma["I"])*src_plus - 1./2.*(g.gamma[mu] + g.gamma["I"])*src_minus
 
     def _Mooee(self, dst, src):
         assert(dst != src)

@@ -27,6 +27,7 @@ from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time
 from gpt.core.log import message
 from gpt.core.transform import cshift, copy, convert, norm2, innerProduct, rankInnerProduct, innerProductNorm2, axpy, axpy_norm2, slice
+from gpt.core.covariant import covariant_shift
 from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
 from gpt.core.operator import *
 from gpt.core.otype import *
