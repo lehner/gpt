@@ -4,7 +4,7 @@
 
 # GPT - Grid Python Toolkit
 
-GPT is a Python3 measurement toolkit built on [Grid](https://github.com/paboyle/Grid) data parallelism.
+GPT is a [Python](https://www.python.org) measurement toolkit built on [Grid](https://github.com/paboyle/Grid) data parallelism.
 
 ## Installation
 GPT is developed with the feature/gpt branch of https://github.com/lehner/Grid.
