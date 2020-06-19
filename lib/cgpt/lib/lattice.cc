@@ -22,12 +22,12 @@ typedef void* (* create_lattice_prec_otype)(GridBase* grid);
 std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
 #define INSTANTIATE(v,t,n) void lattice_init_ ## t ## _ ## n();
-#include "instantiate.h"
+#include "instantiate/instantiate.h"
 #undef INSTANTIATE
 
 void lattice_init() {
 #define INSTANTIATE(v,t,n) lattice_init_ ## t ## _ ## n();
-#include "instantiate.h"
+#include "instantiate/instantiate.h"
 #undef INSTANTIATE
 }
 

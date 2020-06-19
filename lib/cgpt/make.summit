@@ -38,7 +38,7 @@ echo "==========================================================================
 ./update
 
 # Compile
-for src in lib/*.cc
+for src in lib/*.cc lib/instantiate/*.cc
 do
     bn=$(basename $src .cc)
     dst=build/${bn}.o

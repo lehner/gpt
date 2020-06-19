@@ -17,16 +17,14 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lib.h"
+#include "../lib.h"
 
-#include "expression/gammamul.h"
+typedef void* (* create_lattice_prec_otype)(GridBase* grid);
+extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
-#define PER_TENSOR_TYPE(T)						\
-  INSTANTIATE(T,vComplexF)
-
-#define INSTANTIATE(T,vtype)						\
-  template cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la, Gamma::Algebra gamma, int unary_expr, bool rev);
-
-#include "tensors_group1.h"
-
+void lattice_init_double_1() {
+     std::string prec = "double";
+#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<vComplexD>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< vComplexD > >(grid); };
+#include "../tensors_group1.h"
 #undef PER_TENSOR_TYPE
+}

@@ -17,16 +17,14 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lib.h"
+#include "../lib.h"
 
-#include "expression/linear_combination.h"
+typedef void* (* create_lattice_prec_otype)(GridBase* grid);
+extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
-#define PER_TENSOR_TYPE(T)						\
-  INSTANTIATE(T,vComplexF)
-
-#define INSTANTIATE(T,vtype)						\
-  template cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T<vtype>>& _compatible,cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr);
-
-#include "tensors_group2.h"
-
+void lattice_init_single_2() {
+     std::string prec = "single";
+#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<vComplexF>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< vComplexF > >(grid); };
+#include "../tensors_group2.h"
 #undef PER_TENSOR_TYPE
+}

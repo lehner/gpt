@@ -17,10 +17,10 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lib.h"
+#include "../lib.h"
 
-#include "expression/matmul.h"
-#include "expression/mul.h"
+#include "../expression/matmul.h"
+#include "../expression/mul.h"
 
 #define PER_TENSOR_TYPE(T)						\
   INSTANTIATE(T,vComplexD)
@@ -30,6 +30,6 @@
   template cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la,int unary_b, cgpt_Lattice_base* b, int unary_expr); \
   template cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool reverse);
 
-#include "tensors_group2.h"
+#include "../tensors_group1.h"
 
 #undef PER_TENSOR_TYPE

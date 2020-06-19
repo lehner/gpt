@@ -17,14 +17,14 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lib.h"
+#include "../lib.h"
 
 typedef void* (* create_lattice_prec_otype)(GridBase* grid);
 extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
-void lattice_init_double_1() {
+void lattice_init_double_2() {
      std::string prec = "double";
 #define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<vComplexD>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< vComplexD > >(grid); };
-#include "tensors_group1.h"
+#include "../tensors_group2.h"
 #undef PER_TENSOR_TYPE
 }
