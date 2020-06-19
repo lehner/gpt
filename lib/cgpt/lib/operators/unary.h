@@ -22,6 +22,9 @@
 #define UNOP_REALD(name,opcode)						\
   case opcode: return op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l);
 
+#define DIRDISPOP_VOID(name,opcode)						\
+  case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l,dir,disp); return 0.0;
+
 template<typename T>
 RealD cgpt_fermion_operator_unary(T& op, int opcode, cgpt_Lattice_base* in,cgpt_Lattice_base* out) {
   typedef typename T::FermionField::vector_object vobj;
@@ -30,6 +33,16 @@ RealD cgpt_fermion_operator_unary(T& op, int opcode, cgpt_Lattice_base* in,cgpt_
 #include "register.h"
   default:
     ERR("Unknown opcode %d",opcode);
+  }
+}
+
+template<typename T>
+RealD cgpt_fermion_operator_dirdisp(T& op, int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
+  typedef typename T::FermionField::vector_object vobj;
+
+  switch(opcode) {
+#include "register_dirdisp.h"
+    default: ERR("Unknown opcode %d", opcode);
   }
 }
 

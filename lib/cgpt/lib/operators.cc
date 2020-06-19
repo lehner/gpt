@@ -78,3 +78,18 @@ EXPORT(apply_fermion_operator,{
     return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->unary((int)op,src,dst) );
     
   });
+
+EXPORT(apply_fermion_operator_dirdisp,{
+
+    void* p, *_src, *_dst;
+    long op, dir, disp;
+    if (!PyArg_ParseTuple(args, "llllll", &p,&op,&_src,&_dst,&dir,&disp)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+
+    return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->dirdisp((int)op,src,dst,(int)dir,(int)disp) );
+
+  });

@@ -21,6 +21,7 @@ import gpt.qcd.fermion.solver
 import gpt.qcd.fermion.preconditioner
 
 from gpt.qcd.fermion.register import register
+from gpt.qcd.fermion.register_dirdisp import register_dirdisp
 from gpt.qcd.fermion.operator import operator
 
 import copy

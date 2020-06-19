@@ -43,4 +43,8 @@ ExportPhysicalFermionSolution
 ExportPhysicalFermionSource
 END_EXPORT_UNARY_VOID
 
+BEGIN_EXPORT_DIRDISP_VOID
+Mdir
+END_EXPORT_DIRDISP_VOID
+
 */

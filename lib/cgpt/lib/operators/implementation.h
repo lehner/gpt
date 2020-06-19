@@ -32,4 +32,7 @@ public:
     return cgpt_fermion_operator_unary<T>(*op,opcode,in,out);
   }
 
+  virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
+    return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
+  }
 };

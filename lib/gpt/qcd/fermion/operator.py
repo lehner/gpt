@@ -72,8 +72,11 @@ class operator:
         # register matrix operators
         class registry:
             pass
+        class registry_dd:
+            pass
 
         gpt.qcd.fermion.register(registry, self)
+        gpt.qcd.fermion.register_dirdisp(registry_dd, self)
 
         # map Grid matrix operations to clean matrix_operator structure
         self.M = gpt.matrix_operator(
@@ -124,6 +127,8 @@ class operator:
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
 
+        self.Mdir = gpt.matrix_operator(mat = registry_dd.Mdir, otype = otype, grid = self.F_grid)
+
     def __del__(self):
         cgpt.delete_fermion_operator(self.obj)
 
@@ -143,6 +148,12 @@ class operator:
         assert len(o.v_obj) == 1
         # Grid has different calling conventions which we adopt in cgpt:
         return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj[0], o.v_obj[0])
+
+    def dirdisp(self, opcode, o, i, dir, disp):
+        assert(len(i.v_obj) == 1)
+        assert(len(o.v_obj) == 1)
+        # Grid has different calling conventions which we adopt in cgpt:
+        return cgpt.apply_fermion_operator_dirdisp(self.obj,opcode,i.v_obj[0],o.v_obj[0],dir,disp)
 
     def _G5M(self, dst, src):
         self.M(dst, src)
