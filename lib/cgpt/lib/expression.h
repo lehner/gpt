@@ -43,4 +43,5 @@ template<typename T> cgpt_Lattice_base* cgpt_compatible_linear_combination(Latti
 #undef PER_TENSOR_TYPE
 
 // unary
+#include "expression/singlet.h"
 #include "expression/unary.h"

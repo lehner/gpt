@@ -24,15 +24,7 @@ void lattice_init();
 #include "../basis_size.h"
 #undef BASIS_SIZE
 
-// make trace close
-template<typename vtype,int N>
-iSinglet<vtype> trace(const iMatrix<iSinglet<vtype>,N> & m) {
-  iSinglet<vtype> r = Zero();
-  for (int i=0;i<N;i++)
-    r+=m._internal[i][i];
-  return r;
-}
-
+// map types to strings
 static const std::string get_prec(const vComplexF& l) { return "single"; };
 static const std::string get_prec(const vComplexD& l) { return "double"; };
 template<typename T> const std::string get_prec(const Lattice<T>& l) { typedef typename Lattice<T>::vector_type vCoeff_t; vCoeff_t t; return get_prec(t); }
