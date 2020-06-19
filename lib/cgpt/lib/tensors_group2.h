@@ -16,33 +16,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lib.h"
-
-//#define MEM_DEBUG 1
-
-void* operator new(size_t size) {
-#ifdef _GRID_FUTURE_
-  return acceleratorAllocShared(size);
-#endif
-  // makes sure SIMD types are properly aligned
-  // negligible overhead for other data
-  void* r = aligned_alloc(sizeof(vInteger),size);
-  if (!r) // may happen on some implementations for size < sizeof(vInteger)
-    r = malloc(size);
-#ifdef MEM_DEBUG
-  printf("Alloc %p\n",r);
-#endif
-  return r;
-}
-
-void operator delete(void* p) {
-#ifdef _GRID_FUTURE_
-  acceleratorFreeShared(p);
-  return;
-#endif
-
-#ifdef MEM_DEBUG  
-  printf("Delete %p\n",p);
-#endif
-  free(p);
-}
+#define BASIS_SIZE(n) \
+PER_TENSOR_TYPE(iComplexV ## n) \
+PER_TENSOR_TYPE(iComplexM ## n)
+#include "basis_size.h"
+#undef BASIS_SIZE

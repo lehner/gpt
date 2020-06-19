@@ -16,19 +16,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lib.h"
-
-#include "expression/matmul.h"
-#include "expression/mul.h"
-
-#define PER_TENSOR_TYPE(T)						\
-  INSTANTIATE(T,vComplexF)						\
-  INSTANTIATE(T,vComplexD)						\
-
-#define INSTANTIATE(T,vtype)						\
-  template cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la,int unary_b, cgpt_Lattice_base* b, int unary_expr); \
-  template cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool reverse);
-
-#include "tensors.h"
-
-#undef PER_TENSOR_TYPE
+PER_TENSOR_TYPE(iSinglet)
+PER_TENSOR_TYPE(iColourMatrix)
+PER_TENSOR_TYPE(iColourVector)

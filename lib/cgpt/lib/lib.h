@@ -35,6 +35,8 @@ using namespace Grid;
 #define GRID_HAS_ACCELERATOR
 #endif
 
+//#define _GRID_FUTURE_
+
 #include "pvector.h"
 #include "time.h"
 #include "exception.h"

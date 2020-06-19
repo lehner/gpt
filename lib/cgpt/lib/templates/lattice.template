@@ -18,31 +18,12 @@
 */
 #include "lib.h"
 
-//#define MEM_DEBUG 1
+typedef void* (* create_lattice_prec_otype)(GridBase* grid);
+extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
-void* operator new(size_t size) {
-#ifdef _GRID_FUTURE_
-  return acceleratorAllocShared(size);
-#endif
-  // makes sure SIMD types are properly aligned
-  // negligible overhead for other data
-  void* r = aligned_alloc(sizeof(vInteger),size);
-  if (!r) // may happen on some implementations for size < sizeof(vInteger)
-    r = malloc(size);
-#ifdef MEM_DEBUG
-  printf("Alloc %p\n",r);
-#endif
-  return r;
-}
-
-void operator delete(void* p) {
-#ifdef _GRID_FUTURE_
-  acceleratorFreeShared(p);
-  return;
-#endif
-
-#ifdef MEM_DEBUG  
-  printf("Delete %p\n",p);
-#endif
-  free(p);
+void lattice_init_{precision_tag}_{tensor_group}() {
+     std::string prec = "{precision_tag}";
+#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<{precision_vector}>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< {precision_vector} > >(grid); };
+#include "tensors_group{tensor_group}.h"
+#undef PER_TENSOR_TYPE
 }
