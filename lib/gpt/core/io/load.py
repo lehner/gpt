@@ -44,7 +44,8 @@ def load(fn,p={}):
 
     supported = [
         gpt.core.io.gpt_io,
-        gpt.core.io.cevec_io
+        gpt.core.io.cevec_io,
+        gpt.core.io.qlat_io
     ]
 
     for fmt in supported:

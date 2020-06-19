@@ -63,7 +63,9 @@ class tensor:
             ct=res.otype.colortrace
             assert(not ct is None)
             if not ct[0] is None:
-                res= tensor( np.trace( res.array, offset = 0, axis1 = ct[0], axis2 = ct[1]), ct[2] )
+                #res= tensor( np.trace( res.array, offset = 0, axis1 = ct[0], axis2 = ct[1]), ct[2] )
+                tr=np.trace( res.array, offset = 0, axis1 = ct[0], axis2 = ct[1])
+                res=tensor(np.reshape(tr,(1,)), ct[2])
         if res.otype == gpt.ot_complex:
             res = complex(res.array)
         return res
