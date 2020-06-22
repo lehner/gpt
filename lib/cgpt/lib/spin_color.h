@@ -16,8 +16,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#define BASIS_SIZE(n) \
-PER_TENSOR_TYPE(iVSinglet ## n) \
-PER_TENSOR_TYPE(iMSinglet ## n)
-#include "basis_size.h"
-#undef BASIS_SIZE
+SPIN(4) // 4d
+COLOR(3) // SU(3), adjoint SU(2), ...
+COLOR(1) // QED
+SPIN_COLOR(4,3)
+SPIN_COLOR(4,1)

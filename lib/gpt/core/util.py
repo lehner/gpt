@@ -24,7 +24,7 @@ def isnum(x):
 
 # tensor
 def value_to_tensor(val, otype):
-    if otype == gpt.ot_complex:
+    if otype == gpt.ot_singlet:
         return complex(val)
     return gpt.tensor(val, otype)
 

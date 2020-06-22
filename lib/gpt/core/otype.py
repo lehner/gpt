@@ -60,23 +60,23 @@ class ot_base:
     spintrace=None # not supported
     colortrace=None
 
-class ot_complex(ot_base):
+class ot_singlet(ot_base):
     nfloats=2
     shape=(1,)
     spintrace=(None,None,None) # do nothing
     colortrace=(None,None,None)
-    v_otype=[ "ot_complex" ]
+    v_otype=[ "ot_singlet" ]
 
 def complex(grid):
-    return gpt_object(grid, ot_complex)
+    return gpt_object(grid, ot_singlet)
 
 
-class ot_mcolor(ot_base):
+class ot_mcolor3(ot_base):
     nfloats=2*3*3
     shape=(3,3)
     transposed=(1,0)
     spintrace=(None,None,None) # do nothing
-    colortrace=(0,1,ot_complex)
+    colortrace=(0,1,ot_singlet)
     generators=lambda dt: [
         numpy.array([[ 0, 1, 0 ], [ 1, 0, 0 ], [ 0, 0, 0 ]], dtype=dt) / 2.0,
         numpy.array([[ 0, -1j, 0 ], [ 1j, 0, 0 ], [ 0, 0, 0 ]], dtype=dt) / 2.0,
@@ -87,41 +87,59 @@ class ot_mcolor(ot_base):
         numpy.array([[ 0, 0, 0 ], [ 0, 0, -1j ], [ 0, 1j, 0 ]], dtype=dt) / 2.0,
         numpy.array([[ 1, 0, 0 ], [ 0, 1, 0 ], [ 0, 0, -2 ]], dtype=dt) / ( 3.0 ) ** 0.5 / 2.0,
     ]
-    v_otype=[ "ot_mcolor" ]
+    v_otype=[ "ot_mcolor3" ]
 
-def mcolor(grid):
-    return gpt_object(grid, ot_mcolor)
+def mcolor3(grid):
+    return gpt_object(grid, ot_mcolor3)
 
+class ot_mspin4(ot_base):
+    nfloats=2*4*4
+    shape=(4,4)
+    transposed=(1,0)
+    spintrace=(0,1,ot_singlet)
+    colortrace=(None,None,None) # do nothing
+    #generators= TODO
+    v_otype=[ "ot_mspin4" ]
 
-class ot_vcolor(ot_base):
+def mspin4(grid):
+    return gpt_object(grid, ot_mspin4)
+
+class ot_vspin4(ot_base):
+    nfloats=2*4
+    shape=(4,)
+    v_otype=[ "ot_vspin4" ]
+
+def vspin4(grid):
+    return gpt_object(grid, ot_vspin4)
+
+class ot_vcolor3(ot_base):
     nfloats=2*3
     shape=(3,)
-    v_otype=[ "ot_vcolor" ]
+    v_otype=[ "ot_vcolor3" ]
 
-def vcolor(grid):
-    return gpt_object(grid, ot_vcolor)
+def vcolor3(grid):
+    return gpt_object(grid, ot_vcolor3)
 
-
-class ot_mspincolor(ot_base):
+class ot_mspin4color3(ot_base):
     nfloats=2*3*3*4*4
     shape=(4,4,3,3)
     transposed=(1,0,3,2)
-    spintrace=(0,1,ot_mcolor)
-    colortrace=None # not supported, due to current lack of ot_mspin
-    v_otype=[ "ot_mspincolor" ]
+    spintrace=(0,1,ot_mcolor3)
+    colortrace=(2,3,ot_mspin4)
+    v_otype=[ "ot_mspin4color3" ]
 
-def mspincolor(grid):
-    return gpt_object(grid, ot_mspincolor)
+def mspin4color3(grid):
+    return gpt_object(grid, ot_mspin4color3)
 
-class ot_vspincolor(ot_base):
+class ot_vspin4color3(ot_base):
     nfloats=2*3*4
     shape=(4,3)
-    v_otype=[ "ot_vspincolor" ]
+    v_otype=[ "ot_vspin4color3" ]
 
     def distribute(mat,dst,src,zero_lhs):
-        if src.otype.__name__ == "ot_mspincolor":
+        if src.otype.__name__ == "ot_mspin4color3":
             grid=src.grid
-            dst_sc,src_sc=gpt.vspincolor(grid),gpt.vspincolor(grid)
+            dst_sc,src_sc=gpt.vspin4color3(grid),gpt.vspin4color3(grid)
             for s in range(4):
                 for c in range(3):
                     gpt.qcd.prop_to_ferm(src_sc,src,s,c)
@@ -132,91 +150,91 @@ class ot_vspincolor(ot_base):
         else:
             assert(0)
 
-def vspincolor(grid):
-    return gpt_object(grid, ot_vspincolor)
+def vspin4color3(grid):
+    return gpt_object(grid, ot_vspin4color3)
 
 
 ###
 # Basic vectors for coarse grid
-class ot_vcomplex10(ot_base):
+class ot_vsinglet10(ot_base):
     nfloats=2*10
     shape=(10,)
-    v_otype=[ "ot_vcomplex10" ]
+    v_otype=[ "ot_vsinglet10" ]
 
-class ot_vcomplex20(ot_base):
+class ot_vsinglet20(ot_base):
     nfloats=2*20
     shape=(20,)
-    v_otype=[ "ot_vcomplex20" ]
+    v_otype=[ "ot_vsinglet20" ]
 
-class ot_vcomplex40(ot_base):
+class ot_vsinglet40(ot_base):
     nfloats=2*40
     shape=(40,)
-    v_otype=[ "ot_vcomplex40" ]
+    v_otype=[ "ot_vsinglet40" ]
 
-class ot_vcomplex80(ot_base):
+class ot_vsinglet80(ot_base):
     nfloats=2*80
     shape=(80,)
-    v_otype=[ "ot_vcomplex80" ]
+    v_otype=[ "ot_vsinglet80" ]
 
-class ot_vcomplex:
+class ot_vsinglet:
     fundamental={
-        10 : ot_vcomplex10,
-        20 : ot_vcomplex20,
-        40 : ot_vcomplex40,
-        80 : ot_vcomplex80,
+        10 : ot_vsinglet10,
+        20 : ot_vsinglet20,
+        40 : ot_vsinglet40,
+        80 : ot_vsinglet80,
     }
     def __init__(self, n):
-        self.__name__="ot_vcomplex(%d)" % n
+        self.__name__="ot_vsinglet(%d)" % n
         self.nfloats=2*n
         self.shape=(n,)
         self.transposed=None
         self.spintrace=None
         self.colortrace=None
-        decomposition=decompose(n, ot_vcomplex.fundamental.keys())
+        decomposition=decompose(n, ot_vsinglet.fundamental.keys())
         self.v_n0,self.v_n1 = get_range(decomposition)
         self.v_idx=range(len(self.v_n0))
-        self.v_otype = [ ot_vcomplex.fundamental[x] for x in decomposition ]
+        self.v_otype = [ ot_vsinglet.fundamental[x] for x in decomposition ]
 
 def vcomplex(grid, n):
-    return gpt_object(grid, ot_vcomplex(n))
+    return gpt_object(grid, ot_vsinglet(n))
 
 
 # and matrices
-class ot_mcomplex10(ot_base):
+class ot_msinglet10(ot_base):
     nfloats=2*10*10
     shape=(10,10)
-    v_otype=[ "ot_mcomplex10" ]
+    v_otype=[ "ot_msinglet10" ]
 
-class ot_mcomplex20(ot_base):
+class ot_msinglet20(ot_base):
     nfloats=2*20*20
     shape=(20,20)
-    v_otype=[ "ot_mcomplex20" ]
+    v_otype=[ "ot_msinglet20" ]
 
-class ot_mcomplex40(ot_base):
+class ot_msinglet40(ot_base):
     nfloats=2*40*40
     shape=(40,40)
-    v_otype=[ "ot_mcomplex40" ]
+    v_otype=[ "ot_msinglet40" ]
 
-class ot_mcomplex80(ot_base):
+class ot_msinglet80(ot_base):
     nfloats=2*80*80
     shape=(80,80)
-    v_otype=[ "ot_mcomplex80" ]
+    v_otype=[ "ot_msinglet80" ]
 
-class ot_mcomplex:
+class ot_msinglet:
     fundamental={
-        10 : ot_mcomplex10,
-        20 : ot_mcomplex20,
-        40 : ot_mcomplex40,
-        80 : ot_mcomplex80,
+        10 : ot_msinglet10,
+        20 : ot_msinglet20,
+        40 : ot_msinglet40,
+        80 : ot_msinglet80,
     }
     def __init__(self, n):
-        self.__name__="ot_mcomplex(%d)" % n
+        self.__name__="ot_msinglet(%d)" % n
         self.nfloats=2*n*n
         self.shape=(n,n)
         self.transposed=None
         self.spintrace=None
         self.colortrace=None
-        #for m in reversed(sorted(ot_vcomplex.fundamental.keys())):
+        #for m in reversed(sorted(ot_vsinglet.fundamental.keys())):
         #if n % m == 0:
         #if n == m:
         # Need to expand support for 2d v_idx
@@ -224,7 +242,7 @@ class ot_mcomplex:
         assert(0)
 
 def mcomplex(grid, n):
-    return gpt_object(grid, ot_mcomplex(n))
+    return gpt_object(grid, ot_msinglet(n))
 
 
 
@@ -232,15 +250,21 @@ def mcomplex(grid, n):
 # String conversion for safe file input
 def str_to_otype(s):
     base_types={ 
-        "ot_complex" : ot_complex,
-        "ot_mcolor" : ot_mcolor,
-        "ot_vcolor" : ot_vcolor,
-        "ot_mspincolor" : ot_mspincolor,
-        "ot_vspincolor" : ot_vspincolor,
-        "ot_vcomplex10" : ot_vcomplex10,
-        "ot_vcomplex20" : ot_vcomplex20,
-        "ot_vcomplex40" : ot_vcomplex40,
-        "ot_vcomplex80" : ot_vcomplex80,
+        "ot_singlet" : ot_singlet,
+        "ot_mspin4" : ot_mspin4,
+        "ot_vspin4" : ot_vspin4,
+        "ot_mcolor3" : ot_mcolor3,
+        "ot_vcolor3" : ot_vcolor3,
+        "ot_mspin4color3" : ot_mspin4color3,
+        "ot_vspin4color3" : ot_vspin4color3,
+        "ot_vsinglet10" : ot_vsinglet10,
+        "ot_vsinglet20" : ot_vsinglet20,
+        "ot_vsinglet40" : ot_vsinglet40,
+        "ot_vsinglet80" : ot_vsinglet80,
+        "ot_msinglet10" : ot_msinglet10,
+        "ot_msinglet20" : ot_msinglet20,
+        "ot_msinglet40" : ot_msinglet40,
+        "ot_msinglet80" : ot_msinglet80,
     }
     if s in base_types:
         return base_types[s]
@@ -248,7 +272,7 @@ def str_to_otype(s):
     assert(len(a)==2)
     assert(a[1][-1]==")")
     base_vtypes={
-        "ot_vcomplex" : ot_vcomplex
+        "ot_vsinglet" : ot_vsinglet
     }
     return base_vtypes[a[0]](int(a[1][:-1]))
 
@@ -266,23 +290,35 @@ def from_v_otype(v_otype):
 ###
 # Multiplication table
 mtab = {
-    (ot_mcolor,ot_mcolor) : (ot_mcolor,(1,0)),
-    (ot_mcolor,ot_vcolor) : (ot_vcolor,(1,0)),
-    (ot_mspincolor,ot_mspincolor) : (ot_mspincolor,([1,3],[0,2])),
-    (ot_mspincolor,ot_vspincolor) : (ot_vspincolor,([1,3],[0,1])),
+    (ot_mcolor3,ot_mcolor3) : (ot_mcolor3,(1,0)),
+    (ot_mcolor3,ot_vcolor3) : (ot_vcolor3,(1,0)),
+    (ot_mspin4,ot_mspin4) : (ot_mspin4,(1,0)),
+    (ot_mspin4,ot_vspin4) : (ot_vspin4,(1,0)),
+    (ot_mspin4color3,ot_mspin4color3) : (ot_mspin4color3,([1,3],[0,2])),
+    (ot_mspin4color3,ot_vspin4color3) : (ot_vspin4color3,([1,3],[0,1])),
 }
 
 ###
 # Outer product table
 otab = {
-    (ot_vcolor,ot_vcolor) : (ot_mcolor,[]),
-    (ot_vspincolor,ot_vspincolor) : (ot_mspincolor,[(1,2)])
+    (ot_vcolor3,ot_vcolor3) : (ot_mcolor3,[]),
+    (ot_vspin4,ot_vspin4) : (ot_mspin4,[]),
+    (ot_vspin4color3,ot_vspin4color3) : (ot_mspin4color3,[(1,2)])
 }
 
 ###
 # Inner product table
 itab = {
-    (ot_vcolor,ot_vcolor) : (ot_complex,(0,0)),
-    (ot_vspincolor,ot_vspincolor) : (ot_complex,([0,1],[0,1])),
+    (ot_vspin4,ot_vspin4) : (ot_singlet,(0,0)),
+    (ot_vcolor3,ot_vcolor3) : (ot_singlet,(0,0)),
+    (ot_vspin4color3,ot_vspin4color3) : (ot_singlet,([0,1],[0,1])),
 }
 
+###
+# aliases
+mcolor=mcolor3
+vcolor=vcolor3
+mspin=mspin4
+vspin=vspin4
+mspincolor=mspin4color3
+vspincolor=vspin4color3

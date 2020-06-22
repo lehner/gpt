@@ -17,5 +17,15 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 PER_TENSOR_TYPE(iSinglet)
-PER_TENSOR_TYPE(iColourMatrix)
-PER_TENSOR_TYPE(iColourVector)
+
+#define SPIN(Ns)				\
+  PER_TENSOR_TYPE(iMSpin ## Ns)			\
+  PER_TENSOR_TYPE(iVSpin ## Ns)
+#define COLOR(Nc)				\
+  PER_TENSOR_TYPE(iMColor ## Nc)		\
+  PER_TENSOR_TYPE(iVColor ## Nc)
+#define SPIN_COLOR(Ns,Nc)
+#include "spin_color.h"
+#undef SPIN_COLOR
+#undef COLOR
+#undef SPIN

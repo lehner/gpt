@@ -28,7 +28,7 @@ class wilson(covariant_shift):
 
         super().__init__(U,params)
 
-        otype = g.ot_vspincolor
+        otype = g.ot_vspin4color3
         grid = U[0].grid
         if "mass" in params:
             assert(not "kappa" in params)
