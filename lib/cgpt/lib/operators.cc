@@ -26,6 +26,7 @@
 #include "operators/wilson_clover.h"
 #include "operators/zmobius.h"
 #include "operators/mobius.h"
+#include "operators/coarse.h"
 #include "operators/create.h"
     
 EXPORT(create_fermion_operator,{
