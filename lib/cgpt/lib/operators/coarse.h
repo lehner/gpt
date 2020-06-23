@@ -20,13 +20,6 @@
 #define prec_double 2
 #define prec_single 1
 
-template<typename vCoeff_t>
-struct FinestLevelCoarseComplex {
-  // typedef iSinglet<vCoeff_t> type;
-  typedef iScalar<vCoeff_t> type;
-};
-
-// this is elegant since we can just add more precisions
 template<typename vCoeff_t, int prec = getPrecision<vCoeff_t>::value>
 struct FinestLevelFineVec {};
 template<typename vCoeff_t>
@@ -37,19 +30,6 @@ template<typename vCoeff_t>
 struct FinestLevelFineVec<vCoeff_t, prec_single> {
   typedef vSpinColourVectorF type;
 };
-
-template<typename vCoeff_t>
-struct OtherLevelsCoarseComplex {
-  typedef iScalar<vCoeff_t> type;
-};
-
-template<typename vCoeff_t, int nbasis>
-struct OtherLevelsFineVec {
-  // typedef iVector<vCoeff_t, nbasis> type;
-  typedef iVector<iScalar<vCoeff_t>, nbasis> type;
-};
-
-// Rest ///////////////////////////////////////////////////////////////////////
 
 template<typename vCoeff_t>
 cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
@@ -70,15 +50,21 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
 #define BASIS_SIZE(n) \
   if(n == nbasis) { \
     if(level == 0) { \
-      typedef CoarsenedMatrix<typename FinestLevelFineVec<vCoeff_t>::type,                          \
-                              iSinglet<vCoeff_t>, \
-                              n> CMat;                                                       \
-      return new cgpt_fermion_operator<CMat>(new CMat(*grid_c, hermitian)); \
+      typedef CoarsenedMatrix<typename FinestLevelFineVec<vCoeff_t>::type, iSinglet<vCoeff_t>, n> CMat; \
+      auto cm = new CMat(*grid_c, hermitian); \
+      for (int p=0; p<9; p++) { \
+        auto l = get_pointer<cgpt_Lattice_base>(args,"A",p);\
+        cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
+      } \
+      return new cgpt_fermion_operator<CMat>(cm); \
     } else {                                                           \
-      typedef CoarsenedMatrix<iVSinglet ## n<vCoeff_t>,                \
-                              iSinglet<vCoeff_t>,                       \
-                              n> CMat; \
-      return new cgpt_fermion_operator<CMat>(new CMat(*grid_c, hermitian)); \
+      typedef CoarsenedMatrix<iVSinglet ## n<vCoeff_t>, iSinglet<vCoeff_t>, n> CMat; \
+      auto cm = new CMat(*grid_c, hermitian); \
+      for (int p=0; p<9; p++) { \
+        auto l = get_pointer<cgpt_Lattice_base>(args,"A",p);\
+        cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
+      } \
+      return new cgpt_fermion_operator<CMat>(cm); \
       } \
     } else
 #include "../basis_size.h"
