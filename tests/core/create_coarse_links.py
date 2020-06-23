@@ -11,13 +11,14 @@ import sys
 
 # setup fine link fields
 U = g.qcd.gauge.random(g.grid([8,8,8,16], g.double), g.random("test"))
+U = g.qcd.gauge.random(g.grid([4,4,4,4], g.double), g.random("test"))
 
 # do everything in single precision
 U = g.convert(U, g.single)
 
 # setup grids
 fine_grid = U[0].grid
-coarse_grid = g.grid([4,4,4,8], fine_grid.precision)
+coarse_grid = g.grid([2,2,2,2], fine_grid.precision)
 
 # setup fine matrix
 fmat = g.qcd.fermion.wilson_clover(U, {

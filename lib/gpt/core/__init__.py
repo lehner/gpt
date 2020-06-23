@@ -65,3 +65,4 @@ from gpt.core.split import *
 import gpt.core.util
 import gpt.core.block
 import gpt.core.matrix
+import gpt.core.coarse
