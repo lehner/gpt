@@ -49,10 +49,12 @@ static void cgpt_to_full_coor(GridBase* grid, int cb,
 
 static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
 					       std::vector<cgpt_distribute::data_simd> & data,
-					       std::vector<long> & shape,
+					       std::vector<long> & shape, std::vector< std::vector<long> > & tidx,
 					       GridBase* & grid, int & cb, int & dtype) {
   ASSERT(PyList_Check(vlat));
   long nlat=PyList_Size(vlat);
+
+  ASSERT(tidx.size() == nlat);
 
   data.resize(nlat);
   shape.resize(0);
@@ -64,6 +66,7 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
     PyObject* _mem = l->memory_view();
     Py_buffer* buf = PyMemoryView_GET_BUFFER(_mem);
     d.local = buf->buf;
+    d.tidx = tidx[i];
     l->describe_data_layout(d.Nsimd,d.word,d.simd_word,ishape);
     Py_XDECREF(_mem);
     
@@ -89,7 +92,8 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
 static PyArrayObject* cgpt_importexport(GridBase* grid, int cb, int dtype,
 					std::vector<cgpt_distribute::data_simd>& l, 
 					std::vector<long> & ishape, 
-					PyArrayObject* coordinates, PyObject* data) {
+					PyArrayObject* coordinates, 
+					PyObject* data) {
 
   cgpt_distribute dist(grid->_processor,grid->communicator);
 
@@ -124,12 +128,13 @@ static PyArrayObject* cgpt_importexport(GridBase* grid, int cb, int dtype,
   } else {
 
     if (fc_size == 0) {
-      dist.copy_from(plan,0,l);
+      dist.copy_from(plan,0,1,l);
       return 0;
     }
 
     // check compatibility
     void* s;
+    long sz;
     if (PyArray_Check(data)) {
       PyArrayObject* bytes = (PyArrayObject*)data;
       ASSERT(PyArray_NDIM(bytes) == dim.size());
@@ -138,15 +143,17 @@ static PyArrayObject* cgpt_importexport(GridBase* grid, int cb, int dtype,
 	ASSERT(tdim[i] == dim[i]);
       ASSERT(PyArray_TYPE(bytes) == dtype);
       s = (void*)PyArray_DATA(bytes);
+      sz = PyArray_NBYTES(bytes);
     } else if (PyMemoryView_Check(data)) {
       Py_buffer* buf = PyMemoryView_GET_BUFFER(data);
       ASSERT(PyBuffer_IsContiguous(buf,'C'));
       s = (void*)buf->buf;
+      sz = buf->len;
     } else {
       ERR("Incompatible type");
     }
 
-    dist.copy_from(plan,s,l);
+    dist.copy_from(plan,s,sz,l);
     return 0;
   }
 }

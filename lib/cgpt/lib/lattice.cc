@@ -118,35 +118,38 @@ EXPORT(lattice_memory_view_coordinates,{
   });
 
 EXPORT(lattice_export,{
-    PyObject* pos, * vlat;
-    if (!PyArg_ParseTuple(args, "OO", &vlat, &pos)) {
+    PyObject* pos, * vlat, * _tidx;
+    if (!PyArg_ParseTuple(args, "OOO", &vlat, &pos, &_tidx)) {
       return NULL;
     }
 
     ASSERT(PyArray_Check(pos));
     std::vector<cgpt_distribute::data_simd> data;
     std::vector<long> shape;
+    std::vector< std::vector<long> > tidx;
     GridBase* grid;
     int cb,dt;
 
-    cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
+    cgpt_convert(_tidx,tidx);
+    cgpt_prepare_vlattice_importexport(vlat,data,shape,tidx,grid,cb,dt);
     return (PyObject*)cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,0);
   });
 
 EXPORT(lattice_import,{
-    PyObject* pos, *vlat, * d;
-    if (!PyArg_ParseTuple(args, "OOO", &vlat, &pos, &d)) {
+    PyObject* pos, *vlat, * d, * _tidx;
+    if (!PyArg_ParseTuple(args, "OOOO", &vlat, &pos, &_tidx, &d)) {
       return NULL;
     }
 
     ASSERT(PyArray_Check(pos));
     std::vector<cgpt_distribute::data_simd> data;
     std::vector<long> shape;
+    std::vector< std::vector<long> > tidx;
     GridBase* grid;
     int cb,dt;
 
-    cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
-    
+    cgpt_convert(_tidx,tidx);    
+    cgpt_prepare_vlattice_importexport(vlat,data,shape,tidx,grid,cb,dt);
     cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,d);
     return PyLong_FromLong(0);
   });

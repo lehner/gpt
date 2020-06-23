@@ -24,8 +24,12 @@ def peek(target,key):
         return gpt.mview(target[key])
 
     elif type(target) == list:
-        v_obj=[ y for x in target for y in x.v_obj ]
-        return gpt.mview(cgpt.lattice_export(v_obj, key))
+
+        pos = target[0].map_pos(key)
+        tidx = [ y for x in target for y in x.map_tidx(key) ]
+        v_obj = [ y for x in target for y in x.v_obj ]
+
+        return gpt.mview(cgpt.lattice_export(v_obj, pos, tidx))
 
     else:
         assert(0)
@@ -38,8 +42,12 @@ def poke(target,key,value):
     if type(target) == gpt.lattice:
         target[key]=value
     elif type(target) == list:
-        v_obj=[ y for x in target for y in x.v_obj ]
-        cgpt.lattice_import(v_obj, key, value)
+
+        pos = target[0].map_pos(key)
+        tidx = [ y for x in target for y in x.map_tidx(key) ]
+        v_obj = [ y for x in target for y in x.v_obj ]
+
+        cgpt.lattice_import(v_obj, pos, tidx, value)
     else:
         assert(0)
 

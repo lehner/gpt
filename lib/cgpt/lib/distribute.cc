@@ -65,7 +65,7 @@ void cgpt_distribute::create_plan(const std::vector<coor>& c, plan& p) {
   send_tasks_to_ranks(wishlists,p.tasks);
 }
 
-void cgpt_distribute::copy_to(const plan& p,std::vector<data_simd>& src, void* dst) {
+void cgpt_distribute::copy_to(const plan& p, std::vector<data_simd>& src, void* dst) {
   
   // copy local data
   const auto& ld = p.cr.find(rank);
@@ -77,19 +77,29 @@ void cgpt_distribute::copy_to(const plan& p,std::vector<data_simd>& src, void* d
 
 }
 
-void cgpt_distribute::copy_from(const plan& p,void* src,std::vector<data_simd>& dst) {
+void cgpt_distribute::copy_from(const plan& p, void* src, long src_size, std::vector<data_simd>& dst) {
 
   // copy local data
   const auto& ld = p.cr.find(rank);
   if (ld != p.cr.cend())
-    copy_data_rev(ld->second,src,dst);
+    copy_data_rev(ld->second,src,src_size,dst);
 
   // receive the requested wishlist from my task ranks
-  copy_remote_rev(p.tasks,p.cr,src,dst);
+  copy_remote_rev(p.tasks,p.cr,src,src_size,dst);
 
 }
 
-void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map<int,mp>& cr,std::vector<data_simd>& _src, void* _dst) {
+long cgpt_distribute::word_total(std::vector<data_simd>& src) {
+  long r = 0;
+  for (auto& s : src) {
+    ASSERT(s.Nsimd <= SIMD_BASE);
+    r+=s.simd_word * s.tidx.size();
+  }
+  return r;
+}
+
+void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map<int,mp>& cr,
+				  std::vector<data_simd>& _src, void* _dst) {
 #ifdef USE_MPI
   assert(tasks.size() % 2 == 0);
   std::vector<MPI_Request> req;
@@ -148,12 +158,13 @@ void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map
 	    long Nsimd = _src[ni].Nsimd;
 	    long simd_word = _src[ni].simd_word;
 	    long word = _src[ni].word;
-	    long N_ni = word / simd_word;
+	    auto & tidx = _src[ni].tidx;
+	    long N_ni = tidx.size();
 	    long si_stride = Nsimd * simd_word;
 	    long o_stride = Nsimd * word;
 
 	    for (long si = 0; si < N_ni; si++) {
-	      memcpy(&dst[_word_total*idx + (si_base + si)*simd_word],&src[si_stride*si + simd_word*_idx + o_stride*_odx],simd_word);
+	      memcpy(&dst[_word_total*idx + (si_base + si)*simd_word],&src[si_stride*tidx[si] + simd_word*_idx + o_stride*_odx],simd_word);
 	    }
 
 	    si_base += N_ni;
@@ -204,7 +215,8 @@ void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map
 #endif
 }
 
-void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std::map<int,mp>& cr,void* _src,std::vector<data_simd>& _dst) {
+void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std::map<int,mp>& cr,
+				      void* _src, long _src_size, std::vector<data_simd>& _dst) {
 #ifdef USE_MPI
   /*
     tasks here are requests from other nodes to set local data
@@ -259,7 +271,7 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
       char* src = (char*)_src;
       
       thread_for(idx, dest_n,{
-	  memcpy(&dst[idx*_word_total],&src[_word_total*n[idx]],_word_total);
+	  memcpy(&dst[idx*_word_total],&src[(_word_total*n[idx]) % _src_size],_word_total);
 	});
       
       MPI_Request r;
@@ -312,12 +324,13 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
 	    long Nsimd = _dst[ni].Nsimd;
 	    long simd_word = _dst[ni].simd_word;
 	    long word = _dst[ni].word;
-	    long N_ni = word / simd_word;
+	    auto & tidx = _dst[ni].tidx;
+	    long N_ni = tidx.size();
 	    long si_stride = Nsimd * simd_word;
 	    long o_stride = Nsimd * word;
 
 	    for (long si = 0; si < N_ni; si++) {
-	      memcpy(&dst[si_stride*si + simd_word*_idx + o_stride*_odx],&src[_word_total*idx + (si_base + si)*simd_word],simd_word);
+	      memcpy(&dst[si_stride*tidx[si] + simd_word*_idx + o_stride*_odx],&src[_word_total*idx + (si_base + si)*simd_word],simd_word);
 	    }
 	    
 	    si_base += N_ni;
@@ -345,12 +358,13 @@ void cgpt_distribute::copy_data(const mp& m, std::vector<data_simd>& _src, void*
 	long Nsimd = _src[ni].Nsimd;
 	long simd_word = _src[ni].simd_word;
 	long word = _src[ni].word;
-	long N_ni = word / simd_word;
+	auto & tidx = _src[ni].tidx;
+	long N_ni = tidx.size();
 	long si_stride = Nsimd * simd_word;
 	long o_stride = Nsimd * word;
 	
 	for (long si = 0; si < N_ni; si++) {
-	  memcpy(&dst[_word_total*m.dst[idx] + (si_base + si)*simd_word],&src[si_stride*si + simd_word*_idx + o_stride*_odx],simd_word);
+	  memcpy(&dst[_word_total*m.dst[idx] + (si_base + si)*simd_word],&src[si_stride*tidx[si] + simd_word*_idx + o_stride*_odx],simd_word);
 	}
 
 	si_base += N_ni;
@@ -362,7 +376,7 @@ void cgpt_distribute::copy_data(const mp& m, std::vector<data_simd>& _src, void*
   //printf("%g GB/s %g\n",2*GB/(t1-t0),t1-t0);
 }
 
-void cgpt_distribute::copy_data_rev(const mp& m, void* _src, std::vector<data_simd>& _dst) {
+void cgpt_distribute::copy_data_rev(const mp& m, void* _src, long _src_size, std::vector<data_simd>& _dst) {
   long len = m.src.size();
   unsigned char* src = (unsigned char*)_src;
   long _word_total = word_total(_dst);
@@ -379,12 +393,13 @@ void cgpt_distribute::copy_data_rev(const mp& m, void* _src, std::vector<data_si
 	long Nsimd = _dst[ni].Nsimd;
 	long simd_word = _dst[ni].simd_word;
 	long word = _dst[ni].word;
-	long N_ni = word / simd_word;
+	auto & tidx = _dst[ni].tidx;
+	long N_ni = tidx.size();
 	long si_stride = Nsimd * simd_word;
 	long o_stride = Nsimd * word;
 	
 	for (long si = 0; si < N_ni; si++) {
-	  memcpy(&dst[si_stride*si + simd_word*_idx + o_stride*_odx],&src[_word_total*m.dst[idx] + (si_base + si)*simd_word],simd_word);
+	  memcpy(&dst[si_stride*tidx[si] + simd_word*_idx + o_stride*_odx],&src[(_word_total*m.dst[idx] + (si_base + si)*simd_word) % _src_size],simd_word);
 	}
 
 	si_base += N_ni;

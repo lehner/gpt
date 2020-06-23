@@ -83,6 +83,31 @@ static void cgpt_convert(PyObject* in,  std::string& s) {
   }
 }
 
+static void cgpt_convert(PyArrayObject* in, std::vector<long>& out) {
+  ASSERT(PyArray_NDIM(in) == 1);
+  long size = *PyArray_DIMS(in);
+  out.resize(size);
+
+  if (PyArray_TYPE(in)==NPY_INT32) {
+    int32_t* _in = (int32_t*)PyArray_DATA(in);
+    thread_for(idx, size, {
+	out[idx] = _in[idx];
+      });
+  } else if (PyArray_TYPE(in)==NPY_INT64) {
+    int64_t* _in = (int64_t*)PyArray_DATA(in);
+    thread_for(idx, size, {
+	out[idx] = _in[idx];
+      });
+  } else {
+    ERR("Could not convert numpy array to vector of long");
+  }
+}
+
+template<typename t>
+void cgpt_convert(PyArrayObject* in, std::vector<t>& out) {
+  ERR("Conversion not yet implemented");
+}
+
 template<typename t>
 void cgpt_convert(PyObject* in, std::vector<t>& out) {
   if (PyList_Check(in)) {
@@ -93,6 +118,8 @@ void cgpt_convert(PyObject* in, std::vector<t>& out) {
     out.resize(PyTuple_Size(in));
     for (size_t i = 0; i < out.size(); i++)
       cgpt_convert(PyTuple_GetItem(in,i),out[i]);
+  } else if (PyArray_Check(in)) {
+    cgpt_convert((PyArrayObject*)in,out);
   } else {
     ASSERT(0);
   }
