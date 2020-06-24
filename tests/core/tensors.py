@@ -63,7 +63,7 @@ A=mc[0,1,0,1]
 B=msc[0,1,0,1]
 for i in range(3):
     for j in range(3):
-        eps = abs(A.array[i,j] - B.array[1,2,i,j])
+        eps = abs(A[i,j] - B[1,2,i,j])
         assert(eps < 1e-13)
 
 mc[0,1,0,1,2,2]=5
@@ -75,7 +75,7 @@ A=mc[0,1,0,1]
 B=msc[0,1,0,1]
 for i in range(3):
     for j in range(3):
-        eps = abs(A.array[i,j] - B.array[1,2,i,j])
+        eps = abs(A[i,j] - B[1,2,i,j])
         assert(eps < 1e-13)
 
 # peek color
@@ -85,7 +85,7 @@ A=ms[0,1,0,1]
 B=msc[0,1,0,1]
 for i in range(4):
     for j in range(4):
-        eps = abs(A.array[i,j] - B.array[i,j,1,2])
+        eps = abs(A[i,j] - B[i,j,1,2])
         assert(eps < 1e-13)
 
 # gamma matrices applied to spin
