@@ -14,7 +14,7 @@ coarse_grid = g.grid([8, 4, 4, 8], fine_grid.precision)
 
 # basis
 n = 30
-basis = [g.mspincolor(fine_grid) for i in range(n)]
+basis = [g.vspincolor(fine_grid) for i in range(n)]
 rng = g.random("block_seed_string_13")
 rng.cnormal(basis)
 for i in range(2):
