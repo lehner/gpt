@@ -38,23 +38,6 @@ struct _eval_factor_ {
   }
 };
 
-static int gamma_algebra_map_max = 12;
-
-static Gamma::Algebra gamma_algebra_map[] = {
-  Gamma::Algebra::GammaX, // 0
-  Gamma::Algebra::GammaY, // 1
-  Gamma::Algebra::GammaZ, // 2
-  Gamma::Algebra::GammaT, // 3
-  Gamma::Algebra::Gamma5,  // 4
-  Gamma::Algebra::SigmaXY, // 5
-  Gamma::Algebra::SigmaXZ, // 6
-  Gamma::Algebra::SigmaXT, // 7
-  Gamma::Algebra::SigmaYZ, // 8
-  Gamma::Algebra::SigmaYT, // 9
-  Gamma::Algebra::SigmaZT, // 10
-  Gamma::Algebra::Identity // 11
-};
-
 struct _eval_term_ {
   ComplexD coefficient;
   std::vector<_eval_factor_> factors;

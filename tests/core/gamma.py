@@ -3,10 +3,12 @@
 # Authors: Christoph Lehner 2020
 #
 import gpt as g
+import numpy as np
 
-l=g.vspincolor(g.grid([8,4,4,4],g.double))
+l=g.mspincolor(g.grid([8,4,4,4],g.double))
 
-g.random("test").cnormal(l)
+rng=g.random("test")
+rng.cnormal(l)
 
 dst=g.lattice(l)
 ref=g.lattice(l)
@@ -41,6 +43,38 @@ eps = g.norm2(dst - ref) / g.norm2(l)
 g.message("Test Regular Expression: ",eps)
 assert(eps == 0.0)
 
+# reconstruct and test the gamma matrix elements
+for mu in g.gamma:
+    gamma=g.gamma[mu]
+    g.message("Test numpy matrix representation of",mu)
+    gamma_mu_mat=np.identity(4,dtype=np.complex128)
+    for j in range(4):
+        c=g.vspin([ 1 if i == j else 0 for i in range(4) ])
+        gamma_mu_mat[:,j]=(gamma * c).array
+    eps=np.linalg.norm(gamma_mu_mat - gamma.tensor().array)
+    assert(eps < 1e-14)
+
+# test multiplication of spin-color vector
+sc=g.vspincolor([[1,0,0],[0,1,0],[0,0,1],[0,0,0]])
+for mu in g.gamma:
+    gamma=g.gamma[mu]
+    g.message("Test numpy matrix application to vspincolor for",mu)
+    vec=(gamma * sc).array
+    for i in range(4):
+        for j in range(3):
+            eps=abs(vec[i,j] - sum(gamma.tensor().array[i,:] * sc[:,j]))
+            assert(eps < 1e-14)
+
+# test multiplication with spin-color matrix (propagator)
+prop=l[0,0,0,0]
+propPrime=g.gamma[5] * prop * g.gamma[5]
+g.message("Test multiplication with spin-color matrix")
+for s1 in range(4):
+    for s2 in range(4):
+        for c1 in range(3):
+            for c2 in range(3):
+                eps=abs(prop[s1,s2,c1,c2] / propPrime[s1,s2,c1,c2] - (-1)**(s1//2 + s2//2))
+                assert(eps < 1e-14)
 
 
 g.message("All tests passed")

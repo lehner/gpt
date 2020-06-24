@@ -25,8 +25,26 @@
 #define BIT_SPINTRACE 1
 #define BIT_COLORTRACE 2
 
+// mapping to gamma matrices
+static int gamma_algebra_map_max = 12;
+
+static Gamma::Algebra gamma_algebra_map[] = {
+  Gamma::Algebra::GammaX, // 0
+  Gamma::Algebra::GammaY, // 1
+  Gamma::Algebra::GammaZ, // 2
+  Gamma::Algebra::GammaT, // 3
+  Gamma::Algebra::Gamma5,  // 4
+  Gamma::Algebra::SigmaXY, // 5
+  Gamma::Algebra::SigmaXZ, // 6
+  Gamma::Algebra::SigmaXT, // 7
+  Gamma::Algebra::SigmaYZ, // 8
+  Gamma::Algebra::SigmaYT, // 9
+  Gamma::Algebra::SigmaZT, // 10
+  Gamma::Algebra::Identity // 11
+};
+
+// need to supplement this for current Grid
 namespace Grid {
-  // need to supplement this for current Grid
   template<class vtype,int N> accelerator_inline iVector<vtype,N> transpose(const iVector<vtype,N>&r) { return r; }
 };
 
