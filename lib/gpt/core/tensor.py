@@ -103,20 +103,23 @@ class tensor:
             return other.__mul__(self)
 
     def __add__(self, other):
-        assert(self.otype == other.otype)
+        assert(self.otype.__name__ == other.otype.__name__)
         return tensor( self.array + other.array, self.otype)
 
+    def __eq__(self, other):
+        return np.array_equal(self.array,other.array)
+
     def __sub__(self, other):
-        assert(self.otype == other.otype)
+        assert(self.otype.__name__ == other.otype.__name__)
         return tensor( self.array - other.array, self.otype)
 
     def __iadd__(self, other):
-        assert(self.otype == other.otype)
+        assert(self.otype.__name__ == other.otype.__name__)
         self.array += other.array
         return self
 
     def __isub__(self, other):
-        assert(self.otype == other.otype)
+        assert(self.otype.__name__ == other.otype.__name__)
         self.array -= other.array
         return self
 

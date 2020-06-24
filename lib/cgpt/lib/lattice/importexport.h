@@ -49,27 +49,72 @@ static void cgpt_to_full_coor(GridBase* grid, int cb,
 
 static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
 					       std::vector<cgpt_distribute::data_simd> & data,
-					       std::vector<long> & shape, std::vector< std::vector<long> > & tidx,
+					       std::vector<long> & shape, PyArrayObject* tidx,
 					       GridBase* & grid, int & cb, int & dtype) {
+
   ASSERT(PyList_Check(vlat));
   long nlat=PyList_Size(vlat);
 
-  ASSERT(tidx.size() == nlat);
+  ASSERT(PyArray_TYPE(tidx) == NPY_INT32);
+  ASSERT(PyArray_NDIM(tidx) == 2);
+  long* tidx_dim = PyArray_DIMS(tidx);
+  int32_t* tidx_coor = (int32_t*)PyArray_DATA(tidx);
+  long n_indices = tidx_dim[0];
+  long dim_indices = tidx_dim[1];
 
   data.resize(nlat);
   shape.resize(0);
 
   for (long i=0;i<nlat;i++) {
+
     cgpt_distribute::data_simd & d = data[i];
+
     cgpt_Lattice_base* l = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(vlat,i));
-    std::vector<long> ishape;
+
     PyObject* _mem = l->memory_view();
     Py_buffer* buf = PyMemoryView_GET_BUFFER(_mem);
+
     d.local = buf->buf;
-    d.tidx = tidx[i];
+
+    std::vector<long> ishape;
     l->describe_data_layout(d.Nsimd,d.word,d.simd_word,ishape);
+    long words = d.word / d.simd_word;
     Py_XDECREF(_mem);
-    
+
+    long v_n0 = shape.size() ? shape[0] : 0;
+    long v_n1 = v_n0 + ishape[0];
+    ASSERT(dim_indices == ishape.size());
+
+    // first select
+    std::vector<long> indices_on_l;
+    for (long ll=0;ll<n_indices;ll++) {
+      auto & n = tidx_coor[ll*dim_indices];
+      if (v_n0 <= n && n < v_n1)
+	indices_on_l.push_back(ll);
+    }
+
+    //std::cout << GridLogMessage << indices_on_l << std::endl;
+
+    // then process in parallel
+    d.offset_data.resize(indices_on_l.size());
+    d.offset_buffer.resize(indices_on_l.size());
+    thread_region
+      {
+	std::vector<long> coor(dim_indices);
+	thread_for_in_region(idx, indices_on_l.size(),{
+	    for (long l=0;l<dim_indices;l++)
+	      coor[l] = tidx_coor[indices_on_l[idx]*dim_indices + l];
+	    int linear_index;
+	    coor[0] -= v_n0;
+	    Lexicographic::IndexFromCoorReversed(coor,linear_index,ishape);
+	    ASSERT(0 <= linear_index && linear_index < words);
+	    d.offset_data[idx] = linear_index;
+	    d.offset_buffer[idx] = indices_on_l[idx];
+	  });
+      }
+
+    //std::cout << GridLogMessage << "Indices:" << d.offset_data << " -> " << d.offset_buffer << std::endl;
+
     if (i == 0) {
       shape = ishape;
       grid = l->get_grid();
@@ -85,6 +130,7 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
       ASSERT(dtype == l->get_numpy_dtype());
     }
   }
+   
 }
 
 // Coordinates in the list may differ from node to node,
@@ -137,10 +183,6 @@ static PyArrayObject* cgpt_importexport(GridBase* grid, int cb, int dtype,
     long sz;
     if (PyArray_Check(data)) {
       PyArrayObject* bytes = (PyArrayObject*)data;
-      ASSERT(PyArray_NDIM(bytes) == dim.size());
-      long* tdim = PyArray_DIMS(bytes);
-      for (int i=0;i<(int)dim.size();i++)
-	ASSERT(tdim[i] == dim[i]);
       ASSERT(PyArray_TYPE(bytes) == dtype);
       s = (void*)PyArray_DATA(bytes);
       sz = PyArray_NBYTES(bytes);

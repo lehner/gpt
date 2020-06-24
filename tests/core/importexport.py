@@ -10,6 +10,16 @@ import sys
 import random
 
 import cgpt
+
+# add test for byte order swap
+data=memoryview(bytearray(4))
+data[:]=b"NUXI"
+mdata=memoryview(bytes(4))
+cgpt.munge_byte_order(mdata,data,4)
+assert(mdata[::-1]==data)
+
+
+# import/export test
 grid=g.grid([4,4,8,8],g.single)
 src=g.vcomplex(grid,30)
 dst=g.vcomplex(grid,30)

@@ -9,8 +9,8 @@ import numpy as np
 import sys
 
 # load configuration
-fine_grid=g.grid([8,8,8,16],g.single)
-coarse_grid=g.grid([4,4,4,8],fine_grid.precision)
+fine_grid=g.grid([16,8,8,16],g.single)
+coarse_grid=g.grid([8,4,4,8],fine_grid.precision)
 
 # basis
 n=30

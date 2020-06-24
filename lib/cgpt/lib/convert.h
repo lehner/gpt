@@ -21,6 +21,11 @@ static void cgpt_convert(PyObject* in, int& out) {
   out = PyLong_AsLong(in);
 }
 
+static void cgpt_convert(PyObject* in, PyArrayObject*& out) {
+  ASSERT(PyArray_Check(in));
+  out = (PyArrayObject*)in;
+}
+
 static void cgpt_convert(PyObject* in, long& out) {
   ASSERT(PyLong_Check(in));
   out = PyLong_AsLong(in);

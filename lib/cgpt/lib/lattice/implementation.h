@@ -47,6 +47,10 @@ public:
 			PyUnicode_FromString(get_prec(l).c_str()));
   }
 
+  void set_to_zero() {
+    l = Zero();
+  }
+
   // use norm2 convention for squared norm, talked to Peter, Grid may also change to this cleaner notation
   virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
     return ::axpy_norm(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
@@ -97,25 +101,6 @@ public:
   virtual void cshift_from(cgpt_Lattice_base* _src, int dir, int off) {
     cgpt_Lattice<T>* src = compatible<T>(_src);
     l = Cshift(src->l, dir, off);
-  }
-
-  virtual PyObject* get_val(const std::vector<int>& coor) {
-    return cgpt_lattice_peek_value(l,coor);
-  }
-
-  virtual void set_val(const std::vector<int>& coor, PyObject* _val) {
-    int nc = (int)coor.size();
-    if (!nc) {
-      if (cgpt_is_zero(_val)) {
-	l = Zero();
-      } else {
-	sobj val;
-	cgpt_numpy_import(val,_val);
-	l = val;
-      }
-    } else {
-      cgpt_lattice_poke_value(l,coor,_val);
-    }
   }
 
   virtual PyObject* sum() {

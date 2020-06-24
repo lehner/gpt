@@ -10,7 +10,7 @@ import sys
 
 # gauge field
 rng=g.random("test")
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
+U = g.qcd.gauge.random(g.grid([16, 8, 8, 16], g.double), rng)
 
 # zmobius operator
 q=g.qcd.fermion.zmobius(U,{

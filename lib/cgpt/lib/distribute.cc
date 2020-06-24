@@ -93,7 +93,7 @@ long cgpt_distribute::word_total(std::vector<data_simd>& src) {
   long r = 0;
   for (auto& s : src) {
     ASSERT(s.Nsimd <= SIMD_BASE);
-    r+=s.simd_word * s.tidx.size();
+    r+=s.simd_word * s.offset_data.size();
   }
   return r;
 }
@@ -152,22 +152,20 @@ void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map
 	  long _odx = offset / SIMD_BASE;
 	  long _idx = offset % SIMD_BASE;
 
-	  long si_base = 0;
 	  for (long ni = 0; ni < _src.size(); ni++) {
 	    char* src = (char*)_src[ni].local;
 	    long Nsimd = _src[ni].Nsimd;
 	    long simd_word = _src[ni].simd_word;
 	    long word = _src[ni].word;
-	    auto & tidx = _src[ni].tidx;
-	    long N_ni = tidx.size();
+	    auto & offset_data = _src[ni].offset_data;
+	    auto & offset_buffer = _src[ni].offset_buffer;
+	    long N_ni = offset_data.size();
 	    long si_stride = Nsimd * simd_word;
 	    long o_stride = Nsimd * word;
 
 	    for (long si = 0; si < N_ni; si++) {
-	      memcpy(&dst[_word_total*idx + (si_base + si)*simd_word],&src[si_stride*tidx[si] + simd_word*_idx + o_stride*_odx],simd_word);
+	      memcpy(&dst[_word_total*idx + offset_buffer[si]*simd_word],&src[si_stride*offset_data[si] + simd_word*_idx + o_stride*_odx],simd_word);
 	    }
-
-	    si_base += N_ni;
 	  }
 	});
     }
@@ -269,9 +267,16 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
       w.resize(dest_n * _word_total);
       char* dst = (char*)&w[0];
       char* src = (char*)_src;
-      
+
       thread_for(idx, dest_n,{
-	  memcpy(&dst[idx*_word_total],&src[(_word_total*n[idx]) % _src_size],_word_total);
+	  long cur_pos = 0;
+	  while (cur_pos < _word_total) {
+	    long dst_offset = idx*_word_total + cur_pos;
+	    long src_offset = (_word_total*n[idx] + cur_pos) % _src_size;
+	    long block_size = std::min(_word_total - cur_pos,_src_size - src_offset);
+	    memcpy(dst + dst_offset,src + src_offset,block_size);
+	    cur_pos += block_size;
+	  }
 	});
       
       MPI_Request r;
@@ -318,22 +323,20 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
 	  long _odx = offset / SIMD_BASE;
 	  long _idx = offset % SIMD_BASE;
 
-	  long si_base = 0;
 	  for (long ni = 0; ni < _dst.size(); ni++) {
 	    char* dst = (char*)_dst[ni].local;
 	    long Nsimd = _dst[ni].Nsimd;
 	    long simd_word = _dst[ni].simd_word;
 	    long word = _dst[ni].word;
-	    auto & tidx = _dst[ni].tidx;
-	    long N_ni = tidx.size();
+	    auto & offset_data = _dst[ni].offset_data;
+	    auto & offset_buffer = _dst[ni].offset_buffer;
+	    long N_ni = offset_data.size();
 	    long si_stride = Nsimd * simd_word;
 	    long o_stride = Nsimd * word;
 
 	    for (long si = 0; si < N_ni; si++) {
-	      memcpy(&dst[si_stride*tidx[si] + simd_word*_idx + o_stride*_odx],&src[_word_total*idx + (si_base + si)*simd_word],simd_word);
+	      memcpy(&dst[si_stride*offset_data[si] + simd_word*_idx + o_stride*_odx],&src[_word_total*idx + offset_buffer[si]*simd_word],simd_word);
 	    }
-	    
-	    si_base += N_ni;
 	  }
 	});
     }
@@ -352,22 +355,21 @@ void cgpt_distribute::copy_data(const mp& m, std::vector<data_simd>& _src, void*
       long _odx = offset / SIMD_BASE;
       long _idx = offset % SIMD_BASE;
       
-      long si_base = 0;
       for (long ni = 0; ni < _src.size(); ni++) {
 	char* src = (char*)_src[ni].local;
 	long Nsimd = _src[ni].Nsimd;
 	long simd_word = _src[ni].simd_word;
 	long word = _src[ni].word;
-	auto & tidx = _src[ni].tidx;
-	long N_ni = tidx.size();
+	auto & offset_data = _src[ni].offset_data;
+	auto & offset_buffer = _src[ni].offset_buffer;
+	long N_ni = offset_data.size();
 	long si_stride = Nsimd * simd_word;
 	long o_stride = Nsimd * word;
 	
 	for (long si = 0; si < N_ni; si++) {
-	  memcpy(&dst[_word_total*m.dst[idx] + (si_base + si)*simd_word],&src[si_stride*tidx[si] + simd_word*_idx + o_stride*_odx],simd_word);
+	  memcpy(&dst[_word_total*m.dst[idx] + offset_buffer[si]*simd_word],&src[si_stride*offset_data[si] + simd_word*_idx + o_stride*_odx],simd_word);
 	}
 
-	si_base += N_ni;
       }
     });
 
@@ -387,22 +389,20 @@ void cgpt_distribute::copy_data_rev(const mp& m, void* _src, long _src_size, std
       long _odx = offset / SIMD_BASE;
       long _idx = offset % SIMD_BASE;
       
-      long si_base = 0;
       for (long ni = 0; ni < _dst.size(); ni++) {
 	char* dst = (char*)_dst[ni].local;
 	long Nsimd = _dst[ni].Nsimd;
 	long simd_word = _dst[ni].simd_word;
 	long word = _dst[ni].word;
-	auto & tidx = _dst[ni].tidx;
-	long N_ni = tidx.size();
+	auto & offset_data = _dst[ni].offset_data;
+	auto & offset_buffer = _dst[ni].offset_buffer;
+	long N_ni = offset_data.size();
 	long si_stride = Nsimd * simd_word;
 	long o_stride = Nsimd * word;
 	
 	for (long si = 0; si < N_ni; si++) {
-	  memcpy(&dst[si_stride*tidx[si] + simd_word*_idx + o_stride*_odx],&src[(_word_total*m.dst[idx] + (si_base + si)*simd_word) % _src_size],simd_word);
+	  memcpy(&dst[si_stride*offset_data[si] + simd_word*_idx + o_stride*_odx],&src[(_word_total*m.dst[idx] + offset_buffer[si]*simd_word) % _src_size],simd_word);
 	}
-
-	si_base += N_ni;
       }
     });
 

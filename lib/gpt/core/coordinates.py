@@ -18,7 +18,7 @@
 #
 import gpt, cgpt, numpy
 
-def coordinates(o, order = "grid"):
+def coordinates(o, order = "lexicographic"):
     if type(o) == gpt.grid and o.cb.n == 1:
         dim=len(o.ldimensions)
         top=[ o.processor_coor[i]*o.ldimensions[i] for i in range(dim) ]

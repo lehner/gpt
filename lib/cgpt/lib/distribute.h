@@ -24,7 +24,7 @@ class cgpt_distribute {
   struct coor { int rank; long offset; };
   struct mp { std::vector<long> src; std::vector<long> dst; };
   struct plan { std::map<int,mp> cr; std::vector<long> tasks; };
-  struct data_simd { void* local; long word, Nsimd, simd_word; std::vector<long> tidx; };
+  struct data_simd { void* local; long word, Nsimd, simd_word; std::vector<long> offset_data; std::vector<long> offset_buffer; };
 
   int rank;
 

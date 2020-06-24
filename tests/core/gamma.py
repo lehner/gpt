@@ -4,7 +4,7 @@
 #
 import gpt as g
 
-l=g.vspincolor(g.grid([4,4,4,4],g.double))
+l=g.vspincolor(g.grid([8,4,4,4],g.double))
 
 g.random("test").cnormal(l)
 

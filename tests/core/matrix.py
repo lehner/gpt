@@ -4,8 +4,8 @@
 #
 import gpt as g
 
-grid_dp=g.grid([4,4,4,4],g.double)
-grid_sp=g.grid([4,4,4,4],g.single)
+grid_dp=g.grid([8,4,4,4],g.double)
+grid_sp=g.grid([8,4,4,4],g.single)
 
 for grid,eps in [ (grid_dp,1e-15), (grid_sp,1e-7) ]:
     rng=g.random("test")
