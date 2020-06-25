@@ -18,69 +18,46 @@
 #
 import cgpt, gpt
 
+
 class FILE:
     def __init__(self, fn, md):
-        t0=gpt.time()
-        self.f = cgpt.fopen(fn,md)
+        self.f = cgpt.fopen(fn, md)
         if self.f == 0:
             self.f = None
             raise FileNotFoundError("Can not open file %s" % fn)
-        t1=gpt.time()
-        #print("OPEN %g" % (t1-t0))
 
     def __del__(self):
-        t0=gpt.time()
-        if not self.f is None:
+        if self.f is not None:
             cgpt.fclose(self.f)
-        t1=gpt.time()
-        #print("__del__ %g" % (t1-t0))
 
     def close(self):
-        t0=gpt.time()
-        assert(not self.f is None)
+        assert self.f is not None
         cgpt.fclose(self.f)
         self.f = None
-        t1=gpt.time()
-        #print("CLOSE %g" % (t1-t0))
 
     def tell(self):
-        assert(not self.f is None)
-        t0=gpt.time()
-        r=cgpt.ftell(self.f)
-        t1=gpt.time()
-        #print("TELL %g" % (t1-t0))
+        assert self.f is not None
+        r = cgpt.ftell(self.f)
         return r
 
     def seek(self, offset, whence):
-        assert(not self.f is None)
-        t0=gpt.time()
-        r=cgpt.fseek(self.f, offset, whence)
-        t1=gpt.time()
-        #print("SEEK %g" % (t1-t0))
+        assert self.f is not None
+        r = cgpt.fseek(self.f, offset, whence)
         return r
 
     def read(self, sz):
-        assert(not self.f is None)
-        t0=gpt.time()
-        t=bytes(sz)
+        assert self.f is not None
+        t = bytes(sz)
         if sz > 0:
-            assert(cgpt.fread(self.f,sz,memoryview(t))==1)
-        t1=gpt.time()
-        #print("READ %g s, %g GB" % (t1-t0,sz/1024.**3.))
+            assert cgpt.fread(self.f, sz, memoryview(t)) == 1
         return t
 
     def write(self, d):
-        assert(not self.f is None)
-        t0=gpt.time()
+        assert self.f is not None
         if type(d) != memoryview:
-            d=memoryview(d)
-        assert(cgpt.fwrite(self.f,len(d),d)==1)
-        t1=gpt.time()
-        #print("WRITE %g s, %g GB" % (t1-t0,len(d)/1024.**3.))
+            d = memoryview(d)
+        assert cgpt.fwrite(self.f, len(d), d) == 1
 
     def flush(self):
-        assert(not self.f is None)
-        t0=gpt.time()
+        assert self.f is not None
         cgpt.fflush(self.f)
-        t1=gpt.time()
-        #print("FLUSH %g" % (t1-t0))

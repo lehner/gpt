@@ -19,20 +19,27 @@
 import cgpt
 import gpt
 
+
 class even:
-    tag=0
+    tag = 0
+
     def inv():
         return gpt.odd
 
+
 class odd:
-    tag=1
+    tag = 1
+
     def inv():
         return gpt.even
 
+
 class none:
-    tag=None
+    tag = None
+
     def inv():
         return gpt.none
+
 
 def str_to_cb(s):
     if s == "even":
@@ -42,14 +49,16 @@ def str_to_cb(s):
     elif s == "none":
         return none
     else:
-        assert(0)
+        assert 0
+
 
 def pick_cb(cb, dst, src):
-    assert(len(src.v_obj) == len(dst.v_obj))
+    assert len(src.v_obj) == len(dst.v_obj)
     for i in src.otype.v_idx:
-        cgpt.lattice_pick_checkerboard(cb.tag,src.v_obj[i],dst.v_obj[i])
+        cgpt.lattice_pick_checkerboard(cb.tag, src.v_obj[i], dst.v_obj[i])
+
 
 def set_cb(dst, src):
-    assert(len(src.v_obj) == len(dst.v_obj))
+    assert len(src.v_obj) == len(dst.v_obj)
     for i in src.otype.v_idx:
-        cgpt.lattice_set_checkerboard(src.v_obj[i],dst.v_obj[i])
+        cgpt.lattice_set_checkerboard(src.v_obj[i], dst.v_obj[i])

@@ -23,7 +23,7 @@ from time import time
 
 
 class fgcr:
-    @g.params_convention(eps = 1e-15, maxiter = 1000000)
+    @g.params_convention(eps=1e-15, maxiter=1000000)
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
@@ -33,7 +33,9 @@ class fgcr:
     def update_psi(self, psi, alpha, beta, gamma, delta, p, i):
         # backward substitution
         for j in reversed(range(i + 1)):
-            delta[j] = (alpha[j] - np.dot(beta[j, j+1:i+1], delta[j+1:i+1])) / gamma[j]
+            delta[j] = (
+                alpha[j] - np.dot(beta[j, j + 1 : i + 1], delta[j + 1 : i + 1])
+            ) / gamma[j]
 
         for j in range(i + 1):
             psi += delta[j] * p[j]
@@ -43,10 +45,9 @@ class fgcr:
 
     def calc_res(self, mat, psi, mmpsi, src, r):
         mat(mmpsi, psi)
-        return g.axpy_norm2(r, -1., mmpsi, src)
+        return g.axpy_norm2(r, -1.0, mmpsi, src)
 
     def __call__(self, mat, prec=None):
-
         def inv(psi, src):
             # verbosity
             verbose = g.default.is_verbose("fgcr")
@@ -66,13 +67,13 @@ class fgcr:
             delta = np.empty((rlen), dtype_c)
 
             # fields
-            r, mmr, mmpsi = g.copy(src), g.copy(src), g.copy(src)
+            r, mmpsi = g.copy(src), g.copy(src)
             p = [g.lattice(src) for i in range(rlen)]
             mmp = [g.lattice(src) for i in range(rlen)]
 
             # residual target
             ssq = g.norm2(src)
-            rsq = self.eps**2. * ssq
+            rsq = self.eps ** 2.0 * ssq
 
             # initial values
             r2 = self.restart(mat, psi, mmpsi, src, r)
@@ -82,11 +83,11 @@ class fgcr:
                 i = k % rlen
 
                 # iteration criteria
-                reached_maxiter = k+1 == self.maxiter
-                need_restart = i+1 == rlen
+                reached_maxiter = k + 1 == self.maxiter
+                need_restart = i + 1 == rlen
 
                 t0 = time()
-                if not prec is None:
+                if prec is not None:
                     prec(r, p[i])
                 else:
                     p[i] @= r
@@ -102,9 +103,9 @@ class fgcr:
 
                 t6 = time()
                 ip, mmp2 = g.innerProductNorm2(mmp[i], r)
-                gamma[i] = mmp2**0.5
+                gamma[i] = mmp2 ** 0.5
 
-                if gamma[i] == 0.:
+                if gamma[i] == 0.0:
                     g.message("fgcr breakdown, gamma[%d] = 0" % (i))
                     break
 
@@ -116,7 +117,8 @@ class fgcr:
                 if verbose:
                     g.message(
                         "Timing[s]: Prec = %g, Matrix = %g, Orthog = %g, Rest = %g"
-                        % (t1 - t0, t3 - t2, t5 - t4, t7 - t6))
+                        % (t1 - t0, t3 - t2, t5 - t4, t7 - t6)
+                    )
                     g.message("res^2[ %d, %d ] = %g" % (k, i, r2))
 
                 if r2 <= rsq or need_restart or reached_maxiter:
@@ -130,7 +132,8 @@ class fgcr:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
                                     "Computed res = %g, true res = %g, target = %g"
-                                    % (r2**0.5, res**0.5, self.eps))
+                                    % (r2 ** 0.5, res ** 0.5, self.eps)
+                                )
                         break
 
                     if reached_maxiter:
@@ -141,19 +144,20 @@ class fgcr:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
                                     "Computed res = %g, true res = %g, target = %g"
-                                    % (r2**0.5, res**0.5, self.eps))
+                                    % (r2 ** 0.5, res ** 0.5, self.eps)
+                                )
 
                     if need_restart:
                         r2 = self.restart(mat, psi, mmpsi, src, r)
                         if verbose:
                             g.message("Performed restart")
-        
+
         otype = None
         grid = None
         if type(mat) == g.matrix_operator:
             otype = mat.otype
             grid = mat.grid
 
-        return g.matrix_operator(mat = inv, inv_mat = mat, 
-                                 otype = otype, zero = (True,False),
-                                 grid = grid)
+        return g.matrix_operator(
+            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid
+        )

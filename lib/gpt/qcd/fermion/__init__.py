@@ -28,20 +28,25 @@ import copy
 ###
 # instantiate fermion operators
 
+
 @gpt.params_convention()
 def wilson_clover(U, params):
-    params = copy.deepcopy(params) # save current parameters
+    params = copy.deepcopy(params)  # save current parameters
     if "kappa" in params:
-        assert(not "mass" in params)
-        params["mass"] = (1./params["kappa"]/2. - 4.)
-    return operator("wilson_clover", U, params, otype = gpt.ot_vspin4color3)
+        assert "mass" not in params
+        params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
+    return operator("wilson_clover", U, params, otype=gpt.ot_vspin4color3)
+
 
 @gpt.params_convention()
 def zmobius(U, params):
-    params = copy.deepcopy(params) # save current parameters
-    return operator("zmobius", U, params, len(params["omega"]), otype = gpt.ot_vspin4color3)
+    params = copy.deepcopy(params)  # save current parameters
+    return operator(
+        "zmobius", U, params, len(params["omega"]), otype=gpt.ot_vspin4color3
+    )
+
 
 @gpt.params_convention()
 def mobius(U, params):
-    params = copy.deepcopy(params) # save current parameters
-    return operator("mobius", U, params, params["Ls"], otype = gpt.ot_vspin4color3)
+    params = copy.deepcopy(params)  # save current parameters
+    return operator("mobius", U, params, params["Ls"], otype=gpt.ot_vspin4color3)

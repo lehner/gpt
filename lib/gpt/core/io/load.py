@@ -21,39 +21,39 @@ from gpt.params import params_convention
 
 # load through cgpt backend (NerscIO, openQCD, ...)
 def load_cgpt(*a):
-    result=[]
-    r,metadata=cgpt.load(*a, gpt.default.is_verbose("io"))
+    result = []
+    r, metadata = cgpt.load(*a, gpt.default.is_verbose("io"))
     if r is None:
         raise gpt.LoadError()
     for gr in r:
-        grid=gpt.grid(gr[1],eval("gpt.precision." + gr[2]),eval("gpt." + gr[3]),gr[0])
-        result_grid=[]
-        for t_obj,s_ot,s_pr in gr[4]:
-            assert(s_pr == gr[2])
-            l=gpt.lattice(grid,eval("gpt.otype." + s_ot),[ t_obj ])
-            l.metadata=metadata
+        grid = gpt.grid(
+            gr[1], eval("gpt.precision." + gr[2]), eval("gpt." + gr[3]), gr[0]
+        )
+        result_grid = []
+        for t_obj, s_ot, s_pr in gr[4]:
+            assert s_pr == gr[2]
+            l = gpt.lattice(grid, eval("gpt.otype." + s_ot), [t_obj])
+            l.metadata = metadata
             result_grid.append(l)
         result.append(result_grid)
     while len(result) == 1:
-        result=result[0]
+        result = result[0]
     return result
+
 
 # input
 @params_convention()
-def load(fn,p={}):
+def load(fn, p={}):
 
-    supported = [
-        gpt.core.io.gpt_io,
-        gpt.core.io.cevec_io
-    ]
+    supported = [gpt.core.io.gpt_io, gpt.core.io.cevec_io]
 
     for fmt in supported:
         try:
-            return fmt.load(fn,p)
+            return fmt.load(fn, p)
         except NotImplementedError:
             pass
 
-    a=[fn]
+    a = [fn]
     if len(p) > 0:
         a.append(p)
     return load_cgpt(*a)

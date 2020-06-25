@@ -22,9 +22,11 @@ import cgpt
 def rank():
     return cgpt.global_rank()
 
+
 # broadcast
-def broadcast(root,data):
-    return cgpt.broadcast(root,data)
+def broadcast(root, data):
+    return cgpt.broadcast(root, data)
+
 
 # barrier
 def barrier():

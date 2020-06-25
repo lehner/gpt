@@ -1,7 +1,9 @@
+- sparse grids can be easily implemented if I allow for the step in slicing!
 - mcomplex
 - spin/color trace
 - test applications on summit with new version + new Grid
-- A2A, HVP
+- A2A meson fields
+- Stout smearing, plaquette implementation using covariant shifts
 - Complete sparse/split grid implementation
 - sources
 - verbose=eval -> Bytes/s & Flops/s for expression evaluation
