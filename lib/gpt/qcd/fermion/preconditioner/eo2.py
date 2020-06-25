@@ -40,7 +40,7 @@ import gpt
 #
 # R = N^dag ( 1   - EO OO^-1 ) ; R^dag = (1 - EO OO^-1)^dag N
 #
-#     ( EE^-1           ) 
+#     ( EE^-1           )
 # L = ( -OO^-1 OE EE^-1 )
 #
 #     ( 0   0     )
@@ -51,74 +51,81 @@ import gpt
 # we call the corresponding version even/odd parity.
 #
 
+
 class eo2:
-    def __init__(self, op, parity = None):
+    def __init__(self, op, parity=None):
         self.op = op
         self.otype = op.otype
         self.parity = gpt.odd if parity is None else parity
         self.F_grid_eo = op.F_grid_eo
         self.F_grid = op.F_grid
         self.U_grid = op.U_grid
-        self.tmp = gpt.lattice(self.F_grid_eo,self.otype)
-        self.tmp2 = gpt.lattice(self.F_grid_eo,self.otype)
+        self.tmp = gpt.lattice(self.F_grid_eo, self.otype)
+        self.tmp2 = gpt.lattice(self.F_grid_eo, self.otype)
         self.ImportPhysicalFermionSource = self.op.ImportPhysicalFermionSource
         self.ExportPhysicalFermionSolution = self.op.ExportPhysicalFermionSolution
         self.Dminus = self.op.Dminus
         self.ExportPhysicalFermionSource = self.op.ExportPhysicalFermionSource
 
         def _N(op, ip):
-            self.op.Mooee.inv_mat(self.tmp2,ip)
-            self.op.Meooe.mat(op,self.tmp2)
-            self.op.Mooee.inv_mat(self.tmp2,op)
-            self.op.Meooe.mat(op,self.tmp2)
+            self.op.Mooee.inv_mat(self.tmp2, ip)
+            self.op.Meooe.mat(op, self.tmp2)
+            self.op.Mooee.inv_mat(self.tmp2, op)
+            self.op.Meooe.mat(op, self.tmp2)
             op @= ip - op
 
         def _NDag(op, ip):
-            self.op.Meooe.adj_mat(self.tmp2,ip)
-            self.op.Mooee.adj_inv_mat(op,self.tmp2)
-            self.op.Meooe.adj_mat(self.tmp2,op)
-            self.op.Mooee.adj_inv_mat(op,self.tmp2)
+            self.op.Meooe.adj_mat(self.tmp2, ip)
+            self.op.Mooee.adj_inv_mat(op, self.tmp2)
+            self.op.Meooe.adj_mat(self.tmp2, op)
+            self.op.Mooee.adj_inv_mat(op, self.tmp2)
             op @= ip - op
 
         def _NDagN(op, ip):
-            _N(self.tmp,ip)
-            _NDag(op,self.tmp)
+            _N(self.tmp, ip)
+            _NDag(op, self.tmp)
 
-        self.N = gpt.matrix_operator(mat = _N, adj_mat = _NDag, otype = op.otype, grid = self.F_grid_eo, 
-                                     cb = self.parity)
-        self.NDagN = gpt.matrix_operator(mat = _NDagN, adj_mat = _NDagN, otype = op.otype, grid = self.F_grid_eo,
-                                         cb = self.parity)
+        self.N = gpt.matrix_operator(
+            mat=_N, adj_mat=_NDag, otype=op.otype, grid=self.F_grid_eo, cb=self.parity
+        )
+        self.NDagN = gpt.matrix_operator(
+            mat=_NDagN,
+            adj_mat=_NDagN,
+            otype=op.otype,
+            grid=self.F_grid_eo,
+            cb=self.parity,
+        )
 
-    def import_parity(self,e,o):
+    def import_parity(self, e, o):
         if self.parity is gpt.odd:
-            return o,e
-        return e,o
+            return o, e
+        return e, o
 
     def R(self, op, ie, io):
-        ip,inp=self.import_parity(ie,io)
-        self.op.Mooee.inv_mat(self.tmp,inp)
-        self.op.Meooe.mat(op,self.tmp)
+        ip, inp = self.import_parity(ie, io)
+        self.op.Mooee.inv_mat(self.tmp, inp)
+        self.op.Meooe.mat(op, self.tmp)
         self.tmp @= ip - op
-        self.N.adj_mat(op,self.tmp)
+        self.N.adj_mat(op, self.tmp)
 
     def RDag(self, oe, oo, ip):
-        op,onp=self.import_parity(oe,oo)
+        op, onp = self.import_parity(oe, oo)
         # R^dag = (1 - EO OO^-1)^dag N
-        self.N.mat(onp,ip)
-        self.op.Meooe.adj_mat(self.tmp,onp)
-        self.op.Mooee.adj_inv_mat(op,self.tmp)
+        self.N.mat(onp, ip)
+        self.op.Meooe.adj_mat(self.tmp, onp)
+        self.op.Mooee.adj_inv_mat(op, self.tmp)
         op @= -op
 
     def L(self, oe, oo, ip):
-        op,onp=self.import_parity(oe,oo)
-        self.op.Mooee.inv_mat(op,ip)
-        self.op.Meooe.mat(self.tmp,op)
-        self.op.Mooee.inv_mat(onp,self.tmp)
-        onp @= - onp
+        op, onp = self.import_parity(oe, oo)
+        self.op.Mooee.inv_mat(op, ip)
+        self.op.Meooe.mat(self.tmp, op)
+        self.op.Mooee.inv_mat(onp, self.tmp)
+        onp @= -onp
 
     def S(self, oe, oo, ie, io):
-        ip,inp=self.import_parity(ie,io)
-        op,onp=self.import_parity(oe,oo)
-        self.op.Mooee.inv_mat(onp,inp)
-        op[:]=0
+        ip, inp = self.import_parity(ie, io)
+        op, onp = self.import_parity(oe, oo)
+        self.op.Mooee.inv_mat(onp, inp)
+        op[:] = 0
         op.checkerboard(self.parity)

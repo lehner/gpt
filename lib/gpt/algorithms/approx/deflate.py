@@ -21,6 +21,7 @@
 #
 import gpt as g
 
+
 class deflate:
     def __init__(self, inverter, evec, ev):
         self.inverter = inverter
@@ -29,22 +30,21 @@ class deflate:
 
     def __call__(self, matrix):
 
-        otype,grid,cb=None,None,None
+        otype, grid, cb = None, None, None
         if type(matrix) == g.matrix_operator:
-            otype,grid,cb=matrix.otype,matrix.grid,matrix.cb
+            otype, grid, cb = matrix.otype, matrix.grid, matrix.cb
             matrix = matrix.mat
 
         def inv(dst, src):
-            verbose=g.default.is_verbose("deflate")
+            verbose = g.default.is_verbose("deflate")
             # |dst> = sum_n 1/ev[n] |n><n|src>
-            t0=g.time()
-            dst[:]=0
-            for i,n in enumerate(self.evec):
-                dst += n*g.innerProduct(n,src)/self.ev[i]
-            t1=g.time()
+            t0 = g.time()
+            dst[:] = 0
+            for i, n in enumerate(self.evec):
+                dst += n * g.innerProduct(n, src) / self.ev[i]
+            t1 = g.time()
             if verbose:
-                g.message("Deflated in %g s" % (t1-t0))
+                g.message("Deflated in %g s" % (t1 - t0))
             return self.inverter(matrix)(dst, src)
 
-        return g.matrix_operator(mat = inv, inv_mat = matrix, otype = otype,
-                                 grid = grid, cb = cb)
+        return g.matrix_operator(mat=inv, inv_mat=matrix, otype=otype, grid=grid, cb=cb)

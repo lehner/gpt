@@ -21,12 +21,13 @@
 import gpt as g
 from time import time
 
+
 class mr:
 
     # Y. Saad calls it MR, states mat must be positive definite
     # SciPy, Wikipedia call it MINRES, state mat must be symmetric
 
-    @g.params_convention(eps = 1e-15, maxiter = 1000000)
+    @g.params_convention(eps=1e-15, maxiter=1000000)
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
@@ -34,7 +35,6 @@ class mr:
         self.relax = params["relax"]
 
     def __call__(self, mat):
-
         def inv(psi, src):
             verbose = g.default.is_verbose("mr")
             t0 = time()
@@ -45,13 +45,13 @@ class mr:
             r @= src - mmr
 
             ssq = g.norm2(src)
-            rsq = self.eps**2. * ssq
+            rsq = self.eps ** 2.0 * ssq
 
             for k in range(self.maxiter):
                 mat(mmr, r)
                 ip, mmr2 = g.innerProductNorm2(mmr, r)
 
-                if mmr2 == 0.:
+                if mmr2 == 0.0:
                     continue
 
                 alpha = ip.real / mmr2 * self.relax
@@ -74,6 +74,6 @@ class mr:
             otype = mat.otype
             grid = mat.grid
 
-        return g.matrix_operator(mat = inv, inv_mat = mat, 
-                                 otype = otype, zero = (True,False),
-                                 grid = grid)
+        return g.matrix_operator(
+            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid
+        )

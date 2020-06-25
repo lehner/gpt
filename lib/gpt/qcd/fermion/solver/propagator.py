@@ -18,7 +18,8 @@
 #
 import gpt
 
-def propagator(inv_matrix, w = None):
+
+def propagator(inv_matrix, w=None):
 
     if w is None:
         exp = inv_matrix.ExportPhysicalFermionSolution
@@ -30,9 +31,9 @@ def propagator(inv_matrix, w = None):
     def prop(dst_sc, src_sc):
         dst_sc @= exp * inv_matrix * imp * src_sc
 
-    r=gpt.matrix_operator(prop, 
-                          otype = (exp.otype[0],imp.otype[1]),
-                          grid = (exp.grid[0],imp.grid[1]))
+    r = gpt.matrix_operator(
+        prop, otype=(exp.otype[0], imp.otype[1]), grid=(exp.grid[0], imp.grid[1])
+    )
 
     r.inv_matrix = inv_matrix
 

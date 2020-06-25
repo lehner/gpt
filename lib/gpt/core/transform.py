@@ -18,114 +18,138 @@
 #
 import cgpt, gpt, numpy
 
-def cshift(first, second, third, fourth = None):
 
-    if type(first) == gpt.lattice and type(second) == gpt.lattice and not fourth is None:
-        t=first
-        l=gpt.eval(second)
-        d=third
-        o=fourth
+def cshift(first, second, third, fourth=None):
+
+    if (
+        type(first) == gpt.lattice
+        and type(second) == gpt.lattice
+        and fourth is not None
+    ):
+        t = first
+        l = gpt.eval(second)
+        d = third
+        o = fourth
     else:
-        l=gpt.eval(first)
-        d=second
-        o=third
-        t=gpt.lattice(l)
+        l = gpt.eval(first)
+        d = second
+        o = third
+        t = gpt.lattice(l)
 
     for i in t.otype.v_idx:
-        cgpt.cshift(t.v_obj[i],l.v_obj[i],d,o)
+        cgpt.cshift(t.v_obj[i], l.v_obj[i], d, o)
     return t
 
-def copy(first, second = None):
+
+def copy(first, second=None):
 
     if type(first) == gpt.lattice:
-        if not second is None:
-            t=first
-            l=second
+        if second is not None:
+            t = first
+            l = second
         else:
-            l=first
-            t=gpt.lattice(l)
+            l = first
+            t = gpt.lattice(l)
         for i in t.otype.v_idx:
-            cgpt.copy(t.v_obj[i],l.v_obj[i])
+            cgpt.copy(t.v_obj[i], l.v_obj[i])
         return t
 
     else:
-        assert(0)
+        assert 0
+
 
 def convert(first, second):
     if second == gpt.single or second == gpt.double:
 
         # if first is a list, distribute
         if type(first) == list:
-            return [ convert(x,second) for x in first ]
+            return [convert(x, second) for x in first]
 
         # if first is no list, evaluate
-        src=gpt.eval(first)
-        dst_grid=src.grid.converted(second)
-        return convert(gpt.lattice(dst_grid, src.otype),src)
+        src = gpt.eval(first)
+        dst_grid = src.grid.converted(second)
+        return convert(gpt.lattice(dst_grid, src.otype), src)
 
     elif type(first) == gpt.lattice:
 
         # second may be expression
-        second=gpt.eval(second)
+        second = gpt.eval(second)
 
         # now second is lattice
-        assert(len(first.otype.v_idx) == len(second.otype.v_idx))
+        assert len(first.otype.v_idx) == len(second.otype.v_idx)
         for i in first.otype.v_idx:
-            cgpt.convert(first.v_obj[i],second.v_obj[i])
+            cgpt.convert(first.v_obj[i], second.v_obj[i])
 
         # set checkerboard
         first.checkerboard(second.checkerboard())
         return first
 
     else:
-        assert(0)
+        assert 0
 
-def innerProduct(a,b, rank_only = False):
+
+def innerProduct(a, b, rank_only=False):
     if type(a) == gpt.tensor and type(b) == gpt.tensor:
         return gpt.adj(a) * b
-    a=gpt.eval(a)
-    b=gpt.eval(b)
-    assert(len(a.otype.v_idx) == len(b.otype.v_idx))
-    r=sum([ cgpt.lattice_rankInnerProduct(a.v_obj[i],b.v_obj[i]) for i in a.otype.v_idx ])
+    a = gpt.eval(a)
+    b = gpt.eval(b)
+    assert len(a.otype.v_idx) == len(b.otype.v_idx)
+    r = sum(
+        [cgpt.lattice_rankInnerProduct(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
+    )
     if rank_only:
         return r
     # do global sum only once not for each v_idx
-    return a.grid.globalsum(rankInnerProduct(a,b))
+    return a.grid.globalsum(rankInnerProduct(a, b))
 
-def rankInnerProduct(a,b):
-    return innerProduct(a,b, rank_only = True)
+
+def rankInnerProduct(a, b):
+    return innerProduct(a, b, rank_only=True)
+
 
 def norm2(l):
     if type(l) == gpt.tensor:
         return l.norm2()
-    l=gpt.eval(l) # otherwise it gets evaluated twice below
-    return innerProduct(l,l).real
+    l = gpt.eval(l)  # otherwise it gets evaluated twice below
+    return innerProduct(l, l).real
 
-def innerProductNorm2(a,b):
+
+def innerProductNorm2(a, b):
     if type(a) == gpt.tensor and type(b) == gpt.tensor:
         return gpt.adj(a) * b, a.norm2()
-    a=gpt.eval(a)
-    b=gpt.eval(b)
-    assert(len(a.otype.v_idx) == len(b.otype.v_idx))
-    r=[ cgpt.lattice_innerProductNorm2(a.v_obj[i],b.v_obj[i]) for i in a.otype.v_idx ]
-    return sum([ x[0] for x in r ]), sum([ x[1] for x in r ]) # todo, make local version of this too
+    a = gpt.eval(a)
+    b = gpt.eval(b)
+    assert len(a.otype.v_idx) == len(b.otype.v_idx)
+    r = [cgpt.lattice_innerProductNorm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
+    return (
+        sum([x[0] for x in r]),
+        sum([x[1] for x in r]),
+    )  # todo, make local version of this too
+
 
 def axpy_norm2(d, a, x, y):
-    x=gpt.eval(x)
-    y=gpt.eval(y)
-    assert(len(y.otype.v_idx) == len(x.otype.v_idx))
-    assert(len(d.otype.v_idx) == len(x.otype.v_idx))
-    return sum([ cgpt.lattice_axpy_norm2(d.v_obj[i],a,x.v_obj[i],y.v_obj[i]) for i in x.otype.v_idx ])
+    x = gpt.eval(x)
+    y = gpt.eval(y)
+    assert len(y.otype.v_idx) == len(x.otype.v_idx)
+    assert len(d.otype.v_idx) == len(x.otype.v_idx)
+    return sum(
+        [
+            cgpt.lattice_axpy_norm2(d.v_obj[i], a, x.v_obj[i], y.v_obj[i])
+            for i in x.otype.v_idx
+        ]
+    )
+
 
 def axpy(d, a, x, y):
-    x=gpt.eval(x)
-    y=gpt.eval(y)
-    assert(len(y.otype.v_idx) == len(x.otype.v_idx))
-    assert(len(d.otype.v_idx) == len(x.otype.v_idx))
+    x = gpt.eval(x)
+    y = gpt.eval(y)
+    assert len(y.otype.v_idx) == len(x.otype.v_idx)
+    assert len(d.otype.v_idx) == len(x.otype.v_idx)
     for i in x.otype.v_idx:
-        cgpt.lattice_axpy(d.v_obj[i],a,x.v_obj[i],y.v_obj[i])
+        cgpt.lattice_axpy(d.v_obj[i], a, x.v_obj[i], y.v_obj[i])
 
-def slice(x,dim):
-    x=gpt.eval(x)
-    r=sum([ numpy.array(cgpt.lattice_slice(o,dim)) for o in x.v_obj ])
-    return [ gpt.util.value_to_tensor(v,x.otype) for v in r ]
+
+def slice(x, dim):
+    x = gpt.eval(x)
+    r = sum([numpy.array(cgpt.lattice_slice(o, dim)) for o in x.v_obj])
+    return [gpt.util.value_to_tensor(v, x.otype) for v in r]

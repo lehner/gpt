@@ -18,6 +18,7 @@
 #
 import gpt as g
 
+
 class modes:
 
     #
@@ -29,34 +30,32 @@ class modes:
         self.left = left
         self.right = right
         self.evals = evals
-        assert(len(left) == len(right) and
-               len(left) == len(evals) and
-               len(left) > 0)
+        assert len(left) == len(right) and len(left) == len(evals) and len(left) > 0
 
-    def __call__(self, matrix = None):
+    def __call__(self, matrix=None):
 
         # ignore matrix
 
         left = self.left
         right = self.right
         evals = self.evals
-        f_evals = [ self.f(x) for x in evals ]
+        f_evals = [self.f(x) for x in evals]
 
-        otype = (left[0].otype,right[0].otype)
-        grid = (left[0].grid,right[0].grid)
-        cb = (left[0].checkerboard(),right[0].checkerboard())
+        otype = (left[0].otype, right[0].otype)
+        grid = (left[0].grid, right[0].grid)
+        cb = (left[0].checkerboard(), right[0].checkerboard())
 
         def approx(dst, src):
-            assert(src != dst)
-            verbose=g.default.is_verbose("modes")
-            t0=g.time()
-            dst[:]=0
-            for i,x in enumerate(left):
-                dst += f_evals[i] * x * g.innerProduct(right[i],src)
+            assert src != dst
+            verbose = g.default.is_verbose("modes")
+            t0 = g.time()
+            dst[:] = 0
+            for i, x in enumerate(left):
+                dst += f_evals[i] * x * g.innerProduct(right[i], src)
             if verbose:
-                t1=g.time()
-                g.message("Approximation by %d modes took %g s" % (len(left),t1-t0))
-        
-        return g.matrix_operator(mat = approx,
-                                 otype = otype, zero = (False,False),
-                                 grid = grid, cb = cb)
+                t1 = g.time()
+                g.message("Approximation by %d modes took %g s" % (len(left), t1 - t0))
+
+        return g.matrix_operator(
+            mat=approx, otype=otype, zero=(False, False), grid=grid, cb=cb
+        )

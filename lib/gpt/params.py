@@ -18,6 +18,7 @@
 #
 import os, inspect, gpt, cgpt
 
+
 class params_convention:
 
     # Allows for definition of default parameters and allows for
@@ -35,14 +36,14 @@ class params_convention:
     #
     # - A good candidate for default parameters is optional uncritical
     #   behavior such as additional reporting or memory advices.
-    def __init__(self, default = {}, **kwdefault):
+    def __init__(self, default={}, **kwdefault):
         self.default = {**default, **kwdefault}
 
     def __call__(self, f):
         fparams = list(inspect.signature(f).parameters.values())
-        
+
         # Get last defined parameter (which should be the params dict)
-        assert(len(fparams) > 0)
+        assert len(fparams) > 0
         last_fparam = fparams[-1]
 
         # If an annotation is of the last parameter is given, it should be a dict
@@ -57,39 +58,46 @@ class params_convention:
         # Allow for positional default arguments
         for i in reversed(range(nargs)):
             if fparams[i].default is inspect.Parameter.empty:
-                nargs_min=i+1
+                nargs_min = i + 1
                 break
 
         # Wrapper
         def wrap(*args, **kwargs):
-            nargs_given=len(args)
-            assert(nargs_given >= nargs_min)
+            nargs_given = len(args)
+            assert nargs_given >= nargs_min
 
             # allow for positional default arguments to be used
-            for i in range(nargs_given,nargs):
+            for i in range(nargs_given, nargs):
                 args = args + (fparams[i].default,)
 
             # positional arguments
-            positional = args[: nargs]
+            positional = args[:nargs]
 
             # merged params
-            params = {**{k: v for d in args[nargs :] for k, v in d.items()}, **kwargs}
-            for p,v in self.default.items():
-                if not p in params:
-                    params[p]=v
+            params = {**{k: v for d in args[nargs:] for k, v in d.items()}, **kwargs}
+            for p, v in self.default.items():
+                if p not in params:
+                    params[p] = v
             return f(*positional, params)
 
         return wrap
 
 
-def params(fn, verbose = False):
-    fn=os.path.expanduser(fn)
-    dat=open(fn).read()
+def params(fn, verbose=False):
+    fn = os.path.expanduser(fn)
+    dat = open(fn).read()
     if verbose:
-        gpt.message("********************************************************************************")
+        gpt.message(
+            "********************************************************************************"
+        )
         gpt.message("   Load %s:" % fn)
-        gpt.message("********************************************************************************\n%s" % dat.strip())
-        gpt.message("********************************************************************************")
-    r=eval(dat,globals())
-    assert( type(r) == dict )
+        gpt.message(
+            "********************************************************************************\n%s"
+            % dat.strip()
+        )
+        gpt.message(
+            "********************************************************************************"
+        )
+    r = eval(dat, globals())
+    assert type(r) == dict
     return r
