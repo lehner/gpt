@@ -221,7 +221,7 @@ class grid:
         return rank
 
     def __str__(self):
-        ps = 'single' if self.precision==gpt.single else 'double'
+        ps = self.precision.__name__
         return f'Grid {self.gdimensions}; Mpi = {self.mpi}; Precision = {ps}; CheckBoard = {self.cb.__name__}'
 
     def __del__(self):
