@@ -37,14 +37,15 @@ class qlat_io:
         gpt.barrier()
 
     def read_header(self):
-        if self.verbose:
-            gpt.message(f"Qlattice file format; reading {self.path}")
         with open(self.path, "rb") as f:
             line = self.getline(f)
-            if self.verbose:
-                gpt.message(f"   {line}")
             if line != "BEGIN_FIELD_HEADER":
                 return False
+
+            # need to be mute before this line since this is used to autodetect the file format
+            if self.verbose:
+                gpt.message(f"Qlattice file format; reading {self.path}")
+                gpt.message(f"   {line}")
 
             for i in range(8):
                 line = self.getline(f)
