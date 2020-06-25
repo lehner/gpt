@@ -1,0 +1,12 @@
+#!/bin/bash
+FILES=$(git ls-files | egrep "\.py$")
+
+# Remember git hypberblame; .git-blame-ignore-revs file
+
+for f in ${FILES}
+do
+
+echo $f
+python3 -m black -t py36 ${f}
+
+done

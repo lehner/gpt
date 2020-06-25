@@ -29,8 +29,7 @@ import cgpt, sys
 cgpt.init(sys.argv)
 
 # save my hostname
-hostname=socket.gethostname()
+hostname = socket.gethostname()
 
 # synonyms
-eval=expr_eval
-
+eval = expr_eval

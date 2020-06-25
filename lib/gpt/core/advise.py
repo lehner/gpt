@@ -17,27 +17,31 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 class infrequent_use:
-    tag="infrequent_use"
+    tag = "infrequent_use"
+
 
 class to_host:
-    tag="host"
+    tag = "host"
+
 
 class to_accelerator:
-    tag="accelerator"
+    tag = "accelerator"
 
-def distribute(o,f):
+
+def distribute(o, f):
     if type(o) == list:
-        return [ distribute(i,f) for i in o ]
+        return [distribute(i, f) for i in o]
     elif type(o) == tuple:
-        return tuple(distribute(list(o),f))
+        return tuple(distribute(list(o), f))
     elif type(o) == dict:
-        return { i : distribute(o[i],f) for i in o }
+        return {i: distribute(o[i], f) for i in o}
     else:
         return f(o)
 
-def advise(o,t):
+
+def advise(o, t):
     return distribute(o, lambda x: x.advise(t))
 
-def prefetch(o,t):
-    return distribute(o, lambda x: x.prefetch(t))
 
+def prefetch(o, t):
+    return distribute(o, lambda x: x.prefetch(t))

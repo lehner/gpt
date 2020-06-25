@@ -18,7 +18,8 @@
 #
 import cgpt
 
-t0=cgpt.time()
+t0 = cgpt.time()
+
 
 def time():
     return cgpt.time() - t0
