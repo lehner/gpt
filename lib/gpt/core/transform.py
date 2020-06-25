@@ -24,7 +24,7 @@ def cshift(first, second, third, fourth=None):
     if (
         type(first) == gpt.lattice
         and type(second) == gpt.lattice
-        and not fourth is None
+        and fourth is not None
     ):
         t = first
         l = gpt.eval(second)
@@ -44,7 +44,7 @@ def cshift(first, second, third, fourth=None):
 def copy(first, second=None):
 
     if type(first) == gpt.lattice:
-        if not second is None:
+        if second is not None:
             t = first
             l = second
         else:

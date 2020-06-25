@@ -41,7 +41,6 @@ class cg:
             verbose = g.default.is_verbose("cg")
             t0 = g.time()
             p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
-            guess = g.norm2(psi)
             mat(mmp, psi)  # in, out
             d = g.innerProduct(psi, mmp).real
             b = g.norm2(mmp)

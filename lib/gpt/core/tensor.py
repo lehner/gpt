@@ -37,7 +37,7 @@ class tensor:
         return self.array.__setitem__(a, b)
 
     def transposable(self):
-        return not (self.otype.transposed is None)
+        return self.otype.transposed is not None
 
     def transpose(self):
         if not self.transposable():
@@ -58,15 +58,15 @@ class tensor:
         res = self
         if t & gpt.expr_unary.BIT_SPINTRACE:
             st = res.otype.spintrace
-            assert not st is None
-            if not st[0] is None:
+            assert st is not None
+            if st[0] is not None:
                 res = tensor(
                     np.trace(res.array, offset=0, axis1=st[0], axis2=st[1]), st[2]
                 )
         if t & gpt.expr_unary.BIT_COLORTRACE:
             ct = res.otype.colortrace
-            assert not ct is None
-            if not ct[0] is None:
+            assert ct is not None
+            if ct[0] is not None:
                 res = tensor(
                     np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]
                 )

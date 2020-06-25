@@ -88,19 +88,19 @@ class gpt_io:
 
     def close_views(self):
         for f in self.loc:
-            if not self.loc[f] is None:
+            if self.loc[f] is not None:
                 self.loc[f].close()
         self.loc = {}
         self.pos = {}
         self.loc_desc = ""
 
     def close_global(self):
-        if not self.glb is None:
+        if self.glb is not None:
             self.glb.close()
             self.glb = None
 
     def close(self):
-        if not self.index_file is None:
+        if self.index_file is not None:
             self.flush()
             self.index_file = None
             # no more writing after close
@@ -109,7 +109,7 @@ class gpt_io:
 
     def open_view(self, xk, iview, write, mpi, fdimensions, g_cb, l_cb):
         cv = gpt.cartesian_view(
-            iview if not iview is None else -1, mpi, fdimensions, g_cb, l_cb
+            iview if iview is not None else -1, mpi, fdimensions, g_cb, l_cb
         )
         dn, fn = get_local_name(self.root, cv)
         loc_desc = cv.describe() + "/" + ("Write" if write else "Read")
@@ -122,11 +122,11 @@ class gpt_io:
             if self.verbose:
                 gpt.message("Switching view to %s" % self.loc_desc)
 
-        if not tag in self.loc:
-            if write and not dn is None:
+        if tag not in self.loc:
+            if write and dn is not None:
                 os.makedirs(dn, exist_ok=True)
             self.loc[tag] = (
-                gpt.FILE(fn, "a+b" if write else "rb") if not fn is None else None
+                gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
             )
             self.pos[tag] = gpt.coordinates(cv)
 
@@ -176,7 +176,7 @@ class gpt_io:
             dt_distr += gpt.time()
 
             # write data
-            if not f is None:
+            if f is not None:
                 # description and data
                 dt_crc -= gpt.time()
                 crc = gpt.crc32(mv)
@@ -222,7 +222,7 @@ class gpt_io:
         filepos = [int(x) for x in a[3:]]
 
         # first find grid
-        if not g_desc in self.params["grids"]:
+        if g_desc not in self.params["grids"]:
             self.params["grids"][g_desc] = gpt.grid_from_description(g_desc)
         g = self.params["grids"][g_desc]
 
@@ -234,7 +234,7 @@ class gpt_io:
         views_for_node = self.views_for_node(cv0, g)
 
         # performance
-        dt_distr, dt_crc, dt_read, dt_misc = 0.0, 0.0, 0.0, 0.0
+        dt_distr, dt_crc, dt_read = 0.0, 0.0, 0.0
         szGB = 0.0
         g.barrier()
         t0 = gpt.time()
@@ -248,7 +248,7 @@ class gpt_io:
                 xk, iview, False, cv_desc, g.fdimensions, g.cb, l.checkerboard()
             )
 
-            if not f is None:
+            if f is not None:
                 f.seek(filepos[iview], 0)
                 ntag = int.from_bytes(f.read(4), byteorder="little")
                 f.read(ntag)  # not needed if index is present
@@ -299,7 +299,7 @@ class gpt_io:
         return l
 
     def write_numpy(self, a):
-        if not self.glb is None:
+        if self.glb is not None:
             pos = self.glb.tell()
             buf = io.BytesIO()
             numpy.save(buf, a, allow_pickle=False)
@@ -320,7 +320,7 @@ class gpt_io:
             crc32_compare = None
         data = gpt.broadcast(0, data)
         crc32_computed = gpt.crc32(memoryview(data))
-        if not crc32_compare is None:
+        if crc32_compare is not None:
             assert crc32_computed == crc32_compare
         return numpy.load(io.BytesIO(data))
 
@@ -329,7 +329,7 @@ class gpt_io:
 
     def create_index(self, ctx, objs):
         f = self.index_file
-        assert not f is None
+        assert f is not None
         if type(objs) == dict:
             f.write("{\n")
             for x in objs:
@@ -369,7 +369,7 @@ class gpt_io:
             assert 0
 
     def keep_context(self, ctx):
-        if not "paths" in self.params:
+        if "paths" not in self.params:
             return True
         paths = self.params["paths"]
         if type(paths) == str:

@@ -55,7 +55,7 @@ class operator:
         }
 
         for k in params:
-            assert not k in ["U_grid", "U_grid_rb", "F_grid", "F_grid_rb", "U"]
+            assert k not in ["U_grid", "U_grid_rb", "F_grid", "F_grid_rb", "U"]
             self.params[k] = params[k]
 
         # create fermion operator

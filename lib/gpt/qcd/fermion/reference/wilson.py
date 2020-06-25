@@ -32,7 +32,7 @@ class wilson(covariant_shift):
         otype = g.ot_vspin4color3
         grid = U[0].grid
         if "mass" in params:
-            assert not "kappa" in params
+            assert "kappa" not in params
             self.kappa = 1.0 / (params["mass"] + 4.0) / 2.0
         else:
             self.kappa = params["kappa"]

@@ -33,7 +33,7 @@ import copy
 def wilson_clover(U, params):
     params = copy.deepcopy(params)  # save current parameters
     if "kappa" in params:
-        assert not "mass" in params
+        assert "mass" not in params
         params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
     return operator("wilson_clover", U, params, otype=gpt.ot_vspin4color3)
 

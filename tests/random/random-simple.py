@@ -26,7 +26,7 @@ n = 10000
 res = {}
 for i in range(n):
     z = rng.zn()
-    if not z in res:
+    if z not in res:
         res[z] = 0
     res[z] += 1
 
@@ -37,7 +37,7 @@ n = 10000
 res = {}
 for i in range(n):
     z = rng.zn(p={"n": 3})
-    if not z in res:
+    if z not in res:
         res[z] = 0
     res[z] += 1
 

@@ -6,8 +6,6 @@
 # fine-grid basis vectors
 #
 import gpt as g
-import sys
-import numpy as np
 
 # show available memory
 g.mem_report()
@@ -36,7 +34,7 @@ rng = g.random("test")
 
 try:
     fg_basis = g.load("basis", {"grids": q.F_grid_eo})[0]
-except:
+except g.LoadError:
     fg_basis = g.advise(
         [g.vspincolor(q.F_grid_eo) for i in range(nbasis)], g.infrequent_use
     )

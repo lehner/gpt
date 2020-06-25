@@ -40,7 +40,7 @@ g.create.point(src, [0, 0, 0, 0])
 eo = g.qcd.fermion.preconditioner.eo2(w)
 
 # cheby
-c = g.algorithms.approx.chebyshev({"low": 0.0005, "high": 3.5, "order": 50,})
+c = g.algorithms.approx.chebyshev({"low": 0.0005, "high": 3.5, "order": 50})
 
 # implicitly restarted lanczos
 irl = g.algorithms.iterative.irl(

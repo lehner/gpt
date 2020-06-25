@@ -64,12 +64,15 @@ def apply_exp_ixp(dst, src, p):
 def exp_ixp(p):
 
     if type(p) == list:
-        return [momentum_phase(x) for x in p]
+        return [exp_ixp(x) for x in p]
     elif type(p) == numpy.ndarray:
         p = p.tolist()
 
-    mat = lambda dst, src: apply_exp_ixp(dst, src, p)
-    inv_mat = lambda dst, src: apply_exp_ixp(dst, src, [-x for x in p])
+    def mat(dst, src):
+        return apply_exp_ixp(dst, src, p)
+
+    def inv_mat(dst, src):
+        return apply_exp_ixp(dst, src, [-x for x in p])
 
     # do not specify grid or otype, i.e., accept all
     return gpt.matrix_operator(

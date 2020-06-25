@@ -107,5 +107,5 @@ def sum(e):
     l = gpt.eval(e)
     val = cgpt.lattice_sum(l.v_obj[0])
     for i in l.otype.v_idx[1:]:
-        val = numpy.append(val, cgpt.lattice_sum(l.v_obj[i]))
+        val = np.append(val, cgpt.lattice_sum(l.v_obj[i]))
     return gpt.util.value_to_tensor(val, l.otype)

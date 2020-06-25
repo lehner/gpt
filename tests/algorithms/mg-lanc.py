@@ -29,7 +29,7 @@ w = g.qcd.fermion.preconditioner.eo1(
 )
 
 # cheby on fine grid
-c = g.algorithms.approx.chebyshev({"low": 0.01, "high": 6.25, "order": 50,})
+c = g.algorithms.approx.chebyshev({"low": 0.01, "high": 6.25, "order": 50})
 
 # implicitly restarted lanczos on fine grid
 irl = g.algorithms.iterative.irl(
@@ -66,7 +66,7 @@ ev_basis = g.algorithms.approx.evals(w.NDagN, evec, check_eps2=1e-8)
 g.mem_report()
 
 # cheby on coarse grid
-c = g.algorithms.approx.chebyshev({"low": 0.01, "high": 6.25, "order": 50,})
+c = g.algorithms.approx.chebyshev({"low": 0.01, "high": 6.25, "order": 50})
 
 # implicitly restarted lanczos on coarse grid
 irl = g.algorithms.iterative.irl(

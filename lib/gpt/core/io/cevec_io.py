@@ -211,10 +211,10 @@ def load(filename, params):
         gpt.message("Loading %s with %d views per node" % (filename, len(views)))
     for i, v in enumerate(views):
         cv = gpt.cartesian_view(
-            v if not v is None else -1, mpi, fdimensions, fgrid.cb, site_cb
+            v if v is not None else -1, mpi, fdimensions, fgrid.cb, site_cb
         )
         cvc = gpt.cartesian_view(
-            v if not v is None else -1, mpi, cgrid.fdimensions, gpt.full, gpt.none
+            v if v is not None else -1, mpi, cgrid.fdimensions, gpt.full, gpt.none
         )
         pos_coarse = gpt.coordinates(cvc, "canonical")
 
@@ -238,7 +238,7 @@ def load(filename, params):
         crc32_comp = 0
 
         # file
-        f = gpt.FILE(fn, "rb") if not fn is None else None
+        f = gpt.FILE(fn, "rb") if fn is not None else None
 
         # block positions
         pos = [
@@ -273,7 +273,7 @@ def load(filename, params):
         for b in range(read_blocks):
             fgrid.barrier()
             dt_fread -= gpt.time()
-            if not f is None:
+            if f is not None:
                 data = memoryview(f.read(block_data_size_single * nsingleCap))
                 globalReadGB = len(data) / 1024.0 ** 3.0
             else:
@@ -282,7 +282,7 @@ def load(filename, params):
             dt_fread += gpt.time()
             totalSizeGB += globalReadGB
 
-            if not f is None:
+            if f is not None:
                 dt_crc -= gpt.time()
                 crc32_comp = gpt.crc32(data, crc32_comp)
                 dt_crc += gpt.time()
@@ -333,7 +333,7 @@ def load(filename, params):
             for b in range(read_blocks):
                 fgrid.barrier()
                 dt_fread -= gpt.time()
-                if not f is None:
+                if f is not None:
                     data = memoryview(
                         f.read(block_data_size_fp16 * (nbasis - nsingleCap))
                     )
@@ -344,7 +344,7 @@ def load(filename, params):
                 dt_fread += gpt.time()
                 totalSizeGB += globalReadGB
 
-                if not f is None:
+                if f is not None:
                     dt_crc -= gpt.time()
                     crc32_comp = gpt.crc32(data, crc32_comp)
                     dt_crc += gpt.time()
@@ -397,7 +397,7 @@ def load(filename, params):
         for j in range(neigen):
             fgrid.barrier()
             dt_fread -= gpt.time()
-            if not f is None:
+            if f is not None:
                 data = memoryview(f.read(coarse_vector_size))
                 globalReadGB = len(data) / 1024.0 ** 3.0
             else:
@@ -406,7 +406,7 @@ def load(filename, params):
             dt_fread += gpt.time()
             totalSizeGB += globalReadGB
 
-            if not f is None:
+            if f is not None:
                 dt_crc -= gpt.time()
                 crc32_comp = gpt.crc32(data, crc32_comp)
                 dt_crc += gpt.time()
@@ -446,7 +446,7 @@ def load(filename, params):
                 )
 
         # crc checks
-        if not f is None:
+        if f is not None:
             assert crc32_comp == crc32[cv.rank]
 
     # timing
@@ -574,15 +574,15 @@ def save(filename, objs, params):
 
     for i, v in enumerate(views):
         cv = gpt.cartesian_view(
-            v if not v is None else -1, mpi, fdimensions, fgrid.cb, site_cb
+            v if v is not None else -1, mpi, fdimensions, fgrid.cb, site_cb
         )
         cvc = gpt.cartesian_view(
-            v if not v is None else -1, mpi, cgrid.fdimensions, gpt.full, gpt.none
+            v if v is not None else -1, mpi, cgrid.fdimensions, gpt.full, gpt.none
         )
         pos_coarse = gpt.coordinates(cvc, "canonical")
 
         dn, fn = get_local_name(filename, cv)
-        if not fn is None:
+        if fn is not None:
             os.makedirs(dn, exist_ok=True)
 
         # sizes
@@ -597,7 +597,6 @@ def save(filename, objs, params):
         coarse_vector_size = (
             coarse_block_size_part_fp32 + coarse_block_size_part_fp16
         ) * blocks
-        coarse_fp32_vector_size = 2 * (4 * nbasis) * blocks
         totalSize = (
             blocks
             * (
@@ -606,13 +605,13 @@ def save(filename, objs, params):
             )
             + neigen * coarse_vector_size
         )
-        totalSizeGB += totalSize / 1024.0 ** 3.0 if not v is None else 0.0
+        totalSizeGB += totalSize / 1024.0 ** 3.0 if v is not None else 0.0
 
         # checksum
         crc32_comp = 0
 
         # file
-        f = gpt.FILE(fn, "wb") if not fn is None else None
+        f = gpt.FILE(fn, "wb") if fn is not None else None
 
         # block positions
         pos = [
@@ -638,9 +637,6 @@ def save(filename, objs, params):
         for x in pos:
             x.setflags(write=0)
 
-        # dummy buffer
-        data0 = memoryview(bytes())
-
         # single-precision data
         data = memoryview(bytearray(block_data_size_single * nsingleCap))
         reduced_size = len(data) // block_reduce
@@ -653,7 +649,7 @@ def save(filename, objs, params):
             )  # TODO: can already munge here using new index interface
             dt_distr += gpt.time()
 
-            if not f is None:
+            if f is not None:
                 dt_munge -= gpt.time()
                 for l in range(block_reduce):
                     cgpt.munge_inner_outer(
@@ -669,7 +665,7 @@ def save(filename, objs, params):
 
             fgrid.barrier()
             dt_fwrite -= gpt.time()
-            if not f is None:
+            if f is not None:
                 f.write(data)
                 globalWriteGB = len(data) / 1024.0 ** 3.0
             else:
@@ -704,7 +700,7 @@ def save(filename, objs, params):
                 data_munged = gpt.peek(basis[nsingleCap:nbasis], pos[b])
                 dt_distr += gpt.time()
 
-                if not f is None:
+                if f is not None:
                     dt_munge -= gpt.time()
                     for l in range(block_reduce):
                         cgpt.munge_inner_outer(
@@ -723,7 +719,7 @@ def save(filename, objs, params):
 
                 fgrid.barrier()
                 dt_fwrite -= gpt.time()
-                if not f is None:
+                if f is not None:
                     f.write(data)
                     globalWriteGB = len(data) / 1024.0 ** 3.0
                 else:
@@ -753,7 +749,7 @@ def save(filename, objs, params):
             data_fp32 = gpt.mview(cevec[j][pos_coarse])
             dt_distr += gpt.time()
 
-            if not f is None:
+            if f is not None:
                 dt_fp16 -= gpt.time()
                 cgpt.fp32_to_mixed_fp32fp16(
                     data,
@@ -769,7 +765,7 @@ def save(filename, objs, params):
 
             fgrid.barrier()
             dt_fwrite -= gpt.time()
-            if not f is None:
+            if f is not None:
                 f.write(data)
                 globalWriteGB = len(data) / 1024.0 ** 3.0
             else:

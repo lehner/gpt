@@ -87,7 +87,7 @@ g.message("Test eval: %g" % (eps))
 sys.exit(0)
 
 # test eigenvectors
-c = g.algorithms.approx.chebyshev({"low": 0.01, "high": 6.25, "order": 50,})
+c = g.algorithms.approx.chebyshev({"low": 0.01, "high": 6.25, "order": 50})
 
 cop = g.block.operator(c(q.NDagN), cevec[0].grid, basis)
 
@@ -131,7 +131,7 @@ basis, cevec, feval = g.load(
     {"grids": q.F_grid_eo},
 )
 
-c = g.algorithms.approx.chebyshev({"low": 0.004, "high": 5.5, "order": 30,})
+c = g.algorithms.approx.chebyshev({"low": 0.004, "high": 5.5, "order": 30})
 
 cop = g.block.operator(c(q.NDagN), cevec[0].grid, basis)
 

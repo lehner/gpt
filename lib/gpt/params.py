@@ -76,7 +76,7 @@ class params_convention:
             # merged params
             params = {**{k: v for d in args[nargs:] for k, v in d.items()}, **kwargs}
             for p, v in self.default.items():
-                if not p in params:
+                if p not in params:
                     params[p] = v
             return f(*positional, params)
 

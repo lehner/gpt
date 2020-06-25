@@ -57,7 +57,7 @@ class expr:
 
     def is_single(self, t=None):
         b = len(self.val) == 1 and self.val[0][0] == 1.0 and len(self.val[0][1]) == 1
-        if not t is None:
+        if t is not None:
             b = b and type(self.val[0][1][0][1]) == t
         return b
 
@@ -100,7 +100,7 @@ class expr:
             return self.__rmul__(expr(l))
 
     def __truediv__(self, l):
-        if not gpt.util.isnum(l):
+        if gpt.util.isnum(l) is False:
             raise Exception("At this point can only divide by numbers")
         return self.__mul__(expr(1.0 / l))
 
@@ -215,11 +215,11 @@ def expr_eval(first, second=None, ac=False):
     # this will always evaluate to a lattice object
     # or remain an expression if it cannot do so
 
-    if not second is None:
+    if second is not None:
         t_obj = first.v_obj
         e = expr(second)
     else:
-        assert ac == False
+        assert ac is False
         if type(first) == gpt.lattice:
             return first
 
@@ -247,12 +247,12 @@ def expr_eval(first, second=None, ac=False):
     if gpt.default.is_verbose("eval"):
         gpt.message("GPT::verbose::eval: " + str(e))
 
-    if not t_obj is None:
+    if t_obj is not None:
         for i, t in enumerate(t_obj):
             assert 0 == cgpt.eval(t, e.val, e.unary, ac, i)
         return first
     else:
-        assert ac == False
+        assert ac is False
         t_obj, s_ot, s_pr = [0] * n, [0] * n, [0] * n
         for i in otype.v_idx:
             t_obj[i], s_ot[i], s_pr[i] = cgpt.eval(t_obj[i], e.val, e.unary, False, i)

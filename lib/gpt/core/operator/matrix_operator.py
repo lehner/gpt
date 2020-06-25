@@ -113,8 +113,8 @@ class matrix_operator(factor):
             return other.__rmul__(self)
 
     def converted(self, to_precision, verbose=False):
-        assert all([not g is None for g in self.grid])
-        assert all([not ot is None for ot in self.otype])
+        assert all([g is not None for g in self.grid])
+        assert all([ot is not None for ot in self.otype])
         grid = tuple([g.converted(to_precision) for g in self.grid])
         otype = self.otype
         zero = self.zero
@@ -128,7 +128,7 @@ class matrix_operator(factor):
             )
 
             gpt.convert(conv_src, src)
-            if zero[l] == True:
+            if zero[l]:
                 gpt.convert(conv_dst, dst)
             t1 = gpt.time()
             mat(conv_dst, conv_src)
@@ -165,7 +165,7 @@ class matrix_operator(factor):
         assert 0
 
     def __call__(self, first, second=None):
-        assert not self.mat is None
+        assert self.mat is not None
 
         type_match = (
             self.otype[1] is None or self.otype[1].__name__ == first.otype.__name__
@@ -179,7 +179,7 @@ class matrix_operator(factor):
                 dst = gpt.lattice(src)
             else:
                 dst = gpt.lattice(self.grid[0], self.otype[0])
-                if not self.cb[0] is None:
+                if self.cb[0] is not None:
                     dst.checkerboard(self.cb[0])
 
             if self.zero[0]:

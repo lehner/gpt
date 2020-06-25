@@ -29,7 +29,7 @@ w = g.qcd.fermion.preconditioner.eo1(
 )
 
 # cheby
-c = g.algorithms.approx.chebyshev({"low": 0.5, "high": 2.0, "order": 10,})
+c = g.algorithms.approx.chebyshev({"low": 0.5, "high": 2.0, "order": 10})
 
 # implicitly restarted lanczos
 irl = g.algorithms.iterative.irl(

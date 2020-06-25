@@ -73,7 +73,6 @@ class irl:
         # scalars
         k1 = 1
         k2 = Nk
-        Nconv = 0
         beta_k = 0.0
 
         # set initial vector

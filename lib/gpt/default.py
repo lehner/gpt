@@ -38,14 +38,14 @@ def get_single(tag, default):
 
 def get_float(tag, default=float("nan")):
     res = get_single(tag, None)
-    if not res is None:
+    if res is not None:
         return float(res)
     return default
 
 
 def get_int(tag, default):
     res = get_single(tag, None)
-    if not res is None:
+    if res is not None:
         return int(res)
     return default
 

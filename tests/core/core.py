@@ -92,10 +92,11 @@ eps = a / nodes - b
 assert np.linalg.norm(eps) < 1e-7
 
 
-sys.exit(0)
-
+################################################################################
+# Test Cshifts
+################################################################################
 # create a complex lattice on the grid
-src = g.complex(grid)
+src = g.complex(grid_sp)
 
 # zero out all points and set the value at global position 0,0,0,0 to 2
 src[:] = 0
@@ -112,11 +113,13 @@ g.copy(new, src)
 
 # cshift into a new lattice dst
 dst = g.cshift(src, 0, 1)
+# dst[x] = src[x+1] -> src[0] == dst[15]
+assert abs(dst[15, 0, 0, 0] - complex(2, 1)) < 1e-6
 
-# show current memory usage
-g.mem_report()
-del original  # free lattice and remove from scope
-g.mem_report()
+#
+# TODO: make tests out of the below
+#
+sys.exit(0)
 
 # or re-use an existing lattice object as target
 g.cshift(dst, src, 0, 1)
@@ -149,7 +152,7 @@ g.message(new)
 g.message(g.eval(g.adj(new)))
 
 # color matrix
-cm = g.mcolor(grid)
+cm = g.mcolor(grid_sp)
 cm[:] = 0
 cm[0, 0, 0, 0, 2, 2] = 1
 cm[0, 0, 0, 0, 1, 2] = 1

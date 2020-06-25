@@ -30,7 +30,7 @@ def mem_host_available():
             ]
         )
         return float(res["MemAvailable"].strip().split(" ")[0]) * 1024.0
-    except:
+    except Exception:
         return float("nan")
 
 

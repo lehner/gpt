@@ -77,7 +77,7 @@ def grid_get_mpi(fdimensions, cb):
 
         # if not found but dimension is larger than four, we try to extend the four-dimensional grid
         mpi = gpt.default.get_ivec(tag, None, 4)
-        if not mpi is None:
+        if mpi is not None:
             mpi = [1] * (nd - 4) + mpi
 
     if mpi is None:
@@ -169,7 +169,7 @@ class grid:
     def inserted_dimension(self, dimension, extent, cb_mask=None, simd_mask=1):
         if cb_mask is None and self.cb.n == 1:
             cb_mask = 0
-        assert not cb_mask is None
+        assert cb_mask is not None
         cb = general(
             self.cb.n,
             self.cb.cb_mask[0:dimension] + [cb_mask] + self.cb.cb_mask[dimension:],
@@ -228,7 +228,6 @@ class grid:
 
     def globalsum(self, x):
         if type(x) == gpt.tensor:
-            otype = x.otype
             cgpt.grid_globalsum(self.obj, x.array)
         else:
             return cgpt.grid_globalsum(self.obj, x)

@@ -67,7 +67,7 @@ class fgcr:
             delta = np.empty((rlen), dtype_c)
 
             # fields
-            r, mmr, mmpsi = g.copy(src), g.copy(src), g.copy(src)
+            r, mmpsi = g.copy(src), g.copy(src)
             p = [g.lattice(src) for i in range(rlen)]
             mmp = [g.lattice(src) for i in range(rlen)]
 
@@ -87,7 +87,7 @@ class fgcr:
                 need_restart = i + 1 == rlen
 
                 t0 = time()
-                if not prec is None:
+                if prec is not None:
                     prec(r, p[i])
                 else:
                     p[i] @= r

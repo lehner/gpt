@@ -94,7 +94,7 @@ class fgmres:
                 g.copy(src),
             )
             V = [g.lattice(src) for i in range(rlen + 1)]
-            if not prec is None:  # save vectors if unpreconditioned
+            if prec is not None:  # save vectors if unpreconditioned
                 Z = [g.lattice(src) for i in range(rlen + 1)]
 
             # residual
@@ -113,12 +113,12 @@ class fgmres:
                 need_restart = i + 1 == rlen
 
                 t0 = time()
-                if not prec is None:
+                if prec is not None:
                     prec(V[i], Z[i])
                 t1 = time()
 
                 t2 = time()
-                if not prec is None:
+                if prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
@@ -151,7 +151,7 @@ class fgmres:
                     g.message("res^2[ %d, %d ] = %g" % (k, i, r2))
 
                 if r2 <= rsq or need_restart or reached_maxiter:
-                    if not prec is None:
+                    if prec is not None:
                         self.update_psi(psi, gamma, H, y, Z, i)
                     else:
                         self.update_psi(psi, gamma, H, y, V, i)
@@ -169,7 +169,7 @@ class fgmres:
                         break
 
                     if reached_maxiter:
-                        if verbose:
+                        if self.verbose:
                             tt1 = time()
                             g.message("Did NOT converge in %g s" % (tt1 - tt0))
                             if checkres:

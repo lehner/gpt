@@ -32,7 +32,7 @@ def evals(matrix, evec, params):
         # M |v> = l |v> -> <v|M|v> / <v|v>
         l = g.innerProduct(v, tmp).real / g.norm2(v)
         ev.append(l)
-        if not check_eps2 is None:
+        if check_eps2 is not None:
             eps2 = g.norm2(tmp - l * v)
             g.message("eval[ %d ] = %g, eps^2 = %g" % (i, l, eps2))
             if eps2 > check_eps2:

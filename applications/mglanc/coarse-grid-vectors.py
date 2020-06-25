@@ -6,8 +6,6 @@
 # fine-grid basis vectors
 #
 import gpt as g
-import sys
-import numpy as np
 
 # show available memory
 g.mem_report()

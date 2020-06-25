@@ -26,7 +26,7 @@ import sys
 def _separate_otypes(l):
     ot = {}
     for i, x in enumerate(l):
-        if not x.otype in ot:
+        if x.otype not in ot:
             ot[x.otype] = []
         ot[x.otype].append(i)
     return ot
@@ -54,14 +54,15 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N):
         l[i].checkerboard(cb)
     if N != 1:
 
-        merged_lattices = merge_lattices(lattices, N)
+        assert 0
+        merged_lattices = gpt.merge_lattices(lattices, N=N)
 
         for i in range(batches):
             merged_lattices[i].checkerboard(cb)
-            merged_lattices[i][merged_gcoor]
+            # merged_lattices[i][merged_gcoor]
 
-        for i in range(batches):
-            lattices[i * N : (i + 1) * N]
+        # for i in range(batches):
+        #    lattices[i * N : (i + 1) * N]
 
     gpt.poke(l, lcoor, gpt.peek(lattices, gcoor))
     for i in range(n):

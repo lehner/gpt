@@ -42,7 +42,7 @@ class checkpointer:
         self.filename = "%s/%10.10d" % (directory, gpt.rank())
         try:
             self.f = gpt.FILE(self.filename, "r+b")
-        except:
+        except FileNotFoundError:
             self.f = gpt.FILE(self.filename, "w+b")
         self.f.seek(0, 1)
         self.verbose = gpt.default.is_verbose("checkpointer")
@@ -141,7 +141,7 @@ class checkpointer:
                         flags[0] = 1.0  # flag success on this node
 
         # compare global
-        assert not self.grid is None
+        assert self.grid is not None
         self.grid.globalsum(flags)
         t1 = gpt.time()
 

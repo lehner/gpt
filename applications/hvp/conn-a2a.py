@@ -5,7 +5,6 @@
 # Calculate HVP connected diagram with A2A method
 #
 import gpt as g
-import numpy as np
 import sys
 
 # show available memory

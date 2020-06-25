@@ -34,18 +34,18 @@ def read_tags(fn, tags, verbose, nocheck):
                 gpt.message(tag)
 
             data = f.read(16 * ln)
-            if nocheck == False:
+            if nocheck is False:
                 crc32comp = binascii.crc32(data) & 0xFFFFFFFF
 
                 if crc32comp != crc32:
                     raise Exception("Data corrupted!")
 
             cdata = numpy.frombuffer(data, dtype=numpy.complex128, count=ln)
-            if nocheck == False:
+            if nocheck is False:
                 cdata.tolist()
             tags[tag[0:-1]] = cdata
         f.close()
-    except:
+    except Exception:
         raise
 
 
@@ -67,7 +67,7 @@ def write_tags(fn, tags):
             cc = tags[t]
             write_tag(f, t, cc)
         f.close()
-    except:
+    except Exception:
         raise Exception()
 
 
@@ -76,9 +76,9 @@ class corr_io:
         self.tags = {}
 
         if mode == "r":
-            if type(fn) == type(""):
+            if isinstance(fn, str):
                 read_tags(fn, self.tags, verbose, nocheck)
-            elif type(fn) == type([]):
+            elif isinstance(fn, list):
                 for f in fn:
                     read_tags(f, self.tags, verbose, nocheck)
             else:

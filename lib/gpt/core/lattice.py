@@ -45,7 +45,7 @@ class lattice(factor):
                 ]
             else:
                 self.otype = second
-                if not third is None:
+                if third is not None:
                     self.v_obj = third
                 else:
                     self.v_obj = [
@@ -66,7 +66,7 @@ class lattice(factor):
 
         # use first pointer to index page in memory book
         mem_book[self.v_obj[0]] = (self.grid, self.otype, gpt.time())
-        if not cb is None:
+        if cb is not None:
             self.checkerboard(cb)
 
     def __del__(self):
@@ -176,10 +176,6 @@ class lattice(factor):
 
     def __imatmul__(self, expr):
         gpt.eval(self, expr, ac=False)
-        return self
-
-    def __imul__(self, expr):
-        gpt.eval(self, self * expr, ac=False)
         return self
 
     def __imul__(self, expr):

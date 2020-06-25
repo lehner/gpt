@@ -40,7 +40,7 @@ class power_iteration:
             if verbose:
                 g.message("eval_max[ %d ] = %g" % (it, ev))
             tmp @= (1.0 / ev) * dst
-            if not ev_prev is None:
+            if ev_prev is not None:
                 if abs(ev - ev_prev) < self.tol * ev:
                     if verbose:
                         g.message("Converged")
