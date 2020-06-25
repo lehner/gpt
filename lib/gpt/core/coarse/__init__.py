@@ -29,12 +29,13 @@ def create_links(A, fmat, basis):
 
     # directions/displacements we coarsen for
     dirs = [0, 1, 2, 3]  # TODO: for 5d, this needs += 1
+    nstencil = 2 * len(dirs) + 1
     disp = +1
-    selflink = 8
-    hermitian = True  # for now
+    selflink = nstencil - 1 # last one in the list
+    hermitian = True  # for now, needs to be a param -> TODO
 
     # setup fields
-    Mvr = [gpt.lattice(basis[0]) for i in range(9)]  # (needed by current grid)
+    Mvr = [gpt.lattice(basis[0]) for i in range(nstencil)]  # (needed by current grid)
     Mvre, Mvro, tmp = gpt.lattice(basis[0]), gpt.lattice(basis[0]), gpt.lattice(basis[0]),
     oproj = gpt.complex(c_grid)
     selfproj = gpt.vcomplex(c_grid, len(basis))
@@ -59,27 +60,24 @@ def create_links(A, fmat, basis):
 
     for i, vr in enumerate(basis):
         # apply directional hopping terms
-        for d in dirs:  # this triggers four comms -> TODO expose DhopdirAll from Grid, BUT problem with vector<Lattice<... in rhs
-            fmat.Mdir(Mvr[d], vr, d, disp)
+        # this triggers four comms -> TODO expose DhopdirAll from Grid
+        # BUT problem with vector<Lattice<...>> in rhs
+        [fmat.Mdir(Mvr[d], vr, d, disp) for d in dirs]
 
-        # coarsen directional terms
+        # coarsen directional terms + write to link
         for d in dirs:
             for j, vl in enumerate(basis):
-                oproj2_b = gpt.norm2(oproj)
                 gpt.block.maskedInnerProduct(oproj, dirmasks[d], vl, Mvr[d])
-                oproj2_a = gpt.norm2(oproj)
-                assert(oproj2_a != oproj2_b)
-                # gpt.message("oproj before/after = %e/%e" % (oproj2_b, oproj2_a))
                 # TODO: write oproj to link
-                # gpt.message("i, d, j, oproj = ", i, d, j, oproj)
+                # A[d][all_sites_here,j,i] @= oproj[all_sites_here]
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
         tmp @= blockevenmask * fmat.M * vr * blockevenmask + blockoddmask * fmat.M * vr * blockoddmask
 
-        # coarsen diagonal term
+        # coarsen diagonal term + write to link
         gpt.block.project(selfproj, tmp, basis)
-        # TODO: write selfproj to link (outer product with slice of existing one?)
-        # A[selflink] = ...
+        # TODO: write selfproj to link
+        # A[selflink][all_sites_here,:,i] @= selfproj[all_sites_here,:]
 
     # communicate opposite links
     for d in dirs:
@@ -90,11 +88,6 @@ def create_links(A, fmat, basis):
         else:
             # linktmp = ... # TODO internal index manipulation for coarse spin dofs
             A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
-
-    rng = gpt.random("coarse_links")
-    [gpt.message("A2[%d] = %e" % (i, gpt.norm2(A[i]))) for i in range(9)]
-    rng.cnormal(A)
-    [gpt.message("A2[%d] = %e" % (i, gpt.norm2(A[i]))) for i in range(9)]
 
 def recreate_links(A, fmat, basis):
     create_links(A, fmat, basis)
