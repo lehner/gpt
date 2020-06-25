@@ -76,6 +76,3 @@ g.message("Test resid/iter deflated cg: ", eps2, niter_defl)
 assert eps2 < 1e-8
 
 assert niter_defl < niter_cg
-
-g.message("End")
-sys.exit(0)

@@ -81,7 +81,6 @@ EXPORT(delete_grid,{
       return NULL;
     }
     
-    ((GridBase*)p)->Barrier(); // before a grid goes out of life, we need to synchronize
     cgpt_delete_grid((GridBase*)p);
     return PyLong_FromLong(0);
     
