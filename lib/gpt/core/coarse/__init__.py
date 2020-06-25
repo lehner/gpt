@@ -17,11 +17,15 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt, sys
+import gpt, cgpt, sys, numpy
 
 def create_links(A, fmat, basis):
     # NOTE: we expect the blocks in the basis vectors
     # to already be orthogonalized!
+
+    # get grids
+    f_grid = basis[0].grid
+    c_grid = A[0].grid
 
     # directions/displacements we coarsen for
     dirs = [0, 1, 2, 3]  # TODO: for 5d, this needs += 1
@@ -32,70 +36,50 @@ def create_links(A, fmat, basis):
     # setup fields
     Mvr = [gpt.lattice(basis[0]) for i in range(9)]  # (needed by current grid)
     Mvre, Mvro, tmp = gpt.lattice(basis[0]), gpt.lattice(basis[0]), gpt.lattice(basis[0]),
-    oproj = gpt.complex(A[0].grid)
-    selfproj = gpt.vcomplex(A[0].grid, len(basis))
-
-    tmp2 = gpt.lattice(basis[0])
+    oproj = gpt.complex(c_grid)
+    selfproj = gpt.vcomplex(c_grid, len(basis))
 
     # setup masks
-    onemask, evenmask, oddmask = gpt.complex(basis[0].grid), gpt.complex(basis[0].grid), gpt.complex(basis[0].grid)
-    dirmasks = [gpt.complex(basis[0].grid) for d in dirs]
+    onemask, blockevenmask, blockoddmask = gpt.complex(f_grid), gpt.complex(f_grid), gpt.complex(f_grid)
+    dirmasks = [gpt.complex(f_grid) for d in dirs]
 
-    # fill even/odd masks using temporary mask on eo grid
+    # auxilliary stuff needed for masks
     onemask[:] = 1.
-    fgrid = basis[0].grid
-    fgrid_eo = gpt.grid(fgrid.fdimensions, fgrid.precision, gpt.redblack)
-    evenmask_eo = gpt.lattice(fgrid_eo, evenmask.otype)
-    evenmask_eo.checkerboard(gpt.even)
-    evenmask_eo[:] = 1.
-    gpt.set_cb(evenmask, evenmask_eo)
-    oddmask @= onemask - evenmask
+    coor = gpt.coordinates(blockevenmask)
+    block = numpy.array(f_grid.ldimensions)/numpy.array(c_grid.ldimensions)
+    block_cb = coor[:, :] // block[:]
 
-    # fill directional masks
-    for d in dirs:
-        dirmasks[d][:] = 1.
+    # fill masks for sites within even/odd blocks
+    gpt.make_mask(blockevenmask, numpy.sum(block_cb, axis=1) % 2 == 0)
+    blockoddmask @= onemask - blockevenmask
 
-    for d in dirs:
-        # latticecoordinate for current dir
-        # use coor to create masks for even, odd, directions
-        # coor = basis[0].mview_coordinates()
-        # gpt.message("coor = ", coor)
-        pass
+    # fill masks for sites on forward borders of blocks
+    dirmasks_np = coor[:, :] % block[:] == block[:]-1
+    [gpt.make_mask(dirmasks[d], dirmasks_np[:, d]) for d in dirs]
 
     for i, vr in enumerate(basis):
-        # gpt.message("i, vr = ", i, vr)
-        for d in dirs:  # this triggers four comms -> need to expose DhopdirAll from Grid but problem with vector<Lattice<... in rhs
+        # apply directional hopping terms
+        for d in dirs:  # this triggers four comms -> TODO expose DhopdirAll from Grid, BUT problem with vector<Lattice<... in rhs
             fmat.Mdir(Mvr[d], vr, d, disp)
-            # NOTE: this works
 
         # coarsen directional terms
         for d in dirs:
-            dirmasks[d][:] = 1.
-            for j, vl in enumerate(basis): # can combine this together into 1 routine
+            for j, vl in enumerate(basis):
                 oproj2_b = gpt.norm2(oproj)
-                gpt.block.maskedInnerProduct(oproj, oddmask, vl, Mvr[d]) # NOTE: oddmask only for testing, will be dirmask
+                gpt.block.maskedInnerProduct(oproj, dirmasks[d], vl, Mvr[d])
                 oproj2_a = gpt.norm2(oproj)
                 assert(oproj2_a != oproj2_b)
-                gpt.message("oproj before/after = %e/%e" % (oproj2_b, oproj2_a))
-                # gpt.block.maskedInnerProduct(oproj, dirmasks[d], vl, Mvr[d])
+                # gpt.message("oproj before/after = %e/%e" % (oproj2_b, oproj2_a))
                 # TODO: write oproj to link
                 # gpt.message("i, d, j, oproj = ", i, d, j, oproj)
 
-        # apply diagonal term for both cbs separately
-        tmp @= evenmask * (fmat.M * (vr * evenmask)) + oddmask * (fmat.M * (vr * oddmask))
-        tmp2 @= evenmask * fmat.M * vr * evenmask + oddmask * fmat.M * vr * oddmask
-        diff2 = gpt.norm2(tmp2 - tmp)
-        assert(diff2 == 0.)
-        gpt.message("diff = ", diff2)
-         # NOTE: this works
-
-        # gpt.message("i, tmp = ", i, tmp)
+        # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
+        tmp @= blockevenmask * fmat.M * vr * blockevenmask + blockoddmask * fmat.M * vr * blockoddmask
 
         # coarsen diagonal term
         gpt.block.project(selfproj, tmp, basis)
         # TODO: write selfproj to link (outer product with slice of existing one?)
         # A[selflink] = ...
-        # gpt.message("i, selfproj = ", i, selfproj)
 
     # communicate opposite links
     for d in dirs:
