@@ -31,23 +31,31 @@ def create_links(A, fmat, basis):
     dirs = [0, 1, 2, 3]  # TODO: for 5d, this needs += 1
     nstencil = 2 * len(dirs) + 1
     disp = +1
-    selflink = nstencil - 1 # last one in the list
+    selflink = nstencil - 1  # last one in the list
     hermitian = True  # for now, needs to be a param -> TODO
 
     # setup fields
     Mvr = [gpt.lattice(basis[0]) for i in range(nstencil)]  # (needed by current grid)
-    Mvre, Mvro, tmp = gpt.lattice(basis[0]), gpt.lattice(basis[0]), gpt.lattice(basis[0]),
+    Mvre, Mvro, tmp = (
+        gpt.lattice(basis[0]),
+        gpt.lattice(basis[0]),
+        gpt.lattice(basis[0]),
+    )
     oproj = gpt.complex(c_grid)
     selfproj = gpt.vcomplex(c_grid, len(basis))
 
     # setup masks
-    onemask, blockevenmask, blockoddmask = gpt.complex(f_grid), gpt.complex(f_grid), gpt.complex(f_grid)
+    onemask, blockevenmask, blockoddmask = (
+        gpt.complex(f_grid),
+        gpt.complex(f_grid),
+        gpt.complex(f_grid),
+    )
     dirmasks = [gpt.complex(f_grid) for d in dirs]
 
     # auxilliary stuff needed for masks
-    onemask[:] = 1.
+    onemask[:] = 1.0
     coor = gpt.coordinates(blockevenmask)
-    block = numpy.array(f_grid.ldimensions)/numpy.array(c_grid.ldimensions)
+    block = numpy.array(f_grid.ldimensions) / numpy.array(c_grid.ldimensions)
     block_cb = coor[:, :] // block[:]
 
     # fill masks for sites within even/odd blocks
@@ -55,7 +63,7 @@ def create_links(A, fmat, basis):
     blockoddmask @= onemask - blockevenmask
 
     # fill masks for sites on forward borders of blocks
-    dirmasks_np = coor[:, :] % block[:] == block[:]-1
+    dirmasks_np = coor[:, :] % block[:] == block[:] - 1
     [gpt.make_mask(dirmasks[d], dirmasks_np[:, d]) for d in dirs]
 
     for i, vr in enumerate(basis):
@@ -71,7 +79,10 @@ def create_links(A, fmat, basis):
                 A[d][:, :, :, :, j, i] = oproj[:]
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
-        tmp @= blockevenmask * fmat.M * vr * blockevenmask + blockoddmask * fmat.M * vr * blockoddmask
+        tmp @= (
+            blockevenmask * fmat.M * vr * blockevenmask
+            + blockoddmask * fmat.M * vr * blockoddmask
+        )
 
         # coarsen diagonal term + write to link
         gpt.block.project(selfproj, tmp, basis)
@@ -86,6 +97,7 @@ def create_links(A, fmat, basis):
         else:
             # linktmp = ... # TODO internal index manipulation for coarse spin dofs
             A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
+
 
 def recreate_links(A, fmat, basis):
     create_links(A, fmat, basis)
