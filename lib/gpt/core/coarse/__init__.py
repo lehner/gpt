@@ -35,12 +35,8 @@ def create_links(A, fmat, basis):
     hermitian = True  # for now, needs to be a param -> TODO
 
     # setup fields
-    Mvr = [gpt.lattice(basis[0]) for i in range(nstencil)]  # (needed by current grid)
-    Mvre, Mvro, tmp = (
-        gpt.lattice(basis[0]),
-        gpt.lattice(basis[0]),
-        gpt.lattice(basis[0]),
-    )
+    Mvr = [gpt.lattice(basis[0]) for d in dirs]
+    tmp = gpt.lattice(basis[0])
     oproj = gpt.complex(c_grid)
     selfproj = gpt.vcomplex(c_grid, len(basis))
 
