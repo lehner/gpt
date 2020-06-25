@@ -13,10 +13,10 @@ baseurl='https://github.com/waterret/Qlattice'
 path='examples/propagators/sample-results/test-4nt8/results=1000/'
 
 # download reference files for unit testing
-for f in ['psrc-prop-0.field','pion-corr.txt']:
-    if gpt.rank()==0:
-        fname, header = request.urlretrieve(f'{baseurl}/raw/master/{path}/{f}', filename=f'./{f}')
-    gpt.barrier()
+#for f in ['psrc-prop-0.field','pion-corr.txt']:
+#    if gpt.rank()==0:
+#        fname, header = request.urlretrieve(f'{baseurl}/raw/master/{path}/{f}', filename=f'./{f}')
+#    gpt.barrier()
     
 prop = gpt.load('./psrc-prop-0.field')
 gpt.message('Grid from qlat propagator =', prop.grid)
@@ -38,6 +38,6 @@ for i in range(8):
 gpt.message('Test successful')
 
 # remove reference files
-for f in ['psrc-prop-0.field','pion-corr.txt']:
-    if gpt.rank()==0:
-        os.remove(f'./{f}')
+#for f in ['psrc-prop-0.field','pion-corr.txt']:
+#    if gpt.rank()==0:
+#        os.remove(f'./{f}')

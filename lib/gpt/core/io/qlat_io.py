@@ -37,15 +37,19 @@ class qlat_io:
         gpt.barrier()
 
     def read_header(self):
-        gpt.message(f"Qlattice file format; reading {self.path}")
+        if self.verbose:
+            gpt.message(f"Qlattice file format; reading {self.path}")
         with open(self.path, "rb") as f:
             line = self.getline(f)
-            gpt.message(f"   {line}")
-            assert line == "BEGIN_FIELD_HEADER"
+            if self.verbose:
+                gpt.message(f"   {line}")
+            if line != "BEGIN_FIELD_HEADER":
+                return False
 
             for i in range(8):
                 line = self.getline(f)
-                gpt.message(f"\t{line}")
+                if self.verbose:
+                    gpt.message(f"\t{line}")
 
                 [field, val] = line.split(" = ")
                 if field == "field_version":
@@ -67,7 +71,8 @@ class qlat_io:
                     self.crc_exp = val
 
             line = self.getline(f)
-            gpt.message(f"   {line}")
+            if self.verbose:
+                gpt.message(f"   {line}")
             assert line == "END_HEADER"
             self.bytes_header = f.tell()
 
