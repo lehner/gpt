@@ -23,6 +23,11 @@ import numpy as np
 
 class tensor:
     def __init__(self, array, otype):
+
+        # allow to match compatible shapes
+        if array.shape != otype.shape:
+            array = np.reshape(array, otype.shape)
+
         self.array = array
         self.otype = otype
         assert self.array.shape == otype.shape
@@ -68,7 +73,7 @@ class tensor:
             assert ct is not None
             if ct[0] is not None:
                 res = tensor(
-                    np.reshape(np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]),(1,)), ct[2]
+                    np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]
                 )
 
         if res.otype == gpt.ot_singlet:

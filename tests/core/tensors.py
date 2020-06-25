@@ -120,4 +120,5 @@ eps0 = g.norm2(g.trace(msc) - g.spin_trace(ms))
 eps1 = g.norm2(g.trace(msc) - g.color_trace(mc))
 assert eps0 < 1e-9 and eps1 < 1e-9
 
-# should we demand higher precision in agreement?
+# create singlet by number
+assert g.complex(0.5).array[0] == 0.5

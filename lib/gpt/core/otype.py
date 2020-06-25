@@ -46,10 +46,7 @@ def get_range(ns):
 def gpt_object(first, ot):
     if type(first) == gpt.grid:
         return gpt.lattice(first, ot)
-    elif type(first) == list or type(first) == numpy.ndarray:
-        return gpt.tensor(numpy.array(first, dtype=numpy.complex128), ot)
-    else:
-        assert 0
+    return gpt.tensor(numpy.array(first, dtype=numpy.complex128), ot)
 
 
 ###

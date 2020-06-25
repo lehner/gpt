@@ -1,6 +1,4 @@
-- sparse grids can be easily implemented if I allow for the step in slicing!
-- mcomplex
-- spin/color trace
+- mcomplex * vcomplex in expression template
 - test applications on summit with new version + new Grid
 - A2A meson fields
 - Stout smearing, plaquette implementation using covariant shifts
