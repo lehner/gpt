@@ -19,6 +19,7 @@
 import gpt.core.io.corr_io
 import gpt.core.io.gpt_io
 import gpt.core.io.cevec_io
+import gpt.core.io.qlat_io
 from gpt.core.io.FILE import FILE
 from gpt.core.io.error import LoadError
 from gpt.core.io.util import mview, crc32
