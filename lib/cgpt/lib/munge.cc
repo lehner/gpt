@@ -73,11 +73,11 @@ EXPORT(munge_byte_order,{
       thread_for(w,words,{
 	  char* w_s = &s[word_size*w];
 	  char* w_d = &d[word_size*w];
-      char buf[word_size];
+	  char buf[word_size];
 	  for (long byte=0;byte<word_size;byte++) {
 	    buf[byte] = w_s[word_size - 1 - byte];
 	  }
-      memcpy(w_d,buf,word_size);
+	  memcpy(w_d,buf,word_size);
 	});
 
     }
