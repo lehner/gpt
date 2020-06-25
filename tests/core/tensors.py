@@ -109,4 +109,15 @@ for x in range(grid.fdimensions[0]):
         eps = g.norm2(src[x, 0, 0, t] - compare)
         assert eps < 1e-13
 
-# TODO: apply gamma to tensor
+# spin and color traces
+mc = g.eval(g.spin_trace(msc))
+assert g.norm2(mc[0, 0, 0, 0] - g.spin_trace(msc[0, 0, 0, 0])) < 1e-13
+
+ms = g.eval(g.color_trace(msc))
+assert g.norm2(ms[0, 0, 0, 0] - g.color_trace(msc[0, 0, 0, 0])) < 1e-13
+
+eps0 = g.norm2(g.trace(msc) - g.spin_trace(ms))
+eps1 = g.norm2(g.trace(msc) - g.color_trace(mc))
+assert eps0 < 1e-9 and eps1 < 1e-9
+
+# should we demand higher precision in agreement?

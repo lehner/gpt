@@ -23,6 +23,8 @@ from gpt.core.operator.unary import (
     transpose,
     conj,
     trace,
+    spin_trace,
+    color_trace,
     sum,
     apply_expr_unary,
 )

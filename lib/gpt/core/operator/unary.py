@@ -103,6 +103,14 @@ def trace(l, t=None):
     return gpt.expr(l, t)
 
 
+def spin_trace(l):
+    return trace(l, gpt.expr_unary.BIT_SPINTRACE)
+
+
+def color_trace(l):
+    return trace(l, gpt.expr_unary.BIT_COLORTRACE)
+
+
 def sum(e):
     l = gpt.eval(e)
     val = cgpt.lattice_sum(l.v_obj[0])
