@@ -70,54 +70,31 @@ EXPORT(coordinates_from_cartesian_view,{
     PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_INT32);
     int32_t* d = (int32_t*)PyArray_DATA(a);
 
-    if (order == "grid") {
+    if (order == "lexicographic") {
 
-      thread_region 
-	{
-	  std::vector<int32_t> coor(Nd);
-	  thread_for_in_region(idx,points,{
-	      Lexicographic::CoorFromIndex(coor,idx,size);
-	      long idx_cb = (idx % fstride) + ((idx / fstride)/cbf) * fstride;
-	      long site_cb = 0;
-	      for (int i=0;i<Nd;i++)
-		if (checker_dim_mask[i])
-		  site_cb += top[i] + coor[i];
-	      if (site_cb % 2 == cb) {
-		for (int i=0;i<Nd;i++)
-		  d[Nd*idx_cb + i] = top[i] + coor[i];
-	      }
-	    });
-	}
+      cgpt_order_lexicographic order;
+      cgpt_fill_cartesian_view_coordinates(d,Nd,top,size,checker_dim_mask,fstride,
+					   cbf,cb,points,order);
+
+    } else if (order == "reverse_lexicographic") {
+
+      cgpt_order_reverse_lexicographic order;
+      cgpt_fill_cartesian_view_coordinates(d,Nd,top,size,checker_dim_mask,fstride,
+					   cbf,cb,points,order);
 
     } else if (order == "canonical") {
 
       Coordinate c_size = toCanonical(size);
 
-      thread_region 
-	{
-	  Coordinate c_coor(Nd), coor(Nd);
-	  thread_for_in_region(idx,points,{
-	      Lexicographic::CoorFromIndex(c_coor,idx,c_size);
-	      coor = fromCanonical(c_coor);
-
-	      long idx_cb = (idx % fstride) + ((idx / fstride)/cbf) * fstride;
-	      long site_cb = 0;
-	      for (int i=0;i<Nd;i++)
-		if (checker_dim_mask[i])
-		  site_cb += top[i] + coor[i];
-	      if (site_cb % 2 == cb) {
-		for (int i=0;i<Nd;i++)
-		  d[Nd*idx_cb + i] = top[i] + coor[i];
-	      }
-	    });
-	}
+      cgpt_order_canonical order;
+      cgpt_fill_cartesian_view_coordinates(d,Nd,top,c_size,checker_dim_mask,fstride,
+					   cbf,cb,points,order);
 
     } else {
-      ERR("Unknown order scheme: %s",order.c_str());
-    }
 
-    // xoxo
-    // oxox
+      ERR("Unknown order scheme: %s",order.c_str());
+
+    }
 
     PyArray_CLEARFLAGS(a,NPY_ARRAY_WRITEABLE); // read-only, so we can cache distribute plans
     return (PyObject*)a;

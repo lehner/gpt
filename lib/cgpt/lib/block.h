@@ -25,7 +25,7 @@ void cgpt_block_project(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vecto
   PVector<Lattice<T>> basis;
   cgpt_basis_fill(basis,_basis);
 
-#define BASIS_SIZE(n) if (n == basis.size()) { blockProject(compatible< iComplexV ## n<vCoeff_t> >(_coarse)->l,fine,basis); } else
+#define BASIS_SIZE(n) if (n == basis.size()) { blockProject(compatible< iVSinglet ## n<vCoeff_t> >(_coarse)->l,fine,basis); } else
 #include "basis_size.h"
 #undef BASIS_SIZE
   { ERR("Unknown basis size %d",(int)basis.size()); }
@@ -42,7 +42,7 @@ void cgpt_block_promote(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vecto
   PVector<Lattice<T>> basis;
   cgpt_basis_fill(basis,_basis);
 
-#define BASIS_SIZE(n) if (n == basis.size()) { blockPromote(compatible< iComplexV ## n<vCoeff_t> >(_coarse)->l,fine,basis); } else
+#define BASIS_SIZE(n) if (n == basis.size()) { blockPromote(compatible< iVSinglet ## n<vCoeff_t> >(_coarse)->l,fine,basis); } else
 #include "basis_size.h"
 #undef BASIS_SIZE
   { ERR("Unknown basis size %d",(int)basis.size()); }

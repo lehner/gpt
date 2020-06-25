@@ -530,7 +530,7 @@ def save(filename, objs, params):
         for b in range(read_blocks):
             fgrid.barrier()
             dt_distr-=gpt.time()
-            data_munged=gpt.peek(basis[0:nsingleCap],pos[b])
+            data_munged=gpt.peek(basis[0:nsingleCap],pos[b]) # TODO: can already munge here using new index interface
             dt_distr+=gpt.time()
 
             if not f is None:

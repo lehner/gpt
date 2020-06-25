@@ -17,7 +17,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #define BASIS_SIZE(n) \
-PER_TENSOR_TYPE(iComplexV ## n) \
-PER_TENSOR_TYPE(iComplexM ## n)
+PER_TENSOR_TYPE(iVSinglet ## n) \
+PER_TENSOR_TYPE(iMSinglet ## n)
 #include "basis_size.h"
 #undef BASIS_SIZE

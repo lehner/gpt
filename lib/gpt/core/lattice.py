@@ -100,50 +100,34 @@ class lattice(factor):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
         return self.otype.__name__ + ";" + self.checkerboard().__name__
 
-    def map_key(self, key):
-        # slices without specified start/stop corresponds to memory view limitation for this rank
-        if type(key) == slice and key == slice(None,None,None):
-            return ()
-        if type(key) == tuple and not all([ type(k) == int for k in key ]):
-            key = tuple([ k if type(k) == slice else slice(k,k+1) for k in key ])
-            grid=self.grid
-            assert(all([ k.step is None for k in key ]))
-            assert(len(key) == grid.nd)
-            top=[ grid.fdimensions[i] // grid.mpi[i] * grid.processor_coor[i] if k.start is None else k.start for i,k in enumerate(key) ]
-            bottom=[ grid.fdimensions[i] // grid.mpi[i] * (1+grid.processor_coor[i]) if k.stop is None else k.stop for i,k in enumerate(key) ]
-            key=cgpt.coordinates_from_cartesian_view(top,bottom,self.grid.cb.cb_mask,self.checkerboard().tag,"grid")
-        return key
-
     def __setitem__(self, key, value):
-        key = self.map_key(key)
-        if type(key) == tuple:
-            if len(self.v_obj) == 1:
-                cgpt.lattice_set_val(self.v_obj[0], key, gpt.util.tensor_to_value(value))
-            elif type(value) == int and value == 0:
-                for i in self.otype.v_idx:
-                    cgpt.lattice_set_val(self.v_obj[i], key, 0)
-            else:
-                for i in self.otype.v_idx:
-                    cgpt.lattice_set_val(self.v_obj[i], key, gpt.tensor(value.array[self.otype.v_n0[i]:self.otype.v_n1[i]],self.otype.v_otype[i]).array)
-        elif type(key) == numpy.ndarray:
-            cgpt.lattice_import(self.v_obj, key, value)
-        else:
-            assert(0)
+        
+        # short code path to zero lattice
+        if type(key) == slice and key == slice(None,None,None) and type(value) == int and value == 0:
+            for o in self.v_obj:
+                cgpt.lattice_set_to_zero(o)
+            return
+
+        # general code path, map key
+        pos, tidx, shape = gpt.map_key(self,key)
+
+        # convert input to proper numpy array
+        value = gpt.util.tensor_to_value(value, dtype = self.grid.precision.complex_dtype)
+
+        # and import
+        cgpt.lattice_import(self.v_obj, pos, tidx, value)
+
 
     def __getitem__(self, key):
-        key = self.map_key(key)
-        if type(key) == tuple:
-            if len(self.v_obj) == 1:
-                return gpt.util.value_to_tensor(cgpt.lattice_get_val(self.v_obj[0], key), self.otype)
-            else:
-                val=cgpt.lattice_get_val(self.v_obj[0], key)
-                for i in self.otype.v_idx[1:]:
-                    val=numpy.append(val,cgpt.lattice_get_val(self.v_obj[i], key))
-                return gpt.util.value_to_tensor(val, self.otype)
-        elif type(key) == numpy.ndarray:
-            return cgpt.lattice_export(self.v_obj,key)
-        else:
-            assert(0)
+        pos, tidx, shape = gpt.map_key(self,key)
+        val=cgpt.lattice_export(self.v_obj, pos, tidx, shape)
+
+        # if only a single element is returned and we have the full shape,
+        # wrap in a tensor
+        if len(val) == 1 and shape == self.otype.shape:
+            return gpt.util.value_to_tensor(val[0], self.otype)
+
+        return val
 
     def mview(self):
         return [ cgpt.lattice_memory_view(o) for o in self.v_obj ]

@@ -94,14 +94,14 @@ bool cgpt_numpy_import(sobj& dst,PyArrayObject* src,std::vector<long>& dim) {
   int dt = PyArray_TYPE(src);
   if (dt == NPY_COMPLEX64) {
     ComplexF* s = (ComplexF*)PyArray_DATA(src);
-#pragma omp parallel for
-    for (int i=0;i<n;i++)
-      c[i] = (t)s[i];
+    thread_for(i,n,{
+	c[i] = (t)s[i];
+      });
   } else if (dt == NPY_COMPLEX128) {
     ComplexD* s = (ComplexD*)PyArray_DATA(src);
-#pragma omp parallel for
-    for (int i=0;i<n;i++)
+    thread_for(i,n,{
       c[i] = (t)s[i];
+      });
   } else {
     ERR("Incompatible numpy type");
   }

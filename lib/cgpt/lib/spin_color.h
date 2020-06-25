@@ -16,40 +16,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include <Python.h>
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION 
-#define PY_ARRAY_UNIQUE_SYMBOL cgpt_ARRAY_API
-#ifndef _THIS_IS_INIT_
-#define NO_IMPORT_ARRAY
-#endif
-#include <numpy/arrayobject.h>
-#include <vector>
-#include <string>
-#include <iostream>
-
-#include <Grid/Grid.h>
-
-using namespace Grid;
-
-#if defined(GRID_SYCL) || defined(GRID_CUDA) || defined(GRID_HIP)
-#define GRID_HAS_ACCELERATOR
-#endif
-
-//#define _GRID_FUTURE_
-
-#include "pvector.h"
-#include "time.h"
-#include "exception.h"
-#include "cached.h"
-#include "convert.h"
-#include "checksums.h"
-#include "parameters.h"
-#include "numpy.h"
-#include "distribute.h"
-#include "transform.h"
-#include "grid.h"
-#include "lattice.h"
-#include "precision.h"
-#include "util.h"
-#include "expression.h"
-#include "block.h"
+SPIN(4) // 4d
+COLOR(3) // SU(3), adjoint SU(2), ...
+COLOR(1) // QED
+SPIN_COLOR(4,3)
+SPIN_COLOR(4,1)

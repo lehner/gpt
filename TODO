@@ -1,8 +1,5 @@
-- converiant shifts
-- peek/poke spin/color
+- mcomplex
 - spin/color trace
-- vspin
-- vspin4gauge3, vspin1gauge2
 - test applications on summit with new version + new Grid
 - A2A, HVP
 - Complete sparse/split grid implementation

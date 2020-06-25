@@ -66,7 +66,7 @@ class tensor:
                 #res= tensor( np.trace( res.array, offset = 0, axis1 = ct[0], axis2 = ct[1]), ct[2] )
                 tr=np.trace( res.array, offset = 0, axis1 = ct[0], axis2 = ct[1])
                 res=tensor(np.reshape(tr,(1,)), ct[2])
-        if res.otype == gpt.ot_complex:
+        if res.otype == gpt.ot_singlet:
             res = complex(res.array)
         return res
 
@@ -105,20 +105,23 @@ class tensor:
             return other.__mul__(self)
 
     def __add__(self, other):
-        assert(self.otype == other.otype)
+        assert(self.otype.__name__ == other.otype.__name__)
         return tensor( self.array + other.array, self.otype)
 
+    def __eq__(self, other):
+        return np.array_equal(self.array,other.array)
+
     def __sub__(self, other):
-        assert(self.otype == other.otype)
+        assert(self.otype.__name__ == other.otype.__name__)
         return tensor( self.array - other.array, self.otype)
 
     def __iadd__(self, other):
-        assert(self.otype == other.otype)
+        assert(self.otype.__name__ == other.otype.__name__)
         self.array += other.array
         return self
 
     def __isub__(self, other):
-        assert(self.otype == other.otype)
+        assert(self.otype.__name__ == other.otype.__name__)
         self.array -= other.array
         return self
 

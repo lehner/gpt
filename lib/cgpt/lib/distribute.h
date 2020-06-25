@@ -24,7 +24,7 @@ class cgpt_distribute {
   struct coor { int rank; long offset; };
   struct mp { std::vector<long> src; std::vector<long> dst; };
   struct plan { std::map<int,mp> cr; std::vector<long> tasks; };
-  struct data_simd { void* local; long word, Nsimd, simd_word; };
+  struct data_simd { void* local; long word, Nsimd, simd_word; std::vector<long> offset_data; std::vector<long> offset_buffer; };
 
   int rank;
 
@@ -33,9 +33,9 @@ class cgpt_distribute {
 
   void create_plan(const std::vector<coor>& c, plan& plan);
 
-  void copy_to(const plan& p,std::vector<data_simd> & src, void* dst);
+  void copy_to(const plan& p, std::vector<data_simd> & src, void* dst);
 
-  void copy_from(const plan& p,void* src, std::vector<data_simd> & dst);
+  void copy_from(const plan& p, void* src, long src_size, std::vector<data_simd> & dst);
 
  protected:
   void split(const std::vector<coor>& c, std::map<int,mp>& s);
@@ -52,17 +52,10 @@ class cgpt_distribute {
 
   // copy
   void copy_data(const mp& m, std::vector<data_simd>& src, void* dst);
-  void copy_data_rev(const mp& m, void* src, std::vector<data_simd>& dst);
-  void copy_remote(const std::vector<long>& tasks, const std::map<int,mp>& cr,std::vector<data_simd>& src, void* dst);
-  void copy_remote_rev(const std::vector<long>& tasks, const std::map<int,mp>& cr, void* src,std::vector<data_simd>& dst);
+  void copy_data_rev(const mp& m, void* src, long src_size, std::vector<data_simd>& dst);
+  void copy_remote(const std::vector<long>& tasks, const std::map<int,mp>& cr, std::vector<data_simd>& src, void* dst);
+  void copy_remote_rev(const std::vector<long>& tasks, const std::map<int,mp>& cr, void* src, long src_size, std::vector<data_simd>& dst);
 
   // util
-  long word_total(std::vector<data_simd>& src) {
-    long r = 0;
-    for (auto& s : src) {
-      ASSERT(s.Nsimd <= SIMD_BASE);
-      r+=s.word;
-    }
-    return r;
-  }
+  long word_total(std::vector<data_simd>& src);
 };

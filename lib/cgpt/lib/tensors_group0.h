@@ -16,5 +16,12 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-PER_TENSOR_TYPE(iSpinColourMatrix)
-PER_TENSOR_TYPE(iSpinColourVector)
+#define SPIN(Ns)
+#define COLOR(Nc)
+#define SPIN_COLOR(Ns,Nc)			\
+  PER_TENSOR_TYPE(iMSpin ## Ns ## Color ## Nc)	\
+  PER_TENSOR_TYPE(iVSpin ## Ns ## Color ## Nc)
+#include "spin_color.h"
+#undef SPIN_COLOR
+#undef COLOR
+#undef SPIN

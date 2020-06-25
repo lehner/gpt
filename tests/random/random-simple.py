@@ -8,8 +8,8 @@ import gpt as g
 import numpy as np
 import sys
 
-grid_dp=g.grid([4,4,4,4],g.double)
-grid_sp=g.grid([4,4,4,4],g.single)
+grid_dp=g.grid([8,4,4,4],g.double)
+grid_sp=g.grid([8,4,4,4],g.single)
 
 rng=g.random("block_seed_string_13")
 for grid,prec in [ (grid_dp,1e-28), (grid_sp,1e-14) ]:

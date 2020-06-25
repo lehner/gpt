@@ -8,9 +8,11 @@ then
 fi
 
 LOG=$(mktemp)
+fail_list=""
 
 for f in \
     core/core.py \
+    core/tensors.py \
     core/gamma.py \
     core/block.py \
     core/scalar.py \
@@ -40,6 +42,7 @@ else
     echo "ERR ($elapsed s)"
     cat ${LOG}
     fail=$((fail+1))
+    fail_list="$fail_list $f"
 fi
 
 done
@@ -51,7 +54,11 @@ fi
 
 if ((fail != 0))
 then
-    echo "$fail tests failed"
+    echo "$fail tests failed:"
+    for f in ${fail_list}
+    do
+	echo $f
+    done
     exit 1
 else
     echo "All tests successful"
