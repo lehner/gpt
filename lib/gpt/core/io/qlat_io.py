@@ -42,35 +42,38 @@ class qlat_io:
             gpt.message(f'   {line}')
             assert(line == 'BEGIN_FIELD_HEADER')
 
-            while True:
+            for i in range(8):
                 line=self.getline(f)
-                if (line == 'END_HEADER'):
-                    gpt.message(f'   {line}')
-                    break
                 gpt.message(f'\t{line}')
 
                 [field,val] = line.split(' = ')
                 if field=='field_version':
                     self.version = val
+                    assert(val == '1.0')
                 elif field[:10]=='total_site':
                     self.fdimensions.append(int(val))
                 elif field=='multiplicity':
                     if int(val)==288:
-                        self.desc = 'ot_mspincolor;none'
-                        self.size *= 288
+                        self.desc = 'ot_mspin4color3;none'
+                    self.size *= int(val)
                 elif field=='sizeof(M)':
                     if int(val)==4:
                         self.precision = gpt.single
-                        self.size *= 4
                     elif int(val)==8:
                         self.precision = gpt.double
+                    self.size *= int(val)
                 elif field=='field_crc32':
                     self.crc_exp = val
+            
+            line=self.getline(f)
+            gpt.message(f'   {line}')
+            assert(line == 'END_HEADER')
             self.bytes_header = f.tell()
 
         self.cv_desc = '['+','.join(['1']*len(self.fdimensions))+']'
         self.ldimensions = [fd for fd in self.fdimensions]
-        
+        return True
+    
     def getline(self,f):
         line=[]
         while True:
@@ -83,7 +86,6 @@ class qlat_io:
                 break
         return "".join(line)
     
-    # todo: improve speed, rather slow as is below
     def swap(self,data):
         if sys.byteorder=='big':
             return
@@ -92,10 +94,7 @@ class qlat_io:
             size=4
         elif self.precision==gpt.double:
             size=8
-        n=len(data)//size
-        for i in range(n):
-            tmp = data[i*size:(i+1)*size]
-            data[i*size:(i+1)*size] = tmp[::-1]
+        cgpt.munge_byte_order(data,data,size)
     
     def read_lattice_single(self):
         if self.bytes_header<0:
@@ -105,7 +104,6 @@ class qlat_io:
         g=gpt.grid(self.fdimensions, self.precision)
         # create lattice
         l=gpt.lattice(g,self.desc)
-        
         
         # performance
         dt_distr,dt_crc,dt_read,dt_misc=0.0,0.0,0.0,0.0
@@ -117,34 +115,42 @@ class qlat_io:
         # single file: each rank opens it and reads it all
         g.barrier()
         dt_read-=gpt.time()
-        f=gpt.FILE(self.path,"rb")        
-        f.seek(self.bytes_header,0)
-        sz=self.size * int(numpy.prod(g.fdimensions))
-        data=memoryview(bytearray(f.read(sz)))
-        f.close()
         
-        dt_crc-=gpt.time()
-        crc_comp=gpt.crc32(data)
-        dt_crc+=gpt.time()
-
-        dt_misc-=gpt.time()
-        self.swap(data)
-        dt_misc+=gpt.time()
-        dt_read+=gpt.time()
+        cv=gpt.cartesian_view(gpt.rank(),self.cv_desc,g.fdimensions,g.cb,l.checkerboard())     
+        pos=gpt.coordinates(cv)
         
-        sys.stdout.flush()
-        szGB+=len(data) / 1024.**3.
+        if gpt.rank()==0:
+            f=gpt.FILE(self.path,"rb")
+            f.seek(self.bytes_header,0)
+            sz=self.size * int(numpy.prod(g.fdimensions))
+            data=memoryview(bytearray(f.read(sz)))
+            f.close()
+        
+            dt_crc-=gpt.time()
+            crc_comp=gpt.crc32(data)
+            crc_comp=f'{crc_comp:8X}'
+            assert(crc_comp == self.crc_exp)    
+            dt_crc+=gpt.time()
+            
+            dt_misc-=gpt.time()
+            self.swap(data)
+            dt_misc+=gpt.time()
+        
+            sys.stdout.flush()
+            szGB+=len(data) / 1024.**3.
+        else:
+            assert(len(pos)==0)
+            data=None
+        
         g.barrier()
+        dt_read+=gpt.time()
         
         # distributes data accordingly
         dt_distr-=gpt.time()
-        cv=gpt.cartesian_view(gpt.rank(),self.cv_desc,g.fdimensions,g.cb,l.checkerboard())     
-        pos=gpt.coordinates(cv)
         l[pos]=data
+        g.barrier()
         dt_distr+=gpt.time()
         
-        crc_comp=f'{crc_comp:8X}'
-        assert(crc_comp == self.crc_exp)    
         g.barrier()
         t1=gpt.time()
 
@@ -152,15 +158,14 @@ class qlat_io:
         if self.verbose and dt_crc != 0.0:
             gpt.message("Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for reading + checksum, %g GB/s for checksum, %d views per node)" % 
                         (szGB,szGB/(t1-t0),szGB/dt_distr,szGB/dt_read,szGB/dt_crc,1))
-            #gpt.message("     %g total, %g swap, %g crc" %(dt_read,dt_misc,dt_crc))
         return l
     
-def load(filename):
+def load(filename,p={}):
 
-    # first check if this is right file format
-    if not (os.path.exists(filename) and filename[-5:]=='field'):
+    qlat = qlat_io(filename)
+    
+    # check if this is right file format from header
+    if not qlat.read_header():
         raise NotImplementedError()
         
-    qlat = qlat_io(filename)
-    qlat.read_header()
     return qlat.read_lattice_single()

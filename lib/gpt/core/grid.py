@@ -169,6 +169,10 @@ class grid:
             rank = rank*self.mpi[i] + self.processor_coor[i]
         return rank
 
+    def __str__(self):
+        ps = 'single' if self.precision==gpt.single else 'double'
+        return f'Grid {self.gdimensions}; Mpi = {self.mpi}; Precision = {ps}; CheckBoard = {self.cb.__name__}'
+
     def __del__(self):
         cgpt.delete_grid(self.obj)
 
