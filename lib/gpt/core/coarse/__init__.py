@@ -68,16 +68,14 @@ def create_links(A, fmat, basis):
         for d in dirs:
             for j, vl in enumerate(basis):
                 gpt.block.maskedInnerProduct(oproj, dirmasks[d], vl, Mvr[d])
-                # TODO: write oproj to link
-                # A[d][all_sites_here,j,i] @= oproj[all_sites_here]
+                A[d][:, :, :, :, j, i] = oproj[:]
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
         tmp @= blockevenmask * fmat.M * vr * blockevenmask + blockoddmask * fmat.M * vr * blockoddmask
 
         # coarsen diagonal term + write to link
         gpt.block.project(selfproj, tmp, basis)
-        # TODO: write selfproj to link
-        # A[selflink][all_sites_here,:,i] @= selfproj[all_sites_here,:]
+        A[selflink][:, :, :, :, :, i] = selfproj[:, :, :, :, :]
 
     # communicate opposite links
     for d in dirs:
