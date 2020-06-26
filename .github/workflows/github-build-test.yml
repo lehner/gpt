@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  MAKE_BUILD_FLAGS: -j2
+  MAKE_BUILD_FLAGS: -j1 # one for now to debug
   GRID_REPOSITORY_REF: feature/gpt
   CC: mpicc
   CXX: mpic++
@@ -18,8 +18,7 @@ env:
 
 jobs:
   build-grid:
-    runs-on: self-hosted
-    #ubuntu-18.04
+    runs-on: ubuntu-18.04
 
     strategy:
       fail-fast: false
@@ -161,8 +160,7 @@ jobs:
 
   build-gpt:
     needs: build-grid
-    runs-on: self-hosted
-    #ubuntu-18.04
+    runs-on: ubuntu-18.04
 
     strategy:
       fail-fast: false
@@ -357,8 +355,7 @@ jobs:
 
   test-gpt:
     needs: [build-grid, build-gpt]
-    runs-on: self-hosted
-    #ubuntu-18.04
+    runs-on: ubuntu-18.04
 
     strategy:
       fail-fast: false
