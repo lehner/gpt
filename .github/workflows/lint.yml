@@ -1,0 +1,46 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+          architecture: x64
+
+      - name: Clone gpt
+        uses: actions/checkout@v2
+
+      - name: Install linters
+        id: install-linters
+        run: pip install flake8 black # cpplint
+
+      # - name: Run cpplint
+      #   if: always()
+      #   run: |
+      #     cpplint --extensions=cc,h --headers=h --recursive .
+
+      - name: Run black
+        if: always()
+        run: |
+          black --check -q lib/gpt || exit_code=$?
+
+          if [ ${exit_code} -ne 0 ]; then
+              black --diff -q lib/gpt
+          fi
+
+      - name: Run flake8
+        if: always()
+        run: |
+          flake8 \
+            --format="::error file=%(path)s,line=%(row)s,col=%(col)s::%(code)s:%(text)s" \
+            --ignore="E203,E401,E501,W503,F401,F403,F405,E741,E302" \
+            --max-line-length=100 lib/gpt > tmp_flake.log || true
+
+          cat tmp_flake.log
