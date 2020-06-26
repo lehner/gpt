@@ -98,7 +98,7 @@ g.block.orthonormalize(grid_coarse, basis)
 cop = g.block.operator(c(w.NDagN), grid_coarse, basis)
 
 tmp = g.lattice(cstart)
-cop(cstart, tmp)
+tmp @= cop * cstart
 
 # g.message(tmp[0,0,0,0])
 
@@ -133,7 +133,7 @@ except g.LoadError:
         g.block.promote(v, v_fine, basis)
         for j in range(n_smoother_iter):
             v_fine_smooth[:] = 0
-            smoother(w.NDagN, v_fine, v_fine_smooth)
+            v_fine_smooth @= smoother(w.NDagN) * v_fine
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth) ** 0.5
         ev_smooth = g.algorithms.approx.evals(w.NDagN, [v_fine], check_eps2=1e-5)
         ev3[i] = ev_smooth[0]
@@ -147,7 +147,7 @@ solver = g.algorithms.approx.coarse_deflate(
     g.algorithms.iterative.cg({"eps": 1e-8, "maxiter": 1000}), coarse_evec, basis, ev3
 )
 v_fine[:] = 0
-solver(w.NDagN, start, v_fine)
+solver(w.NDagN)(v_fine, start)
 cg_defl_full_ev3 = solver.inverter.history
 
 solver = g.algorithms.approx.coarse_deflate(
@@ -157,10 +157,10 @@ solver = g.algorithms.approx.coarse_deflate(
     ev3[0 : len(basis)],
 )
 v_fine[:] = 0
-solver(w.NDagN, start, v_fine)
+solver(w.NDagN)(v_fine, start)
 cg_defl_basis = solver.inverter.history
 
 solver = g.algorithms.iterative.cg({"eps": 1e-8, "maxiter": 1000})
 v_fine[:] = 0
-solver(w.NDagN, start, v_fine)
+solver(w.NDagN)(v_fine, start)
 cg_undefl = solver.history

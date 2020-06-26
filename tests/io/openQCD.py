@@ -38,12 +38,12 @@ g.create.point(src, [0, 0, 0, 0])
 
 # build solver
 s = g.qcd.fermion.solver
-cg = g.algorithms.iterative.cg({"eps": 1e-6, "maxiter": 1000})
-slv = s.propagator(s.eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
+cg = g.algorithms.iterative.cg({"eps": 1e-6, "maxiter": 200})
+slv = s.propagator(s.inv_eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
 
 # propagator
 dst = g.mspincolor(grid)
-slv(src, dst)
+slv(dst, src)
 
 # two-point
 correlator = g.slice(g.trace(dst * g.adj(dst)), 3)

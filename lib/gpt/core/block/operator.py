@@ -19,36 +19,25 @@
 import gpt, sys
 
 
-class operator_on_fine:
-    def __init__(self, op, cgrid, basis):
-        self.op = op
-        self.src_fine = gpt.lattice(basis[0])
-        self.dst_fine = gpt.lattice(basis[0])
-        self.basis = basis
-        self.verbose = gpt.default.is_verbose("block_operator")
+def operator(op, cgrid, basis):
+    src_fine = gpt.lattice(basis[0])
+    dst_fine = gpt.lattice(basis[0])
+    verbose = gpt.default.is_verbose("block_operator")
 
-    def __call__(self, dst_coarse, src_coarse):
-        tpf = gpt.time()
-        gpt.prefetch(
-            [src_coarse, dst_coarse, self.src_fine, self.dst_fine, self.basis],
-            gpt.to_accelerator,
-        )
+    def mat(dst_coarse, src_coarse):
         t0 = gpt.time()
-        gpt.block.promote(
-            src_coarse, self.src_fine, self.basis
-        )  # TODO: src/dst ordering!!!
+        gpt.block.promote(src_coarse, src_fine, basis)  # TODO: src/dst ordering!!!
         t1 = gpt.time()
-        self.op(self.dst_fine, self.src_fine)
+        op(dst_fine, src_fine)
         t2 = gpt.time()
-        gpt.block.project(dst_coarse, self.dst_fine, self.basis)
+        gpt.block.project(dst_coarse, dst_fine, basis)
         t3 = gpt.time()
-        if self.verbose:
+        if verbose:
             gpt.message(
-                "Timing: %g s (promote), %g s (matrix), %g s (project), %g s (prefetch)"
-                % (t1 - t0, t2 - t1, t3 - t2, t0 - tpf)
+                "Timing: %g s (promote), %g s (matrix), %g s (project)"
+                % (t1 - t0, t2 - t1, t3 - t2)
             )
 
+    otype = gpt.ot_vsinglet(len(basis))
 
-def operator(op, cgrid, basis):
-    # If possible, directly implement op
-    return operator_on_fine(op, cgrid, basis)
+    return gpt.matrix_operator(mat=mat, otype=otype, zero=(False, False), grid=cgrid)

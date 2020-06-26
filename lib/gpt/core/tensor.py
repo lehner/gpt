@@ -66,14 +66,14 @@ class tensor:
             assert st is not None
             if st[0] is not None:
                 res = tensor(
-                    np.trace(res.array, offset=0, axis1=st[0], axis2=st[1]), st[2]
+                    np.trace(res.array, offset=0, axis1=st[0], axis2=st[1]), st[2]()
                 )
         if t & gpt.expr_unary.BIT_COLORTRACE:
             ct = res.otype.colortrace
             assert ct is not None
             if ct[0] is not None:
                 res = tensor(
-                    np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]
+                    np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]()
                 )
 
         if res.otype == gpt.ot_singlet:
@@ -87,7 +87,7 @@ class tensor:
         if type(other) == gpt.tensor:
             tag = (self.otype, other.otype)
             assert tag in gpt.otype.mtab
-            mt = gpt.otype.mtab[tag]
+            mt = gpt.otype.mtab[tag]()
             return tensor(np.tensordot(self.array, other.array, axes=mt[1]), mt[0])
         elif type(other) == complex:
             return tensor(self.array * other, self.otype)
@@ -96,7 +96,7 @@ class tensor:
             if ue == 0 and uf & gpt.factor_unary.BIT_TRANS != 0:
                 tag = (self.otype, to.otype)
                 assert tag in gpt.otype.otab
-                mt = gpt.otype.otab[tag]
+                mt = gpt.otype.otab[tag]()
                 rhs = to.array
                 if uf & gpt.factor_unary.BIT_CONJ != 0:
                     rhs = rhs.conj()

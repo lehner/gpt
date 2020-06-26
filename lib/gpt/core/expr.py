@@ -24,6 +24,7 @@ class factor_unary:
     NONE = 0
     BIT_TRANS = 1
     BIT_CONJ = 2
+    ADJ = 3
 
 
 class expr_unary:
@@ -81,7 +82,7 @@ class expr:
             if ue == 0 and uf & factor_unary.BIT_TRANS != 0:
                 tag = (to.otype, l.otype)
                 assert tag in gpt.otype.itab
-                mt = gpt.otype.itab[tag]
+                mt = gpt.otype.itab[tag]()
                 lhs = to.array
                 if uf & gpt.factor_unary.BIT_CONJ != 0:
                     lhs = lhs.conj()
@@ -135,7 +136,7 @@ class expr:
                 ret = ret + "*"
                 if f[0] == factor_unary.NONE:
                     ret = ret + repr(f[1])
-                elif f[0] == factor_unary.BIT_CONJ | factor_unary.BIT_TRANS:
+                elif f[0] == factor_unary.ADJ:
                     ret = ret + "adj(" + repr(f[1]) + ")"
                 elif f[0] == factor_unary.BIT_CONJ:
                     ret = ret + "conjugate(" + repr(f[1]) + ")"
@@ -210,6 +211,81 @@ def apply_type_right_to_left(e, t):
     assert 0
 
 
+def get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj):
+    if f_adj and not t_adj and f_otype.itab is not None:
+        # inner
+        tab = f_otype.itab
+        rtab = {}
+    elif not t_adj and f_adj and f_otype.otab is not None:
+        # outer
+        tab = f_otype.otab
+        rtab = {}
+    else:
+        tab = f_otype.mtab
+        rtab = t_otype.rmtab
+
+    if t_otype.__name__ in tab:
+        return tab[t_otype.__name__][0]()
+    else:
+        if f_otype.__name__ not in rtab:
+            if f_otype.data_alias is not None:
+                return get_otype_from_multiplication(
+                    t_otype, t_adj, f_otype.data_alias(), f_adj
+                )
+            elif t_otype.data_alias is not None:
+                return get_otype_from_multiplication(
+                    t_otype.data_alias(), t_adj, f_otype, f_adj
+                )
+            else:
+                gpt.message(
+                    "Missing entry in multiplication table: %s x %s"
+                    % (t_otype.__name__, f_otype.__name__)
+                )
+        return rtab[f_otype.__name__][0]()
+
+
+def get_otype_from_expression(e):
+    bare_otype = None
+    for coef, term in e.val:
+        if len(term) == 0:
+            t_otype = gpt.ot_singlet
+        else:
+            t_otype = None
+            t_adj = False
+            for unary, factor in reversed(term):
+                f_otype = factor.otype
+                if isinstance(f_otype, list):
+                    f_otype = f_otype[0]
+
+                f_adj = unary == factor_unary.ADJ
+                if t_otype is None:
+                    t_otype = f_otype
+                    t_adj = f_adj
+                else:
+                    t_otype = get_otype_from_multiplication(
+                        t_otype, t_adj, f_otype, f_adj
+                    )
+
+        if bare_otype is None:
+            bare_otype = t_otype
+        else:
+            # all elements of a sum must have same otype
+            assert bare_otype.__name__ == t_otype.__name__
+
+    # apply unaries
+    if e.unary & expr_unary.BIT_SPINTRACE:
+        st = bare_otype.spintrace
+        assert st is not None
+        if st[2] is not None:
+            bare_otype = st[2]()
+    if e.unary & expr_unary.BIT_COLORTRACE:
+        ct = bare_otype.colortrace
+        assert ct is not None
+        if ct[2] is not None:
+            bare_otype = ct[2]()
+    return bare_otype
+
+
 def expr_eval(first, second=None, ac=False):
 
     # this will always evaluate to a lattice object
@@ -253,11 +329,14 @@ def expr_eval(first, second=None, ac=False):
         return first
     else:
         assert ac is False
+
+        # now find return type
+        otype = get_otype_from_expression(e)
+
         t_obj, s_ot, s_pr = [0] * n, [0] * n, [0] * n
         for i in otype.v_idx:
             t_obj[i], s_ot[i], s_pr[i] = cgpt.eval(t_obj[i], e.val, e.unary, False, i)
-        if len(s_ot) == 1:
-            otype = eval("gpt.otype." + s_ot[0])
-        else:
-            otype = gpt.otype.from_v_otype(s_ot)
+
+        assert s_ot == otype.v_otype
+
         return gpt.lattice(grid, otype, t_obj)

@@ -50,11 +50,11 @@ eps2 = g.norm2(res - g.norm2(cv) ** 2.0 * cv)
 assert eps2 < 1e-13
 
 # create spin color matrix and peek spin index
-msc = g.mspin4color3(grid)
+msc = g.mspincolor(grid)
 rng.cnormal(msc)
 
-ms = g.mspin4(grid)
-mc = g.mcolor3(grid)
+ms = g.mspin(grid)
+mc = g.mcolor(grid)
 
 # peek spin index 1,2
 mc[:] = msc[:, :, :, :, 1, 2, :, :]

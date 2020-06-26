@@ -37,6 +37,11 @@ class qlat_io:
         gpt.barrier()
 
     def read_header(self):
+
+        # make sure this is a file
+        if not os.path.isfile(self.path):
+            return False
+
         with open(self.path, "rb") as f:
             line = self.getline(f)
             if line != "BEGIN_FIELD_HEADER":
@@ -60,7 +65,7 @@ class qlat_io:
                     self.fdimensions.append(int(val))
                 elif field == "multiplicity":
                     if int(val) == 288:
-                        self.desc = "ot_mspin4color3;none"
+                        self.otype = gpt.ot_matrix_spin_color(4, 3)
                     self.size *= int(val)
                 elif field == "sizeof(M)":
                     if int(val) == 4:
@@ -84,7 +89,11 @@ class qlat_io:
     def getline(self, f):
         line = []
         while True:
-            c = str(f.read(1), "utf-8")
+            try:
+                c = str(f.read(1), "utf-8")
+            except UnicodeDecodeError:
+                # this should not happen and likely indicates that we read an incompatible file
+                break
             if c == "\n":
                 break
             else:
@@ -110,7 +119,7 @@ class qlat_io:
         # define grid from header
         g = gpt.grid(self.fdimensions, self.precision)
         # create lattice
-        l = gpt.lattice(g, self.desc)
+        l = gpt.lattice(g, self.otype)
 
         # performance
         dt_distr, dt_crc, dt_read, dt_misc = 0.0, 0.0, 0.0, 0.0

@@ -19,6 +19,10 @@
 import gpt, cgpt
 import numpy as np
 from gpt.core.expr import factor
+from gpt.core.otype import ot_matrix_spin
+
+# otype for gamma matrices
+gamma_otype = ot_matrix_spin(4)
 
 # basic matrices defining the gamma representation
 matrices = {
@@ -47,11 +51,14 @@ fill_sigmas()
 class gamma_base(factor):
     def __init__(self, gamma):
         self.gamma = gamma
+        self.otype = gamma_otype
 
     def __mul__(self, other):
         if type(other) == gpt.tensor:
             return gpt.tensor(
-                cgpt.gamma_tensor_mul(other.array, other.otype, self.gamma, 1),
+                cgpt.gamma_tensor_mul(
+                    other.array, other.otype.v_otype[0], self.gamma, 1
+                ),
                 other.otype,
             )
         else:
@@ -60,7 +67,9 @@ class gamma_base(factor):
     def __rmul__(self, other):
         if type(other) == gpt.tensor:
             return gpt.tensor(
-                cgpt.gamma_tensor_mul(other.array, other.otype, self.gamma, 0),
+                cgpt.gamma_tensor_mul(
+                    other.array, other.otype.v_otype[0], self.gamma, 0
+                ),
                 other.otype,
             )
         else:
@@ -68,7 +77,7 @@ class gamma_base(factor):
 
     def tensor(self):
         assert self.gamma in matrices
-        return gpt.tensor(matrices[self.gamma], gpt.ot_mspin4)
+        return gpt.tensor(matrices[self.gamma], self.otype)
 
 
 gamma = {
