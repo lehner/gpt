@@ -1,4 +1,5 @@
 name: Build/Test
+runs-on: self-hosted
 
 on:
   push:
