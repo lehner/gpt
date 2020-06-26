@@ -76,3 +76,12 @@ def rotate(basis, Qt, j0, j1, k0, k1):
 
 def qr_decomp(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax):
     return cgpt.qr_decomp(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax)
+
+
+def split_chiral(basis):
+    nbasis = len(basis)
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+    for n in range(nb):
+        basis[n + nb] @= 0.5 * basis[n] - 0.5 * gpt.gamma[5] * basis[n]
+        basis[n] @= 0.5 * basis[n] + 0.5 * gpt.gamma[5] * basis[n]
