@@ -1,5 +1,4 @@
 name: Build/Test
-runs-on: self-hosted
 
 on:
   push:
@@ -19,7 +18,8 @@ env:
 
 jobs:
   build-grid:
-    runs-on: ubuntu-18.04
+    runs-on: self-hosted
+    #ubuntu-18.04
 
     strategy:
       fail-fast: false
@@ -161,7 +161,8 @@ jobs:
 
   build-gpt:
     needs: build-grid
-    runs-on: ubuntu-18.04
+    runs-on: self-hosted
+    #ubuntu-18.04
 
     strategy:
       fail-fast: false
@@ -356,7 +357,8 @@ jobs:
 
   test-gpt:
     needs: [build-grid, build-gpt]
-    runs-on: ubuntu-18.04
+    runs-on: self-hosted
+    #ubuntu-18.04
 
     strategy:
       fail-fast: false
