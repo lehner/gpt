@@ -63,14 +63,14 @@ class tensor:
         res = self
         if t & gpt.expr_unary.BIT_SPINTRACE:
             st = res.otype.spintrace
-            assert st is not None
+            assert st is not None and len(st) == 3  # do not yet support tracing vectors
             if st[0] is not None:
                 res = tensor(
                     np.trace(res.array, offset=0, axis1=st[0], axis2=st[1]), st[2]()
                 )
         if t & gpt.expr_unary.BIT_COLORTRACE:
             ct = res.otype.colortrace
-            assert ct is not None
+            assert ct is not None and len(ct) == 3
             if ct[0] is not None:
                 res = tensor(
                     np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]()

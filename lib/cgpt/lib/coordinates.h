@@ -84,12 +84,13 @@ struct cgpt_order_canonical {
 };
 
 template<typename order_t, typename coor_t>
-inline void cgpt_fill_cartesian_view_coordinates(int32_t* d,int Nd,
-						 const std::vector<long>& top,
-						 const coor_t& size,
-						 const std::vector<long>& checker_dim_mask,
-						 long fstride,int cbf,int cb,
-						 long points, order_t order) {
+  inline bool cgpt_fill_cartesian_view_coordinates(int32_t* d,int Nd,
+						   const std::vector<long>& top,
+						   const coor_t& size,
+						   const std::vector<long>& checker_dim_mask,
+						   long fstride,int cbf,int cb,
+						   long points, order_t order) {
+  bool first_on_grid = false;
   thread_region
     {
       coor_t coor(Nd);
@@ -103,8 +104,10 @@ inline void cgpt_fill_cartesian_view_coordinates(int32_t* d,int Nd,
 	  if (site_cb % 2 == cb) {
 	    for (int i=0;i<Nd;i++)
 	      d[Nd*idx_cb + i] = top[i] + coor[i];
+	    if (!idx)
+	      first_on_grid = true;
 	  }
 	});
     }
-
+  return first_on_grid;
 }

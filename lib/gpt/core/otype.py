@@ -57,7 +57,7 @@ class ot_base:
     v_n1 = [1]
     v_idx = [0]
     transposed = None
-    spintrace = None  # not supported
+    spintrace = None
     colortrace = None
     data_alias = None  # ot can be cast as fundamental type data_alias (such as SU(3) -> 3x3 matrix)
     mtab = {}  # x's multiplication table for x * y
@@ -110,6 +110,8 @@ class ot_vector_color(ot_base):
         self.nfloats = 2 * ndim
         self.shape = (ndim,)
         self.v_otype = ["ot_vcolor%d" % ndim]
+        self.spintrace = (None, None)
+        self.colortrace = (0, lambda: ot_singlet)
         self.mtab = {
             "ot_singlet": (lambda: self, None),
         }
@@ -187,6 +189,8 @@ class ot_vector_spin(ot_base):
         self.nfloats = 2 * ndim
         self.shape = (ndim,)
         self.v_otype = ["ot_vspin%d" % ndim]
+        self.spintrace = (0, lambda: ot_singlet)
+        self.colortrace = (None, None)
         self.mtab = {
             "ot_singlet": (lambda: self, None),
         }
@@ -241,6 +245,8 @@ class ot_vector_spin_color(ot_base):
         self.shape = (spin_ndim, color_ndim)
         self.v_otype = ["ot_vspin%dcolor%d" % (spin_ndim, color_ndim)]
         self.ot_matrix = "ot_matrix_spin_color(%d,%d)" % (spin_ndim, color_ndim)
+        self.spintrace = (0, lambda: ot_vector_color(color_ndim))
+        self.colortrace = (1, lambda: ot_vector_spin(spin_ndim))
         self.otab = {
             self.__name__: (
                 lambda: ot_matrix_spin_color(spin_ndim, color_ndim),

@@ -94,6 +94,7 @@ def map_pos(grid, cb, key):
             for i in range(nd)
         ]
     )
+
     return cgpt.coordinates_from_cartesian_view(
         top, bottom, grid.cb.cb_mask, cb.tag, "lexicographic"
     )

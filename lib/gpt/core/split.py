@@ -16,21 +16,10 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-
 import gpt
 import cgpt
 import numpy
 import sys
-
-
-def _separate_otypes(l):
-    ot = {}
-    for i, x in enumerate(l):
-        if x.otype not in ot:
-            ot[x.otype] = []
-        ot[x.otype].append(i)
-    return ot
-
 
 # TODO: verbose split and time operations below
 
