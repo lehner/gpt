@@ -113,7 +113,7 @@ class random:
         grid = out.grid
         ca = gpt.complex(grid)
         lie = gpt.lattice(out)
-        ta = gpt.mcolor(grid)
+        ta = gpt.lattice(out)
 
         lie[:] = 0
         for g in out.otype.generators(grid.precision.complex_dtype):
