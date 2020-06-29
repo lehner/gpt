@@ -175,13 +175,13 @@ class coarse_operator:
 
         # derived objects
         self.A_grid = A[0].grid
-        self.A_grid_eo = gpt.grid(
-            self.A_grid.gdimensions, self.A_grid.precision, gpt.redblack
-        )
+        # self.A_grid_eo = gpt.grid(
+        #     self.A_grid.gdimensions, self.A_grid.precision, gpt.redblack
+        # )
         if Ls is not None:
             assert Ls is None
         self.F_grid = self.A_grid
-        self.F_grid_eo = self.A_grid_eo
+        # self.F_grid_eo = self.A_grid_eo
         # NOTE: The eo grids are not used currently
 
         # parameter for create_fermion_operator
