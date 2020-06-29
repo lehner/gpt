@@ -50,7 +50,19 @@ def create_links(A, fmat, basis):
     )
     dirmasks = [gpt.complex(f_grid) for p in range(nhops)]
 
+    # setup timings
+    dt_total, dt_masks, dt_apply_hop, dt_coarsen_hop, dt_apply_self, dt_coarsen_self = (
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
+
     # auxilliary stuff needed for masks
+    dt_total -= gpt.time()
+    dt_masks -= gpt.time()
     onemask[:] = 1.0
     coor = gpt.coordinates(blockevenmask)
     block = numpy.array(f_grid.ldimensions) / numpy.array(c_grid.ldimensions)
@@ -66,30 +78,52 @@ def create_links(A, fmat, basis):
     for p, d in enumerate(dirs):
         gpt.make_mask(dirmasks[p], dirmasks_forward_np[:, p])
         gpt.make_mask(dirmasks[4 + p], dirmasks_backward_np[:, p])
+    dt_masks += gpt.time()
 
     for i, vr in enumerate(basis):
         # apply directional hopping terms
         # this triggers four comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
+        dt_apply_hop -= gpt.time()
         [fmat.Mdir(Mvr[p], vr, d, fb) for p, (d, fb) in enumerate(dirdisps)]
+        dt_apply_hop += gpt.time()
 
         # coarsen directional terms + write to link
+        dt_coarsen_hop -= gpt.time()
         for p, (d, fb) in enumerate(dirdisps):
             for j, vl in enumerate(basis):
                 gpt.block.maskedInnerProduct(oproj, dirmasks[p], vl, Mvr[p])
                 A[p][:, :, :, :, j, i] = oproj[:]
+        dt_coarsen_hop += gpt.time()
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
+        dt_apply_self -= gpt.time()
         tmp @= (
             blockevenmask * fmat.M * vr * blockevenmask
             + blockoddmask * fmat.M * vr * blockoddmask
         )
+        dt_apply_self += gpt.time()
 
         # coarsen diagonal term + write to link
+        dt_coarsen_self -= gpt.time()
         gpt.block.project(selfproj, tmp, basis)
         A[selflink][:, :, :, :, :, i] = selfproj[:]
+        dt_coarsen_self += gpt.time()
 
         gpt.message("Coarsening of vector %d finished" % i)
+
+    dt_total += gpt.time()
+    gpt.message(
+        "Timings[s]: Masks = %g, MatrixHop = %g, MatrixSelf = %g, CoarsenHop = %g, CoarsenSelf = %g, Total = %g"
+        % (
+            dt_masks,
+            dt_apply_hop,
+            dt_apply_self,
+            dt_coarsen_hop,
+            dt_coarsen_self,
+            dt_total,
+        )
+    )
 
     # communicate opposite links
     # for d in dirs:
