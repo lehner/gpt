@@ -52,31 +52,21 @@ def create_links(A, fmat, basis):
     dirmasks = [gpt.complex(f_grid) for p in range(nhops)]
 
     # setup timings
-    (
-        dt_total,
-        dt_masks,
-        dt_apply_hop,
-        dt_coarsen_hop,
-        dt_copy_hop,
-        dt_apply_self,
-        dt_coarsen_self,
-        dt_copy_self,
-        dt_comm,
-    ) = (
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    )
+    dt = {
+        "total": 0.0,
+        "masks": 0.0,
+        "apply_hop": 0.0,
+        "coarsen_hop": 0.0,
+        "copy_hop": 0.0,
+        "apply_self": 0.0,
+        "coarsen_self": 0.0,
+        "copy_self": 0.0,
+        "comm": 0.0,
+    }
 
     # auxilliary stuff needed for masks
-    dt_total -= gpt.time()
-    dt_masks -= gpt.time()
+    dt["total"] -= gpt.time()
+    dt["masks"] -= gpt.time()
     onemask[:] = 1.0
     coor = gpt.coordinates(blockevenmask)
     block = numpy.array(f_grid.ldimensions) / numpy.array(c_grid.ldimensions)
@@ -92,7 +82,7 @@ def create_links(A, fmat, basis):
     for p, d in enumerate(dirs):
         gpt.make_mask(dirmasks[p], dirmasks_forward_np[:, p])
         gpt.make_mask(dirmasks[4 + p], dirmasks_backward_np[:, p])
-    dt_masks += gpt.time()
+    dt["masks"] += gpt.time()
 
     # save applications of matrix and coarsening if possible
     dirdisps = dirdisps_forward if hermitian else dirdisps_full
@@ -101,42 +91,42 @@ def create_links(A, fmat, basis):
         # apply directional hopping terms
         # this triggers len(dirdisps) comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
-        dt_apply_hop -= gpt.time()
+        dt["apply_hop"] -= gpt.time()
         [fmat.Mdir(Mvr[p], vr, d, fb) for p, (d, fb) in enumerate(dirdisps)]
-        dt_apply_hop += gpt.time()
+        dt["apply_hop"] += gpt.time()
 
         # coarsen directional terms + write to link
         for p, (d, fb) in enumerate(dirdisps):
             for j, vl in enumerate(basis):
-                dt_coarsen_hop -= gpt.time()
+                dt["coarsen_hop"] -= gpt.time()
                 gpt.block.maskedInnerProduct(oproj, dirmasks[p], vl, Mvr[p])
-                dt_coarsen_hop += gpt.time()
-                dt_copy_hop -= gpt.time()
+                dt["coarsen_hop"] += gpt.time()
+                dt["copy_hop"] -= gpt.time()
                 A[p][:, :, :, :, j, i] = oproj[:]
-                dt_copy_hop += gpt.time()
+                dt["copy_hop"] += gpt.time()
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
-        dt_apply_self -= gpt.time()
+        dt["apply_self"] -= gpt.time()
         tmp @= (
             blockevenmask * fmat.M * vr * blockevenmask
             + blockoddmask * fmat.M * vr * blockoddmask
         )
-        dt_apply_self += gpt.time()
+        dt["apply_self"] += gpt.time()
 
         # coarsen diagonal term
-        dt_coarsen_self -= gpt.time()
+        dt["coarsen_self"] -= gpt.time()
         gpt.block.project(selfproj, tmp, basis)
-        dt_coarsen_self += gpt.time()
+        dt["coarsen_self"] += gpt.time()
 
         # write to self link
-        dt_copy_self -= gpt.time()
+        dt["copy_self"] -= gpt.time()
         A[selflink][:, :, :, :, :, i] = selfproj[:]
-        dt_copy_self += gpt.time()
+        dt["copy_self"] += gpt.time()
 
         gpt.message("Coarsening of vector %d finished" % i)
 
     # communicate opposite links
-    dt_comm -= gpt.time()
+    dt["comm"] -= gpt.time()
     for p, (d, fb) in enumerate(dirdisps_forward):
         dd = d + 4
         shift_disp = fb * -1
@@ -146,23 +136,13 @@ def create_links(A, fmat, basis):
             pass
             # # linktmp = ... # TODO internal index manipulation for coarse spin dofs
             # A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
-    dt_comm += gpt.time()
+    dt["comm"] += gpt.time()
 
-    dt_total += gpt.time()
-    gpt.message(
-        "Timings[s]: Masks = %g, MatrixHop = %g, MatrixSelf = %g, CopyHop = %g, CopySelf = %g, CoarsenHop = %g, CoarsenSelf = %g, CommLinks = %g, Total = %g"
-        % (
-            dt_masks,
-            dt_apply_hop,
-            dt_apply_self,
-            dt_copy_hop,
-            dt_copy_self,
-            dt_coarsen_hop,
-            dt_coarsen_self,
-            dt_comm,
-            dt_total,
+    dt["total"] += gpt.time()
+    for k, v in sorted(dt.items(), key=lambda x: x[1]):
+        gpt.message(
+            "Timing coarsening: %15s = %g s (= %g %%)" % (k, v, v / dt["total"] * 100)
         )
-    )
 
 
 def recreate_links(A, fmat, basis):
