@@ -51,7 +51,18 @@ def create_links(A, fmat, basis):
     dirmasks = [gpt.complex(f_grid) for p in range(nhops)]
 
     # setup timings
-    dt_total, dt_masks, dt_apply_hop, dt_coarsen_hop, dt_apply_self, dt_coarsen_self = (
+    (
+        dt_total,
+        dt_masks,
+        dt_apply_hop,
+        dt_coarsen_hop,
+        dt_copy_hop,
+        dt_apply_self,
+        dt_coarsen_self,
+        dt_copy_self,
+    ) = (
+        0.0,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -89,12 +100,14 @@ def create_links(A, fmat, basis):
         dt_apply_hop += gpt.time()
 
         # coarsen directional terms + write to link
-        dt_coarsen_hop -= gpt.time()
         for p, (d, fb) in enumerate(dirdisps):
             for j, vl in enumerate(basis):
+                dt_coarsen_hop -= gpt.time()
                 gpt.block.maskedInnerProduct(oproj, dirmasks[p], vl, Mvr[p])
+                dt_coarsen_hop += gpt.time()
+                dt_copy_hop -= gpt.time()
                 A[p][:, :, :, :, j, i] = oproj[:]
-        dt_coarsen_hop += gpt.time()
+                dt_copy_hop += gpt.time()
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
         dt_apply_self -= gpt.time()
@@ -104,21 +117,27 @@ def create_links(A, fmat, basis):
         )
         dt_apply_self += gpt.time()
 
-        # coarsen diagonal term + write to link
+        # coarsen diagonal term
         dt_coarsen_self -= gpt.time()
         gpt.block.project(selfproj, tmp, basis)
-        A[selflink][:, :, :, :, :, i] = selfproj[:]
         dt_coarsen_self += gpt.time()
+
+        # write to self link
+        dt_copy_self -= gpt.time()
+        A[selflink][:, :, :, :, :, i] = selfproj[:]
+        dt_copy_self += gpt.time()
 
         gpt.message("Coarsening of vector %d finished" % i)
 
     dt_total += gpt.time()
     gpt.message(
-        "Timings[s]: Masks = %g, MatrixHop = %g, MatrixSelf = %g, CoarsenHop = %g, CoarsenSelf = %g, Total = %g"
+        "Timings[s]: Masks = %g, MatrixHop = %g, MatrixSelf = %g, CopyHop = %g, CopySelf = %g, CoarsenHop = %g, CoarsenSelf = %g, Total = %g"
         % (
             dt_masks,
             dt_apply_hop,
             dt_apply_self,
+            dt_copy_hop,
+            dt_copy_self,
             dt_coarsen_hop,
             dt_coarsen_self,
             dt_total,
