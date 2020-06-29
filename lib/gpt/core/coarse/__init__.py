@@ -19,6 +19,7 @@
 #
 import gpt, cgpt, sys, numpy
 
+
 def create_links(A, fmat, basis):
     # NOTE: we expect the blocks in the basis vectors
     # to already be orthogonalized!
@@ -28,14 +29,15 @@ def create_links(A, fmat, basis):
     c_grid = A[0].grid
 
     # directions/displacements we coarsen for
-    dirs = [0, 1, 2, 3]  # TODO: for 5d, this needs += 1
-    nstencil = 2 * len(dirs) + 1
+    dirs = [1, 2, 3, 4] if f_grid.nd == 5 else [0, 1, 2, 3]
+    dirdisps = list(zip(dirs * 2, [+1] * 4 + [-1] * 4))
+    nhops = len(dirdisps)
     disp = +1
-    selflink = nstencil - 1  # last one in the list
+    selflink = nhops
     hermitian = True  # for now, needs to be a param -> TODO
 
     # setup fields
-    Mvr = [gpt.lattice(basis[0]) for d in dirs]
+    Mvr = [gpt.lattice(basis[0]) for i in range(nhops)]
     tmp = gpt.lattice(basis[0])
     oproj = gpt.complex(c_grid)
     selfproj = gpt.vcomplex(c_grid, len(basis))
@@ -46,7 +48,7 @@ def create_links(A, fmat, basis):
         gpt.complex(f_grid),
         gpt.complex(f_grid),
     )
-    dirmasks = [gpt.complex(f_grid) for d in dirs]
+    dirmasks = [gpt.complex(f_grid) for p in range(nhops)]
 
     # auxilliary stuff needed for masks
     onemask[:] = 1.0
@@ -58,21 +60,24 @@ def create_links(A, fmat, basis):
     gpt.make_mask(blockevenmask, numpy.sum(block_cb, axis=1) % 2 == 0)
     blockoddmask @= onemask - blockevenmask
 
-    # fill masks for sites on forward borders of blocks
-    dirmasks_np = coor[:, :] % block[:] == block[:] - 1
-    [gpt.make_mask(dirmasks[d], dirmasks_np[:, d]) for d in dirs]
+    # fill masks for sites on borders of blocks
+    dirmasks_forward_np = coor[:, :] % block[:] == block[:] - 1
+    dirmasks_backward_np = coor[:, :] % block[:] == 0
+    for p, d in enumerate(dirs):
+        gpt.make_mask(dirmasks[p], dirmasks_forward_np[:, p])
+        gpt.make_mask(dirmasks[4 + p], dirmasks_backward_np[:, p])
 
     for i, vr in enumerate(basis):
         # apply directional hopping terms
         # this triggers four comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
-        [fmat.Mdir(Mvr[d], vr, d, disp) for d in dirs]
+        [fmat.Mdir(Mvr[p], vr, d, fb) for p, (d, fb) in enumerate(dirdisps)]
 
         # coarsen directional terms + write to link
-        for d in dirs:
+        for p, (d, fb) in enumerate(dirdisps):
             for j, vl in enumerate(basis):
-                gpt.block.maskedInnerProduct(oproj, dirmasks[d], vl, Mvr[d])
-                A[d][:, :, :, :, j, i] = oproj[:]
+                gpt.block.maskedInnerProduct(oproj, dirmasks[p], vl, Mvr[p])
+                A[p][:, :, :, :, j, i] = oproj[:]
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
         tmp @= (
@@ -82,17 +87,19 @@ def create_links(A, fmat, basis):
 
         # coarsen diagonal term + write to link
         gpt.block.project(selfproj, tmp, basis)
-        A[selflink][:, :, :, :, :, i] = selfproj[:, :, :, :, :]
+        A[selflink][:, :, :, :, :, i] = selfproj[:]
+
+        gpt.message("Coarsening of vector %d finished" % i)
 
     # communicate opposite links
-    for d in dirs:
-        dd = d + len(dirs)
-        shift_disp = disp * -1
-        if hermitian:
-            A[dd] @= gpt.adj(gpt.cshift(A[d], d, shift_disp))
-        else:
-            # linktmp = ... # TODO internal index manipulation for coarse spin dofs
-            A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
+    # for d in dirs:
+    #     dd = d + len(dirs)
+    #     shift_disp = disp * -1
+    #     if hermitian:
+    #         A[dd] @= gpt.adj(gpt.cshift(A[d], d, shift_disp))
+    #     else:
+    #         # linktmp = ... # TODO internal index manipulation for coarse spin dofs
+    #         A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
 
 
 def recreate_links(A, fmat, basis):
