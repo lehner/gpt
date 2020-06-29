@@ -238,3 +238,11 @@ class coarse_operator:
         # for j in range(len(i.v_obj)):
         #     cgpt.apply_fermion_operator(self.obj[j],opcode,i.v_obj[j],o.v_obj[j])
 
+    def dirdisp(self, opcode, o, i, direction, disp):
+        assert len(i.v_obj) == len(o.v_obj)
+        # Grid has different calling conventions which we adopt in cgpt:
+        return cgpt.apply_fermion_operator_dirdisp(
+            self.obj, opcode, i.v_obj[0], o.v_obj[0], direction, disp
+        )
+        # for j in range(len(i.v_obj)):
+        #     cgpt.apply_fermion_operator(self.obj[j],opcode,i.v_obj[j],o.v_obj[j], dir, disp)
