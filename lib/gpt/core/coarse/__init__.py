@@ -30,11 +30,12 @@ def create_links(A, fmat, basis):
 
     # directions/displacements we coarsen for
     dirs = [1, 2, 3, 4] if f_grid.nd == 5 else [0, 1, 2, 3]
-    dirdisps = list(zip(dirs * 2, [+1] * 4 + [-1] * 4))
-    nhops = len(dirdisps)
     disp = +1
+    dirdisps_full = list(zip(dirs * 2, [+1] * 4 + [-1] * 4))
+    dirdisps_forward = list(zip(dirs, [disp] * 4))
+    nhops = len(dirdisps_full)
     selflink = nhops
-    hermitian = True  # for now, needs to be a param -> TODO
+    hermitian = False  # for now, needs to be a param -> TODO
 
     # setup fields
     Mvr = [gpt.lattice(basis[0]) for i in range(nhops)]
@@ -60,7 +61,9 @@ def create_links(A, fmat, basis):
         dt_apply_self,
         dt_coarsen_self,
         dt_copy_self,
+        dt_comm,
     ) = (
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -91,9 +94,12 @@ def create_links(A, fmat, basis):
         gpt.make_mask(dirmasks[4 + p], dirmasks_backward_np[:, p])
     dt_masks += gpt.time()
 
+    # save applications of matrix and coarsening if possible
+    dirdisps = dirdisps_forward if hermitian else dirdisps_full
+
     for i, vr in enumerate(basis):
         # apply directional hopping terms
-        # this triggers four comms -> TODO expose DhopdirAll from Grid
+        # this triggers len(dirdisps) comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
         dt_apply_hop -= gpt.time()
         [fmat.Mdir(Mvr[p], vr, d, fb) for p, (d, fb) in enumerate(dirdisps)]
@@ -129,9 +135,22 @@ def create_links(A, fmat, basis):
 
         gpt.message("Coarsening of vector %d finished" % i)
 
+    # communicate opposite links
+    dt_comm -= gpt.time()
+    for p, (d, fb) in enumerate(dirdisps_forward):
+        dd = d + 4
+        shift_disp = fb * -1
+        if hermitian:
+            A[dd] @= gpt.adj(gpt.cshift(A[d], d, shift_disp))
+        else:
+            pass
+            # # linktmp = ... # TODO internal index manipulation for coarse spin dofs
+            # A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
+    dt_comm += gpt.time()
+
     dt_total += gpt.time()
     gpt.message(
-        "Timings[s]: Masks = %g, MatrixHop = %g, MatrixSelf = %g, CopyHop = %g, CopySelf = %g, CoarsenHop = %g, CoarsenSelf = %g, Total = %g"
+        "Timings[s]: Masks = %g, MatrixHop = %g, MatrixSelf = %g, CopyHop = %g, CopySelf = %g, CoarsenHop = %g, CoarsenSelf = %g, CommLinks = %g, Total = %g"
         % (
             dt_masks,
             dt_apply_hop,
@@ -140,19 +159,10 @@ def create_links(A, fmat, basis):
             dt_copy_self,
             dt_coarsen_hop,
             dt_coarsen_self,
+            dt_comm,
             dt_total,
         )
     )
-
-    # communicate opposite links
-    # for d in dirs:
-    #     dd = d + len(dirs)
-    #     shift_disp = disp * -1
-    #     if hermitian:
-    #         A[dd] @= gpt.adj(gpt.cshift(A[d], d, shift_disp))
-    #     else:
-    #         # linktmp = ... # TODO internal index manipulation for coarse spin dofs
-    #         A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
 
 
 def recreate_links(A, fmat, basis):
