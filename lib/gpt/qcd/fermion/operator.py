@@ -72,6 +72,7 @@ class operator:
         # register matrix operators
         class registry:
             pass
+
         class registry_dd:
             pass
 
@@ -127,7 +128,9 @@ class operator:
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
 
-        self.Mdir = gpt.matrix_operator(mat = registry_dd.Mdir, otype = otype, grid = self.F_grid)
+        self.Mdir = gpt.matrix_operator(
+            mat=registry_dd.Mdir, otype=otype, grid=self.F_grid
+        )
 
     def __del__(self):
         cgpt.delete_fermion_operator(self.obj)
@@ -150,18 +153,20 @@ class operator:
         return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj[0], o.v_obj[0])
 
     def dirdisp(self, opcode, o, i, dir, disp):
-        assert(len(i.v_obj) == 1)
-        assert(len(o.v_obj) == 1)
+        assert len(i.v_obj) == 1
+        assert len(o.v_obj) == 1
         # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator_dirdisp(self.obj,opcode,i.v_obj[0],o.v_obj[0],dir,disp)
+        return cgpt.apply_fermion_operator_dirdisp(
+            self.obj, opcode, i.v_obj[0], o.v_obj[0], dir, disp
+        )
 
     def _G5M(self, dst, src):
         self.M(dst, src)
         dst @= gpt.gamma[5] * dst
 
-    
+
 class coarse_operator:
-    def __init__(self, A, params, Ls = None, otype = None):
+    def __init__(self, A, params, Ls=None, otype=None):
 
         # keep constructor parameters
         self.name = "coarse"
@@ -170,39 +175,48 @@ class coarse_operator:
 
         # derived objects
         self.A_grid = A[0].grid
-        self.A_grid_eo = gpt.grid(self.A_grid.gdimensions,self.A_grid.precision,gpt.redblack)
+        self.A_grid_eo = gpt.grid(
+            self.A_grid.gdimensions, self.A_grid.precision, gpt.redblack
+        )
         if Ls is not None:
-            assert(Ls == None)
+            assert Ls is None
         self.F_grid = self.A_grid
         self.F_grid_eo = self.A_grid_eo
         # NOTE: The eo grids are not used currently
 
         # parameter for create_fermion_operator
         self.params = {
-            'grid_c' : self.A_grid.obj,
-            'hermitian': params['hermitian'],
-            'level': params['level'],
-            'nbasis': params['nbasis'],
-            "A" : [ a.v_obj[0] for a in self.A ]
+            "grid_c": self.A_grid.obj,
+            "hermitian": params["hermitian"],
+            "level": params["level"],
+            "nbasis": params["nbasis"],
+            "A": [a.v_obj[0] for a in self.A],
         }
 
         for k in params:
             self.params[k] = params[k]
 
-        self.obj = cgpt.create_fermion_operator(self.name,self.A_grid.precision,self.params)
+        self.obj = cgpt.create_fermion_operator(
+            self.name, self.A_grid.precision, self.params
+        )
 
         # register matrix operators
         class registry:
             pass
+
         class registry_dd:
             pass
 
-        gpt.qcd.fermion.register(registry,self)
-        gpt.qcd.fermion.register_dirdisp(registry_dd,self)
+        gpt.qcd.fermion.register(registry, self)
+        gpt.qcd.fermion.register_dirdisp(registry_dd, self)
 
-        self.M = gpt.matrix_operator(mat = registry.M, adj_mat = registry.Mdag, otype = otype, grid = self.F_grid)
+        self.M = gpt.matrix_operator(
+            mat=registry.M, adj_mat=registry.Mdag, otype=otype, grid=self.F_grid
+        )
 
-        self.Mdir = gpt.matrix_operator(mat = registry_dd.Mdir, otype = otype, grid = self.F_grid)
+        self.Mdir = gpt.matrix_operator(
+            mat=registry_dd.Mdir, otype=otype, grid=self.F_grid
+        )
 
         # # TODO needs to have an array of objects (apply all of them one after the other)
         # self.obj = []
@@ -218,9 +232,9 @@ class coarse_operator:
         #     cgpt.delete_fermion_operator(elem)
 
     def unary(self, opcode, o, i):
-        assert(len(i.v_obj) == len(o.v_obj))
+        assert len(i.v_obj) == len(o.v_obj)
         # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator(self.obj,opcode,i.v_obj[0],o.v_obj[0])
+        return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj[0], o.v_obj[0])
         # for j in range(len(i.v_obj)):
         #     cgpt.apply_fermion_operator(self.obj[j],opcode,i.v_obj[j],o.v_obj[j])
 
