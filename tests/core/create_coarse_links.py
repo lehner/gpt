@@ -20,15 +20,18 @@ fine_grid = U[0].grid
 coarse_grid = g.grid([2, 2, 2, 2], fine_grid.precision)
 
 # setup fine matrix
-fmat = g.qcd.fermion.wilson_clover(U, {
-    "kappa" : 0.13565,
-    "csw_r" : 2.0171,
-    "csw_t" : 2.0171,
-    "xi_0" : 1,
-    "nu" : 1,
-    "isAnisotropic" : False,
-    "boundary_phases" : [ 1.0, 1.0, 1.0, 1.0 ]
-})
+fmat = g.qcd.fermion.wilson_clover(
+    U,
+    {
+        "kappa": 0.13565,
+        "csw_r": 2.0171,
+        "csw_t": 2.0171,
+        "xi_0": 1,
+        "nu": 1,
+        "isAnisotropic": False,
+        "boundary_phases": [1.0, 1.0, 1.0, 1.0],
+    },
+)
 
 # setup rng
 rng = g.random("ducks_smell_funny")
@@ -40,7 +43,7 @@ nbasis = 20
 northo = 2
 
 # setup basis
-basis = [ g.vspincolor(fine_grid) for i in range(nbasis) ]
+basis = [g.vspincolor(fine_grid) for i in range(nbasis)]
 rng.cnormal(basis)
 g.split_chiral(basis)
 
@@ -64,11 +67,14 @@ A = [g.mcomplex(coarse_grid, nbasis) for i in range(9)]
 g.coarse.create_links(A, fmat, basis)
 
 # create coarse operator from links
-cmat = g.qcd.fermion.coarse_operator(A, {
-    'hermitian': 1,
-    'level': 0,
-    'nbasis': nbasis, # get the size from clinks and ditch the parameter?
-})
+cmat = g.qcd.fermion.coarse_operator(
+    A,
+    {
+        "hermitian": 1,
+        "level": 0,
+        "nbasis": nbasis,  # get the size from clinks and ditch the parameter?
+    },
+)
 
 # setup fine vectors
 fvec_in = g.lattice(basis[0])
