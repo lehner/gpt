@@ -16,18 +16,35 @@ grid = g.grid([4, 4, 4, 4], g.single)
 rng = g.random("ducks_smell_funny")
 
 # number of basis vectors
-nbasis = 20
+nbasis = 20  # doesn't work if not in fundamentals -> TODO
 
 # define fields
-mat_c = g.mcomplex(grid, nbasis)
-vec_in_c, vec_out_c = g.vcomplex(grid, nbasis), g.vcomplex(grid, nbasis)
+link_c = g.mcomplex(grid, nbasis)
+vec_in_c, vec_out_link_c, vec_out_mat_c = (
+    g.vcomplex(grid, nbasis),
+    g.vcomplex(grid, nbasis),
+    g.vcomplex(grid, nbasis),
+)
 
 # initialize fields
-rng.cnormal(mat_c)
+rng.cnormal(link_c)
 rng.cnormal(vec_in_c)
-vec_out_c[:] = 0
+vec_out_link_c[:] = 0
+
+# copy into coarse operator
+A = [g.copy(link_c) for _ in range(9)]
+mat_c = g.qcd.fermion.coarse_operator(A, {"hermitian": 1, "level": 0,},)
 
 # apply the link matrix
-print(g.norm2(vec_out_c))
-vec_out_c @= mat_c * vec_in_c
-print(g.norm2(vec_out_c))
+vec_out_link_c @= link_c * vec_in_c
+mat_c.Mdir(
+    vec_out_mat_c, vec_in_c, 0, 0
+)  # exploit the self coupling link, this uses Grid
+
+# define check tolerance
+tol = 0.0
+
+# report error
+diff2 = g.norm2(vec_out_link_c - vec_out_mat_c)
+assert diff2 == tol
+g.message("Test passed, %e == %e" % (diff2, tol))
