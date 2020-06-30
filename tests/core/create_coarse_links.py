@@ -16,11 +16,11 @@ U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.double), g.random("test"))
 U = g.convert(U, g.single)
 
 # setup grids
-fine_grid = U[0].grid
-coarse_grid = g.grid([2, 2, 2, 2], fine_grid.precision)
+grid_f = U[0].grid
+grid_c = g.grid([2, 2, 2, 2], grid_f.precision)
 
 # setup fine matrix
-fmat = g.qcd.fermion.wilson_clover(
+mat_f = g.qcd.fermion.wilson_clover(
     U,
     {
         "kappa": 0.13565,
@@ -37,70 +37,70 @@ fmat = g.qcd.fermion.wilson_clover(
 rng = g.random("ducks_smell_funny")
 
 # number of basis vectors
-nbasis = 20
+nbasis_f = 20
 
 # number of block orthogonalization steps
 northo = 2
 
 # setup basis
-basis = [g.vspincolor(fine_grid) for i in range(nbasis)]
-rng.cnormal(basis)
-g.split_chiral(basis)
+basis_f = [g.vspincolor(grid_f) for _ in range(nbasis_f)]
+rng.cnormal(basis_f)
+g.split_chiral(basis_f)
 
-# orthonormalize basis
+# orthonormalize basis_f
 for i in range(northo):
     g.message("Block ortho step %d" % i)
-    g.block.orthonormalize(coarse_grid, basis)
+    g.block.orthonormalize(grid_c, basis_f)
 
 # check orthogonality
-iproj, eproj = g.vcomplex(coarse_grid, nbasis), g.vcomplex(coarse_grid, nbasis)
-for i, v in enumerate(basis):
-    g.block.project(iproj, v, basis)
-    eproj[:] = 0.0
-    eproj[:, :, :, :, i] = 1.0
-    err2 = g.norm2(eproj - iproj)
+iproj_c, eproj_c = g.vcomplex(grid_c, nbasis_f), g.vcomplex(grid_c, nbasis_f)
+for i, v in enumerate(basis_f):
+    g.block.project(iproj_c, v, basis_f)
+    eproj_c[:] = 0.0
+    eproj_c[:, :, :, :, i] = 1.0
+    err2 = g.norm2(eproj_c - iproj_c)
     g.message("Orthogonality check error for vector %d = %e" % (i, err2))
 g.message("Orthogonality check done")
 
 # create coarse link fields
-A = [g.mcomplex(coarse_grid, nbasis) for i in range(9)]
-g.coarse.create_links(A, fmat, basis)
+A = [g.mcomplex(grid_c, nbasis_f) for _ in range(9)]
+g.coarse.create_links(A, mat_f, basis_f)
 
 # create coarse operator from links
-cmat = g.qcd.fermion.coarse_operator(A, {"hermitian": 1, "level": 0,},)
+mat_c = g.qcd.fermion.coarse_operator(A, {"hermitian": 1, "level": 0,},)
 
 # setup fine vectors
-fvec_in = g.lattice(basis[0])
-fvec_out = g.lattice(basis[0])
-fvec_in[:] = 0
-fvec_out[:] = 0
+vec_in_f = g.lattice(basis_f[0])
+vec_out_f = g.lattice(basis_f[0])
+vec_in_f[:] = 0
+vec_out_f[:] = 0
 
 # setup coarse vectors
-cvec_in = g.vcomplex(coarse_grid, nbasis)
-cvec_out_chained = g.vcomplex(coarse_grid, nbasis)
-cvec_out_constructed = g.vcomplex(coarse_grid, nbasis)
-rng.cnormal(cvec_in)
-cvec_out_chained[:] = 0
-cvec_out_constructed[:] = 0
+vec_in_c = g.vcomplex(grid_c, nbasis_f)
+vec_out_chained_c = g.vcomplex(grid_c, nbasis_f)
+vec_out_constructed_c = g.vcomplex(grid_c, nbasis_f)
+rng.cnormal(vec_in_c)
+vec_out_chained_c[:] = 0
+vec_out_constructed_c[:] = 0
 
 # apply chained and constructed coarse operator
 dt_chained, dt_constructed = 0.0, 0.0
 dt_chained -= g.time()
-g.block.promote(cvec_in, fvec_in, basis)
-fmat.M(fvec_out, fvec_in)
-g.block.project(cvec_out_chained, fvec_out, basis)
+g.block.promote(vec_in_c, vec_in_f, basis_f)
+mat_f.M(vec_out_f, vec_in_f)
+g.block.project(vec_out_chained_c, vec_out_f, basis_f)
 dt_chained += g.time()
 dt_constructed -= g.time()
-cmat.M(cvec_out_constructed, cvec_in)
+mat_c.M(vec_out_constructed_c, vec_in_c)
 dt_constructed += g.time()
 
 g.message("Timings: chained = %e, constructed = %e" % (dt_chained, dt_constructed))
 
 # define check tolerance
-tol = 1e-26 if fine_grid.precision == g.double else 1e-13
+tol = 1e-26 if grid_f.precision == g.double else 1e-13
 
 # report error
-err2 = g.norm2(cvec_out_chained - cvec_out_constructed) / g.norm2(cvec_out_chained)
+err2 = g.norm2(vec_out_chained_c - vec_out_constructed_c) / g.norm2(vec_out_chained_c)
 g.message("Relative deviation of constructed from chained operator = %e" % err2)
 assert err2 <= tol
 g.message("Test passed, %e <= %e" % (err2, tol))

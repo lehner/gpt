@@ -19,15 +19,15 @@ rng = g.random("ducks_smell_funny")
 nbasis = 20
 
 # define fields
-cmat = g.mcomplex(grid, nbasis)
-cvec_in, cvec_out = g.vcomplex(grid, nbasis), g.vcomplex(grid, nbasis)
+mat_c = g.mcomplex(grid, nbasis)
+vec_in_c, vec_out_c = g.vcomplex(grid, nbasis), g.vcomplex(grid, nbasis)
 
 # initialize fields
-rng.cnormal(cmat)
-rng.cnormal(cvec_in)
-cvec_out[:] = 0
+rng.cnormal(mat_c)
+rng.cnormal(vec_in_c)
+vec_out_c[:] = 0
 
 # apply the link matrix
-print(g.norm2(cvec_out))
-cvec_out @= cmat * cvec_in
-print(g.norm2(cvec_out))
+print(g.norm2(vec_out_c))
+vec_out_c @= mat_c * vec_in_c
+print(g.norm2(vec_out_c))

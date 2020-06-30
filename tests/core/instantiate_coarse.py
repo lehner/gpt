@@ -26,28 +26,35 @@ mg_levels = 18
 
 # coarse link fields
 A = [g.mcomplex(grid, nbasis) for i in range(9)]
+rng.cnormal(A)
 
 # setup coarse operators + vectors for the respective levels
 num_coarse_levels = mg_levels - 1
-cop = []
-cvec_in = []
-cvec_out = []
-for clvl in range(num_coarse_levels):
-    mglvl = clvl + 1
-    cop.append(g.qcd.fermion.coarse_operator(A, {
-        'hermitian': 1,
-        'level': clvl,
-        'nbasis': nbasis,
-    }))
-    cvec_in.append(g.vcomplex(grid, nbasis))
-    cvec_out.append(g.vcomplex(grid, nbasis))
-    rng.cnormal(cvec_in[clvl])
-    cvec_out[clvl][:] = 0
-    g.message("mglvl = %d, clvl = %d: Finished setup" % (mglvl, clvl))
+op_c = []
+vec_in_c = []
+vec_out_c = []
+for lvl_c in range(num_coarse_levels):
+    lvl_mg = lvl_c + 1
+    op_c.append(g.qcd.fermion.coarse_operator(A, {"hermitian": 1, "level": lvl_c}))
+    vec_in_c.append(g.vcomplex(grid, nbasis))
+    vec_out_c.append(g.vcomplex(grid, nbasis))
+    rng.cnormal(vec_in_c[lvl_c])
+    vec_out_c[lvl_c][:] = 0
+    g.message("lvl_mg = %d, lvl_c = %d: Finished setup" % (lvl_mg, lvl_c))
 
 # apply coarse operator
-for clvl in range(num_coarse_levels):
-    mglvl = clvl + 1
-    cop[clvl].M(cvec_out[clvl], cvec_in[clvl])
-    g.message("mglvl = %d, clvl = %d: in = %e" % (mglvl, clvl, g.norm2(cvec_in[clvl])))
-    g.message("mglvl = %d, clvl = %d: out = %e" % (mglvl, clvl, g.norm2(cvec_out[clvl])))
+for lvl_c in range(num_coarse_levels):
+    lvl_mg = lvl_c + 1
+    op_c[lvl_c].M(vec_out_c[lvl_c], vec_in_c[lvl_c])
+    g.message(
+        "lvl_mg = %d, lvl_c = %d: in = %e" % (lvl_mg, lvl_c, g.norm2(vec_in_c[lvl_c]))
+    )
+    g.message(
+        "lvl_mg = %d, lvl_c = %d: out = %e" % (lvl_mg, lvl_c, g.norm2(vec_out_c[lvl_c]))
+    )
+
+g.message("All tests passed")
+
+# NOTE: This doesn't do any checks other than that instantiation and application
+# work for an arbitrary number of levels
+# Execution until here is success
