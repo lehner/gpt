@@ -12,10 +12,10 @@ import sys
 # NOTE: We should test composite against native here!
 
 # setup grid
-grid=g.grid([4,4,4,4],g.single)
+grid = g.grid([4, 4, 4, 4], g.single)
 
 # setup rng
-rng=g.random("ducks_smell_funny")
+rng = g.random("ducks_smell_funny")
 
 # number of basis vectors
 nbasis = 20
