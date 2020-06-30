@@ -16,10 +16,10 @@ grid_sp = g.grid(L, g.single)
 ################################################################################
 # Test SU(2) fundamental
 ################################################################################
-rng=g.random("test")
-U = g.qcd.gauge.random(grid_sp, rng, otype = g.ot_matrix_su2_fundamental() )
-assert abs( g.qcd.gauge.plaquette(U) - 0.8813162545363108 ) < 1e-8
+rng = g.random("test")
+U = g.qcd.gauge.random(grid_sp, rng, otype=g.ot_matrix_su2_fundamental())
+assert abs(g.qcd.gauge.plaquette(U) - 0.8813162545363108) < 1e-8
 
-rng=g.random("test")
-U = g.qcd.gauge.random(grid_dp, rng, otype = g.ot_matrix_su2_fundamental() )
-assert abs( g.qcd.gauge.plaquette(U) - 0.8813162591343201 ) < 1e-14
+rng = g.random("test")
+U = g.qcd.gauge.random(grid_dp, rng, otype=g.ot_matrix_su2_fundamental())
+assert abs(g.qcd.gauge.plaquette(U) - 0.8813162591343201) < 1e-14
