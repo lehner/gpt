@@ -161,6 +161,31 @@ def matrix_su3_fundamental(grid):
     return gpt_object(grid, ot_matrix_su3_fundamental())
 
 
+class ot_matrix_su2_fundamental(ot_matrix_color):
+    def __init__(self):
+        self.Nc = 2
+        super().__init__(2)  # need 2 dim matrices
+        self.__name__ = "ot_matrix_su2_fundamental()"
+        self.data_alias = lambda: ot_matrix_color(2)
+        self.mtab = {
+            self.__name__: (lambda: self, (1, 0)),
+            "ot_vector_color(2)": (lambda: ot_vector_color(2), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+
+    def generators(self, dt):
+        # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
+        return [
+            numpy.array([[0, 1], [1, 0]], dtype=dt) / 2.0,
+            numpy.array([[0, -1j], [1j, 0]], dtype=dt) / 2.0,
+            numpy.array([[1, 0], [0, -1]], dtype=dt) / 2.0,
+        ]
+
+
+def matrix_su2_fundamental(grid):
+    return gpt_object(grid, ot_matrix_su2_fundamental())
+
+
 ###
 # Matrices and vectors of spin
 class ot_matrix_spin(ot_base):
@@ -415,6 +440,7 @@ def str_to_otype(s):
             "ot_matrix_spin_color",
             "ot_vector_spin_color",
             "ot_matrix_su3_fundamental",
+            "ot_matrix_su2_fundamental",
             "ot_vsinglet10",
             "ot_vsinglet20",
             "ot_vsinglet40",
