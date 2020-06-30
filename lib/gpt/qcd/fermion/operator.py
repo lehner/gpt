@@ -196,9 +196,13 @@ class coarse_operator:
         for k in params:
             self.params[k] = params[k]
 
-        self.obj = cgpt.create_fermion_operator(
-            self.name, self.A_grid.precision, self.params
-        )
+        self.obj = []
+        for i in range(len(A[0].v_obj)):
+            self.obj.append(
+                cgpt.create_fermion_operator(
+                    self.name, self.A_grid.precision, self.params
+                )
+            )
 
         # register matrix operators
         class registry:
@@ -218,31 +222,21 @@ class coarse_operator:
             mat=registry_dd.Mdir, otype=otype, grid=self.F_grid
         )
 
-        # # TODO needs to have an array of objects (apply all of them one after the other)
-        # self.obj = []
-        # for blah in blub:
-        #     self.obj.append(cgpt.create_coarse_operator())
-
-        # some form of registration
-
     def __del__(self):
-        cgpt.delete_fermion_operator(self.obj)
-        # # TODO needs to have an array of objects (apply all of them one after the other)
-        # for elem in self.obj:
-        #     cgpt.delete_fermion_operator(elem)
+        for elem in self.obj:
+            cgpt.delete_fermion_operator(elem)
 
     def unary(self, opcode, o, i):
         assert len(i.v_obj) == len(o.v_obj)
+        assert len(i.v_obj) == len(self.obj)
         # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj[0], o.v_obj[0])
-        # for j in range(len(i.v_obj)):
-        #     cgpt.apply_fermion_operator(self.obj[j],opcode,i.v_obj[j],o.v_obj[j])
+        for j in range(len(self.obj)):
+            cgpt.apply_fermion_operator(self.obj[j], opcode, i.v_obj[j], o.v_obj[j])
 
     def dirdisp(self, opcode, o, i, direction, disp):
         assert len(i.v_obj) == len(o.v_obj)
-        # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator_dirdisp(
-            self.obj, opcode, i.v_obj[0], o.v_obj[0], direction, disp
-        )
-        # for j in range(len(i.v_obj)):
-        #     cgpt.apply_fermion_operator(self.obj[j],opcode,i.v_obj[j],o.v_obj[j], dir, disp)
+        assert len(i.v_obj) == len(self.obj)
+        for j in range(len(self.obj)):
+            cgpt.apply_fermion_operator_dirdisp(
+                self.obj[j], opcode, i.v_obj[j], o.v_obj[j], dir, disp
+            )
