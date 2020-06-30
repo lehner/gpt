@@ -3,7 +3,7 @@
 # Authors: Daniel Richtmann 2020
 #          Christoph Lehner 2020
 #
-# Desc.: Test new data type for coarse link matrices
+# Desc.: Test new data type for coarse link matrices against Grid
 #
 import gpt as g
 import numpy as np
