@@ -141,7 +141,8 @@ def create_links(A, fmat, basis):
     dt["total"] += gpt.time()
     for k, v in sorted(dt.items(), key=lambda x: x[1]):
         gpt.message(
-            "Timing coarsening: %15s = %g s (= %g %%)" % (k, v, v / dt["total"] * 100)
+            "Timing coarsening: %15s = %e s (= %6.2f %%)"
+            % (k, v, v / dt["total"] * 100)
         )
 
 
