@@ -189,7 +189,7 @@ class coarse_operator:
             "grid_c": self.A_grid.obj,
             "hermitian": params["hermitian"],
             "level": params["level"],
-            "nbasis": params["nbasis"],
+            "nbasis": self.A[0].otype.shape[0],
             "A": [a.v_obj[0] for a in self.A],
         }
 

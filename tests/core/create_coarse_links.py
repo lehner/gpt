@@ -67,14 +67,7 @@ A = [g.mcomplex(coarse_grid, nbasis) for i in range(9)]
 g.coarse.create_links(A, fmat, basis)
 
 # create coarse operator from links
-cmat = g.qcd.fermion.coarse_operator(
-    A,
-    {
-        "hermitian": 1,
-        "level": 0,
-        "nbasis": nbasis,  # get the size from clinks and ditch the parameter?
-    },
-)
+cmat = g.qcd.fermion.coarse_operator(A, {"hermitian": 1, "level": 0,},)
 
 # setup fine vectors
 fvec_in = g.lattice(basis[0])
