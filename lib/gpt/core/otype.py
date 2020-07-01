@@ -189,7 +189,7 @@ def matrix_su2_fundamental(grid):
 class ot_matrix_su2_adjoint(ot_matrix_color):
     def __init__(self):
         self.Nc = 2
-        super().__init__(3)  # need 2 dim matrices
+        super().__init__(3)  # need 3 dim matrices
         self.__name__ = "ot_matrix_su2_adjoint()"
         self.data_alias = lambda: ot_matrix_color(3)
         self.mtab = {
