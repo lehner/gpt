@@ -88,7 +88,7 @@ class fgcr:
 
                 t0 = time()
                 if prec is not None:
-                    prec(r, p[i])
+                    prec(p[i], r)
                 else:
                     p[i] @= r
                 t1 = time()

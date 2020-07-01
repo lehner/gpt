@@ -114,7 +114,7 @@ class fgmres:
 
                 t0 = time()
                 if prec is not None:
-                    prec(V[i], Z[i])
+                    prec(Z[i], V[i])
                 t1 = time()
 
                 t2 = time()
