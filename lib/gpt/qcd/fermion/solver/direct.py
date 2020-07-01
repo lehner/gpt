@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,7 +17,18 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.fermion.solver.propagator import propagator
-from gpt.qcd.fermion.solver.direct import inv_direct
-from gpt.qcd.fermion.solver.g5m_ne import inv_g5m_ne
-from gpt.qcd.fermion.solver.eo_ne import inv_eo_ne, a2a_eo_ne
+import gpt
+
+
+def inv_direct(matrix, inverter, prec=None):
+    def inv(dst_sc, src_sc):
+        dst_sc @= inverter(matrix.M, prec) * src_sc
+
+    m = gpt.matrix_operator(
+        mat=inv, inv_mat=matrix, otype=matrix.otype, grid=matrix.F_grid
+    )
+
+    m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
+    m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution
+
+    return m
