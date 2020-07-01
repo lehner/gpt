@@ -61,6 +61,7 @@ from gpt.core.basis import (
     rotate,
     qr_decomp,
     split_chiral,
+    unsplit_chiral,
 )
 from gpt.core.cartesian import cartesian_view
 from gpt.core.coordinates import coordinates, exp_ixp, fft, make_mask

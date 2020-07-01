@@ -78,10 +78,21 @@ def qr_decomp(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax):
     return cgpt.qr_decomp(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax)
 
 
-def split_chiral(basis):
+def split_chiral(basis, factor=None):
     nbasis = len(basis)
     assert nbasis % 2 == 0
     nb = nbasis // 2
+    factor = 0.5 if factor is None else factor
     for n in range(nb):
-        basis[n + nb] @= 0.5 * basis[n] - 0.5 * gpt.gamma[5] * basis[n]
-        basis[n] @= 0.5 * basis[n] + 0.5 * gpt.gamma[5] * basis[n]
+        basis[n + nb] @= factor * basis[n] - factor * gpt.gamma[5] * basis[n]
+        basis[n] @= factor * basis[n] + factor * gpt.gamma[5] * basis[n]
+
+
+def unsplit_chiral(basis, factor=None):
+    nbasis = len(basis)
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+    factor = 0.5 if factor is None else factor
+    rev_factor = 0.5 / factor
+    for n in range(nb):
+        basis[n] @= rev_factor * basis[n] + rev_factor * basis[n + nb]
