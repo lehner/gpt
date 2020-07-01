@@ -80,11 +80,11 @@ vec_out_constructed_cc[:] = 0
 dt_chained, dt_constructed = 0.0, 0.0
 dt_chained -= g.time()
 g.block.promote(vec_in_cc, vec_in_c, basis_c)
-fmat.M(vec_out_c, vec_in_c)
+mat_c.M(vec_out_c, vec_in_c)
 g.block.project(vec_out_chained_cc, vec_out_c, basis_c)
 dt_chained += g.time()
 dt_constructed -= g.time()
-mat_c.M(vec_out_constructed_cc, vec_in_cc)
+mat_cc.M(vec_out_constructed_cc, vec_in_cc)
 dt_constructed += g.time()
 
 g.message("Timings: chained = %e, constructed = %e" % (dt_chained, dt_constructed))
