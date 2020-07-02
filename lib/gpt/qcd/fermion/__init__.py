@@ -54,3 +54,9 @@ def mobius(U, params):
     return operator(
         "mobius", U, params, params["Ls"], otype=gpt.ot_vector_spin_color(4, 3)
     )
+
+
+@gpt.params_convention()
+def coarse(A, params):
+    params = copy.deepcopy(params)  # save current parameters
+    return coarse_operator(A, params, None, otype=gpt.ot_vsinglet)

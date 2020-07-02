@@ -172,6 +172,8 @@ class coarse_operator:
         self.name = "coarse"
         self.A = A
         self.params_constructor = params
+        self.Ls = Ls
+        self.otype = otype
 
         # derived objects
         self.A_grid = A[0].grid

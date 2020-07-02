@@ -378,6 +378,12 @@ class ot_vsinglet(ot_base):
             "ot_singlet": (lambda: self, None),
         }
 
+    def distribute(mat, dst, src, zero_lhs):
+        # TODO does this need revisiting?
+        if zero_lhs:
+            dst[:] = 0
+        mat(dst, src)
+
 
 def vsinglet(grid, n):
     return gpt_object(grid, ot_vsinglet(n))
