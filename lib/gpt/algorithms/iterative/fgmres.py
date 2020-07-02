@@ -19,7 +19,6 @@
 #
 import gpt as g
 import numpy as np
-from time import time
 
 
 class fgmres:
@@ -75,7 +74,7 @@ class fgmres:
             checkres = True  # for now
 
             # total time
-            tt0 = time()
+            tt0 = g.time()
 
             # parameters
             rlen = self.restartlen
@@ -112,23 +111,23 @@ class fgmres:
                 reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
-                t0 = time()
+                t0 = g.time()
                 if prec is not None:
                     prec(Z[i], V[i])
-                t1 = time()
+                t1 = g.time()
 
-                t2 = time()
+                t2 = g.time()
                 if prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
-                t3 = time()
+                t3 = g.time()
 
-                t4 = time()
+                t4 = g.time()
                 g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i])
-                t5 = time()
+                t5 = g.time()
 
-                t6 = time()
+                t6 = g.time()
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
 
                 if H[i + 1, i] == 0.0:
@@ -136,12 +135,12 @@ class fgmres:
                     break
 
                 V[i + 1] /= H[i + 1, i]
-                t7 = time()
+                t7 = g.time()
 
-                t8 = time()
+                t8 = g.time()
                 self.qr_update(s, c, H, gamma, i)
                 r2 = np.absolute(gamma[i + 1]) ** 2
-                t9 = time()
+                t9 = g.time()
 
                 if self.verbose:
                     g.message(
@@ -158,7 +157,7 @@ class fgmres:
 
                     if r2 <= rsq:
                         if self.verbose:
-                            tt1 = time()
+                            tt1 = g.time()
                             g.message("Converged in %g s" % (tt1 - tt0))
                         if checkres:
                             res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
@@ -170,7 +169,7 @@ class fgmres:
 
                     if reached_maxiter:
                         if self.verbose:
-                            tt1 = time()
+                            tt1 = g.time()
                             g.message("Did NOT converge in %g s" % (tt1 - tt0))
                             if checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq

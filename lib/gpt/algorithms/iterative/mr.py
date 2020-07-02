@@ -19,7 +19,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from time import time
 
 
 class mr:
@@ -37,7 +36,7 @@ class mr:
     def __call__(self, mat):
         def inv(psi, src):
             verbose = g.default.is_verbose("mr")
-            t0 = time()
+            t0 = g.time()
 
             r, mmr = g.copy(src), g.copy(src)
 
@@ -64,7 +63,7 @@ class mr:
 
                 if r2 <= rsq:
                     if verbose:
-                        t1 = time()
+                        t1 = g.time()
                         g.message("Converged in %g s" % (t1 - t0))
                     break
 

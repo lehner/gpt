@@ -19,7 +19,6 @@
 #
 import gpt as g
 import numpy as np
-from time import time
 
 
 class fgcr:
@@ -54,7 +53,7 @@ class fgcr:
             checkres = True  # for now
 
             # total time
-            tt0 = time()
+            tt0 = g.time()
 
             # parameters
             rlen = self.restartlen
@@ -86,22 +85,22 @@ class fgcr:
                 reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
-                t0 = time()
+                t0 = g.time()
                 if prec is not None:
                     prec(p[i], r)
                 else:
                     p[i] @= r
-                t1 = time()
+                t1 = g.time()
 
-                t2 = time()
+                t2 = g.time()
                 mat(mmp[i], p[i])
-                t3 = time()
+                t3 = g.time()
 
-                t4 = time()
+                t4 = g.time()
                 g.orthogonalize(mmp[i], mmp[0:i], beta[:, i])
-                t5 = time()
+                t5 = g.time()
 
-                t6 = time()
+                t6 = g.time()
                 ip, mmp2 = g.innerProductNorm2(mmp[i], r)
                 gamma[i] = mmp2 ** 0.5
 
@@ -112,7 +111,7 @@ class fgcr:
                 mmp[i] /= gamma[i]
                 alpha[i] = ip / gamma[i]
                 r2 = g.axpy_norm2(r, -alpha[i], mmp[i], r)
-                t7 = time()
+                t7 = g.time()
 
                 if verbose:
                     g.message(
@@ -126,7 +125,7 @@ class fgcr:
 
                     if r2 <= rsq:
                         if verbose:
-                            tt1 = time()
+                            tt1 = g.time()
                             g.message("Converged in %g s" % (tt1 - tt0))
                             if checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
@@ -138,7 +137,7 @@ class fgcr:
 
                     if reached_maxiter:
                         if verbose:
-                            tt1 = time()
+                            tt1 = g.time()
                             g.message("Did NOT converge in %g s" % (tt1 - tt0))
                             if checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
