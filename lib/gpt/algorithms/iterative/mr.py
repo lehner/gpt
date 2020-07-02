@@ -32,9 +32,11 @@ class mr:
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.relax = params["relax"]
+        self.history = None
 
     def __call__(self, mat):
         def inv(psi, src):
+            self.history = []
             verbose = g.default.is_verbose("mr")
             t0 = g.time()
 
@@ -57,6 +59,8 @@ class mr:
 
                 psi += alpha * r
                 r2 = g.axpy_norm2(r, -alpha, mmr, r)
+
+                self.history.append(r2)
 
                 if verbose:
                     g.message("res^2[ %d ] = %g" % (k, r2))

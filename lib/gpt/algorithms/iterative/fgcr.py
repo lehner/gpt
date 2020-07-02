@@ -28,6 +28,7 @@ class fgcr:
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
+        self.history = None
 
     def update_psi(self, psi, alpha, beta, gamma, delta, p, i):
         # backward substitution
@@ -48,6 +49,7 @@ class fgcr:
 
     def __call__(self, mat, prec=None):
         def inv(psi, src):
+            self.history = []
             # verbosity
             verbose = g.default.is_verbose("fgcr")
             checkres = True  # for now
@@ -111,6 +113,7 @@ class fgcr:
                 mmp[i] /= gamma[i]
                 alpha[i] = ip / gamma[i]
                 r2 = g.axpy_norm2(r, -alpha[i], mmp[i], r)
+                self.history.append(r2)
                 t7 = g.time()
 
                 if verbose:

@@ -27,9 +27,11 @@ class bicgstab:
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
+        self.history = None
 
     def __call__(self, mat):
         def inv(psi, src):
+            self.history = []
             verbose = g.default.is_verbose("bicgstab")
             t0 = g.time()
 
@@ -72,6 +74,8 @@ class bicgstab:
                 psi += alpha * p + omega * s
 
                 r2 = g.axpy_norm2(r, -omega, mms, s)
+
+                self.history.append(r2)
 
                 if verbose:
                     g.message("res^2[ %d ] = %g" % (k, r2))

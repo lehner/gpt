@@ -28,6 +28,7 @@ class fgmres:
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
+        self.history = None
 
     def qr_update(self, s, c, H, gamma, i):
         # apply previous givens to matrix
@@ -69,6 +70,7 @@ class fgmres:
 
     def __call__(self, mat, prec=None):
         def inv(psi, src):
+            self.history = []
             # verbosity
             self.verbose = g.default.is_verbose("fgmres")
             checkres = True  # for now
@@ -140,6 +142,7 @@ class fgmres:
                 t8 = g.time()
                 self.qr_update(s, c, H, gamma, i)
                 r2 = np.absolute(gamma[i + 1]) ** 2
+                self.history.append(r2)
                 t9 = g.time()
 
                 if self.verbose:
