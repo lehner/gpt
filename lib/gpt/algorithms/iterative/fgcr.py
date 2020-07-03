@@ -55,7 +55,18 @@ class fgcr:
             checkres = True  # for now
 
             # timing
-            t = g.timer(["setup", "prec", "mat", "ortho", "linalg", "total"])
+            t = g.timer(
+                [
+                    "setup",
+                    "prec",
+                    "mat",
+                    "ortho",
+                    "linalg",
+                    "update_psi",
+                    "restart",
+                    "total",
+                ]
+            )
 
             # start clocks
             t.start("total")
@@ -126,7 +137,9 @@ class fgcr:
                     g.message("res^2[ %d, %d ] = %e" % (k, i, r2))
 
                 if r2 <= rsq or need_restart or reached_maxiter:
+                    t.start("update_psi")
                     self.update_psi(psi, alpha, beta, gamma, delta, p, i)
+                    t.stop("update_psi")
 
                     if r2 <= rsq:
                         if verbose:
@@ -156,9 +169,11 @@ class fgcr:
                                 )
 
                     if need_restart:
+                        t.start("restart")
                         r2 = self.restart(mat, psi, mmpsi, src, r)
                         if verbose:
                             g.message("Performed restart")
+                        t.stop("restart")
 
         otype = None
         grid = None

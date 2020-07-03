@@ -76,7 +76,19 @@ class fgmres:
             checkres = True  # for now
 
             # timing
-            t = g.timer(["setup", "prec", "mat", "ortho", "linalg", "qr", "total"])
+            t = g.timer(
+                [
+                    "setup",
+                    "prec",
+                    "mat",
+                    "ortho",
+                    "linalg",
+                    "qr",
+                    "update_psi",
+                    "restart",
+                    "total",
+                ]
+            )
 
             # start clocks
             t.start("total")
@@ -106,10 +118,10 @@ class fgmres:
             ssq = g.norm2(src)
             rsq = self.eps ** 2.0 * ssq
 
-            t.stop("setup")
-
             # initial values
             r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
+
+            t.stop("setup")
 
             for k in range(self.maxiter):
                 # iteration within current krylov space
@@ -155,10 +167,12 @@ class fgmres:
                     g.message("res^2[ %d, %d ] = %e" % (k, i, r2))
 
                 if r2 <= rsq or need_restart or reached_maxiter:
+                    t.start("update_psi")
                     if prec is not None:
                         self.update_psi(psi, gamma, H, y, Z, i)
                     else:
                         self.update_psi(psi, gamma, H, y, V, i)
+                    t.stop("update_psi")
 
                     if r2 <= rsq:
                         if self.verbose:
@@ -188,9 +202,11 @@ class fgmres:
                                 )
 
                     if need_restart:
+                        t.start("restart")
                         r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
                         if self.verbose:
                             g.message("Performed restart")
+                        t.stop("restart")
 
         otype = None
         grid = None
