@@ -164,8 +164,8 @@ class matrix_operator(factor):
             return self
         assert 0
 
-    def __call__(self, first, second = None, third = None, fourth = None):
-        assert(self.mat is not None)
+    def __call__(self, first, second=None, *extra):
+        assert self.mat is not None
 
         type_match = (
             self.otype[1] is None or self.otype[1].__name__ == first.otype.__name__
@@ -189,12 +189,14 @@ class matrix_operator(factor):
             dst = first
             src = second
 
-        if third is None and fourth is None:
+        if len(extra) == 0:
             if type_match:
                 self.mat(dst, src)
             else:
-                self.otype[1].distribute(self.mat, dst, src, zero_lhs = self.zero[0])
+                self.otype[1].distribute(self.mat, dst, src, zero_lhs=self.zero[0])
+        elif len(extra) == 2:
+            self.mat(dst, src, *extra)  # TODO: the else thing above?
         else:
-            self.mat(dst, src, third, fourth)  # TODO: the else thing above?
+            assert 0
 
         return dst
