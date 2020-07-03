@@ -75,8 +75,15 @@ class fgmres:
             self.verbose = g.default.is_verbose("fgmres")
             checkres = True  # for now
 
-            # total time
-            tt0 = g.time()
+            # timing
+            dt = {
+                key: 0.0
+                for key in ["setup", "prec", "mat", "ortho", "linalg", "qr", "total"]
+            }
+
+            # start clocks
+            dt["total"] -= g.time()
+            dt["setup"] -= g.time()
 
             # parameters
             rlen = self.restartlen
@@ -102,6 +109,8 @@ class fgmres:
             ssq = g.norm2(src)
             rsq = self.eps ** 2.0 * ssq
 
+            dt["setup"] += g.time()
+
             # initial values
             r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
 
@@ -113,23 +122,23 @@ class fgmres:
                 reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
-                t0 = g.time()
+                dt["prec"] -= g.time()
                 if prec is not None:
                     prec(Z[i], V[i])
-                t1 = g.time()
+                dt["prec"] += g.time()
 
-                t2 = g.time()
+                dt["mat"] -= g.time()
                 if prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
-                t3 = g.time()
+                dt["mat"] += g.time()
 
-                t4 = g.time()
+                dt["ortho"] -= g.time()
                 g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i])
-                t5 = g.time()
+                dt["ortho"] += g.time()
 
-                t6 = g.time()
+                dt["linalg"] -= g.time()
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
 
                 if H[i + 1, i] == 0.0:
@@ -137,20 +146,16 @@ class fgmres:
                     break
 
                 V[i + 1] /= H[i + 1, i]
-                t7 = g.time()
+                dt["linalg"] += g.time()
 
-                t8 = g.time()
+                dt["qr"] -= g.time()
                 self.qr_update(s, c, H, gamma, i)
                 r2 = np.absolute(gamma[i + 1]) ** 2
                 self.history.append(r2)
-                t9 = g.time()
+                dt["qr"] += g.time()
 
                 if self.verbose:
-                    g.message(
-                        "Timing[s]: Prec = %g, Matrix = %g, Orthog = %g, RestArnoldi = %g, QR = %g"
-                        % (t1 - t0, t3 - t2, t5 - t4, t7 - t6, t9 - t8)
-                    )
-                    g.message("res^2[ %d, %d ] = %g" % (k, i, r2))
+                    g.message("res^2[ %d, %d ] = %e" % (k, i, r2))
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     if prec is not None:
@@ -160,21 +165,23 @@ class fgmres:
 
                     if r2 <= rsq:
                         if self.verbose:
-                            tt1 = g.time()
-                            g.message("Converged in %g s" % (tt1 - tt0))
-                        if checkres:
-                            comp_res = r2 / ssq
-                            res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                            g.message(
-                                "Computed res = %g, true res = %g, target = %g"
-                                % (comp_res ** 0.5, res ** 0.5, self.eps)
-                            )
+                            dt["total"] += g.time()
+                            g.message("Converged in %g s" % (dt["total"]))
+                            g.util.list_timings("fgmres", dt)
+                            if checkres:
+                                comp_res = r2 / ssq
+                                res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
+                                g.message(
+                                    "Computed res = %g, true res = %g, target = %g"
+                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
+                                )
                         break
 
                     if reached_maxiter:
                         if self.verbose:
-                            tt1 = g.time()
-                            g.message("Did NOT converge in %g s" % (tt1 - tt0))
+                            dt["total"] += g.time()
+                            g.message("Did NOT converge in %g s" % (dt["total"]))
+                            g.util.list_timings("fgmres", dt)
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq

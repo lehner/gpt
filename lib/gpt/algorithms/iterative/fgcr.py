@@ -54,8 +54,14 @@ class fgcr:
             verbose = g.default.is_verbose("fgcr")
             checkres = True  # for now
 
-            # total time
-            tt0 = g.time()
+            # timing
+            dt = {
+                key: 0.0 for key in ["setup", "prec", "mat", "ortho", "linalg", "total"]
+            }
+
+            # start clocks
+            dt["total"] -= g.time()
+            dt["setup"] -= g.time()
 
             # parameters
             rlen = self.restartlen
@@ -79,6 +85,8 @@ class fgcr:
             # initial values
             r2 = self.restart(mat, psi, mmpsi, src, r)
 
+            dt["setup"] += g.time()
+
             for k in range(self.maxiter):
                 # iteration within current krylov space
                 i = k % rlen
@@ -87,22 +95,22 @@ class fgcr:
                 reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
-                t0 = g.time()
+                dt["prec"] -= g.time()
                 if prec is not None:
                     prec(p[i], r)
                 else:
                     p[i] @= r
-                t1 = g.time()
+                dt["prec"] += g.time()
 
-                t2 = g.time()
+                dt["mat"] -= g.time()
                 mat(mmp[i], p[i])
-                t3 = g.time()
+                dt["mat"] += g.time()
 
-                t4 = g.time()
+                dt["ortho"] -= g.time()
                 g.orthogonalize(mmp[i], mmp[0:i], beta[:, i])
-                t5 = g.time()
+                dt["ortho"] += g.time()
 
-                t6 = g.time()
+                dt["linalg"] -= g.time()
                 ip, mmp2 = g.innerProductNorm2(mmp[i], r)
                 gamma[i] = mmp2 ** 0.5
 
@@ -114,22 +122,19 @@ class fgcr:
                 alpha[i] = ip / gamma[i]
                 r2 = g.axpy_norm2(r, -alpha[i], mmp[i], r)
                 self.history.append(r2)
-                t7 = g.time()
+                dt["linalg"] += g.time()
 
                 if verbose:
-                    g.message(
-                        "Timing[s]: Prec = %g, Matrix = %g, Orthog = %g, Rest = %g"
-                        % (t1 - t0, t3 - t2, t5 - t4, t7 - t6)
-                    )
-                    g.message("res^2[ %d, %d ] = %g" % (k, i, r2))
+                    g.message("res^2[ %d, %d ] = %e" % (k, i, r2))
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     self.update_psi(psi, alpha, beta, gamma, delta, p, i)
 
                     if r2 <= rsq:
                         if verbose:
-                            tt1 = g.time()
-                            g.message("Converged in %g s" % (tt1 - tt0))
+                            dt["total"] += g.time()
+                            g.message("Converged in %g s" % (dt["total"]))
+                            g.util.list_timings("fgcr", dt)
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
@@ -141,8 +146,9 @@ class fgcr:
 
                     if reached_maxiter:
                         if verbose:
-                            tt1 = g.time()
-                            g.message("Did NOT converge in %g s" % (tt1 - tt0))
+                            dt["total"] += g.time()
+                            g.message("Did NOT converge in %g s" % (dt["total"]))
+                            g.util.list_timings("fgcr", dt)
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
