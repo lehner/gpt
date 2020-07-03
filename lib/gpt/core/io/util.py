@@ -16,20 +16,19 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt
+import cgpt, gpt
+import numpy as np
 
-# expose fast memoryview for numpy arrays
+# memoryview(data) is unnecessarily slow, cgpt version is faster
 def mview(data):
     if type(data) == memoryview:
         return data
-    mv=cgpt.mview(data)
-    assert(mv.obj is data)
-    return mv
+    return cgpt.mview(data)
+
 
 # fast threaded checksum of memoryviews
-def crc32(view, crc32_prev = 0):
+def crc32(view, crc32_prev=0):
     if type(view) == memoryview:
         return cgpt.util_crc32(view, crc32_prev)
     else:
         return crc32(memoryview(view), crc32_prev)
-

@@ -8,8 +8,11 @@ then
 fi
 
 LOG=$(mktemp)
+fail_list=""
 
 for f in \
+    core/core.py \
+    core/tensors.py \
     core/gamma.py \
     core/block.py \
     core/scalar.py \
@@ -18,7 +21,10 @@ for f in \
     core/orthogonalize.py \
     core/matrix.py \
     core/split.py \
+    core/other_reps.py \
     random/random-simple.py \
+    qcd/a2a.py \
+    qcd/fermion-operators.py \
     algorithms/implicitly-restarted-lanczos.py \
     algorithms/solvers.py
 do
@@ -37,6 +43,7 @@ else
     echo "ERR ($elapsed s)"
     cat ${LOG}
     fail=$((fail+1))
+    fail_list="$fail_list $f"
 fi
 
 done
@@ -48,7 +55,11 @@ fi
 
 if ((fail != 0))
 then
-    echo "$fail tests failed"
+    echo "$fail tests failed:"
+    for f in ${fail_list}
+    do
+	echo $f
+    done
     exit 1
 else
     echo "All tests successful"

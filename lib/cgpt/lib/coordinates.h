@@ -59,3 +59,55 @@ Coordinate fromCanonical(const coor_t cvec) {
     ERR("Dimension %d not supported",(int)cvec.size());
   }
 }
+
+struct cgpt_order_lexicographic {
+  template<typename coor_t>
+  inline void operator()(coor_t& coor, long idx, const coor_t& size) {
+    Lexicographic::CoorFromIndex(coor,idx,size);
+  }
+};
+
+struct cgpt_order_reverse_lexicographic {
+  template<typename coor_t>
+  inline void operator()(coor_t& coor, long idx, const coor_t& size) {
+    Lexicographic::CoorFromIndexReversed(coor,idx,size);
+  }
+};
+
+struct cgpt_order_canonical {
+  template<typename coor_t>
+  inline void operator()(coor_t& coor, long idx, const coor_t& c_size) {
+    coor_t c_coor(coor.size());
+    Lexicographic::CoorFromIndex(c_coor,idx,c_size);
+    coor = fromCanonical(c_coor);
+  }
+};
+
+template<typename order_t, typename coor_t>
+  inline bool cgpt_fill_cartesian_view_coordinates(int32_t* d,int Nd,
+						   const std::vector<long>& top,
+						   const coor_t& size,
+						   const std::vector<long>& checker_dim_mask,
+						   long fstride,int cbf,int cb,
+						   long points, order_t order) {
+  bool first_on_grid = false;
+  thread_region
+    {
+      coor_t coor(Nd);
+      thread_for_in_region(idx,points,{
+	  order(coor,idx,size);
+	  long idx_cb = (idx % fstride) + ((idx / fstride)/cbf) * fstride;
+	  long site_cb = 0;
+	  for (int i=0;i<Nd;i++)
+	    if (checker_dim_mask[i])
+	      site_cb += top[i] + coor[i];
+	  if (site_cb % 2 == cb) {
+	    for (int i=0;i<Nd;i++)
+	      d[Nd*idx_cb + i] = top[i] + coor[i];
+	    if (!idx)
+	      first_on_grid = true;
+	  }
+	});
+    }
+  return first_on_grid;
+}

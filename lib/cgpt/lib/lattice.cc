@@ -19,18 +19,16 @@
 #include "lib.h"
 
 typedef void* (* create_lattice_prec_otype)(GridBase* grid);
-static std::map<std::string,create_lattice_prec_otype> _create_otype_;
+std::map<std::string,create_lattice_prec_otype> _create_otype_;
 
-template<typename vtype>
-void lattice_init_prec(const vtype& t, const std::string& prec) {
-#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<vtype>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< vtype > >(grid); };
-#include "tensors.h"
-#undef PER_TENSOR_TYPE
-}
-  
+#define INSTANTIATE(v,t,n) void lattice_init_ ## t ## _ ## n();
+#include "instantiate/instantiate.h"
+#undef INSTANTIATE
+
 void lattice_init() {
-  lattice_init_prec(vComplexF(),"single");
-  lattice_init_prec(vComplexD(),"double");
+#define INSTANTIATE(v,t,n) lattice_init_ ## t ## _ ## n();
+#include "instantiate/instantiate.h"
+#undef INSTANTIATE
 }
 
 EXPORT(create_lattice,{
@@ -67,38 +65,18 @@ EXPORT(delete_lattice,{
     delete ((cgpt_Lattice_base*)p);
     return PyLong_FromLong(0);
   });
-  
-EXPORT(lattice_set_val,{
+
+EXPORT(lattice_set_to_zero,{
     void* p;
-    PyObject* _coor,* _val;
-    if (!PyArg_ParseTuple(args, "lOO", &p, &_coor,&_val)) {
+    if (!PyArg_ParseTuple(args, "l", &p)) {
       return NULL;
     }
     
-    std::vector<int> coor;
-    cgpt_convert(_coor,coor);
-    
-    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    l->set_val(coor,_val);
-    
+    ((cgpt_Lattice_base*)p)->set_to_zero();
+
     return PyLong_FromLong(0);
   });
-
-EXPORT(lattice_get_val,{
-    void* p;
-    PyObject* _coor;
-    if (!PyArg_ParseTuple(args, "lO", &p, &_coor)) {
-      return NULL;
-    }
-    
-    std::vector<int> coor;
-    cgpt_convert(_coor,coor);
-    
-    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    return l->get_val(coor);
-    
-  });
-
+  
 EXPORT(lattice_memory_view,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {
@@ -120,36 +98,40 @@ EXPORT(lattice_memory_view_coordinates,{
   });
 
 EXPORT(lattice_export,{
-    PyObject* pos, * vlat;
-    if (!PyArg_ParseTuple(args, "OO", &vlat, &pos)) {
+    PyObject* pos, * vlat, * tidx,* _shape;
+    if (!PyArg_ParseTuple(args, "OOOO", &vlat, &pos, &tidx, &_shape)) {
       return NULL;
     }
 
     ASSERT(PyArray_Check(pos));
+    ASSERT(PyArray_Check(tidx));
     std::vector<cgpt_distribute::data_simd> data;
     std::vector<long> shape;
     GridBase* grid;
     int cb,dt;
 
-    cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
+    cgpt_prepare_vlattice_importexport(vlat,data,shape,(PyArrayObject*)tidx,grid,cb,dt);
+    cgpt_convert(_shape,shape);
+
     return (PyObject*)cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,0);
   });
 
 EXPORT(lattice_import,{
-    PyObject* pos, *vlat, * d;
-    if (!PyArg_ParseTuple(args, "OOO", &vlat, &pos, &d)) {
+    PyObject* pos, *vlat, * d, * tidx;
+    if (!PyArg_ParseTuple(args, "OOOO", &vlat, &pos, &tidx, &d)) {
       return NULL;
     }
 
     ASSERT(PyArray_Check(pos));
+    ASSERT(PyArray_Check(tidx));
     std::vector<cgpt_distribute::data_simd> data;
     std::vector<long> shape;
     GridBase* grid;
     int cb,dt;
 
-    cgpt_prepare_vlattice_importexport(vlat,data,shape,grid,cb,dt);
-    
+    cgpt_prepare_vlattice_importexport(vlat,data,shape,(PyArrayObject*)tidx,grid,cb,dt);
     cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,d);
+
     return PyLong_FromLong(0);
   });
 

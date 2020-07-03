@@ -17,20 +17,23 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
+from gpt.params import params_convention
 
 # format
 class format:
-
     class gpt:
-        def __init__(self, params = {}):
+        @params_convention()
+        def __init__(self, params):
             self.params = params
 
     class cevec:
-        def __init__(self, params = {}):
+        @params_convention()
+        def __init__(self, params):
             self.params = params
 
+
 # output
-def save(filename,objs,fmt = format.gpt()):
+def save(filename, objs, fmt=format.gpt()):
 
     if type(fmt) == format.gpt:
         return gpt.core.io.gpt_io.save(filename, objs, fmt.params)
@@ -38,4 +41,3 @@ def save(filename,objs,fmt = format.gpt()):
         return gpt.core.io.cevec_io.save(filename, objs, fmt.params)
 
     return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
-

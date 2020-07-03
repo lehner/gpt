@@ -90,11 +90,44 @@ EXPORT(util_mem,{
     size_t accelerator_available = 0x0;
     size_t accelerator_total = 0x0;
 
-#ifdef GRID_NVCC
-    gridMemGetInfo(&accelerator_available,&accelerator_total);
+#ifdef GRID_CUDA
+    cudaMemGetInfo(&accelerator_available,&accelerator_total);
 #endif
+
+    // TODO: add more information out of MemoryManager::
+    //static uint64_t     DeviceBytes;
+    //static uint64_t     DeviceLRUBytes;
+    //static uint64_t     DeviceMaxBytes;
+    //static uint64_t     HostToDeviceBytes;
+    //static uint64_t     DeviceToHostBytes;
+    //static uint64_t     HostToDeviceXfer;
+    //static uint64_t     DeviceToHostXfer;
 
     return Py_BuildValue("{s:k,s:k}",
 			 "accelerator_available", (unsigned long)accelerator_available,
 			 "accelerator_total", (unsigned long)accelerator_total);
+  });
+
+EXPORT(mview,{
+
+    // default python memoryview(ndarray()) too slow, below faster
+    PyObject* _a;
+    if (!PyArg_ParseTuple(args, "O", &_a)) {
+      return NULL;
+    }
+
+    if (PyArray_Check(_a)) {
+      char* data = (char*)PyArray_DATA((PyArrayObject*)_a);
+      long nbytes = PyArray_NBYTES((PyArrayObject*)_a);
+      PyObject* r = PyMemoryView_FromMemory(data,nbytes,PyBUF_WRITE);
+      Py_XINCREF(_a);
+      ASSERT(!((PyMemoryViewObject*)r)->mbuf->master.obj);
+      ((PyMemoryViewObject*)r)->mbuf->master.obj = _a;
+      return r;
+    } else {
+      ERR("Unsupported type");
+    }
+
+    return NULL;
+
   });

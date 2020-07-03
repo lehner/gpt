@@ -18,19 +18,24 @@
 #
 import numpy
 
+
 class single:
-    nbytes=4
-    real_dtype=numpy.float32
-    complex_dtype=numpy.complex64
+    nbytes = 4
+    real_dtype = numpy.float32
+    complex_dtype = numpy.complex64
+
     def __init__(self):
         pass
 
+
 class double:
-    nbytes=8
-    real_dtype=numpy.float64
-    complex_dtype=numpy.complex128
+    nbytes = 8
+    real_dtype = numpy.float64
+    complex_dtype = numpy.complex128
+
     def __init__(self):
         pass
+
 
 def str_to_precision(s):
     if s == "single":
@@ -38,4 +43,4 @@ def str_to_precision(s):
     elif s == "double":
         return double
     else:
-        assert(0)
+        assert 0

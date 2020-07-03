@@ -18,23 +18,19 @@
 #
 import gpt
 
-class g5m_ne:
-    def __init__(self, matrix, inverter):
-        self.matrix = matrix
-        self.inverter = inverter
-        self.F_grid=matrix.F_grid
-        self.ftmp=gpt.vspincolor(self.F_grid)
-        self.ftmp2=gpt.vspincolor(self.F_grid)
-        self.ftmp3=gpt.vspincolor(self.F_grid)
 
-    def __call__(self, src_sc, dst_sc):
+def inv_g5m_ne(matrix, inverter):
+    F_grid = matrix.F_grid
+    ftmp = gpt.vspincolor(F_grid)
+    i = inverter(lambda o, i: (matrix.G5M(ftmp, i), matrix.G5M(o, ftmp)))
 
-        self.matrix.ImportPhysicalFermionSource(src_sc, self.ftmp)
+    def inv(dst_sc, src_sc):
+        # (G5 M G5 M)^-1 G5 M G5 = M^-1 G5 M^-1 G5^2 M G5 = M^-1
+        dst_sc @= i * matrix.G5M * gpt.gamma[5] * src_sc
 
-        self.ftmp @= gpt.gamma[5] * self.ftmp
-        self.matrix.G5M(self.ftmp,self.ftmp2)
-        
-        self.ftmp[:]=0
-        self.inverter(lambda i,o: (self.matrix.G5M(i,self.ftmp3),self.matrix.G5M(self.ftmp3,o)),self.ftmp2,self.ftmp)
+    m = gpt.matrix_operator(mat=inv, inv_mat=matrix, otype=matrix.otype, grid=F_grid)
 
-        self.matrix.ExportPhysicalFermionSolution(self.ftmp,dst_sc)
+    m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
+    m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution
+
+    return m

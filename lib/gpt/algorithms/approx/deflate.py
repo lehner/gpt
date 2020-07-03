@@ -20,21 +20,39 @@
 #       in contrast to current Grid
 #
 import gpt as g
+import numpy as np
+
 
 class deflate:
-    def __init__(self,inverter, evec, ev):
+    def __init__(self, inverter, evec, ev):
         self.inverter = inverter
         self.evec = evec
         self.ev = ev
 
-    def __call__(self, matrix, src, dst):
-        verbose=g.default.is_verbose("deflate")
-        # |dst> = sum_n 1/ev[n] |n><n|src>
-        t0=g.time()
-        dst[:]=0
-        for i,n in enumerate(self.evec):
-            dst += n*g.innerProduct(n,src)/self.ev[i]
-        t1=g.time()
-        if verbose:
-            g.message("Deflated in %g s" % (t1-t0))
-        return self.inverter(matrix, src, dst)
+    def __call__(self, matrix):
+
+        otype, grid, cb = None, None, None
+        if type(matrix) == g.matrix_operator:
+            otype, grid, cb = matrix.otype, matrix.grid, matrix.cb
+            matrix = matrix.mat
+
+        def inv(dst, src):
+            verbose = g.default.is_verbose("deflate")
+            # |dst> = sum_n 1/ev[n] |n><n|src>
+            t0 = g.time()
+            grid = src.grid
+            rip = np.array(
+                [
+                    g.rankInnerProduct(self.evec[i], src) / self.ev[i]
+                    for i in range(len(self.evec))
+                ],
+                dtype=np.complex128,
+            )
+            grid.globalsum(rip)
+            g.linear_combination(dst, self.evec, rip)
+            t1 = g.time()
+            if verbose:
+                g.message("Deflated in %g s" % (t1 - t0))
+            return self.inverter(matrix)(dst, src)
+
+        return g.matrix_operator(mat=inv, inv_mat=matrix, otype=otype, grid=grid, cb=cb)

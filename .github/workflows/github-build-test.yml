@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  MAKE_BUILD_FLAGS: -j2
+  MAKE_BUILD_FLAGS: -j1 # one for now to debug
   GRID_REPOSITORY_REF: feature/gpt
   CC: mpicc
   CXX: mpic++
@@ -259,8 +259,7 @@ jobs:
         echo ${{ hashFiles('gpt/bootstrap.sh') }} >> gpt_cache_key_file
         echo ${{ hashFiles('gpt/configure.ac') }} >> gpt_cache_key_file
         echo ${{ hashFiles('gpt/Makefile.am') }} >> gpt_cache_key_file
-
-        echo "::set-output name=key::$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
+        echo "::set-output name=key::$(sha256sum gpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
     - name: Get python-gpt version
       id: python-gpt-version

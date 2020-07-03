@@ -62,62 +62,56 @@ EXPORT(coordinates_from_cartesian_view,{
       ERR("Unknown argument type for _cb");
     }
 
-    //std::cout << GridLogMessage << top << ", " << bottom << ", " << checker_dim_mask << ": " << cb << ", " << cbf << ", " << fstride << std::endl;
+    /*
 
-    dims.push_back(points/cbf);
+      In case of even/odd lattices we may allocate too many points
+      if points % cbf != 0 and first element is not on lattice:
+
+      xox                oxo
+      oxo                xox
+      xox  5    versus   oxo  4
+
+      points = 9, cbf = 2, -> allocation of (points+cbf-1)/cbf = 5 positions
+
+    */
+    dims.push_back((points+cbf-1)/cbf);
     dims.push_back(Nd);
 
     PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_INT32);
     int32_t* d = (int32_t*)PyArray_DATA(a);
 
-    if (order == "grid") {
+    bool first_on_lattice;
+    if (order == "lexicographic") {
 
-      thread_region 
-	{
-	  std::vector<int32_t> coor(Nd);
-	  thread_for_in_region(idx,points,{
-	      Lexicographic::CoorFromIndex(coor,idx,size);
-	      long idx_cb = (idx % fstride) + ((idx / fstride)/cbf) * fstride;
-	      long site_cb = 0;
-	      for (int i=0;i<Nd;i++)
-		if (checker_dim_mask[i])
-		  site_cb += top[i] + coor[i];
-	      if (site_cb % 2 == cb) {
-		for (int i=0;i<Nd;i++)
-		  d[Nd*idx_cb + i] = top[i] + coor[i];
-	      }
-	    });
-	}
+      cgpt_order_lexicographic order;
+      first_on_lattice = cgpt_fill_cartesian_view_coordinates(d,Nd,top,size,checker_dim_mask,fstride,
+								  cbf,cb,points,order);
+      
+    } else if (order == "reverse_lexicographic") {
+
+      cgpt_order_reverse_lexicographic order;
+      first_on_lattice = cgpt_fill_cartesian_view_coordinates(d,Nd,top,size,checker_dim_mask,fstride,
+							      cbf,cb,points,order);
 
     } else if (order == "canonical") {
 
       Coordinate c_size = toCanonical(size);
 
-      thread_region 
-	{
-	  Coordinate c_coor(Nd), coor(Nd);
-	  thread_for_in_region(idx,points,{
-	      Lexicographic::CoorFromIndex(c_coor,idx,c_size);
-	      coor = fromCanonical(c_coor);
-
-	      long idx_cb = (idx % fstride) + ((idx / fstride)/cbf) * fstride;
-	      long site_cb = 0;
-	      for (int i=0;i<Nd;i++)
-		if (checker_dim_mask[i])
-		  site_cb += top[i] + coor[i];
-	      if (site_cb % 2 == cb) {
-		for (int i=0;i<Nd;i++)
-		  d[Nd*idx_cb + i] = top[i] + coor[i];
-	      }
-	    });
-	}
+      cgpt_order_canonical order;
+      first_on_lattice = cgpt_fill_cartesian_view_coordinates(d,Nd,top,c_size,checker_dim_mask,fstride,
+							      cbf,cb,points,order);
 
     } else {
+
       ERR("Unknown order scheme: %s",order.c_str());
+
     }
 
-    // xoxo
-    // oxox
+    // shrink list of coordinates if needed
+    if (points % cbf != 0 && !first_on_lattice) {
+      long* tdim = PyArray_DIMS(a);
+      tdim[0]--;
+    }
 
     PyArray_CLEARFLAGS(a,NPY_ARRAY_WRITEABLE); // read-only, so we can cache distribute plans
     return (PyObject*)a;
@@ -356,24 +350,3 @@ EXPORT(coordinates_momentum_phase,{
     return (PyObject*)a;
   });
 
-EXPORT(mview,{
-
-    PyObject* _a;
-    if (!PyArg_ParseTuple(args, "O", &_a)) {
-      return NULL;
-    }
-
-    if (PyArray_Check(_a)) {
-      char* data = (char*)PyArray_DATA((PyArrayObject*)_a);
-      long nbytes = PyArray_NBYTES((PyArrayObject*)_a);
-      PyObject* r = PyMemoryView_FromMemory(data,nbytes,PyBUF_WRITE);
-      Py_XINCREF(_a);
-      PyMemoryView_GET_BASE(r) = _a;
-      return r;
-    } else {
-      ERR("Unsupported type");
-    }
-
-    return NULL;
-
-  });

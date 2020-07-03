@@ -18,59 +18,77 @@
 #
 import sys, gpt
 
-def get(tag,default):
-    res=[]
-    for i,x in enumerate(sys.argv):
+
+def get_all(tag, default):
+    res = []
+    for i, x in enumerate(sys.argv):
         if x == tag:
-            if i+1 < len(sys.argv):
-                res.append(sys.argv[i+1])
+            if i + 1 < len(sys.argv):
+                res.append(sys.argv[i + 1])
     if len(res) == 0:
-        res=[ default ]
+        res = [default]
     return res
 
-def get_single(tag,default):
-    r=get(tag,default)
-    assert(len(r) == 1)
+
+def get_single(tag, default):
+    r = get_all(tag, default)
+    assert len(r) == 1
     return r[0]
 
-def get_float(tag, default = float("nan")):
-    res=get_single(tag,None)
-    if not res is None:
+
+def get_float(tag, default=float("nan")):
+    res = get_single(tag, None)
+    if res is not None:
         return float(res)
     return default
 
+
 def get_int(tag, default):
-    res=get_single(tag,None)
-    if not res is None:
+    res = get_single(tag, None)
+    if res is not None:
         return int(res)
     return default
 
+
 def get_ivec(tag, default, ndim):
-    res=get(tag,None)
+    res = get_all(tag, None)
     if res[0] is None:
         return default
     for x in res:
-        v=[ int(y) for y in x.split(".") ]
+        v = [int(y) for y in x.split(".")]
         if len(v) == ndim:
             return v
     return default
 
+
+# Alias
+get = get_single
+
 # IO parameters
-max_io_nodes=get_int("--max_io_nodes",256)
+max_io_nodes = get_int("--max_io_nodes", 256)
 
 # verbosity
-verbose_default="io,bicgstab,cg,fgcr,fgmres,mr,irl,power_iteration,checkpointer,deflate,block_operator,random"
-verbose_additional="eval,merge"
-verbose = get_single("--verbose",verbose_default).split(",")
-verbose_candidates=",".join(sorted((verbose_default + "," + verbose_additional).split(",")))
+verbose_default = "io,bicgstab,cg,dci,fgcr,fgmres,mr,irl,power_iteration,checkpointer,deflate,block_operator,random"
+verbose_additional = "eval,merge"
+verbose = get_single("--verbose", verbose_default).split(",")
+verbose_candidates = ",".join(
+    sorted((verbose_default + "," + verbose_additional).split(","))
+)
+
+
 def is_verbose(x):
     return x in verbose
 
+
 # help
 if "--help" in sys.argv:
-    print("--------------------------------------------------------------------------------")
+    print(
+        "--------------------------------------------------------------------------------"
+    )
     print(" GPT Help")
-    print("--------------------------------------------------------------------------------")
+    print(
+        "--------------------------------------------------------------------------------"
+    )
     print("")
     print(" --mpi X.Y.Z.T")
     print("")
@@ -87,5 +105,7 @@ if "--help" in sys.argv:
     print(" --max_io_nodes n")
     print("")
     print("   Set maximal number of simultaneous IO nodes.")
-    print("--------------------------------------------------------------------------------")
+    print(
+        "--------------------------------------------------------------------------------"
+    )
     sys.stdout.flush()

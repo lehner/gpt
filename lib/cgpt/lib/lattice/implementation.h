@@ -47,9 +47,17 @@ public:
 			PyUnicode_FromString(get_prec(l).c_str()));
   }
 
+  void set_to_zero() {
+    l = Zero();
+  }
+
   // use norm2 convention for squared norm, talked to Peter, Grid may also change to this cleaner notation
   virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
     return ::axpy_norm(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
+  }
+
+  virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
+    return ::axpy(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
   }
 
   virtual RealD norm2() {
@@ -95,25 +103,6 @@ public:
     l = Cshift(src->l, dir, off);
   }
 
-  virtual PyObject* get_val(const std::vector<int>& coor) {
-    return cgpt_lattice_peek_value(l,coor);
-  }
-
-  virtual void set_val(const std::vector<int>& coor, PyObject* _val) {
-    int nc = (int)coor.size();
-    if (!nc) {
-      if (cgpt_is_zero(_val)) {
-	l = Zero();
-      } else {
-	sobj val;
-	cgpt_numpy_import(val,_val);
-	l = val;
-      }
-    } else {
-      cgpt_lattice_poke_value(l,coor,_val);
-    }
-  }
-
   virtual PyObject* sum() {
     return cgpt_numpy_export( ::sum(l) );
   }
@@ -156,15 +145,27 @@ public:
     cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
   }
 
-  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt) {
+  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt) {
     PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis,_basis);
     cgpt_linear_combination(l,basis,Qt);
   }
 
   virtual PyObject* memory_view() {
+#ifdef _GRID_FUTURE_
+    auto v = l.View(CpuWrite);
+#else
     auto v = l.View();
-    return PyMemoryView_FromMemory((char*)&v[0],v.size()*sizeof(v[0]),PyBUF_WRITE);
+#endif
+    size_t sz = v.size() * sizeof(v[0]);
+    char* ptr = (char*)&v[0];
+#ifdef _GRID_FUTURE_
+    v.ViewClose();
+#endif
+    // this marks Cpu as dirty, so data will be copied to Gpu; this is not fully safe
+    // and the ViewClose should be moved to the destructor of the PyMemoryView object.
+    // Do this in the same way as currently done in mview() in the future.
+    return PyMemoryView_FromMemory(ptr,sz,PyBUF_WRITE);
   }
 
   virtual PyObject* memory_view_coordinates() {
@@ -203,22 +204,21 @@ public:
   }
 
   virtual PyObject* advise(std::string type) {
-    int advise;
     if (type == "infrequent_use") {
-      advise = AdviseInfrequentUse;
+#ifdef _GRID_FUTURE_
+      l.Advise() = AdviseInfrequentUse;
+#endif
     } else {
       ERR("Unknown advise %s",type.c_str());
-    }
-    l.Advise(advise);
+    }    
     return PyLong_FromLong(0);
   }
 
   virtual PyObject* prefetch(std::string type) {
-    int advise;
     if (type == "accelerator") {
-      l.AcceleratorPrefetch();
+      //l.AcceleratorPrefetch();
     } else if (type == "host") {
-      l.HostPrefetch();
+      //l.HostPrefetch();
     } else {
       ERR("Unknown prefetch %s",type.c_str());
     }

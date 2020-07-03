@@ -16,11 +16,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-PER_TENSOR_TYPE(iSinglet)
-PER_TENSOR_TYPE(iColourMatrix)
-PER_TENSOR_TYPE(iColourVector)
-PER_TENSOR_TYPE(iSpinColourMatrix)
-PER_TENSOR_TYPE(iSpinColourVector)
-#define BASIS_SIZE(n) PER_TENSOR_TYPE(iComplexV ## n)
-#include "basis_size.h"
-#undef BASIS_SIZE
+#include "tensors_group0.h"
+#include "tensors_group1.h"
+#include "tensors_group2.h"

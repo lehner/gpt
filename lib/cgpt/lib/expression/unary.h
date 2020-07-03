@@ -46,7 +46,11 @@ cgpt_Lattice_base* lattice_unary(cgpt_Lattice_base* dst, bool ac, const A& la,in
   if (unary_expr == 0) {
     return lattice_expr(dst, ac, la);
   } else if (unary_expr == (BIT_SPINTRACE|BIT_COLORTRACE)) {
-    return lattice_expr(dst, ac, trace(la));
+    return lattice_expr(dst, ac, ToSinglet(trace(la)));
+  } else if (unary_expr == BIT_SPINTRACE) {
+    return lattice_lat(dst, ac, TraceIndex<SpinIndex>(closure(ToSinglet(la))));
+  } else if (unary_expr == BIT_COLORTRACE) {
+    return lattice_lat(dst, ac, TraceIndex<ColourIndex>(closure(ToSinglet(la))));
   }
   ERR("Not implemented");
 }
@@ -76,7 +80,11 @@ cgpt_Lattice_base* lattice_unary_lat(cgpt_Lattice_base* dst, bool ac, const A& l
   if (unary_expr == 0) {
     return lattice_lat(dst, ac, la);
   } else if (unary_expr == (BIT_SPINTRACE|BIT_COLORTRACE)) {
-    return lattice_expr(dst, ac, trace(la));
+    return lattice_expr(dst, ac, ToSinglet(trace(la)));
+  } else if (unary_expr == BIT_SPINTRACE) {
+    return lattice_lat(dst, ac, TraceIndex<SpinIndex>(closure(ToSinglet(la))));
+  } else if (unary_expr == BIT_COLORTRACE) {
+    return lattice_lat(dst, ac, TraceIndex<ColourIndex>(closure(ToSinglet(la))));
   }
   ERR("Not implemented");
 }

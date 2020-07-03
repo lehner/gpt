@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.core import *
-from gpt.params import params
+from gpt.params import params, params_convention
 import gpt.default
 import gpt.create
 import gpt.algorithms
@@ -33,8 +33,7 @@ GPT -- Grit Python Toolkit
 cgpt.init(sys.argv)
 
 # save my hostname
-hostname=socket.gethostname()
+hostname = socket.gethostname()
 
 # synonyms
-eval=expr_eval
-
+eval = expr_eval

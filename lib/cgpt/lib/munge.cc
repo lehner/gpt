@@ -49,3 +49,37 @@ EXPORT(munge_inner_outer,{
     }
     return PyLong_FromLong(0);
   });
+
+EXPORT(munge_byte_order,{
+    PyObject* _src,* _dst;
+    long word_size;
+    if (!PyArg_ParseTuple(args, "OOl", &_dst,&_src,&word_size)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(_src) && PyMemoryView_Check(_dst));
+    Py_buffer* buf_src = PyMemoryView_GET_BUFFER(_src);
+    Py_buffer* buf_dst = PyMemoryView_GET_BUFFER(_dst);
+    ASSERT(PyBuffer_IsContiguous(buf_src,'C'));
+    ASSERT(PyBuffer_IsContiguous(buf_dst,'C'));
+    char* s = (char*)buf_src->buf;
+    char* d = (char*)buf_dst->buf;
+    long len_src = buf_src->len;
+    if (len_src > 0) {
+      ASSERT(len_src == buf_dst->len);
+      ASSERT(len_src % word_size == 0);
+      long words = len_src / word_size;
+
+      thread_for(w,words,{
+	  char* w_s = &s[word_size*w];
+	  char* w_d = &d[word_size*w];
+	  char buf[word_size];
+	  for (long byte=0;byte<word_size;byte++) {
+	    buf[byte] = w_s[word_size - 1 - byte];
+	  }
+	  memcpy(w_d,buf,word_size);
+	});
+
+    }
+    return PyLong_FromLong(0);
+  });

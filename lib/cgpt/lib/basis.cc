@@ -149,7 +149,7 @@ EXPORT(linear_combination,{
 
     ASSERT(basis.size() > 0);
 
-    RealD* data;
+    ComplexD* data;
     int Nm;
     cgpt_numpy_import_vector(_Qt,data,Nm);
 

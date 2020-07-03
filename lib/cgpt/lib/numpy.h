@@ -17,6 +17,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+static int infer_numpy_type(const RealD& v) { return NPY_FLOAT64; }
+static int infer_numpy_type(const RealF& v) { return NPY_FLOAT32; }
 static int infer_numpy_type(const ComplexD& v) { return NPY_COMPLEX128; }
 static int infer_numpy_type(const ComplexF& v) { return NPY_COMPLEX64; }
 static int infer_numpy_type(const std::string & precision) {
@@ -94,14 +96,14 @@ bool cgpt_numpy_import(sobj& dst,PyArrayObject* src,std::vector<long>& dim) {
   int dt = PyArray_TYPE(src);
   if (dt == NPY_COMPLEX64) {
     ComplexF* s = (ComplexF*)PyArray_DATA(src);
-#pragma omp parallel for
-    for (int i=0;i<n;i++)
-      c[i] = (t)s[i];
+    thread_for(i,n,{
+	c[i] = (t)s[i];
+      });
   } else if (dt == NPY_COMPLEX128) {
     ComplexD* s = (ComplexD*)PyArray_DATA(src);
-#pragma omp parallel for
-    for (int i=0;i<n;i++)
+    thread_for(i,n,{
       c[i] = (t)s[i];
+      });
   } else {
     ERR("Incompatible numpy type");
   }
@@ -128,23 +130,26 @@ void cgpt_numpy_import(sobj& dst,PyObject* _src) {
   }
 }
 
-static void cgpt_numpy_import_matrix(PyObject* _Qt, RealD* & data, int & Nm) {
+template<typename Coeff_t>
+void cgpt_numpy_import_matrix(PyObject* _Qt, Coeff_t* & data, int & Nm) {
   ASSERT(PyArray_Check(_Qt));
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
   ASSERT(PyArray_NDIM(Qt)==2);
   Nm = PyArray_DIM(Qt,0);
   ASSERT(Nm == PyArray_DIM(Qt,1));
   // TODO: check and at least forbid strides
-  ASSERT(PyArray_TYPE(Qt) == NPY_FLOAT64);
-  data = (RealD*)PyArray_DATA(Qt);
+  ASSERT(PyArray_TYPE(Qt) == infer_numpy_type(*data));
+  data = (Coeff_t*)PyArray_DATA(Qt);
 }
 
-static void cgpt_numpy_import_vector(PyObject* _Qt, RealD* & data, int & Nm) {
+template<typename Coeff_t>
+void cgpt_numpy_import_vector(PyObject* _Qt, Coeff_t* & data, int & Nm) {
   ASSERT(PyArray_Check(_Qt));
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
   ASSERT(PyArray_NDIM(Qt)==1);
   Nm = PyArray_DIM(Qt,0);
   // TODO: check and at least forbid strides
-  ASSERT(PyArray_TYPE(Qt) == NPY_FLOAT64);
-  data = (RealD*)PyArray_DATA(Qt);
+  ASSERT(PyArray_TYPE(Qt) == infer_numpy_type(*data));
+  data = (Coeff_t*)PyArray_DATA(Qt);
 }
+

@@ -18,38 +18,87 @@
 #
 import gpt as g
 import numpy as np
+from gpt.params import params_convention
+
 
 def plaquette(U):
     # U[mu](x)*U[nu](x+mu)*adj(U[mu](x+nu))*adj(U[nu](x))
-    tr=0.0
-    vol=float(U[0].grid.fsites)
-    for mu in range(4):
+    tr = 0.0
+    vol = float(U[0].grid.fsites)
+    Nd = len(U)
+    Nc = U[0].otype.Nc
+    for mu in range(Nd):
         for nu in range(mu):
-            tr += g.sum( g.trace(U[mu] * g.cshift( U[nu], mu, 1) * g.adj( g.cshift( U[mu], nu, 1 ) ) * g.adj( U[nu] )) )
-    return 2.*tr.real/vol/4./3./3.
+            tr += g.sum(
+                g.trace(
+                    U[mu]
+                    * g.cshift(U[nu], mu, 1)
+                    * g.adj(g.cshift(U[mu], nu, 1))
+                    * g.adj(U[nu])
+                )
+            )
+    return 2.0 * tr.real / vol / Nd / (Nd - 1) / Nc
 
-def unit(first):
-    if type(first) == g.grid:
-        U=[ g.mcolor(first) for i in range(4) ]
-        unit(U)
-        return U
-    elif type(first) == list:
-        for x in first:
-            unit(x)
-    elif type(first) == g.lattice:
-        first[:]=g.mcolor(np.identity(3,dtype=first.grid.precision.complex_dtype))
-    else:
-        assert(0)
 
-def random(first, rng, scale = 1.0):
+@params_convention(otype=None, Nd=None)
+def create_links(first, init, params):
     if type(first) == g.grid:
-        U=[ g.mcolor(first) for i in range(4) ]
-        random(U, rng, scale)
+
+        # default representation is SU3 fundamental
+        if params["otype"] is None:
+            params["otype"] = g.ot_matrix_su3_fundamental()
+
+        # default dimension is four
+        if params["Nd"] is None:
+            params["Nd"] = 4
+
+        # create lattices
+        U = [g.lattice(first, params["otype"]) for i in range(params["Nd"])]
+
+        # initialize them
+        create_links(U, init, params)
         return U
+
     elif type(first) == list:
+
+        # if given a list, the dimensionality can be inferred
+        if params["Nd"] is None:
+            params["Nd"] = len(first)
+        else:
+            assert params["Nd"] == len(first)
+
+        # initialize each link
         for x in first:
-            random(x, rng, scale)
+            create_links(x, init, params)
+        return first
+
     elif type(first) == g.lattice:
-        rng.lie(first, scale)
+
+        # if otype is given, make sure it is expected
+        if params["otype"] is not None:
+            assert params["otype"].__name__ == first.otype.__name__
+
+        init(first, params)
+        return first
+
     else:
-        assert(0)
+        assert 0
+
+
+@params_convention(scale=1.0)
+def random(first, rng, params):
+    def init(x, p):
+        rng.lie(x, scale=p["scale"])
+
+    return create_links(first, init, params)
+
+
+@params_convention()
+def unit(first, params):
+    def init(x, p):
+        otype = x.otype
+        x[:] = g.gpt_object(
+            np.identity(otype.shape[0], dtype=x.grid.precision.complex_dtype), otype
+        )
+
+    return create_links(first, init, params)

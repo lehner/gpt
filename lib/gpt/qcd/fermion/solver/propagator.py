@@ -18,20 +18,23 @@
 #
 import gpt
 
-class propagator:
-    def __init__(self, sc_solver):
-        self.sc_solver = sc_solver
 
-    def __call__(self, src, dst):
-        grid=src.grid
-        # sum_n D^-1 vn vn^dag src = D^-1 vn (src^dag vn)^dag
-        dst_sc,src_sc=gpt.vspincolor(grid),gpt.vspincolor(grid)
+def propagator(inv_matrix, w=None):
 
-        for s in range(4):
-            for c in range(3):
-            
-                gpt.qcd.prop_to_ferm(src_sc,src,s,c)
+    if w is None:
+        exp = inv_matrix.ExportPhysicalFermionSolution
+        imp = inv_matrix.ImportPhysicalFermionSource
+    else:
+        exp = w.ExportPhysicalFermionSolution
+        imp = w.ImportPhysicalFermionSource
 
-                self.sc_solver(src_sc,dst_sc)
+    def prop(dst_sc, src_sc):
+        dst_sc @= exp * inv_matrix * imp * src_sc
 
-                gpt.qcd.ferm_to_prop(dst,dst_sc,s,c)
+    r = gpt.matrix_operator(
+        prop, otype=(exp.otype[0], imp.otype[1]), grid=(exp.grid[0], imp.grid[1])
+    )
+
+    r.inv_matrix = inv_matrix
+
+    return r

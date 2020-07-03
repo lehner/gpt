@@ -17,88 +17,119 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt, numpy, sys
+from gpt.params import params_convention
+
 
 class random:
-
-    def __init__(self, first, second = None):
+    def __init__(self, first, second=None):
 
         if type(first) == dict and second is None:
-            s=first["seed"]
-            engine=first["engine"]
+            s = first["seed"]
+            engine = first["engine"]
         else:
-            s=first
-            engine=second
+            s = first
+            engine = second
             if engine is None:
-                engine="vectorized_ranlux24_389_64"
+                engine = "vectorized_ranlux24_389_64"
 
         self.verbose = gpt.default.is_verbose("random")
-        t0=gpt.time()
-        self.obj = cgpt.create_random(engine,s)
-        t1=gpt.time()
+        t0 = gpt.time()
+        self.obj = cgpt.create_random(engine, s)
+        t1 = gpt.time()
 
         if self.verbose:
-            gpt.message("Initializing gpt.random(%s,%s) took %g s" % (s,engine,t1-t0))
+            gpt.message(
+                "Initializing gpt.random(%s,%s) took %g s" % (s, engine, t1 - t0)
+            )
 
     def __del__(self):
         cgpt.delete_random(self.obj)
 
-    def sample(self,t,p):
+    def sample(self, t, p):
         if type(t) == list:
             for x in t:
-                self.sample(x,p)
+                self.sample(x, p)
         elif t is None:
-            return cgpt.random_sample(self.obj,t,p)
+            return cgpt.random_sample(self.obj, t, p)
         elif type(t) == gpt.lattice:
             if "pos" in p:
-                pos=p["pos"]
+                pos = p["pos"]
             else:
-                pos=gpt.coordinates(t)
-            t0=gpt.time()
-            mv=cgpt.random_sample(self.obj,pos,{**p,**{"shape": list(t.otype.shape), "grid":t.grid.obj, "precision" : t.grid.precision} })
-            t1=gpt.time()
-            t[pos]=mv
+                pos = gpt.coordinates(t)
+            t0 = gpt.time()
+            mv = cgpt.random_sample(
+                self.obj,
+                pos,
+                {
+                    **p,
+                    **{
+                        "shape": list(t.otype.shape),
+                        "grid": t.grid.obj,
+                        "precision": t.grid.precision,
+                    },
+                },
+            )
+            t1 = gpt.time()
+            t[pos] = mv
             if self.verbose:
-                szGB=mv.size * mv.itemsize / 1024.**3.
-                gpt.message("Generated %g GB of random data at %g GB/s" % (szGB,szGB/(t1-t0)))
+                szGB = mv.size * mv.itemsize / 1024.0 ** 3.0
+                gpt.message(
+                    "Generated %g GB of random data at %g GB/s"
+                    % (szGB, szGB / (t1 - t0))
+                )
             return t
         else:
-            assert(0)
+            assert 0
 
-    def normal(self,t = None,p = { "mu" : 0.0, "sigma" : 1.0 }):
-        return self.sample(t,{**{ "distribution" : "normal" }, **p})
+    @params_convention(mu=0.0, sigma=1.0)
+    def normal(self, t=None, p={}):
+        return self.sample(t, {**{"distribution": "normal"}, **p})
 
-    def cnormal(self,t = None,p = { "mu" : 0.0, "sigma" : 1.0 }):
-        return self.sample(t,{**{ "distribution" : "cnormal" }, **p})
+    @params_convention(mu=0.0, sigma=1.0)
+    def cnormal(self, t=None, p={}):
+        return self.sample(t, {**{"distribution": "cnormal"}, **p})
 
-    def uniform_real(self,t = None,p = { "min" : 0.0, "max" : 1.0 }):
-        return self.sample(t,{**{ "distribution" : "uniform_real" }, **p})
+    @params_convention(min=0.0, max=1.0)
+    def uniform_real(self, t=None, p={}):
+        r = self.sample(t, {**{"distribution": "uniform_real"}, **p})
+        if t is None:
+            r = r.real
+        return r
 
-    def uniform_int(self,t = None,p = { "min" : 0, "max" : 1 }):
-        return self.sample(t,{**{ "distribution" : "uniform_int" }, **p})
+    @params_convention(min=0, max=1)
+    def uniform_int(self, t=None, p={}):
+        r = self.sample(t, {**{"distribution": "uniform_int"}, **p})
+        if t is None:
+            r = int(r.real)
+        return r
 
-    def zn(self,t = None,p = { "n" : 2 }):
-        return self.sample(t,{**{ "distribution" : "zn" }, **p})
+    @params_convention(n=2)
+    def zn(self, t=None, p={}):
+        return self.sample(t, {**{"distribution": "zn"}, **p})
 
-    def lie(self, out, scale = 1.0):
-        grid=out.grid
-        ca=gpt.complex(grid)
-        lie=gpt.lattice(out)
-        ta=gpt.mcolor(grid)
+    @params_convention(scale=1.0)
+    def lie(self, out, p={}):
+        scale = p["scale"]
+        grid = out.grid
+        ca = gpt.complex(grid)
+        lie = gpt.lattice(out)
+        ta = gpt.lattice(out)
 
-        lie[:]=0
+        lie[:] = 0
         for g in out.otype.generators(grid.precision.complex_dtype):
-            self.uniform_real(ca,{"min" : -0.5,"max" : 0.5})
-            ta[:]=g
+            self.uniform_real(ca, {"min": -0.5, "max": 0.5})
+            ta[:] = g
             lie += scale * 1j * ca * ta
         out @= gpt.matrix.exp(lie)
+
 
 # sha256
 def sha256(mv):
     if type(mv) == memoryview:
-        a=cgpt.util_sha256(mv)
-        r=a[0]
+        a = cgpt.util_sha256(mv)
+        r = a[0]
         for i in range(7):
-            r=r*(2**32) + a[1+i]
+            r = r * (2 ** 32) + a[1 + i]
         return r
     else:
         return sha256(memoryview(mv))

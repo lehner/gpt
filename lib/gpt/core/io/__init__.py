@@ -16,8 +16,10 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import gpt.core.io.corr_io
 import gpt.core.io.gpt_io
 import gpt.core.io.cevec_io
+import gpt.core.io.qlat_io
 from gpt.core.io.FILE import FILE
 from gpt.core.io.error import LoadError
 from gpt.core.io.util import mview, crc32

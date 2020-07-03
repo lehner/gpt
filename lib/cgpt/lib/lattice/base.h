@@ -21,12 +21,12 @@ class cgpt_Lattice_base {
 public:
   virtual ~cgpt_Lattice_base() { };
   virtual cgpt_Lattice_base* create_lattice_of_same_type() = 0;
-  virtual void set_val(const std::vector<int>& coor, PyObject* val) = 0;
-  virtual PyObject* get_val(const std::vector<int>& coor) = 0;
+  virtual void set_to_zero() = 0;
   virtual PyObject* to_str() = 0;
   virtual PyObject* sum() = 0;
   virtual RealD norm2() = 0;
   virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
+  virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
   virtual ComplexD innerProduct(cgpt_Lattice_base* other) = 0;
   virtual ComplexD rankInnerProduct(cgpt_Lattice_base* other) = 0;
   virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;
@@ -46,7 +46,7 @@ public:
   virtual void change_checkerboard(int cb) = 0;
   virtual int get_checkerboard() = 0;
   virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) = 0;
-  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt) = 0;
+  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &basis,ComplexD* Qt) = 0;
   virtual PyObject* memory_view() = 0; // access to internal memory storage, can be simd format
   virtual PyObject* memory_view_coordinates() = 0;
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) = 0;

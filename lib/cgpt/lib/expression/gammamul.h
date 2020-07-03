@@ -22,37 +22,70 @@ cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int un
   ERR("Not implemented");
 }
 
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourVector<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
-  ERR("Not implemented");
-}
+#define SPIN(Ns)
+#define SPIN_COLOR(Ns,Nc)
 
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourMatrix<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
-  ERR("Not implemented");
-}
+#define COLOR(Nc)							\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVColor ## Nc<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
+    ERR("Not implemented");						\
+  }									\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMColor ## Nc<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
+    ERR("Not implemented");						\
+  }									\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4Color ## Nc<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
+    if (rev) {								\
+      return lattice_unary_rmul(dst, ac, unary_a, la, Gamma(gamma), unary_expr); \
+    }									\
+    ERR("Not implemented");						\
+  }									\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSpin4Color ## Nc<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
+    if (rev) {								\
+      return lattice_unary_rmul(dst, ac, unary_a, la, Gamma(gamma), unary_expr); \
+    } else {								\
+      return lattice_unary_mul(dst, ac, unary_a, la, Gamma(gamma), unary_expr);	\
+    }									\
+  }									\
 
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourVector<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
+template<typename vtype> // spin4 vector
+cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
   if (rev) {
     return lattice_unary_rmul(dst, ac, unary_a, la, Gamma(gamma), unary_expr);
   }
   ERR("Not implemented");
 }
 
-#define BASIS_SIZE(n)							\
-  template<typename vtype>						\
-  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iComplexV ## n<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
-    ERR("Not implemented");						\
-  }
-#include "../basis_size.h"
-#undef BASIS_SIZE
-
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourMatrix<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
+template<typename vtype> // spin4 matrix
+cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSpin4<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
   if (rev) {
     return lattice_unary_rmul(dst, ac, unary_a, la, Gamma(gamma), unary_expr);
   } else {
     return lattice_unary_mul(dst, ac, unary_a, la, Gamma(gamma), unary_expr);
   }
+  ERR("Not implemented");
 }
+
+template<typename vtype, int Ns> // general spin matrix
+cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iScalar<iMatrix<iScalar<vtype>, Ns> > >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
+  ERR("Not implemented");
+}
+
+#include "../spin_color.h"
+#undef SPIN
+#undef COLOR
+#undef SPIN_COLOR
+
+#define BASIS_SIZE(n)							\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSinglet ## n<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
+    ERR("Not implemented");						\
+  }									\
+  template<typename vtype>						\
+  cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSinglet ## n<vtype> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) { \
+    ERR("Not implemented");						\
+  }
+#include "../basis_size.h"
+#undef BASIS_SIZE

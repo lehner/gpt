@@ -19,3 +19,5 @@
 
 from gpt.qcd.fermion.preconditioner.eo1 import eo1
 from gpt.qcd.fermion.preconditioner.eo2 import eo2
+
+# from gpt.qcd.fermion.preconditioner.eo2k import eo2k <- future

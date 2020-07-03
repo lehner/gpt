@@ -4,7 +4,7 @@
 
 # GPT - Grid Python Toolkit
 
-GPT is a Python3 measurement interface for [Grid](https://github.com/paboyle/Grid).
+GPT is a [Python](https://www.python.org) measurement toolkit built on [Grid](https://github.com/paboyle/Grid) data parallelism.  It provides a physics library for lattice QCD and related theories.
 
 ## Installation
 GPT is developed with the feature/gpt branch of https://github.com/lehner/Grid.

@@ -17,38 +17,49 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
+from gpt.params import params_convention
 
 # load through cgpt backend (NerscIO, openQCD, ...)
 def load_cgpt(*a):
-    result=[]
-    r,metadata=cgpt.load(*a, gpt.default.is_verbose("io"))
+    result = []
+    r, metadata = cgpt.load(*a, gpt.default.is_verbose("io"))
     if r is None:
         raise gpt.LoadError()
     for gr in r:
-        grid=gpt.grid(gr[1],eval("gpt.precision." + gr[2]),eval("gpt." + gr[3]),gr[0])
-        result_grid=[]
-        for t_obj,s_ot,s_pr in gr[4]:
-            assert(s_pr == gr[2])
-            l=gpt.lattice(grid,eval("gpt.otype." + s_ot),[ t_obj ])
-            l.metadata=metadata
+        grid = gpt.grid(
+            gr[1], eval("gpt.precision." + gr[2]), eval("gpt." + gr[3]), gr[0]
+        )
+        result_grid = []
+        otype = gpt.ot_matrix_su3_fundamental()
+        for t_obj, s_ot, s_pr in gr[4]:
+            assert s_pr == gr[2]
+
+            # only allow loading su3 gauge fields from cgpt, rest done in python
+            # in the long run, replace *any* IO from cgpt with gpt code
+            assert s_ot == "ot_mcolor3"
+
+            l = gpt.lattice(grid, otype, [t_obj])
+            l.metadata = metadata
             result_grid.append(l)
         result.append(result_grid)
     while len(result) == 1:
-        result=result[0]
+        result = result[0]
     return result
 
-# input
-def load(*a):
 
-    supported = [
-        gpt.core.io.gpt_io,
-        gpt.core.io.cevec_io
-    ]
+# input
+@params_convention()
+def load(fn, p={}):
+
+    supported = [gpt.core.io.gpt_io, gpt.core.io.cevec_io, gpt.core.io.qlat_io]
 
     for fmt in supported:
         try:
-            return fmt.load(*a)
+            return fmt.load(fn, p)
         except NotImplementedError:
             pass
 
+    a = [fn]
+    if len(p) > 0:
+        a.append(p)
     return load_cgpt(*a)
