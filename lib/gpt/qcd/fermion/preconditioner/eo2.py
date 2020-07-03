@@ -116,6 +116,12 @@ class eo2:
         self.op.Mooee.adj_inv_mat(op, self.tmp)
         op @= -op
 
+    def P(self, op, ie, io):
+        ip, inp = self.import_parity(ie, io)
+        self.op.Mooee.inv_mat(self.tmp, inp)
+        self.op.Meooe.mat(op, self.tmp)
+        op @= ip - op
+
     def L(self, oe, oo, ip):
         op, onp = self.import_parity(oe, oo)
         self.op.Mooee.inv_mat(op, ip)

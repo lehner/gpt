@@ -141,3 +141,14 @@ class operator:
     def _G5M(self, dst, src):
         self.M(dst, src)
         dst @= gpt.gamma[5] * dst
+
+    def updated(self, U):
+        if U == self.U:
+            return self
+        return operator(
+            name=self.name,
+            U=U,
+            params=self.params_constructor,
+            Ls=self.Ls,
+            otype=self.otype,
+        )
