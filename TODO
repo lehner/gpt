@@ -1,7 +1,18 @@
+- g.get_key -> g.key(lat)[:,:,...]
+- FFT (will be needed for fast PV below)
+- Singlet * vsinglet
+- vsinglet * vsinglet(tensor)
+- Grid-production-code/zmobius_2pt_hvp_con_gstore/Fourier... <-- First TM, then 5d TM, then  FA
 - mcomplex * vcomplex in expression template
 - test applications on summit with new version + new Grid
 - A2A meson fields
+- Using the l[...] interface, I could implement in python a stencil!  This may still
+  be somewhat slower than the C++ operators but should be worth it for slightly less
+  performance-critical code.
 - Stout smearing, plaquette implementation using covariant shifts
 - Complete sparse/split grid implementation
+- Add RLE capable convertor to cgpt from coordinates to different
+  linear orders
+- Based on this implement in python a parallel reader for file formats nerscIO, openQCD
 - sources
 - verbose=eval -> Bytes/s & Flops/s for expression evaluation

@@ -37,7 +37,7 @@ src = g.mspincolor(grid)
 g.create.point(src, [0, 0, 0, 0])
 
 # even-odd preconditioned matrix
-eo = g.qcd.fermion.preconditioner.eo2(w)
+eo = g.qcd.fermion.preconditioner.eo2(w, parity=g.even)
 
 # cheby
 c = g.algorithms.approx.chebyshev({"low": 0.0005, "high": 3.5, "order": 50})
@@ -79,11 +79,11 @@ except g.LoadError:
 s = g.qcd.fermion.solver
 cg = g.algorithms.iterative.cg({"eps": 1e-6, "maxiter": 1000})
 dcg = g.algorithms.approx.deflate(cg, evec, ev)
-slv = s.propagator(s.eo_ne(eo, dcg))
+slv = s.propagator(s.inv_eo_ne(eo, dcg))
 
 # propagator
 dst = g.mspincolor(grid)
-slv(src, dst)
+slv(dst, src)
 
 # two-point
 correlator = g.slice(g.trace(dst * g.adj(dst)), 3)

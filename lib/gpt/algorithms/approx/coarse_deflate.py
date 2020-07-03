@@ -20,6 +20,7 @@
 #       in contrast to current Grid
 #
 import gpt as g
+import numpy as np
 
 
 class coarse_deflate:
@@ -44,9 +45,19 @@ class coarse_deflate:
             t0 = g.time()
             g.block.project(self.csrc, src, self.basis)
             t1 = g.time()
-            self.cdst[:] = 0
-            for i, n in enumerate(self.cevec):
-                self.cdst += n * g.innerProduct(n, self.csrc) / self.fev[i]
+
+            # inner products
+            grid = src.grid
+            rip = np.array(
+                [
+                    g.rankInnerProduct(self.cevec[i], self.csrc) / self.fev[i]
+                    for i in range(len(self.cevec))
+                ],
+                dtype=np.complex128,
+            )
+            grid.globalsum(rip)
+
+            g.linear_combination(self.cdst, self.cevec, rip)
             t2 = g.time()
             g.block.promote(self.cdst, dst, self.basis)
             t3 = g.time()

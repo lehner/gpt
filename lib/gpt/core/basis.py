@@ -64,6 +64,7 @@ def orthogonalize(w, basis, ips=None, nblock=4):
 
 def linear_combination(r, basis, Qt):
     assert len(basis[0].v_obj) == len(r.v_obj)
+    Qt = numpy.array(Qt, dtype=numpy.complex128)
     for i in r.otype.v_idx:
         cgpt.linear_combination(r.v_obj[i], basis, Qt, i)
 

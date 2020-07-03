@@ -53,7 +53,7 @@ static uint32_t cgpt_crc32(unsigned char* data, int64_t len, uint32_t start_crc 
   } else {
 
     // crc32 of zlib was incorrect for very large sizes, so do it block-wise
-    uint32_t crc = 0x0;
+    uint32_t crc = start_crc;
     off_t blk = 0;
     
     while (len > step) {
