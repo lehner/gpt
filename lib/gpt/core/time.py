@@ -17,9 +17,31 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import cgpt
+import gpt
 
 t0 = cgpt.time()
 
 
 def time():
     return cgpt.time() - t0
+
+
+class timer:
+    def __init__(self, names):
+        self.dt = {key: 0.0 for key in names}
+
+    def start(self, which):
+        self.dt[which] -= time()
+
+    def stop(self, which):
+        self.dt[which] += time()
+
+    def print(self, prefix):
+        for k, v in sorted(self.dt.items(), key=lambda x: x[1]):
+            if "total" in self.dt:
+                gpt.message(
+                    "Timing %s: %15s = %e s (= %6.2f %%)"
+                    % (prefix, k, v, v / self.dt["total"] * 100)
+                )
+            else:
+                gpt.message("Timing %s: %15s = %e s" % (prefix, k, v))
