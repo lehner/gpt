@@ -37,11 +37,20 @@ class timer:
         self.dt[which] += time()
 
     def print(self, prefix):
-        for k, v in sorted(self.dt.items(), key=lambda x: x[1]):
-            if "total" in self.dt:
-                gpt.message(
-                    "Timing %s: %15s = %e s (= %6.2f %%)"
-                    % (prefix, k, v, v / self.dt["total"] * 100)
-                )
-            else:
-                gpt.message("Timing %s: %15s = %e s" % (prefix, k, v))
+        to_print = (
+            self.dt.copy()
+        )  # don't want to have additions below in raw collected data
+
+        if "total" in to_print:
+            total = to_print["total"]
+            profiled = sum(to_print.values()) - total
+            to_print["unprofiled"] = total - profiled
+        else:
+            to_print["total"] = sum(to_print.values())
+            to_print["unprofiled"] = 0.0  # by construction
+
+        for k, v in sorted(to_print.items(), key=lambda x: x[1]):
+            gpt.message(
+                "Timing %s: %15s = %e s (= %6.2f %%)"
+                % (prefix, k, v, v / to_print["total"] * 100)
+            )
