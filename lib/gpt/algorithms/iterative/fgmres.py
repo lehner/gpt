@@ -76,19 +76,7 @@ class fgmres:
             checkres = True  # for now
 
             # timing
-            t = g.timer(
-                [
-                    "setup",
-                    "prec",
-                    "mat",
-                    "ortho",
-                    "linalg",
-                    "qr",
-                    "update_psi",
-                    "restart",
-                    "total",
-                ]
-            )
+            t = g.timer()
 
             # start clocks
             t.start("total")

@@ -55,18 +55,7 @@ class fgcr:
             checkres = True  # for now
 
             # timing
-            t = g.timer(
-                [
-                    "setup",
-                    "prec",
-                    "mat",
-                    "ortho",
-                    "linalg",
-                    "update_psi",
-                    "restart",
-                    "total",
-                ]
-            )
+            t = g.timer()
 
             # start clocks
             t.start("total")

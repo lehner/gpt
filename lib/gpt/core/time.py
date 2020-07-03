@@ -27,11 +27,14 @@ def time():
 
 
 class timer:
-    def __init__(self, names):
-        self.dt = {key: 0.0 for key in names}
+    def __init__(self):
+        self.dt = {}
 
     def start(self, which):
-        self.dt[which] -= time()
+        if which in self.dt:
+            self.dt[which] -= time()
+        else:
+            self.dt[which] = -time()
 
     def stop(self, which):
         self.dt[which] += time()
