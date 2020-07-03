@@ -131,10 +131,11 @@ class fgcr:
                             tt1 = g.time()
                             g.message("Converged in %g s" % (tt1 - tt0))
                             if checkres:
+                                comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
                                     "Computed res = %g, true res = %g, target = %g"
-                                    % (r2 ** 0.5, res ** 0.5, self.eps)
+                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
                         break
 
@@ -143,10 +144,11 @@ class fgcr:
                             tt1 = g.time()
                             g.message("Did NOT converge in %g s" % (tt1 - tt0))
                             if checkres:
+                                comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
                                     "Computed res = %g, true res = %g, target = %g"
-                                    % (r2 ** 0.5, res ** 0.5, self.eps)
+                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
 
                     if need_restart:
