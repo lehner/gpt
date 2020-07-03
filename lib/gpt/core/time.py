@@ -31,10 +31,9 @@ class timer:
         self.dt = {}
 
     def start(self, which):
-        if which in self.dt:
-            self.dt[which] -= time()
-        else:
-            self.dt[which] = -time()
+        if which not in self.dt:
+            self.dt[which] = 0.0
+        self.dt[which] -= time()
 
     def stop(self, which):
         self.dt[which] += time()
