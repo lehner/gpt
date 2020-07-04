@@ -32,17 +32,23 @@ class operator:
         # derived objects
         self.U_grid = U[0].grid
         self.U_grid_eo = gpt.grid(
-            self.U_grid.gdimensions, self.U_grid.precision, gpt.redblack
+            self.U_grid.gdimensions,
+            self.U_grid.precision,
+            gpt.redblack,
+            parent=self.U_grid.parent,
+            mpi=self.U_grid.mpi,
         )
         if Ls is None:
             self.F_grid = self.U_grid
             self.F_grid_eo = self.U_grid_eo
         else:
-            self.F_grid = gpt.grid(
-                [Ls] + self.U_grid.gdimensions, self.U_grid.precision
-            )
+            self.F_grid = self.U_grid.inserted_dimension(0, Ls)
             self.F_grid_eo = gpt.grid(
-                self.F_grid.gdimensions, self.U_grid.precision, gpt.redblack
+                self.F_grid.gdimensions,
+                self.U_grid.precision,
+                gpt.redblack,
+                parent=self.F_grid.parent,
+                mpi=self.F_grid.mpi,
             )
 
         # parameter for create_fermion_operator
