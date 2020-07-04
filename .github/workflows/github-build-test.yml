@@ -477,10 +477,10 @@ jobs:
       env:
         PYTHONPATH: /usr/local/lib/python3.8/site-packages:/usr/local/lib64/python3.8/site-packages
       run: |
-        cd gpt/doc
+        cd gpt/documentation
         make html
 
     - uses: actions/upload-artifact@v2
       with:
         name: documentation
-        path: gpt/docs
+        path: gpt/documentation/build
