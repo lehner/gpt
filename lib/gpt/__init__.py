@@ -25,6 +25,10 @@ import gpt.qcd
 import socket
 import cgpt, sys
 
+"""
+GPT -- Grit Python Toolkit
+"""
+
 # initialize cgpt when gpt is loaded
 cgpt.init(sys.argv)
 

@@ -59,6 +59,23 @@ def coeffs_order(orders):
 
 
 class chebyshev:
+    """Chebyshev Polynomials
+
+    Args:
+        params (dict): A dictionary containing the in input parameters to be saved as attributes.
+
+    Attributes:
+        params (dict): A copy of the argument dictionary.
+        hi (int): Something High
+        lo (int): Something Low
+        order (list of int): I have no idea what this is
+        morder (int): the maximum of order
+        n (int): The length of order
+        func (list of func): A list of functions for something
+        coeffs (list of int): list of coefficients for something
+
+    """
+
     @g.params_convention()
     def __init__(self, params):
         self.params = params
@@ -76,6 +93,16 @@ class chebyshev:
             self.coeffs = coeffs_order(self.order)
 
     def eval(self, x):
+        """Summary of eval
+
+        Some additonal explanation of the eval function
+
+        Args:
+            x (float): Input x
+
+        Returns:
+            Some return value which was a list
+        """
         y = (x - 0.5 * (self.hi + self.lo)) / (0.5 * (self.hi - self.lo))
         T0 = 1
         T1 = y
@@ -135,7 +162,6 @@ class chebyshev:
         if type(mat) == float or type(mat) == complex or type(mat) == int:
             return self.eval(mat)
         else:
-
             otype, grid, cb = None, None, None
             if type(mat) == g.matrix_operator:
                 otype, grid, cb = mat.otype, mat.grid, mat.cb

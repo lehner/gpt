@@ -259,7 +259,6 @@ jobs:
         echo ${{ hashFiles('gpt/bootstrap.sh') }} >> gpt_cache_key_file
         echo ${{ hashFiles('gpt/configure.ac') }} >> gpt_cache_key_file
         echo ${{ hashFiles('gpt/Makefile.am') }} >> gpt_cache_key_file
-
         echo "::set-output name=key::$(sha256sum gpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
     - name: Get python-gpt version
@@ -438,3 +437,50 @@ jobs:
         cd gpt/tests
         ./run "mpirun -np 1 python"
         ./run "mpirun -np 2 -bind-to core python" "--mpi 1.1.1.2 --mpi 1.1.2"
+
+
+  build-gpt-doc:
+    needs: [build-grid, build-gpt]
+    runs-on: ubuntu-18.04
+
+    steps:
+    - name: Install Ubuntu packages
+      run: |
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+
+    - name: Setup python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+        architecture: x64
+
+    - name: Setup python dependencies
+      run: |
+        pip install numpy sphinx ipython sphinxcontrib-napoleon
+
+    - name: Download prebuild python-gpt
+      uses: actions/download-artifact@v2
+      with:
+        name: python-gpt-${{ runner.os }}-python-3.8-gcc-none-${{ needs.build-gpt.outputs.python-gpt-version }}
+
+    - name: Install python-gpt
+      run: |
+        sudo dpkg -i python-gpt-${{ runner.os }}-python-3.8-gcc-none.deb
+
+    - name: Clone gpt
+      uses: actions/checkout@v2
+      with:
+        path: gpt
+
+    - name: Build documentation
+      id: build-documentation
+      env:
+        PYTHONPATH: /usr/local/lib/python3.8/site-packages:/usr/local/lib64/python3.8/site-packages
+      run: |
+        cd gpt/doc
+        make html
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: documentation
+        path: gpt/docs
