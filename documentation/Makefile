@@ -22,7 +22,7 @@ help:
 
 html: Makefile
 	@echo "Copy Figures"
-	@cp logo/logo.png source/_static/
+	@cp -p logo/logo.png source/_static/logo.png
 	@echo "Build HTML Documentation"
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 	@echo "Adjust HTML Paths"
