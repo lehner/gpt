@@ -23,6 +23,9 @@ import numpy
 import sys
 
 
+################################################################################
+# Merging / Separating along space-time coordinates
+################################################################################
 def merge(lattices, dimension=-1, N=-1):
 
     # if only one lattice is given, return immediately
@@ -173,3 +176,71 @@ def separate(lattices, dimension=-1):
 
     # return
     return separated_lattices
+
+
+################################################################################
+# Merging / Separating along internal indices
+################################################################################
+def separate_indices(x, st):
+    pos = gpt.coordinates(x)
+    cb = x.checkerboard()
+    assert st is not None
+    result_otype = st[-1]()
+    if result_otype is None:
+        return x
+    ndim = x.otype.shape[st[0]]
+    rank = len(st) - 1
+    islice = [slice(None, None, None) for i in range(len(x.otype.shape))]
+    ivec = [0] * rank
+    result = {}
+    for i in range(ndim ** rank):
+        idx = i
+        for j in range(rank):
+            c = idx % ndim
+            islice[st[j]] = c
+            ivec[j] = c
+            idx //= ndim
+        v = gpt.lattice(x.grid, result_otype)
+        v.checkerboard(cb)
+        v[pos] = x[(pos,) + tuple(islice)]
+        result[tuple(ivec)] = v
+    return result
+
+
+def separate_spin(x):
+    return separate_indices(x, x.otype.spintrace)
+
+
+def separate_color(x):
+    return separate_indices(x, x.otype.colortrace)
+
+
+def merge_indices(dst, src, st):
+    pos = gpt.coordinates(dst)
+    assert st is not None
+    result_otype = st[-1]()
+    if result_otype is None:
+        dst @= src
+        return
+    ndim = dst.otype.shape[st[0]]
+    rank = len(st) - 1
+    islice = [slice(None, None, None) for i in range(len(dst.otype.shape))]
+    ivec = [0] * rank
+    for i in range(ndim ** rank):
+        idx = i
+        for j in range(rank):
+            c = idx % ndim
+            islice[st[j]] = c
+            ivec[j] = c
+            idx //= ndim
+        dst[(pos,) + tuple(islice)] = src[tuple(ivec)][:]
+
+
+def merge_spin(dst, src):
+    merge_indices(dst, src, dst.otype.spintrace)
+    return dst
+
+
+def merge_color(dst, src):
+    merge_indices(dst, src, dst.otype.colortrace)
+    return dst

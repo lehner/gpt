@@ -47,7 +47,7 @@ do
 	(
 	    echo " [CXX] $bn"
 	    start=$SECONDS
-	    ${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> logs/${bn}.out 2> logs/${bn}.err
+	    /usr/bin/time -v ${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> logs/${bn}.out 2> logs/${bn}.err
 	    success=$?
 	    elapsed=$((SECONDS-start))
 	    if [[ "$success" == "0" ]];

@@ -20,6 +20,7 @@
 #       in contrast to current Grid
 #
 import gpt as g
+import numpy as np
 
 
 class deflate:
@@ -39,9 +40,16 @@ class deflate:
             verbose = g.default.is_verbose("deflate")
             # |dst> = sum_n 1/ev[n] |n><n|src>
             t0 = g.time()
-            dst[:] = 0
-            for i, n in enumerate(self.evec):
-                dst += n * g.innerProduct(n, src) / self.ev[i]
+            grid = src.grid
+            rip = np.array(
+                [
+                    g.rankInnerProduct(self.evec[i], src) / self.ev[i]
+                    for i in range(len(self.evec))
+                ],
+                dtype=np.complex128,
+            )
+            grid.globalsum(rip)
+            g.linear_combination(dst, self.evec, rip)
             t1 = g.time()
             if verbose:
                 g.message("Deflated in %g s" % (t1 - t0))

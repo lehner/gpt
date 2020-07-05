@@ -13,6 +13,43 @@ grid = g.grid(vol, g.single)
 field = g.vcolor
 
 ################################################################################
+# Spin/Color separation
+################################################################################
+msc = g.mspincolor(grid_rb)
+rng.cnormal(msc)
+
+xs = g.separate_spin(msc)
+xc = g.separate_color(msc)
+
+for s1 in range(4):
+    for s2 in range(4):
+        eps = np.linalg.norm(
+            msc[0, 0, 0, 0].array[s1, s2, :, :] - xs[s1, s2][0, 0, 0, 0].array
+        )
+        assert eps < 1e-13
+
+for c1 in range(3):
+    for c2 in range(3):
+        eps = np.linalg.norm(
+            msc[0, 0, 0, 0].array[:, :, c1, c2] - xc[c1, c2][0, 0, 0, 0].array
+        )
+        assert eps < 1e-13
+
+
+msc2 = g.lattice(msc)
+
+g.merge_spin(msc2, xs)
+assert g.norm2(msc2 - msc) < 1e-13
+
+g.merge_color(msc2, xc)
+assert g.norm2(msc2 - msc) < 1e-13
+
+assert (
+    g.norm2(g.separate_color(xs[1, 2])[2, 0] - g.separate_spin(xc[2, 0])[1, 2]) < 1e-13
+)
+
+
+################################################################################
 # Setup lattices
 ################################################################################
 l_rb = [field(grid_rb) for i in range(8)]

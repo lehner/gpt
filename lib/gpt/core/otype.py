@@ -57,7 +57,7 @@ class ot_base:
     v_n1 = [1]
     v_idx = [0]
     transposed = None
-    spintrace = None  # not supported
+    spintrace = None
     colortrace = None
     data_alias = None  # ot can be cast as fundamental type data_alias (such as SU(3) -> 3x3 matrix)
     mtab = {}  # x's multiplication table for x * y
@@ -110,6 +110,8 @@ class ot_vector_color(ot_base):
         self.nfloats = 2 * ndim
         self.shape = (ndim,)
         self.v_otype = ["ot_vcolor%d" % ndim]
+        self.spintrace = (None, None)
+        self.colortrace = (0, lambda: ot_singlet)
         self.mtab = {
             "ot_singlet": (lambda: self, None),
         }
@@ -159,6 +161,56 @@ def matrix_su3_fundamental(grid):
     return gpt_object(grid, ot_matrix_su3_fundamental())
 
 
+class ot_matrix_su2_fundamental(ot_matrix_color):
+    def __init__(self):
+        self.Nc = 2
+        super().__init__(2)  # need 2 dim matrices
+        self.__name__ = "ot_matrix_su2_fundamental()"
+        self.data_alias = lambda: ot_matrix_color(2)
+        self.mtab = {
+            self.__name__: (lambda: self, (1, 0)),
+            "ot_vector_color(2)": (lambda: ot_vector_color(2), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+
+    def generators(self, dt):
+        # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
+        return [
+            numpy.array([[0, 1], [1, 0]], dtype=dt) / 2.0,
+            numpy.array([[0, -1j], [1j, 0]], dtype=dt) / 2.0,
+            numpy.array([[1, 0], [0, -1]], dtype=dt) / 2.0,
+        ]
+
+
+def matrix_su2_fundamental(grid):
+    return gpt_object(grid, ot_matrix_su2_fundamental())
+
+
+class ot_matrix_su2_adjoint(ot_matrix_color):
+    def __init__(self):
+        self.Nc = 2
+        super().__init__(3)  # need 3 dim matrices
+        self.__name__ = "ot_matrix_su2_adjoint()"
+        self.data_alias = lambda: ot_matrix_color(3)
+        self.mtab = {
+            self.__name__: (lambda: self, (1, 0)),
+            "ot_vector_color(3)": (lambda: ot_vector_color(3), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+
+    def generators(self, dt):
+        # (T_i)_{kj} = c^k_{ij} with c^k_{ij} = i \epsilon_{ijk}
+        return [
+            numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt),
+            numpy.array([[0, 0, 1j], [0, 0, 0], [-1j, 0, 0]], dtype=dt),
+            numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt),
+        ]
+
+
+def matrix_su2_adjoint(grid):
+    return gpt_object(grid, ot_matrix_su2_adjoint())
+
+
 ###
 # Matrices and vectors of spin
 class ot_matrix_spin(ot_base):
@@ -187,6 +239,8 @@ class ot_vector_spin(ot_base):
         self.nfloats = 2 * ndim
         self.shape = (ndim,)
         self.v_otype = ["ot_vspin%d" % ndim]
+        self.spintrace = (0, lambda: ot_singlet)
+        self.colortrace = (None, None)
         self.mtab = {
             "ot_singlet": (lambda: self, None),
         }
@@ -241,6 +295,8 @@ class ot_vector_spin_color(ot_base):
         self.shape = (spin_ndim, color_ndim)
         self.v_otype = ["ot_vspin%dcolor%d" % (spin_ndim, color_ndim)]
         self.ot_matrix = "ot_matrix_spin_color(%d,%d)" % (spin_ndim, color_ndim)
+        self.spintrace = (0, lambda: ot_vector_color(color_ndim))
+        self.colortrace = (1, lambda: ot_vector_spin(spin_ndim))
         self.otab = {
             self.__name__: (
                 lambda: ot_matrix_spin_color(spin_ndim, color_ndim),
@@ -409,6 +465,8 @@ def str_to_otype(s):
             "ot_matrix_spin_color",
             "ot_vector_spin_color",
             "ot_matrix_su3_fundamental",
+            "ot_matrix_su2_fundamental",
+            "ot_matrix_su2_adjoint",
             "ot_vsinglet10",
             "ot_vsinglet20",
             "ot_vsinglet40",

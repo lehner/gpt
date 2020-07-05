@@ -26,7 +26,7 @@ void cgpt_basis_rotate(VLattice &basis,RealD* Qt,int j0, int j1, int k0,int k1,i
 #ifdef _GRID_FUTURE_
 
 template<class Field,class VLattice>
-void cgpt_linear_combination(Field &result,VLattice &basis,RealD* Qt) {
+void cgpt_linear_combination(Field &result,VLattice &basis,ComplexD* Qt) {
   typedef typename Field::vector_object vobj;
   GridBase* grid = basis[0].Grid();
 
@@ -51,8 +51,8 @@ void cgpt_linear_combination(Field &result,VLattice &basis,RealD* Qt) {
       result_v[ss] = B;
     });
 #else
-  Vector<double> Qt_jv(N);
-  double * Qt_j = & Qt_jv[0];
+  Vector<ComplexD> Qt_jv(N);
+  ComplexD * Qt_j = & Qt_jv[0];
   for(int k=0;k<N;++k) Qt_j[k]=Qt[k];
   accelerator_for(ss, grid->oSites(),vobj::Nsimd(),{
       decltype(coalescedRead(basis_v[0][ss])) B;
@@ -70,7 +70,7 @@ void cgpt_linear_combination(Field &result,VLattice &basis,RealD* Qt) {
 #else
 
 template<class Field,class VLattice>
-  void cgpt_linear_combination(Field &result,VLattice &basis,RealD* Qt) {
+  void cgpt_linear_combination(Field &result,VLattice &basis,ComplexD* Qt) {
   typedef typename Field::vector_object vobj;
   GridBase* grid = basis[0].Grid();
 
@@ -95,8 +95,8 @@ template<class Field,class VLattice>
   for(int k=0;k<N;k++){
     basis_v[k] = basis[k].AcceleratorView(ViewRead);
   }
-  Vector<double> Qt_jv(N);
-  double * Qt_j = & Qt_jv[0];
+  Vector<ComplexD> Qt_jv(N);
+  ComplexD * Qt_j = & Qt_jv[0];
   for(int k=0;k<N;++k) Qt_j[k]=Qt[k];
   accelerator_for(ss, grid->oSites(),vobj::Nsimd(),{
       decltype(coalescedRead(basis_v[0][ss])) B;

@@ -67,7 +67,7 @@ def grid_from_description(description):
     return grid(fdimensions, precision, cb, obj)
 
 
-def grid_get_mpi(fdimensions, cb):
+def grid_get_mpi_default(fdimensions, cb):
     nd = len(fdimensions)
     tag = "--mpi"
 
@@ -106,7 +106,9 @@ class grid:
 
         self.cb = cb
         if mpi is None:
-            self.mpi = grid_get_mpi(self.fdimensions, self.cb)
+            # if we live on a split grid, cannot use default mpi layout
+            assert parent is None
+            self.mpi = grid_get_mpi_default(self.fdimensions, self.cb)
         else:
             self.mpi = mpi
 
@@ -180,15 +182,17 @@ class grid:
 
         if self.parent is None:
             parent = None
+            mpi = None
         else:
             parent = self.parent.inserted_dimension(dimension, extent)
+            mpi = self.mpi[0:dimension] + [1] + self.mpi[dimension:]
 
         return grid(
             self.fdimensions[0:dimension] + [extent] + self.fdimensions[dimension:],
             self.precision,
             cb=cb,
             obj=None,
-            mpi=None,
+            mpi=mpi,
             parent=parent,
         )
 
@@ -221,7 +225,10 @@ class grid:
         return rank
 
     def __str__(self):
-        return f"Grid {self.gdimensions}; MPI = {self.mpi}; Precision = {self.precision.__name__}; CheckBoard = {self.cb.__name__}"
+        s = f"fdimensions = {self.fdimensions}; mpi = {self.mpi}; precision = {self.precision.__name__}; checkerboard = {self.cb.__name__}"
+        if self.parent is not None:
+            s += " split from " + self.parent.__str__()
+        return s
 
     def __del__(self):
         cgpt.delete_grid(self.obj)
