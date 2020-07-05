@@ -64,13 +64,14 @@ class sap_blk:
         # extended block coor system
         extended_bs = bs[:-1]+[bs[-1]*int(self.nb/2)]
         # block grid local to the node
-        self.grid = gpt.grid(extended_bs,grid.precision,mpi=[1]*Nd)
+        self.grid = grid.split([1]*Nd, extended_bs)
         
         self.bv = int(numpy.prod(self.bs))
         assert self.grid.gsites*2 == (self.bv*self.nb)
         if (self.bv<4):
             raise SapError('Block volume should be bigger than 4')
-            
+        gpt.message(f'Initialized block with grid {self.grid}')
+        
     def coor(self,grid,tag=None):
         coor = numpy.zeros((self.grid.gsites,self.grid.nd),dtype=numpy.int32)
         
@@ -122,10 +123,14 @@ class sap:
         
         for eo in range(2):
             Ucoor = Ublk[eo].coor(op.U_grid)
+            gpt.message('ehre')
             for mu in range(4):
                 U[mu][:] = op.U[mu][Ucoor]
+            gpt.message('ehre')
             Ublk[eo].set_BC_Ufld(U)
+            gpt.message('ehre')
             self.op_blk.append( op.updated(U) )
+            gpt.message('ehre')
        
         if self.op.F_grid.nd == len(bs)+1:
             _bs = [1] + bs
