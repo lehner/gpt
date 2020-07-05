@@ -55,30 +55,42 @@ class sap_blk:
         if numpy.any(self.bs>grid.ldimensions):
             raise SapError('Block size should not exceed local lattice')
         
+        # block dimensions global
         self.bd = numpy.floor_divide(grid.fdimensions,self.bs)
+        # block dimensions local
+        self.bdl = numpy.floor_divide(grid.ldimensions,self.bs)
+        
         # number of blocks per node
         self.nb = int(numpy.prod(self.bd)) // grid.Nprocessors
         if (self.nb<2) or ((self.nb % 2)!=0):
             raise SapError(f'Sap Blocks should define an even/odd grid')
               
-        # extended block coor system
-        extended_bs = bs[:-1]+[bs[-1]*int(self.nb/2)]
+        # extended block sizes
+        self.ebs = [1]*Nd
+        for mu in reversed(range(Nd)):
+            if self.bd[mu]>1:
+                self.ebs[mu] = int(self.nb/2)
+                break
+        ebs = [bs[mu]*self.ebs[mu] for mu in range(Nd)]
+        
         # block grid local to the node
-        self.grid = grid.split([1]*Nd, extended_bs)
+        self.grid = grid.split([1]*Nd, ebs)
         
         self.bv = int(numpy.prod(self.bs))
         assert self.grid.gsites*2 == (self.bv*self.nb)
         if (self.bv<4):
             raise SapError('Block volume should be bigger than 4')
-        gpt.message(f'Initialized block with grid {self.grid}')
+        self.pos()
+        gpt.message(f'SAP Initialized {"even" if self.eo==0 else "odd"} blocks with grid {self.grid.fdimensions} from local lattice {grid.ldimensions}')
         
     def coor(self,grid,tag=None):
         coor = numpy.zeros((self.grid.gsites,self.grid.nd),dtype=numpy.int32)
         
         n=0
+        # global offset of the local lattice
         ofs = [grid.processor_coor[mu]*grid.ldimensions[mu] for mu in range(grid.nd)]
         for ib in range(self.nb):
-            bc=index2coor(ib,self.bd)
+            bc=index2coor(ib,self.bdl)
             _eo=int(numpy.sum(bc) % 2)
             
             if _eo==self.eo:
@@ -92,7 +104,23 @@ class sap_blk:
                 coor[sl,:] = pos
         assert n*2 == self.nb
         return coor
-        
+    
+    def pos(self,tag=None):
+        self.pos = numpy.zeros((self.grid.gsites,self.grid.nd),dtype=numpy.int32)
+        Nd=len(self.bs)
+        ofs=[0]*Nd
+        for mu in range(Nd):
+            if self.ebs[mu]>1:
+                ofs[mu] = 1
+        for n in range(self.nb//2):
+            sl=slice(n*self.bv,(n+1)*self.bv)
+            top = [ofs[mu]*n*self.bs[mu] for mu in range(Nd)]
+            bottom = [top[mu] + self.bs[mu] for mu in range(Nd)]
+            _pos = cgpt.coordinates_from_cartesian_view(top, bottom, self.grid.cb.cb_mask, tag, 'lexicographic')
+                        
+            self.pos[sl,:] = _pos
+            
+                
     def set_BC_Ufld(self, U):
         if self.grid.nd==4:
             self.setBC_4D(U)
@@ -101,13 +129,16 @@ class sap_blk:
     
     def setBC_4D(self, U):
         if self.bd[0]>1:
-            U[0][self.bs[0]-1,:,:,:] = 0
+            for i in range(1,self.ebs[0]+1):
+                U[0][i*self.bs[0]-1,:,:,:] = 0
         if self.bd[1]>1:
-            U[1][:,self.bs[1]-1,:,:] = 0
+            for i in range(1,self.ebs[1]+1):
+                U[1][:,i*self.bs[1]-1,:,:] = 0
         if self.bd[2]>1:
-            U[2][:,:,self.bs[2]-1,:] = 0
+            for i in range(1,self.ebs[2]+1):
+                U[2][:,:,i*self.bs[2]-1,:] = 0
         if self.bd[3]>1:
-            for i in range(1,self.nb//2+1):
+            for i in range(1,self.ebs[3]+1):
                 U[3][:,:,:,i*self.bs[3]-1] = 0
                 
 
@@ -123,22 +154,18 @@ class sap:
         
         for eo in range(2):
             Ucoor = Ublk[eo].coor(op.U_grid)
-            gpt.message('ehre')
             for mu in range(4):
-                U[mu][:] = op.U[mu][Ucoor]
-            gpt.message('ehre')
+                U[mu][Ublk[eo].pos] = op.U[mu][Ucoor]
             Ublk[eo].set_BC_Ufld(U)
-            gpt.message('ehre')
             self.op_blk.append( op.updated(U) )
-            gpt.message('ehre')
        
         if self.op.F_grid.nd == len(bs)+1:
-            _bs = [1] + bs
+            _bs = [self.op.F_grid.fdimensions[0]] + bs
         else:
             _bs = bs
             
         blk = [sap_blk(self.op.F_grid, _bs, eo) for eo in range(2)]
-        self.pos = gpt.coordinates(self.op_blk[0].F_grid)
+        self.pos = blk[0].pos
         self.coor = [blk[eo].coor(op.F_grid) for eo in range(2)]
         
         dt+=gpt.time()
