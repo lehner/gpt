@@ -2,6 +2,8 @@
 - FFT (will be needed for fast PV below)
 - Singlet * vsinglet
 - vsinglet * vsinglet(tensor)
+- On MG branch: t=timer(); t("block1"); block1; t("block2"); block2; t(); g.message(t); <-- use timer __str__ and __call__
+- On MG branch: operator_matrix using *extra can be streamlined wrt if/else statements
 - Grid-production-code/zmobius_2pt_hvp_con_gstore/Fourier... <-- First TM, then 5d TM, then  FA
 - mcomplex * vcomplex in expression template
 - test applications on summit with new version + new Grid
