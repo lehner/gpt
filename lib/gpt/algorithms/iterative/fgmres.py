@@ -28,6 +28,7 @@ class fgmres:
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
+        self.prec = params["prec"] if "prec" in params else None
         self.history = None
 
     def qr_update(self, s, c, H, gamma, i):
@@ -68,7 +69,7 @@ class fgmres:
         mat(mmpsi, psi)
         return g.axpy_norm2(r, -1.0, mmpsi, src)
 
-    def __call__(self, mat, prec=None):
+    def __call__(self, mat):
         def inv(psi, src):
             self.history = []
             # verbosity
@@ -99,7 +100,7 @@ class fgmres:
                 g.copy(src),
             )
             V = [g.lattice(src) for i in range(rlen + 1)]
-            if prec is not None:  # save vectors if unpreconditioned
+            if self.prec is not None:  # save vectors if unpreconditioned
                 Z = [g.lattice(src) for i in range(rlen + 1)]
 
             # residual
@@ -120,12 +121,12 @@ class fgmres:
                 need_restart = i + 1 == rlen
 
                 t.start("prec")
-                if prec is not None:
-                    prec(Z[i], V[i])
+                if self.prec is not None:
+                    self.prec(Z[i], V[i])
                 t.stop("prec")
 
                 t.start("mat")
-                if prec is not None:
+                if self.prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
@@ -156,7 +157,7 @@ class fgmres:
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     t.start("update_psi")
-                    if prec is not None:
+                    if self.prec is not None:
                         self.update_psi(psi, gamma, H, y, Z, i)
                     else:
                         self.update_psi(psi, gamma, H, y, V, i)

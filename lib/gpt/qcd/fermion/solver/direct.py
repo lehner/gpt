@@ -20,9 +20,9 @@
 import gpt
 
 
-def inv_direct(matrix, inverter, prec=None):
+def inv_direct(matrix, inverter):
     def inv(dst_sc, src_sc):
-        dst_sc @= inverter(matrix.M, prec) * src_sc
+        dst_sc @= inverter(matrix.M) * src_sc
 
     m = gpt.matrix_operator(
         mat=inv, inv_mat=matrix, otype=matrix.otype, grid=matrix.F_grid

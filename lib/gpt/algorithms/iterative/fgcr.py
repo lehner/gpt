@@ -28,6 +28,7 @@ class fgcr:
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
+        self.prec = params["prec"] if "prec" in params else None
         self.history = None
 
     def update_psi(self, psi, alpha, beta, gamma, delta, p, i):
@@ -47,7 +48,7 @@ class fgcr:
         mat(mmpsi, psi)
         return g.axpy_norm2(r, -1.0, mmpsi, src)
 
-    def __call__(self, mat, prec=None):
+    def __call__(self, mat):
         def inv(psi, src):
             self.history = []
             # verbosity
@@ -94,8 +95,8 @@ class fgcr:
                 need_restart = i + 1 == rlen
 
                 t.start("prec")
-                if prec is not None:
-                    prec(p[i], r)
+                if self.prec is not None:
+                    self.prec(p[i], r)
                 else:
                     p[i] @= r
                 t.stop("prec")
