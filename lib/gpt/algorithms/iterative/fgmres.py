@@ -204,5 +204,5 @@ class fgmres:
             grid = mat.grid
 
         return g.matrix_operator(
-            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid
+            mat=inv, inv_mat=mat, otype=otype, zero=(False, False), grid=grid
         )

@@ -26,3 +26,4 @@ from gpt.algorithms.iterative.power_iteration import power_iteration
 from gpt.algorithms.iterative.defect_correcting_inverter import (
     defect_correcting_inverter,
 )
+from gpt.algorithms.iterative.mg import mg
