@@ -22,199 +22,299 @@ import numpy as np
 import sys
 
 
-class simple:
-    def __init__(self):
-        self.t_setup = g.timer()
-        self.t_solve = g.timer()
+def make_param_list(a, c):
+    if type(a) == list:
+        return a
+    return [a] * c
 
-    def __call__(self, matrix=None):
-        otype, grid, cb = None, None, None
-        if type(matrix) == g.matrix_operator:
-            otype, grid, cb = matrix.otype, matrix.grid, matrix.cb
-            matrix = matrix.mat
 
-        def inv(psi, src):
-            self.t_solve.start("total")
-            assert src != psi
-            psi @= src
-            self.t_solve.stop("total")
-
-        return g.matrix_operator(mat=inv, inv_mat=matrix, otype=otype, grid=grid, cb=cb)
+def assert_correct_length(a, c):
+    if type(a) == list:
+        for elem in a:
+            assert len(elem) == c
 
 
 class mg:
     def __init__(self, mat_f, params):
+        # save parameters
         self.params = params
-        self.levels = params["levels"]
-        self.grid_f = params["grid_f"]
-        self.grid_c = params["grid_c"]
-        self.northo = params["northo"]
-        self.nbasis = params["nbasis"]
-        self.hermitian = params["hermitian"]
+        self.grid = params["grid"]
+        self.nlevel = len(params["grid"])
+        self.ncoarselevel = self.nlevel - 1
+        self.finest = 0
+        self.coarsest = self.nlevel - 1
+        self.northo = make_param_list(params["northo"], self.nlevel - 1)
+        self.nbasis = make_param_list(params["nbasis"], self.nlevel - 1)
+        self.hermitian = make_param_list(params["hermitian"], self.nlevel - 1)
+        self.vecstype = make_param_list(params["vecstype"], self.nlevel - 1)
+        self.presmooth = make_param_list(params["presmooth"], self.nlevel - 1)
+        self.postsmooth = make_param_list(params["postsmooth"], self.nlevel - 1)
+        self.setupsolve = make_param_list(params["setupsolve"], self.nlevel - 1)
+        self.coarsestsolve = params["coarsestsolve"]
 
-        self.level = 0
+        # easy access to current level and neighbors
+        self.lvl = [i for i in range(self.nlevel)]
+        self.nf_lvl = [i - 1 for i in range(self.nlevel)]
+        self.nc_lvl = [i + 1 for i in range(self.nlevel)]
+        self.nf_lvl[self.finest] = None
+        self.nc_lvl[self.coarsest] = None
 
-        assert self.level == 0
-        assert self.nbasis % 2 == 0
-        self.t_setup = g.timer()
-        self.t_solve = g.timer()
+        # halved nbasis
+        self.nb = []
+        for lvl, b in enumerate(self.nbasis):
+            assert b % 2 == 0
+            self.nb.append(b // 2)
 
-        self.nb = self.nbasis // 2
+        # assertions
+        assert_correct_length(
+            [
+                self.northo,
+                self.nbasis,
+                self.hermitian,
+                self.vecstype,
+                self.presmooth,
+                self.postsmooth,
+                self.setupsolve,
+                self.nb,
+            ],
+            self.nlevel - 1,
+        )
+        assert type(self.coarsestsolve) != list
 
         # timing
-        self.t_setup.start("misc")
+        self.t_setup = [g.timer() for __ in range(self.nlevel)]
+        self.t_solve = [g.timer() for __ in range(self.nlevel)]
 
-        # store fine matrix
-        self.mat_f = mat_f
-
-        # abbreviations
-        s = g.qcd.fermion.solver
-        a = g.algorithms.iterative
-
-        # fine algorithms / solvers
-        slv_alg_c = a.fgcr({"eps": 1e-1, "maxiter": 100, "restartlen": 20})
-        presmth_alg_f = a.fgmres({"eps": 1e-2, "maxiter": 16, "restartlen": 16})
-        # postsmth_alg_f = a.fgmres({"eps": 1e-1, "maxiter": 16, "restartlen": 4})
-        postsmth_alg_f = a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1})
-        setup_alg_f = a.fgmres({"eps": 1e-1, "maxiter": 16, "restartlen": 16})
-        self.slv_presmth_f = s.propagator(s.inv_direct(self.mat_f, presmth_alg_f))
-        self.slv_postsmth_f = s.propagator(s.inv_direct(self.mat_f, postsmth_alg_f))
-        self.slv_setup_f = s.propagator(s.inv_direct(self.mat_f, setup_alg_f))
-        self.t_setup.stop("misc")
-
-        # trying around with setup solver
-        eo2_odd = g.qcd.fermion.preconditioner.eo2(self.mat_f, parity=g.odd)
-        setup_alg_f = a.cg({"eps": 1e-5, "maxiter": 100})
-        self.slv_setup_f = s.propagator(s.inv_eo_ne(eo2_odd, setup_alg_f))
-
-        # create basis / intergrid operator
-        g.message("Starting creation of null-space vectors")
-        self.t_setup.start("setup_vecs")
-        if self.level == 0:
-            self.basis = [g.vspincolor(self.grid_f) for __ in range(self.nbasis)]
+        # rng
         self.rng = g.random("multigrid")
+
+        # temporary vectors for solve
+        self.r, self.e = [None] * self.nlevel, [None] * self.nlevel
+        for lvl in range(self.finest + 1, self.nlevel):
+            nf_lvl = self.nf_lvl[lvl]
+            self.r[lvl] = g.vcomplex(self.grid[lvl], self.nbasis[nf_lvl])
+            self.e[lvl] = g.vcomplex(self.grid[lvl], self.nbasis[nf_lvl])
+        self.r[self.finest] = g.vspincolor(self.grid[self.finest])
+
+        # matrices (coarse ones initialized later)
+        self.mat = [mat_f] + [None] * (self.nlevel - 1)
+
+        # setup basis vectors on all levels but coarsest
+        self.basis = [None] * self.nlevel
+        for lvl, grid in enumerate(self.grid):
+            if lvl == self.coarsest:
+                continue
+            elif lvl == self.finest:
+                self.basis[lvl] = [g.vspincolor(grid) for __ in range(self.nbasis[lvl])]
+            else:
+                self.basis[lvl] = [
+                    g.vcomplex(grid, self.nbasis[self.nf_lvl[lvl]])
+                    for __ in range(self.nbasis[lvl])
+                ]
         self.rng.cnormal(self.basis)
-        self.t_setup.stop("setup_vecs")
 
-        # create near null vectors
-        self.t_setup.start("find_null_space")
-        src, psi = g.copy(self.basis[0]), g.copy(self.basis[0])
-        for i, v in enumerate(self.basis[0 : self.nb]):
-            psi[:] = 0
-            src @= v
-            self.slv_setup_f(psi, src)
-            v @= psi
-        # g.orthonormalize(self.basis)
-        self.t_setup.stop("find_null_space")
-        g.message("Done creating null-space vectors")
+        # setup coarse link fields on all levels but finest
+        self.A = [None] * self.nlevel
+        for lvl in range(self.finest + 1, self.nlevel):
+            self.A[lvl] = [
+                g.mcomplex(self.grid[lvl], self.nbasis[lvl - 1]) for __ in range(9)
+            ]
 
-        self.t_setup.start("ortho_vecs")
-        g.split_chiral(self.basis)
-        for i in range(self.northo):
-            g.message("Block ortho step %d" % i)
-            g.block.orthonormalize(self.grid_c, self.basis)
-        self.t_setup.stop("ortho_vecs")
+        # rest of setup (call that externally?)
+        self.resetup()
 
-        # create coarse links + operator
-        self.t_setup.start("create_coarse")
-        self.A = [g.mcomplex(self.grid_c, self.nbasis) for __ in range(9)]
-        g.coarse.create_links(self.A, mat_f, self.basis)
-        self.mat_c = g.qcd.fermion.coarse(
-            self.A, {"hermitian": self.hermitian, "level": self.level}
-        )
-        self.t_setup.stop("create_coarse")
-        g.message("Done setting up")
+    def resetup(self):
+        for lvl in self.lvl:
+            # aliases
+            t = self.t_setup[lvl]
 
-        # mg operators
-        self.slv_c = s.propagator(s.inv_direct(self.mat_c, slv_alg_c))
-        self.f2c = g.block.project
-        self.c2f = g.block.promote
+            # start clocks
+            t.start("total")
+            t.start("misc")
 
-        self.t_setup.print("mg_setup")
+            # abbreviations
+            s = g.qcd.fermion.solver
+            a = g.algorithms.iterative
+
+            # neighbors
+            nc_lvl = self.nc_lvl[lvl]
+            nf_lvl = self.nf_lvl[lvl]
+
+            t.stop("misc")
+
+            # create coarse links + operator (all but finest)
+            if lvl != self.finest:
+                t.start("create_operator")
+                g.coarse.create_links(self.A[lvl], self.mat[nf_lvl], self.basis[nf_lvl])
+                self.mat[lvl] = g.qcd.fermion.coarse(
+                    self.A[lvl], {"hermitian": self.hermitian[nf_lvl], "level": lvl},
+                )
+                t.stop("create_operator")
+                g.message("Done with operator setup on level %d" % lvl)
+
+            if lvl != self.coarsest:
+                t.start("misc")
+
+                # aliases
+                basis = self.basis[lvl]
+                nb = self.nb[lvl]
+                vecstype = self.vecstype[lvl]
+
+                # setup solver
+                slv_setup = s.propagator(
+                    s.inv_direct(self.mat[lvl], self.setupsolve[lvl])
+                )
+
+                # TODO
+                # g.unsplit_chiral(basis)
+
+                t.stop("misc")
+
+                # find near-null vectors
+                t.start("find_null_vecs")
+                src, psi = g.copy(basis[0]), g.copy(basis[0])
+                for i, v in enumerate(basis[0:nb]):
+                    if vecstype == "test":
+                        psi[:] = 0.0
+                        src @= v
+                    elif vecstype == "null":
+                        src[:] = 0.0
+                        psi @= v
+                    else:
+                        assert 0
+                    slv_setup(psi, src)
+                    v @= psi
+                t.stop("find_null_vecs")
+                g.message("Done finding null-space vectors on level %d" % lvl)
+
+                # chiral doubling
+                t.start("chiral_split")
+                g.split_chiral(basis)
+                t.stop("chiral_split")
+                g.message("Done doing chiral doubling on level %d" % lvl)
+
+                # block orthogonalization
+                t.start("block_ortho")
+                for i in range(self.northo[lvl]):
+                    g.message("Block ortho step %d on level %d" % (i, lvl))
+                    g.block.orthonormalize(self.grid[nc_lvl], basis)
+                t.stop("block_ortho")
+                g.message("Done block-orthonormalizing on level %d" % lvl)
+
+            t.stop("total")
+
+            g.message("Done with entire setup on level %d" % lvl)
 
     def __call__(self, matrix=None):
         # ignore matrix
+        mat = self.mat[self.finest]
         otype, grid, cb = None, None, None
-        if type(self.mat_f) == g.matrix_operator:
-            otype, grid, cb = self.mat_f.otype, self.mat_f.grid, self.mat_f.cb
-            self.mat_f = self.mat_f.mat
-
-        # def inv(psi, src):
-        #     assert src != psi
-        #     psi @= src
-
-        def inv(psi, src):
-            self.t_solve.start("misc")
-
-            src2 = g.norm2(src)
-
-            g.message("mg.vcycle, input: norm2(psi) = %g" % (g.norm2(psi)))
-
-            assert src != psi
-            r = g.copy(src)
-            r_c, e_c = (
-                g.vcomplex(self.grid_c, self.nbasis),
-                g.vcomplex(self.grid_c, self.nbasis),
+        if type(mat) == g.matrix_operator:
+            otype, grid, cb = (
+                mat.otype,
+                mat.grid,
+                mat.cb,
             )
-            e_c[:] = 0
-            uiae = g.copy(src)
-            self.t_solve.stop("misc")
+            mat = mat.mat
 
-            # optional pre-smoothing
-            self.t_solve.start("presmoooth")
-            if False:
-                tmp, mmtmp = gpt.lattice(src), gpt.lattice(src)
-                tmp[:] = 0
-                self.pre_smth_f(tmp, src)
-                self.mat_f.M(mmtmp, tmp)
-                r @= src - mmtmp
+        def invert(psi, src):
+            inv_lvl(psi, src, self.finest)
+
+        def inv_lvl(psi, src, lvl):
+            # aliases
+            t = self.t_solve[lvl]
+
+            # start clock
+            t.start("total")
+
+            # assertions
+            assert psi != src
+
+            g.message(
+                "Starting inversion routine on level %d: psi = %g, src = %g"
+                % (lvl, g.norm2(psi), g.norm2(src))
+            )
+
+            # abbreviations
+            s = g.qcd.fermion.solver
+            f2c = g.block.project
+            c2f = g.block.promote
+
+            # neighbors
+            nc_lvl = self.nc_lvl[lvl]
+            nf_lvl = self.nf_lvl[lvl]
+
+            if lvl == self.coarsest:
+                t.start("invert")
+                # TODO enable eo (requires work in Grid)
+                slv_coarsest = s.propagator(
+                    s.inv_direct(self.mat[lvl], self.coarsestsolve)
+                )
+                slv_coarsest(psi, src)
+                t.stop("invert")
             else:
-                r @= src
-            self.t_solve.stop("presmoooth")
+                # aliases
+                mat = self.mat[lvl]
+                basis = self.basis[lvl]
+                presmooth = self.presmooth[lvl]
+                postsmooth = self.postsmooth[lvl]
+                r = self.r[lvl]
+                t = self.t_solve[lvl]
 
-            # fine to coarse
-            self.t_solve.start("fine2coarse")
-            self.f2c(r_c, r, self.basis)
-            self.t_solve.stop("fine2coarse")
+                # run optional pre-smoother
+                t.start("presmooth")
+                # TODO enable eo (requires work in Grid)
+                # TODO check algorithm regarding presmoothing
+                if False:
+                    tmp, mmtmp = g.lattice(src), g.lattice(src)
+                    tmp[:] = 0
+                    slv_presmooth = s.propagator(s.inv_direct(mat, presmooth))
+                    slv_presmooth(tmp, src)
+                    mat.M(mmtmp, tmp)
+                    r @= src - mmtmp
+                else:
+                    r @= src
+                t.stop("presmooth")
 
-            # coarse solve
-            self.t_solve.start("coarse_solve")
-            g.message("Solve on coarse level: start")
+                g.message("Done presmoothing on level %d" % (lvl))
+
+                # fine to coarse
+                t.start("tocoarse")
+                f2c(self.r[nc_lvl], r, basis)
+                t.stop("tocoarse")
+
+                g.message("Done projecting from level %d to level %d" % (lvl, nc_lvl))
+
+                # call method on next level TODO wrap by solver for k-cycle
+                t.start("nextlevel")
+                inv_lvl(self.e[nc_lvl], self.r[nc_lvl], nc_lvl)
+                t.stop("nextlevel")
+
+                g.message("Done calling level %d from level %d" % (nc_lvl, lvl))
+
+                # coarse to fine
+                t.start("fromcoarse")
+                c2f(self.e[nc_lvl], psi, basis)
+                t.stop("fromcoarse")
+
+                g.message("Done projecting from level %d to level %d" % (nc_lvl, lvl))
+
+                # run optional pre-smoother TODO make optional
+                t.start("postsmooth")
+                # TODO enable eo (requires work in Grid)
+                slv_postsmooth = s.propagator(s.inv_direct(mat, postsmooth))
+                slv_postsmooth(psi, src)
+                t.stop("postsmooth")
+
+                g.message("Done postsmoothing on level %d" % (lvl))
+
+            t.stop("total")
+
             g.message(
-                "Before coarse solve: norm2(e_c) = %g, norm2(r_c) = %g"
-                % (g.norm2(e_c), g.norm2(r_c))
-            )
-            self.slv_c(e_c, r_c)
-            g.message("Solve on coarse level: stop")
-            self.t_solve.stop("coarse_solve")
-
-            # coarse to fine
-            self.t_solve.start("coarse2fine")
-            self.c2f(e_c, psi, self.basis)
-            g.message("mg.vcycle, afterc2f: norm2(psi) = %g" % (g.norm2(psi)))
-            self.t_solve.stop("coarse2fine")
-
-            self.mat_f.M(uiae, psi)
-            uiae @= src - uiae
-            r2_cgc = g.norm2(uiae) / src2
-
-            # post-smoothing (psi as starting guess)
-            self.t_solve.start("postsmooth")
-            g.message("Post-Smoothing on fine level: start")
-            self.slv_postsmth_f(psi, src)
-            g.message("mg.vcycle, afterc2f: norm2(psi) = %g" % (g.norm2(psi)))
-            g.message("Post-Smoothing on fine level: stop")
-            self.t_solve.stop("postsmooth")
-
-            self.mat_f.M(uiae, psi)
-            uiae @= src - uiae
-            r2_postsm = g.norm2(uiae) / src2
-
-            g.message(
-                "input norm = %g, coarse res = %g, post-smooth res = %g"
-                % (src2, r2_cgc, r2_postsm)
+                "Ending inversion routine on level %d: psi = %g, src = %g"
+                % (lvl, g.norm2(psi), g.norm2(src))
             )
 
         return g.matrix_operator(
-            mat=inv, otype=otype, zero=(False, False), grid=grid, cb=cb,
+            mat=invert, otype=otype, zero=(False, False), grid=grid, cb=cb,
         )

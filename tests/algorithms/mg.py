@@ -43,19 +43,26 @@ a = g.algorithms.iterative
 p = g.qcd.fermion.preconditioner
 w_sp = w_dp.converted(g.single)
 
-# preconditioners
+# preconditioners, for params can give
+# lists (separate values for each level, length must be compatible with number of grids (asserted inside))
+# scalar value (broadcast to all levels)
 mg = a.mg(
     w_dp,
     {
-        "levels": 2,
-        "grid_f": grid_f,
-        "grid_c": grid_c,
+        # "grid": [grid_f, grid_c, grid_c, grid_c],
+        "grid": [grid_f, grid_c],
+        # alternatively, we should be able to give one grid + a list of block sizes
         "northo": 2,
         "nbasis": 10,
         "hermitian": True,
+        "vecstype": "test",
+        "presmooth": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
+        # "presmooth": None,
+        "postsmooth": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
+        "coarsestsolve": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
+        "setupsolve": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
     },
 )
-simple = a.simple()
 eo2_even_dp = p.eo2(w_dp, parity=g.even)
 
 # solver params
@@ -133,5 +140,7 @@ for k, v in timings.items():
 g.message(
     "Contributions to time spent in MG preconditioner (possibly accumulated for all mg solver instances with same preconditioner)"
 )
-mg.t_setup.print("mg_setup")
-mg.t_solve.print("mg_solve")
+for lvl in reversed(range(len(mg.t_setup))):
+    mg.t_setup[lvl].print("mg_setup_lvl_" + str(lvl))
+for lvl in reversed(range(len(mg.t_solve))):
+    mg.t_solve[lvl].print("mg_solve_lvl_" + str(lvl))
