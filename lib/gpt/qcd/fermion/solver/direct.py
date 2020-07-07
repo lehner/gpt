@@ -22,10 +22,14 @@ import gpt
 
 def inv_direct(matrix, inverter):
     def inv(dst_sc, src_sc):
-        dst_sc @= inverter(matrix.M) * src_sc
+        inverter(matrix.M)(dst_sc, src_sc)
 
     m = gpt.matrix_operator(
-        mat=inv, inv_mat=matrix, otype=matrix.otype, grid=matrix.F_grid
+        mat=inv,
+        inv_mat=matrix,
+        otype=matrix.otype,
+        zero=(False, False),
+        grid=matrix.F_grid,
     )
 
     m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
