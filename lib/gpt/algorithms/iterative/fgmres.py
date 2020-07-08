@@ -73,7 +73,7 @@ class fgmres:
         def inv(psi, src):
             self.history = []
             # verbosity
-            self.verbose = g.default.is_verbose("fgmres")
+            verbose = g.default.is_verbose("fgmres")
             checkres = True  # for now
 
             # timing
@@ -152,7 +152,7 @@ class fgmres:
                 self.history.append(r2)
                 t.stop("qr")
 
-                if self.verbose:
+                if verbose:
                     g.message(
                         "fgmres: res^2[ %d, %d ] = %g, target = %g" % (k, i, r2, rsq)
                     )
@@ -166,7 +166,7 @@ class fgmres:
                     t.stop("update_psi")
 
                     if r2 <= rsq:
-                        if self.verbose:
+                        if verbose:
                             t.stop("total")
                             g.message(
                                 "fgmres: converged in %d iterations, took %g s"
@@ -183,7 +183,7 @@ class fgmres:
                         break
 
                     if reached_maxiter:
-                        if self.verbose:
+                        if verbose:
                             t.stop("total")
                             g.message(
                                 "fgmres: did NOT converge in %d iterations, took %g s"
@@ -201,7 +201,7 @@ class fgmres:
                     if need_restart:
                         t.start("restart")
                         r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
-                        if self.verbose:
+                        if verbose:
                             g.message("Performed restart")
                         t.stop("restart")
 
