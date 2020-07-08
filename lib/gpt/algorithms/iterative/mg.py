@@ -289,6 +289,7 @@ class mg:
 
                 # call method on next level TODO wrap by solver for k-cycle
                 t.start("nextlevel")
+                self.e[nc_lvl][:] = 0.0
                 inv_lvl(self.e[nc_lvl], self.r[nc_lvl], nc_lvl)
                 t.stop("nextlevel")
 
