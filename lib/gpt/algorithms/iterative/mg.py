@@ -34,6 +34,16 @@ def assert_correct_length(a, c):
             assert len(elem) == c
 
 
+def make_solver(mat, param, parity=None):
+    parity = g.odd if parity is None else parity
+    s = g.qcd.fermion.solver
+    p = g.qcd.fermion.preconditioner
+    if param["eo"] is True:
+        return s.propagator(s.inv_eo_ne(p.eo2(mat, parity), param["alg"]))
+    else:
+        return s.propagator(s.inv_direct(mat, param["alg"]))
+
+
 class mg:
     def __init__(self, mat_f, params):
         # save parameters
@@ -132,10 +142,6 @@ class mg:
             t.start("total")
             t.start("misc")
 
-            # abbreviations
-            s = g.qcd.fermion.solver
-            a = g.algorithms.iterative
-
             # neighbors
             nc_lvl = self.nc_lvl[lvl]
             nf_lvl = self.nf_lvl[lvl]
@@ -161,9 +167,7 @@ class mg:
                 vecstype = self.vecstype[lvl]
 
                 # setup solver
-                slv_setup = s.propagator(
-                    s.inv_direct(self.mat[lvl], self.setupsolve[lvl])
-                )
+                slv_setup = make_solver(self.mat[lvl], self.setupsolve[lvl])
 
                 # TODO
                 # g.unsplit_chiral(basis)
@@ -236,7 +240,6 @@ class mg:
             )
 
             # abbreviations
-            s = g.qcd.fermion.solver
             f2c = g.block.project
             c2f = g.block.promote
 
@@ -246,10 +249,9 @@ class mg:
 
             if lvl == self.coarsest:
                 t.start("invert")
-                # TODO enable eo (requires work in Grid)
-                slv_coarsest = s.propagator(
-                    s.inv_direct(self.mat[lvl], self.coarsestsolve)
-                )
+                # eo currently doesn't work, requires work in Grid -> TODO
+                assert self.coarsestsolve["eo"] is False
+                slv_coarsest = make_solver(self.mat[lvl], self.coarsestsolve)
                 slv_coarsest(psi, src)
                 t.stop("invert")
             else:
@@ -262,13 +264,15 @@ class mg:
                 t = self.t_solve[lvl]
 
                 # run optional pre-smoother
-                # TODO enable eo (requires work in Grid)
                 # TODO check algorithm regarding presmoothing
                 if False:
                     t.start("presmooth")
                     tmp, mmtmp = g.lattice(src), g.lattice(src)
                     tmp[:] = 0
-                    slv_presmooth = s.propagator(s.inv_direct(mat, presmooth))
+                    # eo currently only works on finest, requires work in Grid -> TODO
+                    if lvl != self.finest:
+                        assert presmooth["eo"] is False
+                    slv_presmooth = make_solver(mat, presmooth)
                     slv_presmooth(tmp, src)
                     mat.M(mmtmp, tmp)
                     r @= src - mmtmp
@@ -304,8 +308,10 @@ class mg:
 
                 # run optional pre-smoother TODO make optional
                 t.start("postsmooth")
-                # TODO enable eo (requires work in Grid)
-                slv_postsmooth = s.propagator(s.inv_direct(mat, postsmooth))
+                # eo currently only works on finest, requires work in Grid -> TODO
+                if lvl != self.finest:
+                    assert postsmooth["eo"] is False
+                slv_postsmooth = make_solver(mat, postsmooth)
                 slv_postsmooth(psi, src)
                 t.stop("postsmooth")
 

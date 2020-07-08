@@ -23,9 +23,9 @@ grid_c = g.grid([4, 4, 4, 4], grid_f.precision)
 w_dp = g.qcd.fermion.wilson_clover(
     U,
     {
-        "mass": -0.25,
-        "csw_r": 2.0171,
-        "csw_t": 2.0171,
+        "kappa": 0.13565,
+        "csw_r": 2.0171 / 2,
+        "csw_t": 2.0171 / 2,
         "xi_0": 1,
         "nu": 1,
         "isAnisotropic": False,
@@ -43,26 +43,29 @@ a = g.algorithms.iterative
 p = g.qcd.fermion.preconditioner
 w_sp = w_dp.converted(g.single)
 
-# preconditioners, for params can give
-# lists (separate values for each level, length must be compatible with number of grids (asserted inside))
-# scalar value (broadcast to all levels)
-mg = a.mg(
-    w_dp,
-    {
-        # "grid": [grid_f, grid_c, grid_c, grid_c],
-        "grid": [grid_f, grid_c],
-        # alternatively, we should be able to give one grid + a list of block sizes
-        "northo": 2,
-        "nbasis": 10,
-        "hermitian": True,
-        "vecstype": "test",
-        "presmooth": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
-        # "presmooth": None,
-        "postsmooth": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
-        "coarsestsolve": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
-        "setupsolve": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
+# mg params structure:
+# if a scalar value (= not a list) is given, the parameter is broadcast to every level
+# specifying a list for a parameter instead enables explicit configuration of every level
+# the length of the lists must then be compatible with the number of grids (asserted inside)
+# more complicated parameters again are dictionaries
+mg_params = {
+    "grid": [grid_f, grid_c],
+    "northo": 2,
+    "nbasis": 10,
+    "hermitian": True,
+    "vecstype": "test",
+    "presmooth": {"alg": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}), "eo": True},
+    "postsmooth": {"alg": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}), "eo": True},
+    "coarsestsolve": {
+        "alg": a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
+        "eo": False,
     },
-)
+    "setupsolve": {"alg": a.cg({"eps": 1e-1, "maxiter": 50, "relax": 1}), "eo": True},
+}
+g.message("multigrid parameters: ", mg_params)
+
+mg_prec = a.mg(w_dp, mg_params)
+mr_prec = a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1})
 eo2_even_dp = p.eo2(w_dp, parity=g.even)
 
 # solver params
@@ -77,13 +80,21 @@ algs = {
         {"eps": eps, "maxiter": maxiter, "restartlen": restartlen, "prec": None}
     ),
     "fgcr_mg": a.fgcr(
-        {"eps": eps, "maxiter": maxiter, "restartlen": restartlen, "prec": mg()}
+        {"eps": eps, "maxiter": maxiter, "restartlen": restartlen, "prec": mg_prec()}
     ),
     "fgmres_none": a.fgmres(
         {"eps": eps, "maxiter": maxiter, "restartlen": restartlen, "prec": None}
     ),
     "fgmres_mg": a.fgmres(
-        {"eps": eps, "maxiter": maxiter, "restartlen": restartlen, "prec": mg()}
+        {"eps": eps, "maxiter": maxiter, "restartlen": restartlen, "prec": mg_prec()}
+    ),
+    "fgmres_mr": a.fgmres(
+        {
+            "eps": eps,
+            "maxiter": maxiter,
+            "restartlen": restartlen,
+            "prec": s.inv_direct(w_dp, mr_prec),
+        }
     ),
 }
 
