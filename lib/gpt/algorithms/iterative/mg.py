@@ -62,6 +62,9 @@ class mg:
         self.setupsolve = make_param_list(params["setupsolve"], self.nlevel - 1)
         self.coarsestsolve = params["coarsestsolve"]
 
+        # verbosity
+        self.verbose = g.default.is_verbose("mg")
+
         # easy access to current level and neighbors
         self.lvl = [i for i in range(self.nlevel)]
         self.nf_lvl = [i - 1 for i in range(self.nlevel)]
@@ -156,7 +159,9 @@ class mg:
                     self.A[lvl], {"hermitian": self.hermitian[nf_lvl], "level": lvl},
                 )
                 t.stop("create_operator")
-                g.message("Done with operator setup on level %d" % lvl)
+
+                if self.verbose:
+                    g.message("Done with operator setup on level %d" % lvl)
 
             if lvl != self.coarsest:
                 t.start("misc")
@@ -189,25 +194,33 @@ class mg:
                     slv_setup(psi, src)
                     v @= psi
                 t.stop("find_null_vecs")
-                g.message("Done finding null-space vectors on level %d" % lvl)
+
+                if self.verbose:
+                    g.message("Done finding null-space vectors on level %d" % lvl)
 
                 # chiral doubling
                 t.start("chiral_split")
                 g.split_chiral(basis)
                 t.stop("chiral_split")
-                g.message("Done doing chiral doubling on level %d" % lvl)
+
+                if self.verbose:
+                    g.message("Done doing chiral doubling on level %d" % lvl)
 
                 # block orthogonalization
                 t.start("block_ortho")
                 for i in range(self.northo[lvl]):
-                    g.message("Block ortho step %d on level %d" % (i, lvl))
+                    if self.verbose:
+                        g.message("Block ortho step %d on level %d" % (i, lvl))
                     g.block.orthonormalize(self.grid[nc_lvl], basis)
                 t.stop("block_ortho")
-                g.message("Done block-orthonormalizing on level %d" % lvl)
+
+                if self.verbose:
+                    g.message("Done block-orthonormalizing on level %d" % lvl)
 
             t.stop("total")
 
-            g.message("Done with entire setup on level %d" % lvl)
+            if self.verbose:
+                g.message("Done with entire setup on level %d" % lvl)
 
     def __call__(self, matrix=None):
         # ignore matrix
@@ -234,10 +247,11 @@ class mg:
             # assertions
             assert psi != src
 
-            g.message(
-                "Starting inversion routine on level %d: psi = %g, src = %g"
-                % (lvl, g.norm2(psi), g.norm2(src))
-            )
+            if self.verbose:
+                g.message(
+                    "Starting inversion routine on level %d: psi = %g, src = %g"
+                    % (lvl, g.norm2(psi), g.norm2(src))
+                )
 
             # abbreviations
             f2c = g.block.project
@@ -282,14 +296,25 @@ class mg:
                     r @= src
                     t.stop("copy")
 
-                g.message("Done presmoothing on level %d" % (lvl))
+                if self.verbose:
+                    g.message("Done presmoothing on level %d" % (lvl))
+
+                    g.message(
+                        "Norms before f2c: r_c = %g, r = %g"
+                        % (g.norm2(self.r[nc_lvl]), g.norm2(r))
+                    )
 
                 # fine to coarse
                 t.start("tocoarse")
                 f2c(self.r[nc_lvl], r, basis)
                 t.stop("tocoarse")
 
-                g.message("Done projecting from level %d to level %d" % (lvl, nc_lvl))
+                if self.verbose:
+                    g.message("Norm after f2c: r_c = %g" % (g.norm2(self.r[nc_lvl])))
+
+                    g.message(
+                        "Done projecting from level %d to level %d" % (lvl, nc_lvl)
+                    )
 
                 # call method on next level TODO wrap by solver for k-cycle
                 t.start("nextlevel")
@@ -297,14 +322,25 @@ class mg:
                 inv_lvl(self.e[nc_lvl], self.r[nc_lvl], nc_lvl)
                 t.stop("nextlevel")
 
-                g.message("Done calling level %d from level %d" % (nc_lvl, lvl))
+                if self.verbose:
+                    g.message("Done calling level %d from level %d" % (nc_lvl, lvl))
+
+                    g.message(
+                        "Norms before c2f: psi = %g, e_c = %g"
+                        % (g.norm2(psi), g.norm2(self.e[nc_lvl]))
+                    )
 
                 # coarse to fine
                 t.start("fromcoarse")
                 c2f(self.e[nc_lvl], psi, basis)
                 t.stop("fromcoarse")
 
-                g.message("Done projecting from level %d to level %d" % (nc_lvl, lvl))
+                if self.verbose:
+                    g.message(
+                        "Done projecting from level %d to level %d" % (nc_lvl, lvl)
+                    )
+
+                    g.message("Norms after c2f: psi = %g" % (g.norm2(psi)))
 
                 # run optional pre-smoother TODO make optional
                 t.start("postsmooth")
@@ -315,14 +351,16 @@ class mg:
                 slv_postsmooth(psi, src)
                 t.stop("postsmooth")
 
-                g.message("Done postsmoothing on level %d" % (lvl))
+                if self.verbose:
+                    g.message("Done postsmoothing on level %d" % (lvl))
 
             t.stop("total")
 
-            g.message(
-                "Ending inversion routine on level %d: psi = %g, src = %g"
-                % (lvl, g.norm2(psi), g.norm2(src))
-            )
+            if self.verbose:
+                g.message(
+                    "Ending inversion routine on level %d: psi = %g, src = %g"
+                    % (lvl, g.norm2(psi), g.norm2(src))
+                )
 
         return g.matrix_operator(
             mat=invert, otype=otype, zero=(False, False), grid=grid, cb=cb,

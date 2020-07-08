@@ -24,6 +24,9 @@ def create_links(A, fmat, basis):
     # NOTE: we expect the blocks in the basis vectors
     # to already be orthogonalized!
 
+    # verbosity
+    verbose = gpt.default.is_verbose("coarsen")
+
     # get grids
     f_grid = basis[0].grid
     c_grid = A[0].grid
@@ -113,7 +116,8 @@ def create_links(A, fmat, basis):
         A[selflink][:, :, :, :, :, i] = selfproj[:]
         t.stop("copy_self")
 
-        gpt.message("Coarsening of vector %d finished" % i)
+        if verbose:
+            gpt.message("Coarsening of vector %d finished" % i)
 
     # communicate opposite links
     t.start("comm")
@@ -130,7 +134,8 @@ def create_links(A, fmat, basis):
 
     t.stop("total")
 
-    t.print("coarsening")
+    if verbose:
+        t.print("coarsening")
 
 
 def recreate_links(A, fmat, basis):
