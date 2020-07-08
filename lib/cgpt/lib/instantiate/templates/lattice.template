@@ -20,10 +20,10 @@
 
 typedef void* (* create_lattice_prec_otype)(GridBase* grid);
 extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
+extern std::map<std::string,int> _otype_singlet_rank_;
 
-void lattice_init_{precision_tag}_{tensor_group}() {
-     std::string prec = "{precision_tag}";
-#define PER_TENSOR_TYPE(T) _create_otype_[prec + ":" + get_otype(T<{precision_vector}>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< T< {precision_vector} > >(grid); };
-#include "../tensors_group{tensor_group}.h"
-#undef PER_TENSOR_TYPE
+void lattice_init_{precision_tag}_{tensor_name}() {
+  std::string prec = "{precision_tag}";
+  _create_otype_[prec + ":" + get_otype({tensor_name}<{precision_vector}>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< {tensor_name}< {precision_vector} > >(grid); };
+  _otype_singlet_rank_[get_otype({tensor_name}<{precision_vector}>())] = singlet_rank({tensor_name}<{precision_vector}>());
 }

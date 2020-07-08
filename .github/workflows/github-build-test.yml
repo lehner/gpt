@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  MAKE_BUILD_FLAGS: -j1 # one for now to debug
+  MAKE_BUILD_FLAGS: -j2
   GRID_REPOSITORY_REF: feature/gpt
   CC: mpicc
   CXX: mpic++

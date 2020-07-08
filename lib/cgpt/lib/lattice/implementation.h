@@ -41,6 +41,10 @@ public:
     return typeid(T).name();
   }
 
+  virtual int singlet_rank() {
+    return ::singlet_rank(l);
+  }
+
   virtual PyObject* to_decl() {   
     return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
 			PyUnicode_FromString(get_otype(l).c_str()),
@@ -78,6 +82,10 @@ public:
 
   // ac == { true : add result to dst, false : replace dst }
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) {
+    if (typeid(T) == typeid(iSinglet<vCoeff_t>)) {
+      // singlet multiplication always commutes, can save half cost of instantiation
+      return b->mul(dst,ac,this,unary_b,unary_a,unary_expr);
+    }
     return cgpt_lattice_mul(dst,ac,unary_a,l,unary_b,b,unary_expr);
   }
 
@@ -226,4 +234,3 @@ public:
   }
 
 };
-

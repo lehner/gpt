@@ -37,6 +37,7 @@ public:
   virtual void cshift_from(cgpt_Lattice_base* src, int dir, int off) = 0;
   virtual cgpt_Lattice_base* compatible_linear_combination(cgpt_Lattice_base* dst, bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr) = 0;
   virtual std::string type() = 0;
+  virtual int singlet_rank() = 0;
   virtual PyObject* to_decl() = 0;
   virtual void convert_from(cgpt_Lattice_base* src) = 0;
   virtual PyObject* slice(int dim) = 0;

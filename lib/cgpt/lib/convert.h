@@ -26,6 +26,12 @@ static void cgpt_convert(PyObject* in, PyArrayObject*& out) {
   out = (PyArrayObject*)in;
 }
 
+class cgpt_Lattice_base;
+static void cgpt_convert(PyObject* in, cgpt_Lattice_base*& out) {
+  ASSERT(PyLong_Check(in));
+  out = (cgpt_Lattice_base*)PyLong_AsVoidPtr(in);
+}
+
 static void cgpt_convert(PyObject* in, long& out) {
   ASSERT(PyLong_Check(in));
   out = PyLong_AsLong(in);
