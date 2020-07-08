@@ -62,11 +62,14 @@ class cg:
                 p @= b * p + r
                 self.history.append(cp)
                 if verbose:
-                    g.message("res^2[ %d ] = %g" % (k, cp))
+                    g.message("cg: res^2[ %d ] = %g, target = %g" % (k, cp, rsq))
                 if cp <= rsq:
                     if verbose:
                         t1 = g.time()
-                        g.message("Converged in %g s" % (t1 - t0))
+                        g.message(
+                            "cg: converged in %d iterations, took %g s"
+                            % (k + 1, t1 - t0)
+                        )
                     break
 
         return g.matrix_operator(

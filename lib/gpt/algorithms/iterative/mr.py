@@ -63,12 +63,15 @@ class mr:
                 self.history.append(r2)
 
                 if verbose:
-                    g.message("res^2[ %d ] = %g" % (k, r2))
+                    g.message("mr: res^2[ %d ] = %g, target = %g" % (k, r2, rsq))
 
                 if r2 <= rsq:
                     if verbose:
                         t1 = g.time()
-                        g.message("Converged in %g s" % (t1 - t0))
+                        g.message(
+                            "mr: converged in %d iterations, took %g s"
+                            % (k + 1, t1 - t0)
+                        )
                     break
 
         otype = None

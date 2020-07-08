@@ -140,7 +140,7 @@ class fgmres:
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
 
                 if H[i + 1, i] == 0.0:
-                    g.message("fgmres breakdown, H[%d, %d] = 0" % (i + 1, i))
+                    g.message("fgmres: breakdown, H[%d, %d] = 0" % (i + 1, i))
                     break
 
                 V[i + 1] /= H[i + 1, i]
@@ -153,7 +153,9 @@ class fgmres:
                 t.stop("qr")
 
                 if self.verbose:
-                    g.message("res^2[ %d, %d ] = %e" % (k, i, r2))
+                    g.message(
+                        "fgmres: res^2[ %d, %d ] = %g, target = %g" % (k, i, r2, rsq)
+                    )
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     t.start("update_psi")
@@ -166,13 +168,16 @@ class fgmres:
                     if r2 <= rsq:
                         if self.verbose:
                             t.stop("total")
-                            g.message("Converged in %g s" % (t.dt["total"]))
+                            g.message(
+                                "fgmres: converged in %d iterations, took %g s"
+                                % (k + 1, t.dt["total"])
+                            )
                             t.print("fgmres")
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
-                                    "Computed res = %g, true res = %g, target = %g"
+                                    "fgmres: computed res = %g, true res = %g, target = %g"
                                     % (comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
                         break
@@ -180,13 +185,16 @@ class fgmres:
                     if reached_maxiter:
                         if self.verbose:
                             t.stop("total")
-                            g.message("Did NOT converge in %g s" % (t.dt["total"]))
+                            g.message(
+                                "fgmres: did NOT converge in %d iterations, took %g s"
+                                % (k + 1, t.dt["total"])
+                            )
                             t.print("fgmres")
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
-                                    "Computed res = %g, true res = %g, target = %g"
+                                    "fgmres: computed res = %g, true res = %g, target = %g"
                                     % (comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
 

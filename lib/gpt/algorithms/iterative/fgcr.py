@@ -114,7 +114,7 @@ class fgcr:
                 gamma[i] = mmp2 ** 0.5
 
                 if gamma[i] == 0.0:
-                    g.message("fgcr breakdown, gamma[%d] = 0" % (i))
+                    g.message("fgcr: breakdown, gamma[%d] = 0" % (i))
                     break
 
                 mmp[i] /= gamma[i]
@@ -124,7 +124,9 @@ class fgcr:
                 t.stop("linalg")
 
                 if verbose:
-                    g.message("res^2[ %d, %d ] = %e" % (k, i, r2))
+                    g.message(
+                        "fgcr: res^2[ %d, %d ] = %g, target = %g" % (k, i, r2, rsq)
+                    )
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     t.start("update_psi")
@@ -134,13 +136,16 @@ class fgcr:
                     if r2 <= rsq:
                         if verbose:
                             t.stop("total")
-                            g.message("Converged in %g s" % (t.dt["total"]))
+                            g.message(
+                                "fgcr: converged in %d iterations, took %g s"
+                                % (k + 1, t.dt["total"])
+                            )
                             t.print("fgcr")
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
-                                    "Computed res = %g, true res = %g, target = %g"
+                                    "fgcr: computed res = %g, true res = %g, target = %g"
                                     % (comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
                         break
@@ -148,13 +153,16 @@ class fgcr:
                     if reached_maxiter:
                         if verbose:
                             t.stop("total")
-                            g.message("Did NOT converge in %g s" % (t.dt["total"]))
+                            g.message(
+                                "fgcr: did NOT converge in %d iterations, took %g s"
+                                % (k + 1, t.dt["total"])
+                            )
                             t.print("fgcr")
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
-                                    "Computed res = %g, true res = %g, target = %g"
+                                    "fgcr: computed res = %g, true res = %g, target = %g"
                                     % (comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
 
