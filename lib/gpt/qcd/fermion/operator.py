@@ -220,6 +220,21 @@ class coarse_operator:
             mat=registry.M, adj_mat=registry.Mdag, otype=otype, grid=self.F_grid
         )
 
+        self.ImportPhysicalFermionSource = gpt.matrix_operator(
+            registry.ImportPhysicalFermionSource,
+            otype=otype,
+            grid=(self.F_grid, self.A_grid),
+        )
+        self.ExportPhysicalFermionSolution = gpt.matrix_operator(
+            registry.ExportPhysicalFermionSolution,
+            otype=otype,
+            grid=(self.A_grid, self.F_grid),
+        )
+        self.ExportPhysicalFermionSource = gpt.matrix_operator(
+            registry.ExportPhysicalFermionSource,
+            otype=otype,
+            grid=(self.A_grid, self.F_grid),
+        )
         self.Mdir = gpt.matrix_operator(
             mat=registry_dd.Mdir, otype=otype, grid=self.F_grid
         )
