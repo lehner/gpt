@@ -262,19 +262,21 @@ class mg:
                 t = self.t_solve[lvl]
 
                 # run optional pre-smoother
-                t.start("presmooth")
                 # TODO enable eo (requires work in Grid)
                 # TODO check algorithm regarding presmoothing
                 if False:
+                    t.start("presmooth")
                     tmp, mmtmp = g.lattice(src), g.lattice(src)
                     tmp[:] = 0
                     slv_presmooth = s.propagator(s.inv_direct(mat, presmooth))
                     slv_presmooth(tmp, src)
                     mat.M(mmtmp, tmp)
                     r @= src - mmtmp
+                    t.stop("presmooth")
                 else:
+                    t.start("copy")
                     r @= src
-                t.stop("presmooth")
+                    t.stop("copy")
 
                 g.message("Done presmoothing on level %d" % (lvl))
 
