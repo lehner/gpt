@@ -22,7 +22,6 @@ import numpy
 ###
 # Helper
 def decompose(n, ns):
-    r = []
     for x in reversed(sorted(ns)):
         if n % x == 0:
             return [x] * (n // x)
@@ -76,6 +75,7 @@ class ot_singlet(ot_base):
     mtab = {
         "ot_singlet": (lambda: ot_singlet, None),
     }
+
 
 def singlet(grid):
     return gpt_object(grid, ot_singlet)
@@ -370,7 +370,7 @@ class ot_vsinglet:
         self.v_idx = range(len(self.v_n0))
         self.v_otype = [ot_vsinglet.fundamental[x].__name__ for x in decomposition]
         self.mtab = {
-            "ot_singlet": (lambda: self, None), # TODO: need to add info on contraction
+            "ot_singlet": (lambda: self, None),  # TODO: need to add info on contraction
         }
         self.rmtab = {
             "ot_singlet": (lambda: self, None),
@@ -399,6 +399,7 @@ class ot_msinglet10(ot_base):
     shape = (10, 10)
     v_otype = ["ot_msinglet10"]
 
+
 class ot_msinglet:
     def __init__(self, n):
         self.__name__ = "ot_msinglet(%d)" % n
@@ -414,8 +415,8 @@ class ot_msinglet:
             "ot_singlet": (lambda: self, None),
         }
         decomposition = decompose(n, ot_vsinglet.fundamental.keys())
-        #self.v_n0, self.v_n1 = get_range(decomposition)
-        #self.v_idx = range(len(self.v_n0))
+        # self.v_n0, self.v_n1 = get_range(decomposition)
+        # self.v_idx = range(len(self.v_n0))
         self.v_otype = [ot_vsinglet.fundamental[x].__name__ for x in decomposition] * n
         assert 0
 

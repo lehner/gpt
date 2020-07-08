@@ -329,10 +329,12 @@ def expr_eval(first, second=None, ac=False):
 
         # now find return type
         otype = get_otype_from_expression(e)
-        n = len(otype.v_idx)
 
         res = cgpt.eval(t_obj, e.val, e.unary, False)
-        t_obj, s_ot, s_pr = [ x[0] for x in res ], [ x[1] for x in res ], [ x[2] for x in res ]
+        t_obj, s_ot = (
+            [x[0] for x in res],
+            [x[1] for x in res],
+        )
 
         assert s_ot == otype.v_otype
 

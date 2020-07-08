@@ -15,23 +15,23 @@ vc = g.vcomplex(grid, 30)
 vc[0, 0, 0, 0, 0] = 1
 vc[0, 0, 0, 0, 1:29] = 1.5
 vc[0, 0, 0, 0, 29] = 2
-vc_comp=g.vcomplex([1] + [1.5] * 28 + [2], 30)
+vc_comp = g.vcomplex([1] + [1.5] * 28 + [2], 30)
 eps2 = g.norm2(vc[0, 0, 0, 0] - vc_comp)
 assert eps2 < 1e-13
 
 # demonstrate mask
 mask = g.complex(grid)
-mask[:]=0
-mask[0,1,2,3]=1
-vc[:]=vc[0,0,0,0]
-vcmask = g.eval( mask * vc )
-assert g.norm2(vcmask[0,0,0,0]) < 1e-13
-assert g.norm2(vcmask[0,1,2,3] - vc_comp) < 1e-13
+mask[:] = 0
+mask[0, 1, 2, 3] = 1
+vc[:] = vc[0, 0, 0, 0]
+vcmask = g.eval(mask * vc)
+assert g.norm2(vcmask[0, 0, 0, 0]) < 1e-13
+assert g.norm2(vcmask[0, 1, 2, 3] - vc_comp) < 1e-13
 
 # demonstrate sign flip needed for MG
-sign = g.vcomplex([1]*15 + [-1]*15,30)
+sign = g.vcomplex([1] * 15 + [-1] * 15, 30)
 vc @= sign * vc
-eps2 = g.norm2(vc[0, 0, 0, 0] - g.vcomplex([1] + [1.5] * 14 + [-1.5]*14 + [-2], 30))
+eps2 = g.norm2(vc[0, 0, 0, 0] - g.vcomplex([1] + [1.5] * 14 + [-1.5] * 14 + [-2], 30))
 assert eps2 < 1e-13
 
 # demonstrate matrix * vector ... TODO
