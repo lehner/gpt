@@ -33,7 +33,10 @@ class bicgstab:
         def inv(psi, src):
             self.history = []
             verbose = g.default.is_verbose("bicgstab")
-            t0 = g.time()
+
+            t = g.timer()
+            t.start("total")
+            t.start("setup")
 
             r, rhat, p, s = g.copy(src), g.copy(src), g.copy(src), g.copy(src)
             mmpsi, mmp, mms = g.copy(src), g.copy(src), g.copy(src)
@@ -50,30 +53,50 @@ class bicgstab:
             ssq = g.norm2(src)
             rsq = self.eps ** 2.0 * ssq
 
+            t.stop("setup")
+
             for k in range(self.maxiter):
+                t.start("inner")
                 rhoprev = rho
                 rho = g.innerProduct(rhat, r).real
+                t.stop("inner")
 
+                t.start("linearcomb")
                 beta = (rho / rhoprev) * (alpha / omega)
-
                 p @= r + beta * p - beta * omega * mmp
+                t.stop("linearcomb")
 
+                t.start("mat")
                 mat(mmp, p)
+                t.stop("mat")
+
+                t.start("inner")
                 alpha = rho / g.innerProduct(rhat, mmp).real
+                t.stop("inner")
 
+                t.start("linearcomb")
                 s @= r - alpha * mmp
+                t.stop("linearcomb")
 
+                t.start("mat")
                 mat(mms, s)
+                t.stop("mat")
+
+                t.start("inner")
                 ip, mms2 = g.innerProductNorm2(mms, s)
+                t.stop("inner")
 
                 if mms2 == 0.0:
                     continue
 
+                t.start("linearcomb")
                 omega = ip.real / mms2
-
                 psi += alpha * p + omega * s
+                t.stop("linearcomb")
 
+                t.start("axpy_norm")
                 r2 = g.axpy_norm2(r, -omega, mms, s)
+                t.stop("axpy_norm")
 
                 self.history.append(r2)
 
@@ -82,11 +105,12 @@ class bicgstab:
 
                 if r2 <= rsq:
                     if verbose:
-                        t1 = g.time()
+                        t.stop("total")
                         g.message(
                             "bicgstab: converged in %d iterations, took %g s"
-                            % (k + 1, t1 - t0)
+                            % (k + 1, t.dt["total"])
                         )
+                        t.print("bicgstab")
                     break
 
         otype = None

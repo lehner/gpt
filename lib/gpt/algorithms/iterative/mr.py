@@ -38,7 +38,10 @@ class mr:
         def inv(psi, src):
             self.history = []
             verbose = g.default.is_verbose("mr")
-            t0 = g.time()
+
+            t = g.timer()
+            t.start("total")
+            t.start("setup")
 
             r, mmr = g.copy(src), g.copy(src)
 
@@ -48,17 +51,28 @@ class mr:
             ssq = g.norm2(src)
             rsq = self.eps ** 2.0 * ssq
 
+            t.stop("setup")
+
             for k in range(self.maxiter):
+                t.start("mat")
                 mat(mmr, r)
+                t.stop("mat")
+
+                t.start("inner")
                 ip, mmr2 = g.innerProductNorm2(mmr, r)
+                t.stop("inner")
 
                 if mmr2 == 0.0:
                     continue
 
+                t.start("linearcomb")
                 alpha = ip.real / mmr2 * self.relax
-
                 psi += alpha * r
+                t.stop("linearcomb")
+
+                t.start("axpy_norm")
                 r2 = g.axpy_norm2(r, -alpha, mmr, r)
+                t.stop("axpy_norm")
 
                 self.history.append(r2)
 
@@ -67,11 +81,12 @@ class mr:
 
                 if r2 <= rsq:
                     if verbose:
-                        t1 = g.time()
+                        t.stop("total")
                         g.message(
                             "mr: converged in %d iterations, took %g s"
-                            % (k + 1, t1 - t0)
+                            % (k + 1, t.dt["total"])
                         )
+                        t.print("mr")
                     break
 
         otype = None
