@@ -73,6 +73,10 @@ def map_pos(grid, cb, key):
     assert type(key) == tuple
 
     # slices without specified start/stop corresponds to memory view limitation for this rank
+    if all([k == slice(None, None, None) for k in key]):
+        # go through gpt.coordinates to use its caching feature
+        return gpt.coordinates((grid, cb), order="lexicographic")
+
     nd = grid.nd
     key = tuple([k if type(k) == slice else slice(k, k + 1) for k in key])
     assert all([k.step is None for k in key])
