@@ -83,20 +83,22 @@ def exp_ixp(p):
     )
 
 
-def fft(dims = None):
-
+def fft(dims=None):
     def mat(dst, src, sign):
         d = dims if dims is not None else list(range(src.grid.nd))
-        assert(dst.otype.__name__ == src.otype.__name__)
+        assert dst.otype.__name__ == src.otype.__name__
         for i in dst.otype.v_idx:
-            cgpt.fft(dst.v_obj[i],src.v_obj[i],d,sign)
+            cgpt.fft(dst.v_obj[i], src.v_obj[i], d, sign)
 
     def mat_forward(dst, src):
-        mat(dst,src,1)
+        mat(dst, src, 1)
 
     def mat_backward(dst, src):
-        mat(dst,src,-1)
+        mat(dst, src, -1)
 
     return gpt.matrix_operator(
-        mat = mat_forward, adj_mat = mat_backward, inv_mat = mat_backward, adj_inv_mat = mat_forward
+        mat=mat_forward,
+        adj_mat=mat_backward,
+        inv_mat=mat_backward,
+        adj_inv_mat=mat_forward,
     )
