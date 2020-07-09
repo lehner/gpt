@@ -51,8 +51,9 @@ class timer:
             to_print["total"] = sum(to_print.values())
             to_print["unprofiled"] = 0.0  # by construction
 
-        for k, v in sorted(to_print.items(), key=lambda x: x[1]):
-            gpt.message(
-                "Timing %s: %15s = %e s (= %6.2f %%)"
-                % (prefix, k, v, v / to_print["total"] * 100)
-            )
+        if to_print["total"] != 0.0:
+            for k, v in sorted(to_print.items(), key=lambda x: x[1]):
+                gpt.message(
+                    "Timing %s: %15s = %e s (= %6.2f %%)"
+                    % (prefix, k, v, v / to_print["total"] * 100)
+                )
