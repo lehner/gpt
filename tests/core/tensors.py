@@ -30,11 +30,24 @@ assert g.norm2(vcmask[0, 1, 2, 3] - vc_comp) < 1e-13
 
 # demonstrate sign flip needed for MG
 sign = g.vcomplex([1] * 15 + [-1] * 15, 30)
+vc_comp = g.vcomplex([1] + [1.5] * 14 + [-1.5] * 14 + [-2], 30)
 vc @= sign * vc
-eps2 = g.norm2(vc[0, 0, 0, 0] - g.vcomplex([1] + [1.5] * 14 + [-1.5] * 14 + [-2], 30))
+eps2 = g.norm2(vc[0, 0, 0, 0] - vc_comp)
 assert eps2 < 1e-13
 
-# demonstrate matrix * vector ... TODO
+# demonstrate matrix * vector
+ntest=30
+mc_comp = g.mcomplex([ [ rng.cnormal() for i in range(ntest) ] for j in range(ntest) ],ntest)
+mc = g.mcomplex(grid, ntest)
+mc[:]=mc_comp
+vc_comp = g.vcomplex([ rng.cnormal() for i in range(ntest) ], ntest)
+vc = g.vcomplex(grid, ntest)
+vc[:]=vc_comp
+assert(g.norm2(mc[0,0,0,0] - mc_comp) < 1e-10)
+
+vc2 = g.eval( mc * vc )
+vc2_comp = mc_comp * vc_comp
+assert(g.norm2(vc2[0,0,0,0] - vc2_comp) < 1e-10)
 
 # assign entire lattice
 cm = g.mcolor(grid)

@@ -74,3 +74,20 @@ template<typename T> int singlet_rank(const Lattice<T>& l) { typedef typename La
 
 // map otype strings to their singlet rank
 extern std::map<std::string,int> _otype_singlet_rank_;
+
+// singlet rank and linear size to dimension
+static
+int size_to_singlet_dim(int rank, int size) {
+  if (rank == 0) {
+    ASSERT(size == 1);
+    return 1;
+  } else if (rank == 1) {
+    return size;
+  } else if (rank == 2) {
+    int sqrt_size = (int)(sqrt(size) + 0.5);
+    ASSERT(sqrt_size * sqrt_size == size);
+    return sqrt_size;
+  } else {
+    ERR("Unknown singlet_rank %d",rank);
+  }
+}

@@ -21,14 +21,16 @@ import numpy
 
 ###
 # Helper
-def decompose(n, ns):
+def decompose(n, ns, rank):
     for x in reversed(sorted(ns)):
         if n % x == 0:
-            return [x] * (n // x)
+            return [x] * ( (n // x)**rank )
     raise Exception("Cannot decompose %d in available fundamentals %s" % (n, ns))
 
 
-def get_range(ns):
+def get_range(ns, rank):
+    # TODO: use rank to properly create rank == 2 mapping
+    # This is only relevant for lattice.__str__ of mcomplex
     n = 0
     n0 = []
     n1 = []
@@ -351,7 +353,7 @@ class ot_vsinglet10(ot_base):
     v_otype = ["ot_vsinglet10"]
 
 
-class ot_vsinglet:
+class ot_vsinglet(ot_base):
     fundamental = {
         4: ot_vsinglet4,
         5: ot_vsinglet5,
@@ -365,8 +367,8 @@ class ot_vsinglet:
         self.transposed = None
         self.spintrace = None
         self.colortrace = None
-        decomposition = decompose(n, ot_vsinglet.fundamental.keys())
-        self.v_n0, self.v_n1 = get_range(decomposition)
+        decomposition = decompose(n, ot_vsinglet.fundamental.keys(), 1)
+        self.v_n0, self.v_n1 = get_range(decomposition, 1)
         self.v_idx = range(len(self.v_n0))
         self.v_otype = [ot_vsinglet.fundamental[x].__name__ for x in decomposition]
         self.mtab = {
@@ -400,7 +402,13 @@ class ot_msinglet10(ot_base):
     v_otype = ["ot_msinglet10"]
 
 
-class ot_msinglet:
+class ot_msinglet(ot_base):
+    fundamental = {
+        4: ot_msinglet4,
+        5: ot_msinglet5,
+        10: ot_msinglet10,
+    }
+
     def __init__(self, n):
         self.__name__ = "ot_msinglet(%d)" % n
         self.nfloats = 2 * n * n
@@ -408,17 +416,18 @@ class ot_msinglet:
         self.transposed = None
         self.spintrace = None
         self.colortrace = None
+        self.vector_type = ot_vsinglet(n)
         self.mtab = {
             "ot_singlet": (lambda: self, None),
+            "ot_vsinglet(%d)" % n: (lambda: self.vector_type, (1, 0)),
         }
         self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
-        decomposition = decompose(n, ot_vsinglet.fundamental.keys())
-        # self.v_n0, self.v_n1 = get_range(decomposition)
-        # self.v_idx = range(len(self.v_n0))
-        self.v_otype = [ot_vsinglet.fundamental[x].__name__ for x in decomposition] * n
-        assert 0
+        decomposition = decompose(n, ot_msinglet.fundamental.keys(), 2)
+        self.v_n0, self.v_n1 = get_range(decomposition, 2)
+        self.v_idx = range(len(self.v_n0))
+        self.v_otype = [ot_msinglet.fundamental[x].__name__ for x in decomposition]
 
 
 def msinglet(grid, n):

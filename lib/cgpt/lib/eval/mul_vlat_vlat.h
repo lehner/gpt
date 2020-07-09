@@ -17,22 +17,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 static
-int size_to_singlet_dim(int rank, int size) {
-  if (rank == 0) {
-    ASSERT(size == 1);
-    return 1;
-  } else if (rank == 1) {
-    return size;
-  } else if (rank == 2) {
-    int sqrt_size = (int)(sqrt(size) + 0.5);
-    ASSERT(sqrt_size * sqrt_size == size);
-    return sqrt_size;
-  } else {
-    ERR("Unknown singlet_rank %d",rank);
-  }
-}
-
-static
 void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl, 
 			std::vector<cgpt_Lattice_base*> & lhs_vl, 
 			int lhs_unary, 
@@ -84,11 +68,11 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
     for (int i=0;i<dim;i++) {
 
       // init
-      dst_vl[i] = lhs_vl[mtrans ? (i) : (i * dim)]->
+      dst_vl[i] = lhs_vl[mtrans ? (i * dim) : (i)]->
 	mul( 0, false, rhs_vl[0], lhs_unary, rhs_unary, unary);
 
-      for (int j=0;j<dim;j++) {
-	lhs_vl[mtrans ? (j*dim + i) : (i * dim + j)]->
+      for (int j=1;j<dim;j++) {
+	lhs_vl[mtrans ? (i*dim + j) : (j * dim + i)]->
 	  mul( dst_vl[i], true, rhs_vl[j], lhs_unary, rhs_unary, unary);
       }
     }

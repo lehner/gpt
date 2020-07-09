@@ -45,7 +45,9 @@ SPINS=$(egrep "^SPIN\(" lib/spin_color.h | awk 'BEGIN{ FS="(" }{ print $2+0 }')
 COLORS=$(egrep "^COLOR\(" lib/spin_color.h | awk 'BEGIN{ FS="(" }{ print $2+0 }')
 BASIS_SIZES=$(egrep "^BASIS_SIZE\(" lib/basis_size.h | awk 'BEGIN{ FS="(" }{ print $2+0 }')
 
-echo -e "  Instantiate templates for SPINS\n${SPINS}\n  and COLORS\n${COLORS}\n  and BASIS_SIZES\n${BASIS_SIZES}"
+echo "  SPINS       = $(echo ${SPINS})"
+echo "  COLORS      = $(echo ${COLORS})"
+echo "  BASIS_SIZES = $(echo ${BASIS_SIZES})"
 echo "================================================================================"
 
 # get all tensors that we need

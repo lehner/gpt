@@ -102,6 +102,7 @@ do
 		    printf "%-70s %s\n" " [OK ] $bn " "($elapsed s)"
 		else
 		    printf "%-70s %-30s %s\n" " [ERR] $bn " "($elapsed s)" "logs/${bn}.err"
+		    touch $dst
 		fi
 	    else
 		exit 0
@@ -113,6 +114,7 @@ done
 wait
 
 rm -f next.lock
+find build -size 0 -delete 2> /dev/null
 
 # Link
 ${CXX} --shared build/*.o ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
