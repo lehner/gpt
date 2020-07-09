@@ -36,18 +36,20 @@ eps2 = g.norm2(vc[0, 0, 0, 0] - vc_comp)
 assert eps2 < 1e-13
 
 # demonstrate matrix * vector
-ntest=30
-mc_comp = g.mcomplex([ [ rng.cnormal() for i in range(ntest) ] for j in range(ntest) ],ntest)
+ntest = 30
+mc_comp = g.mcomplex(
+    [[rng.cnormal() for i in range(ntest)] for j in range(ntest)], ntest
+)
 mc = g.mcomplex(grid, ntest)
-mc[:]=mc_comp
-vc_comp = g.vcomplex([ rng.cnormal() for i in range(ntest) ], ntest)
+mc[:] = mc_comp
+vc_comp = g.vcomplex([rng.cnormal() for i in range(ntest)], ntest)
 vc = g.vcomplex(grid, ntest)
-vc[:]=vc_comp
-assert(g.norm2(mc[0,0,0,0] - mc_comp) < 1e-10)
+vc[:] = vc_comp
+assert g.norm2(mc[0, 0, 0, 0] - mc_comp) < 1e-10
 
-vc2 = g.eval( mc * vc )
+vc2 = g.eval(mc * vc)
 vc2_comp = mc_comp * vc_comp
-assert(g.norm2(vc2[0,0,0,0] - vc2_comp) < 1e-10)
+assert g.norm2(vc2[0, 0, 0, 0] - vc2_comp) < 1e-10
 
 # assign entire lattice
 cm = g.mcolor(grid)

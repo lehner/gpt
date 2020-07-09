@@ -24,7 +24,7 @@ import numpy
 def decompose(n, ns, rank):
     for x in reversed(sorted(ns)):
         if n % x == 0:
-            return [x] * ( (n // x)**rank )
+            return [x] * ((n // x) ** rank)
     raise Exception("Cannot decompose %d in available fundamentals %s" % (n, ns))
 
 
