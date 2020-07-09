@@ -189,14 +189,9 @@ class matrix_operator(factor):
             dst = first
             src = second
 
-        if len(extra) == 0:
-            if type_match:
-                self.mat(dst, src)
-            else:
-                self.otype[1].distribute(self.mat, dst, src, zero_lhs=self.zero[0])
-        elif len(extra) == 2:
-            self.mat(dst, src, *extra)  # TODO: the else thing above?
+        if type_match:
+            self.mat(dst, src, *extra)
         else:
-            assert 0
+            self.otype[1].distribute(self.mat, dst, src, *extra, zero_lhs=self.zero[0])
 
         return dst
