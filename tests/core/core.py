@@ -66,6 +66,18 @@ eps = g.norm2(g.adj(exp_ixp * exp_ixp) * exp_ixp * exp_ixp * l_dp - l_dp) / g.no
 g.message("Momentum adj test (2): ", eps)
 assert eps < 1e-20
 
+################################################################################
+# Test FFT
+################################################################################
+fft_l_sp = g.eval( g.fft() * l_sp )
+eps = g.norm2( g.adj(g.fft()) * fft_l_sp - l_sp ) / g.norm2(l_sp)
+g.message("FFTinv * FFT:",eps)
+assert eps < 1e-12
+
+eps = g.norm2( g.sum(exp_ixp * l_sp) / np.prod(L) - fft_l_sp[1, 2, 3, 4] )
+g.message("FFT forward test:",eps)
+assert eps < 1e-12
+
 
 ################################################################################
 # Test vcomplex

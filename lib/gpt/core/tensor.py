@@ -117,6 +117,9 @@ class tensor:
         assert self.otype.__name__ == other.otype.__name__
         return tensor(self.array + other.array, self.otype)
 
+    def __truediv__(self, other):
+        return tensor(self.array / other, self.otype)
+
     def __eq__(self, other):
         return np.array_equal(self.array, other.array)
 
@@ -135,6 +138,5 @@ class tensor:
         return self
 
     def __itruediv__(self, other):
-        assert type(other) == complex
         self.array /= other
         return self

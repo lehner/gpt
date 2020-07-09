@@ -106,6 +106,16 @@ public:
     l = src->l;
   }
 
+  virtual void fft_from(cgpt_Lattice_base* src, const std::vector<int> & dims, int sign) {
+    FFT fft((GridCartesian*)l.Grid());
+    Lattice<T> tmp = compatible<T>(src)->l;
+    for (long i=0;i<dims.size();i++) {
+      fft.FFT_dim(l,tmp,dims[i],sign);
+      if (i != dims.size()-1)
+	tmp = l;
+    }
+  }
+
   virtual void cshift_from(cgpt_Lattice_base* _src, int dir, int off) {
     cgpt_Lattice<T>* src = compatible<T>(_src);
     l = Cshift(src->l, dir, off);
