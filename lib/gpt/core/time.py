@@ -29,8 +29,8 @@ def time():
 class timer:
     def __init__(self, prefix):
         self.dt = {}
-        self.flop = {}
-        self.byte = {}
+        self.f = {}
+        self.b = {}
         self.prefix = prefix
         self.active = False
         self.current = None
@@ -54,52 +54,56 @@ class timer:
         if which is not None:
             if which not in self.dt:
                 self.dt[which] = 0.0
-                self.flop[which] = 0.0
-                self.byte[which] = 0.0
+                self.f[which] = 0.0
+                self.b[which] = 0.0
             self.current = which
-            self.flop[which] += flop if flop is not None else 0.0
-            self.byte[which] += byte if byte is not None else 0.0
+            self.f[which] += flop if flop is not None else 0.0
+            self.b[which] += byte if byte is not None else 0.0
             self.dt[which] -= time()
         else:
             self.dt["total"] += time()
             self.active = False
 
     def print(self):
-        dt_print, flop_print, byte_print = (
-            self.dt.copy(),
-            self.flop.copy(),
-            self.byte.copy(),
-        )  # don't want to have additions below in raw collected data
+        dtp, fp, bp = self.create_print_arrays()
 
-        if "total" in dt_print:
-            total = dt_print["total"]
-            profiled = sum(dt_print.values()) - total
-            dt_print["unprofiled"] = total - profiled
-        else:
-            dt_print["total"] = sum(dt_print.values())
-            dt_print["unprofiled"] = 0.0  # by construction
-
-        flop_print["total"] = sum(flop_print.values())
-        byte_print["total"] = sum(byte_print.values())
-        flop_print["unprofiled"] = 0.0
-        byte_print["unprofiled"] = 0.0
-
-        if dt_print["total"] != 0.0:
-            for k, v in sorted(dt_print.items(), key=lambda x: x[1]):
-                if flop_print["total"] != 0.0 or byte_print["total"] != 0.0:
+        if dtp["total"] != 0.0:
+            for k, v in sorted(dtp.items(), key=lambda x: x[1]):
+                if fp["total"] != 0.0 or bp["total"] != 0.0:
                     gpt.message(
                         "%s: profiling: %15s = %e s (= %6.2f %%) %e F/s %e B/s"
                         % (
                             self.prefix,
                             k,
                             v,
-                            v / dt_print["total"] * 100,
-                            flop_print[k] / v,
-                            byte_print[k] / v,
+                            v / dtp["total"] * 100,
+                            fp[k] / v,
+                            bp[k] / v,
                         )
                     )
                 else:
                     gpt.message(
                         "%s: timing: %15s = %e s (= %6.2f %%)"
-                        % (self.prefix, k, v, v / dt_print["total"] * 100)
+                        % (self.prefix, k, v, v / dtp["total"] * 100)
                     )
+
+    def create_print_arrays(self):
+        """
+        Return copies with enhancements we don't want to have in the raw collected data
+        """
+        dtp, fp, bp = self.dt.copy(), self.f.copy(), self.b.copy()
+
+        if "total" in dtp:
+            total = dtp["total"]
+            profiled = sum(dtp.values()) - total
+            dtp["unprofiled"] = total - profiled
+        else:
+            dtp["total"] = sum(dtp.values())
+            dtp["unprofiled"] = 0.0  # by construction
+
+        fp["total"] = sum(fp.values())
+        bp["total"] = sum(bp.values())
+        fp["unprofiled"] = 0.0
+        bp["unprofiled"] = 0.0
+
+        return dtp, fp, bp
