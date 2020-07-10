@@ -27,18 +27,38 @@ def time():
 
 
 class timer:
-    def __init__(self):
+    def __init__(self, prefix):
         self.dt = {}
+        self.prefix = prefix
+        self.active = False
+        self.current = None
 
-    def start(self, which):
-        if which not in self.dt:
-            self.dt[which] = 0.0
-        self.dt[which] -= time()
+    def __call__(self, which=None):
+        """
+        first started timer also starts total timer
+        with argument given starts a new timer and ends a previous one if running
+        without argument ends current + total timer
+        """
+        if self.active is False and which is not None:
+            if "total" not in self.dt:
+                self.dt["total"] = 0.0
+            self.active = True
+            self.dt["total"] -= time()
 
-    def stop(self, which):
-        self.dt[which] += time()
+        if self.current is not None:
+            self.dt[self.current] += time()
+            self.current = None
 
-    def print(self, prefix):
+        if which is not None:
+            if which not in self.dt:
+                self.dt[which] = 0.0
+            self.current = which
+            self.dt[which] -= time()
+        else:
+            self.dt["total"] += time()
+            self.active = False
+
+    def print(self):
         to_print = (
             self.dt.copy()
         )  # don't want to have additions below in raw collected data

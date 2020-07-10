@@ -27,6 +27,10 @@ def create_links(A, fmat, basis):
     # verbosity
     verbose = gpt.default.is_verbose("coarsen")
 
+    # setup timings
+    t = gpt.timer("coarsen")
+    t("setup")
+
     # get grids
     f_grid = basis[0].grid
     c_grid = A[0].grid
@@ -54,12 +58,8 @@ def create_links(A, fmat, basis):
     )
     dirmasks = [gpt.complex(f_grid) for p in range(nhops)]
 
-    # setup timings
-    t = gpt.timer()
-
     # auxilliary stuff needed for masks
-    t.start("total")
-    t.start("masks")
+    t("masks")
     onemask[:] = 1.0
     coor = gpt.coordinates(blockevenmask)
     block = numpy.array(f_grid.ldimensions) / numpy.array(c_grid.ldimensions)
@@ -75,7 +75,6 @@ def create_links(A, fmat, basis):
     for p, d in enumerate(dirs):
         gpt.make_mask(dirmasks[p], dirmasks_forward_np[:, p])
         gpt.make_mask(dirmasks[4 + p], dirmasks_backward_np[:, p])
-    t.stop("masks")
 
     # save applications of matrix and coarsening if possible
     dirdisps = dirdisps_forward if hermitian else dirdisps_full
@@ -84,43 +83,38 @@ def create_links(A, fmat, basis):
         # apply directional hopping terms
         # this triggers len(dirdisps) comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
-        t.start("apply_hop")
+        t("apply_hop")
         [fmat.Mdir(Mvr[p], vr, d, fb) for p, (d, fb) in enumerate(dirdisps)]
-        t.stop("apply_hop")
 
         # coarsen directional terms + write to link
         for p, (d, fb) in enumerate(dirdisps):
             for j, vl in enumerate(basis):
-                t.start("coarsen_hop")
+                t("coarsen_hop")
                 gpt.block.maskedInnerProduct(oproj, dirmasks[p], vl, Mvr[p])
-                t.stop("coarsen_hop")
-                t.start("copy_hop")
+
+                t("copy_hop")
                 A[p][:, :, :, :, j, i] = oproj[:]
-                t.stop("copy_hop")
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
-        t.start("apply_self")
+        t("apply_self")
         tmp @= (
             blockevenmask * fmat.M * vr * blockevenmask
             + blockoddmask * fmat.M * vr * blockoddmask
         )
-        t.stop("apply_self")
 
         # coarsen diagonal term
-        t.start("coarsen_self")
+        t("coarsen_self")
         gpt.block.project(selfproj, tmp, basis)
-        t.stop("coarsen_self")
 
         # write to self link
-        t.start("copy_self")
+        t("copy_self")
         A[selflink][:, :, :, :, :, i] = selfproj[:]
-        t.stop("copy_self")
 
         if verbose:
             gpt.message("Coarsening of vector %d finished" % i)
 
     # communicate opposite links
-    t.start("comm")
+    t("comm")
     for p, (d, fb) in enumerate(dirdisps_forward):
         dd = d + 4
         shift_disp = fb * -1
@@ -130,12 +124,11 @@ def create_links(A, fmat, basis):
             pass
             # # linktmp = ... # TODO internal index manipulation for coarse spin dofs
             # A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
-    t.stop("comm")
 
-    t.stop("total")
+    t()
 
     if verbose:
-        t.print("coarsening")
+        t.print()
 
 
 def recreate_links(A, fmat, basis):

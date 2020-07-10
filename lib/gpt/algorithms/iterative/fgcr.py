@@ -56,11 +56,8 @@ class fgcr:
             checkres = True  # for now
 
             # timing
-            t = g.timer()
-
-            # start clocks
-            t.start("total")
-            t.start("setup")
+            t = g.timer("fgcr")
+            t("setup")
 
             # parameters
             rlen = self.restartlen
@@ -84,8 +81,6 @@ class fgcr:
             # initial values
             r2 = self.restart(mat, psi, mmpsi, src, r)
 
-            t.stop("setup")
-
             for k in range(self.maxiter):
                 # iteration within current krylov space
                 i = k % rlen
@@ -94,34 +89,30 @@ class fgcr:
                 reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
-                t.start("prec")
+                t("prec")
                 if self.prec is not None:
                     self.prec(p[i], r)
                 else:
                     p[i] @= r
-                t.stop("prec")
 
-                t.start("mat")
+                t("mat")
                 mat(mmp[i], p[i])
-                t.stop("mat")
 
-                t.start("ortho")
+                t("ortho")
                 g.orthogonalize(mmp[i], mmp[0:i], beta[:, i])
-                t.stop("ortho")
 
-                t.start("linalg")
+                t("linalg")
                 ip, mmp2 = g.innerProductNorm2(mmp[i], r)
                 gamma[i] = mmp2 ** 0.5
-
                 if gamma[i] == 0.0:
                     g.message("fgcr: breakdown, gamma[%d] = 0" % (i))
                     break
-
                 mmp[i] /= gamma[i]
                 alpha[i] = ip / gamma[i]
                 r2 = g.axpy_norm2(r, -alpha[i], mmp[i], r)
+
+                t("other")
                 self.history.append(r2)
-                t.stop("linalg")
 
                 if verbose:
                     g.message(
@@ -129,18 +120,17 @@ class fgcr:
                     )
 
                 if r2 <= rsq or need_restart or reached_maxiter:
-                    t.start("update_psi")
+                    t("update_psi")
                     self.update_psi(psi, alpha, beta, gamma, delta, p, i)
-                    t.stop("update_psi")
 
                     if r2 <= rsq:
                         if verbose:
-                            t.stop("total")
+                            t()
                             g.message(
                                 "fgcr: converged in %d iterations, took %g s"
                                 % (k + 1, t.dt["total"])
                             )
-                            t.print("fgcr")
+                            t.print()
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
@@ -152,12 +142,12 @@ class fgcr:
 
                     if reached_maxiter:
                         if verbose:
-                            t.stop("total")
+                            t()
                             g.message(
                                 "fgcr: did NOT converge in %d iterations, took %g s"
                                 % (k + 1, t.dt["total"])
                             )
-                            t.print("fgcr")
+                            t.print()
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
@@ -167,11 +157,10 @@ class fgcr:
                                 )
 
                     if need_restart:
-                        t.start("restart")
+                        t("restart")
                         r2 = self.restart(mat, psi, mmpsi, src, r)
                         if verbose:
-                            g.message("Performed restart")
-                        t.stop("restart")
+                            g.message("fgcr: performed restart")
 
         otype = None
         grid = None

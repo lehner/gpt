@@ -77,11 +77,8 @@ class fgmres:
             checkres = True  # for now
 
             # timing
-            t = g.timer()
-
-            # start clocks
-            t.start("total")
-            t.start("setup")
+            t = g.timer("fgmres")
+            t("setup")
 
             # parameters
             rlen = self.restartlen
@@ -110,8 +107,6 @@ class fgmres:
             # initial values
             r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
 
-            t.stop("setup")
-
             for k in range(self.maxiter):
                 # iteration within current krylov space
                 i = k % rlen
@@ -120,37 +115,38 @@ class fgmres:
                 reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
-                t.start("prec")
+                t("prec")
+
                 if self.prec is not None:
                     self.prec(Z[i], V[i])
-                t.stop("prec")
 
-                t.start("mat")
+                t("mat")
+
                 if self.prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
-                t.stop("mat")
 
-                t.start("ortho")
+                t("ortho")
+
                 g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i])
-                t.stop("ortho")
 
-                t.start("linalg")
+                t("linalg")
+
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
-
                 if H[i + 1, i] == 0.0:
                     g.message("fgmres: breakdown, H[%d, %d] = 0" % (i + 1, i))
                     break
-
                 V[i + 1] /= H[i + 1, i]
-                t.stop("linalg")
 
-                t.start("qr")
+                t("qr")
+
                 self.qr_update(s, c, H, gamma, i)
+
+                t("other")
+
                 r2 = np.absolute(gamma[i + 1]) ** 2
                 self.history.append(r2)
-                t.stop("qr")
 
                 if verbose:
                     g.message(
@@ -158,21 +154,20 @@ class fgmres:
                     )
 
                 if r2 <= rsq or need_restart or reached_maxiter:
-                    t.start("update_psi")
+                    t("update_psi")
                     if self.prec is not None:
                         self.update_psi(psi, gamma, H, y, Z, i)
                     else:
                         self.update_psi(psi, gamma, H, y, V, i)
-                    t.stop("update_psi")
 
                     if r2 <= rsq:
                         if verbose:
-                            t.stop("total")
+                            t()
                             g.message(
                                 "fgmres: converged in %d iterations, took %g s"
                                 % (k + 1, t.dt["total"])
                             )
-                            t.print("fgmres")
+                            t.print()
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
@@ -184,12 +179,12 @@ class fgmres:
 
                     if reached_maxiter:
                         if verbose:
-                            t.stop("total")
+                            t()
                             g.message(
                                 "fgmres: did NOT converge in %d iterations, took %g s"
                                 % (k + 1, t.dt["total"])
                             )
-                            t.print("fgmres")
+                            t.print()
                             if checkres:
                                 comp_res = r2 / ssq
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
@@ -199,11 +194,10 @@ class fgmres:
                                 )
 
                     if need_restart:
-                        t.start("restart")
+                        t("restart")
                         r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
                         if verbose:
-                            g.message("Performed restart")
-                        t.stop("restart")
+                            g.message("fgmres: performed restart")
 
         otype = None
         grid = None

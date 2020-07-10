@@ -39,9 +39,8 @@ class cg:
             assert src != psi
             self.history = []
             verbose = g.default.is_verbose("cg")
-            t = g.timer()
-            t.start("total")
-            t.start("setup")
+            t = g.timer("cg")
+            t("setup")
             p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
             mat(mmp, psi)  # in, out
             d = g.innerProduct(psi, mmp).real
@@ -52,36 +51,32 @@ class cg:
             cp = a
             ssq = g.norm2(src)
             rsq = self.eps ** 2.0 * ssq
-            t.stop("setup")
             for k in range(1, self.maxiter + 1):
                 c = cp
-                t.start("mat")
+                t("mat")
                 mat(mmp, p)
-                t.stop("mat")
-                t.start("inner")
+                t("inner")
                 dc = g.innerProduct(p, mmp)
                 d = dc.real
                 a = c / d
-                t.stop("inner")
-                t.start("axpy_norm")
+                t("axpy_norm")
                 cp = g.axpy_norm2(r, -a, mmp, r)
-                t.stop("axpy_norm")
-                t.start("linearcomb")
+                t("linearcomb")
                 b = cp / c
                 psi += a * p
                 p @= b * p + r
-                t.stop("linearcomb")
+                t("other")
                 self.history.append(cp)
                 if verbose:
                     g.message("cg: res^2[ %d ] = %g, target = %g" % (k, cp, rsq))
                 if cp <= rsq:
                     if verbose:
-                        t.stop("total")
+                        t()
                         g.message(
                             "cg: converged in %d iterations, took %g s"
                             % (k + 1, t.dt["total"])
                         )
-                        t.print("cg")
+                        t.print()
                     break
 
         return g.matrix_operator(

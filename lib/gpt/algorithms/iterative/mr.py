@@ -39,9 +39,8 @@ class mr:
             self.history = []
             verbose = g.default.is_verbose("mr")
 
-            t = g.timer()
-            t.start("total")
-            t.start("setup")
+            t = g.timer("mr")
+            t("setup")
 
             r, mmr = g.copy(src), g.copy(src)
 
@@ -51,28 +50,28 @@ class mr:
             ssq = g.norm2(src)
             rsq = self.eps ** 2.0 * ssq
 
-            t.stop("setup")
-
             for k in range(self.maxiter):
-                t.start("mat")
-                mat(mmr, r)
-                t.stop("mat")
+                t("mat")
 
-                t.start("inner")
+                mat(mmr, r)
+
+                t("inner")
+
                 ip, mmr2 = g.innerProductNorm2(mmr, r)
-                t.stop("inner")
 
                 if mmr2 == 0.0:
                     continue
 
-                t.start("linearcomb")
+                t("linearcomb")
+
                 alpha = ip.real / mmr2 * self.relax
                 psi += alpha * r
-                t.stop("linearcomb")
 
-                t.start("axpy_norm")
+                t("axpy_norm")
+
                 r2 = g.axpy_norm2(r, -alpha, mmr, r)
-                t.stop("axpy_norm")
+
+                t("other")
 
                 self.history.append(r2)
 
@@ -81,12 +80,12 @@ class mr:
 
                 if r2 <= rsq:
                     if verbose:
-                        t.stop("total")
+                        t()
                         g.message(
                             "mr: converged in %d iterations, took %g s"
                             % (k + 1, t.dt["total"])
                         )
-                        t.print("mr")
+                        t.print()
                     break
 
         otype = None

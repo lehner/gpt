@@ -34,9 +34,8 @@ class bicgstab:
             self.history = []
             verbose = g.default.is_verbose("bicgstab")
 
-            t = g.timer()
-            t.start("total")
-            t.start("setup")
+            t = g.timer("bicgstab")
+            t("setup")
 
             r, rhat, p, s = g.copy(src), g.copy(src), g.copy(src), g.copy(src)
             mmpsi, mmp, mms = g.copy(src), g.copy(src), g.copy(src)
@@ -53,51 +52,40 @@ class bicgstab:
             ssq = g.norm2(src)
             rsq = self.eps ** 2.0 * ssq
 
-            t.stop("setup")
-
             for k in range(self.maxiter):
-                t.start("inner")
+                t("inner")
                 rhoprev = rho
                 rho = g.innerProduct(rhat, r).real
-                t.stop("inner")
 
-                t.start("linearcomb")
+                t("linearcomb")
                 beta = (rho / rhoprev) * (alpha / omega)
                 p @= r + beta * p - beta * omega * mmp
-                t.stop("linearcomb")
 
-                t.start("mat")
+                t("mat")
                 mat(mmp, p)
-                t.stop("mat")
 
-                t.start("inner")
+                t("inner")
                 alpha = rho / g.innerProduct(rhat, mmp).real
-                t.stop("inner")
 
-                t.start("linearcomb")
+                t("linearcomb")
                 s @= r - alpha * mmp
-                t.stop("linearcomb")
 
-                t.start("mat")
+                t("mat")
                 mat(mms, s)
-                t.stop("mat")
 
-                t.start("inner")
+                t("inner")
                 ip, mms2 = g.innerProductNorm2(mms, s)
-                t.stop("inner")
-
                 if mms2 == 0.0:
                     continue
 
-                t.start("linearcomb")
+                t("linearcomb")
                 omega = ip.real / mms2
                 psi += alpha * p + omega * s
-                t.stop("linearcomb")
 
-                t.start("axpy_norm")
+                t("axpy_norm")
                 r2 = g.axpy_norm2(r, -omega, mms, s)
-                t.stop("axpy_norm")
 
+                t("other")
                 self.history.append(r2)
 
                 if verbose:
@@ -105,12 +93,12 @@ class bicgstab:
 
                 if r2 <= rsq:
                     if verbose:
-                        t.stop("total")
+                        t()
                         g.message(
                             "bicgstab: converged in %d iterations, took %g s"
                             % (k + 1, t.dt["total"])
                         )
-                        t.print("bicgstab")
+                        t.print()
                     break
 
         otype = None
