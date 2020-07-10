@@ -29,15 +29,17 @@ def time():
 class timer:
     def __init__(self, prefix):
         self.dt = {}
+        self.flop = {}
+        self.byte = {}
         self.prefix = prefix
         self.active = False
         self.current = None
 
-    def __call__(self, which=None):
+    def __call__(self, which=None, *, flop=None, byte=None):
         """
         first started timer also starts total timer
-        with argument given starts a new timer and ends a previous one if running
-        without argument ends current + total timer
+        with argument which given starts a new timer and ends a previous one if running
+        without argument which ends current + total timer
         """
         if self.active is False and which is not None:
             if "total" not in self.dt:
@@ -52,28 +54,52 @@ class timer:
         if which is not None:
             if which not in self.dt:
                 self.dt[which] = 0.0
+                self.flop[which] = 0.0
+                self.byte[which] = 0.0
             self.current = which
+            self.flop[which] += flop if flop is not None else 0.0
+            self.byte[which] += byte if byte is not None else 0.0
             self.dt[which] -= time()
         else:
             self.dt["total"] += time()
             self.active = False
 
     def print(self):
-        to_print = (
-            self.dt.copy()
+        dt_print, flop_print, byte_print = (
+            self.dt.copy(),
+            self.flop.copy(),
+            self.byte.copy(),
         )  # don't want to have additions below in raw collected data
 
-        if "total" in to_print:
-            total = to_print["total"]
-            profiled = sum(to_print.values()) - total
-            to_print["unprofiled"] = total - profiled
+        if "total" in dt_print:
+            total = dt_print["total"]
+            profiled = sum(dt_print.values()) - total
+            dt_print["unprofiled"] = total - profiled
         else:
-            to_print["total"] = sum(to_print.values())
-            to_print["unprofiled"] = 0.0  # by construction
+            dt_print["total"] = sum(dt_print.values())
+            dt_print["unprofiled"] = 0.0  # by construction
 
-        if to_print["total"] != 0.0:
-            for k, v in sorted(to_print.items(), key=lambda x: x[1]):
-                gpt.message(
-                    "Timing %s: %15s = %e s (= %6.2f %%)"
-                    % (prefix, k, v, v / to_print["total"] * 100)
-                )
+        flop_print["total"] = sum(flop_print.values())
+        byte_print["total"] = sum(byte_print.values())
+        flop_print["unprofiled"] = 0.0
+        byte_print["unprofiled"] = 0.0
+
+        if dt_print["total"] != 0.0:
+            for k, v in sorted(dt_print.items(), key=lambda x: x[1]):
+                if flop_print["total"] != 0.0 or byte_print["total"] != 0.0:
+                    gpt.message(
+                        "%s: profiling: %15s = %e s (= %6.2f %%) %e F/s %e B/s"
+                        % (
+                            self.prefix,
+                            k,
+                            v,
+                            v / dt_print["total"] * 100,
+                            flop_print[k] / v,
+                            byte_print[k] / v,
+                        )
+                    )
+                else:
+                    gpt.message(
+                        "%s: timing: %15s = %e s (= %6.2f %%)"
+                        % (self.prefix, k, v, v / dt_print["total"] * 100)
+                    )
