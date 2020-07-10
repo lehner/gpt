@@ -116,23 +116,19 @@ class fgmres:
                 need_restart = i + 1 == rlen
 
                 t("prec")
-
                 if self.prec is not None:
                     self.prec(Z[i], V[i])
 
                 t("mat")
-
                 if self.prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
 
                 t("ortho")
-
                 g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i])
 
                 t("linalg")
-
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
                 if H[i + 1, i] == 0.0:
                     g.message("fgmres: breakdown, H[%d, %d] = 0" % (i + 1, i))
@@ -140,11 +136,9 @@ class fgmres:
                 V[i + 1] /= H[i + 1, i]
 
                 t("qr")
-
                 self.qr_update(s, c, H, gamma, i)
 
                 t("other")
-
                 r2 = np.absolute(gamma[i + 1]) ** 2
                 self.history.append(r2)
 

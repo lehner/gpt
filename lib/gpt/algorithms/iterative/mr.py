@@ -52,27 +52,21 @@ class mr:
 
             for k in range(self.maxiter):
                 t("mat")
-
                 mat(mmr, r)
 
                 t("inner")
-
                 ip, mmr2 = g.innerProductNorm2(mmr, r)
-
                 if mmr2 == 0.0:
                     continue
 
                 t("linearcomb")
-
                 alpha = ip.real / mmr2 * self.relax
                 psi += alpha * r
 
                 t("axpy_norm")
-
                 r2 = g.axpy_norm2(r, -alpha, mmr, r)
 
                 t("other")
-
                 self.history.append(r2)
 
                 if verbose:
