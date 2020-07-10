@@ -33,7 +33,7 @@ cp lib/exports.h lib/exports.h~
 (
     echo "// ${WARNING}"
     sed '1,/BEGIN_EXPORT_DIRDISP_VOID/d;/END_EXPORT_DIRDISP_VOID/,$d' lib/operators/types.h |
-        awk '{ print "DIRDISPOP_VOID(" $1 "," NR + 3000 ")" }'
+    awk '{ print "DIRDISPOP_VOID(" $1 "," NR + 3000 ")" }'
 ) > lib/operators/register_dirdisp.h
 
 (
@@ -46,9 +46,9 @@ cp lib/exports.h lib/exports.h~
 ) > ../gpt/qcd/fermion/register.py
 (
     echo "# ${WARNING}"
-    echo "def register_dirdisp(reg,op):"
+    echo "def register_dirdisp(reg, op):"
     sed '1,/BEGIN_EXPORT_DIRDISP_VOID/d;/END_EXPORT_DIRDISP_VOID/,$d' lib/operators/types.h |
-        awk '{ print "  reg." $1 " = lambda dst, src, dir, disp: op.dirdisp(" NR + 3000 ",dst,src,dir,disp)" }'
+    awk '{ print "    reg." $1 " = lambda dst, src, dir, disp: op.dirdisp(" NR + 3000 ", dst, src, dir, disp)" }'
 ) > ../gpt/qcd/fermion/register_dirdisp.py
 
 # get spins and colors and basis sizes

@@ -65,7 +65,7 @@ class mg:
         # verbosity
         self.verbose = g.default.is_verbose("mg")
 
-        # printing prefix
+        # print prefix
         self.print_prefix = ["mg: level %d:" % i for i in range(self.nlevel)]
 
         # easy access to current level and neighbors
@@ -247,6 +247,8 @@ class mg:
             # assertions
             assert psi != src
 
+            inputnorm = g.norm2(src)
+
             if self.verbose:
                 g.message(
                     "%s starting inversion routine: psi = %g, src = %g"
@@ -295,7 +297,6 @@ class mg:
 
                 if self.verbose:
                     g.message("%s done presmoothing" % (pp))
-
                     g.message(
                         "%s norms before f2c: r_c = %g, r = %g"
                         % (pp, g.norm2(self.r[nc_lvl]), g.norm2(r))
@@ -321,7 +322,6 @@ class mg:
                 if self.verbose:
                     t("output")
                     g.message("%s done calling level %d" % (pp, nc_lvl))
-
                     g.message(
                         "%s norms before c2f: psi = %g, e_c = %g"
                         % (pp, g.norm2(psi), g.norm2(self.e[nc_lvl]))
@@ -331,11 +331,16 @@ class mg:
                 t("fromcoarse")
                 c2f(self.e[nc_lvl], psi, basis)
 
+                t("residual")
+                tmp = g.lattice(src)
+                mat.M(tmp, psi)
+                tmp @= src - tmp
+                res_cgc = (g.norm2(tmp) / inputnorm) ** 0.5
+
                 if self.verbose:
                     t("output")
                     g.message("%s done projecting from level %d" % (pp, nc_lvl))
-
-                g.message("%s norms after c2f: psi = %g" % (pp, g.norm2(psi)))
+                    g.message("%s norms after c2f: psi = %g" % (pp, g.norm2(psi)))
 
                 # run optional pre-smoother TODO make optional
                 t("postsmooth")
@@ -345,13 +350,17 @@ class mg:
                 slv_postsmooth = make_solver(mat, postsmooth)
                 slv_postsmooth(psi, src)
 
-                g.message(
-                    "%s input norm = %g, coarse residual = %g, postsmooth residual = %g"
-                    % (pp, inputnorm, res_cgc, res_postsmooth)
-                )
+                t("residual")
+                mat.M(tmp, psi)
+                tmp @= src - tmp
+                res_postsmooth = (g.norm2(tmp) / inputnorm) ** 0.5
 
                 if self.verbose:
                     g.message("%s done postsmoothing" % (pp))
+                    g.message(
+                        "%s input norm = %g, coarse residual = %g, postsmooth residual = %g"
+                        % (pp, inputnorm, res_cgc, res_postsmooth)
+                    )
 
             t()
 
@@ -359,7 +368,6 @@ class mg:
                 g.message(
                     "%s ending inversion routine: psi = %g, src = %g"
                     % (pp, g.norm2(psi), g.norm2(src))
-                )
                 )
 
         return g.matrix_operator(
