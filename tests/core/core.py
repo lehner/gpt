@@ -81,7 +81,7 @@ assert eps < 1e-12
 fft_mom_A = g.slice(
     g.exp_ixp(2.0 * np.pi * np.array([1, 2, 3, 0]) / L) * l_sp, 3
 ) / np.prod(L[0:3])
-fft_mom_B = [g.vcolor(x) for x in g.eval(g.fft([0, 1, 2]) * l_sp)[1, 2, 3, :]]
+fft_mom_B = [g.vcolor(x) for x in g.eval(g.fft([0, 1, 2]) * l_sp)[1, 2, 3, 0 : L[3]]]
 for t in range(L[3]):
     eps = g.norm2(fft_mom_A[t] - fft_mom_B[t])
     assert eps < 1e-12
