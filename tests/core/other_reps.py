@@ -33,12 +33,12 @@ assert eps < 1e-14
 ################################################################################
 rng = g.random("test")
 U = g.qcd.gauge.random(grid_sp, rng, otype=g.ot_matrix_su2_adjoint())
-eps = abs(g.qcd.gauge.plaquette(U) - 1.0690233906110127)
+eps = abs(g.qcd.gauge.plaquette(U) - 0.712682286898295)
 g.message("Test su2 adjoint single", eps)
 assert eps < 1e-7
 
 rng = g.random("test")
 U = g.qcd.gauge.random(grid_dp, rng, otype=g.ot_matrix_su2_adjoint())
-eps = abs(g.qcd.gauge.plaquette(U) - 1.0690234303179036)
+eps = abs(g.qcd.gauge.plaquette(U) - 0.7126822868786024)
 g.message("Test su2 adjoint double", eps)
 assert eps < 1e-14
