@@ -59,6 +59,34 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
     return;
   }
 
+  // SM -> M
+  if (lhs_singlet_rank == 0 && rhs_singlet_rank == 2) {
+    int dim = rhs_singlet_dim;
+    bool mtrans = (rhs_unary & BIT_TRANS) != 0;
+    dst_vl.resize(dim*dim);
+    for (int i=0;i<dim;i++) {
+      for (int j=0;j<dim;j++) {
+        int idx = mtrans ? (i * dim + j) : (j * dim + i);
+        dst_vl[idx] = lhs_vl[0]->mul(0, false, rhs_vl[idx], lhs_unary, rhs_unary, unary);
+      }
+    }
+    return;
+  }
+
+  // MS -> M
+  if (lhs_singlet_rank == 2 && rhs_singlet_rank == 0) {
+    int dim = lhs_singlet_dim;
+    bool mtrans = (lhs_unary & BIT_TRANS) != 0;
+    dst_vl.resize(dim*dim);
+    for (int i=0;i<dim;i++) {
+      for (int j=0;j<dim;j++) {
+        int idx = mtrans ? (i * dim + j) : (j * dim + i);
+        dst_vl[idx] = lhs_vl[idx]->mul(0, false, rhs_vl[0], lhs_unary, rhs_unary, unary);
+      }
+    }
+    return;
+  }
+
   // MV -> V
   if (lhs_singlet_rank == 2 && rhs_singlet_rank == 1) {
     ASSERT(lhs_singlet_dim == rhs_singlet_dim);
