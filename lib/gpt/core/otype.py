@@ -99,6 +99,9 @@ class ot_matrix_color(ot_base):
             "ot_vector_color(%d)" % ndim: (lambda: ot_vector_color(ndim), (1, 0)),
             "ot_singlet": (lambda: self, None),
         }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
 
 
 def matrix_color(grid, ndim):
@@ -142,6 +145,9 @@ class ot_matrix_su3_fundamental(ot_matrix_color):
             "ot_vector_color(3)": (lambda: ot_vector_color(3), (1, 0)),
             "ot_singlet": (lambda: self, None),
         }
+        self.mtab = {
+            "ot_singlet": (lambda: self, None),
+        }
 
     def generators(self, dt):
         return [
@@ -173,6 +179,9 @@ class ot_matrix_su2_fundamental(ot_matrix_color):
             "ot_vector_color(2)": (lambda: ot_vector_color(2), (1, 0)),
             "ot_singlet": (lambda: self, None),
         }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
 
     def generators(self, dt):
         # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
@@ -196,6 +205,9 @@ class ot_matrix_su2_adjoint(ot_matrix_color):
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
             "ot_vector_color(3)": (lambda: ot_vector_color(3), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+        self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
 
@@ -226,6 +238,9 @@ class ot_matrix_spin(ot_base):
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
             "ot_vector_spin(%d)" % ndim: (lambda: ot_vector_spin(ndim), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+        self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
 
@@ -274,12 +289,14 @@ class ot_matrix_spin_color(ot_base):
                 lambda: ot_vector_spin(spin_ndim, color_ndim),
                 ([1, 3], [0, 1]),
             ),
+            "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
             "ot_matrix_spin(%d)"
             % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
             "ot_matrix_color(%d)"
             % (color_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_singlet": (lambda: self, None),
         }
 
 
@@ -307,11 +324,15 @@ class ot_vector_spin_color(ot_base):
         self.itab = {
             self.__name__: (lambda: ot_singlet, ([0, 1], [0, 1])),
         }
+        self.mtab = {
+            "ot_singlet": (lambda: self, None),
+        }
         self.rmtab = {
             "ot_matrix_spin(%d)"
             % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
             "ot_matrix_color(%d)"
             % (color_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_singlet": (lambda: self, None),
         }
 
     def distribute(self, mat, dst, src, zero_lhs):
