@@ -157,8 +157,9 @@ assert eps0 < 1e-9 and eps1 < 1e-9
 assert g.complex(0.5).array[0] == 0.5
 
 # left and right multiplication of different data types with scalar
+mc = g.mcomplex(grid, ntest)
 for dti in [cv, cm, vsc, msc, vc, mc]:
     rng.cnormal(dti)
     eps = g.norm2(mask * dti - dti * mask)
     g.message(f"Done with {dti.otype.__name__}")
-    assert eps == 0.
+    assert eps == 0.0

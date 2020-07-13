@@ -53,8 +53,8 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 
   // VS -> V
   if (lhs_singlet_rank == 1 && rhs_singlet_rank == 0) {
-    dst_vl.resize(rhs_singlet_dim);
-    for (int idx=0;idx<rhs_singlet_dim;idx++)
+    dst_vl.resize(lhs_singlet_dim);
+    for (int idx=0;idx<lhs_singlet_dim;idx++)
       dst_vl[idx] = lhs_vl[idx]->mul( 0, false, rhs_vl[0], lhs_unary, rhs_unary, unary);
     return;
   }
