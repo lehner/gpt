@@ -56,7 +56,7 @@ function next {
     do
 	(
 	    flock -n 9 || exit 1
-	    for src in lib/*.cc lib/instantiate/*.cc
+	    for src in $(find lib -name *.cc | grep -v 5)
 	    do
 		bn=$(basename $src .cc)
 		dst=build/${bn}.o
