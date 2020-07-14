@@ -122,12 +122,12 @@ for i in range(4):
         assert eps < 1e-13
 
 # gamma matrices applied to spin
-sc = g.vspincolor(grid)
-sc[:] = 0
-sc[0, 0, 0, 0] = g.vspincolor([[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0]])
-scA = g.eval(g.gamma[0] * g.gamma[1] * sc)
-scB = g.eval(g.gamma[0] * g.eval(g.gamma[1] * sc))
-assert g.norm2(scA - scB) < 1e-13
+vsc = g.vspincolor(grid)
+vsc[:] = 0
+vsc[0, 0, 0, 0] = g.vspincolor([[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0]])
+vscA = g.eval(g.gamma[0] * g.gamma[1] * vsc)
+vscB = g.eval(g.gamma[0] * g.eval(g.gamma[1] * vsc))
+assert g.norm2(vscA - vscB) < 1e-13
 
 # set entire block to tensor
 src = g.vspincolor(grid)
@@ -155,3 +155,11 @@ assert eps0 < 1e-9 and eps1 < 1e-9
 
 # create singlet by number
 assert g.complex(0.5).array[0] == 0.5
+
+# left and right multiplication of different data types with scalar
+mc = g.mcomplex(grid, ntest)
+for dti in [cv, cm, vsc, msc, vc, mc]:
+    rng.cnormal(dti)
+    eps = g.norm2(mask * dti - dti * mask)
+    g.message(f"Done with {dti.otype.__name__}")
+    assert eps == 0.0
