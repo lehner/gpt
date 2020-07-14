@@ -34,14 +34,11 @@ def assert_correct_length(a, c):
             assert len(elem) == c
 
 
-def make_solver(mat, param, parity=None):
-    parity = g.odd if parity is None else parity
-    s = g.qcd.fermion.solver
-    p = g.qcd.fermion.preconditioner
-    if param["eo"] is True:
-        return s.propagator(s.inv_eo_ne(p.eo2(mat, parity), param["alg"]))
-    else:
-        return s.propagator(s.inv_direct(mat, param["alg"]))
+def assert_correct_solver(x):
+    if type(x) == list:
+        for elem in x:
+            return assert_correct_solver(elem)
+    assert callable(x) or x is None
 
 
 class mg:
@@ -94,6 +91,9 @@ class mg:
                 self.nb,
             ],
             self.nlevel - 1,
+        )
+        assert_correct_solver(
+            [self.presmooth, self.postsmooth, self.setupsolve, self.coarsestsolve]
         )
         assert type(self.coarsestsolve) != list
 
@@ -175,9 +175,6 @@ class mg:
                 nb = self.nb[lvl]
                 vecstype = self.vecstype[lvl]
 
-                # setup solver
-                slv_setup = make_solver(self.mat[lvl], self.setupsolve[lvl])
-
                 # TODO
                 # g.unsplit_chiral(basis)
 
@@ -193,7 +190,7 @@ class mg:
                         psi @= v
                     else:
                         assert 0
-                    slv_setup(psi, src)
+                    self.setupsolve[lvl](self.mat[lvl])(psi, src)
                     v @= psi
 
                 if self.verbose:
@@ -265,16 +262,11 @@ class mg:
 
             if lvl == self.coarsest:
                 t("invert")
-                # eo currently doesn't work, requires work in Grid -> TODO
-                assert self.coarsestsolve["eo"] is False
-                slv_coarsest = make_solver(self.mat[lvl], self.coarsestsolve)
-                slv_coarsest(psi, src)
+                self.coarsestsolve(self.mat[lvl])(psi, src)
             else:
                 # aliases
                 mat = self.mat[lvl]
                 basis = self.basis[lvl]
-                presmooth = self.presmooth[lvl]
-                postsmooth = self.postsmooth[lvl]
                 r = self.r[lvl]
                 t = self.t_solve[lvl]
 
@@ -284,11 +276,7 @@ class mg:
                     t("presmooth")
                     tmp, mmtmp = g.lattice(src), g.lattice(src)
                     tmp[:] = 0
-                    # eo currently only works on finest, requires work in Grid -> TODO
-                    if lvl != self.finest:
-                        assert presmooth["eo"] is False
-                    slv_presmooth = make_solver(mat, presmooth)
-                    slv_presmooth(tmp, src)
+                    self.presmooth[lvl](mat)(tmp, src)
                     mat.M(mmtmp, tmp)
                     r @= src - mmtmp
                 else:
@@ -344,11 +332,7 @@ class mg:
 
                 # run optional pre-smoother TODO make optional
                 t("postsmooth")
-                # eo currently only works on finest, requires work in Grid -> TODO
-                if lvl != self.finest:
-                    assert postsmooth["eo"] is False
-                slv_postsmooth = make_solver(mat, postsmooth)
-                slv_postsmooth(psi, src)
+                self.postsmooth[lvl](mat)(psi, src)
 
                 t("residual")
                 mat.M(tmp, psi)
