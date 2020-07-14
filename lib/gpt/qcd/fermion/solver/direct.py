@@ -26,9 +26,9 @@ def inv_direct(matrix, inverter):
 
     m = gpt.matrix_operator(
         mat=inv,
-        inv_mat=matrix,
+        inv_mat=matrix.M,
         otype=matrix.otype,
-        zero=(False, False),
+        zero=(True, False),
         grid=matrix.F_grid,
     )
 
