@@ -19,36 +19,42 @@ nbasis = 40
 assert nbasis % 2 == 0
 nb = nbasis // 2
 
-# setup basis
-basis_ref = [g.vspincolor(grid) for i in range(nb)]
-basis_split = [g.vspincolor(grid) for i in range(nbasis)]
-rng.cnormal(basis_ref)
+# setup fine basis
+basis_ref_f = [g.vspincolor(grid) for __ in range(nb)]
+basis_split_f = [g.vspincolor(grid) for __ in range(nbasis)]
+rng.cnormal(basis_ref_f)
 
-# arbitrary factor
-for factor in [0.5, 1.0]:
-    for i in range(nb):
-        basis_split[i] = g.copy(basis_ref[i])
+# setup coarse basis
+basis_ref_c = [g.vcomplex(grid, nbasis) for __ in range(nb)]
+basis_split_c = [g.vcomplex(grid, nbasis) for __ in range(nbasis)]
+rng.cnormal(basis_ref_c)
 
-    g.split_chiral(basis_split, factor)
-    g.unsplit_chiral(basis_split, factor)
 
-    for i in range(nb):
-        diff2 = g.norm2(basis_ref[i] - basis_split[i])
-        assert diff2 == 0.0
-        g.message(
-            "Test passed (factor %g) for vector %d, %e == 0.0" % (factor, i, diff2)
-        )
+def run_test(basis_split, basis_ref):
+    for factor in [0.5, 1.0, None]:
+        for i in range(nb):
+            basis_split[i] = g.copy(basis_ref[i])
 
-# without factor
-for i in range(nb):
-    basis_split[i] = g.copy(basis_ref[i])
+        g.split_chiral(basis_split, factor)
+        g.unsplit_chiral(basis_split, factor)
 
-g.split_chiral(basis_split)
-g.unsplit_chiral(basis_split)
+        typename = basis_split[0].otype.__name__
+        for i in range(nb):
+            diff2 = g.norm2(basis_ref[i] - basis_split[i])
+            assert diff2 == 0.0
+            if factor is None:
+                g.message(
+                    "Test passed (factor None, type %s) for vector %d, %e == 0.0"
+                    % (typename, i, diff2)
+                )
+            else:
+                g.message(
+                    "Test passed (factor %g, type %s) for vector %d, %e == 0.0"
+                    % (factor, typename, i, diff2)
+                )
 
-for i in range(nb):
-    diff2 = g.norm2(basis_ref[i] - basis_split[i])
-    assert diff2 == 0.0
-    g.message("Test passed (no factor) for vector %d, %e == 0.0" % (i, diff2))
 
-g.message("All tests passed")
+run_test(basis_split_f, basis_ref_f)
+g.message("All tests for fine grid")
+run_test(basis_split_c, basis_ref_c)
+g.message("All tests for coarse grid")

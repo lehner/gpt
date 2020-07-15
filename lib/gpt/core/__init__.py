@@ -60,6 +60,7 @@ from gpt.core.basis import (
     linear_combination,
     rotate,
     qr_decomp,
+    g5c,
     split_chiral,
     unsplit_chiral,
 )

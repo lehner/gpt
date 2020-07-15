@@ -36,9 +36,9 @@ def assert_correct_length(a, c):
 
 def assert_correct_solver(x):
     if type(x) == list:
-        for elem in x:
-            return assert_correct_solver(elem)
-    assert callable(x) or x is None
+        [assert_correct_solver(elem) for elem in x]
+    else:
+        assert callable(x) or x is None
 
 
 class mg:
