@@ -191,8 +191,10 @@ class coarse_operator:
             "grid_c": self.A_grid.obj,
             "hermitian": params["hermitian"],
             "level": params["level"],
-            "nbasis": self.A[0].otype.shape[0],
-            "A": [a.v_obj[0] for a in self.A],
+            "nbasis": int(
+                self.A[0].otype.shape[0] / (len(A[0].v_obj)) ** 0.5
+            ),  # for one instance
+            # "A": [a.v_obj[0] for a in self.A],
         }
 
         for k in params:
@@ -200,6 +202,7 @@ class coarse_operator:
 
         self.obj = []
         for i in range(len(A[0].v_obj)):
+            self.params["A"] = [a.v_obj[i] for a in self.A]
             self.obj.append(
                 cgpt.create_fermion_operator(
                     self.name, self.A_grid.precision, self.params
@@ -245,16 +248,33 @@ class coarse_operator:
 
     def unary(self, opcode, o, i):
         assert len(i.v_obj) == len(o.v_obj)
-        assert len(i.v_obj) == len(self.obj)
+        assert len(i.v_obj) == (len(self.obj)) ** 0.5
+        tmp = gpt.lattice(o)
+        o[:] = 0.0
         # Grid has different calling conventions which we adopt in cgpt:
-        for j in range(len(self.obj)):
-            cgpt.apply_fermion_operator(self.obj[j], opcode, i.v_obj[j], o.v_obj[j])
+        for m in range(len(i.v_obj)):
+            tmp[:] = 0.0
+            for n in range(len(i.v_obj)):
+                cgpt.apply_fermion_operator(
+                    self.obj[n * len(i.v_obj) + m], opcode, i.v_obj[n], tmp.v_obj[m]
+                )
+                o += tmp
 
     def dirdisp(self, opcode, o, i, direction, disp):
         assert len(i.v_obj) == len(o.v_obj)
-        assert len(i.v_obj) == len(self.obj)
+        assert len(i.v_obj) == (len(self.obj)) ** 0.5
+        tmp = gpt.lattice(o)
+        o[:] = 0.0
         # Grid has different calling conventions which we adopt in cgpt:
-        for j in range(len(self.obj)):
-            cgpt.apply_fermion_operator_dirdisp(
-                self.obj[j], opcode, i.v_obj[j], o.v_obj[j], direction, disp
-            )
+        for m in range(len(i.v_obj)):
+            tmp[:] = 0.0
+            for n in range(len(i.v_obj)):
+                cgpt.apply_fermion_operator_dirdisp(
+                    self.obj[n * len(i.v_obj) + m],
+                    opcode,
+                    i.v_obj[n],
+                    tmp.v_obj[m],
+                    direction,
+                    disp,
+                )
+                o += tmp
