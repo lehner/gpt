@@ -26,7 +26,7 @@ def plaquette(U):
     tr = 0.0
     vol = float(U[0].grid.fsites)
     Nd = len(U)
-    Nc = U[0].otype.Nc
+    ndim = U[0].otype.shape[0]
     for mu in range(Nd):
         for nu in range(mu):
             tr += g.sum(
@@ -37,7 +37,7 @@ def plaquette(U):
                     * g.adj(U[nu])
                 )
             )
-    return 2.0 * tr.real / vol / Nd / (Nd - 1) / Nc
+    return 2.0 * tr.real / vol / Nd / (Nd - 1) / ndim
 
 
 @params_convention(otype=None, Nd=None)

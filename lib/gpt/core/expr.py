@@ -305,8 +305,6 @@ def expr_eval(first, second=None, ac=False):
             # cannot evaluate to a lattice object, leave expression unevaluated
             return first
         grid = lat.grid
-        otype = lat.otype
-        n = len(otype.v_idx)
         t_obj = None
 
     # apply matrix_operators
@@ -324,8 +322,7 @@ def expr_eval(first, second=None, ac=False):
         gpt.message("GPT::verbose::eval: " + str(e))
 
     if t_obj is not None:
-        for i, t in enumerate(t_obj):
-            assert 0 == cgpt.eval(t, e.val, e.unary, ac, i)
+        assert 0 == cgpt.eval(t_obj, e.val, e.unary, ac)
         return first
     else:
         assert ac is False
@@ -333,9 +330,11 @@ def expr_eval(first, second=None, ac=False):
         # now find return type
         otype = get_otype_from_expression(e)
 
-        t_obj, s_ot, s_pr = [0] * n, [0] * n, [0] * n
-        for i in otype.v_idx:
-            t_obj[i], s_ot[i], s_pr[i] = cgpt.eval(t_obj[i], e.val, e.unary, False, i)
+        res = cgpt.eval(t_obj, e.val, e.unary, False)
+        t_obj, s_ot = (
+            [x[0] for x in res],
+            [x[1] for x in res],
+        )
 
         assert s_ot == otype.v_otype
 

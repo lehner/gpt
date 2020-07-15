@@ -65,6 +65,8 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
   data.resize(nlat);
   shape.resize(0);
 
+  Coordinate vcoor(dim_indices), vsize(dim_indices,1);
+  Coordinate v_n0(dim_indices), v_n1(dim_indices);
   for (long i=0;i<nlat;i++) {
 
     cgpt_distribute::data_simd & d = data[i];
@@ -78,22 +80,53 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
 
     std::vector<long> ishape;
     l->describe_data_layout(d.Nsimd,d.word,d.simd_word,ishape);
+    ASSERT(ishape.size() == dim_indices);
     long words = d.word / d.simd_word;
     Py_XDECREF(_mem);
 
-    long v_n0 = shape.size() ? shape[0] : 0;
-    long v_n1 = v_n0 + ishape[0];
-    ASSERT(dim_indices == ishape.size());
+    // virtual memory layout
+    int singlet_rank = l->singlet_rank();
+
+    // allow for singlet_rank == 0 to be grouped in 1d
+    if (!singlet_rank)
+      singlet_rank = 1;
+
+    if (!i) {
+
+
+      int dim = size_to_singlet_dim(singlet_rank, nlat);
+      for (long s=0;s<singlet_rank;s++)
+	vsize[s]=dim;
+
+      shape.resize(dim_indices);
+      for (long s=0;s<dim_indices;s++) {
+	shape[s] = ishape[s] * vsize[s];
+      }
+
+    } else {
+      for (long s=singlet_rank;s<dim_indices;s++)
+	ASSERT(shape[s] == ishape[s]);
+    }
+
+    Lexicographic::CoorFromIndex(vcoor,i,vsize);
+
+    for (long s=0;s<dim_indices;s++) {
+      v_n0[s] = vcoor[s] * ishape[s];
+      v_n1[s] = v_n0[s] + ishape[s];
+    }
 
     // first select
     std::vector<long> indices_on_l;
     for (long ll=0;ll<n_indices;ll++) {
-      auto & n = tidx_coor[ll*dim_indices];
-      if (v_n0 <= n && n < v_n1)
+      long s;
+      for (s=0;s<dim_indices;s++) {
+	auto & n = tidx_coor[ll*dim_indices + s];
+	if (n < v_n0[s] || n >= v_n1[s])
+	  break;
+      }
+      if (s == dim_indices)
 	indices_on_l.push_back(ll);
     }
-
-    //std::cout << GridLogMessage << indices_on_l << std::endl;
 
     // then process in parallel
     d.offset_data.resize(indices_on_l.size());
@@ -103,9 +136,8 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
 	std::vector<long> coor(dim_indices);
 	thread_for_in_region(idx, indices_on_l.size(),{
 	    for (long l=0;l<dim_indices;l++)
-	      coor[l] = tidx_coor[indices_on_l[idx]*dim_indices + l];
+	      coor[l] = tidx_coor[indices_on_l[idx]*dim_indices + l] - v_n0[l];
 	    int linear_index;
-	    coor[0] -= v_n0;
 	    Lexicographic::IndexFromCoorReversed(coor,linear_index,ishape);
 	    ASSERT(0 <= linear_index && linear_index < words);
 	    d.offset_data[idx] = linear_index;
@@ -113,18 +145,11 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
 	  });
       }
 
-    //std::cout << GridLogMessage << "Indices:" << d.offset_data << " -> " << d.offset_buffer << std::endl;
-
     if (i == 0) {
-      shape = ishape;
       grid = l->get_grid();
       cb = l->get_checkerboard();
       dtype = l->get_numpy_dtype();
     } else {
-      shape[0] += ishape[0];
-      ASSERT(shape.size() == ishape.size());
-      for (long j=1;j<ishape.size();j++)
-	ASSERT(ishape[j]==shape[j]);
       ASSERT(grid == l->get_grid()); // only works if all lattices live on same Grid
       ASSERT(cb == l->get_checkerboard());
       ASSERT(dtype == l->get_numpy_dtype());

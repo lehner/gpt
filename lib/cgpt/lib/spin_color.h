@@ -17,9 +17,11 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 SPIN(4) // 4d
+
 COLOR(3) // SU(3), adjoint SU(2), ...
 COLOR(2) // SU(2)
 COLOR(1) // QED
+
 SPIN_COLOR(4,3)
 SPIN_COLOR(4,2)
 SPIN_COLOR(4,1)

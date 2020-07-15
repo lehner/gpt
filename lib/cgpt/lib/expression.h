@@ -46,19 +46,25 @@ static Gamma::Algebra gamma_algebra_map[] = {
 // need to supplement this for current Grid
 namespace Grid {
   template<class vtype,int N> accelerator_inline iVector<vtype,N> transpose(const iVector<vtype,N>&r) { return r; }
+
+  // define vector * vector -> vector elementwise multiplication
+  template<class l,class r,int N> accelerator_inline
+    auto operator * (const iVector<l,N>& lhs,const iVector<r,N>& rhs) -> iVector<decltype(lhs._internal[0]*rhs._internal[0]),N>
+    {
+      typedef decltype(lhs._internal[0]*rhs._internal[0]) ret_t;
+      iVector<ret_t,N> ret;
+      for (int i=0;i<N;i++)
+	mult(&ret._internal[i],&lhs._internal[i],&rhs._internal[i]);
+      return ret;
+    }
+
 };
 
 // declaration
 template<typename T> cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T>& _compatible,cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr);
-
-#define PER_TENSOR_TYPE(T) \
-  template<typename vtype> cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la,int unary_b, cgpt_Lattice_base* b, int unary_expr); \
-  template<typename vtype> cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool reverse); \
-  template<typename vtype> cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T<vtype>>& la, Gamma::Algebra gamma, int unary_expr, bool reverse);
-
-#include "tensors.h"
-
-#undef PER_TENSOR_TYPE
+template<typename T> cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la,int unary_b, cgpt_Lattice_base* b, int unary_expr);
+template<typename T> cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool reverse);
+template<typename T> cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la, Gamma::Algebra gamma, int unary_expr, bool reverse);
 
 // convert compatible types to singlet
 #include "expression/singlet.h"

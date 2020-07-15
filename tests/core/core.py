@@ -66,6 +66,25 @@ eps = g.norm2(g.adj(exp_ixp * exp_ixp) * exp_ixp * exp_ixp * l_dp - l_dp) / g.no
 g.message("Momentum adj test (2): ", eps)
 assert eps < 1e-20
 
+################################################################################
+# Test FFT
+################################################################################
+fft_l_sp = g.eval(g.fft() * l_sp)
+eps = g.norm2(g.adj(g.fft()) * fft_l_sp - l_sp) / g.norm2(l_sp)
+g.message("FFTinv * FFT:", eps)
+assert eps < 1e-12
+
+eps = g.norm2(g.sum(exp_ixp * l_sp) / np.prod(L) - fft_l_sp[1, 2, 3, 4])
+g.message("FFT forward test:", eps)
+assert eps < 1e-12
+
+fft_mom_A = g.slice(
+    g.exp_ixp(2.0 * np.pi * np.array([1, 2, 3, 0]) / L) * l_sp, 3
+) / np.prod(L[0:3])
+fft_mom_B = [g.vcolor(x) for x in g.eval(g.fft([0, 1, 2]) * l_sp)[1, 2, 3, 0 : L[3]]]
+for t in range(L[3]):
+    eps = g.norm2(fft_mom_A[t] - fft_mom_B[t])
+    assert eps < 1e-12
 
 ################################################################################
 # Test vcomplex

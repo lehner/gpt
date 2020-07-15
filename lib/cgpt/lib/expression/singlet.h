@@ -28,7 +28,15 @@ T1 TensorToSinglet(const T1& a) {
   return a;
 }
 
-// Define ToSinglet unary operator to work in ET
+// Make scalar
+template<typename T>
+iScalar<T> TensorMakeScalar(const T& a) {
+  iScalar<T> ret;
+  ret._internal = a;
+  return ret;
+}
+
+// Define unary operator to work in ET
 #define GRID_UNOP(name)   name<decltype(eval(0, arg))>
 #define GRID_DEF_UNOP(op, name)\
   template <typename T1, typename std::enable_if<is_lattice<T1>::value||is_lattice_expr<T1>::value,T1>::type * = nullptr> \
@@ -39,3 +47,6 @@ T1 TensorToSinglet(const T1& a) {
 
 GridUnopClass(UnaryToSinglet, TensorToSinglet(a));
 GRID_DEF_UNOP(ToSinglet, UnaryToSinglet);
+
+GridUnopClass(UnaryMakeScalar, TensorMakeScalar(a));
+GRID_DEF_UNOP(MakeScalar, UnaryMakeScalar);

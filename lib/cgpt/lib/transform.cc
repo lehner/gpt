@@ -53,6 +53,27 @@ EXPORT(copy,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(fft,{
+    
+    void* _dst,* _src;
+    PyObject* _dims, *_sign;
+    if (!PyArg_ParseTuple(args, "llOO", &_dst, &_src, &_dims, &_sign)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
+
+    std::vector<int> dims;
+    int sign;
+    cgpt_convert(_dims,dims);
+    cgpt_convert(_sign,sign);
+    
+    dst->fft_from(src,dims,sign);
+    
+    return PyLong_FromLong(0);
+  });
+
 
 EXPORT(convert,{
     

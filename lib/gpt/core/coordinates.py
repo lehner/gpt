@@ -18,16 +18,12 @@
 #
 import gpt, cgpt, numpy
 
+_coordinates_cache = {}
+
 
 def coordinates(o, order="lexicographic"):
     if type(o) == gpt.grid and o.cb.n == 1:
-        dim = len(o.ldimensions)
-        top = [o.processor_coor[i] * o.ldimensions[i] for i in range(dim)]
-        bottom = [top[i] + o.ldimensions[i] for i in range(dim)]
-        checker_dim_mask = [0] * dim
-        return cgpt.coordinates_from_cartesian_view(
-            top, bottom, checker_dim_mask, None, order
-        )
+        return coordinates((o, gpt.none), order=order)
     elif type(o) == tuple and type(o[0]) == gpt.grid and len(o) == 2:
         dim = len(o[0].ldimensions)
         cb = o[1].tag
@@ -37,9 +33,16 @@ def coordinates(o, order="lexicographic"):
             o[0].processor_coor[i] * o[0].ldimensions[i] * cbf[i] for i in range(dim)
         ]
         bottom = [top[i] + o[0].ldimensions[i] * cbf[i] for i in range(dim)]
-        return cgpt.coordinates_from_cartesian_view(
+
+        # cache
+        tag = f"{top}-{bottom}-{checker_dim_mask}-{cb}-{order}"
+        if tag in _coordinates_cache:
+            return _coordinates_cache[tag]
+        val = cgpt.coordinates_from_cartesian_view(
             top, bottom, checker_dim_mask, cb, order
         )
+        _coordinates_cache[tag] = val
+        return val
     elif type(o) == gpt.lattice:
         return coordinates((o.grid, o.checkerboard()), order=order)
     elif type(o) == gpt.cartesian_view:
@@ -77,4 +80,25 @@ def exp_ixp(p):
     # do not specify grid or otype, i.e., accept all
     return gpt.matrix_operator(
         mat=mat, adj_mat=inv_mat, inv_mat=inv_mat, adj_inv_mat=mat
+    )
+
+
+def fft(dims=None):
+    def mat(dst, src, sign):
+        d = dims if dims is not None else list(range(src.grid.nd))
+        assert dst.otype.__name__ == src.otype.__name__
+        for i in dst.otype.v_idx:
+            cgpt.fft(dst.v_obj[i], src.v_obj[i], d, sign)
+
+    def mat_forward(dst, src):
+        mat(dst, src, 1)
+
+    def mat_backward(dst, src):
+        mat(dst, src, -1)
+
+    return gpt.matrix_operator(
+        mat=mat_forward,
+        adj_mat=mat_backward,
+        inv_mat=mat_backward,
+        adj_inv_mat=mat_forward,
     )

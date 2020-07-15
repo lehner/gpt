@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  MAKE_BUILD_FLAGS: -j1 # one for now to debug
+  MAKE_BUILD_FLAGS: -j2
   GRID_REPOSITORY_REF: feature/gpt
   CC: mpicc
   CXX: mpic++
@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2020-06-05
+  CACHE_KEY: 2020-07-10
 
 jobs:
   build-grid:
@@ -37,7 +37,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
-        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
     - name: Set compiler alternatives to clang-9
       if: matrix.compiler == 'clang'
@@ -181,7 +181,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
-        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
     - name: Set compiler alternatives to clang-9
       if: matrix.compiler == 'clang'
@@ -370,7 +370,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
-        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
     - name: Set compiler alternatives to clang-9
       if: matrix.compiler == 'clang'

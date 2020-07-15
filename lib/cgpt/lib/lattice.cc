@@ -20,6 +20,7 @@
 
 typedef void* (* create_lattice_prec_otype)(GridBase* grid);
 std::map<std::string,create_lattice_prec_otype> _create_otype_;
+std::map<std::string,int> _otype_singlet_rank_;
 
 #define INSTANTIATE(v,t,n) void lattice_init_ ## t ## _ ## n();
 #include "instantiate/instantiate.h"

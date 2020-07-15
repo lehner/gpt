@@ -16,23 +16,21 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt
+import gpt, sys
 import numpy
 
 ###
 # Helper
-def decompose(n, ns):
-    r = []
+def decompose(n, ns, rank):
     for x in reversed(sorted(ns)):
-        y = n // x
-        r = r + [x] * y
-        n = n % x
-    if n != 0:
-        raise Exception("Cannot decompose %d in available fundamentals %s" % (n, ns))
-    return r
+        if n % x == 0:
+            return [x] * ((n // x) ** rank)
+    raise Exception("Cannot decompose %d in available fundamentals %s" % (n, ns))
 
 
-def get_range(ns):
+def get_range(ns, rank):
+    # TODO: use rank to properly create rank == 2 mapping
+    # This is only relevant for lattice.__str__ of mcomplex
     n = 0
     n0 = []
     n1 = []
@@ -76,6 +74,9 @@ class ot_singlet(ot_base):
     spintrace = (None, None, None)  # do nothing
     colortrace = (None, None, None)
     v_otype = ["ot_singlet"]
+    mtab = {
+        "ot_singlet": (lambda: ot_singlet, None),
+    }
 
 
 def singlet(grid):
@@ -96,6 +97,9 @@ class ot_matrix_color(ot_base):
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
             "ot_vector_color(%d)" % ndim: (lambda: ot_vector_color(ndim), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+        self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
 
@@ -141,6 +145,9 @@ class ot_matrix_su3_fundamental(ot_matrix_color):
             "ot_vector_color(3)": (lambda: ot_vector_color(3), (1, 0)),
             "ot_singlet": (lambda: self, None),
         }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
 
     def generators(self, dt):
         return [
@@ -172,6 +179,9 @@ class ot_matrix_su2_fundamental(ot_matrix_color):
             "ot_vector_color(2)": (lambda: ot_vector_color(2), (1, 0)),
             "ot_singlet": (lambda: self, None),
         }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
 
     def generators(self, dt):
         # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
@@ -195,6 +205,9 @@ class ot_matrix_su2_adjoint(ot_matrix_color):
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
             "ot_vector_color(3)": (lambda: ot_vector_color(3), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+        self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
 
@@ -225,6 +238,9 @@ class ot_matrix_spin(ot_base):
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
             "ot_vector_spin(%d)" % ndim: (lambda: ot_vector_spin(ndim), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+        self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
 
@@ -273,12 +289,14 @@ class ot_matrix_spin_color(ot_base):
                 lambda: ot_vector_spin(spin_ndim, color_ndim),
                 ([1, 3], [0, 1]),
             ),
+            "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
             "ot_matrix_spin(%d)"
             % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
             "ot_matrix_color(%d)"
             % (color_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_singlet": (lambda: self, None),
         }
 
 
@@ -306,11 +324,15 @@ class ot_vector_spin_color(ot_base):
         self.itab = {
             self.__name__: (lambda: ot_singlet, ([0, 1], [0, 1])),
         }
+        self.mtab = {
+            "ot_singlet": (lambda: self, None),
+        }
         self.rmtab = {
             "ot_matrix_spin(%d)"
             % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
             "ot_matrix_color(%d)"
             % (color_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_singlet": (lambda: self, None),
         }
 
     def distribute(self, mat, dst, src, zero_lhs):
@@ -334,36 +356,29 @@ def vector_spin_color(grid, spin_ndim, color_ndim):
 
 ###
 # Basic vectors for coarse grid
+class ot_vsinglet4(ot_base):
+    nfloats = 2 * 4
+    shape = (4,)
+    v_otype = ["ot_vsinglet4"]
+
+
+class ot_vsinglet5(ot_base):
+    nfloats = 2 * 5
+    shape = (5,)
+    v_otype = ["ot_vsinglet5"]
+
+
 class ot_vsinglet10(ot_base):
     nfloats = 2 * 10
     shape = (10,)
     v_otype = ["ot_vsinglet10"]
 
 
-class ot_vsinglet20(ot_base):
-    nfloats = 2 * 20
-    shape = (20,)
-    v_otype = ["ot_vsinglet20"]
-
-
-class ot_vsinglet40(ot_base):
-    nfloats = 2 * 40
-    shape = (40,)
-    v_otype = ["ot_vsinglet40"]
-
-
-class ot_vsinglet80(ot_base):
-    nfloats = 2 * 80
-    shape = (80,)
-    v_otype = ["ot_vsinglet80"]
-
-
-class ot_vsinglet:
+class ot_vsinglet(ot_base):
     fundamental = {
+        4: ot_vsinglet4,
+        5: ot_vsinglet5,
         10: ot_vsinglet10,
-        20: ot_vsinglet20,
-        40: ot_vsinglet40,
-        80: ot_vsinglet80,
     }
 
     def __init__(self, n):
@@ -373,10 +388,16 @@ class ot_vsinglet:
         self.transposed = None
         self.spintrace = None
         self.colortrace = None
-        decomposition = decompose(n, ot_vsinglet.fundamental.keys())
-        self.v_n0, self.v_n1 = get_range(decomposition)
+        decomposition = decompose(n, ot_vsinglet.fundamental.keys(), 1)
+        self.v_n0, self.v_n1 = get_range(decomposition, 1)
         self.v_idx = range(len(self.v_n0))
         self.v_otype = [ot_vsinglet.fundamental[x].__name__ for x in decomposition]
+        self.mtab = {
+            "ot_singlet": (lambda: self, None),  # TODO: need to add info on contraction
+        }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
 
 
 def vsinglet(grid, n):
@@ -384,36 +405,29 @@ def vsinglet(grid, n):
 
 
 # and matrices
+class ot_msinglet4(ot_base):
+    nfloats = 2 * 4 * 4
+    shape = (4, 4)
+    v_otype = ["ot_msinglet4"]
+
+
+class ot_msinglet5(ot_base):
+    nfloats = 2 * 5 * 5
+    shape = (5, 5)
+    v_otype = ["ot_msinglet5"]
+
+
 class ot_msinglet10(ot_base):
     nfloats = 2 * 10 * 10
     shape = (10, 10)
     v_otype = ["ot_msinglet10"]
 
 
-class ot_msinglet20(ot_base):
-    nfloats = 2 * 20 * 20
-    shape = (20, 20)
-    v_otype = ["ot_msinglet20"]
-
-
-class ot_msinglet40(ot_base):
-    nfloats = 2 * 40 * 40
-    shape = (40, 40)
-    v_otype = ["ot_msinglet40"]
-
-
-class ot_msinglet80(ot_base):
-    nfloats = 2 * 80 * 80
-    shape = (80, 80)
-    v_otype = ["ot_msinglet80"]
-
-
-class ot_msinglet:
+class ot_msinglet(ot_base):
     fundamental = {
+        4: ot_msinglet4,
+        5: ot_msinglet5,
         10: ot_msinglet10,
-        20: ot_msinglet20,
-        40: ot_msinglet40,
-        80: ot_msinglet80,
     }
 
     def __init__(self, n):
@@ -423,12 +437,18 @@ class ot_msinglet:
         self.transposed = None
         self.spintrace = None
         self.colortrace = None
-        # for m in reversed(sorted(ot_vsinglet.fundamental.keys())):
-        # if n % m == 0:
-        # if n == m:
-        # Need to expand support for 2d v_idx
-        # Also needs work in expr.eval
-        assert 0
+        self.vector_type = ot_vsinglet(n)
+        self.mtab = {
+            "ot_singlet": (lambda: self, None),
+            "ot_vsinglet(%d)" % n: (lambda: self.vector_type, (1, 0)),
+        }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
+        decomposition = decompose(n, ot_msinglet.fundamental.keys(), 2)
+        self.v_n0, self.v_n1 = get_range(decomposition, 2)
+        self.v_idx = range(len(self.v_n0))
+        self.v_otype = [ot_msinglet.fundamental[x].__name__ for x in decomposition]
 
 
 def msinglet(grid, n):
@@ -467,14 +487,12 @@ def str_to_otype(s):
             "ot_matrix_su3_fundamental",
             "ot_matrix_su2_fundamental",
             "ot_matrix_su2_adjoint",
+            "ot_vsinglet4",
+            "ot_vsinglet5",
             "ot_vsinglet10",
-            "ot_vsinglet20",
-            "ot_vsinglet40",
-            "ot_vsinglet80",
+            "ot_msinglet4",
+            "ot_msinglet5",
             "ot_msinglet10",
-            "ot_msinglet20",
-            "ot_msinglet40",
-            "ot_msinglet80",
         ]
     )
 
