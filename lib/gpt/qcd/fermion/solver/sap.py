@@ -39,6 +39,7 @@ def inv_sap(sap, blk_solver, ncy):
     otype = sap.op.otype
     src_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
     dst_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
+    solver = [blk_solver(op) for op in sap.op_blk]
     
     def inv(psi, rho):
         psi[:] = 0
@@ -54,7 +55,7 @@ def inv_sap(sap, blk_solver, ncy):
                 dt_distr+=gpt.time()
                 
                 dt_solv-=gpt.time()
-                blk_solver(sap.op_blk[eo])(dst_blk, src_blk)
+                solver[eo](dst_blk, src_blk)
                 dt_solv+=gpt.time()
                 
                 dt_distr-=gpt.time()
