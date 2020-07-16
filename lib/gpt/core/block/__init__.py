@@ -71,7 +71,7 @@ def maskedInnerProduct(coarse, fineMask, fineX, fineY):
     coarse[:] = 0
     for i in fot.v_idx:
         cgpt.block_maskedInnerProduct(
-            tmp.v_obj[0], fineMask.v_obj[i], fineX.v_obj[i], fineY.v_obj[i]
+            tmp.v_obj[0], fineMask.v_obj[0], fineX.v_obj[i], fineY.v_obj[i]
         )
         coarse += tmp
     return coarse
