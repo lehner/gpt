@@ -64,7 +64,7 @@ class sap_blk:
         # number of blocks per node
         self.nb = int(numpy.prod(self.bd)) // grid.Nprocessors
         if (self.nb < 2) or ((self.nb % 2) != 0):
-            raise SapError(f"Sap Blocks should define an even/odd grid")
+            raise SapError("Sap Blocks should define an even/odd grid")
 
         # extended block sizes
         self.ebs = [1] * Nd
@@ -180,4 +180,3 @@ class sap:
 
         dt += gpt.time()
         gpt.message(f"SAP Initialized in {dt:g} secs")
-
