@@ -145,7 +145,7 @@ class ot_matrix_su3_fundamental(ot_matrix_color):
             "ot_vector_color(3)": (lambda: ot_vector_color(3), (1, 0)),
             "ot_singlet": (lambda: self, None),
         }
-        self.mtab = {
+        self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
 
