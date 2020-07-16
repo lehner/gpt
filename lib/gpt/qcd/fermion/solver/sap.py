@@ -85,4 +85,4 @@ def inv_sap(sap, blk_solver, ncy):
     m.ImportPhysicalFermionSource = sap.op.ImportPhysicalFermionSource
     m.ExportPhysicalFermionSolution = sap.op.ExportPhysicalFermionSolution
 
-    return m        
+    return m
