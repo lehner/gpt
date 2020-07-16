@@ -428,8 +428,8 @@ jobs:
         cd gpt/tests
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         mpirun -np 2 -mca btl ^openib -bind-to core python core/scalar.py --mpi 1.1.1.2
-        ./run "coverage run mpirun -np 1 -mca btl ^openib python"
-        ./run "coverage run mpirun -np 2 -bind-to core -mca btl ^openib python" "--mpi 1.1.1.2 --mpi 1.1.2"
+        ./run "mpirun -np 1 -mca btl ^openib coverage run"
+        ./run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run --parallel-mode" "--mpi 1.1.1.2 --mpi 1.1.2"
         coverage report -m
 
     - name: Run tests
@@ -437,8 +437,8 @@ jobs:
       run: |
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         cd gpt/tests
-        ./run "coverage run mpirun -np 1 python"
-        ./run "coverage run mpirun -np 2 -bind-to core python" "--mpi 1.1.1.2 --mpi 1.1.2"
+        ./run "mpirun -np 1 coverage run"
+        ./run "mpirun -np 2 -bind-to core coverage run --parallel-mode" "--mpi 1.1.1.2 --mpi 1.1.2"
         coverage report -m
 
 
