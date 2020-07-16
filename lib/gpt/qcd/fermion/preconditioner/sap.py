@@ -174,8 +174,10 @@ class sap:
         self.pos = blk[0].pos
         self.pos.flags["WRITEABLE"] = False
         self.coor = [blk[eo].coor(op.F_grid) for eo in range(2)]
+
         for eo in range(2):
             self.coor[eo].flags["WRITEABLE"] = False
 
         dt += gpt.time()
         gpt.message(f"SAP Initialized in {dt:g} secs")
+
