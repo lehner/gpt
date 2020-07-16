@@ -23,6 +23,8 @@ import numpy
 
 
 def orthogonalize(w, basis, ips=None, nblock=4):
+    # verbosity
+    verbose = gpt.default.is_verbose("orthogonalize")
     n = len(basis)
     if n == 0:
         return
@@ -50,10 +52,11 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         w @= expr
         t_linearCombination += gpt.time()
         i += nblock
-    gpt.message(
-        "Timing Ortho: %g rankInnerProduct, %g globalsum, %g lc"
-        % (t_rankInnerProduct, t_globalSum, t_linearCombination)
-    )
+    if verbose:
+        gpt.message(
+            "Timing Ortho: %g rankInnerProduct, %g globalsum, %g lc"
+            % (t_rankInnerProduct, t_globalSum, t_linearCombination)
+        )
     while i < n:
         ip = gpt.innerProduct(basis[i], w)
         w -= ip * basis[i]
