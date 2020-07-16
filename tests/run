@@ -25,6 +25,7 @@ for f in \
     random/random-simple.py \
     qcd/a2a.py \
     qcd/fermion-operators.py \
+    qcd/sap.py \
     algorithms/implicitly-restarted-lanczos.py \
     algorithms/solvers.py
 do

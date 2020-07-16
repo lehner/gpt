@@ -1,5 +1,6 @@
 import gpt
 
+
 class noprec:
     def __init__(self, op):
         self.op = op
@@ -27,8 +28,5 @@ class noprec:
             mat=_N, adj_mat=_NDag, otype=op.otype, grid=self.F_grid
         )
         self.NDagN = gpt.matrix_operator(
-            mat=_NDagN,
-            adj_mat=_NDagN,
-            otype=op.otype,
-            grid=self.F_grid
+            mat=_NDagN, adj_mat=_NDagN, otype=op.otype, grid=self.F_grid
         )

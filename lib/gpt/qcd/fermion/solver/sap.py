@@ -21,7 +21,7 @@
 # This inverter approximates the solution of the Dirac equation
 # using the Schwartz Alternating Procedure as described here
 #
-# M. Luescher, "Solution of the Dirac equation in lattice QCD using a 
+# M. Luescher, "Solution of the Dirac equation in lattice QCD using a
 #               domain decomposition method"
 # https://arxiv.org/abs/hep-lat/0310048
 #
@@ -34,43 +34,48 @@
 # blocks.
 import gpt
 
+
 def inv_sap(sap, blk_solver, ncy):
-    
+
     otype = sap.op.otype
     src_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
     dst_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
     solver = [blk_solver(op) for op in sap.op_blk]
-    
+
     def inv(psi, rho):
         psi[:] = 0
         eta = gpt.copy(rho)
         ws = [gpt.copy(rho) for _ in range(2)]
-        
-        for ic in range(1,ncy+1):
-            dt_solv=dt_distr=dt_hop=0.0
+
+        for ic in range(1, ncy + 1):
+            dt_solv = dt_distr = dt_hop = 0.0
             for eo in range(2):
                 ws[0][:] = 0
-                dt_distr-=gpt.time()
+                dt_distr -= gpt.time()
                 src_blk[sap.pos] = eta[sap.coor[eo]]
-                dt_distr+=gpt.time()
-                
-                dt_solv-=gpt.time()
+                dt_distr += gpt.time()
+
+                dt_solv -= gpt.time()
                 solver[eo](dst_blk, src_blk)
-                dt_solv+=gpt.time()
-                
-                dt_distr-=gpt.time()
+                dt_solv += gpt.time()
+
+                dt_distr -= gpt.time()
                 ws[0][sap.coor[eo]] = dst_blk[sap.pos]
-                dt_distr+=gpt.time()
-                
-                dt_hop-=gpt.time()
+                dt_distr += gpt.time()
+
+                dt_hop -= gpt.time()
                 sap.op.M(ws[1], ws[0])
                 eta -= ws[1]
                 psi += ws[0]
-                dt_hop+=gpt.time()
-                
-            gpt.message(f'SAP cycle = {ic}; |rho|^2 = {gpt.norm2(eta):g}; |psi|^2 = {gpt.norm2(psi):g}')
-            gpt.message(f'SAP Timings: distr {dt_distr:g} secs, blk_solver {dt_solv:g} secs, hop+update {dt_hop:g} secs')
-                
+                dt_hop += gpt.time()
+
+            gpt.message(
+                f"SAP cycle = {ic}; |rho|^2 = {gpt.norm2(eta):g}; |psi|^2 = {gpt.norm2(psi):g}"
+            )
+            gpt.message(
+                f"SAP Timings: distr {dt_distr:g} secs, blk_solver {dt_solv:g} secs, hop+update {dt_hop:g} secs"
+            )
+
     m = gpt.matrix_operator(
         mat=inv,
         inv_mat=sap.op.M,
@@ -85,4 +90,4 @@ def inv_sap(sap, blk_solver, ncy):
     m.ImportPhysicalFermionSource = sap.op.ImportPhysicalFermionSource
     m.ExportPhysicalFermionSolution = sap.op.ExportPhysicalFermionSolution
 
-    return m        
+    return m

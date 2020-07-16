@@ -8,10 +8,9 @@ def inv_ne(matrix, inverter):
     tmp = gpt.lattice(matrix.F_grid, otype)
 
     def inv(dst_sc, src_sc):
-        
+
         matrix.N.adj()(tmp, src_sc)
         inverter(matrix.NDagN)(dst_sc, tmp)
-        
 
     m = gpt.matrix_operator(
         mat=inv,
