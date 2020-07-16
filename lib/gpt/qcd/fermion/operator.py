@@ -128,8 +128,6 @@ class operator:
         cgpt.delete_fermion_operator(self.obj)
 
     def converted(self, dst_precision):
-        if dst_precision == self.U[0].grid.precision:
-            return self
         return operator(
             name=self.name,
             U=gpt.convert(self.U, dst_precision),
@@ -147,3 +145,12 @@ class operator:
     def _G5M(self, dst, src):
         self.M(dst, src)
         dst @= gpt.gamma[5] * dst
+
+    def updated(self, U):
+        return operator(
+            name=self.name,
+            U=U,
+            params=self.params_constructor,
+            Ls=self.Ls,
+            otype=self.otype,
+        )

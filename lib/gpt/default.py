@@ -80,6 +80,13 @@ def is_verbose(x):
     return x in verbose
 
 
+def set_verbose(x, status=True):
+    if (status is True) and (x not in verbose):
+        verbose.append(x)
+    if (status is False) and (x in verbose):
+        verbose.remove(x)
+
+
 # help
 if "--help" in sys.argv:
     print(

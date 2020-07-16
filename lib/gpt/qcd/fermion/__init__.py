@@ -35,6 +35,7 @@ def wilson_clover(U, params):
     if "kappa" in params:
         assert "mass" not in params
         params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
+        del params["kappa"]
     return operator("wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3))
 
 
