@@ -81,7 +81,7 @@ def is_verbose(x):
 
 
 def set_verbose(x, status=True):
-    if (status is True) and (not x in verbose):
+    if (status is True) and (x not in verbose):
         verbose.append(x)
     if (status is False) and (x in verbose):
         verbose.remove(x)
