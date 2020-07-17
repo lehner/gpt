@@ -51,7 +51,7 @@ vc2 = g.eval(mc * vc)
 vc2_comp = mc_comp * vc_comp
 assert g.norm2(vc2[0, 0, 0, 0] - vc2_comp) < 1e-10
 
-# test transpose and adjoint of mcolor
+# test transpose and adjoint of mcomplex
 mc_adj = g.eval(g.adj(mc))
 mc_transpose = g.eval(g.transpose(mc))
 mc_array = mc[0, 0, 0, 0].array
