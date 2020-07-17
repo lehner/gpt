@@ -26,9 +26,5 @@ from gpt.algorithms.iterative.power_iteration import power_iteration
 from gpt.algorithms.iterative.defect_correcting_inverter import (
     defect_correcting_inverter,
 )
-from gpt.algorithms.iterative.mixed_precision_inverter import (
-    mixed_precision_inverter,
-)
-from gpt.algorithms.iterative.preconditioned_inverter import (
-    preconditioned_inverter,
-)
+from gpt.algorithms.iterative.mixed_precision_inverter import mixed_precision_inverter
+from gpt.algorithms.iterative.preconditioned_inverter import preconditioned_inverter

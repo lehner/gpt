@@ -197,7 +197,7 @@ def apply_type_right_to_left(e, t):
     elif type(e) == list:
         n = len(e)
         for i in reversed(range(n)):
-            if isinstance(e[i][1],t):
+            if isinstance(e[i][1], t):
 
                 # create operator
                 operator = e[i][1].unary(e[i][0])

@@ -61,7 +61,7 @@
 #
 #  eps = 1 - MK
 #
-#        ( EO OO^-1 OE EE-1       -EO OO^-1  )   
+#        ( EO OO^-1 OE EE-1       -EO OO^-1  )
 #      = ( 0                       0         )
 #
 # This structure maps very well to our defect-correcting inverter:
@@ -70,7 +70,7 @@
 #
 #   outer_mat^-1  = inner_mat^-1 \sum_{n=0}^N (- defect)^n
 #
-# with 
+# with
 #
 #   inner_mat^-1 = K  and outer_mat = M
 #
@@ -80,7 +80,7 @@ import gpt, cgpt, numpy
 from gpt.params import params_convention
 
 # ix = x[0] + lat[0]*(x[1] + lat[2]*...)
-def index2coor(ix, lat): # go through cgpt and order=lexicographic
+def index2coor(ix, lat):  # go through cgpt and order=lexicographic
     x = [0] * len(lat)
     for mu in range(len(lat)):
         x[mu] = int(ix % lat[mu])
@@ -132,7 +132,7 @@ class sap_blk:
             f'SAP Initialized {"even" if self.eo==0 else "odd"} blocks with grid {self.grid.fdimensions} from local lattice {grid.ldimensions}'
         )
 
-    def coor(self, grid, tag=None): # and pos -> core/block/
+    def coor(self, grid, tag=None):  # and pos -> core/block/
         coor = numpy.zeros((self.grid.gsites, self.grid.nd), dtype=numpy.int32)
 
         n = 0
@@ -229,8 +229,9 @@ class sap_instance:
         dt += gpt.time()
         gpt.message(f"SAP Initialized in {dt:g} secs")
 
+
 class sap:
-    @params_convention(bs = None)
+    @params_convention(bs=None)
     def __init__(self, params):
         self.bs = params["bs"]
         assert self.bs is not None

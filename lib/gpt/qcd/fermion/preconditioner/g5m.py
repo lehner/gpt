@@ -27,7 +27,7 @@ from gpt.params import params_convention
 # S = 0
 #
 class g5m_ne_instance:
-    def __init__(self,matrix):
+    def __init__(self, matrix):
 
         self.F_grid = matrix.F_grid
         ftmp = gpt.vspincolor(self.F_grid)
@@ -37,7 +37,7 @@ class g5m_ne_instance:
             matrix.G5M.mat(dst, ftmp)
 
         def _L(dst, src):
-            gpt.copy(dst,src)
+            gpt.copy(dst, src)
 
         def _R(dst, src):
             dst @= matrix.G5M * gpt.gamma[5] * src

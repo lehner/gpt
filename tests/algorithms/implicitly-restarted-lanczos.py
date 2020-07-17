@@ -12,7 +12,7 @@ U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.single), g.random("test"))
 
 # wilson, eo prec
 parity = g.odd
-w = g.qcd.fermion.preconditioner.eo1_ne(parity = parity)(    
+w = g.qcd.fermion.preconditioner.eo1_ne(parity=parity)(
     g.qcd.fermion.wilson_clover(
         U,
         {

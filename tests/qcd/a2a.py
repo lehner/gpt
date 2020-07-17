@@ -73,7 +73,7 @@ for p, tag in [
     for x in evec:
         x.checkerboard(p.params["parity"])
 
-    p_q=p(q)
+    p_q = p(q)
     a2a = s.a2a(p_q)
     lma_unphysical = g.algorithms.iterative.preconditioned_inverter(
         p, g.algorithms.approx.modes(evec, evec, evals, lambda x: 1.0 / x)
@@ -94,7 +94,7 @@ for p, tag in [
     dst_a2a = g.eval(a2a_unphysical * F_src)
 
     # add the contact term
-    S_dst = g.eval( p_q.S * F_src )
+    S_dst = g.eval(p_q.S * F_src)
     dst_a2a += S_dst
 
     eps2 = g.norm2(dst_lma - dst_a2a) / g.norm2(dst_lma)

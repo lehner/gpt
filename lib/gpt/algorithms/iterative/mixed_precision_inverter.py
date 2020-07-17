@@ -18,6 +18,7 @@
 #
 import gpt as g
 
+
 class mixed_precision_inverter:
     def __init__(self, inverter, inner_precision, outer_precision):
         self.inverter = inverter

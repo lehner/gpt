@@ -53,25 +53,15 @@ eo2_sp = eo2_odd
 # run with higher stopping condition since it will be the reference run
 slv_cg = w.propagator(inv_pc(eo2, a.cg({"eps": 1e-8, "maxiter": 1000})))
 # other pc and parity
-slv_cg_eo2_even = w.propagator(
-    inv_pc(eo2_even, a.cg({"eps": 1e-8, "maxiter": 1000}))
-)
-slv_cg_eo1_odd = w.propagator(
-    inv_pc(eo1_odd, a.cg({"eps": 1e-8, "maxiter": 1000}))
-)
-slv_cg_eo1_even = w.propagator(
-    inv_pc(eo1_even, a.cg({"eps": 1e-8, "maxiter": 1000}))
-)
+slv_cg_eo2_even = w.propagator(inv_pc(eo2_even, a.cg({"eps": 1e-8, "maxiter": 1000})))
+slv_cg_eo1_odd = w.propagator(inv_pc(eo1_odd, a.cg({"eps": 1e-8, "maxiter": 1000})))
+slv_cg_eo1_even = w.propagator(inv_pc(eo1_even, a.cg({"eps": 1e-8, "maxiter": 1000})))
 # other parity/pc
 slv_cg = w.propagator(inv_pc(eo2, a.cg({"eps": 1e-8, "maxiter": 1000})))
 
 # solvers to test against CG
-slv_mr = w.propagator(
-    inv_pc(eo2, a.mr({"eps": 1e-6, "maxiter": 1000, "relax": 1.0}))
-)
-slv_bicgstab = w.propagator(
-    inv_pc(eo2, a.bicgstab({"eps": 1e-6, "maxiter": 1000}))
-)
+slv_mr = w.propagator(inv_pc(eo2, a.mr({"eps": 1e-6, "maxiter": 1000, "relax": 1.0})))
+slv_bicgstab = w.propagator(inv_pc(eo2, a.bicgstab({"eps": 1e-6, "maxiter": 1000})))
 slv_fgcr = w.propagator(
     inv_pc(eo2, a.fgcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 20}))
 )
@@ -99,7 +89,9 @@ slv_dci_eo = w.propagator(
 # mixed-precision defect-correcting solver at the full field level
 slv_dci_mp = w.propagator(
     a.defect_correcting_inverter(
-        a.mixed_precision_inverter(inv_pc(eo2, a.cg({"eps": 1e-40, "maxiter": 25})), g.single, g.double),
+        a.mixed_precision_inverter(
+            inv_pc(eo2, a.cg({"eps": 1e-40, "maxiter": 25})), g.single, g.double
+        ),
         eps=1e-6,
         maxiter=10,
     )
@@ -111,6 +103,7 @@ g.message("CG finished")
 
 timings = {}
 resid = {}
+
 
 def test(slv, name):
     t0 = g.time()

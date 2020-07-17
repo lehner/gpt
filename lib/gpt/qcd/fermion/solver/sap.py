@@ -22,8 +22,7 @@ from gpt.params import params_convention
 
 # D^-1 = L Mpc^-1 C Mpc^1 R ...  + S
 class inv_sap:
-
-    @params_convention(ncy = 4)
+    @params_convention(ncy=4)
     def __init__(self, sap, blk_solver, params):
         self.params = params
         self.sap = sap
@@ -47,23 +46,25 @@ class inv_sap:
                 for eo in range(2):
                     ws[0][:] = 0
                     dt_distr -= gpt.time()
-                    src_blk[sap.pos] = eta[sap.coor[eo]] # reminder view interface eta[[pos]], ...  eta[...,idx]
+                    src_blk[sap.pos] = eta[
+                        sap.coor[eo]
+                    ]  # reminder view interface eta[[pos]], ...  eta[...,idx]
                     dt_distr += gpt.time()
 
                     dt_solv -= gpt.time()
                     solver[eo](dst_blk, src_blk)
                     dt_solv += gpt.time()
-                    
+
                     dt_distr -= gpt.time()
                     ws[0][sap.coor[eo]] = dst_blk[sap.pos]
                     dt_distr += gpt.time()
-                    
+
                     dt_hop -= gpt.time()
                     sap.op(ws[1], ws[0])
                     eta -= ws[1]
                     psi += ws[0]
                     dt_hop += gpt.time()
-                    
+
                     gpt.message(
                         f"SAP cycle = {ic}; |rho|^2 = {gpt.norm2(eta):g}; |psi|^2 = {gpt.norm2(psi):g}"
                     )

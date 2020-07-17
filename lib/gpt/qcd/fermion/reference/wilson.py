@@ -21,6 +21,7 @@ from gpt.params import params_convention
 from gpt.core.covariant import covariant_shift
 from gpt import matrix_operator
 
+
 class wilson(covariant_shift, matrix_operator):
     # M = sum_mu gamma[mu]*D[mu] + m0 - 1/2 sum_mu D^2[mu]
     # m0 + 4 = 1/2/kappa
@@ -44,8 +45,8 @@ class wilson(covariant_shift, matrix_operator):
         self.Mooee = g.matrix_operator(
             lambda dst, src: self._Mooee(dst, src), otype=otype, grid=grid
         )
-        matrix_operator.__init__(self,
-            lambda dst, src: self._M(dst, src), otype=otype, grid=grid
+        matrix_operator.__init__(
+            self, lambda dst, src: self._M(dst, src), otype=otype, grid=grid
         )
         self.G5M = g.matrix_operator(
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=grid

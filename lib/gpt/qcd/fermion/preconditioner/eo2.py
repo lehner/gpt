@@ -109,15 +109,11 @@ class eo2_base:
         self.L = gpt.matrix_operator(
             mat=_L,
             otype=op.otype,
-            grid=(self.F_grid,self.F_grid_eo),
-            cb=(None,self.parity)
+            grid=(self.F_grid, self.F_grid_eo),
+            cb=(None, self.parity),
         )
 
-        self.S = gpt.matrix_operator(
-            mat=_S,
-            otype=op.otype,
-            grid=self.F_grid,
-        )
+        self.S = gpt.matrix_operator(mat=_S, otype=op.otype, grid=self.F_grid,)
 
         self.N = gpt.matrix_operator(
             mat=_N, adj_mat=_NDag, otype=op.otype, grid=self.F_grid_eo, cb=self.parity
@@ -142,7 +138,7 @@ class eo2_base:
 
 class eo2_ne_instance(eo2_base):
     def __init__(self, op, parity):
-        super().__init__(op,parity)
+        super().__init__(op, parity)
 
         def _R(op, i):
             self.import_parity(i)
@@ -163,11 +159,12 @@ class eo2_ne_instance(eo2_base):
             mat=_R,
             adj_mat=_RDag,
             otype=op.otype,
-            grid=(self.F_grid_eo,self.F_grid),
-            cb=(self.parity,None)
+            grid=(self.F_grid_eo, self.F_grid),
+            cb=(self.parity, None),
         )
 
         self.Mpc = self.NDagN
+
 
 class eo2_ne:
     @params_convention(parity=None)
@@ -177,9 +174,10 @@ class eo2_ne:
     def __call__(self, op):
         return eo2_ne_instance(op, self.params["parity"])
 
+
 class eo2_instance(eo2_base):
     def __init__(self, op, parity):
-        super().__init__(op,parity)
+        super().__init__(op, parity)
 
         def _R(op, i):
             self.import_parity(i)
@@ -190,11 +188,12 @@ class eo2_instance(eo2_base):
         self.R = gpt.matrix_operator(
             mat=_R,
             otype=op.otype,
-            grid=(self.F_grid_eo,self.F_grid),
-            cb=(self.parity,None)
+            grid=(self.F_grid_eo, self.F_grid),
+            cb=(self.parity, None),
         )
 
         self.Mpc = self.N
+
 
 class eo2:
     @params_convention(parity=None)

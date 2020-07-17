@@ -113,15 +113,11 @@ class eo1_base:
         self.L = gpt.matrix_operator(
             mat=_L,
             otype=op.otype,
-            grid=(self.F_grid,self.F_grid_eo),
-            cb=(None,self.parity)
+            grid=(self.F_grid, self.F_grid_eo),
+            cb=(None, self.parity),
         )
 
-        self.S = gpt.matrix_operator(
-            mat=_S,
-            otype=op.otype,
-            grid=self.F_grid,
-        )
+        self.S = gpt.matrix_operator(mat=_S, otype=op.otype, grid=self.F_grid,)
 
         self.N = gpt.matrix_operator(
             mat=_N, adj_mat=_NDag, otype=op.otype, grid=self.F_grid_eo, cb=self.parity
@@ -144,7 +140,6 @@ class eo1_base:
         gpt.set_cb(o, self.out_np)
 
 
-
 class eo1_ne_instance(eo1_base):
     def __init__(self, op, parity):
         super().__init__(op, parity)
@@ -165,16 +160,17 @@ class eo1_ne_instance(eo1_base):
             self.op.Mooee.adj_inv_mat(self.out_np, self.tmp)
             self.out_np @= -self.out_np
             self.export_parity(o)
-            
+
         self.R = gpt.matrix_operator(
             mat=_R,
             adj_mat=_RDag,
             otype=op.otype,
-            grid=(self.F_grid_eo,self.F_grid),
-            cb=(self.parity,None)
+            grid=(self.F_grid_eo, self.F_grid),
+            cb=(self.parity, None),
         )
 
         self.Mpc = self.NDagN
+
 
 class eo1_ne:
     @params_convention(parity=None)
@@ -184,9 +180,10 @@ class eo1_ne:
     def __call__(self, op):
         return eo1_ne_instance(op, self.params["parity"])
 
+
 class eo1_instance(eo1_base):
     def __init__(self, op, parity):
-        super().__init__(op,parity)
+        super().__init__(op, parity)
 
         def _R(self, op, i):
             self.import_parity(i)
@@ -198,11 +195,12 @@ class eo1_instance(eo1_base):
         self.R = gpt.matrix_operator(
             mat=_R,
             otype=op.otype,
-            grid=(self.F_grid_eo,self.F_grid),
-            cb=(self.parity,None)
+            grid=(self.F_grid_eo, self.F_grid),
+            cb=(self.parity, None),
         )
 
         self.Mpc = self.N
+
 
 class eo1:
     @params_convention(parity=None)
