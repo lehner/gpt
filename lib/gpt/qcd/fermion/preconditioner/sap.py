@@ -277,7 +277,8 @@ class sap_cycle:
                 dt_distr += gpt.time()
 
                 dt_hop -= gpt.time()
-                sap.op(ws[1], ws[0])
+                if eo == 0:
+                    sap.op(ws[1], ws[0])
                 eta -= ws[1]
                 dst += ws[0]
                 dt_hop += gpt.time()
@@ -299,3 +300,18 @@ class sap_cycle:
             grid=sap.op.F_grid,
             cb=None,
         )
+
+# sap_cycle applies K of
+#
+#      ( EE^-1            0     )
+#  K = ( -OO^-1 OE EE-1   OO^-1 )
+#
+# ws0 = EE^-1 src_e
+# ws1 = OE EE^-1 src_e
+
+# eta = src - OE EE^-1 src_e
+# dst = OE EE^-1 src_e
+#
+# ws0 = OO^-1 (src_o - OE EE^-1 src_e)
+# ws1 = EO OO^-1 (src_o - OE EE^-1 src_e)
+#
