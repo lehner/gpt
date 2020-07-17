@@ -18,6 +18,7 @@
 #
 import gpt
 
+
 class physical_instance:
     def __init__(self, matrix, pc):
 
@@ -29,7 +30,7 @@ class physical_instance:
 
         self.F_tmp = gpt.lattice(self.F_grid, self.otype)
         self.F_tmp_2 = gpt.lattice(self.F_grid, self.otype)
-        
+
         def _L(dst, src):
             pc.L.mat(self.F_tmp, src)
             self.matrix.ExportPhysicalFermionSolution(dst, self.F_tmp)
@@ -60,4 +61,4 @@ class physical:
         self.pc = pc
 
     def __call__(self, mat):
-        return physical_instance(mat,self.pc(mat))
+        return physical_instance(mat, self.pc(mat))

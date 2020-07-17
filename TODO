@@ -1,6 +1,3 @@
-- Long-term strategy needs to be to get rid of qcd/fermion/solvers directory.  Everything
-  in here needs to be put on same footing as inverters in algorithms directory.
-
 - On MG branch: t=timer(); t("block1"); block1; t("block2"); block2; t(); g.message(t); <-- use timer __str__ and __c
 all__, can also do t("block1", bytes = bytes_processed, flops = flops_in_block) to add GB/s and Gflops/s
 

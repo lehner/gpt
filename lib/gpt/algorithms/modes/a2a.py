@@ -18,8 +18,8 @@
 #
 import gpt
 
+
 class a2a:
     def __init__(self, matrix):
         self.v = matrix.L
         self.w = matrix.R.adj()
-
