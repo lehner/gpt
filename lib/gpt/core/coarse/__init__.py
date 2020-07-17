@@ -26,6 +26,7 @@ def create_links(A, fmat, basis, params):
     # parameters
     hermitian = params["hermitian"]
     savelinks = params["savelinks"]
+    assert not (hermitian and not savelinks)
 
     # verbosity
     verbose = gpt.default.is_verbose("coarsen")
