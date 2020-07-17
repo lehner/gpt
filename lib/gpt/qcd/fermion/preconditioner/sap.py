@@ -31,10 +31,56 @@
 # and odd blocks, such that fields can be easily assigned to blocks
 # and viceversa.
 
+# This inverter approximates the solution of the Dirac equation
+# using the Schwartz Alternating Procedure as described here
+#
+# M. Luescher, "Solution of the Dirac equation in lattice QCD using a
+#               domain decomposition method"
+# https://arxiv.org/abs/hep-lat/0310048
+#
+# It is based on the sap preconditioner class that contains the
+# basic functionalities relevant here.
+#
+# The code below is a first working version; improvements for
+# better performances could be achieved by substituting the
+# application of op.M with the simpler hopping from even/odd
+# blocks.
+
+#
+#      ( EE EO )
+#  M = ( OE OO )
+#
+#      ( EE^-1            0     )
+#  K = ( -OO^-1 OE EE-1   OO^-1 )
+#
+#       ( 1 - EO OO^-1 OE EE-1    EO OO^-1  )
+#  MK = ( 0                       1         )
+#
+#  Then K \sum_{n=0}^N (1 - MK)^n -> K (MK)^-1 = M^-1
+#
+#
+#  eps = 1 - MK
+#
+#        ( EO OO^-1 OE EE-1       -EO OO^-1  )   
+#      = ( 0                       0         )
+#
+# This structure maps very well to our defect-correcting inverter:
+#
+#   outer_mat     =  (1 + defect) inner_mat
+#
+#   outer_mat^-1  = inner_mat^-1 \sum_{n=0}^N (- defect)^n
+#
+# with 
+#
+#   inner_mat^-1 = K  and outer_mat = M
+#
+#   -defect = 1 - outer_mat inner_mat^{-1} = 1 - M K
+#
 import gpt, cgpt, numpy
+from gpt.params import params_convention
 
 # ix = x[0] + lat[0]*(x[1] + lat[2]*...)
-def index2coor(ix, lat):
+def index2coor(ix, lat): # go through cgpt and order=lexicographic
     x = [0] * len(lat)
     for mu in range(len(lat)):
         x[mu] = int(ix % lat[mu])
@@ -86,7 +132,7 @@ class sap_blk:
             f'SAP Initialized {"even" if self.eo==0 else "odd"} blocks with grid {self.grid.fdimensions} from local lattice {grid.ldimensions}'
         )
 
-    def coor(self, grid, tag=None):
+    def coor(self, grid, tag=None): # and pos -> core/block/
         coor = numpy.zeros((self.grid.gsites, self.grid.nd), dtype=numpy.int32)
 
         n = 0
@@ -134,6 +180,8 @@ class sap_blk:
             assert 0
 
     def setBC_4D(self, U):
+        # colon = slice(None,None,None)
+        # tuple([colon] * i + [ coor ] + [colon] * (nd-i))
         if self.bd[0] > 1:
             for i in range(1, self.ebs[0] + 1):
                 U[0][i * self.bs[0] - 1, :, :, :] = 0
@@ -148,7 +196,7 @@ class sap_blk:
                 U[3][:, :, :, i * self.bs[3] - 1] = 0
 
 
-class sap:
+class sap_instance:
     def __init__(self, op, bs):
         self.op = op
         self.op_blk = []
@@ -180,3 +228,12 @@ class sap:
 
         dt += gpt.time()
         gpt.message(f"SAP Initialized in {dt:g} secs")
+
+class sap:
+    @params_convention(bs = None)
+    def __init__(self, params):
+        self.bs = params["bs"]
+        assert self.bs is not None
+
+    def __call__(self, op):
+        return sap_instance(op, self.bs)

@@ -79,7 +79,6 @@ verbose_candidates = ",".join(
 def is_verbose(x):
     return x in verbose
 
-
 def set_verbose(x, status=True):
     if (status is True) and (x not in verbose):
         verbose.append(x)

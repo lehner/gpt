@@ -47,8 +47,8 @@ src = rng.cnormal(g.vspincolor(grid))
 dst_ref, dst = g.lattice(src), g.lattice(src)
 
 # correctness
-dst_ref @= w_ref.M * src
-dst @= w.M * src
+dst_ref @= w_ref * src
+dst @= w * src
 
 eps = g.norm2(dst - dst_ref) / g.norm2(dst)
 g.message("Test wilson versus reference:", eps)
@@ -57,16 +57,16 @@ assert eps < 1e-13
 # now timing
 t0 = g.time()
 for i in range(100):
-    w_ref.M(dst_ref, src)
+    w_ref(dst_ref, src)
 t1 = g.time()
 for i in range(100):
-    w.M(dst, src)
+    w(dst, src)
 t2 = g.time()
 for i in range(100):
-    dst = w.M(src)
+    dst = w(src)
 t3 = g.time()
 for i in range(100):
-    dst @= w.M * src
+    dst @= w * src
 t4 = g.time()
 
 g.message("Reference time/s: ", t1 - t0)
@@ -81,12 +81,13 @@ g.create.point(
 )  # pick point 1 so that "S" in preconditioner contributes to test
 
 # build solver using g5m and cg
-s = g.qcd.fermion.solver
-cg = g.algorithms.iterative.cg({"eps": 1e-6, "maxiter": 1000})
+a = g.algorithms.iterative
+pc = g.qcd.fermion.preconditioner
+cg = a.cg({"eps": 1e-6, "maxiter": 1000})
 
-slv = s.propagator(s.inv_g5m_ne(w, cg))
-slv_eo1 = s.propagator(s.inv_eo_ne(g.qcd.fermion.preconditioner.eo1(w), cg))
-slv_eo2 = s.propagator(s.inv_eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
+slv = w.propagator(a.preconditioned_inverter(pc.g5m_ne(), cg))
+slv_eo1 = w.propagator(a.preconditioned_inverter(pc.eo1_ne(), cg))
+slv_eo2 = w.propagator(a.preconditioned_inverter(pc.eo2_ne(), cg))
 
 # propagator
 dst_eo1 = g.mspincolor(grid)
@@ -105,7 +106,7 @@ g.message(
 assert eps2 < 1e-12
 
 # true residuum
-eps2 = g.norm2(w.M * dst_eo1 - src) / g.norm2(src)
+eps2 = g.norm2(w * dst_eo1 - src) / g.norm2(src)
 g.message("Result of M M^-1 = 1 test: eps2=", eps2)
 assert eps2 < 1e-10
 

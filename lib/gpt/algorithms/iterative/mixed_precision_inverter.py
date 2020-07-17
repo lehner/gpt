@@ -16,21 +16,14 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt
+import gpt as g
 
+class mixed_precision_inverter:
+    def __init__(self, inverter, inner_precision, outer_precision):
+        self.inverter = inverter
+        self.inner_precision = inner_precision
+        self.outer_precision = outer_precision
 
-def inv_g5m_ne(matrix, inverter):
-    F_grid = matrix.F_grid
-    ftmp = gpt.vspincolor(F_grid)
-    i = inverter(lambda o, i: (matrix.G5M(ftmp, i), matrix.G5M(o, ftmp)))
-
-    def inv(dst_sc, src_sc):
-        # (G5 M G5 M)^-1 G5 M G5 = M^-1 G5 M^-1 G5^2 M G5 = M^-1
-        dst_sc @= i * matrix.G5M * gpt.gamma[5] * src_sc
-
-    m = gpt.matrix_operator(mat=inv, inv_mat=matrix, otype=matrix.otype, grid=F_grid)
-
-    m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
-    m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution
-
-    return m
+    def __call__(self, mat):
+        matrix = mat.converted(self.inner_precision)
+        return self.inverter(matrix).converted(self.outer_precision)

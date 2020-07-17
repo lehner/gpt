@@ -35,6 +35,13 @@ class mr:
         self.relax = params["relax"]
 
     def __call__(self, mat):
+
+        otype, grid, cb = None, None, None
+        if type(mat) == g.matrix_operator:
+            otype, grid, cb = mat.otype, mat.grid, mat.cb
+            mat = mat.mat
+            # remove wrapper for performance benefits
+
         def inv(psi, src):
             verbose = g.default.is_verbose("mr")
             t0 = time()
@@ -68,12 +75,6 @@ class mr:
                         g.message("Converged in %g s" % (t1 - t0))
                     break
 
-        otype = None
-        grid = None
-        if type(mat) == g.matrix_operator:
-            otype = mat.otype
-            grid = mat.grid
-
         return g.matrix_operator(
-            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid
+            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid, cb=cb
         )

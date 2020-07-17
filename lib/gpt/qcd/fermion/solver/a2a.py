@@ -18,62 +18,7 @@
 #
 import gpt
 
-
-def inv_eo_ne(matrix, inverter):
-
-    F_grid_eo = matrix.F_grid_eo
-    otype = matrix.otype
-
-    ie = gpt.lattice(F_grid_eo, otype)
-    io = gpt.lattice(F_grid_eo, otype)
-    t1 = gpt.lattice(F_grid_eo, otype)
-    t2 = gpt.lattice(F_grid_eo, otype)
-
-    def inv(dst_sc, src_sc):
-
-        oe = gpt.lattice(F_grid_eo, otype)
-        oo = gpt.lattice(F_grid_eo, otype)
-
-        gpt.pick_cb(gpt.even, ie, src_sc)
-        gpt.pick_cb(gpt.odd, io, src_sc)
-
-        # D^-1 = L NDagN^-1 R + S
-
-        matrix.R(t1, ie, io)
-
-        t2[:] = 0
-        t2.checkerboard(t1.checkerboard())
-
-        inverter(matrix.NDagN)(t2, t1)
-
-        matrix.L(oe, oo, t2)
-
-        matrix.S(t1, t2, ie, io)
-
-        oe += t1
-        oo += t2
-
-        gpt.set_cb(dst_sc, oe)
-        gpt.set_cb(dst_sc, oo)
-
-    m = gpt.matrix_operator(
-        mat=inv,
-        inv_mat=matrix.op.M,
-        adj_inv_mat=matrix.op.M.adj(),
-        adj_mat=None,  # implement adj_mat when needed
-        otype=otype,
-        zero=(True, False),
-        grid=matrix.F_grid,
-        cb=None,
-    )
-
-    m.ImportPhysicalFermionSource = matrix.ImportPhysicalFermionSource
-    m.ExportPhysicalFermionSolution = matrix.ExportPhysicalFermionSolution
-
-    return m
-
-
-class a2a_eo_ne:
+class a2a:
     def __init__(self, matrix):
         self.matrix = matrix
         self.F_grid_eo = matrix.F_grid_eo
@@ -88,14 +33,10 @@ class a2a_eo_ne:
         self.F_tmp_2 = gpt.lattice(self.F_grid, self.otype)
 
         def _v_unphysical(dst, evec):
-            self.matrix.L(self.oe, self.oo, evec)
-            gpt.set_cb(dst, self.oe)
-            gpt.set_cb(dst, self.oo)
+            self.matrix.L.mat(dst, evec)
 
         def _w_unphysical(dst, evec):
-            self.matrix.RDag(self.oe, self.oo, evec)
-            gpt.set_cb(dst, self.oe)
-            gpt.set_cb(dst, self.oo)
+            self.matrix.R.adj_mat(dst, evec)
 
         def _v(dst, evec):
             _v_unphysical(self.F_tmp, evec)

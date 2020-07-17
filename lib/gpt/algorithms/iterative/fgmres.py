@@ -69,6 +69,13 @@ class fgmres:
         return g.axpy_norm2(r, -1.0, mmpsi, src)
 
     def __call__(self, mat, prec=None):
+
+        otype, grid, cb = None, None, None
+        if type(mat) == g.matrix_operator:
+            otype, grid, cb = mat.otype, mat.grid, mat.cb
+            mat = mat.mat
+            # remove wrapper for performance benefits
+
         def inv(psi, src):
             # verbosity
             self.verbose = g.default.is_verbose("fgmres")
@@ -184,12 +191,6 @@ class fgmres:
                         if self.verbose:
                             g.message("Performed restart")
 
-        otype = None
-        grid = None
-        if type(mat) == g.matrix_operator:
-            otype = mat.otype
-            grid = mat.grid
-
         return g.matrix_operator(
-            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid
+            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid, cb=cb
         )
