@@ -16,4 +16,10 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.fermion.solver.a2a import a2a
+import gpt
+
+class a2a:
+    def __init__(self, matrix):
+        self.v = matrix.L
+        self.w = matrix.R.adj()
+

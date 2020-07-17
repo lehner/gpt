@@ -37,7 +37,6 @@ src = g.vspincolor(grid)
 src[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
 
 # build solvers
-s = g.qcd.fermion.solver
 inv = g.algorithms.inverter
 inv_pc = inv.preconditioned
 

@@ -28,7 +28,6 @@ p = {
 w = g.qcd.fermion.wilson_clover(U, p)
 
 # shortcuts
-s = g.qcd.fermion.solver
 inv = g.algorithms.inverter
 inv_pc = inv.preconditioned
 pc = g.qcd.fermion.preconditioner

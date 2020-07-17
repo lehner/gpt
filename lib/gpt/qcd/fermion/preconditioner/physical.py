@@ -18,71 +18,46 @@
 #
 import gpt
 
+class physical_instance:
+    def __init__(self, matrix, pc):
 
-class a2a:
-    def __init__(self, matrix):
         self.matrix = matrix
         self.F_grid_eo = matrix.F_grid_eo
         self.F_grid = matrix.F_grid
         self.U_grid = matrix.U_grid
-        self.otype = matrix.otype
+        self.otype = matrix.otype[0]
 
-        self.oe = gpt.lattice(self.F_grid_eo, self.otype)
-        self.oo = gpt.lattice(self.F_grid_eo, self.otype)
-        self.U_tmp = gpt.lattice(self.U_grid, self.otype)
         self.F_tmp = gpt.lattice(self.F_grid, self.otype)
         self.F_tmp_2 = gpt.lattice(self.F_grid, self.otype)
-
-        def _v_unphysical(dst, evec):
-            self.matrix.L.mat(dst, evec)
-
-        def _w_unphysical(dst, evec):
-            self.matrix.R.adj_mat(dst, evec)
-
-        def _v(dst, evec):
-            _v_unphysical(self.F_tmp, evec)
+        
+        def _L(dst, src):
+            pc.L.mat(self.F_tmp, src)
             self.matrix.ExportPhysicalFermionSolution(dst, self.F_tmp)
 
-        def _w(dst, evec):
-            _w_unphysical(self.F_tmp, evec)
+        def _R_adj(dst, src):
+            pc.R.adj_mat(self.F_tmp, src)
             self.matrix.Dminus.adj_mat(self.F_tmp_2, self.F_tmp)
             self.matrix.ExportPhysicalFermionSource(dst, self.F_tmp_2)
 
-        def _G5w(dst, evec):
-            _w(self.U_tmp, evec)
-            dst @= gpt.gamma[5] * self.U_tmp
-
-        self.v = gpt.matrix_operator(
-            mat=_v,
+        self.L = gpt.matrix_operator(
+            mat=_L,
             otype=self.otype,
             zero=(False, False),
             grid=(self.U_grid, self.F_grid_eo),
         )
 
-        self.w = gpt.matrix_operator(
-            mat=_w,
+        self.R = gpt.matrix_operator(
+            mat=None,
+            adj_mat=_R_adj,
             otype=self.otype,
             zero=(False, False),
-            grid=(self.U_grid, self.F_grid_eo),
+            grid=(self.F_grid_eo, self.U_grid),
         )
 
-        self.G5w = gpt.matrix_operator(
-            mat=_G5w,
-            otype=self.otype,
-            zero=(False, False),
-            grid=(self.U_grid, self.F_grid_eo),
-        )
 
-        self.v_unphysical = gpt.matrix_operator(
-            mat=_v_unphysical,
-            otype=self.otype,
-            zero=(False, False),
-            grid=(self.F_grid, self.F_grid_eo),
-        )
+class physical:
+    def __init__(self, pc):
+        self.pc = pc
 
-        self.w_unphysical = gpt.matrix_operator(
-            mat=_w_unphysical,
-            otype=self.otype,
-            zero=(False, False),
-            grid=(self.F_grid, self.F_grid_eo),
-        )
+    def __call__(self, mat):
+        return physical_instance(mat,self.pc(mat))

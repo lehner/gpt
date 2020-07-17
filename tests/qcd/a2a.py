@@ -39,7 +39,6 @@ q = g.qcd.fermion.zmobius(
 )
 
 # shortcuts
-s = g.qcd.fermion.solver
 pc = g.qcd.fermion.preconditioner
 
 # random vectors on F_grid_eo
@@ -63,10 +62,10 @@ exp = q.ExportPhysicalFermionSolution
 imp = q.ImportPhysicalFermionSource
 
 for p, tag in [
-    (g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd), "eo1-odd"),
-    (g.qcd.fermion.preconditioner.eo2_ne(parity=g.odd), "eo2-odd"),
-    (g.qcd.fermion.preconditioner.eo1_ne(parity=g.even), "eo1-even"),
-    (g.qcd.fermion.preconditioner.eo2_ne(parity=g.even), "eo2-even"),
+    (pc.eo1_ne(parity=g.odd), "eo1-odd"),
+    (pc.eo2_ne(parity=g.odd), "eo2-odd"),
+    (pc.eo1_ne(parity=g.even), "eo1-even"),
+    (pc.eo2_ne(parity=g.even), "eo2-even"),
 ]:
     g.message("Test", tag)
 
@@ -74,7 +73,8 @@ for p, tag in [
         x.checkerboard(p.params["parity"])
 
     p_q = p(q)
-    a2a = s.a2a(p_q)
+    a2a_p = g.algorithms.modes.a2a(pc.physical(p)(q))
+    a2a_u = g.algorithms.modes.a2a(p_q)
     lma_unphysical = g.algorithms.inverter.preconditioned(
         p, g.algorithms.modes.modes(evec, evec, evals, lambda x: 1.0 / x)
     )
@@ -86,8 +86,8 @@ for p, tag in [
 
     # reconstruct by hand
     a2a_unphysical = g.algorithms.modes.modes(
-        [a2a.v_unphysical(x) for x in evec],
-        [a2a.w_unphysical(x) for x in evec],
+        [a2a_u.v(x) for x in evec],
+        [a2a_u.w(x) for x in evec],
         evals,
         lambda x: 1.0 / x,
     )()
@@ -112,7 +112,7 @@ for p, tag in [
 
     # reconstruct by hand
     a2a_physical = g.algorithms.modes.modes(
-        [a2a.v(x) for x in evec], [a2a.w(x) for x in evec], evals, lambda x: 1.0 / x
+        [a2a_p.v(x) for x in evec], [a2a_p.w(x) for x in evec], evals, lambda x: 1.0 / x
     )()
     dst_a2a = g.eval(a2a_physical * U_src)
 
