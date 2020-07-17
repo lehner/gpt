@@ -239,7 +239,8 @@ class sap:
     def __call__(self, op):
         return sap_instance(op, self.bs)
 
-class sap_cycle:    
+
+class sap_cycle:
     @params_convention(bs=None)
     def __init__(self, blk_solver, params):
         self.bs = params["bs"]
@@ -253,7 +254,7 @@ class sap_cycle:
         dst_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
         solver = [self.blk_solver(op) for op in sap.op_blk]
 
-        def inv(dst,src):
+        def inv(dst, src):
             dst[:] = 0
             eta = gpt.copy(src)
             ws = [gpt.copy(src) for _ in range(2)]
@@ -266,11 +267,11 @@ class sap_cycle:
                     sap.coor[eo]
                 ]  # reminder view interface eta[[pos]], ...  eta[...,idx]
                 dt_distr += gpt.time()
-                
+
                 dt_solv -= gpt.time()
                 solver[eo](dst_blk, src_blk)
                 dt_solv += gpt.time()
-                
+
                 dt_distr -= gpt.time()
                 ws[0][sap.coor[eo]] = dst_blk[sap.pos]
                 dt_distr += gpt.time()
@@ -280,7 +281,7 @@ class sap_cycle:
                 eta -= ws[1]
                 dst += ws[0]
                 dt_hop += gpt.time()
-                
+
                 gpt.message(
                     f"SAP cycle; |rho|^2 = {gpt.norm2(eta):g}; |dst|^2 = {gpt.norm2(dst):g}"
                 )
