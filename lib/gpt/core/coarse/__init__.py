@@ -75,9 +75,9 @@ def create_links(A, fmat, basis, params):
     # fill masks for sites on borders of blocks
     dirmasks_forward_np = coor[:, :] % block[:] == block[:] - 1
     dirmasks_backward_np = coor[:, :] % block[:] == 0
-    for p, d in enumerate(dirs):
-        gpt.make_mask(dirmasks[p], dirmasks_forward_np[:, p])
-        gpt.make_mask(dirmasks[4 + p], dirmasks_backward_np[:, p])
+    for mu in dirs:
+        gpt.make_mask(dirmasks[mu], dirmasks_forward_np[:, mu])
+        gpt.make_mask(dirmasks[mu + 4], dirmasks_backward_np[:, mu])
 
     # save applications of matrix and coarsening if possible
     dirdisps = dirdisps_forward if savelinks else dirdisps_full
@@ -87,10 +87,10 @@ def create_links(A, fmat, basis, params):
         # this triggers len(dirdisps) comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
         t("apply_hop")
-        [fmat.Mdir(Mvr[p], vr, d, fb) for p, (d, fb) in enumerate(dirdisps)]
+        [fmat.Mdir(Mvr[p], vr, mu, fb) for p, (mu, fb) in enumerate(dirdisps)]
 
         # coarsen directional terms + write to link
-        for p, (d, fb) in enumerate(dirdisps):
+        for p, (mu, fb) in enumerate(dirdisps):
             for j, vl in enumerate(basis):
                 t("coarsen_hop")
                 gpt.block.maskedInnerProduct(oproj, dirmasks[p], vl, Mvr[p])
@@ -119,17 +119,17 @@ def create_links(A, fmat, basis, params):
     # communicate opposite links
     if savelinks:
         t("comm")
-        for p, (d, fb) in enumerate(dirdisps_forward):
-            dd = d + 4
-            shift_disp = fb * -1
-            Atmp = gpt.copy(A[d])
+        for p, (mu, fb) in enumerate(dirdisps_forward):
+            p_other = p + 4
+            shift_fb = fb * -1
+            Atmp = gpt.copy(A[p])
             if not hermitian:
                 nbasis = len(basis)
                 assert nbasis % 2 == 0
                 nb = nbasis // 2
                 Atmp[:, :, :, :, 0:nb, nb:nbasis] *= -1.0  # upper right block
                 Atmp[:, :, :, :, nb:nbasis, 0:nb] *= -1.0  # lower left block
-            A[dd] @= gpt.adj(gpt.cshift(Atmp, d, shift_disp))
+            A[p_other] @= gpt.adj(gpt.cshift(Atmp, mu, shift_fb))
 
     t()
 
