@@ -16,8 +16,8 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.algorithms.inverter
-import gpt.algorithms.polynomial
-import gpt.algorithms.eigen
-import gpt.algorithms.modes
+from gpt.algorithms.modes.modes import modes
+from gpt.algorithms.modes.coarse_modes import coarse_modes
+from gpt.algorithms.modes.deflate import deflate
+from gpt.algorithms.modes.coarse_deflate import coarse_deflate
 

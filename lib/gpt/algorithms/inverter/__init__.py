@@ -16,15 +16,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.iterative.cg import cg
-from gpt.algorithms.iterative.bicgstab import bicgstab
-from gpt.algorithms.iterative.fgcr import fgcr
-from gpt.algorithms.iterative.fgmres import fgmres
-from gpt.algorithms.iterative.irl import irl
-from gpt.algorithms.iterative.mr import mr
-from gpt.algorithms.iterative.power_iteration import power_iteration
-from gpt.algorithms.iterative.defect_correcting_inverter import (
+from gpt.algorithms.inverter.cg import cg
+from gpt.algorithms.inverter.bicgstab import bicgstab
+from gpt.algorithms.inverter.fgcr import fgcr
+from gpt.algorithms.inverter.fgmres import fgmres
+from gpt.algorithms.inverter.mr import mr
+from gpt.algorithms.inverter.defect_correcting_inverter import (
     defect_correcting_inverter,
 )
-from gpt.algorithms.iterative.mixed_precision_inverter import mixed_precision_inverter
-from gpt.algorithms.iterative.preconditioned_inverter import preconditioned_inverter
+from gpt.algorithms.inverter.mixed_precision_inverter import mixed_precision_inverter
+from gpt.algorithms.inverter.preconditioned_inverter import preconditioned_inverter
