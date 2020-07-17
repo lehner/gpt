@@ -31,7 +31,7 @@ jobs:
         run: |
           black --check -q lib/gpt || exit_code=$?
 
-          if [ ${exit_code} -ne 0 ]; then
+          if [[ "${exit_code}" -ne "0" ]]; then
               black --diff -q lib/gpt
           fi
 
