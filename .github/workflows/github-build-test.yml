@@ -415,41 +415,47 @@ jobs:
     - name: Run tests
       if: matrix.mpi == 'none'
       run: |
-        cd gpt/tests
+        cd gpt
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
-        ./run "coverage run"
+        ./tests/run "coverage run"
 
     - name: Run tests
       if: matrix.mpi == 'openmpi'
       env:
         LD_PRELOAD: libmpi.so
       run: |
-        cd gpt/tests
+        cd gpt
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
-        mpirun -np 2 -mca btl ^openib -bind-to core python core/scalar.py --mpi 1.1.1.2
-        ./run "mpirun -np 1 -mca btl ^openib coverage run"
-        ./run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run --parallel-mode" "--mpi 1.1.1.2 --mpi 1.1.2"
-        coverage combine
+        mpirun -np 2 -mca btl ^openib -bind-to core python tests/core/scalar.py --mpi 1.1.1.2
+        ./tests/run "mpirun -np 1 -mca btl ^openib coverage run"
+        ./tests/run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run" "--mpi 1.1.1.2 --mpi 1.1.2"
 
     - name: Run tests
       if: matrix.mpi == 'mpich'
       run: |
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
-        cd gpt/tests
-        ./run "mpirun -np 1 coverage run"
-        ./run "mpirun -np 2 -bind-to core coverage run --parallel-mode" "--mpi 1.1.1.2 --mpi 1.1.2"
-        coverage combine
+        cd gpt
+        ./tests/run "mpirun -np 1 coverage run"
+        ./tests/run "mpirun -np 2 -bind-to core coverage run" "--mpi 1.1.1.2 --mpi 1.1.2"
 
     - name: Coverage report
       run: |
-        cd gpt/tests
+        cd gpt
+        coverage combine
         ls -lha
-        coverage report -m
+        coverage report -m  # Print coverage report to screen
+        coverage xml  # Export coverage report as XML file, for codecov.io
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        file: ./gpt/tests/.coverage
+      env:
+        PYTHON_VERSION: python${{ matrix.python-version }}
+        COMPILER: ${{ matrix.compiler }}
+        MPI: ${{ matrix.mpi }}
+        CODECOV_ENV: PYTHON_VERSION,COMPILER,MPI
+      run: |
+        cd gpt
+        bash <(curl -s https://codecov.io/bash) \
+          -f ./coverage.xml
 
 
   build-gpt-doc:
