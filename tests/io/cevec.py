@@ -18,7 +18,7 @@ import numpy as np
 U = g.load("/hpcgpfs01/work/clehner/configs/96I/test/ckpoint_lat.2000")
 U = g.convert(U, g.single)
 
-q = g.qcd.fermion.preconditioner.eo1_ne(
+q = g.qcd.fermion.preconditioner.eo1_ne()(
     g.qcd.fermion.mobius(
         U,
         {
