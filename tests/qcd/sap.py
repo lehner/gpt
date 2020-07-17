@@ -29,29 +29,40 @@ w = g.qcd.fermion.wilson_clover(U, p)
 
 # shortcuts
 s = g.qcd.fermion.solver
-inv_pc = g.algorithms.iterative.preconditioned_inverter
+a = g.algorithms.iterative
+inv_pc = a.preconditioned_inverter
 pc = g.qcd.fermion.preconditioner
 
 # solver used to solve dirac equation on SAP blocks
-mr = g.algorithms.iterative.mr({"eps": 1e-16, "maxiter": 4, "relax": 1})
+mr = a.mr({"eps": 1e-16, "maxiter": 4, "relax": 1})
 g.default.set_verbose("mr", False)
 
 # sap inverter
-inv = s.inv_sap(pc.sap(bs=[4, 4, 4, 4]), inv_pc(pc.eo2(), mr), ncy=20)
+inv = a.defect_correcting_inverter(
+    pc.sap_cycle(inv_pc(pc.eo2(), mr), bs=[4, 4, 4, 4]),
+    eps=1e-6,
+    maxiter=20,
+)
 
 # point source
 src = g.vspincolor(w.F_grid)
 src[0, 0, 0, 0] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 dst = g.lattice(src)
-dst = g.eval(inv(w) * src)
+inv_w = inv(w)
+t0 = g.time()
+dst = g.eval(inv_w * src)
+t1 = g.time()
 
 # use different solver and compare
-fgcr = g.algorithms.iterative.fgcr({"eps": 1e-7, "maxiter": 1024, "restartlen": 8})
+fgcr = a.fgcr({"eps": 1e-7, "maxiter": 1024, "restartlen": 8})
 inv2 = inv_pc(pc.eo2(), fgcr)
 
 dst2 = g.lattice(src)
-dst2 = g.eval(inv2(w) * src)
+inv2_w = inv2(w)
+t2 = g.time()
+dst2 = g.eval(inv2_w * src)
+t3 = g.time()
 
 rr = g.norm2(dst2 - dst)
-g.message(f"{rr}")
+g.message(f"Difference of results: {rr}, Time for SAP-based-solve: {t1-t0} s, Time for FGCR: {t3-t2} s")
 assert rr < 1e-11

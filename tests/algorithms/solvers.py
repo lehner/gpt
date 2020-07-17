@@ -41,7 +41,6 @@ s = g.qcd.fermion.solver
 a = g.algorithms.iterative
 inv_pc = a.preconditioned_inverter
 
-w_sp = w.converted(g.single)
 eo2_odd = g.qcd.fermion.preconditioner.eo2_ne(parity=g.odd)
 eo2_even = g.qcd.fermion.preconditioner.eo2_ne(parity=g.even)
 eo1_odd = g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd)
