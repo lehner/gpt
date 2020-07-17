@@ -301,6 +301,7 @@ class sap_cycle:
             cb=None,
         )
 
+
 # sap_cycle applies K of
 #
 #      ( EE^-1            0     )

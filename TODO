@@ -1,11 +1,5 @@
-- qcd/fermion/operator needs to inherit from matrix_operator with action w.M.
-  This then allows for a much cleaner interface as inverters will take matrix_operators
-  as input but input can also define more structure that can be used in preconditioning.
-
 - Long-term strategy needs to be to get rid of qcd/fermion/solvers directory.  Everything
   in here needs to be put on same footing as inverters in algorithms directory.
-
-- New femrion/operator . propagator function
 
 - algorithms.iterative / algorithms.approx structure is not ideal.  Better structure
   it by logic of algorihtms:
@@ -17,13 +11,6 @@
   - eigen (eigenvector/value finders)
 
   - modes (do something with modes, LMA/A2A, ...)
-
-- All inverters need to follow the __init__/__call__ interface:
-  s = solver(solver_params)
-  inverse_matrix = s(matrix)
-
-- SAP fits perfectly in defect_correcting solver form and should just be a preconditioner
-  generating the approximation matrix K of the Luscher paper.
 
 - Transpose for singlet_rank == 2:
   There is missing code in

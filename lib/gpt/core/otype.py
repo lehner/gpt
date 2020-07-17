@@ -434,7 +434,7 @@ class ot_msinglet(ot_base):
         self.__name__ = "ot_msinglet(%d)" % n
         self.nfloats = 2 * n * n
         self.shape = (n, n)
-        self.transposed = None
+        self.transposed = (1, 0)
         self.spintrace = None
         self.colortrace = None
         self.vector_type = ot_vsinglet(n)

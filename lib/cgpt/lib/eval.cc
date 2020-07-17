@@ -214,8 +214,23 @@ void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>
       if (dst.size() == 0)
 	dst.resize(a.size(),0);
       ASSERT(dst.size() == a.size());
-      for (int l=0;l<(int)a.size();l++) {
-	dst[l] = a[l][0].get_lat()->compatible_linear_combination(dst[l],ac, a[l], j, unary);
+
+      bool mtrans = (j & BIT_TRANS) != 0;
+      int singlet_rank = a[0][0].get_lat()->singlet_rank();
+      int singlet_dim  = size_to_singlet_dim(singlet_rank, (int)a.size());
+
+      if (singlet_rank == 2) {
+	for (int r=0;r<singlet_dim;r++) {
+	  for (int s=0;s<singlet_dim;s++) {
+	    int idx1 = r*singlet_dim + s;
+	    int idx2 = mtrans ? (s*singlet_dim + r) : idx1;
+	    dst[idx1] = a[idx2][0].get_lat()->compatible_linear_combination(dst[idx1],ac, a[idx2], j, unary);
+	  }
+	}
+      } else {
+	for (int l=0;l<(int)a.size();l++) {
+	  dst[l] = a[l][0].get_lat()->compatible_linear_combination(dst[l],ac, a[l], j, unary);
+	}
       }
       ac=true;
     }
