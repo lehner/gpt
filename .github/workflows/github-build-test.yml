@@ -446,6 +446,11 @@ jobs:
         ls -lha
         coverage report -m
 
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./gpt/tests/.coverage
+
 
   build-gpt-doc:
     needs: [build-grid, build-gpt]
