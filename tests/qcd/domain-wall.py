@@ -48,12 +48,12 @@ w = g.qcd.fermion.wilson_clover(
 
 
 def H(d, s):
-    w.M(d, s)
+    w(d, s)
     d @= g.gamma[5] * d / 2.0
 
 
 # find largest eigenvalue of overlap kernel
-pi = g.algorithms.iterative.power_iteration({"eps": 1e-3, "maxiter": 30})
+pi = g.algorithms.eigen.power_iteration({"eps": 1e-3, "maxiter": 30})
 st = g.vspincolor(grid)
 g.random("test").cnormal(st)
 pi(H, st)
@@ -88,11 +88,12 @@ src = g.mspincolor(grid)
 g.create.point(src, [0, 1, 0, 0])
 
 # solver
-s = g.qcd.fermion.solver
-cg = g.algorithms.iterative.cg({"eps": 1e-5, "maxiter": 1000})
+pc = g.qcd.fermion.preconditioner
+inv = g.algorithms.inverter
+cg = inv.cg({"eps": 1e-5, "maxiter": 1000})
 
-slv_qm = s.propagator(s.inv_eo_ne(g.qcd.fermion.preconditioner.eo2(qm), cg))
-slv_qz = s.propagator(s.inv_eo_ne(g.qcd.fermion.preconditioner.eo2(qz), cg))
+slv_qm = qm.propagator(inv.preconditioned(pc.eo2_ne(), cg))
+slv_qz = qz.propagator(inv.preconditioned(pc.eo2_ne(), cg))
 
 # propagator
 dst_qm = g.mspincolor(grid)

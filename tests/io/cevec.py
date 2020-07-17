@@ -18,7 +18,7 @@ import numpy as np
 U = g.load("/hpcgpfs01/work/clehner/configs/96I/test/ckpoint_lat.2000")
 U = g.convert(U, g.single)
 
-q = g.qcd.fermion.preconditioner.eo1(
+q = g.qcd.fermion.preconditioner.eo1_ne(
     g.qcd.fermion.mobius(
         U,
         {
@@ -42,7 +42,7 @@ basis, cevec, feval = g.load(
 tmp = g.vspincolor(q.F_grid_eo)
 for i in range(4):
     g.block.promote(cevec[i], tmp, basis)
-    g.algorithms.approx.evals(q.NDagN, [tmp], check_eps2=1e-5)
+    g.algorithms.eigen.evals(q.Mpc, [tmp], check_eps2=1e-5)
     g.message(feval[i])
 
 # save in different layout
@@ -87,18 +87,18 @@ g.message("Test eval: %g" % (eps))
 sys.exit(0)
 
 # test eigenvectors
-c = g.algorithms.approx.chebyshev({"low": 0.01, "high": 6.25, "order": 50})
+c = g.algorithms.polynomial.chebyshev({"low": 0.01, "high": 6.25, "order": 50})
 
-cop = g.block.operator(c(q.NDagN), cevec[0].grid, basis)
+cop = g.block.operator(c(q.Mpc), cevec[0].grid, basis)
 
-ev_basis = g.algorithms.approx.evals(cop, cevec, check_eps2=1000.0, skip=10)
+ev_basis = g.algorithms.eigen.evals(cop, cevec, check_eps2=1000.0, skip=10)
 
 
 # test SYM2
 U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
 U = g.convert(U, g.single)
 
-q = g.qcd.fermion.preconditioner.eo2(
+q = g.qcd.fermion.preconditioner.eo2_ne()(
     g.qcd.fermion.zmobius(
         U,
         {
@@ -131,8 +131,8 @@ basis, cevec, feval = g.load(
     {"grids": q.F_grid_eo},
 )
 
-c = g.algorithms.approx.chebyshev({"low": 0.004, "high": 5.5, "order": 30})
+c = g.algorithms.polynomial.chebyshev({"low": 0.004, "high": 5.5, "order": 30})
 
-cop = g.block.operator(c(q.NDagN), cevec[0].grid, basis)
+cop = g.block.operator(c(q.Mpc), cevec[0].grid, basis)
 
-ev_basis = g.algorithms.approx.evals(cop, cevec, check_eps2=1e-1)
+ev_basis = g.algorithms.eigen.evals(cop, cevec, check_eps2=1e-1)
