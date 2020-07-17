@@ -51,6 +51,18 @@ vc2 = g.eval(mc * vc)
 vc2_comp = mc_comp * vc_comp
 assert g.norm2(vc2[0, 0, 0, 0] - vc2_comp) < 1e-10
 
+# test transpose and adjoint of mcolor
+mc_adj = g.eval(g.adj(mc))
+mc_transpose = g.eval(g.transpose(mc))
+mc_array = mc[0, 0, 0, 0].array
+mc_adj_array = mc_adj[0, 0, 0, 0].array
+mc_transpose_array = mc_transpose[0, 0, 0, 0].array
+assert np.linalg.norm(mc_adj_array - mc_array.transpose().conjugate()) < 1e-13
+assert np.linalg.norm(mc_transpose_array - mc_array.transpose()) < 1e-13
+assert g.norm2(g.adj(mc[0, 0, 0, 0]) - mc_adj[0, 0, 0, 0]) < 1e-25
+assert g.norm2(g.transpose(mc[0, 0, 0, 0]) - mc_transpose[0, 0, 0, 0]) < 1e-25
+
+
 # assign entire lattice
 cm = g.mcolor(grid)
 cv = g.vcolor(grid)

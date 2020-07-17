@@ -123,6 +123,9 @@ class tensor:
     def __eq__(self, other):
         return np.array_equal(self.array, other.array)
 
+    def __neg__(self):
+        return tensor(-self.array, self.otype)
+
     def __sub__(self, other):
         assert self.otype.__name__ == other.otype.__name__
         return tensor(self.array - other.array, self.otype)

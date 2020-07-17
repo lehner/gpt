@@ -1,4 +1,29 @@
-- On MG branch: t=timer(); t("block1"); block1; t("block2"); block2; t(); g.message(t); <-- use timer __str__ and __call__, can also do t("block1", bytes = bytes_processed, flops = flops_in_block) to add GB/s and Gflops/s
+- Long-term strategy needs to be to get rid of qcd/fermion/solvers directory.  Everything
+  in here needs to be put on same footing as inverters in algorithms directory.
+
+- algorithms.iterative / algorithms.approx structure is not ideal.  Better structure
+  it by logic of algorihtms:
+
+  - solvers
+
+  - polynomials
+
+  - eigen (eigenvector/value finders)
+
+  - modes (do something with modes, LMA/A2A, ...)
+
+- Transpose for singlet_rank == 2:
+  There is missing code in
+
+   https://github.com/lehner/gpt/blob/master/lib/cgpt/lib/eval.cc
+
+  at lines 218 and 231 to appropriately shuffle the indices of a versus dst.
+  This is where it should be handled.  Adj should only set the trans|conj
+  flags for the expression engine.
+
+- On MG branch: t=timer(); t("block1"); block1; t("block2"); block2; t(); g.message(t); <-- use timer __str__ and __c
+all__, can also do t("block1", bytes = bytes_processed, flops = flops_in_block) to add GB/s and Gflops/s
+
 - Grid-production-code/zmobius_2pt_hvp_con_gstore/Fourier... <-- First TM, then 5d TM, then  FA
 - test applications on summit with new version + new Grid
 - A2A meson fields
