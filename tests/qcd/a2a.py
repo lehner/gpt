@@ -75,8 +75,8 @@ for p, tag in [
 
     p_q = p(q)
     a2a = s.a2a(p_q)
-    lma_unphysical = g.algorithms.iterative.preconditioned_inverter(
-        p, g.algorithms.approx.modes(evec, evec, evals, lambda x: 1.0 / x)
+    lma_unphysical = g.algorithms.inverter.preconditioned(
+        p, g.algorithms.modes.modes(evec, evec, evals, lambda x: 1.0 / x)
     )
     lma_physical = q.propagator(lma_unphysical)
 
@@ -85,7 +85,7 @@ for p, tag in [
     dst_lma = g.eval(lma_unphysical(q) * F_src)
 
     # reconstruct by hand
-    a2a_unphysical = g.algorithms.approx.modes(
+    a2a_unphysical = g.algorithms.modes.modes(
         [a2a.v_unphysical(x) for x in evec],
         [a2a.w_unphysical(x) for x in evec],
         evals,
@@ -111,7 +111,7 @@ for p, tag in [
     dst_lma = g.eval(lma_physical * U_src)
 
     # reconstruct by hand
-    a2a_physical = g.algorithms.approx.modes(
+    a2a_physical = g.algorithms.modes.modes(
         [a2a.v(x) for x in evec], [a2a.w(x) for x in evec], evals, lambda x: 1.0 / x
     )()
     dst_a2a = g.eval(a2a_physical * U_src)

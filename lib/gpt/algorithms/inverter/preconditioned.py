@@ -18,13 +18,30 @@
 #
 import gpt as g
 
-
-class mixed_precision_inverter:
-    def __init__(self, inverter, inner_precision, outer_precision):
+# M^-1 = L Mpc^-1 R + S
+class preconditioned:
+    @g.params_convention()
+    def __init__(self, preconditioner, inverter, params):
+        self.params = params
+        self.preconditioner = preconditioner
         self.inverter = inverter
-        self.inner_precision = inner_precision
-        self.outer_precision = outer_precision
 
     def __call__(self, mat):
-        matrix = mat.converted(self.inner_precision)
-        return self.inverter(matrix).converted(self.outer_precision)
+
+        matrix = self.preconditioner(mat)
+        inv_mat = self.inverter(matrix.Mpc)
+
+        def inv(dst, src):
+            # TODO: forward guess dst to inverter, need pseudo L.inv(), pick even sites then L.inv() may be EE, do for each PC
+            dst @= matrix.L * inv_mat * matrix.R * src + matrix.S * src
+
+        return g.matrix_operator(
+            mat=inv,
+            inv_mat=mat,
+            adj_inv_mat=mat.adj(),
+            adj_mat=None,  # implement adj_mat when needed
+            otype=mat.otype,
+            zero=(True, False),
+            grid=matrix.F_grid,
+            cb=None,
+        )

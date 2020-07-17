@@ -81,13 +81,13 @@ g.create.point(
 )  # pick point 1 so that "S" in preconditioner contributes to test
 
 # build solver using g5m and cg
-a = g.algorithms.iterative
+inv = g.algorithms.inverter
 pc = g.qcd.fermion.preconditioner
-cg = a.cg({"eps": 1e-6, "maxiter": 1000})
+cg = inv.cg({"eps": 1e-6, "maxiter": 1000})
 
-slv = w.propagator(a.preconditioned_inverter(pc.g5m_ne(), cg))
-slv_eo1 = w.propagator(a.preconditioned_inverter(pc.eo1_ne(), cg))
-slv_eo2 = w.propagator(a.preconditioned_inverter(pc.eo2_ne(), cg))
+slv = w.propagator(inv.preconditioned(pc.g5m_ne(), cg))
+slv_eo1 = w.propagator(inv.preconditioned(pc.eo1_ne(), cg))
+slv_eo2 = w.propagator(inv.preconditioned(pc.eo2_ne(), cg))
 
 # propagator
 dst_eo1 = g.mspincolor(grid)

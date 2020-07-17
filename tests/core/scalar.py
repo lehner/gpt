@@ -27,14 +27,14 @@ def A(dst, src, mass):
 M = g.matrix_operator(lambda d, s: A(d, s, m0))
 
 # find largest eigenvalue
-powit = g.algorithms.iterative.power_iteration({"eps": 1e-6, "maxiter": 100})
+powit = g.algorithms.eigen.power_iteration({"eps": 1e-6, "maxiter": 100})
 g.message("Largest eigenvalue: ", powit(M, src)[0])
 
 # perform CG
 psi = g.lattice(src)
 psi[:] = 0
 
-cg = g.algorithms.iterative.cg({"eps": 1e-8, "maxiter": 1000})
+cg = g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 1000})
 
 psi @= cg(M) * src
 

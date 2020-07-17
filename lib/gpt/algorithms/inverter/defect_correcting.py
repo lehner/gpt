@@ -20,7 +20,7 @@ import gpt as g
 import sys
 
 
-class defect_correcting_inverter:
+class defect_correcting:
 
     #
     # Less numerically stable (leads to suppression of critical low-mode space before inner_mat^{-1}):

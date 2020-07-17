@@ -29,10 +29,10 @@ w = g.qcd.fermion.preconditioner.eo1_ne(parity=parity)(
 
 
 # cheby
-c = g.algorithms.approx.chebyshev({"low": 0.5, "high": 2.0, "order": 10})
+c = g.algorithms.polynomial.chebyshev({"low": 0.5, "high": 2.0, "order": 10})
 
 # implicitly restarted lanczos
-irl = g.algorithms.iterative.irl(
+irl = g.algorithms.eigen.irl(
     {
         "Nk": 60,
         "Nstop": 60,
@@ -57,11 +57,11 @@ evec, ev = irl(c(w.Mpc), start)  # , g.checkpointer("checkpoint")
 g.mem_report()
 
 # print eigenvalues of NDagN as well
-evals = g.algorithms.approx.evals(w.Mpc, evec, check_eps2=1e-11)
+evals = g.algorithms.eigen.evals(w.Mpc, evec, check_eps2=1e-11)
 
 # deflated solver
-cg = g.algorithms.iterative.cg({"eps": 1e-6, "maxiter": 1000})
-defl = g.algorithms.approx.deflate(cg, evec, evals)
+cg = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 1000})
+defl = g.algorithms.eigen.deflate(cg, evec, evals)
 
 sol_cg = g.eval(cg(w.Mpc) * start)
 eps2 = g.norm2(w.Mpc * sol_cg - start) / g.norm2(start)

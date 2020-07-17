@@ -18,6 +18,3 @@
 #
 from gpt.algorithms.modes.modes import modes
 from gpt.algorithms.modes.coarse_modes import coarse_modes
-from gpt.algorithms.modes.deflate import deflate
-from gpt.algorithms.modes.coarse_deflate import coarse_deflate
-
