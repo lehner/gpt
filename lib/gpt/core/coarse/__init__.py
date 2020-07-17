@@ -20,9 +20,12 @@
 import gpt, cgpt, sys, numpy
 
 
-def create_links(A, fmat, basis):
+def create_links(A, fmat, basis, params):
     # NOTE: we expect the blocks in the basis vectors
     # to already be orthogonalized!
+    # parameters
+    hermitian = params["hermitian"]
+    savelinks = params["savelinks"]
 
     # verbosity
     verbose = gpt.default.is_verbose("coarsen")
@@ -42,7 +45,6 @@ def create_links(A, fmat, basis):
     dirdisps_forward = list(zip(dirs, [disp] * 4))
     nhops = len(dirdisps_full)
     selflink = nhops
-    hermitian = False  # for now, needs to be a param -> TODO
 
     # setup fields
     Mvr = [gpt.lattice(basis[0]) for i in range(nhops)]
@@ -77,7 +79,7 @@ def create_links(A, fmat, basis):
         gpt.make_mask(dirmasks[4 + p], dirmasks_backward_np[:, p])
 
     # save applications of matrix and coarsening if possible
-    dirdisps = dirdisps_forward if hermitian else dirdisps_full
+    dirdisps = dirdisps_forward if savelinks else dirdisps_full
 
     for i, vr in enumerate(basis):
         # apply directional hopping terms
@@ -114,16 +116,19 @@ def create_links(A, fmat, basis):
             gpt.message("Coarsening of vector %d finished" % i)
 
     # communicate opposite links
-    t("comm")
-    for p, (d, fb) in enumerate(dirdisps_forward):
-        dd = d + 4
-        shift_disp = fb * -1
-        if hermitian:
-            A[dd] @= gpt.adj(gpt.cshift(A[d], d, shift_disp))
-        else:
-            pass
-            # # linktmp = ... # TODO internal index manipulation for coarse spin dofs
-            # A[dd] @= gpt.adj(gpt.cshift(linktmp, d, shift_disp))
+    if savelinks:
+        t("comm")
+        for p, (d, fb) in enumerate(dirdisps_forward):
+            dd = d + 4
+            shift_disp = fb * -1
+            Atmp = gpt.copy(A[d])
+            if not hermitian:
+                nbasis = len(basis)
+                assert nbasis % 2 == 0
+                nb = nbasis // 2
+                Atmp[:, :, :, :, 0:nb, nb:nbasis] *= -1.0  # upper right block
+                Atmp[:, :, :, :, nb:nbasis, 0:nb] *= -1.0  # lower left block
+            A[dd] @= gpt.adj(gpt.cshift(Atmp, d, shift_disp))
 
     t()
 

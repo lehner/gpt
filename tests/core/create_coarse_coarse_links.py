@@ -25,10 +25,10 @@ northo = 2
 
 # create coarse link fields
 A_c = [g.mcomplex(grid_c, nbasis_f) for _ in range(9)]
-g.coarse.create_links_random(A_c)
+g.coarse.create_links(A_c, mat_f, basis_f, {"hermitian": False, "savelinks": False})
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse_operator(A_c, {"hermitian": 1, "level": 0,},)
+mat_c = g.qcd.fermion.coarse(A_c, {"level": 0,},)
 
 # setup coarse basis
 basis_c = [g.vcomplex(grid_c, nbasis_f) for _ in range(nbasis_c)]
@@ -55,12 +55,10 @@ g.message("Orthogonality check done")
 
 # create coarse coarse link fields
 A_cc = [g.mcomplex(grid_cc, nbasis_c) for _ in range(9)]
-g.coarse.create_links(
-    A_cc, mat_c, basis_c
-)  # doesn't work because can't mul g.complex x g.vcomplex -> TODO
+g.coarse.create_links(A_cc, mat_c, basis_c, {"hermitian": False, "savelinks": False})
 
 # create coarse operator from links
-mat_cc = g.qcd.fermion.coarse_operator(A_cc, {"hermitian": 1, "level": 1,},)
+mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
 
 # setup coarse vectors
 vec_in_c = g.lattice(basis_c[0])

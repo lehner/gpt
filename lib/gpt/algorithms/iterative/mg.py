@@ -53,6 +53,7 @@ class mg:
         self.northo = make_param_list(params["northo"], self.nlevel - 1)
         self.nbasis = make_param_list(params["nbasis"], self.nlevel - 1)
         self.hermitian = make_param_list(params["hermitian"], self.nlevel - 1)
+        self.savelinks = make_param_list(params["savelinks"], self.nlevel - 1)
         self.vecstype = make_param_list(params["vecstype"], self.nlevel - 1)
         self.presmooth = make_param_list(params["presmooth"], self.nlevel - 1)
         self.postsmooth = make_param_list(params["postsmooth"], self.nlevel - 1)
@@ -84,6 +85,7 @@ class mg:
                 self.northo,
                 self.nbasis,
                 self.hermitian,
+                self.savelinks,
                 self.vecstype,
                 self.presmooth,
                 self.postsmooth,
@@ -159,10 +161,16 @@ class mg:
             # create coarse links + operator (all but finest)
             if lvl != self.finest:
                 t("create_operator")
-                g.coarse.create_links(self.A[lvl], self.mat[nf_lvl], self.basis[nf_lvl])
-                self.mat[lvl] = g.qcd.fermion.coarse(
-                    self.A[lvl], {"hermitian": self.hermitian[nf_lvl], "level": lvl},
+                g.coarse.create_links(
+                    self.A[lvl],
+                    self.mat[nf_lvl],
+                    self.basis[nf_lvl],
+                    {
+                        "hermitian": self.hermitian[nf_lvl],
+                        "savelinks": self.savelinks[nf_lvl],
+                    },
                 )
+                self.mat[lvl] = g.qcd.fermion.coarse(self.A[lvl], {"level": lvl},)
 
                 if self.verbose:
                     g.message("%s done with operator setup" % pp)

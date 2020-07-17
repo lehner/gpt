@@ -35,7 +35,7 @@ vec_in_c = []
 vec_out_c = []
 for lvl_c in range(num_coarse_levels):
     lvl_mg = lvl_c + 1
-    op_c.append(g.qcd.fermion.coarse_operator(A, {"hermitian": 1, "level": lvl_c}))
+    op_c.append(g.qcd.fermion.coarse(A, {"level": lvl_c}))
     vec_in_c.append(g.vcomplex(grid, nbasis))
     vec_out_c.append(g.vcomplex(grid, nbasis))
     rng.cnormal(vec_in_c[lvl_c])

@@ -33,7 +33,7 @@ vec_out_link_c[:] = 0
 
 # copy into coarse operator
 A = [g.copy(link_c) for _ in range(9)]
-mat_c = g.qcd.fermion.coarse_operator(A, {"hermitian": 1, "level": 0,},)
+mat_c = g.qcd.fermion.coarse_operator(A, {"level": 0,},)
 
 # apply the link matrix
 vec_out_link_c @= link_c * vec_in_c

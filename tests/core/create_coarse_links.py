@@ -64,10 +64,10 @@ g.message("Orthogonality check done")
 
 # create coarse link fields
 A = [g.mcomplex(grid_c, nbasis_f) for _ in range(9)]
-g.coarse.create_links(A, mat_f, basis_f)
+g.coarse.create_links(A, mat_f, basis_f, {"hermitian": False, "savelinks": False})
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse(A, {"hermitian": 1, "level": 0,},)
+mat_c = g.qcd.fermion.coarse(A, {"level": 0,},)
 
 # setup fine vectors
 vec_in_f = g.lattice(basis_f[0])

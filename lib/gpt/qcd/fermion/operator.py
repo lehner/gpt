@@ -189,7 +189,7 @@ class coarse_operator:
         # parameter for create_fermion_operator
         self.params = {
             "grid_c": self.A_grid.obj,
-            "hermitian": params["hermitian"],
+            "hermitian": False,  # NOTE: doesn't matter what we pass to Grid since we need to do Mdag ourselves anyway
             "level": params["level"],
             "nbasis": int(
                 self.A[0].otype.shape[0] / (len(A[0].v_obj)) ** 0.5

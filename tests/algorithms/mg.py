@@ -56,7 +56,8 @@ mg_params = {
     "grid": [grid_f, grid_c],
     "northo": 2,
     "nbasis": 10,
-    "hermitian": True,
+    "hermitian": False,
+    "savelinks": True,
     "vecstype": "test",
     "presmooth": lambda mat: s.inv_eo(
         p.eo2(mat), a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1})
