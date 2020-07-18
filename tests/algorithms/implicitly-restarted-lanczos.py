@@ -57,7 +57,7 @@ evec, ev = irl(c(w.Mpc), start)  # , g.checkpointer("checkpoint")
 g.mem_report()
 
 # print eigenvalues of NDagN as well
-evals = g.algorithms.eigen.evals(w.Mpc, evec, check_eps2=1e-11)
+evals = g.algorithms.eigen.evals(w.Mpc, evec, check_eps2=1e-11, real=True)
 
 # deflated solver
 cg = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 1000})

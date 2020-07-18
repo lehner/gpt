@@ -19,7 +19,7 @@
 import gpt as g
 
 
-@g.params_convention(check_eps2=None, skip=1)
+@g.params_convention(check_eps2=None, skip=1, real=False)
 def evals(matrix, evec, params):
     check_eps2 = params["check_eps2"]
     skip = params["skip"]
@@ -30,11 +30,13 @@ def evals(matrix, evec, params):
         v = evec[i]
         matrix(tmp, v)
         # M |v> = l |v> -> <v|M|v> / <v|v>
-        l = g.innerProduct(v, tmp).real / g.norm2(v)
+        l = g.innerProduct(v, tmp) / g.norm2(v)
+        if params["real"]:
+            l = l.real
         ev.append(l)
         if check_eps2 is not None:
             eps2 = g.norm2(tmp - l * v)
-            g.message("eval[ %d ] = %g, eps^2 = %g" % (i, l, eps2))
+            g.message(f"eval[ {i} ] = {l}, eps^2 = {eps2}")
             if eps2 > check_eps2:
                 assert 0
 

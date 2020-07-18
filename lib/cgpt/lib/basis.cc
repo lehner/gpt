@@ -121,14 +121,22 @@ EXPORT(rotate,{
 
     ASSERT(basis.size() > 0);
 
-    RealD* data;
-    int Nm;
-    cgpt_numpy_import_matrix(_Qt,data,Nm);
-
+    int Nm, dtype;
+    cgpt_numpy_query_matrix(_Qt, dtype, Nm);
     ASSERT(j0 <= j1 && k0 <= k1 && j0 >=0 && k0 >= 0 && k1 <= Nm && j1 <= Nm && 
 	   (int)basis.size() >= j1 && (int)basis.size() >= k1);
 
-    basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm);
+    if (dtype == NPY_COMPLEX128) {
+      ComplexD* data;
+      cgpt_numpy_import_matrix(_Qt,data,Nm);
+      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm);
+    } else if (dtype == NPY_FLOAT64) {
+      RealD* data;
+      cgpt_numpy_import_matrix(_Qt,data,Nm);
+      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm);
+    } else {
+      ERR("Unknown dtype");
+    }
     
     return PyLong_FromLong(0);
   });

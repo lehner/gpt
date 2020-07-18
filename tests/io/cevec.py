@@ -42,7 +42,7 @@ basis, cevec, feval = g.load(
 tmp = g.vspincolor(q.F_grid_eo)
 for i in range(4):
     g.block.promote(cevec[i], tmp, basis)
-    g.algorithms.eigen.evals(q.Mpc, [tmp], check_eps2=1e-5)
+    g.algorithms.eigen.evals(q.Mpc, [tmp], check_eps2=1e-5, real=True)
     g.message(feval[i])
 
 # save in different layout
@@ -91,7 +91,7 @@ c = g.algorithms.polynomial.chebyshev({"low": 0.01, "high": 6.25, "order": 50})
 
 cop = g.block.operator(c(q.Mpc), cevec[0].grid, basis)
 
-ev_basis = g.algorithms.eigen.evals(cop, cevec, check_eps2=1000.0, skip=10)
+ev_basis = g.algorithms.eigen.evals(cop, cevec, check_eps2=1000.0, skip=10, real=True)
 
 
 # test SYM2
@@ -135,4 +135,4 @@ c = g.algorithms.polynomial.chebyshev({"low": 0.004, "high": 5.5, "order": 30})
 
 cop = g.block.operator(c(q.Mpc), cevec[0].grid, basis)
 
-ev_basis = g.algorithms.eigen.evals(cop, cevec, check_eps2=1e-1)
+ev_basis = g.algorithms.eigen.evals(cop, cevec, check_eps2=1e-1, real=True)

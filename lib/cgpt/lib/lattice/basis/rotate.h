@@ -17,9 +17,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-template<class VLattice>
-void cgpt_basis_rotate(VLattice &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) {
-  PMatrix<RealD> _Qt(Qt,Nm);
+template<class VLattice, typename dtype>
+void cgpt_basis_rotate(VLattice &basis,dtype* Qt,int j0, int j1, int k0,int k1,int Nm) {
+  PMatrix<dtype> _Qt(Qt,Nm);
   basisRotate(basis,_Qt,j0,j1,k0,k1,Nm);
 }
 

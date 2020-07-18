@@ -27,6 +27,7 @@ for f in \
     qcd/fermion-operators.py \
     qcd/sap.py \
     algorithms/implicitly-restarted-lanczos.py \
+    algorithms/arnoldi.py \
     algorithms/solvers.py
 do
 

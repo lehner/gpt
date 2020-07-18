@@ -163,6 +163,12 @@ public:
     cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
   }
 
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt,int j0, int j1, int k0,int k1,int Nm) {
+    PVector<Lattice<T>> basis;
+    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
+  }
+
   virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt) {
     PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis,_basis);

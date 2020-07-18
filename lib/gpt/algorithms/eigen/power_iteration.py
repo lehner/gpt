@@ -20,11 +20,12 @@ import gpt as g
 
 
 class power_iteration:
-    @g.params_convention()
+    @g.params_convention(real = False)
     def __init__(self, params):
         self.params = params
         self.tol = params["eps"]
         self.maxit = params["maxiter"]
+        self.real = params["real"]
 
     def __call__(self, mat, src):
         verbose = g.default.is_verbose("power_iteration")
@@ -36,12 +37,14 @@ class power_iteration:
         ev_prev = None
         for it in range(self.maxit):
             mat(dst, tmp)
-            ev = g.norm2(dst) ** 0.5
+            ev = g.innerProduct(tmp,dst)
+            if self.real:
+                ev = ev.real
             if verbose:
-                g.message("eval_max[ %d ] = %g" % (it, ev))
-            tmp @= (1.0 / ev) * dst
+                g.message(f"eval_max[ {it} ] = {ev}")
+            tmp @= dst / g.norm2(dst) ** 0.5
             if ev_prev is not None:
-                if abs(ev - ev_prev) < self.tol * ev:
+                if abs(ev - ev_prev) < self.tol * abs(ev):
                     if verbose:
                         g.message("Converged")
                     return (ev, tmp, True)
