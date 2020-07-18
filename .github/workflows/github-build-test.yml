@@ -442,7 +442,6 @@ jobs:
       run: |
         cd gpt
         coverage combine
-        ls -lha
         coverage report -m  # Print coverage report to screen
         coverage xml  # Export coverage report as XML file, for codecov.io
 
