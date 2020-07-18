@@ -135,7 +135,9 @@ except g.LoadError:
             v_fine_smooth[:] = 0
             v_fine_smooth @= smoother(w.NDagN) * v_fine
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth) ** 0.5
-        ev_smooth = g.algorithms.approx.evals(w.NDagN, [v_fine], check_eps2=1e-5, real=True)
+        ev_smooth = g.algorithms.approx.evals(
+            w.NDagN, [v_fine], check_eps2=1e-5, real=True
+        )
         ev3[i] = ev_smooth[0]
         g.message("Eigenvalue %d = %.8g" % (i, ev3[i]))
     g.save("/hpcgpfs01/scratch/clehner/ev3", ev3)

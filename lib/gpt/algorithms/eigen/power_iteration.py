@@ -20,7 +20,7 @@ import gpt as g
 
 
 class power_iteration:
-    @g.params_convention(real = False)
+    @g.params_convention(real=False)
     def __init__(self, params):
         self.params = params
         self.tol = params["eps"]
@@ -37,7 +37,7 @@ class power_iteration:
         ev_prev = None
         for it in range(self.maxit):
             mat(dst, tmp)
-            ev = g.innerProduct(tmp,dst)
+            ev = g.innerProduct(tmp, dst)
             if self.real:
                 ev = ev.real
             if verbose:

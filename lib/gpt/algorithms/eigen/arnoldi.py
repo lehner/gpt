@@ -31,7 +31,7 @@ class arnoldi_iteration:
         self.verbose = g.default.is_verbose("arnoldi")
 
         # set initial vector
-        self.basis = [ g.eval( src / g.norm2(src) ** 0.5 ) ]
+        self.basis = [g.eval(src / g.norm2(src) ** 0.5)]
 
         # matrix elements
         self.H = []
@@ -39,7 +39,7 @@ class arnoldi_iteration:
     def __call__(self):
 
         new = self.mat(self.basis[-1])
-        ips = np.zeros((len(self.basis)+1,), np.complex128)
+        ips = np.zeros((len(self.basis) + 1,), np.complex128)
         g.orthogonalize(new, self.basis, ips[0:-1])
         ips[-1] = g.norm2(new) ** 0.5
         new /= ips[-1]
@@ -49,14 +49,14 @@ class arnoldi_iteration:
     def hessenberg(self):
 
         n = len(self.H)
-        H = np.zeros((n,n), np.complex128)
-        for i in range(n-1):
-            H[0:(i+2), i] = self.H[i]
-        H[:, n-1] = self.H[n-1][0:n]
+        H = np.zeros((n, n), np.complex128)
+        for i in range(n - 1):
+            H[0 : (i + 2), i] = self.H[i]
+        H[:, n - 1] = self.H[n - 1][0:n]
         return H
 
     def little_eig(self):
-        
+
         H = self.hessenberg()
         evals, little_evec = np.linalg.eig(H)
         idx = evals.argsort()
@@ -70,5 +70,5 @@ class arnoldi_iteration:
     def single_evec(self, little_evec, i):
         n = len(self.H)
         test = g.lattice(self.basis[0])
-        g.linear_combination(test,self.basis[0:n],little_evec[:,i])
+        g.linear_combination(test, self.basis[0:n], little_evec[:, i])
         return test
