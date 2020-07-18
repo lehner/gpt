@@ -153,10 +153,6 @@ jobs:
         cd -
         dpkg-deb --build $PKGDIR
 
-    - name: Install Grid
-      run: |
-        sudo dpkg -i grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-
 
   build-gpt:
     needs: build-grid
@@ -294,10 +290,6 @@ jobs:
         cd -
         dpkg-deb --build $PKGDIR
 
-    - name: Install cgpt
-      run: |
-        sudo dpkg -i cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-
     - name: gpt package cache
       uses: actions/cache@v2
       id: gpt-package-cache
@@ -324,10 +316,6 @@ jobs:
         sed -e 's/%pkgname%/gpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/gpt/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
-
-    - name: Install gpt
-      run: |
-        sudo dpkg -i gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Create combined package
       run: |
