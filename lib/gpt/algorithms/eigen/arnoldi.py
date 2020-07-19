@@ -40,7 +40,8 @@ class arnoldi_iteration:
     def __call__(self):
 
         t0 = g.time()
-        new = self.mat(self.basis[-1])
+        new = g.lattice(self.basis[-1])
+        self.mat(new,self.basis[-1])
         t1 = g.time()
         ips = np.zeros((len(self.basis) + 1,), np.complex128)
         g.orthogonalize(new, self.basis, ips[0:-1])

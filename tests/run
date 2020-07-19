@@ -27,6 +27,7 @@ for f in \
     ${test_path}/random/random-simple.py \
     ${test_path}/qcd/a2a.py \
     ${test_path}/qcd/fermion-operators.py \
+    ${test_path}/qcd/domain-wall.py \
     ${test_path}/qcd/sap.py \
     ${test_path}/algorithms/implicitly-restarted-lanczos.py \
     ${test_path}/algorithms/arnoldi.py \
