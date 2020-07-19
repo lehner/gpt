@@ -13,7 +13,10 @@ fail_list=""
 test_path=${BASH_SOURCE%/*}
 
 # working directory for IO tests
-export WORK_DIR="tests_work_dir"
+if [[ "${WORK_DIR}" == "" ]];
+then
+  WORK_DIR="tests_work_dir"
+fi
 mkdir -p ${WORK_DIR}
 
 echo "Working directory = ${WORK_DIR}"
