@@ -7,22 +7,28 @@
 import gpt as g
 import numpy as np
 import sys
+import os
 import random
 import cgpt
 
+# workdir
+if "WORK_DIR" in os.environ:
+    work_dir = os.environ["WORK_DIR"]
+else:
+    work_dir = "."
+
 # load configuration
-U = g.load("/hpcgpfs01/work/clehner/configs/32IDfine/ckpoint_lat.200")
-assert abs(g.qcd.gauge.plaquette(U) - float(U[0].metadata["PLAQUETTE"])) < 1e-9
+#U = g.load("/hpcgpfs01/work/clehner/configs/32IDfine/ckpoint_lat.200")
+#assert abs(g.qcd.gauge.plaquette(U) - float(U[0].metadata["PLAQUETTE"])) < 1e-9
 
 # Show metadata of field
-g.message("Metadata", U[0].metadata)
-
-# to single precision
-# U = g.convert(U, g.single)
+#g.message("Metadata", U[0].metadata)
+rng = g.random("test")
+U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 
 # save in default gpt format
 g.save(
-    "out",
+    f"{work_dir}/out",
     {
         "va\nl": [
             0,
@@ -40,7 +46,7 @@ g.save(
 
 # save in custom gpt format with different mpi distribution of local views
 g.save(
-    "out2",
+    f"{work_dir}/out2",
     {
         "val": [
             0,
@@ -72,14 +78,32 @@ g.save(
 # - g.load(fn)          loads everything in fn and creates new grids as needed
 # - g.load(fn,{ "grids" : ..., "paths" :  ... })  both grids and paths are optional parameters and may be lists,
 #                                                 grids are re-used when loading, paths restricts which items to load (allows for glob.glob syntax /U/*)
-res = g.load("out")
+res = g.load(f"{work_dir}/out")
 
 for i in range(4):
-    g.message("Test first restore of U[%d]:" % i, g.norm2(res["U"][i] - U[i]))
+    eps2=g.norm2(res["U"][i] - U[i])
+    g.message("Test first restore of U[%d]:" % i, eps2)
+    assert eps2 < 1e-25
 
-res = g.load("out2", {"paths": "/U/*"})
+res = g.load(f"{work_dir}/out2", {"paths": "/U/*"})
 for i in range(4):
-    g.message("Test second restore of U[%d]:" % i, g.norm2(res["U"][i] - U[i]))
+    eps2=g.norm2(res["U"][i] - U[i])
+    g.message("Test second restore of U[%d]:" % i, eps2)
+    assert eps2 < 1e-25
+
+# checkpointer save
+ckpt = g.checkpointer(f"{work_dir}/ckpt")
+alpha = 0.125
+ckpt.save([ U[0], alpha ])
+
+# checkpointer load
+ckpt = g.checkpointer(f"{work_dir}/ckpt")
+ckpt.grid = U[0].grid
+alpha = 0.125
+U0_test = g.lattice(U[0])
+assert ckpt.load([ U0_test, alpha ])
+assert abs(alpha - 0.125) < 1e-25
+assert g.norm2(U0_test - U[0]) == 0.0
 
 sys.exit(0)
 

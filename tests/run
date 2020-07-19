@@ -36,7 +36,8 @@ for f in \
     ${test_path}/algorithms/implicitly-restarted-lanczos.py \
     ${test_path}/algorithms/arnoldi.py \
     ${test_path}/algorithms/solvers.py \
-    ${test_path}/io/cevec.py
+    ${test_path}/io/cevec.py \
+    ${test_path}/io/test-io.py
 do
 
 printf "%-60s" " [TEST] $f"
