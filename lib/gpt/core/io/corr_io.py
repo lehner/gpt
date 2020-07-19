@@ -27,7 +27,7 @@ def read_tags(fn, tags, verbose, nocheck):
             if len(rd) == 0:
                 break
             ntag = struct.unpack("i", rd)[0]
-            tag = f.read(ntag)
+            tag = f.read(ntag).decode("utf-8")
             (crc32, ln) = struct.unpack("II", f.read(4 * 2))
 
             if verbose:

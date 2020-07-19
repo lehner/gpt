@@ -105,101 +105,111 @@ assert ckpt.load([U0_test, alpha])
 assert abs(alpha - 0.125) < 1e-25
 assert g.norm2(U0_test - U[0]) == 0.0
 
-sys.exit(0)
+# corr-io
+corr = [ rng.normal().real for i in range(32) ]
+w = g.corr_io.writer(f"{work_dir}/head.dat")
+w.write("test",corr)
+del w
+r = g.corr_io.corr_io(f"{work_dir}/head.dat")
+assert "test" in r.glob("*")
+for i in range(len(corr)):
+    assert abs(r.tags["test"][i] - corr[i]) == 0.0
+
+# sys.exit(0)
 
 
-# Calculate Plaquette
-g.message(g.qcd.gauge.plaquette(U))
+# # Calculate Plaquette
+# g.message(g.qcd.gauge.plaquette(U))
 
-# Precision change
-Uf = g.convert(U, g.single)
-g.message(g.qcd.gauge.plaquette(Uf))
+# # Precision change
+# Uf = g.convert(U, g.single)
+# g.message(g.qcd.gauge.plaquette(Uf))
 
-Uf0 = g.convert(U[0], g.single)
-g.message(g.norm2(Uf0))
+# Uf0 = g.convert(U[0], g.single)
+# g.message(g.norm2(Uf0))
 
-del Uf0
-g.mem_report()
+# del Uf0
+# g.mem_report()
 
-# Slice
-x = g.sum(Uf[0])
+# # Slice
+# x = g.sum(Uf[0])
 
-print(x)
+# print(x)
 
-grid = g.grid([4, 4, 4, 4], g.single)
-gr = g.complex(grid)
+# grid = g.grid([4, 4, 4, 4], g.single)
+# gr = g.complex(grid)
 
-gr[0, 0, 0, 0] = 2
-gr[1, 0, 0, 0] = 3
+# gr[0, 0, 0, 0] = 2
+# gr[1, 0, 0, 0] = 3
 
-gride = g.grid([4, 4, 4, 4], g.single, g.redblack)
-gre = g.complex(gride)
-g.pick_cb(g.even, gre, gr)
-gre[2, 0, 0, 0] = 4
-g.set_cb(gr, gre)
-g.mem_report()
-
-
-print(gre)
-
-gre.checkerboard(g.odd)
-
-print(gre)
+# gride = g.grid([4, 4, 4, 4], g.single, g.redblack)
+# gre = g.complex(gride)
+# g.pick_cb(g.even, gre, gr)
+# gre[2, 0, 0, 0] = 4
+# g.set_cb(gr, gre)
+# g.mem_report()
 
 
-sys.exit(0)
+# print(gre)
 
-# Calculate U^\dag U
-u = U[0][0, 1, 2, 3]
+# gre.checkerboard(g.odd)
 
-v = g.vcolor([0, 1, 0])
-
-g.message(g.adj(v))
-g.message(g.adj(u) * u * v)
+# print(gre)
 
 
-gr = g.grid([2, 2, 2, 2], g.single)
-g.message(g.mspincolor(gr)[0, 0, 0, 0] * g.vspincolor(gr)[0, 0, 0, 0])
+# sys.exit(0)
 
-g.message(g.trace(g.mspincolor(gr)[0, 0, 0, 0]))
+# # Calculate U^\dag U
+# u = U[0][0, 1, 2, 3]
 
-# Expression including numpy array
-r = g.eval(u * U[0] + U[1] * u)
-g.message(g.norm2(r))
+# v = g.vcolor([0, 1, 0])
 
-# test inner and outer products
-v = g.vspincolor([[0, 0, 0], [0, 0, 2], [0, 0, 0], [0, 0, 0]])
-w = g.vspincolor([[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0]])
-xx = v * g.adj(w)
-g.message(xx[1][3][2][0])
-g.message(xx)
-g.message(g.adj(v) * v)
-
-g.message(g.transpose(v) * v)
-
-u += g.adj(u)
-g.message(u)
+# g.message(g.adj(v))
+# g.message(g.adj(u) * u * v)
 
 
-v = g.vspincolor([[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3]])
-l = g.vspincolor(gr)
-l[:] = 0
-l[0, 0, 0, 0] = v
+# gr = g.grid([2, 2, 2, 2], g.single)
+# g.message(g.mspincolor(gr)[0, 0, 0, 0] * g.vspincolor(gr)[0, 0, 0, 0])
 
-g.message(l)
+# g.message(g.trace(g.mspincolor(gr)[0, 0, 0, 0]))
 
-for mu in [0, 1, 2, 3, 5]:
-    for nu in [0, 1, 2, 3, 5]:
-        g.message(
-            mu,
-            nu,
-            g.norm2(g.gamma[mu] * g.gamma[nu] * l + g.gamma[nu] * g.gamma[mu] * l)
-            / g.norm2(l),
-        )
+# # Expression including numpy array
+# r = g.eval(u * U[0] + U[1] * u)
+# g.message(g.norm2(r))
 
-g.message(l)
+# # test inner and outer products
+# v = g.vspincolor([[0, 0, 0], [0, 0, 2], [0, 0, 0], [0, 0, 0]])
+# w = g.vspincolor([[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0]])
+# xx = v * g.adj(w)
+# g.message(xx[1][3][2][0])
+# g.message(xx)
+# g.message(g.adj(v) * v)
 
-m = g.mspincolor(gr)
-m[0, 0, 0, 0] = xx
-m @= g.gamma[5] * m * g.gamma[5]
-g.message(m)
+# g.message(g.transpose(v) * v)
+
+# u += g.adj(u)
+# g.message(u)
+
+
+# v = g.vspincolor([[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 2, 3]])
+# l = g.vspincolor(gr)
+# l[:] = 0
+# l[0, 0, 0, 0] = v
+
+# g.message(l)
+
+# for mu in [0, 1, 2, 3, 5]:
+#     for nu in [0, 1, 2, 3, 5]:
+#         g.message(
+#             mu,
+#             nu,
+#             g.norm2(g.gamma[mu] * g.gamma[nu] * l + g.gamma[nu] * g.gamma[mu] * l)
+#             / g.norm2(l),
+#         )
+
+# g.message(l)
+
+# m = g.mspincolor(gr)
+# m[0, 0, 0, 0] = xx
+# m @= g.gamma[5] * m * g.gamma[5]
+# g.message(m)
