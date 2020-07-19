@@ -404,7 +404,7 @@ jobs:
       if: matrix.mpi == 'none'
       run: |
         cd gpt
-        export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-WORK_DIR::$(mktemp -d)"
+        export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         export WORK_DIR=$(mktemp -d)
         ./tests/run "coverage run"
 
