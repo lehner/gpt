@@ -356,10 +356,6 @@ jobs:
       run: |
         cat /proc/cpuinfo
 
-    - name: Setup environment variables
-      run: |
-        echo "::setenv name=WORK_DIR::$(mktemp -d)"
-
     - name: Install Ubuntu packages
       run: |
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
@@ -408,7 +404,8 @@ jobs:
       if: matrix.mpi == 'none'
       run: |
         cd gpt
-        export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
+        export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-WORK_DIR::$(mktemp -d)"
+        export WORK_DIR=$(mktemp -d)
         ./tests/run "coverage run"
 
     - name: Run tests
@@ -418,6 +415,7 @@ jobs:
       run: |
         cd gpt
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
+        export WORK_DIR=$(mktemp -d) 
         mpirun -np 2 -mca btl ^openib -bind-to core python tests/core/scalar.py --mpi 1.1.1.2
         ./tests/run "mpirun -np 1 -mca btl ^openib coverage run"
         ./tests/run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run" "--mpi 1.1.1.2 --mpi 1.1.2"
@@ -427,6 +425,7 @@ jobs:
       run: |
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         cd gpt
+        export WORK_DIR=$(mktemp -d)
         ./tests/run "mpirun -np 1 coverage run"
         ./tests/run "mpirun -np 2 -bind-to core coverage run" "--mpi 1.1.1.2 --mpi 1.1.2"
 
