@@ -106,9 +106,9 @@ assert abs(alpha - 0.125) < 1e-25
 assert g.norm2(U0_test - U[0]) == 0.0
 
 # corr-io
-corr = [ rng.normal().real for i in range(32) ]
+corr = [rng.normal().real for i in range(32)]
 w = g.corr_io.writer(f"{work_dir}/head.dat")
-w.write("test",corr)
+w.write("test", corr)
 del w
 r = g.corr_io.corr_io(f"{work_dir}/head.dat")
 assert "test" in r.glob("*")
