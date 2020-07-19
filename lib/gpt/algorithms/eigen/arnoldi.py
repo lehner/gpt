@@ -51,7 +51,9 @@ class arnoldi_iteration:
         t2 = g.time()
 
         if self.verbose:
-            g.message(f"Arnoldi: len(H) = {len(self.H)} took {t1-t0} s for matrix and {t2-t1} s for linear algebra")
+            g.message(
+                f"Arnoldi: len(H) = {len(self.H)} took {t1-t0} s for matrix and {t2-t1} s for linear algebra"
+            )
 
     def hessenberg(self):
 
@@ -96,8 +98,7 @@ class arnoldi_iteration:
 
 
 class arnoldi:
-    @params_convention(Nmin = None, Nmax = None, Nstep = None, Nstop = None,
-                       resid = None)
+    @params_convention(Nmin=None, Nmax=None, Nstep=None, Nstop=None, resid=None)
     def __init__(self, params):
         self.params = params
         assert params["Nstop"] <= params["Nmin"]
@@ -138,7 +139,12 @@ class arnoldi:
                 idx = 0
 
             try:
-                evals_test = g.algorithms.eigen.evals(mat, [ a.single_evec(little_evec,idx) ], check_eps2=evals[-1]**2.0*self.params["resid"], verbose = self.verbose)
+                g.algorithms.eigen.evals(
+                    mat,
+                    [a.single_evec(little_evec, idx)],
+                    check_eps2=evals[-1] ** 2.0 * self.params["resid"],
+                    verbose=self.verbose,
+                )
             except g.algorithms.eigen.EvalsNotConverged:
                 break
 
@@ -146,7 +152,7 @@ class arnoldi:
 
             if idx == 0:
                 break
-                
+
         if self.verbose:
             g.message(f"Arnoldi: {Nconv} eigenmodes converged")
 

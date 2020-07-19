@@ -25,17 +25,16 @@ w = g.qcd.fermion.wilson_clover(
     },
 )
 
-expected_largest_eigenvalue = 7.438661573807548-0.009147480237836585j
+expected_largest_eigenvalue = 7.438661573807548 - 0.009147480237836585j
 
 # start vector
 start = g.vspincolor(w.F_grid)
 start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 
 # arnoldi with modest convergence criterion
-a = g.algorithms.eigen.arnoldi(Nmin = 50, Nmax = 120, Nstep = 10, Nstop = 1,
-                               resid = 1e-5)
+a = g.algorithms.eigen.arnoldi(Nmin=50, Nmax=120, Nstep=10, Nstop=1, resid=1e-5)
 evec, evals = a(w, start)
 
 # expect the largest eigenvector to have converged somewhat
-evals_test = g.algorithms.eigen.evals(w, evec[-1:], check_eps2=1e5*evals[-1]**2.)
+evals_test = g.algorithms.eigen.evals(w, evec[-1:], check_eps2=1e5 * evals[-1] ** 2.0)
 assert abs(evals_test[-1] - expected_largest_eigenvalue) < 1e-3

@@ -18,8 +18,10 @@
 #
 import gpt as g
 
+
 class EvalsNotConverged(Exception):
     pass
+
 
 @g.params_convention(check_eps2=None, skip=1, real=False)
 def evals(matrix, evec, params):
