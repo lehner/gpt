@@ -1,3 +1,5 @@
+- Repository for IO test files and add tests to standard suite
+- DWF test zmobius approximation work for random gauge, add test!
 - On MG branch: t=timer(); t("block1"); block1; t("block2"); block2; t(); g.message(t); <-- use timer __str__ and __c
 all__, can also do t("block1", bytes = bytes_processed, flops = flops_in_block) to add GB/s and Gflops/s
 

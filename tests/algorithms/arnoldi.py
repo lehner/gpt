@@ -25,31 +25,17 @@ w = g.qcd.fermion.wilson_clover(
     },
 )
 
+expected_largest_eigenvalue = 7.438661573807548-0.009147480237836585j
+
 # start vector
 start = g.vspincolor(w.F_grid)
 start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 
-# power iteration for comparison of largest eigenvalue
-# pi = g.algorithms.eigen.power_iteration({"eps": 1e-5, "maxiter": 300})
-# pi(w, start)
-
-expected_largest_eigenvalue = 7.438443531886123 + 0.013717311016902744j
-
-# arnoldi iteration
-a = g.algorithms.eigen.arnoldi_iteration(w, start)
-for i in range(12):
-    for j in range(10):
-        a()  # single arnoldi step
-
-    evals, little_evec = a.little_eig()
-    g.message("eval_arnoldi_max[", i, "] =", evals[-1].real)
-
-assert abs(evals[-1] - expected_largest_eigenvalue) < 1e-3
-
-# obtain eigenvectors
-evec = a.rotate_basis_to_evec(little_evec)
+# arnoldi with modest convergence criterion
+a = g.algorithms.eigen.arnoldi(Nmin = 50, Nmax = 120, Nstep = 10, Nstop = 1,
+                               resid = 1e-5)
+evec, evals = a(w, start)
 
 # expect the largest eigenvector to have converged somewhat
-evals_test = g.algorithms.eigen.evals(w, evec[-1:], check_eps2=1e-3)
-
-# TODO: implement eigen.arnoldi class with same interface as eigen.irl
+evals_test = g.algorithms.eigen.evals(w, evec[-1:], check_eps2=1e5*evals[-1]**2.)
+assert abs(evals_test[-1] - expected_largest_eigenvalue) < 1e-3

@@ -18,6 +18,8 @@
 #
 import gpt as g
 
+class EvalsNotConverged(Exception):
+    pass
 
 @g.params_convention(check_eps2=None, skip=1, real=False)
 def evals(matrix, evec, params):
@@ -38,6 +40,6 @@ def evals(matrix, evec, params):
             eps2 = g.norm2(tmp - l * v)
             g.message(f"eval[ {i} ] = {l}, eps^2 = {eps2}")
             if eps2 > check_eps2:
-                assert 0
+                raise EvalsNotConverged()
 
     return ev
