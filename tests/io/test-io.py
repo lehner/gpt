@@ -18,11 +18,11 @@ else:
     work_dir = "."
 
 # load configuration
-#U = g.load("/hpcgpfs01/work/clehner/configs/32IDfine/ckpoint_lat.200")
-#assert abs(g.qcd.gauge.plaquette(U) - float(U[0].metadata["PLAQUETTE"])) < 1e-9
+# U = g.load("/hpcgpfs01/work/clehner/configs/32IDfine/ckpoint_lat.200")
+# assert abs(g.qcd.gauge.plaquette(U) - float(U[0].metadata["PLAQUETTE"])) < 1e-9
 
 # Show metadata of field
-#g.message("Metadata", U[0].metadata)
+# g.message("Metadata", U[0].metadata)
 rng = g.random("test")
 U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 
@@ -81,27 +81,27 @@ g.save(
 res = g.load(f"{work_dir}/out")
 
 for i in range(4):
-    eps2=g.norm2(res["U"][i] - U[i])
+    eps2 = g.norm2(res["U"][i] - U[i])
     g.message("Test first restore of U[%d]:" % i, eps2)
     assert eps2 < 1e-25
 
 res = g.load(f"{work_dir}/out2", {"paths": "/U/*"})
 for i in range(4):
-    eps2=g.norm2(res["U"][i] - U[i])
+    eps2 = g.norm2(res["U"][i] - U[i])
     g.message("Test second restore of U[%d]:" % i, eps2)
     assert eps2 < 1e-25
 
 # checkpointer save
 ckpt = g.checkpointer(f"{work_dir}/ckpt")
 alpha = 0.125
-ckpt.save([ U[0], alpha ])
+ckpt.save([U[0], alpha])
 
 # checkpointer load
 ckpt = g.checkpointer(f"{work_dir}/ckpt")
 ckpt.grid = U[0].grid
 alpha = 0.125
 U0_test = g.lattice(U[0])
-assert ckpt.load([ U0_test, alpha ])
+assert ckpt.load([U0_test, alpha])
 assert abs(alpha - 0.125) < 1e-25
 assert g.norm2(U0_test - U[0]) == 0.0
 

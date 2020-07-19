@@ -10,8 +10,8 @@ import sys
 import time
 
 # load configuration
-#U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
-U=g.qcd.gauge.random(g.grid([8,8,8,8],g.double),g.random("test"),scale = 0.5)
+# U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
+U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.double), g.random("test"), scale=0.5)
 g.message("Plaquette:", g.qcd.gauge.plaquette(U))
 
 # do everything in single-precision
@@ -51,16 +51,20 @@ pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-4, "maxiter": 1000})
 
+
 def H5_denom(dst, src):
-    dst @= g.gamma[5] * (2*src + (qm.params["b"] - qm.params["c"])*w*src)
+    dst @= g.gamma[5] * (2 * src + (qm.params["b"] - qm.params["c"]) * w * src)
+
 
 inv_H5_denom = cg(H5_denom)
+
 
 def H5(dst, src):
     # g5 * Dkernel
     # Dkernel = (b+c)*w / (2 + (b-c)*w)
     dst @= inv_H5_denom * w * src
     dst *= qm.params["b"] + qm.params["c"]
+
 
 # arnoldi to get an idea of entire spectral range of w
 start = g.vspincolor(w.F_grid)
@@ -125,15 +129,15 @@ correlator_ref = [
     0.005805496126413345,
     0.00794452615082264,
     0.021211711689829826,
-    0.14737030863761902
+    0.14737030863761902,
 ]
 
 # output
 eps_qm = 0.0
 eps_qz = 0.0
 for t in range(len(correlator_ref)):
-    eps_qm += (correlator_qm[t].real - correlator_ref[t])**2.0
-    eps_qz += (correlator_qz[t].real - correlator_ref[t])**2.0
+    eps_qm += (correlator_qm[t].real - correlator_ref[t]) ** 2.0
+    eps_qz += (correlator_qz[t].real - correlator_ref[t]) ** 2.0
     g.message(t, correlator_qm[t].real, correlator_qz[t].real, correlator_ref[t])
 eps_qm = eps_qm ** 0.5 / len(correlator_ref)
 eps_qz = eps_qz ** 0.5 / len(correlator_ref)

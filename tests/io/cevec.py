@@ -15,19 +15,19 @@ else:
     work_dir = "."
 
 # grids
-fgrid = g.grid([12,8,8,8,16],g.single,g.redblack)
-cgrid = g.grid([1,4,4,4,4],g.single)
+fgrid = g.grid([12, 8, 8, 8, 16], g.single, g.redblack)
+cgrid = g.grid([1, 4, 4, 4, 4], g.single)
 
 # vectors
 nbasis = 20
 nevec = 30
 rng = g.random("test")
-basis = [ g.vspincolor(fgrid) for i in range(nbasis) ]
-cevec = [ g.vcomplex(cgrid,nbasis) for i in range(nevec) ]
-feval = [ rng.normal(mu = 2.0,sigma = 0.5).real for i in range(nevec) ]
+basis = [g.vspincolor(fgrid) for i in range(nbasis)]
+cevec = [g.vcomplex(cgrid, nbasis) for i in range(nevec)]
+feval = [rng.normal(mu=2.0, sigma=0.5).real for i in range(nevec)]
 for b in basis:
     b.checkerboard(g.odd)
-rng.cnormal([basis,cevec])
+rng.cnormal([basis, cevec])
 for i in range(2):
     g.block.orthonormalize(cgrid, basis)
 
@@ -41,9 +41,7 @@ g.save(
 )
 
 # and load again to verify
-basis2, cevec2, feval2 = g.load(
-    f"{work_dir}/cevec", {"grids": fgrid}
-)
+basis2, cevec2, feval2 = g.load(f"{work_dir}/cevec", {"grids": fgrid})
 
 assert len(basis) == len(basis2)
 assert len(cevec) == len(cevec2)
