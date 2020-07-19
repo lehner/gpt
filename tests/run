@@ -12,6 +12,10 @@ LOG=$(mktemp)
 fail_list=""
 test_path=${BASH_SOURCE%/*}
 
+# working directory for IO tests
+export WORK_DIR="tests_work_dir"
+mkdir -p ${WORK_DIR}
+
 for f in \
     ${test_path}/core/core.py \
     ${test_path}/core/tensors.py \
@@ -31,7 +35,8 @@ for f in \
     ${test_path}/qcd/sap.py \
     ${test_path}/algorithms/implicitly-restarted-lanczos.py \
     ${test_path}/algorithms/arnoldi.py \
-    ${test_path}/algorithms/solvers.py
+    ${test_path}/algorithms/solvers.py \
+    ${test_path}/io/cevec.py
 do
 
 printf "%-60s" " [TEST] $f"
@@ -52,6 +57,7 @@ else
 fi
 
 done
+
 
 if [ -f ${LOG} ];
 then

@@ -5,49 +5,35 @@
 # Desc.: Illustrate core concepts and features
 #
 import gpt as g
-import sys
+import sys, os
 import numpy as np
 
-# load configuration
-# /hpcgpfs01/work/clehner/runs/tune-lanc-48c/job-strange-01000/lanczos.output
-# basis,cevec,feval = g.load("/hpcgpfs01/work/lqcd/k2pipipbc/chulwoo/32ID/0.0001/evecs/job-900/lanczos.output",{
-#    "grids" : g.grid([12,32,32,32,64],g.single,g.redblack)
-# })
+# workdir
+if "WORK_DIR" in os.environ:
+    work_dir = os.environ["WORK_DIR"]
+else:
+    work_dir = "."
 
-# test SYM1
-U = g.load("/hpcgpfs01/work/clehner/configs/96I/test/ckpoint_lat.2000")
-U = g.convert(U, g.single)
+# grids
+fgrid = g.grid([12,8,8,8,16],g.single,g.redblack)
+cgrid = g.grid([1,4,4,4,4],g.single)
 
-q = g.qcd.fermion.preconditioner.eo1_ne()(
-    g.qcd.fermion.mobius(
-        U,
-        {
-            "mass": 0.01,
-            "M5": 1.8,
-            "b": 1.5,
-            "c": 0.5,
-            "Ls": 12,
-            "boundary_phases": [1.0, 1.0, 1.0, -1.0],
-        },
-    )
-)
+# vectors
+nbasis = 20
+nevec = 30
+rng = g.random("test")
+basis = [ g.vspincolor(fgrid) for i in range(nbasis) ]
+cevec = [ g.vcomplex(cgrid,nbasis) for i in range(nevec) ]
+feval = [ rng.normal(mu = 2.0,sigma = 0.5).real for i in range(nevec) ]
+for b in basis:
+    b.checkerboard(g.odd)
+rng.cnormal([basis,cevec])
+for i in range(2):
+    g.block.orthonormalize(cgrid, basis)
 
-# load configuration
-basis, cevec, feval = g.load(
-    "/hpcgpfs01/work/clehner/configs/96I/test/checkpoint",
-    {"grids": q.F_grid_eo},  # lanczos.output
-)
-
-# test fine evec of basis
-tmp = g.vspincolor(q.F_grid_eo)
-for i in range(4):
-    g.block.promote(cevec[i], tmp, basis)
-    g.algorithms.eigen.evals(q.Mpc, [tmp], check_eps2=1e-5, real=True)
-    g.message(feval[i])
-
-# save in different layout
+# save in fixed layout
 g.save(
-    "/hpcgpfs01/work/clehner/configs/96I/test/checkpoint2",
+    f"{work_dir}/cevec",
     [basis, cevec, feval],
     g.format.cevec(
         {"nsingle": len(basis) // 2, "max_read_blocks": 16, "mpi": [1, 2, 2, 2, 2]}
@@ -56,83 +42,30 @@ g.save(
 
 # and load again to verify
 basis2, cevec2, feval2 = g.load(
-    "/hpcgpfs01/work/clehner/configs/96I/test/checkpoint2", {"grids": q.F_grid_eo}
+    f"{work_dir}/cevec", {"grids": fgrid}
 )
 
 assert len(basis) == len(basis2)
 assert len(cevec) == len(cevec2)
 assert len(feval) == len(feval2)
 
-pos = g.coordinates(basis[i])
+pos = g.coordinates(basis[0])
 eps = 0.0
 for i in range(len(basis)):
     A = basis[i][pos]
     B = basis2[i][pos]
-    eps += q.F_grid_eo.globalsum(float(np.linalg.norm(A - B)))
+    eps += fgrid.globalsum(float(np.linalg.norm(A - B)))
 g.message("Test basis: %g" % (eps))
 
-pos = g.coordinates(cevec[i])
+pos = g.coordinates(cevec[0])
 eps = 0.0
 for i in range(len(cevec)):
     A = cevec[i][pos]
     B = cevec2[i][pos]
-    eps += q.F_grid_eo.globalsum(float(np.linalg.norm(A - B)))
+    eps += fgrid.globalsum(float(np.linalg.norm(A - B)))
 g.message("Test cevec: %g" % (eps))
 
 eps = 0.0
 for i in range(len(feval)):
     eps += (feval[i] - feval2[i]) ** 2.0
 g.message("Test eval: %g" % (eps))
-
-sys.exit(0)
-
-# test eigenvectors
-c = g.algorithms.polynomial.chebyshev({"low": 0.01, "high": 6.25, "order": 50})
-
-cop = g.block.operator(c(q.Mpc), cevec[0].grid, basis)
-
-ev_basis = g.algorithms.eigen.evals(cop, cevec, check_eps2=1000.0, skip=10, real=True)
-
-
-# test SYM2
-U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
-U = g.convert(U, g.single)
-
-q = g.qcd.fermion.preconditioner.eo2_ne()(
-    g.qcd.fermion.zmobius(
-        U,
-        {
-            "mass": 0.00107,
-            "M5": 1.8,
-            "b": 1.0,
-            "c": 0.0,
-            "omega": [
-                1.0903256131299373,
-                0.9570283702230611,
-                0.7048886040934104,
-                0.48979921782791747,
-                0.328608311201356,
-                0.21664245377015995,
-                0.14121112711957107,
-                0.0907785101745156,
-                0.05608303440064219 - 0.007537158177840385j,
-                0.05608303440064219 + 0.007537158177840385j,
-                0.0365221637144842 - 0.03343945161367745j,
-                0.0365221637144842 + 0.03343945161367745j,
-            ],
-            "boundary_phases": [1.0, 1.0, 1.0, -1.0],
-        },
-    )
-)
-
-# load configuration
-basis, cevec, feval = g.load(
-    "/hpcgpfs01/work/clehner/runs/tune-lanc-16c/job-00004/lanczos.output",
-    {"grids": q.F_grid_eo},
-)
-
-c = g.algorithms.polynomial.chebyshev({"low": 0.004, "high": 5.5, "order": 30})
-
-cop = g.block.operator(c(q.Mpc), cevec[0].grid, basis)
-
-ev_basis = g.algorithms.eigen.evals(cop, cevec, check_eps2=1e-1, real=True)
