@@ -16,6 +16,8 @@ test_path=${BASH_SOURCE%/*}
 export WORK_DIR="tests_work_dir"
 mkdir -p ${WORK_DIR}
 
+echo "Working directory = ${WORK_DIR}"
+
 for f in \
     ${test_path}/core/core.py \
     ${test_path}/core/tensors.py \

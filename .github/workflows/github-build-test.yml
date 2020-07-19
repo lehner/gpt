@@ -359,7 +359,6 @@ jobs:
     - name: Setup environment variables
       run: |
         echo "::setenv name=WORK_DIR::$(mktemp -d)"
-        echo "WORK_DIR=${WORK_DIR}"
 
     - name: Install Ubuntu packages
       run: |
