@@ -356,6 +356,11 @@ jobs:
       run: |
         cat /proc/cpuinfo
 
+    - name: Setup environment variables
+      run: |
+        echo "::setenv name=WORK_DIR::$(mktemp -d)"
+	echo "WORK_DIR=${WORK_DIR}"
+
     - name: Install Ubuntu packages
       run: |
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
