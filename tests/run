@@ -42,7 +42,8 @@ for f in \
     ${test_path}/algorithms/arnoldi.py \
     ${test_path}/algorithms/solvers.py \
     ${test_path}/io/cevec.py \
-    ${test_path}/io/test-io.py
+    ${test_path}/io/test-io.py \
+    ${test_path}/io/qlat.py
 do
 
 printf "%-60s" " [TEST] $f"

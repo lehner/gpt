@@ -18,6 +18,7 @@
 #
 from gpt.core import *
 from gpt.params import params, params_convention
+from gpt.repository import repository
 import gpt.default
 import gpt.create
 import gpt.algorithms
