@@ -21,9 +21,8 @@ import sys
 import os
 from urllib import request
 
-base = {
-    "gpt:" : "https://raw.githubusercontent.com/lehner/gpt-repository/master"
-}
+base = {"gpt:": "https://raw.githubusercontent.com/lehner/gpt-repository/master"}
+
 
 def download(dst, src):
 
@@ -41,22 +40,24 @@ def download(dst, src):
 
     baseurl = base[host]
 
-    if gpt.rank()==0:
+    if gpt.rank() == 0:
         verbose = gpt.default.is_verbose("repository")
         t0 = gpt.time()
-        filename, header = request.urlretrieve(f'{baseurl}/{path}', filename=dst)
+        filename, header = request.urlretrieve(f"{baseurl}/{path}", filename=dst)
         t1 = gpt.time()
         filesize = os.path.getsize(dst)
-        speedMBs = filesize / 1024.**2. / (t1-t0)
+        speedMBs = filesize / 1024.0 ** 2.0 / (t1 - t0)
         if verbose:
-            gpt.message(f"Repository download {src} in {t1-t0:g} s at {speedMBs:g} MB/s")
+            gpt.message(
+                f"Repository download {src} in {t1-t0:g} s at {speedMBs:g} MB/s"
+            )
 
     # add a barrier so that all nodes have file after download
     gpt.barrier()
 
-class repository:
 
-    def load(first, second = None):
+class repository:
+    def load(first, second=None):
 
         # params
         if second is None:

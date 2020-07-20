@@ -15,7 +15,7 @@ else:
     work_dir = "."
 
 # request test files
-files = ['psrc-prop-0.field','pion-corr.txt']
+files = ["psrc-prop-0.field", "pion-corr.txt"]
 for f in files:
     gpt.repository.load(f"{work_dir}/{f}", f"gpt://tests/io/qlat/{f}")
 
