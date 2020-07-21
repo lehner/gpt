@@ -109,8 +109,9 @@ assert g.norm2(U0_test - U[0]) == 0.0
 corr = [rng.normal().real for i in range(32)]
 w = g.corr_io.writer(f"{work_dir}/head.dat")
 w.write("test", corr)
-del w
-r = g.corr_io.corr_io(f"{work_dir}/head.dat")
+w.close()
+
+r = g.corr_io.reader(f"{work_dir}/head.dat")
 assert "test" in r.glob("*")
 for i in range(len(corr)):
     assert abs(r.tags["test"][i] - corr[i]) == 0.0
