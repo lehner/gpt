@@ -103,8 +103,53 @@ def zaxpy(fineZ, coarseA, fineX, fineY):
             fineZ.v_obj[i], coarseA.v_obj[0], fineX.v_obj[i], fineY.v_obj[i]
         )
     return fineZ
+
+
+def normalize(coarse_grid, fine):
+    assert type(coarse_grid) == gpt.grid
+    coarse_tmp = gpt.complex(coarse_grid)
+    zero = gpt.lattice(fine)
+    zero[:] = 0.0
+    innerProduct(coarse_tmp, fine, fine)
+    # TODO: this line is ugly and should probably move to ET
+    coarse_tmp[:] = coarse_tmp[:] ** -0.5
+    zaxpy(fine, coarse_tmp, fine, zero)
+
+
+def orthonormalize_virtual(coarse_grid, basis):
+    assert type(coarse_grid) == gpt.grid
+    coarse_tmp = gpt.complex(coarse_grid)
+    for idx, v in enumerate(basis):
+        for u in basis[:idx]:
+            innerProduct(coarse_tmp, u, v)
+            coarse_tmp *= -1
+            zaxpy(v, coarse_tmp, u, v)
+        normalize(coarse_grid, v)
+
+
 def orthonormalize(coarse_grid, basis):
     assert type(coarse_grid) == gpt.grid
     assert len(basis[0].v_obj) == 1  # for now
     coarse_tmp = gpt.complex(coarse_grid)
     cgpt.block_orthonormalize(coarse_tmp.v_obj[0], basis)
+
+
+def check_orthogonality(coarse_grid, basis, tol=None):
+    assert type(coarse_grid) == gpt.grid
+    nbasis = len(basis)
+    iproj, eproj = (
+        gpt.vcomplex(coarse_grid, nbasis),
+        gpt.vcomplex(coarse_grid, nbasis),
+    )
+    for i, v in enumerate(basis):
+        project(iproj, v, basis)
+        eproj[:] = 0.0
+        eproj[:, :, :, :, i] = 1.0
+        err2 = gpt.norm2(eproj - iproj)
+        if tol is not None:
+            assert err2 <= tol
+            gpt.message(
+                f"Orthogonality check passed for basis vector {i:d}: {err2:e} <= {tol:e}"
+            )
+        else:
+            gpt.message(f"Orthogonality check error for basis vector {i:d}: {err2:e}")
