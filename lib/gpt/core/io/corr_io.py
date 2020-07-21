@@ -96,16 +96,22 @@ class corr_io:
         return [k[0:-l] for k in self.tags.keys() if k[-l:] == pf]
 
     def write(self):
-        write_tags(self.fn, self.tags)
+        if gpt.rank() == 0:
+            write_tags(self.fn, self.tags)
 
 
 class writer:
     def __init__(self, fn):
-        self.f = open(fn, "w+b")
+        if gpt.rank() == 0:
+            self.f = open(fn, "w+b")
+        else:
+            self.f = None
 
     def write(self, tag, cc):
-        write_tag(self.f, tag, cc)
-        self.f.flush()
+        if self.f is not None:
+            write_tag(self.f, tag, cc)
+            self.f.flush()
 
     def __del__(self):
-        self.f.close()
+        if self.f is not None:
+            self.f.close()
