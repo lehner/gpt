@@ -362,12 +362,6 @@ class ot_vsinglet4(ot_base):
     v_otype = ["ot_vsinglet4"]
 
 
-class ot_vsinglet5(ot_base):
-    nfloats = 2 * 5
-    shape = (5,)
-    v_otype = ["ot_vsinglet5"]
-
-
 class ot_vsinglet10(ot_base):
     nfloats = 2 * 10
     shape = (10,)
@@ -377,7 +371,6 @@ class ot_vsinglet10(ot_base):
 class ot_vsinglet(ot_base):
     fundamental = {
         4: ot_vsinglet4,
-        5: ot_vsinglet5,
         10: ot_vsinglet10,
     }
 
@@ -411,12 +404,6 @@ class ot_msinglet4(ot_base):
     v_otype = ["ot_msinglet4"]
 
 
-class ot_msinglet5(ot_base):
-    nfloats = 2 * 5 * 5
-    shape = (5, 5)
-    v_otype = ["ot_msinglet5"]
-
-
 class ot_msinglet10(ot_base):
     nfloats = 2 * 10 * 10
     shape = (10, 10)
@@ -426,7 +413,6 @@ class ot_msinglet10(ot_base):
 class ot_msinglet(ot_base):
     fundamental = {
         4: ot_msinglet4,
-        5: ot_msinglet5,
         10: ot_msinglet10,
     }
 

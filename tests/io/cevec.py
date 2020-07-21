@@ -20,6 +20,7 @@ cgrid = g.grid([1, 4, 4, 4, 4], g.single)
 
 # vectors
 nbasis = 20
+nsingle = 10
 nevec = 30
 rng = g.random("test")
 basis = [g.vspincolor(fgrid) for i in range(nbasis)]
@@ -36,7 +37,7 @@ g.save(
     f"{work_dir}/cevec",
     [basis, cevec, feval],
     g.format.cevec(
-        {"nsingle": len(basis) // 2, "max_read_blocks": 16, "mpi": [1, 2, 2, 2, 2]}
+        {"nsingle": nsingle, "max_read_blocks": 16, "mpi": [1, 2, 2, 2, 2]}
     ),
 )
 
@@ -47,23 +48,42 @@ assert len(basis) == len(basis2)
 assert len(cevec) == len(cevec2)
 assert len(feval) == len(feval2)
 
-pos = g.coordinates(basis[0])
-eps = 0.0
 for i in range(len(basis)):
-    A = basis[i][pos]
-    B = basis2[i][pos]
-    eps += fgrid.globalsum(float(np.linalg.norm(A - B)))
-g.message("Test basis: %g" % (eps))
+    eps2 = g.norm2(basis[i] - basis2[i]) / g.norm2(basis[i])
+    g.message(f"basis {i} resid {eps2}")
+    if i < nsingle:
+        assert eps2 == 0.0
+    else:
+        assert eps2 < 1e-9
 
-pos = g.coordinates(cevec[0])
-eps = 0.0
 for i in range(len(cevec)):
-    A = cevec[i][pos]
-    B = cevec2[i][pos]
-    eps += fgrid.globalsum(float(np.linalg.norm(A - B)))
-g.message("Test cevec: %g" % (eps))
+    eps2 = g.norm2(cevec[i] - cevec2[i]) / g.norm2(cevec[i])
+    g.message(f"cevec {i} resid {eps2}")
+    assert eps2 < 1e-9
 
-eps = 0.0
 for i in range(len(feval)):
-    eps += (feval[i] - feval2[i]) ** 2.0
-g.message("Test eval: %g" % (eps))
+    assert (feval[i] - feval2[i]) ** 2.0 < 1e-25
+
+# and load truncated and verify
+for ntrunc in [ 25 ]:
+    basis2, cevec2, feval2 = g.load(f"{work_dir}/cevec", {"grids": fgrid, "nmax": ntrunc})
+
+    assert min([len(basis),ntrunc]) == len(basis2)
+    assert min([len(cevec),ntrunc]) == len(cevec2)
+    assert len(feval) == len(feval2)
+
+    for i in range(len(basis2)):
+        eps2 = g.norm2(basis[i] - basis2[i]) / g.norm2(basis[i])
+        g.message(f"basis {i} resid {eps2}")
+        if i < nsingle:
+            assert eps2 == 0.0
+        else:
+            assert eps2 < 1e-9
+
+    for i in range(len(cevec2)):
+        eps2 = g.norm2(cevec[i] - cevec2[i]) / g.norm2(cevec[i])
+        g.message(f"cevec {i} resid {eps2}")
+        assert eps2 < 1e-9
+
+    for i in range(len(feval2)):
+        assert (feval[i] - feval2[i]) ** 2.0 < 1e-25
