@@ -94,3 +94,20 @@ EXPORT(block_maskedInnerProduct,{
 
     return PyLong_FromLong(0);
   });
+
+
+EXPORT(block_innerProduct,{
+
+    void* _coarse,* _fineX,* _fineY;
+    if (!PyArg_ParseTuple(args, "lll", &_coarse,&_fineX,&_fineY)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
+    cgpt_Lattice_base* fineX = (cgpt_Lattice_base*)_fineX;
+    cgpt_Lattice_base* fineY = (cgpt_Lattice_base*)_fineY;
+
+    fineX->block_innerProduct(coarse,fineY);
+
+    return PyLong_FromLong(0);
+  });

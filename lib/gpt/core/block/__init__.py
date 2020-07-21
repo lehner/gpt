@@ -66,6 +66,8 @@ def promote(coarse, fine, basis):
 
 def maskedInnerProduct(coarse, fineMask, fineX, fineY):
     assert fineX.checkerboard().__name__ == fineY.checkerboard().__name__
+    assert fineX.otype.__name__ == fineY.otype.__name__
+    assert len(coarse.v_obj) == 1
     fot = fineX.otype
     tmp = gpt.lattice(coarse)
     coarse[:] = 0
@@ -73,6 +75,19 @@ def maskedInnerProduct(coarse, fineMask, fineX, fineY):
         cgpt.block_maskedInnerProduct(
             tmp.v_obj[0], fineMask.v_obj[0], fineX.v_obj[i], fineY.v_obj[i]
         )
+        coarse += tmp
+    return coarse
+
+
+def innerProduct(coarse, fineX, fineY):
+    assert fineX.checkerboard().__name__ == fineY.checkerboard().__name__
+    assert fineX.otype.__name__ == fineY.otype.__name__
+    assert len(coarse.v_obj) == 1
+    fot = fineX.otype
+    tmp = gpt.lattice(coarse)
+    coarse[:] = 0
+    for i in fot.v_idx:
+        cgpt.block_innerProduct(tmp.v_obj[0], fineX.v_obj[i], fineY.v_obj[i])
         coarse += tmp
     return coarse
 

@@ -69,3 +69,11 @@ void cgpt_block_masked_inner_product(cgpt_Lattice_base* _coarse, cgpt_Lattice_ba
                              compatible< iSinglet<vCoeff_t> >(fineMask)->l,
                              fineX, fineY);
 }
+
+template<typename T>
+void cgpt_block_inner_product(cgpt_Lattice_base* _coarse, Lattice<T>& fineX, Lattice<T>& fineY) {
+
+  typedef typename Lattice<T>::vector_type vCoeff_t;
+
+  blockInnerProductD(compatible< iSinglet<vCoeff_t> >(_coarse)->l, fineX, fineY);
+}

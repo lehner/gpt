@@ -221,6 +221,10 @@ public:
     cgpt_block_masked_inner_product(coarse,fineMask,l,compatible<T>(fineOther)->l);
   }
 
+  virtual void block_innerProduct(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineOther) {
+    cgpt_block_inner_product(coarse,l,compatible<T>(fineOther)->l);
+  }
+
   virtual GridBase* get_grid() {
     return l.Grid();
   }
