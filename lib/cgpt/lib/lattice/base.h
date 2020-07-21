@@ -58,6 +58,7 @@ public:
   virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
   virtual void block_maskedInnerProduct(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineMask, cgpt_Lattice_base* fineOther) = 0;
   virtual void block_innerProduct(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineOther) = 0;
+  virtual void block_zaxpy(cgpt_Lattice_base* fineDst, cgpt_Lattice_base* coarseA, cgpt_Lattice_base* fineOther) = 0;
   virtual GridBase* get_grid() = 0;
   virtual PyObject* advise(std::string type) = 0;
   virtual PyObject* prefetch(std::string type) = 0;

@@ -111,3 +111,21 @@ EXPORT(block_innerProduct,{
 
     return PyLong_FromLong(0);
   });
+
+
+EXPORT(block_zaxpy,{
+
+    void* _fineZ,* _coarseA,* _fineX,* _fineY;
+    if (!PyArg_ParseTuple(args, "llll", &_fineZ,&_coarseA,&_fineX,&_fineY)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* fineZ = (cgpt_Lattice_base*)_fineZ;
+    cgpt_Lattice_base* coarseA = (cgpt_Lattice_base*)_coarseA;
+    cgpt_Lattice_base* fineX = (cgpt_Lattice_base*)_fineX;
+    cgpt_Lattice_base* fineY = (cgpt_Lattice_base*)_fineY;
+
+    fineX->block_zaxpy(fineZ,coarseA,fineY);
+
+    return PyLong_FromLong(0);
+  });

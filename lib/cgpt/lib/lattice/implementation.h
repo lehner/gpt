@@ -225,6 +225,10 @@ public:
     cgpt_block_inner_product(coarse,l,compatible<T>(fineOther)->l);
   }
 
+  virtual void block_zaxpy(cgpt_Lattice_base* fineDst, cgpt_Lattice_base* coarseA, cgpt_Lattice_base* fineOther) {
+    cgpt_block_zaxpy(compatible<T>(fineDst)->l,coarseA,l,compatible<T>(fineOther)->l);
+  }
+
   virtual GridBase* get_grid() {
     return l.Grid();
   }

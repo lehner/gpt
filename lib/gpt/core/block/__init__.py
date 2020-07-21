@@ -92,6 +92,17 @@ def innerProduct(coarse, fineX, fineY):
     return coarse
 
 
+def zaxpy(fineZ, coarseA, fineX, fineY):
+    assert fineX.checkerboard().__name__ == fineY.checkerboard().__name__
+    assert fineX.otype.__name__ == fineY.otype.__name__ == fineZ.otype.__name__
+    assert len(coarseA.v_obj) == 1
+    fineZ.checkerboard(fineX.checkerboard())
+    fot = fineX.otype
+    for i in fot.v_idx:
+        cgpt.block_zaxpy(
+            fineZ.v_obj[i], coarseA.v_obj[0], fineX.v_obj[i], fineY.v_obj[i]
+        )
+    return fineZ
 def orthonormalize(coarse_grid, basis):
     assert type(coarse_grid) == gpt.grid
     assert len(basis[0].v_obj) == 1  # for now
