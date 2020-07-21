@@ -21,18 +21,19 @@
 #define STRX(x) #x
 #define STR(x) STRX(x)
 #define ASSERT(x)				\
-  { if ( !(x) )throw "Assert " #x " failed in file " __FILE__ ":"  STR(__LINE__); };
+  { if ( !(x) )throw std::string("Assert " #x " failed in file " __FILE__ ":"  STR(__LINE__)); };
 #define ERR(...)							\
   { char msg[1024]; snprintf(msg,sizeof(msg)-100,__VA_ARGS__);		\
-    strcat(msg, " in file " __FILE__ ":"  STR(__LINE__)); throw (const char*)msg; };
+    strcat(msg, " in file " __FILE__ ":"  STR(__LINE__)); throw std::string(msg); };
 
 #define EXPORT(name,...)					   \
   PyObject* cgpt_ ## name(PyObject* self, PyObject* args) {	   \
     try {							   \
       __VA_ARGS__;						   \
       return NULL;						   \
-    } catch (const char* err) {					   \
-      PyErr_SetString(PyExc_RuntimeError,err);			   \
+    } catch (std::string err) {					   \
+      fprintf(stderr, "ERR: %s\n", err.c_str());		   \
+      PyErr_SetString(PyExc_RuntimeError,err.c_str());		   \
       return NULL;						   \
     }								   \
   }

@@ -49,7 +49,10 @@ assert g.norm2(mc[0, 0, 0, 0] - mc_comp) < 1e-10
 
 vc2 = g.eval(mc * vc)
 vc2_comp = mc_comp * vc_comp
+vc3 = g.eval(mc_comp * vc)
 assert g.norm2(vc2[0, 0, 0, 0] - vc2_comp) < 1e-10
+eps2 = g.norm2(vc2 - vc3) / g.norm2(vc2)
+assert eps2 < 1e-10
 
 # test transpose and adjoint of mcomplex
 mc_adj = g.eval(g.adj(mc))

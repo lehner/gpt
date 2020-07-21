@@ -27,7 +27,6 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 		      bool rev) {
 
   ASSERT(lhs_vl.size() > 0);
-  ASSERT(lhs_vl.size() == rhs_v_otype.size());
   ASSERT(dst_vl.size() == 0);
 
   // learn singlet tensor structure
@@ -35,6 +34,7 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
   int lhs_singlet_dim  = size_to_singlet_dim(lhs_singlet_rank, (int)lhs_vl.size());
   int rhs_singlet_rank = _otype_singlet_rank_[rhs_v_otype[0]];
   int rhs_singlet_dim  = size_to_singlet_dim(rhs_singlet_rank, (int)rhs_v_otype.size());
+  ASSERT(lhs_singlet_dim == rhs_singlet_dim);
 
   // create temporary block arrays
   std::vector<PyArrayObject*> rhs_v_array(rhs_v_otype.size());
@@ -49,8 +49,9 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
     long bytes = PyArray_NBYTES(rhs_array);
     char* s = (char*)PyArray_DATA(rhs_array);
 
-    // V
     if (rhs_singlet_rank == 1) {
+
+      // V
 
       ASSERT(rhs_shape[0] % rhs_singlet_dim == 0);
       long rhs_block_size = rhs_shape[0] / rhs_singlet_dim;
@@ -66,6 +67,36 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 	    memcpy(d + element_bytes*idx,s + element_bytes*(idx + i*rhs_block_size),element_bytes);
 	  });
       }
+
+    } else if (rhs_singlet_rank == 2) {
+
+      // M
+
+      ASSERT(rhs_shape[0] % rhs_singlet_dim == 0);
+      ASSERT(rhs_shape[1] == rhs_shape[0]);
+      ASSERT(rhs_v_array.size() == rhs_singlet_dim * rhs_singlet_dim);
+      long rhs_block_size = rhs_shape[0] / rhs_singlet_dim;
+      long element_bytes = bytes / rhs_shape[0] / rhs_shape[1];
+      
+      // create vector components
+      for (int i=0;i<rhs_singlet_dim;i++) {
+	for (int j=0;j<rhs_singlet_dim;j++) {
+	  int vidx = j*rhs_singlet_dim + i;
+	  long dim[2] = { rhs_block_size, rhs_block_size };
+	  PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew(2, &dim[0], dtype);
+	  rhs_v_array[vidx] = a;
+	  char* d = (char*)PyArray_DATA(a);
+	  thread_for(ii,rhs_block_size,{
+	      for (int jj=0;jj<rhs_block_size;jj++) {
+		int sidx = (ii + i*rhs_block_size)*rhs_shape[0] + (jj + j*rhs_block_size);
+		int didx = ii*rhs_block_size + jj;
+		memcpy(d + element_bytes*didx,s + element_bytes*sidx,element_bytes);
+	      }
+	    });
+
+	}
+      }
+
 
     } else {
       ERR("Unsupported tensor of rank %d",rhs_singlet_rank);
@@ -83,11 +114,33 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 
     // VV -> V
 
-    ASSERT(lhs_singlet_dim == rhs_singlet_dim);
-
     dst_vl.resize(rhs_singlet_dim);
     for (int idx=0;idx<rhs_singlet_dim;idx++)
       dst_vl[idx] = lhs_vl[idx]->matmul( 0, false, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev);
+
+  } else if (lhs_singlet_rank == 1 && rhs_singlet_rank == 2 && rev) {
+
+    // MV -> V
+    int dim = lhs_singlet_dim;
+    bool mtrans = (rhs_unary & BIT_TRANS) != 0;
+    dst_vl.resize(dim);
+
+    for (int i=0;i<dim;i++) {
+
+      int idx;
+      idx = mtrans ? (i * dim) : (i);
+
+      // init
+      dst_vl[i] = lhs_vl[0]->
+	matmul( 0, false, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev);
+
+      for (int j=1;j<dim;j++) {
+	idx = mtrans ? (i*dim + j) : (j * dim + i);
+
+	lhs_vl[j]->
+	  matmul( dst_vl[i], true, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev);
+      }
+    }
 
   } else {
 
