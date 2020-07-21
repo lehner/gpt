@@ -45,6 +45,8 @@ class writer:
             self.f.close()
             self.f = None
 
+        gpt.barrier()
+
 
 class reader:
     def __init__(self, fn):
