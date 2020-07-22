@@ -93,9 +93,9 @@ class tensor:
         elif type(other) == gpt.expr and other.is_single(gpt.tensor):
             ue, uf, to = other.get_single()
             if ue == 0 and uf & gpt.factor_unary.BIT_TRANS != 0:
-                tag = (self.otype, to.otype)
-                assert tag in gpt.otype.otab
-                mt = gpt.otype.otab[tag]()
+                tag = to.otype.__name__
+                assert tag in self.otype.otab
+                mt = self.otype.otab[tag]
                 rhs = to.array
                 if uf & gpt.factor_unary.BIT_CONJ != 0:
                     rhs = rhs.conj()
