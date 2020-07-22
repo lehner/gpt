@@ -36,9 +36,7 @@ for i in range(2):
 g.save(
     f"{work_dir}/cevec",
     [basis, cevec, feval],
-    g.format.cevec(
-        {"nsingle": nsingle, "max_read_blocks": 16, "mpi": [1, 2, 2, 2, 2]}
-    ),
+    g.format.cevec({"nsingle": nsingle, "max_read_blocks": 16, "mpi": [1, 2, 2, 2, 2]}),
 )
 
 # and load again to verify
@@ -65,11 +63,13 @@ for i in range(len(feval)):
     assert (feval[i] - feval2[i]) ** 2.0 < 1e-25
 
 # and load truncated and verify
-for ntrunc in [ 25 ]:
-    basis2, cevec2, feval2 = g.load(f"{work_dir}/cevec", {"grids": fgrid, "nmax": ntrunc})
+for ntrunc in [25]:
+    basis2, cevec2, feval2 = g.load(
+        f"{work_dir}/cevec", {"grids": fgrid, "nmax": ntrunc}
+    )
 
-    assert min([len(basis),ntrunc]) == len(basis2)
-    assert min([len(cevec),ntrunc]) == len(cevec2)
+    assert min([len(basis), ntrunc]) == len(basis2)
+    assert min([len(cevec), ntrunc]) == len(cevec2)
     assert len(feval) == len(feval2)
 
     for i in range(len(basis2)):

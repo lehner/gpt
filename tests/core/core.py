@@ -134,4 +134,3 @@ g.copy(new, src)
 dst = g.cshift(src, 0, 1)
 # dst[x] = src[x+1] -> src[0] == dst[15]
 assert abs(dst[15, 0, 0, 0] - complex(2, 1)) < 1e-6
-
