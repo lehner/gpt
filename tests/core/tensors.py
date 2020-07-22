@@ -10,6 +10,23 @@ import numpy as np
 grid = g.grid([8, 8, 8, 8], g.single)
 rng = g.random("test")
 
+# outer product and inner product of tensors
+lhs = g.vcolor([ rng.cnormal() for i in range(3) ])
+rhs = g.vcolor([ rng.cnormal() for i in range(3) ])
+
+outer = lhs * g.adj(rhs)
+inner = g.adj(lhs) * rhs
+inner_comp = 0.0
+for i in range(3):
+    inner_comp += lhs.array.conjugate()[i] * rhs.array[i]
+    for j in range(3):
+        assert(abs(outer.array[i,j] - lhs.array[i] * rhs.array.conjugate()[j]) < 1e-14)
+assert(abs(inner_comp - inner) < 1e-14)
+
+# TODO: the following is already implemented for vcomplex but should
+# be implemented for all vectors
+# cwise = lhs * rhs
+
 # demonstrate slicing of internal indices
 vc = g.vcomplex(grid, 30)
 vc[0, 0, 0, 0, 0] = 1

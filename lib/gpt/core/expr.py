@@ -80,13 +80,13 @@ class expr:
         elif type(l) == gpt.tensor and self.is_single(gpt.tensor):
             ue, uf, to = self.get_single()
             if ue == 0 and uf & factor_unary.BIT_TRANS != 0:
-                tag = (to.otype, l.otype)
-                assert tag in gpt.otype.itab
-                mt = gpt.otype.itab[tag]()
+                tag = l.otype.__name__
+                assert tag in to.otype.itab
+                mt = to.otype.itab[tag]
                 lhs = to.array
                 if uf & gpt.factor_unary.BIT_CONJ != 0:
                     lhs = lhs.conj()
-                res = gpt.tensor(np.tensordot(lhs, l.array, axes=mt[1]), mt[0])
+                res = gpt.tensor(np.tensordot(lhs, l.array, axes=mt[1]), mt[0]())
                 if res.otype == gpt.ot_singlet:
                     res = complex(res.array)
                 return res
