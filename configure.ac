@@ -117,7 +117,7 @@ AS_IF([test x"${ac_fake_grid}" = x"yes"],
              [AC_PATH_PROG(GRID_CONFIG, [grid-config], [], [$GRID_PREFIX/bin:$PATH])])
        AS_IF([test x"$GRID_CONFIG" = x],
              [
-              AS_IF([test x"enable_cgpt" != x"no"],
+              AS_IF([test x$enable_cgpt != x"no"],
                     [AC_MSG_ERROR([cannot find grid-config])],
                     [])
              ],
