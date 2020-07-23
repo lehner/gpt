@@ -20,6 +20,23 @@ static double cgpt_time() {
   timespec t;
   clock_gettime(CLOCK_REALTIME, &t);
   return t.tv_sec + t.tv_nsec / 1000000000.;
+
+  //struct timeval t;
+  //gettimeofday(&t,NULL);
+  //return t.tv_sec + t.tv_usec / 1000000.;
 }
 
-#define TIME(t,...) double t(0.0); t-=cgpt_time(); __VA_ARGS__; t+=cgpt_time();
+class cgpt_timer {
+ public:
+  std::map<std::string,double> dt;
+  std::string current_tag, title;
+  double tscope;
+
+  cgpt_timer();
+  cgpt_timer(const std::string& _title);
+  ~cgpt_timer();
+
+  void operator()(const std::string& tag);
+  void report();
+
+};

@@ -26,6 +26,14 @@ def get_mem_book():
     return mem_book
 
 
+class lattice_view:
+    def __init__(self, parent):
+        self.parent = parent
+
+    def __getitem__(self, key):
+        return gpt.map_key(self.parent, key) + (self.parent.v_obj,)
+
+
 class lattice(factor):
     __array_priority__ = 1000000
 
@@ -110,8 +118,11 @@ class lattice(factor):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
         return self.otype.__name__ + ";" + self.checkerboard().__name__
 
-    def __setitem__(self, key, value):
+    @property
+    def view(self):
+        return lattice_view(self)
 
+    def __setitem__(self, key, value):
         # short code path to zero lattice
         if (
             type(key) == slice
@@ -126,11 +137,20 @@ class lattice(factor):
         # general code path, map key
         pos, tidx, shape = gpt.map_key(self, key)
 
-        # convert input to proper numpy array
-        value = gpt.util.tensor_to_value(value, dtype=self.grid.precision.complex_dtype)
+        # copy from view or array
+        if type(value) == tuple:
+            # direct copy from view
+            cgpt.lattice_import_view(
+                self.v_obj, pos, tidx, value[3], value[0], value[1]
+            )
+        else:
+            # convert input to proper numpy array
+            value = gpt.util.tensor_to_value(
+                value, dtype=self.grid.precision.complex_dtype
+            )
 
-        # and import
-        cgpt.lattice_import(self.v_obj, pos, tidx, value)
+            # and import
+            cgpt.lattice_import(self.v_obj, pos, tidx, value)
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self, key)

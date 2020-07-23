@@ -31,6 +31,31 @@ assert sys.getrefcount(x) == 2
 
 
 ################################################################################
+# Test assignments
+################################################################################
+pos = l_dp.mview_coordinates()
+lhs = g.lattice(l_dp)
+
+
+def assign_copy():
+    g.copy(lhs, l_dp)
+
+
+def assign_pos():
+    lhs[pos] = l_dp[pos]
+
+
+def assign_pos_view():
+    lhs[pos] = l_dp.view[pos]
+
+
+for method in [assign_copy, assign_pos, assign_pos_view]:
+    lhs[:] = 0
+    method()
+    eps2 = g.norm2(lhs - l_dp) / g.norm2(l_dp)
+    assert eps2 < 1e-25
+
+################################################################################
 # Test exp_ixp
 ################################################################################
 # multiply momentum phase in l
