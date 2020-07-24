@@ -55,7 +55,7 @@ public:
   virtual int get_numpy_dtype() = 0;
   virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
   virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) = 0;
   virtual void block_maskedInnerProduct(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineMask, cgpt_Lattice_base* fineOther) = 0;
   virtual void block_innerProduct(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& fineX, std::vector<cgpt_Lattice_base*>& fineY) = 0;
   virtual void block_innerProduct_test(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineOther) = 0;

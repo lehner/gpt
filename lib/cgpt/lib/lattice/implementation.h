@@ -213,8 +213,8 @@ public:
     cgpt_block_promote(coarse,l,basis);
   }
 
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
-    cgpt_block_orthonormalize(coarse,l,basis);
+  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) {
+    cgpt_block_orthonormalize(coarse,l,vbasis);
   }
 
   virtual void block_maskedInnerProduct(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineMask, cgpt_Lattice_base* fineOther) {
