@@ -179,6 +179,9 @@ def check_orthogonality(coarse_grid, basis, tol=None):
         eproj[:] = 0.0
         eproj[:, :, :, :, i] = 1.0
         err2 = gpt.norm2(eproj - iproj)
+        gpt.message(
+            f"DEBUG: Orthogonality for basis vector {i:d}: err2 = {err2:e} tol = {tol:e}"
+        )
         if tol is not None:
             assert err2 <= tol
             gpt.message(
