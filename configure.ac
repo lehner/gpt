@@ -21,14 +21,15 @@ AM_INIT_AUTOMAKE([1.15.1 foreign subdir-objects -Wall])
 # separate directory for m4 stuff (libtools prefers this)
 AC_CONFIG_MACRO_DIR([m4])
 
+# Trick to set empty default value for CXXFLAGS, needs to be set before
+# running AC_PROG_CXX
+: ${CXXFLAGS=""}
+
 # C++ -Compiler
 AC_PROG_CXX
 
 # use configure header
 AC_CONFIG_HEADERS([config.h])
-
-# Trick to set empty default value for CXXFLAGS
-: ${CXXFLAGS=""}
 
 # archiver (Automake needs this for libraries)
 AM_PROG_AR
