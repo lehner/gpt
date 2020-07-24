@@ -58,6 +58,7 @@ inline void vectorBlockOrthonormalize(Lattice<CComplex> &ip,std::vector<VLattice
   Lattice<CComplex> sip(coarse);
   typename std::remove_reference<decltype(Basis[0][0])>::type zz(fine);
   zz = Zero();
+  zz.Checkerboard()=Basis[0][0].Checkerboard();
   for(int v=0;v<nbasis;v++) {
     for(int u=0;u<v;u++) {
       //Inner product & remove component
