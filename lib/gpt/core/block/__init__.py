@@ -66,6 +66,5 @@ def promote(coarse, fine, basis):
 
 def orthonormalize(coarse_grid, basis):
     assert type(coarse_grid) == gpt.grid
-    assert len(basis[0].v_obj) == 1  # for now
     coarse_tmp = gpt.complex(coarse_grid)
-    cgpt.block_orthonormalize(coarse_tmp.v_obj[0], basis)
+    cgpt.block_orthonormalize(coarse_tmp.v_obj[0], basis, len(basis[0].v_obj))

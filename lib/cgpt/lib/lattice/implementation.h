@@ -219,8 +219,8 @@ public:
     cgpt_block_promote(coarse,l,basis);
   }
 
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
-    cgpt_block_orthonormalize(coarse,l,basis);
+  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) {
+    cgpt_block_orthonormalize(coarse,l,vbasis);
   }
 
   virtual GridBase* get_grid() {
