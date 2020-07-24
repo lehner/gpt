@@ -16,14 +16,16 @@ coarse_grid = g.grid([8, 4, 4, 8], fine_grid.precision)
 def msc():
     return g.vspincolor(fine_grid)
 
+
 def vc12():
-    return g.vcomplex(fine_grid,12)
+    return g.vcomplex(fine_grid, 12)
+
 
 # basis
 n = 30
 res = None
 tmpf_prev = None
-for dtype in [ msc, vc12 ]:
+for dtype in [msc, vc12]:
     g.message(f"Data type {dtype.__name__}")
     basis = [dtype() for i in range(n)]
     rng = g.random("block_seed_string_13")
@@ -35,7 +37,7 @@ for dtype in [ msc, vc12 ]:
     # test coarse vector
     lcoarse = g.vcomplex(coarse_grid, n)
     rng.cnormal(lcoarse)
-    
+
     # temporary fine and coarse vectors
     tmpf = g.lattice(basis[0])
     lcoarse2 = g.lattice(lcoarse)
