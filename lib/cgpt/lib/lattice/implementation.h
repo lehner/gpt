@@ -221,8 +221,12 @@ public:
     cgpt_block_masked_inner_product(coarse,fineMask,l,compatible<T>(fineOther)->l);
   }
 
-  virtual void block_innerProduct(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineOther) {
-    cgpt_block_inner_product(coarse,l,compatible<T>(fineOther)->l);
+  virtual void block_innerProduct(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& fineX, std::vector<cgpt_Lattice_base*>& fineY) {
+    cgpt_block_inner_product(coarse,l,fineX,fineY);
+  }
+
+  virtual void block_innerProduct_test(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineOther) {
+    cgpt_block_inner_product_test(coarse,l,compatible<T>(fineOther)->l);
   }
 
   virtual void block_zaxpy(cgpt_Lattice_base* fineDst, cgpt_Lattice_base* coarseA, cgpt_Lattice_base* fineOther) {

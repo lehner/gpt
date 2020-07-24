@@ -98,6 +98,32 @@ EXPORT(block_maskedInnerProduct,{
 
 EXPORT(block_innerProduct,{
 
+    PyObject* _fineX,* _fineY;
+    void* _coarse;
+    if (!PyArg_ParseTuple(args, "lOO", &_coarse,&_fineX,&_fineY)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
+
+    std::vector<cgpt_Lattice_base*> fineX;
+    std::vector<cgpt_Lattice_base*> fineY;
+    cgpt_vlattice_fill(fineX,_fineX);
+    cgpt_vlattice_fill(fineY,_fineY);
+
+    std::cout << GridLogDebug<< "block_innerProduct: size fineX = " << fineX.size() << " size fineY = " << fineY.size() << std::endl;
+
+    ASSERT(fineX.size() > 0);
+    ASSERT(fineY.size() > 0);
+
+    fineX[0]->block_innerProduct(coarse,fineX,fineY);
+
+    return PyLong_FromLong(0);
+  });
+
+
+EXPORT(block_innerProduct_test,{
+
     void* _coarse,* _fineX,* _fineY;
     if (!PyArg_ParseTuple(args, "lll", &_coarse,&_fineX,&_fineY)) {
       return NULL;
@@ -107,7 +133,7 @@ EXPORT(block_innerProduct,{
     cgpt_Lattice_base* fineX = (cgpt_Lattice_base*)_fineX;
     cgpt_Lattice_base* fineY = (cgpt_Lattice_base*)_fineY;
 
-    fineX->block_innerProduct(coarse,fineY);
+    fineX->block_innerProduct_test(coarse,fineY);
 
     return PyLong_FromLong(0);
   });

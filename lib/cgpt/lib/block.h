@@ -71,11 +71,24 @@ void cgpt_block_masked_inner_product(cgpt_Lattice_base* _coarse, cgpt_Lattice_ba
 }
 
 template<typename T>
-void cgpt_block_inner_product(cgpt_Lattice_base* _coarse, Lattice<T>& fineX, Lattice<T>& fineY) {
+void cgpt_block_inner_product(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _fineX, std::vector<cgpt_Lattice_base*>& _fineY) { // fine argument just to automatically detect type
 
   typedef typename Lattice<T>::vector_type vCoeff_t;
 
-  blockInnerProductD(compatible< iSinglet<vCoeff_t> >(_coarse)->l, fineX, fineY);
+  PVector<Lattice<T>> fineX, fineY;
+  cgpt_basis_fill(fineX,_fineX);
+  cgpt_basis_fill(fineY,_fineY);
+
+  blockInnerProductDVirtual(compatible< iSinglet<vCoeff_t> >(_coarse)->l,fineX,fineY);
+}
+
+
+template<typename T>
+void cgpt_block_inner_product_test(cgpt_Lattice_base* _coarse, Lattice<T>& fineX, Lattice<T>& fineY) {
+
+  typedef typename Lattice<T>::vector_type vCoeff_t;
+
+  blockInnerProductD(compatible< iSinglet<vCoeff_t> >(_coarse)->l,fineX,fineY);
 }
 
 template<typename T>

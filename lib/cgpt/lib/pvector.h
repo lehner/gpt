@@ -22,6 +22,8 @@ class PVector {
   std::vector<T*> _v;
 
  public:
+  typedef T held_type;
+
   PVector(long size) : _v(size) {
   }
 
@@ -59,6 +61,8 @@ class PMatrix {
   T* _v;
   int _N;
  public:
+  typedef T held_type;
+
   PMatrix(T* v, int N) : _v(v), _N(N) {
   }
 

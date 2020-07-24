@@ -68,6 +68,7 @@ def maskedInnerProduct(coarse, fineMask, fineX, fineY):
     assert fineX.checkerboard().__name__ == fineY.checkerboard().__name__
     assert fineX.otype.__name__ == fineY.otype.__name__
     assert len(coarse.v_obj) == 1
+    assert len(fineMask.v_obj) == 1
     fot = fineX.otype
     tmp = gpt.lattice(coarse)
     coarse[:] = 0
@@ -83,11 +84,19 @@ def innerProduct(coarse, fineX, fineY):
     assert fineX.checkerboard().__name__ == fineY.checkerboard().__name__
     assert fineX.otype.__name__ == fineY.otype.__name__
     assert len(coarse.v_obj) == 1
+    cgpt.block_innerProduct(coarse.v_obj[0], fineX, fineY)
+    return coarse
+
+
+def innerProduct_other(coarse, fineX, fineY):
+    assert fineX.checkerboard().__name__ == fineY.checkerboard().__name__
+    assert fineX.otype.__name__ == fineY.otype.__name__
+    assert len(coarse.v_obj) == 1
     fot = fineX.otype
     tmp = gpt.lattice(coarse)
     coarse[:] = 0
     for i in fot.v_idx:
-        cgpt.block_innerProduct(tmp.v_obj[0], fineX.v_obj[i], fineY.v_obj[i])
+        cgpt.block_innerProduct_test(tmp.v_obj[0], fineX.v_obj[i], fineY.v_obj[i])
         coarse += tmp
     return coarse
 
@@ -114,17 +123,41 @@ def normalize(coarse_grid, fine):
     # TODO: this line is ugly and should probably move to ET
     coarse_tmp[:] = coarse_tmp[:] ** -0.5
     zaxpy(fine, coarse_tmp, fine, zero)
+    return fine
+
+
+def normalize_other(coarse_grid, fine):
+    assert type(coarse_grid) == gpt.grid
+    coarse_tmp = gpt.complex(coarse_grid)
+    zero = gpt.lattice(fine)
+    zero[:] = 0.0
+    innerProduct_other(coarse_tmp, fine, fine)
+    # TODO: this line is ugly and should probably move to ET
+    coarse_tmp[:] = coarse_tmp[:] ** -0.5
+    zaxpy(fine, coarse_tmp, fine, zero)
+    return fine
 
 
 def orthonormalize_virtual(coarse_grid, basis):
     assert type(coarse_grid) == gpt.grid
     coarse_tmp = gpt.complex(coarse_grid)
-    for idx, v in enumerate(basis):
-        for u in basis[:idx]:
+    for idx_v, v in enumerate(basis):
+        for idx_u, u in enumerate(basis[:idx_v]):
             innerProduct(coarse_tmp, u, v)
             coarse_tmp *= -1
             zaxpy(v, coarse_tmp, u, v)
         normalize(coarse_grid, v)
+
+
+def orthonormalize_virtual_other(coarse_grid, basis):
+    assert type(coarse_grid) == gpt.grid
+    coarse_tmp = gpt.complex(coarse_grid)
+    for idx_v, v in enumerate(basis):
+        for idx_u, u in enumerate(basis[:idx_v]):
+            innerProduct_other(coarse_tmp, u, v)
+            coarse_tmp *= -1
+            zaxpy(v, coarse_tmp, u, v)
+        normalize_other(coarse_grid, v)
 
 
 def orthonormalize(coarse_grid, basis):
