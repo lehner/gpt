@@ -27,7 +27,7 @@ def check_unitarity(U, eps_ref):
 
 rng = g.random("test")
 
-U = g.ot_matrix_su2_fundamental(grid_sp)
+U = g.matrix_su2_fundamental(grid_sp)
 rng.lie(U)
 check_unitarity(U, 1e-7)
 
@@ -35,7 +35,7 @@ check_unitarity(U, 1e-7)
 V = g.qcd.gauge.fundamental_to_adjoint(U)
 check_unitarity(V, 1e-7)
 
-U = g.ot_matrix_su2_fundamental(grid_dp)
+U = g.matrix_su2_fundamental(grid_dp)
 rng.lie(U)
 check_unitarity(U, 1e-14)
 
@@ -50,11 +50,11 @@ check_unitarity(V, 1e-14)
 ################################################################################
 
 rng = g.random("test")
-U = g.ot_matrix_su2_adjoint(grid_sp)
+U = g.matrix_su2_adjoint(grid_sp)
 rng.lie(U)
 check_unitarity(U, 1e-7)
 
 rng = g.random("test")
-U = g.ot_matrix_su2_adjoint(grid_dp)
+U = g.matrix_su2_adjoint(grid_dp)
 rng.lie(U)
 check_unitarity(U, 1e-14)
