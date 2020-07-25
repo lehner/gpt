@@ -41,7 +41,7 @@ def plaquette(U):
     return 2.0 * tr.real / vol / Nd / (Nd - 1) / ndim
 
 
-def fundamental_to_adjoint(U):
+def fundamental_to_adjoint(U_a, U_f):
     """
     Convert fundamental to adjoint representation.  For now only SU(2) is supported.
 
@@ -49,24 +49,13 @@ def fundamental_to_adjoint(U):
 
     Output: adjoint gauge field
     """
-    if type(U) == list:
-        return [fundamental_to_adjoint(x) for x in U]
-
-    assert type(U) == g.lattice, "Input must be lattice object"
-    assert (
-        U.otype.__name__ == "ot_matrix_su2_fundamental()"
-    ), "Input gauge field must be SU(2) fundamental"
-
-    grid = U.grid
-    T = U.otype.generators(grid.precision.complex_dtype)
-    V_idx = {}
+    grid = U_f.grid
+    T = U_f.otype.generators(grid.precision.complex_dtype)
+    V = {}
     for a in range(len(T)):
         for b in range(len(T)):
-            V_idx[a, b] = g.eval(2.0 * g.trace(T[a] * U * T[b] * g.adj(U)))
-
-    V = g.matrix_su2_adjoint(grid)
-    g.merge_color(V, V_idx)
-    return V
+            V[a, b] = g.eval(2.0 * g.trace(T[a] * U_f * T[b] * g.adj(U_f)))
+    g.merge_color(U_a, V)
 
 
 @params_convention(otype=None, Nd=None)

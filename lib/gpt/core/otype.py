@@ -151,6 +151,7 @@ class ot_matrix_su3_fundamental(ot_matrix_color):
         }
 
     def generators(self, dt):
+        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
         return [
             matrix_su3_fundamental(i)
             for i in [
@@ -189,6 +190,7 @@ class ot_matrix_su2_fundamental(ot_matrix_color):
 
     def generators(self, dt):
         # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
+        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
         return [
             matrix_su2_fundamental(i)
             for i in [
@@ -219,13 +221,14 @@ class ot_matrix_su2_adjoint(ot_matrix_color):
         }
 
     def generators(self, dt):
-        # (T_i)_{kj} = c^k_{ij} with c^k_{ij} = i \epsilon_{ijk}
+        # (T_i)_{kj} = c^k_{ij} with c^k_{ij} = i \epsilon_{ijk} / 2
+        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
         return [
             matrix_su2_adjoint(i)
             for i in [
-                numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt),
-                numpy.array([[0, 0, 1j], [0, 0, 0], [-1j, 0, 0]], dtype=dt),
-                numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt),
+                numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, 1j], [0, 0, 0], [-1j, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
             ]
         ]
 

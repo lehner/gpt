@@ -21,40 +21,58 @@ def check_unitarity(U, eps_ref):
   g.message(f"Test unitarity: {eps}")
   assert eps < eps_ref
 
+def check_representation(U, eps_ref):
+  generators = U.otype.generators(U.grid.precision.complex_dtype)
+
+  # first test generators normalization
+  for a in range(len(generators)):
+    for b in range(len(generators)):
+      eye_ab = 2.0*g.trace(generators[a]*generators[b])
+      if a == b:
+        assert abs(eye_ab - 1) < eps_ref
+      else:
+        assert abs(eye_ab) < eps_ref
+
+  # now project to algebra and make sure it is a linear combination of
+  # the provided generators
+  algebra = g.matrix.log(U)
+  algebra /= 1j
+  n0 = g.norm2(algebra)
+  for Ta in generators:
+    algebra -= Ta * g.trace(algebra*Ta) * 2.0
+  eps = ( g.norm2(algebra) / n0 ) ** 0.5
+  g.message(f"Test representation: {eps}")
+  assert eps < eps_ref
+  
+
 ################################################################################
 # Test SU(2) fundamental and conversion to adjoint
 ################################################################################
 
 rng = g.random("test")
 
-U = g.matrix_su2_fundamental(grid_sp)
-rng.lie(U)
-check_unitarity(U, 1e-7)
+for eps_ref, grid in [ (1e-6, grid_sp), (1e-12, grid_dp) ]:
+  g.message(f"Test SU(2) fundamental and adjoint conversion on grid {grid.precision.__name__}")
 
-# TODO: also make fundamental_to_adjoint a matrix_operator
-V = g.qcd.gauge.fundamental_to_adjoint(U)
-check_unitarity(V, 1e-7)
+  U = g.matrix_su2_fundamental(grid)
+  rng.lie(U)
+  check_unitarity(U, eps_ref)
+  check_representation(U, eps_ref)
 
-U = g.matrix_su2_fundamental(grid_dp)
-rng.lie(U)
-check_unitarity(U, 1e-14)
-
-V = g.qcd.gauge.fundamental_to_adjoint(U)
-check_unitarity(V, 1e-14)
-
-# TODO: the tests should also check the irrep
+  V = g.matrix_su2_adjoint(grid)
+  g.qcd.gauge.fundamental_to_adjoint(V, U)
+  check_unitarity(V, eps_ref)
+  check_representation(V, eps_ref)
 
 
 ################################################################################
-# Test SU(2) adjoint
+# Test all other representations
 ################################################################################
 
-rng = g.random("test")
-U = g.matrix_su2_adjoint(grid_sp)
-rng.lie(U)
-check_unitarity(U, 1e-7)
-
-rng = g.random("test")
-U = g.matrix_su2_adjoint(grid_dp)
-rng.lie(U)
-check_unitarity(U, 1e-14)
+for eps_ref, grid in [ (1e-7, grid_sp), (1e-14, grid_dp) ]:
+  for representation in [ g.matrix_su2_adjoint, g.matrix_su3_fundamental ]:
+    g.message(f"Test {representation.__name__} on grid {grid.precision.__name__}")
+    U = representation(grid)
+    rng.lie(U)
+    check_unitarity(U, eps_ref)
+    check_representation(U, eps_ref)
