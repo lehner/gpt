@@ -51,6 +51,9 @@ cp lib/exports.h lib/exports.h~
     awk '{ print "    reg." $1 " = lambda dst, src, dir, disp: op.dirdisp(" NR + 3000 ", dst, src, dir, disp)" }'
 ) > ../gpt/qcd/fermion/register_dirdisp.py
 
+# Automatically generated python files should be formatted with black
+python3 -m black -t py36 ../gpt/qcd/fermion/register.py 1> /dev/null 2> /dev/null
+
 # get spins and colors and basis sizes
 SPINS=$(egrep "^SPIN\(" lib/spin_color.h | awk 'BEGIN{ FS="(" }{ print $2+0 }')
 COLORS=$(egrep "^COLOR\(" lib/spin_color.h | awk 'BEGIN{ FS="(" }{ print $2+0 }')
