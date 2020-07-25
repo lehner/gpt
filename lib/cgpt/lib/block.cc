@@ -62,7 +62,7 @@ EXPORT(block_orthonormalize,{
 
     PyObject* _basis;
     void* _coarse;
-    int nvec;
+    long nvec;
     if (!PyArg_ParseTuple(args, "lOl", &_coarse,&_basis,&nvec)) {
       return NULL;
     }
