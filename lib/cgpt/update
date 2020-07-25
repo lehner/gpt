@@ -40,6 +40,9 @@ cp lib/exports.h lib/exports.h~
     awk '{ print "    reg." $1 " = lambda dst, src: op.apply_unary_operator(" NR + 2000 ", dst, src)" }' 
 ) > ../gpt/qcd/fermion/register.py
 
+# Automatically generated python files should be formatted with black
+python3 -m black -t py36 ../gpt/qcd/fermion/register.py 1> /dev/null 2> /dev/null
+
 # get spins and colors and basis sizes
 SPINS=$(egrep "^SPIN\(" lib/spin_color.h | awk 'BEGIN{ FS="(" }{ print $2+0 }')
 COLORS=$(egrep "^COLOR\(" lib/spin_color.h | awk 'BEGIN{ FS="(" }{ print $2+0 }')
