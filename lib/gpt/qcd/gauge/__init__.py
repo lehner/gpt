@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020 Tilo Wettig
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -38,6 +39,34 @@ def plaquette(U):
                 )
             )
     return 2.0 * tr.real / vol / Nd / (Nd - 1) / ndim
+
+
+def fund2adj(U):
+    """
+    For SU(2), convert fundamental to adjoint representation
+
+    Input: fundamental gauge field
+
+    Output: adjoint gauge field
+    """
+    if type(U) == list:
+        return [fund2adj(x) for x in U]
+
+    assert type(U) == g.lattice, "Input must be lattice object"
+    assert (
+        U[0, 0, 0, 0].otype.__name__ == "ot_matrix_su2_fundamental()"
+    ), "Input gauge field must be SU(2) fundamental"
+
+    grid = U.grid
+    T = U.otype.generators(grid.precision.complex_dtype)
+    V_idx = {}
+    for a in range(len(T)):
+        for b in range(len(T)):
+            V_idx[a, b] = g.eval(2.0 * g.trace(T[a] * U * T[b] * g.adj(U)))
+
+    V = g.lattice(g.matrix_su2_adjoint(grid))
+    g.merge_color(V, V_idx)
+    return V
 
 
 @params_convention(otype=None, Nd=None)
