@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020 Tilo Wettig
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -151,16 +152,19 @@ class ot_matrix_su3_fundamental(ot_matrix_color):
 
     def generators(self, dt):
         return [
-            numpy.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[1, 0, 0], [0, -1, 0], [0, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, 0, 1], [0, 0, 0], [1, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, 0, -1j], [0, 0, 0], [1j, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, 0, 0], [0, 0, 1], [0, 1, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt) / 2.0,
-            numpy.array([[1, 0, 0], [0, 1, 0], [0, 0, -2]], dtype=dt)
-            / (3.0) ** 0.5
-            / 2.0,
+            matrix_su3_fundamental(i)
+            for i in [
+                numpy.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[1, 0, 0], [0, -1, 0], [0, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, 1], [0, 0, 0], [1, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, -1j], [0, 0, 0], [1j, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, 0], [0, 0, 1], [0, 1, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt) / 2.0,
+                numpy.array([[1, 0, 0], [0, 1, 0], [0, 0, -2]], dtype=dt)
+                / (3.0) ** 0.5
+                / 2.0,
+            ]
         ]
 
 
@@ -186,9 +190,12 @@ class ot_matrix_su2_fundamental(ot_matrix_color):
     def generators(self, dt):
         # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
         return [
-            numpy.array([[0, 1], [1, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, -1j], [1j, 0]], dtype=dt) / 2.0,
-            numpy.array([[1, 0], [0, -1]], dtype=dt) / 2.0,
+            matrix_su2_fundamental(i)
+            for i in [
+                numpy.array([[0, 1], [1, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, -1j], [1j, 0]], dtype=dt) / 2.0,
+                numpy.array([[1, 0], [0, -1]], dtype=dt) / 2.0,
+            ]
         ]
 
 
@@ -214,9 +221,12 @@ class ot_matrix_su2_adjoint(ot_matrix_color):
     def generators(self, dt):
         # (T_i)_{kj} = c^k_{ij} with c^k_{ij} = i \epsilon_{ijk}
         return [
-            numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt),
-            numpy.array([[0, 0, 1j], [0, 0, 0], [-1j, 0, 0]], dtype=dt),
-            numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt),
+            matrix_su2_adjoint(i)
+            for i in [
+                numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt),
+                numpy.array([[0, 0, 1j], [0, 0, 0], [-1j, 0, 0]], dtype=dt),
+                numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt),
+            ]
         ]
 
 
