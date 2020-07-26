@@ -15,6 +15,10 @@ GPT is developed with the feature/gpt branch of https://github.com/lehner/Grid.
 source gpt/scripts/source.sh
 ```
 
+## Tutorials
+A good starting point to learn usage of GPT is the [Tutorials Section](https://github.com/lehner/gpt/tree/master/documentation/tutorial)
+with interactive [Jupyter](https://jupyter.org/) notebooks.
+
 ## Usage
 
 ```python
