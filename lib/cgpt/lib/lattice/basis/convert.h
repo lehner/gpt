@@ -24,18 +24,6 @@ void cgpt_basis_fill(PVector<Lattice<T>>& basis, std::vector<cgpt_Lattice_base*>
     basis(i) = &compatible<T>(_basis[i])->l;
 }
 
-static void cgpt_vlattice_fill(std::vector<cgpt_Lattice_base*>& vlattice, PyObject* _vlattice) {
-  PyObject* v_obj = PyObject_GetAttrString(_vlattice,"v_obj");
-  ASSERT(v_obj && PyList_Check(v_obj));
-  Py_ssize_t size = PyList_Size(v_obj);
-  vlattice.resize(size);
-  for (Py_ssize_t i=0;i<size;i++) {
-    PyObject* obj = PyList_GetItem(v_obj,i);
-    ASSERT(PyLong_Check(obj));
-    vlattice[i] = (cgpt_Lattice_base*)PyLong_AsVoidPtr(obj);
-  }
-}
-
 static void cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _basis, int idx) {
   ASSERT(PyList_Check(_basis));
   Py_ssize_t size = PyList_Size(_basis);

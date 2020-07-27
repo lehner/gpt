@@ -34,21 +34,15 @@ vec_out_project_c, vec_out_mip_c = (
     g.vcomplex(grid_c, nbasis_f),
 )
 fullmask, blockmaskeven = g.complex(grid_f), g.complex(grid_f)
-scalar_tmp_c, scalar_out_ip_c, scalar_out_mip_c = (
-    g.complex(grid_c),
-    g.complex(grid_c),
-    g.complex(grid_c),
-)
+scalar_tmp_c = g.complex(grid_c)
 
 # initialize fields
 rng.cnormal(vec_in_orig_f)
 vec_out_project_c[:] = 0
 vec_out_mip_c[:] = 0
 scalar_tmp_c[:] = 0
-scalar_out_ip_c[:] = 0
-scalar_out_mip_c[:] = 0
 
-# setup masks
+# setup mask
 fullmask[:] = 1
 coor = g.coordinates(blockmaskeven)
 block = np.array(grid_f.ldimensions) / np.array(grid_c.ldimensions)
@@ -65,14 +59,5 @@ for i in range(nbasis_f):
 
 # compare results
 diff2 = g.norm2(vec_out_project_c - vec_out_mip_c)
-assert diff2 <= tol
-g.message("Test passed, %e <= %e" % (diff2, tol))
-
-# block inner products with full mask
-g.block.innerProduct(scalar_out_ip_c, basis_f[i], vec_in_orig_f)
-g.block.maskedInnerProduct(scalar_out_mip_c, fullmask, basis_f[i], vec_in_orig_f)
-
-# compare results
-diff2 = g.norm2(scalar_out_ip_c - scalar_out_ip_c)
 assert diff2 <= tol
 g.message("Test passed, %e <= %e" % (diff2, tol))
