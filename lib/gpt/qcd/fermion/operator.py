@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
+from gpt.params import params_convention
 
 
 class operator(gpt.matrix_operator):
@@ -137,6 +138,16 @@ class operator(gpt.matrix_operator):
 
     def converted(self, dst_precision):
         return self.updated(gpt.convert(self.U, dst_precision))
+
+    @params_convention()
+    def modified(self, params):
+        return operator(
+            name=self.name,
+            U=self.U,
+            params={**self.params_constructor, **params},
+            Ls=self.Ls,
+            otype=self.otype[0],
+        )
 
     def apply_unary_operator(self, opcode, o, i):
         assert len(i.v_obj) == 1
