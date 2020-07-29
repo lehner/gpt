@@ -119,6 +119,7 @@ class random:
             self.uniform_real(ca, {"min": -0.5, "max": 0.5})
             lie += scale * 1j * ca * ta
         out @= gpt.matrix.exp(lie)
+        return out
 
 
 # sha256

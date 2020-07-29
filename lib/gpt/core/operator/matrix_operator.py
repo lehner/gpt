@@ -93,6 +93,10 @@ class matrix_operator(factor):
             # mat^dag = other^dag self^dag
             # (mat^dag)^-1 = (other^dag self^dag)^-1 = self^dag^-1 other^dag^-1
 
+            # TODO:
+            # Depending on other.zero flag and if self.inv_mat is set, we should
+            # attempt to properly propagate dst as well.
+
             adj_other = other.adj()
             adj_self = self.adj()
             inv_other = other.inv()

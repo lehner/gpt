@@ -16,7 +16,21 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.create import random, unit
-from gpt.qcd.gauge.representation import fundamental_to_adjoint
-from gpt.qcd.gauge.loops import plaquette
-from gpt.qcd.gauge.transformation import transformed
+import gpt as g
+
+
+def transformed(obj, V):
+    if isinstance(obj, g.matrix_operator):
+
+        M = obj
+
+        def _mat(dst, src):
+            dst @= V * M * g.adj(V) * src
+
+        return g.matrix_operator(_mat, otype=M.otype, grid=M.grid)
+
+    else:
+
+        U = obj
+
+        return [g(V * U[mu] * g.cshift(g.adj(V), mu, 1)) for mu in range(len(U))]
