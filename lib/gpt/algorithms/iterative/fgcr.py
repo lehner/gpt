@@ -22,12 +22,13 @@ import numpy as np
 
 
 class fgcr:
-    @g.params_convention(eps=1e-15, maxiter=1000000)
+    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True)
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
+        self.checkres = params["checkres"]
         self.prec = params["prec"] if "prec" in params else None
         self.history = None
 
@@ -56,7 +57,6 @@ class fgcr:
             self.history = []
             # verbosity
             verbose = g.default.is_verbose("fgcr")
-            checkres = True  # for now
 
             # timing
             t = g.timer("fgcr")
@@ -125,6 +125,7 @@ class fgcr:
                 if r2 <= rsq or need_restart or reached_maxiter:
                     t("update_psi")
                     self.update_psi(psi, alpha, beta, gamma, delta, p, i)
+                    comp_res = r2 / ssq
 
                     if r2 <= rsq:
                         if verbose:
@@ -134,12 +135,16 @@ class fgcr:
                                 % (k + 1, t.dt["total"])
                             )
                             t.print()
-                            if checkres:
-                                comp_res = r2 / ssq
+                            if self.checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
                                     "fgcr: computed res = %g, true res = %g, target = %g"
                                     % (comp_res ** 0.5, res ** 0.5, self.eps)
+                                )
+                            else:
+                                g.message(
+                                    "fgcr: computed res = %g, target = %g"
+                                    % (comp_res ** 0.5, self.eps)
                                 )
                         break
 
@@ -151,12 +156,16 @@ class fgcr:
                                 % (k + 1, t.dt["total"])
                             )
                             t.print()
-                            if checkres:
-                                comp_res = r2 / ssq
+                            if self.checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
                                     "fgcr: computed res = %g, true res = %g, target = %g"
                                     % (comp_res ** 0.5, res ** 0.5, self.eps)
+                                )
+                            else:
+                                g.message(
+                                    "fgcr: computed res = %g, target = %g"
+                                    % (comp_res ** 0.5, self.eps)
                                 )
 
                     if need_restart:
