@@ -41,7 +41,10 @@ class fgcr:
         for j in range(i + 1):
             psi += delta[j] * p[j]
 
-    def restart(self, mat, psi, mmpsi, src, r):
+    def restart(self, mat, psi, mmpsi, src, r, p):
+        if self.prec is not None:
+            for v in p:
+                v[:] = 0
         return self.calc_res(mat, psi, mmpsi, src, r)
 
     def calc_res(self, mat, psi, mmpsi, src, r):
@@ -79,7 +82,7 @@ class fgcr:
             rsq = self.eps ** 2.0 * ssq
 
             # initial values
-            r2 = self.restart(mat, psi, mmpsi, src, r)
+            r2 = self.restart(mat, psi, mmpsi, src, r, p)
 
             for k in range(self.maxiter):
                 # iteration within current krylov space
@@ -158,7 +161,7 @@ class fgcr:
 
                     if need_restart:
                         t("restart")
-                        r2 = self.restart(mat, psi, mmpsi, src, r)
+                        r2 = self.restart(mat, psi, mmpsi, src, r, p)
                         if verbose:
                             g.message("fgcr: performed restart")
 

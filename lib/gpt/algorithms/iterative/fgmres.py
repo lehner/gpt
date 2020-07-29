@@ -59,10 +59,13 @@ class fgmres:
         for j in range(i + 1):
             psi += y[j] * V[j]
 
-    def restart(self, mat, psi, mmpsi, src, r, V, gamma):
+    def restart(self, mat, psi, mmpsi, src, r, V, Z, gamma):
         r2 = self.calc_res(mat, psi, mmpsi, src, r)
         gamma[0] = r2 ** 0.5
         V[0] @= r / gamma[0]
+        if Z is not None:
+            for z in Z:
+                z[:] = 0.0
         return r2
 
     def calc_res(self, mat, psi, mmpsi, src, r):
@@ -97,15 +100,18 @@ class fgmres:
                 g.copy(src),
             )
             V = [g.lattice(src) for i in range(rlen + 1)]
-            if self.prec is not None:  # save vectors if unpreconditioned
-                Z = [g.lattice(src) for i in range(rlen + 1)]
+            Z = (
+                [g.lattice(src) for i in range(rlen + 1)]
+                if self.prec is not None
+                else None
+            )  # save vectors if unpreconditioned
 
             # residual
             ssq = g.norm2(src)
             rsq = self.eps ** 2.0 * ssq
 
             # initial values
-            r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
+            r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
 
             for k in range(self.maxiter):
                 # iteration within current krylov space
@@ -189,7 +195,7 @@ class fgmres:
 
                     if need_restart:
                         t("restart")
-                        r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
+                        r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
                         if verbose:
                             g.message("fgmres: performed restart")
 
