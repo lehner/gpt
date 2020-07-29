@@ -167,6 +167,7 @@ class fgcr:
                                     "fgcr: computed res = %g, target = %g"
                                     % (comp_res ** 0.5, self.eps)
                                 )
+                        break
 
                     if need_restart:
                         t("restart")
