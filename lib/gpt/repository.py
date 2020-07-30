@@ -60,6 +60,10 @@ def download(dst, src):
     # add a barrier so that all nodes have file after download
     gpt.barrier()
 
+    # os.scandir to trigger network filesystem synchronization
+    os.scandir(os.path.dirname(dst))
+    
+
 
 class repository:
     def load(first, second=None):
