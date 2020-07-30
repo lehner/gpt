@@ -121,48 +121,48 @@ sys.exit(0)
 ################################################################################
 
 
-test = [g.complex(grid) for i in range(8)]
-l_rank = g.split(
-    l, mpi_split=[1, 1, 2, 2]
-)  # now is a list of lattices to deal with locally
-g.barrier()
+# test = [g.complex(grid) for i in range(8)]
+# l_rank = g.split(
+#     l, mpi_split=[1, 1, 2, 2]
+# )  # now is a list of lattices to deal with locally
+# g.barrier()
 
-g.message("Local workload: ", len(l_rank))
-g.unsplit(test, l_rank)
-for i in range(len(test)):
-    assert g.norm2(test[i] - l[i]) == 0.0
-
-
-################################################################################
-# split by ranks
-################################################################################
-l = g.complex(grid)
-rng.cnormal(l)
-l_rank = g.split_by_rank(l)
-
-assert l_rank.grid.globalsum(1.0) == 1.0  # check separate mpi grid
-
-test = g.lattice(l)
-test[:] = 0
-g.unsplit(test, l_rank)
-
-assert g.norm2(test - l) == 0.0
+# g.message("Local workload: ", len(l_rank))
+# g.unsplit(test, l_rank)
+# for i in range(len(test)):
+#     assert g.norm2(test[i] - l[i]) == 0.0
 
 
-# split many at same time (faster since it shares coordinates and grid creation); also can combine different lattice types
-l = [g.vcolor(grid) for i in range(8)]
-rng.cnormal(l)
-l_rank = g.split_by_rank(l)
+# ################################################################################
+# # split by ranks
+# ################################################################################
+# l = g.complex(grid)
+# rng.cnormal(l)
+# l_rank = g.split_by_rank(l)
 
-for i in l_rank:
-    assert i.grid.globalsum(1.0) == 1.0  # check that they live in separate mpi grid
+# assert l_rank.grid.globalsum(1.0) == 1.0  # check separate mpi grid
 
-test = [g.vcolor(grid) for i in range(8)]
+# test = g.lattice(l)
+# test[:] = 0
+# g.unsplit(test, l_rank)
 
-g.unsplit(test, l_rank)
+# assert g.norm2(test - l) == 0.0
 
-for i in range(len(test)):
-    assert g.norm2(test[i] - l[i]) == 0.0
+
+# # split many at same time (faster since it shares coordinates and grid creation); also can combine different lattice types
+# l = [g.vcolor(grid) for i in range(8)]
+# rng.cnormal(l)
+# l_rank = g.split_by_rank(l)
+
+# for i in l_rank:
+#     assert i.grid.globalsum(1.0) == 1.0  # check that they live in separate mpi grid
+
+# test = [g.vcolor(grid) for i in range(8)]
+
+# g.unsplit(test, l_rank)
+
+# for i in range(len(test)):
+#     assert g.norm2(test[i] - l[i]) == 0.0
 
 
 ################################################################################
