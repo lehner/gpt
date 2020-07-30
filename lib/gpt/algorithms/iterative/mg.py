@@ -145,8 +145,15 @@ class mg:
         # rest of setup (call that externally?)
         self.resetup()
 
-    def resetup(self):
-        for lvl in self.lvl:
+    def resetup(self, which_lvls=None):
+        if which_lvls is not None:
+            assert type(which_lvls) == list
+            for elem in which_lvls:
+                assert elem >= self.finest and elem <= self.coarsest
+        else:
+            which_lvls = self.lvl
+
+        for lvl in which_lvls:
             # aliases
             t = self.t_setup[lvl]
             pp = self.print_prefix[lvl]
