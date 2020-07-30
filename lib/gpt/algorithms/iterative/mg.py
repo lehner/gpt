@@ -58,6 +58,7 @@ class mg:
         self.presmooth = make_param_list(params["presmooth"], self.nlevel - 1)
         self.postsmooth = make_param_list(params["postsmooth"], self.nlevel - 1)
         self.setupsolve = make_param_list(params["setupsolve"], self.nlevel - 1)
+        self.wrappersolve = make_param_list(params["wrappersolve"], self.nlevel - 1)
         self.coarsestsolve = params["coarsestsolve"]
 
         # verbosity
@@ -90,6 +91,7 @@ class mg:
                 self.presmooth,
                 self.postsmooth,
                 self.setupsolve,
+                self.wrappersolve,
                 self.nb,
             ],
             self.nlevel - 1,
@@ -306,7 +308,7 @@ class mg:
                     )
 
                 # fine to coarse
-                t("tocoarse")
+                t("to_coarser")
                 f2c(self.r[nc_lvl], r, basis)
 
                 if self.verbose:
@@ -317,10 +319,15 @@ class mg:
 
                     g.message("%s done projecting to level %d" % (pp, nc_lvl))
 
-                # call method on next level TODO wrap by solver for k-cycle
-                t("nextlevel")
+                # call method on next level
+                t("on_coarser")
                 self.e[nc_lvl][:] = 0.0
-                inv_lvl(self.e[nc_lvl], self.r[nc_lvl], nc_lvl)
+                if self.wrappersolve[lvl] is not None:
+                    self.wrappersolve[lvl](
+                        self.mat[nc_lvl], lambda dst, src: inv_lvl(dst, src, nc_lvl)
+                    )(self.e[nc_lvl], self.r[nc_lvl])
+                else:
+                    inv_lvl(self.e[nc_lvl], self.r[nc_lvl], nc_lvl)
 
                 if self.verbose:
                     t("output")
@@ -331,7 +338,7 @@ class mg:
                     )
 
                 # coarse to fine
-                t("fromcoarse")
+                t("from_coarser")
                 c2f(self.e[nc_lvl], psi, basis)
 
                 t("residual")

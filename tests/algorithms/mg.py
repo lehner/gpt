@@ -68,6 +68,18 @@ mg_params = {
     "coarsestsolve": lambda mat: s.inv_direct(
         mat, a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
     ),
+    "wrappersolve": lambda mat, prec: s.inv_direct(
+        mat,
+        a.fgmres(
+            {
+                "eps": 1e-1,
+                "maxiter": 10,
+                "restartlen": 5,
+                "checkres": False,
+                "prec": prec,
+            }
+        ),
+    ),
     "setupsolve": lambda mat: s.inv_eo_ne(
         p.eo2(mat), a.cg({"eps": 1e-1, "maxiter": 50, "relax": 1})
     ),
