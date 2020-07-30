@@ -243,6 +243,7 @@ jobs:
         echo ${{ hashFiles('gpt/configure.ac') }} >> cgpt_cache_key_file
         echo ${{ hashFiles('gpt/Makefile.am') }} >> cgpt_cache_key_file
         echo ${{ hashFiles('gpt/cgpt/Makefile.am') }} >> cgpt_cache_key_file
+        echo ${{ needs.build-grid.outputs.grid-version }} >> cgpt_cache_key_file
 
         echo "::set-output name=key::$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
