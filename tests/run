@@ -21,11 +21,9 @@ mkdir -p ${WORK_DIR}
 
 echo "Working directory = ${WORK_DIR}"
 
-echo "Testing help message"
-${runner} ${test_path}/core/core.py ${extra} --help
-
 for f in \
     ${test_path}/core/core.py \
+    "${test_path}/core/core.py --help" \
     ${test_path}/core/tensors.py \
     ${test_path}/core/gamma.py \
     ${test_path}/core/block.py \
