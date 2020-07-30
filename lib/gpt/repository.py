@@ -62,7 +62,6 @@ def download(dst, src):
 
     # os.scandir to trigger network filesystem synchronization
     os.scandir(os.path.dirname(dst))
-    
 
 
 class repository:
