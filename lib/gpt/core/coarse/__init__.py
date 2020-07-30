@@ -119,22 +119,28 @@ def create_links(A, fmat, basis, params):
     # communicate opposite links
     if savelinks:
         t("comm")
-        for p, (mu, fb) in enumerate(dirdisps_forward):
-            p_other = p + 4
-            shift_fb = fb * -1
-            Atmp = gpt.copy(A[p])
-            if not hermitian:
-                nbasis = len(basis)
-                assert nbasis % 2 == 0
-                nb = nbasis // 2
-                Atmp[:, :, :, :, 0:nb, nb:nbasis] *= -1.0  # upper right block
-                Atmp[:, :, :, :, nb:nbasis, 0:nb] *= -1.0  # lower left block
-            A[p_other] @= gpt.adj(gpt.cshift(Atmp, mu, shift_fb))
+        comm_links(A, dirdisps_forward, hermitian)
 
     t()
 
     if verbose:
         t.print()
+
+
+def comm_links(A, dirdisps_forward, hermitian):
+    assert type(A) == list
+    assert len(A) == 2 * len(dirdisps_forward) + 1
+    for p, (mu, fb) in enumerate(dirdisps_forward):
+        p_other = p + 4
+        shift_fb = fb * -1
+        Atmp = gpt.copy(A[p])
+        if not hermitian:
+            nbasis = A[0].otype.shape[0]
+            assert nbasis % 2 == 0
+            nb = nbasis // 2
+            Atmp[:, :, :, :, 0:nb, nb:nbasis] *= -1.0  # upper right block
+            Atmp[:, :, :, :, nb:nbasis, 0:nb] *= -1.0  # lower left block
+        A[p_other] @= gpt.adj(gpt.cshift(Atmp, mu, shift_fb))
 
 
 def recreate_links(A, fmat, basis):
