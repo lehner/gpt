@@ -87,32 +87,38 @@ def set_verbose(x, status=True):
         verbose.remove(x)
 
 
-# help
-if "--help" in sys.argv:
-    print(
-        "--------------------------------------------------------------------------------"
-    )
-    print(" GPT Help")
-    print(
-        "--------------------------------------------------------------------------------"
-    )
-    print("")
-    print(" --mpi X.Y.Z.T")
-    print("")
-    print("   Set the mpi layout for four-dimensional grids.")
-    print("   The layout for other dimensions can be specified")
-    print("   by additional parameters such as --mpi X.Y.Z for")
-    print("   the mpi layout for three-dimensional grids.")
-    print("")
-    print(" --verbose opt1,opt2,...")
-    print("")
-    print("   Set verbosity options.")
-    print("   Candidates: %s" % verbose_candidates)
-    print("")
-    print(" --max_io_nodes n")
-    print("")
-    print("   Set maximal number of simultaneous IO nodes.")
-    print(
-        "--------------------------------------------------------------------------------"
-    )
-    sys.stdout.flush()
+# help flag
+help_flag = "--help" in sys.argv
+if help_flag:
+    sys.argv.remove("--help")
+
+
+def process_flags():
+    if help_flag:
+        gpt.message(
+            "--------------------------------------------------------------------------------"
+        )
+        gpt.message("                        GPT Help")
+        gpt.message(
+            "--------------------------------------------------------------------------------"
+        )
+        gpt.message("")
+        gpt.message(" --mpi X.Y.Z.T")
+        gpt.message("")
+        gpt.message("   Set the mpi layout for four-dimensional grids.")
+        gpt.message("   The layout for other dimensions can be specified")
+        gpt.message("   by additional parameters such as --mpi X.Y.Z for")
+        gpt.message("   the mpi layout for three-dimensional grids.")
+        gpt.message("")
+        gpt.message(" --verbose opt1,opt2,...")
+        gpt.message("")
+        gpt.message("   Set verbosity options.")
+        gpt.message("   Candidates: %s" % verbose_candidates)
+        gpt.message("")
+        gpt.message(" --max_io_nodes n")
+        gpt.message("")
+        gpt.message("   Set maximal number of simultaneous IO nodes.")
+        gpt.message(
+            "--------------------------------------------------------------------------------"
+        )
+        sys.exit(0)

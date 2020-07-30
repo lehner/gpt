@@ -46,7 +46,7 @@ def download(dst, src):
         t0 = gpt.time()
         if "GPT_REPOSITORY" in os.environ:
             root = os.environ["GPT_REPOSITORY"]
-            shutil.copy2(f"{root}/{path}",dst)
+            shutil.copy2(f"{root}/{path}", dst)
             mode = "copy"
         else:
             filename, header = request.urlretrieve(f"{baseurl}/{path}", filename=dst)
@@ -55,9 +55,7 @@ def download(dst, src):
         filesize = os.path.getsize(dst)
         speedMBs = filesize / 1024.0 ** 2.0 / (t1 - t0)
         if verbose:
-            gpt.message(
-                f"Repository {mode} {src} in {t1-t0:g} s at {speedMBs:g} MB/s"
-            )
+            gpt.message(f"Repository {mode} {src} in {t1-t0:g} s at {speedMBs:g} MB/s")
 
     # add a barrier so that all nodes have file after download
     gpt.barrier()

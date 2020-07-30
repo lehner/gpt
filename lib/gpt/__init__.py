@@ -38,6 +38,9 @@ cgpt.init(sys.argv)
 # save my hostname
 hostname = socket.gethostname()
 
+# process flags
+gpt.default.process_flags()
+
 # synonyms
 eval = expr_eval
 
