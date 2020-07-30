@@ -176,16 +176,11 @@ public:
   }
 
   virtual PyObject* memory_view() {
-#ifdef _GRID_FUTURE_
     auto v = l.View(CpuWrite);
-#else
-    auto v = l.View();
-#endif
     size_t sz = v.size() * sizeof(v[0]);
     char* ptr = (char*)&v[0];
-#ifdef _GRID_FUTURE_
     v.ViewClose();
-#endif
+
     // this marks Cpu as dirty, so data will be copied to Gpu; this is not fully safe
     // and the ViewClose should be moved to the destructor of the PyMemoryView object.
     // Do this in the same way as currently done in mview() in the future.
@@ -229,9 +224,7 @@ public:
 
   virtual PyObject* advise(std::string type) {
     if (type == "infrequent_use") {
-#ifdef _GRID_FUTURE_
       l.Advise() = AdviseInfrequentUse;
-#endif
     } else {
       ERR("Unknown advise %s",type.c_str());
     }    

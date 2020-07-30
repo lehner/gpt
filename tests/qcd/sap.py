@@ -43,6 +43,7 @@ inv1 = inv.defect_correcting(
 
 # point source
 src = g.vspincolor(w.F_grid)
+src[:] = 0
 src[0, 0, 0, 0] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 dst = g.lattice(src)
 inv1_w = inv1(w)

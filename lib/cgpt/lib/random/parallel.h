@@ -77,7 +77,7 @@ void cgpt_hash_unique(std::map<T,std::vector<long>>& u, std::vector<T>& h) {
 }
 
 template<typename sRNG,typename pRNG>
-  void cgpt_random_setup(std::vector<long>& h,sRNG & srng,std::map<long,pRNG> & prng,std::vector<uint64_t> & seed) {
+  void cgpt_random_setup(std::vector<long>& h,sRNG & srng,std::map<long,pRNG*> & prng,std::vector<uint64_t> & seed) {
   std::vector<long> need;
   for (auto x : h) {
     auto p = prng.find(x);
@@ -94,7 +94,7 @@ template<typename sRNG,typename pRNG>
       std::vector<uint64_t> _seed = seed;
       _seed.push_back(x);
 
-      auto pr = pRNG(_seed);
+      auto pr = new pRNG(_seed);
       
       thread_critical
 	{
@@ -148,14 +148,14 @@ template<typename DIST,typename sRNG,typename pRNG>
       thread_for(i, unique_hashes.size(), {
 	  auto h = unique_hashes[i];
 	  auto & uhi = hash_offsets[h];
-	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = (ComplexF)dist(prng.find(h)->second);
+	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = (ComplexF)dist(*prng.find(h)->second);
 	});
     } else if (dtype == NPY_COMPLEX128) {
       ComplexD* d = (ComplexD*)PyArray_DATA(a);
       thread_for(i, unique_hashes.size(), {
 	  auto h = unique_hashes[i];
 	  auto & uhi = hash_offsets[h];
-	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = dist(prng.find(h)->second);
+	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = dist(*prng.find(h)->second);
 	});
     } else {
       ERR("Unknown dtype");

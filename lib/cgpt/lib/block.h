@@ -28,8 +28,8 @@ template<class vobj,class CComplex,int nbasis,class VLattice>
   Lattice<vobj>     fineDataRed = fineData;
 
   //  auto fineData_   = fineData.View();
-  auto coarseData_ = coarseData.AcceleratorView(ViewWrite);
-  auto ip_         = ip.AcceleratorView(ViewReadWrite);
+  autoView( coarseData_ , coarseData, AcceleratorWrite);
+  autoView( ip_         , ip,         AcceleratorWrite);
   for(int v=0;v<nbasis;v++) {
     blockInnerProductD(ip,Basis[v],fineDataRed); // ip = <basis|fine>
     accelerator_for( sc, coarse->oSites(), vobj::Nsimd(), {
