@@ -22,7 +22,7 @@ mkdir -p ${WORK_DIR}
 echo "Working directory = ${WORK_DIR}"
 
 echo "Testing help message"
-${runner} -m gpt ${extra} --help
+${runner} ${test_path}/core/core.py ${extra} --help
 
 for f in \
     ${test_path}/core/core.py \
