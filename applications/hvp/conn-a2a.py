@@ -117,6 +117,9 @@ del l_sloppy_eigensystem
 
 # create basis for a2a vectors
 a2a=params["a2a"](U,l_sloppy)
+if a2a is None:
+    sys.exit(0)
+
 a2a_coarse_grid=params["a2a_coarse_grid"](cevec[0].grid)
 tmpf=g.lattice(basis[0])
 
