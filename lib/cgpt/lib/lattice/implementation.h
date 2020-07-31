@@ -41,10 +41,18 @@ public:
     return typeid(T).name();
   }
 
+  virtual int singlet_rank() {
+    return ::singlet_rank(l);
+  }
+
   virtual PyObject* to_decl() {   
     return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
 			PyUnicode_FromString(get_otype(l).c_str()),
 			PyUnicode_FromString(get_prec(l).c_str()));
+  }
+
+  void set_to_zero() {
+    l = Zero();
   }
 
   // use norm2 convention for squared norm, talked to Peter, Grid may also change to this cleaner notation
@@ -74,6 +82,10 @@ public:
 
   // ac == { true : add result to dst, false : replace dst }
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) {
+    if (typeid(T) == typeid(iSinglet<vCoeff_t>)) {
+      // singlet multiplication always commutes, can save half cost of instantiation
+      return b->mul(dst,ac,this,unary_b,unary_a,unary_expr);
+    }
     return cgpt_lattice_mul(dst,ac,unary_a,l,unary_b,b,unary_expr);
   }
 
@@ -94,28 +106,19 @@ public:
     l = src->l;
   }
 
+  virtual void fft_from(cgpt_Lattice_base* src, const std::vector<int> & dims, int sign) {
+    FFT fft((GridCartesian*)l.Grid());
+    Lattice<T> tmp = compatible<T>(src)->l;
+    for (long i=0;i<dims.size();i++) {
+      fft.FFT_dim(l,tmp,dims[i],sign);
+      if (i != dims.size()-1)
+	tmp = l;
+    }
+  }
+
   virtual void cshift_from(cgpt_Lattice_base* _src, int dir, int off) {
     cgpt_Lattice<T>* src = compatible<T>(_src);
     l = Cshift(src->l, dir, off);
-  }
-
-  virtual PyObject* get_val(const std::vector<int>& coor) {
-    return cgpt_lattice_peek_value(l,coor);
-  }
-
-  virtual void set_val(const std::vector<int>& coor, PyObject* _val) {
-    int nc = (int)coor.size();
-    if (!nc) {
-      if (cgpt_is_zero(_val)) {
-	l = Zero();
-      } else {
-	sobj val;
-	cgpt_numpy_import(val,_val);
-	l = val;
-      }
-    } else {
-      cgpt_lattice_poke_value(l,coor,_val);
-    }
   }
 
   virtual PyObject* sum() {
@@ -160,23 +163,24 @@ public:
     cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
   }
 
-  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt) {
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt,int j0, int j1, int k0,int k1,int Nm) {
+    PVector<Lattice<T>> basis;
+    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
+  }
+
+  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt) {
     PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis,_basis);
     cgpt_linear_combination(l,basis,Qt);
   }
 
   virtual PyObject* memory_view() {
-#ifdef _GRID_FUTURE_
     auto v = l.View(CpuWrite);
-#else
-    auto v = l.View();
-#endif
     size_t sz = v.size() * sizeof(v[0]);
     char* ptr = (char*)&v[0];
-#ifdef _GRID_FUTURE_
     v.ViewClose();
-#endif
+
     // this marks Cpu as dirty, so data will be copied to Gpu; this is not fully safe
     // and the ViewClose should be moved to the destructor of the PyMemoryView object.
     // Do this in the same way as currently done in mview() in the future.
@@ -210,8 +214,8 @@ public:
     cgpt_block_promote(coarse,l,basis);
   }
 
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
-    cgpt_block_orthonormalize(coarse,l,basis);
+  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) {
+    cgpt_block_orthonormalize(coarse,l,vbasis);
   }
 
   virtual GridBase* get_grid() {
@@ -220,9 +224,7 @@ public:
 
   virtual PyObject* advise(std::string type) {
     if (type == "infrequent_use") {
-#ifdef _GRID_FUTURE_
       l.Advise() = AdviseInfrequentUse;
-#endif
     } else {
       ERR("Unknown advise %s",type.c_str());
     }    
@@ -241,4 +243,3 @@ public:
   }
 
 };
-

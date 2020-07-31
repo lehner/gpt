@@ -21,14 +21,15 @@ AM_INIT_AUTOMAKE([1.15.1 foreign subdir-objects -Wall])
 # separate directory for m4 stuff (libtools prefers this)
 AC_CONFIG_MACRO_DIR([m4])
 
+# Trick to set empty default value for CXXFLAGS, needs to be set before
+# running AC_PROG_CXX
+: ${CXXFLAGS=""}
+
 # C++ -Compiler
 AC_PROG_CXX
 
 # use configure header
 AC_CONFIG_HEADERS([config.h])
-
-# Trick to set empty default value for CXXFLAGS
-: ${CXXFLAGS=""}
 
 # archiver (Automake needs this for libraries)
 AM_PROG_AR
@@ -117,7 +118,7 @@ AS_IF([test x"${ac_fake_grid}" = x"yes"],
              [AC_PATH_PROG(GRID_CONFIG, [grid-config], [], [$GRID_PREFIX/bin:$PATH])])
        AS_IF([test x"$GRID_CONFIG" = x],
              [
-              AS_IF([test x"enable_cgpt" != x"no"],
+              AS_IF([test x$enable_cgpt != x"no"],
                     [AC_MSG_ERROR([cannot find grid-config])],
                     [])
              ],

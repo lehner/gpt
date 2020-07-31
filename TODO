@@ -1,10 +1,43 @@
-- converiant shifts
-- peek/poke spin/color
-- spin/color trace
-- vspin
-- vspin4gauge3, vspin1gauge2
+- DWF - Overlap transformation
+
+- matrix_operator should accept vectors of lattices for efficient parallel operation ; 
+  First implement trivial parallelization; then let operator decide if the function itself can
+  handle the list or wants the auto-distribution.  With this, we can then do multiple RHS
+  efficiently.
+
+- If we ever need to speed up inverse matrix operator creation, can
+  create solver_cache class: sc = slv_cache(solver,cache) then when
+  sc(mat) gets called, it creates solver(mat) and sticks it in cache,
+  if already in there, reuses it.
+
+- Gauge Fix class that takes w.propagator and gauge fixing matrices as input
+
+- On MG branch: t=timer(); t("block1"); block1; t("block2"); block2; t(); g.message(t); <-- use timer __str__ and __c
+all__, can also do t("block1", bytes = bytes_processed, flops = flops_in_block) to add GB/s and Gflops/s
+
+- Grid-production-code/zmobius_2pt_hvp_con_gstore/Fourier... <-- First TM, then 5d TM, then  FA
+
 - test applications on summit with new version + new Grid
-- A2A, HVP
+
+- A2A meson fields
+
+- Using the l[...] interface, I could implement in python a stencil!  This may still
+  be somewhat slower than the C++ operators but should be worth it for slightly less
+  performance-critical code.
+
+- Stout smearing, plaquette implementation using covariant shifts
+
 - Complete sparse/split grid implementation
+
+- Add RLE capable convertor to cgpt from coordinates to different
+  linear orders
+
+- Based on this implement in python a parallel reader for file formats nerscIO, openQCD
+
 - sources
+
 - verbose=eval -> Bytes/s & Flops/s for expression evaluation
+
+- For some machines it may be useful to be able to git clone the gpt repository and set an
+  environment variable such that gpt.repository copies files from there instead of downloading
+  them from the web.

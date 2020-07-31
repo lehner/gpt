@@ -28,7 +28,7 @@ template<typename cgpt_rng_engine>
 class cgpt_random_engine : public cgpt_random_engine_base {
  public:
   cgpt_rng_engine cgpt_srng;
-  std::map<long,cgpt_rng_engine> cgpt_prng;
+  std::map<long,cgpt_rng_engine*> cgpt_prng;
   std::vector<uint64_t> cgpt_seed;
 
   std::vector<uint64_t> str_to_seed(const std::string & seed_str) {
@@ -42,6 +42,8 @@ class cgpt_random_engine : public cgpt_random_engine_base {
   }
   
   virtual ~cgpt_random_engine() {
+    for (auto & x : cgpt_prng)
+      delete x.second;
   }
 
   virtual PyObject* sample(PyObject* _target, PyObject* _param) {

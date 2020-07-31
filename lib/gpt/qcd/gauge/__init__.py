@@ -16,40 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-import numpy as np
-
-def plaquette(U):
-    # U[mu](x)*U[nu](x+mu)*adj(U[mu](x+nu))*adj(U[nu](x))
-    tr=0.0
-    vol=float(U[0].grid.fsites)
-    for mu in range(4):
-        for nu in range(mu):
-            tr += g.sum( g.trace(U[mu] * g.cshift( U[nu], mu, 1) * g.adj( g.cshift( U[mu], nu, 1 ) ) * g.adj( U[nu] )) )
-    return 2.*tr.real/vol/4./3./3.
-
-def unit(first):
-    if type(first) == g.grid:
-        U=[ g.mcolor(first) for i in range(4) ]
-        unit(U)
-        return U
-    elif type(first) == list:
-        for x in first:
-            unit(x)
-    elif type(first) == g.lattice:
-        first[:]=g.mcolor(np.identity(3,dtype=first.grid.precision.complex_dtype))
-    else:
-        assert(0)
-
-def random(first, rng, scale = 1.0):
-    if type(first) == g.grid:
-        U=[ g.mcolor(first) for i in range(4) ]
-        random(U, rng, scale = scale)
-        return U
-    elif type(first) == list:
-        for x in first:
-            random(x, rng, scale)
-    elif type(first) == g.lattice:
-        rng.lie(first, scale = scale)
-    else:
-        assert(0)
+from gpt.qcd.gauge.create import random, unit
+from gpt.qcd.gauge.representation import fundamental_to_adjoint
+from gpt.qcd.gauge.loops import plaquette
+from gpt.qcd.gauge.transformation import transformed

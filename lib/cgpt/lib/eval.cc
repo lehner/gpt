@@ -17,42 +17,26 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include "eval/mul_vlat_vlat.h"
+#include "eval/matmul_vlat.h"
 
 struct _eval_factor_ {
   enum { LATTICE, ARRAY, GAMMA } type;
   int unary;
-  union {
-    cgpt_Lattice_base* lattice;
-    PyArrayObject* array;
-  };
+  std::vector<cgpt_Lattice_base*> vlattice;
+  PyArrayObject* array;
 
   Gamma::Algebra gamma;
-  std::string otype;
+  std::vector<std::string> v_otype;
 
   void release() {
     if (type == LATTICE) {
-      delete lattice;
+      for (auto&l : vlattice)
+	delete l;
     } else if (type == ARRAY) {
       Py_DECREF(array);
     }
   }
-};
-
-static int gamma_algebra_map_max = 12;
-
-static Gamma::Algebra gamma_algebra_map[] = {
-  Gamma::Algebra::GammaX, // 0
-  Gamma::Algebra::GammaY, // 1
-  Gamma::Algebra::GammaZ, // 2
-  Gamma::Algebra::GammaT, // 3
-  Gamma::Algebra::Gamma5,  // 4
-  Gamma::Algebra::SigmaXY, // 5
-  Gamma::Algebra::SigmaXZ, // 6
-  Gamma::Algebra::SigmaXT, // 7
-  Gamma::Algebra::SigmaYZ, // 8
-  Gamma::Algebra::SigmaYT, // 9
-  Gamma::Algebra::SigmaZT, // 10
-  Gamma::Algebra::Identity // 11
 };
 
 struct _eval_term_ {
@@ -60,7 +44,7 @@ struct _eval_term_ {
   std::vector<_eval_factor_> factors;
 };
 
-void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms,int idx) {
+void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms) {
   ASSERT(PyList_Check(_list));
   int n = (int)PyList_Size(_list);
 
@@ -87,13 +71,15 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms,int i
       if (PyObject_HasAttrString(f,"v_obj")) {
 	PyObject* v_obj = PyObject_GetAttrString(f,"v_obj");
 	ASSERT(v_obj);
-	ASSERT(PyList_Check(v_obj));
-	ASSERT(idx < PyList_Size(v_obj) && idx >= 0);
-	factor.lattice = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(v_obj,idx));
+	cgpt_convert(v_obj, factor.vlattice);
 	factor.type = _eval_factor_::LATTICE;
       } else if (PyObject_HasAttrString(f,"array")) {
 	factor.array = (PyArrayObject*)PyObject_GetAttrString(f,"array");
-	cgpt_convert(PyObject_GetAttrString(f,"otype"),factor.otype);
+	PyObject* otype = PyObject_GetAttrString(f,"otype");
+	ASSERT(otype);
+	PyObject* v_otype = PyObject_GetAttrString(otype,"v_otype");
+	ASSERT(v_otype);
+	cgpt_convert(v_otype,factor.v_otype);
 	factor.type = _eval_factor_::ARRAY;
       } else if (PyObject_HasAttrString(f,"gamma")) {
 	int gamma = (int)PyLong_AsLong(PyObject_GetAttrString(f,"gamma"));
@@ -115,14 +101,16 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
   if (lhs.type == _eval_factor_::LATTICE) {
     if (rhs.type == _eval_factor_::LATTICE) {
       dst.type = _eval_factor_::LATTICE;
-      dst.lattice = lhs.lattice->mul( 0, false, rhs.lattice, lhs.unary, rhs.unary, unary);
+      eval_mul_vlat_vlat(dst.vlattice, lhs.vlattice, lhs.unary, rhs.vlattice, rhs.unary, unary);
     } else if (rhs.type == _eval_factor_::ARRAY) {
       dst.type = _eval_factor_::LATTICE;
-      dst.lattice = lhs.lattice->matmul( 0, false, rhs.array, rhs.otype, rhs.unary, lhs.unary, unary, false);
+      eval_matmul_vlat(dst.vlattice, lhs.vlattice, lhs.unary, rhs.array, rhs.v_otype, rhs.unary, unary, false);
     } else if (rhs.type == _eval_factor_::GAMMA) {
       ASSERT(rhs.unary == 0);
       dst.type = _eval_factor_::LATTICE;
-      dst.lattice = lhs.lattice->gammamul( 0, false, rhs.gamma, lhs.unary, unary, false);
+      dst.vlattice.resize(1);
+      ASSERT(lhs.vlattice.size() == 1);
+      dst.vlattice[0] = lhs.vlattice[0]->gammamul( 0, false, rhs.gamma, lhs.unary, unary, false);
     } else {
       ASSERT(0);
     }
@@ -130,7 +118,7 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
     ASSERT(lhs.unary == 0);
     if (rhs.type == _eval_factor_::LATTICE) {
       dst.type = _eval_factor_::LATTICE;
-      dst.lattice = rhs.lattice->matmul( 0, false, lhs.array, lhs.otype, lhs.unary, rhs.unary, unary, true);
+      eval_matmul_vlat(dst.vlattice, rhs.vlattice, rhs.unary, lhs.array, lhs.v_otype, lhs.unary, unary, true);
     } else {
       ASSERT(0);
     }
@@ -138,7 +126,9 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
     ASSERT(lhs.unary == 0);
     if (rhs.type == _eval_factor_::LATTICE) {
       dst.type = _eval_factor_::LATTICE;
-      dst.lattice = rhs.lattice->gammamul( 0, false, lhs.gamma, rhs.unary, unary, true);
+      dst.vlattice.resize(1);
+      ASSERT(rhs.vlattice.size() == 1);
+      dst.vlattice[0] = rhs.vlattice[0]->gammamul( 0, false, lhs.gamma, rhs.unary, unary, true);
     } else {
       ASSERT(0);
     }
@@ -149,7 +139,7 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
   return dst;
 }
 
-cgpt_Lattice_base* eval_term(std::vector<_eval_factor_>& factors, int term_unary) {
+std::vector<cgpt_Lattice_base*> eval_term(std::vector<_eval_factor_>& factors, int term_unary) {
   ASSERT(factors.size() > 1);
 
   //f[im2] = eval_mul_factor(f[im2],f[im1]);
@@ -167,10 +157,10 @@ cgpt_Lattice_base* eval_term(std::vector<_eval_factor_>& factors, int term_unary
   }
 
   ASSERT(factors[0].type == _eval_factor_::LATTICE);
-  return factors[0].lattice;
+  return factors[0].vlattice;
 }
 
-cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>& terms,int unary,bool ac) {
+void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>& terms,int unary,bool ac) {
 
   // class A)
   // first separate all terms that are a pure linear combination:
@@ -180,7 +170,7 @@ cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>
   // for all other terms, create terms and apply unary operators before summing
   //   result_class_b = unary(B*C*D) + unary(E*F)
 
-  std::vector< cgpt_lattice_term > terms_a[NUM_FACTOR_UNARY], terms_b;
+  std::vector< std::vector<cgpt_lattice_term> > terms_a[NUM_FACTOR_UNARY], terms_b;
 
   for (size_t i=0;i<terms.size();i++) {
     auto& term = terms[i];
@@ -189,27 +179,78 @@ cgpt_Lattice_base* eval_general(cgpt_Lattice_base* dst, std::vector<_eval_term_>
       auto& factor = term.factors[0];
       ASSERT(factor.type == _eval_factor_::LATTICE);
       ASSERT(factor.unary >= 0 && factor.unary < NUM_FACTOR_UNARY);
-      terms_a[factor.unary].push_back( cgpt_lattice_term( term.coefficient, factor.lattice, false ) );
+
+      auto & a = terms_a[factor.unary];
+      if (a.size() == 0) {
+	a.resize(factor.vlattice.size());
+      } else {
+	ASSERT(a.size() == factor.vlattice.size());
+      }
+
+      for (int l=0;l<(int)factor.vlattice.size();l++) {
+	a[l].push_back( cgpt_lattice_term( term.coefficient, factor.vlattice[l], false ) );
+      }
+
     } else {
-      terms_b.push_back( cgpt_lattice_term( term.coefficient, eval_term(term.factors, unary), true ) );
+
+      auto factor_vlattice = eval_term(term.factors, unary);
+
+      auto & a = terms_b;
+      if (a.size() == 0) {
+	a.resize(factor_vlattice.size());
+      } else {
+	ASSERT(a.size() == factor_vlattice.size());
+      }
+
+      for (int l=0;l<(int)factor_vlattice.size();l++) {
+	a[l].push_back( cgpt_lattice_term( term.coefficient, factor_vlattice[l], true ) );
+      }
     }
   }
 
   for (int j=0;j<NUM_FACTOR_UNARY;j++) {
-    if (terms_a[j].size() > 0) {
-      dst = terms_a[j][0].get_lat()->compatible_linear_combination(dst,ac, terms_a[j], j, unary);
+    auto & a = terms_a[j];
+    if (a.size() > 0) {
+      if (dst.size() == 0)
+	dst.resize(a.size(),0);
+      ASSERT(dst.size() == a.size());
+
+      bool mtrans = (j & BIT_TRANS) != 0;
+      int singlet_rank = a[0][0].get_lat()->singlet_rank();
+      int singlet_dim  = size_to_singlet_dim(singlet_rank, (int)a.size());
+
+      if (singlet_rank == 2) {
+	for (int r=0;r<singlet_dim;r++) {
+	  for (int s=0;s<singlet_dim;s++) {
+	    int idx1 = r*singlet_dim + s;
+	    int idx2 = mtrans ? (s*singlet_dim + r) : idx1;
+	    dst[idx1] = a[idx2][0].get_lat()->compatible_linear_combination(dst[idx1],ac, a[idx2], j, unary);
+	  }
+	}
+      } else {
+	for (int l=0;l<(int)a.size();l++) {
+	  dst[l] = a[l][0].get_lat()->compatible_linear_combination(dst[l],ac, a[l], j, unary);
+	}
+      }
       ac=true;
     }
   }
 
-  if (terms_b.size() > 0) {
-    dst = terms_b[0].get_lat()->compatible_linear_combination(dst,ac, terms_b, 0, 0); // unary operators have been applied above
+  {
+    auto & a = terms_b;
+    if (a.size() > 0) {
+      if (dst.size() == 0)
+	dst.resize(a.size(),0);
+      ASSERT(dst.size() == a.size());
+      for (int l=0;l<(int)a.size();l++) {
+	dst[l] = a[l][0].get_lat()->compatible_linear_combination(dst[l],ac, a[l], 0, 0); // unary operators have been applied above
+      }
+    }
   }
 
-  for (auto& term : terms_b)
-    term.release();
-
-  return dst;
+  for (auto& vterm : terms_b)
+    for (auto& term : vterm)
+      term.release();
 }
 
 static inline void simplify(_eval_term_& term) {
@@ -234,10 +275,9 @@ static void simplify(std::vector<_eval_term_>& terms) {
 
 EXPORT(eval,{
 
-    void* _dst;
-    PyObject* _list,* _ac;
-    int unary, idx;
-    if (!PyArg_ParseTuple(args, "lOiOi", &_dst, &_list, &unary, &_ac, &idx)) {
+    PyObject*_dst, * _list,* _ac;
+    int unary;
+    if (!PyArg_ParseTuple(args, "OOiO", &_dst, &_list, &unary, &_ac)) {
       return NULL;
     }
     
@@ -245,13 +285,14 @@ EXPORT(eval,{
     bool ac;
     cgpt_convert(_ac,ac);
     
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-    bool new_lattice = dst == 0;
-    
+    bool new_lattice = (Py_None == _dst);
+
     std::vector<_eval_term_> terms;
-    eval_convert_factors(_list,terms,idx);
+    eval_convert_factors(_list,terms);
     
-    cgpt_Lattice_base* dst_orig = dst;
+    std::vector<cgpt_Lattice_base*> dst;
+    if (!new_lattice)
+      cgpt_convert(_dst,dst);
 
     // do a first pass that, e.g., combines gamma algebra
     simplify(terms);
@@ -262,12 +303,15 @@ EXPORT(eval,{
     // else
     
     // General code path:
-    dst=eval_general(dst,terms,unary,ac);
-    
-    if (new_lattice)
-      return dst->to_decl();
-    
-    assert(dst == dst_orig);
+    eval_general(dst,terms,unary,ac);
+
+    if (new_lattice) {
+      PyObject* ret = PyList_New(dst.size());
+      for (long i=0;i<dst.size();i++)
+	PyList_SetItem(ret,i,dst[i]->to_decl());
+      return ret;
+    }
+
     return PyLong_FromLong(0);
     
   });

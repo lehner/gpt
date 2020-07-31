@@ -21,6 +21,7 @@ import os
 import struct
 import numpy
 
+
 class checkpointer_none:
     def __init__(self):
         self.grid = None
@@ -31,19 +32,19 @@ class checkpointer_none:
     def load(self, obj):
         return False
 
-class checkpointer:
 
+class checkpointer:
     def __init__(self, root):
         self.root = root
         self.grid = None
-        directory = "%s/%2.2d" % (root, gpt.rank() // 32 )
+        directory = "%s/%2.2d" % (root, gpt.rank() // 32)
         os.makedirs(directory, exist_ok=True)
-        self.filename = "%s/%10.10d" % (directory,gpt.rank())
+        self.filename = "%s/%10.10d" % (directory, gpt.rank())
         try:
-            self.f = gpt.FILE(self.filename,"r+b")
-        except:
-            self.f = gpt.FILE(self.filename,"w+b")
-        self.f.seek(0,1)
+            self.f = gpt.FILE(self.filename, "r+b")
+        except FileNotFoundError:
+            self.f = gpt.FILE(self.filename, "w+b")
+        self.f.seek(0, 1)
         self.verbose = gpt.default.is_verbose("checkpointer")
 
     def save(self, obj):
@@ -53,101 +54,115 @@ class checkpointer:
         elif type(obj) == gpt.lattice:
             self.save(obj.mview())
         elif type(obj) == float:
-            self.save(memoryview(struct.pack("d",obj)))
+            self.save(memoryview(struct.pack("d", obj)))
         elif type(obj) == complex:
-            self.save(memoryview(struct.pack("dd",obj.real,obj.imag)))
+            self.save(memoryview(struct.pack("dd", obj.real, obj.imag)))
         elif type(obj) == memoryview:
-            self.f.seek(0,1)
-            sz=len(obj)
-            szGB=sz/1024.**3
-            self.f.write(sz.to_bytes(8,'little'))
-            t0=gpt.time()
-            self.f.write(gpt.crc32(obj).to_bytes(4,'little'))
-            t1=gpt.time()
+            self.f.seek(0, 1)
+            sz = len(obj)
+            szGB = sz / 1024.0 ** 3
+            self.f.write(sz.to_bytes(8, "little"))
+            t0 = gpt.time()
+            self.f.write(gpt.crc32(obj).to_bytes(4, "little"))
+            t1 = gpt.time()
             self.f.write(obj)
             self.f.flush()
-            t2=gpt.time()
+            t2 = gpt.time()
             if self.verbose:
                 if self.grid is None:
-                    gpt.message("Checkpoint %g GB on head node at %g GB/s for crc32 and %g GB/s for write in %g s total" % (szGB,szGB/(t1-t0),szGB/(t2-t1),t2-t0))
+                    gpt.message(
+                        "Checkpoint %g GB on head node at %g GB/s for crc32 and %g GB/s for write in %g s total"
+                        % (szGB, szGB / (t1 - t0), szGB / (t2 - t1), t2 - t0)
+                    )
                 else:
-                    szGB=self.grid.globalsum(szGB)
-                    gpt.message("Checkpoint %g GB at %g GB/s for crc32 and %g GB/s for write in %g s total" % (szGB,szGB/(t1-t0),szGB/(t2-t1),t2-t0))
+                    szGB = self.grid.globalsum(szGB)
+                    gpt.message(
+                        "Checkpoint %g GB at %g GB/s for crc32 and %g GB/s for write in %g s total"
+                        % (szGB, szGB / (t1 - t0), szGB / (t2 - t1), t2 - t0)
+                    )
         else:
-            assert(0)
+            assert 0
 
     def load(self, obj):
         if type(obj) == list:
             if len(obj) != 1:
-                allok=True
-                pos=self.f.tell()
-                for i,o in enumerate(obj):
-                    r=[o]
-                    allok=allok and self.load(r)
-                    obj[i]=r[0]
+                allok = True
+                pos = self.f.tell()
+                for i, o in enumerate(obj):
+                    r = [o]
+                    allok = allok and self.load(r)
+                    obj[i] = r[0]
                 if not allok:
-                    self.f.seek(pos,0) # reset position to overwrite corrupted data chunk
+                    self.f.seek(
+                        pos, 0
+                    )  # reset position to overwrite corrupted data chunk
                 return allok
             else:
                 if type(obj[0]) == gpt.lattice:
-                    res=self.load(obj[0].mview())
+                    res = self.load(obj[0].mview())
                 elif type(obj[0]) == float:
-                    v=memoryview(bytearray(8))
-                    res=self.load(v)
-                    obj[0]=struct.unpack("d",v)[0]
+                    v = memoryview(bytearray(8))
+                    res = self.load(v)
+                    obj[0] = struct.unpack("d", v)[0]
                 elif type(obj[0]) == complex:
-                    v=memoryview(bytearray(16))
-                    res=self.load(v)
-                    obj[0]=complex(*struct.unpack("dd",v)[0,1])
+                    v = memoryview(bytearray(16))
+                    res = self.load(v)
+                    obj[0] = complex(*struct.unpack("dd", v)[0, 1])
                 elif type(obj[0]) == memoryview:
                     return self.read_view(obj[0])
                 else:
-                    assert(0)
+                    assert 0
                 return res
         elif type(obj) == memoryview:
             return self.read_view(obj)
         elif type(obj) == gpt.lattice:
             return self.load(obj.mview())
         else:
-            assert(0)
+            assert 0
 
     def read_view(self, obj):
-        pos=self.f.tell()
-        self.f.seek(0,2)
-        flags=numpy.array([0.0,1.0,0.0],dtype=numpy.float64)
-        t0=gpt.time()
+        pos = self.f.tell()
+        self.f.seek(0, 2)
+        flags = numpy.array([0.0, 1.0, 0.0], dtype=numpy.float64)
+        t0 = gpt.time()
         if self.f.tell() != pos:
-            self.f.seek(pos,0)
+            self.f.seek(pos, 0)
             # try to read
-            sz=int.from_bytes(self.f.read(8),'little')
-            szGB=sz/1024.**3
-            flags[2]=szGB
-            crc32_expected=int.from_bytes(self.f.read(4),'little')
+            sz = int.from_bytes(self.f.read(8), "little")
+            szGB = sz / 1024.0 ** 3
+            flags[2] = szGB
+            crc32_expected = int.from_bytes(self.f.read(4), "little")
             if len(obj) == sz:
-                data=self.f.read(sz)
+                data = self.f.read(sz)
                 if len(data) == sz:
-                    obj[:]=data
-                    crc32=gpt.crc32(obj)
+                    obj[:] = data
+                    crc32 = gpt.crc32(obj)
                     if crc32 == crc32_expected:
-                        flags[0]=1.0 # flag success on this node
+                        flags[0] = 1.0  # flag success on this node
 
         # compare global
-        assert(not self.grid is None)
+        assert self.grid is not None
         self.grid.globalsum(flags)
-        t1=gpt.time()
+        t1 = gpt.time()
 
         # report status
         if self.verbose and flags[2] != 0.0:
             if flags[0] != flags[1]:
-                gpt.message("Checkpoint %g GB failed on %g out of %g nodes" % (flags[2],flags[1] - flags[0],flags[1]))
+                gpt.message(
+                    "Checkpoint %g GB failed on %g out of %g nodes"
+                    % (flags[2], flags[1] - flags[0], flags[1])
+                )
             else:
-                gpt.message("Checkpoint %g GB at %g GB/s for crc32 and read combined in %g s total" % (flags[2],flags[2]/(t1-t0),t1-t0))
+                gpt.message(
+                    "Checkpoint %g GB at %g GB/s for crc32 and read combined in %g s total"
+                    % (flags[2], flags[2] / (t1 - t0), t1 - t0)
+                )
 
         # all nodes OK?
         if flags[0] == flags[1]:
             return True
-                
+
         # reset position to overwrite corruption
-        self.f.seek(pos,0)
-        
+        self.f.seek(pos, 0)
+
         return False

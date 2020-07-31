@@ -18,50 +18,87 @@
 #
 import gpt, cgpt, numpy
 
-def coordinates(o, order = "grid"):
-    if type(o) == gpt.grid and o.cb.n == 1:
-        dim=len(o.ldimensions)
-        top=[ o.processor_coor[i]*o.ldimensions[i] for i in range(dim) ]
-        bottom=[ top[i] + o.ldimensions[i] for i in range(dim) ]
-        checker_dim_mask=[ 0 ] * dim
-        return cgpt.coordinates_from_cartesian_view(top,bottom,checker_dim_mask,None,order)
-    elif type(o) == tuple and type(o[0]) == gpt.grid and len(o) == 2:
-        dim=len(o[0].ldimensions)
-        cb=o[1].tag
-        checker_dim_mask=o[0].cb.cb_mask
-        cbf=[ o[0].fdimensions[i] // o[0].gdimensions[i] for i in range(dim) ]
-        top=[ o[0].processor_coor[i]*o[0].ldimensions[i]*cbf[i] for i in range(dim) ]
-        bottom=[ top[i] + o[0].ldimensions[i]*cbf[i] for i in range(dim) ]
-        return cgpt.coordinates_from_cartesian_view(top,bottom,checker_dim_mask,cb,order)
-    elif type(o) == gpt.lattice:
-        return coordinates( (o.grid,o.checkerboard()), order = order )
-    elif type(o) == gpt.cartesian_view:
-        return cgpt.coordinates_from_cartesian_view(o.top,o.bottom,o.checker_dim_mask,o.cb,order)
-    else:
-        assert(0)
+_coordinates_cache = {}
 
-def apply_exp_ixp(dst,src,p):
+
+def coordinates(o, order="lexicographic"):
+    if type(o) == gpt.grid and o.cb.n == 1:
+        return coordinates((o, gpt.none), order=order)
+    elif type(o) == tuple and type(o[0]) == gpt.grid and len(o) == 2:
+        dim = len(o[0].ldimensions)
+        cb = o[1].tag
+        checker_dim_mask = o[0].cb.cb_mask
+        cbf = [o[0].fdimensions[i] // o[0].gdimensions[i] for i in range(dim)]
+        top = [
+            o[0].processor_coor[i] * o[0].ldimensions[i] * cbf[i] for i in range(dim)
+        ]
+        bottom = [top[i] + o[0].ldimensions[i] * cbf[i] for i in range(dim)]
+
+        # cache
+        tag = f"{top}-{bottom}-{checker_dim_mask}-{cb}-{order}"
+        if tag in _coordinates_cache:
+            return _coordinates_cache[tag]
+        val = cgpt.coordinates_from_cartesian_view(
+            top, bottom, checker_dim_mask, cb, order
+        )
+        _coordinates_cache[tag] = val
+        return val
+    elif type(o) == gpt.lattice:
+        return coordinates((o.grid, o.checkerboard()), order=order)
+    elif type(o) == gpt.cartesian_view:
+        return cgpt.coordinates_from_cartesian_view(
+            o.top, o.bottom, o.checker_dim_mask, o.cb, order
+        )
+    else:
+        assert 0
+
+
+def apply_exp_ixp(dst, src, p):
     # TODO: add sparse field support (x.internal_coordinates(), x.coordinates())
-    x=src.mview_coordinates()
+    x = src.mview_coordinates()
 
     # create phase field
-    phase=gpt.complex(src.grid)
+    phase = gpt.complex(src.grid)
     phase.checkerboard(src.checkerboard())
-    phase[x]=cgpt.coordinates_momentum_phase(x,p,src.grid.precision)
+    phase[x] = cgpt.coordinates_momentum_phase(x, p, src.grid.precision)
     dst @= phase * src
+
 
 def exp_ixp(p):
 
     if type(p) == list:
-        return [ momentum_phase(x) for x in p ]
+        return [exp_ixp(x) for x in p]
     elif type(p) == numpy.ndarray:
-        p=p.tolist()
+        p = p.tolist()
 
-    mat=lambda dst,src: apply_exp_ixp(dst,src,p)
-    inv_mat=lambda dst,src: apply_exp_ixp(dst,src,[ -x for x in p ])
+    def mat(dst, src):
+        return apply_exp_ixp(dst, src, p)
+
+    def inv_mat(dst, src):
+        return apply_exp_ixp(dst, src, [-x for x in p])
 
     # do not specify grid or otype, i.e., accept all
-    return gpt.matrix_operator(mat = mat,
-                               adj_mat = inv_mat,
-                               inv_mat = inv_mat,
-                               adj_inv_mat = mat)
+    return gpt.matrix_operator(
+        mat=mat, adj_mat=inv_mat, inv_mat=inv_mat, adj_inv_mat=mat
+    )
+
+
+def fft(dims=None):
+    def mat(dst, src, sign):
+        d = dims if dims is not None else list(range(src.grid.nd))
+        assert dst.otype.__name__ == src.otype.__name__
+        for i in dst.otype.v_idx:
+            cgpt.fft(dst.v_obj[i], src.v_obj[i], d, sign)
+
+    def mat_forward(dst, src):
+        mat(dst, src, 1)
+
+    def mat_backward(dst, src):
+        mat(dst, src, -1)
+
+    return gpt.matrix_operator(
+        mat=mat_forward,
+        adj_mat=mat_backward,
+        inv_mat=mat_backward,
+        adj_inv_mat=mat_forward,
+    )

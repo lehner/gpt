@@ -55,80 +55,9 @@ template<typename A, typename B>
 }
 
 #define _COMPATIBLE_(t) typeOpen(b,t) { return lattice_mul(dst,ac, unary_a,la,unary_b,lb,unary_expr); } typeClose();
-
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSinglet<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
-  //print(adj(Gamma::Algebra::Gamma5));
-  _COMPATIBLE_(iSinglet);
-  _COMPATIBLE_(iColourVector);
-  _COMPATIBLE_(iColourMatrix);
-  _COMPATIBLE_(iSpinColourVector);
-  _COMPATIBLE_(iSpinColourMatrix);
-  //#define BASIS_SIZE(n) _COMPATIBLE_(iComplexV ## n);
-  //#include "../basis_size.h"
-  //#undef BASIS_SIZE
-  ERR("Not implemented");
-
-#if 0
-    GridCartesian* grid;
-    Lattice< iColourVector<vComplexF> > a(grid),b(grid);
-    Lattice< iColourMatrix<vComplexF> > m(grid);
-    print( adj(a)*m );
-#endif
-}
+#define _COMPATIBLE_MSL_(t) typeOpen(b,t) { return lattice_mul(dst,ac, unary_a,MakeScalar(la),unary_b,lb,unary_expr); } typeClose();
+#define _COMPATIBLE_MSR_(t) typeOpen(b,t) { return lattice_mul(dst,ac, unary_a,la,unary_b,MakeScalar(lb),unary_expr); } typeClose();
 
 #define _OUTER_PRODUCT_(t) if (unary_a == 0 && unary_b == (BIT_TRANS|BIT_CONJ)) { typeOpen(b,t) { return lattice_unary_lat(dst,ac, outerProduct(la,lb), unary_expr); } typeClose(); }
 #define _INNER_PRODUCT_(t) if (unary_a == (BIT_TRANS|BIT_CONJ) && unary_b == 0) { typeOpen(b,t) { return lattice_unary_lat(dst, ac, localInnerProduct(la,lb), unary_expr ); } typeClose(); }
-
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourVector<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
-  _COMPATIBLE_(iSinglet);
-  _OUTER_PRODUCT_(iColourVector);
-  _INNER_PRODUCT_(iColourVector);
-  ERR("Not implemented");
-}
-
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iColourMatrix<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
-  _COMPATIBLE_(iSinglet);
-  _COMPATIBLE_(iColourVector);
-  _COMPATIBLE_(iColourMatrix);
-  _COMPATIBLE_(iSpinColourVector);
-  _COMPATIBLE_(iSpinColourMatrix);
-  ERR("Not implemented");
-}
-
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourVector<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
-  _COMPATIBLE_(iSinglet);
-  _OUTER_PRODUCT_(iSpinColourVector);
-  _INNER_PRODUCT_(iSpinColourVector);
-  ERR("Not implemented");
-}
-
-// TODO: explicitly instantiate exact templates
-template<typename vtype>
-cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iSpinColourMatrix<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
-  _COMPATIBLE_(iSinglet);
-  _COMPATIBLE_(iColourMatrix);
-  _COMPATIBLE_(iSpinColourVector);
-  _COMPATIBLE_(iSpinColourMatrix);
-  ERR("Not implemented");
-}
-
-#define BASIS_SIZE(n)							\
-  template<typename vtype>						\
-  cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iComplexV ## n<vtype> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) { \
-    ERR("Not implemented");						\
-  }
-#include "../basis_size.h"
-#undef BASIS_SIZE
-
-#undef typeClose
-#undef typeOpen
-#undef castas
-#undef typeis
-#undef _OUTER_PRODUCT_
-#undef _INNER_PRODUCT_
-#undef _COMPATIBLE_
 

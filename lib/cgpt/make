@@ -11,7 +11,7 @@ then
     echo "Could not detect Grid location"
     exit 2
 fi
-NPARALLEL=8
+NPARALLEL=16
 
 # Start
 N=0
@@ -37,36 +37,84 @@ echo "==========================================================================
 
 ./update
 
+rm -f next.lock
+
 # Compile
-for src in lib/*.cc
-do
-    bn=$(basename $src .cc)
-    dst=build/${bn}.o
-    if [ $src -nt $dst ];
-    then
+function abort {
+    echo "Cancelling..."
+    kill -TERM 0
+    wait
+    echo "Done"
+}
+
+trap abort INT
+
+function next {
+    nextFile=$1
+
+    while true
+    do
 	(
-	    echo " [CXX] $bn"
-	    start=$SECONDS
-	    ${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> logs/${bn}.out 2> logs/${bn}.err
-	    success=$?
-	    elapsed=$((SECONDS-start))
-	    if [[ "$success" == "0" ]];
-	    then
-		printf "%-50s %s\n" " [OK ] $bn " "($elapsed s)"
-	    else
-		printf "%-50s %-30s %s\n" " [ERR] $bn " "($elapsed s)" "logs/${bn}.err"
-	    fi
-	) &
-	N=$((N+1))
-	if ((N==NPARALLEL))
+	    flock -n 9 || exit 1
+	    for src in lib/*.cc lib/instantiate/*.cc
+	    do
+		bn=$(basename $src .cc)
+		dst=build/${bn}.o
+		if [ $src -nt $dst ];
+		then
+		    touch $dst
+		    echo $src > $nextFile
+		    exit 0
+		fi
+	    done
+	    rm -f $nextFile
+	) 9> next.lock
+
+	success=$?
+	if ((success == 0))
 	then
-	    wait
-	    N=0
+	    break
 	fi
-    fi
+
+	sleep 0.1
+    done
+}
+
+for ((N=0;N<NPARALLEL;N++))
+do
+    (
+	while true
+	do
+	    next next.${N}
+	    if [ -f next.${N} ];
+	    then
+		src=$(cat next.${N})
+		bn=$(basename $src .cc)
+		dst=build/${bn}.o
+
+		echo " [CXX] $bn"
+		start=$SECONDS
+		${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> logs/${bn}.out 2> logs/${bn}.err
+		success=$?
+		elapsed=$((SECONDS-start))
+		if [[ "$success" == "0" ]];
+		then
+		    printf "%-70s %s\n" " [OK ] $bn " "($elapsed s)"
+		else
+		    printf "%-70s %-30s %s\n" " [ERR] $bn " "($elapsed s)" "logs/${bn}.err"
+		    touch $dst
+		fi
+	    else
+		exit 0
+	    fi
+	done
+    ) &
 done
 
 wait
+
+rm -f next.lock
+find build -size 0 -delete 2> /dev/null
 
 # Link
 ${CXX} --shared build/*.o ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so

@@ -20,23 +20,25 @@ template<typename base_vrng,typename base_rng,int max_vlen>
 class cgpt_vector_rng {
 public:
   typedef typename base_rng::base_type int_type;
+  typedef typename base_rng::container_type int_ctype;
   typedef typename base_vrng::base_type vint_type;
+  typedef typename base_vrng::container_type vint_ctype;
   static const long vlen = sizeof(vint_type) / sizeof(int_type);
   static const long nvrng= max_vlen / vlen + ((max_vlen % vlen == 0) ? 0 : 1);
 
 protected:
 
   base_rng rng;
-  std::vector<base_vrng> vrng;
+  base_vrng vrng[nvrng];
 
   std::vector<int_type> buffer;
   long nbuffer;
 
   // first seed rng using sha256(s)
-  std::vector<int_type> seed(const std::vector<uint64_t> & s) {
+  int_ctype seed(const std::vector<uint64_t> & s) {
     assert(rng.seed_size * sizeof(int_type) % sizeof(uint32_t) == 0);
     long nwords = rng.seed_size * sizeof(int_type) / sizeof(uint32_t);
-    std::vector<int_type> r(nwords);
+    int_ctype r(nwords);
     std::vector<uint32_t> rw;
     long idx = 0;
     while (rw.size() < nwords) {
@@ -57,13 +59,13 @@ protected:
 
   // then seed a large number of rngs
   // fill one lane after another, so that strategy is independent of vlen !
-  std::vector<vint_type> vseed() {
+  vint_ctype vseed() {
     //std::cout << GridLogMessage << "vlen = " << vlen << " vlen_max = " << max_vlen << " nvrng= " << nvrng << std::endl;
-    std::vector<vint_type> r(base_vrng::seed_size);
+    vint_ctype r(base_vrng::seed_size);
     int_type* p = (int_type*)&r[0];
     for (long lane=0;lane<vlen;lane++) {
       for (long j=0;j<base_vrng::seed_size;j++)
-	p[vlen*j + lane] = rng();
+	rng(p[vlen*j + lane]);
     }
     //std::cout << GridLogMessage << "vState = " << r << std::endl;
     return r;
@@ -71,17 +73,20 @@ protected:
 
 public:
 
-  cgpt_vector_rng(const std::vector<uint64_t> & _seed) : rng(seed(_seed)), buffer(vlen * nvrng) {
+  cgpt_vector_rng(const std::vector<uint64_t> & _seed) : buffer(vlen * nvrng) {
+    rng.seed(seed(_seed));
     for (long i=0;i<nvrng;i++)
-      vrng.push_back(base_vrng(vseed()));
+      vrng[i].seed(vseed());
     populate();
   }
 
   void populate() {
     nbuffer=0;
     long j = 0;
+    vint_ctype dst(1);
+    vint_type & r = dst[0];
     for (long i=0;i<nvrng;i++) {
-      vint_type r = vrng[i]();
+      vrng[i](r);
       for (long lane=0;lane<vlen;lane++)
 	buffer[j++] = ((int_type*)&r)[lane];
     }      

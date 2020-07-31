@@ -17,18 +17,25 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
+import numpy as np
 
 # test if of number type
 def isnum(x):
     return isinstance(x, (int, float, complex)) and not isinstance(x, bool)
 
+
 # tensor
 def value_to_tensor(val, otype):
-    if otype == gpt.ot_complex:
+    if otype == gpt.ot_singlet:
         return complex(val)
     return gpt.tensor(val, otype)
 
-def tensor_to_value(value):
+
+def tensor_to_value(value, dtype=np.complex128):
     if type(value) == gpt.tensor:
         value = value.array
+        if value.dtype != dtype:
+            value = dtype(value)
+    elif isnum(value):
+        value = np.array([value], dtype=dtype)
     return value

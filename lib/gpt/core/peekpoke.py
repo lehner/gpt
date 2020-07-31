@@ -16,30 +16,197 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt, sys
+import gpt, cgpt, numpy, sys
 
-def peek(target,key):
+
+def split_key_to_coordinates_and_indices(grid, key):
+
+    nd = grid.nd
+    list_types = [numpy.ndarray, list]
+
+    # l[pos]
+    if type(key) in list_types:
+        return key, None
+
+    # all other keys need to be a tuple
+    assert type(key) == tuple
+
+    # strip positions
+    if type(key[0]) in list_types:
+
+        # l[pos,...]
+        pos = key[0]
+        key = key[1:]
+
+    else:
+
+        # l[x,y,z,...]
+        assert len(key) >= nd
+        pos = key[:nd]
+        key = key[nd:]
+
+    # l[...,tidx]
+    if len(key) == 1 and type(key[0]) in list_types:
+        tidx = key[0]
+
+    # l[...,i0,i1,...]
+    elif key == ():
+        tidx = None
+
+    else:
+        tidx = key
+
+    return pos, tidx
+
+
+def map_pos(grid, cb, key):
+
+    # if list, convert to numpy array
+    if type(key) == list:
+        key = numpy.array(key, dtype=numpy.int32)
+
+    # if key is numpy array, no further processing needed
+    if type(key) == numpy.ndarray:
+        return key
+
+    # if not, we expect a tuple of slices
+    assert type(key) == tuple
+
+    # slices without specified start/stop corresponds to memory view limitation for this rank
+    if all([k == slice(None, None, None) for k in key]):
+        # go through gpt.coordinates to use its caching feature
+        return gpt.coordinates((grid, cb), order="lexicographic")
+
+    nd = grid.nd
+    key = tuple([k if type(k) == slice else slice(k, k + 1) for k in key])
+    assert all([k.step is None for k in key])
+    top = [
+        grid.fdimensions[i] // grid.mpi[i] * grid.processor_coor[i]
+        if k.start is None
+        else k.start
+        for i, k in enumerate(key)
+    ]
+    bottom = [
+        grid.fdimensions[i] // grid.mpi[i] * (1 + grid.processor_coor[i])
+        if k.stop is None
+        else k.stop
+        for i, k in enumerate(key)
+    ]
+    assert all(
+        [
+            0 <= top[i] and top[i] <= bottom[i] and bottom[i] <= grid.fdimensions[i]
+            for i in range(nd)
+        ]
+    )
+
+    return cgpt.coordinates_from_cartesian_view(
+        top, bottom, grid.cb.cb_mask, cb.tag, "lexicographic"
+    )
+
+
+def map_tidx_and_shape(l, key):
+
+    # create shape of combined lattices
+    shapes = [x.otype.shape for x in l]
+    assert all([shapes[0][1:] == s[1:] for s in shapes[1:]])
+    shape = (sum([s[0] for s in shapes]),) + shapes[0][1:]
+    nd = len(shape)
+
+    # if key is None, numpy array of all indices
+    if key is None:
+        tidx = cgpt.coordinates_from_cartesian_view(
+            [0] * nd, list(shape), [0] * nd, gpt.none.tag, "reverse_lexicographic"
+        )
+        return tidx, shape
+
+    # if key is a list, convert to numpy array
+    if type(key) == list:
+        key = numpy.array(key, dtype=numpy.int32)
+
+    # if key is numpy array, no further processing needed
+    if type(key) == numpy.ndarray:
+        # Need to decide how to index tensor indices.  With lexicographical
+        return key, (len(key),)
+
+    # if not, we expect a tuple of either coordinates or slices
+    assert type(key) == tuple
+
+    # slices
+    key = tuple([k if type(k) == slice else slice(k, k + 1) for k in key])
+    assert all([k.step is None for k in key])
+    top = [0 if k.start is None else k.start for i, k in enumerate(key)]
+    bottom = [shape[i] if k.stop is None else k.stop for i, k in enumerate(key)]
+    assert all(
+        [
+            0 <= top[i] and top[i] <= bottom[i] and bottom[i] <= shape[i]
+            for i in range(nd)
+        ]
+    )
+    tidx = cgpt.coordinates_from_cartesian_view(
+        top, bottom, [0] * nd, gpt.none.tag, "reverse_lexicographic"
+    )
+    shape = tuple([bottom[i] - top[i] for i in range(nd)])
+    return tidx, shape
+
+
+def map_key(target, key):
+
+    # work on list of lattices
+    if type(target) == gpt.lattice:
+        return map_key([target], key)
+
+    # all lattices need to have the same grid and checkerboard
+    grid = target[0].grid
+    cb = target[0].checkerboard()
+    assert all([x.grid is grid for x in target[1:]]) and all(
+        [cb.tag == x.checkerboard().tag for x in target[1:]]
+    )
+
+    # special case to select all
+    if type(key) == slice and key == slice(None, None, None):
+        key = tuple([slice(None, None, None) for i in range(grid.nd)])
+
+    # split coordinate and tensor index descriptors
+    pos, tidx = split_key_to_coordinates_and_indices(grid, key)
+
+    # map out the positions and tensor indices
+    pos = map_pos(grid, cb, pos)
+    tidx, shape = map_tidx_and_shape(target, tidx)
+
+    # return triple of positions, tidx, and shape
+    return pos, tidx, shape
+
+
+def peek(target, key):
 
     if type(target) == gpt.lattice:
         return gpt.mview(target[key])
 
     elif type(target) == list:
-        v_obj=[ y for x in target for y in x.v_obj ]
-        return gpt.mview(cgpt.lattice_export(v_obj, key))
+
+        pos, tidx, shape = map_key(target, key)
+        v_obj = [y for x in target for y in x.v_obj]
+
+        return gpt.mview(cgpt.lattice_export(v_obj, pos, tidx, shape))
 
     else:
-        assert(0)
+        assert 0
 
 
-def poke(target,key,value):
+def poke(target, key, value):
 
-    assert(type(value) == memoryview)
+    assert type(value) == memoryview
 
     if type(target) == gpt.lattice:
-        target[key]=value
-    elif type(target) == list:
-        v_obj=[ y for x in target for y in x.v_obj ]
-        cgpt.lattice_import(v_obj, key, value)
-    else:
-        assert(0)
 
+        target[key] = value
+
+    elif type(target) == list:
+
+        pos, tidx, shape = map_key(target, key)
+        v_obj = [y for x in target for y in x.v_obj]
+
+        cgpt.lattice_import(v_obj, pos, tidx, value)
+
+    else:
+        assert 0
