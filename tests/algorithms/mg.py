@@ -9,33 +9,33 @@ import gpt as g
 import numpy as np
 import sys
 
-# load configuration
-precision = g.double
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], precision), g.random("test_slv"))
+# setup rng
+rng = g.random("test_mg")
+
+# setup gauge field
+U = g.qcd.gauge.random(g.grid([16, 16, 16, 16], g.double), rng)
 
 # use the gauge configuration grid
 grid_f = U[0].grid
-
-# create the coarse grid
-grid_c = g.grid([4, 4, 4, 4], grid_f.precision)
 
 # quark
 w_dp = g.qcd.fermion.wilson_clover(
     U,
     {
-        "kappa": 0.13565,
-        "csw_r": 2.0171 / 2,
-        "csw_t": 2.0171 / 2,
+        "mass": -0.2,
+        "csw_r": 1.0,
+        "csw_t": 1.0,
         "xi_0": 1,
         "nu": 1,
         "isAnisotropic": False,
-        "boundary_phases": [1.0, 1.0, 1.0, 1.0],
+        "boundary_phases": [1.0, 1.0, 1.0, -1.0],
     },
 )
 
 # create source
 src = g.vspincolor(grid_f)
 src[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
+# rng.cnormal(src)
 
 # create reference solution
 dst_cg_eone_none = g.copy(src)
@@ -51,22 +51,48 @@ w_sp = w_dp.converted(g.single)
 # if a scalar value (= not a list) is given, the parameter is broadcast to every level
 # specifying a list for a parameter instead enables explicit configuration of every level
 # the length of the lists must then be compatible with the number of grids (asserted inside)
-# more complicated parameters again are dictionaries
-mg_params = {
-    "grid": [grid_f, grid_c],
-    "northo": 2,
-    "nbasis": 10,
+mg_params_2lvl = {
+    "grid": [grid_f, g.block.grid(grid_f, [2, 2, 2, 2])],
+    "northo": 1,
+    "nbasis": 40,
     "hermitian": False,
     "savelinks": True,
     "vecstype": "test",
-    "presmooth": lambda mat: s.inv_eo(
-        p.eo2(mat), a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1})
-    ),
+    "presmooth": None,
     "postsmooth": lambda mat: s.inv_eo(
-        p.eo2(mat), a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1})
+        p.eo2(mat), a.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
     ),
     "coarsestsolve": lambda mat: s.inv_direct(
-        mat, a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1}),
+        mat, a.bicgstab({"eps": 5e-2, "maxiter": 50, "checkres": False}),
+    ),
+    "wrappersolve": None,
+    "setupsolve": lambda mat: s.inv_eo_ne(
+        p.eo2(mat), a.cg({"eps": 1e-3, "maxiter": 50, "checkres": False})
+    ),
+    "distribution": rng.cnormal,
+}
+mg_params_3lvl = {
+    "grid": [
+        grid_f,
+        g.block.grid(grid_f, [2, 2, 2, 2]),  # 2**4 blocking
+        g.block.grid(grid_f, [4, 4, 4, 4]),  # additional 2**4 -> 4**4 blocking
+    ],
+    "northo": 1,
+    "nbasis": 40,
+    "hermitian": False,
+    "savelinks": True,
+    "vecstype": "test",
+    "presmooth": None,
+    "postsmooth": [
+        lambda mat: s.inv_eo(
+            p.eo2(mat), a.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
+        ),
+        lambda mat: s.inv_direct(
+            mat, a.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
+        ),
+    ],
+    "coarsestsolve": lambda mat: s.inv_direct(
+        mat, a.bicgstab({"eps": 5e-2, "maxiter": 50, "checkres": False}),
     ),
     "wrappersolve": lambda mat, prec: s.inv_direct(
         mat,
@@ -80,14 +106,23 @@ mg_params = {
             }
         ),
     ),
-    "setupsolve": lambda mat: s.inv_eo_ne(
-        p.eo2(mat), a.cg({"eps": 1e-1, "maxiter": 50, "relax": 1})
-    ),
+    "setupsolve": [
+        lambda mat: s.inv_eo_ne(
+            p.eo2(mat), a.cg({"eps": 1e-3, "maxiter": 50, "checkres": False})
+        ),
+        lambda mat: s.inv_direct(
+            mat,
+            a.fgmres({"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}),
+        ),
+    ],
+    "distribution": [rng.cnormal, rng.zn],
 }
-g.message("multigrid parameters: ", mg_params)
+g.message("multigrid parameters 2lvl: ", mg_params_2lvl)
+g.message("multigrid parameters 3lvl: ", mg_params_3lvl)
 
-mg_prec = a.mg(w_dp, mg_params)
-mr_prec = a.mr({"eps": 1e-1, "maxiter": 16, "relax": 1})
+mg_prec_2lvl = a.mg(w_dp, mg_params_2lvl)
+mg_prec_3lvl = a.mg(w_dp, mg_params_3lvl)
+bicgstab_prec = a.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
 eo2_even_dp = p.eo2(w_dp, parity=g.even)
 
 # solver params
@@ -102,38 +137,19 @@ slvs = {
         "mat": p.eo2(w_dp),
         "alg": a.cg({"eps": eps, "maxiter": maxiter}),
     },
-    "bicgstab_eone_none": {
-        "inv": s.inv_eo_ne,
-        "mat": p.eo2(w_dp),
-        "alg": a.bicgstab({"eps": eps, "maxiter": maxiter}),
-    },
-    "fgcr_direct_none": {
+    "fgmres_direct_mg_2lvl": {
         "inv": s.inv_direct,
         "mat": w_dp,
-        "alg": a.fgcr(
-            {"eps": eps, "maxiter": maxiter, "restartlen": restartlen, "prec": None}
-        ),
-    },
-    "fgcr_direct_mg": {
-        "inv": s.inv_direct,
-        "mat": w_dp,
-        "alg": a.fgcr(
+        "alg": a.fgmres(
             {
                 "eps": eps,
                 "maxiter": maxiter,
                 "restartlen": restartlen,
-                "prec": s.inv_direct(w_dp, mg_prec),
+                "prec": s.inv_direct(w_dp, mg_prec_2lvl),
             }
         ),
     },
-    "fgmres_direct_none": {
-        "inv": s.inv_direct,
-        "mat": w_dp,
-        "alg": a.fgmres(
-            {"eps": eps, "maxiter": maxiter, "restartlen": restartlen, "prec": None}
-        ),
-    },
-    "fgmres_direct_mg": {
+    "fgmres_direct_mg_3lvl": {
         "inv": s.inv_direct,
         "mat": w_dp,
         "alg": a.fgmres(
@@ -141,11 +157,11 @@ slvs = {
                 "eps": eps,
                 "maxiter": maxiter,
                 "restartlen": restartlen,
-                "prec": s.inv_direct(w_dp, mg_prec),
+                "prec": s.inv_direct(w_dp, mg_prec_3lvl),
             }
         ),
     },
-    "fgmres_direct_mr": {
+    "fgmres_direct_bicgstab": {
         "inv": s.inv_direct,
         "mat": w_dp,
         "alg": a.fgmres(
@@ -153,7 +169,7 @@ slvs = {
                 "eps": eps,
                 "maxiter": maxiter,
                 "restartlen": restartlen,
-                "prec": s.inv_direct(w_dp, mr_prec),
+                "prec": s.inv_direct(w_dp, bicgstab_prec),
             }
         ),
     },
@@ -171,7 +187,7 @@ assert list(slvs.keys())[0] == "cg_eone_none"
 
 def test_slv(slv, name):
     global dst_cg_eone_none
-    print("Starting with solver %s" % name)
+    g.message(f"Starting with solver {name}")
     t0 = g.time()
     dst = g.eval(s.propagator(slv["inv"](slv["mat"], slv["alg"])) * src)
     if name == "cg_eone_none":
@@ -216,11 +232,20 @@ for k, v in timings.items():
         % (k, v, iters[k], resid[k], resid_cg_eone_none[k])
     )
 
-# print mg profiling
+# print 2lvl mg profiling
 g.message(
-    "Contributions to time spent in MG preconditioner (possibly accumulated for all mg solver instances with same preconditioner)"
+    "Contributions to time spent in 2lvl MG preconditioner (possibly accumulated for all mg solver instances with same preconditioner)"
 )
-for lvl in reversed(range(len(mg_prec.t_setup))):
-    mg_prec.t_setup[lvl].print()
-for lvl in reversed(range(len(mg_prec.t_solve))):
-    mg_prec.t_solve[lvl].print()
+for lvl in reversed(range(len(mg_prec_2lvl.t_setup))):
+    mg_prec_2lvl.t_setup[lvl].print()
+for lvl in reversed(range(len(mg_prec_2lvl.t_solve))):
+    mg_prec_2lvl.t_solve[lvl].print()
+
+# print 3lvl mg profiling
+g.message(
+    "Contributions to time spent in 3lvl MG preconditioner (possibly accumulated for all mg solver instances with same preconditioner)"
+)
+for lvl in reversed(range(len(mg_prec_3lvl.t_setup))):
+    mg_prec_3lvl.t_setup[lvl].print()
+for lvl in reversed(range(len(mg_prec_3lvl.t_solve))):
+    mg_prec_3lvl.t_solve[lvl].print()
