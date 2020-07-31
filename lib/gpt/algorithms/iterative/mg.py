@@ -59,6 +59,7 @@ class mg:
         self.postsmooth = make_param_list(params["postsmooth"], self.nlevel - 1)
         self.setupsolve = make_param_list(params["setupsolve"], self.nlevel - 1)
         self.wrappersolve = make_param_list(params["wrappersolve"], self.nlevel - 1)
+        self.distribution = make_param_list(params["distribution"], self.nlevel - 1)
         self.coarsestsolve = params["coarsestsolve"]
 
         # verbosity
@@ -92,6 +93,7 @@ class mg:
                 self.postsmooth,
                 self.setupsolve,
                 self.wrappersolve,
+                self.distribution,
                 self.nb,
             ],
             self.nlevel - 1,
@@ -109,9 +111,6 @@ class mg:
             g.timer("mg_solve_lvl_%d" % (lvl)) for lvl in range(self.nlevel)
         ]
 
-        # rng
-        self.rng = g.random("multigrid")
-
         # temporary vectors for solve
         self.r, self.e = [None] * self.nlevel, [None] * self.nlevel
         for lvl in range(self.finest + 1, self.nlevel):
@@ -123,7 +122,7 @@ class mg:
         # matrices (coarse ones initialized later)
         self.mat = [mat_f] + [None] * (self.nlevel - 1)
 
-        # setup basis vectors on all levels but coarsest
+        # setup random basis vectors on all levels but coarsest
         self.basis = [None] * self.nlevel
         for lvl, grid in enumerate(self.grid):
             if lvl == self.coarsest:
@@ -135,7 +134,7 @@ class mg:
                     g.vcomplex(grid, self.nbasis[self.nf_lvl[lvl]])
                     for __ in range(self.nbasis[lvl])
                 ]
-        self.rng.cnormal(self.basis)
+            self.distribution[lvl](self.basis[lvl][0 : self.nb[lvl]])
 
         # setup coarse link fields on all levels but finest
         self.A = [None] * self.nlevel
