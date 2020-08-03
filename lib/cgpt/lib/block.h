@@ -27,7 +27,6 @@ template<class vobj,class CComplex,int nbasis,class VLattice>
   Lattice<iScalar<CComplex>> ip(coarse);
   Lattice<vobj>     fineDataRed = fineData;
 
-  //  auto fineData_   = fineData.View();
   autoView( coarseData_ , coarseData, AcceleratorWrite);
   autoView( ip_         , ip,         AcceleratorWrite);
   for(int v=0;v<nbasis;v++) {

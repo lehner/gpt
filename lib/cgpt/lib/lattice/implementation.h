@@ -82,7 +82,7 @@ public:
 
   // ac == { true : add result to dst, false : replace dst }
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) {
-    if (typeid(T) == typeid(iSinglet<vCoeff_t>)) {
+    if (typeid(T) == typeid(iSinglet<vCoeff_t>) && b->type() != type()) {
       // singlet multiplication always commutes, can save half cost of instantiation
       return b->mul(dst,ac,this,unary_b,unary_a,unary_expr);
     }

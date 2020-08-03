@@ -19,17 +19,20 @@ template<class T>        struct isSpuriousGridScalar<iScalar<iSinglet<T>>>    : 
 
 // Remove spurious iScalar
 template<typename vobj> 
+accelerator_inline
 iSinglet<vobj> TensorToSinglet(const iScalar<iSinglet<vobj>>& a) {
   return a._internal;
 }
 
 template<typename T1, typename std::enable_if<!isSpuriousGridScalar<T1>::value, T1>::type* = nullptr> 
+accelerator_inline
 T1 TensorToSinglet(const T1& a) {
   return a;
 }
 
 // Make scalar
 template<typename T>
+accelerator_inline
 iScalar<T> TensorMakeScalar(const T& a) {
   iScalar<T> ret;
   ret._internal = a;
