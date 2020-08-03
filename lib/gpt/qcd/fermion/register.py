@@ -23,3 +23,6 @@ def register(reg, op):
     reg.ExportPhysicalFermionSource = lambda dst, src: op.apply_unary_operator(
         2015, dst, src
     )
+    reg.Mdir = lambda dst, src, dir, disp: op.apply_dirdisp_operator(
+        3001, dst, src, dir, disp
+    )

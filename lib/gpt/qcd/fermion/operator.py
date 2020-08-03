@@ -73,11 +73,7 @@ class operator(gpt.matrix_operator):
         class registry:
             pass
 
-        class registry_dd:
-            pass
-
         gpt.qcd.fermion.register(registry, self)
-        gpt.qcd.fermion.register_dirdisp(registry_dd, self)
 
         # map Grid matrix operations to clean matrix_operator structure
         super().__init__(
@@ -128,7 +124,7 @@ class operator(gpt.matrix_operator):
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
         self.Mdir = gpt.matrix_operator(
-            mat=registry_dd.Mdir, otype=otype, grid=self.F_grid
+            mat=registry.Mdir, otype=otype, grid=self.F_grid
         )
 
     def __del__(self):
@@ -237,11 +233,7 @@ class coarse_operator(gpt.matrix_operator):
         class registry:
             pass
 
-        class registry_dd:
-            pass
-
         gpt.qcd.fermion.register(registry, self)
-        gpt.qcd.fermion.register_dirdisp(registry_dd, self)
 
         # map Grid matrix operations to clean matrix_operator structure
         super().__init__(
@@ -266,7 +258,7 @@ class coarse_operator(gpt.matrix_operator):
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
         self.Mdir = gpt.matrix_operator(
-            mat=registry_dd.Mdir, otype=otype, grid=self.F_grid
+            mat=registry.Mdir, otype=otype, grid=self.F_grid
         )
 
     def __del__(self):
