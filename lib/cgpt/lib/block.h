@@ -84,6 +84,59 @@ inline void vectorBlockOrthonormalize(Lattice<CComplex> &ip,std::vector<VLattice
   }
 }
 
+template<class vobj,class CComplex>
+inline void blockMaskedInnerProductGPT(Lattice<CComplex> &coarseInner,
+				    const Lattice<CComplex> &fineMask,
+				    const Lattice<vobj> &fineX,
+				    const Lattice<vobj> &fineY)
+{
+  GridBase * fine  = fineX.Grid();
+  GridBase * coarse= coarseInner.Grid();
+  int  _ndimension = coarse->_ndimension;
+
+  // checks
+  subdivides(coarse,fine);
+  conformable(fineX, fineY);
+
+  Coordinate block_r      (_ndimension);
+
+  for(int d=0 ; d<_ndimension;d++){
+    block_r[d] = fine->_rdimensions[d] / coarse->_rdimensions[d];
+    assert(block_r[d]*coarse->_rdimensions[d] == fine->_rdimensions[d]);
+  }
+  int blockVol = fine->oSites()/coarse->oSites();
+
+  coarseInner=Zero();
+  typename CComplex::scalar_type zz = {0., 0.};
+
+  auto fineX_v   = fineX.AcceleratorView(ViewRead);
+  auto fineY_v   = fineY.AcceleratorView(ViewRead);
+  auto fineMask_v   = fineMask.AcceleratorView(ViewRead);
+  auto coarseInner_v = coarseInner.AcceleratorView(ViewWrite);
+
+  accelerator_for( sc, coarse->oSites(), vobj::Nsimd(), {
+    Coordinate coor_c(_ndimension);
+    Lexicographic::CoorFromIndex(coor_c,sc,coarse->_rdimensions);  // Block coordinate
+
+    int sf;
+    decltype(innerProduct(fineX_v(sf),fineY_v(sf))) reduce=Zero();
+
+    for(int sb=0;sb<blockVol;sb++){
+      Coordinate coor_b(_ndimension);
+      Coordinate coor_f(_ndimension);
+
+      Lexicographic::CoorFromIndex(coor_b,sb,block_r);
+      for(int d=0;d<_ndimension;d++) coor_f[d]=coor_c[d]*block_r[d]+coor_b[d];
+      Lexicographic::IndexFromCoor(coor_f,sf,fine->_rdimensions);
+
+      if(Reduce(TensorRemove(fineMask_v(sf))) != zz)
+        reduce = reduce + innerProduct(fineX_v(sf),fineY_v(sf));
+    }
+    convertType(coarseInner_v[sc], TensorRemove(reduce));
+  });
+  return;
+}
+
 
 template<typename T>
 void cgpt_block_project(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _basis) {
