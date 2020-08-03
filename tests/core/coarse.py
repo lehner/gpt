@@ -157,8 +157,8 @@ mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
 
 # setup coarse vectors
 vec_out_c = g.lattice(basis_c[0])
-vec_in_c[:] = 0
-vec_out_c[:] = 0
+vec_in_c[:] = 0.0
+vec_out_c[:] = 0.0
 
 # setup coarse coarse vectors
 vec_in_cc = g.vcomplex(grid_cc, nbasis_c)
@@ -191,3 +191,51 @@ g.message(
 )
 assert err2 <= tol_operator
 g.message("Test passed for coarse coarse operator, %e <= %e" % (err2, tol_operator))
+
+# Done with chaining tests, now test ET against Grid on coarse grid ###########
+
+# setup fields
+rng.cnormal(A_c)
+mat_c = g.qcd.fermion.coarse(A_c, {"level": 0,},)
+vec_out_link_c, vec_out_mat_c = g.lattice(vec_in_c), g.lattice(vec_in_c)
+vec_out_link_c[:] = 0.0
+vec_out_link_c[:] = 0.0
+rng.cnormal(vec_in_c)
+
+# apply the link matrix
+vec_out_link_c @= A_c[8] * vec_in_c
+mat_c.Mdir(
+    vec_out_mat_c, vec_in_c, 0, 0
+)  # exploit the self coupling link, this uses Grid
+
+# define check tolerance
+tol = 0.0
+
+# report error
+diff2 = g.norm2(vec_out_link_c - vec_out_mat_c)
+assert diff2 == tol
+g.message("Test passed for coarse links, %e == %e" % (diff2, tol))
+
+# Test ET against Grid on coarse coarse grid ##################################
+
+# setup fields
+rng.cnormal(A_cc)
+mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
+vec_out_link_cc, vec_out_mat_cc = g.lattice(vec_in_cc), g.lattice(vec_in_cc)
+vec_out_link_cc[:] = 0.0
+vec_out_link_cc[:] = 0.0
+rng.cnormal(vec_in_cc)
+
+# apply the link matrix
+vec_out_link_cc @= A_cc[8] * vec_in_cc
+mat_cc.Mdir(
+    vec_out_mat_cc, vec_in_cc, 0, 0
+)  # exploit the self coupling link, this uses Grid
+
+# define check tolerance
+tol = 0.0
+
+# report error
+diff2 = g.norm2(vec_out_link_cc - vec_out_mat_cc)
+assert diff2 == tol
+g.message("Test passed for coarse coarse links, %e == %e" % (diff2, tol))

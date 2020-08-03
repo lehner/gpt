@@ -35,7 +35,6 @@ for f in \
     ${test_path}/core/split.py \
     ${test_path}/core/other_reps.py \
     ${test_path}/core/blockmask.py \
-    ${test_path}/core/coarse_link_matrix.py \
     ${test_path}/core/coarse.py \
     ${test_path}/random/random-simple.py \
     ${test_path}/qcd/a2a.py \
