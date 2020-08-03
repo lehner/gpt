@@ -101,8 +101,8 @@ def create_links(A, fmat, basis, params):
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
         t("apply_self")
         tmp @= (
-            blockevenmask * fmat.M * vr * blockevenmask
-            + blockoddmask * fmat.M * vr * blockoddmask
+            blockevenmask * fmat * vr * blockevenmask
+            + blockoddmask * fmat * vr * blockoddmask
         )
 
         # coarsen diagonal term

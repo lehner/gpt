@@ -100,11 +100,11 @@ vec_out_constructed_c[:] = 0.0
 dt_chained, dt_constructed = 0.0, 0.0
 dt_chained -= g.time()
 g.block.promote(vec_in_c, vec_in_f, basis_f)
-mat_f.M(vec_out_f, vec_in_f)
+mat_f(vec_out_f, vec_in_f)
 g.block.project(vec_out_chained_c, vec_out_f, basis_f)
 dt_chained += g.time()
 dt_constructed -= g.time()
-mat_c.M(vec_out_constructed_c, vec_in_c)
+mat_c(vec_out_constructed_c, vec_in_c)
 dt_constructed += g.time()
 
 g.message("Timings: chained = %e, constructed = %e" % (dt_chained, dt_constructed))
@@ -172,11 +172,11 @@ vec_out_constructed_cc[:] = 0.0
 dt_chained, dt_constructed = 0.0, 0.0
 dt_chained -= g.time()
 g.block.promote(vec_in_cc, vec_in_c, basis_c)
-mat_c.M(vec_out_c, vec_in_c)
+mat_c(vec_out_c, vec_in_c)
 g.block.project(vec_out_chained_cc, vec_out_c, basis_c)
 dt_chained += g.time()
 dt_constructed -= g.time()
-mat_cc.M(vec_out_constructed_cc, vec_in_cc)
+mat_cc(vec_out_constructed_cc, vec_in_cc)
 dt_constructed += g.time()
 
 g.message("Timings: chained = %e, constructed = %e" % (dt_chained, dt_constructed))
