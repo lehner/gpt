@@ -37,9 +37,10 @@ src = g.mspincolor(grid)
 g.create.point(src, [0, 0, 0, 0])
 
 # build solver
-s = g.qcd.fermion.solver
-cg = g.algorithms.iterative.cg({"eps": 1e-6, "maxiter": 200})
-slv = s.propagator(s.inv_eo_ne(g.qcd.fermion.preconditioner.eo2(w), cg))
+pc = g.qcd.fermion.preconditioner
+inv = g.algorithms.inverter
+cg = inv.cg({"eps": 1e-6, "maxiter": 200})
+slv = w.propagator(inv.preconditioned(pc.eo2_ne(), cg))
 
 # propagator
 dst = g.mspincolor(grid)

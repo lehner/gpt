@@ -20,7 +20,7 @@ import gpt as g
 import sys
 
 
-class defect_correcting_inverter:
+class defect_correcting:
 
     #
     # Less numerically stable (leads to suppression of critical low-mode space before inner_mat^{-1}):
@@ -61,18 +61,18 @@ class defect_correcting_inverter:
     #
 
     @g.params_convention(eps=1e-15, maxiter=1000000)
-    def __init__(self, inner_inv, params):
+    def __init__(self, inner_inverter, params):
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.history = None
-        self.inner_inv = inner_inv
+        self.inner_inverter = inner_inverter
 
     def __call__(self, outer_mat):
-        def inv(psi, src):
 
-            # inner inverter
-            inner_inv = self.inner_inv
+        inner_inv_mat = self.inner_inverter(outer_mat)
+
+        def inv(psi, src):
 
             # verbosity
             verbose = g.default.is_verbose("dci")
@@ -87,7 +87,7 @@ class defect_correcting_inverter:
 
                 # correction step
                 t0 = g.time()
-                _d = g.eval(inner_inv * _s)
+                _d = g.eval(inner_inv_mat * _s)
                 t1 = g.time()
                 _s -= outer_mat * _d
                 t2 = g.time()

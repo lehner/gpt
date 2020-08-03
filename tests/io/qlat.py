@@ -4,26 +4,30 @@
 #          Christoph Lehner 2020
 #
 import sys
+import os
 import gpt
 import numpy
-import os
-from urllib import request
 
-baseurl = "https://github.com/waterret/Qlattice"
-path = "examples/propagators/sample-results/test-4nt8/results=1000/"
+# workdir
+if "WORK_DIR" in os.environ:
+    work_dir = os.environ["WORK_DIR"]
+else:
+    work_dir = "."
 
-# download reference files for unit testing
-# for f in ['psrc-prop-0.field','pion-corr.txt']:
-#    if gpt.rank()==0:
-#        fname, header = request.urlretrieve(f'{baseurl}/raw/master/{path}/{f}', filename=f'./{f}')
-#    gpt.barrier()
+# request test files
+files = ["psrc-prop-0.field", "pion-corr.txt"]
+for f in files:
+    gpt.repository.load(f"{work_dir}/{f}", f"gpt://tests/io/qlat/{f}")
 
-prop = gpt.load("./psrc-prop-0.field")
+# load field
+prop = gpt.load(f"{work_dir}/psrc-prop-0.field")
 gpt.message("Grid from qlat propagator =", prop.grid)
 
+# calculate correlator
 corr_pion = gpt.slice(gpt.trace(gpt.adj(prop) * prop), 3)
 
-with open("./pion-corr.txt", "r") as f:
+# load reference
+with open(f"{work_dir}/pion-corr.txt", "r") as f:
     txt = f.readlines()
 
 # read lines corresponding to real part of time slices and
@@ -35,8 +39,3 @@ for i in range(8):
     gpt.message("Time slice %d difference %g" % (i, diff))
 
 gpt.message("Test successful")
-
-# remove reference files
-# for f in ['psrc-prop-0.field','pion-corr.txt']:
-#    if gpt.rank()==0:
-#        os.remove(f'./{f}')

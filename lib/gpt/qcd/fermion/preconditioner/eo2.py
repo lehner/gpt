@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
+from gpt.params import params_convention
 
 # First EO preconditioning (upper triangular left)
 #
@@ -36,7 +37,9 @@ import gpt
 #        ( EE^-1              0     )  ( (N^dag N)^-1 N^dag   0 )  ( 1   - EO OO^-1 )
 #      = ( -OO^-1 OE EE^-1    OO^-1 )  ( 0                    1 )  ( 0       1      )
 #
-# M^-1 = L (N^dag N)^-1 R + S
+# M^-1 = L (N^dag N)^-1 R + S    for eo2_ne
+# M^-1 = L N^-1 R + S            for eo2
+# M^-1 = L Mpc^-1 R + S          general form
 #
 # R = N^dag ( 1   - EO OO^-1 ) ; R^dag = (1 - EO OO^-1)^dag N
 #
@@ -52,16 +55,20 @@ import gpt
 #
 
 
-class eo2:
-    def __init__(self, op, parity=None):
+class eo2_base:
+    def __init__(self, op, parity):
         self.op = op
-        self.otype = op.otype
+        self.otype = op.otype[0]
         self.parity = gpt.odd if parity is None else parity
         self.F_grid_eo = op.F_grid_eo
         self.F_grid = op.F_grid
         self.U_grid = op.U_grid
         self.tmp = gpt.lattice(self.F_grid_eo, self.otype)
         self.tmp2 = gpt.lattice(self.F_grid_eo, self.otype)
+        self.in_p = gpt.lattice(self.F_grid_eo, self.otype)
+        self.in_np = gpt.lattice(self.F_grid_eo, self.otype)
+        self.out_p = gpt.lattice(self.F_grid_eo, self.otype)
+        self.out_np = gpt.lattice(self.F_grid_eo, self.otype)
         self.ImportPhysicalFermionSource = self.op.ImportPhysicalFermionSource
         self.ExportPhysicalFermionSolution = self.op.ExportPhysicalFermionSolution
         self.Dminus = self.op.Dminus
@@ -85,9 +92,33 @@ class eo2:
             _N(self.tmp, ip)
             _NDag(op, self.tmp)
 
+        def _L(o, ip):
+            self.op.Mooee.inv_mat(self.out_p, ip)
+            self.op.Meooe.mat(self.tmp, self.out_p)
+            self.op.Mooee.inv_mat(self.out_np, self.tmp)
+            self.out_np @= -self.out_np
+            self.export_parity(o)
+
+        def _S(o, i):
+            self.import_parity(i)
+            self.op.Mooee.inv_mat(self.out_np, self.in_np)
+            self.out_p[:] = 0
+            self.out_p.checkerboard(self.parity)
+            self.export_parity(o)
+
+        self.L = gpt.matrix_operator(
+            mat=_L,
+            otype=op.otype,
+            grid=(self.F_grid, self.F_grid_eo),
+            cb=(None, self.parity),
+        )
+
+        self.S = gpt.matrix_operator(mat=_S, otype=op.otype, grid=self.F_grid,)
+
         self.N = gpt.matrix_operator(
             mat=_N, adj_mat=_NDag, otype=op.otype, grid=self.F_grid_eo, cb=self.parity
         )
+
         self.NDagN = gpt.matrix_operator(
             mat=_NDagN,
             adj_mat=_NDagN,
@@ -96,42 +127,78 @@ class eo2:
             cb=self.parity,
         )
 
-    def import_parity(self, e, o):
-        if self.parity is gpt.odd:
-            return o, e
-        return e, o
+    def import_parity(self, i):
+        gpt.pick_cb(self.parity, self.in_p, i)
+        gpt.pick_cb(self.parity.inv(), self.in_np, i)
 
-    def R(self, op, ie, io):
-        ip, inp = self.import_parity(ie, io)
-        self.op.Mooee.inv_mat(self.tmp, inp)
-        self.op.Meooe.mat(op, self.tmp)
-        self.tmp @= ip - op
-        self.N.adj_mat(op, self.tmp)
+    def export_parity(self, o):
+        gpt.set_cb(o, self.out_p)
+        gpt.set_cb(o, self.out_np)
 
-    def RDag(self, oe, oo, ip):
-        op, onp = self.import_parity(oe, oo)
-        # R^dag = (1 - EO OO^-1)^dag N
-        self.N.mat(onp, ip)
-        self.op.Meooe.adj_mat(self.tmp, onp)
-        self.op.Mooee.adj_inv_mat(op, self.tmp)
-        op @= -op
 
-    def P(self, op, ie, io):
-        ip, inp = self.import_parity(ie, io)
-        self.op.Mooee.inv_mat(self.tmp, inp)
-        self.op.Meooe.mat(op, self.tmp)
-        op @= ip - op
+class eo2_ne_instance(eo2_base):
+    def __init__(self, op, parity):
+        super().__init__(op, parity)
 
-    def L(self, oe, oo, ip):
-        op, onp = self.import_parity(oe, oo)
-        self.op.Mooee.inv_mat(op, ip)
-        self.op.Meooe.mat(self.tmp, op)
-        self.op.Mooee.inv_mat(onp, self.tmp)
-        onp @= -onp
+        def _R(op, i):
+            self.import_parity(i)
+            self.op.Mooee.inv_mat(self.tmp, self.in_np)
+            self.op.Meooe.mat(op, self.tmp)
+            self.tmp @= self.in_p - op
+            self.N.adj_mat(op, self.tmp)
 
-    def S(self, oe, oo, ie, io):
-        ip, inp = self.import_parity(ie, io)
-        op, onp = self.import_parity(oe, oo)
-        self.op.Mooee.inv_mat(onp, inp)
-        op[:] = 0
-        op.checkerboard(self.parity)
+        def _RDag(o, ip):
+            # R^dag = (1 - EO OO^-1)^dag N
+            self.N.mat(self.out_np, ip)
+            self.op.Meooe.adj_mat(self.tmp, self.out_np)
+            self.op.Mooee.adj_inv_mat(self.out_p, self.tmp)
+            self.out_p @= -self.out_p
+            self.export_parity(o)
+
+        self.R = gpt.matrix_operator(
+            mat=_R,
+            adj_mat=_RDag,
+            otype=op.otype,
+            grid=(self.F_grid_eo, self.F_grid),
+            cb=(self.parity, None),
+        )
+
+        self.Mpc = self.NDagN
+
+
+class eo2_ne:
+    @params_convention(parity=None)
+    def __init__(self, params):
+        self.params = params
+
+    def __call__(self, op):
+        return eo2_ne_instance(op, self.params["parity"])
+
+
+class eo2_instance(eo2_base):
+    def __init__(self, op, parity):
+        super().__init__(op, parity)
+
+        def _R(op, i):
+            self.import_parity(i)
+            self.op.Mooee.inv_mat(self.tmp, self.in_np)
+            self.op.Meooe.mat(op, self.tmp)
+            op @= self.in_p - op
+
+        self.R = gpt.matrix_operator(
+            mat=_R,
+            otype=op.otype,
+            grid=(self.F_grid_eo, self.F_grid),
+            cb=(self.parity, None),
+        )
+
+        self.Mpc = self.N
+
+
+class eo2:
+    @params_convention(parity=None)
+    def __init__(self, params):
+        self.params = params
+
+    def __call__(self, op):
+        return eo2_instance(op, self.params["parity"])

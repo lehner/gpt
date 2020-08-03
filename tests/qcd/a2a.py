@@ -39,7 +39,6 @@ q = g.qcd.fermion.zmobius(
 )
 
 # shortcuts
-s = g.qcd.fermion.solver
 pc = g.qcd.fermion.preconditioner
 
 # random vectors on F_grid_eo
@@ -63,42 +62,39 @@ exp = q.ExportPhysicalFermionSolution
 imp = q.ImportPhysicalFermionSource
 
 for p, tag in [
-    (g.qcd.fermion.preconditioner.eo1(q, parity=g.odd), "eo1-odd"),
-    (g.qcd.fermion.preconditioner.eo2(q, parity=g.odd), "eo2-odd"),
-    (g.qcd.fermion.preconditioner.eo1(q, parity=g.even), "eo1-even"),
-    (g.qcd.fermion.preconditioner.eo2(q, parity=g.even), "eo2-even"),
+    (pc.eo1_ne(parity=g.odd), "eo1-odd"),
+    (pc.eo2_ne(parity=g.odd), "eo2-odd"),
+    (pc.eo1_ne(parity=g.even), "eo1-even"),
+    (pc.eo2_ne(parity=g.even), "eo2-even"),
 ]:
     g.message("Test", tag)
 
     for x in evec:
-        x.checkerboard(p.parity)
+        x.checkerboard(p.params["parity"])
 
-    a2a = s.a2a_eo_ne(p)
-    lma_unphysical = s.inv_eo_ne(
-        p, g.algorithms.approx.modes(evec, evec, evals, lambda x: 1.0 / x)
+    p_q = p(q)
+    a2a_p = g.algorithms.modes.a2a(pc.physical(p)(q))
+    a2a_u = g.algorithms.modes.a2a(p_q)
+    lma_unphysical = g.algorithms.inverter.preconditioned(
+        p, g.algorithms.modes.modes(evec, evec, evals, lambda x: 1.0 / x)
     )
-    lma_physical = s.propagator(lma_unphysical)
+    lma_physical = q.propagator(lma_unphysical)
 
     #########
     # unphysical test (5d for domain wall)
-    dst_lma = g.eval(lma_unphysical * F_src)
+    dst_lma = g.eval(lma_unphysical(q) * F_src)
 
     # reconstruct by hand
-    a2a_unphysical = g.algorithms.approx.modes(
-        [a2a.v_unphysical(x) for x in evec],
-        [a2a.w_unphysical(x) for x in evec],
+    a2a_unphysical = g.algorithms.modes.modes(
+        [a2a_u.v(x) for x in evec],
+        [a2a_u.w(x) for x in evec],
         evals,
         lambda x: 1.0 / x,
     )()
     dst_a2a = g.eval(a2a_unphysical * F_src)
 
     # add the contact term
-    g.pick_cb(g.even, ie, F_src)
-    g.pick_cb(g.odd, io, F_src)
-    p.S(oe, oo, ie, io)
-    S_dst = g.vspincolor(q.F_grid)
-    g.set_cb(S_dst, oe)
-    g.set_cb(S_dst, oo)
+    S_dst = g.eval(p_q.S * F_src)
     dst_a2a += S_dst
 
     eps2 = g.norm2(dst_lma - dst_a2a) / g.norm2(dst_lma)
@@ -115,19 +111,13 @@ for p, tag in [
     dst_lma = g.eval(lma_physical * U_src)
 
     # reconstruct by hand
-    a2a_physical = g.algorithms.approx.modes(
-        [a2a.v(x) for x in evec], [a2a.w(x) for x in evec], evals, lambda x: 1.0 / x
+    a2a_physical = g.algorithms.modes.modes(
+        [a2a_p.v(x) for x in evec], [a2a_p.w(x) for x in evec], evals, lambda x: 1.0 / x
     )()
     dst_a2a = g.eval(a2a_physical * U_src)
 
     # add the contact term
-    F_src_inner = g.eval(imp * U_src)
-    g.pick_cb(g.even, ie, F_src_inner)
-    g.pick_cb(g.odd, io, F_src_inner)
-    p.S(oe, oo, ie, io)
-    g.set_cb(S_dst, oe)
-    g.set_cb(S_dst, oo)
-    S_dst = g.eval(exp * S_dst)
+    S_dst = g.eval(exp * p_q.S * imp * U_src)
     dst_a2a += S_dst
 
     eps2 = g.norm2(dst_lma - dst_a2a) / g.norm2(dst_lma)

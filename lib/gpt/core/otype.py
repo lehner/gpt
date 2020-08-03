@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020 Tilo Wettig
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -150,17 +151,21 @@ class ot_matrix_su3_fundamental(ot_matrix_color):
         }
 
     def generators(self, dt):
+        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
         return [
-            numpy.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[1, 0, 0], [0, -1, 0], [0, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, 0, 1], [0, 0, 0], [1, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, 0, -1j], [0, 0, 0], [1j, 0, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, 0, 0], [0, 0, 1], [0, 1, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt) / 2.0,
-            numpy.array([[1, 0, 0], [0, 1, 0], [0, 0, -2]], dtype=dt)
-            / (3.0) ** 0.5
-            / 2.0,
+            matrix_su3_fundamental(i)
+            for i in [
+                numpy.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[1, 0, 0], [0, -1, 0], [0, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, 1], [0, 0, 0], [1, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, -1j], [0, 0, 0], [1j, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, 0], [0, 0, 1], [0, 1, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt) / 2.0,
+                numpy.array([[1, 0, 0], [0, 1, 0], [0, 0, -2]], dtype=dt)
+                / (3.0) ** 0.5
+                / 2.0,
+            ]
         ]
 
 
@@ -185,10 +190,14 @@ class ot_matrix_su2_fundamental(ot_matrix_color):
 
     def generators(self, dt):
         # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
+        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
         return [
-            numpy.array([[0, 1], [1, 0]], dtype=dt) / 2.0,
-            numpy.array([[0, -1j], [1j, 0]], dtype=dt) / 2.0,
-            numpy.array([[1, 0], [0, -1]], dtype=dt) / 2.0,
+            matrix_su2_fundamental(i)
+            for i in [
+                numpy.array([[0, 1], [1, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, -1j], [1j, 0]], dtype=dt) / 2.0,
+                numpy.array([[1, 0], [0, -1]], dtype=dt) / 2.0,
+            ]
         ]
 
 
@@ -212,11 +221,15 @@ class ot_matrix_su2_adjoint(ot_matrix_color):
         }
 
     def generators(self, dt):
-        # (T_i)_{kj} = c^k_{ij} with c^k_{ij} = i \epsilon_{ijk}
+        # (T_i)_{kj} = c^k_{ij} with c^k_{ij} = i \epsilon_{ijk} / 2
+        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
         return [
-            numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt),
-            numpy.array([[0, 0, 1j], [0, 0, 0], [-1j, 0, 0]], dtype=dt),
-            numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt),
+            matrix_su2_adjoint(i)
+            for i in [
+                numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, 0, 1j], [0, 0, 0], [-1j, 0, 0]], dtype=dt) / 2.0,
+                numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
+            ]
         ]
 
 
@@ -362,12 +375,6 @@ class ot_vsinglet4(ot_base):
     v_otype = ["ot_vsinglet4"]
 
 
-# class ot_vsinglet5(ot_base):
-#     nfloats = 2 * 5
-#     shape = (5,)
-#     v_otype = ["ot_vsinglet5"]
-
-
 class ot_vsinglet10(ot_base):
     nfloats = 2 * 10
     shape = (10,)
@@ -377,7 +384,6 @@ class ot_vsinglet10(ot_base):
 class ot_vsinglet(ot_base):
     fundamental = {
         4: ot_vsinglet4,
-        # 5: ot_vsinglet5,
         10: ot_vsinglet10,
     }
 
@@ -420,12 +426,6 @@ class ot_msinglet4(ot_base):
     v_otype = ["ot_msinglet4"]
 
 
-# class ot_msinglet5(ot_base):
-#     nfloats = 2 * 5 * 5
-#     shape = (5, 5)
-#     v_otype = ["ot_msinglet5"]
-
-
 class ot_msinglet10(ot_base):
     nfloats = 2 * 10 * 10
     shape = (10, 10)
@@ -435,7 +435,6 @@ class ot_msinglet10(ot_base):
 class ot_msinglet(ot_base):
     fundamental = {
         4: ot_msinglet4,
-        # 5: ot_msinglet5,
         10: ot_msinglet10,
     }
 

@@ -17,9 +17,10 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
+from gpt.params import params_convention
 
 
-class operator:
+class operator(gpt.matrix_operator):
     def __init__(self, name, U, params, Ls=None, otype=None):
 
         # keep constructor parameters
@@ -27,7 +28,6 @@ class operator:
         self.U = U
         self.params_constructor = params
         self.Ls = Ls
-        self.otype = otype
 
         # derived objects
         self.U_grid = U[0].grid
@@ -80,7 +80,7 @@ class operator:
         gpt.qcd.fermion.register_dirdisp(registry_dd, self)
 
         # map Grid matrix operations to clean matrix_operator structure
-        self.M = gpt.matrix_operator(
+        super().__init__(
             mat=registry.M, adj_mat=registry.Mdag, otype=otype, grid=self.F_grid
         )
         self.Meooe = gpt.matrix_operator(
@@ -127,7 +127,6 @@ class operator:
         self.G5M = gpt.matrix_operator(
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
-
         self.Mdir = gpt.matrix_operator(
             mat=registry_dd.Mdir, otype=otype, grid=self.F_grid
         )
@@ -135,24 +134,35 @@ class operator:
     def __del__(self):
         cgpt.delete_fermion_operator(self.obj)
 
-    def converted(self, dst_precision):
-        if dst_precision == self.U[0].grid.precision:
-            return self
+    def updated(self, U):
         return operator(
             name=self.name,
-            U=gpt.convert(self.U, dst_precision),
+            U=U,
             params=self.params_constructor,
             Ls=self.Ls,
-            otype=self.otype,
+            otype=self.otype[0],
         )
 
-    def unary(self, opcode, o, i):
+    def converted(self, dst_precision):
+        return self.updated(gpt.convert(self.U, dst_precision))
+
+    @params_convention()
+    def modified(self, params):
+        return operator(
+            name=self.name,
+            U=self.U,
+            params={**self.params_constructor, **params},
+            Ls=self.Ls,
+            otype=self.otype[0],
+        )
+
+    def apply_unary_operator(self, opcode, o, i):
         assert len(i.v_obj) == 1
         assert len(o.v_obj) == 1
         # Grid has different calling conventions which we adopt in cgpt:
         return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj[0], o.v_obj[0])
 
-    def dirdisp(self, opcode, o, i, dir, disp):
+    def apply_dirdisp_operator(self, opcode, o, i, dir, disp):
         assert len(i.v_obj) == 1
         assert len(o.v_obj) == 1
         # Grid has different calling conventions which we adopt in cgpt:
@@ -161,11 +171,25 @@ class operator:
         )
 
     def _G5M(self, dst, src):
-        self.M(dst, src)
+        self(dst, src)
         dst @= gpt.gamma[5] * dst
 
+    def propagator(self, solver):
+        exp = self.ExportPhysicalFermionSolution
+        imp = self.ImportPhysicalFermionSource
 
-class coarse_operator:
+        inv_matrix = solver(self)
+
+        def prop(dst_sc, src_sc):
+            inv_matrix(dst_sc, gpt.eval(imp * src_sc))
+            dst_sc @= exp * dst_sc
+
+        return gpt.matrix_operator(
+            prop, otype=(exp.otype[0], imp.otype[1]), grid=(exp.grid[0], imp.grid[1])
+        )
+
+
+class coarse_operator(gpt.matrix_operator):
     def __init__(self, A, params, Ls=None, otype=None):
 
         # keep constructor parameters
@@ -219,10 +243,10 @@ class coarse_operator:
         gpt.qcd.fermion.register(registry, self)
         gpt.qcd.fermion.register_dirdisp(registry_dd, self)
 
-        self.M = gpt.matrix_operator(
+        # map Grid matrix operations to clean matrix_operator structure
+        super().__init__(
             mat=registry.M, adj_mat=registry.Mdag, otype=otype, grid=self.F_grid
         )
-
         self.ImportPhysicalFermionSource = gpt.matrix_operator(
             registry.ImportPhysicalFermionSource,
             otype=otype,
@@ -238,6 +262,9 @@ class coarse_operator:
             otype=otype,
             grid=(self.A_grid, self.F_grid),
         )
+        self.G5M = gpt.matrix_operator(
+            lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
+        )
         self.Mdir = gpt.matrix_operator(
             mat=registry_dd.Mdir, otype=otype, grid=self.F_grid
         )
@@ -246,7 +273,29 @@ class coarse_operator:
         for elem in self.obj:
             cgpt.delete_fermion_operator(elem)
 
-    def unary(self, opcode, o, i):
+    def updated(self, A):
+        return coarse_operator(
+            name=self.name,
+            A=A,
+            params=self.params_constructor,
+            Ls=self.Ls,
+            otype=self.otype[0],
+        )
+
+    def converted(self, dst_precision):
+        return self.updated(gpt.convert(self.A, dst_precision))
+
+    @params_convention()
+    def modified(self, params):
+        return operator(
+            name=self.name,
+            A=self.A,
+            params={**self.params_constructor, **params},
+            Ls=self.Ls,
+            otype=self.otype[0],
+        )
+
+    def apply_unary_operator(self, opcode, o, i):
         assert len(i.v_obj) == len(o.v_obj)
         assert len(i.v_obj) == (len(self.obj)) ** 0.5
         tmp = gpt.lattice(o)
@@ -260,7 +309,7 @@ class coarse_operator:
                 )
                 o += tmp
 
-    def dirdisp(self, opcode, o, i, direction, disp):
+    def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
         assert len(i.v_obj) == len(o.v_obj)
         assert len(i.v_obj) == (len(self.obj)) ** 0.5
         tmp = gpt.lattice(o)
@@ -278,3 +327,22 @@ class coarse_operator:
                     disp,
                 )
                 o += tmp
+
+    def _G5M(self, dst, src):
+        self(dst, src)
+        g5 = gpt.g5c(dst)
+        dst @= g5 * dst
+
+    def propagator(self, solver):
+        exp = self.ExportPhysicalFermionSolution
+        imp = self.ImportPhysicalFermionSource
+
+        inv_matrix = solver(self)
+
+        def prop(dst_sc, src_sc):
+            inv_matrix(dst_sc, gpt.eval(imp * src_sc))
+            dst_sc @= exp * dst_sc
+
+        return gpt.matrix_operator(
+            prop, otype=(exp.otype[0], imp.otype[1]), grid=(exp.grid[0], imp.grid[1])
+        )

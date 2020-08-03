@@ -31,6 +31,31 @@ assert sys.getrefcount(x) == 2
 
 
 ################################################################################
+# Test assignments
+################################################################################
+pos = l_dp.mview_coordinates()
+lhs = g.lattice(l_dp)
+
+
+def assign_copy():
+    g.copy(lhs, l_dp)
+
+
+def assign_pos():
+    lhs[pos] = l_dp[pos]
+
+
+def assign_pos_view():
+    lhs[pos] = l_dp.view[pos]
+
+
+for method in [assign_copy, assign_pos, assign_pos_view]:
+    lhs[:] = 0
+    method()
+    eps2 = g.norm2(lhs - l_dp) / g.norm2(l_dp)
+    assert eps2 < 1e-25
+
+################################################################################
 # Test exp_ixp
 ################################################################################
 # multiply momentum phase in l
@@ -134,49 +159,3 @@ g.copy(new, src)
 dst = g.cshift(src, 0, 1)
 # dst[x] = src[x+1] -> src[0] == dst[15]
 assert abs(dst[15, 0, 0, 0] - complex(2, 1)) < 1e-6
-
-#
-# TODO: make tests out of the below
-#
-sys.exit(0)
-
-# or re-use an existing lattice object as target
-g.cshift(dst, src, 0, 1)
-
-# create a lattice expression
-expr = (
-    g.trace(-(dst * dst) + 2 * dst)
-    + 0.5 * (g.cshift(src, 0, 1) * dst + g.cshift(src, 0, -1)) / 3
-    - g.adj(dst + dst / 2)
-)
-
-# and convert the expression to a new lattice or an existing one,
-# later will allow for lists of expressions to be assigned to lists
-# of target lattices
-new = g.eval(expr)
-
-# or re-use existing lattice object as target
-g.eval(dst, expr)
-
-# alternative notation
-dst @= expr
-
-# accumulate
-dst += expr
-
-# print lattice
-g.message(new)
-
-# print adjungated field
-g.message(g.eval(g.adj(new)))
-
-# color matrix
-cm = g.mcolor(grid_sp)
-cm[:] = 0
-cm[0, 0, 0, 0, 2, 2] = 1
-cm[0, 0, 0, 0, 1, 2] = 1
-g.message(cm)
-
-g.message(g.eval(g.trace(cm)))
-
-g.message(g.innerProductNorm2(src, src), g.norm2(src))

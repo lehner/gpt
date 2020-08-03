@@ -17,7 +17,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt.qcd.fermion.reference
-import gpt.qcd.fermion.solver
 import gpt.qcd.fermion.preconditioner
 
 from gpt.qcd.fermion.register import register
@@ -37,6 +36,7 @@ def wilson_clover(U, params):
     if "kappa" in params:
         assert "mass" not in params
         params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
+        del params["kappa"]
     return operator("wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3))
 
 

@@ -16,8 +16,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-
-from gpt.qcd.fermion.preconditioner.eo1 import eo1
-from gpt.qcd.fermion.preconditioner.eo2 import eo2
+from gpt.qcd.fermion.preconditioner.g5m import g5m_ne
+from gpt.qcd.fermion.preconditioner.eo1 import eo1_ne, eo1
+from gpt.qcd.fermion.preconditioner.eo2 import eo2_ne, eo2
 
 # from gpt.qcd.fermion.preconditioner.eo2k import eo2k <- future
+
+from gpt.qcd.fermion.preconditioner.sap import sap, sap_cycle
+from gpt.qcd.fermion.preconditioner.mixed_dwf import mixed_dwf
+from gpt.qcd.fermion.preconditioner.physical import physical

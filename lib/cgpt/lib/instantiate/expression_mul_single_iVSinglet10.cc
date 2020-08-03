@@ -33,6 +33,7 @@ cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unar
   if (unary_b == 0) {
     _MM_COMPATIBLE_RL_(iVSinglet10);
   }
+  _MM_COMPATIBLE_R_(iMSinglet10);
   ERR("Not implemented");
 }
 

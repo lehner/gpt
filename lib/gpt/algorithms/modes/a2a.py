@@ -16,14 +16,10 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.iterative.cg import cg
-from gpt.algorithms.iterative.bicgstab import bicgstab
-from gpt.algorithms.iterative.fgcr import fgcr
-from gpt.algorithms.iterative.fgmres import fgmres
-from gpt.algorithms.iterative.irl import irl
-from gpt.algorithms.iterative.mr import mr
-from gpt.algorithms.iterative.power_iteration import power_iteration
-from gpt.algorithms.iterative.defect_correcting_inverter import (
-    defect_correcting_inverter,
-)
-from gpt.algorithms.iterative.mg import mg
+import gpt
+
+
+class a2a:
+    def __init__(self, matrix):
+        self.v = matrix.L
+        self.w = matrix.R.adj()

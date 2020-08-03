@@ -19,93 +19,57 @@
 import sys, os, struct, binascii, fnmatch, numpy, gpt
 
 
-def read_tags(fn, tags, verbose, nocheck):
-    f = open(fn, "r+b")
-    try:
+class writer:
+    def __init__(self, fn):
+        if gpt.rank() == 0:
+            self.f = open(fn, "w+b")
+        else:
+            self.f = None
+
+    def write(self, t, cc):
+        if self.f is not None:
+            self.f.write(struct.pack("i", len(t) + 1))
+            self.f.write((t + "\0").encode("utf-8"))
+            ln = len(cc)
+            ccr = [fff for sublist in ((c.real, c.imag) for c in cc) for fff in sublist]
+            bindata = struct.pack("d" * 2 * ln, *ccr)
+            crc32comp = binascii.crc32(bindata) & 0xFFFFFFFF
+            self.f.write(struct.pack("II", crc32comp, ln))
+            self.f.write(bindata)
+            self.f.flush()
+
+        gpt.barrier()
+
+    def close(self):
+        if self.f is not None:
+            self.f.close()
+            self.f = None
+
+        gpt.barrier()
+
+
+class reader:
+    def __init__(self, fn):
+        self.tags = {}
+        f = open(fn, "r+b")
         while True:
             rd = f.read(4)
             if len(rd) == 0:
                 break
             ntag = struct.unpack("i", rd)[0]
-            tag = f.read(ntag)
+            tag = f.read(ntag).decode("utf-8")
             (crc32, ln) = struct.unpack("II", f.read(4 * 2))
 
-            if verbose:
-                gpt.message(tag)
-
             data = f.read(16 * ln)
-            if nocheck is False:
-                crc32comp = binascii.crc32(data) & 0xFFFFFFFF
+            crc32comp = binascii.crc32(data) & 0xFFFFFFFF
 
-                if crc32comp != crc32:
-                    raise Exception("Data corrupted!")
+            if crc32comp != crc32:
+                raise Exception("Data corrupted!")
 
-            cdata = numpy.frombuffer(data, dtype=numpy.complex128, count=ln)
-            if nocheck is False:
-                cdata.tolist()
-            tags[tag[0:-1]] = cdata
+            self.tags[tag[0:-1]] = numpy.frombuffer(
+                data, dtype=numpy.complex128, count=ln
+            )
         f.close()
-    except Exception:
-        raise
-
-
-def write_tag(f, t, cc):
-    f.write(struct.pack("i", len(t) + 1))
-    f.write((t + "\0").encode("utf-8"))
-    ln = len(cc)
-    ccr = [fff for sublist in ((c.real, c.imag) for c in cc) for fff in sublist]
-    bindata = struct.pack("d" * 2 * ln, *ccr)
-    crc32comp = binascii.crc32(bindata) & 0xFFFFFFFF
-    f.write(struct.pack("II", crc32comp, ln))
-    f.write(bindata)
-
-
-def write_tags(fn, tags):
-    f = open(fn, "w+b")
-    try:
-        for t in tags:
-            cc = tags[t]
-            write_tag(f, t, cc)
-        f.close()
-    except Exception:
-        raise Exception()
-
-
-class corr_io:
-    def __init__(self, fn, mode="r", verbose=False, nocheck=False):
-        self.tags = {}
-
-        if mode == "r":
-            if isinstance(fn, str):
-                read_tags(fn, self.tags, verbose, nocheck)
-            elif isinstance(fn, list):
-                for f in fn:
-                    read_tags(f, self.tags, verbose, nocheck)
-            else:
-                raise Exception("Unknown argument type")
-        elif mode == "w":
-            self.fn = fn
-        else:
-            raise Exception("Unknown mode")
 
     def glob(self, pattern):
         return filter(lambda k: fnmatch.fnmatch(k, pattern), self.tags.keys())
-
-    def keys_match_post(self, pf):
-        l = len(pf)
-        return [k[0:-l] for k in self.tags.keys() if k[-l:] == pf]
-
-    def write(self):
-        write_tags(self.fn, self.tags)
-
-
-class writer:
-    def __init__(self, fn):
-        self.f = open(fn, "w+b")
-
-    def write(self, tag, cc):
-        write_tag(self.f, tag, cc)
-        self.f.flush()
-
-    def __del__(self):
-        self.f.close()

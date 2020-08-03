@@ -85,8 +85,9 @@ class tensor:
 
     def __mul__(self, other):
         if type(other) == gpt.tensor:
-            assert other.otype.__name__ in self.otype.mtab
-            mt = self.otype.mtab[other.otype.__name__]
+            tag = other.otype.__name__
+            assert tag in self.otype.mtab
+            mt = self.otype.mtab[tag]
             return tensor(np.tensordot(self.array, other.array, axes=mt[1]), mt[0]())
         elif type(other) == complex:
             return tensor(self.array * other, self.otype)
@@ -102,7 +103,7 @@ class tensor:
                 x = np.multiply.outer(self.array, rhs)
                 for swp in mt[1]:
                     x = np.swapaxes(x, swp[0], swp[1])
-                return tensor(x, mt[0])
+                return tensor(x, mt[0]())
             assert 0
         else:
             return other.__rmul__(self)

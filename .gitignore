@@ -32,3 +32,5 @@ missing
 /lib/gpt/pyfiles.inc
 /lib/cgpt/ccfiles.inc
 /lib/cgpt/hfiles.inc
+*.coverage*
+coverage.xml

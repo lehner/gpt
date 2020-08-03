@@ -16,9 +16,21 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.approx.chebyshev import chebyshev
-from gpt.algorithms.approx.modes import modes
-from gpt.algorithms.approx.coarse_modes import coarse_modes
-from gpt.algorithms.approx.deflate import deflate
-from gpt.algorithms.approx.coarse_deflate import coarse_deflate
-from gpt.algorithms.approx.evals import evals
+import gpt as g
+
+
+def transformed(obj, V):
+    if isinstance(obj, g.matrix_operator):
+
+        M = obj
+
+        def _mat(dst, src):
+            dst @= V * M * g.adj(V) * src
+
+        return g.matrix_operator(_mat, otype=M.otype, grid=M.grid)
+
+    else:
+
+        U = obj
+
+        return [g(V * U[mu] * g.cshift(g.adj(V), mu, 1)) for mu in range(len(U))]

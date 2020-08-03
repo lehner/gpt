@@ -16,26 +16,32 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt
+import gpt as g
 
 
-def propagator(inv_matrix, w=None):
+class EvalsNotConverged(Exception):
+    pass
 
-    if w is None:
-        exp = inv_matrix.ExportPhysicalFermionSolution
-        imp = inv_matrix.ImportPhysicalFermionSource
-    else:
-        exp = w.ExportPhysicalFermionSolution
-        imp = w.ImportPhysicalFermionSource
 
-    def prop(dst_sc, src_sc):
-        inv_matrix(dst_sc, gpt.eval(imp * src_sc))
-        dst_sc @= exp * dst_sc
+@g.params_convention(check_eps2=None, skip=1, real=False)
+def evals(matrix, evec, params):
+    check_eps2 = params["check_eps2"]
+    skip = params["skip"]
+    assert len(evec) > 0
+    tmp = g.lattice(evec[0])
+    ev = []
+    for i in range(0, len(evec), skip):
+        v = evec[i]
+        matrix(tmp, v)
+        # M |v> = l |v> -> <v|M|v> / <v|v>
+        l = g.innerProduct(v, tmp) / g.norm2(v)
+        if params["real"]:
+            l = l.real
+        ev.append(l)
+        if check_eps2 is not None:
+            eps2 = g.norm2(tmp - l * v)
+            g.message(f"eval[ {i} ] = {l}, eps^2 = {eps2}")
+            if eps2 > check_eps2:
+                raise EvalsNotConverged()
 
-    r = gpt.matrix_operator(
-        prop, otype=(exp.otype[0], imp.otype[1]), grid=(exp.grid[0], imp.grid[1])
-    )
-
-    r.inv_matrix = inv_matrix
-
-    return r
+    return ev

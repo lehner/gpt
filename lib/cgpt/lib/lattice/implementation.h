@@ -82,7 +82,7 @@ public:
 
   // ac == { true : add result to dst, false : replace dst }
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) {
-    if (typeid(T) == typeid(iSinglet<vCoeff_t>)) {
+    if (typeid(T) == typeid(iSinglet<vCoeff_t>) && b->type() != type()) {
       // singlet multiplication always commutes, can save half cost of instantiation
       return b->mul(dst,ac,this,unary_b,unary_a,unary_expr);
     }
@@ -163,6 +163,12 @@ public:
     cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
   }
 
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt,int j0, int j1, int k0,int k1,int Nm) {
+    PVector<Lattice<T>> basis;
+    cgpt_basis_fill(basis,_basis);
+    cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
+  }
+
   virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt) {
     PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis,_basis);
@@ -170,16 +176,11 @@ public:
   }
 
   virtual PyObject* memory_view() {
-#ifdef _GRID_FUTURE_
     auto v = l.View(CpuWrite);
-#else
-    auto v = l.View();
-#endif
     size_t sz = v.size() * sizeof(v[0]);
     char* ptr = (char*)&v[0];
-#ifdef _GRID_FUTURE_
     v.ViewClose();
-#endif
+
     // this marks Cpu as dirty, so data will be copied to Gpu; this is not fully safe
     // and the ViewClose should be moved to the destructor of the PyMemoryView object.
     // Do this in the same way as currently done in mview() in the future.
@@ -227,9 +228,7 @@ public:
 
   virtual PyObject* advise(std::string type) {
     if (type == "infrequent_use") {
-#ifdef _GRID_FUTURE_
       l.Advise() = AdviseInfrequentUse;
-#endif
     } else {
       ERR("Unknown advise %s",type.c_str());
     }    

@@ -80,7 +80,7 @@ for i in range(nbasis):
         g.message("marked as infrequent use")
         basis[i].advise(g.infrequent_use)
     g.block.promote(fg_cevec[i], basis[i], fg_basis)
-    g.algorithms.approx.evals(q.NDagN, [basis[i]], check_eps2=1e10)
+    g.algorithms.approx.evals(q.NDagN, [basis[i]], check_eps2=1e10, real=True)
     g.message("Compare to: %g" % fg_feval[i])
 
     g.mem_report(details=False)
@@ -147,7 +147,9 @@ except g.LoadError:
             v_fine_smooth[:] = 0
             smoother(q.NDagN, v_fine, v_fine_smooth)
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth) ** 0.5
-        ev_smooth = g.algorithms.approx.evals(q.NDagN, [v_fine], check_eps2=1e-2)
+        ev_smooth = g.algorithms.approx.evals(
+            q.NDagN, [v_fine], check_eps2=1e-2, real=True
+        )
         ev3[i] = ev_smooth[0]
         g.message("Eigenvalue %d = %.15g" % (i, ev3[i]))
     g.save("ev3", ev3)

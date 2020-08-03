@@ -93,6 +93,8 @@ bool cgpt_numpy_import(sobj& dst,PyArrayObject* src,std::vector<long>& dim) {
 
   t* c = (t*)&dst;
 
+  ASSERT(PyArray_IS_C_CONTIGUOUS(src));
+
   int dt = PyArray_TYPE(src);
   if (dt == NPY_COMPLEX64) {
     ComplexF* s = (ComplexF*)PyArray_DATA(src);
@@ -130,15 +132,24 @@ void cgpt_numpy_import(sobj& dst,PyObject* _src) {
   }
 }
 
-template<typename Coeff_t>
-void cgpt_numpy_import_matrix(PyObject* _Qt, Coeff_t* & data, int & Nm) {
+static 
+void cgpt_numpy_query_matrix(PyObject* _Qt, int & dtype, int & Nm) {
   ASSERT(PyArray_Check(_Qt));
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
   ASSERT(PyArray_NDIM(Qt)==2);
   Nm = PyArray_DIM(Qt,0);
   ASSERT(Nm == PyArray_DIM(Qt,1));
+  dtype = PyArray_TYPE(Qt);
+  ASSERT(PyArray_IS_C_CONTIGUOUS(Qt));
+}
+
+template<typename Coeff_t>
+void cgpt_numpy_import_matrix(PyObject* _Qt, Coeff_t* & data, int & Nm) {
+  int dtype;
+  cgpt_numpy_query_matrix(_Qt, dtype, Nm);
+  PyArrayObject* Qt = (PyArrayObject*)_Qt;
   // TODO: check and at least forbid strides
-  ASSERT(PyArray_TYPE(Qt) == infer_numpy_type(*data));
+  ASSERT(dtype == infer_numpy_type(*data));
   data = (Coeff_t*)PyArray_DATA(Qt);
 }
 
@@ -146,6 +157,7 @@ template<typename Coeff_t>
 void cgpt_numpy_import_vector(PyObject* _Qt, Coeff_t* & data, int & Nm) {
   ASSERT(PyArray_Check(_Qt));
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
+  ASSERT(PyArray_IS_C_CONTIGUOUS(Qt));
   ASSERT(PyArray_NDIM(Qt)==1);
   Nm = PyArray_DIM(Qt,0);
   // TODO: check and at least forbid strides

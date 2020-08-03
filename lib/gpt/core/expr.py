@@ -184,20 +184,13 @@ def get_lattice(e):
     return None
 
 
-def get_grid(e):
-    l = get_lattice(e)
-    if l is None:
-        return None
-    return l.grid
-
-
 def apply_type_right_to_left(e, t):
     if type(e) == expr:
         return expr([(x[0], apply_type_right_to_left(x[1], t)) for x in e.val], e.unary)
     elif type(e) == list:
         n = len(e)
         for i in reversed(range(n)):
-            if type(e[i][1]) == t:
+            if isinstance(e[i][1], t):
 
                 # create operator
                 operator = e[i][1].unary(e[i][0])

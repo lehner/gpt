@@ -27,9 +27,8 @@ template<class vobj,class CComplex,int nbasis,class VLattice>
   Lattice<iScalar<CComplex>> ip(coarse);
   Lattice<vobj>     fineDataRed = fineData;
 
-  //  auto fineData_   = fineData.View();
-  auto coarseData_ = coarseData.AcceleratorView(ViewWrite);
-  auto ip_         = ip.AcceleratorView(ViewReadWrite);
+  autoView( coarseData_ , coarseData, AcceleratorWrite);
+  autoView( ip_         , ip,         AcceleratorWrite);
   for(int v=0;v<nbasis;v++) {
     blockInnerProductD(ip,Basis[v],fineDataRed); // ip = <basis|fine>
     accelerator_for( sc, coarse->oSites(), vobj::Nsimd(), {
@@ -109,10 +108,10 @@ inline void blockMaskedInnerProductGPT(Lattice<CComplex> &coarseInner,
   coarseInner=Zero();
   typename CComplex::scalar_type zz = {0., 0.};
 
-  auto fineX_v   = fineX.AcceleratorView(ViewRead);
-  auto fineY_v   = fineY.AcceleratorView(ViewRead);
-  auto fineMask_v   = fineMask.AcceleratorView(ViewRead);
-  auto coarseInner_v = coarseInner.AcceleratorView(ViewWrite);
+  autoView(fineX_v,       fineX,       AcceleratorRead);
+  autoView(fineY_v,       fineY,       AcceleratorRead);
+  autoView(fineMask_v,    fineMask,    AcceleratorRead);
+  autoView(coarseInner_v, coarseInner, AcceleratorWrite);
 
   accelerator_for( sc, coarse->oSites(), vobj::Nsimd(), {
     Coordinate coor_c(_ndimension);

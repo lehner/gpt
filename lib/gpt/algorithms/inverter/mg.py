@@ -140,7 +140,8 @@ class mg:
         self.A = [None] * self.nlevel
         for lvl in range(self.finest + 1, self.nlevel):
             self.A[lvl] = [
-                g.mcomplex(self.grid[lvl], self.nbasis[lvl - 1]) for __ in range(9)
+                g.mcomplex(self.grid[lvl], self.nbasis[self.nf_lvl[lvl]])
+                for __ in range(9)
             ]
 
         # rest of setup (call that externally?)
@@ -190,9 +191,6 @@ class mg:
                 basis = self.basis[lvl]
                 nb = self.nb[lvl]
                 vecstype = self.vecstype[lvl]
-
-                # TODO
-                # g.unsplit_chiral(basis)
 
                 # find near-null vectors
                 t("find_null_vecs")

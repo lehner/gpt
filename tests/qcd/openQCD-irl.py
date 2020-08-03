@@ -37,13 +37,13 @@ src = g.mspincolor(grid)
 g.create.point(src, [0, 0, 0, 0])
 
 # even-odd preconditioned matrix
-eo = g.qcd.fermion.preconditioner.eo2(w, parity=g.even)
+eo = g.qcd.fermion.preconditioner.eo2_ne(parity=g.even)
 
 # cheby
-c = g.algorithms.approx.chebyshev({"low": 0.0005, "high": 3.5, "order": 50})
+c = g.algorithms.polynomial.chebyshev({"low": 0.0005, "high": 3.5, "order": 50})
 
 # implicitly restarted lanczos
-irl = g.algorithms.iterative.irl(
+irl = g.algorithms.eigen.irl(
     {
         "Nk": 60,
         "Nstop": 60,
@@ -66,20 +66,20 @@ except g.LoadError:
 
     # generate eigenvectors
     evec, ev_cheby = irl(
-        c(eo.NDagN),
+        c(eo(w).NDagN),
         start,
         g.checkpointer("/hpcgpfs01/scratch/clehner/openQCD/checkpoint"),
     )
-    ev = g.algorithms.approx.evals(eo.NDagN, evec, check_eps2=1e-8)
+    ev = g.algorithms.eigen.evals(eo(w).Mpc, evec, check_eps2=1e-8, real=True)
 
     # save eigenvectors
     g.save(path_to_evec, [evec, ev])
 
 # build solver
-s = g.qcd.fermion.solver
-cg = g.algorithms.iterative.cg({"eps": 1e-6, "maxiter": 1000})
-dcg = g.algorithms.approx.deflate(cg, evec, ev)
-slv = s.propagator(s.inv_eo_ne(eo, dcg))
+inv = g.algorithms.inverter
+cg = inv.cg({"eps": 1e-6, "maxiter": 1000})
+dcg = g.algorithms.eigen.deflate(cg, evec, ev)
+slv = w.propagator(inv.preconditioned(eo, dcg))
 
 # propagator
 dst = g.mspincolor(grid)

@@ -44,7 +44,7 @@ class irl:
         self.ckpt = ckpt
 
         # first approximate largest eigenvalue
-        pit = g.algorithms.iterative.power_iteration({"eps": 0.05, "maxiter": 10})
+        pit = g.algorithms.eigen.power_iteration(eps=0.05, maxiter=10, real=True)
         lambda_max = pit(mat, src)[0]
 
         # parameters

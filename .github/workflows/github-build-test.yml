@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2020-07-10
+  CACHE_KEY: 2020-07-30
 
 jobs:
   build-grid:
@@ -153,10 +153,6 @@ jobs:
         cd -
         dpkg-deb --build $PKGDIR
 
-    - name: Install Grid
-      run: |
-        sudo dpkg -i grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-
 
   build-gpt:
     needs: build-grid
@@ -247,6 +243,7 @@ jobs:
         echo ${{ hashFiles('gpt/configure.ac') }} >> cgpt_cache_key_file
         echo ${{ hashFiles('gpt/Makefile.am') }} >> cgpt_cache_key_file
         echo ${{ hashFiles('gpt/cgpt/Makefile.am') }} >> cgpt_cache_key_file
+        echo ${{ needs.build-grid.outputs.grid-version }} >> cgpt_cache_key_file
 
         echo "::set-output name=key::$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
@@ -294,10 +291,6 @@ jobs:
         cd -
         dpkg-deb --build $PKGDIR
 
-    - name: Install cgpt
-      run: |
-        sudo dpkg -i cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
-
     - name: gpt package cache
       uses: actions/cache@v2
       id: gpt-package-cache
@@ -324,10 +317,6 @@ jobs:
         sed -e 's/%pkgname%/gpt/g' -e 's/%version%/0.0.1/g' -e 's/%size%/1024/g' -e 's/%maintainer%/GPT Dev Team/g' -e 's/%description%/gpt/g'  -i ./DEBIAN/control
         cd -
         dpkg-deb --build $PKGDIR
-
-    - name: Install gpt
-      run: |
-        sudo dpkg -i gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Create combined package
       run: |
@@ -396,7 +385,7 @@ jobs:
 
     - name: Setup python dependencies
       run: |
-        pip install numpy
+        pip install numpy coverage
 
     - name: Download prebuild python-gpt
       uses: actions/download-artifact@v2
@@ -415,28 +404,49 @@ jobs:
     - name: Run tests
       if: matrix.mpi == 'none'
       run: |
-        cd gpt/tests
+        cd gpt
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
-        ./run
+        export WORK_DIR=$(mktemp -d)
+        ./tests/run "coverage run"
 
     - name: Run tests
       if: matrix.mpi == 'openmpi'
       env:
         LD_PRELOAD: libmpi.so
       run: |
-        cd gpt/tests
+        cd gpt
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
-        mpirun -np 2 -mca btl ^openib -bind-to core python core/scalar.py --mpi 1.1.1.2
-        ./run "mpirun -np 1 -mca btl ^openib python"
-        ./run "mpirun -np 2 -bind-to core -mca btl ^openib python" "--mpi 1.1.1.2 --mpi 1.1.2"
+        export WORK_DIR=$(mktemp -d) 
+        mpirun -np 2 -mca btl ^openib -bind-to core python tests/core/scalar.py --mpi 1.1.1.2
+        ./tests/run "mpirun -np 1 -mca btl ^openib coverage run"
+        ./tests/run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run" "--mpi 1.1.1.2 --mpi 1.1.2"
 
     - name: Run tests
       if: matrix.mpi == 'mpich'
       run: |
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
-        cd gpt/tests
-        ./run "mpirun -np 1 python"
-        ./run "mpirun -np 2 -bind-to core python" "--mpi 1.1.1.2 --mpi 1.1.2"
+        cd gpt
+        export WORK_DIR=$(mktemp -d)
+        ./tests/run "mpirun -np 1 coverage run"
+        ./tests/run "mpirun -np 2 -bind-to core coverage run" "--mpi 1.1.1.2 --mpi 1.1.2"
+
+    - name: Coverage report
+      run: |
+        cd gpt
+        coverage combine
+        coverage report -m  # Print coverage report to screen
+        coverage xml  # Export coverage report as XML file, for codecov.io
+
+    - name: Upload coverage to Codecov
+      env:
+        PYTHON_VERSION: python${{ matrix.python-version }}
+        COMPILER: ${{ matrix.compiler }}
+        MPI: ${{ matrix.mpi }}
+        CODECOV_ENV: PYTHON_VERSION,COMPILER,MPI
+      run: |
+        cd gpt
+        bash <(curl -s https://codecov.io/bash) \
+          -f ./coverage.xml
 
 
   build-gpt-doc:

@@ -68,7 +68,7 @@ get = get_single
 max_io_nodes = get_int("--max_io_nodes", 256)
 
 # verbosity
-verbose_default = "io,bicgstab,cg,dci,fgcr,fgmres,mr,irl,power_iteration,checkpointer,deflate,block_operator,random,mg,coarsen,orthogonalize"
+verbose_default = "io,bicgstab,cg,dci,fgcr,fgmres,mr,irl,repository,arnoldi,power_iteration,checkpointer,deflate,block_operator,random,mg,coarsen,orthogonalize"
 verbose_additional = "eval,merge"
 verbose = get_single("--verbose", verbose_default).split(",")
 verbose_candidates = ",".join(
@@ -80,32 +80,45 @@ def is_verbose(x):
     return x in verbose
 
 
-# help
-if "--help" in sys.argv:
-    print(
-        "--------------------------------------------------------------------------------"
-    )
-    print(" GPT Help")
-    print(
-        "--------------------------------------------------------------------------------"
-    )
-    print("")
-    print(" --mpi X.Y.Z.T")
-    print("")
-    print("   Set the mpi layout for four-dimensional grids.")
-    print("   The layout for other dimensions can be specified")
-    print("   by additional parameters such as --mpi X.Y.Z for")
-    print("   the mpi layout for three-dimensional grids.")
-    print("")
-    print(" --verbose opt1,opt2,...")
-    print("")
-    print("   Set verbosity options.")
-    print("   Candidates: %s" % verbose_candidates)
-    print("")
-    print(" --max_io_nodes n")
-    print("")
-    print("   Set maximal number of simultaneous IO nodes.")
-    print(
-        "--------------------------------------------------------------------------------"
-    )
-    sys.stdout.flush()
+def set_verbose(x, status=True):
+    if (status is True) and (x not in verbose):
+        verbose.append(x)
+    if (status is False) and (x in verbose):
+        verbose.remove(x)
+
+
+# help flag
+help_flag = "--help" in sys.argv
+if help_flag:
+    sys.argv.remove("--help")
+
+
+def process_flags():
+    if help_flag:
+        gpt.message(
+            "--------------------------------------------------------------------------------"
+        )
+        gpt.message("                        GPT Help")
+        gpt.message(
+            "--------------------------------------------------------------------------------"
+        )
+        gpt.message("")
+        gpt.message(" --mpi X.Y.Z.T")
+        gpt.message("")
+        gpt.message("   Set the mpi layout for four-dimensional grids.")
+        gpt.message("   The layout for other dimensions can be specified")
+        gpt.message("   by additional parameters such as --mpi X.Y.Z for")
+        gpt.message("   the mpi layout for three-dimensional grids.")
+        gpt.message("")
+        gpt.message(" --verbose opt1,opt2,...")
+        gpt.message("")
+        gpt.message("   Set verbosity options.")
+        gpt.message("   Candidates: %s" % verbose_candidates)
+        gpt.message("")
+        gpt.message(" --max_io_nodes n")
+        gpt.message("")
+        gpt.message("   Set maximal number of simultaneous IO nodes.")
+        gpt.message(
+            "--------------------------------------------------------------------------------"
+        )
+        sys.exit(0)

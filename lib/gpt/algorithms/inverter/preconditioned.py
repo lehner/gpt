@@ -18,33 +18,30 @@
 #
 import gpt as g
 
-
-class power_iteration:
+# M^-1 = L Mpc^-1 R + S
+class preconditioned:
     @g.params_convention()
-    def __init__(self, params):
+    def __init__(self, preconditioner, inverter, params):
         self.params = params
-        self.tol = params["eps"]
-        self.maxit = params["maxiter"]
+        self.preconditioner = preconditioner
+        self.inverter = inverter
 
-    def __call__(self, mat, src):
-        verbose = g.default.is_verbose("power_iteration")
+    def __call__(self, mat):
 
-        dst, tmp = g.lattice(src), g.copy(src)
+        matrix = self.preconditioner(mat)
+        inv_mat = self.inverter(matrix.Mpc)
 
-        tmp /= g.norm2(tmp) ** 0.5
+        def inv(dst, src):
+            # TODO: forward guess dst to inverter, need pseudo L.inv(), pick even sites then L.inv() may be EE, do for each PC
+            dst @= matrix.L * inv_mat * matrix.R * src + matrix.S * src
 
-        ev_prev = None
-        for it in range(self.maxit):
-            mat(dst, tmp)
-            ev = g.norm2(dst) ** 0.5
-            if verbose:
-                g.message("eval_max[ %d ] = %g" % (it, ev))
-            tmp @= (1.0 / ev) * dst
-            if ev_prev is not None:
-                if abs(ev - ev_prev) < self.tol * ev:
-                    if verbose:
-                        g.message("Converged")
-                    return (ev, tmp, True)
-            ev_prev = ev
-
-        return (ev, tmp, False)
+        return g.matrix_operator(
+            mat=inv,
+            inv_mat=mat,
+            adj_inv_mat=mat.adj(),
+            adj_mat=None,  # implement adj_mat when needed
+            otype=mat.otype,
+            zero=(True, False),
+            grid=matrix.F_grid,
+            cb=None,
+        )

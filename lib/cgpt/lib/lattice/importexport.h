@@ -224,3 +224,33 @@ static PyArrayObject* cgpt_importexport(GridBase* grid, int cb, int dtype,
     return 0;
   }
 }
+
+
+// direct copy
+static void cgpt_importexport(GridBase* grid_dst, GridBase* grid_src, 
+			      int cb_dst, int cb_src, 
+			      std::vector<cgpt_distribute::data_simd>& l_dst, 
+			      std::vector<cgpt_distribute::data_simd>& l_src, 
+			      PyArrayObject* coordinates_dst, 
+			      PyArrayObject* coordinates_src) {
+  
+  cgpt_distribute dist(grid_dst->_processor,grid_dst->communicator);
+
+  // distribution plans
+  grid_cached<cgpt_distribute::plan> plan_dst(grid_dst,coordinates_dst);
+  grid_cached<cgpt_distribute::plan> plan_src(grid_src,coordinates_src);
+
+  if (!plan_dst.filled()) {
+    std::vector<cgpt_distribute::coor> fc;
+    cgpt_to_full_coor(grid_dst,cb_dst,coordinates_dst,fc);
+    dist.create_plan(fc,plan_dst.fill_ref());
+  }
+
+  if (!plan_src.filled()) {
+    std::vector<cgpt_distribute::coor> fc;
+    cgpt_to_full_coor(grid_src,cb_src,coordinates_src,fc);
+    dist.create_plan(fc,plan_src.fill_ref());
+  }
+
+  dist.copy(plan_dst,plan_src,l_dst,l_src);
+}
