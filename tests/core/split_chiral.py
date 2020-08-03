@@ -15,31 +15,32 @@ grid = g.grid([8, 8, 8, 8], g.double)
 rng = g.random("ducks_smell_funny")
 
 # size of basis
-nbasis = 40
-assert nbasis % 2 == 0
-nb = nbasis // 2
+nbasis_f = 30
+nbasis_c = 40
+nb_f = nbasis_f // 2
+nb_c = nbasis_c // 2
 
 # setup fine basis
-basis_ref_f = [g.vspincolor(grid) for __ in range(nb)]
-basis_split_f = [g.vspincolor(grid) for __ in range(nbasis)]
+basis_ref_f = [g.vspincolor(grid) for __ in range(nb_f)]
+basis_split_f = [g.vspincolor(grid) for __ in range(nbasis_f)]
 rng.cnormal(basis_ref_f)
 
 # setup coarse basis
-basis_ref_c = [g.vcomplex(grid, nbasis) for __ in range(nb)]
-basis_split_c = [g.vcomplex(grid, nbasis) for __ in range(nbasis)]
+basis_ref_c = [g.vcomplex(grid, nbasis_f) for __ in range(nb_c)]
+basis_split_c = [g.vcomplex(grid, nbasis_f) for __ in range(nbasis_c)]
 rng.cnormal(basis_ref_c)
 
 
 def run_test(basis_split, basis_ref):
     for factor in [0.5, 1.0, None]:
-        for i in range(nb):
+        for i in range(len(basis_ref)):
             basis_split[i] = g.copy(basis_ref[i])
 
         g.split_chiral(basis_split, factor)
         g.unsplit_chiral(basis_split, factor)
 
         typename = basis_split[0].otype.__name__
-        for i in range(nb):
+        for i in range(len(basis_ref)):
             diff2 = g.norm2(basis_ref[i] - basis_split[i])
             assert diff2 == 0.0
             if factor is None:
