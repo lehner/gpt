@@ -496,10 +496,8 @@ def str_to_otype(s):
             "ot_matrix_su2_fundamental",
             "ot_matrix_su2_adjoint",
             "ot_vsinglet4",
-            # "ot_vsinglet5",
             "ot_vsinglet10",
             "ot_msinglet4",
-            # "ot_msinglet5",
             "ot_msinglet10",
         ]
     )

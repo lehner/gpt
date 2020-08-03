@@ -38,14 +38,6 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
   int hermitian = get_int(args,"hermitian");
   int level = get_int(args,"level"); // 0 = fine, increases with coarser levels
   int nbasis = get_int(args,"nbasis");
-  // int nbasis_f = get_int(args,"nbasis_f");
-  // int nbasis_c = get_int(args,"nbasis_c");
-
-  // // Tests for the type classes ///////////////////////////////////////////////
-  // const int nbasis = 40;
-  // char* f0 = typename FinestLevelFineVec<vCoeff_t>::type{};              char* c0 = CoarseComplex{};
-  // char* f1 = typename OtherLevelsFineVec<CoarseComplex, nbasis>::type{}; char* c1 = CoarseComplex{};
-  // char* f2 = typename OtherLevelsFineVec<CoarseComplex, nbasis>::type{}; char* c2 = CoarseComplex{};
 
 #define BASIS_SIZE(n) \
   if(n == nbasis) { \
@@ -70,8 +62,6 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
 #include "../basis_size.h"
 #undef BASIS_SIZE
   { ERR("Unknown basis size %d", (int)nbasis); }
-
-  // NOTE: With this we should have a default initialized instance of coarsenedmatrix
 }
 
 #undef prec_double
