@@ -84,10 +84,10 @@ inline void vectorBlockOrthonormalize(Lattice<CComplex> &ip,std::vector<VLattice
 }
 
 template<class vobj,class CComplex>
-inline void blockMaskedInnerProductGPT(Lattice<CComplex> &coarseInner,
-				    const Lattice<CComplex> &fineMask,
-				    const Lattice<vobj> &fineX,
-				    const Lattice<vobj> &fineY)
+inline void blockMaskedInnerProductD(Lattice<CComplex> &coarseInner,
+                                     const Lattice<CComplex> &fineMask,
+                                     const Lattice<vobj> &fineX,
+                                     const Lattice<vobj> &fineY)
 {
   GridBase * fine  = fineX.Grid();
   GridBase * coarse= coarseInner.Grid();
@@ -118,7 +118,7 @@ inline void blockMaskedInnerProductGPT(Lattice<CComplex> &coarseInner,
     Lexicographic::CoorFromIndex(coor_c,sc,coarse->_rdimensions);  // Block coordinate
 
     int sf;
-    decltype(innerProduct(fineX_v(sf),fineY_v(sf))) reduce=Zero();
+    decltype(innerProductD2(fineX_v(sf),fineY_v(sf))) reduce=Zero();
 
     for(int sb=0;sb<blockVol;sb++){
       Coordinate coor_b(_ndimension);
@@ -129,13 +129,12 @@ inline void blockMaskedInnerProductGPT(Lattice<CComplex> &coarseInner,
       Lexicographic::IndexFromCoor(coor_f,sf,fine->_rdimensions);
 
       if(Reduce(TensorRemove(fineMask_v(sf))) != zz)
-        reduce = reduce + innerProduct(fineX_v(sf),fineY_v(sf));
+        reduce = reduce + innerProductD2(fineX_v(sf),fineY_v(sf));
     }
     convertType(coarseInner_v[sc], TensorRemove(reduce));
   });
   return;
 }
-
 
 template<typename T>
 void cgpt_block_project(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _basis) {
@@ -186,7 +185,7 @@ void cgpt_block_masked_inner_product(cgpt_Lattice_base* _coarse, cgpt_Lattice_ba
 
   typedef typename Lattice<T>::vector_type vCoeff_t;
 
-  blockMaskedInnerProductGPT(compatible< iSinglet<vCoeff_t> >(_coarse)->l,
-                             compatible< iSinglet<vCoeff_t> >(fineMask)->l,
-                             fineX, fineY);
+  blockMaskedInnerProductD(compatible< iSinglet<vCoeff_t> >(_coarse)->l,
+                           compatible< iSinglet<vCoeff_t> >(fineMask)->l,
+                           fineX, fineY);
 }
