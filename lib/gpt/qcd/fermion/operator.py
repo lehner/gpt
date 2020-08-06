@@ -211,9 +211,7 @@ class coarse_operator(gpt.matrix_operator):
             "grid_c": self.A_grid.obj,
             "hermitian": False,  # NOTE: doesn't matter what we pass to Grid since we need to do Mdag ourselves anyway
             "level": params["level"],
-            "nbasis": int(
-                self.A[0].otype.shape[0] / (len(A[0].v_obj)) ** 0.5
-            ),  # for one instance
+            "nbasis": self.A[0].otype.v_n1[0],  # for one v_obj instance
             # "A": [a.v_obj[0] for a in self.A],
         }
 
