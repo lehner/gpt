@@ -64,7 +64,7 @@ def promote(coarse, fine, basis):
     return fine
 
 
-def maskedInnerProduct(coarse, fineMask, fineX, fineY):
+def masked_inner_product(coarse, fineMask, fineX, fineY):
     assert fineX.checkerboard().__name__ == fineY.checkerboard().__name__
     assert fineX.otype.__name__ == fineY.otype.__name__
     assert len(coarse.v_obj) == 1
@@ -73,7 +73,7 @@ def maskedInnerProduct(coarse, fineMask, fineX, fineY):
     tmp = gpt.lattice(coarse)
     coarse[:] = 0
     for i in fot.v_idx:
-        cgpt.block_maskedInnerProduct(
+        cgpt.block_masked_inner_product(
             tmp.v_obj[0], fineMask.v_obj[0], fineX.v_obj[i], fineY.v_obj[i]
         )
         coarse += tmp

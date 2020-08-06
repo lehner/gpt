@@ -218,7 +218,7 @@ public:
     cgpt_block_orthonormalize(coarse,l,vbasis);
   }
 
-  virtual void block_maskedInnerProduct(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineMask, cgpt_Lattice_base* fineOther) {
+  virtual void block_masked_inner_product(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineMask, cgpt_Lattice_base* fineOther) {
     cgpt_block_masked_inner_product(coarse,fineMask,l,compatible<T>(fineOther)->l);
   }
 

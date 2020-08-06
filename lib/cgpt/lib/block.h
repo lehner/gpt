@@ -151,8 +151,6 @@ void cgpt_block_project(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vecto
 
 }
 
-
-
 template<typename T>
 void cgpt_block_promote(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _basis) {
 

@@ -93,7 +93,7 @@ def create_links(A, fmat, basis, params):
         for p, (mu, fb) in enumerate(dirdisps):
             for j, vl in enumerate(basis):
                 t("coarsen_hop")
-                gpt.block.maskedInnerProduct(oproj, dirmasks[p], vl, Mvr[p])
+                gpt.block.masked_inner_product(oproj, dirmasks[p], vl, Mvr[p])
 
                 t("copy_hop")
                 A[p][:, :, :, :, j, i] = oproj[:]

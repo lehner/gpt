@@ -83,7 +83,7 @@ EXPORT(block_orthonormalize,{
   });
 
 
-EXPORT(block_maskedInnerProduct,{
+EXPORT(block_masked_inner_product,{
 
     void* _coarse,* _fineMask,* _fineX,* _fineY;
     if (!PyArg_ParseTuple(args, "llll", &_coarse,&_fineMask,&_fineX,&_fineY)) {
@@ -95,7 +95,7 @@ EXPORT(block_maskedInnerProduct,{
     cgpt_Lattice_base* fineX = (cgpt_Lattice_base*)_fineX;
     cgpt_Lattice_base* fineY = (cgpt_Lattice_base*)_fineY;
 
-    fineX->block_maskedInnerProduct(coarse,fineMask,fineY);
+    fineX->block_masked_inner_product(coarse,fineMask,fineY);
 
     return PyLong_FromLong(0);
   });
