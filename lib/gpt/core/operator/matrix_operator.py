@@ -41,7 +41,7 @@ class matrix_operator(factor):
         grid=(None, None),
         zero=(False, False),
         cb=(None, None),
-        accept_list=False
+        accept_list=False,
     ):
 
         self.mat = mat
@@ -74,7 +74,7 @@ class matrix_operator(factor):
             grid=tuple(reversed(self.grid)),
             zero=tuple(reversed(self.zero)),
             cb=tuple(reversed(self.cb)),
-            accept_list = self.accept_list
+            accept_list=self.accept_list,
         )
 
     def adj(self):
@@ -87,7 +87,7 @@ class matrix_operator(factor):
             grid=tuple(reversed(self.grid)),
             zero=tuple(reversed(self.zero)),
             cb=tuple(reversed(self.cb)),
-            accept_list = self.accept_list
+            accept_list=self.accept_list,
         )
 
     def __mul__(self, other):
@@ -116,7 +116,7 @@ class matrix_operator(factor):
                 grid=(self.grid[0], other.grid[1]),
                 zero=(self.zero[0], other.zero[1]),
                 cb=(self.cb[0], other.cb[1]),
-                accept_list = other.accept_list
+                accept_list=other.accept_list,
             )
         else:
             return gpt.expr(other).__rmul__(self)
@@ -164,7 +164,7 @@ class matrix_operator(factor):
             grid=grid,
             zero=zero,
             cb=cb,
-            accept_list = self.accept_list
+            accept_list=self.accept_list,
         )
 
     def unary(self, u):
@@ -199,7 +199,7 @@ class matrix_operator(factor):
             if self.cb[0] is not None:
                 for x in dst:
                     x.checkerboard(self.cb[0])
-                    
+
             if self.zero[0]:
                 for x in dst:
                     x[:] = 0
@@ -211,6 +211,7 @@ class matrix_operator(factor):
         if self.accept_list:
             mat = self.mat
         else:
+
             def mat(dst, src):
                 assert len(dst) == len(src)
                 for idx in range(len(dst)):

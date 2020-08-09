@@ -66,7 +66,11 @@ class expr:
         return b
 
     def get_single(self):
-        return (self.unary, self.val[0][1][0][0], gpt.util.from_list(self.val[0][1][0][1]))
+        return (
+            self.unary,
+            self.val[0][1][0][0],
+            gpt.util.from_list(self.val[0][1][0][1]),
+        )
 
     def __mul__(self, l):
         if type(l) == expr:
@@ -200,7 +204,12 @@ def apply_type_right_to_left(e, t):
 
                 # apply operator
                 e = e[0:i] + [
-                    (factor_unary.NONE, gpt.util.to_list(operator(expr_eval(expr([(1.0, e[i + 1 :])])))))
+                    (
+                        factor_unary.NONE,
+                        gpt.util.to_list(
+                            operator(expr_eval(expr([(1.0, e[i + 1 :])])))
+                        ),
+                    )
                 ]
 
         return e
@@ -337,6 +346,6 @@ def expr_eval(first, second=None, ac=False):
 
             assert s_ot == otype.v_otype
 
-            ret.append( gpt.lattice(grid, otype, t_obj) )
+            ret.append(gpt.lattice(grid, otype, t_obj))
 
         return gpt.util.from_list(ret)

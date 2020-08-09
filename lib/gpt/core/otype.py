@@ -358,7 +358,7 @@ class ot_vector_spin_color(ot_base):
             for i in range(len(src)):
                 for s in range(self.spin_ndim):
                     for c in range(self.color_ndim):
-                        idx = c + self.color_ndim*(s + self.spin_ndim*i)
+                        idx = c + self.color_ndim * (s + self.spin_ndim * i)
                         gpt.qcd.prop_to_ferm(src_sc[idx], src[i], s, c)
                         if zero_lhs:
                             dst_scp[idx][:] = 0
@@ -366,7 +366,7 @@ class ot_vector_spin_color(ot_base):
             for i in range(len(src)):
                 for s in range(self.spin_ndim):
                     for c in range(self.color_ndim):
-                        idx = c + self.color_ndim*(s + self.spin_ndim*i)
+                        idx = c + self.color_ndim * (s + self.spin_ndim * i)
                         gpt.qcd.ferm_to_prop(dst[i], dst_sc[idx], s, c)
         else:
             assert 0
