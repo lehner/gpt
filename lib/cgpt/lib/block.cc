@@ -38,6 +38,27 @@ EXPORT(block_project,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(block_project_using_lut,{
+
+    PyObject* _basis;
+    void* _coarse,* _fine,* _lut;
+    int idx;
+    if (!PyArg_ParseTuple(args, "llOil", &_coarse,&_fine,&_basis,&idx,&_lut)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* fine = (cgpt_Lattice_base*)_fine;
+    cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
+    cgpt_lookup_table_base* lut = (cgpt_lookup_table_base*)_lut;
+
+    std::vector<cgpt_Lattice_base*> basis;
+    cgpt_basis_fill(basis,_basis,idx);
+
+    fine->block_project_using_lut(coarse, basis, lut);
+
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(block_promote,{
 
     PyObject* _basis;

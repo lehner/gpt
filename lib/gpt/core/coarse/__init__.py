@@ -26,6 +26,7 @@ def create_links(A, fmat, basis, params):
     # parameters
     hermitian = params["hermitian"]
     savelinks = params["savelinks"]
+    uselut = params["uselut"]
     assert not (hermitian and not savelinks)
 
     # verbosity
@@ -50,7 +51,8 @@ def create_links(A, fmat, basis, params):
     # setup fields
     Mvr = [gpt.lattice(basis[0]) for i in range(nhops)]
     tmp = gpt.lattice(basis[0])
-    oproj = gpt.complex(c_grid)
+    oproj_scal = gpt.complex(c_grid)
+    oproj_vec = gpt.vcomplex(c_grid, len(basis))
     selfproj = gpt.vcomplex(c_grid, len(basis))
 
     # setup masks
@@ -82,6 +84,14 @@ def create_links(A, fmat, basis, params):
     # save applications of matrix and coarsening if possible
     dirdisps = dirdisps_forward if savelinks else dirdisps_full
 
+    if uselut:
+        # create lookup tables from masks
+        t("luts")
+        dirluts = [
+            gpt.lookup_table(c_grid, dirmasks[p]) for p, (mu, fb) in enumerate(dirdisps)
+        ]
+        fulllut = gpt.lookup_table(c_grid, onemask)
+
     for i, vr in enumerate(basis):
         # apply directional hopping terms
         # this triggers len(dirdisps) comms -> TODO expose DhopdirAll from Grid
@@ -91,12 +101,19 @@ def create_links(A, fmat, basis, params):
 
         # coarsen directional terms + write to link
         for p, (mu, fb) in enumerate(dirdisps):
-            for j, vl in enumerate(basis):
+            if uselut:
                 t("coarsen_hop")
-                gpt.block.masked_inner_product(oproj, dirmasks[p], vl, Mvr[p])
+                gpt.block.project_using_lut(oproj_vec, Mvr[p], basis, dirluts[p])
 
                 t("copy_hop")
-                A[p][:, :, :, :, j, i] = oproj[:]
+                A[p][:, :, :, :, :, i] = oproj_vec[:]
+            else:
+                for j, vl in enumerate(basis):
+                    t("coarsen_hop")
+                    gpt.block.masked_inner_product(oproj_scal, dirmasks[p], vl, Mvr[p])
+
+                    t("copy_hop")
+                    A[p][:, :, :, :, j, i] = oproj_scal[:]
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
         t("apply_self")
@@ -107,7 +124,10 @@ def create_links(A, fmat, basis, params):
 
         # coarsen diagonal term
         t("coarsen_self")
-        gpt.block.project(selfproj, tmp, basis)
+        if uselut:
+            gpt.block.project_using_lut(selfproj, tmp, basis, fulllut)
+        else:
+            gpt.block.project(selfproj, tmp, basis)
 
         # write to self link
         t("copy_self")

@@ -54,6 +54,7 @@ class mg:
         self.nbasis = make_param_list(params["nbasis"], self.nlevel - 1)
         self.hermitian = make_param_list(params["hermitian"], self.nlevel - 1)
         self.savelinks = make_param_list(params["savelinks"], self.nlevel - 1)
+        self.uselut = make_param_list(params["uselut"], self.nlevel - 1)
         self.vecstype = make_param_list(params["vecstype"], self.nlevel - 1)
         self.presmooth = make_param_list(params["presmooth"], self.nlevel - 1)
         self.postsmooth = make_param_list(params["postsmooth"], self.nlevel - 1)
@@ -88,6 +89,7 @@ class mg:
                 self.nbasis,
                 self.hermitian,
                 self.savelinks,
+                self.uselut,
                 self.vecstype,
                 self.presmooth,
                 self.postsmooth,
@@ -177,6 +179,7 @@ class mg:
                     {
                         "hermitian": self.hermitian[nf_lvl],
                         "savelinks": self.savelinks[nf_lvl],
+                        "uselut": self.uselut[nf_lvl],
                     },
                 )
                 self.mat[lvl] = g.qcd.fermion.coarse(self.A[lvl], {"level": lvl},)

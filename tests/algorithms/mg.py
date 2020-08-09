@@ -56,6 +56,7 @@ mg_params_2lvl = {
     "nbasis": 40,
     "hermitian": False,
     "savelinks": True,
+    "uselut": True,
     "vecstype": "test",
     "presmooth": None,
     "postsmooth": i.preconditioned(
@@ -81,6 +82,7 @@ mg_params_3lvl = {
     "nbasis": 40,
     "hermitian": False,
     "savelinks": True,
+    "uselut": True,
     "vecstype": "test",
     "presmooth": None,
     "postsmooth": [

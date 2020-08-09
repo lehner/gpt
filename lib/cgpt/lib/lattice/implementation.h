@@ -16,6 +16,7 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+template<class T> class cgpt_lookup_table;
 template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
@@ -35,6 +36,11 @@ public:
 
   cgpt_Lattice_base* create_lattice_of_same_type() {
     return new cgpt_Lattice<T>(l.Grid());
+  }
+
+  cgpt_lookup_table_base* create_lookup_table(GridBase* coarse_grid, cgpt_Lattice_base* mask) {
+    typedef iSinglet<vCoeff_t> mask_type;
+    return new cgpt_lookup_table<Lattice<mask_type>>(coarse_grid, compatible<mask_type>(mask)->l);
   }
 
   virtual std::string type() {
@@ -208,6 +214,10 @@ public:
 
   virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
     cgpt_block_project(coarse,l,basis);
+  }
+
+  virtual void block_project_using_lut(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis, cgpt_lookup_table_base* lut) {
+    cgpt_block_project_using_lut(coarse,l,basis,lut);
   }
 
   virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {

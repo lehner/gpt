@@ -37,6 +37,62 @@ template<class vobj,class CComplex,int nbasis,class VLattice>
   }
 }
 
+template<class vobj,class CComplex,int nbasis,class VLattice,class ScalarField>
+inline void vectorizableBlockProjectUsingLut(Lattice<iVector<CComplex, nbasis>>& coarseData,
+                                             const Lattice<vobj>&                fineData,
+                                             const VLattice&                     Basis,
+                                             const cgpt_lookup_table<ScalarField>& lut)
+{
+  GridBase *fine   = fineData.Grid();
+  GridBase *coarse = coarseData.Grid();
+
+  int ndimU = Basis[0].Grid()->_ndimension;
+  int ndimF = coarse->_ndimension;
+  int LLs   = 1;
+
+  // checks
+  assert(fine->_ndimension == ndimF);
+  assert(ndimF == ndimU || ndimF == ndimU+1);
+  assert(nbasis == Basis.size());
+  if(ndimF == ndimU) { // strictly 4d or strictly 5d
+    assert(lut.gridsMatch(coarse, fine));
+    for(int i=0; i<Basis.size(); ++i) conformable(Basis[i], fineData);
+    LLs = 1;
+  } else if(ndimF == ndimU+1) { // 4d with mrhs via 5th dimension
+    assert(coarse->_rdimensions[0] == fine->_rdimensions[0]);   // same extent in 5th dimension
+    assert(coarse->_fdimensions[0] == coarse->_rdimensions[0]); // 5th dimension strictly local and not cb'ed
+    assert(fine->_fdimensions[0]   == fine->_rdimensions[0]);   // 5th dimension strictly local and not cb'ed
+    LLs = coarse->_rdimensions[0];
+  }
+
+  auto lut_v = lut.View();
+  auto sizes_v = lut.Sizes();
+  autoView(fineData_v, fineData, AcceleratorRead);
+  autoView(coarseData_v, coarseData, AcceleratorWrite);
+
+  typedef decltype(Basis[0].View(AcceleratorRead)) View;
+  Vector<View> Basis_v; Basis_v.reserve(Basis.size());
+  for(int i=0;i<Basis.size();i++){
+    Basis_v.push_back(Basis[i].View(AcceleratorRead));
+  }
+
+  accelerator_for(scFi, nbasis*coarse->oSites(), vobj::Nsimd(), {
+    auto i   = scFi%nbasis;
+    auto scF = scFi/nbasis;
+    auto s5  = scF%LLs;
+    auto scU = scF/LLs;
+
+    decltype(innerProductD2(Basis_v[0](0), fineData_v(0))) reduce = Zero();
+
+    for(int j=0; j<sizes_v[scU]; ++j) {
+      int sfU = lut_v[scU][j];
+      int sfF = sfU*LLs + s5;
+      reduce = reduce + innerProductD2(Basis_v[i](sfU), fineData_v(sfF));
+    }
+    convertType(coarseData_v[scF](i), TensorRemove(reduce));
+  });
+}
+
 template<class CComplex,class VLattice>
 inline void vectorBlockOrthonormalize(Lattice<CComplex> &ip,std::vector<VLattice> &Basis)
 {
@@ -89,6 +145,7 @@ inline void blockMaskedInnerProductD(Lattice<CComplex> &coarseInner,
                                      const Lattice<vobj> &fineX,
                                      const Lattice<vobj> &fineY)
 {
+  // NOTE: explicit implementation because of issue with convertType
   GridBase * fine  = fineX.Grid();
   GridBase * coarse= coarseInner.Grid();
   int  _ndimension = coarse->_ndimension;
@@ -145,6 +202,21 @@ void cgpt_block_project(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vecto
   cgpt_basis_fill(basis,_basis);
 
 #define BASIS_SIZE(n) if (n == basis.size()) { vectorizableBlockProject(compatible< iVSinglet ## n<vCoeff_t> >(_coarse)->l,fine,basis); } else
+#include "basis_size.h"
+#undef BASIS_SIZE
+  { ERR("Unknown basis size %d",(int)basis.size()); }
+
+}
+
+template<typename T>
+void cgpt_block_project_using_lut(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _basis, cgpt_lookup_table_base* lut) {
+
+  typedef typename Lattice<T>::vector_type vCoeff_t;
+
+  PVector<Lattice<T>> basis;
+  cgpt_basis_fill(basis,_basis);
+
+#define BASIS_SIZE(n) if (n == basis.size()) { vectorizableBlockProjectUsingLut(compatible< iVSinglet ## n<vCoeff_t> >(_coarse)->l,fine,basis,*((cgpt_lookup_table< Lattice<iSinglet<vCoeff_t>> >*)lut)); } else
 #include "basis_size.h"
 #undef BASIS_SIZE
   { ERR("Unknown basis size %d",(int)basis.size()); }
