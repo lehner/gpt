@@ -53,7 +53,6 @@ mom_list=[ "-100", "0-10", "00-1", "000", "100", "010", "001" ]
 # list of mesons
 data_file = 'results_a653/mesons2pt_double_eps15.h5'
 Nt=48
-
 Cg5=g.core.spin_matrices.spin_matrix.Cg5()
 
 for p_n, p in enumerate(mom):
