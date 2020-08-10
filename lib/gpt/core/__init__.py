@@ -39,6 +39,7 @@ from gpt.core.transform import (
     slice,
 )
 from gpt.core.covariant import covariant_shift
+from gpt.core.spin_matrices import spin_matrix
 from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
 from gpt.core.operator import *
 from gpt.core.otype import *

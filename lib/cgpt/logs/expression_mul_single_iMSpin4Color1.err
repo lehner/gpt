@@ -1,0 +1,17 @@
+In file included from /temp_local/bal43566/gpt/dependencies/Grid/Grid/lattice/Lattice.h:32,
+                 from /temp_local/bal43566/gpt/dependencies/Grid/Grid/GridCore.h:58,
+                 from /temp_local/bal43566/gpt/dependencies/Grid/Grid/Grid.h:41,
+                 from lib/instantiate/../lib.h:30,
+                 from lib/instantiate/expression_mul_single_iMSpin4Color1.cc:20:
+/temp_local/bal43566/gpt/dependencies/Grid/Grid/lattice/Lattice_ET.h: In instantiation of ‘decltype (Grid::LatticeBinaryExpression<Grid::BinaryMul<decltype (Grid::eval(0, lhs)), decltype (Grid::eval(0, rhs))>, T1, T2>(Grid::BinaryMul<decltype (Grid::eval(0, lhs)), decltype (Grid::eval(0, rhs))>(), lhs, rhs)) Grid::operator*(const T1&, const T2&) [with T1 = Grid::iScalar<Grid::iScalar<Grid::iMatrix<std::complex<float>, 1> > >; T2 = Grid::Lattice<Grid::iScalar<Grid::iMatrix<Grid::iMatrix<Grid::Grid_simd<std::complex<float>, __vector(8) float>, 1>, 4> > >; typename std::enable_if<((! std::is_base_of<Grid::LatticeBase, T>::value) && (! std::is_base_of<Grid::LatticeExpressionBase, T>::value)), T1>::type* <anonymous> = 0; typename std::enable_if<(std::is_base_of<Grid::LatticeBase, _T1>::value || std::is_base_of<Grid::LatticeExpressionBase, T2>::value), T2>::type* <anonymous> = 0; decltype (Grid::LatticeBinaryExpression<Grid::BinaryMul<decltype (Grid::eval(0, lhs)), decltype (Grid::eval(0, rhs))>, T1, T2>(Grid::BinaryMul<decltype (Grid::eval(0, lhs)), decltype (Grid::eval(0, rhs))>(), lhs, rhs)) = Grid::LatticeBinaryExpression<Grid::BinaryMul<Grid::iScalar<Grid::iScalar<Grid::iMatrix<std::complex<float>, 1> > >, const Grid::iScalar<Grid::iMatrix<Grid::iMatrix<Grid::Grid_simd<std::complex<float>, __vector(8) float>, 1>, 4> >&>, Grid::iScalar<Grid::iScalar<Grid::iMatrix<std::complex<float>, 1> > >, Grid::Lattice<Grid::iScalar<Grid::iMatrix<Grid::iMatrix<Grid::Grid_simd<std::complex<float>, __vector(8) float>, 1>, 4> > > >; decltype (Grid::eval(0, rhs)) = const Grid::iScalar<Grid::iMatrix<Grid::iMatrix<Grid::Grid_simd<std::complex<float>, __vector(8) float>, 1>, 4> >&; decltype (Grid::eval(0, lhs)) = Grid::iScalar<Grid::iScalar<Grid::iMatrix<std::complex<float>, 1> > >]’:
+lib/instantiate/../expression/unary.h:109:36:   required from ‘cgpt_Lattice_base* lattice_unary_rmul(cgpt_Lattice_base*, bool, int, const A&, const B&, int) [with A = Grid::Lattice<Grid::iScalar<Grid::iMatrix<Grid::iMatrix<Grid::Grid_simd<std::complex<float>, __vector(8) float>, 1>, 4> > >; B = Grid::iScalar<Grid::iScalar<Grid::iMatrix<std::complex<float>, 1> > >]’
+lib/instantiate/expression_mul_single_iMSpin4Color1.cc:39:5:   required from here
+/temp_local/bal43566/gpt/dependencies/Grid/Grid/lattice/Lattice_ET.h:424:16: note: the ABI of passing structure with complex float member has changed in GCC 4.4
+ GRID_DEF_BINOP(operator*, BinaryMul);
+                ^~~~~~~~
+/temp_local/bal43566/gpt/dependencies/Grid/Grid/lattice/Lattice_ET.h:375:15: note: in definition of macro ‘GRID_BINOP_RIGHT’
+   inline auto op(const T1 &lhs, const T2 &rhs)    \
+               ^~
+/temp_local/bal43566/gpt/dependencies/Grid/Grid/lattice/Lattice_ET.h:424:1: note: in expansion of macro ‘GRID_DEF_BINOP’
+ GRID_DEF_BINOP(operator*, BinaryMul);
+ ^~~~~~~~~~~~~~
