@@ -74,6 +74,7 @@ verbose = set()
 verbose_candidates = ",".join(
     sorted((verbose_default + "," + verbose_additional).split(","))
 )
+verbose_indent = max([len(x) for x in verbose_candidates.split(",")])
 verbose_stack = []
 
 
@@ -99,13 +100,17 @@ def pop_verbose():
 
 def parse_verbose():
     global verbose
-    for vflag in get_all("--verbose", verbose_default):
-        if vflag[0] in ["+", "-"]:
-            status = {"+": True, "-": False}
-            for f in vflag[1:].split(","):
-                set_verbose(f, status)
-        else:
-            verbose = set(vflag.split(","))
+    verbose = set(
+        [y for x in get_all("--verbose", verbose_default) for y in x.split(",")]
+    )
+    for status, mod in [(True, "add"), (False, "remove")]:
+        for f in [
+            y
+            for x in get_all(f"--verbose_{mod}", None)
+            if x is not None
+            for y in x.split(",")
+        ]:
+            set_verbose(f, status)
 
 
 parse_verbose()
@@ -117,32 +122,58 @@ if help_flag:
     sys.argv.remove("--help")
 
 
+def wrap_list(string, separator_split, separator_join, linewidth, indent):
+    r = ""
+    line = ""
+    array = string.split(separator_split)
+    for i, word in enumerate(array):
+        if len(line) + len(separator_join) + len(word) >= linewidth:
+            r = r + "\n" + (" " * indent) + line
+            line = ""
+        if i + 1 != len(array):
+            line = line + word + separator_join
+        else:
+            line = line + word
+    if len(line) != 0:
+        r = r + "\n" + (" " * indent) + line
+    return r
+
+
 def process_flags():
     if help_flag:
         gpt.message(
-            "--------------------------------------------------------------------------------"
-        )
-        gpt.message("                        GPT Help")
-        gpt.message(
-            "--------------------------------------------------------------------------------"
-        )
-        gpt.message("")
-        gpt.message(" --mpi X.Y.Z.T")
-        gpt.message("")
-        gpt.message("   Set the mpi layout for four-dimensional grids.")
-        gpt.message("   The layout for other dimensions can be specified")
-        gpt.message("   by additional parameters such as --mpi X.Y.Z for")
-        gpt.message("   the mpi layout for three-dimensional grids.")
-        gpt.message("")
-        gpt.message(" --verbose opt1,opt2,...")
-        gpt.message("")
-        gpt.message("   Set verbosity options.")
-        gpt.message("   Candidates: %s" % verbose_candidates)
-        gpt.message("")
-        gpt.message(" --max_io_nodes n")
-        gpt.message("")
-        gpt.message("   Set maximal number of simultaneous IO nodes.")
-        gpt.message(
-            "--------------------------------------------------------------------------------"
+            f"""--------------------------------------------------------------------------------
+                 GPT Help
+--------------------------------------------------------------------------------
+
+ --mpi X.Y.Z.T
+
+   Set the mpi layout for four-dimensional grids.
+   The layout for other dimensions can be specified
+   by additional parameters such as --mpi X.Y.Z for
+   the mpi layout for three-dimensional grids.
+
+ --verbose opt1,opt2,...
+
+   Set list of verbose operations to opt1,opt2,...
+
+   Candidates:
+   {wrap_list(verbose_candidates, ",", ", ", 50, 3)}
+
+   Current selection:
+   {wrap_list(",".join(verbose), ",", ", ", 50, 3)}
+
+ --verbose_add opt1,opt2,...
+
+   Add opt1,opt2,... to list of verbose operations.
+
+ --verbose_remove opt1,opt2,...
+
+   Remove opt1,opt2,... from list of verbose operations.
+
+ --max_io_nodes n
+
+   Set maximal number of simultaneous IO nodes.
+"""
         )
         sys.exit(0)
