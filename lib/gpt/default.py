@@ -70,11 +70,12 @@ max_io_nodes = get_int("--max_io_nodes", 256)
 # verbosity
 verbose_default = "io,bicgstab,cg,dci,fgcr,fgmres,mr,irl,repository,arnoldi,power_iteration,checkpointer,deflate,block_operator,random"
 verbose_additional = "eval,merge"
-verbose = get_single("--verbose", verbose_default).split(",")
+verbose = set()
 verbose_candidates = ",".join(
     sorted((verbose_default + "," + verbose_additional).split(","))
 )
 verbose_stack = []
+
 
 def is_verbose(x):
     return x in verbose
@@ -82,18 +83,32 @@ def is_verbose(x):
 
 def set_verbose(x, status=True):
     if (status is True) and (x not in verbose):
-        verbose.append(x)
+        verbose.add(x)
     if (status is False) and (x in verbose):
         verbose.remove(x)
 
 
 def push_verbose(x, status):
-    verbose_stack.append( (x,is_verbose(x)) )
+    verbose_stack.append((x, is_verbose(x)))
     set_verbose(x, status)
 
 
 def pop_verbose():
-    set_verbose( *verbose_stack.pop() )
+    set_verbose(*verbose_stack.pop())
+
+
+def parse_verbose():
+    global verbose
+    for vflag in get_all("--verbose", verbose_default):
+        if vflag[0] in ["+", "-"]:
+            status = {"+": True, "-": False}
+            for f in vflag[1:].split(","):
+                set_verbose(f, status)
+        else:
+            verbose = set(vflag.split(","))
+
+
+parse_verbose()
 
 
 # help flag

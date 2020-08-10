@@ -107,7 +107,9 @@ g.default.push_verbose("cg", False)
 for i, cv in enumerate(cevec):
     g.block.promote(cv, tmpf, basis)
     tmpf @= smoother * tmpf
-    smoothed_evals = smoothed_evals + g.algorithms.eigen.evals(w.Mpc, [tmpf], check_eps2=1, real=True)
+    smoothed_evals = smoothed_evals + g.algorithms.eigen.evals(
+        w.Mpc, [tmpf], check_eps2=1, real=True
+    )
 g.default.pop_verbose()
 
 # test coarse-grid deflation (re-use fine-grid evals instead of smoothing)
@@ -121,4 +123,3 @@ g.message("Compare fine-grid deflated cg iter: ", niter_defl)
 assert eps2 < 1e-8
 
 assert niter_cdefl < niter_cg
-

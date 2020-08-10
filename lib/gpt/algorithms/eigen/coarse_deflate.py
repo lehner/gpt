@@ -33,6 +33,7 @@ class coarse_deflate:
         def noop(matrix):
             def noop_mat(dst, src):
                 pass
+
             return noop_mat
 
         self.cdefl = g.algorithms.eigen.deflate(noop, cevec, fev)
