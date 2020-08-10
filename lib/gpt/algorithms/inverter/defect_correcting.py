@@ -98,7 +98,9 @@ class defect_correcting:
                     psi[j] += _d[j]
 
                 # true resid
-                eps = max([g.norm2(outer_mat * psi[j] - src[j]) ** 0.5 for j in range(n)])
+                eps = max(
+                    [g.norm2(outer_mat * psi[j] - src[j]) ** 0.5 for j in range(n)]
+                )
                 self.history.append(eps)
 
                 if verbose:

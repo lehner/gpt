@@ -53,7 +53,10 @@ class deflate:
                 g.linear_combination(dst[j], self.evec, rip[j])
             t3 = g.time()
             if verbose:
-                g.message("Deflated %d vector(s) in %g s (%g s for rankInnerProduct, %g s for global sum, %g s for linear combinations)" % (len(src), t3 - t0,t1-t0,t2-t1,t3-t2))
+                g.message(
+                    "Deflated %d vector(s) in %g s (%g s for rankInnerProduct, %g s for global sum, %g s for linear combinations)"
+                    % (len(src), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
+                )
             return self.inverter(matrix)(dst, src)
 
         return g.matrix_operator(

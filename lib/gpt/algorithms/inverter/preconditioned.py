@@ -44,5 +44,5 @@ class preconditioned:
             zero=(True, False),
             grid=matrix.F_grid,
             cb=None,
-            accept_list=True
+            accept_list=True,
         )

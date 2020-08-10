@@ -74,9 +74,9 @@ def convert(first, second):
 
         assert len(first) == len(second)
         for i in range(len(first)):
-            convert(first[i],second[i])
+            convert(first[i], second[i])
         return first
-        
+
     elif type(first) == gpt.lattice:
 
         # second may be expression

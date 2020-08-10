@@ -131,8 +131,8 @@ class matrix_operator(factor):
 
         def _converted(dst, src, mat, l, r):
             t0 = gpt.time()
-            conv_src = [ gpt.lattice(self.grid[l], otype[l]) for x in src ]
-            conv_dst = [ gpt.lattice(self.grid[r], otype[r]) for x in src ]
+            conv_src = [gpt.lattice(self.grid[l], otype[l]) for x in src]
+            conv_dst = [gpt.lattice(self.grid[r], otype[r]) for x in src]
 
             gpt.convert(conv_src, src)
             if zero[l]:
