@@ -54,6 +54,8 @@ mom_list=[ "-100", "0-10", "00-1", "000", "100", "010", "001" ]
 data_file = 'results_a653/mesons2pt_double_eps15.h5'
 Nt=48
 
+Cg5=g.core.spin_matrices.spin_matrix.Cg5()
+
 for p_n, p in enumerate(mom):
     g.message( "mom", mom_list[p_n] )
     P=g.exp_ixp(p)
