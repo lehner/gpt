@@ -103,10 +103,12 @@ cevec, cev = irl(cop, cstart)
 # smoothened evals
 smoother = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 10})(w.Mpc)
 smoothed_evals = []
+g.default.push_verbose("cg", False)
 for i, cv in enumerate(cevec):
     g.block.promote(cv, tmpf, basis)
     tmpf @= smoother * tmpf
     smoothed_evals = smoothed_evals + g.algorithms.eigen.evals(w.Mpc, [tmpf], check_eps2=1, real=True)
+g.default.pop_verbose()
 
 # test coarse-grid deflation (re-use fine-grid evals instead of smoothing)
 cdefl = g.algorithms.eigen.coarse_deflate(cg, cevec, basis, smoothed_evals)

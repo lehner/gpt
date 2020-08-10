@@ -74,7 +74,7 @@ verbose = get_single("--verbose", verbose_default).split(",")
 verbose_candidates = ",".join(
     sorted((verbose_default + "," + verbose_additional).split(","))
 )
-
+verbose_stack = []
 
 def is_verbose(x):
     return x in verbose
@@ -85,6 +85,15 @@ def set_verbose(x, status=True):
         verbose.append(x)
     if (status is False) and (x in verbose):
         verbose.remove(x)
+
+
+def push_verbose(x, status):
+    verbose_stack.append( (x,is_verbose(x)) )
+    set_verbose(x, status)
+
+
+def pop_verbose():
+    set_verbose( *verbose_stack.pop() )
 
 
 # help flag
