@@ -60,8 +60,5 @@ for p_n, p in enumerate(mom):
     P=g.exp_ixp(p)
     correlator = g.slice(g.trace( P * g.adj(dst) * dst), 3)
 
-    corr = np.empty(len(correlator), dtype=complex)
-
     for t,c in enumerate(correlator):
         g.message( t,c.real)
-        corr[t]=c
