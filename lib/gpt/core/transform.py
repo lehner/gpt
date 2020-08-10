@@ -59,7 +59,7 @@ def copy(first, second=None):
 
 
 def convert(first, second):
-    if second == gpt.single or second == gpt.double:
+    if second in [gpt.single, gpt.double]:
 
         # if first is a list, distribute
         if type(first) == list:
@@ -70,6 +70,13 @@ def convert(first, second):
         dst_grid = src.grid.converted(second)
         return convert(gpt.lattice(dst_grid, src.otype), src)
 
+    elif type(first) == list:
+
+        assert len(first) == len(second)
+        for i in range(len(first)):
+            convert(first[i],second[i])
+        return first
+        
     elif type(first) == gpt.lattice:
 
         # second may be expression

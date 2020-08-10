@@ -60,7 +60,7 @@ for i in range(nbasis):
         # basis[i].advise( g.infrequent_use )
 
     g.block.promote(fg_cevec[i], basis[i], fg_basis)
-    g.algorithms.approx.evals(q.NDagN, [basis[i]], check_eps2=1e-4, real=True)
+    g.algorithms.eigen.evals(q.NDagN, [basis[i]], check_eps2=1e-4, real=True)
     g.message("Compare to: %g" % fg_feval[i])
 
     g.mem_report(details=False)
@@ -127,7 +127,7 @@ except g.LoadError:
             v_fine_smooth[:] = 0
             smoother(q.NDagN)(v_fine_smooth, v_fine)
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth) ** 0.5
-        ev_smooth = g.algorithms.approx.evals(
+        ev_smooth = g.algorithms.eigen.evals(
             q.NDagN, [v_fine], check_eps2=1e-2, real=True
         )
         ev3[i] = ev_smooth[0]
@@ -147,12 +147,12 @@ def save_history(fn, history):
     f.close()
 
 
-solver = g.algorithms.approx.coarse_deflate(params["test_solver"], cevec, basis, ev3)
+solver = g.algorithms.eigen.coarse_deflate(params["test_solver"], cevec, basis, ev3)
 v_fine[:] = 0
 solver(q.NDagN)(v_fine, start)
 save_history("cg_test.defl_all_ev3", solver.inverter.history)
 
-solver = g.algorithms.approx.coarse_deflate(
+solver = g.algorithms.eigen.coarse_deflate(
     params["test_solver"], cevec[0 : len(basis)], basis, ev3[0 : len(basis)]
 )
 v_fine[:] = 0

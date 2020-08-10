@@ -32,11 +32,16 @@ l_sloppy_eigensystem = params["light_sloppy_eigensystem"](U, l_sloppy)
 g.mem_report()
 
 # sloppy solver
-prop_l_sloppy = params["light_propagator_sloppy"](U, l_sloppy, l_sloppy_eigensystem)
-params["light_propagator_sloppy_test"](prop_l_sloppy)
+l_sloppy_inverter = params["light_sloppy_inverter"](U, l_sloppy_eigensystem)
 
 # exact solver
-prop_l_exact = params["light_propagator_exact"](U, l_exact, prop_l_sloppy)
+l_exact_inverter = params["light_exact_inverter"](U, l_sloppy_inverter)
+
+# propagators
+prop_l_sloppy = l_sloppy.propagator(l_sloppy_inverter)
+prop_l_exact = l_exact.propagator(l_exact_inverter)
+del l_sloppy_inverter
+del l_exact_inverter
 
 # random number generator
 rng = params["rng"]

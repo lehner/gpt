@@ -166,8 +166,8 @@ class operator(gpt.matrix_operator):
         inv_matrix = solver(self)
 
         def prop(dst_sc, src_sc):
-            dst_sc @= exp * inv_matrix * imp * src_sc
+            gpt.eval(dst_sc, exp * inv_matrix * imp * src_sc)
 
         return gpt.matrix_operator(
-            prop, otype=(exp.otype[0], imp.otype[1]), grid=(exp.grid[0], imp.grid[1])
+            prop, otype=(exp.otype[0], imp.otype[1]), grid=(exp.grid[0], imp.grid[1]), accept_list=True
         )

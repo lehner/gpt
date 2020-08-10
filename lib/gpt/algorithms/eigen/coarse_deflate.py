@@ -56,9 +56,9 @@ class coarse_deflate:
             for i in range(len(src)):
                 g.block.project(csrc[i], src[i], self.basis)
             t1 = g.time()
-            g.default.push_verbose("deflate", False)
+            #g.default.push_verbose("deflate", False)
             self.cdefl(matrix)(cdst, csrc)
-            g.default.pop_verbose()
+            #g.default.pop_verbose()
             t2 = g.time()
             for i in range(len(src)):
                 g.block.promote(cdst[i], dst[i], self.basis)

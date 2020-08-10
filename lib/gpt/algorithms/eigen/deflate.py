@@ -45,13 +45,15 @@ class deflate:
             for i in range(len(self.evec)):
                 for j in range(len(src)):
                     rip[j, i] = g.rankInnerProduct(self.evec[i], src[j]) / self.ev[i]
+            t1 = g.time()
             grid.globalsum(rip)
+            t2 = g.time()
             # TODO: simultaneous linear_combinations
             for j in range(len(src)):
                 g.linear_combination(dst[j], self.evec, rip[j])
-            t1 = g.time()
+            t3 = g.time()
             if verbose:
-                g.message("Deflated %d vector(s) in %g s" % (len(src), t1 - t0))
+                g.message("Deflated %d vector(s) in %g s (%g s for rankInnerProduct, %g s for global sum, %g s for linear combinations)" % (len(src), t3 - t0,t1-t0,t2-t1,t3-t2))
             return self.inverter(matrix)(dst, src)
 
         return g.matrix_operator(
