@@ -26,11 +26,16 @@ import numpy as np
 class coarse_deflate:
     def __init__(self, inverter, cevec, basis, fev):
         self.inverter = inverter
-        self.cevec = cevec
-        self.fev = fev
         self.basis = basis
         self.csrc = g.lattice(cevec[0])
         self.cdst = g.lattice(cevec[0])
+
+        def noop(matrix):
+            def noop_mat(dst, src):
+                pass
+            return noop_mat
+
+        self.cdefl = g.algorithms.eigen.deflate(noop, cevec, fev)
 
     def __call__(self, matrix):
 
@@ -45,19 +50,7 @@ class coarse_deflate:
             t0 = g.time()
             g.block.project(self.csrc, src, self.basis)
             t1 = g.time()
-
-            # inner products
-            grid = src.grid
-            rip = np.array(
-                [
-                    g.rankInnerProduct(self.cevec[i], self.csrc) / self.fev[i]
-                    for i in range(len(self.cevec))
-                ],
-                dtype=np.complex128,
-            )
-            grid.globalsum(rip)
-
-            g.linear_combination(self.cdst, self.cevec, rip)
+            self.cdefl(matrix)(self.cdst, self.csrc)
             t2 = g.time()
             g.block.promote(self.cdst, dst, self.basis)
             t3 = g.time()
