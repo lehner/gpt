@@ -141,7 +141,7 @@ class operator(gpt.matrix_operator):
 
     def split(self, mpi_split):
         split_grid = self.U_grid.split(mpi_split, self.U_grid.fdimensions)
-        U_split = [ gpt.lattice(split_grid, x.otype) for x in self.U ]
+        U_split = [gpt.lattice(split_grid, x.otype) for x in self.U]
         pos_split = gpt.coordinates(U_split[0])
         for i, x in enumerate(U_split):
             x[pos_split] = self.U[i][pos_split]

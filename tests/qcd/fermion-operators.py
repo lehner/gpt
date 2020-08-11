@@ -153,7 +153,11 @@ assert eps < 1e-5
 
 
 # split grid solver check
-slv_split_eo1 = w.propagator(inv.preconditioned(pc.eo1_ne(), inv.split(cg, mpi_split = g.default.get_ivec("--mpi_split",None,4))))
+slv_split_eo1 = w.propagator(
+    inv.preconditioned(
+        pc.eo1_ne(), inv.split(cg, mpi_split=g.default.get_ivec("--mpi_split", None, 4))
+    )
+)
 dst_split = g.mspincolor(grid)
 dst_split @= slv_split_eo1 * src
 eps2 = g.norm2(dst_split - dst_eo1) / g.norm2(dst_eo1)

@@ -119,7 +119,6 @@ def split_by_rank(first):
 def split(first, split_grid):
     assert len(first) > 0
     lattices = first
-    grid = lattices[0].grid
     gcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
     lcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
     assert len(lattices) % split_grid.sranks == 0
