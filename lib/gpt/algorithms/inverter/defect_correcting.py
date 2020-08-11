@@ -89,7 +89,7 @@ class defect_correcting:
 
                 # correction step
                 t0 = g.time()
-                _d = g.util.to_list(g.eval(inner_inv_mat * _s))
+                _d = g.eval(inner_inv_mat * _s)
                 t1 = g.time()
                 for j in range(n):
                     _s[j] -= outer_mat * _d[j]
