@@ -101,7 +101,7 @@ class fgcr:
 
                 t("prec")
                 if self.prec is not None:
-                    self.prec(p[i], r)
+                    self.prec(mat)(p[i], r)
                 else:
                     p[i] @= r
 

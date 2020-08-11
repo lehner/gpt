@@ -290,8 +290,8 @@ class mg:
                     t("presmooth")
                     tmp, mmtmp = g.lattice(src), g.lattice(src)
                     tmp[:] = 0
-                    self.presmooth[lvl](mat)(tmp, src)
-                    mat.M(mmtmp, tmp)
+                    self.presmooth(mat)(tmp, src)
+                    mat(mmtmp, tmp)
                     r @= src - mmtmp
                 else:
                     t("copy")
@@ -320,9 +320,12 @@ class mg:
                 t("on_coarser")
                 self.e[nc_lvl][:] = 0.0
                 if self.wrappersolve[lvl] is not None:
-                    self.wrappersolve[lvl](
-                        self.mat[nc_lvl], lambda dst, src: inv_lvl(dst, src, nc_lvl)
-                    )(self.e[nc_lvl], self.r[nc_lvl])
+                    self.wrappersolve[lvl].prec = lambda dst, src: inv_lvl(
+                        dst, src, nc_lvl
+                    )
+                    self.wrappersolve[lvl](self.mat[nc_lvl])(
+                        self.e[nc_lvl], self.r[nc_lvl]
+                    )
                 else:
                     inv_lvl(self.e[nc_lvl], self.r[nc_lvl], nc_lvl)
 
@@ -340,7 +343,7 @@ class mg:
 
                 t("residual")
                 tmp = g.lattice(src)
-                mat.M(tmp, psi)
+                mat(tmp, psi)
                 tmp @= src - tmp
                 res_cgc = (g.norm2(tmp) / inputnorm) ** 0.5
 
@@ -354,7 +357,7 @@ class mg:
                 self.postsmooth[lvl](mat)(psi, src)
 
                 t("residual")
-                mat.M(tmp, psi)
+                mat(tmp, psi)
                 tmp @= src - tmp
                 res_postsmooth = (g.norm2(tmp) / inputnorm) ** 0.5
 

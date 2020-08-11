@@ -130,7 +130,7 @@ class fgmres:
 
                 t("prec")
                 if self.prec is not None:
-                    self.prec(Z[i], V[i])
+                    self.prec(mat)(Z[i], V[i])
 
                 t("mat")
                 if self.prec is not None:

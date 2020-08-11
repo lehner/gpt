@@ -38,12 +38,11 @@ src[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
 # rng.cnormal(src)
 
 # create reference solution
-dst_cg_eone_none = g.copy(src)
-dst_cg_eone_none[:] = 0
+dst_cg_eo2ne_none = g.copy(src)
+dst_cg_eo2ne_none[:] = 0
 
 # abbreviations
-s = g.qcd.fermion.solver
-a = g.algorithms.iterative
+i = g.algorithms.inverter
 p = g.qcd.fermion.preconditioner
 w_sp = w_dp.converted(g.single)
 
@@ -59,18 +58,19 @@ mg_params_2lvl = {
     "savelinks": True,
     "vecstype": "test",
     "presmooth": None,
-    "postsmooth": lambda mat: s.inv_eo(
-        p.eo2(mat), a.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
+    "postsmooth": i.preconditioned(
+        p.eo2(parity=g.odd), i.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
     ),
-    "coarsestsolve": lambda mat: s.inv_direct(
-        mat, a.bicgstab({"eps": 5e-2, "maxiter": 50, "checkres": False}),
+    "coarsestsolve": i.direct(
+        i.bicgstab({"eps": 5e-2, "maxiter": 50, "checkres": False}),
     ),
     "wrappersolve": None,
-    "setupsolve": lambda mat: s.inv_eo_ne(
-        p.eo2(mat), a.cg({"eps": 1e-3, "maxiter": 50, "checkres": False})
+    "setupsolve": i.preconditioned(
+        p.eo2_ne(parity=g.odd), i.cg({"eps": 1e-3, "maxiter": 50, "checkres": False})
     ),
     "distribution": rng.cnormal,
 }
+
 mg_params_3lvl = {
     "grid": [
         grid_f,
@@ -84,46 +84,36 @@ mg_params_3lvl = {
     "vecstype": "test",
     "presmooth": None,
     "postsmooth": [
-        lambda mat: s.inv_eo(
-            p.eo2(mat), a.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
+        i.preconditioned(
+            p.eo2(parity=g.odd),
+            i.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False}),
         ),
-        lambda mat: s.inv_direct(
-            mat, a.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
-        ),
+        i.direct(i.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})),
     ],
-    "coarsestsolve": lambda mat: s.inv_direct(
-        mat, a.bicgstab({"eps": 5e-2, "maxiter": 50, "checkres": False}),
+    "coarsestsolve": i.direct(
+        i.bicgstab({"eps": 5e-2, "maxiter": 50, "checkres": False}),
     ),
-    "wrappersolve": lambda mat, prec: s.inv_direct(
-        mat,
-        a.fgmres(
-            {
-                "eps": 1e-1,
-                "maxiter": 10,
-                "restartlen": 5,
-                "checkres": False,
-                "prec": prec,
-            }
-        ),
+    "wrappersolve": i.direct(
+        i.fgmres({"eps": 1e-1, "maxiter": 10, "restartlen": 5, "checkres": False,}),
     ),
     "setupsolve": [
-        lambda mat: s.inv_eo_ne(
-            p.eo2(mat), a.cg({"eps": 1e-3, "maxiter": 50, "checkres": False})
+        i.preconditioned(
+            p.eo2_ne(parity=g.odd),
+            i.cg({"eps": 1e-3, "maxiter": 50, "checkres": False}),
         ),
-        lambda mat: s.inv_direct(
-            mat,
-            a.fgmres({"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}),
+        i.direct(
+            i.fgmres({"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}),
         ),
     ],
     "distribution": [rng.cnormal, rng.zn],
 }
+
 g.message("multigrid parameters 2lvl: ", mg_params_2lvl)
 g.message("multigrid parameters 3lvl: ", mg_params_3lvl)
 
-mg_prec_2lvl = a.mg(w_dp, mg_params_2lvl)
-mg_prec_3lvl = a.mg(w_dp, mg_params_3lvl)
-bicgstab_prec = a.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
-eo2_even_dp = p.eo2(w_dp, parity=g.even)
+mg_prec_2lvl = i.mg(w_dp, mg_params_2lvl)
+mg_prec_3lvl = i.mg(w_dp, mg_params_3lvl)
+bicgstab_prec = i.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
 
 # solver params
 eps = 1e-8
@@ -132,76 +122,68 @@ restartlen = 20
 
 # solvers (using dictionaries to gain access to solver history)
 slvs = {
-    "cg_eone_none": {
-        "inv": s.inv_eo_ne,
-        "mat": p.eo2(w_dp),
-        "alg": a.cg({"eps": eps, "maxiter": maxiter}),
-    },
-    "fgmres_direct_mg_2lvl": {
-        "inv": s.inv_direct,
-        "mat": w_dp,
-        "alg": a.fgmres(
+    "cg_eo2ne_none": i.preconditioned(
+        p.eo2_ne(parity=g.odd), i.cg({"eps": eps, "maxiter": maxiter})
+    ),
+    "fgmres_direct_mg_2lvl": i.direct(
+        i.fgmres(
             {
                 "eps": eps,
                 "maxiter": maxiter,
                 "restartlen": restartlen,
-                "prec": s.inv_direct(w_dp, mg_prec_2lvl),
+                "prec": i.direct(mg_prec_2lvl),
             }
         ),
-    },
-    "fgmres_direct_mg_3lvl": {
-        "inv": s.inv_direct,
-        "mat": w_dp,
-        "alg": a.fgmres(
+    ),
+    "fgmres_direct_mg_3lvl": i.direct(
+        i.fgmres(
             {
                 "eps": eps,
                 "maxiter": maxiter,
                 "restartlen": restartlen,
-                "prec": s.inv_direct(w_dp, mg_prec_3lvl),
+                "prec": i.direct(mg_prec_3lvl),
             }
         ),
-    },
-    "fgmres_direct_bicgstab": {
-        "inv": s.inv_direct,
-        "mat": w_dp,
-        "alg": a.fgmres(
+    ),
+    "fgmres_direct_bicgstab": i.direct(
+        i.fgmres(
             {
                 "eps": eps,
                 "maxiter": maxiter,
                 "restartlen": restartlen,
-                "prec": s.inv_direct(w_dp, bicgstab_prec),
+                "prec": i.preconditioned(p.eo2(parity=g.odd), bicgstab_prec),
             }
         ),
-    },
+    ),
 }
 
 # helper dictionaries
 timings = {}
 resid = {}
 iters = {}
-resid_cg_eone_none = {}
+resid_cg_eo2ne_none = {}
 
 # ensure cg runs first
-assert list(slvs.keys())[0] == "cg_eone_none"
+assert list(slvs.keys())[0] == "cg_eo2ne_none"
 
 
 def test_slv(slv, name):
-    global dst_cg_eone_none
+    global dst_cg_eo2ne_none
     g.message(f"Starting with solver {name}")
     t0 = g.time()
-    dst = g.eval(s.propagator(slv["inv"](slv["mat"], slv["alg"])) * src)
-    if name == "cg_eone_none":
-        dst_cg_eone_none = g.copy(dst)
+    dst = g.eval(w_dp.propagator(slv) * src)
+    if name == "cg_eo2ne_none":
+        dst_cg_eo2ne_none = g.copy(dst)
     t1 = g.time()
     timings[name] = t1 - t0
-    resid[name] = (g.norm2(w_dp.M * dst - src) / g.norm2(src)) ** 0.5
-    if name == "cg_eone_none":
-        resid_cg_eone_none[name] = 0.0
+    resid[name] = (g.norm2(w_dp * dst - src) / g.norm2(src)) ** 0.5
+    if name == "cg_eo2ne_none":
+        resid_cg_eo2ne_none[name] = 0.0
     else:
-        resid_cg_eone_none[name] = (
-            g.norm2(dst_cg_eone_none - dst) / g.norm2(dst_cg_eone_none)
+        resid_cg_eo2ne_none[name] = (
+            g.norm2(dst_cg_eo2ne_none - dst) / g.norm2(dst_cg_eo2ne_none)
         ) ** 0.5
-    iters[name] = len(slv["alg"].history)
+    iters[name] = len(slv.inverter.history)
 
 
 # run solvers
@@ -229,7 +211,7 @@ g.message(
 for k, v in timings.items():
     g.message(
         "%-38s %-25g %-25d %-25g %-25g"
-        % (k, v, iters[k], resid[k], resid_cg_eone_none[k])
+        % (k, v, iters[k], resid[k], resid_cg_eo2ne_none[k])
     )
 
 # print 2lvl mg profiling
