@@ -22,12 +22,6 @@ import numpy as np
 import sys
 
 
-def make_param_list(a, c):
-    if type(a) == list:
-        return a
-    return [a] * c
-
-
 def assert_correct_length(a, c):
     if type(a) == list:
         for elem in a:
@@ -50,17 +44,17 @@ class mg:
         self.ncoarselevel = self.nlevel - 1
         self.finest = 0
         self.coarsest = self.nlevel - 1
-        self.northo = make_param_list(params["northo"], self.nlevel - 1)
-        self.nbasis = make_param_list(params["nbasis"], self.nlevel - 1)
-        self.hermitian = make_param_list(params["hermitian"], self.nlevel - 1)
-        self.savelinks = make_param_list(params["savelinks"], self.nlevel - 1)
-        self.uselut = make_param_list(params["uselut"], self.nlevel - 1)
-        self.vecstype = make_param_list(params["vecstype"], self.nlevel - 1)
-        self.presmooth = make_param_list(params["presmooth"], self.nlevel - 1)
-        self.postsmooth = make_param_list(params["postsmooth"], self.nlevel - 1)
-        self.setupsolve = make_param_list(params["setupsolve"], self.nlevel - 1)
-        self.wrappersolve = make_param_list(params["wrappersolve"], self.nlevel - 1)
-        self.distribution = make_param_list(params["distribution"], self.nlevel - 1)
+        self.northo = g.util.to_list(params["northo"], self.nlevel - 1)
+        self.nbasis = g.util.to_list(params["nbasis"], self.nlevel - 1)
+        self.hermitian = g.util.to_list(params["hermitian"], self.nlevel - 1)
+        self.savelinks = g.util.to_list(params["savelinks"], self.nlevel - 1)
+        self.uselut = g.util.to_list(params["uselut"], self.nlevel - 1)
+        self.vecstype = g.util.to_list(params["vecstype"], self.nlevel - 1)
+        self.presmooth = g.util.to_list(params["presmooth"], self.nlevel - 1)
+        self.postsmooth = g.util.to_list(params["postsmooth"], self.nlevel - 1)
+        self.setupsolve = g.util.to_list(params["setupsolve"], self.nlevel - 1)
+        self.wrappersolve = g.util.to_list(params["wrappersolve"], self.nlevel - 1)
+        self.distribution = g.util.to_list(params["distribution"], self.nlevel - 1)
         self.coarsestsolve = params["coarsestsolve"]
 
         # verbosity

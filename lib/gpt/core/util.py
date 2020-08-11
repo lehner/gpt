@@ -42,10 +42,10 @@ def tensor_to_value(value, dtype=np.complex128):
 
 
 # list
-def to_list(value):
+def to_list(value, count=None):
     if type(value) == list:
         return value
-    return [value]
+    return [value] * count if count is not None else [value]
 
 
 def from_list(value):
