@@ -109,5 +109,3 @@ def quarkContract34(mspincolor1 , mspincolor2):
 
     g.merge_spin(dst, mspin)
     return dst
-
-
