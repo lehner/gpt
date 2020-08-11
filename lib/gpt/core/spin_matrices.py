@@ -16,7 +16,9 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-
+#    Authors:  Lorenzo Barca     2020
+#              Christoph Lehner  2020
+#
 import gpt as g
 
 class spin_matrix():

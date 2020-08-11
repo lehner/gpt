@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 #
-# Authors: Christoph Lehner 2020
+# Authors: Lorenzo Barca    2020
+#          Christoph Lehner 2020
 #
 import gpt as g
 import numpy as np
-import h5py
 
 # load configuration
 U = g.load("/glurch/scratch/configs/cls/A653r000/cnfg/A653r000n1750")
@@ -32,7 +32,7 @@ src=g.mspincolor(grid)
 g.create.point(src, [0,0,0,26])
 
 
-# build solver using g5m and cg
+# build cg solver
 inv = g.algorithms.inverter
 pc = g.qcd.fermion.preconditioner
 cg = inv.cg({"eps": 1e-15, "maxiter": 1000})
@@ -53,7 +53,6 @@ mom_list=[ "-100", "0-10", "00-1", "000" ]
 correlator_2pt=g.slice(g.trace( dst * g.adj(dst) ), 3)
 
 t_sink = 31
-Nt = 48
 
 # currents at insertion time
 currents=[ g.gamma["X"], g.gamma["Y"], g.gamma["Z"], g.gamma["T"] ]
@@ -64,7 +63,6 @@ for p_n, p in enumerate(moms):
     P=g.exp_ixp(p)
     G_sink = g.gamma["X"]* P
     G_src = g.gamma["I"]
-
 
     # sequential source
     seq_src = g.lattice(dst)

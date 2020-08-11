@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 #
-# Authors: Christoph Lehner 2020
+# Authors:  Lorenzo Barca    2020
+#           Christoph Lehner 2020
 #
 import gpt as g
 import numpy as np
-import h5py
 
 # load configuration
 U = g.load("/glurch/scratch/configs/cls/A653r000/cnfg/A653r000n1750")
@@ -49,11 +49,6 @@ mom=2.0*np.pi*moms/L
 print("len(moms)", len(moms))
 
 mom_list=[ "-100", "0-10", "00-1", "000", "100", "010", "001" ]
-
-# list of mesons
-data_file = 'results_a653/mesons2pt_double_eps15.h5'
-Nt=48
-Cg5=g.core.spin_matrices.spin_matrix.Cg5()
 
 for p_n, p in enumerate(mom):
     g.message( "mom", mom_list[p_n] )
