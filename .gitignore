@@ -29,6 +29,6 @@ missing
 /lib/gpt/pyfiles.inc
 /lib/cgpt/ccfiles.inc
 /lib/cgpt/hfiles.inc
-/lib/cgpt/logs
+/lib/cgpt/logs/*
 *.coverage*
 coverage.xml
