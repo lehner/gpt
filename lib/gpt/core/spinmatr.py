@@ -33,7 +33,7 @@ def quarkContract12(mspincolor1 , mspincolor2):
     for s1 in range(4):
         for s2 in range(4):
             for k in range(4):
-                mspin[s1, s2] += quarkContractXX(mspin1[k, k], mspin2[s1,s2], grid)
+                mspin[s1, s2] += quarkContractXX(mspin1[k, k], mspin2[s1, s2], grid)
 
     g.merge_spin(dst, mspin)
     return dst
@@ -51,11 +51,10 @@ def quarkContract13(mspincolor1 , mspincolor2):
     for s1 in range(4):
         for s2 in range(4):
             for k in range(4):
-                mspin[s1, s2] += quarkContractXX(mspin1[k,s1], mspin2[k,s2], grid)
+                mspin[s1, s2] += quarkContractXX(mspin1[k, s1], mspin2[k, s2], grid)
 
     g.merge_spin(dst, mspin)
     return dst
-
 
 
 def quarkContract14(mspincolor1 , mspincolor2):
@@ -76,7 +75,6 @@ def quarkContract14(mspincolor1 , mspincolor2):
     return dst
 
 
-
 def quarkContract23(mspincolor1 , mspincolor2):
 
     grid = mspincolor1.grid
@@ -89,12 +87,10 @@ def quarkContract23(mspincolor1 , mspincolor2):
     for s1 in range(4):
         for s2 in range(4):
             for k in range(4):
-                mspin[s1, s2] += quarkContractXX(mspin1[ s1, k ], mspin2[ k, s2 ], grid)
+                mspin[s1, s2] += quarkContractXX(mspin1[s1, k], mspin2[k, s2], grid)
 
     g.merge_spin(dst, mspin)
     return dst
-
-
 
 
 def quarkContract34(mspincolor1 , mspincolor2):
@@ -109,7 +105,7 @@ def quarkContract34(mspincolor1 , mspincolor2):
     for s1 in range(4):
         for s2 in range(4):
             for k in range(4):
-                mspin[s1, s2] += quarkContractXX(mspin1[ s1, s2 ], mspin2[ k, k ], grid)
+                mspin[s1, s2] += quarkContractXX(mspin1[s1, s2], mspin2[k, k], grid)
 
     g.merge_spin(dst, mspin)
     return dst
