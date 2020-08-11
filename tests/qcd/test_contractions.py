@@ -6,22 +6,12 @@
 import gpt as g
 import numpy as np
 
-# load configuration
-# U = g.load("/glurch/scratch/configs/cls/A653r000/cnfg/A653r000n1750")
-
 rng = g.random("test")
 vol = [4, 4, 4, 8]
 grid_rb = g.grid(vol, g.double, g.redblack)
 grid = g.grid(vol, g.double)
 field = g.vcolor
 print(grid)
-
-# do everything in single-precision
-#U = g.convert(U, g.single)
-
-# use the gauge configuration grid
-#grid=U[0].grid
-L = np.array(grid.fdimensions)
 
 msc = g.mspincolor(grid)
 rng.cnormal(msc)
