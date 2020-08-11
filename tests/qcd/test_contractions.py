@@ -7,7 +7,7 @@ import gpt as g
 import numpy as np
 
 # load configuration
-#U = g.load("/glurch/scratch/configs/cls/A653r000/cnfg/A653r000n1750")
+# U = g.load("/glurch/scratch/configs/cls/A653r000/cnfg/A653r000n1750")
 
 rng = g.random("test")
 vol = [4, 4, 4, 8]
