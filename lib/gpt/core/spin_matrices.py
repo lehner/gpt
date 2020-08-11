@@ -23,43 +23,43 @@ import gpt as g
 
 class spin_matrix():
 
-    def T_polx( ):
+    def T_polx():
         return 1/2 * 1j * ( g.gamma["Y"] * g.gamma["Z"] + g.gamma["X"] * g.gamma[5] )
 
-    def T_poly( ):
+    def T_poly():
         return - 1/2 * 1j * ( g.gamma["X"] * g.gamma["Z"] - g.gamma["Y"] * g.gamma[5] )
 
-    def T_polz( ):
+    def T_polz():
         return 1/2 * 1j * ( g.gamma["X"] * g.gamma["Y"] + g.gamma["Z"] * g.gamma[5] )
 
-    def T_unpol( ):
+    def T_unpol():
         return 1/2 * ( g.gamma["I"] + g.gamma["T"] )
 
-    def T_unpol_negpar( ):
+    def T_unpol_negpar():
         return  1/2 * ( 1 - g.gamma["T"])
 
-    def T_mixed( ):
+    def T_mixed():
         return T_unpol() * ( 1 + 1j * g.gamma["Z"] * g.gamma[5] )
 
-    def T_mixed_negpar( ):
+    def T_mixed_negpar():
         return spin_matrix.T_unpol_negpar() * (g.gamma["I"] + 1j * g.gamma["Z"] * g.gamma[5] )
 
-    def C( ):
+    def C():
         return g.gamma["Y"] * g.gamma["T"]
 
-    def Cg5( ):
+    def Cg5():
         return spin_matrix.C() * g.gamma[5]
 
-    def Cg5g4( ):
+    def Cg5g4():
         return spin_matrix.Cg5() * g.gamma["T"]
 
-    def Cgm( ):
+    def Cgm():
         return 1/2 * ( g.gamma["Y"] + 1j * g.gamma["X"] )
 
-    def Cg5_NR( ):
+    def Cg5_NR():
         return spin_matrix.Cg5() * spin_matrix.T_unpol()
 
-    def Cg5_NR_negpar( ):
+    def Cg5_NR_negpar():
         return spin_matrix.Cg5() * spin_matrix.T_unpol_negpar()
 
 
