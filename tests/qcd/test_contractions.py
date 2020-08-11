@@ -26,7 +26,7 @@ for k in range(4):
          xc[2,1][2,2,2,2][k,k] * xc[1,2][2,2,2,2][2,3] + \
          xc[2,2][2,2,2,2][k,k] * xc[1,1][2,2,2,2][2,3]
 
-'''
+
 di_quark=g.core.spinmatr.quarkContract12( msc, msc )
 g.message( "a=", a )
 g.message( "di_quark:", di_quark[2,2,2,2][2,3,0,0])
@@ -36,7 +36,3 @@ g.message("eps: ", eps)
 
 assert( eps < 1e-15 )
 
-'''
-msc1 = g.eval( g.gamma[5] * msc)
-
-print(msc1[0,0,0,0][0,0,0,0])
