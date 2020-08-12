@@ -49,6 +49,8 @@ class mg:
         self.hermitian = g.util.to_list(params["hermitian"], self.nlevel - 1)
         self.savelinks = g.util.to_list(params["savelinks"], self.nlevel - 1)
         self.uselut = g.util.to_list(params["uselut"], self.nlevel - 1)
+        self.preortho = g.util.to_list(params["preortho"], self.nlevel - 1)
+        self.postortho = g.util.to_list(params["postortho"], self.nlevel - 1)
         self.vecstype = g.util.to_list(params["vecstype"], self.nlevel - 1)
         self.presmooth = g.util.to_list(params["presmooth"], self.nlevel - 1)
         self.postsmooth = g.util.to_list(params["postsmooth"], self.nlevel - 1)
@@ -84,6 +86,8 @@ class mg:
                 self.hermitian,
                 self.savelinks,
                 self.uselut,
+                self.preortho,
+                self.postortho,
                 self.vecstype,
                 self.presmooth,
                 self.postsmooth,
@@ -189,6 +193,18 @@ class mg:
                 nb = self.nb[lvl]
                 vecstype = self.vecstype[lvl]
 
+                # pre-orthonormalize basis vectors
+                if self.preortho[lvl]:
+                    t("preortho")
+                    g.default.push_verbose("orthogonalize", False)
+                    for i, v in enumerate(basis[0:nb]):
+                        v /= g.norm2(v) ** 0.5
+                        g.orthogonalize(v, basis[:i])
+                    g.default.pop_verbose()
+
+                    if self.verbose:
+                        g.message("%s done pre-orthonormalizing basis vectors" % pp)
+
                 # find near-null vectors
                 t("find_null_vecs")
                 src, psi = g.copy(basis[0]), g.copy(basis[0])
@@ -206,6 +222,18 @@ class mg:
 
                 if self.verbose:
                     g.message("%s done finding null-space vectors" % pp)
+
+                # post-orthonormalize basis vectors
+                if self.postortho[lvl]:
+                    t("postortho")
+                    g.default.push_verbose("orthogonalize", False)
+                    for i, v in enumerate(basis[0:nb]):
+                        v /= g.norm2(v) ** 0.5
+                        g.orthogonalize(v, basis[:i])
+                    g.default.pop_verbose()
+
+                    if self.verbose:
+                        g.message("%s done post-orthonormalizing basis vectors" % pp)
 
                 # chiral doubling
                 t("chiral_split")

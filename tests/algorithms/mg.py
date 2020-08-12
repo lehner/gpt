@@ -58,6 +58,8 @@ mg_params_2lvl = {
     "savelinks": True,
     "uselut": True,
     "vecstype": "test",
+    "preortho": False,
+    "postortho": False,
     "presmooth": None,
     "postsmooth": i.preconditioned(
         p.eo2(parity=g.odd), i.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
@@ -84,6 +86,8 @@ mg_params_3lvl = {
     "savelinks": True,
     "uselut": True,
     "vecstype": "test",
+    "preortho": False,
+    "postortho": False,
     "presmooth": None,
     "postsmooth": [
         i.preconditioned(
