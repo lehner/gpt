@@ -140,8 +140,17 @@ class mg:
                 for __ in range(9)
             ]
 
+        # setup a history for all solvers
+        self.history = [None] * self.nlevel
+        for lvl in range(self.finest, self.coarsest):
+            self.history[lvl] = {"smooth": [], "setup": [], "wrapper": []}
+        self.history[self.coarsest] = {"coarsest": []}
+
         # rest of setup (call that externally?)
         self.resetup()
+
+    def _get_slv_history(self, slv):
+        return len(slv.inverter.history), slv.inverter.history[-1]
 
     def resetup(self, which_lvls=None):
         if which_lvls is not None:
@@ -214,6 +223,9 @@ class mg:
                     else:
                         assert 0
                     self.setupsolve[lvl](self.mat[lvl])(psi, src)
+                    self.history[lvl]["setup"].append(
+                        self._get_slv_history(self.setupsolve[lvl])
+                    )
                     v @= psi
 
                 if self.verbose:
@@ -298,6 +310,9 @@ class mg:
             if lvl == self.coarsest:
                 t("invert")
                 self.coarsestsolve(self.mat[lvl])(psi, src)
+                self.history[lvl]["coarsest"].append(
+                    self._get_slv_history(self.coarsestsolve)
+                )
             else:
                 # aliases
                 mat = self.mat[lvl]
@@ -330,6 +345,9 @@ class mg:
                     self.wrappersolve[lvl](self.mat[nc_lvl])(
                         self.e[nc_lvl], self.r[nc_lvl]
                     )
+                    self.history[lvl]["wrapper"].append(
+                        self._get_slv_history(self.wrappersolve[lvl])
+                    )
                 else:
                     inv_lvl(self.e[nc_lvl], self.r[nc_lvl], nc_lvl)
 
@@ -359,6 +377,9 @@ class mg:
                 # smooth
                 t("smooth")
                 self.smoothsolve[lvl](mat)(psi, src)
+                self.history[lvl]["smooth"].append(
+                    self._get_slv_history(self.smoothsolve[lvl])
+                )
 
                 t("residual")
                 mat(tmp, psi)
