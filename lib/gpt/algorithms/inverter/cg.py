@@ -50,6 +50,9 @@ class cg:
             a = g.norm2(p)
             cp = a
             ssq = g.norm2(src)
+            if ssq == 0.0:
+                assert a != 0.0  # need either source or psi to not be zero
+                ssq = a
             rsq = self.eps ** 2.0 * ssq
             for k in range(1, self.maxiter + 1):
                 c = cp

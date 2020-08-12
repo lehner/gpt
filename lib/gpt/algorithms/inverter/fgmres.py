@@ -113,12 +113,17 @@ class fgmres:
                 else None
             )  # save vectors if unpreconditioned
 
-            # residual
-            ssq = g.norm2(src)
-            rsq = self.eps ** 2.0 * ssq
-
-            # initial values
+            # initial residual
             r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
+
+            # source
+            ssq = g.norm2(src)
+            if ssq == 0.0:
+                assert r2 != 0.0  # need either source or psi to not be zero
+                ssq = r2
+
+            # target residual
+            rsq = self.eps ** 2.0 * ssq
 
             for k in range(self.maxiter):
                 # iteration within current krylov space
