@@ -222,7 +222,11 @@ class mg:
                         psi @= v
                     else:
                         assert 0
+                    g.default.push_verbose(
+                        self.setupsolve[lvl].inverter.__class__.__name__, False
+                    )
                     self.setupsolve[lvl](self.mat[lvl])(psi, src)
+                    g.default.pop_verbose()
                     self.history[lvl]["setup"].append(
                         self._get_slv_history(self.setupsolve[lvl])
                     )
@@ -309,7 +313,11 @@ class mg:
 
             if lvl == self.coarsest:
                 t("invert")
+                g.default.push_verbose(
+                    self.coarsestsolve.inverter.__class__.__name__, False
+                )
                 self.coarsestsolve(self.mat[lvl])(psi, src)
+                g.default.pop_verbose()
                 self.history[lvl]["coarsest"].append(
                     self._get_slv_history(self.coarsestsolve)
                 )
@@ -339,12 +347,16 @@ class mg:
                 t("on_coarser")
                 self.e[nc_lvl][:] = 0.0
                 if self.wrappersolve[lvl] is not None:
+                    g.default.push_verbose(
+                        self.wrappersolve[lvl].inverter.__class__.__name__, False
+                    )
                     self.wrappersolve[lvl].prec = lambda dst, src: inv_lvl(
                         dst, src, nc_lvl
                     )
                     self.wrappersolve[lvl](self.mat[nc_lvl])(
                         self.e[nc_lvl], self.r[nc_lvl]
                     )
+                    g.default.pop_verbose()
                     self.history[lvl]["wrapper"].append(
                         self._get_slv_history(self.wrappersolve[lvl])
                     )
@@ -376,7 +388,11 @@ class mg:
 
                 # smooth
                 t("smooth")
+                g.default.push_verbose(
+                    self.smoothsolve[lvl].inverter.__class__.__name__, False
+                )
                 self.smoothsolve[lvl](mat)(psi, src)
+                g.default.pop_verbose()
                 self.history[lvl]["smooth"].append(
                     self._get_slv_history(self.smoothsolve[lvl])
                 )
