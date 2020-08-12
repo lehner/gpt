@@ -52,8 +52,7 @@ class mg:
         self.preortho = g.util.to_list(params["preortho"], self.nlevel - 1)
         self.postortho = g.util.to_list(params["postortho"], self.nlevel - 1)
         self.vecstype = g.util.to_list(params["vecstype"], self.nlevel - 1)
-        self.presmooth = g.util.to_list(params["presmooth"], self.nlevel - 1)
-        self.postsmooth = g.util.to_list(params["postsmooth"], self.nlevel - 1)
+        self.smoothsolve = g.util.to_list(params["smoothsolve"], self.nlevel - 1)
         self.setupsolve = g.util.to_list(params["setupsolve"], self.nlevel - 1)
         self.wrappersolve = g.util.to_list(params["wrappersolve"], self.nlevel - 1)
         self.distribution = g.util.to_list(params["distribution"], self.nlevel - 1)
@@ -89,8 +88,7 @@ class mg:
                 self.preortho,
                 self.postortho,
                 self.vecstype,
-                self.presmooth,
-                self.postsmooth,
+                self.smoothsolve,
                 self.setupsolve,
                 self.wrappersolve,
                 self.distribution,
@@ -98,9 +96,7 @@ class mg:
             ],
             self.nlevel - 1,
         )
-        assert_correct_solver(
-            [self.presmooth, self.postsmooth, self.setupsolve, self.coarsestsolve]
-        )
+        assert_correct_solver([self.smoothsolve, self.setupsolve, self.coarsestsolve])
         assert type(self.coarsestsolve) != list
 
         # timing
@@ -309,25 +305,8 @@ class mg:
                 r = self.r[lvl]
                 t = self.t_solve[lvl]
 
-                # run optional pre-smoother
-                # TODO check algorithm regarding presmoothing
-                if False:
-                    t("presmooth")
-                    tmp, mmtmp = g.lattice(src), g.lattice(src)
-                    tmp[:] = 0
-                    self.presmooth(mat)(tmp, src)
-                    mat(mmtmp, tmp)
-                    r @= src - mmtmp
-                else:
-                    t("copy")
-                    r @= src
-
-                if self.verbose:
-                    g.message("%s done presmoothing" % (pp))
-                    g.message(
-                        "%s norms before f2c: r_c = %g, r = %g"
-                        % (pp, g.norm2(self.r[nc_lvl]), g.norm2(r))
-                    )
+                t("copy")
+                r @= src
 
                 # fine to coarse
                 t("to_coarser")
@@ -377,20 +356,20 @@ class mg:
                     g.message("%s done projecting from level %d" % (pp, nc_lvl))
                     g.message("%s norms after c2f: psi = %g" % (pp, g.norm2(psi)))
 
-                # run optional pre-smoother TODO make optional
-                t("postsmooth")
-                self.postsmooth[lvl](mat)(psi, src)
+                # smooth
+                t("smooth")
+                self.smoothsolve[lvl](mat)(psi, src)
 
                 t("residual")
                 mat(tmp, psi)
                 tmp @= src - tmp
-                res_postsmooth = (g.norm2(tmp) / inputnorm) ** 0.5
+                res_smooth = (g.norm2(tmp) / inputnorm) ** 0.5
 
                 if self.verbose:
-                    g.message("%s done postsmoothing" % (pp))
+                    g.message("%s done smoothing" % (pp))
                     g.message(
-                        "%s input norm = %g, coarse residual = %g, postsmooth residual = %g"
-                        % (pp, inputnorm, res_cgc, res_postsmooth)
+                        "%s input norm = %g, coarse residual = %g, smooth residual = %g"
+                        % (pp, inputnorm, res_cgc, res_smooth)
                     )
 
             t()

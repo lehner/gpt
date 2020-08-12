@@ -60,8 +60,7 @@ mg_params_2lvl = {
     "vecstype": "test",
     "preortho": False,
     "postortho": False,
-    "presmooth": None,
-    "postsmooth": i.preconditioned(
+    "smoothsolve": i.preconditioned(
         p.eo2(parity=g.odd), i.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False})
     ),
     "coarsestsolve": i.direct(
@@ -88,8 +87,7 @@ mg_params_3lvl = {
     "vecstype": "test",
     "preortho": False,
     "postortho": False,
-    "presmooth": None,
-    "postsmooth": [
+    "smoothsolve": [
         i.preconditioned(
             p.eo2(parity=g.odd),
             i.bicgstab({"eps": 1e-1, "maxiter": 16, "checkres": False}),
