@@ -407,7 +407,7 @@ jobs:
         cd gpt
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         export WORK_DIR=$(mktemp -d)
-        ./tests/run "coverage run"
+        ./tests/run "coverage run" "--mpi_split 1.1.1.1"
 
     - name: Run tests
       if: matrix.mpi == 'openmpi'
@@ -418,8 +418,8 @@ jobs:
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         export WORK_DIR=$(mktemp -d) 
         mpirun -np 2 -mca btl ^openib -bind-to core python tests/core/scalar.py --mpi 1.1.1.2
-        ./tests/run "mpirun -np 1 -mca btl ^openib coverage run"
-        ./tests/run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run" "--mpi 1.1.1.2 --mpi 1.1.2"
+        ./tests/run "mpirun -np 1 -mca btl ^openib coverage run" "--mpi_split 1.1.1.1"
+        ./tests/run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run" "--mpi 1.1.1.2 --mpi 1.1.2 --mpi_split 1.1.1.1"
 
     - name: Run tests
       if: matrix.mpi == 'mpich'
@@ -427,8 +427,8 @@ jobs:
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         cd gpt
         export WORK_DIR=$(mktemp -d)
-        ./tests/run "mpirun -np 1 coverage run"
-        ./tests/run "mpirun -np 2 -bind-to core coverage run" "--mpi 1.1.1.2 --mpi 1.1.2"
+        ./tests/run "mpirun -np 1 coverage run" "--mpi_split 1.1.1.1"
+        ./tests/run "mpirun -np 2 -bind-to core coverage run" "--mpi 1.1.1.2 --mpi 1.1.2 --mpi_split 1.1.1.1"
 
     - name: Coverage report
       run: |

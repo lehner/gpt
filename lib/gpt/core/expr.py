@@ -37,7 +37,7 @@ class expr_unary:
 # - each expression can have a unary operation such as trace
 # - each expression has linear combination of terms
 # - each term is a non-commutative product of factors
-# - each factor is a lattice/object with optional factor_unary operation applied
+# - each factor is a list of lattices/objects with optional factor_unary operation applied
 # - an object could be a spin or a gauge matrix
 
 
@@ -49,7 +49,10 @@ class expr:
             self.val = val.val
             unary = unary | val.unary
         elif type(val) == list:
-            self.val = val
+            if isinstance(val[0], tuple):
+                self.val = val
+            else:
+                self.val = [(1.0, [(factor_unary.NONE, val)])]
         elif gpt.util.isnum(val):
             self.val = [(complex(val), [])]
         else:
@@ -59,11 +62,15 @@ class expr:
     def is_single(self, t=None):
         b = len(self.val) == 1 and self.val[0][0] == 1.0 and len(self.val[0][1]) == 1
         if t is not None:
-            b = b and type(self.val[0][1][0][1]) == t
+            b = b and gpt.util.is_list_instance(self.val[0][1][0][1], t)
         return b
 
     def get_single(self):
-        return (self.unary, self.val[0][1][0][0], self.val[0][1][0][1])
+        return (
+            self.unary,
+            self.val[0][1][0][0],
+            self.val[0][1][0][1],
+        )
 
     def __mul__(self, l):
         if type(l) == expr:
@@ -179,7 +186,7 @@ def get_lattice(e):
         return get_lattice(e.val[0][1])
     elif type(e) == list:
         for i in e:
-            if type(i[1]) == gpt.lattice:
+            if gpt.util.is_list_instance(i[1], gpt.lattice):
                 return i[1]
     return None
 
@@ -246,10 +253,7 @@ def get_otype_from_expression(e):
             t_otype = None
             t_adj = False
             for unary, factor in reversed(term):
-                f_otype = factor.otype
-                if isinstance(f_otype, list):
-                    f_otype = f_otype[0]
-
+                f_otype = gpt.util.to_list(factor)[0].otype
                 f_adj = unary == factor_unary.ADJ
                 if t_otype is None:
                     t_otype = f_otype
@@ -281,15 +285,15 @@ def get_otype_from_expression(e):
 
 def expr_eval(first, second=None, ac=False):
 
-    # this will always evaluate to a lattice object
+    # this will always evaluate to a (list of) lattice object(s)
     # or remain an expression if it cannot do so
 
     if second is not None:
-        t_obj = first.v_obj
+        t_obj = [x.v_obj for x in gpt.util.to_list(first)]
         e = expr(second)
     else:
         assert ac is False
-        if type(first) == gpt.lattice:
+        if gpt.util.is_list_instance(first, gpt.lattice):
             return first
 
         e = expr(first)
@@ -297,7 +301,10 @@ def expr_eval(first, second=None, ac=False):
         if lat is None:
             # cannot evaluate to a lattice object, leave expression unevaluated
             return first
-        grid = lat.grid
+        return_list = type(lat) == list
+        lat = gpt.util.to_list(lat)
+        grid = lat[0].grid
+        nlat = len(lat)
         t_obj = None
 
     # apply matrix_operators
@@ -315,7 +322,8 @@ def expr_eval(first, second=None, ac=False):
         gpt.message("GPT::verbose::eval: " + str(e))
 
     if t_obj is not None:
-        assert 0 == cgpt.eval(t_obj, e.val, e.unary, ac)
+        for i, t_o in enumerate(t_obj):
+            assert 0 == cgpt.eval(t_o, e.val, e.unary, ac, i)
         return first
     else:
         assert ac is False
@@ -323,12 +331,20 @@ def expr_eval(first, second=None, ac=False):
         # now find return type
         otype = get_otype_from_expression(e)
 
-        res = cgpt.eval(t_obj, e.val, e.unary, False)
-        t_obj, s_ot = (
-            [x[0] for x in res],
-            [x[1] for x in res],
-        )
+        ret = []
 
-        assert s_ot == otype.v_otype
+        for idx in range(nlat):
+            res = cgpt.eval(t_obj, e.val, e.unary, False, idx)
+            t_obj, s_ot = (
+                [x[0] for x in res],
+                [x[1] for x in res],
+            )
 
-        return gpt.lattice(grid, otype, t_obj)
+            assert s_ot == otype.v_otype
+
+            ret.append(gpt.lattice(grid, otype, t_obj))
+
+        if not return_list:
+            return gpt.util.from_list(ret)
+
+        return ret

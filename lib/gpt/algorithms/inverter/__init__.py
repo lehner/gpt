@@ -24,5 +24,6 @@ from gpt.algorithms.inverter.mr import mr
 from gpt.algorithms.inverter.mg import mg
 from gpt.algorithms.inverter.defect_correcting import defect_correcting
 from gpt.algorithms.inverter.mixed_precision import mixed_precision
+from gpt.algorithms.inverter.split import split
 from gpt.algorithms.inverter.preconditioned import preconditioned
 from gpt.algorithms.inverter.direct import direct

@@ -76,3 +76,50 @@ g.message("Test resid/iter deflated cg: ", eps2, niter_defl)
 assert eps2 < 1e-8
 
 assert niter_defl < niter_cg
+
+# block
+grid_coarse = g.block.grid(w.F_grid_eo, [2, 2, 2, 2])
+nbasis = 20
+cstart = g.vcomplex(grid_coarse, nbasis)
+cstart[:] = g.vcomplex([1] * nbasis, nbasis)
+basis = evec[0:nbasis]
+for i in range(2):
+    g.block.orthonormalize(grid_coarse, basis)
+
+# define coarse-grid operator
+cop = g.block.operator(c(w.Mpc), grid_coarse, basis)
+tmp = g.lattice(cstart)
+tmpf = g.lattice(basis[0])
+tmp @= cop * cstart
+g.block.promote(tmp, tmpf, basis)
+g.block.project(cstart, tmpf, basis)
+eps2 = g.norm2(cstart - tmp) / g.norm2(cstart)
+g.message(f"Test coarse-grid promote/project cycle: {eps2}")
+assert eps2 < 1e-13
+
+# coarse-grid lanczos
+cevec, cev = irl(cop, cstart)
+
+# smoothened evals
+smoother = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 10})(w.Mpc)
+smoothed_evals = []
+g.default.push_verbose("cg", False)
+for i, cv in enumerate(cevec):
+    g.block.promote(cv, tmpf, basis)
+    tmpf @= smoother * tmpf
+    smoothed_evals = smoothed_evals + g.algorithms.eigen.evals(
+        w.Mpc, [tmpf], check_eps2=1, real=True
+    )
+g.default.pop_verbose()
+
+# test coarse-grid deflation (re-use fine-grid evals instead of smoothing)
+cdefl = g.algorithms.eigen.coarse_deflate(cg, cevec, basis, smoothed_evals)
+
+sol_cdefl = g.eval(cdefl(w.Mpc) * start)
+eps2 = g.norm2(w.Mpc * sol_cdefl - start) / g.norm2(start)
+niter_cdefl = len(cg.history)
+g.message("Test resid/iter coarse-grid deflated cg: ", eps2, niter_cdefl)
+g.message("Compare fine-grid deflated cg iter: ", niter_defl)
+assert eps2 < 1e-8
+
+assert niter_cdefl < niter_cg

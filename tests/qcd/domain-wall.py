@@ -70,9 +70,10 @@ def H5(dst, src):
 # arnoldi to get an idea of entire spectral range of w
 start = g.vspincolor(w.F_grid)
 start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
-g.default.set_verbose("arnoldi", False)
+g.default.push_verbose("arnoldi", False)
 a = g.algorithms.eigen.arnoldi(Nmin=20, Nmax=20, Nstep=0, Nstop=20, resid=1)
 _, evals_H5 = a(H5, start)
+g.default.pop_verbose()
 g.message(evals_H5)
 # H5 spectrum for 16c RBC lattice: [-1.6344227, ..., 1.6344227]
 # H5 spectrum for random lattice:  [-1.6442832, ..., 1.6442832]
