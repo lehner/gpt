@@ -144,7 +144,9 @@ class fgmres:
                     mat(V[i + 1], V[i])
 
                 t("ortho")
+                g.default.push_verbose("orthogonalize", False)
                 g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i])
+                g.default.pop_verbose()
 
                 t("linalg")
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5

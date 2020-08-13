@@ -114,7 +114,9 @@ class fgcr:
                 mat(mmp[i], p[i])
 
                 t("ortho")
+                g.default.push_verbose("orthogonalize", False)
                 g.orthogonalize(mmp[i], mmp[0:i], beta[:, i])
+                g.default.pop_verbose()
 
                 t("linalg")
                 ip, mmp2 = g.innerProductNorm2(mmp[i], r)
