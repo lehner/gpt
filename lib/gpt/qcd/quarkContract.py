@@ -19,7 +19,7 @@
 #              Christoph Lehner  2020
 #
 import gpt as g
-from gpt.core.colormatr import quarkContractXX
+from gpt.qcd.colormatr import quarkContractXX
 
 def quarkContract12(mspincolor1 , mspincolor2):
 
