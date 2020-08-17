@@ -3,7 +3,6 @@
 *.swp
 *.swo
 *.so
-*.o
 /configure
 /build
 /dependencies
