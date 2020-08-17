@@ -41,12 +41,14 @@ class matrix_operator(factor):
         grid=(None, None),
         zero=(False, False),
         cb=(None, None),
+        accept_list=False,
     ):
 
         self.mat = mat
         self.adj_mat = adj_mat
         self.inv_mat = inv_mat
         self.adj_inv_mat = adj_inv_mat
+        self.accept_list = accept_list
 
         # this allows for automatic application of tensor versions
         # also should handle lists of lattices
@@ -72,6 +74,7 @@ class matrix_operator(factor):
             grid=tuple(reversed(self.grid)),
             zero=tuple(reversed(self.zero)),
             cb=tuple(reversed(self.cb)),
+            accept_list=self.accept_list,
         )
 
     def adj(self):
@@ -84,6 +87,7 @@ class matrix_operator(factor):
             grid=tuple(reversed(self.grid)),
             zero=tuple(reversed(self.zero)),
             cb=tuple(reversed(self.cb)),
+            accept_list=self.accept_list,
         )
 
     def __mul__(self, other):
@@ -92,6 +96,10 @@ class matrix_operator(factor):
             # mat = self * other
             # mat^dag = other^dag self^dag
             # (mat^dag)^-1 = (other^dag self^dag)^-1 = self^dag^-1 other^dag^-1
+
+            # TODO:
+            # Depending on other.zero flag and if self.inv_mat is set, we should
+            # attempt to properly propagate dst as well.
 
             adj_other = other.adj()
             adj_self = self.adj()
@@ -108,9 +116,10 @@ class matrix_operator(factor):
                 grid=(self.grid[0], other.grid[1]),
                 zero=(self.zero[0], other.zero[1]),
                 cb=(self.cb[0], other.cb[1]),
+                accept_list=True,
             )
         else:
-            return other.__rmul__(self)
+            return gpt.expr(other).__rmul__(self)
 
     def converted(self, to_precision, verbose=False):
         assert all([g is not None for g in self.grid])
@@ -122,10 +131,8 @@ class matrix_operator(factor):
 
         def _converted(dst, src, mat, l, r):
             t0 = gpt.time()
-            conv_src, conv_dst = (
-                gpt.lattice(self.grid[l], otype[l]),
-                gpt.lattice(self.grid[r], otype[r]),
-            )
+            conv_src = [gpt.lattice(self.grid[l], otype[l]) for x in src]
+            conv_dst = [gpt.lattice(self.grid[r], otype[r]) for x in src]
 
             gpt.convert(conv_src, src)
             if zero[l]:
@@ -155,6 +162,7 @@ class matrix_operator(factor):
             grid=grid,
             zero=zero,
             cb=cb,
+            accept_list=True,
         )
 
     def unary(self, u):
@@ -167,31 +175,52 @@ class matrix_operator(factor):
     def __call__(self, first, second=None):
         assert self.mat is not None
 
+        return_list = type(first) == list
+        first = gpt.util.to_list(first)
+
         type_match = (
-            self.otype[1] is None or self.otype[1].__name__ == first.otype.__name__
+            self.otype[1] is None or self.otype[1].__name__ == first[0].otype.__name__
         )
 
         if second is None:
 
             src = first
             if self.grid[0] is None or not type_match:
+                dst_grid = src[0].grid
+                dst_otype = src[0].otype
                 # if types do not match or are not provided, assume mat : X -> X
-                dst = gpt.lattice(src)
             else:
-                dst = gpt.lattice(self.grid[0], self.otype[0])
-                if self.cb[0] is not None:
-                    dst.checkerboard(self.cb[0])
+                dst_grid = self.grid[0]
+                dst_otype = self.otype[0]
+
+            dst = [gpt.lattice(dst_grid, dst_otype) for x in src]
+            if self.cb[0] is not None:
+                for x in dst:
+                    x.checkerboard(self.cb[0])
 
             if self.zero[0]:
-                dst[:] = 0
+                for x in dst:
+                    x[:] = 0
 
         else:
             dst = first
-            src = second
+            src = gpt.util.to_list(second)
+
+        if self.accept_list:
+            mat = self.mat
+        else:
+
+            def mat(dst, src):
+                assert len(dst) == len(src)
+                for idx in range(len(dst)):
+                    self.mat(dst[idx], src[idx])
 
         if type_match:
-            self.mat(dst, src)
+            mat(dst, src)
         else:
-            self.otype[1].distribute(self.mat, dst, src, zero_lhs=self.zero[0])
+            self.otype[1].distribute(mat, dst, src, zero_lhs=self.zero[0])
+
+        if not return_list:
+            return gpt.util.from_list(dst)
 
         return dst

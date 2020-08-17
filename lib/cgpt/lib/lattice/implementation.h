@@ -82,7 +82,7 @@ public:
 
   // ac == { true : add result to dst, false : replace dst }
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) {
-    if (typeid(T) == typeid(iSinglet<vCoeff_t>)) {
+    if (typeid(T) == typeid(iSinglet<vCoeff_t>) && b->type() != type()) {
       // singlet multiplication always commutes, can save half cost of instantiation
       return b->mul(dst,ac,this,unary_b,unary_a,unary_expr);
     }
@@ -176,16 +176,11 @@ public:
   }
 
   virtual PyObject* memory_view() {
-#ifdef _GRID_FUTURE_
     auto v = l.View(CpuWrite);
-#else
-    auto v = l.View();
-#endif
     size_t sz = v.size() * sizeof(v[0]);
     char* ptr = (char*)&v[0];
-#ifdef _GRID_FUTURE_
     v.ViewClose();
-#endif
+
     // this marks Cpu as dirty, so data will be copied to Gpu; this is not fully safe
     // and the ViewClose should be moved to the destructor of the PyMemoryView object.
     // Do this in the same way as currently done in mview() in the future.
@@ -219,8 +214,8 @@ public:
     cgpt_block_promote(coarse,l,basis);
   }
 
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
-    cgpt_block_orthonormalize(coarse,l,basis);
+  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) {
+    cgpt_block_orthonormalize(coarse,l,vbasis);
   }
 
   virtual GridBase* get_grid() {
@@ -229,9 +224,7 @@ public:
 
   virtual PyObject* advise(std::string type) {
     if (type == "infrequent_use") {
-#ifdef _GRID_FUTURE_
       l.Advise() = AdviseInfrequentUse;
-#endif
     } else {
       ERR("Unknown advise %s",type.c_str());
     }    

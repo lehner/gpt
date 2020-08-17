@@ -62,17 +62,22 @@ EXPORT(block_orthonormalize,{
 
     PyObject* _basis;
     void* _coarse;
-    if (!PyArg_ParseTuple(args, "lO", &_coarse,&_basis)) {
+    long nvec;
+    if (!PyArg_ParseTuple(args, "lOl", &_coarse,&_basis,&nvec)) {
       return NULL;
     }
 
     cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
 
-    std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis,0); // TODO: generalize
+    ASSERT(nvec > 0);
 
-    ASSERT(basis.size() > 0);
-    basis[0]->block_orthonormalize(coarse,basis);
+    std::vector<std::vector<cgpt_Lattice_base*>> vbasis(nvec);
+    for (long i=0;i<nvec;i++) {
+      cgpt_basis_fill(vbasis[i],_basis,i);
+    }
+
+    ASSERT(vbasis[0].size() > 0);
+    vbasis[0][0]->block_orthonormalize(coarse,vbasis);
 
     return PyLong_FromLong(0);
   });

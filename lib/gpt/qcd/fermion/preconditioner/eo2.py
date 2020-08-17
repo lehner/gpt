@@ -127,6 +127,11 @@ class eo2_base:
             cb=self.parity,
         )
 
+        for undressed in ["N", "NDagN"]:
+            self.__dict__[undressed].split = lambda mpi: eo2_base(
+                op.split(mpi), parity
+            ).__dict__[undressed]
+
     def import_parity(self, i):
         gpt.pick_cb(self.parity, self.in_p, i)
         gpt.pick_cb(self.parity.inv(), self.in_np, i)

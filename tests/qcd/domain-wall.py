@@ -11,7 +11,8 @@ import time
 
 # load configuration
 # U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.double), g.random("test"), scale=0.5)
+rng = g.random("test")
+U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.double), rng, scale=0.5)
 g.message("Plaquette:", g.qcd.gauge.plaquette(U))
 
 # do everything in single-precision
@@ -69,9 +70,10 @@ def H5(dst, src):
 # arnoldi to get an idea of entire spectral range of w
 start = g.vspincolor(w.F_grid)
 start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
-g.default.set_verbose("arnoldi", False)
+g.default.push_verbose("arnoldi", False)
 a = g.algorithms.eigen.arnoldi(Nmin=20, Nmax=20, Nstep=0, Nstop=20, resid=1)
 _, evals_H5 = a(H5, start)
+g.default.pop_verbose()
 g.message(evals_H5)
 # H5 spectrum for 16c RBC lattice: [-1.6344227, ..., 1.6344227]
 # H5 spectrum for random lattice:  [-1.6442832, ..., 1.6442832]
@@ -108,8 +110,10 @@ pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-5, "maxiter": 1000})
 
-slv_qm = qm.propagator(inv.preconditioned(pc.eo2_ne(), cg))
-slv_qz = qz.propagator(inv.preconditioned(pc.eo2_ne(), cg))
+slv_5d = inv.preconditioned(pc.eo2_ne(), cg)
+slv_qm = qm.propagator(slv_5d)
+slv_qz = qz.propagator(slv_5d)
+slv_madwf = qm.propagator(pc.mixed_dwf(slv_5d, slv_5d, qz))
 
 # propagator
 dst_qm = g.mspincolor(grid)
@@ -117,6 +121,14 @@ dst_qz = g.mspincolor(grid)
 
 dst_qm @= slv_qm * src
 dst_qz @= slv_qz * src
+
+# test madwf
+src_sc = rng.cnormal(g.vspincolor(grid))
+dst_madwf_sc = g(slv_madwf * src_sc)
+dst_dwf_sc = g(slv_qm * src_sc)
+eps2 = g.norm2(dst_madwf_sc - dst_dwf_sc) / g.norm2(dst_dwf_sc)
+g.message(f"MADWF test: {eps2}")
+assert eps2 < 5e-4
 
 # two-point
 correlator_qm = g.slice(g.trace(dst_qm * g.adj(dst_qm)), 3)

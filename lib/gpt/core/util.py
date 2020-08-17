@@ -39,3 +39,20 @@ def tensor_to_value(value, dtype=np.complex128):
     elif isnum(value):
         value = np.array([value], dtype=dtype)
     return value
+
+
+# list
+def to_list(value):
+    if type(value) == list:
+        return value
+    return [value]
+
+
+def from_list(value):
+    if type(value) == list and len(value) == 1:
+        return value[0]
+    return value
+
+
+def is_list_instance(value, t):
+    return isinstance(value, t) or (type(value) == list and isinstance(value[0], t))

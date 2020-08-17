@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020 Tilo Wettig
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,12 +17,21 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.inverter.cg import cg
-from gpt.algorithms.inverter.bicgstab import bicgstab
-from gpt.algorithms.inverter.fgcr import fgcr
-from gpt.algorithms.inverter.fgmres import fgmres
-from gpt.algorithms.inverter.mr import mr
-from gpt.algorithms.inverter.defect_correcting import defect_correcting
-from gpt.algorithms.inverter.mixed_precision import mixed_precision
-from gpt.algorithms.inverter.split import split
-from gpt.algorithms.inverter.preconditioned import preconditioned
+import gpt as g
+
+
+def fundamental_to_adjoint(U_a, U_f):
+    """
+    Convert fundamental to adjoint representation.  For now only SU(2) is supported.
+
+    Input: fundamental gauge field
+
+    Output: adjoint gauge field
+    """
+    grid = U_f.grid
+    T = U_f.otype.generators(grid.precision.complex_dtype)
+    V = {}
+    for a in range(len(T)):
+        for b in range(len(T)):
+            V[a, b] = g.eval(2.0 * g.trace(T[a] * U_f * T[b] * g.adj(U_f)))
+    g.merge_color(U_a, V)

@@ -79,8 +79,10 @@ class defect_correcting:
             t_start = g.time()
 
             # leading order
-            _s = g.copy(src)
-            psi[:] = 0
+            n = len(src)
+            _s = [g.copy(x) for x in src]
+            for j in range(n):
+                psi[j][:] = 0
 
             self.history = []
             for i in range(self.maxiter):
@@ -89,12 +91,16 @@ class defect_correcting:
                 t0 = g.time()
                 _d = g.eval(inner_inv_mat * _s)
                 t1 = g.time()
-                _s -= outer_mat * _d
+                for j in range(n):
+                    _s[j] -= outer_mat * _d[j]
                 t2 = g.time()
-                psi += _d
+                for j in range(n):
+                    psi[j] += _d[j]
 
                 # true resid
-                eps = g.norm2(outer_mat * psi - src) ** 0.5
+                eps = max(
+                    [g.norm2(outer_mat * psi[j] - src[j]) ** 0.5 for j in range(n)]
+                )
                 self.history.append(eps)
 
                 if verbose:
@@ -132,4 +138,5 @@ class defect_correcting:
             zero=(True, False),
             grid=grid,
             cb=cb,
+            accept_list=True,
         )

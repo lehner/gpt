@@ -24,7 +24,9 @@ import gpt.create
 import gpt.algorithms
 import gpt.qcd
 import socket
-import cgpt, sys
+import cgpt
+import sys
+import types
 
 """
 GPT -- Grit Python Toolkit
@@ -36,5 +38,16 @@ cgpt.init(sys.argv)
 # save my hostname
 hostname = socket.gethostname()
 
+# process flags
+gpt.default.process_flags()
+
 # synonyms
 eval = expr_eval
+
+# make module callable
+class GPTModule(types.ModuleType):
+    def __call__(self, *args):
+        return expr_eval(*args)
+
+
+sys.modules[__name__].__class__ = GPTModule

@@ -36,27 +36,23 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N):
     assert all([lattices[i].checkerboard() is cb for i in range(1, n)])
     otype = lattices[0].otype
     assert all([lattices[i].otype.__name__ == otype.__name__ for i in range(1, n)])
-    l = [gpt.lattice(split_grid, otype) for i in range(n)]
-    batches = n // N
     assert n % N == 0
-    for i in range(n):
-        l[i].checkerboard(cb)
-    if N != 1:
-
-        assert 0
-        merged_lattices = gpt.merge_lattices(lattices, N=N)
-
-        for i in range(batches):
-            merged_lattices[i].checkerboard(cb)
-            # merged_lattices[i][merged_gcoor]
-
-        # for i in range(batches):
-        #    lattices[i * N : (i + 1) * N]
-
-    gpt.poke(l, lcoor, gpt.peek(lattices, gcoor))
-    for i in range(n):
-        l[i].split_lcoor = lcoor
-        l[i].split_gcoor = gcoor
+    Q = n // N
+    l = [gpt.lattice(split_grid, otype) for i in range(N)]
+    for x in l:
+        x.checkerboard(cb)
+        x.split_lcoor = lcoor
+        x.split_gcoor = gcoor
+    sranks = split_grid.sranks
+    srank = split_grid.srank
+    for i in range(Q):
+        if i == srank // (sranks // Q):
+            lc = lcoor
+            gc = gcoor
+        else:
+            lc = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
+            gc = lc
+        gpt.poke(l, lc, gpt.peek(lattices[i * N : (i + 1) * N], gc))
     return l
 
 
@@ -71,10 +67,7 @@ def unsplit(first, second):
     srank = split_grid.srank
     Q = n // N
     assert n % N == 0
-    print(n, N, Q)
-    sys.stdout.flush()
 
-    # TODO: speed this up by first merging vectors in new 5d grid
     lcoor = second[0].split_lcoor
     gcoor = second[0].split_gcoor
     for i in range(Q):
@@ -123,11 +116,9 @@ def split_by_rank(first):
     return split_lattices(lattices, lcoor, gcoor, split_grid, len(lattices))
 
 
-def split(first, mpi_split=None):
+def split(first, split_grid):
     assert len(first) > 0
     lattices = first
-    grid = lattices[0].grid
-    split_grid = grid.split(mpi_split)
     gcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
     lcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
     assert len(lattices) % split_grid.sranks == 0

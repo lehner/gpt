@@ -112,6 +112,9 @@ def separate(lattices, dimension=-1):
     if type(lattices) != list:
         lattices = [lattices]
 
+    # evaluate in case it is an expression
+    lattices = [gpt.eval(x) for x in lattices]
+
     # number of batches to separate
     batches = len(lattices)
     assert batches > 0

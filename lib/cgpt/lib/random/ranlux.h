@@ -21,31 +21,43 @@
 
     
     For details, see http://luscher.web.cern.ch/luscher/ranlux/notes.pdf (*) .
+
 */
-template<typename T,int l2b,int r,int s,int p>
+
+template<typename C,int l2b,int r,int s,int p>
 class cgpt_ranlux {
 protected:
   long b;
-  T c_nm1, x[r];
-  T vbm1, vb;
+  C x, temporaries;
   int offset, discard;
 
 #define _X_(i) x[(i-1 - offset + r) % r]
+#define c_nm1 temporaries[0]
+#define vbm1 temporaries[1]
+#define vb temporaries[2]
+#define Deltan temporaries[3]
+
 public:
 
-  typedef T base_type;
+  typedef typename std::remove_reference<decltype(x[0])>::type base_type;
+  typedef C container_type;
   static const int seed_size = r;
 
   // constructor seeds
-  cgpt_ranlux(const std::vector<T> & seed) : offset(0), b(1 << l2b), discard(r-1) {
+  cgpt_ranlux() : x(r), temporaries(5),
+    offset(0), b(1 << l2b), discard(r-1) {
+
     assert(s >= 1 && s < r);
-    assert(seed.size() == r);
     assert(sizeof(long)*8 >= l2b);
     // make sure type is unsigned
     assert( (Integer)(-1) > (Integer)(0) );
     // precompute
-    vbm1 = (T)(b-1);
-    vb   = (T)b; 
+    vbm1 = b-1;
+    vb   = b; 
+  }
+
+  void seed(const container_type & seed) {
+    assert(seed.size() == r);
     // avoid trivial sequence, see (5) and (6) of (*)
     for (int i=0;i<r;i++)
       x[i] = seed[i] & vbm1;
@@ -59,23 +71,23 @@ public:
     std::cout << GridLogMessage << "c_{n-1} = " << c_nm1 << std::endl;
   }
 
-  T step() {
+  void step(base_type & dst) {
     offset = (offset + 1) % r;
-    T Deltan = _X_(s) - _X_(r) - c_nm1;
+    Deltan = _X_(s) - _X_(r) - c_nm1;
     //c_nm1 = (Deltan < 0); // for signed integers
     c_nm1 = (Deltan >= vb); // for unsigned integers
     Deltan += vb; 
     _X_(0) = Deltan & vbm1;
-    return _X_(0);
+    dst = _X_(0);
   }
 
-  T operator()() {
+  void operator()(base_type & dst) {
     if (++discard == r) {
       discard=0;
       for (int i=0;i<p-r;i++)
-        step();
+        step(dst);
     }
-    return step();
+    step(dst);
   }
 
   long size() {
@@ -87,12 +99,16 @@ public:
   }
 
 #undef _X_
+#undef c_nm1
+#undef vmb1
+#undef vb
+#undef Deltan
 };
 
 // slow, ideal generator with full decorrelation
-typedef cgpt_ranlux<vInteger,24,24,10,389> cgpt_base_vrng_ranlux24_389;
-typedef cgpt_ranlux<Integer,24,24,10,389> cgpt_base_rng_ranlux24_389;
+typedef cgpt_ranlux<ThreadSafeAlignedVector<vInteger>,24,24,10,389> cgpt_base_vrng_ranlux24_389;
+typedef cgpt_ranlux<std::vector<Integer>,24,24,10,389> cgpt_base_rng_ranlux24_389;
 
 // fast, imperfect generator for testing
-typedef cgpt_ranlux<vInteger,24,24,10,24> cgpt_base_vrng_ranlux24_24;
-typedef cgpt_ranlux<Integer,24,24,10,24> cgpt_base_rng_ranlux24_24;
+typedef cgpt_ranlux<ThreadSafeAlignedVector<vInteger>,24,24,10,24> cgpt_base_vrng_ranlux24_24;
+typedef cgpt_ranlux<std::vector<Integer>,24,24,10,24> cgpt_base_rng_ranlux24_24;

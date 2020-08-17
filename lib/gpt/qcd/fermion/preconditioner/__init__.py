@@ -23,5 +23,5 @@ from gpt.qcd.fermion.preconditioner.eo2 import eo2_ne, eo2
 # from gpt.qcd.fermion.preconditioner.eo2k import eo2k <- future
 
 from gpt.qcd.fermion.preconditioner.sap import sap, sap_cycle
-
+from gpt.qcd.fermion.preconditioner.mixed_dwf import mixed_dwf
 from gpt.qcd.fermion.preconditioner.physical import physical

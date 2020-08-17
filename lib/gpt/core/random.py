@@ -113,14 +113,13 @@ class random:
         grid = out.grid
         ca = gpt.complex(grid)
         lie = gpt.lattice(out)
-        ta = gpt.lattice(out)
 
         lie[:] = 0
-        for g in out.otype.generators(grid.precision.complex_dtype):
+        for ta in out.otype.generators(grid.precision.complex_dtype):
             self.uniform_real(ca, {"min": -0.5, "max": 0.5})
-            ta[:] = g
             lie += scale * 1j * ca * ta
         out @= gpt.matrix.exp(lie)
+        return out
 
 
 # sha256

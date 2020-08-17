@@ -20,9 +20,14 @@ import gpt, sys
 
 
 def message(*a):
+
     # conversion to string can be an mpi process (i.e. for lattice),
     # so need to do it on all ranks
-    s = [str(x) for x in a]
+    s = " ".join([str(x) for x in a])
     if gpt.rank() == 0:
-        print("GPT : %14.6f s :" % gpt.time(), *s)
+        lines = s.split("\n")
+        if len(lines) > 0:
+            print("GPT : %14.6f s :" % gpt.time(), lines[0])
+            for line in lines[1:]:
+                print("                       :", line)
         sys.stdout.flush()

@@ -17,6 +17,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include "random/mem.h"
 #include "random/ranlux.h"
 #include "random/vector.h"
 #include "random/distribution.h"

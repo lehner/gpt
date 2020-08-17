@@ -16,12 +16,21 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.inverter.cg import cg
-from gpt.algorithms.inverter.bicgstab import bicgstab
-from gpt.algorithms.inverter.fgcr import fgcr
-from gpt.algorithms.inverter.fgmres import fgmres
-from gpt.algorithms.inverter.mr import mr
-from gpt.algorithms.inverter.defect_correcting import defect_correcting
-from gpt.algorithms.inverter.mixed_precision import mixed_precision
-from gpt.algorithms.inverter.split import split
-from gpt.algorithms.inverter.preconditioned import preconditioned
+import gpt as g
+
+
+def transformed(obj, V):
+    if isinstance(obj, g.matrix_operator):
+
+        M = obj
+
+        def _mat(dst, src):
+            dst @= V * M * g.adj(V) * src
+
+        return g.matrix_operator(_mat, otype=M.otype, grid=M.grid)
+
+    else:
+
+        U = obj
+
+        return [g(V * U[mu] * g.cshift(g.adj(V), mu, 1)) for mu in range(len(U))]

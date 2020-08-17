@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
+from gpt.params import params_convention
 
 
 class operator(gpt.matrix_operator):
@@ -138,6 +139,24 @@ class operator(gpt.matrix_operator):
     def converted(self, dst_precision):
         return self.updated(gpt.convert(self.U, dst_precision))
 
+    def split(self, mpi_split):
+        split_grid = self.U_grid.split(mpi_split, self.U_grid.fdimensions)
+        U_split = [gpt.lattice(split_grid, x.otype) for x in self.U]
+        pos_split = gpt.coordinates(U_split[0])
+        for i, x in enumerate(U_split):
+            x[pos_split] = self.U[i][pos_split]
+        return self.updated(U_split)
+
+    @params_convention()
+    def modified(self, params):
+        return operator(
+            name=self.name,
+            U=self.U,
+            params={**self.params_constructor, **params},
+            Ls=self.Ls,
+            otype=self.otype[0],
+        )
+
     def apply_unary_operator(self, opcode, o, i):
         assert len(i.v_obj) == 1
         assert len(o.v_obj) == 1
@@ -155,8 +174,11 @@ class operator(gpt.matrix_operator):
         inv_matrix = solver(self)
 
         def prop(dst_sc, src_sc):
-            dst_sc @= exp * inv_matrix * imp * src_sc
+            gpt.eval(dst_sc, exp * inv_matrix * imp * src_sc)
 
         return gpt.matrix_operator(
-            prop, otype=(exp.otype[0], imp.otype[1]), grid=(exp.grid[0], imp.grid[1])
+            prop,
+            otype=(exp.otype[0], imp.otype[1]),
+            grid=(exp.grid[0], imp.grid[1]),
+            accept_list=True,
         )

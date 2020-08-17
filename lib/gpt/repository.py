@@ -19,6 +19,7 @@
 import gpt
 import sys
 import os
+import shutil
 from urllib import request
 
 base = {"gpt:": "https://raw.githubusercontent.com/lehner/gpt-repository/master"}
@@ -43,17 +44,24 @@ def download(dst, src):
     if gpt.rank() == 0:
         verbose = gpt.default.is_verbose("repository")
         t0 = gpt.time()
-        filename, header = request.urlretrieve(f"{baseurl}/{path}", filename=dst)
+        if "GPT_REPOSITORY" in os.environ:
+            root = os.environ["GPT_REPOSITORY"]
+            shutil.copy2(f"{root}/{path}", dst)
+            mode = "copy"
+        else:
+            filename, header = request.urlretrieve(f"{baseurl}/{path}", filename=dst)
+            mode = "download"
         t1 = gpt.time()
         filesize = os.path.getsize(dst)
         speedMBs = filesize / 1024.0 ** 2.0 / (t1 - t0)
         if verbose:
-            gpt.message(
-                f"Repository download {src} in {t1-t0:g} s at {speedMBs:g} MB/s"
-            )
+            gpt.message(f"Repository {mode} {src} in {t1-t0:g} s at {speedMBs:g} MB/s")
 
     # add a barrier so that all nodes have file after download
     gpt.barrier()
+
+    # os.scandir to trigger network filesystem synchronization
+    os.scandir(os.path.dirname(dst))
 
 
 class repository:

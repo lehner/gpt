@@ -150,3 +150,30 @@ for t, c in enumerate(correlator):
 eps = np.linalg.norm(np.array(correlator) - np.array(correlator_ref))
 g.message("Expected correlator eps: ", eps)
 assert eps < 1e-5
+
+
+# split grid solver check
+slv_split_eo1 = w.propagator(
+    inv.preconditioned(
+        pc.eo1_ne(), inv.split(cg, mpi_split=g.default.get_ivec("--mpi_split", None, 4))
+    )
+)
+dst_split = g.mspincolor(grid)
+dst_split @= slv_split_eo1 * src
+eps2 = g.norm2(dst_split - dst_eo1) / g.norm2(dst_eo1)
+g.message(f"Split grid solver check {eps2}")
+assert eps2 < 1e-12
+
+
+# gauge transformation check
+V = rng.lie(g.mcolor(grid))
+prop_on_transformed_U = w.updated(g.qcd.gauge.transformed(U, V)).propagator(
+    inv.preconditioned(pc.eo2_ne(), cg)
+)
+prop_transformed = g.qcd.gauge.transformed(slv_eo2, V)
+src = rng.cnormal(g.vspincolor(grid))
+dst1 = g(prop_on_transformed_U * src)
+dst2 = g(prop_transformed * src)
+eps2 = g.norm2(dst1 - dst2) / g.norm2(dst1)
+g.message(f"Gauge transformation check {eps2}")
+assert eps2 < 1e-12

@@ -111,7 +111,7 @@ def test(slv, name):
     g.message("%s finished: eps^2(CG) = %g" % (name, eps2))
     timings[name] = t1 - t0
     resid[name] = eps2 ** 0.5
-    assert eps2 < 1e-7
+    assert eps2 < 5e-7
 
 
 test(slv_cg_eo2_even, "CG eo2_even")
