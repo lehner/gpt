@@ -166,6 +166,9 @@ class lattice(factor):
 
         return val
 
+    def global_bytes(self):
+        return self.otype.nfloats * self.grid.gsites * self.grid.precision.nbytes
+
     def mview(self):
         return [cgpt.lattice_memory_view(o) for o in self.v_obj]
 
