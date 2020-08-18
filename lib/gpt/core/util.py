@@ -18,6 +18,7 @@
 #
 import gpt
 import numpy as np
+import copy
 
 # test if of number type
 def isnum(x):
@@ -56,3 +57,30 @@ def from_list(value):
 
 def is_list_instance(value, t):
     return isinstance(value, t) or (type(value) == list and isinstance(value[0], t))
+
+
+def entries_have_length(value, count):
+    if type(value) == list:
+        return all([len(v) == count for v in value])
+
+
+# instance
+def to_separate_instances(value):
+    if type(value) != list or len(value) < 2:
+        return
+    for i in range(1, len(value)):
+        if value[i] is value[0]:  # both are references to same object
+            value[i] = copy.copy(value[0])
+
+
+# solver
+def is_solver(value):
+    if type(value) == list:
+        return all([is_solver(v) for v in value])
+    return callable(value) or value is None
+
+
+def is_preconditioned(value):
+    if type(value) == list and len(value) > 0:
+        return all([is_preconditioned(v) for v in value])
+    return hasattr(value, "inverter")
