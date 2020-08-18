@@ -95,23 +95,19 @@ def convert(first, second):
         assert 0
 
 
-def innerProduct(a, b, rank_only=False):
+def rankInnerProduct(a, b, use_accelerator = True):
     if type(a) == gpt.tensor and type(b) == gpt.tensor:
         return gpt.adj(a) * b
     a = gpt.eval(a)
     b = gpt.eval(b)
     assert len(a.otype.v_idx) == len(b.otype.v_idx)
-    r = sum(
-        [cgpt.lattice_rankInnerProduct(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
+    return sum(
+        [cgpt.lattice_rank_inner_product(a.v_obj[i], b.v_obj[i], use_accelerator) for i in a.otype.v_idx]
     )
-    if rank_only:
-        return r
-    # do global sum only once not for each v_idx
+
+
+def innerProduct(a, b):
     return a.grid.globalsum(rankInnerProduct(a, b))
-
-
-def rankInnerProduct(a, b):
-    return innerProduct(a, b, rank_only=True)
 
 
 def norm2(l):
@@ -127,7 +123,7 @@ def innerProductNorm2(a, b):
     a = gpt.eval(a)
     b = gpt.eval(b)
     assert len(a.otype.v_idx) == len(b.otype.v_idx)
-    r = [cgpt.lattice_innerProductNorm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
+    r = [cgpt.lattice_inner_product_norm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
     return (
         sum([x[0] for x in r]),
         sum([x[1] for x in r]),

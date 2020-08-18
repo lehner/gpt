@@ -68,15 +68,15 @@ public:
     return ::norm2(l);
   }
 
-  virtual ComplexD innerProduct(cgpt_Lattice_base* other) {
-    return ::innerProduct(l,compatible<T>(other)->l);
+  virtual ComplexD rank_inner_product(cgpt_Lattice_base* other, bool use_accelerator) {
+    if (use_accelerator) {
+      return ::rankInnerProduct(l,compatible<T>(other)->l);
+    } else {
+      return ::rankInnerProductCpu(l,compatible<T>(other)->l);
+    }
   }
 
-  virtual ComplexD rankInnerProduct(cgpt_Lattice_base* other) {
-    return ::rankInnerProduct(l,compatible<T>(other)->l);
-  }
-
-  virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
+  virtual void inner_product_norm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
     ::innerProductNorm(ip,a2,l,compatible<T>(other)->l);
   }
 

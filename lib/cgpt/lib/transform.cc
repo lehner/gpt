@@ -90,35 +90,23 @@ EXPORT(convert,{
     return PyLong_FromLong(0);
   });
 
-EXPORT(lattice_innerProduct,{
+EXPORT(lattice_rank_inner_product,{
     
     void* _a,* _b;
-    if (!PyArg_ParseTuple(args, "ll", &_a, &_b)) {
+    long use_accelerator;
+    if (!PyArg_ParseTuple(args, "lll", &_a, &_b, &use_accelerator)) {
       return NULL;
     }
     
     cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
     cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
     
-    ComplexD c = a->innerProduct(b);
+    ComplexD c = a->rank_inner_product(b,use_accelerator);
+
     return PyComplex_FromDoubles(c.real(),c.imag());
   });
 
-EXPORT(lattice_rankInnerProduct,{
-    
-    void* _a,* _b;
-    if (!PyArg_ParseTuple(args, "ll", &_a, &_b)) {
-      return NULL;
-    }
-    
-    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
-    cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
-    
-    ComplexD c = a->rankInnerProduct(b);
-    return PyComplex_FromDoubles(c.real(),c.imag());
-  });
-
-EXPORT(lattice_innerProductNorm2,{
+EXPORT(lattice_inner_product_norm2,{
 
     void* _a,* _b;
     if (!PyArg_ParseTuple(args, "ll", &_a, &_b)) {
@@ -131,7 +119,7 @@ EXPORT(lattice_innerProductNorm2,{
     ComplexD ip;
     RealD a2;
 
-    a->innerProductNorm2(ip,a2,b);
+    a->inner_product_norm2(ip,a2,b);
 
     return PyTuple_Pack(2,
                         PyComplex_FromDoubles(ip.real(),ip.imag()),
