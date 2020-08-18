@@ -33,7 +33,7 @@ class preconditioned:
 
         def inv(dst, src):
             # TODO: forward guess dst to inverter, need pseudo L.inv(), pick even sites then L.inv() may be EE, do for each PC
-            dst @= matrix.L * inv_mat * matrix.R * src + matrix.S * src
+            g.eval(dst, matrix.L * inv_mat * matrix.R * src + matrix.S * src)
 
         return g.matrix_operator(
             mat=inv,
@@ -44,4 +44,5 @@ class preconditioned:
             zero=(True, False),
             grid=matrix.F_grid,
             cb=None,
+            accept_list=True,
         )

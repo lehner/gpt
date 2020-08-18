@@ -23,7 +23,7 @@ echo "Working directory = ${WORK_DIR}"
 
 for f in \
     ${test_path}/core/core.py \
-    "${test_path}/core/core.py --help" \
+    "${test_path}/core/core.py --verbose cg,deflate --verbose_add eval,cg --verbose_remove cg,deflate --help" \
     ${test_path}/core/tensors.py \
     ${test_path}/core/gamma.py \
     ${test_path}/core/block.py \
@@ -47,7 +47,7 @@ for f in \
     ${test_path}/io/qlat.py
 do
 
-printf "%-60s" " [TEST] $f"
+printf "%-120s" " [TEST] $f"
 
 start=$SECONDS
 ${runner} $f ${extra} 2>&1 > ${LOG}

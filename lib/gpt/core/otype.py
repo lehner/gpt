@@ -302,6 +302,10 @@ class ot_matrix_spin_color(ot_base):
                 lambda: ot_vector_spin(spin_ndim, color_ndim),
                 ([1, 3], [0, 1]),
             ),
+            "ot_matrix_spin(%d)"
+            % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_matrix_color(%d)"
+            % (color_ndim): (lambda: self, None),  # TODO: add proper indices
             "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
@@ -361,7 +365,7 @@ class ot_vector_spin_color(ot_base):
                         idx = c + self.color_ndim * (s + self.spin_ndim * i)
                         gpt.qcd.prop_to_ferm(src_sc[idx], src[i], s, c)
                         if zero_lhs:
-                            dst_scp[idx][:] = 0
+                            dst_sc[idx][:] = 0
             mat(dst_sc, src_sc)
             for i in range(len(src)):
                 for s in range(self.spin_ndim):
@@ -495,11 +499,11 @@ def str_to_otype(s):
             "ot_matrix_su3_fundamental",
             "ot_matrix_su2_fundamental",
             "ot_matrix_su2_adjoint",
+            "ot_vsinglet",
             "ot_vsinglet4",
-            "ot_vsinglet5",
             "ot_vsinglet10",
+            "ot_msinglet",
             "ot_msinglet4",
-            "ot_msinglet5",
             "ot_msinglet10",
         ]
     )

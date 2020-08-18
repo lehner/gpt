@@ -116,7 +116,7 @@ class matrix_operator(factor):
                 grid=(self.grid[0], other.grid[1]),
                 zero=(self.zero[0], other.zero[1]),
                 cb=(self.cb[0], other.cb[1]),
-                accept_list=other.accept_list,
+                accept_list=True,
             )
         else:
             return gpt.expr(other).__rmul__(self)
@@ -131,10 +131,8 @@ class matrix_operator(factor):
 
         def _converted(dst, src, mat, l, r):
             t0 = gpt.time()
-            conv_src, conv_dst = (
-                gpt.lattice(self.grid[l], otype[l]),
-                gpt.lattice(self.grid[r], otype[r]),
-            )
+            conv_src = [gpt.lattice(self.grid[l], otype[l]) for x in src]
+            conv_dst = [gpt.lattice(self.grid[r], otype[r]) for x in src]
 
             gpt.convert(conv_src, src)
             if zero[l]:
@@ -164,7 +162,7 @@ class matrix_operator(factor):
             grid=grid,
             zero=zero,
             cb=cb,
-            accept_list=self.accept_list,
+            accept_list=True,
         )
 
     def unary(self, u):

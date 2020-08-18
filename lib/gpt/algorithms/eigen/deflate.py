@@ -40,19 +40,25 @@ class deflate:
             verbose = g.default.is_verbose("deflate")
             # |dst> = sum_n 1/ev[n] |n><n|src>
             t0 = g.time()
-            grid = src.grid
-            rip = np.array(
-                [
-                    g.rankInnerProduct(self.evec[i], src) / self.ev[i]
-                    for i in range(len(self.evec))
-                ],
-                dtype=np.complex128,
-            )
-            grid.globalsum(rip)
-            g.linear_combination(dst, self.evec, rip)
+            grid = src[0].grid
+            rip = np.zeros((len(src), len(self.evec)), dtype=np.complex128)
+            for i in range(len(self.evec)):
+                for j in range(len(src)):
+                    rip[j, i] = g.rankInnerProduct(self.evec[i], src[j]) / self.ev[i]
             t1 = g.time()
+            grid.globalsum(rip)
+            t2 = g.time()
+            # TODO: simultaneous linear_combinations
+            for j in range(len(src)):
+                g.linear_combination(dst[j], self.evec, rip[j])
+            t3 = g.time()
             if verbose:
-                g.message("Deflated in %g s" % (t1 - t0))
+                g.message(
+                    "Deflated %d vector(s) in %g s (%g s for rankInnerProduct, %g s for global sum, %g s for linear combinations)"
+                    % (len(src), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
+                )
             return self.inverter(matrix)(dst, src)
 
-        return g.matrix_operator(mat=inv, inv_mat=matrix, otype=otype, grid=grid, cb=cb)
+        return g.matrix_operator(
+            mat=inv, inv_mat=matrix, otype=otype, grid=grid, cb=cb, accept_list=True
+        )

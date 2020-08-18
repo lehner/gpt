@@ -68,8 +68,12 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms, int 
 
       factor.unary = PyLong_AsLong(PyTuple_GetItem(jj,0));
       PyObject* f = PyTuple_GetItem(jj,1);
-      ASSERT(PyList_Check(f) && idx >= 0 && idx < PyList_Size(f));
-      f = PyList_GetItem(f, idx);
+      if (PyList_Check(f)) {
+	ASSERT(idx >= 0 && idx < PyList_Size(f));
+	f = PyList_GetItem(f, idx);
+      } else {
+	ASSERT(idx == 0);
+      }
       if (PyObject_HasAttrString(f,"v_obj")) {
 	PyObject* v_obj = PyObject_GetAttrString(f,"v_obj");
 	ASSERT(v_obj);

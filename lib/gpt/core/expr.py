@@ -44,7 +44,7 @@ class expr_unary:
 class expr:
     def __init__(self, val, unary=expr_unary.NONE):
         if isinstance(val, gpt.factor) or type(val) in [gpt.tensor]:
-            self.val = [(1.0, [(factor_unary.NONE, [val])])]
+            self.val = [(1.0, [(factor_unary.NONE, val)])]
         elif type(val) == expr:
             self.val = val.val
             unary = unary | val.unary
@@ -69,7 +69,7 @@ class expr:
         return (
             self.unary,
             self.val[0][1][0][0],
-            gpt.util.from_list(self.val[0][1][0][1]),
+            self.val[0][1][0][1],
         )
 
     def __mul__(self, l):
@@ -186,7 +186,7 @@ def get_lattice(e):
         return get_lattice(e.val[0][1])
     elif type(e) == list:
         for i in e:
-            if type(i[1][0]) == gpt.lattice:
+            if gpt.util.is_list_instance(i[1], gpt.lattice):
                 return i[1]
     return None
 
@@ -197,19 +197,14 @@ def apply_type_right_to_left(e, t):
     elif type(e) == list:
         n = len(e)
         for i in reversed(range(n)):
-            if isinstance(e[i][1][0], t):
+            if isinstance(e[i][1], t):
 
                 # create operator
-                operator = e[i][1][0].unary(e[i][0])
+                operator = e[i][1].unary(e[i][0])
 
                 # apply operator
                 e = e[0:i] + [
-                    (
-                        factor_unary.NONE,
-                        gpt.util.to_list(
-                            operator(expr_eval(expr([(1.0, e[i + 1 :])])))
-                        ),
-                    )
+                    (factor_unary.NONE, operator(expr_eval(expr([(1.0, e[i + 1 :])]))))
                 ]
 
         return e
@@ -258,7 +253,7 @@ def get_otype_from_expression(e):
             t_otype = None
             t_adj = False
             for unary, factor in reversed(term):
-                f_otype = factor[0].otype
+                f_otype = gpt.util.to_list(factor)[0].otype
                 f_adj = unary == factor_unary.ADJ
                 if t_otype is None:
                     t_otype = f_otype
@@ -294,8 +289,7 @@ def expr_eval(first, second=None, ac=False):
     # or remain an expression if it cannot do so
 
     if second is not None:
-        first = gpt.util.to_list(first)
-        t_obj = [x.v_obj for x in first]
+        t_obj = [x.v_obj for x in gpt.util.to_list(first)]
         e = expr(second)
     else:
         assert ac is False
@@ -307,6 +301,8 @@ def expr_eval(first, second=None, ac=False):
         if lat is None:
             # cannot evaluate to a lattice object, leave expression unevaluated
             return first
+        return_list = type(lat) == list
+        lat = gpt.util.to_list(lat)
         grid = lat[0].grid
         nlat = len(lat)
         t_obj = None
@@ -319,7 +315,7 @@ def expr_eval(first, second=None, ac=False):
         if e.is_single(gpt.lattice):
             ue, uf, v = e.get_single()
             if uf == factor_unary.NONE and ue == expr_unary.NONE:
-                return gpt.util.from_list(v)
+                return v
 
     # verbose output
     if gpt.default.is_verbose("eval"):
@@ -328,7 +324,7 @@ def expr_eval(first, second=None, ac=False):
     if t_obj is not None:
         for i, t_o in enumerate(t_obj):
             assert 0 == cgpt.eval(t_o, e.val, e.unary, ac, i)
-        return gpt.util.from_list(first)
+        return first
     else:
         assert ac is False
 
@@ -348,4 +344,7 @@ def expr_eval(first, second=None, ac=False):
 
             ret.append(gpt.lattice(grid, otype, t_obj))
 
-        return gpt.util.from_list(ret)
+        if not return_list:
+            return gpt.util.from_list(ret)
+
+        return ret
