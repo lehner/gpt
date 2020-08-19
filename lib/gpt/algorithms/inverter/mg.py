@@ -169,24 +169,6 @@ class mg_setup:
             nc_lvl = self.nc_lvl[lvl]
             nf_lvl = self.nf_lvl[lvl]
 
-            # create coarse links + operator (all but finest)
-            if lvl != self.finest:
-                t("create_operator")
-                g.coarse.create_links(
-                    self.A[lvl],
-                    self.mat[nf_lvl],
-                    self.basis[nf_lvl],
-                    {
-                        "hermitian": self.hermitian[nf_lvl],
-                        "savelinks": self.savelinks[nf_lvl],
-                        "uselut": self.uselut[nf_lvl],
-                    },
-                )
-                self.mat[lvl] = g.qcd.fermion.coarse(self.A[lvl], {"level": lvl})
-
-                if self.verbose:
-                    g.message("%s done setting up operator" % pp)
-
             if lvl != self.coarsest:
                 t("misc")
 
@@ -256,6 +238,23 @@ class mg_setup:
 
                 if self.verbose:
                     g.message("%s done block-orthonormalizing" % pp)
+
+                # create coarse links + operator
+                t("create_operator")
+                g.coarse.create_links(
+                    self.A[nc_lvl],
+                    self.mat[lvl],
+                    self.basis[lvl],
+                    {
+                        "hermitian": self.hermitian[lvl],
+                        "savelinks": self.savelinks[lvl],
+                        "uselut": self.uselut[lvl],
+                    },
+                )
+                self.mat[nc_lvl] = g.qcd.fermion.coarse(self.A[nc_lvl], {"level": nc_lvl})
+
+                if self.verbose:
+                    g.message("%s done setting up next coarser operator" % pp)
 
             t()
 
