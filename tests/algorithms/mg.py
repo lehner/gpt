@@ -56,7 +56,7 @@ mg_setup_2lvl = i.mg_setup(
         "vecstype": "null",
         "preortho": False,
         "postortho": False,
-        "solver": i.direct(i.fgmres({"eps": 1e-3, "maxiter": 50, "restartlen": 25})),
+        "solver": i.fgmres({"eps": 1e-3, "maxiter": 50, "restartlen": 25}),
         "distribution": rng.cnormal,
     },
 )
@@ -73,15 +73,9 @@ mg_setup_3lvl = i.mg_setup(
         "preortho": False,
         "postortho": False,
         "solver": [
-            i.direct(
-                i.fgmres(
-                    {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-                )
-            ),
-            i.direct(
-                i.fgmres(
-                    {"eps": 1e-3, "maxiter": 100, "restartlen": 25, "checkres": False}
-                )
+            i.fgmres({"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}),
+            i.fgmres(
+                {"eps": 1e-3, "maxiter": 100, "restartlen": 25, "checkres": False}
             ),
         ],
         "distribution": rng.cnormal,
@@ -95,11 +89,11 @@ g.message(f"mg_setup_3lvl = {mg_setup_3lvl.params}")
 wrappersolver = i.fgmres(
     {"eps": 1e-1, "maxiter": 10, "restartlen": 5, "checkres": False}
 )
-smoothsolver = i.direct(
-    i.fgmres({"eps": 1e-14, "maxiter": 8, "restartlen": 4, "checkres": False})
+smoothsolver = i.fgmres(
+    {"eps": 1e-14, "maxiter": 8, "restartlen": 4, "checkres": False}
 )
-coarsestsolver = i.direct(
-    i.fgmres({"eps": 5e-2, "maxiter": 50, "restartlen": 25, "checkres": False})
+coarsestsolver = i.fgmres(
+    {"eps": 5e-2, "maxiter": 50, "restartlen": 25, "checkres": False}
 )
 
 # mg solver/preconditioner objects
