@@ -164,9 +164,9 @@ assert abs(dst[15, 0, 0, 0] - complex(2, 1)) < 1e-6
 ################################################################################
 # Test multi innerProduct
 ################################################################################
-for grid in [grid_sp,grid_dp]:
-    left = [g.vspin(grid) for i in range(2) ]
-    right = [g.vspin(grid) for i in range(4) ]
+for grid in [grid_sp, grid_dp]:
+    left = [g.vspin(grid) for i in range(2)]
+    right = [g.vspin(grid) for i in range(4)]
     rng.cnormal([left, right])
     host_result = g.rankInnerProduct(left, right, False)
     acc_result = g.rankInnerProduct(left, right, True)
@@ -177,9 +177,9 @@ for grid in [grid_sp,grid_dp]:
         for j in range(4):
             host_result_individual = g.rankInnerProduct(left[i], right[j], False)
             acc_result_individual = g.rankInnerProduct(left[i], right[j], True)
-            eps = abs(host_result_individual - host_result[i,j]) / abs(host_result[i,j])
+            eps = abs(host_result_individual - host_result[i, j]) / abs(
+                host_result[i, j]
+            )
             assert eps < 1e-13
-            eps = abs(acc_result_individual - acc_result[i,j]) / abs(acc_result[i,j])
+            eps = abs(acc_result_individual - acc_result[i, j]) / abs(acc_result[i, j])
             assert eps < 1e-13
-
-

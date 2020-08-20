@@ -124,10 +124,7 @@ class operator(gpt.matrix_operator):
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
         self.Dhop = gpt.matrix_operator(
-            mat=registry.Dhop,
-            adj_mat=registry.DhopDag,
-            otype=otype,
-            grid=self.F_grid,
+            mat=registry.Dhop, adj_mat=registry.DhopDag, otype=otype, grid=self.F_grid,
         )
         self.DhopEO = gpt.matrix_operator(
             mat=registry.DhopEO,

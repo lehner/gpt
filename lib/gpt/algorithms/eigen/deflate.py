@@ -44,7 +44,9 @@ class deflate:
             rip = np.zeros((len(src), len(self.evec)), dtype=np.complex128)
             for i in range(len(self.evec)):
                 for j in range(len(src)):
-                    rip[j, i] = g.rankInnerProduct(self.evec[i], src[j], True) / self.ev[i]
+                    rip[j, i] = (
+                        g.rankInnerProduct(self.evec[i], src[j], True) / self.ev[i]
+                    )
             t1 = g.time()
             grid.globalsum(rip)
             t2 = g.time()

@@ -11,9 +11,11 @@ def access_host(a):
     for x in a:
         x.mview()
 
+
 def access_accelerator(a):
     for x in a:
         x *= 1.0
+
 
 # mute random number generation
 g.default.set_verbose("random", False)
@@ -32,18 +34,21 @@ DWF Linear Algebra Benchmark with
     )
 
     # Source and destination
-    for tp in [g.ot_singlet(), g.ot_vector_spin_color(4,3), g.ot_vsinglet(12)]:
-        for n in [1,4]:
+    for tp in [g.ot_singlet(), g.ot_vector_spin_color(4, 3), g.ot_vsinglet(12)]:
+        for n in [1, 4]:
             one = [g.lattice(grid, tp) for i in range(n)]
             two = [g.lattice(grid, tp) for i in range(n)]
             rng.cnormal([one, two])
 
             # Rank inner product
-            nbytes = (one[0].global_bytes() + two[0].global_bytes())*N*n*n
-            for use_accelerator, compute_name in [(False,"host"),(True,"accelerator")]:
-                
+            nbytes = (one[0].global_bytes() + two[0].global_bytes()) * N * n * n
+            for use_accelerator, compute_name in [
+                (False, "host"),
+                (True, "accelerator"),
+            ]:
+
                 for access in [access_host, access_accelerator]:
-                    
+
                     # Time
                     dt = 0.0
                     for it in range(N):
@@ -52,7 +57,7 @@ DWF Linear Algebra Benchmark with
                         dt -= g.time()
                         ip = g.rankInnerProduct(one, two, use_accelerator)
                         dt += g.time()
-                        
+
                     # Report
                     GBPerSec = nbytes / dt / 1e9
                     g.message(
@@ -63,4 +68,5 @@ DWF Linear Algebra Benchmark with
     Performed on                : {compute_name}
     Time to complete            : {dt:.2f} s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
-""")
+"""
+                    )

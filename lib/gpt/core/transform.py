@@ -95,12 +95,14 @@ def convert(first, second):
         assert 0
 
 
-def rankInnerProduct(a, b, use_accelerator = True):
+def rankInnerProduct(a, b, use_accelerator=True):
     return_list = (type(a) == list) or (type(b) == list)
     a = gpt.util.to_list(a)
     b = gpt.util.to_list(b)
     if type(a[0]) == gpt.tensor and type(b[0]) == gpt.tensor:
-        return numpy.array([ [ gpt.adj(x) * y for y in b ] for x in a ], dtype = np.complex128)
+        return numpy.array(
+            [[gpt.adj(x) * y for y in b] for x in a], dtype=np.complex128
+        )
     a = [gpt.eval(x) for x in a]
     b = [gpt.eval(x) for x in b]
     otype = a[0].otype
@@ -110,7 +112,7 @@ def rankInnerProduct(a, b, use_accelerator = True):
     )
     if return_list:
         return res
-    return gpt.util.to_num(res[0,0])
+    return gpt.util.to_num(res[0, 0])
 
 
 def innerProduct(a, b):
@@ -131,7 +133,9 @@ def innerProductNorm2(a, b):
     a = gpt.eval(a)
     b = gpt.eval(b)
     assert len(a.otype.v_idx) == len(b.otype.v_idx)
-    r = [cgpt.lattice_inner_product_norm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
+    r = [
+        cgpt.lattice_inner_product_norm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx
+    ]
     return (
         sum([x[0] for x in r]),
         sum([x[1] for x in r]),
