@@ -73,7 +73,7 @@ class fgcr:
             rlen = self.restartlen
 
             # tensors
-            dtype_r, dtype_c = np.float64, np.complex128
+            dtype_r, dtype_c = g.double.real_dtype, g.double.complex_dtype
             alpha = np.empty((rlen), dtype_c)
             beta = np.empty((rlen, rlen), dtype_c)
             gamma = np.empty((rlen), dtype_r)

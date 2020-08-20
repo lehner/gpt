@@ -94,7 +94,7 @@ class fgmres:
             rlen = self.restartlen
 
             # tensors
-            dtype = np.complex128
+            dtype = g.double.complex_dtype
             H = np.zeros((rlen + 1, rlen), dtype)
             c = np.zeros((rlen + 1), dtype)
             s = np.zeros((rlen + 1), dtype)
