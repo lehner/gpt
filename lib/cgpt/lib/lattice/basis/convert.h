@@ -24,6 +24,13 @@ void cgpt_basis_fill(PVector<Lattice<T>>& basis, std::vector<cgpt_Lattice_base*>
     basis(i) = &compatible<T>(_basis[i])->l;
 }
 
+template<typename T>
+void cgpt_basis_fill(std::vector<const Lattice<T>*>& basis, std::vector<cgpt_Lattice_base*>& _basis) {
+  basis.resize(_basis.size());
+  for (size_t i=0;i<basis.size();i++)
+    basis[i] = &compatible<T>(_basis[i])->l;
+}
+
 static void cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _basis, int idx) {
   ASSERT(PyList_Check(_basis));
   Py_ssize_t size = PyList_Size(_basis);

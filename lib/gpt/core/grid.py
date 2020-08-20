@@ -239,5 +239,6 @@ class grid:
     def globalsum(self, x):
         if type(x) == gpt.tensor:
             cgpt.grid_globalsum(self.obj, x.array)
+            return x
         else:
             return cgpt.grid_globalsum(self.obj, x)

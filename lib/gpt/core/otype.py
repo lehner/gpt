@@ -70,6 +70,7 @@ class ot_base:
 ###
 # Singlet
 class ot_singlet(ot_base):
+    __name__ = "ot_singlet"
     nfloats = 2
     shape = (1,)
     spintrace = (None, None, None)  # do nothing

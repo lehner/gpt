@@ -2,7 +2,7 @@
 #
 # Authors: Christoph Lehner 2020
 #
-# Benchmark Dslash
+# Benchmark Dslash: TODO: add exactly same as Peter DhopEO
 #
 import gpt as g
 
@@ -36,8 +36,8 @@ DWF Dslash Benchmark with
     )
 
     # Source and destination
-    src = g.vspincolor(qm.F_grid_eo)
-    dst = g.vspincolor(qm.F_grid_eo)
+    src = g.vspincolor(qm.F_grid)
+    dst = g.vspincolor(qm.F_grid)
 
     rng.cnormal(src)
 
@@ -55,19 +55,19 @@ DWF Dslash Benchmark with
 
     # Warmup
     for n in range(5):
-        qm.Meooe.mat(dst, src)
+        qm.Dhop.mat(dst, src)
 
     # Time
     t0 = g.time()
     for n in range(N):
-        qm.Meooe.mat(dst, src)
+        qm.Dhop.mat(dst, src)
     t1 = g.time()
 
     # Report
     GFlopsPerSec = flops / (t1 - t0) / 1e9
     GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
-        f"""{N} applications of Meooe
+        f"""{N} applications of Dhop
     Time to complete            : {t1-t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""

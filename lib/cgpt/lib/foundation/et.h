@@ -17,35 +17,15 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-/*
+template<class vtype,int N> accelerator_inline iVector<vtype,N> transpose(const iVector<vtype,N>&r) { return r; }
 
-The following comments are parsed by ./make and
-generate the mapping of function names to op codes.
-
-BEGIN_EXPORT_UNARY_REALD
-END_EXPORT_UNARY_REALD
-
-BEGIN_EXPORT_UNARY_VOID
-M
-Mdag
-Meooe
-MeooeDag
-Mooee
-MooeeDag
-MooeeInv
-MooeeInvDag
-Mdiag
-Dminus
-DminusDag
-ImportPhysicalFermionSource
-ImportUnphysicalFermion
-ExportPhysicalFermionSolution
-ExportPhysicalFermionSource
-END_EXPORT_UNARY_VOID
-
-BEGIN_EXPORT_UNARY_DAG_VOID
-Dhop
-DhopEO
-END_EXPORT_UNARY_DAG_VOID
-
-*/
+// define vector * vector -> vector elementwise multiplication
+template<class l,class r,int N> accelerator_inline
+  auto operator * (const iVector<l,N>& lhs,const iVector<r,N>& rhs) -> iVector<decltype(lhs._internal[0]*rhs._internal[0]),N>
+{
+  typedef decltype(lhs._internal[0]*rhs._internal[0]) ret_t;
+  iVector<ret_t,N> ret;
+  for (int i=0;i<N;i++)
+    mult(&ret._internal[i],&lhs._internal[i],&rhs._internal[i]);
+  return ret;
+}

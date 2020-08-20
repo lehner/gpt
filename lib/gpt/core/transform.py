@@ -96,18 +96,26 @@ def convert(first, second):
 
 
 def rankInnerProduct(a, b, use_accelerator = True):
-    if type(a) == gpt.tensor and type(b) == gpt.tensor:
-        return gpt.adj(a) * b
-    a = gpt.eval(a)
-    b = gpt.eval(b)
-    assert len(a.otype.v_idx) == len(b.otype.v_idx)
-    return sum(
-        [cgpt.lattice_rank_inner_product(a.v_obj[i], b.v_obj[i], use_accelerator) for i in a.otype.v_idx]
+    return_list = (type(a) == list) or (type(b) == list)
+    a = gpt.util.to_list(a)
+    b = gpt.util.to_list(b)
+    if type(a[0]) == gpt.tensor and type(b[0]) == gpt.tensor:
+        return numpy.array([ [ gpt.adj(x) * y for y in b ] for x in a ], dtype = np.complex128)
+    a = [gpt.eval(x) for x in a]
+    b = [gpt.eval(x) for x in b]
+    otype = a[0].otype
+    assert len(otype.v_idx) == len(b[0].otype.v_idx)
+    res = sum(
+        [cgpt.lattice_rank_inner_product(a, b, i, use_accelerator) for i in otype.v_idx]
     )
+    if return_list:
+        return res
+    return gpt.util.to_num(res[0,0])
 
 
 def innerProduct(a, b):
-    return a.grid.globalsum(rankInnerProduct(a, b))
+    grid = gpt.util.to_list(a)[0].grid
+    return grid.globalsum(rankInnerProduct(a, b))
 
 
 def norm2(l):

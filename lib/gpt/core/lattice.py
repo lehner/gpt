@@ -118,8 +118,11 @@ class lattice(factor):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
         return self.otype.__name__ + ";" + self.checkerboard().__name__
 
+    def global_bytes(self):
+        return self.otype.nfloats * self.grid.gsites * self.grid.precision.nbytes
+
     def rank_bytes(self):
-        return self.grid.gsites * self.grid.precision.nbytes * self.otype.nfloats // self.grid.Nprocessors
+        return self.global_bytes() // self.grid.Nprocessors
 
     @property
     def view(self):
@@ -165,9 +168,6 @@ class lattice(factor):
             return gpt.util.value_to_tensor(val[0], self.otype)
 
         return val
-
-    def global_bytes(self):
-        return self.otype.nfloats * self.grid.gsites * self.grid.precision.nbytes
 
     def mview(self):
         return [cgpt.lattice_memory_view(o) for o in self.v_obj]

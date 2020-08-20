@@ -92,18 +92,28 @@ EXPORT(convert,{
 
 EXPORT(lattice_rank_inner_product,{
     
-    void* _a,* _b;
-    long use_accelerator;
-    if (!PyArg_ParseTuple(args, "lll", &_a, &_b, &use_accelerator)) {
+    PyObject* _left,* _right;
+    long use_accelerator, idx;
+    if (!PyArg_ParseTuple(args, "OOll", &_left, &_right, &idx, &use_accelerator)) {
       return NULL;
     }
     
-    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
-    cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
-    
-    ComplexD c = a->rank_inner_product(b,use_accelerator);
+    std::vector<cgpt_Lattice_base*> left, right;
+    cgpt_basis_fill(left,_left,idx);
+    cgpt_basis_fill(right,_right,idx);
 
-    return PyComplex_FromDoubles(c.real(),c.imag());
+    std::vector<long> dim(2);
+    dim[0] = left.size();
+    dim[1] = right.size();
+
+    PyArrayObject* ret = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], NPY_COMPLEX128);
+    ComplexD* result = (ComplexD*)PyArray_DATA(ret);
+
+    ASSERT(left.size() > 0);
+    
+    left[0]->rank_inner_product(result,left,right,use_accelerator);
+
+    return (PyObject*)ret;
   });
 
 EXPORT(lattice_inner_product_norm2,{

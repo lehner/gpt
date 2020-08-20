@@ -15,37 +15,29 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+    
+    This file tries to isolate foundational code of the data parallel layer.
+    (Some of this could move to Grid.)
 */
+#include <Grid/Grid.h>
 
-/*
+using namespace Grid;
 
-The following comments are parsed by ./make and
-generate the mapping of function names to op codes.
+#if defined(GRID_SYCL) || defined(GRID_CUDA) || defined(GRID_HIP)
+#define GRID_HAS_ACCELERATOR
+#endif
 
-BEGIN_EXPORT_UNARY_REALD
-END_EXPORT_UNARY_REALD
+NAMESPACE_BEGIN(Grid);
 
-BEGIN_EXPORT_UNARY_VOID
-M
-Mdag
-Meooe
-MeooeDag
-Mooee
-MooeeDag
-MooeeInv
-MooeeInvDag
-Mdiag
-Dminus
-DminusDag
-ImportPhysicalFermionSource
-ImportUnphysicalFermion
-ExportPhysicalFermionSolution
-ExportPhysicalFermionSource
-END_EXPORT_UNARY_VOID
+#if defined(GRID_CUDA)||defined(GRID_HIP)
+#include "foundation/reduce_gpu.h"
+#endif
 
-BEGIN_EXPORT_UNARY_DAG_VOID
-Dhop
-DhopEO
-END_EXPORT_UNARY_DAG_VOID
+#include "foundation/reduce.h"
+#include "foundation/singlet.h"
+#include "foundation/et.h"
+#include "foundation/transfer.h"
+#include "foundation/basis.h"
 
-*/
+NAMESPACE_END(Grid);
