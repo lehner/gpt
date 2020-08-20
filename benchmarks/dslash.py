@@ -2,7 +2,7 @@
 #
 # Authors: Christoph Lehner 2020
 #
-# Benchmark Dslash: TODO: add exactly same as Peter DhopEO
+# Benchmark Dslash
 #
 import gpt as g
 
