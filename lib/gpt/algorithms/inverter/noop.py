@@ -16,13 +16,22 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.inverter.noop import noop
-from gpt.algorithms.inverter.cg import cg
-from gpt.algorithms.inverter.bicgstab import bicgstab
-from gpt.algorithms.inverter.fgcr import fgcr
-from gpt.algorithms.inverter.fgmres import fgmres
-from gpt.algorithms.inverter.mr import mr
-from gpt.algorithms.inverter.defect_correcting import defect_correcting
-from gpt.algorithms.inverter.mixed_precision import mixed_precision
-from gpt.algorithms.inverter.split import split
-from gpt.algorithms.inverter.preconditioned import preconditioned
+import gpt as g
+
+
+class noop:
+    def __init__(self):
+        pass
+
+    def __call__(self, mat):
+
+        otype, grid, cb = None, None, None
+        if type(mat) == g.matrix_operator:
+            otype, grid, cb = mat.otype, mat.grid, mat.cb
+
+        def inv(psi, src):
+            pass
+
+        return g.matrix_operator(
+            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid, cb=cb
+        )

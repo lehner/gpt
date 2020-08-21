@@ -59,10 +59,17 @@ g.mem_report()
 # print eigenvalues of NDagN as well
 evals = g.algorithms.eigen.evals(w.Mpc, evec, check_eps2=1e-11, real=True)
 
+# test low-mode approximation of inverse
+noop = g.algorithms.inverter.noop()
+lma = g.algorithms.eigen.deflate(noop, evec, evals)(w.Mpc)
+for i in range(len(evals)):
+    eps2 = g.norm2(evals[i] * lma * evec[i] - evec[i]) / g.norm2(evec[i]) * evals[i]
+    g.message(f"Test low-mode approximation for evec[{i}]: {eps2}")
+    assert eps2 < 1e-11
+
 # deflated solver
 cg = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 1000})
 defl = g.algorithms.eigen.deflate(cg, evec, evals)
-
 sol_cg = g.eval(cg(w.Mpc) * start)
 eps2 = g.norm2(w.Mpc * sol_cg - start) / g.norm2(start)
 niter_cg = len(cg.history)

@@ -93,25 +93,26 @@ EXPORT(convert,{
 EXPORT(lattice_rank_inner_product,{
     
     PyObject* _left,* _right;
-    long use_accelerator, idx;
-    if (!PyArg_ParseTuple(args, "OOll", &_left, &_right, &idx, &use_accelerator)) {
+    long use_accelerator;
+    if (!PyArg_ParseTuple(args, "OOl", &_left, &_right, &use_accelerator)) {
       return NULL;
     }
     
     std::vector<cgpt_Lattice_base*> left, right;
-    cgpt_basis_fill(left,_left,idx);
-    cgpt_basis_fill(right,_right,idx);
+    long n_virtual_left = cgpt_basis_fill(left,_left);
+    long n_virtual_right = cgpt_basis_fill(right,_right);
+    ASSERT(n_virtual_left == n_virtual_right);
 
     std::vector<long> dim(2);
-    dim[0] = left.size();
-    dim[1] = right.size();
+    dim[0] = left.size() / n_virtual_left;
+    dim[1] = right.size() / n_virtual_right;
 
     PyArrayObject* ret = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], NPY_COMPLEX128);
     ComplexD* result = (ComplexD*)PyArray_DATA(ret);
 
     ASSERT(left.size() > 0);
     
-    left[0]->rank_inner_product(result,left,right,use_accelerator);
+    left[0]->rank_inner_product(result,left,right,n_virtual_left,use_accelerator);
 
     return (PyObject*)ret;
   });
