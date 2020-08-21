@@ -108,12 +108,7 @@ def rankInnerProduct(a, b, use_accelerator=True):
         b = [gpt.eval(x) for x in b]
         otype = a[0].otype
         assert len(otype.v_idx) == len(b[0].otype.v_idx)
-        res = sum(
-            [
-                cgpt.lattice_rank_inner_product(a, b, i, use_accelerator)
-                for i in otype.v_idx
-            ]
-        )
+        res = cgpt.lattice_rank_inner_product(a, b, use_accelerator)
     if return_list:
         return res
     return gpt.util.to_num(res[0, 0])

@@ -46,3 +46,27 @@ static void cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _b
   }
 }
 
+static long cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _basis) {
+  ASSERT(PyList_Check(_basis));
+  Py_ssize_t size = PyList_Size(_basis);
+  long n_virtual = -1;
+  for (Py_ssize_t i=0;i<size;i++) {
+    PyObject* li = PyList_GetItem(_basis,i);
+    PyObject* v_obj = PyObject_GetAttrString(li,"v_obj");
+    ASSERT(v_obj && PyList_Check(v_obj));
+    long n = PyList_Size(v_obj);
+    if (n_virtual == -1) {
+      n_virtual = n;
+      basis.resize(size * n_virtual);
+    } else {
+      ASSERT(n_virtual == n);
+    }
+    for (long idx=0;idx<n_virtual;idx++) {
+      PyObject* obj = PyList_GetItem(v_obj,idx);
+      ASSERT(PyLong_Check(obj));
+      basis[i*n_virtual + idx] = (cgpt_Lattice_base*)PyLong_AsVoidPtr(obj);
+    }
+  }
+  return n_virtual;
+}
+
