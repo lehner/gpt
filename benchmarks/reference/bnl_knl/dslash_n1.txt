@@ -1,0 +1,136 @@
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+
+=============================================
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
+=============================================
+GPT :       1.306241 s : 
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [24, 24, 24, 24]
+                       :     precision    : single
+                       :     Ls           : 12
+                       : 
+GPT :      11.230240 s : 100 applications of Dhop
+                       :     Time to complete            : 1.08 s
+                       :     Total performance           : 484.58 GFlops/s
+                       :     Effective memory bandwidth  : 334.80 GB/s
+GPT :      11.231808 s : 
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [24, 24, 24, 24]
+                       :     precision    : double
+                       :     Ls           : 12
+                       : 
+GPT :      20.917626 s : 100 applications of Dhop
+                       :     Time to complete            : 2.29 s
+                       :     Total performance           : 229.24 GFlops/s
+                       :     Effective memory bandwidth  : 316.77 GB/s
+=============================================
+               Finalized GPT                 
+=============================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+
+=============================================
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
+=============================================
+GPT :       1.161181 s : 
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [32, 32, 32, 32]
+                       :     precision    : single
+                       :     Ls           : 12
+                       : 
+GPT :      36.919929 s : 100 applications of Dhop
+                       :     Time to complete            : 3.86 s
+                       :     Total performance           : 430.39 GFlops/s
+                       :     Effective memory bandwidth  : 297.36 GB/s
+GPT :      36.921520 s : 
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [32, 32, 32, 32]
+                       :     precision    : double
+                       :     Ls           : 12
+                       : 
+GPT :      69.127732 s : 100 applications of Dhop
+                       :     Time to complete            : 7.16 s
+                       :     Total performance           : 231.91 GFlops/s
+                       :     Effective memory bandwidth  : 320.45 GB/s
+=============================================
+               Finalized GPT                 
+=============================================
