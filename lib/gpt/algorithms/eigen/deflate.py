@@ -34,10 +34,11 @@ class deflate:
 
     def __call__(self, matrix):
 
-        otype, grid, cb = None, None, None
-        if type(matrix) == g.matrix_operator:
-            otype, grid, cb = matrix.otype, matrix.grid, matrix.cb
-            matrix = matrix.mat
+        otype = self.evec[0].otype
+        grid = self.evec[0].grid
+        cb = self.evec[0].checkerboard()
+
+        inverter = self.inverter(matrix)
 
         def inv(dst, src):
             verbose = g.default.is_verbose("deflate")
@@ -63,7 +64,7 @@ class deflate:
                     "Deflated %d vector(s) in %g s (%g s for rankInnerProduct, %g s for global sum, %g s for linear combinations)"
                     % (len(src), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
                 )
-            return self.inverter(matrix)(dst, src)
+            return inverter(dst, src)
 
         return g.matrix_operator(
             mat=inv, inv_mat=matrix, otype=otype, grid=grid, cb=cb, accept_list=True
