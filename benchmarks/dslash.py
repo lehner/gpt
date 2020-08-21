@@ -11,7 +11,7 @@ rng = g.random("benchmark")
 
 for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
-    N = g.default.get_int("--N",1000)
+    N = g.default.get_int("--N", 1000)
     Ls = g.default.get_int("--Ls", 12)
     g.message(
         f"""
