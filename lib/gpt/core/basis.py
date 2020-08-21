@@ -31,13 +31,13 @@ def orthogonalize(w, basis, ips=None, nblock=4):
     t_rankInnerProduct = 0.0
     t_globalSum = 0.0
     t_linearCombination = 0.0
-    for i in range(0,n,nblock):
+    for i in range(0, n, nblock):
         t_rankInnerProduct -= gpt.time()
-        lip = gpt.rankInnerProduct(basis[i:i + nblock], w)
+        lip = gpt.rankInnerProduct(basis[i : i + nblock], w)
         t_rankInnerProduct += gpt.time()
         t_globalSum -= gpt.time()
         grid.globalsum(lip)
-        lip = [ complex(x) for x in lip ]
+        lip = [complex(x) for x in lip]
         t_globalSum += gpt.time()
         if ips is not None:
             for j in range(len(lip)):

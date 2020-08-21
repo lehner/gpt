@@ -65,7 +65,7 @@ lma = g.algorithms.eigen.deflate(noop, evec, evals)(w.Mpc)
 for i in range(len(evals)):
     eps2 = g.norm2(evals[i] * lma * evec[i] - evec[i]) / g.norm2(evec[i]) * evals[i]
     g.message(f"Test low-mode approximation for evec[{i}]: {eps2}")
-    assert eps2 < 1e-12
+    assert eps2 < 1e-11
 
 # deflated solver
 cg = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 1000})
