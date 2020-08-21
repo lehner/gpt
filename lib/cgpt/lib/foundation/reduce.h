@@ -20,13 +20,42 @@
     This code is based on original Grid code.
 */
 template<class vobj, class stype>
+inline void sumD_cpu(stype* ret, const vobj *arg, Integer osites, Integer nvec)
+{
+  const int nthread = thread_max();
+
+  std::vector<stype> sum(nthread * nvec);
+
+  thread_region
+    {
+      int t = thread_num();
+
+      for (Integer i=0;i<nvec;i++) {
+	vobj vs=Zero();
+	thread_for_in_region(idx, osites, {
+	    vs += arg[osites*i + idx];
+	  });
+	sum[t * nvec + i] = Reduce(vs);
+      }
+    }
+
+
+  thread_for(i,nvec, {
+      stype r = 0.0;
+      for (int j=0;j<nthread;j++)
+	r += sum[j*nvec + i];
+      ret[i] = r;
+    });
+
+}
+
+template<class vobj, class stype>
 inline void sumD(stype* res, const vobj *arg, Integer osites, Integer nvec)
 {
 #if defined(GRID_CUDA)||defined(GRID_HIP)
   sumD_gpu(res,arg,osites,nvec);
 #else
-  for (Integer i=0;i<nvec;i++)
-    res[i]=sumD_cpu(&arg[osites*i],osites);
+  sumD_cpu(res,arg,osites,nvec);
 #endif  
 }
 
