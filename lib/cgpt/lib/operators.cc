@@ -53,6 +53,19 @@ EXPORT(create_fermion_operator,{
     return PyLong_FromVoidPtr(pop);
   });
 
+EXPORT(update_fermion_operator,{
+    
+    void* p;
+    PyObject* _args;
+    if (!PyArg_ParseTuple(args, "lO", &p, &_args)) {
+      return NULL;
+    }
+    
+    ((cgpt_fermion_operator_base*)p)->update(_args);
+
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(delete_fermion_operator,{
     
     void* p;

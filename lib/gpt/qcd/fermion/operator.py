@@ -136,6 +136,11 @@ class operator(gpt.matrix_operator):
     def __del__(self):
         cgpt.delete_fermion_operator(self.obj)
 
+    def update(self, U):
+        self.U = U
+        self.params["U"] = [u.v_obj[0] for u in U]
+        cgpt.update_fermion_operator(self.obj, self.params)
+
     def updated(self, U):
         return operator(
             name=self.name,

@@ -22,17 +22,16 @@ U = g.convert(U, g.single)
 grid = U[0].grid
 
 # mobius <> zmobius domain wall quark
-qm = g.qcd.fermion.mobius(
-    U,
-    {
-        "mass": 0.08,
-        "M5": 1.8,
-        "b": 1.5,
-        "c": 0.5,
-        "Ls": 12,
-        "boundary_phases": [1.0, 1.0, 1.0, 1.0],
-    },
-)
+mobius_params = {
+    "mass": 0.08,
+    "M5": 1.8,
+    "b": 1.5,
+    "c": 0.5,
+    "Ls": 12,
+    "boundary_phases": [1.0, 1.0, 1.0, 1.0],
+}
+
+qm = g.qcd.fermion.mobius(g.qcd.gauge.unit(grid), mobius_params)
 
 w = g.qcd.fermion.wilson_clover(
     U,
@@ -46,6 +45,16 @@ w = g.qcd.fermion.wilson_clover(
         "boundary_phases": [1.0, 1.0, 1.0, 1.0],
     },
 )
+
+# test operator update
+start = g.vspincolor(qm.F_grid)
+rng.cnormal(start)
+qm_new = g.qcd.fermion.mobius(U, mobius_params)
+qm.update(U)
+eps2 = g.norm2(qm * start - qm_new * start) / g.norm2(start)
+g.message(f"Operator update test: {eps2}")
+assert eps2 < 1e-10
+
 
 # solver
 pc = g.qcd.fermion.preconditioner
