@@ -59,8 +59,9 @@ jobs:
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
       run: |
-        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpi /usr/bin/mpicc.mpich
         sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
+        sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Clone c-lime
       uses: actions/checkout@v2
@@ -192,8 +193,9 @@ jobs:
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
       run: |
-        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpi /usr/bin/mpicc.mpich
         sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
+        sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
       uses: actions/setup-python@v2
@@ -374,8 +376,9 @@ jobs:
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
       run: |
-        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpi /usr/bin/mpicc.mpich
         sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
+        sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
       uses: actions/setup-python@v2
