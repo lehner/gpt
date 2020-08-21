@@ -21,12 +21,15 @@
 #
 import gpt as g
 import numpy as np
+from gpt.params import params_convention
 
 
 class coarse_deflate:
-    def __init__(self, inverter, cevec, basis, fev):
+    @params_convention(block=32)
+    def __init__(self, inverter, cevec, basis, fev, params):
         self.inverter = inverter
         self.basis = basis
+        self.params = params
 
         def noop(matrix):
             def noop_mat(dst, src):
@@ -34,7 +37,7 @@ class coarse_deflate:
 
             return noop_mat
 
-        self.cdefl = g.algorithms.eigen.deflate(noop, cevec, fev)
+        self.cdefl = g.algorithms.eigen.deflate(noop, cevec, fev, params)
 
     def __call__(self, matrix):
 
