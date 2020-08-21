@@ -497,3 +497,99 @@ jobs:
       with:
         name: documentation
         path: gpt/documentation/build
+
+  build-gpt-docker-base:
+    needs: [build-grid, build-gpt, test-gpt]
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Check for rebuild
+        id: check-build
+        run: |
+          # TODO: Change github.ref before merging to master branch
+          if [ "${{ secrets.DOCKER_USERNAME }}" != "" ] && [ "${{ secrets.DOCKER_PASSWORD }}" != "" ] \
+            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/feature/docker-images" ]
+          then
+            echo ::set-output name=should-build::'true'
+          else
+            echo "No Docker credentials found, skipping."
+          fi
+
+      - name: Clone gpt
+        if: ${{ steps.check-build.outputs.should-build }}
+        uses: actions/checkout@v2
+
+      - name: Build docker gpt/base image
+        if: ${{ steps.check-build.outputs.should-build }}
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: ${{ secrets.DOCKER_USERNAME }}/gpt-base
+          tags: latest
+          push: true
+          path: docker/base
+
+
+  build-gpt-docker:
+    needs: [build-grid, build-gpt, test-gpt, build-gpt-docker-base]
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: ['gcc', 'clang']
+        # TODO: add other mpi flavors: 'mpich', 'openmpi'
+        mpi: ['none']
+
+    steps:
+      - name: Check for rebuild
+        id: check-build
+        run: |
+          # TODO: Change github.ref before merging to master branch
+          if [ "${{ secrets.DOCKER_USERNAME }}" != "" ] && [ "${{ secrets.DOCKER_PASSWORD }}" != "" ] \
+            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/feature/docker-images" ]
+          then
+            echo ::set-output name=should-build::'true'
+          else
+            echo "No Docker credentials found, skipping."
+          fi
+
+      - name: Clone gpt
+        if: ${{ steps.check-build.outputs.should-build }}
+        uses: actions/checkout@v2
+
+      - name: Download prebuild python-gpt
+        if: ${{ steps.check-build.outputs.should-build }}
+        uses: actions/download-artifact@v2
+        with:
+          name: python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
+
+      - name: Move python-gpt package to docker folder
+        if: ${{ steps.check-build.outputs.should-build }}
+        run: |
+          mv python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/play/gpt-packages
+
+      - name: Build docker gpt/play image
+        if: ${{ steps.check-build.outputs.should-build }}
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: ${{ secrets.DOCKER_USERNAME }}/gpt-play
+          build_args: BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/gpt-base,COMPILER=${{ matrix.compiler }},MPI=${{ matrix.mpi }}
+          tags: ${{ matrix.compiler }}-${{ matrix.mpi }}
+          push: true
+          path: docker/play
+
+      - name: Build docker gpt/notebook image
+        if: ${{ steps.check-build.outputs.should-build }}
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: ${{ secrets.DOCKER_USERNAME }}/gpt-notebook
+          build_args: BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/gpt-play,COMPILER=${{ matrix.compiler }},MPI=${{ matrix.mpi }}
+          tags: ${{ matrix.compiler }}-${{ matrix.mpi }}
+          push: true
+          path: docker/notebook
