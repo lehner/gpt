@@ -34,3 +34,4 @@ missing
 /lib/cgpt/hfiles.inc
 *.coverage*
 coverage.xml
+/docker/play/gpt-packages/*.deb
