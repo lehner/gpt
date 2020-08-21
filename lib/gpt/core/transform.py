@@ -100,16 +100,20 @@ def rankInnerProduct(a, b, use_accelerator=True):
     a = gpt.util.to_list(a)
     b = gpt.util.to_list(b)
     if type(a[0]) == gpt.tensor and type(b[0]) == gpt.tensor:
-        return numpy.array(
-            [[gpt.adj(x) * y for y in b] for x in a], dtype=np.complex128
+        res = numpy.array(
+            [[gpt.adj(x) * y for y in b] for x in a], dtype=numpy.complex128
         )
-    a = [gpt.eval(x) for x in a]
-    b = [gpt.eval(x) for x in b]
-    otype = a[0].otype
-    assert len(otype.v_idx) == len(b[0].otype.v_idx)
-    res = sum(
-        [cgpt.lattice_rank_inner_product(a, b, i, use_accelerator) for i in otype.v_idx]
-    )
+    else:
+        a = [gpt.eval(x) for x in a]
+        b = [gpt.eval(x) for x in b]
+        otype = a[0].otype
+        assert len(otype.v_idx) == len(b[0].otype.v_idx)
+        res = sum(
+            [
+                cgpt.lattice_rank_inner_product(a, b, i, use_accelerator)
+                for i in otype.v_idx
+            ]
+        )
     if return_list:
         return res
     return gpt.util.to_num(res[0, 0])

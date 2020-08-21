@@ -23,8 +23,9 @@ import gpt as g
 import numpy as np
 from gpt.params import params_convention
 
+
 class deflate:
-    @params_convention(block = 16)
+    @params_convention(block=16)
     def __init__(self, inverter, evec, ev, params):
         self.inverter = inverter
         self.evec = evec
@@ -45,11 +46,11 @@ class deflate:
             grid = src[0].grid
             rip = np.zeros((len(src), len(self.evec)), dtype=np.complex128)
             block = self.params["block"]
-            for i0 in range(0,len(self.evec),block):
-                rip_block = g.rankInnerProduct(self.evec[i0:i0+block], src, True)
+            for i0 in range(0, len(self.evec), block):
+                rip_block = g.rankInnerProduct(self.evec[i0 : i0 + block], src, True)
                 for i in range(rip_block.shape[0]):
                     for j in range(rip_block.shape[1]):
-                        rip[j, i0 + i] = rip_block[i,j] / self.ev[i0 + i]
+                        rip[j, i0 + i] = rip_block[i, j] / self.ev[i0 + i]
             t1 = g.time()
             grid.globalsum(rip)
             t2 = g.time()
