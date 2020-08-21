@@ -282,7 +282,7 @@ jobs:
         ./bootstrap.sh
         mkdir -p build
         cd build
-        ../configure --disable-gpt || cat config.log
+        CXX="$(grid-config --cxx)" ../configure --disable-gpt || cat config.log
         make ${MAKE_BUILD_FLAGS}
         DESTDIR=$PKGDIR make install
 
