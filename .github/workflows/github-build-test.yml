@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2020-08-21
+  CACHE_KEY: 2020-08-22
 
 jobs:
   build-grid:
