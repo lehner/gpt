@@ -1,0 +1,75 @@
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================
+Grid : Message : MPI is initialised and logging filters activated
+Grid : Message : ================================================
+Grid : Message : Requested 1073741824 byte stencil comms buffers
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.752006 s : Grid Default Decomposition patterns
+Grid : Message : 0.752137 s :   OpenMP threads : 64
+Grid : Message : 0.752211 s :   MPI tasks      : 1 1 1 1
+Grid : Message : 0.752317 s :   vRealF         : 512bits ; 2 2 2 2
+Grid : Message : 0.752408 s :   vRealD         : 512bits ; 1 2 2 2
+Grid : Message : 0.752501 s :   vComplexF      : 512bits ; 1 2 2 2
+Grid : Message : 0.752592 s :   vComplexD      : 512bits ; 1 1 2 2
+
+=============================================
+              Initialized GPT
+    Copyright (C) 2020 Christoph Lehner
+=============================================
+GPT :       1.340333 s :
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [32, 32, 32, 32]
+                       :     precision    : single
+                       :     Ls           : 12
+                       :
+GPT :      82.959884 s : 1000 applications of Dhop
+                       :     Time to complete            : 47.26 s
+                       :     Total performance           : 351.43 GFlops/s
+                       :     Effective memory bandwidth  : 242.81 GB/s
+GPT :      82.962533 s :
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [32, 32, 32, 32]
+                       :     precision    : double
+                       :     Ls           : 12
+                       :
+GPT :     201.224962 s : 1000 applications of Dhop
+                       :     Time to complete            : 86.03 s
+                       :     Total performance           : 193.07 GFlops/s
+                       :     Effective memory bandwidth  : 266.78 GB/s
+=============================================
+               Finalized GPT
+=============================================
