@@ -109,7 +109,7 @@ class fgcr:
                 t5 = time()
 
                 t6 = time()
-                ip, mmp2 = g.innerProductNorm2(mmp[i], r)
+                ip, mmp2 = g.inner_product_norm2(mmp[i], r)
                 gamma[i] = mmp2 ** 0.5
 
                 if gamma[i] == 0.0:

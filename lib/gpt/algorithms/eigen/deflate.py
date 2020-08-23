@@ -48,7 +48,7 @@ class deflate:
             rip = np.zeros((len(src), len(self.evec)), dtype=np.complex128)
             block = self.params["block"]
             for i0 in range(0, len(self.evec), block):
-                rip_block = g.rankInnerProduct(self.evec[i0 : i0 + block], src, True)
+                rip_block = g.rank_inner_product(self.evec[i0 : i0 + block], src, True)
                 for i in range(rip_block.shape[0]):
                     for j in range(rip_block.shape[1]):
                         rip[j, i0 + i] = rip_block[i, j] / self.ev[i0 + i]
@@ -61,7 +61,7 @@ class deflate:
             t3 = g.time()
             if verbose:
                 g.message(
-                    "Deflated %d vector(s) in %g s (%g s for rankInnerProduct, %g s for global sum, %g s for linear combinations)"
+                    "Deflated %d vector(s) in %g s (%g s for rank_inner_product, %g s for global sum, %g s for linear combinations)"
                     % (len(src), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
                 )
             return inverter(dst, src)

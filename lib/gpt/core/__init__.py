@@ -31,14 +31,13 @@ from gpt.core.transform import (
     copy,
     convert,
     norm2,
-    innerProduct,
-    rankInnerProduct,
-    innerProductNorm2,
+    inner_product,
+    rank_inner_product,
+    inner_product_norm2,
     axpy,
     axpy_norm2,
     slice,
 )
-from gpt.core.covariant import covariant_shift
 from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
 from gpt.core.operator import *
 from gpt.core.otype import *
@@ -55,7 +54,7 @@ from gpt.core.io import (
     corr_io,
 )
 from gpt.core.checkpointer import checkpointer, checkpointer_none
-from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomp
+from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomposition
 from gpt.core.cartesian import cartesian_view
 from gpt.core.coordinates import coordinates, exp_ixp, fft, make_mask
 from gpt.core.random import random, sha256
@@ -63,6 +62,7 @@ from gpt.core.mem import mem_info, mem_report
 from gpt.core.merge import *
 from gpt.core.split import *
 from gpt.core.lookup_table import *
+import gpt.core.covariant
 import gpt.core.util
 import gpt.core.block
 import gpt.core.matrix

@@ -42,7 +42,7 @@ class cg:
             t0 = g.time()
             p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
             mat(mmp, psi)  # in, out
-            d = g.innerProduct(psi, mmp).real
+            d = g.inner_product(psi, mmp).real
             b = g.norm2(mmp)
             r @= src - mmp
             p @= r
@@ -53,7 +53,7 @@ class cg:
             for k in range(1, self.maxiter + 1):
                 c = cp
                 mat(mmp, p)
-                dc = g.innerProduct(p, mmp)
+                dc = g.inner_product(p, mmp)
                 d = dc.real
                 a = c / d
                 cp = g.axpy_norm2(r, -a, mmp, r)

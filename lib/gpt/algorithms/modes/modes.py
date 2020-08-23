@@ -51,7 +51,7 @@ class modes:
             t0 = g.time()
             dst[:] = 0
             for i, x in enumerate(left):
-                dst += f_evals[i] * x * g.innerProduct(right[i], src)
+                dst += f_evals[i] * x * g.inner_product(right[i], src)
             if verbose:
                 t1 = g.time()
                 g.message("Approximation by %d modes took %g s" % (len(left), t1 - t0))

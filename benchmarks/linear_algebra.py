@@ -55,13 +55,13 @@ DWF Linear Algebra Benchmark with
                         access(one)
                         access(two)
                         dt -= g.time()
-                        ip = g.rankInnerProduct(one, two, use_accelerator)
+                        ip = g.rank_inner_product(one, two, use_accelerator)
                         dt += g.time()
 
                     # Report
                     GBPerSec = nbytes / dt / 1e9
                     g.message(
-                        f"""{N} rankInnerProduct
+                        f"""{N} rank_inner_product
     Object type                 : {tp.__name__}
     Block                       : {n} x {n}
     Data resides in             : {access.__name__[7:]}

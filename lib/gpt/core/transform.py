@@ -95,7 +95,7 @@ def convert(first, second):
         assert 0
 
 
-def rankInnerProduct(a, b, use_accelerator=True):
+def rank_inner_product(a, b, use_accelerator=True):
     return_list = (type(a) == list) or (type(b) == list)
     a = gpt.util.to_list(a)
     b = gpt.util.to_list(b)
@@ -114,19 +114,19 @@ def rankInnerProduct(a, b, use_accelerator=True):
     return gpt.util.to_num(res[0, 0])
 
 
-def innerProduct(a, b):
+def inner_product(a, b):
     grid = gpt.util.to_list(a)[0].grid
-    return grid.globalsum(rankInnerProduct(a, b))
+    return grid.globalsum(rank_inner_product(a, b))
 
 
 def norm2(l):
     if type(l) == gpt.tensor:
         return l.norm2()
     l = gpt.eval(l)  # otherwise it gets evaluated twice below
-    return innerProduct(l, l).real
+    return inner_product(l, l).real
 
 
-def innerProductNorm2(a, b):
+def inner_product_norm2(a, b):
     if type(a) == gpt.tensor and type(b) == gpt.tensor:
         return gpt.adj(a) * b, a.norm2()
     a = gpt.eval(a)
