@@ -1,0 +1,117 @@
+#!/bin/bash
+# Configure
+root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
+GRID=${root}/dependencies/Grid/build
+if [ ! -d ${GRID} ];
+then
+    GRID=${root}/../Grid/build
+fi
+if [ ! -d ${GRID} ];
+then
+    echo "Could not detect Grid location"
+    exit 2
+fi
+[[ -n $MAKE_THREADS ]] && NPARALLEL=$MAKE_THREADS || NPARALLEL=16
+
+# Start
+N=0
+
+mkdir -p logs
+
+echo "================================================================================"
+echo "  Compiling Benchmarks against Grid in ${GRID}"
+echo "================================================================================"
+
+NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
+CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
+CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID} -I${GRID}/Grid -I${NUMPY_INCLUDE} $(python3-config --includes)"
+LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
+LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
+
+[[ -n $NBASIS ]] && CXXFLAGS="$CXXFLAGS -DNBASIS=$NBASIS"
+
+echo "CXX = $CXX"
+echo "CXXFLAGS = $CXXFLAGS"
+echo "LDFLAGS = $LDFLAGS"
+echo "LIBS = $LIBS"
+
+echo "================================================================================"
+
+rm -f next.lock
+
+# Compile
+function abort {
+    echo "Cancelling..."
+    kill -TERM 0
+    wait
+    echo "Done"
+}
+
+trap abort INT
+
+function next {
+    nextFile=$1
+
+    while true
+    do
+	(
+	    flock -n 9 || exit 1
+	    for src in *.cc
+	    do
+		bn=$(basename $src .cc)
+    [[ -n $NBASIS ]] && dst=${bn}.nbasis_${NBASIS}.exe || dst=${bn}.exe
+		if [ $src -nt $dst ];
+		then
+		    touch $dst
+		    echo $src > $nextFile
+		    exit 0
+		fi
+	    done
+	    rm -f $nextFile
+	) 9> next.lock
+
+	success=$?
+	if ((success == 0))
+	then
+	    break
+	fi
+
+	sleep 0.1
+    done
+}
+
+for ((N=0;N<NPARALLEL;N++))
+do
+    (
+	while true
+	do
+	    next next.${N}
+	    if [ -f next.${N} ];
+	    then
+		src=$(cat next.${N})
+		bn=$(basename $src .cc)
+    [[ -n $NBASIS ]] && dst=${bn}.nbasis_${NBASIS}.exe || dst=${bn}.exe
+
+		echo " [CXX] $bn"
+		start=$SECONDS
+	  ${CXX} $src ${CXXFLAGS} ${LDFLAGS} ${LIBS} -lGrid -o $dst 1> logs/${bn}.out 2> logs/${bn}.err
+		success=$?
+		elapsed=$((SECONDS-start))
+		if [[ "$success" == "0" ]];
+		then
+		    printf "%-70s %s\n" " [OK ] $bn " "($elapsed s)"
+		else
+		    printf "%-70s %-30s %s\n" " [ERR] $bn " "($elapsed s)" "logs/${bn}.err"
+		    touch $dst
+		fi
+	    else
+		exit 0
+	    fi
+	done
+    ) &
+done
+
+wait
+
+rm -f next.lock
+find build -size 0 -delete 2> /dev/null
