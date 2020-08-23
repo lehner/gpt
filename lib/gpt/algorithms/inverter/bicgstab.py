@@ -58,19 +58,19 @@ class bicgstab:
 
             for k in range(self.maxiter):
                 rhoprev = rho
-                rho = g.innerProduct(rhat, r).real
+                rho = g.inner_product(rhat, r).real
 
                 beta = (rho / rhoprev) * (alpha / omega)
 
                 p @= r + beta * p - beta * omega * mmp
 
                 mat(mmp, p)
-                alpha = rho / g.innerProduct(rhat, mmp).real
+                alpha = rho / g.inner_product(rhat, mmp).real
 
                 s @= r - alpha * mmp
 
                 mat(mms, s)
-                ip, mms2 = g.innerProductNorm2(mms, s)
+                ip, mms2 = g.inner_product_norm2(mms, s)
 
                 if mms2 == 0.0:
                     continue

@@ -37,7 +37,7 @@ class power_iteration:
         ev_prev = None
         for it in range(self.maxit):
             mat(dst, tmp)
-            ev = g.innerProduct(tmp, dst)
+            ev = g.inner_product(tmp, dst)
             if self.real:
                 ev = ev.real
             if verbose:

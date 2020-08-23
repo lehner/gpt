@@ -162,21 +162,21 @@ dst = g.cshift(src, 0, 1)
 assert abs(dst[15, 0, 0, 0] - complex(2, 1)) < 1e-6
 
 ################################################################################
-# Test multi innerProduct
+# Test multi inner_product
 ################################################################################
 for grid in [grid_sp, grid_dp]:
     left = [g.vcomplex(grid, 8) for i in range(2)]
     right = [g.vcomplex(grid, 8) for i in range(4)]
     rng.cnormal([left, right])
-    host_result = g.rankInnerProduct(left, right, False)
-    acc_result = g.rankInnerProduct(left, right, True)
+    host_result = g.rank_inner_product(left, right, False)
+    acc_result = g.rank_inner_product(left, right, True)
     eps = np.linalg.norm(host_result - acc_result) / np.linalg.norm(host_result)
     g.message(f"Test multi inner product host<>accelerator: {eps}")
     assert eps < 1e-13
     for i in range(2):
         for j in range(4):
-            host_result_individual = g.rankInnerProduct(left[i], right[j], False)
-            acc_result_individual = g.rankInnerProduct(left[i], right[j], True)
+            host_result_individual = g.rank_inner_product(left[i], right[j], False)
+            acc_result_individual = g.rank_inner_product(left[i], right[j], True)
             eps = abs(host_result_individual - host_result[i, j]) / abs(
                 host_result[i, j]
             )

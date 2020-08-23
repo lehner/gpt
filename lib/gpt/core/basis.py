@@ -28,13 +28,13 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         return
     grid = basis[0].grid
     i = 0
-    t_rankInnerProduct = 0.0
+    t_rank_inner_product = 0.0
     t_globalSum = 0.0
     t_linearCombination = 0.0
     for i in range(0, n, nblock):
-        t_rankInnerProduct -= gpt.time()
-        lip = gpt.rankInnerProduct(basis[i : i + nblock], w)
-        t_rankInnerProduct += gpt.time()
+        t_rank_inner_product -= gpt.time()
+        lip = gpt.rank_inner_product(basis[i : i + nblock], w)
+        t_rank_inner_product += gpt.time()
         t_globalSum -= gpt.time()
         grid.globalsum(lip)
         lip = [complex(x) for x in lip]
@@ -49,8 +49,8 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         w @= expr
         t_linearCombination += gpt.time()
     gpt.message(
-        "Timing Ortho: %g rankInnerProduct, %g globalsum, %g lc"
-        % (t_rankInnerProduct, t_globalSum, t_linearCombination)
+        "Timing Ortho: %g rank_inner_product, %g globalsum, %g lc"
+        % (t_rank_inner_product, t_globalSum, t_linearCombination)
     )
 
 
@@ -66,5 +66,5 @@ def rotate(basis, Qt, j0, j1, k0, k1):
         cgpt.rotate(basis, Qt, j0, j1, k0, k1, i)
 
 
-def qr_decomp(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax):
-    return cgpt.qr_decomp(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax)
+def qr_decomposition(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax):
+    return cgpt.qr_decomposition(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax)
