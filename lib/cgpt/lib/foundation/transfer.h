@@ -83,3 +83,68 @@ inline void vectorBlockOrthonormalize(Lattice<CComplex> &ip,std::vector<VLattice
       blockZAXPY(Basis[j][v],sip,Basis[j][v],zz);
   }
 }
+
+// NOTE: This is only here for comparison with lut version -- can remove later
+template<class vobj,class CComplex,int nbasis,class VLattice>
+inline void vectorizableBlockProjectUsingNoLut(Lattice<iVector<CComplex, nbasis>>& coarseData,
+                                               const Lattice<vobj>&                fineData,
+                                               const VLattice&                     Basis)
+{
+  GridBase *fine   = fineData.Grid();
+  GridBase *coarse = coarseData.Grid();
+
+  int _ndimension = coarse->_ndimension;
+
+  // checks
+  assert(nbasis == Basis.size());
+  subdivides(coarse, fine);
+  for(int i = 0; i < nbasis; i++) {
+    conformable(Basis[i], fineData);
+  }
+
+  Coordinate block_r(_ndimension);
+  Coordinate fine_rdimensions   = fine->_rdimensions;
+  Coordinate coarse_rdimensions = coarse->_rdimensions;
+
+  size_t block_v = 1;
+  for(int d = 0; d < _ndimension; ++d) {
+    block_r[d] = fine->_rdimensions[d] / coarse->_rdimensions[d];
+    assert(block_r[d] * coarse->_rdimensions[d] == fine->_rdimensions[d]);
+    block_v *= block_r[d];
+  }
+  assert(block_v == fine->oSites() / coarse->oSites());
+
+  autoView(fineData_v, fineData, AcceleratorRead);
+  autoView(coarseData_v, coarseData, AcceleratorWrite);
+
+  typedef decltype(Basis[0].View(AcceleratorRead)) View;
+  Vector<View> Basis_v; Basis_v.reserve(Basis.size());
+  for(int i=0;i<Basis.size();i++){
+    Basis_v.push_back(Basis[i].View(AcceleratorRead));
+  }
+
+  accelerator_for(sci, nbasis * coarse->oSites(), vobj::Nsimd(), {
+    auto i  = sci % nbasis;
+    auto sc = sci / nbasis;
+
+    Coordinate coor_c(_ndimension);
+    Lexicographic::CoorFromIndex(coor_c, sc, coarse_rdimensions);
+
+    int sf;
+    decltype(innerProductD2(Basis_v[sf](0), fineData_v(sf))) reduce = Zero();
+
+    for(int sb = 0; sb < block_v; ++sb) {
+      Coordinate coor_b(_ndimension);
+      Coordinate coor_f(_ndimension);
+
+      Lexicographic::CoorFromIndex(coor_b, sb, block_r);
+      for(int d = 0; d < _ndimension; ++d) coor_f[d] = coor_c[d] * block_r[d] + coor_b[d];
+      Lexicographic::IndexFromCoor(coor_f, sf, fine_rdimensions);
+
+      reduce = reduce + innerProductD2(Basis_v[i](sf), fineData_v(sf));
+    }
+    convertType(coarseData_v[sc](i), TensorRemove(reduce));
+  });
+
+  for(int i=0;i<Basis.size();i++) Basis_v[i].ViewClose();
+}

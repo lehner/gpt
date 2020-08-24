@@ -48,6 +48,25 @@ def project(coarse, fine, basis):
     return coarse
 
 
+def project_using_lut(coarse, fine, basis, lut):
+    assert fine.checkerboard().__name__ == basis[0].checkerboard().__name__
+    cot = coarse.otype
+    fot = fine.otype
+    tmp = gpt.lattice(coarse)
+    coarse[:] = 0
+    for j in fot.v_idx:
+        for i in cot.v_idx:
+            cgpt.block_project_using_lut(
+                tmp.v_obj[i],
+                fine.v_obj[j],
+                basis[cot.v_n0[i] : cot.v_n1[i]],
+                j,
+                lut.obj,
+            )
+        coarse += tmp
+    return coarse
+
+
 def promote(coarse, fine, basis):
     assert len(basis) > 0
     cot = coarse.otype

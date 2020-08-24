@@ -21,6 +21,7 @@ class cgpt_Lattice_base {
 public:
   virtual ~cgpt_Lattice_base() { };
   virtual cgpt_Lattice_base* create_lattice_of_same_type() = 0;
+  virtual cgpt_lookup_table_base* create_lookup_table(GridBase* coarse_grid, cgpt_Lattice_base* mask) = 0;
   virtual void set_to_zero() = 0;
   virtual PyObject* to_str() = 0;
   virtual PyObject* sum() = 0;
@@ -54,6 +55,7 @@ public:
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) = 0;
   virtual int get_numpy_dtype() = 0;
   virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
+  virtual void block_project_using_lut(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis, cgpt_lookup_table_base* lut) = 0;
   virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
   virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) = 0;
   virtual GridBase* get_grid() = 0;

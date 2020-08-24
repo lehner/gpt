@@ -33,7 +33,20 @@ void cgpt_block_project(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vecto
 
 }
 
+template<typename T>
+void cgpt_block_project_using_lut(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _basis, cgpt_lookup_table_base* lut) {
 
+  typedef typename Lattice<T>::vector_type vCoeff_t;
+
+  PVector<Lattice<T>> basis;
+  cgpt_basis_fill(basis,_basis);
+
+#define BASIS_SIZE(n) if (n == basis.size()) { vectorizableBlockProjectUsingLut(compatible< iVSinglet ## n<vCoeff_t> >(_coarse)->l,fine,basis,*((cgpt_lookup_table< Lattice<iSinglet<vCoeff_t>> >*)lut)); } else
+#include "basis_size.h"
+#undef BASIS_SIZE
+  { ERR("Unknown basis size %d",(int)basis.size()); }
+
+}
 
 template<typename T>
 void cgpt_block_promote(cgpt_Lattice_base* _coarse, Lattice<T>& fine, std::vector<cgpt_Lattice_base*>& _basis) {
