@@ -35,6 +35,7 @@ for f in \
     ${test_path}/core/split.py \
     ${test_path}/core/other_representations.py \
     ${test_path}/random/random_simple.py \
+    ${test_path}/create/smear.py \
     ${test_path}/qcd/a2a.py \
     ${test_path}/qcd/fermion_operators.py \
     ${test_path}/qcd/domain_wall.py \

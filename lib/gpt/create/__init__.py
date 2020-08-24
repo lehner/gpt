@@ -18,6 +18,7 @@
 #
 import gpt
 import numpy as np
+import gpt.create.smear
 
 
 def point(src, pos):
