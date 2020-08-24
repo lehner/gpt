@@ -60,11 +60,11 @@ void run_benchmark(int* argc, char*** argv) {
 
   GridCartesian* fgrid =
     SpaceTimeGrid::makeFourDimGrid(readFromCommandlineIvec(argc, argv, "--fgrid", {16, 16, 16, 32}),
-                                   GridDefaultSimd(Nd, vComplex::Nsimd()),
+                                   GridDefaultSimd(Nd, vCoeff_t::Nsimd()),
                                    GridDefaultMpi());
   GridCartesian* cgrid =
     SpaceTimeGrid::makeFourDimGrid(readFromCommandlineIvec(argc, argv, "--cgrid", {4, 4, 4, 8}),
-                                   GridDefaultSimd(Nd, vComplex::Nsimd()),
+                                   GridDefaultSimd(Nd, vCoeff_t::Nsimd()),
                                    GridDefaultMpi());
 
   int N = readFromCommandlineInt(argc, argv, "--N", 1000);

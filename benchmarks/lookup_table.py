@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 #
 # Authors: Christoph Lehner 2020
+#          Daniel Richtmann 2020
 #
-# Desc.: Illustrate core concepts and features
+# Desc.: Benchmark blocking operators with and without lookup table
 #
 import gpt as g
 import numpy as np
