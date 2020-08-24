@@ -118,6 +118,12 @@ class lattice(factor):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
         return self.otype.__name__ + ";" + self.checkerboard().__name__
 
+    def global_bytes(self):
+        return self.otype.nfloats * self.grid.gsites * self.grid.precision.nbytes
+
+    def rank_bytes(self):
+        return self.global_bytes() // self.grid.Nprocessors
+
     @property
     def view(self):
         return lattice_view(self)

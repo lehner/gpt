@@ -23,6 +23,6 @@ for i in range(n):
     g.orthogonalize(basis[i], basis[:i])
 
     for j in range(i):
-        eps = g.innerProduct(basis[j], basis[i])
+        eps = g.inner_product(basis[j], basis[i])
         g.message(" <%d|%d> =" % (j, i), eps)
         assert abs(eps) < 1e-6

@@ -34,7 +34,7 @@ def evals(matrix, evec, params):
         v = evec[i]
         matrix(tmp, v)
         # M |v> = l |v> -> <v|M|v> / <v|v>
-        l = g.innerProduct(v, tmp) / g.norm2(v)
+        l = g.inner_product(v, tmp) / g.norm2(v)
         if params["real"]:
             l = l.real
         ev.append(l)

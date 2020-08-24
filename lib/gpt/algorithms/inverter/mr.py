@@ -56,7 +56,7 @@ class mr:
 
             for k in range(self.maxiter):
                 mat(mmr, r)
-                ip, mmr2 = g.innerProductNorm2(mmr, r)
+                ip, mmr2 = g.inner_product_norm2(mmr, r)
 
                 if mmr2 == 0.0:
                     continue

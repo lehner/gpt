@@ -20,8 +20,19 @@ import gpt
 import numpy as np
 
 # test if of number type
-def isnum(x):
+def is_num(x):
     return isinstance(x, (int, float, complex)) and not isinstance(x, bool)
+
+
+# convert to number type
+def to_num(x):
+    if isinstance(x, (np.complex128, np.complex64)):
+        return complex(x)
+    elif isinstance(x, (np.float64, np.float128)):
+        return float(x)
+    elif isinstance(x, (np.int32, np.int64)):
+        return int(x)
+    return x
 
 
 # tensor
@@ -36,7 +47,7 @@ def tensor_to_value(value, dtype=np.complex128):
         value = value.array
         if value.dtype != dtype:
             value = dtype(value)
-    elif isnum(value):
+    elif is_num(value):
         value = np.array([value], dtype=dtype)
     return value
 

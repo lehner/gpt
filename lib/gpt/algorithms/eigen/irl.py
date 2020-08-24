@@ -112,7 +112,7 @@ class irl:
             Qt = np.identity(Nm, dtype)
             t0 = g.time()
             for ip in range(k2, Nm):
-                g.qr_decomp(ev, lme, Nm, Nm, Qt, ev2[ip], k1, Nm)
+                g.qr_decomposition(ev, lme, Nm, Nm, Qt, ev2[ip], k1, Nm)
             t1 = g.time()
 
             if verbose:
@@ -167,7 +167,7 @@ class irl:
                         if not ckpt.load(v):
                             mat(v, B)
                             ckpt.save(v)
-                        ev_test = g.innerProduct(B, v).real
+                        ev_test = g.inner_product(B, v).real
                         eps2 = g.norm2(v - ev_test * B) / lambda_max ** 2.0
                         if verbose:
                             g.message(
@@ -252,7 +252,7 @@ class irl:
             if k > 0:
                 w -= lme[k - 1] * evec[k - 1]
 
-            zalph = g.innerProduct(evec_k, w)
+            zalph = g.inner_product(evec_k, w)
             alph = zalph.real
 
             w -= alph * evec_k

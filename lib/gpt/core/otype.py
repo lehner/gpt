@@ -70,6 +70,7 @@ class ot_base:
 ###
 # Singlet
 class ot_singlet(ot_base):
+    __name__ = "ot_singlet"
     nfloats = 2
     shape = (1,)
     spintrace = (None, None, None)  # do nothing
@@ -373,7 +374,9 @@ class ot_vector_spin_color(ot_base):
                         idx = c + self.color_ndim * (s + self.spin_ndim * i)
                         gpt.qcd.ferm_to_prop(dst[i], dst_sc[idx], s, c)
         else:
-            assert 0
+            raise TypeError(
+                f"Unexpected type {src[0].otype.__name__} <> {self.ot_matrix}"
+            )
 
 
 def vector_spin_color(grid, spin_ndim, color_ndim):

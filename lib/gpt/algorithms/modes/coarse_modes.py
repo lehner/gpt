@@ -56,7 +56,7 @@ class coarse_modes:
             dst_coarse = g.lattice(left[0])
             dst_coarse[:] = 0
             for i, x in enumerate(left):
-                dst_coarse += f_evals[i] * x * g.innerProduct(right[i], src_coarse)
+                dst_coarse += f_evals[i] * x * g.inner_product(right[i], src_coarse)
 
             g.block.promote(dst_coarse, dst, left_basis)
 

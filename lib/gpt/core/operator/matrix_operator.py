@@ -121,6 +121,9 @@ class matrix_operator(factor):
         else:
             return gpt.expr(other).__rmul__(self)
 
+    def __rmul__(self, other):
+        return gpt.expr(other).__mul__(self)
+
     def converted(self, to_precision, verbose=False):
         assert all([g is not None for g in self.grid])
         assert all([ot is not None for ot in self.otype])

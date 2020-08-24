@@ -1,0 +1,93 @@
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla V100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 16911433728 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: IBM Summit or similar - NOT setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 6
+SharedMemoryMpi:  Node  communicator of size 6
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 536870912bytes at 0x2000e0000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 536870912 byte stencil comms buffers 
+Grid : Message : MemoryManager Cache 4194304000 bytes 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 16
+Grid : Message : MemoryManager::Init() Non unified: Caching accelerator data in dedicated memory
+Grid : Message : MemoryManager::Init() Using cudaMalloc
+Grid : Message : 4.946401 s : Grid Default Decomposition patterns
+Grid : Message : 4.946409 s : 	OpenMP threads : 6
+Grid : Message : 4.946420 s : 	MPI tasks      : 6 1 1 1 
+Grid : Message : 4.946438 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 4.946455 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 4.946468 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 4.946480 s : 	vComplexD      : 512bits ; 1 1 2 2 
+
+=============================================
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
+=============================================
+GPT :       5.096184 s : 
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [48, 24, 24, 24]
+                       :     precision    : single
+                       :     Ls           : 12
+                       : 
+GPT :      26.147219 s : 1000 applications of Dhop
+                       :     Time to complete            : 1.88 s
+                       :     Total performance           : 5603.03 GFlops/s
+                       :     Effective memory bandwidth  : 3871.19 GB/s
+GPT :      26.155562 s : 
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [48, 24, 24, 24]
+                       :     precision    : double
+                       :     Ls           : 12
+                       : 
+GPT :      48.731163 s : 1000 applications of Dhop
+                       :     Time to complete            : 5.19 s
+                       :     Total performance           : 2025.24 GFlops/s
+                       :     Effective memory bandwidth  : 2798.51 GB/s
+=============================================
+               Finalized GPT                 
+=============================================

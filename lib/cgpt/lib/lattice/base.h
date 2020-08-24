@@ -27,9 +27,8 @@ public:
   virtual RealD norm2() = 0;
   virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
   virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
-  virtual ComplexD innerProduct(cgpt_Lattice_base* other) = 0;
-  virtual ComplexD rankInnerProduct(cgpt_Lattice_base* other) = 0;
-  virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;
+  virtual void rank_inner_product(ComplexD* result, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, bool use_accelerator) = 0;
+  virtual void inner_product_norm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;
   virtual void copy_from(cgpt_Lattice_base* src) = 0;
   virtual void fft_from(cgpt_Lattice_base* src, const std::vector<int> & dims, int sign) = 0;
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) = 0; // unary_expr(unary_a(this) * unary_b(b))

@@ -43,4 +43,9 @@ ExportPhysicalFermionSolution
 ExportPhysicalFermionSource
 END_EXPORT_UNARY_VOID
 
+BEGIN_EXPORT_UNARY_DAG_VOID
+Dhop
+DhopEO
+END_EXPORT_UNARY_DAG_VOID
+
 */

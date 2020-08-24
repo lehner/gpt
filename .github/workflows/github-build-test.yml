@@ -14,11 +14,11 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2020-07-30
+  CACHE_KEY: 2020-08-22b
 
 jobs:
   build-grid:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     strategy:
       fail-fast: false
@@ -59,8 +59,9 @@ jobs:
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
       run: |
-        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpi /usr/bin/mpicc.mpich
         sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
+        sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Clone c-lime
       uses: actions/checkout@v2
@@ -156,7 +157,7 @@ jobs:
 
   build-gpt:
     needs: build-grid
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     strategy:
       fail-fast: false
@@ -192,8 +193,9 @@ jobs:
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
       run: |
-        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpi /usr/bin/mpicc.mpich
         sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
+        sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
       uses: actions/setup-python@v2
@@ -343,7 +345,7 @@ jobs:
 
   test-gpt:
     needs: [build-grid, build-gpt]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     strategy:
       fail-fast: false
@@ -374,8 +376,9 @@ jobs:
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
       run: |
-        sudo update-alternatives --set mpi /usr/include/mpich
+        sudo update-alternatives --set mpi /usr/bin/mpicc.mpich
         sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
+        sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
       uses: actions/setup-python@v2
@@ -416,7 +419,7 @@ jobs:
       run: |
         cd gpt
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
-        export WORK_DIR=$(mktemp -d) 
+        export WORK_DIR=$(mktemp -d)
         mpirun -np 2 -mca btl ^openib -bind-to core python tests/core/scalar.py --mpi 1.1.1.2
         ./tests/run "mpirun -np 1 -mca btl ^openib coverage run" "--mpi_split 1.1.1.1"
         ./tests/run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run" "--mpi 1.1.1.2 --mpi 1.1.2 --mpi_split 1.1.1.1"
@@ -451,7 +454,7 @@ jobs:
 
   build-gpt-doc:
     needs: [build-grid, build-gpt]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
     - name: Install Ubuntu packages

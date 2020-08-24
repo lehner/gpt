@@ -95,39 +95,46 @@ def convert(first, second):
         assert 0
 
 
-def innerProduct(a, b, rank_only=False):
-    if type(a) == gpt.tensor and type(b) == gpt.tensor:
-        return gpt.adj(a) * b
-    a = gpt.eval(a)
-    b = gpt.eval(b)
-    assert len(a.otype.v_idx) == len(b.otype.v_idx)
-    r = sum(
-        [cgpt.lattice_rankInnerProduct(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
-    )
-    if rank_only:
-        return r
-    # do global sum only once not for each v_idx
-    return a.grid.globalsum(rankInnerProduct(a, b))
+def rank_inner_product(a, b, use_accelerator=True):
+    return_list = (type(a) == list) or (type(b) == list)
+    a = gpt.util.to_list(a)
+    b = gpt.util.to_list(b)
+    if type(a[0]) == gpt.tensor and type(b[0]) == gpt.tensor:
+        res = numpy.array(
+            [[gpt.adj(x) * y for y in b] for x in a], dtype=numpy.complex128
+        )
+    else:
+        a = [gpt.eval(x) for x in a]
+        b = [gpt.eval(x) for x in b]
+        otype = a[0].otype
+        assert len(otype.v_idx) == len(b[0].otype.v_idx)
+        res = cgpt.lattice_rank_inner_product(a, b, use_accelerator)
+    if return_list:
+        return res
+    return gpt.util.to_num(res[0, 0])
 
 
-def rankInnerProduct(a, b):
-    return innerProduct(a, b, rank_only=True)
+def inner_product(a, b):
+    grid = gpt.util.to_list(a)[0].grid
+    return grid.globalsum(rank_inner_product(a, b))
 
 
 def norm2(l):
     if type(l) == gpt.tensor:
         return l.norm2()
     l = gpt.eval(l)  # otherwise it gets evaluated twice below
-    return innerProduct(l, l).real
+    return inner_product(l, l).real
 
 
-def innerProductNorm2(a, b):
+def inner_product_norm2(a, b):
     if type(a) == gpt.tensor and type(b) == gpt.tensor:
         return gpt.adj(a) * b, a.norm2()
     a = gpt.eval(a)
     b = gpt.eval(b)
     assert len(a.otype.v_idx) == len(b.otype.v_idx)
-    r = [cgpt.lattice_innerProductNorm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
+    r = [
+        cgpt.lattice_inner_product_norm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx
+    ]
     return (
         sum([x[0] for x in r]),
         sum([x[1] for x in r]),

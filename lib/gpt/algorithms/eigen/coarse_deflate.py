@@ -21,12 +21,15 @@
 #
 import gpt as g
 import numpy as np
+from gpt.params import params_convention
 
 
 class coarse_deflate:
-    def __init__(self, inverter, cevec, basis, fev):
+    @params_convention(block=32)
+    def __init__(self, inverter, cevec, basis, fev, params):
         self.inverter = inverter
         self.basis = basis
+        self.params = params
 
         def noop(matrix):
             def noop_mat(dst, src):
@@ -34,14 +37,16 @@ class coarse_deflate:
 
             return noop_mat
 
-        self.cdefl = g.algorithms.eigen.deflate(noop, cevec, fev)
+        self.cdefl = g.algorithms.eigen.deflate(noop, cevec, fev, params)
 
     def __call__(self, matrix):
 
-        otype, grid, cb = None, None, None
-        if type(matrix) == g.matrix_operator:
-            otype, grid, cb = matrix.otype, matrix.grid, matrix.cb
-            matrix = matrix.mat
+        otype = self.basis[0].otype
+        grid = self.basis[0].grid
+        cb = self.basis[0].checkerboard()
+
+        cdefl = self.cdefl(matrix)
+        inverter = self.inverter(matrix)
 
         def inv(dst, src):
             verbose = g.default.is_verbose("deflate")
@@ -57,7 +62,7 @@ class coarse_deflate:
                 g.block.project(csrc[i], src[i], self.basis)
             t1 = g.time()
             # g.default.push_verbose("deflate", False)
-            self.cdefl(matrix)(cdst, csrc)
+            cdefl(cdst, csrc)
             # g.default.pop_verbose()
             t2 = g.time()
             for i in range(len(src)):
@@ -68,7 +73,7 @@ class coarse_deflate:
                     "Coarse-grid deflated %d vector(s) in %g s (project %g s, coarse deflate %g s, promote %g s)"
                     % (len(src), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
                 )
-            return self.inverter(matrix)(dst, src)
+            return inverter(dst, src)
 
         return g.matrix_operator(
             mat=inv, inv_mat=matrix, otype=otype, grid=grid, cb=cb, accept_list=True
