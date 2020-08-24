@@ -102,12 +102,3 @@ def fft(dims=None):
         inv_mat=mat_backward,
         adj_inv_mat=mat_forward,
     )
-
-
-def make_mask(field, mask):
-    assert type(mask == numpy.ndarray)
-    assert field.otype == gpt.ot_singlet
-
-    x = gpt.coordinates(field)
-    dtype = numpy.complex128 if field.grid.precision == gpt.double else numpy.complex64
-    field[x] = mask.astype(dtype).reshape((len(mask), 1))

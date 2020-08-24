@@ -56,7 +56,7 @@ from gpt.core.io import (
 from gpt.core.checkpointer import checkpointer, checkpointer_none
 from gpt.core.basis import orthogonalize, linear_combination, rotate, qr_decomposition
 from gpt.core.cartesian import cartesian_view
-from gpt.core.coordinates import coordinates, exp_ixp, fft, make_mask
+from gpt.core.coordinates import coordinates, exp_ixp, fft
 from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report
 from gpt.core.merge import *
