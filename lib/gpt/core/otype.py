@@ -300,7 +300,7 @@ class ot_matrix_spin_color(ot_base):
             self.__name__: (lambda: self, ([1, 3], [0, 2])),
             "ot_vector_spin_color(%d,%d)"
             % (spin_ndim, color_ndim): (
-                lambda: ot_vector_spin(spin_ndim, color_ndim),
+                lambda: ot_vector_spin_color(spin_ndim, color_ndim),
                 ([1, 3], [0, 1]),
             ),
             "ot_matrix_spin(%d)"
