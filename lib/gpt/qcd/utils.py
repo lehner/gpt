@@ -17,13 +17,23 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import cgpt
+import gpt
 
 
 def ferm_to_prop(p, f, s, c):
     assert len(f.v_obj) == 1 and len(p.v_obj) == 1
     return cgpt.util_ferm2prop(f.v_obj[0], p.v_obj[0], s, c, True)
 
-
 def prop_to_ferm(f, p, s, c):
     assert len(f.v_obj) == 1 and len(p.v_obj) == 1
     return cgpt.util_ferm2prop(f.v_obj[0], p.v_obj[0], s, c, False)
+
+def reunitize(U):
+    if type(U) == list:
+        for a in U:
+            reunitize(a)
+    elif type(U) == gpt.lattice:
+        assert len(U.v_obj) == 1
+        return cgpt.util_reunitize(U.v_obj[0], U.v_obj[0])
+    else:
+        assert False
