@@ -39,6 +39,6 @@ NAMESPACE_BEGIN(Grid);
 #include "foundation/et.h"
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
-#include "foundation/table.h"
+#include "foundation/block.h"
 
 NAMESPACE_END(Grid);

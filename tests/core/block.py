@@ -30,23 +30,18 @@ for dtype in [msc, vc12]:
     basis = [dtype() for i in range(n)]
     rng = g.random("block_seed_string_13")
     rng.cnormal(basis)
+
+    b = g.block.map(coarse_grid, basis)
+
     for i in range(2):
         g.message("Ortho step %d" % i)
-        g.block.orthonormalize(coarse_grid, basis)
+        b.orthonormalize()
 
     # test coarse vector
     lcoarse = g.vcomplex(coarse_grid, n)
     rng.cnormal(lcoarse)
 
-    # temporary fine and coarse vectors
-    tmpf = g.lattice(basis[0])
-    lcoarse2 = g.lattice(lcoarse)
-
-    # coarse-to-fine-to-coarse
-    g.block.promote(lcoarse, tmpf, basis)
-    g.block.project(lcoarse2, tmpf, basis)
-
-    # report error
-    err2 = g.norm2(lcoarse - lcoarse2) / g.norm2(lcoarse)
+    # report error of promote-project cycle
+    err2 = g.norm2(b.project * b.promote * lcoarse - lcoarse) / g.norm2(lcoarse)
     g.message(err2)
     assert err2 < 1e-12

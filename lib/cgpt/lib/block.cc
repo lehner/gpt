@@ -1,6 +1,7 @@
 /*
     GPT - Grid Python Toolkit
     Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,87 +19,91 @@
 */
 #include "lib.h"
 
-EXPORT(block_project,{
+EXPORT(create_block_map,{
 
+    void* _grid_c,*_mask;
+    long nvec, basis_size;
     PyObject* _basis;
-    void* _coarse,* _fine;
-    int idx;
-    if (!PyArg_ParseTuple(args, "llOi", &_coarse,&_fine,&_basis,&idx)) {
+    if (!PyArg_ParseTuple(args, "lOlll", &_grid_c, &_basis, &_mask, &nvec, &basis_size)) {
       return NULL;
     }
 
-    cgpt_Lattice_base* fine = (cgpt_Lattice_base*)_fine;
-    cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
-
-    std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis,idx);
-
-    fine->block_project(coarse,basis);
-
-    return PyLong_FromLong(0);
-  });
-
-EXPORT(block_project_using_lut,{
-
-    PyObject* _basis;
-    void* _coarse,* _fine,* _lut;
-    int idx;
-    if (!PyArg_ParseTuple(args, "llOil", &_coarse,&_fine,&_basis,&idx,&_lut)) {
-      return NULL;
-    }
-
-    cgpt_Lattice_base* fine = (cgpt_Lattice_base*)_fine;
-    cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
-    cgpt_lookup_table_base* lut = (cgpt_lookup_table_base*)_lut;
-
-    std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis,idx);
-
-    fine->block_project_using_lut(coarse, basis, lut);
-
-    return PyLong_FromLong(0);
-  });
-
-EXPORT(block_promote,{
-
-    PyObject* _basis;
-    void* _coarse,* _fine;
-    int idx;
-    if (!PyArg_ParseTuple(args, "llOi", &_coarse,&_fine,&_basis,&idx)) {
-      return NULL;
-    }
-
-    cgpt_Lattice_base* fine = (cgpt_Lattice_base*)_fine;
-    cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
-
-    std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis,idx);
-
-    fine->block_promote(coarse,basis);
-
-    return PyLong_FromLong(0);
-  });
-
-EXPORT(block_orthonormalize,{
-
-    PyObject* _basis;
-    void* _coarse;
-    long nvec;
-    if (!PyArg_ParseTuple(args, "lOl", &_coarse,&_basis,&nvec)) {
-      return NULL;
-    }
-
-    cgpt_Lattice_base* coarse = (cgpt_Lattice_base*)_coarse;
-
-    ASSERT(nvec > 0);
+    GridBase* grid_c = (GridBase*)_grid_c;
+    cgpt_Lattice_base* mask = (cgpt_Lattice_base*)_mask;
 
     std::vector<std::vector<cgpt_Lattice_base*>> vbasis(nvec);
     for (long i=0;i<nvec;i++) {
       cgpt_basis_fill(vbasis[i],_basis,i);
     }
 
-    ASSERT(vbasis[0].size() > 0);
-    vbasis[0][0]->block_orthonormalize(coarse,vbasis);
+    ASSERT(vbasis.size() > 0 && vbasis[0].size() > 0);
+
+    return PyLong_FromVoidPtr((void*) vbasis[0][0]->block_map(grid_c, vbasis, mask, basis_size));
+  });
+
+EXPORT(delete_block_map,{
+
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+
+    delete ((cgpt_block_map_base*)p);
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(block_project,{
+
+    void* _map;
+    PyObject * _coarse, * _fine;
+    if (!PyArg_ParseTuple(args, "lOO", &_map, &_coarse,&_fine)) {
+      return NULL;
+    }
+
+    cgpt_block_map_base* map = (cgpt_block_map_base*)_map;
+
+    std::vector<cgpt_Lattice_base*> fine;
+    long nfine = cgpt_basis_fill(fine, _fine);
+
+    std::vector<cgpt_Lattice_base*> coarse;
+    long ncoarse = cgpt_basis_fill(coarse, _coarse);
+
+    map->project(coarse, ncoarse, fine, nfine);
+
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(block_promote,{
+
+    void* _map;
+    PyObject * _coarse, * _fine;
+    if (!PyArg_ParseTuple(args, "lOO", &_map, &_coarse,&_fine)) {
+      return NULL;
+    }
+
+    cgpt_block_map_base* map = (cgpt_block_map_base*)_map;
+
+    std::vector<cgpt_Lattice_base*> fine;
+    long nfine = cgpt_basis_fill(fine, _fine);
+
+    std::vector<cgpt_Lattice_base*> coarse;
+    long ncoarse = cgpt_basis_fill(coarse, _coarse);
+
+    map->promote(coarse, ncoarse, fine, nfine);
+
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(block_orthonormalize,{
+
+    void* _map;
+    if (!PyArg_ParseTuple(args, "l", &_map)) {
+      return NULL;
+    }
+
+    cgpt_block_map_base* map = (cgpt_block_map_base*)_map;
+
+    map->orthonormalize();
 
     return PyLong_FromLong(0);
   });

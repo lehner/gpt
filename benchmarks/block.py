@@ -3,7 +3,7 @@
 # Authors: Christoph Lehner 2020
 #          Daniel Richtmann 2020
 #
-# Desc.: Benchmark blocking operators with and without lookup table
+# Desc.: Benchmark blocking operators
 #
 import gpt as g
 import numpy as np
@@ -11,14 +11,6 @@ import sys
 
 g.default.set_verbose("random", False)
 rng = g.random("benchmark")
-
-# helper function
-def relative_deviation(reference, result):
-    diff = g.eval(reference - result)
-    abs_dev = g.norm2(diff)
-    rel_dev = abs_dev / g.norm2(reference)
-    g.message(f"""absolute deviation = {abs_dev}, relative deviation = {rel_dev}""")
-    return rel_dev
 
 
 for precision in [g.single, g.double]:
@@ -48,10 +40,8 @@ Lookup Table Benchmark with
     rng.cnormal(src)
     rng.cnormal(basis)
 
-    # Lookup table
-    mask_full = g.complex(fgrid)
-    mask_full[:] = 1
-    lut_full = g.lookup_table(cgrid, mask_full)
+    # Make a plan (could give a non-trivial project mask as third argument to map)
+    block_map = g.block.map(cgrid, basis)
 
     # Flops
     Nc = src.otype.shape[1]
@@ -66,25 +56,15 @@ Lookup Table Benchmark with
         * N
     )
 
-    # Warmup without lookup table
+    # Warmup
     for n in range(5):
-        g.block.project(dst_default, src, basis)
+        block_map.project(dst_default, src)
 
-    # Time without lookup table
+    # Time
     t0 = g.time()
     for n in range(N):
-        g.block.project(dst_default, src, basis)
+        block_map.project(dst_default, src)
     t1 = g.time()
-
-    # Warmup with lookup table
-    for n in range(5):
-        g.block.project_using_lut(dst_lut, src, basis, lut_full)
-
-    # Time with lookup table
-    t2 = g.time()
-    for n in range(N):
-        g.block.project_using_lut(dst_lut, src, basis, lut_full)
-    t3 = g.time()
 
     # Report without lookuptable
     GFlopsPerSec = flops / (t1 - t0) / 1e9
@@ -96,17 +76,3 @@ Lookup Table Benchmark with
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
     """
     )
-
-    # Report with lookuptable
-    GFlopsPerSec = flops / (t3 - t2) / 1e9
-    GBPerSec = nbytes / (t3 - t2) / 1e9
-    g.message(
-        f"""{N} applications of block_project_using_lut
-    Time to complete            : {t3-t2:.2f} s
-    Total performance           : {GFlopsPerSec:.2f} GFlops/s
-    Effective memory bandwidth  : {GBPerSec:.2f} GB/s
-    """
-    )
-
-    # Verify agreement
-    assert relative_deviation(dst_default, dst_lut) == 0.0

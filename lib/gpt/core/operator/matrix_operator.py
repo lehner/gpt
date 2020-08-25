@@ -181,13 +181,17 @@ class matrix_operator(factor):
         return_list = type(first) == list
         first = gpt.util.to_list(first)
 
+        if second is None:
+            src = first
+        else:
+            dst = first
+            src = gpt.util.to_list(second)
+
         type_match = (
-            self.otype[1] is None or self.otype[1].__name__ == first[0].otype.__name__
+            self.otype[1] is None or self.otype[1].__name__ == src[0].otype.__name__
         )
 
         if second is None:
-
-            src = first
             if self.grid[0] is None or not type_match:
                 dst_grid = src[0].grid
                 dst_otype = src[0].otype
@@ -204,10 +208,6 @@ class matrix_operator(factor):
             if self.zero[0]:
                 for x in dst:
                     x[:] = 0
-
-        else:
-            dst = first
-            src = gpt.util.to_list(second)
 
         if self.accept_list:
             mat = self.mat

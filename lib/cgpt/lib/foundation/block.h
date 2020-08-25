@@ -18,20 +18,12 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-class cgpt_lookup_table_base {
+template<class T_singlet>
+class cgpt_block_lookup_table {
 public:
   typedef uint64_t index_type;
   typedef uint64_t size_type;
 
-  virtual ~cgpt_lookup_table_base() {};
-  virtual accelerator_inline index_type const* const* View() const = 0;
-  virtual accelerator_inline size_type const* Sizes() const = 0;
-  virtual accelerator_inline index_type const* ReverseView() const = 0;
-  virtual bool gridsMatch(GridBase* coarse, GridBase* fine) const = 0;
-};
-
-template<class ScalarField>
-class cgpt_lookup_table : public cgpt_lookup_table_base {
   /////////////////////////////////////////////
   // Member Data
   /////////////////////////////////////////////
@@ -50,18 +42,17 @@ private:
 
 public:
 
-  cgpt_lookup_table(GridBase* coarse, ScalarField const& mask)
+  cgpt_block_lookup_table(GridBase* coarse, const Lattice<T_singlet> & mask)
     : coarse_(coarse)
     , fine_(mask.Grid())
     , lut_vec_(coarse_->oSites())
     , lut_ptr_(coarse_->oSites())
     , sizes_(coarse_->oSites())
-    , reverse_lut_vec_(fine_->oSites()){
+    , reverse_lut_vec_(fine_->oSites()) {
     populate(coarse_, mask);
   }
 
-  virtual ~cgpt_lookup_table() {
-    // std::cout << "Deallocate" << std::endl;
+  virtual ~cgpt_block_lookup_table() {
   }
 
   virtual accelerator_inline
@@ -89,7 +80,7 @@ public:
   }
 
 private:
-  void populate(GridBase* coarse, ScalarField const& mask) {
+  void populate(GridBase* coarse, const Lattice<T_singlet> & mask) {
     int        _ndimension = coarse_->_ndimension;
     Coordinate block_r(_ndimension);
 
@@ -112,7 +103,7 @@ private:
       sizes_[sc]  = 0;
     }
 
-    typename ScalarField::scalar_type zz = {0., 0.,};
+    typename Lattice<T_singlet>::scalar_type zz = {0., 0.,};
 
     autoView(mask_v, mask, CpuRead);
     thread_for(sc, coarse_->oSites(), {
@@ -139,16 +130,15 @@ private:
       }
       lut_vec_[sc].resize(sizes_[sc]);
     });
-
-    std::cout << GridLogMessage << "Recalculation of coarsening lookup table finished" << std::endl;
   }
 };
 
-template<class vobj,class CComplex,int nbasis,class VLattice,class ScalarField>
+
+template<class vobj,class CComplex,int nbasis,class VLattice,class T_singlet>
 inline void vectorizableBlockProjectUsingLut(Lattice<iVector<CComplex, nbasis>>&   coarseData,
                                              const Lattice<vobj>&                  fineData,
                                              const VLattice&                       Basis,
-                                             const cgpt_lookup_table<ScalarField>& lut)
+                                             const cgpt_block_lookup_table<T_singlet>& lut)
 {
   GridBase *fine   = fineData.Grid();
   GridBase *coarse = coarseData.Grid();

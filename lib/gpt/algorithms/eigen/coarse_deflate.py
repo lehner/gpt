@@ -38,6 +38,7 @@ class coarse_deflate:
             return noop_mat
 
         self.cdefl = g.algorithms.eigen.deflate(noop, cevec, fev, params)
+        self.cgrid = cevec[0].grid
 
     def __call__(self, matrix):
 
@@ -47,6 +48,7 @@ class coarse_deflate:
 
         cdefl = self.cdefl(matrix)
         inverter = self.inverter(matrix)
+        b = g.block.map(self.cgrid, self.basis)
 
         def inv(dst, src):
             verbose = g.default.is_verbose("deflate")
@@ -59,14 +61,14 @@ class coarse_deflate:
 
             t0 = g.time()
             for i in range(len(src)):
-                g.block.project(csrc[i], src[i], self.basis)
+                b.project(csrc[i], src[i])
             t1 = g.time()
             # g.default.push_verbose("deflate", False)
             cdefl(cdst, csrc)
             # g.default.pop_verbose()
             t2 = g.time()
             for i in range(len(src)):
-                g.block.promote(cdst[i], dst[i], self.basis)
+                b.promote(dst[i], cdst[i])
             t3 = g.time()
             if verbose:
                 g.message(

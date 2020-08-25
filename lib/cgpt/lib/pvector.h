@@ -51,6 +51,13 @@ class PVector {
   const T*& operator()(long i) const {
     return _v[i];
   }
+
+  PVector slice(long i0, long i1) const {
+    PVector ret(i1-i0);
+    for (long i=i0;i<i1;i++)
+      ret._v[i-i0] = _v[i];
+    return ret;
+  }
 };
 
 template<typename T>

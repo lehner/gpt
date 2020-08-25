@@ -16,9 +16,8 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt, sys
-from gpt.core.block.operator import operator
-
+import gpt
+from gpt.core.block.map import map
 
 def grid(fgrid, nblock):
     assert fgrid.nd == len(nblock)
@@ -31,59 +30,3 @@ def grid(fgrid, nblock):
         gpt.full,
         parent=fgrid.parent,
     )
-
-
-def project(coarse, fine, basis):
-    assert fine.checkerboard().__name__ == basis[0].checkerboard().__name__
-    cot = coarse.otype
-    fot = fine.otype
-    tmp = gpt.lattice(coarse)
-    coarse[:] = 0
-    for j in fot.v_idx:
-        for i in cot.v_idx:
-            cgpt.block_project(
-                tmp.v_obj[i], fine.v_obj[j], basis[cot.v_n0[i] : cot.v_n1[i]], j
-            )
-        coarse += tmp
-    return coarse
-
-
-def project_using_lut(coarse, fine, basis, lut):
-    assert fine.checkerboard().__name__ == basis[0].checkerboard().__name__
-    cot = coarse.otype
-    fot = fine.otype
-    tmp = gpt.lattice(coarse)
-    coarse[:] = 0
-    for j in fot.v_idx:
-        for i in cot.v_idx:
-            cgpt.block_project_using_lut(
-                tmp.v_obj[i],
-                fine.v_obj[j],
-                basis[cot.v_n0[i] : cot.v_n1[i]],
-                j,
-                lut.obj,
-            )
-        coarse += tmp
-    return coarse
-
-
-def promote(coarse, fine, basis):
-    assert len(basis) > 0
-    cot = coarse.otype
-    fot = fine.otype
-    fine.checkerboard(basis[0].checkerboard())
-    tmp = gpt.lattice(fine)
-    fine[:] = 0
-    for i in cot.v_idx:
-        for j in fot.v_idx:
-            cgpt.block_promote(
-                coarse.v_obj[i], tmp.v_obj[j], basis[cot.v_n0[i] : cot.v_n1[i]], j
-            )
-        fine += tmp
-    return fine
-
-
-def orthonormalize(coarse_grid, basis):
-    assert type(coarse_grid) == gpt.grid
-    coarse_tmp = gpt.complex(coarse_grid)
-    cgpt.block_orthonormalize(coarse_tmp.v_obj[0], basis, len(basis[0].v_obj))

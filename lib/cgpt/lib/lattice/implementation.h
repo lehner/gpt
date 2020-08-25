@@ -37,11 +37,6 @@ public:
     return new cgpt_Lattice<T>(l.Grid());
   }
 
-  cgpt_lookup_table_base* create_lookup_table(GridBase* coarse_grid, cgpt_Lattice_base* mask) {
-    typedef iSinglet<vCoeff_t> mask_type;
-    return new cgpt_lookup_table<Lattice<mask_type>>(coarse_grid, compatible<mask_type>(mask)->l);
-  }
-
   virtual std::string type() {
     return typeid(T).name();
   }
@@ -215,20 +210,19 @@ public:
     return infer_numpy_type(Coeff_t());
   }
 
-  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
-    cgpt_block_project(coarse,l,basis);
-  }
+  virtual cgpt_block_map_base* block_map(GridBase* coarse, 
+					 std::vector<std::vector<cgpt_Lattice_base*>>& vbasis,
+					 cgpt_Lattice_base* mask,
+					 long basis_size) {
 
-  virtual void block_project_using_lut(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis, cgpt_lookup_table_base* lut) {
-    cgpt_block_project_using_lut(coarse,l,basis,lut);
-  }
+    ASSERT(vbasis.size() > 0 && vbasis[0].size() % basis_size == 0);
 
-  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
-    cgpt_block_promote(coarse,l,basis);
-  }
+#define BASIS_SIZE(n) if (n == basis_size) { return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t> >(coarse,vbasis,mask); }
+#include "../basis_size.h"
+#undef BASIS_SIZE
+    
+    { ERR("Unknown basis size %d",(int)basis_size); }
 
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) {
-    cgpt_block_orthonormalize(coarse,l,vbasis);
   }
 
   virtual GridBase* get_grid() {
