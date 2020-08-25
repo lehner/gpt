@@ -37,3 +37,16 @@ def plaquette(U):
                 )
             )
     return 2.0 * tr.real / vol / Nd / (Nd - 1) / ndim
+
+
+def field_strength(U, mu, nu):
+    """ returns field strength tensor \hat{F}_{\mu\nu} """
+
+    assert mu != nu
+    # v = staple_up - staple_down
+    v = g.eval(g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
+               - g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1))
+
+    F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
+    F @= 0.125 * (F - g.adj(F))
+    return F

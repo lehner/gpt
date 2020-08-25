@@ -18,6 +18,6 @@
 #
 from gpt.qcd.gauge.create import random, unit
 from gpt.qcd.gauge.representation import fundamental_to_adjoint, assert_unitary
-from gpt.qcd.gauge.loops import plaquette
+from gpt.qcd.gauge.loops import plaquette, field_strength
 from gpt.qcd.gauge.transformation import transformed
 import gpt.qcd.gauge.smear
