@@ -26,7 +26,7 @@ public:
   cgpt_fermion_operator(T* _op) : op(_op) {
   }
 
-  virtual ~cgpt_fermion_operator() { 
+  virtual ~cgpt_fermion_operator() {
     delete op;
   }
 
@@ -36,6 +36,16 @@ public:
 
   virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
     return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
+  }
+
+  virtual void deriv(std::array<cgpt_Lattice_base*,Nd> force, cgpt_Lattice_base* X, cgpt_Lattice_base* Y, int dag) {
+    typedef typename T::FermionField::vector_object vobj_ferm; // (vectorized) spin-vector x color-vector
+    typedef typename T::GaugeLinkField::vector_object vobj_gauge; // (vectorized) color-matrix
+
+    typename T::GaugeField tmp(X->get_grid());
+    op->MDeriv(tmp, compatible<vobj_ferm>(X)->l, compatible<vobj_ferm>(Y)->l, dag);
+    for(int mu = 0; mu < Nd; ++mu)
+        compatible<vobj_gauge>(force[mu])->l = peekLorentz(tmp, mu);
   }
 
   virtual void update(PyObject* args) {
@@ -70,6 +80,10 @@ public:
 
   virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
     return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
+  }
+
+  virtual void deriv(std::array<cgpt_Lattice_base*,Nd> force, cgpt_Lattice_base* X, cgpt_Lattice_base* Y, int dag) {
+    assert(false); // not implemented yet
   }
 
   virtual void update(PyObject* args) {
