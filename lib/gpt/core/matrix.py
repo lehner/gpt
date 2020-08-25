@@ -19,13 +19,12 @@
 import gpt, numpy
 
 # matrix exponential
-def exp(i):
+def exp(i, order=19):
     if i.grid.precision != gpt.double:
         x = gpt.convert(i, gpt.double)
     else:
         x = gpt.copy(i)
     n = gpt.norm2(x) ** 0.5 / x.grid.gsites
-    order = 19
     maxn = 0.05
     ns = 0
     if n > maxn:
