@@ -18,5 +18,5 @@
 #
 from gpt.qcd.gauge.create import random, unit
 from gpt.qcd.gauge.representation import fundamental_to_adjoint
-from gpt.qcd.gauge.loops import plaquette
+from gpt.qcd.gauge.loops import plaquette, staple
 from gpt.qcd.gauge.transformation import transformed

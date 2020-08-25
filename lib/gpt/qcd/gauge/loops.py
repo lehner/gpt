@@ -37,3 +37,19 @@ def plaquette(U):
                 )
             )
     return 2.0 * tr.real / vol / Nd / (Nd - 1) / ndim
+
+
+def staple(U, mu):
+    """
+    returns sum of Nd*(Nd-1)/2 staples written such that
+    plaquette(U) = const * sum_mu Real ( Trace( U[mu] * staple(U, mu) ) )
+    """
+    Nd = len(U)
+    S = g.mcolor(U[0].grid)
+    S[:] = 0
+    for nu in range(Nd):
+        if nu == mu:
+            continue
+        S += g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
+        S += g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1)
+    return S
