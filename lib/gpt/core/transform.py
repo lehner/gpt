@@ -53,7 +53,13 @@ def copy(first, second=None):
         for i in t.otype.v_idx:
             cgpt.copy(t.v_obj[i], l.v_obj[i])
         return t
-
+    elif type(first) == list:
+        if second is None:
+            return [copy(x) for x in first]
+        else:
+            assert type(second) == list and len(second) == len(first)
+            for x,y in zip(first,second):
+                copy(x,y)
     else:
         assert 0
 
