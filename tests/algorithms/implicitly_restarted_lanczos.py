@@ -96,7 +96,9 @@ for i in range(2):
 
 # define coarse-grid operator
 cop = b.operator(c(w.Mpc))
-eps2 = g.norm2(cop * cstart - b.project*c(w.Mpc)*b.promote*cstart) / g.norm2(cstart)
+eps2 = g.norm2(cop * cstart - b.project * c(w.Mpc) * b.promote * cstart) / g.norm2(
+    cstart
+)
 g.message(f"Test coarse-grid promote/project cycle: {eps2}")
 assert eps2 < 1e-13
 

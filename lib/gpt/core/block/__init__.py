@@ -19,6 +19,7 @@
 import gpt
 from gpt.core.block.map import map
 
+
 def grid(fgrid, nblock):
     assert fgrid.nd == len(nblock)
     for i in range(fgrid.nd):

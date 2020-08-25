@@ -144,7 +144,9 @@ def save_history(fn, history):
     f.close()
 
 
-solver = g.algorithms.eigen.coarse_deflate(params["test_solver"], cevec, basis, ev3)(q.Mpc)
+solver = g.algorithms.eigen.coarse_deflate(params["test_solver"], cevec, basis, ev3)(
+    q.Mpc
+)
 v_fine[:] = 0
 solver(v_fine, start)
 save_history("cg_test.defl_all_ev3", solver.inverter.history)

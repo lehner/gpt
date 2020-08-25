@@ -18,8 +18,9 @@
 #
 import gpt, cgpt
 
+
 class map:
-    def __init__(self, coarse_grid, basis, mask = None):
+    def __init__(self, coarse_grid, basis, mask=None):
         assert type(coarse_grid) == gpt.grid
         assert len(basis) > 0
 
@@ -35,30 +36,34 @@ class map:
         basis_size = c_otype.v_n1[0]
         self.coarse_grid = coarse_grid
         self.basis = basis
-        self.obj = cgpt.create_block_map(coarse_grid.obj, basis, mask.v_obj[0], len(basis[0].v_obj), basis_size)
+        self.obj = cgpt.create_block_map(
+            coarse_grid.obj, basis, mask.v_obj[0], len(basis[0].v_obj), basis_size
+        )
 
         def _project(coarse, fine):
             assert fine[0].checkerboard().__name__ == basis[0].checkerboard().__name__
             cgpt.block_project(self.obj, coarse, fine)
 
-
         def _promote(fine, coarse):
             assert fine[0].checkerboard().__name__ == basis[0].checkerboard().__name__
             cgpt.block_promote(self.obj, coarse, fine)
 
+        self.project = gpt.matrix_operator(
+            mat=_project,
+            otype=(c_otype, basis[0].otype),
+            grid=(coarse_grid, basis[0].grid),
+            cb=(None, basis[0].checkerboard()),
+            accept_list=True,
+        )
 
-        self.project = gpt.matrix_operator(mat = _project, 
-                                           otype=(c_otype,basis[0].otype),
-                                           grid=(coarse_grid,basis[0].grid),
-                                           cb = (None,basis[0].checkerboard()),
-                                           accept_list = True)
+        self.promote = gpt.matrix_operator(
+            mat=_promote,
+            otype=(basis[0].otype, c_otype),
+            grid=(basis[0].grid, coarse_grid),
+            cb=(basis[0].checkerboard(), None),
+            accept_list=True,
+        )
 
-        self.promote = gpt.matrix_operator(mat = _promote,
-                                           otype=(basis[0].otype,c_otype),
-                                           grid=(basis[0].grid,coarse_grid),
-                                           cb = (basis[0].checkerboard(),None),
-                                           accept_list = True)
-        
     def __del__(self):
         cgpt.delete_block_map(self.obj)
 
@@ -86,7 +91,9 @@ class map:
 
         otype = gpt.ot_vsinglet(len(self.basis))
 
-        return gpt.matrix_operator(mat=mat, otype=otype, zero=(False, False), grid=self.coarse_grid)
+        return gpt.matrix_operator(
+            mat=mat, otype=otype, zero=(False, False), grid=self.coarse_grid
+        )
 
 
 # TODO:
