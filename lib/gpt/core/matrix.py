@@ -77,3 +77,30 @@ def log(i, convergence_threshold=0.5):
         gpt.convert(r, o)
         o = r
     return o
+
+def inv(i):
+    """ site-local matrix inversion for color-matrix/spin-matrix/spin-color-matrix """
+    tmp = i[:]  # get numpy array of local sites
+
+    # simple: just a color- or spin-matrix
+    if type(i.otype) == gpt.ot_matrix_su3_fundamental or type(i.otype) == gpt.ot_matrix_color or type(i.otype) == gpt.ot_matrix_spin:
+        tmp = numpy.linalg.inv(tmp)
+    # little more complex: combined color-spin-matrix
+    elif type(i.otype) == gpt.ot_matrix_spin_color:
+        # GPT uses shape = (Ns, Ns, Nc, Nc)
+        # for numpy inversion we need shape = (Ns*Nc, Ns*Nc)
+        ns = i.otype.shape[0]  # spin dimensions (i.e. 4)
+        nc = i.otype.shape[2]  # color dimensions (i.e. 3)
+        sites = tmp.shape[0]   # number of sites on this rank
+        tmp = numpy.transpose(tmp, (0, 1, 3, 2, 4))
+        tmp = tmp.reshape((sites, ns * nc, ns * nc))
+        tmp = numpy.linalg.inv(tmp)
+        tmp = tmp.reshape((sites, ns, nc, ns, nc))
+        tmp = numpy.transpose(tmp, (0, 1, 3, 2, 4))
+        tmp = numpy.copy(tmp, order='C')  # GPT expects this order
+    else:
+        assert False
+
+    o = gpt.lattice(i)
+    o[:] = tmp
+    return o
