@@ -39,6 +39,34 @@ class wilson(shift, matrix_operator):
         else:
             self.kappa = params["kappa"]
 
+        if "csw" in params:
+            self.csw = params["csw"]
+
+            def gamma_product(M, gamma):
+                """
+                Ideally, this would just be 'g.gamma[gamma] * M',
+                but GPTs expressions cant quite to that (yet?)
+                """
+                gamma = g.gamma[gamma].tensor()
+                r = g.mspincolor(M.grid)
+                r[:] = 0
+                for mu in range(4):
+                    for nu in range(4):
+                        if gamma[mu, nu] != 0.0:
+                            r[:, :, :, :, mu, nu, :, :] = gamma[mu, nu] * M[:, :, :, :, :, :]
+                return r
+
+            self.clover = gamma_product(g.qcd.gauge.field_strength(U, 0, 1), "SigmaXY")
+            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 0, 2), "SigmaXZ")
+            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 0, 3), "SigmaXT")
+            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 1, 2), "SigmaYZ")
+            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 1, 3), "SigmaYT")
+            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 2, 3), "SigmaZT")
+            self.clover *= -0.5 * self.csw
+
+        else:
+            self.csw = None
+
         self.Meooe = g.matrix_operator(
             lambda dst, src: self._Meooe(dst, src), otype=otype, grid=grid
         )
@@ -66,6 +94,8 @@ class wilson(shift, matrix_operator):
     def _Mooee(self, dst, src):
         assert dst != src
         dst @= 1.0 / 2.0 * 1.0 / self.kappa * src
+        if self.csw is not None:
+            dst += self.clover * src
 
     def _M(self, dst, src):
         assert dst != src
