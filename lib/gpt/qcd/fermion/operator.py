@@ -101,6 +101,12 @@ class operator(gpt.matrix_operator):
                 grid=self.F_grid_eo,
             )
 
+        self.M = gpt.matrix_operator(
+            mat=registry.M,
+            adj_mat=registry.Mdag,
+            otype=otype,
+            grid=self.F_grid
+        )
         self.Mdiag = gpt.matrix_operator(registry.Mdiag, otype=otype, grid=self.F_grid)
         self.Dminus = gpt.matrix_operator(
             mat=registry.Dminus,
@@ -189,6 +195,14 @@ class operator(gpt.matrix_operator):
     def _G5M(self, dst, src):
         self(dst, src)
         dst @= gpt.qcd.fermion.coarse.gamma5(dst) * dst
+
+    def deriv(self, force, X, Y, dag):
+        assert type(force) == list and len(force) == 4
+        for f in force:
+            assert len(f.v_obj) == 1
+        assert len(X.v_obj) == 1
+        assert len(Y.v_obj) == 1
+        return cgpt.apply_fermion_deriv(self.obj, [f.v_obj[0] for f in force], X.v_obj[0], Y.v_obj[0], dag)
 
     def propagator(self, solver):
         exp = self.ExportPhysicalFermionSolution
