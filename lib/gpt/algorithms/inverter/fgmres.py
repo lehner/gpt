@@ -182,7 +182,7 @@ class fgmres:
                                 "fgmres: converged in %d iterations, took %g s"
                                 % (k + 1, t.dt["total"])
                             )
-                            t.print()
+                            g.message(t)
                             if self.checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
@@ -203,7 +203,7 @@ class fgmres:
                                 "fgmres: did NOT converge in %d iterations, took %g s"
                                 % (k + 1, t.dt["total"])
                             )
-                            t.print()
+                            g.message(t)
                             if self.checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(

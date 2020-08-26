@@ -64,28 +64,20 @@ class timer:
             self.dt["total"] += time()
             self.active = False
 
-    def print(self):
+    def __str__(self):
         dtp, fp, bp = self.create_print_arrays()
+
+        s = ""
 
         if dtp["total"] != 0.0:
             for k, v in sorted(dtp.items(), key=lambda x: x[1]):
+                frac = v / dtp["total"] * 100
                 if fp["total"] != 0.0 or bp["total"] != 0.0:
-                    gpt.message(
-                        "%s: profiling: %15s = %e s (= %6.2f %%) %e F/s %e B/s"
-                        % (
-                            self.prefix,
-                            k,
-                            v,
-                            v / dtp["total"] * 100,
-                            fp[k] / v,
-                            bp[k] / v,
-                        )
-                    )
+                    s += f"{self.prefix}: profiling: {k:15s} = {v:e} s (= {frac:6.2f} %) {fp[k]/v:e} F/s {bp[k]/v:e} B/s\n"
                 else:
-                    gpt.message(
-                        "%s: timing: %15s = %e s (= %6.2f %%)"
-                        % (self.prefix, k, v, v / dtp["total"] * 100)
-                    )
+                    s += f"{self.prefix}: timing: {k:15s} = {v:e} s (= {frac:6.2f} %)\n"
+
+        return s[:-1]
 
     def create_print_arrays(self):
         """

@@ -79,7 +79,7 @@ class cg:
                             "cg: converged in %d iterations, took %g s"
                             % (k, t.dt["total"])
                         )
-                        t.print()
+                        g.message(t)
                     break
 
         return g.matrix_operator(

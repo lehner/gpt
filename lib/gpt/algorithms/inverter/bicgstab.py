@@ -109,7 +109,7 @@ class bicgstab:
                             "bicgstab: converged in %d iterations, took %g s"
                             % (k + 1, t.dt["total"])
                         )
-                        t.print()
+                        g.message(t)
                     break
 
         return g.matrix_operator(

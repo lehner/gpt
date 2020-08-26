@@ -144,7 +144,7 @@ def create_links(A, fmat, basis, params):
     t()
 
     if verbose:
-        t.print()
+        gpt.message(t)
 
 
 def comm_links(A, dirdisps_forward, hermitian):
