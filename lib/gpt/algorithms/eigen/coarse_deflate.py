@@ -60,15 +60,13 @@ class coarse_deflate:
             cdst = [g.lattice(template) for x in src]
 
             t0 = g.time()
-            for i in range(len(src)):
-                b.project(csrc[i], src[i])
+            b.project(csrc, src)
             t1 = g.time()
             # g.default.push_verbose("deflate", False)
             cdefl(cdst, csrc)
             # g.default.pop_verbose()
             t2 = g.time()
-            for i in range(len(src)):
-                b.promote(dst[i], cdst[i])
+            b.promote(dst, cdst)
             t3 = g.time()
             if verbose:
                 g.message(

@@ -144,24 +144,24 @@ def save_history(fn, history):
     f.close()
 
 
-solver = g.algorithms.eigen.coarse_deflate(params["test_solver"], cevec, basis, ev3)(
+test_solver = params["test_solver"]
+solver = g.algorithms.eigen.coarse_deflate(test_solver, cevec, basis, ev3)(
     q.Mpc
 )
 v_fine[:] = 0
 solver(v_fine, start)
-save_history("cg_test.defl_all_ev3", solver.inverter.history)
+save_history("cg_test.defl_all_ev3", test_solver.history)
 
 solver = g.algorithms.eigen.coarse_deflate(
     params["test_solver"], cevec[0 : len(basis)], basis, ev3[0 : len(basis)]
 )(q.Mpc)
 v_fine[:] = 0
 solver(v_fine, start)
-save_history("cg_test.defl_full", solver.inverter.history)
+save_history("cg_test.defl_full", test_solver.history)
 
-solver = params["test_solver"]
 v_fine[:] = 0
-solver(v_fine, start)
-save_history("cg_test.undefl", solver.history)
+test_solver(q.Mpc)(v_fine, start)
+save_history("cg_test.undefl", test_solver.history)
 
 # save in rbc format
 g.save("lanczos.output", [basis, cevec, ev3], params["format"])

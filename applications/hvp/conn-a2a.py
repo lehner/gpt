@@ -94,6 +94,7 @@ def contract(pos, prop, tag, may_save_prop=True):
         g.message("Correlator %s\n" % corr_tag, corr)
 
 
+
 # calculate correlators for exact positions
 for pos in source_positions_exact:
 
