@@ -69,8 +69,8 @@ public:
   }
 
   virtual void rank_inner_product(ComplexD* res, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, bool use_accelerator) {
-    std::vector< const Lattice<T>* > _left;
-    std::vector< const Lattice<T>* > _right;
+    PVector<Lattice<T>> _left;
+    PVector<Lattice<T>> _right;
     cgpt_basis_fill(_left,left);
     cgpt_basis_fill(_right,right);
     if (use_accelerator) {
@@ -211,17 +211,17 @@ public:
   }
 
   virtual cgpt_block_map_base* block_map(GridBase* coarse, 
-					 std::vector<std::vector<cgpt_Lattice_base*>>& vbasis,
-					 cgpt_Lattice_base* mask,
-					 long basis_size) {
+					 std::vector<cgpt_Lattice_base*>& basis,
+					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
+					 cgpt_Lattice_base* mask) {
 
-    ASSERT(vbasis.size() > 0 && vbasis[0].size() % basis_size == 0);
+    ASSERT(basis.size() > 0 && basis.size() % basis_n_virtual == 0);
 
-#define BASIS_SIZE(n) if (n == basis_size) { return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t> >(coarse,vbasis,mask); }
+#define BASIS_SIZE(n) if (n == basis_virtual_size) { return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t> >(coarse,basis,basis_n_virtual,basis_n_block,mask); }
 #include "../basis_size.h"
 #undef BASIS_SIZE
     
-    { ERR("Unknown basis size %d",(int)basis_size); }
+    { ERR("Unknown basis size %d",(int)basis_virtual_size); }
 
   }
 

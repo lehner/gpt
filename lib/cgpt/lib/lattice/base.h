@@ -54,7 +54,9 @@ public:
   virtual PyObject* memory_view_coordinates() = 0;
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) = 0;
   virtual int get_numpy_dtype() = 0;
-  virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis, cgpt_Lattice_base* mask, long basis_size) = 0;
+  virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<cgpt_Lattice_base*>& basis, 
+					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
+					 cgpt_Lattice_base* mask) = 0;
   virtual GridBase* get_grid() = 0;
   virtual PyObject* advise(std::string type) = 0;
   virtual PyObject* prefetch(std::string type) = 0;

@@ -19,8 +19,13 @@
 import gpt, cgpt
 
 
+#
+# basis_n_block:  How many basis vectors are cached/moved to accelerator at the same time
+#                 A larger number is generally more performant, however, requires more available
+#                 cache/accelerator memory.
+#
 class map:
-    def __init__(self, coarse_grid, basis, mask=None):
+    def __init__(self, coarse_grid, basis, mask=None, basis_n_block = 8):
         assert type(coarse_grid) == gpt.grid
         assert len(basis) > 0
 
@@ -37,7 +42,7 @@ class map:
         self.coarse_grid = coarse_grid
         self.basis = basis
         self.obj = cgpt.create_block_map(
-            coarse_grid.obj, basis, mask.v_obj[0], len(basis[0].v_obj), basis_size
+            coarse_grid.obj, basis, basis_size, basis_n_block, mask.v_obj[0],
         )
 
         def _project(coarse, fine):

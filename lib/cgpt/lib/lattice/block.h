@@ -20,10 +20,10 @@ class cgpt_block_map_base {
 public:
   virtual ~cgpt_block_map_base() { };
 
-  virtual void project(std::vector<cgpt_Lattice_base*>& _coarse, long _ncoarse,
-		       std::vector<cgpt_Lattice_base*>& _fine, long _nfine) = 0;
-  virtual void promote(std::vector<cgpt_Lattice_base*>& _coarse, long _ncoarse,
-		       std::vector<cgpt_Lattice_base*>& _fine, long _nfine)  = 0;
+  virtual void project(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
+		       std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual) = 0;
+  virtual void promote(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
+		       std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual)  = 0;
   virtual void orthonormalize() = 0;
 };
 
@@ -36,7 +36,8 @@ class cgpt_block_map : public cgpt_block_map_base {
   typedef typename Lattice<T>::scalar_type Coeff_t;
   typedef iSinglet<vCoeff_t> T_singlet;
 
-  std::vector<PVector<Lattice<T>>> vbasis;
+  PVector<Lattice<T>> basis;
+  long basis_n_virtual, basis_n, basis_n_block;
   cgpt_block_lookup_table<T_singlet> lut;
   GridBase* coarse_grid;
   GridBase* fine_grid;
@@ -47,47 +48,33 @@ public:
   }
 
   cgpt_block_map(GridBase* _coarse_grid, 
-		 std::vector<std::vector<cgpt_Lattice_base*>>& _vbasis,
+		 std::vector<cgpt_Lattice_base*>& _basis, long _basis_n_virtual, long _basis_n_block,
 		 cgpt_Lattice_base* _mask) 
     :
     lut(_coarse_grid, compatible<T_singlet>(_mask)->l),
     coarse_grid(_coarse_grid),
-    fine_grid(_vbasis[0][0]->get_grid())
+    fine_grid(_basis[0]->get_grid()),
+    basis_n_virtual(_basis_n_virtual),
+    basis_n_block(_basis_n_block)
   {
-	
-    vbasis.resize(_vbasis.size());
-    for (long i=0;i<_vbasis.size();i++)
-      cgpt_basis_fill(vbasis[i],_vbasis[i]);
+    cgpt_basis_fill(basis,_basis);
+    ASSERT(basis.size() % basis_n_virtual == 0);
+    basis_n = basis.size() / basis_n_virtual;
   }
 
-  virtual void project(std::vector<cgpt_Lattice_base*>& _coarse, long _ncoarse,
-		       std::vector<cgpt_Lattice_base*>& _fine, long _nfine) {
+  virtual void project(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
+		       std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual) {
 
     PVector<Lattice<T>> fine;
     PVector<Lattice<C>> coarse;
     cgpt_basis_fill(fine,_fine);
     cgpt_basis_fill(coarse,_coarse);
 
-    ASSERT(_fine.size() == _nfine);
-    ASSERT(_coarse.size() == _ncoarse);
-
-    ASSERT(vbasis[0].size() % _ncoarse == 0);
-    long coarse_block_size = vbasis[0].size() / _ncoarse;
-
-    Lattice<C> tmp(coarse_grid);
-    for (long i=0;i<_ncoarse;i++)
-      coarse[i] = Zero();
-
-    for (long j=0;j<_nfine;j++) {
-      for (long i=0;i<_ncoarse;i++) {
-	vectorizableBlockProjectUsingLut(tmp, fine[j], vbasis[j].slice(i*coarse_block_size,(i+1)*coarse_block_size), lut);
-	coarse[i] += tmp;
-      }
-    }
+    vectorizableBlockProject(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block);
   }
 
-  virtual void promote(std::vector<cgpt_Lattice_base*>& _coarse, long _ncoarse,
-		       std::vector<cgpt_Lattice_base*>& _fine, long _nfine) {
+  virtual void promote(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
+		       std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual) {
 
 
     PVector<Lattice<T>> fine;
@@ -95,26 +82,11 @@ public:
     cgpt_basis_fill(fine,_fine);
     cgpt_basis_fill(coarse,_coarse);
 
-    ASSERT(_fine.size() == _nfine);
-    ASSERT(_coarse.size() == _ncoarse);
-
-    ASSERT(vbasis[0].size() % _ncoarse == 0);
-    long coarse_block_size = vbasis[0].size() / _ncoarse;
-
-    Lattice<T> tmp(fine_grid);
-    for (long i=0;i<_nfine;i++)
-      fine[i] = Zero();
-
-    for (long i=0;i<_ncoarse;i++) {
-      for (long j=0;j<_nfine;j++) {
-	blockPromote(coarse[i], tmp, vbasis[j].slice(i*coarse_block_size,(i+1)*coarse_block_size));
-	fine[j] += tmp;
-      }
-    }
+    vectorizableBlockPromote(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block);
   }
 
   virtual void orthonormalize() {
     Lattice<T_singlet> c(coarse_grid);
-    vectorBlockOrthonormalize(c,vbasis);
+    vectorBlockOrthonormalize(c,basis,basis_n_virtual);
   }
 };

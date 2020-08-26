@@ -22,23 +22,21 @@
 EXPORT(create_block_map,{
 
     void* _grid_c,*_mask;
-    long nvec, basis_size;
+    long  basis_virtual_size, basis_n_block;
     PyObject* _basis;
-    if (!PyArg_ParseTuple(args, "lOlll", &_grid_c, &_basis, &_mask, &nvec, &basis_size)) {
+    if (!PyArg_ParseTuple(args, "lOlll", &_grid_c, &_basis, &basis_virtual_size, &basis_n_block, &_mask)) {
       return NULL;
     }
 
     GridBase* grid_c = (GridBase*)_grid_c;
     cgpt_Lattice_base* mask = (cgpt_Lattice_base*)_mask;
 
-    std::vector<std::vector<cgpt_Lattice_base*>> vbasis(nvec);
-    for (long i=0;i<nvec;i++) {
-      cgpt_basis_fill(vbasis[i],_basis,i);
-    }
+    std::vector<cgpt_Lattice_base*> basis;
+    long basis_n_virtual = cgpt_basis_fill(basis,_basis);
 
-    ASSERT(vbasis.size() > 0 && vbasis[0].size() > 0);
+    ASSERT(basis.size() > 0);
 
-    return PyLong_FromVoidPtr((void*) vbasis[0][0]->block_map(grid_c, vbasis, mask, basis_size));
+    return PyLong_FromVoidPtr((void*) basis[0]->block_map(grid_c, basis, basis_n_virtual, basis_virtual_size, basis_n_block, mask));
   });
 
 EXPORT(delete_block_map,{
@@ -63,12 +61,13 @@ EXPORT(block_project,{
     cgpt_block_map_base* map = (cgpt_block_map_base*)_map;
 
     std::vector<cgpt_Lattice_base*> fine;
-    long nfine = cgpt_basis_fill(fine, _fine);
+    long fine_n_virtual = cgpt_basis_fill(fine, _fine);
 
     std::vector<cgpt_Lattice_base*> coarse;
-    long ncoarse = cgpt_basis_fill(coarse, _coarse);
+    long coarse_n_virtual = cgpt_basis_fill(coarse, _coarse);
 
-    map->project(coarse, ncoarse, fine, nfine);
+    map->project(coarse, coarse_n_virtual,
+		 fine, fine_n_virtual);
 
     return PyLong_FromLong(0);
   });
@@ -84,12 +83,13 @@ EXPORT(block_promote,{
     cgpt_block_map_base* map = (cgpt_block_map_base*)_map;
 
     std::vector<cgpt_Lattice_base*> fine;
-    long nfine = cgpt_basis_fill(fine, _fine);
+    long fine_n_virtual = cgpt_basis_fill(fine, _fine);
 
     std::vector<cgpt_Lattice_base*> coarse;
-    long ncoarse = cgpt_basis_fill(coarse, _coarse);
+    long coarse_n_virtual = cgpt_basis_fill(coarse, _coarse);
 
-    map->promote(coarse, ncoarse, fine, nfine);
+    map->promote(coarse, coarse_n_virtual, 
+		 fine, fine_n_virtual);
 
     return PyLong_FromLong(0);
   });
