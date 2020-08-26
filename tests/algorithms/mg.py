@@ -8,11 +8,12 @@
 import gpt as g
 import numpy as np
 
-# setup rng
+# setup rng, make it quiet
 rng = g.random("test_mg")
+g.default.set_verbose("random", False)
 
 # setup gauge field
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.single), rng)
+U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.single), rng)
 
 # quark
 w = g.qcd.fermion.wilson_clover(
@@ -49,7 +50,7 @@ mg_setup_2lvl = i.mg_setup(
     {
         "block": [[4, 4, 4, 4]],
         "northo": 1,
-        "nbasis": 40,
+        "nbasis": 30,
         "hermitian": False,
         "savelinks": True,
         "uselut": True,
@@ -65,7 +66,7 @@ mg_setup_3lvl = i.mg_setup(
     {
         "block": [[2, 2, 2, 2], [2, 2, 2, 2]],
         "northo": 1,
-        "nbasis": 40,
+        "nbasis": 30,
         "hermitian": False,
         "savelinks": True,
         "uselut": True,
@@ -86,7 +87,7 @@ mg_setup_4lvl = i.mg_setup(
     {
         "block": [[2, 2, 2, 2], [2, 2, 1, 1], [1, 1, 2, 2]],
         "northo": 1,
-        "nbasis": 40,
+        "nbasis": 30,
         "hermitian": False,
         "savelinks": True,
         "uselut": True,
@@ -171,14 +172,6 @@ smoother_prec = mg_2lvl_vcycle.smoothsolver[0]
 # outer solver
 fgmres_outer = i.fgmres({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})
 
-# unpreconditioned inversion
-fgmres_outer.prec = None
-sol_noprec = g.eval(fgmres_outer(w) * src)
-eps2 = g.norm2(w * sol_noprec - src) / g.norm2(src)
-niter_noprec = len(fgmres_outer.history)
-g.message("Test resid/iter no prec fgmres:", eps2, niter_noprec)
-assert eps2 < 1e-9
-
 # preconditioned inversion (using only smoother, w/o coarse grid correction)
 fgmres_outer.prec = smoother_prec
 sol_smooth = g.eval(fgmres_outer(w) * src)
@@ -186,7 +179,6 @@ eps2 = g.norm2(w * sol_smooth - src) / g.norm2(src)
 niter_prec_smooth = len(fgmres_outer.history)
 g.message("Test resid/iter smoother prec fgmres:", eps2, niter_prec_smooth)
 assert eps2 < 1e-9
-assert niter_prec_smooth < niter_noprec
 
 # preconditioned inversion (2lvl mg -- vcycle)
 fgmres_outer.prec = mg_2lvl_vcycle

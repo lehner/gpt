@@ -10,9 +10,9 @@ import numpy as np
 import sys
 
 # command line parameters
-grid_f_size = g.default.get_ivec("--fgrid", [8, 8, 8, 8], 4)
-grid_c_size = g.default.get_ivec("--cgrid", [4, 4, 4, 4], 4)
-grid_cc_size = g.default.get_ivec("--ccgrid", [2, 2, 2, 2], 4)
+grid_f_size = g.default.get_ivec("--fgrid", [8, 8, 8, 16], 4)
+grid_c_size = g.default.get_ivec("--cgrid", [4, 4, 4, 8], 4)
+grid_cc_size = g.default.get_ivec("--ccgrid", [2, 2, 2, 4], 4)
 
 # setup fine link fields
 U = g.qcd.gauge.random(g.grid(grid_f_size, g.double), g.random("test"))
@@ -29,7 +29,7 @@ grid_cc = g.grid(grid_cc_size, grid_f.precision)
 mat_f = g.qcd.fermion.wilson_clover(
     U,
     {
-        "mass": -0.1,
+        "kappa": 0.137,
         "csw_r": 0,
         "csw_t": 0,
         "xi_0": 1,
@@ -43,11 +43,11 @@ mat_f = g.qcd.fermion.wilson_clover(
 rng = g.random("ducks_smell_funny")
 
 # number of basis vectors
-nbasis_f = 30
-nbasis_c = 40
+nbasis_f = 20
+nbasis_c = 30
 
 # number of block orthogonalization steps
-northo = 2
+northo = 1
 
 # define check tolerances
 tol_ortho = 1e-28 if grid_f.precision == g.double else 1e-11
