@@ -570,6 +570,16 @@ jobs:
         run: |
           mv python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/play/gpt-packages
 
+      - name: Get Tags
+        if: ${{ steps.check-build.outputs.should-build }}
+        id: get-docker-tags
+        run: |
+          tags="${{ matrix.compiler }}-${{ matrix.mpi }}"
+          [ "${{ matrix.compiler }}-${{ matrix.mpi }}" == "clang-none" ] && tags="${tags},latest"
+
+          echo "Image Tags: ${tags}"
+          echo "::set-output name=tags::${tags}"
+
       - name: Build docker gpt/play image
         if: ${{ steps.check-build.outputs.should-build }}
         uses: docker/build-push-action@v1
@@ -578,7 +588,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ secrets.DOCKER_USERNAME }}/gpt-play
           build_args: BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/gpt-base,COMPILER=${{ matrix.compiler }},MPI=${{ matrix.mpi }}
-          tags: ${{ matrix.compiler }}-${{ matrix.mpi }}
+          tags: ${{ steps.get-docker-tags.outputs.tags }}
           push: true
           path: docker/play
 
@@ -590,6 +600,6 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ secrets.DOCKER_USERNAME }}/gpt-notebook
           build_args: BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/gpt-play,COMPILER=${{ matrix.compiler }},MPI=${{ matrix.mpi }}
-          tags: ${{ matrix.compiler }}-${{ matrix.mpi }}
+          tags: ${{ steps.get-docker-tags.outputs.tags }}
           push: true
           path: docker/notebook
