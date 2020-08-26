@@ -25,7 +25,7 @@ import gpt, cgpt
 #                 cache/accelerator memory.
 #
 class map:
-    def __init__(self, coarse_grid, basis, mask=None, basis_n_block = 8):
+    def __init__(self, coarse_grid, basis, mask=None, basis_n_block=8):
         assert type(coarse_grid) == gpt.grid
         assert len(basis) > 0
 

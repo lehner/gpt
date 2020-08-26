@@ -43,10 +43,10 @@ for dtype in [msc, vc12]:
     rng.cnormal(lcoarse)
 
     # report error of promote-project cycle
-    lcoarse2 = g( b.project * b.promote * lcoarse )
+    lcoarse2 = g(b.project * b.promote * lcoarse)
     for i in range(nvec):
-        lcoarse2_i = g( b.project * b.promote * lcoarse[i] )
-        eps2 = g.norm2( lcoarse2[i] - lcoarse2_i ) / g.norm2(lcoarse2_i)
+        lcoarse2_i = g(b.project * b.promote * lcoarse[i])
+        eps2 = g.norm2(lcoarse2[i] - lcoarse2_i) / g.norm2(lcoarse2_i)
         g.message(eps2)
         assert eps2 < 1e-12
     err2 = g.norm2(lcoarse2[0] - lcoarse[0]) / g.norm2(lcoarse[0])
