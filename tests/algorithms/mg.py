@@ -229,7 +229,7 @@ g.message(
     "Test resid/iter 4lvl vcycle mg prec fgmres:", eps2, niter_prec_4lvl_mg_vcycle
 )
 assert eps2 < 1e-10
-assert niter_prec_4lvl_mg_vcycle < niter_prec_3lvl_mg_vcycle
+assert niter_prec_4lvl_mg_vcycle <= niter_prec_3lvl_mg_vcycle
 
 # preconditioned inversion (4lvl mg -- kcycle)
 fgmres_outer.prec = mg_4lvl_kcycle
