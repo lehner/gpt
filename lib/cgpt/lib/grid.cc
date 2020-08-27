@@ -140,12 +140,11 @@ EXPORT(grid_globalsum,{
       } else {
 	ERR("Unsupported numy data type (single, double, csingle, cdouble, uint64 currently allowed)");
       }
+      Py_XINCREF(o);
+      return o;
     } else {
       ERR("Unsupported object");
     }
-    // need to act on floats, complex, and numpy arrays PyArrayObject
-    //PyArrayObject* p;
-    return PyLong_FromLong(0);
   });
 
 EXPORT(grid_get_processor,{

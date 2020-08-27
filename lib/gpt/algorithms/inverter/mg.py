@@ -134,6 +134,16 @@ class mg_setup:
                 ]
             self.distribution[lvl](self.basis[lvl][0 : self.nb[lvl]])
 
+        # setup a block map on all levels but coarsest
+        self.blockmap = [None] * self.nlevel
+        for lvl in self.lvl:
+            if lvl == self.coarsest:
+                continue
+            else:
+                self.blockmap[lvl] = g.block.map(
+                    self.grid[self.nc_lvl[lvl]], self.basis[lvl]
+                )
+
         # setup coarse link fields on all levels but finest
         self.A = [None] * self.nlevel
         for lvl in range(self.finest + 1, self.nlevel):
@@ -174,6 +184,7 @@ class mg_setup:
 
                 # aliases
                 basis = self.basis[lvl]
+                blockmap = self.blockmap[lvl]
                 nb = self.nb[lvl]
                 vecstype = self.vecstype[lvl]
 
@@ -234,7 +245,7 @@ class mg_setup:
                 for i in range(self.northo[lvl]):
                     if self.verbose:
                         g.message("%s block ortho step %d" % (pp, i))
-                    g.block.orthonormalize(self.grid[nc_lvl], basis)
+                    blockmap.orthonormalize()
 
                 if self.verbose:
                     g.message("%s done block-orthonormalizing" % pp)
@@ -337,13 +348,10 @@ class mg_prec:
             e_c = self.e[nc_lvl] if lvl != s.coarsest else None
             mat_c = s.mat[nc_lvl] if lvl != s.coarsest else None
             mat = s.mat[lvl]
+            bm = s.blockmap[lvl]
             slv_s = self.smoothsolver[lvl] if lvl != s.coarsest else None
             slv_w = self.wrappersolver[lvl] if lvl <= s.coarsest - 2 else None
             slv_c = self.coarsestsolver if lvl == s.coarsest else None
-
-            # convenience
-            f2c = lambda coarse, fine: g.block.project(coarse, fine, s.basis[lvl])
-            c2f = lambda fine, coarse: g.block.promote(coarse, fine, s.basis[lvl])
 
             # start clocks
             t("misc")
@@ -368,7 +376,7 @@ class mg_prec:
 
                 # fine to coarse
                 t("to_coarser")
-                f2c(r_c, r)
+                bm.project(r_c, r)
 
                 if self.verbose:
                     t("output")
@@ -406,7 +414,7 @@ class mg_prec:
 
                 # coarse to fine
                 t("from_coarser")
-                c2f(psi, e_c)
+                bm.promote(psi, e_c)
 
                 if self.verbose:
                     t("output")

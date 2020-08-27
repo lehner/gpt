@@ -32,6 +32,10 @@ class PVector {
     _v.resize(size);
   }
 
+  void push_back(T* t) {
+    _v.push_back(t);
+  }
+
   long size() const {
     return _v.size();
   }
@@ -50,6 +54,17 @@ class PVector {
 
   const T*& operator()(long i) const {
     return _v[i];
+  }
+
+  PVector slice(long i0, long i1, long step = 1) const {
+    if (i0<0)
+      i0=0;
+    if (i1 > _v.size())
+      i1 = _v.size();
+    PVector ret;
+    for (long i=i0;i<i1;i+=step)
+      ret.push_back(_v[i]);
+    return ret;
   }
 };
 

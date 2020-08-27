@@ -53,7 +53,7 @@ class expr:
                 self.val = val
             else:
                 self.val = [(1.0, [(factor_unary.NONE, val)])]
-        elif gpt.util.isnum(val):
+        elif gpt.util.is_num(val):
             self.val = [(complex(val), [])]
         else:
             raise Exception("Unknown type " + str(type(val)))
@@ -108,7 +108,7 @@ class expr:
             return self.__rmul__(expr(l))
 
     def __truediv__(self, l):
-        if gpt.util.isnum(l) is False:
+        if gpt.util.is_num(l) is False:
             raise Exception("At this point can only divide by numbers")
         return self.__mul__(expr(1.0 / l))
 
@@ -167,7 +167,7 @@ class factor:
         return expr(self) * expr(l)
 
     def __truediv__(self, l):
-        assert gpt.util.isnum(l)
+        assert gpt.util.is_num(l)
         return expr(self) * (1.0 / l)
 
     def __add__(self, l):

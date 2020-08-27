@@ -16,6 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from gpt.algorithms.inverter.noop import noop
 from gpt.algorithms.inverter.cg import cg
 from gpt.algorithms.inverter.bicgstab import bicgstab
 from gpt.algorithms.inverter.fgcr import fgcr

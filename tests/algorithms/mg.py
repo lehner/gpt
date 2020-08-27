@@ -9,8 +9,8 @@ import gpt as g
 import numpy as np
 
 # setup rng, make it quiet
-rng = g.random("test_mg")
 g.default.set_verbose("random", False)
+rng = g.random("test_mg")
 
 # setup gauge field
 U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.single), rng)
@@ -48,7 +48,7 @@ p = g.qcd.fermion.preconditioner
 mg_setup_2lvl = i.mg_setup(
     w,
     {
-        "block": [[4, 4, 4, 4]],
+        "block": [[2, 2, 2, 2]],
         "northo": 1,
         "nbasis": 30,
         "hermitian": False,
@@ -57,7 +57,9 @@ mg_setup_2lvl = i.mg_setup(
         "vecstype": "null",
         "preortho": False,
         "postortho": False,
-        "solver": i.fgmres({"eps": 1e-3, "maxiter": 50, "restartlen": 25}),
+        "solver": i.fgmres(
+            {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
+        ),
         "distribution": rng.cnormal,
     },
 )
@@ -73,12 +75,9 @@ mg_setup_3lvl = i.mg_setup(
         "vecstype": "null",
         "preortho": False,
         "postortho": False,
-        "solver": [
-            i.fgmres({"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}),
-            i.fgmres(
-                {"eps": 1e-3, "maxiter": 100, "restartlen": 25, "checkres": False}
-            ),
-        ],
+        "solver": i.fgmres(
+            {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
+        ),
         "distribution": rng.cnormal,
     },
 )
@@ -178,7 +177,7 @@ sol_smooth = g.eval(fgmres_outer(w) * src)
 eps2 = g.norm2(w * sol_smooth - src) / g.norm2(src)
 niter_prec_smooth = len(fgmres_outer.history)
 g.message("Test resid/iter smoother prec fgmres:", eps2, niter_prec_smooth)
-assert eps2 < 1e-9
+assert eps2 < 1e-10
 
 # preconditioned inversion (2lvl mg -- vcycle)
 fgmres_outer.prec = mg_2lvl_vcycle
@@ -188,7 +187,7 @@ niter_prec_2lvl_mg_vcycle = len(fgmres_outer.history)
 g.message(
     "Test resid/iter 2lvl vcycle mg prec fgmres:", eps2, niter_prec_2lvl_mg_vcycle
 )
-assert eps2 < 1e-9
+assert eps2 < 1e-10
 assert niter_prec_2lvl_mg_vcycle < niter_prec_smooth
 
 # preconditioned inversion (2lvl mg -- kcycle)
@@ -199,7 +198,7 @@ niter_prec_2lvl_mg_kcycle = len(fgmres_outer.history)
 g.message(
     "Test resid/iter 2lvl kcycle mg prec fgmres:", eps2, niter_prec_2lvl_mg_kcycle
 )
-assert eps2 < 1e-9
+assert eps2 < 1e-10
 assert niter_prec_2lvl_mg_kcycle == niter_prec_2lvl_mg_vcycle  # equivalent for 2 lvls
 
 # preconditioned inversion (3lvl mg -- vcycle)
@@ -210,8 +209,8 @@ niter_prec_3lvl_mg_vcycle = len(fgmres_outer.history)
 g.message(
     "Test resid/iter 3lvl vcycle mg prec fgmres:", eps2, niter_prec_3lvl_mg_vcycle
 )
-assert eps2 < 1e-9
-assert niter_prec_3lvl_mg_vcycle <= niter_prec_2lvl_mg_vcycle
+assert eps2 < 1e-10
+assert niter_prec_3lvl_mg_vcycle < niter_prec_smooth
 
 # preconditioned inversion (3lvl mg -- kcycle)
 fgmres_outer.prec = mg_3lvl_kcycle
@@ -221,7 +220,7 @@ niter_prec_3lvl_mg_kcycle = len(fgmres_outer.history)
 g.message(
     "Test resid/iter 3lvl kcycle mg prec fgmres:", eps2, niter_prec_3lvl_mg_kcycle
 )
-assert eps2 < 1e-9
+assert eps2 < 1e-10
 assert niter_prec_3lvl_mg_kcycle <= niter_prec_3lvl_mg_vcycle
 
 # preconditioned inversion (4lvl mg -- vcycle)
@@ -232,8 +231,8 @@ niter_prec_4lvl_mg_vcycle = len(fgmres_outer.history)
 g.message(
     "Test resid/iter 4lvl vcycle mg prec fgmres:", eps2, niter_prec_4lvl_mg_vcycle
 )
-assert eps2 < 1e-9
-assert niter_prec_4lvl_mg_vcycle <= niter_prec_2lvl_mg_vcycle
+assert eps2 < 1e-10
+assert niter_prec_4lvl_mg_vcycle < niter_prec_3lvl_mg_vcycle
 
 # preconditioned inversion (4lvl mg -- kcycle)
 fgmres_outer.prec = mg_4lvl_kcycle
@@ -243,7 +242,7 @@ niter_prec_4lvl_mg_kcycle = len(fgmres_outer.history)
 g.message(
     "Test resid/iter 4lvl kcycle mg prec fgmres:", eps2, niter_prec_4lvl_mg_kcycle
 )
-assert eps2 < 1e-9
+assert eps2 < 1e-10
 assert niter_prec_4lvl_mg_kcycle <= niter_prec_4lvl_mg_vcycle
 
 # print contributions to mg setup runtime

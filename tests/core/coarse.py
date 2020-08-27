@@ -14,8 +14,12 @@ grid_f_size = g.default.get_ivec("--fgrid", [8, 8, 8, 16], 4)
 grid_c_size = g.default.get_ivec("--cgrid", [4, 4, 4, 8], 4)
 grid_cc_size = g.default.get_ivec("--ccgrid", [2, 2, 2, 4], 4)
 
+# setup rng, make it quiet
+g.default.set_verbose("random", False)
+rng = g.random("test")
+
 # setup fine link fields
-U = g.qcd.gauge.random(g.grid(grid_f_size, g.double), g.random("test"))
+U = g.qcd.gauge.random(g.grid(grid_f_size, g.double), rng)
 
 # do everything in single precision
 U = g.convert(U, g.single)
@@ -39,9 +43,6 @@ mat_f = g.qcd.fermion.wilson_clover(
     },
 )
 
-# setup rng
-rng = g.random("ducks_smell_funny")
-
 # number of basis vectors
 nbasis_f = 20
 nbasis_c = 30
@@ -61,14 +62,13 @@ rng.cnormal(basis_f)
 # split fine basis into chiral halfs
 g.split_chiral(basis_f)
 
+# setup fine block map map
+bm_f = g.block.map(grid_c, basis_f)
+
 # orthonormalize fine basis
 for i in range(northo):
     g.message("Block ortho step %d" % i)
-    g.block.orthonormalize(grid_c, basis_f)
-
-# check orthogonality
-g.block.check_orthogonality(grid_c, basis_f, tol_ortho)
-g.message("Orthogonality check for fine basis done")
+    bm_f.orthonormalize()
 
 # create coarse link fields
 A_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
@@ -108,32 +108,13 @@ del A_lut_c, Asaved_c, Asaved_lut_c
 # create coarse operator from links
 mat_c = g.qcd.fermion.coarse(A_c, {"level": 0,},)
 
-# setup fine vectors
-vec_in_f = g.lattice(basis_f[0])
-vec_out_f = g.lattice(basis_f[0])
-vec_in_f[:] = 0.0
-vec_out_f[:] = 0.0
-
 # setup coarse vectors
 vec_in_c = g.vcomplex(grid_c, nbasis_f)
-vec_out_chained_c = g.vcomplex(grid_c, nbasis_f)
-vec_out_constructed_c = g.vcomplex(grid_c, nbasis_f)
 rng.cnormal(vec_in_c)
-vec_out_chained_c[:] = 0.0
-vec_out_constructed_c[:] = 0.0
 
 # apply chained and constructed coarse operator
-dt_chained, dt_constructed = 0.0, 0.0
-dt_chained -= g.time()
-g.block.promote(vec_in_c, vec_in_f, basis_f)
-mat_f(vec_out_f, vec_in_f)
-g.block.project(vec_out_chained_c, vec_out_f, basis_f)
-dt_chained += g.time()
-dt_constructed -= g.time()
-mat_c(vec_out_constructed_c, vec_in_c)
-dt_constructed += g.time()
-
-g.message("Timings: chained = %e, constructed = %e" % (dt_chained, dt_constructed))
+vec_out_chained_c = g(bm_f.project * mat_f * bm_f.promote * vec_in_c)
+vec_out_constructed_c = g(mat_c * vec_in_c)
 
 # report error
 err2 = g.norm2(vec_out_chained_c - vec_out_constructed_c) / g.norm2(vec_out_chained_c)
@@ -153,14 +134,13 @@ rng.cnormal(basis_c)
 # split coarse basis into chiral halfs
 g.split_chiral(basis_c)
 
+# setup coarse block map map
+bm_c = g.block.map(grid_cc, basis_c)
+
 # orthonormalize coarse basis
 for i in range(northo):
     g.message("Block ortho step %d" % i)
-    g.block.orthonormalize(grid_cc, basis_c)
-
-# check orthogonality
-g.block.check_orthogonality(grid_cc, basis_c, tol_ortho)
-g.message("Orthogonality check for coarse basis done")
+    bm_c.orthonormalize()
 
 # create coarse coarse link fields
 A_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
@@ -200,31 +180,13 @@ del A_lut_cc, Asaved_cc, Asaved_lut_cc
 # create coarse operator from links
 mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
 
-# setup coarse vectors
-vec_out_c = g.lattice(basis_c[0])
-vec_in_c[:] = 0.0
-vec_out_c[:] = 0.0
-
 # setup coarse coarse vectors
 vec_in_cc = g.vcomplex(grid_cc, nbasis_c)
-vec_out_chained_cc = g.vcomplex(grid_cc, nbasis_c)
-vec_out_constructed_cc = g.vcomplex(grid_cc, nbasis_c)
 rng.cnormal(vec_in_cc)
-vec_out_chained_cc[:] = 0.0
-vec_out_constructed_cc[:] = 0.0
 
 # apply chained and constructed coarse coarse operator
-dt_chained, dt_constructed = 0.0, 0.0
-dt_chained -= g.time()
-g.block.promote(vec_in_cc, vec_in_c, basis_c)
-mat_c(vec_out_c, vec_in_c)
-g.block.project(vec_out_chained_cc, vec_out_c, basis_c)
-dt_chained += g.time()
-dt_constructed -= g.time()
-mat_cc(vec_out_constructed_cc, vec_in_cc)
-dt_constructed += g.time()
-
-g.message("Timings: chained = %e, constructed = %e" % (dt_chained, dt_constructed))
+vec_out_chained_cc = g(bm_c.project * mat_c * bm_c.promote * vec_in_cc)
+vec_out_constructed_cc = g(mat_cc * vec_in_cc)
 
 # report error
 err2 = g.norm2(vec_out_chained_cc - vec_out_constructed_cc) / g.norm2(

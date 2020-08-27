@@ -18,17 +18,17 @@
 #
 import gpt as g
 from gpt.params import params_convention
-from gpt.core.covariant import covariant_shift
+from gpt.core.covariant import shift
 from gpt import matrix_operator
 
 
-class wilson(covariant_shift, matrix_operator):
+class wilson(shift, matrix_operator):
     # M = sum_mu gamma[mu]*D[mu] + m0 - 1/2 sum_mu D^2[mu]
     # m0 + 4 = 1/2/kappa
     @params_convention()
     def __init__(self, U, params):
 
-        covariant_shift.__init__(self, U, params)
+        shift.__init__(self, U, params)
 
         Nc = U[0].otype.Nc
         otype = g.ot_vector_spin_color(4, Nc)

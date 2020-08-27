@@ -48,7 +48,7 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
         auto l = get_pointer<cgpt_Lattice_base>(args,"A",p);\
         cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
       } \
-      return new cgpt_fermion_operator<CMat>(cm); \
+      return new cgpt_coarse_operator<CMat>(cm); \
     } else {                                                           \
       typedef CoarsenedMatrix<iVSinglet ## n<vCoeff_t>, iSinglet<vCoeff_t>, n> CMat; \
       auto cm = new CMat(*grid_c, hermitian); \
@@ -56,7 +56,7 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
         auto l = get_pointer<cgpt_Lattice_base>(args,"A",p);\
         cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
       } \
-      return new cgpt_fermion_operator<CMat>(cm); \
+      return new cgpt_coarse_operator<CMat>(cm); \
       } \
     } else
 #include "../basis_size.h"

@@ -20,7 +20,7 @@ import cgpt, gpt, numpy
 from gpt.params import params_convention
 
 
-class covariant_shift:
+class shift:
     @params_convention()
     def __init__(self, U, params):
         self.nd = len(U)

@@ -16,28 +16,22 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, sys
+import gpt as g
 
 
-def operator(op, cgrid, basis):
-    src_fine = gpt.lattice(basis[0])
-    dst_fine = gpt.lattice(basis[0])
-    verbose = gpt.default.is_verbose("block_operator")
+class noop:
+    def __init__(self):
+        pass
 
-    def mat(dst_coarse, src_coarse):
-        t0 = gpt.time()
-        gpt.block.promote(src_coarse, src_fine, basis)  # TODO: src/dst ordering!!!
-        t1 = gpt.time()
-        op(dst_fine, src_fine)
-        t2 = gpt.time()
-        gpt.block.project(dst_coarse, dst_fine, basis)
-        t3 = gpt.time()
-        if verbose:
-            gpt.message(
-                "Timing: %g s (promote), %g s (matrix), %g s (project)"
-                % (t1 - t0, t2 - t1, t3 - t2)
-            )
+    def __call__(self, mat):
 
-    otype = gpt.ot_vsinglet(len(basis))
+        otype, grid, cb = None, None, None
+        if type(mat) == g.matrix_operator:
+            otype, grid, cb = mat.otype, mat.grid, mat.cb
 
-    return gpt.matrix_operator(mat=mat, otype=otype, zero=(False, False), grid=cgrid)
+        def inv(psi, src):
+            pass
+
+        return g.matrix_operator(
+            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid, cb=cb
+        )

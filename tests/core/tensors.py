@@ -22,6 +22,8 @@ for i in range(3):
     for j in range(3):
         assert abs(outer.array[i, j] - lhs.array[i] * rhs.array.conjugate()[j]) < 1e-14
 assert abs(inner_comp - inner) < 1e-14
+assert abs(inner_comp - g.rank_inner_product(lhs, rhs)) < 1e-14
+
 
 # TODO: the following is already implemented for vcomplex but should
 # be implemented for all vectors

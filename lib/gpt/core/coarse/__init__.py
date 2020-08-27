@@ -51,8 +51,7 @@ def create_links(A, fmat, basis, params):
     # setup fields
     Mvr = [gpt.lattice(basis[0]) for i in range(nhops)]
     tmp = gpt.lattice(basis[0])
-    oproj_scal = gpt.complex(c_grid)
-    oproj_vec = gpt.vcomplex(c_grid, len(basis))
+    oproj = gpt.vcomplex(c_grid, len(basis))
     selfproj = gpt.vcomplex(c_grid, len(basis))
 
     # setup masks
@@ -84,13 +83,12 @@ def create_links(A, fmat, basis, params):
     # save applications of matrix and coarsening if possible
     dirdisps = dirdisps_forward if savelinks else dirdisps_full
 
-    if uselut:
-        # create lookup tables from masks
-        t("luts")
-        dirluts = [
-            gpt.lookup_table(c_grid, dirmasks[p]) for p, (mu, fb) in enumerate(dirdisps)
-        ]
-        fulllut = gpt.lookup_table(c_grid, onemask)
+    # create block maps
+    t("blockmap")
+    dirbms = [
+        gpt.block.map(c_grid, basis, dirmasks[p]) for p, (mu, fb) in enumerate(dirdisps)
+    ]
+    fullbm = gpt.block.map(c_grid, basis)
 
     for i, vr in enumerate(basis):
         # apply directional hopping terms
@@ -101,19 +99,11 @@ def create_links(A, fmat, basis, params):
 
         # coarsen directional terms + write to link
         for p, (mu, fb) in enumerate(dirdisps):
-            if uselut:
-                t("coarsen_hop")
-                gpt.block.project_using_lut(oproj_vec, Mvr[p], basis, dirluts[p])
+            t("coarsen_hop")
+            dirbms[p].project(oproj, Mvr[p])
 
-                t("copy_hop")
-                A[p][:, :, :, :, :, i] = oproj_vec[:]
-            else:
-                for j, vl in enumerate(basis):
-                    t("coarsen_hop")
-                    gpt.block.masked_inner_product(oproj_scal, dirmasks[p], vl, Mvr[p])
-
-                    t("copy_hop")
-                    A[p][:, :, :, :, j, i] = oproj_scal[:]
+            t("copy_hop")
+            A[p][:, :, :, :, :, i] = oproj[:]
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
         t("apply_self")
@@ -124,17 +114,14 @@ def create_links(A, fmat, basis, params):
 
         # coarsen diagonal term
         t("coarsen_self")
-        if uselut:
-            gpt.block.project_using_lut(selfproj, tmp, basis, fulllut)
-        else:
-            gpt.block.project(selfproj, tmp, basis)
+        fullbm.project(selfproj, tmp)
 
         # write to self link
         t("copy_self")
         A[selflink][:, :, :, :, :, i] = selfproj[:]
 
         if verbose:
-            gpt.message("Coarsening of vector %d finished" % i)
+            gpt.message("coarsen: done with vector %d" % i)
 
     # communicate opposite links
     if savelinks:

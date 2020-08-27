@@ -21,20 +21,24 @@
 #
 import gpt as g
 import numpy as np
+from gpt.params import params_convention
 
 
 class deflate:
-    def __init__(self, inverter, evec, ev):
+    @params_convention(block=16)
+    def __init__(self, inverter, evec, ev, params):
         self.inverter = inverter
         self.evec = evec
         self.ev = ev
+        self.params = params
 
     def __call__(self, matrix):
 
-        otype, grid, cb = None, None, None
-        if type(matrix) == g.matrix_operator:
-            otype, grid, cb = matrix.otype, matrix.grid, matrix.cb
-            matrix = matrix.mat
+        otype = self.evec[0].otype
+        grid = self.evec[0].grid
+        cb = self.evec[0].checkerboard()
+
+        inverter = self.inverter(matrix)
 
         def inv(dst, src):
             verbose = g.default.is_verbose("deflate")
@@ -42,9 +46,12 @@ class deflate:
             t0 = g.time()
             grid = src[0].grid
             rip = np.zeros((len(src), len(self.evec)), dtype=np.complex128)
-            for i in range(len(self.evec)):
-                for j in range(len(src)):
-                    rip[j, i] = g.rankInnerProduct(self.evec[i], src[j]) / self.ev[i]
+            block = self.params["block"]
+            for i0 in range(0, len(self.evec), block):
+                rip_block = g.rank_inner_product(self.evec[i0 : i0 + block], src, True)
+                for i in range(rip_block.shape[0]):
+                    for j in range(rip_block.shape[1]):
+                        rip[j, i0 + i] = rip_block[i, j] / self.ev[i0 + i]
             t1 = g.time()
             grid.globalsum(rip)
             t2 = g.time()
@@ -54,10 +61,10 @@ class deflate:
             t3 = g.time()
             if verbose:
                 g.message(
-                    "Deflated %d vector(s) in %g s (%g s for rankInnerProduct, %g s for global sum, %g s for linear combinations)"
+                    "Deflated %d vector(s) in %g s (%g s for rank_inner_product, %g s for global sum, %g s for linear combinations)"
                     % (len(src), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
                 )
-            return self.inverter(matrix)(dst, src)
+            return inverter(dst, src)
 
         return g.matrix_operator(
             mat=inv, inv_mat=matrix, otype=otype, grid=grid, cb=cb, accept_list=True

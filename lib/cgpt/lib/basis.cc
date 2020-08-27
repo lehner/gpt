@@ -79,7 +79,7 @@ void cgpt_QR_decomp(RealD* lmd,                // Nm
   }
 }
 
-EXPORT(qr_decomp,{
+EXPORT(qr_decomposition,{
 
     PyObject* _lmd,* _lme,* _Qt,* _Dsh;
     int Nk,Nm,kmin,kmax;

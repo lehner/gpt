@@ -117,4 +117,4 @@ rm -f next.lock
 find build -size 0 -delete 2> /dev/null
 
 # Link
-${CXX} --shared build/*.o ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
+${CXX} --shared $(ls -t build/*.o) ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so

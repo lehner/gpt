@@ -29,8 +29,9 @@ feval = [rng.normal(mu=2.0, sigma=0.5).real for i in range(nevec)]
 for b in basis:
     b.checkerboard(g.odd)
 rng.cnormal([basis, cevec])
+b = g.block.map(cgrid, basis)
 for i in range(2):
-    g.block.orthonormalize(cgrid, basis)
+    b.orthonormalize()
 
 # save in fixed layout
 g.save(

@@ -16,7 +16,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-template<class T> class cgpt_lookup_table;
 template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
@@ -36,11 +35,6 @@ public:
 
   cgpt_Lattice_base* create_lattice_of_same_type() {
     return new cgpt_Lattice<T>(l.Grid());
-  }
-
-  cgpt_lookup_table_base* create_lookup_table(GridBase* coarse_grid, cgpt_Lattice_base* mask) {
-    typedef iSinglet<vCoeff_t> mask_type;
-    return new cgpt_lookup_table<Lattice<mask_type>>(coarse_grid, compatible<mask_type>(mask)->l);
   }
 
   virtual std::string type() {
@@ -74,15 +68,19 @@ public:
     return ::norm2(l);
   }
 
-  virtual ComplexD innerProduct(cgpt_Lattice_base* other) {
-    return ::innerProduct(l,compatible<T>(other)->l);
+  virtual void rank_inner_product(ComplexD* res, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, bool use_accelerator) {
+    PVector<Lattice<T>> _left;
+    PVector<Lattice<T>> _right;
+    cgpt_basis_fill(_left,left);
+    cgpt_basis_fill(_right,right);
+    if (use_accelerator) {
+      ::rankInnerProduct(res,_left,_right,n_virtual);
+    } else {
+      ::rankInnerProductCpu(res,_left,_right,n_virtual);
+    }
   }
 
-  virtual ComplexD rankInnerProduct(cgpt_Lattice_base* other) {
-    return ::rankInnerProduct(l,compatible<T>(other)->l);
-  }
-
-  virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
+  virtual void inner_product_norm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) {
     ::innerProductNorm(ip,a2,l,compatible<T>(other)->l);
   }
 
@@ -212,24 +210,19 @@ public:
     return infer_numpy_type(Coeff_t());
   }
 
-  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
-    cgpt_block_project(coarse,l,basis);
-  }
+  virtual cgpt_block_map_base* block_map(GridBase* coarse, 
+					 std::vector<cgpt_Lattice_base*>& basis,
+					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
+					 cgpt_Lattice_base* mask) {
 
-  virtual void block_project_using_lut(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis, cgpt_lookup_table_base* lut) {
-    cgpt_block_project_using_lut(coarse,l,basis,lut);
-  }
+    ASSERT(basis.size() > 0 && basis.size() % basis_n_virtual == 0);
 
-  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) {
-    cgpt_block_promote(coarse,l,basis);
-  }
+#define BASIS_SIZE(n) if (n == basis_virtual_size) { return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t> >(coarse,basis,basis_n_virtual,basis_n_block,mask); }
+#include "../basis_size.h"
+#undef BASIS_SIZE
+    
+    { ERR("Unknown basis size %d",(int)basis_virtual_size); }
 
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) {
-    cgpt_block_orthonormalize(coarse,l,vbasis);
-  }
-
-  virtual void block_masked_inner_product(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineMask, cgpt_Lattice_base* fineOther) {
-    cgpt_block_masked_inner_product(coarse,fineMask,l,compatible<T>(fineOther)->l);
   }
 
   virtual GridBase* get_grid() {

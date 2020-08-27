@@ -119,7 +119,7 @@ class fgcr:
                 g.default.pop_verbose()
 
                 t("linalg")
-                ip, mmp2 = g.innerProductNorm2(mmp[i], r)
+                ip, mmp2 = g.inner_product_norm2(mmp[i], r)
                 gamma[i] = mmp2 ** 0.5
                 if gamma[i] == 0.0:
                     g.message("fgcr: breakdown, gamma[%d] = 0" % (i))

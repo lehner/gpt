@@ -16,22 +16,20 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+class cgpt_block_map_base;
 class cgpt_lattice_term;
-class cgpt_lookup_table_base;
 class cgpt_Lattice_base {
 public:
   virtual ~cgpt_Lattice_base() { };
   virtual cgpt_Lattice_base* create_lattice_of_same_type() = 0;
-  virtual cgpt_lookup_table_base* create_lookup_table(GridBase* coarse_grid, cgpt_Lattice_base* mask) = 0;
   virtual void set_to_zero() = 0;
   virtual PyObject* to_str() = 0;
   virtual PyObject* sum() = 0;
   virtual RealD norm2() = 0;
   virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
   virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
-  virtual ComplexD innerProduct(cgpt_Lattice_base* other) = 0;
-  virtual ComplexD rankInnerProduct(cgpt_Lattice_base* other) = 0;
-  virtual void innerProductNorm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;
+  virtual void rank_inner_product(ComplexD* result, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, bool use_accelerator) = 0;
+  virtual void inner_product_norm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;
   virtual void copy_from(cgpt_Lattice_base* src) = 0;
   virtual void fft_from(cgpt_Lattice_base* src, const std::vector<int> & dims, int sign) = 0;
   virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) = 0; // unary_expr(unary_a(this) * unary_b(b))
@@ -56,11 +54,9 @@ public:
   virtual PyObject* memory_view_coordinates() = 0;
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) = 0;
   virtual int get_numpy_dtype() = 0;
-  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
-  virtual void block_project_using_lut(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis, cgpt_lookup_table_base* lut) = 0;
-  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) = 0;
-  virtual void block_masked_inner_product(cgpt_Lattice_base* coarse, cgpt_Lattice_base* fineMask, cgpt_Lattice_base* fineOther) = 0;
+  virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<cgpt_Lattice_base*>& basis, 
+					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
+					 cgpt_Lattice_base* mask) = 0;
   virtual GridBase* get_grid() = 0;
   virtual PyObject* advise(std::string type) = 0;
   virtual PyObject* prefetch(std::string type) = 0;
@@ -70,6 +66,10 @@ template<class T> class cgpt_Lattice;
 
 template<typename T>
 cgpt_Lattice<T>* compatible(cgpt_Lattice_base* other) {
-  ASSERT(typeid(T).name() == other->type());
+  if (typeid(T).name() != other->type()) {
+    std::string expected_name = demangle(typeid(T).name());
+    std::string given_name = demangle(other->type().c_str());
+    ERR("Expected type %s, got type %s", expected_name.c_str(), given_name.c_str());
+  }
   return (cgpt_Lattice<T>*)other;
 }

@@ -66,7 +66,7 @@ class bicgstab:
             for k in range(self.maxiter):
                 t("inner")
                 rhoprev = rho
-                rho = g.innerProduct(rhat, r).real
+                rho = g.inner_product(rhat, r).real
 
                 t("linearcomb")
                 beta = (rho / rhoprev) * (alpha / omega)
@@ -76,7 +76,7 @@ class bicgstab:
                 mat(mmp, p)
 
                 t("inner")
-                alpha = rho / g.innerProduct(rhat, mmp).real
+                alpha = rho / g.inner_product(rhat, mmp).real
 
                 t("linearcomb")
                 s @= r - alpha * mmp
@@ -85,7 +85,7 @@ class bicgstab:
                 mat(mms, s)
 
                 t("inner")
-                ip, mms2 = g.innerProductNorm2(mms, s)
+                ip, mms2 = g.inner_product_norm2(mms, s)
                 if mms2 == 0.0:
                     continue
 

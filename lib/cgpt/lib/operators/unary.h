@@ -19,6 +19,12 @@
 #define UNOP_VOID(name,opcode)						\
   case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l); return 0.0;
 
+#define UNOP_VOID_DAG0(name,opcode)						\
+  case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l,0); return 0.0;
+
+#define UNOP_VOID_DAG1(name,opcode)						\
+  case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l,1); return 0.0;
+
 #define UNOP_REALD(name,opcode)						\
   case opcode: return op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l);
 

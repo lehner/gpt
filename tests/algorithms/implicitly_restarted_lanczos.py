@@ -59,10 +59,17 @@ g.mem_report()
 # print eigenvalues of NDagN as well
 evals = g.algorithms.eigen.evals(w.Mpc, evec, check_eps2=1e-11, real=True)
 
+# test low-mode approximation of inverse
+noop = g.algorithms.inverter.noop()
+lma = g.algorithms.eigen.deflate(noop, evec, evals)(w.Mpc)
+for i in range(len(evals)):
+    eps2 = g.norm2(evals[i] * lma * evec[i] - evec[i]) / g.norm2(evec[i]) * evals[i]
+    g.message(f"Test low-mode approximation for evec[{i}]: {eps2}")
+    assert eps2 < 1e-11
+
 # deflated solver
 cg = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 1000})
 defl = g.algorithms.eigen.deflate(cg, evec, evals)
-
 sol_cg = g.eval(cg(w.Mpc) * start)
 eps2 = g.norm2(w.Mpc * sol_cg - start) / g.norm2(start)
 niter_cg = len(cg.history)
@@ -83,17 +90,15 @@ nbasis = 20
 cstart = g.vcomplex(grid_coarse, nbasis)
 cstart[:] = g.vcomplex([1] * nbasis, nbasis)
 basis = evec[0:nbasis]
+b = g.block.map(grid_coarse, basis)
 for i in range(2):
-    g.block.orthonormalize(grid_coarse, basis)
+    b.orthonormalize()
 
 # define coarse-grid operator
-cop = g.block.operator(c(w.Mpc), grid_coarse, basis)
-tmp = g.lattice(cstart)
-tmpf = g.lattice(basis[0])
-tmp @= cop * cstart
-g.block.promote(tmp, tmpf, basis)
-g.block.project(cstart, tmpf, basis)
-eps2 = g.norm2(cstart - tmp) / g.norm2(cstart)
+cop = b.operator(c(w.Mpc))
+eps2 = g.norm2(cop * cstart - b.project * c(w.Mpc) * b.promote * cstart) / g.norm2(
+    cstart
+)
 g.message(f"Test coarse-grid promote/project cycle: {eps2}")
 assert eps2 < 1e-13
 
@@ -104,9 +109,9 @@ cevec, cev = irl(cop, cstart)
 smoother = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 10})(w.Mpc)
 smoothed_evals = []
 g.default.push_verbose("cg", False)
+tmpf = g.lattice(basis[0])
 for i, cv in enumerate(cevec):
-    g.block.promote(cv, tmpf, basis)
-    tmpf @= smoother * tmpf
+    tmpf @= smoother * b.promote * cv
     smoothed_evals = smoothed_evals + g.algorithms.eigen.evals(
         w.Mpc, [tmpf], check_eps2=1, real=True
     )

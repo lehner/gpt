@@ -27,15 +27,8 @@
 #include <string>
 #include <iostream>
 
-#include <Grid/Grid.h>
-
-using namespace Grid;
-
-#if defined(GRID_SYCL) || defined(GRID_CUDA) || defined(GRID_HIP)
-#define GRID_HAS_ACCELERATOR
-#endif
-
 #include "pvector.h"
+#include "foundation.h"
 #include "time.h"
 #include "exception.h"
 #include "cached.h"
@@ -50,5 +43,4 @@ using namespace Grid;
 #include "precision.h"
 #include "util.h"
 #include "expression.h"
-#include "lookup_table.h"
-#include "block.h"
+

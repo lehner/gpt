@@ -21,4 +21,5 @@ public:
   virtual ~cgpt_fermion_operator_base() { };
   virtual RealD unary(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out) = 0;
   virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) = 0;
+  virtual void update(PyObject* args) = 0;
 };

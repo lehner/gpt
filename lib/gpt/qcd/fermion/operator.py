@@ -123,12 +123,26 @@ class operator(gpt.matrix_operator):
         self.G5M = gpt.matrix_operator(
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
+        self.Dhop = gpt.matrix_operator(
+            mat=registry.Dhop, adj_mat=registry.DhopDag, otype=otype, grid=self.F_grid,
+        )
+        self.DhopEO = gpt.matrix_operator(
+            mat=registry.DhopEO,
+            adj_mat=registry.DhopEODag,
+            otype=otype,
+            grid=self.F_grid_eo,
+        )
         self.Mdir = gpt.matrix_operator(
             mat=registry.Mdir, otype=otype, grid=self.F_grid
         )
 
     def __del__(self):
         cgpt.delete_fermion_operator(self.obj)
+
+    def update(self, U):
+        self.U = U
+        self.params["U"] = [u.v_obj[0] for u in U]
+        cgpt.update_fermion_operator(self.obj, self.params)
 
     def updated(self, U):
         return operator(

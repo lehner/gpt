@@ -1,0 +1,294 @@
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+OPENMPI detected
+AcceleratorCudaInit: IBM Summit or similar - use default device
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 6
+SharedMemoryMpi:  Node  communicator of size 6
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 536870912bytes at 0x2000e0000000 for comms buffers 
+OPENMPI detected
+OPENMPI detected
+OPENMPI detected
+OPENMPI detected
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 536870912 byte stencil comms buffers 
+Grid : Message : MemoryManager Cache 4194304000 bytes 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 16
+Grid : Message : MemoryManager::Init() Non unified: Caching accelerator data in dedicated memory
+Grid : Message : MemoryManager::Init() Using cudaMalloc
+Grid : Message : 5.177200 s : Grid Default Decomposition patterns
+Grid : Message : 5.178600 s : 	OpenMP threads : 6
+Grid : Message : 5.179600 s : 	MPI tasks      : 6 1 1 1 
+Grid : Message : 5.181500 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 5.182900 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 5.184200 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 5.185600 s : 	vComplexD      : 512bits ; 1 1 2 2 
+
+=============================================
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
+=============================================
+OPENMPI detected
+GPT :      56.903302 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [48, 24, 24, 24]
+                       :     coarse fdimensions  : [24, 12, 12, 12]
+                       :     precision           : single
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 1
+                       : 
+GPT :      58.464358 s : 1000 applications of block_project
+                       :             Time to complete            : 1.15 s
+                       :             Total performance           : 2174.60 GFlops/s
+                       :             Effective memory bandwidth  : 2287.96 GB/s
+                       :             
+GPT :      60.763032 s : 1000 applications of block_promote
+                       :             Time to complete            : 2.29 s
+                       :             Total performance           : 1105.64 GFlops/s
+                       :             Effective memory bandwidth  : 1146.20 GB/s
+                       :             
+GPT :      60.763208 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [48, 24, 24, 24]
+                       :     coarse fdimensions  : [24, 12, 12, 12]
+                       :     precision           : single
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 4
+                       : 
+GPT :      64.629973 s : 1000 applications of block_project
+                       :             Time to complete            : 2.78 s
+                       :             Total performance           : 3589.44 GFlops/s
+                       :             Effective memory bandwidth  : 3776.55 GB/s
+                       :             
+GPT :      69.946770 s : 1000 applications of block_promote
+                       :             Time to complete            : 5.29 s
+                       :             Total performance           : 1914.60 GFlops/s
+                       :             Effective memory bandwidth  : 1984.84 GB/s
+                       :             
+GPT :     120.521270 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [48, 24, 24, 24]
+                       :     coarse fdimensions  : [24, 12, 12, 12]
+                       :     precision           : double
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 1
+                       : 
+GPT :     123.825127 s : 1000 applications of block_project
+                       :             Time to complete            : 2.92 s
+                       :             Total performance           : 854.27 GFlops/s
+                       :             Effective memory bandwidth  : 1797.59 GB/s
+                       :             
+GPT :     129.277554 s : 1000 applications of block_promote
+                       :             Time to complete            : 5.43 s
+                       :             Total performance           : 466.74 GFlops/s
+                       :             Effective memory bandwidth  : 967.73 GB/s
+                       :             
+GPT :     129.277627 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [48, 24, 24, 24]
+                       :     coarse fdimensions  : [24, 12, 12, 12]
+                       :     precision           : double
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 4
+                       : 
+GPT :     135.707373 s : 1000 applications of block_project
+                       :             Time to complete            : 5.13 s
+                       :             Total performance           : 1947.24 GFlops/s
+                       :             Effective memory bandwidth  : 4097.49 GB/s
+                       :             
+GPT :     151.025009 s : 1000 applications of block_promote
+                       :             Time to complete            : 15.24 s
+                       :             Total performance           : 664.55 GFlops/s
+                       :             Effective memory bandwidth  : 1377.86 GB/s
+                       :             
+=============================================
+               Finalized GPT                 
+=============================================
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+Warning: OMP_NUM_THREADS=6 is greater than available PU's
+OPENMPI detected
+AcceleratorCudaInit: IBM Summit or similar - use default device
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 6
+SharedMemoryMpi:  Node  communicator of size 6
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 536870912bytes at 0x2000e0000000 for comms buffers 
+OPENMPI detected
+OPENMPI detected
+OPENMPI detected
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 536870912 byte stencil comms buffers 
+Grid : Message : MemoryManager Cache 4194304000 bytes 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 16
+Grid : Message : MemoryManager::Init() Non unified: Caching accelerator data in dedicated memory
+Grid : Message : MemoryManager::Init() Using cudaMalloc
+Grid : Message : 4.979664 s : Grid Default Decomposition patterns
+Grid : Message : 4.979672 s : 	OpenMP threads : 6
+Grid : Message : 4.979682 s : 	MPI tasks      : 6 1 1 1 
+Grid : Message : 4.979700 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 4.979713 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 4.979726 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 4.979739 s : 	vComplexD      : 512bits ; 1 1 2 2 
+
+=============================================
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
+=============================================
+OPENMPI detected
+OPENMPI detected
+GPT :      56.855742 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [48, 24, 24, 24]
+                       :     coarse fdimensions  : [12, 6, 6, 6]
+                       :     precision           : single
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 1
+                       : 
+GPT :      60.958615 s : 1000 applications of block_project
+                       :             Time to complete            : 4.01 s
+                       :             Total performance           : 621.65 GFlops/s
+                       :             Effective memory bandwidth  : 650.95 GB/s
+                       :             
+GPT :      63.279851 s : 1000 applications of block_promote
+                       :             Time to complete            : 2.31 s
+                       :             Total performance           : 1096.59 GFlops/s
+                       :             Effective memory bandwidth  : 1131.43 GB/s
+                       :             
+GPT :      63.280025 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [48, 24, 24, 24]
+                       :     coarse fdimensions  : [12, 6, 6, 6]
+                       :     precision           : single
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 4
+                       : 
+GPT :      67.588090 s : 1000 applications of block_project
+                       :             Time to complete            : 4.19 s
+                       :             Total performance           : 2384.49 GFlops/s
+                       :             Effective memory bandwidth  : 2496.90 GB/s
+                       :             
+GPT :      72.630921 s : 1000 applications of block_promote
+                       :             Time to complete            : 5.02 s
+                       :             Total performance           : 2018.48 GFlops/s
+                       :             Effective memory bandwidth  : 2082.62 GB/s
+                       :             
+GPT :     121.630652 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [48, 24, 24, 24]
+                       :     coarse fdimensions  : [12, 6, 6, 6]
+                       :     precision           : double
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 1
+                       : 
+GPT :     126.780396 s : 1000 applications of block_project
+                       :             Time to complete            : 5.02 s
+                       :             Total performance           : 497.48 GFlops/s
+                       :             Effective memory bandwidth  : 1041.87 GB/s
+                       :             
+GPT :     132.272468 s : 1000 applications of block_promote
+                       :             Time to complete            : 5.46 s
+                       :             Total performance           : 463.37 GFlops/s
+                       :             Effective memory bandwidth  : 956.18 GB/s
+                       :             
+GPT :     132.272586 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [48, 24, 24, 24]
+                       :     coarse fdimensions  : [12, 6, 6, 6]
+                       :     precision           : double
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 4
+                       : 
+GPT :     138.361205 s : 1000 applications of block_project
+                       :             Time to complete            : 5.57 s
+                       :             Total performance           : 1791.29 GFlops/s
+                       :             Effective memory bandwidth  : 3751.48 GB/s
+                       :             
+GPT :     151.964885 s : 1000 applications of block_promote
+                       :             Time to complete            : 13.54 s
+                       :             Total performance           : 748.27 GFlops/s
+                       :             Effective memory bandwidth  : 1544.10 GB/s
+                       :             
+=============================================
+               Finalized GPT                 
+=============================================
