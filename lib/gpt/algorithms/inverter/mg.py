@@ -70,7 +70,6 @@ class mg_setup:
         self.nbasis = g.util.to_list(params["nbasis"], self.nlevel - 1)
         self.hermitian = g.util.to_list(params["hermitian"], self.nlevel - 1)
         self.savelinks = g.util.to_list(params["savelinks"], self.nlevel - 1)
-        self.uselut = g.util.to_list(params["uselut"], self.nlevel - 1)
         self.preortho = g.util.to_list(params["preortho"], self.nlevel - 1)
         self.postortho = g.util.to_list(params["postortho"], self.nlevel - 1)
         self.vecstype = g.util.to_list(params["vecstype"], self.nlevel - 1)
@@ -103,7 +102,6 @@ class mg_setup:
                 self.nbasis,
                 self.hermitian,
                 self.savelinks,
-                self.uselut,
                 self.preortho,
                 self.postortho,
                 self.vecstype,
@@ -259,10 +257,11 @@ class mg_setup:
                     {
                         "hermitian": self.hermitian[lvl],
                         "savelinks": self.savelinks[lvl],
-                        "uselut": self.uselut[lvl],
                     },
                 )
-                self.mat[nc_lvl] = g.qcd.fermion.coarse(self.A[nc_lvl], {"level": nc_lvl})
+                self.mat[nc_lvl] = g.qcd.fermion.coarse(
+                    self.A[nc_lvl], {"level": nc_lvl}
+                )
 
                 if self.verbose:
                     g.message("%s done setting up next coarser operator" % pp)

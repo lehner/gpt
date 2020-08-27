@@ -26,7 +26,6 @@ def create_links(A, fmat, basis, params):
     # parameters
     hermitian = params["hermitian"]
     savelinks = params["savelinks"]
-    uselut = params["uselut"]
     assert not (hermitian and not savelinks)
 
     # verbosity

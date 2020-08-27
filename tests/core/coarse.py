@@ -72,38 +72,17 @@ for i in range(northo):
 
 # create coarse link fields
 A_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
-A_lut_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
 Asaved_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
-Asaved_lut_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
-g.coarse.create_links(
-    A_c, mat_f, basis_f, {"hermitian": False, "savelinks": False, "uselut": False}
-)
-g.coarse.create_links(
-    A_lut_c, mat_f, basis_f, {"hermitian": False, "savelinks": False, "uselut": True}
-)
-g.coarse.create_links(
-    Asaved_c, mat_f, basis_f, {"hermitian": False, "savelinks": True, "uselut": False}
-)
-g.coarse.create_links(
-    Asaved_lut_c,
-    mat_f,
-    basis_f,
-    {"hermitian": False, "savelinks": True, "uselut": True},
-)
+g.coarse.create_links(A_c, mat_f, basis_f, {"hermitian": False, "savelinks": False})
+g.coarse.create_links(Asaved_c, mat_f, basis_f, {"hermitian": False, "savelinks": True})
 
 # compare link fields
 for p in range(9):
-    err2 = g.norm2(A_c[p] - A_lut_c[p]) / g.norm2(A_c[p])
-    g.message(f"Relative deviation of A_lut_c[{p}] from A_c[{p}] = {err2:e}",)
-    assert err2 <= tol_links
     err2 = g.norm2(A_c[p] - Asaved_c[p]) / g.norm2(A_c[p])
     g.message(f"Relative deviation of Asaved_c[{p}] from A_c[{p}] = {err2:e}",)
     assert err2 <= tol_links
-    err2 = g.norm2(A_c[p] - Asaved_lut_c[p]) / g.norm2(A_c[p])
-    g.message(f"Relative deviation of Asaved_lut_c[{p}] from A_c[{p}] = {err2:e}",)
-    assert err2 <= tol_links
 g.message(f"Tests for links passed for all directions")
-del A_lut_c, Asaved_c, Asaved_lut_c
+del Asaved_c
 
 # create coarse operator from links
 mat_c = g.qcd.fermion.coarse(A_c, {"level": 0,},)
@@ -144,38 +123,19 @@ for i in range(northo):
 
 # create coarse coarse link fields
 A_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
-A_lut_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
 Asaved_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
-Asaved_lut_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
+g.coarse.create_links(A_cc, mat_c, basis_c, {"hermitian": False, "savelinks": False})
 g.coarse.create_links(
-    A_cc, mat_c, basis_c, {"hermitian": False, "savelinks": False, "uselut": False}
-)
-g.coarse.create_links(
-    A_lut_cc, mat_c, basis_c, {"hermitian": False, "savelinks": False, "uselut": True}
-)
-g.coarse.create_links(
-    Asaved_cc, mat_c, basis_c, {"hermitian": False, "savelinks": True, "uselut": False}
-)
-g.coarse.create_links(
-    Asaved_lut_cc,
-    mat_c,
-    basis_c,
-    {"hermitian": False, "savelinks": True, "uselut": True},
+    Asaved_cc, mat_c, basis_c, {"hermitian": False, "savelinks": True}
 )
 
 # compare link fields
 for p in range(9):
-    err2 = g.norm2(A_cc[p] - A_lut_cc[p]) / g.norm2(A_cc[p])
-    g.message(f"Relative deviation of A_lut_cc[{p}] from A_cc[{p}] = {err2:e}",)
-    assert err2 <= tol_links
     err2 = g.norm2(A_cc[p] - Asaved_cc[p]) / g.norm2(A_cc[p])
     g.message(f"Relative deviation of Asaved_cc[{p}] from A_cc[{p}] = {err2:e}",)
     assert err2 <= tol_links
-    err2 = g.norm2(A_cc[p] - Asaved_lut_cc[p]) / g.norm2(A_cc[p])
-    g.message(f"Relative deviation of Asaved_lut_cc[{p}] from A_cc[{p}] = {err2:e}",)
-    assert err2 <= tol_links
 g.message(f"Tests for links passed for all directions")
-del A_lut_cc, Asaved_cc, Asaved_lut_cc
+del Asaved_cc
 
 # create coarse operator from links
 mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
