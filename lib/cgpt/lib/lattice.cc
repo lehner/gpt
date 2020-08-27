@@ -104,8 +104,8 @@ EXPORT(lattice_export,{
       return NULL;
     }
 
-    ASSERT(PyArray_Check(pos));
-    ASSERT(PyArray_Check(tidx));
+    ASSERT(cgpt_PyArray_Check(pos));
+    ASSERT(cgpt_PyArray_Check(tidx));
     std::vector<cgpt_distribute::data_simd> data;
     std::vector<long> shape;
     GridBase* grid;
@@ -123,8 +123,8 @@ EXPORT(lattice_import,{
       return NULL;
     }
 
-    ASSERT(PyArray_Check(pos));
-    ASSERT(PyArray_Check(tidx));
+    ASSERT(cgpt_PyArray_Check(pos));
+    ASSERT(cgpt_PyArray_Check(tidx));
     std::vector<cgpt_distribute::data_simd> data;
     std::vector<long> shape;
     GridBase* grid;
@@ -142,8 +142,8 @@ EXPORT(lattice_import_view,{
       return NULL;
     }
 
-    ASSERT(PyArray_Check(pos_dst) && PyArray_Check(pos_src));
-    ASSERT(PyArray_Check(tidx_dst) && PyArray_Check(tidx_src));
+    ASSERT(cgpt_PyArray_Check(pos_dst) && cgpt_PyArray_Check(pos_src));
+    ASSERT(cgpt_PyArray_Check(tidx_dst) && cgpt_PyArray_Check(tidx_src));
     std::vector<cgpt_distribute::data_simd> data_dst, data_src;
     std::vector<long> shape_dst, shape_src;
     GridBase* grid_dst,* grid_src;

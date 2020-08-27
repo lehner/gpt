@@ -35,6 +35,7 @@ for f in \
     ${test_path}/core/split.py \
     ${test_path}/core/other_representations.py \
     ${test_path}/random/random_simple.py \
+    ${test_path}/create/create.py \
     ${test_path}/create/smear.py \
     ${test_path}/qcd/a2a.py \
     ${test_path}/qcd/fermion_operators.py \
@@ -44,7 +45,7 @@ for f in \
     ${test_path}/algorithms/arnoldi.py \
     ${test_path}/algorithms/solvers.py \
     ${test_path}/io/cevec.py \
-    ${test_path}/io/test_io.py \
+    ${test_path}/io/io.py \
     ${test_path}/io/qlat.py
 do
 

@@ -79,7 +79,7 @@ EXPORT(gamma_tensor_mul,{
       return NULL;
     }
     
-    ASSERT(PyArray_Check(_src));
+    ASSERT(cgpt_PyArray_Check(_src));
 
     PyArrayObject* src = (PyArrayObject*)_src;
 

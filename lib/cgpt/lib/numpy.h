@@ -125,7 +125,7 @@ void cgpt_numpy_import(sobj& dst,PyObject* _src) {
     t* c = (t*)&dst;
     c[0] = src;
   } else {
-    ASSERT(PyArray_Check(_src));
+    ASSERT(cgpt_PyArray_Check(_src));
     PyArrayObject* src = (PyArrayObject*)_src;
     if (!cgpt_numpy_import(dst,src,dim))
       ERR("Incompatible types");
@@ -134,7 +134,7 @@ void cgpt_numpy_import(sobj& dst,PyObject* _src) {
 
 static 
 void cgpt_numpy_query_matrix(PyObject* _Qt, int & dtype, int & Nm) {
-  ASSERT(PyArray_Check(_Qt));
+  ASSERT(cgpt_PyArray_Check(_Qt));
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
   ASSERT(PyArray_NDIM(Qt)==2);
   Nm = PyArray_DIM(Qt,0);

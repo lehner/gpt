@@ -17,10 +17,23 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
-import gpt.create.smear
+import numpy as np
 import gpt.create.sparse_grid
-import gpt.create.wall
 
-def point(src, pos):
-    src[:] = 0
-    src[tuple(pos)] = src.otype.identity()
+
+def zn(src, t, n, rng, orthogonal = 3):
+    nd = src.grid.nd
+    assert nd > orthogonal
+    position = [0]*nd
+    spacing = [1]*nd
+    position[orthogonal] = t
+    spacing[orthogonal] = np.iinfo(np.int32).max
+    return gpt.create.sparse_grid.zn(src, position, spacing, rng, n)
+
+
+def z2(src, t, rng, orthogonal = 3):
+    return zn(src, t, 2, rng, orthogonal)
+
+
+def z3(src, t, rng, orthogonal = 3):
+    return zn(src, t, 3, rng, orthogonal)
