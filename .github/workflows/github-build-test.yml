@@ -6,7 +6,7 @@ on:
 
 env:
   MAKE_BUILD_FLAGS: -j2
-  GRID_REPOSITORY_REF: feature/gpt-coarsenedmatrix
+  GRID_REPOSITORY_REF: feature/gpt
   CC: mpicc
   CXX: mpic++
   OMPI_CC: cc
@@ -107,7 +107,7 @@ jobs:
     - name: Clone Grid
       uses: actions/checkout@v2
       with:
-        repository: DanielRichtmann/Grid
+        repository: lehner/Grid
         ref: ${{ env.GRID_REPOSITORY_REF }}
         path: Grid
 
