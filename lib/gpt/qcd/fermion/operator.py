@@ -234,7 +234,7 @@ class coarse_operator(gpt.matrix_operator):
         # parameter for create_fermion_operator
         self.params = {
             "grid_c": self.A_grid.obj,
-            "hermitian": False,  # NOTE: doesn't matter what we pass to Grid since we need to do Mdag ourselves anyway
+            "make_hermitian": False,  # NOTE: doesn't matter what we pass to Grid since we need to do Mdag ourselves anyway
             "level": params["level"],
             "nbasis": self.A[0].otype.v_n1[0],  # for one v_obj instance
             # "A": [a.v_obj[0] for a in self.A],

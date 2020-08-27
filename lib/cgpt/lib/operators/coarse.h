@@ -35,7 +35,7 @@ template<typename vCoeff_t>
 cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
 
   auto grid_c = get_pointer<GridCartesian>(args,"grid_c"); // should actually take an 'F_', and an 'U_' grid
-  int hermitian = get_int(args,"hermitian");
+  int make_hermitian = get_int(args,"make_hermitian");
   int level = get_int(args,"level"); // 0 = fine, increases with coarser levels
   int nbasis = get_int(args,"nbasis");
 
@@ -43,7 +43,7 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
   if(n == nbasis) { \
     if(level == 0) { \
       typedef CoarsenedMatrix<typename FinestLevelFineVec<vCoeff_t>::type, iSinglet<vCoeff_t>, n> CMat; \
-      auto cm = new CMat(*grid_c, hermitian); \
+      auto cm = new CMat(*grid_c, make_hermitian); \
       for (int p=0; p<9; p++) { \
         auto l = get_pointer<cgpt_Lattice_base>(args,"A",p);\
         cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
@@ -51,7 +51,7 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
       return new cgpt_coarse_operator<CMat>(cm); \
     } else {                                                           \
       typedef CoarsenedMatrix<iVSinglet ## n<vCoeff_t>, iSinglet<vCoeff_t>, n> CMat; \
-      auto cm = new CMat(*grid_c, hermitian); \
+      auto cm = new CMat(*grid_c, make_hermitian); \
       for (int p=0; p<9; p++) { \
         auto l = get_pointer<cgpt_Lattice_base>(args,"A",p);\
         cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \

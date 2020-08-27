@@ -24,9 +24,9 @@ def create_links(A, fmat, basis, params):
     # NOTE: we expect the blocks in the basis vectors
     # to already be orthogonalized!
     # parameters
-    hermitian = params["hermitian"]
+    make_hermitian = params["make_hermitian"]
     savelinks = params["savelinks"]
-    assert not (hermitian and not savelinks)
+    assert not (make_hermitian and not savelinks)
 
     # verbosity
     verbose = gpt.default.is_verbose("coarsen")
@@ -125,7 +125,7 @@ def create_links(A, fmat, basis, params):
     # communicate opposite links
     if savelinks:
         t("comm")
-        comm_links(A, dirdisps_forward, hermitian)
+        comm_links(A, dirdisps_forward, make_hermitian)
 
     t()
 
@@ -133,14 +133,14 @@ def create_links(A, fmat, basis, params):
         gpt.message(t)
 
 
-def comm_links(A, dirdisps_forward, hermitian):
+def comm_links(A, dirdisps_forward, make_hermitian):
     assert type(A) == list
     assert len(A) == 2 * len(dirdisps_forward) + 1
     for p, (mu, fb) in enumerate(dirdisps_forward):
         p_other = p + 4
         shift_fb = fb * -1
         Atmp = gpt.copy(A[p])
-        if not hermitian:
+        if not make_hermitian:
             nbasis = A[0].otype.shape[0]
             assert nbasis % 2 == 0
             nb = nbasis // 2

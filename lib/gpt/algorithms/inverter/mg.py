@@ -68,7 +68,7 @@ class mg_setup:
         # other parameters
         self.northo = g.util.to_list(params["northo"], self.nlevel - 1)
         self.nbasis = g.util.to_list(params["nbasis"], self.nlevel - 1)
-        self.hermitian = g.util.to_list(params["hermitian"], self.nlevel - 1)
+        self.make_hermitian = g.util.to_list(params["make_hermitian"], self.nlevel - 1)
         self.savelinks = g.util.to_list(params["savelinks"], self.nlevel - 1)
         self.preortho = g.util.to_list(params["preortho"], self.nlevel - 1)
         self.postortho = g.util.to_list(params["postortho"], self.nlevel - 1)
@@ -100,7 +100,7 @@ class mg_setup:
             [
                 self.northo,
                 self.nbasis,
-                self.hermitian,
+                self.make_hermitian,
                 self.savelinks,
                 self.preortho,
                 self.postortho,
@@ -255,7 +255,7 @@ class mg_setup:
                     self.mat[lvl],
                     self.basis[lvl],
                     {
-                        "hermitian": self.hermitian[lvl],
+                        "make_hermitian": self.make_hermitian[lvl],
                         "savelinks": self.savelinks[lvl],
                     },
                 )
