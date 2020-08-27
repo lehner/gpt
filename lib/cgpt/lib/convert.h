@@ -16,7 +16,7 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#define cgpt_PyArray_Check(a) (PyArray_Check(a) && PyArray_IS_C_CONTIGUOUS(a))
+#define cgpt_PyArray_Check(a) (PyArray_Check(a) && PyArray_IS_C_CONTIGUOUS((PyArrayObject*)a))
 
 static void cgpt_convert(PyObject* in, int& out) {
   ASSERT(PyLong_Check(in));
