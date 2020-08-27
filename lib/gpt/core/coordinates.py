@@ -110,5 +110,4 @@ def make_mask(field, mask):
     assert field.otype == gpt.ot_singlet
 
     x = gpt.coordinates(field)
-    dtype = numpy.complex128 if field.grid.precision == gpt.double else numpy.complex64
-    field[x] = mask.astype(dtype).reshape((len(mask), 1))
+    field[x] = mask.astype(field.grid.precision.complex_dtype).reshape((len(mask), 1))
