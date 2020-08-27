@@ -15,7 +15,7 @@ inv = gpt.algorithms.inverter
 cg = inv.cg
 ```
 - Different parts of the code are expected to be stable to different degrees:
-  - Frequent changes to cgpt are expected and may be needed, e.g., due to performance improvements or enabling new hardware platforms.
+  - Frequent changes to cgpt are expected and may be needed, e.g., due to performance improvements or to enable new hardware platforms.
   - The implementation of functions in gpt may also change on a frequent basis to add new features or make the code faster or more maintainable.
   - The gpt interface should only change if needed.  The interface is defined implicitly through the [tests](https://github.com/lehner/gpt/blob/master/tests).  
   The preferred way to indicate that an interface design choice is intended to be stable is to add it to the tests.
