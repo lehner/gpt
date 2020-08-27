@@ -17,11 +17,18 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
-import gpt.create.smear
-import gpt.create.sparse_grid
-import gpt.create.wall
+import numpy as np
 
 
-def point(src, pos):
-    src[:] = 0
-    src[tuple(pos)] = src.otype.identity()
+def coordinates(src, position, spacing):
+    coor = gpt.coordinates(src)
+    return coor[np.sum(np.mod(coor - position, spacing), axis=1) == 0]
+
+
+def zn(src, position, spacing, rng, n):
+    singlet = gpt.lattice(src.grid, gpt.ot_singlet)
+    singlet.checkerboard(src.checkerboard())
+    singlet[:] = 0
+    rng.zn(singlet, n=n, pos=coordinates(src, position, spacing))
+    src @= src.otype.identity() * singlet
+    return src

@@ -126,7 +126,7 @@ EXPORT(grid_globalsum,{
       cgpt_convert(o,c);
       grid->GlobalSum(c);
       return PyLong_FromLong(c);
-    } else if (PyArray_Check(o)) {
+    } else if (cgpt_PyArray_Check(o)) {
       PyArrayObject* ao = (PyArrayObject*)o;
       int dt = PyArray_TYPE(ao);
       void* data = PyArray_DATA(ao);

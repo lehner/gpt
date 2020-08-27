@@ -80,6 +80,9 @@ class ot_singlet(ot_base):
         "ot_singlet": (lambda: ot_singlet, None),
     }
 
+    def identity():
+        return 1.0
+
 
 def singlet(grid):
     return gpt_object(grid, ot_singlet)
@@ -297,25 +300,30 @@ class ot_matrix_spin_color(ot_base):
         self.colortrace = (2, 3, lambda: ot_matrix_spin(spin_ndim))
         self.v_otype = ["ot_mspin%dcolor%d" % (spin_ndim, color_ndim)]
         self.mtab = {
-            self.__name__: (lambda: self, ([1, 3], [0, 2])),
+            self.__name__: (lambda: self, ([1, 3], [0, 2]), (0, 2, 1, 3)),
             "ot_vector_spin_color(%d,%d)"
             % (spin_ndim, color_ndim): (
                 lambda: ot_vector_spin_color(spin_ndim, color_ndim),
                 ([1, 3], [0, 1]),
             ),
-            "ot_matrix_spin(%d)"
-            % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
-            "ot_matrix_color(%d)"
-            % (color_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_matrix_spin(%d)" % (spin_ndim): (lambda: self, (1, 0), (0, 3, 1, 2)),
+            "ot_matrix_color(%d)" % (color_ndim): (lambda: self, (3, 0)),
             "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
-            "ot_matrix_spin(%d)"
-            % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
-            "ot_matrix_color(%d)"
-            % (color_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_matrix_spin(%d)" % (spin_ndim): (lambda: self, (1, 0)),
+            "ot_matrix_color(%d)" % (color_ndim): (lambda: self, (1, 2), (1, 2, 0, 3)),
             "ot_singlet": (lambda: self, None),
         }
+
+    def identity(self):
+        return matrix_spin_color(
+            numpy.multiply.outer(
+                numpy.identity(self.shape[0]), numpy.identity(self.shape[2])
+            ),
+            self.shape[0],
+            self.shape[2],
+        )
 
 
 def matrix_spin_color(grid, spin_ndim, color_ndim):
@@ -495,7 +503,7 @@ def str_to_otype(s):
             )
         )
     else:
-        root = a
+        root = a[0]
         args = ""
 
     # then map to type
