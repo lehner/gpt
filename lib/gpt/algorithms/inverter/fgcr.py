@@ -32,15 +32,15 @@ class fgcr:
         self.prec = params["prec"] if "prec" in params else None
         self.history = None
 
-    def update_psi(self, psi, alpha, beta, gamma, delta, p, i):
+    def update_psi(self, psi, alpha, beta, gamma, chi, p, i):
         # backward substitution
         for j in reversed(range(i + 1)):
-            delta[j] = (
-                alpha[j] - np.dot(beta[j, j + 1 : i + 1], delta[j + 1 : i + 1])
+            chi[j] = (
+                alpha[j] - np.dot(beta[j, j + 1 : i + 1], chi[j + 1 : i + 1])
             ) / gamma[j]
 
         for j in range(i + 1):
-            psi += delta[j] * p[j]
+            psi += chi[j] * p[j]
 
     def restart(self, mat, psi, mmpsi, src, r, p):
         if self.prec is not None:
@@ -77,12 +77,12 @@ class fgcr:
             alpha = np.empty((rlen), dtype_c)
             beta = np.empty((rlen, rlen), dtype_c)
             gamma = np.empty((rlen), dtype_r)
-            delta = np.empty((rlen), dtype_c)
+            chi = np.empty((rlen), dtype_c)
 
             # fields
             r, mmpsi = g.copy(src), g.copy(src)
             p = [g.lattice(src) for i in range(rlen)]
-            mmp = [g.lattice(src) for i in range(rlen)]
+            z = [g.lattice(src) for i in range(rlen)]
 
             # initial residual
             r2 = self.restart(mat, psi, mmpsi, src, r, p)
@@ -111,22 +111,22 @@ class fgcr:
                     p[i] @= r
 
                 t("mat")
-                mat(mmp[i], p[i])
+                mat(z[i], p[i])
 
                 t("ortho")
                 g.default.push_verbose("orthogonalize", False)
-                g.orthogonalize(mmp[i], mmp[0:i], beta[:, i])
+                g.orthogonalize(z[i], z[0:i], beta[:, i])
                 g.default.pop_verbose()
 
                 t("linalg")
-                ip, mmp2 = g.inner_product_norm2(mmp[i], r)
-                gamma[i] = mmp2 ** 0.5
+                ip, z2 = g.inner_product_norm2(z[i], r)
+                gamma[i] = z2 ** 0.5
                 if gamma[i] == 0.0:
                     g.message("fgcr: breakdown, gamma[%d] = 0" % (i))
                     break
-                mmp[i] /= gamma[i]
+                z[i] /= gamma[i]
                 alpha[i] = ip / gamma[i]
-                r2 = g.axpy_norm2(r, -alpha[i], mmp[i], r)
+                r2 = g.axpy_norm2(r, -alpha[i], z[i], r)
 
                 t("other")
                 self.history.append(r2)
@@ -138,7 +138,7 @@ class fgcr:
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     t("update_psi")
-                    self.update_psi(psi, alpha, beta, gamma, delta, p, i)
+                    self.update_psi(psi, alpha, beta, gamma, chi, p, i)
                     comp_res = r2 / ssq
 
                     if r2 <= rsq:
