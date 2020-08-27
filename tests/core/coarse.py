@@ -73,8 +73,12 @@ for i in range(northo):
 # create coarse link fields
 A_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
 Asaved_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
-g.coarse.create_links(A_c, mat_f, basis_f, {"make_hermitian": False, "savelinks": False})
-g.coarse.create_links(Asaved_c, mat_f, basis_f, {"make_hermitian": False, "savelinks": True})
+g.coarse.create_links(
+    A_c, mat_f, basis_f, {"make_hermitian": False, "savelinks": False}
+)
+g.coarse.create_links(
+    Asaved_c, mat_f, basis_f, {"make_hermitian": False, "savelinks": True}
+)
 
 # compare link fields
 for p in range(9):
@@ -124,7 +128,9 @@ for i in range(northo):
 # create coarse coarse link fields
 A_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
 Asaved_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
-g.coarse.create_links(A_cc, mat_c, basis_c, {"make_hermitian": False, "savelinks": False})
+g.coarse.create_links(
+    A_cc, mat_c, basis_c, {"make_hermitian": False, "savelinks": False}
+)
 g.coarse.create_links(
     Asaved_cc, mat_c, basis_c, {"make_hermitian": False, "savelinks": True}
 )
