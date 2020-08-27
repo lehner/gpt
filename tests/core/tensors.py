@@ -202,12 +202,12 @@ for dti in [cv, cm, vsc, msc, vc, mc]:
 
 # test numpy versus lattice tensor multiplication
 for a_type in [
-        g.ot_matrix_spin_color(4,3),
-        g.ot_vector_spin_color(4,3),
-        g.ot_matrix_spin(4),
-        g.ot_vector_spin(4),
-        g.ot_matrix_color(3),
-        g.ot_vector_color(3),
+    g.ot_matrix_spin_color(4, 3),
+    g.ot_vector_spin_color(4, 3),
+    g.ot_matrix_spin(4),
+    g.ot_vector_spin(4),
+    g.ot_matrix_color(3),
+    g.ot_vector_color(3),
 ]:
     # mtab
     for e in a_type.mtab:
@@ -215,13 +215,17 @@ for a_type in [
             b_type = g.str_to_otype(e)
             a = rng.cnormal(g.lattice(grid, a_type))
             b = rng.cnormal(g.lattice(grid, b_type))
-            mul_lat = g(a*b)[0,0,0,0]
-            mul_np = a[0,0,0,0] * b[0,0,0,0]
+            mul_lat = g(a * b)[0, 0, 0, 0]
+            mul_np = a[0, 0, 0, 0] * b[0, 0, 0, 0]
             eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
             g.message(f"Test {a_type.__name__} * {b_type.__name__}: {eps2}")
             if eps2 > 1e-12:
                 g.message(mul_lat)
-                g.message(np.tensordot(a[0,0,0,0].array, b[0,0,0,0].array, axes=a_type.mtab[e][1]).shape)
+                g.message(
+                    np.tensordot(
+                        a[0, 0, 0, 0].array, b[0, 0, 0, 0].array, axes=a_type.mtab[e][1]
+                    ).shape
+                )
                 assert eps2 < 1e-12
 
     # rmtab
@@ -230,13 +234,23 @@ for a_type in [
             b_type = g.str_to_otype(e)
             a = rng.cnormal(g.lattice(grid, a_type))
             b = rng.cnormal(g.lattice(grid, b_type))
-            mul_lat = g(b*a)[0,0,0,0]
-            mul_np = b[0,0,0,0] * a[0,0,0,0]
+            mul_lat = g(b * a)[0, 0, 0, 0]
+            mul_np = b[0, 0, 0, 0] * a[0, 0, 0, 0]
             eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
             g.message(f"Test {b_type.__name__} * {a_type.__name__}: {eps2}")
             if eps2 > 1e-12:
-                g.message(mul_lat[3,2,1,0])
-                g.message(mul_np[3,2,1,0], mul_np[2,3,1,0], mul_np[2,3,0,1], mul_np[3,2,0,1])
-                g.message(np.tensordot(b[0,0,0,0].array, a[0,0,0,0].array, axes=a_type.rmtab[e][1]).shape)
+                g.message(mul_lat[3, 2, 1, 0])
+                g.message(
+                    mul_np[3, 2, 1, 0],
+                    mul_np[2, 3, 1, 0],
+                    mul_np[2, 3, 0, 1],
+                    mul_np[3, 2, 0, 1],
+                )
+                g.message(
+                    np.tensordot(
+                        b[0, 0, 0, 0].array,
+                        a[0, 0, 0, 0].array,
+                        axes=a_type.rmtab[e][1],
+                    ).shape
+                )
                 assert eps2 < 1e-12
-

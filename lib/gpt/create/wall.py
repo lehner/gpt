@@ -21,19 +21,19 @@ import numpy as np
 import gpt.create.sparse_grid
 
 
-def zn(src, t, n, rng, orthogonal = 3):
+def zn(src, t, n, rng, orthogonal=3):
     nd = src.grid.nd
     assert nd > orthogonal
-    position = [0]*nd
-    spacing = [1]*nd
+    position = [0] * nd
+    spacing = [1] * nd
     position[orthogonal] = t
     spacing[orthogonal] = np.iinfo(np.int32).max
     return gpt.create.sparse_grid.zn(src, position, spacing, rng, n)
 
 
-def z2(src, t, rng, orthogonal = 3):
+def z2(src, t, rng, orthogonal=3):
     return zn(src, t, 2, rng, orthogonal)
 
 
-def z3(src, t, rng, orthogonal = 3):
+def z3(src, t, rng, orthogonal=3):
     return zn(src, t, 3, rng, orthogonal)

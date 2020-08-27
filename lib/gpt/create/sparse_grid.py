@@ -19,15 +19,16 @@
 import gpt
 import numpy as np
 
+
 def coordinates(src, position, spacing):
     coor = gpt.coordinates(src)
-    return coor[np.sum(np.mod(coor - position,spacing), axis=1) == 0]
+    return coor[np.sum(np.mod(coor - position, spacing), axis=1) == 0]
 
 
 def zn(src, position, spacing, rng, n):
     singlet = gpt.lattice(src.grid, gpt.ot_singlet)
     singlet.checkerboard(src.checkerboard())
     singlet[:] = 0
-    rng.zn(singlet, n = n, pos = coordinates(src,position,spacing))
+    rng.zn(singlet, n=n, pos=coordinates(src, position, spacing))
     src @= src.otype.identity() * singlet
     return src

@@ -306,22 +306,24 @@ class ot_matrix_spin_color(ot_base):
                 lambda: ot_vector_spin_color(spin_ndim, color_ndim),
                 ([1, 3], [0, 1]),
             ),
-            "ot_matrix_spin(%d)"
-            % (spin_ndim): (lambda: self, (1, 0), (0, 3, 1, 2)),
-            "ot_matrix_color(%d)"
-            % (color_ndim): (lambda: self, (3, 0)),
+            "ot_matrix_spin(%d)" % (spin_ndim): (lambda: self, (1, 0), (0, 3, 1, 2)),
+            "ot_matrix_color(%d)" % (color_ndim): (lambda: self, (3, 0)),
             "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
-            "ot_matrix_spin(%d)"
-            % (spin_ndim): (lambda: self, (1, 0)),
-            "ot_matrix_color(%d)"
-            % (color_ndim): (lambda: self, (1, 2), (1,2,0,3)),
+            "ot_matrix_spin(%d)" % (spin_ndim): (lambda: self, (1, 0)),
+            "ot_matrix_color(%d)" % (color_ndim): (lambda: self, (1, 2), (1, 2, 0, 3)),
             "ot_singlet": (lambda: self, None),
         }
 
     def identity(self):
-        return matrix_spin_color(numpy.multiply.outer(numpy.identity(self.shape[0]), numpy.identity(self.shape[2])), self.shape[0], self.shape[2])
+        return matrix_spin_color(
+            numpy.multiply.outer(
+                numpy.identity(self.shape[0]), numpy.identity(self.shape[2])
+            ),
+            self.shape[0],
+            self.shape[2],
+        )
 
 
 def matrix_spin_color(grid, spin_ndim, color_ndim):
