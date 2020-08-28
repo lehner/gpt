@@ -59,4 +59,4 @@ def mobius(U, params):
 @gpt.params_convention()
 def coarse(A, params):
     params = copy.deepcopy(params)  # save current parameters
-    return coarse_operator(A, params, None, otype=A[0].otype.vector_type)
+    return coarse_operator(A, params, otype=A[0].otype.vector_type)

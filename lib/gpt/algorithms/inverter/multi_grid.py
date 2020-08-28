@@ -38,7 +38,7 @@ def get_slv_history(slv):
         return 0, 0.0
 
 
-class mg_setup:
+class setup:
     def __init__(self, mat_f, params):
         # save parameters
         self.params = params
@@ -77,7 +77,7 @@ class mg_setup:
         self.solver = g.util.to_list(params["solver"], self.nlevel - 1)
 
         # verbosity
-        self.verbose = g.default.is_verbose("mg_setup")
+        self.verbose = g.default.is_verbose("multi_grid_setup")
 
         # print prefix
         self.print_prefix = ["mg_setup: level %d:" % i for i in range(self.nlevel)]
@@ -271,7 +271,7 @@ class mg_setup:
                 g.message("%s done with entire setup" % pp)
 
 
-class mg_prec:
+class inverter:
     def __init__(self, setup, params):
         # save input
         self.setup = setup
@@ -287,7 +287,7 @@ class mg_prec:
         self.coarsestsolver = par["coarsestsolver"]
 
         # verbosity
-        self.verbose = g.default.is_verbose("mg")
+        self.verbose = g.default.is_verbose("multi_grid_inverter")
 
         # print prefix
         self.print_prefix = ["mg: level %d:" % i for i in range(s.nlevel)]

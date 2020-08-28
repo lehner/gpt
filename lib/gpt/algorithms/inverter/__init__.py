@@ -23,8 +23,8 @@ from gpt.algorithms.inverter.bicgstab import bicgstab
 from gpt.algorithms.inverter.fgcr import fgcr
 from gpt.algorithms.inverter.fgmres import fgmres
 from gpt.algorithms.inverter.mr import mr
-from gpt.algorithms.inverter.mg import mg_setup, mg_prec
 from gpt.algorithms.inverter.defect_correcting import defect_correcting
 from gpt.algorithms.inverter.mixed_precision import mixed_precision
 from gpt.algorithms.inverter.split import split
 from gpt.algorithms.inverter.preconditioned import preconditioned
+import gpt.algorithms.inverter.multi_grid

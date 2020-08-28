@@ -49,6 +49,7 @@ src[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 
 # abbreviations
 i = g.algorithms.inverter
+mg = i.multi_grid
 p = g.qcd.fermion.preconditioner
 
 # NOTE: mg params structure
@@ -56,7 +57,7 @@ p = g.qcd.fermion.preconditioner
 # - scalar value (= not a list) -> broadcast parameter to every level
 
 # mg setups
-mg_setup_2lvl = i.mg_setup(
+mg_setup_2lvl = mg.setup(
     w,
     {
         "block": [[2, 2, 2, 2]],
@@ -73,7 +74,7 @@ mg_setup_2lvl = i.mg_setup(
         "distribution": rng.cnormal,
     },
 )
-mg_setup_3lvl = i.mg_setup(
+mg_setup_3lvl = mg.setup(
     w,
     {
         "block": [[2, 2, 2, 2], [1, 2, 2, 2]],
@@ -90,7 +91,7 @@ mg_setup_3lvl = i.mg_setup(
         "distribution": rng.cnormal,
     },
 )
-mg_setup_4lvl = i.mg_setup(
+mg_setup_4lvl = mg.setup(
     w,
     {
         "block": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 1, 2, 2]],
@@ -124,7 +125,7 @@ coarsestsolver = i.fgmres(
 )
 
 # mg solver/preconditioner objects
-mg_2lvl_vcycle = i.mg_prec(
+mg_2lvl_vcycle = mg.inverter(
     mg_setup_2lvl,
     {
         "coarsestsolver": coarsestsolver,
@@ -132,7 +133,7 @@ mg_2lvl_vcycle = i.mg_prec(
         "wrappersolver": None,
     },
 )
-mg_2lvl_kcycle = i.mg_prec(
+mg_2lvl_kcycle = mg.inverter(
     mg_setup_2lvl,
     {
         "coarsestsolver": coarsestsolver,
@@ -140,7 +141,7 @@ mg_2lvl_kcycle = i.mg_prec(
         "wrappersolver": wrappersolver,
     },
 )
-mg_3lvl_vcycle = i.mg_prec(
+mg_3lvl_vcycle = mg.inverter(
     mg_setup_3lvl,
     {
         "coarsestsolver": coarsestsolver,
@@ -148,7 +149,7 @@ mg_3lvl_vcycle = i.mg_prec(
         "wrappersolver": None,
     },
 )
-mg_3lvl_kcycle = i.mg_prec(
+mg_3lvl_kcycle = mg.inverter(
     mg_setup_3lvl,
     {
         "coarsestsolver": coarsestsolver,
@@ -156,7 +157,7 @@ mg_3lvl_kcycle = i.mg_prec(
         "wrappersolver": wrappersolver,
     },
 )
-mg_4lvl_vcycle = i.mg_prec(
+mg_4lvl_vcycle = mg.inverter(
     mg_setup_4lvl,
     {
         "coarsestsolver": coarsestsolver,
@@ -164,7 +165,7 @@ mg_4lvl_vcycle = i.mg_prec(
         "wrappersolver": None,
     },
 )
-mg_4lvl_kcycle = i.mg_prec(
+mg_4lvl_kcycle = mg.inverter(
     mg_setup_4lvl,
     {
         "coarsestsolver": coarsestsolver,
