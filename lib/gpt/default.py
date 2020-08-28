@@ -68,7 +68,7 @@ get = get_single
 max_io_nodes = get_int("--max_io_nodes", 256)
 
 # verbosity
-verbose_default = "io,bicgstab,cg,dci,fgcr,fgmres,mr,irl,repository,arnoldi,power_iteration,checkpointer,deflate,block_operator,random,split"
+verbose_default = "io,bicgstab,cg,dci,fgcr,fgmres,mr,irl,repository,arnoldi,power_iteration,checkpointer,deflate,block_operator,random,split,mg_setup,mg_prec,coarsen,orthogonalize"
 verbose_additional = "eval,merge"
 verbose = set()
 verbose_candidates = ",".join(

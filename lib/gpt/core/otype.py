@@ -428,6 +428,15 @@ class ot_vsinglet(ot_base):
         self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
+        self.itab = {
+            self.__name__: (lambda: ot_singlet, (0, 0)),
+        }
+
+    def distribute(mat, dst, src, zero_lhs):
+        # TODO does this need revisiting?
+        if zero_lhs:
+            dst[:] = 0
+        mat(dst, src)
 
 
 def vsinglet(grid, n):

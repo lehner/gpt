@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Daniel Richtmann
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,16 +19,18 @@
 #
 import gpt as g
 import numpy as np
-from time import time
 
 
 class fgmres:
-    @g.params_convention(eps=1e-15, maxiter=1000000)
+    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True)
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
+        self.checkres = params["checkres"]
+        self.prec = params["prec"] if "prec" in params else None
+        self.history = None
 
     def qr_update(self, s, c, H, gamma, i):
         # apply previous givens to matrix
@@ -58,17 +60,20 @@ class fgmres:
         for j in range(i + 1):
             psi += y[j] * V[j]
 
-    def restart(self, mat, psi, mmpsi, src, r, V, gamma):
+    def restart(self, mat, psi, mmpsi, src, r, V, Z, gamma):
         r2 = self.calc_res(mat, psi, mmpsi, src, r)
         gamma[0] = r2 ** 0.5
         V[0] @= r / gamma[0]
+        if Z is not None:
+            for z in Z:
+                z[:] = 0.0
         return r2
 
     def calc_res(self, mat, psi, mmpsi, src, r):
         mat(mmpsi, psi)
         return g.axpy_norm2(r, -1.0, mmpsi, src)
 
-    def __call__(self, mat, prec=None):
+    def __call__(self, mat):
 
         otype, grid, cb = None, None, None
         if type(mat) == g.matrix_operator:
@@ -77,18 +82,19 @@ class fgmres:
             # remove wrapper for performance benefits
 
         def inv(psi, src):
+            self.history = []
             # verbosity
-            self.verbose = g.default.is_verbose("fgmres")
-            checkres = True  # for now
+            verbose = g.default.is_verbose("fgmres")
 
-            # total time
-            tt0 = time()
+            # timing
+            t = g.timer("fgmres")
+            t("setup")
 
             # parameters
             rlen = self.restartlen
 
             # tensors
-            dtype = np.complex128
+            dtype = g.double.complex_dtype
             H = np.zeros((rlen + 1, rlen), dtype)
             c = np.zeros((rlen + 1), dtype)
             s = np.zeros((rlen + 1), dtype)
@@ -101,15 +107,23 @@ class fgmres:
                 g.copy(src),
             )
             V = [g.lattice(src) for i in range(rlen + 1)]
-            if prec is not None:  # save vectors if unpreconditioned
-                Z = [g.lattice(src) for i in range(rlen + 1)]
+            Z = (
+                [g.lattice(src) for i in range(rlen + 1)]
+                if self.prec is not None
+                else None
+            )  # save vectors if unpreconditioned
 
-            # residual
+            # initial residual
+            r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
+
+            # source
             ssq = g.norm2(src)
-            rsq = self.eps ** 2.0 * ssq
+            if ssq == 0.0:
+                assert r2 != 0.0  # need either source or psi to not be zero
+                ssq = r2
 
-            # initial values
-            r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
+            # target residual
+            rsq = self.eps ** 2.0 * ssq
 
             for k in range(self.maxiter):
                 # iteration within current krylov space
@@ -119,77 +133,95 @@ class fgmres:
                 reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
-                t0 = time()
-                if prec is not None:
-                    prec(V[i], Z[i])
-                t1 = time()
+                t("prec")
+                if self.prec is not None:
+                    self.prec(mat)(Z[i], V[i])
 
-                t2 = time()
-                if prec is not None:
+                t("mat")
+                if self.prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
-                t3 = time()
 
-                t4 = time()
+                t("ortho")
+                g.default.push_verbose("orthogonalize", False)
                 g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i])
-                t5 = time()
+                g.default.pop_verbose()
 
-                t6 = time()
+                t("linalg")
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
-
                 if H[i + 1, i] == 0.0:
-                    g.message("fgmres breakdown, H[%d, %d] = 0" % (i + 1, i))
+                    g.message("fgmres: breakdown, H[%d, %d] = 0" % (i + 1, i))
                     break
-
                 V[i + 1] /= H[i + 1, i]
-                t7 = time()
 
-                t8 = time()
+                t("qr")
                 self.qr_update(s, c, H, gamma, i)
-                r2 = np.absolute(gamma[i + 1]) ** 2
-                t9 = time()
 
-                if self.verbose:
+                t("other")
+                r2 = np.absolute(gamma[i + 1]) ** 2
+                self.history.append(r2)
+
+                if verbose:
                     g.message(
-                        "Timing[s]: Prec = %g, Matrix = %g, Orthog = %g, RestArnoldi = %g, QR = %g"
-                        % (t1 - t0, t3 - t2, t5 - t4, t7 - t6, t9 - t8)
+                        "fgmres: res^2[ %d, %d ] = %g, target = %g" % (k, i, r2, rsq)
                     )
-                    g.message("res^2[ %d, %d ] = %g" % (k, i, r2))
 
                 if r2 <= rsq or need_restart or reached_maxiter:
-                    if prec is not None:
+                    t("update_psi")
+                    if self.prec is not None:
                         self.update_psi(psi, gamma, H, y, Z, i)
                     else:
                         self.update_psi(psi, gamma, H, y, V, i)
+                    comp_res = r2 / ssq
 
                     if r2 <= rsq:
-                        if self.verbose:
-                            tt1 = time()
-                            g.message("Converged in %g s" % (tt1 - tt0))
-                        if checkres:
-                            res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
+                        if verbose:
+                            t()
                             g.message(
-                                "Computed res = %g, true res = %g, target = %g"
-                                % (r2 ** 0.5, res ** 0.5, self.eps)
+                                "fgmres: converged in %d iterations, took %g s"
+                                % (k + 1, t.dt["total"])
                             )
+                            g.message(t)
+                            if self.checkres:
+                                res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
+                                g.message(
+                                    "fgmres: computed res = %g, true res = %g, target = %g"
+                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
+                                )
+                            else:
+                                g.message(
+                                    "fgmres: computed res = %g, target = %g"
+                                    % (comp_res ** 0.5, self.eps)
+                                )
                         break
 
                     if reached_maxiter:
-                        if self.verbose:
-                            tt1 = time()
-                            g.message("Did NOT converge in %g s" % (tt1 - tt0))
-                            if checkres:
+                        if verbose:
+                            t()
+                            g.message(
+                                "fgmres: did NOT converge in %d iterations, took %g s"
+                                % (k + 1, t.dt["total"])
+                            )
+                            g.message(t)
+                            if self.checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 g.message(
-                                    "Computed res = %g, true res = %g, target = %g"
-                                    % (r2 ** 0.5, res ** 0.5, self.eps)
+                                    "fgmres: computed res = %g, true res = %g, target = %g"
+                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
+                            else:
+                                g.message(
+                                    "fgmres: computed res = %g, target = %g"
+                                    % (comp_res ** 0.5, self.eps)
+                                )
+                        break
 
                     if need_restart:
-                        r2 = self.restart(mat, psi, mmpsi, src, r, V, gamma)
-                        if self.verbose:
-                            g.message("Performed restart")
+                        t("restart")
+                        r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
+                        if verbose:
+                            g.message("fgmres: performed restart")
 
         return g.matrix_operator(
             mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid, cb=cb

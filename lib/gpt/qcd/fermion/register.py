@@ -27,3 +27,6 @@ def register(reg, op):
     reg.DhopDag = lambda dst, src: op.apply_unary_operator(4001, dst, src)
     reg.DhopEO = lambda dst, src: op.apply_unary_operator(3002, dst, src)
     reg.DhopEODag = lambda dst, src: op.apply_unary_operator(4002, dst, src)
+    reg.Mdir = lambda dst, src, dir, disp: op.apply_dirdisp_operator(
+        5001, dst, src, dir, disp
+    )

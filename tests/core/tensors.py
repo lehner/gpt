@@ -31,6 +31,17 @@ assert abs(inner_comp - g.rank_inner_product(lhs, rhs)) < 1e-14
 # be implemented for all vectors
 # cwise = lhs * rhs
 
+# inner product for vcomplex
+lhs = g.vcomplex([1.0] * 10 + [2] * 10 + [3] * 10 + [4] * 10, 40)
+rhs = g.vcomplex([5.0] * 10 + [6] * 10 + [7] * 10 + [8] * 10, 40)
+
+inner = g.adj(lhs) * rhs
+inner_comp = 0.0
+for i in range(40):
+    inner_comp += lhs.array.conjugate()[i] * rhs.array[i]
+assert abs(inner_comp - inner) < 1e-14
+assert inner.real == 700.0
+
 # demonstrate slicing of internal indices
 vc = g.vcomplex(grid, 30)
 vc[0, 0, 0, 0, 0] = 1

@@ -13,7 +13,7 @@ fine_grid = g.grid([16, 8, 8, 16], g.single)
 coarse_grid = g.grid([8, 4, 4, 8], fine_grid.precision)
 
 # data types
-def msc():
+def vsc():
     return g.vspincolor(fine_grid)
 
 
@@ -26,7 +26,7 @@ n = 30
 nvec = 2
 res = None
 tmpf_prev = None
-for dtype in [msc, vc12]:
+for dtype in [vsc, vc12]:
     g.message(f"Data type {dtype.__name__}")
     basis = [dtype() for i in range(n)]
     rng = g.random("block_seed_string_13")

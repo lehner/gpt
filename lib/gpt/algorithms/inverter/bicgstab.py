@@ -19,7 +19,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from time import time
 
 
 class bicgstab:
@@ -28,6 +27,7 @@ class bicgstab:
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
+        self.history = None
 
     def __call__(self, mat):
 
@@ -38,8 +38,11 @@ class bicgstab:
             # remove wrapper for performance benefits
 
         def inv(psi, src):
+            self.history = []
             verbose = g.default.is_verbose("bicgstab")
-            t0 = time()
+
+            t = g.timer("bicgstab")
+            t("setup")
 
             r, rhat, p, s = g.copy(src), g.copy(src), g.copy(src), g.copy(src)
             mmpsi, mmp, mms = g.copy(src), g.copy(src), g.copy(src)
@@ -53,41 +56,60 @@ class bicgstab:
             p @= r
             mmp @= r
 
+            r2 = g.norm2(r)
             ssq = g.norm2(src)
+            if ssq == 0.0:
+                assert r2 != 0.0  # need either source or psi to not be zero
+                ssq = r2
             rsq = self.eps ** 2.0 * ssq
 
             for k in range(self.maxiter):
+                t("inner")
                 rhoprev = rho
                 rho = g.inner_product(rhat, r).real
 
+                t("linearcomb")
                 beta = (rho / rhoprev) * (alpha / omega)
-
                 p @= r + beta * p - beta * omega * mmp
 
+                t("mat")
                 mat(mmp, p)
+
+                t("inner")
                 alpha = rho / g.inner_product(rhat, mmp).real
 
+                t("linearcomb")
                 s @= r - alpha * mmp
 
+                t("mat")
                 mat(mms, s)
-                ip, mms2 = g.inner_product_norm2(mms, s)
 
+                t("inner")
+                ip, mms2 = g.inner_product_norm2(mms, s)
                 if mms2 == 0.0:
                     continue
 
+                t("linearcomb")
                 omega = ip.real / mms2
-
                 psi += alpha * p + omega * s
 
+                t("axpy_norm")
                 r2 = g.axpy_norm2(r, -omega, mms, s)
 
+                t("other")
+                self.history.append(r2)
+
                 if verbose:
-                    g.message("res^2[ %d ] = %g" % (k, r2))
+                    g.message("bicgstab: res^2[ %d ] = %g, target = %g" % (k, r2, rsq))
 
                 if r2 <= rsq:
                     if verbose:
-                        t1 = time()
-                        g.message("Converged in %g s" % (t1 - t0))
+                        t()
+                        g.message(
+                            "bicgstab: converged in %d iterations, took %g s"
+                            % (k + 1, t.dt["total"])
+                        )
+                        g.message(t)
                     break
 
         return g.matrix_operator(

@@ -1,6 +1,7 @@
 /*
     GPT - Grid Python Toolkit
     Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -33,6 +34,10 @@ public:
     return cgpt_fermion_operator_unary<T>(*op,opcode,in,out);
   }
 
+  virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
+    return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
+  }
+
   virtual void update(PyObject* args) {
     GaugeField U(op->GaugeGrid());
     typedef typename GaugeField::vector_type vCoeff_t;
@@ -44,4 +49,36 @@ public:
     op->ImportGauge(U);
   }
 
+};
+
+template<typename T>
+class cgpt_coarse_operator : public cgpt_fermion_operator_base {
+public:
+  T* op;
+  typedef typename T::CoarseMatrix CoarseLinkField;
+
+  cgpt_coarse_operator(T* _op) : op(_op) {
+  }
+
+  virtual ~cgpt_coarse_operator() {
+    delete op;
+  }
+
+  virtual RealD unary(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out) {
+    return cgpt_fermion_operator_unary<T>(*op,opcode,in,out);
+  }
+
+  virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
+    return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
+  }
+
+  virtual void update(PyObject* args) {
+    typedef typename CoarseLinkField::vector_type vCoeff_t;
+    const int nbasis = GridTypeMapper<typename T::CoarseVector::vector_object>::count;
+
+    for(int p = 0; p < 9; p++) {
+      auto l = get_pointer<cgpt_Lattice_base>(args, "A", p);
+      op->A[p] = compatible<iMatrix<iSinglet<vCoeff_t>,nbasis>>(l)->l;
+    }
+  }
 };

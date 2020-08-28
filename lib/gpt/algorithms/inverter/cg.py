@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -39,7 +40,8 @@ class cg:
             assert src != psi
             self.history = []
             verbose = g.default.is_verbose("cg")
-            t0 = g.time()
+            t = g.timer("cg")
+            t("setup")
             p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
             mat(mmp, psi)  # in, out
             d = g.inner_product(psi, mmp).real
@@ -49,24 +51,36 @@ class cg:
             a = g.norm2(p)
             cp = a
             ssq = g.norm2(src)
+            if ssq == 0.0:
+                assert a != 0.0  # need either source or psi to not be zero
+                ssq = a
             rsq = self.eps ** 2.0 * ssq
             for k in range(1, self.maxiter + 1):
                 c = cp
+                t("mat")
                 mat(mmp, p)
+                t("inner")
                 dc = g.inner_product(p, mmp)
                 d = dc.real
                 a = c / d
+                t("axpy_norm")
                 cp = g.axpy_norm2(r, -a, mmp, r)
+                t("linearcomb")
                 b = cp / c
                 psi += a * p
                 p @= b * p + r
+                t("other")
                 self.history.append(cp)
                 if verbose:
-                    g.message("res^2[ %d ] = %g" % (k, cp))
+                    g.message("cg: res^2[ %d ] = %g, target = %g" % (k, cp, rsq))
                 if cp <= rsq:
                     if verbose:
-                        t1 = g.time()
-                        g.message("Converged in %g s" % (t1 - t0))
+                        t()
+                        g.message(
+                            "cg: converged in %d iterations, took %g s"
+                            % (k, t.dt["total"])
+                        )
+                        g.message(t)
                     break
 
         return g.matrix_operator(

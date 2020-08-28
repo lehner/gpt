@@ -175,7 +175,7 @@ class matrix_operator(factor):
             return self
         assert 0
 
-    def __call__(self, first, second=None):
+    def __call__(self, first, second=None, *extra):
         assert self.mat is not None
 
         return_list = type(first) == list
@@ -213,15 +213,15 @@ class matrix_operator(factor):
             mat = self.mat
         else:
 
-            def mat(dst, src):
+            def mat(dst, src, *extra):
                 assert len(dst) == len(src)
                 for idx in range(len(dst)):
-                    self.mat(dst[idx], src[idx])
+                    self.mat(dst[idx], src[idx], *extra)
 
         if type_match:
-            mat(dst, src)
+            mat(dst, src, *extra)
         else:
-            self.otype[1].distribute(mat, dst, src, zero_lhs=self.zero[0])
+            self.otype[1].distribute(mat, dst, src, *extra, zero_lhs=self.zero[0])
 
         if not return_list:
             return gpt.util.from_list(dst)
