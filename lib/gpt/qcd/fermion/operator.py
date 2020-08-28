@@ -345,7 +345,7 @@ class coarse_operator(gpt.matrix_operator):
 
     def _G5M(self, dst, src):
         self(dst, src)
-        g5 = gpt.g5c(dst)
+        g5 = gpt.coarse.gamma5(dst)
         dst @= g5 * dst
 
     def propagator(self, solver):

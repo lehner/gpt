@@ -60,7 +60,7 @@ basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
 rng.cnormal(basis_f)
 
 # split fine basis into chiral halfs
-g.split_chiral(basis_f)
+g.coarse.split_chiral(basis_f)
 
 # setup fine block map map
 bm_f = g.block.map(grid_c, basis_f)
@@ -115,7 +115,7 @@ basis_c = [g.vcomplex(grid_c, nbasis_f) for __ in range(nbasis_c)]
 rng.cnormal(basis_c)
 
 # split coarse basis into chiral halfs
-g.split_chiral(basis_c)
+g.coarse.split_chiral(basis_c)
 
 # setup coarse block map map
 bm_c = g.block.map(grid_cc, basis_c)

@@ -151,3 +151,36 @@ def comm_links(A, dirdisps_forward, make_hermitian):
 
 def recreate_links(A, fmat, basis):
     create_links(A, fmat, basis)
+
+
+def gamma5(src):
+    if hasattr(src.otype, "fundamental"):
+        nbasis = src.otype.shape[0]
+        assert nbasis % 2 == 0
+        nb = nbasis // 2
+        return gpt.vcomplex([1] * nb + [-1] * nb, nbasis)
+    else:
+        return gpt.gamma[5]
+
+
+def split_chiral(basis, factor=None):
+    nbasis = len(basis)
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+    factor = 0.5 if factor is None else factor
+    g5 = gamma5(basis[0])
+    tmp = gpt.lattice(basis[0])
+    for n in range(nb):
+        tmp @= g5 * basis[n]
+        basis[n + nb] @= (basis[n] - tmp) * factor
+        basis[n] @= (basis[n] + tmp) * factor
+
+
+def unsplit_chiral(basis, factor=None):
+    nbasis = len(basis)
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+    factor = 0.5 if factor is None else factor
+    rev_factor = 0.5 / factor
+    for n in range(nb):
+        basis[n] @= (basis[n] + basis[n + nb]) * rev_factor

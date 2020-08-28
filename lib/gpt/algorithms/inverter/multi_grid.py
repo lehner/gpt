@@ -232,7 +232,7 @@ class setup:
 
                 # chiral doubling
                 t("chiral_split")
-                g.split_chiral(basis)
+                g.coarse.split_chiral(basis)
 
                 if self.verbose:
                     g.message("%s done doing chiral doubling" % pp)

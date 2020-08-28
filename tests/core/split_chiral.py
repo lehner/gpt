@@ -36,8 +36,8 @@ def run_test(basis_split, basis_ref):
         for i in range(len(basis_ref)):
             basis_split[i] = g.copy(basis_ref[i])
 
-        g.split_chiral(basis_split, factor)
-        g.unsplit_chiral(basis_split, factor)
+        g.coarse.split_chiral(basis_split, factor)
+        g.coarse.unsplit_chiral(basis_split, factor)
 
         typename = basis_split[0].otype.__name__
         for i in range(len(basis_ref)):
