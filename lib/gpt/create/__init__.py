@@ -17,9 +17,11 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
-import numpy as np
+import gpt.create.smear
+import gpt.create.sparse_grid
+import gpt.create.wall
 
 
 def point(src, pos):
     src[:] = 0
-    src[tuple(pos)] = gpt.mspincolor(np.multiply.outer(np.identity(4), np.identity(3)))
+    src[tuple(pos)] = src.otype.identity()

@@ -1,0 +1,2519 @@
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 2.134501 s : Grid Default Decomposition patterns
+Grid : Message : 2.134505 s : 	OpenMP threads : 160
+Grid : Message : 2.134516 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 2.134530 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 2.134535 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 2.134539 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 2.134544 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 2.206906 s : Lookup Table Benchmark with
+Grid : Message : 2.206916 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 2.206924 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 2.206932 s :     precision           : single
+Grid : Message : 2.206938 s :     nbasis              : 10
+
+Grid : Message : 2.264911 s : Recalculation of coarsening lookup table finished
+Grid : Message : 4.163553 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 4.163561 s :     Time to complete            : 1.59647 s
+Grid : Message : 4.163629 s :     Total performance           : 2.41173 GFlops/s
+Grid : Message : 4.163634 s :     Effective memory bandwidth  : 2.72217 GB/s
+
+Grid : Message : 4.163643 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 4.163646 s :     Time to complete            : 0.123358 s
+Grid : Message : 4.163650 s :     Total performance           : 31.2119 GFlops/s
+Grid : Message : 4.163656 s :     Effective memory bandwidth  : 35.2296 GB/s
+
+Grid : Message : 4.163665 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 4.163668 s :     Time to complete            : 0.166449 s
+Grid : Message : 4.163672 s :     Total performance           : 23.1316 GFlops/s
+Grid : Message : 4.163676 s :     Effective memory bandwidth  : 26.1092 GB/s
+
+Grid : Message : 4.165261 s : Lookup Table Benchmark with
+Grid : Message : 4.165266 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 4.165270 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 4.165274 s :     precision           : double
+Grid : Message : 4.165277 s :     nbasis              : 10
+
+Grid : Message : 4.183408 s : Recalculation of coarsening lookup table finished
+Grid : Message : 6.144626 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 6.144634 s :     Time to complete            : 1.51112 s
+Grid : Message : 6.144645 s :     Total performance           : 2.54793 GFlops/s
+Grid : Message : 6.144649 s :     Effective memory bandwidth  : 5.75182 GB/s
+
+Grid : Message : 6.144659 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 6.144662 s :     Time to complete            : 0.135462 s
+Grid : Message : 6.144666 s :     Total performance           : 28.423 GFlops/s
+Grid : Message : 6.144670 s :     Effective memory bandwidth  : 64.1635 GB/s
+
+Grid : Message : 6.144679 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 6.144682 s :     Time to complete            : 0.302332 s
+Grid : Message : 6.144686 s :     Total performance           : 12.7351 GFlops/s
+Grid : Message : 6.144690 s :     Effective memory bandwidth  : 28.7489 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.549846 s : Grid Default Decomposition patterns
+Grid : Message : 0.549850 s : 	OpenMP threads : 160
+Grid : Message : 0.549861 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.549875 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.549880 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.549885 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.549890 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.555747 s : Lookup Table Benchmark with
+Grid : Message : 0.555753 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 0.555758 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.555762 s :     precision           : single
+Grid : Message : 0.555765 s :     nbasis              : 20
+
+Grid : Message : 0.578807 s : Recalculation of coarsening lookup table finished
+Grid : Message : 4.110849 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 4.110857 s :     Time to complete            : 3.11977 s
+Grid : Message : 4.110899 s :     Total performance           : 2.46829 GFlops/s
+Grid : Message : 4.110903 s :     Effective memory bandwidth  : 2.65997 GB/s
+
+Grid : Message : 4.110912 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 4.110915 s :     Time to complete            : 0.167337 s
+Grid : Message : 4.110919 s :     Total performance           : 46.0178 GFlops/s
+Grid : Message : 4.110925 s :     Effective memory bandwidth  : 49.5915 GB/s
+
+Grid : Message : 4.110934 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 4.110937 s :     Time to complete            : 0.223631 s
+Grid : Message : 4.110941 s :     Total performance           : 34.4339 GFlops/s
+Grid : Message : 4.110945 s :     Effective memory bandwidth  : 37.108 GB/s
+
+Grid : Message : 4.112810 s : Lookup Table Benchmark with
+Grid : Message : 4.112815 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 4.112819 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 4.112823 s :     precision           : double
+Grid : Message : 4.112826 s :     nbasis              : 20
+
+Grid : Message : 4.139416 s : Recalculation of coarsening lookup table finished
+Grid : Message : 7.756987 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 7.756996 s :     Time to complete            : 3.01101 s
+Grid : Message : 7.757008 s :     Total performance           : 2.55744 GFlops/s
+Grid : Message : 7.757012 s :     Effective memory bandwidth  : 5.51209 GB/s
+
+Grid : Message : 7.757022 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 7.757025 s :     Time to complete            : 0.254674 s
+Grid : Message : 7.757029 s :     Total performance           : 30.2366 GFlops/s
+Grid : Message : 7.757033 s :     Effective memory bandwidth  : 65.1696 GB/s
+
+Grid : Message : 7.757042 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 7.757045 s :     Time to complete            : 0.331229 s
+Grid : Message : 7.757049 s :     Total performance           : 23.2482 GFlops/s
+Grid : Message : 7.757053 s :     Effective memory bandwidth  : 50.1073 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.527087 s : Grid Default Decomposition patterns
+Grid : Message : 0.527091 s : 	OpenMP threads : 160
+Grid : Message : 0.527102 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.527116 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.527121 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.527126 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.527130 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.532970 s : Lookup Table Benchmark with
+Grid : Message : 0.532977 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 0.532981 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.532985 s :     precision           : single
+Grid : Message : 0.532988 s :     nbasis              : 30
+
+Grid : Message : 0.561198 s : Recalculation of coarsening lookup table finished
+Grid : Message : 5.682362 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 5.682370 s :     Time to complete            : 4.61071 s
+Grid : Message : 5.682413 s :     Total performance           : 2.50519 GFlops/s
+Grid : Message : 5.682417 s :     Effective memory bandwidth  : 2.6571 GB/s
+
+Grid : Message : 5.682426 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 5.682429 s :     Time to complete            : 0.116899 s
+Grid : Message : 5.682433 s :     Total performance           : 98.8094 GFlops/s
+Grid : Message : 5.682439 s :     Effective memory bandwidth  : 104.801 GB/s
+
+Grid : Message : 5.682448 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 5.682451 s :     Time to complete            : 0.365688 s
+Grid : Message : 5.682455 s :     Total performance           : 31.5863 GFlops/s
+Grid : Message : 5.682459 s :     Effective memory bandwidth  : 33.5016 GB/s
+
+Grid : Message : 5.684562 s : Lookup Table Benchmark with
+Grid : Message : 5.684567 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 5.684571 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 5.684575 s :     precision           : double
+Grid : Message : 5.684578 s :     nbasis              : 30
+
+Grid : Message : 5.720337 s : Recalculation of coarsening lookup table finished
+Grid : Message : 10.970638 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 10.970646 s :     Time to complete            : 4.4878 s
+Grid : Message : 10.970659 s :     Total performance           : 2.57381 GFlops/s
+Grid : Message : 10.970663 s :     Effective memory bandwidth  : 5.45975 GB/s
+
+Grid : Message : 10.970673 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 10.970676 s :     Time to complete            : 0.14566 s
+Grid : Message : 10.970681 s :     Total performance           : 79.2992 GFlops/s
+Grid : Message : 10.970685 s :     Effective memory bandwidth  : 168.216 GB/s
+
+Grid : Message : 10.970694 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 10.970697 s :     Time to complete            : 0.585972 s
+Grid : Message : 10.970701 s :     Total performance           : 19.7121 GFlops/s
+Grid : Message : 10.970706 s :     Effective memory bandwidth  : 41.8147 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.528020 s : Grid Default Decomposition patterns
+Grid : Message : 0.528024 s : 	OpenMP threads : 160
+Grid : Message : 0.528036 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.528049 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.528054 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.528059 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.528063 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.534033 s : Lookup Table Benchmark with
+Grid : Message : 0.534040 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 0.534044 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.534048 s :     precision           : single
+Grid : Message : 0.534051 s :     nbasis              : 40
+
+Grid : Message : 0.570276 s : Recalculation of coarsening lookup table finished
+Grid : Message : 7.112360 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 7.112369 s :     Time to complete            : 6.15402 s
+Grid : Message : 7.112414 s :     Total performance           : 2.50258 GFlops/s
+Grid : Message : 7.112419 s :     Effective memory bandwidth  : 2.63304 GB/s
+
+Grid : Message : 7.112429 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 7.112432 s :     Time to complete            : 0.110743 s
+Grid : Message : 7.112437 s :     Total performance           : 139.069 GFlops/s
+Grid : Message : 7.112443 s :     Effective memory bandwidth  : 146.319 GB/s
+
+Grid : Message : 7.112453 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 7.112456 s :     Time to complete            : 0.241412 s
+Grid : Message : 7.112460 s :     Total performance           : 63.7953 GFlops/s
+Grid : Message : 7.112464 s :     Effective memory bandwidth  : 67.1208 GB/s
+
+Grid : Message : 7.115076 s : Lookup Table Benchmark with
+Grid : Message : 7.115081 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 7.115086 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 7.115090 s :     precision           : double
+Grid : Message : 7.115093 s :     nbasis              : 40
+
+Grid : Message : 7.162208 s : Recalculation of coarsening lookup table finished
+Grid : Message : 13.717407 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 13.717417 s :     Time to complete            : 5.99698 s
+Grid : Message : 13.717429 s :     Total performance           : 2.56812 GFlops/s
+Grid : Message : 13.717433 s :     Effective memory bandwidth  : 5.40398 GB/s
+
+Grid : Message : 13.717444 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 13.717447 s :     Time to complete            : 0.132424 s
+Grid : Message : 13.717451 s :     Total performance           : 116.3 GFlops/s
+Grid : Message : 13.717455 s :     Effective memory bandwidth  : 244.726 GB/s
+
+Grid : Message : 13.717464 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 13.717467 s :     Time to complete            : 0.343933 s
+Grid : Message : 13.717471 s :     Total performance           : 44.779 GFlops/s
+Grid : Message : 13.717475 s :     Effective memory bandwidth  : 94.2264 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.528236 s : Grid Default Decomposition patterns
+Grid : Message : 0.528241 s : 	OpenMP threads : 160
+Grid : Message : 0.528252 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.528266 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.528271 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.528276 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.528281 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.534071 s : Lookup Table Benchmark with
+Grid : Message : 0.534077 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 0.534081 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.534085 s :     precision           : single
+Grid : Message : 0.534088 s :     nbasis              : 10
+
+Grid : Message : 0.572611 s : Recalculation of coarsening lookup table finished
+Grid : Message : 4.381671 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 4.381681 s :     Time to complete            : 2.92585 s
+Grid : Message : 4.381729 s :     Total performance           : 6.66193 GFlops/s
+Grid : Message : 4.381733 s :     Effective memory bandwidth  : 7.49104 GB/s
+
+Grid : Message : 4.381744 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 4.381747 s :     Time to complete            : 0.33272 s
+Grid : Message : 4.381751 s :     Total performance           : 58.5833 GFlops/s
+Grid : Message : 4.381757 s :     Effective memory bandwidth  : 65.8743 GB/s
+
+Grid : Message : 4.381766 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 4.381769 s :     Time to complete            : 0.528615 s
+Grid : Message : 4.381773 s :     Total performance           : 36.8734 GFlops/s
+Grid : Message : 4.381777 s :     Effective memory bandwidth  : 41.4625 GB/s
+
+Grid : Message : 4.385745 s : Lookup Table Benchmark with
+Grid : Message : 4.385750 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 4.385754 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 4.385758 s :     precision           : double
+Grid : Message : 4.385761 s :     nbasis              : 10
+
+Grid : Message : 4.420859 s : Recalculation of coarsening lookup table finished
+Grid : Message : 8.158726 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 8.158735 s :     Time to complete            : 2.77043 s
+Grid : Message : 8.158747 s :     Total performance           : 7.03568 GFlops/s
+Grid : Message : 8.158752 s :     Effective memory bandwidth  : 15.8226 GB/s
+
+Grid : Message : 8.158762 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 8.158765 s :     Time to complete            : 0.363687 s
+Grid : Message : 8.158769 s :     Total performance           : 53.5951 GFlops/s
+Grid : Message : 8.158773 s :     Effective memory bandwidth  : 120.531 GB/s
+
+Grid : Message : 8.158782 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 8.158785 s :     Time to complete            : 0.580393 s
+Grid : Message : 8.158789 s :     Total performance           : 33.5839 GFlops/s
+Grid : Message : 8.158793 s :     Effective memory bandwidth  : 75.5271 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.528416 s : Grid Default Decomposition patterns
+Grid : Message : 0.528420 s : 	OpenMP threads : 160
+Grid : Message : 0.528431 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.528450 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.528455 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.528460 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.528465 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.534298 s : Lookup Table Benchmark with
+Grid : Message : 0.534304 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 0.534308 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.534312 s :     precision           : single
+Grid : Message : 0.534315 s :     nbasis              : 20
+
+Grid : Message : 0.594369 s : Recalculation of coarsening lookup table finished
+Grid : Message : 7.360992 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 7.361002 s :     Time to complete            : 5.76043 s
+Grid : Message : 7.361050 s :     Total performance           : 6.7675 GFlops/s
+Grid : Message : 7.361055 s :     Effective memory bandwidth  : 7.26417 GB/s
+
+Grid : Message : 7.361066 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 7.361069 s :     Time to complete            : 0.383309 s
+Grid : Message : 7.361073 s :     Total performance           : 101.703 GFlops/s
+Grid : Message : 7.361077 s :     Effective memory bandwidth  : 109.167 GB/s
+
+Grid : Message : 7.361086 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 7.361089 s :     Time to complete            : 0.584442 s
+Grid : Message : 7.361093 s :     Total performance           : 66.7024 GFlops/s
+Grid : Message : 7.361097 s :     Effective memory bandwidth  : 71.5978 GB/s
+
+Grid : Message : 7.365545 s : Lookup Table Benchmark with
+Grid : Message : 7.365550 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 7.365554 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 7.365558 s :     precision           : double
+Grid : Message : 7.365561 s :     nbasis              : 20
+
+Grid : Message : 7.425598 s : Recalculation of coarsening lookup table finished
+Grid : Message : 14.514070 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 14.514270 s :     Time to complete            : 5.49693 s
+Grid : Message : 14.514410 s :     Total performance           : 7.0919 GFlops/s
+Grid : Message : 14.514450 s :     Effective memory bandwidth  : 15.2248 GB/s
+
+Grid : Message : 14.514550 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 14.514580 s :     Time to complete            : 0.416631 s
+Grid : Message : 14.514620 s :     Total performance           : 93.5688 GFlops/s
+Grid : Message : 14.514660 s :     Effective memory bandwidth  : 200.872 GB/s
+
+Grid : Message : 14.514750 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 14.514780 s :     Time to complete            : 0.66994 s
+Grid : Message : 14.514820 s :     Total performance           : 58.1898 GFlops/s
+Grid : Message : 14.514860 s :     Effective memory bandwidth  : 124.921 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.527620 s : Grid Default Decomposition patterns
+Grid : Message : 0.527624 s : 	OpenMP threads : 160
+Grid : Message : 0.527635 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.527649 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.527654 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.527658 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.527663 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.533426 s : Lookup Table Benchmark with
+Grid : Message : 0.533432 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 0.533436 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.533440 s :     precision           : single
+Grid : Message : 0.533443 s :     nbasis              : 30
+
+Grid : Message : 0.613796 s : Recalculation of coarsening lookup table finished
+Grid : Message : 10.368039 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 10.368048 s :     Time to complete            : 8.69091 s
+Grid : Message : 10.368098 s :     Total performance           : 6.72835 GFlops/s
+Grid : Message : 10.368103 s :     Effective memory bandwidth  : 7.10763 GB/s
+
+Grid : Message : 10.368112 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 10.368115 s :     Time to complete            : 0.408735 s
+Grid : Message : 10.368119 s :     Total performance           : 143.065 GFlops/s
+Grid : Message : 10.368123 s :     Effective memory bandwidth  : 151.129 GB/s
+
+Grid : Message : 10.368132 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 10.368135 s :     Time to complete            : 0.599906 s
+Grid : Message : 10.368139 s :     Total performance           : 97.4745 GFlops/s
+Grid : Message : 10.368143 s :     Effective memory bandwidth  : 102.969 GB/s
+
+Grid : Message : 10.373064 s : Lookup Table Benchmark with
+Grid : Message : 10.373069 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 10.373073 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 10.373077 s :     precision           : double
+Grid : Message : 10.373080 s :     nbasis              : 30
+
+Grid : Message : 10.453943 s : Recalculation of coarsening lookup table finished
+Grid : Message : 19.972811 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 19.972821 s :     Time to complete            : 8.20295 s
+Grid : Message : 19.972834 s :     Total performance           : 7.12859 GFlops/s
+Grid : Message : 19.972839 s :     Effective memory bandwidth  : 15.0609 GB/s
+
+Grid : Message : 19.972849 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 19.972852 s :     Time to complete            : 0.46821 s
+Grid : Message : 19.972856 s :     Total performance           : 124.892 GFlops/s
+Grid : Message : 19.972860 s :     Effective memory bandwidth  : 263.864 GB/s
+
+Grid : Message : 19.972869 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 19.972872 s :     Time to complete            : 0.789822 s
+Grid : Message : 19.972876 s :     Total performance           : 74.0363 GFlops/s
+Grid : Message : 19.972880 s :     Effective memory bandwidth  : 156.419 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.532334 s : Grid Default Decomposition patterns
+Grid : Message : 0.532338 s : 	OpenMP threads : 160
+Grid : Message : 0.532349 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.532363 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.532369 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.532374 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.532379 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.538245 s : Lookup Table Benchmark with
+Grid : Message : 0.538251 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 0.538255 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.538259 s :     precision           : single
+Grid : Message : 0.538262 s :     nbasis              : 40
+
+Grid : Message : 0.644155 s : Recalculation of coarsening lookup table finished
+Grid : Message : 13.405136 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 13.405147 s :     Time to complete            : 11.622 s
+Grid : Message : 13.405197 s :     Total performance           : 6.70858 GFlops/s
+Grid : Message : 13.405202 s :     Effective memory bandwidth  : 7.02965 GB/s
+
+Grid : Message : 13.405211 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 13.405214 s :     Time to complete            : 0.429711 s
+Grid : Message : 13.405218 s :     Total performance           : 181.441 GFlops/s
+Grid : Message : 13.405222 s :     Effective memory bandwidth  : 190.125 GB/s
+
+Grid : Message : 13.405232 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 13.405235 s :     Time to complete            : 0.638133 s
+Grid : Message : 13.405239 s :     Total performance           : 122.18 GFlops/s
+Grid : Message : 13.405243 s :     Effective memory bandwidth  : 128.028 GB/s
+
+Grid : Message : 13.410621 s : Lookup Table Benchmark with
+Grid : Message : 13.410626 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 13.410630 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 13.410634 s :     precision           : double
+Grid : Message : 13.410637 s :     nbasis              : 40
+
+Grid : Message : 13.521578 s : Recalculation of coarsening lookup table finished
+Grid : Message : 26.763960 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 26.764160 s :     Time to complete            : 10.9709 s
+Grid : Message : 26.764300 s :     Total performance           : 7.10672 GFlops/s
+Grid : Message : 26.764340 s :     Effective memory bandwidth  : 14.8937 GB/s
+
+Grid : Message : 26.764430 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 26.764460 s :     Time to complete            : 0.551347 s
+Grid : Message : 26.764500 s :     Total performance           : 141.413 GFlops/s
+Grid : Message : 26.764540 s :     Effective memory bandwidth  : 296.361 GB/s
+
+Grid : Message : 26.764630 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 26.764660 s :     Time to complete            : 0.953862 s
+Grid : Message : 26.764700 s :     Total performance           : 81.7386 GFlops/s
+Grid : Message : 26.764740 s :     Effective memory bandwidth  : 171.301 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.550751 s : Grid Default Decomposition patterns
+Grid : Message : 0.550755 s : 	OpenMP threads : 160
+Grid : Message : 0.550766 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.550779 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.550784 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.550789 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.550794 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.556660 s : Lookup Table Benchmark with
+Grid : Message : 0.556666 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 0.556670 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.556674 s :     precision           : single
+Grid : Message : 0.556677 s :     nbasis              : 10
+
+Grid : Message : 0.621101 s : Recalculation of coarsening lookup table finished
+Grid : Message : 10.321362 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 10.321372 s :     Time to complete            : 7.34201 s
+Grid : Message : 10.321419 s :     Total performance           : 8.3906 GFlops/s
+Grid : Message : 10.321426 s :     Effective memory bandwidth  : 9.42883 GB/s
+
+Grid : Message : 10.321435 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 10.321438 s :     Time to complete            : 0.860354 s
+Grid : Message : 10.321442 s :     Total performance           : 71.6029 GFlops/s
+Grid : Message : 10.321446 s :     Effective memory bandwidth  : 80.4628 GB/s
+
+Grid : Message : 10.321455 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 10.321458 s :     Time to complete            : 1.44298 s
+Grid : Message : 10.321462 s :     Total performance           : 42.6922 GFlops/s
+Grid : Message : 10.321466 s :     Effective memory bandwidth  : 47.9747 GB/s
+
+Grid : Message : 10.331815 s : Lookup Table Benchmark with
+Grid : Message : 10.331822 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 10.331826 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 10.331830 s :     precision           : double
+Grid : Message : 10.331833 s :     nbasis              : 10
+
+Grid : Message : 10.402176 s : Recalculation of coarsening lookup table finished
+Grid : Message : 19.914505 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 19.914515 s :     Time to complete            : 6.82731 s
+Grid : Message : 19.914527 s :     Total performance           : 9.02315 GFlops/s
+Grid : Message : 19.914532 s :     Effective memory bandwidth  : 20.2793 GB/s
+
+Grid : Message : 19.914542 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 19.914545 s :     Time to complete            : 1.01398 s
+Grid : Message : 19.914549 s :     Total performance           : 60.7546 GFlops/s
+Grid : Message : 19.914553 s :     Effective memory bandwidth  : 136.544 GB/s
+
+Grid : Message : 19.914562 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 19.914565 s :     Time to complete            : 1.61102 s
+Grid : Message : 19.914569 s :     Total performance           : 38.2391 GFlops/s
+Grid : Message : 19.914573 s :     Effective memory bandwidth  : 85.9415 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.528891 s : Grid Default Decomposition patterns
+Grid : Message : 0.528895 s : 	OpenMP threads : 160
+Grid : Message : 0.528906 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.528920 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.528925 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.528930 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.528935 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.534717 s : Lookup Table Benchmark with
+Grid : Message : 0.534723 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 0.534727 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.534731 s :     precision           : single
+Grid : Message : 0.534734 s :     nbasis              : 20
+
+Grid : Message : 0.641652 s : Recalculation of coarsening lookup table finished
+Grid : Message : 17.439411 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 17.439421 s :     Time to complete            : 14.2399 s
+Grid : Message : 17.439470 s :     Total performance           : 8.65226 GFlops/s
+Grid : Message : 17.439474 s :     Effective memory bandwidth  : 9.28105 GB/s
+
+Grid : Message : 17.439483 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 17.439486 s :     Time to complete            : 0.936529 s
+Grid : Message : 17.439490 s :     Total performance           : 131.558 GFlops/s
+Grid : Message : 17.439494 s :     Effective memory bandwidth  : 141.118 GB/s
+
+Grid : Message : 17.439503 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 17.439506 s :     Time to complete            : 1.52502 s
+Grid : Message : 17.439509 s :     Total performance           : 80.7907 GFlops/s
+Grid : Message : 17.439513 s :     Effective memory bandwidth  : 86.662 GB/s
+
+Grid : Message : 17.451099 s : Lookup Table Benchmark with
+Grid : Message : 17.451107 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 17.451112 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 17.451116 s :     precision           : double
+Grid : Message : 17.451119 s :     nbasis              : 20
+
+Grid : Message : 17.567519 s : Recalculation of coarsening lookup table finished
+Grid : Message : 33.841252 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 33.841262 s :     Time to complete            : 13.2175 s
+Grid : Message : 33.841277 s :     Total performance           : 9.32155 GFlops/s
+Grid : Message : 33.841281 s :     Effective memory bandwidth  : 19.9979 GB/s
+
+Grid : Message : 33.841291 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 33.841294 s :     Time to complete            : 1.10978 s
+Grid : Message : 33.841298 s :     Total performance           : 111.02 GFlops/s
+Grid : Message : 33.841302 s :     Effective memory bandwidth  : 238.176 GB/s
+
+Grid : Message : 33.841311 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 33.841314 s :     Time to complete            : 1.84249 s
+Grid : Message : 33.841317 s :     Total performance           : 66.8701 GFlops/s
+Grid : Message : 33.841321 s :     Effective memory bandwidth  : 143.459 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.530969 s : Grid Default Decomposition patterns
+Grid : Message : 0.530973 s : 	OpenMP threads : 160
+Grid : Message : 0.530984 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.530998 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.531003 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.531008 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.531013 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.536822 s : Lookup Table Benchmark with
+Grid : Message : 0.536828 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 0.536832 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.536836 s :     precision           : single
+Grid : Message : 0.536839 s :     nbasis              : 30
+
+Grid : Message : 0.683678 s : Recalculation of coarsening lookup table finished
+Grid : Message : 24.622057 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 24.622067 s :     Time to complete            : 21.1702 s
+Grid : Message : 24.622119 s :     Total performance           : 8.72979 GFlops/s
+Grid : Message : 24.622124 s :     Effective memory bandwidth  : 9.21561 GB/s
+
+Grid : Message : 24.622133 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 24.622136 s :     Time to complete            : 1.00913 s
+Grid : Message : 24.622140 s :     Total performance           : 183.139 GFlops/s
+Grid : Message : 24.622144 s :     Effective memory bandwidth  : 193.331 GB/s
+
+Grid : Message : 24.622153 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 24.622156 s :     Time to complete            : 1.62104 s
+Grid : Message : 24.622160 s :     Total performance           : 114.008 GFlops/s
+Grid : Message : 24.622164 s :     Effective memory bandwidth  : 120.353 GB/s
+
+Grid : Message : 24.635431 s : Lookup Table Benchmark with
+Grid : Message : 24.635439 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 24.635443 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 24.635447 s :     precision           : double
+Grid : Message : 24.635450 s :     nbasis              : 30
+
+Grid : Message : 24.796667 s : Recalculation of coarsening lookup table finished
+Grid : Message : 48.341591 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 48.341601 s :     Time to complete            : 19.7944 s
+Grid : Message : 48.341615 s :     Total performance           : 9.33657 GFlops/s
+Grid : Message : 48.341619 s :     Effective memory bandwidth  : 19.7123 GB/s
+
+Grid : Message : 48.341628 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 48.341631 s :     Time to complete            : 1.29304 s
+Grid : Message : 48.341635 s :     Total performance           : 142.928 GFlops/s
+Grid : Message : 48.341639 s :     Effective memory bandwidth  : 301.764 GB/s
+
+Grid : Message : 48.341648 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 48.341651 s :     Time to complete            : 2.30659 s
+Grid : Message : 48.341655 s :     Total performance           : 80.1234 GFlops/s
+Grid : Message : 48.341659 s :     Effective memory bandwidth  : 169.165 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.530638 s : Grid Default Decomposition patterns
+Grid : Message : 0.530642 s : 	OpenMP threads : 160
+Grid : Message : 0.530653 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.530668 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.530673 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.530678 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.530683 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.536563 s : Lookup Table Benchmark with
+Grid : Message : 0.536570 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 0.536574 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.536578 s :     precision           : single
+Grid : Message : 0.536581 s :     nbasis              : 40
+
+Grid : Message : 0.720998 s : Recalculation of coarsening lookup table finished
+Grid : Message : 32.380810 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 32.381020 s :     Time to complete            : 28.3322 s
+Grid : Message : 32.381460 s :     Total performance           : 8.69736 GFlops/s
+Grid : Message : 32.381510 s :     Effective memory bandwidth  : 9.10737 GB/s
+
+Grid : Message : 32.381600 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 32.381630 s :     Time to complete            : 1.08206 s
+Grid : Message : 32.381670 s :     Total performance           : 227.728 GFlops/s
+Grid : Message : 32.381710 s :     Effective memory bandwidth  : 238.464 GB/s
+
+Grid : Message : 32.381800 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 32.381830 s :     Time to complete            : 1.72274 s
+Grid : Message : 32.381870 s :     Total performance           : 143.037 GFlops/s
+Grid : Message : 32.381910 s :     Effective memory bandwidth  : 149.779 GB/s
+
+Grid : Message : 32.525900 s : Lookup Table Benchmark with
+Grid : Message : 32.525990 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 32.526040 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 32.526080 s :     precision           : double
+Grid : Message : 32.526110 s :     nbasis              : 40
+
+Grid : Message : 32.261754 s : Recalculation of coarsening lookup table finished
+Grid : Message : 63.289160 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 63.289280 s :     Time to complete            : 26.3558 s
+Grid : Message : 63.289410 s :     Total performance           : 9.34958 GFlops/s
+Grid : Message : 63.289460 s :     Effective memory bandwidth  : 19.5807 GB/s
+
+Grid : Message : 63.289550 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 63.289580 s :     Time to complete            : 1.47054 s
+Grid : Message : 63.289620 s :     Total performance           : 167.567 GFlops/s
+Grid : Message : 63.289660 s :     Effective memory bandwidth  : 350.933 GB/s
+
+Grid : Message : 63.289750 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 63.289780 s :     Time to complete            : 2.74166 s
+Grid : Message : 63.289810 s :     Total performance           : 89.8782 GFlops/s
+Grid : Message : 63.289850 s :     Effective memory bandwidth  : 188.23 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.529055 s : Grid Default Decomposition patterns
+Grid : Message : 0.529059 s : 	OpenMP threads : 160
+Grid : Message : 0.529071 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.529085 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.529090 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.529095 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.529099 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.534923 s : Lookup Table Benchmark with
+Grid : Message : 0.534929 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 0.534933 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 0.534937 s :     precision           : single
+Grid : Message : 0.534940 s :     nbasis              : 10
+
+Grid : Message : 0.772430 s : Recalculation of coarsening lookup table finished
+Grid : Message : 6.665208 s : 500 applications of vectorizableBlockProject
+Grid : Message : 6.665219 s :     Time to complete            : 4.18064 s
+Grid : Message : 6.665273 s :     Total performance           : 37.2993 GFlops/s
+Grid : Message : 6.665280 s :     Effective memory bandwidth  : 41.9146 GB/s
+
+Grid : Message : 6.665290 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 6.665293 s :     Time to complete            : 0.603953 s
+Grid : Message : 6.665297 s :     Total performance           : 258.19 GFlops/s
+Grid : Message : 6.665301 s :     Effective memory bandwidth  : 290.138 GB/s
+
+Grid : Message : 6.665310 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 6.665313 s :     Time to complete            : 1.01728 s
+Grid : Message : 6.665317 s :     Total performance           : 153.285 GFlops/s
+Grid : Message : 6.665321 s :     Effective memory bandwidth  : 172.252 GB/s
+
+Grid : Message : 6.717101 s : Lookup Table Benchmark with
+Grid : Message : 6.717110 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 6.717115 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 6.717119 s :     precision           : double
+Grid : Message : 6.717122 s :     nbasis              : 10
+
+Grid : Message : 6.990692 s : Recalculation of coarsening lookup table finished
+Grid : Message : 14.248431 s : 500 applications of vectorizableBlockProject
+Grid : Message : 14.248442 s :     Time to complete            : 4.408 s
+Grid : Message : 14.248456 s :     Total performance           : 35.3754 GFlops/s
+Grid : Message : 14.248462 s :     Effective memory bandwidth  : 79.5052 GB/s
+
+Grid : Message : 14.248471 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 14.248474 s :     Time to complete            : 0.944183 s
+Grid : Message : 14.248478 s :     Total performance           : 165.153 GFlops/s
+Grid : Message : 14.248482 s :     Effective memory bandwidth  : 371.177 GB/s
+
+Grid : Message : 14.248491 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 14.248494 s :     Time to complete            : 1.76746 s
+Grid : Message : 14.248498 s :     Total performance           : 88.2253 GFlops/s
+Grid : Message : 14.248502 s :     Effective memory bandwidth  : 198.284 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.529207 s : Grid Default Decomposition patterns
+Grid : Message : 0.529211 s : 	OpenMP threads : 160
+Grid : Message : 0.529222 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.529237 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.529242 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.529247 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.529252 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.535105 s : Lookup Table Benchmark with
+Grid : Message : 0.535111 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 0.535116 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 0.535120 s :     precision           : single
+Grid : Message : 0.535123 s :     nbasis              : 20
+
+Grid : Message : 0.924128 s : Recalculation of coarsening lookup table finished
+Grid : Message : 12.809460 s : 500 applications of vectorizableBlockProject
+Grid : Message : 12.809670 s :     Time to complete            : 8.28297 s
+Grid : Message : 12.810110 s :     Total performance           : 37.6519 GFlops/s
+Grid : Message : 12.810160 s :     Effective memory bandwidth  : 40.3882 GB/s
+
+Grid : Message : 12.810250 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 12.810280 s :     Time to complete            : 0.976487 s
+Grid : Message : 12.810320 s :     Total performance           : 319.379 GFlops/s
+Grid : Message : 12.810360 s :     Effective memory bandwidth  : 342.589 GB/s
+
+Grid : Message : 12.810450 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 12.810480 s :     Time to complete            : 1.72642 s
+Grid : Message : 12.810520 s :     Total performance           : 180.645 GFlops/s
+Grid : Message : 12.810560 s :     Effective memory bandwidth  : 193.773 GB/s
+
+Grid : Message : 12.142996 s : Lookup Table Benchmark with
+Grid : Message : 12.143007 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 12.143012 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 12.143016 s :     precision           : double
+Grid : Message : 12.143019 s :     nbasis              : 20
+
+Grid : Message : 12.621330 s : Recalculation of coarsening lookup table finished
+Grid : Message : 26.677100 s : 500 applications of vectorizableBlockProject
+Grid : Message : 26.677110 s :     Time to complete            : 8.66789 s
+Grid : Message : 26.677124 s :     Total performance           : 35.9799 GFlops/s
+Grid : Message : 26.677129 s :     Effective memory bandwidth  : 77.1892 GB/s
+
+Grid : Message : 26.677139 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 26.677142 s :     Time to complete            : 1.78944 s
+Grid : Message : 26.677146 s :     Total performance           : 174.283 GFlops/s
+Grid : Message : 26.677150 s :     Effective memory bandwidth  : 373.897 GB/s
+
+Grid : Message : 26.677159 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 26.677162 s :     Time to complete            : 3.33704 s
+Grid : Message : 26.677166 s :     Total performance           : 93.457 GFlops/s
+Grid : Message : 26.677170 s :     Effective memory bandwidth  : 200.497 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.528135 s : Grid Default Decomposition patterns
+Grid : Message : 0.528139 s : 	OpenMP threads : 160
+Grid : Message : 0.528151 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.528165 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.528170 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.528175 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.528180 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.534012 s : Lookup Table Benchmark with
+Grid : Message : 0.534019 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 0.534023 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 0.534027 s :     precision           : single
+Grid : Message : 0.534030 s :     nbasis              : 30
+
+Grid : Message : 1.813340 s : Recalculation of coarsening lookup table finished
+Grid : Message : 18.570490 s : 500 applications of vectorizableBlockProject
+Grid : Message : 18.570600 s :     Time to complete            : 12.3767 s
+Grid : Message : 18.571120 s :     Total performance           : 37.7973 GFlops/s
+Grid : Message : 18.571170 s :     Effective memory bandwidth  : 39.9008 GB/s
+
+Grid : Message : 18.571260 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 18.571290 s :     Time to complete            : 1.56822 s
+Grid : Message : 18.571330 s :     Total performance           : 298.302 GFlops/s
+Grid : Message : 18.571370 s :     Effective memory bandwidth  : 314.903 GB/s
+
+Grid : Message : 18.571460 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 18.571490 s :     Time to complete            : 2.77427 s
+Grid : Message : 18.571530 s :     Total performance           : 168.622 GFlops/s
+Grid : Message : 18.571570 s :     Effective memory bandwidth  : 178.006 GB/s
+
+Grid : Message : 18.121822 s : Lookup Table Benchmark with
+Grid : Message : 18.121831 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 18.121836 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 18.121840 s :     precision           : double
+Grid : Message : 18.121843 s :     nbasis              : 30
+
+Grid : Message : 18.789223 s : Recalculation of coarsening lookup table finished
+Grid : Message : 39.569991 s : 500 applications of vectorizableBlockProject
+Grid : Message : 39.570001 s :     Time to complete            : 12.9197 s
+Grid : Message : 39.570014 s :     Total performance           : 36.2085 GFlops/s
+Grid : Message : 39.570019 s :     Effective memory bandwidth  : 76.447 GB/s
+
+Grid : Message : 39.570028 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 39.570031 s :     Time to complete            : 2.61156 s
+Grid : Message : 39.570035 s :     Total performance           : 179.128 GFlops/s
+Grid : Message : 39.570039 s :     Effective memory bandwidth  : 378.193 GB/s
+
+Grid : Message : 39.570048 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 39.570051 s :     Time to complete            : 4.88104 s
+Grid : Message : 39.570055 s :     Total performance           : 95.8411 GFlops/s
+Grid : Message : 39.570059 s :     Effective memory bandwidth  : 202.35 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.647942 s : Grid Default Decomposition patterns
+Grid : Message : 0.647946 s : 	OpenMP threads : 160
+Grid : Message : 0.647957 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.647971 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.647976 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.647981 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.647986 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.653825 s : Lookup Table Benchmark with
+Grid : Message : 0.653831 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 0.653836 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 0.653840 s :     precision           : single
+Grid : Message : 0.653843 s :     nbasis              : 40
+
+Grid : Message : 1.354759 s : Recalculation of coarsening lookup table finished
+Grid : Message : 23.344689 s : 500 applications of vectorizableBlockProject
+Grid : Message : 23.344702 s :     Time to complete            : 16.4677 s
+Grid : Message : 23.344755 s :     Total performance           : 37.8765 GFlops/s
+Grid : Message : 23.344760 s :     Effective memory bandwidth  : 39.662 GB/s
+
+Grid : Message : 23.344769 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 23.344772 s :     Time to complete            : 1.83499 s
+Grid : Message : 23.344776 s :     Total performance           : 339.913 GFlops/s
+Grid : Message : 23.344780 s :     Effective memory bandwidth  : 355.937 GB/s
+
+Grid : Message : 23.344789 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 23.344792 s :     Time to complete            : 3.35439 s
+Grid : Message : 23.344796 s :     Total performance           : 185.947 GFlops/s
+Grid : Message : 23.344800 s :     Effective memory bandwidth  : 194.713 GB/s
+
+Grid : Message : 23.416994 s : Lookup Table Benchmark with
+Grid : Message : 23.417003 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 23.417008 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 23.417012 s :     precision           : double
+Grid : Message : 23.417015 s :     nbasis              : 40
+
+Grid : Message : 24.279380 s : Recalculation of coarsening lookup table finished
+Grid : Message : 51.837660 s : 500 applications of vectorizableBlockProject
+Grid : Message : 51.837670 s :     Time to complete            : 17.1938 s
+Grid : Message : 51.837683 s :     Total performance           : 36.277 GFlops/s
+Grid : Message : 51.837688 s :     Effective memory bandwidth  : 75.9743 GB/s
+
+Grid : Message : 51.837697 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 51.837700 s :     Time to complete            : 3.46308 s
+Grid : Message : 51.837704 s :     Total performance           : 180.111 GFlops/s
+Grid : Message : 51.837708 s :     Effective memory bandwidth  : 377.204 GB/s
+
+Grid : Message : 51.837717 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 51.837720 s :     Time to complete            : 6.39736 s
+Grid : Message : 51.837724 s :     Total performance           : 97.4994 GFlops/s
+Grid : Message : 51.837728 s :     Effective memory bandwidth  : 204.191 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.529453 s : Grid Default Decomposition patterns
+Grid : Message : 0.529457 s : 	OpenMP threads : 160
+Grid : Message : 0.529468 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.529483 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.529488 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.529493 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.529498 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.535391 s : Lookup Table Benchmark with
+Grid : Message : 0.535397 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 0.535401 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 0.535405 s :     precision           : single
+Grid : Message : 0.535408 s :     nbasis              : 10
+
+Grid : Message : 1.197067 s : Recalculation of coarsening lookup table finished
+Grid : Message : 6.789372 s : 250 applications of vectorizableBlockProject
+Grid : Message : 6.789382 s :     Time to complete            : 3.00698 s
+Grid : Message : 6.789436 s :     Total performance           : 81.9477 GFlops/s
+Grid : Message : 6.789443 s :     Effective memory bandwidth  : 92.0876 GB/s
+
+Grid : Message : 6.789453 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 6.789456 s :     Time to complete            : 0.873524 s
+Grid : Message : 6.789460 s :     Total performance           : 282.093 GFlops/s
+Grid : Message : 6.789465 s :     Effective memory bandwidth  : 316.999 GB/s
+
+Grid : Message : 6.789474 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 6.789477 s :     Time to complete            : 1.50526 s
+Grid : Message : 6.789480 s :     Total performance           : 163.703 GFlops/s
+Grid : Message : 6.789484 s :     Effective memory bandwidth  : 183.96 GB/s
+
+Grid : Message : 6.951165 s : Lookup Table Benchmark with
+Grid : Message : 6.951178 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 6.951183 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 6.951187 s :     precision           : double
+Grid : Message : 6.951190 s :     nbasis              : 10
+
+Grid : Message : 7.714357 s : Recalculation of coarsening lookup table finished
+Grid : Message : 15.956845 s : 250 applications of vectorizableBlockProject
+Grid : Message : 15.956856 s :     Time to complete            : 3.80823 s
+Grid : Message : 15.956870 s :     Total performance           : 64.706 GFlops/s
+Grid : Message : 15.956875 s :     Effective memory bandwidth  : 145.425 GB/s
+
+Grid : Message : 15.956885 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 15.956888 s :     Time to complete            : 1.40102 s
+Grid : Message : 15.956892 s :     Total performance           : 175.883 GFlops/s
+Grid : Message : 15.956896 s :     Effective memory bandwidth  : 395.292 GB/s
+
+Grid : Message : 15.956905 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 15.956908 s :     Time to complete            : 2.65974 s
+Grid : Message : 15.956911 s :     Total performance           : 92.6465 GFlops/s
+Grid : Message : 15.956915 s :     Effective memory bandwidth  : 208.221 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.528550 s : Grid Default Decomposition patterns
+Grid : Message : 0.528554 s : 	OpenMP threads : 160
+Grid : Message : 0.528565 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.528579 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.528585 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.528590 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.528595 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.534365 s : Lookup Table Benchmark with
+Grid : Message : 0.534370 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 0.534374 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 0.534378 s :     precision           : single
+Grid : Message : 0.534381 s :     nbasis              : 20
+
+Grid : Message : 1.656560 s : Recalculation of coarsening lookup table finished
+Grid : Message : 12.103406 s : 250 applications of vectorizableBlockProject
+Grid : Message : 12.103417 s :     Time to complete            : 5.919 s
+Grid : Message : 12.103466 s :     Total performance           : 83.2625 GFlops/s
+Grid : Message : 12.103472 s :     Effective memory bandwidth  : 89.3135 GB/s
+
+Grid : Message : 12.103483 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 12.103486 s :     Time to complete            : 1.46656 s
+Grid : Message : 12.103490 s :     Total performance           : 336.046 GFlops/s
+Grid : Message : 12.103494 s :     Effective memory bandwidth  : 360.467 GB/s
+
+Grid : Message : 12.103503 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 12.103506 s :     Time to complete            : 2.67417 s
+Grid : Message : 12.103511 s :     Total performance           : 184.293 GFlops/s
+Grid : Message : 12.103515 s :     Effective memory bandwidth  : 197.686 GB/s
+
+Grid : Message : 12.290963 s : Lookup Table Benchmark with
+Grid : Message : 12.290974 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 12.290980 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 12.290984 s :     precision           : double
+Grid : Message : 12.290987 s :     nbasis              : 20
+
+Grid : Message : 13.610466 s : Recalculation of coarsening lookup table finished
+Grid : Message : 29.433577 s : 250 applications of vectorizableBlockProject
+Grid : Message : 29.433588 s :     Time to complete            : 7.42844 s
+Grid : Message : 29.433601 s :     Total performance           : 66.3438 GFlops/s
+Grid : Message : 29.433606 s :     Effective memory bandwidth  : 142.33 GB/s
+
+Grid : Message : 29.433616 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 29.433619 s :     Time to complete            : 2.66304 s
+Grid : Message : 29.433623 s :     Total performance           : 185.063 GFlops/s
+Grid : Message : 29.433627 s :     Effective memory bandwidth  : 397.024 GB/s
+
+Grid : Message : 29.433636 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 29.433639 s :     Time to complete            : 5.02374 s
+Grid : Message : 29.433643 s :     Total performance           : 98.1003 GFlops/s
+Grid : Message : 29.433647 s :     Effective memory bandwidth  : 210.459 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.527723 s : Grid Default Decomposition patterns
+Grid : Message : 0.527727 s : 	OpenMP threads : 160
+Grid : Message : 0.527738 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.527752 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.527757 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.527762 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.527767 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.533675 s : Lookup Table Benchmark with
+Grid : Message : 0.533682 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 0.533686 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 0.533690 s :     precision           : single
+Grid : Message : 0.533693 s :     nbasis              : 30
+
+Grid : Message : 2.115605 s : Recalculation of coarsening lookup table finished
+Grid : Message : 17.764881 s : 250 applications of vectorizableBlockProject
+Grid : Message : 17.764891 s :     Time to complete            : 8.82673 s
+Grid : Message : 17.764943 s :     Total performance           : 83.7509 GFlops/s
+Grid : Message : 17.764948 s :     Effective memory bandwidth  : 88.4117 GB/s
+
+Grid : Message : 17.764959 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 17.764962 s :     Time to complete            : 2.22032 s
+Grid : Message : 17.764966 s :     Total performance           : 332.945 GFlops/s
+Grid : Message : 17.764970 s :     Effective memory bandwidth  : 351.474 GB/s
+
+Grid : Message : 17.764979 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 17.764982 s :     Time to complete            : 4.02574 s
+Grid : Message : 17.764986 s :     Total performance           : 183.63 GFlops/s
+Grid : Message : 17.764990 s :     Effective memory bandwidth  : 193.849 GB/s
+
+Grid : Message : 17.973322 s : Lookup Table Benchmark with
+Grid : Message : 17.973336 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 17.973341 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 17.973345 s :     precision           : double
+Grid : Message : 17.973348 s :     nbasis              : 30
+
+Grid : Message : 19.884276 s : Recalculation of coarsening lookup table finished
+Grid : Message : 43.225205 s : 250 applications of vectorizableBlockProject
+Grid : Message : 43.225216 s :     Time to complete            : 11.049 s
+Grid : Message : 43.225229 s :     Total performance           : 66.9062 GFlops/s
+Grid : Message : 43.225234 s :     Effective memory bandwidth  : 141.259 GB/s
+
+Grid : Message : 43.225243 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 43.225246 s :     Time to complete            : 3.90586 s
+Grid : Message : 43.225250 s :     Total performance           : 189.266 GFlops/s
+Grid : Message : 43.225254 s :     Effective memory bandwidth  : 399.598 GB/s
+
+Grid : Message : 43.225263 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 43.225266 s :     Time to complete            : 7.35057 s
+Grid : Message : 43.225270 s :     Total performance           : 100.57 GFlops/s
+Grid : Message : 43.225274 s :     Effective memory bandwidth  : 212.334 GB/s
+
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 0
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 1
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 2
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device Number    : 3
+AcceleratorCudaInit: ========================
+AcceleratorCudaInit: Device identifier: Tesla P100-SXM2-16GB
+AcceleratorCudaInit:   totalGlobalMem: 17071734784 
+AcceleratorCudaInit:   managedMemory: 1 
+AcceleratorCudaInit:   isMultiGpuBoard: 0 
+AcceleratorCudaInit:   warpSize: 32 
+AcceleratorCudaInit: setting device to node rank
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x110020000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=63b0a19f370f643aa5b97f37bd1a18ea33a209f8: (HEAD, origin/feature/gpt, origin/HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : MemoryManager::Init() Using cudaMallocManaged
+Grid : Message : 0.527943 s : Grid Default Decomposition patterns
+Grid : Message : 0.527947 s : 	OpenMP threads : 160
+Grid : Message : 0.527958 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.527972 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.527977 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.527982 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.527987 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.533758 s : Lookup Table Benchmark with
+Grid : Message : 0.533764 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 0.533768 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 0.533772 s :     precision           : single
+Grid : Message : 0.533775 s :     nbasis              : 40
+
+Grid : Message : 2.568811 s : Recalculation of coarsening lookup table finished
+Grid : Message : 22.966113 s : 250 applications of vectorizableBlockProject
+Grid : Message : 22.966123 s :     Time to complete            : 11.7333 s
+Grid : Message : 22.966176 s :     Total performance           : 84.0056 GFlops/s
+Grid : Message : 22.966181 s :     Effective memory bandwidth  : 87.9657 GB/s
+
+Grid : Message : 22.966190 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 22.966193 s :     Time to complete            : 2.78534 s
+Grid : Message : 22.966197 s :     Total performance           : 353.875 GFlops/s
+Grid : Message : 22.966201 s :     Effective memory bandwidth  : 370.557 GB/s
+
+Grid : Message : 22.966210 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 22.966213 s :     Time to complete            : 5.11949 s
+Grid : Message : 22.966217 s :     Total performance           : 192.531 GFlops/s
+Grid : Message : 22.966221 s :     Effective memory bandwidth  : 201.607 GB/s
+
+Grid : Message : 23.194057 s : Lookup Table Benchmark with
+Grid : Message : 23.194069 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 23.194074 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 23.194078 s :     precision           : double
+Grid : Message : 23.194081 s :     nbasis              : 40
+
+Grid : Message : 25.683086 s : Recalculation of coarsening lookup table finished
+Grid : Message : 56.755173 s : 250 applications of vectorizableBlockProject
+Grid : Message : 56.755184 s :     Time to complete            : 14.6865 s
+Grid : Message : 56.755199 s :     Total performance           : 67.1134 GFlops/s
+Grid : Message : 56.755204 s :     Effective memory bandwidth  : 140.554 GB/s
+
+Grid : Message : 56.755213 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 56.755216 s :     Time to complete            : 5.22948 s
+Grid : Message : 56.755220 s :     Total performance           : 188.482 GFlops/s
+Grid : Message : 56.755224 s :     Effective memory bandwidth  : 394.734 GB/s
+
+Grid : Message : 56.755233 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 56.755236 s :     Time to complete            : 9.77977 s
+Grid : Message : 56.755240 s :     Total performance           : 100.786 GFlops/s
+Grid : Message : 56.755244 s :     Effective memory bandwidth  : 211.074 GB/s

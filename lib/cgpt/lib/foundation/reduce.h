@@ -61,14 +61,14 @@ inline void sumD(stype* res, const vobj *arg, Integer osites, Integer nvec)
 
 template<class vobj>
 inline void rankInnerProduct(ComplexD* result, 
-			     std::vector< const Lattice<vobj>*> &multi_left,
-			     std::vector< const Lattice<vobj>*> &multi_right,
+			     PVector<Lattice<vobj>> &multi_left,
+			     PVector<Lattice<vobj>> &multi_right,
 			     size_t n_virtual)
 {
   typedef typename vobj::scalar_type scalar_type;
   typedef typename vobj::vector_type vector_type;
 
-  GridBase *grid = multi_left[0]->Grid();
+  GridBase *grid = multi_left[0].Grid();
 
   assert(multi_left.size() % n_virtual == 0);
   assert(multi_right.size() % n_virtual == 0);
@@ -78,15 +78,8 @@ inline void rankInnerProduct(ComplexD* result,
   const uint64_t sites = grid->oSites();
 
   typedef decltype(innerProductD(vobj(),vobj())) inner_t;
-  typedef decltype(multi_left[0]->View(AcceleratorRead)) View;
-  Vector<View> left_v; left_v.reserve(multi_left.size());
-  Vector<View> right_v; right_v.reserve(multi_right.size());
-
-  for(uint64_t k=0;k<multi_left.size();k++)
-    left_v.push_back(multi_left[k]->View(AcceleratorRead));
-
-  for(uint64_t k=0;k<multi_right.size();k++)
-    right_v.push_back(multi_right[k]->View(AcceleratorRead));
+  VECTOR_VIEW_OPEN(multi_left,left_v,AcceleratorRead);
+  VECTOR_VIEW_OPEN(multi_right,right_v,AcceleratorRead);
 
   Vector<inner_t> inner_tmp(sites * n_left * n_right);
   auto inner_tmp_v = &inner_tmp[0];
@@ -111,23 +104,23 @@ inline void rankInnerProduct(ComplexD* result,
     });
   }
 
-  for(uint64_t k=0;k<left_v.size();k++) left_v[k].ViewClose();
-  for(uint64_t k=0;k<right_v.size();k++) right_v[k].ViewClose();
+  VECTOR_VIEW_CLOSE(left_v);
+  VECTOR_VIEW_CLOSE(right_v);
 
   sumD(result,inner_tmp_v,(Integer)sites,(Integer)(n_left*n_right));
 }
 
 template<class vobj>
 inline void rankInnerProductCpu(ComplexD* result, 
-				std::vector<const Lattice<vobj>*> &multi_left,
-				std::vector<const Lattice<vobj>*> &multi_right,
+				PVector<Lattice<vobj>> &multi_left,
+				PVector<Lattice<vobj>> &multi_right,
 				size_t n_virtual)
 {
   typedef typename vobj::scalar_type scalar_type;
   typedef typename vobj::vector_type vector_type;
   typedef typename GridTypeMapper<vector_type>::DoublePrecision2 vector_typeD2;
   
-  GridBase *grid = multi_left[0]->Grid();
+  GridBase *grid = multi_left[0].Grid();
 
   assert(multi_left.size() % n_virtual == 0);
   assert(multi_right.size() % n_virtual == 0);
@@ -138,15 +131,8 @@ inline void rankInnerProductCpu(ComplexD* result,
   const uint64_t words = grid->oSites() * words_per_osite;
   const uint64_t max_parallel = thread_max();
 
-  typedef decltype(multi_left[0]->View(CpuRead)) View;
-  Vector<View> left_v; left_v.reserve(multi_left.size());
-  Vector<View> right_v; right_v.reserve(multi_right.size());
-
-  for(uint64_t k=0;k<multi_left.size();k++)
-    left_v.push_back(multi_left[k]->View(CpuRead));
-
-  for(uint64_t k=0;k<multi_right.size();k++)
-    right_v.push_back(multi_right[k]->View(CpuRead));
+  VECTOR_VIEW_OPEN(multi_left,left_v,CpuRead);
+  VECTOR_VIEW_OPEN(multi_right,right_v,CpuRead);
   
   {
     std::vector<ComplexD> all_thread_sum_reduce(max_parallel * n_left*n_right);
@@ -183,7 +169,8 @@ inline void rankInnerProductCpu(ComplexD* result,
 
       }
 
-    for(uint64_t k=0;k<left_v.size();k++) left_v[k].ViewClose();
-    for(uint64_t k=0;k<right_v.size();k++) right_v[k].ViewClose();
   }
+
+  VECTOR_VIEW_CLOSE(left_v);
+  VECTOR_VIEW_CLOSE(right_v);
 }

@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@ import gpt.qcd.fermion.preconditioner
 
 from gpt.qcd.fermion.register import register
 from gpt.qcd.fermion.operator import operator
+from gpt.qcd.fermion.operator import coarse_operator
 
 import copy
 
@@ -52,3 +54,9 @@ def mobius(U, params):
     return operator(
         "mobius", U, params, params["Ls"], otype=gpt.ot_vector_spin_color(4, 3)
     )
+
+
+@gpt.params_convention()
+def coarse(A, params):
+    params = copy.deepcopy(params)  # save current parameters
+    return coarse_operator(A, params, None, otype=A[0].otype.vector_type)

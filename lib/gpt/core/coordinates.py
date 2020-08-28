@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -102,3 +103,11 @@ def fft(dims=None):
         inv_mat=mat_backward,
         adj_inv_mat=mat_forward,
     )
+
+
+def make_mask(field, mask):
+    assert type(mask == numpy.ndarray)
+    assert field.otype == gpt.ot_singlet
+
+    x = gpt.coordinates(field)
+    field[x] = mask.astype(field.grid.precision.complex_dtype).reshape((len(mask), 1))

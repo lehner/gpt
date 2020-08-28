@@ -1,0 +1,1820 @@
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.706418 s : Grid Default Decomposition patterns
+Grid : Message : 0.706514 s : 	OpenMP threads : 64
+Grid : Message : 0.706583 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.706709 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.706796 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.706881 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.706966 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.709587 s : Lookup Table Benchmark with
+Grid : Message : 0.709660 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 0.709767 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.709871 s :     precision           : single
+Grid : Message : 0.709934 s :     nbasis              : 10
+
+Grid : Message : 0.771333 s : Recalculation of coarsening lookup table finished
+Grid : Message : 1.638860 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 1.638942 s :     Time to complete            : 0.724072 s
+Grid : Message : 1.639213 s :     Total performance           : 5.31748 GFlops/s
+Grid : Message : 1.639344 s :     Effective memory bandwidth  : 6.00197 GB/s
+
+Grid : Message : 1.639580 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 1.639649 s :     Time to complete            : 0.060377 s
+Grid : Message : 1.639735 s :     Total performance           : 63.77 GFlops/s
+Grid : Message : 1.639817 s :     Effective memory bandwidth  : 71.9787 GB/s
+
+Grid : Message : 1.639986 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 1.640052 s :     Time to complete            : 0.075366 s
+Grid : Message : 1.640199 s :     Total performance           : 51.0872 GFlops/s
+Grid : Message : 1.640312 s :     Effective memory bandwidth  : 57.6633 GB/s
+
+Grid : Message : 1.650835 s : Lookup Table Benchmark with
+Grid : Message : 1.650908 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 1.651016 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 1.651160 s :     precision           : double
+Grid : Message : 1.651225 s :     nbasis              : 10
+
+Grid : Message : 1.674713 s : Recalculation of coarsening lookup table finished
+Grid : Message : 2.499914 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 2.500004 s :     Time to complete            : 0.700726 s
+Grid : Message : 2.500151 s :     Total performance           : 5.49464 GFlops/s
+Grid : Message : 2.500233 s :     Effective memory bandwidth  : 12.4039 GB/s
+
+Grid : Message : 2.500401 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 2.500466 s :     Time to complete            : 0.03615 s
+Grid : Message : 2.500550 s :     Total performance           : 106.507 GFlops/s
+Grid : Message : 2.500633 s :     Effective memory bandwidth  : 240.435 GB/s
+
+Grid : Message : 2.500796 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 2.500859 s :     Time to complete            : 0.065836 s
+Grid : Message : 2.500937 s :     Total performance           : 58.4823 GFlops/s
+Grid : Message : 2.501046 s :     Effective memory bandwidth  : 132.021 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.586255 s : Grid Default Decomposition patterns
+Grid : Message : 0.586350 s : 	OpenMP threads : 64
+Grid : Message : 0.586418 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.586557 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.586650 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.586737 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.586825 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.589693 s : Lookup Table Benchmark with
+Grid : Message : 0.589765 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 0.589868 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.589972 s :     precision           : single
+Grid : Message : 0.590034 s :     nbasis              : 20
+
+Grid : Message : 0.660411 s : Recalculation of coarsening lookup table finished
+Grid : Message : 2.379342 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 2.379588 s :     Time to complete            : 1.46109 s
+Grid : Message : 2.381429 s :     Total performance           : 5.27036 GFlops/s
+Grid : Message : 2.381546 s :     Effective memory bandwidth  : 5.67965 GB/s
+
+Grid : Message : 2.381790 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 2.381886 s :     Time to complete            : 0.107851 s
+Grid : Message : 2.382007 s :     Total performance           : 71.3992 GFlops/s
+Grid : Message : 2.382154 s :     Effective memory bandwidth  : 76.9441 GB/s
+
+Grid : Message : 2.382398 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 2.382500 s :     Time to complete            : 0.136225 s
+Grid : Message : 2.382621 s :     Total performance           : 56.5277 GFlops/s
+Grid : Message : 2.382740 s :     Effective memory bandwidth  : 60.9176 GB/s
+
+Grid : Message : 2.400599 s : Lookup Table Benchmark with
+Grid : Message : 2.400698 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 2.400840 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 2.400993 s :     precision           : double
+Grid : Message : 2.401135 s :     nbasis              : 20
+
+Grid : Message : 2.441839 s : Recalculation of coarsening lookup table finished
+Grid : Message : 4.124948 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 4.125092 s :     Time to complete            : 1.3954 s
+Grid : Message : 4.125229 s :     Total performance           : 5.51848 GFlops/s
+Grid : Message : 4.125341 s :     Effective memory bandwidth  : 11.8941 GB/s
+
+Grid : Message : 4.125595 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 4.125694 s :     Time to complete            : 0.101693 s
+Grid : Message : 4.125809 s :     Total performance           : 75.7228 GFlops/s
+Grid : Message : 4.125929 s :     Effective memory bandwidth  : 163.207 GB/s
+
+Grid : Message : 4.126207 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 4.126306 s :     Time to complete            : 0.157882 s
+Grid : Message : 4.126426 s :     Total performance           : 48.7736 GFlops/s
+Grid : Message : 4.126548 s :     Effective memory bandwidth  : 105.123 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.571445 s : Grid Default Decomposition patterns
+Grid : Message : 0.571526 s : 	OpenMP threads : 64
+Grid : Message : 0.571595 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.571737 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.571831 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.571920 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.572008 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.574443 s : Lookup Table Benchmark with
+Grid : Message : 0.574517 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 0.574624 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.574728 s :     precision           : single
+Grid : Message : 0.574792 s :     nbasis              : 30
+
+Grid : Message : 0.660125 s : Recalculation of coarsening lookup table finished
+Grid : Message : 3.210394 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 3.210643 s :     Time to complete            : 2.16185 s
+Grid : Message : 3.212389 s :     Total performance           : 5.34297 GFlops/s
+Grid : Message : 3.212506 s :     Effective memory bandwidth  : 5.66696 GB/s
+
+Grid : Message : 3.212754 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 3.212847 s :     Time to complete            : 0.164313 s
+Grid : Message : 3.212966 s :     Total performance           : 70.2971 GFlops/s
+Grid : Message : 3.213085 s :     Effective memory bandwidth  : 74.5597 GB/s
+
+Grid : Message : 3.213355 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 3.213442 s :     Time to complete            : 0.205294 s
+Grid : Message : 3.213543 s :     Total performance           : 56.2643 GFlops/s
+Grid : Message : 3.213660 s :     Effective memory bandwidth  : 59.6761 GB/s
+
+Grid : Message : 3.235909 s : Lookup Table Benchmark with
+Grid : Message : 3.236010 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 3.236157 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 3.236347 s :     precision           : double
+Grid : Message : 3.236448 s :     nbasis              : 30
+
+Grid : Message : 3.295170 s : Recalculation of coarsening lookup table finished
+Grid : Message : 5.896616 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 5.896738 s :     Time to complete            : 2.15448 s
+Grid : Message : 5.896877 s :     Total performance           : 5.36125 GFlops/s
+Grid : Message : 5.896997 s :     Effective memory bandwidth  : 11.3727 GB/s
+
+Grid : Message : 5.897292 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 5.897390 s :     Time to complete            : 0.166803 s
+Grid : Message : 5.897515 s :     Total performance           : 69.2477 GFlops/s
+Grid : Message : 5.897647 s :     Effective memory bandwidth  : 146.893 GB/s
+
+Grid : Message : 5.897906 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 5.898009 s :     Time to complete            : 0.247924 s
+Grid : Message : 5.898140 s :     Total performance           : 46.5898 GFlops/s
+Grid : Message : 5.898290 s :     Effective memory bandwidth  : 98.8298 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.564793 s : Grid Default Decomposition patterns
+Grid : Message : 0.564919 s : 	OpenMP threads : 64
+Grid : Message : 0.564990 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.565132 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.565228 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.565319 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.565409 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.572696 s : Lookup Table Benchmark with
+Grid : Message : 0.572768 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 0.572915 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.573020 s :     precision           : single
+Grid : Message : 0.573083 s :     nbasis              : 40
+
+Grid : Message : 0.672412 s : Recalculation of coarsening lookup table finished
+Grid : Message : 4.141148 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 4.141419 s :     Time to complete            : 2.92832 s
+Grid : Message : 4.143199 s :     Total performance           : 5.25932 GFlops/s
+Grid : Message : 4.143319 s :     Effective memory bandwidth  : 5.53347 GB/s
+
+Grid : Message : 4.143570 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 4.143668 s :     Time to complete            : 0.228335 s
+Grid : Message : 4.143788 s :     Total performance           : 67.449 GFlops/s
+Grid : Message : 4.143923 s :     Effective memory bandwidth  : 70.9649 GB/s
+
+Grid : Message : 4.144165 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 4.144268 s :     Time to complete            : 0.288044 s
+Grid : Message : 4.144388 s :     Total performance           : 53.4674 GFlops/s
+Grid : Message : 4.144494 s :     Effective memory bandwidth  : 56.2545 GB/s
+
+Grid : Message : 4.169476 s : Lookup Table Benchmark with
+Grid : Message : 4.169550 s :     fine fdimensions    : [8 8 8 8 ]
+Grid : Message : 4.169656 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 4.169759 s :     precision           : double
+Grid : Message : 4.169883 s :     nbasis              : 40
+
+Grid : Message : 4.244933 s : Recalculation of coarsening lookup table finished
+Grid : Message : 7.774193 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 7.774285 s :     Time to complete            : 2.89405 s
+Grid : Message : 7.774390 s :     Total performance           : 5.3216 GFlops/s
+Grid : Message : 7.774469 s :     Effective memory bandwidth  : 11.198 GB/s
+
+Grid : Message : 7.774644 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 7.774709 s :     Time to complete            : 0.244143 s
+Grid : Message : 7.774859 s :     Total performance           : 63.0817 GFlops/s
+Grid : Message : 7.774944 s :     Effective memory bandwidth  : 132.74 GB/s
+
+Grid : Message : 7.775111 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 7.775176 s :     Time to complete            : 0.354035 s
+Grid : Message : 7.775255 s :     Total performance           : 43.5012 GFlops/s
+Grid : Message : 7.775336 s :     Effective memory bandwidth  : 91.5377 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.588356 s : Grid Default Decomposition patterns
+Grid : Message : 0.588454 s : 	OpenMP threads : 64
+Grid : Message : 0.588576 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.588724 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.588822 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.588912 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.589003 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.591956 s : Lookup Table Benchmark with
+Grid : Message : 0.592031 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 0.592137 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.592240 s :     precision           : single
+Grid : Message : 0.592302 s :     nbasis              : 10
+
+Grid : Message : 0.717727 s : Recalculation of coarsening lookup table finished
+Grid : Message : 2.488984 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 2.489236 s :     Time to complete            : 1.11355 s
+Grid : Message : 2.490978 s :     Total performance           : 17.5042 GFlops/s
+Grid : Message : 2.491100 s :     Effective memory bandwidth  : 19.6827 GB/s
+
+Grid : Message : 2.491347 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 2.491472 s :     Time to complete            : 0.287169 s
+Grid : Message : 2.491589 s :     Total performance           : 67.8759 GFlops/s
+Grid : Message : 2.491710 s :     Effective memory bandwidth  : 76.3233 GB/s
+
+Grid : Message : 2.491958 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 2.492057 s :     Time to complete            : 0.355414 s
+Grid : Message : 2.492175 s :     Total performance           : 54.8426 GFlops/s
+Grid : Message : 2.492294 s :     Effective memory bandwidth  : 61.6681 GB/s
+
+Grid : Message : 2.517082 s : Lookup Table Benchmark with
+Grid : Message : 2.517184 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 2.517327 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 2.517511 s :     precision           : double
+Grid : Message : 2.517614 s :     nbasis              : 10
+
+Grid : Message : 2.606070 s : Recalculation of coarsening lookup table finished
+Grid : Message : 4.794800 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 4.794919 s :     Time to complete            : 1.32051 s
+Grid : Message : 4.795050 s :     Total performance           : 14.7608 GFlops/s
+Grid : Message : 4.795167 s :     Effective memory bandwidth  : 33.1958 GB/s
+
+Grid : Message : 4.795445 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 4.795538 s :     Time to complete            : 0.391387 s
+Grid : Message : 4.795656 s :     Total performance           : 49.802 GFlops/s
+Grid : Message : 4.795772 s :     Effective memory bandwidth  : 112 GB/s
+
+Grid : Message : 4.796012 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 4.796113 s :     Time to complete            : 0.453622 s
+Grid : Message : 4.796233 s :     Total performance           : 42.9693 GFlops/s
+Grid : Message : 4.796379 s :     Effective memory bandwidth  : 96.6342 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.560461 s : Grid Default Decomposition patterns
+Grid : Message : 0.560558 s : 	OpenMP threads : 64
+Grid : Message : 0.560627 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.560809 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.560911 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.561000 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.561091 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.563710 s : Lookup Table Benchmark with
+Grid : Message : 0.563826 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 0.563934 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.564037 s :     precision           : single
+Grid : Message : 0.564099 s :     nbasis              : 20
+
+Grid : Message : 0.750592 s : Recalculation of coarsening lookup table finished
+Grid : Message : 4.287829 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 4.288074 s :     Time to complete            : 2.21484 s
+Grid : Message : 4.289807 s :     Total performance           : 17.6011 GFlops/s
+Grid : Message : 4.289932 s :     Effective memory bandwidth  : 18.8929 GB/s
+
+Grid : Message : 4.290154 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 4.290257 s :     Time to complete            : 0.581991 s
+Grid : Message : 4.290379 s :     Total performance           : 66.9833 GFlops/s
+Grid : Message : 4.290497 s :     Effective memory bandwidth  : 71.8993 GB/s
+
+Grid : Message : 4.290763 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 4.290860 s :     Time to complete            : 0.716443 s
+Grid : Message : 4.290977 s :     Total performance           : 54.4128 GFlops/s
+Grid : Message : 4.291094 s :     Effective memory bandwidth  : 58.4062 GB/s
+
+Grid : Message : 4.322393 s : Lookup Table Benchmark with
+Grid : Message : 4.322489 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 4.322628 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 4.322807 s :     precision           : double
+Grid : Message : 4.322903 s :     nbasis              : 20
+
+Grid : Message : 4.473241 s : Recalculation of coarsening lookup table finished
+Grid : Message : 8.925227 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 8.925341 s :     Time to complete            : 2.67785 s
+Grid : Message : 8.925467 s :     Total performance           : 14.5578 GFlops/s
+Grid : Message : 8.925580 s :     Effective memory bandwidth  : 31.2525 GB/s
+
+Grid : Message : 8.925834 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 8.925926 s :     Time to complete            : 0.803196 s
+Grid : Message : 8.926042 s :     Total performance           : 48.5357 GFlops/s
+Grid : Message : 8.926159 s :     Effective memory bandwidth  : 104.196 GB/s
+
+Grid : Message : 8.926402 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 8.926500 s :     Time to complete            : 0.942208 s
+Grid : Message : 8.926622 s :     Total performance           : 41.3748 GFlops/s
+Grid : Message : 8.926769 s :     Effective memory bandwidth  : 88.8227 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.569741 s : Grid Default Decomposition patterns
+Grid : Message : 0.569821 s : 	OpenMP threads : 64
+Grid : Message : 0.569891 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.570032 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.570184 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.570278 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.570370 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.573027 s : Lookup Table Benchmark with
+Grid : Message : 0.573141 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 0.573249 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.573353 s :     precision           : single
+Grid : Message : 0.573417 s :     nbasis              : 30
+
+Grid : Message : 0.822236 s : Recalculation of coarsening lookup table finished
+Grid : Message : 6.171855 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 6.172151 s :     Time to complete            : 3.35519 s
+Grid : Message : 6.173916 s :     Total performance           : 17.4284 GFlops/s
+Grid : Message : 6.174040 s :     Effective memory bandwidth  : 18.4108 GB/s
+
+Grid : Message : 6.174327 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 6.174422 s :     Time to complete            : 0.89754 s
+Grid : Message : 6.174546 s :     Total performance           : 65.1509 GFlops/s
+Grid : Message : 6.174678 s :     Effective memory bandwidth  : 68.8234 GB/s
+
+Grid : Message : 6.174937 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 6.175066 s :     Time to complete            : 1.06278 s
+Grid : Message : 6.175197 s :     Total performance           : 55.0213 GFlops/s
+Grid : Message : 6.175323 s :     Effective memory bandwidth  : 58.1229 GB/s
+
+Grid : Message : 6.216288 s : Lookup Table Benchmark with
+Grid : Message : 6.216389 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 6.216530 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 6.216683 s :     precision           : double
+Grid : Message : 6.216778 s :     nbasis              : 30
+
+Grid : Message : 6.425863 s : Recalculation of coarsening lookup table finished
+Grid : Message : 12.297929 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 12.298080 s :     Time to complete            : 3.65523 s
+Grid : Message : 12.298205 s :     Total performance           : 15.9978 GFlops/s
+Grid : Message : 12.298312 s :     Effective memory bandwidth  : 33.7991 GB/s
+
+Grid : Message : 12.298542 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 12.298642 s :     Time to complete            : 0.953278 s
+Grid : Message : 12.298764 s :     Total performance           : 61.3415 GFlops/s
+Grid : Message : 12.298884 s :     Effective memory bandwidth  : 129.599 GB/s
+
+Grid : Message : 12.299152 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 12.299250 s :     Time to complete            : 1.22751 s
+Grid : Message : 12.299376 s :     Total performance           : 47.6373 GFlops/s
+Grid : Message : 12.299499 s :     Effective memory bandwidth  : 100.645 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.568619 s : Grid Default Decomposition patterns
+Grid : Message : 0.568701 s : 	OpenMP threads : 64
+Grid : Message : 0.568771 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.568910 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.569006 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.569097 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.569189 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.571926 s : Lookup Table Benchmark with
+Grid : Message : 0.572001 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 0.572110 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.572214 s :     precision           : single
+Grid : Message : 0.572278 s :     nbasis              : 40
+
+Grid : Message : 0.882408 s : Recalculation of coarsening lookup table finished
+Grid : Message : 7.887695 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 7.887816 s :     Time to complete            : 4.42652 s
+Grid : Message : 7.888164 s :     Total performance           : 17.6137 GFlops/s
+Grid : Message : 7.888296 s :     Effective memory bandwidth  : 18.4567 GB/s
+
+Grid : Message : 7.888515 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 7.888614 s :     Time to complete            : 1.14194 s
+Grid : Message : 7.888735 s :     Total performance           : 68.2761 GFlops/s
+Grid : Message : 7.888849 s :     Effective memory bandwidth  : 71.5438 GB/s
+
+Grid : Message : 7.889053 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 7.889118 s :     Time to complete            : 1.39648 s
+Grid : Message : 7.889198 s :     Total performance           : 55.8313 GFlops/s
+Grid : Message : 7.889315 s :     Effective memory bandwidth  : 58.5033 GB/s
+
+Grid : Message : 7.937515 s : Lookup Table Benchmark with
+Grid : Message : 7.937588 s :     fine fdimensions    : [12 12 12 12 ]
+Grid : Message : 7.937694 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 7.937798 s :     precision           : double
+Grid : Message : 7.937861 s :     nbasis              : 40
+
+Grid : Message : 8.210910 s : Recalculation of coarsening lookup table finished
+Grid : Message : 16.204917 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 16.205140 s :     Time to complete            : 5.00063 s
+Grid : Message : 16.205283 s :     Total performance           : 15.5915 GFlops/s
+Grid : Message : 16.205395 s :     Effective memory bandwidth  : 32.6754 GB/s
+
+Grid : Message : 16.205625 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 16.205697 s :     Time to complete            : 1.29146 s
+Grid : Message : 16.205783 s :     Total performance           : 60.3713 GFlops/s
+Grid : Message : 16.205866 s :     Effective memory bandwidth  : 126.521 GB/s
+
+Grid : Message : 16.206030 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 16.206095 s :     Time to complete            : 1.65448 s
+Grid : Message : 16.206174 s :     Total performance           : 47.1249 GFlops/s
+Grid : Message : 16.206308 s :     Effective memory bandwidth  : 98.7605 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.617952 s : Grid Default Decomposition patterns
+Grid : Message : 0.618130 s : 	OpenMP threads : 64
+Grid : Message : 0.618222 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.618379 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.618495 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.618606 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.618716 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.621278 s : Lookup Table Benchmark with
+Grid : Message : 0.621372 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 0.621509 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.621645 s :     precision           : single
+Grid : Message : 0.621725 s :     nbasis              : 10
+
+Grid : Message : 0.897919 s : Recalculation of coarsening lookup table finished
+Grid : Message : 5.742590 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 5.746300 s :     Time to complete            : 2.17998 s
+Grid : Message : 5.748750 s :     Total performance           : 28.2589 GFlops/s
+Grid : Message : 5.749930 s :     Effective memory bandwidth  : 31.7556 GB/s
+
+Grid : Message : 5.752590 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 5.753590 s :     Time to complete            : 0.89636 s
+Grid : Message : 5.754770 s :     Total performance           : 68.7267 GFlops/s
+Grid : Message : 5.755980 s :     Effective memory bandwidth  : 77.2307 GB/s
+
+Grid : Message : 5.758520 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 5.759580 s :     Time to complete            : 1.0732 s
+Grid : Message : 5.761080 s :     Total performance           : 57.402 GFlops/s
+Grid : Message : 5.762300 s :     Effective memory bandwidth  : 64.5047 GB/s
+
+Grid : Message : 5.117343 s : Lookup Table Benchmark with
+Grid : Message : 5.117442 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 5.117586 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 5.117746 s :     precision           : double
+Grid : Message : 5.117846 s :     nbasis              : 10
+
+Grid : Message : 5.358322 s : Recalculation of coarsening lookup table finished
+Grid : Message : 11.268557 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 11.268686 s :     Time to complete            : 2.59695 s
+Grid : Message : 11.268829 s :     Total performance           : 23.7216 GFlops/s
+Grid : Message : 11.269018 s :     Effective memory bandwidth  : 53.3136 GB/s
+
+Grid : Message : 11.269314 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 11.269415 s :     Time to complete            : 1.53794 s
+Grid : Message : 11.269553 s :     Total performance           : 40.056 GFlops/s
+Grid : Message : 11.269696 s :     Effective memory bandwidth  : 90.0248 GB/s
+
+Grid : Message : 11.269997 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 11.270104 s :     Time to complete            : 1.73943 s
+Grid : Message : 11.270238 s :     Total performance           : 35.4161 GFlops/s
+Grid : Message : 11.270370 s :     Effective memory bandwidth  : 79.5967 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 4.382600 s : Grid Default Decomposition patterns
+Grid : Message : 4.383710 s : 	OpenMP threads : 64
+Grid : Message : 4.384410 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 4.386100 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 4.387020 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 4.387890 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 4.388750 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 4.412730 s : Lookup Table Benchmark with
+Grid : Message : 4.413480 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 4.414520 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 4.415830 s :     precision           : single
+Grid : Message : 4.416480 s :     nbasis              : 20
+
+Grid : Message : 4.481606 s : Recalculation of coarsening lookup table finished
+Grid : Message : 12.775520 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 12.775653 s :     Time to complete            : 4.36463 s
+Grid : Message : 12.775904 s :     Total performance           : 28.2287 GFlops/s
+Grid : Message : 12.776010 s :     Effective memory bandwidth  : 30.2801 GB/s
+
+Grid : Message : 12.776245 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 12.776309 s :     Time to complete            : 1.76621 s
+Grid : Message : 12.776393 s :     Total performance           : 69.7584 GFlops/s
+Grid : Message : 12.776473 s :     Effective memory bandwidth  : 74.828 GB/s
+
+Grid : Message : 12.776734 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 12.776823 s :     Time to complete            : 2.10927 s
+Grid : Message : 12.776925 s :     Total performance           : 58.4124 GFlops/s
+Grid : Message : 12.777031 s :     Effective memory bandwidth  : 62.6574 GB/s
+
+Grid : Message : 12.830602 s : Lookup Table Benchmark with
+Grid : Message : 12.830703 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 12.830848 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 12.831041 s :     precision           : double
+Grid : Message : 12.831134 s :     nbasis              : 20
+
+Grid : Message : 13.233697 s : Recalculation of coarsening lookup table finished
+Grid : Message : 26.247037 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 26.247126 s :     Time to complete            : 5.07592 s
+Grid : Message : 26.247236 s :     Total performance           : 24.273 GFlops/s
+Grid : Message : 26.247328 s :     Effective memory bandwidth  : 52.0739 GB/s
+
+Grid : Message : 26.247588 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 26.247682 s :     Time to complete            : 3.94522 s
+Grid : Message : 26.247796 s :     Total performance           : 31.2296 GFlops/s
+Grid : Message : 26.247911 s :     Effective memory bandwidth  : 66.9983 GB/s
+
+Grid : Message : 26.248132 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 26.248198 s :     Time to complete            : 3.91948 s
+Grid : Message : 26.248288 s :     Total performance           : 31.4347 GFlops/s
+Grid : Message : 26.248372 s :     Effective memory bandwidth  : 67.4382 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.571027 s : Grid Default Decomposition patterns
+Grid : Message : 0.571109 s : 	OpenMP threads : 64
+Grid : Message : 0.571180 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.571317 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.571410 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.571499 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.571586 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.574186 s : Lookup Table Benchmark with
+Grid : Message : 0.574262 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 0.574375 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.574484 s :     precision           : single
+Grid : Message : 0.574548 s :     nbasis              : 30
+
+Grid : Message : 1.175744 s : Recalculation of coarsening lookup table finished
+Grid : Message : 13.680639 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 13.680727 s :     Time to complete            : 6.45535 s
+Grid : Message : 13.681049 s :     Total performance           : 28.6292 GFlops/s
+Grid : Message : 13.681150 s :     Effective memory bandwidth  : 30.2225 GB/s
+
+Grid : Message : 13.681321 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 13.681385 s :     Time to complete            : 2.83101 s
+Grid : Message : 13.681464 s :     Total performance           : 65.2811 GFlops/s
+Grid : Message : 13.681546 s :     Effective memory bandwidth  : 68.9141 GB/s
+
+Grid : Message : 13.681712 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 13.681776 s :     Time to complete            : 3.15173 s
+Grid : Message : 13.681856 s :     Total performance           : 58.638 GFlops/s
+Grid : Message : 13.682005 s :     Effective memory bandwidth  : 61.9013 GB/s
+
+Grid : Message : 13.743722 s : Lookup Table Benchmark with
+Grid : Message : 13.743795 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 13.743964 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 13.744072 s :     precision           : double
+Grid : Message : 13.744137 s :     nbasis              : 30
+
+Grid : Message : 14.311577 s : Recalculation of coarsening lookup table finished
+Grid : Message : 29.927778 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 29.928038 s :     Time to complete            : 7.4203 s
+Grid : Message : 29.928144 s :     Total performance           : 24.9062 GFlops/s
+Grid : Message : 29.928231 s :     Effective memory bandwidth  : 52.5845 GB/s
+
+Grid : Message : 29.928411 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 29.928476 s :     Time to complete            : 3.77901 s
+Grid : Message : 29.928569 s :     Total performance           : 48.9047 GFlops/s
+Grid : Message : 29.928658 s :     Effective memory bandwidth  : 103.253 GB/s
+
+Grid : Message : 29.928909 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 29.928980 s :     Time to complete            : 4.32972 s
+Grid : Message : 29.929073 s :     Total performance           : 42.6844 GFlops/s
+Grid : Message : 29.929157 s :     Effective memory bandwidth  : 90.1198 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.614432 s : Grid Default Decomposition patterns
+Grid : Message : 0.614531 s : 	OpenMP threads : 64
+Grid : Message : 0.614621 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.614778 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.614890 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.615000 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.615132 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.617989 s : Lookup Table Benchmark with
+Grid : Message : 0.618123 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 0.618258 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 0.618390 s :     precision           : single
+Grid : Message : 0.618470 s :     nbasis              : 40
+
+Grid : Message : 1.384269 s : Recalculation of coarsening lookup table finished
+Grid : Message : 18.275007 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 18.275140 s :     Time to complete            : 8.75168 s
+Grid : Message : 18.275442 s :     Total performance           : 28.1564 GFlops/s
+Grid : Message : 18.275554 s :     Effective memory bandwidth  : 29.4837 GB/s
+
+Grid : Message : 18.275867 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 18.275968 s :     Time to complete            : 3.60442 s
+Grid : Message : 18.276119 s :     Total performance           : 68.3648 GFlops/s
+Grid : Message : 18.276275 s :     Effective memory bandwidth  : 71.5876 GB/s
+
+Grid : Message : 18.276590 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 18.276728 s :     Time to complete            : 4.44712 s
+Grid : Message : 18.276871 s :     Total performance           : 55.41 GFlops/s
+Grid : Message : 18.277040 s :     Effective memory bandwidth  : 58.0221 GB/s
+
+Grid : Message : 18.347716 s : Lookup Table Benchmark with
+Grid : Message : 18.347817 s :     fine fdimensions    : [16 16 16 16 ]
+Grid : Message : 18.347956 s :     coarse fdimensions  : [4 4 4 4 ]
+Grid : Message : 18.348197 s :     precision           : double
+Grid : Message : 18.348324 s :     nbasis              : 40
+
+Grid : Message : 19.798390 s : Recalculation of coarsening lookup table finished
+Grid : Message : 40.658700 s : 1000 applications of vectorizableBlockProject
+Grid : Message : 40.672000 s :     Time to complete            : 9.89767 s
+Grid : Message : 40.686100 s :     Total performance           : 24.8963 GFlops/s
+Grid : Message : 40.702900 s :     Effective memory bandwidth  : 52.1398 GB/s
+
+Grid : Message : 40.729000 s : 1000 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 40.739900 s :     Time to complete            : 5.1139 s
+Grid : Message : 40.754400 s :     Total performance           : 48.1854 GFlops/s
+Grid : Message : 40.768800 s :     Effective memory bandwidth  : 100.914 GB/s
+
+Grid : Message : 40.806600 s : 1000 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 40.817900 s :     Time to complete            : 5.80121 s
+Grid : Message : 40.832100 s :     Total performance           : 42.4765 GFlops/s
+Grid : Message : 40.845200 s :     Effective memory bandwidth  : 88.9578 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.594781 s : Grid Default Decomposition patterns
+Grid : Message : 0.594925 s : 	OpenMP threads : 64
+Grid : Message : 0.594997 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.595143 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.595243 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.595339 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.595428 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.597736 s : Lookup Table Benchmark with
+Grid : Message : 0.597809 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 0.597953 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 0.598058 s :     precision           : single
+Grid : Message : 0.598126 s :     nbasis              : 10
+
+Grid : Message : 1.791615 s : Recalculation of coarsening lookup table finished
+Grid : Message : 10.624567 s : 500 applications of vectorizableBlockProject
+Grid : Message : 10.624685 s :     Time to complete            : 3.6741 s
+Grid : Message : 10.625026 s :     Total performance           : 42.4416 GFlops/s
+Grid : Message : 10.625143 s :     Effective memory bandwidth  : 47.6932 GB/s
+
+Grid : Message : 10.625403 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 10.625497 s :     Time to complete            : 2.25184 s
+Grid : Message : 10.625615 s :     Total performance           : 69.2478 GFlops/s
+Grid : Message : 10.625739 s :     Effective memory bandwidth  : 77.8163 GB/s
+
+Grid : Message : 10.626024 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 10.626123 s :     Time to complete            : 2.80986 s
+Grid : Message : 10.626239 s :     Total performance           : 55.4956 GFlops/s
+Grid : Message : 10.626366 s :     Effective memory bandwidth  : 62.3625 GB/s
+
+Grid : Message : 10.874938 s : Lookup Table Benchmark with
+Grid : Message : 10.875037 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 10.875184 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 10.875334 s :     precision           : double
+Grid : Message : 10.875438 s :     nbasis              : 10
+
+Grid : Message : 11.990516 s : Recalculation of coarsening lookup table finished
+Grid : Message : 23.446239 s : 500 applications of vectorizableBlockProject
+Grid : Message : 23.446354 s :     Time to complete            : 5.01806 s
+Grid : Message : 23.446488 s :     Total performance           : 31.0747 GFlops/s
+Grid : Message : 23.446605 s :     Effective memory bandwidth  : 69.8396 GB/s
+
+Grid : Message : 23.446877 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 23.446955 s :     Time to complete            : 3.00416 s
+Grid : Message : 23.447064 s :     Total performance           : 51.9062 GFlops/s
+Grid : Message : 23.447183 s :     Effective memory bandwidth  : 116.658 GB/s
+
+Grid : Message : 23.447437 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 23.447539 s :     Time to complete            : 3.30867 s
+Grid : Message : 23.447668 s :     Total performance           : 47.1291 GFlops/s
+Grid : Message : 23.447815 s :     Effective memory bandwidth  : 105.921 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.589152 s : Grid Default Decomposition patterns
+Grid : Message : 0.589247 s : 	OpenMP threads : 64
+Grid : Message : 0.589316 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.589457 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.589551 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.589640 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.589729 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.592139 s : Lookup Table Benchmark with
+Grid : Message : 0.592212 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 0.592320 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 0.592425 s :     precision           : single
+Grid : Message : 0.592494 s :     nbasis              : 20
+
+Grid : Message : 2.561079 s : Recalculation of coarsening lookup table finished
+Grid : Message : 19.665210 s : 500 applications of vectorizableBlockProject
+Grid : Message : 19.665329 s :     Time to complete            : 7.05831 s
+Grid : Message : 19.665650 s :     Total performance           : 44.1847 GFlops/s
+Grid : Message : 19.665780 s :     Effective memory bandwidth  : 47.3957 GB/s
+
+Grid : Message : 19.666051 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 19.666148 s :     Time to complete            : 4.44875 s
+Grid : Message : 19.666272 s :     Total performance           : 70.1027 GFlops/s
+Grid : Message : 19.666395 s :     Effective memory bandwidth  : 75.1973 GB/s
+
+Grid : Message : 19.666645 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 19.666744 s :     Time to complete            : 5.41332 s
+Grid : Message : 19.666882 s :     Total performance           : 57.6115 GFlops/s
+Grid : Message : 19.667005 s :     Effective memory bandwidth  : 61.7983 GB/s
+
+Grid : Message : 19.921137 s : Lookup Table Benchmark with
+Grid : Message : 19.921242 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 19.921388 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 19.921542 s :     precision           : double
+Grid : Message : 19.921641 s :     nbasis              : 20
+
+Grid : Message : 21.812667 s : Recalculation of coarsening lookup table finished
+Grid : Message : 43.923624 s : 500 applications of vectorizableBlockProject
+Grid : Message : 43.923746 s :     Time to complete            : 10.0229 s
+Grid : Message : 43.923919 s :     Total performance           : 31.1158 GFlops/s
+Grid : Message : 43.924020 s :     Effective memory bandwidth  : 66.7542 GB/s
+
+Grid : Message : 43.924251 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 43.924350 s :     Time to complete            : 5.53795 s
+Grid : Message : 43.924470 s :     Total performance           : 56.315 GFlops/s
+Grid : Message : 43.924588 s :     Effective memory bandwidth  : 120.815 GB/s
+
+Grid : Message : 43.924860 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 43.924957 s :     Time to complete            : 6.3179 s
+Grid : Message : 43.925074 s :     Total performance           : 49.3628 GFlops/s
+Grid : Message : 43.925193 s :     Effective memory bandwidth  : 105.9 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.579576 s : Grid Default Decomposition patterns
+Grid : Message : 0.579657 s : 	OpenMP threads : 64
+Grid : Message : 0.579727 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.579867 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.579961 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.580055 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.580139 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.582788 s : Lookup Table Benchmark with
+Grid : Message : 0.582862 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 0.582971 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 0.583076 s :     precision           : single
+Grid : Message : 0.583138 s :     nbasis              : 30
+
+Grid : Message : 3.330516 s : Recalculation of coarsening lookup table finished
+Grid : Message : 29.209591 s : 500 applications of vectorizableBlockProject
+Grid : Message : 29.209707 s :     Time to complete            : 10.5668 s
+Grid : Message : 29.210053 s :     Total performance           : 44.271 GFlops/s
+Grid : Message : 29.210178 s :     Effective memory bandwidth  : 46.7348 GB/s
+
+Grid : Message : 29.210415 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 29.210525 s :     Time to complete            : 6.89272 s
+Grid : Message : 29.210618 s :     Total performance           : 67.8693 GFlops/s
+Grid : Message : 29.210714 s :     Effective memory bandwidth  : 71.6464 GB/s
+
+Grid : Message : 29.210941 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 29.211038 s :     Time to complete            : 8.15266 s
+Grid : Message : 29.211163 s :     Total performance           : 57.3806 GFlops/s
+Grid : Message : 29.211285 s :     Effective memory bandwidth  : 60.5739 GB/s
+
+Grid : Message : 29.464644 s : Lookup Table Benchmark with
+Grid : Message : 29.464745 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 29.464886 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 29.465042 s :     precision           : double
+Grid : Message : 29.465141 s :     nbasis              : 30
+
+Grid : Message : 32.148154 s : Recalculation of coarsening lookup table finished
+Grid : Message : 64.838909 s : 500 applications of vectorizableBlockProject
+Grid : Message : 64.839026 s :     Time to complete            : 14.4612 s
+Grid : Message : 64.839171 s :     Total performance           : 32.349 GFlops/s
+Grid : Message : 64.839286 s :     Effective memory bandwidth  : 68.2985 GB/s
+
+Grid : Message : 64.839546 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 64.839671 s :     Time to complete            : 8.49515 s
+Grid : Message : 64.839802 s :     Total performance           : 55.0672 GFlops/s
+Grid : Message : 64.839913 s :     Effective memory bandwidth  : 116.264 GB/s
+
+Grid : Message : 64.840139 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 64.840230 s :     Time to complete            : 9.39258 s
+Grid : Message : 64.840361 s :     Total performance           : 49.8057 GFlops/s
+Grid : Message : 64.840495 s :     Effective memory bandwidth  : 105.155 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.611731 s : Grid Default Decomposition patterns
+Grid : Message : 0.611812 s : 	OpenMP threads : 64
+Grid : Message : 0.611883 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.612024 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.612176 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.612275 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.612368 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.615578 s : Lookup Table Benchmark with
+Grid : Message : 0.615670 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 0.615805 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 0.615941 s :     precision           : single
+Grid : Message : 0.616023 s :     nbasis              : 40
+
+Grid : Message : 4.129029 s : Recalculation of coarsening lookup table finished
+Grid : Message : 38.437973 s : 500 applications of vectorizableBlockProject
+Grid : Message : 38.438117 s :     Time to complete            : 13.9617 s
+Grid : Message : 38.438422 s :     Total performance           : 44.6749 GFlops/s
+Grid : Message : 38.438526 s :     Effective memory bandwidth  : 46.7809 GB/s
+
+Grid : Message : 38.438772 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 38.438873 s :     Time to complete            : 8.8887 s
+Grid : Message : 38.438993 s :     Total performance           : 70.1721 GFlops/s
+Grid : Message : 38.439139 s :     Effective memory bandwidth  : 73.4801 GB/s
+
+Grid : Message : 38.439394 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 38.439495 s :     Time to complete            : 11.1005 s
+Grid : Message : 38.439614 s :     Total performance           : 56.19 GFlops/s
+Grid : Message : 38.439741 s :     Effective memory bandwidth  : 58.8389 GB/s
+
+Grid : Message : 38.686127 s : Lookup Table Benchmark with
+Grid : Message : 38.686231 s :     fine fdimensions    : [24 24 24 24 ]
+Grid : Message : 38.686377 s :     coarse fdimensions  : [6 6 6 6 ]
+Grid : Message : 38.686527 s :     precision           : double
+Grid : Message : 38.686631 s :     nbasis              : 40
+
+Grid : Message : 42.125358 s : Recalculation of coarsening lookup table finished
+Grid : Message : 85.503612 s : 500 applications of vectorizableBlockProject
+Grid : Message : 85.503728 s :     Time to complete            : 19.3793 s
+Grid : Message : 85.503859 s :     Total performance           : 32.1858 GFlops/s
+Grid : Message : 85.503968 s :     Effective memory bandwidth  : 67.4061 GB/s
+
+Grid : Message : 85.504232 s : 500 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 85.504329 s :     Time to complete            : 10.8798 s
+Grid : Message : 85.504443 s :     Total performance           : 57.3299 GFlops/s
+Grid : Message : 85.504562 s :     Effective memory bandwidth  : 120.065 GB/s
+
+Grid : Message : 85.504800 s : 500 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 85.504895 s :     Time to complete            : 12.6713 s
+Grid : Message : 85.505030 s :     Total performance           : 49.2245 GFlops/s
+Grid : Message : 85.505149 s :     Effective memory bandwidth  : 103.09 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.604636 s : Grid Default Decomposition patterns
+Grid : Message : 0.604778 s : 	OpenMP threads : 64
+Grid : Message : 0.604848 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.604973 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.605061 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.605204 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.605292 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.609512 s : Lookup Table Benchmark with
+Grid : Message : 0.609586 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 0.609693 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 0.609799 s :     precision           : single
+Grid : Message : 0.609864 s :     nbasis              : 10
+
+Grid : Message : 4.248933 s : Recalculation of coarsening lookup table finished
+Grid : Message : 17.220488 s : 250 applications of vectorizableBlockProject
+Grid : Message : 17.220618 s :     Time to complete            : 4.98566 s
+Grid : Message : 17.220974 s :     Total performance           : 49.4248 GFlops/s
+Grid : Message : 17.221135 s :     Effective memory bandwidth  : 55.5405 GB/s
+
+Grid : Message : 17.221364 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 17.221464 s :     Time to complete            : 3.4843 s
+Grid : Message : 17.221591 s :     Total performance           : 70.7216 GFlops/s
+Grid : Message : 17.221713 s :     Effective memory bandwidth  : 79.4724 GB/s
+
+Grid : Message : 17.221969 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 17.222098 s :     Time to complete            : 4.23138 s
+Grid : Message : 17.222221 s :     Total performance           : 58.2353 GFlops/s
+Grid : Message : 17.222352 s :     Effective memory bandwidth  : 65.4411 GB/s
+
+Grid : Message : 17.942836 s : Lookup Table Benchmark with
+Grid : Message : 17.942941 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 17.943149 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 17.943303 s :     precision           : double
+Grid : Message : 17.943406 s :     nbasis              : 10
+
+Grid : Message : 21.392874 s : Recalculation of coarsening lookup table finished
+Grid : Message : 39.367286 s : 250 applications of vectorizableBlockProject
+Grid : Message : 39.367429 s :     Time to complete            : 6.56659 s
+Grid : Message : 39.367579 s :     Total performance           : 37.5256 GFlops/s
+Grid : Message : 39.367725 s :     Effective memory bandwidth  : 84.3379 GB/s
+
+Grid : Message : 39.368064 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 39.368150 s :     Time to complete            : 5.26987 s
+Grid : Message : 39.368269 s :     Total performance           : 46.7593 GFlops/s
+Grid : Message : 39.368399 s :     Effective memory bandwidth  : 105.09 GB/s
+
+Grid : Message : 39.368708 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 39.368795 s :     Time to complete            : 5.76067 s
+Grid : Message : 39.368918 s :     Total performance           : 42.7755 GFlops/s
+Grid : Message : 39.369064 s :     Effective memory bandwidth  : 96.1367 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.899316 s : Grid Default Decomposition patterns
+Grid : Message : 0.899435 s : 	OpenMP threads : 64
+Grid : Message : 0.899582 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.899761 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.899881 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.899995 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.900106 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.902939 s : Lookup Table Benchmark with
+Grid : Message : 0.903033 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 0.903174 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 0.903308 s :     precision           : single
+Grid : Message : 0.903389 s :     nbasis              : 20
+
+Grid : Message : 6.931064 s : Recalculation of coarsening lookup table finished
+Grid : Message : 32.918298 s : 250 applications of vectorizableBlockProject
+Grid : Message : 32.918577 s :     Time to complete            : 9.84817 s
+Grid : Message : 32.918939 s :     Total performance           : 50.0429 GFlops/s
+Grid : Message : 32.919068 s :     Effective memory bandwidth  : 53.6796 GB/s
+
+Grid : Message : 32.919311 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 32.919438 s :     Time to complete            : 7.14934 s
+Grid : Message : 32.919537 s :     Total performance           : 68.9338 GFlops/s
+Grid : Message : 32.919632 s :     Effective memory bandwidth  : 73.9434 GB/s
+
+Grid : Message : 32.919855 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 32.919952 s :     Time to complete            : 8.46324 s
+Grid : Message : 32.920074 s :     Total performance           : 58.2319 GFlops/s
+Grid : Message : 32.920202 s :     Effective memory bandwidth  : 62.4638 GB/s
+
+Grid : Message : 33.620972 s : Lookup Table Benchmark with
+Grid : Message : 33.621071 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 33.621218 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 33.621406 s :     precision           : double
+Grid : Message : 33.621507 s :     nbasis              : 20
+
+Grid : Message : 39.532341 s : Recalculation of coarsening lookup table finished
+Grid : Message : 75.188329 s : 250 applications of vectorizableBlockProject
+Grid : Message : 75.188494 s :     Time to complete            : 12.8113 s
+Grid : Message : 75.188663 s :     Total performance           : 38.4685 GFlops/s
+Grid : Message : 75.188795 s :     Effective memory bandwidth  : 82.5282 GB/s
+
+Grid : Message : 75.189111 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 75.189207 s :     Time to complete            : 10.5877 s
+Grid : Message : 75.189372 s :     Total performance           : 46.5475 GFlops/s
+Grid : Message : 75.189476 s :     Effective memory bandwidth  : 99.8604 GB/s
+
+Grid : Message : 75.189639 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 75.189702 s :     Time to complete            : 11.5317 s
+Grid : Message : 75.189785 s :     Total performance           : 42.7369 GFlops/s
+Grid : Message : 75.189863 s :     Effective memory bandwidth  : 91.6854 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.635272 s : Grid Default Decomposition patterns
+Grid : Message : 0.635353 s : 	OpenMP threads : 64
+Grid : Message : 0.635423 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.635565 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.635663 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.635753 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.635845 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.638880 s : Lookup Table Benchmark with
+Grid : Message : 0.638981 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 0.639114 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 0.639252 s :     precision           : single
+Grid : Message : 0.639348 s :     nbasis              : 30
+
+Grid : Message : 9.121495 s : Recalculation of coarsening lookup table finished
+Grid : Message : 48.151973 s : 250 applications of vectorizableBlockProject
+Grid : Message : 48.152233 s :     Time to complete            : 14.719 s
+Grid : Message : 48.152632 s :     Total performance           : 50.2239 GFlops/s
+Grid : Message : 48.152786 s :     Effective memory bandwidth  : 53.019 GB/s
+
+Grid : Message : 48.153026 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 48.153102 s :     Time to complete            : 10.8107 s
+Grid : Message : 48.153208 s :     Total performance           : 68.3811 GFlops/s
+Grid : Message : 48.153345 s :     Effective memory bandwidth  : 72.1866 GB/s
+
+Grid : Message : 48.153661 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 48.153819 s :     Time to complete            : 12.7201 s
+Grid : Message : 48.153968 s :     Total performance           : 58.1162 GFlops/s
+Grid : Message : 48.154111 s :     Effective memory bandwidth  : 61.3505 GB/s
+
+Grid : Message : 48.859400 s : Lookup Table Benchmark with
+Grid : Message : 48.859503 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 48.859644 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 48.859897 s :     precision           : double
+Grid : Message : 48.860038 s :     nbasis              : 30
+
+Grid : Message : 57.181865 s : Recalculation of coarsening lookup table finished
+Grid : Message : 110.985012 s : 250 applications of vectorizableBlockProject
+Grid : Message : 110.985157 s :     Time to complete            : 19.0727 s
+Grid : Message : 110.985313 s :     Total performance           : 38.7594 GFlops/s
+Grid : Message : 110.985474 s :     Effective memory bandwidth  : 81.8328 GB/s
+
+Grid : Message : 110.985871 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 110.985951 s :     Time to complete            : 16.0564 s
+Grid : Message : 110.986075 s :     Total performance           : 46.0405 GFlops/s
+Grid : Message : 110.986228 s :     Effective memory bandwidth  : 97.2055 GB/s
+
+Grid : Message : 110.986497 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 110.986636 s :     Time to complete            : 17.5984 s
+Grid : Message : 110.986852 s :     Total performance           : 42.0063 GFlops/s
+Grid : Message : 110.986998 s :     Effective memory bandwidth  : 88.6881 GB/s
+
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=f0dc0f36214c4dda1eace9d83956e5d7fef4f729: (HEAD, feature/gpt) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+Grid : Message : 0.637120 s : Grid Default Decomposition patterns
+Grid : Message : 0.637222 s : 	OpenMP threads : 64
+Grid : Message : 0.637313 s : 	MPI tasks      : 1 1 1 1 
+Grid : Message : 0.637469 s : 	vRealF         : 512bits ; 2 2 2 2 
+Grid : Message : 0.637584 s : 	vRealD         : 512bits ; 1 2 2 2 
+Grid : Message : 0.637695 s : 	vComplexF      : 512bits ; 1 2 2 2 
+Grid : Message : 0.637807 s : 	vComplexD      : 512bits ; 1 1 2 2 
+Grid : Message : 0.641026 s : Lookup Table Benchmark with
+Grid : Message : 0.641127 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 0.641265 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 0.641400 s :     precision           : single
+Grid : Message : 0.641485 s :     nbasis              : 40
+
+Grid : Message : 11.510919 s : Recalculation of coarsening lookup table finished
+Grid : Message : 63.585839 s : 250 applications of vectorizableBlockProject
+Grid : Message : 63.585998 s :     Time to complete            : 19.5605 s
+Grid : Message : 63.586373 s :     Total performance           : 50.3903 GFlops/s
+Grid : Message : 63.586521 s :     Effective memory bandwidth  : 52.7658 GB/s
+
+Grid : Message : 63.586789 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 63.586889 s :     Time to complete            : 14.149 s
+Grid : Message : 63.587050 s :     Total performance           : 69.663 GFlops/s
+Grid : Message : 63.587173 s :     Effective memory bandwidth  : 72.947 GB/s
+
+Grid : Message : 63.587420 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 63.587520 s :     Time to complete            : 17.3301 s
+Grid : Message : 63.587634 s :     Total performance           : 56.8756 GFlops/s
+Grid : Message : 63.587755 s :     Effective memory bandwidth  : 59.5568 GB/s
+
+Grid : Message : 64.311393 s : Lookup Table Benchmark with
+Grid : Message : 64.311497 s :     fine fdimensions    : [32 32 32 32 ]
+Grid : Message : 64.311643 s :     coarse fdimensions  : [8 8 8 8 ]
+Grid : Message : 64.311796 s :     precision           : double
+Grid : Message : 64.311895 s :     nbasis              : 40
+
+Grid : Message : 75.147830 s : Recalculation of coarsening lookup table finished
+Grid : Message : 147.889688 s : 250 applications of vectorizableBlockProject
+Grid : Message : 147.889823 s :     Time to complete            : 25.7149 s
+Grid : Message : 147.890021 s :     Total performance           : 38.3304 GFlops/s
+Grid : Message : 147.890140 s :     Effective memory bandwidth  : 80.2746 GB/s
+
+Grid : Message : 147.890440 s : 250 applications of vectorizableBlockProjectUsingLut
+Grid : Message : 147.890551 s :     Time to complete            : 21.793 s
+Grid : Message : 147.890696 s :     Total performance           : 45.2283 GFlops/s
+Grid : Message : 147.890829 s :     Effective memory bandwidth  : 94.7208 GB/s
+
+Grid : Message : 147.891141 s : 250 applications of vectorizableBlockProjectUsingNoLut
+Grid : Message : 147.891238 s :     Time to complete            : 23.7838 s
+Grid : Message : 147.891370 s :     Total performance           : 41.4425 GFlops/s
+Grid : Message : 147.891496 s :     Effective memory bandwidth  : 86.7923 GB/s
+

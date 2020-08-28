@@ -16,13 +16,15 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+#define cgpt_PyArray_Check(a) (PyArray_Check(a) && PyArray_IS_C_CONTIGUOUS((PyArrayObject*)a))
+
 static void cgpt_convert(PyObject* in, int& out) {
   ASSERT(PyLong_Check(in));
   out = PyLong_AsLong(in);
 }
 
 static void cgpt_convert(PyObject* in, PyArrayObject*& out) {
-  ASSERT(PyArray_Check(in));
+  ASSERT(cgpt_PyArray_Check(in));
   out = (PyArrayObject*)in;
 }
 
@@ -129,7 +131,7 @@ void cgpt_convert(PyObject* in, std::vector<t>& out) {
     out.resize(PyTuple_Size(in));
     for (size_t i = 0; i < out.size(); i++)
       cgpt_convert(PyTuple_GetItem(in,i),out[i]);
-  } else if (PyArray_Check(in)) {
+  } else if (cgpt_PyArray_Check(in)) {
     cgpt_convert((PyArrayObject*)in,out);
   } else {
     ASSERT(0);

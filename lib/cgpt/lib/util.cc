@@ -116,7 +116,7 @@ EXPORT(mview,{
       return NULL;
     }
 
-    if (PyArray_Check(_a)) {
+    if (cgpt_PyArray_Check(_a)) {
       char* data = (char*)PyArray_DATA((PyArrayObject*)_a);
       long nbytes = PyArray_NBYTES((PyArrayObject*)_a);
       PyObject* r = PyMemoryView_FromMemory(data,nbytes,PyBUF_WRITE);

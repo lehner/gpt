@@ -242,7 +242,7 @@ EXPORT(coordinates_select_box,{
     cgpt_convert(_top,top);
     cgpt_convert(_bottom,bottom);
 
-    ASSERT(PyArray_Check(_coordinates));
+    ASSERT(cgpt_PyArray_Check(_coordinates));
     PyArrayObject* coordinates = (PyArrayObject*)_coordinates;
     ASSERT(PyArray_TYPE(coordinates)==NPY_INT32);
     ASSERT(PyArray_NDIM(coordinates) == 2);
@@ -306,7 +306,7 @@ EXPORT(coordinates_momentum_phase,{
     cgpt_convert(_prec,prec);
     int dtype = infer_numpy_type(prec);
     
-    ASSERT(PyArray_Check(_coordinates));
+    ASSERT(cgpt_PyArray_Check(_coordinates));
     PyArrayObject* coordinates = (PyArrayObject*)_coordinates;
     ASSERT(PyArray_TYPE(coordinates)==NPY_INT32);
     ASSERT(PyArray_NDIM(coordinates) == 2);

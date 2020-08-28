@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -132,6 +133,9 @@ class operator(gpt.matrix_operator):
             otype=otype,
             grid=self.F_grid_eo,
         )
+        self.Mdir = gpt.matrix_operator(
+            mat=registry.Mdir, otype=otype, grid=self.F_grid
+        )
 
     def __del__(self):
         cgpt.delete_fermion_operator(self.obj)
@@ -177,9 +181,180 @@ class operator(gpt.matrix_operator):
         # Grid has different calling conventions which we adopt in cgpt:
         return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj[0], o.v_obj[0])
 
+    def apply_dirdisp_operator(self, opcode, o, i, dir, disp):
+        assert len(i.v_obj) == 1
+        assert len(o.v_obj) == 1
+        # Grid has different calling conventions which we adopt in cgpt:
+        return cgpt.apply_fermion_operator_dirdisp(
+            self.obj, opcode, i.v_obj[0], o.v_obj[0], dir, disp
+        )
+
     def _G5M(self, dst, src):
         self(dst, src)
         dst @= gpt.gamma[5] * dst
+
+    def propagator(self, solver):
+        exp = self.ExportPhysicalFermionSolution
+        imp = self.ImportPhysicalFermionSource
+
+        inv_matrix = solver(self)
+
+        def prop(dst_sc, src_sc):
+            gpt.eval(dst_sc, exp * inv_matrix * imp * src_sc)
+
+        return gpt.matrix_operator(
+            prop,
+            otype=(exp.otype[0], imp.otype[1]),
+            grid=(exp.grid[0], imp.grid[1]),
+            accept_list=True,
+        )
+
+
+class coarse_operator(gpt.matrix_operator):
+    def __init__(self, A, params, Ls=None, otype=None):
+
+        # keep constructor parameters
+        self.name = "coarse"
+        self.A = A
+        self.params_constructor = params
+        self.Ls = Ls
+        self.otype = otype
+
+        # derived objects
+        self.A_grid = A[0].grid
+        # self.A_grid_eo = gpt.grid(
+        #     self.A_grid.gdimensions, self.A_grid.precision, gpt.redblack
+        # )
+        if Ls is not None:
+            assert Ls is None
+        self.F_grid = self.A_grid
+        # self.F_grid_eo = self.A_grid_eo
+        # NOTE: The eo grids are not used currently
+
+        # parameter for create_fermion_operator
+        self.params = {
+            "grid_c": self.A_grid.obj,
+            "make_hermitian": False,  # NOTE: doesn't matter what we pass to Grid since we need to do Mdag ourselves anyway
+            "level": params["level"],
+            "nbasis": self.A[0].otype.v_n1[0],  # for one v_obj instance
+            # "A": [a.v_obj[0] for a in self.A],
+        }
+
+        for k in params:
+            self.params[k] = params[k]
+
+        self.obj = []
+        for i in range(len(A[0].v_obj)):
+            self.params["A"] = [a.v_obj[i] for a in self.A]
+            self.obj.append(
+                cgpt.create_fermion_operator(
+                    self.name, self.A_grid.precision, self.params
+                )
+            )
+
+        # register matrix operators
+        class registry:
+            pass
+
+        gpt.qcd.fermion.register(registry, self)
+
+        # map Grid matrix operations to clean matrix_operator structure
+        super().__init__(
+            mat=registry.M, adj_mat=registry.Mdag, otype=otype, grid=self.F_grid
+        )
+        self.ImportPhysicalFermionSource = gpt.matrix_operator(
+            registry.ImportPhysicalFermionSource,
+            otype=otype,
+            grid=(self.F_grid, self.A_grid),
+        )
+        self.ExportPhysicalFermionSolution = gpt.matrix_operator(
+            registry.ExportPhysicalFermionSolution,
+            otype=otype,
+            grid=(self.A_grid, self.F_grid),
+        )
+        self.ExportPhysicalFermionSource = gpt.matrix_operator(
+            registry.ExportPhysicalFermionSource,
+            otype=otype,
+            grid=(self.A_grid, self.F_grid),
+        )
+        self.G5M = gpt.matrix_operator(
+            lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
+        )
+        self.Mdir = gpt.matrix_operator(
+            mat=registry.Mdir, otype=otype, grid=self.F_grid
+        )
+
+    def __del__(self):
+        for elem in self.obj:
+            cgpt.delete_fermion_operator(elem)
+
+    def updated(self, A):
+        return coarse_operator(
+            name=self.name,
+            A=A,
+            params=self.params_constructor,
+            Ls=self.Ls,
+            otype=self.otype[0],
+        )
+
+    def converted(self, dst_precision):
+        return self.updated(gpt.convert(self.A, dst_precision))
+
+    def split(self, mpi_split):
+        split_grid = self.A_grid.split(mpi_split, self.A_grid.fdimensions)
+        A_split = [gpt.lattice(split_grid, x.otype) for x in self.A]
+        pos_split = gpt.coordinates(A_split[0])
+        for i, x in enumerate(A_split):
+            x[pos_split] = self.A[i][pos_split]
+        return self.updated(A_split)
+
+    @params_convention()
+    def modified(self, params):
+        return operator(
+            name=self.name,
+            A=self.A,
+            params={**self.params_constructor, **params},
+            Ls=self.Ls,
+            otype=self.otype[0],
+        )
+
+    def apply_unary_operator(self, opcode, o, i):
+        assert len(i.v_obj) == len(o.v_obj)
+        assert len(i.v_obj) == (len(self.obj)) ** 0.5
+        tmp = gpt.lattice(o)
+        o[:] = 0.0
+        # Grid has different calling conventions which we adopt in cgpt:
+        for m in range(len(i.v_obj)):
+            tmp[:] = 0.0
+            for n in range(len(i.v_obj)):
+                cgpt.apply_fermion_operator(
+                    self.obj[n * len(i.v_obj) + m], opcode, i.v_obj[n], tmp.v_obj[m]
+                )
+                o += tmp
+
+    def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
+        assert len(i.v_obj) == len(o.v_obj)
+        assert len(i.v_obj) == (len(self.obj)) ** 0.5
+        tmp = gpt.lattice(o)
+        o[:] = 0.0
+        # Grid has different calling conventions which we adopt in cgpt:
+        for m in range(len(i.v_obj)):
+            tmp[:] = 0.0
+            for n in range(len(i.v_obj)):
+                cgpt.apply_fermion_operator_dirdisp(
+                    self.obj[n * len(i.v_obj) + m],
+                    opcode,
+                    i.v_obj[n],
+                    tmp.v_obj[m],
+                    direction,
+                    disp,
+                )
+                o += tmp
+
+    def _G5M(self, dst, src):
+        self(dst, src)
+        g5 = gpt.g5c(dst)
+        dst @= g5 * dst
 
     def propagator(self, solver):
         exp = self.ExportPhysicalFermionSolution

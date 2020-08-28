@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Daniel Richtmann
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from time import time
 
 
 class mr:
@@ -33,6 +32,7 @@ class mr:
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.relax = params["relax"]
+        self.history = None
 
     def __call__(self, mat):
 
@@ -43,36 +43,54 @@ class mr:
             # remove wrapper for performance benefits
 
         def inv(psi, src):
+            self.history = []
             verbose = g.default.is_verbose("mr")
-            t0 = time()
+
+            t = g.timer("mr")
+            t("setup")
 
             r, mmr = g.copy(src), g.copy(src)
 
             mat(mmr, psi)
             r @= src - mmr
 
+            r2 = g.norm2(r)
             ssq = g.norm2(src)
+            # if ssq == 0.0:
+            # assert r2 != 0.0  # need either source or psi to not be zero
+            # ssq = r2
             rsq = self.eps ** 2.0 * ssq
 
             for k in range(self.maxiter):
+                t("mat")
                 mat(mmr, r)
-                ip, mmr2 = g.inner_product_norm2(mmr, r)
 
+                t("inner")
+                ip, mmr2 = g.inner_product_norm2(mmr, r)
                 if mmr2 == 0.0:
                     continue
 
+                t("linearcomb")
                 alpha = ip.real / mmr2 * self.relax
-
                 psi += alpha * r
+
+                t("axpy_norm")
                 r2 = g.axpy_norm2(r, -alpha, mmr, r)
 
+                t("other")
+                self.history.append(r2)
+
                 if verbose:
-                    g.message("res^2[ %d ] = %g" % (k, r2))
+                    g.message("mr: res^2[ %d ] = %g, target = %g" % (k, r2, rsq))
 
                 if r2 <= rsq:
                     if verbose:
-                        t1 = time()
-                        g.message("Converged in %g s" % (t1 - t0))
+                        t()
+                        g.message(
+                            "mr: converged in %d iterations, took %g s"
+                            % (k + 1, t.dt["total"])
+                        )
+                        g.message(t)
                     break
 
         return g.matrix_operator(

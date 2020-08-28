@@ -206,7 +206,7 @@ static PyArrayObject* cgpt_importexport(GridBase* grid, int cb, int dtype,
     // check compatibility
     void* s;
     long sz;
-    if (PyArray_Check(data)) {
+    if (cgpt_PyArray_Check(data)) {
       PyArrayObject* bytes = (PyArrayObject*)data;
       ASSERT(PyArray_TYPE(bytes) == dtype);
       s = (void*)PyArray_DATA(bytes);

@@ -1,0 +1,124 @@
+SharedMemoryMpi:  World communicator of size 1
+SharedMemoryMpi:  Node  communicator of size 1
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=9877ed9bf8e57f7b95746581f33d5d690bcc911c: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+
+=============================================
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
+=============================================
+GPT :       3.347149 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [16, 16, 16, 16]
+                       :     coarse fdimensions  : [4, 4, 4, 4]
+                       :     precision           : single
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 1
+                       : 
+GPT :       3.714654 s : 100 applications of block_project
+                       :             Time to complete            : 0.35 s
+                       :             Total performance           : 71.13 GFlops/s
+                       :             Effective memory bandwidth  : 74.48 GB/s
+                       :             
+GPT :       4.009268 s : 100 applications of block_promote
+                       :             Time to complete            : 0.28 s
+                       :             Total performance           : 89.71 GFlops/s
+                       :             Effective memory bandwidth  : 92.56 GB/s
+                       :             
+GPT :       4.009547 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [16, 16, 16, 16]
+                       :     coarse fdimensions  : [4, 4, 4, 4]
+                       :     precision           : single
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 4
+                       : 
+GPT :       5.338178 s : 100 applications of block_project
+                       :             Time to complete            : 1.26 s
+                       :             Total performance           : 78.49 GFlops/s
+                       :             Effective memory bandwidth  : 82.19 GB/s
+                       :             
+GPT :       5.963729 s : 100 applications of block_promote
+                       :             Time to complete            : 0.59 s
+                       :             Total performance           : 169.24 GFlops/s
+                       :             Effective memory bandwidth  : 174.61 GB/s
+                       :             
+GPT :       7.312624 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [16, 16, 16, 16]
+                       :     coarse fdimensions  : [4, 4, 4, 4]
+                       :     precision           : double
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 1
+                       : 
+GPT :       7.825518 s : 100 applications of block_project
+                       :             Time to complete            : 0.48 s
+                       :             Total performance           : 51.25 GFlops/s
+                       :             Effective memory bandwidth  : 107.33 GB/s
+                       :             
+GPT :       8.538471 s : 100 applications of block_promote
+                       :             Time to complete            : 0.68 s
+                       :             Total performance           : 36.96 GFlops/s
+                       :             Effective memory bandwidth  : 76.27 GB/s
+                       :             
+GPT :       8.538751 s : 
+                       : Lookup Table Benchmark with
+                       :     fine fdimensions    : [16, 16, 16, 16]
+                       :     coarse fdimensions  : [4, 4, 4, 4]
+                       :     precision           : double
+                       :     nbasis              : 40
+                       :     basis_n_block       : 8
+                       :     nvec                : 4
+                       : 
+GPT :      10.219302 s : 100 applications of block_project
+                       :             Time to complete            : 1.59 s
+                       :             Total performance           : 62.00 GFlops/s
+                       :             Effective memory bandwidth  : 129.84 GB/s
+                       :             
+GPT :      11.654424 s : 100 applications of block_promote
+                       :             Time to complete            : 1.33 s
+                       :             Total performance           : 75.38 GFlops/s
+                       :             Effective memory bandwidth  : 155.55 GB/s
+                       :             
+=============================================
+               Finalized GPT                 
+=============================================

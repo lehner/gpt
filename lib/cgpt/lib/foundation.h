@@ -28,6 +28,15 @@ using namespace Grid;
 #define GRID_HAS_ACCELERATOR
 #endif
 
+#define VECTOR_VIEW_OPEN(l,v,mode)				\
+  Vector< decltype(l[0].View(mode)) > v; v.reserve(l.size());	\
+  for(uint64_t k=0;k<l.size();k++)				\
+    v.push_back(l[k].View(mode));	       
+
+#define VECTOR_VIEW_CLOSE(v)				\
+  for(uint64_t k=0;k<v.size();k++) v[k].ViewClose();
+
+
 NAMESPACE_BEGIN(Grid);
 
 #if defined(GRID_CUDA)||defined(GRID_HIP)
@@ -37,6 +46,7 @@ NAMESPACE_BEGIN(Grid);
 #include "foundation/reduce.h"
 #include "foundation/singlet.h"
 #include "foundation/et.h"
+#include "foundation/block.h"
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
 

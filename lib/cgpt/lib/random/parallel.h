@@ -109,7 +109,7 @@ template<typename DIST,typename sRNG,typename pRNG>
 			       std::vector<long> & shape,std::vector<uint64_t> & seed,
 			       GridBase* grid,int dtype) {
 
-  if (PyArray_Check(_target)) {
+  if (cgpt_PyArray_Check(_target)) {
 
     //TIME(t0,
 

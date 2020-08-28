@@ -175,19 +175,23 @@ class matrix_operator(factor):
             return self
         assert 0
 
-    def __call__(self, first, second=None):
+    def __call__(self, first, second=None, *extra):
         assert self.mat is not None
 
         return_list = type(first) == list
         first = gpt.util.to_list(first)
 
+        if second is None:
+            src = first
+        else:
+            dst = first
+            src = gpt.util.to_list(second)
+
         type_match = (
-            self.otype[1] is None or self.otype[1].__name__ == first[0].otype.__name__
+            self.otype[1] is None or self.otype[1].__name__ == src[0].otype.__name__
         )
 
         if second is None:
-
-            src = first
             if self.grid[0] is None or not type_match:
                 dst_grid = src[0].grid
                 dst_otype = src[0].otype
@@ -205,23 +209,19 @@ class matrix_operator(factor):
                 for x in dst:
                     x[:] = 0
 
-        else:
-            dst = first
-            src = gpt.util.to_list(second)
-
         if self.accept_list:
             mat = self.mat
         else:
 
-            def mat(dst, src):
+            def mat(dst, src, *extra):
                 assert len(dst) == len(src)
                 for idx in range(len(dst)):
-                    self.mat(dst[idx], src[idx])
+                    self.mat(dst[idx], src[idx], *extra)
 
         if type_match:
-            mat(dst, src)
+            mat(dst, src, *extra)
         else:
-            self.otype[1].distribute(mat, dst, src, zero_lhs=self.zero[0])
+            self.otype[1].distribute(mat, dst, src, *extra, zero_lhs=self.zero[0])
 
         if not return_list:
             return gpt.util.from_list(dst)

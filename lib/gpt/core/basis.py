@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -23,6 +24,8 @@ import numpy
 
 
 def orthogonalize(w, basis, ips=None, nblock=4):
+    # verbosity
+    verbose = gpt.default.is_verbose("orthogonalize")
     n = len(basis)
     if n == 0:
         return
@@ -48,10 +51,11 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         t_linearCombination -= gpt.time()
         w @= expr
         t_linearCombination += gpt.time()
-    gpt.message(
-        "Timing Ortho: %g rank_inner_product, %g globalsum, %g lc"
-        % (t_rank_inner_product, t_globalSum, t_linearCombination)
-    )
+    if verbose:
+        gpt.message(
+            "Timing Ortho: %g rank_inner_product, %g globalsum, %g lc"
+            % (t_rank_inner_product, t_globalSum, t_linearCombination)
+        )
 
 
 def linear_combination(r, basis, Qt):
@@ -68,3 +72,36 @@ def rotate(basis, Qt, j0, j1, k0, k1):
 
 def qr_decomposition(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax):
     return cgpt.qr_decomposition(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax)
+
+
+def g5c(src):
+    if hasattr(src.otype, "fundamental"):
+        nbasis = src.otype.shape[0]
+        assert nbasis % 2 == 0
+        nb = nbasis // 2
+        return gpt.vcomplex([1] * nb + [-1] * nb, nbasis)
+    else:
+        return gpt.gamma[5]
+
+
+def split_chiral(basis, factor=None):
+    nbasis = len(basis)
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+    factor = 0.5 if factor is None else factor
+    g5 = g5c(basis[0])
+    tmp = gpt.lattice(basis[0])
+    for n in range(nb):
+        tmp @= g5 * basis[n]
+        basis[n + nb] @= (basis[n] - tmp) * factor
+        basis[n] @= (basis[n] + tmp) * factor
+
+
+def unsplit_chiral(basis, factor=None):
+    nbasis = len(basis)
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+    factor = 0.5 if factor is None else factor
+    rev_factor = 0.5 / factor
+    for n in range(nb):
+        basis[n] @= (basis[n] + basis[n + nb]) * rev_factor

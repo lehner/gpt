@@ -16,6 +16,7 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+class cgpt_block_map_base;
 class cgpt_lattice_term;
 class cgpt_Lattice_base {
 public:
@@ -53,9 +54,9 @@ public:
   virtual PyObject* memory_view_coordinates() = 0;
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) = 0;
   virtual int get_numpy_dtype() = 0;
-  virtual void block_project(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
-  virtual void block_promote(cgpt_Lattice_base* coarse, std::vector<cgpt_Lattice_base*>& basis) = 0;
-  virtual void block_orthonormalize(cgpt_Lattice_base* coarse, std::vector<std::vector<cgpt_Lattice_base*>>& vbasis) = 0;
+  virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<cgpt_Lattice_base*>& basis, 
+					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
+					 cgpt_Lattice_base* mask) = 0;
   virtual GridBase* get_grid() = 0;
   virtual PyObject* advise(std::string type) = 0;
   virtual PyObject* prefetch(std::string type) = 0;
@@ -65,6 +66,10 @@ template<class T> class cgpt_Lattice;
 
 template<typename T>
 cgpt_Lattice<T>* compatible(cgpt_Lattice_base* other) {
-  ASSERT(typeid(T).name() == other->type());
+  if (typeid(T).name() != other->type()) {
+    std::string expected_name = demangle(typeid(T).name());
+    std::string given_name = demangle(other->type().c_str());
+    ERR("Expected type %s, got type %s", expected_name.c_str(), given_name.c_str());
+  }
   return (cgpt_Lattice<T>*)other;
 }

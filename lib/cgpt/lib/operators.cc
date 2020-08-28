@@ -1,6 +1,7 @@
 /*
     GPT - Grid Python Toolkit
     Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,6 +27,7 @@
 #include "operators/wilson_clover.h"
 #include "operators/zmobius.h"
 #include "operators/mobius.h"
+#include "operators/coarse.h"
 #include "operators/create.h"
     
 EXPORT(create_fermion_operator,{
@@ -90,4 +92,19 @@ EXPORT(apply_fermion_operator,{
     
     return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->unary((int)op,src,dst) );
     
+  });
+
+EXPORT(apply_fermion_operator_dirdisp,{
+
+    void* p, *_src, *_dst;
+    long op, dir, disp;
+    if (!PyArg_ParseTuple(args, "llllll", &p,&op,&_src,&_dst,&dir,&disp)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+
+    return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->dirdisp((int)op,src,dst,(int)dir,(int)disp) );
+
   });

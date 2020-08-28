@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -22,6 +23,7 @@ from gpt.algorithms.inverter.bicgstab import bicgstab
 from gpt.algorithms.inverter.fgcr import fgcr
 from gpt.algorithms.inverter.fgmres import fgmres
 from gpt.algorithms.inverter.mr import mr
+from gpt.algorithms.inverter.mg import mg_setup, mg_prec
 from gpt.algorithms.inverter.defect_correcting import defect_correcting
 from gpt.algorithms.inverter.mixed_precision import mixed_precision
 from gpt.algorithms.inverter.split import split

@@ -85,10 +85,16 @@ class tensor:
 
     def __mul__(self, other):
         if type(other) == gpt.tensor:
-            tag = other.otype.__name__
-            assert tag in self.otype.mtab
-            mt = self.otype.mtab[tag]
-            return tensor(np.tensordot(self.array, other.array, axes=mt[1]), mt[0]())
+            self_tag = self.otype.__name__
+            other_tag = other.otype.__name__
+            if other_tag in self.otype.mtab:
+                mt = self.otype.mtab[other_tag]
+            elif self_tag in other.otype.rmtab:
+                mt = other.otype.rmtab[self_tag]
+            a = np.tensordot(self.array, other.array, axes=mt[1])
+            if len(mt) > 2:
+                a = np.transpose(a, mt[2])
+            return tensor(a, mt[0]())
         elif type(other) == complex:
             return tensor(self.array * other, self.otype)
         elif type(other) == gpt.expr and other.is_single(gpt.tensor):
