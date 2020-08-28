@@ -125,7 +125,7 @@ def create_links(A, fmat, basis, params):
     # communicate opposite links
     if savelinks:
         t("comm")
-        comm_links(A, dirdisps_forward, make_hermitian)
+        communicate_links(A, dirdisps_forward, make_hermitian)
 
     t()
 
@@ -133,7 +133,7 @@ def create_links(A, fmat, basis, params):
         gpt.message(t)
 
 
-def comm_links(A, dirdisps_forward, make_hermitian):
+def communicate_links(A, dirdisps_forward, make_hermitian):
     assert type(A) == list
     assert len(A) == 2 * len(dirdisps_forward) + 1
     for p, (mu, fb) in enumerate(dirdisps_forward):

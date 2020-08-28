@@ -21,6 +21,11 @@ import gpt, cgpt
 from gpt.params import params_convention
 
 
+# TODO:
+# - common base class for shared code
+# - Mdir -> dictionary
+# - Remove extra arguments from matrix_operator!
+
 class operator(gpt.matrix_operator):
     def __init__(self, name, U, params, Ls=None, otype=None):
 
