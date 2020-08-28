@@ -105,7 +105,7 @@ def fft(dims=None):
     )
 
 
-def make_mask(field, mask):
+def coordinate_mask(field, mask):
     assert type(mask == numpy.ndarray)
     assert field.otype == gpt.ot_singlet
 

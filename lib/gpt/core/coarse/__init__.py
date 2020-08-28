@@ -69,15 +69,15 @@ def create_links(A, fmat, basis, params):
     block_cb = coor[:, :] // block[:]
 
     # fill masks for sites within even/odd blocks
-    gpt.make_mask(blockevenmask, numpy.sum(block_cb, axis=1) % 2 == 0)
+    gpt.coordinate_mask(blockevenmask, numpy.sum(block_cb, axis=1) % 2 == 0)
     blockoddmask @= onemask - blockevenmask
 
     # fill masks for sites on borders of blocks
     dirmasks_forward_np = coor[:, :] % block[:] == block[:] - 1
     dirmasks_backward_np = coor[:, :] % block[:] == 0
     for mu in dirs:
-        gpt.make_mask(dirmasks[mu], dirmasks_forward_np[:, mu])
-        gpt.make_mask(dirmasks[mu + 4], dirmasks_backward_np[:, mu])
+        gpt.coordinate_mask(dirmasks[mu], dirmasks_forward_np[:, mu])
+        gpt.coordinate_mask(dirmasks[mu + 4], dirmasks_backward_np[:, mu])
 
     # save applications of matrix and coarsening if possible
     dirdisps = dirdisps_forward if savelinks else dirdisps_full
