@@ -17,17 +17,14 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#define prec_double 2
-#define prec_single 1
-
-template<typename vCoeff_t, int prec = getPrecision<vCoeff_t>::value>
-struct FinestLevelFineVec {};
 template<typename vCoeff_t>
-struct FinestLevelFineVec<vCoeff_t, prec_double> {
+struct FinestLevelFineVec { };
+template<>
+struct FinestLevelFineVec<vComplexD> {
   typedef vSpinColourVectorD type;
 };
-template<typename vCoeff_t>
-struct FinestLevelFineVec<vCoeff_t, prec_single> {
+template<>
+struct FinestLevelFineVec<vComplexF> {
   typedef vSpinColourVectorF type;
 };
 
@@ -63,6 +60,3 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
 #undef BASIS_SIZE
   { ERR("Unknown basis size %d", (int)nbasis); }
 }
-
-#undef prec_double
-#undef prec_single

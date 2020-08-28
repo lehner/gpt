@@ -175,7 +175,6 @@ class mg_setup:
 
             # neighbors
             nc_lvl = self.nc_lvl[lvl]
-            nf_lvl = self.nf_lvl[lvl]
 
             if lvl != self.coarsest:
                 t("misc")
@@ -337,7 +336,6 @@ class mg_prec:
 
             # neighbors
             nc_lvl = s.nc_lvl[lvl]
-            nf_lvl = s.nf_lvl[lvl]
 
             # aliases
             t = self.t[lvl]

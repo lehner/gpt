@@ -211,13 +211,12 @@ class operator(gpt.matrix_operator):
 
 
 class coarse_operator(gpt.matrix_operator):
-    def __init__(self, A, params, Ls=None, otype=None):
+    def __init__(self, A, params, otype=None):
 
         # keep constructor parameters
         self.name = "coarse"
         self.A = A
         self.params_constructor = params
-        self.Ls = Ls
         self.otype = otype
 
         # derived objects
@@ -225,8 +224,6 @@ class coarse_operator(gpt.matrix_operator):
         # self.A_grid_eo = gpt.grid(
         #     self.A_grid.gdimensions, self.A_grid.precision, gpt.redblack
         # )
-        if Ls is not None:
-            assert Ls is None
         self.F_grid = self.A_grid
         # self.F_grid_eo = self.A_grid_eo
         # NOTE: The eo grids are not used currently
@@ -293,7 +290,6 @@ class coarse_operator(gpt.matrix_operator):
             name=self.name,
             A=A,
             params=self.params_constructor,
-            Ls=self.Ls,
             otype=self.otype[0],
         )
 
@@ -310,11 +306,10 @@ class coarse_operator(gpt.matrix_operator):
 
     @params_convention()
     def modified(self, params):
-        return operator(
+        return coarse_operator(
             name=self.name,
             A=self.A,
             params={**self.params_constructor, **params},
-            Ls=self.Ls,
             otype=self.otype[0],
         )
 

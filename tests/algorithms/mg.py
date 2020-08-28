@@ -8,12 +8,23 @@
 import gpt as g
 import numpy as np
 
-# setup rng, make it quiet
+# setup rng, mute
 g.default.set_verbose("random", False)
 rng = g.random("test_mg")
 
+# adjust volume for mpi layout of test
+L = [8, 8, 8, 16]
+mpi = g.default.get_ivec("--mpi", None, 4)
+simd = [1, 2, 2, 2]
+l = [L[i]//mpi[i]//simd[i] for i in range(4)]
+l_min = [4, 4, 4, 4]
+for i in range(4):
+    if l[i] < l_min[i]:
+        L[i] *= l_min[i] // l[i]
+g.message(f"Run with L = {L}")
+
 # setup gauge field
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.single), rng)
+U = g.qcd.gauge.random(g.grid(L, g.single), rng)
 
 # quark
 w = g.qcd.fermion.wilson_clover(
@@ -65,7 +76,7 @@ mg_setup_2lvl = i.mg_setup(
 mg_setup_3lvl = i.mg_setup(
     w,
     {
-        "block": [[2, 2, 2, 2], [2, 2, 2, 2]],
+        "block": [[2, 2, 2, 2], [1, 2, 2, 2]],
         "northo": 1,
         "nbasis": 30,
         "make_hermitian": False,
@@ -82,7 +93,7 @@ mg_setup_3lvl = i.mg_setup(
 mg_setup_4lvl = i.mg_setup(
     w,
     {
-        "block": [[2, 2, 2, 2], [2, 2, 1, 1], [1, 1, 2, 2]],
+        "block": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 1, 2, 2]],
         "northo": 1,
         "nbasis": 30,
         "make_hermitian": False,
