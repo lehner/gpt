@@ -295,11 +295,11 @@ class inverter:
         # assertions
         assert g.util.entries_have_length([self.smoothsolver], s.nlevel - 1)
         assert g.util.entries_have_length([self.wrappersolver], s.nlevel - 2)
-        assert g.util.is_solver(
+        assert g.util.is_callable(
             [self.smoothsolver, self.coarsestsolver, self.wrappersolver]
         )
         assert type(self.coarsestsolver) != list
-        assert not g.util.is_preconditioned(self.wrappersolver)
+        assert not g.util.all_have_attribute(self.wrappersolver,"inverter")
 
         # create separate instances due to different preconditioners
         g.util.to_separate_instances(self.wrappersolver)
