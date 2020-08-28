@@ -287,10 +287,7 @@ class coarse_operator(gpt.matrix_operator):
 
     def updated(self, A):
         return coarse_operator(
-            name=self.name,
-            A=A,
-            params=self.params_constructor,
-            otype=self.otype[0],
+            name=self.name, A=A, params=self.params_constructor, otype=self.otype[0],
         )
 
     def converted(self, dst_precision):

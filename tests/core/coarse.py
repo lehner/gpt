@@ -85,11 +85,11 @@ for p in range(9):
     err2 = g.norm2(A_c[p] - Asaved_c[p]) / g.norm2(A_c[p])
     g.message(f"Relative deviation of Asaved_c[{p}] from A_c[{p}] = {err2:e}",)
     assert err2 <= tol_links
-g.message(f"Tests for links passed for all directions")
+g.message("Tests for links passed for all directions")
 del Asaved_c
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse(A_c, {"level": 0,},)
+mat_c = g.qcd.fermion.coarse(A_c, level=0)
 
 # setup coarse vectors
 vec_in_c = g.vcomplex(grid_c, nbasis_f)
@@ -140,11 +140,11 @@ for p in range(9):
     err2 = g.norm2(A_cc[p] - Asaved_cc[p]) / g.norm2(A_cc[p])
     g.message(f"Relative deviation of Asaved_cc[{p}] from A_cc[{p}] = {err2:e}",)
     assert err2 <= tol_links
-g.message(f"Tests for links passed for all directions")
+g.message("Tests for links passed for all directions")
 del Asaved_cc
 
 # create coarse operator from links
-mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
+mat_cc = g.qcd.fermion.coarse(A_cc, level=1)
 
 # setup coarse coarse vectors
 vec_in_cc = g.vcomplex(grid_cc, nbasis_c)
@@ -169,7 +169,7 @@ g.message("Test passed for coarse coarse operator, %e <= %e" % (err2, tol_operat
 
 # setup fields
 rng.cnormal(A_c)
-mat_c = g.qcd.fermion.coarse(A_c, {"level": 0,},)
+mat_c = g.qcd.fermion.coarse(A_c, level=0)
 vec_out_link_c, vec_out_mat_c = g.lattice(vec_in_c), g.lattice(vec_in_c)
 vec_out_link_c[:] = 0.0
 vec_out_link_c[:] = 0.0
@@ -193,7 +193,7 @@ g.message("Test passed for coarse links, %e == %e" % (diff2, tol))
 
 # setup fields
 rng.cnormal(A_cc)
-mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
+mat_cc = g.qcd.fermion.coarse(A_cc, level=1)
 vec_out_link_cc, vec_out_mat_cc = g.lattice(vec_in_cc), g.lattice(vec_in_cc)
 vec_out_link_cc[:] = 0.0
 vec_out_link_cc[:] = 0.0
