@@ -34,6 +34,10 @@ class fgcr:
         self.prec = params["prec"]
         self.history = None
 
+    @g.params_convention()
+    def modified(self, params):
+        return fgcr({**self.params, **params})
+
     def update_psi(self, psi, alpha, beta, gamma, chi, p, i):
         # backward substitution
         for j in reversed(range(i + 1)):

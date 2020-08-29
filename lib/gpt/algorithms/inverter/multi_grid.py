@@ -301,9 +301,6 @@ class inverter:
         assert type(self.coarsest_solver) != list
         assert not g.util.all_have_attribute(self.wrapper_solver, "inverter")
 
-        # create separate instances due to different preconditioners
-        g.util.to_separate_instances(self.wrapper_solver)
-
         # timing
         self.t = [g.timer("mg_solve_lvl_%d" % (lvl)) for lvl in range(s.nlevel)]
 
@@ -389,14 +386,12 @@ class inverter:
 
                     def prec(matrix):
                         def ignore_mat(dst_p, src_p):
-                            inv_lvl(dst_p, src_p, s.nc_lvl[lvl])
+                            inv_lvl(dst_p, src_p, nc_lvl)
 
                         return ignore_mat
 
-                    slv_w.prec = prec
-
                     g.default.push_verbose(get_slv_name(slv_w), False)
-                    slv_w(mat_c)(e_c, r_c)
+                    slv_w.modified(prec=prec)(mat_c)(e_c, r_c)
                     g.default.pop_verbose()
                     self.history[lvl]["wrapper"].append(get_slv_history(slv_w))
                 else:

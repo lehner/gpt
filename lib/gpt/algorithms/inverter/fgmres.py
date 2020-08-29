@@ -34,6 +34,10 @@ class fgmres:
         self.prec = params["prec"]
         self.history = None
 
+    @g.params_convention()
+    def modified(self, params):
+        return fgmres({**self.params, **params})
+
     def qr_update(self, s, c, H, gamma, i):
         # apply previous givens to matrix
         for j in range(i):
