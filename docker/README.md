@@ -8,13 +8,13 @@ This is the base for all gpt Docker images, everything which is shared between a
 
 This image includes the basic tools, these are currently very basic and require some more work, to be really useful, for more information run `gpt` inside the Docker container.
 
-### Play
+### Shell
 
 This image includes a user preinstalled Python 3.8 and gpt setup. You can use the folder `/gpt-code` to include your code you want to run with gpt.
 
 If you are on the host system in the directory where the gpt code is located run:
 ```
-docker run -it -v "$(pwd):/gpt-code" gpt/play
+docker run -it -v "$(pwd):/gpt-code" gpt/shell
 ```
 
 ### Notebook
@@ -31,7 +31,7 @@ It is also possible to run the command with `-d` in the backround and view the k
 
 ## Tags
 
-For the `gptdev/play` and `gptdev/notebook` images, in addition to the `latest` tag, the following tags are available:
+For the `gptdev/shell` and `gptdev/notebook` images, in addition to the `latest` tag, the following tags are available:
 ```
 gcc-none
 clang-none

@@ -1,6 +1,6 @@
 ARG COMPILER=gcc
 ARG MPI=none
-ARG BASE_IMAGE=gptdev/play
+ARG BASE_IMAGE=gptdev/shell
 
 FROM ${BASE_IMAGE}:${COMPILER}-${MPI}
 

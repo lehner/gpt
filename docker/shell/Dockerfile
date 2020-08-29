@@ -16,6 +16,14 @@ RUN \
 
 COPY gpt-packages/python-gpt-Linux-python-3.8-${COMPILER}-${MPI}.deb /app/
 
+COPY gpt/documentation/tutorial/ /app/tutorial/
+
+COPY gpt/tests/ /app/tests/
+
+COPY gpt/applications/ /app/applications/
+
+COPY gpt/benchmarks/ /app/benchmarks/
+
 RUN \
     dpkg -i python-gpt-Linux-python-3.8-${COMPILER}-${MPI}.deb && \
     rm python-gpt-Linux-python-3.8-${COMPILER}-${MPI}.deb

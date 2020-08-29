@@ -32,12 +32,12 @@ Open the shown link `http://127.0.0.1:8888/?token=<token>`, in a browser. You sh
 
 If you prefer an interactive python3 console run
 ```
-docker run --rm -it -p 8888:8888 gptdev/play /usr/bin/python3
+docker run --rm -it -p 8888:8888 gptdev/shell /usr/bin/python3
 ```
 
 or to obtain a bash terminal
 ```
-docker run --rm -it -p 8888:8888 gptdev/play /bin/bash
+docker run --rm -it -p 8888:8888 gptdev/shell /bin/bash
 ```
 
 Use `-v /local/gpt/code:/gpt-code` to mount your custom code into the Docker container.
