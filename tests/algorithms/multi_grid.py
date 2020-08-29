@@ -253,6 +253,7 @@ g.message(
 )
 assert eps2 < 1e-10
 # assert niter_prec_4lvl_mg_kcycle <= niter_prec_4lvl_mg_vcycle
+assert niter_prec_4lvl_mg_kcycle == 8
 
 # print contributions to mg setup runtime
 g.message("Contributions to time spent in MG setups")
