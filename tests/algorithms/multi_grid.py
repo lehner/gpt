@@ -114,13 +114,13 @@ g.message(f"mg_setup_3lvl = {mg_setup_3lvl.params}")
 g.message(f"mg_setup_4lvl = {mg_setup_4lvl.params}")
 
 # mg inner solvers
-wrappersolver = i.fgmres(
+wrapper_solver = i.fgmres(
     {"eps": 1e-1, "maxiter": 10, "restartlen": 5, "checkres": False}
 )
-smoothsolver = i.fgmres(
+smooth_solver = i.fgmres(
     {"eps": 1e-14, "maxiter": 8, "restartlen": 4, "checkres": False}
 )
-coarsestsolver = i.fgmres(
+coarsest_solver = i.fgmres(
     {"eps": 5e-2, "maxiter": 50, "restartlen": 25, "checkres": False}
 )
 
@@ -128,54 +128,54 @@ coarsestsolver = i.fgmres(
 mg_2lvl_vcycle = mg.inverter(
     mg_setup_2lvl,
     {
-        "coarsestsolver": coarsestsolver,
-        "smoothsolver": smoothsolver,
-        "wrappersolver": None,
+        "coarsest_solver": coarsest_solver,
+        "smooth_solver": smooth_solver,
+        "wrapper_solver": None,
     },
 )
 mg_2lvl_kcycle = mg.inverter(
     mg_setup_2lvl,
     {
-        "coarsestsolver": coarsestsolver,
-        "smoothsolver": smoothsolver,
-        "wrappersolver": wrappersolver,
+        "coarsest_solver": coarsest_solver,
+        "smooth_solver": smooth_solver,
+        "wrapper_solver": wrapper_solver,
     },
 )
 mg_3lvl_vcycle = mg.inverter(
     mg_setup_3lvl,
     {
-        "coarsestsolver": coarsestsolver,
-        "smoothsolver": smoothsolver,
-        "wrappersolver": None,
+        "coarsest_solver": coarsest_solver,
+        "smooth_solver": smooth_solver,
+        "wrapper_solver": None,
     },
 )
 mg_3lvl_kcycle = mg.inverter(
     mg_setup_3lvl,
     {
-        "coarsestsolver": coarsestsolver,
-        "smoothsolver": smoothsolver,
-        "wrappersolver": wrappersolver,
+        "coarsest_solver": coarsest_solver,
+        "smooth_solver": smooth_solver,
+        "wrapper_solver": wrapper_solver,
     },
 )
 mg_4lvl_vcycle = mg.inverter(
     mg_setup_4lvl,
     {
-        "coarsestsolver": coarsestsolver,
-        "smoothsolver": smoothsolver,
-        "wrappersolver": None,
+        "coarsest_solver": coarsest_solver,
+        "smooth_solver": smooth_solver,
+        "wrapper_solver": None,
     },
 )
 mg_4lvl_kcycle = mg.inverter(
     mg_setup_4lvl,
     {
-        "coarsestsolver": coarsestsolver,
-        "smoothsolver": smoothsolver,
-        "wrappersolver": wrappersolver,
+        "coarsest_solver": coarsest_solver,
+        "smooth_solver": smooth_solver,
+        "wrapper_solver": wrapper_solver,
     },
 )
 
 # preconditioners
-smoother_prec = mg_2lvl_vcycle.smoothsolver[0]
+smoother_prec = mg_2lvl_vcycle.smooth_solver[0]
 
 # outer solver
 fgmres_outer = i.fgmres({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})

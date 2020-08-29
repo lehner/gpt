@@ -282,9 +282,9 @@ class inverter:
         par = self.params
 
         # parameters
-        self.smoothsolver = g.util.to_list(par["smoothsolver"], s.nlevel - 1)
-        self.wrappersolver = g.util.to_list(par["wrappersolver"], s.nlevel - 2)
-        self.coarsestsolver = par["coarsestsolver"]
+        self.smooth_solver = g.util.to_list(par["smooth_solver"], s.nlevel - 1)
+        self.wrapper_solver = g.util.to_list(par["wrapper_solver"], s.nlevel - 2)
+        self.coarsest_solver = par["coarsest_solver"]
 
         # verbosity
         self.verbose = g.default.is_verbose("multi_grid_inverter")
@@ -293,16 +293,16 @@ class inverter:
         self.print_prefix = ["mg: level %d:" % i for i in range(s.nlevel)]
 
         # assertions
-        assert g.util.entries_have_length([self.smoothsolver], s.nlevel - 1)
-        assert g.util.entries_have_length([self.wrappersolver], s.nlevel - 2)
+        assert g.util.entries_have_length([self.smooth_solver], s.nlevel - 1)
+        assert g.util.entries_have_length([self.wrapper_solver], s.nlevel - 2)
         assert g.util.is_callable(
-            [self.smoothsolver, self.coarsestsolver, self.wrappersolver]
+            [self.smooth_solver, self.coarsest_solver, self.wrapper_solver]
         )
-        assert type(self.coarsestsolver) != list
-        assert not g.util.all_have_attribute(self.wrappersolver, "inverter")
+        assert type(self.coarsest_solver) != list
+        assert not g.util.all_have_attribute(self.wrapper_solver, "inverter")
 
         # create separate instances due to different preconditioners
-        g.util.to_separate_instances(self.wrappersolver)
+        g.util.to_separate_instances(self.wrapper_solver)
 
         # timing
         self.t = [g.timer("mg_solve_lvl_%d" % (lvl)) for lvl in range(s.nlevel)]
@@ -346,9 +346,9 @@ class inverter:
             mat_c = s.mat[nc_lvl] if lvl != s.coarsest else None
             mat = s.mat[lvl]
             bm = s.blockmap[lvl]
-            slv_s = self.smoothsolver[lvl] if lvl != s.coarsest else None
-            slv_w = self.wrappersolver[lvl] if lvl <= s.coarsest - 2 else None
-            slv_c = self.coarsestsolver if lvl == s.coarsest else None
+            slv_s = self.smooth_solver[lvl] if lvl != s.coarsest else None
+            slv_w = self.wrapper_solver[lvl] if lvl <= s.coarsest - 2 else None
+            slv_c = self.coarsest_solver if lvl == s.coarsest else None
 
             # start clocks
             t("misc")
