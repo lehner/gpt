@@ -506,9 +506,8 @@ jobs:
       - name: Check for rebuild
         id: check-build
         run: |
-          # TODO: Change github.ref before merging to master branch
           if [ "${{ secrets.DOCKER_USERNAME }}" != "" ] && [ "${{ secrets.DOCKER_PASSWORD }}" != "" ] \
-            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/feature/docker-images" ]
+            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ]
           then
             echo ::set-output name=should-build::'true'
           else
@@ -546,7 +545,6 @@ jobs:
       - name: Check for rebuild
         id: check-build
         run: |
-          # TODO: Change github.ref before merging to master branch
           if [ "${{ secrets.DOCKER_USERNAME }}" != "" ] && [ "${{ secrets.DOCKER_PASSWORD }}" != "" ] \
             && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ]
           then
