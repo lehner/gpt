@@ -9,3 +9,4 @@ RUN \
     pip3 install --no-cache-dir numpy
 
 ENV PATH="/app/bin:${PATH}"
+ENV TZ="Europe/Berlin"
