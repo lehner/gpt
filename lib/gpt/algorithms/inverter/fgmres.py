@@ -22,7 +22,9 @@ import numpy as np
 
 
 class fgmres:
-    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None)
+    @g.params_convention(
+        eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
+    )
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
@@ -110,9 +112,7 @@ class fgmres:
             )
             V = [g.lattice(src) for i in range(rlen + 1)]
             Z = (
-                [g.lattice(src) for i in range(rlen + 1)]
-                if prec is not None
-                else None
+                [g.lattice(src) for i in range(rlen + 1)] if prec is not None else None
             )  # save vectors if unpreconditioned
 
             # initial residual

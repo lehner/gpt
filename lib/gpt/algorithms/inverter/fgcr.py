@@ -22,7 +22,9 @@ import numpy as np
 
 
 class fgcr:
-    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None)
+    @g.params_convention(
+        eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
+    )
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
