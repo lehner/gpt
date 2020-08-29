@@ -31,8 +31,10 @@ It is also possible to run the command with `-d` in the backround and view the k
 
 ## Tags
 
-For the `gpt/play` and `gpt/notebook` in addition to the `latest` tag, which points to `clang-none` the following tags are available:
+For the `gptdev/play` and `gptdev/notebook` images, in addition to the `latest` tag, the following tags are available:
 ```
 gcc-none
 clang-none
 ```
+
+If you omit the tags `latest` is used, which points to `clang-none`.

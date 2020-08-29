@@ -512,7 +512,7 @@ jobs:
           then
             echo ::set-output name=should-build::'true'
           else
-            echo "No Docker credentials found, skipping."
+            echo "Skipping docker build."
           fi
 
       - name: Clone gpt
@@ -525,7 +525,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: ${{ secrets.DOCKER_USERNAME }}/gpt-base
+          repository: ${{ secrets.DOCKER_USERNAME }}/base
           tags: latest
           push: true
           path: docker/base
@@ -548,11 +548,11 @@ jobs:
         run: |
           # TODO: Change github.ref before merging to master branch
           if [ "${{ secrets.DOCKER_USERNAME }}" != "" ] && [ "${{ secrets.DOCKER_PASSWORD }}" != "" ] \
-            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/feature/docker-images" ]
+            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ]
           then
             echo ::set-output name=should-build::'true'
           else
-            echo "No Docker credentials found, skipping."
+            echo "Skipping docker build."
           fi
 
       - name: Clone gpt
@@ -586,8 +586,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: ${{ secrets.DOCKER_USERNAME }}/gpt-play
-          build_args: BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/gpt-base,COMPILER=${{ matrix.compiler }},MPI=${{ matrix.mpi }}
+          repository: ${{ secrets.DOCKER_USERNAME }}/play
+          build_args: BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/base,COMPILER=${{ matrix.compiler }},MPI=${{ matrix.mpi }}
           tags: ${{ steps.get-docker-tags.outputs.tags }}
           push: true
           path: docker/play
@@ -599,8 +599,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: ${{ secrets.DOCKER_USERNAME }}/gpt-notebook
-          build_args: BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/gpt-play,COMPILER=${{ matrix.compiler }},MPI=${{ matrix.mpi }}
+          repository: ${{ secrets.DOCKER_USERNAME }}/notebook
+          build_args: BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/play,COMPILER=${{ matrix.compiler }},MPI=${{ matrix.mpi }}
           tags: ${{ steps.get-docker-tags.outputs.tags }}
           push: true
           path: docker/notebook
