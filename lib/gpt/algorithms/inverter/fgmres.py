@@ -81,6 +81,8 @@ class fgmres:
             mat = mat.mat
             # remove wrapper for performance benefits
 
+        prec = self.prec(mat) if self.prec is not None else None
+
         def inv(psi, src):
             self.history = []
             # verbosity
@@ -109,7 +111,7 @@ class fgmres:
             V = [g.lattice(src) for i in range(rlen + 1)]
             Z = (
                 [g.lattice(src) for i in range(rlen + 1)]
-                if self.prec is not None
+                if prec is not None
                 else None
             )  # save vectors if unpreconditioned
 
@@ -134,11 +136,11 @@ class fgmres:
                 need_restart = i + 1 == rlen
 
                 t("prec")
-                if self.prec is not None:
-                    self.prec(mat)(Z[i], V[i])
+                if prec is not None:
+                    prec(Z[i], V[i])
 
                 t("mat")
-                if self.prec is not None:
+                if prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
@@ -169,7 +171,7 @@ class fgmres:
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     t("update_psi")
-                    if self.prec is not None:
+                    if prec is not None:
                         self.update_psi(psi, gamma, H, y, Z, i)
                     else:
                         self.update_psi(psi, gamma, H, y, V, i)

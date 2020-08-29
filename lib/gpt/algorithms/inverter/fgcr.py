@@ -60,6 +60,8 @@ class fgcr:
             mat = mat.mat
             # remove wrapper for performance benefits
 
+        prec = self.prec(mat) if self.prec is not None else None
+
         def inv(psi, src):
             self.history = []
             # verbosity
@@ -105,8 +107,8 @@ class fgcr:
                 need_restart = i + 1 == rlen
 
                 t("prec")
-                if self.prec is not None:
-                    self.prec(mat)(p[i], r)
+                if prec is not None:
+                    prec(p[i], r)
                 else:
                     p[i] @= r
 
