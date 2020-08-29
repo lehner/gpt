@@ -25,8 +25,8 @@ def create_links(A, fmat, basis, params):
     # to already be orthogonalized!
     # parameters
     make_hermitian = params["make_hermitian"]
-    savelinks = params["savelinks"]
-    assert not (make_hermitian and not savelinks)
+    save_links = params["save_links"]
+    assert not (make_hermitian and not save_links)
 
     # verbosity
     verbose = gpt.default.is_verbose("coarsen")
@@ -80,7 +80,7 @@ def create_links(A, fmat, basis, params):
         gpt.coordinate_mask(dirmasks[mu + 4], dirmasks_backward_np[:, mu])
 
     # save applications of matrix and coarsening if possible
-    dirdisps = dirdisps_forward if savelinks else dirdisps_full
+    dirdisps = dirdisps_forward if save_links else dirdisps_full
 
     # create block maps
     t("blockmap")
@@ -123,7 +123,7 @@ def create_links(A, fmat, basis, params):
             gpt.message("coarsen: done with vector %d" % i)
 
     # communicate opposite links
-    if savelinks:
+    if save_links:
         t("comm")
         communicate_links(A, dirdisps_forward, make_hermitian)
 

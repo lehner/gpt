@@ -69,7 +69,7 @@ class setup:
         self.northo = g.util.to_list(params["northo"], self.nlevel - 1)
         self.nbasis = g.util.to_list(params["nbasis"], self.nlevel - 1)
         self.make_hermitian = g.util.to_list(params["make_hermitian"], self.nlevel - 1)
-        self.savelinks = g.util.to_list(params["savelinks"], self.nlevel - 1)
+        self.save_links = g.util.to_list(params["save_links"], self.nlevel - 1)
         self.preortho = g.util.to_list(params["preortho"], self.nlevel - 1)
         self.postortho = g.util.to_list(params["postortho"], self.nlevel - 1)
         self.vecstype = g.util.to_list(params["vecstype"], self.nlevel - 1)
@@ -101,7 +101,7 @@ class setup:
                 self.northo,
                 self.nbasis,
                 self.make_hermitian,
-                self.savelinks,
+                self.save_links,
                 self.preortho,
                 self.postortho,
                 self.vecstype,
@@ -255,7 +255,7 @@ class setup:
                     self.basis[lvl],
                     {
                         "make_hermitian": self.make_hermitian[lvl],
-                        "savelinks": self.savelinks[lvl],
+                        "save_links": self.save_links[lvl],
                     },
                 )
                 self.mat[nc_lvl] = g.qcd.fermion.coarse(

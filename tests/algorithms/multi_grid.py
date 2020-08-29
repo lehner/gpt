@@ -14,7 +14,7 @@ rng = g.random("test_mg")
 
 # adjust volume for mpi layout of test
 L = [8, 8, 8, 16]
-mpi = g.default.get_ivec("--mpi", None, 4)
+mpi = g.default.get_ivec("--mpi", [1,1,1,1], 4)
 simd = [1, 2, 2, 2]
 l = [L[i] // mpi[i] // simd[i] for i in range(4)]
 l_min = [4, 4, 4, 4]
@@ -64,7 +64,7 @@ mg_setup_2lvl = mg.setup(
         "northo": 1,
         "nbasis": 30,
         "make_hermitian": False,
-        "savelinks": True,
+        "save_links": True,
         "vecstype": "null",
         "preortho": False,
         "postortho": False,
@@ -81,7 +81,7 @@ mg_setup_3lvl = mg.setup(
         "northo": 1,
         "nbasis": 30,
         "make_hermitian": False,
-        "savelinks": True,
+        "save_links": True,
         "vecstype": "null",
         "preortho": False,
         "postortho": False,
@@ -98,7 +98,7 @@ mg_setup_4lvl = mg.setup(
         "northo": 1,
         "nbasis": 30,
         "make_hermitian": False,
-        "savelinks": True,
+        "save_links": True,
         "vecstype": "null",
         "preortho": False,
         "postortho": False,
