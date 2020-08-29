@@ -22,14 +22,14 @@ import numpy as np
 
 
 class fgmres:
-    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True)
+    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None)
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
-        self.prec = params["prec"] if "prec" in params else None
+        self.prec = params["prec"]
         self.history = None
 
     def qr_update(self, s, c, H, gamma, i):

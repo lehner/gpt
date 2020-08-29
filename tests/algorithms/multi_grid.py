@@ -178,10 +178,10 @@ mg_4lvl_kcycle = mg.inverter(
 smoother_prec = mg_2lvl_vcycle.smooth_solver[0]
 
 # outer solver
-fgmres_outer = i.fgmres({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})
+fgmres_params = {"eps": 1e-6, "maxiter": 1000, "restartlen": 20}
 
 # preconditioned inversion (using only smoother, w/o coarse grid correction)
-fgmres_outer.prec = smoother_prec
+fgmres_outer = i.fgmres(fgmres_params, prec = smoother_prec)
 sol_smooth = g.eval(fgmres_outer(w) * src)
 eps2 = g.norm2(w * sol_smooth - src) / g.norm2(src)
 niter_prec_smooth = len(fgmres_outer.history)
@@ -189,7 +189,7 @@ g.message("Test resid/iter smoother prec fgmres:", eps2, niter_prec_smooth)
 assert eps2 < 1e-10
 
 # preconditioned inversion (2lvl mg -- vcycle)
-fgmres_outer.prec = mg_2lvl_vcycle
+fgmres_outer = i.fgmres(fgmres_params, prec = mg_2lvl_vcycle)
 sol_prec_2lvl_mg_vcycle = g.eval(fgmres_outer(w) * src)
 eps2 = g.norm2(w * sol_prec_2lvl_mg_vcycle - src) / g.norm2(src)
 niter_prec_2lvl_mg_vcycle = len(fgmres_outer.history)
@@ -200,7 +200,7 @@ assert eps2 < 1e-10
 assert niter_prec_2lvl_mg_vcycle < niter_prec_smooth
 
 # preconditioned inversion (2lvl mg -- kcycle)
-fgmres_outer.prec = mg_2lvl_kcycle
+fgmres_outer = i.fgmres(fgmres_params, prec = mg_2lvl_kcycle)
 sol_prec_2lvl_mg_kcycle = g.eval(fgmres_outer(w) * src)
 eps2 = g.norm2(w * sol_prec_2lvl_mg_kcycle - src) / g.norm2(src)
 niter_prec_2lvl_mg_kcycle = len(fgmres_outer.history)
@@ -211,7 +211,7 @@ assert eps2 < 1e-10
 assert niter_prec_2lvl_mg_kcycle == niter_prec_2lvl_mg_vcycle  # equivalent for 2 lvls
 
 # preconditioned inversion (3lvl mg -- vcycle)
-fgmres_outer.prec = mg_3lvl_vcycle
+fgmres_outer = i.fgmres(fgmres_params, prec =  mg_3lvl_vcycle)
 sol_prec_3lvl_mg_vcycle = g.eval(fgmres_outer(w) * src)
 eps2 = g.norm2(w * sol_prec_3lvl_mg_vcycle - src) / g.norm2(src)
 niter_prec_3lvl_mg_vcycle = len(fgmres_outer.history)
@@ -222,7 +222,7 @@ assert eps2 < 1e-10
 assert niter_prec_3lvl_mg_vcycle < niter_prec_smooth
 
 # preconditioned inversion (3lvl mg -- kcycle)
-fgmres_outer.prec = mg_3lvl_kcycle
+fgmres_outer = i.fgmres(fgmres_params, prec =  mg_3lvl_kcycle)
 sol_prec_3lvl_mg_kcycle = g.eval(fgmres_outer(w) * src)
 eps2 = g.norm2(w * sol_prec_3lvl_mg_kcycle - src) / g.norm2(src)
 niter_prec_3lvl_mg_kcycle = len(fgmres_outer.history)
@@ -233,7 +233,7 @@ assert eps2 < 1e-10
 assert niter_prec_3lvl_mg_kcycle <= niter_prec_3lvl_mg_vcycle
 
 # preconditioned inversion (4lvl mg -- vcycle)
-fgmres_outer.prec = mg_4lvl_vcycle
+fgmres_outer = i.fgmres(fgmres_params, prec =  mg_4lvl_vcycle)
 sol_prec_4lvl_mg_vcycle = g.eval(fgmres_outer(w) * src)
 eps2 = g.norm2(w * sol_prec_4lvl_mg_vcycle - src) / g.norm2(src)
 niter_prec_4lvl_mg_vcycle = len(fgmres_outer.history)
@@ -244,7 +244,7 @@ assert eps2 < 1e-10
 assert niter_prec_4lvl_mg_vcycle <= niter_prec_3lvl_mg_vcycle
 
 # preconditioned inversion (4lvl mg -- kcycle)
-fgmres_outer.prec = mg_4lvl_kcycle
+fgmres_outer = i.fgmres(fgmres_params, prec =  mg_4lvl_kcycle)
 sol_prec_4lvl_mg_kcycle = g.eval(fgmres_outer(w) * src)
 eps2 = g.norm2(w * sol_prec_4lvl_mg_kcycle - src) / g.norm2(src)
 niter_prec_4lvl_mg_kcycle = len(fgmres_outer.history)
