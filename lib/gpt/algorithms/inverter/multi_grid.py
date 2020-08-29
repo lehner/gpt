@@ -299,7 +299,7 @@ class inverter:
             [self.smoothsolver, self.coarsestsolver, self.wrappersolver]
         )
         assert type(self.coarsestsolver) != list
-        assert not g.util.all_have_attribute(self.wrappersolver,"inverter")
+        assert not g.util.all_have_attribute(self.wrappersolver, "inverter")
 
         # create separate instances due to different preconditioners
         g.util.to_separate_instances(self.wrappersolver)

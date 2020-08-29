@@ -177,8 +177,8 @@ rng.cnormal(vec_in_c)
 
 # apply the link matrix
 vec_out_link_c @= A_c[8] * vec_in_c
-mat_c.Mdir(
-    vec_out_mat_c, vec_in_c, 0, 0
+mat_c.Mdir(0, 0)(
+    vec_out_mat_c, vec_in_c
 )  # exploit the self coupling link, this uses Grid
 
 # define check tolerance
@@ -201,8 +201,8 @@ rng.cnormal(vec_in_cc)
 
 # apply the link matrix
 vec_out_link_cc @= A_cc[8] * vec_in_cc
-mat_cc.Mdir(
-    vec_out_mat_cc, vec_in_cc, 0, 0
+mat_cc.Mdir(0, 0)(
+    vec_out_mat_cc, vec_in_cc
 )  # exploit the self coupling link, this uses Grid
 
 # define check tolerance

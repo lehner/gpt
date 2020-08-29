@@ -77,7 +77,7 @@ public:
     const int nbasis = GridTypeMapper<typename T::CoarseVector::vector_object>::count;
 
     for(int p = 0; p < 9; p++) {
-      auto l = get_pointer<cgpt_Lattice_base>(args, "A", p);
+      auto l = get_pointer<cgpt_Lattice_base>(args, "U", p);
       op->A[p] = compatible<iMatrix<iSinglet<vCoeff_t>,nbasis>>(l)->l;
     }
   }

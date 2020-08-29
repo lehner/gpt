@@ -94,7 +94,7 @@ def create_links(A, fmat, basis, params):
         # this triggers len(dirdisps) comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
         t("apply_hop")
-        [fmat.Mdir(Mvr[p], vr, mu, fb) for p, (mu, fb) in enumerate(dirdisps)]
+        [fmat.Mdir(*dirdisp)(Mvr[p], vr) for p, dirdisp in enumerate(dirdisps)]
 
         # coarsen directional terms + write to link
         for p, (mu, fb) in enumerate(dirdisps):
