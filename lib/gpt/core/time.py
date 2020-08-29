@@ -36,7 +36,7 @@ class timer:
         self.active = False
         self.current = None
 
-    def __call__(self, which=None, *, flop=None, byte=None):
+    def __call__(self, which=None, flop=None, byte=None):
         """
         first started timer also starts total timer
         with argument which given starts a new timer and ends a previous one if running
@@ -66,6 +66,7 @@ class timer:
             self.active = False
 
     def __str__(self):
+        assert not self.active
         dtp, fp, bp = self.create_print_arrays()
 
         s = ""

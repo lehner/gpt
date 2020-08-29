@@ -453,6 +453,7 @@ class inverter:
                     "%s ending inversion routine: psi = %g, src = %g"
                     % (pp, g.norm2(psi), g.norm2(src))
                 )
+                t()
 
         return g.matrix_operator(
             mat=lambda dst, src: inv_lvl(dst, src, self.setup.finest),
