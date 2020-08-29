@@ -591,6 +591,7 @@ jobs:
           tags: ${{ steps.get-docker-tags.outputs.tags }}
           push: true
           path: docker/play
+          always_pull: true
 
       - name: Build docker gpt/notebook image
         if: ${{ steps.check-build.outputs.should-build }}
@@ -603,3 +604,4 @@ jobs:
           tags: ${{ steps.get-docker-tags.outputs.tags }}
           push: true
           path: docker/notebook
+          always_pull: true
