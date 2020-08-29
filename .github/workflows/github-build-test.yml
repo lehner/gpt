@@ -567,6 +567,7 @@ jobs:
         if: ${{ steps.check-build.outputs.should-build }}
         run: |
           mv python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/shell/gpt-packages
+          cp -r gpt/documentation/tutorials/ docker/shell/gpt-packages
 
       - name: Get Tags
         if: ${{ steps.check-build.outputs.should-build }}
