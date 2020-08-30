@@ -25,10 +25,10 @@ the server is then bound to the local host system on port `8888`.
 
 To run, for example the [gpt tutorials](https://github.com/lehner/gpt#tutorials), use `-v` to mount the directory into the Docker image, i.e.
 ```
-docker run --rm -v /local/path/to/gpt-repository/documentation/tutorial:/notebooks/tutorial -p 8888:8888 gptdev/notebook
+docker run --rm -v /local/path/to/gpt-repository/documentation/tutorials:/notebooks/tutorials -p 8888:8888 gptdev/notebook
 ```
 
-Open the shown link `http://127.0.0.1:8888/?token=<token>`, in a browser. You should then see the `tutorial` folder, from within you can run the interactive tutorials.
+Open the shown link `http://127.0.0.1:8888/?token=<token>`, in a browser. You should then see the `tutorials` folder, from within you can run the interactive tutorials.
 
 If you prefer an interactive python3 console run
 ```
@@ -50,7 +50,7 @@ source gpt/scripts/source.sh
 ```
 
 ## Tutorials
-A good starting point to learn how to use GPT is the [Tutorials Section](https://github.com/lehner/gpt/tree/master/documentation/tutorial)
+A good starting point to learn how to use GPT is the [Tutorials Section](https://github.com/lehner/gpt/tree/master/documentation/tutorials)
 with interactive [Jupyter](https://jupyter.org/) notebooks.
 
 ## Usage
