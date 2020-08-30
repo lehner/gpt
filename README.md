@@ -9,7 +9,7 @@ GPT is a [Python](https://www.python.org) measurement toolkit built on [Grid](ht
 
 ## Quick Start
 The fastest way to try GPT is to install [Docker](https://docs.docker.com/get-docker/),
-start a [Jupyter](https://jupyter.org/) notebook server with the latest GPT version
+start a [Jupyter](https://jupyter.org/) notebook server with the latest GPT version by running
 ```
 docker run --rm -p 8888:8888 gptdev/notebook
 ```
