@@ -16,10 +16,6 @@ RUN \
 
 COPY gpt-packages/python-gpt-Linux-python-3.8-${COMPILER}-${MPI}.deb /app/
 
-COPY tests/ /app/tests/
-COPY benchmarks/ /app/benchmarks/
-COPY applications/ /app/applications/
-
 RUN \
     dpkg -i python-gpt-Linux-python-3.8-${COMPILER}-${MPI}.deb && \
     rm python-gpt-Linux-python-3.8-${COMPILER}-${MPI}.deb
@@ -32,12 +28,19 @@ RUN groupadd -r gpt && \
 FROM scratch
 COPY --from=build / /
 
-WORKDIR /app
+RUN sudo mkdir /gpt-code && sudo chown gpt:gpt /gpt-code
 
-USER gpt
+WORKDIR /gpt-code
+
 VOLUME /gpt-code
 
+COPY tests/ /gpt-code/tests/
+COPY benchmarks/ /gpt-code/benchmarks/
+COPY applications/ /gpt-code/applications/
+
+USER gpt
+
 ENV PYTHONPATH="/usr/local/lib/python3.8/site-packages:${PYTHONPATH}"
-ENV PATH="/app/bin:/home/gpt/.local/bin:${PATH}"
+ENV PATH="/gpt-code/bin:/home/gpt/.local/bin:${PATH}"
 
 CMD ["/bin/bash"]

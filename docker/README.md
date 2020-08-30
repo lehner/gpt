@@ -1,40 +1,18 @@
 # GPT - Docker images
-
-## Different image types
-
-### Base
-
-This is the base for all gpt Docker images, everything which is shared between all other images, should be included here. This image will probably not useful otherwise.
-
-This image includes the basic tools, these are currently very basic and require some more work, to be really useful, for more information run `gpt` inside the Docker container.
+In addition to the notebook docker image described in the main [README](../README.md),
+we provide the gptdev/shell Docker image which is further described below.
+For more information on how to use Docker, please see the [Docker documentation](https://docs.docker.com/get-started/).
 
 ### Shell
 
-This image includes a user preinstalled Python 3.8 and gpt setup. You can use the folder `/gpt-code` to include your code you want to run with gpt.
-
-If you are on the host system in the directory where the gpt code is located run:
+This image includes a user preinstalled Python 3.8 and GPT setup.  Start the session with
 ```
-docker run -it -v "$(pwd):/gpt-code" gpt/shell
+docker run --rm -it -v$(pwd):/gpt-code gptdev/shell
 ```
-
-### Notebook
-
-If you want to use `gpt` in a Jupyter notebook you should use this image. You can use the folder `/notebooks` to include your current notebooks.
-
-If you are on the host system in the directory where your notebooks are located run:
+which mounts the current working directory in the image's working
+directory.  Alternatively, you can use a non-persistent version
+of the GPT applications, benchmarks, and tests folders by
+running
 ```
-docker run -p 8888:8888 -v "$(pwd):/notebooks" gpt/notebook
+docker run --rm -it gptdev/shell
 ```
-
-Connect in the browser to `localhost:8888` and enter the secret key, which should be visible from the console output.
-It is also possible to run the command with `-d` in the backround and view the key with docker `docker logs <container id>`. Where the container can be found either from the output when starting the container or with `docker container ls`.
-
-## Tags
-
-For the `gptdev/shell` and `gptdev/notebook` images, in addition to the `latest` tag, the following tags are available:
-```
-gcc-none
-clang-none
-```
-
-If you omit the tags `latest` is used, which points to `clang-none`.

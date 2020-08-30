@@ -1,10 +1,10 @@
-# How to use gpt with a pythonic setup or via cmake
+# GPT Setup Instructions
 
 ## Prerequisites
 
 All the methods listed below rely on:
 
-* Specified Grid installation (--with-grid) has to be built with the `-fPIC` flag
+* Specified Grid installation (--with-grid) has to be built with the `-fPIC` flag.  GPT is developed with the feature/gpt branch of https://github.com/lehner/Grid.
 * a `python3-config` or a python3 installation that
   autotools can find
 
@@ -20,8 +20,13 @@ The build follows the default procedure:
     make -j7
     make install
 
-This will take care of the Python specific paths as well,
-e.g., using `--prefix=$HOME/.local`  will install it in
-`$HOME/.local/~/.local/lib/python3.7/site-packages`
-(Paths might differ slightly, depending on your Linux distro and
-your Python distro.)
+You may, e.g., decide to install GPT in your home directory
+using `--prefix=$HOME/.local`.
+
+## Alternative make system
+You may also decide to use the `make` script in lib/cgpt for rapid development.  In this case
+use
+```bash
+source gpt/scripts/source.sh
+```
+to properly set the Python environment.
