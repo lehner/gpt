@@ -16,7 +16,7 @@ RUN \
 
 COPY gpt-packages/python-gpt-Linux-python-3.8-${COMPILER}-${MPI}.deb /app/
 
-COPY gpt-packages/tutorials/ /app/tutorials/
+COPY gpt-packages/tutorial/ /app/tutorial/
 
 RUN \
     dpkg -i python-gpt-Linux-python-3.8-${COMPILER}-${MPI}.deb && \
