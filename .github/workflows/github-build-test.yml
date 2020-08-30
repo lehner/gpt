@@ -448,8 +448,14 @@ jobs:
         CODECOV_ENV: PYTHON_VERSION,COMPILER,MPI
       run: |
         cd gpt
-        bash <(curl -s https://codecov.io/bash) \
+        if [ "${{ secrets.CODECOV_USERNAME }}" != "" ] \
+            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ]
+        then
+          bash <(curl -s https://codecov.io/bash) \
           -f ./coverage.xml
+        else
+          echo "Skip uploading code coverage since we are not upstream"
+        fi
 
 
   build-gpt-doc:
