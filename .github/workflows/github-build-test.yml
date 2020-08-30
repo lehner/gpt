@@ -567,9 +567,9 @@ jobs:
         if: ${{ steps.check-build.outputs.should-build }}
         run: |
           mv python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/shell/gpt-packages
-	  ls
-	  echo ${GITHUB_WORKSPACE}
-	  ls ${GITHUB_WORKSPACE}
+          ls
+          echo ${GITHUB_WORKSPACE}
+          ls ${GITHUB_WORKSPACE}
           cp -r ${GITHUB_WORKSPACE}/documentation/tutorials/ docker/shell/gpt-packages
 
       - name: Get Tags
