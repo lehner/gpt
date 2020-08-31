@@ -50,7 +50,7 @@ for f in \
     ${test_path}/io/cevec.py \
     ${test_path}/io/io.py \
     ${test_path}/io/qlat.py \
-    ${test_patj}/qis/qis.py
+    ${test_path}/qis/qis.py
 do
 
 printf "%-120s" " [TEST] $f"

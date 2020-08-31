@@ -31,7 +31,7 @@ def check_norm(state):
     assert (g.norm2(state.lattice) - 1.0) < state.lattice.grid.precision.eps
 
 
-def project_cbit(state, i, val):
+def set_value_of_qubit(state, i, val):
     s = state.cloned()
     mv = s.measure(i)
     if mv != val:
@@ -103,8 +103,9 @@ for i in range(N):
 # CNOT
 g.message("Randomized CNOT test")
 for control in range(N):
-    state_control_0 = project_cbit(stR, control, 0)
-    state_control_1 = project_cbit(stR, control, 1)
+    # on a random vector with fixed control qubit value, perform the test
+    state_control_0 = set_value_of_qubit(stR, control, 0)
+    state_control_1 = set_value_of_qubit(stR, control, 1)
     for target in range(N):
         if target != control:
             psi = CNOT(control, target) * state_control_0
