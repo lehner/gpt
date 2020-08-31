@@ -15,21 +15,28 @@ r = g.random("qis_test")
 # tests done for N qubits
 N = 11
 g.message(f"Run tests with {N} qubits")
-st0 = state(r, N, precision = g.double)
+st0 = state(r, N, precision=g.double)
 stR = st0.cloned()
 stR.randomize()
 
+
 def check_same(state_a, state_b):
-    assert g.norm2(state_a.lattice - state_b.lattice) ** 0.5 < state_a.lattice.grid.precision.eps
+    assert (
+        g.norm2(state_a.lattice - state_b.lattice) ** 0.5
+        < state_a.lattice.grid.precision.eps
+    )
+
 
 def check_norm(state):
-    assert ( g.norm2(state.lattice) - 1.0 ) < state.lattice.grid.precision.eps
+    assert (g.norm2(state.lattice) - 1.0) < state.lattice.grid.precision.eps
+
 
 def project_cbit(state, i, val):
     while True:
         s = state.cloned()
         if s.measure(i) == val:
             return s
+
 
 # first make sure state is properly initialized
 g.message("Test initial state")
@@ -61,29 +68,34 @@ g.message("Test CNOT^2")
 for i in range(N):
     for j in range(N):
         if i != j:
-            psi = (CNOT(i,j) | CNOT(i,j)) * stR
+            psi = (CNOT(i, j) | CNOT(i, j)) * stR
             check_same(psi, stR)
 
 # now test S^4 = 1
 g.message("Test S^4")
 for i in range(N):
-    psi = (R_z(i,np.pi / 2.0) | R_z(i,np.pi / 2.0) | R_z(i,np.pi / 2.0) | R_z(i,np.pi / 2.0)) * stR
+    psi = (
+        R_z(i, np.pi / 2.0)
+        | R_z(i, np.pi / 2.0)
+        | R_z(i, np.pi / 2.0)
+        | R_z(i, np.pi / 2.0)
+    ) * stR
     check_same(psi, stR)
 
 # check norm of all gates
 g.message("Test gate unitarity")
 for i in range(N):
-    check_norm( X(i) * stR )
-    check_norm( R_z(i, 0.125124) * stR )
-    check_norm( H(i) * stR )
+    check_norm(X(i) * stR)
+    check_norm(R_z(i, 0.125124) * stR)
+    check_norm(H(i) * stR)
     for j in range(N):
         if i != j:
-            check_norm( CNOT(i,j) * stR )
+            check_norm(CNOT(i, j) * stR)
 
 # H | Z | H = X
 g.message("Test H | Z | H == X")
 for i in range(N):
-    a = (H(i) | R_z(i,np.pi) | H(i)) * stR
+    a = (H(i) | R_z(i, np.pi) | H(i)) * stR
     b = X(i) * stR
     check_same(a, b)
 
@@ -97,7 +109,7 @@ for control in range(N):
             psi = CNOT(control, target) * state_control_0
             check_same(psi, state_control_0)
 
-            psi = ( CNOT(control, target) | X(target) ) * state_control_1
+            psi = (CNOT(control, target) | X(target)) * state_control_1
             check_same(psi, state_control_1)
 
 # Bell state
@@ -107,7 +119,7 @@ for i in range(N):
     circuit = H(i)
     for j in range(N):
         if i != j:
-            circuit = circuit | CNOT(i,j)
+            circuit = circuit | CNOT(i, j)
     bell = circuit * st0
     if i == 0:
         bell_ref = bell
@@ -119,5 +131,5 @@ g.message(bell)
 
 for i in range(100):
     measured = M() * bell
-    for j in range(1,N):
+    for j in range(1, N):
         assert measured.classical_bit[j] == measured.classical_bit[0]

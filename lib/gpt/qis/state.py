@@ -27,7 +27,9 @@ import numpy as np
 #   lat, bfl[i] at the same time?  Need more masks etc. but could eliminate
 #   cost of bfl?
 class state:
-    def __init__(self, rng, number_of_qubits, precision = None, bit_map = None, lattice = None):
+    def __init__(
+        self, rng, number_of_qubits, precision=None, bit_map=None, lattice=None
+    ):
         if precision is None:
             precision = g.double
         if bit_map is None:
@@ -36,7 +38,7 @@ class state:
         self.precision = precision
         self.number_of_qubits = number_of_qubits
         self.bit_map = bit_map
-        self.classical_bit = [ None ] * number_of_qubits
+        self.classical_bit = [None] * number_of_qubits
         if lattice is not None:
             self.lattice = lattice
         else:
@@ -44,10 +46,15 @@ class state:
             self.lattice[:] = 0
             self.lattice[self.bit_map.zero_coordinate] = 1
 
-
     def cloned(self):
-        s = state(self.rng, self.number_of_qubits, self.precision, self.bit_map, g.copy(self.lattice))
-        s.classical_bit = [ x for x in self.classical_bit ]
+        s = state(
+            self.rng,
+            self.number_of_qubits,
+            self.precision,
+            self.bit_map,
+            g.copy(self.lattice),
+        )
+        s.classical_bit = [x for x in self.classical_bit]
         return s
 
     def randomize(self):
@@ -64,7 +71,14 @@ class state:
             if abs(val) > self.precision.eps:
                 if len(r) != 0:
                     r += "\n"
-                r += " + " + str(val) + " " + self.bit_map.coordinate_to_basis_name(self.bit_map.coordinates[idx])
+                r += (
+                    " + "
+                    + str(val)
+                    + " "
+                    + self.bit_map.coordinate_to_basis_name(
+                        self.bit_map.coordinates[idx]
+                    )
+                )
         if self.lattice.grid.Nprocessors != 1:
             r += "\n + ..."
         return r
@@ -80,8 +94,11 @@ class state:
         g.copy(self.lattice, self.bit_flipped_lattice(i))
 
     def R_z(self, i, phi):
-        phase_one = np.exp(1j*phi)
-        self.lattice @= self.bit_map.zero_mask[i] * self.lattice + self.bit_map.one_mask[i] * self.lattice * phase_one
+        phase_one = np.exp(1j * phi)
+        self.lattice @= (
+            self.bit_map.zero_mask[i] * self.lattice
+            + self.bit_map.one_mask[i] * self.lattice * phase_one
+        )
 
     def H(self, i):
         bfl = self.bit_flipped_lattice(i)
@@ -90,14 +107,15 @@ class state:
         bfl_zero = self.bit_map.one_mask[i] * bfl
         bfl_one = self.bit_map.zero_mask[i] * bfl
         nrm = 1.0 / 2.0 ** 0.5
-        self.lattice @= nrm * ( zero + bfl_zero ) + nrm * (bfl_one - one)
-
+        self.lattice @= nrm * (zero + bfl_zero) + nrm * (bfl_one - one)
 
     def CNOT(self, control, target):
         assert control != target
         bfl = self.bit_flipped_lattice(target)
-        self.lattice @= self.bit_map.zero_mask[control] * self.lattice + self.bit_map.one_mask[control] * bfl
-
+        self.lattice @= (
+            self.bit_map.zero_mask[control] * self.lattice
+            + self.bit_map.one_mask[control] * bfl
+        )
 
     def measure(self, i):
         p_one = g.norm2(self.lattice * self.bit_map.one_mask[i])

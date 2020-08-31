@@ -17,17 +17,22 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+
 def _H(st, i):
     st.H(i)
+
 
 def _X(st, i):
     st.X(i)
 
+
 def _R_z(st, i, phase):
     st.R_z(i, phase)
 
+
 def _CNOT(st, c, t):
     st.CNOT(c, t)
+
 
 def _M(st, i):
     if i is not None:
@@ -38,30 +43,34 @@ def _M(st, i):
 
 
 class circuit:
-    def __init__(self, val = []):
+    def __init__(self, val=[]):
         self.val = val
-    
+
     def __or__(self, other):
         return circuit(self.val + other.val)
 
     def __mul__(self, original):
         other = original.cloned()
-        for op,*args in self.val:
-            op(other,*args)
+        for op, *args in self.val:
+            op(other, *args)
         return other
 
 
 def H(i):
-    return circuit([ (_H,i) ])
+    return circuit([(_H, i)])
+
 
 def X(i):
-    return circuit([ (_X,i) ])
+    return circuit([(_X, i)])
 
-def R_z(i,phase):
-    return circuit([ (_R_z,i,phase) ])
+
+def R_z(i, phase):
+    return circuit([(_R_z, i, phase)])
+
 
 def CNOT(control, target):
-    return circuit([ (_CNOT, control, target) ])
+    return circuit([(_CNOT, control, target)])
 
-def M(i = None):
-    return circuit([ (_M,i) ])
+
+def M(i=None):
+    return circuit([(_M, i)])
