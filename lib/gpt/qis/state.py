@@ -23,6 +23,9 @@ import numpy as np
 # - state should have baseclass serializable, maybe lattice as well
 #   use interface in gpt_io
 # - X should be virtual, introduce mapping that allows 0<>1 relabeling
+#   Concretely, this implements all X and CNOT as changes only to the
+#   coordinates (and not_coordinates and masks); all of this would parallelize very well.
+#   The only costly part then is the Hadamard.
 # - If bit flipped lattice generation is too slow, always evolve all lattices
 #   lat, bfl[i] at the same time?  Need more masks etc. but could eliminate
 #   cost of bfl?
