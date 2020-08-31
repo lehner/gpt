@@ -5,7 +5,8 @@
 
 # GPT - Grid Python Toolkit
 
-GPT is a [Python](https://www.python.org) measurement toolkit built on [Grid](https://github.com/paboyle/Grid) data parallelism.  It provides a physics library for lattice QCD and related theories.
+GPT is a [Python](https://www.python.org) measurement toolkit built on [Grid](https://github.com/paboyle/Grid) data parallelism (MPI, openMP, SIMD, and SIMT).
+It provides a physics library for lattice QCD and related theories as well as a QIS module including a digital quantum computing simulator.
 
 ## Quick Start
 The fastest way to try GPT is to install [Docker](https://docs.docker.com/get-docker/),
