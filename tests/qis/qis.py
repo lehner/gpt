@@ -32,10 +32,11 @@ def check_norm(state):
 
 
 def project_cbit(state, i, val):
-    while True:
-        s = state.cloned()
-        if s.measure(i) == val:
-            return s
+    s = state.cloned()
+    mv = s.measure(i)
+    if mv != val:
+        s.X(i)
+    return s
 
 
 # first make sure state is properly initialized
