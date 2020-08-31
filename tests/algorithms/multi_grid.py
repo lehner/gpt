@@ -49,63 +49,57 @@ p = g.qcd.fermion.preconditioner
 # - list -> configure each level by itself explicitly (correct lengths asserted inside)
 # - scalar value (= not a list) -> broadcast parameter to every level
 
+# mg setup parameters
+mg_setup_2lvl_params = {
+    "block": [[2, 2, 2, 2]],
+    "northo": 1,
+    "nbasis": 30,
+    "make_hermitian": False,
+    "save_links": True,
+    "vecstype": "null",
+    "preortho": False,
+    "postortho": False,
+    "solver": i.fgmres(
+        {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
+    ),
+    "distribution": rng.cnormal,
+}
+mg_setup_3lvl_params = {
+    "block": [[2, 2, 2, 2], [1, 2, 2, 2]],
+    "northo": 1,
+    "nbasis": 30,
+    "make_hermitian": False,
+    "save_links": True,
+    "vecstype": "null",
+    "preortho": False,
+    "postortho": False,
+    "solver": i.fgmres(
+        {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
+    ),
+    "distribution": rng.cnormal,
+}
+mg_setup_4lvl_params = {
+    "block": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 1, 2, 2]],
+    "northo": 1,
+    "nbasis": 30,
+    "make_hermitian": False,
+    "save_links": True,
+    "vecstype": "null",
+    "preortho": False,
+    "postortho": False,
+    "solver": i.fgmres(
+        {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
+    ),
+    "distribution": rng.cnormal,
+}
+g.message(f"mg_setup_2lvl = {mg_setup_2lvl_params}")
+g.message(f"mg_setup_3lvl = {mg_setup_3lvl_params}")
+g.message(f"mg_setup_4lvl = {mg_setup_4lvl_params}")
 
-# mg setups
-# mg_setup_2lvl = mg.setup(
-#     w,
-#     {
-#         "block": [[2, 2, 2, 2]],
-#         "northo": 1,
-#         "nbasis": 30,
-#         "make_hermitian": False,
-#         "save_links": True,
-#         "vecstype": "null",
-#         "preortho": False,
-#         "postortho": False,
-#         "solver": i.fgmres(
-#             {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-#         ),
-#         "distribution": rng.cnormal,
-#     },
-# )
-mg_setup_3lvl = mg.setup(
-    w,
-    {
-        "block": [[2, 2, 2, 2], [1, 2, 2, 2]],
-        "northo": 1,
-        "nbasis": 30,
-        "make_hermitian": False,
-        "save_links": True,
-        "vecstype": "null",
-        "preortho": False,
-        "postortho": False,
-        "solver": i.fgmres(
-            {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-        ),
-        "distribution": rng.cnormal,
-    },
-)
-# mg_setup_4lvl = mg.setup(
-#     w,
-#     {
-#         "block": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 1, 2, 2]],
-#         "northo": 1,
-#         "nbasis": 30,
-#         "make_hermitian": False,
-#         "save_links": True,
-#         "vecstype": "null",
-#         "preortho": False,
-#         "postortho": False,
-#         "solver": i.fgmres(
-#             {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-#         ),
-#         "distribution": rng.cnormal,
-#     },
-# )
-
-# g.message(f"mg_setup_2lvl = {mg_setup_2lvl.params}")
-g.message(f"mg_setup_3lvl = {mg_setup_3lvl.params}")
-# g.message(f"mg_setup_4lvl = {mg_setup_4lvl.params}")
+# mg setup objects
+# mg_setup_2lvl = mg.setup(w, mg_setup_2lvl_params)
+mg_setup_3lvl = mg.setup(w, mg_setup_3lvl_params)
+# mg_setup_4lvl = mg.setup(w, mg_setup_4lvl_params)
 
 # mg inner solvers
 wrapper_solver = i.fgmres(
@@ -119,54 +113,22 @@ coarsest_solver = i.fgmres(
 )
 
 # mg solver/preconditioner objects
-# mg_2lvl_vcycle = mg.inverter(
-#     mg_setup_2lvl,
-#     {
-#         "coarsest_solver": coarsest_solver,
-#         "smooth_solver": smooth_solver,
-#         "wrapper_solver": None,
-#     },
-# )
-# mg_2lvl_kcycle = mg.inverter(
-#     mg_setup_2lvl,
-#     {
-#         "coarsest_solver": coarsest_solver,
-#         "smooth_solver": smooth_solver,
-#         "wrapper_solver": wrapper_solver,
-#     },
-# )
-# mg_3lvl_vcycle = mg.inverter(
-#     mg_setup_3lvl,
-#     {
-#         "coarsest_solver": coarsest_solver,
-#         "smooth_solver": smooth_solver,
-#         "wrapper_solver": None,
-#     },
-# )
-mg_3lvl_kcycle = mg.inverter(
-    mg_setup_3lvl,
-    {
-        "coarsest_solver": coarsest_solver,
-        "smooth_solver": smooth_solver,
-        "wrapper_solver": wrapper_solver,
-    },
-)
-# mg_4lvl_vcycle = mg.inverter(
-#     mg_setup_4lvl,
-#     {
-#         "coarsest_solver": coarsest_solver,
-#         "smooth_solver": smooth_solver,
-#         "wrapper_solver": None,
-#     },
-# )
-# mg_4lvl_kcycle = mg.inverter(
-#     mg_setup_4lvl,
-#     {
-#         "coarsest_solver": coarsest_solver,
-#         "smooth_solver": smooth_solver,
-#         "wrapper_solver": wrapper_solver,
-#     },
-# )
+vcycle_params = {
+    "coarsest_solver": coarsest_solver,
+    "smooth_solver": smooth_solver,
+    "wrapper_solver": None,
+}
+kcycle_params = {
+    "coarsest_solver": coarsest_solver,
+    "smooth_solver": smooth_solver,
+    "wrapper_solver": wrapper_solver,
+}
+# mg_2lvl_vcycle = mg.inverter(mg_setup_2lvl, vcycle_params)
+# mg_2lvl_kcycle = mg.inverter(mg_setup_2lvl, kcycle_params)
+# mg_3lvl_vcycle = mg.inverter(mg_setup_3lvl, vcycle_params)
+mg_3lvl_kcycle = mg.inverter(mg_setup_3lvl, kcycle_params)
+# mg_4lvl_vcycle = mg.inverter(mg_setup_4lvl, vcycle_params)
+# mg_4lvl_kcycle = mg.inverter(mg_setup_4lvl, kcycle_params)
 
 # preconditioners
 smoother_prec = mg_3lvl_kcycle.smooth_solver[0]
