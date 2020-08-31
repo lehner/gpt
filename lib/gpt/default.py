@@ -71,7 +71,7 @@ max_io_nodes = get_int("--max_io_nodes", 256)
 verbose_default = (
     "io,bicgstab,cg,dci,fgcr,fgmres,mr,irl,repository,arnoldi,power_iteration,"
     + "checkpointer,deflate,block_operator,random,split,multi_grid_setup,multi_grid_inverter,"
-    + "coarsen,orthogonalize"
+    + "coarsen,orthogonalize,qis_map"
 )
 verbose_additional = "eval,merge"
 verbose = set()

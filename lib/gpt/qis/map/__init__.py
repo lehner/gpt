@@ -16,33 +16,4 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import numpy
-
-
-class single:
-    nbytes = 4
-    real_dtype = numpy.float32
-    complex_dtype = numpy.complex64
-    eps = 1e-7
-
-    def __init__(self):
-        pass
-
-
-class double:
-    nbytes = 8
-    real_dtype = numpy.float64
-    complex_dtype = numpy.complex128
-    eps = 1e-15
-
-    def __init__(self):
-        pass
-
-
-def str_to_precision(s):
-    if s == "single":
-        return single
-    elif s == "double":
-        return double
-    else:
-        assert 0
+from gpt.qis.map.canonical import canonical

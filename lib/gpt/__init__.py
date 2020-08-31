@@ -23,6 +23,7 @@ import gpt.default
 import gpt.create
 import gpt.algorithms
 import gpt.qcd
+import gpt.qis
 import socket
 import cgpt
 import sys
