@@ -64,16 +64,6 @@ class chebyshev:
     Args:
         params (dict): A dictionary containing the in input parameters to be saved as attributes.
 
-    Attributes:
-        params (dict): A copy of the argument dictionary.
-        hi (int): Something High
-        lo (int): Something Low
-        order (list of int): I have no idea what this is
-        morder (int): the maximum of order
-        n (int): The length of order
-        func (list of func): A list of functions for something
-        coeffs (list of int): list of coefficients for something
-
     """
 
     @g.params_convention()
@@ -143,19 +133,6 @@ class chebyshev:
                     s[j] += Un * self.coeffs[j][i + 1] * (i + 1)
 
         return undo_list([v / (0.5 * (self.hi - self.lo)) for v in s])
-
-    def inv(self, z, x0, maxiter=1000, resid=1e-8):
-        assert len(self.coeffs) == 1
-        print("Find c(x) = ", z, " starting with x0 = ", x0)
-        x = x0
-        for i in range(maxiter):
-            eps = self.eval(x) - z
-            print(i, x, eps, x0)
-            if abs(eps) < abs(z) * resid:
-                print("Found c(", x, ") = ", self.eval(x))
-                return x
-            x -= eps / self.evalD(x)
-        return float("nan")
 
     def __call__(self, mat):
 
