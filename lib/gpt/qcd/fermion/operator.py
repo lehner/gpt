@@ -229,6 +229,7 @@ class fine_operator(operator):
 class coarse_operator(operator):
     def __init__(self, name, U, params, otype=None):
         super().__init__(name, U, params, otype, False)
+        self.tmp = gpt.lattice(U[0].grid, otype)
 
         self.obj = []
         for i in range(len(U[0].v_obj)):
@@ -245,31 +246,40 @@ class coarse_operator(operator):
 
     def apply_unary_operator(self, opcode, o, i):
         assert len(i.v_obj) == len(o.v_obj)
+        assert len(i.v_obj) == len(self.tmp.v_obj)
         assert len(i.v_obj) == (len(self.obj)) ** 0.5
-        tmp = gpt.lattice(o)
-        o[:] = 0.0
-        for m in range(len(i.v_obj)):
-            tmp[:] = 0.0
+        if len(i.v_obj) == 1:
+            cgpt.apply_fermion_operator(self.obj[0], opcode, i.v_obj[0], o.v_obj[0])
+        else:
             for n in range(len(i.v_obj)):
-                cgpt.apply_fermion_operator(
-                    self.obj[n * len(i.v_obj) + m], opcode, i.v_obj[n], tmp.v_obj[m]
-                )
-                o += tmp
+                for m in range(len(i.v_obj)):
+                    cgpt.apply_fermion_operator(
+                        self.obj[n * len(i.v_obj) + m],
+                        opcode,
+                        i.v_obj[n],
+                        o.v_obj[m] if n == 0 else self.tmp.v_obj[m],
+                    )
+                if n != 0:
+                    o += self.tmp
 
     def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
         assert len(i.v_obj) == len(o.v_obj)
+        assert len(i.v_obj) == len(self.tmp.v_obj)
         assert len(i.v_obj) == (len(self.obj)) ** 0.5
-        tmp = gpt.lattice(o)
-        o[:] = 0.0
-        for m in range(len(i.v_obj)):
-            tmp[:] = 0.0
+        if len(i.v_obj) == 1:
+            cgpt.apply_fermion_operator_dirdisp(
+                self.obj[0], opcode, i.v_obj[0], o.v_obj[0], direction, disp,
+            )
+        else:
             for n in range(len(i.v_obj)):
-                cgpt.apply_fermion_operator_dirdisp(
-                    self.obj[n * len(i.v_obj) + m],
-                    opcode,
-                    i.v_obj[n],
-                    tmp.v_obj[m],
-                    direction,
-                    disp,
-                )
-                o += tmp
+                for m in range(len(i.v_obj)):
+                    cgpt.apply_fermion_operator_dirdisp(
+                        self.obj[n * len(i.v_obj) + m],
+                        opcode,
+                        i.v_obj[n],
+                        o.v_obj[m] if n == 0 else self.tmp.v_obj[m],
+                        direction,
+                        disp,
+                    )
+                if n != 0:
+                    o += self.tmp
