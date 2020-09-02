@@ -257,9 +257,9 @@ assert niter_prec_3lvl_mg_kcycle <= niter_prec_smooth
 # print contributions to mg setup runtime
 g.message("Contributions to time spent in MG setups")
 for name, t in [
-#    ("2lvl", mg_setup_2lvl.t),
+    #    ("2lvl", mg_setup_2lvl.t),
     ("3lvl", mg_setup_3lvl.t),
-#    ("4lvl", mg_setup_4lvl.t),
+    #    ("4lvl", mg_setup_4lvl.t),
 ]:
     g.message(name + ":")
     for lvl in reversed(range(len(t))):
@@ -268,12 +268,12 @@ for name, t in [
 # print contributions to mg solve runtime
 g.message("Contributions to time spent in MG preconditioners")
 for name, t in [
-#    ("2lvl_vcycle", mg_2lvl_vcycle.t),
-#    ("2lvl_kcycle", mg_2lvl_kcycle.t),
-#    ("3lvl_vcycle", mg_3lvl_vcycle.t),
+    #    ("2lvl_vcycle", mg_2lvl_vcycle.t),
+    #    ("2lvl_kcycle", mg_2lvl_kcycle.t),
+    #    ("3lvl_vcycle", mg_3lvl_vcycle.t),
     ("3lvl_kcycle", mg_3lvl_kcycle.t),
-#    ("4lvl_vcycle", mg_4lvl_vcycle.t),
-#    ("4lvl_kcycle", mg_4lvl_kcycle.t),
+    #    ("4lvl_vcycle", mg_4lvl_vcycle.t),
+    #    ("4lvl_kcycle", mg_4lvl_kcycle.t),
 ]:
     g.message(name + ":")
     for lvl in reversed(range(len(t))):
@@ -282,12 +282,12 @@ for name, t in [
 # print average iteration counts / time per level
 g.message("Average iteration counts of inner solvers")
 for name, h in [
-#    ("2lvl_vcycle", mg_2lvl_vcycle.history),
-#    ("2lvl_kcycle", mg_2lvl_kcycle.history),
-#    ("3lvl_vcycle", mg_3lvl_vcycle.history),
+    #    ("2lvl_vcycle", mg_2lvl_vcycle.history),
+    #    ("2lvl_kcycle", mg_2lvl_kcycle.history),
+    #    ("3lvl_vcycle", mg_3lvl_vcycle.history),
     ("3lvl_kcycle", mg_3lvl_kcycle.history),
-#    ("4lvl_vcycle", mg_4lvl_vcycle.history),
-#    ("4lvl_kcycle", mg_4lvl_kcycle.history),
+    #    ("4lvl_vcycle", mg_4lvl_vcycle.history),
+    #    ("4lvl_kcycle", mg_4lvl_kcycle.history),
 ]:
     for lvl in reversed(range(len(h))):
         for k, v in h[lvl].items():
