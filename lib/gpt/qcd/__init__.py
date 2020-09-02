@@ -18,4 +18,6 @@
 #
 import gpt.qcd.gauge
 import gpt.qcd.fermion
+import gpt.qcd.scalar
+
 from gpt.qcd.utils import ferm_to_prop, prop_to_ferm
