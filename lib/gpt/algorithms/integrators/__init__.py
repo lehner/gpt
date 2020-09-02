@@ -1,7 +1,27 @@
+#
+#    GPT - Grid Python Toolkit
+#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Mattia Bruno
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License along
+#    with this program; if not, write to the Free Software Foundation, Inc.,
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
 import gpt
 from gpt.core.matrix import exp as mexp
 
-from gpt.algorithms.integrators.molecular_dynamics import leap_frog
+from gpt.algorithms.integrators.molecular_dynamics import leap_frog, OMF4
 
 
 class update:
@@ -28,7 +48,6 @@ class update:
             return 1
 
     def __call__(self, eps):
-        t0 = gpt.time()
         for mu in range(len(self.fld)):
             if hasattr(self, "mom"):
                 if self.get_type() == 0:
@@ -40,7 +59,6 @@ class update:
                     a.pre_force()
                     frc = a.force(mu)
                     self.fld[mu] -= eps * frc
-        return gpt.time() - t0
 
     def get_act(self):
         if hasattr(self, "act"):

@@ -1,3 +1,23 @@
+#
+#    GPT - Grid Python Toolkit
+#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Mattia Bruno
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License along
+#    with this program; if not, write to the Free Software Foundation, Inc.,
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
 import gpt
 import numpy
 
@@ -54,30 +74,26 @@ class hmc:
         self.act = mdint.get_act()
 
     def __call__(self, tau):
-        t0 = gpt.time()
-        dts = -gpt.time()
+        verbose = gpt.default.is_verbose("hmc")
+        time = gpt.timer("HMC")
+
+        time("setup")
         for mu in range(len(self.fld)):
             self.fld_copy[mu] @= self.fld[mu]
         self.mom.refresh(self.rng)
         if self.pf is not None:
             self.pf.refresh(self.rng)
 
-        dts += gpt.time()
-
-        dta = dti = 0.0
-        dta -= gpt.time()
+        time("actions")
         a0 = [self.mom.action()]
         a0 += [a() for a in self.act]
-        dta += gpt.time()
 
-        dti -= gpt.time()
+        time("integrators")
         self.mdint(tau)
-        dti += gpt.time()
 
-        dta -= gpt.time()
+        time("actions")
         a1 = [self.mom.action()]
         a1 += [a() for a in self.act]
-        dta += gpt.time()
 
         # accept/reject
         dH = sum(a1) - sum(a0)
@@ -97,51 +113,33 @@ class hmc:
             for mu in range(len(self.fld)):
                 self.fld[mu] @= self.fld_copy[mu]
 
-        gpt.message(
-            f"HMC Trajectory generated in {gpt.time()-t0:g} secs; accept = {accept:d}; dH = {dH:g}"
-        )
-        gpt.message(
-            f"HMC Timings = setup {dts:g} secs, actions {dta:g} secs, integrators {dti:g} secs"
-        )
+        if verbose:
+            time()
+            gpt.message(time)
+            gpt.message(f"HMC Trajectory: accept = {accept:d}; dH = {dH:g}")
 
         return [accept, dH, numpy.exp(-dH)]
 
     def reversibility_test(self, tau):
-        t0 = gpt.time()
-        dts = -gpt.time()
         for mu in range(len(self.fld)):
             self.fld_copy[mu] @= self.fld[mu]
         self.mom.refresh(self.rng)
         if self.pf is not None:
             self.pf.refresh(self.rng)
-        dts += gpt.time()
 
-        dta = dti = 0.0
-        dta -= gpt.time()
         a0 = [self.mom.action()]
         a0 += [a() for a in self.act]
-        dta += gpt.time()
 
-        dti -= gpt.time()
         self.mdint(tau)
-        dti += gpt.time()
-
-        dts -= gpt.time()
         self.mom.reverse()
-        dts += gpt.time()
-
-        dti -= gpt.time()
         self.mdint(tau)
-        dti += gpt.time()
 
-        dta -= gpt.time()
         a1 = [self.mom.action()]
         a1 += [a() for a in self.act]
-        dta += gpt.time()
 
         # accept/reject
         dH = sum(a1) - sum(a0)
         gpt.barrier()
 
-        gpt.message(f"HMC Reversibility test in {gpt.time()-t0:g} secs; dH = {dH:g}")
+        gpt.message(f"HMC Reversibility test dH = {dH:g}")
         return dH
