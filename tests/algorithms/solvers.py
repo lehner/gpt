@@ -57,7 +57,7 @@ eo2_inv = inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000}))(w)
 dst_F = g(eo2_inv * src_F)
 for pc in [eo1_odd, eo1_even, eo2_odd, eo2_even]:
     cg = inv.cg({"eps": 1e-8, "maxiter": 1000})
-    gen_inv = inv_pc(eo2, cg)(w)
+    gen_inv = inv_pc(pc, cg)(w)
     dst_gen = g.copy(dst_F)
     gen_inv(dst_gen, src_F)
     # make sure using the guess results in immediate convergence
