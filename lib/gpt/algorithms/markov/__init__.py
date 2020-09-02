@@ -19,3 +19,4 @@
 from gpt.algorithms.markov.su2_heat_bath import *
 from gpt.algorithms.markov.u1_heat_bath import *
 from gpt.algorithms.markov.metropolis import *
+from gpt.algorithms.markov.hmc import *
