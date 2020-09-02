@@ -1,3 +1,23 @@
+#
+#    GPT - Grid Python Toolkit
+#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Mattia Bruno
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License along
+#    with this program; if not, write to the Free Software Foundation, Inc.,
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
 import gpt
 
 
@@ -15,13 +35,57 @@ class leap_frog(integrator):
     def __call__(self, tau):
         eps = tau / self.N
 
-        dt0 = dt1 = 0.0
+        time = gpt.timer("leap_frog")
+        time("leap_frog")
 
-        dt0 += self.i0(eps * 0.5)
+        self.i0(eps * 0.5)
         for i in range(self.N):
-            dt1 += self.i1(eps)
+            self.i1(eps)
             if i != self.N - 1:
-                dt0 += self.i0(eps)
-        dt0 += self.i0(eps * 0.5)
+                self.i0(eps)
+        self.i0(eps * 0.5)
 
-        gpt.message(f"LeapFrog Timings = dt0 {dt0:g} secs, dt1 {dt1:g} secs")
+        time()
+        gpt.message(f"Leap Frog Integrator ran in {time.dt['total']:g} secs")
+
+
+class OMF4(integrator):
+    def __init__(self, N, i0, i1):
+        super().__init__(N, i0, i1)
+        self.r = [
+            0.08398315262876693,
+            0.2539785108410595,
+            0.6822365335719091,
+            -0.03230286765269967,
+        ]
+
+    def __call__(self, tau):
+        eps = tau / self.N
+        f1 = 0.5 - self.r[0] - self.r[2]
+        f2 = 1.0 - 2.0 * (self.r[1] + self.r[3])
+
+        time = gpt.timer("OMF4")
+        time("OMF4")
+
+        self.i0(self.r[0] * eps)
+        for i in range(self.N):
+            self.i1(self.r[1] * eps)
+            self.i0(self.r[2] * eps)
+            self.i1(self.r[3] * eps)
+
+            self.i0(f1 * eps)
+
+            self.i1(f2 * eps)
+
+            self.i0(f1 * eps)
+
+            self.i1(self.r[3] * eps)
+            self.i0(self.r[2] * eps)
+            self.i1(self.r[1] * eps)
+
+            if i != self.N - 1:
+                self.i0(2.0 * self.r[0] * eps)
+        self.i0(self.r[0] * eps)
+
+        time()
+        gpt.message(f"OMF4 Integrator ran in {time.dt['total']:g} secs")
