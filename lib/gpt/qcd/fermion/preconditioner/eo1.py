@@ -103,6 +103,10 @@ class eo1_base:
             self.out_np @= -self.out_np
             self.export_parity(o)
 
+        def _L_pseudo_inverse(op, i):
+            self.import_parity(i)
+            op @= self.in_p
+
         def _S(o, i):
             self.import_parity(i)
             self.op.Mooee.inv_mat(self.out_np, self.in_np)
@@ -112,6 +116,7 @@ class eo1_base:
 
         self.L = gpt.matrix_operator(
             mat=_L,
+            inv_mat=_L_pseudo_inverse,
             otype=op.otype,
             grid=(self.F_grid, self.F_grid_eo),
             cb=(None, self.parity),

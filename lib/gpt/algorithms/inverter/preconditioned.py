@@ -32,8 +32,10 @@ class preconditioned:
         inv_mat = self.inverter(matrix.Mpc)
 
         def inv(dst, src):
-            # TODO: forward guess dst to inverter, need pseudo L.inv(), pick even sites then L.inv() may be EE, do for each PC
-            g.eval(dst, matrix.L * inv_mat * matrix.R * src + matrix.S * src)
+            pc_src = g(matrix.R * src)
+            pc_dst = g(matrix.L.inv() * dst)
+            inv_mat(pc_dst, pc_src)
+            g.eval(dst, matrix.L * pc_dst + matrix.S * src)
 
         return g.matrix_operator(
             mat=inv,
