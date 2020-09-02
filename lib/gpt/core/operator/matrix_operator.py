@@ -227,3 +227,45 @@ class matrix_operator(factor):
             return gpt.util.from_list(dst)
 
         return dst
+
+def site_diagonal_operator(M, with_inverse=True):
+    """
+    create a matrix_operator that just multiplies a site-local matrix
+    """
+
+    if type(M.otype) == gpt.ot_matrix_spin:
+        otype = gpt.ot_vector_spin(M.otype.shape[0])
+    elif type(M.otype) == gpt.ot_matrix_color:
+        otype = gpt.ot_vector_color(M.otype.shape[0])
+    elif type(M.otype) == gpt.ot_matrix_spin_color:
+        otype = gpt.ot_vector_spin_color(M.otype.shape[0], M.otype.shape[2])
+    else:
+        assert False
+    grid = M.grid
+
+    def mat(dst, src):
+        dst @= M * src
+
+    def adj_mat(dst, src):
+        dst @= gpt.adj(M) * src
+
+    if with_inverse:
+        Minv = gpt.matrix.inv(M)
+
+        def inv_mat(dst, src):
+            dst @= Minv * src
+
+        def adj_inv_mat(dst, src):
+            dst @= gpt.adj(Minv) * src
+    else:
+        inv_mat = None
+        adj_inv_mat = None
+
+    return matrix_operator(
+        mat=mat,
+        adj_mat=adj_mat,
+        inv_mat=inv_mat,
+        adj_inv_mat=adj_inv_mat,
+        otype=otype,
+        grid=grid
+    )
