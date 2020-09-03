@@ -76,23 +76,14 @@ def entries_have_length(value, count):
         return all([len(v) == count for v in value])
 
 
-# instance
-def to_separate_instances(value):
-    if type(value) != list or len(value) < 2:
-        return
-    for i in range(1, len(value)):
-        if value[i] is value[0]:  # both are references to same object
-            value[i] = copy.copy(value[0])
-
-
-# solver
-def is_solver(value):
+# callable
+def is_callable(value):
     if type(value) == list:
-        return all([is_solver(v) for v in value])
+        return all([is_callable(v) for v in value])
     return callable(value) or value is None
 
 
-def is_preconditioned(value):
+def all_have_attribute(value, a):
     if type(value) == list and len(value) > 0:
-        return all([is_preconditioned(v) for v in value])
-    return hasattr(value, "inverter")
+        return all([all_have_attribute(v, a) for v in value])
+    return hasattr(value, a)

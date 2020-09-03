@@ -22,8 +22,9 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
   long nc = tdim[0];
   long nd = tdim[1];
   std::vector<bool> mpi_dim(nd);
-  if (nd == 4) {
-    mpi_dim = {true,true,true,true};
+  if (nd <= 4) {
+    for (long i=0;i<nd;i++)
+      mpi_dim[i] = true;
   } else if (nd == 5) {
     mpi_dim = {false,true,true,true,true};
   } else {

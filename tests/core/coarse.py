@@ -10,9 +10,9 @@ import numpy as np
 import sys
 
 # command line parameters
-grid_f_size = g.default.get_ivec("--fgrid", [8, 8, 8, 16], 4)
-grid_c_size = g.default.get_ivec("--cgrid", [4, 4, 4, 8], 4)
-grid_cc_size = g.default.get_ivec("--ccgrid", [2, 2, 2, 4], 4)
+grid_f_size = g.default.get_ivec("--fgrid", [16, 16, 16, 32], 4)
+grid_c_size = g.default.get_ivec("--cgrid", [8, 8, 8, 16], 4)
+grid_cc_size = g.default.get_ivec("--ccgrid", [4, 4, 4, 8], 4)
 
 # setup rng, make it quiet
 g.default.set_verbose("random", False)
@@ -60,7 +60,7 @@ basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
 rng.cnormal(basis_f)
 
 # split fine basis into chiral halfs
-g.split_chiral(basis_f)
+g.coarse.split_chiral(basis_f)
 
 # setup fine block map map
 bm_f = g.block.map(grid_c, basis_f)
@@ -74,10 +74,10 @@ for i in range(northo):
 A_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
 Asaved_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
 g.coarse.create_links(
-    A_c, mat_f, basis_f, {"make_hermitian": False, "savelinks": False}
+    A_c, mat_f, basis_f, {"make_hermitian": False, "save_links": False}
 )
 g.coarse.create_links(
-    Asaved_c, mat_f, basis_f, {"make_hermitian": False, "savelinks": True}
+    Asaved_c, mat_f, basis_f, {"make_hermitian": False, "save_links": True}
 )
 
 # compare link fields
@@ -85,11 +85,11 @@ for p in range(9):
     err2 = g.norm2(A_c[p] - Asaved_c[p]) / g.norm2(A_c[p])
     g.message(f"Relative deviation of Asaved_c[{p}] from A_c[{p}] = {err2:e}",)
     assert err2 <= tol_links
-g.message(f"Tests for links passed for all directions")
+g.message("Tests for links passed for all directions")
 del Asaved_c
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse(A_c, {"level": 0,},)
+mat_c = g.qcd.fermion.coarse(A_c, level=0)
 
 # setup coarse vectors
 vec_in_c = g.vcomplex(grid_c, nbasis_f)
@@ -115,7 +115,7 @@ basis_c = [g.vcomplex(grid_c, nbasis_f) for __ in range(nbasis_c)]
 rng.cnormal(basis_c)
 
 # split coarse basis into chiral halfs
-g.split_chiral(basis_c)
+g.coarse.split_chiral(basis_c)
 
 # setup coarse block map map
 bm_c = g.block.map(grid_cc, basis_c)
@@ -129,10 +129,10 @@ for i in range(northo):
 A_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
 Asaved_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
 g.coarse.create_links(
-    A_cc, mat_c, basis_c, {"make_hermitian": False, "savelinks": False}
+    A_cc, mat_c, basis_c, {"make_hermitian": False, "save_links": False}
 )
 g.coarse.create_links(
-    Asaved_cc, mat_c, basis_c, {"make_hermitian": False, "savelinks": True}
+    Asaved_cc, mat_c, basis_c, {"make_hermitian": False, "save_links": True}
 )
 
 # compare link fields
@@ -140,11 +140,11 @@ for p in range(9):
     err2 = g.norm2(A_cc[p] - Asaved_cc[p]) / g.norm2(A_cc[p])
     g.message(f"Relative deviation of Asaved_cc[{p}] from A_cc[{p}] = {err2:e}",)
     assert err2 <= tol_links
-g.message(f"Tests for links passed for all directions")
+g.message("Tests for links passed for all directions")
 del Asaved_cc
 
 # create coarse operator from links
-mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
+mat_cc = g.qcd.fermion.coarse(A_cc, level=1)
 
 # setup coarse coarse vectors
 vec_in_cc = g.vcomplex(grid_cc, nbasis_c)
@@ -169,7 +169,7 @@ g.message("Test passed for coarse coarse operator, %e <= %e" % (err2, tol_operat
 
 # setup fields
 rng.cnormal(A_c)
-mat_c = g.qcd.fermion.coarse(A_c, {"level": 0,},)
+mat_c = g.qcd.fermion.coarse(A_c, level=0)
 vec_out_link_c, vec_out_mat_c = g.lattice(vec_in_c), g.lattice(vec_in_c)
 vec_out_link_c[:] = 0.0
 vec_out_link_c[:] = 0.0
@@ -177,8 +177,8 @@ rng.cnormal(vec_in_c)
 
 # apply the link matrix
 vec_out_link_c @= A_c[8] * vec_in_c
-mat_c.Mdir(
-    vec_out_mat_c, vec_in_c, 0, 0
+mat_c.Mdir(0, 0)(
+    vec_out_mat_c, vec_in_c
 )  # exploit the self coupling link, this uses Grid
 
 # define check tolerance
@@ -193,7 +193,7 @@ g.message("Test passed for coarse links, %e == %e" % (diff2, tol))
 
 # setup fields
 rng.cnormal(A_cc)
-mat_cc = g.qcd.fermion.coarse(A_cc, {"level": 1,},)
+mat_cc = g.qcd.fermion.coarse(A_cc, level=1)
 vec_out_link_cc, vec_out_mat_cc = g.lattice(vec_in_cc), g.lattice(vec_in_cc)
 vec_out_link_cc[:] = 0.0
 vec_out_link_cc[:] = 0.0
@@ -201,8 +201,8 @@ rng.cnormal(vec_in_cc)
 
 # apply the link matrix
 vec_out_link_cc @= A_cc[8] * vec_in_cc
-mat_cc.Mdir(
-    vec_out_mat_cc, vec_in_cc, 0, 0
+mat_cc.Mdir(0, 0)(
+    vec_out_mat_cc, vec_in_cc
 )  # exploit the self coupling link, this uses Grid
 
 # define check tolerance

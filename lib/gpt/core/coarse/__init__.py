@@ -25,8 +25,8 @@ def create_links(A, fmat, basis, params):
     # to already be orthogonalized!
     # parameters
     make_hermitian = params["make_hermitian"]
-    savelinks = params["savelinks"]
-    assert not (make_hermitian and not savelinks)
+    save_links = params["save_links"]
+    assert not (make_hermitian and not save_links)
 
     # verbosity
     verbose = gpt.default.is_verbose("coarsen")
@@ -69,18 +69,18 @@ def create_links(A, fmat, basis, params):
     block_cb = coor[:, :] // block[:]
 
     # fill masks for sites within even/odd blocks
-    gpt.make_mask(blockevenmask, numpy.sum(block_cb, axis=1) % 2 == 0)
+    gpt.coordinate_mask(blockevenmask, numpy.sum(block_cb, axis=1) % 2 == 0)
     blockoddmask @= onemask - blockevenmask
 
     # fill masks for sites on borders of blocks
     dirmasks_forward_np = coor[:, :] % block[:] == block[:] - 1
     dirmasks_backward_np = coor[:, :] % block[:] == 0
     for mu in dirs:
-        gpt.make_mask(dirmasks[mu], dirmasks_forward_np[:, mu])
-        gpt.make_mask(dirmasks[mu + 4], dirmasks_backward_np[:, mu])
+        gpt.coordinate_mask(dirmasks[mu], dirmasks_forward_np[:, mu])
+        gpt.coordinate_mask(dirmasks[mu + 4], dirmasks_backward_np[:, mu])
 
     # save applications of matrix and coarsening if possible
-    dirdisps = dirdisps_forward if savelinks else dirdisps_full
+    dirdisps = dirdisps_forward if save_links else dirdisps_full
 
     # create block maps
     t("blockmap")
@@ -94,7 +94,7 @@ def create_links(A, fmat, basis, params):
         # this triggers len(dirdisps) comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
         t("apply_hop")
-        [fmat.Mdir(Mvr[p], vr, mu, fb) for p, (mu, fb) in enumerate(dirdisps)]
+        [fmat.Mdir(*dirdisp)(Mvr[p], vr) for p, dirdisp in enumerate(dirdisps)]
 
         # coarsen directional terms + write to link
         for p, (mu, fb) in enumerate(dirdisps):
@@ -123,9 +123,9 @@ def create_links(A, fmat, basis, params):
             gpt.message("coarsen: done with vector %d" % i)
 
     # communicate opposite links
-    if savelinks:
+    if save_links:
         t("comm")
-        comm_links(A, dirdisps_forward, make_hermitian)
+        communicate_links(A, dirdisps_forward, make_hermitian)
 
     t()
 
@@ -133,7 +133,7 @@ def create_links(A, fmat, basis, params):
         gpt.message(t)
 
 
-def comm_links(A, dirdisps_forward, make_hermitian):
+def communicate_links(A, dirdisps_forward, make_hermitian):
     assert type(A) == list
     assert len(A) == 2 * len(dirdisps_forward) + 1
     for p, (mu, fb) in enumerate(dirdisps_forward):
@@ -151,3 +151,36 @@ def comm_links(A, dirdisps_forward, make_hermitian):
 
 def recreate_links(A, fmat, basis):
     create_links(A, fmat, basis)
+
+
+def gamma5(src):
+    if hasattr(src.otype, "fundamental"):
+        nbasis = src.otype.shape[0]
+        assert nbasis % 2 == 0
+        nb = nbasis // 2
+        return gpt.vcomplex([1] * nb + [-1] * nb, nbasis)
+    else:
+        return gpt.gamma[5]
+
+
+def split_chiral(basis, factor=None):
+    nbasis = len(basis)
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+    factor = 0.5 if factor is None else factor
+    g5 = gamma5(basis[0])
+    tmp = gpt.lattice(basis[0])
+    for n in range(nb):
+        tmp @= g5 * basis[n]
+        basis[n + nb] @= (basis[n] - tmp) * factor
+        basis[n] @= (basis[n] + tmp) * factor
+
+
+def unsplit_chiral(basis, factor=None):
+    nbasis = len(basis)
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+    factor = 0.5 if factor is None else factor
+    rev_factor = 0.5 / factor
+    for n in range(nb):
+        basis[n] @= (basis[n] + basis[n + nb]) * rev_factor

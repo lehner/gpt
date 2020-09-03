@@ -22,15 +22,21 @@ import numpy as np
 
 
 class fgmres:
-    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True)
+    @g.params_convention(
+        eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
+    )
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
-        self.prec = params["prec"] if "prec" in params else None
+        self.prec = params["prec"]
         self.history = None
+
+    @g.params_convention()
+    def modified(self, params):
+        return fgmres({**self.params, **params})
 
     def qr_update(self, s, c, H, gamma, i):
         # apply previous givens to matrix
@@ -81,6 +87,8 @@ class fgmres:
             mat = mat.mat
             # remove wrapper for performance benefits
 
+        prec = self.prec(mat) if self.prec is not None else None
+
         def inv(psi, src):
             self.history = []
             # verbosity
@@ -108,9 +116,7 @@ class fgmres:
             )
             V = [g.lattice(src) for i in range(rlen + 1)]
             Z = (
-                [g.lattice(src) for i in range(rlen + 1)]
-                if self.prec is not None
-                else None
+                [g.lattice(src) for i in range(rlen + 1)] if prec is not None else None
             )  # save vectors if unpreconditioned
 
             # initial residual
@@ -134,11 +140,11 @@ class fgmres:
                 need_restart = i + 1 == rlen
 
                 t("prec")
-                if self.prec is not None:
-                    self.prec(mat)(Z[i], V[i])
+                if prec is not None:
+                    prec(Z[i], V[i])
 
                 t("mat")
-                if self.prec is not None:
+                if prec is not None:
                     mat(V[i + 1], Z[i])
                 else:
                     mat(V[i + 1], V[i])
@@ -169,7 +175,7 @@ class fgmres:
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     t("update_psi")
-                    if self.prec is not None:
+                    if prec is not None:
                         self.update_psi(psi, gamma, H, y, Z, i)
                     else:
                         self.update_psi(psi, gamma, H, y, V, i)

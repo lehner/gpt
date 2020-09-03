@@ -203,6 +203,11 @@ assert eps0 < 1e-9 and eps1 < 1e-9
 # create singlet by number
 assert g.complex(0.5).array[0] == 0.5
 
+# test expression -> string conversion;
+# at this point only make sure that it
+# produces a string without failing
+g.message(f"Test string conversion of expression:\n{g.trace(0.5 * msc * msc - msc)}")
+
 # left and right multiplication of different data types with scalar
 mc = g.mcomplex(grid, ntest)
 for dti in [cv, cm, vsc, msc, vc, mc]:

@@ -5,19 +5,34 @@
 
 # GPT - Grid Python Toolkit
 
-GPT is a [Python](https://www.python.org) measurement toolkit built on [Grid](https://github.com/paboyle/Grid) data parallelism.  It provides a physics library for lattice QCD and related theories.
+GPT is a [Python](https://www.python.org) measurement toolkit built on [Grid](https://github.com/paboyle/Grid) data parallelism (MPI, OpenMP, SIMD, and SIMT).
+It provides a physics library for lattice QCD and related theories as well as a QIS module including a digital quantum computing simulator.
+
+## Quick Start
+The fastest way to try GPT is to install [Docker](https://docs.docker.com/get-docker/),
+start a [Jupyter](https://jupyter.org/) notebook server with the latest GPT version by running
+```
+docker run --rm -p 8888:8888 gptdev/notebook
+```
+and then open the shown link `http://127.0.0.1:8888/?token=<token>` in a browser.
+You should see the tutorials folder pre-installed.
+
+Note that this session does not retain data after termination.  Run
+```
+docker run --rm -p 8888:8888 -v $(pwd):/notebooks gptdev/notebook
+```
+to instead mount the current working directory on your machine.
+
+Please consult the [GPT Docker documentation](https://github.com/lehner/gpt/tree/master/docker/README.md) for additional options.
+
 
 ## Installation
-GPT is developed with the feature/gpt branch of https://github.com/lehner/Grid.
-
-## Setting up the runtime
-```bash
-source gpt/scripts/source.sh
-```
+A detailed description on how to install GPT
+locally can be found [here](README.setup.md).
 
 ## Tutorials
-A good starting point to learn how to use GPT is the [Tutorials Section](https://github.com/lehner/gpt/tree/master/documentation/tutorial)
-with interactive [Jupyter](https://jupyter.org/) notebooks.
+You may also visit a static version of the tutorials [here](https://github.com/lehner/gpt/tree/master/documentation/tutorials).
+
 
 ## Usage
 

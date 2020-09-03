@@ -1,9 +1,8 @@
-- DWF - Overlap transformation
+- preconditioner argument of fgmres etc. needs auto-initialization (called with matrix etc., then do not need to_separate_instances)
 
-- matrix_operator should accept vectors of lattices for efficient parallel operation ; 
-  First implement trivial parallelization; then let operator decide if the function itself can
-  handle the list or wants the auto-distribution.  With this, we can then do multiple RHS
-  efficiently.
+- matrix_operator <> vector_space
+
+- coarse_matrix needs to pass lists of U's for sub-blocks to cgpt for speedup
 
 - If we ever need to speed up inverse matrix operator creation, can
   create solver_cache class: sc = slv_cache(solver,cache) then when
@@ -11,9 +10,6 @@
   if already in there, reuses it.
 
 - Gauge Fix class that takes w.propagator and gauge fixing matrices as input
-
-- On MG branch: t=timer(); t("block1"); block1; t("block2"); block2; t(); g.message(t); <-- use timer __str__ and __c
-all__, can also do t("block1", bytes = bytes_processed, flops = flops_in_block) to add GB/s and Gflops/s
 
 - Grid-production-code/zmobius_2pt_hvp_con_gstore/Fourier... <-- First TM, then 5d TM, then  FA
 

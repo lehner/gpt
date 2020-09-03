@@ -22,15 +22,21 @@ import numpy as np
 
 
 class fgcr:
-    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True)
+    @g.params_convention(
+        eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
+    )
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
-        self.prec = params["prec"] if "prec" in params else None
+        self.prec = params["prec"]
         self.history = None
+
+    @g.params_convention()
+    def modified(self, params):
+        return fgcr({**self.params, **params})
 
     def update_psi(self, psi, alpha, beta, gamma, chi, p, i):
         # backward substitution
@@ -59,6 +65,8 @@ class fgcr:
             otype, grid, cb = mat.otype, mat.grid, mat.cb
             mat = mat.mat
             # remove wrapper for performance benefits
+
+        prec = self.prec(mat) if self.prec is not None else None
 
         def inv(psi, src):
             self.history = []
@@ -105,8 +113,8 @@ class fgcr:
                 need_restart = i + 1 == rlen
 
                 t("prec")
-                if self.prec is not None:
-                    self.prec(mat)(p[i], r)
+                if prec is not None:
+                    prec(p[i], r)
                 else:
                     p[i] @= r
 

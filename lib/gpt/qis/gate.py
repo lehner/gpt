@@ -16,33 +16,61 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import numpy
 
 
-class single:
-    nbytes = 4
-    real_dtype = numpy.float32
-    complex_dtype = numpy.complex64
-    eps = 1e-7
-
-    def __init__(self):
-        pass
+def _H(st, i):
+    st.H(i)
 
 
-class double:
-    nbytes = 8
-    real_dtype = numpy.float64
-    complex_dtype = numpy.complex128
-    eps = 1e-15
-
-    def __init__(self):
-        pass
+def _X(st, i):
+    st.X(i)
 
 
-def str_to_precision(s):
-    if s == "single":
-        return single
-    elif s == "double":
-        return double
+def _R_z(st, i, phase):
+    st.R_z(i, phase)
+
+
+def _CNOT(st, c, t):
+    st.CNOT(c, t)
+
+
+def _M(st, i):
+    if i is not None:
+        st.measure(i)
     else:
-        assert 0
+        for i in range(st.number_of_qubits):
+            st.measure(i)
+
+
+class circuit:
+    def __init__(self, val=[]):
+        self.val = val
+
+    def __or__(self, other):
+        return circuit(self.val + other.val)
+
+    def __mul__(self, original):
+        other = original.cloned()
+        for op, *args in self.val:
+            op(other, *args)
+        return other
+
+
+def H(i):
+    return circuit([(_H, i)])
+
+
+def X(i):
+    return circuit([(_X, i)])
+
+
+def R_z(i, phase):
+    return circuit([(_R_z, i, phase)])
+
+
+def CNOT(control, target):
+    return circuit([(_CNOT, control, target)])
+
+
+def M(i=None):
+    return circuit([(_M, i)])

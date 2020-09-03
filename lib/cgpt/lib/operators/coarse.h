@@ -17,24 +17,21 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#define prec_double 2
-#define prec_single 1
-
-template<typename vCoeff_t, int prec = getPrecision<vCoeff_t>::value>
-struct FinestLevelFineVec {};
 template<typename vCoeff_t>
-struct FinestLevelFineVec<vCoeff_t, prec_double> {
+struct FinestLevelFineVec { };
+template<>
+struct FinestLevelFineVec<vComplexD> {
   typedef vSpinColourVectorD type;
 };
-template<typename vCoeff_t>
-struct FinestLevelFineVec<vCoeff_t, prec_single> {
+template<>
+struct FinestLevelFineVec<vComplexF> {
   typedef vSpinColourVectorF type;
 };
 
 template<typename vCoeff_t>
 cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
 
-  auto grid_c = get_pointer<GridCartesian>(args,"grid_c"); // should actually take an 'F_', and an 'U_' grid
+  auto grid_c = get_pointer<GridCartesian>(args,"U_grid");
   int make_hermitian = get_int(args,"make_hermitian");
   int level = get_int(args,"level"); // 0 = fine, increases with coarser levels
   int nbasis = get_int(args,"nbasis");
@@ -45,7 +42,7 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
       typedef CoarsenedMatrix<typename FinestLevelFineVec<vCoeff_t>::type, iSinglet<vCoeff_t>, n> CMat; \
       auto cm = new CMat(*grid_c, make_hermitian); \
       for (int p=0; p<9; p++) { \
-        auto l = get_pointer<cgpt_Lattice_base>(args,"A",p);\
+        auto l = get_pointer<cgpt_Lattice_base>(args,"U",p);\
         cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
       } \
       return new cgpt_coarse_operator<CMat>(cm); \
@@ -53,7 +50,7 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
       typedef CoarsenedMatrix<iVSinglet ## n<vCoeff_t>, iSinglet<vCoeff_t>, n> CMat; \
       auto cm = new CMat(*grid_c, make_hermitian); \
       for (int p=0; p<9; p++) { \
-        auto l = get_pointer<cgpt_Lattice_base>(args,"A",p);\
+        auto l = get_pointer<cgpt_Lattice_base>(args,"U",p);\
         cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
       } \
       return new cgpt_coarse_operator<CMat>(cm); \
@@ -63,6 +60,3 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
 #undef BASIS_SIZE
   { ERR("Unknown basis size %d", (int)nbasis); }
 }
-
-#undef prec_double
-#undef prec_single

@@ -20,7 +20,7 @@ class cgpt_distribute {
  public:
 
   static const long SIMD_BASE = 256;
-  static long offset(long odx, long idx) { return odx*SIMD_BASE + idx; };
+  static long offset(long odx, long idx) { ASSERT(idx<SIMD_BASE); return odx*SIMD_BASE + idx; };
   struct coor { int rank; long offset; };
   struct mp { std::vector<long> src; std::vector<long> dst; };
   struct plan { std::map<int,mp> cr; std::vector<long> tasks; };

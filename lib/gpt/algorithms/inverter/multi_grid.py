@@ -38,7 +38,7 @@ def get_slv_history(slv):
         return 0, 0.0
 
 
-class mg_setup:
+class setup:
     def __init__(self, mat_f, params):
         # save parameters
         self.params = params
@@ -69,7 +69,7 @@ class mg_setup:
         self.northo = g.util.to_list(params["northo"], self.nlevel - 1)
         self.nbasis = g.util.to_list(params["nbasis"], self.nlevel - 1)
         self.make_hermitian = g.util.to_list(params["make_hermitian"], self.nlevel - 1)
-        self.savelinks = g.util.to_list(params["savelinks"], self.nlevel - 1)
+        self.save_links = g.util.to_list(params["save_links"], self.nlevel - 1)
         self.preortho = g.util.to_list(params["preortho"], self.nlevel - 1)
         self.postortho = g.util.to_list(params["postortho"], self.nlevel - 1)
         self.vecstype = g.util.to_list(params["vecstype"], self.nlevel - 1)
@@ -77,7 +77,7 @@ class mg_setup:
         self.solver = g.util.to_list(params["solver"], self.nlevel - 1)
 
         # verbosity
-        self.verbose = g.default.is_verbose("mg_setup")
+        self.verbose = g.default.is_verbose("multi_grid_setup")
 
         # print prefix
         self.print_prefix = ["mg_setup: level %d:" % i for i in range(self.nlevel)]
@@ -101,7 +101,7 @@ class mg_setup:
                 self.northo,
                 self.nbasis,
                 self.make_hermitian,
-                self.savelinks,
+                self.save_links,
                 self.preortho,
                 self.postortho,
                 self.vecstype,
@@ -175,7 +175,6 @@ class mg_setup:
 
             # neighbors
             nc_lvl = self.nc_lvl[lvl]
-            nf_lvl = self.nf_lvl[lvl]
 
             if lvl != self.coarsest:
                 t("misc")
@@ -233,7 +232,7 @@ class mg_setup:
 
                 # chiral doubling
                 t("chiral_split")
-                g.split_chiral(basis)
+                g.coarse.split_chiral(basis)
 
                 if self.verbose:
                     g.message("%s done doing chiral doubling" % pp)
@@ -256,7 +255,7 @@ class mg_setup:
                     self.basis[lvl],
                     {
                         "make_hermitian": self.make_hermitian[lvl],
-                        "savelinks": self.savelinks[lvl],
+                        "save_links": self.save_links[lvl],
                     },
                 )
                 self.mat[nc_lvl] = g.qcd.fermion.coarse(
@@ -272,7 +271,7 @@ class mg_setup:
                 g.message("%s done with entire setup" % pp)
 
 
-class mg_prec:
+class inverter:
     def __init__(self, setup, params):
         # save input
         self.setup = setup
@@ -283,27 +282,24 @@ class mg_prec:
         par = self.params
 
         # parameters
-        self.smoothsolver = g.util.to_list(par["smoothsolver"], s.nlevel - 1)
-        self.wrappersolver = g.util.to_list(par["wrappersolver"], s.nlevel - 2)
-        self.coarsestsolver = par["coarsestsolver"]
+        self.smooth_solver = g.util.to_list(par["smooth_solver"], s.nlevel - 1)
+        self.wrapper_solver = g.util.to_list(par["wrapper_solver"], s.nlevel - 2)
+        self.coarsest_solver = par["coarsest_solver"]
 
         # verbosity
-        self.verbose = g.default.is_verbose("mg")
+        self.verbose = g.default.is_verbose("multi_grid_inverter")
 
         # print prefix
         self.print_prefix = ["mg: level %d:" % i for i in range(s.nlevel)]
 
         # assertions
-        assert g.util.entries_have_length([self.smoothsolver], s.nlevel - 1)
-        assert g.util.entries_have_length([self.wrappersolver], s.nlevel - 2)
-        assert g.util.is_solver(
-            [self.smoothsolver, self.coarsestsolver, self.wrappersolver]
+        assert g.util.entries_have_length([self.smooth_solver], s.nlevel - 1)
+        assert g.util.entries_have_length([self.wrapper_solver], s.nlevel - 2)
+        assert g.util.is_callable(
+            [self.smooth_solver, self.coarsest_solver, self.wrapper_solver]
         )
-        assert type(self.coarsestsolver) != list
-        assert not g.util.is_preconditioned(self.wrappersolver)
-
-        # create separate instances due to different preconditioners
-        g.util.to_separate_instances(self.wrappersolver)
+        assert type(self.coarsest_solver) != list
+        assert not g.util.all_have_attribute(self.wrapper_solver, "inverter")
 
         # timing
         self.t = [g.timer("mg_solve_lvl_%d" % (lvl)) for lvl in range(s.nlevel)]
@@ -337,7 +333,6 @@ class mg_prec:
 
             # neighbors
             nc_lvl = s.nc_lvl[lvl]
-            nf_lvl = s.nf_lvl[lvl]
 
             # aliases
             t = self.t[lvl]
@@ -348,9 +343,9 @@ class mg_prec:
             mat_c = s.mat[nc_lvl] if lvl != s.coarsest else None
             mat = s.mat[lvl]
             bm = s.blockmap[lvl]
-            slv_s = self.smoothsolver[lvl] if lvl != s.coarsest else None
-            slv_w = self.wrappersolver[lvl] if lvl <= s.coarsest - 2 else None
-            slv_c = self.coarsestsolver if lvl == s.coarsest else None
+            slv_s = self.smooth_solver[lvl] if lvl != s.coarsest else None
+            slv_w = self.wrapper_solver[lvl] if lvl <= s.coarsest - 2 else None
+            slv_c = self.coarsest_solver if lvl == s.coarsest else None
 
             # start clocks
             t("misc")
@@ -391,14 +386,12 @@ class mg_prec:
 
                     def prec(matrix):
                         def ignore_mat(dst_p, src_p):
-                            inv_lvl(dst_p, src_p, s.nc_lvl[lvl])
+                            inv_lvl(dst_p, src_p, nc_lvl)
 
                         return ignore_mat
 
-                    slv_w.prec = prec
-
                     g.default.push_verbose(get_slv_name(slv_w), False)
-                    slv_w(mat_c)(e_c, r_c)
+                    slv_w.modified(prec=prec)(mat_c)(e_c, r_c)
                     g.default.pop_verbose()
                     self.history[lvl]["wrapper"].append(get_slv_history(slv_w))
                 else:
@@ -455,6 +448,7 @@ class mg_prec:
                     "%s ending inversion routine: psi = %g, src = %g"
                     % (pp, g.norm2(psi), g.norm2(src))
                 )
+                t()
 
         return g.matrix_operator(
             mat=lambda dst, src: inv_lvl(dst, src, self.setup.finest),
