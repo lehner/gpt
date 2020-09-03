@@ -13,6 +13,7 @@ import sys
 # gauge field
 rng = g.random("test")
 U = g.qcd.gauge.random(g.grid([16, 16, 16, 32], g.single), rng)
+g.message("Plaquette:", g.qcd.gauge.plaquette(U))
 
 # wilson
 p = {

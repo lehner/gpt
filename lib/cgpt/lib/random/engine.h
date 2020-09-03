@@ -27,9 +27,10 @@ public:
 template<typename cgpt_rng_engine>
 class cgpt_random_engine : public cgpt_random_engine_base {
  public:
+  std::string _seed_str;
   cgpt_rng_engine cgpt_srng;
-  std::map<long,cgpt_rng_engine*> cgpt_prng;
-  std::vector<uint64_t> cgpt_seed;
+  std::map<GridBase*,std::map<long,cgpt_rng_engine*>> cgpt_prng;
+  std::map<GridBase*,std::vector<uint64_t>> cgpt_seed;
 
   std::vector<uint64_t> str_to_seed(const std::string & seed_str) {
     std::vector<uint64_t> r;
@@ -38,12 +39,13 @@ class cgpt_random_engine : public cgpt_random_engine_base {
     return r;
   }
 
-  cgpt_random_engine(const std::string & seed_str) : cgpt_seed(str_to_seed(seed_str)), cgpt_srng(str_to_seed(seed_str)) {
+  cgpt_random_engine(const std::string & seed_str) : _seed_str(seed_str), cgpt_srng(str_to_seed(seed_str)) {
   }
   
   virtual ~cgpt_random_engine() {
     for (auto & x : cgpt_prng)
-      delete x.second;
+      for (auto & y : x.second)
+	delete y.second;
   }
 
   virtual PyObject* sample(PyObject* _target, PyObject* _param) {
@@ -59,23 +61,35 @@ class cgpt_random_engine : public cgpt_random_engine_base {
       dtype = infer_numpy_type(get_str(_param,"precision"));
     }
 
+    std::map<long, cgpt_rng_engine*> & prng = cgpt_prng[grid];
+    std::vector<uint64_t> & seed = cgpt_seed[grid];
+    if (seed.size() == 0) {
+      seed = str_to_seed(_seed_str);
+      if (grid) {
+	for (auto x : grid->_fdimensions)
+	  seed.push_back(x);
+	for (auto x : grid->_gdimensions)
+	  seed.push_back(x);
+      }
+    }
+
     // always generate in double first regardless of type casting to ensure that numbers are the same up to rounding errors
     // (rng could use random bits to result in different next float/double sampling)
     if (dist == "normal") {
       cgpt_normal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
     } else if (dist == "cnormal") {
       cgpt_cnormal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
     } else if (dist == "uniform_real") {
       cgpt_uniform_real_distribution distribution(get_float(_param,"min"),get_float(_param,"max"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
     } else if (dist == "uniform_int") {
       cgpt_uniform_int_distribution distribution(get_int(_param,"min"),get_int(_param,"max"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
     } else if (dist == "zn") {
       cgpt_zn_distribution distribution(get_int(_param,"n"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,cgpt_prng,shape,cgpt_seed,grid,dtype);
+      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
     } else {
       ERR("Unknown distribution: %s", dist.c_str());
     }

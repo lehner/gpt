@@ -456,7 +456,7 @@ class inverter:
             inv_mat=self.setup.mat[self.setup.finest],
             adj_inv_mat=None,
             otype=otype,
-            zero=(False, False),
+            zero=(True, False),
             grid=grid,
             cb=cb,
         )

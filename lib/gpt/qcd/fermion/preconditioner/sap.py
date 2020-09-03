@@ -269,6 +269,7 @@ class sap_cycle:
                 dt_distr += gpt.time()
 
                 dt_solv -= gpt.time()
+                dst_blk[:] = 0  # for now
                 solver[eo](dst_blk, src_blk)
                 dt_solv += gpt.time()
 
