@@ -21,3 +21,5 @@ import gpt.qcd.fermion
 from gpt.qcd.utils import ferm_to_prop, prop_to_ferm
 from gpt.qcd import quarkContract
 from gpt.qcd import spin_matrices
+from gpt.qcd import sequential_source
+

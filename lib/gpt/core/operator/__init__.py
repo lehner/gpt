@@ -27,4 +27,6 @@ from gpt.core.operator.unary import (
     color_trace,
     sum,
     apply_expr_unary,
+    color_transpose,
+    spin_transpose,
 )

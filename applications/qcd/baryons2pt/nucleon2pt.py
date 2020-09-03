@@ -4,6 +4,7 @@
 #          Lorenzo Barca 2020
 import gpt as g
 import numpy as np
+from gpt.qcd.spin_matrices import spin_matrix as spm
 
 # load configuration
 U = g.load("/glurch/scratch/configs/cls/A653r000/cnfg/A653r000n1750")
@@ -38,11 +39,11 @@ slv_eo2 = w.propagator(inv.preconditioned(pc.eo2_ne(), cg))
 dst = g.mspincolor(grid)
 dst @= slv_eo2 * src
 
-Cg5 = g.qcd.spin_matrices.spin_matrix.Cg5()
-Polx = g.qcd.spin_matrices.spin_matrix.T_polx()
-Poly = g.qcd.spin_matrices.spin_matrix.T_poly()
-Polz = g.qcd.spin_matrices.spin_matrix.T_polz()
-Tunpol = g.qcd.spin_matrices.spin_matrix.T_unpol()
+Cg5 = spm.Cg5()
+Polx = spm.T_polx()
+Poly = spm.T_poly()
+Polz = spm.T_polz()
+Tunpol = spm.T_unpol()
 
 pols = {"Polx": Polx, "Poly": Poly, "Polz": Polz, "Tunpol": Tunpol}
 
@@ -51,17 +52,16 @@ di_quark = g.qcd.quarkContract.quarkContract13(g.eval(dst * Cg5), g.eval(Cg5 * d
 # momentum
 moms = np.array(([-1,0,0,0], [0,-1,0,0], [0,0,-1,0],
 [0,0,0,0], [1,0,0,0], [0,1,0,0], [0,0,1,0]), dtype=float)
-mom = 2.0*np.pi*moms/L
+mom = 2.0 * np.pi * moms / L
 
 mom_list = [ "mom_-100", "mom_0-10", "mom_00-1", "mom_000", "mom_100", "mom_010", "mom_001" ]
 
 for pol in pols:
-    pol_grp = nucl_grp.create_group(pol)
     for p_n, p in enumerate(mom):
         g.message("mom", mom_list[p_n])
         P = g.exp_ixp(p)
-        correlator = g.slice(g.trace(P*pols[pol] * g.color_trace(dst * g.spin_trace(di_quark) ) ) + \
-                             g.trace(P*pols[pol] * g.color_trace(dst * di_quark ) ), 3 )
+        correlator = g.slice(g.trace(P * pols[pol] * g.color_trace(dst * g.spin_trace(di_quark) ) ) + \
+                             g.trace(P * pols[pol] * g.color_trace(dst * di_quark ) ), 3 )
         for t,c in enumerate(correlator):
             g.message(t, c)
 
