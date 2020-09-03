@@ -21,46 +21,115 @@
 import gpt
 from gpt.core.matrix import exp as mexp
 
-from gpt.algorithms.integrators.molecular_dynamics import leap_frog, OMF4
+from gpt.algorithms.integrators.molecular_dynamics import leap_frog, OMF2, OMF4
 
 
-class update:
+class update_gauge:
     def __init__(self, first, second):
         if not type(first) is list:
             self.fld = [first]
         else:
             self.fld = first
 
-        if not type(second) is list:
-            tmp = [second]
+        if type(second) is gpt.algorithms.markov.conjugate_momenta:
+            self.mom = second.mom
         else:
-            tmp = second
-
-        if hasattr(tmp[0], "force"):
-            self.act = tmp
-        else:
-            self.mom = tmp
-
-    def get_type(self):
-        if self.fld[0].otype is gpt.otype.ot_matrix_su3_fundamental:
-            return 0
-        elif self.fld[0].otype is gpt.otype.ot_singlet:
-            return 1
+            raise TypeError
 
     def __call__(self, eps):
         for mu in range(len(self.fld)):
-            if hasattr(self, "mom"):
-                if self.get_type() == 0:
-                    self.fld[mu] @= mexp(gpt.eval(eps * self.mom[mu])) * self.fld[mu]
-                elif self.get_type() == 1:
-                    self.fld[mu] += eps * self.mom[mu]
-            else:
-                for a in self.act:
-                    a.pre_force()
-                    frc = a.force(mu)
-                    self.fld[mu] -= eps * frc
+            self.fld[mu] @= mexp(gpt.eval(eps * self.mom[mu])) * self.fld[mu]
 
     def get_act(self):
-        if hasattr(self, "act"):
-            return self.act
         return []
+
+
+class update_scalar:
+    def __init__(self, first, second):
+        if not type(first) is list:
+            self.fld = [first]
+        else:
+            self.fld = first
+
+        if type(second) is gpt.algorithms.markov.conjugate_momenta:
+            self.mom = second.mom
+        else:
+            raise TypeError
+
+    def __call__(self, eps):
+        for mu in range(len(self.fld)):
+            self.fld[mu] += eps * self.mom[mu]
+
+    def get_act(self):
+        return []
+
+
+class update_mom:
+    def __init__(self, first, second):
+        if type(first) is gpt.algorithms.markov.conjugate_momenta:
+            self.cm = first
+        else:
+            raise TypeError
+
+        if not type(second) is list:
+            if hasattr(second, "force"):
+                self.act = [second]
+            else:
+                raise TypeError
+        else:
+            if hasattr(second[0], "force"):
+                self.act = second
+            else:
+                raise TypeError
+
+    def __call__(self, eps):
+        for a in self.act:
+            a.setup_force()
+            for i in range(self.cm.N):
+                frc = a.force(self.cm.fld[i])
+                self.cm.mom[i] -= eps * frc
+
+    def get_act(self):
+        return self.act
+
+
+# class update:
+#    def __init__(self, first, second):
+#        if not type(first) is list:
+#            self.fld = [first]
+#        else:
+#            self.fld = first
+#
+#        if not type(second) is list:
+#            tmp = [second]
+#        else:
+#            tmp = second
+#
+#        if hasattr(tmp[0], "force"):
+#            self.act = tmp
+#        else:
+#            self.mom = tmp
+#
+#    def get_type(self):
+#        if self.fld[0].otype is gpt.otype.ot_matrix_su3_fundamental:
+#            return 0
+#        elif self.fld[0].otype is gpt.otype.ot_singlet:
+#            return 1
+#
+#    def __call__(self, eps):
+#        for mu in range(len(self.fld)):
+#            if hasattr(self, "mom"):
+#                if self.get_type() == 0:
+#                    self.fld[mu] @= mexp(gpt.eval(eps * self.mom[mu])) * self.fld[mu]
+#                elif self.get_type() == 1:
+#                    self.fld[mu] += eps * self.mom[mu]
+#            else:
+#                for a in self.act:
+#                    a.setup_force()
+#                    frc = a.force(mu)
+#                    self.fld[mu] -= eps * frc
+#
+#    def get_act(self):
+#        if hasattr(self, "act"):
+#            return self.act
+#        return []

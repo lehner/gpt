@@ -20,8 +20,8 @@ mom = gpt.algorithms.markov.conjugate_momenta(phi)
 
 a0 = gpt.qcd.scalar.actions.phi4(phi, 0.25, 0.0)
 
-iphi = gpt.algorithms.integrators.update(phi, mom.mom)
-i0 = gpt.algorithms.integrators.update(mom.mom, a0)
+iphi = gpt.algorithms.integrators.update_scalar(phi, mom)
+i0 = gpt.algorithms.integrators.update_mom(mom, a0)
 
 lp = gpt.algorithms.integrators.leap_frog(20, i0, iphi)
 

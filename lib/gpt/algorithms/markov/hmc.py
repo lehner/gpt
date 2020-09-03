@@ -24,10 +24,20 @@ import numpy
 
 class conjugate_momenta:
     def __init__(self, field):
+        # otype = field[0].otype
+        # self.mom = [gpt.lattice(otype.near_identity_type) for f in field]
+        # gpt.random.element(U[mu])
+        # otype.project_to_algebra(self.mom[mu], U[mu])
+        # otype.apply_near_indentity(field[mu], self.mom[mu])
+
         if type(field) is list:
             self.mom = [gpt.lattice(f) for f in field]
+            self.fld = field
         else:
             self.mom = [gpt.lattice(field)]
+            self.fld = [field]
+
+        self.N = len(self.mom)
 
     def action(self):
         # -1/2 pi^a pi^a, with pi^a from the algebra;
