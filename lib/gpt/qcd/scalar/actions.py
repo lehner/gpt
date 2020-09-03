@@ -42,13 +42,16 @@ class phi4:
 
         return act
 
-    def pre_force(self):
+    def setup_force(self):
         self.J[:] = 0
         for mu in range(self.Nd):
             self.J += gpt.cshift(self.phi, mu, 1)
             self.J += gpt.cshift(self.phi, mu, -1)
 
-    def force(self, mu):
+    def force(self, field):
+        if field.v_obj != self.phi.v_obj:
+            raise Exception
+
         frc = gpt.lattice(self.phi)
         frc @= -2.0 * self.kappa * self.J
         frc += 2.0 * self.phi

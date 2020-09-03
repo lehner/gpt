@@ -53,6 +53,7 @@ for f in \
     ${test_path}/markov/pure_gauge.py \
     ${test_path}/markov/u1_gauge.py \
     ${test_path}/algorithms/hmc_scalar.py \
+    ${test_path}/algorithms/molecular_dynamics.py \
     ${test_path}/io/cevec.py \
     ${test_path}/io/io.py \
     ${test_path}/io/qlat.py \

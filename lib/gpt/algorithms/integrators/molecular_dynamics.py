@@ -34,6 +34,7 @@ class integrator:
 class leap_frog(integrator):
     def __call__(self, tau):
         eps = tau / self.N
+        verbose = gpt.default.is_verbose("leap_frog")
 
         time = gpt.timer("leap_frog")
         time("leap_frog")
@@ -45,8 +46,36 @@ class leap_frog(integrator):
                 self.i0(eps)
         self.i0(eps * 0.5)
 
-        time()
-        gpt.message(f"Leap Frog Integrator ran in {time.dt['total']:g} secs")
+        if verbose:
+            time()
+            gpt.message(f"Leap Frog Integrator ran in {time.dt['total']:g} secs")
+
+
+class OMF2(integrator):
+    def __init__(self, N, i0, i1, l=0.18):
+        super().__init__(N, i0, i1)
+        self.r0 = l
+
+    def __call__(self, tau):
+        eps = tau / self.N
+        verbose = gpt.default.is_verbose("omf2")
+
+        time = gpt.timer("OMF4")
+        time("OMF4")
+
+        self.i0(self.r0 * eps)
+        for i in range(self.N):
+            self.i1(eps * 0.5)
+            self.i0((1 - 2 * self.r0) * eps)
+            self.i1(eps * 0.5)
+
+            if i != self.N - 1:
+                self.i0(2.0 * self.r0 * eps)
+        self.i0(self.r0 * eps)
+
+        if verbose:
+            time()
+            gpt.message(f"OMF2 Integrator ran in {time.dt['total']:g} secs")
 
 
 class OMF4(integrator):
@@ -63,6 +92,7 @@ class OMF4(integrator):
         eps = tau / self.N
         f1 = 0.5 - self.r[0] - self.r[2]
         f2 = 1.0 - 2.0 * (self.r[1] + self.r[3])
+        verbose = gpt.default.is_verbose("omf4")
 
         time = gpt.timer("OMF4")
         time("OMF4")
@@ -87,5 +117,6 @@ class OMF4(integrator):
                 self.i0(2.0 * self.r[0] * eps)
         self.i0(self.r[0] * eps)
 
-        time()
-        gpt.message(f"OMF4 Integrator ran in {time.dt['total']:g} secs")
+        if verbose:
+            time()
+            gpt.message(f"OMF4 Integrator ran in {time.dt['total']:g} secs")
