@@ -81,18 +81,17 @@ class defect_correcting:
             # leading order
             n = len(src)
             _s = [g.copy(x) for x in src]
-            for j in range(n):
-                psi[j][:] = 0
+            _d = [g.copy(x) for x in psi]
 
             self.history = []
             for i in range(self.maxiter):
 
                 # correction step
                 t0 = g.time()
-                _d = g.eval(inner_inv_mat * _s)
-                t1 = g.time()
                 for j in range(n):
                     _s[j] -= outer_mat * _d[j]
+                t1 = g.time()
+                _d = g.eval(inner_inv_mat * _s)
                 t2 = g.time()
                 for j in range(n):
                     psi[j] += _d[j]
@@ -110,9 +109,9 @@ class defect_correcting:
                         "] =",
                         eps,
                         ".  Timing:",
-                        t1 - t0,
-                        "s (innver_inv), ",
                         t2 - t1,
+                        "s (innver_inv), ",
+                        t1 - t0,
                         "s (outer_mat)",
                     )
 
