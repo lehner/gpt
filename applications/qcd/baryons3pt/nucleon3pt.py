@@ -65,7 +65,6 @@ t_sink = 31
 
 for pol in pols:
     g.message(pol)
-    pol_grp = nucl_grp.create_group(pol)
 
     # sequential source
     tmp_seq_src = g.qcd.sequential_source.nucleon3pt_seq_src.p2p_ubaru(dst, pols[pol], Cg5, t_sink)
@@ -73,7 +72,6 @@ for pol in pols:
     for snk_mom_n, snk_mom  in enumerate(sink_mom):
         g.message(sink_moms_list[snk_mom_n])
         P = g.exp_ixp(snk_mom)
-        snk_mom_grp = pol_grp.create_group(sink_moms_list[snk_mom_n])
 
         seq_src = g.lattice(src)
         seq_src[:] = tmp_seq_src[:]
