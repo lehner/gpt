@@ -10,11 +10,21 @@ import sys
 
 grid_dp = g.grid([8, 4, 4, 4], g.double)
 grid_sp = g.grid([8, 4, 4, 4], g.single)
+grid_large_dp = g.grid([8, 8, 4, 8], g.double)
 
 rng = g.random("block_seed_string_13")
-for grid, prec in [(grid_dp, 1e-28), (grid_sp, 1e-14)]:
-    U = g.qcd.gauge.random(grid, rng, scale=10)
-    g.message(g.qcd.gauge.plaquette(U))
+for grid, prec, ref_plaquette, scale in [
+    (grid_dp, 1e-28, -0.00014108397456619623, 10),
+    (grid_sp, 1e-14, -0.00014108397456619623, 10),
+    (grid_large_dp, 1e-28, 0.38723058417632267, 2),
+]:
+    U = g.qcd.gauge.random(grid, rng, scale=scale)
+    comp_plaquette = g.qcd.gauge.plaquette(U)
+    eps2 = abs(comp_plaquette - ref_plaquette) ** 2.0
+    g.message(
+        f"Computed plaquette {comp_plaquette} versus reference {ref_plaquette}: {eps2}"
+    )
+    assert eps2 < prec
     for i in range(4):
         test = g.norm2(g.adj(U[i]) * U[i] - g.qcd.gauge.unit(grid)[0]) / g.norm2(U[i])
         g.message(test)
