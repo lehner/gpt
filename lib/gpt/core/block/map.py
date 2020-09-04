@@ -97,7 +97,7 @@ class map:
         otype = gpt.ot_vsinglet(len(self.basis))
 
         return gpt.matrix_operator(
-            mat=mat, otype=otype, zero=(False, False), grid=self.coarse_grid
+            mat=mat, otype=otype, accept_guess=(False, False), grid=self.coarse_grid
         )
 
 

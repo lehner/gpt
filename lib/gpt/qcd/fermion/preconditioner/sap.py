@@ -297,7 +297,7 @@ class sap_cycle:
             adj_inv_mat=sap.op.adj(),
             adj_mat=None,  # implement adj_mat when needed
             otype=otype,
-            zero=(True, False),
+            accept_guess=(True, False),
             grid=sap.op.F_grid,
             cb=None,
         )

@@ -43,7 +43,7 @@ class preconditioned:
             adj_inv_mat=mat.adj(),
             adj_mat=None,  # implement adj_mat when needed
             otype=mat.otype,
-            zero=(True, False),
+            accept_guess=(True, False),
             grid=matrix.F_grid,
             cb=None,
             accept_list=True,

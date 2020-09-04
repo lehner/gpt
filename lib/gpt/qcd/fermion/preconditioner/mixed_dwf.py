@@ -97,7 +97,7 @@ class mixed_dwf:
             mat=inv,
             inv_mat=dwf_outer,
             otype=dwf_outer.otype,
-            zero=(True, False),
+            accept_guess=(True, False),
             grid=dwf_outer.F_grid,
             cb=None,
         )

@@ -198,5 +198,10 @@ class fgcr:
                             g.message("fgcr: performed restart")
 
         return g.matrix_operator(
-            mat=inv, inv_mat=mat, otype=otype, zero=(True, False), grid=grid, cb=cb
+            mat=inv,
+            inv_mat=mat,
+            otype=otype,
+            accept_guess=(True, False),
+            grid=grid,
+            cb=cb,
         )

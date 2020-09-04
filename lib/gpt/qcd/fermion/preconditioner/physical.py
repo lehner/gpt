@@ -43,7 +43,7 @@ class physical_instance:
         self.L = gpt.matrix_operator(
             mat=_L,
             otype=self.otype,
-            zero=(False, False),
+            accept_guess=(False, False),
             grid=(self.U_grid, self.F_grid_eo),
         )
 
@@ -51,7 +51,7 @@ class physical_instance:
             mat=None,
             adj_mat=_R_adj,
             otype=self.otype,
-            zero=(False, False),
+            accept_guess=(False, False),
             grid=(self.F_grid_eo, self.U_grid),
         )
 

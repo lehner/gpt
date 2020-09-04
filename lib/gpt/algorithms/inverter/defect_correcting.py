@@ -135,7 +135,7 @@ class defect_correcting:
             mat=inv,
             inv_mat=outer_mat,
             otype=otype,
-            zero=(True, False),
+            accept_guess=(True, False),
             grid=grid,
             cb=cb,
             accept_list=True,
