@@ -127,7 +127,6 @@ kcycle_params = {
 }
 mg_2lvl_vcycle_dp = mg.inverter(mg_setup_2lvl_dp, vcycle_params)
 mg_2lvl_vcycle_sp = mg.inverter(mg_setup_2lvl_sp, vcycle_params)
-# mg_2lvl_kcycle_sp = mg.inverter(mg_setup_2lvl_sp, kcycle_params)
 # mg_3lvl_vcycle_sp = mg.inverter(mg_setup_3lvl_sp, vcycle_params)
 mg_3lvl_kcycle_sp = mg.inverter(mg_setup_3lvl_sp, kcycle_params)
 # mg_4lvl_vcycle_sp = mg.inverter(mg_setup_4lvl_sp, vcycle_params)
@@ -174,22 +173,6 @@ g.message(
 )
 assert eps2 < 1e-12
 assert niter_prec_2lvl_mg_vcycle_mp <= niter_prec_2lvl_mg_vcycle_dp + 1
-
-# # preconditioned inversion (2lvl mg -- kcycle -- mixed precision)
-# fgmres_outer = i.fgmres(
-#     fgmres_params,
-#     prec=i.mixed_precision(i.direct(mg_2lvl_kcycle_sp), g.single, g.double),
-# )
-# sol_prec_2lvl_mg_kcycle_mp = g.eval(fgmres_outer(w_dp) * src)
-# eps2 = g.norm2(w_dp * sol_prec_2lvl_mg_kcycle_mp - src) / g.norm2(src)
-# niter_prec_2lvl_mg_kcycle_mp = len(fgmres_outer.history)
-# g.message(
-#     "Test resid/iter fgmres + 2lvl kcycle mg mixed:", eps2, niter_prec_2lvl_mg_kcycle_mp
-# )
-# assert eps2 < 1e-12
-# assert (
-#     niter_prec_2lvl_mg_kcycle_mp == niter_prec_2lvl_mg_vcycle_mp
-# )  # equivalent for 2 lvls
 
 # # preconditioned inversion (3lvl mg -- vcycle -- mixed precision)
 # fgmres_outer = i.fgmres(
@@ -265,7 +248,6 @@ g.message("Contributions to time spent in MG preconditioners")
 for name, t in [
     ("2lvl_vcycle_dp", mg_2lvl_vcycle_dp.t),
     ("2lvl_vcycle_sp", mg_2lvl_vcycle_sp.t),
-    # ("2lvl_kcycle_sp", mg_2lvl_kcycle_sp.t),
     # ("3lvl_vcycle_sp", mg_3lvl_vcycle_sp.t),
     ("3lvl_kcycle_sp", mg_3lvl_kcycle_sp.t),
     # ("4lvl_vcycle_sp", mg_4lvl_vcycle_sp.t),
@@ -280,7 +262,6 @@ g.message("Average iteration counts of inner solvers")
 for name, h in [
     ("2lvl_vcycle_dp", mg_2lvl_vcycle_dp.history),
     ("2lvl_vcycle_sp", mg_2lvl_vcycle_sp.history),
-    # ("2lvl_kcycle_sp", mg_2lvl_kcycle_sp.history),
     # ("3lvl_vcycle_sp", mg_3lvl_vcycle_sp.history),
     ("3lvl_kcycle_sp", mg_3lvl_kcycle_sp.history),
     # ("4lvl_vcycle_sp", mg_4lvl_vcycle_sp.history),
