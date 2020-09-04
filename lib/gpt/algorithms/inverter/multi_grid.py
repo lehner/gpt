@@ -96,6 +96,7 @@ class setup:
             self.nb.append(b // 2)
 
         # assertions
+        assert self.nlevel >= 2
         assert g.util.entries_have_length(
             [
                 self.northo,
