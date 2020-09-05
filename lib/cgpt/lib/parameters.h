@@ -48,6 +48,13 @@ static RealD get_float(PyObject* dict, const char* key) {
   return val;
 }
 
+static ComplexD get_complex(PyObject* dict, const char* key) {
+  PyObject* _val = get_key(dict,key);
+  ComplexD val;
+  cgpt_convert(_val,val);
+  return val;
+}
+
 static int get_int(PyObject* dict, const char* key) {
   PyObject* _val = get_key(dict,key);
   int val;

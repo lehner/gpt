@@ -120,6 +120,10 @@ public:
     }
   }
 
+  virtual void unary_from(cgpt_Lattice_base* src, PyObject* params) {
+    cgpt_unary_from(l,compatible<T>(src)->l,params);
+  }
+
   virtual void cshift_from(cgpt_Lattice_base* _src, int dir, int off) {
     cgpt_Lattice<T>* src = compatible<T>(_src);
     l = Cshift(src->l, dir, off);

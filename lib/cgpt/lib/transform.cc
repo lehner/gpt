@@ -74,6 +74,22 @@ EXPORT(fft,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(unary,{
+    
+    void* _dst,* _src;
+    PyObject* params;
+    if (!PyArg_ParseTuple(args, "llO", &_dst, &_src, &params)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
+    
+    dst->unary_from(src,params);
+    
+    return PyLong_FromLong(0);
+  });
+
 
 EXPORT(convert,{
     

@@ -16,13 +16,33 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lattice/types.h"
-#include "lattice/base.h"
-#include "lattice/basis.h"
-#include "lattice/block.h"
-#include "lattice/term.h"
-#include "lattice/unary.h"
-#include "lattice/importexport.h"
-#include "lattice/tostring.h"
-#include "lattice/coordinates.h"
-#include "lattice/implementation.h"
+template<typename T>
+void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
+  ASSERT(PyDict_Check(params));
+  auto op = get_str(params,"operator");
+  if (op == "imag") {
+    dst = imag(src);
+  } else if (op == "real") {
+    dst = real(src);
+  } else if (op == "abs") {
+    dst = abs(src);
+  } else if (op == "sqrt") {
+    dst = sqrt(src);
+  } else if (op == "pow") {
+    dst = pow(src, get_float(params,"exponent"));
+  } else if (op == "sin") {
+    dst = sin(src);
+  } else if (op == "cos") {
+    dst = cos(src);
+  } else if (op == "asin") {
+    dst = asin(src);
+  } else if (op == "acos") {
+    dst = acos(src);
+  } else if (op == "exp") {
+    dst = exp(src);
+  } else if (op == "log") {
+    dst = log(src);
+  } else {
+    ERR("Unknown operator %s", op.c_str());
+  }
+}
