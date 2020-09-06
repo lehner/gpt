@@ -18,4 +18,5 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-import gpt.qcd.scalar.actions
+import gpt.qcd.actions.gauge
+import gpt.qcd.actions.scalar

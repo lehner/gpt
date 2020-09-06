@@ -8,7 +8,7 @@ import gpt
 import numpy
 
 gpt.default.set_verbose("hmc")
-grid = gpt.grid([16, 16], gpt.double)
+grid = gpt.grid([16, 32], gpt.double)
 
 rng = gpt.random("test")
 
@@ -18,12 +18,12 @@ phi[:].imag = 0
 
 mom = gpt.algorithms.markov.conjugate_momenta(phi)
 
-a0 = gpt.qcd.scalar.actions.phi4(phi, 0.25, 0.0)
+a0 = gpt.qcd.actions.scalar.phi4(phi, 0.25, 0.0)
 
 iphi = gpt.algorithms.integrators.update_scalar(phi, mom)
 i0 = gpt.algorithms.integrators.update_mom(mom, a0)
 
-lp = gpt.algorithms.integrators.leap_frog(20, i0, iphi)
+lp = gpt.algorithms.integrators.OMF2(4, i0, iphi)
 
 hmc = gpt.algorithms.markov.hmc(phi, mom, None, lp, rng)
 

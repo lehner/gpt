@@ -56,7 +56,6 @@ class phi4:
         frc @= -2.0 * self.kappa * self.J
         frc += 2.0 * self.phi
         if self.l != 0.0:
-            frc += 4.0 * self.l * gpt.adj(self.phi) * self.phi * self.phi
-            frc += 4.0 * self.l * self.phi
-        frc[:].imag = 0
+            p2 = gpt.norm2(self.phi)
+            frc += 4.0 * self.l * (p2 - 1.0) * self.phi
         return frc
