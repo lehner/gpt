@@ -8,7 +8,7 @@ import gpt
 import numpy
 
 gpt.default.set_verbose("hmc")
-grid = gpt.grid([16, 32], gpt.double)
+grid = gpt.grid([16, 16, 16, 16], gpt.double)
 
 rng = gpt.random("test")
 
