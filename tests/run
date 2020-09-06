@@ -45,12 +45,14 @@ for f in \
     ${test_path}/qcd/gauge.py \
     ${test_path}/qcd/domain_wall.py \
     ${test_path}/qcd/sap.py \
+    ${test_path}/qcd/actions_gauge.py \
+    ${test_path}/qcd/actions_scalar.py \
     ${test_path}/algorithms/implicitly_restarted_lanczos.py \
     ${test_path}/algorithms/arnoldi.py \
     ${test_path}/algorithms/solvers.py \
     ${test_path}/algorithms/polynomials.py \
     ${test_path}/algorithms/multi_grid.py \
-    ${test_path}/algorithms/hmc_scalar.py \
+    ${test_path}/algorithms/markov.py \
     ${test_path}/algorithms/molecular_dynamics.py \
     ${test_path}/io/cevec.py \
     ${test_path}/io/io.py \
