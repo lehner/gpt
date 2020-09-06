@@ -56,13 +56,14 @@ class conjugate_momenta:
 
         for m in self.mom:
             m[:] = 0
-            rng.normal(ca, {"mu": 0.0, "sigma": 1.0})
-
             if hasattr(m.otype, "generators"):
                 for g in m.otype.generators(m.grid.precision.complex_dtype):
                     ta[:] = g
+                    rng.normal(ca, {"mu": 0.0, "sigma": 1.0})
+                    ca[:].imag = 0.0
                     m += 1j * ca * ta
             else:
+                rng.normal(ca, {"mu": 0.0, "sigma": 1.0})
                 m += ca
 
     def reverse(self):

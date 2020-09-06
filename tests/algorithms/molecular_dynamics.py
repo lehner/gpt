@@ -17,7 +17,7 @@ rng.normal(phi, sigma=0.5)
 phi[:].imag = 0
 
 mom = gpt.algorithms.markov.conjugate_momenta(phi)
-act = gpt.qcd.scalar.actions.phi4(phi, 0.25, 0.123)
+act = gpt.qcd.actions.scalar.phi4(phi, 0.25, 0.123)
 
 iphi = gpt.algorithms.integrators.update_scalar(phi, mom)
 i0 = gpt.algorithms.integrators.update_mom(mom, act)
