@@ -37,8 +37,7 @@ def fundamental_to_adjoint(U_a, U_f):
     g.merge_color(U_a, V)
 
 
-
 def assert_unitary(U):
     I = g.identity(U)
-    err = ( g.norm2( U * g.adj(U) - I ) / g.norm2(I) ) ** 0.5
+    err = (g.norm2(U * g.adj(U) - I) / g.norm2(I)) ** 0.5
     assert err < U.grid.precision.eps * 10.0

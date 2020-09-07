@@ -25,7 +25,7 @@ from gpt.params import params_convention
 def project_to_traceless_anti_hermitian(src):
     src = g.eval(src)
     N = src.otype.shape[0]
-    ret = g( 0.5*src - 0.5*g.adj(src) )
+    ret = g(0.5 * src - 0.5 * g.adj(src))
     ret -= g.identity(src) * g.trace(ret) / N
     return ret
 
@@ -36,7 +36,10 @@ def stout_general(U, params):
     C = g.qcd.gauge.smear.staple_sum(U, params)
     U_prime = []
     for mu in range(nd):
-        U_mu_prime = g( g.matrix.exp(project_to_traceless_anti_hermitian( C[mu] * g.adj(U[mu]) )) * U[mu] )
+        U_mu_prime = g(
+            g.matrix.exp(project_to_traceless_anti_hermitian(C[mu] * g.adj(U[mu])))
+            * U[mu]
+        )
         g.qcd.gauge.assert_unitary(U_mu_prime)
         U_prime.append(U_mu_prime)
     return U_prime
@@ -49,5 +52,18 @@ def stout(U, params):
     orthogonal_dimension = params["orthogonal_dimension"]
     if orthogonal_dimension is None:
         orthogonal_dimension = -1
-    rho_matrix = np.array([ [ 0.0 if (mu == orthogonal_dimension or nu == orthogonal_dimension or mu == nu) else rho for nu in range(nd)] for mu in range(nd) ], dtype = np.float64)
+    rho_matrix = np.array(
+        [
+            [
+                0.0
+                if (
+                    mu == orthogonal_dimension or nu == orthogonal_dimension or mu == nu
+                )
+                else rho
+                for nu in range(nd)
+            ]
+            for mu in range(nd)
+        ],
+        dtype=np.float64,
+    )
     return stout_general(U, rho=rho_matrix)

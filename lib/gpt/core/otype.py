@@ -109,11 +109,7 @@ class ot_matrix_color(ot_base):
         }
 
     def identity(self):
-        return matrix_color(
-            numpy.identity(self.shape[0]),
-            self.shape[0]
-        )
-
+        return matrix_color(numpy.identity(self.shape[0]), self.shape[0])
 
 
 def matrix_color(grid, ndim):
