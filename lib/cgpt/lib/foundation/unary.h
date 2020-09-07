@@ -136,8 +136,10 @@ template <class scalar>
 struct cgpt_pow_functor {
   double y;
   accelerator cgpt_pow_functor(double _y) : y(_y){};
-  accelerator scalar operator()(const scalar &a) const { return pow(a, y); }
+  accelerator scalar operator()(const scalar &a) const { return _cgpt_pow(a, y); }
 };
+static accelerator_inline ComplexD _cgpt_pow(const ComplexD & z, double y) { return pow(z,y); };
+static accelerator_inline ComplexF _cgpt_pow(const ComplexF & z, double y) { return pow(z,(float)y); };
 template <class S, class V>
 accelerator_inline Grid_simd<S, V> cgpt_pow(const Grid_simd<S, V> &r, double y) {
   return SimdApply(cgpt_pow_functor<S>(y), r);
