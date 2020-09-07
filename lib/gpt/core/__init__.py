@@ -38,6 +38,7 @@ from gpt.core.transform import (
     axpy,
     axpy_norm2,
     slice,
+    identity,
 )
 from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
 from gpt.core.operator import *

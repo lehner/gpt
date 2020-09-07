@@ -108,6 +108,13 @@ class ot_matrix_color(ot_base):
             "ot_singlet": (lambda: self, None),
         }
 
+    def identity(self):
+        return matrix_color(
+            numpy.identity(self.shape[0]),
+            self.shape[0]
+        )
+
+
 
 def matrix_color(grid, ndim):
     return gpt_object(grid, ot_matrix_color(ndim))

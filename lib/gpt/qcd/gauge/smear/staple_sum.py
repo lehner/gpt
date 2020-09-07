@@ -1,7 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020 Tilo Wettig
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,27 +17,31 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.params import params_convention
+
+def staple(U, mu, nu):
+    assert mu != nu
+    U_nu_x_plus_mu = g.cshift(U[nu], mu, 1)
+    U_mu_x_plus_nu = g.cshift(U[mu], nu, 1)
+    U_nu_x_minus_nu = g.cshift(U[nu], nu, -1)
+    return g( U[nu] * U_mu_x_plus_nu * g.adj(U_nu_x_plus_mu)
+              + g.adj(U_nu_x_minus_nu) * g.cshift(U[mu] * U_nu_x_plus_mu, nu, -1) )
+
+@params_convention(rho=None)
+def staple_sum(U, params):
+    nd = len(U)
+    rho = params["rho"]
+    assert rho is not None
+    assert rho.shape == (nd,nd)
+    U_prime = []
+    for mu in range(nd):
+        U_mu_prime = g.lattice(U[mu])
+        U_mu_prime[:] = 0
+        for nu in range(nd):
+            if mu != nu:
+                if abs(rho[mu,nu]) != 0.0:
+                    U_mu_prime += rho[mu,nu] * staple(U,mu,nu)
+        U_prime.append(U_mu_prime)
+    return U_prime
 
 
-def fundamental_to_adjoint(U_a, U_f):
-    """
-    Convert fundamental to adjoint representation.  For now only SU(2) is supported.
-
-    Input: fundamental gauge field
-
-    Output: adjoint gauge field
-    """
-    grid = U_f.grid
-    T = U_f.otype.generators(grid.precision.complex_dtype)
-    V = {}
-    for a in range(len(T)):
-        for b in range(len(T)):
-            V[a, b] = g.eval(2.0 * g.trace(T[a] * U_f * T[b] * g.adj(U_f)))
-    g.merge_color(U_a, V)
-
-
-
-def assert_unitary(U):
-    I = g.identity(U)
-    err = ( g.norm2( U * g.adj(U) - I ) / g.norm2(I) ) ** 0.5
-    assert err < U.grid.precision.eps * 10.0

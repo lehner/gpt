@@ -1,7 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020 Tilo Wettig
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,28 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-
-
-def fundamental_to_adjoint(U_a, U_f):
-    """
-    Convert fundamental to adjoint representation.  For now only SU(2) is supported.
-
-    Input: fundamental gauge field
-
-    Output: adjoint gauge field
-    """
-    grid = U_f.grid
-    T = U_f.otype.generators(grid.precision.complex_dtype)
-    V = {}
-    for a in range(len(T)):
-        for b in range(len(T)):
-            V[a, b] = g.eval(2.0 * g.trace(T[a] * U_f * T[b] * g.adj(U_f)))
-    g.merge_color(U_a, V)
-
-
-
-def assert_unitary(U):
-    I = g.identity(U)
-    err = ( g.norm2( U * g.adj(U) - I ) / g.norm2(I) ) ** 0.5
-    assert err < U.grid.precision.eps * 10.0
+from gpt.qcd.gauge.smear.staple_sum import staple_sum
+from gpt.qcd.gauge.smear.stout import stout
