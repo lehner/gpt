@@ -41,13 +41,13 @@ iScalar<T> TensorMakeScalar(const T& a) {
 }
 
 // Define unary operator to work in ET
-#define GRID_UNOP(name)   name<decltype(eval(0, arg))>
-#define GRID_DEF_UNOP(op, name)\
+#define GRID_UNOP(name)   name
+#define GRID_DEF_UNOP(op, name)						\
   template <typename T1, typename std::enable_if<is_lattice<T1>::value||is_lattice_expr<T1>::value,T1>::type * = nullptr> \
     inline auto op(const T1 &arg) ->decltype(LatticeUnaryExpression<GRID_UNOP(name),T1>(GRID_UNOP(name)(), arg)) \
-  {\
+  {									\
     return     LatticeUnaryExpression<GRID_UNOP(name),T1>(GRID_UNOP(name)(), arg); \
-						     }
+  }
 
 GridUnopClass(UnaryToSinglet, TensorToSinglet(a));
 GRID_DEF_UNOP(ToSinglet, UnaryToSinglet);
