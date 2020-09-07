@@ -33,16 +33,16 @@ def _simple_matrix(operator, extra_params={}):
 
 imag = _simple_matrix("imag")
 real = _simple_matrix("real")
-abs_real = _simple_matrix("abs")
-sqrt_real = _simple_matrix("sqrt")
+abs = _simple_matrix("abs")
+sqrt = _simple_matrix("sqrt")
 exp = _simple_matrix("exp")
-log_real = _simple_matrix("log")
-sin_real = _simple_matrix("sin")
-asin_real = _simple_matrix("asin")
-cos_real = _simple_matrix("cos")
-acos_real = _simple_matrix("acos")
-inv_real = _simple_matrix("pow", {"exponent": -1.0})
+log = _simple_matrix("log")
+sin = _simple_matrix("sin")
+asin = _simple_matrix("asin")
+cos = _simple_matrix("cos")
+acos = _simple_matrix("acos")
+inv = _simple_matrix("pow", {"exponent": -1.0})
 
 
-def pow_real(exponent):
+def pow(exponent):
     return _simple_matrix("pow", {"exponent": exponent})

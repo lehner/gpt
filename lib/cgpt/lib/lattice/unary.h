@@ -25,23 +25,23 @@ void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
   } else if (op == "real") {
     dst = real(src);
   } else if (op == "abs") {
-    dst = abs(src);
+    dst = cgpt_abs(src);
   } else if (op == "sqrt") {
-    dst = sqrt(src);
+    dst = cgpt_sqrt(src);
   } else if (op == "pow") {
-    dst = pow(src, get_float(params,"exponent"));
+    dst = cgpt_pow(src, get_float(params,"exponent"));
   } else if (op == "sin") {
-    dst = sin(src);
+    dst = cgpt_sin(src);
   } else if (op == "cos") {
-    dst = cos(src);
+    dst = cgpt_cos(src);
   } else if (op == "asin") {
-    dst = asin(src);
+    dst = cgpt_asin(src);
   } else if (op == "acos") {
-    dst = acos(src);
+    dst = cgpt_acos(src);
   } else if (op == "exp") {
     dst = exp(src);
   } else if (op == "log") {
-    dst = log(src);
+    dst = cgpt_log(src);
   } else {
     ERR("Unknown operator %s", op.c_str());
   }

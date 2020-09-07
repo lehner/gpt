@@ -54,3 +54,6 @@ GRID_DEF_UNOP(ToSinglet, UnaryToSinglet);
 
 GridUnopClass(UnaryMakeScalar, TensorMakeScalar(a));
 GRID_DEF_UNOP(MakeScalar, UnaryMakeScalar);
+
+
+GRID_DEF_UNOP(cgpt_abs, cgpt_UnaryAbs);
