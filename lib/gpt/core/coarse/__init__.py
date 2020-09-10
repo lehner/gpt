@@ -141,6 +141,7 @@ def communicate_links(A, dirdisps_forward, make_hermitian):
         shift_fb = fb * -1
         Atmp = gpt.copy(A[p])
         if not make_hermitian:
+            # Atmp = prefactor_dagger(Atmp) * Atmp  # this would be more elegant
             nbasis = A[0].otype.shape[0]
             assert nbasis % 2 == 0
             nb = nbasis // 2
@@ -184,3 +185,41 @@ def unsplit_chiral(basis, factor=None):
     rev_factor = 0.5 / factor
     for n in range(nb):
         basis[n] @= (basis[n] + basis[n + nb]) * rev_factor
+
+
+def invert_link(A):
+    assert type(A) == gpt.lattice
+    A_inv = gpt.lattice(A)
+    to_list = gpt.util.to_list
+    cgpt.invert_coarse_link(to_list(A_inv), to_list(A), A.otype.v_n1[0])
+    return A_inv
+
+
+def prefactor_dagger(A, v_idx=None):
+    assert type(A) == gpt.lattice
+    nbasis = A.otype.shape[0]
+    assert nbasis % 2 == 0
+    nb = nbasis // 2
+
+    factor = numpy.ones((nbasis, nbasis), dtype=gpt.double.real_dtype)
+    factor[0:nb, nb:nbasis] *= -1.0  # upper right block
+    factor[nb:nbasis, 0:nb] *= -1.0  # lower left block
+
+    if v_idx is None:
+        return factor
+
+    # extract the subblock of the prefactor belonging to v_idx
+    assert v_idx < len(A.v_obj)
+    nrow_v_idx = int(len(A.v_obj) ** 0.5)
+    nbasis_v_idx = A.otype.v_n1[0]
+    row_v_idx = v_idx % nrow_v_idx
+    col_v_idx = v_idx // nrow_v_idx
+
+    return (
+        factor[
+            row_v_idx * nbasis_v_idx : (row_v_idx + 1) * nbasis_v_idx,
+            col_v_idx * nbasis_v_idx : (col_v_idx + 1) * nbasis_v_idx,
+        ]
+        .reshape(nbasis_v_idx * nbasis_v_idx)
+        .tolist()
+    )

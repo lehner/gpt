@@ -32,27 +32,41 @@ template<typename vCoeff_t>
 cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
 
   auto grid_c = get_pointer<GridCartesian>(args,"U_grid");
+  auto grid_c_rb = get_pointer<GridRedBlackCartesian>(args,"U_grid_rb");
   int make_hermitian = get_int(args,"make_hermitian");
   int level = get_int(args,"level"); // 0 = fine, increases with coarser levels
   int nbasis = get_int(args,"nbasis");
+  std::vector<ComplexD> dag_factor = get_complex_vec_gen(args,"dag_factor");
 
 #define BASIS_SIZE(n) \
   if(n == nbasis) { \
     if(level == 0) { \
       typedef CoarsenedMatrix<typename FinestLevelFineVec<vCoeff_t>::type, iSinglet<vCoeff_t>, n> CMat; \
-      auto cm = new CMat(*grid_c, make_hermitian); \
+      auto cm = new CMat(*grid_c, *grid_c_rb, make_hermitian); \
+      auto l = get_pointer<cgpt_Lattice_base>(args,"U_self_inv"); \
+      cm->AselfInv = compatible<iMSinglet ##n<vCoeff_t>>(l)->l; \
       for (int p=0; p<9; p++) { \
         auto l = get_pointer<cgpt_Lattice_base>(args,"U",p); \
         cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l; \
       } \
+      for (int i=0; i<nbasis*nbasis; i++) { \
+        cm->dag_factor[i] = dag_factor[i].real(); \
+      } \
+      cm->FillHalfCbs(); \
       return new cgpt_coarse_operator<CMat>(cm); \
     } else { \
       typedef CoarsenedMatrix<iVSinglet ## n<vCoeff_t>, iSinglet<vCoeff_t>, n> CMat; \
-      auto cm = new CMat(*grid_c, make_hermitian); \
+      auto cm = new CMat(*grid_c, *grid_c_rb, make_hermitian); \
+      auto l = get_pointer<cgpt_Lattice_base>(args,"U_self_inv"); \
+      cm->AselfInv = compatible<iMSinglet ##n<vCoeff_t>>(l)->l; \
       for (int p=0; p<9; p++) { \
         auto l = get_pointer<cgpt_Lattice_base>(args,"U",p); \
         cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l; \
       } \
+      for (int i=0; i<nbasis*nbasis; i++) { \
+        cm->dag_factor[i] = dag_factor[i].real(); \
+      } \
+      cm->FillHalfCbs(); \
       return new cgpt_coarse_operator<CMat>(cm); \
     } \
   } else

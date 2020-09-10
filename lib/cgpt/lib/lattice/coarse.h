@@ -1,6 +1,7 @@
 /*
     GPT - Grid Python Toolkit
     Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,14 +17,16 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lattice/types.h"
-#include "lattice/base.h"
-#include "lattice/basis.h"
-#include "lattice/block.h"
-#include "lattice/coarse.h"
-#include "lattice/term.h"
-#include "lattice/unary.h"
-#include "lattice/importexport.h"
-#include "lattice/tostring.h"
-#include "lattice/coordinates.h"
-#include "lattice/implementation.h"
+
+template<typename CMat>
+void cgpt_invert_coarse_link(std::vector<cgpt_Lattice_base*>& _link_inv,
+                             std::vector<cgpt_Lattice_base*>& _link,
+                             long                             n_virtual) {
+
+  PVector<Lattice<CMat>> link_inv;
+  PVector<Lattice<CMat>> link;
+  cgpt_basis_fill(link_inv, _link_inv);
+  cgpt_basis_fill(link, _link);
+
+  invertCoarseLink(link_inv, link, n_virtual);
+}
