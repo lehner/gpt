@@ -42,21 +42,21 @@ cgpt_fermion_operator_base* cgpt_create_coarsenedmatrix(PyObject* args) {
       typedef CoarsenedMatrix<typename FinestLevelFineVec<vCoeff_t>::type, iSinglet<vCoeff_t>, n> CMat; \
       auto cm = new CMat(*grid_c, make_hermitian); \
       for (int p=0; p<9; p++) { \
-        auto l = get_pointer<cgpt_Lattice_base>(args,"U",p);\
-        cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
+        auto l = get_pointer<cgpt_Lattice_base>(args,"U",p); \
+        cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l; \
       } \
       return new cgpt_coarse_operator<CMat>(cm); \
-    } else {                                                           \
+    } else { \
       typedef CoarsenedMatrix<iVSinglet ## n<vCoeff_t>, iSinglet<vCoeff_t>, n> CMat; \
       auto cm = new CMat(*grid_c, make_hermitian); \
       for (int p=0; p<9; p++) { \
-        auto l = get_pointer<cgpt_Lattice_base>(args,"U",p);\
-        cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l;  \
+        auto l = get_pointer<cgpt_Lattice_base>(args,"U",p); \
+        cm->A[p] = compatible<iMSinglet ##n<vCoeff_t>>(l)->l; \
       } \
       return new cgpt_coarse_operator<CMat>(cm); \
-      } \
-    } else
+    } \
+  } else
 #include "../basis_size.h"
 #undef BASIS_SIZE
-  { ERR("Unknown basis size %d", (int)nbasis); }
+    { ERR("Unknown basis size %d", (int)nbasis); }
 }
