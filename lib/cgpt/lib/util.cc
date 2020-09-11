@@ -19,42 +19,27 @@
 #include "lib.h"
 
 EXPORT(util_ferm2prop,{
-
+    
     void* _ferm,* _prop;
     long spin, color;
     PyObject* _f2p;
     if (!PyArg_ParseTuple(args, "llllO", &_ferm, &_prop, &spin, &color, &_f2p)) {
       return NULL;
     }
-
+    
     cgpt_Lattice_base* ferm = (cgpt_Lattice_base*)_ferm;
     cgpt_Lattice_base* prop = (cgpt_Lattice_base*)_prop;
-
+    
     bool f2p;
     cgpt_convert(_f2p,f2p);
-
+    
     ferm->ferm_to_prop(prop,(int)spin,(int)color,f2p);
-
+    
     return PyLong_FromLong(0);
   });
 
-EXPORT(util_reunitize,{
-
-      void* _dst,* _src;
-      if (!PyArg_ParseTuple(args, "ll", &_dst, &_src)) {
-        return NULL;
-      }
-
-      cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-      cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
-
-      dst->reunitize(src);
-
-      return PyLong_FromLong(0);
-    });
-
 EXPORT(util_crc32,{
-
+    
     PyObject* _mem;
     long crc32_prev;
     if (!PyArg_ParseTuple(args, "Ol", &_mem,&crc32_prev)) {
@@ -68,12 +53,12 @@ EXPORT(util_crc32,{
     int64_t len = (int64_t)buf->len;
 
     uint32_t crc = cgpt_crc32(data,len,(uint32_t)crc32_prev);
-
+    
     return PyLong_FromLong(crc);
   });
 
 EXPORT(util_sha256,{
-
+    
     PyObject* _mem;
     if (!PyArg_ParseTuple(args, "O", &_mem)) {
       return NULL;
@@ -87,7 +72,7 @@ EXPORT(util_sha256,{
 
     uint32_t sha256[8];
     cgpt_sha256(sha256,data,len);
-
+    
     return PyTuple_Pack(8,
 			PyLong_FromLong(sha256[0]),
 			PyLong_FromLong(sha256[1]),

@@ -16,8 +16,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lib/util.h"
-
 template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
@@ -47,7 +45,7 @@ public:
     return ::singlet_rank(l);
   }
 
-  virtual PyObject* to_decl() {
+  virtual PyObject* to_decl() {   
     return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
 			PyUnicode_FromString(get_otype(l).c_str()),
 			PyUnicode_FromString(get_prec(l).c_str()));
@@ -147,10 +145,6 @@ public:
     cgpt_ferm_to_prop(l,prop,spin,color,f2p);
   }
 
-  void reunitize(cgpt_Lattice_base* src) override {
-    cgpt_reunitize(l, compatible<T>(src)->l);
-  }
-
   virtual void pick_checkerboard_from(int cb, cgpt_Lattice_base* src) {
     pickCheckerboard(cb, l, compatible<T>(src)->l);
   }
@@ -211,7 +205,7 @@ public:
     if (ishape.size() == 0) // treat complex numbers as 1d array with one element
       ishape.push_back(1);
   }
-
+  
   virtual int get_numpy_dtype() {
     return infer_numpy_type(Coeff_t());
   }
@@ -240,7 +234,7 @@ public:
       l.Advise() = AdviseInfrequentUse;
     } else {
       ERR("Unknown advise %s",type.c_str());
-    }
+    }    
     return PyLong_FromLong(0);
   }
 

@@ -16,8 +16,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#pragma once
-
 template<typename vtype>
 void cgpt_ferm_to_prop(Lattice<iSpinColourVector<vtype>>& ferm, cgpt_Lattice_base* _prop, int s, int c, bool f2p) {
   Lattice<iSpinColourMatrix<vtype>> & prop = compatible<iSpinColourMatrix<vtype>>(_prop)->l;
@@ -47,16 +45,6 @@ void cgpt_ferm_to_prop(Lattice<iSpinColourVector<vtype>>& ferm, cgpt_Lattice_bas
 template<typename T>
 void cgpt_ferm_to_prop(Lattice<T>& ferm, cgpt_Lattice_base* _prop, int s, int c, bool f2p) {
   ERR("not supported");
-}
-
-template<typename vtype>
-void cgpt_reunitize(Lattice<iColourMatrix<vtype>>& dst, Lattice<iColourMatrix<vtype>>& src) {
-  dst = ProjectOnGroup(src);
-}
-
-template<typename T>
-void cgpt_reunitize(Lattice<T>&, Lattice<T>&) {
-  ERR("reunitize not supported for this lattice type");
 }
 
 static long cgpt_gcd(long a, long b) {

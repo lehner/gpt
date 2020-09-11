@@ -43,7 +43,6 @@ public:
   virtual void convert_from(cgpt_Lattice_base* src) = 0;
   virtual PyObject* slice(int dim) = 0;
   virtual void ferm_to_prop(cgpt_Lattice_base* prop, int spin, int color, bool f2p) = 0;
-  virtual void reunitize(cgpt_Lattice_base* src) = 0;
   virtual void pick_checkerboard_from(int cb, cgpt_Lattice_base* src) = 0;
   virtual void set_checkerboard_from(cgpt_Lattice_base* src) = 0;
   virtual void change_checkerboard(int cb) = 0;

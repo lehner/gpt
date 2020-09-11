@@ -18,7 +18,7 @@
 #
 import cgpt
 import gpt
-
+import numpy as np
 
 def ferm_to_prop(p, f, s, c):
     assert len(f.v_obj) == 1 and len(p.v_obj) == 1
@@ -29,11 +29,32 @@ def prop_to_ferm(f, p, s, c):
     return cgpt.util_ferm2prop(f.v_obj[0], p.v_obj[0], s, c, False)
 
 def reunitize(U):
+    """
+    'project' site-local matrix to SU(N).
+       * roughly equivalent to Grids 'ProjectOnGroup'
+       * uses the "modified Gram-Schmidt process"
+       * intended to remove numerical rounding errors during HMC
+       * can be unstable for very large N or input far away from SU(N) (not an issue for intended usecase)
+    """
     if type(U) == list:
         for a in U:
             reunitize(a)
-    elif type(U) == gpt.lattice:
-        assert len(U.v_obj) == 1
-        return cgpt.util_reunitize(U.v_obj[0], U.v_obj[0])
-    else:
-        assert False
+        return
+    assert type(U) == gpt.lattice
+    shape = U.otype.shape
+    assert len(shape) == 2 and shape[0] == shape[1]
+    N = shape[0]  # number of colors
+
+    # step 1: (modified) Gram-Schmidt process to get a unitary matrix
+    tmp = U[:]
+    for i in range(N):
+        for j in range(i):
+            c = np.einsum("ij,ij->i", np.conj(tmp[:, j, :]), tmp[:, i, :])
+            tmp[:, i, :] -= c[:, np.newaxis] * tmp[:, j, :]
+        tmp[:, i, :] /= np.linalg.norm(tmp[:, i, :], axis=1, keepdims=True)
+    U[:] = tmp[:]
+
+    # step 2: fix the determinant (NOTE: Grids 'ProjectOnGroup' skips this step)
+    D = gpt.matrix.det(U)
+    D[:] **= -1. / N
+    U[:] *= D[:][:, np.newaxis]
