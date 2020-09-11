@@ -104,3 +104,11 @@ def inv(i):
     o = gpt.lattice(i)
     o[:] = tmp
     return o
+
+def det(i):
+    """ site-local matrix determinant for color-matrix """
+    tmp = i[:]
+    assert len(i.otype.shape) == 2
+    o = gpt.complex(i.grid)
+    o[:] = numpy.linalg.det(tmp)
+    return o
