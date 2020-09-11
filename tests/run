@@ -35,7 +35,7 @@ for f in \
     ${test_path}/core/split.py \
     ${test_path}/core/other_representations.py \
     ${test_path}/core/split_chiral.py \
-    ${test_path}/core/coarse.py \
+    ${test_path}/core/coarsen.py \
     ${test_path}/random/simple.py \
     ${test_path}/create/create.py \
     ${test_path}/create/smear.py \
