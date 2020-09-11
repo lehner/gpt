@@ -62,7 +62,7 @@ rng.cnormal(basis_f)
 # split fine basis into chiral halfs
 g.coarse.split_chiral(basis_f)
 
-# setup fine block map map
+# setup fine block map
 bm_f = g.block.map(grid_c, basis_f)
 
 # orthonormalize fine basis
@@ -119,7 +119,7 @@ rng.cnormal(basis_c)
 # split coarse basis into chiral halfs
 g.coarse.split_chiral(basis_c)
 
-# setup coarse block map map
+# setup coarse block map
 bm_c = g.block.map(grid_cc, basis_c)
 
 # orthonormalize coarse basis
