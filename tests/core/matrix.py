@@ -67,3 +67,14 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
             f"Test {op[1].__name__}: {a} == {b} with argument {m[0, 0, 0, 0, 1, 2]}: {eps2}"
         )
         assert eps2 < eps ** 2.0
+
+# test inv
+for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
+    rng = g.random("test")
+    m = rng.cnormal(g.mspincolor(grid))
+    minv = g.matrix.inv(m)
+    eye = g.lattice(m)
+    eye[:] = m.otype.identity()
+    eps2 = g.norm2(m * minv - eye) / (12 * grid.fsites)
+    g.message(f"test M*M^-1 = 1: {eps2}")
+    assert eps2 < eps ** 2
