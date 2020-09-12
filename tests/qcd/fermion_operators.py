@@ -177,3 +177,9 @@ dst2 = g(prop_transformed * src)
 eps2 = g.norm2(dst1 - dst2) / g.norm2(dst1)
 g.message(f"Gauge transformation check {eps2}")
 assert eps2 < 1e-12
+
+
+# test instantiation of other actions
+rhq = g.qcd.fermion.rhq_columbia(
+    U, mass=4.0, cp=3.0, zeta=2.5, boundary_phases=[1, 1, 1, -1]
+)

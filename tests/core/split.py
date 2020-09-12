@@ -7,7 +7,7 @@ import numpy as np
 import sys
 
 rng = g.random("test")
-vol = [8, 8, 8, 16]
+vol = [16, 16, 16, 32]
 grid_rb = g.grid(vol, g.single, g.redblack)
 grid = g.grid(vol, g.single)
 field = g.vcolor
