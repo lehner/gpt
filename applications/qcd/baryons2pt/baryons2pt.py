@@ -84,7 +84,7 @@ N_baryons = 24
 
 
 with h5py.File(data_file, 'a') as hdf:
-    for baryon_n in range(22, N_baryons):
+    for baryon_n in range(N_baryons):
 
         if( baryon_n== 0 ):
             meas = "Sigma+_1"
