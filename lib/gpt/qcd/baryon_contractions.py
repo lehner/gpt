@@ -59,7 +59,7 @@ class baryons_2prop():
         return  g.trace(g.eval(Pol_i * g.color_trace(src_1 * I * g.spin_trace(di_quark))))
 
 
-    def sigmast_2pt(self, src_1 , src_2, Pol_i, Spin_M):
+    def sigma_star_2pt(self, src_1 , src_2, Pol_i, Spin_M):
         I = g.mspincolor(src_1.grid)
         I[:] = I.otype.identity()
         di_quark = qC.quarkContract13(g.eval(src_1 * Spin_M), g.eval(Spin_M * src_2))
