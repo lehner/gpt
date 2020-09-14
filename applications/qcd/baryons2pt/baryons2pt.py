@@ -7,8 +7,8 @@
 import gpt as g
 import numpy as np
 from gpt.qcd.spin_matrices import spin_matrix as spm
-from gpt.qcd.baryon_spectrum import baryons_2prop
-from gpt.qcd.baryon_spectrum import baryons_3prop
+from gpt.qcd.baryon_contractions import baryons_2prop
+from gpt.qcd.baryon_contractions import baryons_3prop
 import h5py
 
 b2p = baryons_2prop()
@@ -86,7 +86,7 @@ N_baryons = 24
 with h5py.File(data_file, 'a') as hdf:
     for baryon_n in range(N_baryons):
 
-        if( baryon_n== 0 ):
+        if(baryon_n== 0):
             meas = "Sigma+_1"
             g.message(meas)
             hdf.create_group(meas)
@@ -103,7 +103,7 @@ with h5py.File(data_file, 'a') as hdf:
             hdf[meas].create_dataset('data', data = corr)
             # add table ?
 
-        elif( baryon_n== 1 ):
+        elif(baryon_n== 1):
             meas = "Lambda_1"
             g.message(meas)
             hdf.create_group(meas)
@@ -119,7 +119,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 2 ):
+        elif(baryon_n== 2):
             meas = "Sigma_star+_1"
             g.message(meas)
             hdf.create_group(meas)
@@ -135,7 +135,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 3 ):
+        elif(baryon_n== 3):
             meas = "Sigma+_2"
             g.message(meas)
             hdf.create_group(meas)
@@ -151,7 +151,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 4 ):
+        elif(baryon_n== 4):
             meas = "Lambda_2"
             g.message(meas)
             hdf.create_group(meas)
@@ -167,10 +167,10 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 5 ):
+        elif(baryon_n== 5):
             meas = "Sigma_star+_2"
             g.message(meas)
-#            hdf.create_group(meas)
+            hdf.create_group(meas)
             tmp_correlator = b2p.sigma_star_2pt(quark_prop_1, quark_prop_2, T_mixed, Cg4m)
             corr = np.zeros((len(mom_list), Nt), dtype = complex)
 
@@ -183,7 +183,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 6 ):
+        elif(baryon_n== 6):
             meas = "Sigma+_3"
             g.message(meas)
             hdf.create_group(meas)
@@ -199,7 +199,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 7 ):
+        elif(baryon_n== 7):
             meas = "Lambda_3"
             g.message(meas)
             hdf.create_group(meas)
@@ -215,10 +215,10 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 8 ):
+        elif(baryon_n== 8):
             meas = "Sigma_star+_3"
             g.message(meas)
-#            hdf.create_group(meas)
+            hdf.create_group(meas)
             tmp_correlator = b2p.sigma_star_2pt(quark_prop_1, quark_prop_2, T_unpol, Cgm_NR)
             corr = np.zeros((len(mom_list), Nt), dtype = complex)
 
@@ -232,7 +232,7 @@ with h5py.File(data_file, 'a') as hdf:
             hdf[meas].create_dataset('data', data = corr)
 #           multiplied by 4
 
-        elif( baryon_n== 9 ):
+        elif(baryon_n== 9):
             meas = "Sigma+_4"
             g.message(meas)
             hdf.create_group(meas)
@@ -248,7 +248,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 10 ):
+        elif(baryon_n== 10):
             meas = "Sigma+_5"
             g.message(meas)
             hdf.create_group(meas)
@@ -264,7 +264,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 11 ):
+        elif(baryon_n== 11):
             meas = "Sigma+_6"
             g.message(meas)
             hdf.create_group(meas)
@@ -280,7 +280,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 12 ):
+        elif(baryon_n== 12):
             meas = "Lambda_4"
             g.message(meas)
             hdf.create_group(meas)
@@ -296,7 +296,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 13 ):
+        elif(baryon_n== 13):
             meas = "Xi_1"
             g.message(meas)
             hdf.create_group(meas)
@@ -312,7 +312,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 14 ):
+        elif(baryon_n== 14):
             meas = "Lambda_5"
             g.message(meas)
             hdf.create_group(meas)
@@ -329,7 +329,7 @@ with h5py.File(data_file, 'a') as hdf:
             hdf[meas].create_dataset('data', data = corr)
 
 
-        elif( baryon_n== 15 ):
+        elif(baryon_n== 15):
             meas = "Xi_2"
             g.message(meas)
             hdf.create_group(meas)
@@ -345,7 +345,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 16 ):
+        elif(baryon_n== 16):
             meas = "Proton_negpar_3"
             g.message(meas)
             hdf.create_group(meas)
@@ -361,7 +361,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 17 ):
+        elif(baryon_n== 17):
             meas = "Proton_Polx"
             g.message(meas)
             hdf.create_group(meas)
@@ -377,7 +377,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 18 ):
+        elif(baryon_n== 18):
             meas = "Proton_Poly"
             g.message(meas)
             hdf.create_group(meas)
@@ -393,7 +393,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 19 ):
+        elif(baryon_n== 19):
             meas = "Proton_Polz"
             g.message(meas)
             hdf.create_group(meas)
@@ -409,7 +409,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 20 ):
+        elif(baryon_n== 20):
             meas = "Sigma_0"
             g.message(meas)
             hdf.create_group(meas)
@@ -425,7 +425,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 21 ):
+        elif(baryon_n== 21):
             meas = "Lambda_octet"
             g.message(meas)
             hdf.create_group(meas)
@@ -441,10 +441,10 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 22 ):
+        elif(baryon_n== 22):
             meas = "lambda8_to_sigma0"
             g.message(meas)
-#            hdf.create_group(meas)
+            hdf.create_group(meas)
             tmp_correlator = b3p.lambda8_to_sigma0_2pt(quark_prop_1, quark_prop_2, quark_prop_3, T_unpol, Cg5)
             corr = np.zeros((len(mom_list), Nt), dtype = complex)
 
@@ -457,7 +457,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 23 ):
+        elif(baryon_n== 23):
             meas = "sigma0_to_lambda8"
             g.message(meas)
             hdf.create_group(meas)
@@ -473,7 +473,7 @@ with h5py.File(data_file, 'a') as hdf:
                     corr[p_n, t] = c
             hdf[meas].create_dataset('data', data = corr)
 
-        elif( baryon_n== 24 ):
+        elif(baryon_n== 24):
             meas = "sigma_star+_3"
             g.message(meas)
             hdf.create_group(meas)
