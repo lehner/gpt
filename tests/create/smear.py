@@ -85,5 +85,5 @@ for dimensions in [[0, 1, 2], [0, 1, 2, 3]]:
         dst = g(smear_unit * src_mom)
         eps2 = g.norm2(dst - factor * src_mom) / g.norm2(dst)
         g.message(f"Wuppertal test using eigen representation: {eps2}")
-        assert eps2 < 1e-28
+        assert eps2 < 1e-26
 
