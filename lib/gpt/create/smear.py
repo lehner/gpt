@@ -55,3 +55,20 @@ def gauss(U, params):
             dst += (sigma * sigma / (4.0 * steps)) * lap * dst
 
     return g.matrix_operator(mat=mat)
+
+
+@params_convention(boundary_phases=[1, 1, 1, -1], dimensions=[0, 1, 2])
+def wuppertal(U, params):
+    kappa = params["kappa"]
+    steps = params["steps"]
+    dimensions = params["dimensions"]
+    lap = laplace(g.covariant.shift(U, params), dimensions)
+
+    def mat(dst, src):
+        assert dst != src
+        g.copy(dst, src)
+        for n in range(steps):
+            dst += (kappa / (1 + 2.0 * len(dimensions) * kappa)) * lap * dst
+
+    return g.matrix_operator(mat=mat)
+
