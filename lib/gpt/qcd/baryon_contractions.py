@@ -25,7 +25,7 @@ from gpt.qcd import quarkContract as qC
 
 class baryons_2prop():
 
-    def sigma_2pt(self, src_1, src_2, Pol_i, Spin_M):
+    def proton_2pt(self, src_1, src_2, Pol_i, Spin_M):
         I = g.mspincolor(src_1.grid)
         I[:] = I.otype.identity()
         di_quark = qC.quarkContract13(g.eval(src_1 * Spin_M), g.eval(Spin_M * src_2))

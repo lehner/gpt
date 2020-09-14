@@ -40,7 +40,7 @@ class spin_matrix():
 
     def T_mixed():
         return 1 / 2 * (g.gamma["I"] + g.gamma["T"] - \
-                        1j * (g.gamma["X"] * g.gamma["Y"] + g.gamma["Z"] * g.gamma[5]) )
+                      1j * (g.gamma["X"] * g.gamma["Y"] + g.gamma["Z"] * g.gamma[5]) )
 
     def T_mixed_negpar():
         return 1 / 2 * (g.gamma["I"] - g.gamma["T"] - \
@@ -57,6 +57,12 @@ class spin_matrix():
 
     def Cgm():
         return 1 / 2 * g.gamma["Y"] * g.gamma["T"] * (g.gamma["Y"] + 1j * g.gamma["X"])
+
+    def Cgm_NR():
+        return spin_matrix.Cgm() * spin_matrix.T_unpol()
+
+    def Cg4m():
+        return 1 / 2 * g.gamma["Y"] * g.gamma["T"] * (g.gamma["T"] * g.gamma["Y"] + 1j * g.gamma["X"])
 
     def Cg5_NR():
         return spin_matrix.Cg5() * spin_matrix.T_unpol()
