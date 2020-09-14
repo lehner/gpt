@@ -68,7 +68,7 @@ class split:
             mat=inv,
             inv_mat=matrix,
             otype=otype,
-            zero=(True, False),
+            accept_guess=(True, False),
             grid=grid,
             cb=cb,
             accept_list=True,

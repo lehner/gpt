@@ -42,6 +42,20 @@ def wilson_clover(U, params):
 
 
 @gpt.params_convention()
+def rhq_columbia(U, params):
+    return wilson_clover(
+        U,
+        mass=params["mass"],
+        csw_r=params["cp"],
+        csw_t=params["cp"],
+        xi_0=1.0,
+        nu=params["zeta"],
+        isAnisotropic=True,
+        boundary_phases=params["boundary_phases"],
+    )
+
+
+@gpt.params_convention()
 def zmobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
     assert "Ls" not in params

@@ -16,8 +16,34 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.create import random, unit
-from gpt.qcd.gauge.representation import fundamental_to_adjoint, assert_unitary
-from gpt.qcd.gauge.loops import plaquette
-from gpt.qcd.gauge.transformation import transformed
-import gpt.qcd.gauge.smear
+import gpt as g
+from gpt.params import params_convention
+
+
+def staple(U, mu, nu):
+    assert mu != nu
+    U_nu_x_plus_mu = g.cshift(U[nu], mu, 1)
+    U_mu_x_plus_nu = g.cshift(U[mu], nu, 1)
+    U_nu_x_minus_nu = g.cshift(U[nu], nu, -1)
+    return g(
+        U[nu] * U_mu_x_plus_nu * g.adj(U_nu_x_plus_mu)
+        + g.adj(U_nu_x_minus_nu) * g.cshift(U[mu] * U_nu_x_plus_mu, nu, -1)
+    )
+
+
+@params_convention(rho=None)
+def staple_sum(U, params):
+    nd = len(U)
+    rho = params["rho"]
+    assert rho is not None
+    assert rho.shape == (nd, nd)
+    U_prime = []
+    for mu in range(nd):
+        U_mu_prime = g.lattice(U[mu])
+        U_mu_prime[:] = 0
+        for nu in range(nd):
+            if mu != nu:
+                if abs(rho[mu, nu]) != 0.0:
+                    U_mu_prime += rho[mu, nu] * staple(U, mu, nu)
+        U_prime.append(U_mu_prime)
+    return U_prime

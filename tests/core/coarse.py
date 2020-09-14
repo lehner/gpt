@@ -83,7 +83,9 @@ g.coarse.create_links(
 # compare link fields
 for p in range(9):
     err2 = g.norm2(A_c[p] - Asaved_c[p]) / g.norm2(A_c[p])
-    g.message(f"Relative deviation of Asaved_c[{p}] from A_c[{p}] = {err2:e}",)
+    g.message(
+        f"Relative deviation of Asaved_c[{p}] from A_c[{p}] = {err2:e}",
+    )
     assert err2 <= tol_links
 g.message("Tests for links passed for all directions")
 del Asaved_c
@@ -138,7 +140,9 @@ g.coarse.create_links(
 # compare link fields
 for p in range(9):
     err2 = g.norm2(A_cc[p] - Asaved_cc[p]) / g.norm2(A_cc[p])
-    g.message(f"Relative deviation of Asaved_cc[{p}] from A_cc[{p}] = {err2:e}",)
+    g.message(
+        f"Relative deviation of Asaved_cc[{p}] from A_cc[{p}] = {err2:e}",
+    )
     assert err2 <= tol_links
 g.message("Tests for links passed for all directions")
 del Asaved_cc
@@ -182,12 +186,12 @@ mat_c.Mdir(0, 0)(
 )  # exploit the self coupling link, this uses Grid
 
 # define check tolerance
-tol = 0.0
+tol = 1e-12
 
 # report error
-diff2 = g.norm2(vec_out_link_c - vec_out_mat_c)
-assert diff2 == tol
-g.message("Test passed for coarse links, %e == %e" % (diff2, tol))
+diff2 = g.norm2(vec_out_link_c - vec_out_mat_c) / g.norm2(vec_out_mat_c)
+assert diff2 <= tol
+g.message("Test passed for coarse links, %e <= %e" % (diff2, tol))
 
 # Test ET against Grid on coarse coarse grid ##################################
 
@@ -206,9 +210,9 @@ mat_cc.Mdir(0, 0)(
 )  # exploit the self coupling link, this uses Grid
 
 # define check tolerance
-tol = 0.0
+tol = 1e-12
 
 # report error
-diff2 = g.norm2(vec_out_link_cc - vec_out_mat_cc)
-assert diff2 == tol
-g.message("Test passed for coarse coarse links, %e == %e" % (diff2, tol))
+diff2 = g.norm2(vec_out_link_cc - vec_out_mat_cc) / g.norm2(vec_out_mat_cc)
+assert diff2 <= tol
+g.message("Test passed for coarse coarse links, %e <= %e" % (diff2, tol))

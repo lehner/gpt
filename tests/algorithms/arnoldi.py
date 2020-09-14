@@ -25,7 +25,7 @@ w = g.qcd.fermion.wilson_clover(
     },
 )
 
-expected_largest_eigenvalue = 7.438661573807548 - 0.009147480237836585j
+expected_largest_eigenvalue = 7.437868841644861 + 0.012044335728622612j
 
 # start vector
 start = g.vspincolor(w.F_grid)

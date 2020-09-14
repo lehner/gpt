@@ -12,19 +12,12 @@ import numpy as np
 g.default.set_verbose("random", False)
 rng = g.random("test_mg")
 
-# adjust volume for mpi layout of test
-L = [8, 8, 8, 16]
-mpi = g.default.get_ivec("--mpi", [1, 1, 1, 1], 4)
-simd = [1, 2, 2, 2]
-l = [L[i] // mpi[i] // simd[i] for i in range(4)]
-l_min = [4, 4, 4, 4]
-for i in range(4):
-    if l[i] < l_min[i]:
-        L[i] *= l_min[i] // l[i]
-g.message(f"Run with L = {L}")
+# just run with larger volume
+L = [8, 8, 16, 16]
 
 # setup gauge field
 U = g.qcd.gauge.random(g.grid(L, g.single), rng)
+g.message("Plaquette:", g.qcd.gauge.plaquette(U))
 
 # quark
 w = g.qcd.fermion.wilson_clover(
@@ -55,6 +48,7 @@ p = g.qcd.fermion.preconditioner
 # NOTE: mg params structure
 # - list -> configure each level by itself explicitly (correct lengths asserted inside)
 # - scalar value (= not a list) -> broadcast parameter to every level
+
 
 # mg setups
 # mg_setup_2lvl = mg.setup(

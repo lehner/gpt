@@ -28,11 +28,7 @@ void cgpt_linear_combination(Field &result,VLattice &basis,ComplexD* Qt) {
   autoView( result_v , result, AcceleratorWriteDiscard);
   int N = (int)basis.size();
 
-  typedef decltype(basis[0].View(AcceleratorRead)) View;
-  Vector<View> basis_v; basis_v.reserve(basis.size());
-  for(int k=0;k<basis.size();k++){
-    basis_v.push_back(basis[k].View(AcceleratorRead));
-  }
+  VECTOR_VIEW_OPEN(basis,basis_v,AcceleratorRead);
 
 #ifndef GRID_HAS_ACCELERATOR
   thread_for(ss, grid->oSites(),{
@@ -56,5 +52,5 @@ void cgpt_linear_combination(Field &result,VLattice &basis,ComplexD* Qt) {
     });
 #endif
 
-  for(int k=0;k<basis.size();k++) basis_v[k].ViewClose();
+  VECTOR_VIEW_CLOSE(basis_v);
 }

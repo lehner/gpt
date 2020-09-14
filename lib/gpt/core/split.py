@@ -38,21 +38,29 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N):
     assert all([lattices[i].otype.__name__ == otype.__name__ for i in range(1, n)])
     assert n % N == 0
     Q = n // N
+
     l = [gpt.lattice(split_grid, otype) for i in range(N)]
+
+    lcoor = numpy.copy(lcoor)  # no cache
+    gcoor = numpy.copy(gcoor)
+    empty = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
+
     for x in l:
         x.checkerboard(cb)
         x.split_lcoor = lcoor
         x.split_gcoor = gcoor
     sranks = split_grid.sranks
     srank = split_grid.srank
+
     for i in range(Q):
         if i == srank // (sranks // Q):
             lc = lcoor
             gc = gcoor
         else:
-            lc = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
+            lc = empty
             gc = lc
         gpt.poke(l, lc, gpt.peek(lattices[i * N : (i + 1) * N], gc))
+
     return l
 
 
@@ -70,12 +78,14 @@ def unsplit(first, second):
 
     lcoor = second[0].split_lcoor
     gcoor = second[0].split_gcoor
+    empty = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
+
     for i in range(Q):
         if i == srank // (sranks // Q):
             lc = lcoor
             gc = gcoor
         else:
-            lc = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
+            lc = empty
             gc = lc
         gpt.poke(first[i * N : (i + 1) * N], gc, gpt.peek(second, lc))
 

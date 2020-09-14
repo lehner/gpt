@@ -67,5 +67,5 @@ class coarse_modes:
                 )
 
         return g.matrix_operator(
-            mat=approx, otype=otype, zero=(False, False), grid=grid, cb=cb
+            mat=approx, otype=otype, accept_guess=(False, False), grid=grid, cb=cb
         )

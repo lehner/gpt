@@ -10,11 +10,21 @@ import sys
 
 grid_dp = g.grid([8, 4, 4, 4], g.double)
 grid_sp = g.grid([8, 4, 4, 4], g.single)
+grid_large_dp = g.grid([8, 8, 4, 8], g.double)
 
 rng = g.random("block_seed_string_13")
-for grid, prec in [(grid_dp, 1e-28), (grid_sp, 1e-14)]:
-    U = g.qcd.gauge.random(grid, rng, scale=10)
-    g.message(g.qcd.gauge.plaquette(U))
+for grid, prec, ref_plaquette, scale in [
+    (grid_dp, 1e-28, -0.00014108397456619623, 10),
+    (grid_sp, 1e-14, -0.00014108397456619623, 10),
+    (grid_large_dp, 1e-28, 0.38723058417632267, 2),
+]:
+    U = g.qcd.gauge.random(grid, rng, scale=scale)
+    comp_plaquette = g.qcd.gauge.plaquette(U)
+    eps2 = abs(comp_plaquette - ref_plaquette) ** 2.0
+    g.message(
+        f"Computed plaquette {comp_plaquette} versus reference {ref_plaquette}: {eps2}"
+    )
+    assert eps2 < prec
     for i in range(4):
         test = g.norm2(g.adj(U[i]) * U[i] - g.qcd.gauge.unit(grid)[0]) / g.norm2(U[i])
         g.message(test)
@@ -71,16 +81,17 @@ test_sequence_comp = np.array(
 # print([ v[0,0,0,0].real, v[2,0,0,0].real, v[0,2,0,0].real, v[1,3,1,3].real, v[3,2,1,0].real ])
 test_sequence_ref = np.array(
     [
-        1.0336693180495347,
-        -0.23474901515559715,
-        -0.26622475825072717,
-        1.0175124089453662,
-        0.9519248978004753,
+        -0.29101665386129116,
+        -1.4591269443435488,
+        -0.3641310411719848,
+        -0.9454532383815435,
+        0.4996115272362977,
     ],
     np.float64,
 )
 
-g.message(test_sequence_comp)
+for x in test_sequence_comp:
+    g.message(x)
 
 err = np.linalg.norm(test_sequence_comp - test_sequence_ref)
 assert err < 1e-14
@@ -99,18 +110,21 @@ test_sequence_comp = np.array(
         v[3, 2, 1, 0].real,
     ]
 )
-# print([ v[0,0,0,0].real, v[2,0,0,0].real, v[0,2,0,0].real, v[1,3,1,3].real, v[3,2,1,0].real ])
+
+
+for x in test_sequence_comp:
+    g.message(x)
+
 test_sequence_ref = np.array(
     [
-        -0.3194228736274878,
-        -0.4211727874061459,
-        0.7680875563790006,
-        -0.18697640758578687,
-        0.3276024231946795,
+        1.473846437649123,
+        0.06134886004475955,
+        -1.4849224560837744,
+        -0.2316303634513769,
+        -0.5309613807759392,
     ],
     np.float64,
 )
-g.message(test_sequence_comp)
 
 err = np.linalg.norm(test_sequence_comp - test_sequence_ref)
 assert err < 1e-14

@@ -44,7 +44,7 @@ NAMESPACE_BEGIN(Grid);
 #endif
 
 #include "foundation/reduce.h"
-#include "foundation/singlet.h"
+#include "foundation/unary.h"
 #include "foundation/et.h"
 #include "foundation/block.h"
 #include "foundation/transfer.h"

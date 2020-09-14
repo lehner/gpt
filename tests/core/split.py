@@ -11,6 +11,7 @@ vol = [16, 16, 16, 32]
 grid_rb = g.grid(vol, g.single, g.redblack)
 grid = g.grid(vol, g.single)
 field = g.vcolor
+Nlat = 12
 
 ################################################################################
 # Spin/Color separation
@@ -52,9 +53,9 @@ assert (
 ################################################################################
 # Setup lattices
 ################################################################################
-l_rb = [field(grid_rb) for i in range(8)]
-l = [field(grid) for i in range(8)]
-for i in range(8):
+l_rb = [field(grid_rb) for i in range(Nlat)]
+l = [field(grid) for i in range(Nlat)]
+for i in range(Nlat):
     l_rb[i].checkerboard(g.odd)
 rng.cnormal(l_rb)
 rng.cnormal(l)
@@ -87,7 +88,7 @@ assert all([g.norm2(x) > 0 for x in l])
 
 # Test merging slices along a new last dimension 4 at a time
 m = g.merge(l, N=4)
-assert len(m) == 2
+assert len(m) == Nlat // 4
 
 for i in range(len(m)):
     for j in range(4):
@@ -96,7 +97,7 @@ for i in range(len(m)):
 
 # Test merging slices along a new 2nd dimension 4 at a time
 m = g.merge(l, 1, N=4)
-assert len(m) == 2
+assert len(m) == Nlat // 4
 
 for i in range(len(m)):
     for j in range(4):
@@ -105,7 +106,7 @@ for i in range(len(m)):
 
 test = g.separate(m, 1)
 
-assert len(test) == 8
+assert len(test) == Nlat
 for i in range(len(l)):
     assert g.norm2(l[i] - test[i]) == 0.0
 
@@ -114,64 +115,20 @@ test = g.separate(g.merge(l))
 for i in range(len(l)):
     assert g.norm2(l[i] - test[i]) == 0.0
 
-sys.exit(0)
 ################################################################################
-# multi-vector (as in right-hand sides) splitting
-# test split CG both speed and correctness against original
+# Test split grid
 ################################################################################
+for src in [l, l_rb]:
+    split_grid = src[0].grid.split(
+        g.default.get_ivec("--mpi_split", None, 4), src[0].grid.fdimensions
+    )
+    src_unsplit = [g.lattice(x) for x in src]
 
-
-# test = [g.complex(grid) for i in range(8)]
-# l_rank = g.split(
-#     l, mpi_split=[1, 1, 2, 2]
-# )  # now is a list of lattices to deal with locally
-# g.barrier()
-
-# g.message("Local workload: ", len(l_rank))
-# g.unsplit(test, l_rank)
-# for i in range(len(test)):
-#     assert g.norm2(test[i] - l[i]) == 0.0
-
-
-# ################################################################################
-# # split by ranks
-# ################################################################################
-# l = g.complex(grid)
-# rng.cnormal(l)
-# l_rank = g.split_by_rank(l)
-
-# assert l_rank.grid.globalsum(1.0) == 1.0  # check separate mpi grid
-
-# test = g.lattice(l)
-# test[:] = 0
-# g.unsplit(test, l_rank)
-
-# assert g.norm2(test - l) == 0.0
-
-
-# # split many at same time (faster since it shares coordinates and grid creation); also can combine different lattice types
-# l = [g.vcolor(grid) for i in range(8)]
-# rng.cnormal(l)
-# l_rank = g.split_by_rank(l)
-
-# for i in l_rank:
-#     assert i.grid.globalsum(1.0) == 1.0  # check that they live in separate mpi grid
-
-# test = [g.vcolor(grid) for i in range(8)]
-
-# g.unsplit(test, l_rank)
-
-# for i in range(len(test)):
-#     assert g.norm2(test[i] - l[i]) == 0.0
-
-
-################################################################################
-# split sites, useful for sub-blocking AND for sparse lattices with random
-# points
-################################################################################
-
-# for iblock:
-#    pos_of_block=g.coordinates_of_block(iblock)
-#    l_block = g.split_sites(l_rank,pos_of_block)
-#    g.unsplit(l_rank,l_block)
-#    l_block[g.boundary_points(...)]=0
+    # perform this test twice, second time cached plan will be used
+    for it in range(2):
+        src_split = g.split(src, split_grid=split_grid)
+        g.unsplit(src_unsplit, src_split)
+        for i in range(len(src)):
+            eps2 = g.norm2(src_unsplit[i] - src[i]) / g.norm2(src[i])
+            g.message(f"Split test {i} / {len(src)}: {eps2}")
+            assert eps2 == 0.0

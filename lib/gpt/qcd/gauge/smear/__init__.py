@@ -16,8 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.create import random, unit
-from gpt.qcd.gauge.representation import fundamental_to_adjoint, assert_unitary
-from gpt.qcd.gauge.loops import plaquette
-from gpt.qcd.gauge.transformation import transformed
-import gpt.qcd.gauge.smear
+from gpt.qcd.gauge.smear.staple_sum import staple_sum
+from gpt.qcd.gauge.smear.stout import stout
