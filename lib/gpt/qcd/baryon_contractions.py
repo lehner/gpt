@@ -106,7 +106,7 @@ class baryons_3prop():
 
     def lambda8_to_sigma0_2pt(self, prop_s, prop_u, prop_d, Pol_i, Spin_M):
         return  (2. * self.sigma_2pt(prop_s, prop_d, prop_u, Pol_i, Spin_M) - \
-                 2. * self.sigma_2pt(prop_s, prop_u, prop_d, Pol_i, Spin_M))
+                 2. * self.sigma_2pt(prop_s, prop_u, prop_d, Pol_i, Spin_M) + \
                       self.sigma_2pt(prop_d, prop_u, prop_s, Pol_i, Spin_M) - \
                       self.sigma_2pt(prop_u, prop_d, prop_s, Pol_i, Spin_M)) / np.sqrt(12.)
 
