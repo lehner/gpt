@@ -490,4 +490,3 @@ with h5py.File(data_file, 'a') as hdf:
             hdf[meas].create_dataset('data', data = corr)
 
         else: g.message("Unknown baryon")
-

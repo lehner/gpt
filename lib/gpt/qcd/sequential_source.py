@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#
+#                  2020  Lorenzo Barca
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation; either version 2 of the License, or
@@ -16,15 +16,14 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-#    Authors:  Lorenzo Barca     2020
-#              Christoph Lehner  2020
-#
+
 import gpt as g
 from gpt.qcd import quarkContract as qC
 
 class nucleon3pt_seq_src():
 
     def p2p_dbard(src, Pol_i, Spin_M, t_sink):
+
         tmp_seq_src = g.lattice(src)
         q1_tmp = g.eval(Pol_i * src * Spin_M)   # e.g.  Pol_i * D * Cg5
         q2_tmp = g.eval(Spin_M * src)           # e.g.  Cg5 * D
@@ -42,9 +41,8 @@ class nucleon3pt_seq_src():
         return seq_src
 
     def p2p_ubaru(src, Pol_i, Spin_M, t_sink):
-        I = g.mspincolor(src.grid)
-        I[:] = I.otype.identity()
 
+        I = g.ot_matrix_spin_color(4, 3).identity()
         tmp_seq_src = g.lattice(src)
         q1_tmp = g.eval(src * Spin_M)           # e.g.  D * Cg5
         q2_tmp = g.eval(Spin_M * src)           # e.g.  Cg5 * D
@@ -67,9 +65,8 @@ class nucleon3pt_seq_src():
 
 
     def p2n_dbaru(src, Pol_i, Spin_M, t_sink):
-        I = g.mspincolor(src.grid)
-        I[:] = I.otype.identity()
 
+        I = g.ot_matrix_spin_color(4, 3).identity()
         tmp_seq_src = g.lattice(src)
         q1_tmp = g.eval(src * Spin_M)           # e.g.  D * Cg5
         q2_tmp = g.eval(Spin_M * src)           # e.g.  Cg5 * D
