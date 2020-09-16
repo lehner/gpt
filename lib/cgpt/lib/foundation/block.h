@@ -97,13 +97,14 @@ private:
     sizes_.resize(coarse_->oSites());
     reverse_lut_vec_.resize(fine_->oSites());
     for(index_type sc = 0; sc < coarse_->oSites(); ++sc) {
-      lut_vec_[sc].resize(0);
-      lut_vec_[sc].reserve(block_v);
+      lut_vec_[sc].resize(block_v);
       lut_ptr_[sc] = &lut_vec_[sc][0];
       sizes_[sc]  = 0;
     }
 
-    typename Lattice<T_singlet>::scalar_type zz = {0., 0.,};
+    typedef typename Lattice<T_singlet>::scalar_type scalar_t;
+    typedef typename Lattice<T_singlet>::vector_type vector_t;
+    scalar_t zz = {0., 0.,};
 
     autoView(mask_v, mask, CpuRead);
     thread_for(sc, coarse_->oSites(), {
@@ -121,7 +122,13 @@ private:
 
         index_type sf = (index_type)sf_tmp;
 
-        if(Reduce(TensorRemove(coalescedRead(mask_v[sf]))) != zz) {
+	// masks are understood only on reduced SIMD grid, in order to forbid
+	// unexpected behavior, force consistency!
+	vector_t vmask = TensorRemove(mask_v[sf]);
+	scalar_t rmask = Reduce(vmask);
+	scalar_t fmask = *(scalar_t*)&vmask;
+	ASSERT(rmask * sizeof(scalar_t) == sizeof(vector_t) * fmask);
+        if(rmask != zz) {
           lut_ptr_[sc][count] = sf;
           sizes_[sc]++;
           count++;
