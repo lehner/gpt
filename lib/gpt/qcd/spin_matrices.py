@@ -1,7 +1,8 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Lorenzo Barca
+#                  2020  Lorenzo Barca    (lorenzo1.barca@ur.de)
+#
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation; either version 2 of the License, or
@@ -60,7 +61,8 @@ class spin_matrix():
         return spin_matrix.Cgm() * spin_matrix.T_unpol()
 
     def Cg4m():
-        return 1 / 2 * g.gamma["Y"] * g.gamma["T"] * (g.gamma["T"] * g.gamma["Y"] + 1j * g.gamma["X"])
+        tmp_gamma = 1 / 2 * (g.gamma["Y"] + 1j * g.gamma["X"])
+        return (g.gamma["Y"] * g.gamma["T"]) * (g.gamma["T"] * tmp_gamma)
 
     def Cg5_NR():
         return spin_matrix.Cg5() * spin_matrix.T_unpol()
