@@ -126,10 +126,11 @@ private:
 	// masks are understood only on reduced SIMD grid, in order to forbid
 	// unexpected behavior, force consistency!
 	vector_t vmask = TensorRemove(mask_v[sf]);
-	scalar_t rmask = Reduce(vmask);
-	scalar_t fmask = *(scalar_t*)&vmask;
-	ASSERT(abs(rmask - Nsimd * fmask) < 1e-5);
-        if(rmask != zz) {
+	scalar_t* fmask = (scalar_t*)&vmask;
+	bool bset = fmask[0] != zz;
+	for (int lane=1;lane<Nsimd;lane++)
+	  ASSERT(bset == (fmask[lane] != zz));
+        if(bset) {
           lut_ptr_[sc][count] = sf;
           sizes_[sc]++;
           count++;
