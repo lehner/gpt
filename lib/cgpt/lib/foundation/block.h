@@ -83,6 +83,7 @@ private:
   void populate(GridBase* coarse, const Lattice<T_singlet> & mask) {
     int        _ndimension = coarse_->_ndimension;
     Coordinate block_r(_ndimension);
+    int Nsimd = coarse->Nsimd();
 
     size_type block_v = 1;
     for(int d = 0; d < _ndimension; ++d) {
@@ -127,7 +128,7 @@ private:
 	vector_t vmask = TensorRemove(mask_v[sf]);
 	scalar_t rmask = Reduce(vmask);
 	scalar_t fmask = *(scalar_t*)&vmask;
-	ASSERT(rmask * sizeof(scalar_t) == sizeof(vector_t) * fmask);
+	ASSERT(abs(rmask - Nsimd * fmask) < 1e-5);
         if(rmask != zz) {
           lut_ptr_[sc][count] = sf;
           sizes_[sc]++;
