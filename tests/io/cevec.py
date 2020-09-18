@@ -20,7 +20,7 @@ cgrid = g.grid([1, 4, 4, 4, 4], g.single)
 
 # vectors
 nbasis = 20
-nsingle = 10
+nsingle = 5
 nevec = 30
 rng = g.random("test")
 basis = [g.vspincolor(fgrid) for i in range(nbasis)]
