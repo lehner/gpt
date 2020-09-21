@@ -108,6 +108,12 @@ class ot_matrix_color(ot_base):
             "ot_singlet": (lambda: self, None),
         }
 
+    def identity(self):
+        return matrix_color(
+            numpy.identity(self.shape[0]),
+            self.shape[0],
+        )
+
 
 def matrix_color(grid, ndim):
     return gpt_object(grid, ot_matrix_color(ndim))
@@ -154,6 +160,12 @@ class ot_matrix_su3_fundamental(ot_matrix_color):
             "ot_singlet": (lambda: self, None),
         }
 
+    def identity(self):
+        return matrix_color(
+            numpy.identity(self.shape[0]),
+            self.shape[0],
+        )
+
     def generators(self, dt):
         # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
         return [
@@ -191,6 +203,12 @@ class ot_matrix_su2_fundamental(ot_matrix_color):
         self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
+
+    def identity(self):
+        return matrix_color(
+            numpy.identity(self.shape[0]),
+            self.shape[0],
+        )
 
     def generators(self, dt):
         # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
@@ -260,6 +278,12 @@ class ot_matrix_spin(ot_base):
         self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
+
+    def identity(self):
+        return matrix_color(
+            numpy.identity(self.shape[0]),
+            self.shape[0],
+        )
 
 
 def matrix_spin(grid, ndim):
