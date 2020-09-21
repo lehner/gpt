@@ -29,7 +29,7 @@ class matrix_operator(factor):
     # lhs = A rhs
     # otype = (lhs.otype,rhs.otype)
     # grid = (lhs.grid,rhs.grid)
-    # zero = (lhs.zero,rhs.zero)  <-  initialize opposite temporary to zero?
+    # accept_guess = (accept_guess_for_mat,accept_guess_for_inv_mat)
     #
     def __init__(
         self,
@@ -39,7 +39,7 @@ class matrix_operator(factor):
         adj_inv_mat=None,
         otype=(None, None),
         grid=(None, None),
-        zero=(False, False),
+        accept_guess=(False, False),
         cb=(None, None),
         accept_list=False,
     ):
@@ -56,7 +56,11 @@ class matrix_operator(factor):
 
         # do we request, e.g., the lhs of lhs = A rhs to be initialized to zero
         # if it is not given?
-        self.zero = zero if type(zero) == tuple else (zero, zero)
+        self.accept_guess = (
+            accept_guess
+            if type(accept_guess) == tuple
+            else (accept_guess, accept_guess)
+        )
 
         # the grids we expect
         self.grid = grid if type(grid) == tuple else (grid, grid)
@@ -72,7 +76,7 @@ class matrix_operator(factor):
             adj_inv_mat=self.adj_mat,
             otype=tuple(reversed(self.otype)),
             grid=tuple(reversed(self.grid)),
-            zero=tuple(reversed(self.zero)),
+            accept_guess=tuple(reversed(self.accept_guess)),
             cb=tuple(reversed(self.cb)),
             accept_list=self.accept_list,
         )
@@ -85,7 +89,7 @@ class matrix_operator(factor):
             adj_inv_mat=self.inv_mat,
             otype=tuple(reversed(self.otype)),
             grid=tuple(reversed(self.grid)),
-            zero=tuple(reversed(self.zero)),
+            accept_guess=tuple(reversed(self.accept_guess)),
             cb=tuple(reversed(self.cb)),
             accept_list=self.accept_list,
         )
@@ -98,7 +102,7 @@ class matrix_operator(factor):
             # (mat^dag)^-1 = (other^dag self^dag)^-1 = self^dag^-1 other^dag^-1
 
             # TODO:
-            # Depending on other.zero flag and if self.inv_mat is set, we should
+            # Depending on other.accept_guess flag and if self.inv_mat is set, we should
             # attempt to properly propagate dst as well.
 
             adj_other = other.adj()
@@ -114,7 +118,7 @@ class matrix_operator(factor):
                 adj_inv_mat=lambda dst, src: adj_inv_self(dst, adj_inv_other(src)),
                 otype=(self.otype[0], other.otype[1]),
                 grid=(self.grid[0], other.grid[1]),
-                zero=(self.zero[0], other.zero[1]),
+                accept_guess=(self.accept_guess[0], other.accept_guess[1]),
                 cb=(self.cb[0], other.cb[1]),
                 accept_list=True,
             )
@@ -129,7 +133,7 @@ class matrix_operator(factor):
         assert all([ot is not None for ot in self.otype])
         grid = tuple([g.converted(to_precision) for g in self.grid])
         otype = self.otype
-        zero = self.zero
+        accept_guess = self.accept_guess
         cb = self.cb
 
         def _converted(dst, src, mat, l, r):
@@ -138,7 +142,7 @@ class matrix_operator(factor):
             conv_dst = [gpt.lattice(self.grid[r], otype[r]) for x in src]
 
             gpt.convert(conv_src, src)
-            if zero[l]:
+            if accept_guess[l]:
                 gpt.convert(conv_dst, dst)
             t1 = gpt.time()
             mat(conv_dst, conv_src)
@@ -163,7 +167,7 @@ class matrix_operator(factor):
             adj_inv_mat=lambda dst, src: _converted(dst, src, self.adj_inv_mat, 0, 1),
             otype=otype,
             grid=grid,
-            zero=zero,
+            accept_guess=accept_guess,
             cb=cb,
             accept_list=True,
         )
@@ -205,7 +209,7 @@ class matrix_operator(factor):
                 for x in dst:
                     x.checkerboard(self.cb[0])
 
-            if self.zero[0]:
+            if self.accept_guess[0]:
                 for x in dst:
                     x[:] = 0
 
@@ -221,7 +225,7 @@ class matrix_operator(factor):
         if type_match:
             mat(dst, src)
         else:
-            self.otype[1].distribute(mat, dst, src, zero_lhs=self.zero[0])
+            self.otype[1].distribute(mat, dst, src, zero_lhs=self.accept_guess[0])
 
         if not return_list:
             return gpt.util.from_list(dst)

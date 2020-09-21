@@ -36,7 +36,7 @@ class g5m_ne_instance:
             matrix.G5M.mat(ftmp, src)
             matrix.G5M.mat(dst, ftmp)
 
-        def _L(dst, src):
+        def _ident(dst, src):
             gpt.copy(dst, src)
 
         def _R(dst, src):
@@ -46,7 +46,9 @@ class g5m_ne_instance:
             dst[:] = 0
 
         self.Mpc = gpt.matrix_operator(mat=_Mpc, otype=matrix.otype, grid=self.F_grid)
-        self.L = gpt.matrix_operator(mat=_L, otype=matrix.otype, grid=self.F_grid)
+        self.L = gpt.matrix_operator(
+            mat=_ident, inv_mat=_ident, otype=matrix.otype, grid=self.F_grid
+        )
         self.R = gpt.matrix_operator(mat=_R, otype=matrix.otype, grid=self.F_grid)
         self.S = gpt.matrix_operator(mat=_S, otype=matrix.otype, grid=self.F_grid)
 

@@ -13,6 +13,7 @@ import sys
 # gauge field
 rng = g.random("test")
 U = g.qcd.gauge.random(g.grid([16, 16, 16, 32], g.single), rng)
+g.message("Plaquette:", g.qcd.gauge.plaquette(U))
 
 # wilson
 p = {
@@ -38,7 +39,9 @@ g.default.set_verbose("mr", False)
 
 # sap inverter
 inv1 = inv.defect_correcting(
-    pc.sap_cycle(inv_pc(pc.eo2(), mr), bs=[4, 4, 4, 4]), eps=1e-6, maxiter=20,
+    pc.sap_cycle(inv_pc(pc.eo2(), mr), bs=[4, 4, 4, 4]),
+    eps=1e-6,
+    maxiter=20,
 )
 
 # point source
@@ -50,6 +53,7 @@ inv1_w = inv1(w)
 t0 = g.time()
 dst = g.eval(inv1_w * src)
 t1 = g.time()
+dc_iter = len(inv1.history)
 
 # use different solver and compare
 fgcr = inv.fgcr({"eps": 1e-7, "maxiter": 1024, "restartlen": 8})
@@ -66,3 +70,18 @@ g.message(
     f"Difference of results: {rr}, Time for SAP-based-solve: {t1-t0} s, Time for FGCR: {t3-t2} s"
 )
 assert rr < 1e-11
+
+# run the sap inverter with a guess
+fgcr = inv.fgcr({"eps": 1e-3, "maxiter": 1024, "restartlen": 8})
+dst3 = g(inv_pc(pc.eo2(), fgcr)(w)(src))
+t4 = g.time()
+inv1_w(dst3, src)
+t5 = g.time()
+dc_iter_with_guess = len(inv1.history)
+rr = g.norm2(dst3 - dst)
+g.message(
+    f"Difference of results: {rr}, Time for SAP-based-solve after guess: {t5-t4} s"
+)
+assert rr < 1e-11
+g.message(f"Iteration count with guess reduced from {dc_iter} to {dc_iter_with_guess}")
+assert dc_iter_with_guess < dc_iter

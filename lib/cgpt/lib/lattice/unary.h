@@ -16,32 +16,33 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include <Python.h>
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION 
-#define PY_ARRAY_UNIQUE_SYMBOL cgpt_ARRAY_API
-#ifndef _THIS_IS_INIT_
-#define NO_IMPORT_ARRAY
-#endif
-#include <numpy/arrayobject.h>
-#include <vector>
-#include <map>
-#include <string>
-#include <iostream>
-
-#include "pvector.h"
-#include "time.h"
-#include "exception.h"
-#include "foundation.h"
-#include "cached.h"
-#include "convert.h"
-#include "checksums.h"
-#include "parameters.h"
-#include "numpy.h"
-#include "distribute.h"
-#include "transform.h"
-#include "grid.h"
-#include "lattice.h"
-#include "precision.h"
-#include "util.h"
-#include "expression.h"
-
+template<typename T>
+void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
+  ASSERT(PyDict_Check(params));
+  auto op = get_str(params,"operator");
+  if (op == "imag") {
+    dst = imag(src);
+  } else if (op == "real") {
+    dst = real(src);
+  } else if (op == "abs") {
+    dst = cgpt_abs(src);
+  } else if (op == "sqrt") {
+    dst = cgpt_sqrt(src);
+  } else if (op == "pow") {
+    dst = cgpt_pow(src, get_float(params,"exponent"));
+  } else if (op == "sin") {
+    dst = cgpt_sin(src);
+  } else if (op == "cos") {
+    dst = cgpt_cos(src);
+  } else if (op == "asin") {
+    dst = cgpt_asin(src);
+  } else if (op == "acos") {
+    dst = cgpt_acos(src);
+  } else if (op == "exp") {
+    dst = exp(src);
+  } else if (op == "log") {
+    dst = cgpt_log(src);
+  } else {
+    ERR("Unknown operator %s", op.c_str());
+  }
+}

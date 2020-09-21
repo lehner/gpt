@@ -173,3 +173,9 @@ def slice(x, dim):
     x = gpt.eval(x)
     r = sum([numpy.array(cgpt.lattice_slice(o, dim)) for o in x.v_obj])
     return [gpt.util.value_to_tensor(v, x.otype) for v in r]
+
+
+def identity(src):
+    eye = gpt.lattice(src)
+    eye[:] = src.otype.identity()
+    return eye

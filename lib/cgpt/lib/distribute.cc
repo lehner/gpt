@@ -403,9 +403,16 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
 	});
       
       MPI_Request r;
-      ASSERT(w.size() < INT_MAX);
-      ASSERT(MPI_SUCCESS == MPI_Isend(&w[0],(int)w.size(),MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
-      req.push_back(r);
+      size_t t_left = w.size();
+      size_t t_max = INT_MAX;
+      char* t_ptr = &w[0];
+      while (t_left) {
+	size_t t_size = std::min(t_left,t_max);
+	ASSERT(MPI_SUCCESS == MPI_Isend(t_ptr,t_size,MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
+	req.push_back(r);
+	t_ptr += t_size;
+	t_left -= t_size;
+      }
     }
   }
 
@@ -419,9 +426,16 @@ void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std:
     w.resize(dest_n * _word_total);
     
     MPI_Request r;
-    ASSERT(w.size() < INT_MAX);
-    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],(int)w.size(),MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
-    req.push_back(r);
+    size_t t_left = w.size();
+    size_t t_max = INT_MAX;
+    char* t_ptr = &w[0];
+    while (t_left) {
+      size_t t_size = std::min(t_left,t_max);
+      ASSERT(MPI_SUCCESS == MPI_Irecv(t_ptr,(int)t_size,MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
+      req.push_back(r);
+      t_ptr += t_size;
+      t_left -= t_size;
+    }
   }
   {
     std::vector<MPI_Status> stat(req.size());

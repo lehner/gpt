@@ -104,7 +104,7 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
   auto sizes_v = lut.Sizes();
 
   VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorRead);
-  VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorWrite);
+  VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorWriteDiscard);
 
   for (long basis_i0=0;basis_i0<basis_n;basis_i0+=basis_n_block) {
     long basis_i1 = std::min(basis_i0 + basis_n_block, basis_n);
@@ -179,8 +179,8 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
 
   auto rlut_v = lut.ReverseView();
 
-  VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorRead);
-  VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorWrite);
+  VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorWriteDiscard);
+  VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorRead);
 
   for (long basis_i0=0;basis_i0<basis_n;basis_i0+=basis_n_block) {
     long basis_i1 = std::min(basis_i0 + basis_n_block, basis_n);

@@ -16,27 +16,33 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
+import gpt
+from gpt.core.operator.matrix_operator import matrix_operator
+import cgpt
 
 
-class noop:
-    def __init__(self):
-        pass
+def _simple_matrix(operator, extra_params={}):
+    def _mat(dst, src):
+        for i in dst.otype.v_idx:
+            cgpt.unary(
+                dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params}
+            )
 
-    def __call__(self, mat):
+    return matrix_operator(_mat)
 
-        otype, grid, cb = None, None, None
-        if type(mat) == g.matrix_operator:
-            otype, grid, cb = mat.otype, mat.grid, mat.cb
 
-        def inv(psi, src):
-            pass
+imag = _simple_matrix("imag")
+real = _simple_matrix("real")
+abs = _simple_matrix("abs")
+sqrt = _simple_matrix("sqrt")
+exp = _simple_matrix("exp")
+log = _simple_matrix("log")
+sin = _simple_matrix("sin")
+asin = _simple_matrix("asin")
+cos = _simple_matrix("cos")
+acos = _simple_matrix("acos")
+inv = _simple_matrix("pow", {"exponent": -1.0})
 
-        return g.matrix_operator(
-            mat=inv,
-            inv_mat=mat,
-            otype=otype,
-            accept_guess=(True, False),
-            grid=grid,
-            cb=cb,
-        )
+
+def pow(exponent):
+    return _simple_matrix("pow", {"exponent": exponent})

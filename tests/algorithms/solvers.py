@@ -34,6 +34,7 @@ w = g.qcd.fermion.wilson_clover(
 
 # create point source
 src = g.vspincolor(grid)
+src[:] = 0
 src[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
 
 # build solvers
@@ -47,6 +48,20 @@ eo1_even = g.qcd.fermion.preconditioner.eo1_ne(parity=g.even)
 # default
 eo2 = eo2_odd
 eo2_sp = eo2_odd
+
+# test full-site guess for preconditioner
+src_F = g.vspincolor(w.F_grid)
+src_F[:] = 0
+src_F[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
+eo2_inv = inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000}))(w)
+dst_F = g(eo2_inv * src_F)
+for pc in [eo1_odd, eo1_even, eo2_odd, eo2_even]:
+    cg = inv.cg({"eps": 1e-7, "maxiter": 1000})
+    gen_inv = inv_pc(pc, cg)(w)
+    dst_gen = g.copy(dst_F)
+    gen_inv(dst_gen, src_F)
+    # make sure using the guess results in immediate convergence
+    assert len(cg.history) == 1
 
 # run with higher stopping condition since it will be the reference run
 slv_cg = w.propagator(inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000})))

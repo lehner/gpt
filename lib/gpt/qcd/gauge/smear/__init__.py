@@ -16,27 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-
-
-class noop:
-    def __init__(self):
-        pass
-
-    def __call__(self, mat):
-
-        otype, grid, cb = None, None, None
-        if type(mat) == g.matrix_operator:
-            otype, grid, cb = mat.otype, mat.grid, mat.cb
-
-        def inv(psi, src):
-            pass
-
-        return g.matrix_operator(
-            mat=inv,
-            inv_mat=mat,
-            otype=otype,
-            accept_guess=(True, False),
-            grid=grid,
-            cb=cb,
-        )
+from gpt.qcd.gauge.smear.staple_sum import staple_sum
+from gpt.qcd.gauge.smear.stout import stout

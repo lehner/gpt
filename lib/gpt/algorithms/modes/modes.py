@@ -57,5 +57,5 @@ class modes:
                 g.message("Approximation by %d modes took %g s" % (len(left), t1 - t0))
 
         return g.matrix_operator(
-            mat=approx, otype=otype, zero=(False, False), grid=grid, cb=cb
+            mat=approx, otype=otype, accept_guess=(False, False), grid=grid, cb=cb
         )

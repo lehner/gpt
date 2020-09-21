@@ -19,8 +19,6 @@
 #
 import gpt, cgpt, numpy
 
-_coordinates_cache = {}
-
 
 def coordinates(o, order="lexicographic"):
     if type(o) == gpt.grid and o.cb.n == 1:
@@ -34,16 +32,9 @@ def coordinates(o, order="lexicographic"):
             o[0].processor_coor[i] * o[0].ldimensions[i] * cbf[i] for i in range(dim)
         ]
         bottom = [top[i] + o[0].ldimensions[i] * cbf[i] for i in range(dim)]
-
-        # cache
-        tag = f"{top}-{bottom}-{checker_dim_mask}-{cb}-{order}"
-        if tag in _coordinates_cache:
-            return _coordinates_cache[tag]
-        val = cgpt.coordinates_from_cartesian_view(
+        return cgpt.coordinates_from_cartesian_view(
             top, bottom, checker_dim_mask, cb, order
         )
-        _coordinates_cache[tag] = val
-        return val
     elif type(o) == gpt.lattice:
         return coordinates((o.grid, o.checkerboard()), order=order)
     elif type(o) == gpt.cartesian_view:

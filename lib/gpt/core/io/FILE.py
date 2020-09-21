@@ -18,9 +18,30 @@
 #
 import cgpt, gpt
 
+# , os, shutil, sys
+
+# def cache_file(src,md):
+#     if md != "rb":
+#         return src
+#     root="/scratch"
+#     dst = "%s/%s" % (root,src.replace("/","_"))
+#     src_size = os.stat(src).st_size
+#     print(f"Caching {src} of size {src_size} to {dst}"); sys.stdout.flush()
+#     if os.path.exists(dst):
+#         if os.stat(dst).st_size == src_size:
+#             print("Use cached"); sys.stdout.flush()
+#             return dst
+#         else:
+#             os.unlink(dst)
+#     print("Start copy"); sys.stdout.flush()
+#     shutil.copyfile(src,dst)
+#     print("End copy"); sys.stdout.flush()
+#     return dst
+
 
 class FILE:
     def __init__(self, fn, md):
+        # fn = cache_file(fn,md)
         self.f = cgpt.fopen(fn, md)
         if self.f == 0:
             self.f = None
