@@ -174,7 +174,9 @@ def load(filename, params):
         neigen_max = neigen
         nsingleCap_max = nsingleCap
 
-    alternative_scheme = "alternative_scheme" in params and params["alternative_scheme"] == True
+    alternative_scheme = (
+        "alternative_scheme" in params and params["alternative_scheme"] is True
+    )
 
     # allocate all lattices
     basis = [gpt.vspincolor(fgrid) for i in range(nbasis_max)]
