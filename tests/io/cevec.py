@@ -15,13 +15,13 @@ else:
     work_dir = "."
 
 # grids
-fgrid = g.grid([12, 8, 8, 8, 16], g.single, g.redblack)
+fgrid = g.grid([4, 8, 8, 8, 16], g.single, g.redblack)
 cgrid = g.grid([1, 4, 4, 4, 4], g.single)
 
 # vectors
-nbasis = 20
+nbasis = 40
 nsingle = 10
-nevec = 30
+nevec = 48
 rng = g.random("test")
 basis = [g.vspincolor(fgrid) for i in range(nbasis)]
 cevec = [g.vcomplex(cgrid, nbasis) for i in range(nevec)]
@@ -64,7 +64,7 @@ for i in range(len(feval)):
     assert (feval[i] - feval2[i]) ** 2.0 < 1e-25
 
 # and load truncated and verify
-for ntrunc in [25]:
+for ntrunc in [44]:
     basis2, cevec2, feval2 = g.load(
         f"{work_dir}/cevec", {"grids": fgrid, "nmax": ntrunc}
     )
