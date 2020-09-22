@@ -19,9 +19,9 @@ fgrid = g.grid([12, 8, 8, 8, 16], g.single, g.redblack)
 cgrid = g.grid([1, 4, 4, 4, 4], g.single)
 
 # vectors
-nbasis = 24
+nbasis = 30
 nsingle = 10
-nevec = 30
+nevec = 43
 rng = g.random("test")
 basis = [g.vspincolor(fgrid) for i in range(nbasis)]
 cevec = [g.vcomplex(cgrid, nbasis) for i in range(nevec)]
