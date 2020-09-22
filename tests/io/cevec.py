@@ -64,7 +64,7 @@ for i in range(len(feval)):
     assert (feval[i] - feval2[i]) ** 2.0 < 1e-25
 
 # and load truncated and verify
-for ntrunc in [30]:
+for ntrunc in [44]:
     basis2, cevec2, feval2 = g.load(
         f"{work_dir}/cevec", {"grids": fgrid, "nmax": ntrunc}
     )
