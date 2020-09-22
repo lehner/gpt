@@ -34,14 +34,14 @@ g.mem_report()
 # sloppy solver
 l_sloppy_inverter = params["light_sloppy_inverter"](U, l_sloppy_eigensystem)
 
-# exact solver
-l_exact_inverter = params["light_exact_inverter"](U, l_sloppy_inverter)
+l_low_inverter = params["light_low_inverter"](U, l_sloppy_eigensystem)
 
 # propagators
+prop_l_low = l_sloppy.propagator(l_low_inverter)
 prop_l_sloppy = l_sloppy.propagator(l_sloppy_inverter)
-prop_l_exact = l_exact.propagator(l_exact_inverter)
+prop_l_exact = l_exact.propagator(params["light_exact_inverter"](U, l_sloppy_inverter))
+prop_l_corrected_low = l_exact.propagator(params["light_corrected_low_inverter"](U, l_low_inverter))
 del l_sloppy_inverter
-del l_exact_inverter
 
 # random number generator
 rng = params["rng"]
@@ -95,17 +95,51 @@ def contract(pos, prop, tag, may_save_prop=True):
 
 
 # calculate correlators for exact positions
+vol3d = l_exact.U_grid.fdimensions[0] * l_exact.U_grid.fdimensions[1] * l_exact.U_grid.fdimensions[2]
+#vol3d = 8
+#spacing = [48, 48, 48, 192]
+
+source_time_slices = 2
+full_time = l_exact.U_grid.fdimensions[3]
+assert full_time % source_time_slices == 0
+sparse_time = full_time // source_time_slices
+
+
 for pos in source_positions_exact:
 
-    # exact_sloppy
-    src = g.mspincolor(l_sloppy.U_grid)
-    g.create.point(src, pos)
-    contract(pos, g.eval(prop_l_sloppy * src), "sloppy")
+    srcD = g.mspincolor(l_exact.U_grid)
+    srcD[:] = 0
 
-    # exact
-    src = g.mspincolor(l_exact.U_grid)
-    g.create.point(src, pos)
-    contract(pos, g.eval(prop_l_exact * src), "exact")
+    # create time-sparsened source
+    sign_of_slice = [ rng.zn(n=2) for i in range(source_time_slices) ]
+    pos_of_slice = [ [pos[i] if i<3 else (pos[i] + j * sparse_time) % full_time for i in range(4) ] for j in range(source_time_slices) ]
+    g.message(f"Signature: {pos} -> {pos_of_slice} with signs {sign_of_slice}")
+    for i in range(source_time_slices):
+        #srcD += g.create.point(g.lattice(srcD), pos_of_slice[i]) * sign_of_slice[i]
+        srcD += g.create.wall.z2(g.lattice(srcD), pos_of_slice[i][3], rng) * (sign_of_slice[i] / vol3d**0.5)
+    
+
+    #g.create.wall.z2(srcD, pos[3], rng)
+    #g.create.sparse_grid.zn(srcD, pos, spacing, rng, 2)
+    #srcD /= vol3d**0.5
+    srcF = g.convert(srcD, g.single)
+
+    # exact_sloppy
+    prop_exact = g.eval(prop_l_exact * srcD)
+    prop_sloppy = g.eval(prop_l_sloppy * srcF)
+    prop_low = g.eval(prop_l_low * srcF)
+    #prop_corrected_low = g.eval(prop_l_corrected_low * srcD)
+    for i in range(source_time_slices):
+        contract(pos_of_slice[i], g.eval( sign_of_slice[i] * prop_exact ), "exact")
+        contract(pos_of_slice[i], g.eval( sign_of_slice[i] * prop_sloppy ), "sloppy")
+        contract(pos_of_slice[i], g.eval( sign_of_slice[i] * prop_low ), "low")
+        #contract(pos_of_slice[i], g.eval( sign_of_slice[i] * prop_corrected_low ), "clow")
+
+
+sys.exit(0)
+
+# fine_n = promote * coarse_n
+# sum_x fine_n^T fine_m = sum_x coarse_n^T promote^T_x promote_x coarse_m
 
 # calculate correlators for sloppy positions
 for pos in source_positions_sloppy:
