@@ -19,7 +19,7 @@ fgrid = g.grid([12, 8, 8, 8, 16], g.single, g.redblack)
 cgrid = g.grid([1, 4, 4, 4, 4], g.single)
 
 # vectors
-nbasis = 23
+nbasis = 24
 nsingle = 10
 nevec = 30
 rng = g.random("test")
