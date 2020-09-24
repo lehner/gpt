@@ -52,9 +52,7 @@ def reunitize(U):
             c = np.einsum("ij, ij -> i", np.conj(tmp[:, j, :]), tmp[:, i, :])
             tmp[:, i, :] -= c[:, np.newaxis] * tmp[:, j, :]
         tmp[:, i, :] /= np.linalg.norm(tmp[:, i, :], axis=1, keepdims=True)
-#    U = gpt.eval(tmp)
     U[:] = tmp[:]
-#    U = gpt.lattice(tmp)
 
     # step 2: fix the determinant (NOTE: Grids 'ProjectOnGroup' skips this step)
     D = gpt.matrix.det(U)

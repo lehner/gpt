@@ -78,3 +78,12 @@ def log(i, convergence_threshold=0.5):
         gpt.convert(r, o)
         o = r
     return o
+
+
+def det(i):
+     """ site-local matrix determinant for color-matrix """
+     tmp = i[:]
+     assert len(i.otype.shape) == 2
+     o = gpt.complex(i.grid)
+     o[:] = numpy.linalg.det(tmp)
+     return o
