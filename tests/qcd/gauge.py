@@ -50,6 +50,8 @@ for i in range(3):
         eps2 = g.norm2(U_stout[mu] * g.adj(U_stout[mu]) - I) / g.norm2(I)
         g.message(f"Unitarity check of stout-smeared links: mu = {mu}, eps2 = {eps2}")
 
+    print("type U_stout: ", type(U_stout))
+    print("len U_stout: ", len(U_stout))
     P_stout.append(g.qcd.gauge.plaquette(U_stout))
 
 g.message(f"Stout smeared plaquettes {P_stout}")
@@ -73,3 +75,30 @@ P_comp = [0.7986848674527128, 0.9132213221481771, 0.9739960794712376]
 g.message(f"Plaquette fingerprint {P} and reference {P_comp}")
 for i in range(3):
     assert abs(P[i] - P_comp[i]) < 1e-12
+
+
+# Test APE smearing
+U_ape = U
+P_ape = []
+P_ape_transformed = []
+N_iteration = 3
+params_ape = {"alpha":2.5, "Blk_Max":5, "Blk_Accuracy":1e-20}
+for i in range(N_iteration):
+    U_ape = g.qcd.gauge.smear.ape(U_ape, params_ape)
+
+    for mu in range(len(U_ape)):
+        I = g.identity(U_ape[mu])
+        eps2 = g.norm2(U_ape[mu] * g.adj(U_ape[mu]) - I) / g.norm2(I)
+        g.message(f"Unitarity check of ape-smeared links: mu = {mu}, eps2 = {eps2}")
+
+    print("type U_ape: ", type(U_ape))
+    print("len U_ape: ", len(U_ape))
+    P_ape.append(g.qcd.gauge.plaquette(U_ape))
+    U_ape_transformed = g.qcd.gauge.transformed(U_ape, V)
+    P_ape_transformed.append(g.qcd.gauge.plaquette(U_ape_transformed))
+
+g.message(f"Ape smeared plaquettes {P_ape}")
+g.message(f"Ape smeared plaquettes after gauge transformation: {P_ape_transformed}")
+assert sorted(P_ape) == P_ape
+
+
