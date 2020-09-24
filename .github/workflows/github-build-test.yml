@@ -37,7 +37,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
-        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev libomp-dev
+        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
     - name: Set compiler alternatives to clang-9
       if: matrix.compiler == 'clang'
@@ -48,7 +48,7 @@ jobs:
         sudo update-alternatives --set cc /usr/bin/clang-9
         sudo update-alternatives --set c++ /usr/bin/clang++-9
 
-        echo '::set-env name=LDFLAGS::-lomp'
+        #echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set compiler to cc and c++
       if: matrix.mpi == 'none'
