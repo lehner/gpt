@@ -26,9 +26,8 @@ from gpt.params import params_convention
 def project_to_su3(u, w, su2_index):
     v = g.eval(u * w)
     grid = u.grid
-    Nc = 3
+    Nc = u.otype.Nc
     Vol = u[:].shape[0]
-    fuzz = 1e-10
     r = np.empty((Vol, 4), dtype=float)
     su2_extract(r, v, su2_index)
 
@@ -37,9 +36,7 @@ def project_to_su3(u, w, su2_index):
     r_l = np.sqrt(r[:, 0]**2 + r[:, 1]**2 + r[:, 2]**2 + r[:, 3]**2)
 
     #  normalize
-    #  Fill   (r[0]/r_l, -r[1]/r_l, -r[2]/r_l, -r[3]/r_l) for r_l > fuzz
-    #  and    (1,0,0,0)  for sites with r_l < fuzz
-    delta = np.array([1., -1., -1., -1.], dtype=float)
+    #  Fill   (r[0]/r_l, -r[1]/r_l, -r[2]/r_l, -r[3]/r_l)
     a_0 = np.array([1., 0., 0., 0.], dtype=float)
     a = np.empty((Vol, 4), dtype=float)
     a[:, 0] = r[:, 0] / r_l
@@ -59,7 +56,7 @@ def project_to_su3(u, w, su2_index):
 
 def su2_extract(r, source, su2_index):
     source = g.eval(source)
-    Nc = 3
+    Nc = source.otype.Nc
     found, del_i, index = 0, 0, -1
     while(del_i < (Nc-1) and found ==0):
         del_i += 1
@@ -87,7 +84,7 @@ def suN_fill(dest, r, su2_index):
 
 #     /* Determine the SU(N) indices corresponding to the SU(2) indices */
 #     /* of the SU(2) subgroup $3 */
-    Nc = 3
+    Nc = dest.otype.Nc
     found, del_i, index = 0, 0, -1
     while (del_i < (Nc-1) and found == 0):
         del_i +=1

@@ -47,7 +47,7 @@ def ape(U, params):
 @params_convention(alpha=2.5)
 def ape_general(U, params):
     nd = len(U)
-    Nc = 3
+    Nc = U[0].otype.Nc
     alpha = params["alpha"]
     orthogonal_dimension = params["orthogonal_dimension"]
     grid = U[0].grid
@@ -75,7 +75,7 @@ def ape_general(U, params):
                  g.qcd.reunitize(U_mu_smear)
                  # calculate new trace
                  # new_trace = np.sum(g.slice(g.trace(U_mu_smear * U_unproj) / (vol * Nc), 3)).real
-                 epsilon = np.abs((new_trace - old_trace) / old_trace)
+                 # epsilon = np.abs((new_trace - old_trace) / old_trace)
                  # old_trace = new_trace
                  g.qcd.gauge.assert_unitary(U_mu_smear)
         else: U_mu_smear = U[mu]
