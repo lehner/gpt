@@ -77,10 +77,7 @@ except g.LoadError:
 
 # build solver
 inv = g.algorithms.inverter
-dcg = inv.sequence(
-    inv.deflate(evec, ev),
-    inv.cg({"eps": 1e-6, "maxiter": 1000})
-)
+dcg = inv.sequence(inv.deflate(evec, ev), inv.cg({"eps": 1e-6, "maxiter": 1000}))
 slv = w.propagator(inv.preconditioned(eo, dcg))
 
 # propagator

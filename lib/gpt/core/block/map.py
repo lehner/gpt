@@ -42,7 +42,11 @@ class map:
         self.coarse_grid = coarse_grid
         self.basis = basis
         self.obj = cgpt.create_block_map(
-            coarse_grid.obj, basis, basis_size, basis_n_block, mask.v_obj[0],
+            coarse_grid.obj,
+            basis,
+            basis_size,
+            basis_n_block,
+            mask.v_obj[0],
         )
 
         def _project(coarse, fine):
@@ -92,7 +96,7 @@ class map:
             if verbose:
                 gpt.message(
                     "coarse_operator acting on %d vector(s) in %g s (promote %g s, fine_operator %g s, project %g s)"
-                    % (len(src_coarse), t3-t0, t1 - t0, t2 - t1, t3 - t2)
+                    % (len(src_coarse), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
                 )
 
         otype = gpt.ot_vsinglet(len(self.basis))

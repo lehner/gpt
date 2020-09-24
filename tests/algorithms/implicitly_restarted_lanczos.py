@@ -68,11 +68,8 @@ for i in range(len(evals)):
     assert eps2 < 1e-11
 
 # deflated solver
-cg = inv.cg({"eps": 1e-6, "maxiter": 1000}) 
-defl = inv.sequence(
-    inv.deflate(evec, evals),
-    cg
-)
+cg = inv.cg({"eps": 1e-6, "maxiter": 1000})
+defl = inv.sequence(inv.deflate(evec, evals), cg)
 sol_cg = g.eval(cg(w.Mpc) * start)
 eps2 = g.norm2(w.Mpc * sol_cg - start) / g.norm2(start)
 niter_cg = len(cg.history)
@@ -121,10 +118,7 @@ for i, cv in enumerate(cevec):
 g.default.pop_verbose()
 
 # test coarse-grid deflation (re-use fine-grid evals instead of smoothing)
-cdefl = inv.sequence(
-    inv.coarse_deflate(cevec, basis, smoothed_evals),
-    cg
-)
+cdefl = inv.sequence(inv.coarse_deflate(cevec, basis, smoothed_evals), cg)
 
 sol_cdefl = g.eval(cdefl(w.Mpc) * start)
 eps2 = g.norm2(w.Mpc * sol_cdefl - start) / g.norm2(start)

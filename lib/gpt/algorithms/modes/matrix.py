@@ -61,5 +61,10 @@ def matrix(left, right, evals, f, params):
             )
 
     return g.matrix_operator(
-        mat=approx, otype=otype, accept_guess=(False, False), grid=grid, cb=cb, accept_list=True
+        mat=approx,
+        otype=otype,
+        accept_guess=(False, False),
+        grid=grid,
+        cb=cb,
+        accept_list=True,
     )

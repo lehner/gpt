@@ -122,7 +122,11 @@ class eo1_base:
             cb=(None, self.parity),
         )
 
-        self.S = gpt.matrix_operator(mat=_S, otype=op.otype, grid=self.F_grid,)
+        self.S = gpt.matrix_operator(
+            mat=_S,
+            otype=op.otype,
+            grid=self.F_grid,
+        )
 
         self.N = gpt.matrix_operator(
             mat=_N, adj_mat=_NDag, otype=op.otype, grid=self.F_grid_eo, cb=self.parity
