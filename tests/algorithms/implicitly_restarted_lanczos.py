@@ -60,16 +60,19 @@ g.mem_report()
 evals = g.algorithms.eigen.evals(w.Mpc, evec, check_eps2=1e-11, real=True)
 
 # test low-mode approximation of inverse
-noop = g.algorithms.inverter.noop()
-lma = g.algorithms.eigen.deflate(noop, evec, evals)(w.Mpc)
+inv = g.algorithms.inverter
+lma = inv.deflate(evec, evals)(w.Mpc)
 for i in range(len(evals)):
     eps2 = g.norm2(evals[i] * lma * evec[i] - evec[i]) / g.norm2(evec[i]) * evals[i]
     g.message(f"Test low-mode approximation for evec[{i}]: {eps2}")
     assert eps2 < 1e-11
 
 # deflated solver
-cg = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 1000})
-defl = g.algorithms.eigen.deflate(cg, evec, evals)
+cg = inv.cg({"eps": 1e-6, "maxiter": 1000}) 
+defl = inv.sequence(
+    inv.deflate(evec, evals),
+    cg
+)
 sol_cg = g.eval(cg(w.Mpc) * start)
 eps2 = g.norm2(w.Mpc * sol_cg - start) / g.norm2(start)
 niter_cg = len(cg.history)
@@ -95,7 +98,7 @@ for i in range(2):
     b.orthonormalize()
 
 # define coarse-grid operator
-cop = b.operator(c(w.Mpc))
+cop = b.coarse_operator(c(w.Mpc))
 eps2 = g.norm2(cop * cstart - b.project * c(w.Mpc) * b.promote * cstart) / g.norm2(
     cstart
 )
@@ -106,7 +109,7 @@ assert eps2 < 1e-13
 cevec, cev = irl(cop, cstart)
 
 # smoothened evals
-smoother = g.algorithms.inverter.cg({"eps": 1e-6, "maxiter": 10})(w.Mpc)
+smoother = inv.cg({"eps": 1e-6, "maxiter": 10})(w.Mpc)
 smoothed_evals = []
 g.default.push_verbose("cg", False)
 tmpf = g.lattice(basis[0])
@@ -118,13 +121,17 @@ for i, cv in enumerate(cevec):
 g.default.pop_verbose()
 
 # test coarse-grid deflation (re-use fine-grid evals instead of smoothing)
-cdefl = g.algorithms.eigen.coarse_deflate(cg, cevec, basis, smoothed_evals)
+cdefl = inv.sequence(
+    inv.coarse_deflate(cevec, basis, smoothed_evals),
+    cg
+)
 
 sol_cdefl = g.eval(cdefl(w.Mpc) * start)
 eps2 = g.norm2(w.Mpc * sol_cdefl - start) / g.norm2(start)
 niter_cdefl = len(cg.history)
 g.message("Test resid/iter coarse-grid deflated cg: ", eps2, niter_cdefl)
 g.message("Compare fine-grid deflated cg iter: ", niter_defl)
+g.message("Compare cg iter: ", niter_cg)
 assert eps2 < 1e-8
 
 assert niter_cdefl < niter_cg

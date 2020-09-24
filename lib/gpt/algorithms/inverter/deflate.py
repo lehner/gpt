@@ -17,26 +17,13 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.params import params_convention
 
 
-class noop:
-    def __init__(self):
-        pass
+class deflate:
+    @params_convention(block=16)
+    def __init__(self, evec, ev, params):
+        self.mat = g.algorithms.modes.matrix(evec, evec, ev, lambda x: 1.0 / x, params)
 
-    def __call__(self, mat):
-
-        otype, grid, cb = None, None, None
-        if type(mat) == g.matrix_operator:
-            otype, grid, cb = mat.otype, mat.grid, mat.cb
-
-        def inv(psi, src):
-            pass
-
-        return g.matrix_operator(
-            mat=inv,
-            inv_mat=mat,
-            otype=otype,
-            accept_guess=(True, False),
-            grid=grid,
-            cb=cb,
-        )
+    def __call__(self, matrix):
+        return self.mat
