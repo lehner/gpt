@@ -48,8 +48,6 @@ jobs:
         sudo update-alternatives --set cc /usr/bin/clang-9
         sudo update-alternatives --set c++ /usr/bin/clang++-9
 
-        #echo '::set-env name=LDFLAGS::-lomp'
-
     - name: Set compiler to cc and c++
       if: matrix.mpi == 'none'
       run: |
@@ -188,7 +186,6 @@ jobs:
 
         sudo update-alternatives --set cc /usr/bin/clang-9
         sudo update-alternatives --set c++ /usr/bin/clang++-9
-        echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -371,7 +368,6 @@ jobs:
 
         sudo update-alternatives --set cc /usr/bin/clang-9
         sudo update-alternatives --set c++ /usr/bin/clang++-9
-        echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
