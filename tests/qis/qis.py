@@ -23,6 +23,7 @@ def set_value_of_qubit(state, i, val):
         s.X(i)
     return s
 
+
 # test different backends
 for q in [g.qis.backends.static, g.qis.backends.dynamic]:
     g.message(f"Testing {q.__name__}")
@@ -102,7 +103,7 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
             if target != control:
                 psi = CNOT(control, target) * state_control_0
                 q.check_same(psi, state_control_0)
-                
+
                 psi = (CNOT(control, target) | X(target)) * state_control_1
                 q.check_same(psi, state_control_1)
 
@@ -127,4 +128,3 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
         measured = M() * bell
         for j in range(1, N):
             assert measured.classical_bit[j] == measured.classical_bit[0]
-

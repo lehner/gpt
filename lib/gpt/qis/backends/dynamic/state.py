@@ -20,7 +20,6 @@ import gpt as g
 import numpy as np
 
 
-
 # TODO
 # - once happy with design, move time-critical aspects (creation of maps)
 #   to cgpt
@@ -66,6 +65,7 @@ class map_canonical:
         return (
             "|" + ("".join([str(x) for x in reversed(self.index_to_bits(idx))])) + ">"
         )
+
 
 # IDEAS
 # - state should have baseclass serializable, maybe lattice as well
@@ -180,9 +180,6 @@ class state:
             r = 0
         self.classical_bit[i] = r
         return r
-
-
-
 
 
 def check_same(state_a, state_b):

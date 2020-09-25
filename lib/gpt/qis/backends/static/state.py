@@ -135,9 +135,6 @@ class state:
         return r
 
 
-
-
-
 def check_same(state_a, state_b):
     assert (
         g.norm2(state_a.lattice - state_b.lattice) ** 0.5
