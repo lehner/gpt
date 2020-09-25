@@ -16,5 +16,32 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.modes.matrix import matrix
-from gpt.algorithms.modes.a2a import a2a
+import gpt as g
+import sys
+
+
+class sequence:
+    def __init__(self, *inverters):
+        self.inverters = inverters
+
+    def __call__(self, outer_mat):
+
+        inverters_mat = [i(outer_mat) for i in self.inverters]
+
+        def inv(dst, src):
+            for i in inverters_mat:
+                i(dst, src)
+
+        otype, grid, cb = None, None, None
+        if type(outer_mat) == g.matrix_operator:
+            otype, grid, cb = outer_mat.otype, outer_mat.grid, outer_mat.cb
+
+        return g.matrix_operator(
+            mat=inv,
+            inv_mat=outer_mat,
+            otype=otype,
+            accept_guess=(True, False),
+            grid=grid,
+            cb=cb,
+            accept_list=True,
+        )

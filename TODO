@@ -1,4 +1,6 @@
-- preconditioner argument of fgmres etc. needs auto-initialization (called with matrix etc., then do not need to_separate_instances)
+- QIS:
+  - Symbolic circuit optimization
+  - Combine all X/CNOT into single sweep, similar for Rphis
 
 - matrix_operator <> vector_space
 

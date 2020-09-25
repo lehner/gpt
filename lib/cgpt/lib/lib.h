@@ -24,13 +24,14 @@
 #endif
 #include <numpy/arrayobject.h>
 #include <vector>
+#include <map>
 #include <string>
 #include <iostream>
 
 #include "pvector.h"
-#include "foundation.h"
 #include "time.h"
 #include "exception.h"
+#include "foundation.h"
 #include "cached.h"
 #include "convert.h"
 #include "checksums.h"

@@ -24,7 +24,7 @@ import numpy as np
 # TODO
 # - once happy with design, move time-critical aspects (creation of maps)
 #   to cgpt
-class canonical:
+class map_canonical:
     def __init__(self, n, precision):
         self.n = n
         self.fdimensions = [2 ** n]

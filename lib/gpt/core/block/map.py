@@ -79,29 +79,57 @@ class map:
     def orthonormalize(self):
         cgpt.block_orthonormalize(self.obj)
 
-    def operator(self, op):
-        src_fine = gpt.lattice(self.basis[0])
-        dst_fine = gpt.lattice(self.basis[0])
+    def coarse_operator(self, fine_operator):
         verbose = gpt.default.is_verbose("block_operator")
 
         def mat(dst_coarse, src_coarse):
+            src_fine = [gpt.lattice(self.basis[0]) for x in src_coarse]
+            dst_fine = [gpt.lattice(self.basis[0]) for x in src_coarse]
+
             t0 = gpt.time()
             self.promote(src_fine, src_coarse)
             t1 = gpt.time()
-            op(dst_fine, src_fine)
+            fine_operator(dst_fine, src_fine)
             t2 = gpt.time()
             self.project(dst_coarse, dst_fine)
             t3 = gpt.time()
             if verbose:
                 gpt.message(
-                    "Timing: %g s (promote), %g s (matrix), %g s (project)"
-                    % (t1 - t0, t2 - t1, t3 - t2)
+                    "coarse_operator acting on %d vector(s) in %g s (promote %g s, fine_operator %g s, project %g s)"
+                    % (len(src_coarse), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
                 )
 
         otype = gpt.ot_vsinglet(len(self.basis))
+        return gpt.matrix_operator(
+            mat=mat, otype=otype, grid=self.coarse_grid, accept_list=True
+        )
+
+    def fine_operator(self, coarse_operator):
+        verbose = gpt.default.is_verbose("block_operator")
+        coarse_otype = gpt.ot_vsinglet(len(self.basis))
+        otype = self.basis[0].otype
+        grid = self.basis[0].grid
+        cb = self.basis[0].checkerboard()
+
+        def mat(dst, src):
+            csrc = [gpt.lattice(self.coarse_grid, coarse_otype) for x in src]
+            cdst = [gpt.lattice(self.coarse_grid, coarse_otype) for x in src]
+
+            t0 = gpt.time()
+            self.project(csrc, src)
+            t1 = gpt.time()
+            coarse_operator(cdst, csrc)
+            t2 = gpt.time()
+            self.promote(dst, cdst)
+            t3 = gpt.time()
+            if verbose:
+                gpt.message(
+                    "fine_operator acting on %d vector(s) in %g s (project %g s, coarse_operator %g s, promote %g s)"
+                    % (len(src), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
+                )
 
         return gpt.matrix_operator(
-            mat=mat, otype=otype, accept_guess=(False, False), grid=self.coarse_grid
+            mat=mat, otype=otype, grid=grid, cb=cb, accept_list=True
         )
 
 

@@ -1,0 +1,460 @@
+AcceleratorCudaInit: rank 1 setting device to node rank 1
+AcceleratorCudaInit: rank 3 setting device to node rank 3
+SLURM detected
+AcceleratorCudaInit[0]: ========================
+AcceleratorCudaInit[0]: Device Number    : 0
+AcceleratorCudaInit[0]: ========================
+AcceleratorCudaInit[0]: Device identifier: A100-SXM4-40GB
+AcceleratorCudaInit[0]:   totalGlobalMem: 42506321920 
+AcceleratorCudaInit[0]:   managedMemory: 1 
+AcceleratorCudaInit[0]:   isMultiGpuBoard: 0 
+AcceleratorCudaInit[0]:   warpSize: 32 
+AcceleratorCudaInit[0]:   pciBusID: 3 
+AcceleratorCudaInit[0]:   pciDeviceID: 0 
+AcceleratorCudaInit: rank 0 setting device to node rank 0
+AcceleratorCudaInit: ================================================
+AcceleratorCudaInit: rank 2 setting device to node rank 2
+SharedMemoryMpi:  World communicator of size 4
+SharedMemoryMpi:  Node  communicator of size 4
+SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x148940000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=5cffa05c7e2965216200e7fff3183fce3f15c8bb: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
+Grid : Message : MemoryManager Cache 34005057536 bytes 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Non unified: Caching accelerator data in dedicated memory
+Grid : Message : MemoryManager::Init() Using cudaMalloc
+
+=============================================
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
+=============================================
+GPT :       2.480708 s : 
+                       : DWF Linear Algebra Benchmark with
+                       :     fdimensions  : [24, 24, 24, 24]
+                       :     precision    : single
+                       : 
+GPT :       3.934087 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 0.06 s
+                       :     Effective memory bandwidth  : 8.95 GB/s
+                       : 
+GPT :       4.021223 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 0.08 s
+                       :     Effective memory bandwidth  : 6.60 GB/s
+                       : 
+GPT :       4.069488 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.05 s
+                       :     Effective memory bandwidth  : 11.09 GB/s
+                       : 
+GPT :       4.082452 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.01 s
+                       :     Effective memory bandwidth  : 75.19 GB/s
+                       : 
+GPT :       5.336533 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 0.93 s
+                       :     Effective memory bandwidth  : 9.11 GB/s
+                       : 
+GPT :       6.366382 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 1.01 s
+                       :     Effective memory bandwidth  : 8.45 GB/s
+                       : 
+GPT :       6.510518 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.14 s
+                       :     Effective memory bandwidth  : 59.30 GB/s
+                       : 
+GPT :       6.624200 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.09 s
+                       :     Effective memory bandwidth  : 94.57 GB/s
+                       : 
+GPT :       8.003212 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 0.71 s
+                       :     Effective memory bandwidth  : 8.96 GB/s
+                       : 
+GPT :       8.964212 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 0.95 s
+                       :     Effective memory bandwidth  : 6.74 GB/s
+                       : 
+GPT :       9.209931 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.24 s
+                       :     Effective memory bandwidth  : 26.08 GB/s
+                       : 
+GPT :       9.229429 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.01 s
+                       :     Effective memory bandwidth  : 474.69 GB/s
+                       : 
+GPT :      23.299773 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 11.21 s
+                       :     Effective memory bandwidth  : 9.10 GB/s
+                       : 
+GPT :      35.118677 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 11.78 s
+                       :     Effective memory bandwidth  : 8.65 GB/s
+                       : 
+GPT :      36.147149 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 1.03 s
+                       :     Effective memory bandwidth  : 99.31 GB/s
+                       : 
+GPT :      36.320307 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.14 s
+                       :     Effective memory bandwidth  : 706.06 GB/s
+                       : 
+GPT :      37.645602 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 0.67 s
+                       :     Effective memory bandwidth  : 9.47 GB/s
+                       : 
+GPT :      38.594875 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 0.93 s
+                       :     Effective memory bandwidth  : 6.86 GB/s
+                       : 
+GPT :      38.842975 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.25 s
+                       :     Effective memory bandwidth  : 25.88 GB/s
+                       : 
+GPT :      38.891804 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.04 s
+                       :     Effective memory bandwidth  : 176.17 GB/s
+                       : 
+GPT :      52.720154 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 10.96 s
+                       :     Effective memory bandwidth  : 9.30 GB/s
+                       : 
+GPT :      64.400670 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 11.62 s
+                       :     Effective memory bandwidth  : 8.77 GB/s
+                       : 
+GPT :      65.373580 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.97 s
+                       :     Effective memory bandwidth  : 105.11 GB/s
+                       : 
+GPT :      65.568562 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.14 s
+                       :     Effective memory bandwidth  : 708.53 GB/s
+                       : 
+GPT :      65.569167 s : 
+                       : DWF Linear Algebra Benchmark with
+                       :     fdimensions  : [24, 24, 24, 24]
+                       :     precision    : double
+                       : 
+GPT :      67.042274 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 0.05 s
+                       :     Effective memory bandwidth  : 19.78 GB/s
+                       : 
+GPT :      67.134344 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 0.08 s
+                       :     Effective memory bandwidth  : 12.52 GB/s
+                       : 
+GPT :      67.191722 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.06 s
+                       :     Effective memory bandwidth  : 18.63 GB/s
+                       : 
+GPT :      67.210149 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.01 s
+                       :     Effective memory bandwidth  : 90.07 GB/s
+                       : 
+GPT :      68.362541 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 0.82 s
+                       :     Effective memory bandwidth  : 20.84 GB/s
+                       : 
+GPT :      69.351025 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 0.96 s
+                       :     Effective memory bandwidth  : 17.75 GB/s
+                       : 
+GPT :      69.575355 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.22 s
+                       :     Effective memory bandwidth  : 76.27 GB/s
+                       : 
+GPT :      69.699318 s : 100 rank_inner_product
+                       :     Object type                 : ot_singlet
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.10 s
+                       :     Effective memory bandwidth  : 175.33 GB/s
+                       : 
+GPT :      70.995831 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 0.64 s
+                       :     Effective memory bandwidth  : 19.98 GB/s
+                       : 
+GPT :      72.159132 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 1.14 s
+                       :     Effective memory bandwidth  : 11.15 GB/s
+                       : 
+GPT :      72.627467 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.47 s
+                       :     Effective memory bandwidth  : 27.32 GB/s
+                       : 
+GPT :      72.672420 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.04 s
+                       :     Effective memory bandwidth  : 353.28 GB/s
+                       : 
+GPT :      85.353901 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 9.80 s
+                       :     Effective memory bandwidth  : 20.80 GB/s
+                       : 
+GPT :      96.397797 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 10.98 s
+                       :     Effective memory bandwidth  : 18.57 GB/s
+                       : 
+GPT :      98.244559 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 1.84 s
+                       :     Effective memory bandwidth  : 110.56 GB/s
+                       : 
+GPT :      98.473396 s : 100 rank_inner_product
+                       :     Object type                 : ot_vector_spin_color(4,3)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.19 s
+                       :     Effective memory bandwidth  : 1070.32 GB/s
+                       : 
+GPT :     100.385281 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 0.58 s
+                       :     Effective memory bandwidth  : 22.00 GB/s
+                       : 
+GPT :     101.475123 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 1.06 s
+                       :     Effective memory bandwidth  : 11.98 GB/s
+                       : 
+GPT :     101.961156 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.48 s
+                       :     Effective memory bandwidth  : 26.32 GB/s
+                       : 
+GPT :     102.016671 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 1 x 1
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.04 s
+                       :     Effective memory bandwidth  : 318.54 GB/s
+                       : 
+GPT :     114.521310 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : host
+                       :     Time to complete            : 9.61 s
+                       :     Effective memory bandwidth  : 21.22 GB/s
+                       : 
+GPT :     125.583971 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : host
+                       :     Time to complete            : 10.98 s
+                       :     Effective memory bandwidth  : 18.57 GB/s
+                       : 
+GPT :     127.416064 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : host
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 1.83 s
+                       :     Effective memory bandwidth  : 111.48 GB/s
+                       : 
+GPT :     127.637543 s : 100 rank_inner_product
+                       :     Object type                 : ot_vsinglet(12)
+                       :     Block                       : 4 x 4
+                       :     Data resides in             : accelerator
+                       :     Performed on                : accelerator
+                       :     Time to complete            : 0.16 s
+                       :     Effective memory bandwidth  : 1275.82 GB/s
+                       : 
+=============================================
+               Finalized GPT                 
+=============================================
