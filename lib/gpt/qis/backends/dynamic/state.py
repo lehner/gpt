@@ -66,17 +66,14 @@ class map_canonical:
             "|" + ("".join([str(x) for x in reversed(self.index_to_bits(idx))])) + ">"
         )
 
-
-# IDEAS
-# - state should have baseclass serializable, maybe lattice as well
-#   use interface in gpt_io
-# - X should be virtual, introduce mapping that allows 0<>1 relabeling
-#   Concretely, this implements all X and CNOT as changes only to the
-#   coordinates (and not_coordinates and masks); all of this would parallelize very well.
-#   The only costly part then is the Hadamard.
-# - If bit flipped lattice generation is too slow, always evolve all lattices
-#   lat, bfl[i] at the same time?  Need more masks etc. but could eliminate
-#   cost of bfl?
+# Variables:
+# - lattice:    keeps complex coordinates in 2^number_of_qubits space
+# - coordinates:  lattice coordinates saved on current rank
+# - state_coordinates:  
+# - state_to_position_index
+# - position_of_state
+#  - coordinates
+#  map 
 class state:
     def __init__(
         self, rng, number_of_qubits, precision=None, bit_map=None, lattice=None
@@ -185,9 +182,9 @@ class state:
 def check_same(state_a, state_b):
     assert (
         g.norm2(state_a.lattice - state_b.lattice) ** 0.5
-        < state_a.lattice.grid.precision.eps
+        < state_a.lattice.grid.precision.eps * 10.0
     )
 
 
 def check_norm(state):
-    assert (g.norm2(state.lattice) - 1.0) < state.lattice.grid.precision.eps
+    assert (g.norm2(state.lattice) - 1.0) < state.lattice.grid.precision.eps * 10.0

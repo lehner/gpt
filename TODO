@@ -2,8 +2,6 @@
   - Symbolic circuit optimization
   - Combine all X/CNOT into single sweep, similar for Rphis
 
-- preconditioner argument of fgmres etc. needs auto-initialization (called with matrix etc., then do not need to_separate_instances)
-
 - matrix_operator <> vector_space
 
 - coarse_matrix needs to pass lists of U's for sub-blocks to cgpt for speedup

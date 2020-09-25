@@ -138,9 +138,9 @@ class state:
 def check_same(state_a, state_b):
     assert (
         g.norm2(state_a.lattice - state_b.lattice) ** 0.5
-        < state_a.lattice.grid.precision.eps
+        < state_a.lattice.grid.precision.eps * 10.0
     )
 
 
 def check_norm(state):
-    assert (g.norm2(state.lattice) - 1.0) < state.lattice.grid.precision.eps
+    assert (g.norm2(state.lattice) - 1.0) < state.lattice.grid.precision.eps * 10.0
