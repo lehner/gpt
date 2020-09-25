@@ -52,42 +52,45 @@ p = g.qcd.fermion.preconditioner
 
 # mg setup parameters
 mg_setup_2lvl_params = {
-    "block": [[2, 2, 2, 2]],
-    "northo": 1,
+    "blocksize": [[2, 2, 2, 2]],
+    "nblockortho": 1,
+    "check_blockortho": True,
     "nbasis": 30,
     "make_hermitian": False,
     "save_links": True,
-    "vecstype": "null",
-    "preortho": False,
-    "postortho": False,
+    "vector_type": "null",
+    "npreortho": 1,
+    "npostortho": 0,
     "solver": i.fgmres(
         {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
     ),
     "distribution": rng.cnormal,
 }
 mg_setup_3lvl_params = {
-    "block": [[2, 2, 2, 2], [1, 2, 2, 2]],
-    "northo": 1,
+    "blocksize": [[2, 2, 2, 2], [1, 2, 2, 2]],
+    "nblockortho": 1,
+    "check_blockortho": True,
     "nbasis": 30,
     "make_hermitian": False,
     "save_links": True,
-    "vecstype": "null",
-    "preortho": False,
-    "postortho": False,
+    "vector_type": "null",
+    "npreortho": 1,
+    "npostortho": 0,
     "solver": i.fgmres(
         {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
     ),
     "distribution": rng.cnormal,
 }
 mg_setup_4lvl_params = {
-    "block": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 1, 2, 2]],
-    "northo": 1,
+    "blocksize": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 1, 2, 2]],
+    "nblockortho": 1,
+    "check_blockortho": True,
     "nbasis": 30,
     "make_hermitian": False,
     "save_links": True,
-    "vecstype": "null",
-    "preortho": False,
-    "postortho": False,
+    "vector_type": "null",
+    "npreortho": 1,
+    "npostortho": 0,
     "solver": i.fgmres(
         {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
     ),
@@ -132,14 +135,11 @@ mg_3lvl_kcycle_sp = mg.inverter(mg_setup_3lvl_sp, kcycle_params)
 # mg_4lvl_vcycle_sp = mg.inverter(mg_setup_4lvl_sp, vcycle_params)
 # mg_4lvl_kcycle_sp = mg.inverter(mg_setup_4lvl_sp, kcycle_params)
 
-# preconditioners
-smoother_prec = mg_3lvl_kcycle_sp.smooth_solver[0]
-
 # outer solver
 fgmres_params = {"eps": 1e-6, "maxiter": 1000, "restartlen": 20}
 
 # preconditioned inversion (using only smoother, w/o coarse grid correction)
-fgmres_outer = i.fgmres(fgmres_params, prec=smoother_prec)
+fgmres_outer = i.fgmres(fgmres_params, prec=smooth_solver)
 sol_smooth = g.eval(fgmres_outer(w_dp) * src)
 eps2 = g.norm2(w_dp * sol_smooth - src) / g.norm2(src)
 niter_prec_smooth = len(fgmres_outer.history)
@@ -157,7 +157,7 @@ g.message(
     niter_prec_2lvl_mg_vcycle_dp,
 )
 assert eps2 < 1e-12
-assert niter_prec_2lvl_mg_vcycle_dp < niter_prec_smooth
+assert niter_prec_2lvl_mg_vcycle_dp <= niter_prec_smooth
 
 # preconditioned inversion (2lvl mg -- vcycle -- mixed precision)
 fgmres_outer = i.fgmres(

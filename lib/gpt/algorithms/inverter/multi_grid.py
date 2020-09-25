@@ -52,8 +52,8 @@ class setup:
         # grid sizes - allow specifying in two ways
         if "grid" in params:
             self.grid.extend(params["grid"])
-        elif "block" in params:
-            for i, bs in enumerate(params["block"]):
+        elif "blocksize" in params:
+            for i, bs in enumerate(params["blocksize"]):
                 assert type(bs) == list
                 self.grid.append(g.block.grid(self.grid[i], bs))
         else:
@@ -66,13 +66,16 @@ class setup:
         self.coarsest = self.nlevel - 1
 
         # other parameters
-        self.northo = g.util.to_list(params["northo"], self.nlevel - 1)
+        self.nblockortho = g.util.to_list(params["nblockortho"], self.nlevel - 1)
+        self.check_blockortho = g.util.to_list(
+            params["check_blockortho"], self.nlevel - 1
+        )
         self.nbasis = g.util.to_list(params["nbasis"], self.nlevel - 1)
         self.make_hermitian = g.util.to_list(params["make_hermitian"], self.nlevel - 1)
         self.save_links = g.util.to_list(params["save_links"], self.nlevel - 1)
-        self.preortho = g.util.to_list(params["preortho"], self.nlevel - 1)
-        self.postortho = g.util.to_list(params["postortho"], self.nlevel - 1)
-        self.vecstype = g.util.to_list(params["vecstype"], self.nlevel - 1)
+        self.npreortho = g.util.to_list(params["npreortho"], self.nlevel - 1)
+        self.npostortho = g.util.to_list(params["npostortho"], self.nlevel - 1)
+        self.vector_type = g.util.to_list(params["vector_type"], self.nlevel - 1)
         self.distribution = g.util.to_list(params["distribution"], self.nlevel - 1)
         self.solver = g.util.to_list(params["solver"], self.nlevel - 1)
 
@@ -99,13 +102,13 @@ class setup:
         assert self.nlevel >= 2
         assert g.util.entries_have_length(
             [
-                self.northo,
+                self.nblockortho,
                 self.nbasis,
                 self.make_hermitian,
                 self.save_links,
-                self.preortho,
-                self.postortho,
-                self.vecstype,
+                self.npreortho,
+                self.npostortho,
+                self.vector_type,
                 self.distribution,
                 self.solver,
                 self.nb,
@@ -184,28 +187,30 @@ class setup:
                 basis = self.basis[lvl]
                 blockmap = self.blockmap[lvl]
                 nb = self.nb[lvl]
-                vecstype = self.vecstype[lvl]
+                vector_type = self.vector_type[lvl]
 
-                # pre-orthonormalize basis vectors
-                if self.preortho[lvl]:
-                    t("preortho")
-                    g.default.push_verbose("orthogonalize", False)
+                # pre-orthonormalize basis vectors globally
+                t("pre_ortho")
+                g.default.push_verbose("orthogonalize", False)
+                for n in range(self.npreortho[lvl]):
+                    if self.verbose:
+                        g.message("%s pre ortho step %d" % (pp, n))
                     for i, v in enumerate(basis[0:nb]):
                         v /= g.norm2(v) ** 0.5
                         g.orthogonalize(v, basis[:i])
-                    g.default.pop_verbose()
+                g.default.pop_verbose()
 
-                    if self.verbose:
-                        g.message("%s done pre-orthonormalizing basis vectors" % pp)
+                if self.verbose:
+                    g.message("%s done pre-orthonormalizing basis vectors" % pp)
 
                 # find near-null vectors
                 t("find_null_vecs")
                 src, psi = g.copy(basis[0]), g.copy(basis[0])
                 for i, v in enumerate(basis[0:nb]):
-                    if vecstype == "test":
+                    if vector_type == "test":
                         psi[:] = 0.0
                         src @= v
-                    elif vecstype == "null":
+                    elif vector_type == "null":
                         src[:] = 0.0
                         psi @= v
                     else:
@@ -219,17 +224,19 @@ class setup:
                 if self.verbose:
                     g.message("%s done finding null-space vectors" % pp)
 
-                # post-orthonormalize basis vectors
-                if self.postortho[lvl]:
-                    t("postortho")
-                    g.default.push_verbose("orthogonalize", False)
+                # post-orthonormalize basis vectors globally
+                t("post_ortho")
+                g.default.push_verbose("orthogonalize", False)
+                for n in range(self.npostortho[lvl]):
+                    if self.verbose:
+                        g.message("%s post ortho step %d" % (pp, n))
                     for i, v in enumerate(basis[0:nb]):
                         v /= g.norm2(v) ** 0.5
                         g.orthogonalize(v, basis[:i])
-                    g.default.pop_verbose()
+                g.default.pop_verbose()
 
-                    if self.verbose:
-                        g.message("%s done post-orthonormalizing basis vectors" % pp)
+                if self.verbose:
+                    g.message("%s done post-orthonormalizing basis vectors" % pp)
 
                 # chiral doubling
                 t("chiral_split")
@@ -238,12 +245,16 @@ class setup:
                 if self.verbose:
                     g.message("%s done doing chiral doubling" % pp)
 
-                # block orthogonalization
+                # orthonormalize blocks
                 t("block_ortho")
-                for i in range(self.northo[lvl]):
+                for i in range(self.nblockortho[lvl]):
                     if self.verbose:
                         g.message("%s block ortho step %d" % (pp, i))
                     blockmap.orthonormalize()
+
+                if self.check_blockortho:
+                    t("block_ortho_check")
+                    blockmap.check_orthogonality()
 
                 if self.verbose:
                     g.message("%s done block-orthonormalizing" % pp)

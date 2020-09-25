@@ -42,7 +42,7 @@ mat_f = g.qcd.fermion.wilson_clover(
 nbasis_f = 30
 
 # number of block orthogonalization steps
-block_ortho_passes = 1
+nblockortho = 1
 
 # setup fine basis
 basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
@@ -55,7 +55,7 @@ g.coarse.split_chiral(basis_f)
 bm_f = g.block.map(grid_c, basis_f)
 
 # orthonormalize fine basis
-for i in range(block_ortho_passes):
+for i in range(nblockortho):
     g.message("Block ortho step %d" % i)
     bm_f.orthonormalize()
 

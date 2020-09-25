@@ -48,7 +48,7 @@ nbasis_f = 20
 nbasis_c = 30
 
 # number of block orthogonalization steps
-northo = 1
+nblockortho = 1
 
 # define check tolerances
 tol_ortho = 1e-28 if grid_f.precision == g.double else 1e-11
@@ -66,7 +66,7 @@ g.coarse.split_chiral(basis_f)
 bm_f = g.block.map(grid_c, basis_f)
 
 # orthonormalize fine basis
-for i in range(northo):
+for i in range(nblockortho):
     g.message("Block ortho step %d" % i)
     bm_f.orthonormalize()
 
@@ -123,7 +123,7 @@ g.coarse.split_chiral(basis_c)
 bm_c = g.block.map(grid_cc, basis_c)
 
 # orthonormalize coarse basis
-for i in range(northo):
+for i in range(nblockortho):
     g.message("Block ortho step %d" % i)
     bm_c.orthonormalize()
 
