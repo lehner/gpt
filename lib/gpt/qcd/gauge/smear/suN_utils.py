@@ -23,6 +23,7 @@ from gpt.params import params_convention
 #  Extract an unnormalized SU(2) matrix from a GL(3,C) matrix
 #  Project a complex Nc x Nc matrix W onto SU(Nc=3) by maximizing Tr(VW)
 
+#  Should I rename it to "project_to_suN"?
 def project_to_su3(u, w, su2_index):
     v = g.eval(u * w)
     grid = u.grid

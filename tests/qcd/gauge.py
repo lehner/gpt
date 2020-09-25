@@ -81,9 +81,8 @@ for i in range(3):
 U_ape = U
 P_ape = []
 P_ape_transformed = []
-N_iteration = 3
 params_ape = {"alpha":2.5, "Blk_Max":5, "Blk_Accuracy":1e-20}
-for i in range(N_iteration):
+for i in range(3):
     U_ape = g.qcd.gauge.smear.ape(U_ape, params_ape)
 
     for mu in range(len(U_ape)):
@@ -94,11 +93,8 @@ for i in range(N_iteration):
     print("type U_ape: ", type(U_ape))
     print("len U_ape: ", len(U_ape))
     P_ape.append(g.qcd.gauge.plaquette(U_ape))
-    U_ape_transformed = g.qcd.gauge.transformed(U_ape, V)
-    P_ape_transformed.append(g.qcd.gauge.plaquette(U_ape_transformed))
 
 g.message(f"Ape smeared plaquettes {P_ape}")
-g.message(f"Ape smeared plaquettes after gauge transformation: {P_ape_transformed}")
 assert sorted(P_ape) == P_ape
 
 
