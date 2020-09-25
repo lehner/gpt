@@ -19,6 +19,54 @@
 import gpt as g
 import numpy as np
 
+
+
+# TODO
+# - once happy with design, move time-critical aspects (creation of maps)
+#   to cgpt
+class map_canonical:
+    def __init__(self, n, precision):
+        self.n = n
+        self.fdimensions = [2 ** n]
+        self.grid = g.grid(self.fdimensions, precision)
+        self.verbose = g.default.is_verbose("qis_map")
+        self.zero_coordinate = (0,)  # |00000 ... 0> state
+        t = g.timer("map_init")
+        t("coordinates")
+        # TODO: need to split over multiple dimensions, single dimension can hold at most 32 bits
+        self.coordinates = g.coordinates(self.grid)
+        self.not_coordinates = [
+            np.bitwise_xor(self.coordinates, 2 ** i) for i in range(n)
+        ]
+        for i in range(n):
+            self.not_coordinates[i].flags["WRITEABLE"] = False
+        t("masks")
+        self.one_mask = []
+        self.zero_mask = []
+        for i in range(n):
+            proj = np.bitwise_and(self.coordinates, 2 ** i)
+
+            mask = g.complex(self.grid)
+            g.coordinate_mask(mask, proj != 0)
+            self.one_mask.append(mask)
+
+            mask = g.complex(self.grid)
+            g.coordinate_mask(mask, proj == 0)
+            self.zero_mask.append(mask)
+
+        t()
+        if self.verbose:
+            g.message(t)
+
+    def index_to_bits(self, idx):
+        return [(idx >> shift) & 1 for shift in range(self.n)]
+
+    def coordinate_to_basis_name(self, coordinate):
+        idx = coordinate[0]
+        return (
+            "|" + ("".join([str(x) for x in reversed(self.index_to_bits(idx))])) + ">"
+        )
+
 # IDEAS
 # - state should have baseclass serializable, maybe lattice as well
 #   use interface in gpt_io
@@ -36,7 +84,7 @@ class state:
         if precision is None:
             precision = g.double
         if bit_map is None:
-            bit_map = g.qis.map.canonical(number_of_qubits, precision)
+            bit_map = map_canonical(number_of_qubits, precision)
         self.rng = rng
         self.precision = precision
         self.number_of_qubits = number_of_qubits
@@ -132,3 +180,17 @@ class state:
             r = 0
         self.classical_bit[i] = r
         return r
+
+
+
+
+
+def check_same(state_a, state_b):
+    assert (
+        g.norm2(state_a.lattice - state_b.lattice) ** 0.5
+        < state_a.lattice.grid.precision.eps
+    )
+
+
+def check_norm(state):
+    assert (g.norm2(state.lattice) - 1.0) < state.lattice.grid.precision.eps
