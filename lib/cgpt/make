@@ -25,7 +25,7 @@ echo "==========================================================================
 NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
 CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
 CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID} -I${GRID}/Grid -I${NUMPY_INCLUDE} $(python3-config --includes)"
-LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
+LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -L${root}/lib -Wl,--enable-new-dtags -Wl,-rpath -Wl,${root}/lib"
 LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
 
 echo "CXX = $CXX"
@@ -117,4 +117,5 @@ rm -f next.lock
 find build -size 0 -delete 2> /dev/null
 
 # Link
-${CXX} --shared $(ls -t build/*.o) ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
+${CXX} --shared $(ls -t build/*.o | grep expression_linear) ${LDFLAGS} ${LIBS} -lGrid -o ../libcgptexpr.so
+${CXX} --shared $(ls -t build/*.o | grep -v expression_linear) ${LDFLAGS} ${LIBS} -lGrid -lcgptexpr -o ../cgpt.so
