@@ -76,7 +76,7 @@ for p, tag in [
     a2a_p = g.algorithms.modes.a2a(pc.physical(p)(q))
     a2a_u = g.algorithms.modes.a2a(p_q)
     lma_unphysical = g.algorithms.inverter.preconditioned(
-        p, g.algorithms.modes.modes(evec, evec, evals, lambda x: 1.0 / x)
+        p, g.algorithms.inverter.deflate(evec, evals)
     )
     lma_physical = q.propagator(lma_unphysical)
 
@@ -85,12 +85,12 @@ for p, tag in [
     dst_lma = g.eval(lma_unphysical(q) * F_src)
 
     # reconstruct by hand
-    a2a_unphysical = g.algorithms.modes.modes(
+    a2a_unphysical = g.algorithms.modes.matrix(
         [a2a_u.v(x) for x in evec],
         [a2a_u.w(x) for x in evec],
         evals,
         lambda x: 1.0 / x,
-    )()
+    )
     dst_a2a = g.eval(a2a_unphysical * F_src)
 
     # add the contact term
@@ -111,9 +111,9 @@ for p, tag in [
     dst_lma = g.eval(lma_physical * U_src)
 
     # reconstruct by hand
-    a2a_physical = g.algorithms.modes.modes(
+    a2a_physical = g.algorithms.modes.matrix(
         [a2a_p.v(x) for x in evec], [a2a_p.w(x) for x in evec], evals, lambda x: 1.0 / x
-    )()
+    )
     dst_a2a = g.eval(a2a_physical * U_src)
 
     # add the contact term

@@ -18,6 +18,7 @@
 #
 import gpt as g
 import numpy as np
+from gpt.qis.backends.static.map_canonical import map_canonical
 
 # IDEAS
 # - state should have baseclass serializable, maybe lattice as well
@@ -36,7 +37,7 @@ class state:
         if precision is None:
             precision = g.double
         if bit_map is None:
-            bit_map = g.qis.map.canonical(number_of_qubits, precision)
+            bit_map = map_canonical(number_of_qubits, precision)
         self.rng = rng
         self.precision = precision
         self.number_of_qubits = number_of_qubits
@@ -132,3 +133,14 @@ class state:
             r = 0
         self.classical_bit[i] = r
         return r
+
+
+def check_same(state_a, state_b):
+    assert (
+        g.norm2(state_a.lattice - state_b.lattice) ** 0.5
+        < state_a.lattice.grid.precision.eps * 10.0
+    )
+
+
+def check_norm(state):
+    assert (g.norm2(state.lattice) - 1.0) < state.lattice.grid.precision.eps * 10.0

@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2020-08-22b
+  CACHE_KEY: 2020-09-24
 
 jobs:
   build-grid:
@@ -47,8 +47,6 @@ jobs:
 
         sudo update-alternatives --set cc /usr/bin/clang-9
         sudo update-alternatives --set c++ /usr/bin/clang++-9
-
-        echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set compiler to cc and c++
       if: matrix.mpi == 'none'
@@ -188,7 +186,6 @@ jobs:
 
         sudo update-alternatives --set cc /usr/bin/clang-9
         sudo update-alternatives --set c++ /usr/bin/clang++-9
-        echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -371,7 +368,6 @@ jobs:
 
         sudo update-alternatives --set cc /usr/bin/clang-9
         sudo update-alternatives --set c++ /usr/bin/clang++-9
-        echo '::set-env name=LDFLAGS::-lomp'
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'

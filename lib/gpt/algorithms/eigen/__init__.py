@@ -20,5 +20,3 @@ from gpt.algorithms.eigen.irl import irl
 from gpt.algorithms.eigen.arnoldi import arnoldi_iteration, arnoldi
 from gpt.algorithms.eigen.power_iteration import power_iteration
 from gpt.algorithms.eigen.evals import evals, EvalsNotConverged
-from gpt.algorithms.eigen.deflate import deflate
-from gpt.algorithms.eigen.coarse_deflate import coarse_deflate
