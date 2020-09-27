@@ -71,25 +71,27 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
 
     VECTOR_VIEW_OPEN(basis.slice(basis_i0*n_virtual,basis_i1*n_virtual),basis_v,AcceleratorRead);
     long Nsimd = grid->Nsimd();
-    accelerator_for(idx, grid->oSites()*n_vec,Nsimd,{
-	auto vec_i = idx % n_vec;
-	auto ss = idx / n_vec;
+    long oSites = grid->oSites();
+    accelerator_for(_idx, oSites*n_vec*n_virtual,Nsimd,{
+	auto idx = _idx;
+	auto ss = idx % oSites; idx /= oSites;
+	auto vec_i = idx % n_vec; idx /= n_vec;
+	auto virtual_i = idx % n_virtual; idx /= n_virtual;
 
 	decltype(coalescedRead(basis_v[0][ss])) B;
 
-	for (long virtual_i=0; virtual_i<n_virtual; virtual_i++) {
-	  if (basis_i0 == 0)
-	    B = Zero();
-	  else
-	    B = result_v[vec_i*n_virtual + virtual_i](ss);
-
-	  for(long basis_i_rel=0; basis_i_rel<basis_block; basis_i_rel++) {
-	    long basis_i_abs = basis_i_rel + basis_i0;
-	    B += Qt_j[basis_i_abs + vec_i*n_basis] * basis_v[basis_i_rel*n_virtual + virtual_i](ss);
-	  }
-
-	  coalescedWrite(result_v[vec_i*n_virtual + virtual_i][ss], B);
+	if (basis_i0 == 0)
+	  B = Zero();
+	else
+	  B = result_v[vec_i*n_virtual + virtual_i](ss);
+	
+	for(long basis_i_rel=0; basis_i_rel<basis_block; basis_i_rel++) {
+	  long basis_i_abs = basis_i_rel + basis_i0;
+	  B += Qt_j[basis_i_abs + vec_i*n_basis] * basis_v[basis_i_rel*n_virtual + virtual_i](ss);
 	}
+	
+	coalescedWrite(result_v[vec_i*n_virtual + virtual_i][ss], B);
+
       });
 
     VECTOR_VIEW_CLOSE(basis_v);

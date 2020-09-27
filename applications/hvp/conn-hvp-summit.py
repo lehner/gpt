@@ -29,12 +29,16 @@ groups = {
 }
 
 jobs = {
-    "exact_0": {"exact": 1, "sloppy": 0, "low": 0}, # 1270 seconds + 660 to load evecs
-    "sloppy_0": {"exact": 0, "sloppy": 8, "low": 0}, # 2652 seconds + 580 to load evecs ; this is ideal for 1h jobs
-    "low_0": {"exact": 0, "sloppy": 0, "low": 100},
+    "exact_0": {"exact": 1, "sloppy": 0, "low": 0},  # 1270 seconds + 660 to load evecs
+    "sloppy_0": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+    },  # 2652 seconds + 580 to load evecs ; this is ideal for 1h jobs
+    "low_0": {"exact": 0, "sloppy": 0, "low": 150},
 }
 
-simultaneous_low_positions = 10
+simultaneous_low_positions = 3
 
 jobs_per_run = 1
 
@@ -136,56 +140,40 @@ eig = g.load(groups[group]["evec_fmt"] % conf, grids=l_sloppy.F_grid_eo)
 light_innerL_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
     g.algorithms.inverter.sequence(
-        g.algorithms.inverter.coarse_deflate(
-            eig[1],
-            eig[0],
-            eig[2],
-            block=200,
-        ),
+        g.algorithms.inverter.coarse_deflate(eig[1], eig[0], eig[2], block=200,),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 200}),
             mpi_split=g.default.get_ivec("--mpi_split", None, 4),
-        )
-    )
+        ),
+    ),
 )
 
 light_innerH_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
     g.algorithms.inverter.sequence(
-        g.algorithms.inverter.coarse_deflate(
-            eig[1],
-            eig[0],
-            eig[2],
-            block=200,
-        ),
+        g.algorithms.inverter.coarse_deflate(eig[1], eig[0], eig[2], block=200,),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 300}),
             mpi_split=g.default.get_ivec("--mpi_split", None, 4),
-        )
-    )
+        ),
+    ),
 )
 
 light_low_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
-    g.algorithms.inverter.coarse_deflate(
-        eig[1], eig[0], eig[2], block=200
-    )
+    g.algorithms.inverter.coarse_deflate(eig[1], eig[0], eig[2], block=200),
 )
 
 light_exact_inverter = g.algorithms.inverter.defect_correcting(
-    g.algorithms.inverter.mixed_precision(
-        light_innerH_inverter, g.single, g.double
-    ),
+    g.algorithms.inverter.mixed_precision(light_innerH_inverter, g.single, g.double),
     eps=1e-8,
-    maxiter=10
+    maxiter=10,
 )
 
 light_sloppy_inverter = g.algorithms.inverter.defect_correcting(
-    g.algorithms.inverter.mixed_precision(
-        light_innerL_inverter, g.single, g.double
-    ),
+    g.algorithms.inverter.mixed_precision(light_innerL_inverter, g.single, g.double),
     eps=1e-8,
-    maxiter=2
+    maxiter=2,
 )
 
 prop_l_low = l_sloppy.propagator(light_low_inverter)
@@ -263,7 +251,7 @@ for group, job, conf, jid, n in run_jobs:
     sparse_time = full_time // source_time_slices
 
     # source creation
-    def create_source(pos, point = False):
+    def create_source(pos, point=False):
         srcD = g.mspincolor(l_exact.U_grid)
         srcD[:] = 0
 
@@ -279,7 +267,9 @@ for group, job, conf, jid, n in run_jobs:
         g.message(f"Signature: {pos} -> {pos_of_slice} with signs {sign_of_slice}")
         for i in range(source_time_slices):
             if point:
-                srcD += g.create.point(g.lattice(srcD), pos_of_slice[i]) * sign_of_slice[i]
+                srcD += (
+                    g.create.point(g.lattice(srcD), pos_of_slice[i]) * sign_of_slice[i]
+                )
             else:
                 srcD += g.create.wall.z2(g.lattice(srcD), pos_of_slice[i][3], rng) * (
                     sign_of_slice[i] / vol3d ** 0.5
@@ -321,7 +311,9 @@ for group, job, conf, jid, n in run_jobs:
         array_sign_of_slice = []
 
         for inner in range(simultaneous_low_positions):
-            srcD, pos_of_slice, sign_of_slice = create_source(source_positions_low[pos_idx + inner], point = True)
+            srcD, pos_of_slice, sign_of_slice = create_source(
+                source_positions_low[pos_idx + inner], point=True
+            )
             srcF = g.convert(srcD, g.single)
             array_srcF.append(srcF)
             array_pos_of_slice.append(pos_of_slice)
@@ -334,4 +326,9 @@ for group, job, conf, jid, n in run_jobs:
             pos_of_slice = array_pos_of_slice[inner]
             sign_of_slice = array_sign_of_slice[inner]
             for i in range(source_time_slices):
-                contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_low), "low-pnt", False)
+                contract(
+                    pos_of_slice[i],
+                    g.eval(sign_of_slice[i] * prop_low),
+                    "low-pnt",
+                    False,
+                )

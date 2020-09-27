@@ -58,14 +58,14 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         )
 
 
-def linear_combination(r, basis, Qt, n_block = None):
+def linear_combination(r, basis, Qt, n_block=None):
     r = gpt.util.to_list(r)
     assert all([len(basis[0].v_obj) == len(x.v_obj) for x in r])
     if n_block is None:
         n_block = len(basis)
     Qt = numpy.array(Qt, dtype=numpy.complex128)
     if len(Qt.shape) == 1:
-        Qt.shape=(1,Qt.shape[0])
+        Qt.shape = (1, Qt.shape[0])
     cgpt.linear_combination(r, basis, Qt, n_block)
 
 

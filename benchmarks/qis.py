@@ -20,13 +20,13 @@ for precision in [g.single, g.double]:
     for q in [g.qis.backends.static]:
         g.message(
             f"""
-            
-    Run tests with 
 
-     {n} qubits 
+    Run tests with
+
+     {n} qubits
      {precision.__name__} precision
      {q.__name__} backend
-            
+
             """
         )
         stR = q.state(r, n, precision=precision)

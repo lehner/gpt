@@ -66,14 +66,15 @@ class map_canonical:
             "|" + ("".join([str(x) for x in reversed(self.index_to_bits(idx))])) + ">"
         )
 
+
 # Variables:
 # - lattice:    keeps complex coordinates in 2^number_of_qubits space
 # - coordinates:  lattice coordinates saved on current rank
-# - state_coordinates:  
+# - state_coordinates:
 # - state_to_position_index
 # - position_of_state
 #  - coordinates
-#  map 
+#  map
 class state:
     def __init__(
         self, rng, number_of_qubits, precision=None, bit_map=None, lattice=None

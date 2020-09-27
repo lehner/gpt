@@ -193,18 +193,18 @@ for grid in [grid_sp, grid_dp]:
 ################################################################################
 # Test multi linear_combination against expression engine
 ################################################################################
-for grid in [grid_sp,grid_dp]:
+for grid in [grid_sp, grid_dp]:
     nbasis = 7
     nblock = 3
     nvec = 2
-    basis = [g.vcomplex(grid,8) for i in range(nbasis)]
+    basis = [g.vcomplex(grid, 8) for i in range(nbasis)]
     rng.cnormal(basis)
-    dst = [g.vcomplex(grid,8) for i in range(nvec)]
-    coef=[[rng.cnormal() for i in range(nbasis)] for j in range(nvec)]
+    dst = [g.vcomplex(grid, 8) for i in range(nvec)]
+    coef = [[rng.cnormal() for i in range(nbasis)] for j in range(nvec)]
     # multi
-    g.linear_combination(dst,basis,coef,nblock)
+    g.linear_combination(dst, basis, coef, nblock)
     for j in range(nvec):
-        ref = g.vcomplex(grid,8)
+        ref = g.vcomplex(grid, 8)
         ref[:] = 0
         for i in range(nbasis):
             ref += coef[j][i] * basis[i]
