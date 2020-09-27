@@ -18,7 +18,7 @@
 #
 import gpt as g
 import numpy as np
-from gpt.qis.backends.static.map_canonical import map_canonical
+from gpt.qis.map_canonical import map_canonical
 
 # IDEAS
 # - state should have baseclass serializable, maybe lattice as well
