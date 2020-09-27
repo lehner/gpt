@@ -135,37 +135,41 @@ eig = g.load(groups[group]["evec_fmt"] % conf, grids=l_sloppy.F_grid_eo)
 
 light_innerL_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
-    g.algorithms.eigen.coarse_deflate(
+    g.algorithms.inverter.sequence(
+        g.algorithms.inverter.coarse_deflate(
+            eig[1],
+            eig[0],
+            eig[2],
+            block=200,
+        ),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 200}),
             mpi_split=g.default.get_ivec("--mpi_split", None, 4),
-        ),
-        eig[1],
-        eig[0],
-        eig[2],
-        block=200,
-    ),
+        )
+    )
 )
 
 light_innerH_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
-    g.algorithms.eigen.coarse_deflate(
+    g.algorithms.inverter.sequence(
+        g.algorithms.inverter.coarse_deflate(
+            eig[1],
+            eig[0],
+            eig[2],
+            block=200,
+        ),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 300}),
             mpi_split=g.default.get_ivec("--mpi_split", None, 4),
-        ),
-        eig[1],
-        eig[0],
-        eig[2],
-        block=200,
-    ),
+        )
+    )
 )
 
 light_low_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
-    g.algorithms.eigen.coarse_deflate(
-        g.algorithms.inverter.noop(), eig[1], eig[0], eig[2], block=200
-    ),
+    g.algorithms.inverter.coarse_deflate(
+        eig[1], eig[0], eig[2], block=200
+    )
 )
 
 light_exact_inverter = g.algorithms.inverter.defect_correcting(
@@ -173,7 +177,7 @@ light_exact_inverter = g.algorithms.inverter.defect_correcting(
         light_innerH_inverter, g.single, g.double
     ),
     eps=1e-8,
-    maxiter=10,
+    maxiter=10
 )
 
 light_sloppy_inverter = g.algorithms.inverter.defect_correcting(
@@ -181,7 +185,7 @@ light_sloppy_inverter = g.algorithms.inverter.defect_correcting(
         light_innerL_inverter, g.single, g.double
     ),
     eps=1e-8,
-    maxiter=2,
+    maxiter=2
 )
 
 prop_l_low = l_sloppy.propagator(light_low_inverter)

@@ -27,7 +27,7 @@ from gpt.params import params_convention
 #
 @params_convention(block=16)
 def matrix(left, right, evals, f, params):
-    assert len(left) == len(right) and len(left) == len(evals) and len(left) > 0
+    assert len(left) == len(right) and len(left) <= len(evals) and len(left) > 0
     f_evals = [f(x) for x in evals]
 
     otype = (left[0].otype, right[0].otype)
@@ -50,9 +50,12 @@ def matrix(left, right, evals, f, params):
         t1 = g.time()
         grid.globalsum(rip)
         t2 = g.time()
-        # TODO: simultaneous linear_combinations
-        for j in range(len(src)):
-            g.linear_combination(dst[j], left, rip[j])
+        g.linear_combination(dst, left, rip)
+        for i in range(len(dst)):
+            tmp=g.lattice(dst)
+            g.linear_combination(tmp, left, rip[i])
+            eps2=g.norm2(tmp - dst[i]) / g.norm2(tmp)
+            g.message(f"TEST {i}: {eps2}")
         t3 = g.time()
         if verbose:
             g.message(
