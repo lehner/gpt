@@ -22,7 +22,7 @@ from gpt.params import params_convention
 
 
 class coarse_deflate:
-    @params_convention(block=32)
+    @params_convention(block=32, linear_combination_block=4)
     def __init__(self, cevec, basis, fev, params):
         self.mat = g.block.map(cevec[0].grid, basis).fine_operator(
             g.algorithms.modes.matrix(cevec, cevec, fev, lambda x: 1.0 / x, params)

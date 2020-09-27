@@ -25,9 +25,9 @@ from gpt.params import params_convention
 #
 #  A = sum_n left[n] right[n]^dag f(eval[n])
 #
-@params_convention(block=16)
+@params_convention(block=16, linear_combination_block=8)
 def matrix(left, right, evals, f, params):
-    assert len(left) == len(right) and len(left) == len(evals) and len(left) > 0
+    assert len(left) == len(right) and len(left) <= len(evals) and len(left) > 0
     f_evals = [f(x) for x in evals]
 
     otype = (left[0].otype, right[0].otype)
@@ -42,6 +42,7 @@ def matrix(left, right, evals, f, params):
         grid = src[0].grid
         rip = np.zeros((len(src), len(left)), dtype=np.complex128)
         block = params["block"]
+        linear_combination_block = params["linear_combination_block"]
         for i0 in range(0, len(left), block):
             rip_block = g.rank_inner_product(right[i0 : i0 + block], src, True)
             for i in range(rip_block.shape[0]):
@@ -50,9 +51,7 @@ def matrix(left, right, evals, f, params):
         t1 = g.time()
         grid.globalsum(rip)
         t2 = g.time()
-        # TODO: simultaneous linear_combinations
-        for j in range(len(src)):
-            g.linear_combination(dst[j], left, rip[j])
+        g.linear_combination(dst, left, rip, linear_combination_block)
         t3 = g.time()
         if verbose:
             g.message(
