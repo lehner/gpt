@@ -32,10 +32,13 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
 
   VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
   VECTOR_VIEW_OPEN(basis,basis_v,CpuRead);
+
+  typedef typename std::remove_reference<decltype(basis_v[0][0])>::type vobj;
+  std::vector<vobj> B_all(n_vec*n_virtual*thread_max());
+  
   thread_region
     {
-      typedef typename std::remove_reference<decltype(basis_v[0][0])>::type vobj;
-      std::vector<vobj> B(n_vec*n_virtual);
+      vobj* B = &B_all[n_vec*n_virtual*thread_num()];
 
       thread_for_in_region(ss, grid->oSites(),{
 	  
