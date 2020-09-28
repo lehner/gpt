@@ -24,6 +24,23 @@ def set_value_of_qubit(state, i, val):
     return s
 
 
+# special test for dynamic prefetching
+st = g.qis.backends.dynamic.state(r, N, precision=g.double)
+for i in range(N):
+    st0 = X(i) * st
+    st0.prefetch([5, 4, 2])
+    st0 = M() * st0
+    ref = [0] * N
+    ref[i] = 1
+    assert st0.classical_bit == ref
+
+# state mangler
+mangle = {
+    g.qis.backends.static: lambda st: st,
+    g.qis.backends.dynamic: lambda st: st.prefetch([8, 7, 3, 6]),
+}
+
+
 # test different backends
 for q in [g.qis.backends.static, g.qis.backends.dynamic]:
     g.message(f"Testing {q.__name__}")
@@ -34,13 +51,17 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
 
     # first make sure state is properly initialized
     g.message("Test initial state")
-    psi = M() * st0
+    st1 = st0.cloned()
+    mangle[q](st1)
+    psi = M() * st1
     assert psi.classical_bit == [0] * N
 
     # now test all X gates
     g.message("Test X")
     for i in range(N):
-        psi = (X(i) | M()) * st0
+        psi = X(i) * st0
+        mangle[q](psi)
+        psi = M() * psi
         ref = [0] * N
         ref[i] = 1
         assert psi.classical_bit == ref
@@ -48,13 +69,17 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
     # now test X^2 = 1
     g.message("Test X^2")
     for i in range(N):
-        psi = (X(i) | X(i)) * stR
+        psi = X(i) * stR
+        mangle[q](psi)
+        psi = X(i) * psi
         q.check_same(psi, stR)
 
     # now test H^2 = 1
     g.message("Test H^2")
     for i in range(N):
-        psi = (H(i) | H(i)) * stR
+        psi = H(i) * stR
+        mangle[q](psi)
+        psi = H(i) * psi
         q.check_same(psi, stR)
 
     # now test CNOT^2 = 1
@@ -62,18 +87,17 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
     for i in range(N):
         for j in range(N):
             if i != j:
-                psi = (CNOT(i, j) | CNOT(i, j)) * stR
+                psi = CNOT(i, j) * stR
+                mangle[q](psi)
+                psi = CNOT(i, j) * psi
                 q.check_same(psi, stR)
 
     # now test S^4 = 1
     g.message("Test S^4")
     for i in range(N):
-        psi = (
-            R_z(i, np.pi / 2.0)
-            | R_z(i, np.pi / 2.0)
-            | R_z(i, np.pi / 2.0)
-            | R_z(i, np.pi / 2.0)
-        ) * stR
+        psi = (R_z(i, np.pi / 2.0) | R_z(i, np.pi / 2.0) | R_z(i, np.pi / 2.0)) * stR
+        mangle[q](psi)
+        psi = R_z(i, np.pi / 2.0) * psi
         q.check_same(psi, stR)
 
     # check norm of all gates
@@ -89,7 +113,9 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
     # H | Z | H = X
     g.message("Test H | Z | H == X")
     for i in range(N):
-        a = (H(i) | R_z(i, np.pi) | H(i)) * stR
+        a = (H(i) | R_z(i, np.pi)) * stR
+        mangle[q](a)
+        a = H(i) * a
         b = X(i) * stR
         q.check_same(a, b)
 
@@ -110,12 +136,14 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
     # Bell state
     g.message("Test Bell-type state")
     bell_ref = None
+    st1 = st0.cloned()
+    mangle[q](st1)
     for i in range(N):
         circuit = H(i)
         for j in range(N):
             if i != j:
                 circuit = circuit | CNOT(i, j)
-        bell = circuit * st0
+        bell = circuit * st1
         if i == 0:
             bell_ref = bell
         else:

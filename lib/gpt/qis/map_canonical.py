@@ -59,10 +59,16 @@ class map_canonical:
             g.message(t)
 
     def coordinates_from_permutation(self, bit_permutation):
-        # TODO: need a faster version
-        for i in range(n):
-            proj = np.bitwise_and(self.coordinates, 2 ** i)
-
+        ones = np.ones(self.coordinates.shape, self.coordinates.dtype)
+        zeros = np.zeros(self.coordinates.shape, self.coordinates.dtype)
+        coor = np.copy(zeros)
+        for i in range(self.n):
+            coor += np.where(
+                np.bitwise_and(self.coordinates, 2 ** i) != 0,
+                (2 ** bit_permutation[i]) * ones,
+                zeros,
+            )
+        return coor
 
     def index_to_bits(self, idx, bit_permutation):
         if bit_permutation is None:
@@ -70,8 +76,14 @@ class map_canonical:
         else:
             return [(idx >> bit_permutation[shift]) & 1 for shift in range(self.n)]
 
-    def coordinate_to_basis_name(self, coordinate, bit_permutation = None):
+    def coordinate_to_basis_name(self, coordinate, bit_permutation=None):
         idx = coordinate[0]
         return (
-            "|" + ("".join([str(x) for x in reversed(self.index_to_bits(idx, bit_permutation))])) + ">"
+            "|"
+            + (
+                "".join(
+                    [str(x) for x in reversed(self.index_to_bits(idx, bit_permutation))]
+                )
+            )
+            + ">"
         )

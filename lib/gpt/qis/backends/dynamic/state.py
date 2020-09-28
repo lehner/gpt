@@ -29,18 +29,27 @@ from gpt.qis.map_canonical import map_canonical
 
 class state:
     def __init__(
-        self, rng, number_of_qubits, precision=None, bit_map=None, lattice=None, bit_permutation=None
+        self,
+        rng,
+        number_of_qubits,
+        precision=None,
+        bit_map=None,
+        lattice=None,
+        bit_permutation=None,
+        current_coordinates=None,
     ):
         if precision is None:
             precision = g.double
         if bit_map is None:
             bit_map = map_canonical(number_of_qubits, precision)
         if bit_permutation is None:
-            bit_permutation = list(reversed(range(number_of_qubits))) # to test
+            bit_permutation = list(range(number_of_qubits))
+            current_coordinates = bit_map.coordinates
         self.rng = rng
         self.precision = precision
         self.number_of_qubits = number_of_qubits
         self.bit_map = bit_map
+        self.current_coordinates = current_coordinates
         self.bit_permutation = bit_permutation
         self.classical_bit = [None] * number_of_qubits
         if lattice is not None:
@@ -57,24 +66,27 @@ class state:
             self.precision,
             self.bit_map,
             g.copy(self.lattice),
-            self.bit_permutation
+            self.bit_permutation,
+            self.current_coordinates,
         )
         s.classical_bit = [x for x in self.classical_bit]
         return s
 
     def prefetch(self, local_qubits):
 
-        current_permutation=self.bit_permutation
-        high_qubits=[]
-        for i in range(number_of_qubits):
-            pass
+        current_permutation = self.bit_permutation
+        high_qubits = []
+        for i in range(self.number_of_qubits):
+            if i not in local_qubits:
+                high_qubits.append(i)
+        new_permutation = local_qubits + high_qubits
 
         # coordinates from bit_permutation
-        current_pos = bit_map.coordinates_from_permutation(current_permutation)
-        new_pos = bit_map.coordinates_from_permutation(new_permutation)
-        self.lattice[new_pos] = self.lattice[current_pos]
+        current_coordinates = self.current_coordinates
+        new_coordinates = self.bit_map.coordinates_from_permutation(new_permutation)
+        self.lattice[new_coordinates] = self.lattice[current_coordinates]
         self.bit_permutation = new_permutation
-
+        self.current_coordinates = new_coordinates
 
     def randomize(self):
         self.rng.cnormal(self.lattice)
@@ -95,8 +107,7 @@ class state:
                     + str(val)
                     + " "
                     + self.bit_map.coordinate_to_basis_name(
-                        self.bit_map.coordinates[idx],
-                        self.bit_permutation
+                        self.bit_map.coordinates[idx], self.bit_permutation
                     )
                 )
         if self.lattice.grid.Nprocessors != 1:
@@ -142,10 +153,14 @@ class state:
         p_zero = 1.0 - p_one
         l = self.rng.uniform_real()
         if l <= p_one:
-            self.lattice @= (self.lattice * self.bit_map.one_mask[self.bit_permutation[i]]) / (p_one ** 0.5)
+            self.lattice @= (
+                self.lattice * self.bit_map.one_mask[self.bit_permutation[i]]
+            ) / (p_one ** 0.5)
             r = 1
         else:
-            self.lattice @= (self.lattice * self.bit_map.zero_mask[self.bit_permutation[i]]) / (p_zero ** 0.5)
+            self.lattice @= (
+                self.lattice * self.bit_map.zero_mask[self.bit_permutation[i]]
+            ) / (p_zero ** 0.5)
             r = 0
         self.classical_bit[i] = r
         return r
@@ -153,7 +168,10 @@ class state:
 
 def check_same(state_a, state_b):
     assert (
-        g.norm2(state_a.lattice - state_b.lattice) ** 0.5
+        np.linalg.norm(
+            state_a.lattice[state_a.current_coordinates]
+            - state_b.lattice[state_b.current_coordinates]
+        )
         < state_a.lattice.grid.precision.eps * 10.0
     )
 

@@ -42,7 +42,11 @@ class map:
         self.coarse_grid = coarse_grid
         self.basis = basis
         self.obj = cgpt.create_block_map(
-            coarse_grid.obj, basis, basis_size, basis_n_block, mask.v_obj[0],
+            coarse_grid.obj,
+            basis,
+            basis_size,
+            basis_n_block,
+            mask.v_obj[0],
         )
 
         def _project(coarse, fine):

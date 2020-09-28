@@ -13,11 +13,11 @@ r = g.random("qis_test")
 
 
 n = g.default.get_int("--n", 16)
-N = g.default.get_int("--N", 100)
+N = g.default.get_int("--N", 10)
 
 for precision in [g.single, g.double]:
 
-    for q in [g.qis.backends.static]:
+    for q in [g.qis.backends.static, g.qis.backends.dynamic]:
         g.message(
             f"""
 
@@ -37,23 +37,25 @@ for precision in [g.single, g.double]:
             return R_z(i, np.pi)
 
         for gate in [X, H, Z]:
-            g.message(
-                f"""
-    - Benchmark {gate.__name__} gate"""
-            )
-            circuit = gate(0)
-            for j in range(1, N):
-                circuit = circuit | gate(j % n)
-            t0 = g.time()
-            st = circuit * stR
-            t1 = g.time()
-            GB = st.lattice.global_bytes() * N * 2 / 1e9
-            g.message(
-                f"""
-    Number of applications :   {N}
-    Timing                 :   {t1-t0} s
-    Effective bandwidth    :   {GB/(t1-t0)} GB/s"""
-            )
+            for bit in range(n):
+                g.message(
+                    f"""
+    - Benchmark {gate.__name__}({bit}) gate"""
+                )
+
+                circuit = gate(bit)
+                for j in range(1, N):
+                    circuit = circuit | gate(bit)
+                t0 = g.time()
+                st = circuit * stR
+                t1 = g.time()
+                GB = st.lattice.global_bytes() * N * 2 / 1e9
+                g.message(
+                    f"""
+                    Number of applications :   {N}
+                    Timing                 :   {t1-t0} s
+                    Effective bandwidth    :   {GB/(t1-t0)} GB/s"""
+                )
 
         # test performance of two-qubit gates
         for gate in [CNOT]:
