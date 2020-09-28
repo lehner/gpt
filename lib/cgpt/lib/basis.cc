@@ -166,7 +166,6 @@ EXPORT(linear_combination,{
     ASSERT((dst.size() / dst_n_virtual) == Nvec);
     ASSERT(Nm*basis_n_virtual == (int)basis.size());
 
-    //    std::cout << Nvec << ", " << dst.size() << std::endl; // 12, 180
     dst[0]->linear_combination(dst,basis,data,basis_n_virtual,basis_n_block);
     
     return PyLong_FromLong(0);

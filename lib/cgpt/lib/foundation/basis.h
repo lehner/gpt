@@ -19,6 +19,7 @@
 
 template<class VLattice>
 void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long n_virtual,long basis_n_block) {
+
   ASSERT(result.size() % n_virtual == 0);
   ASSERT(basis.size() % n_virtual == 0);
   long n_vec = result.size() / n_virtual;
@@ -28,36 +29,28 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
   for (size_t i=0;i<result.size();i++)
     result[i].Checkerboard() = basis[0].Checkerboard();
 
+
 #ifndef GRID_HAS_ACCELERATOR
 
   VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
   VECTOR_VIEW_OPEN(basis,basis_v,CpuRead);
 
   typedef typename std::remove_reference<decltype(basis_v[0][0])>::type vobj;
-  std::vector<vobj> B_all(n_vec*n_virtual*thread_max());
+
+  thread_for(ss, grid->oSites(),{
   
-  thread_region
-    {
-      vobj* B = &B_all[n_vec*n_virtual*thread_num()];
-
-      thread_for_in_region(ss, grid->oSites(),{
-	  
-	  for (long i=0;i<n_vec*n_virtual;i++)
-	    B[i] = Zero();
-      
-	  for(long k=0; k<n_basis; ++k) {
-	    for (long j=0;j<n_virtual;j++) {
-	      auto b = basis_v[k*n_virtual + j][ss];
-	      for (long i=0;i<n_vec;i++) {
-		B[i*n_virtual + j] += Qt[k + i*n_basis] * b;
-	      }
-	    }
-	  }
-
-	  for (long i=0;i<n_vec*n_virtual;i++)
-	    result_v[i][ss] = B[i];
-	});
+    for (long j=0;j<n_virtual;j++) {
+      for (long i=0;i<n_vec;i++) {
+        vobj B = Zero();
+	for(long k=0; k<n_basis; k++) {
+          B += Qt[k + i*n_basis] * basis_v[k*n_virtual + j][ss];
+	}
+        result_v[i*n_virtual + j][ss] = B;
+      }
     }
+
+  });
+
   VECTOR_VIEW_CLOSE(basis_v);
   VECTOR_VIEW_CLOSE(result_v);
 #else
