@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2020  Daniel Richtmann (daniel.richtmann@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,6 +19,22 @@
 #
 import cgpt, gpt, numpy
 from gpt.params import params_convention
+
+
+def apply_open_boundaries(field):
+    if type(field) == list:
+        return [apply_open_boundaries(x) for x in field]
+
+    assert type(field) == gpt.lattice
+    T = field.grid.fdimensions[3]
+    field[:, :, :, 0] = 0.0
+    field[:, :, :, T - 1] = 0.0
+    return field
+    # TODO create plan and cache it
+
+
+def apply_boundaries(field, open_bc=False):
+    return apply_open_boundaries(field) if open_bc is True else field
 
 
 class shift:

@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2020  Daniel Richtmann (daniel.richtmann@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,7 +19,7 @@
 #
 import gpt as g
 from gpt.params import params_convention
-from gpt.core.covariant import shift
+from gpt.core.covariant import shift, apply_boundaries
 from gpt import matrix_operator, site_diagonal_operator
 
 class wilson(shift, matrix_operator):
@@ -39,6 +40,12 @@ class wilson(shift, matrix_operator):
         else:
             self.kappa = params["kappa"]
 
+        self.open_bc = params["boundary_phases"][3] == 0.0
+        if self.open_bc:
+            assert "cF" in params
+            self.cF = params["cF"]
+            T = self.L[3]
+
         if "csw" in params:
             self.csw = params["csw"]
 
@@ -56,16 +63,33 @@ class wilson(shift, matrix_operator):
                             r[:, :, :, :, mu, nu, :, :] = gamma[mu, nu] * M[:, :, :, :, :, :]
                 return r
 
-            self.clover = gamma_product(g.qcd.gauge.field_strength(U, 0, 1), "SigmaXY")
-            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 0, 2), "SigmaXZ")
-            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 0, 3), "SigmaXT")
-            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 1, 2), "SigmaYZ")
-            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 1, 3), "SigmaYT")
-            self.clover += gamma_product(g.qcd.gauge.field_strength(U, 2, 3), "SigmaZT")
+            field_strength = g.qcd.gauge.field_strength
+            self.clover = gamma_product(field_strength(self.U, 0, 1), "SigmaXY")
+            self.clover += gamma_product(field_strength(self.U, 0, 2), "SigmaXZ")
+            self.clover += gamma_product(field_strength(self.U, 0, 3), "SigmaXT")
+            self.clover += gamma_product(field_strength(self.U, 1, 2), "SigmaYZ")
+            self.clover += gamma_product(field_strength(self.U, 1, 3), "SigmaYT")
+            self.clover += gamma_product(field_strength(self.U, 2, 3), "SigmaZT")
+
+            if self.open_bc:  # unity at the temporal boundaries
+                self.clover[:, :, :, 0, :, :, :, :] = 0.0
+                self.clover[:, :, :, T - 1, :, :, :, :] = 0.0
+                for alpha in range(4):
+                    for a in range(Nc):
+                        self.clover[:, :, :, 0, alpha, alpha, a, a] = 1.0
+                        self.clover[:, :, :, T - 1, alpha, alpha, a, a] = 1.0
+
             self.clover *= -0.5 * self.csw
             for alpha in range(4):
                 for a in range(Nc):
                     self.clover[:, :, :, :, alpha, alpha, a, a] += 0.5 / self.kappa
+
+            # improvement coefficients next to temporal boundaries
+            if self.open_bc and self.cF != 1.0:
+                for alpha in range(4):
+                    for a in range(Nc):
+                        self.clover[:, :, :, 1, alpha, alpha, a, a] += self.cF - 1.0
+                        self.clover[:, :, :, T - 2, alpha, alpha, a, a] += self.cF - 1.0
 
             self.Mdiag = site_diagonal_operator(self.clover)
 
@@ -142,7 +166,33 @@ class wilson(shift, matrix_operator):
     def _M(self, dst, src):
         assert dst != src
         dst @= self.Meooe * src + self.Mooee * src
+        apply_boundaries(dst, self.open_bc)
 
     def _G5M(self, dst, src):
         assert dst != src
         dst @= g.gamma[5] * self * src
+
+    def propagator(self, solver, dst, src):
+        """
+        NOTE: This is not intended to be a final "official" implementation.
+        Rather, I needed it for the open bc test to run.
+        """
+        src, dst = g.util.to_list(src), g.util.to_list(dst)
+        inv_matrix = solver(self)
+        grid = src[0].grid
+        n = 4 * 3 * len(src)
+        dst_sc = [g.vspincolor(grid) for i in range(n)]
+        src_sc = [g.vspincolor(grid) for i in range(n)]
+
+        for i in range(len(src)):
+            for s in range(4):
+                for c in range(3):
+                    idx = c + 3 * (s + 4 * i)
+                    g.qcd.prop_to_ferm(src_sc[idx], src[i], s, c)
+                    dst_sc[idx][:] = 0
+        inv_matrix(dst_sc, src_sc)
+        for i in range(len(src)):
+            for s in range(4):
+                for c in range(3):
+                    idx = c + 3 * (s + 4 * i)
+                    g.qcd.ferm_to_prop(dst[i], dst_sc[idx], s, c)
