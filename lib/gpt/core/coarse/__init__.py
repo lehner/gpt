@@ -20,13 +20,21 @@
 import gpt, cgpt, sys, numpy
 
 
+#
+# rhs_n_block: How many vectors are acted on at the same time
+#
+@gpt.params.params_convention(make_hermitian=False, save_links=True, rhs_n_block=4)
 def create_links(A, fmat, basis, params):
     # NOTE: we expect the blocks in the basis vectors
     # to already be orthogonalized!
     # parameters
     make_hermitian = params["make_hermitian"]
     save_links = params["save_links"]
+    rhs_n_block = params["rhs_n_block"]
     assert not (make_hermitian and not save_links)
+
+    # sanity
+    rhs_n_block = min(len(basis), rhs_n_block)
 
     # verbosity
     verbose = gpt.default.is_verbose("coarsen")
@@ -48,10 +56,10 @@ def create_links(A, fmat, basis, params):
     selflink = nhops
 
     # setup fields
-    Mvr = [gpt.lattice(basis[0]) for i in range(nhops)]
-    tmp = gpt.lattice(basis[0])
-    oproj = gpt.vcomplex(c_grid, len(basis))
-    selfproj = gpt.vcomplex(c_grid, len(basis))
+    Mbasis = [[gpt.lattice(basis[0]) for j in range(rhs_n_block)] for i in range(nhops)]
+    tmp = [gpt.lattice(basis[0]) for j in range(rhs_n_block)]
+    oproj = [gpt.vcomplex(c_grid, len(basis)) for j in range(rhs_n_block)]
+    selfproj = [gpt.vcomplex(c_grid, len(basis)) for j in range(rhs_n_block)]
 
     # setup masks
     onemask, blockevenmask, blockoddmask = (
@@ -89,27 +97,35 @@ def create_links(A, fmat, basis, params):
     ]
     fullbm = gpt.block.map(c_grid, basis)
 
-    for i, vr in enumerate(basis):
+    for i0 in range(0, len(basis), rhs_n_block):
+        # rhs indices
+        t("indices")
+        i1 = min(i0 + rhs_n_block, len(basis))
+        iblock = i1 - i0
+
         # apply directional hopping terms
         # this triggers len(dirdisps) comms -> TODO expose DhopdirAll from Grid
         # BUT problem with vector<Lattice<...>> in rhs
         t("apply_hop")
-        [fmat.Mdir(*dirdisp)(Mvr[p], vr) for p, dirdisp in enumerate(dirdisps)]
+        for p, dirdisp in enumerate(dirdisps):
+            fmat.Mdir(*dirdisp)(Mbasis[p][0:iblock], basis[i0:i1])
 
         # coarsen directional terms + write to link
         for p, (mu, fb) in enumerate(dirdisps):
             t("coarsen_hop")
-            dirbms[p].project(oproj, Mvr[p])
+            dirbms[p].project(oproj, Mbasis[p])
 
             t("copy_hop")
-            A[p][:, :, :, :, :, i] = oproj[:]
+            for ib in range(iblock):
+                A[p][:, :, :, :, :, i0 + ib] = oproj[ib][:]
 
         # fast diagonal term: apply full matrix to both block cbs separately and discard hops into other cb
         t("apply_self")
-        tmp @= (
-            blockevenmask * fmat * vr * blockevenmask
-            + blockoddmask * fmat * vr * blockoddmask
-        )
+        for ib in range(iblock):
+            tmp[ib] @= (
+                blockevenmask * fmat * basis[i0 + ib] * blockevenmask
+                + blockoddmask * fmat * basis[i0 + ib] * blockoddmask
+            )
 
         # coarsen diagonal term
         t("coarsen_self")
@@ -117,10 +133,11 @@ def create_links(A, fmat, basis, params):
 
         # write to self link
         t("copy_self")
-        A[selflink][:, :, :, :, :, i] = selfproj[:]
+        for ib in range(iblock):
+            A[selflink][:, :, :, :, :, i0 + ib] = selfproj[ib][:]
 
         if verbose:
-            gpt.message("coarsen: done with vector %d" % i)
+            gpt.message("coarsen: done with vectors %3d - %3d" % (i0, i1 - 1))
 
     # communicate opposite links
     if save_links:
