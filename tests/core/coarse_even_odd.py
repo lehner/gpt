@@ -10,8 +10,8 @@ import numpy as np
 import sys
 
 # command line parameters
-grid_f_size = g.default.get_ivec("--fgrid", [8, 8, 8, 8], 4)
-grid_c_size = g.default.get_ivec("--cgrid", [4, 4, 4, 4], 4)
+grid_f_size = g.default.get_ivec("--fgrid", [8, 8, 8, 16], 4)
+grid_c_size = g.default.get_ivec("--cgrid", [4, 4, 4, 8], 4)
 
 # setup rng, make it quiet
 g.default.set_verbose("random", False)
@@ -312,7 +312,7 @@ Test: imag(v^dag Mooee^-dag Mooee^-1 v) = 0 (on full grid + both cbs)
     rel. dev. even = {rel_dev_e} -> test {'passed' if rel_dev_e <= 1e-9 else 'failed'}
     rel. dev. odd = {rel_dev_o} -> test {'passed' if rel_dev_o <= 1e-9 else 'failed'}"""
     )
-    assert rel_dev <= 1e-9 and rel_dev_e <= 1e-9 and rel_dev_o <= 1e-9
+    assert rel_dev <= 1e-8 and rel_dev_e <= 1e-8 and rel_dev_o <= 1e-8
 
     # Mooee^-1 Mooee = 1 (on full grid + both cbs)
     mat.Mooee.mat(tmp, src)
