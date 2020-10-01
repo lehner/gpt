@@ -283,11 +283,11 @@ Test: imag(v^dag Mooee^dag Mooee v) = 0 (on full grid + both cbs)
     dot = {dot}
     dot_e = {dot_e}
     dot_o = {dot_o}
-    rel. dev. = {rel_dev} -> test {'passed' if rel_dev <= 1e-9 else 'failed'}
-    rel. dev. even = {rel_dev_e} -> test {'passed' if rel_dev_e <= 1e-9 else 'failed'}
-    rel. dev. odd = {rel_dev_o} -> test {'passed' if rel_dev_o <= 1e-9 else 'failed'}"""
+    rel. dev. = {rel_dev} -> test {'passed' if rel_dev <= 1e-8 else 'failed'}
+    rel. dev. even = {rel_dev_e} -> test {'passed' if rel_dev_e <= 1e-8 else 'failed'}
+    rel. dev. odd = {rel_dev_o} -> test {'passed' if rel_dev_o <= 1e-8 else 'failed'}"""
     )
-    assert rel_dev <= 1e-9 and rel_dev_e <= 1e-9 and rel_dev_o <= 1e-9
+    assert rel_dev <= 1e-8 and rel_dev_e <= 1e-8 and rel_dev_o <= 1e-8
 
     # imag(v^dag Mooee^-dag Mooee^-1 v) = 0 (on full grid + both cbs)
     mat.Mooee.inv_mat(tmp, src)
@@ -308,9 +308,9 @@ Test: imag(v^dag Mooee^-dag Mooee^-1 v) = 0 (on full grid + both cbs)
     dot = {dot}
     dot_e = {dot_e}
     dot_o = {dot_o}
-    rel. dev. = {rel_dev} -> test {'passed' if rel_dev <= 1e-9 else 'failed'}
-    rel. dev. even = {rel_dev_e} -> test {'passed' if rel_dev_e <= 1e-9 else 'failed'}
-    rel. dev. odd = {rel_dev_o} -> test {'passed' if rel_dev_o <= 1e-9 else 'failed'}"""
+    rel. dev. = {rel_dev} -> test {'passed' if rel_dev <= 1e-8 else 'failed'}
+    rel. dev. even = {rel_dev_e} -> test {'passed' if rel_dev_e <= 1e-8 else 'failed'}
+    rel. dev. odd = {rel_dev_o} -> test {'passed' if rel_dev_o <= 1e-8 else 'failed'}"""
     )
     assert rel_dev <= 1e-8 and rel_dev_e <= 1e-8 and rel_dev_o <= 1e-8
 
