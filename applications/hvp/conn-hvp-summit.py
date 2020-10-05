@@ -29,18 +29,20 @@ groups = {
 }
 
 jobs = {
-    "exact_0": {"exact": 1, "sloppy": 0, "low": 0},  # 1270 seconds + 660 to load evecs
-    "sloppy_0": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-    },  # 2652 seconds + 580 to load evecs ; this is ideal for 1h jobs
-    "low_0": {"exact": 0, "sloppy": 0, "low": 150},
+    "exact_0": {"exact": 1, "sloppy": 0, "low": 0, "all_time_slices": True},  # 1270 seconds + 660 to load ev
+    "sloppy_0": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "sloppy_1": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "low_0": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "low_1": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "exact_0_correlated": {"exact": 1, "sloppy": 0, "low": 0, "all_time_slices": False},  # 1270 seconds + 660 to load ev
+    "sloppy_0_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
+    "low_0_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
 }
+# At 32 jobs we break even with eigenvector generation
 
 simultaneous_low_positions = 3
 
-jobs_per_run = 1
+jobs_per_run = g.default.get_int("--gpt_jobs", 1)
 
 source_time_slices = 2
 
@@ -90,7 +92,7 @@ def get_job(only_on_conf=None):
 if g.rank() == 0:
     first_job = get_job()
     run_jobs = str(
-        [first_job] + [get_job(first_job[2]) for i in range(1, jobs_per_run)]
+        list(filter(lambda x: x is not None,[first_job] + [get_job(first_job[2]) for i in range(1, jobs_per_run)]))
     ).encode("utf-8")
 else:
     run_jobs = bytes()
@@ -193,7 +195,8 @@ for group, job, conf, jid, n in run_jobs:
 """
     )
 
-    rng = g.random(f"hvp-conn-a2a-ensemble-{conf}-{job}")
+    job_seed = job.split("_correlated")[0]
+    rng = g.random(f"hvp-conn-a2a-ensemble-{conf}-{job_seed}")
 
     source_positions_low = [
         [rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)]
@@ -208,9 +211,15 @@ for group, job, conf, jid, n in run_jobs:
         for j in range(jobs[job]["exact"])
     ]
 
+    all_time_slices = jobs[job]["all_time_slices"]
+    use_source_time_slices = source_time_slices
+    if not all_time_slices:
+        use_source_time_slices = 1
+    
     g.message(f" positions_low = {source_positions_low}")
     g.message(f" positions_sloppy = {source_positions_sloppy}")
     g.message(f" positions_exact = {source_positions_exact}")
+    g.message(f" all_time_slices = {all_time_slices}")
 
     root_job = f"{root_output}/{conf}/{job}"
     output = g.gpt_io.writer(f"{root_job}/propagators")
@@ -220,6 +229,8 @@ for group, job, conf, jid, n in run_jobs:
     def contract(pos, prop, tag, may_save_prop=True):
         t0 = pos[3]
         prop_tag = "%s/%s" % (tag, str(pos))
+        if not all_time_slices:
+            prop_tag = "single_time_slice/" + prop_tag
 
         # save propagators
         if save_propagators and may_save_prop:
@@ -257,6 +268,9 @@ for group, job, conf, jid, n in run_jobs:
 
         # create time-sparsened source
         sign_of_slice = [rng.zn(n=2) for i in range(source_time_slices)]
+        for i in range(use_source_time_slices,source_time_slices):
+            sign_of_slice[i] = 0.0
+
         pos_of_slice = [
             [
                 pos[i] if i < 3 else (pos[i] + j * sparse_time) % full_time
@@ -286,7 +300,7 @@ for group, job, conf, jid, n in run_jobs:
         prop_sloppy = g.eval(prop_l_sloppy * srcD)
         prop_low = g.eval(prop_l_low * srcF)
 
-        for i in range(source_time_slices):
+        for i in range(use_source_time_slices):
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_exact), "exact")
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_sloppy), "sloppy")
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_low), "low", False)
@@ -299,7 +313,7 @@ for group, job, conf, jid, n in run_jobs:
         prop_sloppy = g.eval(prop_l_sloppy * srcD)
         prop_low = g.eval(prop_l_low * srcF)
 
-        for i in range(source_time_slices):
+        for i in range(use_source_time_slices):
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_sloppy), "sloppy")
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_low), "low", False)
 
@@ -325,7 +339,7 @@ for group, job, conf, jid, n in run_jobs:
             prop_low = array_prop_low[inner]
             pos_of_slice = array_pos_of_slice[inner]
             sign_of_slice = array_sign_of_slice[inner]
-            for i in range(source_time_slices):
+            for i in range(use_source_time_slices):
                 contract(
                     pos_of_slice[i],
                     g.eval(sign_of_slice[i] * prop_low),
