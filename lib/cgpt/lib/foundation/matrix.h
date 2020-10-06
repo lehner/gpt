@@ -23,20 +23,18 @@ inline void invertMatrix(PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>
 			 const PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>&  matrix,
 			 long                                                            n_virtual) {
 
-  /*
-    TODO: rewrite this with singlet_rank etc. so that it works for ALL matrices
-  */
-  assert(matrix_inv.size() > 0 && matrix.size() > 0);
+  ASSERT(matrix_inv.size() > 0 && matrix.size() > 0);
 
-  assert(matrix_inv.size() % n_virtual == 0);
-  assert(matrix_inv.size() == n_virtual);
+  ASSERT(matrix_inv.size() % n_virtual == 0);
+  ASSERT(matrix_inv.size() == n_virtual);
   long matrix_inv_n = matrix_inv.size() / n_virtual;
 
-  assert(matrix.size() % n_virtual == 0);
-  assert(matrix_inv.size() == n_virtual);
+  ASSERT(matrix.size() % n_virtual == 0);
+  ASSERT(matrix.size() == n_virtual);
+
   long matrix_n = matrix.size() / n_virtual;
 
-  assert(matrix_inv_n == matrix_n);
+  ASSERT(matrix_inv_n == matrix_n);
 
   conformable(matrix_inv[0].Grid(), matrix[0].Grid());
   GridBase *grid = matrix[0].Grid();
@@ -104,6 +102,60 @@ inline void invertMatrix(PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>
   VECTOR_VIEW_CLOSE(matrix_inv_v);
   VECTOR_VIEW_CLOSE(matrix_v);
 }
+
+
+template<class vtype,int Nc>
+inline void invertMatrix(PVector<Lattice<iScalar<iScalar<iMatrix<vtype, Nc>>>>>&        matrix_inv,
+			 const PVector<Lattice<iScalar<iScalar<iMatrix<vtype, Nc>>>>>&  matrix,
+			 long                                                           n_virtual) {
+
+  ASSERT(matrix_inv.size() == 1 && matrix.size() == 1);
+  ASSERT(n_virtual == 1);
+
+  conformable(matrix_inv[0].Grid(), matrix[0].Grid());
+  GridBase *grid = matrix[0].Grid();
+
+  long lsites = grid->lSites();
+
+  typedef typename iScalar<iScalar<iMatrix<vtype,Nc>>>::scalar_object scalar_object;
+
+  VECTOR_VIEW_OPEN(matrix_inv,matrix_inv_v,CpuWrite);
+  VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
+
+  thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
+    auto site = _idx;
+
+    Eigen::MatrixXcd matrix_inv_eigen = Eigen::MatrixXcd::Zero(Nc, Nc);
+    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(Nc, Nc);
+
+    scalar_object matrix_inv_tmp = Zero();
+    scalar_object matrix_tmp = Zero();
+
+    Coordinate lcoor;
+    grid->LocalIndexToLocalCoor(site, lcoor);
+
+    peekLocalSite(matrix_tmp, matrix_v[0], lcoor);
+    for (long row=0;row<Nc;row++) {
+      for (long col=0;col<Nc;col++) {
+	matrix_eigen(row, col) = static_cast<ComplexD>(TensorRemove(matrix_tmp()()(row, col)));
+      }
+    }
+
+    matrix_inv_eigen = matrix_eigen.inverse();
+
+    for (long row=0;row<Nc;row++) {
+      for (long col=0;col<Nc;col++) {
+	matrix_inv_tmp()()(row, col) = matrix_inv_eigen(row, col);
+      }
+    }
+    pokeLocalSite(matrix_inv_tmp, matrix_inv_v[0], lcoor);
+
+  });
+
+  VECTOR_VIEW_CLOSE(matrix_inv_v);
+  VECTOR_VIEW_CLOSE(matrix_v);
+}
+
 
 
 template<typename T>
