@@ -58,6 +58,7 @@ public:
   virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<cgpt_Lattice_base*>& basis, 
 					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
 					 cgpt_Lattice_base* mask) = 0;
+  virtual void invert_coarse_link(std::vector<cgpt_Lattice_base*>& link_inv, std::vector<cgpt_Lattice_base*>& link, long n_virtual, long basis_virtual_size) = 0;
   virtual GridBase* get_grid() = 0;
   virtual PyObject* advise(std::string type) = 0;
   virtual PyObject* prefetch(std::string type) = 0;

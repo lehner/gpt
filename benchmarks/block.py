@@ -32,7 +32,7 @@ for precision in [g.single, g.double]:
     for nvec in [1, 4]:
         g.message(
             f"""
-Lookup Table Benchmark with
+Blocking Benchmark with
     fine fdimensions    : {fgrid.fdimensions}
     coarse fdimensions  : {cgrid.fdimensions}
     precision           : {precision.__name__}
@@ -83,7 +83,7 @@ Lookup Table Benchmark with
             block_map.project(coarse, fine)
         t1 = g.time()
 
-        # Report without lookuptable
+        # Report
         GFlopsPerSec = flops / (t1 - t0) / 1e9
         GBPerSec = nbytes / (t1 - t0) / 1e9
         g.message(
@@ -123,7 +123,7 @@ Lookup Table Benchmark with
             block_map.promote(fine, coarse)
         t1 = g.time()
 
-        # Report without lookuptable
+        # Report
         GFlopsPerSec = flops / (t1 - t0) / 1e9
         GBPerSec = nbytes / (t1 - t0) / 1e9
         g.message(

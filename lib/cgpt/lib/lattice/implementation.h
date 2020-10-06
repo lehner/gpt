@@ -230,6 +230,19 @@ public:
 
   }
 
+  virtual void invert_coarse_link(std::vector<cgpt_Lattice_base*>& link_inv, std::vector<cgpt_Lattice_base*>& link, long n_virtual, long basis_virtual_size) {
+
+    ASSERT(link.size() == link_inv.size());
+    ASSERT(link.size() > 0 && link.size() % n_virtual == 0);
+    ASSERT(link_inv.size() > 0 && link_inv.size() % n_virtual == 0);
+
+#define BASIS_SIZE(n) if (n == basis_virtual_size) { return cgpt_invert_coarse_link<iMSinglet ## n<vCoeff_t>>(link_inv, link, n_virtual); }
+#include "../basis_size.h"
+#undef BASIS_SIZE
+
+    { ERR("Unknown basis size %d",(int)basis_virtual_size); }
+  }
+
   virtual GridBase* get_grid() {
     return l.Grid();
   }

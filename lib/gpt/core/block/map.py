@@ -79,6 +79,23 @@ class map:
     def orthonormalize(self):
         cgpt.block_orthonormalize(self.obj)
 
+    def check_orthogonality(self, tol=None):
+        c_otype = gpt.ot_vsinglet(len(self.basis))
+        iproj = gpt.lattice(self.coarse_grid, c_otype)
+        eproj = gpt.lattice(self.coarse_grid, c_otype)
+        for i, v in enumerate(self.basis):
+            iproj @= self.project * v
+            eproj[:] = 0.0
+            eproj[:, :, :, :, i] = 1.0
+            err2 = gpt.norm2(eproj - iproj)
+            if tol is not None:
+                assert err2 <= tol
+                gpt.message(
+                    f"blockmap: ortho check for vector {i:d}: {err2:e} <= {tol:e}"
+                )
+            else:
+                gpt.message(f"blockmap: ortho check error for vector {i:d}: {err2:e}")
+
     def coarse_operator(self, fine_operator):
         verbose = gpt.default.is_verbose("block_operator")
 

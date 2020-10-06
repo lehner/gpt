@@ -228,11 +228,16 @@ class fine_operator(operator):
 
 class coarse_operator(operator):
     def __init__(self, name, U, params, otype=None):
-        super().__init__(name, U, params, otype, False)
+        super().__init__(name, U, params, otype, True)
+        self.tmp = gpt.lattice(self.F_grid, otype)
+        self.tmp_eo = gpt.lattice(self.F_grid_eo, otype)
+        self.U_self_inv = gpt.coarse.invert_link(self.U[8])
 
         self.obj = []
         for i in range(len(U[0].v_obj)):
             self.params["U"] = [a.v_obj[i] for a in self.U]
+            self.params["U_self_inv"] = self.U_self_inv.v_obj[i]
+            self.params["dag_factor"] = gpt.coarse.prefactor_dagger(self.U[8], i)
             self.obj.append(
                 cgpt.create_fermion_operator(
                     self.name, self.U_grid.precision, self.params
@@ -246,30 +251,39 @@ class coarse_operator(operator):
     def apply_unary_operator(self, opcode, o, i):
         assert len(i.v_obj) == len(o.v_obj)
         assert len(i.v_obj) == (len(self.obj)) ** 0.5
-        tmp = gpt.lattice(o)
-        o[:] = 0.0
-        for m in range(len(i.v_obj)):
-            tmp[:] = 0.0
+        if len(i.v_obj) == 1:
+            cgpt.apply_fermion_operator(self.obj[0], opcode, i.v_obj[0], o.v_obj[0])
+        else:
+            tmp = self.tmp if o.checkerboard() is gpt.none else self.tmp_eo
             for n in range(len(i.v_obj)):
-                cgpt.apply_fermion_operator(
-                    self.obj[n * len(i.v_obj) + m], opcode, i.v_obj[n], tmp.v_obj[m]
-                )
-                o += tmp
+                for m in range(len(i.v_obj)):
+                    cgpt.apply_fermion_operator(
+                        self.obj[n * len(i.v_obj) + m],
+                        opcode,
+                        i.v_obj[n],
+                        o.v_obj[m] if n == 0 else tmp.v_obj[m],
+                    )
+                if n != 0:
+                    o += tmp
 
     def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
         assert len(i.v_obj) == len(o.v_obj)
         assert len(i.v_obj) == (len(self.obj)) ** 0.5
-        tmp = gpt.lattice(o)
-        o[:] = 0.0
-        for m in range(len(i.v_obj)):
-            tmp[:] = 0.0
+        if len(i.v_obj) == 1:
+            cgpt.apply_fermion_operator_dirdisp(
+                self.obj[0], opcode, i.v_obj[0], o.v_obj[0], direction, disp,
+            )
+        else:
+            tmp = self.tmp  # dirdisp is on full grid by definition
             for n in range(len(i.v_obj)):
-                cgpt.apply_fermion_operator_dirdisp(
-                    self.obj[n * len(i.v_obj) + m],
-                    opcode,
-                    i.v_obj[n],
-                    tmp.v_obj[m],
-                    direction,
-                    disp,
-                )
-                o += tmp
+                for m in range(len(i.v_obj)):
+                    cgpt.apply_fermion_operator_dirdisp(
+                        self.obj[n * len(i.v_obj) + m],
+                        opcode,
+                        i.v_obj[n],
+                        o.v_obj[m] if n == 0 else tmp.v_obj[m],
+                        direction,
+                        disp,
+                    )
+                if n != 0:
+                    o += tmp

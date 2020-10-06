@@ -76,7 +76,8 @@ class defect_correcting:
 
             # verbosity
             verbose = g.default.is_verbose("dci")
-            t_start = g.time()
+            t = g.timer("dci")
+            t("setup")
 
             # leading order
             n = len(src)
@@ -87,12 +88,12 @@ class defect_correcting:
             for i in range(self.maxiter):
 
                 # correction step
-                t0 = g.time()
+                t("outer_mat")
                 for j in range(n):
                     _s[j] -= outer_mat * _d[j]
-                t1 = g.time()
+                t("inner_inv")
                 _d = g.eval(inner_inv_mat * _s)
-                t2 = g.time()
+                t("accum")
                 for j in range(n):
                     psi[j] += _d[j]
 
@@ -103,27 +104,16 @@ class defect_correcting:
                 self.history.append(eps)
 
                 if verbose:
-                    g.message(
-                        "Defect-correcting inverter:  eps[",
-                        i,
-                        "] =",
-                        eps,
-                        ".  Timing:",
-                        t2 - t1,
-                        "s (innver_inv), ",
-                        t1 - t0,
-                        "s (outer_mat)",
-                    )
+                    g.message("Defect-correcting inverter: res^2[ %d ] = %g" % (i, eps))
 
                 if eps < self.eps:
                     if verbose:
+                        t()
                         g.message(
-                            "Defect-correcting inverter: converged at iteration",
-                            i,
-                            "after",
-                            g.time() - t_start,
-                            "s",
+                            "Defect-correcting inverter: converged in %d iterations, took %g s"
+                            % (i + 1, t.dt["total"])
                         )
+                        g.message(t)
                     break
 
         otype, grid, cb = None, None, None
