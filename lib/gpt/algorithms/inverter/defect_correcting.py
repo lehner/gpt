@@ -59,6 +59,18 @@ class defect_correcting:
     #
     #     eps defect = outer_mat inner_mat^{-1} - 1
     #
+    # Therefore
+    #
+    #     lhs = lhs^{(0)} - inner_mat^{-1} (outer_mat inner_mat^{-1} - 1) rhs + ...
+    #
+    #     lhs = lhs^{(0)} - inner_mat^{-1} (outer_mat lhs^{(0)} - rhs) + ...
+    #
+    # Finally
+    #
+    #     lhs^{(0)} = inner_mat^{-1} rhs
+    #     lhs^{(1)} = lhs^{(0)} - inner_mat^{-1} (outer_mat lhs^{(0)} - rhs)
+    #     lhs^{(2)} = lhs^{(1)} - inner_mat^{-1} (outer_mat lhs^{(1)} - rhs)
+    #
 
     @g.params_convention(eps=1e-15, maxiter=1000000)
     def __init__(self, inner_inverter, params):
@@ -81,27 +93,35 @@ class defect_correcting:
 
             # leading order
             n = len(src)
-            _s = [g.copy(x) for x in src]
-            _d = [g.copy(x) for x in psi]
+            _s = [g.lattice(x) for x in src]
+            for j in range(n):
+                _s[j] @= src[j] - outer_mat * psi[j] # remaining src
+
+            # src norm
+            ssq = [g.norm2(x) for x in src]
+            for j in range(n):
+                if ssq[j] == 0.0:
+                    ssq[j] = g.norm2(outer_mat * psi[j])
+                    if ssq[j] == 0.0:
+                        ssq[j] = 1.0;
 
             self.history = []
             for i in range(self.maxiter):
 
                 # correction step
-                t("outer_mat")
-                for j in range(n):
-                    _s[j] -= outer_mat * _d[j]
                 t("inner_inv")
                 _d = g.eval(inner_inv_mat * _s)
-                t("accum")
+
+                t("outer_mat")
                 for j in range(n):
                     psi[j] += _d[j]
+                    _s[j] @= src[j] - outer_mat * psi[j] # remaining src
 
                 # true resid
-                eps = max(
-                    [g.norm2(outer_mat * psi[j] - src[j]) ** 0.5 for j in range(n)]
-                )
+                eps = max([(g.norm2(_s[j]) / ssq[j]) ** 0.5 for j in range(n)])
                 self.history.append(eps)
+
+                t2 = g.time()
 
                 if verbose:
                     g.message("Defect-correcting inverter: res^2[ %d ] = %g" % (i, eps))
