@@ -74,7 +74,6 @@ class state:
 
     def prefetch(self, local_qubits):
 
-        current_permutation = self.bit_permutation
         high_qubits = []
         for i in range(self.number_of_qubits):
             if i not in local_qubits:

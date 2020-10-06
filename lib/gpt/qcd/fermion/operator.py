@@ -271,7 +271,12 @@ class coarse_operator(operator):
         assert len(i.v_obj) == (len(self.obj)) ** 0.5
         if len(i.v_obj) == 1:
             cgpt.apply_fermion_operator_dirdisp(
-                self.obj[0], opcode, i.v_obj[0], o.v_obj[0], direction, disp,
+                self.obj[0],
+                opcode,
+                i.v_obj[0],
+                o.v_obj[0],
+                direction,
+                disp,
             )
         else:
             tmp = self.tmp  # dirdisp is on full grid by definition

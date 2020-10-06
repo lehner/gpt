@@ -51,9 +51,9 @@ nbasis_c = 30
 nblockortho = 1
 
 # define check tolerances
-tol_ortho = (grid_f.precision.eps*10)**2.0
-tol_links = (grid_f.precision.eps*10)**2.0
-tol_operator = (grid_f.precision.eps*10)**2.0
+tol_ortho = (grid_f.precision.eps * 10) ** 2.0
+tol_links = (grid_f.precision.eps * 10) ** 2.0
+tol_operator = (grid_f.precision.eps * 10) ** 2.0
 
 # setup fine basis
 basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]

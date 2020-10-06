@@ -103,7 +103,7 @@ A_self = A_c[8]
 A_self_inv = g.coarse.invert_link(A_self)
 vec_out_c @= A_self_inv * A_self * vec_in_c
 assert g.norm2(vec_out_c - vec_in_c) / g.norm2(vec_in_c) < 1e-13
-g.message(f"Test: coarse link inversion: passed\n")
+g.message("Test: coarse link inversion: passed\n")
 
 # test correct checkerboards on full grid
 for m, o, i, w in [
