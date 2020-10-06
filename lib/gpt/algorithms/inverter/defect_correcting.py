@@ -95,7 +95,7 @@ class defect_correcting:
             n = len(src)
             _s = [g.lattice(x) for x in src]
             for j in range(n):
-                _s[j] @= src[j] - outer_mat * psi[j] # remaining src
+                _s[j] @= src[j] - outer_mat * psi[j]  # remaining src
 
             # src norm
             ssq = [g.norm2(x) for x in src]
@@ -103,7 +103,7 @@ class defect_correcting:
                 if ssq[j] == 0.0:
                     ssq[j] = g.norm2(outer_mat * psi[j])
                     if ssq[j] == 0.0:
-                        ssq[j] = 1.0;
+                        ssq[j] = 1.0
 
             self.history = []
             for i in range(self.maxiter):
@@ -115,7 +115,7 @@ class defect_correcting:
                 t("outer_mat")
                 for j in range(n):
                     psi[j] += _d[j]
-                    _s[j] @= src[j] - outer_mat * psi[j] # remaining src
+                    _s[j] @= src[j] - outer_mat * psi[j]  # remaining src
 
                 # true resid
                 eps = max([(g.norm2(_s[j]) / ssq[j]) ** 0.5 for j in range(n)])
