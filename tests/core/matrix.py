@@ -23,7 +23,6 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     g.message(f"adj(U) == inv(U): {eps2}")
     assert eps2 < eps ** 2.0
 
-
     # then test component operators
     c = g.component
 
