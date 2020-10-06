@@ -13,7 +13,7 @@ g.default.set_verbose("random", False)
 rng = g.random("test_mg")
 
 # just run with larger volume
-L = [8, 8, 16, 16]
+L = [16, 8, 16, 16]
 
 # setup gauge field
 U = g.qcd.gauge.random(g.grid(L, g.double), rng)
@@ -67,7 +67,7 @@ mg_setup_2lvl_params = {
     "distribution": rng.cnormal,
 }
 mg_setup_3lvl_params = {
-    "blocksize": [[2, 2, 2, 2], [1, 2, 2, 1]],
+    "blocksize": [[2, 2, 2, 2], [2, 1, 1, 1]],
     "nblockortho": 1,
     "check_blockortho": True,
     "nbasis": 30,
@@ -81,29 +81,30 @@ mg_setup_3lvl_params = {
     ),
     "distribution": rng.cnormal,
 }
-mg_setup_4lvl_params = {
-    "blocksize": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 1, 2, 2]],
-    "nblockortho": 1,
-    "check_blockortho": True,
-    "nbasis": 30,
-    "make_hermitian": False,
-    "save_links": True,
-    "vector_type": "null",
-    "npreortho": 1,
-    "npostortho": 0,
-    "solver": i.fgmres(
-        {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-    ),
-    "distribution": rng.cnormal,
-}
+# mg_setup_4lvl_params = {
+#     "blocksize": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 2, 2, 2]],
+#     "nblockortho": 1,
+#     "check_blockortho": True,
+#     "nbasis": 30,
+#     "make_hermitian": False,
+#     "save_links": True,
+#     "vector_type": "null",
+#     "npreortho": 1,
+#     "npostortho": 0,
+#     "solver": i.fgmres(
+#         {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
+#     ),
+#     "distribution": rng.cnormal,
+# }
 g.message(f"mg_setup_2lvl = {mg_setup_2lvl_params}")
 g.message(f"mg_setup_3lvl = {mg_setup_3lvl_params}")
-g.message(f"mg_setup_4lvl = {mg_setup_4lvl_params}")
+# g.message(f"mg_setup_4lvl = {mg_setup_4lvl_params}")
 
 # mg setup objects
 mg_setup_2lvl_dp = mg.setup(w_dp, mg_setup_2lvl_params)
 mg_setup_2lvl_sp = mg.setup(w_sp, mg_setup_2lvl_params)
 mg_setup_3lvl_sp = mg.setup(w_sp, mg_setup_3lvl_params)
+
 # mg_setup_4lvl_sp = mg.setup(w_sp, mg_setup_4lvl_params)
 
 # mg inner solvers

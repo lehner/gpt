@@ -10,8 +10,8 @@ import numpy as np
 import sys
 
 # command line parameters
-grid_f_size = g.default.get_ivec("--fgrid", [8, 8, 8, 16], 4)
-grid_c_size = g.default.get_ivec("--cgrid", [4, 4, 4, 8], 4)
+grid_f_size = g.default.get_ivec("--fgrid", [16, 16, 16, 16], 4)
+grid_c_size = g.default.get_ivec("--cgrid", [8, 8, 8, 8], 4)
 
 # setup rng, make it quiet
 g.default.set_verbose("random", False)
