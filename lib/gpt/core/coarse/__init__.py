@@ -204,14 +204,6 @@ def unsplit_chiral(basis, factor=None):
         basis[n] @= (basis[n] + basis[n + nb]) * rev_factor
 
 
-def invert_link(A):
-    assert type(A) == gpt.lattice
-    A_inv = gpt.lattice(A)
-    to_list = gpt.util.to_list
-    cgpt.invert_coarse_link(to_list(A_inv), to_list(A), A.otype.v_n1[0])
-    return A_inv
-
-
 def prefactor_dagger(A, v_idx=None):
     assert type(A) == gpt.lattice
     nbasis = A.otype.shape[0]

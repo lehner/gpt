@@ -17,25 +17,16 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lib.h"
+template<typename T>
+void cgpt_invert_matrix(Lattice<T>& l, std::vector<cgpt_Lattice_base*>& _matrix_inv, std::vector<cgpt_Lattice_base*>& _matrix, long n_virtual) {
+  
+  PVector<Lattice<T>> matrix_inv;
+  PVector<Lattice<T>> matrix;
+  cgpt_basis_fill(matrix_inv, _matrix_inv);
+  cgpt_basis_fill(matrix, _matrix);
 
-EXPORT(invert_coarse_link,{
+  ASSERT(matrix.size() == matrix_inv.size());
+  ASSERT(matrix.size() > 0 && matrix.size() % n_virtual == 0);
 
-    PyObject * _link_inv, * _link;
-    long basis_virtual_size;
-    if (!PyArg_ParseTuple(args, "OOl", &_link_inv, &_link, &basis_virtual_size)) {
-      return NULL;
-    }
-
-    std::vector<cgpt_Lattice_base*> link_inv;
-    long link_inv_n_virtual = cgpt_basis_fill(link_inv, _link_inv);
-
-    std::vector<cgpt_Lattice_base*> link;
-    long link_n_virtual = cgpt_basis_fill(link, _link);
-
-    ASSERT(link_inv_n_virtual == link_n_virtual);
-
-    link[0]->invert_coarse_link(link_inv, link, link_n_virtual, basis_virtual_size);
-
-    return PyLong_FromLong(0);
-  });
+  invertMatrix(matrix_inv, matrix, n_virtual);
+}

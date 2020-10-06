@@ -19,23 +19,27 @@
 */
 
 template<class CComplex,int basis_virtual_size>
-inline void invertCoarseLink(      PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>&   link_inv,
-                             const PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>&   link,
-                                   long                                                       n_virtual) {
-  assert(link_inv.size() > 0 && link.size() > 0);
+inline void invertMatrix(PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>&        matrix_inv,
+			 const PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>&  matrix,
+			 long                                                            n_virtual) {
 
-  assert(link_inv.size() % n_virtual == 0);
-  assert(link_inv.size() == n_virtual);
-  long link_inv_n = link_inv.size() / n_virtual;
+  /*
+    TODO: rewrite this with singlet_rank etc. so that it works for ALL matrices
+  */
+  assert(matrix_inv.size() > 0 && matrix.size() > 0);
 
-  assert(link.size() % n_virtual == 0);
-  assert(link_inv.size() == n_virtual);
-  long link_n = link.size() / n_virtual;
+  assert(matrix_inv.size() % n_virtual == 0);
+  assert(matrix_inv.size() == n_virtual);
+  long matrix_inv_n = matrix_inv.size() / n_virtual;
 
-  assert(link_inv_n == link_n);
+  assert(matrix.size() % n_virtual == 0);
+  assert(matrix_inv.size() == n_virtual);
+  long matrix_n = matrix.size() / n_virtual;
 
-  conformable(link_inv[0].Grid(), link[0].Grid());
-  GridBase *grid = link[0].Grid();
+  assert(matrix_inv_n == matrix_n);
+
+  conformable(matrix_inv[0].Grid(), matrix[0].Grid());
+  GridBase *grid = matrix[0].Grid();
 
   long lsites = grid->lSites();
 
@@ -44,17 +48,17 @@ inline void invertCoarseLink(      PVector<Lattice<iMatrix<CComplex, basis_virtu
 
   typedef typename iMatrix<CComplex, basis_virtual_size>::scalar_object scalar_object;
 
-  VECTOR_VIEW_OPEN(link_inv,link_inv_v,CpuWrite);
-  VECTOR_VIEW_OPEN(link,link_v,CpuRead);
+  VECTOR_VIEW_OPEN(matrix_inv,matrix_inv_v,CpuWrite);
+  VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
 
   thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
     auto site = _idx;
 
-    Eigen::MatrixXcd link_inv_eigen = Eigen::MatrixXcd::Zero(nbasis_global, nbasis_global);
-    Eigen::MatrixXcd link_eigen = Eigen::MatrixXcd::Zero(nbasis_global, nbasis_global);
+    Eigen::MatrixXcd matrix_inv_eigen = Eigen::MatrixXcd::Zero(nbasis_global, nbasis_global);
+    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(nbasis_global, nbasis_global);
 
-    scalar_object link_inv_tmp = Zero();
-    scalar_object link_tmp = Zero();
+    scalar_object matrix_inv_tmp = Zero();
+    scalar_object matrix_tmp = Zero();
 
     Coordinate lcoor;
     grid->LocalIndexToLocalCoor(site, lcoor);
@@ -69,19 +73,19 @@ inline void invertCoarseLink(      PVector<Lattice<iMatrix<CComplex, basis_virtu
     // col_global = column index of combination of v_objs viewed as 1 single big matrix tensor (row-major ordering)
 
     for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
-      peekLocalSite(link_tmp, link_v[lex_outer], lcoor);
+      peekLocalSite(matrix_tmp, matrix_v[lex_outer], lcoor);
       long row_outer = lex_outer % n_virtual_red;
       long col_outer = lex_outer / n_virtual_red;
       for (long row_inner=0; row_inner<basis_virtual_size; row_inner++) {
         for (long col_inner=0; col_inner<basis_virtual_size; col_inner++) {
           long row_global = row_outer * basis_virtual_size + row_inner;
           long col_global = col_outer * basis_virtual_size + col_inner;
-          link_eigen(row_global, col_global) = static_cast<ComplexD>(TensorRemove(link_tmp(row_inner, col_inner)));
+          matrix_eigen(row_global, col_global) = static_cast<ComplexD>(TensorRemove(matrix_tmp(row_inner, col_inner)));
         }
       }
     }
 
-    link_inv_eigen = link_eigen.inverse();
+    matrix_inv_eigen = matrix_eigen.inverse();
 
     for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
       long row_outer = lex_outer % n_virtual_red;
@@ -90,13 +94,23 @@ inline void invertCoarseLink(      PVector<Lattice<iMatrix<CComplex, basis_virtu
         for (long col_inner=0; col_inner<basis_virtual_size; col_inner++) {
           long row_global = row_outer * basis_virtual_size + row_inner;
           long col_global = col_outer * basis_virtual_size + col_inner;
-          link_inv_tmp(row_inner, col_inner) = link_inv_eigen(row_global, col_global);
+          matrix_inv_tmp(row_inner, col_inner) = matrix_inv_eigen(row_global, col_global);
         }
       }
-      pokeLocalSite(link_inv_tmp, link_inv_v[lex_outer], lcoor);
+      pokeLocalSite(matrix_inv_tmp, matrix_inv_v[lex_outer], lcoor);
     }
   });
 
-  VECTOR_VIEW_CLOSE(link_inv_v);
-  VECTOR_VIEW_CLOSE(link_v);
+  VECTOR_VIEW_CLOSE(matrix_inv_v);
+  VECTOR_VIEW_CLOSE(matrix_v);
+}
+
+
+template<typename T>
+inline void invertMatrix(PVector<Lattice<T>>&        matrix_inv,
+			 const PVector<Lattice<T>>&  matrix,
+			 long                        n_virtual) {
+
+  ERR("Not implemented");
+
 }

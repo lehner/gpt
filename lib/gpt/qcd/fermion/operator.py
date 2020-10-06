@@ -231,7 +231,7 @@ class coarse_operator(operator):
         super().__init__(name, U, params, otype, True)
         self.tmp = gpt.lattice(self.F_grid, otype)
         self.tmp_eo = gpt.lattice(self.F_grid_eo, otype)
-        self.U_self_inv = gpt.coarse.invert_link(self.U[8])
+        self.U_self_inv = gpt.matrix.inv(self.U[8])
 
         self.obj = []
         for i in range(len(U[0].v_obj)):

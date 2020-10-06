@@ -49,6 +49,6 @@ NAMESPACE_BEGIN(Grid);
 #include "foundation/block.h"
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
-#include "foundation/coarse.h"
+#include "foundation/matrix.h"
 
 NAMESPACE_END(Grid);

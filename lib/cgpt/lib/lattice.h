@@ -20,7 +20,7 @@
 #include "lattice/base.h"
 #include "lattice/basis.h"
 #include "lattice/block.h"
-#include "lattice/coarse.h"
+#include "lattice/matrix.h"
 #include "lattice/term.h"
 #include "lattice/unary.h"
 #include "lattice/importexport.h"

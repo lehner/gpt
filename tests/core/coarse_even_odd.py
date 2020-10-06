@@ -100,7 +100,7 @@ vec_in_c_eo.checkerboard(g.odd)
 # test coarse link inversion
 # NOTE: can't multiply and test for identity directly so we act on vector
 A_self = A_c[8]
-A_self_inv = g.coarse.invert_link(A_self)
+A_self_inv = g.matrix.inv(A_self)
 vec_out_c @= A_self_inv * A_self * vec_in_c
 assert g.norm2(vec_out_c - vec_in_c) / g.norm2(vec_in_c) < 1e-13
 g.message("Test: coarse link inversion: passed\n")

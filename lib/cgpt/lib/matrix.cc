@@ -17,16 +17,26 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+#include "lib.h"
 
-template<typename CMat>
-void cgpt_invert_coarse_link(std::vector<cgpt_Lattice_base*>& _link_inv,
-                             std::vector<cgpt_Lattice_base*>& _link,
-                             long                             n_virtual) {
+EXPORT(invert_matrix,{
 
-  PVector<Lattice<CMat>> link_inv;
-  PVector<Lattice<CMat>> link;
-  cgpt_basis_fill(link_inv, _link_inv);
-  cgpt_basis_fill(link, _link);
+    PyObject * _matrix_inv, * _matrix;
+    if (!PyArg_ParseTuple(args, "OO", &_matrix_inv, &_matrix)) {
+      return NULL;
+    }
 
-  invertCoarseLink(link_inv, link, n_virtual);
-}
+    std::vector<cgpt_Lattice_base*> matrix_inv;
+    long matrix_inv_n_virtual = cgpt_basis_fill(matrix_inv, _matrix_inv);
+
+    std::vector<cgpt_Lattice_base*> matrix;
+    long matrix_n_virtual = cgpt_basis_fill(matrix, _matrix);
+
+    ASSERT(matrix_inv_n_virtual == matrix_n_virtual);
+
+    ASSERT(matrix.size() > 0);
+
+    matrix[0]->invert_matrix(matrix_inv, matrix, matrix_n_virtual);
+
+    return PyLong_FromLong(0);
+  });
