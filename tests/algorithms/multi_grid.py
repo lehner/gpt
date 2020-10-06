@@ -52,45 +52,45 @@ p = g.qcd.fermion.preconditioner
 
 # mg setup parameters
 mg_setup_2lvl_params = {
-    "blocksize": [[2, 2, 2, 2]],
-    "nblockortho": 1,
-    "check_blockortho": True,
-    "nbasis": 30,
+    "block_size": [[2, 2, 2, 2]],
+    "n_block_ortho": 1,
+    "check_block_ortho": True,
+    "n_basis": 30,
     "make_hermitian": False,
     "save_links": True,
     "vector_type": "null",
-    "npreortho": 1,
-    "npostortho": 0,
+    "n_pre_ortho": 1,
+    "n_post_ortho": 0,
     "solver": i.fgmres(
         {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
     ),
     "distribution": rng.cnormal,
 }
 mg_setup_3lvl_params = {
-    "blocksize": [[2, 2, 2, 2], [2, 1, 1, 1]],
-    "nblockortho": 1,
-    "check_blockortho": True,
-    "nbasis": 30,
+    "block_size": [[2, 2, 2, 2], [2, 1, 1, 1]],
+    "n_block_ortho": 1,
+    "check_block_ortho": True,
+    "n_basis": 30,
     "make_hermitian": False,
     "save_links": True,
     "vector_type": "null",
-    "npreortho": 1,
-    "npostortho": 0,
+    "n_pre_ortho": 1,
+    "n_post_ortho": 0,
     "solver": i.fgmres(
         {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
     ),
     "distribution": rng.cnormal,
 }
 # mg_setup_4lvl_params = {
-#     "blocksize": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 2, 2, 2]],
-#     "nblockortho": 1,
-#     "check_blockortho": True,
-#     "nbasis": 30,
+#     "block_size": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 2, 2, 2]],
+#     "n_block_ortho": 1,
+#     "check_block_ortho": True,
+#     "n_basis": 30,
 #     "make_hermitian": False,
 #     "save_links": True,
 #     "vector_type": "null",
-#     "npreortho": 1,
-#     "npostortho": 0,
+#     "n_pre_ortho": 1,
+#     "n_post_ortho": 0,
 #     "solver": i.fgmres(
 #         {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
 #     ),

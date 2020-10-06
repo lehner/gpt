@@ -52,8 +52,8 @@ class setup:
         # grid sizes - allow specifying in two ways
         if "grid" in params:
             self.grid.extend(params["grid"])
-        elif "blocksize" in params:
-            for i, bs in enumerate(params["blocksize"]):
+        elif "block_size" in params:
+            for i, bs in enumerate(params["block_size"]):
                 assert type(bs) == list
                 self.grid.append(g.block.grid(self.grid[i], bs))
         else:
@@ -66,15 +66,15 @@ class setup:
         self.coarsest = self.nlevel - 1
 
         # other parameters
-        self.nblockortho = g.util.to_list(params["nblockortho"], self.nlevel - 1)
+        self.nblockortho = g.util.to_list(params["n_block_ortho"], self.nlevel - 1)
         self.check_blockortho = g.util.to_list(
-            params["check_blockortho"], self.nlevel - 1
+            params["check_block_ortho"], self.nlevel - 1
         )
-        self.nbasis = g.util.to_list(params["nbasis"], self.nlevel - 1)
+        self.nbasis = g.util.to_list(params["n_basis"], self.nlevel - 1)
         self.make_hermitian = g.util.to_list(params["make_hermitian"], self.nlevel - 1)
         self.save_links = g.util.to_list(params["save_links"], self.nlevel - 1)
-        self.npreortho = g.util.to_list(params["npreortho"], self.nlevel - 1)
-        self.npostortho = g.util.to_list(params["npostortho"], self.nlevel - 1)
+        self.npreortho = g.util.to_list(params["n_pre_ortho"], self.nlevel - 1)
+        self.npostortho = g.util.to_list(params["n_post_ortho"], self.nlevel - 1)
         self.vector_type = g.util.to_list(params["vector_type"], self.nlevel - 1)
         self.distribution = g.util.to_list(params["distribution"], self.nlevel - 1)
         self.solver = g.util.to_list(params["solver"], self.nlevel - 1)
@@ -399,7 +399,7 @@ class inverter:
                         def ignore_mat(dst_p, src_p):
                             inv_lvl(dst_p, src_p, nc_lvl)
 
-                        #return g.matrix_operator(ignore_mat)
+                        # return g.matrix_operator(ignore_mat)
                         return ignore_mat
 
                     g.default.push_verbose(get_slv_name(slv_w), False)
