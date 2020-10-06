@@ -163,7 +163,7 @@ assert niter_prec_2lvl_mg_vcycle_dp <= niter_prec_smooth
 # preconditioned inversion (2lvl mg -- vcycle -- mixed precision)
 fgmres_outer = i.fgmres(
     fgmres_params,
-    prec=i.mixed_precision(i.direct(mg_2lvl_vcycle_sp), g.single, g.double),
+    prec=i.mixed_precision(mg_2lvl_vcycle_sp, g.single, g.double),
     # prec=i.mixed_precision(mg_2lvl_vcycle_sp, g.single, g.double),  # NOTE: This won't work
 )
 sol_prec_2lvl_mg_vcycle_mp = g.eval(fgmres_outer(w_dp) * src)
@@ -178,7 +178,7 @@ assert niter_prec_2lvl_mg_vcycle_mp <= niter_prec_2lvl_mg_vcycle_dp + 1
 # # preconditioned inversion (3lvl mg -- vcycle -- mixed precision)
 # fgmres_outer = i.fgmres(
 #     fgmres_params,
-#     prec=i.mixed_precision(i.direct(mg_3lvl_vcycle_sp), g.single, g.double),
+#     prec=i.mixed_precision(mg_3lvl_vcycle_sp, g.single, g.double),
 # )
 # sol_prec_3lvl_mg_vcycle_mp = g.eval(fgmres_outer(w_dp) * src)
 # eps2 = g.norm2(w_dp * sol_prec_3lvl_mg_vcycle_mp - src) / g.norm2(src)
@@ -192,7 +192,7 @@ assert niter_prec_2lvl_mg_vcycle_mp <= niter_prec_2lvl_mg_vcycle_dp + 1
 # preconditioned inversion (3lvl mg -- kcycle -- mixed precision)
 fgmres_outer = i.fgmres(
     fgmres_params,
-    prec=i.mixed_precision(i.direct(mg_3lvl_kcycle_sp), g.single, g.double),
+    prec=i.mixed_precision(mg_3lvl_kcycle_sp, g.single, g.double),
 )
 sol_prec_3lvl_mg_kcycle_mp = g.eval(fgmres_outer(w_dp) * src)
 eps2 = g.norm2(w_dp * sol_prec_3lvl_mg_kcycle_mp - src) / g.norm2(src)
@@ -207,7 +207,7 @@ assert niter_prec_3lvl_mg_kcycle_mp < niter_prec_smooth
 # # preconditioned inversion (4lvl mg -- vcycle -- mixed precision)
 # fgmres_outer = i.fgmres(
 #     fgmres_params,
-#     prec=i.mixed_precision(i.direct(mg_4lvl_vcycle_sp), g.single, g.double),
+#     prec=i.mixed_precision(mg_4lvl_vcycle_sp, g.single, g.double),
 # )
 # sol_prec_4lvl_mg_vcycle_mp = g.eval(fgmres_outer(w_dp) * src)
 # eps2 = g.norm2(w_dp * sol_prec_4lvl_mg_vcycle_mp - src) / g.norm2(src)
@@ -222,7 +222,7 @@ assert niter_prec_3lvl_mg_kcycle_mp < niter_prec_smooth
 # fgmres_outer = i.fgmres(fgmres_params, prec=mg_4lvl_kcycle_sp)
 # fgmres_outer = i.fgmres(
 #     fgmres_params,
-#     prec=i.mixed_precision(i.direct(mg_4lvl_kcycle_sp), g.single, g.double),
+#     prec=i.mixed_precision(mg_4lvl_kcycle_sp, g.single, g.double),
 # )
 # sol_prec_4lvl_mg_kcycle_mp = g.eval(fgmres_outer(w_dp) * src)
 # eps2 = g.norm2(w_dp * sol_prec_4lvl_mg_kcycle_mp - src) / g.norm2(src)

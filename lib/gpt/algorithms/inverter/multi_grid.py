@@ -340,6 +340,7 @@ class inverter:
         def inv_lvl(psi, src, lvl):
             # assertions
             assert psi != src
+            assert type(src) != list
 
             # neighbors
             nc_lvl = s.nc_lvl[lvl]
@@ -398,6 +399,7 @@ class inverter:
                         def ignore_mat(dst_p, src_p):
                             inv_lvl(dst_p, src_p, nc_lvl)
 
+                        #return g.matrix_operator(ignore_mat)
                         return ignore_mat
 
                     g.default.push_verbose(get_slv_name(slv_w), False)
