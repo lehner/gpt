@@ -65,6 +65,10 @@ class timer:
             self.dt["total"] += time()
             self.active = False
 
+    @property
+    def total(self):
+        return self.dt["total"]
+
     def __str__(self):
         assert not self.active
         dtp, fp, bp = self.create_print_arrays()

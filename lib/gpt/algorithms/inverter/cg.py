@@ -78,7 +78,7 @@ class cg:
                         t()
                         g.message(
                             "cg: converged in %d iterations, took %g s"
-                            % (k, t.dt["total"])
+                            % (k, t.total)
                         )
                         g.message(t)
                     break

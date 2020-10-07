@@ -122,8 +122,13 @@ def inner_product(a, b):
 def norm2(l):
     if type(l) == gpt.tensor:
         return l.norm2()
-    l = gpt.eval(l)  # otherwise it gets evaluated twice below
-    return inner_product(l, l).real
+    l = gpt.eval(l)
+    return_list = type(l) == list
+    l = gpt.util.to_list(l)
+    ip = l[0].grid.globalsum(numpy.array([rank_inner_product(x, x) for x in l], dtype=numpy.complex128)).real
+    if return_list:
+        return ip
+    return gpt.util.to_num(ip[0])
 
 
 def inner_product_norm2(a, b):
