@@ -55,6 +55,22 @@ class circuit:
             op(other, *args)
         return other
 
+    def dagger(self):
+        """
+        Return the daggered circuit.
+        For a circuit ``c`` ``c | c.dagger()`` will be the identity.
+
+        Implementation detail:
+
+        Currently this function is a bit hacky and requires
+        the gate definition to be the tuple ``(fct, qbit)``
+        for all but the ``R`` gate.
+        For the ``R`` gate the tuple ``(fct, qbit, angle)`` is
+        the definition.
+        """
+        return circuit([g if len(g < 3) else (*g[:-1], -g[-1]) for g in reversed(self.val)])
+
+
 
 def H(i):
     return circuit([(_H, i)])
