@@ -55,16 +55,6 @@ class circuit:
             op(other, *args)
         return other
 
-    def dagger(self):
-        """
-        Return the daggered circuit.
-        For a circuit ``c`` ``c | c.dagger()`` will be the identity.
-
-        Implementation detail: It's a bit hacky.
-        """
-        return circuit([g if g[0] != _R_z else (*g[:-1], -g[-1]) for g in reversed(self.val)])
-
-
 
 def H(i):
     return circuit([(_H, i)])

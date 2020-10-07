@@ -133,17 +133,6 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
                 psi = (CNOT(control, target) | X(target)) * state_control_1
                 q.check_same(psi, state_control_1)
 
-    # daggers of circuits
-    g.message("Dagger of circuit")
-    circuit = (H(0)
-                | R(0, np.random.uniform(0, 2*np.pi))
-                | CNOT(0, 1)
-                | X(1) | R(1, np.random.uniform(0, 2*np.pi))
-                | H(1) | CNOT(1, 2))
-    id_circuit = circuit | circuit.dagger()
-    q.check_same(stR, id_circuit * stR)
-
-
     # Bell state
     g.message("Test Bell-type state")
     bell_ref = None
