@@ -60,15 +60,9 @@ class circuit:
         Return the daggered circuit.
         For a circuit ``c`` ``c | c.dagger()`` will be the identity.
 
-        Implementation detail:
-
-        Currently this function is a bit hacky and requires
-        the gate definition to be the tuple ``(fct, qbit)``
-        for all but the ``R`` gate.
-        For the ``R`` gate the tuple ``(fct, qbit, angle)`` is
-        the definition.
+        Implementation detail: It's a bit hacky.
         """
-        return circuit([g if len(g < 3) else (*g[:-1], -g[-1]) for g in reversed(self.val)])
+        return circuit([g if g[0] != _R_z else (*g[:-1], -g[-1]) for g in reversed(self.val)])
 
 
 
