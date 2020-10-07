@@ -136,9 +136,9 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
     # daggers of circuits
     g.message("Dagger of circuit")
     circuit = (H(0)
-                | R(0, np.random.uniform(0, 2*np.pi))
+                | R_z(0, np.random.uniform(0, 2*np.pi))
                 | CNOT(0, 1)
-                | X(1) | R(1, np.random.uniform(0, 2*np.pi))
+                | X(1) | R_z(1, np.random.uniform(0, 2*np.pi))
                 | H(1) | CNOT(1, 2))
     id_circuit = circuit | circuit.dagger()
     q.check_same(stR, id_circuit * stR)
