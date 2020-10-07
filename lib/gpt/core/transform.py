@@ -125,7 +125,13 @@ def norm2(l):
     l = gpt.eval(l)
     return_list = type(l) == list
     l = gpt.util.to_list(l)
-    ip = l[0].grid.globalsum(numpy.array([rank_inner_product(x, x) for x in l], dtype=numpy.complex128)).real
+    ip = (
+        l[0]
+        .grid.globalsum(
+            numpy.array([rank_inner_product(x, x) for x in l], dtype=numpy.complex128)
+        )
+        .real
+    )
     if return_list:
         return ip
     return gpt.util.to_num(ip[0])

@@ -61,16 +61,20 @@ w = g.qcd.fermion.wilson_clover(
 inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-4, "maxiter": 1000})
 
+
 def H5_denom(dst, src):
     dst @= g.gamma[5] * (2 * src + (qm.params["b"] - qm.params["c"]) * w * src)
 
+
 inv_H5_denom = cg(H5_denom)
+
 
 def H5(dst, src):
     # g5 * Dkernel
     # Dkernel = (b+c)*w / (2 + (b-c)*w)
     dst @= inv_H5_denom * w * src
     dst *= qm.params["b"] + qm.params["c"]
+
 
 # arnoldi to get an idea of entire spectral range of w
 start = g.vspincolor(w.F_grid)
@@ -124,9 +128,8 @@ slv_qm_e = qm.propagator(slv_5d_e)
 slv_qz = qz.propagator(slv_5d)
 slv_madwf = qm.propagator(pc.mixed_dwf(slv_5d, slv_5d, qz))
 slv_madwf_dc = qm.propagator(
-        inv.defect_correcting(
-            pc.mixed_dwf(slv_5d, slv_5d, qz),
-            eps=1e-6, maxiter=10))
+    inv.defect_correcting(pc.mixed_dwf(slv_5d, slv_5d, qz), eps=1e-6, maxiter=10)
+)
 
 
 # inverse one spin color src

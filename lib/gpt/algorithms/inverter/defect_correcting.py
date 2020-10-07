@@ -97,8 +97,16 @@ class defect_correcting:
 
             # norm of source
             norm2_of_source = g.norm2(src)
-            norm2_of_source = [g.norm2(outer_mat * psi[j]) if norm2_of_source[j] == 0.0 else norm2_of_source[j] for j in range(n)]
-            norm2_of_source = [1.0 if norm2_of_source[j] == 0.0 else norm2_of_source[j] for j in range(n)]
+            norm2_of_source = [
+                g.norm2(outer_mat * psi[j])
+                if norm2_of_source[j] == 0.0
+                else norm2_of_source[j]
+                for j in range(n)
+            ]
+            norm2_of_source = [
+                1.0 if norm2_of_source[j] == 0.0 else norm2_of_source[j]
+                for j in range(n)
+            ]
 
             self.history = []
             for i in range(self.maxiter):
@@ -112,7 +120,9 @@ class defect_correcting:
 
                 # true resid
                 t("norm2")
-                eps = max([(norm2_of_defect[j] / norm2_of_source[j]) ** 0.5 for j in range(n)])
+                eps = max(
+                    [(norm2_of_defect[j] / norm2_of_source[j]) ** 0.5 for j in range(n)]
+                )
                 self.history.append(eps)
 
                 if verbose:
@@ -131,7 +141,7 @@ class defect_correcting:
                 # normalize _s to avoid floating-point underflow in inner_inv_mat
                 t("linear algebra")
                 for j in range(n):
-                    _s[j] /= norm2_of_source[j]**0.5
+                    _s[j] /= norm2_of_source[j] ** 0.5
 
                 # correction step
                 t("inner inverter")
@@ -139,9 +149,7 @@ class defect_correcting:
 
                 t("linear algebra")
                 for j in range(n):
-                    psi[j] += _d[j] * norm2_of_source[j]**0.5
-
-
+                    psi[j] += _d[j] * norm2_of_source[j] ** 0.5
 
         otype, grid, cb = None, None, None
         if type(outer_mat) == g.matrix_operator:
