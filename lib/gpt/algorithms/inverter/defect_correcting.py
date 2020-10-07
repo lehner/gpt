@@ -97,16 +97,11 @@ class defect_correcting:
 
             # norm of source
             norm2_of_source = g.norm2(src)
-            norm2_of_source = [
-                g.norm2(outer_mat * psi[j])
-                if norm2_of_source[j] == 0.0
-                else norm2_of_source[j]
-                for j in range(n)
-            ]
-            norm2_of_source = [
-                1.0 if norm2_of_source[j] == 0.0 else norm2_of_source[j]
-                for j in range(n)
-            ]
+            for j in range(n):
+                if norm2_of_source[j] == 0.0:
+                    norm2_of_source[j] = g.norm2(outer_mat * psi[j])
+                    if norm2_of_source[j] == 0.0:
+                        norm2_of_source[j] = 1.0
 
             self.history = []
             for i in range(self.maxiter):
