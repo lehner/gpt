@@ -8,6 +8,7 @@ import gpt
 import numpy
 
 gpt.default.set_verbose("hmc")
+gpt.default.set_verbose("omf4")
 gpt.default.set_verbose("random", False)
 grid = gpt.grid([16, 16, 16, 32], gpt.double)
 
@@ -27,14 +28,14 @@ mdint = gpt.algorithms.integrators.OMF4(8, i0, iU)
 hmc = gpt.algorithms.markov.hmc(U, mom, None, mdint, rng)
 
 gpt.message("Thermalization")
-for itrj in range(40):
+for itrj in range(1): #40
     gpt.message(f"Trajectory {itrj}")
     hmc(2.0)
     gpt.message(f"Plaquette = {gpt.qcd.gauge.plaquette(U)*3.}")
 
 hmc_hist = []
 plaq_hist = []
-for itrj in range(100):
+for itrj in range(1): #100
     gpt.message(f"Trajectory {itrj}")
     hmc_hist.append(hmc(2.0))
     plaq_hist.append(gpt.qcd.gauge.plaquette(U))

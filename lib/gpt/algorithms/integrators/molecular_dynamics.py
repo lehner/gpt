@@ -97,26 +97,39 @@ class OMF4(integrator):
         time = gpt.timer("OMF4")
         time("OMF4")
 
+        time("momenta")
         self.i0(self.r[0] * eps)
         for i in range(self.N):
+            time("fields")
             self.i1(self.r[1] * eps)
+            time("momenta")
             self.i0(self.r[2] * eps)
+            time("fields")
             self.i1(self.r[3] * eps)
 
+            time("momenta")
             self.i0(f1 * eps)
 
+            time("fields")
             self.i1(f2 * eps)
 
+            time("momenta")
             self.i0(f1 * eps)
 
+            time("fields")
             self.i1(self.r[3] * eps)
+            time("momenta")
             self.i0(self.r[2] * eps)
+            time("fields")
             self.i1(self.r[1] * eps)
 
             if i != self.N - 1:
+                time("momenta")
                 self.i0(2.0 * self.r[0] * eps)
+        time("momenta")
         self.i0(self.r[0] * eps)
 
         if verbose:
             time()
+            gpt.message(time)
             gpt.message(f"OMF4 Integrator ran in {time.dt['total']:g} secs")

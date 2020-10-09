@@ -43,8 +43,7 @@ class symanzik:
         if pos:
             return (
                 gpt.cshift(self.U[nu], mu, 1)
-                * gpt.adj(gpt.cshift(self.U[mu], nu, 1))
-                * gpt.adj(self.U[nu])
+                * gpt.adj(self.U[nu] * gpt.cshift(self.U[mu], nu, 1))
             )
         else:
             # tmp = gpt.cshift(self.U[nu], nu, -1)
@@ -126,9 +125,10 @@ class symanzik:
 
                     # __ __
                     # __ __|
+                    tmp2 = gpt.cshift(self.U[nu], mu, 1)
                     stpos += (
                         self.c1
-                        * gpt.cshift(self.U[nu], mu, 1)
+                        * tmp2
                         * gpt.cshift(tmp, nu, 1)
                         * gpt.adj(self.U[nu])
                     )
@@ -156,7 +156,7 @@ class symanzik:
                     tmp = self.__staple(nu, mu, False)
                     stpos += (
                         self.c1
-                        * gpt.cshift(self.U[nu], mu, 1)
+                        * tmp2
                         * gpt.adj(gpt.cshift(self.U[mu], nu, 1))
                         * tmp
                     )
@@ -166,7 +166,7 @@ class symanzik:
                     # |_|    |__>nu
                     stneg += self.c1 * gpt.adj(
                         gpt.cshift(
-                            tmp * self.U[mu] * gpt.cshift(self.U[nu], mu, 1), nu, -1
+                            tmp * self.U[mu] * tmp2, nu, -1
                         )
                     )
 
@@ -178,9 +178,7 @@ class symanzik:
                     #  __ __
                     # |__ __
                     stneg += self.c1 * gpt.cshift(
-                        gpt.adj(gpt.cshift(self.U[nu], mu, 1)) * tmp * self.U[nu],
-                        nu,
-                        -1,
+                        gpt.adj(tmp2) * tmp * self.U[nu], nu, -1,
                     )
 
         return [stpos, stneg]
@@ -196,14 +194,17 @@ class symanzik:
 
     def force(self, field):
         frc = gpt.lattice(self.U[0])
+        mu = -1
         for U in self.U:
             if U.v_obj == field.v_obj:
                 mu = self.U.index(U)
                 [stpos, stneg] = self.compute_staples(mu)
                 frc @= U * stpos
                 frc -= gpt.adj(U * stneg)
-
-        self.sun2alg(frc)
+        if mu==-1:
+            raise Exception
+            
+        self.sun2alg(frc) # 10% of entire force
         return frc * self.g0inv
 
 
