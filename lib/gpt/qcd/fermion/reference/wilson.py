@@ -22,6 +22,7 @@ from gpt.params import params_convention
 from gpt.core.covariant import shift, apply_boundaries
 from gpt import matrix_operator, site_diagonal_operator
 
+
 class wilson(shift, matrix_operator):
     # M = sum_mu gamma[mu]*D[mu] + m0 - 1/2 sum_mu D^2[mu]
     # m0 + 4 = 1/2/kappa
@@ -34,11 +35,21 @@ class wilson(shift, matrix_operator):
         otype = g.ot_vector_spin_color(4, Nc)
         grid = U[0].grid
         self.F_grid = grid
+        self.F_grid_eo = g.grid(
+            self.F_grid.gdimensions,
+            self.F_grid.precision,
+            g.redblack,
+            parent=self.F_grid.parent,
+            mpi=self.F_grid.mpi,
+        )
         if "mass" in params:
             assert "kappa" not in params
+            self.mass = params["mass"]
             self.kappa = 1.0 / (params["mass"] + 4.0) / 2.0
         else:
+            assert "kappa" in params
             self.kappa = params["kappa"]
+            self.mass = 1 / (2 * params["kappa"]) - 4
 
         self.open_bc = params["boundary_phases"][3] == 0.0
         if self.open_bc:
