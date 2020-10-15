@@ -33,26 +33,26 @@ class doublet:
         self.M = M
         self.Sinv = Sinv(M) * M.ImportPhysicalFermionSource
         if Finv2 is None:
-            #self.Finv = Finv(M * M.adj)
+            self.Finv = Finv(M * M.adj)
             self.Finv2 = None
         else:
             self.Finv = Finv(self.M)
             self.Finv2 = Finv2(self.M.adj)
         self.grid = M.F_grid
         
-    def refresh(self, rng):
-        #
-        eta = gpt.vspincolor(self.grid)
-        rng.normal(eta)
-        self.pf @= self.M * eta
-        
-    def __call__(self):
-        psi = gpt.vspincolor(self.grid)
-        gpt.eval(psi, self.Sinv * self.pf)
-        return gpt.norm2(psi)
+    def __call__(self,rng=None):
+        if not rng is None:
+            eta = gpt.vspincolor(self.grid)
+            rng.normal(eta)
+            self.pf @= self.M * eta
+            return gpt.norm2(eta)
+        else:
+            psi = gpt.vspincolor(self.grid)
+            gpt.eval(psi, self.Sinv * self.pf)
+            return gpt.norm2(psi)
     
     def setup_force(self):
-        #self.M.update(op.U) ---> ?
+        self.M.update(self.M.U)
         if self.Finv2 is None:
             gpt.eval(self.chi, self.Finv * self.pf)
             self.psi @= self.M.adj * self.chi
