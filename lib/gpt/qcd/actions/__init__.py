@@ -20,3 +20,4 @@
 
 import gpt.qcd.actions.gauge
 import gpt.qcd.actions.scalar
+import gpt.qcd.actions.fermion
