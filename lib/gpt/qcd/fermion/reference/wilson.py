@@ -199,7 +199,7 @@ class wilson(shift, matrix_operator):
 
     def _M(self, dst, src):
         assert dst != src
-        dst @= self.Meooe * src + self.Mooee * src
+        dst @= self.Dhop * src + self.Mdiag * src
         apply_boundaries(dst, self.open_bc)
 
     def _G5M(self, dst, src):
