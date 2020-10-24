@@ -26,7 +26,6 @@ w = g.qcd.fermion.reference.wilson(
         "kappa": 0.11,
         "csw_r": 1.5,
         "csw_t": 1.5,
-        "csw": 1.5,  # reference uses this instead
         "xi_0": 1,
         "nu": 1,
         "isAnisotropic": False,

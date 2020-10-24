@@ -56,7 +56,7 @@ assert eps < 1e-13
 
 # more thorough test of Grid-based-Wilson vs reference-Wilson
 wc = g.qcd.fermion.wilson_clover(U, p, csw_r=2.0171, csw_t=2.0171)
-wc_ref = g.qcd.fermion.reference.wilson(U, p, csw=2.0171)
+wc_ref = g.qcd.fermion.reference.wilson(U, p, csw_r=2.0171, csw_t=2.0171)
 assert g.norm2(wc * src - wc_ref * src) / g.norm2(wc * src) < 1e-13
 assert g.norm2(wc.Mdiag * src - wc_ref.Mdiag * src) / g.norm2(wc.Mdiag * src) < 1e-13
 assert g.norm2(wc.Dhop * src - wc_ref.Dhop * src) / g.norm2(wc.Dhop * src) < 1e-13

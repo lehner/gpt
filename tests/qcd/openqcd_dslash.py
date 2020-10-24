@@ -87,7 +87,6 @@ w = g.qcd.fermion.reference.wilson(
         "kappa": 0.13500,
         "csw_r": 1.978,
         "csw_t": 1.978,
-        "csw": 1.978,  # reference implementation uses this
         "cF": 1.3,
         "xi_0": 1,
         "nu": 1,

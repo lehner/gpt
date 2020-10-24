@@ -42,6 +42,14 @@ class wilson(shift, matrix_operator):
             parent=self.F_grid.parent,
             mpi=self.F_grid.mpi,
         )
+        self.csw = None
+        for one, other in [("csw_r", "csw_t"), ("csw_t", "csw_r")]:
+            if one in params:
+                assert other in params
+                self.csw = params[one]
+                assert params[other] == self.csw
+        assert "csw" not in params
+
         if "mass" in params:
             assert "kappa" not in params
             self.mass = params["mass"]
@@ -57,8 +65,7 @@ class wilson(shift, matrix_operator):
             self.cF = params["cF"]
             T = self.L[3]
 
-        if "csw" in params:
-            self.csw = params["csw"]
+        if self.csw is not None:
 
             def gamma_product(M, gamma):
                 """
@@ -105,7 +112,6 @@ class wilson(shift, matrix_operator):
             self.Mdiag = site_diagonal_operator(self.clover)
 
         else:
-            self.csw = None
             self.clover = 0.5 / self.kappa
             self.clover_inv = 1.0 / self.clover
 
