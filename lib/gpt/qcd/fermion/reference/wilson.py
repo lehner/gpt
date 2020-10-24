@@ -32,16 +32,18 @@ class wilson(shift, matrix_operator):
         shift.__init__(self, U, params)
 
         Nc = U[0].otype.Nc
-        otype = g.ot_vector_spin_color(4, Nc)
-        grid = U[0].grid
-        self.F_grid = grid
-        self.F_grid_eo = g.grid(
-            self.F_grid.gdimensions,
-            self.F_grid.precision,
+        self.otype = g.ot_vector_spin_color(4, Nc)
+        self.U_grid = U[0].grid
+        self.U_grid_eo = g.grid(
+            self.U_grid.gdimensions,
+            self.U_grid.precision,
             g.redblack,
-            parent=self.F_grid.parent,
-            mpi=self.F_grid.mpi,
+            parent=self.U_grid.parent,
+            mpi=self.U_grid.mpi,
         )
+        self.F_grid = self.U_grid
+        self.F_grid_eo = self.U_grid_eo
+
         self.csw = None
         for one, other in [("csw_r", "csw_t"), ("csw_t", "csw_r")]:
             if one in params:
@@ -118,33 +120,48 @@ class wilson(shift, matrix_operator):
             self.Mdiag = g.matrix_operator(
                 mat=lambda dst, src: self._Mooee(dst, src),
                 inv_mat=lambda dst, src: self._MooeeInv(dst, src),
-                otype=otype, grid=grid
+                otype=self.otype,
+                grid=self.F_grid,
             )
 
         self.Meooe = g.matrix_operator(
-            lambda dst, src: self._Meooe(dst, src), otype=otype, grid=grid
+            lambda dst, src: self._Meooe(dst, src),
+            otype=self.otype,
+            grid=self.F_grid_eo,
         )
         self.Mooee = g.matrix_operator(
-            lambda dst, src: self._Mooee(dst, src), otype=otype, grid=grid
+            lambda dst, src: self._Mooee(dst, src),
+            otype=self.otype,
+            grid=self.F_grid_eo,
         )
         matrix_operator.__init__(
-            self, lambda dst, src: self._M(dst, src), otype=otype, grid=grid
+            self, lambda dst, src: self._M(dst, src), otype=self.otype, grid=self.F_grid
         )
         self.Dhop = g.matrix_operator(
-            lambda dst, src: self._Meooe(dst, src), otype=otype, grid=grid
+            lambda dst, src: self._Meooe(dst, src), otype=self.otype, grid=self.F_grid
         )
         self.M = g.matrix_operator(
-            lambda dst, src: self._M(dst, src), otype=otype, grid=grid
+            lambda dst, src: self._M(dst, src), otype=self.otype, grid=self.F_grid
         )
         self.G5M = g.matrix_operator(
-            lambda dst, src: self._G5M(dst, src), otype=otype, grid=grid
+            lambda dst, src: self._G5M(dst, src), otype=self.otype, grid=self.F_grid
+        )
+        self.ImportPhysicalFermionSource = g.matrix_operator(
+            lambda dst, src: g.copy(dst, src),
+            otype=self.otype,
+            grid=(self.U_grid, self.F_grid),
+        )
+        self.ExportPhysicalFermionSolution = g.matrix_operator(
+            lambda dst, src: g.copy(dst, src),
+            otype=self.otype,
+            grid=(self.U_grid, self.F_grid),
         )
 
     def Mdir(self, mu, fb):
         return g.matrix_operator(
             mat=lambda dst, src: self._Mdir(dst, src, mu, fb),
             otype=self.otype,
-            grid=self.F_grid
+            grid=self.F_grid,
         )
 
     def _Meooe(self, dst, src):
@@ -189,27 +206,18 @@ class wilson(shift, matrix_operator):
         assert dst != src
         dst @= g.gamma[5] * self * src
 
-    def propagator(self, solver, dst, src):
-        """
-        NOTE: This is not intended to be a final "official" implementation.
-        Rather, I needed it for the open bc test to run.
-        """
-        src, dst = g.util.to_list(src), g.util.to_list(dst)
-        inv_matrix = solver(self)
-        grid = src[0].grid
-        n = 4 * 3 * len(src)
-        dst_sc = [g.vspincolor(grid) for i in range(n)]
-        src_sc = [g.vspincolor(grid) for i in range(n)]
+    def propagator(self, solver):
+        exp = self.ExportPhysicalFermionSolution
+        imp = self.ImportPhysicalFermionSource
 
-        for i in range(len(src)):
-            for s in range(4):
-                for c in range(3):
-                    idx = c + 3 * (s + 4 * i)
-                    g.qcd.prop_to_ferm(src_sc[idx], src[i], s, c)
-                    dst_sc[idx][:] = 0
-        inv_matrix(dst_sc, src_sc)
-        for i in range(len(src)):
-            for s in range(4):
-                for c in range(3):
-                    idx = c + 3 * (s + 4 * i)
-                    g.qcd.ferm_to_prop(dst[i], dst_sc[idx], s, c)
+        inv_matrix = solver(self)
+
+        def prop(dst_sc, src_sc):
+            g.eval(dst_sc, exp * inv_matrix * imp * src_sc)
+
+        return g.matrix_operator(
+            prop,
+            otype=(exp.otype[0], imp.otype[1]),
+            grid=(exp.grid[0], imp.grid[1]),
+            accept_list=True,
+        )

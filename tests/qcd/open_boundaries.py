@@ -52,7 +52,7 @@ fgmres = i.fgmres({"eps": 1e-12, "maxiter": 1000})
 slv = fgmres
 
 # calculate propagator
-w.propagator(slv, dst, src)
+dst @= w.propagator(slv) * src
 
 # two point
 corr_2pt = g.slice(g.trace(dst * g.adj(dst)), 3)
