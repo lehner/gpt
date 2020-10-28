@@ -46,6 +46,7 @@ for f in \
     ${test_path}/qcd/domain_wall.py \
     ${test_path}/qcd/sap.py \
     ${test_path}/qcd/actions_gauge.py \
+    ${test_path}/qcd/actions_qcd.py \
     ${test_path}/qcd/actions_scalar.py \
     ${test_path}/algorithms/implicitly_restarted_lanczos.py \
     ${test_path}/algorithms/arnoldi.py \
