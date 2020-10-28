@@ -17,7 +17,7 @@ grid = g.grid([8] * 4, g.double)
 # wilson
 p={
     #"kappa" : 0.137,
-    "mass" : 0.1,
+    "mass" : 0.8,
     "csw_r" : 0,
     "csw_t" : 0,
     "xi_0" : 1,
@@ -32,7 +32,8 @@ act = g.qcd.actions.fermion.doublet
 eo2_ne = g.qcd.fermion.preconditioner.eo2_ne(parity=g.odd)
 inv = g.algorithms.inverter
 inv1 = inv.preconditioned(eo2_ne, inv.cg({"eps": 1e-12, "maxiter": 1024}))
-inv2 = inv.preconditioned(eo2_ne, inv.cg({"eps": 1e-10, "maxiter": 1024}))
+inv2 = inv.cg({"eps": 1e-10, "maxiter": 1024})
+inv3 = inv.preconditioned(eo2_ne, inv.cg({"eps": 1e-10, "maxiter": 1024}))
 
 # pseudo-fermion field
 pf = g.vspincolor(grid)
@@ -44,7 +45,6 @@ a = act(pf, Dop, inv1, inv2)
 
 a0 = a(rng)
 a1 = a()
-print(a0 - a1)
 assert abs(a0 - a1) * 12 < 1e-8
 
 # force numerical vs analytical
@@ -54,6 +54,16 @@ mom = g.algorithms.markov.conjugate_momenta(U)
 mom.refresh(rng)
 
 frc = g.lattice(U[0])
+
+a.setup_force()
+dSdt = 0.0
+for mu in range(grid.nd):
+    frc @= a.force(U[mu])
+    dSdt += (
+        2.0 * g.inner_product(frc, mom.mom[mu]).real
+    )  # factor 2 due to normalization of algebra
+#a.clean_force()
+
 
 Up = g.qcd.gauge.unit(grid)
 Um = g.qcd.gauge.unit(grid)
@@ -81,15 +91,17 @@ am = a()
 da += 1 / 12 * (-ap + am)
 
 da *= 1 / eps
+g.message(f"Force difference {abs(dSdt/da-1.0)}")
+assert abs(dSdt / da - 1.0) < 2*eps**2
 
-a.setup_force()
+
+# check different syntax
+a2 = act(pf, Dop, inv1, inv3, inv3)
+a2.setup_force()
 daa = 0.0
 for mu in range(grid.nd):
-    frc @= a.force(U[mu])
-    daa += (
+    frc @= a2.force(U[mu])
+    daaa += (
         2.0 * g.inner_product(frc, mom.mom[mu]).real
     )  # factor 2 due to normalization of algebra
-print(da,daa)
-a.clean_force()
-#assert abs(da / daa - 1.0) < eps ** 2
-#g.message(f"Force difference {abs(da/daa-1.0)} , type {acts[i]}")
+print(daa,da)
