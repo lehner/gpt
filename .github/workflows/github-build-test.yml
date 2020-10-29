@@ -51,8 +51,8 @@ jobs:
     - name: Set compiler to cc and c++
       if: matrix.mpi == 'none'
       run: |
-        echo '::set-env name=CC::cc'
-        echo '::set-env name=CXX::c++'
+        echo 'CC=cc' >> $GITHUB_ENV
+        echo 'CXX=c++' >> $GITHUB_ENV
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
