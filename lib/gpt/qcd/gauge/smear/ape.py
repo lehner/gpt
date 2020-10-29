@@ -74,13 +74,13 @@ def ape_general(U, params):
                  for su2_index in range(int(Nc * (Nc - 1) / 2)):
                      U_mu_smear = project_to_su3(U_mu_smear, U_unproj, su2_index)
                  assert(U_mu_smear != U[mu])
-                 # Reunitarize
-                 g.qcd.reunitize(U_mu_smear)
                  # calculate new trace
                  new_trace = np.sum(g.slice(g.trace(U_mu_smear * U_unproj) / (vol * Nc), 3)).real
                  epsilon = np.abs((new_trace - old_trace) / old_trace)
                  old_trace = new_trace
-                 g.qcd.gauge.assert_unitary(U_mu_smear)
-        else: U_mu_smear = U[mu]
+        # Reunitarize
+        g.message("reunitarize")
+        g.qcd.reunitize(U_mu_smear)
+        g.qcd.gauge.assert_unitary(U_mu_smear)
         U_smear.append(U_mu_smear)
     return U_smear
