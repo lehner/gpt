@@ -97,4 +97,4 @@ propagators = {"light" : quark_prop_1, "strange" : quark_prop_2, "charm" : quark
 
 params = {"su(n)": suN, "kappa" : 0.137}
 
-g.qcd.new_baryon_spectrum.baryon_spectrum(data_file, quark_prop_1, quark_prop_2, quark_prop_3, mom, mom_list, params)
+g.qcd.baryon_spectrum.baryon_spectrum(data_file, quark_prop_1, quark_prop_2, quark_prop_3, mom, mom_list, params)
