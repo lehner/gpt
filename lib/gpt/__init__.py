@@ -30,7 +30,7 @@ import sys
 import types
 
 """
-GPT -- Grit Python Toolkit
+GPT -- Grid Python Toolkit
 """
 
 # initialize cgpt when gpt is loaded

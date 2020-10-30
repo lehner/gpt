@@ -189,3 +189,25 @@ for grid in [grid_sp, grid_dp]:
                 )
                 eps = abs(host_result_individual - ref) / abs(ref)
                 assert eps < 1e-12
+
+################################################################################
+# Test multi linear_combination against expression engine
+################################################################################
+for grid in [grid_sp, grid_dp]:
+    nbasis = 7
+    nblock = 3
+    nvec = 2
+    basis = [g.vcomplex(grid, 8) for i in range(nbasis)]
+    rng.cnormal(basis)
+    dst = [g.vcomplex(grid, 8) for i in range(nvec)]
+    coef = [[rng.cnormal() for i in range(nbasis)] for j in range(nvec)]
+    # multi
+    g.linear_combination(dst, basis, coef, nblock)
+    for j in range(nvec):
+        ref = g.vcomplex(grid, 8)
+        ref[:] = 0
+        for i in range(nbasis):
+            ref += coef[j][i] * basis[i]
+        eps2 = g.norm2(dst[j] - ref) / g.norm2(ref)
+        g.message(f"Test linear combination of vector {j}: {eps2}")
+        assert eps2 < 1e-13

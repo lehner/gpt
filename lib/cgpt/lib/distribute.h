@@ -16,6 +16,37 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
+/*
+namespace cgpt_distribute {
+
+  struct {
+    int rank; // mpi rank
+    int index; // index within array of base pointes
+    long offset; // offset within base pointer
+  } global_offset_t;
+
+  class global_memory_view_t {
+  public:
+    std::vector<global_offset_t> element_positions;
+    long element_size;
+  };
+
+  // two global views can create a global_transfer_plan
+  // this should work with buffers (local + buffer to send/receive remote, one for each rank)
+  // 
+
+  struct {
+    long offset_src;
+    long offset_dst;
+    long size;
+  } bcopy_block_t;
+
+  typedef std::vector<bcopy_block_t> bcopy_plan_t;
+
+}
+*/
+
 class cgpt_distribute {
  public:
 

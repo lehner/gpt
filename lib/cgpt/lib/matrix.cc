@@ -1,6 +1,7 @@
 /*
     GPT - Grid Python Toolkit
     Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,14 +17,26 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lattice/types.h"
-#include "lattice/base.h"
-#include "lattice/basis.h"
-#include "lattice/block.h"
-#include "lattice/matrix.h"
-#include "lattice/term.h"
-#include "lattice/unary.h"
-#include "lattice/importexport.h"
-#include "lattice/tostring.h"
-#include "lattice/coordinates.h"
-#include "lattice/implementation.h"
+#include "lib.h"
+
+EXPORT(invert_matrix,{
+
+    PyObject * _matrix_inv, * _matrix;
+    if (!PyArg_ParseTuple(args, "OO", &_matrix_inv, &_matrix)) {
+      return NULL;
+    }
+
+    std::vector<cgpt_Lattice_base*> matrix_inv;
+    long matrix_inv_n_virtual = cgpt_basis_fill(matrix_inv, _matrix_inv);
+
+    std::vector<cgpt_Lattice_base*> matrix;
+    long matrix_n_virtual = cgpt_basis_fill(matrix, _matrix);
+
+    ASSERT(matrix_inv_n_virtual == matrix_n_virtual);
+
+    ASSERT(matrix.size() > 0);
+
+    matrix[0]->invert_matrix(matrix_inv, matrix, matrix_n_virtual);
+
+    return PyLong_FromLong(0);
+  });

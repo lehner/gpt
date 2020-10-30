@@ -10,9 +10,9 @@ import numpy as np
 import sys
 
 # command line parameters
-grid_f_size = g.default.get_ivec("--fgrid", [16, 16, 16, 32], 4)
-grid_c_size = g.default.get_ivec("--cgrid", [8, 8, 8, 16], 4)
-grid_cc_size = g.default.get_ivec("--ccgrid", [4, 4, 4, 8], 4)
+grid_f_size = g.default.get_ivec("--fgrid", [16, 16, 32, 32], 4)
+grid_c_size = g.default.get_ivec("--cgrid", [8, 8, 16, 16], 4)
+grid_cc_size = g.default.get_ivec("--ccgrid", [4, 4, 8, 8], 4)
 
 # setup rng, make it quiet
 g.default.set_verbose("random", False)
@@ -48,12 +48,12 @@ nbasis_f = 20
 nbasis_c = 30
 
 # number of block orthogonalization steps
-northo = 1
+nblockortho = 1
 
 # define check tolerances
-tol_ortho = 1e-28 if grid_f.precision == g.double else 1e-11
-tol_links = 1e-30 if grid_f.precision == g.double else 1e-13
-tol_operator = 1e-30 if grid_f.precision == g.double else 1e-13
+tol_ortho = (grid_f.precision.eps * 10) ** 2.0
+tol_links = (grid_f.precision.eps * 10) ** 2.0
+tol_operator = (grid_f.precision.eps * 10) ** 2.0
 
 # setup fine basis
 basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
@@ -62,11 +62,11 @@ rng.cnormal(basis_f)
 # split fine basis into chiral halfs
 g.coarse.split_chiral(basis_f)
 
-# setup fine block map map
+# setup fine block map
 bm_f = g.block.map(grid_c, basis_f)
 
 # orthonormalize fine basis
-for i in range(northo):
+for i in range(nblockortho):
     g.message("Block ortho step %d" % i)
     bm_f.orthonormalize()
 
@@ -119,11 +119,11 @@ rng.cnormal(basis_c)
 # split coarse basis into chiral halfs
 g.coarse.split_chiral(basis_c)
 
-# setup coarse block map map
+# setup coarse block map
 bm_c = g.block.map(grid_cc, basis_c)
 
 # orthonormalize coarse basis
-for i in range(northo):
+for i in range(nblockortho):
     g.message("Block ortho step %d" % i)
     bm_c.orthonormalize()
 

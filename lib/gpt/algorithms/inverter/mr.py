@@ -26,7 +26,7 @@ class mr:
     # Y. Saad calls it MR, states mat must be positive definite
     # SciPy, Wikipedia call it MINRES, state mat must be symmetric
 
-    @g.params_convention(eps=1e-15, maxiter=1000000)
+    @g.params_convention(eps=1e-15, maxiter=1000000, relax=1.0)
     def __init__(self, params):
         self.params = params
         self.eps = params["eps"]
@@ -88,7 +88,7 @@ class mr:
                         t()
                         g.message(
                             "mr: converged in %d iterations, took %g s"
-                            % (k + 1, t.dt["total"])
+                            % (k + 1, t.total)
                         )
                         g.message(t)
                     break

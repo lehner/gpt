@@ -16,76 +16,41 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+#
+#    This backend implements bit-permutation ideas similar to De Raedt et al. (2007)
+#
+#      https://core.ac.uk/download/pdf/205885919.pdf
+#
+#    to reduce communication overhead.
 import gpt as g
 import numpy as np
+from gpt.qis.map_canonical import map_canonical
 
 
-# TODO
-# - once happy with design, move time-critical aspects (creation of maps)
-#   to cgpt
-class map_canonical:
-    def __init__(self, n, precision):
-        self.n = n
-        self.fdimensions = [2 ** n]
-        self.grid = g.grid(self.fdimensions, precision)
-        self.verbose = g.default.is_verbose("qis_map")
-        self.zero_coordinate = (0,)  # |00000 ... 0> state
-        t = g.timer("map_init")
-        t("coordinates")
-        # TODO: need to split over multiple dimensions, single dimension can hold at most 32 bits
-        self.coordinates = g.coordinates(self.grid)
-        self.not_coordinates = [
-            np.bitwise_xor(self.coordinates, 2 ** i) for i in range(n)
-        ]
-        for i in range(n):
-            self.not_coordinates[i].flags["WRITEABLE"] = False
-        t("masks")
-        self.one_mask = []
-        self.zero_mask = []
-        for i in range(n):
-            proj = np.bitwise_and(self.coordinates, 2 ** i)
-
-            mask = g.complex(self.grid)
-            g.coordinate_mask(mask, proj != 0)
-            self.one_mask.append(mask)
-
-            mask = g.complex(self.grid)
-            g.coordinate_mask(mask, proj == 0)
-            self.zero_mask.append(mask)
-
-        t()
-        if self.verbose:
-            g.message(t)
-
-    def index_to_bits(self, idx):
-        return [(idx >> shift) & 1 for shift in range(self.n)]
-
-    def coordinate_to_basis_name(self, coordinate):
-        idx = coordinate[0]
-        return (
-            "|" + ("".join([str(x) for x in reversed(self.index_to_bits(idx))])) + ">"
-        )
-
-# Variables:
-# - lattice:    keeps complex coordinates in 2^number_of_qubits space
-# - coordinates:  lattice coordinates saved on current rank
-# - state_coordinates:  
-# - state_to_position_index
-# - position_of_state
-#  - coordinates
-#  map 
 class state:
     def __init__(
-        self, rng, number_of_qubits, precision=None, bit_map=None, lattice=None
+        self,
+        rng,
+        number_of_qubits,
+        precision=None,
+        bit_map=None,
+        lattice=None,
+        bit_permutation=None,
+        current_coordinates=None,
     ):
         if precision is None:
             precision = g.double
         if bit_map is None:
             bit_map = map_canonical(number_of_qubits, precision)
+        if bit_permutation is None:
+            bit_permutation = list(range(number_of_qubits))
+            current_coordinates = bit_map.coordinates
         self.rng = rng
         self.precision = precision
         self.number_of_qubits = number_of_qubits
         self.bit_map = bit_map
+        self.current_coordinates = current_coordinates
+        self.bit_permutation = bit_permutation
         self.classical_bit = [None] * number_of_qubits
         if lattice is not None:
             self.lattice = lattice
@@ -101,9 +66,26 @@ class state:
             self.precision,
             self.bit_map,
             g.copy(self.lattice),
+            self.bit_permutation,
+            self.current_coordinates,
         )
         s.classical_bit = [x for x in self.classical_bit]
         return s
+
+    def prefetch(self, local_qubits):
+
+        high_qubits = []
+        for i in range(self.number_of_qubits):
+            if i not in local_qubits:
+                high_qubits.append(i)
+        new_permutation = local_qubits + high_qubits
+
+        # coordinates from bit_permutation
+        current_coordinates = self.current_coordinates
+        new_coordinates = self.bit_map.coordinates_from_permutation(new_permutation)
+        self.lattice[new_coordinates] = self.lattice[current_coordinates]
+        self.bit_permutation = new_permutation
+        self.current_coordinates = new_coordinates
 
     def randomize(self):
         self.rng.cnormal(self.lattice)
@@ -124,7 +106,7 @@ class state:
                     + str(val)
                     + " "
                     + self.bit_map.coordinate_to_basis_name(
-                        self.bit_map.coordinates[idx]
+                        self.bit_map.coordinates[idx], self.bit_permutation
                     )
                 )
         if self.lattice.grid.Nprocessors != 1:
@@ -133,7 +115,7 @@ class state:
 
     def bit_flipped_lattice(self, i):
         c = self.bit_map.coordinates
-        nci = self.bit_map.not_coordinates[i]
+        nci = self.bit_map.not_coordinates[self.bit_permutation[i]]
         bfl = g.lattice(self.lattice)
         bfl[c] = self.lattice[nci]
         return bfl
@@ -144,16 +126,16 @@ class state:
     def R_z(self, i, phi):
         phase_one = np.exp(1j * phi)
         self.lattice @= (
-            self.bit_map.zero_mask[i] * self.lattice
-            + self.bit_map.one_mask[i] * self.lattice * phase_one
+            self.bit_map.zero_mask[self.bit_permutation[i]] * self.lattice
+            + self.bit_map.one_mask[self.bit_permutation[i]] * self.lattice * phase_one
         )
 
     def H(self, i):
         bfl = self.bit_flipped_lattice(i)
-        zero = self.bit_map.zero_mask[i] * self.lattice
-        one = self.bit_map.one_mask[i] * self.lattice
-        bfl_zero = self.bit_map.one_mask[i] * bfl
-        bfl_one = self.bit_map.zero_mask[i] * bfl
+        zero = self.bit_map.zero_mask[self.bit_permutation[i]] * self.lattice
+        one = self.bit_map.one_mask[self.bit_permutation[i]] * self.lattice
+        bfl_zero = self.bit_map.one_mask[self.bit_permutation[i]] * bfl
+        bfl_one = self.bit_map.zero_mask[self.bit_permutation[i]] * bfl
         nrm = 1.0 / 2.0 ** 0.5
         self.lattice @= nrm * (zero + bfl_zero) + nrm * (bfl_one - one)
 
@@ -161,19 +143,23 @@ class state:
         assert control != target
         bfl = self.bit_flipped_lattice(target)
         self.lattice @= (
-            self.bit_map.zero_mask[control] * self.lattice
-            + self.bit_map.one_mask[control] * bfl
+            self.bit_map.zero_mask[self.bit_permutation[control]] * self.lattice
+            + self.bit_map.one_mask[self.bit_permutation[control]] * bfl
         )
 
     def measure(self, i):
-        p_one = g.norm2(self.lattice * self.bit_map.one_mask[i])
+        p_one = g.norm2(self.lattice * self.bit_map.one_mask[self.bit_permutation[i]])
         p_zero = 1.0 - p_one
         l = self.rng.uniform_real()
         if l <= p_one:
-            self.lattice @= (self.lattice * self.bit_map.one_mask[i]) / (p_one ** 0.5)
+            self.lattice @= (
+                self.lattice * self.bit_map.one_mask[self.bit_permutation[i]]
+            ) / (p_one ** 0.5)
             r = 1
         else:
-            self.lattice @= (self.lattice * self.bit_map.zero_mask[i]) / (p_zero ** 0.5)
+            self.lattice @= (
+                self.lattice * self.bit_map.zero_mask[self.bit_permutation[i]]
+            ) / (p_zero ** 0.5)
             r = 0
         self.classical_bit[i] = r
         return r
@@ -181,7 +167,10 @@ class state:
 
 def check_same(state_a, state_b):
     assert (
-        g.norm2(state_a.lattice - state_b.lattice) ** 0.5
+        np.linalg.norm(
+            state_a.lattice[state_a.current_coordinates]
+            - state_b.lattice[state_b.current_coordinates]
+        )
         < state_a.lattice.grid.precision.eps * 10.0
     )
 

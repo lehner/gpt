@@ -161,10 +161,10 @@ class matrix_operator(factor):
                 )
 
         return matrix_operator(
-            mat=lambda dst, src: _converted(dst, src, self.mat, 0, 1),
-            adj_mat=lambda dst, src: _converted(dst, src, self.adj_mat, 1, 0),
-            inv_mat=lambda dst, src: _converted(dst, src, self.inv_mat, 1, 0),
-            adj_inv_mat=lambda dst, src: _converted(dst, src, self.adj_inv_mat, 0, 1),
+            mat=lambda dst, src: _converted(dst, src, self, 0, 1),
+            adj_mat=lambda dst, src: _converted(dst, src, self.adj(), 1, 0),
+            inv_mat=lambda dst, src: _converted(dst, src, self.inv(), 1, 0),
+            adj_inv_mat=lambda dst, src: _converted(dst, src, self.adj().inv(), 0, 1),
             otype=otype,
             grid=grid,
             accept_guess=accept_guess,

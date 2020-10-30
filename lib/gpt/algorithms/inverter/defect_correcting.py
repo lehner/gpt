@@ -59,6 +59,18 @@ class defect_correcting:
     #
     #     eps defect = outer_mat inner_mat^{-1} - 1
     #
+    # Therefore
+    #
+    #     lhs = lhs^{(0)} - inner_mat^{-1} (outer_mat inner_mat^{-1} - 1) rhs + ...
+    #
+    #     lhs = lhs^{(0)} - inner_mat^{-1} (outer_mat lhs^{(0)} - rhs) + ...
+    #
+    # Finally
+    #
+    #     lhs^{(0)} = inner_mat^{-1} rhs
+    #     lhs^{(1)} = lhs^{(0)} - inner_mat^{-1} (outer_mat lhs^{(0)} - rhs)
+    #     lhs^{(2)} = lhs^{(1)} - inner_mat^{-1} (outer_mat lhs^{(1)} - rhs)
+    #
 
     @g.params_convention(eps=1e-15, maxiter=1000000)
     def __init__(self, inner_inverter, params):
@@ -76,55 +88,63 @@ class defect_correcting:
 
             # verbosity
             verbose = g.default.is_verbose("dci")
-            t_start = g.time()
+            t = g.timer("dci")
+            t("setup")
 
-            # leading order
+            # inner source
             n = len(src)
-            _s = [g.copy(x) for x in src]
-            _d = [g.copy(x) for x in psi]
+            _s = [g.lattice(x) for x in src]
+
+            # norm of source
+            norm2_of_source = g.norm2(src)
+            for j in range(n):
+                if norm2_of_source[j] == 0.0:
+                    norm2_of_source[j] = g.norm2(outer_mat * psi[j])
+                    if norm2_of_source[j] == 0.0:
+                        norm2_of_source[j] = 1.0
 
             self.history = []
             for i in range(self.maxiter):
 
-                # correction step
-                t0 = g.time()
+                t("outer matrix")
                 for j in range(n):
-                    _s[j] -= outer_mat * _d[j]
-                t1 = g.time()
-                _d = g.eval(inner_inv_mat * _s)
-                t2 = g.time()
-                for j in range(n):
-                    psi[j] += _d[j]
+                    _s[j] @= src[j] - outer_mat * psi[j]  # remaining src
+
+                t("norm2")
+                norm2_of_defect = g.norm2(_s)
 
                 # true resid
+                t("norm2")
                 eps = max(
-                    [g.norm2(outer_mat * psi[j] - src[j]) ** 0.5 for j in range(n)]
+                    [(norm2_of_defect[j] / norm2_of_source[j]) ** 0.5 for j in range(n)]
                 )
                 self.history.append(eps)
 
                 if verbose:
-                    g.message(
-                        "Defect-correcting inverter:  eps[",
-                        i,
-                        "] =",
-                        eps,
-                        ".  Timing:",
-                        t2 - t1,
-                        "s (innver_inv), ",
-                        t1 - t0,
-                        "s (outer_mat)",
-                    )
+                    g.message("Defect-correcting inverter: res^2[ %d ] = %g" % (i, eps))
 
                 if eps < self.eps:
                     if verbose:
+                        t()
                         g.message(
-                            "Defect-correcting inverter: converged at iteration",
-                            i,
-                            "after",
-                            g.time() - t_start,
-                            "s",
+                            "Defect-correcting inverter: converged in %d iterations, took %g s"
+                            % (i + 1, t.total)
                         )
+                        g.message(t)
                     break
+
+                # normalize _s to avoid floating-point underflow in inner_inv_mat
+                t("linear algebra")
+                for j in range(n):
+                    _s[j] /= norm2_of_source[j] ** 0.5
+
+                # correction step
+                t("inner inverter")
+                _d = g.eval(inner_inv_mat * _s)
+
+                t("linear algebra")
+                for j in range(n):
+                    psi[j] += _d[j] * norm2_of_source[j] ** 0.5
 
         otype, grid, cb = None, None, None
         if type(outer_mat) == g.matrix_operator:

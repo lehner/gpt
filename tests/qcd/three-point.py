@@ -72,7 +72,7 @@ dst_seq @= propagator * src_seq
 
 # 3pt
 correlator_3pt = g.slice(
-    g.trace(G_src * g.gamma[5] * g.adj(dst_seq) * g.gamma[5] * G_snk * dst_seq), 3
+    g.trace(G_src * g.gamma[5] * g.adj(dst) * g.gamma[5] * G_snk * dst_seq), 3
 )
 
 # output

@@ -52,8 +52,8 @@ class setup:
         # grid sizes - allow specifying in two ways
         if "grid" in params:
             self.grid.extend(params["grid"])
-        elif "block" in params:
-            for i, bs in enumerate(params["block"]):
+        elif "block_size" in params:
+            for i, bs in enumerate(params["block_size"]):
                 assert type(bs) == list
                 self.grid.append(g.block.grid(self.grid[i], bs))
         else:
@@ -66,13 +66,16 @@ class setup:
         self.coarsest = self.nlevel - 1
 
         # other parameters
-        self.northo = g.util.to_list(params["northo"], self.nlevel - 1)
-        self.nbasis = g.util.to_list(params["nbasis"], self.nlevel - 1)
+        self.nblockortho = g.util.to_list(params["n_block_ortho"], self.nlevel - 1)
+        self.check_blockortho = g.util.to_list(
+            params["check_block_ortho"], self.nlevel - 1
+        )
+        self.nbasis = g.util.to_list(params["n_basis"], self.nlevel - 1)
         self.make_hermitian = g.util.to_list(params["make_hermitian"], self.nlevel - 1)
         self.save_links = g.util.to_list(params["save_links"], self.nlevel - 1)
-        self.preortho = g.util.to_list(params["preortho"], self.nlevel - 1)
-        self.postortho = g.util.to_list(params["postortho"], self.nlevel - 1)
-        self.vecstype = g.util.to_list(params["vecstype"], self.nlevel - 1)
+        self.npreortho = g.util.to_list(params["n_pre_ortho"], self.nlevel - 1)
+        self.npostortho = g.util.to_list(params["n_post_ortho"], self.nlevel - 1)
+        self.vector_type = g.util.to_list(params["vector_type"], self.nlevel - 1)
         self.distribution = g.util.to_list(params["distribution"], self.nlevel - 1)
         self.solver = g.util.to_list(params["solver"], self.nlevel - 1)
 
@@ -96,15 +99,16 @@ class setup:
             self.nb.append(b // 2)
 
         # assertions
+        assert self.nlevel >= 2
         assert g.util.entries_have_length(
             [
-                self.northo,
+                self.nblockortho,
                 self.nbasis,
                 self.make_hermitian,
                 self.save_links,
-                self.preortho,
-                self.postortho,
-                self.vecstype,
+                self.npreortho,
+                self.npostortho,
+                self.vector_type,
                 self.distribution,
                 self.solver,
                 self.nb,
@@ -166,6 +170,9 @@ class setup:
             which_lvls = self.lvl
 
         for lvl in which_lvls:
+            if lvl == self.coarsest:
+                continue
+
             # aliases
             t = self.t[lvl]
             pp = self.print_prefix[lvl]
@@ -176,94 +183,97 @@ class setup:
             # neighbors
             nc_lvl = self.nc_lvl[lvl]
 
-            if lvl != self.coarsest:
-                t("misc")
+            # aliases
+            basis = self.basis[lvl]
+            blockmap = self.blockmap[lvl]
+            nb = self.nb[lvl]
+            vector_type = self.vector_type[lvl]
 
-                # aliases
-                basis = self.basis[lvl]
-                blockmap = self.blockmap[lvl]
-                nb = self.nb[lvl]
-                vecstype = self.vecstype[lvl]
-
-                # pre-orthonormalize basis vectors
-                if self.preortho[lvl]:
-                    t("preortho")
-                    g.default.push_verbose("orthogonalize", False)
-                    for i, v in enumerate(basis[0:nb]):
-                        v /= g.norm2(v) ** 0.5
-                        g.orthogonalize(v, basis[:i])
-                    g.default.pop_verbose()
-
-                    if self.verbose:
-                        g.message("%s done pre-orthonormalizing basis vectors" % pp)
-
-                # find near-null vectors
-                t("find_null_vecs")
-                src, psi = g.copy(basis[0]), g.copy(basis[0])
+            # pre-orthonormalize basis vectors globally
+            t("pre_ortho")
+            g.default.push_verbose("orthogonalize", False)
+            for n in range(self.npreortho[lvl]):
+                if self.verbose:
+                    g.message("%s pre ortho step %d" % (pp, n))
                 for i, v in enumerate(basis[0:nb]):
-                    if vecstype == "test":
-                        psi[:] = 0.0
-                        src @= v
-                    elif vecstype == "null":
-                        src[:] = 0.0
-                        psi @= v
-                    else:
-                        assert 0
-                    g.default.push_verbose(get_slv_name(self.solver[lvl]), False)
-                    self.solver[lvl](self.mat[lvl])(psi, src)
-                    g.default.pop_verbose()
-                    self.history[lvl].append(get_slv_history(self.solver[lvl]))
-                    v @= psi
+                    v /= g.norm2(v) ** 0.5
+                    g.orthogonalize(v, basis[:i])
+            g.default.pop_verbose()
 
+            if self.verbose:
+                g.message("%s done pre-orthonormalizing basis vectors" % pp)
+
+            # find near-null vectors
+            t("find_null_vecs")
+            src, psi = g.copy(basis[0]), g.copy(basis[0])
+            for i, v in enumerate(basis[0:nb]):
+                if vector_type == "test":
+                    psi[:] = 0.0
+                    src @= v
+                elif vector_type == "null":
+                    src[:] = 0.0
+                    psi @= v
+                else:
+                    assert 0
+                g.default.push_verbose(get_slv_name(self.solver[lvl]), False)
+                self.solver[lvl](self.mat[lvl])(psi, src)
+                g.default.pop_verbose()
+                self.history[lvl].append(get_slv_history(self.solver[lvl]))
+                v @= psi
+
+            if self.verbose:
+                g.message("%s done finding null-space vectors" % pp)
+
+            # post-orthonormalize basis vectors globally
+            t("post_ortho")
+            g.default.push_verbose("orthogonalize", False)
+            for n in range(self.npostortho[lvl]):
                 if self.verbose:
-                    g.message("%s done finding null-space vectors" % pp)
+                    g.message("%s post ortho step %d" % (pp, n))
+                for i, v in enumerate(basis[0:nb]):
+                    v /= g.norm2(v) ** 0.5
+                    g.orthogonalize(v, basis[:i])
+            g.default.pop_verbose()
 
-                # post-orthonormalize basis vectors
-                if self.postortho[lvl]:
-                    t("postortho")
-                    g.default.push_verbose("orthogonalize", False)
-                    for i, v in enumerate(basis[0:nb]):
-                        v /= g.norm2(v) ** 0.5
-                        g.orthogonalize(v, basis[:i])
-                    g.default.pop_verbose()
+            if self.verbose:
+                g.message("%s done post-orthonormalizing basis vectors" % pp)
 
-                    if self.verbose:
-                        g.message("%s done post-orthonormalizing basis vectors" % pp)
+            # chiral doubling
+            t("chiral_split")
+            g.coarse.split_chiral(basis)
 
-                # chiral doubling
-                t("chiral_split")
-                g.coarse.split_chiral(basis)
+            if self.verbose:
+                g.message("%s done doing chiral doubling" % pp)
 
+            # orthonormalize blocks
+            t("block_ortho")
+            for i in range(self.nblockortho[lvl]):
                 if self.verbose:
-                    g.message("%s done doing chiral doubling" % pp)
+                    g.message("%s block ortho step %d" % (pp, i))
+                blockmap.orthonormalize()
 
-                # block orthogonalization
-                t("block_ortho")
-                for i in range(self.northo[lvl]):
-                    if self.verbose:
-                        g.message("%s block ortho step %d" % (pp, i))
-                    blockmap.orthonormalize()
+            if self.check_blockortho:
+                t("block_ortho_check")
+                blockmap.check_orthogonality()
 
-                if self.verbose:
-                    g.message("%s done block-orthonormalizing" % pp)
+            if self.verbose:
+                g.message("%s done block-orthonormalizing" % pp)
 
-                # create coarse links + operator
-                t("create_operator")
-                g.coarse.create_links(
-                    self.A[nc_lvl],
-                    self.mat[lvl],
-                    self.basis[lvl],
-                    {
-                        "make_hermitian": self.make_hermitian[lvl],
-                        "save_links": self.save_links[lvl],
-                    },
-                )
-                self.mat[nc_lvl] = g.qcd.fermion.coarse(
-                    self.A[nc_lvl], {"level": nc_lvl}
-                )
+            # create coarse links + operator
+            t("create_operator")
+            g.coarse.create_links(
+                self.A[nc_lvl],
+                self.mat[lvl],
+                self.basis[lvl],
+                {
+                    "make_hermitian": self.make_hermitian[lvl],
+                    "save_links": self.save_links[lvl],
+                },
+            )
+            self.mat[nc_lvl] = g.qcd.fermion.coarse(self.A[nc_lvl], {"level": nc_lvl})
 
-                if self.verbose:
-                    g.message("%s done setting up next coarser operator" % pp)
+            if self.verbose:
+                g.message("%s done setting up next coarser operator" % pp)
 
             t()
 
@@ -330,6 +340,7 @@ class inverter:
         def inv_lvl(psi, src, lvl):
             # assertions
             assert psi != src
+            assert type(src) != list
 
             # neighbors
             nc_lvl = s.nc_lvl[lvl]
@@ -388,6 +399,7 @@ class inverter:
                         def ignore_mat(dst_p, src_p):
                             inv_lvl(dst_p, src_p, nc_lvl)
 
+                        # return g.matrix_operator(ignore_mat)
                         return ignore_mat
 
                     g.default.push_verbose(get_slv_name(slv_w), False)

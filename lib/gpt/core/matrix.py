@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, numpy
+import gpt, cgpt, numpy
 
 # matrix exponential
 def exp(i):
@@ -78,6 +78,14 @@ def log(i, convergence_threshold=0.5):
         gpt.convert(r, o)
         o = r
     return o
+
+
+def inv(A):
+    assert type(A) == gpt.lattice
+    A_inv = gpt.lattice(A)
+    to_list = gpt.util.to_list
+    cgpt.invert_matrix(to_list(A_inv), to_list(A))
+    return A_inv
 
 
 def det(i):

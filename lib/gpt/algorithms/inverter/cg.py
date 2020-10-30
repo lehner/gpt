@@ -77,8 +77,7 @@ class cg:
                     if verbose:
                         t()
                         g.message(
-                            "cg: converged in %d iterations, took %g s"
-                            % (k, t.dt["total"])
+                            "cg: converged in %d iterations, took %g s" % (k, t.total)
                         )
                         g.message(t)
                     break

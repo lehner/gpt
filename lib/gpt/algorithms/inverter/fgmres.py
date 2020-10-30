@@ -186,7 +186,7 @@ class fgmres:
                             t()
                             g.message(
                                 "fgmres: converged in %d iterations, took %g s"
-                                % (k + 1, t.dt["total"])
+                                % (k + 1, t.total)
                             )
                             g.message(t)
                             if self.checkres:

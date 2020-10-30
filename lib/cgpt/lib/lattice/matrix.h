@@ -1,6 +1,7 @@
 /*
     GPT - Grid Python Toolkit
     Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,14 +17,16 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-#include "lattice/types.h"
-#include "lattice/base.h"
-#include "lattice/basis.h"
-#include "lattice/block.h"
-#include "lattice/matrix.h"
-#include "lattice/term.h"
-#include "lattice/unary.h"
-#include "lattice/importexport.h"
-#include "lattice/tostring.h"
-#include "lattice/coordinates.h"
-#include "lattice/implementation.h"
+template<typename T>
+void cgpt_invert_matrix(Lattice<T>& l, std::vector<cgpt_Lattice_base*>& _matrix_inv, std::vector<cgpt_Lattice_base*>& _matrix, long n_virtual) {
+  
+  PVector<Lattice<T>> matrix_inv;
+  PVector<Lattice<T>> matrix;
+  cgpt_basis_fill(matrix_inv, _matrix_inv);
+  cgpt_basis_fill(matrix, _matrix);
+
+  ASSERT(matrix.size() == matrix_inv.size());
+  ASSERT(matrix.size() > 0 && matrix.size() % n_virtual == 0);
+
+  invertMatrix(matrix_inv, matrix, n_virtual);
+}

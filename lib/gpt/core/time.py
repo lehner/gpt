@@ -65,6 +65,10 @@ class timer:
             self.dt["total"] += time()
             self.active = False
 
+    @property
+    def total(self):
+        return self.dt["total"]
+
     def __str__(self):
         assert not self.active
         dtp, fp, bp = self.create_print_arrays()
@@ -75,9 +79,9 @@ class timer:
             for k, v in sorted(dtp.items(), key=lambda x: x[1]):
                 frac = v / dtp["total"] * 100
                 if fp["total"] != 0.0 or bp["total"] != 0.0:
-                    s += f"{self.prefix}: profiling: {k:15s} = {v:e} s (= {frac:6.2f} %) {fp[k]/v:e} F/s {bp[k]/v:e} B/s\n"
+                    s += f"{self.prefix}: profiling: {k:20s} = {v:e} s (= {frac:6.2f} %) {fp[k]/v:e} F/s {bp[k]/v:e} B/s\n"
                 else:
-                    s += f"{self.prefix}: timing: {k:15s} = {v:e} s (= {frac:6.2f} %)\n"
+                    s += f"{self.prefix}: timing: {k:20s} = {v:e} s (= {frac:6.2f} %)\n"
 
         return s[:-1]
 

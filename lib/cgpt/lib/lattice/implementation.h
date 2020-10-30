@@ -177,10 +177,11 @@ public:
     cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
   }
 
-  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt) {
-    PVector<Lattice<T>> basis;
+  virtual void linear_combination(std::vector<cgpt_Lattice_base*> & _dst, std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt, long n_virtual, long basis_n_block) {
+    PVector<Lattice<T>> basis, dst;
     cgpt_basis_fill(basis,_basis);
-    cgpt_linear_combination(l,basis,Qt);
+    cgpt_basis_fill(dst,_dst);
+    cgpt_linear_combination(dst,basis,Qt,n_virtual,basis_n_block);
   }
 
   virtual PyObject* memory_view() {
@@ -227,6 +228,10 @@ public:
     
     { ERR("Unknown basis size %d",(int)basis_virtual_size); }
 
+  }
+
+  virtual void invert_matrix(std::vector<cgpt_Lattice_base*>& matrix_inv, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) {
+    cgpt_invert_matrix(l,matrix_inv,matrix,n_virtual);
   }
 
   virtual GridBase* get_grid() {

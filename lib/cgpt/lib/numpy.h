@@ -133,12 +133,12 @@ void cgpt_numpy_import(sobj& dst,PyObject* _src) {
 }
 
 static 
-void cgpt_numpy_query_matrix(PyObject* _Qt, int & dtype, int & Nm) {
+void cgpt_numpy_query_matrix(PyObject* _Qt, int & dtype, int & Nrow, int & Ncol) {
   ASSERT(cgpt_PyArray_Check(_Qt));
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
   ASSERT(PyArray_NDIM(Qt)==2);
-  Nm = PyArray_DIM(Qt,0);
-  ASSERT(Nm == PyArray_DIM(Qt,1));
+  Nrow = PyArray_DIM(Qt,0);
+  Ncol = PyArray_DIM(Qt,1);
   dtype = PyArray_TYPE(Qt);
   ASSERT(PyArray_IS_C_CONTIGUOUS(Qt));
 }
@@ -146,7 +146,19 @@ void cgpt_numpy_query_matrix(PyObject* _Qt, int & dtype, int & Nm) {
 template<typename Coeff_t>
 void cgpt_numpy_import_matrix(PyObject* _Qt, Coeff_t* & data, int & Nm) {
   int dtype;
-  cgpt_numpy_query_matrix(_Qt, dtype, Nm);
+  int Nmp;
+  cgpt_numpy_query_matrix(_Qt, dtype, Nm, Nmp);
+  ASSERT(Nm == Nmp);
+  PyArrayObject* Qt = (PyArrayObject*)_Qt;
+  // TODO: check and at least forbid strides
+  ASSERT(dtype == infer_numpy_type(*data));
+  data = (Coeff_t*)PyArray_DATA(Qt);
+}
+
+template<typename Coeff_t>
+void cgpt_numpy_import_matrix(PyObject* _Qt, Coeff_t* & data, int & Nrow, int & Ncol) {
+  int dtype;
+  cgpt_numpy_query_matrix(_Qt, dtype, Nrow, Ncol);
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
   // TODO: check and at least forbid strides
   ASSERT(dtype == infer_numpy_type(*data));
