@@ -17,35 +17,236 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-/*
-namespace cgpt_distribute {
+template<typename offset_t, typename rank_t, typename index_t>
+class global_memory_view {
+ public:
 
-  struct {
-    int rank; // mpi rank
-    int index; // index within array of base pointes
-    long offset; // offset within base pointer
-  } global_offset_t;
-
-  class global_memory_view_t {
-  public:
-    std::vector<global_offset_t> element_positions;
-    long element_size;
+  struct block_t {
+    rank_t rank;
+    index_t index;
+    offset_t start, size;
   };
 
-  // two global views can create a global_transfer_plan
-  // this should work with buffers (local + buffer to send/receive remote, one for each rank)
-  // 
+  std::vector<block_t> blocks;
 
-  struct {
-    long offset_src;
-    long offset_dst;
-    long size;
-  } bcopy_block_t;
+  global_memory_view<offset_t,rank_t,index_t> merged() const;
+};
 
-  typedef std::vector<bcopy_block_t> bcopy_plan_t;
+class comm_message {
+ public:
+  std::vector<char> data;
 
-}
-*/
+  size_t offset;
+
+  comm_message() : offset(0) {
+  }
+
+  bool eom() {
+    return offset == data.size();
+  }
+
+  void get_mem(void* dst, size_t sz) {
+    ASSERT(offset + sz <= data.size());
+    memcpy(dst,&data[offset],sz);
+    offset += sz;
+  }
+
+  size_t get_size() {
+    size_t sz;
+    get_mem(&sz,sizeof(sz));
+    return sz;
+  }
+
+  void put_bytes(const void* v, size_t sz) {
+    offset = data.size();
+    data.resize(offset + sz + sizeof(sz));
+    *(size_t*)&data[offset] = sz;
+    memcpy(&data[offset + sizeof(sz)],v,sz);
+  }
+
+  void get_bytes(void* v, size_t sz) {
+    ASSERT(get_size() == sz);
+    get_mem(v,sz);
+  }
+
+  void get_bytes(std::vector<char>& buf) {
+    buf.resize(get_size());
+    get_mem(&buf[0],buf.size());
+  }
+
+  void put(const int v) {
+    put_bytes(&v,sizeof(v));
+  }
+
+  void get(int & v) {
+    get_bytes(&v,sizeof(v));
+  }
+
+  void put(const size_t v) {
+    put_bytes(&v,sizeof(v));
+  }
+
+  void get(size_t& v) {
+    get_bytes(&v,sizeof(v));
+  }
+
+  void put(const uint32_t v) {
+    put_bytes(&v,sizeof(v));
+  }
+
+  void get(uint32_t& v) {
+    get_bytes(&v,sizeof(v));
+  }
+
+  template<typename T>
+  void put(const T& t) {
+    std::vector<char> buf;
+    convert_to_bytes(buf,t);
+    put_bytes(&buf[0],buf.size());
+  }
+
+  template<typename T>
+  void get(T& t) {
+    std::vector<char> buf;
+    get_bytes(buf);
+    convert_from_bytes(t,buf);
+  }
+
+  template<typename A, typename B>
+  void put(const std::map<A,B>& m) {
+    put((size_t)m.size());
+    for (auto & x : m)
+      put(x);
+  }
+
+  template<typename A, typename B>
+  void get(std::map<A,B>& m) {
+    size_t sz;
+    get(sz);
+    for (size_t i=0;i<sz;i++) {
+      std::pair<A,B> p;
+      get(p);
+      m.insert(p);
+    }
+  }
+
+  template<typename A>
+  void put(const std::vector<A>& m) {
+    put((size_t)m.size());
+    for (auto & x : m)
+      put(x);
+  }
+
+  template<typename A>
+  void get(std::vector<A>& m) {
+    size_t sz;
+    get(sz);
+    m.resize(sz);
+    for (auto & x : m)
+      get(x);
+  }
+
+  template<typename A, typename B>
+  void put(const std::pair<A,B>& p) {
+    put(p.first);
+    put(p.second);
+  }
+
+  template<typename A, typename B>
+  void get(std::pair<A,B>& p) {
+    get(p.first);
+    get(p.second);
+  }
+};
+
+template<typename rank_t>
+class global_transfer {
+ public:
+  global_transfer(rank_t rank, Grid_MPI_Comm comm);
+
+  rank_t rank;
+  Grid_MPI_Comm comm;
+
+  rank_t mpi_ranks, mpi_rank;
+  std::vector<rank_t> mpi_rank_map;
+
+  std::vector<MPI_Request> requests;
+
+  template<typename data_t>
+  void all_to_root(const std::vector<data_t>& my, std::map<rank_t, std::vector<data_t> > & rank);
+
+  template<typename data_t>
+  void root_to_all(const std::map<rank_t, std::vector<data_t> > & rank, std::vector<data_t>& my);
+
+  void provide_my_receivers_get_my_senders(const std::map<rank_t, size_t>& receivers,
+					   std::map<rank_t, size_t>& senders);
+
+  void multi_send_recv(const std::map<rank_t, comm_message>& send,
+		       std::map<rank_t, comm_message>& recv);
+
+  template<typename data_t>
+  void isend(rank_t other_rank, const std::vector<data_t>& data) {
+#ifdef CGPT_USE_MPI
+    MPI_Request r;
+    ASSERT(MPI_SUCCESS == MPI_Isend(&data[0],data.size()*sizeof(data_t),MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
+    requests.push_back(r);
+#endif
+  }
+
+  template<typename data_t>
+  void irecv(rank_t other_rank, std::vector<data_t>& data) {
+#ifdef CGPT_USE_MPI
+    MPI_Request r;
+    ASSERT(MPI_SUCCESS == MPI_Irecv(&data[0],data.size()*sizeof(data_t),MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
+    requests.push_back(r);
+#endif
+  }
+
+  void wait();
+
+};
+
+template<typename offset_t, typename rank_t, typename index_t>
+class global_memory_transfer : public global_transfer<rank_t> {
+ public:
+
+  typedef global_memory_view<offset_t,rank_t,index_t> view_t;
+
+  struct block_t {
+    offset_t start_dst, start_src, size;
+  };
+
+  friend void convert_to_bytes(std::vector<char>& bytes, const block_t& b) {
+    bytes.resize(sizeof(b));
+    memcpy(&bytes[0],&b,sizeof(b));
+  }
+
+  friend void convert_from_bytes(block_t& b, const std::vector<char>& bytes) {
+    ASSERT(bytes.size() == sizeof(b));
+    memcpy(&b,&bytes[0],bytes.size());
+  }
+
+  // public interface
+  global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
+
+  std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, std::vector<block_t> > > blocks;
+
+  void create(const view_t& dst, const view_t& src);
+
+  void execute(std::vector<void*>& base_dst, 
+	       std::vector<void*>& base_src);
+
+  // helper
+  void print();
+  void fill_blocks_from_view_pair(const view_t& dst, const view_t& src);
+  void gather_my_blocks();
+  void optimize();
+};
+
+typedef global_memory_view<uint64_t,int,uint32_t> gm_view;
+typedef global_memory_transfer<uint64_t,int,uint32_t> gm_transfer;
+
+
 
 class cgpt_distribute {
  public:

@@ -53,7 +53,39 @@ EXPORT(init,{
       "    Copyright (C) 2020 Christoph Lehner      " << std::endl <<
       "=============================================" << std::endl;
 
-    cgpt_initialized = true;    
+    cgpt_initialized = true;
+
+    // debug
+    {
+      int rank = CartesianCommunicator::RankWorld();
+      gm_transfer plan(rank, CartesianCommunicator::communicator_world);
+      printf("Rank %d here\n",rank);
+
+      gm_view osrc, odst;
+
+      size_t word = 8;
+
+#if 0
+      osrc.blocks.push_back( { rank, 0, 0, word });
+      odst.blocks.push_back( { (rank+1)%8, 0,0,word});
+#else
+      osrc.blocks.push_back( { 0, 0, 0, 3*word } ); // rank, index, offset, size
+
+      odst.blocks.push_back( { 1, 0, 0, word } ); // rank, index, offset, size
+      odst.blocks.push_back( { 1, 0, word, word } ); // rank, index, offset, size
+      odst.blocks.push_back( { 2, 0, 0, word } ); // rank, index, offset, size
+#endif
+
+      plan.create(odst, osrc);
+
+      printf("Rank %d signing off\n",rank);
+      Grid_finalize();
+      exit(0);
+
+      // what are the conditions on the grids of a and b??
+      // copy_pos = g.copy_plan( a.view[pos], b.view[pos] )
+      // copy_pos(a_like, b_like)
+    }
     return PyLong_FromLong(0);
     
   });

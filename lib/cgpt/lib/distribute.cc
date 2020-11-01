@@ -17,14 +17,449 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include <set>
 
-#if defined (GRID_COMMS_MPI3)
-#define USE_MPI 1
+//
+// global_transfer
+//
+template<typename rank_t>
+global_transfer<rank_t>::global_transfer(rank_t _rank, Grid_MPI_Comm _comm) : rank(_rank), comm(_comm) {
+
+#ifdef CGPT_USE_MPI
+  MPI_Comm_size(comm,&mpi_ranks);
+  MPI_Comm_rank(comm,&mpi_rank);
+  mpi_rank_map.resize(mpi_ranks,0);
+  ASSERT(rank < mpi_ranks);
+  mpi_rank_map[rank] = mpi_rank;
+  ASSERT(MPI_SUCCESS == MPI_Allreduce(MPI_IN_PLACE,&mpi_rank_map[0],mpi_ranks * sizeof(rank_t) / sizeof(int),MPI_INT,MPI_SUM,comm));
+#else
+  mpi_ranks=1;
+  mpi_rank=0;
+  mpi_rank_map.push_back(0);
+  ASSERT(rank == 0);
 #endif
+}
+
+template<typename rank_t>
+template<typename data_t>
+void global_transfer<rank_t>::root_to_all(const std::map<rank_t, std::vector<data_t> > & all, std::vector<data_t>& my) {
+
+  // store mine
+  if (rank == 0) {
+    auto e = all.find(0);
+    my.clear();
+    if (e != all.end())
+      my = e->second;
+  }
+
+#ifdef CGPT_USE_MPI
+
+  std::vector<int> all_size(mpi_ranks,0);
+  int my_size;
+  for (rank_t i=0; i<mpi_ranks; i++) {
+    auto e = all.find(i);
+    all_size[i] = (e != all.end()) ? (int)e->second.size() : 0;
+  }
+  ASSERT(MPI_SUCCESS == MPI_Scatter(&all_size[0], 1, MPI_INT, &my_size, 1, MPI_INT, mpi_rank_map[0], comm));
+
+  // root node now receives from every node the list of its partners (if it is non-vanishing)
+  std::vector<MPI_Request> req;
+  if (rank == 0) {
+    // root node now
+    for (rank_t i=1;i<mpi_ranks;i++) {
+
+      int rank_size = all_size[mpi_rank_map[i]];
+
+      if (rank_size != 0) {
+        auto & data = all.at(i);
+
+	isend(i,data);
+      }
+
+    }
+
+  } else {
+
+    if (my_size != 0) {
+      my.resize(my_size);
+      irecv(0,my);
+    }
+  }
+
+  wait();
+#endif
+}
+
+template<typename rank_t>
+template<typename data_t>
+void global_transfer<rank_t>::all_to_root(const std::vector<data_t>& my, std::map<rank_t, std::vector<data_t> > & all) {
+
+  // store mine
+  if (rank == 0)
+    all[0] = my;
+
+#ifdef CGPT_USE_MPI
+  int my_size = (int)my.size();
+  std::vector<int> all_size(mpi_ranks,0);
+  ASSERT(MPI_SUCCESS == MPI_Gather(&my_size, 1, MPI_INT, &all_size[0], 1, MPI_INT, mpi_rank_map[0], comm));
+
+  // root node now receives from every node the list of its partners (if it is non-vanishing)
+  if (rank == 0) {
+    // root node now
+    for (rank_t i=1;i<mpi_ranks;i++) {
+
+      int rank_size = all_size[mpi_rank_map[i]];
+
+      if (rank_size != 0) {
+	std::vector<data_t> & data = all[i];
+	data.resize(rank_size);
+
+	irecv(i,data);
+      }
+
+    }
+
+  } else {
+
+    if (my_size != 0) {
+      isend(0,my);
+    }
+  }
+
+  wait();
+#endif
+}
+
+template<typename rank_t>
+void global_transfer<rank_t>::wait() {
+#ifdef CGPT_USE_MPI
+  std::vector<MPI_Status> stat(requests.size());
+  ASSERT(MPI_SUCCESS == MPI_Waitall((int)requests.size(), &requests[0], &stat[0]));
+  requests.clear();
+#endif
+}
+
+template<typename rank_t>
+void global_transfer<rank_t>::provide_my_receivers_get_my_senders(const std::map<rank_t, size_t>& receivers,
+								  std::map<rank_t, size_t>& senders) {
+
+  struct rank_size_t {
+    rank_t rank;
+    size_t size;
+  };
+
+  // root node collects
+  std::map<rank_t, std::vector<rank_size_t> > ranks_that_will_receive_data_from_rank;
+  std::vector<rank_size_t> ranks_that_will_receive_my_data;
+  for (auto & r : receivers) {
+    ranks_that_will_receive_my_data.push_back({r.first, r.second});
+  }
+
+  all_to_root(ranks_that_will_receive_my_data, ranks_that_will_receive_data_from_rank);
+
+  // create communication matrix
+  std::map<rank_t, std::vector<rank_size_t> > ranks_from_which_rank_will_receive_data;
+  if (this->rank == 0) {
+    // for each rank create list of ranks that needs to talk to them
+    std::map<rank_t, std::map<rank_t,size_t> > ranks_set_from_which_rank_will_receive_data;
+
+    rank_t l;
+    for (l=0;l<this->mpi_ranks;l++) {
+      for (rank_size_t j : ranks_that_will_receive_data_from_rank[l]) {
+	auto & x = ranks_set_from_which_rank_will_receive_data[j.rank];
+	auto y = x.find(l);
+	ASSERT(y == x.end());
+	x[l] = j.size;
+      }
+    }
+
+    for (l=0;l<this->mpi_ranks;l++) {
+      for (auto & x : ranks_set_from_which_rank_will_receive_data[l]) {
+	ranks_from_which_rank_will_receive_data[l].push_back({x.first,x.second});
+      }
+    }
+  }
+
+  // scatter packet number to be received by each rank
+  std::vector<rank_size_t> ranks_from_which_I_will_receive_data;
+  root_to_all(ranks_from_which_rank_will_receive_data, ranks_from_which_I_will_receive_data);
+
+  // convert
+  for (auto r : ranks_from_which_I_will_receive_data) {
+    //std::cout << "Rank " << this->rank << " here, will receive " << r.size << " bytes from rank " << r.rank << std::endl;
+    senders[r.rank] = r.size;
+  }
+}
+
+template<typename rank_t>
+void global_transfer<rank_t>::multi_send_recv(const std::map<rank_t, comm_message>& send,
+					      std::map<rank_t, comm_message>& recv) {
+
+  // prepare list of all ranks for which I have data
+  std::map<rank_t, size_t> my_receivers;
+  std::map<rank_t, size_t> my_senders;
+
+  for (auto & s : send) {
+    ASSERT(s.first != rank); // should not send to myself
+    my_receivers[s.first] = s.second.data.size();
+  }
+
+  provide_my_receivers_get_my_senders(my_receivers,my_senders);
+
+  // allocate receive buffers
+  for (auto & s : my_senders) {
+    recv[s.first].data.resize(s.second);
+  }
+
+  // initiate communication
+  for (auto & s : send) {
+    isend(s.first, s.second.data);
+  }
+
+  for (auto & r : recv) {
+    irecv(r.first, r.second.data);
+  }
+
+  // wait
+  wait();
+}
+//
+// global_memory_view
+//
+template<typename offset_t, typename rank_t, typename index_t>
+global_memory_view<offset_t,rank_t,index_t> global_memory_view<offset_t,rank_t,index_t>::merged() const {
+
+  global_memory_view<offset_t,rank_t,index_t> ret;
+  if (blocks.size()) {
+    ret.blocks.push_back(blocks[0]);
+    size_t c = 0;
+    
+    for (size_t i=1;i<blocks.size();i++) {
+      auto & bc = ret.blocks[c];
+      auto & bi = blocks[i];
+      if (bc.rank == bi.rank && bc.index == bi.index &&
+	  bi.start == (bc.start + bc.size)) {
+	bc.size += bi.size;
+      } else {
+	c = i;
+	ret.blocks.push_back(bi);
+      }
+    }
+  }
+
+  return ret;
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
+global_memory_transfer<offset_t,rank_t,index_t>::global_memory_transfer(rank_t _rank, Grid_MPI_Comm _comm) : global_transfer<rank_t>(_rank, _comm) {
+}
+
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::fill_blocks_from_view_pair(const view_t& _dst,
+										 const view_t& _src) {
+  // create local src -> dst command
+  auto dst = _dst.merged();
+  auto src = _src.merged();
+
+  size_t is = 0, id = 0;
+  while (is < src.blocks.size() &&
+	 id < dst.blocks.size()) {
+    auto & s = src.blocks[is];
+    auto & d = dst.blocks[id];
+
+    offset_t sz = std::min(s.size, d.size);
+
+    blocks
+      [std::make_pair(d.rank, s.rank)]
+      [std::make_pair(d.index, s.index)]
+      .push_back({d.start,s.start,sz});
+
+    if (sz == s.size) {
+      is++;
+    } else {
+      s.start += sz;
+      s.size -= sz;
+    }
+
+    if (sz == d.size) {
+      id++;
+    } else {
+      d.start += sz;
+      d.size -= sz;
+    }
+  }
+
+  // expect both to be of same size
+  ASSERT(is == src.blocks.size() &&
+	 id == dst.blocks.size());
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
+
+  // serialize my blocks to approprate communication buffers
+  std::map<rank_t, comm_message> tasks_for_rank;
+  for (auto & ranks : blocks) {
+    if (ranks.first.first != this->rank)
+      tasks_for_rank[ranks.first.first].put(ranks);
+    if ((ranks.first.first != ranks.first.second) &&
+	(ranks.first.second != this->rank))
+      tasks_for_rank[ranks.first.second].put(ranks);
+  }
+
+  std::map<rank_t, comm_message> tasks_from_rank;
+  multi_send_recv(tasks_for_rank, tasks_from_rank);
+
+  // de-serialize my blocks from appropriate communication buffers
+  for (auto & tasks : tasks_from_rank) {
+    while (!tasks.second.eom()) {
+      std::pair< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, std::vector<block_t> > > ranks;
+      tasks.second.get(ranks);
+
+      // and merge with current blocks
+      for (auto & idx : ranks.second) {
+	auto & a = blocks[ranks.first][idx.first];
+	auto & b = idx.second;
+	a.insert(a.end(), b.begin(), b.end());
+      }
+    }
+  }
+
+  // and finally remove all blocks from this rank in which it does not participate
+  auto i = std::begin(blocks);
+  while (i != std::end(blocks)) {
+    if (i->first.first != this->rank &&
+	i->first.second != this->rank)
+      i = blocks.erase(i);
+    else
+      ++i;
+  }
+
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
+  struct {
+    bool operator()(const block_t& a, const block_t& b) const
+    {
+      return a.start_src < b.start_src;
+    }
+  } less;
+  
+  for (auto & ranks : blocks) {
+    for (auto & indices : ranks.second) {
+      auto & blocks = indices.second;
+      std::sort(blocks.begin(), blocks.end(), less);
+
+      // merge neighboring blocks
+      std::vector<block_t> ret;
+      ret.push_back(blocks[0]);
+      size_t c = 0;
+    
+      for (size_t i=1;i<blocks.size();i++) {
+	auto & bc = ret[c];
+	auto & bi = blocks[i];
+	if (bi.start_src == bc.start_src &&
+	    bi.start_dst == bc.start_dst &&
+	    bi.size == bc.size) {
+	  continue; // remove duplicates (maybe from different ranks)
+	} else if (bi.start_src == (bc.start_src + bc.size) &&
+		   bi.start_dst == (bc.start_dst + bc.size)) {
+	  bc.size += bi.size;
+	} else {
+	  c = i;
+	  ret.push_back(bi);
+	}
+      }
+
+      blocks = ret;
+    }
+  }
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
+							     const view_t& _src) {
+
+  // reset
+  blocks.clear();
+
+  // fill
+  fill_blocks_from_view_pair(_dst,_src);
+
+  // optimize blocks obtained from this rank
+  optimize();
+
+  // gather my blocks
+  gather_my_blocks();
+
+  // optimize blocks after gathering all of my blocks
+  optimize();
+
+  // then prepare packets for each node
+  print();
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::print() {
+
+  for (auto ranks : blocks) {
+    for (auto indices : ranks.second) {
+      std::cout << GridLogMessage 
+		<< "[" << ranks.first.first << "," << ranks.first.second << "]"
+		<< "[" << indices.first.first << "," << indices.first.second << "] : " << std::endl;
+
+      for (auto block : indices.second) {
+	std::cout << GridLogMessage << block.start_dst << " <- " <<
+	  block.start_src << " for " << block.size << std::endl;
+      }
+    }
+  }
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<void*>& base_dst, 
+							      std::vector<void*>& base_src) {
+}
+
+
+/*
+  ASSERT(offset_dst.size() == offset_src.size());
+
+  // gather all rank_src -> rank_dst requests from all mpi ranks
+
+  for (auto & r2r : local_r2r_plan) {
+    bcopy_plan::merge(r2r.second);
+  }
+
+  // now sync between all ranks
+  //std::vector<memory_offset_t> 
+  //long size = wishlist.size();
+  //std::vector<long> rank_size(mpi_ranks);
+
+  //
+  
+
+
+  // root should know all of my r1_r2_size
+  // then root lets all nodes know
+
+  // this creates the recv_plan and send_plan
+
+  // and also the local copy plan
+  */
+
+
+template class global_memory_view<uint64_t,int,uint32_t>;
+template class global_memory_transfer<uint64_t,int,uint32_t>;
+
+
+// legacy below
 
 cgpt_distribute::cgpt_distribute(int _rank, Grid_MPI_Comm _comm) : rank(_rank), comm(_comm) {
 
-#ifdef USE_MPI
+#ifdef CGPT_USE_MPI
   //MPI_COMM_WORLD
   MPI_Comm_size(comm,&mpi_ranks);
   MPI_Comm_rank(comm,&mpi_rank);
@@ -223,7 +658,7 @@ long cgpt_distribute::word_total(std::vector<data_simd>& src) {
 
 void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map<int,mp>& cr,
 				  std::vector<data_simd>& _src, void* _dst) {
-#ifdef USE_MPI
+#ifdef CGPT_USE_MPI
   assert(tasks.size() % 2 == 0);
   std::vector<MPI_Request> req;
   std::map<int, std::vector<long> > remote_needs_offsets;
@@ -338,7 +773,7 @@ void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map
 
 void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std::map<int,mp>& cr,
 				      void* _src, long _src_size, std::vector<data_simd>& _dst) {
-#ifdef USE_MPI
+#ifdef CGPT_USE_MPI
   /*
     tasks here are requests from other nodes to set local data
 
@@ -567,7 +1002,7 @@ void cgpt_distribute::get_send_tasks_for_rank(int i, const std::map<int, std::ve
 }
 
 void cgpt_distribute::send_tasks_to_ranks(const std::map<int, std::vector<long> >& wishlists, std::vector<long>& tasks) const {
-#ifdef USE_MPI  
+#ifdef CGPT_USE_MPI  
   std::vector<long> lens(mpi_ranks);
   long len;
 
@@ -615,7 +1050,7 @@ void cgpt_distribute::send_tasks_to_ranks(const std::map<int, std::vector<long> 
 }
 
 void cgpt_distribute::wishlists_to_root(const std::vector<long>& wishlist, std::map<int, std::vector<long> >& wishlists) const {
-#ifdef USE_MPI
+#ifdef CGPT_USE_MPI
   long size = wishlist.size();
   std::vector<long> rank_size(mpi_ranks);
 
