@@ -216,6 +216,10 @@ class global_memory_transfer : public global_transfer<rank_t> {
     offset_t start_dst, start_src, size;
   };
 
+  enum memory_type {
+    mt_none, mt_host, mt_accelerator
+  };
+
   friend void convert_to_bytes(std::vector<char>& bytes, const block_t& b) {
     bytes.resize(sizeof(b));
     memcpy(&bytes[0],&b,sizeof(b));
@@ -231,16 +235,17 @@ class global_memory_transfer : public global_transfer<rank_t> {
 
   std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, std::vector<block_t> > > blocks;
 
-  void create(const view_t& dst, const view_t& src);
+  void create(const view_t& dst, const view_t& src, memory_type use_comm_buffers_of_type = mt_none);
 
-  void execute(std::vector<void*>& base_dst, 
-	       std::vector<void*>& base_src);
+  void execute(std::vector<std::pair<memory_type,void*>>& base_dst, 
+	       std::vector<std::pair<memory_type,void*>>& base_src);
 
   // helper
   void print();
   void fill_blocks_from_view_pair(const view_t& dst, const view_t& src);
   void gather_my_blocks();
   void optimize();
+  void create_comm_buffers(memory_type mt);
 };
 
 typedef global_memory_view<uint64_t,int,uint32_t> gm_view;

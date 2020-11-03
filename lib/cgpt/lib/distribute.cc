@@ -380,7 +380,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
 
 template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
-							     const view_t& _src) {
+							     const view_t& _src,
+							     memory_type use_comm_buffers_of_type) {
 
   // reset
   blocks.clear();
@@ -397,8 +398,24 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
   // optimize blocks after gathering all of my blocks
   optimize();
 
+  // optionally create communication buffers
+  create_comm_buffers(use_comm_buffers_of_type);
+
   // then prepare packets for each node
   print();
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory_type mt) {
+
+  // first remove buffers
+
+  // then exit if nothing to create
+  if (mt == mt_none)
+    return;
+
+  // Need to compute size of communications buffer for each target node
+
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -419,8 +436,11 @@ void global_memory_transfer<offset_t,rank_t,index_t>::print() {
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<void*>& base_dst, 
-							      std::vector<void*>& base_src) {
+void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::pair<memory_type,void*>>& base_dst, 
+							      std::vector<std::pair<memory_type,void*>>& base_src) {
+  // if there is no buffer, directly issue separate isend / irecv for each block
+
+  // if there is a buffer, first gather in communication buffer
 }
 
 
