@@ -21,22 +21,6 @@ AM_INIT_AUTOMAKE([1.15.1 foreign subdir-objects -Wall])
 # separate directory for m4 stuff (libtools prefers this)
 AC_CONFIG_MACRO_DIR([m4])
 
-# Trick to set empty default value for CXXFLAGS, needs to be set before
-# running AC_PROG_CXX
-: ${CXXFLAGS=""}
-
-# C++ -Compiler
-AC_PROG_CXX
-
-# use configure header
-AC_CONFIG_HEADERS([config.h])
-
-# archiver (Automake needs this for libraries)
-AM_PROG_AR
-
-# need for dynamic libraries (no need for ranlib)
-LT_INIT([disable-static])
-
 AC_ARG_ENABLE([cgpt],
               AS_HELP_STRING([--disable-cgpt], [Disable building cgpt]))
 AC_ARG_ENABLE([gpt],
@@ -160,6 +144,22 @@ for token in -Xlinker -Xcompiler
 do
     fixxer([GRID_CXXFLAGS],${token})
 done
+
+# Trick to set empty default value for CXXFLAGS, needs to be set before
+# running AC_PROG_CXX
+: ${CXXFLAGS=""}
+
+# C++ -Compiler
+AC_PROG_CXX
+
+# use configure header
+AC_CONFIG_HEADERS([config.h])
+
+# archiver (Automake needs this for libraries)
+AM_PROG_AR
+
+# need for dynamic libraries (no need for ranlib)
+LT_INIT([disable-static])
 
 # Makefiles to be generated. These are all *.in  files.
 # We have to use subdirs, because for the python files I need to
