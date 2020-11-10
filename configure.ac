@@ -21,13 +21,6 @@ AM_INIT_AUTOMAKE([1.15.1 foreign subdir-objects -Wall])
 # separate directory for m4 stuff (libtools prefers this)
 AC_CONFIG_MACRO_DIR([m4])
 
-# Trick to set empty default value for CXXFLAGS, needs to be set before
-# running AC_PROG_CXX
-: ${CXXFLAGS=""}
-
-# C++ -Compiler
-AC_PROG_CXX
-
 # use configure header
 AC_CONFIG_HEADERS([config.h])
 
@@ -146,6 +139,14 @@ AS_IF([expr "${GRID_CXXLD}" : ".*Usage:" > /dev/null],
 : ${GRID_CXXLD:=${GRID_CXX}}
 : ${CXX:=${GRID_CXX}}
 : ${CXXLD:=${GRID_CXXLD}}
+
+# Trick to set empty default value for CXXFLAGS, needs to be set before
+# running AC_PROG_CXX
+: ${CXXFLAGS=""}
+
+# C++ -Compiler
+# This as to be done _after_ setting CXX (if necessary)
+AC_PROG_CXX
 
 # The following code tries to fix nvcc (and possibly other weird
 # compilers) that take an -Xcompiler or -Xlinker argument flag.
