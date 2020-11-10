@@ -69,23 +69,41 @@ EXPORT(init,{
       osrc.blocks.push_back( { rank, 0, 0, word });
       odst.blocks.push_back( { (rank+1)%8, 0,0,word});
 #else
-      osrc.blocks.push_back( { 0, 0, 0, 3*word } ); // rank, index, offset, size
+      osrc.blocks.push_back( { 0, 0, word, 3*word } ); // rank, index, offset, size
 
       odst.blocks.push_back( { 1, 0, 0, word } ); // rank, index, offset, size
       odst.blocks.push_back( { 1, 0, word, word } ); // rank, index, offset, size
       odst.blocks.push_back( { 2, 0, 0, word } ); // rank, index, offset, size
 #endif
 
-      plan.create(odst, osrc);
+      plan.create(odst, osrc, gm_transfer::mt_none); // for now no buffer
 
-      printf("Rank %d signing off\n",rank);
-      Grid_finalize();
-      exit(0);
+      // prepare test data and execute
+      double* host_src = new double[128];
+      for (int i=0;i<128;i++)
+	host_src[i] = rank * 1000 + i;
 
-      // what are the conditions on the grids of a and b??
-      // copy_pos = g.copy_plan( a.view[pos], b.view[pos] )
-      // copy_pos(a_like, b_like)
+      double* host_dst = new double[128];
+      for (int i=0;i<128;i++)
+	host_dst[i] = 0.5 + 100*i;
+
+      std::vector< std::pair<gm_transfer::memory_type, void*> > dst, src;
+      dst.push_back( std::make_pair(gm_transfer::mt_host,host_dst) );
+      src.push_back( std::make_pair(gm_transfer::mt_host,host_src) );
+
+      plan.execute(dst,src);
+
+      for (int i=0;i<4;i++)
+	printf("Rank %d position %d has %g (my src %g), my dst ptr %p, my src ptr %p\n",rank,i,host_dst[i],host_src[i],host_dst,host_src);
     }
+     
+    Grid_finalize();
+    exit(0);
+
+    // what are the conditions on the grids of a and b??
+    // copy_pos = g.copy_plan( a.view[pos], b.view[pos] )
+    // copy_pos(a_like, b_like)
+    
     return PyLong_FromLong(0);
     
   });

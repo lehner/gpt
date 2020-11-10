@@ -164,13 +164,16 @@ class global_transfer {
  public:
   global_transfer(rank_t rank, Grid_MPI_Comm comm);
 
+  const size_t size_mpi_max = INT_MAX;
   rank_t rank;
   Grid_MPI_Comm comm;
 
   rank_t mpi_ranks, mpi_rank;
   std::vector<rank_t> mpi_rank_map;
 
+#ifdef CGPT_USE_MPI
   std::vector<MPI_Request> requests;
+#endif
 
   template<typename data_t>
   void all_to_root(const std::vector<data_t>& my, std::map<rank_t, std::vector<data_t> > & rank);
@@ -184,25 +187,21 @@ class global_transfer {
   void multi_send_recv(const std::map<rank_t, comm_message>& send,
 		       std::map<rank_t, comm_message>& recv);
 
+
+  void isend(rank_t other_rank, const void* pdata, size_t sz);
+  void irecv(rank_t other_rank, void* pdata, size_t sz);
+
   template<typename data_t>
   void isend(rank_t other_rank, const std::vector<data_t>& data) {
-#ifdef CGPT_USE_MPI
-    MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Isend(&data[0],data.size()*sizeof(data_t),MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
-    requests.push_back(r);
-#endif
+    isend(other_rank,&data[0],data.size()*sizeof(data_t));
   }
 
   template<typename data_t>
   void irecv(rank_t other_rank, std::vector<data_t>& data) {
-#ifdef CGPT_USE_MPI
-    MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Irecv(&data[0],data.size()*sizeof(data_t),MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
-    requests.push_back(r);
-#endif
+    irecv(other_rank,&data[0],data.size()*sizeof(data_t));
   }
 
-  void wait();
+  void waitall();
 
 };
 
@@ -220,6 +219,46 @@ class global_memory_transfer : public global_transfer<rank_t> {
     mt_none, mt_host, mt_accelerator
   };
 
+  class memory_buffer {
+  public:
+    memory_type type;
+    void* ptr;
+    size_t sz;
+
+    memory_buffer(size_t _sz, memory_type _type) : sz(_sz), type(_type) {
+      if (type == mt_accelerator) {
+	ptr = acceleratorAllocDevice(sz);
+      } else if (type == mt_host) {
+	ptr = acceleratorAllocCpu(sz);
+      } else {
+	ERR("Unknown memory type");
+      }
+    }
+
+    memory_buffer(const memory_buffer& other) {
+      ERR("Copy constructor not yet supported");
+    }
+
+    memory_buffer(memory_buffer&& other) {
+      // move constructor
+      ptr = other.ptr;
+      type = other.type;
+      sz = other.sz;
+      other.ptr = 0;
+      other.type = mt_none;
+      other.sz = 0;
+    }
+
+    ~memory_buffer() {
+      if (type == mt_accelerator) {
+	acceleratorFreeDevice(ptr);
+      } else if (type == mt_host) {
+	acceleratorFreeCpu(ptr);
+      }
+
+    }
+  };
+
   friend void convert_to_bytes(std::vector<char>& bytes, const block_t& b) {
     bytes.resize(sizeof(b));
     memcpy(&bytes[0],&b,sizeof(b));
@@ -229,6 +268,10 @@ class global_memory_transfer : public global_transfer<rank_t> {
     ASSERT(bytes.size() == sizeof(b));
     memcpy(&b,&bytes[0],bytes.size());
   }
+
+  // memory buffers
+  std::map<rank_t, memory_buffer> send_buffers, recv_buffers;
+  memory_type comm_buffers_type;
 
   // public interface
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
@@ -246,6 +289,9 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void gather_my_blocks();
   void optimize();
   void create_comm_buffers(memory_type mt);
+  void bcopy(const std::vector<block_t>& blocks,
+	     std::pair<memory_type,void*>& base_dst, 
+	     const std::pair<memory_type,void*>& base_src);
 };
 
 typedef global_memory_view<uint64_t,int,uint32_t> gm_view;

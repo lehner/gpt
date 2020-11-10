@@ -86,7 +86,7 @@ void global_transfer<rank_t>::root_to_all(const std::map<rank_t, std::vector<dat
     }
   }
 
-  wait();
+  waitall();
 #endif
 }
 
@@ -126,17 +126,56 @@ void global_transfer<rank_t>::all_to_root(const std::vector<data_t>& my, std::ma
     }
   }
 
-  wait();
+  waitall();
 #endif
 }
 
 template<typename rank_t>
-void global_transfer<rank_t>::wait() {
+void global_transfer<rank_t>::waitall() {
 #ifdef CGPT_USE_MPI
+  printf("WAIT %d\n",(int)requests.size());
   std::vector<MPI_Status> stat(requests.size());
   ASSERT(MPI_SUCCESS == MPI_Waitall((int)requests.size(), &requests[0], &stat[0]));
   requests.clear();
 #endif
+}
+
+template<typename rank_t>
+void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t sz) {
+  if (sz <= size_mpi_max) {
+#ifdef CGPT_USE_MPI
+    printf("Send from %d to %d, %d bytes from %p (%g double)\n",this->rank,other_rank,(int)sz,pdata,*(double*)pdata);
+    MPI_Request r;
+    ASSERT(MPI_SUCCESS == MPI_Isend(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
+    requests.push_back(r);
+#endif
+  } else {
+    while (sz) {
+      size_t sz_block = std::min(sz,size_mpi_max);
+      isend(other_rank,pdata,sz_block);
+      sz -= sz_block;
+      pdata = (void*)((char*)pdata + sz_block);
+    }
+  }
+}
+
+template<typename rank_t>
+void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz) {
+  if (sz <= size_mpi_max) {
+#ifdef CGPT_USE_MPI
+    printf("Recv from %d to %d, %d bytes to %p\n",other_rank,this->rank,(int)sz,pdata);
+    MPI_Request r;
+    ASSERT(MPI_SUCCESS == MPI_Irecv(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
+    requests.push_back(r);
+#endif
+  } else {
+    while (sz) {
+      size_t sz_block = std::min(sz,size_mpi_max);
+      irecv(other_rank,pdata,sz_block);
+      sz -= sz_block;
+      pdata = (void*)((char*)pdata + sz_block);
+    }
+  }
 }
 
 template<typename rank_t>
@@ -221,7 +260,7 @@ void global_transfer<rank_t>::multi_send_recv(const std::map<rank_t, comm_messag
   }
 
   // wait
-  wait();
+  waitall();
 }
 //
 // global_memory_view
@@ -251,7 +290,8 @@ global_memory_view<offset_t,rank_t,index_t> global_memory_view<offset_t,rank_t,i
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-global_memory_transfer<offset_t,rank_t,index_t>::global_memory_transfer(rank_t _rank, Grid_MPI_Comm _comm) : global_transfer<rank_t>(_rank, _comm) {
+global_memory_transfer<offset_t,rank_t,index_t>::global_memory_transfer(rank_t _rank, Grid_MPI_Comm _comm) :
+  global_transfer<rank_t>(_rank, _comm), comm_buffers_type(mt_none) {
 }
 
 
@@ -309,7 +349,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
   }
 
   std::map<rank_t, comm_message> tasks_from_rank;
-  multi_send_recv(tasks_for_rank, tasks_from_rank);
+  this->multi_send_recv(tasks_for_rank, tasks_from_rank);
 
   // de-serialize my blocks from appropriate communication buffers
   for (auto & tasks : tasks_from_rank) {
@@ -408,14 +448,55 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
 template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory_type mt) {
 
-  // first remove buffers
+  // first remove existing buffers
+  send_buffers.clear();
+  recv_buffers.clear();
+  comm_buffers_type = mt;
 
   // then exit if nothing to create
   if (mt == mt_none)
     return;
 
   // Need to compute size of communications buffer for each target node
+  std::map<rank_t, size_t> send_size, recv_size;
+  for (auto ranks : blocks) {
+    rank_t dst_rank = ranks.first.first;
+    rank_t src_rank = ranks.first.second;
 
+    if (dst_rank == src_rank) {
+      ASSERT(src_rank == this->rank);
+      // no communication
+      continue;
+    }
+
+    size_t sz = 0;
+    for (auto indices : ranks.second) {
+      for (auto block : indices.second) {      
+	sz += block.size;
+      }
+    }
+
+    if (dst_rank == this->rank) {
+      recv_size[src_rank] += sz;
+    } else if (src_rank == this->rank) {
+      send_size[dst_rank] += sz;
+    } else {
+      ERR("Mismatched comm info at rank %ld",this->rank);
+    }
+  }
+
+  // allocate buffers
+  for (auto s : send_size) {
+    printf("Rank %d has a send_buffer of size %d for rank %d\n",
+	   this->rank, (int)s.second, (int)s.first);
+    send_buffers.insert(std::make_pair(s.first,memory_buffer(s.second, mt)));
+  }
+
+  for (auto s : recv_size) {
+    printf("Rank %d has a recv_buffer of size %d for rank %d\n",
+	   this->rank, (int)s.second, (int)s.first);
+    recv_buffers.insert(std::make_pair(s.first,memory_buffer(s.second, mt)));
+  }
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -436,9 +517,92 @@ void global_memory_transfer<offset_t,rank_t,index_t>::print() {
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<block_t>& blocks,
+							    std::pair<memory_type,void*>& base_dst, 
+							    const std::pair<memory_type,void*>& base_src) {
+  
+  memory_type mt_dst = base_dst.first;
+  char* p_dst = (char*)base_dst.second;
+
+  memory_type mt_src = base_src.first;
+  const char* p_src = (const char*)base_dst.second;
+  
+  if (mt_dst == mt_host && mt_src == mt_host) {
+    for (size_t i=0;i<blocks.size();i++) {
+      auto&b=blocks[i];
+      memcpy(&p_dst[b.start_dst],&p_src[b.start_src],b.size);
+    }
+  } else if (mt_dst == mt_host && mt_src == mt_accelerator) {
+    for (size_t i=0;i<blocks.size();i++) {
+      auto&b=blocks[i];
+      acceleratorCopyFromDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],b.size);
+    }
+  } else if (mt_dst == mt_accelerator && mt_src == mt_host) {
+    for (size_t i=0;i<blocks.size();i++) {
+      auto&b=blocks[i];
+      acceleratorCopyToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],b.size);
+    }
+  } else if (mt_dst == mt_accelerator && mt_src == mt_accelerator) {
+    ERR("Not allowed for now, implement a accelerator_for loop for all of them");
+  } else {
+    ERR("Unknown memory copy pattern");
+  }
+
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::pair<memory_type,void*>>& base_dst, 
 							      std::vector<std::pair<memory_type,void*>>& base_src) {
+
   // if there is no buffer, directly issue separate isend / irecv for each block
+  if (comm_buffers_type == mt_none) {
+    // first start remote submissions
+    for (auto ranks : blocks) {
+      rank_t dst_rank = ranks.first.first;
+      rank_t src_rank = ranks.first.second;
+
+      if (src_rank == this->rank && dst_rank != this->rank) {
+	for (auto indices : ranks.second) {
+	  index_t dst_idx = indices.first.first;
+	  index_t src_idx = indices.first.second;
+
+	  for (auto block : indices.second) {
+	    this->isend(dst_rank, (char*)base_src[src_idx].second + block.start_src, block.size);
+	  }
+	}
+      } else if (src_rank != this->rank && dst_rank == this->rank) {
+	for (auto indices : ranks.second) {
+	  index_t dst_idx = indices.first.first;
+	  index_t src_idx = indices.first.second;
+
+	  for (auto block : indices.second) {
+	    this->irecv(src_rank, (char*)base_dst[dst_idx].second + block.start_dst, block.size);
+	  }
+	}
+      }
+    }
+
+    // then do local copies
+    for (auto ranks : blocks) {
+      rank_t dst_rank = ranks.first.first;
+      rank_t src_rank = ranks.first.second;
+      
+      if (src_rank == this->rank && dst_rank == this->rank) {
+	for (auto indices : ranks.second) {
+	  index_t dst_idx = indices.first.first;
+	  index_t src_idx = indices.first.second;
+
+	  bcopy(indices.second,base_dst[dst_idx],base_src[src_idx]);
+	}
+      }
+    }
+
+    // then wait for remote copies to finish
+    this->waitall();
+
+  } else {
+    ERR("Not yet implemented");
+  }
 
   // if there is a buffer, first gather in communication buffer
 }
