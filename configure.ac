@@ -157,10 +157,15 @@ AC_DEFUN([fixxer],[# The FiXXer
 AS_IF([expr "${$1}" : ".*$2 " > /dev/null],
       [$1=`echo "${$1}" | ${SED} -e "s/$2 /$2 $2 $2 /g"`])])
 
-for token in -Xlinker -Xcompiler
-do
-    fixxer([GRID_CXXFLAGS],${token})
-done
+#for token in -Xlinker -Xcompiler
+#do
+#    fixxer([GRID_CXXFLAGS],${token})
+#done
+#
+# Better fix: The FiXXXer
+AC_DEFUN([fixxxer],[# The FiXXXer
+         $1=`echo "${$1}" | ${SED} -e 's;\([^ ]*\);-Wc,\1;g'`])
+fixxxer([GRID_CXXFLAGS])
 
 # Makefiles to be generated. These are all *.in  files.
 # We have to use subdirs, because for the python files I need to
