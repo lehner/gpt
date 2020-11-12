@@ -134,6 +134,8 @@ template<typename rank_t>
 void global_transfer<rank_t>::waitall() {
 #ifdef CGPT_USE_MPI
   printf("WAIT %d\n",(int)requests.size());
+  if (!requests.size())
+    return;
   std::vector<MPI_Status> stat(requests.size());
   ASSERT(MPI_SUCCESS == MPI_Waitall((int)requests.size(), &requests[0], &stat[0]));
   requests.clear();
@@ -224,7 +226,7 @@ void global_transfer<rank_t>::provide_my_receivers_get_my_senders(const std::map
   root_to_all(ranks_from_which_rank_will_receive_data, ranks_from_which_I_will_receive_data);
 
   // convert
-  for (auto r : ranks_from_which_I_will_receive_data) {
+  for (auto & r : ranks_from_which_I_will_receive_data) {
     //std::cout << "Rank " << this->rank << " here, will receive " << r.size << " bytes from rank " << r.rank << std::endl;
     senders[r.rank] = r.size;
   }
@@ -380,6 +382,15 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
 
 template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
+  for (auto & ranks : blocks) {
+    for (auto & indices : ranks.second) {
+      optimize(indices.second);
+    }
+  }
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::optimize(std::vector<block_t>& blocks) {
   struct {
     bool operator()(const block_t& a, const block_t& b) const
     {
@@ -387,35 +398,30 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
     }
   } less;
   
-  for (auto & ranks : blocks) {
-    for (auto & indices : ranks.second) {
-      auto & blocks = indices.second;
-      std::sort(blocks.begin(), blocks.end(), less);
+  std::sort(blocks.begin(), blocks.end(), less);
 
-      // merge neighboring blocks
-      std::vector<block_t> ret;
-      ret.push_back(blocks[0]);
-      size_t c = 0;
-    
-      for (size_t i=1;i<blocks.size();i++) {
-	auto & bc = ret[c];
-	auto & bi = blocks[i];
-	if (bi.start_src == bc.start_src &&
-	    bi.start_dst == bc.start_dst &&
-	    bi.size == bc.size) {
-	  continue; // remove duplicates (maybe from different ranks)
-	} else if (bi.start_src == (bc.start_src + bc.size) &&
-		   bi.start_dst == (bc.start_dst + bc.size)) {
-	  bc.size += bi.size;
-	} else {
-	  c = i;
-	  ret.push_back(bi);
-	}
-      }
-
-      blocks = ret;
+  // merge neighboring blocks
+  std::vector<block_t> ret;
+  ret.push_back(blocks[0]);
+  size_t c = 0;
+  
+  for (size_t i=1;i<blocks.size();i++) {
+    auto & bc = ret[c];
+    auto & bi = blocks[i];
+    if (bi.start_src == bc.start_src &&
+	bi.start_dst == bc.start_dst &&
+	bi.size == bc.size) {
+      continue; // remove duplicates (maybe from different ranks)
+    } else if (bi.start_src == (bc.start_src + bc.size) &&
+	       bi.start_dst == (bc.start_dst + bc.size)) {
+      bc.size += bi.size;
+    } else {
+      c = i;
+      ret.push_back(bi);
     }
   }
+  
+  blocks = ret;
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -451,6 +457,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory
   // first remove existing buffers
   send_buffers.clear();
   recv_buffers.clear();
+  send_blocks.clear();
+  recv_blocks.clear();
   comm_buffers_type = mt;
 
   // then exit if nothing to create
@@ -458,8 +466,9 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory
     return;
 
   // Need to compute size of communications buffer for each target node
+  // Also need to create contiguous send_blocks and recv_blocks
   std::map<rank_t, size_t> send_size, recv_size;
-  for (auto ranks : blocks) {
+  for (auto & ranks : blocks) {
     rank_t dst_rank = ranks.first.first;
     rank_t src_rank = ranks.first.second;
 
@@ -469,30 +478,42 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory
       continue;
     }
 
-    size_t sz = 0;
-    for (auto indices : ranks.second) {
-      for (auto block : indices.second) {      
-	sz += block.size;
-      }
-    }
-
     if (dst_rank == this->rank) {
+      size_t sz = 0;
+      for (auto & indices : ranks.second) {
+	auto& rb = recv_blocks[src_rank][indices.first.first]; // dst index
+	for (auto & block : indices.second) {      
+	  rb.push_back({ block.start_dst, sz, block.size });
+	  sz += block.size;
+	}
+	optimize(rb);
+      }
       recv_size[src_rank] += sz;
     } else if (src_rank == this->rank) {
+      size_t sz = 0;
+      for (auto & indices : ranks.second) {
+	auto& sb = send_blocks[dst_rank][indices.first.second]; // src index
+	for (auto & block : indices.second) {      
+	  sb.push_back({ sz, block.start_src, block.size });
+	  sz += block.size;
+	}
+	optimize(sb);
+      }
       send_size[dst_rank] += sz;
     } else {
       ERR("Mismatched comm info at rank %ld",this->rank);
     }
+
   }
 
   // allocate buffers
-  for (auto s : send_size) {
+  for (auto & s : send_size) {
     printf("Rank %d has a send_buffer of size %d for rank %d\n",
 	   this->rank, (int)s.second, (int)s.first);
     send_buffers.insert(std::make_pair(s.first,memory_buffer(s.second, mt)));
   }
 
-  for (auto s : recv_size) {
+  for (auto & s : recv_size) {
     printf("Rank %d has a recv_buffer of size %d for rank %d\n",
 	   this->rank, (int)s.second, (int)s.first);
     recv_buffers.insert(std::make_pair(s.first,memory_buffer(s.second, mt)));
@@ -502,13 +523,13 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory
 template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::print() {
 
-  for (auto ranks : blocks) {
-    for (auto indices : ranks.second) {
+  for (auto & ranks : blocks) {
+    for (auto & indices : ranks.second) {
       std::cout << GridLogMessage 
 		<< "[" << ranks.first.first << "," << ranks.first.second << "]"
 		<< "[" << indices.first.first << "," << indices.first.second << "] : " << std::endl;
 
-      for (auto block : indices.second) {
+      for (auto & block : indices.second) {
 	std::cout << GridLogMessage << block.start_dst << " <- " <<
 	  block.start_src << " for " << block.size << std::endl;
       }
@@ -525,7 +546,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bl
   char* p_dst = (char*)base_dst.second;
 
   memory_type mt_src = base_src.first;
-  const char* p_src = (const char*)base_dst.second;
+  const char* p_src = (const char*)base_src.second;
   
   if (mt_dst == mt_host && mt_src == mt_host) {
     for (size_t i=0;i<blocks.size();i++) {
@@ -543,7 +564,20 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bl
       acceleratorCopyToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],b.size);
     }
   } else if (mt_dst == mt_accelerator && mt_src == mt_accelerator) {
-    ERR("Not allowed for now, implement a accelerator_for loop for all of them");
+
+    for (size_t i=0;i<blocks.size();i++) {
+      block_t b=blocks[i];
+
+      ASSERT(b.size % sizeof(float) == 0);
+          
+      size_t nfloats = b.size / sizeof(float);
+      float* f_src = (float*)&p_src[b.start_src];
+      float* f_dst = (float*)&p_dst[b.start_dst];
+      accelerator_for(i, nfloats,1,{
+	  f_dst[i] = f_src[i];
+	});
+    }
+
   } else {
     ERR("Unknown memory copy pattern");
   }
@@ -556,84 +590,101 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::p
 
   // if there is no buffer, directly issue separate isend / irecv for each block
   if (comm_buffers_type == mt_none) {
+
     // first start remote submissions
-    for (auto ranks : blocks) {
+    for (auto & ranks : blocks) {
       rank_t dst_rank = ranks.first.first;
       rank_t src_rank = ranks.first.second;
 
       if (src_rank == this->rank && dst_rank != this->rank) {
-	for (auto indices : ranks.second) {
+	for (auto & indices : ranks.second) {
 	  index_t dst_idx = indices.first.first;
 	  index_t src_idx = indices.first.second;
 
-	  for (auto block : indices.second) {
+	  for (auto & block : indices.second) {
 	    this->isend(dst_rank, (char*)base_src[src_idx].second + block.start_src, block.size);
 	  }
 	}
       } else if (src_rank != this->rank && dst_rank == this->rank) {
-	for (auto indices : ranks.second) {
+	for (auto & indices : ranks.second) {
 	  index_t dst_idx = indices.first.first;
 	  index_t src_idx = indices.first.second;
 
-	  for (auto block : indices.second) {
+	  for (auto & block : indices.second) {
 	    this->irecv(src_rank, (char*)base_dst[dst_idx].second + block.start_dst, block.size);
 	  }
 	}
       }
     }
 
-    // then do local copies
-    for (auto ranks : blocks) {
-      rank_t dst_rank = ranks.first.first;
-      rank_t src_rank = ranks.first.second;
-      
-      if (src_rank == this->rank && dst_rank == this->rank) {
-	for (auto indices : ranks.second) {
-	  index_t dst_idx = indices.first.first;
-	  index_t src_idx = indices.first.second;
+  } else {
 
-	  bcopy(indices.second,base_dst[dst_idx],base_src[src_idx]);
-	}
+    // if there is a buffer, first gather in communication buffer
+    for (auto & ranks : send_blocks) {
+      rank_t dst_rank = ranks.first;
+      auto & buf = send_buffers.at(dst_rank);
+      std::pair<memory_type,void*> dst;
+      dst.first = buf.type;
+      dst.second = buf.ptr;
+
+      for (auto & indices : ranks.second) {
+	index_t src_idx = indices.first;
+	bcopy(indices.second, dst, base_src[src_idx]);
       }
     }
 
-    // then wait for remote copies to finish
-    this->waitall();
-
-  } else {
-    ERR("Not yet implemented");
+    // send/recv buffers
+    for (auto & buf : send_buffers) {
+      this->isend(buf.first, buf.second.ptr, buf.second.sz);
+    }
+    for (auto & buf : recv_buffers) {
+      this->irecv(buf.first, buf.second.ptr, buf.second.sz);
+    }
   }
 
-  // if there is a buffer, first gather in communication buffer
-}
 
-
-/*
-  ASSERT(offset_dst.size() == offset_src.size());
-
-  // gather all rank_src -> rank_dst requests from all mpi ranks
-
-  for (auto & r2r : local_r2r_plan) {
-    bcopy_plan::merge(r2r.second);
+  // then do local copies
+  for (auto & ranks : blocks) {
+    rank_t dst_rank = ranks.first.first;
+    rank_t src_rank = ranks.first.second;
+    
+    if (src_rank == this->rank && dst_rank == this->rank) {
+      for (auto & indices : ranks.second) {
+	index_t dst_idx = indices.first.first;
+	index_t src_idx = indices.first.second;
+	
+	bcopy(indices.second,base_dst[dst_idx],base_src[src_idx]);
+      }
+    }
   }
-
-  // now sync between all ranks
-  //std::vector<memory_offset_t> 
-  //long size = wishlist.size();
-  //std::vector<long> rank_size(mpi_ranks);
-
-  //
   
+  // then wait for remote copies to finish
+  this->waitall();
 
+  // if buffer was used, need to re-distribute locally
+  if (comm_buffers_type != mt_none) {
+    for (auto & ranks : recv_blocks) {
 
-  // root should know all of my r1_r2_size
-  // then root lets all nodes know
+      rank_t src_rank = ranks.first;
+      auto & buf = recv_buffers.at(src_rank);
+      std::pair<memory_type,void*> src;
+      src.first = buf.type;
+      src.second = buf.ptr;
 
-  // this creates the recv_plan and send_plan
+      for (auto & indices : ranks.second) {
+	index_t dst_idx = indices.first;
+	printf("On rank %d recv_block from %d block %d\n",
+	       (int)this->rank,
+	       (int)src_rank,
+	       (int)buf.sz);
+	for (size_t i=0;i<buf.sz/sizeof(double);i++)
+	  printf("%d = %g\n",(int)i,((double*)buf.ptr)[i]);
+	bcopy(indices.second, base_dst[dst_idx], src);
+      }
+    }
+  }
 
-  // and also the local copy plan
-  */
-
+}
 
 template class global_memory_view<uint64_t,int,uint32_t>;
 template class global_memory_transfer<uint64_t,int,uint32_t>;

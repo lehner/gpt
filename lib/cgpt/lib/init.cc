@@ -76,7 +76,8 @@ EXPORT(init,{
       odst.blocks.push_back( { 2, 0, 0, word } ); // rank, index, offset, size
 #endif
 
-      plan.create(odst, osrc, gm_transfer::mt_none); // for now no buffer
+      //plan.create(odst, osrc, gm_transfer::mt_none); // for now no buffer
+      plan.create(odst, osrc, gm_transfer::mt_host);
 
       // prepare test data and execute
       double* host_src = new double[128];

@@ -272,6 +272,7 @@ class global_memory_transfer : public global_transfer<rank_t> {
   // memory buffers
   std::map<rank_t, memory_buffer> send_buffers, recv_buffers;
   memory_type comm_buffers_type;
+  std::map< rank_t, std::map< index_t, std::vector<block_t> > > send_blocks, recv_blocks;
 
   // public interface
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
@@ -288,6 +289,7 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void fill_blocks_from_view_pair(const view_t& dst, const view_t& src);
   void gather_my_blocks();
   void optimize();
+  void optimize(std::vector<block_t>& blocks);
   void create_comm_buffers(memory_type mt);
   void bcopy(const std::vector<block_t>& blocks,
 	     std::pair<memory_type,void*>& base_dst, 
