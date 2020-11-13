@@ -299,7 +299,8 @@ class global_memory_transfer : public global_transfer<rank_t> {
 typedef global_memory_view<uint64_t,int,uint32_t> gm_view;
 typedef global_memory_transfer<uint64_t,int,uint32_t> gm_transfer;
 
-
+// perform a test of the global memory system
+void test_global_memory_system();
 
 class cgpt_distribute {
  public:

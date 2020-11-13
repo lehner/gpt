@@ -133,7 +133,7 @@ void global_transfer<rank_t>::all_to_root(const std::vector<data_t>& my, std::ma
 template<typename rank_t>
 void global_transfer<rank_t>::waitall() {
 #ifdef CGPT_USE_MPI
-  printf("WAIT %d\n",(int)requests.size());
+  //printf("WAIT %d\n",(int)requests.size());
   if (!requests.size())
     return;
   std::vector<MPI_Status> stat(requests.size());
@@ -146,7 +146,7 @@ template<typename rank_t>
 void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t sz) {
   if (sz <= size_mpi_max) {
 #ifdef CGPT_USE_MPI
-    printf("Send from %d to %d, %d bytes from %p (%g double)\n",this->rank,other_rank,(int)sz,pdata,*(double*)pdata);
+    //printf("Send from %d to %d, %d bytes from %p (%g double)\n",this->rank,other_rank,(int)sz,pdata,*(double*)pdata);
     MPI_Request r;
     ASSERT(MPI_SUCCESS == MPI_Isend(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
     requests.push_back(r);
@@ -165,7 +165,7 @@ template<typename rank_t>
 void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz) {
   if (sz <= size_mpi_max) {
 #ifdef CGPT_USE_MPI
-    printf("Recv from %d to %d, %d bytes to %p\n",other_rank,this->rank,(int)sz,pdata);
+    //printf("Recv from %d to %d, %d bytes to %p\n",other_rank,this->rank,(int)sz,pdata);
     MPI_Request r;
     ASSERT(MPI_SUCCESS == MPI_Irecv(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
     requests.push_back(r);
@@ -282,7 +282,7 @@ global_memory_view<offset_t,rank_t,index_t> global_memory_view<offset_t,rank_t,i
 	  bi.start == (bc.start + bc.size)) {
 	bc.size += bi.size;
       } else {
-	c = i;
+	c++;
 	ret.blocks.push_back(bi);
       }
     }
@@ -303,6 +303,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::fill_blocks_from_view_pair
   // create local src -> dst command
   auto dst = _dst.merged();
   auto src = _src.merged();
+  //auto dst = _dst;
+  //auto src = _src;
 
   size_t is = 0, id = 0;
   while (is < src.blocks.size() &&
@@ -416,7 +418,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize(std::vector<block
 	       bi.start_dst == (bc.start_dst + bc.size)) {
       bc.size += bi.size;
     } else {
-      c = i;
+      c++;
       ret.push_back(bi);
     }
   }
@@ -446,9 +448,6 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
 
   // optionally create communication buffers
   create_comm_buffers(use_comm_buffers_of_type);
-
-  // then prepare packets for each node
-  print();
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -508,14 +507,14 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory
 
   // allocate buffers
   for (auto & s : send_size) {
-    printf("Rank %d has a send_buffer of size %d for rank %d\n",
-	   this->rank, (int)s.second, (int)s.first);
+    //printf("Rank %d has a send_buffer of size %d for rank %d\n",
+    //	   this->rank, (int)s.second, (int)s.first);
     send_buffers.insert(std::make_pair(s.first,memory_buffer(s.second, mt)));
   }
 
   for (auto & s : recv_size) {
-    printf("Rank %d has a recv_buffer of size %d for rank %d\n",
-	   this->rank, (int)s.second, (int)s.first);
+    //printf("Rank %d has a recv_buffer of size %d for rank %d\n",
+    //	   this->rank, (int)s.second, (int)s.first);
     recv_buffers.insert(std::make_pair(s.first,memory_buffer(s.second, mt)));
   }
 }
@@ -673,12 +672,12 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::p
 
       for (auto & indices : ranks.second) {
 	index_t dst_idx = indices.first;
-	printf("On rank %d recv_block from %d block %d\n",
-	       (int)this->rank,
-	       (int)src_rank,
-	       (int)buf.sz);
-	for (size_t i=0;i<buf.sz/sizeof(double);i++)
-	  printf("%d = %g\n",(int)i,((double*)buf.ptr)[i]);
+	//printf("On rank %d recv_block from %d block %d\n",
+	//     (int)this->rank,
+	//     (int)src_rank,
+	//     (int)buf.sz);
+	//for (size_t i=0;i<buf.sz/sizeof(double);i++)
+	//  printf("%d = %g\n",(int)i,((double*)buf.ptr)[i]);
 	bcopy(indices.second, base_dst[dst_idx], src);
       }
     }
@@ -689,6 +688,97 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::p
 template class global_memory_view<uint64_t,int,uint32_t>;
 template class global_memory_transfer<uint64_t,int,uint32_t>;
 
+void test_global_memory_system() {
+
+  int rank = CartesianCommunicator::RankWorld();
+  gm_transfer plan(rank, CartesianCommunicator::communicator_world);
+  gm_transfer plan_host_buf(rank, CartesianCommunicator::communicator_world);
+  int ranks = plan.mpi_ranks;
+  //printf("Rank %d/%d here\n",rank,ranks);
+  
+  gm_view osrc, odst;
+  
+  size_t word = sizeof(double);
+  size_t word_half = word/2;
+  size_t nwords = 512;
+  size_t nindex = 6;
+  
+  // every node requests a specific
+  srand (time(NULL));
+  std::vector<int> src_ranks(nwords*nindex);
+  std::vector<int> src_offset(nwords*nindex);
+  std::vector<int> src_index(nwords*nindex);
+  
+  for (int i=0;i<nindex*nwords;i++) {
+    src_ranks[i] = rand() % ranks;
+    src_offset[i] = rand() % nwords;
+    src_index[i] = rand() % nindex;
+  }
+
+  //std::cout << GridLogMessage << "Test setup:" << src_ranks << std::endl << src_offset << std::endl << src_index << std::endl;
+
+  for (int i=0;i<nindex;i++) {
+    for (int j=0;j<nwords;j++) {
+      int rs = src_ranks[j + i*nwords];
+      int js = src_offset[j + i*nwords];
+      int is = src_index[j + i*nwords];
+      osrc.blocks.push_back( { rs, is, js*word, word_half } ); // rank, index, offset, size
+      osrc.blocks.push_back( { rs, is, js*word + word_half, word_half } ); // rank, index, offset, size
+      odst.blocks.push_back( { rank, i, j*word, word } ); // rank, index, offset, size
+    }
+  }
+  
+  
+  plan.create(odst, osrc, gm_transfer::mt_none);
+  plan_host_buf.create(odst, osrc, gm_transfer::mt_host);
+  
+  // prepare test data and execute
+  std::vector< std::vector<double> > host_src(nindex);
+  std::vector< std::vector<double> > host_dst(nindex);
+  for (int i=0;i<nindex;i++) {
+    host_src[i].resize(nwords);
+    host_dst[i].resize(nwords);
+    for (int j=0;j<nwords;j++)
+      host_src[i][j] = rank * 1000 + j + 100000 * i;
+  }
+  
+  std::vector< std::pair<gm_transfer::memory_type, void*> > dst, src;
+  for (int i=0;i<nindex;i++) {
+    dst.push_back( std::make_pair(gm_transfer::mt_host,&host_dst[i][0]) );
+    src.push_back( std::make_pair(gm_transfer::mt_host,&host_src[i][0]) );
+  }
+
+  for (int iter=0;iter<2;iter++) {
+
+    for (int i=0;i<nindex;i++) {
+      for (int j=0;j<nwords;j++) {
+	host_dst[i][j] = -0.1;
+      }
+    }
+    
+    if (iter == 0)
+      plan.execute(dst,src);
+    else
+      plan_host_buf.execute(dst,src);
+  
+    // test
+    for (int i=0;i<nindex;i++) {
+      for (int j=0;j<nwords;j++) {
+	int rs = src_ranks[j + i*nwords];
+	int js = src_offset[j + i*nwords];
+	int is = src_index[j + i*nwords];
+	
+	double expected = rs * 1000 + js + 100000 * is;
+	double have = host_dst[i][j];
+	if (have != expected) {
+	  printf("ITER%d, Rank %d has an error %g != %g (%d %d)\n",iter,rank,expected,have,
+		 i,j);
+	}
+      }
+    }
+  }
+
+}
 
 // legacy below
 
