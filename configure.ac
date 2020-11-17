@@ -166,6 +166,9 @@ AS_IF([expr "${$1}" : ".*$2 " > /dev/null],
 AC_DEFUN([fixxxer],[# The FiXXXer
          $1=`echo "${$1}" | ${SED} -e 's;\([^ ]*\);-Wc,\1;g'`])
 fixxxer([GRID_CXXFLAGS])
+AC_DEFUN([fixxxler],[# The FiXXXer for Linker
+         $1=`echo "${$1}" | ${SED} -e 's;\([^ ]*\);-Wl,\1;g'`])
+fixxxler([CXXLD])
 
 # Makefiles to be generated. These are all *.in  files.
 # We have to use subdirs, because for the python files I need to
