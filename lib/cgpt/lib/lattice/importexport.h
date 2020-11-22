@@ -16,6 +16,12 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
+//static void create_numpy_view(gm_view& view, std::vector<int>& shape, dtype) {
+  
+//}
+
+/*
 static void cgpt_to_full_coor(GridBase* grid, int cb,
 			      PyArrayObject* coordinates, 
 			      std::vector<cgpt_distribute::coor>& fc) {
@@ -254,3 +260,4 @@ static void cgpt_importexport(GridBase* grid_dst, GridBase* grid_src,
 
   dist.copy(plan_dst,plan_src,l_dst,l_src);
 }
+*/

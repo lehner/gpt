@@ -219,17 +219,24 @@ class global_memory_transfer : public global_transfer<rank_t> {
     mt_none, mt_host, mt_accelerator
   };
 
-  class memory_buffer {
+  class memory_view {
   public:
     memory_type type;
     void* ptr;
     size_t sz;
+  };
 
-    memory_buffer(size_t _sz, memory_type _type) : sz(_sz), type(_type) {
-      if (type == mt_accelerator) {
-	ptr = acceleratorAllocDevice(sz);
-      } else if (type == mt_host) {
-	ptr = acceleratorAllocCpu(sz);
+  class memory_buffer {
+  public:
+    memory_view view;
+
+    memory_buffer(size_t _sz, memory_type _type) {
+      view.sz = _sz;
+      view.type = _type;
+      if (_type == mt_accelerator) {
+	view.ptr = acceleratorAllocDevice(_sz);
+      } else if (_type == mt_host) {
+	view.ptr = acceleratorAllocCpu(_sz);
       } else {
 	ERR("Unknown memory type");
       }
@@ -241,19 +248,17 @@ class global_memory_transfer : public global_transfer<rank_t> {
 
     memory_buffer(memory_buffer&& other) {
       // move constructor
-      ptr = other.ptr;
-      type = other.type;
-      sz = other.sz;
-      other.ptr = 0;
-      other.type = mt_none;
-      other.sz = 0;
+      view = other.view;
+      other.view.ptr = 0;
+      other.view.type = mt_none;
+      other.view.sz = 0;
     }
 
     ~memory_buffer() {
-      if (type == mt_accelerator) {
-	acceleratorFreeDevice(ptr);
-      } else if (type == mt_host) {
-	acceleratorFreeCpu(ptr);
+      if (view.type == mt_accelerator) {
+	acceleratorFreeDevice(view.ptr);
+      } else if (view.type == mt_host) {
+	acceleratorFreeCpu(view.ptr);
       }
 
     }
@@ -274,6 +279,9 @@ class global_memory_transfer : public global_transfer<rank_t> {
   memory_type comm_buffers_type;
   std::map< rank_t, std::map< index_t, std::vector<block_t> > > send_blocks, recv_blocks;
 
+  // bounds
+  std::vector<offset_t> bounds_dst, bounds_src;
+
   // public interface
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
 
@@ -281,8 +289,8 @@ class global_memory_transfer : public global_transfer<rank_t> {
 
   void create(const view_t& dst, const view_t& src, memory_type use_comm_buffers_of_type = mt_none);
 
-  void execute(std::vector<std::pair<memory_type,void*>>& base_dst, 
-	       std::vector<std::pair<memory_type,void*>>& base_src);
+  void execute(std::vector<memory_view>& base_dst, 
+	       std::vector<memory_view>& base_src);
 
   // helper
   void print();
@@ -290,10 +298,11 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void gather_my_blocks();
   void optimize();
   void optimize(std::vector<block_t>& blocks);
+  void create_bounds();
   void create_comm_buffers(memory_type mt);
   void bcopy(const std::vector<block_t>& blocks,
-	     std::pair<memory_type,void*>& base_dst, 
-	     const std::pair<memory_type,void*>& base_src);
+	     memory_view& base_dst, 
+	     const memory_view& base_src);
 };
 
 typedef global_memory_view<uint64_t,int,uint32_t> gm_view;
@@ -301,49 +310,3 @@ typedef global_memory_transfer<uint64_t,int,uint32_t> gm_transfer;
 
 // perform a test of the global memory system
 void test_global_memory_system();
-
-class cgpt_distribute {
- public:
-
-  static const long SIMD_BASE = 256;
-  static long offset(long odx, long idx) { ASSERT(idx<SIMD_BASE); return odx*SIMD_BASE + idx; };
-  struct coor { int rank; long offset; };
-  struct mp { std::vector<long> src; std::vector<long> dst; };
-  struct plan { std::map<int,mp> cr; std::vector<long> tasks; };
-  struct data_simd { void* local; long word, Nsimd, simd_word; std::vector<long> offset_data; std::vector<long> offset_buffer; };
-
-  int rank;
-
-  // word == sizeof(sobj), simd_word == sizeof(Coeff_t)
-  cgpt_distribute(int rank, Grid_MPI_Comm comm);
-
-  void create_plan(const std::vector<coor>& c, plan& plan) const;
-
-  void copy_to(const plan& p, std::vector<data_simd> & src, void* dst);
-
-  void copy_from(const plan& p, void* src, long src_size, std::vector<data_simd> & dst);
-
-  void copy(const plan& p_dst, const plan& p_src, std::vector<data_simd> & dst, std::vector<data_simd> & src);
-
- protected:
-  void split(const std::vector<coor>& c, std::map<int,mp>& s) const;
-  Grid_MPI_Comm comm;
-
-  int mpi_ranks, mpi_rank;
-  std::vector<int> mpi_rank_map;
-
-  // plan
-  void packet_prepare_need(std::vector<long>& data, const std::map<int,mp>& cr) const;
-  void wishlists_to_root(const std::vector<long>& wishlist, std::map<int, std::vector<long> >& wishlists) const;
-  void send_tasks_to_ranks(const std::map<int, std::vector<long> >& wishlists, std::vector<long>& tasks) const;
-  void get_send_tasks_for_rank(int i, const std::map<int, std::vector<long> >& wishlists, std::vector<long>& tasks) const;
-
-  // copy
-  void copy_data(const mp& m, std::vector<data_simd>& src, void* dst);
-  void copy_data_rev(const mp& m, void* src, long src_size, std::vector<data_simd>& dst);
-  void copy_remote(const std::vector<long>& tasks, const std::map<int,mp>& cr, std::vector<data_simd>& src, void* dst);
-  void copy_remote_rev(const std::vector<long>& tasks, const std::map<int,mp>& cr, void* src, long src_size, std::vector<data_simd>& dst);
-
-  // util
-  long word_total(std::vector<data_simd>& src);
-};

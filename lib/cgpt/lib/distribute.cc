@@ -427,6 +427,33 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize(std::vector<block
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::create_bounds() {
+
+  for (auto & ranks : blocks) {
+    rank_t dst_rank = ranks.first.first;
+    rank_t src_rank = ranks.first.second;
+
+    for (auto & indices : ranks.second) {
+      index_t dst_idx = indices.first.first;
+      index_t src_idx = indices.first.second;
+      if (dst_idx >= bounds_dst.size())
+	bounds_dst.resize(dst_idx+1,0);
+      if (src_idx >= bounds_src.size())
+	bounds_src.resize(src_idx+1,0);
+      for (auto & bi : indices.second) {
+	offset_t end_dst = bi.start_dst + bi.size;
+	offset_t end_src = bi.start_src + bi.size;
+	if (dst_rank == this->rank && end_dst > bounds_dst[dst_idx])
+	  bounds_dst[dst_idx] = end_dst;
+	if (src_rank == this->rank && end_src > bounds_src[src_idx])
+	  bounds_src[src_idx] = end_src;
+      }
+    }
+  }
+
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
 							     const view_t& _src,
 							     memory_type use_comm_buffers_of_type) {
@@ -448,6 +475,9 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
 
   // optionally create communication buffers
   create_comm_buffers(use_comm_buffers_of_type);
+
+  // create bounds
+  create_bounds();
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -538,14 +568,14 @@ void global_memory_transfer<offset_t,rank_t,index_t>::print() {
 
 template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<block_t>& blocks,
-							    std::pair<memory_type,void*>& base_dst, 
-							    const std::pair<memory_type,void*>& base_src) {
+							    memory_view& base_dst, 
+							    const memory_view& base_src) {
   
-  memory_type mt_dst = base_dst.first;
-  char* p_dst = (char*)base_dst.second;
+  memory_type mt_dst = base_dst.type;
+  char* p_dst = (char*)base_dst.ptr;
 
-  memory_type mt_src = base_src.first;
-  const char* p_src = (const char*)base_src.second;
+  memory_type mt_src = base_src.type;
+  const char* p_src = (const char*)base_src.ptr;
   
   if (mt_dst == mt_host && mt_src == mt_host) {
     for (size_t i=0;i<blocks.size();i++) {
@@ -563,20 +593,10 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bl
       acceleratorCopyToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],b.size);
     }
   } else if (mt_dst == mt_accelerator && mt_src == mt_accelerator) {
-
     for (size_t i=0;i<blocks.size();i++) {
-      block_t b=blocks[i];
-
-      ASSERT(b.size % sizeof(float) == 0);
-          
-      size_t nfloats = b.size / sizeof(float);
-      float* f_src = (float*)&p_src[b.start_src];
-      float* f_dst = (float*)&p_dst[b.start_dst];
-      accelerator_for(i, nfloats,1,{
-	  f_dst[i] = f_src[i];
-	});
+      auto&b=blocks[i];
+      acceleratorCopyDeviceToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],b.size);
     }
-
   } else {
     ERR("Unknown memory copy pattern");
   }
@@ -584,8 +604,21 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bl
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::pair<memory_type,void*>>& base_dst, 
-							      std::vector<std::pair<memory_type,void*>>& base_src) {
+void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory_view>& base_dst, 
+							      std::vector<memory_view>& base_src) {
+
+  // first check bounds
+  for (size_t i=0;i<base_dst.size();i++) {
+    if (base_dst[i].sz < bounds_dst[i]) {
+      ERR("Destination view index %ld is too small (%ld < %ld)", i, base_dst[i].sz, bounds_dst[i]);
+    }
+  }
+
+  for (size_t i=0;i<base_src.size();i++) {
+    if (base_src[i].sz < bounds_src[i]) {
+      ERR("Source view index %ld is too small (%ld < %ld)", i, base_src[i].sz, bounds_src[i]);
+    }
+  }
 
   // if there is no buffer, directly issue separate isend / irecv for each block
   if (comm_buffers_type == mt_none) {
@@ -601,7 +634,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::p
 	  index_t src_idx = indices.first.second;
 
 	  for (auto & block : indices.second) {
-	    this->isend(dst_rank, (char*)base_src[src_idx].second + block.start_src, block.size);
+	    this->isend(dst_rank, (char*)base_src[src_idx].ptr + block.start_src, block.size);
 	  }
 	}
       } else if (src_rank != this->rank && dst_rank == this->rank) {
@@ -610,7 +643,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::p
 	  index_t src_idx = indices.first.second;
 
 	  for (auto & block : indices.second) {
-	    this->irecv(src_rank, (char*)base_dst[dst_idx].second + block.start_dst, block.size);
+	    this->irecv(src_rank, (char*)base_dst[dst_idx].ptr + block.start_dst, block.size);
 	  }
 	}
       }
@@ -621,10 +654,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::p
     // if there is a buffer, first gather in communication buffer
     for (auto & ranks : send_blocks) {
       rank_t dst_rank = ranks.first;
-      auto & buf = send_buffers.at(dst_rank);
-      std::pair<memory_type,void*> dst;
-      dst.first = buf.type;
-      dst.second = buf.ptr;
+      auto & dst = send_buffers.at(dst_rank).view;
 
       for (auto & indices : ranks.second) {
 	index_t src_idx = indices.first;
@@ -634,10 +664,10 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::p
 
     // send/recv buffers
     for (auto & buf : send_buffers) {
-      this->isend(buf.first, buf.second.ptr, buf.second.sz);
+      this->isend(buf.first, buf.second.view.ptr, buf.second.view.sz);
     }
     for (auto & buf : recv_buffers) {
-      this->irecv(buf.first, buf.second.ptr, buf.second.sz);
+      this->irecv(buf.first, buf.second.view.ptr, buf.second.view.sz);
     }
   }
 
@@ -665,10 +695,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<std::p
     for (auto & ranks : recv_blocks) {
 
       rank_t src_rank = ranks.first;
-      auto & buf = recv_buffers.at(src_rank);
-      std::pair<memory_type,void*> src;
-      src.first = buf.type;
-      src.second = buf.ptr;
+      auto & src = recv_buffers.at(src_rank).view;
 
       for (auto & indices : ranks.second) {
 	index_t dst_idx = indices.first;
@@ -742,10 +769,10 @@ void test_global_memory_system() {
       host_src[i][j] = rank * 1000 + j + 100000 * i;
   }
   
-  std::vector< std::pair<gm_transfer::memory_type, void*> > dst, src;
+  std::vector<gm_transfer::memory_view> dst, src;
   for (int i=0;i<nindex;i++) {
-    dst.push_back( std::make_pair(gm_transfer::mt_host,&host_dst[i][0]) );
-    src.push_back( std::make_pair(gm_transfer::mt_host,&host_src[i][0]) );
+    dst.push_back( { gm_transfer::mt_host,&host_dst[i][0],nwords*sizeof(double)} );
+    src.push_back( { gm_transfer::mt_host,&host_src[i][0],nwords*sizeof(double)} );
   }
 
   for (int iter=0;iter<2;iter++) {
@@ -778,644 +805,4 @@ void test_global_memory_system() {
     }
   }
 
-}
-
-// legacy below
-
-cgpt_distribute::cgpt_distribute(int _rank, Grid_MPI_Comm _comm) : rank(_rank), comm(_comm) {
-
-#ifdef CGPT_USE_MPI
-  //MPI_COMM_WORLD
-  MPI_Comm_size(comm,&mpi_ranks);
-  MPI_Comm_rank(comm,&mpi_rank);
-  mpi_rank_map.resize(mpi_ranks,0);
-  ASSERT(rank < mpi_ranks);
-  mpi_rank_map[rank] = mpi_rank;
-  ASSERT(MPI_SUCCESS == MPI_Allreduce(MPI_IN_PLACE,&mpi_rank_map[0],mpi_ranks,MPI_INT,MPI_SUM,comm));
-#else
-  mpi_ranks=1;
-  mpi_rank=0;
-  mpi_rank_map.push_back(0);
-#endif
-}
-
-void cgpt_distribute::split(const std::vector<coor>& c, std::map<int,mp>& s) const {
-  long dst = 0;
-  for (auto& f : c) {
-    auto & t = s[f.rank];
-    t.src.push_back(f.offset);
-    t.dst.push_back(dst++);
-  }
-}
-
-void cgpt_distribute::create_plan(const std::vector<coor>& c, plan& p) const {
-
-  // split mapping by rank
-  split(c,p.cr);
-
-  // head node needs to learn all the remote requirements
-  std::vector<long> wishlist;
-  packet_prepare_need(wishlist,p.cr);
-
-  // head node collects the wishlists
-  std::map< int, std::vector<long> > wishlists;
-  wishlists_to_root(wishlist,wishlists);
-
-  // now root tells every node which other nodes needs how much of its data
-  send_tasks_to_ranks(wishlists,p.tasks);
-}
-
-void cgpt_distribute::copy_to(const plan& p, std::vector<data_simd>& src, void* dst) {
-  
-  // copy local data
-  const auto& ld = p.cr.find(rank);
-  if (ld != p.cr.cend())
-    copy_data(ld->second,src,dst);
-
-  // receive the requested wishlist from my task ranks
-  copy_remote(p.tasks,p.cr,src,dst);
-
-}
-
-void cgpt_distribute::copy_from(const plan& p, void* src, long src_size, std::vector<data_simd>& dst) {
-
-  // copy local data
-  const auto& ld = p.cr.find(rank);
-  if (ld != p.cr.cend())
-    copy_data_rev(ld->second,src,src_size,dst);
-
-  // receive the requested wishlist from my task ranks
-  copy_remote_rev(p.tasks,p.cr,src,src_size,dst);
-
-}
-
-void cgpt_distribute::copy(const plan& p_dst, const plan& p_src, std::vector<data_simd>& dst, std::vector<data_simd>& src) {
-
-  // for now only support local data 
-  ASSERT(p_dst.tasks.size() == 0);
-  ASSERT(p_src.tasks.size() == 0);
-  ASSERT(dst.size() == src.size());
-
-  //double t0 = cgpt_time();
-
-  // local->local
-  const auto& ld_src = p_src.cr.find(rank);
-  const auto& ld_dst = p_dst.cr.find(rank);
-  if ((ld_src != p_src.cr.cend()) && (ld_dst != p_dst.cr.end())) {
-    auto & _dst = ld_dst->second.src;
-    auto & _src = ld_src->second.src;
-    ASSERT(_dst.size() == _src.size());
-    long len = _dst.size();
-
-    for (long ni = 0; ni < dst.size(); ni++) {
-      
-      // src
-      auto & src_offset_data = src[ni].offset_data;
-      long src_N_ni = src_offset_data.size();
-      long src_Nsimd = src[ni].Nsimd;
-      long src_simd_word = src[ni].simd_word;
-      long src_word = src[ni].word;
-      long src_si_stride = src_Nsimd * src_simd_word;
-      long src_o_stride = src_Nsimd * src_word;
-      char* __src = (char*)src[ni].local;
-
-      // dst
-      auto & dst_offset_data = dst[ni].offset_data;
-      long dst_N_ni = dst_offset_data.size();
-      long dst_Nsimd = dst[ni].Nsimd;
-      long dst_simd_word = dst[ni].simd_word;
-      long dst_word = dst[ni].word;
-      long dst_si_stride = dst_Nsimd * dst_simd_word;
-      long dst_o_stride = dst_Nsimd * dst_word;
-      char* __dst = (char*)dst[ni].local;
-
-      // eq
-      ASSERT(dst_N_ni == src_N_ni);
-      ASSERT(dst_simd_word == src_simd_word);
-      long N_ni = dst_N_ni;
-      long simd_word = dst_simd_word;
-
-      ASSERT(len % dst_Nsimd == 0);
-      long len_simd = len / dst_Nsimd;
-
-      //double t0 =cgpt_time(); 
-      thread_region
-	{
-
-	  long copy_src_start = -1;
-	  long copy_dst_start = -1;
-	  long copy_size = 0;
-
-	  thread_for_in_region(idx_simd, len_simd, {
-	  
-	      for (long si = 0; si < N_ni; si++) {
-
-		for (long idx_internal = 0; idx_internal < dst_Nsimd; idx_internal++) {
-
-		  long idx = idx_simd * dst_Nsimd + idx_internal;
-
-		  long offset_src = _src[idx];
-		  long _odx_src = offset_src / SIMD_BASE;
-		  long _idx_src = offset_src % SIMD_BASE;
-		  
-		  long offset_dst = _dst[idx];
-		  long _odx_dst = offset_dst / SIMD_BASE;
-		  long _idx_dst = offset_dst % SIMD_BASE;
-		  
-		  long src_idx = src_si_stride*src_offset_data[si] + simd_word*_idx_src + src_o_stride*_odx_src;
-		  long dst_idx = dst_si_stride*dst_offset_data[si] + simd_word*_idx_src + dst_o_stride*_odx_src;
-		  
-		  if (copy_src_start + copy_size == src_idx &&
-		      copy_dst_start + copy_size == dst_idx) {
-		    copy_size += simd_word;
-		  } else {
-		    
-		    if (copy_src_start != -1) {
-		      // perform copy of previous block
-		      //if (thread_num() == 0)
-		      //std::cout << GridLogMessage << copy_dst_start << " <- " << copy_src_start << " size " << copy_size << "( odx = " << _odx_dst << ", idx = " << _idx_dst << ")" << std::endl;
-		      memcpy(&__dst[copy_dst_start],&__src[copy_src_start],copy_size);
-		      //if (copy_size == 64) {
-		      //  vComplexD* a = (vComplexD*)&__dst[copy_dst_start];
-		      //  vComplexD* b = (vComplexD*)&__src[copy_src_start];
-		      //  *a = *b;
-		      //}
-		    }
-		    
-		    copy_src_start = src_idx;
-		    copy_dst_start = dst_idx;
-		    copy_size = simd_word;
-		  }
-		}
-	      }
-		  
-
-	    });
-
-	  if (copy_src_start != -1) {
-	    // perform copy of block
-	    //if (thread_num() == 0)
-	    //  std::cout << GridLogMessage << copy_dst_start << " <- " << copy_src_start << " size " << copy_size << std::endl;
-	    memcpy(&__dst[copy_dst_start],&__src[copy_src_start],copy_size);
-	  }
-	}
-    }
-
-    //double t1 = cgpt_time();
-    //std::cout << GridLogMessage << "Copy " << t1 - t0 << std::endl;
-    //for (long i =0;i<ld_src->second.dst.size();i++) {
-    //  std::cout << GridLogMessage << ld_src->second.dst[i] << " <- " << ld_dst->second.dst[i] << std::endl;
-    //}
-    return;
-  }
-
-  ERR("Invalid copy setup");
-}
-
-long cgpt_distribute::word_total(std::vector<data_simd>& src) {
-  long r = 0;
-  for (auto& s : src) {
-    ASSERT(s.Nsimd <= SIMD_BASE);
-    r+=s.simd_word * s.offset_data.size();
-  }
-  return r;
-}
-
-void cgpt_distribute::copy_remote(const std::vector<long>& tasks, const std::map<int,mp>& cr,
-				  std::vector<data_simd>& _src, void* _dst) {
-#ifdef CGPT_USE_MPI
-  assert(tasks.size() % 2 == 0);
-  std::vector<MPI_Request> req;
-  std::map<int, std::vector<long> > remote_needs_offsets;
-  long _word_total = word_total(_src);
-
-  for (int i = 0; i < tasks.size() / 2; i++) {
-    int dest_rank  = (int)tasks[2*i + 0];
-    long dest_n    = tasks[2*i + 1];
-
-    auto & w = remote_needs_offsets[dest_rank];
-
-    w.resize(dest_n);
-
-    MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],dest_n,MPI_LONG,mpi_rank_map[dest_rank],0x3,comm,&r));
-    req.push_back(r);
-
-  }
-  for (auto & f : cr) {
-    int dest_rank = f.first;
-    if (dest_rank != rank) {
-      auto & off = f.second.src;
-      MPI_Request r;
-      ASSERT(MPI_SUCCESS == MPI_Isend(&off[0],off.size(),MPI_LONG,mpi_rank_map[dest_rank],0x3,comm,&r));
-      req.push_back(r);
-    }
-  }
-
-  {
-    std::vector<MPI_Status> stat(req.size());
-    ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
-  }
-
-  // now send all data
-  req.resize(0);
-  std::map<int, std::vector<char> > buf;
-  for (int i = 0; i < tasks.size() / 2; i++) {
-    int dest_rank  = (int)tasks[2*i + 0];
-    long dest_n    = tasks[2*i + 1];
-
-    auto & w = buf[dest_rank];
-    auto & n = remote_needs_offsets[dest_rank];
-    w.resize(dest_n * _word_total);
-    char* dst = (char*)&w[0];
-
-    {
-      thread_for(idx, dest_n, {
-	  long offset = n[idx];
-	  long _odx = offset / SIMD_BASE;
-	  long _idx = offset % SIMD_BASE;
-
-	  for (long ni = 0; ni < _src.size(); ni++) {
-	    char* src = (char*)_src[ni].local;
-	    long Nsimd = _src[ni].Nsimd;
-	    long simd_word = _src[ni].simd_word;
-	    long word = _src[ni].word;
-	    auto & offset_data = _src[ni].offset_data;
-	    auto & offset_buffer = _src[ni].offset_buffer;
-	    long N_ni = offset_data.size();
-	    long si_stride = Nsimd * simd_word;
-	    long o_stride = Nsimd * word;
-
-	    for (long si = 0; si < N_ni; si++) {
-	      memcpy(&dst[_word_total*idx + offset_buffer[si]*simd_word],&src[si_stride*offset_data[si] + simd_word*_idx + o_stride*_odx],simd_word);
-	    }
-	  }
-	});
-    }
-
-    MPI_Request r;
-    ASSERT(w.size() < INT_MAX);
-    ASSERT(MPI_SUCCESS == MPI_Isend(&w[0],(int)w.size(),MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
-    req.push_back(r);
-  }
-
-  // receive data
-  std::map<int, std::vector<char> > bufr;
-  for (auto & f : cr) {
-    int dest_rank = f.first;
-    if (dest_rank != rank) {
-      long dest_n = f.second.src.size();
-      auto & w = bufr[dest_rank];
-      w.resize(dest_n * _word_total);
-      MPI_Request r;
-      ASSERT(w.size() < INT_MAX);
-      ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],(int)w.size(),MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
-      req.push_back(r);
-    }
-  }
-  {
-    std::vector<MPI_Status> stat(req.size());
-    ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
-  }
-
-  // now bufr contains all data to copy to dest
-  char* dst = (char*)_dst;
-  for (auto & f : cr) {
-    int dest_rank = f.first;
-    if (dest_rank != rank) {
-      auto & d = f.second.dst;
-      auto & w = bufr[dest_rank];
-      long dest_n = f.second.src.size();
-      assert(dest_n == d.size());
-      assert(dest_n*_word_total == w.size());
-      thread_for(idx, dest_n,{
-	  memcpy(&dst[_word_total*d[idx]],&w[idx*_word_total],_word_total);
-	});
-    }
-  }  
-#endif
-}
-
-void cgpt_distribute::copy_remote_rev(const std::vector<long>& tasks, const std::map<int,mp>& cr,
-				      void* _src, long _src_size, std::vector<data_simd>& _dst) {
-#ifdef CGPT_USE_MPI
-  /*
-    tasks here are requests from other nodes to set local data
-
-    cr are the local requests to set remote data
-  */
-
-  long _word_total = word_total(_dst);
-  assert(tasks.size() % 2 == 0);
-  std::vector<MPI_Request> req;
-  std::map<int, std::vector<long> > remote_needs_offsets; // we will gather here the offsets that the remote wants to set with the sent buffer
-  for (int i = 0; i < tasks.size() / 2; i++) {
-    int dest_rank  = (int)tasks[2*i + 0];
-    long dest_n    = tasks[2*i + 1];
-
-    auto & w = remote_needs_offsets[dest_rank];
-
-    w.resize(dest_n);
-
-    MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],dest_n,MPI_LONG,mpi_rank_map[dest_rank],0x3,comm,&r));
-    req.push_back(r);
-
-  }
-  for (auto & f : cr) {
-    int dest_rank = f.first;
-    if (dest_rank != rank) {
-      auto & off = f.second.src; // OK
-      MPI_Request r;
-      ASSERT(MPI_SUCCESS == MPI_Isend(&off[0],off.size(),MPI_LONG,mpi_rank_map[dest_rank],0x3,comm,&r));
-      req.push_back(r);
-    }
-  }
-
-  {
-    std::vector<MPI_Status> stat(req.size());
-    ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
-  }
-
-  // now send all data
-  req.resize(0);
-  std::map<int, std::vector<char> > buf;
-  for (auto & f : cr) {
-    int dest_rank  = f.first;
-    if (dest_rank != rank) {
-      auto & w = buf[dest_rank];
-      auto & n = f.second.dst; // source positions to be sent to dest_rank
-      long dest_n = (long)n.size();
-
-      w.resize(dest_n * _word_total);
-      char* dst = (char*)&w[0];
-      char* src = (char*)_src;
-
-      thread_for(idx, dest_n,{
-	  long cur_pos = 0;
-	  while (cur_pos < _word_total) {
-	    long dst_offset = idx*_word_total + cur_pos;
-	    long src_offset = (_word_total*n[idx] + cur_pos) % _src_size;
-	    long block_size = std::min(_word_total - cur_pos,_src_size - src_offset);
-	    memcpy(dst + dst_offset,src + src_offset,block_size);
-	    cur_pos += block_size;
-	  }
-	});
-      
-      MPI_Request r;
-      size_t t_left = w.size();
-      size_t t_max = INT_MAX;
-      char* t_ptr = &w[0];
-      while (t_left) {
-	size_t t_size = std::min(t_left,t_max);
-	ASSERT(MPI_SUCCESS == MPI_Isend(t_ptr,t_size,MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
-	req.push_back(r);
-	t_ptr += t_size;
-	t_left -= t_size;
-      }
-    }
-  }
-
-  // receive data
-  std::map<int, std::vector<char> > bufr;
-  for (int i = 0; i < tasks.size() / 2; i++) {
-    int dest_rank  = (int)tasks[2*i + 0];
-    long dest_n    = tasks[2*i + 1];
-
-    auto & w = bufr[dest_rank];
-    w.resize(dest_n * _word_total);
-    
-    MPI_Request r;
-    size_t t_left = w.size();
-    size_t t_max = INT_MAX;
-    char* t_ptr = &w[0];
-    while (t_left) {
-      size_t t_size = std::min(t_left,t_max);
-      ASSERT(MPI_SUCCESS == MPI_Irecv(t_ptr,(int)t_size,MPI_CHAR,mpi_rank_map[dest_rank],0x2,comm,&r));
-      req.push_back(r);
-      t_ptr += t_size;
-      t_left -= t_size;
-    }
-  }
-  {
-    std::vector<MPI_Status> stat(req.size());
-    ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
-  }
-
-  // now bufr contains all data to copy to local
-  for (int i = 0; i < tasks.size() / 2; i++) {
-    int dest_rank  = (int)tasks[2*i + 0];
-    long dest_n    = tasks[2*i + 1];
-
-    auto & s = remote_needs_offsets[dest_rank]; // offsets the remote wants to set
-    auto & w = bufr[dest_rank];
-    assert(dest_n == s.size());
-    assert(dest_n*_word_total == w.size());
-    
-    {
-      char* src = (char*)&w[0];
-      
-      thread_for(idx, dest_n, {
-	  long offset = s[idx];
-	  long _odx = offset / SIMD_BASE;
-	  long _idx = offset % SIMD_BASE;
-
-	  for (long ni = 0; ni < _dst.size(); ni++) {
-	    char* dst = (char*)_dst[ni].local;
-	    long Nsimd = _dst[ni].Nsimd;
-	    long simd_word = _dst[ni].simd_word;
-	    long word = _dst[ni].word;
-	    auto & offset_data = _dst[ni].offset_data;
-	    auto & offset_buffer = _dst[ni].offset_buffer;
-	    long N_ni = offset_data.size();
-	    long si_stride = Nsimd * simd_word;
-	    long o_stride = Nsimd * word;
-
-	    for (long si = 0; si < N_ni; si++) {
-	      memcpy(&dst[si_stride*offset_data[si] + simd_word*_idx + o_stride*_odx],&src[_word_total*idx + offset_buffer[si]*simd_word],simd_word);
-	    }
-	  }
-	});
-    }
-  }  
-#endif
-}
-
-void cgpt_distribute::copy_data(const mp& m, std::vector<data_simd>& _src, void* _dst) {
-  long len = m.src.size();
-  unsigned char* dst = (unsigned char*)_dst;
-  long _word_total = word_total(_src);
-
-  //double t0 =cgpt_time();
-  thread_for(idx, len, {
-      long offset = m.src[idx];
-      long _odx = offset / SIMD_BASE;
-      long _idx = offset % SIMD_BASE;
-      
-      for (long ni = 0; ni < _src.size(); ni++) {
-	char* src = (char*)_src[ni].local;
-	long Nsimd = _src[ni].Nsimd;
-	long simd_word = _src[ni].simd_word;
-	long word = _src[ni].word;
-	auto & offset_data = _src[ni].offset_data;
-	auto & offset_buffer = _src[ni].offset_buffer;
-	long N_ni = offset_data.size();
-	long si_stride = Nsimd * simd_word;
-	long o_stride = Nsimd * word;
-	
-	for (long si = 0; si < N_ni; si++) {
-	  memcpy(&dst[_word_total*m.dst[idx] + offset_buffer[si]*simd_word],&src[si_stride*offset_data[si] + simd_word*_idx + o_stride*_odx],simd_word);
-	}
-
-      }
-    });
-
-  //double t1=cgpt_time();
-  //double GB = _src[0].word * _src.size() * len / 1024. / 1024. /1024.;
-  //printf("%g GB/s %g\n",2*GB/(t1-t0),t1-t0);
-}
-
-void cgpt_distribute::copy_data_rev(const mp& m, void* _src, long _src_size, std::vector<data_simd>& _dst) {
-  long len = m.src.size();
-  unsigned char* src = (unsigned char*)_src;
-  long _word_total = word_total(_dst);
-
-  //double t0 =cgpt_time(); 
-  thread_for(idx, len, {
-      long offset = m.src[idx];
-      long _odx = offset / SIMD_BASE;
-      long _idx = offset % SIMD_BASE;
-      
-      for (long ni = 0; ni < _dst.size(); ni++) {
-	char* dst = (char*)_dst[ni].local;
-	long Nsimd = _dst[ni].Nsimd;
-	long simd_word = _dst[ni].simd_word;
-	long word = _dst[ni].word;
-	auto & offset_data = _dst[ni].offset_data;
-	auto & offset_buffer = _dst[ni].offset_buffer;
-	long N_ni = offset_data.size();
-	long si_stride = Nsimd * simd_word;
-	long o_stride = Nsimd * word;
-	
-	for (long si = 0; si < N_ni; si++) {
-	  memcpy(&dst[si_stride*offset_data[si] + simd_word*_idx + o_stride*_odx],&src[(_word_total*m.dst[idx] + offset_buffer[si]*simd_word) % _src_size],simd_word);
-	}
-      }
-    });
-
-
-  //double t1=cgpt_time();
-  //double GB = _dst[0].word * _dst.size() * len / 1024. / 1024. /1024.;
-  //printf("rev %g GB/s %g\n",2*GB/(t1-t0),t1-t0);
-}
-
-void cgpt_distribute::get_send_tasks_for_rank(int i, const std::map<int, std::vector<long> >& wishlists, std::vector<long>& tasks) const {
-  // first find all tasks
-  tasks.resize(0);
-  for (auto & w : wishlists) {
-    auto & d = w.second;
-    assert(d.size() % 2 == 0);
-    for (size_t j = 0; j < d.size() / 2; j++) {
-      long rank = d[2*j + 0];
-      long n    = d[2*j + 1];
-      if (rank == i) {
-	tasks.push_back(w.first);
-	tasks.push_back(n);
-      }	  
-    }
-  }
-}
-
-void cgpt_distribute::send_tasks_to_ranks(const std::map<int, std::vector<long> >& wishlists, std::vector<long>& tasks) const {
-#ifdef CGPT_USE_MPI  
-  std::vector<long> lens(mpi_ranks);
-  long len;
-
-  if (!rank) {
-
-    std::map< int, std::vector<long> > rank_tasks;
-    for (int i=1;i<mpi_ranks;i++) {
-      get_send_tasks_for_rank(i,wishlists,rank_tasks[i]);
-    }
-
-    // vector of lengths
-    for (int i=1;i<mpi_ranks;i++)
-      lens[mpi_rank_map[i]] = rank_tasks[i].size();
-
-    ASSERT(MPI_SUCCESS == MPI_Scatter(&lens[0], 1, MPI_LONG, &len, 1, MPI_LONG, mpi_rank_map[0], comm));
-
-    std::vector<MPI_Request> req;
-    for (int i=1;i<mpi_ranks;i++) {
-      long li = lens[mpi_rank_map[i]];
-      if (li != 0) {
-	MPI_Request r;
-	ASSERT(MPI_SUCCESS == MPI_Isend(&rank_tasks[i][0], li, MPI_LONG,mpi_rank_map[i],0x5,comm,&r));
-	req.push_back(r);
-      }
-    }
-
-    if (req.size() != 0) {
-      std::vector<MPI_Status> stat(req.size());
-      ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
-    }
-
-    get_send_tasks_for_rank(0,wishlists,tasks); // overwrite mine with my tasks
-  } else {
-
-    ASSERT(MPI_SUCCESS == MPI_Scatter(&lens[0], 1, MPI_LONG, &len, 1, MPI_LONG, mpi_rank_map[0], comm));
-    // receive
-    tasks.resize(len);
-    MPI_Status status;
-    if (len != 0)
-      ASSERT(MPI_SUCCESS == MPI_Recv(&tasks[0],len,MPI_LONG,mpi_rank_map[0],0x5,comm,&status));
-  }
-#else
-  get_send_tasks_for_rank(0,wishlists,tasks); // overwrite mine with my tasks
-#endif
-}
-
-void cgpt_distribute::wishlists_to_root(const std::vector<long>& wishlist, std::map<int, std::vector<long> >& wishlists) const {
-#ifdef CGPT_USE_MPI
-  long size = wishlist.size();
-  std::vector<long> rank_size(mpi_ranks);
-
-  ASSERT(MPI_SUCCESS == MPI_Gather(&size, 1, MPI_LONG, &rank_size[0], 1, MPI_LONG, mpi_rank_map[0], comm));
-
-  if (rank != 0) {
-    if (size)
-      ASSERT(MPI_SUCCESS == MPI_Send(&wishlist[0], size, MPI_LONG,mpi_rank_map[0],0x4,comm));
-  } else {
-    wishlists[0] = wishlist; // my own wishlist can stay
-
-    std::vector<MPI_Request> req;
-    for (int i=1;i<mpi_ranks;i++) { // gather wishes from all others
-      long rs = rank_size[mpi_rank_map[i]];
-
-      if (rs != 0) {
-	auto & w = wishlists[i];
-	w.resize(rs);
-
-	if (rs != 0) {
-	  MPI_Request r;
-	  ASSERT(MPI_SUCCESS == MPI_Irecv(&w[0],rs,MPI_LONG,mpi_rank_map[i],0x4,comm,&r));
-	  req.push_back(r);
-	}
-      }
-    }
-
-    if (req.size() != 0) {
-      std::vector<MPI_Status> stat(req.size());
-      ASSERT(MPI_SUCCESS == MPI_Waitall((int)req.size(), &req[0], &stat[0]));
-    }
-  }
-#endif
-}
-
-void cgpt_distribute::packet_prepare_need(std::vector<long>& data, const std::map<int,mp>& cr) const {
-  for (auto & f : cr) {
-    if (f.first != rank) {
-      data.push_back(f.first); // rank
-      data.push_back(f.second.src.size());
-    }
-  }
 }
