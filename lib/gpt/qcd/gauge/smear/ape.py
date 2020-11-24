@@ -60,12 +60,12 @@ def ape_general(U, params):
     Blk_Max = params["Blk_Max"]
     Blk_Accuracy = params["Blk_Accuracy"]
     for mu in range(nd):
+        U_mu_smear = U[mu]
         if mu!= orthogonal_dimension:
              U_mu_smear =  g(U[mu] * alpha)
              U_mu_smear += g(C[mu])
              U_unproj = g.eval(g.adj(U_mu_smear))
              # start with original link
-             U_mu_smear = U[mu]
              old_trace = np.sum(g.slice(g.trace(U_mu_smear * U_unproj) / (vol * Nc), 3)).real
              n_smear = 0
              epsilon = 1.
