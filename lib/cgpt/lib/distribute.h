@@ -29,6 +29,8 @@ class global_memory_view {
 
   std::vector<block_t> blocks;
 
+  void print() const;
+
   global_memory_view<offset_t,rank_t,index_t> merged() const;
 };
 

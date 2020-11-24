@@ -268,6 +268,15 @@ void global_transfer<rank_t>::multi_send_recv(const std::map<rank_t, comm_messag
 // global_memory_view
 //
 template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_view<offset_t,rank_t,index_t>::print() const {
+  std::cout << "global_memory_view:" << std::endl;
+  for (size_t i=0;i<blocks.size();i++) {
+    auto & bc = blocks[i];
+    std::cout << " [" << i << "/" << blocks.size() << "] = { " << bc.rank << ", " << bc.index << ", " << bc.start << ", " << bc.size << " }" << std::endl;
+  }
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
 global_memory_view<offset_t,rank_t,index_t> global_memory_view<offset_t,rank_t,index_t>::merged() const {
 
   global_memory_view<offset_t,rank_t,index_t> ret;
@@ -608,6 +617,9 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 							      std::vector<memory_view>& base_src) {
 
   // first check bounds
+  ASSERT(base_dst.size() == bounds_dst.size());
+  ASSERT(base_src.size() == bounds_src.size());
+
   for (size_t i=0;i<base_dst.size();i++) {
     if (base_dst[i].sz < bounds_dst[i]) {
       ERR("Destination view index %ld is too small (%ld < %ld)", i, base_dst[i].sz, bounds_dst[i]);

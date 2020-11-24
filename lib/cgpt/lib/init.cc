@@ -56,13 +56,9 @@ EXPORT(init,{
     cgpt_initialized = true;
 
     // test global memory system
-    test_global_memory_system();     
-    Grid_finalize();
-    exit(0);
-
-    // what are the conditions on the grids of a and b??
-    // copy_pos = g.copy_plan( a.view[pos], b.view[pos] )
-    // copy_pos(a_like, b_like)
+    //test_global_memory_system();     
+    //Grid_finalize();
+    //exit(0);
     
     return PyLong_FromLong(0);
     

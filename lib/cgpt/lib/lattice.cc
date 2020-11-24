@@ -106,6 +106,10 @@ EXPORT(lattice_export,{
 
     ASSERT(cgpt_PyArray_Check(pos));
     ASSERT(cgpt_PyArray_Check(tidx));
+
+    gm_view src;
+    append_view_from_vlattice(src,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
+
     //std::vector<cgpt_distribute::data_simd> data;
     std::vector<long> shape;
     GridBase* grid;
@@ -130,6 +134,10 @@ EXPORT(lattice_import,{
     std::vector<long> shape;
     GridBase* grid;
     int cb,dt;
+
+    gm_view src;
+    append_view_from_vlattice(src,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
+
 
     //cgpt_prepare_vlattice_importexport(vlat,data,shape,(PyArrayObject*)tidx,grid,cb,dt);
     //cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,d);
