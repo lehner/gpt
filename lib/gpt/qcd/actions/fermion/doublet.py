@@ -64,7 +64,6 @@ class doublet:
             gpt.eval(psi, self.Finv * self.pf)
             gpt.eval(self.chi, self.Finv2 * psi)
         
-        print('crosscheck ',gpt.norm2(psi))
         #self.frc = [gpt.lattice(U) for U in self.M.U]
         tmp = [gpt.lattice(U) for U in self.M.U]
         
