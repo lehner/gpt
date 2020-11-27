@@ -31,6 +31,16 @@ static int infer_numpy_type(const std::string & precision) {
   }
 }
 
+static size_t numpy_dtype_size(int dtype) {
+  if (dtype == NPY_COMPLEX64) {
+    return 8;
+  } else if (dtype == NPY_COMPLEX128) {
+    return 16;
+  } else {
+    ERR("Unknown dtype %d",dtype);
+  }
+}
+
 static void cgpt_numpy_data_layout(const ComplexF& v, std::vector<long>& dim) {}
 static void cgpt_numpy_data_layout(const ComplexD& v, std::vector<long>& dim) {}
 

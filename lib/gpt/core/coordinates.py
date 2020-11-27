@@ -47,7 +47,7 @@ def coordinates(o, order="lexicographic"):
 
 def apply_exp_ixp(dst, src, p):
     # TODO: add sparse field support (x.internal_coordinates(), x.coordinates())
-    x = src.mview_coordinates()
+    x = gpt.coordinates(src)
 
     # create phase field
     phase = gpt.complex(src.grid)

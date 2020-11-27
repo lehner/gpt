@@ -17,6 +17,10 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+enum memory_type {
+  mt_none, mt_host, mt_accelerator
+};
+
 template<typename offset_t, typename rank_t, typename index_t>
 class global_memory_view {
  public:
@@ -30,6 +34,7 @@ class global_memory_view {
   std::vector<block_t> blocks;
 
   void print() const;
+  offset_t size() const;
 
   global_memory_view<offset_t,rank_t,index_t> merged() const;
 };
@@ -215,10 +220,6 @@ class global_memory_transfer : public global_transfer<rank_t> {
 
   struct block_t {
     offset_t start_dst, start_src, size;
-  };
-
-  enum memory_type {
-    mt_none, mt_host, mt_accelerator
   };
 
   class memory_view {

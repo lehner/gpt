@@ -277,6 +277,16 @@ void global_memory_view<offset_t,rank_t,index_t>::print() const {
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
+offset_t global_memory_view<offset_t,rank_t,index_t>::size() const {
+  offset_t sz = 0;
+  for (size_t i=0;i<blocks.size();i++) {
+    auto & bc = blocks[i];
+    sz += bc.size;
+  }
+  return sz;
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
 global_memory_view<offset_t,rank_t,index_t> global_memory_view<offset_t,rank_t,index_t>::merged() const {
 
   global_memory_view<offset_t,rank_t,index_t> ret;
@@ -617,16 +627,16 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 							      std::vector<memory_view>& base_src) {
 
   // first check bounds
-  ASSERT(base_dst.size() == bounds_dst.size());
-  ASSERT(base_src.size() == bounds_src.size());
+  ASSERT(base_dst.size() >= bounds_dst.size());
+  ASSERT(base_src.size() >= bounds_src.size());
 
-  for (size_t i=0;i<base_dst.size();i++) {
+  for (size_t i=0;i<bounds_dst.size();i++) {
     if (base_dst[i].sz < bounds_dst[i]) {
       ERR("Destination view index %ld is too small (%ld < %ld)", i, base_dst[i].sz, bounds_dst[i]);
     }
   }
 
-  for (size_t i=0;i<base_src.size();i++) {
+  for (size_t i=0;i<bounds_src.size();i++) {
     if (base_src[i].sz < bounds_src[i]) {
       ERR("Source view index %ld is too small (%ld < %ld)", i, base_src[i].sz, bounds_src[i]);
     }
@@ -768,8 +778,8 @@ void test_global_memory_system() {
   }
   
   
-  plan.create(odst, osrc, gm_transfer::mt_none);
-  plan_host_buf.create(odst, osrc, gm_transfer::mt_host);
+  plan.create(odst, osrc, mt_none);
+  plan_host_buf.create(odst, osrc, mt_host);
   
   // prepare test data and execute
   std::vector< std::vector<double> > host_src(nindex);
@@ -783,8 +793,8 @@ void test_global_memory_system() {
   
   std::vector<gm_transfer::memory_view> dst, src;
   for (int i=0;i<nindex;i++) {
-    dst.push_back( { gm_transfer::mt_host,&host_dst[i][0],nwords*sizeof(double)} );
-    src.push_back( { gm_transfer::mt_host,&host_src[i][0],nwords*sizeof(double)} );
+    dst.push_back( { mt_host,&host_dst[i][0],nwords*sizeof(double)} );
+    src.push_back( { mt_host,&host_src[i][0],nwords*sizeof(double)} );
   }
 
   for (int iter=0;iter<2;iter++) {
