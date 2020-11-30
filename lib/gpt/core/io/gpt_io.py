@@ -34,6 +34,39 @@ def get_local_name(root, cv):
     filename = "%s/%10.10d.field" % (directory, rank)
     return directory, filename
 
+# bitmask class
+class BitMask:
+    def __init__(self, N):        
+        self.N = N
+        self.nbytes = 1 + (N-1)//8
+        self.bytes = bytearray(self.nbytes)
+        self.mask = numpy.zeros((N,),dtype=numpy.bool)
+        self.cN = 0
+        
+    def setbytes(self, src):
+        self.bytes[:] = src[:]
+        self.cN = 0
+        for i in range(self.N):
+            if self.get(i):
+                self.mask[i] = 1
+        self.cN = numpy.sum(self.mask)
+        
+    def get(self, i):
+        assert(i<self.N)
+        return (self.bytes[i // 8] & (1 << (i % 8))) != 0
+
+    def set(self, i, v):
+        assert(i<self.N)
+        if v:
+            self.mask[i] = 1
+            self.bytes[i // 8] |= 1 << (i % 8)
+        else:
+            self.mask[i] = 0
+            self.bytes[i // 8] &= ~(1 << (i % 8))
+
+    def __del__(self):
+        del self.bytes
+        del self.mask
 
 # gpt io class
 class gpt_io:
@@ -217,7 +250,7 @@ class gpt_io:
         g.globalsum(pos)
         return res + " " + " ".join(["%d" % x for x in pos])
 
-    def read_lattice(self, a):
+    def read_lattice(self, a, sparse=False):
         g_desc = a[0]
         cv_desc = a[1]
         l_desc = a[2]
@@ -276,7 +309,18 @@ class gpt_io:
             g.barrier()
             dt_read += gpt.time()
             dt_distr -= gpt.time()
-            l[pos, self.cache[cache_key]] = data
+
+            if sparse:
+                # this code does not work if mpi layout bigger than data layout
+                # because for some node data will be None and it won't have the
+                # bitmask
+                N = g.fsites // cv0.ranks
+                bmask = BitMask(N)
+                bmask.setbytes(data[0:bmask.nbytes])
+                l[pos[bmask.mask,:], self.cache[cache_key]] = data[bmask.nbytes:]
+            else:
+                l[pos, self.cache[cache_key]] = data
+
             g.barrier()
             dt_distr += gpt.time()
 
@@ -434,6 +478,11 @@ class gpt_io:
             return self.read_lattice(a[1:])
         elif cmd == "grid":
             return gpt.grid_from_description(p.get()[1])
+        elif cmd == "sparse_lattice":
+            a = p.get()
+            if not self.keep_context(ctx):
+                return None
+            return self.read_lattice(a[1:], True)
         else:
             assert 0
 
@@ -514,7 +563,6 @@ def load(filename, params):
 
     p = index_parser(idx.decode("utf-8", "strict").split("\n"))
     res = x.read_index(p)
-
     # if multiple chunks are available, return them as a list
     if not p.eof():
         res = [res]
