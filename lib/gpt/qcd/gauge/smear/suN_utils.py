@@ -27,14 +27,10 @@ from gpt.params import params_convention
 #  Should I rename it to "project_to_suN"?
 def project_to_su3(u, w, su2_index):
     v = g.eval(u * w)
-    grid = u.grid
-    Nc = u.otype.Nc
     Vol = u[:].shape[0]
     r = np.empty((Vol, 4), dtype=float)
     su2_extract(r, v, su2_index)
 
-    # now project onto SU(2)
-    r_l = np.empty(Vol, dtype=complex)
     r_l = np.sqrt(r[:, 0]**2 + r[:, 1]**2 + r[:, 2]**2 + r[:, 3]**2)
 
     #  normalize
@@ -60,10 +56,10 @@ def su2_extract(r, source, su2_index):
     source = g.eval(source)
     Nc = source.otype.Nc
     found, del_i, index = 0, 0, -1
-    while(del_i < (Nc-1) and found ==0):
+    while(del_i < (Nc - 1) and found == 0):
         del_i += 1
         for i1 in range(Nc - del_i):
-            index +=1
+            index += 1
             if (index == su2_index):
                 found = 1
                 break
@@ -88,10 +84,10 @@ def suN_fill(dest, r, su2_index):
 #     /* of the SU(2) subgroup $3 */
     Nc = dest.otype.Nc
     found, del_i, index = 0, 0, -1
-    while (del_i < (Nc-1) and found == 0):
-        del_i +=1
-        for i1 in range(Nc-del_i):
-            index +=1
+    while (del_i < (Nc - 1) and found == 0):
+        del_i += 1
+        for i1 in range(Nc - del_i):
+            index += 1
             if (index == su2_index):
                 found = 1
                 break
