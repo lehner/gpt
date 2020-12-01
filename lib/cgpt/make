@@ -1,29 +1,52 @@
 #!/bin/bash
 # Configure
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
-GRID=${root}/dependencies/Grid/build
-if [ ! -d ${GRID} ];
+
+GRID=$1
+if [[ "$GRID" == "" ]];
 then
-    GRID=${root}/../Grid/build
+    GRID=${root}/dependencies/Grid/build
+    if [ ! -d ${GRID} ];
+    then
+	GRID=${root}/../Grid/build
+    fi
 fi
+
 if [ ! -d ${GRID} ];
 then
-    echo "Could not detect Grid location"
+    echo "Could not detect Grid location at ${GRID}"
     exit 2
 fi
-NPARALLEL=16
+
+BUILD=$(basename $GRID)
+
+NPARALLEL=$2
+if [[ "$NPARALLEL" == "" ]];
+then
+    NPARALLEL=16
+fi
 
 # Start
 N=0
 
-mkdir -p build logs
+mkdir -p ${BUILD}/objs ${BUILD}/logs
+lib="$( cd "${BUILD}" >/dev/null 2>&1 && pwd )"
+
+(
+cat<<EOF
+export PYTHONPATH=${lib}\${PYTHONPATH:+:\${PYTHONPATH}}
+EOF
+) > ${BUILD}/source.sh
 
 echo "================================================================================"
-echo "  Compiling CGPT against Grid in ${GRID}"
+echo "  Compiling CGPT against Grid in ${GRID} with ${NPARALLEL} parallel jobs to ${BUILD}"
+echo "  Usage: source ${BUILD}/source.sh"
 echo "================================================================================"
 
 NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
 CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
+CXXLD=$(grep "GRID_CXXLD " ${GRID}/Makefile | sed "s/^[^=]*=//")
+
 CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID} -I${GRID}/Grid -I${NUMPY_INCLUDE} $(python3-config --includes)"
 LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
 LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
@@ -59,7 +82,7 @@ function next {
 	    for src in lib/*.cc lib/instantiate/*.cc
 	    do
 		bn=$(basename $src .cc)
-		dst=build/${bn}.o
+		dst=${BUILD}/objs/${bn}.o
 		if [ $src -nt $dst ];
 		then
 		    touch $dst
@@ -90,7 +113,7 @@ do
 	    then
 		src=$(cat next.${N})
 		bn=$(basename $src .cc)
-		dst=build/${bn}.o
+		dst=${BUILD}/objs/${bn}.o
 
 		echo " [CXX] $bn"
 		start=$SECONDS
@@ -114,7 +137,7 @@ done
 wait
 
 rm -f next.lock
-find build -size 0 -delete 2> /dev/null
+find ${BUILD}/objs -size 0 -delete 2> /dev/null
 
 # Link
-${CXX} --shared $(ls -t build/*.o) ${LDFLAGS} ${LIBS} -lGrid -o ../cgpt.so
+${CXXLD} --shared $(ls -t ${BUILD}/objs/*.o) ${LDFLAGS} ${LIBS} -lGrid -o ${BUILD}/cgpt.so
