@@ -34,7 +34,7 @@ lib="$( cd "${BUILD}" >/dev/null 2>&1 && pwd )"
 
 (
 cat<<EOF
-export PYTHONPATH=${lib}\${PYTHONPATH:+:\${PYTHONPATH}}
+export PYTHONPATH=${lib}:${lib}/../..\${PYTHONPATH:+:\${PYTHONPATH}}
 EOF
 ) > ${BUILD}/source.sh
 
