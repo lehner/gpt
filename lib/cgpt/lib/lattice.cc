@@ -115,12 +115,6 @@ EXPORT(lattice_export,{
     std::vector<PyObject*> views;
     append_memory_view_from_vlat(vsrc,vlat,mt_host,views);
 
-    std::cout << "-----" << std::endl;
-    for (size_t i=0;i<vsrc.size();i++)
-      std::cout << "vsrc[" << i << "]=" << vsrc[i].sz << std::endl;
-    for (size_t i=0;i<vdst.size();i++)
-      std::cout << "vdst[" << i << "]=" << vdst[i].sz << std::endl;
-
     plan.execute(vdst,vsrc);
 
     for (auto v : views)
@@ -144,8 +138,6 @@ EXPORT(lattice_import,{
 
     size_t sz_dst = dst.size();
     
-    std::cout << "Size:" << sz_dst << std::endl;
-
     d = append_view_from_dense_array(src,(PyArrayObject*)d,sz_dst);
 
     gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
@@ -157,12 +149,6 @@ EXPORT(lattice_import,{
 
     std::vector<PyObject*> views;
     append_memory_view_from_vlat(vdst,vlat,mt_host,views);
-
-    std::cout << "-----" << std::endl;
-    for (size_t i=0;i<vsrc.size();i++)
-      std::cout << "vsrc[" << i << "]=" << vsrc[i].sz << std::endl;
-    for (size_t i=0;i<vdst.size();i++)
-      std::cout << "vdst[" << i << "]=" << vdst[i].sz << std::endl;
 
     plan.execute(vdst,vsrc);
 

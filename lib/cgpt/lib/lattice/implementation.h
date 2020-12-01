@@ -196,7 +196,7 @@ public:
 
     PyObject* r = PyMemoryView_FromMemory(ptr,sz,PyBUF_WRITE);
     PyObject *capsule = PyCapsule_New((void*)v, NULL, [] (PyObject *capsule) -> void { 
-	std::cout << "ViewClose" << std::endl; 
+	//std::cout << "ViewClose" << std::endl; 
 	LatticeView<vobj>* v = (LatticeView<vobj>*)PyCapsule_GetPointer(capsule, NULL);
 	v->ViewClose();
 	delete v;

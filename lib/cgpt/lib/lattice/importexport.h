@@ -210,8 +210,8 @@ static void tensor_indices_to_memory_offsets(std::vector<long>& t_indices,
 static PyArrayObject* create_array_to_hold_view(gm_view& dst,gm_view& src,
 						PyObject* vlat,std::vector<long>& shape) {
 
-  std::cout << "ca" << std::endl;
-  std::cout << src.size() << std::endl;
+  //std::cout << "ca" << std::endl;
+  //std::cout << src.size() << std::endl;
 
   long sz_scalar, sz_vector, sz_vobj;
   int dtype = get_vlat_data_layout(sz_scalar, sz_vector, sz_vobj, vlat);
@@ -234,7 +234,7 @@ static PyArrayObject* create_array_to_hold_view(gm_view& dst,gm_view& src,
   
   dst.blocks.push_back({ rank, 0, 0, src.size() });
 
-  std::cout << "Elements" << fshape << std::endl;
+  //std::cout << "Elements" << fshape << std::endl;
 
   return (PyArrayObject*)PyArray_SimpleNew((int)fshape.size(), &fshape[0], dtype);
 }
@@ -259,13 +259,13 @@ static PyObject* append_view_from_dense_array(gm_view& out,
   int rank = CartesianCommunicator::RankWorld();
 
   out.blocks.push_back({ rank, 0, 0, sz_target });
-  std::cout << ndim << "," << dtype << "," << sz << "<>" << sz_target << std::endl;
+  //std::cout << ndim << "," << dtype << "," << sz << "<>" << sz_target << std::endl;
 
   if (sz == sz_target) {
     Py_XINCREF(data);
   } else {
     // create new array and return it
-    std::cout << "need new array" << std::endl;
+    //std::cout << "need new array" << std::endl;
 
     std::vector<long> dim(1);
     ASSERT(sz_target % sz_element == 0);
@@ -317,10 +317,10 @@ static void append_view_from_vlattice(gm_view& out,
       }
     });
 
-  std::cout << t_indices << t_offsets << std::endl;
-  std::cout << c_rank << std::endl;
-  std::cout << c_odx << c_idx << std::endl;
-  std::cout << sz_scalar << "," << sz_vector << "," << sz_vobj << std::endl;
+  //std::cout << t_indices << t_offsets << std::endl;
+  //std::cout << c_rank << std::endl;
+  //std::cout << c_odx << c_idx << std::endl;
+  //std::cout << sz_scalar << "," << sz_vector << "," << sz_vobj << std::endl;
 
   //out.print();
 
