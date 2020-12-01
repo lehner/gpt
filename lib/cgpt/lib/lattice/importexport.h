@@ -16,13 +16,14 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-static void get_vlat_data_layout(long& sz_scalar,
-				 long& sz_vector,
-				 long& sz_vobj,
-				 PyObject* vlat) {
+static int get_vlat_data_layout(long& sz_scalar,
+				long& sz_vector,
+				long& sz_vobj,
+				PyObject* vlat) {
 
   ASSERT(PyList_Check(vlat));
   long nlat=PyList_Size(vlat);
+  int dtype;
   ASSERT(nlat > 0);
 
   for (long i=0;i<nlat;i++) {
@@ -41,13 +42,16 @@ static void get_vlat_data_layout(long& sz_scalar,
       sz_scalar = _sz_scalar;
       sz_vector = _sz_vector;
       sz_vobj = _sz_vobj;
+      dtype = l->get_numpy_dtype();
     } else {
       ASSERT(sz_scalar == _sz_scalar);
       ASSERT(sz_vector == _sz_vector);
       ASSERT(sz_vobj == _sz_vobj);
+      ASSERT(dtype == l->get_numpy_dtype());
     }
   }
-  
+
+  return dtype;
 }
 
 static void coordinates_to_memory_offsets(std::vector<long>& c_rank,
@@ -116,9 +120,8 @@ static void append_memory_view_from_vlat(std::vector<gm_transfer::memory_view>& 
 
     Py_buffer* buf = PyMemoryView_GET_BUFFER(v);
     unsigned char* data = (unsigned char*)buf->buf;
-    int64_t len = (int64_t)buf->len;
 
-    mv.push_back({ mt, data, len} );
+    mv.push_back({ mt, data, (size_t)buf->len} );
   }
 }
 
@@ -204,10 +207,42 @@ static void tensor_indices_to_memory_offsets(std::vector<long>& t_indices,
 
 }
 
+static PyArrayObject* create_array_to_hold_view(gm_view& dst,gm_view& src,
+						PyObject* vlat,std::vector<long>& shape) {
+
+  std::cout << "ca" << std::endl;
+  std::cout << src.size() << std::endl;
+
+  long sz_scalar, sz_vector, sz_vobj;
+  int dtype = get_vlat_data_layout(sz_scalar, sz_vector, sz_vobj, vlat);
+
+  ASSERT(src.size() % sz_scalar == 0);
+  long nelements = (long)src.size() / sz_scalar;
+
+  long telements = 1;
+  for (long i : shape)
+    telements *= i;
+
+  ASSERT(nelements % telements == 0);
+  long n = nelements / telements;
+
+  std::vector<long> fshape(1, n);
+  for (long i : shape)
+    fshape.push_back(i);
+
+  int rank = CartesianCommunicator::RankWorld();
+  
+  dst.blocks.push_back({ rank, 0, 0, src.size() });
+
+  std::cout << "Elements" << fshape << std::endl;
+
+  return (PyArrayObject*)PyArray_SimpleNew((int)fshape.size(), &fshape[0], dtype);
+}
+
 static void append_memory_view_from_dense_array(std::vector<gm_transfer::memory_view>& mv,
 						PyArrayObject* d) {
 
-  mv.push_back( { mt_host, PyArray_DATA(d), PyArray_NBYTES(d)} );
+  mv.push_back( { mt_host, PyArray_DATA(d), (size_t)PyArray_NBYTES(d)} );
 
 }
 
@@ -247,28 +282,6 @@ static PyObject* append_view_from_dense_array(gm_view& out,
   }
 
   return (PyObject*)data;
-}
-
-static void append_view_from_dense_array(gm_view& out,
-					 PyObject* vlat,
-					 PyArrayObject* coordinates,
-					 PyArrayObject* tidx,
-					 std::vector<long>& shape) {
-
-  std::cout << shape << std::endl;
-
-  ASSERT(PyArray_NDIM(coordinates) == 2);
-  long* tdim = PyArray_DIMS(coordinates);
-  long nc = tdim[0];
-
-  ASSERT(PyArray_NDIM(tidx) == 2);
-  long* tidx_dim = PyArray_DIMS(tidx);
-  long n_indices = tidx_dim[0];
-
-
-  Grid_finalize();
-  exit(0);
-  
 }
 
 static void append_view_from_vlattice(gm_view& out,

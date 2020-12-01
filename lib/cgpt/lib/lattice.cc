@@ -103,18 +103,30 @@ EXPORT(lattice_export,{
     gm_view src, dst;
     append_view_from_vlattice(src,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
 
-    append_view_from_dense_array(dst,vlat,(PyArrayObject*)pos,(PyArrayObject*)tidx,shape);
+    PyArrayObject* dst_array = create_array_to_hold_view(dst,src,vlat,shape);
 
-    // create numpy array
+    gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
+    plan.create(dst, src, mt_none);
 
-    // create and execute plan
+    std::vector<gm_transfer::memory_view> vdst, vsrc;
 
-      
-    Grid_finalize();
-    exit(0);
+    append_memory_view_from_dense_array(vdst,dst_array);
 
-    //return (PyObject*)cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,0);
-    return PyLong_FromLong(0);
+    std::vector<PyObject*> views;
+    append_memory_view_from_vlat(vsrc,vlat,mt_host,views);
+
+    std::cout << "-----" << std::endl;
+    for (size_t i=0;i<vsrc.size();i++)
+      std::cout << "vsrc[" << i << "]=" << vsrc[i].sz << std::endl;
+    for (size_t i=0;i<vdst.size();i++)
+      std::cout << "vdst[" << i << "]=" << vdst[i].sz << std::endl;
+
+    plan.execute(vdst,vsrc);
+
+    for (auto v : views)
+      Py_XDECREF(v);
+
+    return (PyObject*)dst_array;
   });
 
 EXPORT(lattice_import,{
@@ -158,31 +170,6 @@ EXPORT(lattice_import,{
       Py_XDECREF(v);
 
     Py_XDECREF(d);
-
-    return PyLong_FromLong(0);
-  });
-
-EXPORT(lattice_import_view,{
-    PyObject * vlat_dst, *vlat_src, * pos_dst, * tidx_dst, * pos_src, * tidx_src;
-    if (!PyArg_ParseTuple(args, "OOOOOO", &vlat_dst, &pos_dst, &tidx_dst, &vlat_src, &pos_src, &tidx_src)) {
-      return NULL;
-    }
-
-    ASSERT(cgpt_PyArray_Check(pos_dst) && cgpt_PyArray_Check(pos_src));
-    ASSERT(cgpt_PyArray_Check(tidx_dst) && cgpt_PyArray_Check(tidx_src));
-    //std::vector<cgpt_distribute::data_simd> data_dst, data_src;
-    std::vector<long> shape_dst, shape_src;
-    GridBase* grid_dst,* grid_src;
-    int cb_dst, dt_dst, cb_src, dt_src;
-
-    //cgpt_prepare_vlattice_importexport(vlat_dst,data_dst,shape_dst,(PyArrayObject*)tidx_dst,grid_dst,cb_dst,dt_dst);
-    //cgpt_prepare_vlattice_importexport(vlat_src,data_src,shape_src,(PyArrayObject*)tidx_src,grid_src,cb_src,dt_src);
-
-    //cgpt_importexport(grid_dst,grid_src,
-    //		      cb_dst,cb_src,
-    //		      data_dst,data_src,
-    //		      (PyArrayObject*)pos_dst,
-    //		      (PyArrayObject*)pos_src);
 
     return PyLong_FromLong(0);
   });

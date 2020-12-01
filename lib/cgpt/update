@@ -17,7 +17,7 @@ then
     diff lib/exports.h lib/exports.h~ > /dev/null
     if [[ "$?" != "0" ]];
     then
-	rm -f build/lib.o
+	rm -f */objs/lib.o
     fi
 fi
 cp lib/exports.h lib/exports.h~
