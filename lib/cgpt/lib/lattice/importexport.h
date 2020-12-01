@@ -196,8 +196,8 @@ static void tensor_indices_to_memory_offsets(std::vector<long>& t_indices,
 	}
 	
 	int iidx, lidx;
-	Lexicographic::IndexFromCoorReversed(icoor,iidx,ishape);
-	Lexicographic::IndexFromCoorReversed(lcoor,lidx,lshape);
+	Lexicographic::IndexFromCoor(icoor,iidx,ishape); // R
+	Lexicographic::IndexFromCoorReversed(lcoor,lidx,lshape); // R
 	
 	t_indices[i] = iidx;
 	t_offsets[i] = lidx;
@@ -322,7 +322,7 @@ static void append_view_from_vlattice(gm_view& out,
   std::cout << c_odx << c_idx << std::endl;
   std::cout << sz_scalar << "," << sz_vector << "," << sz_vobj << std::endl;
 
-  out.print();
+  //out.print();
 
   /*    thread_region
       {
