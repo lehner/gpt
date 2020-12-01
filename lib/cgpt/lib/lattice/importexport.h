@@ -16,10 +16,63 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-static void cgpt_to_full_coor(GridBase* grid, int cb,
-			      PyArrayObject* coordinates, 
-			      std::vector<cgpt_distribute::coor>& fc) {
+static void get_vlat_data_layout(long& sz_scalar,
+				 long& sz_vector,
+				 long& sz_vobj,
+				 PyObject* vlat) {
+
+  ASSERT(PyList_Check(vlat));
+  long nlat=PyList_Size(vlat);
+  ASSERT(nlat > 0);
+
+  for (long i=0;i<nlat;i++) {
+
+    cgpt_Lattice_base* l = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(vlat,i));
+
+    std::vector<long> ishape;
+    long Nsimd, word, simd_word;
+    l->describe_data_layout(Nsimd,word,simd_word,ishape);
+
+    long _sz_scalar = simd_word;
+    long _sz_vector = simd_word * Nsimd;
+    long _sz_vobj = word * Nsimd;
+
+    if (!i) {
+      sz_scalar = _sz_scalar;
+      sz_vector = _sz_vector;
+      sz_vobj = _sz_vobj;
+    } else {
+      ASSERT(sz_scalar == _sz_scalar);
+      ASSERT(sz_vector == _sz_vector);
+      ASSERT(sz_vobj == _sz_vobj);
+    }
+  }
   
+}
+
+static void coordinates_to_memory_offsets(std::vector<long>& c_rank,
+					  std::vector<long>& c_odx,
+					  std::vector<long>& c_idx,
+					  PyObject* vlat,
+					  PyArrayObject* coordinates) {
+
+  ASSERT(PyList_Check(vlat));
+  long nlat=PyList_Size(vlat);
+  ASSERT(nlat > 0);
+
+  GridBase* grid;
+  int cb;
+  for (long i=0;i<nlat;i++) {
+
+    cgpt_Lattice_base* l = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(vlat,i));
+    if (!i) {
+      grid = l->get_grid();
+      cb = l->get_checkerboard();
+    } else {
+      ASSERT(grid == l->get_grid());
+    }
+  }
+
   ASSERT(PyArray_NDIM(coordinates) == 2);
   long* tdim = PyArray_DIMS(coordinates);
   long nc = tdim[0];
@@ -30,7 +83,9 @@ static void cgpt_to_full_coor(GridBase* grid, int cb,
 
   ASSERT(sizeof(Coordinate::value) == 4);
 
-  fc.resize(nc);
+  c_rank.resize(nc);
+  c_odx.resize(nc);
+  c_idx.resize(nc);
 
   thread_region 
     {
@@ -39,50 +94,69 @@ static void cgpt_to_full_coor(GridBase* grid, int cb,
 	  memcpy(&site[0],&coor[stride*i],4*stride);
 	  ASSERT( cb == grid->CheckerBoard(site) );
 	  
-	  cgpt_distribute::coor& c = fc[i];
-	  int odx, idx;
-	  grid->GlobalCoorToRankIndex(c.rank,odx,idx,site);
-	  c.offset = cgpt_distribute::offset(odx,idx);
+	  int odx, idx, rank;
+	  grid->GlobalCoorToRankIndex(rank,odx,idx,site);
+	  c_rank[i] = rank;
+	  c_odx[i] = odx;
+	  c_idx[i] = idx;
 	});
     }
 }
 
-static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
-					       std::vector<cgpt_distribute::data_simd> & data,
-					       std::vector<long> & shape, PyArrayObject* tidx,
-					       GridBase* & grid, int & cb, int & dtype) {
+static void append_memory_view_from_vlat(std::vector<gm_transfer::memory_view>& mv,
+					 PyObject* vlat, memory_type mt, std::vector<PyObject*>& views) {
 
   ASSERT(PyList_Check(vlat));
   long nlat=PyList_Size(vlat);
 
+  for (long i=0;i<nlat;i++) {
+    cgpt_Lattice_base* l = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(vlat,i));
+    PyObject* v = l->memory_view(mt);
+    views.push_back(v);
+
+    Py_buffer* buf = PyMemoryView_GET_BUFFER(v);
+    unsigned char* data = (unsigned char*)buf->buf;
+    int64_t len = (int64_t)buf->len;
+
+    mv.push_back({ mt, data, len} );
+  }
+}
+
+static void tensor_indices_to_memory_offsets(std::vector<long>& t_indices,
+					     std::vector<long>& t_offsets,
+					     PyObject* vlat,
+					     long index_start, long index_stride,
+					     PyArrayObject* tidx) {
+
+
+  ASSERT(PyList_Check(vlat));
+  long nlat=PyList_Size(vlat);
+
+  std::vector<long> index(nlat);
+  for (long i=0;i<nlat;i++)
+    index[i] = index_start + i*index_stride;
+
   ASSERT(PyArray_TYPE(tidx) == NPY_INT32);
+
   ASSERT(PyArray_NDIM(tidx) == 2);
   long* tidx_dim = PyArray_DIMS(tidx);
   int32_t* tidx_coor = (int32_t*)PyArray_DATA(tidx);
   long n_indices = tidx_dim[0];
   long dim_indices = tidx_dim[1];
 
-  data.resize(nlat);
-  shape.resize(0);
+  t_indices.resize(n_indices);
+  t_offsets.resize(n_indices);
 
-  Coordinate vcoor(dim_indices), vsize(dim_indices,1);
-  Coordinate v_n0(dim_indices), v_n1(dim_indices);
+  std::vector<long> ishape, lshape;
+  long singlet_dim;
   for (long i=0;i<nlat;i++) {
-
-    cgpt_distribute::data_simd & d = data[i];
 
     cgpt_Lattice_base* l = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(vlat,i));
 
-    PyObject* _mem = l->memory_view();
-    Py_buffer* buf = PyMemoryView_GET_BUFFER(_mem);
-
-    d.local = buf->buf;
-
-    std::vector<long> ishape;
-    l->describe_data_layout(d.Nsimd,d.word,d.simd_word,ishape);
-    ASSERT(ishape.size() == dim_indices);
-    long words = d.word / d.simd_word;
-    Py_XDECREF(_mem);
+    long Nsimd, word, simd_word;
+    std::vector<long> _lshape;
+    l->describe_data_layout(Nsimd,word,simd_word,_lshape);
+    ASSERT(_lshape.size() == dim_indices);
 
     // virtual memory layout
     int singlet_rank = l->singlet_rank();
@@ -93,45 +167,151 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
 
     if (!i) {
 
-
-      int dim = size_to_singlet_dim(singlet_rank, nlat);
-      for (long s=0;s<singlet_rank;s++)
-	vsize[s]=dim;
-
-      shape.resize(dim_indices);
-      for (long s=0;s<dim_indices;s++) {
-	shape[s] = ishape[s] * vsize[s];
-      }
+      singlet_dim = size_to_singlet_dim(singlet_rank, nlat);
+      lshape = _lshape;
+      ishape = std::vector<long>(dim_indices, singlet_dim);
 
     } else {
-      for (long s=singlet_rank;s<dim_indices;s++)
-	ASSERT(shape[s] == ishape[s]);
+
+      ASSERT( singlet_dim == size_to_singlet_dim(singlet_rank, nlat) );
+      for (long s=0;s<dim_indices;s++)
+	ASSERT(lshape[s] == _lshape[s]);
+    }
+  }
+
+  t_indices.resize(n_indices);
+  t_offsets.resize(n_indices);
+
+  thread_region
+    {
+      std::vector<long> gcoor(dim_indices), lcoor(dim_indices), icoor(dim_indices);
+      thread_for_in_region(i,n_indices,{
+	for (long l=0;l<dim_indices;l++) {
+	  gcoor[l] = tidx_coor[i*dim_indices + l];
+	  icoor[l] = gcoor[l] / lshape[l]; // coordinate of virtual lattice
+	  lcoor[l] = gcoor[l] - icoor[l] * lshape[l]; // coordinate within virtual lattice
+	}
+	
+	int iidx, lidx;
+	Lexicographic::IndexFromCoorReversed(icoor,iidx,ishape);
+	Lexicographic::IndexFromCoorReversed(lcoor,lidx,lshape);
+	
+	t_indices[i] = iidx;
+	t_offsets[i] = lidx;
+	//std::cout << i << gcoor << "= idx" <<iidx << " lidx"<<lidx<< std::endl;    
+	});
     }
 
-    Lexicographic::CoorFromIndex(vcoor,i,vsize);
+}
 
-    for (long s=0;s<dim_indices;s++) {
-      v_n0[s] = vcoor[s] * ishape[s];
-      v_n1[s] = v_n0[s] + ishape[s];
-    }
+static void append_memory_view_from_dense_array(std::vector<gm_transfer::memory_view>& mv,
+						PyArrayObject* d) {
 
-    // first select
-    std::vector<long> indices_on_l;
-    for (long ll=0;ll<n_indices;ll++) {
-      long s;
-      for (s=0;s<dim_indices;s++) {
-	auto & n = tidx_coor[ll*dim_indices + s];
-	if (n < v_n0[s] || n >= v_n1[s])
-	  break;
+  mv.push_back( { mt_host, PyArray_DATA(d), PyArray_NBYTES(d)} );
+
+}
+
+static PyObject* append_view_from_dense_array(gm_view& out,
+					      PyArrayObject* data,
+					      size_t sz_target) {
+
+  long ndim = PyArray_NDIM(data);
+  long dtype = PyArray_TYPE(data);
+  size_t sz = (size_t)PyArray_NBYTES(data);
+  size_t sz_element = numpy_dtype_size(dtype);
+  size_t nelements = sz / sz_element;
+
+  int rank = CartesianCommunicator::RankWorld();
+
+  out.blocks.push_back({ rank, 0, 0, sz_target });
+  std::cout << ndim << "," << dtype << "," << sz << "<>" << sz_target << std::endl;
+
+  if (sz == sz_target) {
+    Py_XINCREF(data);
+  } else {
+    // create new array and return it
+    std::cout << "need new array" << std::endl;
+
+    std::vector<long> dim(1);
+    ASSERT(sz_target % sz_element == 0);
+    dim[0] = sz_target / sz_element;
+    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], dtype);
+    char* s = (char*)PyArray_DATA(data);
+    char* d = (char*)PyArray_DATA(a);
+
+    thread_for(i, dim[0], {
+    	memcpy(d + sz_element*i, s + sz_element*(i % nelements), sz_element);
+      });
+
+    data = a;
+  }
+
+  return (PyObject*)data;
+}
+
+static void append_view_from_dense_array(gm_view& out,
+					 PyObject* vlat,
+					 PyArrayObject* coordinates,
+					 PyArrayObject* tidx,
+					 std::vector<long>& shape) {
+
+  std::cout << shape << std::endl;
+
+  ASSERT(PyArray_NDIM(coordinates) == 2);
+  long* tdim = PyArray_DIMS(coordinates);
+  long nc = tdim[0];
+
+  ASSERT(PyArray_NDIM(tidx) == 2);
+  long* tidx_dim = PyArray_DIMS(tidx);
+  long n_indices = tidx_dim[0];
+
+
+  Grid_finalize();
+  exit(0);
+  
+}
+
+static void append_view_from_vlattice(gm_view& out,
+				      PyObject* vlat,
+				      long index_start, long index_stride,
+				      PyArrayObject* pos,
+				      PyArrayObject* tidx) {
+
+  ASSERT(PyArray_TYPE(pos) == NPY_INT32);
+  std::vector<long> t_indices, t_offsets, c_rank, c_odx, c_idx;
+
+  // tensor dof
+  tensor_indices_to_memory_offsets(t_indices, t_offsets, vlat, index_start, index_stride, tidx);
+
+  // coordinate dof
+  coordinates_to_memory_offsets(c_rank,c_odx,c_idx, vlat, pos);
+
+  // get data layout
+  long sz_scalar, sz_vector, sz_vobj;
+  get_vlat_data_layout(sz_scalar,sz_vector,sz_vobj, vlat);
+
+  // offset = idx * sz_scalar + tidx * sz_vector + odx * sz_vobj
+  size_t b0 = out.blocks.size();
+  out.blocks.resize(b0 + t_indices.size() * c_rank.size());
+
+  thread_for(ci, c_rank.size(), {
+      for (long i=0;i<t_indices.size();i++) {
+	auto & b = out.blocks[b0 + ci * t_indices.size() + i];
+	b.rank = c_rank[ci];
+	b.index = index_start + t_indices[i] * index_stride;
+	b.start = c_idx[ci] * sz_scalar + t_offsets[i] * sz_vector + c_odx[ci] * sz_vobj;
+	b.size = sz_scalar;
       }
-      if (s == dim_indices)
-	indices_on_l.push_back(ll);
-    }
+    });
 
-    // then process in parallel
-    d.offset_data.resize(indices_on_l.size());
-    d.offset_buffer.resize(indices_on_l.size());
-    thread_region
+  std::cout << t_indices << t_offsets << std::endl;
+  std::cout << c_rank << std::endl;
+  std::cout << c_odx << c_idx << std::endl;
+  std::cout << sz_scalar << "," << sz_vector << "," << sz_vobj << std::endl;
+
+  out.print();
+
+  /*    thread_region
       {
 	std::vector<long> coor(dim_indices);
 	thread_for_in_region(idx, indices_on_l.size(),{
@@ -144,113 +324,6 @@ static void cgpt_prepare_vlattice_importexport(PyObject* vlat,
 	    d.offset_buffer[idx] = indices_on_l[idx];
 	  });
       }
-
-    if (i == 0) {
-      grid = l->get_grid();
-      cb = l->get_checkerboard();
-      dtype = l->get_numpy_dtype();
-    } else {
-      ASSERT(grid == l->get_grid()); // only works if all lattices live on same Grid
-      ASSERT(cb == l->get_checkerboard());
-      ASSERT(dtype == l->get_numpy_dtype());
-    }
-  }
-   
-}
-
-// Coordinates in the list may differ from node to node,
-// in general they create a full map of the lattice.
-static PyArrayObject* cgpt_importexport(GridBase* grid, int cb, int dtype,
-					std::vector<cgpt_distribute::data_simd>& l, 
-					std::vector<long> & ishape, 
-					PyArrayObject* coordinates, 
-					PyObject* data) {
-
-  cgpt_distribute dist(grid->_processor,grid->communicator);
-
-  // distribution plan
-  grid_cached<cgpt_distribute::plan> plan(grid,coordinates);
-  if (!plan.filled()) {
-    
-    // first get full coordinates
-    std::vector<cgpt_distribute::coor> fc;
-    cgpt_to_full_coor(grid,cb,coordinates,fc);
-
-    // new plan
-    dist.create_plan(fc,plan.fill_ref());
-  }
-
-  // create target data layout
-  long fc_size = PyArray_DIMS(coordinates)[0]; // already checked above, no need to check again
-  std::vector<long> dim(1,fc_size);
-  for (auto s : ishape) {
-    dim.push_back(s);
-  }
-
-  if (!data) {
-    // create target
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], dtype);
-    void* s = (void*)PyArray_DATA(a);
+  */
   
-    // fill data
-    dist.copy_to(plan,l,s);
-    return a;
-
-  } else {
-
-    if (fc_size == 0) {
-      dist.copy_from(plan,0,1,l);
-      return 0;
-    }
-
-    // check compatibility
-    void* s;
-    long sz;
-    if (cgpt_PyArray_Check(data)) {
-      PyArrayObject* bytes = (PyArrayObject*)data;
-      ASSERT(PyArray_TYPE(bytes) == dtype);
-      s = (void*)PyArray_DATA(bytes);
-      sz = PyArray_NBYTES(bytes);
-    } else if (PyMemoryView_Check(data)) {
-      Py_buffer* buf = PyMemoryView_GET_BUFFER(data);
-      ASSERT(PyBuffer_IsContiguous(buf,'C'));
-      s = (void*)buf->buf;
-      sz = buf->len;
-    } else {
-      ERR("Incompatible type");
-    }
-
-    dist.copy_from(plan,s,sz,l);
-    return 0;
-  }
-}
-
-
-// direct copy
-static void cgpt_importexport(GridBase* grid_dst, GridBase* grid_src, 
-			      int cb_dst, int cb_src, 
-			      std::vector<cgpt_distribute::data_simd>& l_dst, 
-			      std::vector<cgpt_distribute::data_simd>& l_src, 
-			      PyArrayObject* coordinates_dst, 
-			      PyArrayObject* coordinates_src) {
-  
-  cgpt_distribute dist(grid_dst->_processor,grid_dst->communicator);
-
-  // distribution plans
-  grid_cached<cgpt_distribute::plan> plan_dst(grid_dst,coordinates_dst);
-  grid_cached<cgpt_distribute::plan> plan_src(grid_src,coordinates_src);
-
-  if (!plan_dst.filled()) {
-    std::vector<cgpt_distribute::coor> fc;
-    cgpt_to_full_coor(grid_dst,cb_dst,coordinates_dst,fc);
-    dist.create_plan(fc,plan_dst.fill_ref());
-  }
-
-  if (!plan_src.filled()) {
-    std::vector<cgpt_distribute::coor> fc;
-    cgpt_to_full_coor(grid_src,cb_src,coordinates_src,fc);
-    dist.create_plan(fc,plan_src.fill_ref());
-  }
-
-  dist.copy(plan_dst,plan_src,l_dst,l_src);
 }

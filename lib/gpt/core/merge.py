@@ -81,12 +81,8 @@ def merge(lattices, dimension=-1, N=-1):
         x.checkerboard(cb[0])
 
     # coordinates of source lattices
-    gcoor_zero = lattices[
-        0
-    ].mview_coordinates()  # return coordinates in internal ordering, speed up access
-    gcoor_one = (
-        lattices[1].mview_coordinates() if N > 1 and cb_mask == 1 else gcoor_zero
-    )
+    gcoor_zero = gpt.coordinates(lattices[0])
+    gcoor_one = (gpt.coordinates(lattices[1]) if N > 1 and cb_mask == 1 else gcoor_zero)
     gcoor = [gcoor_zero, gcoor_one]
 
     # data transfer
@@ -158,9 +154,8 @@ def separate(lattices, dimension=-1):
             x.checkerboard(cb.inv())
 
     # construct coordinates
-    separated_gcoor_zero = separated_lattices[0].mview_coordinates()
-    separated_gcoor_one = (
-        separated_lattices[1].mview_coordinates()
+    separated_gcoor_zero = gpt.coordinates(separated_lattices[0])
+    separated_gcoor_one = (gpt.coordinates(separated_lattices[1])
         if N > 1 and cb_mask == 1
         else separated_gcoor_zero
     )

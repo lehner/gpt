@@ -172,10 +172,6 @@ class lattice(factor):
     def mview(self):
         return [cgpt.lattice_memory_view(o) for o in self.v_obj]
 
-    def mview_coordinates(self):
-        # coordinates are identical for all x \in v_obj
-        return cgpt.lattice_memory_view_coordinates(self.v_obj[0])
-
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype.__name__, self.grid.precision.__name__)
 

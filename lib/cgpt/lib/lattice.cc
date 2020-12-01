@@ -85,17 +85,7 @@ EXPORT(lattice_memory_view,{
     }
     
     cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    return l->memory_view();
-  });
-
-EXPORT(lattice_memory_view_coordinates,{
-    void* p;
-    if (!PyArg_ParseTuple(args, "l", &p)) {
-      return NULL;
-    }
-    
-    cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    return l->memory_view_coordinates();
+    return l->memory_view(mt_host);
   });
 
 EXPORT(lattice_export,{
@@ -106,15 +96,25 @@ EXPORT(lattice_export,{
 
     ASSERT(cgpt_PyArray_Check(pos));
     ASSERT(cgpt_PyArray_Check(tidx));
-    std::vector<cgpt_distribute::data_simd> data;
-    std::vector<long> shape;
-    GridBase* grid;
-    int cb,dt;
 
-    cgpt_prepare_vlattice_importexport(vlat,data,shape,(PyArrayObject*)tidx,grid,cb,dt);
+    std::vector<long> shape;
     cgpt_convert(_shape,shape);
 
-    return (PyObject*)cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,0);
+    gm_view src, dst;
+    append_view_from_vlattice(src,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
+
+    append_view_from_dense_array(dst,vlat,(PyArrayObject*)pos,(PyArrayObject*)tidx,shape);
+
+    // create numpy array
+
+    // create and execute plan
+
+      
+    Grid_finalize();
+    exit(0);
+
+    //return (PyObject*)cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,0);
+    return PyLong_FromLong(0);
   });
 
 EXPORT(lattice_import,{
@@ -125,13 +125,39 @@ EXPORT(lattice_import,{
 
     ASSERT(cgpt_PyArray_Check(pos));
     ASSERT(cgpt_PyArray_Check(tidx));
-    std::vector<cgpt_distribute::data_simd> data;
-    std::vector<long> shape;
-    GridBase* grid;
-    int cb,dt;
+    ASSERT(cgpt_PyArray_Check(d));
 
-    cgpt_prepare_vlattice_importexport(vlat,data,shape,(PyArrayObject*)tidx,grid,cb,dt);
-    cgpt_importexport(grid,cb,dt,data,shape,(PyArrayObject*)pos,d);
+    gm_view src, dst;
+    append_view_from_vlattice(dst,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
+
+    size_t sz_dst = dst.size();
+    
+    std::cout << "Size:" << sz_dst << std::endl;
+
+    d = append_view_from_dense_array(src,(PyArrayObject*)d,sz_dst);
+
+    gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
+    plan.create(dst, src, mt_none);
+
+    std::vector<gm_transfer::memory_view> vdst, vsrc;
+
+    append_memory_view_from_dense_array(vsrc,(PyArrayObject*)d);
+
+    std::vector<PyObject*> views;
+    append_memory_view_from_vlat(vdst,vlat,mt_host,views);
+
+    std::cout << "-----" << std::endl;
+    for (size_t i=0;i<vsrc.size();i++)
+      std::cout << "vsrc[" << i << "]=" << vsrc[i].sz << std::endl;
+    for (size_t i=0;i<vdst.size();i++)
+      std::cout << "vdst[" << i << "]=" << vdst[i].sz << std::endl;
+
+    plan.execute(vdst,vsrc);
+
+    for (auto v : views)
+      Py_XDECREF(v);
+
+    Py_XDECREF(d);
 
     return PyLong_FromLong(0);
   });
@@ -144,19 +170,19 @@ EXPORT(lattice_import_view,{
 
     ASSERT(cgpt_PyArray_Check(pos_dst) && cgpt_PyArray_Check(pos_src));
     ASSERT(cgpt_PyArray_Check(tidx_dst) && cgpt_PyArray_Check(tidx_src));
-    std::vector<cgpt_distribute::data_simd> data_dst, data_src;
+    //std::vector<cgpt_distribute::data_simd> data_dst, data_src;
     std::vector<long> shape_dst, shape_src;
     GridBase* grid_dst,* grid_src;
     int cb_dst, dt_dst, cb_src, dt_src;
 
-    cgpt_prepare_vlattice_importexport(vlat_dst,data_dst,shape_dst,(PyArrayObject*)tidx_dst,grid_dst,cb_dst,dt_dst);
-    cgpt_prepare_vlattice_importexport(vlat_src,data_src,shape_src,(PyArrayObject*)tidx_src,grid_src,cb_src,dt_src);
+    //cgpt_prepare_vlattice_importexport(vlat_dst,data_dst,shape_dst,(PyArrayObject*)tidx_dst,grid_dst,cb_dst,dt_dst);
+    //cgpt_prepare_vlattice_importexport(vlat_src,data_src,shape_src,(PyArrayObject*)tidx_src,grid_src,cb_src,dt_src);
 
-    cgpt_importexport(grid_dst,grid_src,
-		      cb_dst,cb_src,
-		      data_dst,data_src,
-		      (PyArrayObject*)pos_dst,
-		      (PyArrayObject*)pos_src);
+    //cgpt_importexport(grid_dst,grid_src,
+    //		      cb_dst,cb_src,
+    //		      data_dst,data_src,
+    //		      (PyArrayObject*)pos_dst,
+    //		      (PyArrayObject*)pos_src);
 
     return PyLong_FromLong(0);
   });

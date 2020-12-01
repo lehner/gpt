@@ -1,3 +1,7 @@
+- Rework Multigrid based on sequence ?
+
+- Rework Cshift based on view interface
+
 - QIS:
   - Symbolic circuit optimization
   - Combine all X/CNOT into single sweep, similar for Rphis
