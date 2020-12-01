@@ -291,7 +291,8 @@ global_memory_view<offset_t,rank_t,index_t> global_memory_view<offset_t,rank_t,i
 
   global_memory_view<offset_t,rank_t,index_t> ret;
   if (blocks.size()) {
-    ret.blocks.push_back(blocks[0]);
+    if (blocks[0].size)
+      ret.blocks.push_back(blocks[0]);
     size_t c = 0;
     
     for (size_t i=1;i<blocks.size();i++) {
@@ -302,7 +303,8 @@ global_memory_view<offset_t,rank_t,index_t> global_memory_view<offset_t,rank_t,i
 	bc.size += bi.size;
       } else {
 	c++;
-	ret.blocks.push_back(bi);
+	if (bi.size)
+	  ret.blocks.push_back(bi);
       }
     }
   }

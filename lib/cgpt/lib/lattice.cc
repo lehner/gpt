@@ -106,7 +106,8 @@ EXPORT(lattice_export,{
     PyArrayObject* dst_array = create_array_to_hold_view(dst,src,vlat,shape);
 
     gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
-    plan.create(dst, src, mt_none);
+
+    plan.create(dst, src, mt_host);
 
     std::vector<gm_transfer::memory_view> vdst, vsrc;
 
@@ -119,7 +120,7 @@ EXPORT(lattice_export,{
 
     for (auto v : views)
       Py_XDECREF(v);
-
+    
     return (PyObject*)dst_array;
   });
 
@@ -141,8 +142,9 @@ EXPORT(lattice_import,{
       d = append_view_from_dense_array(src,(PyArrayObject*)d,sz_dst);
 
       gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
-      plan.create(dst, src, mt_none);
-      
+
+      plan.create(dst, src, mt_host);
+
       std::vector<gm_transfer::memory_view> vdst, vsrc;
       
       append_memory_view_from_dense_array(vsrc,(PyArrayObject*)d);
@@ -156,17 +158,20 @@ EXPORT(lattice_import,{
 	Py_XDECREF(v);
       
       Py_XDECREF(d);
+
     } else if (PyMemoryView_Check(d)) {
 
       append_view_from_memory_view(src,d);
 
       gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
-      plan.create(dst, src, mt_none);
+
+      plan.create(dst, src, mt_host);
       
       std::vector<gm_transfer::memory_view> vdst, vsrc;
       
       append_memory_view_from_memory_view(vsrc,d);
-      
+
+    
       std::vector<PyObject*> views;
       append_memory_view_from_vlat(vdst,vlat,mt_host,views);
       
@@ -174,7 +179,7 @@ EXPORT(lattice_import,{
       
       for (auto v : views)
 	Py_XDECREF(v);
-      
+
     } else {
       ERR("Unknown import data");
     }
