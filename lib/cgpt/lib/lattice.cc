@@ -131,31 +131,53 @@ EXPORT(lattice_import,{
 
     ASSERT(cgpt_PyArray_Check(pos));
     ASSERT(cgpt_PyArray_Check(tidx));
-    ASSERT(cgpt_PyArray_Check(d));
 
     gm_view src, dst;
     append_view_from_vlattice(dst,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
 
     size_t sz_dst = dst.size();
-    
-    d = append_view_from_dense_array(src,(PyArrayObject*)d,sz_dst);
 
-    gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
-    plan.create(dst, src, mt_none);
+    if (cgpt_PyArray_Check(d)) {
+      d = append_view_from_dense_array(src,(PyArrayObject*)d,sz_dst);
 
-    std::vector<gm_transfer::memory_view> vdst, vsrc;
+      gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
+      plan.create(dst, src, mt_none);
+      
+      std::vector<gm_transfer::memory_view> vdst, vsrc;
+      
+      append_memory_view_from_dense_array(vsrc,(PyArrayObject*)d);
+      
+      std::vector<PyObject*> views;
+      append_memory_view_from_vlat(vdst,vlat,mt_host,views);
+      
+      plan.execute(vdst,vsrc);
+      
+      for (auto v : views)
+	Py_XDECREF(v);
+      
+      Py_XDECREF(d);
+    } else if (PyMemoryView_Check(d)) {
 
-    append_memory_view_from_dense_array(vsrc,(PyArrayObject*)d);
+      append_view_from_memory_view(src,d);
 
-    std::vector<PyObject*> views;
-    append_memory_view_from_vlat(vdst,vlat,mt_host,views);
-
-    plan.execute(vdst,vsrc);
-
-    for (auto v : views)
-      Py_XDECREF(v);
-
-    Py_XDECREF(d);
+      gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
+      plan.create(dst, src, mt_none);
+      
+      std::vector<gm_transfer::memory_view> vdst, vsrc;
+      
+      append_memory_view_from_memory_view(vsrc,d);
+      
+      std::vector<PyObject*> views;
+      append_memory_view_from_vlat(vdst,vlat,mt_host,views);
+      
+      plan.execute(vdst,vsrc);
+      
+      for (auto v : views)
+	Py_XDECREF(v);
+      
+    } else {
+      ERR("Unknown import data");
+    }
 
     return PyLong_FromLong(0);
   });

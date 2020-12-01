@@ -246,6 +246,24 @@ static void append_memory_view_from_dense_array(std::vector<gm_transfer::memory_
 
 }
 
+static void append_memory_view_from_memory_view(std::vector<gm_transfer::memory_view>& mv,
+						PyObject* d) {
+
+  Py_buffer* buf = PyMemoryView_GET_BUFFER(d);
+  mv.push_back( { mt_host, buf->buf, (size_t)buf->len} );
+
+}
+
+static void append_view_from_memory_view(gm_view& out,
+					 PyObject* d) {
+
+  Py_buffer* buf = PyMemoryView_GET_BUFFER(d);
+  int rank = CartesianCommunicator::RankWorld();
+
+  out.blocks.push_back({ rank, 0, 0, (size_t)buf->len });
+
+}
+
 static PyObject* append_view_from_dense_array(gm_view& out,
 					      PyArrayObject* data,
 					      size_t sz_target) {

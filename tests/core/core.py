@@ -34,7 +34,7 @@ assert sys.getrefcount(x) == 2
 ################################################################################
 # Test assignments
 ################################################################################
-pos = l_dp.mview_coordinates()
+pos = g.coordinates(l_dp)
 lhs = g.lattice(l_dp)
 
 
@@ -47,10 +47,10 @@ def assign_pos():
 
 
 def assign_pos_view():
-    lhs[pos] = l_dp.view[pos]
+    g.copy_plan(lhs.view[pos], l_dp.view[pos]).execute(lhs,l_dp)
 
 
-for method in [assign_copy, assign_pos, assign_pos_view]:
+for method in [assign_copy, assign_pos]: #, assign_pos_view
     lhs[:] = 0
     method()
     eps2 = g.norm2(lhs - l_dp) / g.norm2(l_dp)
