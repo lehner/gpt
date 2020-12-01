@@ -38,9 +38,16 @@ export PYTHONPATH=${lib}\${PYTHONPATH:+:\${PYTHONPATH}}
 EOF
 ) > ${BUILD}/source.sh
 
+abs_BUILD="$( cd "${BUILD}" && pwd )"
+
 echo "================================================================================"
-echo "  Compiling CGPT against Grid in ${GRID} with ${NPARALLEL} parallel jobs to ${BUILD}"
-echo "  Usage: source ${BUILD}/source.sh"
+echo "  Compiling CGPT"
+echo "--------------------------------------------------------------------------------"
+echo "  Grid build:     ${GRID}"
+echo "  Parallel jobs:  ${NPARALLEL}"
+echo "  Destination:    ${BUILD}"
+echo "--------------------------------------------------------------------------------"
+echo "  Usage: source ${abs_BUILD}/source.sh"
 echo "================================================================================"
 
 NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
@@ -48,6 +55,13 @@ CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
 CXXLD=$(grep "GRID_CXXLD " ${GRID}/Makefile | sed "s/^[^=]*=//")
 
 CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID} -I${GRID}/Grid -I${NUMPY_INCLUDE} $(python3-config --includes)"
+
+if [[ "$(echo $CXXFLAGS | grep fPIC -c)" == "0" ]];
+then
+    echo "Need to configure Grid with -fPIC"
+    exit 2
+fi
+
 LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
 LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
 
@@ -117,14 +131,14 @@ do
 
 		echo " [CXX] $bn"
 		start=$SECONDS
-		${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> logs/${bn}.out 2> logs/${bn}.err
+		${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> ${BUILD}/logs/${bn}.out 2> ${BUILD}/logs/${bn}.err
 		success=$?
 		elapsed=$((SECONDS-start))
 		if [[ "$success" == "0" ]];
 		then
 		    printf "%-70s %s\n" " [OK ] $bn " "($elapsed s)"
 		else
-		    printf "%-70s %-30s %s\n" " [ERR] $bn " "($elapsed s)" "logs/${bn}.err"
+		    printf "%-70s %-30s %s\n" " [ERR] $bn " "($elapsed s)" "${BUILD}/logs/${bn}.err"
 		    touch $dst
 		fi
 	    else
