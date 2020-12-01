@@ -20,16 +20,15 @@
 import gpt as g
 import numpy as np
 from gpt.qcd.spin_matrices import spin_matrix as spm
-from gpt.qcd.baryon_contractions import baryons_2prop
-from gpt.qcd.baryon_contractions import baryons_3prop
+from gpt.qcd.baryon_contractions import BaryonsContractions2prop
+from gpt.qcd.baryon_contractions import BaryonsContractions3prop
 from gpt.qcd.create_hdf5 import _check_meas, _write_hdf5dset
 
-b2p = baryons_2prop()
-b3p = baryons_3prop()
+b2p = BaryonsContractions2prop()
+b3p = BaryonsContractions2prop()
 
 
 def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list, time_rev):
-    ''' The correlators have dimension [N_baryons * n_time_rev][#moms][Nt] '''
 
     n_baryons = int(corr.shape[0] / 2)
 
@@ -37,7 +36,7 @@ def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list,
         if(baryon_n == 0):
             meas = "Sigma_star+_1"
             g.message(meas)
-            tmp_correlator = b2p.sigma_star_2pt(quark_prop_1, quark_prop_2, spm.T_mixed(), spm.Cgm())
+            tmp_correlator = b2p._sigma_star_2pt(quark_prop_1, quark_prop_2, spm.T_mixed(), spm.Cgm())
 
             for p_n, p in enumerate(moms):
                 g.message(mom_list[p_n])
@@ -50,7 +49,7 @@ def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list,
         elif(baryon_n == 1):
             meas = "Sigma+_4"
             g.message(meas)
-            tmp_correlator = b2p.proton_2pt(quark_prop_1, quark_prop_2, spm.T_unpol(), spm.Cg5())
+            tmp_correlator = b2p._proton_2pt(quark_prop_1, quark_prop_2, spm.T_unpol(), spm.Cg5())
 
             for p_n, p in enumerate(moms):
                 g.message(mom_list[p_n])
@@ -63,7 +62,7 @@ def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list,
         elif(baryon_n == 2):
             meas = "Lambda_4"
             g.message(meas)
-            tmp_correlator = b2p.lambda_naive_2pt(quark_prop_1, quark_prop_2, spm.T_unpol(), spm.Cg5())
+            tmp_correlator = b2p._lambda_naive_2pt(quark_prop_1, quark_prop_2, spm.T_unpol(), spm.Cg5())
 
             for p_n, p in enumerate(moms):
                 g.message(mom_list[p_n])
@@ -76,7 +75,7 @@ def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list,
         elif(baryon_n == 3):
             meas = "Proton_Polx"
             g.message(meas)
-            tmp_correlator = b2p.proton_2pt(quark_prop_1, quark_prop_2, spm.T_polx(), spm.Cg5())
+            tmp_correlator = b2p._proton_2pt(quark_prop_1, quark_prop_2, spm.T_polx(), spm.Cg5())
 
             for p_n, p in enumerate(moms):
                 g.message(mom_list[p_n])
@@ -89,7 +88,7 @@ def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list,
         elif(baryon_n == 4):
             meas = "Proton_Poly"
             g.message(meas)
-            tmp_correlator = b2p.proton_2pt(quark_prop_1, quark_prop_2, spm.T_poly(), spm.Cg5())
+            tmp_correlator = b2p._proton_2pt(quark_prop_1, quark_prop_2, spm.T_poly(), spm.Cg5())
 
             for p_n, p in enumerate(moms):
                 g.message(mom_list[p_n])
@@ -102,7 +101,7 @@ def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list,
         elif(baryon_n == 5):
             meas = "Proton_Polz"
             g.message(meas)
-            tmp_correlator = b2p.proton_2pt(quark_prop_1, quark_prop_2, spm.T_polz(), spm.Cg5())
+            tmp_correlator = b2p._proton_2pt(quark_prop_1, quark_prop_2, spm.T_polz(), spm.Cg5())
 
             for p_n, p in enumerate(moms):
                 g.message(mom_list[p_n])
@@ -115,7 +114,7 @@ def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list,
         elif(baryon_n == 6):
             meas = "Lambda_octet"
             g.message(meas)
-            tmp_correlator = b3p.lambda8_2pt(quark_prop_1, quark_prop_2, quark_prop_3, spm.T_unpol(), spm.Cg5())
+            tmp_correlator = b3p._lambda8_2pt(quark_prop_1, quark_prop_2, quark_prop_3, spm.T_unpol(), spm.Cg5())
 
             for p_n, p in enumerate(moms):
                 g.message(mom_list[p_n])
