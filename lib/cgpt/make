@@ -77,8 +77,18 @@ echo "==========================================================================
 rm -f next.lock
 
 # Compile
+function clean_files {
+    rm -f next.lock
+    for ((N=0;N<NPARALLEL;N++))
+    do
+	rm -f next.${N}
+    done
+    find ${BUILD}/objs -size 0 -delete 2> /dev/null
+}
+
 function abort {
     echo "Cancelling..."
+    clean_files
     kill -TERM 0
     wait
     echo "Done"
@@ -150,8 +160,7 @@ done
 
 wait
 
-rm -f next.lock
-find ${BUILD}/objs -size 0 -delete 2> /dev/null
+clean_files
 
 # Link
 ${CXXLD} --shared $(ls -t ${BUILD}/objs/*.o) ${LDFLAGS} ${LIBS} -lGrid -o ${BUILD}/cgpt.so
