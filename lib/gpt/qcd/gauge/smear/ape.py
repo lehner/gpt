@@ -47,7 +47,7 @@ def ape(U, params):
 
 @params_convention(alpha=2.5)
 def ape_general(U, params):
-#   Following (43) of https://arxiv.org/pdf/hep-lat/0505012.pdf
+#   Following (27) of https://arxiv.org/pdf/hep-lat/0505012.pdf
 #   here the smearing factor alpha is multiplying the starting links
     nd = len(U)
     Nc = U[0].otype.Nc
