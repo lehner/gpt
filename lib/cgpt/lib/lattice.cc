@@ -101,11 +101,11 @@ EXPORT(lattice_export,{
     cgpt_convert(_shape,shape);
 
     gm_view src, dst;
-    append_view_from_vlattice(src,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
+    GridBase* grid = append_view_from_vlattice(src,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
 
-    PyArrayObject* dst_array = create_array_to_hold_view(dst,src,vlat,shape);
+    PyArrayObject* dst_array = create_array_to_hold_view(dst,src,vlat,shape,grid->_processor);
 
-    gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
+    gm_transfer plan(grid->_processor, grid->communicator);
 
     plan.create(dst, src, mt_host);
 
@@ -134,14 +134,14 @@ EXPORT(lattice_import,{
     ASSERT(cgpt_PyArray_Check(tidx));
 
     gm_view src, dst;
-    append_view_from_vlattice(dst,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
+    GridBase* grid = append_view_from_vlattice(dst,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
 
     size_t sz_dst = dst.size();
 
     if (cgpt_PyArray_Check(d)) {
-      d = append_view_from_dense_array(src,(PyArrayObject*)d,sz_dst);
+      d = append_view_from_dense_array(src,(PyArrayObject*)d,sz_dst,grid->_processor);
 
-      gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
+      gm_transfer plan(grid->_processor, grid->communicator);
 
       plan.create(dst, src, mt_host);
 
@@ -161,9 +161,9 @@ EXPORT(lattice_import,{
 
     } else if (PyMemoryView_Check(d)) {
 
-      append_view_from_memory_view(src,d);
+      append_view_from_memory_view(src,d, grid->_processor);
 
-      gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
+      gm_transfer plan(grid->_processor, grid->communicator);
 
       plan.create(dst, src, mt_host);
       
@@ -183,7 +183,7 @@ EXPORT(lattice_import,{
 
     } else if (d == Py_None) {
       
-      gm_transfer plan(CartesianCommunicator::RankWorld(), CartesianCommunicator::communicator_world);
+      gm_transfer plan(grid->_processor, grid->communicator);
 
       plan.create(dst, src, mt_host);
       
@@ -191,7 +191,6 @@ EXPORT(lattice_import,{
       
       append_memory_view_from_memory_view(vsrc,d);
 
-    
       std::vector<PyObject*> views;
       append_memory_view_from_vlat(vdst,vlat,mt_host,views);
       

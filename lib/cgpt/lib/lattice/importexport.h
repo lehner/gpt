@@ -16,7 +16,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-static int get_vlat_data_layout(long& sz_scalar,
+static int get_vlat_data_layout(GridBase* & grid,
+				long& sz_scalar,
 				long& sz_vector,
 				long& sz_vobj,
 				PyObject* vlat) {
@@ -43,11 +44,13 @@ static int get_vlat_data_layout(long& sz_scalar,
       sz_vector = _sz_vector;
       sz_vobj = _sz_vobj;
       dtype = l->get_numpy_dtype();
+      grid = l->get_grid();
     } else {
       ASSERT(sz_scalar == _sz_scalar);
       ASSERT(sz_vector == _sz_vector);
       ASSERT(sz_vobj == _sz_vobj);
       ASSERT(dtype == l->get_numpy_dtype());
+      ASSERT(grid == l->get_grid());
     }
   }
 
@@ -208,13 +211,15 @@ static void tensor_indices_to_memory_offsets(std::vector<long>& t_indices,
 }
 
 static PyArrayObject* create_array_to_hold_view(gm_view& dst,gm_view& src,
-						PyObject* vlat,std::vector<long>& shape) {
+						PyObject* vlat,std::vector<long>& shape,
+						int rank) {
 
   //std::cout << "ca" << std::endl;
   //std::cout << src.size() << std::endl;
 
   long sz_scalar, sz_vector, sz_vobj;
-  int dtype = get_vlat_data_layout(sz_scalar, sz_vector, sz_vobj, vlat);
+  GridBase* grid;
+  int dtype = get_vlat_data_layout(grid, sz_scalar, sz_vector, sz_vobj, vlat);
 
   ASSERT(src.size() % sz_scalar == 0);
   long nelements = (long)src.size() / sz_scalar;
@@ -230,8 +235,6 @@ static PyArrayObject* create_array_to_hold_view(gm_view& dst,gm_view& src,
   for (long i : shape)
     fshape.push_back(i);
 
-  int rank = CartesianCommunicator::RankWorld();
-  
   dst.blocks.push_back({ rank, 0, 0, src.size() });
 
   //std::cout << "Elements" << fshape << std::endl;
@@ -255,26 +258,24 @@ static void append_memory_view_from_memory_view(std::vector<gm_transfer::memory_
 }
 
 static void append_view_from_memory_view(gm_view& out,
-					 PyObject* d) {
+					 PyObject* d,
+					 int rank) {
 
   Py_buffer* buf = PyMemoryView_GET_BUFFER(d);
-  int rank = CartesianCommunicator::RankWorld();
-
   out.blocks.push_back({ rank, 0, 0, (size_t)buf->len });
 
 }
 
 static PyObject* append_view_from_dense_array(gm_view& out,
 					      PyArrayObject* data,
-					      size_t sz_target) {
+					      size_t sz_target,
+					      int rank) {
 
   long ndim = PyArray_NDIM(data);
   long dtype = PyArray_TYPE(data);
   size_t sz = (size_t)PyArray_NBYTES(data);
   size_t sz_element = numpy_dtype_size(dtype);
   size_t nelements = sz / sz_element;
-
-  int rank = CartesianCommunicator::RankWorld();
 
   out.blocks.push_back({ rank, 0, 0, sz_target });
   //std::cout << ndim << "," << dtype << "," << sz << "<>" << sz_target << std::endl;
@@ -302,11 +303,11 @@ static PyObject* append_view_from_dense_array(gm_view& out,
   return (PyObject*)data;
 }
 
-static void append_view_from_vlattice(gm_view& out,
-				      PyObject* vlat,
-				      long index_start, long index_stride,
-				      PyArrayObject* pos,
-				      PyArrayObject* tidx) {
+static GridBase* append_view_from_vlattice(gm_view& out,
+					   PyObject* vlat,
+					   long index_start, long index_stride,
+					   PyArrayObject* pos,
+					   PyArrayObject* tidx) {
 
   ASSERT(PyArray_TYPE(pos) == NPY_INT32);
   std::vector<long> t_indices, t_offsets, c_rank, c_odx, c_idx;
@@ -319,7 +320,8 @@ static void append_view_from_vlattice(gm_view& out,
 
   // get data layout
   long sz_scalar, sz_vector, sz_vobj;
-  get_vlat_data_layout(sz_scalar,sz_vector,sz_vobj, vlat);
+  GridBase* grid;
+  get_vlat_data_layout(grid, sz_scalar,sz_vector,sz_vobj, vlat);
 
   // offset = idx * sz_scalar + tidx * sz_vector + odx * sz_vobj
   size_t b0 = out.blocks.size();
@@ -342,19 +344,5 @@ static void append_view_from_vlattice(gm_view& out,
 
   //out.print();
 
-  /*    thread_region
-      {
-	std::vector<long> coor(dim_indices);
-	thread_for_in_region(idx, indices_on_l.size(),{
-	    for (long l=0;l<dim_indices;l++)
-	      coor[l] = tidx_coor[indices_on_l[idx]*dim_indices + l] - v_n0[l];
-	    int linear_index;
-	    Lexicographic::IndexFromCoorReversed(coor,linear_index,ishape);
-	    ASSERT(0 <= linear_index && linear_index < words);
-	    d.offset_data[idx] = linear_index;
-	    d.offset_buffer[idx] = indices_on_l[idx];
-	  });
-      }
-  */
-  
+  return grid;
 }
