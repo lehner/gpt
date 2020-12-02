@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, numpy
+import cgpt, gpt, numpy, sys
 from gpt.core.expr import factor
 
 mem_book = {}
@@ -161,8 +161,13 @@ class lattice(factor):
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self, key)
-        val = cgpt.lattice_export(self.v_obj, pos, tidx, shape)
+        my_view=gpt.copy_view(cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx))
 
+        val=numpy.ndarray((len(pos),*shape),dtype=self.grid.precision.complex_dtype,order='C')
+        val_view=gpt.copy_view(self.grid.obj,[[self.grid.processor,0,0,val.nbytes]])
+        plan=gpt.copy_plan(val_view,my_view)
+        plan(val,self)
+        
         # if only a single element is returned and we have the full shape,
         # wrap in a tensor
         if len(val) == 1 and shape == self.otype.shape:

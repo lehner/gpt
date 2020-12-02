@@ -88,42 +88,6 @@ EXPORT(lattice_memory_view,{
     return l->memory_view(mt_host);
   });
 
-EXPORT(lattice_export,{
-    PyObject* pos, * vlat, * tidx,* _shape;
-    if (!PyArg_ParseTuple(args, "OOOO", &vlat, &pos, &tidx, &_shape)) {
-      return NULL;
-    }
-
-    ASSERT(cgpt_PyArray_Check(pos));
-    ASSERT(cgpt_PyArray_Check(tidx));
-
-    std::vector<long> shape;
-    cgpt_convert(_shape,shape);
-
-    gm_view src, dst;
-    GridBase* grid = append_view_from_vlattice(src,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
-
-    PyArrayObject* dst_array = create_array_to_hold_view(dst,src,vlat,shape,grid->_processor);
-
-    gm_transfer plan(grid->_processor, grid->communicator);
-
-    plan.create(dst, src, mt_host);
-
-    std::vector<gm_transfer::memory_view> vdst, vsrc;
-
-    append_memory_view_from_dense_array(vdst,dst_array);
-
-    std::vector<PyObject*> views;
-    append_memory_view_from_vlat(vsrc,vlat,mt_host,views);
-
-    plan.execute(vdst,vsrc);
-
-    for (auto v : views)
-      Py_XDECREF(v);
-    
-    return (PyObject*)dst_array;
-  });
-
 EXPORT(lattice_import,{
     PyObject* pos, *vlat, * d, * tidx;
     if (!PyArg_ParseTuple(args, "OOOO", &vlat, &pos, &tidx, &d)) {

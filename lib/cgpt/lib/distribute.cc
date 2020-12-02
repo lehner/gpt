@@ -457,9 +457,9 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_bounds() {
     for (auto & indices : ranks.second) {
       index_t dst_idx = indices.first.first;
       index_t src_idx = indices.first.second;
-      if (dst_idx >= bounds_dst.size())
+      if (dst_rank == this->rank && dst_idx >= bounds_dst.size())
 	bounds_dst.resize(dst_idx+1,0);
-      if (src_idx >= bounds_src.size())
+      if (src_rank == this->rank && src_idx >= bounds_src.size())
 	bounds_src.resize(src_idx+1,0);
       for (auto & bi : indices.second) {
 	offset_t end_dst = bi.start_dst + bi.size;

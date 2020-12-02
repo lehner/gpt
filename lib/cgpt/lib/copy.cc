@@ -57,7 +57,7 @@ EXPORT(copy_create_plan,{
     PyObject* _tbuffer;
     std::string tbuffer;
     
-    if (!PyArg_ParseTuple(args, "llO", &_vsrc, &_vdst, &_tbuffer)) {
+    if (!PyArg_ParseTuple(args, "llO", &_vdst, &_vsrc, &_tbuffer)) {
       return NULL;
     }
 
@@ -71,6 +71,7 @@ EXPORT(copy_create_plan,{
     
     gm_transfer* plan = new gm_transfer(vsrc->rank, vsrc->comm);
     memory_type mt = cgpt_memory_type_from_string(tbuffer);
+
     plan->create(vdst->view, vsrc->view, mt);
 
     return PyLong_FromVoidPtr(plan);
@@ -79,11 +80,15 @@ EXPORT(copy_create_plan,{
 EXPORT(copy_execute_plan,{
 
     long _plan;
-    PyObject* _dst,* _src;
+    PyObject* _dst,* _src,* _lattice_view_location;
+    std::string lattice_view_location;
     
-    if (!PyArg_ParseTuple(args, "lOO", &_plan, &_dst, &_src)) {
+    if (!PyArg_ParseTuple(args, "lOOO", &_plan, &_dst, &_src, &_lattice_view_location)) {
       return NULL;
     }
+
+    cgpt_convert(_lattice_view_location, lattice_view_location);
+    memory_type lattice_view_mt = cgpt_memory_type_from_string(lattice_view_location);
 
     gm_transfer* plan = (gm_transfer*)_plan;
 
@@ -91,9 +96,9 @@ EXPORT(copy_execute_plan,{
 
     std::vector<PyObject*> lattice_views;
 
-    cgpt_copy_add_memory_views(vdst, _dst, lattice_views);
-    cgpt_copy_add_memory_views(vsrc, _src, lattice_views);
-    
+    cgpt_copy_add_memory_views(vdst, _dst, lattice_views, lattice_view_mt);
+    cgpt_copy_add_memory_views(vsrc, _src, lattice_views, lattice_view_mt);
+
     plan->execute(vdst, vsrc);
 
     for (auto v : lattice_views)

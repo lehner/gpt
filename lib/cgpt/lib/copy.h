@@ -36,7 +36,8 @@ static memory_type cgpt_memory_type_from_string(const std::string& s) {
 
 static void cgpt_copy_add_memory_views(std::vector<gm_transfer::memory_view>& mv,
 				       PyObject* s,
-				       std::vector<PyObject*>& lattice_views) {
+				       std::vector<PyObject*>& lattice_views,
+				       memory_type lattice_view_mt) {
 
   ASSERT(PyList_Check(s));
   long n=PyList_Size(s);
@@ -50,20 +51,20 @@ static void cgpt_copy_add_memory_views(std::vector<gm_transfer::memory_view>& mv
       Py_buffer* buf = PyMemoryView_GET_BUFFER(item);
       mv.push_back( { mt_host, buf->buf, (size_t)buf->len} );
     } else {
-      ASSERT(PyList_Check(item));
-      ASSERT(PyList_Size(item) == 2);
-      PyObject* _tbuffer = PyList_GetItem(item,0);
-      std::string tbuffer;
-      cgpt_convert(_tbuffer,tbuffer);
-      cgpt_Lattice_base* l = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(item,1));
-      memory_type mt = cgpt_memory_type_from_string(tbuffer);
-      PyObject* v = l->memory_view(mt);
-      lattice_views.push_back(v);
+      PyObject* v_obj = PyObject_GetAttrString(item,"v_obj");
+      ASSERT(v_obj && PyList_Check(v_obj));
+      long nlat = PyList_Size(v_obj);
 
-      Py_buffer* buf = PyMemoryView_GET_BUFFER(v);
-      unsigned char* data = (unsigned char*)buf->buf;
+      for (long j=0;j<nlat;j++) {
+	cgpt_Lattice_base* l = (cgpt_Lattice_base*)PyLong_AsVoidPtr(PyList_GetItem(v_obj,j));
+	PyObject* v = l->memory_view(lattice_view_mt);
+	lattice_views.push_back(v);
+	
+	Py_buffer* buf = PyMemoryView_GET_BUFFER(v);
+	unsigned char* data = (unsigned char*)buf->buf;
 
-      mv.push_back({ mt, data, (size_t)buf->len} );
+	mv.push_back({ lattice_view_mt, data, (size_t)buf->len} );
+      }
     }
   }
 

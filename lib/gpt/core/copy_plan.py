@@ -19,20 +19,27 @@
 import cgpt, gpt, numpy
 
 class copy_plan:
-    def __init__(self, vdst, vsrc, communication_buffer = "host"): # host/accelerator/none
-        self.obj = cgpt.copy_create_plan(vdst, vsrc, communication_buffer)
+    def __init__(self, vdst, vsrc, lattice_view_location = "host", communication_buffer_location = "host"): # host/accelerator/none
+        self.obj = cgpt.copy_create_plan(vdst.obj, vsrc.obj, communication_buffer_location)
+        self.lattice_view_location = lattice_view_location
 
     def __del__(self):
         cgpt.copy_delete_plan(self.obj)
 
     def __call__(self, dst, src):
-        # prepare? lattice vobjs
-        cgpt.copy_execute_plan(self.obj, dst, src)
+        dst = gpt.util.to_list(dst)
+        src = gpt.util.to_list(src)
+        cgpt.copy_execute_plan(self.obj, dst, src, self.lattice_view_location)
 
         
 class copy_view:
-    def __init__(self, obj):
-        self.obj = obj
+    def __init__(self, first, second = None):
+        if second is None:
+            self.obj = first
+        else:
+            grid_obj = first
+            blocks = numpy.array(second, dtype=numpy.int64)
+            self.obj = cgpt.copy_create_view(grid_obj, blocks)
 
     def __del__(self):
         cgpt.copy_delete_view(self.obj)

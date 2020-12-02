@@ -186,8 +186,16 @@ def peek(target, key):
 
         pos, tidx, shape = map_key(target, key)
         v_obj = [y for x in target for y in x.v_obj]
+        grid = target[0].grid
+        assert all([grid.obj == x.grid.obj for x in target])
 
-        return gpt.mview(cgpt.lattice_export(v_obj, pos, tidx, shape))
+        my_view=gpt.copy_view(cgpt.copy_create_view_from_lattice(v_obj, pos, tidx))
+
+        val=numpy.ndarray((len(pos),*shape),dtype=grid.precision.complex_dtype,order='C')
+        val_view=gpt.copy_view(grid.obj,[[grid.processor,0,0,val.nbytes]])
+        gpt.copy_plan(val_view,my_view)(val,target)
+
+        return gpt.mview(val)
 
     else:
         assert 0
