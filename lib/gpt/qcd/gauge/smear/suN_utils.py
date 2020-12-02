@@ -35,7 +35,6 @@ def project_to_su3(u, w, su2_index):
 
     #  normalize
     #  Fill   (r[0]/r_l, -r[1]/r_l, -r[2]/r_l, -r[3]/r_l)
-    a_0 = np.array([1., 0., 0., 0.], dtype=float)
     a = np.empty((Vol, 4), dtype=float)
     a[:, 0] = r[:, 0] / r_l
     a[:, 1] = -r[:, 1] / r_l
