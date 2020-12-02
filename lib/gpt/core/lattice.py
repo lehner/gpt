@@ -31,9 +31,10 @@ class lattice_view:
         self.parent = parent
 
     def __getitem__(self, key):
-        return gpt.map_key(self.parent, key) + (self.parent.v_obj,)
+        pos, tidx, shape = gpt.map_key(self.parent, key)
+        return gpt.copy_view(cgpt.copy_create_view_from_lattice(self.parent.v_obj, pos, tidx))
 
-
+    
 class lattice(factor):
     __array_priority__ = 1000000
 

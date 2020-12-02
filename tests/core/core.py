@@ -47,7 +47,7 @@ def assign_pos():
 
 
 def assign_pos_view():
-    g.copy_plan(lhs.view[pos], l_dp.view[pos]).execute(lhs,l_dp)
+    g.copy_plan(lhs.view[pos], l_dp.view[pos])(lhs,l_dp)
 
 
 for method in [assign_copy, assign_pos]: #, assign_pos_view
