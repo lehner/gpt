@@ -11,7 +11,7 @@ then
     echo "Could not detect Grid location"
     exit 2
 fi
-NPARALLEL=6
+NPARALLEL=16
 
 # Start
 N=0
