@@ -18,9 +18,18 @@
 #
 import cgpt, gpt, numpy
 
+
 class copy_plan:
-    def __init__(self, vdst, vsrc, lattice_view_location = "host", communication_buffer_location = "host"): # host/accelerator/none
-        self.obj = cgpt.copy_create_plan(vdst.obj, vsrc.obj, communication_buffer_location)
+    def __init__(
+        self,
+        vdst,
+        vsrc,
+        lattice_view_location="host",
+        communication_buffer_location="host",
+    ):  # host/accelerator/none
+        self.obj = cgpt.copy_create_plan(
+            vdst.obj, vsrc.obj, communication_buffer_location
+        )
         self.lattice_view_location = lattice_view_location
 
     def __del__(self):
@@ -34,9 +43,9 @@ class copy_plan:
     def info(self):
         return cgpt.copy_get_plan_info(self.obj)
 
-        
+
 class copy_view:
-    def __init__(self, first, second = None):
+    def __init__(self, first, second=None):
         if second is None:
             self.obj = first
         else:

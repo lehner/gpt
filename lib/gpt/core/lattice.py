@@ -32,9 +32,11 @@ class lattice_view:
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self.parent, key)
-        return gpt.copy_view(cgpt.copy_create_view_from_lattice(self.parent.v_obj, pos, tidx))
+        return gpt.copy_view(
+            cgpt.copy_create_view_from_lattice(self.parent.v_obj, pos, tidx)
+        )
 
-    
+
 class lattice(factor):
     __array_priority__ = 1000000
 
@@ -143,31 +145,39 @@ class lattice(factor):
 
         # general code path, map key
         pos, tidx, shape = gpt.map_key(self, key)
-        my_view=gpt.copy_view(cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx))
-        
-        # convert input to proper numpy array
-        value = gpt.util.tensor_to_value(
-            value, dtype=self.grid.precision.complex_dtype
+        my_view = gpt.copy_view(
+            cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx)
         )
+
+        # convert input to proper numpy array
+        value = gpt.util.tensor_to_value(value, dtype=self.grid.precision.complex_dtype)
 
         # allow for none
         if value is None:
             value = memoryview(bytearray())
 
         # needed bytes and optional cyclic upscaling
-        nbytes_needed = len(pos)*numpy.prod(shape)*self.grid.precision.nbytes*2
+        nbytes_needed = len(pos) * numpy.prod(shape) * self.grid.precision.nbytes * 2
         value = cgpt.copy_cyclic_upscale(value, nbytes_needed)
-        value_view=gpt.copy_view(self.grid.obj,[[self.grid.processor,0,0,value.nbytes]])
-        gpt.copy_plan(my_view,value_view)(self,value)
+        value_view = gpt.copy_view(
+            self.grid.obj, [[self.grid.processor, 0, 0, value.nbytes]]
+        )
+        gpt.copy_plan(my_view, value_view)(self, value)
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self, key)
-        my_view=gpt.copy_view(cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx))
+        my_view = gpt.copy_view(
+            cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx)
+        )
 
-        value=numpy.ndarray((len(pos),*shape),dtype=self.grid.precision.complex_dtype,order='C')
-        value_view=gpt.copy_view(self.grid.obj,[[self.grid.processor,0,0,value.nbytes]])
-        gpt.copy_plan(value_view,my_view)(value,self)
-        
+        value = numpy.ndarray(
+            (len(pos), *shape), dtype=self.grid.precision.complex_dtype, order="C"
+        )
+        value_view = gpt.copy_view(
+            self.grid.obj, [[self.grid.processor, 0, 0, value.nbytes]]
+        )
+        gpt.copy_plan(value_view, my_view)(value, self)
+
         # if only a single element is returned and we have the full shape,
         # wrap in a tensor
         if len(value) == 1 and shape == self.otype.shape:

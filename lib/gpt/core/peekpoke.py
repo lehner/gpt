@@ -189,11 +189,13 @@ def peek(target, key):
         grid = target[0].grid
         assert all([grid.obj == x.grid.obj for x in target])
 
-        my_view=gpt.copy_view(cgpt.copy_create_view_from_lattice(v_obj, pos, tidx))
+        my_view = gpt.copy_view(cgpt.copy_create_view_from_lattice(v_obj, pos, tidx))
 
-        value=numpy.ndarray((len(pos),*shape),dtype=grid.precision.complex_dtype,order='C')
-        value_view=gpt.copy_view(grid.obj,[[grid.processor,0,0,value.nbytes]])
-        gpt.copy_plan(value_view,my_view)(value,target)
+        value = numpy.ndarray(
+            (len(pos), *shape), dtype=grid.precision.complex_dtype, order="C"
+        )
+        value_view = gpt.copy_view(grid.obj, [[grid.processor, 0, 0, value.nbytes]])
+        gpt.copy_plan(value_view, my_view)(value, target)
 
         return gpt.mview(value)
 
@@ -217,10 +219,10 @@ def poke(target, key, value):
         grid = target[0].grid
         assert all([grid.obj == x.grid.obj for x in target])
 
-        my_view=gpt.copy_view(cgpt.copy_create_view_from_lattice(v_obj, pos, tidx))
+        my_view = gpt.copy_view(cgpt.copy_create_view_from_lattice(v_obj, pos, tidx))
 
-        value_view=gpt.copy_view(grid.obj,[[grid.processor,0,0,value.nbytes]])
-        gpt.copy_plan(my_view,value_view)(target,value)
-            
+        value_view = gpt.copy_view(grid.obj, [[grid.processor, 0, 0, value.nbytes]])
+        gpt.copy_plan(my_view, value_view)(target, value)
+
     else:
         assert 0

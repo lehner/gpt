@@ -82,7 +82,7 @@ def merge(lattices, dimension=-1, N=-1):
 
     # coordinates of source lattices
     gcoor_zero = gpt.coordinates(lattices[0])
-    gcoor_one = (gpt.coordinates(lattices[1]) if N > 1 and cb_mask == 1 else gcoor_zero)
+    gcoor_one = gpt.coordinates(lattices[1]) if N > 1 and cb_mask == 1 else gcoor_zero
     gcoor = [gcoor_zero, gcoor_one]
 
     # data transfer
@@ -155,7 +155,8 @@ def separate(lattices, dimension=-1):
 
     # construct coordinates
     separated_gcoor_zero = gpt.coordinates(separated_lattices[0])
-    separated_gcoor_one = (gpt.coordinates(separated_lattices[1])
+    separated_gcoor_one = (
+        gpt.coordinates(separated_lattices[1])
         if N > 1 and cb_mask == 1
         else separated_gcoor_zero
     )

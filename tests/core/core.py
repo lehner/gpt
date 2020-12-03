@@ -57,7 +57,7 @@ def assign_pos_view():
             info_index = info_rank[index]
             # Make sure that after optimization only a single memcpy is needed
             assert info_index["blocks"] == 1
-    plan(lhs,l_dp)
+    plan(lhs, l_dp)
 
 
 for method in [assign_copy, assign_pos, assign_pos_view]:
