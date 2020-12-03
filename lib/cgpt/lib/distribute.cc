@@ -773,9 +773,9 @@ void test_global_memory_system() {
       int rs = src_ranks[j + i*nwords];
       int js = src_offset[j + i*nwords];
       int is = src_index[j + i*nwords];
-      osrc.blocks.push_back( { rs, is, js*word, word_half } ); // rank, index, offset, size
-      osrc.blocks.push_back( { rs, is, js*word + word_half, word_half } ); // rank, index, offset, size
-      odst.blocks.push_back( { rank, i, j*word, word } ); // rank, index, offset, size
+      osrc.blocks.push_back( { rs, (uint32_t)is, js*word, word_half } ); // rank, index, offset, size
+      osrc.blocks.push_back( { rs, (uint32_t)is, js*word + word_half, word_half } ); // rank, index, offset, size
+      odst.blocks.push_back( { rank, (uint32_t)i, j*word, word } ); // rank, index, offset, size
     }
   }
   
