@@ -107,6 +107,20 @@ EXPORT(copy_execute_plan,{
     return PyLong_FromVoidPtr(0);
   });
 
+EXPORT(copy_cyclic_upscale,{
+    PyObject* input;
+    long sz_target;
+    
+    if (!PyArg_ParseTuple(args, "Ol", &input, &sz_target)) {
+      return NULL;
+    }
+
+    // for now only support arrays, in the future may also support memoryviews
+    ASSERT(cgpt_PyArray_Check(input));
+
+    return cgpt_copy_cyclic_upscale_array((PyArrayObject*)input, (size_t)sz_target);
+  });
+
 EXPORT(copy_create_view_from_lattice,{
     PyObject* pos, * vlat, * tidx;
     
@@ -118,7 +132,7 @@ EXPORT(copy_create_view_from_lattice,{
     ASSERT(cgpt_PyArray_Check(tidx));
 
     cgpt_gm_view* v = new cgpt_gm_view();
-    GridBase* grid = append_view_from_vlattice(v->view,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
+    GridBase* grid = cgpt_copy_append_view_from_vlattice(v->view,vlat,0,1,(PyArrayObject*)pos,(PyArrayObject*)tidx);
 
     v->comm = grid->communicator;
     v->rank = grid->_processor;
