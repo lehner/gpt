@@ -31,6 +31,9 @@ class copy_plan:
         src = gpt.util.to_list(src)
         cgpt.copy_execute_plan(self.obj, dst, src, self.lattice_view_location)
 
+    def info(self):
+        return cgpt.copy_get_plan_info(self.obj)
+
         
 class copy_view:
     def __init__(self, first, second = None):

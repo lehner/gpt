@@ -77,6 +77,41 @@ EXPORT(copy_create_plan,{
     return PyLong_FromVoidPtr(plan);
   });
 
+EXPORT(copy_get_plan_info,{
+    long _plan;
+    if (!PyArg_ParseTuple(args, "l", &_plan)) {
+      return NULL;
+    }
+
+    gm_transfer* plan = (gm_transfer*)_plan;
+
+    PyObject* ret = PyDict_New();
+    for (auto & rank : plan->blocks) {
+      auto rank_dst = rank.first.first;
+      auto rank_src = rank.first.second;
+
+      PyObject* ret_rank = PyDict_New();
+      for (auto & index : rank.second) {
+	auto index_dst = index.first.first;
+	auto index_src = index.first.second;
+	size_t blocks = index.second.size();
+	size_t size = 0;
+	for (auto & b : index.second) {
+	  size += b.size;
+	}
+
+	PyObject* data = PyDict_New();
+	PyDict_SetItemString(data,"blocks",PyLong_FromLong((long)blocks));
+	PyDict_SetItemString(data,"size",PyLong_FromLong((long)size));
+	PyDict_SetItem(ret_rank, Py_BuildValue("(ll)",index_dst, index_src), data);
+      }
+
+      PyDict_SetItem(ret, Py_BuildValue("(ll)",rank_dst, rank_src), ret_rank);
+    }
+
+    return ret;
+  });
+    
 EXPORT(copy_execute_plan,{
 
     long _plan;

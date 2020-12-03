@@ -47,10 +47,20 @@ def assign_pos():
 
 
 def assign_pos_view():
-    g.copy_plan(lhs.view[pos], l_dp.view[pos])(lhs,l_dp)
+    plan = g.copy_plan(lhs.view[pos], l_dp.view[pos])
+    info = plan.info()
+    for rank_dst, rank_src in info:
+        assert rank_dst == rank_src
+        assert rank_dst == lhs.grid.processor
+        info_rank = info[(rank_dst, rank_src)]
+        for index in info_rank:
+            info_index = info_rank[index]
+            # Make sure that after optimization only a single memcpy is needed
+            assert info_index["blocks"] == 1
+    plan(lhs,l_dp)
 
 
-for method in [assign_copy, assign_pos]: #, assign_pos_view
+for method in [assign_copy, assign_pos, assign_pos_view]:
     lhs[:] = 0
     method()
     eps2 = g.norm2(lhs - l_dp) / g.norm2(l_dp)
