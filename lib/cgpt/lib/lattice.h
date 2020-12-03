@@ -23,7 +23,6 @@
 #include "lattice/matrix.h"
 #include "lattice/term.h"
 #include "lattice/unary.h"
-#include "lattice/importexport.h"
 #include "lattice/tostring.h"
 #include "lattice/coordinates.h"
 #include "lattice/implementation.h"

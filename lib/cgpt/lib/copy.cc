@@ -116,9 +116,12 @@ EXPORT(copy_cyclic_upscale,{
     }
 
     // for now only support arrays, in the future may also support memoryviews
-    ASSERT(cgpt_PyArray_Check(input));
+    if (cgpt_PyArray_Check(input)) {
+      return cgpt_copy_cyclic_upscale_array((PyArrayObject*)input, (size_t)sz_target);
+    }
 
-    return cgpt_copy_cyclic_upscale_array((PyArrayObject*)input, (size_t)sz_target);
+    Py_XINCREF(input);
+    return input;
   });
 
 EXPORT(copy_create_view_from_lattice,{

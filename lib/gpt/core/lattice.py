@@ -143,37 +143,37 @@ class lattice(factor):
 
         # general code path, map key
         pos, tidx, shape = gpt.map_key(self, key)
+        my_view=gpt.copy_view(cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx))
+        
+        # convert input to proper numpy array
+        value = gpt.util.tensor_to_value(
+            value, dtype=self.grid.precision.complex_dtype
+        )
 
-        # copy from view or array
-        if type(value) == tuple:
-            # direct copy from view
-            cgpt.lattice_import_view(
-                self.v_obj, pos, tidx, value[3], value[0], value[1]
-            )
-        else:
-            # convert input to proper numpy array
-            value = gpt.util.tensor_to_value(
-                value, dtype=self.grid.precision.complex_dtype
-            )
+        # allow for none
+        if value is None:
+            value = memoryview(bytearray())
 
-            # and import
-            cgpt.lattice_import(self.v_obj, pos, tidx, value)
+        # needed bytes and optional cyclic upscaling
+        nbytes_needed = len(pos)*numpy.prod(shape)*self.grid.precision.nbytes*2
+        value = cgpt.copy_cyclic_upscale(value, nbytes_needed)
+        value_view=gpt.copy_view(self.grid.obj,[[self.grid.processor,0,0,value.nbytes]])
+        gpt.copy_plan(my_view,value_view)(self,value)
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self, key)
         my_view=gpt.copy_view(cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx))
 
-        val=numpy.ndarray((len(pos),*shape),dtype=self.grid.precision.complex_dtype,order='C')
-        val_view=gpt.copy_view(self.grid.obj,[[self.grid.processor,0,0,val.nbytes]])
-        plan=gpt.copy_plan(val_view,my_view)
-        plan(val,self)
+        value=numpy.ndarray((len(pos),*shape),dtype=self.grid.precision.complex_dtype,order='C')
+        value_view=gpt.copy_view(self.grid.obj,[[self.grid.processor,0,0,value.nbytes]])
+        gpt.copy_plan(value_view,my_view)(value,self)
         
         # if only a single element is returned and we have the full shape,
         # wrap in a tensor
-        if len(val) == 1 and shape == self.otype.shape:
-            return gpt.util.value_to_tensor(val[0], self.otype)
+        if len(value) == 1 and shape == self.otype.shape:
+            return gpt.util.value_to_tensor(value[0], self.otype)
 
-        return val
+        return value
 
     def mview(self):
         return [cgpt.lattice_memory_view(o) for o in self.v_obj]
