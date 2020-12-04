@@ -45,9 +45,13 @@ class copy_plan:
 
 
 class copy_view:
-    def __init__(self, first, second=None):
+    def __init__(self, first=None, second=None):
         if second is None:
-            self.obj = first
+            if first is None:
+                # empty global view
+                self.obj = cgpt.copy_create_view(0, numpy.ndarray(shape=(0,4),dtype=numpy.int64))
+            else:
+                self.obj = first
         else:
             grid_obj = first
             blocks = numpy.array(second, dtype=numpy.int64)
@@ -58,3 +62,16 @@ class copy_view:
 
     def __len__(self):
         return cgpt.copy_view_size(self.obj)
+
+    @property
+    def globalized(self):
+        return copy_view(cgpt.copy_view_globalized(self.obj))
+
+    def __add__(self, other):
+        return copy_view(cgpt.copy_add_views(self.obj,other.obj))
+
+    def __iadd__(self, other):
+        obj_prev = self.obj
+        self.obj = cgpt.copy_add_views(obj_prev,other.obj)
+        cgpt.copy_delete_view(obj_prev)
+        return self

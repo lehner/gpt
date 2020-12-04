@@ -188,6 +188,8 @@ class global_transfer {
   template<typename data_t>
   void root_to_all(const std::map<rank_t, std::vector<data_t> > & rank, std::vector<data_t>& my);
 
+  void global_sum(std::vector<uint64_t>& data);
+  
   void provide_my_receivers_get_my_senders(const std::map<rank_t, size_t>& receivers,
 					   std::map<rank_t, size_t>& senders);
 
@@ -219,7 +221,7 @@ class global_memory_transfer : public global_transfer<rank_t> {
   typedef global_memory_view<offset_t,rank_t,index_t> view_t;
 
   struct block_t {
-    offset_t start_dst, start_src, size;
+    offset_t start_dst, start_src, size; // todo: support stride?
   };
 
   class memory_view {

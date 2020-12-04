@@ -19,6 +19,7 @@
 struct cgpt_gm_view {
   Grid_MPI_Comm comm;
   int rank;
+  uint32_t n_indices;
   gm_view view;
 };
 
@@ -33,6 +34,77 @@ static memory_type cgpt_memory_type_from_string(const std::string& s) {
     ERR("Unknown memory_type %s",s.c_str());
   }
 }
+
+static uint32_t cgpt_get_view_max_index(gm_view& a) {
+  long max_index = -1;
+  thread_region
+    {
+      long thread_max_index = -1;
+      thread_for_in_region(i, a.blocks.size(), {
+	  auto & blk = a.blocks[i];
+	  if ((long)blk.index > thread_max_index)
+	    thread_max_index = (long)blk.index;
+	});
+
+      thread_critical
+	{
+	  if (thread_max_index > max_index)
+	    max_index = thread_max_index;
+	}
+    }
+  return max_index;
+}
+
+static cgpt_gm_view* cgpt_add_views(cgpt_gm_view* a, cgpt_gm_view* b) {
+  ASSERT(a->comm == b->comm);
+  ASSERT(a->rank == b->rank);
+
+  cgpt_gm_view* r = new cgpt_gm_view();
+  r->comm = a->comm;
+  r->rank = a->rank;
+  r->n_indices = a->n_indices + b->n_indices;
+
+  r->view.blocks.resize(a->view.blocks.size() + b->view.blocks.size());
+  thread_for(i, a->view.blocks.size(), {
+      r->view.blocks[i] = a->view.blocks[i];
+    });
+  thread_for(i, b->view.blocks.size(), {
+      auto & blk = r->view.blocks[a->view.blocks.size() + i];
+      blk = b->view.blocks[i];
+      blk.index += a->n_indices;
+    });
+  
+  return r;
+}
+
+static cgpt_gm_view* cgpt_view_globalized(cgpt_gm_view* v) {
+
+  cgpt_gm_view* r = new cgpt_gm_view();
+  
+  global_transfer<int> xf(v->rank, v->comm);
+
+  std::vector<uint64_t> rank_map(xf.mpi_ranks,0);
+    
+  r->comm = CartesianCommunicator::communicator_world;
+  r->rank = CartesianCommunicator::RankWorld();
+  r->n_indices = v->n_indices;
+  r->view.blocks.resize(v->view.blocks.size());
+  
+  rank_map[xf.rank] = (uint64_t)r->rank;
+  xf.global_sum(rank_map);
+  
+  thread_for(i, v->view.blocks.size(), {
+      auto & s = v->view.blocks[i];
+      auto & d = r->view.blocks[i];
+      d = s;
+
+      // fix rank
+      d.rank = (int)rank_map[s.rank];
+    });
+
+  return r;
+}
+
 
 static void cgpt_copy_add_memory_views(std::vector<gm_transfer::memory_view>& mv,
 				       PyObject* s,

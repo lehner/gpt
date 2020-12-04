@@ -40,6 +40,27 @@ EXPORT(copy_view_size,{
     return PyLong_FromLong((long)v->view.size());
   });
 
+EXPORT(copy_view_globalized,{
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+    
+    cgpt_gm_view* v = (cgpt_gm_view*)p;
+    return PyLong_FromVoidPtr(cgpt_view_globalized(v));
+  });
+
+EXPORT(copy_add_views,{
+    void* _a, *_b;
+    if (!PyArg_ParseTuple(args, "ll", &_a, &_b)) {
+      return NULL;
+    }
+    
+    cgpt_gm_view* a = (cgpt_gm_view*)_a;
+    cgpt_gm_view* b = (cgpt_gm_view*)_b;
+    return PyLong_FromVoidPtr(cgpt_add_views(a,b));
+  });
+
 EXPORT(copy_delete_plan,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {
@@ -174,30 +195,10 @@ EXPORT(copy_create_view_from_lattice,{
 
     v->comm = grid->communicator;
     v->rank = grid->_processor;
+    v->n_indices = (uint32_t)PyList_Size(vlat);
     
     return PyLong_FromVoidPtr(v);
   });
-
-/*
-  Add views
-*/
-
-/*
-  To global communicator
-
-      v->comm = CartesianCommunicator::communicator_world;
-      v->rank = CartesianCommunicator::RankWorld();
-
-      std::vector<uint64_t> rank_map(grid->_Nprocessors,0);
-      rank_map[grid->_processor] = (uint64_t)v->rank;
-      grid->GlobalSumVector(&rank_map[0],rank_map.size());
-
-      thread_for(i, v->view.blocks.size(), {
-	  auto & x = v->view.blocks[i];
-	  x.rank = (int)rank_map[grid->_processor];
-	});
-    }
-*/
 
 EXPORT(copy_create_view,{
 
@@ -240,6 +241,7 @@ EXPORT(copy_create_view,{
 	  x.size = (uint64_t)ad[4 * i + 3];
 	});
 
+    v->n_indices = cgpt_get_view_max_index(v->view) + 1;
     return PyLong_FromVoidPtr(v);
   });
 

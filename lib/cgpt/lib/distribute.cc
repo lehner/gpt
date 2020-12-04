@@ -41,6 +41,13 @@ global_transfer<rank_t>::global_transfer(rank_t _rank, Grid_MPI_Comm _comm) : ra
 }
 
 template<typename rank_t>
+void global_transfer<rank_t>::global_sum(std::vector<uint64_t>& data) {
+#ifdef CGPT_USE_MPI
+  ASSERT(MPI_SUCCESS == MPI_Allreduce(MPI_IN_PLACE,&data[0],data.size(),MPI_UINT64_T,MPI_SUM,comm));
+#endif
+}
+
+template<typename rank_t>
 template<typename data_t>
 void global_transfer<rank_t>::root_to_all(const std::map<rank_t, std::vector<data_t> > & all, std::vector<data_t>& my) {
 
@@ -599,6 +606,11 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bl
   const char* p_src = (const char*)base_src.ptr;
   
   if (mt_dst == mt_host && mt_src == mt_host) {
+    // TODO
+    // strategy:
+    // - define nparallel (number of threads)
+    // - nparallel_per_block = nparallel / blocks.size()
+    //
     for (size_t i=0;i<blocks.size();i++) {
       auto&b=blocks[i];
       memcpy(&p_dst[b.start_dst],&p_src[b.start_src],b.size);
@@ -736,6 +748,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
 }
 
+template class global_transfer<int>;
 template class global_memory_view<uint64_t,int,uint32_t>;
 template class global_memory_transfer<uint64_t,int,uint32_t>;
 
