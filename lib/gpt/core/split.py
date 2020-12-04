@@ -69,7 +69,8 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
     if cache is None:
         cache = {}
 
-    if "split_plan" not in cache:
+    cache_key = f"split_plan_{lattices[0].grid.obj}_{l[0].grid.obj}_{lattices[0].otype.__name__}_{l[0].otype.__name__}_{n}_{N}"
+    if cache_key not in cache:
         src_view = gpt.copy_view()
         dst_view = gpt.copy_view()
         for i in range(Q):
@@ -85,9 +86,9 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
             for x in l:
                 dst_view += x.view[lc].globalized
 
-        cache["split_plan"] = gpt.copy_plan(dst_view, src_view)
+        cache[cache_key] = gpt.copy_plan(dst_view, src_view)
 
-    cache["split_plan"](dst_data, src_data)
+    cache[cache_key](dst_data, src_data)
 
     return l
 
@@ -114,7 +115,8 @@ def unsplit(first, second, cache=None):
     if cache is None:
         cache = {}
 
-    if "unsplit_plan" not in cache:
+    cache_key = f"unsplit_plan_{first[0].grid.obj}_{second[0].grid.obj}_{first[0].otype.__name__}_{second[0].otype.__name__}_{n}_{N}"
+    if cache_key not in cache:
         src_view = gpt.copy_view()
         dst_view = gpt.copy_view()
 
@@ -131,9 +133,9 @@ def unsplit(first, second, cache=None):
             for x in first[i * N : (i + 1) * N]:
                 dst_view += x.view[gc].globalized
 
-        cache["unsplit_plan"] = gpt.copy_plan(dst_view, src_view)
+        cache[cache_key] = gpt.copy_plan(dst_view, src_view)
 
-    cache["unsplit_plan"](dst_data, src_data)
+    cache[cache_key](dst_data, src_data)
 
 
 def split_sites(first, sites, mpi_split=None):
