@@ -49,7 +49,9 @@ class copy_view:
         if second is None:
             if first is None:
                 # empty global view
-                self.obj = cgpt.copy_create_view(0, numpy.ndarray(shape=(0,4),dtype=numpy.int64))
+                self.obj = cgpt.copy_create_view(
+                    0, numpy.ndarray(shape=(0, 4), dtype=numpy.int64)
+                )
             else:
                 self.obj = first
         else:
@@ -68,10 +70,10 @@ class copy_view:
         return copy_view(cgpt.copy_view_globalized(self.obj))
 
     def __add__(self, other):
-        return copy_view(cgpt.copy_add_views(self.obj,other.obj))
+        return copy_view(cgpt.copy_add_views(self.obj, other.obj))
 
     def __iadd__(self, other):
         obj_prev = self.obj
-        self.obj = cgpt.copy_add_views(obj_prev,other.obj)
+        self.obj = cgpt.copy_add_views(obj_prev, other.obj)
         cgpt.copy_delete_view(obj_prev)
         return self
