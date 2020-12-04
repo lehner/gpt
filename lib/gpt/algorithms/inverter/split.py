@@ -46,8 +46,8 @@ class split:
                 )
 
             t0 = g.time()
-            src_split = g.split(src, split_grid=matrix_split.grid[1], src_cache)
-            dst_split = g.split(dst, split_grid=matrix_split.grid[0], dst_cache)
+            src_split = g.split(src, matrix_split.grid[1], src_cache)
+            dst_split = g.split(dst, matrix_split.grid[0], dst_cache)
             t1 = g.time()
 
             operation_split(dst_split, src_split)
