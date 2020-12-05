@@ -40,14 +40,27 @@ EXPORT(copy_view_size,{
     return PyLong_FromLong((long)v->view.size());
   });
 
-EXPORT(copy_view_globalized,{
-    void* p;
-    if (!PyArg_ParseTuple(args, "l", &p)) {
+EXPORT(copy_view_embeded_in_communicator,{
+    void* p,* _grid;
+    if (!PyArg_ParseTuple(args, "ll", &p,&_grid)) {
       return NULL;
     }
     
     cgpt_gm_view* v = (cgpt_gm_view*)p;
-    return PyLong_FromVoidPtr(cgpt_view_globalized(v));
+    GridBase* grid = (GridBase*)_grid;
+    return PyLong_FromVoidPtr(cgpt_view_embeded_in_communicator(v,grid));
+  });
+
+EXPORT(copy_view_add_index_offset,{
+    void* p;
+    long offset;
+    if (!PyArg_ParseTuple(args, "ll", &p,&offset)) {
+      return NULL;
+    }
+    
+    cgpt_gm_view* v = (cgpt_gm_view*)p;
+    cgpt_view_index_offset(v->view, (uint32_t)offset);
+    return PyLong_FromLong(0);
   });
 
 EXPORT(copy_add_views,{
@@ -195,7 +208,6 @@ EXPORT(copy_create_view_from_lattice,{
 
     v->comm = grid->communicator;
     v->rank = grid->_processor;
-    v->n_indices = (uint32_t)PyList_Size(vlat);
     
     return PyLong_FromVoidPtr(v);
   });
@@ -241,7 +253,6 @@ EXPORT(copy_create_view,{
 	  x.size = (uint64_t)ad[4 * i + 3];
 	});
 
-    v->n_indices = cgpt_get_view_max_index(v->view) + 1;
     return PyLong_FromVoidPtr(v);
   });
 

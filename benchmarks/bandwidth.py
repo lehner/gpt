@@ -32,7 +32,10 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     pos = g.coordinates(lhs)
 
     # create plan during first assignment, exclude from benchmark
-    plan = g.copy_plan(lhs.view[pos], rhs.view[pos])
+    plan = g.copy_plan(lhs, rhs)
+    plan.destination += lhs.view[pos]
+    plan.source += rhs.view[pos]
+    plan = plan()
 
     t0 = g.time()
     for n in range(N):

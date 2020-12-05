@@ -47,7 +47,10 @@ def assign_pos():
 
 
 def assign_pos_view():
-    plan = g.copy_plan(lhs.view[pos], l_dp.view[pos])
+    plan = g.copy_plan(lhs, l_dp)
+    plan.destination += lhs.view[pos]
+    plan.source += l_dp.view[pos]
+    plan = plan()
     info = plan.info()
     for rank_dst, rank_src in info:
         assert rank_dst == rank_src

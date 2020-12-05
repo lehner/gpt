@@ -53,8 +53,6 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
 
     l = [gpt.lattice(split_grid, otype) for i in range(N)]
 
-    empty = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
-
     for x in l:
         x.checkerboard(cb)
         x.split_lcoor = lcoor
@@ -63,7 +61,7 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
     srank = split_grid.srank
 
     src_data = lattices
-    dst_data = l * Q
+    dst_data = l
 
     # build views
     if cache is None:
@@ -71,22 +69,13 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
 
     cache_key = f"split_plan_{lattices[0].grid.obj}_{l[0].grid.obj}_{lattices[0].otype.__name__}_{l[0].otype.__name__}_{n}_{N}"
     if cache_key not in cache:
-        src_view = gpt.copy_view()
-        dst_view = gpt.copy_view()
-        for i in range(Q):
-            if i == srank // (sranks // Q):
-                lc = lcoor
-                gc = gcoor
-            else:
-                lc = empty
-                gc = lc
-
-            for x in lattices[i * N : (i + 1) * N]:
-                src_view += x.view[gc].globalized
-            for x in l:
-                dst_view += x.view[lc].globalized
-
-        cache[cache_key] = gpt.copy_plan(dst_view, src_view)
+        plan = gpt.copy_plan(dst_data, src_data, embed_in_communicator=lattices[0].grid)
+        i = srank // (sranks // Q)
+        for x in lattices[i * N : (i + 1) * N]:
+            plan.source += x.view[gcoor]
+        for x in l:
+            plan.destination += x.view[lcoor]
+        cache[cache_key] = plan()
 
     cache[cache_key](dst_data, src_data)
 
@@ -109,7 +98,7 @@ def unsplit(first, second, cache=None):
     gcoor = second[0].split_gcoor
     empty = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
 
-    src_data = second * Q
+    src_data = second
     dst_data = first
 
     if cache is None:
@@ -117,23 +106,13 @@ def unsplit(first, second, cache=None):
 
     cache_key = f"unsplit_plan_{first[0].grid.obj}_{second[0].grid.obj}_{first[0].otype.__name__}_{second[0].otype.__name__}_{n}_{N}"
     if cache_key not in cache:
-        src_view = gpt.copy_view()
-        dst_view = gpt.copy_view()
-
-        for i in range(Q):
-            if i == srank // (sranks // Q):
-                lc = lcoor
-                gc = gcoor
-            else:
-                lc = empty
-                gc = lc
-
-            for x in second:
-                src_view += x.view[lc].globalized
-            for x in first[i * N : (i + 1) * N]:
-                dst_view += x.view[gc].globalized
-
-        cache[cache_key] = gpt.copy_plan(dst_view, src_view)
+        plan = gpt.copy_plan(dst_data, src_data, embed_in_communicator=first[0].grid)
+        i = srank // (sranks // Q)
+        for x in first[i * N : (i + 1) * N]:
+            plan.destination += x.view[gcoor]
+        for x in second:
+            plan.source += x.view[lcoor]
+        cache[cache_key] = plan()
 
     cache[cache_key](dst_data, src_data)
 

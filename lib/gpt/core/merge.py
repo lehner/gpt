@@ -195,7 +195,10 @@ def separate_indices(x, st, cache=default_merge_indices_cache):
     islice = [slice(None, None, None) for i in range(len(x.otype.shape))]
     ivec = [0] * rank
     result = {}
-    cache_key_base = f"separate_indices_{cb.__name__}_{result_otype.__name__}_{x.otype.__name__}_{x.grid.obj}"
+
+    keys = []
+    tidx = []
+    dst = []
     for i in range(ndim ** rank):
         idx = i
         for j in range(rank):
@@ -203,15 +206,25 @@ def separate_indices(x, st, cache=default_merge_indices_cache):
             islice[st[j]] = c
             ivec[j] = c
             idx //= ndim
+        keys.append(tuple(ivec))
+        tidx.append(tuple(islice))
+
+    for i in keys:
         v = gpt.lattice(x.grid, result_otype)
         v.checkerboard(cb)
-        cache_key = f"{cache_key_base}_{i}"
-        if cache_key not in cache:
-            cache[cache_key] = gpt.copy_plan(
-                v.view[pos], x.view[(pos,) + tuple(islice)]
-            )
-        cache[cache_key](v, x)
-        result[tuple(ivec)] = v
+        result[i] = v
+        dst.append(v)
+
+    cache_key = f"separate_indices_{cb.__name__}_{result_otype.__name__}_{x.otype.__name__}_{x.grid.obj}"
+    if cache_key not in cache:
+        plan = gpt.copy_plan(dst, x)
+        for i in range(len(tidx)):
+            plan.destination += result[keys[i]].view[pos]
+            plan.source += x.view[(pos,) + tidx[i]]
+        cache[cache_key] = plan()
+
+    cache[cache_key](dst, x)
+
     return result
 
 
@@ -234,9 +247,10 @@ def merge_indices(dst, src, st, cache=default_merge_indices_cache):
     rank = len(st) - 1
     islice = [slice(None, None, None) for i in range(len(dst.otype.shape))]
     ivec = [0] * rank
-    cache_key_base = (
-        f"merge_indices_{dst.describe()}_{result_otype.__name__}_{dst.grid.obj}"
-    )
+    cache_key = f"merge_indices_{dst.describe()}_{result_otype.__name__}_{dst.grid.obj}"
+
+    tidx = []
+    src_i = []
     for i in range(ndim ** rank):
         idx = i
         for j in range(rank):
@@ -244,13 +258,17 @@ def merge_indices(dst, src, st, cache=default_merge_indices_cache):
             islice[st[j]] = c
             ivec[j] = c
             idx //= ndim
-        src_i = src[tuple(ivec)]
-        cache_key = f"{cache_key_base}_{i}"
-        if cache_key not in cache:
-            cache[cache_key] = gpt.copy_plan(
-                dst.view[(pos,) + tuple(islice)], src_i.view[:]
-            )
-        cache[cache_key](dst, src_i)
+        src_i.append(src[tuple(ivec)])
+        tidx.append(tuple(islice))
+
+    if cache_key not in cache:
+        plan = gpt.copy_plan(dst, src_i)
+        for i in range(ndim ** rank):
+            plan.destination += dst.view[(pos,) + tidx[i]]
+            plan.source += src_i[i].view[:]
+        cache[cache_key] = plan()
+
+    cache[cache_key](dst, src_i)
 
 
 def merge_spin(dst, src):

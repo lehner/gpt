@@ -26,15 +26,13 @@ def get_mem_book():
     return mem_book
 
 
-class lattice_view:
+class lattice_view_constructor:
     def __init__(self, parent):
         self.parent = parent
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self.parent, key)
-        return gpt.copy_view(
-            cgpt.copy_create_view_from_lattice(self.parent.v_obj, pos, tidx)
-        )
+        return gpt.lattice_view(self.parent, pos, tidx)
 
 
 class lattice(factor):
@@ -129,7 +127,7 @@ class lattice(factor):
 
     @property
     def view(self):
-        return lattice_view(self)
+        return lattice_view_constructor(self)
 
     def __setitem__(self, key, value):
         # short code path to zero lattice
@@ -145,38 +143,41 @@ class lattice(factor):
 
         # general code path, map key
         pos, tidx, shape = gpt.map_key(self, key)
-        my_view = gpt.copy_view(
-            cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx)
-        )
 
         # convert input to proper numpy array
         value = gpt.util.tensor_to_value(value, dtype=self.grid.precision.complex_dtype)
-
-        # allow for none
         if value is None:
             value = memoryview(bytearray())
 
         # needed bytes and optional cyclic upscaling
         nbytes_needed = len(pos) * numpy.prod(shape) * self.grid.precision.nbytes * 2
         value = cgpt.copy_cyclic_upscale(value, nbytes_needed)
-        value_view = gpt.copy_view(
-            self.grid.obj, [[self.grid.processor, 0, 0, value.nbytes]]
+
+        # create plan
+        plan = gpt.copy_plan(self, value)
+        plan.destination += gpt.lattice_view(self, pos, tidx)
+        plan.source += gpt.global_memory_view(
+            self.grid, [[self.grid.processor, value, 0, value.nbytes]]
         )
-        gpt.copy_plan(my_view, value_view)(self, value)
+        xp = plan()
+
+        xp(self, value)
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self, key)
-        my_view = gpt.copy_view(
-            cgpt.copy_create_view_from_lattice(self.v_obj, pos, tidx)
-        )
 
         value = numpy.ndarray(
             (len(pos), *shape), dtype=self.grid.precision.complex_dtype, order="C"
         )
-        value_view = gpt.copy_view(
-            self.grid.obj, [[self.grid.processor, 0, 0, value.nbytes]]
+
+        plan = gpt.copy_plan(value, self)
+        plan.destination += gpt.global_memory_view(
+            self.grid, [[self.grid.processor, value, 0, value.nbytes]]
         )
-        gpt.copy_plan(value_view, my_view)(value, self)
+        plan.source += gpt.lattice_view(self, pos, tidx)
+        xp = plan()
+
+        xp(value, self)
 
         # if only a single element is returned and we have the full shape,
         # wrap in a tensor
