@@ -25,3 +25,4 @@ from gpt.qcd import spin_matrices
 from gpt.qcd import sequential_source
 from gpt.qcd import create_hdf5
 from gpt.qcd import baryon_contractions, baryon_spectrum
+from gpt.qcd import heavy_baryon_contractions, heavy_baryon_spectrum

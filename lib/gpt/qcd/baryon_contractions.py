@@ -22,6 +22,13 @@ import gpt as g
 from gpt.qcd import quarkContract as qC
 import numpy as np
 
+#
+# Add reference and comments
+#
+# Generalize functions?
+#
+
+
 class BaryonsContractions2prop():
 
     def _proton_2pt(self, src_1, src_2, Pol_i, Spin_M):
@@ -95,13 +102,13 @@ class BaryonsContractions3prop():
                         self._sigma_2pt(prop_d, prop_u, prop_s, Pol_i, Spin_M))
 
 
-    def _lambda8_2pt(self, prop_s, prop_u, prop_d, Pol_i, Spin_M):
-        return  (2. * self._sigma_2pt(prop_s, prop_d , prop_u, Pol_i, Spin_M) + \
-                 2. * self._sigma_2pt(prop_s, prop_u, prop_d, Pol_i, Spin_M) + \
-                 2. * self._sigma_2pt(prop_d, prop_s, prop_u, Pol_i, Spin_M) + \
-                 2. * self._sigma_2pt(prop_u, prop_s, prop_d, Pol_i, Spin_M) - \
-                      self._sigma_2pt(prop_d, prop_u, prop_s, Pol_i, Spin_M) - \
-                      self._sigma_2pt(prop_u, prop_d, prop_s, Pol_i, Spin_M)) / 6.
+    def _lambda8_2pt(self, prop_h, prop_u, prop_d, Pol_i, Spin_M):
+        return  (2. * self._sigma_2pt(prop_h, prop_d , prop_u, Pol_i, Spin_M) + \
+                 2. * self._sigma_2pt(prop_h, prop_u, prop_d, Pol_i, Spin_M) + \
+                 2. * self._sigma_2pt(prop_d, prop_h, prop_u, Pol_i, Spin_M) + \
+                 2. * self._sigma_2pt(prop_u, prop_h, prop_d, Pol_i, Spin_M) - \
+                      self._sigma_2pt(prop_d, prop_u, prop_h, Pol_i, Spin_M) - \
+                      self._sigma_2pt(prop_u, prop_d, prop_h, Pol_i, Spin_M)) / 6.
 
 
     def _lambda8_to_sigma0_2pt(self, prop_s, prop_u, prop_d, Pol_i, Spin_M):

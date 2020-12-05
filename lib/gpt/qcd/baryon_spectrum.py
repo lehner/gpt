@@ -28,9 +28,7 @@ b2p = BaryonsContractions2prop()
 b3p = BaryonsContractions2prop()
 
 
-def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list, time_rev):
-
-    n_baryons = int(corr.shape[0] / 2)
+def _baryon_loop(corr, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list, time_rev, n_baryons):
 
     for baryon_n in range(n_baryons):
         if(baryon_n == 0):
@@ -138,7 +136,7 @@ def baryon_spectrum(data_file, quark_prop_1, quark_prop_2, quark_prop_3, moms, m
 
     correlators = np.zeros((n_baryons * 2, len(mom_list), Nt), dtype = complex)
     time_rev = 0
-    _baryon_loop(correlators, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list, time_rev)
+    _baryon_loop(correlators, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list, time_rev, n_baryons)
 
     #
     # Time reversed propagators
@@ -149,5 +147,5 @@ def baryon_spectrum(data_file, quark_prop_1, quark_prop_2, quark_prop_3, moms, m
     quark_prop_3 = g.eval(-g.gamma[5] * g.gamma["T"] * quark_prop_3 * g.gamma[5] * g.gamma["T"])
     time_rev = 1
 
-    _baryon_loop(correlators, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list, time_rev)
+    _baryon_loop(correlators, quark_prop_1, quark_prop_2, quark_prop_3, moms, mom_list, time_rev, n_baryons)
     _write_hdf5dset(correlators, data_file)
