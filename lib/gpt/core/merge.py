@@ -180,7 +180,10 @@ def separate(lattices, dimension=-1):
 ################################################################################
 # Merging / Separating along internal indices
 ################################################################################
-def separate_indices(x, st):
+default_merge_indices_cache = {}
+
+
+def separate_indices(x, st, cache=default_merge_indices_cache):
     pos = gpt.coordinates(x)
     cb = x.checkerboard()
     assert st is not None
@@ -192,6 +195,7 @@ def separate_indices(x, st):
     islice = [slice(None, None, None) for i in range(len(x.otype.shape))]
     ivec = [0] * rank
     result = {}
+    cache_key_base = f"separate_indices_{cb.__name__}_{result_otype.__name__}_{x.otype.__name__}_{x.grid.obj}"
     for i in range(ndim ** rank):
         idx = i
         for j in range(rank):
@@ -201,7 +205,12 @@ def separate_indices(x, st):
             idx //= ndim
         v = gpt.lattice(x.grid, result_otype)
         v.checkerboard(cb)
-        v[pos] = x[(pos,) + tuple(islice)]
+        cache_key = f"{cache_key_base}_{i}"
+        if cache_key not in cache:
+            cache[cache_key] = gpt.copy_plan(
+                v.view[pos], x.view[(pos,) + tuple(islice)]
+            )
+        cache[cache_key](v, x)
         result[tuple(ivec)] = v
     return result
 
@@ -214,7 +223,7 @@ def separate_color(x):
     return separate_indices(x, x.otype.colortrace)
 
 
-def merge_indices(dst, src, st):
+def merge_indices(dst, src, st, cache=default_merge_indices_cache):
     pos = gpt.coordinates(dst)
     assert st is not None
     result_otype = st[-1]()
@@ -225,6 +234,9 @@ def merge_indices(dst, src, st):
     rank = len(st) - 1
     islice = [slice(None, None, None) for i in range(len(dst.otype.shape))]
     ivec = [0] * rank
+    cache_key_base = (
+        f"merge_indices_{dst.describe()}_{result_otype.__name__}_{dst.grid.obj}"
+    )
     for i in range(ndim ** rank):
         idx = i
         for j in range(rank):
@@ -232,7 +244,13 @@ def merge_indices(dst, src, st):
             islice[st[j]] = c
             ivec[j] = c
             idx //= ndim
-        dst[(pos,) + tuple(islice)] = src[tuple(ivec)][:]
+        src_i = src[tuple(ivec)]
+        cache_key = f"{cache_key_base}_{i}"
+        if cache_key not in cache:
+            cache[cache_key] = gpt.copy_plan(
+                dst.view[(pos,) + tuple(islice)], src_i.view[:]
+            )
+        cache[cache_key](dst, src_i)
 
 
 def merge_spin(dst, src):

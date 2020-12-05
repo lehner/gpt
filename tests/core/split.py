@@ -122,11 +122,11 @@ for src in [l, l_rb]:
     split_grid = src[0].grid.split(
         g.default.get_ivec("--mpi_split", None, 4), src[0].grid.fdimensions
     )
-    src_unsplit = [g.lattice(x) for x in src]
 
     # perform this test without cache and with cache (to fill and then to test)
     cache = {}
     for it in range(3):
+        src_unsplit = [g.lattice(x) for x in src]
         t0 = g.time()
         src_split = g.split(src, split_grid, None if it == 0 else cache)
         t1 = g.time()
