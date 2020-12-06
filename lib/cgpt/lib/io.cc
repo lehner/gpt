@@ -32,7 +32,7 @@ EXPORT(load,{
     if ((ret = load_openQCD(args)))
       return ret;
 
-    return Py_BuildValue("(NN)",Py_None,Py_None);
+    return Py_BuildValue("(OO)",Py_None,Py_None);
     
   });
 

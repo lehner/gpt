@@ -185,9 +185,23 @@ def peek(target, key):
     elif type(target) == list:
 
         pos, tidx, shape = map_key(target, key)
-        v_obj = [y for x in target for y in x.v_obj]
+        grid = target[0].grid
+        assert all([grid.obj == x.grid.obj for x in target])
 
-        return gpt.mview(cgpt.lattice_export(v_obj, pos, tidx, shape))
+        value = numpy.ndarray(
+            (len(pos), *shape), dtype=grid.precision.complex_dtype, order="C"
+        )
+
+        plan = gpt.copy_plan(value, target)
+        plan.destination += gpt.global_memory_view(
+            grid, [[grid.processor, value, 0, value.nbytes]]
+        )
+        plan.source += gpt.lattice_view(target, pos, tidx)
+        xp = plan()
+
+        xp(value, target)
+
+        return gpt.mview(value)
 
     else:
         assert 0
@@ -204,9 +218,18 @@ def poke(target, key, value):
     elif type(target) == list:
 
         pos, tidx, shape = map_key(target, key)
-        v_obj = [y for x in target for y in x.v_obj]
 
-        cgpt.lattice_import(v_obj, pos, tidx, value)
+        grid = target[0].grid
+        assert all([grid.obj == x.grid.obj for x in target])
+
+        plan = gpt.copy_plan(target, value)
+        plan.destination += gpt.lattice_view(target, pos, tidx)
+        plan.source += gpt.global_memory_view(
+            grid, [[grid.processor, value, 0, value.nbytes]]
+        )
+        xp = plan()
+
+        xp(target, value)
 
     else:
         assert 0

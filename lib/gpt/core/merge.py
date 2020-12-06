@@ -81,12 +81,8 @@ def merge(lattices, dimension=-1, N=-1):
         x.checkerboard(cb[0])
 
     # coordinates of source lattices
-    gcoor_zero = lattices[
-        0
-    ].mview_coordinates()  # return coordinates in internal ordering, speed up access
-    gcoor_one = (
-        lattices[1].mview_coordinates() if N > 1 and cb_mask == 1 else gcoor_zero
-    )
+    gcoor_zero = gpt.coordinates(lattices[0])
+    gcoor_one = gpt.coordinates(lattices[1]) if N > 1 and cb_mask == 1 else gcoor_zero
     gcoor = [gcoor_zero, gcoor_one]
 
     # data transfer
@@ -158,9 +154,9 @@ def separate(lattices, dimension=-1):
             x.checkerboard(cb.inv())
 
     # construct coordinates
-    separated_gcoor_zero = separated_lattices[0].mview_coordinates()
+    separated_gcoor_zero = gpt.coordinates(separated_lattices[0])
     separated_gcoor_one = (
-        separated_lattices[1].mview_coordinates()
+        gpt.coordinates(separated_lattices[1])
         if N > 1 and cb_mask == 1
         else separated_gcoor_zero
     )
@@ -184,7 +180,10 @@ def separate(lattices, dimension=-1):
 ################################################################################
 # Merging / Separating along internal indices
 ################################################################################
-def separate_indices(x, st):
+default_merge_indices_cache = {}
+
+
+def separate_indices(x, st, cache=default_merge_indices_cache):
     pos = gpt.coordinates(x)
     cb = x.checkerboard()
     assert st is not None
@@ -196,6 +195,10 @@ def separate_indices(x, st):
     islice = [slice(None, None, None) for i in range(len(x.otype.shape))]
     ivec = [0] * rank
     result = {}
+
+    keys = []
+    tidx = []
+    dst = []
     for i in range(ndim ** rank):
         idx = i
         for j in range(rank):
@@ -203,10 +206,25 @@ def separate_indices(x, st):
             islice[st[j]] = c
             ivec[j] = c
             idx //= ndim
+        keys.append(tuple(ivec))
+        tidx.append(tuple(islice))
+
+    for i in keys:
         v = gpt.lattice(x.grid, result_otype)
         v.checkerboard(cb)
-        v[pos] = x[(pos,) + tuple(islice)]
-        result[tuple(ivec)] = v
+        result[i] = v
+        dst.append(v)
+
+    cache_key = f"separate_indices_{cb.__name__}_{result_otype.__name__}_{x.otype.__name__}_{x.grid.obj}"
+    if cache_key not in cache:
+        plan = gpt.copy_plan(dst, x)
+        for i in range(len(tidx)):
+            plan.destination += result[keys[i]].view[pos]
+            plan.source += x.view[(pos,) + tidx[i]]
+        cache[cache_key] = plan()
+
+    cache[cache_key](dst, x)
+
     return result
 
 
@@ -218,7 +236,7 @@ def separate_color(x):
     return separate_indices(x, x.otype.colortrace)
 
 
-def merge_indices(dst, src, st):
+def merge_indices(dst, src, st, cache=default_merge_indices_cache):
     pos = gpt.coordinates(dst)
     assert st is not None
     result_otype = st[-1]()
@@ -229,6 +247,10 @@ def merge_indices(dst, src, st):
     rank = len(st) - 1
     islice = [slice(None, None, None) for i in range(len(dst.otype.shape))]
     ivec = [0] * rank
+    cache_key = f"merge_indices_{dst.describe()}_{result_otype.__name__}_{dst.grid.obj}"
+
+    tidx = []
+    src_i = []
     for i in range(ndim ** rank):
         idx = i
         for j in range(rank):
@@ -236,7 +258,17 @@ def merge_indices(dst, src, st):
             islice[st[j]] = c
             ivec[j] = c
             idx //= ndim
-        dst[(pos,) + tuple(islice)] = src[tuple(ivec)][:]
+        src_i.append(src[tuple(ivec)])
+        tidx.append(tuple(islice))
+
+    if cache_key not in cache:
+        plan = gpt.copy_plan(dst, src_i)
+        for i in range(ndim ** rank):
+            plan.destination += dst.view[(pos,) + tidx[i]]
+            plan.source += src_i[i].view[:]
+        cache[cache_key] = plan()
+
+    cache[cache_key](dst, src_i)
 
 
 def merge_spin(dst, src):

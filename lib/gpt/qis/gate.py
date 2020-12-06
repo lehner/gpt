@@ -62,8 +62,9 @@ class circuit:
 
         Implementation detail: It's a bit hacky.
         """
-        return circuit([g if g[0] != _R_z else (*g[:-1], -g[-1]) for g in reversed(self.val)])
-
+        return circuit(
+            [g if g[0] != _R_z else (*g[:-1], -g[-1]) for g in reversed(self.val)]
+        )
 
 
 def H(i):

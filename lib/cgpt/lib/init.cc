@@ -53,7 +53,13 @@ EXPORT(init,{
       "    Copyright (C) 2020 Christoph Lehner      " << std::endl <<
       "=============================================" << std::endl;
 
-    cgpt_initialized = true;    
+    cgpt_initialized = true;
+
+    // test global memory system
+    //test_global_memory_system();     
+    //Grid_finalize();
+    //exit(0);
+    
     return PyLong_FromLong(0);
     
   });

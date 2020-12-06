@@ -28,6 +28,10 @@ using namespace Grid;
 #define GRID_HAS_ACCELERATOR
 #endif
 
+#if defined (GRID_COMMS_MPI3)
+#define CGPT_USE_MPI 1
+#endif
+
 #define VECTOR_VIEW_OPEN(l,v,mode)				\
   Vector< decltype(l[0].View(mode)) > v; v.reserve(l.size());	\
   for(uint64_t k=0;k<l.size();k++)				\

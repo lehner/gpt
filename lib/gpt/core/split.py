@@ -24,7 +24,19 @@ import sys
 # TODO: verbose split and time operations below
 
 
-def split_lattices(lattices, lcoor, gcoor, split_grid, N):
+def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
+    # Example:
+    #
+    # Original
+    #
+    # lattice1,...,latticen | lattice1,...,latticen
+    #
+    # New
+    #
+    # lattice1,...,latticeN | latticeN+1,...,lattice2N
+    #
+    # Q = n // N = 2
+
     # N is desired number of parallel split lattices per unsplit lattice
     # 1 <= N <= sranks, sranks % N == 0
     assert len(lcoor) == len(gcoor)
@@ -41,10 +53,6 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N):
 
     l = [gpt.lattice(split_grid, otype) for i in range(N)]
 
-    lcoor = numpy.copy(lcoor)  # no cache
-    gcoor = numpy.copy(gcoor)
-    empty = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
-
     for x in l:
         x.checkerboard(cb)
         x.split_lcoor = lcoor
@@ -52,19 +60,29 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N):
     sranks = split_grid.sranks
     srank = split_grid.srank
 
-    for i in range(Q):
-        if i == srank // (sranks // Q):
-            lc = lcoor
-            gc = gcoor
-        else:
-            lc = empty
-            gc = lc
-        gpt.poke(l, lc, gpt.peek(lattices[i * N : (i + 1) * N], gc))
+    src_data = lattices
+    dst_data = l
+
+    # build views
+    if cache is None:
+        cache = {}
+
+    cache_key = f"split_plan_{lattices[0].grid.obj}_{l[0].grid.obj}_{lattices[0].otype.__name__}_{l[0].otype.__name__}_{n}_{N}"
+    if cache_key not in cache:
+        plan = gpt.copy_plan(dst_data, src_data, embed_in_communicator=lattices[0].grid)
+        i = srank // (sranks // Q)
+        for x in lattices[i * N : (i + 1) * N]:
+            plan.source += x.view[gcoor]
+        for x in l:
+            plan.destination += x.view[lcoor]
+        cache[cache_key] = plan()
+
+    cache[cache_key](dst_data, src_data)
 
     return l
 
 
-def unsplit(first, second):
+def unsplit(first, second, cache=None):
     if type(first) != list:
         return unsplit([first], [second])
 
@@ -78,16 +96,24 @@ def unsplit(first, second):
 
     lcoor = second[0].split_lcoor
     gcoor = second[0].split_gcoor
-    empty = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
 
-    for i in range(Q):
-        if i == srank // (sranks // Q):
-            lc = lcoor
-            gc = gcoor
-        else:
-            lc = empty
-            gc = lc
-        gpt.poke(first[i * N : (i + 1) * N], gc, gpt.peek(second, lc))
+    src_data = second
+    dst_data = first
+
+    if cache is None:
+        cache = {}
+
+    cache_key = f"unsplit_plan_{first[0].grid.obj}_{second[0].grid.obj}_{first[0].otype.__name__}_{second[0].otype.__name__}_{n}_{N}"
+    if cache_key not in cache:
+        plan = gpt.copy_plan(dst_data, src_data, embed_in_communicator=first[0].grid)
+        i = srank // (sranks // Q)
+        for x in first[i * N : (i + 1) * N]:
+            plan.destination += x.view[gcoor]
+        for x in second:
+            plan.source += x.view[lcoor]
+        cache[cache_key] = plan()
+
+    cache[cache_key](dst_data, src_data)
 
 
 def split_sites(first, sites, mpi_split=None):
@@ -126,12 +152,12 @@ def split_by_rank(first):
     return split_lattices(lattices, lcoor, gcoor, split_grid, len(lattices))
 
 
-def split(first, split_grid):
+def split(first, split_grid, cache=None):
     assert len(first) > 0
     lattices = first
     gcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
     lcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
     assert len(lattices) % split_grid.sranks == 0
     return split_lattices(
-        lattices, lcoor, gcoor, split_grid, len(lattices) // split_grid.sranks
+        lattices, lcoor, gcoor, split_grid, len(lattices) // split_grid.sranks, cache
     )

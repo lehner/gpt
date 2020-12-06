@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, numpy
+import cgpt, gpt, numpy, sys
 from gpt.core.expr import factor
 
 mem_book = {}
@@ -26,12 +26,13 @@ def get_mem_book():
     return mem_book
 
 
-class lattice_view:
+class lattice_view_constructor:
     def __init__(self, parent):
         self.parent = parent
 
     def __getitem__(self, key):
-        return gpt.map_key(self.parent, key) + (self.parent.v_obj,)
+        pos, tidx, shape = gpt.map_key(self.parent, key)
+        return gpt.lattice_view(self.parent, pos, tidx)
 
 
 class lattice(factor):
@@ -126,7 +127,7 @@ class lattice(factor):
 
     @property
     def view(self):
-        return lattice_view(self)
+        return lattice_view_constructor(self)
 
     def __setitem__(self, key, value):
         # short code path to zero lattice
@@ -143,38 +144,50 @@ class lattice(factor):
         # general code path, map key
         pos, tidx, shape = gpt.map_key(self, key)
 
-        # copy from view or array
-        if type(value) == tuple:
-            # direct copy from view
-            cgpt.lattice_import_view(
-                self.v_obj, pos, tidx, value[3], value[0], value[1]
-            )
-        else:
-            # convert input to proper numpy array
-            value = gpt.util.tensor_to_value(
-                value, dtype=self.grid.precision.complex_dtype
-            )
+        # convert input to proper numpy array
+        value = gpt.util.tensor_to_value(value, dtype=self.grid.precision.complex_dtype)
+        if value is None:
+            value = memoryview(bytearray())
 
-            # and import
-            cgpt.lattice_import(self.v_obj, pos, tidx, value)
+        # needed bytes and optional cyclic upscaling
+        nbytes_needed = len(pos) * numpy.prod(shape) * self.grid.precision.nbytes * 2
+        value = cgpt.copy_cyclic_upscale(value, nbytes_needed)
+
+        # create plan
+        plan = gpt.copy_plan(self, value)
+        plan.destination += gpt.lattice_view(self, pos, tidx)
+        plan.source += gpt.global_memory_view(
+            self.grid, [[self.grid.processor, value, 0, value.nbytes]]
+        )
+        xp = plan()
+
+        xp(self, value)
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self, key)
-        val = cgpt.lattice_export(self.v_obj, pos, tidx, shape)
+
+        value = numpy.ndarray(
+            (len(pos), *shape), dtype=self.grid.precision.complex_dtype, order="C"
+        )
+
+        plan = gpt.copy_plan(value, self)
+        plan.destination += gpt.global_memory_view(
+            self.grid, [[self.grid.processor, value, 0, value.nbytes]]
+        )
+        plan.source += gpt.lattice_view(self, pos, tidx)
+        xp = plan()
+
+        xp(value, self)
 
         # if only a single element is returned and we have the full shape,
         # wrap in a tensor
-        if len(val) == 1 and shape == self.otype.shape:
-            return gpt.util.value_to_tensor(val[0], self.otype)
+        if len(value) == 1 and shape == self.otype.shape:
+            return gpt.util.value_to_tensor(value[0], self.otype)
 
-        return val
+        return value
 
     def mview(self):
         return [cgpt.lattice_memory_view(o) for o in self.v_obj]
-
-    def mview_coordinates(self):
-        # coordinates are identical for all x \in v_obj
-        return cgpt.lattice_memory_view_coordinates(self.v_obj[0])
 
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype.__name__, self.grid.precision.__name__)

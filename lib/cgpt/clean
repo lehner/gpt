@@ -1,7 +1,5 @@
 #!/bin/bash
 
-rm -rv logs
-rm -rv build
 rm -v next.*
 
 for fn in lib/*{.h,.cc,/*{.h,.cc}} ; do

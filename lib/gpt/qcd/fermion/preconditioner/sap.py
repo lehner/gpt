@@ -253,19 +253,27 @@ class sap_cycle:
         src_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
         dst_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
         solver = [self.blk_solver(op) for op in sap.op_blk]
+        cache = {}
 
         def inv(dst, src):
             dst[:] = 0
             eta = gpt.copy(src)
             ws = [gpt.copy(src) for _ in range(2)]
+            cache_key_base = (
+                f"{dst.describe()}_{src.describe()}_{src.grid.obj}_{dst.grid.obj}"
+            )
 
             dt_solv = dt_distr = dt_hop = 0.0
             for eo in range(2):
                 ws[0][:] = 0
                 dt_distr -= gpt.time()
-                src_blk[sap.pos] = eta[
-                    sap.coor[eo]
-                ]  # reminder view interface eta[[pos]], ...  eta[...,idx]
+                cache_key = f"{cache_key_base}_{eo}_a"
+                if cache_key not in cache:
+                    plan = gpt.copy_plan(src_blk, eta, embed_in_communicator=eta.grid)
+                    plan.destination += src_blk.view[sap.pos]
+                    plan.source += eta.view[sap.coor[eo]]
+                    cache[cache_key] = plan()
+                cache[cache_key](src_blk, eta)
                 dt_distr += gpt.time()
 
                 dt_solv -= gpt.time()
@@ -274,7 +282,15 @@ class sap_cycle:
                 dt_solv += gpt.time()
 
                 dt_distr -= gpt.time()
-                ws[0][sap.coor[eo]] = dst_blk[sap.pos]
+                cache_key = f"{cache_key_base}_{eo}_b"
+                if cache_key not in cache:
+                    plan = gpt.copy_plan(
+                        ws[0], dst_blk, embed_in_communicator=ws[0].grid
+                    )
+                    plan.destination += ws[0].view[sap.coor[eo]]
+                    plan.source += dst_blk.view[sap.pos]
+                    cache[cache_key] = plan()
+                cache[cache_key](ws[0], dst_blk)
                 dt_distr += gpt.time()
 
                 dt_hop -= gpt.time()
