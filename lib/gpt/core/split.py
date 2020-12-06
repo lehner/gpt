@@ -96,7 +96,6 @@ def unsplit(first, second, cache=None):
 
     lcoor = second[0].split_lcoor
     gcoor = second[0].split_gcoor
-    empty = numpy.empty(shape=(0, split_grid.nd), dtype=numpy.int32)
 
     src_data = second
     dst_data = first
