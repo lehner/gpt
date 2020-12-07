@@ -20,22 +20,22 @@
 import numpy as np
 import gpt as g
 from gpt.params import params_convention
-from gpt.qcd.gauge.smear.suN_utils import project_to_su3, su2_extract, suN_fill
+from gpt.core.suN_utils import project_onto_suN
 
 @params_convention(alpha=2.5, orthogonal_dimension=3, Blk_Max=None, Blk_Accuracy=None)
 def ape(U, params):
     nd = len(U)
     alpha = params["alpha"]
     orthogonal_dimension = params["orthogonal_dimension"]
-    Blk_Max = params["Blk_Max"]
-    Blk_Accuracy = params["Blk_Accuracy"]
+    blk_max = params["blk_max"]
+    blk_accuracy = params["blk_accuracy"]
     rho_matrix = np.array(
         [
             [
                 0.0
                 if (
                     mu == orthogonal_dimension or nu == orthogonal_dimension or mu == nu
-                )
+                 )
                 else 1.0
                 for nu in range(nd)
             ]
@@ -43,45 +43,26 @@ def ape(U, params):
         ],
         dtype=np.float64,
     )
-    return ape_general(U, rho=rho_matrix, Blk_Max=Blk_Max, Blk_Accuracy=Blk_Accuracy, orthogonal_dimension=orthogonal_dimension)
+    return ape_general(U, rho=rho_matrix, blk_max=blk_max, blk_accuracy=blk_accuracy, orthogonal_dimension=orthogonal_dimension)
 
 @params_convention(alpha=2.5)
 def ape_general(U, params):
 #   Following (27) of https://arxiv.org/pdf/hep-lat/0505012.pdf
 #   here the smearing factor alpha is multiplying the starting links
     nd = len(U)
-    Nc = U[0].otype.Nc
     alpha = params["alpha"]
     orthogonal_dimension = params["orthogonal_dimension"]
-    grid = U[0].grid
-    vol = float(grid.fsites)
-    C = g.qcd.gauge.smear.staple_sum(U, params)
+    sum_staples = g.qcd.gauge.smear.staple_sum(U, params)
     U_smear = []
-    Blk_Max = params["Blk_Max"]
-    Blk_Accuracy = params["Blk_Accuracy"]
     for mu in range(nd):
         U_mu_smear = U[mu]
         if mu!= orthogonal_dimension:
-             U_mu_smear =  g(U[mu] * alpha)
-             U_mu_smear += g(C[mu])
+             U_mu_smear =  g(U[mu] * alpha) + g(sum_staples[mu])
              U_unproj = g.eval(g.adj(U_mu_smear))
-             # start with original link
-             U_mu_smear = U[mu]
-             old_trace = np.sum(g.slice(g.trace(U_mu_smear * U_unproj) / (vol * Nc), 3)).real
-             n_smear = 0
-             epsilon = 1.
-             while(n_smear < Blk_Max and epsilon > Blk_Accuracy):
-                 n_smear += 1
-                 for su2_index in range(int(Nc * (Nc - 1) / 2)):
-                     U_mu_smear = project_to_su3(U_mu_smear, U_unproj, su2_index)
-                 assert(U_mu_smear != U[mu])
-                 # calculate new trace
-                 new_trace = np.sum(g.slice(g.trace(U_mu_smear * U_unproj) / (vol * Nc), 3)).real
-                 epsilon = np.abs((new_trace - old_trace) / old_trace)
-                 old_trace = new_trace
-        # Reunitarize
-        g.message("reunitarize")
-        g.qcd.reunitize(U_mu_smear)
-        g.qcd.gauge.assert_unitary(U_mu_smear)
+             # project onto suN
+             U_mu_smear = project_onto_suN(U_unproj, U[mu], params)
+             # Reunitarize
+             g.qcd.reunitize(U_mu_smear)
+             g.qcd.gauge.assert_unitary(U_mu_smear)
         U_smear.append(U_mu_smear)
     return U_smear
