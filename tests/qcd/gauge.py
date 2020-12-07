@@ -81,7 +81,7 @@ for i in range(3):
 U_ape = U
 P_ape = []
 P_ape_transformed = []
-params_ape = {"alpha":2.5, "Blk_Max":5, "Blk_Accuracy":1e-20}
+params_ape = {"alpha":2.5, "blk_max":5, "blk_accuracy":1e-20}
 for i in range(3):
     U_ape = g.qcd.gauge.smear.ape(U_ape, params_ape)
 
