@@ -19,19 +19,44 @@
 #
 import gpt, sys
 import numpy
+
+# need a basic container to store the group/algebra data
 from gpt.core.object_type import ot_matrix_color, ot_vector_color
 
 ###
+# TODO:
+# first generalize the below to general SU(n) fundamental and adjoint; distinguish group and algebra fields
+# allow for conversion (fundamental <> adjoint is already implemented in representation.py, can merge?) -> type conversion table, then use gpt.convert !!
+#
+
+
+###
 # Representations of groups
-class ot_matrix_su3_fundamental(ot_matrix_color):
-    def __init__(self):
-        self.Nc = 3
-        super().__init__(3)  # need 3 dim lattice
-        self.__name__ = "ot_matrix_su3_fundamental()"
-        self.data_alias = lambda: ot_matrix_color(3)
+class ot_matrix_su_n_fundamental_algebra(ot_matrix_color):
+    def __init__(self, Nc):
+        self.Nc = Nc
+        super().__init__(Nc)
+        self.__name__ = f"ot_matrix_su_n_fundamental_algebra({Nc})"
+        self.data_alias = lambda: ot_matrix_color(Nc)
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
-            "ot_vector_color(3)": (lambda: ot_vector_color(3), (1, 0)),
+            f"ot_vector_color({Nc})": (lambda: ot_vector_color(Nc), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
+
+
+class ot_matrix_su_n_fundamental_group(ot_matrix_color):
+    def __init__(self, Nc):
+        self.Nc = Nc
+        super().__init__(Nc)  # need 3 dim lattice
+        self.__name__ = f"ot_matrix_su_n_fundamental_group({Nc})"
+        self.data_alias = lambda: ot_matrix_color(Nc)
+        self.mtab = {
+            self.__name__: (lambda: self, (1, 0)),
+            f"ot_vector_color({Nc})": (lambda: ot_vector_color(Nc), (1, 0)),
             "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
@@ -39,33 +64,74 @@ class ot_matrix_su3_fundamental(ot_matrix_color):
         }
 
     def generators(self, dt):
-        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
-        return [
-            gpt.matrix_su3_fundamental(i)
-            for i in [
-                numpy.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
-                numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
-                numpy.array([[1, 0, 0], [0, -1, 0], [0, 0, 0]], dtype=dt) / 2.0,
-                numpy.array([[0, 0, 1], [0, 0, 0], [1, 0, 0]], dtype=dt) / 2.0,
-                numpy.array([[0, 0, -1j], [0, 0, 0], [1j, 0, 0]], dtype=dt) / 2.0,
-                numpy.array([[0, 0, 0], [0, 0, 1], [0, 1, 0]], dtype=dt) / 2.0,
-                numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt) / 2.0,
-                numpy.array([[1, 0, 0], [0, 1, 0], [0, 0, -2]], dtype=dt)
-                / (3.0) ** 0.5
-                / 2.0,
-            ]
-        ]
+        r = []
+
+        # accumulate generators in pauli / Gell-Mann ordering
+        for i in range(self.Nc):
+            for j in range(i + 1, self.Nc):
+
+                # sigma_x
+                alg = numpy.zeros(shape=(self.Nc, self.Nc), dtype=dt)
+                alg[i, j] = 1.0
+                alg[j, i] = 1.0
+                r.append(alg)
+
+                # sigma_y
+                alg = numpy.zeros(shape=(self.Nc, self.Nc), dtype=dt)
+                alg[i, j] = -1j
+                alg[j, i] = 1j
+                r.append(alg)
+
+                # sigma_z
+                if j == i + 1:
+                    alg = numpy.zeros(shape=(self.Nc, self.Nc), dtype=dt)
+                    for l in range(j):
+                        alg[l, l] = 1.0
+                    alg[j, j] = -j
+                    r.append(alg)
+
+        # need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
+        for alg in r:
+            alg /= (numpy.trace(numpy.dot(alg, alg)) * 2.0) ** 0.5
+
+        # return gpt_object version
+        algebra_otype = ot_matrix_su_n_fundamental_algebra(self.Nc)
+        return [gpt.gpt_object(i, algebra_otype) for i in r]
 
 
-class ot_matrix_su2_fundamental(ot_matrix_color):
-    def __init__(self):
-        self.Nc = 2
-        super().__init__(2)  # need 2 dim matrices
-        self.__name__ = "ot_matrix_su2_fundamental()"
-        self.data_alias = lambda: ot_matrix_color(2)
+class ot_matrix_su_n_adjoint_algebra(ot_matrix_color):
+    def __init__(self, Nc):
+        self.Nc = Nc
+        self.Ndim = Nc * Nc - 1
+        super().__init__(self.Ndim)
+        self.__name__ = f"ot_matrix_su_n_adjoint_algebra({Nc})"
+        self.data_alias = lambda: ot_matrix_color(self.Ndim)
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
-            "ot_vector_color(2)": (lambda: ot_vector_color(2), (1, 0)),
+            f"ot_vector_color({self.Ndim})": (
+                lambda: ot_vector_color(self.Ndim),
+                (1, 0),
+            ),
+            "ot_singlet": (lambda: self, None),
+        }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
+
+
+class ot_matrix_su_n_adjoint_group(ot_matrix_color):
+    def __init__(self, Nc):
+        self.Nc = Nc
+        self.Ndim = Nc * Nc - 1
+        super().__init__(self.Ndim)
+        self.__name__ = f"ot_matrix_su_n_adjoint_group({Nc})"
+        self.data_alias = lambda: ot_matrix_color(self.Ndim)
+        self.mtab = {
+            self.__name__: (lambda: self, (1, 0)),
+            f"ot_vector_color({self.Ndim})": (
+                lambda: ot_vector_color(self.Ndim),
+                (1, 0),
+            ),
             "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
@@ -73,41 +139,31 @@ class ot_matrix_su2_fundamental(ot_matrix_color):
         }
 
     def generators(self, dt):
-        # The generators are normalized such that T_a^2 = Id/2Nc + d_{aab}T_b/2
-        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
-        return [
-            gpt.matrix_su2_fundamental(i)
-            for i in [
-                numpy.array([[0, 1], [1, 0]], dtype=dt) / 2.0,
-                numpy.array([[0, -1j], [1j, 0]], dtype=dt) / 2.0,
-                numpy.array([[1, 0], [0, -1]], dtype=dt) / 2.0,
+        T_f = ot_matrix_su_n_fundamental_group(self.Nc).generators(dt)
+        f = [
+            [
+                [
+                    numpy.trace(
+                        (T_f[a].array @ T_f[b].array - T_f[b].array @ T_f[a].array)
+                        @ T_f[c].array
+                    )
+                    * 2.0
+                    / 1j
+                    for c in range(self.Ndim)
+                ]
+                for b in range(self.Ndim)
             ]
+            for a in range(self.Ndim)
         ]
+        r = []
+        for a in range(self.Ndim):
+            arr = numpy.array(f[a], dtype=dt) / 1j
+            r.append(arr)
 
+        # need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
+        for alg in r:
+            alg /= (numpy.trace(numpy.dot(alg, alg)) * 2.0) ** 0.5
 
-class ot_matrix_su2_adjoint(ot_matrix_color):
-    def __init__(self):
-        self.Nc = 2
-        super().__init__(3)  # need 3 dim matrices
-        self.__name__ = "ot_matrix_su2_adjoint()"
-        self.data_alias = lambda: ot_matrix_color(3)
-        self.mtab = {
-            self.__name__: (lambda: self, (1, 0)),
-            "ot_vector_color(3)": (lambda: ot_vector_color(3), (1, 0)),
-            "ot_singlet": (lambda: self, None),
-        }
-        self.rmtab = {
-            "ot_singlet": (lambda: self, None),
-        }
-
-    def generators(self, dt):
-        # (T_i)_{kj} = c^k_{ij} with c^k_{ij} = i \epsilon_{ijk} / 2
-        # Generators always need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
-        return [
-            gpt.matrix_su2_adjoint(i)
-            for i in [
-                numpy.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]], dtype=dt) / 2.0,
-                numpy.array([[0, 0, 1j], [0, 0, 0], [-1j, 0, 0]], dtype=dt) / 2.0,
-                numpy.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]], dtype=dt) / 2.0,
-            ]
-        ]
+        # return gpt_object version
+        algebra_otype = ot_matrix_su_n_adjoint_algebra(self.Nc)
+        return [gpt.gpt_object(i, algebra_otype) for i in r]

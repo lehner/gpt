@@ -27,7 +27,7 @@ def create_links(first, init, params):
 
         # default representation is SU3 fundamental
         if params["otype"] is None:
-            params["otype"] = g.ot_matrix_su3_fundamental()
+            params["otype"] = g.ot_matrix_su_n_fundamental_group(3)
 
         # default dimension is four
         if params["Nd"] is None:

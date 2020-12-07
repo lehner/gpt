@@ -72,15 +72,15 @@ def msinglet(grid, n):
 ###
 # Container objects with lie group structure
 def matrix_su2_fundamental(grid):
-    return gpt_object(grid, ot_matrix_su2_fundamental())
+    return gpt_object(grid, ot_matrix_su_n_fundamental_group(2))
 
 
 def matrix_su2_adjoint(grid):
-    return gpt_object(grid, ot_matrix_su2_adjoint())
+    return gpt_object(grid, ot_matrix_su_n_adjoint_group(2))
 
 
 def matrix_su3_fundamental(grid):
-    return gpt_object(grid, ot_matrix_su3_fundamental())
+    return gpt_object(grid, ot_matrix_su_n_fundamental_group(3))
 
 
 ###
@@ -112,9 +112,10 @@ def str_to_otype(s):
             "ot_vector_color",
             "ot_matrix_spin_color",
             "ot_vector_spin_color",
-            "ot_matrix_su3_fundamental",
-            "ot_matrix_su2_fundamental",
-            "ot_matrix_su2_adjoint",
+            "ot_matrix_su_n_fundamental_group",
+            "ot_matrix_su_n_fundamental_algebra",
+            "ot_matrix_su_n_adjoint_group",
+            "ot_matrix_su_n_adjoint_algebra",
             "ot_vsinglet",
             "ot_vsinglet4",
             "ot_vsinglet10",
