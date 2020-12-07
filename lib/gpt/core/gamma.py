@@ -19,7 +19,7 @@
 import gpt, cgpt
 import numpy as np
 from gpt.core.expr import factor
-from gpt.core.otype import ot_matrix_spin
+from gpt.core.object_type import ot_matrix_spin
 
 # otype for gamma matrices
 gamma_otype = ot_matrix_spin(4)

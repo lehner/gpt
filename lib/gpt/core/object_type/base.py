@@ -16,8 +16,20 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.algorithms.inverter
-import gpt.algorithms.polynomial
-import gpt.algorithms.eigen
-import gpt.algorithms.modes
-import gpt.algorithms.markov
+
+
+class ot_base:
+    v_otype = [None]  # cgpt's data types
+    v_n0 = [0]
+    v_n1 = [1]
+    v_idx = [0]
+    transposed = None
+    spintrace = None
+    colortrace = None
+    data_alias = None  # ot can be cast as fundamental type data_alias (such as SU(3) -> 3x3 matrix)
+    mtab = {}  # x's multiplication table for x * y
+    rmtab = {}  # y's multiplication table for x * y
+
+    # only vectors shall define otab/itab
+    otab = None  # x's outer product multiplication table for x * adj(y)
+    itab = None  # x's inner product multiplication table for adj(x) * y

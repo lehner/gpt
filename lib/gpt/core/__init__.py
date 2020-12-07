@@ -43,7 +43,7 @@ from gpt.core.transform import (
 from gpt.core.copy_plan import copy_plan, lattice_view, global_memory_view
 from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
 from gpt.core.operator import *
-from gpt.core.otype import *
+from gpt.core.object_type import *
 from gpt.core.mpi import *
 from gpt.core.io import (
     load,

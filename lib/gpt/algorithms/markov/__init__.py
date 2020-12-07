@@ -16,8 +16,4 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.algorithms.inverter
-import gpt.algorithms.polynomial
-import gpt.algorithms.eigen
-import gpt.algorithms.modes
-import gpt.algorithms.markov
+from gpt.algorithms.markov.su2_heat_bath import *

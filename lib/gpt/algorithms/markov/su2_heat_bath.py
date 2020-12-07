@@ -16,8 +16,18 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.algorithms.inverter
-import gpt.algorithms.polynomial
-import gpt.algorithms.eigen
-import gpt.algorithms.modes
-import gpt.algorithms.markov
+#    Generate U with
+#
+#      P(U) = e^{ Re Tr Staple U } dU
+#
+#    based on 1985 Kennedy and Pendleton paper (PLB 156 p393-399)
+import gpt as g
+
+
+class su2_heat_bath:
+    @g.params_convention(beta=6)
+    def __init__(self, rng, params):
+        self.rng = rng
+
+    def __call__(self, U, staple):
+        pass
