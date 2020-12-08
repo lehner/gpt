@@ -10,7 +10,7 @@ import numpy as np
 # load configuration
 rng = g.random("test")
 U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
-V = rng.lie(g.lattice(U[0]))
+V = rng.element(g.lattice(U[0]))
 U_transformed = g.qcd.gauge.transformed(U, V)
 
 # Test gauge invariance of plaquette

@@ -69,7 +69,7 @@ def create_links(first, init, params):
 @params_convention(scale=1.0)
 def random(first, rng, params):
     def init(x, p):
-        rng.lie(x, scale=p["scale"])
+        rng.element(x, scale=p["scale"])
 
     return create_links(first, init, params)
 

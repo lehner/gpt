@@ -25,42 +25,108 @@ from gpt.core.object_type import ot_matrix_color, ot_vector_color
 
 ###
 # TODO:
-# first generalize the below to general SU(n) fundamental and adjoint; distinguish group and algebra fields
-# allow for conversion (fundamental <> adjoint is already implemented in representation.py, can merge?) -> type conversion table, then use gpt.convert !!
+# su2 subgroups
+# add projection to algebra and group here
 #
 
 
 ###
+# Compute structure constant
+def compute_structure_constant(T, dt):
+    Ndim = len(T)
+    f_abc = numpy.array(
+        [
+            [
+                [
+                    numpy.trace(
+                        (T[a].array @ T[b].array - T[b].array @ T[a].array) @ T[c].array
+                    )
+                    / numpy.trace(T[c].array @ T[c].array)
+                    / 1j
+                    for c in range(Ndim)
+                ]
+                for b in range(Ndim)
+            ]
+            for a in range(Ndim)
+        ],
+        dtype=dt,
+    )
+
+    assert numpy.abs(f_abc[0][1][2] - 1) < 1e-7
+
+    return f_abc
+
+
+###
+# Convert fundamental to adjoint representation
+def fundamental_to_adjoint(U_a, U_f):
+    grid = U_f.grid
+    T = U_f.otype.cartesian().generators(grid.precision.complex_dtype)
+    V = {}
+    for a in range(len(T)):
+        for b in range(len(T)):
+            V[a, b] = gpt.eval(2.0 * gpt.trace(T[a] * U_f * T[b] * gpt.adj(U_f)))
+    gpt.merge_color(U_a, V)
+
+
+###
+# Base class
+class ot_matrix_su_n_base(ot_matrix_color):
+    def __init__(self, Nc, Ndim, name):
+        self.Nc = Nc
+        self.Ndim = Ndim
+        super().__init__(Ndim)  # Ndim x Ndim matrix
+        self.__name__ = name
+        self.data_alias = lambda: ot_matrix_color(Ndim)
+        self.mtab = {
+            self.__name__: (lambda: self, (1, 0)),
+            f"ot_vector_color({Ndim})": (lambda: ot_vector_color(Ndim), (1, 0)),
+            "ot_singlet": (lambda: self, None),
+        }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+        }
+
+
+class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
+    def __init__(self, Nc, Ndim, name):
+        super().__init__(Nc, Ndim, name)
+
+    def cartesian(self):
+        return self
+
+    def coordinates(self, l, c=None):
+        assert l.otype.__name__ == self.__name__
+        gen = self.generators(l.grid.precision.complex_dtype)
+        if c is None:
+            norm = [numpy.trace(Ta.array @ Ta.array) for Ta in gen]
+            return [gpt.eval(gpt.trace(l * Ta) / n) for n, Ta in zip(norm, gen)]
+        else:
+            l[:] = 0
+            for ca, Ta in zip(c, gen):
+                l += ca * Ta
+
+
+class ot_matrix_su_n_group(ot_matrix_su_n_base):
+    def __init__(self, Nc, Ndim, name):
+        super().__init__(Nc, Ndim, name)
+
+    def is_element(U):
+        I = gpt.identity(U)
+        err = (gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)) ** 0.5
+        # consider additional determinant check
+        return err < U.grid.precision.eps * 10.0
+
+
+###
 # Representations of groups
-class ot_matrix_su_n_fundamental_algebra(ot_matrix_color):
+class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
     def __init__(self, Nc):
-        self.Nc = Nc
-        super().__init__(Nc)
-        self.__name__ = f"ot_matrix_su_n_fundamental_algebra({Nc})"
-        self.data_alias = lambda: ot_matrix_color(Nc)
-        self.mtab = {
-            self.__name__: (lambda: self, (1, 0)),
-            f"ot_vector_color({Nc})": (lambda: ot_vector_color(Nc), (1, 0)),
-            "ot_singlet": (lambda: self, None),
-        }
-        self.rmtab = {
-            "ot_singlet": (lambda: self, None),
-        }
-
-
-class ot_matrix_su_n_fundamental_group(ot_matrix_color):
-    def __init__(self, Nc):
-        self.Nc = Nc
-        super().__init__(Nc)  # need 3 dim lattice
-        self.__name__ = f"ot_matrix_su_n_fundamental_group({Nc})"
-        self.data_alias = lambda: ot_matrix_color(Nc)
-        self.mtab = {
-            self.__name__: (lambda: self, (1, 0)),
-            f"ot_vector_color({Nc})": (lambda: ot_vector_color(Nc), (1, 0)),
-            "ot_singlet": (lambda: self, None),
-        }
-        self.rmtab = {
-            "ot_singlet": (lambda: self, None),
+        super().__init__(Nc, Nc, f"ot_matrix_su_n_fundamental_algebra({Nc})")
+        self.ctab = {
+            f"ot_matrix_su_n_fundamental_group({Nc})": lambda dst, src: gpt.eval(
+                dst, gpt.matrix.exp(src * 1j)
+            )
         }
 
     def generators(self, dt):
@@ -99,71 +165,55 @@ class ot_matrix_su_n_fundamental_group(ot_matrix_color):
         return [gpt.gpt_object(i, algebra_otype) for i in r]
 
 
-class ot_matrix_su_n_adjoint_algebra(ot_matrix_color):
+class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
     def __init__(self, Nc):
-        self.Nc = Nc
-        self.Ndim = Nc * Nc - 1
-        super().__init__(self.Ndim)
-        self.__name__ = f"ot_matrix_su_n_adjoint_algebra({Nc})"
-        self.data_alias = lambda: ot_matrix_color(self.Ndim)
-        self.mtab = {
-            self.__name__: (lambda: self, (1, 0)),
-            f"ot_vector_color({self.Ndim})": (
-                lambda: ot_vector_color(self.Ndim),
-                (1, 0),
+        super().__init__(Nc, Nc, f"ot_matrix_su_n_fundamental_group({Nc})")
+        self.ctab = {
+            f"ot_matrix_su_n_adjoint_group({Nc})": fundamental_to_adjoint,
+            f"ot_matrix_su_n_fundamental_algebra({Nc})": lambda dst, src: gpt.eval(
+                dst, gpt.matrix.log(src) / 1j
             ),
-            "ot_singlet": (lambda: self, None),
-        }
-        self.rmtab = {
-            "ot_singlet": (lambda: self, None),
         }
 
+    def cartesian(self):
+        return ot_matrix_su_n_fundamental_algebra(self.Nc)
 
-class ot_matrix_su_n_adjoint_group(ot_matrix_color):
+
+class ot_matrix_su_n_adjoint_algebra(ot_matrix_su_n_algebra):
+    f = {}
+
     def __init__(self, Nc):
-        self.Nc = Nc
-        self.Ndim = Nc * Nc - 1
-        super().__init__(self.Ndim)
-        self.__name__ = f"ot_matrix_su_n_adjoint_group({Nc})"
-        self.data_alias = lambda: ot_matrix_color(self.Ndim)
-        self.mtab = {
-            self.__name__: (lambda: self, (1, 0)),
-            f"ot_vector_color({self.Ndim})": (
-                lambda: ot_vector_color(self.Ndim),
-                (1, 0),
-            ),
-            "ot_singlet": (lambda: self, None),
-        }
-        self.rmtab = {
-            "ot_singlet": (lambda: self, None),
-        }
+        super().__init__(Nc, Nc * Nc - 1, f"ot_matrix_su_n_adjoint_algebra({Nc})")
+        self.ctab[f"ot_matrix_su_n_adjoint_group({Nc})"] = lambda dst, src: gpt.eval(
+            dst, gpt.matrix.exp(src * 1j)
+        )
 
     def generators(self, dt):
-        T_f = ot_matrix_su_n_fundamental_group(self.Nc).generators(dt)
-        f = [
-            [
-                [
-                    numpy.trace(
-                        (T_f[a].array @ T_f[b].array - T_f[b].array @ T_f[a].array)
-                        @ T_f[c].array
-                    )
-                    * 2.0
-                    / 1j
-                    for c in range(self.Ndim)
-                ]
-                for b in range(self.Ndim)
-            ]
-            for a in range(self.Ndim)
-        ]
+        T_f = ot_matrix_su_n_fundamental_algebra(self.Nc).generators(dt)
+        if self.Nc not in ot_matrix_su_n_adjoint_algebra.f:
+            ot_matrix_su_n_adjoint_algebra.f[self.Nc] = compute_structure_constant(
+                T_f, dt
+            )
+            # assert compute_structure_constant(ot_matrix_su_n_fundamental_algebra(2).generators(dt),dt)[0][1][2] == 1
+            # assert compute_structure_constant(ot_matrix_su_n_adjoint_algebra(2).generators(dt),dt)[0][1][2] == 1
+
         r = []
         for a in range(self.Ndim):
-            arr = numpy.array(f[a], dtype=dt) / 1j
-            r.append(arr)
-
-        # need to satisfy normalization Tr(T_a T_b) = 1/2 delta_{ab}
-        for alg in r:
-            alg /= (numpy.trace(numpy.dot(alg, alg)) * 2.0) ** 0.5
+            r.append(ot_matrix_su_n_adjoint_algebra.f[self.Nc][a] / 1j)
 
         # return gpt_object version
         algebra_otype = ot_matrix_su_n_adjoint_algebra(self.Nc)
         return [gpt.gpt_object(i, algebra_otype) for i in r]
+
+
+class ot_matrix_su_n_adjoint_group(ot_matrix_su_n_group):
+    def __init__(self, Nc):
+        super().__init__(Nc, Nc * Nc - 1, f"ot_matrix_su_n_adjoint_group({Nc})")
+        self.ctab = {
+            f"ot_matrix_su_n_adjoint_algebra({Nc})": lambda dst, src: gpt.eval(
+                dst, gpt.matrix.log(src) / 1j
+            )
+        }
+
+    def cartesian(self):
+        return ot_matrix_su_n_adjoint_algebra(self.Nc)

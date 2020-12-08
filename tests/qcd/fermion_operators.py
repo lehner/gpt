@@ -166,7 +166,7 @@ assert eps2 < 1e-12
 
 
 # gauge transformation check
-V = rng.lie(g.mcolor(grid))
+V = rng.element(g.mcolor(grid))
 prop_on_transformed_U = w.updated(g.qcd.gauge.transformed(U, V)).propagator(
     inv.preconditioned(pc.eo2_ne(), cg)
 )

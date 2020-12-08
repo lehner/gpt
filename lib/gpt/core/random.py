@@ -108,17 +108,20 @@ class random:
         return self.sample(t, {**{"distribution": "zn"}, **p})
 
     @params_convention(scale=1.0)
-    def lie(self, out, p={}):
+    def element(self, out, p={}):
+
+        if type(out) == list:
+            return [self.element(x, p) for x in out]
+
         scale = p["scale"]
         grid = out.grid
         ca = gpt.complex(grid)
-        lie = gpt.lattice(out)
-
-        lie[:] = 0
-        for ta in out.otype.generators(grid.precision.complex_dtype):
+        cartesian_space = gpt.lattice(out.grid, out.otype.cartesian())
+        cartesian_space[:] = 0
+        for ta in cartesian_space.otype.generators(grid.precision.complex_dtype):
             self.uniform_real(ca, {"min": -0.5, "max": 0.5})
-            lie += scale * 1j * ca * ta
-        out @= gpt.matrix.exp(lie)
+            cartesian_space += scale * ca * ta
+        gpt.convert(out, cartesian_space)
         return out
 
 

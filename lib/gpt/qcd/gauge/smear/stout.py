@@ -40,7 +40,7 @@ def stout_general(U, params):
             g.matrix.exp(project_to_traceless_anti_hermitian(C[mu] * g.adj(U[mu])))
             * U[mu]
         )
-        g.qcd.gauge.assert_unitary(U_mu_prime)
+        assert U_mu_prime.otype.is_element(U_mu_prime)
         U_prime.append(U_mu_prime)
     return U_prime
 

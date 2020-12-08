@@ -13,7 +13,7 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     m = g.mcolor(grid)
 
     # first test matrix operators
-    rng.lie(m)
+    rng.element(m)
     m2 = g.matrix.exp(g.matrix.log(m))
     eps2 = g.norm2(m - m2) / g.norm2(m)
     g.message(f"exp(log(m)) == m: {eps2}")

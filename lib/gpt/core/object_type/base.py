@@ -33,3 +33,6 @@ class ot_base:
     # only vectors shall define otab/itab
     otab = None  # x's outer product multiplication table for x * adj(y)
     itab = None  # x's inner product multiplication table for adj(x) * y
+
+    # list of object types to which I can convert and converter function
+    ctab = {}
