@@ -18,7 +18,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import numpy as np
-import gpt as g
+import gpt
 from gpt.params import params_convention
 
 #  Extract an unnormalized SU(2) matrix from a GL(Nc,C) matrix
@@ -65,7 +65,7 @@ def project_to_suN_step(dest, unprojected):
         normalized_su2_comps[:, 3] = -su2_comps[:, 3] / norm
 
         tmp[:] = 0
-        for ii in range(n_color):
+        for ii in range(n_colors):
             tmp[:, :, :, :, ii, ii] = 1
 
         fill_su2_components_into_suN(tmp, normalized_su2_comps, su2_index)
@@ -101,21 +101,19 @@ def extract_su2_components(suN_matrix, su2_index):
 #   * Fill in B from B_SU(2) = b0 + i sum_k bk sigma_k
 #
 def fill_su2_components_into_suN(dest, su2_comps, su2_index):
-    n_color = dest.otype.Nc
+    n_colors = dest.otype.Nc
     index, i1, i2 = 0, None, None
-    for ii in range(1, n_color):
-        for jj in range(n_color - ii):
+    for ii in range(1, n_colors):
+        for jj in range(n_colors - ii):
             if index == su2_index and i1 is None:
                 i1 = jj
                 i2 = ii + jj
             index += 1
 
     tmp = gpt.separate_color(dest)
-
     tmp[i1, i1] = su2_comps[:, 0] + 1j * su2_comps[:, 3]
     tmp[i1, i2] = su2_comps[:, 2] + 1j * su2_comps[:, 1]
     tmp[i2, i1] = - su2_comps[:, 2] + 1j * su2_comps[:, 1]
     tmp[i2, i2] = su2_comps[:, 0] - 1j * su2_comps[:, 3]
 
     gpt.merge_color(dest, tmp)
-

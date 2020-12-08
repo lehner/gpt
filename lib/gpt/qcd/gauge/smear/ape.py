@@ -18,7 +18,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import numpy as np
-import gpt as g
+import gpt
 from gpt.params import params_convention
 from gpt.core.suNutils import project_onto_suN
 
@@ -27,11 +27,11 @@ def ape(u, params):
     nd = len(u)
 
     # create mask for staples
-    rho = np.ones((nd, nd), dtype=np.float64)
+    params["rho"] = np.ones((nd, nd), dtype=np.float64)
     for mu in range(nd):
         for nu in range(nd):
             if mu == params["orthogonal_dimension"] or nu == params["orthogonal_dimension"] or mu == nu:
-                rho[mu, nu] = 0.0
+                params["rho"][mu, nu] = 0.0
 
     # create staples
     staplesum = gpt.qcd.gauge.smear.staple_sum(u, params)
@@ -46,7 +46,7 @@ def ape(u, params):
             u_unprojected = gpt.eval(gpt.adj(gpt(u_tmp * params["alpha"]) + gpt(staplesum[mu])))
 
             # take the original gauge field as a starting point for the projections
-            project_to_suN(u_tmp, u_unprojected, params)
+            project_onto_suN(u_tmp, u_unprojected, params)
 
             # reunitarize
             g.qcd.reunitize(U_mu_smear)

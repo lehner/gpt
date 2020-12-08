@@ -19,4 +19,4 @@
 from gpt.qcd.gauge.smear.staple_sum import staple_sum
 from gpt.qcd.gauge.smear.stout import stout
 from gpt.qcd.gauge.smear.ape import ape
-from gpt.core import suN_utils
+from gpt.core import suNutils
