@@ -49,8 +49,8 @@ def ape(u, params):
             project_onto_suN(u_tmp, u_unprojected, params)
 
             # reunitarize
-            g.qcd.reunitize(U_mu_smear)
-            g.qcd.gauge.assert_unitary(U_mu_smear)
+            gpt.qcd.reunitize(u_tmp)
+            gpt.qcd.gauge.assert_unitary(u_tmp)
 
         u_apesmeared.append(u_tmp)
         gpt.message(f"Direction {mu} done.")

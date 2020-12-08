@@ -31,7 +31,7 @@ def project_onto_suN(dest, u_unprojected, params):  # Need more sanity check and
 
     for _ in range(params["max_iteration"]):
         # perform a single projection step
-        dest @= project_to_suN_step(dest, u_unprojected)
+        project_to_suN_step(dest, u_unprojected)
 
         # calculate new trace
         new_trace = np.sum(gpt.slice(gpt.trace(dest * u_unprojected), 3)).real / (vol * 3)
@@ -100,8 +100,8 @@ def extract_su2_components(suN_matrix, su2_index):
 #
 #   * Fill in B from B_SU(2) = b0 + i sum_k bk sigma_k
 #
-def fill_su2_components_into_suN(dest, su2_comps, su2_index):
-    n_colors = dest.otype.Nc
+def fill_su2_components_into_suN(dst, su2_comps, su2_index):
+    n_colors = dst.otype.Nc
     index, i1, i2 = 0, None, None
     for ii in range(1, n_colors):
         for jj in range(n_colors - ii):
@@ -110,10 +110,10 @@ def fill_su2_components_into_suN(dest, su2_comps, su2_index):
                 i2 = ii + jj
             index += 1
 
-    tmp = gpt.separate_color(dest)
-    tmp[i1, i1] = su2_comps[:, 0] + 1j * su2_comps[:, 3]
-    tmp[i1, i2] = su2_comps[:, 2] + 1j * su2_comps[:, 1]
-    tmp[i2, i1] = - su2_comps[:, 2] + 1j * su2_comps[:, 1]
-    tmp[i2, i2] = su2_comps[:, 0] - 1j * su2_comps[:, 3]
+    tmp = gpt.separate_color(dst)
+    tmp[i1, i1][:] = su2_comps[:, 0] + 1j * su2_comps[:, 3]
+    tmp[i1, i2][:] = su2_comps[:, 2] + 1j * su2_comps[:, 1]
+    tmp[i2, i1][:] = - su2_comps[:, 2] + 1j * su2_comps[:, 1]
+    tmp[i2, i2][:] = su2_comps[:, 0] - 1j * su2_comps[:, 3]
 
-    gpt.merge_color(dest, tmp)
+    gpt.merge_color(dst, tmp)
