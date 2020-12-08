@@ -111,7 +111,7 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
     def __init__(self, Nc, Ndim, name):
         super().__init__(Nc, Ndim, name)
 
-    def is_element(U):
+    def is_element(self, U):
         I = gpt.identity(U)
         err = (gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)) ** 0.5
         # consider additional determinant check
