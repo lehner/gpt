@@ -23,6 +23,10 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     g.message(f"adj(U) == inv(U): {eps2}")
     assert eps2 < eps ** 2.0
 
+    eps2 = g.norm2( g.matrix.log(g.matrix.det(g.matrix.exp(m))) - g.trace(m) ) / g.norm2(m)
+    g.message(f"log(det(exp(m))) == tr(m): {eps2}")
+    assert eps2 < eps ** 2.0
+    
     # then test component operators
     c = g.component
 
