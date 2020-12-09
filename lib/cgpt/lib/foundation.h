@@ -49,10 +49,13 @@ NAMESPACE_BEGIN(Grid);
 
 #include "foundation/reduce.h"
 #include "foundation/unary.h"
+#include "foundation/binary.h"
+#include "foundation/ternary.h"
 #include "foundation/et.h"
 #include "foundation/block.h"
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
 #include "foundation/matrix.h"
+
 
 NAMESPACE_END(Grid);

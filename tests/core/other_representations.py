@@ -114,6 +114,8 @@ for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
 # Test all other representations
 ################################################################################
 for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
+    U=g.lattice(grid, g.ot_matrix_su_n_fundamental_group(3))
+    g.message(f"SU(2) subgroups:",U.otype.su_2_subgroups())
     for representation in [g.matrix_su2_adjoint, g.matrix_su3_fundamental]:
         g.message(f"Test {representation.__name__} on grid {grid.precision.__name__}")
         U = representation(grid)

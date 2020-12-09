@@ -30,3 +30,18 @@ void cgpt_invert_matrix(Lattice<T>& l, std::vector<cgpt_Lattice_base*>& _matrix_
 
   invertMatrix(matrix_inv, matrix, n_virtual);
 }
+
+template<typename T>
+void cgpt_determinant(Lattice<T>& l, cgpt_Lattice_base* _det, std::vector<cgpt_Lattice_base*>& _matrix, long n_virtual) {
+
+  typedef typename Lattice<T>::vector_type vCoeff_t;
+  
+  Lattice< iSinglet<vCoeff_t> > & det = compatible< iSinglet<vCoeff_t> >(_det)->l;
+  
+  PVector<Lattice<T>> matrix;
+  cgpt_basis_fill(matrix, _matrix);
+
+  ASSERT(matrix.size() > 0 && matrix.size() % n_virtual == 0);
+
+  determinant(det, matrix, n_virtual);
+}

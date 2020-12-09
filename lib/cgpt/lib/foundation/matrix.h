@@ -166,3 +166,60 @@ inline void invertMatrix(PVector<Lattice<T>>&        matrix_inv,
   ERR("Not implemented");
 
 }
+
+
+
+template<class vtype,int Nc>
+inline void determinant(Lattice<iScalar<iScalar<iScalar<vtype>>>>&                     det,
+			const PVector<Lattice<iScalar<iScalar<iMatrix<vtype, Nc>>>>>&  matrix,
+			long                                                           n_virtual) {
+
+  ASSERT(matrix.size() == 1);
+  ASSERT(n_virtual == 1);
+
+  conformable(det.Grid(), matrix[0].Grid());
+  GridBase *grid = matrix[0].Grid();
+
+  long lsites = grid->lSites();
+
+  typedef typename iScalar<iScalar<iMatrix<vtype,Nc>>>::scalar_object scalar_object;
+  typedef typename iScalar<iScalar<iScalar<vtype>>>::scalar_object singlet_object;
+
+  autoView(det_v, det, CpuWrite);
+  VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
+
+  thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
+    auto site = _idx;
+
+    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(Nc, Nc);
+
+    scalar_object matrix_tmp = Zero();
+    singlet_object singlet_tmp;
+
+    Coordinate lcoor;
+    grid->LocalIndexToLocalCoor(site, lcoor);
+
+    peekLocalSite(matrix_tmp, matrix_v[0], lcoor);
+    for (long row=0;row<Nc;row++) {
+      for (long col=0;col<Nc;col++) {
+	matrix_eigen(row, col) = static_cast<ComplexD>(TensorRemove(matrix_tmp()()(row, col)));
+      }
+    }
+
+    singlet_tmp()()() = matrix_eigen.determinant();
+    
+    pokeLocalSite(singlet_tmp, det_v, lcoor);
+
+  });
+
+  VECTOR_VIEW_CLOSE(matrix_v);
+}
+
+template<typename T>
+inline void determinant(Lattice<iScalar<iScalar<iScalar<typename T::vector_type>>>>&          det,
+			const PVector<Lattice<T>>&                                            matrix,
+			long                                                                  n_virtual) {
+
+  ERR("Not implemented");
+  
+}

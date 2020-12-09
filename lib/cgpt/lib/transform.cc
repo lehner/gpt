@@ -90,6 +90,40 @@ EXPORT(unary,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(binary,{
+    
+    void* _dst,* _a, * _b;
+    PyObject* params;
+    if (!PyArg_ParseTuple(args, "lllO", &_dst, &_a, &_b, &params)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
+    cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
+    
+    dst->binary_from(a,b,params);
+    
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(ternary,{
+    
+    void* _dst,* _a, * _b, * _c;
+    PyObject* params;
+    if (!PyArg_ParseTuple(args, "llllO", &_dst, &_a, &_b, &_c, &params)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
+    cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
+    cgpt_Lattice_base* c = (cgpt_Lattice_base*)_c;
+    
+    dst->ternary_from(a,b,c,params);
+    
+    return PyLong_FromLong(0);
+  });
 
 EXPORT(convert,{
     

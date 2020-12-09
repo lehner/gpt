@@ -14,17 +14,12 @@
 
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    51 Franklin Street, Fifth Floor, Boston, MA 021basis_virtual_size-1n_virtual_red01 USA.
 */
-#include "lattice/types.h"
-#include "lattice/base.h"
-#include "lattice/basis.h"
-#include "lattice/block.h"
-#include "lattice/matrix.h"
-#include "lattice/term.h"
-#include "lattice/unary.h"
-#include "lattice/binary.h"
-#include "lattice/ternary.h"
-#include "lattice/tostring.h"
-#include "lattice/coordinates.h"
-#include "lattice/implementation.h"
+
+template<typename S, typename T>
+inline void cgpt_where(Lattice<T>& answer, const Lattice<S>& question, const Lattice<T>& yes, const Lattice<T>& no) {
+
+  answer = where( TensorRemove(question) == 0.0, no, yes);
+
+}
