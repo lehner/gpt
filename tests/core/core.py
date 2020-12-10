@@ -224,3 +224,21 @@ for grid in [grid_sp, grid_dp]:
         eps2 = g.norm2(dst[j] - ref) / g.norm2(ref)
         g.message(f"Test linear combination of vector {j}: {eps2}")
         assert eps2 < 1e-13
+
+
+################################################################################
+# Test where
+################################################################################
+sel = g.complex(grid)
+sel[:] = 0
+rng.uniform_int(sel, min=0, max=1)
+
+yes = g.vcomplex(grid, 8)
+no = g.vcomplex(grid, 8)
+rng.cnormal([yes,no])
+
+w = g.where(sel,yes,no)
+
+eps = np.linalg.norm(w[:] - np.where(sel[:] != 0.0,yes[:],no[:])) / np.linalg.norm(w[:])
+g.message(f"Test gpt.where <> numpy.where with a selection of {g.norm2(sel)} points: {eps}")
+assert eps == 0.0

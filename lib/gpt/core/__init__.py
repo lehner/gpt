@@ -39,6 +39,7 @@ from gpt.core.transform import (
     axpy_norm2,
     slice,
     identity,
+    where,
 )
 from gpt.core.copy_plan import copy_plan, lattice_view, global_memory_view
 from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
