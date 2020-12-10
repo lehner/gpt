@@ -111,7 +111,6 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
     def __init__(self, Nc, Ndim, name):
         super().__init__(Nc, Ndim, name)
 
-        
     def is_element(self, U):
         I = gpt.identity(U)
         err = (gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)) ** 0.5
@@ -168,7 +167,7 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
 
 class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
     cache = {}
-    
+
     def __init__(self, Nc):
         super().__init__(Nc, Nc, f"ot_matrix_su_n_fundamental_group({Nc})")
         self.ctab = {
@@ -178,20 +177,17 @@ class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
             ),
         }
 
-
     def cartesian(self):
         return ot_matrix_su_n_fundamental_algebra(self.Nc)
 
-
     def su_2_subgroups(self):
-        N = ( self.Nc * (self.Nc - 1) ) // 2
+        N = (self.Nc * (self.Nc - 1)) // 2
         r = []
-        for i in range(N-1):
-            for j in range(i+1,N):
-                r.append( (i,j) )
+        for i in range(N - 1):
+            for j in range(i + 1, N):
+                r.append((i, j))
         assert len(r) == N
         return r
-
 
     def su_2_extract(self, u2, U, idx):
         assert u2.otype.Nc == 2 and u2.otype.Ndim == 2
@@ -202,8 +198,8 @@ class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
             plan = gpt.copy_plan(u2, U)
             for i in range(2):
                 for j in range(2):
-                    plan.destination += u2.view[:,i,j]
-                    plan.source += U.view[:,idx[i],idx[j]]
+                    plan.destination += u2.view[:, i, j]
+                    plan.source += U.view[:, idx[i], idx[j]]
             cache[cache_key] = plan()
         cache[cache_key](u2, U)
         u2 @= u2 - gpt.adj(u2) + gpt.identity(u2) * gpt.trace(gpt.adj(u2))

@@ -149,7 +149,7 @@ def identity(src):
     return eye
 
 
-def where(first, second, third, fourth = None):
+def where(first, second, third, fourth=None):
     if fourth is None:
         question = first
         yes = second
@@ -165,9 +165,9 @@ def where(first, second, third, fourth = None):
     assert len(yes.v_obj) == len(no.v_obj)
     assert len(answer.v_obj) == len(yes.v_obj)
 
-    params = { "operator" : "?:" }
-    
+    params = {"operator": "?:"}
+
     for a, y, n in zip(answer.v_obj, yes.v_obj, no.v_obj):
         cgpt.ternary(a, question.v_obj[0], y, n, params)
-        
+
     return answer

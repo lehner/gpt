@@ -230,15 +230,35 @@ for grid in [grid_sp, grid_dp]:
 # Test where
 ################################################################################
 sel = g.complex(grid)
-sel[:] = 0
 rng.uniform_int(sel, min=0, max=1)
 
 yes = g.vcomplex(grid, 8)
 no = g.vcomplex(grid, 8)
-rng.cnormal([yes,no])
+rng.cnormal([yes, no])
 
-w = g.where(sel,yes,no)
+w = g.where(sel, yes, no)
 
-eps = np.linalg.norm(w[:] - np.where(sel[:] != 0.0,yes[:],no[:])) / np.linalg.norm(w[:])
-g.message(f"Test gpt.where <> numpy.where with a selection of {g.norm2(sel)} points: {eps}")
+eps = np.linalg.norm(w[:] - np.where(sel[:] != 0.0, yes[:], no[:])) / np.linalg.norm(
+    w[:]
+)
+g.message(
+    f"Test gpt.where <> numpy.where with a selection of {g.norm2(sel)} points: {eps}"
+)
+assert eps == 0.0
+
+
+################################################################################
+# Test comparators
+################################################################################
+a = g.complex(grid)
+b = g.complex(grid)
+rng.cnormal([a, b])
+
+c = a < b
+eps = np.linalg.norm(c[:] - (a[:] < b[:]).astype(np.int)) / np.linalg.norm(c[:])
+g.message(f"Test a < b from gpt<>numpy: {eps}")
+assert eps == 0.0
+
+eps = g.norm2((b < a) - (a > b)) ** 0.5
+g.message(f"Test a < b compatible with b > a: {eps}")
 assert eps == 0.0
