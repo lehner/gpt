@@ -145,9 +145,9 @@ for i in range(len(corr)):
 
 # gride = g.grid([4, 4, 4, 4], g.single, g.redblack)
 # gre = g.complex(gride)
-# g.pick_cb(g.even, gre, gr)
+# g.pick_checkerboard(g.even, gre, gr)
 # gre[2, 0, 0, 0] = 4
-# g.set_cb(gr, gre)
+# g.set_checkerboard(gr, gre)
 # g.mem_report()
 
 

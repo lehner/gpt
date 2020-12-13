@@ -33,7 +33,7 @@ def project_to_traceless_anti_hermitian(src):
 @params_convention(rho=None)
 def stout_general(U, params):
     nd = len(U)
-    C = g.qcd.gauge.smear.staple_sum(U, params)
+    C = g.qcd.gauge.staple_sum(U, params)
     U_prime = []
     for mu in range(nd):
         U_mu_prime = g(

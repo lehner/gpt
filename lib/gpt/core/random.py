@@ -107,19 +107,23 @@ class random:
     def zn(self, t=None, p={}):
         return self.sample(t, {**{"distribution": "zn"}, **p})
 
-    @params_convention(scale=1.0)
+    @params_convention(scale=1.0, normal=False)
     def element(self, out, p={}):
 
         if type(out) == list:
             return [self.element(x, p) for x in out]
 
         scale = p["scale"]
+        normal = p["normal"]
         grid = out.grid
         ca = gpt.complex(grid)
         cartesian_space = gpt.lattice(out.grid, out.otype.cartesian())
         cartesian_space[:] = 0
         for ta in cartesian_space.otype.generators(grid.precision.complex_dtype):
-            self.uniform_real(ca, {"min": -0.5, "max": 0.5})
+            if normal:
+                self.normal(ca)
+            else:
+                self.uniform_real(ca, {"min": -0.5, "max": 0.5})
             cartesian_space += scale * ca * ta
         gpt.convert(out, cartesian_space)
         return out

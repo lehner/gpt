@@ -24,8 +24,8 @@ assert eps < 1e-13
 rho = np.array(
     [[0.0 if i == j else 0.1 for i in range(4)] for j in range(4)], dtype=np.float64
 )
-C = g.qcd.gauge.smear.staple_sum(U, rho=rho)
-C_transformed = g.qcd.gauge.smear.staple_sum(U_transformed, rho=rho)
+C = g.qcd.gauge.staple_sum(U, rho=rho)
+C_transformed = g.qcd.gauge.staple_sum(U_transformed, rho=rho)
 for mu in range(len(C)):
     q = g.sum(g.trace(C[mu] * g.adj(U[mu]))) / U[0].grid.gsites
     q_transformed = (
