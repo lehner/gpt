@@ -72,7 +72,7 @@ for it in range(2000):
                 g.eval(-beta * g.trace(U_mu_prime * g.adj(st)) * mask)
             )
 
-            dp = g.matrix.exp(action - action_prime)
+            dp = g.component.exp(g.eval(action - action_prime))
 
             rn = g.lattice(dp)
             t("random")
