@@ -53,7 +53,7 @@ def gauss(U, params):
     def mat(dst, src):
         assert dst != src
         g.copy(dst, src)
-        for n in range(steps):
+        for _ in range(steps):
             dst += (sigma * sigma / (4.0 * steps)) * lap * dst
 
     return g.matrix_operator(mat=mat)
@@ -61,16 +61,18 @@ def gauss(U, params):
 
 @params_convention(boundary_phases=[1, 1, 1, -1], dimensions=[0, 1, 2])
 def wuppertal(U, params):
-    kappa = params["kappa"]
+    delta = params["delta"]
     steps = params["steps"]
     dimensions = params["dimensions"]
     lap = laplace(g.covariant.shift(U, params), dimensions)
 
     def mat(dst, src):
+        g.message(f"Doing Wuppertal smearing with {steps} iterations and delta={delta}")
         assert dst != src
         g.copy(dst, src)
-        for n in range(steps):
-            dst += (kappa / (1 + 2.0 * len(dimensions) * kappa)) * lap * dst
+        for _ in range(steps):
+            dst += (delta / (1 + 2.0 * len(dimensions) * delta)) * lap * dst
+        g.message("Doing Wuppertal done.")
 
     return g.matrix_operator(mat=mat)
 
