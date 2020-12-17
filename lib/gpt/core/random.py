@@ -37,6 +37,8 @@ class random:
         self.obj = cgpt.create_random(engine, s)
         t1 = gpt.time()
 
+        self.cache = {}
+        
         if self.verbose:
             gpt.message(
                 "Initializing gpt.random(%s,%s) took %g s" % (s, engine, t1 - t0)
@@ -113,19 +115,36 @@ class random:
         if type(out) == list:
             return [self.element(x, p) for x in out]
 
+        t1 = -gpt.time()
+        
         scale = p["scale"]
         normal = p["normal"]
         grid = out.grid
         ca = gpt.complex(grid)
         cartesian_space = gpt.lattice(out.grid, out.otype.cartesian())
         cartesian_space[:] = 0
+
+        t0 = 0.0
+        
         for ta in cartesian_space.otype.generators(grid.precision.complex_dtype):
+
+            t0 -= gpt.time()
+            
             if normal:
                 self.normal(ca)
             else:
                 self.uniform_real(ca, {"min": -0.5, "max": 0.5})
+
+            t0 += gpt.time()
+            
             cartesian_space += scale * ca * ta
+
+        t2 = -gpt.time()
         gpt.convert(out, cartesian_space)
+        t2 += gpt.time()
+
+        t1 += gpt.time()
+        gpt.message("element total",t1,"rng",t0,"convert",t2)
         return out
 
 
