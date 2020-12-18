@@ -183,3 +183,211 @@ assert eps2 < 1e-12
 rhq = g.qcd.fermion.rhq_columbia(
     U, mass=4.0, cp=3.0, zeta=2.5, boundary_phases=[1, 1, 1, -1]
 )
+
+
+#########################################################################
+# Test fermion operators against known results
+#
+# this protects against bugs introduced in the matrix application
+# of fermion operators (new architectures / implementations)
+#
+# These tests are only meaningfull in combination with other
+# cross-checks
+#########################################################################
+test_suite = {
+    "wilson_clover": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": {
+            "kappa": 0.13500,
+            "csw_r": 1.5,
+            "csw_t": 1.951,
+            "xi_0": 0.75123,
+            "nu": 1.412,
+            "isAnisotropic": True,
+            "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+        },
+        "matrices_rb": {
+            ".Mooee": [
+                (-899.6678262187658 + 1989.7984555764265j),
+                (-899.6678262187658 + 1989.7984555764265j),
+                (-22.005769958619545 + 34.784294100787505j),
+                (-22.005769958619545 + 34.784294100787505j),
+                (-925.3456101495686 + 1785.3909272079718j),
+                (-925.3456101495686 + 1785.3909272079718j),
+                (-21.28549612737098 + 40.29271781260442j),
+                (-21.28549612737098 + 40.29271781260442j),
+            ],
+            ".Meooe": [
+                (-163.21030861530133 - 901.980848496021j),
+                (608.0842430279749 - 1249.2439986784607j),
+                (544.0707569351338 - 723.5933004295134j),
+                (24.878541623221736 - 1077.208039065551j),
+            ],
+        },
+        "matrices": {
+            "": [
+                (-871.8416353893713 - 358.7175198308046j),
+                (-987.4411552844747 - 5434.989784505095j),
+            ],
+            ".Mdiag": [(-840.8952373062322 - 3254.115048791882j)],
+        },
+    },
+    "wilson_clover_legacy": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": {
+            "kappa": 0.13500,
+            "csw_r": 1.5,
+            "csw_t": 1.951,
+            "xi_0": 0.75123,
+            "nu": 1.412,
+            "isAnisotropic": True,
+            "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+            "use_legacy": True,  # will be deprecated eventually
+        },
+        "matrices_rb": {
+            ".Mooee": [
+                (-899.6678262187658 + 1989.7984555764265j),
+                (-899.6678262187658 + 1989.7984555764265j),
+                (-22.005769958619545 + 34.784294100787505j),
+                (-22.005769958619545 + 34.784294100787505j),
+                (-925.3456101495686 + 1785.3909272079718j),
+                (-925.3456101495686 + 1785.3909272079718j),
+                (-21.28549612737098 + 40.29271781260442j),
+                (-21.28549612737098 + 40.29271781260442j),
+            ],
+            ".Meooe": [
+                (-163.21030861530133 - 901.980848496021j),
+                (608.0842430279749 - 1249.2439986784607j),
+                (544.0707569351338 - 723.5933004295134j),
+                (24.878541623221736 - 1077.208039065551j),
+            ],
+        },
+        "matrices": {
+            "": [
+                (-871.8416353893713 - 358.7175198308046j),
+                (-987.4411552844747 - 5434.989784505095j),
+            ],
+            ".Mdiag": [(-840.8952373062322 - 3254.115048791882j)],
+        },
+    },
+    "zmobius": {
+        "fermion": g.qcd.fermion.zmobius,
+        "params": {
+            "mass": 0.08,
+            "M5": 1.8,
+            "b": 1.0,
+            "c": 0.0,
+            "omega": [
+                0.17661651536320583 + 1j * (0.14907774771612217),
+                0.23027432016909377 + 1j * (-0.03530801572584271),
+                0.3368765581549033 + 1j * (0),
+                0.7305711010541054 + 1j * (0),
+                1.1686138337986505 + 1j * (0.3506492418109086),
+                1.1686138337986505 + 1j * (-0.3506492418109086),
+                0.994175013717952 + 1j * (0),
+                0.5029903152251229 + 1j * (0),
+                0.23027432016909377 + 1j * (0.03530801572584271),
+                0.17661651536320583 + 1j * (-0.14907774771612217),
+            ],
+            "boundary_phases": [1.0, 1.0, 1.0, -1.0],
+        },
+        "matrices_rb": {
+            ".Mooee": [
+                (-2446.6009975599286 + 5633.208069699162j),
+                (-3173.664349815171 + 8268.326283629753j),
+                (138.4111258279281 + 297.2047111305896j),
+                (274.30528686708595 + 138.77396302243844j),
+                (-2446.6009975599286 + 5633.208069699162j),
+                (-3173.664349815171 + 8268.326283629753j),
+                (138.4111258279281 + 297.2047111305896j),
+                (274.30528686708595 + 138.77396302243844j),
+            ],
+            ".Meooe": [
+                (2320.1432377385536 - 2611.1244058385605j),
+                (-733.4792560192691 + 2376.2136953390655j),
+                (3083.8202044273708 - 1957.829867279577j),
+                (379.70047141651867 - 1324.6526037216404j),
+            ],
+        },
+        "matrices": {
+            "": [
+                (-2424.048033434305 + 10557.661684178218j),
+                (5058.817509141269 + 3535.1171451161918j),
+            ],
+            ".Mdiag": [(2643.396577965267 + 6550.259431381319j)],
+        },
+    },
+}
+
+
+g.default.set_verbose("random", False)
+for precision in [g.single, g.double]:
+    # test suite
+    for name in test_suite:
+
+        # load configuration
+        rng = g.random("finger_print")
+        U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], precision), rng)
+
+        # default grid
+        grid = U[0].grid
+
+        # check tolerance
+        eps = grid.precision.eps
+
+        # params
+        test = test_suite[name]
+        g.message(f"Starting test suite for {precision.__name__} precision {name}")
+
+        # create fermion
+        fermion = test["fermion"](U, test["params"])
+
+        # do red/black tests
+        grid_rb = fermion.F_grid_eo
+        src = rng.cnormal(g.vspincolor(grid_rb))
+        dst = rng.cnormal(g.vspincolor(grid_rb))
+        for matrix in test["matrices_rb"]:
+            finger_print = []
+            for cb in [g.even, g.odd]:
+                src.checkerboard(cb)
+                mat = eval(f"fermion{matrix}")
+                finger_print.append(g.inner_product(dst, mat * src))
+                if mat.adj_mat is not None:
+                    finger_print.append(g.inner_product(dst, g.adj(mat) * src))
+                    if mat.inv_mat is not None:
+                        finger_print.append(g.inner_product(dst, g.inv(mat) * src))
+                        finger_print.append(
+                            g.inner_product(dst, g.inv(g.adj(mat)) * src)
+                        )
+            if test["matrices_rb"][matrix] is None:
+                g.message(f"Matrix {matrix} fingerprint: {finger_print}")
+            else:
+                fp = np.array(finger_print)
+                eps = np.linalg.norm(
+                    fp - np.array(test["matrices_rb"][matrix])
+                ) / np.linalg.norm(fp)
+                g.message(f"Test {matrix} fingerprint: {eps}")
+                assert eps < grid.precision.eps * 10.0
+
+        # do full tests
+        grid = fermion.F_grid
+        src = rng.cnormal(g.vspincolor(grid))
+        dst = rng.cnormal(g.vspincolor(grid))
+        for matrix in test["matrices"]:
+            finger_print = []
+            mat = eval(f"fermion{matrix}")
+            finger_print.append(g.inner_product(dst, mat * src))
+            if mat.adj_mat is not None:
+                finger_print.append(g.inner_product(dst, g.adj(mat) * src))
+                if mat.inv_mat is not None:
+                    finger_print.append(g.inner_product(dst, g.inv(mat) * src))
+                    finger_print.append(g.inner_product(dst, g.inv(g.adj(mat)) * src))
+            if test["matrices"][matrix] is None:
+                g.message(f"Matrix {matrix} fingerprint: {finger_print}")
+            else:
+                fp = np.array(finger_print)
+                eps = np.linalg.norm(
+                    fp - np.array(test["matrices"][matrix])
+                ) / np.linalg.norm(fp)
+                g.message(f"Test {matrix} fingerprint: {eps}")
+                assert eps < grid.precision.eps * 10.0

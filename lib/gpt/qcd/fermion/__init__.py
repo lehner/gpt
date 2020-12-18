@@ -36,8 +36,8 @@ def wilson_clover(U, params):
         assert "mass" not in params
         params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
         del params["kappa"]
-    if "faster_apply" not in params:
-        params["faster_apply"] = 1  # default to faster application
+    if "use_legacy" not in params:
+        params["use_legacy"] = False  # default to new, faster implementation
     return fine_operator(
         "wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3)
     )

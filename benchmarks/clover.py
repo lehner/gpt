@@ -14,13 +14,13 @@ for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
     N = g.default.get_int("--N", 1000)
 
-    for faster_apply in [0, 1]:
+    for use_legacy in [False, True]:
         g.message(
             f"""
     Clover Term Benchmark with
         fdimensions  : {grid.fdimensions}
         precision    : {precision.__name__}
-        faster_apply : {faster_apply}
+        use_legacy   : {use_legacy}
     """
         )
 
@@ -35,7 +35,7 @@ for precision in [g.single, g.double]:
                 "nu": 1,
                 "isAnisotropic": False,
                 "boundary_phases": [1.0, 1.0, 1.0, 1.0],
-                "faster_apply": faster_apply,
+                "use_legacy": use_legacy,
             },
         )
 
