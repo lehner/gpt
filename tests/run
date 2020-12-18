@@ -50,6 +50,7 @@ for f in \
     ${test_path}/algorithms/solvers.py \
     ${test_path}/algorithms/polynomials.py \
     ${test_path}/algorithms/multi_grid.py \
+    ${test_path}/markov/pure_gauge.py \
     ${test_path}/io/cevec.py \
     ${test_path}/io/io.py \
     ${test_path}/io/qlat.py \

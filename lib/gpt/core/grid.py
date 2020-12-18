@@ -140,14 +140,16 @@ class grid:
     def describe(
         self,
     ):  # creates a string without spaces that can be used to construct it again, this should only describe the grid geometry not the mpi
-        assert self.sranks == 1  # for now do not support split grids
-        return (
+        s = (
             str(self.fdimensions)
             + ";"
             + self.precision.__name__
             + ";"
             + self.cb.__name__
         ).replace(" ", "")
+        if self.parent is not None:
+            s += ";" + self.parent.describe()
+        return s
 
     def converted(self, dst_precision):
         if dst_precision == self.precision:

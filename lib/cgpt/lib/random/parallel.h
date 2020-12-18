@@ -16,12 +16,26 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& hashes,GridBase* grid) {
-  ASSERT(PyArray_NDIM(coordinates) == 2);
-  long* tdim = PyArray_DIMS(coordinates);
-  long nc = tdim[0];
-  long nd = tdim[1];
-  std::vector<bool> mpi_dim(nd);
+
+template<typename sRNG,typename pRNG>
+  void cgpt_random_setup(sRNG & srng, pRNG & prng, GridBase* grid) {
+
+  typedef typename std::remove_reference<decltype(*prng.rng[0])>::type PRNG_t;
+  
+  // first figure out number of parallel rngs needed for this Grid
+  int nd = grid->Nd();
+  
+  prng.block = 2;
+  
+  std::vector<long> mpi_dim(nd);
+  std::vector<long> cb_dim(nd);
+  std::vector<long> block_dim(nd);
+  std::vector<long> reduced_dim(nd);
+
+  auto & block = prng.block;
+  auto & sites = prng.sites;
+  auto & samples = prng.samples;
+
   if (nd <= 4) {
     for (long i=0;i<nd;i++)
       mpi_dim[i] = true;
@@ -31,146 +45,152 @@ static void cgpt_random_to_hash(PyArrayObject* coordinates,std::vector<long>& ha
     ERR("Nd = %ld not yet supported for random interface",nd);
   }
 
-  const int block = 2;
-  ASSERT(nd == grid->Nd());
-
-  ASSERT(PyArray_TYPE(coordinates)==NPY_INT32);
-  int32_t* coor = (int32_t*)PyArray_DATA(coordinates);
-
-  std::vector<int> cb_dim(nd);
+  long blocks = 1;
+  sites = (long)grid->_isites * (long)grid->_osites;
+  
   for (long j=0;j<nd;j++) {
-    if (mpi_dim[j]) {
-      ASSERT(grid->_gdimensions[j] % block == 0);
-      ASSERT(grid->_ldimensions[j] % block == 0); 
-    }
+
     // make sure points within a block are always on same node
     // irrespective of MPI setup
     cb_dim[j] = grid->_fdimensions[j] / grid->_gdimensions[j];
+
+    if (mpi_dim[j]) {
+      ASSERT(grid->_gdimensions[j] % block == 0);
+      ASSERT(grid->_ldimensions[j] % block == 0);
+      block_dim[j] = grid->_ldimensions[j] / block;
+      reduced_dim[j] = block;
+      blocks *= block_dim[j];
+    } else {
+      block_dim[j] = 1;
+      reduced_dim[j] = grid->_ldimensions[j];
+    }
   }
 
-  hashes.resize(nc);
-  thread_for(i, nc, {
+  // now we know how many prng's we need ; create hash lookup table
+  prng.hash.resize(blocks);
+  prng.rng.resize(blocks);
+  samples.resize(blocks);
+  
+  thread_for(idx, blocks, {
+
+      std::vector<long> bcoor;
+      Lexicographic::CoorFromIndex(bcoor,idx,block_dim);
+      
       long t = 0;
       for (long j=0;j<nd;j++) {
 	if (mpi_dim[j]) {
-	  int32_t c = coor[nd*i+j] / cb_dim[j] / block;
-	  ASSERT((c >= (grid->_lstart[j]/block)) && (c < ((grid->_lend[j]+1)/block)));
+	  int32_t c = bcoor[j] + grid->_lstart[j]/block;
+	  ASSERT(c < ((grid->_lend[j]+1)/block));
 	  t*=grid->_gdimensions[j] / block;
 	  t+=c;
 	}
       }
-      hashes[i] = t;
-    });
-}
 
-template<typename T>
-void cgpt_hash_offsets(std::vector<T>& h, std::map<T,std::vector<long>>& u) {
-  // This is a candidate for optimization; for ranlux48 not dominant but not negligible
-  for (long off=0;off<h.size();off++)
-    u[h[off]].push_back(off);
-}
+      prng.hash[idx] = t;
 
-template<typename T>
-void cgpt_hash_unique(std::map<T,std::vector<long>>& u, std::vector<T>& h) {
-  for (auto&k : u)
-    h.push_back(k.first);
-  //std::cout << GridLogMessage << h.size() << " unique parallel RNGs" << std::endl;
-}
+      std::vector<uint64_t> _seed = prng.seed;
+      _seed.push_back(t);
 
-template<typename sRNG,typename pRNG>
-  void cgpt_random_setup(std::vector<long>& h,sRNG & srng,std::map<long,pRNG*> & prng,std::vector<uint64_t> & seed) {
-  std::vector<long> need;
-  for (auto x : h) {
-    auto p = prng.find(x);
-    if (p == prng.end()) {
-      need.push_back(x);
-    }
-  }
+      prng.rng[idx] = new PRNG_t(_seed);
 
-  //std::cout << GridLogMessage << need.size() << " new parallel RNGs" << std::endl;
-
-  thread_for(i, need.size(), {
-
-      long x = need[i];
-      std::vector<uint64_t> _seed = seed;
-      _seed.push_back(x);
-
-      auto pr = new pRNG(_seed);
+      samples[idx].resize(sites / blocks);
       
-      thread_critical
-	{
-	  prng.insert({x,pr});
-	}
     });
-}
 
+  // now create samples
+  thread_region
+    {
+      Coordinate lcoor(nd);
+      std::vector<long> bcoor(nd);
+      std::vector<long> rcoor(nd);
+      
+      thread_for_in_region(idx, sites, {
+
+	  Lexicographic::CoorFromIndex(lcoor,idx,grid->_ldimensions);
+
+	  for (long j=0;j<nd;j++) {
+	    if (mpi_dim[j]) {
+	      bcoor[j] = lcoor[j] / block;
+	      rcoor[j] = lcoor[j] % block;
+	    } else {
+	      bcoor[j] = 0;
+	      rcoor[j] = lcoor[j];
+	    }
+	  }
+
+	  int block_index, reduced_index;
+	  Lexicographic::IndexFromCoor(bcoor,block_index,block_dim);
+	  Lexicographic::IndexFromCoor(rcoor,reduced_index,reduced_dim);
+
+	  samples[block_index][reduced_index] = idx;
+	});
+    }
+
+}
 
 template<typename DIST,typename sRNG,typename pRNG>
-  PyObject* cgpt_random_sample(DIST & dist,PyObject* _target,sRNG& srng,pRNG& prng,
-			       std::vector<long> & shape,std::vector<uint64_t> & seed,
-			       GridBase* grid,int dtype) {
+PyObject* cgpt_random_sample(DIST & dist,sRNG& srng,pRNG& prng,
+			     std::vector<long> & shape,
+			     GridBase* grid,int dtype) {
 
-  if (cgpt_PyArray_Check(_target)) {
+  if (grid) {
 
-    //TIME(t0,
+    //cgpt_timer t("cgpt_random_sample");
 
-    std::vector<long> hashes;
-    cgpt_random_to_hash((PyArrayObject*)_target,hashes,grid);
+    
+    //t("cgpt_random_setup");
+    if (prng.hash.size() == 0) {
+      cgpt_random_setup(srng, prng, grid);
+    }
 
-    //	 );
-
-    //TIME(t1,
-    std::map<long,std::vector<long>> hash_offsets;
-    cgpt_hash_offsets(hashes,hash_offsets);
-    //	 );
-
-    //TIME(t2,
-    std::vector<long> unique_hashes;
-    cgpt_hash_unique(hash_offsets,unique_hashes);
-    //	 );
-
-    //TIME(t3,
-    cgpt_random_setup(unique_hashes,srng,prng,seed);
-    //	 );
-
+    //t("push");
+    
     //TIME(t4,
     long n = 1;
     std::vector<long> dims;
-    dims.push_back(hashes.size());
+    dims.push_back(prng.sites);
     for (auto s : shape) {
       n *= s;
       dims.push_back(s);
     }
 
+    //t("array");
     // all the previous effort allows the prng to act in parallel
     PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], dtype);
+    auto & samples = prng.samples;
+
+    //t("fill");
+
+    double t0 = cgpt_time();
     if (dtype == NPY_COMPLEX64) {
       ComplexF* d = (ComplexF*)PyArray_DATA(a);
-      thread_for(i, unique_hashes.size(), {
-	  auto h = unique_hashes[i];
-	  auto & uhi = hash_offsets[h];
-	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = (ComplexF)dist(*prng.find(h)->second);
+      thread_for(i, samples.size(), {
+	  auto & r = prng.rng[i];
+	  auto & s = samples[i];
+	  for (long x=0;x<s.size();x++) for (long j=0;j<n;j++) d[n*s[x]+j] = (ComplexF)dist(*r);
 	});
     } else if (dtype == NPY_COMPLEX128) {
       ComplexD* d = (ComplexD*)PyArray_DATA(a);
-      thread_for(i, unique_hashes.size(), {
-	  auto h = unique_hashes[i];
-	  auto & uhi = hash_offsets[h];
-	  for (auto & x : uhi) for (long j=0;j<n;j++) d[n*x+j] = dist(*prng.find(h)->second);
+      thread_for(i, samples.size(), {
+	  auto & r = prng.rng[i];
+	  auto & s = samples[i];
+	  for (long x=0;x<s.size();x++) for (long j=0;j<n;j++) d[n*s[x]+j] = (ComplexD)dist(*r);
 	});
     } else {
       ERR("Unknown dtype");
     }
+    double t1 = cgpt_time();
+    //std::cout << GridLogMessage << "Fill: " << t1- t0 << std::endl;
+
+    //t.report();
+    
     //	 );
 
-    //std::cout << GridLogMessage << "Timing: " << t0 << ", " << t1 << ", " << t2 << ", " << t3 << ", " << t4 << std::endl;
     return (PyObject*)a;
 
-  } else if (_target == Py_None) {
+  } else {
     ComplexD val = (ComplexD)dist(srng);
     return PyComplex_FromDoubles(val.real(),val.imag());
-  } else {
-    ERR("_target type not implemented");
   }
 
 }

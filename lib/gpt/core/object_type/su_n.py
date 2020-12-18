@@ -24,13 +24,6 @@ import numpy
 from gpt.core.object_type import ot_matrix_color, ot_vector_color
 
 ###
-# TODO:
-# su2 subgroups
-# add projection to algebra and group here
-#
-
-
-###
 # Compute structure constant
 def compute_structure_constant(T, dt):
     Ndim = len(T)
@@ -113,9 +106,33 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
 
     def is_element(self, U):
         I = gpt.identity(U)
-        err = (gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)) ** 0.5
+        I_s = gpt.identity(gpt.complex(U.grid))
+        err2 = gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)
+        err2 += gpt.norm2(gpt.matrix.det(U) - I_s) / gpt.norm2(I_s)
         # consider additional determinant check
-        return err < U.grid.precision.eps * 10.0
+        return err2 ** 0.5 < U.grid.precision.eps * 10.0
+
+    def project(self, U, method):
+        if method == "defect_right" or method == "defect":
+            # V = V0(1 + eps)  with  dag(eps) = eps , dag(V0) V0 = 1
+            # dag(V) V - 1 = (1+eps)(1+eps) - 1 = 2eps + O(eps^2)
+            # Multiply from right with 1 - eps = 1 - 1/2 (dag(V)V-1)
+            # det(V) = 1 + Tr(eps) = 1 + 1/2 Tr(dag(V) V - 1)
+            # Multiply with 1 - Tr(eps)
+            U *= gpt.component.pow(-1.0 / self.Nc)(gpt.matrix.det(U))
+            I = gpt.identity(U)
+            eps = gpt.eval(0.5 * gpt.adj(U) * U - 0.5 * I)
+            U @= U * (I - eps)
+        elif method == "defect_left":
+            # V = (1 + eps)V0  with  dag(eps) = eps , dag(V0) V0 = 1
+            # V dag(V) - 1 = (1+eps)(1+eps) - 1 = 2eps + O(eps^2)
+            # Multiply from left with 1 - eps = 1 - 1/2 (V dag(V)-1)
+            U *= gpt.component.pow(-1.0 / self.Nc)(gpt.matrix.det(U))
+            I = gpt.identity(U)
+            eps = gpt.eval(0.5 * U * gpt.adj(U) - 0.5 * I)
+            U @= (I - eps) * U
+        else:
+            raise Exception("Unknown projection method")
 
 
 ###
@@ -180,7 +197,7 @@ class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
     def cartesian(self):
         return ot_matrix_su_n_fundamental_algebra(self.Nc)
 
-    def su_2_subgroups(self):
+    def su2_subgroups(self):
         N = (self.Nc * (self.Nc - 1)) // 2
         r = []
         for i in range(N - 1):
@@ -189,24 +206,36 @@ class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
         assert len(r) == N
         return r
 
-    def su_2_extract(self, u2, U, idx):
+    def block_extract(self, u2, U, idx):
         assert u2.otype.Nc == 2 and u2.otype.Ndim == 2
         idx = list(idx)
         cache = ot_matrix_su_n_fundamental_group.cache
         cache_key = f"{self.Nc}_{idx}"
         if cache_key not in cache:
+            pos = tuple([slice(None, None, None) for i in range(u2.grid.nd)])
             plan = gpt.copy_plan(u2, U)
             for i in range(2):
                 for j in range(2):
-                    plan.destination += u2.view[:, i, j]
-                    plan.source += U.view[:, idx[i], idx[j]]
+                    plan.destination += u2.view[pos + (i, j)]
+                    plan.source += U.view[pos + (idx[i], idx[j])]
             cache[cache_key] = plan()
         cache[cache_key](u2, U)
-        u2 @= u2 - gpt.adj(u2) + gpt.identity(u2) * gpt.trace(gpt.adj(u2))
-        pass
 
-    def su_2_insert(self, U, u2, idx):
-        pass
+    def block_insert(self, U, u2, idx):
+        U @= gpt.identity(U)
+        assert u2.otype.Nc == 2 and u2.otype.Ndim == 2
+        idx = list(idx)
+        cache = ot_matrix_su_n_fundamental_group.cache
+        cache_key = f"{self.Nc}_{idx}_rev"
+        if cache_key not in cache:
+            pos = tuple([slice(None, None, None) for i in range(u2.grid.nd)])
+            plan = gpt.copy_plan(U, u2)
+            for i in range(2):
+                for j in range(2):
+                    plan.source += u2.view[pos + (i, j)]
+                    plan.destination += U.view[pos + (idx[i], idx[j])]
+            cache[cache_key] = plan()
+        cache[cache_key](U, u2)
 
 
 class ot_matrix_su_n_adjoint_algebra(ot_matrix_su_n_algebra):

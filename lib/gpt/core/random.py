@@ -38,7 +38,7 @@ class random:
         t1 = gpt.time()
 
         self.cache = {}
-        
+
         if self.verbose:
             gpt.message(
                 "Initializing gpt.random(%s,%s) took %g s" % (s, engine, t1 - t0)
@@ -52,16 +52,11 @@ class random:
             for x in t:
                 self.sample(x, p)
         elif t is None:
-            return cgpt.random_sample(self.obj, t, p)
+            return cgpt.random_sample(self.obj, p)
         elif type(t) == gpt.lattice:
-            if "pos" in p:
-                pos = p["pos"]
-            else:
-                pos = gpt.coordinates(t)
             t0 = gpt.time()
             mv = cgpt.random_sample(
                 self.obj,
-                pos,
                 {
                     **p,
                     **{
@@ -72,7 +67,20 @@ class random:
                 },
             )
             t1 = gpt.time()
-            t[pos] = mv
+            cache_key = f"{t.grid.obj}_{t.grid.describe()}_{t.otype.shape}"
+            if cache_key not in self.cache:
+                pos = gpt.coordinates(t)
+                plan = gpt.copy_plan(t, mv)
+                plan.destination += t.view[pos]
+                plan.source += gpt.global_memory_view(
+                    t.grid, [[t.grid.processor, mv, 0, mv.nbytes]]
+                )
+                self.cache[cache_key] = plan()
+
+            assert "pos" not in p  # to ensure that deprecated code is not used
+
+            self.cache[cache_key](t, mv)
+
             if self.verbose:
                 szGB = mv.size * mv.itemsize / 1024.0 ** 3.0
                 gpt.message(
@@ -115,36 +123,39 @@ class random:
         if type(out) == list:
             return [self.element(x, p) for x in out]
 
-        t1 = -gpt.time()
-        
+        t = gpt.timer("element")
+
         scale = p["scale"]
         normal = p["normal"]
         grid = out.grid
+
+        t("complex")
         ca = gpt.complex(grid)
+
+        t("cartesian_space")
         cartesian_space = gpt.lattice(out.grid, out.otype.cartesian())
+        t("csset")
         cartesian_space[:] = 0
 
-        t0 = 0.0
-        
-        for ta in cartesian_space.otype.generators(grid.precision.complex_dtype):
+        t("gen")
+        gen = cartesian_space.otype.generators(grid.precision.complex_dtype)
+        t()
+        for ta in gen:
 
-            t0 -= gpt.time()
-            
+            t("rng")
+
             if normal:
                 self.normal(ca)
             else:
                 self.uniform_real(ca, {"min": -0.5, "max": 0.5})
-
-            t0 += gpt.time()
-            
+            t("lc")
             cartesian_space += scale * ca * ta
 
-        t2 = -gpt.time()
+        t("conv")
         gpt.convert(out, cartesian_space)
-        t2 += gpt.time()
+        t()
 
-        t1 += gpt.time()
-        gpt.message("element total",t1,"rng",t0,"convert",t2)
+        # gpt.message(t)
         return out
 
 

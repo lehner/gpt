@@ -42,8 +42,10 @@ public:
   }
 
   T get_bits(int bits) {
+    // get bits is slow
     while (bits > nbits)
       populate();
+
     T base = ((T)1) << bits;
     T res = state & (base - 1);
     state /= base;

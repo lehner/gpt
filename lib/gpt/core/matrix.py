@@ -20,7 +20,10 @@ import gpt, cgpt, numpy
 
 # matrix exponential
 def exp(i):
+    t = gpt.timer("exp")
+    t("eval")
     i = gpt.eval(i)  # accept expressions
+    t("prep")
     if i.grid.precision != gpt.double:
         x = gpt.convert(i, gpt.double)
     else:
@@ -33,21 +36,29 @@ def exp(i):
         ns = int(numpy.log2(n / maxn))
         x /= 2 ** ns
     o = gpt.lattice(x)
+    t("mem")
     o[:] = 0
     nfac = 1.0
     xn = gpt.copy(x)
-    o[:] = numpy.identity(o.otype.shape[0], o.grid.precision.complex_dtype)
+    t("id")
+    o @= gpt.identity(o)
+    t("add")
     o += xn
+    t("loop")
     for j in range(2, order + 1):
         nfac /= j
         xn @= xn * x
         o += xn * nfac
+    t("reduce")
     for j in range(ns):
         o @= o * o
+    t("conv")
     if i.grid.precision != gpt.double:
         r = gpt.lattice(i)
         gpt.convert(r, o)
         o = r
+    t()
+    # gpt.message(t)
     return o
 
 

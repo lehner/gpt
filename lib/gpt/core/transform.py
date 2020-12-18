@@ -149,17 +149,28 @@ def identity(src):
     return eye
 
 
+def project(src, method):
+    src.otype.project(src, method)
+    return src
+
+
 def where(first, second, third, fourth=None):
     if fourth is None:
         question = first
         yes = second
         no = third
-        answer = gpt.lattice(yes)
+        answer = None
     else:
         question = second
         yes = third
         no = fourth
         answer = first
+
+    question = gpt.eval(question)
+    yes = gpt.eval(yes)
+    no = gpt.eval(no)
+    if answer is None:
+        answer = gpt.lattice(yes)
 
     assert len(question.v_obj) == 1
     assert len(yes.v_obj) == len(no.v_obj)
