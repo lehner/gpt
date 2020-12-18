@@ -41,7 +41,6 @@ for f in \
     ${test_path}/create/create.py \
     ${test_path}/create/smear.py \
     ${test_path}/qcd/a2a.py \
-    ${test_path}/qcd/clover.py \
     ${test_path}/qcd/fermion_operators.py \
     ${test_path}/qcd/gauge.py \
     ${test_path}/qcd/domain_wall.py \
