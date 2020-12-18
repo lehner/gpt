@@ -56,6 +56,7 @@ NAMESPACE_BEGIN(Grid);
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
 #include "foundation/matrix.h"
+#include "foundation/clover.h"
 
 
 NAMESPACE_END(Grid);
