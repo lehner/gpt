@@ -2,11 +2,8 @@
 
 ## Prerequisites
 
-All the methods listed below rely on:
-
-* Specified Grid installation (--with-grid) has to be built with the `-fPIC` flag.  GPT is developed with the feature/gpt branch of https://github.com/lehner/Grid.
-* a `python3-config` or a python3 installation that
-  autotools can find
+* Grid based on the feature/gpt branch of https://github.com/lehner/Grid
+* Python 3.6 or newer
 
 ## Bootstrap
 
