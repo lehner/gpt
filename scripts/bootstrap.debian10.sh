@@ -1,5 +1,26 @@
 #!/bin/bash
 #
+# Check debian packages
+#
+function check_package {
+	dpkg -s $1 1> /dev/null 2> /dev/null
+	if [[ "$?" != "0" ]];
+	then
+		echo "Package $1 needs to be installed first"
+		exit 1
+	fi
+}
+
+check_package gcc
+check_package python3
+check_package python3-pip
+check_package wget
+check_package autoconf
+check_package libssl-dev
+check_package zlib1g-dev
+check_package libfftw3-dev
+
+#
 # Install python3 if it is not yet there
 #
 echo "Checking numpy"
@@ -9,11 +30,6 @@ then
     echo "Install numpy"
     python3 -m pip install --user numpy
 fi
-
-#
-# Default libraries
-#
-brew install wget autoconf automake openssl
 
 #
 # Get root directory
