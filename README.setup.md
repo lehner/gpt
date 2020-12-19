@@ -8,25 +8,13 @@ All the methods listed below rely on:
 * a `python3-config` or a python3 installation that
   autotools can find
 
-## Standard build with GNU autotools
+## Bootstrap
 
-The build follows the default procedure:
-
-    cd /path/to/source
-    ./bootstrap.sh
-    mkdir /path/to/builddir
-    cd    /path/to/builddir
-    /path/to/source/configure --with-grid=/path/to/grid/installdir --prefix=/path/to/installdir
-    make -j7
-    make install
-
-You may, e.g., decide to install GPT in your home directory
-using `--prefix=$HOME/.local`.
-
-## Alternative make system
-You may also decide to use the `make` script in lib/cgpt for rapid development.  In this case
-use
+GPT includes scripts to automatically download and setup GPT and its dependencies
+for common architectures.  These scripts are listed in gpt/scripts/bootstrap
+and should be invoked from the gpt directory, e.g., as
 ```bash
-source gpt/scripts/source.sh
+git clone https://github.com/lehner/gpt
+cd gpt
+scripts/bootstrap/debian10.clang.avx2.no-mpi
 ```
-to properly set the Python environment.
