@@ -11,7 +11,7 @@ function check_package {
 	fi
 }
 
-check_package clang-9
+check_package clang
 check_package python3
 check_package python3-pip
 check_package wget
@@ -34,7 +34,7 @@ fi
 #
 # Get root directory
 #
-root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
 
 #
 # Precompile python
