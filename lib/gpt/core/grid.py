@@ -167,6 +167,22 @@ class grid:
             parent=parent,
         )
 
+    def checkerboarded(self, cb):
+        if cb == self.cb:
+            return self
+        if self.parent is None:
+            parent = None
+        else:
+            parent = self.parent.checkerboarded(cb)
+        return grid(
+            self.fdimensions,
+            self.precision,
+            cb=cb,
+            obj=None,
+            mpi=self.mpi,
+            parent=parent,
+        )
+
     def split(self, mpi_split, fdimensions):
         return grid(fdimensions, self.precision, self.cb, None, mpi_split, self)
 

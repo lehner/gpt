@@ -24,8 +24,8 @@ grid = U[0].grid
 # wilson parameters
 p = {
     "kappa": 0.137,
-    "csw_r": 0,
-    "csw_t": 0,
+    "csw_r": 0.0,
+    "csw_t": 0.0,
     "xi_0": 1,
     "nu": 1,
     "isAnisotropic": False,
@@ -36,7 +36,7 @@ p = {
 # print(pf)
 
 # take slow reference implementation of wilson (kappa = 1/2/(m0 + 4) ) ;
-w_ref = g.qcd.fermion.reference.wilson(U, p)
+w_ref = g.qcd.fermion.reference.wilson_clover(U, p)
 
 # and fast Grid version
 w = g.qcd.fermion.wilson_clover(U, p, kappa=0.137)
@@ -191,84 +191,53 @@ rhq = g.qcd.fermion.rhq_columbia(
 # this protects against bugs introduced in the matrix application
 # of fermion operators (new architectures / implementations)
 #
-# These tests are only meaningfull in combination with other
-# cross-checks
+# These tests are only meaningfull if reference implementation is also
+# included
 #########################################################################
+wilson_clover_params = {
+    "kappa": 0.13500,
+    "csw_r": 1.5,
+    "csw_t": 1.951,
+    "xi_0": 1.33111,
+    "nu": 2.61,
+    "isAnisotropic": True,
+    "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+}
+wilson_clover_matrices_rb = {
+    ".Mooee": [
+        (-964.604747199766 + 1955.3204837295887j),
+        (-984.9379301006896 + 1812.470240028601j),
+    ],
+    ".Meooe": [
+        (-180.76784134943463 - 907.7516272233529j),
+        (563.2079135281185 - 720.151781978722j),
+    ],
+}
+wilson_clover_matrices = {
+    "": [(-946.8714968698364 - 427.1253034080037j)],
+    ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
+}
 test_suite = {
     "wilson_clover": {
         "fermion": g.qcd.fermion.wilson_clover,
-        "params": {
-            "kappa": 0.13500,
-            "csw_r": 1.5,
-            "csw_t": 1.951,
-            "xi_0": 0.75123,
-            "nu": 1.412,
-            "isAnisotropic": True,
-            "boundary_phases": [1.0, -1.0, 1.0, -1.0],
-        },
-        "matrices_rb": {
-            ".Mooee": [
-                (-899.6678262187658 + 1989.7984555764265j),
-                (-899.6678262187658 + 1989.7984555764265j),
-                (-22.005769958619545 + 34.784294100787505j),
-                (-22.005769958619545 + 34.784294100787505j),
-                (-925.3456101495686 + 1785.3909272079718j),
-                (-925.3456101495686 + 1785.3909272079718j),
-                (-21.28549612737098 + 40.29271781260442j),
-                (-21.28549612737098 + 40.29271781260442j),
-            ],
-            ".Meooe": [
-                (-163.21030861530133 - 901.980848496021j),
-                (608.0842430279749 - 1249.2439986784607j),
-                (544.0707569351338 - 723.5933004295134j),
-                (24.878541623221736 - 1077.208039065551j),
-            ],
-        },
-        "matrices": {
-            "": [
-                (-871.8416353893713 - 358.7175198308046j),
-                (-987.4411552844747 - 5434.989784505095j),
-            ],
-            ".Mdiag": [(-840.8952373062322 - 3254.115048791882j)],
-        },
+        "params": wilson_clover_params,
+        "matrices_rb": wilson_clover_matrices_rb,
+        "matrices": wilson_clover_matrices,
     },
     "wilson_clover_legacy": {
         "fermion": g.qcd.fermion.wilson_clover,
         "params": {
-            "kappa": 0.13500,
-            "csw_r": 1.5,
-            "csw_t": 1.951,
-            "xi_0": 0.75123,
-            "nu": 1.412,
-            "isAnisotropic": True,
-            "boundary_phases": [1.0, -1.0, 1.0, -1.0],
-            "use_legacy": True,  # will be deprecated eventually
-        },
-        "matrices_rb": {
-            ".Mooee": [
-                (-899.6678262187658 + 1989.7984555764265j),
-                (-899.6678262187658 + 1989.7984555764265j),
-                (-22.005769958619545 + 34.784294100787505j),
-                (-22.005769958619545 + 34.784294100787505j),
-                (-925.3456101495686 + 1785.3909272079718j),
-                (-925.3456101495686 + 1785.3909272079718j),
-                (-21.28549612737098 + 40.29271781260442j),
-                (-21.28549612737098 + 40.29271781260442j),
-            ],
-            ".Meooe": [
-                (-163.21030861530133 - 901.980848496021j),
-                (608.0842430279749 - 1249.2439986784607j),
-                (544.0707569351338 - 723.5933004295134j),
-                (24.878541623221736 - 1077.208039065551j),
-            ],
-        },
-        "matrices": {
-            "": [
-                (-871.8416353893713 - 358.7175198308046j),
-                (-987.4411552844747 - 5434.989784505095j),
-            ],
-            ".Mdiag": [(-840.8952373062322 - 3254.115048791882j)],
-        },
+            **wilson_clover_params,
+            "use_legacy": True,
+        },  # will be deprecated eventually
+        "matrices_rb": wilson_clover_matrices_rb,
+        "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_reference": {
+        "fermion": g.qcd.fermion.reference.wilson_clover,
+        "params": wilson_clover_params,
+        "matrices_rb": wilson_clover_matrices_rb,
+        "matrices": wilson_clover_matrices,
     },
     "zmobius": {
         "fermion": g.qcd.fermion.zmobius,
@@ -294,30 +263,43 @@ test_suite = {
         "matrices_rb": {
             ".Mooee": [
                 (-2446.6009975599286 + 5633.208069699162j),
-                (-3173.664349815171 + 8268.326283629753j),
-                (138.4111258279281 + 297.2047111305896j),
-                (274.30528686708595 + 138.77396302243844j),
                 (-2446.6009975599286 + 5633.208069699162j),
-                (-3173.664349815171 + 8268.326283629753j),
-                (138.4111258279281 + 297.2047111305896j),
-                (274.30528686708595 + 138.77396302243844j),
             ],
             ".Meooe": [
                 (2320.1432377385536 - 2611.1244058385605j),
-                (-733.4792560192691 + 2376.2136953390655j),
                 (3083.8202044273708 - 1957.829867279577j),
-                (379.70047141651867 - 1324.6526037216404j),
             ],
         },
         "matrices": {
             "": [
                 (-2424.048033434305 + 10557.661684178218j),
-                (5058.817509141269 + 3535.1171451161918j),
             ],
             ".Mdiag": [(2643.396577965267 + 6550.259431381319j)],
         },
     },
 }
+
+
+def verify_matrix_element(mat, dst, src, tag):
+    src_prime = g.eval(mat * src)
+    dst.checkerboard(src_prime.checkerboard())
+    X = g.inner_product(dst, src_prime)
+    eps_ref = src.grid.precision.eps * 10.0
+    if mat.adj_mat is not None:
+        X_from_adj = g.inner_product(src, g.adj(mat) * dst).conjugate()
+        eps = abs(X - X_from_adj) / abs(X)
+        g.message(f"Test adj({tag}): {eps}")
+        assert eps < eps_ref
+        if mat.inv_mat is not None:
+            eps = (g.norm2(src - mat * g.inv(mat) * src) / g.norm2(src)) ** 0.5
+            g.message(f"Test inv({tag}): {eps}")
+            assert eps < eps_ref
+            Y = g.inner_product(dst, g.inv(g.adj(mat)) * src)
+            Y_from_adj = g.inner_product(src, g.inv(mat) * dst).conjugate()
+            eps = abs(Y - Y_from_adj) / abs(Y)
+            g.message(f"Test adj(inv({tag})): {eps}")
+            assert eps < eps_ref
+    return X
 
 
 g.default.set_verbose("random", False)
@@ -352,14 +334,9 @@ for precision in [g.single, g.double]:
             for cb in [g.even, g.odd]:
                 src.checkerboard(cb)
                 mat = eval(f"fermion{matrix}")
-                finger_print.append(g.inner_product(dst, mat * src))
-                if mat.adj_mat is not None:
-                    finger_print.append(g.inner_product(dst, g.adj(mat) * src))
-                    if mat.inv_mat is not None:
-                        finger_print.append(g.inner_product(dst, g.inv(mat) * src))
-                        finger_print.append(
-                            g.inner_product(dst, g.inv(g.adj(mat)) * src)
-                        )
+                finger_print.append(
+                    verify_matrix_element(mat, dst, src, f"fermion{matrix}")
+                )
             if test["matrices_rb"][matrix] is None:
                 g.message(f"Matrix {matrix} fingerprint: {finger_print}")
             else:
@@ -380,12 +357,9 @@ for precision in [g.single, g.double]:
         for matrix in test["matrices"]:
             finger_print = []
             mat = eval(f"fermion{matrix}")
-            finger_print.append(g.inner_product(dst, mat * src))
-            if mat.adj_mat is not None:
-                finger_print.append(g.inner_product(dst, g.adj(mat) * src))
-                if mat.inv_mat is not None:
-                    finger_print.append(g.inner_product(dst, g.inv(mat) * src))
-                    finger_print.append(g.inner_product(dst, g.inv(g.adj(mat)) * src))
+            finger_print.append(
+                verify_matrix_element(mat, dst, src, f"fermion{matrix}")
+            )
             if test["matrices"][matrix] is None:
                 g.message(f"Matrix {matrix} fingerprint: {finger_print}")
             else:

@@ -96,5 +96,11 @@ gamma = {
     "SigmaYZ": gamma_base(8),
     "SigmaYT": gamma_base(9),
     "SigmaZT": gamma_base(10),
+    (0, 1): gamma_base(5),  # other name for Sigma_ij
+    (0, 2): gamma_base(6),
+    (0, 3): gamma_base(7),
+    (1, 2): gamma_base(8),
+    (1, 3): gamma_base(9),
+    (2, 3): gamma_base(10),
     "I": gamma_base(11),  # identity matrix
 }
