@@ -284,7 +284,7 @@ def verify_matrix_element(mat, dst, src, tag):
     src_prime = g.eval(mat * src)
     dst.checkerboard(src_prime.checkerboard())
     X = g.inner_product(dst, src_prime)
-    eps_ref = src.grid.precision.eps * 10.0
+    eps_ref = src.grid.precision.eps * 50.0
     if mat.adj_mat is not None:
         X_from_adj = g.inner_product(src, g.adj(mat) * dst).conjugate()
         eps = abs(X - X_from_adj) / abs(X)
