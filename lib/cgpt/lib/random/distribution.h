@@ -131,8 +131,8 @@ class cgpt_cnormal_distribution {
   RealD mu,sigma;
   cgpt_cnormal_distribution(RealD _mu, RealD _sigma) : mu(_mu), sigma(_sigma) {};
   template<typename R> ComplexD operator()(R & r) {
-    RealD re = r.get_normal(mu,sigma);
     RealD im = r.get_normal(mu,sigma);
+    RealD re = r.get_normal(mu,sigma);
     return ComplexD(re,im);
   };
 };
