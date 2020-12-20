@@ -52,7 +52,7 @@ def ape_general(U, params):
     nd = len(U)
     alpha = params["alpha"]
     orthogonal_dimension = params["orthogonal_dimension"]
-    sum_staples = g.qcd.gauge.smear.staple_sum(U, params)
+    sum_staples = g.qcd.gauge.staples(U, params)
     U_smear = []
     for mu in range(nd):
         U_mu_smear = U[mu]
@@ -63,6 +63,6 @@ def ape_general(U, params):
              U_mu_smear = project_onto_suN(U_unproj, U[mu], params)
              # Reunitarize
              g.qcd.reunitize(U_mu_smear)
-             g.qcd.gauge.assert_unitary(U_mu_smear)
+             assert U_mu_smear.otype.is_element(U_mu_smear)
         U_smear.append(U_mu_smear)
     return U_smear
