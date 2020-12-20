@@ -1,0 +1,19 @@
+#!/bin/bash
+gnuplot<<EOF
+set terminal postscript color enhanced size 16cm, 10cm
+set output "plaquette.ps"
+
+set xlabel "Configuration"
+set ylabel "P"
+
+set title "Plaquette Action beta = 5.5, 8^4 lattice"
+plot \
+"metropolis.P" title "Metropolis, Step size = 0.5", \
+"su2_heat_bath.P" title "SU(2) Heatbath"
+EOF
+
+ps2pdf plaquette.ps
+pdfcrop plaquette.pdf
+
+mv plaquette-crop.pdf plaquette.pdf
+rm -f plaquette.ps

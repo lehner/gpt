@@ -1,4 +1,3 @@
-- gpt.convert(DDD) creates matrix_operator <- also use this for algebra<>group conversion, otype needs to know what other otypes can be converted to
 
 - Rework Multigrid based on sequence ?
 

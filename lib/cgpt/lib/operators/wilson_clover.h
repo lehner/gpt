@@ -30,6 +30,7 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
   RealD mass = get_float(args,"mass");
   RealD csw_r = get_float(args,"csw_r");
   RealD csw_t = get_float(args,"csw_t");
+  bool use_legacy = get_bool(args,"use_legacy");
   wac.isAnisotropic = get_bool(args,"isAnisotropic");
   wac.xi_0 = get_float(args,"xi_0");
   wac.nu = get_float(args,"nu");
@@ -48,7 +49,11 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
     PokeIndex<LorentzIndex>(U,Umu,mu);
   }
 
-  auto f = new WilsonCloverFermion<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,wac,wp);
-
-  return new cgpt_fermion_operator<WilsonCloverFermion<WI>>(f);
+  if (!use_legacy) {
+    auto f = new FasterWilsonCloverFermion<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,wac,wp);
+    return new cgpt_fermion_operator<WilsonCloverFermion<WI>>(f);
+  } else {
+    auto f = new WilsonCloverFermion<WI>(U, *grid, *grid_rb, mass, csw_r, csw_t, wac, wp);
+    return new cgpt_fermion_operator<WilsonCloverFermion<WI>>(f);
+  }
 }

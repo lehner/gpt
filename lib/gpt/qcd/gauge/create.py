@@ -27,7 +27,7 @@ def create_links(first, init, params):
 
         # default representation is SU3 fundamental
         if params["otype"] is None:
-            params["otype"] = g.ot_matrix_su3_fundamental()
+            params["otype"] = g.ot_matrix_su_n_fundamental_group(3)
 
         # default dimension is four
         if params["Nd"] is None:
@@ -69,7 +69,7 @@ def create_links(first, init, params):
 @params_convention(scale=1.0)
 def random(first, rng, params):
     def init(x, p):
-        rng.lie(x, scale=p["scale"])
+        rng.element(x, scale=p["scale"])
 
     return create_links(first, init, params)
 

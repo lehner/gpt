@@ -73,7 +73,7 @@ protected:
 
 public:
 
-  cgpt_vector_rng(const std::vector<uint64_t> & _seed) : buffer(vlen * nvrng) {
+  cgpt_vector_rng(const std::vector<uint64_t>& _seed) : buffer(vlen * nvrng) {
     rng.seed(seed(_seed));
     for (long i=0;i<nvrng;i++)
       vrng[i].seed(vseed());

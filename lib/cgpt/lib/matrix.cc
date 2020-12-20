@@ -40,3 +40,22 @@ EXPORT(invert_matrix,{
 
     return PyLong_FromLong(0);
   });
+
+EXPORT(determinant,{
+
+    PyObject * _matrix;
+    void* _det;
+    if (!PyArg_ParseTuple(args, "lO", &_det, &_matrix)) {
+      return NULL;
+    }
+
+    cgpt_Lattice_base* det = (cgpt_Lattice_base*)_det;
+    std::vector<cgpt_Lattice_base*> matrix;
+    long matrix_n_virtual = cgpt_basis_fill(matrix, _matrix);
+
+    ASSERT(matrix.size() > 0);
+
+    matrix[0]->determinant(det, matrix, matrix_n_virtual);
+
+    return PyLong_FromLong(0);
+  });
