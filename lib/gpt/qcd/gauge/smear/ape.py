@@ -52,7 +52,7 @@ def ape_general(U, params):
     nd = len(U)
     alpha = params["alpha"]
     orthogonal_dimension = params["orthogonal_dimension"]
-    sum_staples = g.qcd.gauge.staples(U, params)
+    sum_staples = g.qcd.gauge.staples.staple_sum(U, params)
     U_smear = []
     for mu in range(nd):
         U_mu_smear = U[mu]
