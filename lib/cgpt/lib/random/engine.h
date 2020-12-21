@@ -19,7 +19,7 @@
 class cgpt_random_engine_base {
 public:
   virtual ~cgpt_random_engine_base() { };
-  virtual PyObject* sample(PyObject* target, PyObject* param) = 0;
+  virtual PyObject* sample(PyObject* param) = 0;
   virtual double test_U01() = 0;
   virtual uint32_t test_bits() = 0;
 };
@@ -29,8 +29,17 @@ class cgpt_random_engine : public cgpt_random_engine_base {
  public:
   std::string _seed_str;
   cgpt_rng_engine cgpt_srng;
-  std::map<GridBase*,std::map<long,cgpt_rng_engine*>> cgpt_prng;
-  std::map<GridBase*,std::vector<uint64_t>> cgpt_seed;
+
+  struct prng_t {
+    std::vector<cgpt_rng_engine*> rng;
+    std::vector<long> hash;
+    std::vector<uint64_t> seed;
+    std::vector< std::vector< long > > samples;
+    long block, sites;
+    std::string grid_tag;
+  };
+  
+  std::map<GridBase*,prng_t> cgpt_prng;
 
   std::vector<uint64_t> str_to_seed(const std::string & seed_str) {
     std::vector<uint64_t> r;
@@ -44,12 +53,14 @@ class cgpt_random_engine : public cgpt_random_engine_base {
   
   virtual ~cgpt_random_engine() {
     for (auto & x : cgpt_prng)
-      for (auto & y : x.second)
-	delete y.second;
+      for (auto & y : x.second.rng)
+	delete y;
   }
 
-  virtual PyObject* sample(PyObject* _target, PyObject* _param) {
+  virtual PyObject* sample(PyObject* _param) {
 
+    double t0 = cgpt_time();
+    
     ASSERT(PyDict_Check(_param));
     std::string dist = get_str(_param,"distribution"), precision;
     std::vector<long> shape;
@@ -61,8 +72,15 @@ class cgpt_random_engine : public cgpt_random_engine_base {
       dtype = infer_numpy_type(get_str(_param,"precision"));
     }
 
-    std::map<long, cgpt_rng_engine*> & prng = cgpt_prng[grid];
-    std::vector<uint64_t> & seed = cgpt_seed[grid];
+    prng_t & prng = cgpt_prng[grid];
+    if (prng.grid_tag.size() == 0) {
+      prng.grid_tag = cgpt_grid_cache_tag[grid];
+    }
+    if (prng.grid_tag != cgpt_grid_cache_tag[grid]) {
+      // Grid changed! clear cache
+      prng = prng_t();
+    }
+    std::vector<uint64_t> & seed = prng.seed;
     if (seed.size() == 0) {
       seed = str_to_seed(_seed_str);
       if (grid) {
@@ -73,23 +91,26 @@ class cgpt_random_engine : public cgpt_random_engine_base {
       }
     }
 
+    double t1 = cgpt_time();
+    //std::cout << GridLogMessage << "prep " << t1-t0 << std::endl;
+
     // always generate in double first regardless of type casting to ensure that numbers are the same up to rounding errors
     // (rng could use random bits to result in different next float/double sampling)
     if (dist == "normal") {
       cgpt_normal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
     } else if (dist == "cnormal") {
       cgpt_cnormal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
     } else if (dist == "uniform_real") {
       cgpt_uniform_real_distribution distribution(get_float(_param,"min"),get_float(_param,"max"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
     } else if (dist == "uniform_int") {
       cgpt_uniform_int_distribution distribution(get_int(_param,"min"),get_int(_param,"max"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
     } else if (dist == "zn") {
       cgpt_zn_distribution distribution(get_int(_param,"n"));
-      return cgpt_random_sample(distribution,_target,cgpt_srng,prng,shape,seed,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
     } else {
       ERR("Unknown distribution: %s", dist.c_str());
     }

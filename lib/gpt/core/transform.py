@@ -58,43 +58,6 @@ def copy(first, second=None):
         assert 0
 
 
-def convert(first, second):
-    if second in [gpt.single, gpt.double]:
-
-        # if first is a list, distribute
-        if type(first) == list:
-            return [convert(x, second) for x in first]
-
-        # if first is no list, evaluate
-        src = gpt.eval(first)
-        dst_grid = src.grid.converted(second)
-        return convert(gpt.lattice(dst_grid, src.otype), src)
-
-    elif type(first) == list:
-
-        assert len(first) == len(second)
-        for i in range(len(first)):
-            convert(first[i], second[i])
-        return first
-
-    elif type(first) == gpt.lattice:
-
-        # second may be expression
-        second = gpt.eval(second)
-
-        # now second is lattice
-        assert len(first.otype.v_idx) == len(second.otype.v_idx)
-        for i in first.otype.v_idx:
-            cgpt.convert(first.v_obj[i], second.v_obj[i])
-
-        # set checkerboard
-        first.checkerboard(second.checkerboard())
-        return first
-
-    else:
-        assert 0
-
-
 def rank_inner_product(a, b, use_accelerator=True):
     return_list = (type(a) == list) or (type(b) == list)
     a = gpt.util.to_list(a)
@@ -184,3 +147,38 @@ def identity(src):
     eye = gpt.lattice(src)
     eye[:] = src.otype.identity()
     return eye
+
+
+def project(src, method):
+    src.otype.project(src, method)
+    return src
+
+
+def where(first, second, third, fourth=None):
+    if fourth is None:
+        question = first
+        yes = second
+        no = third
+        answer = None
+    else:
+        question = second
+        yes = third
+        no = fourth
+        answer = first
+
+    question = gpt.eval(question)
+    yes = gpt.eval(yes)
+    no = gpt.eval(no)
+    if answer is None:
+        answer = gpt.lattice(yes)
+
+    assert len(question.v_obj) == 1
+    assert len(yes.v_obj) == len(no.v_obj)
+    assert len(answer.v_obj) == len(yes.v_obj)
+
+    params = {"operator": "?:"}
+
+    for a, y, n in zip(answer.v_obj, yes.v_obj, no.v_obj):
+        cgpt.ternary(a, question.v_obj[0], y, n, params)
+
+    return answer

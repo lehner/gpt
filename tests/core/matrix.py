@@ -13,7 +13,7 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     m = g.mcolor(grid)
 
     # first test matrix operators
-    rng.lie(m)
+    rng.element(m)
     m2 = g.matrix.exp(g.matrix.log(m))
     eps2 = g.norm2(m - m2) / g.norm2(m)
     g.message(f"exp(log(m)) == m: {eps2}")
@@ -21,6 +21,12 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
 
     eps2 = g.norm2(g.adj(m) - g.matrix.inv(m)) / g.norm2(m)
     g.message(f"adj(U) == inv(U): {eps2}")
+    assert eps2 < eps ** 2.0
+
+    eps2 = g.norm2(g.matrix.log(g.matrix.det(g.matrix.exp(m))) - g.trace(m)) / g.norm2(
+        m
+    )
+    g.message(f"log(det(exp(m))) == tr(m): {eps2}")
     assert eps2 < eps ** 2.0
 
     # then test component operators

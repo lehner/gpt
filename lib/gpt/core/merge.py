@@ -215,7 +215,7 @@ def separate_indices(x, st, cache=default_merge_indices_cache):
         result[i] = v
         dst.append(v)
 
-    cache_key = f"separate_indices_{cb.__name__}_{result_otype.__name__}_{x.otype.__name__}_{x.grid.obj}"
+    cache_key = f"separate_indices_{cb.__name__}_{result_otype.__name__}_{x.otype.__name__}_{x.grid.describe()}_{x.grid.obj}"
     if cache_key not in cache:
         plan = gpt.copy_plan(dst, x)
         for i in range(len(tidx)):

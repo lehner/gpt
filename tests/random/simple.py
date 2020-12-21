@@ -13,6 +13,17 @@ grid_sp = g.grid([8, 4, 4, 4], g.single)
 grid_large_dp = g.grid([8, 8, 4, 8], g.double)
 
 rng = g.random("block_seed_string_13")
+
+
+grid_dp = g.grid([8, 16, 16, 16], g.double)
+t = g.mspincolor(grid_dp)
+rng.cnormal(t)
+rng.cnormal(t)
+rng.cnormal(t)
+rng.cnormal(t)
+
+sys.exit(0)
+
 for grid, prec, ref_plaquette, scale in [
     (grid_dp, 1e-28, -0.00014108397456619623, 10),
     (grid_sp, 1e-14, -0.00014108397456619623, 10),

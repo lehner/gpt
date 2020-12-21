@@ -19,7 +19,11 @@
 import numpy
 
 
-class single:
+class precision:
+    pass
+
+
+class single(precision):
     nbytes = 4
     real_dtype = numpy.float32
     complex_dtype = numpy.complex64
@@ -29,7 +33,7 @@ class single:
         pass
 
 
-class double:
+class double(precision):
     nbytes = 8
     real_dtype = numpy.float64
     complex_dtype = numpy.complex128

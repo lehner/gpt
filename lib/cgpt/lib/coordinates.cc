@@ -231,67 +231,6 @@ EXPORT(coordinates_inserted_dimension,{
     return (PyObject*)a;
   });
 
-EXPORT(coordinates_select_box,{
-
-    PyObject* _coordinates, * _top, * _bottom;
-    if (!PyArg_ParseTuple(args, "OOO", &_coordinates,&_top,&_bottom)) {
-      return NULL;
-    }
-
-    std::vector<long> top, bottom;
-    cgpt_convert(_top,top);
-    cgpt_convert(_bottom,bottom);
-
-    ASSERT(cgpt_PyArray_Check(_coordinates));
-    PyArrayObject* coordinates = (PyArrayObject*)_coordinates;
-    ASSERT(PyArray_TYPE(coordinates)==NPY_INT32);
-    ASSERT(PyArray_NDIM(coordinates) == 2);
-    long* tdim = PyArray_DIMS(coordinates);
-    long nc    = tdim[0];
-    long nd    = tdim[1];
-    ASSERT(nd == bottom.size() && nd == top.size());
-    std::vector<bool> keep(nc);
-
-    int32_t* s = (int32_t*)PyArray_DATA(coordinates);
-    thread_for(i,nc,{
-	long j;
-	for (j=0;j<nd;j++) {
-	  auto & x = s[i*nd+j];
-	  if (x < top[j] || x>= bottom[j])
-	    break;
-	}
-	keep[i] = (j == nd);
-      });
-
-    long maxn = 1;
-    for (long d=0;d<nd;d++) {
-      maxn *= bottom[d] - top[d];
-      ASSERT(maxn > 0);
-    }
-
-    std::vector<long> m(maxn);
-    long idx = 0;
-
-    for (long i=0;i<nc;i++)
-      if (keep[i])
-	m[idx++]=i;
-
-    std::vector<long> dims(2);
-    dims[0] = idx;
-    dims[1] = nd;
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_INT32);
-    int32_t* d = (int32_t*)PyArray_DATA(a);
-
-    thread_for(i,idx,{
-	long idx = m[i];
-	for (long j=0;j<nd;j++)
-	  d[i*nd + j] = s[idx*nd + j];
-      });
-
-    PyArray_CLEARFLAGS(a,NPY_ARRAY_WRITEABLE); // read-only, so we can cache distribute plans
-    return (PyObject*)a;
-  });
-
 EXPORT(coordinates_momentum_phase,{
 
     // exp(i x mom)

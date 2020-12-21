@@ -153,15 +153,15 @@ for mat, vec_full, vec_half, w in [
         vec_half(),
     )
     rng.cnormal(src)
-    g.pick_cb(g.even, src_e, src)
-    g.pick_cb(g.odd, src_o, src)
+    g.pick_checkerboard(g.even, src_e, src)
+    g.pick_checkerboard(g.odd, src_o, src)
 
     # Meo + Moe = Dhop
     mat.Dhop.mat(ref, src)
     mat.Meooe.mat(res_o, src_e)
     mat.Meooe.mat(res_e, src_o)
-    g.set_cb(res, res_e)
-    g.set_cb(res, res_o)
+    g.set_checkerboard(res, res_e)
+    g.set_checkerboard(res, res_o)
     rel_dev = g.norm2(ref - res) / g.norm2(ref)
     g.message(
         f"""
@@ -177,8 +177,8 @@ Test: Meo + Moe = Dhop
     mat.Dhop.adj_mat(ref, src)
     mat.Meooe.adj_mat(res_o, src_e)
     mat.Meooe.adj_mat(res_e, src_o)
-    g.set_cb(res, res_e)
-    g.set_cb(res, res_o)
+    g.set_checkerboard(res, res_e)
+    g.set_checkerboard(res, res_o)
     rel_dev = g.norm2(ref - res) / g.norm2(ref)
     g.message(
         f"""
@@ -198,8 +198,8 @@ Test: Meo^dag + Moe^dag = Dhop^dag
     mat.Meooe.mat(tmp2_e, src_o)
     tmp2_o += tmp_o
     tmp2_e += tmp_e
-    g.set_cb(res, tmp2_e)
-    g.set_cb(res, tmp2_o)
+    g.set_checkerboard(res, tmp2_e)
+    g.set_checkerboard(res, tmp2_o)
     rel_dev = g.norm2(ref - res) / g.norm2(ref)
     g.message(
         f"""
@@ -219,8 +219,8 @@ Test: Meo + Moe + Moo + Mee = M
     mat.Meooe.adj_mat(tmp2_e, src_o)
     tmp2_o += tmp_o
     tmp2_e += tmp_e
-    g.set_cb(res, tmp2_e)
-    g.set_cb(res, tmp2_o)
+    g.set_checkerboard(res, tmp2_e)
+    g.set_checkerboard(res, tmp2_o)
     rel_dev = g.norm2(ref - res) / g.norm2(ref)
     g.message(
         f"""

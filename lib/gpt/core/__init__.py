@@ -18,7 +18,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.core.grid import grid, grid_from_description, full, redblack
-from gpt.core.precision import single, double, str_to_precision
+from gpt.core.precision import single, double, precision, str_to_precision
 from gpt.core.advise import advise, prefetch, infrequent_use, to_host, to_accelerator
 from gpt.core.expr import expr, factor, expr_unary, factor_unary, expr_eval
 from gpt.core.lattice import lattice, get_mem_book
@@ -27,10 +27,10 @@ from gpt.core.tensor import tensor
 from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time, timer
 from gpt.core.log import message
+from gpt.core.convert import convert
 from gpt.core.transform import (
     cshift,
     copy,
-    convert,
     norm2,
     inner_product,
     rank_inner_product,
@@ -39,11 +39,20 @@ from gpt.core.transform import (
     axpy_norm2,
     slice,
     identity,
+    project,
+    where,
 )
 from gpt.core.copy_plan import copy_plan, lattice_view, global_memory_view
-from gpt.core.checkerboard import pick_cb, set_cb, even, odd, none, str_to_cb
+from gpt.core.checkerboard import (
+    pick_checkerboard,
+    set_checkerboard,
+    even,
+    odd,
+    none,
+    str_to_cb,
+)
 from gpt.core.operator import *
-from gpt.core.otype import *
+from gpt.core.object_type import *
 from gpt.core.mpi import *
 from gpt.core.io import (
     load,

@@ -1,7 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020 Tilo Wettig
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,27 +16,23 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
 
 
-def fundamental_to_adjoint(U_a, U_f):
-    """
-    Convert fundamental to adjoint representation.  For now only SU(2) is supported.
+class ot_base:
+    v_otype = [None]  # cgpt's data types
+    v_n0 = [0]
+    v_n1 = [1]
+    v_idx = [0]
+    transposed = None
+    spintrace = None
+    colortrace = None
+    data_alias = None  # ot can be cast as fundamental type data_alias (such as SU(3) -> 3x3 matrix)
+    mtab = {}  # x's multiplication table for x * y
+    rmtab = {}  # y's multiplication table for x * y
 
-    Input: fundamental gauge field
+    # only vectors shall define otab/itab
+    otab = None  # x's outer product multiplication table for x * adj(y)
+    itab = None  # x's inner product multiplication table for adj(x) * y
 
-    Output: adjoint gauge field
-    """
-    grid = U_f.grid
-    T = U_f.otype.generators(grid.precision.complex_dtype)
-    V = {}
-    for a in range(len(T)):
-        for b in range(len(T)):
-            V[a, b] = g.eval(2.0 * g.trace(T[a] * U_f * T[b] * g.adj(U_f)))
-    g.merge_color(U_a, V)
-
-
-def assert_unitary(U):
-    I = g.identity(U)
-    err = (g.norm2(U * g.adj(U) - I) / g.norm2(I)) ** 0.5
-    assert err < U.grid.precision.eps * 10.0
+    # list of object types to which I can convert and converter function
+    ctab = {}

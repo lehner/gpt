@@ -120,9 +120,22 @@ public:
     }
   }
 
-  virtual void unary_from(cgpt_Lattice_base* src, PyObject* params) {
-    cgpt_unary_from(l,compatible<T>(src)->l,params);
+  virtual void unary_from(cgpt_Lattice_base* a, PyObject* params) {
+    cgpt_unary_from(l,compatible<T>(a)->l,params);
   }
+
+  virtual void binary_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b, PyObject* params) {
+    cgpt_binary_from(l,compatible<T>(a)->l,compatible<T>(b)->l,params);
+  }
+
+  virtual void ternary_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b, cgpt_Lattice_base* c, PyObject* params) {
+    cgpt_ternary_from(l,
+		      compatible<iSinglet<vCoeff_t>>(a)->l,
+		      compatible<T>(b)->l,
+		      compatible<T>(c)->l, params);
+  }
+  
+
 
   virtual void cshift_from(cgpt_Lattice_base* _src, int dir, int off) {
     cgpt_Lattice<T>* src = compatible<T>(_src);
@@ -241,6 +254,10 @@ public:
     cgpt_invert_matrix(l,matrix_inv,matrix,n_virtual);
   }
 
+  virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) {
+    cgpt_determinant(l,det,matrix,n_virtual);
+  }
+  
   virtual GridBase* get_grid() {
     return l.Grid();
   }

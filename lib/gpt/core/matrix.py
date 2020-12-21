@@ -20,6 +20,10 @@ import gpt, cgpt, numpy
 
 # matrix exponential
 def exp(i):
+    t = gpt.timer("exp")
+    t("eval")
+    i = gpt.eval(i)  # accept expressions
+    t("prep")
     if i.grid.precision != gpt.double:
         x = gpt.convert(i, gpt.double)
     else:
@@ -32,25 +36,34 @@ def exp(i):
         ns = int(numpy.log2(n / maxn))
         x /= 2 ** ns
     o = gpt.lattice(x)
+    t("mem")
     o[:] = 0
     nfac = 1.0
     xn = gpt.copy(x)
-    o[:] = numpy.identity(o.otype.shape[0], o.grid.precision.complex_dtype)
+    t("id")
+    o @= gpt.identity(o)
+    t("add")
     o += xn
+    t("loop")
     for j in range(2, order + 1):
         nfac /= j
         xn @= xn * x
         o += xn * nfac
+    t("reduce")
     for j in range(ns):
         o @= o * o
+    t("conv")
     if i.grid.precision != gpt.double:
         r = gpt.lattice(i)
         gpt.convert(r, o)
         o = r
+    t()
+    # gpt.message(t)
     return o
 
 
 def log(i, convergence_threshold=0.5):
+    i = gpt.eval(i)
     # i = n*(1 + x), log(i) = log(n) + log(1+x)
     # x = i/n - 1, |x|^2 = <i/n - 1, i/n - 1> = |i|^2/n^2 + |1|^2 - (<i,1> + <1,i>)/n
     # d/dn |x|^2 = -2 |i|^2/n^3 + (<i,1> + <1,i>)/n^2 = 0 -> 2|i|^2 == n (<i,1> + <1,i>)
@@ -81,6 +94,7 @@ def log(i, convergence_threshold=0.5):
 
 
 def inv(A):
+    A = gpt.eval(A)
     assert type(A) == gpt.lattice
     A_inv = gpt.lattice(A)
     to_list = gpt.util.to_list
@@ -88,10 +102,10 @@ def inv(A):
     return A_inv
 
 
-def det(i):
-     """ site-local matrix determinant for color-matrix """
-     tmp = i[:]
-     assert len(i.otype.shape) == 2
-     o = gpt.complex(i.grid)
-     o[:] = numpy.linalg.det(tmp)
-     return o
+def det(A):
+    A = gpt.eval(A)
+    assert type(A) == gpt.lattice
+    r = gpt.complex(A.grid)
+    to_list = gpt.util.to_list
+    cgpt.determinant(r.v_obj[0], to_list(A))
+    return r

@@ -102,14 +102,14 @@ EXPORT(delete_random,{
 
 EXPORT(random_sample,{
 
-    PyObject* _target, *_param;
+    PyObject* _param;
     void* _p;
-    if (!PyArg_ParseTuple(args, "lOO", &_p,&_target,&_param)) {
+    if (!PyArg_ParseTuple(args, "lO", &_p,&_param)) {
       return NULL;
     }
 
     cgpt_random_engine_base* p = (cgpt_random_engine_base*)_p;
-    return p->sample(_target,_param);
+    return p->sample(_param);
 
   });
 
