@@ -133,8 +133,8 @@ static void cgpt_copy_add_memory_views(std::vector<gm_transfer::memory_view>& mv
 
 	mv.push_back({ lattice_view_mt, data, (size_t)buf->len} );
       }
+      Py_DECREF(v_obj);
     }
-    Py_DECREF(v_obj);
   }
 
 }
