@@ -36,6 +36,7 @@ static void cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _b
     PyObject* obj = PyList_GetItem(v_obj,idx);
     ASSERT(PyLong_Check(obj));
     basis[i] = (cgpt_Lattice_base*)PyLong_AsVoidPtr(obj);
+    Py_XDECREF(v_obj);
   }
 }
 
@@ -59,6 +60,7 @@ static long cgpt_basis_fill(std::vector<cgpt_Lattice_base*>& basis, PyObject* _b
       ASSERT(PyLong_Check(obj));
       basis[i*n_virtual + idx] = (cgpt_Lattice_base*)PyLong_AsVoidPtr(obj);
     }
+    Py_XDECREF(v_obj);
   }
   return n_virtual;
 }
