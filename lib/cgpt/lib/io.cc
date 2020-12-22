@@ -46,14 +46,14 @@ EXPORT(save,{
     }
 
     cgpt_convert(_dest,dest);
-    cgpt_convert(_format,format);
+    cgpt_convert((PyObject*)_format->ob_type,format);
     cgpt_convert(_verbose,verbose);
 
-    //if (format == "gpt") {
-    //  return save_gpt(dest,_objs,verbose);
-    //}
-
-    ERR("Unknown format: %s", format.c_str());
+    if (format == "nersc") {
+      save_nersc(dest, _format, _objs, verbose);
+    } else {
+      ERR("Unknown format: %s", format.c_str());
+    }
     
     Py_RETURN_NONE;
     

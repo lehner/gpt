@@ -2,6 +2,7 @@
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
+#
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation; either version 2 of the License, or
@@ -16,33 +17,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt
-from gpt.params import params_convention
+import gpt as g
 
-# format
-class format:
-    class gpt:
-        @params_convention()
-        def __init__(self, params):
-            self.params = params
-
-    class cevec:
-        @params_convention()
-        def __init__(self, params):
-            self.params = params
-
-    class nersc:
-        @params_convention()
-        def __init__(self, params):
-            self.params = params
-
-
-# output
-def save(filename, objs, fmt=format.gpt()):
-
-    if type(fmt) == format.gpt:
-        return gpt.core.io.gpt_io.save(filename, objs, fmt.params)
-    elif type(fmt) == format.cevec:
-        return gpt.core.io.cevec_io.save(filename, objs, fmt.params)
-
-    return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
