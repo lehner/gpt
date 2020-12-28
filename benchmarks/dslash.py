@@ -12,7 +12,7 @@ rng = g.random("benchmark")
 for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
     N = g.default.get_int("--N", 1000)
-    Ls = g.default.get_int("--Ls", 12)
+    Ls = g.default.get_int("--Ls", 8)
     g.message(
         f"""
 DWF Dslash Benchmark with
@@ -39,7 +39,11 @@ DWF Dslash Benchmark with
     src = g.vspincolor(qm.F_grid)
     dst = g.vspincolor(qm.F_grid)
 
+    # random source
     rng.cnormal(src)
+
+    # copy to new memory region
+    src = g.copy(src)
 
     # Flops
     gauge_otype = qm.U[0].otype

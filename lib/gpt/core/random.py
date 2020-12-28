@@ -79,6 +79,10 @@ class random:
 
             assert "pos" not in p  # to ensure that deprecated code is not used
 
+            # guide optimal page mapping on first write, overhead minimal
+            t[:] = 0
+
+            # fill lattice
             self.cache[cache_key](t, mv)
 
             if self.verbose:

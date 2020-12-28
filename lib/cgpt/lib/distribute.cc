@@ -424,7 +424,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize(std::vector<block
   struct {
     bool operator()(const block_t& a, const block_t& b) const
     {
-      return a.start_src < b.start_src;
+      return a.start_dst < b.start_dst; // sort by destination address (better for first write page mapping)
     }
   } less;
   
