@@ -22,7 +22,7 @@ import gpt as g
 from gpt.params import params_convention
 from gpt.core.suN_utils import project_onto_suN
 
-@params_convention(alpha=2.5, orthogonal_dimension=3, Blk_Max=None, Blk_Accuracy=None)
+@params_convention(alpha=2.5, orthogonal_dimension=3, blk_max=None, blk_accuracy=None)
 def ape(U, params):
     nd = len(U)
     alpha = params["alpha"]
@@ -55,7 +55,7 @@ def ape_general(U, params):
     sum_staples = g.qcd.gauge.staples.staple_sum(U, params)
     U_smear = []
     for mu in range(nd):
-        U_mu_smear = U[mu]
+        U_mu_smear = g.copy(U[mu])
         if mu!= orthogonal_dimension:
              U_mu_smear =  g(U[mu] * alpha) + g(sum_staples[mu])
              U_unproj = g.eval(g.adj(U_mu_smear))
