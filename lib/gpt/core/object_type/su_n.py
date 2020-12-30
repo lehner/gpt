@@ -200,8 +200,8 @@ class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
     def su2_subgroups(self):
         N = (self.Nc * (self.Nc - 1)) // 2
         r = []
-        for i in range(N - 1):
-            for j in range(i + 1, N):
+        for i in range(self.Nc - 1):
+            for j in range(i + 1, self.Nc):
                 r.append((i, j))
         assert len(r) == N
         return r
