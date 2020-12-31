@@ -22,51 +22,80 @@ import numpy as np
 import h5py
 
 
-def _check_meas(hdf5):
-    ''' Assert existence of the measurement, create otherwise and return the hdf5 group '''
+def _check_meas(name_hdf5, measurement_spectrum):
+    ''' Assert existence of the measurement, 
+       create otherwise and return the name of the source measurement'''
 
-    if "barspec" not in hdf5.keys():
-        grp1 = hdf5.create_group("barspec")
-    grp1 = hdf5["barspec"]
-    n = 0
-    e = True
-    while (e == True):
-        meas = "meas" + str(n)
-        if meas not in grp1.keys():
-            e = False
-            grp2 = grp1.create_group(meas)
-        n += 1
-    return grp2
+    with h5py.File(name_hdf5, 'a') as hdf5:
+        if measurement_spectrum not in hdf5.keys():
+            grp1 = hdf5.create_group(measurement_spectrum)
+        grp1 = hdf5[measurement_spectrum]
+        n = 0
+        tmp = True
+        while (tmp == True):
+            meas_tsrc = "meas" + str(n)
+            if meas_tsrc not in grp1.keys():
+                tmp = False
+                grp2 = grp1.create_group(meas_tsrc)
+            n += 1
+    return meas_tsrc
 
 
+def _check_propset(name_hdf5, spectrum_meas, source_meas, propset_meas):
+    ''' Assert existence of the measurement, 
+       create otherwise and return the name of the source measurement'''
 
-def _write_hdf5dset(correlators, file):
-    ''' The correlators have dimension [n_baryons * 2(n_time_rev)][#moms][Nt] '''
+    hdf5 = h5py.File(name_hdf5, 'a')
+    grp1 = hdf5[spectrum_meas]
+    grp2 = grp1[source_meas]
+    grp2.create_group(propset_meas)
+
+
+def _write_hdf5dset_baryon(correlators, data_file, tsrc_meas):
+    ''' The correlators have dimension [n_baryons * 2(time_rev)][#moms][Nt] '''
 
     n_baryons = correlators.shape[0]
     moms = correlators.shape[1]
     Nt = correlators.shape[-1]
 
-    with h5py.File(file, 'a') as hdf5_file:
-        group_meas = _check_meas(hdf5_file)
+    hdf5_file = h5py.File(data_file, 'a')
+    spectrum_group = hdf5_file["baryonspec"]
+    tsrc_group = spectrum_group[tsrc_meas]
 
-        # Add attributes
-#        dset.attrs['title'] = '2-point function for baryon spectrum'
-#        dset.attrs['su(n)'] = 'SU(' + str(suN) + ')'
-#        dset.attrs['quarks'] = quarks_list
-#        dset.attrs['kappa'] = kappa_list
-
-        print(group_meas)
-        offset = 0
-        if "data" not in group_meas.keys():
-            dset = group_meas.create_dataset("data",
+    if "data" not in tsrc_group.keys():
+        dset = tsrc_group.create_dataset("data",
                                       correlators.shape,
                                       dtype=complex,
                                       chunks=True,
                                       fletcher32=True)
-        else:
-            dset = group_meas["data"]
-            offset = 1
+    else:
+        dset = tsrc_group["data"]
 
-        dset[...] = correlators[:]
+    dset[...] = correlators[:]
+    hdf5_file.close()
+
+
+def _write_hdf5dset_meson(correlators, data_file, tsrc_meas, propset_meas):
+
+    n_mesons = correlators.shape[0]
+    moms = correlators.shape[1]
+    Nt = correlators.shape[-1]
+
+    hdf5_file = h5py.File(data_file, 'a')
+    spectrum_meas_grp = hdf5_file["mesonspec"]
+    source_meas_grp = spectrum_meas_grp[tsrc_meas]
+    propset_meas_grp = source_meas_grp[propset_meas]
+
+    if "data" not in propset_meas_grp.keys():
+        dset = propset_meas_grp.create_dataset("data",
+                                      correlators.shape,
+                                      dtype=complex,
+                                      chunks=True,
+                                      fletcher32=True)
+    else:
+        dset = propset_meas_grp["data"]
+
+    dset[...] = correlators[:]
+    hdf5_file.close()
+
 
