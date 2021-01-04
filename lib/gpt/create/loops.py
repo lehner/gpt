@@ -1,6 +1,8 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Lorenzo Barca    (lorenzo1.barca@ur.de)
+#
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,13 +18,19 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt
-import gpt.create.smear
-import gpt.create.sparse_grid
-import gpt.create.wall
-import gpt.create.loops
+#
+import gpt as g
 
-def point(src, pos):
-    src[:] = 0
-    src[tuple(pos)] = src.otype.identity()
-    return src
+# gpt/qcd/gauge/loops in gpt/create or gpt/meas ?
+
+def polyakov_loop(U, mu):
+    # tr[ prod_j U_{\mu}(m, j) ]
+    vol = float(U[0].grid.fsites)
+    Nc = U[0].otype.Nc
+    tmp_polyakov_loop = g.copy(U[mu])
+    for n in range(1, U[0].grid.fdimensions[mu]):
+        tmp = g.cshift(tmp_polyakov_loop, mu, 1)
+        tmp_polyakov_loop = g.eval(U[mu] * tmp)
+
+    return g.sum(g.trace(tmp_polyakov_loop)) / Nc / vol
+
