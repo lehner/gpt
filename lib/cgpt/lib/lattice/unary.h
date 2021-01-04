@@ -30,6 +30,10 @@ void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
     dst = cgpt_sqrt(src);
   } else if (op == "pow") {
     dst = cgpt_pow(src, get_float(params,"exponent"));
+  } else if (op == "exp") {
+    dst = exp(src);
+  } else if (op == "log") {
+    dst = cgpt_log(src);
   } else if (op == "sin") {
     dst = cgpt_sin(src);
   } else if (op == "cos") {
@@ -42,10 +46,18 @@ void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
     dst = cgpt_acos(src);
   } else if (op == "atan") {
     dst = cgpt_atan(src);
-  } else if (op == "exp") {
-    dst = exp(src);
-  } else if (op == "log") {
-    dst = cgpt_log(src);
+  } else if (op == "sinh") {
+    dst = cgpt_sinh(src);
+  } else if (op == "cosh") {
+    dst = cgpt_cosh(src);
+  } else if (op == "tanh") {
+    dst = cgpt_tanh(src);
+  } else if (op == "asinh") {
+    dst = cgpt_asinh(src);
+  } else if (op == "acosh") {
+    dst = cgpt_acosh(src);
+  } else if (op == "atanh") {
+    dst = cgpt_atanh(src);
   } else {
     ERR("Unknown operator %s", op.c_str());
   }

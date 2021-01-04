@@ -43,6 +43,12 @@ cos = _simple_matrix("cos")
 acos = _simple_matrix("acos")
 tan = _simple_matrix("tan")
 atan = _simple_matrix("atan")
+sinh = _simple_matrix("sinh")
+asinh = _simple_matrix("asinh")
+cosh = _simple_matrix("cosh")
+acosh = _simple_matrix("acosh")
+tanh = _simple_matrix("tanh")
+atanh = _simple_matrix("atanh")
 inv = _simple_matrix("pow", {"exponent": -1.0})
 
 
