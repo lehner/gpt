@@ -41,6 +41,8 @@ sin = _simple_matrix("sin")
 asin = _simple_matrix("asin")
 cos = _simple_matrix("cos")
 acos = _simple_matrix("acos")
+tan = _simple_matrix("tan")
+atan = _simple_matrix("atan")
 inv = _simple_matrix("pow", {"exponent": -1.0})
 
 

@@ -34,10 +34,14 @@ void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
     dst = cgpt_sin(src);
   } else if (op == "cos") {
     dst = cgpt_cos(src);
+  } else if (op == "tan") {
+    dst = cgpt_tan(src);
   } else if (op == "asin") {
     dst = cgpt_asin(src);
   } else if (op == "acos") {
     dst = cgpt_acos(src);
+  } else if (op == "atan") {
+    dst = cgpt_atan(src);
   } else if (op == "exp") {
     dst = exp(src);
   } else if (op == "log") {

@@ -49,6 +49,8 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         (c.asin, np.arcsin),
         (c.cos, np.cos),
         (c.acos, np.arccos),
+        (c.tan, np.tan),
+        (c.atan, np.arctan),
         (c.inv, inv),
         (c.pow(3.45), pow3p45),
     ]:
