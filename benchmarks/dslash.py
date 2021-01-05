@@ -6,7 +6,7 @@
 #
 import gpt as g
 
-g.default.set_verbose("random", False)
+#g.default.set_verbose("random", False)
 rng = g.random("benchmark")
 
 for precision in [g.single, g.double]:
@@ -40,7 +40,10 @@ DWF Dslash Benchmark with
     dst = g.vspincolor(qm.F_grid)
 
     # random source
+    t0 = g.time()
     rng.cnormal(src)
+    t1 = g.time()
+    g.message(f"Timing for rng: {t1-t0}")
 
     # copy to new memory region
     src = g.copy(src)

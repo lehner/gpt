@@ -19,8 +19,16 @@
 #define cgpt_PyArray_Check(a) (PyArray_Check(a) && PyArray_IS_C_CONTIGUOUS((PyArrayObject*)a))
 
 static void cgpt_convert(PyObject* in, int& out) {
-  ASSERT(PyLong_Check(in));
-  out = PyLong_AsLong(in);
+  if (PyLong_Check(in)) {
+    out = PyLong_AsLong(in);
+  } else if (PyType_Check(in)) {
+    PyArray_Descr* dtype;
+    ASSERT(PyArray_DescrConverter(in, &dtype));
+    out = dtype->type_num;
+    Py_DECREF(dtype);
+  } else {
+    ASSERT(0);
+  }
 }
 
 static void cgpt_convert(PyObject* in, PyArrayObject*& out) {

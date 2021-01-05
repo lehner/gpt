@@ -156,7 +156,7 @@ PyObject* cgpt_random_sample(DIST & dist,sRNG& srng,pRNG& prng,
 
     //t("array");
     // all the previous effort allows the prng to act in parallel
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], dtype);
+    PyArrayObject* a = cgpt_new_PyArray((int)dims.size(), &dims[0], dtype);
     auto & samples = prng.samples;
 
     //t("fill");

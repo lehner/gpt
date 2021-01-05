@@ -157,7 +157,7 @@ EXPORT(lattice_rank_inner_product,{
     dim[0] = left.size() / n_virtual_left;
     dim[1] = right.size() / n_virtual_right;
 
-    PyArrayObject* ret = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], NPY_COMPLEX128);
+    PyArrayObject* ret = cgpt_new_PyArray((int)dim.size(), &dim[0], NPY_COMPLEX128);
     ComplexD* result = (ComplexD*)PyArray_DATA(ret);
 
     ASSERT(left.size() > 0);

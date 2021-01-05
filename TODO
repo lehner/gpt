@@ -1,8 +1,13 @@
+- Complete implementation of new blocked memory system in many node setup, re-run also test in init.cc
+
+- Improve random performance further ; generate data in optimal ordering
+
+- block_map additional parameter tensor index projection ([0,1],[2,3] for upper/lower half chiral protection)
+
 - Remark: mapping to physical page happens on first write.  With fixed OMP core binding it is crucial to have
           appropriate thread layout on first write.
 
-- Improve random performance further.
-	  
+  
 - General wilson loop (describe through direction, distance)
 
 - Rework Multigrid based on sequence ?

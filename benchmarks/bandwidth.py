@@ -6,10 +6,8 @@
 #
 import gpt as g
 
-# grid = g.grid([32,32,32,64], g.single)
-grid = g.grid([8, 8, 8, 16], g.single)
-# grid = g.grid([16, 16, 32, 128], g.single)
-N = 10
+grid = g.grid(g.default.get_ivec("--grid", [8, 8, 8, 16], 4), g.single)
+N = g.default.get_int("--N", 10)
 
 rng = g.random("test")
 
@@ -36,12 +34,15 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     plan.destination += lhs.view[pos]
     plan.source += rhs.view[pos]
     plan = plan()
+    plan_info = plan.info()[0,0][0,0]
+    block_size = plan_info['size'] // plan_info['blocks']
 
     t0 = g.time()
     for n in range(N):
         plan(lhs, rhs)
     t1 = g.time()
     g.message("%-50s %g GB/s %g s" % ("copy_plan:", GB / (t1 - t0), (t1 - t0) / N))
+    g.message(" " * 51 + f"block_size = {block_size}")
 
 
 # spin/color separate/merge

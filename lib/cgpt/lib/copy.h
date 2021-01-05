@@ -49,13 +49,36 @@ static cgpt_gm_view* cgpt_add_views(cgpt_gm_view* a, cgpt_gm_view* b) {
     r->rank = b->rank;
   }
 
-  r->view.blocks.resize(a->view.blocks.size() + b->view.blocks.size());
-  thread_for(i, a->view.blocks.size(), {
-      r->view.blocks[i] = a->view.blocks[i];
-    });
-  thread_for(i, b->view.blocks.size(), {
-      r->view.blocks[i + a->view.blocks.size()] = b->view.blocks[i];
-    });
+  if (a->view.blocks.size() == 0) {
+    r->view = b->view;
+  } else if (b->view.blocks.size() == 0) {
+    r->view = a->view;
+  } else {
+    
+    long block_size = cgpt_gcd(a->view.block_size, b->view.block_size);
+
+    long a_factor = a->view.block_size / block_size;
+    long b_factor = b->view.block_size / block_size;
+    
+    r->view.blocks.resize(a_factor * a->view.blocks.size() + b_factor * b->view.blocks.size());
+    r->view.block_size = block_size;
+
+    thread_for(i, a->view.blocks.size(), {
+	for (long j=0;j<a_factor;j++) {
+	  auto & d = r->view.blocks[a_factor*i+j];
+	  d = a->view.blocks[i];
+	  d.start += j * block_size;
+	}
+      });
+    thread_for(i, b->view.blocks.size(), {
+	for (long j=0;j<b_factor;j++) {
+	  auto & d = r->view.blocks[b_factor*i + j + a->view.blocks.size() * a_factor];
+	  d = b->view.blocks[i];
+	  d.start += j * block_size;
+	}
+      });
+  }
+  
   return r;
 }
 
@@ -85,6 +108,7 @@ static cgpt_gm_view* cgpt_view_embeded_in_communicator(cgpt_gm_view* v, GridBase
   std::vector<uint64_t> rank_map(xf.mpi_ranks,0);
 
   r->view.blocks.resize(v->view.blocks.size());
+  r->view.block_size = v->view.block_size;
   
   rank_map[xf.rank] = (uint64_t)r->rank;
   xf.global_sum(rank_map);
@@ -155,7 +179,7 @@ static PyObject* cgpt_copy_cyclic_upscale_array(PyArrayObject* data,
     std::vector<long> dim(1);
     ASSERT(sz_target % sz_element == 0);
     dim[0] = sz_target / sz_element;
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], dtype);
+    PyArrayObject* a = cgpt_new_PyArray((int)dim.size(), &dim[0], dtype);
     char* s = (char*)PyArray_DATA(data);
     char* d = (char*)PyArray_DATA(a);
 
@@ -369,13 +393,14 @@ static GridBase* cgpt_copy_append_view_from_vlattice(gm_view& out,
   size_t b0 = out.blocks.size();
   out.blocks.resize(b0 + t_indices.size() * c_rank.size());
 
+  out.block_size = sz_scalar;
+  
   thread_for(ci, c_rank.size(), {
       for (long i=0;i<t_indices.size();i++) {
 	auto & b = out.blocks[b0 + ci * t_indices.size() + i];
 	b.rank = c_rank[ci];
 	b.index = index_start + t_indices[i] * index_stride;
 	b.start = c_idx[ci] * sz_scalar + t_offsets[i] * sz_vector + c_odx[ci] * sz_vobj;
-	b.size = sz_scalar;
       }
     });
 
@@ -385,6 +410,6 @@ static GridBase* cgpt_copy_append_view_from_vlattice(gm_view& out,
   //std::cout << sz_scalar << "," << sz_vector << "," << sz_vobj << std::endl;
 
   //out.print();
-
+  //std::cout << GridLogMessage << "LV " << out.block_size << " , " << out.blocks.size() << std::endl;
   return grid;
 }

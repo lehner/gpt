@@ -76,21 +76,25 @@ class random:
                     t.grid, [[t.grid.processor, mv, 0, mv.nbytes]]
                 )
                 self.cache[cache_key] = plan()
-
+            t2 = gpt.time()
+            gpt.message(f"Copy: {t2-t1}")
             assert "pos" not in p  # to ensure that deprecated code is not used
 
             # guide optimal page mapping on first write, overhead minimal
             t[:] = 0
-
+            
             # fill lattice
             self.cache[cache_key](t, mv)
 
+            t.swap(gpt.copy(t))
+           
             if self.verbose:
                 szGB = mv.size * mv.itemsize / 1024.0 ** 3.0
                 gpt.message(
                     "Generated %g GB of random data at %g GB/s"
                     % (szGB, szGB / (t1 - t0))
                 )
+
             return t
         else:
             assert 0

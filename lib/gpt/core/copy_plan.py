@@ -148,6 +148,9 @@ class global_memory_view:
             assert isinstance(self.communicator, gpt.grid)
             grid_obj = self.communicator.obj
 
+        if self.blocks is None:
+            return _view(cgpt.copy_create_view(grid_obj, None))
+
         processed_blocks = []
         for b in self.blocks:
             processed_blocks.append([b[0], layout.get_index(b[1]), b[2], b[3]])

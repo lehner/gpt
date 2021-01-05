@@ -17,7 +17,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
-#include <set>
+#include <unordered_map>
+
+#define BCOPY_MEM_ALIGN   (sizeof(vComplexF))
 
 //
 // global_transfer
@@ -279,46 +281,54 @@ void global_memory_view<offset_t,rank_t,index_t>::print() const {
   std::cout << "global_memory_view:" << std::endl;
   for (size_t i=0;i<blocks.size();i++) {
     auto & bc = blocks[i];
-    std::cout << " [" << i << "/" << blocks.size() << "] = { " << bc.rank << ", " << bc.index << ", " << bc.start << ", " << bc.size << " }" << std::endl;
+    std::cout << " [" << i << "/" << blocks.size() << "] = { " << bc.rank << ", " << bc.index << ", " << bc.start << ", " << block_size << " }" << std::endl;
   }
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
 offset_t global_memory_view<offset_t,rank_t,index_t>::size() const {
-  offset_t sz = 0;
-  for (size_t i=0;i<blocks.size();i++) {
-    auto & bc = blocks[i];
-    sz += bc.size;
-  }
-  return sz;
+  return block_size * blocks.size();
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-global_memory_view<offset_t,rank_t,index_t> global_memory_view<offset_t,rank_t,index_t>::merged() const {
-
-  global_memory_view<offset_t,rank_t,index_t> ret;
-  if (blocks.size()) {
-    if (blocks[0].size)
-      ret.blocks.push_back(blocks[0]);
-    size_t c = 0;
-    
-    for (size_t i=1;i<blocks.size();i++) {
-      auto & bc = ret.blocks[c];
-      auto & bi = blocks[i];
-      if (bc.rank == bi.rank && bc.index == bi.index &&
-	  bi.start == (bc.start + bc.size)) {
-	bc.size += bi.size;
-      } else {
-	c++;
-	if (bi.size)
-	  ret.blocks.push_back(bi);
-      }
+bool global_memory_view<offset_t,rank_t,index_t>::is_aligned() const {
+  bool aligned = true;
+  thread_region
+    {
+      bool thread_aligned = true;
+      thread_for_in_region(i, blocks.size(), {
+	  if (blocks[i].start % block_size)
+	    thread_aligned = false;
+	});
+      thread_critical
+	{
+	  if (!thread_aligned)
+	    aligned = false;
+	}
     }
-  }
-
-  return ret;
+  return aligned;
 }
 
+template<typename V>
+void cgpt_distribute_merge_into(std::vector<V> & target, const std::vector<V> & src) {
+  target.insert(target.end(), src.begin(), src.end());
+}
+
+template<typename K, typename V>
+void cgpt_distribute_merge_into(std::pair<K,V> & target, const std::pair<K,V> & src) {
+  target.first = src.first;
+  cgpt_distribute_merge_into(target.second, src.second);
+}
+
+template<typename K, typename V>
+void cgpt_distribute_merge_into(std::map<K,V> & target, const std::map<K,V> & src) {
+  for (auto & x : src) {
+    V & y = target[x.first];
+    const V & z = x.second;
+    cgpt_distribute_merge_into(y, z);
+  }
+}
+		
 template<typename offset_t, typename rank_t, typename index_t>
 global_memory_transfer<offset_t,rank_t,index_t>::global_memory_transfer(rank_t _rank, Grid_MPI_Comm _comm) :
   global_transfer<rank_t>(_rank, _comm), comm_buffers_type(mt_none) {
@@ -326,45 +336,81 @@ global_memory_transfer<offset_t,rank_t,index_t>::global_memory_transfer(rank_t _
 
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::fill_blocks_from_view_pair(const view_t& _dst,
-										 const view_t& _src) {
-  // create local src -> dst command
-  auto dst = _dst.merged();
-  auto src = _src.merged();
-  //auto dst = _dst;
-  //auto src = _src;
+void global_memory_transfer<offset_t,rank_t,index_t>::fill_blocks_from_view_pair(const view_t& dst,
+										 const view_t& src) {
 
-  size_t is = 0, id = 0;
-  while (is < src.blocks.size() &&
-	 id < dst.blocks.size()) {
-    auto & s = src.blocks[is];
-    auto & d = dst.blocks[id];
 
-    offset_t sz = std::min(s.size, d.size);
+  long block_size = cgpt_gcd(dst.block_size, src.block_size);
+  long dst_factor = dst.block_size / block_size;
+  long src_factor = src.block_size / block_size;
+  ASSERT(dst_factor * dst.blocks.size() == src_factor * src.blocks.size());
 
-    blocks
-      [std::make_pair(d.rank, s.rank)]
-      [std::make_pair(d.index, s.index)]
-      .push_back({d.start,s.start,sz});
+  ASSERT(dst.is_aligned());
+  ASSERT(src.is_aligned());
+  
+  //cgpt_timer t("fill");
 
-    if (sz == s.size) {
-      is++;
-    } else {
-      s.start += sz;
-      s.size -= sz;
+  //t("parallel_fill");
+
+  size_t threads;
+  thread_region
+    {
+      threads = thread_max();
+    }
+  typedef std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, blocks_t > > thread_block_t;
+  std::vector<thread_block_t> tblocks(threads);
+
+  thread_region
+    {
+      size_t thread = thread_num();
+
+      thread_for_in_region(i, dst_factor * dst.blocks.size(), {
+	  size_t i_src = i / src_factor;
+	  size_t i_dst = i / dst_factor;
+	  
+	  size_t j_src = i % src_factor;
+	  size_t j_dst = i % dst_factor;
+	  
+	  auto & s = src.blocks[i_src];
+	  auto & d = dst.blocks[i_dst];
+	  
+	  tblocks[thread]
+	    [std::make_pair(d.rank, s.rank)]
+	    [std::make_pair(d.index, s.index)]
+	    .second.push_back({d.start + j_dst * block_size,s.start + j_src * block_size});
+	});
+
+      for (auto & b : tblocks[thread]) {
+	for (auto & c : b.second) {
+	  c.second.first = block_size;
+	}
+      }
     }
 
-    if (sz == d.size) {
-      id++;
-    } else {
-      d.start += sz;
-      d.size -= sz;
-    }
+  //t("merge");
+  
+  // now merge neighboring thread data
+  size_t merge_base = 2;
+  while (merge_base < 2*threads) {
+    thread_region
+      {
+	size_t thread = thread_num();
+	if (thread % merge_base == 0) {
+	  size_t partner = thread + merge_base / 2;
+
+	  if (partner < threads)
+	    cgpt_distribute_merge_into(tblocks[thread], tblocks[partner]);
+	}
+      }
+    merge_base *= 2;
   }
 
-  // expect both to be of same size
-  ASSERT(is == src.blocks.size() &&
-	 id == dst.blocks.size());
+  //t("final");
+  blocks = tblocks[0];
+
+  //t.report();
+
+  
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -386,14 +432,12 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
   // de-serialize my blocks from appropriate communication buffers
   for (auto & tasks : tasks_from_rank) {
     while (!tasks.second.eom()) {
-      std::pair< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, std::vector<block_t> > > ranks;
+      std::pair< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, blocks_t > > ranks;
       tasks.second.get(ranks);
 
       // and merge with current blocks
       for (auto & idx : ranks.second) {
-	auto & a = blocks[ranks.first][idx.first];
-	auto & b = idx.second;
-	a.insert(a.end(), b.begin(), b.end());
+	merge_blocks(blocks[ranks.first][idx.first], idx.second);
       }
     }
   }
@@ -411,6 +455,50 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::merge_blocks(blocks_t& dst, const blocks_t& src) {
+
+  if (!dst.second.size()) {
+    dst = src;
+    return;
+  }
+
+  offset_t block_size = (offset_t)cgpt_gcd(dst.first, src.first);
+
+  //std::cout << GridLogMessage << "merge_blocks " << dst.first << " x " << src.first << " -> " << block_size << std::endl;
+  offset_t dst_factor = dst.first / block_size;
+  offset_t src_factor = src.first / block_size;
+  
+  blocks_t nd;
+  nd.first = block_size;
+  nd.second.resize(dst.second.size() * dst_factor + src.second.size() * src_factor);
+
+  thread_for(i, dst.second.size(), {
+      for (size_t j=0;j<dst_factor;j++) {
+	auto & d = nd.second[i*dst_factor + j];
+	auto & s = dst.second[i];
+	d = s;
+	d.start_dst += j*block_size;
+	d.start_src += j*block_size;
+      }
+    });
+
+  size_t o = dst.second.size() * dst_factor;
+  
+  thread_for(i, src.second.size(), {
+      for (size_t j=0;j<src_factor;j++) {
+	auto & d = nd.second[o + i*src_factor + j];
+	auto & s = src.second[i];
+	d = s;
+	d.start_dst += j*block_size;
+	d.start_src += j*block_size;
+      }
+    });
+  
+  dst.first = nd.first;
+  dst.second = std::move(nd.second);
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
   for (auto & ranks : blocks) {
     for (auto & indices : ranks.second) {
@@ -420,38 +508,64 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::optimize(std::vector<block_t>& blocks) {
+void global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks) {
+
   struct {
     bool operator()(const block_t& a, const block_t& b) const
     {
       return a.start_dst < b.start_dst; // sort by destination address (better for first write page mapping)
     }
   } less;
-  
-  std::sort(blocks.begin(), blocks.end(), less);
 
-  // merge neighboring blocks
-  std::vector<block_t> ret;
-  ret.push_back(blocks[0]);
-  size_t c = 0;
+  //cgpt_timer t("optimize");
+
+  //t("sort"); // can make this 2x faster by first only extracting the sorting index
+  cgpt_sort(blocks.second, less);
+
+  //t("unique");
+  std::vector<block_t> unique_blocks;
+  cgpt_sorted_unique(unique_blocks, blocks.second, [](const block_t & a, const block_t & b) {
+						     return (a.start_dst == b.start_dst && a.start_src == b.start_src);
+						   });
+
+  //t("print");
+  //std::cout << GridLogMessage << "Unique " << blocks.second.size() << " -> " << unique_blocks.size() << std::endl;
   
-  for (size_t i=1;i<blocks.size();i++) {
-    auto & bc = ret[c];
-    auto & bi = blocks[i];
-    if (bi.start_src == bc.start_src &&
-	bi.start_dst == bc.start_dst &&
-	bi.size == bc.size) {
-      continue; // remove duplicates (maybe from different ranks)
-    } else if (bi.start_src == (bc.start_src + bc.size) &&
-	       bi.start_dst == (bc.start_dst + bc.size)) {
-      bc.size += bi.size;
-    } else {
-      c++;
-      ret.push_back(bi);
-    }
+  //t("rle");
+  std::vector<size_t> start, repeats;
+  size_t block_size = blocks.first;
+  size_t gcd = cgpt_rle(start, repeats, unique_blocks, [block_size](const block_t & a, const block_t & b) {
+						  return (a.start_dst + block_size == b.start_dst &&
+							  a.start_src + block_size == b.start_src);
+						});
+
+  // can adjust block_size?
+  if (gcd == 1) {
+    //t("adopt unique_blocks");
+    blocks.second = unique_blocks;
+  } else {
+    //t("adjust block_size");
+    blocks.first *= gcd;
+    ASSERT(unique_blocks.size() % gcd == 0); // this should always be true unless cgpt_rle made a mistake
+    size_t n = unique_blocks.size() / gcd;
+    blocks.second.resize(n);
+    thread_for(i, n, {
+	blocks.second[i] = unique_blocks[i*gcd];
+      });
   }
   
-  blocks = ret;
+  //t("print");
+  //std::cout << GridLogMessage << "RLE " << start.size() << " gcd = " << gcd << std::endl;
+  //std::cout << GridLogMessage << start[0] << " x " << repeats[0] <<  " last " << start[start.size()-1] << " x " << repeats[repeats.size()-1] << std::endl;
+  //if (start.size() > 2) {
+  //  std::cout << GridLogMessage << start[1] << " x " << repeats[1] << std::endl;
+  //  std::cout << GridLogMessage << start[2] << " x " << repeats[2] << std::endl;
+  //  for (size_t i=0;i<32;i++) {
+  //	std::cout << GridLogMessage << i << ": " << unique_blocks[i].start_dst << "/" << unique_blocks[i].start_src << std::endl;
+  //  }
+  //}
+  //t.report();
+
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -468,14 +582,30 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_bounds() {
 	bounds_dst.resize(dst_idx+1,0);
       if (src_rank == this->rank && src_idx >= bounds_src.size())
 	bounds_src.resize(src_idx+1,0);
-      for (auto & bi : indices.second) {
-	offset_t end_dst = bi.start_dst + bi.size;
-	offset_t end_src = bi.start_src + bi.size;
-	if (dst_rank == this->rank && end_dst > bounds_dst[dst_idx])
-	  bounds_dst[dst_idx] = end_dst;
-	if (src_rank == this->rank && end_src > bounds_src[src_idx])
-	  bounds_src[src_idx] = end_src;
-      }
+
+      auto & a = indices.second.second;
+      thread_region
+	{
+	  offset_t t_max_dst = 0;
+	  offset_t t_max_src = 0;
+	  
+	  thread_for_in_region(i, a.size(), {
+	      offset_t end_dst = a[i].start_dst + indices.second.first;
+	      offset_t end_src = a[i].start_src + indices.second.first;
+	      if (dst_rank == this->rank && end_dst > t_max_dst)
+		t_max_dst = end_dst;
+	      if (src_rank == this->rank && end_src > t_max_src)
+		t_max_src = end_src;
+	    });
+
+	  thread_critical
+	    {
+	      if (dst_rank == this->rank && t_max_dst > bounds_dst[dst_idx])
+		bounds_dst[dst_idx] = t_max_dst;
+	      if (src_rank == this->rank && t_max_src > bounds_src[src_idx])
+		bounds_src[src_idx] = t_max_src;
+	    }
+	}
     }
   }
 
@@ -484,28 +614,44 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_bounds() {
 template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
 							     const view_t& _src,
-							     memory_type use_comm_buffers_of_type) {
+							     memory_type use_comm_buffers_of_type,
+							     bool local_only,
+							     bool skip_optimize) {
 
+  //cgpt_timer t("create");
+
+  //t("fill blocks");
   // reset
   blocks.clear();
 
   // fill
   fill_blocks_from_view_pair(_dst,_src);
 
+  //t("opt1");
   // optimize blocks obtained from this rank
-  optimize();
+  if (!skip_optimize)
+    optimize();
 
-  // gather my blocks
-  gather_my_blocks();
+  if (!local_only) {
+    //t("gather");
+    // gather my blocks
+    gather_my_blocks();
 
-  // optimize blocks after gathering all of my blocks
-  optimize();
+    //t("opt2");
+    // optimize blocks after gathering all of my blocks
+    if (!skip_optimize)
+      optimize();
 
-  // optionally create communication buffers
-  create_comm_buffers(use_comm_buffers_of_type);
+    //t("createcom");
+    // optionally create communication buffers
+    create_comm_buffers(use_comm_buffers_of_type);
+  }
 
+  //t("createbounds");
   // create bounds
   create_bounds();
+
+  //t.report();
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -539,28 +685,59 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory
       size_t sz = 0;
       for (auto & indices : ranks.second) {
 	auto& rb = recv_blocks[src_rank][indices.first.first]; // dst index
-	for (auto & block : indices.second) {      
-	  rb.push_back({ block.start_dst, sz, block.size });
-	  sz += block.size;
-	}
-	optimize(rb);
+
+	blocks_t nb;
+	nb.first = indices.second.first;
+	auto & a = indices.second.second;
+	nb.second.resize(a.size());
+	thread_for(i, nb.second.size(), {
+	    nb.second[i] = { a[i].start_dst, sz + i * nb.first };
+	  });
+	sz += nb.first * nb.second.size();
+
+	if (sz % BCOPY_MEM_ALIGN)
+	  sz += BCOPY_MEM_ALIGN - sz % BCOPY_MEM_ALIGN;
+
+	merge_blocks(rb, nb);
       }
       recv_size[src_rank] += sz;
     } else if (src_rank == this->rank) {
       size_t sz = 0;
       for (auto & indices : ranks.second) {
 	auto& sb = send_blocks[dst_rank][indices.first.second]; // src index
-	for (auto & block : indices.second) {      
-	  sb.push_back({ sz, block.start_src, block.size });
-	  sz += block.size;
-	}
-	optimize(sb);
+
+	blocks_t nb;
+	nb.first = indices.second.first;
+	auto & a = indices.second.second;
+	nb.second.resize(a.size());
+	thread_for(i, nb.second.size(), {
+	    auto & block = a[i];
+	    nb.second[i] = { sz + i * nb.first, a[i].start_src };
+	  });
+	sz += nb.first * nb.second.size();
+
+	if (sz % BCOPY_MEM_ALIGN)
+	  sz += BCOPY_MEM_ALIGN - sz % BCOPY_MEM_ALIGN;
+
+	merge_blocks(sb, nb);
       }
       send_size[dst_rank] += sz;
     } else {
       ERR("Mismatched comm info at rank %ld",this->rank);
     }
+  }
 
+  // optimize blocks
+  for (auto & a : recv_blocks) {
+    for (auto & b : a.second) {
+      optimize(b.second);
+    }
+  }
+
+  for (auto & a : recv_blocks) {
+    for (auto & b : a.second) {
+      optimize(b.second);
+    }
   }
 
   // allocate buffers
@@ -586,16 +763,71 @@ void global_memory_transfer<offset_t,rank_t,index_t>::print() {
 		<< "[" << ranks.first.first << "," << ranks.first.second << "]"
 		<< "[" << indices.first.first << "," << indices.first.second << "] : " << std::endl;
 
-      for (auto & block : indices.second) {
+      for (auto & block : indices.second.second) {
 	std::cout << GridLogMessage << block.start_dst << " <- " <<
-	  block.start_src << " for " << block.size << std::endl;
+	  block.start_src << " for " << indices.second.first << std::endl;
       }
     }
   }
 }
 
+template<typename T, typename blocks_t>
+bool bcopy_host_host(const blocks_t& blocks, char* p_dst, const char* p_src) {
+  size_t bs = blocks.first;
+  if (bs % sizeof(T) != 0 ||             // block is not multiple of T
+      (size_t)p_dst % sizeof(T) != 0 ||  // dst is not aligned w.r.t. T
+      (size_t)p_src % sizeof(T) != 0)    // src is not aligned w.r.t. T
+    return false;
+
+  ASSERT(BCOPY_MEM_ALIGN % sizeof(T) == 0); // make sure we update BCOPY_MEM_ALIGN if needed
+
+  size_t npb = bs / sizeof(T);
+
+  auto & b = blocks.second;
+
+  T* dst = (T*)p_dst;
+  const T* src = (const T*)p_src;
+
+  size_t b_size = b.size();
+  thread_for(i, npb * b_size, {
+      auto & x = b[i / npb];
+      size_t i_dst = x.start_dst / sizeof(T);
+      size_t i_src = x.start_src / sizeof(T);
+      size_t j = i % npb;
+      
+      dst[i_dst + j] = src[i_src + j];
+    });
+
+  return true;
+}
+
+template<typename T, typename blocks_t>
+bool bcopy_accelerator_accelerator(const blocks_t& blocks, char* p_dst, const char* p_src) {
+  size_t bs = blocks.first;
+  if (bs % sizeof(T) != 0)
+    return false;
+
+  size_t npb = bs / sizeof(T);
+
+  auto & b = blocks.second;
+
+  T* dst = (T*)p_dst;
+  const T* src = (const T*)p_src;
+
+  accelerator_for(i, npb * b.size(), {
+      auto & x = b[i / npb];
+      size_t i_dst = x.start_dst / sizeof(T);
+      size_t i_src = x.start_src / sizeof(T);
+      size_t j = i % npb;
+      
+      dst[i_dst + j] = src[i_src + j];
+    });
+  
+  return true;
+}
+
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<block_t>& blocks,
+void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const blocks_t& blocks,
 							    memory_view& base_dst, 
 							    const memory_view& base_src) {
   
@@ -606,29 +838,30 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bl
   const char* p_src = (const char*)base_src.ptr;
   
   if (mt_dst == mt_host && mt_src == mt_host) {
-    // TODO
-    // strategy:
-    // - define nparallel (number of threads)
-    // - nparallel_per_block = nparallel / blocks.size()
-    //
-    for (size_t i=0;i<blocks.size();i++) {
-      auto&b=blocks[i];
-      memcpy(&p_dst[b.start_dst],&p_src[b.start_src],b.size);
+    if (bcopy_host_host<vComplexF>(blocks, p_dst, p_src));
+    else if (bcopy_host_host<ComplexF>(blocks, p_dst, p_src));
+    else if (bcopy_host_host<double>(blocks, p_dst, p_src));
+    else if (bcopy_host_host<float>(blocks, p_dst, p_src));
+    else {
+      ERR("No fast copy method for block size %ld host<>host implemented", (long)blocks.first);
     }
   } else if (mt_dst == mt_host && mt_src == mt_accelerator) {
-    for (size_t i=0;i<blocks.size();i++) {
-      auto&b=blocks[i];
-      acceleratorCopyFromDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],b.size);
+    for (size_t i=0;i<blocks.second.size();i++) {
+      auto&b=blocks.second[i];
+      acceleratorCopyFromDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],blocks.first);
     }
   } else if (mt_dst == mt_accelerator && mt_src == mt_host) {
-    for (size_t i=0;i<blocks.size();i++) {
-      auto&b=blocks[i];
-      acceleratorCopyToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],b.size);
+    for (size_t i=0;i<blocks.second.size();i++) {
+      auto&b=blocks.second[i];
+      acceleratorCopyToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],blocks.first);
     }
   } else if (mt_dst == mt_accelerator && mt_src == mt_accelerator) {
-    for (size_t i=0;i<blocks.size();i++) {
-      auto&b=blocks[i];
-      acceleratorCopyDeviceToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],b.size);
+    if (bcopy_accelerator_accelerator<vComplexF>(blocks, p_dst, p_src)); // maybe better performance if I start with second one?
+    else if (bcopy_accelerator_accelerator<ComplexF>(blocks, p_dst, p_src));
+    else if (bcopy_accelerator_accelerator<double>(blocks, p_dst, p_src));
+    else if (bcopy_accelerator_accelerator<float>(blocks, p_dst, p_src));
+    else {
+      ERR("No fast copy method for block size %ld accelerator<>accelerator implemented", (long)blocks.first);
     }
   } else {
     ERR("Unknown memory copy pattern");
@@ -669,8 +902,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 	  index_t dst_idx = indices.first.first;
 	  index_t src_idx = indices.first.second;
 
-	  for (auto & block : indices.second) {
-	    this->isend(dst_rank, (char*)base_src[src_idx].ptr + block.start_src, block.size);
+	  for (auto & block : indices.second.second) {
+	    this->isend(dst_rank, (char*)base_src[src_idx].ptr + block.start_src, indices.second.first);
 	  }
 	}
       } else if (src_rank != this->rank && dst_rank == this->rank) {
@@ -678,8 +911,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 	  index_t dst_idx = indices.first.first;
 	  index_t src_idx = indices.first.second;
 
-	  for (auto & block : indices.second) {
-	    this->irecv(src_rank, (char*)base_dst[dst_idx].ptr + block.start_dst, block.size);
+	  for (auto & block : indices.second.second) {
+	    this->irecv(src_rank, (char*)base_dst[dst_idx].ptr + block.start_dst, indices.second.first);
 	  }
 	}
       }
@@ -709,6 +942,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
 
   // then do local copies
+ 
   for (auto & ranks : blocks) {
     rank_t dst_rank = ranks.first.first;
     rank_t src_rank = ranks.first.second;
@@ -781,17 +1015,19 @@ void test_global_memory_system() {
 
   //std::cout << GridLogMessage << "Test setup:" << src_ranks << std::endl << src_offset << std::endl << src_index << std::endl;
 
+  osrc.block_size = word_half;
+  odst.block_size = word;
+
   for (int i=0;i<nindex;i++) {
     for (int j=0;j<nwords;j++) {
       int rs = src_ranks[j + i*nwords];
       int js = src_offset[j + i*nwords];
       int is = src_index[j + i*nwords];
-      osrc.blocks.push_back( { rs, (uint32_t)is, js*word, word_half } ); // rank, index, offset, size
-      osrc.blocks.push_back( { rs, (uint32_t)is, js*word + word_half, word_half } ); // rank, index, offset, size
-      odst.blocks.push_back( { rank, (uint32_t)i, j*word, word } ); // rank, index, offset, size
+      osrc.blocks.push_back( { rs, (uint32_t)is, js*word } ); // rank, index, offset, size
+      osrc.blocks.push_back( { rs, (uint32_t)is, js*word + word_half } ); // rank, index, offset, size
+      odst.blocks.push_back( { rank, (uint32_t)i, j*word } ); // rank, index, offset, size
     }
   }
-  
   
   plan.create(odst, osrc, mt_none);
   plan_host_buf.create(odst, osrc, mt_host);
@@ -824,7 +1060,7 @@ void test_global_memory_system() {
       plan.execute(dst,src);
     else
       plan_host_buf.execute(dst,src);
-  
+
     // test
     for (int i=0;i<nindex;i++) {
       for (int j=0;j<nwords;j++) {

@@ -28,15 +28,15 @@ class global_memory_view {
   struct block_t {
     rank_t rank;
     index_t index;
-    offset_t start, size;
+    offset_t start;
   };
 
   std::vector<block_t> blocks;
+  offset_t block_size;
 
   void print() const;
   offset_t size() const;
-
-  global_memory_view<offset_t,rank_t,index_t> merged() const;
+  bool is_aligned() const;
 };
 
 class comm_message {
@@ -221,8 +221,10 @@ class global_memory_transfer : public global_transfer<rank_t> {
   typedef global_memory_view<offset_t,rank_t,index_t> view_t;
 
   struct block_t {
-    offset_t start_dst, start_src, size; // todo: support stride?
+    offset_t start_dst, start_src;
   };
+
+  typedef std::pair<offset_t, std::vector<block_t>> blocks_t;
 
   class memory_view {
   public:
@@ -282,7 +284,7 @@ class global_memory_transfer : public global_transfer<rank_t> {
   // memory buffers
   std::map<rank_t, memory_buffer> send_buffers, recv_buffers;
   memory_type comm_buffers_type;
-  std::map< rank_t, std::map< index_t, std::vector<block_t> > > send_blocks, recv_blocks;
+  std::map< rank_t, std::map< index_t, blocks_t > > send_blocks, recv_blocks;
 
   // bounds
   std::vector<offset_t> bounds_dst, bounds_src;
@@ -290,9 +292,12 @@ class global_memory_transfer : public global_transfer<rank_t> {
   // public interface
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
 
-  std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, std::vector<block_t> > > blocks;
+  std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, blocks_t > > blocks;
 
-  void create(const view_t& dst, const view_t& src, memory_type use_comm_buffers_of_type = mt_none);
+  void create(const view_t& dst, const view_t& src,
+	      memory_type use_comm_buffers_of_type = mt_none,
+	      bool local_only = false,
+	      bool skip_optimize = false);
 
   void execute(std::vector<memory_view>& base_dst, 
 	       std::vector<memory_view>& base_src);
@@ -302,10 +307,11 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void fill_blocks_from_view_pair(const view_t& dst, const view_t& src);
   void gather_my_blocks();
   void optimize();
-  void optimize(std::vector<block_t>& blocks);
+  void optimize(blocks_t& blocks);
   void create_bounds();
   void create_comm_buffers(memory_type mt);
-  void bcopy(const std::vector<block_t>& blocks,
+  void merge_blocks(blocks_t& dst, const blocks_t& src);
+  void bcopy(const blocks_t& blocks,
 	     memory_view& base_dst, 
 	     const memory_view& base_src);
 };
