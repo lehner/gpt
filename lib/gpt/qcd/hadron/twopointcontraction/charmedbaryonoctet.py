@@ -25,13 +25,13 @@ def contract_charmed_xi_prime_zero(prop_down, prop_strange, prop_charm, pol_matr
     cg5 = charge_conjugation() * gpt.gamma[5]
     return 0.5 * (
         baryon_base_contraction(prop_down, prop_strange, prop_charm, pol_matrix, cg5) +
-        baryon_base_contraction(prop_charm, prop_down, prop_strange, pol_matrix, cg5)
+        baryon_base_contraction(prop_strange, prop_down, prop_charm, pol_matrix, cg5)
     )
 
 
 def contract_double_charmed_xi_plus(prop_down, prop_charm, pol_matrix):
     cg5 = charge_conjugation() * gpt.gamma[5]
-    return baryon_base_contraction(prop_charm, prop_down, prop_charm, pol_matrix, cg5)
+    return baryon_base_contraction(prop_charm, prop_charm, prop_down, pol_matrix, cg5)
 
 
 def contract_charmed_omega(prop_strange, prop_charm, pol_matrix):
@@ -41,7 +41,7 @@ def contract_charmed_omega(prop_strange, prop_charm, pol_matrix):
 
 def contract_double_charmed_omega(prop_strange, prop_charm, pol_matrix):
     cg5 = charge_conjugation() * gpt.gamma[5]
-    return baryon_base_contraction(prop_charm, prop_strange, prop_charm, pol_matrix, cg5)
+    return baryon_base_contraction(prop_charm, prop_charm, prop_strange, pol_matrix, cg5)
 
 
 def charmed_xi_to_xi_prime(prop_down, prop_strange, prop_charm, pol_matrix):

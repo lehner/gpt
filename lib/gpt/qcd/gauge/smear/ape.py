@@ -34,13 +34,13 @@ def ape(u, params):
                 params["rho"][mu, nu] = 0.0
 
     # create staples
-    staplesum = gpt.qcd.gauge.smear.staple_sum(u, params)
+    staplesum = gpt.qcd.gauge.staple_sum(u, params)
 
     u_apesmeared = []
     for mu in range(nd):
         gpt.message(f"Starting direction {mu}...")
         # start with original link
-        u_tmp = u[mu]
+        u_tmp = gpt.copy(u[mu])
         if mu != params["orthogonal_dimension"]:
             # get the unprojected, i.e., u + staples
             u_unprojected = gpt.eval(gpt.adj(gpt(u_tmp * params["alpha"]) + gpt(staplesum[mu])))
@@ -50,7 +50,7 @@ def ape(u, params):
 
             # reunitarize
             gpt.qcd.reunitize(u_tmp)
-            gpt.qcd.gauge.assert_unitary(u_tmp)
+            #gpt.qcd.gauge.assert_unitary(u_tmp)
 
         u_apesmeared.append(u_tmp)
         gpt.message(f"Direction {mu} done.")
