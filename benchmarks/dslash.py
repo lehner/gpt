@@ -6,8 +6,10 @@
 #
 import gpt as g
 
-#g.default.set_verbose("random", False)
-rng = g.random("benchmark")
+# g.default.set_verbose("random", False)
+rng = g.random(
+    "benchmark", "vectorized_ranlux24_24_64"
+)  # faster rng sufficient for benchmarking purposes
 
 for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
@@ -44,9 +46,6 @@ DWF Dslash Benchmark with
     rng.cnormal(src)
     t1 = g.time()
     g.message(f"Timing for rng: {t1-t0}")
-
-    # copy to new memory region
-    src = g.copy(src)
 
     # Flops
     gauge_otype = qm.U[0].otype

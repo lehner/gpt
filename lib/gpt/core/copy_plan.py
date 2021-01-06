@@ -108,12 +108,14 @@ class copy_plan:
         self.destination = copy_plan_view(dst, embed_in_communicator)
         self.source = copy_plan_view(src, embed_in_communicator)
 
-    def __call__(self):
+    def __call__(self, local_only=False, skip_optimize=False):
         return copy_plan_executer(
             cgpt.copy_create_plan(
                 self.destination.view.obj,
                 self.source.view.obj,
                 self.communication_buffer_location,
+                local_only,
+                skip_optimize,
             ),
             self.lattice_view_location,
         )

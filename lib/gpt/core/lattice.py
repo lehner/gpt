@@ -163,7 +163,10 @@ class lattice(factor):
             plan = gpt.copy_plan(self, value)
             plan.destination += gpt.lattice_view(self, pos, tidx)
             plan.source += gpt.global_memory_view(
-                self.grid, [[self.grid.processor, value, 0, value.nbytes]] if value.nbytes > 0 else None
+                self.grid,
+                [[self.grid.processor, value, 0, value.nbytes]]
+                if value.nbytes > 0
+                else None,
             )
             xp = plan()
             if cache_key is not None:
@@ -176,13 +179,14 @@ class lattice(factor):
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self, key)
 
-        value = cgpt.ndarray(
-            (len(pos), *shape), self.grid.precision.complex_dtype
-        )
+        value = cgpt.ndarray((len(pos), *shape), self.grid.precision.complex_dtype)
 
         plan = gpt.copy_plan(value, self)
         plan.destination += gpt.global_memory_view(
-            self.grid, [[self.grid.processor, value, 0, value.nbytes]] if value.nbytes > 0 else None
+            self.grid,
+            [[self.grid.processor, value, 0, value.nbytes]]
+            if value.nbytes > 0
+            else None,
         )
         plan.source += gpt.lattice_view(self, pos, tidx)
         xp = plan()

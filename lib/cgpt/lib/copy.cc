@@ -90,8 +90,9 @@ EXPORT(copy_create_plan,{
     long _vsrc, _vdst;
     PyObject* _tbuffer;
     std::string tbuffer;
+    long local_only, skip_optimize;
     
-    if (!PyArg_ParseTuple(args, "llO", &_vdst, &_vsrc, &_tbuffer)) {
+    if (!PyArg_ParseTuple(args, "llOll", &_vdst, &_vsrc, &_tbuffer, &local_only, &skip_optimize)) {
       return NULL;
     }
 
@@ -106,7 +107,7 @@ EXPORT(copy_create_plan,{
     gm_transfer* plan = new gm_transfer(vsrc->rank, vsrc->comm);
     memory_type mt = cgpt_memory_type_from_string(tbuffer);
 
-    plan->create(vdst->view, vsrc->view, mt);
+    plan->create(vdst->view, vsrc->view, mt,local_only,skip_optimize);
 
     return PyLong_FromVoidPtr(plan);
   });

@@ -37,8 +37,6 @@ class random:
         self.obj = cgpt.create_random(engine, s)
         t1 = gpt.time()
 
-        self.cache = {}
-
         if self.verbose:
             gpt.message(
                 "Initializing gpt.random(%s,%s) took %g s" % (s, engine, t1 - t0)
@@ -55,41 +53,21 @@ class random:
             return cgpt.random_sample(self.obj, p)
         elif type(t) == gpt.lattice:
             t0 = gpt.time()
-            mv = cgpt.random_sample(
+            cgpt.random_sample(
                 self.obj,
                 {
                     **p,
-                    **{
-                        "shape": list(t.otype.shape),
-                        "grid": t.grid.obj,
-                        "precision": t.grid.precision,
-                    },
+                    **{"lattices": [t]},
                 },
             )
             t1 = gpt.time()
-            cache_key = f"{t.grid.obj}_{t.grid.describe()}_{t.otype.shape}"
-            if cache_key not in self.cache:
-                pos = gpt.coordinates(t)
-                plan = gpt.copy_plan(t, mv)
-                plan.destination += t.view[pos]
-                plan.source += gpt.global_memory_view(
-                    t.grid, [[t.grid.processor, mv, 0, mv.nbytes]]
-                )
-                self.cache[cache_key] = plan()
-            t2 = gpt.time()
-            gpt.message(f"Copy: {t2-t1}")
             assert "pos" not in p  # to ensure that deprecated code is not used
 
-            # guide optimal page mapping on first write, overhead minimal
-            t[:] = 0
-            
-            # fill lattice
-            self.cache[cache_key](t, mv)
-
+            # optimize memory mapping
             t.swap(gpt.copy(t))
-           
+
             if self.verbose:
-                szGB = mv.size * mv.itemsize / 1024.0 ** 3.0
+                szGB = t.global_bytes() / 1024.0 ** 3.0
                 gpt.message(
                     "Generated %g GB of random data at %g GB/s"
                     % (szGB, szGB / (t1 - t0))

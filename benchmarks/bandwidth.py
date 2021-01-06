@@ -34,8 +34,8 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     plan.destination += lhs.view[pos]
     plan.source += rhs.view[pos]
     plan = plan()
-    plan_info = plan.info()[0,0][0,0]
-    block_size = plan_info['size'] // plan_info['blocks']
+    plan_info = plan.info()[0, 0][0, 0]
+    block_size = plan_info["size"] // plan_info["blocks"]
 
     t0 = g.time()
     for n in range(N):
