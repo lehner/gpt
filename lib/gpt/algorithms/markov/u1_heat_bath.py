@@ -38,10 +38,7 @@ class u1_heat_bath:
         verbose = g.default.is_verbose(
             "u1_heat_bath"
         )  # need verbosity categories [ performance, progress ]
-        assert type(link) == g.lattice
-        a = g.component.abs(staple)
-
-        assert type(a) == g.lattice
+        assert type(link) == g.lattice and type(staple) == g.lattice
 
         # component-wise functions needed below
         exp = g.component.exp
@@ -76,7 +73,7 @@ class u1_heat_bath:
             return g.eval(
                 one
                 - cos(x)
-                - inv(a)
+                - a_inv
                 * log(
                     g.eval(
                         one + (cosh(g.eval(alpha * x)) - one) * inv(g.eval(one + beta))
@@ -85,16 +82,18 @@ class u1_heat_bath:
             )
 
         # temporaries
+        a = g.component.abs(staple)  # absolute value of staple
+        a_inv = g.eval(inv(a))  # needed several times
         grid = a.grid
         one = g.identity(g.complex(grid))
         zero = g.identity(g.complex(grid))
         zero[:] = 0
-        d = g.complex(grid)
-        accepted = g.complex(grid)
+        Unew = g.complex(grid)  # proposal for new links
+        accepted = g.complex(grid)  # mask for accepted links
         num_sites = round(g.norm2(g.where(mask, one, zero)))
         x1 = g.complex(grid)
         x2 = g.complex(grid)
-        nohit = 0
+        nohit = 0  # to compute acceptance ratio
 
         # parameters of Hattori-Nakajima method
         eps = 0.001
@@ -105,7 +104,7 @@ class u1_heat_bath:
         beta = g.eval(
             (
                 gmax(
-                    g.eval(alpha * alpha * inv(a)),
+                    g.eval(alpha * alpha * a_inv),
                     g.eval(
                         (cosh(g.eval(np.pi * alpha)) - one)
                         * inv(g.eval(exp(g.eval(2.0 * a)) - one))
@@ -117,14 +116,15 @@ class u1_heat_bath:
         beta_s = sqrt(g.eval((one + beta) * inv(g.eval(one - beta))))
         tmp = atan(g.eval(inv(beta_s) * tanh(g.eval(0.5 * np.pi * alpha))))
 
-        # main loop
+        # main loop (large optimization potential but not time-critical anyway)
         num_accepted = 0
         accepted[:] = 0
-        d[:] = 0
+        Unew[:] = 0
+        # worst-case acceptance ratio of Hattori-Nakajima is 0.88
         while num_accepted < num_sites:
             self.rng.uniform_real(x1, min=0.0, max=1.0)
             self.rng.uniform_real(x2, min=0.0, max=1.0)
-            d = g.where(accepted, d, exp(g.eval(1j * h(x1))))
+            Unew = g.where(accepted, Unew, exp(g.eval(1j * h(x1))))
             newly_accepted = g.where(x2 < gg(x1), one, zero)
             accepted = g.where(
                 mask, g.where(newly_accepted, newly_accepted, accepted), zero
@@ -137,10 +137,8 @@ class u1_heat_bath:
                 f"Acceptance ratio for U(1) heatbath update = {num_sites/(num_sites+nohit)}"
             )
 
-        # print(f"d = {d[0, 1, 2, :]}")
-        # link @= d  # to be checked
-        x1 = staple * inv(g.eval(a))
-        # x1 = g.adj(staple) * inv(g.eval(a))
-        link @= d * x1  # to be checked
-        # print(f"link = {link[0, 1, 2, :]}")
-        # input("Press Enter to continue...")
+        # Unew was drawn with phase angle centered about zero
+        # need to shift this by phase angle of staple
+        Unew = Unew * staple * a_inv
+        # we update every link, thus accepted = mask
+        link @= g.where(accepted, Unew, link)
