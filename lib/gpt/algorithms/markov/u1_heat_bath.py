@@ -138,7 +138,6 @@ class u1_heat_bath:
             )
 
         # Unew was drawn with phase angle centered about zero
-        # need to shift this by phase angle of staple
-        Unew = Unew * staple * a_inv
-        # we update every link, thus accepted = mask
-        link @= g.where(accepted, Unew, link)
+        # -> need to shift this by phase angle of staple
+        # (we update every link, thus accepted = mask)
+        link @= g.where(accepted, Unew * staple * a_inv, link)
