@@ -18,7 +18,7 @@ g.message("alpha = {}; n_iter = {}; blk_Max = {}; blk_Accuracy = {}".format(alph
 params_ape = {"alpha": alpha, "Blk_Max": blk_max, "Blk_Accuracy": blk_accuracy}
 U_ape = U
 for i in range(5):
-    U_ape = g.qcd.gauge.smear.new_ape(U_ape, params_ape)
+    U_ape = g.qcd.gauge.smear.ape(U_ape, params_ape)
 g.message("Done with APE-link smearing")
 
 # use the gauge configuration grid
@@ -28,7 +28,7 @@ Nt = Vol[-1]
 L = Vol[0]
 
 # quark
-w = g.qcd.fermion.wilson_clover(U_ape,{
+w = g.qcd.fermion.wilson_clover(U,{
     "kappa" : 0.137,
     "csw_r" : 0.,
     "csw_t" : 0.,

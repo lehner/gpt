@@ -35,6 +35,28 @@ static bool read_nersc_header(std::string filename, std::map<std::string,std::st
   return true;
 }
 
+static void save_nersc(const std::string& filename,
+		       PyObject* format,
+		       PyObject* objs,
+		       bool verbose) {
+
+  std::vector< cgpt_Lattice_base* > U;
+  long npl = cgpt_basis_fill(U, objs);
+
+  ASSERT(npl == 1);
+  ASSERT(U.size() == 4);
+
+  LatticeGaugeFieldD Umu(U[0]->get_grid());
+  
+  for (int mu=0;mu<4;mu++) {
+    auto lat = compatible< iColourMatrix< vComplexD > >(U[mu]);
+    PokeIndex<LorentzIndex>(Umu,lat->l,mu);
+  }
+
+  NerscIO::writeConfiguration(Umu,filename,0,0);
+
+}
+
 static PyObject* load_nersc(PyObject* args) { 
 
   ASSERT(PyTuple_Check(args));

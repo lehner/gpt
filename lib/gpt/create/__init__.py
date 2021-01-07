@@ -20,7 +20,7 @@ import gpt
 import gpt.create.smear
 import gpt.create.sparse_grid
 import gpt.create.wall
-
+import gpt.create.loops
 
 def point(src, pos):
     src[:] = 0

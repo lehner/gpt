@@ -1,6 +1,8 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Lorenzo Barca    (lorenzo1.barca@ur.de)
+#
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,33 +18,19 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt
-from gpt.params import params_convention
+#
+import gpt as g
 
-# format
-class format:
-    class gpt:
-        @params_convention()
-        def __init__(self, params):
-            self.params = params
+# gpt/qcd/gauge/loops in gpt/create or gpt/meas ?
 
-    class cevec:
-        @params_convention()
-        def __init__(self, params):
-            self.params = params
+def polyakov_loop(U, mu):
+    # tr[ prod_j U_{\mu}(m, j) ]
+    vol = float(U[0].grid.fsites)
+    Nc = U[0].otype.Nc
+    tmp_polyakov_loop = g.copy(U[mu])
+    for n in range(1, U[0].grid.fdimensions[mu]):
+        tmp = g.cshift(tmp_polyakov_loop, mu, 1)
+        tmp_polyakov_loop = g.eval(U[mu] * tmp)
 
-    class nersc:
-        @params_convention()
-        def __init__(self, params):
-            self.params = params
+    return g.sum(g.trace(tmp_polyakov_loop)) / Nc / vol
 
-
-# output
-def save(filename, objs, fmt=format.gpt()):
-
-    if type(fmt) == format.gpt:
-        return gpt.core.io.gpt_io.save(filename, objs, fmt.params)
-    elif type(fmt) == format.cevec:
-        return gpt.core.io.cevec_io.save(filename, objs, fmt.params)
-
-    return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))

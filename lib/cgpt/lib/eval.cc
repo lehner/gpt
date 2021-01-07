@@ -79,6 +79,7 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms, int 
 	ASSERT(v_obj);
 	cgpt_convert(v_obj, factor.vlattice);
 	factor.type = _eval_factor_::LATTICE;
+	Py_DECREF(v_obj);
       } else if (PyObject_HasAttrString(f,"array")) {
 	factor.array = (PyArrayObject*)PyObject_GetAttrString(f,"array");
 	PyObject* otype = PyObject_GetAttrString(f,"otype");
@@ -87,11 +88,15 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms, int 
 	ASSERT(v_otype);
 	cgpt_convert(v_otype,factor.v_otype);
 	factor.type = _eval_factor_::ARRAY;
+	Py_DECREF(otype);
+	Py_DECREF(v_otype);
       } else if (PyObject_HasAttrString(f,"gamma")) {
-	int gamma = (int)PyLong_AsLong(PyObject_GetAttrString(f,"gamma"));
+	PyObject* tmp = PyObject_GetAttrString(f,"gamma");
+	int gamma = (int)PyLong_AsLong(tmp);
 	ASSERT(gamma >= 0 && gamma < gamma_algebra_map_max);
 	factor.gamma = gamma_algebra_map[gamma];
 	factor.type = _eval_factor_::GAMMA;
+	Py_DECREF(tmp);
       } else {
 	ASSERT(0);
       }

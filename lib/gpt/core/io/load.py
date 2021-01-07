@@ -26,11 +26,9 @@ def load_cgpt(*a):
     if r is None:
         raise gpt.LoadError()
     for gr in r:
-        grid = gpt.grid(
-            gr[1], eval("gpt.precision." + gr[2]), eval("gpt." + gr[3]), gr[0]
-        )
+        grid = gpt.grid(gr[1], eval("gpt." + gr[2]), eval("gpt." + gr[3]), gr[0])
         result_grid = []
-        otype = gpt.ot_matrix_su3_fundamental()
+        otype = gpt.ot_matrix_su_n_fundamental_group(3)
         for t_obj, s_ot, s_pr in gr[4]:
             assert s_pr == gr[2]
 
