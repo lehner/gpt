@@ -17,6 +17,10 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 #    2020 Tilo Wettig
+#    Implementation of heatbath algorithm by Hattori-Nakajima (hep-lat/9210016).
+#    Tested against low- and high-temperature expansions in Lautrup-Nauenberg,
+#    Phys. Lett. B 95 (1980) 63 and against numbers in Table 3 of Azcoiti et al.,
+#    JHEP 08 (2009) 008 (arXiv:0905.0639)
 
 import gpt as g
 import numpy as np
