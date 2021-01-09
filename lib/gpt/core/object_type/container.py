@@ -124,6 +124,9 @@ class ot_matrix_spin(ot_base):
             "ot_singlet": (lambda: self, None),
         }
 
+    def identity(self):
+        return gpt.matrix_spin(numpy.identity(self.shape[0]), self.shape[0])
+
 
 class ot_vector_spin(ot_base):
     def __init__(self, ndim):
