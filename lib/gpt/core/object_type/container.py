@@ -56,7 +56,7 @@ class ot_singlet(ot_base):
         "ot_singlet": (lambda: ot_singlet, None),
     }
 
-    def identity():
+    def identity(self):
         return 1.0
 
 
