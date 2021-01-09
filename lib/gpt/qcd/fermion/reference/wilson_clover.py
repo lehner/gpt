@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -59,6 +60,19 @@ class wilson_clover(shift_eo, matrix_operator):
 
         self.kappa = 1.0 / (2.0 * (self.m0 + 1.0 + 3.0 * self.nu / self.xi_0))
 
+        self.open_bc = params["boundary_phases"][self.nd - 1] == 0.0
+        if self.open_bc:
+            assert all(
+                [
+                    self.xi_0 == 1.0,
+                    self.nu == 1.0,
+                    self.csw_r == self.csw_t,
+                    "cF" in params,
+                ]
+            )  # open bc only for isotropic case, require cF passed
+            self.cF = params["cF"]
+            T = self.L[self.nd - 1]
+
         # compute field strength tensor
         if self.csw_r != 0.0 or self.csw_t != 0.0:
             self.clover = g.mspincolor(grid)
@@ -77,6 +91,24 @@ class wilson_clover(shift_eo, matrix_operator):
                         * I
                         * g.qcd.gauge.field_strength(U, mu, nu)
                     )
+
+            # set clover to unity at the temporal boundaries (scaled correctly)
+            if self.open_bc:
+                self.clover[:, :, :, 0, :, :, :, :] = 0.0
+                self.clover[:, :, :, T - 1, :, :, :, :] = 0.0
+                for alpha in range(4):
+                    for a in range(Nc):
+                        self.clover[:, :, :, 0, alpha, alpha, a, a] = -0.5 * self.csw_t
+                        self.clover[:, :, :, T - 1, alpha, alpha, a, a] = (
+                            -0.5 * self.csw_t
+                        )
+
+            # add improvement coefficients next to temporal boundaries
+            if self.open_bc and self.cF != 1.0:
+                for alpha in range(4):
+                    for a in range(Nc):
+                        self.clover[:, :, :, 1, alpha, alpha, a, a] += self.cF - 1.0
+                        self.clover[:, :, :, T - 2, alpha, alpha, a, a] += self.cF - 1.0
 
             self.clover_eo = {
                 g.even: g.lattice(grid_eo, self.clover.otype),
@@ -121,6 +153,7 @@ class wilson_clover(shift_eo, matrix_operator):
                 cc / 2.0 * (g.gamma[mu] - g.gamma["I"]) * src_plus
                 - cc / 2.0 * (g.gamma[mu] + g.gamma["I"]) * src_minus
             )
+        g.covariant.apply_boundaries(dst, self.open_bc)
 
     def _Mooee(self, dst, src):
         assert dst != src
@@ -129,6 +162,7 @@ class wilson_clover(shift_eo, matrix_operator):
         dst @= 1.0 / 2.0 * 1.0 / self.kappa * src
         if self.clover is not None:
             dst += self.clover_eo[cb] * src
+        g.covariant.apply_boundaries(dst, self.open_bc)
 
     def _M(self, dst, src):
         assert dst != src
