@@ -32,7 +32,7 @@
 // Here: Above but diagonal as complex numbers, i.e., need to store/transfer
 // 2 * (6 * 2 + 15 * 2) = 84 real or 42 complex words
 //
-// Words per site and improvement compared to Grid (combined with the input and output spinors:
+// Words per site and improvement compared to Grid (combined with the input and output spinors):
 //
 // - Grid:    2*12 + 12*12 = 168 words -> 1.00 x less
 // - Minimal: 2*12 + 36    =  60 words -> 2.80 x less
