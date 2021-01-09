@@ -74,8 +74,7 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         rng = g.random("test")
         m = rng.cnormal(dtype(grid))
         minv = g.matrix.inv(m)
-        eye = g.lattice(m)
-        eye[:] = m.otype.identity()
+        eye = g.identity(m)
         eps2 = g.norm2(m * minv - eye) / (12 * grid.fsites)
         g.message(f"test M*M^-1 = 1 for {m.otype.__name__}: {eps2}")
         assert eps2 < eps ** 2
