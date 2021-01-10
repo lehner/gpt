@@ -30,10 +30,10 @@ assert eps2 < 1e-29
 
 
 # Test covariance of wuppertal smearing operator
-smear = g.create.smear.wuppertal(U, kappa=0.25, steps=3, dimensions=[0, 1, 2])
+smear = g.create.smear.wuppertal(U, delta=0.25, steps=3, dimensions=[0, 1, 2])
 U_transformed = g.qcd.gauge.transformed(U, V)
 smear_transformed = g.create.smear.wuppertal(
-    U_transformed, kappa=0.25, steps=3, dimensions=[0, 1, 2]
+    U_transformed, delta=0.25, steps=3, dimensions=[0, 1, 2]
 )
 
 src = g.mspincolor(grid)
@@ -68,9 +68,9 @@ for dimensions in [[0, 1, 2], [0, 1, 2, 3]]:
 
 # Test wuppertal smearing operator on point source over unit gauge field
 for dimensions in [[0, 1, 2], [0, 1, 2, 3]]:
-    for kappa, steps in [(0.25, 3), (0.16, 2)]:
+    for delta, steps in [(0.25, 3), (0.16, 2)]:
         smear_unit = g.create.smear.wuppertal(
-            U_unit, kappa=kappa, steps=steps, dimensions=dimensions
+            U_unit, delta=delta, steps=steps, dimensions=dimensions
         )
         src = g.vcolor(grid)
         src[:] = g.vcolor([1, 0, 0])
@@ -81,7 +81,7 @@ for dimensions in [[0, 1, 2], [0, 1, 2, 3]]:
         src_mom = g(g.exp_ixp(p) * src)
 
         laplace = sum([2.0 * (np.cos(p[i]) - 1.0) for i in dimensions])
-        factor = (1.0 + kappa / (1 + 2 * len(dimensions) * kappa) * laplace ) ** steps
+        factor = (1.0 + delta / (1 + 2 * len(dimensions) * delta) * laplace ) ** steps
         dst = g(smear_unit * src_mom)
         eps2 = g.norm2(dst - factor * src_mom) / g.norm2(dst)
         g.message(f"Wuppertal test using eigen representation: {eps2}")
