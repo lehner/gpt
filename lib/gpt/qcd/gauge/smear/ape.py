@@ -18,51 +18,40 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import numpy as np
-import gpt as g
+import gpt
 from gpt.params import params_convention
-from gpt.core.suN_utils import project_onto_suN
+from gpt.core.suNutils import project_onto_suN
 
-@params_convention(alpha=2.5, orthogonal_dimension=3, blk_max=None, blk_accuracy=None)
-def ape(U, params):
-    nd = len(U)
-    alpha = params["alpha"]
-    orthogonal_dimension = params["orthogonal_dimension"]
-    blk_max = params["blk_max"]
-    blk_accuracy = params["blk_accuracy"]
-    rho_matrix = np.array(
-        [
-            [
-                0.0
-                if (
-                    mu == orthogonal_dimension or nu == orthogonal_dimension or mu == nu
-                 )
-                else 1.0
-                for nu in range(nd)
-            ]
-            for mu in range(nd)
-        ],
-        dtype=np.float64,
-    )
-    return ape_general(U, rho=rho_matrix, blk_max=blk_max, blk_accuracy=blk_accuracy, orthogonal_dimension=orthogonal_dimension)
+@params_convention(alpha=2.5, orthogonal_dimension=3, max_iterations=20, accuracy=1e-20)
+def ape(u, params):
+    nd = len(u)
 
-@params_convention(alpha=2.5)
-def ape_general(U, params):
-#   Following (27) of https://arxiv.org/pdf/hep-lat/0505012.pdf
-#   here the smearing factor alpha is multiplying the starting links
-    nd = len(U)
-    alpha = params["alpha"]
-    orthogonal_dimension = params["orthogonal_dimension"]
-    sum_staples = g.qcd.gauge.staples.staple_sum(U, params)
-    U_smear = []
+    # create mask for staples
+    params["rho"] = np.ones((nd, nd), dtype=np.float64)
     for mu in range(nd):
-        U_mu_smear = g.copy(U[mu])
-        if mu!= orthogonal_dimension:
-             U_mu_smear =  g(U[mu] * alpha) + g(sum_staples[mu])
-             U_unproj = g.eval(g.adj(U_mu_smear))
-             # project onto suN
-             U_mu_smear = project_onto_suN(U_unproj, U[mu], params)
-             # Reunitarize
-             g.qcd.reunitize(U_mu_smear)
-             assert U_mu_smear.otype.is_element(U_mu_smear)
-        U_smear.append(U_mu_smear)
-    return U_smear
+        for nu in range(nd):
+            if mu == params["orthogonal_dimension"] or nu == params["orthogonal_dimension"] or mu == nu:
+                params["rho"][mu, nu] = 0.0
+
+    # create staples
+    staplesum = gpt.qcd.gauge.staple_sum(u, params)
+
+    u_apesmeared = []
+    for mu in range(nd):
+        gpt.message(f"Starting direction {mu}...")
+        # start with original link
+        u_tmp = gpt.copy(u[mu])
+        if mu != params["orthogonal_dimension"]:
+            # get the unprojected, i.e., u + staples
+            u_unprojected = gpt.eval(gpt.adj(gpt(u_tmp * params["alpha"]) + gpt(staplesum[mu])))
+
+            # take the original gauge field as a starting point for the projections
+            project_onto_suN(u_tmp, u_unprojected, params)
+
+            # reunitarize
+            gpt.qcd.reunitize(u_tmp)
+            #gpt.qcd.gauge.assert_unitary(u_tmp)
+
+        u_apesmeared.append(u_tmp)
+        gpt.message(f"Direction {mu} done.")
+    return u_apesmeared
