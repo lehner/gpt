@@ -58,12 +58,13 @@ bool bcopy_accelerator_accelerator(const blocks_t& blocks, char* p_dst, const ch
   size_t npb = bs / sizeof(T);
 
   auto & b = blocks.second;
+  auto * pb = &b[0];
 
   T* dst = (T*)p_dst;
   const T* src = (const T*)p_src;
 
-  accelerator_for(i, npb * b.size(), {
-      auto & x = b[i / npb];
+  accelerator_for(i, npb * b.size(), 1, {
+      auto & x = pb[i / npb];
       size_t i_dst = x.start_dst / sizeof(T);
       size_t i_src = x.start_src / sizeof(T);
       size_t j = i % npb;

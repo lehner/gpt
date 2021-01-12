@@ -59,26 +59,29 @@ void test_global_memory_system() {
   osrc.block_size = (rand() % 2 == 0) ? word_half : word;
   odst.block_size = (rand() % 2 == 0) ? word_half : word;
 
+  size_t d = 0, s = 0;
+  osrc.blocks.resize(nindex * nwords * (word / osrc.block_size));
+  odst.blocks.resize(nindex * nwords * (word / odst.block_size));
   for (int i=0;i<nindex;i++) {
     for (int j=0;j<nwords;j++) {
       int rs = src_ranks[j + i*nwords];
       int js = src_offset[j + i*nwords];
       int is = src_index[j + i*nwords];
       if (osrc.block_size == word_half) {
-	osrc.blocks.push_back( { rs, (uint32_t)is, js*word } ); // rank, index, offset, size
-	osrc.blocks.push_back( { rs, (uint32_t)is, js*word + word_half } ); // rank, index, offset, size
+	osrc.blocks[s++] = { rs, (uint32_t)is, js*word }; // rank, index, offset, size
+	osrc.blocks[s++] = { rs, (uint32_t)is, js*word + word_half }; // rank, index, offset, size
       } else {
-	osrc.blocks.push_back( { rs, (uint32_t)is, js*word } ); // rank, index, offset, size
+	osrc.blocks[s++] = { rs, (uint32_t)is, js*word }; // rank, index, offset, size
       }
       if (odst.block_size == word_half) {
-	odst.blocks.push_back( { rank, (uint32_t)i, j*word } ); // rank, index, offset, size
-	odst.blocks.push_back( { rank, (uint32_t)i, j*word + word_half } ); // rank, index, offset, size
+	odst.blocks[d++] = { rank, (uint32_t)i, j*word }; // rank, index, offset, size
+	odst.blocks[d++] = { rank, (uint32_t)i, j*word + word_half }; // rank, index, offset, size
       } else {
-	odst.blocks.push_back( { rank, (uint32_t)i, j*word } ); // rank, index, offset, size
+	odst.blocks[d++] = { rank, (uint32_t)i, j*word }; // rank, index, offset, size
       }
     }
   }
-  
+
   plan.create(odst, osrc, mt_none);
   plan_host_buf.create(odst, osrc, mt_host);
   

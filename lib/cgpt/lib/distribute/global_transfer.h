@@ -36,15 +36,15 @@ global_transfer<rank_t>::global_transfer(rank_t _rank, Grid_MPI_Comm _comm) : ra
 }
 
 template<typename rank_t>
-void global_transfer<rank_t>::global_sum(std::vector<uint64_t>& data) {
+void global_transfer<rank_t>::global_sum(uint64_t* pdata, size_t size) {
 #ifdef CGPT_USE_MPI
-  ASSERT(MPI_SUCCESS == MPI_Allreduce(MPI_IN_PLACE,&data[0],data.size(),MPI_UINT64_T,MPI_SUM,comm));
+  ASSERT(MPI_SUCCESS == MPI_Allreduce(MPI_IN_PLACE,pdata,size,MPI_UINT64_T,MPI_SUM,comm));
 #endif
 }
 
 template<typename rank_t>
-template<typename data_t>
-void global_transfer<rank_t>::root_to_all(const std::map<rank_t, std::vector<data_t> > & all, std::vector<data_t>& my) {
+template<typename vec_t>
+void global_transfer<rank_t>::root_to_all(const std::map<rank_t, vec_t > & all, vec_t & my) {
 
   // store mine
   if (rank == 0) {
@@ -93,8 +93,8 @@ void global_transfer<rank_t>::root_to_all(const std::map<rank_t, std::vector<dat
 }
 
 template<typename rank_t>
-template<typename data_t>
-void global_transfer<rank_t>::all_to_root(const std::vector<data_t>& my, std::map<rank_t, std::vector<data_t> > & all) {
+template<typename vec_t>
+void global_transfer<rank_t>::all_to_root(const vec_t& my, std::map<rank_t, vec_t > & all) {
 
   // store mine
   if (rank == 0)
@@ -113,7 +113,7 @@ void global_transfer<rank_t>::all_to_root(const std::vector<data_t>& my, std::ma
       int rank_size = all_size[mpi_rank_map[i]];
 
       if (rank_size != 0) {
-	std::vector<data_t> & data = all[i];
+	auto & data = all[i];
 	data.resize(rank_size);
 
 	irecv(i,data);

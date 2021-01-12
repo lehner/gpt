@@ -48,3 +48,12 @@ bool global_memory_view<offset_t,rank_t,index_t>::is_aligned() const {
     }
   return aligned;
 }
+
+template<typename offset_t, typename rank_t, typename index_t>
+void global_memory_view<offset_t,rank_t,index_t>::operator=(const global_memory_view<offset_t,rank_t,index_t>& other) {
+  block_size = other.block_size;
+  blocks.resize(other.blocks.size());
+  thread_for(i, blocks.size(), {
+      blocks[i] = other.blocks[i];
+    });
+}

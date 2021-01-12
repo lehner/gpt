@@ -23,17 +23,27 @@ void cgpt_distribute_merge_into(std::vector<V> & target, const std::vector<V> & 
   target.insert(target.end(), src.begin(), src.end());
 }
 
-template<typename K, typename V>
-void cgpt_distribute_merge_into(std::pair<K,V> & target, const std::pair<K,V> & src) {
+template<typename V>
+void cgpt_distribute_merge_into(Vector<V> & target, const std::vector<V> & src) {
+  size_t target_size = target.size();
+  size_t src_size = src.size();
+  target.resize(src_size + target_size);
+  thread_for(i, src_size, {
+      target[i + target_size] = src[i];
+    });
+}
+
+template<typename K, typename V1, typename V2>
+void cgpt_distribute_merge_into(std::pair<K,V1> & target, const std::pair<K,V2> & src) {
   target.first = src.first;
   cgpt_distribute_merge_into(target.second, src.second);
 }
 
-template<typename K, typename V>
-void cgpt_distribute_merge_into(std::map<K,V> & target, const std::map<K,V> & src) {
+template<typename K, typename V1, typename V2>
+void cgpt_distribute_merge_into(std::map<K,V1> & target, const std::map<K,V2> & src) {
   for (auto & x : src) {
-    V & y = target[x.first];
-    const V & z = x.second;
+    V1 & y = target[x.first];
+    const V2 & z = x.second;
     cgpt_distribute_merge_into(y, z);
   }
 }
@@ -66,7 +76,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::fill_blocks_from_view_pair
     {
       threads = thread_max();
     }
-  typedef std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, blocks_t > > thread_block_t;
+  typedef std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, thread_blocks_t > > thread_block_t;
+
   std::vector<thread_block_t> tblocks(threads);
 
   thread_region
@@ -115,7 +126,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::fill_blocks_from_view_pair
   }
 
   //t("final");
-  blocks = tblocks[0];
+  cgpt_distribute_merge_into(blocks, tblocks[0]);
 
   //t.report();
 
@@ -141,7 +152,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
   // de-serialize my blocks from appropriate communication buffers
   for (auto & tasks : tasks_from_rank) {
     while (!tasks.second.eom()) {
-      std::pair< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, blocks_t > > ranks;
+      std::pair< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, thread_blocks_t > > ranks;
       tasks.second.get(ranks);
 
       // and merge with current blocks
@@ -164,10 +175,15 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::merge_blocks(blocks_t& dst, const blocks_t& src) {
+template<typename blocks_src_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::merge_blocks(blocks_t& dst, const blocks_src_t& src) {
 
   if (!dst.second.size()) {
-    dst = src;
+    dst.first = src.first;
+    dst.second.resize(src.second.size());
+    thread_for(i, dst.second.size(), {
+	dst.second[i] = src.second[i];
+      });
     return;
   }
 
@@ -232,7 +248,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks)
   cgpt_sort(blocks.second, less);
 
   //t("unique");
-  std::vector<block_t> unique_blocks;
+  Vector<block_t> unique_blocks;
   cgpt_sorted_unique(unique_blocks, blocks.second, [](const block_t & a, const block_t & b) {
 						     return (a.start_dst == b.start_dst && a.start_src == b.start_src);
 						   });
@@ -241,7 +257,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks)
   //std::cout << GridLogMessage << "Unique " << blocks.second.size() << " -> " << unique_blocks.size() << std::endl;
   
   //t("rle");
-  std::vector<size_t> start, repeats;
+  Vector<size_t> start, repeats;
   size_t block_size = blocks.first;
   size_t gcd = cgpt_rle(start, repeats, unique_blocks, [block_size](const block_t & a, const block_t & b) {
 						  return (a.start_dst + block_size == b.start_dst &&

@@ -17,9 +17,12 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     rng.cnormal([lhs, rhs])
 
     # 2 * N for read/write
-    GB = 2 * N * lhs.otype.nfloats * grid.precision.nbytes * grid.fsites / 1024.0 ** 3.0
+    GB = 2 * N * lhs.global_bytes() / 1024.0 ** 3.0
 
     g.message(f"Test {lhs.otype.__name__}")
+
+    # warmup
+    g.copy(lhs, rhs)
 
     t0 = g.time()
     for n in range(N):
@@ -30,19 +33,23 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     pos = g.coordinates(lhs)
 
     # create plan during first assignment, exclude from benchmark
+    # plan = g.copy_plan(lhs, rhs, lattice_view_location="accelerator")
     plan = g.copy_plan(lhs, rhs)
     plan.destination += lhs.view[pos]
     plan.source += rhs.view[pos]
     plan = plan()
-    plan_info = plan.info()[0, 0][0, 0]
-    block_size = plan_info["size"] // plan_info["blocks"]
+    # plan_info = plan.info()[0, 0][0, 0]
+    # block_size = plan_info["size"] // plan_info["blocks"]
+    # g.message(" " * 51 + f"block_size = {block_size}")
+
+    # warmup
+    plan(lhs, rhs)
 
     t0 = g.time()
     for n in range(N):
         plan(lhs, rhs)
     t1 = g.time()
     g.message("%-50s %g GB/s %g s" % ("copy_plan:", GB / (t1 - t0), (t1 - t0) / N))
-    g.message(" " * 51 + f"block_size = {block_size}")
 
 
 # spin/color separate/merge

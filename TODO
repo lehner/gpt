@@ -1,3 +1,8 @@
+- First instance of random should also be faster ... random
+
+- AlignedVector<Vector<index_type>> lut_vec_; very wasteful in block.h (imagine osites * 2MB pages)
+  Need an unaligned/minimally-aligned version of Vector!
+
 - Complete implementation of new blocked memory system in many node setup, re-run also test in init.cc
 
 - Improve random performance further ; generate data in optimal ordering

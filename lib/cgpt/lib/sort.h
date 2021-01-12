@@ -16,14 +16,10 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-template<typename cmp_t, typename element_t>
-void cgpt_sort(std::vector<element_t>& data, const cmp_t & cmp) {
-  size_t threads;
+template<typename cmp_t, typename vec_t>
+void cgpt_sort(vec_t& data, const cmp_t & cmp) {
+  size_t threads = thread_max();
   size_t n = data.size();
-  thread_region
-    {
-      threads = thread_max();
-    }
 
   // split sorting into sub-blocks that will be pre-sorted per thread
   size_t n_per_thread = (n + threads - 1) / threads;
@@ -67,13 +63,13 @@ void cgpt_sort(std::vector<element_t>& data, const cmp_t & cmp) {
 #endif
 }
 
-template<typename check_t, typename element_t>
-void cgpt_sorted_unique(std::vector<element_t>& u, const std::vector<element_t>& a, check_t c) {
-  std::vector<char> flags(a.size());
+template<typename check_t, typename vec_t>
+void cgpt_sorted_unique(vec_t& u, const vec_t& a, check_t c) {
+  AlignedVector<char> flags(a.size());
   thread_for(i, a.size()-1, { flags[i] = c(a[i],a[i+1]); });
   flags[a.size()-1] = 0;
 
-  std::vector<size_t> idx;
+  AlignedVector<size_t> idx;
   cgpt_enumerate(idx, flags, [](char x) { return !x; });
 
   u.resize(idx.size());
@@ -82,79 +78,3 @@ void cgpt_sorted_unique(std::vector<element_t>& u, const std::vector<element_t>&
     });
 }
 
-static long cgpt_gcd(long a, long b) {
-  while (b) {
-    long t = b;
-    b = a % b;
-    a = t;
-  }
-  return a;
-}
-
-template<typename check_t, typename element_t>
-size_t cgpt_rle(std::vector<size_t> & start, std::vector<size_t> & repeats,
-		const std::vector<element_t> & a, check_t c) {
-  
-  std::vector<char> flags(a.size());
-  thread_for(i, a.size()-1, { flags[i] = c(a[i],a[i+1]); });
-  flags[a.size()-1] = 0;
-
-  std::vector<size_t> idx;
-  cgpt_enumerate(idx, flags, [](char x) { return !x; });
-
-  start.resize(idx.size());
-  repeats.resize(idx.size());
-
-  // Example 1:
-  // ABCDE
-  // 11110 flags
-  // 4 idx
-  // start = { 0 }, repeats = { 5 }
-
-  // Example 2:
-  // ACEGH
-  // 00000 flags
-  // {0,1,2,3,4} idx
-  // start   = { 0, 1, 2, 3, 4 }
-  // repeats = { 1, 1, 1, 1, 1 }
-
-  // Example 3:
-  // ABCEFG
-  // 110110 flags
-  // idx = { 2, 5 }
-  // start   = { 0, 3 }
-  // repeats = { 3, 3 }
-  size_t gcd = 0;
-  thread_region
-    {
-      size_t tgcd = 0;
-      
-      thread_for_in_region(i, idx.size(), {
-
-	  // start[i] + repeats[i] == start[i+1]
-	  // idx[-1] = -1
-	  if (i) {
-	    start[i] = idx[i-1] + 1;
-	    repeats[i] = idx[i] - idx[i-1];
-	    tgcd = (size_t)cgpt_gcd((long)tgcd, (long)repeats[i]);
-	  } else {
-	    start[0] = 0;
-	    repeats[0] = idx[0] + 1;
-	    tgcd = repeats[0];
-	  }
-	});
-
-      thread_critical
-	{
-	  if (tgcd) {
-	    if (gcd) {
-	      gcd = (size_t)cgpt_gcd((long)gcd, (long)tgcd);
-	    } else {
-	      gcd = tgcd;
-	    }
-	  }
-	}
-    }
-
-  return gcd;
-}

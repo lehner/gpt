@@ -141,7 +141,7 @@ void cgpt_random_sample_lattice(prng_t & prng, dist_t & dist,
 
   ASSERT(n_virtual == (long)lattices.size());
 
-  std::vector<complex_t> data(blocks * n_per_block);
+  AlignedVector<complex_t> data(blocks * n_per_block);
 
   //double t0 = cgpt_time();
   thread_for(idx, blocks, {

@@ -24,7 +24,7 @@ inline void sumD_cpu(stype* ret, const vobj *arg, Integer osites, Integer nvec)
 {
   const int nthread = thread_max();
 
-  std::vector<stype> sum(nthread * nvec);
+  AlignedVector<stype> sum(nthread * nvec);
 
   thread_region
     {
@@ -135,17 +135,16 @@ inline void rankInnerProductCpu(ComplexD* result,
   VECTOR_VIEW_OPEN(multi_right,right_v,CpuRead);
   
   {
-    std::vector<ComplexD> all_thread_sum_reduce(max_parallel * n_left*n_right);
-
+    AlignedVector<ComplexD> all_thread_sum_reduce(max_parallel * n_left*n_right);
+    
     thread_region
       {
 	ComplexD * thread_sum_reduce = &all_thread_sum_reduce[thread_num()*n_left*n_right];
-
-	thread_for_in_region( i, n_left*n_right, {
-	    thread_sum_reduce[i] = 0.0;
+	thread_for_in_region(i, all_thread_sum_reduce.size(), {
+	    all_thread_sum_reduce[i] = 0.0;
 	  });
 
-	thread_for_in_region( w, words,{
+	thread_for_in_region( w, words, {
 	    for (uint64_t kl=0;kl<n_left;kl++) {
 	      for (uint64_t kr=0;kr<n_right;kr++) {
 		ComplexD s = 0.0;

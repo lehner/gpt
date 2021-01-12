@@ -269,9 +269,9 @@ EXPORT(copy_create_view,{
 
     v->view.block_size = block_size;
 
-    std::vector<gm_view::block_t> blocks;
+    AlignedVector<gm_view::block_t> blocks;
     blocks.resize(nb);
-    std::vector<size_t> ndup(nb);
+    AlignedVector<size_t> ndup(nb);
     thread_for(i, nb, {
 	auto & x = blocks[i];
 	x.rank = (int)ad[4 * i + 0];
@@ -286,7 +286,6 @@ EXPORT(copy_create_view,{
 		   [block_size](size_t index, size_t sub_index, gm_view::block_t & b) {
 		     b.start += sub_index * block_size;
 		   });
-
     return PyLong_FromVoidPtr(v);
   });
 
