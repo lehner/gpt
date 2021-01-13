@@ -49,27 +49,27 @@ bool bcopy_host_host(const blocks_t& blocks, char* p_dst, const char* p_src) {
   return true;
 }
 
-template<typename T, typename blocks_t>
+template<typename T, typename vT, typename blocks_t>
 bool bcopy_accelerator_accelerator(const blocks_t& blocks, char* p_dst, const char* p_src) {
   size_t bs = blocks.first;
-  if (bs % sizeof(T) != 0)
+  if (bs % sizeof(vT) != 0)
     return false;
 
-  size_t npb = bs / sizeof(T);
+  size_t npb = bs / sizeof(vT);
 
   auto & b = blocks.second;
   auto * pb = &b[0];
 
-  T* dst = (T*)p_dst;
-  const T* src = (const T*)p_src;
+  vT* dst = (vT*)p_dst;
+  const vT* src = (const vT*)p_src;
 
-  accelerator_for(i, npb * b.size(), 1, {
+  accelerator_for(i, npb * b.size(), sizeof(vT)/sizeof(T), {
       auto & x = pb[i / npb];
-      size_t i_dst = x.start_dst / sizeof(T);
-      size_t i_src = x.start_src / sizeof(T);
+      size_t i_dst = x.start_dst / sizeof(vT);
+      size_t i_src = x.start_src / sizeof(vT);
       size_t j = i % npb;
       
-      dst[i_dst + j] = src[i_src + j];
+      coalescedWrite(dst[i_dst + j], coalescedRead(src[i_src + j]));
     });
   
   return true;

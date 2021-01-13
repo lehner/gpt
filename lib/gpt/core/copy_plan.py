@@ -52,14 +52,17 @@ class copy_plan_view:
         n = 0
         self.memory_layout = {}
         self.data = data  # keep reference to data so that id(x) stays unique for lifetime of this instance
+        self.requires_host_memory = False
         for x in gpt.util.to_list(data):
             self.memory_layout[id(x)] = n
             if isinstance(x, gpt.lattice):
                 n += len(x.v_obj)
             elif isinstance(x, memoryview):
                 n += 1
+                self.requires_host_memory = True
             elif isinstance(x, numpy.ndarray):
                 n += 1
+                self.requires_host_memory = True
             else:
                 raise Exception(f"Unknown data type {type(x)}")
 
@@ -98,15 +101,22 @@ class copy_plan:
         self,
         dst,
         src,
-        lattice_view_location="host",
-        communication_buffer_location="host",
         embed_in_communicator=None,
-    ):  # host/accelerator/none
-        self.communication_buffer_location = communication_buffer_location
-        self.lattice_view_location = lattice_view_location
-
+    ):
         self.destination = copy_plan_view(dst, embed_in_communicator)
         self.source = copy_plan_view(src, embed_in_communicator)
+
+        data_location = (
+            "host"
+            if (
+                self.destination.requires_host_memory
+                or self.source.requires_host_memory
+            )
+            else "accelerator"
+        )
+
+        self.communication_buffer_location = data_location
+        self.lattice_view_location = data_location
 
     def __call__(self, local_only=False, skip_optimize=False):
         return copy_plan_executer(

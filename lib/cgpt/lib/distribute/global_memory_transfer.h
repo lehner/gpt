@@ -526,10 +526,11 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const blocks_t& bloc
       acceleratorCopyToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],blocks.first);
     }
   } else if (mt_dst == mt_accelerator && mt_src == mt_accelerator) {
-    if (bcopy_accelerator_accelerator<vComplexF>(blocks, p_dst, p_src)); // maybe better performance if I start with second one?
-    else if (bcopy_accelerator_accelerator<ComplexF>(blocks, p_dst, p_src));
-    else if (bcopy_accelerator_accelerator<double>(blocks, p_dst, p_src));
-    else if (bcopy_accelerator_accelerator<float>(blocks, p_dst, p_src));
+    if (bcopy_accelerator_accelerator<SpinMatrixF,vSpinMatrixF>(blocks, p_dst, p_src));
+    else if (bcopy_accelerator_accelerator<ColourMatrixF,vColourMatrixF>(blocks, p_dst, p_src));
+    else if (bcopy_accelerator_accelerator<SpinVectorF,vSpinVectorF>(blocks, p_dst, p_src));
+    else if (bcopy_accelerator_accelerator<ColourVectorF,vColourVectorF>(blocks, p_dst, p_src));
+    else if (bcopy_accelerator_accelerator<TComplexF,vTComplexF>(blocks, p_dst, p_src));
     else {
       ERR("No fast copy method for block size %ld accelerator<>accelerator implemented", (long)blocks.first);
     }

@@ -33,7 +33,6 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     pos = g.coordinates(lhs)
 
     # create plan during first assignment, exclude from benchmark
-    # plan = g.copy_plan(lhs, rhs, lattice_view_location="accelerator")
     plan = g.copy_plan(lhs, rhs)
     plan.destination += lhs.view[pos]
     plan.source += rhs.view[pos]
