@@ -531,6 +531,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const blocks_t& bloc
     else if (bcopy_accelerator_accelerator<SpinVectorF,vSpinVectorF>(blocks, p_dst, p_src));
     else if (bcopy_accelerator_accelerator<ColourVectorF,vColourVectorF>(blocks, p_dst, p_src));
     else if (bcopy_accelerator_accelerator<TComplexF,vTComplexF>(blocks, p_dst, p_src));
+    else if (bcopy_accelerator_accelerator<TComplexF,TComplexF>(blocks, p_dst, p_src)); // fallback option
     else {
       ERR("No fast copy method for block size %ld accelerator<>accelerator implemented", (long)blocks.first);
     }
