@@ -37,6 +37,7 @@ class state:
         lattice=None,
         bit_permutation=None,
         current_coordinates=None,
+        bit_flipped_plan=None,
     ):
         if precision is None:
             precision = g.double
@@ -50,6 +51,7 @@ class state:
         self.number_of_qubits = number_of_qubits
         self.bit_map = bit_map
         self.current_coordinates = current_coordinates
+        self.bit_flipped_plan = {} if bit_flipped_plan is None else bit_flipped_plan
         self.bit_permutation = bit_permutation
         self.classical_bit = [None] * number_of_qubits
         if lattice is not None:
@@ -68,6 +70,7 @@ class state:
             g.copy(self.lattice),
             self.bit_permutation,
             self.current_coordinates,
+            self.bit_flipped_plan,
         )
         s.classical_bit = [x for x in self.classical_bit]
         return s
@@ -86,6 +89,7 @@ class state:
         self.lattice[new_coordinates] = self.lattice[current_coordinates]
         self.bit_permutation = new_permutation
         self.current_coordinates = new_coordinates
+        self.bit_flipped_plan = {}
 
     def randomize(self):
         self.rng.cnormal(self.lattice)
@@ -117,7 +121,12 @@ class state:
         c = self.bit_map.coordinates
         nci = self.bit_map.not_coordinates[self.bit_permutation[i]]
         bfl = g.lattice(self.lattice)
-        bfl[c] = self.lattice[nci]
+        if i not in self.bit_flipped_plan:
+            p = g.copy_plan(bfl, self.lattice)
+            p.destination += bfl.view[c]
+            p.source += self.lattice.view[nci]
+            self.bit_flipped_plan[i] = p()
+        self.bit_flipped_plan[i](bfl, self.lattice)
         return bfl
 
     def X(self, i):
