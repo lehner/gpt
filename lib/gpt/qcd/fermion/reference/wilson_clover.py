@@ -134,6 +134,16 @@ class wilson_clover(shift_eo, matrix_operator):
         self.Mdiag = g.matrix_operator(
             lambda dst, src: self._Mdiag(dst, src), otype=otype, grid=grid
         )
+        self.ImportPhysicalFermionSource = g.matrix_operator(
+            lambda dst, src: g.copy(dst, src),
+            otype=self.otype,
+            grid=(self.U_grid, self.F_grid),
+        )
+        self.ExportPhysicalFermionSolution = g.matrix_operator(
+            lambda dst, src: g.copy(dst, src),
+            otype=self.otype,
+            grid=(self.U_grid, self.F_grid),
+        )
 
     def _Meooe(self, dst, src):
         assert dst != src
@@ -191,3 +201,19 @@ class wilson_clover(shift_eo, matrix_operator):
     def _G5M(self, dst, src):
         assert dst != src
         dst @= g.gamma[5] * self * src
+
+    def propagator(self, solver):
+        exp = self.ExportPhysicalFermionSolution
+        imp = self.ImportPhysicalFermionSource
+
+        inv_matrix = solver(self)
+
+        def prop(dst_sc, src_sc):
+            g.eval(dst_sc, exp * inv_matrix * imp * src_sc)
+
+        return g.matrix_operator(
+            prop,
+            otype=(exp.otype[0], imp.otype[1]),
+            grid=(exp.grid[0], imp.grid[1]),
+            accept_list=True,
+        )
