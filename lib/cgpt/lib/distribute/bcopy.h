@@ -49,6 +49,14 @@ bool bcopy_host_host(const blocks_t& blocks, char* p_dst, const char* p_src) {
   return true;
 }
 
+accelerator_inline const TComplexF coalescedRead(const TComplexF & x) {
+  return x;
+}
+
+accelerator_inline void coalescedWrite(TComplexF& x, const TComplexF & y) {
+  x=y;
+}
+
 template<typename T, typename vT, typename blocks_t>
 bool bcopy_accelerator_accelerator(const blocks_t& blocks, char* p_dst, const char* p_src) {
   size_t bs = blocks.first;
@@ -68,7 +76,7 @@ bool bcopy_accelerator_accelerator(const blocks_t& blocks, char* p_dst, const ch
       size_t i_dst = x.start_dst / sizeof(vT);
       size_t i_src = x.start_src / sizeof(vT);
       size_t j = i % npb;
-      
+
       coalescedWrite(dst[i_dst + j], coalescedRead(src[i_src + j]));
     });
   
