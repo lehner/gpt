@@ -6,7 +6,7 @@
 #
 import gpt as g
 import numpy as np
-import gpt.qcd.quarkContract as qC
+import gpt.qcd.hadron.quarkcontract as qC
 import time
 
 # load configuration
@@ -57,12 +57,12 @@ for n, U in enumerate(gauge_links):
     propagators = [dst, g.eval(g.gamma[5] * g.adj(dst) * g.gamma[5])]
 
     for l, prop in enumerate(propagators):
-        contraction_routines = [qC.quarkContract12(prop, prop),
-                                qC.quarkContract13(prop, prop),
-                                qC.quarkContract14(prop, prop),
-                                qC.quarkContract23(prop, prop),
-                                qC.quarkContract24(prop, prop),
-                                qC.quarkContract34(prop, prop)]
+        contraction_routines = [qC.quark_contract_12(prop, prop),
+                                qC.quark_contract_13(prop, prop),
+                                qC.quark_contract_14(prop, prop),
+                                qC.quark_contract_23(prop, prop),
+                                qC.quark_contract_24(prop, prop),
+                                qC.quark_contract_34(prop, prop)]
 
         for m, di_quark in enumerate(contraction_routines):
             correlator = g.slice(g.trace(di_quark * g.adj(di_quark) ), 3)
@@ -79,8 +79,8 @@ for k in range(len(contraction_routines)):
 for n in range(4):
     I = g.ot_matrix_spin_color(4, 3).identity()
     if (n == 0):
-        di_quark1 = qC.quarkContract12(dst, dst)
-        di_quark2 = qC.quarkContract12(dst, g.eval(I * g.spin_trace(dst)))
+        di_quark1 = qC.quark_contract_12(dst, dst)
+        di_quark2 = qC.quark_contract_12(dst, g.eval(I * g.spin_trace(dst)))
 
         correlator1 = g.slice(g.trace(di_quark1), 3)
         correlator2 = g.slice(g.color_trace(di_quark2), 3)
@@ -89,8 +89,8 @@ for n in range(4):
             assert (correlator1[t] - correlator2[t][0, 0]) < 1e-13
 
     if (n == 1):
-        di_quark1 = qC.quarkContract34(dst, dst)
-        di_quark2 = qC.quarkContract34(g.eval(I * g.spin_trace(dst)), dst)
+        di_quark1 = qC.quark_contract_34(dst, dst)
+        di_quark2 = qC.quark_contract_34(g.eval(I * g.spin_trace(dst)), dst)
 
         correlator1 = g.slice(g.trace(di_quark1), 3)
         correlator2 = g.slice(g.color_trace(di_quark2), 3)
@@ -99,8 +99,8 @@ for n in range(4):
             assert (correlator1[t] - correlator2[t][0, 0]) < 1e-13
 
     if (n == 2):
-        di_quark1 = qC.quarkContract13(dst, dst)
-        di_quark2 = qC.quarkContract24(dst, dst)
+        di_quark1 = qC.quark_contract_13(dst, dst)
+        di_quark2 = qC.quark_contract_24(dst, dst)
 
         correlator1 = g.slice(g.trace(di_quark1), 3)
         correlator2 = g.slice(g.trace(di_quark2), 3)
@@ -109,8 +109,8 @@ for n in range(4):
             assert (correlator1[t].real - correlator2[t].real) < 1e-13
 
     if (n == 3):
-        di_quark1 = qC.quarkContract14(dst, dst)
-        di_quark2 = qC.quarkContract23(dst, dst)
+        di_quark1 = qC.quark_contract_14(dst, dst)
+        di_quark2 = qC.quark_contract_23(dst, dst)
         correlator1 = g.slice(g.trace(di_quark1), 3)
         correlator2 = g.slice(g.trace(di_quark2), 3)
 

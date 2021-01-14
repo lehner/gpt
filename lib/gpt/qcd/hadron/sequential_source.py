@@ -88,4 +88,3 @@ class nucleon3pt_seq_src():
         seq_src[:, :, :, t_sink] = tmp_seq_src[:, :, :, t_sink]
         return seq_src
 
-
