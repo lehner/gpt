@@ -77,7 +77,7 @@ EXPORT(coordinates_from_cartesian_view,{
     dims.push_back((points+cbf-1)/cbf);
     dims.push_back(Nd);
 
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_INT32);
+    PyArrayObject* a = cgpt_new_PyArray((int)dims.size(), &dims[0], NPY_INT32);
     int32_t* d = (int32_t*)PyArray_DATA(a);
 
     bool first_on_lattice;
@@ -158,7 +158,7 @@ EXPORT(coordinates_from_block,{
       for (int i=0;i<Nd;i++)
 	c_block_top[i] = c_top[i] + c_block_coor[i] * c_block_size[i];
       
-      PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_INT32);
+      PyArrayObject* a = cgpt_new_PyArray((int)dims.size(), &dims[0], NPY_INT32);
       int32_t* d = (int32_t*)PyArray_DATA(a);
       
       if (Nd == 5) {
@@ -213,7 +213,7 @@ EXPORT(coordinates_inserted_dimension,{
     long xds = xdim.size();
     dims[0] = nc * xds;
     dims[1] = nd;
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(), &dims[0], NPY_INT32);
+    PyArrayObject* a = cgpt_new_PyArray((int)dims.size(), &dims[0], NPY_INT32);
     int32_t* d = (int32_t*)PyArray_DATA(a);
     int32_t* s = (int32_t*)PyArray_DATA(coordinates);
 
@@ -258,7 +258,7 @@ EXPORT(coordinates_momentum_phase,{
     std::vector<long> dims(2);
     dims[0]=nc;
     dims[1]=1;
-    PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew((int)dims.size(),&dims[0],dtype);
+    PyArrayObject* a = cgpt_new_PyArray((int)dims.size(),&dims[0],dtype);
     if (dtype == NPY_COMPLEX64) {
       ComplexF* d = (ComplexF*)PyArray_DATA(a);
 

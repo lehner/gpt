@@ -90,8 +90,9 @@ EXPORT(copy_create_plan,{
     long _vsrc, _vdst;
     PyObject* _tbuffer;
     std::string tbuffer;
+    long local_only, skip_optimize;
     
-    if (!PyArg_ParseTuple(args, "llO", &_vdst, &_vsrc, &_tbuffer)) {
+    if (!PyArg_ParseTuple(args, "llOll", &_vdst, &_vsrc, &_tbuffer, &local_only, &skip_optimize)) {
       return NULL;
     }
 
@@ -106,7 +107,7 @@ EXPORT(copy_create_plan,{
     gm_transfer* plan = new gm_transfer(vsrc->rank, vsrc->comm);
     memory_type mt = cgpt_memory_type_from_string(tbuffer);
 
-    plan->create(vdst->view, vsrc->view, mt);
+    plan->create(vdst->view, vsrc->view, mt,local_only,skip_optimize);
 
     return PyLong_FromVoidPtr(plan);
   });
@@ -128,11 +129,8 @@ EXPORT(copy_get_plan_info,{
       for (auto & index : rank.second) {
 	auto index_dst = index.first.first;
 	auto index_src = index.first.second;
-	size_t blocks = index.second.size();
-	size_t size = 0;
-	for (auto & b : index.second) {
-	  size += b.size;
-	}
+	size_t blocks = index.second.second.size();
+	size_t size = index.second.first * blocks;
 
 	PyObject* data = PyDict_New();
 	PyDict_SetItemString(data,"blocks",PyLong_FromLong((long)blocks));
@@ -221,16 +219,6 @@ EXPORT(copy_create_view,{
       return NULL;
     }
 
-    ASSERT(cgpt_PyArray_Check(_a));
-    PyArrayObject* a = (PyArrayObject*)_a;
-
-    ASSERT(PyArray_NDIM(a) == 2);
-    long* tdim = PyArray_DIMS(a);
-    long nb = tdim[0];
-    ASSERT(tdim[1] == 4);
-    ASSERT(PyArray_TYPE(a)==NPY_INT64);
-    int64_t* ad = (int64_t*)PyArray_DATA(a);
-
     GridBase* grid = (GridBase*)_grid;
     cgpt_gm_view* v = new cgpt_gm_view();
 
@@ -242,17 +230,62 @@ EXPORT(copy_create_view,{
       v->rank = CartesianCommunicator::RankWorld();
     }
 
-    v->view.blocks.resize(nb);
-    thread_for(i, nb, {
-	  auto & x = v->view.blocks[i];
-	  x.rank = (int)ad[4 * i + 0];
-	  if (x.rank < 0)
-	    x.rank = v->rank;
-	  x.index = (uint32_t)ad[4 * i + 1];
-	  x.start = (uint64_t)ad[4 * i + 2];
-	  x.size = (uint64_t)ad[4 * i + 3];
-	});
+    long nb;
+    int64_t* ad;
 
+    if (_a == Py_None) {
+      nb = 0;
+      ad = 0;
+    } else {
+      ASSERT(cgpt_PyArray_Check(_a));
+      PyArrayObject* a = (PyArrayObject*)_a;
+
+      ASSERT(PyArray_NDIM(a) == 2);
+      long* tdim = PyArray_DIMS(a);
+      nb = tdim[0];
+      ASSERT(tdim[1] == 4);
+      ASSERT(PyArray_TYPE(a)==NPY_INT64);
+      ad = (int64_t*)PyArray_DATA(a);
+    }
+
+    struct {
+      int64_t* ad;
+      long nb;
+      
+      long operator[](size_t i) const {
+	return (long)ad[4 * i + 3];
+      }
+      
+      size_t size() const {
+	return nb;
+      }
+    } get_block_size;
+
+    get_block_size.ad = ad;
+    get_block_size.nb = nb;
+
+    long block_size = cgpt_reduce(get_block_size, cgpt_gcd, nb ? get_block_size[0] : 1);
+    ASSERT(block_size);
+
+    v->view.block_size = block_size;
+
+    AlignedVector<gm_view::block_t> blocks;
+    blocks.resize(nb);
+    AlignedVector<size_t> ndup(nb);
+    thread_for(i, nb, {
+	auto & x = blocks[i];
+	x.rank = (int)ad[4 * i + 0];
+	if (x.rank < 0)
+	  x.rank = v->rank;
+	x.index = (uint32_t)ad[4 * i + 1];
+	x.start = (uint64_t)ad[4 * i + 2];
+	ndup[i] = (long)ad[4 * i + 3] / block_size;
+      });
+
+    cgpt_duplicate(v->view.blocks, blocks, ndup,
+		   [block_size](size_t index, size_t sub_index, gm_view::block_t & b) {
+		     b.start += sub_index * block_size;
+		   });
     return PyLong_FromVoidPtr(v);
   });
 

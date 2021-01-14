@@ -1,6 +1,5 @@
-SharedMemoryMpi:  World communicator of size 1
-SharedMemoryMpi:  Node  communicator of size 1
-SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation
+SharedMemoryNone: SharedMemoryAllocate 1073741824 GPU implementation 
+0SharedMemoryNone:  SharedMemoryNone.cc acceleratorAllocDevice 1073741824bytes at 0x4000168d1000 for comms buffers 
 
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
@@ -15,7 +14,7 @@ __|_   GGGG    R   R   III    DDDD      _|__
 __|_                                    _|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
 
 
 Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
@@ -29,48 +28,45 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-Current Grid git commit hash=9877ed9bf8e57f7b95746581f33d5d690bcc911c: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+Current Grid git commit hash=299d0de066bb234478558a6b56b902cb1508cd39: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
 
-Grid : Message : ================================================
-Grid : Message : MPI is initialised and logging filters activated
-Grid : Message : ================================================
-Grid : Message : Requested 1073741824 byte stencil comms buffers
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
 Grid : Message : MemoryManager::Init() setting up
 Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
 Grid : Message : MemoryManager::Init() Unified memory space
 
 =============================================
-              Initialized GPT
-    Copyright (C) 2020 Christoph Lehner
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
 =============================================
-GPT :       0.300688 s :
+GPT :       0.281613 s : 
                        : DWF Dslash Benchmark with
                        :     fdimensions  : [8, 8, 8, 8]
                        :     precision    : single
-                       :     Ls           : 12
-                       :
-GPT :       0.568165 s : 1000 applications of Dhop
-                       :     Time to complete            : 0.12 s
-                       :     Total performance           : 525.95 GFlops/s
-                       :     Effective memory bandwidth  : 363.38 GB/s
-GPT :       0.569384 s :
+                       :     Ls           : 8
+                       : 
+GPT :       0.581577 s : 1000 applications of Dhop
+                       :     Time to complete            : 0.07 s
+                       :     Total performance           : 641.78 GFlops/s
+                       :     Effective memory bandwidth  : 455.08 GB/s
+GPT :       0.582117 s : 
                        : DWF Dslash Benchmark with
                        :     fdimensions  : [8, 8, 8, 8]
                        :     precision    : double
-                       :     Ls           : 12
-                       :
-GPT :       0.944750 s : 1000 applications of Dhop
-                       :     Time to complete            : 0.24 s
-                       :     Total performance           : 267.75 GFlops/s
-                       :     Effective memory bandwidth  : 369.99 GB/s
+                       :     Ls           : 8
+                       : 
+GPT :       0.934536 s : 1000 applications of Dhop
+                       :     Time to complete            : 0.13 s
+                       :     Total performance           : 336.63 GFlops/s
+                       :     Effective memory bandwidth  : 477.41 GB/s
 =============================================
-               Finalized GPT
+               Finalized GPT                 
 =============================================
-
-
-SharedMemoryMpi:  World communicator of size 1
-SharedMemoryMpi:  Node  communicator of size 1
-SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation
+SharedMemoryNone: SharedMemoryAllocate 1073741824 GPU implementation 
+0SharedMemoryNone:  SharedMemoryNone.cc acceleratorAllocDevice 1073741824bytes at 0x4000168d1000 for comms buffers 
 
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
@@ -85,7 +81,7 @@ __|_   GGGG    R   R   III    DDDD      _|__
 __|_                                    _|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
 
 
 Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
@@ -99,110 +95,40 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-Current Grid git commit hash=9877ed9bf8e57f7b95746581f33d5d690bcc911c: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+Current Grid git commit hash=299d0de066bb234478558a6b56b902cb1508cd39: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
 
-Grid : Message : ================================================
-Grid : Message : MPI is initialised and logging filters activated
-Grid : Message : ================================================
-Grid : Message : Requested 1073741824 byte stencil comms buffers
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 1073741824 byte stencil comms buffers 
 Grid : Message : MemoryManager::Init() setting up
 Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
 Grid : Message : MemoryManager::Init() Unified memory space
 
 =============================================
-              Initialized GPT
-    Copyright (C) 2020 Christoph Lehner
+              Initialized GPT                
+    Copyright (C) 2020 Christoph Lehner      
 =============================================
-GPT :       0.260748 s :
+GPT :       0.265714 s : 
                        : DWF Dslash Benchmark with
                        :     fdimensions  : [24, 24, 24, 24]
                        :     precision    : single
-                       :     Ls           : 12
-                       :
-GPT :      18.227915 s : 1000 applications of Dhop
-                       :     Time to complete            : 9.51 s
-                       :     Total performance           : 552.84 GFlops/s
-                       :     Effective memory bandwidth  : 381.96 GB/s
-GPT :      18.229087 s :
+                       :     Ls           : 8
+                       : 
+GPT :      20.218240 s : 1000 applications of Dhop
+                       :     Time to complete            : 3.67 s
+                       :     Total performance           : 954.90 GFlops/s
+                       :     Effective memory bandwidth  : 677.11 GB/s
+GPT :      20.218842 s : 
                        : DWF Dslash Benchmark with
                        :     fdimensions  : [24, 24, 24, 24]
                        :     precision    : double
-                       :     Ls           : 12
-                       :
-GPT :      45.373146 s : 1000 applications of Dhop
-                       :     Time to complete            : 18.81 s
-                       :     Total performance           : 279.44 GFlops/s
-                       :     Effective memory bandwidth  : 386.13 GB/s
+                       :     Ls           : 8
+                       : 
+GPT :      45.245379 s : 1000 applications of Dhop
+                       :     Time to complete            : 7.36 s
+                       :     Total performance           : 475.80 GFlops/s
+                       :     Effective memory bandwidth  : 674.77 GB/s
 =============================================
-               Finalized GPT
-=============================================
-
-
-SharedMemoryMpi:  World communicator of size 1
-SharedMemoryMpi:  Node  communicator of size 1
-SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation
-
-__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
-__|_                                    _|__
-__|_   GGGG    RRRR    III    DDDD      _|__
-__|_  G        R   R    I     D   D     _|__
-__|_  G        R   R    I     D    D    _|__
-__|_  G  GG    RRRR     I     D    D    _|__
-__|_  G   G    R  R     I     D   D     _|__
-__|_   GGGG    R   R   III    DDDD      _|__
-__|_                                    _|__
-__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-
-
-Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-Current Grid git commit hash=9877ed9bf8e57f7b95746581f33d5d690bcc911c: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
-
-Grid : Message : ================================================
-Grid : Message : MPI is initialised and logging filters activated
-Grid : Message : ================================================
-Grid : Message : Requested 1073741824 byte stencil comms buffers
-Grid : Message : MemoryManager::Init() setting up
-Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
-Grid : Message : MemoryManager::Init() Unified memory space
-
-=============================================
-              Initialized GPT
-    Copyright (C) 2020 Christoph Lehner
-=============================================
-GPT :       0.265864 s :
-                       : DWF Dslash Benchmark with
-                       :     fdimensions  : [32, 32, 32, 32]
-                       :     precision    : single
-                       :     Ls           : 12
-                       :
-GPT :      33.887853 s : 100 applications of Dhop
-                       :     Time to complete            : 2.47 s
-                       :     Total performance           : 672.96 GFlops/s
-                       :     Effective memory bandwidth  : 464.95 GB/s
-GPT :      33.889042 s :
-                       : DWF Dslash Benchmark with
-                       :     fdimensions  : [32, 32, 32, 32]
-                       :     precision    : double
-                       :     Ls           : 12
-                       :
-GPT :      69.763040 s : 100 applications of Dhop
-                       :     Time to complete            : 4.83 s
-                       :     Total performance           : 344.14 GFlops/s
-                       :     Effective memory bandwidth  : 475.54 GB/s
-=============================================
-               Finalized GPT
+               Finalized GPT                 
 =============================================

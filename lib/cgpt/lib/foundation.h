@@ -43,6 +43,9 @@ using namespace Grid;
 
 NAMESPACE_BEGIN(Grid);
 
+// aligned vector
+template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
+
 #if defined(GRID_CUDA)||defined(GRID_HIP)
 #include "foundation/reduce_gpu.h"
 #endif

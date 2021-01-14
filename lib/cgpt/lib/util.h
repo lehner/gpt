@@ -46,12 +46,3 @@ template<typename T>
 void cgpt_ferm_to_prop(Lattice<T>& ferm, cgpt_Lattice_base* _prop, int s, int c, bool f2p) {
   ERR("not supported");
 }
-
-static long cgpt_gcd(long a, long b) {
-  while (b) {
-    long t = b;
-    b = a % b;
-    a = t;
-  }
-  return a;
-}

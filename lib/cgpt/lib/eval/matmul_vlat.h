@@ -60,7 +60,7 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
       // create vector components
       for (int i=0;i<rhs_singlet_dim;i++) {
 	long dim[1] = { rhs_block_size };
-	PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew(1, &dim[0], dtype);
+	PyArrayObject* a = cgpt_new_PyArray(1, &dim[0], dtype);
 	rhs_v_array[i] = a;
 	char* d = (char*)PyArray_DATA(a);
 	thread_for(idx,rhs_block_size,{
@@ -83,7 +83,7 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 	for (int j=0;j<rhs_singlet_dim;j++) {
 	  int vidx = j*rhs_singlet_dim + i;
 	  long dim[2] = { rhs_block_size, rhs_block_size };
-	  PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNew(2, &dim[0], dtype);
+	  PyArrayObject* a = cgpt_new_PyArray(2, &dim[0], dtype);
 	  rhs_v_array[vidx] = a;
 	  char* d = (char*)PyArray_DATA(a);
 	  thread_for(ii,rhs_block_size,{

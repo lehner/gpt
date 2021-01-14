@@ -28,15 +28,17 @@ class global_memory_view {
   struct block_t {
     rank_t rank;
     index_t index;
-    offset_t start, size;
+    offset_t start;
   };
 
-  std::vector<block_t> blocks;
+  AlignedVector<block_t> blocks;
+  offset_t block_size;
 
   void print() const;
   offset_t size() const;
+  bool is_aligned() const;
 
-  global_memory_view<offset_t,rank_t,index_t> merged() const;
+  void operator=(const global_memory_view<offset_t,rank_t,index_t>& other);
 };
 
 class comm_message {
@@ -138,7 +140,7 @@ class comm_message {
   }
 
   template<typename A>
-  void put(const std::vector<A>& m) {
+  void put(const Vector<A>& m) {
     put((size_t)m.size());
     for (auto & x : m)
       put(x);
@@ -182,13 +184,18 @@ class global_transfer {
   std::vector<MPI_Request> requests;
 #endif
 
-  template<typename data_t>
-  void all_to_root(const std::vector<data_t>& my, std::map<rank_t, std::vector<data_t> > & rank);
+  template<typename vec_t>
+  void all_to_root(const vec_t & my, std::map<rank_t, vec_t > & rank);
 
-  template<typename data_t>
-  void root_to_all(const std::map<rank_t, std::vector<data_t> > & rank, std::vector<data_t>& my);
+  template<typename vec_t>
+  void root_to_all(const std::map<rank_t, vec_t > & rank, vec_t& my);
 
-  void global_sum(std::vector<uint64_t>& data);
+  template<typename vec_t>
+  void global_sum(vec_t & data) {
+    global_sum(&data[0], data.size());
+  }
+  
+  void global_sum(uint64_t* pdata, size_t size);
   
   void provide_my_receivers_get_my_senders(const std::map<rank_t, size_t>& receivers,
 					   std::map<rank_t, size_t>& senders);
@@ -200,14 +207,14 @@ class global_transfer {
   void isend(rank_t other_rank, const void* pdata, size_t sz);
   void irecv(rank_t other_rank, void* pdata, size_t sz);
 
-  template<typename data_t>
-  void isend(rank_t other_rank, const std::vector<data_t>& data) {
-    isend(other_rank,&data[0],data.size()*sizeof(data_t));
+  template<typename vec_t>
+  void isend(rank_t other_rank, const vec_t& data) {
+    isend(other_rank,&data[0],data.size()*sizeof(data[0]));
   }
 
-  template<typename data_t>
-  void irecv(rank_t other_rank, std::vector<data_t>& data) {
-    irecv(other_rank,&data[0],data.size()*sizeof(data_t));
+  template<typename vec_t>
+  void irecv(rank_t other_rank, vec_t& data) {
+    irecv(other_rank,&data[0],data.size()*sizeof(data[0]));
   }
 
   void waitall();
@@ -221,8 +228,11 @@ class global_memory_transfer : public global_transfer<rank_t> {
   typedef global_memory_view<offset_t,rank_t,index_t> view_t;
 
   struct block_t {
-    offset_t start_dst, start_src, size; // todo: support stride?
+    offset_t start_dst, start_src;
   };
+
+  typedef std::pair<offset_t, Vector<block_t>> blocks_t;
+  typedef std::pair<offset_t, std::vector<block_t>> thread_blocks_t;
 
   class memory_view {
   public:
@@ -269,20 +279,23 @@ class global_memory_transfer : public global_transfer<rank_t> {
     }
   };
 
-  friend void convert_to_bytes(std::vector<char>& bytes, const block_t& b) {
+  template<typename vec_t>
+  friend void convert_to_bytes(vec_t& bytes, const block_t& b) {
+    ASSERT(sizeof(bytes[0])==1);
     bytes.resize(sizeof(b));
     memcpy(&bytes[0],&b,sizeof(b));
   }
 
-  friend void convert_from_bytes(block_t& b, const std::vector<char>& bytes) {
-    ASSERT(bytes.size() == sizeof(b));
+  template<typename vec_t>
+  friend void convert_from_bytes(block_t& b, const vec_t& bytes) {
+    ASSERT(bytes.size() == sizeof(b) && sizeof(bytes[0])==1);
     memcpy(&b,&bytes[0],bytes.size());
   }
 
   // memory buffers
   std::map<rank_t, memory_buffer> send_buffers, recv_buffers;
   memory_type comm_buffers_type;
-  std::map< rank_t, std::map< index_t, std::vector<block_t> > > send_blocks, recv_blocks;
+  std::map< rank_t, std::map< index_t, blocks_t > > send_blocks, recv_blocks;
 
   // bounds
   std::vector<offset_t> bounds_dst, bounds_src;
@@ -290,9 +303,12 @@ class global_memory_transfer : public global_transfer<rank_t> {
   // public interface
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
 
-  std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, std::vector<block_t> > > blocks;
+  std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, blocks_t > > blocks;
 
-  void create(const view_t& dst, const view_t& src, memory_type use_comm_buffers_of_type = mt_none);
+  void create(const view_t& dst, const view_t& src,
+	      memory_type use_comm_buffers_of_type = mt_none,
+	      bool local_only = false,
+	      bool skip_optimize = false);
 
   void execute(std::vector<memory_view>& base_dst, 
 	       std::vector<memory_view>& base_src);
@@ -302,10 +318,13 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void fill_blocks_from_view_pair(const view_t& dst, const view_t& src);
   void gather_my_blocks();
   void optimize();
-  void optimize(std::vector<block_t>& blocks);
+  void optimize(blocks_t& blocks);
   void create_bounds();
   void create_comm_buffers(memory_type mt);
-  void bcopy(const std::vector<block_t>& blocks,
+
+  template<typename blocks_src_t>
+  void merge_blocks(blocks_t& dst, const blocks_src_t& src);
+  void bcopy(const blocks_t& blocks,
 	     memory_view& base_dst, 
 	     const memory_view& base_src);
 };

@@ -76,7 +76,7 @@ public:
     Deltan = _X_(s) - _X_(r) - c_nm1;
     //c_nm1 = (Deltan < 0); // for signed integers
     c_nm1 = (Deltan >= vb); // for unsigned integers
-    Deltan += vb; 
+    Deltan += vb;
     _X_(0) = Deltan & vbm1;
     dst = _X_(0);
   }

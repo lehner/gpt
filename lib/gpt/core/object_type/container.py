@@ -215,6 +215,7 @@ class ot_vector_spin_color(ot_base):
     def distribute(self, mat, dst, src, zero_lhs):
         src, dst = gpt.util.to_list(src), gpt.util.to_list(dst)
         if src[0].otype.__name__ == self.ot_matrix:
+            assert dst[0].otype.__name__ == self.ot_matrix
             grid = src[0].grid
             n = self.spin_ndim * self.color_ndim * len(src)
             dst_sc = [gpt.gpt_object(grid, self) for i in range(n)]

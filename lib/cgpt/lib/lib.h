@@ -32,7 +32,8 @@
 #include "time.h"
 #include "exception.h"
 #include "foundation.h"
-#include "cached.h"
+#include "reduce.h"
+#include "sort.h"
 #include "convert.h"
 #include "checksums.h"
 #include "parameters.h"
@@ -41,7 +42,7 @@
 #include "transform.h"
 #include "grid.h"
 #include "lattice.h"
-#include "precision.h"
 #include "util.h"
+#include "precision.h"
 #include "expression.h"
 

@@ -116,8 +116,12 @@ class matrix_operator(factor):
                 adj_mat=lambda dst, src: adj_other(dst, adj_self(src)),
                 inv_mat=lambda dst, src: inv_other(dst, inv_self(src)),
                 adj_inv_mat=lambda dst, src: adj_inv_self(dst, adj_inv_other(src)),
-                otype=(self.otype[0], other.otype[1]),
-                grid=(self.grid[0], other.grid[1]),
+                otype=(None, None)
+                if other.otype[1] is None
+                else (self.otype[0], other.otype[1]),
+                grid=(None, None)
+                if other.grid[1] is None
+                else (self.grid[0], other.grid[1]),
                 accept_guess=(self.accept_guess[0], other.accept_guess[1]),
                 cb=(self.cb[0], other.cb[1]),
                 accept_list=True,
@@ -138,8 +142,8 @@ class matrix_operator(factor):
 
         def _converted(dst, src, mat, l, r):
             t0 = gpt.time()
-            conv_src = [gpt.lattice(self.grid[l], otype[l]) for x in src]
-            conv_dst = [gpt.lattice(self.grid[r], otype[r]) for x in src]
+            conv_src = [gpt.lattice(self.grid[r], otype[r]) for x in src]
+            conv_dst = [gpt.lattice(self.grid[l], otype[l]) for x in src]
 
             gpt.convert(conv_src, src)
             if accept_guess[l]:

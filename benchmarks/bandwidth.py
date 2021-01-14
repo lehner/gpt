@@ -6,10 +6,8 @@
 #
 import gpt as g
 
-# grid = g.grid([32,32,32,64], g.single)
-grid = g.grid([8, 8, 8, 16], g.single)
-# grid = g.grid([16, 16, 32, 128], g.single)
-N = 10
+grid = g.grid(g.default.get_ivec("--grid", [8, 8, 8, 16], 4), g.single)
+N = g.default.get_int("--N", 10)
 
 rng = g.random("test")
 
@@ -19,9 +17,12 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     rng.cnormal([lhs, rhs])
 
     # 2 * N for read/write
-    GB = 2 * N * lhs.otype.nfloats * grid.precision.nbytes * grid.fsites / 1024.0 ** 3.0
+    GB = 2 * N * lhs.global_bytes() / 1024.0 ** 3.0
 
     g.message(f"Test {lhs.otype.__name__}")
+
+    # warmup
+    g.copy(lhs, rhs)
 
     t0 = g.time()
     for n in range(N):
@@ -36,6 +37,12 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     plan.destination += lhs.view[pos]
     plan.source += rhs.view[pos]
     plan = plan()
+    # plan_info = plan.info()[0, 0][0, 0]
+    # block_size = plan_info["size"] // plan_info["blocks"]
+    # g.message(" " * 51 + f"block_size = {block_size}")
+
+    # warmup
+    plan(lhs, rhs)
 
     t0 = g.time()
     for n in range(N):

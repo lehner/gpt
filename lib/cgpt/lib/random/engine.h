@@ -30,11 +30,15 @@ class cgpt_random_engine : public cgpt_random_engine_base {
   std::string _seed_str;
   cgpt_rng_engine cgpt_srng;
 
+  struct index_t {
+    int i,o; // adjust once grid adjusts
+  };
+  
   struct prng_t {
     std::vector<cgpt_rng_engine*> rng;
     std::vector<long> hash;
     std::vector<uint64_t> seed;
-    std::vector< std::vector< long > > samples;
+    std::vector< std::vector< index_t > > samples;
     long block, sites;
     std::string grid_tag;
   };
@@ -62,14 +66,17 @@ class cgpt_random_engine : public cgpt_random_engine_base {
     double t0 = cgpt_time();
     
     ASSERT(PyDict_Check(_param));
-    std::string dist = get_str(_param,"distribution"), precision;
-    std::vector<long> shape;
+    std::string dist = get_str(_param,"distribution");
     GridBase* grid = 0;
-    int dtype = NPY_COMPLEX128;
-    if (PyDict_GetItemString(_param,"shape")) {
-      shape = get_long_vec(_param,"shape");
-      grid = get_pointer<GridBase>(_param,"grid");
-      dtype = infer_numpy_type(get_str(_param,"precision"));
+    std::vector<cgpt_Lattice_base*> lattices;
+    long n_virtual;
+    PyObject* _lattices = PyDict_GetItemString(_param,"lattices");
+    if (_lattices) {
+      n_virtual = cgpt_basis_fill(lattices,_lattices);
+      ASSERT(lattices.size() > 0);
+      grid = lattices[0]->get_grid();
+      for (size_t i=1;i<lattices.size();i++)
+	ASSERT(grid == lattices[i]->get_grid());
     }
 
     prng_t & prng = cgpt_prng[grid];
@@ -98,19 +105,19 @@ class cgpt_random_engine : public cgpt_random_engine_base {
     // (rng could use random bits to result in different next float/double sampling)
     if (dist == "normal") {
       cgpt_normal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,lattices,n_virtual);
     } else if (dist == "cnormal") {
       cgpt_cnormal_distribution distribution(get_float(_param,"mu"),get_float(_param,"sigma"));
-      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,lattices,n_virtual);
     } else if (dist == "uniform_real") {
       cgpt_uniform_real_distribution distribution(get_float(_param,"min"),get_float(_param,"max"));
-      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,lattices,n_virtual);
     } else if (dist == "uniform_int") {
       cgpt_uniform_int_distribution distribution(get_int(_param,"min"),get_int(_param,"max"));
-      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,lattices,n_virtual);
     } else if (dist == "zn") {
       cgpt_zn_distribution distribution(get_int(_param,"n"));
-      return cgpt_random_sample(distribution,cgpt_srng,prng,shape,grid,dtype);
+      return cgpt_random_sample(distribution,cgpt_srng,prng,lattices,n_virtual);
     } else {
       ERR("Unknown distribution: %s", dist.c_str());
     }

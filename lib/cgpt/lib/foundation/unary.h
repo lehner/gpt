@@ -130,8 +130,16 @@ DEFINE_SIMPLE_UNOP(sin);
 DEFINE_SIMPLE_UNOP(asin);
 DEFINE_SIMPLE_UNOP(cos);
 DEFINE_SIMPLE_UNOP(acos);
+DEFINE_SIMPLE_UNOP(tan);
+DEFINE_SIMPLE_UNOP(atan);
+DEFINE_SIMPLE_UNOP(sinh);
+DEFINE_SIMPLE_UNOP(asinh);
+DEFINE_SIMPLE_UNOP(cosh);
+DEFINE_SIMPLE_UNOP(acosh);
+DEFINE_SIMPLE_UNOP(tanh);
+DEFINE_SIMPLE_UNOP(atanh);
 
-// binary
+// binary in terms of total arguments but unary in lattice arguments
 static accelerator_inline ComplexD _cgpt_pow(const ComplexD & z, double y) { return pow(z,y); };
 static accelerator_inline ComplexF _cgpt_pow(const ComplexF & z, double y) { return pow(z,(float)y); };
 template <class scalar>

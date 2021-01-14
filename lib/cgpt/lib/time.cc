@@ -74,7 +74,7 @@ void cgpt_timer::report() {
   }
   
   std::cout << GridLogMessage << "================================================================================" << std::endl;
-  std::cout << GridLogMessage << std::setw(50) << " Total time " << std::setw(24) << std::right << tot << " s" << std::endl;
+  std::cout << GridLogMessage << std::setw(42) << " Total time " << std::setw(32) << std::right << tot << " s" << std::endl;
 }
 
 // export
