@@ -57,6 +57,9 @@ class state:
             self.lattice[:] = 0
             self.lattice[self.bit_map.zero_coordinate] = 1
 
+    def __getitem__(self, idx):
+        return self.lattice[(idx,)]
+
     def cloned(self):
         s = state(
             self.rng,
@@ -134,8 +137,11 @@ class state:
             + self.bit_map.one_mask[control] * bfl
         )
 
+    def probability(self, i):
+        return g.norm2(self.lattice * self.bit_map.one_mask[i])
+
     def measure(self, i):
-        p_one = g.norm2(self.lattice * self.bit_map.one_mask[i])
+        p_one = self.probability(i)
         p_zero = 1.0 - p_one
         l = self.rng.uniform_real()
         if l <= p_one:
