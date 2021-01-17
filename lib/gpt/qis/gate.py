@@ -57,11 +57,11 @@ class circuit:
     def __mul__(self, original):
         other = original.cloned()
         for op, *args in self.val:
-            t0 = g.time()
+            #t0 = g.time()
             op(other, *args)
-            t1 = g.time()
-            gb = 2 * other.lattice.global_bytes() / 1e9
-            g.message(f"T {gb/(t1-t0)} {op.__name__}")
+            #t1 = g.time()
+            #gb = 2 * other.lattice.global_bytes() / 1e9
+            #g.message(f"T {gb/(t1-t0)} {op.__name__}")
         return other
 
     def __len__(self):

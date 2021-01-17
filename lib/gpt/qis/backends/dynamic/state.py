@@ -132,9 +132,9 @@ class state:
             p.destination += bfl.view[c]
             p.source += self.lattice.view[nci]
             self.bit_flipped_plan[i] = p()
-            g.message(
-                self.bit_flipped_plan[i].info()
-            )  # TODO: it is odd that this maxes out at 22 GB/s ; focus on bandwidth benchmark first, why 500GB/s for prop and only 5 for singlet?
+            #g.message(
+            #    self.bit_flipped_plan[i].info()
+            #)  # TODO: it is odd that this maxes out at 22 GB/s ; focus on bandwidth benchmark first, why 500GB/s for prop and only 5 for singlet?
         self.bit_flipped_plan[i](bfl, self.lattice)
         return bfl
 
