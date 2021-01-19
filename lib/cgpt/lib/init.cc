@@ -18,16 +18,8 @@
 */
 #define _THIS_IS_INIT_ // needed for numpy array
 #include "lib.h"
-#include "benchmarks.h"
 
 static bool cgpt_initialized = false;
-
-static bool has_flag(const std::vector<char*>& cargs, char* arg) {
-  for (auto x : cargs)
-    if (x && !strcmp(x,arg))
-      return true;
-  return false;
-}
 
 EXPORT(init,{
 
@@ -58,23 +50,11 @@ EXPORT(init,{
     std::cout << std::endl <<
       "=============================================" << std::endl <<
       "              Initialized GPT                " << std::endl <<
-      "    Copyright (C) 2020 Christoph Lehner      " << std::endl <<
+      "     Copyright (C) 2020 Christoph Lehner     " << std::endl <<
       "=============================================" << std::endl;
 
     cgpt_initialized = true;
 
-    // tests
-    if (has_flag(cargs,"--cgpt-tests")) {
-      test_global_memory_system();
-    }
-
-    // benchmarks
-    if (has_flag(cargs,"--cgpt-benchmarks")) {
-      benchmarks(8);
-      benchmarks(16);
-      benchmarks(32);
-    }
-    
     return PyLong_FromLong(0);
     
   });
