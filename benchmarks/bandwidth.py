@@ -17,7 +17,7 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     rng.cnormal([lhs, rhs])
 
     # 2 * N for read/write
-    GB = 2 * N * lhs.global_bytes() / 1024.0 ** 3.0
+    GB = 2 * N * lhs.global_bytes() / 1e9
 
     g.message(f"Test {lhs.otype.__name__}")
 
@@ -56,7 +56,7 @@ msc = g.mspincolor(grid)
 rng.cnormal(msc)
 
 # 2 * N for read/write
-GB = 2 * N * msc.otype.nfloats * grid.precision.nbytes * grid.fsites / 1024.0 ** 3.0
+GB = 2 * N * msc.otype.nfloats * grid.precision.nbytes * grid.fsites / 1e9
 
 xc = g.separate_color(msc)
 g.merge_color(msc, xc)

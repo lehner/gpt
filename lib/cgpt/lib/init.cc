@@ -18,8 +18,16 @@
 */
 #define _THIS_IS_INIT_ // needed for numpy array
 #include "lib.h"
+#include "benchmarks.h"
 
 static bool cgpt_initialized = false;
+
+static bool has_flag(const std::vector<char*>& cargs, char* arg) {
+  for (auto x : cargs)
+    if (!strcmp(x,arg))
+      return true;
+  return false;
+}
 
 EXPORT(init,{
 
@@ -55,10 +63,21 @@ EXPORT(init,{
 
     cgpt_initialized = true;
 
-    // Initial test of new global memory system
-    //test_global_memory_system();     
-    //  Grid_finalize();
-    //  exit(0);
+    // tests
+    if (has_flag(cargs,"--cgpt-tests")) {
+      test_global_memory_system();
+      Grid_finalize();
+      exit(0);
+    }
+
+    // benchmarks
+    if (has_flag(cargs,"--cgpt-benchmarks")) {
+      benchmarks(8);
+      benchmarks(16);
+      benchmarks(32);
+      Grid_finalize();
+      exit(0);
+    }
     
     return PyLong_FromLong(0);
     

@@ -65,7 +65,7 @@
 //     4  8 11 13 14
 
 template<class Impl>
-class FasterWilsonCloverFermion : public WilsonFermion<Impl> {
+class CompactWilsonCloverFermion : public WilsonFermion<Impl> {
   /////////////////////////////////////////////
   // Sizes
   /////////////////////////////////////////////
@@ -107,14 +107,14 @@ public:
 
 public:
 
-  FasterWilsonCloverFermion(GaugeField& _Umu,
-                            GridCartesian& Fgrid,
-                            GridRedBlackCartesian& Hgrid,
-                            const RealD _mass,
-                            const RealD _csw_r = 0.0,
-                            const RealD _csw_t = 0.0,
-                            const WilsonAnisotropyCoefficients& clover_anisotropy = WilsonAnisotropyCoefficients(),
-                            const ImplParams& impl_p = ImplParams())
+  CompactWilsonCloverFermion(GaugeField& _Umu,
+			     GridCartesian& Fgrid,
+			     GridRedBlackCartesian& Hgrid,
+			     const RealD _mass,
+			     const RealD _csw_r = 0.0,
+			     const RealD _csw_t = 0.0,
+			     const WilsonAnisotropyCoefficients& clover_anisotropy = WilsonAnisotropyCoefficients(),
+			     const ImplParams& impl_p = ImplParams())
     : WilsonBase(_Umu, Fgrid, Hgrid, _mass, impl_p, clover_anisotropy)
     , csw_r(_csw_r)
     , csw_t(_csw_t)
@@ -606,7 +606,8 @@ public:
 
     // Report timings
     double t7 = usecond();
-    std::cout << GridLogMessage << "FasterWilsonCloverFermion::ImportGauge timings:"
+#if 0
+    std::cout << GridLogMessage << "CompactWilsonCloverFermion::ImportGauge timings:"
               << " WilsonFermion::Importgauge = " << (t1 - t0) / 1e6
               << ", allocations = "               << (t2 - t1) / 1e6
               << ", field strength = "            << (t3 - t2) / 1e6
@@ -616,6 +617,7 @@ public:
               << ", pick cbs = "                  << (t7 - t6) / 1e6
               << ", total = "                     << (t7 - t0) / 1e6
               << std::endl;
+#endif
   }
 
 

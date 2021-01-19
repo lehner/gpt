@@ -1,2 +1,2 @@
 #!/bin/bash
-git ls-files | xargs wc -l
+git ls-files | egrep "\.(py|h|cc)$" | xargs wc -l
