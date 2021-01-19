@@ -18,8 +18,9 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.params import params_convention
-from gpt.core.covariant import shift_eo
+from gpt.core.covariant import shift_eo, apply_boundaries
 from gpt import matrix_operator
 
 
@@ -92,38 +93,55 @@ class wilson_clover(shift_eo, matrix_operator):
                         * g.qcd.gauge.field_strength(U, mu, nu)
                     )
 
-            # set clover to unity at the temporal boundaries (scaled correctly)
             if self.open_bc:
+                # set field strength tensor to unity at the temporal boundaries
+                value = -0.5 * self.csw_t + 1.0 / 2.0 * 1.0 / self.kappa
                 self.clover[:, :, :, 0, :, :, :, :] = 0.0
                 self.clover[:, :, :, T - 1, :, :, :, :] = 0.0
                 for alpha in range(4):
                     for a in range(Nc):
-                        self.clover[:, :, :, 0, alpha, alpha, a, a] = -0.5 * self.csw_t
-                        self.clover[:, :, :, T - 1, alpha, alpha, a, a] = (
-                            -0.5 * self.csw_t
-                        )
+                        self.clover[:, :, :, 0, alpha, alpha, a, a] = value
+                        self.clover[:, :, :, T - 1, alpha, alpha, a, a] = value
 
-            # add improvement coefficients next to temporal boundaries
-            if self.open_bc and self.cF != 1.0:
-                for alpha in range(4):
-                    for a in range(Nc):
-                        self.clover[:, :, :, 1, alpha, alpha, a, a] += self.cF - 1.0
-                        self.clover[:, :, :, T - 2, alpha, alpha, a, a] += self.cF - 1.0
+                if self.cF != 1.0:
+                    # add improvement coefficients next to temporal boundaries
+                    value = self.cF - 1.0
+                    for alpha in range(4):
+                        for a in range(Nc):
+                            self.clover[:, :, :, 1, alpha, alpha, a, a] += value
+                            self.clover[:, :, :, T - 2, alpha, alpha, a, a] += value
+
+            # integrate kappa into clover matrix for inversion
+            self.clover += 1.0 / 2.0 * 1.0 / self.kappa * I
+
+            self.clover_inv = g.matrix.inv(self.clover)
 
             self.clover_eo = {
                 g.even: g.lattice(grid_eo, self.clover.otype),
                 g.odd: g.lattice(grid_eo, self.clover.otype),
             }
+            self.clover_inv_eo = {
+                g.even: g.lattice(grid_eo, self.clover.otype),
+                g.odd: g.lattice(grid_eo, self.clover.otype),
+            }
             for cb in self.clover_eo:
                 g.pick_checkerboard(cb, self.clover_eo[cb], self.clover)
+                g.pick_checkerboard(cb, self.clover_inv_eo[cb], self.clover_inv)
         else:
             self.clover = None
+            self.clover_inv = None
 
         self.Meooe = g.matrix_operator(
-            lambda dst, src: self._Meooe(dst, src), otype=otype, grid=grid_eo
+            mat=lambda dst, src: self._Meooe(dst, src), otype=otype, grid=grid_eo
         )
         self.Mooee = g.matrix_operator(
-            lambda dst, src: self._Mooee(dst, src), otype=otype, grid=grid_eo
+            mat=lambda dst, src: self._Mooee(dst, src),
+            inv_mat=lambda dst, src: self._MooeeInv(dst, src),
+            otype=otype,
+            grid=grid_eo,
+        )
+        self.Dhop = g.matrix_operator(
+            mat=lambda dst, src: self._Dhop(dst, src), otype=otype, grid=grid
         )
         matrix_operator.__init__(
             self, lambda dst, src: self._M(dst, src), otype=otype, grid=grid
@@ -136,13 +154,21 @@ class wilson_clover(shift_eo, matrix_operator):
         )
         self.ImportPhysicalFermionSource = g.matrix_operator(
             lambda dst, src: g.copy(dst, src),
-            otype=self.otype,
+            otype=otype,
             grid=(self.U_grid, self.F_grid),
         )
         self.ExportPhysicalFermionSolution = g.matrix_operator(
             lambda dst, src: g.copy(dst, src),
-            otype=self.otype,
+            otype=otype,
             grid=(self.U_grid, self.F_grid),
+        )
+        self.ExportPhysicalFermionSource = g.matrix_operator(
+            lambda dst, src: g.copy(dst, src),
+            otype=otype,
+            grid=(self.U_grid, self.F_grid),
+        )
+        self.Dminus = g.matrix_operator(
+            lambda dst, src: g.copy(dst, src), otype=otype, grid=grid
         )
 
     def _Meooe(self, dst, src):
@@ -163,16 +189,41 @@ class wilson_clover(shift_eo, matrix_operator):
                 cc / 2.0 * (g.gamma[mu] - g.gamma["I"]) * src_plus
                 - cc / 2.0 * (g.gamma[mu] + g.gamma["I"]) * src_minus
             )
-        g.covariant.apply_boundaries(dst, self.open_bc)
+        apply_boundaries(dst, self.open_bc)
 
     def _Mooee(self, dst, src):
         assert dst != src
         cb = src.checkerboard()
         dst.checkerboard(cb)
-        dst @= 1.0 / 2.0 * 1.0 / self.kappa * src
         if self.clover is not None:
-            dst += self.clover_eo[cb] * src
-        g.covariant.apply_boundaries(dst, self.open_bc)
+            dst @= self.clover_eo[cb] * src
+        else:
+            dst @= 1.0 / 2.0 * 1.0 / self.kappa * src
+        apply_boundaries(dst, self.open_bc)
+
+    def _MooeeInv(self, dst, src):
+        assert dst != src
+        cb = src.checkerboard()
+        dst.checkerboard(cb)
+        if self.clover_inv is not None:
+            dst @= self.clover_inv_eo[cb] * src
+        else:
+            dst @= 2.0 * self.kappa * src
+        apply_boundaries(dst, self.open_bc)
+
+    def _Dhop(self, dst, src):
+        assert dst != src
+
+        g.pick_checkerboard(g.even, self.src_e, src)
+        g.pick_checkerboard(g.odd, self.src_o, src)
+
+        self.dst_o @= self.Meooe * self.src_e
+        self.dst_e @= self.Meooe * self.src_o
+
+        g.set_checkerboard(dst, self.dst_o)
+        g.set_checkerboard(dst, self.dst_e)
+
+        apply_boundaries(dst, self.open_bc)
 
     def _M(self, dst, src):
         assert dst != src
@@ -186,6 +237,8 @@ class wilson_clover(shift_eo, matrix_operator):
         g.set_checkerboard(dst, self.dst_o)
         g.set_checkerboard(dst, self.dst_e)
 
+        apply_boundaries(dst, self.open_bc)
+
     def _Mdiag(self, dst, src):
         assert dst != src
 
@@ -197,6 +250,8 @@ class wilson_clover(shift_eo, matrix_operator):
 
         g.set_checkerboard(dst, self.dst_o)
         g.set_checkerboard(dst, self.dst_e)
+
+        apply_boundaries(dst, self.open_bc)
 
     def _G5M(self, dst, src):
         assert dst != src
