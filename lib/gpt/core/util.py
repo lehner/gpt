@@ -18,6 +18,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
+import sys
 import numpy as np
 import copy
 
@@ -98,3 +99,24 @@ def fdimensions_from_openqcd(fdim):
 def fdimensions_to_openqcd(fdim):
     assert len(fdim) == 4
     return [int(fdim[(i - 1) % 4]) for i in range(4)]  # T X Y Z <- X Y Z T
+
+
+# fields agree
+def fields_agree(ref, res, tol):
+    """
+    Implements the standard correctness check between two fields with their relative error
+    """
+    norm2_ref = gpt.norm2(ref) if type(ref) == gpt.lattice else ref
+    norm2_res = gpt.norm2(res) if type(res) == gpt.lattice else res
+
+    if type(ref) == gpt.lattice and type(res) == gpt.lattice:
+        diff = gpt.norm2(res - ref)
+    else:
+        diff = abs(norm2_ref - norm2_res)
+
+    err = (diff / norm2_ref) ** 0.5
+
+    gpt.message(
+        f"default residual check: reference = {norm2_ref:25.20e}, result = {norm2_res:25.20e},      error = {err:25.20e}, tol = {tol:25.20e} -> check {'passed' if err <= tol else 'failed'}"
+    )
+    return err <= tol
