@@ -28,7 +28,7 @@ from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time, timer
 from gpt.core.log import message
 from gpt.core.convert import convert
-from gpt.core.cshift import cshift_plan
+from gpt.core.cshift_plan import cshift_plan
 from gpt.core.transform import (
     cshift,
     copy,
