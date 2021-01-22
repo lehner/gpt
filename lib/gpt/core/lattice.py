@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, numpy
+import cgpt, gpt, numpy, sys
 from gpt.core.expr import factor
 
 mem_book = {}
@@ -26,16 +26,18 @@ def get_mem_book():
     return mem_book
 
 
-class lattice_view:
+class lattice_view_constructor:
     def __init__(self, parent):
         self.parent = parent
 
     def __getitem__(self, key):
-        return gpt.map_key(self.parent, key) + (self.parent.v_obj,)
+        pos, tidx, shape = gpt.map_key(self.parent, key)
+        return gpt.lattice_view(self.parent, pos, tidx)
 
 
 class lattice(factor):
     __array_priority__ = 1000000
+    cache = {}
 
     def __init__(self, first, second=None, third=None):
         self.metadata = {}
@@ -82,6 +84,12 @@ class lattice(factor):
         for o in self.v_obj:
             cgpt.delete_lattice(o)
 
+    def swap(self, other):
+        assert self.grid == other.grid
+        assert self.otype == other.otype
+        self.v_obj, other.v_obj = other.v_obj, self.v_obj
+        self.metadata, other.metadata = other.metadata, self.metadata
+
     def advise(self, t):
         if type(t) != str:
             t = t.tag
@@ -126,55 +134,79 @@ class lattice(factor):
 
     @property
     def view(self):
-        return lattice_view(self)
+        return lattice_view_constructor(self)
 
     def __setitem__(self, key, value):
         # short code path to zero lattice
-        if (
-            type(key) == slice
-            and key == slice(None, None, None)
-            and type(value) == int
-            and value == 0
-        ):
-            for o in self.v_obj:
-                cgpt.lattice_set_to_zero(o)
-            return
+        cache_key = None
+        if type(key) == slice and key == slice(None, None, None):
+            cache_key = f"{self.otype.__name__}_{self.checkerboard().__name__}_{self.grid.describe()}"
+            if type(value) == int and value == 0:
+                for o in self.v_obj:
+                    cgpt.lattice_set_to_zero(o)
+                return
 
         # general code path, map key
         pos, tidx, shape = gpt.map_key(self, key)
 
-        # copy from view or array
-        if type(value) == tuple:
-            # direct copy from view
-            cgpt.lattice_import_view(
-                self.v_obj, pos, tidx, value[3], value[0], value[1]
-            )
-        else:
-            # convert input to proper numpy array
-            value = gpt.util.tensor_to_value(
-                value, dtype=self.grid.precision.complex_dtype
+        # convert input to proper numpy array
+        value = gpt.util.tensor_to_value(value, dtype=self.grid.precision.complex_dtype)
+        if value is None:
+            value = memoryview(bytearray())
+
+        # needed bytes and optional cyclic upscaling
+        nbytes_needed = len(pos) * numpy.prod(shape) * self.grid.precision.nbytes * 2
+        value = cgpt.copy_cyclic_upscale(value, nbytes_needed)
+
+        # create plan
+        if cache_key is None or cache_key not in lattice.cache:
+            plan = gpt.copy_plan(self, value)
+            plan.destination += gpt.lattice_view(self, pos, tidx)
+            plan.source += gpt.global_memory_view(
+                self.grid,
+                [[self.grid.processor, value, 0, value.nbytes]]
+                if value.nbytes > 0
+                else None,
             )
 
-            # and import
-            cgpt.lattice_import(self.v_obj, pos, tidx, value)
+            # skip optimization if we only use it once
+            xp = plan(
+                local_only=isinstance(pos, gpt.core.local_coordinates),
+                skip_optimize=cache_key is None,
+            )
+            if cache_key is not None:
+                lattice.cache[cache_key] = xp
+        else:
+            xp = lattice.cache[cache_key]
+
+        xp(self, value)
 
     def __getitem__(self, key):
         pos, tidx, shape = gpt.map_key(self, key)
-        val = cgpt.lattice_export(self.v_obj, pos, tidx, shape)
+
+        value = cgpt.ndarray((len(pos), *shape), self.grid.precision.complex_dtype)
+
+        plan = gpt.copy_plan(value, self)
+        plan.destination += gpt.global_memory_view(
+            self.grid,
+            [[self.grid.processor, value, 0, value.nbytes]]
+            if value.nbytes > 0
+            else None,
+        )
+        plan.source += gpt.lattice_view(self, pos, tidx)
+        xp = plan()
+
+        xp(value, self)
 
         # if only a single element is returned and we have the full shape,
         # wrap in a tensor
-        if len(val) == 1 and shape == self.otype.shape:
-            return gpt.util.value_to_tensor(val[0], self.otype)
+        if len(value) == 1 and shape == self.otype.shape:
+            return gpt.util.value_to_tensor(value[0], self.otype)
 
-        return val
+        return value
 
     def mview(self):
         return [cgpt.lattice_memory_view(o) for o in self.v_obj]
-
-    def mview_coordinates(self):
-        # coordinates are identical for all x \in v_obj
-        return cgpt.lattice_memory_view_coordinates(self.v_obj[0])
 
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype.__name__, self.grid.precision.__name__)
@@ -211,3 +243,14 @@ class lattice(factor):
     def __itruediv__(self, expr):
         gpt.eval(self, self / expr, ac=False)
         return self
+
+    def __lt__(self, other):
+        assert self.otype == gpt.ot_singlet
+        assert other.otype == gpt.ot_singlet
+        res = gpt.lattice(self)
+        params = {"operator": "<"}
+        cgpt.binary(res.v_obj[0], self.v_obj[0], other.v_obj[0], params)
+        return res
+
+    def __gt__(self, other):
+        return other.__lt__(self)

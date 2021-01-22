@@ -34,7 +34,7 @@ assert sys.getrefcount(x) == 2
 ################################################################################
 # Test assignments
 ################################################################################
-pos = l_dp.mview_coordinates()
+pos = g.coordinates(l_dp)
 lhs = g.lattice(l_dp)
 
 
@@ -47,7 +47,20 @@ def assign_pos():
 
 
 def assign_pos_view():
-    lhs[pos] = l_dp.view[pos]
+    plan = g.copy_plan(lhs, l_dp)
+    plan.destination += lhs.view[pos]
+    plan.source += l_dp.view[pos]
+    plan = plan()
+    info = plan.info()
+    for rank_dst, rank_src in info:
+        assert rank_dst == rank_src
+        assert rank_dst == lhs.grid.processor
+        info_rank = info[(rank_dst, rank_src)]
+        for index in info_rank:
+            info_index = info_rank[index]
+            # Make sure that after optimization only a single memcpy is needed
+            assert info_index["blocks"] == 1
+    plan(lhs, l_dp)
 
 
 for method in [assign_copy, assign_pos, assign_pos_view]:
@@ -189,3 +202,63 @@ for grid in [grid_sp, grid_dp]:
                 )
                 eps = abs(host_result_individual - ref) / abs(ref)
                 assert eps < 1e-12
+
+################################################################################
+# Test multi linear_combination against expression engine
+################################################################################
+for grid in [grid_sp, grid_dp]:
+    nbasis = 7
+    nblock = 3
+    nvec = 2
+    basis = [g.vcomplex(grid, 8) for i in range(nbasis)]
+    rng.cnormal(basis)
+    dst = [g.vcomplex(grid, 8) for i in range(nvec)]
+    coef = [[rng.cnormal() for i in range(nbasis)] for j in range(nvec)]
+    # multi
+    g.linear_combination(dst, basis, coef, nblock)
+    for j in range(nvec):
+        ref = g.vcomplex(grid, 8)
+        ref[:] = 0
+        for i in range(nbasis):
+            ref += coef[j][i] * basis[i]
+        eps2 = g.norm2(dst[j] - ref) / g.norm2(ref)
+        g.message(f"Test linear combination of vector {j}: {eps2}")
+        assert eps2 < 1e-13
+
+
+################################################################################
+# Test where
+################################################################################
+sel = g.complex(grid)
+rng.uniform_int(sel, min=0, max=1)
+
+yes = g.vcomplex(grid, 8)
+no = g.vcomplex(grid, 8)
+rng.cnormal([yes, no])
+
+w = g.where(sel, yes, no)
+
+eps = np.linalg.norm(w[:] - np.where(sel[:] != 0.0, yes[:], no[:])) / np.linalg.norm(
+    w[:]
+)
+g.message(
+    f"Test gpt.where <> numpy.where with a selection of {g.norm2(sel)} points: {eps}"
+)
+assert eps == 0.0
+
+
+################################################################################
+# Test comparators
+################################################################################
+a = g.complex(grid)
+b = g.complex(grid)
+rng.cnormal([a, b])
+
+c = a < b
+eps = np.linalg.norm(c[:] - (a[:] < b[:]).astype(np.int)) / np.linalg.norm(c[:])
+g.message(f"Test a < b from gpt<>numpy: {eps}")
+assert eps == 0.0
+
+eps = g.norm2((b < a) - (a > b)) ** 0.5
+g.message(f"Test a < b compatible with b > a: {eps}")
+assert eps == 0.0

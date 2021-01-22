@@ -32,6 +32,7 @@ class split:
         matrix_split = matrix.split(mpi_split)
         operation_split = self.operation(matrix_split)
         nparallel = matrix_split.grid[0].sranks
+        cache = {}
 
         def inv(dst, src):
 
@@ -44,14 +45,14 @@ class split:
                 )
 
             t0 = g.time()
-            src_split = g.split(src, split_grid=matrix_split.grid[1])
-            dst_split = g.split(dst, split_grid=matrix_split.grid[0])
+            src_split = g.split(src, matrix_split.grid[1], cache)
+            dst_split = g.split(dst, matrix_split.grid[0], cache)
             t1 = g.time()
 
             operation_split(dst_split, src_split)
 
             t2 = g.time()
-            g.unsplit(dst, dst_split)
+            g.unsplit(dst, dst_split, cache)
             t3 = g.time()
 
             if verbose:

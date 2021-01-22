@@ -20,3 +20,4 @@ import gpt.algorithms.inverter
 import gpt.algorithms.polynomial
 import gpt.algorithms.eigen
 import gpt.algorithms.modes
+import gpt.algorithms.markov

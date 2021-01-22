@@ -24,8 +24,8 @@ grid = U[0].grid
 # wilson parameters
 p = {
     "kappa": 0.137,
-    "csw_r": 0,
-    "csw_t": 0,
+    "csw_r": 0.0,
+    "csw_t": 0.0,
     "xi_0": 1,
     "nu": 1,
     "isAnisotropic": False,
@@ -36,7 +36,7 @@ p = {
 # print(pf)
 
 # take slow reference implementation of wilson (kappa = 1/2/(m0 + 4) ) ;
-w_ref = g.qcd.fermion.reference.wilson(U, p)
+w_ref = g.qcd.fermion.reference.wilson_clover(U, p)
 
 # and fast Grid version
 w = g.qcd.fermion.wilson_clover(U, p, kappa=0.137)
@@ -178,7 +178,7 @@ assert eps2 < 1e-12
 
 
 # gauge transformation check
-V = rng.lie(g.mcolor(grid))
+V = rng.element(g.mcolor(grid))
 prop_on_transformed_U = w.updated(g.qcd.gauge.transformed(U, V)).propagator(
     inv.preconditioned(pc.eo2_ne(), cg)
 )
@@ -195,3 +195,189 @@ assert eps2 < 1e-12
 rhq = g.qcd.fermion.rhq_columbia(
     U, mass=4.0, cp=3.0, zeta=2.5, boundary_phases=[1, 1, 1, -1]
 )
+
+
+#########################################################################
+# Test fermion operators against known results
+#
+# this protects against bugs introduced in the matrix application
+# of fermion operators (new architectures / implementations)
+#
+# These tests are only meaningfull if reference implementation is also
+# included
+#########################################################################
+wilson_clover_params = {
+    "kappa": 0.13500,
+    "csw_r": 1.5,
+    "csw_t": 1.951,
+    "xi_0": 1.33111,
+    "nu": 2.61,
+    "isAnisotropic": True,
+    "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+}
+wilson_clover_matrices_rb = {
+    ".Mooee": [
+        (-964.604747199766 + 1955.3204837295887j),
+        (-984.9379301006896 + 1812.470240028601j),
+    ],
+    ".Meooe": [
+        (-180.76784134943463 - 907.7516272233529j),
+        (563.2079135281185 - 720.151781978722j),
+    ],
+}
+wilson_clover_matrices = {
+    "": [(-946.8714968698364 - 427.1253034080037j)],
+    ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
+}
+test_suite = {
+    "wilson_clover": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": wilson_clover_params,
+        "matrices_rb": wilson_clover_matrices_rb,
+        "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_legacy": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": {
+            **wilson_clover_params,
+            "use_legacy": True,
+        },  # will be deprecated eventually
+        "matrices_rb": wilson_clover_matrices_rb,
+        "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_reference": {
+        "fermion": g.qcd.fermion.reference.wilson_clover,
+        "params": wilson_clover_params,
+        "matrices_rb": wilson_clover_matrices_rb,
+        "matrices": wilson_clover_matrices,
+    },
+    "zmobius": {
+        "fermion": g.qcd.fermion.zmobius,
+        "params": {
+            "mass": 0.08,
+            "M5": 1.8,
+            "b": 1.0,
+            "c": 0.0,
+            "omega": [
+                0.17661651536320583 + 1j * (0.14907774771612217),
+                0.23027432016909377 + 1j * (-0.03530801572584271),
+                0.3368765581549033 + 1j * (0),
+                0.7305711010541054 + 1j * (0),
+                1.1686138337986505 + 1j * (0.3506492418109086),
+                1.1686138337986505 + 1j * (-0.3506492418109086),
+                0.994175013717952 + 1j * (0),
+                0.5029903152251229 + 1j * (0),
+                0.23027432016909377 + 1j * (0.03530801572584271),
+                0.17661651536320583 + 1j * (-0.14907774771612217),
+            ],
+            "boundary_phases": [1.0, 1.0, 1.0, -1.0],
+        },
+        "matrices_rb": {
+            ".Mooee": [
+                (-2446.6009975599286 + 5633.208069699162j),
+                (-2446.6009975599286 + 5633.208069699162j),
+            ],
+            ".Meooe": [
+                (2320.1432377385536 - 2611.1244058385605j),
+                (3083.8202044273708 - 1957.829867279577j),
+            ],
+        },
+        "matrices": {
+            "": [
+                (-2424.048033434305 + 10557.661684178218j),
+            ],
+            ".Mdiag": [(2643.396577965267 + 6550.259431381319j)],
+        },
+    },
+}
+
+
+def verify_matrix_element(mat, dst, src, tag):
+    src_prime = g.eval(mat * src)
+    dst.checkerboard(src_prime.checkerboard())
+    X = g.inner_product(dst, src_prime)
+    eps_ref = src.grid.precision.eps * 50.0
+    if mat.adj_mat is not None:
+        X_from_adj = g.inner_product(src, g.adj(mat) * dst).conjugate()
+        eps = abs(X - X_from_adj) / abs(X)
+        g.message(f"Test adj({tag}): {eps}")
+        assert eps < eps_ref
+        if mat.inv_mat is not None:
+            eps = (g.norm2(src - mat * g.inv(mat) * src) / g.norm2(src)) ** 0.5
+            g.message(f"Test inv({tag}): {eps}")
+            assert eps < eps_ref
+            Y = g.inner_product(dst, g.inv(g.adj(mat)) * src)
+            Y_from_adj = g.inner_product(src, g.inv(mat) * dst).conjugate()
+            eps = abs(Y - Y_from_adj) / abs(Y)
+            g.message(f"Test adj(inv({tag})): {eps}")
+            assert eps < eps_ref
+    return X
+
+
+g.default.set_verbose("random", False)
+for precision in [g.single, g.double]:
+    # test suite
+    for name in test_suite:
+
+        # load configuration
+        rng = g.random("finger_print")
+        U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], precision), rng)
+
+        # default grid
+        grid = U[0].grid
+
+        # check tolerance
+        eps = grid.precision.eps
+
+        # params
+        test = test_suite[name]
+        g.message(f"Starting test suite for {precision.__name__} precision {name}")
+
+        # create fermion
+        fermion = test["fermion"](U, test["params"])
+
+        # do red/black tests
+        grid_rb = fermion.F_grid_eo
+        src = rng.cnormal(g.vspincolor(grid_rb))
+        dst = rng.cnormal(g.vspincolor(grid_rb))
+        g.message(f"<dst|src> = {g.inner_product(dst, src)}")
+        for matrix in test["matrices_rb"]:
+            finger_print = []
+            for cb in [g.even, g.odd]:
+                src.checkerboard(cb)
+                mat = eval(f"fermion{matrix}")
+                finger_print.append(
+                    verify_matrix_element(mat, dst, src, f"fermion{matrix}")
+                )
+            if test["matrices_rb"][matrix] is None:
+                g.message(f"Matrix {matrix} fingerprint: {finger_print}")
+            else:
+                fp = np.array(finger_print)
+                eps = np.linalg.norm(
+                    fp - np.array(test["matrices_rb"][matrix])
+                ) / np.linalg.norm(fp)
+                g.message(f"Test {matrix} fingerprint: {eps}")
+                if eps >= grid.precision.eps * 10.0:
+                    g.message(finger_print)
+                    g.message(test["matrices_rb"][matrix])
+                assert eps < grid.precision.eps * 10.0
+
+        # do full tests
+        grid = fermion.F_grid
+        src = rng.cnormal(g.vspincolor(grid))
+        dst = rng.cnormal(g.vspincolor(grid))
+        for matrix in test["matrices"]:
+            finger_print = []
+            mat = eval(f"fermion{matrix}")
+            finger_print.append(
+                verify_matrix_element(mat, dst, src, f"fermion{matrix}")
+            )
+            if test["matrices"][matrix] is None:
+                g.message(f"Matrix {matrix} fingerprint: {finger_print}")
+            else:
+                fp = np.array(finger_print)
+                eps = np.linalg.norm(
+                    fp - np.array(test["matrices"][matrix])
+                ) / np.linalg.norm(fp)
+                g.message(f"Test {matrix} fingerprint: {eps}")
+                assert eps < grid.precision.eps * 10.0

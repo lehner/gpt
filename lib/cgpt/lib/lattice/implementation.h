@@ -120,9 +120,22 @@ public:
     }
   }
 
-  virtual void unary_from(cgpt_Lattice_base* src, PyObject* params) {
-    cgpt_unary_from(l,compatible<T>(src)->l,params);
+  virtual void unary_from(cgpt_Lattice_base* a, PyObject* params) {
+    cgpt_unary_from(l,compatible<T>(a)->l,params);
   }
+
+  virtual void binary_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b, PyObject* params) {
+    cgpt_binary_from(l,compatible<T>(a)->l,compatible<T>(b)->l,params);
+  }
+
+  virtual void ternary_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b, cgpt_Lattice_base* c, PyObject* params) {
+    cgpt_ternary_from(l,
+		      compatible<iSinglet<vCoeff_t>>(a)->l,
+		      compatible<T>(b)->l,
+		      compatible<T>(c)->l, params);
+  }
+  
+
 
   virtual void cshift_from(cgpt_Lattice_base* _src, int dir, int off) {
     cgpt_Lattice<T>* src = compatible<T>(_src);
@@ -177,26 +190,34 @@ public:
     cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
   }
 
-  virtual void linear_combination(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt) {
-    PVector<Lattice<T>> basis;
+  virtual void linear_combination(std::vector<cgpt_Lattice_base*> & _dst, std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt, long n_virtual, long basis_n_block) {
+    PVector<Lattice<T>> basis, dst;
     cgpt_basis_fill(basis,_basis);
-    cgpt_linear_combination(l,basis,Qt);
+    cgpt_basis_fill(dst,_dst);
+    cgpt_linear_combination(dst,basis,Qt,n_virtual,basis_n_block);
   }
 
-  virtual PyObject* memory_view() {
-    auto v = l.View(CpuWrite);
-    size_t sz = v.size() * sizeof(v[0]);
-    char* ptr = (char*)&v[0];
-    v.ViewClose();
+  virtual PyObject* memory_view(memory_type mt) {
 
-    // this marks Cpu as dirty, so data will be copied to Gpu; this is not fully safe
-    // and the ViewClose should be moved to the destructor of the PyMemoryView object.
-    // Do this in the same way as currently done in mview() in the future.
-    return PyMemoryView_FromMemory(ptr,sz,PyBUF_WRITE);
-  }
+    if (mt == mt_none) {
+      mt = mt_host;
+    }
 
-  virtual PyObject* memory_view_coordinates() {
-    return cgpt_memory_view_coordinates(l.Grid(),l.Checkerboard());
+    LatticeView<vobj>* v = new LatticeView<vobj>(l.View((mt == mt_host) ? CpuWrite : AcceleratorWrite));
+    size_t sz = v->size() * sizeof((*v)[0]);
+    char* ptr = (char*)&(*v)[0];
+
+    PyObject* r = PyMemoryView_FromMemory(ptr,sz,PyBUF_WRITE);
+    PyObject *capsule = PyCapsule_New((void*)v, NULL, [] (PyObject *capsule) -> void { 
+	//std::cout << "ViewClose" << std::endl; 
+	LatticeView<vobj>* v = (LatticeView<vobj>*)PyCapsule_GetPointer(capsule, NULL);
+	v->ViewClose();
+	delete v;
+      });
+    ASSERT(!((PyMemoryViewObject*)r)->mbuf->master.obj);
+    ((PyMemoryViewObject*)r)->mbuf->master.obj = capsule;
+
+    return r;
   }
 
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) {
@@ -229,6 +250,14 @@ public:
 
   }
 
+  virtual void invert_matrix(std::vector<cgpt_Lattice_base*>& matrix_inv, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) {
+    cgpt_invert_matrix(l,matrix_inv,matrix,n_virtual);
+  }
+
+  virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) {
+    cgpt_determinant(l,det,matrix,n_virtual);
+  }
+  
   virtual GridBase* get_grid() {
     return l.Grid();
   }

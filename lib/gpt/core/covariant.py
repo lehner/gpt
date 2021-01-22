@@ -20,24 +20,21 @@ import cgpt, gpt, numpy
 from gpt.params import params_convention
 
 
-class shift:
-    @params_convention()
-    def __init__(self, U, params):
+class shift_base:
+    def __init__(self, U, boundary_phases):
         self.nd = len(U)
-        self.L = U[0].grid.fdimensions
         self.U = [gpt.copy(u) for u in U]
-        self.params = params
+        self.L = U[0].grid.fdimensions
 
-        for mu in range(self.nd):
-            last_slice = tuple(
-                [
-                    self.L[mu] - 1 if mu == nu else slice(None, None, None)
-                    for nu in range(self.nd)
-                ]
-            )
-            self.U[mu][last_slice] = (
-                self.U[mu][last_slice] * self.params["boundary_phases"][mu]
-            )
+        if boundary_phases is not None:
+            for mu in range(self.nd):
+                last_slice = tuple(
+                    [
+                        self.L[mu] - 1 if mu == nu else slice(None, None, None)
+                        for nu in range(self.nd)
+                    ]
+                )
+                self.U[mu][last_slice] = self.U[mu][last_slice] * boundary_phases[mu]
 
         # now take boundary_phase from params and apply here
         self.Udag = [gpt.eval(gpt.adj(u)) for u in self.U]
@@ -58,7 +55,32 @@ class shift:
             gpt.matrix_operator(mat=_forward(mu), inv_mat=_backward(mu))
             for mu in range(self.nd)
         ]
-        self.backward = [
-            gpt.matrix_operator(inv_mat=_forward(mu), mat=_backward(mu))
-            for mu in range(self.nd)
-        ]
+        self.backward = [o.inv() for o in self.forward]
+
+
+class shift(shift_base):
+    @params_convention()
+    def __init__(self, U, params):
+        self.params = params
+        super().__init__(U, params["boundary_phases"])
+
+
+class shift_eo(shift):
+    @params_convention()
+    def __init__(self, U, params):
+
+        # initialize full lattice
+        super().__init__(U, params)
+        U = None  # do not use anymore / force use including boundary phase
+
+        # create checkerboard version
+        self.checkerboard = {}
+
+        # add even/odd functionality
+        grid_eo = self.U[0].grid.checkerboarded(gpt.redblack)
+        for cb in [gpt.even, gpt.odd]:
+            _U = [gpt.lattice(grid_eo, self.U[0].otype) for u in self.U]
+            for mu in range(self.nd):
+                gpt.pick_checkerboard(cb, _U[mu], self.U[mu])
+
+            self.checkerboard[cb] = shift_base(_U, None)

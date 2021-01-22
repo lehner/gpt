@@ -32,6 +32,7 @@ private:
   GridBase*                       coarse_;
   GridBase*                       fine_;
   std::vector<Vector<index_type>> lut_vec_;
+    // WARNING: this introduces an un-threaded Vector() constructor operation osites times, avoid in future when time-critical (using AlignedVector or similar with empty construct)
   Vector<index_type*>             lut_ptr_;
   Vector<size_type>               sizes_;
   Vector<index_type>              reverse_lut_vec_;
@@ -54,11 +55,6 @@ public:
 
   virtual ~cgpt_block_lookup_table() {
   }
-
-  virtual accelerator_inline
-  std::vector<Vector<index_type>> const& operator()() const {
-    return lut_vec_;
-  } // CPU access (TODO: remove?)
 
   virtual accelerator_inline
   index_type const* const* View() const {

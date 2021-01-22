@@ -50,10 +50,11 @@ EXPORT(init,{
     std::cout << std::endl <<
       "=============================================" << std::endl <<
       "              Initialized GPT                " << std::endl <<
-      "    Copyright (C) 2020 Christoph Lehner      " << std::endl <<
+      "     Copyright (C) 2020 Christoph Lehner     " << std::endl <<
       "=============================================" << std::endl;
 
-    cgpt_initialized = true;    
+    cgpt_initialized = true;
+
     return PyLong_FromLong(0);
     
   });

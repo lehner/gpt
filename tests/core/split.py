@@ -122,12 +122,17 @@ for src in [l, l_rb]:
     split_grid = src[0].grid.split(
         g.default.get_ivec("--mpi_split", None, 4), src[0].grid.fdimensions
     )
-    src_unsplit = [g.lattice(x) for x in src]
 
-    # perform this test twice, second time cached plan will be used
-    for it in range(2):
-        src_split = g.split(src, split_grid=split_grid)
-        g.unsplit(src_unsplit, src_split)
+    # perform this test without cache and with cache (to fill and then to test)
+    cache = {}
+    for it in range(3):
+        src_unsplit = [g.lattice(x) for x in src]
+        t0 = g.time()
+        src_split = g.split(src, split_grid, None if it == 0 else cache)
+        t1 = g.time()
+        g.unsplit(src_unsplit, src_split, None if it == 0 else cache)
+        t2 = g.time()
+        g.message(f"Timing: {t1-t0}s for split and {t2-t1}s for unsplit")
         for i in range(len(src)):
             eps2 = g.norm2(src_unsplit[i] - src[i]) / g.norm2(src[i])
             g.message(f"Split test {i} / {len(src)}: {eps2}")

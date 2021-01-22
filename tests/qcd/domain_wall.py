@@ -33,6 +33,17 @@ mobius_params = {
 
 qm = g.qcd.fermion.mobius(g.qcd.gauge.unit(grid), mobius_params)
 
+# test operator update
+start = g.vspincolor(qm.F_grid)
+rng.cnormal(start)
+qm_new = g.qcd.fermion.mobius(U, mobius_params)
+qm.update(U)
+eps2 = g.norm2(qm * start - qm_new * start) / g.norm2(start)
+g.message(f"Operator update test: {eps2}")
+assert eps2 < 1e-15
+
+
+# study kernel spectrum
 w = g.qcd.fermion.wilson_clover(
     U,
     {
@@ -46,18 +57,7 @@ w = g.qcd.fermion.wilson_clover(
     },
 )
 
-# test operator update
-start = g.vspincolor(qm.F_grid)
-rng.cnormal(start)
-qm_new = g.qcd.fermion.mobius(U, mobius_params)
-qm.update(U)
-eps2 = g.norm2(qm * start - qm_new * start) / g.norm2(start)
-g.message(f"Operator update test: {eps2}")
-assert eps2 < 1e-10
-
-
 # solver
-pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-4, "maxiter": 1000})
 
@@ -110,6 +110,7 @@ qz = g.qcd.fermion.zmobius(
     },
 )
 
+
 # create point source
 src = g.mspincolor(grid)
 g.create.point(src, [0, 1, 0, 0])
@@ -118,11 +119,35 @@ g.create.point(src, [0, 1, 0, 0])
 pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-5, "maxiter": 1000})
+cg_e = inv.cg({"eps": 1e-6, "maxiter": 1000})
 
 slv_5d = inv.preconditioned(pc.eo2_ne(), cg)
+slv_5d_e = inv.preconditioned(pc.eo2_ne(), cg_e)
 slv_qm = qm.propagator(slv_5d)
+slv_qm_e = qm.propagator(slv_5d_e)
 slv_qz = qz.propagator(slv_5d)
 slv_madwf = qm.propagator(pc.mixed_dwf(slv_5d, slv_5d, qz))
+slv_madwf_dc = qm.propagator(
+    inv.defect_correcting(pc.mixed_dwf(slv_5d, slv_5d, qz), eps=1e-6, maxiter=10)
+)
+
+
+# inverse one spin color src
+src_sc = rng.cnormal(g.vspincolor(grid))
+dst_dwf_sc = g(slv_qm_e * src_sc)
+
+# test madwf
+dst_madwf_sc = g(slv_madwf * src_sc)
+eps2 = g.norm2(dst_madwf_sc - dst_dwf_sc) / g.norm2(dst_dwf_sc)
+g.message(f"MADWF test: {eps2}")
+assert eps2 < 5e-4
+
+# test madwf with defect_correcting
+dst_madwf_dc_sc = g(slv_madwf_dc * src_sc)
+eps2 = g.norm2(dst_madwf_dc_sc - dst_dwf_sc) / g.norm2(dst_dwf_sc)
+g.message(f"MADWF defect_correcting test: {eps2}")
+assert eps2 < 1e-10
+
 
 # propagator
 dst_qm = g.mspincolor(grid)
@@ -131,13 +156,6 @@ dst_qz = g.mspincolor(grid)
 dst_qm @= slv_qm * src
 dst_qz @= slv_qz * src
 
-# test madwf
-src_sc = rng.cnormal(g.vspincolor(grid))
-dst_madwf_sc = g(slv_madwf * src_sc)
-dst_dwf_sc = g(slv_qm * src_sc)
-eps2 = g.norm2(dst_madwf_sc - dst_dwf_sc) / g.norm2(dst_dwf_sc)
-g.message(f"MADWF test: {eps2}")
-assert eps2 < 5e-4
 
 # two-point
 correlator_qm = g.slice(g.trace(dst_qm * g.adj(dst_qm)), 3)

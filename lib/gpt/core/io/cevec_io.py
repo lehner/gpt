@@ -174,6 +174,10 @@ def load(filename, params):
         neigen_max = neigen
         nsingleCap_max = nsingleCap
 
+    alternative_scheme = (
+        "alternative_scheme" in params and params["alternative_scheme"] is True
+    )
+
     # allocate all lattices
     basis = [gpt.vspincolor(fgrid) for i in range(nbasis_max)]
     cevec = [gpt.vcomplex(cgrid, nbasis_max) for i in range(neigen_max)]
@@ -357,7 +361,7 @@ def load(filename, params):
                             data_munged[reduced_size * l : reduced_size * (l + 1)],
                             data_fp32[reduced_size * l : reduced_size * (l + 1)],
                             len(pos[b]) // block_reduce,
-                            nsingleCap,
+                            nsingleCap if alternative_scheme else (nbasis - nsingleCap),
                         )
                     dt_munge += gpt.time()
                 else:
@@ -706,7 +710,7 @@ def save(filename, objs, params):
                         cgpt.munge_inner_outer(
                             data_fp32[reduced_size * l : reduced_size * (l + 1)],
                             data_munged[reduced_size * l : reduced_size * (l + 1)],
-                            nsingleCap,
+                            nbasis - nsingleCap,
                             len(pos[b]) // block_reduce,
                         )
                     dt_munge += gpt.time()

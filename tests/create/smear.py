@@ -11,7 +11,7 @@ L = [8, 8, 8, 16]
 grid = g.grid(L, g.double)
 U = g.qcd.gauge.random(grid, rng)
 U_unit = g.qcd.gauge.unit(grid)
-V = rng.lie(g.mcolor(grid))
+V = rng.element(g.mcolor(grid))
 
 # Test covariance of gauss smearing operator
 smear = g.create.smear.gauss(U, sigma=0.5, steps=3, dimensions=[0, 1, 2])

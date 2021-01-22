@@ -44,8 +44,8 @@ assert inner.real == 700.0
 
 # demonstrate slicing of internal indices
 vc = g.vcomplex(grid, 30)
-vc[0, 0, 0, 0, 0] = 1
 vc[0, 0, 0, 0, 1:29] = 1.5
+vc[0, 0, 0, 0, 0] = 1
 vc[0, 0, 0, 0, 29] = 2
 vc_comp = g.vcomplex([1] + [1.5] * 28 + [2], 30)
 eps2 = g.norm2(vc[0, 0, 0, 0] - vc_comp)

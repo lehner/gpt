@@ -31,6 +31,11 @@ class format:
         def __init__(self, params):
             self.params = params
 
+    class nersc:
+        @params_convention()
+        def __init__(self, params):
+            self.params = params
+
 
 # output
 def save(filename, objs, fmt=format.gpt()):

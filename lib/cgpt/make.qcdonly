@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo "BASIS_SIZE(10)" > lib/basis_size.h
+
+echo "SPIN(4)" > lib/spin_color.h
+echo "COLOR(3)" >> lib/spin_color.h
+echo "SPIN_COLOR(4,3)" >> lib/spin_color.h
+
+./clean
+./make
+

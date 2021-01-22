@@ -25,3 +25,4 @@ import gpt.create.wall
 def point(src, pos):
     src[:] = 0
     src[tuple(pos)] = src.otype.identity()
+    return src

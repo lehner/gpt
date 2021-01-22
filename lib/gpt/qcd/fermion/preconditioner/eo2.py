@@ -142,12 +142,12 @@ class eo2_base:
             ).__dict__[undressed]
 
     def import_parity(self, i):
-        gpt.pick_cb(self.parity, self.in_p, i)
-        gpt.pick_cb(self.parity.inv(), self.in_np, i)
+        gpt.pick_checkerboard(self.parity, self.in_p, i)
+        gpt.pick_checkerboard(self.parity.inv(), self.in_np, i)
 
     def export_parity(self, o):
-        gpt.set_cb(o, self.out_p)
-        gpt.set_cb(o, self.out_np)
+        gpt.set_checkerboard(o, self.out_p)
+        gpt.set_checkerboard(o, self.out_np)
 
 
 class eo2_ne_instance(eo2_base):

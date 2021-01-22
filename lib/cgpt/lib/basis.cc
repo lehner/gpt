@@ -121,8 +121,9 @@ EXPORT(rotate,{
 
     ASSERT(basis.size() > 0);
 
-    int Nm, dtype;
-    cgpt_numpy_query_matrix(_Qt, dtype, Nm);
+    int Nm, NmP, dtype;
+    cgpt_numpy_query_matrix(_Qt, dtype, Nm, NmP);
+    ASSERT(Nm == NmP);
     ASSERT(j0 <= j1 && k0 <= k1 && j0 >=0 && k0 >= 0 && k1 <= Nm && j1 <= Nm && 
 	   (int)basis.size() >= j1 && (int)basis.size() >= k1);
 
@@ -143,27 +144,29 @@ EXPORT(rotate,{
 
 EXPORT(linear_combination,{
 
-    PyObject* _basis,* _Qt;
-    void* _dst;
-    int idx;
-    if (!PyArg_ParseTuple(args, "lOOi", &_dst, &_basis, &_Qt, &idx)) {
+    PyObject* _dst, * _basis,* _Qt;
+    long basis_n_block;
+    if (!PyArg_ParseTuple(args, "OOOl", &_dst, &_basis, &_Qt, &basis_n_block)) {
       return NULL;
     }
     
     std::vector<cgpt_Lattice_base*> basis;
-    cgpt_basis_fill(basis,_basis,idx);
+    long basis_n_virtual = cgpt_basis_fill(basis,_basis);
 
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    std::vector<cgpt_Lattice_base*> dst;
+    long dst_n_virtual = cgpt_basis_fill(dst,_dst);
 
-    ASSERT(basis.size() > 0);
+    ASSERT(basis.size() > 0 && dst.size() > 0);
+    ASSERT(basis_n_virtual == dst_n_virtual);
 
     ComplexD* data;
-    int Nm;
-    cgpt_numpy_import_vector(_Qt,data,Nm);
+    int Nvec,Nm;
+    cgpt_numpy_import_matrix(_Qt,data,Nvec,Nm);
 
-    ASSERT(Nm >= (int)basis.size());
+    ASSERT((dst.size() / dst_n_virtual) == Nvec);
+    ASSERT(Nm*basis_n_virtual == (int)basis.size());
 
-    dst->linear_combination(basis,data);
+    dst[0]->linear_combination(dst,basis,data,basis_n_virtual,basis_n_block);
     
     return PyLong_FromLong(0);
   });

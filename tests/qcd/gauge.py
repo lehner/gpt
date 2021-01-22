@@ -10,22 +10,38 @@ import numpy as np
 # load configuration
 rng = g.random("test")
 U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
-V = rng.lie(g.lattice(U[0]))
+V = rng.element(g.lattice(U[0]))
 U_transformed = g.qcd.gauge.transformed(U, V)
 
-# Test gauge invariance of plaquette
+# reference plaquette
 P = g.qcd.gauge.plaquette(U)
+
+# test rectangle calculation using parallel transport and copy_plan
+R_1x1, R_2x1 = g.qcd.gauge.rectangle(U, [(1, 1), (2, 1)])
+eps = abs(P - R_1x1)
+g.message(f"Plaquette {P} versus 1x1 rectangle {R_1x1}: {eps}")
+assert eps < 1e-13
+
+# Test gauge invariance of plaquette
 P_transformed = g.qcd.gauge.plaquette(U_transformed)
 eps = abs(P - P_transformed)
 g.message(f"Plaquette before {P} and after {P_transformed} gauge transformation: {eps}")
+assert eps < 1e-13
+
+# Test gauge invariance of R_2x1
+R_2x1_transformed = g.qcd.gauge.rectangle(U_transformed, 2, 1)
+eps = abs(R_2x1 - R_2x1_transformed)
+g.message(
+    f"R_2x1 before {R_2x1} and after {R_2x1_transformed} gauge transformation: {eps}"
+)
 assert eps < 1e-13
 
 # Test gauge covariance of staple
 rho = np.array(
     [[0.0 if i == j else 0.1 for i in range(4)] for j in range(4)], dtype=np.float64
 )
-C = g.qcd.gauge.smear.staple_sum(U, rho=rho)
-C_transformed = g.qcd.gauge.smear.staple_sum(U_transformed, rho=rho)
+C = g.qcd.gauge.staple_sum(U, rho=rho)
+C_transformed = g.qcd.gauge.staple_sum(U_transformed, rho=rho)
 for mu in range(len(C)):
     q = g.sum(g.trace(C[mu] * g.adj(U[mu]))) / U[0].grid.gsites
     q_transformed = (

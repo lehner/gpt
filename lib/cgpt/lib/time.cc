@@ -28,8 +28,8 @@ cgpt_timer::cgpt_timer(const std::string& _title) : title(_title) {
 }
 
 cgpt_timer::~cgpt_timer() {
-  tscope += cgpt_time();
-  std::cout << GridLogMessage << std::setw(50) << (" Time in scope " + title) << std::setw(24) << std::right << tscope << " s" << std::endl;
+  //tscope += cgpt_time();
+  //std::cout << GridLogMessage << std::setw(50) << (" Time in scope " + title) << std::setw(24) << std::right << tscope << " s" << std::endl;
 }
 
 void cgpt_timer::operator()(const std::string& tag) {
@@ -74,7 +74,7 @@ void cgpt_timer::report() {
   }
   
   std::cout << GridLogMessage << "================================================================================" << std::endl;
-  std::cout << GridLogMessage << std::setw(50) << " Total time " << std::setw(24) << std::right << tot << " s" << std::endl;
+  std::cout << GridLogMessage << std::setw(42) << " Total time " << std::setw(32) << std::right << tot << " s" << std::endl;
 }
 
 // export

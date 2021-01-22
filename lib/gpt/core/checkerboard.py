@@ -52,13 +52,13 @@ def str_to_cb(s):
         assert 0
 
 
-def pick_cb(cb, dst, src):
+def pick_checkerboard(cb, dst, src):
     assert len(src.v_obj) == len(dst.v_obj)
     for i in src.otype.v_idx:
         cgpt.lattice_pick_checkerboard(cb.tag, src.v_obj[i], dst.v_obj[i])
 
 
-def set_cb(dst, src):
+def set_checkerboard(dst, src):
     assert len(src.v_obj) == len(dst.v_obj)
     for i in src.otype.v_idx:
         cgpt.lattice_set_checkerboard(src.v_obj[i], dst.v_obj[i])

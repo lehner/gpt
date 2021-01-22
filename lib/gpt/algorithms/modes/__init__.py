@@ -16,6 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.modes.modes import modes
-from gpt.algorithms.modes.coarse_modes import coarse_modes
+from gpt.algorithms.modes.matrix import matrix
 from gpt.algorithms.modes.a2a import a2a

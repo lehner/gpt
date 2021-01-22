@@ -28,6 +28,10 @@ using namespace Grid;
 #define GRID_HAS_ACCELERATOR
 #endif
 
+#if defined (GRID_COMMS_MPI3)
+#define CGPT_USE_MPI 1
+#endif
+
 #define VECTOR_VIEW_OPEN(l,v,mode)				\
   Vector< decltype(l[0].View(mode)) > v; v.reserve(l.size());	\
   for(uint64_t k=0;k<l.size();k++)				\
@@ -39,15 +43,23 @@ using namespace Grid;
 
 NAMESPACE_BEGIN(Grid);
 
+// aligned vector
+template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
+
 #if defined(GRID_CUDA)||defined(GRID_HIP)
 #include "foundation/reduce_gpu.h"
 #endif
 
 #include "foundation/reduce.h"
 #include "foundation/unary.h"
+#include "foundation/binary.h"
+#include "foundation/ternary.h"
 #include "foundation/et.h"
 #include "foundation/block.h"
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
+#include "foundation/matrix.h"
+#include "foundation/clover.h"
+
 
 NAMESPACE_END(Grid);

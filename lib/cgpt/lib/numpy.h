@@ -31,6 +31,31 @@ static int infer_numpy_type(const std::string & precision) {
   }
 }
 
+static size_t numpy_dtype_size(int dtype) {
+  switch (dtype) {
+  case NPY_FLOAT32:
+  case NPY_INT32:
+    return 4;
+  case NPY_COMPLEX64:
+  case NPY_FLOAT64:
+    return 8;
+  case NPY_COMPLEX128:
+    return 16;
+  default:
+    ERR("Unknown dtype %d",dtype);
+  }
+}
+
+static PyArrayObject* cgpt_new_PyArray(long nd, long* dim, int dtype) {
+  size_t sz = numpy_dtype_size(dtype);
+  for (long i=0;i<nd;i++)
+    sz *= dim[i];
+  void* data = aligned_alloc(GRID_ALLOC_ALIGN, sz);
+  PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNewFromData((int)nd, dim, dtype, data);
+  PyArray_ENABLEFLAGS(a, NPY_ARRAY_OWNDATA);
+  return a;
+}
+
 static void cgpt_numpy_data_layout(const ComplexF& v, std::vector<long>& dim) {}
 static void cgpt_numpy_data_layout(const ComplexD& v, std::vector<long>& dim) {}
 
@@ -71,7 +96,7 @@ PyObject* cgpt_numpy_export(const sobj& v) {
   }
 
   
-  PyArrayObject* arr = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], infer_numpy_type(*c));
+  PyArrayObject* arr = cgpt_new_PyArray((int)dim.size(), &dim[0], infer_numpy_type(*c));
   memcpy(PyArray_DATA(arr),c,sizeof(sobj));
   return (PyObject*)arr;
 }
@@ -133,12 +158,12 @@ void cgpt_numpy_import(sobj& dst,PyObject* _src) {
 }
 
 static 
-void cgpt_numpy_query_matrix(PyObject* _Qt, int & dtype, int & Nm) {
+void cgpt_numpy_query_matrix(PyObject* _Qt, int & dtype, int & Nrow, int & Ncol) {
   ASSERT(cgpt_PyArray_Check(_Qt));
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
   ASSERT(PyArray_NDIM(Qt)==2);
-  Nm = PyArray_DIM(Qt,0);
-  ASSERT(Nm == PyArray_DIM(Qt,1));
+  Nrow = PyArray_DIM(Qt,0);
+  Ncol = PyArray_DIM(Qt,1);
   dtype = PyArray_TYPE(Qt);
   ASSERT(PyArray_IS_C_CONTIGUOUS(Qt));
 }
@@ -146,7 +171,19 @@ void cgpt_numpy_query_matrix(PyObject* _Qt, int & dtype, int & Nm) {
 template<typename Coeff_t>
 void cgpt_numpy_import_matrix(PyObject* _Qt, Coeff_t* & data, int & Nm) {
   int dtype;
-  cgpt_numpy_query_matrix(_Qt, dtype, Nm);
+  int Nmp;
+  cgpt_numpy_query_matrix(_Qt, dtype, Nm, Nmp);
+  ASSERT(Nm == Nmp);
+  PyArrayObject* Qt = (PyArrayObject*)_Qt;
+  // TODO: check and at least forbid strides
+  ASSERT(dtype == infer_numpy_type(*data));
+  data = (Coeff_t*)PyArray_DATA(Qt);
+}
+
+template<typename Coeff_t>
+void cgpt_numpy_import_matrix(PyObject* _Qt, Coeff_t* & data, int & Nrow, int & Ncol) {
+  int dtype;
+  cgpt_numpy_query_matrix(_Qt, dtype, Nrow, Ncol);
   PyArrayObject* Qt = (PyArrayObject*)_Qt;
   // TODO: check and at least forbid strides
   ASSERT(dtype == infer_numpy_type(*data));
