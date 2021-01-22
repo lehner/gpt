@@ -563,6 +563,9 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     }
   }
 
+  cgpt_timer tt("execute");
+  tt("pre");
+  
   // if there is no buffer, directly issue separate isend / irecv for each block
   if (comm_buffers_type == mt_none) {
 
@@ -616,7 +619,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
 
   // then do local copies
- 
+  tt("local"); 
   for (auto & ranks : blocks) {
     rank_t dst_rank = ranks.first.first;
     rank_t src_rank = ranks.first.second;
@@ -630,10 +633,12 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
       }
     }
   }
-  
+
+  tt("wait");
   // then wait for remote copies to finish
   this->waitall();
 
+  tt("post");
   // if buffer was used, need to re-distribute locally
   if (comm_buffers_type != mt_none) {
     for (auto & ranks : recv_blocks) {
@@ -653,5 +658,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
       }
     }
   }
+
+  tt.report();
 
 }

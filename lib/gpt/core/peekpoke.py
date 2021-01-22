@@ -197,7 +197,7 @@ def peek(target, key):
             grid, [[grid.processor, value, 0, value.nbytes]]
         )
         plan.source += gpt.lattice_view(target, pos, tidx)
-        xp = plan()
+        xp = plan(skip_optimize = True)
 
         xp(value, target)
 
@@ -213,10 +213,14 @@ def poke(target, key, value):
 
     if type(target) == gpt.lattice:
 
+        t0 = gpt.time()
         target[key] = value
+        t1 = gpt.time()
+        gpt.message(t1-t0,"X")
 
     elif type(target) == list:
 
+        t0 = gpt.time()
         pos, tidx, shape = map_key(target, key)
 
         grid = target[0].grid
@@ -227,9 +231,13 @@ def poke(target, key, value):
         plan.source += gpt.global_memory_view(
             grid, [[grid.processor, value, 0, value.nbytes]]
         )
-        xp = plan()
+        ta = gpt.time()
+        xp = plan(skip_optimize = True)
+        tb = gpt.time()
 
         xp(target, value)
-
+        tc = gpt.time()
+        t1 = gpt.time()
+        gpt.message(t1-t0,tb-ta, tc-ta,xp.info())
     else:
         assert 0
