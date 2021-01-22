@@ -168,7 +168,12 @@ class lattice(factor):
                 if value.nbytes > 0
                 else None,
             )
-            xp = plan()
+
+            # skip optimization if we only use it once
+            xp = plan(
+                local_only=isinstance(pos, gpt.core.local_coordinates),
+                skip_optimize=cache_key is None,
+            )
             if cache_key is not None:
                 lattice.cache[cache_key] = xp
         else:

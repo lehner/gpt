@@ -49,4 +49,4 @@ Matrix Multiply Benchmark with
     Time to complete            : {dt:.2f} s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
 """
-                    )
+        )

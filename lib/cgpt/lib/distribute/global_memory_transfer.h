@@ -239,6 +239,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks)
     bool operator()(const block_t& a, const block_t& b) const
     {
       return a.start_dst < b.start_dst; // sort by destination address (better for first write page mapping)
+      // Make this an option?
+      //return a.start_src < b.start_src; // sort by source address (better for parallel transport)
     }
   } less;
 

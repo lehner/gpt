@@ -20,6 +20,10 @@
 import gpt, cgpt, numpy
 
 
+class local_coordinates(numpy.ndarray):
+    pass
+
+
 def coordinates(o, order="lexicographic"):
     if type(o) == gpt.grid and o.cb.n == 1:
         return coordinates((o, gpt.none), order=order)
@@ -34,7 +38,7 @@ def coordinates(o, order="lexicographic"):
         bottom = [top[i] + o[0].ldimensions[i] * cbf[i] for i in range(dim)]
         return cgpt.coordinates_from_cartesian_view(
             top, bottom, checker_dim_mask, cb, order
-        )
+        ).view(local_coordinates)
     elif type(o) == gpt.lattice:
         return coordinates((o.grid, o.checkerboard()), order=order)
     elif type(o) == gpt.cartesian_view:
@@ -60,7 +64,7 @@ def exp_ixp(p):
 
     if type(p) == list:
         return [exp_ixp(x) for x in p]
-    elif type(p) == numpy.ndarray:
+    elif isinstance(p, numpy.ndarray):
         p = p.tolist()
 
     def mat(dst, src):
@@ -97,7 +101,7 @@ def fft(dims=None):
 
 
 def coordinate_mask(field, mask):
-    assert type(mask == numpy.ndarray)
+    assert isinstance(mask, numpy.ndarray)
     assert field.otype == gpt.ot_singlet
 
     x = gpt.coordinates(field)
