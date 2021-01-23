@@ -15,8 +15,8 @@ else:
     work_dir = "."
 
 # grids
-fgrid = g.grid([4, 8*8, 8, 8, 16], g.single, g.redblack)
-cgrid = g.grid([1, 4*8, 4, 4, 4], g.single)
+fgrid = g.grid([4, 8, 8, 8, 16], g.single, g.redblack)
+cgrid = g.grid([1, 4, 4, 4, 4], g.single)
 
 # vectors
 nbasis = 40

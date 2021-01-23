@@ -18,8 +18,12 @@
 */
 
 enum memory_type {
-  mt_none, mt_host, mt_accelerator
+  mt_host = 0x0,
+  mt_accelerator = 0x1,
+  mt_none = 0x2
 };
+
+#define mt_int_len mt_none
 
 template<typename offset_t, typename rank_t, typename index_t>
 class global_memory_view {
@@ -324,9 +328,13 @@ class global_memory_transfer : public global_transfer<rank_t> {
 
   template<typename blocks_src_t>
   void merge_blocks(blocks_t& dst, const blocks_src_t& src);
-  void bcopy(const blocks_t& blocks,
-	     memory_view& base_dst, 
-	     const memory_view& base_src);
+
+  struct bcopy_arg_t {
+    const blocks_t& blocks;
+    memory_view& base_dst; 
+    const memory_view& base_src;
+  };
+  void bcopy(const std::vector<bcopy_arg_t>& args);
 };
 
 typedef global_memory_view<uint64_t,int,uint32_t> gm_view;
