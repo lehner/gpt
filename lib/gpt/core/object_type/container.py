@@ -320,6 +320,7 @@ class ot_msinglet(ot_base):
         self.mtab = {
             "ot_singlet": (lambda: self, None),
             "ot_vsinglet(%d)" % n: (lambda: self.vector_type, (1, 0)),
+            # TODO: add ot_msinglet and in cgpt
         }
         self.rmtab = {
             "ot_singlet": (lambda: self, None),
@@ -328,3 +329,6 @@ class ot_msinglet(ot_base):
         self.v_n0, self.v_n1 = get_range(decomposition, 2)
         self.v_idx = range(len(self.v_n0))
         self.v_otype = [ot_msinglet.fundamental[x].__name__ for x in decomposition]
+
+    def identity(self):
+        return gpt.matrix_color(numpy.identity(self.shape[0]), self.shape[0])

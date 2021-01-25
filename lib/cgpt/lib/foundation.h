@@ -58,6 +58,7 @@ template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
 #include "foundation/block.h"
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
+#include "foundation/eigen.h"
 #include "foundation/matrix.h"
 #include "foundation/clover.h"
 
