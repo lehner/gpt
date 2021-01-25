@@ -18,6 +18,138 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include <type_traits>
+template<class stype, int Ncolour>
+typename std::enable_if<isGridFundamental<stype>::value, void>::type
+convertToEigen(const iScalar<iScalar<iMatrix<stype, Ncolour>>>& matrix_grid,
+               Eigen::MatrixXcd&                                matrix_eigen) {
+  for(long row=0;row<Ncolour;row++) {
+    for(long col=0;col<Ncolour;col++) {
+      matrix_eigen(row, col) = static_cast<ComplexD>(TensorRemove(matrix_grid()()(row, col)));
+    }
+  }
+}
+template<class stype, int Nspin>
+typename std::enable_if<isGridFundamental<stype>::value, void>::type
+convertToEigen(const iScalar<iMatrix<iScalar<stype>, Nspin>>& matrix_grid,
+               Eigen::MatrixXcd&                              matrix_eigen) {
+  for(long row=0;row<Nspin;row++) {
+    for(long col=0;col<Nspin;col++) {
+      matrix_eigen(row, col) = static_cast<ComplexD>(TensorRemove(matrix_grid()(row, col)()));
+    }
+  }
+}
+template<class stype, int Nspin, int Ncolour>
+typename std::enable_if<isGridFundamental<stype>::value, void>::type
+convertToEigen(const iScalar<iMatrix<iMatrix<stype, Ncolour>, Nspin>>& matrix_grid,
+               Eigen::MatrixXcd&                                       matrix_eigen) {
+  for (long s_row=0;s_row<Nspin;s_row++) {
+    for (long s_col=0;s_col<Nspin;s_col++) {
+      for (long c_row=0;c_row<Ncolour;c_row++) {
+        for (long c_col=0;c_col<Ncolour;c_col++) {
+          matrix_eigen(s_row*Ncolour+c_row, s_col*Ncolour+c_col) = static_cast<ComplexD>(TensorRemove(matrix_grid()(s_row, s_col)(c_row, c_col)));
+        }
+      }
+    }
+  }
+}
+template<class sobj>
+void convertToEigen(const sobj&       matrix_grid,
+                    Eigen::MatrixXcd& matrix_eigen) {
+  ERR("Not implemented");
+}
+
+
+template<class stype, int Ncolour>
+typename std::enable_if<isGridFundamental<stype>::value, void>::type
+convertFromEigen(const Eigen::MatrixXcd&                    matrix_eigen,
+                 iScalar<iScalar<iMatrix<stype, Ncolour>>>& matrix_grid) {
+  for(long row=0;row<Ncolour;row++) {
+    for(long col=0;col<Ncolour;col++) {
+      matrix_grid()()(row, col) = matrix_eigen(row, col);
+    }
+  }
+}
+template<class stype, int Nspin>
+typename std::enable_if<isGridFundamental<stype>::value, void>::type
+convertFromEigen(const Eigen::MatrixXcd&                  matrix_eigen,
+                 iScalar<iMatrix<iScalar<stype>, Nspin>>& matrix_grid) {
+  for(long row=0;row<Nspin;row++) {
+    for(long col=0;col<Nspin;col++) {
+      matrix_grid()(row, col)() = matrix_eigen(row, col);
+    }
+  }
+}
+template<class stype, int Nspin, int Ncolour>
+typename std::enable_if<isGridFundamental<stype>::value, void>::type
+convertFromEigen(const Eigen::MatrixXcd&                           matrix_eigen,
+                 iScalar<iMatrix<iMatrix<stype, Ncolour>, Nspin>>& matrix_grid) {
+  for (long s_row=0;s_row<Nspin;s_row++) {
+    for (long s_col=0;s_col<Nspin;s_col++) {
+      for (long c_row=0;c_row<Ncolour;c_row++) {
+        for (long c_col=0;c_col<Ncolour;c_col++) {
+          matrix_grid()(s_row, s_col)(c_row, c_col) = matrix_eigen(s_row*Ncolour+c_row, s_col*Ncolour+c_col);
+        }
+      }
+    }
+  }
+}
+template<class sobj>
+void convertFromEigen(const Eigen::MatrixXcd& matrix_eigen,
+                      sobj&                   matrix_grid) {
+  ERR("Not implemented");
+}
+
+
+template<class vobj>
+inline void invertMatrix(PVector<Lattice<vobj>>&       matrix_inv,
+                         const PVector<Lattice<vobj>>& matrix,
+                         long                          n_virtual) {
+
+  ASSERT(matrix_inv.size() == 1 && matrix.size() == 1);
+  ASSERT(n_virtual == 1);
+
+  conformable(matrix_inv[0], matrix[0]);
+  GridBase *grid = matrix[0].Grid();
+
+  long lsites = grid->lSites();
+
+  typedef typename std::remove_reference<decltype(matrix_inv[0])>::type::scalar_object scalar_object;
+
+  VECTOR_VIEW_OPEN(matrix_inv,matrix_inv_v,CpuWrite);
+  VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
+
+  const int N = sqrt(GridTypeMapper<vobj>::count); // count returns total number of elems in tensor
+
+  std::cout << GridLogMessage << "Calling generic version of invertMatrix with N = " << N << std::endl;
+
+  thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
+    auto site = _idx;
+
+    Eigen::MatrixXcd matrix_inv_eigen = Eigen::MatrixXcd::Zero(N, N);
+    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(N, N);
+
+    scalar_object matrix_inv_tmp = Zero();
+    scalar_object matrix_tmp = Zero();
+
+    Coordinate lcoor;
+    grid->LocalIndexToLocalCoor(site, lcoor);
+
+    peekLocalSite(matrix_tmp, matrix_v[0], lcoor);
+    convertToEigen(matrix_tmp, matrix_eigen);
+
+    matrix_inv_eigen = matrix_eigen.inverse();
+
+    convertFromEigen(matrix_inv_eigen, matrix_inv_tmp);
+    pokeLocalSite(matrix_inv_tmp, matrix_inv_v[0], lcoor);
+
+  });
+
+  VECTOR_VIEW_CLOSE(matrix_inv_v);
+  VECTOR_VIEW_CLOSE(matrix_v);
+}
+
+// template<class CComplex,int basis_virtual_size, typename std::enable_if<CComplex::TensorLevel == 3, void>::type* = nullptr>
 template<class CComplex,int basis_virtual_size>
 inline void invertMatrix(PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>&        matrix_inv,
 			 const PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>&  matrix,
@@ -48,6 +180,8 @@ inline void invertMatrix(PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>
 
   VECTOR_VIEW_OPEN(matrix_inv,matrix_inv_v,CpuWrite);
   VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
+
+  std::cout << GridLogMessage << "Calling dedicated version for virtual fields" << std::endl;
 
   thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
     auto site = _idx;
@@ -104,186 +238,10 @@ inline void invertMatrix(PVector<Lattice<iMatrix<CComplex, basis_virtual_size>>>
 }
 
 
-template<class vtype,int Nc>
-inline void invertMatrix(PVector<Lattice<iScalar<iScalar<iMatrix<vtype, Nc>>>>>&        matrix_inv,
-			 const PVector<Lattice<iScalar<iScalar<iMatrix<vtype, Nc>>>>>&  matrix,
-			 long                                                           n_virtual) {
-
-  ASSERT(matrix_inv.size() == 1 && matrix.size() == 1);
-  ASSERT(n_virtual == 1);
-
-  conformable(matrix_inv[0].Grid(), matrix[0].Grid());
-  GridBase *grid = matrix[0].Grid();
-
-  long lsites = grid->lSites();
-
-  typedef typename iScalar<iScalar<iMatrix<vtype,Nc>>>::scalar_object scalar_object;
-
-  VECTOR_VIEW_OPEN(matrix_inv,matrix_inv_v,CpuWrite);
-  VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
-
-  thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
-    auto site = _idx;
-
-    Eigen::MatrixXcd matrix_inv_eigen = Eigen::MatrixXcd::Zero(Nc, Nc);
-    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(Nc, Nc);
-
-    scalar_object matrix_inv_tmp = Zero();
-    scalar_object matrix_tmp = Zero();
-
-    Coordinate lcoor;
-    grid->LocalIndexToLocalCoor(site, lcoor);
-
-    peekLocalSite(matrix_tmp, matrix_v[0], lcoor);
-    for (long row=0;row<Nc;row++) {
-      for (long col=0;col<Nc;col++) {
-	matrix_eigen(row, col) = static_cast<ComplexD>(TensorRemove(matrix_tmp()()(row, col)));
-      }
-    }
-
-    matrix_inv_eigen = matrix_eigen.inverse();
-
-    for (long row=0;row<Nc;row++) {
-      for (long col=0;col<Nc;col++) {
-	matrix_inv_tmp()()(row, col) = matrix_inv_eigen(row, col);
-      }
-    }
-    pokeLocalSite(matrix_inv_tmp, matrix_inv_v[0], lcoor);
-
-  });
-
-  VECTOR_VIEW_CLOSE(matrix_inv_v);
-  VECTOR_VIEW_CLOSE(matrix_v);
-}
-
-
-template<class vtype,int Ns>
-inline void invertMatrix(PVector<Lattice<iScalar<iMatrix<iScalar<vtype>, Ns>>>>&        matrix_inv,
-			 const PVector<Lattice<iScalar<iMatrix<iScalar<vtype>, Ns>>>>&  matrix,
-			 long                                                           n_virtual) {
-
-  ASSERT(matrix_inv.size() == 1 && matrix.size() == 1);
-  ASSERT(n_virtual == 1);
-
-  conformable(matrix_inv[0].Grid(), matrix[0].Grid());
-  GridBase *grid = matrix[0].Grid();
-
-  long lsites = grid->lSites();
-
-  typedef typename iScalar<iMatrix<iScalar<vtype>, Ns>>::scalar_object scalar_object;
-
-  VECTOR_VIEW_OPEN(matrix_inv,matrix_inv_v,CpuWrite);
-  VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
-
-  thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
-    auto site = _idx;
-
-    Eigen::MatrixXcd matrix_inv_eigen = Eigen::MatrixXcd::Zero(Ns, Ns);
-    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(Ns, Ns);
-
-    scalar_object matrix_inv_tmp = Zero();
-    scalar_object matrix_tmp = Zero();
-
-    Coordinate lcoor;
-    grid->LocalIndexToLocalCoor(site, lcoor);
-
-    peekLocalSite(matrix_tmp, matrix_v[0], lcoor);
-    for (long row=0;row<Ns;row++) {
-      for (long col=0;col<Ns;col++) {
-        matrix_eigen(row, col) = static_cast<ComplexD>(TensorRemove(matrix_tmp()(row, col)()));
-      }
-    }
-
-    matrix_inv_eigen = matrix_eigen.inverse();
-
-    for (long row=0;row<Ns;row++) {
-      for (long col=0;col<Ns;col++) {
-        matrix_inv_tmp()(row, col)() = matrix_inv_eigen(row, col);
-      }
-    }
-    pokeLocalSite(matrix_inv_tmp, matrix_inv_v[0], lcoor);
-  });
-
-  VECTOR_VIEW_CLOSE(matrix_inv_v);
-  VECTOR_VIEW_CLOSE(matrix_v);
-}
-
-
-template<class vtype,int Ns,int Nc>
-inline void invertMatrix(PVector<Lattice<iScalar<iMatrix<iMatrix<vtype, Nc>, Ns>>>>&        matrix_inv,
-			 const PVector<Lattice<iScalar<iMatrix<iMatrix<vtype, Nc>, Ns>>>>&  matrix,
-			 long                                                               n_virtual) {
-
-  ASSERT(matrix_inv.size() == 1 && matrix.size() == 1);
-  ASSERT(n_virtual == 1);
-
-  conformable(matrix_inv[0].Grid(), matrix[0].Grid());
-  GridBase *grid = matrix[0].Grid();
-
-  long lsites = grid->lSites();
-
-  typedef typename iScalar<iMatrix<iMatrix<vtype, Nc>, Ns>>::scalar_object scalar_object;
-
-  VECTOR_VIEW_OPEN(matrix_inv,matrix_inv_v,CpuWrite);
-  VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
-
-  thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
-    auto site = _idx;
-
-    Eigen::MatrixXcd matrix_inv_eigen = Eigen::MatrixXcd::Zero(Ns*Nc, Ns*Nc);
-    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(Ns*Nc, Ns*Nc);
-
-    scalar_object matrix_inv_tmp = Zero();
-    scalar_object matrix_tmp = Zero();
-
-    Coordinate lcoor;
-    grid->LocalIndexToLocalCoor(site, lcoor);
-
-    peekLocalSite(matrix_tmp, matrix_v[0], lcoor);
-    for (long s_row=0;s_row<Ns;s_row++) {
-      for (long s_col=0;s_col<Ns;s_col++) {
-        for (long c_row=0;c_row<Nc;c_row++) {
-          for (long c_col=0;c_col<Nc;c_col++) {
-            matrix_eigen(s_row*Nc+c_row, s_col*Nc+c_col) = static_cast<ComplexD>(TensorRemove(matrix_tmp()(s_row, s_col)(c_row, c_col)));
-          }
-        }
-      }
-    }
-
-    matrix_inv_eigen = matrix_eigen.inverse();
-
-    for (long s_row=0;s_row<Ns;s_row++) {
-      for (long s_col=0;s_col<Ns;s_col++) {
-        for (long c_row=0;c_row<Nc;c_row++) {
-          for (long c_col=0;c_col<Nc;c_col++) {
-            matrix_inv_tmp()(s_row, s_col)(c_row, c_col) = matrix_inv_eigen(s_row*Nc+c_row, s_col*Nc+c_col);
-          }
-        }
-      }
-    }
-    pokeLocalSite(matrix_inv_tmp, matrix_inv_v[0], lcoor);
-  });
-
-  VECTOR_VIEW_CLOSE(matrix_inv_v);
-  VECTOR_VIEW_CLOSE(matrix_v);
-}
-
-
-template<typename T>
-inline void invertMatrix(PVector<Lattice<T>>&        matrix_inv,
-			 const PVector<Lattice<T>>&  matrix,
-			 long                        n_virtual) {
-
-  ERR("Not implemented");
-
-}
-
-
-
-template<class vtype,int Nc>
-inline void determinant(Lattice<iScalar<iScalar<iScalar<vtype>>>>&                     det,
-			const PVector<Lattice<iScalar<iScalar<iMatrix<vtype, Nc>>>>>&  matrix,
-			long                                                           n_virtual) {
+template<class vobj>
+inline void determinant(Lattice<iSinglet<typename vobj::vector_type>>& det,
+                        const PVector<Lattice<vobj>>&                  matrix,
+                        long                                           n_virtual) {
 
   ASSERT(matrix.size() == 1);
   ASSERT(n_virtual == 1);
@@ -293,16 +251,18 @@ inline void determinant(Lattice<iScalar<iScalar<iScalar<vtype>>>>&              
 
   long lsites = grid->lSites();
 
-  typedef typename iScalar<iScalar<iMatrix<vtype,Nc>>>::scalar_object scalar_object;
-  typedef typename iScalar<iScalar<iScalar<vtype>>>::scalar_object singlet_object;
+  typedef typename std::remove_reference<decltype(matrix[0])>::type::scalar_object scalar_object;
+  typedef typename std::remove_reference<decltype(det)>::type::scalar_object       singlet_object;
 
   autoView(det_v, det, CpuWrite);
   VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
 
+  const int N = sqrt(GridTypeMapper<vobj>::count);
+
   thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
     auto site = _idx;
 
-    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(Nc, Nc);
+    Eigen::MatrixXcd matrix_eigen = Eigen::MatrixXcd::Zero(N, N);
 
     scalar_object matrix_tmp = Zero();
     singlet_object singlet_tmp;
@@ -311,11 +271,7 @@ inline void determinant(Lattice<iScalar<iScalar<iScalar<vtype>>>>&              
     grid->LocalIndexToLocalCoor(site, lcoor);
 
     peekLocalSite(matrix_tmp, matrix_v[0], lcoor);
-    for (long row=0;row<Nc;row++) {
-      for (long col=0;col<Nc;col++) {
-	matrix_eigen(row, col) = static_cast<ComplexD>(TensorRemove(matrix_tmp()()(row, col)));
-      }
-    }
+    convertToEigen(matrix_tmp, matrix_eigen);
 
     singlet_tmp()()() = matrix_eigen.determinant();
     
@@ -324,13 +280,4 @@ inline void determinant(Lattice<iScalar<iScalar<iScalar<vtype>>>>&              
   });
 
   VECTOR_VIEW_CLOSE(matrix_v);
-}
-
-template<typename T>
-inline void determinant(Lattice<iScalar<iScalar<iScalar<typename T::vector_type>>>>&          det,
-			const PVector<Lattice<T>>&                                            matrix,
-			long                                                                  n_virtual) {
-
-  ERR("Not implemented");
-  
 }
