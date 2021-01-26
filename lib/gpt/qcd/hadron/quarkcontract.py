@@ -21,7 +21,7 @@
 import gpt
 
 
-def quark_contract_xx(msc1, msc2, grid):
+def quark_contract_xx(mspincolor1, mspincolor2, components):
     """
     This routine is written for Nc = 3
 
@@ -49,124 +49,105 @@ def quark_contract_xx(msc1, msc2, grid):
         Permutations: +(0, 1, 2), -(1, 0, 2)          +(0, 1, 2), -(1, 0, 2)
     """
 
-    c1 = gpt.separate_color(msc1)
-    c2 = gpt.separate_color(msc2)
+    dst = gpt.mspincolor(mspincolor1.grid)
+    dst[:] = 0
+    sdst = gpt.separate_spin(dst)
 
-    y = {
-        (0, 0): gpt.eval(c1[1, 1] * c2[2, 2] - c1[1, 2] * c2[2, 1] - c1[2, 1] * c2[1, 2] + c1[2, 2] * c2[1, 1]),
-        (0, 1): gpt.eval(c1[2, 1] * c2[0, 2] - c1[2, 2] * c2[0, 1] - c1[0, 1] * c2[2, 2] + c1[0, 2] * c2[2, 1]),
-        (0, 2): gpt.eval(c1[0, 1] * c2[1, 2] - c1[0, 2] * c2[1, 1] - c1[1, 1] * c2[0, 2] + c1[1, 2] * c2[0, 1]),
-        (1, 0): gpt.eval(c1[1, 2] * c2[2, 0] - c1[1, 0] * c2[2, 2] - c1[2, 2] * c2[1, 0] + c1[2, 0] * c2[1, 2]),
-        (1, 1): gpt.eval(c1[2, 2] * c2[0, 0] - c1[2, 0] * c2[0, 2] - c1[0, 2] * c2[2, 0] + c1[0, 0] * c2[2, 2]),
-        (1, 2): gpt.eval(c1[0, 2] * c2[1, 0] - c1[0, 0] * c2[1, 2] - c1[1, 2] * c2[0, 0] + c1[1, 0] * c2[0, 2]),
-        (2, 0): gpt.eval(c1[1, 0] * c2[2, 1] - c1[1, 1] * c2[2, 0] - c1[2, 0] * c2[1, 1] + c1[2, 1] * c2[1, 0]),
-        (2, 1): gpt.eval(c1[2, 0] * c2[0, 1] - c1[2, 1] * c2[0, 0] - c1[0, 0] * c2[2, 1] + c1[0, 1] * c2[2, 0]),
-        (2, 2): gpt.eval(c1[0, 0] * c2[1, 1] - c1[0, 1] * c2[1, 0] - c1[1, 0] * c2[0, 1] + c1[1, 1] * c2[0, 0])
-    }
+    mcolor1 = gpt.separate_spin(mspincolor1)
+    mcolor2 = gpt.separate_spin(mspincolor2)
 
-    dst = gpt.mcolor(grid)
-    gpt.merge_color(dst, y)
+    comps1, comps2, target = dict(), dict(), dict()
+    for key in components.keys():
+
+        assert key not in target, f"Found duplicate key: {key}"
+        target[key] = gpt.separate_color(sdst[key])
+
+        for comps in components[key]:
+            c0_0, c0_1, c1_0, c1_1 = comps
+            if (c0_0, c0_1) not in comps1:
+                comps1[(c0_0, c0_1)] = gpt.separate_color(mcolor1[(c0_0, c0_1)])
+            if (c1_0, c1_1) not in comps2:
+                comps2[(c1_0, c1_1)] = gpt.separate_color(mcolor2[(c1_0, c1_1)])
+
+    for key in components.keys():
+        tmp = target[key]
+
+        for comps in components[key]:
+            c0_0, c0_1, c1_0, c1_1 = comps
+
+            c1 = comps1[(c0_0, c0_1)]
+            c2 = comps2[(c1_0, c1_1)]
+
+            tmp[(0, 0)] += gpt.eval(c1[1, 1] * c2[2, 2] - c1[1, 2] * c2[2, 1] - c1[2, 1] * c2[1, 2] + c1[2, 2] * c2[1, 1])
+            tmp[(0, 1)] += gpt.eval(c1[2, 1] * c2[0, 2] - c1[2, 2] * c2[0, 1] - c1[0, 1] * c2[2, 2] + c1[0, 2] * c2[2, 1])
+            tmp[(0, 2)] += gpt.eval(c1[0, 1] * c2[1, 2] - c1[0, 2] * c2[1, 1] - c1[1, 1] * c2[0, 2] + c1[1, 2] * c2[0, 1])
+            tmp[(1, 0)] += gpt.eval(c1[1, 2] * c2[2, 0] - c1[1, 0] * c2[2, 2] - c1[2, 2] * c2[1, 0] + c1[2, 0] * c2[1, 2])
+            tmp[(1, 1)] += gpt.eval(c1[2, 2] * c2[0, 0] - c1[2, 0] * c2[0, 2] - c1[0, 2] * c2[2, 0] + c1[0, 0] * c2[2, 2])
+            tmp[(1, 2)] += gpt.eval(c1[0, 2] * c2[1, 0] - c1[0, 0] * c2[1, 2] - c1[1, 2] * c2[0, 0] + c1[1, 0] * c2[0, 2])
+            tmp[(2, 0)] += gpt.eval(c1[1, 0] * c2[2, 1] - c1[1, 1] * c2[2, 0] - c1[2, 0] * c2[1, 1] + c1[2, 1] * c2[1, 0])
+            tmp[(2, 1)] += gpt.eval(c1[2, 0] * c2[0, 1] - c1[2, 1] * c2[0, 0] - c1[0, 0] * c2[2, 1] + c1[0, 1] * c2[2, 0])
+            tmp[(2, 2)] += gpt.eval(c1[0, 0] * c2[1, 1] - c1[0, 1] * c2[1, 0] - c1[1, 0] * c2[0, 1] + c1[1, 1] * c2[0, 0])
+
+    for key in components.keys():
+        gpt.merge_color(sdst[key], target[key])
+    gpt.merge_spin(dst, sdst)
 
     return dst
-
 
 def quark_contract_12(mspincolor1, mspincolor2):
-    grid = mspincolor1.grid
-    dst = gpt.mspincolor(grid)
-    dst[:] = 0
-    mspin = gpt.separate_spin(dst)
-    mspin1 = gpt.separate_spin(mspincolor1)
-    mspin2 = gpt.separate_spin(mspincolor2)
-
+    components = dict()
     for s1 in range(4):
         for s2 in range(4):
+            components[(s1, s2)] = []
             for k in range(4):
-                mspin[s1, s2] += quark_contract_xx(mspin1[k, k], mspin2[s1, s2], grid)
-
-    gpt.merge_spin(dst, mspin)
-    return dst
+                components[(s1, s2)].append([k, k, s1, s2])
+    return quark_contract_xx(mspincolor1, mspincolor2, components)
 
 
 def quark_contract_13(mspincolor1, mspincolor2):
-    grid = mspincolor1.grid
-    dst = gpt.mspincolor(grid)
-    dst[:] = 0
-    mspin = gpt.separate_spin(dst)
-    mspin1 = gpt.separate_spin(mspincolor1)
-    mspin2 = gpt.separate_spin(mspincolor2)
-
+    components = dict()
     for s1 in range(4):
         for s2 in range(4):
+            components[(s1, s2)] = []
             for k in range(4):
-                mspin[s1, s2] += quark_contract_xx(mspin1[k, s1], mspin2[k, s2], grid)
-
-    gpt.merge_spin(dst, mspin)
-    return dst
+                components[(s1, s2)].append([k, s1, k, s2])
+    return quark_contract_xx(mspincolor1, mspincolor2, components)
 
 
 def quark_contract_14(mspincolor1, mspincolor2):
-    grid = mspincolor1.grid
-    dst = gpt.mspincolor(grid)
-    dst[:] = 0
-    mspin = gpt.separate_spin(dst)
-    mspin1 = gpt.separate_spin(mspincolor1)
-    mspin2 = gpt.separate_spin(mspincolor2)
-
+    components = dict()
     for s1 in range(4):
         for s2 in range(4):
             for k in range(4):
-                mspin[s1, s2] += quark_contract_xx(mspin1[k, s1], mspin2[s2, k], grid)
-
-    gpt.merge_spin(dst, mspin)
-    return dst
+                components[(s1, s2)].append([k, s1, s2, k])
+    return quark_contract_xx(mspincolor1, mspincolor2, components)
 
 
 def quark_contract_23(mspincolor1, mspincolor2):
-    grid = mspincolor1.grid
-    dst = gpt.mspincolor(grid)
-    dst[:] = 0
-    mspin = gpt.separate_spin(dst)
-    mspin1 = gpt.separate_spin(mspincolor1)
-    mspin2 = gpt.separate_spin(mspincolor2)
-
+    components = dict()
     for s1 in range(4):
         for s2 in range(4):
+            components[(s1, s2)] = []
             for k in range(4):
-                mspin[s1, s2] += quark_contract_xx(mspin1[s1, k], mspin2[k, s2], grid)
-
-    gpt.merge_spin(dst, mspin)
-    return dst
+                components[(s1, s2)].append([s1, k, k, s2])
+    return quark_contract_xx(mspincolor1, mspincolor2, components)
 
 
 def quark_contract_24(mspincolor1, mspincolor2):
-    grid = mspincolor1.grid
-    dst = gpt.mspincolor(grid)
-    dst[:] = 0
-    mspin = gpt.separate_spin(dst)
-    mspin1 = gpt.separate_spin(mspincolor1)
-    mspin2 = gpt.separate_spin(mspincolor2)
-
+    components = dict()
     for s1 in range(4):
         for s2 in range(4):
+            components[(s1, s2)] = []
             for k in range(4):
-                mspin[s1, s2] += quark_contract_xx(mspin1[s1, k], mspin2[s2, k], grid)
-
-    gpt.merge_spin(dst, mspin)
-    return dst
+                components[(s1, s2)].append([s1, k, s2, k])
+    return quark_contract_xx(mspincolor1, mspincolor2, components)
 
 
 def quark_contract_34(mspincolor1, mspincolor2):
-    grid = mspincolor1.grid
-    dst = gpt.mspincolor(grid)
-    dst[:] = 0
-    mspin = gpt.separate_spin(dst)
-    mspin1 = gpt.separate_spin(mspincolor1)
-    mspin2 = gpt.separate_spin(mspincolor2)
-
+    components = dict()
     for s1 in range(4):
         for s2 in range(4):
+            components[(s1, s2)] = []
             for k in range(4):
-                mspin[s1, s2] += quark_contract_xx(mspin1[s1, s2], mspin2[k, k], grid)
-
-    gpt.merge_spin(dst, mspin)
-    return dst
+                components[(s1, s2)].append([s1, s2, k, k])
+    return quark_contract_xx(mspincolor1, mspincolor2, components)
