@@ -61,8 +61,7 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
 
 # test inv
 for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
-    # TODO: lambda grid: g.mcomplex(grid, 8)
-    for dtype in [g.mcolor, g.mspin, g.mspincolor]:
+    for dtype in [g.mcolor, g.mspin, g.mspincolor, lambda grid: g.mcomplex(grid, 8)]:
         rng = g.random("test")
         m = rng.cnormal(dtype(grid))
         minv = g.matrix.inv(m)
