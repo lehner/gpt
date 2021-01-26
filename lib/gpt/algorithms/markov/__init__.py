@@ -17,4 +17,5 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.algorithms.markov.su2_heat_bath import *
+from gpt.algorithms.markov.u1_heat_bath import *
 from gpt.algorithms.markov.metropolis import *
