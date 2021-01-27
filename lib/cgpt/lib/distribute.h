@@ -47,128 +47,45 @@ class global_memory_view {
 
 class comm_message {
  public:
-  std::vector<char> data;
+  AlignedVector<char> data;
 
-  size_t offset;
+  size_t offset, size;
 
-  comm_message() : offset(0) {
+  comm_message() : offset(0), size(0) {
   }
 
   bool eom() {
     return offset == data.size();
   }
 
-  void get_mem(void* dst, size_t sz) {
-    ASSERT(offset + sz <= data.size());
-    memcpy(dst,&data[offset],sz);
-    offset += sz;
+  void alloc() {
+    data.resize(size);
   }
 
-  size_t get_size() {
-    size_t sz;
-    get_mem(&sz,sizeof(sz));
-    return sz;
+  void reserve(size_t sz) {
+    size += sz;
   }
 
-  void put_bytes(const void* v, size_t sz) {
-    offset = data.size();
-    data.resize(offset + sz + sizeof(sz));
-    *(size_t*)&data[offset] = sz;
-    memcpy(&data[offset + sizeof(sz)],v,sz);
+  void resize(size_t sz) {
+    reserve(sz);
+    alloc();
   }
 
-  void get_bytes(void* v, size_t sz) {
-    ASSERT(get_size() == sz);
-    get_mem(v,sz);
+  void reset() {
+    offset = 0;
+  }
+  
+  void* get(size_t sz) {
+    void* r = (void*)&data[offset];
+    size_t n = offset + sz;
+    ASSERT(n <= data.size());
+    offset = n;
+    return r;
   }
 
-  void get_bytes(std::vector<char>& buf) {
-    buf.resize(get_size());
-    get_mem(&buf[0],buf.size());
-  }
-
-  void put(const int v) {
-    put_bytes(&v,sizeof(v));
-  }
-
-  void get(int & v) {
-    get_bytes(&v,sizeof(v));
-  }
-
-  void put(const size_t v) {
-    put_bytes(&v,sizeof(v));
-  }
-
-  void get(size_t& v) {
-    get_bytes(&v,sizeof(v));
-  }
-
-  void put(const uint32_t v) {
-    put_bytes(&v,sizeof(v));
-  }
-
-  void get(uint32_t& v) {
-    get_bytes(&v,sizeof(v));
-  }
-
-  template<typename T>
-  void put(const T& t) {
-    std::vector<char> buf;
-    convert_to_bytes(buf,t);
-    put_bytes(&buf[0],buf.size());
-  }
-
-  template<typename T>
-  void get(T& t) {
-    std::vector<char> buf;
-    get_bytes(buf);
-    convert_from_bytes(t,buf);
-  }
-
-  template<typename A, typename B>
-  void put(const std::map<A,B>& m) {
-    put((size_t)m.size());
-    for (auto & x : m)
-      put(x);
-  }
-
-  template<typename A, typename B>
-  void get(std::map<A,B>& m) {
-    size_t sz;
-    get(sz);
-    for (size_t i=0;i<sz;i++) {
-      std::pair<A,B> p;
-      get(p);
-      m.insert(p);
-    }
-  }
-
-  template<typename A>
-  void put(const Vector<A>& m) {
-    put((size_t)m.size());
-    for (auto & x : m)
-      put(x);
-  }
-
-  template<typename A>
-  void get(std::vector<A>& m) {
-    size_t sz;
-    get(sz);
-    m.resize(sz);
-    for (auto & x : m)
-      get(x);
-  }
-
-  template<typename A, typename B>
-  void put(const std::pair<A,B>& p) {
-    put(p.first);
-    put(p.second);
-  }
-
-  template<typename A, typename B>
-  void get(std::pair<A,B>& p) {
-    get(p.first);
-    get(p.second);
+  template<typename data_t>
+  void put(data_t & data) {
+    memcpy(get(sizeof(data)),&data,sizeof(data));
   }
 };
 
@@ -324,7 +241,10 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void optimize();
   void optimize(blocks_t& blocks);
   void create_bounds();
-  void create_comm_buffers(memory_type mt);
+  void create_comm_buffers(memory_type mt, bool optimize_blocks);
+
+  template<typename ranks_t>
+  void prepare_comm_message(comm_message & msg, ranks_t & ranks, bool populate);
 
   template<typename blocks_src_t>
   void merge_blocks(blocks_t& dst, const blocks_src_t& src);

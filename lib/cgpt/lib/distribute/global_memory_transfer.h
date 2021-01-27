@@ -134,26 +134,77 @@ void global_memory_transfer<offset_t,rank_t,index_t>::fill_blocks_from_view_pair
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
+template<typename ranks_t>
+void global_memory_transfer<offset_t,rank_t,index_t>::prepare_comm_message(comm_message & msg, ranks_t & ranks, bool populate) {
+
+  if (!populate) {
+    msg.reserve(sizeof(ranks.first) + sizeof(size_t));
+    for (auto & indices : ranks.second)
+      msg.reserve(sizeof(indices.first) + sizeof(size_t)*2 + indices.second.second.size()*sizeof(block_t));
+  } else {
+    msg.put(ranks.first);
+
+    size_t n = ranks.second.size();
+    msg.put(n);
+    
+    for (auto & indices : ranks.second) {
+      msg.put(indices.first);
+      msg.put(indices.second.first);
+
+      n = indices.second.second.size();
+      msg.put(n);
+
+      block_t* dst = (block_t*)msg.get(sizeof(block_t) * n);
+      block_t* src = &indices.second.second[0];
+      thread_for(i, n, {
+	  dst[n] = src[n];
+	});
+    }
+  }
+  
+}
+
+template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
 
   // serialize my blocks to approprate communication buffers
   std::map<rank_t, comm_message> tasks_for_rank;
+
+  // reserve comm buffers
   for (auto & ranks : blocks) {
     if (ranks.first.first != this->rank)
-      tasks_for_rank[ranks.first.first].put(ranks);
+      prepare_comm_message(tasks_for_rank[ranks.first.first], ranks, false);
     if ((ranks.first.first != ranks.first.second) &&
 	(ranks.first.second != this->rank))
-      tasks_for_rank[ranks.first.second].put(ranks);
+      prepare_comm_message(tasks_for_rank[ranks.first.second], ranks, false);
   }
+  
+  std::cout << GridLogMessage << "Axx" << std::endl;
+  for (auto & x : tasks_for_rank) {
+    x.second.alloc();
+    std::cout << GridLogMessage << x.first << " <> " << x.second.size << std::endl;
+  }
+
+  for (auto & ranks : blocks) {
+    if (ranks.first.first != this->rank)
+      prepare_comm_message(tasks_for_rank[ranks.first.first], ranks, true);
+    if ((ranks.first.first != ranks.first.second) &&
+	(ranks.first.second != this->rank))
+      prepare_comm_message(tasks_for_rank[ranks.first.second], ranks, true);
+  }
+  
+
+  std::cout << GridLogMessage << "Bxx" << std::endl;
 
   std::map<rank_t, comm_message> tasks_from_rank;
   this->multi_send_recv(tasks_for_rank, tasks_from_rank);
 
+  std::cout << GridLogMessage << "C" << std::endl;
   // de-serialize my blocks from appropriate communication buffers
   for (auto & tasks : tasks_from_rank) {
     while (!tasks.second.eom()) {
       std::pair< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, thread_blocks_t > > ranks;
-      tasks.second.get(ranks);
+      //tasks.second.get(ranks);
 
       // and merge with current blocks
       for (auto & idx : ranks.second) {
@@ -162,6 +213,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
     }
   }
 
+  std::cout << GridLogMessage << "D" << std::endl;
   // and finally remove all blocks from this rank in which it does not participate
   auto i = std::begin(blocks);
   while (i != std::end(blocks)) {
@@ -171,6 +223,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
     else
       ++i;
   }
+
+  std::cout << GridLogMessage << "E" << std::endl;
 
 }
 
@@ -345,44 +399,54 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
 							     bool local_only,
 							     bool skip_optimize) {
 
-  //cgpt_timer t("create");
+  {
+    uint64_t d = 0;
+    this->global_sum(&d,1);
+  }
 
-  //t("fill blocks");
+  cgpt_timer t("create");
+
+  t("fill blocks");
   // reset
   blocks.clear();
 
   // fill
   fill_blocks_from_view_pair(_dst,_src);
 
-  //t("opt1");
+  t("opt1");
   // optimize blocks obtained from this rank
   if (!skip_optimize)
     optimize();
 
   if (!local_only) {
-    //t("gather");
+    t("sync");
+    {
+      uint64_t d = 0;
+      this->global_sum(&d,1);
+    }
+    t("gather");
     // gather my blocks
     gather_my_blocks();
 
-    //t("opt2");
+    t("opt2");
     // optimize blocks after gathering all of my blocks
     if (!skip_optimize)
       optimize();
 
-    //t("createcom");
+    t("createcom");
     // optionally create communication buffers
-    create_comm_buffers(use_comm_buffers_of_type);
+    create_comm_buffers(use_comm_buffers_of_type,!skip_optimize);
   }
 
-  //t("createbounds");
+  t("createbounds");
   // create bounds
   create_bounds();
 
-  //t.report();
+  t.report();
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory_type mt) {
+void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory_type mt, bool optimize_blocks) {
 
   // first remove existing buffers
   send_buffers.clear();
@@ -455,15 +519,17 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory
   }
 
   // optimize blocks
-  for (auto & a : recv_blocks) {
-    for (auto & b : a.second) {
-      optimize(b.second);
+  if (optimize_blocks) {
+    for (auto & a : recv_blocks) {
+      for (auto & b : a.second) {
+	optimize(b.second);
+      }
     }
-  }
-
-  for (auto & a : recv_blocks) {
-    for (auto & b : a.second) {
-      optimize(b.second);
+    
+    for (auto & a : recv_blocks) {
+      for (auto & b : a.second) {
+	optimize(b.second);
+      }
     }
   }
 
@@ -588,10 +654,19 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     }
   }
 
-  //cgpt_timer tt("execute");
-  //tt("pre");
+  {
+    uint64_t d = 0;
+    this->global_sum(&d,1);
+  }
+  cgpt_timer tt("execute");
+  tt("pre");
   
   // if there is no buffer, directly issue separate isend / irecv for each block
+  int stats_isends = 0;
+  int stats_irecvs = 0;
+  size_t stats_send_bytes = 0;
+  size_t stats_recv_bytes = 0;
+  
   if (comm_buffers_type == mt_none) {
 
     // first start remote submissions
@@ -601,7 +676,6 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
       if (src_rank == this->rank && dst_rank != this->rank) {
 	for (auto & indices : ranks.second) {
-	  index_t dst_idx = indices.first.first;
 	  index_t src_idx = indices.first.second;
 
 	  for (auto & block : indices.second.second) {
@@ -611,7 +685,6 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
       } else if (src_rank != this->rank && dst_rank == this->rank) {
 	for (auto & indices : ranks.second) {
 	  index_t dst_idx = indices.first.first;
-	  index_t src_idx = indices.first.second;
 
 	  for (auto & block : indices.second.second) {
 	    this->irecv(src_rank, (char*)base_dst[dst_idx].ptr + block.start_dst, indices.second.first);
@@ -640,15 +713,19 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     // send/recv buffers
     for (auto & buf : send_buffers) {
       this->isend(buf.first, buf.second.view.ptr, buf.second.view.sz);
+      stats_isends += 1;
+      stats_send_bytes += buf.second.view.sz;
     }
     for (auto & buf : recv_buffers) {
       this->irecv(buf.first, buf.second.view.ptr, buf.second.view.sz);
+      stats_irecvs += 1;
+      stats_recv_bytes += buf.second.view.sz;
     }
   }
 
 
   // then do local copies
-  //tt("local");
+  tt("local");
   {
     std::vector<bcopy_arg_t> bca;
     for (auto & ranks : blocks) {
@@ -667,11 +744,16 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     bcopy(bca);
   }
   
-  //tt("wait");
+  tt("wait");
   // then wait for remote copies to finish
+  double t0 = cgpt_time();
   this->waitall();
+  double t1 = cgpt_time();
+  std::cout << GridLogMessage << "WAIT: time " << t1-t0 << " sends " << stats_isends <<
+    " bytes " << stats_send_bytes << " recvs " << stats_irecvs << " bytes " << stats_recv_bytes << std::endl;
+  
 
-  //tt("post");
+  tt("post");
   // if buffer was used, need to re-distribute locally
   if (comm_buffers_type != mt_none) {
     std::vector<bcopy_arg_t> bca;
@@ -694,6 +776,6 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     bcopy(bca);
   }
 
-  //tt.report();
+  tt.report();
 
 }

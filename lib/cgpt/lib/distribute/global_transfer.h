@@ -96,6 +96,9 @@ template<typename rank_t>
 template<typename vec_t>
 void global_transfer<rank_t>::all_to_root(const vec_t& my, std::map<rank_t, vec_t > & all) {
 
+  std::cout << GridLogMessage << "alpha" << my.size() << std::endl;
+  std::cout << GridLogMessage << mpi_ranks << mpi_rank_map << std::endl;
+  
   // store mine
   if (rank == 0)
     all[0] = my;
@@ -105,6 +108,8 @@ void global_transfer<rank_t>::all_to_root(const vec_t& my, std::map<rank_t, vec_
   std::vector<int> all_size(mpi_ranks,0);
   ASSERT(MPI_SUCCESS == MPI_Gather(&my_size, 1, MPI_INT, &all_size[0], 1, MPI_INT, mpi_rank_map[0], comm));
 
+  std::cout << GridLogMessage << "beta" << all_size << std::endl;
+  
   // root node now receives from every node the list of its partners (if it is non-vanishing)
   if (rank == 0) {
     // root node now
@@ -128,7 +133,11 @@ void global_transfer<rank_t>::all_to_root(const vec_t& my, std::map<rank_t, vec_
     }
   }
 
+  std::cout << GridLogMessage << "gamma" << std::endl;
+
   waitall();
+
+  std::cout << GridLogMessage << "delta" << std::endl;
 #endif
 }
 
@@ -198,8 +207,11 @@ void global_transfer<rank_t>::provide_my_receivers_get_my_senders(const std::map
     ranks_that_will_receive_my_data.push_back({r.first, r.second});
   }
 
+  std::cout << GridLogMessage << "1" << std::endl;
+  
   all_to_root(ranks_that_will_receive_my_data, ranks_that_will_receive_data_from_rank);
 
+  std::cout << GridLogMessage << "2" << std::endl;
   // create communication matrix
   std::map<rank_t, std::vector<rank_size_t> > ranks_from_which_rank_will_receive_data;
   if (this->rank == 0) {
@@ -223,10 +235,12 @@ void global_transfer<rank_t>::provide_my_receivers_get_my_senders(const std::map
     }
   }
 
+  std::cout << GridLogMessage << "3" << std::endl;
   // scatter packet number to be received by each rank
   std::vector<rank_size_t> ranks_from_which_I_will_receive_data;
   root_to_all(ranks_from_which_rank_will_receive_data, ranks_from_which_I_will_receive_data);
 
+  std::cout << GridLogMessage << "4" << std::endl;
   // convert
   for (auto & r : ranks_from_which_I_will_receive_data) {
     //std::cout << "Rank " << this->rank << " here, will receive " << r.size << " bytes from rank " << r.rank << std::endl;
@@ -245,24 +259,29 @@ void global_transfer<rank_t>::multi_send_recv(const std::map<rank_t, comm_messag
   for (auto & s : send) {
     ASSERT(s.first != rank); // should not send to myself
     my_receivers[s.first] = s.second.data.size();
+    printf("Receivers %d = %d\n", (int)s.first, (int)s.second.data.size());
   }
+
+  std::cout << GridLogMessage << "a" << std::endl;
 
   provide_my_receivers_get_my_senders(my_receivers,my_senders);
 
+    std::cout << GridLogMessage << "b" << std::endl;
   // allocate receive buffers
   for (auto & s : my_senders) {
-    recv[s.first].data.resize(s.second);
+    recv[s.first].resize(s.second);
   }
+  std::cout << GridLogMessage << "c" << std::endl;
 
   // initiate communication
   for (auto & s : send) {
     isend(s.first, s.second.data);
   }
-
+  std::cout << GridLogMessage << "d" << std::endl;
   for (auto & r : recv) {
     irecv(r.first, r.second.data);
   }
-
+  std::cout << GridLogMessage << "e" << std::endl;
   // wait
   waitall();
 }

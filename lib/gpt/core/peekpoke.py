@@ -216,7 +216,7 @@ def poke(target, key, value):
 
     elif type(target) == list:
 
-        # t0 = gpt.time()
+        t0 = gpt.time()
         pos, tidx, shape = map_key(target, key)
 
         grid = target[0].grid
@@ -227,13 +227,16 @@ def poke(target, key, value):
         plan.source += gpt.global_memory_view(
             grid, [[grid.processor, value, 0, value.nbytes]]
         )
-        # ta = gpt.time()
+        ta = gpt.time()
         xp = plan(skip_optimize=True)
-        # tb = gpt.time()
+        tb = gpt.time()
 
         xp(target, value)
-        # tc = gpt.time()
-        # t1 = gpt.time()
-        # gpt.message(t1-t0,tb-ta, tc-ta,xp.info())
+        tc = gpt.time()
+        t1 = gpt.time()
+
+        gb = sum([ x.global_bytes() / 1e9 for x in target ])
+        gb = value.nbytes / 1e9
+        gpt.message("Total poke",t1-t0,"create",tb-ta, "execute",tc-tb,xp.info(),"speed (GB/s)",gb/(t1-t0))
     else:
         assert 0
