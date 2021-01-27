@@ -18,7 +18,7 @@ Vol = np.array(grid.fdimensions) # eg [24, 24, 24, 48]
 rng = g.random("test")
 
 # apply gauge transformation to the links
-V = rng.lie(g.lattice(U0[0]))
+V = rng.element(g.lattice(U0[0]))
 U_transformed = g.qcd.gauge.transformed(U0, V)
 
 gauge_links = [U0, U_transformed]
