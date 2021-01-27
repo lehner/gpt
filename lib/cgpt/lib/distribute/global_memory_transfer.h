@@ -239,6 +239,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks)
     bool operator()(const block_t& a, const block_t& b) const
     {
       return a.start_dst < b.start_dst; // sort by destination address (better for first write page mapping)
+      // Make this an option?
+      //return a.start_src < b.start_src; // sort by source address (better for parallel transport)
     }
   } less;
 
@@ -497,46 +499,71 @@ void global_memory_transfer<offset_t,rank_t,index_t>::print() {
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const blocks_t& blocks,
-							    memory_view& base_dst, 
-							    const memory_view& base_src) {
-  
-  memory_type mt_dst = base_dst.type;
-  char* p_dst = (char*)base_dst.ptr;
+void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bcopy_arg_t>& args) {
 
-  memory_type mt_src = base_src.type;
-  const char* p_src = (const char*)base_src.ptr;
-  
-  if (mt_dst == mt_host && mt_src == mt_host) {
-    if (bcopy_host_host<vComplexF>(blocks, p_dst, p_src));
-    else if (bcopy_host_host<ComplexF>(blocks, p_dst, p_src));
-    else if (bcopy_host_host<double>(blocks, p_dst, p_src));
-    else if (bcopy_host_host<float>(blocks, p_dst, p_src));
-    else {
-      ERR("No fast copy method for block size %ld host<>host implemented", (long)blocks.first);
+  std::unordered_map<size_t,std::vector<bcopy_ptr_arg_t<block_t>>> bca;
+
+#define bcopy_map_idx(block_size, mt_dst, mt_src) (block_size * mt_int_len * mt_int_len + mt_dst * mt_int_len + mt_src)
+
+  for (auto & arg : args) {
+    auto & base_dst = arg.base_dst;
+    auto & base_src = arg.base_src;
+    auto & blocks   = arg.blocks;
+
+    memory_type mt_dst = base_dst.type;
+    char* p_dst = (char*)base_dst.ptr;
+    
+    memory_type mt_src = base_src.type;
+    const char* p_src = (const char*)base_src.ptr;
+
+    bca[bcopy_map_idx(blocks.first,mt_dst,mt_src)].push_back({blocks.second, p_dst, p_src});
+  }  
+
+  for (auto & bcc : bca) {
+    size_t idx = bcc.first;
+    auto & bc = bcc.second;
+
+    size_t bs = idx / (mt_int_len * mt_int_len);
+    idx %= mt_int_len * mt_int_len;
+
+    switch (idx) {
+    case mt_host * mt_int_len + mt_host:
+      if (bcopy_host_host<vComplexF>(bs,bc));
+      else if (bcopy_host_host<ComplexF>(bs,bc));
+      else if (bcopy_host_host<double>(bs,bc));
+      else if (bcopy_host_host<float>(bs,bc));
+      else {
+	ERR("No fast copy method for block size %ld host<>host implemented", (long)bs);
+      }
+      break;
+    case mt_host * mt_int_len + mt_accelerator:
+      for (auto & bi : bc) {
+	for (size_t i=0;i<bi.blocks.size();i++) {
+	  auto&b=bi.blocks[i];
+	  acceleratorCopyFromDevice((void*)&bi.p_src[b.start_src],(void*)&bi.p_dst[b.start_dst],bs);
+	}
+      }
+      break;
+    case mt_accelerator * mt_int_len + mt_host:
+      for (auto & bi : bc) {
+	for (size_t i=0;i<bi.blocks.size();i++) {
+	  auto&b=bi.blocks[i];
+	  acceleratorCopyToDevice((void*)&bi.p_src[b.start_src],(void*)&bi.p_dst[b.start_dst],bs);
+	}
+      }
+      break;
+    case mt_accelerator * mt_int_len + mt_accelerator:
+      if (bcopy_accelerator_accelerator<SpinMatrixF,vSpinMatrixF>(bs,bc));
+      else if (bcopy_accelerator_accelerator<ColourMatrixF,vColourMatrixF>(bs,bc));
+      else if (bcopy_accelerator_accelerator<SpinVectorF,vSpinVectorF>(bs,bc));
+      else if (bcopy_accelerator_accelerator<ColourVectorF,vColourVectorF>(bs,bc));
+      else if (bcopy_accelerator_accelerator<TComplexF,vTComplexF>(bs,bc));
+      else if (bcopy_accelerator_accelerator<TComplexF,TComplexF>(bs,bc)); // fallback option
+      else {
+	ERR("No fast copy method for block size %ld accelerator<>accelerator implemented", (long)bs);
+      }
+      break;
     }
-  } else if (mt_dst == mt_host && mt_src == mt_accelerator) {
-    for (size_t i=0;i<blocks.second.size();i++) {
-      auto&b=blocks.second[i];
-      acceleratorCopyFromDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],blocks.first);
-    }
-  } else if (mt_dst == mt_accelerator && mt_src == mt_host) {
-    for (size_t i=0;i<blocks.second.size();i++) {
-      auto&b=blocks.second[i];
-      acceleratorCopyToDevice((void*)&p_src[b.start_src],(void*)&p_dst[b.start_dst],blocks.first);
-    }
-  } else if (mt_dst == mt_accelerator && mt_src == mt_accelerator) {
-    if (bcopy_accelerator_accelerator<SpinMatrixF,vSpinMatrixF>(blocks, p_dst, p_src));
-    else if (bcopy_accelerator_accelerator<ColourMatrixF,vColourMatrixF>(blocks, p_dst, p_src));
-    else if (bcopy_accelerator_accelerator<SpinVectorF,vSpinVectorF>(blocks, p_dst, p_src));
-    else if (bcopy_accelerator_accelerator<ColourVectorF,vColourVectorF>(blocks, p_dst, p_src));
-    else if (bcopy_accelerator_accelerator<TComplexF,vTComplexF>(blocks, p_dst, p_src));
-    else if (bcopy_accelerator_accelerator<TComplexF,TComplexF>(blocks, p_dst, p_src)); // fallback option
-    else {
-      ERR("No fast copy method for block size %ld accelerator<>accelerator implemented", (long)blocks.first);
-    }
-  } else {
-    ERR("Unknown memory copy pattern");
   }
 
 }
@@ -561,6 +588,9 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     }
   }
 
+  //cgpt_timer tt("execute");
+  //tt("pre");
+  
   // if there is no buffer, directly issue separate isend / irecv for each block
   if (comm_buffers_type == mt_none) {
 
@@ -592,6 +622,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
   } else {
 
+    std::vector<bcopy_arg_t> bca;
+    
     // if there is a buffer, first gather in communication buffer
     for (auto & ranks : send_blocks) {
       rank_t dst_rank = ranks.first;
@@ -599,9 +631,11 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
       for (auto & indices : ranks.second) {
 	index_t src_idx = indices.first;
-	bcopy(indices.second, dst, base_src[src_idx]);
+	bca.push_back({indices.second, dst, base_src[src_idx]});
       }
     }
+
+    bcopy(bca);
 
     // send/recv buffers
     for (auto & buf : send_buffers) {
@@ -614,26 +648,33 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
 
   // then do local copies
- 
-  for (auto & ranks : blocks) {
-    rank_t dst_rank = ranks.first.first;
-    rank_t src_rank = ranks.first.second;
-    
-    if (src_rank == this->rank && dst_rank == this->rank) {
-      for (auto & indices : ranks.second) {
-	index_t dst_idx = indices.first.first;
-	index_t src_idx = indices.first.second;
-	
-	bcopy(indices.second,base_dst[dst_idx],base_src[src_idx]);
+  //tt("local");
+  {
+    std::vector<bcopy_arg_t> bca;
+    for (auto & ranks : blocks) {
+      rank_t dst_rank = ranks.first.first;
+      rank_t src_rank = ranks.first.second;
+      
+      if (src_rank == this->rank && dst_rank == this->rank) {
+	for (auto & indices : ranks.second) {
+	  index_t dst_idx = indices.first.first;
+	  index_t src_idx = indices.first.second;
+	  
+	  bca.push_back({indices.second,base_dst[dst_idx],base_src[src_idx]});
+	}
       }
     }
+    bcopy(bca);
   }
   
+  //tt("wait");
   // then wait for remote copies to finish
   this->waitall();
 
+  //tt("post");
   // if buffer was used, need to re-distribute locally
   if (comm_buffers_type != mt_none) {
+    std::vector<bcopy_arg_t> bca;
     for (auto & ranks : recv_blocks) {
 
       rank_t src_rank = ranks.first;
@@ -647,9 +688,12 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 	//     (int)buf.sz);
 	//for (size_t i=0;i<buf.sz/sizeof(double);i++)
 	//  printf("%d = %g\n",(int)i,((double*)buf.ptr)[i]);
-	bcopy(indices.second, base_dst[dst_idx], src);
+	bca.push_back({indices.second, base_dst[dst_idx], src});
       }
     }
+    bcopy(bca);
   }
+
+  //tt.report();
 
 }

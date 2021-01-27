@@ -28,6 +28,7 @@ from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time, timer
 from gpt.core.log import message
 from gpt.core.convert import convert
+from gpt.core.cshift_plan import cshift_plan
 from gpt.core.transform import (
     cshift,
     copy,
@@ -73,7 +74,13 @@ from gpt.core.basis import (
     qr_decomposition,
 )
 from gpt.core.cartesian import cartesian_view
-from gpt.core.coordinates import coordinates, exp_ixp, fft, coordinate_mask
+from gpt.core.coordinates import (
+    coordinates,
+    exp_ixp,
+    fft,
+    coordinate_mask,
+    local_coordinates,
+)
 from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report
 from gpt.core.merge import *

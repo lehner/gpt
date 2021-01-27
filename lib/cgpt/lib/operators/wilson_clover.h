@@ -50,9 +50,9 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
   }
 
   if (!use_legacy) {
-    auto f = new FasterWilsonCloverFermion<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,wac,wp);
-    return new cgpt_fermion_operator<WilsonCloverFermion<WI>>(f);
-  } else {
+    auto f = new CompactWilsonCloverFermion<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,wac,wp);
+    return new cgpt_fermion_operator<CompactWilsonCloverFermion<WI>>(f);
+  } else { // TODO: deprecate soon
     auto f = new WilsonCloverFermion<WI>(U, *grid, *grid_rb, mass, csw_r, csw_t, wac, wp);
     return new cgpt_fermion_operator<WilsonCloverFermion<WI>>(f);
   }

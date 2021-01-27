@@ -61,10 +61,13 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
     for i in range(N):
         psi = X(i) * st0
         mangle[q](psi)
-        psi = M() * psi
+        psi2 = M() * psi
         ref = [0] * N
         ref[i] = 1
-        assert psi.classical_bit == ref
+        assert psi2.classical_bit == ref  # then test coefficients and m
+
+        # test that direct access is compatible
+        assert (abs(psi[2 ** i]) - 1.0) < 1e-7
 
     # now test X^2 = 1
     g.message("Test X^2")
@@ -156,7 +159,7 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
         circuit = H(i)
         for j in range(N):
             if i != j:
-                circuit = circuit | CNOT(i, j)
+                circuit |= CNOT(i, j)
         bell = circuit * st1
         if i == 0:
             bell_ref = bell

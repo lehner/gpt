@@ -60,7 +60,8 @@ markov = g.algorithms.markov.su2_heat_bath(rng)
 U = g.qcd.gauge.unit(grid)
 for it in range(5):
     plaq = g.qcd.gauge.plaquette(U)
-    g.message(f"SU(2)-subgroup heatbath {it} has P = {plaq}")
+    R_2x1 = g.qcd.gauge.rectangle(U, 2, 1)
+    g.message(f"SU(2)-subgroup heatbath {it} has P = {plaq}, R_2x1 = {R_2x1}")
     for cb in [g.even, g.odd]:
         mask[:] = 0
         mask_rb.checkerboard(cb)
@@ -71,3 +72,4 @@ for it in range(5):
             markov(U[mu], st, mask)
 
 assert abs(plaq - 0.5596460567580329) < 1e-6
+assert abs(R_2x1 - 0.3452021016014947) < 1e-6

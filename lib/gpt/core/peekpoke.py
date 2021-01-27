@@ -25,14 +25,14 @@ def split_key_to_coordinates_and_indices(grid, key):
     list_types = [numpy.ndarray, list]
 
     # l[pos]
-    if type(key) in list_types:
+    if any([isinstance(key, t) for t in list_types]):
         return key, None
 
     # all other keys need to be a tuple
     assert type(key) == tuple
 
     # strip positions
-    if type(key[0]) in list_types:
+    if any([isinstance(key[0], t) for t in list_types]):
 
         # l[pos,...]
         pos = key[0]
@@ -46,7 +46,7 @@ def split_key_to_coordinates_and_indices(grid, key):
         key = key[nd:]
 
     # l[...,tidx]
-    if len(key) == 1 and type(key[0]) in list_types:
+    if len(key) == 1 and any([isinstance(key[0], t) for t in list_types]):
         tidx = key[0]
 
     # l[...,i0,i1,...]
@@ -66,7 +66,7 @@ def map_pos(grid, cb, key):
         key = numpy.array(key, dtype=numpy.int32)
 
     # if key is numpy array, no further processing needed
-    if type(key) == numpy.ndarray:
+    if isinstance(key, numpy.ndarray):
         return key
 
     # if not, we expect a tuple of slices
@@ -124,7 +124,7 @@ def map_tidx_and_shape(l, key):
         key = numpy.array(key, dtype=numpy.int32)
 
     # if key is numpy array, no further processing needed
-    if type(key) == numpy.ndarray:
+    if isinstance(key, numpy.ndarray):
         # Need to decide how to index tensor indices.  With lexicographical
         return key, (len(key),)
 
@@ -197,7 +197,7 @@ def peek(target, key):
             grid, [[grid.processor, value, 0, value.nbytes]]
         )
         plan.source += gpt.lattice_view(target, pos, tidx)
-        xp = plan()
+        xp = plan(skip_optimize=True)
 
         xp(value, target)
 
@@ -212,11 +212,11 @@ def poke(target, key, value):
     assert type(value) == memoryview
 
     if type(target) == gpt.lattice:
-
         target[key] = value
 
     elif type(target) == list:
 
+        # t0 = gpt.time()
         pos, tidx, shape = map_key(target, key)
 
         grid = target[0].grid
@@ -227,9 +227,13 @@ def poke(target, key, value):
         plan.source += gpt.global_memory_view(
             grid, [[grid.processor, value, 0, value.nbytes]]
         )
-        xp = plan()
+        # ta = gpt.time()
+        xp = plan(skip_optimize=True)
+        # tb = gpt.time()
 
         xp(target, value)
-
+        # tc = gpt.time()
+        # t1 = gpt.time()
+        # gpt.message(t1-t0,tb-ta, tc-ta,xp.info())
     else:
         assert 0

@@ -76,6 +76,12 @@ class map_canonical:
         else:
             return [(idx >> bit_permutation[shift]) & 1 for shift in range(self.n)]
 
+    def bits_to_index(self, bits, bit_permutation):
+        if bit_permutation is None:
+            return sum([bits[i] << i for i in range(self.n)])
+        else:
+            return sum([bits[i] << bit_permutation[i] for i in range(self.n)])
+
     def coordinate_to_basis_name(self, coordinate, bit_permutation=None):
         idx = coordinate[0]
         return (

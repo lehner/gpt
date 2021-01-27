@@ -224,6 +224,7 @@ for a_type in [
     g.ot_vector_spin(4),
     g.ot_matrix_color(3),
     g.ot_vector_color(3),
+    g.ot_matrix_singlet(8),
 ]:
     # mtab
     for e in a_type.mtab:
@@ -241,6 +242,33 @@ for a_type in [
                     np.tensordot(
                         a[0, 0, 0, 0].array, b[0, 0, 0, 0].array, axes=a_type.mtab[e][1]
                     ).shape
+                )
+                assert eps2 < 1e-12
+
+            # if appropriate, test adjoint versions
+            if a_type.transposed is not None:
+
+                mul_lat = g(g.adj(a) * b)[0, 0, 0, 0]
+                mul_np = g.adj(a[0, 0, 0, 0]) * b[0, 0, 0, 0]
+                eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+                g.message(f"Test adj({a_type.__name__}) * {b_type.__name__}: {eps2}")
+                assert eps2 < 1e-12
+
+            if b_type.transposed is not None:
+
+                mul_lat = g(a * g.adj(b))[0, 0, 0, 0]
+                mul_np = a[0, 0, 0, 0] * g.adj(b[0, 0, 0, 0])
+                eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+                g.message(f"Test {a_type.__name__} * adj({b_type.__name__}): {eps2}")
+                assert eps2 < 1e-12
+
+            if a_type.transposed is not None and b_type.transposed is not None:
+
+                mul_lat = g(g.adj(a) * g.adj(b))[0, 0, 0, 0]
+                mul_np = g.adj(a[0, 0, 0, 0]) * g.adj(b[0, 0, 0, 0])
+                eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+                g.message(
+                    f"Test adj({a_type.__name__}) * adj({b_type.__name__}): {eps2}"
                 )
                 assert eps2 < 1e-12
 

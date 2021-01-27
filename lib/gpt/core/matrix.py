@@ -71,9 +71,7 @@ def log(i, convergence_threshold=0.5):
         x = gpt.convert(i, gpt.double)
     else:
         x = gpt.copy(i)
-    I = numpy.identity(x.otype.shape[0], x.grid.precision.complex_dtype)
-    lI = gpt.lattice(x)
-    lI[:] = I
+    lI = gpt.identity(gpt.lattice(x))
     n = gpt.norm2(x) / gpt.inner_product(x, lI).real
     x /= n
     x -= lI

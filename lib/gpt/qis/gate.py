@@ -16,6 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import gpt as g
 
 
 def _H(st, i):
@@ -49,11 +50,22 @@ class circuit:
     def __or__(self, other):
         return circuit(self.val + other.val)
 
+    def __ior__(self, other):
+        self.val += other.val
+        return self
+
     def __mul__(self, original):
         other = original.cloned()
         for op, *args in self.val:
+            # t0 = g.time()
             op(other, *args)
+            # t1 = g.time()
+            # gb = 2 * other.lattice.global_bytes() / 1e9
+            # g.message(f"T {gb/(t1-t0)} {op.__name__}")
         return other
+
+    def __len__(self):
+        return len(self.val)
 
     def dagger(self):
         """
@@ -63,7 +75,7 @@ class circuit:
         Implementation detail: It's a bit hacky.
         """
         return circuit(
-            [g if g[0] != _R_z else (*g[:-1], -g[-1]) for g in reversed(self.val)]
+            [ga if ga[0] != _R_z else (*ga[:-1], -ga[-1]) for ga in reversed(self.val)]
         )
 
 

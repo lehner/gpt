@@ -131,4 +131,6 @@ void test_global_memory_system() {
     }
   }
 
+  std::cout << GridLogMessage << "Test of global memory system completed" << std::endl;
+
 }
