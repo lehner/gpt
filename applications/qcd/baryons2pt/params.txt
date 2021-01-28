@@ -1,0 +1,51 @@
+# Parameter file
+{ 
+    "config": {
+        "path": "path_config",
+    },
+    "APE": { 
+        "alpha" : 2.5,
+        "APE_iter" : 5,
+        "max_iteration" : 19,
+        "accuracy" : 1e-20,
+    },
+    "source_position": [0, 0, 0, 8],
+    "wilson_light": {
+        "kappa": 0.137,
+        "csw_r": 0.,
+        "csw_t": 0.,
+        "xi_0": 1,
+        "nu": 1,
+        "isAnisotropic": False,
+        "boundary_phases": [1.0, 1.0, 1.0, -1.0],
+    },
+    "wilson_strange": {
+        "kappa": 0.1365,
+        "csw_r": 0.,
+        "csw_t": 0.,
+        "xi_0": 1,
+        "nu": 1,
+        "isAnisotropic": False,
+        "boundary_phases": [1.0, 1.0, 1.0, -1.0],
+    },
+    "wilson_charm1": {
+        "kappa": 0.127,
+        "csw_r": 0.,
+        "csw_t": 0.,
+        "xi_0": 1,
+        "nu": 1,
+        "isAnisotropic": False,
+        "boundary_phases": [1.0, 1.0, 1.0, -1.0],
+    },
+    "wuppertal_smear_source": {
+        "delta" : 0.25,
+        "steps" : 5,
+        "dimensions" : [0, 1, 2],
+    },
+    "wuppertal_smear_propagator": {
+        "delta" : 0.25,
+        "steps" : 5,
+        "dimensions" : [0, 1, 2],
+    },
+    "mom2_max" : 1,
+}

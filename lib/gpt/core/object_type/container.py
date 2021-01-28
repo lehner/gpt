@@ -124,6 +124,9 @@ class ot_matrix_spin(ot_base):
             "ot_singlet": (lambda: self, None),
         }
 
+    def identity(self):
+        return gpt.matrix_spin(numpy.identity(self.shape[0]), self.shape[0])
+
 
 class ot_vector_spin(ot_base):
     def __init__(self, ndim):
@@ -241,35 +244,37 @@ class ot_vector_spin_color(ot_base):
 
 ###
 # Basic vectors for coarse grid
-class ot_vsinglet4(ot_base):
+class ot_vector_singlet4(ot_base):
     nfloats = 2 * 4
     shape = (4,)
     v_otype = ["ot_vsinglet4"]
 
 
-class ot_vsinglet10(ot_base):
+class ot_vector_singlet10(ot_base):
     nfloats = 2 * 10
     shape = (10,)
     v_otype = ["ot_vsinglet10"]
 
 
-class ot_vsinglet(ot_base):
+class ot_vector_singlet(ot_base):
     fundamental = {
-        4: ot_vsinglet4,
-        10: ot_vsinglet10,
+        4: ot_vector_singlet4,
+        10: ot_vector_singlet10,
     }
 
     def __init__(self, n):
-        self.__name__ = "ot_vsinglet(%d)" % n
+        self.__name__ = "ot_vector_singlet(%d)" % n
         self.nfloats = 2 * n
         self.shape = (n,)
         self.transposed = None
         self.spintrace = None
         self.colortrace = None
-        decomposition = decompose(n, ot_vsinglet.fundamental.keys(), 1)
+        decomposition = decompose(n, ot_vector_singlet.fundamental.keys(), 1)
         self.v_n0, self.v_n1 = get_range(decomposition, 1)
         self.v_idx = range(len(self.v_n0))
-        self.v_otype = [ot_vsinglet.fundamental[x].__name__ for x in decomposition]
+        self.v_otype = [
+            ot_vector_singlet.fundamental[x].v_otype[0] for x in decomposition
+        ]
         self.mtab = {
             "ot_singlet": (lambda: self, None),  # TODO: need to add info on contraction
         }
@@ -288,40 +293,47 @@ class ot_vsinglet(ot_base):
 
 
 # and matrices
-class ot_msinglet4(ot_base):
+class ot_matrix_singlet4(ot_base):
     nfloats = 2 * 4 * 4
     shape = (4, 4)
     v_otype = ["ot_msinglet4"]
 
 
-class ot_msinglet10(ot_base):
+class ot_matrix_singlet10(ot_base):
     nfloats = 2 * 10 * 10
     shape = (10, 10)
     v_otype = ["ot_msinglet10"]
 
 
-class ot_msinglet(ot_base):
+class ot_matrix_singlet(ot_base):
     fundamental = {
-        4: ot_msinglet4,
-        10: ot_msinglet10,
+        4: ot_matrix_singlet4,
+        10: ot_matrix_singlet10,
     }
 
     def __init__(self, n):
-        self.__name__ = "ot_msinglet(%d)" % n
+        self.__name__ = "ot_matrix_singlet(%d)" % n
         self.nfloats = 2 * n * n
         self.shape = (n, n)
         self.transposed = (1, 0)
-        self.spintrace = None
-        self.colortrace = None
-        self.vector_type = ot_vsinglet(n)
+        # tracing of matrix_singlet needs better implementation (spin+color trace currently is implemented as complete trace in cgpt)
+        self.spintrace = (None, None, None)
+        self.colortrace = (0, 1, lambda: ot_singlet)
+        self.vector_type = ot_vector_singlet(n)
         self.mtab = {
+            self.__name__: (lambda: self, (1, 0)),
             "ot_singlet": (lambda: self, None),
-            "ot_vsinglet(%d)" % n: (lambda: self.vector_type, (1, 0)),
+            "ot_vector_singlet(%d)" % n: (lambda: self.vector_type, (1, 0)),
         }
         self.rmtab = {
             "ot_singlet": (lambda: self, None),
         }
-        decomposition = decompose(n, ot_msinglet.fundamental.keys(), 2)
+        decomposition = decompose(n, ot_matrix_singlet.fundamental.keys(), 2)
         self.v_n0, self.v_n1 = get_range(decomposition, 2)
         self.v_idx = range(len(self.v_n0))
-        self.v_otype = [ot_msinglet.fundamental[x].__name__ for x in decomposition]
+        self.v_otype = [
+            ot_matrix_singlet.fundamental[x].v_otype[0] for x in decomposition
+        ]
+
+    def identity(self):
+        return gpt.matrix_color(numpy.identity(self.shape[0]), self.shape[0])

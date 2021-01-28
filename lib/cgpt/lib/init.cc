@@ -50,16 +50,11 @@ EXPORT(init,{
     std::cout << std::endl <<
       "=============================================" << std::endl <<
       "              Initialized GPT                " << std::endl <<
-      "    Copyright (C) 2020 Christoph Lehner      " << std::endl <<
+      "     Copyright (C) 2020 Christoph Lehner     " << std::endl <<
       "=============================================" << std::endl;
 
     cgpt_initialized = true;
 
-    // Initial test of new global memory system
-    //test_global_memory_system();     
-    //  Grid_finalize();
-    //  exit(0);
-    
     return PyLong_FromLong(0);
     
   });

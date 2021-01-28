@@ -336,8 +336,8 @@ class gpt_io:
                 f.write(x.encode("unicode_escape").decode("utf-8") + "\n")
                 self.create_index("%s/%s" % (ctx, x), objs[x])
             f.write("}\n")
-        elif (
-            type(objs) == numpy.ndarray
+        elif isinstance(
+            objs, numpy.ndarray
         ):  # needs to be above list for proper precedence
             f.write("array %d %d\n" % self.write_numpy(objs))
         elif type(objs) == list:

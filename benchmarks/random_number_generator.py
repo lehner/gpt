@@ -31,7 +31,7 @@ Benchmark RNG engine {engine} in {precision.__name__} precision
                 t0 = g.time()
                 rng.uniform_real(dst)
                 t1 = g.time()
-                gb = dst.global_bytes() / 1024.0 ** 3.0
+                gb = dst.global_bytes() / 1e9
                 g.message(
                     f"uniform_real({lattice.__name__}) iteration {i}: {gb/(t1-t0)} GB/s"
                 )

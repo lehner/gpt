@@ -35,7 +35,9 @@ for x in range(4):
                 )
 
 # now create a random partition of this lattice distributed over all nodes
-c = g.coordinates(grid).copy()  # copy to make it writeable
+c = (
+    g.coordinates(grid).copy().view(np.ndarray)
+)  # copy to make it writeable and lift local_coordinate type
 random.seed(13)
 for tr in range(10):
     shift = [random.randint(0, 8) for i in range(4)]
