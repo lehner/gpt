@@ -54,8 +54,11 @@ void global_memory_transfer<offset_t,rank_t,index_t>::fill_blocks_from_view_pair
 										 const view_t& src,
 										 bool local_only) {
 
-
-  block_size = cgpt_gcd(dst.block_size, src.block_size);
+  if (!dst.blocks.size() || !src.blocks.size()) {
+    block_size = BCOPY_MEM_ALIGN * 1024; // a generous default
+  } else {
+    block_size = cgpt_gcd(dst.block_size, src.block_size);
+  }
 
   if (!local_only) {
     block_size = this->global_gcd(block_size);
