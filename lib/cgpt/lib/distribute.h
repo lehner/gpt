@@ -117,6 +117,8 @@ class global_transfer {
   }
   
   void global_sum(uint64_t* pdata, size_t size);
+
+  long global_gcd(long n);
   
   void provide_my_receivers_get_my_senders(const std::map<rank_t, size_t>& receivers,
 					   std::map<rank_t, size_t>& senders);
@@ -152,8 +154,43 @@ class global_memory_transfer : public global_transfer<rank_t> {
     offset_t start_dst, start_src;
   };
 
-  typedef std::pair<offset_t, Vector<block_t>> blocks_t;
-  typedef std::pair<offset_t, std::vector<block_t>> thread_blocks_t;
+  struct rank_pair_t {
+    rank_t dst_rank;
+    rank_t src_rank;
+
+    bool operator<(const rank_pair_t & other) const {
+      if (dst_rank < other.dst_rank)
+	return true;
+      else if (dst_rank > other.dst_rank)
+	return false;
+      if (src_rank < other.src_rank)
+	return true;
+      return false;
+    }
+  };
+
+  struct index_pair_t {
+    index_t dst_index;
+    index_t src_index;
+
+    bool operator<(const index_pair_t & other) const {
+      if (dst_index < other.dst_index)
+	return true;
+      else if (dst_index > other.dst_index)
+	return false;
+      if (src_index < other.src_index)
+	return true;
+      return false;
+    }
+  };
+
+  typedef Vector<block_t> blocks_t;
+  typedef std::vector<block_t> thread_blocks_t;
+
+  struct abstract_blocks_t {
+    size_t n_blocks;
+    size_t offset;
+  };
 
   class memory_view {
   public:
@@ -216,7 +253,7 @@ class global_memory_transfer : public global_transfer<rank_t> {
   // memory buffers
   std::map<rank_t, memory_buffer> send_buffers, recv_buffers;
   memory_type comm_buffers_type;
-  std::map< rank_t, std::map< index_t, blocks_t > > send_blocks, recv_blocks;
+  std::map<rank_t, std::map< index_t, blocks_t > > send_blocks, recv_blocks;
 
   // bounds
   std::vector<offset_t> bounds_dst, bounds_src;
@@ -224,7 +261,8 @@ class global_memory_transfer : public global_transfer<rank_t> {
   // public interface
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
 
-  std::map< std::pair<rank_t,rank_t>, std::map< std::pair<index_t,index_t>, blocks_t > > blocks;
+  offset_t block_size;
+  std::map< rank_pair_t , std::map< index_pair_t, blocks_t > > blocks;
 
   void create(const view_t& dst, const view_t& src,
 	      memory_type use_comm_buffers_of_type = mt_none,
@@ -236,18 +274,22 @@ class global_memory_transfer : public global_transfer<rank_t> {
 
   // helper
   void print();
-  void fill_blocks_from_view_pair(const view_t& dst, const view_t& src);
+  void fill_blocks_from_view_pair(const view_t& dst, const view_t& src, bool local_only);
   void gather_my_blocks();
   void optimize();
-  void optimize(blocks_t& blocks);
+  long optimize(blocks_t& blocks);
+  void skip(blocks_t& blocks, long gcd);
   void create_bounds();
-  void create_comm_buffers(memory_type mt, bool optimize_blocks);
+  void create_comm_buffers(memory_type mt);
 
   template<typename ranks_t>
   void prepare_comm_message(comm_message & msg, ranks_t & ranks, bool populate);
+  void merge_comm_blocks(std::map<rank_t, comm_message> & src);
 
-  template<typename blocks_src_t>
-  void merge_blocks(blocks_t& dst, const blocks_src_t& src);
+  template<typename K, typename V1, typename V2>
+  void distribute_merge_into(std::map<K,V1> & target, const std::map<K,V2> & src);
+  void distribute_merge_into(blocks_t & target, const thread_blocks_t & src);
+  void distribute_merge_into(thread_blocks_t & target, const thread_blocks_t & src);
 
   struct bcopy_arg_t {
     const blocks_t& blocks;

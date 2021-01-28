@@ -37,7 +37,7 @@ void cgpt_reduce_inplace(red_t & r, const get_t & get, op_t op, empty_t empty) {
 template<typename get_t, typename op_t, typename empty_t>
 auto cgpt_reduce(const get_t & get, op_t op, empty_t empty) -> typename std::remove_reference<decltype(get[0])>::type {
 
-  typedef typename std::remove_reference<decltype(get[0])>::type red_t;
+  typedef typename std::remove_const<typename std::remove_reference<decltype(get[0])>::type>::type red_t;
 
   red_t r;
   cgpt_reduce_inplace(r, get, [op](red_t & r, const red_t & a) {
