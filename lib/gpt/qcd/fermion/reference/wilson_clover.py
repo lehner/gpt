@@ -95,7 +95,7 @@ class wilson_clover(shift_eo, matrix_operator):
 
             if self.open_bc:
                 # set field strength tensor to unity at the temporal boundaries
-                value = -0.5 * self.csw_t + 1.0 / 2.0 * 1.0 / self.kappa
+                value = -0.5 * self.csw_t
                 self.clover[:, :, :, 0, :, :, :, :] = 0.0
                 self.clover[:, :, :, T - 1, :, :, :, :] = 0.0
                 for alpha in range(4):
