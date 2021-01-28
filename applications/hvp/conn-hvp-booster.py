@@ -30,14 +30,44 @@ groups = {
 }
 
 jobs = {
-    "booster_exact_0": {"exact": 1, "sloppy": 0, "low": 0, "all_time_slices": True},  # 1270 seconds + 660 to load ev
-    "booster_sloppy_0": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-#    "booster_sloppy_1": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "booster_low_0": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
-#    "booster_low_1": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "booster_exact_0_correlated": {"exact": 1, "sloppy": 0, "low": 0, "all_time_slices": False},  # 1270 seconds + 660 to load ev
-    "booster_sloppy_0_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
-    "booster_low_0_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
+    "booster_exact_0": {
+        "exact": 1,
+        "sloppy": 0,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 1270 seconds + 660 to load ev
+    "booster_sloppy_0": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    #    "booster_sloppy_1": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "booster_low_0": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": True,
+    },  # 2100 seconds + 600 to load ev
+    #    "booster_low_1": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "booster_exact_0_correlated": {
+        "exact": 1,
+        "sloppy": 0,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 1270 seconds + 660 to load ev
+    "booster_sloppy_0_correlated": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 2652 seconds + 580 to load ev
+    "booster_low_0_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": False,
+    },  # 2100 seconds + 600 to load ev
 }
 
 # At 32 jobs we break even with eigenvector generation
@@ -94,7 +124,12 @@ def get_job(only_on_conf=None):
 if g.rank() == 0:
     first_job = get_job()
     run_jobs = str(
-        list(filter(lambda x: x is not None,[first_job] + [get_job(first_job[2]) for i in range(1, jobs_per_run)]))
+        list(
+            filter(
+                lambda x: x is not None,
+                [first_job] + [get_job(first_job[2]) for i in range(1, jobs_per_run)],
+            )
+        )
     ).encode("utf-8")
 else:
     run_jobs = bytes()
@@ -144,7 +179,12 @@ eig = g.load(groups[group]["evec_fmt"] % conf, grids=l_sloppy.F_grid_eo)
 light_innerL_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
     g.algorithms.inverter.sequence(
-        g.algorithms.inverter.coarse_deflate(eig[1], eig[0], eig[2], block=200,),
+        g.algorithms.inverter.coarse_deflate(
+            eig[1],
+            eig[0],
+            eig[2],
+            block=200,
+        ),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 200}),
             mpi_split=g.default.get_ivec("--mpi_split", None, 4),
@@ -155,7 +195,12 @@ light_innerL_inverter = g.algorithms.inverter.preconditioned(
 light_innerH_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
     g.algorithms.inverter.sequence(
-        g.algorithms.inverter.coarse_deflate(eig[1], eig[0], eig[2], block=200,),
+        g.algorithms.inverter.coarse_deflate(
+            eig[1],
+            eig[0],
+            eig[2],
+            block=200,
+        ),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 300}),
             mpi_split=g.default.get_ivec("--mpi_split", None, 4),
@@ -270,7 +315,7 @@ for group, job, conf, jid, n in run_jobs:
 
         # create time-sparsened source
         sign_of_slice = [rng.zn(n=2) for i in range(source_time_slices)]
-        for i in range(use_source_time_slices,source_time_slices):
+        for i in range(use_source_time_slices, source_time_slices):
             sign_of_slice[i] = 0.0
 
         pos_of_slice = [

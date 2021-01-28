@@ -253,8 +253,8 @@ def load(filename, params):
         # group blocks
         read_blocks = blocks
         block_reduce = 1
-        gpt.message("Read blocks",blocks)
-        max_read_blocks = get_param(params, "max_read_blocks", 2) #8
+        gpt.message("Read blocks", blocks)
+        max_read_blocks = get_param(params, "max_read_blocks", 2)  # 8
         while read_blocks > max_read_blocks and read_blocks % 2 == 0:
             pos = [
                 numpy.concatenate((pos[2 * i + 0], pos[2 * i + 1]))
@@ -264,7 +264,7 @@ def load(filename, params):
             block_data_size_fp16 *= 2
             read_blocks //= 2
             block_reduce *= 2
-            gpt.message("Block size",block_data_size_single)
+            gpt.message("Block size", block_data_size_single)
 
         # make read-only to enable caching
         for x in pos:

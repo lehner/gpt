@@ -235,8 +235,18 @@ def poke(target, key, value):
         tc = gpt.time()
         t1 = gpt.time()
 
-        gb = sum([ x.global_bytes() / 1e9 for x in target ])
+        gb = sum([x.global_bytes() / 1e9 for x in target])
         gb = value.nbytes / 1e9
-        gpt.message("Total poke",t1-t0,"create",tb-ta, "execute",tc-tb,xp.info(),"speed (GB/s)",gb/(t1-t0))
+        gpt.message(
+            "Total poke",
+            t1 - t0,
+            "create",
+            tb - ta,
+            "execute",
+            tc - tb,
+            xp.info(),
+            "speed (GB/s)",
+            gb / (t1 - t0),
+        )
     else:
         assert 0
