@@ -27,12 +27,12 @@ Benchmark linear combination
     # Source and destination
     for tp in [g.ot_matrix_color(3), g.ot_matrix_spin(4), g.ot_vector_spin_color(4, 3)]:
         for nbasis in [4, 8, 16]:
-            basis=[g.lattice(grid, tp) for i in range(nbasis)]
-            result=g.lattice(grid, tp)
+            basis = [g.lattice(grid, tp) for i in range(nbasis)]
+            result = g.lattice(grid, tp)
             rng.cnormal(basis)
 
             # Typical usecase: nbasis -> 1
-            Qt = np.ones((1,nbasis), np.complex128)
+            Qt = np.ones((1, nbasis), np.complex128)
 
             # Bytes
             nbytes = (nbasis + 1) * result.global_bytes() * N
@@ -55,8 +55,7 @@ Benchmark linear combination
     Time to complete            : {dt:.2f} s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
 """
-        )
-
+            )
 
 
 # main test loop
@@ -75,16 +74,18 @@ Benchmark bilinear combination
     # Source and destination
     for tp in [g.ot_singlet]:
         for nbasis in [4, 8, 16]:
-            basis=[g.lattice(grid, tp) for i in range(nbasis)]
-            result=[g.lattice(grid, tp) for i in range(nbasis)]
+            basis = [g.lattice(grid, tp) for i in range(nbasis)]
+            result = [g.lattice(grid, tp) for i in range(nbasis)]
             rng.cnormal(basis)
 
             # Typical usecase : nbasis x nbasis -> nbasis
-            Qt = np.ones((nbasis,nbasis), np.complex128)
-            lidx = np.mod(np.arange(nbasis*nbasis, dtype=np.int32), nbasis).reshape(nbasis,nbasis)
+            Qt = np.ones((nbasis, nbasis), np.complex128)
+            lidx = np.mod(np.arange(nbasis * nbasis, dtype=np.int32), nbasis).reshape(
+                nbasis, nbasis
+            )
 
             # Bytes
-            nbytes = nbasis * (2*nbasis + 1) * result[0].global_bytes() * N
+            nbytes = nbasis * (2 * nbasis + 1) * result[0].global_bytes() * N
 
             # Time
             dt = 0.0
@@ -104,4 +105,4 @@ Benchmark bilinear combination
     Time to complete            : {dt:.2f} s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
 """
-        )
+            )
