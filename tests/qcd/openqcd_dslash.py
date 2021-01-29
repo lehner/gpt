@@ -30,6 +30,26 @@ def fields_agree_openqcd(ref, res):
     return diff <= tol
 
 
+def fields_agree(ref, res, tol):
+    """
+    Implements the standard correctness check between two fields with their relative deviation
+    """
+    norm2_ref = g.norm2(ref) if type(ref) == g.lattice else ref
+    norm2_res = g.norm2(res) if type(res) == g.lattice else res
+
+    if type(ref) == g.lattice and type(res) == g.lattice:
+        diff = g.norm2(res - ref)
+    else:
+        diff = abs(norm2_ref - norm2_res)
+
+    rel_dev = diff / norm2_ref
+
+    g.message(
+        f"default residual check: reference = {norm2_ref:25.20e}, result = {norm2_res:25.20e},    rel_dev = {rel_dev:25.20e}, tol = {tol:25.20e} -> check {'passed' if rel_dev <= tol else 'failed'}"
+    )
+    return rel_dev <= tol
+
+
 def read_sfld(fname):
     """
     Read a spinor field written by openqcd into a numpy array.
@@ -80,7 +100,7 @@ def read_openqcd_fermion(fname, cb=None):
     norm2_field = g.norm2(field)
 
     assert fields_agree_openqcd(norm2_file, norm2_field)
-    assert g.util.fields_agree(norm2_file, norm2_field, g.double.eps)
+    assert fields_agree(norm2_file, norm2_field, g.double.eps)
 
     if not cb:
         return field
@@ -233,6 +253,6 @@ for wc_name, wc in [("fast", wc_fast), ("reference", wc_ref)]:
         # report error
         g.message(f"Checking residuals for {wc_name:10s} operator: {method_name}")
         assert fields_agree_openqcd(data["dst_oqcd"], data["dst_gpt"])
-        assert g.util.fields_agree(data["dst_oqcd"], data["dst_gpt"], g.double.eps)
+        assert fields_agree(data["dst_oqcd"], data["dst_gpt"], g.double.eps)
 
 g.message("All tests successful")
