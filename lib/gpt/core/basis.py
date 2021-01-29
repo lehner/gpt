@@ -69,16 +69,14 @@ def linear_combination(r, basis, Qt, n_block=None):
     cgpt.linear_combination(r, basis, Qt, n_block)
 
 
-def bilinear_combination(r, left_basis, right_basis, Qt, lidx, ridx, n_block=None):
+def bilinear_combination(r, left_basis, right_basis, Qt, lidx, ridx):
     r = gpt.util.to_list(r)
     # assert all([len(left_basis[0].v_obj) == len(x.v_obj) for x in r])
     # assert all([len(right_basis[0].v_obj) == len(x.v_obj) for x in r])
-    if n_block is None:
-        n_block = len(left_basis)
     Qt = numpy.array(Qt, dtype=numpy.complex128)
     lidx = numpy.array(lidx, dtype=numpy.int32)
     ridx = numpy.array(ridx, dtype=numpy.int32)
-    cgpt.bilinear_combination(r, left_basis, right_basis, Qt, lidx, ridx, n_block)
+    cgpt.bilinear_combination(r, left_basis, right_basis, Qt, lidx, ridx)
 
 
 def rotate(basis, Qt, j0, j1, k0, k1):
