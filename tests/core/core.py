@@ -227,6 +227,33 @@ for grid in [grid_sp, grid_dp]:
 
 
 ################################################################################
+# Test bilinear_combination against expression engine
+################################################################################
+for grid in [grid_sp, grid_dp]:
+    left = [g.complex(grid) for i in range(3)]
+    right = [g.complex(grid) for i in range(3)]
+    result_bilinear = [g.complex(grid) for i in range(3)]
+    rng.cnormal([left, right])
+    result = [
+        g.eval(left[1] * right[2] - left[2] * right[1]),
+        g.eval(left[2] * right[0] - left[0] * right[2]),
+        g.eval(left[0] * right[1] + left[2] * right[0]),
+    ]
+    g.bilinear_combination(
+        result_bilinear,
+        left,
+        right,
+        [[1.0, -1.0], [1.0, -1.0], [1.0, 1.0]],
+        [[1, 2], [2, 0], [0, 2]],
+        [[2, 1], [0, 2], [1, 0]],
+    )
+    for j in range(len(result)):
+        eps2 = g.norm2(result[j] - result_bilinear[j]) / g.norm2(result[j])
+        g.message(f"Test bilinear combination of vector {j}: {eps2}")
+        assert eps2 < 1e-13
+
+
+################################################################################
 # Test where
 ################################################################################
 sel = g.complex(grid)
