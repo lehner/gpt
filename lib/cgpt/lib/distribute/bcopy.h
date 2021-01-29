@@ -18,6 +18,7 @@
 */
 
 #define BCOPY_MEM_ALIGN   (sizeof(vComplexF))
+#define BCOPY_ALIGN(sz) ( ( ( (sz) + BCOPY_MEM_ALIGN - 1 ) / BCOPY_MEM_ALIGN ) * BCOPY_MEM_ALIGN )
 
 template<typename block_t>
 struct bcopy_ptr_arg_t {

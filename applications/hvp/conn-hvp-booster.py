@@ -8,220 +8,61 @@ import gpt as g
 import sys, os
 
 # configure
-root_output = "/gpfs/alpine/phy138/proj-shared/phy138flavor/lehner/conn-hvp"
+root_output = "/p/project/gm2dwf/lehner/projects/conn-hvp"
 
+# 420, 500, 580
 groups = {
-    "phy131": {
-        "confs": ["420", "500", "580"],
-        "evec_fmt": "/gpfs/alpine/phy131/world-shared/lehner/evec-cache/96I/%s/lanczos.output",
-        "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
+    "booster_batch_0": {
+        "confs": ["520", "560", "620"],
+        "evec_fmt": "/p/scratch/gm2dwf/evecs/96I/%s/lanczos.output",
+        "conf_fmt": "/p/project/gm2dwf/configs/96I/evol0/ckpoint_lat.%s",
     },
-    "phy138": {
-        "confs": ["460", "640", "540", "720"],
-        "evec_fmt": "/gpfs/alpine/phy138/world-shared/lehner/evec-cache/96I/%s/lanczos.output",
-        "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
-    },
-    "phy138n": {
-        "confs": ["480", "520", "560", "600", "620"],
-        "evec_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/lehner/runs/summit-96I-%s-256/lanczos.output",
-        "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
-    },
+    # "phy138": {
+    #     "confs": ["460", "640", "540", "720"],
+    #    "evec_fmt": "/gpfs/alpine/phy138/world-shared/lehner/evec-cache/96I/%s/lanczos.output",
+    #    "conf_fmt": "/p/project/gm2dwf/configs/96I/evol0/ckpoint_lat.%s",
+    # },
+    # "phy138n": {
+    #    "confs": ["480", "520", "560", "600", "620"],
+    #    "evec_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/lehner/runs/summit-96I-%s-256/lanczos.output",
+    #    "conf_fmt": "/p/project/gm2dwf/configs/96I/evol0/ckpoint_lat.%s",
+    # },
 }
 
 jobs = {
-    "exact_0": {
+    "booster_exact_0": {
         "exact": 1,
         "sloppy": 0,
         "low": 0,
         "all_time_slices": True,
     },  # 1270 seconds + 660 to load ev
-    "sloppy_0": {
+    "booster_sloppy_0": {
         "exact": 0,
         "sloppy": 8,
         "low": 0,
         "all_time_slices": True,
     },  # 2652 seconds + 580 to load ev
-    "sloppy_1": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "low_0": {
+    #    "booster_sloppy_1": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "booster_low_0": {
         "exact": 0,
         "sloppy": 0,
         "low": 150,
         "all_time_slices": True,
     },  # 2100 seconds + 600 to load ev
-    "low_1": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "exact_0_correlated": {
+    #    "booster_low_1": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "booster_exact_0_correlated": {
         "exact": 1,
         "sloppy": 0,
         "low": 0,
         "all_time_slices": False,
     },  # 1270 seconds + 660 to load ev
-    "sloppy_0_correlated": {
+    "booster_sloppy_0_correlated": {
         "exact": 0,
         "sloppy": 8,
         "low": 0,
         "all_time_slices": False,
     },  # 2652 seconds + 580 to load ev
-    "low_0_correlated": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": False,
-    },  # 2100 seconds + 600 to load ev
-    "sloppy_2": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "sloppy_3": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "low_2": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": True,
-    },  # 2100 seconds + 600 to load ev
-    "low_3": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "sloppy_1_correlated": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": False,
-    },  # 2652 seconds + 580 to load ev
-    "low_1_correlated": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": False,
-    },  # 2100 seconds + 600 to load ev
-    "sloppy_4": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "sloppy_5": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "sloppy_6": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "sloppy_7": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "low_4": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": True,
-    },  # 2100 seconds + 600 to load ev
-    "low_5": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "low_6": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": True,
-    },  # 2100 seconds + 600 to load ev
-    "low_7": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "sloppy_2_correlated": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": False,
-    },  # 2652 seconds + 580 to load ev
-    "low_2_correlated": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": False,
-    },  # 2100 seconds + 600 to load ev
-    "sloppy_3_correlated": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": False,
-    },  # 2652 seconds + 580 to load ev
-    "low_3_correlated": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": False,
-    },  # 2100 seconds + 600 to load ev
-    "sloppy_8": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "sloppy_9": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "sloppy_10": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "sloppy_11": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": True,
-    },  # 2652 seconds + 580 to load ev
-    "low_8": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": True,
-    },  # 2100 seconds + 600 to load ev
-    "low_9": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "low_10": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": True,
-    },  # 2100 seconds + 600 to load ev
-    "low_11": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "sloppy_4_correlated": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": False,
-    },  # 2652 seconds + 580 to load ev
-    "low_4_correlated": {
-        "exact": 0,
-        "sloppy": 0,
-        "low": 150,
-        "all_time_slices": False,
-    },  # 2100 seconds + 600 to load ev
-    "sloppy_5_correlated": {
-        "exact": 0,
-        "sloppy": 8,
-        "low": 0,
-        "all_time_slices": False,
-    },  # 2652 seconds + 580 to load ev
-    "low_5_correlated": {
+    "booster_low_0_correlated": {
         "exact": 0,
         "sloppy": 0,
         "low": 150,
@@ -237,7 +78,7 @@ jobs_per_run = g.default.get_int("--gpt_jobs", 1)
 
 source_time_slices = 2
 
-save_propagators = True
+save_propagators = False
 
 operators = {
     "G0": g.gamma[0],
