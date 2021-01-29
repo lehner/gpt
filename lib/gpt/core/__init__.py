@@ -70,6 +70,7 @@ from gpt.core.checkpointer import checkpointer, checkpointer_none
 from gpt.core.basis import (
     orthogonalize,
     linear_combination,
+    bilinear_combination,
     rotate,
     qr_decomposition,
 )

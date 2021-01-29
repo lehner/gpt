@@ -2,6 +2,7 @@
 EXPORT_FUNCTION(qr_decomposition)
 EXPORT_FUNCTION(rotate)
 EXPORT_FUNCTION(linear_combination)
+EXPORT_FUNCTION(bilinear_combination)
 EXPORT_FUNCTION(benchmarks)
 EXPORT_FUNCTION(tests)
 EXPORT_FUNCTION(create_block_map)

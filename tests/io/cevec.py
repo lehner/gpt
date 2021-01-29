@@ -15,6 +15,7 @@ else:
     work_dir = "."
 
 # grids
+# fgrid = g.grid([4 * 3, 8 * 2, 8 * 2, 8 * 2, 16 * 2], g.single, g.redblack)
 fgrid = g.grid([4, 8, 8, 8, 16], g.single, g.redblack)
 cgrid = g.grid([1, 4, 4, 4, 4], g.single)
 
