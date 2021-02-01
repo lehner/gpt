@@ -900,7 +900,7 @@ public:
     // Report timings
     double t5 = usecond();
 #if 0
-    std::cout << GridLogMessage << "FasterWilsonCloverFermion::ModifyBoundaries timings:"
+    std::cout << GridLogMessage << "CompactWilsonCloverFermion::ModifyBoundaries timings:"
               << " checks = "          << (t1 - t0) / 1e6
               << ", coordinate = "     << (t2 - t1) / 1e6
               << ", off-diag zero = "  << (t3 - t2) / 1e6
