@@ -17,6 +17,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+static int infer_numpy_type(const int32_t& v) { return NPY_INT32; }
 static int infer_numpy_type(const RealD& v) { return NPY_FLOAT64; }
 static int infer_numpy_type(const RealF& v) { return NPY_FLOAT32; }
 static int infer_numpy_type(const ComplexD& v) { return NPY_COMPLEX128; }
