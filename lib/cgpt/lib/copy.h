@@ -112,7 +112,7 @@ static cgpt_gm_view* cgpt_view_embeded_in_communicator(cgpt_gm_view* v, GridBase
   
   rank_map[xf.rank] = (uint64_t)r->rank;
   xf.global_sum(rank_map);
-  
+
   thread_for(i, v->view.blocks.size(), {
       auto & s = v->view.blocks[i];
       auto & d = r->view.blocks[i];

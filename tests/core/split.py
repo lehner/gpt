@@ -78,8 +78,8 @@ def lattice_reverse_check(lat):
     assert eps == 0.0
 
 
-lattice_reverse_check(l_rb[0])
 lattice_reverse_check(l[0])
+lattice_reverse_check(l_rb[0])
 
 ################################################################################
 # Test merge/separate here

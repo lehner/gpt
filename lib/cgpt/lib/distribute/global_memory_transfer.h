@@ -315,7 +315,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
     }
   }
     
-  for (auto & a : recv_blocks) {
+  for (auto & a : send_blocks) {
     for (auto & b : a.second) {
       long gcd = optimize(b.second);
       if (global_gcd == -1)
@@ -335,7 +335,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
       for (auto & b : a.second)
 	skip(b.second, global_gcd);
     
-    for (auto & a : recv_blocks)
+    for (auto & a : send_blocks)
       for (auto & b : a.second)
 	skip(b.second, global_gcd);
     

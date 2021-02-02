@@ -22,7 +22,7 @@ from gpt.core.precision import single, double, precision, str_to_precision
 from gpt.core.advise import advise, prefetch, infrequent_use, to_host, to_accelerator
 from gpt.core.expr import expr, factor, expr_unary, factor_unary, expr_eval
 from gpt.core.lattice import lattice, get_mem_book
-from gpt.core.peekpoke import poke, peek, map_key
+from gpt.core.peekpoke import map_key
 from gpt.core.tensor import tensor
 from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time, timer

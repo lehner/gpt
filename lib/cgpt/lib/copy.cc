@@ -265,7 +265,8 @@ EXPORT(copy_create_view,{
     get_block_size.nb = nb;
 
     long block_size = cgpt_reduce(get_block_size, cgpt_gcd, nb ? get_block_size[0] : 1);
-    ASSERT(block_size);
+    if (!block_size)
+      block_size = sizeof(vComplexF);
 
     v->view.block_size = block_size;
 
