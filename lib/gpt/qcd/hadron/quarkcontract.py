@@ -19,6 +19,7 @@
 #
 
 import gpt
+import numpy as np
 
 
 def quark_contract_xx(mspincolor1, mspincolor2, components):
@@ -49,7 +50,9 @@ def quark_contract_xx(mspincolor1, mspincolor2, components):
         Permutations: +(0, 1, 2), -(1, 0, 2)          +(0, 1, 2), -(1, 0, 2)
     """
 
-    dst = gpt.mspincolor(mspincolor1.grid)
+    grid = mspincolor1.grid
+
+    dst = gpt.mspincolor(grid)
     dst[:] = 0
     sdst = gpt.separate_spin(dst)
 
@@ -69,30 +72,48 @@ def quark_contract_xx(mspincolor1, mspincolor2, components):
             if (c1_0, c1_1) not in comps2:
                 comps2[(c1_0, c1_1)] = gpt.separate_color(mcolor2[(c1_0, c1_1)])
 
+    bilinear_result = [gpt.complex(grid) for _ in range(9)]
+    bilinear_coeffs = np.array([
+        [1.0, -1.0, -1.0, +1.0] for _ in range(9)
+    ], dtype=np.complex128)
+    bilinear_leftbasis = np.array([
+        [4, 5, 7, 8], [7, 8, 1, 2], [1, 2, 4, 5],
+        [5, 3, 8, 6], [8, 6, 2, 0], [2, 0, 5, 3],
+        [3, 4, 6, 7], [6, 7, 0, 1], [0, 1, 3, 4]
+    ], dtype=np.int32)
+    bilinear_rightbasis = np.array([
+        [8, 7, 5, 4], [2, 1, 8, 7], [5, 4, 2, 1],
+        [6, 8, 3, 5], [0, 2, 6, 8], [3, 5, 0, 2],
+        [7, 6, 4, 3], [1, 0, 7, 6], [4, 3, 1, 0]
+    ], dtype=np.int32)
+
     for key in components.keys():
         tmp = target[key]
 
         for comps in components[key]:
             c0_0, c0_1, c1_0, c1_1 = comps
 
-            c1 = comps1[(c0_0, c0_1)]
-            c2 = comps2[(c1_0, c1_1)]
+            left = [comps1[(c0_0, c0_1)][ii // 3, ii % 3] for ii in range(9)]
+            right = [comps2[(c1_0, c1_1)][ii // 3, ii % 3] for ii in range(9)]
 
-            tmp[(0, 0)] += c1[1, 1] * c2[2, 2] - c1[1, 2] * c2[2, 1] - c1[2, 1] * c2[1, 2] + c1[2, 2] * c2[1, 1]
-            tmp[(0, 1)] += c1[2, 1] * c2[0, 2] - c1[2, 2] * c2[0, 1] - c1[0, 1] * c2[2, 2] + c1[0, 2] * c2[2, 1]
-            tmp[(0, 2)] += c1[0, 1] * c2[1, 2] - c1[0, 2] * c2[1, 1] - c1[1, 1] * c2[0, 2] + c1[1, 2] * c2[0, 1]
-            tmp[(1, 0)] += c1[1, 2] * c2[2, 0] - c1[1, 0] * c2[2, 2] - c1[2, 2] * c2[1, 0] + c1[2, 0] * c2[1, 2]
-            tmp[(1, 1)] += c1[2, 2] * c2[0, 0] - c1[2, 0] * c2[0, 2] - c1[0, 2] * c2[2, 0] + c1[0, 0] * c2[2, 2]
-            tmp[(1, 2)] += c1[0, 2] * c2[1, 0] - c1[0, 0] * c2[1, 2] - c1[1, 2] * c2[0, 0] + c1[1, 0] * c2[0, 2]
-            tmp[(2, 0)] += c1[1, 0] * c2[2, 1] - c1[1, 1] * c2[2, 0] - c1[2, 0] * c2[1, 1] + c1[2, 1] * c2[1, 0]
-            tmp[(2, 1)] += c1[2, 0] * c2[0, 1] - c1[2, 1] * c2[0, 0] - c1[0, 0] * c2[2, 1] + c1[0, 1] * c2[2, 0]
-            tmp[(2, 2)] += c1[0, 0] * c2[1, 1] - c1[0, 1] * c2[1, 0] - c1[1, 0] * c2[0, 1] + c1[1, 1] * c2[0, 0]
+            gpt.bilinear_combination(
+                bilinear_result,
+                left,
+                right,
+                bilinear_coeffs,
+                bilinear_leftbasis,
+                bilinear_rightbasis
+            )
+
+            for ii in range(9):
+                tmp[ii // 3, ii % 3] += bilinear_result[ii]
 
     for key in components.keys():
         gpt.merge_color(sdst[key], target[key])
     gpt.merge_spin(dst, sdst)
 
     return dst
+
 
 def quark_contract_12(mspincolor1, mspincolor2):
     components = dict()
