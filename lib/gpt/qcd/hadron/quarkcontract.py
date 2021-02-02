@@ -50,68 +50,97 @@ def quark_contract_xx(mspincolor1, mspincolor2, components):
         Permutations: +(0, 1, 2), -(1, 0, 2)          +(0, 1, 2), -(1, 0, 2)
     """
 
+    t_separatespin, t_separatecolor, t_create, t_bilinear, t_merge = 0.0, 0.0, 0.0, 0.0, 0.0
+    t_start = gpt.time()
+
     grid = mspincolor1.grid
 
-    dst = gpt.mspincolor(grid)
-    dst[:] = 0
-    sdst = gpt.separate_spin(dst)
-
+    t_separatespin -= gpt.time()
     mcolor1 = gpt.separate_spin(mspincolor1)
     mcolor2 = gpt.separate_spin(mspincolor2)
+    t_separatespin += gpt.time()
 
-    comps1, comps2, target = dict(), dict(), dict()
-    for key in components.keys():
-
-        assert key not in target, f"Found duplicate key: {key}"
-        target[key] = gpt.separate_color(sdst[key])
-
-        for comps in components[key]:
-            c0_0, c0_1, c1_0, c1_1 = comps
-            if (c0_0, c0_1) not in comps1:
-                comps1[(c0_0, c0_1)] = gpt.separate_color(mcolor1[(c0_0, c0_1)])
-            if (c1_0, c1_1) not in comps2:
-                comps2[(c1_0, c1_1)] = gpt.separate_color(mcolor2[(c1_0, c1_1)])
-
+    t_create -= gpt.time()
+    dst = gpt.mspincolor(grid)
+    spinsep_dst = {(ii // 4, ii % 4): gpt.mcolor(grid) for ii in range(16)}
     bilinear_result = [gpt.complex(grid) for _ in range(9)]
-    bilinear_coeffs = np.array([
-        [1.0, -1.0, -1.0, +1.0] for _ in range(9)
-    ], dtype=np.complex128)
-    bilinear_leftbasis = np.array([
+    t_create += gpt.time()
+
+    leftbase = np.array([
         [4, 5, 7, 8], [7, 8, 1, 2], [1, 2, 4, 5],
         [5, 3, 8, 6], [8, 6, 2, 0], [2, 0, 5, 3],
         [3, 4, 6, 7], [6, 7, 0, 1], [0, 1, 3, 4]
     ], dtype=np.int32)
-    bilinear_rightbasis = np.array([
+    rightbase = np.array([
         [8, 7, 5, 4], [2, 1, 8, 7], [5, 4, 2, 1],
         [6, 8, 3, 5], [0, 2, 6, 8], [3, 5, 0, 2],
         [7, 6, 4, 3], [1, 0, 7, 6], [4, 3, 1, 0]
     ], dtype=np.int32)
 
-    for key in components.keys():
-        tmp = target[key]
+    comps1, comps2, used_keys = dict(), dict(), []
+    for spin_key in components.keys():
+        assert spin_key not in used_keys, f"Found duplicate key: {key}"
+        used_keys.append(spin_key)
 
-        for comps in components[key]:
+        lefts, rights = [], []
+        bilin_coeffs, bilin_leftbasis, bilin_rightbasis = [], [], []
+        for nn, comps in enumerate(components[spin_key]):
             c0_0, c0_1, c1_0, c1_1 = comps
 
-            left = [comps1[(c0_0, c0_1)][ii // 3, ii % 3] for ii in range(9)]
-            right = [comps2[(c1_0, c1_1)][ii // 3, ii % 3] for ii in range(9)]
-
-            gpt.bilinear_combination(
-                bilinear_result,
-                left,
-                right,
-                bilinear_coeffs,
-                bilinear_leftbasis,
-                bilinear_rightbasis
-            )
+            if (c0_0, c0_1) not in comps1:
+                t_separatecolor -= gpt.time()
+                comps1[c0_0, c0_1] = gpt.separate_color(mcolor1[c0_0, c0_1])
+                t_separatecolor += gpt.time()
+            if (c1_0, c1_1) not in comps2:
+                t_separatecolor -= gpt.time()
+                comps2[c1_0, c1_1] = gpt.separate_color(mcolor2[c1_0, c1_1])
+                t_separatecolor += gpt.time()        
 
             for ii in range(9):
-                tmp[ii // 3, ii % 3] += bilinear_result[ii]
+                lefts.append(comps1[c0_0, c0_1][ii // 3, ii % 3])
+                rights.append(comps2[c1_0, c1_1][ii // 3, ii % 3])
 
-    for key in components.keys():
-        gpt.merge_color(sdst[key], target[key])
-    gpt.merge_spin(dst, sdst)
+            bilin_coeffs = np.append(bilin_coeffs, [1.0, -1.0, -1.0, +1.0])
+            bilin_leftbasis.append(leftbase + nn * 9)
+            bilin_rightbasis.append(rightbase + nn * 9)
 
+        bilin_coeffs = np.array([bilin_coeffs for _ in range(9)], dtype=np.int32)
+        bilin_leftbasis = np.concatenate(bilin_leftbasis, axis=1)
+        bilin_rightbasis = np.concatenate(bilin_rightbasis, axis=1)
+
+        t_bilinear -= gpt.time()
+        gpt.bilinear_combination(
+            bilinear_result,
+            lefts,
+            rights,
+            bilin_coeffs,
+            bilin_leftbasis,
+            bilin_rightbasis
+        )
+        t_bilinear += gpt.time()
+
+        cmat_dict = dict()
+        for ii in range(9):
+            cmat_dict[ii // 3, ii % 3] = bilinear_result[ii]
+
+        t_merge -= gpt.time()
+        gpt.merge_color(spinsep_dst[spin_key], cmat_dict)
+        t_merge += gpt.time()
+
+    t_merge -= gpt.time()
+    gpt.merge_spin(dst, spinsep_dst)
+    t_merge += gpt.time()
+
+    t_total = gpt.time() - t_start
+    t_profiled = t_separatespin + t_separatecolor + t_create + t_bilinear + t_merge
+
+    gpt.message("quark_contract_xx: total", t_total, "s")
+    gpt.message("quark_contract_xx: t_separatespin", t_separatespin, "s", round(100 * t_separatespin / t_total, 1), "%")
+    gpt.message("quark_contract_xx: t_separatecolor", t_separatecolor, "s", round(100 * t_separatecolor / t_total, 1), "%")
+    gpt.message("quark_contract_xx: t_create", t_create, "s", round(100 * t_create / t_total, 1), "%")
+    gpt.message("quark_contract_xx: t_bilinear", t_bilinear, "s", round(100 * t_bilinear / t_total, 1), "%")
+    gpt.message("quark_contract_xx: t_merge", t_merge, "s", round(100 * t_merge / t_total, 1), "%")
+    gpt.message("quark_contract_xx: unprofiled", t_total - t_profiled, "s", round(100 * (t_total - t_profiled) / t_total, 1), "%")
     return dst
 
 
