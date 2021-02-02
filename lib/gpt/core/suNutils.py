@@ -54,10 +54,6 @@ def project_to_suN_step(dest, unprojected):
         tmp @= gpt.eval(dest * unprojected)
         su2_comps = extract_normalized_su2_components(tmp, su2_index)
 
-        tmp[:] = 0
-        for ii in range(n_colors):
-            tmp[:, :, :, :, ii, ii] = 1
-
         fill_su2_components_into_suN(tmp, su2_comps, su2_index)
         dest @= gpt.eval(tmp * dest)
 
@@ -68,7 +64,6 @@ def project_to_suN_step(dest, unprojected):
 #     * Then compute the b(k) of $ A_SU(2) = b0 I + i sum_k bk sigma_k $
 def extract_normalized_su2_components(suN_matrix, su2_index):
     suN_matrix = gpt.eval(suN_matrix)
-    suN_matrix_adj = gpt.eval(gpt.adj(suN_matrix))
     n_colors = suN_matrix.otype.Nc
     su2_components = [gpt.complex(suN_matrix.grid) for _ in range(4)]
 
@@ -81,13 +76,12 @@ def extract_normalized_su2_components(suN_matrix, su2_index):
             index += 1
 
     tmp_src = gpt.separate_color(suN_matrix)
-    adj_src = gpt.separate_color(suN_matrix_adj)
 
     # should be replaced by real and imag functions at some point
-    su2_components[0] @= 0.5 * (tmp_src[i1, i1] + adj_src[i1, i1] + tmp_src[i2, i2] + adj_src[i2, i2])
-    su2_components[1] @= -0.5j * (tmp_src[i1, i2] - adj_src[i2, i1] + tmp_src[i2, i1] - adj_src[i1, i2])
-    su2_components[2] @= 0.5 * (tmp_src[i1, i2] + adj_src[i2, i1] - tmp_src[i2, i1] - adj_src[i1, i2])
-    su2_components[3] @= -0.5j * (tmp_src[i1, i1] - adj_src[i1, i1] - tmp_src[i2, i2] + adj_src[i2, i2])
+    su2_components[0] @= gpt.component.real(gpt.eval(tmp_src[i1, i1] + tmp_src[i2, i2]))
+    su2_components[1] @= gpt.component.imag(gpt.eval(tmp_src[i1, i2] + tmp_src[i2, i1]))
+    su2_components[2] @= gpt.component.real(gpt.eval(tmp_src[i1, i2] - tmp_src[i2, i1]))
+    su2_components[3] @= gpt.component.imag(gpt.eval(tmp_src[i1, i1] - tmp_src[i2, i2]))
 
     norm = gpt.eval(
         su2_components[0]*su2_components[0] +
@@ -95,7 +89,7 @@ def extract_normalized_su2_components(suN_matrix, su2_index):
         su2_components[2]*su2_components[2] +
         su2_components[3]*su2_components[3]
     )
-    norm[:] = 1 / np.sqrt(norm[:])
+    norm @= gpt.component.inv(gpt.component.sqrt(norm))
 
     su2_components[0] @= su2_components[0] * norm
     su2_components[1] @= - su2_components[1] * norm
@@ -123,5 +117,9 @@ def fill_su2_components_into_suN(dst, su2_comps, su2_index):
     tmp[i1, i2] @= su2_comps[2] + 1j * su2_comps[1]
     tmp[i2, i1] @= - su2_comps[2] + 1j * su2_comps[1]
     tmp[i2, i2] @= su2_comps[0] - 1j * su2_comps[3]
+    for ii in range(n_colors):
+        for jj in range(n_colors):
+            if ii not in [i1, i2] or jj not in [i1, i2]:
+                tmp[ii, jj][:] = 1.0 if ii == jj else 0.0
 
     gpt.merge_color(dst, tmp)
