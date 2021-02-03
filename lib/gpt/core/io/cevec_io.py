@@ -712,7 +712,6 @@ def save(filename, objs, params):
                 bytearray(block_data_size_single * (nbasis - nsingleCap))
             )
             data = memoryview(bytearray(block_data_size_fp16 * (nbasis - nsingleCap)))
-            reduced_size = len(data_fp32) // block_reduce
             for b in range(read_blocks):
                 fgrid.barrier()
                 dt_distr -= gpt.time()
