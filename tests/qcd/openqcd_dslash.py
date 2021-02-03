@@ -10,6 +10,24 @@ import sys
 import gpt as g
 import numpy as np
 
+
+# fdimensions
+def fdimensions_from_openqcd(fdim):
+    """
+    Convert openqcd's coordinate ordering to our's: T X Y Z -> X Y Z T
+    """
+    assert len(fdim) == 4
+    return [int(fdim[(i + 1) % 4]) for i in range(4)]
+
+
+def fdimensions_to_openqcd(fdim):
+    """
+    Convert our coordinate ordering to openqcd's:  X Y Z T -> T X Y Z
+    """
+    assert len(fdim) == 4
+    return [int(fdim[(i - 1) % 4]) for i in range(4)]
+
+
 # helper functions
 def fields_agree_openqcd(ref, res):
     """
@@ -93,7 +111,7 @@ def read_openqcd_fermion(fname, cb=None):
     # we in memory, slow to fast: t z y x,
     # -> need to swap x and z
     fld = np.swapaxes(fld, 1, 3)
-    grid = g.grid(g.util.fdimensions_from_openqcd(lat), g.double)
+    grid = g.grid(fdimensions_from_openqcd(lat), g.double)
     field = g.vspincolor(grid)
     field[:] = fld.flatten(order="C")
     norm2_file = norm[0]

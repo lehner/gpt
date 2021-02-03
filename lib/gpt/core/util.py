@@ -88,14 +88,3 @@ def all_have_attribute(value, a):
     if type(value) == list and len(value) > 0:
         return all([all_have_attribute(v, a) for v in value])
     return hasattr(value, a)
-
-
-# fdimensions
-def fdimensions_from_openqcd(fdim):
-    assert len(fdim) == 4
-    return [int(fdim[(i + 1) % 4]) for i in range(4)]  # X Y Z T <- T X Y Z
-
-
-def fdimensions_to_openqcd(fdim):
-    assert len(fdim) == 4
-    return [int(fdim[(i - 1) % 4]) for i in range(4)]  # T X Y Z <- X Y Z T
