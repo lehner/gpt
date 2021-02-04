@@ -83,9 +83,6 @@ class gpt_io:
             f.write("%X\n" % index_crc)
             f.close()
 
-    def __del__(self):
-        self.close()
-
     def close_views(self):
         for f in self.loc:
             if self.loc[f] is not None:
@@ -326,6 +323,7 @@ class gpt_io:
 
     def write(self, objs):
         self.create_index("", objs)
+        self.flush()
 
     def create_index(self, ctx, objs):
         f = self.index_file
