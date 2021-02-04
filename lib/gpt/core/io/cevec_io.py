@@ -253,7 +253,6 @@ def load(filename, params):
 
         # single-precision data
         data_munged = memoryview(bytearray(block_data_size_single * nsingleCap))
-        reduced_size = len(data_munged) // block_reduce
         for b in range(read_blocks):
             fgrid.barrier()
             dt_fread -= gpt.time()
@@ -319,7 +318,6 @@ def load(filename, params):
             data_munged = memoryview(
                 bytearray(block_data_size_single * (nbasis - nsingleCap))
             )
-            reduced_size = len(data_munged) // block_reduce
             for b in range(read_blocks):
                 fgrid.barrier()
                 dt_fread -= gpt.time()
@@ -643,7 +641,6 @@ def save(filename, objs, params):
         # single-precision data
         data = memoryview(bytearray(block_data_size_single * nsingleCap))
         data_munged = memoryview(bytearray(block_data_size_single * nsingleCap))
-        reduced_size = len(data) // block_reduce
 
         for b in range(read_blocks):
             fgrid.barrier()
