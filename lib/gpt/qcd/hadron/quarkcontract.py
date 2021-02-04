@@ -94,7 +94,7 @@ def quark_contract_xx(mspincolor1, mspincolor2, components):
             if (c1_0, c1_1) not in comps2:
                 t_separatecolor -= gpt.time()
                 comps2[c1_0, c1_1] = gpt.separate_color(mcolor2[c1_0, c1_1])
-                t_separatecolor += gpt.time()        
+                t_separatecolor += gpt.time()
 
             for ii in range(9):
                 lefts.append(comps1[c0_0, c0_1][ii // 3, ii % 3])
