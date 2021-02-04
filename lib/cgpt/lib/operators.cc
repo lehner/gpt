@@ -28,6 +28,7 @@
 #include "operators/zmobius.h"
 #include "operators/mobius.h"
 #include "operators/coarse.h"
+#include "operators/coarse_multi_arg.h"
 #include "operators/create.h"
     
 EXPORT(create_fermion_operator,{
@@ -106,5 +107,43 @@ EXPORT(apply_fermion_operator_dirdisp,{
     cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
 
     return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->dirdisp((int)op,src,dst,(int)dir,(int)disp) );
+
+  });
+
+EXPORT(apply_multi_arg_fermion_operator,{
+
+    void* p;
+    PyObject *_src, *_dst;
+    long op;
+    if (!PyArg_ParseTuple(args, "llOO", &p,&op,&_src,&_dst)) {
+      return NULL;
+    }
+
+    std::vector<cgpt_Lattice_base*> src;
+    long src_n_virtual = cgpt_basis_fill(src, _src);
+
+    std::vector<cgpt_Lattice_base*> dst;
+    long dst_n_virtual = cgpt_basis_fill(dst, _dst);
+
+    return PyFloat_FromDouble( ((cgpt_multi_arg_fermion_operator_base*)p)->unary((int)op,src,src_n_virtual,dst,dst_n_virtual) );
+
+  });
+
+EXPORT(apply_multi_arg_fermion_operator_dirdisp,{
+
+    void* p;
+    PyObject *_src, *_dst;
+    long op, dir, disp;
+    if (!PyArg_ParseTuple(args, "llOOll", &p,&op,&_src,&_dst,&dir,&disp)) {
+      return NULL;
+    }
+
+    std::vector<cgpt_Lattice_base*> src;
+    long src_n_virtual = cgpt_basis_fill(src, _src);
+
+    std::vector<cgpt_Lattice_base*> dst;
+    long dst_n_virtual = cgpt_basis_fill(dst, _dst);
+
+    return PyFloat_FromDouble( ((cgpt_multi_arg_fermion_operator_base*)p)->dirdisp((int)op,src,src_n_virtual,dst,dst_n_virtual,(int)dir,(int)disp) );
 
   });

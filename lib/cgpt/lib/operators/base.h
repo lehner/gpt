@@ -24,3 +24,9 @@ public:
   virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) = 0;
   virtual void update(PyObject* args) = 0;
 };
+
+class cgpt_multi_arg_fermion_operator_base : public cgpt_fermion_operator_base {
+public:
+  virtual RealD unary(int opcode, std::vector<cgpt_Lattice_base*>& in, long in_n_virtual, std::vector<cgpt_Lattice_base*>& out, long out_n_virtual) = 0;
+  virtual RealD dirdisp(int opcode, std::vector<cgpt_Lattice_base*>& in, long in_n_virtual, std::vector<cgpt_Lattice_base*>& out, long out_n_virtual, int dir, int disp) = 0;
+};

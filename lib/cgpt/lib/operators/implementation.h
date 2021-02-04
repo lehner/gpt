@@ -82,3 +82,62 @@ public:
     }
   }
 };
+
+template<typename T>
+class cgpt_multi_arg_coarse_operator : public cgpt_multi_arg_fermion_operator_base {
+public:
+  T* op;
+
+  cgpt_multi_arg_coarse_operator(T* _op) : op(_op) {
+  }
+
+  virtual ~cgpt_multi_arg_coarse_operator() {
+    delete op;
+  }
+
+  virtual RealD unary(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out) {
+    ASSERT(0);
+    return 0.0;
+  }
+
+  virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
+    ASSERT(0);
+    return 0.0;
+  }
+
+  virtual RealD unary(int opcode,
+                      std::vector<cgpt_Lattice_base*>& in, long in_n_virtual,
+                      std::vector<cgpt_Lattice_base*>& out, long out_n_virtual) {
+    return cgpt_multi_arg_fermion_operator_unary<T>(*op, opcode, in, in_n_virtual, out, out_n_virtual);
+  }
+
+  virtual RealD dirdisp(int opcode,
+                        std::vector<cgpt_Lattice_base*>& in, long in_n_virtual,
+                        std::vector<cgpt_Lattice_base*>& out, long out_n_virtual,
+                        int dir, int disp) {
+    return cgpt_multi_arg_fermion_operator_dirdisp<T>(*op, opcode,
+                                                      in, in_n_virtual,
+                                                      out, out_n_virtual,
+                                                      dir, disp);
+  }
+
+  virtual void update(PyObject* args) {
+    typedef typename T::BasicLinkField::vector_type vCoeff_t;
+    const int nbasis = GridTypeMapper<typename T::BasicFermionField::vector_object>::count;
+
+    std::cout << "nbasis in update: " << nbasis << std::endl;
+
+    auto ASelfInv_ptr_list = get_pointer_vec<cgpt_Lattice_base>(args,"U_self_inv");
+    auto A_ptr_list = get_pointer_vec<cgpt_Lattice_base>(args,"U");
+
+    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis>>> ASelfInv;
+    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis>>> A;
+
+    cgpt_basis_fill(ASelfInv, ASelfInv_ptr_list);
+    cgpt_basis_fill(A, A_ptr_list);
+
+    ASSERT(A.size() == 9*ASelfInv.size());
+
+    op->ImportGauge(A, ASelfInv); // TODO: rename -> ImportGauge for consistency?
+  }
+};

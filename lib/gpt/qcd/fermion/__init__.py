@@ -86,3 +86,13 @@ def coarse_fermion(A, params):
     assert "nbasis" not in params
     params["nbasis"] = A[0].otype.v_n1[0]
     return coarse_operator("coarse", A, params, otype=A[0].otype.vector_type)
+
+
+@gpt.params_convention(make_hermitian=False)
+def coarse_multi_arg(A, params):
+    params = copy.deepcopy(params)  # save current parameters
+    assert "nbasis" not in params
+    params["nbasis"] = A[0].otype.v_n1[0]
+    return multi_arg_coarse_operator(
+        "coarse_multi_arg", A, params, otype=A[0].otype.vector_type
+    )

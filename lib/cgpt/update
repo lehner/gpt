@@ -40,6 +40,23 @@ cp lib/exports.h lib/exports.h~
     sed '1,/BEGIN_EXPORT_DIRDISP_VOID/d;/END_EXPORT_DIRDISP_VOID/,$d' lib/operators/types.h |
     awk '{ print "DIRDISPOP_VOID(" $1 "," NR + 5000 ")" }'
 ) > lib/operators/register_dirdisp.h
+(
+    echo "// ${WARNING}"
+    sed '1,/BEGIN_EXPORT_MULTI_REALD/d;/END_EXPORT_MULTI_REALD/,$d' lib/operators/types.h |
+    awk '{ print "MULTIOP_REALD(" $1 "," NR + 6000 ")" }'
+    sed '1,/BEGIN_EXPORT_MULTI_VOID/d;/END_EXPORT_MULTI_VOID/,$d' lib/operators/types.h |
+    awk '{ print "MULTIOP_VOID(" $1 "," NR + 7000 ")" }'
+    sed '1,/BEGIN_EXPORT_MULTI_DAG_VOID/d;/END_EXPORT_MULTI_DAG_VOID/,$d' lib/operators/types.h |
+    awk '{
+           print "MULTIOP_VOID_DAG0(" $1 "," NR + 8000 ")";
+           print "MULTIOP_VOID_DAG1(" $1 "," NR + 9000 ")";
+    }'
+) > lib/operators/register_multi.h
+(
+    echo "// ${WARNING}"
+    sed '1,/BEGIN_EXPORT_MULTI_DIRDISP_VOID/d;/END_EXPORT_MULTI_DIRDISP_VOID/,$d' lib/operators/types.h |
+    awk '{ print "MULTIDIRDISPOP_VOID(" $1 "," NR + 10000 ")" }'
+) > lib/operators/register_multi_dirdisp.h
 
 (
     echo "# ${WARNING}"
@@ -56,6 +73,21 @@ cp lib/exports.h lib/exports.h~
     sed '1,/BEGIN_EXPORT_DIRDISP_VOID/d;/END_EXPORT_DIRDISP_VOID/,$d' lib/operators/types.h |
     awk '{ print "    reg." $1 " = lambda dst, src, dir, disp: op.apply_dirdisp_operator(" NR + 5000 ", dst, src, dir, disp)" }'
 ) > ../gpt/qcd/fermion/register.py
+(
+    echo ""
+    echo "def register_multi_arg(reg, op):"
+    sed '1,/BEGIN_EXPORT_MULTI_REALD/d;/END_EXPORT_MULTI_REALD/,$d' lib/operators/types.h |
+    awk '{ print "    reg." $1 " = lambda dst, src: op.apply_unary_operator(" NR + 6000 ", dst, src)" }'
+    sed '1,/BEGIN_EXPORT_MULTI_VOID/d;/END_EXPORT_MULTI_VOID/,$d' lib/operators/types.h |
+    awk '{ print "    reg." $1 " = lambda dst, src: op.apply_unary_operator(" NR + 7000 ", dst, src)" }'
+    sed '1,/BEGIN_EXPORT_MULTI_DAG_VOID/d;/END_EXPORT_MULTI_DAG_VOID/,$d' lib/operators/types.h |
+    awk '{
+           print "    reg." $1 " = lambda dst, src: op.apply_unary_operator(" NR + 8000 ", dst, src)";
+           print "    reg." $1 "Dag = lambda dst, src: op.apply_unary_operator(" NR + 9000 ", dst, src)";
+    }'
+    sed '1,/BEGIN_EXPORT_MULTI_DIRDISP_VOID/d;/END_EXPORT_MULTI_DIRDISP_VOID/,$d' lib/operators/types.h |
+    awk '{ print "    reg." $1 " = lambda dst, src, dir, disp: op.apply_dirdisp_operator(" NR + 10000 ", dst, src, dir, disp)" }'
+) >> ../gpt/qcd/fermion/register.py
 
 # Automatically generated python files should be formatted with black
 python3 -m black -t py36 ../gpt/qcd/fermion/register.py 1> /dev/null 2> /dev/null

@@ -32,6 +32,21 @@
 #define DIRDISPOP_VOID(name,opcode)						\
   case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l,dir,disp); return 0.0;
 
+#define MULTIOP_VOID(name,opcode)						\
+  case opcode: op.name(_in,in_n_virtual,_out,out_n_virtual); return 0.0;
+
+#define MULTIOP_VOID_DAG0(name,opcode)						\
+  case opcode: op.name(_in,in_n_virtual,_out,out_n_virtual,0); return 0.0;
+
+#define MULTIOP_VOID_DAG1(name,opcode)						\
+  case opcode: op.name(_in,in_n_virtual,_out,out_n_virtual,1); return 0.0;
+
+#define MULTIOP_REALD(name,opcode)						\
+  case opcode: return op.name(_in,in_n_virtual,_out,out_n_virtual);
+
+#define MULTIDIRDISPOP_VOID(name,opcode)						\
+  case opcode: op.name(_in,in_n_virtual,_out,out_n_virtual,dir,disp); return 0.0;
+
 template<typename T>
 RealD cgpt_fermion_operator_unary(T& op, int opcode, cgpt_Lattice_base* in,cgpt_Lattice_base* out) {
   typedef typename T::FermionField::vector_object vobj;
@@ -49,6 +64,44 @@ RealD cgpt_fermion_operator_dirdisp(T& op, int opcode, cgpt_Lattice_base* in, cg
 
   switch(opcode) {
 #include "register_dirdisp.h"
+    default: ERR("Unknown opcode %d", opcode);
+  }
+}
+
+template<typename T>
+RealD cgpt_multi_arg_fermion_operator_unary(T& op, int opcode,
+                                            std::vector<cgpt_Lattice_base*>& in, long in_n_virtual,
+                                            std::vector<cgpt_Lattice_base*>& out, long out_n_virtual) {
+  typedef typename T::BasicFermionField BasicFermionField;
+
+  PVector<BasicFermionField> _in;
+  PVector<BasicFermionField> _out;
+
+  cgpt_basis_fill(_in,in);
+  cgpt_basis_fill(_out,out);
+
+  switch (opcode) {
+#include "register_multi.h"
+  default:
+    ERR("Unknown opcode %d",opcode);
+  }
+}
+
+template<typename T>
+RealD cgpt_multi_arg_fermion_operator_dirdisp(T& op, int opcode,
+                                              std::vector<cgpt_Lattice_base*>& in, long in_n_virtual,
+                                              std::vector<cgpt_Lattice_base*>& out, long out_n_virtual,
+                                              int dir, int disp) {
+  typedef typename T::BasicFermionField BasicFermionField;
+
+  PVector<BasicFermionField> _in;
+  PVector<BasicFermionField> _out;
+
+  cgpt_basis_fill(_in,in);
+  cgpt_basis_fill(_out,out);
+
+  switch(opcode) {
+#include "register_multi_dirdisp.h"
     default: ERR("Unknown opcode %d", opcode);
   }
 }
