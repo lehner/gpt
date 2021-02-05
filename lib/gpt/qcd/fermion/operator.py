@@ -348,7 +348,9 @@ class multi_arg_coarse_operator(operator):
         cgpt.delete_fermion_operator(self.obj)
 
     def apply_unary_operator(self, opcode, o, i):
-        print(type(i), type(o), type(i[0]), type(o[0]))
+        o = gpt.util.to_list(o)
+        i = gpt.util.to_list(i)
+        # print(type(i), type(o), type(i[0]), type(o[0]))
         return cgpt.apply_multi_arg_fermion_operator(self.obj, opcode, i, o)
 
     def apply_dirdisp_operator(self, opcode, o, i, direction, disp):

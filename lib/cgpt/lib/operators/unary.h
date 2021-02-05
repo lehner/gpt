@@ -72,10 +72,10 @@ template<typename T>
 RealD cgpt_multi_arg_fermion_operator_unary(T& op, int opcode,
                                             std::vector<cgpt_Lattice_base*>& in, long in_n_virtual,
                                             std::vector<cgpt_Lattice_base*>& out, long out_n_virtual) {
-  typedef typename T::BasicFermionField BasicFermionField;
+  typedef typename T::VirtualFermionField VirtualFermionField;
 
-  PVector<BasicFermionField> _in;
-  PVector<BasicFermionField> _out;
+  PVector<VirtualFermionField> _in;
+  PVector<VirtualFermionField> _out;
 
   cgpt_basis_fill(_in,in);
   cgpt_basis_fill(_out,out);
@@ -92,10 +92,10 @@ RealD cgpt_multi_arg_fermion_operator_dirdisp(T& op, int opcode,
                                               std::vector<cgpt_Lattice_base*>& in, long in_n_virtual,
                                               std::vector<cgpt_Lattice_base*>& out, long out_n_virtual,
                                               int dir, int disp) {
-  typedef typename T::BasicFermionField BasicFermionField;
+  typedef typename T::VirtualFermionField VirtualFermionField;
 
-  PVector<BasicFermionField> _in;
-  PVector<BasicFermionField> _out;
+  PVector<VirtualFermionField> _in;
+  PVector<VirtualFermionField> _out;
 
   cgpt_basis_fill(_in,in);
   cgpt_basis_fill(_out,out);

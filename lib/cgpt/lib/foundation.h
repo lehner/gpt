@@ -35,11 +35,20 @@ using namespace Grid;
 #define VECTOR_VIEW_OPEN(l,v,mode)				\
   Vector< decltype(l[0].View(mode)) > v; v.reserve(l.size());	\
   for(uint64_t k=0;k<l.size();k++)				\
-    v.push_back(l[k].View(mode));	       
+    v.push_back(l[k].View(mode));
+
+#define VECTOR_VIEW_OPEN_POINTER(l,v,p,mode)			\
+  Vector< decltype(l[0].View(mode)) > v; v.reserve(l.size());	\
+  for(uint64_t k=0;k<l.size();k++)				\
+    v.push_back(l[k].View(mode));	                        \
+  typename std::remove_reference<decltype(v[0])>::type* p = &v[0];
 
 #define VECTOR_VIEW_CLOSE(v)				\
   for(uint64_t k=0;k<v.size();k++) v[k].ViewClose();
 
+#define VECTOR_VIEW_CLOSE_POINTER(v,p)                  \
+  for(uint64_t k=0;k<v.size();k++) v[k].ViewClose();    \
+  p = nullptr;
 
 NAMESPACE_BEGIN(Grid);
 
@@ -61,6 +70,7 @@ template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
 #include "foundation/eigen.h"
 #include "foundation/matrix.h"
 #include "foundation/clover.h"
+#include "foundation/coarse.h"
 
 
 NAMESPACE_END(Grid);

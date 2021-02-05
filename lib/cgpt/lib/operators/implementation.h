@@ -122,16 +122,16 @@ public:
   }
 
   virtual void update(PyObject* args) {
-    typedef typename T::BasicLinkField::vector_type vCoeff_t;
-    const int nbasis = GridTypeMapper<typename T::BasicFermionField::vector_object>::count;
+    typedef typename T::VirtualLinkField::vector_type vCoeff_t;
+    const int nbasis_virtual = GridTypeMapper<typename T::VirtualFermionField::vector_object>::count;
 
-    std::cout << "nbasis in update: " << nbasis << std::endl;
+    std::cout << "nbasis_virtual in update: " << nbasis_virtual << std::endl;
 
     auto ASelfInv_ptr_list = get_pointer_vec<cgpt_Lattice_base>(args,"U_self_inv");
     auto A_ptr_list = get_pointer_vec<cgpt_Lattice_base>(args,"U");
 
-    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis>>> ASelfInv;
-    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis>>> A;
+    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis_virtual>>> ASelfInv;
+    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis_virtual>>> A;
 
     cgpt_basis_fill(ASelfInv, ASelfInv_ptr_list);
     cgpt_basis_fill(A, A_ptr_list);
