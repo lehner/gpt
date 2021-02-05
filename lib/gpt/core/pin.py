@@ -17,18 +17,12 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import numpy as np
-from gpt.params import params_convention
 
 
-class coarse_deflate:
-    @params_convention(block=32, linear_combination_block=4, fine_block=8)
-    def __init__(self, cevec, basis, fev, params):
-        self.mat = g.block.map(
-            cevec[0].grid, basis, basis_n_block=params["fine_block"]
-        ).fine_operator(
-            g.algorithms.modes.matrix(cevec, cevec, fev, lambda x: 1.0 / x, params)
-        )
+class pin:
+    def __init__(self, lattices, location):
+        lattices = g.util.to_list(lattices)
 
-    def __call__(self, matrix):
-        return self.mat
+        # just open the views, when we close them
+        # pinning is released
+        self.views = [x.mview(location) for x in lattices]

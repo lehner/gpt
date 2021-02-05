@@ -16,19 +16,11 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-import numpy as np
-from gpt.params import params_convention
+import traceback
 
 
-class coarse_deflate:
-    @params_convention(block=32, linear_combination_block=4, fine_block=8)
-    def __init__(self, cevec, basis, fev, params):
-        self.mat = g.block.map(
-            cevec[0].grid, basis, basis_n_block=params["fine_block"]
-        ).fine_operator(
-            g.algorithms.modes.matrix(cevec, cevec, fev, lambda x: 1.0 / x, params)
-        )
-
-    def __call__(self, matrix):
-        return self.mat
+def get_call_stack():
+    return [
+        (f"{frame.filename}:{frame.lineno}", frame.line)
+        for frame in traceback.extract_stack(None)[:-2]
+    ]

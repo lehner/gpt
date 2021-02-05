@@ -140,7 +140,7 @@ class defect_correcting:
 
                 # correction step
                 t("inner inverter")
-                _d = g.eval(inner_inv_mat * _s)
+                _d = inner_inv_mat(_s)
 
                 t("linear algebra")
                 for j in range(n):

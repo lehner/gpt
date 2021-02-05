@@ -27,6 +27,8 @@ from gpt.core.tensor import tensor
 from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time, timer
 from gpt.core.log import message
+from gpt.core.pin import pin
+from gpt.core.stack import get_call_stack
 from gpt.core.convert import convert
 from gpt.core.cshift_plan import cshift_plan
 from gpt.core.transform import (

@@ -17,9 +17,12 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import cgpt, gpt, numpy, sys
+from gpt.default import is_verbose
 from gpt.core.expr import factor
 
+
 mem_book = {}
+verbose_lattice_creation = is_verbose("lattice_creation")
 
 
 def get_mem_book():
@@ -75,7 +78,12 @@ class lattice(factor):
             raise Exception("Unknown lattice constructor")
 
         # use first pointer to index page in memory book
-        mem_book[self.v_obj[0]] = (self.grid, self.otype, gpt.time())
+        mem_book[self.v_obj[0]] = (
+            self.grid,
+            self.otype,
+            gpt.time(),
+            gpt.get_call_stack() if verbose_lattice_creation else None,
+        )
         if cb is not None:
             self.checkerboard(cb)
 
@@ -205,8 +213,8 @@ class lattice(factor):
 
         return value
 
-    def mview(self):
-        return [cgpt.lattice_memory_view(o) for o in self.v_obj]
+    def mview(self, location="host"):
+        return [cgpt.lattice_memory_view(o, location) for o in self.v_obj]
 
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype.__name__, self.grid.precision.__name__)

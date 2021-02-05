@@ -47,7 +47,6 @@ EXPORT(create_lattice,{
     cgpt_convert(_otype,otype);
     cgpt_convert(_prec,prec);
     
-    void* plat = 0;
     std::string tag = prec + ":" + otype;
     auto f = _create_otype_.find(tag);
     if (f == _create_otype_.end()) {
@@ -80,12 +79,17 @@ EXPORT(lattice_set_to_zero,{
   
 EXPORT(lattice_memory_view,{
     void* p;
-    if (!PyArg_ParseTuple(args, "l", &p)) {
+    PyObject* _lattice_view_location;
+    if (!PyArg_ParseTuple(args, "lO", &p, &_lattice_view_location)) {
       return NULL;
     }
+
+    std::string lattice_view_location;
+    cgpt_convert(_lattice_view_location,lattice_view_location);
+    memory_type lattice_view_mt = cgpt_memory_type_from_string(lattice_view_location);
     
     cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    return l->memory_view(mt_host);
+    return l->memory_view(lattice_view_mt);
   });
 
 EXPORT(lattice_to_str,{
