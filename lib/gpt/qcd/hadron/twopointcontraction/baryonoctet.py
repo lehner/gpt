@@ -20,73 +20,95 @@
 
 import gpt
 from gpt.qcd.hadron.quarkcontract import quark_contract_13
-from gpt.qcd.hadron.spinmatrices import charge_conjugation
 from numpy import sqrt
 
 
-def baryon_base_contraction(prop_1, prop_2, prop_3, pol_matrix, spin_matrix):
-    di_quark = quark_contract_13(gpt.eval(prop_3 * spin_matrix), gpt.eval(spin_matrix * prop_2))
+def baryon_octet_base_contraction(prop, diquark, pol_matrix):
     return gpt.trace(
-        gpt.eval(pol_matrix * gpt.color_trace(prop_1 * gpt.spin_trace(di_quark))) +
-        gpt.eval(pol_matrix * gpt.color_trace(prop_1 * di_quark))
+        pol_matrix * gpt.color_trace(prop * gpt.spin_trace(diquark)) +
+        pol_matrix * gpt.color_trace(prop * diquark)
     )
 
 
-def contract_proton(prop_up, prop_down, pol_matrix):
-    cg5 = charge_conjugation() * gpt.gamma[5]
-    return baryon_base_contraction(prop_up, prop_up, prop_down, pol_matrix, cg5)
+def contract_proton(prop_up, prop_down, spin_matrix, pol_matrix, diquark=None):
+    if diquark is None:
+        diquark = quark_contract_13(
+            gpt.eval(prop_down * spin_matrix), gpt.eval(spin_matrix * prop_up)
+        )
+    return baryon_octet_base_contraction(prop_up, diquark, pol_matrix)
 
 
-def contract_neutron(prop_up, prop_down, pol_matrix):
-    cg5 = charge_conjugation() * gpt.gamma[5]
-    return baryon_base_contraction(prop_down, prop_down, prop_up, pol_matrix, cg5)
+def contract_neutron(prop_up, prop_down, spin_matrix, pol_matrix, diquark=None):
+    if diquark is None:
+        diquark = quark_contract_13(
+            gpt.eval(prop_up * spin_matrix), gpt.eval(spin_matrix * prop_down)
+        )
+    return baryon_octet_base_contraction(prop_down, diquark, pol_matrix)
 
 
-def contract_xi_zero(prop_up, prop_strange, pol_matrix):
-    cg5 = charge_conjugation() * gpt.gamma[5]
-    return baryon_base_contraction(prop_strange, prop_strange, prop_up, pol_matrix, cg5)
+def contract_xi_zero(prop_up, prop_strange, spin_matrix, pol_matrix, diquark=None):
+    if diquark is None:
+        diquark = quark_contract_13(
+            gpt.eval(prop_up * spin_matrix), gpt.eval(spin_matrix * prop_strange)
+        )
+    return baryon_octet_base_contraction(prop_strange, diquark, pol_matrix)
 
 
-def contract_sigma_plus(prop_up, prop_strange, pol_matrix):
-    cg5 = charge_conjugation() * gpt.gamma[5]
-    return baryon_base_contraction(prop_up, prop_up, prop_strange, pol_matrix, cg5)
+def contract_sigma_plus(prop_up, prop_strange, spin_matrix, pol_matrix, diquark=None):
+    if diquark is None:
+        diquark = quark_contract_13(
+            gpt.eval(prop_strange * spin_matrix), gpt.eval(spin_matrix * prop_up)
+        )
+    return baryon_octet_base_contraction(prop_up, diquark, pol_matrix)
 
 
-def contract_lambda(prop_up, prop_down, prop_strange, pol_matrix):
-    cg5 = charge_conjugation() * gpt.gamma[5]
+def contract_lambda(prop_up, prop_down, prop_strange, spin_matrix, pol_matrix, diquarks=None):
+    if diquarks is None:
+        diquarks = []
+        prop_dict = {"up": prop_up, "down": prop_down, "strange": prop_strange}
+        for diquark_flavors in [
+            "up_down", "down_up",
+            "up_strange", "down_strange",
+            "strange_up", "strange_down"
+        ]:
+            flav1, flav2 = diquark_flavors.split("_")
+            diquarks.append(quark_contract_13(
+                gpt.eval(prop_dict[flav1] * spin_matrix), gpt.eval(spin_matrix * prop_dict[flav2])
+            ))
     return (
-        2 * baryon_base_contraction(prop_strange, prop_down, prop_up, pol_matrix, cg5) +
-        2 * baryon_base_contraction(prop_strange, prop_up, prop_down, pol_matrix, cg5) +
-        2 * baryon_base_contraction(prop_down, prop_strange, prop_up, pol_matrix, cg5) +
-        2 * baryon_base_contraction(prop_up, prop_strange, prop_down, pol_matrix, cg5) -
-        baryon_base_contraction(prop_down, prop_up, prop_strange, pol_matrix, cg5) -
-        baryon_base_contraction(prop_up, prop_down, prop_strange, pol_matrix, cg5)
+        2 * baryon_octet_base_contraction(prop_strange, diquarks[0], pol_matrix) +
+        2 * baryon_octet_base_contraction(prop_strange, diquarks[1], pol_matrix) +
+        2 * baryon_octet_base_contraction(prop_down, diquarks[2], pol_matrix) +
+        2 * baryon_octet_base_contraction(prop_up, diquarks[3], pol_matrix) -
+        baryon_octet_base_contraction(prop_down, diquarks[4], pol_matrix) -
+        baryon_octet_base_contraction(prop_up, diquarks[5], pol_matrix)
     ) / 6.
 
 
-def chroma_contract_lambda(prop_up, prop_down, prop_strange, pol_matrix):
-    cg5 = charge_conjugation() * gpt.gamma[5]
+def contract_lambda_naive(prop_up, prop_down, prop_strange, spin_matrix, pol_matrix, diquark=None):
+    if diquark is None:
+        diquark = quark_contract_13(
+            gpt.eval(prop_up * spin_matrix), gpt.eval(spin_matrix * prop_down)
+        )
+    return gpt.trace(pol_matrix * gpt.color_trace(prop_strange * gpt.spin_trace(diquark)))
+
+
+def contract_lambda_to_sigma_zero(prop_up, prop_down, prop_strange, spin_matrix, pol_matrix, diquarks=None):
+    if diquarks is None:
+        diquarks = []
+        prop_dict = {"up": prop_up, "down": prop_down, "strange": prop_strange}
+        for diquark_flavors in [
+            "up_down", "down_up",
+            "strange_up", "strange_down"
+        ]:
+            flav1, flav2 = diquark_flavors.split("_")
+            diquarks.append(quark_contract_13(
+                gpt.eval(prop_dict[flav1] * spin_matrix), gpt.eval(spin_matrix * prop_dict[flav2])
+            ))
     return (
-        2 * baryon_base_contraction(prop_down, prop_strange, prop_up, pol_matrix, cg5) +
-        2 * baryon_base_contraction(prop_down, prop_up, prop_strange, pol_matrix, cg5) +
-        2 * baryon_base_contraction(prop_strange, prop_down, prop_up, pol_matrix, cg5) +
-        2 * baryon_base_contraction(prop_up, prop_down, prop_strange, pol_matrix, cg5) -
-        baryon_base_contraction(prop_strange, prop_up, prop_down, pol_matrix, cg5) -
-        baryon_base_contraction(prop_up, prop_strange, prop_down, pol_matrix, cg5)
-    ) / 6.
-
-
-def contract_lambda_naive(prop_up, prop_down, prop_strange, pol_matrix):
-    cg5 = charge_conjugation() * gpt.gamma[5]
-    di_quark = quark_contract_13(gpt.eval(prop_up * cg5), gpt.eval(cg5 * prop_down))
-    return gpt.trace(gpt.eval(pol_matrix * gpt.color_trace(prop_strange * gpt.spin_trace(di_quark))))
-
-
-def contract_lambda_to_sigma_zero(prop_up, prop_down, prop_strange, pol_matrix):
-    cg5 = charge_conjugation() * gpt.gamma[5]
-    return (
-        2 * baryon_base_contraction(prop_strange, prop_down, prop_up, pol_matrix, cg5) -
-        2 * baryon_base_contraction(prop_strange, prop_up, prop_down, pol_matrix, cg5) +
-        baryon_base_contraction(prop_down, prop_up, prop_strange, pol_matrix, cg5) -
-        baryon_base_contraction(prop_up, prop_down, prop_strange, pol_matrix, cg5)
+        2 * baryon_octet_base_contraction(prop_strange, diquarks[0], pol_matrix) -
+        2 * baryon_octet_base_contraction(prop_strange, diquarks[1], pol_matrix) +
+        baryon_octet_base_contraction(prop_down, diquarks[2], pol_matrix) -
+        baryon_octet_base_contraction(prop_up, diquarks[3], pol_matrix)
     ) / sqrt(12)
+

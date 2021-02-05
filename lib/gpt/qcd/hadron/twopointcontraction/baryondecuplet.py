@@ -20,37 +20,74 @@
 
 import gpt
 from gpt.qcd.hadron.quarkcontract import quark_contract_13
-from gpt.qcd.hadron.spinmatrices import charge_conjugation, gamma_minus
 
 
-def contract_xi_zero_star(prop_up, prop_strange, pol_matrix):
-    cgminus = charge_conjugation() * gamma_minus()
+def baryon_decuplet_base_contraction(prop_1, prop_2, diquarks, pol_matrix):
+    assert isinstance(diquarks, list)
 
-    di_quark = quark_contract_13(gpt.eval(prop_up * cgminus), gpt.eval(cgminus * prop_strange))
     contraction = gpt.trace(
-        gpt.eval(pol_matrix * gpt.color_trace(prop_strange * gpt.spin_trace(di_quark))) +
-        gpt.eval(pol_matrix * gpt.color_trace(prop_strange * di_quark))
+        gpt.eval(pol_matrix * gpt.color_trace(prop_2 * gpt.spin_trace(diquarks[0]))) +
+        gpt.eval(pol_matrix * gpt.color_trace(prop_2 * diquarks[0]))
     )
-
-    di_quark @= quark_contract_13(gpt.eval(prop_strange * cgminus), gpt.eval(cgminus * prop_up))
-    contraction += gpt.trace(gpt.eval(pol_matrix * gpt.color_trace(prop_strange * di_quark)))
-
-    di_quark = quark_contract_13(gpt.eval(prop_strange * cgminus), gpt.eval(cgminus * prop_strange))
-    contraction += gpt.trace(gpt.eval(pol_matrix * gpt.color_trace(prop_up * di_quark)))
+    contraction += gpt.eval(gpt.trace(pol_matrix * gpt.color_trace(prop_2 * diquarks[1])))
+    contraction += gpt.eval(gpt.trace(pol_matrix * gpt.color_trace(prop_1 * diquarks[2])))
     contraction *= 2
-
-    contraction += gpt.trace(gpt.eval(pol_matrix * gpt.color_trace(prop_up * gpt.spin_trace(di_quark))))
+    contraction += gpt.eval(gpt.trace(pol_matrix * gpt.color_trace(prop_1 * gpt.spin_trace(diquarks[2]))))
     return contraction
 
 
-def contract_delta_plus(prop_up, prop_down, pol_matrix):
-    return contract_xi_zero_star(prop_up, prop_down, pol_matrix)
+def contract_delta_plus(prop_up, prop_down, spin_matrix, pol_matrix, diquarks=None):
+    if diquarks is None:
+        diquarks = [
+            quark_contract_13(
+                gpt.eval(prop_up * spin_matrix), gpt.eval(spin_matrix * prop_down)
+            ),
+            quark_contract_13(
+                gpt.eval(prop_down * spin_matrix), gpt.eval(spin_matrix * prop_up)
+            ),
+            quark_contract_13(
+                gpt.eval(prop_down * spin_matrix), gpt.eval(spin_matrix * prop_down)
+            )
+        ]
+    return baryon_decuplet_base_contraction(prop_up, prop_down, diquarks, pol_matrix)
 
 
-def contract_sigma_plus_star(prop_up, prop_strange, pol_matrix):
-    return contract_xi_zero_star(prop_strange, prop_up, pol_matrix)
+def contract_xi_zero_star(prop_up, prop_strange, spin_matrix, pol_matrix, diquarks=None):
+    if diquarks is None:
+        diquarks = [
+            quark_contract_13(
+                gpt.eval(prop_up * spin_matrix), gpt.eval(spin_matrix * prop_strange)
+            ),
+            quark_contract_13(
+                gpt.eval(prop_strange * spin_matrix), gpt.eval(spin_matrix * prop_up)
+            ),
+            quark_contract_13(
+                gpt.eval(prop_strange * spin_matrix), gpt.eval(spin_matrix * prop_strange)
+            )
+        ]
+    return baryon_decuplet_base_contraction(prop_up, prop_strange, diquarks, pol_matrix)
 
 
-def contract_omega(prop_strange, pol_matrix):
-    # TODO: normalization ?
-    return contract_xi_zero_star(prop_strange, prop_strange, pol_matrix)
+def contract_sigma_plus_star(prop_up, prop_strange, spin_matrix, pol_matrix, diquarks=None):
+    if diquarks is None:
+        diquarks = [
+            quark_contract_13(
+                gpt.eval(prop_strange * spin_matrix), gpt.eval(spin_matrix * prop_up)
+            ),
+            quark_contract_13(
+                gpt.eval(prop_up * spin_matrix), gpt.eval(spin_matrix * prop_strange)
+            ),
+            quark_contract_13(
+                gpt.eval(prop_up * spin_matrix), gpt.eval(spin_matrix * prop_up)
+            )
+        ]
+    return baryon_decuplet_base_contraction(prop_strange, prop_up, diquarks, pol_matrix)
+
+
+def contract_omega(prop_strange, spin_matrix, pol_matrix, diquark=None):
+    if diquark is None:
+        diquark = quark_contract_13(
+            gpt.eval(prop_strange * spin_matrix), gpt.eval(spin_matrix * prop_strange)
+        )
+    return baryon_decuplet_base_contraction(prop_strange, prop_strange, [diquark for _ in range(3)], pol_matrix)
+

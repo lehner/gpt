@@ -36,9 +36,9 @@ from gpt.params import params_convention
 def laplace(cov, dimensions):
     def mat(dst, src):
         assert dst != src
-        dst[:] = 0.0
-        for mu in dimensions:
-            dst += g.eval(-2.0 * src + cov.forward[mu] * src + cov.backward[mu] * src)
+        dst @= -2.0 * src + cov.forward[dimensions[0]] * src + cov.backward[dimensions[0]] * src
+        for mu in dimensions[1:]:
+            dst += -2.0 * src + cov.forward[mu] * src + cov.backward[mu] * src
 
     return g.matrix_operator(mat=mat)
 
