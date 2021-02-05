@@ -78,8 +78,8 @@ def lattice_reverse_check(lat):
     assert eps == 0.0
 
 
-lattice_reverse_check(l_rb[0])
 lattice_reverse_check(l[0])
+lattice_reverse_check(l_rb[0])
 
 ################################################################################
 # Test merge/separate here
@@ -126,14 +126,21 @@ for src in [l, l_rb]:
     # perform this test without cache and with cache (to fill and then to test)
     cache = {}
     for it in range(3):
-        src_unsplit = [g.lattice(x) for x in src]
-        t0 = g.time()
-        src_split = g.split(src, split_grid, None if it == 0 else cache)
-        t1 = g.time()
-        g.unsplit(src_unsplit, src_split, None if it == 0 else cache)
-        t2 = g.time()
-        g.message(f"Timing: {t1-t0}s for split and {t2-t1}s for unsplit")
-        for i in range(len(src)):
-            eps2 = g.norm2(src_unsplit[i] - src[i]) / g.norm2(src[i])
-            g.message(f"Split test {i} / {len(src)}: {eps2}")
-            assert eps2 == 0.0
+        for group_policy in [
+            g.split_group_policy.separate,
+            g.split_group_policy.together,
+        ]:
+            g.message(f"Iteration {it}, group_policy = {group_policy.__name__}")
+            src_unsplit = [g.lattice(x) for x in src]
+            t0 = g.time()
+            src_split = g.split(
+                src, split_grid, None if it == 0 else cache, group_policy
+            )
+            t1 = g.time()
+            g.unsplit(src_unsplit, src_split, None if it == 0 else cache, group_policy)
+            t2 = g.time()
+            g.message(f"Timing: {t1-t0}s for split and {t2-t1}s for unsplit")
+            for i in range(len(src)):
+                eps2 = g.norm2(src_unsplit[i] - src[i]) / g.norm2(src[i])
+                g.message(f"Split test {i} / {len(src)}: {eps2}")
+                assert eps2 == 0.0

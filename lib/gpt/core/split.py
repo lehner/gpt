@@ -21,10 +21,17 @@ import cgpt
 import numpy
 import sys
 
-# TODO: verbose split and time operations below
+
+# Implement policies as classes, may want to add more variables/methods later
+class split_group_policy:
+    class together:
+        pass
+
+    class separate:
+        pass
 
 
-def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
+def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache, group_policy):
     # Example:
     #
     # Original
@@ -39,17 +46,34 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
 
     # N is desired number of parallel split lattices per unsplit lattice
     # 1 <= N <= sranks, sranks % N == 0
-    assert len(lcoor) == len(gcoor)
+
     n = len(lattices)
     assert n > 0
+    assert n % N == 0
+    Q = n // N
+
+    # Save memory by performing each group separately
+    if N != 1 and group_policy == split_group_policy.separate:
+        res = []
+        for i in range(N):
+            res += split_lattices(
+                [lattices[q * N + i] for q in range(Q)],
+                lcoor,
+                gcoor,
+                split_grid,
+                1,
+                cache,
+                group_policy,
+            )
+        return res
+
+    assert len(lcoor) == len(gcoor)
     grid = lattices[0].grid
     assert all([lattices[i].grid.obj == grid.obj for i in range(1, n)])
     cb = lattices[0].checkerboard()
     assert all([lattices[i].checkerboard() is cb for i in range(1, n)])
     otype = lattices[0].otype
     assert all([lattices[i].otype.__name__ == otype.__name__ for i in range(1, n)])
-    assert n % N == 0
-    Q = n // N
 
     l = [gpt.lattice(split_grid, otype) for i in range(N)]
 
@@ -82,17 +106,26 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache):
     return l
 
 
-def unsplit(first, second, cache=None):
+def unsplit(first, second, cache=None, group_policy=split_group_policy.separate):
     if type(first) != list:
         return unsplit([first], [second])
 
     n = len(first)
     N = len(second)
+    Q = n // N
+    assert n % N == 0
+
+    # Save memory by performing each group separately
+    if N != 1 and group_policy == split_group_policy.separate:
+        for i in range(N):
+            unsplit(
+                [first[q * N + i] for q in range(Q)], [second[i]], cache, group_policy
+            )
+        return
+
     split_grid = second[0].grid
     sranks = split_grid.sranks
     srank = split_grid.srank
-    Q = n // N
-    assert n % N == 0
 
     lcoor = second[0].split_lcoor
     gcoor = second[0].split_gcoor
@@ -116,26 +149,7 @@ def unsplit(first, second, cache=None):
     cache[cache_key](dst_data, src_data)
 
 
-def split_sites(first, sites, mpi_split=None):
-    # this is the general case and should be used by the others
-    # sites need to be the local sites we want to have on this rank
-    # in the mpi_split layout
-    #
-    # split_by_rank : mpi_split = [1,1,1,1] ; sites = gpt.coordinates(first)
-    # split_list    : mpi_split = param     ; sites = gpt.coordinates(first_on_split_grid)
-    #
-    # in general find compact envelope of sites (minimal ldimensions that can hold the sites)
-    # this needs to be fast and should go into cgpt
-    #
-    return
-
-
-def split_block(first, ldimensions, mpi_split):
-    # this can still work with operators, block here
-    pass
-
-
-def split_by_rank(first):
+def split_by_rank(first, group_policy=split_group_policy.separate):
     if type(first) != list:
         return split_by_rank([first])[0]
 
@@ -149,15 +163,23 @@ def split_by_rank(first):
     split_grid = grid.split(mpi_split, fdimensions)
     gcoor = gpt.coordinates(lattices[0])
     lcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
-    return split_lattices(lattices, lcoor, gcoor, split_grid, len(lattices))
+    return split_lattices(
+        lattices, lcoor, gcoor, split_grid, len(lattices), group_policy
+    )
 
 
-def split(first, split_grid, cache=None):
+def split(first, split_grid, cache=None, group_policy=split_group_policy.separate):
     assert len(first) > 0
     lattices = first
     gcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
     lcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
     assert len(lattices) % split_grid.sranks == 0
     return split_lattices(
-        lattices, lcoor, gcoor, split_grid, len(lattices) // split_grid.sranks, cache
+        lattices,
+        lcoor,
+        gcoor,
+        split_grid,
+        len(lattices) // split_grid.sranks,
+        cache,
+        group_policy,
     )

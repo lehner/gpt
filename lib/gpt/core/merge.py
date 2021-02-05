@@ -88,11 +88,18 @@ def merge(lattices, dimension=-1, N=-1):
     # data transfer
     for i in range(N):
         merged_gcoor = cgpt.coordinates_inserted_dimension(gcoor[i % 2], dimension, [i])
-        gpt.poke(
-            merged_lattices,
-            merged_gcoor,
-            gpt.peek([lattices[j * N + i] for j in range(batches)], gcoor[i % 2]),
+
+        plan = gpt.copy_plan(
+            merged_lattices[0],
+            lattices[i],
+            embed_in_communicator=merged_lattices[0].grid,
         )
+        plan.destination += merged_lattices[0].view[merged_gcoor]
+        plan.source += lattices[i].view[gcoor[i % 2]]
+        plan = plan()
+
+        for j in range(batches):
+            plan(merged_lattices[j], lattices[j * N + i])
 
     # if only one batch, remove list
     if len(merged_lattices) == 1:
@@ -167,11 +174,16 @@ def separate(lattices, dimension=-1):
         gcoor = cgpt.coordinates_inserted_dimension(
             separated_gcoor[i % 2], dimension, [i]
         )
-        gpt.poke(
-            [separated_lattices[j * N + i] for j in range(batches)],
-            separated_gcoor[i % 2],
-            gpt.peek(lattices, gcoor),
+
+        plan = gpt.copy_plan(
+            separated_lattices[i], lattices[0], embed_in_communicator=lattices[0].grid
         )
+        plan.destination += separated_lattices[i].view[separated_gcoor[i % 2]]
+        plan.source += lattices[0].view[gcoor]
+        plan = plan()
+
+        for j in range(batches):
+            plan(separated_lattices[j * N + i], lattices[j])
 
     # return
     return separated_lattices
