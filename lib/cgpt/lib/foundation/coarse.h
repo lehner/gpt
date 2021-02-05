@@ -21,6 +21,22 @@
     This code is based on original Grid code.
 */
 
+// The purpose of this file is to make the coarse grid operator aware of virtual fields.
+// The first implementation we pursued in gpt looped over instances of Grid's CoarsenedMatrix.
+// This showed bad performance due to quadratic scaling of the number of comms with the number of virtual fields and also low computational perfomance on GPUs due to less parallelism within a single kernel call.
+//
+// To adress the first of these problems, we do the following:
+// We want to perform only ONE communication per application of the operator. We resort to the following trick to achieve this:
+// We copy the list of the 4d virtual fields into a temporary 5d object of the same 4d size and have the virtual index run in the 5th dimension.
+// We then use Grid's stencil on this five-dimensional object and a strictly local 5th dimension.
+// In our experiments we find that the overhead introduced by the copying is absolutely negligibly compared to communication time that would be necessary otherwise.
+
+// To adress the second problem, we do the following:
+// We pack every degree of freedom (index within a virtual field, list of virtual fields, number of rhs, sites) into the accelerator_for in order to ensure higher utilization of the GPU's compute capabilities.
+// If we were to manage utilizing the GPU's shared memory we could improve upon this by another factor of 8 in parallelism.
+
+// Note that we also provide a cpu version without parallelism over the index within a virtual field. This code is based on the observation that we saw a 30% performance increase on the a64fx
+
 template<class Field>
 void conformable(GridBase* grid, const PVector<Field>& field) {
   for(int v=0; v<field.size(); v++) {
@@ -57,6 +73,16 @@ void changingCheckerboard(const PVector<Field>& in, PVector<Field>& out) {
   }
 }
 
+template<class Field>
+bool checkerBoardIs(const PVector<Field>& in, int cb) {
+  assert((cb==Odd) || (cb==Even));
+  bool ret = true;
+  for(int v=0; v<in.size(); v++) {
+    ret = ret && in[v].Checkerboard() == cb;
+  }
+  return ret;
+}
+
 
 // this is the interface that gpt requires at the moment
 template<class FermionField>
@@ -87,19 +113,19 @@ public:
   virtual void M(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
   virtual void Mdag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
   virtual void MdagM(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
-  virtual void Mdiag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
+  virtual void Mdiag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) { Mooee(in, in_n_virtual, out, out_n_virtual); }
   virtual void Mdir(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dir, int disp) = 0;
-  virtual void MdirAll(const FermionField& in, uint64_t in_n_virtual, std::vector<FermionField>& out, uint64_t out_n_virtual) = 0;
+  // virtual void MdirAll(const FermionField& in, uint64_t in_n_virtual, std::vector<FermionField>& out, uint64_t out_n_virtual) = 0; // TODO think about this one again!
 
   /////////////////////////////////////////////////////////////////////////////
   //                            half cb operations                           //
   /////////////////////////////////////////////////////////////////////////////
 
   virtual void Meooe(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
-  virtual void Mooee(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
-  virtual void MooeeInv(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
   virtual void MeooeDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
+  virtual void Mooee(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
   virtual void MooeeDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
+  virtual void MooeeInv(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
   virtual void MooeeInvDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
 
   /////////////////////////////////////////////////////////////////////////////
@@ -174,24 +200,26 @@ private: // member data ///////////////////////////////////////////////////////
   uint64_t fermion_n_virtual_;
   uint64_t n_arg_;
 
-  Stencil stencil_;
+  // Stencil stencil_;
   // Stencil stencilEven_;
   // Stencil stencilOdd_;
   Stencil stencilMultiArg_;
-  // Stencil stencilEvenMultiArg_;
-  // Stencil stencilOddMultiArg_;
+  Stencil stencilEvenMultiArg_;
+  Stencil stencilOddMultiArg_;
 
   PhysicalGaugeField Uc_;
-  // PhysicalGaugeField UcEven_;
-  // PhysicalGaugeField UcOdd_;
+  PhysicalGaugeField UcEven_;
+  PhysicalGaugeField UcOdd_;
 
-  PhysicalGridLayoutGaugeField UcGridLayout_;
+  // PhysicalGridLayoutGaugeField UcGridLayout_;
 
   PhysicalLinkField UcSelfInv_;
-  // PhysicalLinkField UcSelfInvEven_;
-  // PhysicalLinkField UcSelfInvOdd_;
+  PhysicalLinkField UcSelfInvEven_;
+  PhysicalLinkField UcSelfInvOdd_;
 
   VirtualFermionField tmpMultiArg_;
+  VirtualFermionField tmpEvenMultiArg_;
+  VirtualFermionField tmpOddMultiArg_;
 
   double MCalls;
   double MMiscTime;
@@ -217,39 +245,139 @@ public: // member functions (implementing interface) //////////////////////////
   int isTrivialEE() { return 0; }
 
   // full cb operations
-  void M(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
-    M_internal(in, in_n_virtual, out, out_n_virtual);
+  void M(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    MInternal(in, in_n_virtual, out, out_n_virtual);
   }
-  void Mdag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void MdagM(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void Mdiag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void Mdir(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dir, int disp) {}
-  void MdirAll(const FermionField& in, uint64_t in_n_virtual, std::vector<FermionField>& out, uint64_t out_n_virtual) {}
+  void Mdag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    assert(0 && "TODO: implement this");
+  }
+  void MdagM(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    assert(0 && "TODO: implement this");
+  }
+  void Mdiag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    Mooee(in, in_n_virtual, out, out_n_virtual);
+  }
+  void Mdir(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dir, int disp) override {
+    DhopDir(in, in_n_virtual, out, out_n_virtual, dir, disp);
+  }
+  // void MdirAll(const FermionField& in, uint64_t in_n_virtual, std::vector<FermionField>& out, uint64_t out_n_virtual) override { // TODO think about this one again!
+  //   DhopDirAll(in, in_n_virtual, out, out_n_virtual);
+  // }
 
   // half cb operations
-  void Meooe(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void Mooee(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void MooeeInv(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void MeooeDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void MooeeDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void MooeeInvDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
+  void Meooe(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    if(in[0].Checkerboard() == Odd) {
+      DhopEO(in, in_n_virtual, out, out_n_virtual, DaggerNo);
+    } else {
+      DhopOE(in, in_n_virtual, out, out_n_virtual, DaggerNo);
+    }
+  }
+  void MeooeDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    if(in[0].Checkerboard() == Odd) {
+      DhopEO(in, in_n_virtual, out, out_n_virtual, DaggerYes);
+    } else {
+      DhopOE(in, in_n_virtual, out, out_n_virtual, DaggerYes);
+    }
+  }
+  void Mooee(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    // // assert(0 && "TODO: implement this");
+    // if(in[0].Grid()->_isCheckerBoarded) {
+    //   if(in[0].Checkerboard() == Odd) {
+    //     MooeeInternal(in, out, DiagonalOdd, TriangleOdd);
+    //   } else {
+    //     MooeeInternal(in, out, DiagonalEven, TriangleEven);
+    //   }
+    // } else {
+    //   MooeeInternal(in, out, Diagonal, Triangle);
+    // }
+  }
+  void MooeeDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    Mooee(in, in_n_virtual, out, out_n_virtual); // self-coupling term is hermitian TODO, sure?
+    // assert(0 && "TODO: implement this");
+  }
+  void MooeeInv(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    // // assert(0 && "TODO: implement this");
+    // if(in[0].Grid()->_isCheckerBoarded) {
+    //   if(in[0].Checkerboard() == Odd) {
+    //     MooeeInternal(in, out, DiagonalInvOdd, TriangleInvOdd);
+    //   } else {
+    //     MooeeInternal(in, out, DiagonalInvEven, TriangleInvEven);
+    //   }
+    // } else {
+    //   MooeeInternal(in, out, DiagonalInv, TriangleInv);
+    // }
+  }
+  void MooeeInvDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    MooeeInv(in, in_n_virtual, out, out_n_virtual); // self-coupling term is hermitian TODO, sure?
+    // assert(0 && "TODO: implement this");
+  }
 
   // non-hermitian hopping term; half cb or both
-  void Dhop(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dag) {}
-  void DhopOE(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dag) {}
-  void DhopEO(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dag) {}
-  void DhopDir(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dir, int disp) {}
+  void Dhop(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dag) override {
+    std::cout << GridLogMessage << "Dhop: starting function" << std::endl;
+    conformable(grid_, in); // verifies full grid
+    std::cout << GridLogMessage << "Dhop: done with first conformable check" << std::endl;
+    conformable(in[0].Grid(), out);
+    std::cout << GridLogMessage << "Dhop: done with second conformable check" << std::endl;
+
+    constantCheckerboard(in, out);
+
+    DhopInternal(stencilMultiArg_, Uc_, in, in_n_virtual, out, out_n_virtual, tmpMultiArg_, dag);
+    std::cout << GridLogMessage << "Dhop: ending function" << std::endl;
+  }
+  void DhopOE(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dag) override {
+    std::cout << GridLogMessage << "DhopOE: starting function" << std::endl;
+    conformable(cbGrid_, in);    // verifies half grid
+    std::cout << GridLogMessage << "DhopOE: done with first conformable check" << std::endl;
+    conformable(in[0].Grid(), out); // drops the cb check
+    std::cout << GridLogMessage << "DhopOE: done with second conformable check" << std::endl;
+
+    assert(checkerBoardIs(in, Even));
+    std::cout << GridLogMessage << "DhopOE: done with checkerBoardIs" << std::endl;
+    changingCheckerboard(in, out);
+    std::cout << GridLogMessage << "DhopOE: done with changingCheckerboard" << std::endl;
+
+    DhopInternal(stencilEvenMultiArg_, UcOdd_, in, in_n_virtual, out, out_n_virtual, tmpEvenMultiArg_, dag);
+    std::cout << GridLogMessage << "DhopOE: ending function" << std::endl;
+  }
+  void DhopEO(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dag) override {
+    std::cout << GridLogMessage << "DhopEO: starting function" << std::endl;
+    conformable(cbGrid_, in);    // verifies half grid
+    std::cout << GridLogMessage << "DhopEO: done with first conformable check" << std::endl;
+    conformable(in[0].Grid(), out); // drops the cb check
+    std::cout << GridLogMessage << "DhopEO: done with second conformable check" << std::endl;
+
+    assert(checkerBoardIs(in, Odd));
+    changingCheckerboard(in, out);
+
+    DhopInternal(stencilOddMultiArg_, UcEven_, in, in_n_virtual, out, out_n_virtual, tmpOddMultiArg_, dag);
+    std::cout << GridLogMessage << "DhopEO: ending function" << std::endl;
+  }
+  void DhopDir(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dir, int disp) override {
+    assert(0 && "TODO: implement this");
+  }
 
   // dminus stuff
-
-  void Dminus(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
-  void DminusDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {}
+  void Dminus(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    assert(0 && "TODO: implement this");
+  }
+  void DminusDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
+    assert(0 && "TODO: implement this");
+  }
 
   // import/export
-  void ImportPhysicalFermionSource(const FermionField& input, uint64_t input_n_virtual, FermionField& imported, uint64_t imported_n_virtual) {}
-  void ImportUnphysicalFermion(const FermionField& input, uint64_t input_n_virtual, FermionField& imported, uint64_t imported_n_virtual) {}
-  void ExportPhysicalFermionSolution(const FermionField& solution, uint64_t solution_n_virtual, FermionField& exported, uint64_t exported_n_virtual) {}
-  void ExportPhysicalFermionSource(const FermionField& solution, uint64_t solution_n_virtual, FermionField& exported, uint64_t exported_n_virtual) {}
+  void ImportPhysicalFermionSource(const FermionField& input, uint64_t input_n_virtual, FermionField& imported, uint64_t imported_n_virtual) override {
+    assert(0 && "TODO: implement this");
+  }
+  void ImportUnphysicalFermion(const FermionField& input, uint64_t input_n_virtual, FermionField& imported, uint64_t imported_n_virtual) override {
+    assert(0 && "TODO: implement this");
+  }
+  void ExportPhysicalFermionSolution(const FermionField& solution, uint64_t solution_n_virtual, FermionField& exported, uint64_t exported_n_virtual) override {
+    assert(0 && "TODO: implement this");
+  }
+  void ExportPhysicalFermionSource(const FermionField& solution, uint64_t solution_n_virtual, FermionField& exported, uint64_t exported_n_virtual) override {
+    assert(0 && "TODO: implement this");
+  }
 
 public: // member functions (additional) //////////////////////////////////////
 
@@ -269,7 +397,7 @@ public: // member functions (additional) //////////////////////////////////////
 
     // NOTE: can't use PokeIndex here because of different tensor depths
     VECTOR_VIEW_OPEN_POINTER(Uc_,           Uc_member_v,             Uc_member_p,             AcceleratorWrite);
-    VECTOR_VIEW_OPEN_POINTER(UcGridLayout_, Uc_member_grid_layout_v, Uc_member_grid_layout_p, AcceleratorWrite);
+    // VECTOR_VIEW_OPEN_POINTER(UcGridLayout_, Uc_member_grid_layout_v, Uc_member_grid_layout_p, AcceleratorWrite);
     VECTOR_VIEW_OPEN_POINTER(Uc,            Uc_arg_v,                Uc_arg_p,                AcceleratorRead);
     for(int v=0; v<NvirtualLink; v++) {
       const int v_row = v%NvirtualFermion; const int v_col = v/NvirtualFermion; // NOTE: comes in from gpt with row faster index -> col-major order
@@ -286,16 +414,16 @@ public: // member functions (additional) //////////////////////////////////////
           coalescedWrite(Uc_member_p[link_idx_row_col][ss](p), coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // change to col faster index -> row-major order -> with transpose
           // coalescedWrite(Uc_member_p[link_idx_col_row][ss](p), coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // keep      row faster index -> col-major order -> without transpose
 
-          // grid's layout with Lorentz in std::vector
-          // coalescedWrite(Uc_member_grid_layout_p[gauge_idx_point_row_col][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // point slow, virtual fast, col faster index -> virtual in row-major order
-          // coalescedWrite(Uc_member_grid_layout_p[gauge_idx_point_col_row][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // point slow, virtual fast, row faster index -> virtual in col-major order
-          coalescedWrite(Uc_member_grid_layout_p[gauge_idx_row_col_point][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // virtual slow, point fast, col faster index -> virtual in row-major order
-          // coalescedWrite(Uc_member_grid_layout_p[gauge_idx_col_row_point][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // virtual slow, point fast, row faster index -> virtual in col-major order
+          // // grid's layout with Lorentz in std::vector
+          // // coalescedWrite(Uc_membergrid__layout_p[gauge_idx_point_row_col][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // point slow, virtual fast, col faster index -> virtual in row-major order
+          // // coalescedWrite(Uc_membergrid__layout_p[gauge_idx_point_col_row][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // point slow, virtual fast, row faster index -> virtual in col-major order
+          // coalescedWrite(Uc_membergrid__layout_p[gauge_idx_row_col_point][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // virtual slow, point fast, col faster index -> virtual in row-major order
+          // // coalescedWrite(Uc_membergrid__layout_p[gauge_idx_col_row_point][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss])); // virtual slow, point fast, row faster index -> virtual in col-major order
         });
       }
     }
     VECTOR_VIEW_CLOSE_POINTER(Uc_member_v, Uc_member_p);
-    VECTOR_VIEW_CLOSE_POINTER(Uc_member_grid_layout_v, Uc_member_grid_layout_p);
+    // VECTOR_VIEW_CLOSE_POINTER(Uc_member_grid_layout_v, Uc_member_grid_layout_p);
     VECTOR_VIEW_CLOSE_POINTER(Uc_arg_v, Uc_arg_p);
 
     for(int v=0; v<NvirtualLink; v++) UcSelfInv_[v] = UcSelfInv[v];
@@ -303,7 +431,15 @@ public: // member functions (additional) //////////////////////////////////////
   }
 
   void PickCheckerboards() {
-    grid_printf("VirtualCoarsenedMatrix::pickCheckerboards still needs to be implemented\n");
+    for(int i=0; i<Uc_.size(); i++) {
+      pickCheckerboard(Even, UcEven_[i], Uc_[i]);
+      pickCheckerboard(Odd, UcOdd_[i], Uc_[i]);
+    }
+    for(int i=0; i<UcSelfInv_.size(); i++) {
+      pickCheckerboard(Even, UcSelfInvEven_[i], UcSelfInv_[i]);
+      pickCheckerboard(Odd, UcSelfInvOdd_[i], UcSelfInv_[i]);
+    }
+    grid_printf("VirtualCoarsenedMatrix::PickCheckerboards finished\n");
   }
 
   void Report(int Nvec) {
@@ -346,7 +482,7 @@ public: // member functions (additional) //////////////////////////////////////
       grid_printf("CoarseOperator Average mflops/s, mbytes/s per call per rank (full): %.0f, %.0f\n", Fullmflops/Nproc, Fullmbytes/Nproc);
       grid_printf("CoarseOperator Average mflops/s, mbytes/s per call per node (full): %.0f, %.0f\n", Fullmflops/Nnode, Fullmbytes/Nnode);
 
-      grid_printf("CoarseOperator Stencil\n"); stencil_.Report();
+      // grid_printf("CoarseOperator Stencil\n"); stencil_.Report();
       // grid_printf("CoarseOperator StencilEven\n"); stencilEven_.Report();
       // grid_printf("CoarseOperator StencilOdd\n"); stencilOdd_.Report();
       grid_printf("CoarseOperator StencilMultiArg\n"); stencilMultiArg_.Report();
@@ -366,7 +502,7 @@ public: // member functions (additional) //////////////////////////////////////
     MComputeTime = 0;
     MTotalTime   = 0;
 
-    stencil_.ZeroCounters();
+    // stencil_.ZeroCounters();
     // stencilEven_.ZeroCounters();
     // stencilOdd_.ZeroCounters();
     stencilMultiArg_.ZeroCounters();
@@ -392,20 +528,22 @@ public: // member functions (additional) //////////////////////////////////////
     , link_n_virtual_(UcSelfInv.size())
     , fermion_n_virtual_(uint64_t(sqrt(UcSelfInv.size())))
     , n_arg_(numArg)
-    , stencil_(grid_, geom_.npoint, Even, geom_.directions, geom_.displacements, 0)
+    // , stencil_(grid_, geom_.npoint, Even, geom_.directions, geom_.displacements, 0)
     // , stencilEven_(cbGrid_, geom_.npoint, Even, geom_.directions, geom_.displacements, 0)
     // , stencilOdd_(cbGrid_, geom_.npoint, Odd, geom_.directions, geom_.displacements, 0)
     , stencilMultiArg_(gridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
-    // , stencilEvenMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
-    // , stencilOddMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Odd, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
+    , stencilEvenMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
+    , stencilOddMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Odd, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
     , Uc_(link_n_virtual_, grid_)
-    // , UcEven_(link_n_virtual_, cbGrid_)
-    // , UcOdd_(link_n_virtual_, cbGrid_)
-    , UcGridLayout_(geom_.npoint*link_n_virtual_, grid_)
+    , UcEven_(link_n_virtual_, cbGrid_)
+    , UcOdd_(link_n_virtual_, cbGrid_)
+    // , UcGridLayout_(geom_.npoint*link_n_virtual_, grid_)
     , UcSelfInv_(link_n_virtual_, grid_)
-    // , UcSelfInvEven_(link_n_virtual_, cbGrid_)
-    // , UcSelfInvOdd_(link_n_virtual_, cbGrid_)
+    , UcSelfInvEven_(link_n_virtual_, cbGrid_)
+    , UcSelfInvOdd_(link_n_virtual_, cbGrid_)
     , tmpMultiArg_(gridMultiArg_)
+    , tmpEvenMultiArg_(cbGridMultiArg_)
+    , tmpOddMultiArg_(cbGridMultiArg_)
   {
     grid_->show_decomposition();
     cbGrid_->show_decomposition();
@@ -414,6 +552,11 @@ public: // member functions (additional) //////////////////////////////////////
     ImportGauge(Uc, UcSelfInv);
     PickCheckerboards();
     ZeroCounters();
+
+    // need to set these since I can't pick a cb for them!
+    tmpEvenMultiArg_.Checkerboard() = Even;
+    tmpOddMultiArg_.Checkerboard() = Odd;
+
     grid_printf("Constructed the latest coarse operator\n"); fflush(stdout);
   }
 
@@ -432,15 +575,101 @@ private: // member functions //////////////////////////////////////////////////
 
 public: // kernel functions TODO: move somewhere else ////////////////////////
 
-  void M_internal(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+  void MInternal(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
 #if defined(GRID_CUDA) || defined(GRID_HIP)
-    M_gpu(in, in_n_virtual, out, out_n_virtual);
+    MInternal_gpu(in, in_n_virtual, out, out_n_virtual);
 #else
-    M_cpu(in, in_n_virtual, out, out_n_virtual);
+    MInternal_cpu(in, in_n_virtual, out, out_n_virtual);
 #endif
   }
 
-  void M_gpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+  void DhopInternal(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp, int dag) {
+#if defined(GRID_CUDA) || defined(GRID_HIP)
+    DhopInternal_gpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
+#else
+    DhopInternal_cpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
+#endif
+  }
+
+  void MooeeInternal(const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+#if defined(GRID_CUDA) || defined(GRID_HIP)
+    MooeeInternal_gpu(Uc, in, in_n_virtual, out, out_n_virtual);
+#else
+    MooeeInternal_cpu(Uc, in, in_n_virtual, out, out_n_virtual);
+#endif
+  }
+
+  void MooeeInternal_gpu(const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+    MCalls++;
+    MTotalTime -= usecond();
+    MMiscTime -= usecond();
+    const int Narg            = numArg(in, in_n_virtual, out, out_n_virtual);
+    const int NvirtualFermion = in_n_virtual;
+    const int NvirtualLink    = NvirtualFermion*NvirtualFermion;
+    const int Nsimd           = SiteSpinor::Nsimd();
+    const int Nsite           = in[0].Grid()->oSites();
+    const int SelfPoint       = geom_.npoint - 1;
+
+    assert(n_arg_ == Narg);
+
+    MViewTime -= usecond();
+    VECTOR_VIEW_OPEN_POINTER(Uc_, Uc_v, Uc_p, AcceleratorRead);
+    VECTOR_VIEW_OPEN_POINTER(in, in_v, in_p, AcceleratorRead);
+    VECTOR_VIEW_OPEN_POINTER(out, out_v, out_p, AcceleratorWrite);
+    MViewTime += usecond();
+
+    for(int v_col=0; v_col<NvirtualFermion; v_col++) {
+      typedef decltype(coalescedRead(in_v[0][0]))    calcVector;
+      typedef decltype(coalescedRead(in_v[0][0](0))) calcComplex;
+
+      MComputeTime -= usecond();
+      accelerator_for(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
+              int _idx  = idx;
+        const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
+        const int arg   = _idx%Narg; _idx/=Narg;
+        const int v_row = _idx%NvirtualFermion; _idx/=NvirtualFermion;
+        const int ss    = _idx%Nsite; _idx/=Nsite;
+
+        const int v_arg_col = arg*NvirtualFermion+v_col;
+        const int v_arg_row = arg*NvirtualFermion+v_row;
+        const int v_row_col = v_row * NvirtualFermion + v_col;
+        const int v_col_row = v_col * NvirtualFermion + v_row;
+        const int sF        = ss*NvirtualFermion*Narg+v_col*Narg+arg; // needed for stencil access
+
+        calcComplex res;
+        calcVector nbr;
+        int ptype;
+        StencilEntry *SE_MA;
+
+        if (v_col == 0)
+          res = Zero();
+        else
+          res = coalescedRead(out_p[v_arg_row][ss](b));
+
+        nbr = coalescedRead(in_v[v_arg_col][ss]);
+
+        for(int bb=0;bb<NbasisVirtual;bb++) {
+          res = res + coalescedRead(Uc_p[v_row*NvirtualFermion+v_col][ss](SelfPoint)(b,bb))*nbr(bb);
+          // res = res + coalescedRead(Uc_p[v_col*NvirtualFermion+v_row][ss](SelfPoint)(b,bb))*nbr(bb);
+        }
+        coalescedWrite(out_p[v_arg_row][ss](b),res);
+      });
+      MComputeTime += usecond();
+    }
+    MViewTime -= usecond();
+    VECTOR_VIEW_CLOSE_POINTER(Uc_v, Uc_p);
+    VECTOR_VIEW_CLOSE_POINTER(in_v, in_p);
+    VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
+    MViewTime += usecond();
+    MTotalTime += usecond();
+
+  }
+  void MooeeInternal_cpu(const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+    // only need to apply the last point in the stencil!
+    MooeeInternal_gpu(Uc, in, in_n_virtual, out, out_n_virtual);
+  }
+
+  void MInternal_gpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
     // NOTE: corresponds to "M_finegrained_loopinternal_tensorlayout_parchange_commsreduce" in test file
     // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
     MCalls++;
@@ -450,7 +679,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     const int NvirtualFermion = in_n_virtual;
     const int NvirtualLink    = NvirtualFermion*NvirtualFermion;
     const int Nsimd           = SiteSpinor::Nsimd();
-    const int Nsite           = this->Grid()->oSites();
+    const int Nsite           = in[0].Grid()->oSites();
     const int Npoint          = geom_.npoint;
 
     assert(n_arg_ == Narg);
@@ -549,7 +778,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     MTotalTime += usecond();
   }
 
-  void M_cpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+  void MInternal_cpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
     // NOTE: corresponds to "M_loopinternal_tensorlayout_parchange_commsreduce" in test file
     // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
     MCalls++;
@@ -559,7 +788,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     const int NvirtualFermion = in_n_virtual;
     const int NvirtualLink    = NvirtualFermion*NvirtualFermion;
     const int Nsimd           = SiteSpinor::Nsimd();
-    const int Nsite           = this->Grid()->oSites();
+    const int Nsite           = in[0].Grid()->oSites();
     const int Npoint          = geom_.npoint;
 
     assert(n_arg_ == Narg);
@@ -653,5 +882,114 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
+  }
+
+  void DhopInternal_gpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
+    // NOTE: corresponds to "M_finegrained_loopinternal_tensorlayout_parchange_commsreduce" in test file
+    // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
+    MCalls++;
+    MTotalTime -= usecond();
+    MMiscTime -= usecond();
+    const int Narg            = numArg(in, in_n_virtual, out, out_n_virtual);
+    const int NvirtualFermion = in_n_virtual;
+    const int NvirtualLink    = NvirtualFermion*NvirtualFermion;
+    const int Nsimd           = SiteSpinor::Nsimd();
+    const int Nsite           = in[0].Grid()->oSites();
+    const int Npoint          = geom_.npoint - 1; // self stencil point is last
+
+    assert(n_arg_ == Narg);
+
+    SimpleCompressor<SiteSpinor> compressor;
+    MMiscTime += usecond();
+
+    {
+      MView2Time-=usecond();
+      VECTOR_VIEW_OPEN_POINTER(in, in_v, in_p, AcceleratorRead);
+      autoView(tmp_v, tmp, AcceleratorWrite);
+      MView2Time+=usecond();
+      MCopyTime-=usecond();
+      accelerator_for(sF, Nsite*NvirtualFermion*Narg, Nsimd, {
+              int _sF   = sF;                  // this does fastest to slowest from top to bottom
+        const int arg   = _sF%Narg;            _sF/=Narg;
+        const int v_col = _sF%NvirtualFermion; _sF/=NvirtualFermion;
+        const int sU    = _sF%Nsite;           _sF/=Nsite;
+        coalescedWrite(tmp_v[sF], in_v[arg*NvirtualFermion+v_col](sU));
+        // printf("COPY: sF = %4d, arg = %4d, sU = %4d, v_col = %4d\n", sF, arg, sU, v_col); fflush(stdout);
+      });
+      MCopyTime+=usecond();
+      MView2Time-=usecond();
+      VECTOR_VIEW_CLOSE_POINTER(in_v, in_p);
+      MView2Time+=usecond();
+    }
+
+    MCommTime-=usecond();
+    stencil.HaloExchange(tmp, compressor);
+    MCommTime+=usecond();
+
+    MViewTime -= usecond();
+    VECTOR_VIEW_OPEN_POINTER(Uc, Uc_v, Uc_p, AcceleratorRead);
+    VECTOR_VIEW_OPEN_POINTER(in, in_v, in_p, AcceleratorRead);
+    autoView(tmp_v, tmp, AcceleratorRead);
+    autoView(stencil_v, stencil, AcceleratorRead);
+    VECTOR_VIEW_OPEN_POINTER(out, out_v, out_p, AcceleratorWrite);
+    MViewTime += usecond();
+
+    for(int v_col=0; v_col<NvirtualFermion; v_col++) {
+      typedef decltype(coalescedRead(tmp_v[0]))    calcVector;
+      typedef decltype(coalescedRead(tmp_v[0](0))) calcComplex;
+
+      MComputeTime -= usecond();
+      accelerator_for(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
+              int _idx  = idx;
+        const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
+        const int arg   = _idx%Narg; _idx/=Narg;
+        const int v_row = _idx%NvirtualFermion; _idx/=NvirtualFermion;
+        const int ss    = _idx%Nsite; _idx/=Nsite;
+
+        const int v_arg_col = arg*NvirtualFermion+v_col;
+        const int v_arg_row = arg*NvirtualFermion+v_row;
+        const int v_row_col = v_row * NvirtualFermion + v_col;
+        const int v_col_row = v_col * NvirtualFermion + v_row;
+        const int sF        = ss*NvirtualFermion*Narg+v_col*Narg+arg; // needed for stencil access
+
+        calcComplex res;
+        calcVector nbr;
+        int ptype;
+        StencilEntry *SE_MA;
+
+        if (v_col == 0)
+          res = Zero();
+        else
+          res = coalescedRead(out_p[v_arg_row][ss](b));
+
+        for(int point=0; point<Npoint; point++) {
+          SE_MA=stencil_v.GetEntry(ptype,point,sF);
+
+          if(SE_MA->_is_local) {
+            nbr = coalescedReadPermute(tmp_v[SE_MA->_offset],ptype,SE_MA->_permute);
+          } else {
+            nbr = coalescedRead(stencil_v.CommBuf()[SE_MA->_offset]);
+          }
+          acceleratorSynchronise();
+
+          for(int bb=0;bb<NbasisVirtual;bb++) {
+            res = res + coalescedRead(Uc_p[v_row*NvirtualFermion+v_col][ss](point)(b,bb))*nbr(bb);
+            // res = res + coalescedRead(Uc_p[v_col*NvirtualFermion+v_row][ss](point)(b,bb))*nbr(bb);
+          }
+        }
+        coalescedWrite(out_p[v_arg_row][ss](b),res);
+      });
+      MComputeTime += usecond();
+    }
+    MViewTime -= usecond();
+    VECTOR_VIEW_CLOSE_POINTER(Uc_v, Uc_p);
+    VECTOR_VIEW_CLOSE_POINTER(in_v, in_p);
+    VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
+    MViewTime += usecond();
+    MTotalTime += usecond();
+  }
+
+  void DhopInternal_cpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
+    DhopInternal_gpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
   }
 };
