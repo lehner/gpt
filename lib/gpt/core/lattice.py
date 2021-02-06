@@ -19,7 +19,7 @@
 import cgpt, gpt, numpy, sys
 from gpt.default import is_verbose
 from gpt.core.expr import factor
-
+from gpt.core.mem import host
 
 mem_book = {}
 verbose_lattice_creation = is_verbose("lattice_creation")
@@ -97,20 +97,6 @@ class lattice(factor):
         assert self.otype == other.otype
         self.v_obj, other.v_obj = other.v_obj, self.v_obj
         self.metadata, other.metadata = other.metadata, self.metadata
-
-    def advise(self, t):
-        if type(t) != str:
-            t = t.tag
-        for o in self.v_obj:
-            cgpt.lattice_advise(o, t)
-        return self
-
-    def prefetch(self, t):
-        if type(t) != str:
-            t = t.tag
-        for o in self.v_obj:
-            cgpt.lattice_prefetch(o, t)
-        return self
 
     def checkerboard(self, val=None):
         if val is None:
@@ -213,8 +199,8 @@ class lattice(factor):
 
         return value
 
-    def mview(self, location="host"):
-        return [cgpt.lattice_memory_view(o, location) for o in self.v_obj]
+    def mview(self, location=host):
+        return [cgpt.lattice_memory_view(self, o, location) for o in self.v_obj]
 
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype.__name__, self.grid.precision.__name__)

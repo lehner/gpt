@@ -19,6 +19,14 @@
 import resource, gpt, cgpt, os
 
 
+class accelerator:
+    pass
+
+
+class host:
+    pass
+
+
 def mem_host_available():
     try:
         res = dict(

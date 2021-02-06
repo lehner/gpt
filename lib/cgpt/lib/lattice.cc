@@ -80,7 +80,8 @@ EXPORT(lattice_set_to_zero,{
 EXPORT(lattice_memory_view,{
     void* p;
     PyObject* _lattice_view_location;
-    if (!PyArg_ParseTuple(args, "lO", &p, &_lattice_view_location)) {
+    PyObject* _lattice;
+    if (!PyArg_ParseTuple(args, "OlO", &_lattice, &p, &_lattice_view_location)) {
       return NULL;
     }
 
@@ -89,7 +90,30 @@ EXPORT(lattice_memory_view,{
     memory_type lattice_view_mt = cgpt_memory_type_from_string(lattice_view_location);
     
     cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    return l->memory_view(lattice_view_mt);
+    PyObject* r = l->memory_view(lattice_view_mt);
+
+    struct _mvc {
+      PyObject* _lattice;
+      PyObject* _base;
+    };
+
+    _mvc* pm = new _mvc;
+    pm->_lattice = _lattice;
+    Py_INCREF(_lattice);
+    pm->_base = ((PyMemoryViewObject*)r)->mbuf->master.obj;
+    
+    PyObject *capsule =
+      PyCapsule_New((void*)pm, NULL,
+		    [] (PyObject *capsule) -> void { 
+		      _mvc* pm = (_mvc*)PyCapsule_GetPointer(capsule, NULL);
+		      Py_DECREF(pm->_base);
+		      Py_DECREF(pm->_lattice);
+		      delete pm;
+		    });
+
+    ((PyMemoryViewObject*)r)->mbuf->master.obj = capsule;
+
+    return r;
   });
 
 EXPORT(lattice_to_str,{
@@ -146,28 +170,4 @@ EXPORT(lattice_get_checkerboard,{
     }
     cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
     return PyLong_FromLong(dst->get_checkerboard() == Even ? 0 : 1);
-  });
-
-EXPORT(lattice_advise,{
-    void* _dst;
-    PyObject* _type;
-    if (!PyArg_ParseTuple(args, "lO", &_dst,&_type)) {
-      return NULL;
-    }
-    std::string type;
-    cgpt_convert(_type,type);
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-    return dst->advise(type);
-  });
-
-EXPORT(lattice_prefetch,{
-    void* _dst;
-    PyObject* _type;
-    if (!PyArg_ParseTuple(args, "lO", &_dst,&_type)) {
-      return NULL;
-    }
-    std::string type;
-    cgpt_convert(_type,type);
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-    return dst->prefetch(type);
   });

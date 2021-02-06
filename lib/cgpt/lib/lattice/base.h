@@ -62,8 +62,6 @@ public:
   virtual void invert_matrix(std::vector<cgpt_Lattice_base*>& matrix_inv, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0;
   virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0; // this determines type of matrix[0]
   virtual GridBase* get_grid() = 0;
-  virtual PyObject* advise(std::string type) = 0;
-  virtual PyObject* prefetch(std::string type) = 0;
 };
 
 template<class T> class cgpt_Lattice;
