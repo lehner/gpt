@@ -69,7 +69,8 @@ EXPORT(exit,{
 	"               Finalized GPT                 " << std::endl <<
 	"=============================================" << std::endl;
 
-      Grid_finalize();
+      // For now keep Grid alive.  May change default behavior in future.
+      // Grid_finalize();
       cgpt_initialized = false;
 
     }

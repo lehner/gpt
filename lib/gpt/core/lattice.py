@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, numpy, sys
+import cgpt, gpt, numpy
 from gpt.default import is_verbose
 from gpt.core.expr import factor
 from gpt.core.mem import host
