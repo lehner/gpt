@@ -107,12 +107,12 @@ class copy_plan:
         self.source = copy_plan_view(src, embed_in_communicator)
 
         data_location = (
-            "host"
+            gpt.host
             if (
                 self.destination.requires_host_memory
                 or self.source.requires_host_memory
             )
-            else "accelerator"
+            else gpt.accelerator
         )
 
         self.communication_buffer_location = data_location

@@ -16,10 +16,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, numpy, sys
+import cgpt, gpt, numpy
+from gpt.default import is_verbose
 from gpt.core.expr import factor
+from gpt.core.mem import host
 
 mem_book = {}
+verbose_lattice_creation = is_verbose("lattice_creation")
 
 
 def get_mem_book():
@@ -35,6 +38,18 @@ class lattice_view_constructor:
         return gpt.lattice_view(self.parent, pos, tidx)
 
 
+def unpack_cache_key(key):
+    if type(key) == tuple and type(key[-1]) == dict:
+        cache = key[-1]
+        key = key[0:-1]
+        if len(key) == 1:
+            key = key[0]
+        return cache, key
+
+    return None, key
+
+
+# lattice class
 class lattice(factor):
     __array_priority__ = 1000000
     cache = {}
@@ -75,7 +90,12 @@ class lattice(factor):
             raise Exception("Unknown lattice constructor")
 
         # use first pointer to index page in memory book
-        mem_book[self.v_obj[0]] = (self.grid, self.otype, gpt.time())
+        mem_book[self.v_obj[0]] = (
+            self.grid,
+            self.otype,
+            gpt.time(),
+            gpt.get_call_stack() if verbose_lattice_creation else None,
+        )
         if cb is not None:
             self.checkerboard(cb)
 
@@ -89,20 +109,6 @@ class lattice(factor):
         assert self.otype == other.otype
         self.v_obj, other.v_obj = other.v_obj, self.v_obj
         self.metadata, other.metadata = other.metadata, self.metadata
-
-    def advise(self, t):
-        if type(t) != str:
-            t = t.tag
-        for o in self.v_obj:
-            cgpt.lattice_advise(o, t)
-        return self
-
-    def prefetch(self, t):
-        if type(t) != str:
-            t = t.tag
-        for o in self.v_obj:
-            cgpt.lattice_prefetch(o, t)
-        return self
 
     def checkerboard(self, val=None):
         if val is None:
@@ -137,17 +143,24 @@ class lattice(factor):
         return lattice_view_constructor(self)
 
     def __setitem__(self, key, value):
+        # unpack cache
+        cache, key = unpack_cache_key(key)
+        cache_key = None if cache is None else "set"
+
         # short code path to zero lattice
-        cache_key = None
         if type(key) == slice and key == slice(None, None, None):
-            cache_key = f"{self.otype.__name__}_{self.checkerboard().__name__}_{self.grid.describe()}"
+
             if type(value) == int and value == 0:
                 for o in self.v_obj:
                     cgpt.lattice_set_to_zero(o)
                 return
 
+            cache_key = f"{self.otype.__name__}_{self.checkerboard().__name__}_{self.grid.describe()}"
+            cache = lattice.cache
+
         # general code path, map key
         pos, tidx, shape = gpt.map_key(self, key)
+        n_pos = len(pos)
 
         # convert input to proper numpy array
         value = gpt.util.tensor_to_value(value, dtype=self.grid.precision.complex_dtype)
@@ -155,11 +168,11 @@ class lattice(factor):
             value = memoryview(bytearray())
 
         # needed bytes and optional cyclic upscaling
-        nbytes_needed = len(pos) * numpy.prod(shape) * self.grid.precision.nbytes * 2
+        nbytes_needed = n_pos * numpy.prod(shape) * self.grid.precision.nbytes * 2
         value = cgpt.copy_cyclic_upscale(value, nbytes_needed)
 
         # create plan
-        if cache_key is None or cache_key not in lattice.cache:
+        if cache_key is None or cache_key not in cache:
             plan = gpt.copy_plan(self, value)
             plan.destination += gpt.lattice_view(self, pos, tidx)
             plan.source += gpt.global_memory_view(
@@ -175,26 +188,41 @@ class lattice(factor):
                 skip_optimize=cache_key is None,
             )
             if cache_key is not None:
-                lattice.cache[cache_key] = xp
+                cache[cache_key] = xp
         else:
-            xp = lattice.cache[cache_key]
+            xp = cache[cache_key]
 
         xp(self, value)
 
     def __getitem__(self, key):
+
+        # unpack cache
+        cache, key = unpack_cache_key(key)
+        cache_key = None if cache is None else "get"
+
+        # general code path, map key
         pos, tidx, shape = gpt.map_key(self, key)
+        n_pos = len(pos)
 
-        value = cgpt.ndarray((len(pos), *shape), self.grid.precision.complex_dtype)
+        # create target
+        value = cgpt.ndarray((n_pos, *shape), self.grid.precision.complex_dtype)
 
-        plan = gpt.copy_plan(value, self)
-        plan.destination += gpt.global_memory_view(
-            self.grid,
-            [[self.grid.processor, value, 0, value.nbytes]]
-            if value.nbytes > 0
-            else None,
-        )
-        plan.source += gpt.lattice_view(self, pos, tidx)
-        xp = plan()
+        # create plan
+        if cache_key is None or cache_key not in cache:
+            plan = gpt.copy_plan(value, self)
+            plan.destination += gpt.global_memory_view(
+                self.grid,
+                [[self.grid.processor, value, 0, value.nbytes]]
+                if value.nbytes > 0
+                else None,
+            )
+            plan.source += gpt.lattice_view(self, pos, tidx)
+            xp = plan()
+
+            if cache_key is not None:
+                cache[cache_key] = xp
+        else:
+            xp = cache[cache_key]
 
         xp(value, self)
 
@@ -205,8 +233,8 @@ class lattice(factor):
 
         return value
 
-    def mview(self):
-        return [cgpt.lattice_memory_view(o) for o in self.v_obj]
+    def mview(self, location=host):
+        return [cgpt.lattice_memory_view(self, o, location) for o in self.v_obj]
 
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype.__name__, self.grid.precision.__name__)

@@ -176,6 +176,23 @@ class matrix_operator(factor):
             accept_list=True,
         )
 
+    def grouped(self, max_group_size):
+        def _grouped(dst, src, mat):
+            for i in range(0, len(src), max_group_size):
+                mat(dst[i : i + max_group_size], src[i : i + max_group_size])
+
+        return matrix_operator(
+            mat=lambda dst, src: _grouped(dst, src, self),
+            adj_mat=lambda dst, src: _grouped(dst, src, self.adj()),
+            inv_mat=lambda dst, src: _grouped(dst, src, self.inv()),
+            adj_inv_mat=lambda dst, src: _grouped(dst, src, self.adj().inv()),
+            otype=self.otype,
+            grid=self.grid,
+            accept_guess=self.accept_guess,
+            cb=self.cb,
+            accept_list=True,
+        )
+
     def unary(self, u):
         if u == gpt.factor_unary.BIT_TRANS | gpt.factor_unary.BIT_CONJ:
             return self.adj()

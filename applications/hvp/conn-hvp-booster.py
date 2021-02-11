@@ -72,7 +72,7 @@ jobs = {
 
 # At 32 jobs we break even with eigenvector generation
 
-simultaneous_low_positions = 3
+simultaneous_low_positions = 2
 
 jobs_per_run = g.default.get_int("--gpt_jobs", 1)
 
@@ -176,6 +176,9 @@ l_sloppy = l_exact.converted(g.single)
 
 eig = g.load(groups[group]["evec_fmt"] % conf, grids=l_sloppy.F_grid_eo)
 
+# pin coarse eigenvectors to GPU memory
+pin = g.pin(eig[1], g.accelerator)
+
 light_innerL_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
     g.algorithms.inverter.sequence(
@@ -183,7 +186,9 @@ light_innerL_inverter = g.algorithms.inverter.preconditioned(
             eig[1],
             eig[0],
             eig[2],
-            block=200,
+            block=400,
+            fine_block=4,
+            linear_combination_block=32,
         ),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 200}),
@@ -199,7 +204,9 @@ light_innerH_inverter = g.algorithms.inverter.preconditioned(
             eig[1],
             eig[0],
             eig[2],
-            block=200,
+            block=400,
+            fine_block=4,
+            linear_combination_block=32,
         ),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 300}),
@@ -210,7 +217,9 @@ light_innerH_inverter = g.algorithms.inverter.preconditioned(
 
 light_low_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
-    g.algorithms.inverter.coarse_deflate(eig[1], eig[0], eig[2], block=200),
+    g.algorithms.inverter.coarse_deflate(
+        eig[1], eig[0], eig[2], block=400, linear_combination_block=32, fine_block=4
+    ),
 )
 
 light_exact_inverter = g.algorithms.inverter.defect_correcting(
@@ -226,8 +235,8 @@ light_sloppy_inverter = g.algorithms.inverter.defect_correcting(
 )
 
 prop_l_low = l_sloppy.propagator(light_low_inverter)
-prop_l_sloppy = l_exact.propagator(light_sloppy_inverter)
-prop_l_exact = l_exact.propagator(light_exact_inverter)
+prop_l_sloppy = l_exact.propagator(light_sloppy_inverter).grouped(6)
+prop_l_exact = l_exact.propagator(light_exact_inverter).grouped(6)
 
 # show available memory
 g.mem_report(details=False)
@@ -343,14 +352,27 @@ for group, job, conf, jid, n in run_jobs:
         srcD, pos_of_slice, sign_of_slice = create_source(pos)
         srcF = g.convert(srcD, g.single)
 
-        prop_exact = g.eval(prop_l_exact * srcD)
         prop_sloppy = g.eval(prop_l_sloppy * srcD)
+        g.mem_report(details=False)
+
+        prop_exact = g.eval(prop_l_exact * srcD)
+        g.mem_report(details=False)
+
         prop_low = g.eval(prop_l_low * srcF)
+        g.mem_report(details=False)
 
         for i in range(use_source_time_slices):
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_exact), "exact")
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_sloppy), "sloppy")
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_low), "low", False)
+
+        g.mem_report(details=False)
+
+        prop_low = None
+        prop_sloppy = None
+        prop_exact = None
+        srcD = None
+        srcF = None
 
     # sloppy positions
     for pos in source_positions_sloppy:
@@ -363,6 +385,13 @@ for group, job, conf, jid, n in run_jobs:
         for i in range(use_source_time_slices):
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_sloppy), "sloppy")
             contract(pos_of_slice[i], g.eval(sign_of_slice[i] * prop_low), "low", False)
+
+        g.mem_report(details=False)
+
+        prop_low = None
+        prop_sloppy = None
+        srcD = None
+        srcF = None
 
     # low positions
     for pos_idx in range(0, len(source_positions_low), simultaneous_low_positions):
@@ -381,6 +410,7 @@ for group, job, conf, jid, n in run_jobs:
             array_sign_of_slice.append(sign_of_slice)
 
         array_prop_low = g.eval(prop_l_low * array_srcF)
+        g.mem_report(False)
 
         for inner in range(simultaneous_low_positions):
             prop_low = array_prop_low[inner]
@@ -393,3 +423,5 @@ for group, job, conf, jid, n in run_jobs:
                     "low-pnt",
                     False,
                 )
+
+del pin

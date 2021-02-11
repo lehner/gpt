@@ -121,7 +121,7 @@ class defect_correcting:
                 self.history.append(eps)
 
                 if verbose:
-                    g.message("Defect-correcting inverter: res^2[ %d ] = %g" % (i, eps))
+                    g.message("Defect-correcting inverter: res[ %d ] = %g" % (i, eps))
 
                 if eps < self.eps:
                     if verbose:
@@ -140,7 +140,7 @@ class defect_correcting:
 
                 # correction step
                 t("inner inverter")
-                _d = g.eval(inner_inv_mat * _s)
+                _d = inner_inv_mat(_s)
 
                 t("linear algebra")
                 for j in range(n):

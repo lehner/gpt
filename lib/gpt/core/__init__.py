@@ -19,7 +19,6 @@
 #
 from gpt.core.grid import grid, grid_from_description, full, redblack
 from gpt.core.precision import single, double, precision, str_to_precision
-from gpt.core.advise import advise, prefetch, infrequent_use, to_host, to_accelerator
 from gpt.core.expr import expr, factor, expr_unary, factor_unary, expr_eval
 from gpt.core.lattice import lattice, get_mem_book
 from gpt.core.peekpoke import map_key
@@ -27,6 +26,8 @@ from gpt.core.tensor import tensor
 from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time, timer
 from gpt.core.log import message
+from gpt.core.pin import pin
+from gpt.core.stack import get_call_stack
 from gpt.core.convert import convert
 from gpt.core.cshift_plan import cshift_plan
 from gpt.core.transform import (
@@ -83,7 +84,7 @@ from gpt.core.coordinates import (
     local_coordinates,
 )
 from gpt.core.random import random, sha256
-from gpt.core.mem import mem_info, mem_report
+from gpt.core.mem import mem_info, mem_report, accelerator, host
 from gpt.core.merge import *
 from gpt.core.split import *
 import gpt.core.covariant

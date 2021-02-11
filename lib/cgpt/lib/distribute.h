@@ -25,6 +25,18 @@ enum memory_type {
 
 #define mt_int_len mt_none
 
+static memory_type cgpt_memory_type_from_string(const std::string& s) {
+  if (s == "none") {
+    return mt_none;
+  } else if (s == "host") {
+    return mt_host;
+  } else if (s == "accelerator") {
+    return mt_accelerator;
+  } else {
+    ERR("Unknown memory_type %s",s.c_str());
+  }
+}
+
 template<typename offset_t, typename rank_t, typename index_t>
 class global_memory_view {
  public:
