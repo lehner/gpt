@@ -291,7 +291,7 @@ b = g.complex(grid)
 rng.cnormal([a, b])
 
 c = a < b
-eps = np.linalg.norm(c[:] - (a[:] < b[:]).astype(np.int)) / np.linalg.norm(c[:])
+eps = np.linalg.norm(c[:] - (a[:] < b[:]).astype(np.int32)) / np.linalg.norm(c[:])
 g.message(f"Test a < b from gpt<>numpy: {eps}")
 assert eps == 0.0
 
