@@ -18,7 +18,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
-import sys
 import numpy as np
 import copy
 
