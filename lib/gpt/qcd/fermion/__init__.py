@@ -36,8 +36,14 @@ def wilson_clover(U, params):
         assert "mass" not in params
         params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
         del params["kappa"]
+    if "cF" not in params:
+        params["cF"] = 1.0  # default to 1.0 (i.e., doing nothing)
     if "use_legacy" not in params:
         params["use_legacy"] = False  # default to new, faster implementation
+    if params["use_legacy"]:
+        assert params["boundary_phases"][-1] != 0.0  # only new op supports open bc
+    if params["boundary_phases"][-1] != 0.0:
+        assert params["cF"] == 1.0  # forbid usage of cF without open bc
     return fine_operator(
         "wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3)
     )
@@ -50,6 +56,7 @@ def rhq_columbia(U, params):
         mass=params["mass"],
         csw_r=params["cp"],
         csw_t=params["cp"],
+        cF=1.0,
         xi_0=1.0,
         nu=params["zeta"],
         isAnisotropic=True,

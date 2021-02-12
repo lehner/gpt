@@ -136,6 +136,15 @@ class setup:
                 ]
             self.distribution[lvl](self.basis[lvl][0 : self.nb[lvl]])
 
+        # open bc for basis vectors if finest level matrix is open bc
+        # the way I retrieve this info is rather ugly -> TODO?
+        if self.mat[self.finest].params["boundary_phases"][-1] == 0.0:
+            for lvl, grid in enumerate(self.grid):
+                if lvl != self.coarsest:
+                    g.core.covariant.apply_open_boundaries(
+                        self.basis[lvl][0 : self.nb[lvl]]
+                    )
+
         # setup a block map on all levels but coarsest
         self.blockmap = [None] * self.nlevel
         for lvl in self.lvl:
