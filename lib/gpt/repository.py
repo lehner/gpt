@@ -22,9 +22,7 @@ import os
 import shutil
 from urllib import request
 
-base = {
-    "gpt:": "https://raw.githubusercontent.com/DanielRichtmann/gpt-repository/master"
-}
+base = {"gpt:": "https://raw.githubusercontent.com/lehner/gpt-repository/master"}
 
 
 def download(dst, src):
