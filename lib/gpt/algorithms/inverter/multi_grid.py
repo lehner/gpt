@@ -141,7 +141,10 @@ class setup:
         if self.mat[self.finest].params["boundary_phases"][-1] == 0.0:
             for lvl, grid in enumerate(self.grid):
                 if lvl != self.coarsest:
-                    g.core.covariant.apply_open_boundaries(
+                    # TODO: the following needs to be part of a more abstract
+                    # interface, should not refer to a qcd module function explicitly
+                    # here!  Do this in next iteration of MG interface (inv.sequence, ...).
+                    g.qcd.fermion.apply_open_boundaries(
                         self.basis[lvl][0 : self.nb[lvl]]
                     )
 

@@ -367,8 +367,8 @@ for precision in [g.single, g.double]:
 
         # apply open boundaries to fields if necessary
         if test["params"]["boundary_phases"][-1] == 0.0:
-            g.core.covariant.apply_open_boundaries(src)
-            g.core.covariant.apply_open_boundaries(dst)
+            g.qcd.fermion.apply_open_boundaries(src)
+            g.qcd.fermion.apply_open_boundaries(dst)
 
         g.message(f"<dst|src> = {g.inner_product(dst, src)}")
         for matrix in test["matrices_rb"]:
@@ -399,8 +399,8 @@ for precision in [g.single, g.double]:
 
         # apply open boundaries to fields if necessary
         if test["params"]["boundary_phases"][-1] == 0.0:
-            g.core.covariant.apply_open_boundaries(src)
-            g.core.covariant.apply_open_boundaries(dst)
+            g.qcd.fermion.apply_open_boundaries(src)
+            g.qcd.fermion.apply_open_boundaries(dst)
 
         for matrix in test["matrices"]:
             finger_print = []

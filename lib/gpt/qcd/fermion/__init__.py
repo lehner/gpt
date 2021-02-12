@@ -22,6 +22,7 @@ import gpt.qcd.fermion.preconditioner
 
 from gpt.qcd.fermion.register import register
 from gpt.qcd.fermion.operator import fine_operator, coarse_operator
+from gpt.qcd.fermion.boundary_conditions import *
 
 import copy
 

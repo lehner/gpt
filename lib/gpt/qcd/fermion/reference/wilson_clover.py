@@ -20,7 +20,7 @@
 import gpt as g
 import numpy as np
 from gpt.params import params_convention
-from gpt.core.covariant import shift_eo, apply_boundaries
+from gpt.core.covariant import shift_eo
 from gpt import matrix_operator
 
 
@@ -171,6 +171,10 @@ class wilson_clover(shift_eo, matrix_operator):
             lambda dst, src: g.copy(dst, src), otype=otype, grid=grid
         )
 
+    def apply_boundaries(self, dst):
+        if self.open_bc:
+            g.qcd.fermion.apply_open_boundaries(dst)
+
     def _Meooe(self, dst, src):
         assert dst != src
         cb = src.checkerboard()
@@ -189,7 +193,7 @@ class wilson_clover(shift_eo, matrix_operator):
                 cc / 2.0 * (g.gamma[mu] - g.gamma["I"]) * src_plus
                 - cc / 2.0 * (g.gamma[mu] + g.gamma["I"]) * src_minus
             )
-        apply_boundaries(dst, self.open_bc)
+        self.apply_boundaries(dst)
 
     def _Mooee(self, dst, src):
         assert dst != src
@@ -199,7 +203,7 @@ class wilson_clover(shift_eo, matrix_operator):
             dst @= self.clover_eo[cb] * src
         else:
             dst @= 1.0 / 2.0 * 1.0 / self.kappa * src
-        apply_boundaries(dst, self.open_bc)
+        self.apply_boundaries(dst)
 
     def _MooeeInv(self, dst, src):
         assert dst != src
@@ -209,7 +213,7 @@ class wilson_clover(shift_eo, matrix_operator):
             dst @= self.clover_inv_eo[cb] * src
         else:
             dst @= 2.0 * self.kappa * src
-        apply_boundaries(dst, self.open_bc)
+        self.apply_boundaries(dst)
 
     def _Dhop(self, dst, src):
         assert dst != src
@@ -223,7 +227,7 @@ class wilson_clover(shift_eo, matrix_operator):
         g.set_checkerboard(dst, self.dst_o)
         g.set_checkerboard(dst, self.dst_e)
 
-        apply_boundaries(dst, self.open_bc)
+        self.apply_boundaries(dst)
 
     def _M(self, dst, src):
         assert dst != src
@@ -237,7 +241,7 @@ class wilson_clover(shift_eo, matrix_operator):
         g.set_checkerboard(dst, self.dst_o)
         g.set_checkerboard(dst, self.dst_e)
 
-        apply_boundaries(dst, self.open_bc)
+        self.apply_boundaries(dst)
 
     def _Mdiag(self, dst, src):
         assert dst != src
@@ -251,7 +255,7 @@ class wilson_clover(shift_eo, matrix_operator):
         g.set_checkerboard(dst, self.dst_o)
         g.set_checkerboard(dst, self.dst_e)
 
-        apply_boundaries(dst, self.open_bc)
+        self.apply_boundaries(dst)
 
     def _G5M(self, dst, src):
         assert dst != src

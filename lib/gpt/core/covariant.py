@@ -84,19 +84,3 @@ class shift_eo(shift):
                 gpt.pick_checkerboard(cb, _U[mu], self.U[mu])
 
             self.checkerboard[cb] = shift_base(_U, None)
-
-
-def apply_open_boundaries(field):
-    if type(field) == list:
-        return [apply_open_boundaries(x) for x in field]
-
-    assert type(field) == gpt.lattice
-    T = field.grid.fdimensions[3]
-    field[:, :, :, 0] = 0.0
-    field[:, :, :, T - 1] = 0.0
-    return field
-    # TODO create plan and cache it
-
-
-def apply_boundaries(field, open_bc=False):
-    return apply_open_boundaries(field) if open_bc is True else field
