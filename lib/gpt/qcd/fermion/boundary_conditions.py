@@ -19,6 +19,7 @@
 #
 import gpt
 
+
 def apply_open_boundaries(field):
     if type(field) == list:
         return [apply_open_boundaries(x) for x in field]
