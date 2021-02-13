@@ -30,4 +30,4 @@ from gpt.algorithms.inverter.mixed_precision import mixed_precision
 from gpt.algorithms.inverter.split import split
 from gpt.algorithms.inverter.preconditioned import preconditioned
 from gpt.algorithms.inverter.multi_grid import multi_grid, multi_grid_setup
-from gpt.algorithms.inverter.calculate_residuum import calculate_residuum
+from gpt.algorithms.inverter.calculate_residual import calculate_residual

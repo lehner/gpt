@@ -19,9 +19,9 @@
 import gpt as g
 
 
-class calculate_residuum:
+class calculate_residual:
     def __init__(self, tag=None):
-        self.tag = "" if tag is None else f" [{tag}]"
+        self.tag = "" if tag is None else f"{tag}: "
 
     def __call__(self, mat):
         def inv(dst, src):
@@ -29,7 +29,7 @@ class calculate_residuum:
                 eps = g.norm2(mat * dst[i] - src[i]) ** 0.5
                 nrm = g.norm2(src[i]) ** 0.5
                 g.message(
-                    f"Residuum for source {i}/{len(dst)}{self.tag}: {eps} (absolute) {eps/nrm} (relative)"
+                    f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps/nrm}, | src[{i}] | = {nrm}"
                 )
 
         otype, grid, cb = None, None, None

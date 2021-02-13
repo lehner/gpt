@@ -108,11 +108,11 @@ kcycle_params = {
 
 mg_2lvl_vcycle_dp = i.sequence(
     i.multi_grid(coarsest_solver, *mg_setup_2lvl_dp[0]),
-    i.calculate_residuum(
+    i.calculate_residual(
         "before smoother"
     ),  # optional since it costs time but helps to tune MG solver
     smooth_solver,
-    i.calculate_residuum("after smoother"),  # optional
+    i.calculate_residual("after smoother"),  # optional
 )
 
 mg_3lvl_kcycle_sp = i.sequence(
