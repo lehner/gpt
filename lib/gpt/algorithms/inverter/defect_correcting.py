@@ -17,7 +17,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import sys
 
 
 class defect_correcting:
@@ -147,7 +146,7 @@ class defect_correcting:
                     psi[j] += _d[j] * norm2_of_source[j] ** 0.5
 
         otype, grid, cb = None, None, None
-        if type(outer_mat) == g.matrix_operator:
+        if isinstance(outer_mat, g.matrix_operator):
             otype, grid, cb = outer_mat.otype, outer_mat.grid, outer_mat.cb
 
         return g.matrix_operator(

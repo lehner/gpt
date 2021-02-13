@@ -17,28 +17,28 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import sys
 
 
-class sequence:
-    def __init__(self, *inverters):
-        self.inverters = inverters
+class calculate_residuum:
+    def __init__(self, tag=None):
+        self.tag = "" if tag is None else f" [{tag}]"
 
-    def __call__(self, outer_mat):
-
-        inverters_mat = [i(outer_mat) for i in self.inverters]
-
+    def __call__(self, mat):
         def inv(dst, src):
-            for i in inverters_mat:
-                i(dst, src)
+            for i in range(len(dst)):
+                eps = g.norm2(mat * dst[i] - src[i]) ** 0.5
+                nrm = g.norm2(src[i]) ** 0.5
+                g.message(
+                    f"Residuum for source {i}/{len(dst)}{self.tag}: {eps} (absolute) {eps/nrm} (relative)"
+                )
 
         otype, grid, cb = None, None, None
-        if isinstance(outer_mat, g.matrix_operator):
-            otype, grid, cb = outer_mat.otype, outer_mat.grid, outer_mat.cb
+        if isinstance(mat, g.matrix_operator):
+            otype, grid, cb = mat.otype, mat.grid, mat.cb
 
         return g.matrix_operator(
             mat=inv,
-            inv_mat=outer_mat,
+            inv_mat=mat,
             otype=otype,
             accept_guess=(True, False),
             grid=grid,

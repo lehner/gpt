@@ -38,7 +38,7 @@ def get_slv_history(slv):
         return 0, 0.0
 
 
-class setup:
+class multi_grid_setup:
     def __init__(self, mat_f, params):
         # save parameters
         self.params = params
@@ -172,6 +172,9 @@ class setup:
         # rest of setup
         self.__call__()
 
+    def __getitem__(self, level):
+        return (self.grid[level + 1], self.basis[level])
+
     # TODO This needs to be able to get a parameter dict and act accordingly
     def __call__(self, which_lvls=None):
         if which_lvls is not None:
@@ -293,194 +296,61 @@ class setup:
                 g.message("%s done with entire setup" % pp)
 
 
-class inverter:
-    def __init__(self, setup, params):
-        # save input
-        self.setup = setup
+class multi_grid:
+    @g.params_convention(make_hermitian=False, save_links=True)
+    def __init__(self, coarse_inverter, coarse_grid, basis, params):
         self.params = params
-
-        # aliases
-        s = self.setup
-        par = self.params
-
-        # parameters
-        self.smooth_solver = g.util.to_list(par["smooth_solver"], s.nlevel - 1)
-        self.wrapper_solver = g.util.to_list(par["wrapper_solver"], s.nlevel - 2)
-        self.coarsest_solver = par["coarsest_solver"]
-
-        # verbosity
+        self.coarse_inverter = coarse_inverter
+        self.coarse_grid = coarse_grid
         self.verbose = g.default.is_verbose("multi_grid_inverter")
+        self.basis = basis
 
-        # print prefix
-        self.print_prefix = ["mg: level %d:" % i for i in range(s.nlevel)]
+    def __call__(self, mat):
 
-        # assertions
-        assert g.util.entries_have_length([self.smooth_solver], s.nlevel - 1)
-        assert g.util.entries_have_length([self.wrapper_solver], s.nlevel - 2)
-        assert g.util.is_callable(
-            [self.smooth_solver, self.coarsest_solver, self.wrapper_solver]
+        assert isinstance(mat, g.matrix_operator)
+        otype, fine_grid, cb = mat.otype, mat.grid, mat.cb
+
+        bm = g.block.map(self.coarse_grid, self.basis)
+
+        A = [g.mcomplex(self.coarse_grid, len(self.basis)) for i in range(9)]
+
+        g.coarse.create_links(
+            A,
+            mat,
+            self.basis,
+            {
+                "make_hermitian": self.params["make_hermitian"],
+                "save_links": self.params["save_links"],
+            },
         )
-        assert type(self.coarsest_solver) != list
-        assert not g.util.all_have_attribute(self.wrapper_solver, "inverter")
 
-        # timing
-        self.t = [g.timer("mg_solve_lvl_%d" % (lvl)) for lvl in range(s.nlevel)]
+        # level == 0 <> otype != mcomplex
+        level = 1 if isinstance(otype, g.ot_matrix_singlet) else 0
+        cmat = g.qcd.fermion.coarse(A, {"level": level})
+        cinv = self.coarse_inverter(cmat)
 
-        # temporary vectors
-        self.r, self.e = [None] * s.nlevel, [None] * s.nlevel
-        for lvl in range(s.finest + 1, s.nlevel):
-            nf_lvl = s.nf_lvl[lvl]
-            self.r[lvl] = g.vcomplex(s.grid[lvl], s.nbasis[nf_lvl])
-            self.e[lvl] = g.vcomplex(s.grid[lvl], s.nbasis[nf_lvl])
-        self.r[s.finest] = g.vspincolor(s.grid[s.finest])
+        def inv(dst, src):
+            assert dst != src
+            if self.verbose:
+                g.message(f"Enter grid {self.coarse_grid}")
+                t0 = g.time()
 
-        # setup a history for all solvers
-        self.history = [None] * s.nlevel
-        for lvl in range(s.finest, s.coarsest):
-            self.history[lvl] = {"smooth": [], "wrapper": []}
-        self.history[s.coarsest] = {"coarsest": []}
-
-    def __call__(self, matrix=None):
-
-        # ignore matrix
-
-        s = self.setup
-        otype = (self.r[s.finest].otype, self.r[s.finest].otype)
-        grid = (self.r[s.finest].grid, self.r[s.finest].grid)
-        cb = (self.r[s.finest].checkerboard(), self.r[s.finest].checkerboard())
-
-        def inv_lvl(psi, src, lvl):
-            # assertions
-            assert psi != src
-            assert type(src) != list
-
-            # neighbors
-            nc_lvl = s.nc_lvl[lvl]
-
-            # aliases
-            t = self.t[lvl]
-            r = self.r[lvl]
-            pp = self.print_prefix[lvl]
-            r_c = self.r[nc_lvl] if lvl != s.coarsest else None
-            e_c = self.e[nc_lvl] if lvl != s.coarsest else None
-            mat_c = s.mat[nc_lvl] if lvl != s.coarsest else None
-            mat = s.mat[lvl]
-            bm = s.blockmap[lvl]
-            slv_s = self.smooth_solver[lvl] if lvl != s.coarsest else None
-            slv_w = self.wrapper_solver[lvl] if lvl <= s.coarsest - 2 else None
-            slv_c = self.coarsest_solver if lvl == s.coarsest else None
-
-            # start clocks
-            t("misc")
+            g.eval(dst, bm.promote * cinv * bm.project * src)
 
             if self.verbose:
+                t1 = g.time()
                 g.message(
-                    "%s starting inversion routine: psi = %g, src = %g"
-                    % (pp, g.norm2(psi), g.norm2(src))
+                    f"Back to grid {fine_grid[0]}, spent {t1-t0} seconds on coarse grid"
                 )
-
-            inputnorm = g.norm2(src)
-
-            if lvl == s.coarsest:
-                t("invert")
-                g.default.push_verbose(get_slv_name(slv_c), False)
-                slv_c(mat)(psi, src)
-                g.default.pop_verbose()
-                self.history[lvl]["coarsest"].append(get_slv_history(slv_c))
-            else:
-                t("copy")
-                r @= src
-
-                # fine to coarse
-                t("to_coarser")
-                bm.project(r_c, r)
-
-                if self.verbose:
-                    t("output")
-                    g.message(
-                        "%s done calling f2c: r_c = %g, r = %g"
-                        % (pp, g.norm2(r_c), g.norm2(r))
-                    )
-
-                # call method on next level
-                t("on_coarser")
-                e_c[:] = 0.0
-                if slv_w is not None and lvl < s.coarsest - 1:
-
-                    def prec(matrix):
-                        def ignore_mat(dst_p, src_p):
-                            inv_lvl(dst_p, src_p, nc_lvl)
-
-                        # return g.matrix_operator(ignore_mat)
-                        return ignore_mat
-
-                    g.default.push_verbose(get_slv_name(slv_w), False)
-                    slv_w.modified(prec=prec)(mat_c)(e_c, r_c)
-                    g.default.pop_verbose()
-                    self.history[lvl]["wrapper"].append(get_slv_history(slv_w))
-                else:
-                    inv_lvl(e_c, r_c, nc_lvl)
-
-                if self.verbose:
-                    t("output")
-                    g.message(
-                        "%s done calling coarser level: e_c = %g, r_c = %g"
-                        % (pp, g.norm2(e_c), g.norm2(r_c))
-                    )
-
-                # coarse to fine
-                t("from_coarser")
-                bm.promote(psi, e_c)
-
-                if self.verbose:
-                    t("output")
-                    g.message(
-                        "%s done calling c2f: psi = %g, e_c = %g"
-                        % (pp, g.norm2(psi), g.norm2(e_c))
-                    )
-
-                t("residual")
-                tmp = g.lattice(src)
-                mat(tmp, psi)
-                tmp @= src - tmp
-                res_cgc = (g.norm2(tmp) / inputnorm) ** 0.5
-
-                # smooth
-                t("smooth")
-                g.default.push_verbose(get_slv_name(slv_s), False)
-                slv_s(mat)(psi, src)
-                g.default.pop_verbose()
-                self.history[lvl]["smooth"].append(get_slv_history(slv_s))
-
-                t("residual")
-                mat(tmp, psi)
-                tmp @= src - tmp
-                res_smooth = (g.norm2(tmp) / inputnorm) ** 0.5
-
-                if self.verbose:
-                    t("output")
-                    g.message(
-                        "%s done smoothing: input norm = %g, coarse residual = %g, smooth residual = %g"
-                        % (pp, inputnorm, res_cgc, res_smooth)
-                    )
-
-            t()
-
-            if self.verbose:
-                t("output")
-                g.message(
-                    "%s ending inversion routine: psi = %g, src = %g"
-                    % (pp, g.norm2(psi), g.norm2(src))
-                )
-                t()
 
         return g.matrix_operator(
-            mat=lambda dst, src: inv_lvl(dst, src, self.setup.finest),
+            mat=inv,
+            inv_mat=mat,
             adj_mat=None,
-            inv_mat=self.setup.mat[self.setup.finest],
             adj_inv_mat=None,
             otype=otype,
             accept_guess=(True, False),
-            grid=grid,
+            accept_list=True,
+            grid=fine_grid,
             cb=cb,
         )
