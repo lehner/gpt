@@ -58,6 +58,13 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         )
 
 
+def orthonormalize(basis, nblock=4):
+    for i, v in enumerate(basis):
+        gpt.orthogonalize(v, basis[:i], nblock=nblock)
+        v /= gpt.norm2(v) ** 0.5
+    return basis
+
+
 def linear_combination(r, basis, Qt, n_block=None):
     r = gpt.util.to_list(r)
     assert all([len(basis[0].v_obj) == len(x.v_obj) for x in r])

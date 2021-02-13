@@ -158,6 +158,24 @@ class operator(gpt.matrix_operator):
     def converted(self, dst_precision):
         return self.updated(gpt.convert(self.U, dst_precision))
 
+    @params_convention(make_hermitian=False)
+    def coarsened(self, coarse_grid, basis, params):
+        # TODO: allow for non-nearest-neighbor operators as well
+        A = [gpt.mcomplex(coarse_grid, len(basis)) for i in range(9)]
+
+        gpt.coarse.create_links(
+            A,
+            self,
+            basis,
+            {
+                "make_hermitian": params["make_hermitian"],
+                "save_links": True,
+            },
+        )
+
+        level = 1 if isinstance(self.otype[0], gpt.ot_matrix_singlet) else 0
+        return gpt.qcd.fermion.coarse(A, {"level": level})
+
     def updated(self, U):
         return type(self)(
             name=self.name,

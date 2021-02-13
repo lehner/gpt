@@ -7,6 +7,7 @@
 #
 import gpt as g
 import numpy as np
+import sys
 
 # setup rng, mute
 g.default.set_verbose("random", False)
@@ -45,43 +46,35 @@ src[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 i = g.algorithms.inverter
 p = g.qcd.fermion.preconditioner
 
-# mg setup parameters
-mg_setup_2lvl_params = {
-    "block_size": [[2, 2, 2, 2]],
-    "n_block_ortho": 1,
-    "check_block_ortho": True,
-    "n_basis": 30,
-    "make_hermitian": False,
-    "save_links": True,
-    "vector_type": "null",
-    "n_pre_ortho": 1,
-    "n_post_ortho": 0,
-    "solver": i.fgmres(
-        {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-    ),
-    "distribution": rng.cnormal,
-}
-mg_setup_3lvl_params = {
-    "block_size": [[2, 2, 2, 2], [2, 1, 1, 1]],
-    "n_block_ortho": 1,
-    "check_block_ortho": True,
-    "n_basis": 30,
-    "make_hermitian": False,
-    "save_links": True,
-    "vector_type": "null",
-    "n_pre_ortho": 1,
-    "n_post_ortho": 0,
-    "solver": i.fgmres(
-        {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-    ),
-    "distribution": rng.cnormal,
-}
-g.message(f"mg_setup_2lvl = {mg_setup_2lvl_params}")
-g.message(f"mg_setup_3lvl = {mg_setup_3lvl_params}")
+# define transitions between grids (setup)
+def find_near_null_vectors(w, cgrid):
+    slv = i.fgmres(eps=1e-3, maxiter=50, restartlen=25, checkres=False)(w)
+    basis = g.orthonormalize(
+        rng.cnormal([g.lattice(w.grid[0], w.otype[0]) for i in range(30)])
+    )
+    null = g.lattice(basis[0])
+    null[:] = 0
+    for b in basis:
+        slv(b, null)
+    # TODO: apply open boundaries, e.g., in this function
+    g.coarse.split_chiral(basis)
+    bm = g.block.map(cgrid, basis)
+    bm.orthonormalize()
+    bm.check_orthogonality()
+    return basis
 
-# mg setup objects
-mg_setup_2lvl_dp = i.multi_grid_setup(w_dp, mg_setup_2lvl_params)
-mg_setup_3lvl_sp = i.multi_grid_setup(w_sp, mg_setup_3lvl_params)
+
+mg_setup_2lvl = i.multi_grid_setup(
+    block_size=[[2, 2, 2, 2]], projector=find_near_null_vectors
+)
+
+mg_setup_3lvl = i.multi_grid_setup(
+    block_size=[[2, 2, 2, 2], [2, 1, 1, 1]], projector=find_near_null_vectors
+)
+
+mg_setup_2lvl_dp = mg_setup_2lvl(w_dp)
+mg_setup_2lvl_sp = mg_setup_2lvl(w_sp)
+mg_setup_3lvl_sp = mg_setup_3lvl(w_sp)
 
 # mg inner solvers
 wrapper_solver = i.fgmres(
@@ -95,17 +88,6 @@ coarsest_solver = i.fgmres(
 )
 
 # mg solver/preconditioner objects
-vcycle_params = {
-    "coarsest_solver": coarsest_solver,
-    "smooth_solver": smooth_solver,
-    "wrapper_solver": None,
-}
-kcycle_params = {
-    "coarsest_solver": coarsest_solver,
-    "smooth_solver": smooth_solver,
-    "wrapper_solver": wrapper_solver,
-}
-
 mg_2lvl_vcycle_dp = i.sequence(
     i.multi_grid(coarsest_solver, *mg_setup_2lvl_dp[0]),
     i.calculate_residual(
@@ -165,37 +147,4 @@ g.message(
     "Test resid/iter fgmres + 3lvl kcycle mg mixed:", eps2, niter_prec_3lvl_mg_kcycle_mp
 )
 assert eps2 < 1e-12
-# assert niter_prec_3lvl_mg_kcycle_mp <= niter_prec_3lvl_mg_vcycle_mp
 assert niter_prec_3lvl_mg_kcycle_mp < niter_prec_smooth
-
-# print contributions to mg setup runtime
-g.message("Contributions to time spent in MG setups")
-for name, t in [
-    ("2lvl_dp", mg_setup_2lvl_dp.t),
-    ("3lvl_sp", mg_setup_3lvl_sp.t),
-]:
-    g.message(name + ":")
-    for lvl in reversed(range(len(t))):
-        g.message(t[lvl])
-
-# print contributions to mg solve runtime
-# g.message("Contributions to time spent in MG preconditioners")
-# for name, t in [
-#     ("2lvl_vcycle_dp", mg_2lvl_vcycle_dp.t),
-#     ("3lvl_kcycle_sp", mg_3lvl_kcycle_sp.t),
-# ]:
-#     g.message(name + ":")
-#     for lvl in reversed(range(len(t))):
-#         g.message(t[lvl])
-
-# # print average iteration counts / time per level
-# g.message("Average iteration counts of inner solvers")
-# for name, h in [
-#     ("2lvl_vcycle_dp", mg_2lvl_vcycle_dp.history),
-#     ("3lvl_kcycle_sp", mg_3lvl_kcycle_sp.history),
-# ]:
-#     for lvl in reversed(range(len(h))):
-#         for k, v in h[lvl].items():
-#             stats = list(map(lambda l: sum(l) / len(l), zip(*v)))
-#             if stats:
-#                 g.message(f"{name}: lvl {lvl}: {k:10s} = {int(stats[0])}")

@@ -49,6 +49,7 @@ class random:
         if type(t) == list:
             for x in t:
                 self.sample(x, p)
+            return t
         elif t is None:
             return cgpt.random_sample(self.obj, p)
         elif type(t) == gpt.lattice:
