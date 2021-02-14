@@ -171,7 +171,6 @@ def communicate_links(A, dirdisps_forward, make_hermitian):
         A[p_other] @= gpt.adj(gpt.cshift(Atmp, mu, shift_fb))
 
 
-
 def gamma5(src):
     if hasattr(src.otype, "fundamental"):
         nbasis = src.otype.shape[0]
