@@ -49,7 +49,7 @@ basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
 rng.cnormal(basis_f)
 
 # split fine basis into chiral halfs
-g.coarse.split_chiral(basis_f)
+g.qcd.fermion.coarse.split_chiral(basis_f)
 
 # setup fine block map
 bm_f = g.block.map(grid_c, basis_f)
@@ -66,7 +66,7 @@ g.coarse.create_links(
 )
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse(A_c, level=0)
+mat_c = g.qcd.fermion.coarse_fermion(A_c, level=0)
 
 # save typing
 def vec_c_full():

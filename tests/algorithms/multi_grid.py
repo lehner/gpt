@@ -57,7 +57,7 @@ def find_near_null_vectors(w, cgrid):
     for b in basis:
         slv(b, null)
     # TODO: apply open boundaries, e.g., in this function
-    g.coarse.split_chiral(basis)
+    g.qcd.fermion.coarse.split_chiral(basis)
     bm = g.block.map(cgrid, basis)
     bm.orthonormalize()
     bm.check_orthogonality()

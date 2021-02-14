@@ -19,6 +19,7 @@
 #
 import gpt.qcd.fermion.reference
 import gpt.qcd.fermion.preconditioner
+import gpt.qcd.fermion.coarse
 
 from gpt.qcd.fermion.register import register
 from gpt.qcd.fermion.operator import fine_operator, coarse_operator
@@ -80,7 +81,7 @@ def mobius(U, params):
 
 
 @gpt.params_convention(make_hermitian=False)
-def coarse(A, params):
+def coarse_fermion(A, params):
     params = copy.deepcopy(params)  # save current parameters
     assert "nbasis" not in params
     params["nbasis"] = A[0].otype.v_n1[0]

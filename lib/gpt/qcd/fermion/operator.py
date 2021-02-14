@@ -161,20 +161,9 @@ class operator(gpt.matrix_operator):
     @params_convention(make_hermitian=False)
     def coarsened(self, coarse_grid, basis, params):
         # TODO: allow for non-nearest-neighbor operators as well
-        A = [gpt.mcomplex(coarse_grid, len(basis)) for i in range(9)]
-
-        gpt.coarse.create_links(
-            A,
-            self,
-            basis,
-            {
-                "make_hermitian": params["make_hermitian"],
-                "save_links": True,
-            },
+        return gpt.qcd.fermion.coarse.nearest_neighbor_operator(
+            self, coarse_grid, basis, params
         )
-
-        level = 1 if isinstance(self.otype[0], gpt.ot_matrix_singlet) else 0
-        return gpt.qcd.fermion.coarse(A, {"level": level})
 
     def updated(self, U):
         return type(self)(
@@ -255,7 +244,9 @@ class coarse_operator(operator):
         for i in range(len(U[0].v_obj)):
             self.params["U"] = [a.v_obj[i] for a in self.U]
             self.params["U_self_inv"] = self.U_self_inv.v_obj[i]
-            self.params["dag_factor"] = gpt.coarse.prefactor_dagger(self.U[8], i)
+            self.params["dag_factor"] = gpt.qcd.fermion.coarse.prefactor_dagger(
+                self.U[8], i
+            )
             self.obj.append(
                 cgpt.create_fermion_operator(
                     self.name, self.U_grid.precision, self.params

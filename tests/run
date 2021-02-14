@@ -34,12 +34,12 @@ for f in \
     ${test_path}/core/matrix.py \
     ${test_path}/core/split.py \
     ${test_path}/core/other_representations.py \
-    ${test_path}/core/split_chiral.py \
-    ${test_path}/core/coarsen.py \
-    ${test_path}/core/coarse_even_odd.py \
     ${test_path}/random/simple.py \
     ${test_path}/create/create.py \
     ${test_path}/create/smear.py \
+    ${test_path}/qcd/split_chiral.py \
+    ${test_path}/qcd/coarsen.py \
+    ${test_path}/qcd/coarse_even_odd.py \
     ${test_path}/qcd/a2a.py \
     ${test_path}/qcd/fermion_operators.py \
     ${test_path}/qcd/gauge.py \
