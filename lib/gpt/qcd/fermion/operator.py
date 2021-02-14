@@ -188,7 +188,7 @@ class operator(gpt.matrix_operator):
 
     def _G5M(self, dst, src):
         self(dst, src)
-        dst @= gpt.coarse.gamma5(dst) * dst
+        dst @= gpt.qcd.fermion.coarse.gamma5(dst) * dst
 
     def propagator(self, solver):
         exp = self.ExportPhysicalFermionSolution
