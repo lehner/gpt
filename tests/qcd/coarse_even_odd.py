@@ -61,7 +61,7 @@ for i in range(nblockortho):
 
 # create coarse link fields
 A_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
-g.coarse.create_links(
+g.qcd.fermion.coarse.create_links(
     A_c, mat_f, basis_f, {"make_hermitian": False, "save_links": True}
 )
 
