@@ -39,13 +39,13 @@ You may also visit a static version of the tutorials [here](https://github.com/l
 ```python
 import gpt as g
 
-# double-precision 8^4 grid
+# Double-precision 8^4 grid
 grid = g.grid([8,8,8,8], g.double)
 
-# pRNG
+# Parallel random number generator
 rng = g.random("seed text")
 
-# random gauge field
+# Random gauge field
 U = g.qcd.gauge.random(grid, rng)
 
 # Mobius domain-wall fermion
@@ -56,7 +56,7 @@ fermion = g.qcd.fermion.mobius(U, mass=0.1, M5=1.8, b=1.0, c=0.0, Ls=24,
 inv = g.algorithms.inverter
 pc = g.qcd.fermion.preconditioner
 
-# even-odd-preconditioned CG solver
+# Even-odd-preconditioned CG solver
 slv_5d = inv.preconditioned(pc.eo2_ne(), inv.cg(eps = 1e-4, maxiter = 1000))
 
 # Abstract fermion propagator using this solver
