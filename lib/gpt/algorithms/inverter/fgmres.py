@@ -176,13 +176,13 @@ class fgmres(base_iterative):
                             if self.checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
                                 self.log(
-                                    "converged in iteration %d;  computed res = %g, true res = %g, target = %g"
-                                    % (k, comp_res ** 0.5, res ** 0.5, self.eps)
+                                    "converged in %d iterations;  computed res = %g, true res = %g, target = %g"
+                                    % (k + 1, comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
                             else:
                                 self.log(
-                                    "converged in iteration %d;  computed res = %g, target = %g"
-                                    % (k, comp_res ** 0.5, self.eps)
+                                    "converged in %d iterations;  computed res = %g, target = %g"
+                                    % (k + 1, comp_res ** 0.5, self.eps)
                                 )
                         break
 

@@ -19,20 +19,21 @@
 #
 import gpt as g
 import numpy as np
+from gpt.algorithms import base_iterative
 
 
-class fgcr:
+class fgcr(base_iterative):
     @g.params_convention(
         eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
     )
     def __init__(self, params):
+        super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
         self.prec = params["prec"]
-        self.history = None
 
     @g.params_convention()
     def modified(self, params):
@@ -68,13 +69,8 @@ class fgcr:
 
         prec = self.prec(mat) if self.prec is not None else None
 
-        def inv(psi, src):
-            self.history = []
-            # verbosity
-            verbose = g.default.is_verbose("fgcr")
-
-            # timing
-            t = g.timer("fgcr")
+        @self.timed_function
+        def inv(psi, src, t):
             t("setup")
 
             # parameters
@@ -130,19 +126,14 @@ class fgcr:
                 ip, z2 = g.inner_product_norm2(z[i], r)
                 gamma[i] = z2 ** 0.5
                 if gamma[i] == 0.0:
-                    g.message("fgcr: breakdown, gamma[%d] = 0" % (i))
+                    g.debug("breakdown, gamma[%d] = 0" % (i))
                     break
                 z[i] /= gamma[i]
                 alpha[i] = ip / gamma[i]
                 r2 = g.axpy_norm2(r, -alpha[i], z[i], r)
 
                 t("other")
-                self.history.append(r2)
-
-                if verbose:
-                    g.message(
-                        "fgcr: res^2[ %d, %d ] = %g, target = %g" % (k, i, r2, rsq)
-                    )
+                self.log_convergence((k, i), r2, rsq)
 
                 if r2 <= rsq or need_restart or reached_maxiter:
                     t("update_psi")
@@ -150,52 +141,39 @@ class fgcr:
                     comp_res = r2 / ssq
 
                     if r2 <= rsq:
-                        if verbose:
-                            t()
-                            g.message(
-                                "fgcr: converged in %d iterations, took %g s"
-                                % (k + 1, t.total)
-                            )
-                            g.message(t)
+                        if self.verbose:
                             if self.checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                                g.message(
-                                    "fgcr: computed res = %g, true res = %g, target = %g"
-                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
+                                self.log(
+                                    "converged in %d iterations;  computed res = %g, true res = %g, target = %g"
+                                    % (k + 1, comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
                             else:
-                                g.message(
-                                    "fgcr: computed res = %g, target = %g"
-                                    % (comp_res ** 0.5, self.eps)
+                                self.log(
+                                    "converged in %d iterations;  computed res = %g, target = %g"
+                                    % (k + 1, comp_res ** 0.5, self.eps)
                                 )
                         break
 
                     if reached_maxiter:
-                        if verbose:
-                            t()
-                            g.message(
-                                "fgcr: did NOT converge in %d iterations, took %g s"
-                                % (k + 1, t.dt["total"])
-                            )
-                            g.message(t)
+                        if self.verbose:
                             if self.checkres:
                                 res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                                g.message(
-                                    "fgcr: computed res = %g, true res = %g, target = %g"
-                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
+                                self.log(
+                                    "NOT converged in %d iterations;  computed res = %g, true res = %g, target = %g"
+                                    % (k + 1, comp_res ** 0.5, res ** 0.5, self.eps)
                                 )
                             else:
-                                g.message(
-                                    "fgcr: computed res = %g, target = %g"
-                                    % (comp_res ** 0.5, self.eps)
+                                self.log(
+                                    "NOT converged in %d iterations;  computed res = %g, target = %g"
+                                    % (k + 1, comp_res ** 0.5, self.eps)
                                 )
                         break
 
                     if need_restart:
                         t("restart")
                         r2 = self.restart(mat, psi, mmpsi, src, r, p)
-                        if verbose:
-                            g.message("fgcr: performed restart")
+                        self.debug("fgcr: performed restart")
 
         return g.matrix_operator(
             mat=inv,

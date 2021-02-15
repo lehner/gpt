@@ -71,8 +71,12 @@ class cg(base_iterative):
                 t("other")
                 self.log_convergence(k, cp, rsq)
                 if cp <= rsq:
-                    self.log(f"converged in iteration {k}")
-                    break
+                    self.log(f"converged in {k+1} iterations")
+                    return
+
+            self.log(
+                f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}"
+            )
 
         return g.matrix_operator(
             mat=inv,
