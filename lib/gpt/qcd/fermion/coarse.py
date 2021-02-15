@@ -37,10 +37,10 @@ def create_links(A, fmat, basis, params):
     rhs_n_block = min(len(basis), rhs_n_block)
 
     # verbosity
-    verbose = gpt.default.is_verbose("coarsen")
+    verbose_performance = gpt.default.is_verbose("coarsen_performance")
 
     # setup timings
-    t = gpt.timer("coarsen")
+    t = gpt.timer("coarsen", verbose_performance)
     t("setup")
 
     # get grids
@@ -140,17 +140,13 @@ def create_links(A, fmat, basis, params):
         for ib in range(iblock):
             A[selflink][:, :, :, :, :, i0 + ib] = selfproj[ib][:]
 
-        if verbose:
-            gpt.message("coarsen: done with vectors %3d - %3d" % (i0, i1 - 1))
-
     # communicate opposite links
     if save_links:
         t("comm")
         communicate_links(A, dirdisps_forward, make_hermitian)
 
-    t()
-
-    if verbose:
+    if verbose_performance:
+        t()
         gpt.message(t)
 
 

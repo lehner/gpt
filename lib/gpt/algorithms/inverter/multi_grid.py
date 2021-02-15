@@ -18,6 +18,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.algorithms import base
 
 
 class multi_grid_setup:
@@ -39,13 +40,13 @@ class multi_grid_setup:
         return levels
 
 
-class multi_grid:
+class multi_grid(base):
     @g.params_convention(make_hermitian=False, save_links=True)
     def __init__(self, coarse_inverter, coarse_grid, basis, params):
+        super().__init__()
         self.params = params
         self.coarse_inverter = coarse_inverter
         self.coarse_grid = coarse_grid
-        self.verbose = g.default.is_verbose("multi_grid_inverter")
         self.basis = basis
 
     def __call__(self, mat):
@@ -59,19 +60,21 @@ class multi_grid:
 
         cinv = self.coarse_inverter(cmat)
 
-        def inv(dst, src):
+        @self.timed_function
+        def inv(dst, src, t):
             assert dst != src
-            if self.verbose:
-                g.message(f"Enter grid {self.coarse_grid}")
-                t0 = g.time()
+            self.log(f"{self.coarse_grid.fdimensions}" + " {")
 
-            g.eval(dst, bm.promote * cinv * bm.project * src)
+            t("project")
+            src_c = bm.project(src)
+            t("coarse inverter")
+            dst_c = cinv(src_c)
+            del src_c
+            t("promote")
+            bm.promote(dst, dst_c)
+            t()
 
-            if self.verbose:
-                t1 = g.time()
-                g.message(
-                    f"Back to grid {fine_grid[0]}, spent {t1-t0} seconds on coarse grid"
-                )
+            self.log("}")
 
         return g.matrix_operator(
             mat=inv,

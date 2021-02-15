@@ -11,6 +11,7 @@ import sys
 
 # setup rng, mute
 g.default.set_verbose("random", False)
+g.default.set_verbose("fgmres_performance", True)  # to get timing info at bottom
 rng = g.random("test_mg")
 
 # just run with larger volume
@@ -97,17 +98,38 @@ mg_2lvl_vcycle_dp = i.sequence(
     i.calculate_residual("after smoother"),  # optional
 )
 
+# For timing purposes, keep variables of solvers of various levels
+smooth_solver_lvl3 = smooth_solver.modified()
+smooth_solver_lvl2 = smooth_solver.modified()
+coarsest_solver_lvl3 = coarsest_solver.modified()
+
+wrapper_solver_lvl2 = wrapper_solver.modified(
+    prec=i.sequence(
+        i.multi_grid(coarsest_solver_lvl3, *mg_setup_3lvl_sp[1]),
+        smooth_solver_lvl3,
+    )
+)
+
 mg_3lvl_kcycle_sp = i.sequence(
     i.multi_grid(
-        wrapper_solver.modified(
-            prec=i.sequence(
-                i.multi_grid(coarsest_solver, *mg_setup_3lvl_sp[1]), smooth_solver
-            )
-        ),
+        wrapper_solver_lvl2,
         *mg_setup_3lvl_sp[0],
     ),
-    smooth_solver,
+    smooth_solver_lvl2,
 )
+
+# Shorter version if we do not want to create timing overview below:
+# mg_3lvl_kcycle_sp = i.sequence(
+#     i.multi_grid(
+#         wrapper_solver.modified(
+#             prec=i.sequence(
+#                 i.multi_grid(coarsest_solver, *mg_setup_3lvl_sp[1]), smooth_solver
+#             )
+#         ),
+#         *mg_setup_3lvl_sp[0],
+#     ),
+#     smooth_solver,
+# )
 
 # outer solver
 fgmres_params = {"eps": 1e-6, "maxiter": 1000, "restartlen": 20}
@@ -148,3 +170,12 @@ g.message(
 )
 assert eps2 < 1e-12
 assert niter_prec_3lvl_mg_kcycle_mp < niter_prec_smooth
+
+# show timings
+for slv_name, slv in [
+    ("smooth_solver_lvl3", smooth_solver_lvl3),
+    ("smooth_solver_lvl2", smooth_solver_lvl2),
+    ("coarsest_solver_lvl3", coarsest_solver_lvl3),
+    ("wrapper_solver_lvl2", wrapper_solver_lvl2),
+]:
+    g.message(f"\nTimings for {slv_name}:\n{slv.timer}\n")
