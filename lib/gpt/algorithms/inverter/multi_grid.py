@@ -40,7 +40,7 @@ class multi_grid_setup:
         return levels
 
 
-class multi_grid(base):
+class coarse_grid(base):
     @g.params_convention(make_hermitian=False, save_links=True)
     def __init__(self, coarse_inverter, coarse_grid, basis, params):
         super().__init__()

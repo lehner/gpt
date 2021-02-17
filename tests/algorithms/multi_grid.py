@@ -90,7 +90,7 @@ coarsest_solver = i.fgmres(
 
 # mg solver/preconditioner objects
 mg_2lvl_vcycle_dp = i.sequence(
-    i.multi_grid(coarsest_solver, *mg_setup_2lvl_dp[0]),
+    i.coarse_grid(coarsest_solver, *mg_setup_2lvl_dp[0]),
     i.calculate_residual(
         "before smoother"
     ),  # optional since it costs time but helps to tune MG solver
@@ -105,13 +105,13 @@ coarsest_solver_lvl3 = coarsest_solver.modified()
 
 wrapper_solver_lvl2 = wrapper_solver.modified(
     prec=i.sequence(
-        i.multi_grid(coarsest_solver_lvl3, *mg_setup_3lvl_sp[1]),
+        i.coarse_grid(coarsest_solver_lvl3, *mg_setup_3lvl_sp[1]),
         smooth_solver_lvl3,
     )
 )
 
 mg_3lvl_kcycle_sp = i.sequence(
-    i.multi_grid(
+    i.coarse_grid(
         wrapper_solver_lvl2,
         *mg_setup_3lvl_sp[0],
     ),
@@ -120,10 +120,10 @@ mg_3lvl_kcycle_sp = i.sequence(
 
 # Shorter version if we do not want to create timing overview below:
 # mg_3lvl_kcycle_sp = i.sequence(
-#     i.multi_grid(
+#     i.coarse_grid(
 #         wrapper_solver.modified(
 #             prec=i.sequence(
-#                 i.multi_grid(coarsest_solver, *mg_setup_3lvl_sp[1]), smooth_solver
+#                 i.coarse_grid(coarsest_solver, *mg_setup_3lvl_sp[1]), smooth_solver
 #             )
 #         ),
 #         *mg_setup_3lvl_sp[0],
