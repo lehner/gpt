@@ -58,8 +58,11 @@
 
 // Note that we also provide a cpu version without parallelism over the index within a virtual field. This code is based on the observation that we saw a 30% performance increase on the a64fx
 
-#define ROW_MAJOR
-// #define TENSOR_LAYOUT
+
+// Toggles
+#define ROW_MAJOR // store virtual index of link fields in row major order, i.e., transpose them w.r.t. python ordering
+// #define TENSOR_LAYOUT // have Lorentz index in tensor structure rather than std::vector
+#define REFERENCE_SUMMATION_ORDER // keep summation order as in reference implementation
 
 
 template<class Field>
@@ -845,10 +848,14 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
         int ptype;
         StencilEntry *SE_MA;
 
+#if defined(REFERENCE_SUMMATION_ORDER)
+        res = Zero();
+#else
         if (v_col == 0)
           res = Zero();
         else
           res = coalescedRead(out_p[v_arg_row][ss](b));
+#endif
 
         for(int point=0; point<Npoint; point++) {
           SE_MA=stencilMultiArg_v.GetEntry(ptype,point,sF);
@@ -868,6 +875,11 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
 #endif
           }
         }
+#if defined(REFERENCE_SUMMATION_ORDER)
+        if (v_col != 0) {
+          res = res + coalescedRead(out_p[v_arg_row][ss](b));
+        }
+#endif
         coalescedWrite(out_p[v_arg_row][ss](b),res);
       });
       MComputeTime += usecond();
@@ -943,10 +955,14 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
         int ptype;
         StencilEntry *SE_MA;
 
+#if defined(REFERENCE_SUMMATION_ORDER)
+        res = Zero();
+#else
         if (v_col == 0)
           res = Zero();
         else
           res = coalescedRead(out_p[v_arg_row][ss]);
+#endif
 
         for(int point=0; point<Npoint; point++) {
           SE_MA=stencilMultiArg_v.GetEntry(ptype,point,sF);
@@ -964,6 +980,12 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
           res = res + coalescedRead(Uc_p[v_link*Npoint+point][ss])*nbr;
 #endif
         }
+
+#if defined(REFERENCE_SUMMATION_ORDER)
+        if (v_col != 0) {
+          res = res + coalescedRead(out_p[v_arg_row][ss]);
+        }
+#endif
         coalescedWrite(out_p[v_arg_row][ss],res);
       });
       MComputeTime += usecond();
@@ -1037,10 +1059,14 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
         int ptype;
         StencilEntry *SE_MA;
 
+#if defined(REFERENCE_SUMMATION_ORDER)
+        res = Zero();
+#else
         if (v_col == 0)
           res = Zero();
         else
           res = coalescedRead(out_p[v_arg_row][ss](b));
+#endif
 
         for(int point=0; point<Npoint_hop; point++) {
           SE_MA=stencil_v.GetEntry(ptype,point,sF);
@@ -1060,6 +1086,11 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
 #endif
           }
         }
+#if defined(REFERENCE_SUMMATION_ORDER)
+        if (v_col != 0) {
+          res = res + coalescedRead(out_p[v_arg_row][ss](b));
+        }
+#endif
         coalescedWrite(out_p[v_arg_row][ss](b),res);
       });
       MComputeTime += usecond();
@@ -1136,10 +1167,14 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
         int ptype;
         StencilEntry *SE_MA;
 
+#if defined(REFERENCE_SUMMATION_ORDER)
+        res = Zero();
+#else
         if (v_col == 0)
           res = Zero();
         else
           res = coalescedRead(out_p[v_arg_row][ss](b));
+#endif
 
         SE_MA=stencil_v.GetEntry(ptype,point,sF);
 
@@ -1157,6 +1192,11 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
           res = res + coalescedRead(Uc_p[v_link*Npoint+point][ss](b,bb))*nbr(bb);
 #endif
         }
+#if defined(REFERENCE_SUMMATION_ORDER)
+        if (v_col != 0) {
+          res = res + coalescedRead(out_p[v_arg_row][ss](b));
+        }
+#endif
         coalescedWrite(out_p[v_arg_row][ss](b),res);
       });
       MComputeTime += usecond();
@@ -1222,16 +1262,25 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
         int ptype;
         StencilEntry *SE_MA;
 
+#if defined(REFERENCE_SUMMATION_ORDER)
+        res = Zero();
+#else
         if (v_col == 0)
           res = Zero();
         else
           res = coalescedRead(out_p[v_arg_row][ss](b));
+#endif
 
         nbr = coalescedRead(in_v[v_arg_col][ss]);
 
         for(int bb=0;bb<NbasisVirtual;bb++) {
           res = res + coalescedRead(UcSelf_p[v_link][ss](b,bb))*nbr(bb);
         }
+#if defined(REFERENCE_SUMMATION_ORDER)
+        if (v_col != 0) {
+          res = res + coalescedRead(out_p[v_arg_row][ss](b));
+        }
+#endif
         coalescedWrite(out_p[v_arg_row][ss](b),res);
       });
       MComputeTime += usecond();
