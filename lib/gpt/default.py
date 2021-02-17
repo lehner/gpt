@@ -73,7 +73,7 @@ verbose_default = (
     + "checkpointer,modes,block_operator,random,split,multi_grid,"
     + "coarsen,qis_map,metropolis,su2_heat_bath,u1_heat_bath"
 )
-verbose_additional = "eval,merge,orthogonalize"
+verbose_additional = "eval,merge,orthogonalize,copy_plan"
 verbose = set()
 verbose_candidates = ",".join(
     sorted((verbose_default + "," + verbose_additional).split(","))
