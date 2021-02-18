@@ -216,6 +216,31 @@ for dti in [cv, cm, vsc, msc, vc, mc]:
     g.message(f"Done with {dti.otype.__name__}")
     assert eps == 0.0
 
+# multiplication tester
+def test_multiply(a, b):
+    a_type = a.otype
+    b_type = b.otype
+
+    # no unary
+    mul_lat = g(a * b)
+    mul_lat = mul_lat[0, 0, 0, 0]
+    mul_np = a[0, 0, 0, 0] * b[0, 0, 0, 0]
+    eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+    g.message(f"Test {a_type.__name__} * {b_type.__name__}: {eps2}")
+    assert eps2 < 1e-12
+
+    # traces
+    for tr in [g.trace, g.color_trace, g.spin_trace]:
+        mul_lat = g(tr(a * b))[0, 0, 0, 0]
+        mul_np = tr(a[0, 0, 0, 0] * b[0, 0, 0, 0])
+        if type(mul_lat) == complex:
+            eps2 = abs(mul_lat - mul_np) ** 2.0 / abs(mul_lat) ** 2.0
+        else:
+            eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+        g.message(f"Test {tr.__name__}({a_type.__name__} * {b_type.__name__}): {eps2}")
+        assert eps2 < 1e-12
+
+
 # test numpy versus lattice tensor multiplication
 for a_type in [
     g.ot_matrix_spin_color(4, 3),
@@ -232,18 +257,7 @@ for a_type in [
             b_type = g.str_to_otype(e)
             a = rng.cnormal(g.lattice(grid, a_type))
             b = rng.cnormal(g.lattice(grid, b_type))
-            mul_lat = g(a * b)[0, 0, 0, 0]
-            mul_np = a[0, 0, 0, 0] * b[0, 0, 0, 0]
-            eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
-            g.message(f"Test {a_type.__name__} * {b_type.__name__}: {eps2}")
-            if eps2 > 1e-12:
-                g.message(mul_lat)
-                g.message(
-                    np.tensordot(
-                        a[0, 0, 0, 0].array, b[0, 0, 0, 0].array, axes=a_type.mtab[e][1]
-                    ).shape
-                )
-                assert eps2 < 1e-12
+            test_multiply(a, b)
 
             # if appropriate, test adjoint versions
             if a_type.transposed is not None:
@@ -278,23 +292,52 @@ for a_type in [
             b_type = g.str_to_otype(e)
             a = rng.cnormal(g.lattice(grid, a_type))
             b = rng.cnormal(g.lattice(grid, b_type))
-            mul_lat = g(b * a)[0, 0, 0, 0]
-            mul_np = b[0, 0, 0, 0] * a[0, 0, 0, 0]
-            eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
-            g.message(f"Test {b_type.__name__} * {a_type.__name__}: {eps2}")
-            if eps2 > 1e-12:
-                g.message(mul_lat[3, 2, 1, 0])
-                g.message(
-                    mul_np[3, 2, 1, 0],
-                    mul_np[2, 3, 1, 0],
-                    mul_np[2, 3, 0, 1],
-                    mul_np[3, 2, 0, 1],
-                )
-                g.message(
-                    np.tensordot(
-                        b[0, 0, 0, 0].array,
-                        a[0, 0, 0, 0].array,
-                        axes=a_type.rmtab[e][1],
-                    ).shape
-                )
-                assert eps2 < 1e-12
+            test_multiply(b, a)
+
+# test linear combinations
+def test_linear_combinations(a, b):
+    a_type = a.otype
+    b_type = b.otype
+    lat = g(a + b)[0, 0, 0, 0]
+    np = a[0, 0, 0, 0] + b[0, 0, 0, 0]
+    eps2 = g.norm2(lat - np) / g.norm2(lat)
+    g.message(f"Test {a_type.__name__} + {b_type.__name__}: {eps2}")
+    assert eps2 < 1e-12
+
+    if a_type.transposed is not None:
+        for unary in [g.adj, g.transpose, g.conj]:
+            lat = g(unary(a + b))[0, 0, 0, 0]
+            np = unary(a[0, 0, 0, 0] + b[0, 0, 0, 0])
+            eps2 = g.norm2(lat - np) / g.norm2(lat)
+            g.message(
+                f"Test {unary.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}"
+            )
+            assert eps2 < 1e-12
+
+    # TODO: add more tests, also for single term
+    # for tr in [g.trace, g.color_trace, g.spin_trace]:
+    #     g.message(f"{a_type.__name__},{tr.__name__}")
+    #     lat = g(tr(a + b))[0, 0, 0, 0]
+    #     np = tr(a[0, 0, 0, 0] + b[0, 0, 0, 0])
+    #     if type(lat) == complex:
+    #         eps2 = abs(lat - np) ** 2.0 / abs(lat) ** 2.0
+    #     else:
+    #         eps2 = g.norm2(lat - np) / g.norm2(lat)
+    #     g.message(f"Test {tr.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}")
+    #     assert eps2 < 1e-12
+
+
+for a_type in [
+    g.ot_matrix_spin_color(4, 3),
+    g.ot_vector_spin_color(4, 3),
+    g.ot_matrix_spin(4),
+    g.ot_vector_spin(4),
+    g.ot_matrix_color(3),
+    g.ot_vector_color(3),
+    g.ot_matrix_singlet(8),
+    g.ot_vector_singlet(8),
+]:
+    a = rng.cnormal(g.lattice(grid, a_type))
+    b = rng.cnormal(g.lattice(grid, a_type))
+
+    test_linear_combinations(a, b)

@@ -110,7 +110,7 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
       bool rtrans = (rhs_unary & BIT_TRANS) != 0;
       bool trace = (unary & BIT_COLORTRACE) != 0;
       dst_vl.resize(trace ? 1 : dim*dim);
-      
+
       for (int i=0;i<dim;i++) {
 	for (int j=0;j<dim;j++) {
 
@@ -120,8 +120,9 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 	  int dst_idx = trace ? 0 : matrix_index(i,j,false);
 	  
 	  // init
+	  bool ac = trace && i != 0;
 	  dst_vl[dst_idx] = lhs_vl[matrix_index(i,0,ltrans)]->
-	    mul( 0, false, rhs_vl[matrix_index(0,j,rtrans)], lhs_unary, rhs_unary, unary);
+	    mul( ac ? dst_vl[dst_idx] : 0, ac, rhs_vl[matrix_index(0,j,rtrans)], lhs_unary, rhs_unary, unary);
 
 	  for (int l=1;l<dim;l++) {
 	    lhs_vl[matrix_index(i,l,ltrans)]->
