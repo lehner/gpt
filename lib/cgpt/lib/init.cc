@@ -69,9 +69,12 @@ EXPORT(exit,{
 	"               Finalized GPT                 " << std::endl <<
 	"=============================================" << std::endl;
 
-      // For now keep Grid alive.  May change default behavior in future.
-      // Grid_finalize();
+      // int rank = CartesianCommunicator::RankWorld();
+	    
+      Grid_finalize();
       cgpt_initialized = false;
+
+      // printf("Rank %d done\n",rank);  fflush(stdout);
 
     }
 

@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,19 +17,16 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-from gpt.algorithms import base
+import gpt
 
 
-class mixed_precision(base):
-    def __init__(self, inverter, inner_precision, outer_precision):
-        super().__init__()
-        self.inverter = inverter
-        self.inner_precision = inner_precision
-        self.outer_precision = outer_precision
+def apply_open_boundaries(field):
+    if type(field) == list:
+        return [apply_open_boundaries(x) for x in field]
 
-    def __call__(self, mat):
-        matrix = mat.converted(self.inner_precision)
-        return self.inverter(matrix).converted(
-            self.outer_precision, self.timed_function
-        )
+    assert type(field) == gpt.lattice
+    T = field.grid.fdimensions[3]
+    field[:, :, :, 0] = 0.0
+    field[:, :, :, T - 1] = 0.0
+    return field
+    # TODO create plan and cache it

@@ -17,18 +17,31 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.algorithms import base
 
 
-class mixed_precision(base):
-    def __init__(self, inverter, inner_precision, outer_precision):
-        super().__init__()
-        self.inverter = inverter
-        self.inner_precision = inner_precision
-        self.outer_precision = outer_precision
+class calculate_residual:
+    def __init__(self, tag=None):
+        self.tag = "" if tag is None else f"{tag}: "
 
     def __call__(self, mat):
-        matrix = mat.converted(self.inner_precision)
-        return self.inverter(matrix).converted(
-            self.outer_precision, self.timed_function
+        def inv(dst, src):
+            for i in range(len(dst)):
+                eps = g.norm2(mat * dst[i] - src[i]) ** 0.5
+                nrm = g.norm2(src[i]) ** 0.5
+                g.message(
+                    f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps/nrm}, | src[{i}] | = {nrm}"
+                )
+
+        otype, grid, cb = None, None, None
+        if isinstance(mat, g.matrix_operator):
+            otype, grid, cb = mat.otype, mat.grid, mat.cb
+
+        return g.matrix_operator(
+            mat=inv,
+            inv_mat=mat,
+            otype=otype,
+            accept_guess=(True, False),
+            grid=grid,
+            cb=cb,
+            accept_list=True,
         )

@@ -143,29 +143,46 @@ class state:
 
     def R_z(self, i, phi):
         phase_one = np.exp(1j * phi)
-        self.lattice @= (
-            self.bit_map.zero_mask[self.bit_permutation[i]] * self.lattice
-            + self.bit_map.one_mask[self.bit_permutation[i]] * self.lattice * phase_one
+        g.bilinear_combination(
+            [self.lattice],
+            [
+                self.bit_map.zero_mask[self.bit_permutation[i]],
+                self.bit_map.one_mask[self.bit_permutation[i]],
+            ],
+            [self.lattice],
+            [[1.0, phase_one]],
+            [[0, 1]],
+            [[0, 0]],
         )
 
     def H(self, i):
         bfl = self.bit_flipped_lattice(i)
-        zero = self.bit_map.zero_mask[self.bit_permutation[i]] * self.lattice
-        one = self.bit_map.one_mask[self.bit_permutation[i]] * self.lattice
-        bfl_zero = self.bit_map.one_mask[self.bit_permutation[i]] * bfl
-        bfl_one = self.bit_map.zero_mask[self.bit_permutation[i]] * bfl
         nrm = 1.0 / 2.0 ** 0.5
-        self.lattice @= nrm * (zero + bfl_zero) + nrm * (bfl_one - one)
-        # TODO: create a cgpt function
-        # cgpt.local_linear_combination taking instead of a list of coefficients a list of complex lattices
-        # then add both linear combination and this local_linear_combination to the benchmarking suite
+        g.bilinear_combination(
+            [self.lattice],
+            [
+                self.bit_map.zero_mask[self.bit_permutation[i]],
+                self.bit_map.one_mask[self.bit_permutation[i]],
+            ],
+            [self.lattice, bfl],
+            [[nrm, nrm, -nrm, nrm]],
+            [[0, 0, 1, 1]],
+            [[0, 1, 0, 1]],
+        )
 
     def CNOT(self, control, target):
         assert control != target
         bfl = self.bit_flipped_lattice(target)
-        self.lattice @= (
-            self.bit_map.zero_mask[self.bit_permutation[control]] * self.lattice
-            + self.bit_map.one_mask[self.bit_permutation[control]] * bfl
+        g.bilinear_combination(
+            [self.lattice],
+            [
+                self.bit_map.zero_mask[self.bit_permutation[control]],
+                self.bit_map.one_mask[self.bit_permutation[control]],
+            ],
+            [self.lattice, bfl],
+            [[1.0, 1.0]],
+            [[0, 1]],
+            [[0, 1]],
         )
 
     def probability(self, i):
@@ -176,15 +193,18 @@ class state:
         p_zero = 1.0 - p_one
         l = self.rng.uniform_real()
         if l <= p_one:
-            self.lattice @= (
-                self.lattice * self.bit_map.one_mask[self.bit_permutation[i]]
-            ) / (p_one ** 0.5)
+            proj = self.bit_map.one_mask[self.bit_permutation[i]]
+            nrm = 1.0 / (p_one ** 0.5)
             r = 1
         else:
-            self.lattice @= (
-                self.lattice * self.bit_map.zero_mask[self.bit_permutation[i]]
-            ) / (p_zero ** 0.5)
+            proj = self.bit_map.zero_mask[self.bit_permutation[i]]
+            nrm = 1.0 / (p_zero ** 0.5)
             r = 0
+
+        g.bilinear_combination(
+            [self.lattice], [proj], [self.lattice], [[nrm]], [[0]], [[0]]
+        )
+
         self.classical_bit[i] = r
         return r
 

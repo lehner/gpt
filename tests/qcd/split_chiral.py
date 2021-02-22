@@ -12,7 +12,7 @@ import numpy as np
 grid = g.grid([8, 8, 8, 8], g.double)
 
 # setup rng
-rng = g.random("ducks_smell_funny")
+rng = g.random("test")
 
 # size of basis
 nbasis_f = 30
@@ -36,8 +36,8 @@ def run_test(basis_split, basis_ref):
         for i in range(len(basis_ref)):
             basis_split[i] = g.copy(basis_ref[i])
 
-        g.coarse.split_chiral(basis_split, factor)
-        g.coarse.unsplit_chiral(basis_split, factor)
+        g.qcd.fermion.coarse.split_chiral(basis_split, factor)
+        g.qcd.fermion.coarse.unsplit_chiral(basis_split, factor)
 
         typename = basis_split[0].otype.__name__
         for i in range(len(basis_ref)):

@@ -18,15 +18,16 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.algorithms import base_iterative
 
 
-class cg:
+class cg(base_iterative):
     @g.params_convention(eps=1e-15, maxiter=1000000)
     def __init__(self, params):
+        super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
-        self.history = None
 
     def __call__(self, mat):
 
@@ -36,11 +37,9 @@ class cg:
             mat = mat.mat
             # remove wrapper for performance benefits
 
-        def inv(psi, src):
+        @self.timed_function
+        def inv(psi, src, t):
             assert src != psi
-            self.history = []
-            verbose = g.default.is_verbose("cg")
-            t = g.timer("cg")
             t("setup")
             p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
             mat(mmp, psi)  # in, out
@@ -55,32 +54,29 @@ class cg:
                 assert a != 0.0  # need either source or psi to not be zero
                 ssq = a
             rsq = self.eps ** 2.0 * ssq
-            for k in range(1, self.maxiter + 1):
+            for k in range(self.maxiter):
                 c = cp
-                t("mat")
+                t("matrix")
                 mat(mmp, p)
-                t("inner")
+                t("inner_product")
                 dc = g.inner_product(p, mmp)
                 d = dc.real
                 a = c / d
-                t("axpy_norm")
+                t("axpy_norm2")
                 cp = g.axpy_norm2(r, -a, mmp, r)
-                t("linearcomb")
+                t("linear combination")
                 b = cp / c
                 psi += a * p
                 p @= b * p + r
                 t("other")
-                self.history.append(cp)
-                if verbose:
-                    g.message("cg: res^2[ %d ] = %g, target = %g" % (k, cp, rsq))
+                self.log_convergence(k, cp, rsq)
                 if cp <= rsq:
-                    if verbose:
-                        t()
-                        g.message(
-                            "cg: converged in %d iterations, took %g s" % (k, t.total)
-                        )
-                        g.message(t)
-                    break
+                    self.log(f"converged in {k+1} iterations")
+                    return
+
+            self.log(
+                f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}"
+            )
 
         return g.matrix_operator(
             mat=inv,

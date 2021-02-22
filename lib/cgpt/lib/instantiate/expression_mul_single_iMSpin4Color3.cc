@@ -19,7 +19,6 @@
 */
 #include "../lib.h"
 
-#include "../expression/matmul.h"
 #include "../expression/mul.h"
 
 template<>

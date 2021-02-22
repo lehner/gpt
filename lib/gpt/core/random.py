@@ -33,6 +33,7 @@ class random:
                 engine = "vectorized_ranlux24_389_64"
 
         self.verbose = gpt.default.is_verbose("random")
+        self.verbose_performance = gpt.default.is_verbose("random_performance")
         t0 = gpt.time()
         self.obj = cgpt.create_random(engine, s)
         t1 = gpt.time()
@@ -49,6 +50,7 @@ class random:
         if type(t) == list:
             for x in t:
                 self.sample(x, p)
+            return t
         elif t is None:
             return cgpt.random_sample(self.obj, p)
         elif type(t) == gpt.lattice:
@@ -66,7 +68,7 @@ class random:
             # optimize memory mapping
             t.swap(gpt.copy(t))
 
-            if self.verbose:
+            if self.verbose_performance:
                 szGB = t.global_bytes() / 1024.0 ** 3.0
                 gpt.message(
                     "Generated %g GB of random data at %g GB/s"

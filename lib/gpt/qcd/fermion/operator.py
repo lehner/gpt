@@ -158,6 +158,13 @@ class operator(gpt.matrix_operator):
     def converted(self, dst_precision):
         return self.updated(gpt.convert(self.U, dst_precision))
 
+    @params_convention(make_hermitian=False)
+    def coarsened(self, coarse_grid, basis, params):
+        # TODO: allow for non-nearest-neighbor operators as well
+        return gpt.qcd.fermion.coarse.nearest_neighbor_operator(
+            self, coarse_grid, basis, params
+        )
+
     def updated(self, U):
         return type(self)(
             name=self.name,
@@ -181,7 +188,7 @@ class operator(gpt.matrix_operator):
 
     def _G5M(self, dst, src):
         self(dst, src)
-        dst @= gpt.coarse.gamma5(dst) * dst
+        dst @= gpt.qcd.fermion.coarse.gamma5(dst) * dst
 
     def propagator(self, solver):
         exp = self.ExportPhysicalFermionSolution
@@ -237,7 +244,9 @@ class coarse_operator(operator):
         for i in range(len(U[0].v_obj)):
             self.params["U"] = [a.v_obj[i] for a in self.U]
             self.params["U_self_inv"] = self.U_self_inv.v_obj[i]
-            self.params["dag_factor"] = gpt.coarse.prefactor_dagger(self.U[8], i)
+            self.params["dag_factor"] = gpt.qcd.fermion.coarse.prefactor_dagger(
+                self.U[8], i
+            )
             self.obj.append(
                 cgpt.create_fermion_operator(
                     self.name, self.U_grid.precision, self.params

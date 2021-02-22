@@ -17,36 +17,40 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.algorithms import base_iterative
 
 
-class power_iteration:
+class power_iteration(base_iterative):
     @g.params_convention(real=False)
     def __init__(self, params):
+        super().__init__()
         self.params = params
         self.tol = params["eps"]
         self.maxit = params["maxiter"]
         self.real = params["real"]
 
-    def __call__(self, mat, src):
-        verbose = g.default.is_verbose("power_iteration")
-
+    @base_iterative.timed_method
+    def __call__(self, mat, src, t):
         dst, tmp = g.lattice(src), g.copy(src)
 
         tmp /= g.norm2(tmp) ** 0.5
 
         ev_prev = None
         for it in range(self.maxit):
+            t("matrix")
             mat(dst, tmp)
+            t("inner_product")
             ev = g.inner_product(tmp, dst)
+            t("other")
             if self.real:
                 ev = ev.real
-            if verbose:
-                g.message(f"eval_max[ {it} ] = {ev}")
+            self.log_convergence(it, ev)
+            t("normalize")
             tmp @= dst / g.norm2(dst) ** 0.5
+            t("other")
             if ev_prev is not None:
                 if abs(ev - ev_prev) < self.tol * abs(ev):
-                    if verbose:
-                        g.message("Converged")
+                    self.log(f"converged in iteration {it}")
                     return (ev, tmp, True)
             ev_prev = ev
 

@@ -115,26 +115,37 @@ class state:
 
     def R_z(self, i, phi):
         phase_one = np.exp(1j * phi)
-        self.lattice @= (
-            self.bit_map.zero_mask[i] * self.lattice
-            + self.bit_map.one_mask[i] * self.lattice * phase_one
+        g.bilinear_combination(
+            [self.lattice],
+            [self.bit_map.zero_mask[i], self.bit_map.one_mask[i]],
+            [self.lattice],
+            [[1.0, phase_one]],
+            [[0, 1]],
+            [[0, 0]],
         )
 
     def H(self, i):
         bfl = self.bit_flipped_lattice(i)
-        zero = self.bit_map.zero_mask[i] * self.lattice
-        one = self.bit_map.one_mask[i] * self.lattice
-        bfl_zero = self.bit_map.one_mask[i] * bfl
-        bfl_one = self.bit_map.zero_mask[i] * bfl
         nrm = 1.0 / 2.0 ** 0.5
-        self.lattice @= nrm * (zero + bfl_zero) + nrm * (bfl_one - one)
+        g.bilinear_combination(
+            [self.lattice],
+            [self.bit_map.zero_mask[i], self.bit_map.one_mask[i]],
+            [self.lattice, bfl],
+            [[nrm, nrm, -nrm, nrm]],
+            [[0, 0, 1, 1]],
+            [[0, 1, 0, 1]],
+        )
 
     def CNOT(self, control, target):
         assert control != target
         bfl = self.bit_flipped_lattice(target)
-        self.lattice @= (
-            self.bit_map.zero_mask[control] * self.lattice
-            + self.bit_map.one_mask[control] * bfl
+        g.bilinear_combination(
+            [self.lattice],
+            [self.bit_map.zero_mask[control], self.bit_map.one_mask[control]],
+            [self.lattice, bfl],
+            [[1.0, 1.0]],
+            [[0, 1]],
+            [[0, 1]],
         )
 
     def probability(self, i):
@@ -145,11 +156,18 @@ class state:
         p_zero = 1.0 - p_one
         l = self.rng.uniform_real()
         if l <= p_one:
-            self.lattice @= (self.lattice * self.bit_map.one_mask[i]) / (p_one ** 0.5)
+            proj = self.bit_map.one_mask[i]
+            nrm = 1.0 / (p_one ** 0.5)
             r = 1
         else:
-            self.lattice @= (self.lattice * self.bit_map.zero_mask[i]) / (p_zero ** 0.5)
+            proj = self.bit_map.zero_mask[i]
+            nrm = 1.0 / (p_zero ** 0.5)
             r = 0
+
+        g.bilinear_combination(
+            [self.lattice], [proj], [self.lattice], [[nrm]], [[0]], [[0]]
+        )
+
         self.classical_bit[i] = r
         return r
 

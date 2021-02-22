@@ -70,6 +70,7 @@ from gpt.core.io import (
 from gpt.core.checkpointer import checkpointer, checkpointer_none
 from gpt.core.basis import (
     orthogonalize,
+    orthonormalize,
     linear_combination,
     bilinear_combination,
     rotate,
@@ -92,4 +93,3 @@ import gpt.core.util
 import gpt.core.block
 import gpt.core.matrix
 import gpt.core.component
-import gpt.core.coarse

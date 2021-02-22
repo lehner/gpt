@@ -132,7 +132,7 @@ class matrix_operator(factor):
     def __rmul__(self, other):
         return gpt.expr(other).__mul__(self)
 
-    def converted(self, to_precision, verbose=False):
+    def converted(self, to_precision, timing_wrapper=None):
         assert all([g is not None for g in self.grid])
         assert all([ot is not None for ot in self.otype])
         grid = tuple([g.converted(to_precision) for g in self.grid])
@@ -140,29 +140,30 @@ class matrix_operator(factor):
         accept_guess = self.accept_guess
         cb = self.cb
 
-        def _converted(dst, src, mat, l, r):
-            t0 = gpt.time()
+        def _converted(dst, src, mat, l, r, t=lambda x: None):
+            t("converted: setup")
+
             conv_src = [gpt.lattice(self.grid[r], otype[r]) for x in src]
             conv_dst = [gpt.lattice(self.grid[l], otype[l]) for x in src]
+
+            t("converted: convert")
 
             gpt.convert(conv_src, src)
             if accept_guess[l]:
                 gpt.convert(conv_dst, dst)
-            t1 = gpt.time()
+
+            t("converted: matrix")
+
             mat(conv_dst, conv_src)
-            t2 = gpt.time()
+
+            t("converted: convert")
+
             gpt.convert(dst, conv_dst)
-            t3 = gpt.time()
-            if verbose:
-                gpt.message(
-                    "Converted to",
-                    to_precision.__name__,
-                    "in",
-                    t3 - t2 + t1 - t0,
-                    "s, matrix application in",
-                    t2 - t1,
-                    "s",
-                )
+
+            t()
+
+        if timing_wrapper is not None:
+            _converted = timing_wrapper(_converted)
 
         return matrix_operator(
             mat=lambda dst, src: _converted(dst, src, self, 0, 1),

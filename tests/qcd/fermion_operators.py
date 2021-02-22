@@ -203,6 +203,16 @@ wilson_clover_params = {
     "isAnisotropic": True,
     "boundary_phases": [1.0, -1.0, 1.0, -1.0],
 }
+wilson_clover_open_params = {
+    "kappa": 0.13500,
+    "csw_r": 1.978,
+    "csw_t": 1.978,
+    "cF": 1.3,
+    "xi_0": 1,
+    "nu": 1,
+    "isAnisotropic": False,
+    "boundary_phases": [1.0, 1.0, 1.0, 0.0],
+}
 wilson_clover_matrices_rb = {
     ".Mooee": [
         (-964.604747199766 + 1955.3204837295887j),
@@ -216,6 +226,20 @@ wilson_clover_matrices_rb = {
 wilson_clover_matrices = {
     "": [(-946.8714968698364 - 427.1253034080037j)],
     ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
+}
+wilson_clover_matrices_rb_open = {
+    ".Mooee": [
+        (-786.8010863449176 + 1070.7776954461517j),
+        (-799.9912213689927 + 868.0454954800668j),
+    ],
+    ".Meooe": [
+        (-515.6416289919217 - 727.8655685760094j),
+        (-186.16467422408803 - 815.6089918787717j),
+    ],
+}
+wilson_clover_matrices_open = {
+    "": [(-1634.2615676797234 + 239.27037187495998j)],
+    ".Mdiag": [(-1239.3535155227526 - 1158.5295177146759j)],
 }
 test_suite = {
     "wilson_clover": {
@@ -238,6 +262,18 @@ test_suite = {
         "params": wilson_clover_params,
         "matrices_rb": wilson_clover_matrices_rb,
         "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_openbc_reference": {
+        "fermion": g.qcd.fermion.reference.wilson_clover,
+        "params": wilson_clover_open_params,
+        "matrices_rb": wilson_clover_matrices_rb_open,
+        "matrices": wilson_clover_matrices_open,
+    },
+    "wilson_clover_openbc": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": wilson_clover_open_params,
+        "matrices_rb": wilson_clover_matrices_rb_open,
+        "matrices": wilson_clover_matrices_open,
     },
     "zmobius": {
         "fermion": g.qcd.fermion.zmobius,
@@ -328,6 +364,12 @@ for precision in [g.single, g.double]:
         grid_rb = fermion.F_grid_eo
         src = rng.cnormal(g.vspincolor(grid_rb))
         dst = rng.cnormal(g.vspincolor(grid_rb))
+
+        # apply open boundaries to fields if necessary
+        if test["params"]["boundary_phases"][-1] == 0.0:
+            g.qcd.fermion.apply_open_boundaries(src)
+            g.qcd.fermion.apply_open_boundaries(dst)
+
         g.message(f"<dst|src> = {g.inner_product(dst, src)}")
         for matrix in test["matrices_rb"]:
             finger_print = []
@@ -354,6 +396,12 @@ for precision in [g.single, g.double]:
         grid = fermion.F_grid
         src = rng.cnormal(g.vspincolor(grid))
         dst = rng.cnormal(g.vspincolor(grid))
+
+        # apply open boundaries to fields if necessary
+        if test["params"]["boundary_phases"][-1] == 0.0:
+            g.qcd.fermion.apply_open_boundaries(src)
+            g.qcd.fermion.apply_open_boundaries(dst)
+
         for matrix in test["matrices"]:
             finger_print = []
             mat = eval(f"fermion{matrix}")

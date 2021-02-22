@@ -102,12 +102,10 @@ template<class VLattice>
 void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &right_basis,ComplexD* Qt,int32_t* left_indices,int32_t* right_indices,
 			       long n_virtual, long n_elements) {
 
-  size_t basis_size = left_basis.size();
-  ASSERT(right_basis.size() == basis_size);
   ASSERT(result.size() % n_virtual == 0);
-  ASSERT(basis_size % n_virtual == 0);
+  ASSERT(right_basis.size() % n_virtual == 0);
+  ASSERT(left_basis.size() % n_virtual == 0);
   long n_vec = result.size() / n_virtual;
-  long n_basis = basis_size / n_virtual;
   GridBase* grid = left_basis[0].Grid();
 
   for (size_t i=0;i<result.size();i++)
