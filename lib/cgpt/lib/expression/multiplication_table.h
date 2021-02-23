@@ -142,7 +142,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,n>>>, iScalar<iScalar<
   typedef iScalar<iScalar<iMatrix<decltype(vtype1()*vtype2()),n>>> result_type;
 
 #ifdef GRID_HAS_ACCELERATOR
-  static constexpr int n_elements = n;
+  static constexpr int n_elements = n*n;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     int i = e / n;
     int j = e % n;

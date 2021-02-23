@@ -21,17 +21,17 @@
 
 template<typename T>
 accelerator_inline
-void coalescedWriteElement(T & c, const typename T::vector_type & v, int e) {
+void coalescedWriteElement(T & __restrict__ c, const typename T::vector_type & v, int e) {
   typedef typename T::vector_type vCoeff_t;
-  vCoeff_t * p = (vCoeff_t*)&c;
+  vCoeff_t * __restrict__ p = (vCoeff_t*)&c;
   p[e] = v;
 }
 
 template<typename T>
 accelerator_inline
-typename T::vector_type coalescedReadElement(const T & c, int e) {
+typename T::vector_type coalescedReadElement(const T & __restrict__ c, int e) {
   typedef typename T::vector_type vCoeff_t;
-  vCoeff_t * p = (vCoeff_t*)&c;
+  vCoeff_t * __restrict__ p = (vCoeff_t*)&c;
   return p[e];
 }
 

@@ -56,17 +56,9 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
   //for (long j=0;j<MT::n_elements;j++) {
 #ifndef GRID_HAS_ACCELERATOR
   accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
-      const T1 & la = p_a[osite];
-      const T2 & lb = p_b[osite];
-      //for (int i=0;i<sizeof(T1)/8;i++)
-      //	svprfd(svptrue_b64(), ((int64_t*)&la) + i, SV_PLDL1STRM);
-      //for (int i=0;i<sizeof(T2)/8;i++)
-      //svprfd(svptrue_b64(), ((int64_t*)&lb) + i, SV_PLDL1STRM);
-      T lc;
       for (int j=0;j<MT::n_elements;j++) {
-	MT::eval(lc, la, lb, j);
+	MT::eval(p_c[osite], p_a[osite], p_b[osite], j);
       }
-      p_c[osite] = lc;
     });
 #else
   accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
