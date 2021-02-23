@@ -41,10 +41,40 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
   auto * p_a = &a_v[0];
   auto * p_b = &b_v[0];
 
+  /*
+  #if defined(A64FX) || defined(A64FXFIXEDSIZE)
+  #define PREFETCH_CLOVER(BASE) {				    \
+  uint64_t base;						    \
+  if ((pf_dist_L1 >= 0) && (ss + pf_dist_L1 < Nsite)) {		    \
+  base = (uint64_t)&diag_t()(pf_dist_L1+BASE)(0);		    \
+  svprfd(svptrue_b64(), (int64_t*)(base +    0), SV_PLDL1STRM);	    \
+  svprfd(svptrue_b64(), (int64_t*)(base +  256), SV_PLDL1STRM);	    \
+	
+  */
+    
+  //for (long osite=0;osite<grid->oSites();osite++)
+  //for (long j=0;j<MT::n_elements;j++) {
+#ifndef GRID_HAS_ACCELERATOR
+  accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+      const T1 & la = p_a[osite];
+      const T2 & lb = p_b[osite];
+      //for (int i=0;i<sizeof(T1)/8;i++)
+      //	svprfd(svptrue_b64(), ((int64_t*)&la) + i, SV_PLDL1STRM);
+      //for (int i=0;i<sizeof(T2)/8;i++)
+      //svprfd(svptrue_b64(), ((int64_t*)&lb) + i, SV_PLDL1STRM);
+      T lc;
+      for (int j=0;j<MT::n_elements;j++) {
+	MT::eval(lc, la, lb, j);
+      }
+      p_c[osite] = lc;
+    });
+#else
   accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
       MT::eval(p_c[osite], p_a[osite], p_b[osite], j);
     });
+#endif
 
+  //}
   return _c;
 }
 
@@ -69,12 +99,19 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 
   auto * p_c = &c_v[0];
   auto * p_a = &a_v[0];
-  auto * p_b = &b;
 
+  Vector<T2> v_b(1);
+  v_b[0] = b;
+
+  auto * p_b = &v_b[0];
+
+  //for (long osite=0;osite<grid->oSites();osite++)
+  //for (long j=0;j<MT::n_elements;j++) {
+ 
   accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
       MT::eval(p_c[osite], p_a[osite], *p_b, j);
     });
-
+  //}
   return _c;
 }
 
@@ -98,11 +135,18 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
   autoView(b_v, b, AcceleratorRead);
 
   auto * p_c = &c_v[0];
-  auto * p_a = &a;
+
+  Vector<T1> v_a(1);
+  v_a[0] = a;
+
+  auto * p_a = &v_a[0];
   auto * p_b = &b_v[0];
 
   accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
+      //for (long osite=0;osite<grid->oSites();osite++)
+      //for (long j=0;j<MT::n_elements;j++) {
       MT::eval(p_c[osite], *p_a, p_b[osite], j);
+      //}
     });
 
   return _c;

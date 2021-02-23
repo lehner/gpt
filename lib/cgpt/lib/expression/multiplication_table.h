@@ -43,6 +43,12 @@ struct tensorMultType<iMatrix<inner,n>,vtype> {
   typedef iMatrix<typename tensorMultType<inner,vtype>::type,n> type;
 };
 
+#ifndef GRID_SIMT
+#define DEF_z() typename result_type::vector_type v; zeroit(v);
+#else
+#define DEF_z() typename result_type::scalar_type v; zeroit(v);
+#endif
+
 // General
 template<typename T1, typename vtype2, typename Accumulator, int unary_expr>
 struct MultiplicationTable<T1,iSinglet<vtype2>,Accumulator,unary_expr> {
@@ -50,7 +56,7 @@ struct MultiplicationTable<T1,iSinglet<vtype2>,Accumulator,unary_expr> {
   typedef iSinglet<vtype2> T2;
   static constexpr int n_elements = GridTypeMapper<result_type>::count;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
-    Accumulator::coalescedWriteElement(c, coalescedReadElement(a, e) * coalescedRead(b()()()), e);
+    Accumulator::coalescedWriteElement(c, coalescedReadElement(a, e) * coalescedReadElement(b, 0), e);
   }
 };
 
@@ -61,7 +67,7 @@ struct MultiplicationTable<iSinglet<vtype1>,T2,Accumulator,unary_expr,
   typedef iSinglet<vtype1> T1;
   static constexpr int n_elements = GridTypeMapper<result_type>::count;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
-    Accumulator::coalescedWriteElement(c, coalescedReadElement(b, e) * coalescedRead(a()()()), e);
+    Accumulator::coalescedWriteElement(c, coalescedReadElement(b, e) * coalescedReadElement(a, 0), e);
   }
 };
 
@@ -73,11 +79,11 @@ struct MultiplicationTable<iMatrix<iSinglet<vtype1>,n>, iMatrix<iSinglet<vtype2>
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
-    decltype(coalescedRead(c)) v = Zero();
+    DEF_z();
     for (int i=0;i<n;i++)
       for (int j=0;j<n;j++)
-	v += coalescedRead(a(i,j)) * coalescedRead(b(j,i));
-    Accumulator::coalescedWrite(c, v);
+	v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j,i);
+    Accumulator::coalescedWriteSinglet(c, v);
   }
 };
 
@@ -94,15 +100,14 @@ struct MultiplicationTable<iMatrix<iSinglet<vtype1>,n>, iMatrix<iSinglet<vtype2>
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     int i = e / n;
     int j = e % n;
-    decltype(coalescedRead(c(0,0))) v = Zero();
+    DEF_z();
     for (int l=0;l<n;l++)
-      v += coalescedRead(a(i,l)) * coalescedRead(b(l,j));
-    Accumulator::coalescedWrite(c(i,j), v);
+      v += coalescedReadElement(a,i,l) * coalescedReadElement(b,l,j);
+    Accumulator::coalescedWrite(c, i, j, v);
   }
 };
 
-
-// VSinglet x VSinglet
+/// VSinglet x VSinglet
 template<int n, typename vtype1, typename vtype2, typename Accumulator, int unary_expr>
 struct MultiplicationTable<iVector<iSinglet<vtype1>,n>, iVector<iSinglet<vtype2>,n>, Accumulator, unary_expr> {
   typedef iVector<iSinglet<vtype1>,n> T1;
@@ -110,7 +115,7 @@ struct MultiplicationTable<iVector<iSinglet<vtype1>,n>, iVector<iSinglet<vtype2>
   typedef iVector<iSinglet<decltype(vtype1()*vtype2())>,n> result_type;
   static constexpr int n_elements = n;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int i) {
-    Accumulator::coalescedWrite(c(i), coalescedRead(a(i)) * coalescedRead(b(i)));
+    Accumulator::coalescedWrite(c, i, coalescedReadElement(a,i) * coalescedReadElement(b,i));
   }
 };
 
@@ -122,10 +127,10 @@ struct MultiplicationTable<iMatrix<iSinglet<vtype1>,n>, iVector<iSinglet<vtype2>
   typedef iVector<iSinglet<decltype(vtype1()*vtype2())>,n> result_type;
   static constexpr int n_elements = n;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int i) {
-    decltype(coalescedRead(c(0))) v = Zero();
+    DEF_z();
     for (int j=0;j<n;j++)
-      v += coalescedRead(a(i,j)) * coalescedRead(b(j));
-    Accumulator::coalescedWrite(c(i), v);
+      v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j);
+    Accumulator::coalescedWrite(c, i, v);
   }
 };
 
@@ -135,15 +140,23 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,n>>>, iScalar<iScalar<
   typedef iScalar<iScalar<iMatrix<vtype1,n>>> T1;
   typedef iScalar<iScalar<iMatrix<vtype2,n>>> T2;
   typedef iScalar<iScalar<iMatrix<decltype(vtype1()*vtype2()),n>>> result_type;
-  static constexpr int n_elements = n*n;
+
+#ifdef GRID_HAS_ACCELERATOR
+  static constexpr int n_elements = n;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     int i = e / n;
     int j = e % n;
-    decltype(coalescedRead(c()()(0,0))) v = 0.0;
+    DEF_z();
     for (int l=0;l<n;l++)
-      v += coalescedRead(a()()(i,l)) * coalescedRead(b()()(l,j));
-    Accumulator::coalescedWrite(c()()(i,j), v);
+      v += coalescedReadElement(a,i,l) * coalescedReadElement(b,l,j);
+    Accumulator::coalescedWrite(c, i, j, v);
   }
+#else
+  static constexpr int n_elements = 1;
+  static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
+      c = a*b;
+  }
+#endif
 };
 
 template<int n, typename vtype1, typename vtype2, typename Accumulator>
@@ -153,11 +166,11 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,n>>>, iScalar<iScalar<
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
-    decltype(coalescedRead(c()()())) v = 0.0;
+    DEF_z();
     for (int i=0;i<n;i++)
       for (int j=0;j<n;j++)
-	v += coalescedRead(a()()(i,j)) * coalescedRead(b()()(j,i));
-    Accumulator::coalescedWrite(c()()(), v);
+	v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j,i);
+    Accumulator::coalescedWriteSinglet(c, v);
   }
 };
 
@@ -173,10 +186,10 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,n>>>, iScalar<iScalar<
   typedef iScalar<iScalar<iVector<decltype(vtype1()*vtype2()),n>>> result_type;
   static constexpr int n_elements = n;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int i) {
-    decltype(coalescedRead(c()()(0))) v = 0.0;
+    DEF_z();
     for (int j=0;j<n;j++)
-      v += coalescedRead(a()()(i,j)) * coalescedRead(b()()(j));
-    Accumulator::coalescedWrite(c()()(i), v);
+      v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j);
+    Accumulator::coalescedWrite(c, i, v);
   }
 };
 
@@ -190,10 +203,10 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, iScalar<iMatrix<
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     int i = e / n;
     int j = e % n;
-    decltype(coalescedRead(c()(0,0)())) v = 0.0;
+    DEF_z();
     for (int l=0;l<n;l++)
-      v += coalescedRead(a()(i,l)()) * coalescedRead(b()(l,j)());
-    Accumulator::coalescedWrite(c()(i,j)(), v);
+      v += coalescedReadElement(a,i,l) * coalescedReadElement(b,l,j);
+    Accumulator::coalescedWrite(c, i, j, v);
   }
 };
 
@@ -204,11 +217,11 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, iScalar<iMatrix<
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
-    decltype(coalescedRead(c()()())) v = 0.0;
+    DEF_z();
     for (int i=0;i<n;i++)
       for (int j=0;j<n;j++)
-	v += coalescedRead(a()(i,j)()) * coalescedRead(b()(j,i)());
-    Accumulator::coalescedWrite(c()()(), v);
+	v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j,i);
+    Accumulator::coalescedWriteSinglet(c, v);
   }
 };
 
@@ -225,10 +238,10 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, iScalar<iVector<
   typedef iScalar<iVector<iScalar<decltype(vtype1()*vtype2())>,n>> result_type;
   static constexpr int n_elements = n;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int i) {
-    decltype(coalescedRead(c()(0)())) v = 0.0;
+    DEF_z();
     for (int j=0;j<n;j++)
-      v += coalescedRead(a()(i,j)()) * coalescedRead(b()(j)());
-    Accumulator::coalescedWrite(c()(i)(), v);
+      v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j);
+    Accumulator::coalescedWrite(c, i, v);
   }
 };
 
@@ -314,10 +327,10 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iVector
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     int is = e / nc;
     int ic = e % nc;
-    decltype(coalescedRead(c()(0)(0))) v = 0.0;
+    DEF_z();
     for (int jc=0;jc<nc;jc++)
-      v += coalescedRead(a()()(ic,jc)) * coalescedRead(b()(is)(jc));
-    Accumulator::coalescedWrite(c()(is)(ic), v);
+      v += coalescedReadElement(a,ic,jc) * coalescedReadElement(b,is,jc);
+    Accumulator::coalescedWrite(c, is, ic, v);
   }
 };
 
@@ -338,10 +351,10 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iMatrix
     int js = je / nc;
     int jc = je % nc;
     
-    decltype(coalescedRead(c()(0,0)(0,0))) v = 0.0;
+    DEF_z();
     for (int lc=0;lc<nc;lc++)
-      v += coalescedRead(a()()(ic,lc)) * coalescedRead(b()(is,js)(lc,jc));
-    Accumulator::coalescedWrite(c()(is,js)(ic,jc), v);
+      v += coalescedReadElement(a,ic,lc) * coalescedReadElement(b,is,js,lc,jc);
+    Accumulator::coalescedWrite(c, is, js, ic, jc, v);
   }
 };
 
@@ -355,11 +368,11 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iMatrix
     int is = e / ns;
     int js = e % ns;
     
-    decltype(coalescedRead(c()(0,0)())) v = 0.0;
+    DEF_z();
     for (int ic=0;ic<nc;ic++)
       for (int lc=0;lc<nc;lc++)
-	v += coalescedRead(a()()(ic,lc)) * coalescedRead(b()(is,js)(lc,ic));
-    Accumulator::coalescedWrite(c()(is,js)(), v);
+	v += coalescedReadElement(a,ic,lc) * coalescedReadElement(b,is,js,lc,ic);
+    Accumulator::coalescedWrite(c, is, js, v);
   }
 };
 
@@ -372,12 +385,12 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iMatrix
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     int ic = e % nc;
     int jc = e / nc;
-    
-    decltype(coalescedRead(c()()(0,0))) v = 0.0;
+
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int lc=0;lc<nc;lc++)
-	v += coalescedRead(a()()(ic,lc)) * coalescedRead(b()(ls,ls)(lc,jc));
-    Accumulator::coalescedWrite(c()()(ic,jc), v);
+	v += coalescedReadElement(a,ic,lc) * coalescedReadElement(b,ls,ls,lc,jc);
+    Accumulator::coalescedWrite(c, ic, jc, v);
   }
 };
 
@@ -388,12 +401,12 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iMatrix
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
-    decltype(coalescedRead(c()()())) v = 0.0;
+    DEF_z();
     for (int ic=0;ic<nc;ic++)
       for (int ls=0;ls<ns;ls++)
 	for (int lc=0;lc<nc;lc++)
-	  v += coalescedRead(a()()(ic,lc)) * coalescedRead(b()(ls,ls)(lc,ic));
-    Accumulator::coalescedWrite(c()()(), v);
+	  v += coalescedReadElement(a,ic,lc) * coalescedReadElement(b,ls,ls,lc,ic);
+    Accumulator::coalescedWriteSinglet(c, v);
   }
 };
 
@@ -414,10 +427,10 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iSca
     int js = je / nc;
     int jc = je % nc;
     
-    decltype(coalescedRead(c()(0,0)(0,0))) v = 0.0;
+    DEF_z();
     for (int lc=0;lc<nc;lc++)
-      v += coalescedRead(a()(is,js)(ic,lc)) * coalescedRead(b()()(lc,jc));
-    Accumulator::coalescedWrite(c()(is,js)(ic,jc), v);
+      v += coalescedReadElement(a,is,js,ic,lc) * coalescedReadElement(b,lc,jc);
+    Accumulator::coalescedWrite(c, is, js, ic, jc, v);
   }
 };
 
@@ -431,11 +444,11 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iSca
     int is = e / ns;
     int js = e % ns;
     
-    decltype(coalescedRead(c()(0,0)())) v = 0.0;
+    DEF_z();
     for (int lc=0;lc<nc;lc++)
       for (int ic=0;ic<nc;ic++)
-	v += coalescedRead(a()(is,js)(ic,lc)) * coalescedRead(b()()(lc,ic));
-    Accumulator::coalescedWrite(c()(is,js)(), v);
+	v += coalescedReadElement(a,is,js,ic,lc) * coalescedReadElement(b,lc,ic);
+    Accumulator::coalescedWrite(c, is, js, v);
   }
 };
 
@@ -449,11 +462,11 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iSca
     int ic = e / nc;
     int jc = e % nc;
     
-    decltype(coalescedRead(c()()(0,0))) v = 0.0;
+    DEF_z();
     for (int lc=0;lc<nc;lc++)
       for (int is=0;is<ns;is++)
-	v += coalescedRead(a()(is,is)(ic,lc)) * coalescedRead(b()()(lc,jc));
-    Accumulator::coalescedWrite(c()()(ic,jc), v);
+	v += coalescedReadElement(a,is,is,ic,lc) * coalescedReadElement(b,lc,jc);
+    Accumulator::coalescedWrite(c, ic, jc, v);
   }
 };
 
@@ -465,12 +478,12 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iSca
   static constexpr int n_elements = 1;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     
-    decltype(coalescedRead(c()()())) v = 0.0;
+    DEF_z();
     for (int lc=0;lc<nc;lc++)
       for (int is=0;is<ns;is++)
 	for (int ic=0;ic<nc;ic++)
-	  v += coalescedRead(a()(is,is)(ic,lc)) * coalescedRead(b()()(lc,ic));
-    Accumulator::coalescedWrite(c()()(), v);
+	  v += coalescedReadElement(a,is,is,ic,lc) * coalescedReadElement(b,lc,ic);
+    Accumulator::coalescedWriteSinglet(c, v);
   }
 };
 
@@ -485,10 +498,10 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iVector
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     int is = e / nc;
     int ic = e % nc;
-    decltype(coalescedRead(c()(0)(0))) v = 0.0;
+    DEF_z();
     for (int js=0;js<ns;js++)
-      v += coalescedRead(a()(is,js)()) * coalescedRead(b()(js)(ic));
-    Accumulator::coalescedWrite(c()(is)(ic), v);
+      v += coalescedReadElement(a,is,js) * coalescedReadElement(b,js,ic);
+    Accumulator::coalescedWrite(c, is, ic, v);
   }
 };
 
@@ -509,10 +522,10 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iMatrix
     int js = je / nc;
     int jc = je % nc;
     
-    decltype(coalescedRead(c()(0,0)(0,0))) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
-      v += coalescedRead(a()(is,ls)()) * coalescedRead(b()(ls,js)(ic,jc));
-    Accumulator::coalescedWrite(c()(is,js)(ic,jc), v);
+      v += coalescedReadElement(a,is,ls) * coalescedReadElement(b,ls,js,ic,jc);
+    Accumulator::coalescedWrite(c, is, js, ic, jc, v);
   }
 };
 
@@ -526,11 +539,11 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iMatrix
     int is = e / ns;
     int js = e % ns;
     
-    decltype(coalescedRead(c()(0,0)())) v = 0.0;
+    DEF_z();
     for (int ic=0;ic<nc;ic++)
       for (int ls=0;ls<ns;ls++)
-	v += coalescedRead(a()(is,ls)()) * coalescedRead(b()(ls,js)(ic,ic));
-    Accumulator::coalescedWrite(c()(is,js)(), v);
+	v += coalescedReadElement(a,is,ls) * coalescedReadElement(b,ls,js,ic,ic);
+    Accumulator::coalescedWrite(c, is, js, v);
   }
 };
 
@@ -544,11 +557,11 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iMatrix
     int ic = e / nc;
     int jc = e % nc;
     
-    decltype(coalescedRead(c()()(0,0))) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int is=0;is<ns;is++)
-      v += coalescedRead(a()(is,ls)()) * coalescedRead(b()(ls,is)(ic,jc));
-    Accumulator::coalescedWrite(c()()(ic,jc), v);
+	v += coalescedReadElement(a,is,ls) * coalescedReadElement(b,ls,is,ic,jc);
+    Accumulator::coalescedWrite(c, ic, jc, v);
   }
 };
 
@@ -560,12 +573,12 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iMatrix
   static constexpr int n_elements = 1;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     
-    decltype(coalescedRead(c()()())) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int is=0;is<ns;is++)
 	for (int ic=0;ic<nc;ic++)
-	  v += coalescedRead(a()(is,ls)()) * coalescedRead(b()(ls,is)(ic,ic));
-    Accumulator::coalescedWrite(c()()(), v);
+	  v += coalescedReadElement(a,is,ls) * coalescedReadElement(b,ls,is,ic,ic);
+    Accumulator::coalescedWriteSinglet(c, v);
   }
 };
 
@@ -588,10 +601,10 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
     int js = je / nc;
     int jc = je % nc;
     
-    decltype(coalescedRead(c()(0,0)(0,0))) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
-      v += coalescedRead(a()(is,ls)(ic,jc)) * coalescedRead(b()(ls,js)());
-    Accumulator::coalescedWrite(c()(is,js)(ic,jc), v);
+      v += coalescedReadElement(a,is,ls,ic,jc) * coalescedReadElement(b,ls,js);
+    Accumulator::coalescedWrite(c, is, js, ic, jc, v);
   }
 };
 
@@ -605,11 +618,11 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
     int ic = e / nc;
     int jc = e % nc;
     
-    decltype(coalescedRead(c()()(0,0))) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int is=0;is<ns;is++)
-	v += coalescedRead(a()(is,ls)(ic,jc)) * coalescedRead(b()(ls,is)());
-    Accumulator::coalescedWrite(c()()(ic,jc), v);
+	v += coalescedReadElement(a,is,ls,ic,jc) * coalescedReadElement(b,ls,is);
+    Accumulator::coalescedWrite(c, ic, jc, v);
   }
 };
 
@@ -622,12 +635,12 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     int is = e / ns;
     int js = e % ns;
-    
-    decltype(coalescedRead(c()(0,0)())) v = 0.0;
+
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int ic=0;ic<nc;ic++)
-	v += coalescedRead(a()(is,ls)(ic,ic)) * coalescedRead(b()(ls,js)());
-    Accumulator::coalescedWrite(c()(is,js)(), v);
+	v += coalescedReadElement(a,is,ls,ic,ic) * coalescedReadElement(b,ls,js);
+    Accumulator::coalescedWrite(c, is, js, v);
   }
 };
 
@@ -638,12 +651,12 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
-    decltype(coalescedRead(c()()())) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int ic=0;ic<nc;ic++)
 	for (int is=0;is<ns;is++)
-	  v += coalescedRead(a()(is,ls)(ic,ic)) * coalescedRead(b()(ls,is)());
-    Accumulator::coalescedWrite(c()()(), v);
+	  v += coalescedReadElement(a,is,ls,ic,ic) * coalescedReadElement(b,ls,is);
+    Accumulator::coalescedWriteSinglet(c, v);
   }
 };
 
@@ -664,11 +677,11 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
     int js = je / nc;
     int jc = je % nc;
     
-    decltype(coalescedRead(c()(0,0)(0,0))) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int lc=0;lc<nc;lc++)
-	v += coalescedRead(a()(is,ls)(ic,lc)) * coalescedRead(b()(ls,js)(lc,jc));
-    Accumulator::coalescedWrite(c()(is,js)(ic,jc), v);
+	v += coalescedReadElement(a,is,ls,ic,lc) * coalescedReadElement(b,ls,js,lc,jc);
+    Accumulator::coalescedWrite(c, is, js, ic, jc, v);
   }
 };
 
@@ -682,12 +695,12 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
     int ic = e / nc;
     int jc = e % nc;
     
-    decltype(coalescedRead(c()()(0,0))) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int lc=0;lc<nc;lc++)
 	for (int is=0;is<ns;is++)
-	v += coalescedRead(a()(is,ls)(ic,lc)) * coalescedRead(b()(ls,is)(lc,jc));
-    Accumulator::coalescedWrite(c()()(ic,jc), v);
+	  v += coalescedReadElement(a,is,ls,ic,lc) * coalescedReadElement(b,ls,is,lc,jc);
+    Accumulator::coalescedWrite(c, ic, jc, v);
   }
 };
 
@@ -701,12 +714,12 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
     int is = e / ns;
     int js = e % ns;
     
-    decltype(coalescedRead(c()(0,0)())) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int lc=0;lc<nc;lc++)
 	for (int ic=0;ic<nc;ic++)
-	  v += coalescedRead(a()(is,ls)(ic,lc)) * coalescedRead(b()(ls,js)(lc,ic));
-    Accumulator::coalescedWrite(c()(is,js)(), v);
+	  v += coalescedReadElement(a,is,ls,ic,lc) * coalescedReadElement(b,ls,js,lc,ic);
+    Accumulator::coalescedWrite(c, is, js, v);
   }
 };
 
@@ -718,13 +731,13 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   static constexpr int n_elements = 1;
   static accelerator_inline void eval(result_type & c, const T1 & a, const T2 & b, int e) {
     
-    decltype(coalescedRead(c()()())) v = 0.0;
+    DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int lc=0;lc<nc;lc++)
 	for (int ic=0;ic<nc;ic++)
 	  for (int is=0;is<ns;is++)
-	    v += coalescedRead(a()(is,ls)(ic,lc)) * coalescedRead(b()(ls,is)(lc,ic));
-    Accumulator::coalescedWrite(c()()(), v);
+	    v += coalescedReadElement(a,is,ls,ic,lc) * coalescedReadElement(b,ls,is,lc,ic);
+    Accumulator::coalescedWriteSinglet(c, v);
   }
 };
 
@@ -739,10 +752,10 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iVec
     int is = e / nc;
     int ic = e % nc;
     
-    decltype(coalescedRead(c()(0)(0))) v = 0.0;
+    DEF_z();
     for (int js=0;js<ns;js++)
       for (int jc=0;jc<nc;jc++)
-	v += coalescedRead(a()(is,js)(ic,jc)) * coalescedRead(b()(js)(jc));
-    Accumulator::coalescedWrite(c()(is)(ic), v);
+	v += coalescedReadElement(a,is,js,ic,jc) * coalescedReadElement(b,js,jc);
+    Accumulator::coalescedWrite(c, is, ic, v);
   }
 };
