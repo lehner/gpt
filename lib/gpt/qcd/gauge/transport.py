@@ -67,6 +67,7 @@ class transport:
             site_displacements.add(tuple(d))
 
         plan = g.cshift_plan()
+        plan_site = g.cshift_plan()
 
         self.link_indices = []
         for mu in range(self.dim):
@@ -75,16 +76,17 @@ class transport:
         self.site_fields_indices = []
         for i in range(self.n_site_fields):
             self.site_fields_indices.append(
-                plan.add(site_fields[i], site_displacements)
+                plan_site.add(site_fields[i], site_displacements)
             )
 
         self.cshifts = plan()
+        self.cshifts_site = plan_site()
 
     def __call__(self, links, site_fields=[]):
-        assert len(site_fields) == self.n_site_fields
+        assert len(site_fields) in [0, self.n_site_fields]
         assert len(links) == self.dim
 
-        buffers = self.cshifts(links + site_fields)
+        buffers = self.cshifts(links)
 
         for p in self.paths:
             d = [0 for mu in range(self.dim)]
@@ -109,7 +111,19 @@ class transport:
             assert r is not None
             yield g.eval(r)
 
+        if len(site_fields) > 0:
+            buffers = self.cshifts_site(site_fields)
+            for i in range(self.n_site_fields):
+                site_fields_indices_i = self.site_fields_indices[i]
+                for sfi in site_fields_indices_i:
+                    yield (sfi, buffers[site_fields_indices_i[sfi]])
+
+    def do_site_fields(self, site_fields):
+        assert len(site_fields) == self.n_site_fields
+
+        buffers = self.cshifts_site(site_fields)
         for i in range(self.n_site_fields):
             site_fields_indices_i = self.site_fields_indices[i]
             for sfi in site_fields_indices_i:
                 yield (sfi, buffers[site_fields_indices_i[sfi]])
+
