@@ -27,7 +27,7 @@ import sys
 
 # Implicitly Restarted Lanczos
 class irl:
-    @g.params_convention(advise=None, mem_report=False)
+    @g.params_convention(orthogonalize_nblock=4, mem_report=False)
     def __init__(self, params):
         self.params = params
         self.napply = 0
@@ -65,10 +65,6 @@ class irl:
         f = g.lattice(src)
         v = g.lattice(src)
         evec = [g.lattice(src) for i in range(Nm)]
-
-        # advice memory storage
-        if not self.params["advise"] is None:
-            g.advise(evec, self.params["advise"])
 
         # scalars
         k1 = 1
@@ -262,7 +258,9 @@ class irl:
 
             t2 = g.time()
             if k > 0:
-                g.orthogonalize(w, evec[0:k])
+                g.orthogonalize(
+                    w, evec[0:k], nblock=self.params["orthogonalize_nblock"]
+                )
             t3 = g.time()
 
             ckpt.save([w, alph, beta])

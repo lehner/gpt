@@ -262,24 +262,4 @@ public:
     return l.Grid();
   }
 
-  virtual PyObject* advise(std::string type) {
-    if (type == "infrequent_use") {
-      l.Advise() = AdviseInfrequentUse;
-    } else {
-      ERR("Unknown advise %s",type.c_str());
-    }    
-    return PyLong_FromLong(0);
-  }
-
-  virtual PyObject* prefetch(std::string type) {
-    if (type == "accelerator") {
-      //l.AcceleratorPrefetch();
-    } else if (type == "host") {
-      //l.HostPrefetch();
-    } else {
-      ERR("Unknown prefetch %s",type.c_str());
-    }
-    return PyLong_FromLong(0);
-  }
-
 };

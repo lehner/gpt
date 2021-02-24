@@ -90,8 +90,8 @@ class ot_vector_color(ot_base):
         self.nfloats = 2 * ndim
         self.shape = (ndim,)
         self.v_otype = ["ot_vcolor%d" % ndim]
-        self.spintrace = (None, None)
-        self.colortrace = (0, lambda: ot_singlet)
+        self.spintrace = (None, None, None)
+        self.colortrace = (None, None, None)
         self.mtab = {
             "ot_singlet": (lambda: self, None),
         }
@@ -134,8 +134,8 @@ class ot_vector_spin(ot_base):
         self.nfloats = 2 * ndim
         self.shape = (ndim,)
         self.v_otype = ["ot_vspin%d" % ndim]
-        self.spintrace = (0, lambda: ot_singlet)
-        self.colortrace = (None, None)
+        self.spintrace = (None, None, None)
+        self.colortrace = (None, None, None)
         self.mtab = {
             "ot_singlet": (lambda: self, None),
         }
@@ -193,8 +193,8 @@ class ot_vector_spin_color(ot_base):
         self.shape = (spin_ndim, color_ndim)
         self.v_otype = ["ot_vspin%dcolor%d" % (spin_ndim, color_ndim)]
         self.ot_matrix = "ot_matrix_spin_color(%d,%d)" % (spin_ndim, color_ndim)
-        self.spintrace = (0, lambda: ot_vector_color(color_ndim))
-        self.colortrace = (1, lambda: ot_vector_spin(spin_ndim))
+        self.spintrace = (None, None, None)
+        self.colortrace = (None, None, None)
         self.otab = {
             self.__name__: (
                 lambda: ot_matrix_spin_color(spin_ndim, color_ndim),
@@ -267,8 +267,8 @@ class ot_vector_singlet(ot_base):
         self.nfloats = 2 * n
         self.shape = (n,)
         self.transposed = None
-        self.spintrace = None
-        self.colortrace = None
+        self.spintrace = (None, None, None)
+        self.colortrace = (None, None, None)
         decomposition = decompose(n, ot_vector_singlet.fundamental.keys(), 1)
         self.v_n0, self.v_n1 = get_range(decomposition, 1)
         self.v_idx = range(len(self.v_n0))
@@ -316,7 +316,6 @@ class ot_matrix_singlet(ot_base):
         self.nfloats = 2 * n * n
         self.shape = (n, n)
         self.transposed = (1, 0)
-        # tracing of matrix_singlet needs better implementation (spin+color trace currently is implemented as complete trace in cgpt)
         self.spintrace = (None, None, None)
         self.colortrace = (0, 1, lambda: ot_singlet)
         self.vector_type = ot_vector_singlet(n)

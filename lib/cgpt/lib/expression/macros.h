@@ -26,11 +26,14 @@
 
 #define _MM_INNER_OUTER_PRODUCT_(t) ERR("Not implemented"); return 0;
 
-//if (unary_a == (BIT_TRANS|BIT_CONJ)) { typeOpen(b,t) {			\
-//    if (rev) { return lattice_unary_lat(dst, ac, outerProduct(ab,la), unary_expr ); } else \
-//      { return lattice_unary_lat(dst, ac, localInnerProduct(la,ab), unary_expr ); } } typeClose(); }
+#define typeis(a,at) ( a->type() == typeid(at<vtype>).name() )
+#define castas(a,at) ( ((cgpt_Lattice<at<vtype> >*)a)->l )
+#define typeOpen(a,at) if (typeis(a,at)) { auto& l ## a = castas(a,at);
+#define typeClose() }
 
-//if (!rev && unary_b == (BIT_TRANS|BIT_CONJ) && unary_a == 0) {
-//  typeOpen(b,iSpinColourVector) { return lattice_unary_lat(dst,ac, outerProduct(la,ab), unary_expr); } typeClose();
-//}
+#define _COMPATIBLE_(t) typeOpen(b,t) { return lattice_mul(dst,ac, unary_a,la,unary_b,lb,unary_expr); } typeClose();
+#define _COMPATIBLE_MSR_(t) typeOpen(b,t) { return lattice_mul(dst,ac, unary_a,la,unary_b,lb,unary_expr); } typeClose();
+
+#define _OUTER_PRODUCT_(t) if (unary_a == 0 && unary_b == (BIT_TRANS|BIT_CONJ)) { typeOpen(b,t) { return lattice_unary_lat(dst,ac, outerProduct(la,lb), unary_expr); } typeClose(); }
+#define _INNER_PRODUCT_(t) if (unary_a == (BIT_TRANS|BIT_CONJ) && unary_b == 0) { typeOpen(b,t) { return lattice_unary_lat(dst, ac, localInnerProduct(la,lb), unary_expr ); } typeClose(); }
 

@@ -32,6 +32,15 @@ assert sys.getrefcount(x) == 2
 
 
 ################################################################################
+# Test pinning
+################################################################################
+l_v = g.complex(grid_sp)
+pin = g.pin(l_v, g.accelerator)
+del l_v
+del pin
+
+
+################################################################################
 # Test assignments
 ################################################################################
 pos = g.coordinates(l_dp)
@@ -282,10 +291,15 @@ b = g.complex(grid)
 rng.cnormal([a, b])
 
 c = a < b
-eps = np.linalg.norm(c[:] - (a[:] < b[:]).astype(np.int)) / np.linalg.norm(c[:])
+eps = np.linalg.norm(c[:] - (a[:] < b[:]).astype(np.int32)) / np.linalg.norm(c[:])
 g.message(f"Test a < b from gpt<>numpy: {eps}")
 assert eps == 0.0
 
 eps = g.norm2((b < a) - (a > b)) ** 0.5
 g.message(f"Test a < b compatible with b > a: {eps}")
 assert eps == 0.0
+
+################################################################################
+# Test mem_report
+################################################################################
+g.mem_report()

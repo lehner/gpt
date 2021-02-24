@@ -17,10 +17,10 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import sys
+from gpt.algorithms import base_iterative
 
 
-class defect_correcting:
+class defect_correcting(base_iterative):
 
     #
     # Less numerically stable (leads to suppression of critical low-mode space before inner_mat^{-1}):
@@ -74,21 +74,18 @@ class defect_correcting:
 
     @g.params_convention(eps=1e-15, maxiter=1000000)
     def __init__(self, inner_inverter, params):
+        super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
-        self.history = None
         self.inner_inverter = inner_inverter
 
     def __call__(self, outer_mat):
 
         inner_inv_mat = self.inner_inverter(outer_mat)
 
-        def inv(psi, src):
-
-            # verbosity
-            verbose = g.default.is_verbose("dci")
-            t = g.timer("dci")
+        @self.timed_function
+        def inv(psi, src, t):
             t("setup")
 
             # inner source
@@ -103,7 +100,6 @@ class defect_correcting:
                     if norm2_of_source[j] == 0.0:
                         norm2_of_source[j] = 1.0
 
-            self.history = []
             for i in range(self.maxiter):
 
                 t("outer matrix")
@@ -118,19 +114,11 @@ class defect_correcting:
                 eps = max(
                     [(norm2_of_defect[j] / norm2_of_source[j]) ** 0.5 for j in range(n)]
                 )
-                self.history.append(eps)
 
-                if verbose:
-                    g.message("Defect-correcting inverter: res^2[ %d ] = %g" % (i, eps))
+                self.log_convergence(i, eps, self.eps)
 
                 if eps < self.eps:
-                    if verbose:
-                        t()
-                        g.message(
-                            "Defect-correcting inverter: converged in %d iterations, took %g s"
-                            % (i + 1, t.total)
-                        )
-                        g.message(t)
+                    self.log(f"converged in {i+1} iterations")
                     break
 
                 # normalize _s to avoid floating-point underflow in inner_inv_mat
@@ -140,14 +128,14 @@ class defect_correcting:
 
                 # correction step
                 t("inner inverter")
-                _d = g.eval(inner_inv_mat * _s)
+                _d = inner_inv_mat(_s)
 
                 t("linear algebra")
                 for j in range(n):
                     psi[j] += _d[j] * norm2_of_source[j] ** 0.5
 
         otype, grid, cb = None, None, None
-        if type(outer_mat) == g.matrix_operator:
+        if isinstance(outer_mat, g.matrix_operator):
             otype, grid, cb = outer_mat.otype, outer_mat.grid, outer_mat.cb
 
         return g.matrix_operator(

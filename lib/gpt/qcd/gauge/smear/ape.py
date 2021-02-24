@@ -50,7 +50,7 @@ def ape(u, params):
 
             # reunitarize
             gpt.qcd.reunitize(u_tmp)
-            #gpt.qcd.gauge.assert_unitary(u_tmp)
+            u_tmp.otype.is_element(u_tmp)
 
         u_apesmeared.append(u_tmp)
         gpt.message(f"Direction {mu} done.")

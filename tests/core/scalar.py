@@ -38,8 +38,6 @@ cg = g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 1000})
 
 psi @= cg(M) * src
 
-g.mem_report()
-
 # Test CG
 eps2 = g.norm2(M * psi - src)
 g.message("True residuum:", eps2)

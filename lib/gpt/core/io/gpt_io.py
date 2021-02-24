@@ -58,6 +58,7 @@ class gpt_io:
         self.loc = {}
         self.pos = {}
         self.loc_desc = ""
+        self.cache = {}
 
         # If we write, keep an index buffer
         self.index_file = io.StringIO("") if write else None
@@ -82,9 +83,6 @@ class gpt_io:
             f = open(self.root + "/index.crc32", "wt")
             f.write("%X\n" % index_crc)
             f.close()
-
-    def __del__(self):
-        self.close()
 
     def close_views(self):
         for f in self.loc:
@@ -166,13 +164,17 @@ class gpt_io:
         # need to write all views
         for xk, iview in enumerate(views_for_node):
 
+            cache_key = res + f"_{g.obj}_{iview}_write"
+            if cache_key not in self.cache:
+                self.cache[cache_key] = {}
+
             f, p = self.open_view(
                 xk, iview, True, mpi, g.fdimensions, g.cb, l.checkerboard()
             )
 
             # all nodes are needed to communicate
             dt_distr -= gpt.time()
-            mv = gpt.mview(l[p])
+            mv = gpt.mview(l[p, self.cache[cache_key]])
             dt_distr += gpt.time()
 
             # write data
@@ -248,6 +250,10 @@ class gpt_io:
                 xk, iview, False, cv_desc, g.fdimensions, g.cb, l.checkerboard()
             )
 
+            cache_key = f"{a[0:3]}_{g.obj}_{iview}_read"
+            if cache_key not in self.cache:
+                self.cache[cache_key] = {}
+
             if f is not None:
                 f.seek(filepos[iview], 0)
                 ntag = int.from_bytes(f.read(4), byteorder="little")
@@ -270,7 +276,7 @@ class gpt_io:
             g.barrier()
             dt_read += gpt.time()
             dt_distr -= gpt.time()
-            l[pos] = data
+            l[pos, self.cache[cache_key]] = data
             g.barrier()
             dt_distr += gpt.time()
 
@@ -290,11 +296,6 @@ class gpt_io:
                     len(views_for_node),
                 )
             )
-
-        # TODO:
-        # split grid exposure, allow cgpt_distribute to be given a communicator
-        # and take it in importexport.h, add debug info here
-        # more benchmarks, useful to create a plan for cgpt_distribute and cache? immutable numpy array returned from coordinates, attach plan
 
         return l
 
@@ -326,6 +327,7 @@ class gpt_io:
 
     def write(self, objs):
         self.create_index("", objs)
+        self.flush()
 
     def create_index(self, ctx, objs):
         f = self.index_file

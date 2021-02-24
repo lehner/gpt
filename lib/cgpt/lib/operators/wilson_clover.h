@@ -30,6 +30,7 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
   RealD mass = get_float(args,"mass");
   RealD csw_r = get_float(args,"csw_r");
   RealD csw_t = get_float(args,"csw_t");
+  RealD cF = get_float(args,"cF");
   bool use_legacy = get_bool(args,"use_legacy");
   wac.isAnisotropic = get_bool(args,"isAnisotropic");
   wac.xi_0 = get_float(args,"xi_0");
@@ -50,7 +51,7 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
   }
 
   if (!use_legacy) {
-    auto f = new CompactWilsonCloverFermion<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,wac,wp);
+    auto f = new CompactWilsonCloverFermion<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,cF,wac,wp);
     return new cgpt_fermion_operator<CompactWilsonCloverFermion<WI>>(f);
   } else { // TODO: deprecate soon
     auto f = new WilsonCloverFermion<WI>(U, *grid, *grid_rb, mass, csw_r, csw_t, wac, wp);
