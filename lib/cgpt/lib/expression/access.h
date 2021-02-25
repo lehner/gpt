@@ -184,13 +184,13 @@ public:
   template<typename V>
   accelerator_inline
   void coalescedWriteElement(uint64_t osite, const V & v, int e) {
-    Base::coalescedWriteElement(p_d[osite],p_c[osite],coef*v,e);
+    Base::coalescedWriteElement(p_d[osite],p_c[osite],((typename T::scalar_type)coef)*v,e);
   }
   
   template<typename V>
   accelerator_inline
   void coalescedWrite(uint64_t osite, const V & v) {
-    Base::coalescedWrite(p_d[osite],p_c[osite],coef*v);
+    Base::coalescedWrite(p_d[osite],p_c[osite],((typename T::scalar_type)coef)*v);
   }
   
   template<typename V>
