@@ -4,6 +4,7 @@
 #
 import gpt as g
 import numpy as np
+import math
 
 grid_dp = g.grid([8, 4, 4, 4], g.double)
 grid_sp = g.grid([8, 4, 4, 4], g.single)
@@ -61,7 +62,14 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
 
 # test inv
 for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
-    for dtype in [g.mcolor, g.mspin, g.mspincolor, lambda grid: g.mcomplex(grid, 8)]:
+    g.message(
+        f"""
+
+    Test log,exp,det,tr for {grid.precision.__name__}
+
+"""
+    )
+    for dtype in [g.mspincolor, g.mcolor, g.mspin, lambda grid: g.mcomplex(grid, 8)]:
         rng = g.random("test")
         m = rng.cnormal(dtype(grid))
         minv = g.matrix.inv(m)

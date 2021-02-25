@@ -18,6 +18,10 @@
 #
 import cgpt, gpt, sys
 import numpy as np
+from gpt.default import is_verbose
+
+verbose = is_verbose("eval")
+verbose_performance = is_verbose("eval_performance")
 
 
 class factor_unary:
@@ -285,12 +289,16 @@ def get_otype_from_expression(e):
 
 def expr_eval(first, second=None, ac=False):
 
+    t = gpt.timer("eval", verbose_performance)
+
     # this will always evaluate to a (list of) lattice object(s)
     # or remain an expression if it cannot do so
 
+    t("prepare")
     if second is not None:
-        t_obj = [x.v_obj for x in gpt.util.to_list(first)]
+        dst = gpt.util.to_list(first)
         e = expr(second)
+        return_list = False
     else:
         assert ac is False
         if gpt.util.is_list_instance(first, gpt.lattice):
@@ -305,36 +313,43 @@ def expr_eval(first, second=None, ac=False):
         lat = gpt.util.to_list(lat)
         grid = lat[0].grid
         nlat = len(lat)
-        t_obj = None
+        dst = None
 
+    t("apply matrix ops")
     # apply matrix_operators
     e = apply_type_right_to_left(e, gpt.matrix_operator)
 
+    t("fast return")
     # fast return if already a lattice
-    if t_obj is None:
+    if dst is None:
         if e.is_single(gpt.lattice):
             ue, uf, v = e.get_single()
             if uf == factor_unary.NONE and ue == expr_unary.NONE:
                 return v
 
     # verbose output
-    if gpt.default.is_verbose("eval"):
-        gpt.message("GPT::verbose::eval: " + str(e))
+    if verbose:
+        gpt.message("eval: " + str(e))
 
-    if t_obj is not None:
-        for i, t_o in enumerate(t_obj):
-            assert 0 == cgpt.eval(t_o, e.val, e.unary, ac, i)
-        return first
+    if verbose_performance:
+        cgpt.timer_begin()
+
+    if dst is not None:
+        t("cgpt.eval")
+        for i, dst_i in enumerate(dst):
+            dst_i.update(cgpt.eval(dst_i.v_obj, e.val, e.unary, ac, i))
+        ret = dst
     else:
         assert ac is False
-
+        t("get otype")
         # now find return type
         otype = get_otype_from_expression(e)
 
         ret = []
 
         for idx in range(nlat):
-            res = cgpt.eval(t_obj, e.val, e.unary, False, idx)
+            t("cgpt.eval")
+            res = cgpt.eval(None, e.val, e.unary, False, idx)
             t_obj, s_ot = (
                 [x[0] for x in res],
                 [x[1] for x in res],
@@ -342,9 +357,17 @@ def expr_eval(first, second=None, ac=False):
 
             assert s_ot == otype.v_otype
 
+            t("lattice")
             ret.append(gpt.lattice(grid, otype, t_obj))
 
-        if not return_list:
-            return gpt.util.from_list(ret)
+    t()
+    if verbose_performance:
+        t_cgpt = gpt.timer("cgpt_eval", True)
+        t_cgpt += cgpt.timer_end()
+        gpt.message(t)
+        gpt.message(t_cgpt)
 
-        return ret
+    if not return_list:
+        return gpt.util.from_list(ret)
+
+    return ret

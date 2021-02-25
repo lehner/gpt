@@ -128,21 +128,21 @@ auto coalescedReadElement(const iScalar<T> & c, int a1, int b1, int a2, int b2) 
 
 class AccumulatorYesBase {
 public:
-  
+
   template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWriteElement(T & c, const V & v, int e) {
+  accelerator_inline
+  void coalescedWriteElement(T & d, T & c, const V & v, int e) {
     auto r = coalescedReadElement(c, e);
     r += v;
-    ::coalescedWriteElement(c, r, e);
+    ::coalescedWriteElement(d, r, e);
   }
 
   template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWrite(T & c, const V & v) {
+  accelerator_inline
+  void coalescedWrite(T & d, T & c, const V & v) {
     auto r = coalescedRead(c);
     r += v;
-    ::coalescedWrite(c, r);
+    ::coalescedWrite(d, r);
   }
 
   static constexpr ViewMode AcceleratorWriteMode = AcceleratorWrite;
@@ -151,96 +151,105 @@ public:
 
 class AccumulatorNoBase {
 public:
-  
+
   template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWriteElement(T & c, const V & v, int e) {
-    ::coalescedWriteElement(c, v, e);
+  accelerator_inline
+  void coalescedWriteElement(T & d, T & c, const V & v, int e) {
+    ::coalescedWriteElement(d, v, e);
   }
 
   template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWrite(T & c, const V & v) {
-    ::coalescedWrite(c, v);
+  accelerator_inline
+  void coalescedWrite(T & d, T & c, const V & v) {
+    ::coalescedWrite(d, v);
   }
 
   static constexpr ViewMode AcceleratorWriteMode = AcceleratorWriteDiscard;
   
 };
 
-template<typename Base>
-class AccumulatorImpl : public Base {
+template<typename Base, typename T>
+class Accumulator : public Base {
 public:
+
+  ComplexD coef;
+  T* p_c, *p_d;
   
-  template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWriteElement(T & c, const V & v, int e) {
-    Base::coalescedWriteElement(c,v,e);
+  Accumulator(ComplexD _coef, T* _p_c, T* _p_d) :
+    coef(_coef),
+    p_c(_p_c),
+    p_d(_p_d) {
   }
 
-  template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWriteSinglet(T & c, const V & v) {
-    Base::coalescedWriteElement(c,v,0);
+  template<typename V>
+  accelerator_inline
+  void coalescedWriteElement(uint64_t osite, const V & v, int e) {
+    Base::coalescedWriteElement(p_d[osite],p_c[osite],coef*v,e);
   }
-
-  template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWriteElement(T & c, const iScalar<V> & v, int e) {
-    coalescedWriteElement(c,v(),e);
+  
+  template<typename V>
+  accelerator_inline
+  void coalescedWrite(uint64_t osite, const V & v) {
+    Base::coalescedWrite(p_d[osite],p_c[osite],coef*v);
   }
-
-
-  template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWrite(T & c, const V & v) {
-    Base::coalescedWrite(c,v);
+  
+  template<typename V>
+  accelerator_inline
+  void coalescedWriteElement(uint64_t osite, const iScalar<V> & v, int e) {
+    coalescedWriteElement(osite,v(),e);
   }
-
-  template<typename T, typename V, int n>
-  static accelerator_inline
-  void coalescedWrite(iMatrix<T,n> & c, int i, int j, const V & v) {
-    coalescedWriteElement(c, v, i*n + j);
+  
+  template<typename V>
+  accelerator_inline
+  void coalescedWriteSinglet(uint64_t osite, const V & v) {
+    coalescedWriteElement(osite, v, 0);
   }
-
-  template<typename T, typename V, int n1, int n2>
-  static accelerator_inline
-  void coalescedWrite(iVector<iVector<T,n2>,n1> & c, int i, int j, const V & v) {
-    coalescedWriteElement(c, v, i*n2 + j);
+  
+  template<typename C, int n>
+  accelerator_inline
+  int getIndex(iMatrix<C,n> & c, int i, int j) {
+    return i*n + j;
   }
-
-  template<typename T, typename V, int n1, int n2>
-  static accelerator_inline
-  void coalescedWrite(iMatrix<iMatrix<T,n2>,n1> & c, int i1, int j1, int i2, int j2, const V & v) {
-    coalescedWriteElement(c, v, i2*n2 + j2 + n2*n2*(i1*n1 + j1));
+  
+  template<typename C, int n1, int n2>
+  accelerator_inline
+  int getIndex(iVector<iVector<C,n2>,n1> & c, int i, int j) {
+    return i*n2 + j;
   }
-
-  template<typename T, typename V, int n>
-  static accelerator_inline
-  void coalescedWrite(iVector<T,n> & c, int i, const V & v) {
-    coalescedWriteElement(c, v, i);
+  
+  template<typename C>
+  accelerator_inline
+  int getIndex(iScalar<C> & c, int i, int j) {
+    return getIndex(c(), i, j);
   }
-
-  template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWrite(iScalar<T> & c, int i1, int j1, int i2, int j2, const V & v) {
-    coalescedWrite(c(), i1, j1, i2, j2, v);
+  
+  template<typename C, int n1, int n2>
+  accelerator_inline
+  int getIndex(iMatrix<iMatrix<C,n2>,n1> & c, int i1, int j1, int i2, int j2) {
+    return i2*n2 + j2 + n2*n2*(i1*n1 + j1);
   }
-
-  template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWrite(iScalar<T> & c, int i, int j, const V & v) {
-    coalescedWrite(c(), i, j, v);
+  
+  template<typename C>
+  accelerator_inline
+  int getIndex(iScalar<C> & c, int i1, int j1, int i2, int j2) {
+    return getIndex(c(), i1, j1, i2, j2);
   }
-
-  template<typename T, typename V>
-  static accelerator_inline
-  void coalescedWrite(iScalar<T> & c, int i, const V & v) {
-    coalescedWrite(c(), i, v);
+  
+  template<typename V>
+  accelerator_inline
+  void coalescedWrite(uint64_t osite, int i, int j, const V & v) {
+    coalescedWriteElement(osite, v, getIndex(p_c[osite],i,j));
   }
-
-
+  
+  template<typename V>
+  accelerator_inline
+  void coalescedWrite(uint64_t osite, int i1, int j1, int i2, int j2, const V & v) {
+    coalescedWriteElement(osite, v, getIndex(p_c[osite],i1,j1,i2,j2));
+  }
+  
+  template<typename V>
+  accelerator_inline
+  void coalescedWrite(uint64_t osite, int i, const V & v) {
+    coalescedWriteElement(osite, v, i);
+  }
 };
-
-typedef AccumulatorImpl<AccumulatorYesBase> AccumulatorYes;
-typedef AccumulatorImpl<AccumulatorNoBase> AccumulatorNo;

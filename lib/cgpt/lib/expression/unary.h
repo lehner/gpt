@@ -48,43 +48,43 @@ cgpt_Lattice_base* lattice_unary(cgpt_Lattice_base* dst, bool ac, const A& la,in
   } else if (unary_expr == (BIT_SPINTRACE|BIT_COLORTRACE)) {
     return lattice_expr(dst, ac, ToSinglet(trace(la)));
   } else if (unary_expr == BIT_SPINTRACE) {
-    return lattice_lat(dst, ac, TraceIndex<SpinIndex>(closure(ToSinglet(la))));
+    return lattice_lat(dst, ac, TraceIndex<SpinIndex>(closure(ToSinglet(la))),1.0);
   } else if (unary_expr == BIT_COLORTRACE) {
-    return lattice_lat(dst, ac, TraceIndex<ColourIndex>(closure(ToSinglet(la))));
+    return lattice_lat(dst, ac, TraceIndex<ColourIndex>(closure(ToSinglet(la))),1.0);
   }
   ERR("Not implemented");
 }
 
 template<typename A> 
-cgpt_Lattice_base* lattice_lat(cgpt_Lattice_base* dst, bool ac, const A& lat) {
+cgpt_Lattice_base* lattice_lat(cgpt_Lattice_base* dst, bool ac, const A& lat, ComplexD coef) {
   typedef typename A::vector_object const_vobj;
   typedef typename std::remove_const<const_vobj>::type vobj;
   if (dst) {
     auto& l = compatible<vobj>(dst)->l;
     if (ac) {
-      l += lat;
+      l += coef * lat;
     } else {
-      l = lat;
+      l = coef * lat;
     }
     return dst;
   } else {
     ASSERT(!ac);
     cgpt_Lattice<vobj>* c = new cgpt_Lattice<vobj>((GridCartesian*)lat.Grid());
-    c->l = lat;
+    c->l = coef * lat;
     return (cgpt_Lattice_base*)c;
   }
 }
 
 template<typename A>
-cgpt_Lattice_base* lattice_unary_lat(cgpt_Lattice_base* dst, bool ac, const A& la,int unary_expr) {
+cgpt_Lattice_base* lattice_unary_lat(cgpt_Lattice_base* dst, bool ac, const A& la,int unary_expr,ComplexD coef) {
   if (unary_expr == 0) {
-    return lattice_lat(dst, ac, la);
+    return lattice_lat(dst, ac, la, coef);
   } else if (unary_expr == (BIT_SPINTRACE|BIT_COLORTRACE)) {
-    return lattice_expr(dst, ac, ToSinglet(trace(la)));
+    return lattice_expr(dst, ac, coef*ToSinglet(trace(la)));
   } else if (unary_expr == BIT_SPINTRACE) {
-    return lattice_lat(dst, ac, TraceIndex<SpinIndex>(closure(ToSinglet(la))));
+    return lattice_lat(dst, ac, TraceIndex<SpinIndex>(closure(ToSinglet(la))),coef);
   } else if (unary_expr == BIT_COLORTRACE) {
-    return lattice_lat(dst, ac, TraceIndex<ColourIndex>(closure(ToSinglet(la))));
+    return lattice_lat(dst, ac, TraceIndex<ColourIndex>(closure(ToSinglet(la))),coef);
   }
   ERR("Not implemented");
 }

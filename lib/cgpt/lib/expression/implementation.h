@@ -17,195 +17,228 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-template<typename Accumulator, int unary_expr, typename T1, typename T2, typename Enable = void>
-cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
-				const Lattice<T1> & a,
-				const Lattice<T2> & b) {
-    
-  GridBase* grid = a.Grid();
-
-  typedef MultiplicationTable<T1,T2,Accumulator,unary_expr> MT;
-  typedef typename MT::result_type T;
-
-  if (!_c)
-    _c = new cgpt_Lattice<T>(grid);
-
-  auto & c = compatible<T>(_c)->l;
-  c.Checkerboard() = a.Checkerboard();
-
-  autoView(c_v, c, Accumulator::AcceleratorWriteMode);
-  autoView(a_v, a, AcceleratorRead);
-  autoView(b_v, b, AcceleratorRead);
-
-  auto * p_c = &c_v[0];
-  auto * p_a = &a_v[0];
-  auto * p_b = &b_v[0];
-
-  /*
-  #if defined(A64FX) || defined(A64FXFIXEDSIZE)
-  #define PREFETCH_CLOVER(BASE) {				    \
-  uint64_t base;						    \
-  if ((pf_dist_L1 >= 0) && (ss + pf_dist_L1 < Nsite)) {		    \
-  base = (uint64_t)&diag_t()(pf_dist_L1+BASE)(0);		    \
-  svprfd(svptrue_b64(), (int64_t*)(base +    0), SV_PLDL1STRM);	    \
-  svprfd(svptrue_b64(), (int64_t*)(base +  256), SV_PLDL1STRM);	    \
-	
-  */
-    
-  //for (long osite=0;osite<grid->oSites();osite++)
-  //for (long j=0;j<MT::n_elements;j++) {
-#ifndef GRID_HAS_ACCELERATOR
-  accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
-      for (int j=0;j<MT::n_elements;j++) {
-	MT::eval(p_c[osite], p_a[osite], p_b[osite], j);
-      }
-    });
-#else
-  accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
-      MT::eval(p_c[osite], p_a[osite], p_b[osite], j);
-    });
-#endif
-
-  //}
-  return _c;
-}
-
-template<typename Accumulator, int unary_expr, typename T1, typename T2>
+template<typename AccumulatorBase, int unary_expr, bool rev, typename T1, typename T2, typename Enable = void>
 cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 				      const Lattice<T1> & a,
-				      const T2 & b) {
+				      const Lattice<T2> & b,
+				      ComplexD coef) {
+
+  Timer("create lat");
+  GridBase* grid = a.Grid();
+
+  ASSERT(rev == false);
+
+  typedef MultiplicationTable<T1,T2,unary_expr> MT;
+  typedef typename MT::result_type T;
+
+  cgpt_Lattice_base* _d = 0;
+
+  // d = a*b + c
+  Lattice<T>* pd = 0;
+  Lattice<T>* pc = 0;
+  if (!_c) {
+    _c = new cgpt_Lattice<T>(grid);
+    _d = _c;
+    pc = &compatible<T>(_c)->l;
+    pd = pc;
+  } else {
+    pc = &compatible<T>(_c)->l;
+    if ((void*)pc == (void*)&a || (void*)pc == (void*)&b) {
+      // do not overwrite existing memory in this case, a guarantee for MT to allow for faster implementations
+      _d = new cgpt_Lattice<T>(grid);
+    } else {
+      _d = _c;
+    }
+    pd = &compatible<T>(_d)->l;
+  }
+  Timer("view");
+
+  pd->Checkerboard() = a.Checkerboard();
+
+  {
+    autoView(a_v, a, AcceleratorRead);
+    autoView(b_v, b, AcceleratorRead);
+    autoView(c_v, (*pc), AcceleratorRead);
+    autoView(d_v, (*pd), AcceleratorWrite);
+  
+    auto * p_a = &a_v[0];
+    auto * p_b = &b_v[0];
+
+    Accumulator<AccumulatorBase,T> ac(coef,&c_v[0],&d_v[0]);
+
+    Timer("loop");
+    
+    // TODO: if c==a or c==b, need to copy to new memory region
+#ifndef GRID_HAS_ACCELERATOR
+    accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+	PREFETCH(p_a[osite]);
+	PREFETCH(p_b[osite]);
+	for (int j=0;j<MT::n_elements;j++) {
+	  MT::eval(ac, osite, p_a[osite], p_b[osite], j);
+	}
+      });
+#else
+    accelerator_for(ss, grid->oSites() * MT::n_elements, grid->Nsimd(), {
+	auto osite = ss / MT::n_elements;
+	auto j = ss - osite * MT::n_elements;
+	MT::eval(ac, osite, p_a[osite], p_b[osite], j);
+      });
+#endif
+
+    Timer();
+  }
+
+  if (_c != _d)
+    delete _c;
+  return _d;
+}
+
+template<typename AccumulatorBase, int unary_expr, bool rev, typename T1, typename T2>
+cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
+				      const Lattice<T1> & a,
+				      const T2 & b,
+				      ComplexD coef) {
     
   GridBase* grid = a.Grid();
 
-  typedef MultiplicationTable<T1,T2,Accumulator,unary_expr> MT;
+  typedef MultiplicationTableRev<T1,T2,unary_expr,rev> MT;
   typedef typename MT::result_type T;
 
-  if (!_c)
+  cgpt_Lattice_base* _d = 0;
+
+  // d = a*b + c
+  Lattice<T>* pd = 0;
+  Lattice<T>* pc = 0;
+  if (!_c) {
     _c = new cgpt_Lattice<T>(grid);
+    _d = _c;
+    pc = &compatible<T>(_c)->l;
+    pd = pc;
+  } else {
+    pc = &compatible<T>(_c)->l;
+    if ((void*)pc == (void*)&a) {
+      // do not overwrite existing memory in this case, a guarantee for MT to allow for faster implementations
+      _d = new cgpt_Lattice<T>(grid);
+    } else {
+      _d = _c;
+    }
+    pd = &compatible<T>(_d)->l;
+  }
+  
+  pd->Checkerboard() = a.Checkerboard();
 
-  auto & c = compatible<T>(_c)->l;
-  c.Checkerboard() = a.Checkerboard();
+  {
+    autoView(a_v, a, AcceleratorRead);
+    autoView(c_v, (*pc), AcceleratorRead);
+    autoView(d_v, (*pd), AcceleratorWrite);
+    
+    Accumulator<AccumulatorBase,T> ac(coef, &c_v[0], &d_v[0]);
+    auto * p_a = &a_v[0];
+    
+    Vector<T2> v_b(1);
+    v_b[0] = b;
+    
+    auto * p_b = &v_b[0];
+    
+    accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
+	MT::eval(ac, osite, p_a[osite], *p_b, j);
+      });
+  }
 
-  autoView(c_v, c, Accumulator::AcceleratorWriteMode);
-  autoView(a_v, a, AcceleratorRead);
-
-  auto * p_c = &c_v[0];
-  auto * p_a = &a_v[0];
-
-  Vector<T2> v_b(1);
-  v_b[0] = b;
-
-  auto * p_b = &v_b[0];
-
-  //for (long osite=0;osite<grid->oSites();osite++)
-  //for (long j=0;j<MT::n_elements;j++) {
- 
-  accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
-      MT::eval(p_c[osite], p_a[osite], *p_b, j);
-    });
-  //}
-  return _c;
+  if (_d != _c)
+    delete _c;
+  return _d;
 }
 
-template<typename Accumulator, int unary_expr, typename T1, typename T2>
-cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
-				      const T1 & a,
-				      const Lattice<T2> & b) {
-
-  GridBase* grid = b.Grid();
-
-  typedef MultiplicationTable<T1,T2,Accumulator,unary_expr> MT;
-  typedef typename MT::result_type T;
-
-  if (!_c)
-    _c = new cgpt_Lattice<T>(grid);
-
-  auto & c = compatible<T>(_c)->l;
-  c.Checkerboard() = b.Checkerboard();
-
-  autoView(c_v, c, Accumulator::AcceleratorWriteMode);
-  autoView(b_v, b, AcceleratorRead);
-
-  auto * p_c = &c_v[0];
-
-  Vector<T1> v_a(1);
-  v_a[0] = a;
-
-  auto * p_a = &v_a[0];
-  auto * p_b = &b_v[0];
-
-  accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
-      //for (long osite=0;osite<grid->oSites();osite++)
-      //for (long j=0;j<MT::n_elements;j++) {
-      MT::eval(p_c[osite], *p_a, p_b[osite], j);
-      //}
-    });
-
-  return _c;
-}
-
-template<typename Accumulator, typename T1, typename T2>
+template<typename AccumulatorBase, bool rev, typename T1, typename T2>
 cgpt_Lattice_base* cgpt_mul_acc(cgpt_Lattice_base* _c,
 				const T1 & a,
 				const T2 & b,
-				int unary_expr) {
+				int unary_expr,
+				ComplexD coef) {
 
   switch (unary_expr) {
   case 0:
-    return cgpt_mul_acc_unary<Accumulator,0>(_c,a,b);
+    return cgpt_mul_acc_unary<AccumulatorBase,0,rev>(_c,a,b,coef);
   case BIT_SPINTRACE:
-    return cgpt_mul_acc_unary<Accumulator,BIT_SPINTRACE>(_c,a,b);
+    return cgpt_mul_acc_unary<AccumulatorBase,BIT_SPINTRACE,rev>(_c,a,b,coef);
   case BIT_COLORTRACE:
-    return cgpt_mul_acc_unary<Accumulator,BIT_COLORTRACE>(_c,a,b);
+    return cgpt_mul_acc_unary<AccumulatorBase,BIT_COLORTRACE,rev>(_c,a,b,coef);
   case BIT_COLORTRACE|BIT_SPINTRACE:
-    return cgpt_mul_acc_unary<Accumulator,BIT_SPINTRACE|BIT_COLORTRACE>(_c,a,b);
+    return cgpt_mul_acc_unary<AccumulatorBase,BIT_SPINTRACE|BIT_COLORTRACE,rev>(_c,a,b,coef);
   default:
     ERR("Unknown unary %d", unary_expr);
   }
 }
 
-template<typename T1, typename T2>
+template<bool rev, typename T1, typename T2>
 cgpt_Lattice_base* cgpt_mul(cgpt_Lattice_base* _c, bool ac,
 			    const T1 & a,
 			    const T2 & b,
-			    int unary_expr) {
+			    int unary_expr,
+			    ComplexD coef) {
 
   if (ac) {
     ASSERT(_c);
-    return cgpt_mul_acc<AccumulatorYes>(_c,a,b,unary_expr);
+    return cgpt_mul_acc<AccumulatorYesBase,rev>(_c,a,b,unary_expr,coef);
   } else {
-    return cgpt_mul_acc<AccumulatorNo>(_c,a,b,unary_expr);
+    return cgpt_mul_acc<AccumulatorNoBase,rev>(_c,a,b,unary_expr,coef);
   }
 }
 
 template<typename T>
-const Lattice<T> cgpt_unary(int unary, const Lattice<T> & l) {
+void cgpt_unary(const Lattice<T> * & pl, const Lattice<T> & l, int unary) {
   switch (unary) {
   case 0:
-    return l;
+    pl = &l;
+    break;
   case BIT_TRANS|BIT_CONJ:
-    return adj(l);
+    pl = new Lattice<T>( adj(l) );
+    break;
   case BIT_TRANS:
-    return transpose(l);
+    pl = new Lattice<T>( transpose(l) );
+    break;
   case BIT_CONJ:
-    return conjugate(l);
+    pl = new Lattice<T>( conjugate(l) );
+    break;
   default:
     ERR("Unknown unary %d",unary);
   }
 }
 
 template<typename A, typename B>
-  cgpt_Lattice_base* lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, int unary_b, const B& lb,int unary_expr) {
+cgpt_Lattice_base* lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, int unary_b, const B& lb,int unary_expr,ComplexD coef) {
   ASSERT(la.Grid() == lb.Grid());
-  return cgpt_mul(dst, ac, cgpt_unary(unary_a, la), cgpt_unary(unary_b, lb), unary_expr);
+  Timer("lattice_mul");
+  const A * pa;
+  const B * pb;
+  cgpt_unary(pa,la,unary_a);
+  cgpt_unary(pb,lb,unary_b);
+  cgpt_Lattice_base* ret = cgpt_mul<false>(dst, ac, *pa, *pb, unary_expr,coef);
+  if (pa != &la)
+    delete pa;
+  if (pb != &lb)
+    delete pb;
+  Timer();
+  return ret;
 }
 
 template<typename A, typename B>
-  cgpt_Lattice_base* lattice_unary_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr) {
-  return cgpt_mul(dst, ac, cgpt_unary(unary_a, la), ab, unary_expr);
+cgpt_Lattice_base* lattice_unary_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr,ComplexD coef) {
+  const A * pa;
+  cgpt_unary(pa,la,unary_a);
+  cgpt_Lattice_base* ret = cgpt_mul<false>(dst, ac, *pa, ab, unary_expr,coef);
+  if (pa != &la)
+    delete pa;
+  return ret;
 }
 
 template<typename A, typename B>
-  cgpt_Lattice_base* lattice_unary_rmul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr) {
-  return cgpt_mul(dst, ac, ab, cgpt_unary(unary_a, la), unary_expr);
+cgpt_Lattice_base* lattice_unary_rmul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr, ComplexD coef) {
+  const A * pa;
+  cgpt_unary(pa,la,unary_a);
+  cgpt_Lattice_base* ret = cgpt_mul<true>(dst, ac, *pa, ab, unary_expr,coef);
+  if (pa != &la)
+    delete pa;
+  return ret;
 }

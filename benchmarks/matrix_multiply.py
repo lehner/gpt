@@ -47,7 +47,7 @@ Matrix Multiply Benchmark with
         g.message(
             f"""{N} matrix_multiply
     Object type                 : {tp.__name__}
-    Time to complete            : {dt:.2f} s
+    Time to complete            : {dt:.2g} s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
 """
         )
