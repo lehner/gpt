@@ -83,11 +83,12 @@ def extract_normalized_su2_components(suN_matrix, su2_index):
     su2_components[2] @= gpt.component.real(gpt.eval(tmp_src[i1, i2] - tmp_src[i2, i1]))
     su2_components[3] @= gpt.component.imag(gpt.eval(tmp_src[i1, i1] - tmp_src[i2, i2]))
 
+    square = gpt.component.pow(2)
     norm = gpt.eval(
-        su2_components[0]*su2_components[0] +
-        su2_components[1]*su2_components[1] +
-        su2_components[2]*su2_components[2] +
-        su2_components[3]*su2_components[3]
+        square * su2_components[0] +
+        square * su2_components[1] +
+        square * su2_components[2] +
+        square * su2_components[3]
     )
     norm @= gpt.component.inv(gpt.component.sqrt(norm))
 

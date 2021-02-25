@@ -134,13 +134,14 @@ def quark_contract_xx(mspincolor1, mspincolor2, components):
     t_total = gpt.time() - t_start
     t_profiled = t_separatespin + t_separatecolor + t_create + t_bilinear + t_merge
 
-    gpt.message("quark_contract_xx: total", t_total, "s")
-    gpt.message("quark_contract_xx: t_separatespin", t_separatespin, "s", round(100 * t_separatespin / t_total, 1), "%")
-    gpt.message("quark_contract_xx: t_separatecolor", t_separatecolor, "s", round(100 * t_separatecolor / t_total, 1), "%")
-    gpt.message("quark_contract_xx: t_create", t_create, "s", round(100 * t_create / t_total, 1), "%")
-    gpt.message("quark_contract_xx: t_bilinear", t_bilinear, "s", round(100 * t_bilinear / t_total, 1), "%")
-    gpt.message("quark_contract_xx: t_merge", t_merge, "s", round(100 * t_merge / t_total, 1), "%")
-    gpt.message("quark_contract_xx: unprofiled", t_total - t_profiled, "s", round(100 * (t_total - t_profiled) / t_total, 1), "%")
+    if gpt.default.is_verbose("quark_contract_xx"):
+        gpt.message("quark_contract_xx: total", t_total, "s")
+        gpt.message("quark_contract_xx: t_separatespin", t_separatespin, "s", round(100 * t_separatespin / t_total, 1), "%")
+        gpt.message("quark_contract_xx: t_separatecolor", t_separatecolor, "s", round(100 * t_separatecolor / t_total, 1), "%")
+        gpt.message("quark_contract_xx: t_create", t_create, "s", round(100 * t_create / t_total, 1), "%")
+        gpt.message("quark_contract_xx: t_bilinear", t_bilinear, "s", round(100 * t_bilinear / t_total, 1), "%")
+        gpt.message("quark_contract_xx: t_merge", t_merge, "s", round(100 * t_merge / t_total, 1), "%")
+        gpt.message("quark_contract_xx: unprofiled", t_total - t_profiled, "s", round(100 * (t_total - t_profiled) / t_total, 1), "%")
     return dst
 
 
