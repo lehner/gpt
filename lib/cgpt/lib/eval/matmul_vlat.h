@@ -24,10 +24,11 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 		      std::vector<std::string> & rhs_v_otype, 
 		      int rhs_unary, 
 		      int unary,
-		      bool rev) {
+		      bool rev,
+		      bool ac,
+		      ComplexD coef) {
 
   ASSERT(lhs_vl.size() > 0);
-  ASSERT(dst_vl.size() == 0);
 
   // learn singlet tensor structure
   int lhs_singlet_rank = lhs_vl[0]->singlet_rank();
@@ -107,23 +108,23 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 
     // SS -> S
 
-    dst_vl.resize(1);
-    dst_vl[0] = lhs_vl[0]->matmul( 0, false, rhs_v_array[0], rhs_v_otype[0], rhs_unary, lhs_unary, unary, rev);
+    dst_vl.resize(1, 0);
+    dst_vl[0] = lhs_vl[0]->matmul( dst_vl[0], ac, rhs_v_array[0], rhs_v_otype[0], rhs_unary, lhs_unary, unary, rev, coef);
 
   } else if (lhs_singlet_rank == 1 && rhs_singlet_rank == 1) {
 
     // VV -> V
 
-    dst_vl.resize(rhs_singlet_dim);
+    dst_vl.resize(rhs_singlet_dim, 0);
     for (int idx=0;idx<rhs_singlet_dim;idx++)
-      dst_vl[idx] = lhs_vl[idx]->matmul( 0, false, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev);
+      dst_vl[idx] = lhs_vl[idx]->matmul( dst_vl[idx], ac, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev, coef);
 
   } else if (lhs_singlet_rank == 1 && rhs_singlet_rank == 2 && rev) {
 
     // MV -> V
     int dim = lhs_singlet_dim;
     bool mtrans = (rhs_unary & BIT_TRANS) != 0;
-    dst_vl.resize(dim);
+    dst_vl.resize(dim, 0);
 
     for (int i=0;i<dim;i++) {
 
@@ -132,13 +133,13 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 
       // init
       dst_vl[i] = lhs_vl[0]->
-	matmul( 0, false, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev);
+	matmul( dst_vl[i], ac, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev, coef);
 
       for (int j=1;j<dim;j++) {
 	idx = mtrans ? (i*dim + j) : (j * dim + i);
 
 	lhs_vl[j]->
-	  matmul( dst_vl[i], true, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev);
+	  matmul( dst_vl[i], true, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev, coef);
       }
     }
 

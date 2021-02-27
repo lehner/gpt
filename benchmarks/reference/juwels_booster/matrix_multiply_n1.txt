@@ -1,4 +1,4 @@
-# srun -N1 -n4 benchmarks/dslash.py --shm 2048 --device-mem 16000 --grid 64.32.32.32 --mpi 4.1.1.1 --accelerator-threads 4 --Ls 12
+# srun -N1 -n4 benchmarks/matrix_multiply.py --shm 2048 --device-mem 16000 --grid 48.48.48.128 --mpi 4.1.1.1 --accelerator-threads 4 --Ls 8
 OPENMPI detected
 AcceleratorCudaInit: using default device 
 AcceleratorCudaInit: assume user either uses a) IBM jsrun, or 
@@ -7,7 +7,7 @@ AcceleratorCudaInit: Configure options --enable-summit, --enable-select-gpu=no
 AcceleratorCudaInit: ================================================
 SharedMemoryMpi:  World communicator of size 4
 SharedMemoryMpi:  Node  communicator of size 4
-0SharedMemoryMpi:  SharedMemoryMPI.cc acceleratorAllocDevice 2147483648bytes at 0x151280000000 for comms buffers 
+0SharedMemoryMpi:  SharedMemoryMPI.cc acceleratorAllocDevice 2147483648bytes at 0x14bfe0000000 for comms buffers 
 
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
@@ -52,26 +52,46 @@ Grid : Message : MemoryManager::Init() Using cudaMalloc
               Initialized GPT                
      Copyright (C) 2020 Christoph Lehner     
 =============================================
-GPT :       1.789520 s : 
-                       : DWF Dslash Benchmark with
-                       :     fdimensions  : [64, 32, 32, 32]
+GPT :       1.841966 s : 
+                       : Matrix Multiply Benchmark with
+                       :     fdimensions  : [48, 48, 48, 128]
                        :     precision    : single
-                       :     Ls           : 12
                        : 
-GPT :       8.298510 s : 1000 applications of Dhop
-                       :     Time to complete            : 3.04 s
-                       :     Total performance           : 10936.42 GFlops/s
-                       :     Effective memory bandwidth  : 7556.07 GB/s
-GPT :       8.299385 s : 
-                       : DWF Dslash Benchmark with
-                       :     fdimensions  : [64, 32, 32, 32]
+GPT :      11.310327 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_color(3)
+                       :     Time to complete            : 0.0081 s
+                       :     Effective memory bandwidth  : 3772.97 GB/s
+                       : 
+GPT :      17.027862 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_spin(4)
+                       :     Time to complete            : 0.014 s
+                       :     Effective memory bandwidth  : 3829.27 GB/s
+                       : 
+GPT :      62.510472 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_spin_color(4,3)
+                       :     Time to complete            : 0.097 s
+                       :     Effective memory bandwidth  : 5046.46 GB/s
+                       : 
+GPT :      62.518977 s : 
+                       : Matrix Multiply Benchmark with
+                       :     fdimensions  : [48, 48, 48, 128]
                        :     precision    : double
-                       :     Ls           : 12
                        : 
-GPT :      18.682222 s : 1000 applications of Dhop
-                       :     Time to complete            : 6.70 s
-                       :     Total performance           : 4954.93 GFlops/s
-                       :     Effective memory bandwidth  : 6846.82 GB/s
+GPT :      72.260958 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_color(3)
+                       :     Time to complete            : 0.016 s
+                       :     Effective memory bandwidth  : 3839.21 GB/s
+                       : 
+GPT :      78.472572 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_spin(4)
+                       :     Time to complete            : 0.028 s
+                       :     Effective memory bandwidth  : 3866.28 GB/s
+                       : 
+GPT :     128.970901 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_spin_color(4,3)
+                       :     Time to complete            : 0.33 s
+                       :     Effective memory bandwidth  : 2943.91 GB/s
+                       : 
 =============================================
                Finalized GPT                 
 =============================================

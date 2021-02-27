@@ -18,66 +18,75 @@
 */
 #include "lib.h"
 
-// timer
-cgpt_timer::cgpt_timer() {
-  tscope = -cgpt_time();
-}
+// the global timer is here
+cgpt_timer Timer;
 
-cgpt_timer::cgpt_timer(const std::string& _title) : title(_title) {
-  tscope = -cgpt_time();
+// timer
+cgpt_timer::cgpt_timer(bool _active) : active(_active) {
+  if (_active)
+    tscope = -cgpt_time();
 }
 
 cgpt_timer::~cgpt_timer() {
-  //tscope += cgpt_time();
-  //std::cout << GridLogMessage << std::setw(50) << (" Time in scope " + title) << std::setw(24) << std::right << tscope << " s" << std::endl;
 }
 
 void cgpt_timer::operator()(const std::string& tag) {
+
+  if (!active)
+    return;
   
   if (current_tag.size()) {
-    dt[current_tag] += cgpt_time();
+    auto & x = dt[current_tag];
+    x.first += 1;
+    x.second += cgpt_time();
   }
   
   if (tag.size()) {
-    dt[tag] -= cgpt_time();
+    dt[tag].second -= cgpt_time();
   }
   
   current_tag = tag;
 }
 
-void cgpt_timer::report() {
+PyObject* cgpt_timer::report() {
+
+  PyObject* ret = PyDict_New();
+  
+  if (!active)
+    return ret;
   
   // force stop timing
   operator()("");
   
-  std::cout << GridLogMessage << "================================================================================" << std::endl;
-  std::cout << GridLogMessage << "  Timing report " << title << std::endl;
-  std::cout << GridLogMessage << "================================================================================" << std::endl;
-  
   // total time spent
-  double tot = 0.0;
-  for (auto & _dt : dt)
-    tot += _dt.second;
-  
-  // sort
-  std::vector<std::string> tags;
-  for (auto & _dt : dt)
-    tags.push_back(_dt.first);
-  std::sort(tags.begin(), tags.end(), [=](std::string a, std::string b) {return dt[a] > dt[b]; });
-  
-  for (auto & tag : tags) {
-    double time = dt[tag];
-    std::cout << GridLogMessage <<  " " <<
-      std::setw(40) << tag << 
-      std::setw(15) << std::right << time/ tot * 100 << " % " <<
-      std::setw(15) << std::right << time << " s"<< std::endl;
+  for (auto & _dt : dt) {
+    PyObject* val = PyDict_New();
+    PyDict_SetItemString(ret,_dt.first.c_str(),val);
+
+    PyObject* v = PyFloat_FromDouble(_dt.second.second);
+    PyDict_SetItemString(val,"time", v); Py_XDECREF(v);
+
+    v = PyLong_FromLong(_dt.second.first);
+    PyDict_SetItemString(val,"calls", v); Py_XDECREF(v);
+    
+    Py_XDECREF(val);
   }
-  
-  std::cout << GridLogMessage << "================================================================================" << std::endl;
-  std::cout << GridLogMessage << std::setw(42) << " Total time " << std::setw(32) << std::right << tot << " s" << std::endl;
+
+  return ret;
 }
 
 // export
 EXPORT(time,{
     return PyFloat_FromDouble(cgpt_time());
+  });
+
+EXPORT(timer_begin,{
+    Timer = cgpt_timer(true);
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(timer_end,{
+    auto ret = Timer.report();
+    Timer = cgpt_timer(false);
+    return ret;
   });

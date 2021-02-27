@@ -45,9 +45,19 @@ class timer:
         self.enabled = enabled
 
     def __iadd__(self, other):
-        iadd(self.dt, other.dt)
-        iadd(self.b, other.b)
-        iadd(self.f, other.f)
+        if isinstance(other, dict):
+            for key in other:
+                if key not in self.dt:
+                    self.dt[key] = 0.0
+                    self.b[key] = 0.0
+                    self.f[key] = 0.0
+                dt = other[key]["time"]
+                self.dt[key] += dt
+                self.dt["total"] += dt
+        else:
+            iadd(self.dt, other.dt)
+            iadd(self.b, other.b)
+            iadd(self.f, other.f)
         return self
 
     def __call__(self, which=None, flop=None, byte=None):
