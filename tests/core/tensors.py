@@ -227,7 +227,7 @@ def test_multiply(a, b):
     mul_np = a[0, 0, 0, 0] * b[0, 0, 0, 0]
     eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
     g.message(f"Test {a_type.__name__} * {b_type.__name__}: {eps2}")
-    assert eps2 < 1e-12
+    assert eps2 < 1e-11
 
     # no unary with overwrite a
     if c_type == a_type:
@@ -237,7 +237,7 @@ def test_multiply(a, b):
         mul_lat = ta[0, 0, 0, 0]
         eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
         g.message(f"Test dst=lhs {a_type.__name__} * {b_type.__name__}: {eps2}")
-        assert eps2 < 1e-12
+        assert eps2 < 1e-11
 
     # no unary with overwrite b
     if c_type == b_type:
@@ -247,7 +247,7 @@ def test_multiply(a, b):
         mul_lat = tb[0, 0, 0, 0]
         eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
         g.message(f"Test dst=rhs {a_type.__name__} * {b_type.__name__}: {eps2}")
-        assert eps2 < 1e-12
+        assert eps2 < 1e-11
 
     # traces
     for tr in [g.trace, g.color_trace, g.spin_trace]:
@@ -258,7 +258,7 @@ def test_multiply(a, b):
         else:
             eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
         g.message(f"Test {tr.__name__}({a_type.__name__} * {b_type.__name__}): {eps2}")
-        assert eps2 < 1e-12
+        assert eps2 < 1e-11
 
     # bilinear combination
     c = g.copy(a)
@@ -272,7 +272,7 @@ def test_multiply(a, b):
     g.message(
         f"Test {a_type.__name__} * {b_type.__name__} + {a_type.__name__} * {b_type.__name__}: {eps2}"
     )
-    assert eps2 < 1e-12
+    assert eps2 < 1e-11
 
     # traces
     for tr in [g.trace, g.color_trace, g.spin_trace]:
@@ -287,7 +287,7 @@ def test_multiply(a, b):
         g.message(
             f"Test {tr.__name__}({a_type.__name__} * {b_type.__name__} + {a_type.__name__} * {b_type.__name__}): {eps2}"
         )
-        assert eps2 < 1e-12
+        assert eps2 < 1e-11
 
 
 # test numpy versus lattice tensor multiplication
@@ -315,7 +315,7 @@ for a_type in [
                 mul_np = g.adj(a[0, 0, 0, 0]) * b[0, 0, 0, 0]
                 eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
                 g.message(f"Test adj({a_type.__name__}) * {b_type.__name__}: {eps2}")
-                assert eps2 < 1e-12
+                assert eps2 < 1e-11
 
             if b_type.transposed is not None:
 
@@ -323,7 +323,7 @@ for a_type in [
                 mul_np = a[0, 0, 0, 0] * g.adj(b[0, 0, 0, 0])
                 eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
                 g.message(f"Test {a_type.__name__} * adj({b_type.__name__}): {eps2}")
-                assert eps2 < 1e-12
+                assert eps2 < 1e-11
 
             if a_type.transposed is not None and b_type.transposed is not None:
 
@@ -333,7 +333,7 @@ for a_type in [
                 g.message(
                     f"Test adj({a_type.__name__}) * adj({b_type.__name__}): {eps2}"
                 )
-                assert eps2 < 1e-12
+                assert eps2 < 1e-11
 
     # rmtab
     for e in a_type.rmtab:
@@ -351,7 +351,7 @@ def test_linear_combinations(a, b):
     np = a[0, 0, 0, 0] + b[0, 0, 0, 0]
     eps2 = g.norm2(lat - np) / g.norm2(lat)
     g.message(f"Test {a_type.__name__} + {b_type.__name__}: {eps2}")
-    assert eps2 < 1e-12
+    assert eps2 < 1e-11
 
     if a_type.transposed is not None:
         for unary in [g.adj, g.transpose, g.conj]:
@@ -361,7 +361,7 @@ def test_linear_combinations(a, b):
             g.message(
                 f"Test {unary.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}"
             )
-            assert eps2 < 1e-12
+            assert eps2 < 1e-11
 
     if a_type.spintrace[0] is not None or a_type.colortrace[0] is not None:
         for tr in [g.trace, g.color_trace, g.spin_trace]:
@@ -374,7 +374,7 @@ def test_linear_combinations(a, b):
             g.message(
                 f"Test {tr.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}"
             )
-            assert eps2 < 1e-12
+            assert eps2 < 1e-11
 
 
 for a_type in [
