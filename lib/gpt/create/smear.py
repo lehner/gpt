@@ -89,4 +89,3 @@ def wuppertal(U, params):
             dst += (delta / (1 + 2.0 * len(dimensions) * delta)) * lap * dst
 
     return gpt.matrix_operator(mat=mat)
-

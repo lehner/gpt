@@ -169,6 +169,7 @@ def extract_su2_components(suN_matrix, su2_indices):
     su2_components[1] @= gpt.component.imag(gpt.eval(separated[i1, i2] + separated[i2, i1]))
     su2_components[2] @= gpt.component.real(gpt.eval(separated[i1, i2] - separated[i2, i1]))
     su2_components[3] @= gpt.component.imag(gpt.eval(separated[i1, i1] - separated[i2, i2]))
+
     return su2_components
 
 

@@ -99,4 +99,3 @@ def reunitize(gauge):
         gpt.message("reunitize: t_norm", t_norm, "s", round(100 * t_norm / t_total, 1), "%")
         gpt.message("reunitize: t_det", t_det, "s", round(100 * t_det / t_total, 1), "%")
         gpt.message("reunitize: unprofiled", t_unprofiled, "s", round(100 * t_unprofiled / t_total, 1), "%")
-

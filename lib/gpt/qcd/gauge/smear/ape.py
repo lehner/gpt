@@ -27,6 +27,7 @@ def ape(u, params):
     t_total = - gpt.time()
 
     t_setstaple, t_addstaple, t_project, t_reunitize, t_su3check = 0.0, 0.0, 0.0, 0.0, 0.0
+
     nd = len(u)
 
     # create mask for staples
