@@ -363,7 +363,7 @@ def test_linear_combinations(a, b):
             )
             assert eps2 < 1e-12
 
-    if a_type.spintrace[0] is not None:
+    if a_type.spintrace[0] is not None or a_type.colortrace[0] is not None:
         for tr in [g.trace, g.color_trace, g.spin_trace]:
             lat = g(tr(a + b))[0, 0, 0, 0]
             np = tr(a[0, 0, 0, 0] + b[0, 0, 0, 0])

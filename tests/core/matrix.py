@@ -16,6 +16,10 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     # first get matrix
     rng.element(m)
 
+    # test
+    ma = g(g.adj(m))
+    g.message(g(g.trace(g(ma - g.matrix.inv(m)))))
+
     # and test unitarity
     eps2 = g.norm2(g.adj(m) - g.matrix.inv(m)) / g.norm2(m)
     g.message(f"adj(U) == inv(U): {eps2}")

@@ -43,14 +43,6 @@ struct tensorMultType<iMatrix<inner,n>,vtype> {
   typedef iMatrix<typename tensorMultType<inner,vtype>::type,n> type;
 };
 
-#ifndef GRID_SIMT
-#define DEF_z() typename result_type::vector_type v; zeroit(v);
-#define DEF_o(O) O v; zeroit(v);
-#else
-#define DEF_z() typename result_type::scalar_type v; zeroit(v);
-#define DEF_o(O) typename O::scalar_object v; zeroit(v);
-#endif
-
 // General
 template<typename T1, typename vtype2, int unary_expr>
 struct MultiplicationTable<T1,iSinglet<vtype2>,unary_expr> {

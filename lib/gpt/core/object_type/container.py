@@ -18,8 +18,14 @@
 #
 from gpt.core.object_type.base import ot_base
 import gpt
+import cgpt
 import numpy
 
+# query cgpt about available sizes
+lattice_types = cgpt.lattice_types()
+basis_sizes = sorted(
+    [int(x[11:]) for x in filter(lambda x: x[0:11] == "ot_msinglet", lattice_types)]
+)
 
 ###
 # Helper
@@ -244,23 +250,15 @@ class ot_vector_spin_color(ot_base):
 
 ###
 # Basic vectors for coarse grid
-class ot_vector_singlet4(ot_base):
-    nfloats = 2 * 4
-    shape = (4,)
-    v_otype = ["ot_vsinglet4"]
-
-
-class ot_vector_singlet10(ot_base):
-    nfloats = 2 * 10
-    shape = (10,)
-    v_otype = ["ot_vsinglet10"]
+class ot_vector_singlet_base(ot_base):
+    def __init__(self, n):
+        self.nfloats = 2 * n
+        self.shape = (n,)
+        self.v_otype = [f"ot_vsinglet{n}"]
 
 
 class ot_vector_singlet(ot_base):
-    fundamental = {
-        4: ot_vector_singlet4,
-        10: ot_vector_singlet10,
-    }
+    fundamental = {n: ot_vector_singlet_base(n) for n in basis_sizes}
 
     def __init__(self, n):
         self.__name__ = "ot_vector_singlet(%d)" % n
@@ -293,23 +291,15 @@ class ot_vector_singlet(ot_base):
 
 
 # and matrices
-class ot_matrix_singlet4(ot_base):
-    nfloats = 2 * 4 * 4
-    shape = (4, 4)
-    v_otype = ["ot_msinglet4"]
-
-
-class ot_matrix_singlet10(ot_base):
-    nfloats = 2 * 10 * 10
-    shape = (10, 10)
-    v_otype = ["ot_msinglet10"]
+class ot_matrix_singlet_base(ot_base):
+    def __init__(self, n):
+        self.nfloats = 2 * n * n
+        self.shape = (n, n)
+        self.v_otype = [f"ot_msinglet{n}"]
 
 
 class ot_matrix_singlet(ot_base):
-    fundamental = {
-        4: ot_matrix_singlet4,
-        10: ot_matrix_singlet10,
-    }
+    fundamental = {n: ot_matrix_singlet_base(n) for n in basis_sizes}
 
     def __init__(self, n):
         self.__name__ = "ot_matrix_singlet(%d)" % n

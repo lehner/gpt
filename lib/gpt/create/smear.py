@@ -29,50 +29,63 @@
 #
 #      gauss = ( 1 + sigma^2 / (4 steps) laplace )^steps
 #
-import gpt as g
+import gpt
 from gpt.params import params_convention
 
 
-def laplace(cov, dimensions):
+# TODO:	add boundary_phases to laplace
+def laplace(gauge, site_field, dimensions):
+    
+    paths, keys = [], []
+    for mu in dimensions:
+        paths.append(gpt.qcd.gauge.path().forward(mu))
+        keys.append(tuple([1 if mu == nu else 0 for nu in range(len(gauge))]))
+        paths.append(gpt.qcd.gauge.path().backward(mu))
+        keys.append(tuple([-1 if mu == nu else 0 for nu in range(len(gauge))]))
+    transport = gpt.qcd.gauge.transport(gauge, paths, [site_field, ])
+    
+    links = dict()
+    for key, link in zip(keys, transport(gauge)):
+        links[key] = link
+    
     def mat(dst, src):
-        assert dst != src
-        dst @= -2.0 * src + cov.forward[dimensions[0]] * src + cov.backward[dimensions[0]] * src
-        for mu in dimensions[1:]:
-            dst += -2.0 * src + cov.forward[mu] * src + cov.backward[mu] * src
+        dst @= -2 * len(dimensions) * src
+        for key, field in transport.do_site_fields([src, ]):
+            dst += links[key] * field
 
-    return g.matrix_operator(mat=mat)
+    return gpt.matrix_operator(mat=mat)
 
 
+# TODO: add boundary_phases to laplace
 @params_convention(boundary_phases=[1, 1, 1, -1], dimensions=[0, 1, 2])
 def gauss(U, params):
     sigma = params["sigma"]
     steps = params["steps"]
     dimensions = params["dimensions"]
-    lap = laplace(g.covariant.shift(U, params), dimensions)
 
     def mat(dst, src):
         assert dst != src
-        g.copy(dst, src)
+        gpt.copy(dst, src)
+        lap = laplace(U, dst, dimensions)
+        gpt.copy(dst, src)
         for _ in range(steps):
             dst += (sigma * sigma / (4.0 * steps)) * lap * dst
 
-    return g.matrix_operator(mat=mat)
+    return gpt.matrix_operator(mat=mat)
 
 
+# TODO:	add boundary_phases to laplace
 @params_convention(boundary_phases=[1, 1, 1, -1], dimensions=[0, 1, 2])
 def wuppertal(U, params):
     delta = params["delta"]
     steps = params["steps"]
     dimensions = params["dimensions"]
-    lap = laplace(g.covariant.shift(U, params), dimensions)
 
     def mat(dst, src):
-        g.message(f"Doing Wuppertal smearing with {steps} iterations and delta={delta}")
         assert dst != src
-        g.copy(dst, src)
+        gpt.copy(dst, src)
+        lap = laplace(U, src, dimensions)
         for _ in range(steps):
             dst += (delta / (1 + 2.0 * len(dimensions) * delta)) * lap * dst
-        g.message("Doing Wuppertal done.")
 
-    return g.matrix_operator(mat=mat)
-
+    return gpt.matrix_operator(mat=mat)

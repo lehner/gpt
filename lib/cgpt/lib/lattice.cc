@@ -17,6 +17,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include <set>
 
 typedef void* (* create_lattice_prec_otype)(GridBase* grid);
 std::map<std::string,create_lattice_prec_otype> _create_otype_;
@@ -28,6 +29,12 @@ std::map<std::string,int> _otype_singlet_rank_;
 
 void lattice_init() {
 #define INSTANTIATE(v,t,n) lattice_init_ ## t ## _ ## n();
+#include "instantiate/instantiate.h"
+#undef INSTANTIATE
+}
+
+void lattice_fill_types(std::set<std::string> & types) {
+#define INSTANTIATE(v,t,n) types.insert(get_otype(n<v>()));
 #include "instantiate/instantiate.h"
 #undef INSTANTIATE
 }
@@ -64,6 +71,20 @@ EXPORT(delete_lattice,{
     
     delete ((cgpt_Lattice_base*)p);
     return PyLong_FromLong(0);
+  });
+
+EXPORT(lattice_types,{
+    std::set<std::string> types;
+    lattice_fill_types(types);
+    
+    PyObject* list = PyList_New(types.size());
+    long i = 0;
+    for (auto & t : types) {
+      PyList_SetItem(list,i++,PyUnicode_FromString(t.c_str()));
+    }
+    
+    return list;
+    
   });
 
 EXPORT(lattice_set_to_zero,{
