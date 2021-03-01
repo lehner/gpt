@@ -19,12 +19,14 @@
 */
 #include "../lib.h"
 
-typedef void* (* create_lattice_prec_otype)(GridBase* grid);
-extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
-extern std::map<std::string,int> _otype_singlet_rank_;
+#include "../expression/linear_combination.h"
 
-void lattice_init_single_iVSinglet60() {
-  std::string prec = "single";
-  _create_otype_[prec + ":" + get_otype(iVSinglet60<vComplexF>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< iVSinglet60< vComplexF > >(grid); };
-  _otype_singlet_rank_[get_otype(iVSinglet60<vComplexF>())] = singlet_rank(iVSinglet60<vComplexF>());
-}
+#define PER_TENSOR_TYPE(T)						\
+  INSTANTIATE(T,vComplexF)
+
+#define INSTANTIATE(T,vtype)						\
+  template cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T<vtype>>& _compatible,cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr);
+
+PER_TENSOR_TYPE(iMSinglet30)
+
+#undef PER_TENSOR_TYPE

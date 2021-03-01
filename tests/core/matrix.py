@@ -17,7 +17,7 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     rng.element(m)
 
     # test
-    ma = g( g.adj(m) )
+    ma = g(g.adj(m))
     g.message(g(g.trace(g(ma - g.matrix.inv(m)))))
 
     # and test unitarity

@@ -19,14 +19,26 @@
 */
 #include "../lib.h"
 
-#include "../expression/linear_combination.h"
+#include "../expression/mul.h"
 
-#define PER_TENSOR_TYPE(T)						\
-  INSTANTIATE(T,vComplexF)
+template<>
+cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSinglet30<vComplexF> >& la, Gamma::Algebra gamma, int unary_expr, bool rev, ComplexD coef) {
+  ERR("Not implemented");
+}
 
-#define INSTANTIATE(T,vtype)						\
-  template cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T<vtype>>& _compatible,cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr);
+template<>
+cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSinglet30<vComplexF> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev, ComplexD coef) {
+  typedef vComplexF vtype;
+  if (unary_b == 0) {
+    _MM_COMPATIBLE_RL_(iVSinglet30);
+  }
+  _MM_COMPATIBLE_R_(iMSinglet30);
+  ERR("Not implemented");
+}
 
-PER_TENSOR_TYPE(iMSinglet60)
-
-#undef PER_TENSOR_TYPE
+template<>
+cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSinglet30<vComplexF> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr, ComplexD coef) {
+  typedef vComplexF vtype;
+  _COMPATIBLE_MSR_(iSinglet);
+  ERR("Not implemented");
+}

@@ -23,7 +23,9 @@ import numpy
 
 # query cgpt about available sizes
 lattice_types = cgpt.lattice_types()
-basis_sizes = sorted([ int(x[11:]) for x in filter(lambda x: x[0:11] == "ot_msinglet",lattice_types) ])
+basis_sizes = sorted(
+    [int(x[11:]) for x in filter(lambda x: x[0:11] == "ot_msinglet", lattice_types)]
+)
 
 ###
 # Helper
@@ -254,8 +256,9 @@ class ot_vector_singlet_base(ot_base):
         self.shape = (n,)
         self.v_otype = [f"ot_vsinglet{n}"]
 
+
 class ot_vector_singlet(ot_base):
-    fundamental = { n : ot_vector_singlet_base(n) for n in basis_sizes }
+    fundamental = {n: ot_vector_singlet_base(n) for n in basis_sizes}
 
     def __init__(self, n):
         self.__name__ = "ot_vector_singlet(%d)" % n
@@ -296,7 +299,7 @@ class ot_matrix_singlet_base(ot_base):
 
 
 class ot_matrix_singlet(ot_base):
-    fundamental = { n : ot_matrix_singlet_base(n) for n in basis_sizes }
+    fundamental = {n: ot_matrix_singlet_base(n) for n in basis_sizes}
 
     def __init__(self, n):
         self.__name__ = "ot_matrix_singlet(%d)" % n
