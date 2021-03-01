@@ -97,6 +97,8 @@ def apply_expr_unary(l):
 
 
 def trace(l, t=None):
+    if isinstance(l, gpt.expr):
+        l = gpt.eval(l)
     if t is None:
         t = gpt.expr_unary.BIT_SPINTRACE | gpt.expr_unary.BIT_COLORTRACE
     if type(l) == gpt.tensor:
