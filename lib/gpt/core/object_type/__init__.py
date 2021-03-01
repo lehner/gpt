@@ -119,9 +119,11 @@ def str_to_otype(s):
             "ot_vector_singlet",
             "ot_vector_singlet4",
             "ot_vector_singlet10",
+            "ot_vector_singlet60",
             "ot_matrix_singlet",
             "ot_matrix_singlet4",
             "ot_matrix_singlet10",
+            "ot_matrix_singlet60",
         ]
     )
 

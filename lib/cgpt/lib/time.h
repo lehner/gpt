@@ -28,15 +28,19 @@ static double cgpt_time() {
 
 class cgpt_timer {
  public:
-  std::map<std::string,double> dt;
-  std::string current_tag, title;
+  std::map<std::string,std::pair<int,double>> dt;
+  std::string current_tag;
   double tscope;
+  bool active;
 
-  cgpt_timer();
-  cgpt_timer(const std::string& _title);
+  cgpt_timer(bool active = false);
   ~cgpt_timer();
 
-  void operator()(const std::string& tag);
-  void report();
+  void operator()(const std::string& tag = "");
+  PyObject* report();
 
 };
+
+// we have one global timer that can be manipulated
+// from gpt to learn about cgpt function internal timings
+extern cgpt_timer Timer;

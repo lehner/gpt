@@ -17,6 +17,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "access.h"
-#include "multiplication_table.h"
 #include "macros.h"
-#include "implementation.h"
+#include "multiplication_table.h"
+#include "mul_implementation.h"

@@ -104,7 +104,8 @@ static PyObject* load_openQCD(PyObject* args) {
     // build metadata
     PyObject* metadata = PyDict_New();
     for (auto& k : fields) {
-      PyDict_SetItemString(metadata,k.first.c_str(),PyUnicode_FromString(k.second.c_str()));
+      PyObject* data = PyUnicode_FromString(k.second.c_str());
+      PyDict_SetItemString(metadata,k.first.c_str(),data); Py_XDECREF(data);
     }
 
     // return

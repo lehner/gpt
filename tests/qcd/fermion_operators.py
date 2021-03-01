@@ -10,7 +10,8 @@ import sys, cmath
 
 # load configuration
 rng = g.random("test")
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
+L = [8, 8, 8, 16]
+U = g.qcd.gauge.random(g.grid(L, g.double), rng)
 
 # do everything in single-precision
 U = g.convert(U, g.single)
@@ -177,6 +178,34 @@ dst2 = g(prop_transformed * src)
 eps2 = g.norm2(dst1 - dst2) / g.norm2(dst1)
 g.message(f"Gauge transformation check {eps2}")
 assert eps2 < 1e-12
+
+
+# test twisted boundary momentum phase
+U_unit = g.qcd.gauge.unit(grid)
+theta = 0.91231
+quark0 = g.qcd.fermion.mobius(
+    U_unit,
+    Ls=8,
+    mass=0.1,
+    b=1,
+    c=0,
+    M5=1.8,
+    boundary_phases=[np.exp(1j * theta), 1, 1, 1],
+)
+q0prop = quark0.propagator(
+    inv.preconditioned(pc.eo2_ne(), inv.cg(eps=1e-7, maxiter=1000))
+)
+src = g.vspincolor(U_unit[0].grid)
+src[:] = 0
+src[:, :, :, 0, 0, 0] = 1
+prop = g(q0prop * g.exp_ixp(np.array([theta / L[0], 0, 0, 0])) * src)
+prop_1000_over_0000 = complex(prop[1, 0, 0, 2, 0, 0]) / complex(prop[0, 0, 0, 2, 0, 0])
+eps = abs(prop_1000_over_0000) - 1
+g.message(f"Twisted boundary covariance is a phase: {eps}")
+assert eps < 1e-6
+eps = abs(prop_1000_over_0000 - np.exp(1j * theta / L[0]))
+g.message(f"Twisted boundary covariance as expected momentum: {eps}")
+assert eps < 1e-6
 
 
 # test instantiation of other actions

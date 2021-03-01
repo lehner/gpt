@@ -19,6 +19,7 @@
 #include "lib.h"
 #include "benchmarks.h"
 
+#if 0
 template<typename base_t, typename int_t>
 class iHalfPrecision {
 public:
@@ -60,12 +61,13 @@ void half() {
   a = Zero();
   //b = a + a;
 }
+#endif
 
 EXPORT(benchmarks,{
     //half();
-    //benchmarks(8);
-    //benchmarks(16);
-    //benchmarks(32);
+    benchmarks(8);
+    benchmarks(16);
+    benchmarks(32);
     return PyLong_FromLong(0);
   });
 

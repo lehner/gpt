@@ -133,12 +133,16 @@ EXPORT(copy_get_plan_info,{
 	size_t size = plan->block_size * blocks;
 
 	PyObject* data = PyDict_New();
-	PyDict_SetItemString(data,"blocks",PyLong_FromLong((long)blocks));
-	PyDict_SetItemString(data,"size",PyLong_FromLong((long)size));
-	PyDict_SetItem(ret_rank, Py_BuildValue("(ll)",index_dst, index_src), data);
+	PyObject* data_blocks = PyLong_FromLong((long)blocks);
+	PyDict_SetItemString(data,"blocks",data_blocks); Py_XDECREF(data_blocks);
+	PyObject* data_size = PyLong_FromLong((long)size);
+	PyDict_SetItemString(data,"size",data_size); Py_XDECREF(data_size);
+	PyObject* key = Py_BuildValue("(ll)",index_dst, index_src);
+	PyDict_SetItem(ret_rank, key, data); Py_XDECREF(key); Py_XDECREF(data);
       }
 
-      PyDict_SetItem(ret, Py_BuildValue("(ll)",rank_dst, rank_src), ret_rank);
+      PyObject* key = Py_BuildValue("(ll)",rank_dst, rank_src);
+      PyDict_SetItem(ret, key, ret_rank); Py_XDECREF(key); Py_XDECREF(ret_rank);
     }
 
     return ret;

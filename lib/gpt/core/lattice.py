@@ -110,6 +110,13 @@ class lattice(factor):
         self.v_obj, other.v_obj = other.v_obj, self.v_obj
         self.metadata, other.metadata = other.metadata, self.metadata
 
+    def update(self, v_obj):
+        if v_obj != self.v_obj:
+            mb = mem_book[self.v_obj[0]]
+            del mem_book[self.v_obj[0]]
+            self.v_obj = v_obj
+            mem_book[self.v_obj[0]] = mb
+
     def checkerboard(self, val=None):
         if val is None:
             if self.grid.cb.n == 1:
