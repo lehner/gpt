@@ -43,19 +43,26 @@ def cshift(first, second, third, fourth=None):
 
 def copy(first, second=None):
 
-    if type(first) == gpt.lattice:
-        if second is not None:
-            t = first
-            l = second
-        else:
-            l = first
-            t = gpt.lattice(l)
-        for i in t.otype.v_idx:
-            cgpt.copy(t.v_obj[i], l.v_obj[i])
-        return t
+    if second is not None:
+        t = first
+        l = second
 
     else:
-        assert 0
+        l = first
+        if type(l) == list:
+            t = [gpt.lattice(x) for x in l]
+        else:
+            t = gpt.lattice(l)
+
+    if isinstance(l, gpt.lattice):
+        for i in t.otype.v_idx:
+            cgpt.copy(t.v_obj[i], l.v_obj[i])
+    else:
+        for j in range(len(l)):
+            for i in t[j].otype.v_idx:
+                cgpt.copy(t[j].v_obj[i], l[j].v_obj[i])
+
+    return t
 
 
 def rank_inner_product(a, b, use_accelerator=True):
