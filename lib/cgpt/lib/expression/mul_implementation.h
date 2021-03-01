@@ -140,9 +140,21 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
     
     auto * p_b = &v_b[0];
     
-    accelerator_for2d(osite, grid->oSites(), j, MT::n_elements, grid->Nsimd(), {
+#ifndef GRID_HAS_ACCELERATOR
+    accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+	PREFETCH(p_a[osite]);
+	PREFETCH(p_b[osite]);
+	for (int j=0;j<MT::n_elements;j++) {
+	  MT::eval(ac, osite, p_a[osite], *p_b, j);
+	}
+      });
+#else
+    accelerator_for(ss, grid->oSites() * MT::n_elements, grid->Nsimd(), {
+	auto osite = ss / MT::n_elements;
+	auto j = ss - osite * MT::n_elements;
 	MT::eval(ac, osite, p_a[osite], *p_b, j);
       });
+#endif
   }
 
   if (_d != _c)
@@ -186,8 +198,11 @@ cgpt_Lattice_base* cgpt_mul(cgpt_Lattice_base* _c, bool ac,
   }
 }
 
+
 template<typename T>
 void cgpt_unary(const Lattice<T> * & pl, const Lattice<T> & l, int unary) {
+  // TODO: replace this by creating a left-hand-side/right-hand-side Reader template class
+  // that can switch indices / CC in coalescedRead...
   switch (unary) {
   case 0:
     pl = &l;

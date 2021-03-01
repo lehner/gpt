@@ -26,6 +26,7 @@ import numpy
 def decompose(n, ns, rank):
     for x in reversed(sorted(ns)):
         if n % x == 0:
+            gpt.message(n, ns, rank, x)
             return [x] * ((n // x) ** rank)
     raise Exception("Cannot decompose %d in available fundamentals %s" % (n, ns))
 
@@ -256,10 +257,17 @@ class ot_vector_singlet10(ot_base):
     v_otype = ["ot_vsinglet10"]
 
 
+class ot_vector_singlet60(ot_base):
+    nfloats = 2 * 60
+    shape = (60,)
+    v_otype = ["ot_vsinglet60"]
+
+
 class ot_vector_singlet(ot_base):
     fundamental = {
         4: ot_vector_singlet4,
         10: ot_vector_singlet10,
+        60: ot_vector_singlet60,
     }
 
     def __init__(self, n):
@@ -304,11 +312,18 @@ class ot_matrix_singlet10(ot_base):
     shape = (10, 10)
     v_otype = ["ot_msinglet10"]
 
+    
+class ot_matrix_singlet60(ot_base):
+    nfloats = 2 * 60 * 60
+    shape = (60, 60)
+    v_otype = ["ot_msinglet60"]
+
 
 class ot_matrix_singlet(ot_base):
     fundamental = {
         4: ot_matrix_singlet4,
         10: ot_matrix_singlet10,
+        60: ot_matrix_singlet60
     }
 
     def __init__(self, n):

@@ -40,6 +40,16 @@
 
 
 
+#ifndef GRID_SIMT
+#define DEF_z() typename result_type::vector_type v; zeroit(v);
+#define DEF_o(O) O v; zeroit(v);
+#else
+#define DEF_z() typename result_type::scalar_type v; zeroit(v);
+#define DEF_o(O) typename O::scalar_object v; zeroit(v);
+#endif
+
+
+
 #if defined(A64FX) || defined(A64FXFIXEDSIZE)
 #define PREFETCH(a) {							\
     uint64_t base;							\
