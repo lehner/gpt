@@ -30,15 +30,15 @@ def prop_to_ferm(f, p, s, c):
     return cgpt.util_ferm2prop(f.v_obj[0], p.v_obj[0], s, c, False)
 
 
-def reunitize(U):
+def reunitize(gauge):
 #     'project' site-local matrix to SU(N).
 #        * roughly equivalent to Grids 'ProjectOnGroup'
 #        * uses the "modified Gram-Schmidt process"
 #        * intended to remove numerical rounding errors during HMC
 #        * can be unstable for very large N or input far away from SU(N) (not an issue for intended usecase)
     if type(gauge) == list:
-        for a in gauge:
-            reunitize(a)
+        for u in gauge:
+            reunitize(u)
         return
 
     t_total, t_sep, t_merge, t_c, t_norm, t_det = 0, 0, 0, 0, 0, 0
@@ -50,7 +50,6 @@ def reunitize(U):
     assert len(shape) == 2 and shape[0] == shape[1]
     n_color = shape[0]
 
-    # step 1: (modified) Gram-Schmidt process to get a unitary matrix
     t_sep -= gpt.time()
     tmp = gpt.separate_color(gauge)
     t_sep += gpt.time()
@@ -58,6 +57,7 @@ def reunitize(U):
     c = gpt.complex(tmp[0, 0].grid)
     norm = gpt.complex(tmp[0, 0].grid)
 
+    # step 1: (modified) Gram-Schmidt process to get a unitary matrix
     for i in range(n_color):
         for j in range(i):
             t_c -= gpt.time()
@@ -95,8 +95,8 @@ def reunitize(U):
         gpt.message("reunitize: total", t_total, "s")
         gpt.message("reunitize: t_separate", t_sep, "s", round(100 * t_sep / t_total, 1), "%")
         gpt.message("reunitize: t_merge", t_merge, "s", round(100 * t_merge / t_total, 1), "%")
-        gpt.message("reunitize: t_separatecolor", t_sep, "s", round(100 * t_sep / t_total, 1), "%")
         gpt.message("reunitize: t_c", t_c, "s", round(100 * t_c / t_total, 1), "%")
         gpt.message("reunitize: t_norm", t_norm, "s", round(100 * t_norm / t_total, 1), "%")
+        gpt.message("reunitize: t_det", t_det, "s", round(100 * t_det / t_total, 1), "%")
         gpt.message("reunitize: unprofiled", t_unprofiled, "s", round(100 * t_unprofiled / t_total, 1), "%")
 
