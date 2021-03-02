@@ -105,7 +105,6 @@ class fgcr(base_iterative):
                 i = k % rlen
 
                 # iteration criteria
-                reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
                 t("prec")
@@ -126,7 +125,7 @@ class fgcr(base_iterative):
                 ip, z2 = g.inner_product_norm2(z[i], r)
                 gamma[i] = z2 ** 0.5
                 if gamma[i] == 0.0:
-                    g.debug("breakdown, gamma[%d] = 0" % (i))
+                    self.debug(f"breakdown, gamma[{i:d}] = 0")
                     break
                 z[i] /= gamma[i]
                 alpha[i] = ip / gamma[i]
@@ -135,45 +134,28 @@ class fgcr(base_iterative):
                 t("other")
                 self.log_convergence((k, i), r2, rsq)
 
-                if r2 <= rsq or need_restart or reached_maxiter:
+                if r2 <= rsq or need_restart:
                     t("update_psi")
                     self.update_psi(psi, alpha, beta, gamma, chi, p, i)
-                    comp_res = r2 / ssq
 
-                    if r2 <= rsq:
-                        if self.verbose:
-                            if self.checkres:
-                                res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                                self.log(
-                                    "converged in %d iterations;  computed res = %g, true res = %g, target = %g"
-                                    % (k + 1, comp_res ** 0.5, res ** 0.5, self.eps)
-                                )
-                            else:
-                                self.log(
-                                    "converged in %d iterations;  computed res = %g, target = %g"
-                                    % (k + 1, comp_res ** 0.5, self.eps)
-                                )
-                        break
+                if r2 <= rsq:
+                    msg = f"converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+                    if self.checkres:
+                        res = self.calc_res(mat, psi, mmpsi, src, r)
+                        msg += f";  true squared residual {res:e} / {rsq:e}"
+                    self.log(msg)
+                    return
 
-                    if reached_maxiter:
-                        if self.verbose:
-                            if self.checkres:
-                                res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                                self.log(
-                                    "NOT converged in %d iterations;  computed res = %g, true res = %g, target = %g"
-                                    % (k + 1, comp_res ** 0.5, res ** 0.5, self.eps)
-                                )
-                            else:
-                                self.log(
-                                    "NOT converged in %d iterations;  computed res = %g, target = %g"
-                                    % (k + 1, comp_res ** 0.5, self.eps)
-                                )
-                        break
+                if need_restart:
+                    t("restart")
+                    r2 = self.restart(mat, psi, mmpsi, src, r, p)
+                    self.debug("performed restart")
 
-                    if need_restart:
-                        t("restart")
-                        r2 = self.restart(mat, psi, mmpsi, src, r, p)
-                        self.debug("fgcr: performed restart")
+            msg = f"NOT converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+            if self.checkres:
+                res = self.calc_res(mat, psi, mmpsi, src, r)
+                msg += f";  true squared residual {res:e} / {rsq:e}"
+            self.log(msg)
 
         return g.matrix_operator(
             mat=inv,
