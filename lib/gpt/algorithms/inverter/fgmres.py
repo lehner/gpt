@@ -134,7 +134,6 @@ class fgmres(base_iterative):
                 i = k % rlen
 
                 # iteration criteria
-                reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
                 t("prec")
