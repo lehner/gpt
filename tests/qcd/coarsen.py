@@ -91,7 +91,7 @@ g.message("Tests for links passed for all directions")
 del Asaved_c
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse_fermion(A_c, level=0)
+mat_c = g.qcd.fermion.coarse_fermion_switch(A_c, level=0)
 
 # setup coarse vectors
 vec_in_c = g.vcomplex(grid_c, nbasis_f)
@@ -147,8 +147,8 @@ for p in range(9):
 g.message("Tests for links passed for all directions")
 del Asaved_cc
 
-# create coarse operator from links
-mat_cc = g.qcd.fermion.coarse_fermion(A_cc, level=1)
+# create coarse coarse operator from links
+mat_cc = g.qcd.fermion.coarse_fermion_switch(A_cc, level=1)
 
 # setup coarse coarse vectors
 vec_in_cc = g.vcomplex(grid_cc, nbasis_c)

@@ -25,7 +25,7 @@ from gpt.qcd.fermion.register import register
 from gpt.qcd.fermion.operator import fine_operator, coarse_operator
 from gpt.qcd.fermion.boundary_conditions import *
 
-import copy
+import copy, sys
 
 ###
 # instantiate fermion operators
@@ -89,10 +89,18 @@ def coarse_fermion(A, params):
 
 
 @gpt.params_convention(make_hermitian=False)
-def coarse_multi_arg(A, params):
+def coarse_fermion_multi_arg(A, params):
     params = copy.deepcopy(params)  # save current parameters
     assert "nbasis" not in params
     params["nbasis"] = A[0].otype.v_n1[0]
     return multi_arg_coarse_operator(
         "coarse_multi_arg", A, params, otype=A[0].otype.vector_type
     )
+
+
+@gpt.params_convention(make_hermitian=False)
+def coarse_fermion_switch(A, params):
+    if "--new-operator" in sys.argv:
+        return coarse_fermion_multi_arg(A, params)
+    else:
+        return coarse_fermion(A, params)

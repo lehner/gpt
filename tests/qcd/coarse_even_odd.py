@@ -66,7 +66,7 @@ g.qcd.fermion.coarse.create_links(
 )
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse_fermion(A_c, level=0)
+mat_c = g.qcd.fermion.coarse_fermion_switch(A_c, level=0)
 
 # save typing
 def vec_c_full():

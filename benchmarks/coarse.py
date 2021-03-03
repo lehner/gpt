@@ -30,7 +30,7 @@ Coarse Operator Benchmark with
     # Coarse operator
     A = [g.mcomplex(grid, nbasis) for __ in range(9)]
     rng.cnormal(A)
-    co = g.qcd.fermion.coarse(A, {"level": level})
+    co = g.qcd.fermion.coarse_fermion_switch(A, {"level": level})
 
     # Source and destination
     src = g.vcomplex(grid, nbasis)
