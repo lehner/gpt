@@ -21,8 +21,12 @@ import gpt.qcd.fermion.reference
 import gpt.qcd.fermion.preconditioner
 import gpt.qcd.fermion.coarse
 
-from gpt.qcd.fermion.register import register
-from gpt.qcd.fermion.operator import fine_operator, coarse_operator
+from gpt.qcd.fermion.register import register, register_multi_arg
+from gpt.qcd.fermion.operator import (
+    fine_operator,
+    coarse_operator,
+    multi_arg_coarse_operator,
+)
 from gpt.qcd.fermion.boundary_conditions import *
 
 import copy, sys
