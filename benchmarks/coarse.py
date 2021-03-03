@@ -15,8 +15,8 @@ N = g.default.get_int("--N", 1000)
 nbasis = g.default.get_int("--nbasis", 40)
 level = g.default.get_int("--level", 0)
 
-for precision in [g.single, g.double]:
-    grid = g.grid(g.default.get_ivec("--grid", [6, 6, 6, 6], 4), precision)
+for precision in [g.single]:
+    grid = g.grid(g.default.get_ivec("--grid", [4, 4, 4, 4], 4), precision)
     g.message(
         f"""
 Coarse Operator Benchmark with
