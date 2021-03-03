@@ -792,9 +792,15 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
 
   void DhopInternal(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp, int dag) {
 #if defined(GRID_CUDA) || defined(GRID_HIP)
-    DhopInternal_gpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
+    if(dag == DaggerYes)
+      DhopDagInternal_gpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
+    else
+      DhopInternal_gpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
 #else
-    DhopInternal_cpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
+    if(dag == DaggerYes)
+      DhopDagInternal_cpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
+    else
+      DhopInternal_cpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
 #endif
   }
 
@@ -1251,6 +1257,119 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
 
   void DhopInternal_cpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
     DhopInternal_gpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
+  }
+
+  void DhopDagInternal_gpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
+    // NOTE: corresponds to "M_finegrained_loopinternal_tensorlayout_parchange_commsreduce" in test file
+    // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
+    MCalls++;
+    MTotalTime -= usecond();
+    MMiscTime -= usecond();
+    const int Narg            = numArg(in, in_n_virtual, out, out_n_virtual);
+    const int NvirtualFermion = in_n_virtual;
+    const int NvirtualLink    = NvirtualFermion*NvirtualFermion;
+    const int Nsimd           = SiteSpinor::Nsimd();
+    const int Nsite           = in[0].Grid()->oSites();
+    const int Npoint          = geom_.npoint;
+    const int Npoint_hop      = geom_.npoint-1; // all but the self-coupling term
+
+    assert(n_arg_ == Narg);
+
+    SimpleCompressor<SiteSpinor> compressor;
+    MMiscTime += usecond();
+
+    copyToTmp5dField(in, tmp, Nsite, NvirtualFermion, Narg); // timed inside
+
+    MCommTime-=usecond();
+    stencil.HaloExchange(tmp, compressor);
+    MCommTime+=usecond();
+
+    MViewTime -= usecond();
+    VECTOR_VIEW_OPEN_POINTER(Uc, Uc_v, Uc_p, AcceleratorRead);
+    autoView(tmp_v, tmp, AcceleratorRead);
+    autoView(stencil_v, stencil, AcceleratorRead);
+    VECTOR_VIEW_OPEN_POINTER(out, out_v, out_p, AcceleratorWrite);
+    RealD* dag_factor_p = &dag_factor_[0];
+    MViewTime += usecond();
+
+    for(int v_col=0; v_col<NvirtualFermion; v_col++) {
+      typedef decltype(coalescedRead(tmp_v[0]))    calcVector;
+      typedef decltype(coalescedRead(tmp_v[0](0))) calcComplex;
+
+      MComputeTime -= usecond();
+      accelerator_for(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
+              int _idx  = idx;
+        const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
+        const int arg   = _idx%Narg; _idx/=Narg;
+        const int v_row = _idx%NvirtualFermion; _idx/=NvirtualFermion;
+        const int ss    = _idx%Nsite; _idx/=Nsite;
+
+        const int v_arg_col = arg*NvirtualFermion+v_col;
+        const int v_arg_row = arg*NvirtualFermion+v_row;
+        const int v_row_col = v_row * NvirtualFermion + v_col;
+        const int v_col_row = v_col * NvirtualFermion + v_row;
+        const int sF        = ss*NvirtualFermion*Narg+v_col*Narg+arg; // needed for stencil access
+
+        const int b_global = v_row*NvirtualFermion+b;
+
+#if defined(ROW_MAJOR)
+        const int v_link = v_row_col;
+#else // =  COL_MAJOR
+        const int v_link = v_col_row;
+#endif
+
+        calcComplex res;
+        calcVector nbr;
+        int ptype;
+        StencilEntry *SE_MA;
+
+#if defined(REFERENCE_SUMMATION_ORDER)
+        res = Zero();
+#else
+        if (v_col == 0)
+          res = Zero();
+        else
+          res = coalescedRead(out_p[v_arg_row][ss](b));
+#endif
+
+        for(int point=0; point<Npoint_hop; point++) {
+          SE_MA=stencil_v.GetEntry(ptype,point,sF);
+
+          if(SE_MA->_is_local) {
+            nbr = coalescedReadPermute(tmp_v[SE_MA->_offset],ptype,SE_MA->_permute);
+          } else {
+            nbr = coalescedRead(stencil_v.CommBuf()[SE_MA->_offset]);
+          }
+          acceleratorSynchronise();
+
+          for(int bb=0;bb<NbasisVirtual;bb++) {
+            const int bb_global = v_row*NvirtualFermion+bb;
+#if defined(TENSOR_LAYOUT)
+            res = res + dag_factor_p[b_global*nbasis_global_+bb_global] * coalescedRead(Uc_p[v_link][ss](point)(b,bb))*nbr(bb);
+#else
+            res = res + dag_factor_p[b_global*nbasis_global_+bb_global] * coalescedRead(Uc_p[v_link*Npoint+point][ss](b,bb))*nbr(bb);
+#endif
+          }
+        }
+#if defined(REFERENCE_SUMMATION_ORDER)
+        if (v_col != 0) {
+          res = res + coalescedRead(out_p[v_arg_row][ss](b));
+        }
+#endif
+        coalescedWrite(out_p[v_arg_row][ss](b),res);
+      });
+      MComputeTime += usecond();
+    }
+    MViewTime -= usecond();
+    VECTOR_VIEW_CLOSE_POINTER(Uc_v, Uc_p);
+    VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
+    MViewTime += usecond();
+    MTotalTime += usecond();
+    grid_printf_flush("Finished calling: DhopInternal_gpu\n");
+  }
+
+  void DhopDagInternal_cpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
+    DhopDagInternal_gpu(stencil, Uc, in, in_n_virtual, out, out_n_virtual, tmp);
   }
 
   void DhopDirInternal_gpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp, int point) {
