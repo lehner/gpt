@@ -73,7 +73,7 @@ class fgmres(base_iterative):
         V[0] @= r / gamma[0]
         if Z is not None:
             for z in Z:
-                z[:] = 0.0
+                z[:] = 0
         return r2
 
     def calc_res(self, mat, psi, mmpsi, src, r):
@@ -117,7 +117,9 @@ class fgmres(base_iterative):
             )  # save vectors if unpreconditioned
 
             # initial residual
+            t("restart")
             r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
+            t("setup")
 
             # source
             ssq = g.norm2(src)

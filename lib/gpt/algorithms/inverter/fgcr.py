@@ -118,9 +118,7 @@ class fgcr(base_iterative):
                 mat(z[i], p[i])
 
                 t("ortho")
-                g.default.push_verbose("orthogonalize", False)
                 g.orthogonalize(z[i], z[0:i], beta[:, i])
-                g.default.pop_verbose()
 
                 t("linalg")
                 ip, z2 = g.inner_product_norm2(z[i], r)

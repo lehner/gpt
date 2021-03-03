@@ -157,7 +157,7 @@ class lattice(factor):
         # short code path to zero lattice
         if type(key) == slice and key == slice(None, None, None):
 
-            if type(value) == int and value == 0:
+            if gpt.util.is_num(value) and value == 0:
                 for o in self.v_obj:
                     cgpt.lattice_set_to_zero(o)
                 return

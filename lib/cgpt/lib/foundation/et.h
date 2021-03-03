@@ -29,3 +29,14 @@ template<class l,class r,int N> accelerator_inline
     mult(&ret._internal[i],&lhs._internal[i],&rhs._internal[i]);
   return ret;
 }
+
+template<typename T>
+void cgpt_zeroit(Lattice<T> & l) {
+  // Found poor performance with l = Zero() in Grid, need to investigate
+  GridBase* grid = l.Grid();
+  autoView(l_v, l, AcceleratorWriteDiscard);
+  auto p_v = &l_v[0];
+  accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+      zeroit(p_v[osite]);
+    });
+}

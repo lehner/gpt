@@ -52,7 +52,7 @@ public:
   }
 
   void set_to_zero() {
-    l = Zero();
+    cgpt_zeroit(l);
   }
 
   // use norm2 convention for squared norm, talked to Peter, Grid may also change to this cleaner notation
