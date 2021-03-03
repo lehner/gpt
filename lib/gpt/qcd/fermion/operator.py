@@ -23,6 +23,9 @@ from gpt.params import params_convention
 
 class operator(gpt.matrix_operator):
     def __init__(self, name, U, params, otype, with_even_odd, with_multi_arg):
+        gpt.message(
+            f"Creating {name} operator {'WITH' if with_multi_arg else 'WITHOUT'} multiarg"
+        )
         # keep constructor parameters
         self.name = name
         self.U = U
@@ -75,10 +78,8 @@ class operator(gpt.matrix_operator):
             pass
 
         if with_multi_arg:
-            print("with_multi_arg")
             gpt.qcd.fermion.register_multi_arg(registry, self)
         else:
-            print("withOUT_multi_arg")
             gpt.qcd.fermion.register(registry, self)
 
         # map Grid matrix operations to clean matrix_operator structure
