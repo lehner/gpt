@@ -340,7 +340,6 @@ class multi_arg_coarse_operator(operator):
 
         self.params["U"] = [v_obj for u in U for v_obj in u.v_obj]
         self.params["U_self_inv"] = self.U_self_inv.v_obj
-        self.params["dag_factor"] = gpt.coarse.prefactor_dagger(self.U[8], 0)  # TODO
         self.obj = cgpt.create_fermion_operator(
             self.name, self.U_grid.precision, self.params
         )
