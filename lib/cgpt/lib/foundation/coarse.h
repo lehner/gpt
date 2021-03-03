@@ -342,32 +342,46 @@ public: // member functions (implementing interface) //////////////////////////
   void Mooee(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
     if(in[0].Grid()->_isCheckerBoarded) {
       if(in[0].Checkerboard() == Odd) {
-        MooeeInternal(UcSelfOdd_, in, in_n_virtual, out, out_n_virtual);
+        MooeeInternal(UcSelfOdd_, in, in_n_virtual, out, out_n_virtual, DaggerNo);
       } else {
-        MooeeInternal(UcSelfEven_, in, in_n_virtual, out, out_n_virtual);
+        MooeeInternal(UcSelfEven_, in, in_n_virtual, out, out_n_virtual, DaggerNo);
       }
     } else {
-      MooeeInternal(UcSelf_, in, in_n_virtual, out, out_n_virtual);
+      MooeeInternal(UcSelf_, in, in_n_virtual, out, out_n_virtual, DaggerNo);
     }
   }
   void MooeeDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
-    Mooee(in, in_n_virtual, out, out_n_virtual);
-    grid_printf_flush("TODO: implement this correctly\n");
+    if(in[0].Grid()->_isCheckerBoarded) {
+      if(in[0].Checkerboard() == Odd) {
+        MooeeInternal(UcSelfOdd_, in, in_n_virtual, out, out_n_virtual, DaggerYes);
+      } else {
+        MooeeInternal(UcSelfEven_, in, in_n_virtual, out, out_n_virtual, DaggerYes);
+      }
+    } else {
+      MooeeInternal(UcSelf_, in, in_n_virtual, out, out_n_virtual, DaggerYes);
+    }
   }
   void MooeeInv(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
     if(in[0].Grid()->_isCheckerBoarded) {
       if(in[0].Checkerboard() == Odd) {
-        MooeeInternal(UcSelfInvOdd_, in, in_n_virtual, out, out_n_virtual);
+        MooeeInternal(UcSelfInvOdd_, in, in_n_virtual, out, out_n_virtual, DaggerNo);
       } else {
-        MooeeInternal(UcSelfInvEven_, in, in_n_virtual, out, out_n_virtual);
+        MooeeInternal(UcSelfInvEven_, in, in_n_virtual, out, out_n_virtual, DaggerNo);
       }
     } else {
-      MooeeInternal(UcSelfInv_, in, in_n_virtual, out, out_n_virtual);
+      MooeeInternal(UcSelfInv_, in, in_n_virtual, out, out_n_virtual, DaggerNo);
     }
   }
   void MooeeInvDag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
-    MooeeInv(in, in_n_virtual, out, out_n_virtual);
-    grid_printf_flush("TODO: implement this correctly\n");
+    if(in[0].Grid()->_isCheckerBoarded) {
+      if(in[0].Checkerboard() == Odd) {
+        MooeeInternal(UcSelfInvOdd_, in, in_n_virtual, out, out_n_virtual, DaggerYes);
+      } else {
+        MooeeInternal(UcSelfInvEven_, in, in_n_virtual, out, out_n_virtual, DaggerYes);
+      }
+    } else {
+      MooeeInternal(UcSelfInv_, in, in_n_virtual, out, out_n_virtual, DaggerYes);
+    }
   }
 
   // non-hermitian hopping term; half cb or both
@@ -812,11 +826,17 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
 #endif
   }
 
-  void MooeeInternal(const PhysicalLinkField& UcSelf, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+  void MooeeInternal(const PhysicalLinkField& UcSelf, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dag) {
 #if defined(GRID_CUDA) || defined(GRID_HIP)
-    MooeeInternal_gpu(UcSelf, in, in_n_virtual, out, out_n_virtual);
+    if(dag == DaggerYes)
+      MooeeDagInternal_gpu(UcSelf, in, in_n_virtual, out, out_n_virtual);
+    else
+      MooeeInternal_gpu(UcSelf, in, in_n_virtual, out, out_n_virtual);
 #else
-    MooeeInternal_cpu(UcSelf, in, in_n_virtual, out, out_n_virtual);
+    if(dag == DaggerYes)
+      MooeeDagInternal_cpu(UcSelf, in, in_n_virtual, out, out_n_virtual);
+    else
+      MooeeInternal_cpu(UcSelf, in, in_n_virtual, out, out_n_virtual);
 #endif
   }
 
@@ -1561,5 +1581,94 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
 
   void MooeeInternal_cpu(const PhysicalLinkField& UcSelf, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
     MooeeInternal_gpu(UcSelf, in, in_n_virtual, out, out_n_virtual);
+  }
+
+  void MooeeDagInternal_gpu(const PhysicalLinkField& UcSelf, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+    MCalls++;
+    MTotalTime -= usecond();
+    MMiscTime -= usecond();
+    const int Narg            = numArg(in, in_n_virtual, out, out_n_virtual);
+    const int NvirtualFermion = in_n_virtual;
+    const int NvirtualLink    = NvirtualFermion*NvirtualFermion;
+    const int Nsimd           = SiteSpinor::Nsimd();
+    const int Nsite           = in[0].Grid()->oSites();
+
+    assert(n_arg_ == Narg);
+
+    constantCheckerboard(in, out);
+
+    MViewTime -= usecond();
+    VECTOR_VIEW_OPEN_POINTER(UcSelf, UcSelf_v, UcSelf_p, AcceleratorRead);
+    VECTOR_VIEW_OPEN_POINTER(in, in_v, in_p, AcceleratorRead);
+    VECTOR_VIEW_OPEN_POINTER(out, out_v, out_p, AcceleratorWrite);
+    RealD* dag_factor_p = &dag_factor_[0];
+    MViewTime += usecond();
+
+    for(int v_col=0; v_col<NvirtualFermion; v_col++) {
+      typedef decltype(coalescedRead(in_v[0][0]))    calcVector;
+      typedef decltype(coalescedRead(in_v[0][0](0))) calcComplex;
+
+      MComputeTime -= usecond();
+      accelerator_for(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
+              int _idx  = idx;
+        const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
+        const int arg   = _idx%Narg; _idx/=Narg;
+        const int v_row = _idx%NvirtualFermion; _idx/=NvirtualFermion;
+        const int ss    = _idx%Nsite; _idx/=Nsite;
+
+        const int v_arg_col = arg*NvirtualFermion+v_col;
+        const int v_arg_row = arg*NvirtualFermion+v_row;
+        const int v_row_col = v_row * NvirtualFermion + v_col;
+        const int v_col_row = v_col * NvirtualFermion + v_row;
+        const int sF        = ss*NvirtualFermion*Narg+v_col*Narg+arg; // needed for stencil access
+
+        const int b_global = v_row*NvirtualFermion+b;
+
+#if defined(ROW_MAJOR)
+        const int v_link = v_row_col;
+#else // =  COL_MAJOR
+        const int v_link = v_col_row;
+#endif
+
+        calcComplex res;
+        calcVector nbr;
+        int ptype;
+        StencilEntry *SE_MA;
+
+#if defined(REFERENCE_SUMMATION_ORDER)
+        res = Zero();
+#else
+        if (v_col == 0)
+          res = Zero();
+        else
+          res = coalescedRead(out_p[v_arg_row][ss](b));
+#endif
+
+        nbr = coalescedRead(in_v[v_arg_col][ss]);
+
+        for(int bb=0;bb<NbasisVirtual;bb++) {
+          const int bb_global = v_row*NvirtualFermion+bb;
+          res = res + dag_factor_p[b_global*nbasis_global_+bb_global] * coalescedRead(UcSelf_p[v_link][ss](b,bb))*nbr(bb);
+        }
+#if defined(REFERENCE_SUMMATION_ORDER)
+        if (v_col != 0) {
+          res = res + coalescedRead(out_p[v_arg_row][ss](b));
+        }
+#endif
+        coalescedWrite(out_p[v_arg_row][ss](b),res);
+      });
+      MComputeTime += usecond();
+    }
+    MViewTime -= usecond();
+    VECTOR_VIEW_CLOSE_POINTER(UcSelf_v, UcSelf_p);
+    VECTOR_VIEW_CLOSE_POINTER(in_v, in_p);
+    VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
+    MViewTime += usecond();
+    MTotalTime += usecond();
+    grid_printf_flush("Finished calling: MooeeDagInternal_gpu\n");
+  }
+
+  void MooeeDagInternal_cpu(const PhysicalLinkField& UcSelf, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
+    MooeeDagInternal_gpu(UcSelf, in, in_n_virtual, out, out_n_virtual);
   }
 };
