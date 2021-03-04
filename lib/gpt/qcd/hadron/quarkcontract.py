@@ -53,12 +53,29 @@ def quark_contract_xx(mspincolor1, mspincolor2, components):
     t_separatespin, t_separatecolor, t_create, t_bilinear, t_merge = 0.0, 0.0, 0.0, 0.0, 0.0
     t_start = gpt.time()
 
-    grid = mspincolor1.grid
+    comps1, comps2 = dict(), dict()
+    for mspincolor, comps in [
+        [mspincolor1, comps1],
+        [mspincolor2, comps2]
+    ]:
+        if isinstance(mspincolor, gpt.lattice):
+            t_separatespin -= gpt.time()
+            spin_separated = gpt.separate_spin(mspincolor)
+            t_separatespin += gpt.time()
 
-    t_separatespin -= gpt.time()
-    mcolor1 = gpt.separate_spin(mspincolor1)
-    mcolor2 = gpt.separate_spin(mspincolor2)
-    t_separatespin += gpt.time()
+            for spinkey in spin_separated:
+                t_separatecolor -= gpt.time()
+                comps[spinkey] = gpt.separate_color(spin_separated[spinkey])
+                t_separatecolor += gpt.time()
+
+        elif isinstance(mspincolor, dict):
+            for spinkey in mspincolor:
+                n_keys = len(mspincolor[spinkey])
+                n_colors = np.sqrt(n_keys)
+                assert n_colors == int(n_colors)
+                assert (int(n_colors) - 1, int(n_colors) - 1) in mspincolor[spinkey]
+                comps[spinkey] = mspincolor[spinkey]
+    grid = comps1[0, 0][0, 0].grid
 
     t_create -= gpt.time()
     dst = gpt.mspincolor(grid)
@@ -77,24 +94,12 @@ def quark_contract_xx(mspincolor1, mspincolor2, components):
         [7, 6, 4, 3], [1, 0, 7, 6], [4, 3, 1, 0]
     ], dtype=np.int32)
 
-    comps1, comps2, used_keys = dict(), dict(), []
     for spin_key in components.keys():
-        assert spin_key not in used_keys, f"Found duplicate key: {key}"
-        used_keys.append(spin_key)
 
         lefts, rights = [], []
         bilin_coeffs, bilin_leftbasis, bilin_rightbasis = [], [], []
         for nn, comps in enumerate(components[spin_key]):
             c0_0, c0_1, c1_0, c1_1 = comps
-
-            if (c0_0, c0_1) not in comps1:
-                t_separatecolor -= gpt.time()
-                comps1[c0_0, c0_1] = gpt.separate_color(mcolor1[c0_0, c0_1])
-                t_separatecolor += gpt.time()
-            if (c1_0, c1_1) not in comps2:
-                t_separatecolor -= gpt.time()
-                comps2[c1_0, c1_1] = gpt.separate_color(mcolor2[c1_0, c1_1])
-                t_separatecolor += gpt.time()
 
             for ii in range(9):
                 lefts.append(comps1[c0_0, c0_1][ii // 3, ii % 3])
