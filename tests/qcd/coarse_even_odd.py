@@ -45,11 +45,11 @@ nbasis_f = 30
 nblockortho = 1
 
 # setup fine basis
-basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
+basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f // 2)]
 rng.cnormal(basis_f)
 
 # split fine basis into chiral halfs
-g.coarse.split_chiral(basis_f)
+g.qcd.fermion.coarse.split_chiral(basis_f)
 
 # setup fine block map
 bm_f = g.block.map(grid_c, basis_f)
@@ -61,12 +61,12 @@ for i in range(nblockortho):
 
 # create coarse link fields
 A_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
-g.coarse.create_links(
+g.qcd.fermion.coarse.create_links(
     A_c, mat_f, basis_f, {"make_hermitian": False, "save_links": True}
 )
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse(A_c, level=0)
+mat_c = g.qcd.fermion.coarse_fermion(A_c, level=0)
 
 # save typing
 def vec_c_full():

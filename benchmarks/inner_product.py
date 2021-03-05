@@ -35,7 +35,7 @@ Inner Product Benchmark with
     )
 
     # Source and destination
-    for tp in [g.ot_singlet(), g.ot_vector_spin_color(4, 3), g.ot_vsinglet(12)]:
+    for tp in [g.ot_singlet(), g.ot_vector_spin_color(4, 3), g.ot_vector_singlet(12)]:
         for n in [1, 4]:
             one = [g.lattice(grid, tp) for i in range(n)]
             two = [g.lattice(grid, tp) for i in range(n)]

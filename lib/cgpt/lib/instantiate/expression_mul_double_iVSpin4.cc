@@ -19,26 +19,25 @@
 */
 #include "../lib.h"
 
-#include "../expression/matmul.h"
 #include "../expression/mul.h"
 
 template<>
-cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4<vComplexD> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
+cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4<vComplexD> >& la, Gamma::Algebra gamma, int unary_expr, bool rev, ComplexD coef) {
   if (rev) {
-    return lattice_unary_rmul(dst, ac, unary_a, la, Gamma(gamma), unary_expr);
+    return lattice_unary_rmul(dst, ac, unary_a, la, Gamma(gamma), unary_expr, coef);
   }
   ERR("Not implemented");
 }
 
 template<>
-cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4<vComplexD> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
+cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4<vComplexD> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev, ComplexD coef) {
   typedef vComplexD vtype;
   _MM_INNER_OUTER_PRODUCT_(iVSpin4);
   ERR("Not implemented");
 }
 
 template<>
-cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4<vComplexD> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
+cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4<vComplexD> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr, ComplexD coef) {
   typedef vComplexD vtype;
   _COMPATIBLE_(iSinglet);
   _OUTER_PRODUCT_(iVSpin4);

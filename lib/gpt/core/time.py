@@ -27,14 +27,38 @@ def time():
     return cgpt.time() - t0
 
 
+def iadd(a, b):
+    for x in b:
+        if x not in a:
+            a[x] = 0.0
+        a[x] += b[x]
+
+
 class timer:
-    def __init__(self, prefix):
-        self.dt = {}
+    def __init__(self, name, enabled=True):
+        self.dt = {"total": 0.0}
         self.f = {}
         self.b = {}
-        self.prefix = prefix
+        self.name = name
         self.active = False
         self.current = None
+        self.enabled = enabled
+
+    def __iadd__(self, other):
+        if isinstance(other, dict):
+            for key in other:
+                if key not in self.dt:
+                    self.dt[key] = 0.0
+                    self.b[key] = 0.0
+                    self.f[key] = 0.0
+                dt = other[key]["time"]
+                self.dt[key] += dt
+                self.dt["total"] += dt
+        else:
+            iadd(self.dt, other.dt)
+            iadd(self.b, other.b)
+            iadd(self.f, other.f)
+        return self
 
     def __call__(self, which=None, flop=None, byte=None):
         """
@@ -42,9 +66,11 @@ class timer:
         with argument which given starts a new timer and ends a previous one if running
         without argument which ends current + total timer
         """
+
+        if not self.enabled:
+            return
+
         if self.active is False and which is not None:
-            if "total" not in self.dt:
-                self.dt["total"] = 0.0
             self.active = True
             self.dt["total"] -= time()
 
@@ -61,7 +87,7 @@ class timer:
             self.f[which] += flop if flop is not None else 0.0
             self.b[which] += byte if byte is not None else 0.0
             self.dt[which] -= time()
-        else:
+        elif self.active:
             self.dt["total"] += time()
             self.active = False
 
@@ -75,13 +101,15 @@ class timer:
 
         s = ""
 
-        if dtp["total"] != 0.0:
-            for k, v in sorted(dtp.items(), key=lambda x: x[1]):
-                frac = v / dtp["total"] * 100
-                if fp["total"] != 0.0 or bp["total"] != 0.0:
-                    s += f"{self.prefix}: profiling: {k:20s} = {v:e} s (= {frac:6.2f} %) {fp[k]/v:e} F/s {bp[k]/v:e} B/s\n"
-                else:
-                    s += f"{self.prefix}: timing: {k:20s} = {v:e} s (= {frac:6.2f} %)\n"
+        if dtp["total"] == 0.0:
+            return "No time spent here"
+
+        for k, v in sorted(dtp.items(), key=lambda x: x[1]):
+            frac = v / dtp["total"] * 100
+            if fp["total"] != 0.0 or bp["total"] != 0.0:
+                s += f"{self.name}: profiling: {k:20s} = {v:e} s (= {frac:6.2f} %) {fp[k]/v:e} F/s {bp[k]/v:e} B/s\n"
+            else:
+                s += f"{self.name}: timing: {k:20s} = {v:e} s (= {frac:6.2f} %)\n"
 
         return s[:-1]
 

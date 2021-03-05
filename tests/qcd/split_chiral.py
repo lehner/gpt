@@ -12,32 +12,28 @@ import numpy as np
 grid = g.grid([8, 8, 8, 8], g.double)
 
 # setup rng
-rng = g.random("ducks_smell_funny")
+rng = g.random("test")
 
 # size of basis
-nbasis_f = 30
-nbasis_c = 40
-nb_f = nbasis_f // 2
-nb_c = nbasis_c // 2
+nb_f = 15
+nb_c = 20
 
 # setup fine basis
 basis_ref_f = [g.vspincolor(grid) for __ in range(nb_f)]
-basis_split_f = [g.vspincolor(grid) for __ in range(nbasis_f)]
 rng.cnormal(basis_ref_f)
 
-# setup coarse basis
-basis_ref_c = [g.vcomplex(grid, nbasis_f) for __ in range(nb_c)]
-basis_split_c = [g.vcomplex(grid, nbasis_f) for __ in range(nbasis_c)]
+# setup coarse basis (factor of 2 for chiral doubling)
+basis_ref_c = [g.vcomplex(grid, 2 * nb_f) for __ in range(nb_c)]
 rng.cnormal(basis_ref_c)
 
 
-def run_test(basis_split, basis_ref):
+def run_test(basis_ref):
     for factor in [0.5, 1.0, None]:
-        for i in range(len(basis_ref)):
-            basis_split[i] = g.copy(basis_ref[i])
-
-        g.coarse.split_chiral(basis_split, factor)
-        g.coarse.unsplit_chiral(basis_split, factor)
+        basis_split = g.copy(basis_ref)
+        g.qcd.fermion.coarse.split_chiral(basis_split, factor)
+        assert len(basis_split) == len(basis_ref) * 2
+        g.qcd.fermion.coarse.unsplit_chiral(basis_split, factor)
+        assert len(basis_split) == len(basis_ref)
 
         typename = basis_split[0].otype.__name__
         for i in range(len(basis_ref)):
@@ -55,7 +51,7 @@ def run_test(basis_split, basis_ref):
                 )
 
 
-run_test(basis_split_f, basis_ref_f)
+run_test(basis_ref_f)
 g.message("All tests for fine grid")
-run_test(basis_split_c, basis_ref_c)
+run_test(basis_ref_c)
 g.message("All tests for coarse grid")

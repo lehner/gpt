@@ -15,8 +15,10 @@ else:
     work_dir = "."
 
 # grids
-fgrid = g.grid([4, 8*8, 8, 8, 16], g.single, g.redblack)
-cgrid = g.grid([1, 4*8, 4, 4, 4], g.single)
+fgrid = g.grid([4, 8, 8, 8, 16], g.single, g.redblack)
+cgrid = g.grid([1, 4, 4, 4, 4], g.single)
+# fgrid = g.grid([12, 96, 48, 24, 24], g.single, g.redblack)
+# cgrid = g.grid([1, 96//4, 48//4, 24//4, 24//4], g.single)
 
 # vectors
 nbasis = 40
@@ -33,47 +35,23 @@ b = g.block.map(cgrid, basis)
 for i in range(2):
     b.orthonormalize()
 
-# save in fixed layout
-g.save(
-    f"{work_dir}/cevec",
-    [basis, cevec, feval],
-    g.format.cevec({"nsingle": nsingle, "max_read_blocks": 16, "mpi": [1, 2, 2, 2, 2]}),
-)
+for mpi_layout in [[1, 1, 1, 1, 1], [1, 2, 2, 2, 2]]:
 
-# and load again to verify
-basis2, cevec2, feval2 = g.load(f"{work_dir}/cevec", {"grids": fgrid})
-
-assert len(basis) == len(basis2)
-assert len(cevec) == len(cevec2)
-assert len(feval) == len(feval2)
-
-for i in range(len(basis)):
-    eps2 = g.norm2(basis[i] - basis2[i]) / g.norm2(basis[i])
-    g.message(f"basis {i} resid {eps2}")
-    if i < nsingle:
-        assert eps2 == 0.0
-    else:
-        assert eps2 < 1e-9
-
-for i in range(len(cevec)):
-    eps2 = g.norm2(cevec[i] - cevec2[i]) / g.norm2(cevec[i])
-    g.message(f"cevec {i} resid {eps2}")
-    assert eps2 < 1e-9
-
-for i in range(len(feval)):
-    assert (feval[i] - feval2[i]) ** 2.0 < 1e-25
-
-# and load truncated and verify
-for ntrunc in [44]:
-    basis2, cevec2, feval2 = g.load(
-        f"{work_dir}/cevec", {"grids": fgrid, "nmax": ntrunc}
+    # save in fixed layout
+    g.save(
+        f"{work_dir}/cevec",
+        [basis, cevec, feval],
+        g.format.cevec({"nsingle": nsingle, "max_read_blocks": 8, "mpi": mpi_layout}),
     )
 
-    assert min([len(basis), ntrunc]) == len(basis2)
-    assert min([len(cevec), ntrunc]) == len(cevec2)
+    # and load again to verify
+    basis2, cevec2, feval2 = g.load(f"{work_dir}/cevec", {"grids": fgrid})
+
+    assert len(basis) == len(basis2)
+    assert len(cevec) == len(cevec2)
     assert len(feval) == len(feval2)
 
-    for i in range(len(basis2)):
+    for i in range(len(basis)):
         eps2 = g.norm2(basis[i] - basis2[i]) / g.norm2(basis[i])
         g.message(f"basis {i} resid {eps2}")
         if i < nsingle:
@@ -81,10 +59,43 @@ for ntrunc in [44]:
         else:
             assert eps2 < 1e-9
 
-    for i in range(len(cevec2)):
+    for i in range(len(cevec)):
         eps2 = g.norm2(cevec[i] - cevec2[i]) / g.norm2(cevec[i])
         g.message(f"cevec {i} resid {eps2}")
         assert eps2 < 1e-9
 
-    for i in range(len(feval2)):
+    for i in range(len(feval)):
         assert (feval[i] - feval2[i]) ** 2.0 < 1e-25
+
+    # and load truncated and verify
+    for ntrunc in [46, 32, 8]:
+        g.message(
+            f"""
+
+    Test with ntrunc = {ntrunc}
+
+"""
+        )
+        basis2, cevec2, feval2 = g.load(
+            f"{work_dir}/cevec", {"grids": fgrid, "nmax": ntrunc}
+        )
+
+        assert min([len(basis), ntrunc]) == len(basis2)
+        assert min([len(cevec), ntrunc]) == len(cevec2)
+        assert len(feval) == len(feval2)
+
+        for i in range(len(basis2)):
+            eps2 = g.norm2(basis[i] - basis2[i]) / g.norm2(basis[i])
+            g.message(f"basis {i} resid {eps2}")
+            if i < nsingle:
+                assert eps2 == 0.0
+            else:
+                assert eps2 < 1e-9
+
+        for i in range(len(cevec2)):
+            eps2 = g.norm2(cevec[i] - cevec2[i]) / g.norm2(cevec[i])
+            g.message(f"cevec {i} resid {eps2}")
+            assert eps2 < 1e-9
+
+        for i in range(len(feval2)):
+            assert (feval[i] - feval2[i]) ** 2.0 < 1e-25

@@ -61,12 +61,12 @@ def vector_spin_color(grid, spin_ndim, color_ndim):
     return gpt_object(grid, ot_vector_spin_color(spin_ndim, color_ndim))
 
 
-def vsinglet(grid, n):
-    return gpt_object(grid, ot_vsinglet(n))
+def vector_singlet(grid, n):
+    return gpt_object(grid, ot_vector_singlet(n))
 
 
-def msinglet(grid, n):
-    return gpt_object(grid, ot_msinglet(n))
+def matrix_singlet(grid, n):
+    return gpt_object(grid, ot_matrix_singlet(n))
 
 
 ###
@@ -116,12 +116,14 @@ def str_to_otype(s):
             "ot_matrix_su_n_fundamental_algebra",
             "ot_matrix_su_n_adjoint_group",
             "ot_matrix_su_n_adjoint_algebra",
-            "ot_vsinglet",
-            "ot_vsinglet4",
-            "ot_vsinglet10",
-            "ot_msinglet",
-            "ot_msinglet4",
-            "ot_msinglet10",
+            "ot_vector_singlet",
+            "ot_vector_singlet4",
+            "ot_vector_singlet10",
+            "ot_vector_singlet60",
+            "ot_matrix_singlet",
+            "ot_matrix_singlet4",
+            "ot_matrix_singlet10",
+            "ot_matrix_singlet60",
         ]
     )
 
@@ -136,11 +138,11 @@ def complex(grid):
 
 
 def vcomplex(grid, n):
-    return vsinglet(grid, n)
+    return vector_singlet(grid, n)
 
 
 def mcomplex(grid, n):
-    return msinglet(grid, n)
+    return matrix_singlet(grid, n)
 
 
 def mcolor(grid):

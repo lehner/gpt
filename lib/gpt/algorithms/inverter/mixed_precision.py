@@ -17,14 +17,18 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.algorithms import base
 
 
-class mixed_precision:
+class mixed_precision(base):
     def __init__(self, inverter, inner_precision, outer_precision):
+        super().__init__()
         self.inverter = inverter
         self.inner_precision = inner_precision
         self.outer_precision = outer_precision
 
     def __call__(self, mat):
         matrix = mat.converted(self.inner_precision)
-        return self.inverter(matrix).converted(self.outer_precision)
+        return self.inverter(matrix).converted(
+            self.outer_precision, self.timed_function
+        )

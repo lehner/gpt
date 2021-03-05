@@ -104,42 +104,40 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms, int 
   }
 }
 
-_eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
+_eval_factor_ eval_mul_factor(std::vector<cgpt_Lattice_base*> * vdst, _eval_factor_ lhs, _eval_factor_ rhs, int unary, bool ac, ComplexD coef) {
 
   _eval_factor_ dst;
   dst.unary = 0;
+  dst.type = _eval_factor_::LATTICE;
+  if (vdst)
+    dst.vlattice = *vdst;
 
   if (lhs.type == _eval_factor_::LATTICE) {
     if (rhs.type == _eval_factor_::LATTICE) {
-      dst.type = _eval_factor_::LATTICE;
-      eval_mul_vlat_vlat(dst.vlattice, lhs.vlattice, lhs.unary, rhs.vlattice, rhs.unary, unary);
+      eval_mul_vlat_vlat(dst.vlattice, lhs.vlattice, lhs.unary, rhs.vlattice, rhs.unary, unary, ac, coef);
     } else if (rhs.type == _eval_factor_::ARRAY) {
-      dst.type = _eval_factor_::LATTICE;
-      eval_matmul_vlat(dst.vlattice, lhs.vlattice, lhs.unary, rhs.array, rhs.v_otype, rhs.unary, unary, false);
+      eval_matmul_vlat(dst.vlattice, lhs.vlattice, lhs.unary, rhs.array, rhs.v_otype, rhs.unary, unary, false, ac, coef);
     } else if (rhs.type == _eval_factor_::GAMMA) {
       ASSERT(rhs.unary == 0);
-      dst.type = _eval_factor_::LATTICE;
-      dst.vlattice.resize(1);
+      dst.vlattice.resize(1, 0);
       ASSERT(lhs.vlattice.size() == 1);
-      dst.vlattice[0] = lhs.vlattice[0]->gammamul( 0, false, rhs.gamma, lhs.unary, unary, false);
+      dst.vlattice[0] = lhs.vlattice[0]->gammamul( dst.vlattice[0], ac, rhs.gamma, lhs.unary, unary, false, coef);
     } else {
       ASSERT(0);
     }
   } else if (lhs.type == _eval_factor_::ARRAY) {
     ASSERT(lhs.unary == 0);
     if (rhs.type == _eval_factor_::LATTICE) {
-      dst.type = _eval_factor_::LATTICE;
-      eval_matmul_vlat(dst.vlattice, rhs.vlattice, rhs.unary, lhs.array, lhs.v_otype, lhs.unary, unary, true);
+      eval_matmul_vlat(dst.vlattice, rhs.vlattice, rhs.unary, lhs.array, lhs.v_otype, lhs.unary, unary, true, ac, coef);
     } else {
       ASSERT(0);
     }
   } else if (lhs.type == _eval_factor_::GAMMA) {
     ASSERT(lhs.unary == 0);
     if (rhs.type == _eval_factor_::LATTICE) {
-      dst.type = _eval_factor_::LATTICE;
-      dst.vlattice.resize(1);
+      dst.vlattice.resize(1, 0);
       ASSERT(rhs.vlattice.size() == 1);
-      dst.vlattice[0] = rhs.vlattice[0]->gammamul( 0, false, lhs.gamma, rhs.unary, unary, true);
+      dst.vlattice[0] = rhs.vlattice[0]->gammamul( dst.vlattice[0], ac, lhs.gamma, rhs.unary, unary, true, coef);
     } else {
       ASSERT(0);
     }
@@ -147,10 +145,13 @@ _eval_factor_ eval_mul_factor(_eval_factor_ lhs, _eval_factor_ rhs, int unary) {
     ASSERT(0);
   }
 
+  if (vdst)
+    *vdst = dst.vlattice;
+
   return dst;
 }
 
-std::vector<cgpt_Lattice_base*> eval_term(std::vector<_eval_factor_>& factors, int term_unary) {
+std::vector<cgpt_Lattice_base*> eval_term(std::vector<cgpt_Lattice_base*> * dst, std::vector<_eval_factor_>& factors, int term_unary, bool ac, ComplexD coef) {
   ASSERT(factors.size() > 1);
 
   //f[im2] = eval_mul_factor(f[im2],f[im1]);
@@ -162,7 +163,11 @@ std::vector<cgpt_Lattice_base*> eval_term(std::vector<_eval_factor_>& factors, i
   for (size_t i = factors.size() - 1; i > 0; i--) {
     auto& im1 = factors[i];
     auto& im2 = factors[i-1];
-    im2 = eval_mul_factor(im2,im1, i == 1 ? term_unary : 0); // apply unary operator in last step
+    if (i == 1) {
+      im2 = eval_mul_factor(dst,im2,im1,term_unary,ac,coef); // apply unary operator in last step
+    } else {
+      im2 = eval_mul_factor(0,im2,im1,0,false,1.0);
+    }
     if (i != factors.size() - 1)
       im1.release();
   }
@@ -173,6 +178,8 @@ std::vector<cgpt_Lattice_base*> eval_term(std::vector<_eval_factor_>& factors, i
 
 void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>& terms,int unary,bool ac) {
 
+  Timer("prepare");
+  
   // class A)
   // first separate all terms that are a pure linear combination:
   //   result_class_a = unary(A + B + C) taken using compatible_linear_combination
@@ -204,8 +211,14 @@ void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>
 
     } else {
 
-      auto factor_vlattice = eval_term(term.factors, unary);
-
+      Timer("eval");
+      if (terms.size() == 1) {
+	eval_term(&dst,term.factors,unary,ac,term.coefficient);
+	return;
+      }
+      auto factor_vlattice = eval_term(0, term.factors, unary, false, 1.0);
+      Timer("prepare");
+      
       auto & a = terms_b;
       if (a.size() == 0) {
 	a.resize(factor_vlattice.size());
@@ -222,26 +235,39 @@ void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>
   for (int j=0;j<NUM_FACTOR_UNARY;j++) {
     auto & a = terms_a[j];
     if (a.size() > 0) {
-      if (dst.size() == 0)
-	dst.resize(a.size(),0);
-      ASSERT(dst.size() == a.size());
 
       bool mtrans = (j & BIT_TRANS) != 0;
+      bool trace = (unary & BIT_COLORTRACE) != 0;
+      size_t n_dst = trace ? 1 : a.size();
+      
+      if (dst.size() == 0)
+	dst.resize(n_dst,0);
+
+      ASSERT(dst.size() == n_dst);
+
       int singlet_rank = a[0][0].get_lat()->singlet_rank();
       int singlet_dim  = size_to_singlet_dim(singlet_rank, (int)a.size());
 
       if (singlet_rank == 2) {
 	for (int r=0;r<singlet_dim;r++) {
 	  for (int s=0;s<singlet_dim;s++) {
-	    int idx1 = r*singlet_dim + s;
-	    int idx2 = mtrans ? (s*singlet_dim + r) : idx1;
-	    dst[idx1] = a[idx2][0].get_lat()->compatible_linear_combination(dst[idx1],ac, a[idx2], j, unary);
+	    int idx1 = trace ? 0 : (r*singlet_dim + s);
+	    int idx2 = mtrans ? (s*singlet_dim + r) : (r*singlet_dim + s);
+	    if (trace && s != r)
+	      continue;
+	    Timer("linear combination");
+	    dst[idx1] = a[idx2][0].get_lat()->compatible_linear_combination(dst[idx1],ac, a[idx2], j, unary | (trace ? BIT_SPINTRACE : 0));
+	    Timer("prepare");
+	    if (trace)
+	      ac=true;
 	  }
 	}
       } else {
-	for (int l=0;l<(int)a.size();l++) {
+	Timer("linear combination");
+	for (int l=0;l<(int)dst.size();l++) {
 	  dst[l] = a[l][0].get_lat()->compatible_linear_combination(dst[l],ac, a[l], j, unary);
 	}
+	Timer("prepare");
       }
       ac=true;
     }
@@ -254,11 +280,14 @@ void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>
 	dst.resize(a.size(),0);
       ASSERT(dst.size() == a.size());
       for (int l=0;l<(int)a.size();l++) {
+	Timer("linear combination");
 	dst[l] = a[l][0].get_lat()->compatible_linear_combination(dst[l],ac, a[l], 0, 0); // unary operators have been applied above
+	Timer("prepare");
       }
     }
   }
 
+  Timer("prepare");
   for (auto& vterm : terms_b)
     for (auto& term : vterm)
       term.release();
@@ -316,13 +345,13 @@ EXPORT(eval,{
     // General code path:
     eval_general(dst,terms,unary,ac);
 
+    PyObject* ret = PyList_New(dst.size());
     if (new_lattice) {
-      PyObject* ret = PyList_New(dst.size());
       for (long i=0;i<dst.size();i++)
 	PyList_SetItem(ret,i,dst[i]->to_decl());
-      return ret;
+    } else {
+      for (long i=0;i<dst.size();i++)
+	PyList_SetItem(ret,i,PyLong_FromVoidPtr(dst[i]));
     }
-
-    return PyLong_FromLong(0);
-    
+    return ret;    
   });

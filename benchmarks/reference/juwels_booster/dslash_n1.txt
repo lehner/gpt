@@ -1,22 +1,13 @@
-AcceleratorCudaInit: rank 1 setting device to node rank 1
-AcceleratorCudaInit: rank 3 setting device to node rank 3
-SLURM detected
-AcceleratorCudaInit[0]: ========================
-AcceleratorCudaInit[0]: Device Number    : 0
-AcceleratorCudaInit[0]: ========================
-AcceleratorCudaInit[0]: Device identifier: A100-SXM4-40GB
-AcceleratorCudaInit[0]:   totalGlobalMem: 42506321920
-AcceleratorCudaInit[0]:   managedMemory: 1
-AcceleratorCudaInit[0]:   isMultiGpuBoard: 0
-AcceleratorCudaInit[0]:   warpSize: 32
-AcceleratorCudaInit[0]:   pciBusID: 3
-AcceleratorCudaInit[0]:   pciDeviceID: 0
-AcceleratorCudaInit: rank 0 setting device to node rank 0
+# srun -N1 -n4 benchmarks/dslash.py --shm 2048 --device-mem 16000 --grid 64.32.32.32 --mpi 4.1.1.1 --accelerator-threads 8 --Ls 12
+OPENMPI detected
+AcceleratorCudaInit: using default device 
+AcceleratorCudaInit: assume user either uses a) IBM jsrun, or 
+AcceleratorCudaInit: b) invokes through a wrapping script to set CUDA_VISIBLE_DEVICES, UCX_NET_DEVICES, and numa binding 
+AcceleratorCudaInit: Configure options --enable-summit, --enable-select-gpu=no 
 AcceleratorCudaInit: ================================================
-AcceleratorCudaInit: rank 2 setting device to node rank 2
 SharedMemoryMpi:  World communicator of size 4
 SharedMemoryMpi:  Node  communicator of size 4
-SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x14d540000000 for comms buffers
+0SharedMemoryMpi:  SharedMemoryMPI.cc acceleratorAllocDevice 2147483648bytes at 0x14b880000000 for comms buffers 
 
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
@@ -31,7 +22,7 @@ __|_   GGGG    R   R   III    DDDD      _|__
 __|_                                    _|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
 
 
 Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
@@ -45,130 +36,42 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-Current Grid git commit hash=5cffa05c7e2965216200e7fff3183fce3f15c8bb: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+Current Grid git commit hash=9c9566b9c9686a63755f39bb8910cf5325ef7177: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
 
-Grid : Message : ================================================
-Grid : Message : MPI is initialised and logging filters activated
-Grid : Message : ================================================
-Grid : Message : Requested 1073741824 byte stencil comms buffers
-Grid : Message : MemoryManager Cache 34005057536 bytes
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 2147483648 byte stencil comms buffers 
+Grid : Message : MemoryManager Cache 16777216000 bytes 
 Grid : Message : MemoryManager::Init() setting up
 Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
 Grid : Message : MemoryManager::Init() Non unified: Caching accelerator data in dedicated memory
 Grid : Message : MemoryManager::Init() Using cudaMalloc
 
 =============================================
-              Initialized GPT
-    Copyright (C) 2020 Christoph Lehner
+              Initialized GPT                
+     Copyright (C) 2020 Christoph Lehner     
 =============================================
-GPT :       2.433877 s :
+GPT :       1.543473 s : 
                        : DWF Dslash Benchmark with
-                       :     fdimensions  : [48, 24, 24, 24]
+                       :     fdimensions  : [64, 32, 32, 32]
                        :     precision    : single
                        :     Ls           : 12
-                       :
-GPT :      19.127511 s : 1000 applications of Dhop
-                       :     Time to complete            : 1.22 s
-                       :     Total performance           : 8584.50 GFlops/s
-                       :     Effective memory bandwidth  : 5931.11 GB/s
-GPT :      19.128420 s :
+                       : 
+GPT :       7.958636 s : 1000 applications of Dhop
+                       :     Time to complete            : 2.93 s
+                       :     Total performance           : 11325.46 GFlops/s
+                       :     Effective memory bandwidth  : 7824.86 GB/s
+GPT :       7.959499 s : 
                        : DWF Dslash Benchmark with
-                       :     fdimensions  : [48, 24, 24, 24]
+                       :     fdimensions  : [64, 32, 32, 32]
                        :     precision    : double
                        :     Ls           : 12
-                       :
-GPT :      37.983417 s : 1000 applications of Dhop
-                       :     Time to complete            : 3.27 s
-                       :     Total performance           : 3215.74 GFlops/s
-                       :     Effective memory bandwidth  : 4443.56 GB/s
+                       : 
+GPT :      17.420620 s : 1000 applications of Dhop
+                       :     Time to complete            : 5.78 s
+                       :     Total performance           : 5749.77 GFlops/s
+                       :     Effective memory bandwidth  : 7945.14 GB/s
 =============================================
-               Finalized GPT
-=============================================
-
-
-SLURM detected
-AcceleratorCudaInit[0]: ========================
-AcceleratorCudaInit[0]: Device Number    : 0
-AcceleratorCudaInit[0]: ========================
-AcceleratorCudaInit[0]: Device identifier: A100-SXM4-40GB
-AcceleratorCudaInit[0]:   totalGlobalMem: 42506321920
-AcceleratorCudaInit[0]:   managedMemory: 1
-AcceleratorCudaInit[0]:   isMultiGpuBoard: 0
-AcceleratorCudaInit[0]:   warpSize: 32
-AcceleratorCudaInit[0]:   pciBusID: 3
-AcceleratorCudaInit[0]:   pciDeviceID: 0
-AcceleratorCudaInit: rank 0 setting device to node rank 0
-AcceleratorCudaInit: ================================================
-AcceleratorCudaInit: rank 2 setting device to node rank 2
-AcceleratorCudaInit: rank 1 setting device to node rank 1
-AcceleratorCudaInit: rank 3 setting device to node rank 3
-SharedMemoryMpi:  World communicator of size 4
-SharedMemoryMpi:  Node  communicator of size 4
-SharedMemoryMpi:  SharedMemoryMPI.cc cudaMalloc 1073741824bytes at 0x149020000000 for comms buffers
-
-__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
-__|_                                    _|__
-__|_   GGGG    RRRR    III    DDDD      _|__
-__|_  G        R   R    I     D   D     _|__
-__|_  G        R   R    I     D    D    _|__
-__|_  G  GG    RRRR     I     D    D    _|__
-__|_  G   G    R  R     I     D   D     _|__
-__|_   GGGG    R   R   III    DDDD      _|__
-__|_                                    _|__
-__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
-  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-
-
-Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-Current Grid git commit hash=5cffa05c7e2965216200e7fff3183fce3f15c8bb: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
-
-Grid : Message : ================================================
-Grid : Message : MPI is initialised and logging filters activated
-Grid : Message : ================================================
-Grid : Message : Requested 1073741824 byte stencil comms buffers
-Grid : Message : MemoryManager Cache 34005057536 bytes
-Grid : Message : MemoryManager::Init() setting up
-Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
-Grid : Message : MemoryManager::Init() Non unified: Caching accelerator data in dedicated memory
-Grid : Message : MemoryManager::Init() Using cudaMalloc
-
-=============================================
-              Initialized GPT
-    Copyright (C) 2020 Christoph Lehner
-=============================================
-GPT :       2.466333 s :
-                       : DWF Dslash Benchmark with
-                       :     fdimensions  : [32, 32, 32, 64]
-                       :     precision    : single
-                       :     Ls           : 12
-                       :
-GPT :      55.401937 s : 1000 applications of Dhop
-                       :     Time to complete            : 3.99 s
-                       :     Total performance           : 8331.23 GFlops/s
-                       :     Effective memory bandwidth  : 5756.12 GB/s
-GPT :      55.402848 s :
-                       : DWF Dslash Benchmark with
-                       :     fdimensions  : [32, 32, 32, 64]
-                       :     precision    : double
-                       :     Ls           : 12
-                       :
-GPT :     117.193592 s : 1000 applications of Dhop
-                       :     Time to complete            : 10.74 s
-                       :     Total performance           : 3093.78 GFlops/s
-                       :     Effective memory bandwidth  : 4275.04 GB/s
-=============================================
-               Finalized GPT
+               Finalized GPT                 
 =============================================

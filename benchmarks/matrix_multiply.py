@@ -13,7 +13,7 @@ rng = g.random("benchmark")
 # main test loop
 for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
-    N = 100
+    N = 10
     Nwarmup = 5
     g.message(
         f"""
@@ -27,6 +27,7 @@ Matrix Multiply Benchmark with
     for tp in [g.ot_matrix_color(3), g.ot_matrix_spin(4), g.ot_matrix_spin_color(4, 3)]:
         one = g.lattice(grid, tp)
         two = g.lattice(grid, tp)
+        three = g.lattice(grid, tp)
         rng.cnormal([one, two])
 
         # Rank inner product
@@ -37,7 +38,7 @@ Matrix Multiply Benchmark with
         for it in range(N + Nwarmup):
             if it >= Nwarmup:
                 dt -= g.time()
-            g(one * two)
+            g.eval(three, one * two)
             if it >= Nwarmup:
                 dt += g.time()
 
@@ -46,7 +47,7 @@ Matrix Multiply Benchmark with
         g.message(
             f"""{N} matrix_multiply
     Object type                 : {tp.__name__}
-    Time to complete            : {dt:.2f} s
+    Time to complete            : {dt:.2g} s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
 """
         )

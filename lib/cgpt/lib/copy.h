@@ -22,18 +22,6 @@ struct cgpt_gm_view {
   gm_view view;
 };
 
-static memory_type cgpt_memory_type_from_string(const std::string& s) {
-  if (s == "none") {
-    return mt_none;
-  } else if (s == "host") {
-    return mt_host;
-  } else if (s == "accelerator") {
-    return mt_accelerator;
-  } else {
-    ERR("Unknown memory_type %s",s.c_str());
-  }
-}
-
 static cgpt_gm_view* cgpt_add_views(cgpt_gm_view* a, cgpt_gm_view* b) {
   if (a->view.blocks.size() && b->view.blocks.size()) {
     ASSERT(a->comm == b->comm);
@@ -112,7 +100,7 @@ static cgpt_gm_view* cgpt_view_embeded_in_communicator(cgpt_gm_view* v, GridBase
   
   rank_map[xf.rank] = (uint64_t)r->rank;
   xf.global_sum(rank_map);
-  
+
   thread_for(i, v->view.blocks.size(), {
       auto & s = v->view.blocks[i];
       auto & d = r->view.blocks[i];

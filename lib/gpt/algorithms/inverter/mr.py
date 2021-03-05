@@ -19,20 +19,21 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.algorithms import base_iterative
 
 
-class mr:
+class mr(base_iterative):
 
     # Y. Saad calls it MR, states mat must be positive definite
     # SciPy, Wikipedia call it MINRES, state mat must be symmetric
 
     @g.params_convention(eps=1e-15, maxiter=1000000, relax=1.0)
     def __init__(self, params):
+        super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.relax = params["relax"]
-        self.history = None
 
     def __call__(self, mat):
 
@@ -42,11 +43,9 @@ class mr:
             mat = mat.mat
             # remove wrapper for performance benefits
 
-        def inv(psi, src):
-            self.history = []
-            verbose = g.default.is_verbose("mr")
+        @self.timed_function
+        def inv(psi, src, t):
 
-            t = g.timer("mr")
             t("setup")
 
             r, mmr = g.copy(src), g.copy(src)
@@ -78,20 +77,16 @@ class mr:
                 r2 = g.axpy_norm2(r, -alpha, mmr, r)
 
                 t("other")
-                self.history.append(r2)
 
-                if verbose:
-                    g.message("mr: res^2[ %d ] = %g, target = %g" % (k, r2, rsq))
+                self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
-                    if verbose:
-                        t()
-                        g.message(
-                            "mr: converged in %d iterations, took %g s"
-                            % (k + 1, t.total)
-                        )
-                        g.message(t)
-                    break
+                    self.log(f"converged in {k+1} iterations")
+                    return
+
+            self.log(
+                f"NOT converged in {k+1} iterations;  squared residual {r2:e} / {rsq:e}"
+            )
 
         return g.matrix_operator(
             mat=inv,

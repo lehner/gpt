@@ -16,7 +16,15 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import resource, gpt, cgpt
+import resource, gpt, cgpt, os
+
+
+class accelerator:
+    pass
+
+
+class host:
+    pass
 
 
 def mem_host_available():
@@ -73,8 +81,9 @@ def mem_report(details=True):
                     "Created at time",
                 )
             )
+        smsg_prev = ""
         for i, page in enumerate(mem_book):
-            grid, otype, created = mem_book[page]
+            grid, otype, created, stack = mem_book[page]
             g_gb = (
                 grid.fsites
                 * grid.precision.nbytes
@@ -86,6 +95,20 @@ def mem_report(details=True):
             g_tot_gb += g_gb
             l_tot_gb += l_gb
             if details:
+                if stack is not None:
+                    sfmt = "\n" + (" " * 10) + f"%-{73}s  %s"
+                    smsg = ""
+                    for iline, line in enumerate(stack):
+                        smsg += sfmt % (
+                            (" " * iline) + os.path.basename(line[0]),
+                            line[1].strip(),
+                        )
+                    if smsg != smsg_prev:
+                        smsg_prev = smsg
+                        gpt.message(
+                            "------------------------------------------------------------------------------------------------------------------------------------"
+                        )
+                        gpt.message(smsg + "\n")
                 gpt.message(
                     fmt
                     % (

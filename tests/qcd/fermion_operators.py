@@ -10,7 +10,8 @@ import sys, cmath
 
 # load configuration
 rng = g.random("test")
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
+L = [8, 8, 8, 16]
+U = g.qcd.gauge.random(g.grid(L, g.double), rng)
 
 # do everything in single-precision
 U = g.convert(U, g.single)
@@ -191,6 +192,34 @@ g.message(f"Gauge transformation check {eps2}")
 assert eps2 < 1e-12
 
 
+# test twisted boundary momentum phase
+U_unit = g.qcd.gauge.unit(grid)
+theta = 0.91231
+quark0 = g.qcd.fermion.mobius(
+    U_unit,
+    Ls=8,
+    mass=0.1,
+    b=1,
+    c=0,
+    M5=1.8,
+    boundary_phases=[np.exp(1j * theta), 1, 1, 1],
+)
+q0prop = quark0.propagator(
+    inv.preconditioned(pc.eo2_ne(), inv.cg(eps=1e-7, maxiter=1000))
+)
+src = g.vspincolor(U_unit[0].grid)
+src[:] = 0
+src[:, :, :, 0, 0, 0] = 1
+prop = g(q0prop * g.exp_ixp(np.array([theta / L[0], 0, 0, 0])) * src)
+prop_1000_over_0000 = complex(prop[1, 0, 0, 2, 0, 0]) / complex(prop[0, 0, 0, 2, 0, 0])
+eps = abs(prop_1000_over_0000) - 1
+g.message(f"Twisted boundary covariance is a phase: {eps}")
+assert eps < 1e-6
+eps = abs(prop_1000_over_0000 - np.exp(1j * theta / L[0]))
+g.message(f"Twisted boundary covariance as expected momentum: {eps}")
+assert eps < 1e-6
+
+
 # test instantiation of other actions
 rhq = g.qcd.fermion.rhq_columbia(
     U, mass=4.0, cp=3.0, zeta=2.5, boundary_phases=[1, 1, 1, -1]
@@ -215,6 +244,16 @@ wilson_clover_params = {
     "isAnisotropic": True,
     "boundary_phases": [1.0, -1.0, 1.0, -1.0],
 }
+wilson_clover_open_params = {
+    "kappa": 0.13500,
+    "csw_r": 1.978,
+    "csw_t": 1.978,
+    "cF": 1.3,
+    "xi_0": 1,
+    "nu": 1,
+    "isAnisotropic": False,
+    "boundary_phases": [1.0, 1.0, 1.0, 0.0],
+}
 wilson_clover_matrices_rb = {
     ".Mooee": [
         (-964.604747199766 + 1955.3204837295887j),
@@ -228,6 +267,20 @@ wilson_clover_matrices_rb = {
 wilson_clover_matrices = {
     "": [(-946.8714968698364 - 427.1253034080037j)],
     ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
+}
+wilson_clover_matrices_rb_open = {
+    ".Mooee": [
+        (-786.8010863449176 + 1070.7776954461517j),
+        (-799.9912213689927 + 868.0454954800668j),
+    ],
+    ".Meooe": [
+        (-515.6416289919217 - 727.8655685760094j),
+        (-186.16467422408803 - 815.6089918787717j),
+    ],
+}
+wilson_clover_matrices_open = {
+    "": [(-1634.2615676797234 + 239.27037187495998j)],
+    ".Mdiag": [(-1239.3535155227526 - 1158.5295177146759j)],
 }
 test_suite = {
     "wilson_clover": {
@@ -250,6 +303,18 @@ test_suite = {
         "params": wilson_clover_params,
         "matrices_rb": wilson_clover_matrices_rb,
         "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_openbc_reference": {
+        "fermion": g.qcd.fermion.reference.wilson_clover,
+        "params": wilson_clover_open_params,
+        "matrices_rb": wilson_clover_matrices_rb_open,
+        "matrices": wilson_clover_matrices_open,
+    },
+    "wilson_clover_openbc": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": wilson_clover_open_params,
+        "matrices_rb": wilson_clover_matrices_rb_open,
+        "matrices": wilson_clover_matrices_open,
     },
     "zmobius": {
         "fermion": g.qcd.fermion.zmobius,
@@ -340,6 +405,12 @@ for precision in [g.single, g.double]:
         grid_rb = fermion.F_grid_eo
         src = rng.cnormal(g.vspincolor(grid_rb))
         dst = rng.cnormal(g.vspincolor(grid_rb))
+
+        # apply open boundaries to fields if necessary
+        if test["params"]["boundary_phases"][-1] == 0.0:
+            g.qcd.fermion.apply_open_boundaries(src)
+            g.qcd.fermion.apply_open_boundaries(dst)
+
         g.message(f"<dst|src> = {g.inner_product(dst, src)}")
         for matrix in test["matrices_rb"]:
             finger_print = []
@@ -366,6 +437,12 @@ for precision in [g.single, g.double]:
         grid = fermion.F_grid
         src = rng.cnormal(g.vspincolor(grid))
         dst = rng.cnormal(g.vspincolor(grid))
+
+        # apply open boundaries to fields if necessary
+        if test["params"]["boundary_phases"][-1] == 0.0:
+            g.qcd.fermion.apply_open_boundaries(src)
+            g.qcd.fermion.apply_open_boundaries(dst)
+
         for matrix in test["matrices"]:
             finger_print = []
             mat = eval(f"fermion{matrix}")

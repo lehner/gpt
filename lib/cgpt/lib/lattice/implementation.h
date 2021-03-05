@@ -85,24 +85,24 @@ public:
   }
 
   // ac == { true : add result to dst, false : replace dst }
-  virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) {
+  virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr, ComplexD coef) {
     if (typeid(T) == typeid(iSinglet<vCoeff_t>) && b->type() != type()) {
       // singlet multiplication always commutes, can save half cost of instantiation
-      return b->mul(dst,ac,this,unary_b,unary_a,unary_expr);
+      return b->mul(dst,ac,this,unary_b,unary_a,unary_expr,coef);
     }
-    return cgpt_lattice_mul(dst,ac,unary_a,l,unary_b,b,unary_expr);
+    return cgpt_lattice_mul(dst,ac,unary_a,l,unary_b,b,unary_expr,coef);
   }
 
   virtual cgpt_Lattice_base* compatible_linear_combination(cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr) {
     return cgpt_compatible_linear_combination(l,dst,ac,f,unary_factor,unary_expr);
   }
 
-  virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse) {
-    return cgpt_lattice_matmul(dst,ac,unary_a,l,b,bot,unary_b,unary_expr,reverse);
+  virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse, ComplexD coef) {
+    return cgpt_lattice_matmul(dst,ac,unary_a,l,b,bot,unary_b,unary_expr,reverse,coef);
   }
 
-  virtual cgpt_Lattice_base* gammamul(cgpt_Lattice_base* dst, bool ac, Gamma::Algebra gamma, int unary_a, int unary_expr, bool reverse) {
-    return cgpt_lattice_gammamul(dst,ac,unary_a,l,gamma,unary_expr,reverse);
+  virtual cgpt_Lattice_base* gammamul(cgpt_Lattice_base* dst, bool ac, Gamma::Algebra gamma, int unary_a, int unary_expr, bool reverse, ComplexD coef) {
+    return cgpt_lattice_gammamul(dst,ac,unary_a,l,gamma,unary_expr,reverse,coef);
   }
 
   virtual void copy_from(cgpt_Lattice_base* _src) {
@@ -260,26 +260,6 @@ public:
   
   virtual GridBase* get_grid() {
     return l.Grid();
-  }
-
-  virtual PyObject* advise(std::string type) {
-    if (type == "infrequent_use") {
-      l.Advise() = AdviseInfrequentUse;
-    } else {
-      ERR("Unknown advise %s",type.c_str());
-    }    
-    return PyLong_FromLong(0);
-  }
-
-  virtual PyObject* prefetch(std::string type) {
-    if (type == "accelerator") {
-      //l.AcceleratorPrefetch();
-    } else if (type == "host") {
-      //l.HostPrefetch();
-    } else {
-      ERR("Unknown prefetch %s",type.c_str());
-    }
-    return PyLong_FromLong(0);
   }
 
 };

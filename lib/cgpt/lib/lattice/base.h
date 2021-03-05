@@ -35,9 +35,9 @@ public:
   virtual void unary_from(cgpt_Lattice_base* src, PyObject* params) = 0;
   virtual void binary_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b, PyObject* params) = 0;
   virtual void ternary_from(cgpt_Lattice_base* question, cgpt_Lattice_base* yes, cgpt_Lattice_base* no, PyObject* params) = 0;
-  virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) = 0; // unary_expr(unary_a(this) * unary_b(b))
-  virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse) = 0;
-  virtual cgpt_Lattice_base* gammamul(cgpt_Lattice_base* dst, bool ac, Gamma::Algebra gamma, int unary_a, int unary_expr, bool reverse) = 0;
+  virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr, ComplexD coef) = 0; // unary_expr(unary_a(this) * unary_b(b)) * coef
+  virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse, ComplexD coef) = 0;
+  virtual cgpt_Lattice_base* gammamul(cgpt_Lattice_base* dst, bool ac, Gamma::Algebra gamma, int unary_a, int unary_expr, bool reverse, ComplexD coef) = 0;
   virtual void cshift_from(cgpt_Lattice_base* src, int dir, int off) = 0;
   virtual cgpt_Lattice_base* compatible_linear_combination(cgpt_Lattice_base* dst, bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr) = 0;
   virtual std::string type() = 0;
@@ -62,8 +62,6 @@ public:
   virtual void invert_matrix(std::vector<cgpt_Lattice_base*>& matrix_inv, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0;
   virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0; // this determines type of matrix[0]
   virtual GridBase* get_grid() = 0;
-  virtual PyObject* advise(std::string type) = 0;
-  virtual PyObject* prefetch(std::string type) = 0;
 };
 
 template<class T> class cgpt_Lattice;

@@ -56,11 +56,11 @@ tol_links = (grid_f.precision.eps * 10) ** 2.0
 tol_operator = (grid_f.precision.eps * 10) ** 2.0
 
 # setup fine basis
-basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
+basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f // 2)]
 rng.cnormal(basis_f)
 
 # split fine basis into chiral halfs
-g.coarse.split_chiral(basis_f)
+g.qcd.fermion.coarse.split_chiral(basis_f)
 
 # setup fine block map
 bm_f = g.block.map(grid_c, basis_f)
@@ -73,10 +73,10 @@ for i in range(nblockortho):
 # create coarse link fields
 A_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
 Asaved_c = [g.mcomplex(grid_c, nbasis_f) for __ in range(9)]
-g.coarse.create_links(
+g.qcd.fermion.coarse.create_links(
     A_c, mat_f, basis_f, {"make_hermitian": False, "save_links": False}
 )
-g.coarse.create_links(
+g.qcd.fermion.coarse.create_links(
     Asaved_c, mat_f, basis_f, {"make_hermitian": False, "save_links": True}
 )
 
@@ -91,7 +91,7 @@ g.message("Tests for links passed for all directions")
 del Asaved_c
 
 # create coarse operator from links
-mat_c = g.qcd.fermion.coarse(A_c, level=0)
+mat_c = g.qcd.fermion.coarse_fermion(A_c, level=0)
 
 # setup coarse vectors
 vec_in_c = g.vcomplex(grid_c, nbasis_f)
@@ -113,11 +113,11 @@ g.message("Test passed for coarse operator, %e <= %e" % (err2, tol_operator))
 # Done with fine grid, now test on coarse #####################################
 
 # setup coarse basis
-basis_c = [g.vcomplex(grid_c, nbasis_f) for __ in range(nbasis_c)]
+basis_c = [g.vcomplex(grid_c, nbasis_f) for __ in range(nbasis_c // 2)]
 rng.cnormal(basis_c)
 
 # split coarse basis into chiral halfs
-g.coarse.split_chiral(basis_c)
+g.qcd.fermion.coarse.split_chiral(basis_c)
 
 # setup coarse block map
 bm_c = g.block.map(grid_cc, basis_c)
@@ -130,10 +130,10 @@ for i in range(nblockortho):
 # create coarse coarse link fields
 A_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
 Asaved_cc = [g.mcomplex(grid_cc, nbasis_c) for __ in range(9)]
-g.coarse.create_links(
+g.qcd.fermion.coarse.create_links(
     A_cc, mat_c, basis_c, {"make_hermitian": False, "save_links": False}
 )
-g.coarse.create_links(
+g.qcd.fermion.coarse.create_links(
     Asaved_cc, mat_c, basis_c, {"make_hermitian": False, "save_links": True}
 )
 
@@ -148,7 +148,7 @@ g.message("Tests for links passed for all directions")
 del Asaved_cc
 
 # create coarse operator from links
-mat_cc = g.qcd.fermion.coarse(A_cc, level=1)
+mat_cc = g.qcd.fermion.coarse_fermion(A_cc, level=1)
 
 # setup coarse coarse vectors
 vec_in_cc = g.vcomplex(grid_cc, nbasis_c)
@@ -173,7 +173,7 @@ g.message("Test passed for coarse coarse operator, %e <= %e" % (err2, tol_operat
 
 # setup fields
 rng.cnormal(A_c)
-mat_c = g.qcd.fermion.coarse(A_c, level=0)
+mat_c = g.qcd.fermion.coarse_fermion(A_c, level=0)
 vec_out_link_c, vec_out_mat_c = g.lattice(vec_in_c), g.lattice(vec_in_c)
 vec_out_link_c[:] = 0.0
 vec_out_link_c[:] = 0.0
@@ -197,7 +197,7 @@ g.message("Test passed for coarse links, %e <= %e" % (diff2, tol))
 
 # setup fields
 rng.cnormal(A_cc)
-mat_cc = g.qcd.fermion.coarse(A_cc, level=1)
+mat_cc = g.qcd.fermion.coarse_fermion(A_cc, level=1)
 vec_out_link_cc, vec_out_mat_cc = g.lattice(vec_in_cc), g.lattice(vec_in_cc)
 vec_out_link_cc[:] = 0.0
 vec_out_link_cc[:] = 0.0

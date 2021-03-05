@@ -45,9 +45,10 @@ static Gamma::Algebra gamma_algebra_map[] = {
 
 // declaration
 template<typename T> cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T>& _compatible,cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr);
-template<typename T> cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la,int unary_b, cgpt_Lattice_base* b, int unary_expr);
-template<typename T> cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool reverse);
-template<typename T> cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la, Gamma::Algebra gamma, int unary_expr, bool reverse);
+template<typename T> cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la,int unary_b, cgpt_Lattice_base* b, int unary_expr,ComplexD coef);
+template<typename T> cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la, PyArrayObject* b, std::string& bot,
+							    int unary_b, int unary_expr, bool reverse, ComplexD coef);
+template<typename T> cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice<T>& la, Gamma::Algebra gamma, int unary_expr, bool reverse, ComplexD coef);
 
 // unary
 #include "expression/unary.h"

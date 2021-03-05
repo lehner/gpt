@@ -17,6 +17,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include <set>
 
 typedef void* (* create_lattice_prec_otype)(GridBase* grid);
 std::map<std::string,create_lattice_prec_otype> _create_otype_;
@@ -28,6 +29,12 @@ std::map<std::string,int> _otype_singlet_rank_;
 
 void lattice_init() {
 #define INSTANTIATE(v,t,n) lattice_init_ ## t ## _ ## n();
+#include "instantiate/instantiate.h"
+#undef INSTANTIATE
+}
+
+void lattice_fill_types(std::set<std::string> & types) {
+#define INSTANTIATE(v,t,n) types.insert(get_otype(n<v>()));
 #include "instantiate/instantiate.h"
 #undef INSTANTIATE
 }
@@ -47,7 +54,6 @@ EXPORT(create_lattice,{
     cgpt_convert(_otype,otype);
     cgpt_convert(_prec,prec);
     
-    void* plat = 0;
     std::string tag = prec + ":" + otype;
     auto f = _create_otype_.find(tag);
     if (f == _create_otype_.end()) {
@@ -67,6 +73,20 @@ EXPORT(delete_lattice,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(lattice_types,{
+    std::set<std::string> types;
+    lattice_fill_types(types);
+    
+    PyObject* list = PyList_New(types.size());
+    long i = 0;
+    for (auto & t : types) {
+      PyList_SetItem(list,i++,PyUnicode_FromString(t.c_str()));
+    }
+    
+    return list;
+    
+  });
+
 EXPORT(lattice_set_to_zero,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {
@@ -80,12 +100,41 @@ EXPORT(lattice_set_to_zero,{
   
 EXPORT(lattice_memory_view,{
     void* p;
-    if (!PyArg_ParseTuple(args, "l", &p)) {
+    PyObject* _lattice_view_location;
+    PyObject* _lattice;
+    if (!PyArg_ParseTuple(args, "OlO", &_lattice, &p, &_lattice_view_location)) {
       return NULL;
     }
+
+    std::string lattice_view_location;
+    cgpt_convert(_lattice_view_location,lattice_view_location);
+    memory_type lattice_view_mt = cgpt_memory_type_from_string(lattice_view_location);
     
     cgpt_Lattice_base* l = (cgpt_Lattice_base*)p;
-    return l->memory_view(mt_host);
+    PyObject* r = l->memory_view(lattice_view_mt);
+
+    struct _mvc {
+      PyObject* _lattice;
+      PyObject* _base;
+    };
+
+    _mvc* pm = new _mvc;
+    pm->_lattice = _lattice;
+    Py_INCREF(_lattice);
+    pm->_base = ((PyMemoryViewObject*)r)->mbuf->master.obj;
+    
+    PyObject *capsule =
+      PyCapsule_New((void*)pm, NULL,
+		    [] (PyObject *capsule) -> void { 
+		      _mvc* pm = (_mvc*)PyCapsule_GetPointer(capsule, NULL);
+		      Py_DECREF(pm->_base);
+		      Py_DECREF(pm->_lattice);
+		      delete pm;
+		    });
+
+    ((PyMemoryViewObject*)r)->mbuf->master.obj = capsule;
+
+    return r;
   });
 
 EXPORT(lattice_to_str,{
@@ -142,28 +191,4 @@ EXPORT(lattice_get_checkerboard,{
     }
     cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
     return PyLong_FromLong(dst->get_checkerboard() == Even ? 0 : 1);
-  });
-
-EXPORT(lattice_advise,{
-    void* _dst;
-    PyObject* _type;
-    if (!PyArg_ParseTuple(args, "lO", &_dst,&_type)) {
-      return NULL;
-    }
-    std::string type;
-    cgpt_convert(_type,type);
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-    return dst->advise(type);
-  });
-
-EXPORT(lattice_prefetch,{
-    void* _dst;
-    PyObject* _type;
-    if (!PyArg_ParseTuple(args, "lO", &_dst,&_type)) {
-      return NULL;
-    }
-    std::string type;
-    cgpt_convert(_type,type);
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-    return dst->prefetch(type);
   });

@@ -26,7 +26,6 @@ for i in range(3):
 assert abs(inner_comp - inner) < 1e-14
 assert abs(inner_comp - g.rank_inner_product(lhs, rhs)) < 1e-14
 
-
 # TODO: the following is already implemented for vcomplex but should
 # be implemented for all vectors
 # cwise = lhs * rhs
@@ -216,14 +215,90 @@ for dti in [cv, cm, vsc, msc, vc, mc]:
     g.message(f"Done with {dti.otype.__name__}")
     assert eps == 0.0
 
+# multiplication tester
+def test_multiply(a, b):
+    a_type = a.otype
+    b_type = b.otype
+
+    # no unary
+    mul_lat = g(a * b)
+    c_type = mul_lat.otype
+    mul_lat = mul_lat[0, 0, 0, 0]
+    mul_np = a[0, 0, 0, 0] * b[0, 0, 0, 0]
+    eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+    g.message(f"Test {a_type.__name__} * {b_type.__name__}: {eps2}")
+    assert eps2 < 1e-11
+
+    # no unary with overwrite a
+    if c_type == a_type:
+        ta = g.copy(a)
+        tb = g.copy(b)
+        ta @= ta * tb
+        mul_lat = ta[0, 0, 0, 0]
+        eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+        g.message(f"Test dst=lhs {a_type.__name__} * {b_type.__name__}: {eps2}")
+        assert eps2 < 1e-11
+
+    # no unary with overwrite b
+    if c_type == b_type:
+        ta = g.copy(a)
+        tb = g.copy(b)
+        tb @= ta * tb
+        mul_lat = tb[0, 0, 0, 0]
+        eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+        g.message(f"Test dst=rhs {a_type.__name__} * {b_type.__name__}: {eps2}")
+        assert eps2 < 1e-11
+
+    # traces
+    for tr in [g.trace, g.color_trace, g.spin_trace]:
+        mul_lat = g(tr(a * b))[0, 0, 0, 0]
+        mul_np = tr(a[0, 0, 0, 0] * b[0, 0, 0, 0])
+        if type(mul_lat) == complex:
+            eps2 = abs(mul_lat - mul_np) ** 2.0 / abs(mul_lat) ** 2.0
+        else:
+            eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+        g.message(f"Test {tr.__name__}({a_type.__name__} * {b_type.__name__}): {eps2}")
+        assert eps2 < 1e-11
+
+    # bilinear combination
+    c = g.copy(a)
+    d = g.copy(b)
+    lam1 = rng.cnormal()
+    lam2 = rng.cnormal()
+    mul_lat = g(lam1 * a * b + lam2 * c * d)
+    mul_lat = mul_lat[0, 0, 0, 0]
+    mul_np = lam1 * a[0, 0, 0, 0] * b[0, 0, 0, 0] + lam2 * c[0, 0, 0, 0] * d[0, 0, 0, 0]
+    eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+    g.message(
+        f"Test {a_type.__name__} * {b_type.__name__} + {a_type.__name__} * {b_type.__name__}: {eps2}"
+    )
+    assert eps2 < 1e-11
+
+    # traces
+    for tr in [g.trace, g.color_trace, g.spin_trace]:
+        mul_lat = g(tr(lam1 * a * b + lam2 * c * d))[0, 0, 0, 0]
+        mul_np = tr(
+            lam1 * a[0, 0, 0, 0] * b[0, 0, 0, 0] + lam2 * c[0, 0, 0, 0] * d[0, 0, 0, 0]
+        )
+        if type(mul_lat) == complex:
+            eps2 = abs(mul_lat - mul_np) ** 2.0 / abs(mul_lat) ** 2.0
+        else:
+            eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+        g.message(
+            f"Test {tr.__name__}({a_type.__name__} * {b_type.__name__} + {a_type.__name__} * {b_type.__name__}): {eps2}"
+        )
+        assert eps2 < 1e-11
+
+
 # test numpy versus lattice tensor multiplication
 for a_type in [
-    g.ot_matrix_spin_color(4, 3),
-    g.ot_vector_spin_color(4, 3),
     g.ot_matrix_spin(4),
     g.ot_vector_spin(4),
     g.ot_matrix_color(3),
     g.ot_vector_color(3),
+    g.ot_matrix_singlet(8),
+    g.ot_matrix_spin_color(4, 3),
+    g.ot_vector_spin_color(4, 3),
 ]:
     # mtab
     for e in a_type.mtab:
@@ -231,18 +306,34 @@ for a_type in [
             b_type = g.str_to_otype(e)
             a = rng.cnormal(g.lattice(grid, a_type))
             b = rng.cnormal(g.lattice(grid, b_type))
-            mul_lat = g(a * b)[0, 0, 0, 0]
-            mul_np = a[0, 0, 0, 0] * b[0, 0, 0, 0]
-            eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
-            g.message(f"Test {a_type.__name__} * {b_type.__name__}: {eps2}")
-            if eps2 > 1e-12:
-                g.message(mul_lat)
+            test_multiply(a, b)
+
+            # if appropriate, test adjoint versions
+            if a_type.transposed is not None:
+
+                mul_lat = g(g.adj(a) * b)[0, 0, 0, 0]
+                mul_np = g.adj(a[0, 0, 0, 0]) * b[0, 0, 0, 0]
+                eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+                g.message(f"Test adj({a_type.__name__}) * {b_type.__name__}: {eps2}")
+                assert eps2 < 1e-11
+
+            if b_type.transposed is not None:
+
+                mul_lat = g(a * g.adj(b))[0, 0, 0, 0]
+                mul_np = a[0, 0, 0, 0] * g.adj(b[0, 0, 0, 0])
+                eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
+                g.message(f"Test {a_type.__name__} * adj({b_type.__name__}): {eps2}")
+                assert eps2 < 1e-11
+
+            if a_type.transposed is not None and b_type.transposed is not None:
+
+                mul_lat = g(g.adj(a) * g.adj(b))[0, 0, 0, 0]
+                mul_np = g.adj(a[0, 0, 0, 0]) * g.adj(b[0, 0, 0, 0])
+                eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
                 g.message(
-                    np.tensordot(
-                        a[0, 0, 0, 0].array, b[0, 0, 0, 0].array, axes=a_type.mtab[e][1]
-                    ).shape
+                    f"Test adj({a_type.__name__}) * adj({b_type.__name__}): {eps2}"
                 )
-                assert eps2 < 1e-12
+                assert eps2 < 1e-11
 
     # rmtab
     for e in a_type.rmtab:
@@ -250,23 +341,53 @@ for a_type in [
             b_type = g.str_to_otype(e)
             a = rng.cnormal(g.lattice(grid, a_type))
             b = rng.cnormal(g.lattice(grid, b_type))
-            mul_lat = g(b * a)[0, 0, 0, 0]
-            mul_np = b[0, 0, 0, 0] * a[0, 0, 0, 0]
-            eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
-            g.message(f"Test {b_type.__name__} * {a_type.__name__}: {eps2}")
-            if eps2 > 1e-12:
-                g.message(mul_lat[3, 2, 1, 0])
-                g.message(
-                    mul_np[3, 2, 1, 0],
-                    mul_np[2, 3, 1, 0],
-                    mul_np[2, 3, 0, 1],
-                    mul_np[3, 2, 0, 1],
-                )
-                g.message(
-                    np.tensordot(
-                        b[0, 0, 0, 0].array,
-                        a[0, 0, 0, 0].array,
-                        axes=a_type.rmtab[e][1],
-                    ).shape
-                )
-                assert eps2 < 1e-12
+            test_multiply(b, a)
+
+# test linear combinations
+def test_linear_combinations(a, b):
+    a_type = a.otype
+    b_type = b.otype
+    lat = g(a + b)[0, 0, 0, 0]
+    np = a[0, 0, 0, 0] + b[0, 0, 0, 0]
+    eps2 = g.norm2(lat - np) / g.norm2(lat)
+    g.message(f"Test {a_type.__name__} + {b_type.__name__}: {eps2}")
+    assert eps2 < 1e-11
+
+    if a_type.transposed is not None:
+        for unary in [g.adj, g.transpose, g.conj]:
+            lat = g(unary(a + b))[0, 0, 0, 0]
+            np = unary(a[0, 0, 0, 0] + b[0, 0, 0, 0])
+            eps2 = g.norm2(lat - np) / g.norm2(lat)
+            g.message(
+                f"Test {unary.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}"
+            )
+            assert eps2 < 1e-11
+
+    if a_type.spintrace[0] is not None or a_type.colortrace[0] is not None:
+        for tr in [g.trace, g.color_trace, g.spin_trace]:
+            lat = g(tr(a + b))[0, 0, 0, 0]
+            np = tr(a[0, 0, 0, 0] + b[0, 0, 0, 0])
+            if type(lat) == complex:
+                eps2 = abs(lat - np) ** 2.0 / abs(lat) ** 2.0
+            else:
+                eps2 = g.norm2(lat - np) / g.norm2(lat)
+            g.message(
+                f"Test {tr.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}"
+            )
+            assert eps2 < 1e-11
+
+
+for a_type in [
+    g.ot_matrix_spin_color(4, 3),
+    g.ot_vector_spin_color(4, 3),
+    g.ot_matrix_spin(4),
+    g.ot_vector_spin(4),
+    g.ot_matrix_color(3),
+    g.ot_vector_color(3),
+    g.ot_matrix_singlet(8),
+    g.ot_vector_singlet(8),
+]:
+    a = rng.cnormal(g.lattice(grid, a_type))
+    b = rng.cnormal(g.lattice(grid, a_type))
+
+    test_linear_combinations(a, b)

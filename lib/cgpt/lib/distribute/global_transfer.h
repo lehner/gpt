@@ -62,6 +62,7 @@ void global_transfer<rank_t>::root_to_all(const std::map<rank_t, vec_t > & all, 
     auto e = all.find(i);
     all_size[i] = (e != all.end()) ? (int)e->second.size() : 0;
   }
+
   ASSERT(MPI_SUCCESS == MPI_Scatter(&all_size[0], 1, MPI_INT, &my_size, 1, MPI_INT, mpi_rank_map[0], comm));
 
   // root node now receives from every node the list of its partners (if it is non-vanishing)
@@ -90,6 +91,19 @@ void global_transfer<rank_t>::root_to_all(const std::map<rank_t, vec_t > & all, 
 
   waitall();
 #endif
+}
+
+template<typename rank_t>
+long global_transfer<rank_t>::global_gcd(long n) {
+
+#ifdef CGPT_USE_MPI
+  std::vector<long> all_n(mpi_ranks,0);
+  ASSERT(MPI_SUCCESS == MPI_Allgather(&n, 1, MPI_LONG, &all_n[0], 1, MPI_LONG, comm));
+  return cgpt_reduce(all_n, cgpt_gcd, n);
+#else
+  return n;
+#endif
+  
 }
 
 template<typename rank_t>
@@ -251,7 +265,7 @@ void global_transfer<rank_t>::multi_send_recv(const std::map<rank_t, comm_messag
 
   // allocate receive buffers
   for (auto & s : my_senders) {
-    recv[s.first].data.resize(s.second);
+    recv[s.first].resize(s.second);
   }
 
   // initiate communication

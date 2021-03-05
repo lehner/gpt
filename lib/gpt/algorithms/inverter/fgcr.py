@@ -19,20 +19,21 @@
 #
 import gpt as g
 import numpy as np
+from gpt.algorithms import base_iterative
 
 
-class fgcr:
+class fgcr(base_iterative):
     @g.params_convention(
         eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
     )
     def __init__(self, params):
+        super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
         self.prec = params["prec"]
-        self.history = None
 
     @g.params_convention()
     def modified(self, params):
@@ -68,13 +69,8 @@ class fgcr:
 
         prec = self.prec(mat) if self.prec is not None else None
 
-        def inv(psi, src):
-            self.history = []
-            # verbosity
-            verbose = g.default.is_verbose("fgcr")
-
-            # timing
-            t = g.timer("fgcr")
+        @self.timed_function
+        def inv(psi, src, t):
             t("setup")
 
             # parameters
@@ -109,7 +105,6 @@ class fgcr:
                 i = k % rlen
 
                 # iteration criteria
-                reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
                 t("prec")
@@ -130,72 +125,37 @@ class fgcr:
                 ip, z2 = g.inner_product_norm2(z[i], r)
                 gamma[i] = z2 ** 0.5
                 if gamma[i] == 0.0:
-                    g.message("fgcr: breakdown, gamma[%d] = 0" % (i))
+                    self.debug(f"breakdown, gamma[{i:d}] = 0")
                     break
                 z[i] /= gamma[i]
                 alpha[i] = ip / gamma[i]
                 r2 = g.axpy_norm2(r, -alpha[i], z[i], r)
 
                 t("other")
-                self.history.append(r2)
+                self.log_convergence((k, i), r2, rsq)
 
-                if verbose:
-                    g.message(
-                        "fgcr: res^2[ %d, %d ] = %g, target = %g" % (k, i, r2, rsq)
-                    )
-
-                if r2 <= rsq or need_restart or reached_maxiter:
+                if r2 <= rsq or need_restart:
                     t("update_psi")
                     self.update_psi(psi, alpha, beta, gamma, chi, p, i)
-                    comp_res = r2 / ssq
 
-                    if r2 <= rsq:
-                        if verbose:
-                            t()
-                            g.message(
-                                "fgcr: converged in %d iterations, took %g s"
-                                % (k + 1, t.total)
-                            )
-                            g.message(t)
-                            if self.checkres:
-                                res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                                g.message(
-                                    "fgcr: computed res = %g, true res = %g, target = %g"
-                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
-                                )
-                            else:
-                                g.message(
-                                    "fgcr: computed res = %g, target = %g"
-                                    % (comp_res ** 0.5, self.eps)
-                                )
-                        break
+                if r2 <= rsq:
+                    msg = f"converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+                    if self.checkres:
+                        res = self.calc_res(mat, psi, mmpsi, src, r)
+                        msg += f";  true squared residual {res:e} / {rsq:e}"
+                    self.log(msg)
+                    return
 
-                    if reached_maxiter:
-                        if verbose:
-                            t()
-                            g.message(
-                                "fgcr: did NOT converge in %d iterations, took %g s"
-                                % (k + 1, t.dt["total"])
-                            )
-                            g.message(t)
-                            if self.checkres:
-                                res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                                g.message(
-                                    "fgcr: computed res = %g, true res = %g, target = %g"
-                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
-                                )
-                            else:
-                                g.message(
-                                    "fgcr: computed res = %g, target = %g"
-                                    % (comp_res ** 0.5, self.eps)
-                                )
-                        break
+                if need_restart:
+                    t("restart")
+                    r2 = self.restart(mat, psi, mmpsi, src, r, p)
+                    self.debug("performed restart")
 
-                    if need_restart:
-                        t("restart")
-                        r2 = self.restart(mat, psi, mmpsi, src, r, p)
-                        if verbose:
-                            g.message("fgcr: performed restart")
+            msg = f"NOT converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+            if self.checkres:
+                res = self.calc_res(mat, psi, mmpsi, src, r)
+                msg += f";  true squared residual {res:e} / {rsq:e}"
+            self.log(msg)
 
         return g.matrix_operator(
             mat=inv,

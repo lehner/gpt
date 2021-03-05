@@ -96,3 +96,98 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
 #endif
 
 }
+
+
+template<class VLattice>
+void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &right_basis,ComplexD* Qt,int32_t* left_indices,int32_t* right_indices,
+			       long n_virtual, long n_elements) {
+
+  ASSERT(result.size() % n_virtual == 0);
+  ASSERT(right_basis.size() % n_virtual == 0);
+  ASSERT(left_basis.size() % n_virtual == 0);
+  long n_vec = result.size() / n_virtual;
+  GridBase* grid = left_basis[0].Grid();
+
+  for (size_t i=0;i<result.size();i++)
+    result[i].Checkerboard() = left_basis[0].Checkerboard();
+
+
+#ifndef GRID_HAS_ACCELERATOR
+
+  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
+  VECTOR_VIEW_OPEN(left_basis,left_basis_v,CpuRead);
+  VECTOR_VIEW_OPEN(right_basis,right_basis_v,CpuRead);
+
+  typedef typename std::remove_reference<decltype(left_basis_v[0][0])>::type vobj;
+
+  thread_for(ss, grid->oSites(),{
+  
+    for (long j=0;j<n_virtual;j++) {
+      for (long i=0;i<n_vec;i++) {
+        vobj B = Zero();
+	for(long k=0; k<n_elements; k++) {
+	  int32_t left_index = left_indices[k + i*n_elements];
+	  int32_t right_index = right_indices[k + i*n_elements];
+          B += Qt[k + i*n_elements] * left_basis_v[left_index*n_virtual + j][ss] * right_basis_v[right_index*n_virtual + j][ss];
+	}
+        result_v[i*n_virtual + j][ss] = B;
+      }
+    }
+
+  });
+
+  VECTOR_VIEW_CLOSE(left_basis_v);
+  VECTOR_VIEW_CLOSE(right_basis_v);
+  VECTOR_VIEW_CLOSE(result_v);
+
+#else
+  Vector<ComplexD> Qt_jv(n_elements*n_vec);
+  Vector<int> left_indices_jv(n_elements*n_vec);
+  Vector<int> right_indices_jv(n_elements*n_vec);
+  ComplexD * Qt_j = & Qt_jv[0];
+  int * left_indices_j = & left_indices_jv[0];
+  int * right_indices_j = & right_indices_jv[0];
+  thread_for(k,n_elements*n_vec,{
+      Qt_j[k]=Qt[k];
+      left_indices_j[k]=left_indices[k];
+      right_indices_j[k]=right_indices[k];
+    });
+
+  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWriteDiscard);
+  VECTOR_VIEW_OPEN(left_basis,left_basis_v,AcceleratorRead);
+  VECTOR_VIEW_OPEN(right_basis,right_basis_v,AcceleratorRead);
+
+  long Nsimd = grid->Nsimd();
+  long oSites = grid->oSites();
+  accelerator_for(_idx, oSites*n_vec*n_virtual/**n_elements*/,Nsimd,{
+      auto idx = _idx;
+      auto ss = idx % oSites; idx /= oSites;
+      auto vec_i = idx % n_vec; idx /= n_vec;
+      auto virtual_i = idx % n_virtual; idx /= n_virtual;
+      //auto k = idx;
+
+      decltype(coalescedRead(left_basis_v[0][ss])) B;
+
+      //if (k == 0) {
+      B = Zero();
+      //} else {
+      //B = result_v[vec_i*n_virtual + virtual_i](ss);
+      //}
+      
+      for(long k=0; k<n_elements; k++) {
+	int left_index = left_indices_j[k + vec_i*n_elements];
+	int right_index = right_indices_j[k + vec_i*n_elements];
+	B += Qt_j[k + vec_i*n_elements] * left_basis_v[left_index*n_virtual + virtual_i](ss) * right_basis_v[right_index*n_virtual + virtual_i](ss);
+      }
+      
+      coalescedWrite(result_v[vec_i*n_virtual + virtual_i][ss], B);
+      
+    });
+
+  VECTOR_VIEW_CLOSE(left_basis_v);
+  VECTOR_VIEW_CLOSE(right_basis_v);
+  VECTOR_VIEW_CLOSE(result_v);
+#endif
+
+  
+}

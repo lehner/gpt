@@ -17,13 +17,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt, sys, numpy
-
+import gpt, numpy
+from gpt.params import params_convention
 
 #
 # rhs_n_block: How many vectors are acted on at the same time
 #
-@gpt.params.params_convention(make_hermitian=False, save_links=True, rhs_n_block=4)
+@params_convention(make_hermitian=False, save_links=True, rhs_n_block=4)
 def create_links(A, fmat, basis, params):
     # NOTE: we expect the blocks in the basis vectors
     # to already be orthogonalized!
@@ -37,10 +37,10 @@ def create_links(A, fmat, basis, params):
     rhs_n_block = min(len(basis), rhs_n_block)
 
     # verbosity
-    verbose = gpt.default.is_verbose("coarsen")
+    verbose_performance = gpt.default.is_verbose("coarsen_performance")
 
     # setup timings
-    t = gpt.timer("coarsen")
+    t = gpt.timer("coarsen", verbose_performance)
     t("setup")
 
     # get grids
@@ -48,6 +48,10 @@ def create_links(A, fmat, basis, params):
     c_grid = A[0].grid
 
     # directions/displacements we coarsen for
+    assert f_grid.nd in [
+        4,
+        5,
+    ]  # TODO: this is poor design, need to make this independent of ndim
     dirs = [1, 2, 3, 4] if f_grid.nd == 5 else [0, 1, 2, 3]
     disp = +1
     dirdisps_full = list(zip(dirs * 2, [+1] * 4 + [-1] * 4))
@@ -136,17 +140,13 @@ def create_links(A, fmat, basis, params):
         for ib in range(iblock):
             A[selflink][:, :, :, :, :, i0 + ib] = selfproj[ib][:]
 
-        if verbose:
-            gpt.message("coarsen: done with vectors %3d - %3d" % (i0, i1 - 1))
-
     # communicate opposite links
     if save_links:
         t("comm")
         communicate_links(A, dirdisps_forward, make_hermitian)
 
-    t()
-
-    if verbose:
+    if verbose_performance:
+        t()
         gpt.message(t)
 
 
@@ -167,10 +167,6 @@ def communicate_links(A, dirdisps_forward, make_hermitian):
         A[p_other] @= gpt.adj(gpt.cshift(Atmp, mu, shift_fb))
 
 
-def recreate_links(A, fmat, basis):
-    create_links(A, fmat, basis)
-
-
 def gamma5(src):
     if hasattr(src.otype, "fundamental"):
         nbasis = src.otype.shape[0]
@@ -182,15 +178,13 @@ def gamma5(src):
 
 
 def split_chiral(basis, factor=None):
-    nbasis = len(basis)
-    assert nbasis % 2 == 0
-    nb = nbasis // 2
+    nb = len(basis)
     factor = 0.5 if factor is None else factor
     g5 = gamma5(basis[0])
     tmp = gpt.lattice(basis[0])
     for n in range(nb):
         tmp @= g5 * basis[n]
-        basis[n + nb] @= (basis[n] - tmp) * factor
+        basis.append(gpt.eval((basis[n] - tmp) * factor))
         basis[n] @= (basis[n] + tmp) * factor
 
 
@@ -202,6 +196,7 @@ def unsplit_chiral(basis, factor=None):
     rev_factor = 0.5 / factor
     for n in range(nb):
         basis[n] @= (basis[n] + basis[n + nb]) * rev_factor
+    del basis[nb:]
 
 
 def prefactor_dagger(A, v_idx=None):
@@ -232,3 +227,14 @@ def prefactor_dagger(A, v_idx=None):
         .reshape(nbasis_v_idx * nbasis_v_idx)
         .tolist()
     )
+
+
+def nearest_neighbor_operator(fine_matrix, coarse_grid, basis, params):
+    A = [gpt.mcomplex(coarse_grid, len(basis)) for i in range(9)]
+
+    create_links(
+        A, fine_matrix, basis, make_hermitian=params["make_hermitian"], save_links=True
+    )
+
+    level = 1 if isinstance(fine_matrix.otype[0], gpt.ot_matrix_singlet) else 0
+    return gpt.qcd.fermion.coarse_fermion(A, level=level)

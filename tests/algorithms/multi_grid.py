@@ -7,9 +7,11 @@
 #
 import gpt as g
 import numpy as np
+import sys
 
 # setup rng, mute
 g.default.set_verbose("random", False)
+g.default.set_verbose("fgmres_performance", True)  # to get timing info at bottom
 rng = g.random("test_mg")
 
 # just run with larger volume
@@ -43,69 +45,37 @@ src[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 
 # abbreviations
 i = g.algorithms.inverter
-mg = i.multi_grid
 p = g.qcd.fermion.preconditioner
 
-# NOTE: mg params structure
-# - list -> configure each level by itself explicitly (correct lengths asserted inside)
-# - scalar value (= not a list) -> broadcast parameter to every level
+# define transitions between grids (setup)
+def find_near_null_vectors(w, cgrid):
+    slv = i.fgmres(eps=1e-3, maxiter=50, restartlen=25, checkres=False)(w)
+    basis = g.orthonormalize(
+        rng.cnormal([g.lattice(w.grid[0], w.otype[0]) for i in range(15)])
+    )
+    null = g.lattice(basis[0])
+    null[:] = 0
+    for b in basis:
+        slv(b, null)
+    # TODO: apply open boundaries, e.g., in this function
+    g.qcd.fermion.coarse.split_chiral(basis)
+    bm = g.block.map(cgrid, basis)
+    bm.orthonormalize()
+    bm.check_orthogonality()
+    return basis
 
-# mg setup parameters
-mg_setup_2lvl_params = {
-    "block_size": [[2, 2, 2, 2]],
-    "n_block_ortho": 1,
-    "check_block_ortho": True,
-    "n_basis": 30,
-    "make_hermitian": False,
-    "save_links": True,
-    "vector_type": "null",
-    "n_pre_ortho": 1,
-    "n_post_ortho": 0,
-    "solver": i.fgmres(
-        {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-    ),
-    "distribution": rng.cnormal,
-}
-mg_setup_3lvl_params = {
-    "block_size": [[2, 2, 2, 2], [2, 1, 1, 1]],
-    "n_block_ortho": 1,
-    "check_block_ortho": True,
-    "n_basis": 30,
-    "make_hermitian": False,
-    "save_links": True,
-    "vector_type": "null",
-    "n_pre_ortho": 1,
-    "n_post_ortho": 0,
-    "solver": i.fgmres(
-        {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-    ),
-    "distribution": rng.cnormal,
-}
-# mg_setup_4lvl_params = {
-#     "block_size": [[2, 2, 2, 2], [1, 2, 1, 1], [1, 2, 2, 2]],
-#     "n_block_ortho": 1,
-#     "check_block_ortho": True,
-#     "n_basis": 30,
-#     "make_hermitian": False,
-#     "save_links": True,
-#     "vector_type": "null",
-#     "n_pre_ortho": 1,
-#     "n_post_ortho": 0,
-#     "solver": i.fgmres(
-#         {"eps": 1e-3, "maxiter": 50, "restartlen": 25, "checkres": False}
-#     ),
-#     "distribution": rng.cnormal,
-# }
-g.message(f"mg_setup_2lvl = {mg_setup_2lvl_params}")
-g.message(f"mg_setup_3lvl = {mg_setup_3lvl_params}")
-# g.message(f"mg_setup_4lvl = {mg_setup_4lvl_params}")
 
-# mg setup objects
-mg_setup_2lvl_dp = mg.setup(w_dp, mg_setup_2lvl_params)
-mg_setup_2lvl_sp = mg.setup(w_sp, mg_setup_2lvl_params)
-mg_setup_3lvl_sp = mg.setup(w_sp, mg_setup_3lvl_params)
+mg_setup_2lvl = i.multi_grid_setup(
+    block_size=[[2, 2, 2, 2]], projector=find_near_null_vectors
+)
 
-# mg_setup_4lvl_sp = mg.setup(w_sp, mg_setup_4lvl_params)
+mg_setup_3lvl = i.multi_grid_setup(
+    block_size=[[2, 2, 2, 2], [2, 1, 1, 1]], projector=find_near_null_vectors
+)
+
+mg_setup_2lvl_dp = mg_setup_2lvl(w_dp)
+mg_setup_2lvl_sp = mg_setup_2lvl(w_sp)
+mg_setup_3lvl_sp = mg_setup_3lvl(w_sp)
 
 # mg inner solvers
 wrapper_solver = i.fgmres(
@@ -119,22 +89,47 @@ coarsest_solver = i.fgmres(
 )
 
 # mg solver/preconditioner objects
-vcycle_params = {
-    "coarsest_solver": coarsest_solver,
-    "smooth_solver": smooth_solver,
-    "wrapper_solver": None,
-}
-kcycle_params = {
-    "coarsest_solver": coarsest_solver,
-    "smooth_solver": smooth_solver,
-    "wrapper_solver": wrapper_solver,
-}
-mg_2lvl_vcycle_dp = mg.inverter(mg_setup_2lvl_dp, vcycle_params)
-mg_2lvl_vcycle_sp = mg.inverter(mg_setup_2lvl_sp, vcycle_params)
-# mg_3lvl_vcycle_sp = mg.inverter(mg_setup_3lvl_sp, vcycle_params)
-mg_3lvl_kcycle_sp = mg.inverter(mg_setup_3lvl_sp, kcycle_params)
-# mg_4lvl_vcycle_sp = mg.inverter(mg_setup_4lvl_sp, vcycle_params)
-# mg_4lvl_kcycle_sp = mg.inverter(mg_setup_4lvl_sp, kcycle_params)
+mg_2lvl_vcycle_dp = i.sequence(
+    i.coarse_grid(coarsest_solver, *mg_setup_2lvl_dp[0]),
+    i.calculate_residual(
+        "before smoother"
+    ),  # optional since it costs time but helps to tune MG solver
+    smooth_solver,
+    i.calculate_residual("after smoother"),  # optional
+)
+
+# For timing purposes, keep variables of solvers of various levels
+smooth_solver_lvl3 = smooth_solver.modified()
+smooth_solver_lvl2 = smooth_solver.modified()
+coarsest_solver_lvl3 = coarsest_solver.modified()
+
+wrapper_solver_lvl2 = wrapper_solver.modified(
+    prec=i.sequence(
+        i.coarse_grid(coarsest_solver_lvl3, *mg_setup_3lvl_sp[1]),
+        smooth_solver_lvl3,
+    )
+)
+
+mg_3lvl_kcycle_sp = i.sequence(
+    i.coarse_grid(
+        wrapper_solver_lvl2,
+        *mg_setup_3lvl_sp[0],
+    ),
+    smooth_solver_lvl2,
+)
+
+# Shorter version if we do not want to create timing overview below:
+# mg_3lvl_kcycle_sp = i.sequence(
+#     i.coarse_grid(
+#         wrapper_solver.modified(
+#             prec=i.sequence(
+#                 i.coarse_grid(coarsest_solver, *mg_setup_3lvl_sp[1]), smooth_solver
+#             )
+#         ),
+#         *mg_setup_3lvl_sp[0],
+#     ),
+#     smooth_solver,
+# )
 
 # outer solver
 fgmres_params = {"eps": 1e-6, "maxiter": 1000, "restartlen": 20}
@@ -150,6 +145,7 @@ assert eps2 < 1e-12
 # preconditioned inversion (2lvl mg -- vcycle -- double precision)
 fgmres_outer = i.fgmres(fgmres_params, prec=mg_2lvl_vcycle_dp)
 sol_prec_2lvl_mg_vcycle_dp = g.eval(fgmres_outer(w_dp) * src)
+
 eps2 = g.norm2(w_dp * sol_prec_2lvl_mg_vcycle_dp - src) / g.norm2(src)
 niter_prec_2lvl_mg_vcycle_dp = len(fgmres_outer.history)
 g.message(
@@ -160,117 +156,26 @@ g.message(
 assert eps2 < 1e-12
 assert niter_prec_2lvl_mg_vcycle_dp <= niter_prec_smooth
 
-# preconditioned inversion (2lvl mg -- vcycle -- mixed precision)
-fgmres_outer = i.fgmres(
-    fgmres_params,
-    prec=i.mixed_precision(mg_2lvl_vcycle_sp, g.single, g.double),
-    # prec=i.mixed_precision(mg_2lvl_vcycle_sp, g.single, g.double),  # NOTE: This won't work
-)
-sol_prec_2lvl_mg_vcycle_mp = g.eval(fgmres_outer(w_dp) * src)
-eps2 = g.norm2(w_dp * sol_prec_2lvl_mg_vcycle_mp - src) / g.norm2(src)
-niter_prec_2lvl_mg_vcycle_mp = len(fgmres_outer.history)
-g.message(
-    "Test resid/iter fgmres + 2lvl vcycle mg mixed:", eps2, niter_prec_2lvl_mg_vcycle_mp
-)
-assert eps2 < 1e-12
-assert niter_prec_2lvl_mg_vcycle_mp <= niter_prec_2lvl_mg_vcycle_dp + 1
-
-# # preconditioned inversion (3lvl mg -- vcycle -- mixed precision)
-# fgmres_outer = i.fgmres(
-#     fgmres_params,
-#     prec=i.mixed_precision(mg_3lvl_vcycle_sp, g.single, g.double),
-# )
-# sol_prec_3lvl_mg_vcycle_mp = g.eval(fgmres_outer(w_dp) * src)
-# eps2 = g.norm2(w_dp * sol_prec_3lvl_mg_vcycle_mp - src) / g.norm2(src)
-# niter_prec_3lvl_mg_vcycle_mp = len(fgmres_outer.history)
-# g.message(
-#     "Test resid/iter fgmres + 3lvl vcycle mg mixed:", eps2, niter_prec_3lvl_mg_vcycle_mp
-# )
-# assert eps2 < 1e-12
-# assert niter_prec_3lvl_mg_vcycle_mp < niter_prec_smooth
-
 # preconditioned inversion (3lvl mg -- kcycle -- mixed precision)
 fgmres_outer = i.fgmres(
     fgmres_params,
     prec=i.mixed_precision(mg_3lvl_kcycle_sp, g.single, g.double),
 )
 sol_prec_3lvl_mg_kcycle_mp = g.eval(fgmres_outer(w_dp) * src)
+
 eps2 = g.norm2(w_dp * sol_prec_3lvl_mg_kcycle_mp - src) / g.norm2(src)
 niter_prec_3lvl_mg_kcycle_mp = len(fgmres_outer.history)
 g.message(
     "Test resid/iter fgmres + 3lvl kcycle mg mixed:", eps2, niter_prec_3lvl_mg_kcycle_mp
 )
 assert eps2 < 1e-12
-# assert niter_prec_3lvl_mg_kcycle_mp <= niter_prec_3lvl_mg_vcycle_mp
 assert niter_prec_3lvl_mg_kcycle_mp < niter_prec_smooth
 
-# # preconditioned inversion (4lvl mg -- vcycle -- mixed precision)
-# fgmres_outer = i.fgmres(
-#     fgmres_params,
-#     prec=i.mixed_precision(mg_4lvl_vcycle_sp, g.single, g.double),
-# )
-# sol_prec_4lvl_mg_vcycle_mp = g.eval(fgmres_outer(w_dp) * src)
-# eps2 = g.norm2(w_dp * sol_prec_4lvl_mg_vcycle_mp - src) / g.norm2(src)
-# niter_prec_4lvl_mg_vcycle_mp = len(fgmres_outer.history)
-# g.message(
-#     "Test resid/iter fgmres + 4lvl vcycle mg mixed:", eps2, niter_prec_4lvl_mg_vcycle_mp
-# )
-# assert eps2 < 1e-12
-# assert niter_prec_4lvl_mg_vcycle_mp <= niter_prec_3lvl_mg_vcycle_mp
-
-# # preconditioned inversion (4lvl mg -- kcycle -- mixed precision)
-# fgmres_outer = i.fgmres(fgmres_params, prec=mg_4lvl_kcycle_sp)
-# fgmres_outer = i.fgmres(
-#     fgmres_params,
-#     prec=i.mixed_precision(mg_4lvl_kcycle_sp, g.single, g.double),
-# )
-# sol_prec_4lvl_mg_kcycle_mp = g.eval(fgmres_outer(w_dp) * src)
-# eps2 = g.norm2(w_dp * sol_prec_4lvl_mg_kcycle_mp - src) / g.norm2(src)
-# niter_prec_4lvl_mg_kcycle_mp = len(fgmres_outer.history)
-# g.message(
-#     "Test resid/iter fgmres + 4lvl kcycle mg mixed:", eps2, niter_prec_4lvl_mg_kcycle_mp
-# )
-# assert eps2 < 1e-12
-# assert niter_prec_4lvl_mg_kcycle_mp <= niter_prec_4lvl_mg_vcycle_mp
-
-# print contributions to mg setup runtime
-g.message("Contributions to time spent in MG setups")
-for name, t in [
-    ("2lvl_dp", mg_setup_2lvl_dp.t),
-    ("2lvl_sp", mg_setup_2lvl_sp.t),
-    ("3lvl_sp", mg_setup_3lvl_sp.t),
-    # ("4lvl_sp", mg_setup_4lvl_sp.t),
+# show timings
+for slv_name, slv in [
+    ("smooth_solver_lvl3", smooth_solver_lvl3),
+    ("smooth_solver_lvl2", smooth_solver_lvl2),
+    ("coarsest_solver_lvl3", coarsest_solver_lvl3),
+    ("wrapper_solver_lvl2", wrapper_solver_lvl2),
 ]:
-    g.message(name + ":")
-    for lvl in reversed(range(len(t))):
-        g.message(t[lvl])
-
-# print contributions to mg solve runtime
-g.message("Contributions to time spent in MG preconditioners")
-for name, t in [
-    ("2lvl_vcycle_dp", mg_2lvl_vcycle_dp.t),
-    ("2lvl_vcycle_sp", mg_2lvl_vcycle_sp.t),
-    # ("3lvl_vcycle_sp", mg_3lvl_vcycle_sp.t),
-    ("3lvl_kcycle_sp", mg_3lvl_kcycle_sp.t),
-    # ("4lvl_vcycle_sp", mg_4lvl_vcycle_sp.t),
-    # ("4lvl_kcycle_sp", mg_4lvl_kcycle_sp.t),
-]:
-    g.message(name + ":")
-    for lvl in reversed(range(len(t))):
-        g.message(t[lvl])
-
-# print average iteration counts / time per level
-g.message("Average iteration counts of inner solvers")
-for name, h in [
-    ("2lvl_vcycle_dp", mg_2lvl_vcycle_dp.history),
-    ("2lvl_vcycle_sp", mg_2lvl_vcycle_sp.history),
-    # ("3lvl_vcycle_sp", mg_3lvl_vcycle_sp.history),
-    ("3lvl_kcycle_sp", mg_3lvl_kcycle_sp.history),
-    # ("4lvl_vcycle_sp", mg_4lvl_vcycle_sp.history),
-    # ("4lvl_kcycle_sp", mg_4lvl_kcycle_sp.history),
-]:
-    for lvl in reversed(range(len(h))):
-        for k, v in h[lvl].items():
-            stats = list(map(lambda l: sum(l) / len(l), zip(*v)))
-            if stats:
-                g.message(f"{name}: lvl {lvl}: {k:10s} = {int(stats[0])}")
+    g.message(f"\nTimings for {slv_name}:\n{slv.timer}\n")

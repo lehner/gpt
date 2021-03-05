@@ -39,25 +39,36 @@ You may also visit a static version of the tutorials [here](https://github.com/l
 ```python
 import gpt as g
 
-# load gauge field and describe fermion
-gauge=g.qcd.gaugefield("params.txt")
-light=g.qcd.fermion("light.txt")
+# Double-precision 8^4 grid
+grid = g.grid([8,8,8,8], g.double)
 
-# create point source
-src=g.mspincolor(gauge.dp.grid)
-g.create.point(src, [0,0,0,0])
+# Parallel random number generator
+rng = g.random("seed text")
 
-# solve
-prop=light.solve.exact(src)
+# Random gauge field
+U = g.qcd.gauge.random(grid, rng)
 
-# pion
-corr_pion=g.slice(g.trace(g.adj(prop)*prop),3)
-print("Pion two point:")
-print(corr_pion)
+# Mobius domain-wall fermion
+fermion = g.qcd.fermion.mobius(U, mass=0.1, M5=1.8, b=1.0, c=0.0, Ls=24,
+                               boundary_phases=[1,1,1,-1])
 
-# vector
-gamma=g.gamma
-corr_vector=g.slice(g.trace(gamma[0]*g.adj(prop)*gamma[0]*prop),3)
-print("Vector two point:")
-print(corr_vector)
+# Short-cuts
+inv = g.algorithms.inverter
+pc = g.qcd.fermion.preconditioner
+
+# Even-odd-preconditioned CG solver
+slv_5d = inv.preconditioned(pc.eo2_ne(), inv.cg(eps = 1e-4, maxiter = 1000))
+
+# Abstract fermion propagator using this solver
+fermion_propagator = fermion.propagator(slv_5d)
+
+# Create point source
+src = g.mspincolor(U[0].grid)
+g.create.point(src, [0, 0, 0, 0])
+
+# Solve propagator on 12 spin-color components
+prop = g( fermion_propagator * src )
+
+# Pion correlator
+g.message(g.slice(g.trace(prop * g.adj(prop)), 3))
 ```

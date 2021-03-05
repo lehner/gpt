@@ -19,15 +19,16 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.algorithms import base_iterative
 
 
-class bicgstab:
+class bicgstab(base_iterative):
     @g.params_convention(eps=1e-15, maxiter=1000000)
     def __init__(self, params):
+        super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
-        self.history = None
 
     def __call__(self, mat):
 
@@ -37,11 +38,9 @@ class bicgstab:
             mat = mat.mat
             # remove wrapper for performance benefits
 
-        def inv(psi, src):
-            self.history = []
-            verbose = g.default.is_verbose("bicgstab")
+        @self.timed_function
+        def inv(psi, src, t):
 
-            t = g.timer("bicgstab")
             t("setup")
 
             r, rhat, p, s = g.copy(src), g.copy(src), g.copy(src), g.copy(src)
@@ -97,20 +96,16 @@ class bicgstab:
                 r2 = g.axpy_norm2(r, -omega, mms, s)
 
                 t("other")
-                self.history.append(r2)
 
-                if verbose:
-                    g.message("bicgstab: res^2[ %d ] = %g, target = %g" % (k, r2, rsq))
+                self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
-                    if verbose:
-                        t()
-                        g.message(
-                            "bicgstab: converged in %d iterations, took %g s"
-                            % (k + 1, t.total)
-                        )
-                        g.message(t)
-                    break
+                    self.log(f"converged in {k+1} iterations")
+                    return
+
+            self.log(
+                f"NOT converged in {k+1} iterations;  squared residual {r2:e} / {rsq:e}"
+            )
 
         return g.matrix_operator(
             mat=inv,

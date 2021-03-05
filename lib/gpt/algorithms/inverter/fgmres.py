@@ -19,20 +19,21 @@
 #
 import gpt as g
 import numpy as np
+from gpt.algorithms import base_iterative
 
 
-class fgmres:
+class fgmres(base_iterative):
     @g.params_convention(
         eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
     )
     def __init__(self, params):
+        super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
         self.prec = params["prec"]
-        self.history = None
 
     @g.params_convention()
     def modified(self, params):
@@ -89,13 +90,9 @@ class fgmres:
 
         prec = self.prec(mat) if self.prec is not None else None
 
-        def inv(psi, src):
-            self.history = []
-            # verbosity
-            verbose = g.default.is_verbose("fgmres")
-
+        @self.timed_function
+        def inv(psi, src, t):
             # timing
-            t = g.timer("fgmres")
             t("setup")
 
             # parameters
@@ -118,6 +115,7 @@ class fgmres:
             Z = (
                 [g.lattice(src) for i in range(rlen + 1)] if prec is not None else None
             )  # save vectors if unpreconditioned
+            ZV = Z if prec is not None else V
 
             # initial residual
             r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
@@ -136,28 +134,22 @@ class fgmres:
                 i = k % rlen
 
                 # iteration criteria
-                reached_maxiter = k + 1 == self.maxiter
                 need_restart = i + 1 == rlen
 
                 t("prec")
                 if prec is not None:
-                    prec(Z[i], V[i])
+                    prec(ZV[i], V[i])
 
                 t("mat")
-                if prec is not None:
-                    mat(V[i + 1], Z[i])
-                else:
-                    mat(V[i + 1], V[i])
+                mat(V[i + 1], ZV[i])
 
                 t("ortho")
-                g.default.push_verbose("orthogonalize", False)
                 g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i])
-                g.default.pop_verbose()
 
                 t("linalg")
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
                 if H[i + 1, i] == 0.0:
-                    g.message("fgmres: breakdown, H[%d, %d] = 0" % (i + 1, i))
+                    self.debug(f"breakdown, H[{i+1:d}, {i:d}] = 0")
                     break
                 V[i + 1] /= H[i + 1, i]
 
@@ -166,68 +158,30 @@ class fgmres:
 
                 t("other")
                 r2 = np.absolute(gamma[i + 1]) ** 2
-                self.history.append(r2)
+                self.log_convergence((k, i), r2, rsq)
 
-                if verbose:
-                    g.message(
-                        "fgmres: res^2[ %d, %d ] = %g, target = %g" % (k, i, r2, rsq)
-                    )
-
-                if r2 <= rsq or need_restart or reached_maxiter:
+                if r2 <= rsq or need_restart:
                     t("update_psi")
-                    if prec is not None:
-                        self.update_psi(psi, gamma, H, y, Z, i)
-                    else:
-                        self.update_psi(psi, gamma, H, y, V, i)
-                    comp_res = r2 / ssq
+                    self.update_psi(psi, gamma, H, y, ZV, i)
 
-                    if r2 <= rsq:
-                        if verbose:
-                            t()
-                            g.message(
-                                "fgmres: converged in %d iterations, took %g s"
-                                % (k + 1, t.total)
-                            )
-                            g.message(t)
-                            if self.checkres:
-                                res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                                g.message(
-                                    "fgmres: computed res = %g, true res = %g, target = %g"
-                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
-                                )
-                            else:
-                                g.message(
-                                    "fgmres: computed res = %g, target = %g"
-                                    % (comp_res ** 0.5, self.eps)
-                                )
-                        break
+                if r2 <= rsq:
+                    msg = f"converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+                    if self.checkres:
+                        res = self.calc_res(mat, psi, mmpsi, src, r)
+                        msg += f";  true squared residual {res:e} / {rsq:e}"
+                    self.log(msg)
+                    return
 
-                    if reached_maxiter:
-                        if verbose:
-                            t()
-                            g.message(
-                                "fgmres: did NOT converge in %d iterations, took %g s"
-                                % (k + 1, t.dt["total"])
-                            )
-                            g.message(t)
-                            if self.checkres:
-                                res = self.calc_res(mat, psi, mmpsi, src, r) / ssq
-                                g.message(
-                                    "fgmres: computed res = %g, true res = %g, target = %g"
-                                    % (comp_res ** 0.5, res ** 0.5, self.eps)
-                                )
-                            else:
-                                g.message(
-                                    "fgmres: computed res = %g, target = %g"
-                                    % (comp_res ** 0.5, self.eps)
-                                )
-                        break
+                if need_restart:
+                    t("restart")
+                    r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
+                    self.debug("performed restart")
 
-                    if need_restart:
-                        t("restart")
-                        r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
-                        if verbose:
-                            g.message("fgmres: performed restart")
+            msg = f"NOT converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+            if self.checkres:
+                res = self.calc_res(mat, psi, mmpsi, src, r)
+                msg += f";  true squared residual {res:e} / {rsq:e}"
+            self.log(msg)
 
         return g.matrix_operator(
             mat=inv,
