@@ -719,11 +719,7 @@ public: // member functions (additional) //////////////////////////////////////
 
     assert(n_arg_ == 1); // Limit to 1 for now!
 
-#if defined(TENSOR_LAYOUT)
-    grid_printf_flush("Constructed the latest coarse operator with lorentz index in tensor\n"); fflush(stdout);
-    #else
-    grid_printf_flush("Constructed the latest coarse operator with lorentz index in std::vector\n"); fflush(stdout);
-    #endif
+    reportVersion();
   }
 
 private: // member functions //////////////////////////////////////////////////
@@ -753,6 +749,26 @@ private: // member functions //////////////////////////////////////////////////
       int row = i/nbasis_global_;
       dag_factor_[i] = dag_factor_eigen(row, col);
     });
+  }
+
+  void reportVersion() {
+#if defined(ROW_MAJOR)
+    grid_printf_flush("Creating coarse operator link matrices in layout: row    major\n");
+#else
+    grid_printf_flush("Creating coarse operator link matrices in layout: column major\n");
+#endif
+
+#if defined(TENSOR_LAYOUT)
+    grid_printf_flush("Creating coarse operator link matrices using: grid tensors\n");
+#else
+    grid_printf_flush("Creating coarse operator link matrices using: std::vector (as in grid)\n");
+#endif
+
+#if defined(REFERENCE_SUMMATION_ORDER)
+    grid_printf_flush("Creating coarse operator with summation order: reference\n");
+#else
+    grid_printf_flush("Creating coarse operator with summation order: modified\n");
+#endif
   }
 
 public: // kernel functions TODO: move somewhere else ////////////////////////
