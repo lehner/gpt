@@ -50,6 +50,15 @@ using namespace Grid;
   for(uint64_t k=0;k<v.size();k++) v[k].ViewClose();    \
   p = nullptr;
 
+// use grid's print prefix but more conveniently
+#define grid_message(...) \
+  { \
+    char _buf[1024]; \
+    sprintf(_buf, __VA_ARGS__); \
+    std::cout << GridLogMessage << _buf; \
+    fflush(stdout);                      \
+  }
+
 NAMESPACE_BEGIN(Grid);
 
 // aligned vector
