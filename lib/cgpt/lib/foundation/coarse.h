@@ -257,8 +257,6 @@ private: // member data ///////////////////////////////////////////////////////
   PhysicalLinkField UcSelfInvEven_;
   PhysicalLinkField UcSelfInvOdd_;
 
-  PhysicalFermionField tmp_;
-
   VirtualFermionField tmpMultiArg_;
   VirtualFermionField tmpEvenMultiArg_;
   VirtualFermionField tmpOddMultiArg_;
@@ -506,7 +504,7 @@ public: // member functions (additional) //////////////////////////////////////
       UcSelfInv_[v_link] = UcSelfInv[v];
     }
 
-    grid_printf_flush("ImportGauge of new Coarse Operator finished\n");
+    grid_message("ImportGauge of new Coarse Operator finished\n");
   }
 
   void PickCheckerboards() {
@@ -540,7 +538,7 @@ public: // member functions (additional) //////////////////////////////////////
       pickCheckerboard(Odd, UcSelfInvOdd_[i], UcSelfInv_[i]);
     }
 
-    grid_printf_flush("VirtualCoarsenedMatrix::PickCheckerboards finished\n");
+    grid_message("VirtualCoarsenedMatrix::PickCheckerboards finished\n");
   }
 
   void Report(int Nvec) {
@@ -553,15 +551,15 @@ public: // member functions (additional) //////////////////////////////////////
     RealD nbasis = NbasisVirtual * fermion_n_virtual_;
 
     if ( MCalls > 0 ) {
-      grid_printf_flush("#### M calls report\n");
-      grid_printf_flush("CoarseOperator Number of Calls                         : %d\n", (int)MCalls);
-      grid_printf_flush("CoarseOperator MiscTime   /Calls, MiscTime    : %10.2f us, %10.2f us (= %6.2f %%)\n", MMiscTime   /MCalls, MMiscTime,    MMiscTime   /MTotalTime*100);
-      grid_printf_flush("CoarseOperator ViewTime   /Calls, ViewTime    : %10.2f us, %10.2f us (= %6.2f %%)\n", MViewTime   /MCalls, MViewTime,    MViewTime   /MTotalTime*100);
-      grid_printf_flush("CoarseOperator View2Time  /Calls, View2Time   : %10.2f us, %10.2f us (= %6.2f %%)\n", MView2Time  /MCalls, MView2Time,   MView2Time  /MTotalTime*100);
-      grid_printf_flush("CoarseOperator CopyTime   /Calls, CopyTime    : %10.2f us, %10.2f us (= %6.2f %%)\n", MCopyTime   /MCalls, MCopyTime,    MCopyTime   /MTotalTime*100);
-      grid_printf_flush("CoarseOperator CommTime   /Calls, CommTime    : %10.2f us, %10.2f us (= %6.2f %%)\n", MCommTime   /MCalls, MCommTime,    MCommTime   /MTotalTime*100);
-      grid_printf_flush("CoarseOperator ComputeTime/Calls, ComputeTime : %10.2f us, %10.2f us (= %6.2f %%)\n", MComputeTime/MCalls, MComputeTime, MComputeTime/MTotalTime*100);
-      grid_printf_flush("CoarseOperator TotalTime  /Calls, TotalTime   : %10.2f us, %10.2f us (= %6.2f %%)\n", MTotalTime  /MCalls, MTotalTime,   MTotalTime  /MTotalTime*100);
+      grid_message("#### M calls report\n");
+      grid_message("CoarseOperator Number of Calls                         : %d\n", (int)MCalls);
+      grid_message("CoarseOperator MiscTime   /Calls, MiscTime    : %10.2f us, %10.2f us (= %6.2f %%)\n", MMiscTime   /MCalls, MMiscTime,    MMiscTime   /MTotalTime*100);
+      grid_message("CoarseOperator ViewTime   /Calls, ViewTime    : %10.2f us, %10.2f us (= %6.2f %%)\n", MViewTime   /MCalls, MViewTime,    MViewTime   /MTotalTime*100);
+      grid_message("CoarseOperator View2Time  /Calls, View2Time   : %10.2f us, %10.2f us (= %6.2f %%)\n", MView2Time  /MCalls, MView2Time,   MView2Time  /MTotalTime*100);
+      grid_message("CoarseOperator CopyTime   /Calls, CopyTime    : %10.2f us, %10.2f us (= %6.2f %%)\n", MCopyTime   /MCalls, MCopyTime,    MCopyTime   /MTotalTime*100);
+      grid_message("CoarseOperator CommTime   /Calls, CommTime    : %10.2f us, %10.2f us (= %6.2f %%)\n", MCommTime   /MCalls, MCommTime,    MCommTime   /MTotalTime*100);
+      grid_message("CoarseOperator ComputeTime/Calls, ComputeTime : %10.2f us, %10.2f us (= %6.2f %%)\n", MComputeTime/MCalls, MComputeTime, MComputeTime/MTotalTime*100);
+      grid_message("CoarseOperator TotalTime  /Calls, TotalTime   : %10.2f us, %10.2f us (= %6.2f %%)\n", MTotalTime  /MCalls, MTotalTime,   MTotalTime  /MTotalTime*100);
 
       // Average the compute time
       grid_->GlobalSum(MComputeTime);
@@ -573,24 +571,21 @@ public: // member functions (additional) //////////////////////////////////////
       RealD byte_per_site = word_per_site * complex_words * prec_bytes;
       RealD mflops = flop_per_site*volume*MCalls/MComputeTime;
       RealD mbytes = byte_per_site*volume*MCalls/MComputeTime;
-      grid_printf_flush("CoarseOperator Average mflops/s, mbytes/s per call                : %.0f, %.0f\n", mflops, mbytes);
-      grid_printf_flush("CoarseOperator Average mflops/s, mbytes/s per call per rank       : %.0f, %.0f\n", mflops/Nproc, mbytes/Nproc);
-      grid_printf_flush("CoarseOperator Average mflops/s, mbytes/s per call per node       : %.0f, %.0f\n", mflops/Nnode, mbytes/Nnode);
+      grid_message("CoarseOperator Average mflops/s, mbytes/s per call                : %.0f, %.0f\n", mflops, mbytes);
+      grid_message("CoarseOperator Average mflops/s, mbytes/s per call per rank       : %.0f, %.0f\n", mflops/Nproc, mbytes/Nproc);
+      grid_message("CoarseOperator Average mflops/s, mbytes/s per call per node       : %.0f, %.0f\n", mflops/Nnode, mbytes/Nnode);
 
       RealD Fullmflops = flop_per_site*volume*MCalls/(MTotalTime);
       RealD Fullmbytes = byte_per_site*volume*MCalls/(MTotalTime);
-      grid_printf_flush("CoarseOperator Average mflops/s, mbytes/s per call (full)         : %.0f, %.0f\n", Fullmflops, Fullmbytes);
-      grid_printf_flush("CoarseOperator Average mflops/s, mbytes/s per call per rank (full): %.0f, %.0f\n", Fullmflops/Nproc, Fullmbytes/Nproc);
-      grid_printf_flush("CoarseOperator Average mflops/s, mbytes/s per call per node (full): %.0f, %.0f\n", Fullmflops/Nnode, Fullmbytes/Nnode);
+      grid_message("CoarseOperator Average mflops/s, mbytes/s per call (full)         : %.0f, %.0f\n", Fullmflops, Fullmbytes);
+      grid_message("CoarseOperator Average mflops/s, mbytes/s per call per rank (full): %.0f, %.0f\n", Fullmflops/Nproc, Fullmbytes/Nproc);
+      grid_message("CoarseOperator Average mflops/s, mbytes/s per call per node (full): %.0f, %.0f\n", Fullmflops/Nnode, Fullmbytes/Nnode);
 
-      // grid_printf_flush("CoarseOperator Stencil\n"); stencil_.Report();
-      // grid_printf_flush("CoarseOperator StencilEven\n"); stencilEven_.Report();
-      // grid_printf_flush("CoarseOperator StencilOdd\n"); stencilOdd_.Report();
-      grid_printf_flush("CoarseOperator StencilMultiArg\n"); stencilMultiArg_.Report();
-      // grid_printf_flush("CoarseOperator StencilMultiArgEven\n"); stencilMultiArgEven_.Report();
-      // grid_printf_flush("CoarseOperator StencilMultiArgOdd\n"); stencilMultiArgOdd_.Report();
+      grid_message("CoarseOperator StencilMultiArg\n"); stencilMultiArg_.Report();
+      grid_message("CoarseOperator StencilMultiArgEven\n"); stencilMultiArgEven_.Report();
+      grid_message("CoarseOperator StencilMultiArgOdd\n"); stencilMultiArgOdd_.Report();
     }
-    grid_printf_flush("Report of new Coarse Operator finished\n");
+    grid_message("Report of new Coarse Operator finished\n");
   }
 
   void ZeroCounters() {
@@ -603,12 +598,9 @@ public: // member functions (additional) //////////////////////////////////////
     MComputeTime = 0;
     MTotalTime   = 0;
 
-    // stencil_.ZeroCounters();
-    // stencilEven_.ZeroCounters();
-    // stencilOdd_.ZeroCounters();
     stencilMultiArg_.ZeroCounters();
-    // stencilMultiArgEven_.ZeroCounters();
-    // stencilMultiArgOdd_.ZeroCounters();
+    stencilMultiArgEven_.ZeroCounters();
+    stencilMultiArgOdd_.ZeroCounters();
   }
 
   void copyToTmp5dField(const FermionField& in, VirtualFermionField& tmp, int Nsite, int NvirtualFermion, int Narg) {
@@ -622,7 +614,7 @@ public: // member functions (additional) //////////////////////////////////////
         const int v_col = _sF%NvirtualFermion; _sF/=NvirtualFermion;
         const int sU    = _sF%Nsite;           _sF/=Nsite;
         coalescedWrite(tmp_v[sF], in_v[arg*NvirtualFermion+v_col](sU));
-        // grid_printf_flush("COPY: sF = %4d, arg = %4d, sU = %4d, v_col = %4d\n", sF, arg, sU, v_col); fflush(stdout);
+        // grid_message("COPY: sF = %4d, arg = %4d, sU = %4d, v_col = %4d\n", sF, arg, sU, v_col); fflush(stdout);
       });
     MCopyTime+=usecond();
     MView2Time-=usecond();
@@ -649,9 +641,6 @@ public: // member functions (additional) //////////////////////////////////////
     , fermion_n_virtual_(uint64_t(sqrt(UcSelfInv.size())))
     , n_arg_(numArg)
     , nbasis_global_(fermion_n_virtual_*NbasisVirtual)
-    // , stencil_(grid_, geom_.npoint, Even, geom_.directions, geom_.displacements, 0)
-    // , stencilEven_(cbGrid_, geom_.npoint, Even, geom_.directions, geom_.displacements, 0)
-    // , stencilOdd_(cbGrid_, geom_.npoint, Odd, geom_.directions, geom_.displacements, 0)
     , stencilMultiArg_(gridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
     , stencilEvenMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
     , stencilOddMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Odd, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
@@ -675,7 +664,6 @@ public: // member functions (additional) //////////////////////////////////////
     , UcSelfInv_(link_n_virtual_, grid_)
     , UcSelfInvEven_(link_n_virtual_, cbGrid_)
     , UcSelfInvOdd_(link_n_virtual_, cbGrid_)
-    , tmp_(fermion_n_virtual_*n_arg_, grid_) // needed for temporary in M
     , tmpMultiArg_(gridMultiArg_)
     , tmpEvenMultiArg_(cbGridMultiArg_)
     , tmpOddMultiArg_(cbGridMultiArg_)
@@ -731,21 +719,21 @@ private: // member functions //////////////////////////////////////////////////
 
   void reportVersion() {
 #if defined(ROW_MAJOR)
-    grid_printf_flush("Creating coarse operator link matrices in layout: row    major\n");
+    grid_message("Creating coarse operator link matrices in layout: row    major\n");
 #else
-    grid_printf_flush("Creating coarse operator link matrices in layout: column major\n");
+    grid_message("Creating coarse operator link matrices in layout: column major\n");
 #endif
 
 #if defined(TENSOR_LAYOUT)
-    grid_printf_flush("Creating coarse operator link matrices using: grid tensors\n");
+    grid_message("Creating coarse operator link matrices using: grid tensors\n");
 #else
-    grid_printf_flush("Creating coarse operator link matrices using: std::vector (as in grid)\n");
+    grid_message("Creating coarse operator link matrices using: std::vector (as in grid)\n");
 #endif
 
 #if defined(REFERENCE_SUMMATION_ORDER)
-    grid_printf_flush("Creating coarse operator with summation order: reference\n");
+    grid_message("Creating coarse operator with summation order: reference\n");
 #else
-    grid_printf_flush("Creating coarse operator with summation order: modified\n");
+    grid_message("Creating coarse operator with summation order: modified\n");
 #endif
   }
 
@@ -939,7 +927,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
-    grid_printf_flush("Finished calling: MInternal_gpu\n");
+    grid_message("Finished calling: MInternal_gpu\n");
   }
 
   void MInternal_cpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
@@ -1045,7 +1033,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
-    grid_printf_flush("Finished calling: MInternal_cpu\n");
+    grid_message("Finished calling: MInternal_cpu\n");
   }
 
   void MdagInternal_gpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
@@ -1157,7 +1145,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
-    grid_printf_flush("Finished calling: MInternal_gpu\n");
+    grid_message("Finished calling: MdagInternal_gpu\n");
   }
 
   void MdagInternal_cpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
@@ -1266,7 +1254,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
-    grid_printf_flush("Finished calling: DhopInternal_gpu\n");
+    grid_message("Finished calling: DhopInternal_gpu\n");
   }
 
   void DhopInternal_cpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
@@ -1379,7 +1367,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
-    grid_printf_flush("Finished calling: DhopInternal_gpu\n");
+    grid_message("Finished calling: DhopDagInternal_gpu\n");
   }
 
   void DhopDagInternal_cpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
@@ -1399,6 +1387,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     const int Nsite           = in[0].Grid()->oSites();
     const int Npoint          = geom_.npoint;
 
+    grid_message("DhopDirInternal_gpu: n_arg_ = %d, Narg = %d\n", n_arg_, Narg);
     assert(n_arg_ == Narg);
 
     SimpleCompressor<SiteSpinor> compressor;
@@ -1485,7 +1474,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
-    grid_printf_flush("Finished calling: DhopDirInternal_gpu\n");
+    grid_message("Finished calling: DhopDirInternal_gpu\n");
   }
 
   void DhopDirInternal_cpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp, int point) {
@@ -1570,7 +1559,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
-    grid_printf_flush("Finished calling: MooeeInternal_gpu\n");
+    grid_message("Finished calling: MooeeInternal_gpu\n");
   }
 
   void MooeeInternal_cpu(const PhysicalLinkField& UcSelf, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
@@ -1659,7 +1648,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_CLOSE_POINTER(out_v, out_p);
     MViewTime += usecond();
     MTotalTime += usecond();
-    grid_printf_flush("Finished calling: MooeeDagInternal_gpu\n");
+    grid_message("Finished calling: MooeeDagInternal_gpu\n");
   }
 
   void MooeeDagInternal_cpu(const PhysicalLinkField& UcSelf, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
