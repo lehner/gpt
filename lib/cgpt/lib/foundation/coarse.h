@@ -234,7 +234,6 @@ private: // member data ///////////////////////////////////////////////////////
   GridBase* cbGridMultiArg_;
 
   bool hermitianOverall_;
-  bool hermitianSelf_;
 
   uint64_t link_n_virtual_;
   uint64_t fermion_n_virtual_;
@@ -271,8 +270,6 @@ private: // member data ///////////////////////////////////////////////////////
   double MCommTime;
   double MComputeTime;
   double MTotalTime;
-
-  // Vector<RealD> dagFactor_;
 
 public: // member functions (implementing interface) //////////////////////////
 
@@ -636,7 +633,6 @@ public: // member functions (additional) //////////////////////////////////////
     , gridMultiArg_(SpaceTimeGrid::makeFiveDimGrid(numArg*uint64_t(sqrt(UcSelfInv.size())), &grid))
     , cbGridMultiArg_(SpaceTimeGrid::makeFiveDimRedBlackGrid(numArg*uint64_t(sqrt(UcSelfInv.size())), &grid))
     , hermitianOverall_(makeHermitian)
-    , hermitianSelf_(false)
     , link_n_virtual_(UcSelfInv.size())
     , fermion_n_virtual_(uint64_t(sqrt(UcSelfInv.size())))
     , n_arg_(numArg)
@@ -823,8 +819,6 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
   }
 
   void MInternal_gpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
-    // NOTE: corresponds to "M_finegrained_loopinternal_tensorlayout_parchange_commsreduce" in test file
-    // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
     MCalls++;
     MTotalTime -= usecond();
     MMiscTime -= usecond();
@@ -931,8 +925,6 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
   }
 
   void MInternal_cpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
-    // NOTE: corresponds to "M_loopinternal_tensorlayout_parchange_commsreduce" in test file
-    // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
     MCalls++;
     MTotalTime -= usecond();
     MMiscTime -= usecond();
@@ -1037,8 +1029,6 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
   }
 
   void MdagInternal_gpu(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) {
-    // NOTE: corresponds to "M_finegrained_loopinternal_tensorlayout_parchange_commsreduce" in test file
-    // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
     MCalls++;
     MTotalTime -= usecond();
     MMiscTime -= usecond();
@@ -1153,8 +1143,6 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
   }
 
   void DhopInternal_gpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
-    // NOTE: corresponds to "M_finegrained_loopinternal_tensorlayout_parchange_commsreduce" in test file
-    // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
     MCalls++;
     MTotalTime -= usecond();
     MMiscTime -= usecond();
@@ -1262,8 +1250,6 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
   }
 
   void DhopDagInternal_gpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp) {
-    // NOTE: corresponds to "M_finegrained_loopinternal_tensorlayout_parchange_commsreduce" in test file
-    // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
     MCalls++;
     MTotalTime -= usecond();
     MMiscTime -= usecond();
@@ -1375,8 +1361,6 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
   }
 
   void DhopDirInternal_gpu(Stencil& stencil, const PhysicalGaugeField& Uc, const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, VirtualFermionField& tmp, int point) {
-    // NOTE: corresponds to "M_finegrained_loopinternal_tensorlayout_parchange_commsreduce" in test file
-    // NOTE: version with additional parallelism over output virtual index + reducing comms by temporary 5d object -- Lorentz in tensor
     MCalls++;
     MTotalTime -= usecond();
     MMiscTime -= usecond();
