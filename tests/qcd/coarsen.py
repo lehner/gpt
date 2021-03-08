@@ -173,7 +173,7 @@ g.message("Test passed for coarse coarse operator, %e <= %e" % (err2, tol_operat
 
 # setup fields
 rng.cnormal(A_c)
-mat_c = g.qcd.fermion.coarse_fermion(A_c, level=0)
+mat_c = g.qcd.fermion.coarse_fermion_switch(A_c, level=0)
 vec_out_link_c, vec_out_mat_c = g.lattice(vec_in_c), g.lattice(vec_in_c)
 vec_out_link_c[:] = 0.0
 vec_out_link_c[:] = 0.0
@@ -197,7 +197,7 @@ g.message("Test passed for coarse links, %e <= %e" % (diff2, tol))
 
 # setup fields
 rng.cnormal(A_cc)
-mat_cc = g.qcd.fermion.coarse_fermion(A_cc, level=1)
+mat_cc = g.qcd.fermion.coarse_fermion_switch(A_cc, level=1)
 vec_out_link_cc, vec_out_mat_cc = g.lattice(vec_in_cc), g.lattice(vec_in_cc)
 vec_out_link_cc[:] = 0.0
 vec_out_link_cc[:] = 0.0

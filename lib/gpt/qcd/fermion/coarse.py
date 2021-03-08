@@ -17,7 +17,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, numpy
+import gpt, numpy, sys
 from gpt.params import params_convention
 
 #
@@ -237,4 +237,4 @@ def nearest_neighbor_operator(fine_matrix, coarse_grid, basis, params):
     )
 
     level = 1 if isinstance(fine_matrix.otype[0], gpt.ot_matrix_singlet) else 0
-    return gpt.qcd.fermion.coarse_fermion(A, level=level)
+    return gpt.qcd.fermion.coarse_fermion_switch(A, level=level)
