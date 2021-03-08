@@ -170,7 +170,6 @@ class operator(gpt.matrix_operator):
             mat=lambda dst, src: self._Mdir(dst, src, mu, fb),
             otype=self.otype,
             grid=self.F_grid,
-            accept_list=self.with_multi_arg,
         )
 
     @params_convention()
@@ -354,6 +353,8 @@ class multi_arg_coarse_operator(operator):
         return cgpt.apply_multi_arg_fermion_operator(self.obj, opcode, i, o)
 
     def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
+        o = gpt.util.to_list(o)
+        i = gpt.util.to_list(i)
         return cgpt.apply_multi_arg_fermion_operator_dirdisp(
             self.obj, opcode, i, o, direction, disp
         )
