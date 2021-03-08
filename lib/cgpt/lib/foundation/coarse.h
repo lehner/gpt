@@ -149,10 +149,8 @@ public:
 
   virtual void M(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
   virtual void Mdag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
-  virtual void MdagM(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) = 0;
   virtual void Mdiag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) { Mooee(in, in_n_virtual, out, out_n_virtual); }
   virtual void Mdir(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dir, int disp) = 0;
-  // virtual void MdirAll(const FermionField& in, uint64_t in_n_virtual, std::vector<FermionField>& out, uint64_t out_n_virtual) = 0; // TODO think about this one again!
 
   /////////////////////////////////////////////////////////////////////////////
   //                            half cb operations                           //
@@ -293,26 +291,9 @@ public: // member functions (implementing interface) //////////////////////////
   // full cb operations
   void M(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
     MInternal(in, in_n_virtual, out, out_n_virtual);
-#if 0 // only needed when we're separating self coupling from directions
-    constantCheckerboard(in, out);
-    Dhop(in, in_n_virtual, out, out_n_virtual, DaggerNo);
-    // TODO move to external function START
-    FermionField tmp_pvec;
-    tmp_pvec.resize(tmp_.size());
-    for(size_t i=0;i<tmp_.size();i++) {
-      tmp_pvec(i) = &(tmp_[i]);
-    }
-    // TODO move to external function END
-    Mooee(in, in_n_virtual, tmp_pvec, out_n_virtual);
-    axpy(out, 1.0, out, tmp_pvec, out_n_virtual);
-#endif
   }
   void Mdag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
     MdagInternal(in, in_n_virtual, out, out_n_virtual);
-  }
-  void MdagM(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
-    grid_printf_flush("TODO: implement this correctly\n");
-    MInternal(in, in_n_virtual, out, out_n_virtual);
   }
   void Mdiag(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
     Mooee(in, in_n_virtual, out, out_n_virtual);
@@ -320,9 +301,6 @@ public: // member functions (implementing interface) //////////////////////////
   void Mdir(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual, int dir, int disp) override {
     DhopDir(in, in_n_virtual, out, out_n_virtual, dir, disp);
   }
-  // void MdirAll(const FermionField& in, uint64_t in_n_virtual, std::vector<FermionField>& out, uint64_t out_n_virtual) override { // TODO think about this one again!
-  //   DhopDirAll(in, in_n_virtual, out, out_n_virtual);
-  // }
 
   // half cb operations
   void Meooe(const FermionField& in, uint64_t in_n_virtual, FermionField& out, uint64_t out_n_virtual) override {
