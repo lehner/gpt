@@ -7,5 +7,5 @@ echo "COLOR(3)" >> lib/spin_color.h
 echo "SPIN_COLOR(4,3)" >> lib/spin_color.h
 
 ./clean
-./make
+./make $@
 

@@ -10,7 +10,7 @@ import numpy
 gpt.default.set_verbose("hmc")
 gpt.default.set_verbose("omf4")
 gpt.default.set_verbose("random", False)
-grid = gpt.grid([16, 16, 16, 32], gpt.double)
+grid = gpt.grid([16, 16, 32, 32], gpt.double)
 
 rng = gpt.random("pure-gauge")
 U = gpt.qcd.gauge.unit(grid)
@@ -20,10 +20,20 @@ mom = gpt.algorithms.markov.conjugate_momenta(U)
 act = gpt.qcd.actions.gauge.wilson(U, 5.96)
 act.hot_start(rng)
 
-iU = gpt.algorithms.integrators.update_gauge(U, mom)
-i0 = gpt.algorithms.integrators.update_mom(mom, act)
+N=10
 
-mdint = gpt.algorithms.integrators.OMF4(8, i0, iU)
+time = gpt.timer("force")
+for i in range(N):
+    time('setup')
+    act.setup_force()
+time()
+gpt.message('time per force',time.total/N)
+
+import sys
+sys.exit()
+
+int = gpt.algorithms.integrators
+mdint = int.OMF4(8, int.update_mom(mom, act), int.update_gauge(U, mom))
 
 hmc = gpt.algorithms.markov.hmc(U, mom, None, mdint, rng)
 

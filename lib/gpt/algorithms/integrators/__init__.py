@@ -59,6 +59,7 @@ class update_scalar:
     def __call__(self, eps):
         for mu in range(len(self.fld)):
             self.fld[mu] += eps * self.mom[mu]
+            #self.fld[mu] @= alg2group(eps*self.mom[mu], self.fld[mu])
 
     def get_act(self):
         return []

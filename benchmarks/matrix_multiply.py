@@ -12,7 +12,7 @@ rng = g.random("benchmark")
 
 # main test loop
 for precision in [g.single, g.double]:
-    grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
+    grid = g.grid(g.default.get_ivec("--grid", [16,16,32,32], 4), precision)
     N = 10
     Nwarmup = 5
     g.message(
@@ -48,6 +48,7 @@ Matrix Multiply Benchmark with
             f"""{N} matrix_multiply
     Object type                 : {tp.__name__}
     Time to complete            : {dt:.2g} s
+    Time to complete 1          : {dt/N:.2e} s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
 """
         )
