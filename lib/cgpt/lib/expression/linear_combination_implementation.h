@@ -253,7 +253,7 @@ cgpt_Lattice_base* cgpt_compatible_linear_combination(Lattice<T>& _compatible,cg
     return cgpt_lc<T,BIT_COLORTRACE>(dst,ac,f,unary_factor);
   } else if (unary_expr == BIT_SPINTRACE) {
     return cgpt_lc<T,BIT_SPINTRACE>(dst,ac,f,unary_factor);
-  } else if (unary_expr == BIT_COLORTRACE|BIT_SPINTRACE) {
+  } else if (unary_expr == (BIT_COLORTRACE|BIT_SPINTRACE)) {
     return cgpt_lc<T,BIT_COLORTRACE|BIT_SPINTRACE>(dst,ac,f,unary_factor);
   } else {
     ERR("Invalid unary_expr = %d",unary_expr);
