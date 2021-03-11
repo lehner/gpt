@@ -96,7 +96,7 @@ class matrix_operator(factor):
 
     def __mul__(self, other):
 
-        if type(other) == matrix_operator:
+        if isinstance(other, matrix_operator):
             # mat = self * other
             # mat^dag = other^dag self^dag
             # (mat^dag)^-1 = (other^dag self^dag)^-1 = self^dag^-1 other^dag^-1
