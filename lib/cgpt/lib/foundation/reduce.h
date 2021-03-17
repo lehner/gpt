@@ -84,13 +84,11 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	      ComplexD v = 0.0;
 
 	      if (do_all) {
-#pragma unroll
 		for (int j=0;j<n_per_thread;j++) {
 		  uint64_t idx = lane + j*n_coalesce + idx0;
 		  v += (ComplexD)conjugate(a[idx]) * (ComplexD)b[idx];
 	        }
               } else {
-#pragma unroll
 		for (int j=0;j<n_per_thread;j++) {
 		  uint64_t idx = lane + j*n_coalesce + idx0;
 		  if (idx < n_total)
