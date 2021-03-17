@@ -87,13 +87,16 @@ EXPORT(lattice_types,{
     
   });
 
-EXPORT(lattice_set_to_zero,{
+EXPORT(lattice_set_to_number,{
     void* p;
-    if (!PyArg_ParseTuple(args, "l", &p)) {
+    PyObject* _number;
+    if (!PyArg_ParseTuple(args, "lO", &p, &_number)) {
       return NULL;
     }
-    
-    ((cgpt_Lattice_base*)p)->set_to_zero();
+
+    ComplexD number;
+    cgpt_convert(_number,number);
+    ((cgpt_Lattice_base*)p)->set_to_number(number);
 
     return PyLong_FromLong(0);
   });

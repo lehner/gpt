@@ -146,13 +146,14 @@ class fgmres(base_iterative):
                 mat(V[i + 1], ZV[i])
 
                 t("ortho")
-                g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i])
+                g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i], nblock=10)
 
-                t("linalg")
+                t("linalg norm2")
                 H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
                 if H[i + 1, i] == 0.0:
                     self.debug(f"breakdown, H[{i+1:d}, {i:d}] = 0")
                     break
+                t("linalg div")
                 V[i + 1] /= H[i + 1, i]
 
                 t("qr")

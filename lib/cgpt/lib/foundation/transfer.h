@@ -118,12 +118,13 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
 	auto vec_i = idx % vec_n; idx /= vec_n;
 	auto sc = idx % coarse_osites; idx /= coarse_osites;
 	
-	decltype(innerProductD2(basis_v[0](0), fine_v[0](0))) reduce = Zero();
+	decltype(innerProductD2(coalescedRead(basis_v[0][0]), coalescedRead(fine_v[0][0]))) reduce = Zero();
 	
 	for (long fine_virtual_i=0; fine_virtual_i<fine_n_virtual; fine_virtual_i++) {
 	  for(long j=0; j<sizes_v[sc]; ++j) {
 	    long sf = lut_v[sc][j];
-	    reduce = reduce + innerProductD2(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i](sf), fine_v[vec_i*fine_n_virtual + fine_virtual_i](sf));
+	    reduce = reduce + innerProductD2(coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]),
+					     coalescedRead(fine_v[vec_i*fine_n_virtual + fine_virtual_i][sf]));
 	  }
 	}
 	
@@ -207,14 +208,14 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
 	  if (basis_i0 == 0)
 	    fine_t = Zero();
 	  else
-	    fine_t = fine_v[vec_i*fine_n_virtual + fine_virtual_i](sf);
+	    fine_t = coalescedRead(fine_v[vec_i*fine_n_virtual + fine_virtual_i][sf]);
 
 	  for(long basis_i_rel=0; basis_i_rel<basis_block; basis_i_rel++) {
 	    long basis_i_abs = basis_i_rel + basis_i0;
 	    long coarse_virtual_i = basis_i_abs / coarse_virtual_size;
 	    long coarse_i = basis_i_abs % coarse_virtual_size;
-	    convertType(cA,TensorRemove(coarse_v[vec_i*coarse_n_virtual + coarse_virtual_i](sc)(coarse_i)));
-	    auto prod = cA*basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i](sf);
+	    convertType(cA,TensorRemove(coalescedRead(coarse_v[vec_i*coarse_n_virtual + coarse_virtual_i][sc])(coarse_i)));
+	    auto prod = cA*coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]);
 	    convertType(cAx,prod);
 	    fine_t = fine_t + cAx;
 	  }

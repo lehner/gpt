@@ -133,23 +133,6 @@ template<typename T1, int N>
 struct UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_SPINTRACE|BIT_COLORTRACE> :
   UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_COLORTRACE> {};
 
-
-
-template<typename T>
-void cgpt_unary(cgpt_Lattice<T> * pc, int unary) {
-  switch (unary) {
-  case BIT_TRANS|BIT_CONJ:
-    pc->l = adj(pc->l);
-    break;
-  case BIT_TRANS:
-    pc->l = closure(transpose(pc->l));
-    break;
-  case BIT_CONJ:
-    pc->l = conjugate(pc->l);
-    break;
-  }
-}
-
 template<typename T,int unary_expr,typename AccumulatorBase>
 cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term>& f, int unary_factor) {
 
