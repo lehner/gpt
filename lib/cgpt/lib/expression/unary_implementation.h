@@ -23,6 +23,10 @@ accelerator_inline typename std::enable_if<isGridTensor<T>::notvalue, void>::typ
   coalescedWriteFundamental(r, conjugate(coalescedReadFundamental(l)));
 }
 
+template<typename T> accelerator_inline void cgpt_adj(iScalar<T> & r, const iScalar<T> & l);
+template<typename T, int n> accelerator_inline void cgpt_adj(iMatrix<T,n> & r, const iMatrix<T,n> & l);
+template<typename T, int n> accelerator_inline void cgpt_adj(iVector<T,n> & r, const iVector<T,n> & l);
+
 template<typename T, int n> accelerator_inline void cgpt_adj(iMatrix<T,n> & r, const iMatrix<T,n> & l) {
   for (int i=0;i<n;i++)
     for (int j=0;j<n;j++)
@@ -44,6 +48,10 @@ accelerator_inline typename std::enable_if<isGridTensor<T>::notvalue, void>::typ
   coalescedWriteFundamental(r, coalescedReadFundamental(l));
 }
 
+template<typename T, int n> accelerator_inline void cgpt_trans(iMatrix<T,n> & r, const iMatrix<T,n> & l);
+template<typename T, int n> accelerator_inline void cgpt_trans(iVector<T,n> & r, const iVector<T,n> & l);
+template<typename T> accelerator_inline void cgpt_trans(iScalar<T> & r, const iScalar<T> & l);
+
 template<typename T, int n> accelerator_inline void cgpt_trans(iMatrix<T,n> & r, const iMatrix<T,n> & l) {
   for (int i=0;i<n;i++)
     for (int j=0;j<n;j++)
@@ -63,6 +71,10 @@ template<typename T> accelerator_inline void cgpt_trans(iScalar<T> & r, const iS
 template<typename T> accelerator_inline typename std::enable_if<isGridTensor<T>::notvalue, void>::type cgpt_conj(T & r, const T & l) {
   coalescedWriteFundamental(r, conjugate(coalescedReadFundamental(l)));
 }
+
+template<typename T, int n> accelerator_inline void cgpt_conj(iMatrix<T,n> & r, const iMatrix<T,n> & l);
+template<typename T, int n> accelerator_inline void cgpt_conj(iVector<T,n> & r, const iVector<T,n> & l);
+template<typename T> accelerator_inline void cgpt_conj(iScalar<T> & r, const iScalar<T> & l);
 
 template<typename T, int n> accelerator_inline void cgpt_conj(iMatrix<T,n> & r, const iMatrix<T,n> & l) {
   for (int i=0;i<n;i++)
