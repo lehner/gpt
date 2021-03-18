@@ -31,26 +31,43 @@ def _simple_matrix(operator, extra_params={}):
     return matrix_operator(_mat)
 
 
+def _simple_map(operator, extra_params={}):
+    def _mat(first, second=None):
+        if second is not None:
+            dst = first
+            src = gpt.eval(second)
+        else:
+            src = gpt.eval(first)
+            dst = gpt.lattice(src)
+        for i in dst.otype.v_idx:
+            cgpt.unary(
+                dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params}
+            )
+        return dst
+
+    return _mat
+
+
 imag = _simple_matrix("imag")
 real = _simple_matrix("real")
-abs = _simple_matrix("abs")
-sqrt = _simple_matrix("sqrt")
-exp = _simple_matrix("exp")
-log = _simple_matrix("log")
-sin = _simple_matrix("sin")
-asin = _simple_matrix("asin")
-cos = _simple_matrix("cos")
-acos = _simple_matrix("acos")
-tan = _simple_matrix("tan")
-atan = _simple_matrix("atan")
-sinh = _simple_matrix("sinh")
-asinh = _simple_matrix("asinh")
-cosh = _simple_matrix("cosh")
-acosh = _simple_matrix("acosh")
-tanh = _simple_matrix("tanh")
-atanh = _simple_matrix("atanh")
-inv = _simple_matrix("pow", {"exponent": -1.0})
+abs = _simple_map("abs")
+sqrt = _simple_map("sqrt")
+exp = _simple_map("exp")
+log = _simple_map("log")
+sin = _simple_map("sin")
+asin = _simple_map("asin")
+cos = _simple_map("cos")
+acos = _simple_map("acos")
+tan = _simple_map("tan")
+atan = _simple_map("atan")
+sinh = _simple_map("sinh")
+asinh = _simple_map("asinh")
+cosh = _simple_map("cosh")
+acosh = _simple_map("acosh")
+tanh = _simple_map("tanh")
+atanh = _simple_map("atanh")
+inv = _simple_map("pow", {"exponent": -1.0})
 
 
 def pow(exponent):
-    return _simple_matrix("pow", {"exponent": exponent})
+    return _simple_map("pow", {"exponent": exponent})
