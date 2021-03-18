@@ -159,7 +159,7 @@ class lattice(factor):
 
             if gpt.util.is_num(value):
                 for o in self.v_obj:
-                    cgpt.lattice_set_to_number(o,value)
+                    cgpt.lattice_set_to_number(o, value)
                 return
 
             cache_key = f"{self.otype.__name__}_{self.checkerboard().__name__}_{self.grid.describe()}"

@@ -217,11 +217,14 @@ for grid in [grid_dp, grid_sp]:
                     host_result[i, j]
                 )
                 assert eps < 1e-13
-                eps = abs(acc_result_individual - acc_result[i, j]) / abs(acc_result[i, j])
+                eps = abs(acc_result_individual - acc_result[i, j]) / abs(
+                    acc_result[i, j]
+                )
                 assert eps < 1e-13
                 if i == 0 and j == 0:
                     ref = np.vdot(
-                        left[i][:].astype(np.complex128), right[j][:].astype(np.complex128)
+                        left[i][:].astype(np.complex128),
+                        right[j][:].astype(np.complex128),
                     )
                     eps = abs(host_result_individual - ref) / abs(ref)
                     assert eps < 1e-12

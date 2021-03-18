@@ -445,4 +445,4 @@ for precision in [g.single, g.double]:
                     fp - np.array(test["matrices"][matrix])
                 ) / np.linalg.norm(fp)
                 g.message(f"Test {matrix} fingerprint: {eps}")
-                assert eps < grid.precision.eps * 10.0
+                assert eps < grid.precision.eps * 50.0
