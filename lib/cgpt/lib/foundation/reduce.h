@@ -67,7 +67,7 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 
 	accelerator_forNB(work, n_outer, n_coalesce, {
 
-	    accelerator_shared ComplexD vc[n_coalesce];
+	    accelerator_shared double vr[2*n_coalesce];
 	    
 	    int lane = acceleratorSIMTlane(n_coalesce);
 	    uint64_t idx0 = work * n_per_thread * n_coalesce;
@@ -96,14 +96,15 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	        }
 	      }	      
 	    
-	      vc[lane] = v;
+	      vr[2*lane + 0] = v.real();
+	      vr[2*lane + 1] = v.imag();
 
 	      acceleratorSynchronise();
 
 	      if (lane == 0) {
 		v = 0.0;
 		for (int j=0;j<n_coalesce;j++)
-		  v+=vc[j];
+		  v+=ComplexD(vr[2*j + 0],vr[2*j + 1]);
 		c[work] = v;
 	      }
 
