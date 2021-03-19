@@ -23,7 +23,14 @@ from gpt.algorithms import base_iterative
 
 
 class cagcr(base_iterative):
-    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=8, checkres=True)
+    """
+    This algorithm delays the orthogonalization by 'unrolling' the iterations within a restart of standard gcr.
+    Due to this delay the restart length cannot be chosen arbitrarily large as the vectors quickly become linear dependent otherwise.
+    The convergence greatly varies depending on this number but something in the ballpark of 8-10 should be be a good value here.
+    This is acceptible since this algorithm isn't aimed to be used as a standalone solver but rather as a preconditioner to a flexible solver or a smoother/coarse solver in multigrid.
+    """
+
+    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=10, checkres=True)
     def __init__(self, params):
         super().__init__()
         self.params = params
@@ -31,10 +38,6 @@ class cagcr(base_iterative):
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
-
-        g.message(
-            "Note that this solver is aimed at being used as a preconditioner exclusively"
-        )
 
     @g.params_convention()
     def modified(self, params):
