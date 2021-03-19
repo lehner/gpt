@@ -81,6 +81,9 @@ slv_fgcr = w.propagator(
 slv_fgmres = w.propagator(
     inv_pc(eo2, inv.fgmres({"eps": 1e-6, "maxiter": 1000, "restartlen": 20}))
 )
+slv_cagcr = w.propagator(
+    inv_pc(eo2, inv.cagcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 10}))
+)
 
 # defect-correcting solver at the full field level
 slv_dci = w.propagator(
@@ -139,6 +142,7 @@ test(slv_mr, "MR")
 test(slv_bicgstab, "BICGSTAB")
 test(slv_fgcr, "FGCR")
 test(slv_fgmres, "FGMRES")
+test(slv_cagcr, "CAGCR")
 
 # summary
 g.message(
