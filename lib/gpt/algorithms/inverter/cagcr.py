@@ -63,8 +63,7 @@ class cagcr(base_iterative):
             rlen = self.restartlen
 
             # tensors
-            dtype_r, dtype_c = g.double.real_dtype, g.double.complex_dtype
-            alpha = np.empty((rlen), dtype_c)
+            alpha = np.empty((rlen), g.double.complex_dtype)
 
             # fields
             r, mmpsi = g.copy(src), g.copy(src)
