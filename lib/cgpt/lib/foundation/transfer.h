@@ -17,6 +17,13 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
+#ifdef GRID_HAS_ACCELERATOR
+#define accelerator_for_lane( lane, nsimd, ... ) { int lane = acceleratorSIMTlane(nsimd); __VA_ARGS__ }
+#else
+#define accelerator_for_lane( lane, nsimd, ... ) { for (int lane=0;lane<nsimd;lane++){__VA_ARGS__} }
+#endif  
+
 template<class vobj> inline void cgpt_pickCheckerboard(int cb,Lattice<vobj> &half,const Lattice<vobj> &full)
 {
   half.Checkerboard() = cb;
@@ -104,7 +111,7 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
 
   int in_nsimd = in_grid->Nsimd();
   int out_nsimd = out_grid->Nsimd();
-  
+
   accelerator_for(in_oidx,in_grid->oSites(),in_nsimd,{
 
       Coordinate in_ocoor(ndim);
@@ -112,17 +119,19 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
       
       gi.oCoorFromOindex(in_ocoor, in_oidx);
 
-      int in_lane = acceleratorSIMTlane(in_nsimd);
-
-      for(int mu=0;mu<ndim;mu++)
-	lcoor[mu] = in_ocoor[mu] + gi._rdimensions[mu]*in_icoor[lane][mu];
-
-      auto out_lane = go.iIndex(lcoor);
-      auto out_oidx = go.oIndex(lcoor);
-
-      for (int i=0;i<n_elem;i++) {
-	((out_t*)&out_p[out_oidx])[i * out_nsimd + out_lane] = ((in_t*)&in_p[in_oidx])[i * in_nsimd + in_lane];
-      }
+      accelerator_for_lane(in_lane,in_nsimd,{
+	  
+	  for(int mu=0;mu<ndim;mu++)
+	    lcoor[mu] = in_ocoor[mu] + gi._rdimensions[mu]*in_icoor[in_lane][mu];
+	  
+	  auto out_lane = go.iIndex(lcoor);
+	  auto out_oidx = go.oIndex(lcoor);
+	  
+	  for (int i=0;i<n_elem;i++) {
+	    ((out_t*)&out_p[out_oidx])[i * out_nsimd + out_lane] = ((in_t*)&in_p[in_oidx])[i * in_nsimd + in_lane];
+	  }
+	  
+	});
 	
   });
 }

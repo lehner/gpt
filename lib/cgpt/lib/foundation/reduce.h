@@ -20,7 +20,7 @@
     This code is based on original Grid code.
 */
 
-#if defined(GRID_CUDA)||defined(GRID_HIP)
+#ifdef GRID_HAS_ACCELERATOR
 #define rankInnerProduct rankInnerProductGPU
 #else
 #define rankInnerProduct rankInnerProductCpu
