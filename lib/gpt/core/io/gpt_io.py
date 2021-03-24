@@ -366,6 +366,8 @@ class gpt_io:
             f.write(
                 "float %.16g\n" % float(objs)
             )  # improve: avoid implicit type conversion
+        elif type(objs) == gpt.grid:
+            f.write("grid %s\n" % objs.describe())
         else:
             print("Unknown type: ", type(objs))
             assert 0
@@ -430,6 +432,8 @@ class gpt_io:
             if not self.keep_context(ctx):
                 return None
             return self.read_lattice(a[1:])
+        elif cmd == "grid":
+            return gpt.grid_from_description(p.get()[1])
         else:
             assert 0
 

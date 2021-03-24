@@ -22,10 +22,15 @@ import numpy as np
 from gpt.algorithms import base_iterative
 
 
-class fgcr(base_iterative):
-    @g.params_convention(
-        eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
-    )
+class cagcr(base_iterative):
+    """
+    This algorithm delays the orthogonalization by 'unrolling' the iterations within a restart of standard gcr.
+    Due to this delay the restart length cannot be chosen arbitrarily large as the vectors quickly become linear dependent otherwise.
+    The convergence greatly varies depending on this number but something in the ballpark of 8-10 should be be a good value here.
+    This is acceptible since this algorithm isn't aimed to be used as a standalone solver but rather as a preconditioner to a flexible solver or a smoother/coarse solver in multigrid.
+    """
+
+    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=10, checkres=True)
     def __init__(self, params):
         super().__init__()
         self.params = params
@@ -33,27 +38,10 @@ class fgcr(base_iterative):
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
-        self.prec = params["prec"]
 
     @g.params_convention()
     def modified(self, params):
-        return fgcr({**self.params, **params})
-
-    def update_psi(self, psi, alpha, beta, gamma, chi, p, i):
-        # backward substitution
-        for j in reversed(range(i + 1)):
-            chi[j] = (
-                alpha[j] - np.dot(beta[j, j + 1 : i + 1], chi[j + 1 : i + 1])
-            ) / gamma[j]
-
-        for j in range(i + 1):
-            psi += chi[j] * p[j]
-
-    def restart(self, mat, psi, mmpsi, src, r, p):
-        if self.prec is not None:
-            for v in p:
-                v[:] = 0
-        return self.calc_res(mat, psi, mmpsi, src, r)
+        return cagcr({**self.params, **params})
 
     def calc_res(self, mat, psi, mmpsi, src, r):
         mat(mmpsi, psi)
@@ -67,8 +55,6 @@ class fgcr(base_iterative):
             mat = mat.mat
             # remove wrapper for performance benefits
 
-        prec = self.prec(mat) if self.prec is not None else None
-
         @self.timed_function
         def inv(psi, src, t):
             t("setup")
@@ -77,19 +63,17 @@ class fgcr(base_iterative):
             rlen = self.restartlen
 
             # tensors
-            dtype_r, dtype_c = g.double.real_dtype, g.double.complex_dtype
-            alpha = np.empty((rlen), dtype_c)
-            beta = np.empty((rlen, rlen), dtype_c)
-            gamma = np.empty((rlen), dtype_r)
-            chi = np.empty((rlen), dtype_c)
+            alpha = np.empty((rlen), g.double.complex_dtype)
 
             # fields
             r, mmpsi = g.copy(src), g.copy(src)
-            p = [g.lattice(src) for i in range(rlen)]
-            z = [g.lattice(src) for i in range(rlen)]
+            p = [g.lattice(src) for i in range(rlen + 1)]
+            # in QUDA, q is just an "alias" to p with q[k] = p[k+1]
+            # don't alias here, but just use slicing
 
             # initial residual
-            r2 = self.restart(mat, psi, mmpsi, src, r, p)
+            r2 = self.calc_res(mat, psi, mmpsi, src, r)
+            p[0] @= r
 
             # source
             ssq = g.norm2(src)
@@ -100,56 +84,55 @@ class fgcr(base_iterative):
             # target residual
             rsq = self.eps ** 2.0 * ssq
 
-            for k in range(self.maxiter):
-                # iteration within current krylov space
-                i = k % rlen
-
-                # iteration criteria
-                need_restart = i + 1 == rlen
-
-                t("prec")
-                if prec is not None:
-                    prec(p[i], r)
-                else:
-                    p[i] @= r
-
+            for k in range(0, self.maxiter, rlen):
                 t("mat")
-                mat(z[i], p[i])
+                for i in range(rlen):
+                    mat(p[i + 1], p[i])
 
-                t("ortho")
-                g.orthogonalize(z[i], z[0:i], beta[:, i])
+                t("inner_product")
+                ips = g.inner_product(p[1:], p[1:] + [p[0]])  # single reduction
 
-                t("linalg")
-                ip, z2 = g.inner_product_norm2(z[i], r)
-                gamma[i] = z2 ** 0.5
-                if gamma[i] == 0.0:
-                    self.debug(f"breakdown, gamma[{i:d}] = 0")
-                    break
-                z[i] /= gamma[i]
-                alpha[i] = ip / gamma[i]
-                r2 = g.axpy_norm2(r, -alpha[i], z[i], r)
+                t("solve")
+                rhs = ips[:, -1]  # last column
+                A = ips[:, :-1]  # all but last column
+                alpha = np.linalg.solve(A, rhs)
 
-                t("other")
-                self.log_convergence((k, i), r2, rsq)
+                # # check that solution is correct
+                # g.message(np.allclose(np.dot(A, alpha), rhs))
 
-                if r2 <= rsq or need_restart:
-                    t("update_psi")
-                    self.update_psi(psi, alpha, beta, gamma, chi, p, i)
+                t("update_psi")
+                for i in range(rlen):
+                    g.axpy(psi, alpha[i], p[i], psi)
+
+                if self.maxiter != rlen:
+                    t("update_residual")
+                    for i in range(rlen):
+                        g.axpy(r, -alpha[i], p[i + 1], r)
+
+                    t("residual")
+                    r2 = g.norm2(r)
+
+                    t("other")
+                    self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
-                    msg = f"converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+                    msg = f"converged in {k+rlen} iterations"
+                    if self.maxiter != rlen:
+                        msg += f";  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
                         res = self.calc_res(mat, psi, mmpsi, src, r)
                         msg += f";  true squared residual {res:e} / {rsq:e}"
                     self.log(msg)
                     return
 
-                if need_restart:
+                if self.maxiter != rlen:
                     t("restart")
-                    r2 = self.restart(mat, psi, mmpsi, src, r, p)
+                    p[0] @= r
                     self.debug("performed restart")
 
-            msg = f"NOT converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+            msg = f"NOT converged in {k+rlen} iterations"
+            if self.maxiter != rlen:
+                msg += f";  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:
                 res = self.calc_res(mat, psi, mmpsi, src, r)
                 msg += f";  true squared residual {res:e} / {rsq:e}"

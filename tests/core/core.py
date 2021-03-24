@@ -10,7 +10,7 @@ import numpy as np
 import sys, cgpt
 
 # grid
-L = [16, 16, 16, 32]
+L = [16, 12, 12, 24]
 grid_dp = g.grid(L, g.double)
 grid_sp = g.grid(L, g.single)
 
@@ -160,6 +160,19 @@ assert np.linalg.norm(eps) < 1e-7
 
 
 ################################################################################
+# Test fast versus slow code paths to set all elements to a number
+################################################################################
+src = g.mspincolor(grid_sp)
+new = g.mspincolor(grid_sp)
+n = complex(3, 5)
+src[:] = n
+for x in range(L[0]):
+    new[x, :, :, :] = n
+assert abs(src[2, 3, 1, 5, 1, 2, 0, 1] - n) < 1e-7
+assert g.norm2(src - new) / g.norm2(new) < 1e-7
+
+
+################################################################################
 # Test Cshifts
 ################################################################################
 # create a complex lattice on the grid
@@ -186,31 +199,35 @@ assert abs(dst[15, 0, 0, 0] - complex(2, 1)) < 1e-6
 ################################################################################
 # Test multi inner_product
 ################################################################################
-for grid in [grid_sp, grid_dp]:
-    left = [g.vcomplex(grid, 8) for i in range(2)]
-    right = [g.vcomplex(grid, 8) for i in range(4)]
-    rng.cnormal([left, right])
-    host_result = g.rank_inner_product(left, right, False)
-    acc_result = g.rank_inner_product(left, right, True)
-    eps = np.linalg.norm(host_result - acc_result) / np.linalg.norm(host_result)
-    g.message(f"Test multi inner product host<>accelerator: {eps}")
-    assert eps < 1e-13
-    for i in range(2):
-        for j in range(4):
-            host_result_individual = g.rank_inner_product(left[i], right[j], False)
-            acc_result_individual = g.rank_inner_product(left[i], right[j], True)
-            eps = abs(host_result_individual - host_result[i, j]) / abs(
-                host_result[i, j]
-            )
-            assert eps < 1e-13
-            eps = abs(acc_result_individual - acc_result[i, j]) / abs(acc_result[i, j])
-            assert eps < 1e-13
-            if i == 0 and j == 0:
-                ref = np.vdot(
-                    left[i][:].astype(np.complex128), right[j][:].astype(np.complex128)
+for grid in [grid_dp, grid_sp]:
+    for dtype in [g.vspincolor, lambda grid: g.vcomplex(grid, 12), g.complex]:
+        left = [dtype(grid) for i in range(2)]
+        right = [dtype(grid) for i in range(3)]
+        rng.cnormal([left, right])
+        host_result = g.rank_inner_product(left, right, False)
+        acc_result = g.rank_inner_product(left, right, True)
+        eps = np.linalg.norm(host_result - acc_result) / np.linalg.norm(host_result)
+        g.message(f"Test multi inner product host<>accelerator: {eps}")
+        assert eps < 1e-13
+        for i in range(2):
+            for j in range(3):
+                host_result_individual = g.rank_inner_product(left[i], right[j], False)
+                acc_result_individual = g.rank_inner_product(left[i], right[j], True)
+                eps = abs(host_result_individual - host_result[i, j]) / abs(
+                    host_result[i, j]
                 )
-                eps = abs(host_result_individual - ref) / abs(ref)
-                assert eps < 1e-12
+                assert eps < 1e-13
+                eps = abs(acc_result_individual - acc_result[i, j]) / abs(
+                    acc_result[i, j]
+                )
+                assert eps < 1e-13
+                if i == 0 and j == 0:
+                    ref = np.vdot(
+                        left[i][:].astype(np.complex128),
+                        right[j][:].astype(np.complex128),
+                    )
+                    eps = abs(host_result_individual - ref) / abs(ref)
+                    assert eps < 1e-12
 
 ################################################################################
 # Test multi linear_combination against expression engine

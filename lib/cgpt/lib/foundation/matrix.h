@@ -61,7 +61,7 @@ inline void matrixEigenFunctor(PVector<Lattice<vector_object>>&        matrix_re
     grid->LocalIndexToLocalCoor(site, lcoor);
 
     for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
-      peekLocalSite(matrix_tmp, matrix_v[lex_outer], lcoor);
+      peekLocalSite(matrix_tmp, __matrix_v[lex_outer], lcoor);
       converter.fillMatrix(lex_outer, matrix_eigen, matrix_tmp);
     }
 
@@ -69,7 +69,7 @@ inline void matrixEigenFunctor(PVector<Lattice<vector_object>>&        matrix_re
 
     for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
       converter.fillObject(lex_outer, matrix_result_tmp, matrix_result_eigen);
-      pokeLocalSite(matrix_result_tmp, matrix_result_v[lex_outer], lcoor);
+      pokeLocalSite(matrix_result_tmp, __matrix_result_v[lex_outer], lcoor);
     }
   });
 
@@ -115,7 +115,7 @@ inline void matrixEigenFunctor(Lattice<iSinglet<typename vector_object::vector_t
     grid->LocalIndexToLocalCoor(site, lcoor);
 
     for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
-      peekLocalSite(matrix_tmp, matrix_v[lex_outer], lcoor);
+      peekLocalSite(matrix_tmp, __matrix_v[lex_outer], lcoor);
       converter.fillMatrix(lex_outer, matrix_eigen, matrix_tmp);
     }
 

@@ -1,4 +1,4 @@
-# srun -N1 -n4 benchmarks/matrix_multiply.py --shm 2048 --device-mem 16000 --grid 48.48.48.128 --mpi 4.1.1.1 --accelerator-threads 4 --Ls 8
+# srun -N1 -n4 benchmarks/matrix_multiply.py --shm 2048 --device-mem 16000 --grid 48.48.48.128 --mpi 4.1.1.1 --accelerator-threads 8 --Ls 12
 OPENMPI detected
 AcceleratorCudaInit: using default device 
 AcceleratorCudaInit: assume user either uses a) IBM jsrun, or 
@@ -7,7 +7,7 @@ AcceleratorCudaInit: Configure options --enable-summit, --enable-select-gpu=no
 AcceleratorCudaInit: ================================================
 SharedMemoryMpi:  World communicator of size 4
 SharedMemoryMpi:  Node  communicator of size 4
-0SharedMemoryMpi:  SharedMemoryMPI.cc acceleratorAllocDevice 2147483648bytes at 0x14bfe0000000 for comms buffers 
+0SharedMemoryMpi:  SharedMemoryMPI.cc acceleratorAllocDevice 2147483648bytes at 0x148120000000 for comms buffers 
 
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
@@ -36,7 +36,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-Current Grid git commit hash=019ffe17d4f1ba9d167cb45f62ea7a0df0c19adc: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) uncommited changes
+Current Grid git commit hash=9c9566b9c9686a63755f39bb8910cf5325ef7177: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
 
 Grid : Message : ================================================ 
 Grid : Message : MPI is initialised and logging filters activated 
@@ -52,45 +52,45 @@ Grid : Message : MemoryManager::Init() Using cudaMalloc
               Initialized GPT                
      Copyright (C) 2020 Christoph Lehner     
 =============================================
-GPT :       1.841966 s : 
+GPT :       1.589357 s : 
                        : Matrix Multiply Benchmark with
                        :     fdimensions  : [48, 48, 48, 128]
                        :     precision    : single
                        : 
-GPT :      11.310327 s : 10 matrix_multiply
+GPT :      10.985099 s : 10 matrix_multiply
                        :     Object type                 : ot_matrix_color(3)
-                       :     Time to complete            : 0.0081 s
-                       :     Effective memory bandwidth  : 3772.97 GB/s
+                       :     Time to complete            : 0.0058 s
+                       :     Effective memory bandwidth  : 5271.36 GB/s
                        : 
-GPT :      17.027862 s : 10 matrix_multiply
+GPT :      16.689329 s : 10 matrix_multiply
                        :     Object type                 : ot_matrix_spin(4)
-                       :     Time to complete            : 0.014 s
-                       :     Effective memory bandwidth  : 3829.27 GB/s
+                       :     Time to complete            : 0.01 s
+                       :     Effective memory bandwidth  : 5333.21 GB/s
                        : 
-GPT :      62.510472 s : 10 matrix_multiply
+GPT :      62.092583 s : 10 matrix_multiply
                        :     Object type                 : ot_matrix_spin_color(4,3)
                        :     Time to complete            : 0.097 s
-                       :     Effective memory bandwidth  : 5046.46 GB/s
+                       :     Effective memory bandwidth  : 5057.37 GB/s
                        : 
-GPT :      62.518977 s : 
+GPT :      62.262581 s : 
                        : Matrix Multiply Benchmark with
                        :     fdimensions  : [48, 48, 48, 128]
                        :     precision    : double
                        : 
-GPT :      72.260958 s : 10 matrix_multiply
+GPT :      72.003471 s : 10 matrix_multiply
                        :     Object type                 : ot_matrix_color(3)
-                       :     Time to complete            : 0.016 s
-                       :     Effective memory bandwidth  : 3839.21 GB/s
+                       :     Time to complete            : 0.012 s
+                       :     Effective memory bandwidth  : 5264.01 GB/s
                        : 
-GPT :      78.472572 s : 10 matrix_multiply
+GPT :      78.174681 s : 10 matrix_multiply
                        :     Object type                 : ot_matrix_spin(4)
-                       :     Time to complete            : 0.028 s
-                       :     Effective memory bandwidth  : 3866.28 GB/s
+                       :     Time to complete            : 0.02 s
+                       :     Effective memory bandwidth  : 5439.91 GB/s
                        : 
-GPT :     128.970901 s : 10 matrix_multiply
+GPT :     128.232979 s : 10 matrix_multiply
                        :     Object type                 : ot_matrix_spin_color(4,3)
-                       :     Time to complete            : 0.33 s
-                       :     Effective memory bandwidth  : 2943.91 GB/s
+                       :     Time to complete            : 0.22 s
+                       :     Effective memory bandwidth  : 4416.45 GB/s
                        : 
 =============================================
                Finalized GPT                 

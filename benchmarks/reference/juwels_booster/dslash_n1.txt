@@ -1,4 +1,4 @@
-# srun -N1 -n4 benchmarks/dslash.py --shm 2048 --device-mem 16000 --grid 64.32.32.32 --mpi 4.1.1.1 --accelerator-threads 4 --Ls 12
+# srun -N1 -n4 benchmarks/dslash.py --shm 2048 --device-mem 16000 --grid 64.32.32.32 --mpi 4.1.1.1 --accelerator-threads 8 --Ls 12
 OPENMPI detected
 AcceleratorCudaInit: using default device 
 AcceleratorCudaInit: assume user either uses a) IBM jsrun, or 
@@ -7,7 +7,7 @@ AcceleratorCudaInit: Configure options --enable-summit, --enable-select-gpu=no
 AcceleratorCudaInit: ================================================
 SharedMemoryMpi:  World communicator of size 4
 SharedMemoryMpi:  Node  communicator of size 4
-0SharedMemoryMpi:  SharedMemoryMPI.cc acceleratorAllocDevice 2147483648bytes at 0x151280000000 for comms buffers 
+0SharedMemoryMpi:  SharedMemoryMPI.cc acceleratorAllocDevice 2147483648bytes at 0x14b880000000 for comms buffers 
 
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
 __|__|__|__|__|__|__|__|__|__|__|__|__|__|__
@@ -36,7 +36,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-Current Grid git commit hash=019ffe17d4f1ba9d167cb45f62ea7a0df0c19adc: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) uncommited changes
+Current Grid git commit hash=9c9566b9c9686a63755f39bb8910cf5325ef7177: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
 
 Grid : Message : ================================================ 
 Grid : Message : MPI is initialised and logging filters activated 
@@ -52,26 +52,26 @@ Grid : Message : MemoryManager::Init() Using cudaMalloc
               Initialized GPT                
      Copyright (C) 2020 Christoph Lehner     
 =============================================
-GPT :       1.789520 s : 
+GPT :       1.543473 s : 
                        : DWF Dslash Benchmark with
                        :     fdimensions  : [64, 32, 32, 32]
                        :     precision    : single
                        :     Ls           : 12
                        : 
-GPT :       8.298510 s : 1000 applications of Dhop
-                       :     Time to complete            : 3.04 s
-                       :     Total performance           : 10936.42 GFlops/s
-                       :     Effective memory bandwidth  : 7556.07 GB/s
-GPT :       8.299385 s : 
+GPT :       7.958636 s : 1000 applications of Dhop
+                       :     Time to complete            : 2.93 s
+                       :     Total performance           : 11325.46 GFlops/s
+                       :     Effective memory bandwidth  : 7824.86 GB/s
+GPT :       7.959499 s : 
                        : DWF Dslash Benchmark with
                        :     fdimensions  : [64, 32, 32, 32]
                        :     precision    : double
                        :     Ls           : 12
                        : 
-GPT :      18.682222 s : 1000 applications of Dhop
-                       :     Time to complete            : 6.70 s
-                       :     Total performance           : 4954.93 GFlops/s
-                       :     Effective memory bandwidth  : 6846.82 GB/s
+GPT :      17.420620 s : 1000 applications of Dhop
+                       :     Time to complete            : 5.78 s
+                       :     Total performance           : 5749.77 GFlops/s
+                       :     Effective memory bandwidth  : 7945.14 GB/s
 =============================================
                Finalized GPT                 
 =============================================

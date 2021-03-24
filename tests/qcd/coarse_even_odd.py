@@ -45,7 +45,7 @@ nbasis_f = 30
 nblockortho = 1
 
 # setup fine basis
-basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
+basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f // 2)]
 rng.cnormal(basis_f)
 
 # split fine basis into chiral halfs

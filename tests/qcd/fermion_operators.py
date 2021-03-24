@@ -345,11 +345,14 @@ test_suite = {
 }
 
 
+finger_print_tolerance = 50.0
+
+
 def verify_matrix_element(mat, dst, src, tag):
     src_prime = g.eval(mat * src)
     dst.checkerboard(src_prime.checkerboard())
     X = g.inner_product(dst, src_prime)
-    eps_ref = src.grid.precision.eps * 50.0
+    eps_ref = src.grid.precision.eps * finger_print_tolerance
     if mat.adj_mat is not None:
         X_from_adj = g.inner_product(src, g.adj(mat) * dst).conjugate()
         eps = abs(X - X_from_adj) / abs(X)
@@ -416,10 +419,10 @@ for precision in [g.single, g.double]:
                     fp - np.array(test["matrices_rb"][matrix])
                 ) / np.linalg.norm(fp)
                 g.message(f"Test {matrix} fingerprint: {eps}")
-                if eps >= grid.precision.eps * 10.0:
+                if eps >= grid.precision.eps * finger_print_tolerance:
                     g.message(finger_print)
                     g.message(test["matrices_rb"][matrix])
-                assert eps < grid.precision.eps * 10.0
+                assert eps < grid.precision.eps * finger_print_tolerance
 
         # do full tests
         grid = fermion.F_grid
@@ -445,4 +448,4 @@ for precision in [g.single, g.double]:
                     fp - np.array(test["matrices"][matrix])
                 ) / np.linalg.norm(fp)
                 g.message(f"Test {matrix} fingerprint: {eps}")
-                assert eps < grid.precision.eps * 10.0
+                assert eps < grid.precision.eps * finger_print_tolerance

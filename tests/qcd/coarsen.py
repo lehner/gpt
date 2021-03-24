@@ -56,7 +56,7 @@ tol_links = (grid_f.precision.eps * 10) ** 2.0
 tol_operator = (grid_f.precision.eps * 10) ** 2.0
 
 # setup fine basis
-basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f)]
+basis_f = [g.vspincolor(grid_f) for __ in range(nbasis_f // 2)]
 rng.cnormal(basis_f)
 
 # split fine basis into chiral halfs
@@ -113,7 +113,7 @@ g.message("Test passed for coarse operator, %e <= %e" % (err2, tol_operator))
 # Done with fine grid, now test on coarse #####################################
 
 # setup coarse basis
-basis_c = [g.vcomplex(grid_c, nbasis_f) for __ in range(nbasis_c)]
+basis_c = [g.vcomplex(grid_c, nbasis_f) for __ in range(nbasis_c // 2)]
 rng.cnormal(basis_c)
 
 # split coarse basis into chiral halfs

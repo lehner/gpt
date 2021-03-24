@@ -21,17 +21,22 @@
 import gpt
 import cgpt
 import numpy
+from gpt.default import is_verbose
+
+
+verbose_performance = is_verbose("orthogonalize_performance")
 
 
 def orthogonalize(w, basis, ips=None, nblock=4):
     # verbosity
-    verbose_performance = gpt.default.is_verbose("orthogonalize_performance")
     t = gpt.timer("orthogonalize", verbose_performance)
     n = len(basis)
     if n == 0:
         return
     grid = basis[0].grid
     i = 0
+    if verbose_performance:
+        cgpt.timer_begin()
     for i in range(0, n, nblock):
         t("rank_inner_product")
         lip = gpt.rank_inner_product(basis[i : i + nblock], w)
@@ -49,7 +54,9 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         w @= expr
         t()
     if verbose_performance:
-        gpt.message(f"\nPerformance of orthogonalize:\n{t}\n")
+        t_cgpt = gpt.timer("cgpt_orthogonalize", True)
+        t_cgpt += cgpt.timer_end()
+        gpt.message(f"\nPerformance of orthogonalize:\n{t}\n{t_cgpt}")
 
 
 def orthonormalize(basis, nblock=4):

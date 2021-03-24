@@ -178,15 +178,13 @@ def gamma5(src):
 
 
 def split_chiral(basis, factor=None):
-    nbasis = len(basis)
-    assert nbasis % 2 == 0
-    nb = nbasis // 2
+    nb = len(basis)
     factor = 0.5 if factor is None else factor
     g5 = gamma5(basis[0])
     tmp = gpt.lattice(basis[0])
     for n in range(nb):
         tmp @= g5 * basis[n]
-        basis[n + nb] @= (basis[n] - tmp) * factor
+        basis.append(gpt.eval((basis[n] - tmp) * factor))
         basis[n] @= (basis[n] + tmp) * factor
 
 
@@ -198,6 +196,7 @@ def unsplit_chiral(basis, factor=None):
     rev_factor = 0.5 / factor
     for n in range(nb):
         basis[n] @= (basis[n] + basis[n + nb]) * rev_factor
+    del basis[nb:]
 
 
 def prefactor_dagger(A, v_idx=None):

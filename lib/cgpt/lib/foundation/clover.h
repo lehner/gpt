@@ -105,6 +105,31 @@ public:
   typedef Lattice<SiteMask> MaskField;
 
   /////////////////////////////////////////////
+  // Index helpers
+  /////////////////////////////////////////////
+
+public:
+  
+  template<typename vobj>
+  accelerator_inline static vobj triangle_elem(const iImplCloverTriangle<vobj>& triangle, int block, int i, int j, int Nred) {
+    assert(i != j);
+    if(i < j) {
+      return triangle()(block)(triangle_index(i, j, Nred));
+    } else { // i > j
+      return conjugate(triangle()(block)(triangle_index(i, j, Nred)));
+    }
+  }
+
+  accelerator_inline static int triangle_index(int i, int j, int Nred) {
+    if(i == j)
+      return 0;
+    else if(i < j)
+      return Nred * (Nred - 1) / 2 - (Nred - i) * (Nred - i - 1) / 2 + j - i - 1;
+    else // i > j
+      return Nred * (Nred - 1) / 2 - (Nred - j) * (Nred - j - 1) / 2 + i - j - 1;
+  }
+
+  /////////////////////////////////////////////
   // Constructors
   /////////////////////////////////////////////
 
@@ -385,7 +410,7 @@ public:
           for(int j=0; j<Nred; j++) {
             if (j == i) continue;
             int sj = s_start + j/Nc, cj = j%Nc;
-            res()(si)(ci) = res()(si)(ci) + triangle_elem(triangle_t, block, i, j) * in_t()(sj)(cj);
+            res()(si)(ci) = res()(si)(ci) + triangle_elem(triangle_t, block, i, j, Nred) * in_t()(sj)(cj);
           };
         };
       };
@@ -747,7 +772,7 @@ public:
               if(i == j)
                 clover_eigen(s_row*Nc+c_row, s_col*Nc+c_col) = static_cast<ComplexD>(TensorRemove(diagonal_tmp()(block)(i)));
               else
-                clover_eigen(s_row*Nc+c_row, s_col*Nc+c_col) = static_cast<ComplexD>(TensorRemove(triangle_elem(triangle_tmp, block, i, j)));
+                clover_eigen(s_row*Nc+c_row, s_col*Nc+c_col) = static_cast<ComplexD>(TensorRemove(triangle_elem(triangle_tmp, block, i, j, Nred)));
             }
           }
         }
@@ -768,7 +793,7 @@ public:
               if(i == j)
                 diagonal_inv_tmp()(block)(i) = clover_inv_eigen(s_row*Nc+c_row, s_col*Nc+c_col);
               else if(i < j)
-                triangle_inv_tmp()(block)(triangle_index(i, j)) = clover_inv_eigen(s_row*Nc+c_row, s_col*Nc+c_col);
+                triangle_inv_tmp()(block)(triangle_index(i, j, Nred)) = clover_inv_eigen(s_row*Nc+c_row, s_col*Nc+c_col);
               else
                 continue;
             }
@@ -795,6 +820,10 @@ public:
     autoView(diagonal_v, diagonal, AcceleratorWrite);
     autoView(triangle_v, triangle, AcceleratorWrite);
 
+    auto diagonal_p = &diagonal_v[0];
+    auto triangle_p = &triangle_v[0];
+    auto full_p = &full_v[0];
+
     // NOTE: this function cannot be 'private' since nvcc forbids this for kernels
     accelerator_for(ss, full.Grid()->oSites(), 1, {
       for(int s_row = 0; s_row < Ns; s_row++) {
@@ -808,9 +837,9 @@ public:
               int i = s_row_block * Nc + c_row;
               int j = s_col_block * Nc + c_col;
               if(i == j)
-                diagonal_v[ss]()(block)(i) = full_v[ss]()(s_row, s_col)(c_row, c_col);
+                diagonal_p[ss]()(block)(i) = full_p[ss]()(s_row, s_col)(c_row, c_col);
               else if(i < j)
-                triangle_v[ss]()(block)(triangle_index(i, j)) = full_v[ss]()(s_row, s_col)(c_row, c_col);
+                triangle_p[ss]()(block)(triangle_index(i, j, Nred)) = full_p[ss]()(s_row, s_col)(c_row, c_col);
               else
                 continue;
             }
@@ -835,6 +864,10 @@ public:
     autoView(triangle_v, triangle, AcceleratorRead);
     autoView(full_v,     full,     AcceleratorWrite);
 
+    auto diagonal_p = &diagonal_v[0];
+    auto triangle_p = &triangle_v[0];
+    auto full_p = &full_v[0];
+
     // NOTE: this function cannot be 'private' since nvcc forbids this for kernels
     accelerator_for(ss, full.Grid()->oSites(), 1, {
       for(int s_row = 0; s_row < Ns; s_row++) {
@@ -848,9 +881,9 @@ public:
               int i = s_row_block * Nc + c_row;
               int j = s_col_block * Nc + c_col;
               if(i == j)
-                full_v[ss]()(s_row, s_col)(c_row, c_col) = diagonal_v[ss]()(block)(i);
+                full_p[ss]()(s_row, s_col)(c_row, c_col) = diagonal_p[ss]()(block)(i);
               else
-                full_v[ss]()(s_row, s_col)(c_row, c_col) = triangle_elem(triangle_v[ss], block, i, j);
+                full_p[ss]()(s_row, s_col)(c_row, c_col) = triangle_elem(triangle_p[ss], block, i, j, Nred);
             }
           }
         }
@@ -1090,32 +1123,6 @@ public:
 
   /////////////////////////////////////////////
   // Helpers
-  /////////////////////////////////////////////
-
-private:
-
-  template<typename vobj>
-  accelerator_inline vobj triangle_elem(const iImplCloverTriangle<vobj>& triangle, int block, int i, int j) {
-    assert(i != j);
-    if(i < j) {
-      return triangle()(block)(triangle_index(i, j));
-    } else { // i > j
-      return conjugate(triangle()(block)(triangle_index(i, j)));
-    }
-  }
-
-
-  accelerator_inline int triangle_index(int i, int j) {
-    if(i == j)
-      return 0;
-    else if(i < j)
-      return Nred * (Nred - 1) / 2 - (Nred - i) * (Nred - i - 1) / 2 + j - i - 1;
-    else // i > j
-      return Nred * (Nred - 1) / 2 - (Nred - j) * (Nred - j - 1) / 2 + i - j - 1;
-  }
-
-  /////////////////////////////////////////////
-  // Member Data
   /////////////////////////////////////////////
 
 private:

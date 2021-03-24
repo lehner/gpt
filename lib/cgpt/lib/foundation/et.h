@@ -29,3 +29,21 @@ template<class l,class r,int N> accelerator_inline
     mult(&ret._internal[i],&lhs._internal[i],&rhs._internal[i]);
   return ret;
 }
+
+template<typename T>
+void cgpt_set_to_number(Lattice<T> & l, ComplexD val) {
+
+  typedef typename T::scalar_type Coeff_t;
+  Coeff_t v = (Coeff_t)val;
+  
+  // Found poor performance with l = Zero() in Grid, need to investigate
+  GridBase* grid = l.Grid();
+  autoView(l_v, l, AcceleratorWriteDiscard);
+  auto p_v = &l_v[0];
+  constexpr int n_elements = GridTypeMapper<T>::count;
+  accelerator_for(ss, grid->oSites() * n_elements, grid->Nsimd(), {
+      auto osite = ss / n_elements;
+      auto j = ss - osite * n_elements;
+      coalescedWriteElement(p_v[osite], v, j);
+    });
+}

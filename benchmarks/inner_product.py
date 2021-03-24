@@ -5,16 +5,17 @@
 # Benchmark Inner Products
 #
 import gpt as g
+import cgpt
 
 # helper functions to access data on host or accelerator
 def access_host(a):
     for x in a:
-        x.mview()
+        x.mview(g.host)
 
 
 def access_accelerator(a):
     for x in a:
-        x *= 1.0
+        x.mview(g.accelerator)
 
 
 # mute random number generation
@@ -43,33 +44,36 @@ Inner Product Benchmark with
 
             # Rank inner product
             nbytes = (one[0].global_bytes() + two[0].global_bytes()) * N * n * n
-            for use_accelerator, compute_name in [
-                (False, "host"),
-                (True, "accelerator"),
+            for use_accelerator, compute_name, access in [
+                (False, "host", access_host),
+                (True, "accelerator", access_accelerator),
             ]:
 
-                for access in [access_host, access_accelerator]:
+                # Time
+                dt = 0.0
+                cgpt.timer_begin()
+                for it in range(N + Nwarmup):
+                    access(one)
+                    access(two)
+                    if it >= Nwarmup:
+                        dt -= g.time()
+                    ip = g.rank_inner_product(one, two, use_accelerator)
+                    if it >= Nwarmup:
+                        dt += g.time()
 
-                    # Time
-                    dt = 0.0
-                    for it in range(N + Nwarmup):
-                        access(one)
-                        access(two)
-                        if it >= Nwarmup:
-                            dt -= g.time()
-                        ip = g.rank_inner_product(one, two, use_accelerator)
-                        if it >= Nwarmup:
-                            dt += g.time()
-
-                    # Report
-                    GBPerSec = nbytes / dt / 1e9
-                    g.message(
-                        f"""{N} rank_inner_product
+                # Report
+                GBPerSec = nbytes / dt / 1e9
+                cgpt_t = g.timer("rip")
+                cgpt_t += cgpt.timer_end()
+                g.message(
+                    f"""{N} rank_inner_product
     Object type                 : {tp.__name__}
     Block                       : {n} x {n}
     Data resides in             : {access.__name__[7:]}
     Performed on                : {compute_name}
     Time to complete            : {dt:.2f} s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
+
+    {cgpt_t}
 """
-                    )
+                )

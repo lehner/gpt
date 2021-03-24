@@ -19,55 +19,170 @@
 
     This code is based on original Grid code.
 */
-template<class vobj, class stype>
-inline void sumD_cpu(stype* ret, const vobj *arg, Integer osites, Integer nvec)
-{
-  const int nthread = thread_max();
 
-  AlignedVector<stype> sum(nthread * nvec);
+#if defined(GRID_CUDA)||defined(GRID_HIP)
+#define rankInnerProduct rankInnerProductGPU
+#else
+#define rankInnerProduct rankInnerProductCpu
+#endif  
 
-  thread_region
-    {
-      int t = thread_num();
+#ifdef GRID_SIMT
+#define accelerator_shared __shared__
+#else
+#define accelerator_shared
+#endif
 
-      for (Integer i=0;i<nvec;i++) {
-	vobj vs=Zero();
-	thread_for_in_region(idx, osites, {
-	    vs += arg[osites*i + idx];
+
+template<int n_per_thread, int n_coalesce, typename T>
+inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint64_t n_left, uint64_t n_right, uint64_t n_virtual,
+				       T left_v, T right_v) {
+
+  typedef typename std::remove_reference<decltype(left_v[0][0])>::type::scalar_type scalar_type;
+
+  ASSERT(n_total % n_per_thread == 0);
+  const uint64_t n_reduced = n_total / n_per_thread;
+
+  const uint64_t n_outer = (n_reduced + n_coalesce - 1) / n_coalesce;
+
+  const uint64_t n_inner = n_left * n_right;
+
+  uint64_t n_total_stride = 1;
+  for (uint64_t n_stride=n_outer * n_virtual;n_stride > 1;n_stride = (n_stride + n_coalesce - 1) / n_coalesce) {
+    n_total_stride += n_stride;
+  }
+
+  Vector<ComplexD> inner_tmp;
+  inner_tmp.resize(n_total_stride * n_inner);
+  
+  auto inner_tmp_v = &inner_tmp[0];
+
+  Timer("rip: loop");
+  auto nt = acceleratorThreads();
+  acceleratorThreads(1);
+  {
+    for (int i=0;i<n_virtual;i++) {
+
+      for (int kl=0;kl<n_left;kl++) {
+	scalar_type* a = (scalar_type*)left_v[kl*n_virtual+i];
+
+	accelerator_forNB(work, n_outer, n_coalesce, {
+
+	    accelerator_shared double vr[2*n_coalesce];
+	    
+	    int lane = acceleratorSIMTlane(n_coalesce);
+	    uint64_t idx0 = work * n_per_thread * n_coalesce;
+
+	    // avoid inner *if* for as long as possible
+	    bool do_all = (lane + (n_per_thread - 1)*n_coalesce + idx0) < n_total;
+	    
+	    for (int kr=0;kr<n_right;kr++) {
+	      int idx_result = kl * n_right + kr;
+	      
+	      scalar_type* b = (scalar_type*)right_v[kr*n_virtual+i];
+	      ComplexD* c = (ComplexD*)&inner_tmp_v[(idx_result * n_virtual + i) * n_outer];
+
+	      ComplexD v = 0.0;
+
+	      if (do_all) {
+		for (int j=0;j<n_per_thread;j++) {
+		  uint64_t idx = lane + j*n_coalesce + idx0;
+		  v += (ComplexD)conjugate(a[idx]) * (ComplexD)b[idx];
+	        }
+              } else {
+		for (int j=0;j<n_per_thread;j++) {
+		  uint64_t idx = lane + j*n_coalesce + idx0;
+		  if (idx < n_total)
+		    v += (ComplexD)conjugate(a[idx]) * (ComplexD)b[idx];
+	        }
+	      }	      
+	    
+	      vr[2*lane + 0] = v.real();
+	      vr[2*lane + 1] = v.imag();
+
+	      acceleratorSynchronise();
+
+	      if (lane == 0) {
+		v = 0.0;
+		for (int j=0;j<n_coalesce;j++)
+		  v+=ComplexD(vr[2*j + 0],vr[2*j + 1]);
+		c[work] = v;
+	      }
+
+	      acceleratorSynchronise();
+	    }
 	  });
-	sum[t * nvec + i] = Reduce(vs);
       }
     }
+    // now reduce from n_outer -> n_outer / n_coalesce
+    uint64_t n_stride = n_outer * n_virtual;
+    ComplexD* src_base = &inner_tmp_v[0];
+    while (n_stride > 1) {
 
+      ComplexD* dst_base = &src_base[n_inner * n_stride];
+      
+      uint64_t n_stride_prime = (n_stride + n_coalesce - 1) / n_coalesce;
 
-  thread_for(i,nvec, {
-      stype r = 0.0;
-      for (int j=0;j<nthread;j++)
-	r += sum[j*nvec + i];
-      ret[i] = r;
-    });
+      accelerator_forNB(work, n_stride_prime, n_coalesce, {
 
+	  accelerator_shared ComplexD vc[n_coalesce];
+	    
+	  int lane = acceleratorSIMTlane(n_coalesce);
+
+	  uint64_t idx0 = work * n_coalesce + lane;
+	  bool active = idx0 < n_stride;
+	  
+	  for (int i=0;i<n_inner;i++) {
+
+	    ComplexD v = 0.0;
+
+	    if (active) {
+	      v = src_base[i*n_stride + idx0];
+	    }
+	    
+	    vc[lane] = v;
+	    
+	    acceleratorSynchronise();
+	    
+	    if (lane == 0) {
+	      v = 0.0;
+	      for (int i=0;i<n_coalesce;i++)
+		v+=vc[i];
+	      dst_base[i*n_stride_prime + work] = v;
+	    }
+	    
+	    acceleratorSynchronise();
+	  }
+	});
+      
+      n_stride = n_stride_prime;
+      src_base = dst_base;
+    }
+    accelerator_barrier();
+    // results are now here:
+    for (int i=0;i<n_inner;i++) {
+      result[i] = src_base[i];
+    }
+  }
+  acceleratorThreads(nt);
 }
 
-template<class vobj, class stype>
-inline void sumD(stype* res, const vobj *arg, Integer osites, Integer nvec)
-{
-#if defined(GRID_CUDA)||defined(GRID_HIP)
-  sumD_gpu(res,arg,osites,nvec);
-#else
-  sumD_cpu(res,arg,osites,nvec);
-#endif  
-}
+class tensor_ComplexD : public ComplexD {
+public:
+  typedef tensor_ComplexD scalar_objectD;
+  typedef tensor_ComplexD scalar_object;
+  typedef tensor_ComplexD scalar_type;
+  typedef tensor_ComplexD vector_type;
+  accelerator tensor_ComplexD() : ComplexD() {};
+  accelerator_inline tensor_ComplexD(const Zero &z) { *(ComplexD*)this = 0.0; };
+  static accelerator_inline constexpr int Nsimd(void) { return 1; } 
+};
 
 template<class vobj>
-inline void rankInnerProduct(ComplexD* result, 
-			     PVector<Lattice<vobj>> &multi_left,
-			     PVector<Lattice<vobj>> &multi_right,
-			     size_t n_virtual)
+inline void rankInnerProductGPU(ComplexD* result, 
+				PVector<Lattice<vobj>> &multi_left,
+				PVector<Lattice<vobj>> &multi_right,
+				size_t n_virtual)
 {
-  typedef typename vobj::scalar_type scalar_type;
-  typedef typename vobj::vector_type vector_type;
-
   GridBase *grid = multi_left[0].Grid();
 
   assert(multi_left.size() % n_virtual == 0);
@@ -75,40 +190,34 @@ inline void rankInnerProduct(ComplexD* result,
 
   const uint64_t n_left = multi_left.size() / n_virtual;
   const uint64_t n_right = multi_right.size() / n_virtual;
-  const uint64_t sites = grid->oSites();
 
-  typedef decltype(innerProductD(vobj(),vobj())) inner_t;
+  constexpr int n_reduction_min = GridTypeMapper<vobj>::count;
+  const uint64_t n_total = grid->oSites() * n_reduction_min * vobj::Nsimd();
+
+  Timer("rip: view");
   VECTOR_VIEW_OPEN(multi_left,left_v,AcceleratorRead);
   VECTOR_VIEW_OPEN(multi_right,right_v,AcceleratorRead);
 
-  Vector<inner_t> inner_tmp(sites * n_left * n_right);
-  auto inner_tmp_v = &inner_tmp[0];
-
+  constexpr uint64_t n_coalesce = 32; // good idea to align this with warp size
+#define GPU_IP_N(n_per_thread) if (n_total % n_per_thread == 0) { \
+    rankInnerProductGPU_reduce<n_per_thread,n_coalesce>(n_total, result, n_left, n_right, n_virtual, left_v, right_v); \
+  } else
+  //GPU_IP_N(32)
+  GPU_IP_N(16)
+  GPU_IP_N(8)
+  GPU_IP_N(4)
+  GPU_IP_N(2)
   {
-    accelerator_for( work, sites * n_left * n_right, 1,{
-	uint64_t _work = work;
-#ifdef GRID_HAS_ACCELERATOR
-	uint64_t ss = _work % sites; _work /= sites;
-	uint64_t kr = _work % n_right; _work /= n_right;
-	uint64_t kl = _work % n_left;// _work /= n_left;
-#else
-	uint64_t kr = _work % n_right; _work /= n_right;
-	uint64_t kl = _work % n_left; _work /= n_left;
-	uint64_t ss = _work % sites; //_work /= sites;
-#endif
-	inner_t vs;
-	zeroit(vs);
-	for (size_t i=0;i<n_virtual;i++)
-	  vs+=innerProductD(left_v[kl*n_virtual+i][ss],right_v[kr*n_virtual+i][ss]);
-	inner_tmp_v[ ss + sites * ( kl * n_right + kr ) ] = vs;
-    });
+    rankInnerProductGPU_reduce<n_reduction_min,vobj::Nsimd()>(n_total, result, n_left, n_right, n_virtual, left_v, right_v);
   }
-
+  
+  Timer("rip: view");
   VECTOR_VIEW_CLOSE(left_v);
   VECTOR_VIEW_CLOSE(right_v);
 
-  sumD(result,inner_tmp_v,(Integer)sites,(Integer)(n_left*n_right));
+  Timer();
 }
+
 
 template<class vobj>
 inline void rankInnerProductCpu(ComplexD* result, 

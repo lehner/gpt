@@ -88,3 +88,4 @@ cgpt_Lattice_base* lattice_unary_lat(cgpt_Lattice_base* dst, bool ac, const A& l
   }
   ERR("Not implemented");
 }
+

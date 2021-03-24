@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# Get compilers
+#
+export MODULEPATH=$MODULEPATH:/bug/opt/modulefiles
+module purge
+module load compiler/intel/18.0.1.163
+module load mpi/intel/2018.1.163
+
+#
+# Get root directory
+#
+root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
+
+#
+# Precompile python
+#
+echo "Compile gpt"
+python3 -m compileall ${root}/lib/gpt
+
+
+#
+# Create dependencies and download
+#
+dep=${root}/dependencies
+if [ ! -f ${dep}/Grid/build/Grid/libGrid.a ];
+then
+
+	if [ -d ${dep} ];
+	then
+	    echo "$dep already exists ; rm -rf $dep before bootstrapping again"
+	    exit 1
+	fi
+
+	mkdir -p ${dep}
+	cd ${dep}
+
+	#
+	# Lime
+	#
+	wget https://github.com/usqcd-software/c-lime/tarball/master
+	tar xzf master
+	mv usqcd-software-c-lime* lime
+	rm -f master
+	cd lime
+	./autogen.sh
+	CC=icc ./configure
+	make -j 16
+	cd ..
+
+	#
+	# Grid
+	#
+	git clone https://github.com/lehner/Grid.git
+	cd Grid
+	git checkout feature/gpt
+	./bootstrap.sh
+	mkdir build
+	cd build
+	CXX=mpiicpc CXXFLAGS="-fPIC" ../configure --enable-mkl=yes --enable-shm=shmget --enable-comms=mpi-auto --enable-simd=KNL --with-lime=${dep}/lime
+	cd Grid
+	make -j 16
+fi
+
+if [ ! -f ${root}/lib/cgpt/build/cgpt.so ];
+then
+	#
+	# cgpt
+	#
+	cd ${root}/lib/cgpt
+	./make ${root}/dependencies/Grid/build 16
+fi
+
+#
+# Tests (can only be run in a job)
+#
+#cd ${root}/tests
+#source ${root}/lib/cgpt/build/source.sh
+#./run "" "--mpi_split 1.1.1.1"
+
+echo "To use:"
+echo "source ${root}/lib/cgpt/build/source.sh"
+

@@ -79,11 +79,11 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
 	if (basis_i0 == 0)
 	  B = Zero();
 	else
-	  B = result_v[vec_i*n_virtual + virtual_i](ss);
+	  B = coalescedRead(result_v[vec_i*n_virtual + virtual_i][ss]);
 	
 	for(long basis_i_rel=0; basis_i_rel<basis_block; basis_i_rel++) {
 	  long basis_i_abs = basis_i_rel + basis_i0;
-	  B += Qt_j[basis_i_abs + vec_i*n_basis] * basis_v[basis_i_rel*n_virtual + virtual_i](ss);
+	  B += Qt_j[basis_i_abs + vec_i*n_basis] * coalescedRead(basis_v[basis_i_rel*n_virtual + virtual_i][ss]);
 	}
 	
 	coalescedWrite(result_v[vec_i*n_virtual + virtual_i][ss], B);
@@ -177,7 +177,8 @@ void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &r
       for(long k=0; k<n_elements; k++) {
 	int left_index = left_indices_j[k + vec_i*n_elements];
 	int right_index = right_indices_j[k + vec_i*n_elements];
-	B += Qt_j[k + vec_i*n_elements] * left_basis_v[left_index*n_virtual + virtual_i](ss) * right_basis_v[right_index*n_virtual + virtual_i](ss);
+	B += Qt_j[k + vec_i*n_elements] * coalescedRead(left_basis_v[left_index*n_virtual + virtual_i][ss]) *
+	  coalescedRead(right_basis_v[right_index*n_virtual + virtual_i][ss]);
       }
       
       coalescedWrite(result_v[vec_i*n_virtual + virtual_i][ss], B);

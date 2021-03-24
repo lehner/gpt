@@ -69,7 +69,7 @@ max_io_nodes = get_int("--max_io_nodes", 256)
 
 # verbosity
 verbose_default = (
-    "io,bicgstab,cg,defect_correcting,fgcr,fgmres,mr,irl,repository,arnoldi,power_iteration,"
+    "io,bicgstab,cg,defect_correcting,cagcr,fgcr,fgmres,mr,irl,repository,arnoldi,power_iteration,"
     + "checkpointer,modes,block_operator,random,split,coarse_grid,"
     + "coarsen,qis_map,metropolis,su2_heat_bath,u1_heat_bath"
 )

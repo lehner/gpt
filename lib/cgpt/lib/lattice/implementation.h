@@ -51,13 +51,8 @@ public:
 			PyUnicode_FromString(get_prec(l).c_str()));
   }
 
-  void set_to_zero() {
-    l = Zero();
-  }
-
-  // use norm2 convention for squared norm, talked to Peter, Grid may also change to this cleaner notation
-  virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
-    return ::axpy_norm(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
+  void set_to_number(ComplexD val) {
+    cgpt_set_to_number(l,val);
   }
 
   virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {

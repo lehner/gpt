@@ -35,7 +35,33 @@ typename T::vector_type coalescedReadElement(const T & __restrict__ c, int e) {
   return p[e];
 }
 
+template<typename T>
+accelerator_inline void coalescedWriteFundamental(T & __restrict__ c, const T & v) {
+  c = v;
+}
+
+template<typename T>
+accelerator_inline T coalescedReadFundamental(const T & __restrict__ c) {
+  return c;
+}
+
 #else
+
+template<typename T>
+accelerator_inline void coalescedWriteFundamental(T & __restrict__ c, const typename T::scalar_type & v) {
+  typedef typename T::scalar_type Coeff_t;
+  int lane=acceleratorSIMTlane(T::Nsimd());
+  Coeff_t * __restrict__ p = (Coeff_t*)&c;
+  p[lane] = v;
+}
+
+template<typename T>
+accelerator_inline typename T::scalar_type coalescedReadFundamental(const T & __restrict__ c) {
+  typedef typename T::scalar_type Coeff_t;
+  int lane=acceleratorSIMTlane(T::Nsimd());
+  Coeff_t * __restrict__ p = (Coeff_t*)&c;
+  return p[lane];
+}
 
 template<int Nsimd>
 struct coalescedElementSIMT {

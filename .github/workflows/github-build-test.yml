@@ -37,6 +37,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
+        sudo apt-get update
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
     - name: Set compiler alternatives to clang-9
@@ -176,6 +177,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
+        sudo apt-get update
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
     - name: Set compiler alternatives to clang-9
@@ -358,6 +360,7 @@ jobs:
 
     - name: Install Ubuntu packages
       run: |
+        sudo apt-get update
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
     - name: Set compiler alternatives to clang-9
@@ -461,6 +464,7 @@ jobs:
     steps:
     - name: Install Ubuntu packages
       run: |
+        sudo apt-get update
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Setup python

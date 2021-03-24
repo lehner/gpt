@@ -157,9 +157,9 @@ class lattice(factor):
         # short code path to zero lattice
         if type(key) == slice and key == slice(None, None, None):
 
-            if type(value) == int and value == 0:
+            if gpt.util.is_num(value):
                 for o in self.v_obj:
-                    cgpt.lattice_set_to_zero(o)
+                    cgpt.lattice_set_to_number(o, value)
                 return
 
             cache_key = f"{self.otype.__name__}_{self.checkerboard().__name__}_{self.grid.describe()}"
