@@ -158,11 +158,11 @@ public:
   }
 
   virtual void pick_checkerboard_from(int cb, cgpt_Lattice_base* src) {
-    pickCheckerboard(cb, l, compatible<T>(src)->l);
+    cgpt_pickCheckerboard(cb, l, compatible<T>(src)->l);
   }
 
   virtual void set_checkerboard_from(cgpt_Lattice_base* src) {
-    setCheckerboard(l, compatible<T>(src)->l);
+    cgpt_setCheckerboard(l, compatible<T>(src)->l);
   }
 
   virtual void change_checkerboard(int cb) {

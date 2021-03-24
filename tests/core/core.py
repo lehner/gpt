@@ -19,6 +19,14 @@ rng = g.random("test")
 l_dp = rng.cnormal(g.vcolor(grid_dp))
 l_sp = g.convert(l_dp, g.single)
 
+# and convert precision
+l_dp_prime = g.convert(l_sp, g.double)
+eps2 = g.norm2(l_dp - l_dp_prime) / g.norm2(l_dp)
+assert eps2 < 1e-14
+eps2 = g.norm2(l_dp[0, 0, 0, 0] - l_sp[0, 0, 0, 0])
+assert eps2 < 1e-14
+
+
 ################################################################################
 # Test mview
 ################################################################################

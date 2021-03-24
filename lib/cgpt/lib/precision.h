@@ -20,11 +20,11 @@
   template<typename vtype>						\
   void cgpt_lattice_convert_from(Lattice< T<vtype> >& dst,cgpt_Lattice_base* src) { \
     if (src->type() == typeid(T<vtype>).name()) {			\
-      localConvert(((cgpt_Lattice<T<vtype>>*)src)->l,dst);		\
+      dst = ((cgpt_Lattice<T<vtype>>*)src)->l;				\
     } else if (src->type() == typeid(T<vComplexD>).name()) {		\
-      precisionChange(dst, ((cgpt_Lattice<T<vComplexD>>*)src)->l );	\
+      cgpt_precisionChange(dst, ((cgpt_Lattice<T<vComplexD>>*)src)->l ); \
     } else if (src->type() == typeid(T<vComplexF>).name()) {		\
-      precisionChange(dst, ((cgpt_Lattice<T<vComplexF>>*)src)->l );	\
+      cgpt_precisionChange(dst, ((cgpt_Lattice<T<vComplexF>>*)src)->l ); \
     } else {								\
       ERR("Only support conversion between single, double");		\
     }									\
