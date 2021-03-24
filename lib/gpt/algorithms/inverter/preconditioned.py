@@ -41,12 +41,12 @@ class preconditioned(base):
             inv_mat(pc_dst, pc_src)
             t("combine")
             # TODO: further improve this, maybe understand why eval is not optimal
-            tmp = [g.lattice(x) for x in dst]
+            tmp = g.lattice(dst[0])
             # g.eval(dst, matrix.L * pc_dst + matrix.S * src)
             for i in range(len(dst)):
                 matrix.L.mat(dst[i], pc_dst[i])
-                matrix.S.mat(tmp[i], src[i])
-                g.axpy(dst[i], 1.0, dst[i], tmp[i])
+                matrix.S.mat(tmp, src[i])
+                g.axpy(dst[i], 1.0, dst[i], tmp)
 
         return g.matrix_operator(
             mat=inv,
