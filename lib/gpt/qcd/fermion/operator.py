@@ -219,17 +219,13 @@ class fine_operator(operator):
         cgpt.delete_fermion_operator(self.obj)
 
     def apply_unary_operator(self, opcode, o, i):
-        assert len(i.v_obj) == 1
-        assert len(o.v_obj) == 1
         # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj[0], o.v_obj[0])
+        return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj, o.v_obj)
 
     def apply_dirdisp_operator(self, opcode, o, i, dir, disp):
-        assert len(i.v_obj) == 1
-        assert len(o.v_obj) == 1
         # Grid has different calling conventions which we adopt in cgpt:
         return cgpt.apply_fermion_operator_dirdisp(
-            self.obj, opcode, i.v_obj[0], o.v_obj[0], dir, disp
+            self.obj, opcode, i.v_obj, o.v_obj, dir, disp
         )
 
 
@@ -239,65 +235,26 @@ class coarse_operator(operator):
         self.tmp = gpt.lattice(self.F_grid, otype)
         self.tmp_eo = gpt.lattice(self.F_grid_eo, otype)
         self.U_self_inv = gpt.matrix.inv(self.U[8])
+        self.t = gpt.timer("coarse_operator")
 
-        self.obj = []
-        for i in range(len(U[0].v_obj)):
-            self.params["U"] = [a.v_obj[i] for a in self.U]
-            self.params["U_self_inv"] = self.U_self_inv.v_obj[i]
-            self.params["dag_factor"] = gpt.qcd.fermion.coarse.prefactor_dagger(
-                self.U[8], i
-            )
-            self.obj.append(
-                cgpt.create_fermion_operator(
-                    self.name, self.U_grid.precision, self.params
-                )
-            )
+        self.params["U"] = [v_obj for u in U for v_obj in u.v_obj]
+        self.params["U_self_inv"] = self.U_self_inv.v_obj
+        self.obj = cgpt.create_fermion_operator(
+            self.name, self.U_grid.precision, self.params
+        )
 
     def __del__(self):
-        for elem in self.obj:
-            cgpt.delete_fermion_operator(elem)
+        cgpt.delete_fermion_operator(self.obj)
 
     def apply_unary_operator(self, opcode, o, i):
-        assert len(i.v_obj) == len(o.v_obj)
-        assert len(i.v_obj) == (len(self.obj)) ** 0.5
-        if len(i.v_obj) == 1:
-            cgpt.apply_fermion_operator(self.obj[0], opcode, i.v_obj[0], o.v_obj[0])
-        else:
-            tmp = self.tmp if o.checkerboard() is gpt.none else self.tmp_eo
-            for n in range(len(i.v_obj)):
-                for m in range(len(i.v_obj)):
-                    cgpt.apply_fermion_operator(
-                        self.obj[n * len(i.v_obj) + m],
-                        opcode,
-                        i.v_obj[n],
-                        o.v_obj[m] if n == 0 else tmp.v_obj[m],
-                    )
-                if n != 0:
-                    o += tmp
+        cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj, o.v_obj)
 
     def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
-        assert len(i.v_obj) == len(o.v_obj)
-        assert len(i.v_obj) == (len(self.obj)) ** 0.5
-        if len(i.v_obj) == 1:
-            cgpt.apply_fermion_operator_dirdisp(
-                self.obj[0],
-                opcode,
-                i.v_obj[0],
-                o.v_obj[0],
-                direction,
-                disp,
-            )
-        else:
-            tmp = self.tmp  # dirdisp is on full grid by definition
-            for n in range(len(i.v_obj)):
-                for m in range(len(i.v_obj)):
-                    cgpt.apply_fermion_operator_dirdisp(
-                        self.obj[n * len(i.v_obj) + m],
-                        opcode,
-                        i.v_obj[n],
-                        o.v_obj[m] if n == 0 else tmp.v_obj[m],
-                        direction,
-                        disp,
-                    )
-                if n != 0:
-                    o += tmp
+        cgpt.apply_fermion_operator_dirdisp(
+            self.obj,
+            opcode,
+            i.v_obj,
+            o.v_obj,
+            direction,
+            disp,
+        )
