@@ -803,7 +803,6 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     autoView(tmpMultiArg_v, tmpMultiArg_, AcceleratorRead);
     autoView(stencilMultiArg_v, stencilMultiArg_, AcceleratorRead);
     auto tmpMultiArg_p = &tmpMultiArg_v[0];
-    auto stencilMultiArg_p = &stencilMultiArg_v[0];
     VECTOR_VIEW_OPEN(out, out_v, AcceleratorWrite);
     MViewTime += usecond();
 
@@ -851,7 +850,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
           if(SE_MA->_is_local) {
             nbr = coalescedReadPermute(tmpMultiArg_p[SE_MA->_offset],ptype,SE_MA->_permute);
           } else {
-            nbr = coalescedRead(stencilMultiArg_p.CommBuf()[SE_MA->_offset]);
+            nbr = coalescedRead(stencilMultiArg_v.CommBuf()[SE_MA->_offset]);
           }
           acceleratorSynchronise();
 
