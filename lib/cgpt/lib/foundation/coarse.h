@@ -1016,6 +1016,8 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     auto tmpMultiArg_p = &tmpMultiArg_v[0];
     VECTOR_VIEW_OPEN(out, out_v, AcceleratorWrite);
     RealD* dag_factor_p = &dag_factor_[0];
+    auto nbasis_global__ = nbasis_global_; // auto-offloading problem of member function
+    std::cout << GridLogMessage << dag_factor_.size() << " versus " << nbasis_global_ << std::endl;
     MViewTime += usecond();
 
     for(int v_col=0; v_col<NvirtualFermion; v_col++) {
@@ -1024,66 +1026,67 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
 
       MComputeTime -= usecond();
       accelerator_for(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
-              int _idx  = idx;
-        const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
-        const int arg   = _idx%Narg; _idx/=Narg;
-        const int v_row = _idx%NvirtualFermion; _idx/=NvirtualFermion;
-        const int ss    = _idx%Nsite; _idx/=Nsite;
-
-        const int v_arg_col = arg*NvirtualFermion+v_col;
-        const int v_arg_row = arg*NvirtualFermion+v_row;
-        const int v_row_col = v_row * NvirtualFermion + v_col;
-        const int v_col_row = v_col * NvirtualFermion + v_row;
-        const int sF        = ss*NvirtualFermion*Narg+v_col*Narg+arg; // needed for stencil access
-
-        const int b_global = v_row*NvirtualFermion+b;
-
+	  int _idx  = idx;
+	  const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
+	  const int arg   = _idx%Narg; _idx/=Narg;
+	  const int v_row = _idx%NvirtualFermion; _idx/=NvirtualFermion;
+	  const int ss    = _idx%Nsite; _idx/=Nsite;
+	  
+	  const int v_arg_col = arg*NvirtualFermion+v_col;
+	  const int v_arg_row = arg*NvirtualFermion+v_row;
+	  const int v_row_col = v_row * NvirtualFermion + v_col;
+	  const int v_col_row = v_col * NvirtualFermion + v_row;
+	  const int sF        = ss*NvirtualFermion*Narg+v_col*Narg+arg; // needed for stencil access
+	  
+	  const int b_global = v_row*NvirtualFermion+b;
+	  
 #if defined(ROW_MAJOR)
-        const int v_link = v_row_col;
+	  const int v_link = v_row_col;
 #else // =  COL_MAJOR
-        const int v_link = v_col_row;
+	  const int v_link = v_col_row;
 #endif
-
-        calcComplex res;
-        calcVector nbr;
-        int ptype;
-        StencilEntry *SE_MA;
-
+	  
+	  calcComplex res;
+	  calcVector nbr;
+	  int ptype;
+	  StencilEntry *SE_MA;
+	  
 #if defined(REFERENCE_SUMMATION_ORDER)
-        res = Zero();
+	  res = Zero();
 #else
-        if (v_col == 0)
-          res = Zero();
-        else
-          res = coalescedRead(out_v[v_arg_row][ss](b));
+	  if (v_col == 0)
+	    res = Zero();
+	  else
+	    res = coalescedRead(out_v[v_arg_row][ss](b));
 #endif
+	  
+	  for(int point=0; point<Npoint; point++) {
+	    SE_MA=stencilMultiArg_v.GetEntry(ptype,point,sF);
+	    
+	    if(SE_MA->_is_local) {
+	      nbr = coalescedReadPermute(tmpMultiArg_v[SE_MA->_offset],ptype,SE_MA->_permute);
+	    } else {
+	      nbr = coalescedRead(stencilMultiArg_v.CommBuf()[SE_MA->_offset]);
+	    }
+	    acceleratorSynchronise();
 
-        for(int point=0; point<Npoint; point++) {
-          SE_MA=stencilMultiArg_v.GetEntry(ptype,point,sF);
-
-          if(SE_MA->_is_local) {
-            nbr = coalescedReadPermute(tmpMultiArg_v[SE_MA->_offset],ptype,SE_MA->_permute);
-          } else {
-            nbr = coalescedRead(stencilMultiArg_v.CommBuf()[SE_MA->_offset]);
-          }
-          acceleratorSynchronise();
-
-          for(int bb=0;bb<NbasisVirtual;bb++) {
-            const int bb_global = v_row*NvirtualFermion+bb;
+	    // suspect memory access problem in dag_factor_p of size n_basis_global_^2
+	    for(int bb=0;bb<NbasisVirtual;bb++) {
+	      const int bb_global = v_row*NvirtualFermion+bb;
 #if defined(TENSOR_LAYOUT)
-            res = res + dag_factor_p[b_global*nbasis_global_+bb_global] * coalescedRead(Uc_v[v_link][ss](point)(b,bb))*nbr(bb);
+	      res = res + dag_factor_p[b_global*nbasis_global__+bb_global] * coalescedRead(Uc_v[v_link][ss](point)(b,bb))*nbr(bb);
 #else
-            res = res + dag_factor_p[b_global*nbasis_global_+bb_global] * coalescedRead(Uc_v[v_link*Npoint+point][ss](b,bb))*nbr(bb);
+	      res = res + dag_factor_p[b_global*nbasis_global__+bb_global] * coalescedRead(Uc_v[v_link*Npoint+point][ss](b,bb))*nbr(bb);
 #endif
-          }
-        }
+	    }
+	  }
 #if defined(REFERENCE_SUMMATION_ORDER)
-        if (v_col != 0) {
-          res = res + coalescedRead(out_v[v_arg_row][ss](b));
-        }
+	  if (v_col != 0) {
+	    res = res + coalescedRead(out_v[v_arg_row][ss](b));
+	  }
 #endif
-        coalescedWrite(out_v[v_arg_row][ss](b),res);
-      });
+	  coalescedWrite(out_v[v_arg_row][ss](b),res);
+	});
       MComputeTime += usecond();
     }
     MViewTime -= usecond();
@@ -1236,6 +1239,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     auto tmp_p = &tmp_v[0];
     VECTOR_VIEW_OPEN(out, out_v, AcceleratorWrite);
     RealD* dag_factor_p = &dag_factor_[0];
+    auto nbasis_global__ = nbasis_global_;
     MViewTime += usecond();
 
     for(int v_col=0; v_col<NvirtualFermion; v_col++) {
@@ -1291,9 +1295,9 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
           for(int bb=0;bb<NbasisVirtual;bb++) {
             const int bb_global = v_row*NvirtualFermion+bb;
 #if defined(TENSOR_LAYOUT)
-            res = res + dag_factor_p[b_global*nbasis_global_+bb_global] * coalescedRead(Uc_v[v_link][ss](point)(b,bb))*nbr(bb);
+            res = res + dag_factor_p[b_global*nbasis_global__+bb_global] * coalescedRead(Uc_v[v_link][ss](point)(b,bb))*nbr(bb);
 #else
-            res = res + dag_factor_p[b_global*nbasis_global_+bb_global] * coalescedRead(Uc_v[v_link*Npoint+point][ss](b,bb))*nbr(bb);
+            res = res + dag_factor_p[b_global*nbasis_global__+bb_global] * coalescedRead(Uc_v[v_link*Npoint+point][ss](b,bb))*nbr(bb);
 #endif
           }
         }
@@ -1528,6 +1532,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     VECTOR_VIEW_OPEN(in, in_v,   AcceleratorRead);
     VECTOR_VIEW_OPEN(out, out_v, AcceleratorWrite);
     RealD* dag_factor_p = &dag_factor_[0];
+    auto nbasis_global__ = nbasis_global_;
     MViewTime += usecond();
 
     for(int v_col=0; v_col<NvirtualFermion; v_col++) {
@@ -1574,7 +1579,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
 
         for(int bb=0;bb<NbasisVirtual;bb++) {
           const int bb_global = v_row*NvirtualFermion+bb;
-          res = res + dag_factor_p[b_global*nbasis_global_+bb_global] * coalescedRead(UcSelf_v[v_link][ss](b,bb))*nbr(bb);
+          res = res + dag_factor_p[b_global*nbasis_global__+bb_global] * coalescedRead(UcSelf_v[v_link][ss](b,bb))*nbr(bb);
         }
 #if defined(REFERENCE_SUMMATION_ORDER)
         if (v_col != 0) {
