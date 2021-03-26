@@ -19,9 +19,9 @@
 */
 
 #ifdef GRID_HAS_ACCELERATOR
-#define accelerator_for_lane( lane, nsimd, ... ) { int lane = acceleratorSIMTlane(nsimd); __VA_ARGS__ }
+#define accelerator_foreach_lane( lane, nsimd, ... ) { int lane = acceleratorSIMTlane(nsimd); __VA_ARGS__ }
 #else
-#define accelerator_for_lane( lane, nsimd, ... ) { for (int lane=0;lane<nsimd;lane++){__VA_ARGS__} }
+#define accelerator_foreach_lane( lane, nsimd, ... ) { for (int lane=0;lane<nsimd;lane++){__VA_ARGS__} }
 #endif  
 
 template<class vobj> inline void cgpt_pickCheckerboard(int cb,Lattice<vobj> &half,const Lattice<vobj> &full)
@@ -119,7 +119,7 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
       
       gi.oCoorFromOindex(in_ocoor, in_oidx);
 
-      accelerator_for_lane(in_lane,in_nsimd,{
+      accelerator_foreach_lane(in_lane,in_nsimd,{
 	  
 	  for(int mu=0;mu<ndim;mu++)
 	    lcoor[mu] = in_ocoor[mu] + gi._rdimensions[mu]*in_icoor[in_lane][mu];
