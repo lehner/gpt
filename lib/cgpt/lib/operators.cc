@@ -81,30 +81,26 @@ EXPORT(delete_fermion_operator,{
 
 EXPORT(apply_fermion_operator,{
     
-    void* p, *_src, *_dst;
+    void* p;
+    PyObject* _src, *_dst;
     long op;
-    if (!PyArg_ParseTuple(args, "llll", &p,&op,&_src,&_dst)) {
+    if (!PyArg_ParseTuple(args, "llOO", &p,&op,&_src,&_dst)) {
       return NULL;
     }
-    
-    cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-    
-    return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->unary((int)op,src,dst) );
+
+    return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->unary((int)op,_src,_dst) );
     
   });
 
 EXPORT(apply_fermion_operator_dirdisp,{
 
-    void* p, *_src, *_dst;
+    void* p;
+    PyObject* _src, *_dst;
     long op, dir, disp;
-    if (!PyArg_ParseTuple(args, "llllll", &p,&op,&_src,&_dst,&dir,&disp)) {
+    if (!PyArg_ParseTuple(args, "llOOll", &p,&op,&_src,&_dst,&dir,&disp)) {
       return NULL;
     }
 
-    cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
-
-    return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->dirdisp((int)op,src,dst,(int)dir,(int)disp) );
+    return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->dirdisp((int)op,_src,_dst,(int)dir,(int)disp) );
 
   });

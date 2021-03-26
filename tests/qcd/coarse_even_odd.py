@@ -209,7 +209,7 @@ Test: Meo + Moe + Moo + Mee = M
     res = {g.norm2(res)}
     rel. dev. = {rel_dev} -> test {'passed' if rel_dev <= 1e-14 else 'failed'}"""
     )
-    assert rel_dev <= 1e-14
+    assert rel_dev <= 1e-13
 
     # Meo^dag + Moe^dag + Moo^dag + Mee^dag = M^dag
     mat.adj_mat(ref, src)

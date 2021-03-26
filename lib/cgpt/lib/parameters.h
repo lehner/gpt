@@ -1,6 +1,7 @@
 /*
     GPT - Grid Python Toolkit
     Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,6 +40,20 @@ T* get_pointer(PyObject* dict, const char* key, int mu) {
   PyObject* val = PyList_GetItem(list, mu);
   ASSERT(PyLong_Check(val));
   return (T*)PyLong_AsLong(val);
+}
+
+template<typename T>
+std::vector<T*> get_pointer_vec(PyObject* dict, const char* key) {
+  PyObject* list = get_key(dict, key);
+  ASSERT(PyList_Check(list));
+  long            N = PyList_Size(list);
+  std::vector<T*> ret(N);
+  for(int i = 0; i < N; i++) {
+    PyObject* val = PyList_GetItem(list, i);
+    ASSERT(PyLong_Check(val));
+    ret[i] = (T*)PyLong_AsLong(val);
+  }
+  return ret;
 }
 
 static RealD get_float(PyObject* dict, const char* key) {
