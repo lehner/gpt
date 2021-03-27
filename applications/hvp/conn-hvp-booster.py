@@ -42,14 +42,26 @@ jobs = {
         "low": 0,
         "all_time_slices": True,
     },  # 2652 seconds + 580 to load ev
-    #    "booster_sloppy_1": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "booster_sloppy_1": {"exact": 0, "sloppy": 32, "low": 0, "all_time_slices": True},
+    "booster_sloppy_2": {"exact": 0, "sloppy": 32, "low": 0, "all_time_slices": True},
+    "booster_sloppy_3": {"exact": 0, "sloppy": 32, "low": 0, "all_time_slices": True},
+    "booster_sloppy_4": {"exact": 0, "sloppy": 32, "low": 0, "all_time_slices": True},
+    "booster_sloppy_5": {"exact": 0, "sloppy": 32, "low": 0, "all_time_slices": True},
+    "booster_sloppy_6": {"exact": 0, "sloppy": 32, "low": 0, "all_time_slices": True},
+    "booster_sloppy_7": {"exact": 0, "sloppy": 32, "low": 0, "all_time_slices": True},
     "booster_low_0": {
         "exact": 0,
         "sloppy": 0,
         "low": 150,
         "all_time_slices": True,
     },  # 2100 seconds + 600 to load ev
-    #    "booster_low_1": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "booster_low_1": {"exact": 0, "sloppy": 0, "low": 600, "all_time_slices": True},
+    "booster_low_2": {"exact": 0, "sloppy": 0, "low": 600, "all_time_slices": True},
+    "booster_low_3": {"exact": 0, "sloppy": 0, "low": 600, "all_time_slices": True},
+    "booster_low_4": {"exact": 0, "sloppy": 0, "low": 600, "all_time_slices": True},
+    "booster_low_5": {"exact": 0, "sloppy": 0, "low": 600, "all_time_slices": True},
+    "booster_low_6": {"exact": 0, "sloppy": 0, "low": 600, "all_time_slices": True},
+    "booster_low_7": {"exact": 0, "sloppy": 0, "low": 600, "all_time_slices": True},
     "booster_exact_0_correlated": {
         "exact": 1,
         "sloppy": 0,
