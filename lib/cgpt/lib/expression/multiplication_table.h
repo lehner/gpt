@@ -270,6 +270,22 @@ struct MultiplicationTable<Gamma, iScalar<iMatrix<iScalar<vtype2>,n>>, unary_exp
   }
 };
 
+template<int n, typename vtype2>
+struct MultiplicationTable<Gamma, iScalar<iMatrix<iScalar<vtype2>,n>>, BIT_SPINTRACE> {
+  typedef Gamma T1;
+  typedef iScalar<iMatrix<iScalar<vtype2>,n>> T2;
+  typedef iScalar<iScalar<iScalar<vtype2>>> result_type;
+  static constexpr int n_elements = 1;
+  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+    ac.coalescedWrite(osite, traceIndex<SpinIndex>(a * coalescedRead(b)));
+  }
+};
+
+template<int n, typename vtype2>
+struct MultiplicationTable<Gamma, iScalar<iMatrix<iScalar<vtype2>,n>>, BIT_SPINTRACE|BIT_COLORTRACE> :
+  MultiplicationTable<Gamma, iScalar<iMatrix<iScalar<vtype2>,n>>, BIT_SPINTRACE> {};
+
+
 // MSpin x Gamma
 template<int n, typename vtype1, int unary_expr>
 struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, Gamma, unary_expr> {
@@ -281,6 +297,22 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, Gamma, unary_exp
     ac.coalescedWrite(osite, coalescedRead(a) * b);
   }
 };
+
+template<int n, typename vtype2>
+struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype2>,n>>, Gamma, BIT_SPINTRACE> {
+  typedef iScalar<iMatrix<iScalar<vtype2>,n>> T1;
+  typedef Gamma T2;
+  typedef iScalar<iScalar<iScalar<vtype2>>> result_type;
+  static constexpr int n_elements = 1;
+  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+    ac.coalescedWrite(osite, traceIndex<SpinIndex>(coalescedRead(a) * b));
+  }
+};
+
+template<int n, typename vtype2>
+struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype2>,n>>, Gamma, BIT_SPINTRACE|BIT_COLORTRACE> :
+  MultiplicationTable<iScalar<iMatrix<iScalar<vtype2>,n>>, Gamma, BIT_SPINTRACE> {};
+
 
 // Gamma x VSpinColor
 template<int ns, int nc, typename vtype2, int unary_expr>
@@ -295,8 +327,8 @@ struct MultiplicationTable<Gamma, iScalar<iVector<iVector<vtype2,nc>,ns>>, unary
 };
 
 // Gamma x MSpinColor
-template<int ns, int nc, typename vtype2, int unary_expr>
-struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, unary_expr> {
+template<int ns, int nc, typename vtype2>
+struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, 0> {
   typedef Gamma T1;
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> result_type;
@@ -306,15 +338,81 @@ struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, unary
   }
 };
 
+template<int ns, int nc, typename vtype2>
+struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, BIT_SPINTRACE> {
+  typedef Gamma T1;
+  typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
+  typedef iScalar<iScalar<iMatrix<vtype2,nc>>> result_type;
+  static constexpr int n_elements = 1;
+  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+    ac.coalescedWrite(osite, traceIndex<SpinIndex>(a * coalescedRead(b)));
+  }
+};
+
+template<int ns, int nc, typename vtype2>
+struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, BIT_COLORTRACE> {
+  typedef Gamma T1;
+  typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
+  typedef iScalar<iMatrix<iScalar<vtype2>,ns>> result_type;
+  static constexpr int n_elements = 1;
+  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+    ac.coalescedWrite(osite, traceIndex<ColourIndex>(a * coalescedRead(b)));
+  }
+};
+
+template<int ns, int nc, typename vtype2>
+struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, BIT_SPINTRACE|BIT_COLORTRACE> {
+  typedef Gamma T1;
+  typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
+  typedef iScalar<iScalar<iScalar<vtype2>>> result_type;
+  static constexpr int n_elements = 1;
+  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+    ac.coalescedWrite(osite, trace(a * coalescedRead(b)));
+  }
+};
+
 // MSpinColor x Gamma
-template<int ns, int nc, typename vtype1, int unary_expr>
-struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, Gamma, unary_expr> {
-  typedef iScalar<iMatrix<iMatrix<vtype1,nc>,ns>> T1;
+template<int ns, int nc, typename vtype2>
+struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>,Gamma, 0> {
   typedef Gamma T2;
-  typedef iScalar<iMatrix<iMatrix<vtype1,nc>,ns>> result_type;
+  typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T1;
+  typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> result_type;
   static constexpr int n_elements = 1;
   template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
     ac.coalescedWrite(osite, coalescedRead(a) * b);
+  }
+};
+
+template<int ns, int nc, typename vtype2>
+struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>,Gamma, BIT_SPINTRACE> {
+  typedef Gamma T2;
+  typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T1;
+  typedef iScalar<iScalar<iMatrix<vtype2,nc>>> result_type;
+  static constexpr int n_elements = 1;
+  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+    ac.coalescedWrite(osite, traceIndex<SpinIndex>(coalescedRead(a) * b));
+  }
+};
+
+template<int ns, int nc, typename vtype2>
+struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>,Gamma, BIT_COLORTRACE> {
+  typedef Gamma T2;
+  typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T1;
+  typedef iScalar<iMatrix<iScalar<vtype2>,ns>> result_type;
+  static constexpr int n_elements = 1;
+  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+    ac.coalescedWrite(osite, traceIndex<ColourIndex>(coalescedRead(a) * b));
+  }
+};
+
+template<int ns, int nc, typename vtype2>
+struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>,Gamma, BIT_SPINTRACE|BIT_COLORTRACE> {
+  typedef Gamma T2;
+  typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T1;
+  typedef iScalar<iScalar<iScalar<vtype2>>> result_type;
+  static constexpr int n_elements = 1;
+  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+    ac.coalescedWrite(osite, trace(coalescedRead(a) * b));
   }
 };
 

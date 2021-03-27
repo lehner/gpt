@@ -75,4 +75,5 @@ Coarse Operator Benchmark with
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
 
 {t_cgpt}
-""")
+"""
+    )
