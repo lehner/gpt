@@ -17,25 +17,36 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.algorithms import base
 
 # M^-1 = L Mpc^-1 R + S
-class preconditioned:
+class preconditioned(base):
     @g.params_convention()
     def __init__(self, preconditioner, inverter, params):
+        super().__init__()
         self.params = params
         self.preconditioner = preconditioner
         self.inverter = inverter
 
     def __call__(self, mat):
-
         matrix = self.preconditioner(mat)
         inv_mat = self.inverter(matrix.Mpc)
 
-        def inv(dst, src):
+        @self.timed_function
+        def inv(dst, src, t):
+            t("prepare")
             pc_src = g(matrix.R * src)
             pc_dst = g(matrix.L.inv() * dst)
+            t("inv mat")
             inv_mat(pc_dst, pc_src)
-            g.eval(dst, matrix.L * pc_dst + matrix.S * src)
+            t("combine")
+            # TODO: further improve this, maybe understand why eval is not optimal
+            tmp = g.lattice(dst[0])
+            # g.eval(dst, matrix.L * pc_dst + matrix.S * src)
+            for i in range(len(dst)):
+                matrix.L.mat(dst[i], pc_dst[i])
+                matrix.S.mat(tmp, src[i])
+                g.axpy(dst[i], 1.0, dst[i], tmp)
 
         return g.matrix_operator(
             mat=inv,

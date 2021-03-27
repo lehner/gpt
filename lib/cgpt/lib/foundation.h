@@ -57,12 +57,15 @@ template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
 #include "foundation/binary.h"
 #include "foundation/ternary.h"
 #include "foundation/et.h"
-#include "foundation/block.h"
+#include "foundation/grid.h"
+#include "foundation/block_lookup_table.h"
+#include "foundation/block_core.h"
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
 #include "foundation/eigen.h"
 #include "foundation/matrix.h"
 #include "foundation/clover.h"
+#include "foundation/coarse.h"
 
 
 NAMESPACE_END(Grid);

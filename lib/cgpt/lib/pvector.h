@@ -56,6 +56,11 @@ class PVector {
     return _v[i];
   }
 
+  // allow for type conversion to access first element
+  operator T&() {
+    return *_v[0];
+  }
+
   PVector slice(long i0, long i1, long step = 1) const {
     if (i0<0)
       i0=0;

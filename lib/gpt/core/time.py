@@ -36,13 +36,16 @@ def iadd(a, b):
 
 class timer:
     def __init__(self, name, enabled=True):
+        self.name = name
+        self.enabled = enabled
+        self.reset()
+
+    def reset(self):
         self.dt = {"total": 0.0}
         self.f = {}
         self.b = {}
-        self.name = name
         self.active = False
         self.current = None
-        self.enabled = enabled
 
     def __iadd__(self, other):
         if isinstance(other, dict):
