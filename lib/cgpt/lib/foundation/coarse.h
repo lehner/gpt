@@ -775,9 +775,6 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
   }
 
   void MInternal_gpu(const VFermionField& in, VFermionField& out) {
-    MCalls++;
-    MTotalTime -= usecond();
-    MMiscTime -= usecond();
     const int Narg            = numArg(in, out);
     const int NvirtualFermion = numVirtual(in, out);
     const int NvirtualLink    = NvirtualFermion*NvirtualFermion;
@@ -791,96 +788,96 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     conformable(FermionGrid(), out);
     constantCheckerboard(in, out);
 
+    Timer("compressor");
     SimpleCompressor<SiteSpinor> compressor;
-    MMiscTime += usecond();
 
+
+    Timer("copyToTmp5dField");
     copyToTmp5dField(in, tmpMultiArg_, Nsite, NvirtualFermion, Narg); // timed inside
 
-    MCommTime-=usecond();
+    Timer("HaloExchange");
     stencilMultiArg_.HaloExchange(tmpMultiArg_, compressor);
-    MCommTime+=usecond();
 
-    MViewTime -= usecond();
+    Timer("View");
     VECTOR_VIEW_OPEN(Uc_, Uc_v, AcceleratorRead);
     autoView(tmpMultiArg_v, tmpMultiArg_, AcceleratorRead);
     autoView(stencilMultiArg_v, stencilMultiArg_, AcceleratorRead);
     auto tmpMultiArg_p = &tmpMultiArg_v[0];
     VECTOR_VIEW_OPEN(out, out_v, AcceleratorWrite);
-    MViewTime += usecond();
 
+
+    Timer("Compute");
     for(int v_col=0; v_col<NvirtualFermion; v_col++) {
       typedef decltype(coalescedRead(tmpMultiArg_v[0]))    calcVector;
       typedef decltype(coalescedRead(tmpMultiArg_v[0](0))) calcComplex;
 
-      MComputeTime -= usecond();
-      // Idea: maybe faster to do many simpler NB kernels?  what about different streams?
+      /*
+	Checked multiple streams and breaking this up in more NB, did not improve
+      */
       accelerator_forNB(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
-              int _idx  = idx;
-        const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
-        const int arg   = _idx%Narg; _idx/=Narg;
-        const int v_row = _idx%NvirtualFermion; _idx/=NvirtualFermion;
-        const int ss    = _idx%Nsite; _idx/=Nsite;
-
-        const int v_arg_col = arg*NvirtualFermion+v_col;
-        const int v_arg_row = arg*NvirtualFermion+v_row;
-        const int v_row_col = v_row * NvirtualFermion + v_col;
-        const int v_col_row = v_col * NvirtualFermion + v_row;
-        const int sF        = ss*NvirtualFermion*Narg+v_col*Narg+arg; // needed for stencil access
-
+	  int _idx  = idx;
+	  const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
+	  const int arg   = _idx%Narg; _idx/=Narg;
+	  const int v_row = _idx%NvirtualFermion; _idx/=NvirtualFermion;
+	  const int ss    = _idx%Nsite; _idx/=Nsite;
+	  
+	  const int v_arg_col = arg*NvirtualFermion+v_col;
+	  const int v_arg_row = arg*NvirtualFermion+v_row;
+	  const int v_row_col = v_row * NvirtualFermion + v_col;
+	  const int v_col_row = v_col * NvirtualFermion + v_row;
+	  const int sF        = ss*NvirtualFermion*Narg+v_col*Narg+arg; // needed for stencil access
+	  
 #if defined(ROW_MAJOR)
-        const int v_link = v_row_col;
+	  const int v_link = v_row_col;
 #else // =  COL_MAJOR
-        const int v_link = v_col_row;
+	  const int v_link = v_col_row;
 #endif
-
-        calcComplex res;
-        calcVector nbr;
-        int ptype;
-        StencilEntry *SE_MA;
-
+	  
+	  calcComplex res;
+	  calcVector nbr;
+	  int ptype;
+	  StencilEntry *SE_MA;
+	  
 #if defined(REFERENCE_SUMMATION_ORDER)
-        res = Zero();
+	  res = Zero();
 #else
-        if (v_col == 0)
-          res = Zero();
-        else
-          res = coalescedRead(out_v[v_arg_row][ss](b));
+	  if (v_col == 0)
+	    res = Zero();
+	  else
+	    res = coalescedRead(out_v[v_arg_row][ss](b));
 #endif
-
-        for(int point=0; point<Npoint; point++) {
-          SE_MA=stencilMultiArg_v.GetEntry(ptype,point,sF);
-
-          if(SE_MA->_is_local) {
-            nbr = coalescedReadPermute(tmpMultiArg_p[SE_MA->_offset],ptype,SE_MA->_permute);
-          } else {
-            nbr = coalescedRead(stencilMultiArg_v.CommBuf()[SE_MA->_offset]);
-          }
-          acceleratorSynchronise();
-
-          for(int bb=0;bb<NbasisVirtual;bb++) {
+	  
+	  for(int point=0; point<Npoint; point++) {
+	    SE_MA=stencilMultiArg_v.GetEntry(ptype,point,sF);
+	    
+	    if(SE_MA->_is_local) {
+	      nbr = coalescedReadPermute(tmpMultiArg_p[SE_MA->_offset],ptype,SE_MA->_permute);
+	    } else {
+	      nbr = coalescedRead(stencilMultiArg_v.CommBuf()[SE_MA->_offset]);
+	    }
+	    acceleratorSynchronise();
+	    
+	    for(int bb=0;bb<NbasisVirtual;bb++) {
 #if defined(TENSOR_LAYOUT)
-            res = res + coalescedRead(Uc_v[v_link][ss](point)(b,bb))*nbr(bb);
+	      res = res + coalescedRead(Uc_v[v_link][ss](point)(b,bb))*nbr(bb);
 #else
-            res = res + coalescedRead(Uc_v[v_link*Npoint+point][ss](b,bb))*nbr(bb);
+	      res = res + coalescedRead(Uc_v[v_link*Npoint+point][ss](b,bb))*nbr(bb);
 #endif
-          }
-        }
+	    }
+	  }
 #if defined(REFERENCE_SUMMATION_ORDER)
-        if (v_col != 0) {
-          res = res + coalescedRead(out_v[v_arg_row][ss](b));
-        }
+	  if (v_col != 0) {
+	    res = res + coalescedRead(out_v[v_arg_row][ss](b));
+	  }
 #endif
-        coalescedWrite(out_v[v_arg_row][ss](b),res);
-      });
-      MComputeTime += usecond();
+	  coalescedWrite(out_v[v_arg_row][ss](b),res);
+	});
     }
     accelerator_barrier();
-    MViewTime -= usecond();
+    Timer("View");
     VECTOR_VIEW_CLOSE(Uc_v);
     VECTOR_VIEW_CLOSE(out_v);
-    MViewTime += usecond();
-    MTotalTime += usecond();
-    //grid_message("Finished calling: MInternal_gpu\n");
+    Timer();
   }
 
   void MInternal_cpu(const VFermionField& in, VFermionField& out) {
