@@ -26,12 +26,22 @@ gamma_otype = ot_matrix_spin(4)
 
 # basic matrices defining the gamma representation
 matrices = {
-    0: np.array([[0, 0, 0, 1j], [0, 0, 1j, 0], [0, -1j, 0, 0], [-1j, 0, 0, 0]]),
-    1: np.array([[0, 0, 0, -1], [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]]),
-    2: np.array([[0, 0, 1j, 0], [0, 0, 0, -1j], [-1j, 0, 0, 0], [0, 1j, 0, 0]]),
-    3: np.array([[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]]),
-    4: np.diagflat([1, 1, -1, -1]),
-    11: np.diagflat([1, 1, 1, 1]),
+    0: np.array(
+        [[0, 0, 0, 1j], [0, 0, 1j, 0], [0, -1j, 0, 0], [-1j, 0, 0, 0]],
+        dtype=np.complex128,
+    ),
+    1: np.array(
+        [[0, 0, 0, -1], [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]], dtype=np.complex128
+    ),
+    2: np.array(
+        [[0, 0, 1j, 0], [0, 0, 0, -1j], [-1j, 0, 0, 0], [0, 1j, 0, 0]],
+        dtype=np.complex128,
+    ),
+    3: np.array(
+        [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.complex128
+    ),
+    4: np.diagflat([1, 1, -1, -1]).astype(dtype=np.complex128),
+    11: np.diagflat([1, 1, 1, 1]).astype(dtype=np.complex128),
 }
 
 # sigma_xy = 1/2 [gamma_x,gamma_y]

@@ -7,6 +7,7 @@
 #
 import gpt as g
 import numpy as np
+import cgpt
 
 g.default.set_verbose("random", False)
 rng = g.random("benchmark")
@@ -30,7 +31,7 @@ Coarse Operator Benchmark with
     # Coarse operator
     A = [g.mcomplex(grid, nbasis) for __ in range(9)]
     rng.cnormal(A)
-    co = g.qcd.fermion.coarse(A, {"level": level})
+    co = g.qcd.fermion.coarse_fermion(A, {"level": level})
 
     # Source and destination
     src = g.vcomplex(grid, nbasis)
@@ -51,6 +52,13 @@ Coarse Operator Benchmark with
     for n in range(5):
         co.mat(dst, src)
 
+    # Time cgpt
+    cgpt.timer_begin()
+    for n in range(5):
+        co.mat(dst, src)
+    t_cgpt = g.timer("coarse_mat", True)
+    t_cgpt += cgpt.timer_end()
+
     # Time
     t0 = g.time()
     for n in range(N):
@@ -64,5 +72,8 @@ Coarse Operator Benchmark with
         f"""{N} applications of M
     Time to complete            : {t1-t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
-    Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
+    Effective memory bandwidth  : {GBPerSec:.2f} GB/s
+
+{t_cgpt}
+"""
     )
