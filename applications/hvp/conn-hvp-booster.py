@@ -13,7 +13,20 @@ root_output = "/p/project/gm2dwf/lehner/projects/conn-hvp"
 # 420, 500, 580
 groups = {
     "booster_batch_0": {
-        "confs": ["520", "560", "620"],
+        "confs": [
+            "520",
+            "560",
+            "620",
+            "420",
+            "460",
+            "720",
+            "640",
+            "540",
+            "480",
+            "500",
+            "580",
+            "600",
+        ],
         "evec_fmt": "/p/scratch/gm2dwf/evecs/96I/%s/lanczos.output",
         "conf_fmt": "/p/project/gm2dwf/configs/96I/evol0/ckpoint_lat.%s",
     },
@@ -74,12 +87,36 @@ jobs = {
         "low": 0,
         "all_time_slices": False,
     },  # 2652 seconds + 580 to load ev
+    "booster_sloppy_1_correlated": {
+        "exact": 0,
+        "sloppy": 32,
+        "low": 0,
+        "all_time_slices": False,
+    },
+    "booster_sloppy_2_correlated": {
+        "exact": 0,
+        "sloppy": 32,
+        "low": 0,
+        "all_time_slices": False,
+    },
     "booster_low_0_correlated": {
         "exact": 0,
         "sloppy": 0,
         "low": 150,
         "all_time_slices": False,
     },  # 2100 seconds + 600 to load ev
+    "booster_low_1_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 600,
+        "all_time_slices": False,
+    },
+    "booster_low_2_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 600,
+        "all_time_slices": False,
+    },
 }
 
 # At 32 jobs we break even with eigenvector generation

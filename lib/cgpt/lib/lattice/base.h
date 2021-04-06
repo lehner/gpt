@@ -49,8 +49,8 @@ public:
   virtual void set_checkerboard_from(cgpt_Lattice_base* src) = 0;
   virtual void change_checkerboard(int cb) = 0;
   virtual int get_checkerboard() = 0;
-  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) = 0;
-  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &basis,ComplexD* Qt,int j0, int j1, int k0,int k1,int Nm) = 0;
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm,bool use_accelerator) = 0;
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &basis,ComplexD* Qt,int j0, int j1, int k0,int k1,int Nm,bool use_accelerator) = 0;
   virtual void linear_combination(std::vector<cgpt_Lattice_base*>& dst, std::vector<cgpt_Lattice_base*> &basis,ComplexD* Qt, long n_virtual, long basis_n_block) = 0;
   virtual PyObject* memory_view(memory_type mt) = 0; // access to internal memory storage, can be simd format
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) = 0;

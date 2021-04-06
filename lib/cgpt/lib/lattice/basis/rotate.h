@@ -18,7 +18,11 @@
 */
 
 template<class VLattice, typename dtype>
-void cgpt_basis_rotate(VLattice &basis,dtype* Qt,int j0, int j1, int k0,int k1,int Nm) {
+void cgpt_basis_rotate(VLattice &basis,dtype* Qt,int j0, int j1, int k0,int k1,int Nm,bool use_accelerator) {
   PMatrix<dtype> _Qt(Qt,Nm);
-  basisRotate(basis,_Qt,j0,j1,k0,k1,Nm);
+  if (use_accelerator) {
+    basisRotate(basis,_Qt,j0,j1,k0,k1,Nm);
+  } else {
+    cgpt_basis_rotate_cpu(basis,_Qt,j0,j1,k0,k1,Nm);
+  }
 }
