@@ -1,0 +1,69 @@
+# OMP_NUM_THREADS=24 srun -N1 -n2 gpt/benchmarks/dslash.py --dslash-asm --grid 16.16.16.16 --mpi 2.1.1.1
+SharedMemoryMpi:  World communicator of size 2
+SharedMemoryMpi:  Node  communicator of size 2
+SharedMemoryMpi: SharedMemoryAllocate 1073741824 shmget implementation
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=2bb374daea0f412ab131d274c4fd2e60e2a92c3b: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+
+Grid : Message : ================================================
+Grid : Message : MPI is initialised and logging filters activated
+Grid : Message : ================================================
+Grid : Message : Requested 1073741824 byte stencil comms buffers
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Unified memory space
+
+=============================================
+              Initialized GPT
+     Copyright (C) 2020 Christoph Lehner
+=============================================
+GPT :       0.622002 s :
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [16, 16, 16, 16]
+                       :     precision    : single
+                       :     Ls           : 8
+                       :
+GPT :       1.729954 s : 1000 applications of Dhop
+                       :     Time to complete            : 0.96 s
+                       :     Total performance           : 721.20 GFlops/s
+                       :     Effective memory bandwidth  : 511.39 GB/s
+GPT :       1.730796 s :
+                       : DWF Dslash Benchmark with
+                       :     fdimensions  : [16, 16, 16, 16]
+                       :     precision    : double
+                       :     Ls           : 8
+                       :
+GPT :       4.455045 s : 1000 applications of Dhop
+                       :     Time to complete            : 2.57 s
+                       :     Total performance           : 269.64 GFlops/s
+                       :     Effective memory bandwidth  : 382.40 GB/s
+=============================================
+               Finalized GPT
+=============================================
