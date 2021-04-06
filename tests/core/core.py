@@ -332,7 +332,7 @@ a = [g.complex(grid) for i in range(3)]
 b = [g.complex(grid) for i in range(3)]
 rng.cnormal(a)
 c = [g.copy(x) for x in a]
-Qt = np.array([[1,2,3],[9,7,13],[15,17,19]], dtype=np.complex128)
+Qt = np.array([[1, 2, 3], [9, 7, 13], [15, 17, 19]], dtype=np.complex128)
 for i in range(3):
     g.linear_combination(b[i], a, Qt[i])
 g.rotate(a, Qt, 0, 3, 0, 3, True)
