@@ -1,5 +1,6 @@
 [![Build/Test](https://github.com/lehner/gpt/workflows/Build/Test/badge.svg)](https://github.com/lehner/gpt/actions?query=workflow%3ABuild%2FTest)
 [![codecov](https://codecov.io/gh/lehner/gpt/branch/master/graph/badge.svg)](https://codecov.io/gh/lehner/gpt/branch/master)
+[![DOI](https://zenodo.org/badge/242580638.svg)](https://zenodo.org/badge/latestdoi/242580638)
 
 ![GPT Logo](/documentation/logo/logo-1280-640.png)
 
