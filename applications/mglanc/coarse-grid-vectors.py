@@ -152,7 +152,7 @@ v_fine[:] = 0
 solver(v_fine, start)
 save_history("cg_test.defl_all_ev3", test_solver.history)
 
-solver = g.algorithms.iniverter.sequence(
+solver = g.algorithms.inverter.sequence(
     g.algorithms.inverter.coarse_deflate(
         cevec[0 : len(basis)], basis, ev3[0 : len(basis)]
     ),
