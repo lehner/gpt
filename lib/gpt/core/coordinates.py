@@ -108,8 +108,8 @@ def coordinate_mask(field, mask):
     field[x] = mask.astype(field.grid.precision.complex_dtype).reshape((len(mask), 1))
 
 
-def correlate(a,b,dims=None):
+def correlate(a, b, dims=None):
     # c[x] = (1/vol) sum_y a[y]*b[y+x]
     F = gpt.fft(dims=dims)
     G = gpt.adj(F)
-    return F(gpt(F(a)*G(b)))
+    return F(gpt(F(a) * G(b)))

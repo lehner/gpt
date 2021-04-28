@@ -18,7 +18,7 @@ N = g.default.get_int("--N", 10)
 for precision in [g.single, g.double]:
 
     g.mem_report()
-    for q in [g.qis.backends.dynamic]: #g.qis.backends.static, 
+    for q in [g.qis.backends.dynamic]:  # g.qis.backends.static,
         g.message(
             f"""
 

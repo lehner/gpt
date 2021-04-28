@@ -140,7 +140,7 @@ class state:
         t2 = g.time()
         self.bit_flipped_plan[i](bfl, self.lattice)
         t3 = g.time()
-        #g.message(t1-t0,t2-t1,t3-t2)
+        # g.message(t1-t0,t2-t1,t3-t2)
         return bfl
 
     def X(self, i):

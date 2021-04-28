@@ -37,7 +37,7 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     plan.destination += lhs.view[pos]
     plan.source += rhs.view[pos]
     plan = plan()
-    #g.message(plan.info())
+    # g.message(plan.info())
 
     # warmup
     plan(lhs, rhs)
