@@ -164,7 +164,7 @@ class gpt_io:
         # need to write all views
         for xk, iview in enumerate(views_for_node):
 
-            cache_key = res + f"_{g.obj}_{iview}_write"
+            cache_key = res + f"_{g.obj}_{xk}_{iview}_write"
             if cache_key not in self.cache:
                 self.cache[cache_key] = {}
 
@@ -250,7 +250,7 @@ class gpt_io:
                 xk, iview, False, cv_desc, g.fdimensions, g.cb, l.checkerboard()
             )
 
-            cache_key = f"{a[0:3]}_{g.obj}_{iview}_read"
+            cache_key = f"{a[0:3]}_{g.obj}_{xk}_{iview}_read"
             if cache_key not in self.cache:
                 self.cache[cache_key] = {}
 

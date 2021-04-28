@@ -112,7 +112,8 @@ EXPORT(rotate,{
 
     PyObject* _basis,* _Qt;
     int j0,j1,k0,k1,idx;
-    if (!PyArg_ParseTuple(args, "OOiiiii", &_basis, &_Qt, &j0, &j1, &k0, &k1, &idx)) {
+    long use_accelerator;
+    if (!PyArg_ParseTuple(args, "OOiiiiil", &_basis, &_Qt, &j0, &j1, &k0, &k1, &idx, &use_accelerator)) {
       return NULL;
     }
     
@@ -130,11 +131,11 @@ EXPORT(rotate,{
     if (dtype == NPY_COMPLEX128) {
       ComplexD* data;
       cgpt_numpy_import_matrix(_Qt,data,Nm);
-      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm);
+      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm,use_accelerator);
     } else if (dtype == NPY_FLOAT64) {
       RealD* data;
       cgpt_numpy_import_matrix(_Qt,data,Nm);
-      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm);
+      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm,use_accelerator);
     } else {
       ERR("Unknown dtype");
     }
