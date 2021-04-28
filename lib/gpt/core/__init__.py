@@ -83,6 +83,7 @@ from gpt.core.coordinates import (
     fft,
     coordinate_mask,
     local_coordinates,
+    correlate,
 )
 from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report, accelerator, host
