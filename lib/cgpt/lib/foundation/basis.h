@@ -192,3 +192,39 @@ void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &r
 
   
 }
+
+template<class VField, class Matrix>
+void cgpt_basis_rotate_cpu(VField &basis,Matrix& Qt,int j0, int j1, int k0,int k1,int Nm) {
+  typedef decltype(basis[0]) Field;
+  typedef decltype(basis[0].View(CpuRead)) View;
+
+  Vector<View> basis_v; basis_v.reserve(basis.size());
+  typedef typename std::remove_reference<decltype(basis_v[0][0])>::type vobj;
+  typedef typename std::remove_reference<decltype(Qt(0,0))>::type Coeff_t;
+  GridBase* grid = basis[0].Grid();
+      
+  for(int k=0;k<basis.size();k++){
+    basis_v.push_back(basis[k].View(CpuWrite));
+  }
+
+  int max_threads = thread_max();
+  Vector < vobj > Bt(Nm * max_threads);
+  thread_region
+    {
+      vobj* B = &Bt[Nm * thread_num()];
+      thread_for_in_region(ss, grid->oSites(),{
+	  for(int j=j0; j<j1; ++j) B[j]=0.;
+      
+	  for(int j=j0; j<j1; ++j){
+	    for(int k=k0; k<k1; ++k){
+	      B[j] +=Qt(j,k) * basis_v[k][ss];
+	    }
+	  }
+	  for(int j=j0; j<j1; ++j){
+	    basis_v[j][ss] = B[j];
+	  }
+	});
+    }
+
+  for(int k=0;k<basis.size();k++) basis_v[k].ViewClose();
+}

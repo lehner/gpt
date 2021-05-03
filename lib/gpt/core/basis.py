@@ -87,9 +87,9 @@ def bilinear_combination(r, left_basis, right_basis, Qt, lidx, ridx):
     cgpt.bilinear_combination(r, left_basis, right_basis, Qt, lidx, ridx)
 
 
-def rotate(basis, Qt, j0, j1, k0, k1):
+def rotate(basis, Qt, j0, j1, k0, k1, use_accelerator=True):
     for i in basis[0].otype.v_idx:
-        cgpt.rotate(basis, Qt, j0, j1, k0, k1, i)
+        cgpt.rotate(basis, Qt, j0, j1, k0, k1, i, use_accelerator)
 
 
 def qr_decomposition(lmd, lme, Nk, Nm, Qt, Dsh, kmin, kmax):

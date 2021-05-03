@@ -67,17 +67,21 @@ class fgmres(base_iterative):
         for j in range(i + 1):
             psi += y[j] * V[j]
 
-    def restart(self, mat, psi, mmpsi, src, r, V, Z, gamma):
-        r2 = self.calc_res(mat, psi, mmpsi, src, r)
+    def restart(self, mat, psi, mmpsi, src, r, V, Z, gamma, t):
+        r2 = self.calc_res(mat, psi, mmpsi, src, r, t)
+        t("restart - misc")
         gamma[0] = r2 ** 0.5
         V[0] @= r / gamma[0]
+        t("restart - zero")
         if Z is not None:
             for z in Z:
                 z[:] = 0
         return r2
 
-    def calc_res(self, mat, psi, mmpsi, src, r):
+    def calc_res(self, mat, psi, mmpsi, src, r, t):
+        t("res - mat")
         mat(mmpsi, psi)
+        t("res - axpy")
         return g.axpy_norm2(r, -1.0, mmpsi, src)
 
     def __call__(self, mat):
@@ -119,7 +123,7 @@ class fgmres(base_iterative):
 
             # initial residual
             t("restart")
-            r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
+            r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma, t)
             t("setup")
 
             # source
@@ -170,19 +174,19 @@ class fgmres(base_iterative):
                 if r2 <= rsq:
                     msg = f"converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
-                        res = self.calc_res(mat, psi, mmpsi, src, r)
+                        res = self.calc_res(mat, psi, mmpsi, src, r, t)
                         msg += f";  true squared residual {res:e} / {rsq:e}"
                     self.log(msg)
                     return
 
                 if need_restart:
                     t("restart")
-                    r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma)
+                    r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma, t)
                     self.debug("performed restart")
 
             msg = f"NOT converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:
-                res = self.calc_res(mat, psi, mmpsi, src, r)
+                res = self.calc_res(mat, psi, mmpsi, src, r, t)
                 msg += f";  true squared residual {res:e} / {rsq:e}"
             self.log(msg)
 

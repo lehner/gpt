@@ -53,6 +53,24 @@ for lat in [g.mspincolor, g.mspin]:
     g.message("Test Regular Expression: ", eps)
     assert eps == 0.0
 
+    # test algebra versus matrix
+    for mu in [0, 1, 2, 3, 5, "I"]:
+        for op in [
+            lambda a, b: a * b,
+            lambda a, b: b * a,
+            lambda a, b: g.spin_trace(a * b),
+            lambda a, b: g.spin_trace(b * a),
+            lambda a, b: g.color_trace(a * b),
+            lambda a, b: g.color_trace(b * a),
+            lambda a, b: g.trace(a * b),
+            lambda a, b: g.trace(b * a),
+        ]:
+            dst_alg = g(op(g.gamma[mu], l))
+            dst_mat = g(op(g.gamma[mu].tensor(), l))
+            eps2 = g.norm2(dst_alg - dst_mat) / g.norm2(dst_mat)
+            g.message(f"Algebra<>Matrix {mu}: {eps2}")
+            assert eps2 < 1e-14
+
 # reconstruct and test the gamma matrix elements
 for mu in g.gamma:
     gamma = g.gamma[mu]

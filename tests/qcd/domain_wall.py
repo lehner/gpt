@@ -156,9 +156,11 @@ dst_qz = g.mspincolor(grid)
 dst_qm @= slv_qm * src
 dst_qz @= slv_qz * src
 
-
 # two-point
-correlator_qm = g.slice(g.trace(dst_qm * g.adj(dst_qm)), 3)
+correlator_qm = g.slice(
+    g.trace(g.gamma[0] * g.gamma[0] * dst_qm * g.gamma[0] * g.gamma[0] * g.adj(dst_qm)),
+    3,
+)
 correlator_qz = g.slice(g.trace(dst_qz * g.adj(dst_qz)), 3)
 correlator_ref = [
     0.4873415231704712,
