@@ -23,7 +23,7 @@ import gpt as g
 default_rectangle_cache = {}
 
 
-def rectangle(U, first, second=None, third=None, cache=default_rectangle_cache):
+def rectangle(U, first, second=None, third=None, cache=default_rectangle_cache, field=False):
     #
     # Calling conventions:
     #
@@ -79,18 +79,31 @@ def rectangle(U, first, second=None, third=None, cache=default_rectangle_cache):
     vol = float(U[0].grid.fsites)
     ndim = U[0].otype.shape[0]
 
-    value = 0.0
+    if field:
+        value = g.complex(U[0].grid)
+        value[:] = 0
+    else:
+        value = 0.0
     idx = 0
     ridx = 0
     results = []
     for p in loops:
-        value += g.sum(g.trace(p))
+        if field:
+            value += g.trace(p)
+        else:
+            value += g.sum(g.trace(p))
         idx += 1
         if idx == ranges[ridx]:
-            results.append(value.real / vol / idx / ndim)
+            if field:
+                results.append(g(g.component.real(value) / idx / ndim))
+            else:
+                results.append(value.real / vol / idx / ndim)
             idx = 0
             ridx = ridx + 1
-            value = 0.0
+            if field:
+                value[:] = 0
+            else:
+                value = 0.0
     if len(results) == 1:
         return results[0]
     return results
