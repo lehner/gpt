@@ -37,9 +37,7 @@ for t in [g.mspincolor, g.vcolor, g.complex, g.mcolor]:
     plan.destination += lhs.view[pos]
     plan.source += rhs.view[pos]
     plan = plan()
-    # plan_info = plan.info()[0, 0][0, 0]
-    # block_size = plan_info["size"] // plan_info["blocks"]
-    # g.message(" " * 51 + f"block_size = {block_size}")
+    # g.message(plan.info())
 
     # warmup
     plan(lhs, rhs)

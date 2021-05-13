@@ -9,7 +9,7 @@ import numpy as np
 from gpt.qis.gate import *
 
 # need a random number generator for measurements
-r = g.random("qis_test")
+r = g.random("qis_test", "vectorized_ranlux24_24_64")
 
 
 n = g.default.get_int("--n", 16)
@@ -17,7 +17,8 @@ N = g.default.get_int("--N", 10)
 
 for precision in [g.single, g.double]:
 
-    for q in [g.qis.backends.static, g.qis.backends.dynamic]:
+    g.mem_report()
+    for q in [g.qis.backends.dynamic]:  # g.qis.backends.static,
         g.message(
             f"""
 

@@ -126,7 +126,9 @@ class state:
     def bit_flipped_lattice(self, i):
         c = self.bit_map.coordinates
         nci = self.bit_map.not_coordinates[self.bit_permutation[i]]
+        # t0 = g.time()
         bfl = g.lattice(self.lattice)
+        # t1 = g.time()
         if i not in self.bit_flipped_plan:
             p = g.copy_plan(bfl, self.lattice)
             p.destination += bfl.view[c]
@@ -135,7 +137,10 @@ class state:
             # g.message(
             #     self.bit_flipped_plan[i].info()
             # )  # TODO: it is odd that this maxes out at 22 GB/s ; focus on bandwidth benchmark first, why 500GB/s for prop and only 5 for singlet?
+        # t2 = g.time()
         self.bit_flipped_plan[i](bfl, self.lattice)
+        # t3 = g.time()
+        # g.message(t1-t0,t2-t1,t3-t2)
         return bfl
 
     def X(self, i):
