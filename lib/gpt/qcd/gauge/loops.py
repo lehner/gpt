@@ -23,7 +23,9 @@ import gpt as g
 default_rectangle_cache = {}
 
 
-def rectangle(U, first, second=None, third=None, cache=default_rectangle_cache, field=False):
+def rectangle(
+    U, first, second=None, third=None, cache=default_rectangle_cache, field=False
+):
     #
     # Calling conventions:
     #
