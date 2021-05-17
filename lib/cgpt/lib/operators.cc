@@ -28,6 +28,7 @@
 #include "operators/zmobius.h"
 #include "operators/mobius.h"
 #include "operators/coarse.h"
+#include "operators/laplacian.h"
 #include "operators/create.h"
     
 EXPORT(create_fermion_operator,{

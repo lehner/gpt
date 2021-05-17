@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+#
+# Authors: Thomas Wurm 2021
+#
+import gpt
+
+# setup
+rng = gpt.random("test")
+N = gpt.default.get_int("--N", 1000)
+vol = gpt.default.get_ivec("--grid", [16, 16, 16, 32], 4)
+
+for precision in [gpt.single, gpt.double]:
+    grid = gpt.grid(vol, precision)
+    u = gpt.qcd.gauge.random(grid, rng)
+
+    # initialize fields
+    src = gpt.vspincolor(grid)
+    rng.cnormal(src)
+    dst = gpt.vspincolor(grid)
+
+    for dimensions in [[0, 1, 2], [0, 1, 2, 3]]:
+        # initialize laplacian
+        laplacian = gpt.qcd.fermion.covariant_laplacian(u, dimensions=dimensions, boundary_phases=[1.0, 1.0, 1.0, -1.0])
+
+        # apply laplacian once
+        laplacian(dst, src)
+
+        # apply laplacian N times and measure time
+        t0 = gpt.time()
+        for _ in range(N):
+            laplacian(dst, src)
+        t1 = gpt.time()
+
+        # calculate performance
+        Nc = u[0].otype.shape[0]
+        Nd = len(u)
+        Ndis = 2 * len(dimensions) # number of displacements
+
+        GFlopsPerSec = src.grid.gsites * N * (
+            Nd * Nc +  # set result to (2 * N_dims) * src
+            Ndis * Nd * Nc**2 +  # apply multLink for each displacement
+            Ndis * Nd * Nc +  # add products to result
+            Nd * Nc  # write result
+        ) / (t1 - t0) / 1e9
+
+        GBPerSec = 2 * precision.nbytes * src.grid.gsites * N * (
+            2 * Nd * Nc + # set result to (2 * N_dims) * src
+            Ndis * Nd * (Nc**2 + 2 * Nc) + # apply multLink for each displacement
+            Ndis * Nd * 2 * Nc + # add products to result
+            2 * Nd * Nc  # write result
+        ) / (t1 - t0) / 1e9
+
+        gpt.message(
+            f"""Laplacian benchmark {N} iterations and dims {dimensions}:
+        Time to complete            : {t1-t0:.2f} s
+        Total performance           : {GFlopsPerSec:.2f} GFlops/s
+        Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
+        )
+

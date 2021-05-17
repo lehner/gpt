@@ -17,6 +17,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
+
 template<typename vCoeff_t>
 cgpt_fermion_operator_base* cgpt_create_fermion_operator(const std::string& optype, PyObject* args) {
 
@@ -28,6 +30,8 @@ cgpt_fermion_operator_base* cgpt_create_fermion_operator(const std::string& opty
     return cgpt_create_mobius<vCoeff_t>(args);
   } else if (optype == "coarse") {
     return cgpt_create_coarsenedmatrix<vCoeff_t>(args);
+  } else if (optype == "laplacian"){
+    return cgpt_create_laplacian<vCoeff_t>(args);
   } else {
     ERR("Unknown operator type");
   }
