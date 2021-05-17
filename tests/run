@@ -37,6 +37,7 @@ for f in \
     ${test_path}/random/simple.py \
     ${test_path}/create/create.py \
     ${test_path}/create/smear.py \
+    ${test_path}/create/laplacian.py \
     ${test_path}/qcd/split_chiral.py \
     ${test_path}/qcd/coarsen.py \
     ${test_path}/qcd/coarse_even_odd.py \
