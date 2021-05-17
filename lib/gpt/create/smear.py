@@ -46,7 +46,7 @@ def gauss(U, params):
     sigma = params["sigma"]
     steps = params["steps"]
     dimensions = params["dimensions"]
-    lap = laplace(g.covariant.shift(U, params), dimensions)
+    lap = g.qcd.fermion.covariant_laplacian(U, dimensions=dimensions, boundary_phases=params["boundary_phases"])
 
     def mat(dst, src):
         assert dst != src

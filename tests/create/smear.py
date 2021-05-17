@@ -34,7 +34,7 @@ for dimensions in [[0, 1, 2], [0, 1, 2, 3]]:
         smear_unit = g.create.smear.gauss(
             U_unit, sigma=sigma, steps=steps, dimensions=dimensions
         )
-        src = g.vcolor(grid)
+        src = g.vspincolor(grid)
         src[:] = g.vcolor([1, 0, 0])
 
         # anti-periodic boundary conditions in time mean space and time are
