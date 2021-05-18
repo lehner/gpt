@@ -120,7 +120,6 @@ public:
       StencilEntry* SE;
       calcSpinor result = -1.0 * npoint * coalescedRead(in_v[osite]);
       calcSpinor displaced;
-      calcSpinor tmp;
 
       // for each point in stencil
       for (int point = 0; point < npoint; point++){
@@ -133,8 +132,7 @@ public:
         }
 
         // multiply link and add to result
-        Impl::multLink(tmp, gauge_v[osite], displaced, dims_gauge[point]);
-        result += tmp;
+        mac(&result(), &gauge_v[osite](dims_gauge[point]), &displaced());
       }
       coalescedWrite(out_v[osite], result);
     })

@@ -37,7 +37,6 @@ for f in \
     ${test_path}/random/simple.py \
     ${test_path}/create/create.py \
     ${test_path}/create/smear.py \
-    ${test_path}/create/laplacian.py \
     ${test_path}/qcd/split_chiral.py \
     ${test_path}/qcd/coarsen.py \
     ${test_path}/qcd/coarse_even_odd.py \
@@ -46,6 +45,7 @@ for f in \
     ${test_path}/qcd/gauge.py \
     ${test_path}/qcd/domain_wall.py \
     ${test_path}/qcd/sap.py \
+    ${test_path}/qcd/laplacian.py \
     ${test_path}/algorithms/implicitly_restarted_lanczos.py \
     ${test_path}/algorithms/arnoldi.py \
     ${test_path}/algorithms/solvers.py \

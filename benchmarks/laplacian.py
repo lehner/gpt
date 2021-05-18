@@ -36,18 +36,16 @@ for precision in [gpt.single, gpt.double]:
         Nd = len(u)
         Ndis = 2 * len(dimensions) # number of displacements
 
-        GFlopsPerSec = src.grid.gsites * N * (
-            Nd * Nc +  # set result to (2 * N_dims) * src
-            Ndis * Nd * Nc**2 +  # apply multLink for each displacement
-            Ndis * Nd * Nc +  # add products to result
-            Nd * Nc  # write result
+        GFlopsPerSec = src.grid.gsites * N * Nd * (
+            Nc +  # set result to (2 * N_dims) * src
+            Ndis * (2 * Nc**2 + Nc) +  # for each displacement multiply link and add
+            Nc  # write result
         ) / (t1 - t0) / 1e9
 
-        GBPerSec = 2 * precision.nbytes * src.grid.gsites * N * (
-            2 * Nd * Nc + # set result to (2 * N_dims) * src
-            Ndis * Nd * (Nc**2 + 2 * Nc) + # apply multLink for each displacement
-            Ndis * Nd * 2 * Nc + # add products to result
-            2 * Nd * Nc  # write result
+        GBPerSec = 2 * precision.nbytes * src.grid.gsites * N * Nd * (
+            2 * Nc +  # set result to (2 * N_dims) * src
+            Ndis * (Nc**2 + 2 * Nc) +  # for each displacement multiply link and add
+            2 * Nc  # write result
         ) / (t1 - t0) / 1e9
 
         gpt.message(
