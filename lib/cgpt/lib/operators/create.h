@@ -18,7 +18,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-
 template<typename vCoeff_t>
 cgpt_fermion_operator_base* cgpt_create_fermion_operator(const std::string& optype, PyObject* args) {
 
