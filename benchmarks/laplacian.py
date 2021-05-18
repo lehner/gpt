@@ -51,6 +51,7 @@ for precision in [gpt.single, gpt.double]:
         gpt.message(
             f"""Laplacian benchmark {N} iterations and dims {dimensions}:
         Time to complete            : {t1-t0:.2f} s
+        Precision                   : {precision.__name__}
         Total performance           : {GFlopsPerSec:.2f} GFlops/s
         Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
         )
