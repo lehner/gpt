@@ -32,10 +32,11 @@ public:
             std::vector<int> dims,
             const ImplParams &p = ImplParams()
             )
-    : FermionOperator<Impl>(p) // for parsing boundary conditions
+    : FermionOperator<Impl>(p) // for parsing boundary phases (and twists)
     , _grid(&Fgrid)
     , _cbgrid(&Hgrid)
     , _tmp(&Hgrid)
+    , dimensions(dims)
     , dims_gauge(set_dims_gauge(dims))
     , directions(set_directions(dims))
     , displacements(set_displacements(dims))
@@ -78,7 +79,7 @@ public:
     for (int ii = 0; ii < dims.size(); ii++)
     {
       ret[ii] = dims[ii];
-      ret[ii + dims.size()] = dims[ii] + _grid->Nd();
+      ret[ii + dims.size()] = dims[ii] + 4;
     }
     return ret;
   }
@@ -94,9 +95,56 @@ public:
   // copied from WilsonFermion
     GaugeField HUmu(_Umu.Grid());
     HUmu = _Umu ;
-    Impl::DoubleStore(GaugeGrid(), Umu, HUmu);
+    DoubleStore(GaugeGrid(), Umu, HUmu);
     pickCheckerboard(Even, UmuEven, Umu);
     pickCheckerboard(Odd, UmuOdd, Umu);
+  }
+
+  inline void DoubleStore(GridBase *GaugeGrid,
+                          DoubledGaugeField &Uds,
+                          const GaugeField &Umu)
+  {
+  // copied from WilsonImpl
+    typedef typename Simd::scalar_type scalar_type;
+
+    conformable(Uds.Grid(), GaugeGrid);
+    conformable(Umu.Grid(), GaugeGrid);
+
+    GaugeLinkField U(GaugeGrid);
+    GaugeLinkField tmp(GaugeGrid);
+
+    Lattice<iScalar<vInteger> > coor(GaugeGrid);
+    ////////////////////////////////////////////////////
+    // apply any boundary phase or twists
+    ////////////////////////////////////////////////////
+    for (int mu : dimensions) {
+
+      ////////// boundary phase /////////////
+      auto pha = Impl::Params.boundary_phases[mu];
+      scalar_type phase( real(pha),imag(pha) );
+
+      int L   = GaugeGrid->GlobalDimensions()[mu];
+      int Lmu = L - 1;
+
+      LatticeCoordinate(coor, mu);
+
+      U = PeekIndex<LorentzIndex>(Umu, mu);
+
+      // apply any twists
+      RealD theta = Impl::Params.twist_n_2pi_L[mu] * 2*M_PI / L;
+      if ( theta != 0.0) {
+        scalar_type twphase(::cos(theta),::sin(theta));
+        U = twphase*U;
+        std::cout << GridLogMessage << " Twist ["<<mu<<"] "<< Impl::Params.twist_n_2pi_L[mu]<< " phase"<<phase <<std::endl;
+      }
+
+      tmp = where(coor == Lmu, phase * U, U);
+      PokeIndex<LorentzIndex>(Uds, tmp, mu);
+
+      U = adj(Cshift(U, mu, -1));
+      U = where(coor == 0, conjugate(phase) * U, U);
+      PokeIndex<LorentzIndex>(Uds, U, mu + 4);
+    }
   }
 
   // implement functionality
@@ -236,6 +284,7 @@ private:
 
   FermionField _tmp;
 
+  std::vector<int> dimensions;
   std::vector<int> dims_gauge;
   std::vector<int> directions;
   std::vector<int> displacements;

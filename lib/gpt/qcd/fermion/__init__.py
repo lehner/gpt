@@ -87,8 +87,8 @@ def coarse_fermion(A, params):
     params["nbasis"] = A[0].otype.v_n1[0]
     return coarse_operator("coarse", A, params, otype=A[0].otype.vector_type)
 
+
 @gpt.params_convention()
 def covariant_laplacian(U, params):
     params = copy.deepcopy(params)  # save current parameters
     return fine_operator("laplacian", U, params, otype=gpt.ot_vector_spin_color(4, 3))
-
