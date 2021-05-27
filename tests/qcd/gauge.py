@@ -55,6 +55,13 @@ for mu in range(len(C)):
     assert eps < 1e-14
 
 
+# Test wilson flow
+U_wf = g.qcd.gauge.smear.wilson_flow(U, epsilon=0.1)
+E = g.qcd.gauge.energy_density(U_wf)
+eps = abs(E - 0.3032029987236007)
+g.message(f"Energy density check after wilson flow at t=0.1: {eps}")
+assert eps < 1e-10
+
 # Test stout smearing
 U_stout = U
 P_stout = []

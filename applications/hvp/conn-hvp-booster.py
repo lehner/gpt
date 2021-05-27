@@ -28,7 +28,7 @@ groups = {
             "600",
             "780",
             "800",
-            "820"
+            "820",
         ],
         "evec_fmt": "/p/scratch/gm2dwf/evecs/96I/%s/lanczos.output",
         "conf_fmt": "/p/project/gm2dwf/configs/96I/evol0/ckpoint_lat.%s",

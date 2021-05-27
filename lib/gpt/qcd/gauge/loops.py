@@ -141,3 +141,13 @@ def field_strength(U, mu, nu):
     F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
     F @= 0.125 * (F - g.adj(F))
     return F
+
+
+def energy_density(U):
+    Nd = len(U)
+    res = 0.0
+    for mu in range(Nd):
+        for nu in range(mu):
+            Fmunu = field_strength(U, mu, nu)
+            res += g.sum(g.trace(Fmunu * Fmunu))
+    return -res.real / U[0].grid.gsites
