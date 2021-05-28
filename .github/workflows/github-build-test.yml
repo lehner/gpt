@@ -120,9 +120,9 @@ jobs:
 
         if [ "${{ matrix.mpi }}" == "none" ]
         then
-            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 || cat config.log
+            ../configure CXXFLAGS="-fPIC -fopenmp" --enable-simd=AVX2 || cat config.log
         else
-            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 --enable-comms=mpi-auto || cat config.log
+            ../configure CXXFLAGS="-fPIC -fopenmp" --enable-simd=AVX2 --enable-comms=mpi-auto || cat config.log
         fi
 
         cd Grid
