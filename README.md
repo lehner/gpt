@@ -30,6 +30,7 @@ Please consult the [GPT Docker documentation](https://github.com/lehner/gpt/tree
 A detailed description on how to install GPT
 locally can be found [here](README.setup.md).
 
+
 ## Tutorials
 You may also visit a static version of the tutorials [here](https://github.com/lehner/gpt/tree/master/documentation/tutorials).
 
