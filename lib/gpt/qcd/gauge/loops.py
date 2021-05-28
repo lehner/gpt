@@ -143,11 +143,19 @@ def field_strength(U, mu, nu):
     return F
 
 
-def energy_density(U):
+def energy_density(U, field=False):
     Nd = len(U)
-    res = 0.0
+    if field:
+        res = g.complex(U[0].grid)
+        res[:] = 0
+    else:
+        res = 0.0
     for mu in range(Nd):
         for nu in range(mu):
             Fmunu = field_strength(U, mu, nu)
-            res += g.sum(g.trace(Fmunu * Fmunu))
-    return -res.real / U[0].grid.gsites
+            E_density = g.trace(Fmunu * Fmunu)
+            if field:
+                res -= E_density
+            else:
+                res -= g.sum(E_density)
+    return g.component.real(res) if field else res.real / U[0].grid.gsites
