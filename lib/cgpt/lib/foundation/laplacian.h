@@ -73,9 +73,9 @@ public:
     return ret;
   }
 
-  std::vector<int> set_dims_gauge(std::vector<int> dims)
+  Vector<int> set_dims_gauge(std::vector<int> dims)
   {
-    std::vector<int> ret(2 * dims.size());
+    Vector<int> ret(2 * dims.size());
     for (int ii = 0; ii < dims.size(); ii++)
     {
       ret[ii] = dims[ii];
@@ -162,15 +162,17 @@ public:
     autoView(gauge_v, Umu, AcceleratorRead);
 
     typedef decltype(coalescedRead(in_v[0])) calcSpinor;
+    int Npoint = npoint; // lambda capture of this-pointer
+    int* dims_p = &dims_gauge[0];
 
-    accelerator_for(osite, _grid->oSites(), FermionField::vector_object::Nsimd(), {
+    accelerator_for(osite, _grid->oSites(), _grid->Nsimd(), {
       int permute_type;
       StencilEntry* SE;
-      calcSpinor result = -1.0 * npoint * coalescedRead(in_v[osite]);
+      calcSpinor result = -1.0 * Npoint * coalescedRead(in_v[osite]);
       calcSpinor displaced;
 
       // for each point in stencil
-      for (int point = 0; point < npoint; point++){
+      for (int point = 0; point < Npoint; point++){
         SE = Stencil_v.GetEntry(permute_type, point, osite);
 
         if (SE->_is_local){
@@ -178,9 +180,11 @@ public:
         } else {
           displaced = coalescedRead(Stencil_v.CommBuf()[SE->_offset]);
         }
+        acceleratorSynchronise();
 
         // multiply link and add to result
-        mac(&result(), &gauge_v[osite](dims_gauge[point]), &displaced());
+        auto U = coalescedRead(gauge_v[osite](dims_p[point]));
+        mac(&result(), &U, &displaced());
       }
       coalescedWrite(out_v[osite], result);
     })
@@ -285,7 +289,7 @@ private:
   FermionField _tmp;
 
   std::vector<int> dimensions;
-  std::vector<int> dims_gauge;
+  Vector<int> dims_gauge;
   std::vector<int> directions;
   std::vector<int> displacements;
   int npoint;
