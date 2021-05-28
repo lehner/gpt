@@ -19,6 +19,7 @@
 #include "lib.h"
 #include "benchmarks.h"
 
+/*
 template<typename uncompressed_t, typename compressed_t>
 class iCompressed {
 public:
@@ -92,9 +93,10 @@ void mask() {
   //random(pRNG,b);
   //a = Zero();
 }
+*/
 
 EXPORT(benchmarks,{
-    mask();
+    //mask();
     //half();
     benchmarks(8);
     benchmarks(16);

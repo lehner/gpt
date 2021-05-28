@@ -16,5 +16,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.smear.stout import stout
-from gpt.qcd.gauge.smear.wilson_flow import wilson_flow
+import gpt as g
+
+# (2) of https://arxiv.org/pdf/hep-lat/0311018.pdf
+def traceless_anti_hermitian(src):
+    src = g.eval(src)
+    N = src.otype.shape[0]
+    ret = g(0.5 * src - 0.5 * g.adj(src))
+    ret -= g.identity(src) * g.trace(ret) / N
+    return ret

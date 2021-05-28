@@ -36,6 +36,12 @@ g.message(
 )
 assert eps < 1e-13
 
+# Test field version
+R_2x1_field = g(g.sum(g.qcd.gauge.rectangle(U, 2, 1, field=True)) / U[0].grid.gsites)
+eps = abs(R_2x1 - R_2x1_field)
+g.message(f"R_2x1 field check: {eps}")
+assert eps < 1e-13
+
 # Test gauge covariance of staple
 rho = np.array(
     [[0.0 if i == j else 0.1 for i in range(4)] for j in range(4)], dtype=np.float64
@@ -54,6 +60,19 @@ for mu in range(len(C)):
     )
     assert eps < 1e-14
 
+
+# Test wilson flow and energy density
+U_wf = g.qcd.gauge.smear.wilson_flow(U, epsilon=0.1)
+E = g.qcd.gauge.energy_density(U_wf)
+E_from_field = g(
+    g.sum(g.qcd.gauge.energy_density(U_wf, field=True)) / U_wf[0].grid.gsites
+)
+eps = abs(E - 0.3032029987236007)
+g.message(f"Energy density check after wilson flow at t=0.1: {eps}")
+assert eps < 1e-10
+eps = abs(E - E_from_field)
+g.message(f"Energy density field test: {eps}")
+assert eps < 1e-10
 
 # Test stout smearing
 U_stout = U
