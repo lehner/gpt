@@ -19,3 +19,4 @@
 from gpt.qcd.gauge.smear.stout import stout
 from gpt.qcd.gauge.smear.ape import ape
 from gpt.core import suNutils
+from gpt.qcd.gauge.smear.wilson_flow import wilson_flow

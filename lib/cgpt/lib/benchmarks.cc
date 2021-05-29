@@ -19,51 +19,84 @@
 #include "lib.h"
 #include "benchmarks.h"
 
-#if 0
-template<typename base_t, typename int_t>
-class iHalfPrecision {
+/*
+template<typename uncompressed_t, typename compressed_t>
+class iCompressed {
 public:
-  typedef typename base_t::scalar_object base_sobj_t;
-  typedef typename base_t::scalar_type base_Coeff_t;
-  static constexpr int nFloats = 2 * sizeof(base_sobj_t) / sizeof(base_Coeff_t);
-  static constexpr int nSimd = sizeof(base_t) / sizeof(base_sobj_t);
+  typedef typename uncompressed_t::scalar_type scalar_type;
+  typedef typename uncompressed_t::scalar_object scalar_object;
+  typedef typename uncompressed_t::vector_type vector_type;
+  typedef typename uncompressed_t::vector_typeD vector_typeD;
+  typedef iCompressed<uncompressed_t,compressed_t> this_t;
 
-  typedef iHalfPrecision< base_sobj_t, int_t > scalar_object;
-  typedef void scalar_type; // if we need this we are in trouble
-  typedef void vector_type; // or maybe we should just inherit from base?
+  compressed_t data;
 
-  int_t exponents[nSimd];
-  int_t mantissa[nSimd][nFloats];
+  accelerator iCompressed() = default;
 
-  iHalfPrecision<base_t,int_t> operator=(const Zero & zero) {
-    // TODO
-    return *this;
+  iCompressed(const Zero & zz) {
   }
+
+  friend accelerator_inline scalar_object Reduce(const this_t & a) {
+    return scalar_object();
+  }
+  
+  friend accelerator_inline this_t operator+(const this_t & a, const this_t & b) {
+    return this_t();
+  }
+
+  friend accelerator_inline uncompressed_t coalescedRead(const this_t& c) {
+    return uncompressed_t();
+  }
+
+  friend accelerator_inline void coalescedWrite(this_t& c, const uncompressed_t & u) {
+  }
+
+  friend accelerator_inline auto innerProductD(const this_t& left,
+					       const this_t& right)
+    -> decltype(innerProductD(uncompressed_t(),uncompressed_t())) {
+    return innerProductD(uncompressed_t(),uncompressed_t());
+  }
+
+  friend void cgpt_lattice_convert_from(Lattice<this_t>& dst,cgpt_Lattice_base* src) {
+  }
+
+  friend int singlet_rank(const this_t& c) {
+    return singlet_rank(uncompressed_t());
+  }
+
+  friend const std::string get_otype(const Lattice<this_t>& l) {
+    return "";
+  }
+
 };
 
-void half() {
+template<typename uncompressed_t, typename compressed_t>
+class GridTypeMapper<iCompressed<uncompressed_t,compressed_t>> {
+public:
+  constexpr static int count = GridTypeMapper<uncompressed_t>::count;
+};
 
-  int lat = 8;
+void mask() {
+
+    int lat = 8;
   Coordinate simd_layout = GridDefaultSimd(Nd,vComplex::Nsimd());
   Coordinate mpi_layout  = GridDefaultMpi();
   Coordinate latt_size  ({lat*mpi_layout[0],lat*mpi_layout[1],lat*mpi_layout[2],lat*mpi_layout[3]});
   GridCartesian     Grid(latt_size,simd_layout,mpi_layout);
 
-  iHalfPrecision< vSpinColourVectorF, int16_t > hp;
-  std::cout << GridLogMessage << hp.nFloats << ", " << hp.nSimd << " , " << sizeof(hp) << " versus " << sizeof(vSpinColourVectorF) << std::endl;
-  
-  //Lattice< iVector<vComplexF,3> > b(&Grid);
-  Lattice< iHalfPrecision< vSpinColourVectorF, int16_t > > a(&Grid), b(&Grid);
+  //cgpt_Lattice< iCompressed< iSinglet<vComplexD>, short > > a(&Grid);
 
-  GridParallelRNG          pRNG(&Grid);      pRNG.SeedFixedIntegers(std::vector<int>({45,12,81,9}));
+  //autoView(a_v,a,CpuWrite);
+  //std::cout << GridLogMessage << "Test " << sizeof(a_v[0]) << std::endl;
+
+  //GridParallelRNG          pRNG(&Grid);      pRNG.SeedFixedIntegers(std::vector<int>({45,12,81,9}));
   //random(pRNG,b);
-
-  a = Zero();
-  //b = a + a;
+  //a = Zero();
 }
-#endif
+*/
 
 EXPORT(benchmarks,{
+    //mask();
     //half();
     benchmarks(8);
     benchmarks(16);

@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2020-09-24
+  CACHE_KEY: 2021-05-28
 
 jobs:
   build-grid:
@@ -120,9 +120,9 @@ jobs:
 
         if [ "${{ matrix.mpi }}" == "none" ]
         then
-            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 || cat config.log
+            ../configure CXXFLAGS="-fPIC -fopenmp" --enable-simd=AVX2 || cat config.log
         else
-            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 --enable-comms=mpi-auto || cat config.log
+            ../configure CXXFLAGS="-fPIC -fopenmp" --enable-simd=AVX2 --enable-comms=mpi-auto || cat config.log
         fi
 
         cd Grid

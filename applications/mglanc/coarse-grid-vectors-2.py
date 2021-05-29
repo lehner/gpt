@@ -24,53 +24,23 @@ g.mem_report()
 q = params["fmatrix"](U)
 
 # load basis vectors
-nbasis = params["nbasis"]
-fg_basis, fg_cevec, fg_feval = g.load(
-    params["basis"],
-    {
-        "grids": q.F_grid_eo,
-        "nmax": nbasis,
-        "advise_basis": g.infrequent_use,
-        "advise_cevec": g.infrequent_use,
-    },
-)
+basis, feval = g.load(params["basis"])
+nbasis = len(basis)
 
 # memory info
 g.mem_report()
 
 # norms
 for i in range(nbasis):
-    g.message("Norm2 of basis[%d] = %g" % (i, g.norm2(fg_basis[i])))
-
-for i in range(nbasis):
-    g.message("Norm2 of cevec[%d] = %g" % (i, g.norm2(fg_cevec[i])))
+    g.message("Norm2 of basis[%d] = %g" % (i, g.norm2(basis[i])))
 
 g.mem_report()
 
 # prepare and test basis
-basis = []
-assert nbasis > 0
-b = g.block.map(fg_cevec[0].grid, fg_basis)
 for i in range(nbasis):
-    basis.append(
-        g.vspincolor(q.F_grid_eo)
-    )  # don't advise yet, let it be first touched on accelerator
     g.message(i)
-    if i < params["nbasis_on_host"]:
-        g.message("marked as infrequent use")
-        # basis[i].advise( g.infrequent_use )
-
-    basis[i] @= b.promote * fg_cevec[i]
     g.algorithms.eigen.evals(q.Mpc, [basis[i]], check_eps2=1e-4, real=True)
-    g.message("Compare to: %g" % fg_feval[i])
-
     g.mem_report(details=False)
-
-# now discard original basis
-del fg_basis
-del fg_cevec
-g.message("Memory information after discarding original basis:")
-g.mem_report()
 
 # coarse grid
 cgrid = params["cgrid"](q.F_grid_eo)

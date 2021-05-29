@@ -1,7 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Lorenzo Barca    (lorenzo1.barca@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,10 +16,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.create import random, unit
-from gpt.qcd.gauge.transport import path, transport
-from gpt.qcd.gauge.loops import plaquette, rectangle, field_strength, energy_density
-from gpt.qcd.gauge.staples import staple, staple_sum
-from gpt.qcd.gauge.transformation import transformed
-import gpt.qcd.gauge.project
-import gpt.qcd.gauge.smear
+import gpt as g
+
+# (2) of https://arxiv.org/pdf/hep-lat/0311018.pdf
+def traceless_anti_hermitian(src):
+    src = g.eval(src)
+    N = src.otype.shape[0]
+    ret = g(0.5 * src - 0.5 * g.adj(src))
+    ret -= g.identity(src) * g.trace(ret) / N
+    return ret

@@ -23,7 +23,35 @@ import gpt as g
 default_rectangle_cache = {}
 
 
-def rectangle(U, first, second=None, third=None, cache=default_rectangle_cache):
+class accumulator_average:
+    def __init__(self, like):
+        self.value = 0.0
+
+    def __iadd__(self, v):
+        v = g(v)
+        self.value += g.sum(v) / v.grid.gsites
+        return self
+
+    def scaled_real(self, scale):
+        return self.value.real * scale
+
+
+class accumulator_field:
+    def __init__(self, like):
+        self.value = g.complex(like.grid)
+        self.value[:] = 0.0
+
+    def __iadd__(self, v):
+        self.value += v
+        return self
+
+    def scaled_real(self, scale):
+        return g(g.component.real(self.value) * scale)
+
+
+def rectangle(
+    U, first, second=None, third=None, cache=default_rectangle_cache, field=False
+):
     #
     # Calling conventions:
     #
@@ -34,6 +62,7 @@ def rectangle(U, first, second=None, third=None, cache=default_rectangle_cache):
     # or specify explicit mu,L_mu,nu,L_nu configurations
     # rectangle(U, [ [ (0,1,3,2), (1,2,3,2) ] ])
     #
+    accumulator = accumulator_field if field else accumulator_average
     if second is not None:
         L_mu = first
         L_nu = second
@@ -75,22 +104,19 @@ def rectangle(U, first, second=None, third=None, cache=default_rectangle_cache):
     ranges = cache[cache_key][1]
 
     loops = transport(U)
-
-    vol = float(U[0].grid.fsites)
     ndim = U[0].otype.shape[0]
-
-    value = 0.0
+    value = accumulator(U[0])
     idx = 0
     ridx = 0
     results = []
     for p in loops:
-        value += g.sum(g.trace(p))
+        value += g.trace(p)
         idx += 1
         if idx == ranges[ridx]:
-            results.append(value.real / vol / idx / ndim)
+            results.append(value.scaled_real(1.0 / idx / ndim))
             idx = 0
             ridx = ridx + 1
-            value = 0.0
+            value = accumulator(U[0])
     if len(results) == 1:
         return results[0]
     return results
@@ -126,3 +152,14 @@ def field_strength(U, mu, nu):
     F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
     F @= 0.125 * (F - g.adj(F))
     return F
+
+
+def energy_density(U, field=False):
+    Nd = len(U)
+    accumulator = accumulator_field if field else accumulator_average
+    res = accumulator(U[0])
+    for mu in range(Nd):
+        for nu in range(mu):
+            Fmunu = field_strength(U, mu, nu)
+            res += g.trace(Fmunu * Fmunu)
+    return res.scaled_real(-1.0)
