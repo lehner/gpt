@@ -572,7 +572,8 @@ jobs:
         id: get-docker-tags
         run: |
           tags="${{ matrix.compiler }}-${{ matrix.mpi }}"
-          [ "${{ matrix.compiler }}-${{ matrix.mpi }}" == "clang-none" ] && tags="${tags},latest"
+          # reset this to clang at a later time
+          [ "${{ matrix.compiler }}-${{ matrix.mpi }}" == "gcc-none" ] && tags="${tags},latest"
 
           echo "Image Tags: ${tags}"
           echo "::set-output name=tags::${tags}"
