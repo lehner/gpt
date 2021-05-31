@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2021-05-28
+  CACHE_KEY: 2021-05-29
 
 jobs:
   build-grid:
@@ -120,9 +120,9 @@ jobs:
 
         if [ "${{ matrix.mpi }}" == "none" ]
         then
-            ../configure CXXFLAGS="-fPIC -fopenmp" --enable-simd=AVX2 || cat config.log
+            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 || cat config.log
         else
-            ../configure CXXFLAGS="-fPIC -fopenmp" --enable-simd=AVX2 --enable-comms=mpi-auto || cat config.log
+            ../configure CXXFLAGS=-fPIC --enable-simd=AVX2 --enable-comms=mpi-auto || cat config.log
         fi
 
         cd Grid
@@ -277,13 +277,12 @@ jobs:
       run: |
         PKGDIR=$PWD/cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}
         mkdir -p $PKGDIR
-        cd gpt
-        ./bootstrap.sh
-        mkdir -p build
-        cd build
-        CXX="$(grid-config --cxx)" ../configure --disable-gpt || cat config.log
-        make ${MAKE_BUILD_FLAGS}
-        DESTDIR=$PKGDIR make install
+        cd gpt/lib/cgpt
+        ./make %grid-config 2
+        SITEPACKAGES=$(python3 -c 'import site; print(site.getsitepackages()[0])')
+        DST="${PKGDIR}/${SITEPACKAGES}"
+        mkdir -p ${DST}
+        cp build/cgpt.so ${DST}
 
         cd $PKGDIR
         mkdir -p DEBIAN
