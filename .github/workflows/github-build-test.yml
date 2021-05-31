@@ -240,10 +240,6 @@ jobs:
       run: |
         # TODO: if the make and make.summit files are removed from ./gpt/lib/cgpt we can use the complete folder for hashing
         echo ${{ hashFiles('gpt/lib/cgpt/lib/**') }} >> cgpt_cache_key_file
-        echo ${{ hashFiles('gpt/bootstrap.sh') }} >> cgpt_cache_key_file
-        echo ${{ hashFiles('gpt/configure.ac') }} >> cgpt_cache_key_file
-        echo ${{ hashFiles('gpt/Makefile.am') }} >> cgpt_cache_key_file
-        echo ${{ hashFiles('gpt/cgpt/Makefile.am') }} >> cgpt_cache_key_file
         echo ${{ needs.build-grid.outputs.grid-version }} >> cgpt_cache_key_file
 
         echo "::set-output name=key::$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
@@ -254,9 +250,6 @@ jobs:
       # https://github.community/t/hashfiles-with-multiple-patterns/17168
       run: |
         echo ${{ hashFiles('gpt/lib/gpt/**') }} >> gpt_cache_key_file
-        echo ${{ hashFiles('gpt/bootstrap.sh') }} >> gpt_cache_key_file
-        echo ${{ hashFiles('gpt/configure.ac') }} >> gpt_cache_key_file
-        echo ${{ hashFiles('gpt/Makefile.am') }} >> gpt_cache_key_file
         echo "::set-output name=key::$(sha256sum gpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
     - name: Get python-gpt version
@@ -304,12 +297,11 @@ jobs:
         PKGDIR=$PWD/gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}
         mkdir -p $PKGDIR
         cd gpt
-        ./bootstrap.sh
-        mkdir -p build
-        cd build
-        ../configure --disable-cgpt || cat config.log
-        make ${MAKE_BUILD_FLAGS}
-        DESTDIR=$PKGDIR make install
+        python3 -m compileall lib/gpt
+        SITEPACKAGES=$(python3 -c 'import site; print(site.getsitepackages()[0])')
+        DST="${PKGDIR}/${SITEPACKAGES}"
+        mkdir -p ${DST}
+        cp -r lib/gpt ${DST}
 
         cd $PKGDIR
         mkdir -p DEBIAN
