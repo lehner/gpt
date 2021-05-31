@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2021-05-29
+  CACHE_KEY: 2021-05-30
 
 jobs:
   build-grid:
@@ -272,7 +272,7 @@ jobs:
         mkdir -p $PKGDIR
         cd gpt/lib/cgpt
         ./make %grid-config 2
-        SITEPACKAGES=$(python3 -c 'import site; print(site.getsitepackages()[0])')
+        SITEPACKAGES="/usr/local/lib/python${{ matrix.python-version}}/site-packages"
         DST="${PKGDIR}/${SITEPACKAGES}"
         mkdir -p ${DST}
         cp build/cgpt.so ${DST}
@@ -298,7 +298,7 @@ jobs:
         mkdir -p $PKGDIR
         cd gpt
         python3 -m compileall lib/gpt
-        SITEPACKAGES=$(python3 -c 'import site; print(site.getsitepackages()[0])')
+        SITEPACKAGES="/usr/local/lib/python${{ matrix.python-version}}/site-packages"
         DST="${PKGDIR}/${SITEPACKAGES}"
         mkdir -p ${DST}
         cp -r lib/gpt ${DST}
