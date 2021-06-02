@@ -74,7 +74,6 @@ class hmc:
         self.pf = pf  # pseudo-fermion
         self.act = mdint.get_act()
 
-        
     def __call__(self, tau):
         verbose = gpt.default.is_verbose("hmc")
         time = gpt.timer("HMC")

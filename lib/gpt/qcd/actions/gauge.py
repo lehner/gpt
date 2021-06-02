@@ -49,6 +49,7 @@ class symanzik:
         self.beta = beta
         self.g0inv = beta * 0.5 / self.Nc
         self.c0 = c0
+
         assert(self.c0 > 0.0)
         self.c1 = (1.0 - c0) / 8.0
 

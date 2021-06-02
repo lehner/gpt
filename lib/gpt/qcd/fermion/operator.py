@@ -204,6 +204,14 @@ class operator(gpt.matrix_operator):
         assert len(Y.v_obj) == 1
         return cgpt.apply_fermion_deriv(self.obj, [f.v_obj[0] for f in force], X.v_obj[0], Y.v_obj[0], dag)
 
+    def deriv(self, force, X, Y, dag):
+        assert type(force) == list and len(force) == 4
+        for f in force:
+            assert len(f.v_obj) == 1
+        assert len(X.v_obj) == 1
+        assert len(Y.v_obj) == 1
+        return cgpt.apply_fermion_deriv(self.obj, [f.v_obj[0] for f in force], X.v_obj[0], Y.v_obj[0], dag)
+
     def propagator(self, solver):
         exp = self.ExportPhysicalFermionSolution
         imp = self.ImportPhysicalFermionSource
