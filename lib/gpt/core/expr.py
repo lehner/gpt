@@ -270,8 +270,8 @@ def get_otype_from_expression(e):
         if bare_otype is None:
             bare_otype = t_otype
         else:
-            # all elements of a sum must have same otype
-            assert bare_otype.__name__ == t_otype.__name__
+            # all elements of a sum must have same data type
+            assert t_otype.data_otype().__name__ == bare_otype.data_otype().__name__
 
     # apply unaries
     if e.unary & expr_unary.BIT_SPINTRACE:
