@@ -2,23 +2,64 @@
 # Configure
 root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
 
+# Python environment
+NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
+CXXFLAGS_PYTHON="-I${NUMPY_INCLUDE} $(python3-config --includes)"
+
+# Arguments
 GRID=$1
-if [[ "$GRID" == "" ]];
+
+if [[ "$GRID" == "%grid-config" ]];
 then
-    GRID=${root}/dependencies/Grid/build
+
+    which grid-config
+    if [[ "$?" != "0" ]];
+    then
+	echo "grid-config not found in PATH"
+	exit 1
+    fi
+
+    CXX=$(grid-config --cxx)
+    CXXLD=$(grid-config --cxxld)
+    CXXFLAGS="$(grid-config --cxxflags) ${CXXFLAGS_PYTHON}"
+    LDFLAGS=$(grid-config --ldflags)
+    LIBS=$(grid-config --libs)
+    BUILD="build"
+
+else
+
+    # Select Grid Directory
+    if [[ "$GRID" == "" ]];
+    then
+	GRID=${root}/dependencies/Grid/build
+	if [ ! -d ${GRID} ];
+	then
+	    GRID=${root}/../Grid/build
+	fi
+    fi
+
     if [ ! -d ${GRID} ];
     then
-	GRID=${root}/../Grid/build
+	echo "Could not detect Grid location at ${GRID}"
+	exit 2
     fi
+
+    CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
+    CXXLD=$(grep "GRID_CXXLD " ${GRID}/Makefile | sed "s/^[^=]*=//")
+    CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID} -I${GRID}/Grid ${CXXFLAGS_PYTHON}"
+    LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
+    LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
+    BUILD=$(basename $GRID)
+
 fi
 
-if [ ! -d ${GRID} ];
+if [[ "$(echo $CXXFLAGS | grep fPIC -c)" == "0" ]];
 then
-    echo "Could not detect Grid location at ${GRID}"
+    echo "Need to configure Grid with -fPIC"
     exit 2
 fi
 
-BUILD=$(basename $GRID)
+
 
 NPARALLEL=$2
 if [[ "$NPARALLEL" == "" ]];
@@ -49,21 +90,6 @@ echo "  Destination:    ${BUILD}"
 echo "--------------------------------------------------------------------------------"
 echo "  Usage: source ${abs_BUILD}/source.sh"
 echo "================================================================================"
-
-NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
-CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
-CXXLD=$(grep "GRID_CXXLD " ${GRID}/Makefile | sed "s/^[^=]*=//")
-
-CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID} -I${GRID}/Grid -I${NUMPY_INCLUDE} $(python3-config --includes)"
-
-if [[ "$(echo $CXXFLAGS | grep fPIC -c)" == "0" ]];
-then
-    echo "Need to configure Grid with -fPIC"
-    exit 2
-fi
-
-LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
-LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
 
 echo "CXX = $CXX"
 echo "CXXFLAGS = $CXXFLAGS"
