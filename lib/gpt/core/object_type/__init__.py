@@ -21,6 +21,7 @@ import gpt, sys
 from gpt.core.object_type.base import *
 from gpt.core.object_type.container import *
 from gpt.core.object_type.su_n import *
+from gpt.core.object_type.u_1 import *
 import numpy
 
 ###
@@ -71,6 +72,10 @@ def matrix_singlet(grid, n):
 
 ###
 # Container objects with lie group structure
+def u1(grid):
+    return gpt_object(grid, ot_u_1_group())
+
+
 def matrix_su2_fundamental(grid):
     return gpt_object(grid, ot_matrix_su_n_fundamental_group(2))
 
