@@ -88,6 +88,9 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
     def cartesian(self):
         return self
 
+    def compose(self, a, b):
+        return a + b
+
     def coordinates(self, l, c=None):
         assert l.otype.__name__ == self.__name__
         gen = self.generators(l.grid.precision.complex_dtype)
@@ -103,6 +106,9 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
 class ot_matrix_su_n_group(ot_matrix_su_n_base):
     def __init__(self, Nc, Ndim, name):
         super().__init__(Nc, Ndim, name)
+
+    def compose(self, a, b):
+        return a * b
 
     def is_element(self, U):
         I = gpt.identity(U)

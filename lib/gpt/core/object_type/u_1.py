@@ -53,6 +53,9 @@ class ot_u_1_algebra(ot_u_1_base):
     def cartesian(self):
         return self
 
+    def compose(self, a, b):
+        return a + b
+
     def generators(self, dt):
         return [complex(1.0, 0)]
 
@@ -71,6 +74,9 @@ class ot_u_1_group(ot_u_1_base):
                 dst, gpt.component.log(src) / 1j
             )
         }
+
+    def compose(self, a, b):
+        return a * b
 
     def is_element(self, U):
         I = gpt.identity(U)

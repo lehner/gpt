@@ -56,47 +56,12 @@ def dSdU(U):
         dSdU_mu @= g.qcd.gauge.project.traceless_anti_hermitian(g(Umu * dSdU_mu)) * (
             -1.0
         )
+        dSdU_mu.otype = Umu.otype.cartesian()
         dSdU.append(dSdU_mu)
     return dSdU  # deriv = -g^2 dSdU
 
 
-def update_field(P, U, ep):
-    for Pmu, Umu in zip(P, U):
-        Umu @= g.project(g.matrix.exp(g(ep * Pmu)), "defect") * Umu
-
-
-def add_field(Z, dU):
-    for Zmu, dUmu in zip(Z, dU):
-        Zmu += dUmu
-
-
 def wilson_flow(U, epsilon):
-    # Flow a gauge field from U(t) to U(t+epsilon) using the original Runke-Kutta scheme
-    # Eq. (C.2) of https://link.springer.com/content/pdf/10.1007/JHEP08(2010)071.pdf
-    Uprime = g.copy(U)
-    Z = dSdU(Uprime)
-    for Zmu in Z:
-        Zmu *= 0.25
-    update_field(Z, Uprime, epsilon)
-    # Z = Z0/4
-    # U = W1
-    for Zmu in Z:
-        Zmu *= -17.0 / 8.0
-    # Z = -Z0*17/32
-    add_field(Z, dSdU(Uprime))
-    # Z = -Z0*17/32 + Z1
-    for Zmu in Z:
-        Zmu *= 8.0 / 9.0
-    # Z = -Z0*17/36 + 8/9*Z1
-    update_field(Z, Uprime, epsilon)
-    # U = W2
-    for Zmu in Z:
-        Zmu *= -4.0 / 3.0
-    # Z = Z0*17/27 - 32/27*Z1
-    add_field(Z, dSdU(Uprime))
-    # Z = Z0*17/27 - 32/27*Z1 + Z2
-    for Zmu in Z:
-        Zmu *= 3.0 / 4.0
-    # Z = Z0*17/36 - 8/9*Z1 + 3/4*Z2
-    update_field(Z, Uprime, epsilon)
-    return Uprime
+    return g.algorithms.integrator.runge_kutta_4(
+        U, lambda Uprime: [g(-1j * u) for u in dSdU(Uprime)], epsilon
+    )

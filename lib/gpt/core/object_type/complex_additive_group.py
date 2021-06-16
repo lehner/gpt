@@ -45,6 +45,9 @@ class ot_complex_additive_group(ot_singlet):
     def cartesian(self):
         return self
 
+    def compose(self, a, b):
+        return a + b
+
     def generators(self, dt):
         return [complex(1.0, 0.0), complex(0.0, 1.0)]
 

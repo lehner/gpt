@@ -42,6 +42,9 @@ class ot_real_additive_group(ot_singlet):
     def identity(self):
         return 1.0
 
+    def compose(self, a, b):
+        return a + b
+
     def cartesian(self):
         return self
 
