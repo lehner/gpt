@@ -49,13 +49,16 @@ def runge_kutta_4(src, d_src_cartesian, epsilon):
     # Generalization of (C.2) of https://arxiv.org/pdf/1006.4518.pdf
     # to integrate also additive groups with same interface
     #
-    # Example: group = SU(n), U(1)
-    #
-    #  src'(t) = exp(i*d_src_cartesian(src(t)))*src(t)
-    #
     # Example: group = (\mathbb{C},+)
     #
-    #  src'(t) = d_src_cartesian(src(t))
+    #  src(t+eps) = src(t) + eps * d_src_cartesian(src(t)) + O(eps^2)
+    #  Notation: src'(t) = d_src_cartesian(src(t))
+    #
+    # Example: group = SU(n), U(1)
+    #
+    #  src(t+eps) = exp(i*d_src_cartesian(src(t))*eps)*src(t) + O(eps^2)
+    #  lim_{eps -> 0} (src(t+eps) - src(t)) / eps = i*d_src_cartesian
+    #  Notation: src'(t) = exp(i*d_src_cartesian(src(t)))*src(t)
     #
     # Input:  src(t)
     # Output: src(t+eps)
