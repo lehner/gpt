@@ -24,6 +24,3 @@ from gpt.qcd.gauge.transformation import transformed
 
 import gpt.qcd.gauge.project
 import gpt.qcd.gauge.smear
-
-import gpt.qcd.gauge.actions
-import gpt.qcd.gauge.smear

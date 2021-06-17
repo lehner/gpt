@@ -10,7 +10,7 @@ import numpy
 gpt.default.set_verbose("hmc")
 gpt.default.set_verbose("omf4")
 gpt.default.set_verbose("random", False)
-grid = gpt.grid([16, 16, 32, 32], gpt.double)
+grid = gpt.grid([16, 16, 16, 16], gpt.double)
 
 rng = gpt.random("pure-gauge")
 U = gpt.qcd.gauge.unit(grid)
@@ -29,8 +29,8 @@ for i in range(N):
 time()
 gpt.message('time per force',time.total/N)
 
-import sys
-sys.exit()
+#import sys
+#sys.exit()
 
 int = gpt.algorithms.integrators
 mdint = int.OMF4(8, int.update_mom(mom, act), int.update_gauge(U, mom))

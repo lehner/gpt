@@ -26,11 +26,7 @@ from gpt.algorithms.integrators.molecular_dynamics import leap_frog, OMF2, OMF4
 
 class update_gauge:
     def __init__(self, first, second):
-        if not type(first) is list:
-            self.fld = [first]
-        else:
-            self.fld = first
-
+        self.fld = gpt.core.util.to_list(first)
         if type(second) is gpt.algorithms.markov.conjugate_momenta:
             self.mom = second.mom
         else:
@@ -46,11 +42,8 @@ class update_gauge:
 
 class update_scalar:
     def __init__(self, first, second):
-        if not type(first) is list:
-            self.fld = [first]
-        else:
-            self.fld = first
-
+        self.fld = gpt.core.util.to_list(first)
+        
         if type(second) is gpt.algorithms.markov.conjugate_momenta:
             self.mom = second.mom
         else:
@@ -67,20 +60,14 @@ class update_scalar:
 
 class update_mom:
     def __init__(self, first, second):
-        if type(first) is gpt.algorithms.markov.conjugate_momenta:
-            self.cm = first
-        else:
+        self.cm = first
+        self.act = gpt.core.util.to_list(second)
+        
+        if not type(self.cm) is gpt.algorithms.markov.conjugate_momenta:
             raise TypeError
 
-        if not type(second) is list:
-            if hasattr(second, "force"):
-                self.act = [second]
-            else:
-                raise TypeError
-        else:
-            if hasattr(second[0], "force"):
-                self.act = second
-            else:
+        for _act in self.act:
+            if not hasattr(_act, "force"):
                 raise TypeError
 
     def __call__(self, eps):
@@ -88,7 +75,8 @@ class update_mom:
             a.setup_force()
             for i in range(self.cm.N):
                 frc = a.force(self.cm.fld[i])
-                self.cm.mom[i] -= eps * frc
+                if not frc is None:
+                    self.cm.mom[i] -= eps * frc
 
     def get_act(self):
         return self.act

@@ -51,6 +51,67 @@ aref.setup_force()
 frc @= aref.force(phi)
 daa = g.inner_product(frc, dphi).real
 
-dd = abs(da / daa) - 1.0
+dd = abs(da / daa - 1.0)
+g.message(f"Relative difference numerical and analytic force = {dd:g}")
+assert dd < 1e-10
+
+#######
+
+rho = g.lattice(phi)
+rng.normal(rho)
+rho[:].imag = 0
+
+gc = 0.1234
+act = g.qcd.actions.scalar.rho_phi2
+
+eps = 1e-4
+
+phip @= phi + dphi * eps
+phim @= phi - dphi * eps
+ap = act(phip, rho, gc)
+am = act(phim, rho, gc)
+da = 2 / 3 * (ap() - am())
+
+phip @= phi + dphi * eps * 2.0
+phim @= phi - dphi * eps * 2.0
+ap = act(phip, rho, gc)
+am = act(phim, rho, gc)
+da += 1 / 12 * (-ap() + am())
+
+da *= 1 / eps
+
+frc = g.lattice(phi)
+aref = act(phi, rho, gc)
+aref.setup_force()
+
+frc @= aref.force(phi)
+daa = g.inner_product(frc, dphi).real
+
+dd = abs(da / daa - 1.0)
+g.message(f"Relative difference numerical and analytic force = {dd:g}")
+assert dd < 1e-10
+
+phip @= phi + dphi * eps
+phim @= phi - dphi * eps
+ap = act(rho, phip, gc)
+am = act(rho, phim, gc)
+da = 2 / 3 * (ap() - am())
+
+phip @= phi + dphi * eps * 2.0
+phim @= phi - dphi * eps * 2.0
+ap = act(rho, phip, gc)
+am = act(rho, phim, gc)
+da += 1 / 12 * (-ap() + am())
+
+da *= 1 / eps
+
+frc = g.lattice(phi)
+aref = act(rho, phi, gc)
+aref.setup_force()
+
+frc @= aref.force(phi)
+daa = g.inner_product(frc, dphi).real
+
+dd = abs(da / daa - 1.0)
 g.message(f"Relative difference numerical and analytic force = {dd:g}")
 assert dd < 1e-10

@@ -24,30 +24,38 @@ import numpy
 
 class conjugate_momenta:
     def __init__(self, field):
-        if type(field) is list:
-            self.mom = [gpt.lattice(f.grid,f.otype.cartesian()) for f in gpt.core.util.to_list(field)]
-            self.fld = gpt.core.util.to_list(field)
+        self.fld = gpt.core.util.to_list(field)
+        self.mom = []
+        for f in self.fld:
+            if hasattr(f.otype,"cartesian"):
+                self.mom += [gpt.lattice(f.grid,f.otype.cartesian())]
+            else:
+                self.mom += [gpt.lattice(f.grid,f.otype)]
 
         self.N = len(self.mom)
 
     def action(self):
-        # -1/2 pi^a pi^a, with pi^a from the algebra;
-        # pi = sum_a Ta pi^a, [convention is tr(Ta Tb) = -1/2 delta_{ab}]
+        # 1/2 pi^a pi^a, with pi^a from the algebra;
         momsq = 0
         for m in self.mom:
-            pia = m.otype.coordinates(m)
-            for p in pia:
-                momsq += gpt.sum(p*p);
-#         if self.mom[0].otype is gpt.otype.ot_singlet:
-#             return 0.5 * momsq.real
-        return -0.5 * momsq.real
+            if hasattr(m.otype,"cartesian"):
+                pia = m.otype.coordinates(m)
+                for p in pia:
+                    momsq += gpt.sum(p*p)
+                
+            else:
+                momsq += gpt.sum(m*gpt.adj(m))
+        return 0.5 * momsq.real
 
     def refresh(self, rng):
 #         ca = gpt.complex(self.mom[0].grid)
 #         ta = gpt.lattice(self.mom[0])
 
         for m in self.mom:
-            rng.element(m, scale=1.0, normal=True)
+            if hasattr(m.otype,"cartesian"):
+                rng.element(m, scale=1.0, normal=True)
+            else:
+                rng.normal(m)
 #             m[:] = 0
 #             if hasattr(m.otype, "generators"):
 #                 for g in m.otype.generators(m.grid.precision.complex_dtype):
@@ -68,36 +76,40 @@ class hmc:
     def __init__(self, fld, mom, pf, mdint, rng):
         self.mdint = mdint
         self.rng = rng
-        self.mom = mom
+        self.mom = gpt.core.util.to_list(mom)
         self.fld = gpt.core.util.to_list(fld)
         self.fld_copy = [gpt.copy(f) for f in self.fld]
-        self.pf = pf  # pseudo-fermion
+        self.pf = None if pf is None else gpt.core.util.to_list(pf)  # pseudo-fermion
         self.act = mdint.get_act()
 
+    def start(self):
+        for mu in range(len(self.fld)):
+            self.fld_copy[mu] @= self.fld[mu]
+        for m in self.mom:
+            m.refresh(self.rng)
+        if not self.pf is None:
+            for _pf in self.pf:
+                _pf.refresh(self.rng)
+        
     def __call__(self, tau):
         verbose = gpt.default.is_verbose("hmc")
         time = gpt.timer("HMC")
 
         time("setup")
-        for mu in range(len(self.fld)):
-            self.fld_copy[mu] @= self.fld[mu]
-        self.mom.refresh(self.rng)
-        if self.pf is not None:
-            self.pf.refresh(self.rng)
-
+        self.start()
+        
         time("actions")
-        a0 = [self.mom.action()]
+        a0 = [m.action() for m in self.mom]
         a0 += [a() for a in self.act]
 
         time("integrators")
         self.mdint(tau)
 
         time("actions")
-        a1 = [self.mom.action()]
+        a1 = [m.action() for m in self.mom]
         a1 += [a() for a in self.act]
 
         # accept/reject
-        gpt.message(a0,a1)
         dH = sum(a1) - sum(a0)
 
         # decision taken on master node, but for completeness all nodes throw one random number
@@ -124,20 +136,19 @@ class hmc:
 
     
     def reversibility_test(self, tau):
-        for mu in range(len(self.fld)):
-            self.fld_copy[mu] @= self.fld[mu]
-        self.mom.refresh(self.rng)
-        if self.pf is not None:
-            self.pf.refresh(self.rng)
+        self.start()
 
-        a0 = [self.mom.action()]
+        a0 = [m.action() for m in self.mom]
         a0 += [a() for a in self.act]
 
         self.mdint(tau)
-        self.mom.reverse()
+        
+        for m in self.mom:
+            m.reverse()
+            
         self.mdint(tau)
 
-        a1 = [self.mom.action()]
+        a1 = [m.action() for m in self.mom]
         a1 += [a() for a in self.act]
 
         # accept/reject
