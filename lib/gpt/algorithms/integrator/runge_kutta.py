@@ -23,11 +23,11 @@ def runge_kutta(src, d_src_cartesian, epsilon, code):
     dst = g.copy(src)
     z = d_src_cartesian(dst)
     for uf, zf in code:
-        for dst_i, z_i in zip(g.util.to_list(dst), g.util.to_list(z)):
+        for dst_i, z_i in g.util.to_list(dst, z):
             dst_i @= g.group.compose((uf * epsilon) * z_i, dst_i)
         if zf is not None:
             dsc = d_src_cartesian(dst)
-            for dsc_i, z_i in zip(g.util.to_list(dsc), g.util.to_list(z)):
+            for dsc_i, z_i in g.util.to_list(dsc, z):
                 z_i @= g.group.compose(zf * dsc_i, z_i)
     return dst
 
