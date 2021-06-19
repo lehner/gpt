@@ -16,5 +16,25 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.optimize.gradient_descent import gradient_descent
-import gpt.algorithms.optimize.fourier_accelerate
+import gpt as g
+import numpy as np
+
+
+def landau(U):
+    def df(V):
+        A = [
+            g(g.qcd.gauge.project.traceless_anti_hermitian(u) / 1j)
+            for u in g.qcd.gauge.transformed(U, V)
+        ]
+        dmuAmu = g.lattice(V.grid, V.otype.cartesian())
+        dmuAmu[:] = 0
+        for mu, Amu in enumerate(A):
+            dmuAmu += Amu - g.cshift(Amu, mu, -1)
+        return dmuAmu
+
+    def f(V):
+        return sum([g.sum(g.trace(u)) for u in g.qcd.gauge.transformed(U, V)]).real * (
+            -2.0
+        )
+
+    return f, df

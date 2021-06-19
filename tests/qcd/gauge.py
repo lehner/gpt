@@ -108,3 +108,36 @@ P_comp = [0.7986848674527128, 0.9132213221481771, 0.9739960794712376]
 g.message(f"Plaquette fingerprint {P} and reference {P_comp}")
 for i in range(3):
     assert abs(P[i] - P_comp[i]) < 1e-12
+
+# Test gauge fixing
+gd = g.algorithms.optimize.gradient_descent(maxiter=50, eps=1e-9, step=0.1)
+V0 = g.identity(U[0])
+rng.element(V0)
+
+# get functionals
+l_f, l_df = g.qcd.gauge.fix.landau(U)
+fal_df = g.algorithms.optimize.fourier_accelerate.inverse_phat_square(V0.grid, l_df)
+
+# test functionals
+for f, df, tag in [(l_f, l_df, "Landau")]:
+    df_app = g.group.approximate_gradient(V0, f, 0, 0, 0, 0, epsilon=1e-5)
+    df_val = df(V0)[0, 0, 0, 0]
+    eps = (g.norm2(df_app - df_val) / g.norm2(df_val)) ** 0.5
+    g.message(f"Test functional derivative for {tag}: {eps}")
+    assert eps < 1e-4
+
+# test gauge fixing
+for f, df, df_test, tag, expected_improvement in [
+    (l_f, l_df, l_df, "Landau", 1e-3),
+    (l_f, fal_df, l_df, "Fourier Accelerated Landau", 1e-5),
+]:
+    V1 = g.copy(V0)
+
+    eps0 = g.norm2(df_test(V1)) ** 0.5 / f(V1)
+    g.message(f"df/f before {tag} gauge fix: {eps0}")
+
+    gd(f, df)(V1)
+
+    eps1 = g.norm2(df_test(V1)) ** 0.5 / f(V1)
+    g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")
+    assert eps1 / eps0 < expected_improvement

@@ -68,6 +68,7 @@ def approximate_gradient(x, functional, *site, epsilon=1e-7):
     # This helper function allows for quick checks of gradient implementations on single sites
     c = x.otype.cartesian()
     grid = x.grid
+    epsilon = complex(epsilon)
 
     # move to neutral element of group (\vec{0} in cartesian space)
     t = g.lattice(grid, c)

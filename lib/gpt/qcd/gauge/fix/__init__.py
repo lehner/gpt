@@ -16,5 +16,4 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.optimize.gradient_descent import gradient_descent
-import gpt.algorithms.optimize.fourier_accelerate
+from gpt.qcd.gauge.fix.landau import landau
