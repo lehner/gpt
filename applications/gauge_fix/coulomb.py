@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# Author: Christoph Lehner 2021
+#
 import gpt as g
 
 U = g.load("/p/project/gm2dwf/configs/64I/ckpoint_lat.Coulomb.1200")
@@ -8,7 +11,7 @@ Usep = [g.separate(u,3) for u in U[0:3]]
 Nt = U[0].grid.gdimensions[3]
 
 # gradient descent
-gd = g.algorithms.optimize.gradient_descent(maxiter=100000, eps=1e-9, step=0.1)
+gd = g.algorithms.optimize.gradient_descent(maxiter=100000, eps=1e-7, step=0.1)
 
 # Coulomb functional on each time-slice
 for t in range(Nt):
