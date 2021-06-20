@@ -25,5 +25,7 @@ def line_search_quadratic(s, x, dv0, df, step):
     sv0 = dv0.otype.inner_product(s, dv0)
     sv1 = dv0.otype.inner_product(s, dv1)
     r = sv0 / sv1
+    if abs(r - 1.0) < 1e-15:
+        return 1.0
     c = r / (r - 1.0)
     return c
