@@ -36,20 +36,20 @@ class gradient_descent(base_iterative):
                 d = df(x)
                 x @= g.group.compose(-self.step * d, x)
 
-                rs = g.norm2(d) ** 0.5 / d.grid.gsites
+                rs = (g.norm2(d) / d.grid.gsites / d.otype.nfloats) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 
                 if i % self.nf == 0:
                     v = f(x)
-                    self.log(f"iteration {i}: f(x) = {v:e}, |df|/V = {rs:e}")
+                    self.log(f"iteration {i}: f(x) = {v:e}, |df|/sqrt(dof) = {rs:e}")
 
                 if rs <= self.eps:
                     self.log(f"converged in {i+1} iterations")
                     return
 
             self.log(
-                f"NOT converged in {i+1} iterations;  df(x) = {rs:e} / {self.eps:e}"
+                f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
             )
 
         return opt
