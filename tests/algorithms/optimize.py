@@ -43,8 +43,22 @@ assert (
     < 1e-5
 )
 
-# now test gradient descent
-gd = g.algorithms.optimize.gradient_descent(maxiter=100, eps=1e-7, step=1e-3)
-assert f(V0) > 1e3
-gd(f, df)(V0)
-assert f(V0) < 1e-7
+# now test minimizers
+rng.element(V0)
+V1 = g.copy(V0)
+for gd in [
+    g.algorithms.optimize.gradient_descent(maxiter=100, eps=1e-7, step=1e-3),
+    g.algorithms.optimize.gradient_descent(
+        maxiter=100, eps=1e-7, step=1e-3, line_search=True
+    ),
+    g.algorithms.optimize.non_linear_cg(
+        maxiter=100, eps=1e-7, step=1e-3, line_search=False
+    ),
+    g.algorithms.optimize.non_linear_cg(
+        maxiter=100, eps=1e-7, step=1e-3, line_search=True
+    ),
+]:
+    V0 @= V1
+    assert f(V0) > 1e3
+    gd(f, df)(V0)
+    assert f(V0) < 1e-7

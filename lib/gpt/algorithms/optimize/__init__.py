@@ -16,5 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from gpt.algorithms.optimize.line_search import line_search_cubic
 from gpt.algorithms.optimize.gradient_descent import gradient_descent
+from gpt.algorithms.optimize.non_linear_cg import non_linear_cg
 import gpt.algorithms.optimize.fourier_accelerate

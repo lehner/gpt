@@ -20,9 +20,9 @@ import gpt as g
 from gpt.algorithms import base_iterative
 
 
-class gradient_descent(base_iterative):
+class non_linear_cg(base_iterative):
     @g.params_convention(
-        eps=1e-8, maxiter=1000, step=1e-3, log_functional_every=10, line_search=False
+        eps=1e-8, maxiter=1000, step=1e-3, log_functional_every=10, line_search=True
     )
     def __init__(self, params):
         super().__init__()
@@ -37,18 +37,32 @@ class gradient_descent(base_iterative):
         def opt(x, t):
             for i in range(self.maxiter):
                 d = df(x)
-                dv0 = d.otype.inner_product(d, d)
+
+                if i == 0:
+                    s = d
+                    beta = 0
+                else:
+                    # use fletcher reeves
+                    beta = d.otype.inner_product(d, d) / d.otype.inner_product(
+                        d_last, d_last
+                    )
+                    if beta < 0.0:
+                        beta = 0.0
+                    s = g(d + beta * s_last)
+
+                sv0 = d.otype.inner_product(s, d)
 
                 c = 1.0
                 if self.line_search:
                     # find optimal step
                     # ansatz: f(x) = a + b*(x-c)^2, then solve for c from dv1 and dv0
-                    d1 = df(g(g.group.compose(-self.step * d, x)))
-                    dv1 = d.otype.inner_product(d1, d1)
-                    r = (dv0 / dv1) ** 0.5
+                    sv1 = d.otype.inner_product(
+                        s, df(g(g.group.compose(-self.step * s, x)))
+                    )
+                    r = sv0 / sv1
                     c = r / (r - 1.0)
 
-                x @= g.group.compose(-self.step * c * d, x)
+                x @= g.group.compose(-self.step * c * s, x)
 
                 rs = (g.norm2(d) / d.grid.gsites / d.otype.nfloats) ** 0.5
 
@@ -58,11 +72,11 @@ class gradient_descent(base_iterative):
                     v = f(x)
                     if self.line_search:
                         self.log(
-                            f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, step_optimal = {c*self.step}"
+                            f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step_optimal = {c*self.step}"
                         )
                     else:
                         self.log(
-                            f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}"
+                            f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}"
                         )
 
                 if rs <= self.eps:
@@ -71,6 +85,10 @@ class gradient_descent(base_iterative):
                         f"converged in {i+1} iterations: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}"
                     )
                     return
+
+                # keep last search direction
+                s_last = s
+                d_last = d
 
             self.log(
                 f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"

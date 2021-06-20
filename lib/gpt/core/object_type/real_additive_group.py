@@ -51,6 +51,9 @@ class ot_real_additive_group(ot_singlet):
     def generators(self, dt):
         return [1.0]
 
+    def inner_product(self, left, right):
+        return gpt.inner_product(left, right).real
+
     def coordinates(self, l, c=None):
         if c is None:
             return [gpt.component.real(l)]

@@ -59,6 +59,9 @@ class ot_u_1_algebra(ot_u_1_base):
     def generators(self, dt):
         return [complex(1.0, 0)]
 
+    def inner_product(self, left, right):
+        return gpt.inner_product(left, right).real
+
     def coordinates(self, l, c=None):
         if c is None:
             return [l]
