@@ -110,7 +110,7 @@ for i in range(3):
     assert abs(P[i] - P_comp[i]) < 1e-12
 
 # Test gauge fixing
-gd = g.algorithms.optimize.gradient_descent(maxiter=50, eps=1e-9, step=0.1)
+opt = g.algorithms.optimize.non_linear_cg(maxiter=50, eps=1e-9, step=0.1, line_search=True)
 V0 = g.identity(U[0])
 rng.element(V0)
 
@@ -128,15 +128,15 @@ for f, df, tag in [(l_f, l_df, "Landau")]:
 
 # test gauge fixing
 for f, df, df_test, tag, expected_improvement in [
-    (l_f, l_df, l_df, "Landau", 1e-3),
-    (l_f, fal_df, l_df, "Fourier Accelerated Landau", 1e-5),
+    (l_f, l_df, l_df, "Landau", 1e-7),
+    (l_f, fal_df, l_df, "Fourier Accelerated Landau", 1e-9),
 ]:
     V1 = g.copy(V0)
 
     eps0 = g.norm2(df_test(V1)) ** 0.5 / f(V1)
     g.message(f"df/f before {tag} gauge fix: {eps0}")
 
-    gd(f, df)(V1)
+    opt(f, df)(V1)
 
     eps1 = g.norm2(df_test(V1)) ** 0.5 / f(V1)
     g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")

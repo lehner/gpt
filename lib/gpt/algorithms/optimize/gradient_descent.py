@@ -37,16 +37,12 @@ class gradient_descent(base_iterative):
         def opt(x, t):
             for i in range(self.maxiter):
                 d = df(x)
-                dv0 = d.otype.inner_product(d, d)
 
                 c = 1.0
                 if self.line_search:
-                    # find optimal step
-                    # ansatz: f(x) = a + b*(x-c)^2, then solve for c from dv1 and dv0
-                    d1 = df(g(g.group.compose(-self.step * d, x)))
-                    dv1 = d.otype.inner_product(d1, d1)
-                    r = (dv0 / dv1) ** 0.5
-                    c = r / (r - 1.0)
+                    c = g.algorithms.optimize.line_search_quadratic(
+                        d, x, d, df, -self.step
+                    )
 
                 x @= g.group.compose(-self.step * c * d, x)
 

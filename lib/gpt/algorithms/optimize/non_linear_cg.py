@@ -50,17 +50,11 @@ class non_linear_cg(base_iterative):
                         beta = 0.0
                     s = g(d + beta * s_last)
 
-                sv0 = d.otype.inner_product(s, d)
-
                 c = 1.0
                 if self.line_search:
-                    # find optimal step
-                    # ansatz: f(x) = a + b*(x-c)^2, then solve for c from dv1 and dv0
-                    sv1 = d.otype.inner_product(
-                        s, df(g(g.group.compose(-self.step * s, x)))
+                    c = g.algorithms.optimize.line_search_quadratic(
+                        s, x, d, df, -self.step
                     )
-                    r = sv0 / sv1
-                    c = r / (r - 1.0)
 
                 x @= g.group.compose(-self.step * c * s, x)
 

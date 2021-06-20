@@ -16,7 +16,14 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.optimize.line_search import line_search_quadratic
-from gpt.algorithms.optimize.gradient_descent import gradient_descent
-from gpt.algorithms.optimize.non_linear_cg import non_linear_cg
-import gpt.algorithms.optimize.fourier_accelerate
+import gpt as g
+
+
+def line_search_quadratic(s, x, dv0, df, step):
+    dv1 = df(g(g.group.compose(step * s, x)))
+    # ansatz: f(x) = a + b*(x-c)^2, then solve for c from dv1 and dv0
+    sv0 = dv0.otype.inner_product(s, dv0)
+    sv1 = dv0.otype.inner_product(s, dv1)
+    r = sv0 / sv1
+    c = r / (r - 1.0)
+    return c
