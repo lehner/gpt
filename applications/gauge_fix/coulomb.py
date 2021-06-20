@@ -9,7 +9,7 @@ import sys
 p_mpi_split = g.default.get_ivec("--mpi_split", None, 3)
 p_maxiter = g.default.get_int("--maxiter", 100000)
 p_eps = g.default.get_float("--eps", 3e-8)
-p_step = g.default.get_float("--step", 0.1)
+p_step = g.default.get_float("--step", 0.05)
 p_source = g.default.get("--source", None)
 p_rng_seed = g.default.get("--random", None)
 
