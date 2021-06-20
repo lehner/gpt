@@ -23,6 +23,8 @@ g.message(
     source   = {p_source}
     random   = {p_rng_seed}
 
+  Note: convergence is only guaranteed for sufficiently small step parameter.
+
 """
 )
 
