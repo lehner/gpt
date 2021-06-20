@@ -9,10 +9,13 @@ p_mpi_split = g.default.get_ivec("--mpi_split", None, 3)
 p_maxiter = g.default.get_int("--maxiter", 20)
 p_eps = g.default.get_float("--eps", 3e-8)
 p_step = g.default.get_float("--step", 0.1)
-p_source = g.default.get("--source", "/p/project/gm2dwf/configs/64I/ckpoint_lat.Coulomb.1200")
+p_source = g.default.get(
+    "--source", "/p/project/gm2dwf/configs/64I/ckpoint_lat.Coulomb.1200"
+)
 p_rng_seed = g.default.get("--random", None)
 
-g.message(f"""
+g.message(
+    f"""
 
   Coulomb gauge fixer run with:
     maxiter  = {p_maxiter}
@@ -21,7 +24,8 @@ g.message(f"""
     source   = {p_source}
     random   = {p_rng_seed}
 
-""")
+"""
+)
 
 # create rng if needed
 rng = None if p_rng_seed is None else g.random(p_rng_seed)
@@ -32,18 +36,14 @@ U = g.load(p_source)
 # split in time
 Nt = U[0].grid.gdimensions[3]
 g.message(f"Separate {Nt} time slices")
-Usep = [g.separate(u,3) for u in U[0:3]]
+Usep = [g.separate(u, 3) for u in U[0:3]]
 Vt = [g.mcolor(Usep[0][0].grid) for t in range(Nt)]
 cache = {}
-split_grid = Usep[0][0].grid.split(
-    p_mpi_split, Usep[0][0].grid.fdimensions
-)
+split_grid = Usep[0][0].grid.split(p_mpi_split, Usep[0][0].grid.fdimensions)
 
 g.message("Split grid")
-Usep_split = [
-    g.split(Usep[mu],split_grid,cache) for mu in range(3)
-]
-Vt_split = g.split(Vt,split_grid,cache)
+Usep_split = [g.split(Usep[mu], split_grid, cache) for mu in range(3)]
+Vt_split = g.split(Vt, split_grid, cache)
 
 # gradient descent
 gd = g.algorithms.optimize.gradient_descent(maxiter=p_maxiter, eps=p_eps, step=p_step)
@@ -54,7 +54,9 @@ g.message(f"This rank has {Nt_split} time slices")
 for t in range(Nt_split):
 
     f, df = g.qcd.gauge.fix.landau([Usep_split[mu][t] for mu in range(3)])
-    fa_df = g.algorithms.optimize.fourier_accelerate.inverse_phat_square(Vt_split[t].grid, df)
+    fa_df = g.algorithms.optimize.fourier_accelerate.inverse_phat_square(
+        Vt_split[t].grid, df
+    )
 
     g.message(f"Run local time slice {t} / {Nt_split}")
 
@@ -62,7 +64,7 @@ for t in range(Nt_split):
         rng.element(Vt_split[t])
     else:
         Vt_split[t] @= g.identity(Vt_split[t])
-    
+
     gd(f, fa_df)(Vt_split[t])
 
 g.message("Unsplit")
@@ -71,7 +73,7 @@ g.unsplit(Vt, Vt_split, cache)
 
 g.message("Project to group (should only remove rounding errors)")
 
-Vt = [g.project(vt,"defect") for vt in Vt]
+Vt = [g.project(vt, "defect") for vt in Vt]
 
 g.message("Test")
 
@@ -81,14 +83,14 @@ for t in range(Nt):
     dfv = df(Vt[t])
     theta = g.norm2(dfv).real / Vt[t].grid.gsites / dfv.otype.Nc
     g.message(f"theta[{t}] = {theta}")
-    g.message(f"V[{t}][0,0,0] = ", Vt[t][0,0,0])
+    g.message(f"V[{t}][0,0,0] = ", Vt[t][0, 0, 0])
 
 # merge time slices
 V = g.merge(Vt, 3)
 U_transformed = g.qcd.gauge.transformed(U, V)
 
 # remove rounding errors on U_transformed
-U_transformed = [g.project(u,"defect") for u in U_transformed]
+U_transformed = [g.project(u, "defect") for u in U_transformed]
 
 # save results
 g.save("U.transformed", U_transformed, g.format.nersc())
