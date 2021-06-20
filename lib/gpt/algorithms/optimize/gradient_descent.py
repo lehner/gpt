@@ -42,7 +42,7 @@ class gradient_descent(base_iterative):
 
                 if i % self.nf == 0:
                     v = f(x)
-                    self.log(f"iteration {i}: f(x) = {v:e}")
+                    self.log(f"iteration {i}: f(x) = {v:e}, |df|/V = {rs:e}")
 
                 if rs <= self.eps:
                     self.log(f"converged in {i+1} iterations")
