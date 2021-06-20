@@ -40,9 +40,9 @@ def inverse_phat_square(grid, df, dimensions=None):
         weight += c_mu_l
 
     # special consideration for zero
-    weight[0, 0, 0, 0] = np.pi / np.prod(
+    weight[0, 0, 0, 0] = np.pi**2.0 / np.prod(
         [grid.gdimensions[mu] for mu in dimensions]
-    ) ** (1.0 / len(dimensions))
+    ) ** (2.0 / len(dimensions))
 
     # invert
     weight @= g.component.inv(weight) * complex(4.0)
