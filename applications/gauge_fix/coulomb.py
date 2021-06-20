@@ -3,15 +3,14 @@
 # Author: Christoph Lehner 2021
 #
 import gpt as g
+import sys
 
 # Parameters
 p_mpi_split = g.default.get_ivec("--mpi_split", None, 3)
-p_maxiter = g.default.get_int("--maxiter", 20)
+p_maxiter = g.default.get_int("--maxiter", 100000)
 p_eps = g.default.get_float("--eps", 3e-8)
 p_step = g.default.get_float("--step", 0.1)
-p_source = g.default.get(
-    "--source", "/p/project/gm2dwf/configs/64I/ckpoint_lat.Coulomb.1200"
-)
+p_source = g.default.get("--source", None)
 p_rng_seed = g.default.get("--random", None)
 
 g.message(
@@ -26,6 +25,14 @@ g.message(
 
 """
 )
+
+if p_source is None:
+    g.message("Need to provide source file")
+    sys.exit(1)
+
+if p_mpi_split is None:
+    g.message("Need to provide mpi_split")
+    sys.exit(1)
 
 # create rng if needed
 rng = None if p_rng_seed is None else g.random(p_rng_seed)
