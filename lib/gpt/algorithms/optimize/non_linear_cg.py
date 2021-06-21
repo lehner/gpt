@@ -18,11 +18,28 @@
 #
 import gpt as g
 from gpt.algorithms import base_iterative
+from gpt.algorithms.optimize import line_search_quadratic
+
+
+def fletcher_reeves(d, d_last):
+    return d.otype.inner_product(d, d) / d.otype.inner_product(d_last, d_last)
+
+
+def polak_ribiere(d, d_last):
+    ip_dd = d.otype.inner_product(d, d)
+    ip_dl = d.otype.inner_product(d, d_last)
+    ip_ll = d.otype.inner_product(d_last, d_last)
+    return max([0.0, (ip_dd - ip_dl) / ip_ll])
 
 
 class non_linear_cg(base_iterative):
     @g.params_convention(
-        eps=1e-8, maxiter=1000, step=1e-3, log_functional_every=10, line_search=True
+        eps=1e-8,
+        maxiter=1000,
+        step=1e-3,
+        log_functional_every=10,
+        line_search=line_search_quadratic,
+        beta=fletcher_reeves,
     )
     def __init__(self, params):
         super().__init__()
@@ -31,30 +48,24 @@ class non_linear_cg(base_iterative):
         self.step = params["step"]
         self.nf = params["log_functional_every"]
         self.line_search = params["line_search"]
+        self.beta = params["beta"]
 
     def __call__(self, f, df):
         @self.timed_function
         def opt(x, t):
+            d_last = None
+            s_last = None
             for i in range(self.maxiter):
                 d = df(x)
 
                 if i == 0:
-                    s = d
                     beta = 0
+                    s = d
                 else:
-                    # use fletcher reeves
-                    beta = d.otype.inner_product(d, d) / d.otype.inner_product(
-                        d_last, d_last
-                    )
-                    if beta < 0.0:
-                        beta = 0.0
+                    beta = self.beta(d, d_last)
                     s = g(d + beta * s_last)
 
-                c = 1.0
-                if self.line_search:
-                    c = g.algorithms.optimize.line_search_quadratic(
-                        s, x, d, df, -self.step
-                    )
+                c = self.line_search(s, x, d, df, -self.step)
 
                 x @= g.group.compose(-self.step * c * s, x)
 
@@ -64,14 +75,9 @@ class non_linear_cg(base_iterative):
 
                 if i % self.nf == 0:
                     v = f(x)
-                    if self.line_search:
-                        self.log(
-                            f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step_optimal = {c*self.step}"
-                        )
-                    else:
-                        self.log(
-                            f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}"
-                        )
+                    self.log(
+                        f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step = {c*self.step}"
+                    )
 
                 if rs <= self.eps:
                     v = f(x)
@@ -81,8 +87,8 @@ class non_linear_cg(base_iterative):
                     return True
 
                 # keep last search direction
-                s_last = s
                 d_last = d
+                s_last = s
 
             self.log(
                 f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"

@@ -29,3 +29,7 @@ def line_search_quadratic(s, x, dv0, df, step):
         return 1.0
     c = r / (r - 1.0)
     return c
+
+
+def line_search_none(s, x, dv0, df, step):
+    return 1.0

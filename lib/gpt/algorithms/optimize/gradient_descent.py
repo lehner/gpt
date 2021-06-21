@@ -18,11 +18,16 @@
 #
 import gpt as g
 from gpt.algorithms import base_iterative
+from gpt.algorithms.optimize import line_search_none
 
 
 class gradient_descent(base_iterative):
     @g.params_convention(
-        eps=1e-8, maxiter=1000, step=1e-3, log_functional_every=10, line_search=False
+        eps=1e-8,
+        maxiter=1000,
+        step=1e-3,
+        log_functional_every=10,
+        line_search=line_search_none,
     )
     def __init__(self, params):
         super().__init__()
@@ -38,11 +43,7 @@ class gradient_descent(base_iterative):
             for i in range(self.maxiter):
                 d = df(x)
 
-                c = 1.0
-                if self.line_search:
-                    c = g.algorithms.optimize.line_search_quadratic(
-                        d, x, d, df, -self.step
-                    )
+                c = self.line_search(d, x, d, df, -self.step)
 
                 x @= g.group.compose(-self.step * c * d, x)
 
@@ -52,14 +53,9 @@ class gradient_descent(base_iterative):
 
                 if i % self.nf == 0:
                     v = f(x)
-                    if self.line_search:
-                        self.log(
-                            f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, step_optimal = {c*self.step}"
-                        )
-                    else:
-                        self.log(
-                            f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}"
-                        )
+                    self.log(
+                        f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, step = {c*self.step}"
+                    )
 
                 if rs <= self.eps:
                     v = f(x)
