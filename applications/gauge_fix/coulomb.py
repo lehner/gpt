@@ -10,7 +10,7 @@ p_mpi_split = g.default.get_ivec("--mpi_split", None, 3)
 p_maxiter_cg = g.default.get_int("--maxiter_cg", 500)
 p_maxiter_gd = g.default.get_int("--maxiter_gd", 100000)
 p_eps = g.default.get_float("--eps", 3e-8)
-p_step = g.default.get_float("--step", 0.05)
+p_step = g.default.get_float("--step", 0.03)
 p_source = g.default.get("--source", None)
 p_rng_seed = g.default.get("--random", None)
 
