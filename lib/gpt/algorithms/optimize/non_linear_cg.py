@@ -35,7 +35,6 @@ class non_linear_cg(base_iterative):
     def __call__(self, f, df):
         @self.timed_function
         def opt(x, t):
-            line_search = self.line_search
             for i in range(self.maxiter):
                 d = df(x)
 
@@ -52,7 +51,7 @@ class non_linear_cg(base_iterative):
                     s = g(d + beta * s_last)
 
                 c = 1.0
-                if line_search:
+                if self.line_search:
                     c = g.algorithms.optimize.line_search_quadratic(
                         s, x, d, df, -self.step
                     )
