@@ -35,6 +35,7 @@ class non_linear_cg(base_iterative):
     def __call__(self, f, df):
         @self.timed_function
         def opt(x, t):
+            line_search = self.line_search
             for i in range(self.maxiter):
                 d = df(x)
 
@@ -51,7 +52,7 @@ class non_linear_cg(base_iterative):
                     s = g(d + beta * s_last)
 
                 c = 1.0
-                if self.line_search:
+                if line_search:
                     c = g.algorithms.optimize.line_search_quadratic(
                         s, x, d, df, -self.step
                     )
@@ -78,7 +79,7 @@ class non_linear_cg(base_iterative):
                     self.log(
                         f"converged in {i+1} iterations: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}"
                     )
-                    return
+                    return True
 
                 # keep last search direction
                 s_last = s
@@ -87,5 +88,6 @@ class non_linear_cg(base_iterative):
             self.log(
                 f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
             )
+            return False
 
         return opt

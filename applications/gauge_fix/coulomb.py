@@ -7,7 +7,8 @@ import sys
 
 # Parameters
 p_mpi_split = g.default.get_ivec("--mpi_split", None, 3)
-p_maxiter = g.default.get_int("--maxiter", 100000)
+p_maxiter_cg = g.default.get_int("--maxiter_cg", 500)
+p_maxiter_gd = g.default.get_int("--maxiter_gd", 100000)
 p_eps = g.default.get_float("--eps", 3e-8)
 p_step = g.default.get_float("--step", 0.05)
 p_source = g.default.get("--source", None)
@@ -18,11 +19,12 @@ g.message(
 
   Coulomb gauge fixer run with:
 
-    maxiter  = {p_maxiter}
-    eps      = {p_eps}
-    step     = {p_step}
-    source   = {p_source}
-    random   = {p_rng_seed}
+    maxiter_cg  = {p_maxiter_cg}
+    maxiter_gd  = {p_maxiter_gd}
+    eps         = {p_eps}
+    step        = {p_step}
+    source      = {p_source}
+    random      = {p_rng_seed}
 
   Note: convergence is only guaranteed for sufficiently small step parameter.
 
@@ -56,8 +58,11 @@ Usep_split = [g.split(Usep[mu], split_grid, cache) for mu in range(3)]
 Vt_split = g.split(Vt, split_grid, cache)
 
 # optimizer
-opt = g.algorithms.optimize.non_linear_cg(
-    maxiter=p_maxiter, eps=p_eps, step=p_step, line_search=True
+cg = g.algorithms.optimize.non_linear_cg(
+    maxiter=p_maxiter_cg, eps=p_eps, step=p_step, line_search=True
+)
+gd = g.algorithms.optimize.gradient_descent(
+    maxiter=p_maxiter_gd, eps=p_eps, step=p_step
 )
 
 # Coulomb functional on each time-slice
@@ -77,7 +82,8 @@ for t in range(Nt_split):
     else:
         Vt_split[t] @= g.identity(Vt_split[t])
 
-    opt(f, fa_df)(Vt_split[t])
+    if not cg(f, fa_df)(Vt_split[t]):
+        gd(f, fa_df)(Vt_split[t])
 
 g.message("Unsplit")
 

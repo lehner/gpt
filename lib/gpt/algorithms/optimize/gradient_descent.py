@@ -66,10 +66,11 @@ class gradient_descent(base_iterative):
                     self.log(
                         f"converged in {i+1} iterations: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}"
                     )
-                    return
+                    return True
 
             self.log(
                 f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
             )
+            return False
 
         return opt
