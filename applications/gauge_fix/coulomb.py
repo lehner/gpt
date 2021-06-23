@@ -58,13 +58,15 @@ Usep_split = [g.split(Usep[mu], split_grid, cache) for mu in range(3)]
 Vt_split = g.split(Vt, split_grid, cache)
 
 # optimizer
-opt = g.algorithms.optimize 
+opt = g.algorithms.optimize
 cg = opt.non_linear_cg(
-    maxiter=p_maxiter_cg, eps=p_eps, step=p_step, line_search=opt.line_search_quadratic, beta=opt.polak_ribiere
+    maxiter=p_maxiter_cg,
+    eps=p_eps,
+    step=p_step,
+    line_search=opt.line_search_quadratic,
+    beta=opt.polak_ribiere,
 )
-gd = opt.gradient_descent(
-    maxiter=p_maxiter_gd, eps=p_eps, step=p_step
-)
+gd = opt.gradient_descent(maxiter=p_maxiter_gd, eps=p_eps, step=p_step)
 
 # Coulomb functional on each time-slice
 Nt_split = len(Vt_split)
@@ -72,9 +74,7 @@ g.message(f"This rank has {Nt_split} time slices")
 for t in range(Nt_split):
 
     f, df = g.qcd.gauge.fix.landau([Usep_split[mu][t] for mu in range(3)])
-    fa_df = opt.fourier_accelerate.inverse_phat_square(
-        Vt_split[t].grid, df
-    )
+    fa_df = opt.fourier_accelerate.inverse_phat_square(Vt_split[t].grid, df)
 
     g.message(f"Run local time slice {t} / {Nt_split}")
 

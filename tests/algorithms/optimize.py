@@ -26,8 +26,9 @@ def df(V):
 
 
 # first establish correctness of df
-df_app = g.group.approximate_gradient(V0, f, 0, 0, 0, 0)
-df_val = df(V0)[0, 0, 0, 0]
+test_weight = rng.normal(g.singlet(grid))
+df_app = g.group.approximate_gradient(V0, f, test_weight)
+df_val = g.sum(df(V0) * test_weight)
 eps = abs(df_app - df_val) / abs(df_val)
 g.message(f"Test gradient: {eps}")
 assert eps < 1e-6
@@ -37,8 +38,8 @@ vp = g.complex(grid)
 vp[:] = complex(1.9, 2.5)
 assert (
     abs(
-        g.group.approximate_gradient(vp, lambda v: g.norm2(v), 0, 0, 0, 0)
-        - 2.0 * vp[0, 0, 0, 0]
+        g.group.approximate_gradient(vp, lambda v: g.norm2(v), test_weight)
+        - 2.0 * g.sum(vp * test_weight)
     )
     < 1e-5
 )

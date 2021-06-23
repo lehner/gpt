@@ -22,13 +22,13 @@ from gpt.algorithms.optimize import line_search_quadratic
 
 
 def fletcher_reeves(d, d_last):
-    return d.otype.inner_product(d, d) / d.otype.inner_product(d_last, d_last)
+    return g.group.inner_product(d, d) / g.group.inner_product(d_last, d_last)
 
 
 def polak_ribiere(d, d_last):
-    ip_dd = d.otype.inner_product(d, d)
-    ip_dl = d.otype.inner_product(d, d_last)
-    ip_ll = d.otype.inner_product(d_last, d_last)
+    ip_dd = g.group.inner_product(d, d)
+    ip_dl = g.group.inner_product(d, d_last)
+    ip_ll = g.group.inner_product(d_last, d_last)
     return max([0.0, (ip_dd - ip_dl) / ip_ll])
 
 

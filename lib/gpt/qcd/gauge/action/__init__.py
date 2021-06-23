@@ -16,12 +16,4 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.create import random, unit
-from gpt.qcd.gauge.transport import path, transport
-from gpt.qcd.gauge.loops import plaquette, rectangle, field_strength, energy_density
-from gpt.qcd.gauge.staples import staple, staple_sum
-from gpt.qcd.gauge.transformation import transformed
-import gpt.qcd.gauge.project
-import gpt.qcd.gauge.smear
-import gpt.qcd.gauge.fix
-import gpt.qcd.gauge.action
+from gpt.qcd.gauge.action.wilson import wilson

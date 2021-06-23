@@ -64,7 +64,13 @@ def compose(left, right):
     return dst[0]
 
 
-def approximate_gradient(x, functional, *site, epsilon=1e-7):
+def inner_product(left, right):
+    # inner product over group's real vector space
+    left_type = left.otype
+    return left_type.inner_product(left, right)
+
+
+def approximate_gradient(x, functional, site_weight, epsilon=1e-5):
     # This helper function allows for quick checks of gradient implementations on single sites
     c = x.otype.cartesian()
     grid = x.grid
@@ -73,17 +79,21 @@ def approximate_gradient(x, functional, *site, epsilon=1e-7):
     # move to neutral element of group (\vec{0} in cartesian space)
     t = g.lattice(grid, c)
     t[:] = 0
-    r = t[site]
 
     # generators of cartesian space
     gen = c.generators(grid.precision.complex_dtype)
+    r = gen[0] * complex(0.0)
 
     # functional at neutral element
-    f0 = functional(x)
-
     for i, gg in enumerate(gen):
-        t[site] += epsilon * gg
-        r += ((functional(g(g.group.compose(t, x))) - f0) / epsilon) * gg
-        t[site] -= epsilon * gg
+        t += epsilon * gg * site_weight
+        r += (
+            (
+                functional(g(g.group.compose(t, x)))
+                - functional(g(g.group.compose(-t, x)))
+            )
+            / (2.0 * epsilon)
+        ) * gg
+        t -= epsilon * gg * site_weight
 
     return r
