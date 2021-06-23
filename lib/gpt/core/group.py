@@ -85,7 +85,7 @@ def approximate_gradient(x, functional, site_weight, epsilon=1e-5):
     r = gen[0] * complex(0.0)
 
     # functional at neutral element
-    for i, gg in enumerate(gen):
+    for gg in gen:
         t += epsilon * gg * site_weight
         r += (
             (
