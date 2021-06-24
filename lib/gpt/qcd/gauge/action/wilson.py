@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-
+from gpt.core.group import differentiable_functional
 
 def staple(U, mu):
     st = g.lattice(U[0])
@@ -29,15 +29,12 @@ def staple(U, mu):
     return g(g.adj(st))
 
 
-class wilson:
-    def __init__(self, U, beta):
+class wilson(differentiable_functional):
+    def __init__(self, beta):
         self.beta = beta
-        self.U = U
+        self.__name__ = f"wilson({beta})"
 
-    def update(self, U):
-        self.U = U
-
-    def __call__(self):
+    def __call__(self, U):
         # Let beta = 2 ndim_repr / g^2
         #
         # S(U) = -beta sum_{mu>nu} Re[Tr[P_{mu,nu}]]/ndim_repr        (only U-dependent part)
@@ -46,18 +43,18 @@ class wilson:
         #      = -2/g^2 sum_{mu,nu} Re[Tr[staple_{mu,nu}^dag U_mu]]
         #
         # since   P_{mu,nu} = staple_{mu,nu}^dag U_mu + staple_{mu,nu} U_mu^dag = 2 Re[staple^dag * U]
-        Nd = len(self.U)
-        vol = self.U[0].grid.gsites
+        Nd = len(U)
+        vol = U[0].grid.gsites
         return (
             self.beta
-            * (1.0 - g.qcd.gauge.plaquette(self.U))
+            * (1.0 - g.qcd.gauge.plaquette(U))
             * (Nd - 1)
             * Nd
             * vol
             / 2.0
         )
 
-    def gradient(self, field):
+    def gradient(self, U):
         # Eq. (1.3) and Appendix A of https://link.springer.com/content/pdf/10.1007/JHEP08(2010)071.pdf
         # S(Umu) = -2/g^2 Re trace(Umu * staple)
         # dS(Umu) = lim_{eps->0} Ta ( S(e^{eps Ta} Umu) - S(Umu) ) / eps  with  \Tr[T_a T_b]=-1/2 \delta_{ab}
@@ -69,19 +66,12 @@ class wilson:
         # r0 = c_a T_a + imaginary_diagonal   with A^dag = -A
         # trace(T_a * r0) = -1/2 c_a
         # dS(Umu) = 1/g^2 tracelss_anti_hermitian(Umu * staple)
-        return_list = isinstance(field, list)
         dS = []
-        for Umu in g.util.to_list(field):
-            if Umu not in self.U:
-                dS.append(None)
-            else:
-                mu = self.U.index(Umu)
-                dSdU_mu = staple(self.U, mu)
-                dSdU_mu @= g.qcd.gauge.project.traceless_anti_hermitian(
-                    g(Umu * dSdU_mu)
-                ) * (self.beta / (2.0 * Umu.otype.shape[0]) / 1j)
-                dSdU_mu.otype = Umu.otype.cartesian()
-                dS.append(dSdU_mu)
-        if not return_list:
-            return dS[0]
+        for mu, Umu in enumerate(U):
+            dSdU_mu = staple(U, mu)
+            dSdU_mu @= g.qcd.gauge.project.traceless_anti_hermitian(
+                g(Umu * dSdU_mu)
+            ) * (self.beta / (2.0 * Umu.otype.shape[0]) / 1j)
+            dSdU_mu.otype = Umu.otype.cartesian()
+            dS.append(dSdU_mu)
         return dS

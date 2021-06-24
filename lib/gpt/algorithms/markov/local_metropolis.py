@@ -25,7 +25,7 @@
 import gpt as g
 
 
-class metropolis:
+class local_metropolis:
     @g.params_convention(step_size=0.5, project_method="defect")
     def __init__(self, rng, params):
         self.rng = rng
@@ -33,7 +33,7 @@ class metropolis:
 
     def __call__(self, link, staple, mask):
         verbose = g.default.is_verbose(
-            "metropolis"
+            "local_metropolis"
         )  # need verbosity categories [ performance, progress ]
         project_method = self.params["project_method"]
         step_size = self.params["step_size"]
@@ -41,7 +41,7 @@ class metropolis:
         number_accept = 0
         possible_accept = 0
 
-        t = g.timer("metropolis")
+        t = g.timer("local_metropolis")
 
         t("action")
         action = g.component.real(g.eval(-g.trace(link * g.adj(staple)) * mask))
@@ -83,4 +83,6 @@ class metropolis:
 
         # g.message(t)
         if verbose:
-            g.message(f"Metropolis acceptance rate: {number_accept / possible_accept}")
+            g.message(
+                f"Local metropolis acceptance rate: {number_accept / possible_accept}"
+            )

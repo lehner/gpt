@@ -18,36 +18,41 @@
 #
 import gpt as g
 import numpy as np
+from gpt.core.group import differentiable_functional
 
 
-def inverse_phat_square(grid, df, dimensions=None):
-    if dimensions is None:
-        dimensions = list(range(grid.nd))
+class inverse_phat_square(differentiable_functional):
+    def __init__(self, grid, base, dimensions=None):
+        self.base = base
 
-    fft = g.fft(dimensions)
+        if dimensions is None:
+            dimensions = list(range(grid.nd))
 
-    # create FA mask
-    cache = {}
-    weight = g.complex(grid)
-    weight[:] = 0
-    coor = g.coordinates(weight)
-    for mu in dimensions:
-        c_mu = coor[:, mu].astype(np.complex128)
-        c_mu_l = g.complex(grid)
-        c_mu_l[coor, cache] = c_mu
-        c_mu_l @= g.component.sin(c_mu_l * (np.pi / grid.gdimensions[mu]))
-        c_mu_l @= c_mu_l * c_mu_l * complex(4.0)
-        weight += c_mu_l
+        self.fft = g.fft(dimensions)
 
-    # special consideration for zero
-    weight[0, 0, 0, 0] = (2.0 * np.pi) ** 2.0 / np.prod(
-        [grid.gdimensions[mu] for mu in dimensions]
-    ) ** (2.0 / len(dimensions))
+        # create FA mask
+        cache = {}
+        self.weight = g.complex(grid)
+        self.weight[:] = 0
+        coor = g.coordinates(self.weight)
+        for mu in dimensions:
+            c_mu = coor[:, mu].astype(np.complex128)
+            c_mu_l = g.complex(grid)
+            c_mu_l[coor, cache] = c_mu
+            c_mu_l @= g.component.sin(c_mu_l * (np.pi / grid.gdimensions[mu]))
+            c_mu_l @= c_mu_l * c_mu_l * complex(4.0)
+            self.weight += c_mu_l
 
-    # invert
-    weight @= g.component.inv(weight) * complex(4.0 * len(dimensions))
+        # special consideration for zero
+        self.weight[0, 0, 0, 0] = (2.0 * np.pi) ** 2.0 / np.prod(
+            [grid.gdimensions[mu] for mu in dimensions]
+        ) ** (2.0 / len(dimensions))
 
-    def df_prime(*arg):
-        return g(g.inv(fft) * weight * fft * df(*arg))
+        # invert
+        self.weight @= g.component.inv(self.weight) * complex(4.0 * len(dimensions))
 
-    return df_prime
+    def gradient(self, fields):
+        return g(g.inv(self.fft) * self.weight * self.fft * self.base.gradient(fields))
+
+    def __call__(self, *a):
+        return self.base(*a)

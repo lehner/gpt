@@ -3,6 +3,7 @@
 # Authors: Christoph Lehner 2021
 #
 import gpt as g
+from gpt.core.group import differentiable_functional
 
 # load configuration
 rng = g.random("test")
@@ -14,35 +15,25 @@ V0 = g.u1(grid)
 rng.element([U, V0])
 
 
-def f(V):
-    return g.sum(U * V).real ** 2.0
+class test_functional(differentiable_functional):
+    def __init__(self, U):
+        self.U = U
 
+    def __call__(self, V):
+        V = g.util.from_list(V)
+        return g.sum(self.U * V).real ** 2.0
 
-def df(V):
-    # lim_theta->0 1/theta (g.sum(U*e^{itheta}).real ** 2.0 - g.sum(U).real ** 2.0)
-    r = g(-2.0 * g.sum(U * V).real * g.component.imag(g(U * V)))
-    r.otype = V.otype.cartesian()
-    return r
+    @differentiable_functional.one_field_gradient
+    def gradient(self, V):
+        # lim_theta->0 1/theta (g.sum(U*e^{itheta}).real ** 2.0 - g.sum(U).real ** 2.0)
+        r = g(-2.0 * g.sum(self.U * V).real * g.component.imag(g(self.U * V)))
+        r.otype = V.otype.cartesian()
+        return r
 
+f = test_functional(U)
 
 # first establish correctness of df
-test_weight = rng.normal(g.singlet(grid))
-df_app = g.group.approximate_gradient(V0, f, test_weight)
-df_val = g.sum(df(V0) * test_weight)
-eps = abs(df_app - df_val) / abs(df_val)
-g.message(f"Test gradient: {eps}")
-assert eps < 1e-6
-
-# test a second functional
-vp = g.complex(grid)
-vp[:] = complex(1.9, 2.5)
-assert (
-    abs(
-        g.group.approximate_gradient(vp, lambda v: g.norm2(v), test_weight)
-        - 2.0 * g.sum(vp * test_weight)
-    )
-    < 1e-5
-)
+f.assert_gradient_error(rng, V0, 1e-5, 1e-8)
 
 # now test minimizers
 rng.element(V0)
@@ -70,5 +61,5 @@ for gd in [
 ]:
     V0 @= V1
     assert f(V0) > 1e3
-    gd(f, df)(V0)
+    gd(f)(V0)
     assert f(V0) < 1e-7

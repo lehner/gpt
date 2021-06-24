@@ -62,19 +62,8 @@ for mu in range(len(C)):
     assert eps < 1e-14
 
 # Test gauge actions
-test_weight = rng.normal(g.singlet(grid))
-for action in [lambda Uprime: g.qcd.gauge.action.wilson(Uprime, 5.43)]:
-    for mu in range(len(U)):
-        df_app = g.group.approximate_gradient(
-            U[mu],
-            lambda Umu: action(U[0:mu] + [Umu] + U[mu + 1 :])(),
-            test_weight,
-            epsilon=1e-5,
-        )
-        df_val = g.sum(action(U).gradient(U[mu]) * test_weight)
-        eps = (g.norm2(df_app - df_val) / g.norm2(df_val)) ** 0.5
-        g.message(f"Test action {action.__name__} derivative w.r.t. U[{mu}]: {eps}")
-        assert eps < 1e-7
+for action in [g.qcd.gauge.action.wilson(5.43)]:
+    action.assert_gradient_error(rng, U, 1e-5, 1e-7)
 
 # Test wilson flow and energy density
 U_wf = g.qcd.gauge.smear.wilson_flow(U, epsilon=0.1)
@@ -130,29 +119,24 @@ V0 = g.identity(U[0])
 rng.element(V0)
 
 # get functionals
-l_f, l_df = g.qcd.gauge.fix.landau(U)
-fal_df = g.algorithms.optimize.fourier_accelerate.inverse_phat_square(V0.grid, l_df)
+l = g.qcd.gauge.fix.landau(U)
+fal = g.algorithms.optimize.fourier_accelerate.inverse_phat_square(V0.grid, l)
 
 # test functionals
-for f, df, tag in [(l_f, l_df, "Landau")]:
-    df_app = g.group.approximate_gradient(V0, f, test_weight, epsilon=1e-5)
-    df_val = g.sum(df(V0) * test_weight)
-    eps = (g.norm2(df_app - df_val) / g.norm2(df_val)) ** 0.5
-    g.message(f"Test functional derivative for {tag}: {eps}")
-    assert eps < 1e-6
+l.assert_gradient_error(rng, V0, 1e-5, 1e-7)
 
 # test gauge fixing
-for f, df, df_test, tag, expected_improvement in [
-    (l_f, l_df, l_df, "Landau", 1e-7),
-    (l_f, fal_df, l_df, "Fourier Accelerated Landau", 1e-9),
+for f, f_test, tag, expected_improvement in [
+    (l, l, "Landau", 1e-7),
+    (fal, l, "Fourier Accelerated Landau", 1e-9),
 ]:
     V1 = g.copy(V0)
 
-    eps0 = g.norm2(df_test(V1)) ** 0.5 / f(V1)
+    eps0 = g.norm2(f_test.gradient(V1)) ** 0.5 / f_test(V1)
     g.message(f"df/f before {tag} gauge fix: {eps0}")
 
-    opt(f, df)(V1)
+    opt(f)(V1)
 
-    eps1 = g.norm2(df_test(V1)) ** 0.5 / f(V1)
+    eps1 = g.norm2(f_test.gradient(V1)) ** 0.5 / f_test(V1)
     g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")
     assert eps1 / eps0 < expected_improvement

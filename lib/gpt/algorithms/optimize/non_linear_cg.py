@@ -50,13 +50,13 @@ class non_linear_cg(base_iterative):
         self.line_search = params["line_search"]
         self.beta = params["beta"]
 
-    def __call__(self, f, df):
+    def __call__(self, f):
         @self.timed_function
         def opt(x, t):
             d_last = None
             s_last = None
             for i in range(self.maxiter):
-                d = df(x)
+                d = f.gradient(x)
 
                 if i == 0:
                     beta = 0
@@ -65,7 +65,7 @@ class non_linear_cg(base_iterative):
                     beta = self.beta(d, d_last)
                     s = g(d + beta * s_last)
 
-                c = self.line_search(s, x, d, df, -self.step)
+                c = self.line_search(s, x, d, f.gradient, -self.step)
 
                 x @= g.group.compose(-self.step * c * s, x)
 
@@ -74,15 +74,13 @@ class non_linear_cg(base_iterative):
                 self.log_convergence(i, rs, self.eps)
 
                 if i % self.nf == 0:
-                    v = f(x)
                     self.log(
-                        f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step = {c*self.step}"
+                        f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step = {c*self.step}"
                     )
 
                 if rs <= self.eps:
-                    v = f(x)
                     self.log(
-                        f"converged in {i+1} iterations: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}"
+                        f"converged in {i+1} iterations: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}"
                     )
                     return True
 

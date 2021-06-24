@@ -16,8 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-
-def wilson_flow(U, epsilon):
-    action = g.qcd.gauge.action.wilson(2.0 * U[0].otype.shape[0])
-    return g.algorithms.integrator.runge_kutta_4(U, lambda Uprime: [g(-u) for u in action.gradient(Uprime)], epsilon)
+from gpt.core.group.operation import inner_product, compose, projected_convert
+from gpt.core.group.differentiable_functional import differentiable_functional

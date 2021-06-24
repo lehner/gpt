@@ -37,13 +37,13 @@ class gradient_descent(base_iterative):
         self.nf = params["log_functional_every"]
         self.line_search = params["line_search"]
 
-    def __call__(self, f, df):
+    def __call__(self, f):
         @self.timed_function
         def opt(x, t):
             for i in range(self.maxiter):
-                d = df(x)
+                d = f.gradient(x)
 
-                c = self.line_search(d, x, d, df, -self.step)
+                c = self.line_search(d, x, d, f.gradient, -self.step)
 
                 x @= g.group.compose(-self.step * c * d, x)
 
@@ -52,15 +52,13 @@ class gradient_descent(base_iterative):
                 self.log_convergence(i, rs, self.eps)
 
                 if i % self.nf == 0:
-                    v = f(x)
                     self.log(
-                        f"iteration {i}: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}, step = {c*self.step}"
+                        f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, step = {c*self.step}"
                     )
 
                 if rs <= self.eps:
-                    v = f(x)
                     self.log(
-                        f"converged in {i+1} iterations: f(x) = {v:.15e}, |df|/sqrt(dof) = {rs:e}"
+                        f"converged in {i+1} iterations: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}"
                     )
                     return True
 

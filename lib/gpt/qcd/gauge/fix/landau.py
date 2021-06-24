@@ -18,23 +18,27 @@
 #
 import gpt as g
 import numpy as np
+from gpt.core.group import differentiable_functional
 
+class landau(differentiable_functional):
 
-def landau(U):
-    def df(V):
+    def __init__(self, U):
+        self.U = U
+
+    def __call__(self, V):
+        V = g.util.from_list(V)
+        return sum([g.sum(g.trace(u)) for u in g.qcd.gauge.transformed(self.U, V)]).real * (
+            -2.0
+        )
+
+    @differentiable_functional.one_field_gradient
+    def gradient(self, V):
         A = [
             g(g.qcd.gauge.project.traceless_anti_hermitian(u) / 1j)
-            for u in g.qcd.gauge.transformed(U, V)
+            for u in g.qcd.gauge.transformed(self.U, V)
         ]
         dmuAmu = g.lattice(V.grid, V.otype.cartesian())
         dmuAmu[:] = 0
         for mu, Amu in enumerate(A):
             dmuAmu += Amu - g.cshift(Amu, mu, -1)
         return dmuAmu
-
-    def f(V):
-        return sum([g.sum(g.trace(u)) for u in g.qcd.gauge.transformed(U, V)]).real * (
-            -2.0
-        )
-
-    return f, df
