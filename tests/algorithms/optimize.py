@@ -30,6 +30,7 @@ class test_functional(differentiable_functional):
         r.otype = V.otype.cartesian()
         return r
 
+
 f = test_functional(U)
 
 # first establish correctness of df

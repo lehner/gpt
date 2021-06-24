@@ -17,28 +17,19 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import numpy as np
-from gpt.core.group import differentiable_functional
 
 
-class landau(differentiable_functional):
-    def __init__(self, U):
-        self.U = U
+class langevin:
+    @g.params_convention(epsilon=0.01)
+    def __init__(self, rng, params):
+        self.rng = rng
+        self.eps = params["epsilon"]
 
-    def __call__(self, V):
-        V = g.util.from_list(V)
-        return sum(
-            [g.sum(g.trace(u)) for u in g.qcd.gauge.transformed(self.U, V)]
-        ).real * (-2.0)
-
-    @differentiable_functional.one_field_gradient
-    def gradient(self, V):
-        A = [
-            g(g.qcd.gauge.project.traceless_anti_hermitian(u) / 1j)
-            for u in g.qcd.gauge.transformed(self.U, V)
-        ]
-        dmuAmu = g.lattice(V.grid, V.otype.cartesian())
-        dmuAmu[:] = 0
-        for mu, Amu in enumerate(A):
-            dmuAmu += Amu - g.cshift(Amu, mu, -1)
-        return dmuAmu
+    def __call__(self, fields, action):
+        gr = action.gradient(fields)
+        for d, f in zip(gr, fields):
+            f @= g.group.compose(
+                -d * self.eps
+                + self.rng.element(g.lattice(d), normal=True) * (self.eps * 2.0) ** 0.5,
+                f,
+            )

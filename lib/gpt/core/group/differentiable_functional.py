@@ -24,10 +24,10 @@ class differentiable_functional:
         return
 
     def __call__(self, fields):
-        raise Error("Not implemented")
+        raise NotImplementedError()
 
     def gradient(self, fields):
-        raise Error("Not implemented")
+        raise NotImplementedError()
 
     def one_field_gradient(inner):
         def f(self, fields):

@@ -73,8 +73,8 @@ Nt_split = len(Vt_split)
 g.message(f"This rank has {Nt_split} time slices")
 for t in range(Nt_split):
 
-    f, df = g.qcd.gauge.fix.landau([Usep_split[mu][t] for mu in range(3)])
-    fa_df = opt.fourier_accelerate.inverse_phat_square(Vt_split[t].grid, df)
+    f = g.qcd.gauge.fix.landau([Usep_split[mu][t] for mu in range(3)])
+    fa = opt.fourier_accelerate.inverse_phat_square(Vt_split[t].grid, f)
 
     g.message(f"Run local time slice {t} / {Nt_split}")
 
@@ -83,8 +83,8 @@ for t in range(Nt_split):
     else:
         Vt_split[t] @= g.identity(Vt_split[t])
 
-    if not cg(f, fa_df)(Vt_split[t]):
-        gd(f, fa_df)(Vt_split[t])
+    if not cg(fa)(Vt_split[t]):
+        gd(fa)(Vt_split[t])
 
 g.message("Unsplit")
 
@@ -98,8 +98,8 @@ g.message("Test")
 
 # test results
 for t in range(Nt):
-    f, df = g.qcd.gauge.fix.landau([Usep[mu][t] for mu in range(3)])
-    dfv = df(Vt[t])
+    f = g.qcd.gauge.fix.landau([Usep[mu][t] for mu in range(3)])
+    dfv = f.gradient(Vt[t])
     theta = g.norm2(dfv).real / Vt[t].grid.gsites / dfv.otype.Nc
     g.message(f"theta[{t}] = {theta}")
     g.message(f"V[{t}][0,0,0] = ", Vt[t][0, 0, 0])

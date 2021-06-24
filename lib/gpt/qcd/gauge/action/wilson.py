@@ -19,6 +19,7 @@
 import gpt as g
 from gpt.core.group import differentiable_functional
 
+
 def staple(U, mu):
     st = g.lattice(U[0])
     st[:] = 0
@@ -45,14 +46,7 @@ class wilson(differentiable_functional):
         # since   P_{mu,nu} = staple_{mu,nu}^dag U_mu + staple_{mu,nu} U_mu^dag = 2 Re[staple^dag * U]
         Nd = len(U)
         vol = U[0].grid.gsites
-        return (
-            self.beta
-            * (1.0 - g.qcd.gauge.plaquette(U))
-            * (Nd - 1)
-            * Nd
-            * vol
-            / 2.0
-        )
+        return self.beta * (1.0 - g.qcd.gauge.plaquette(U)) * (Nd - 1) * Nd * vol / 2.0
 
     def gradient(self, U):
         # Eq. (1.3) and Appendix A of https://link.springer.com/content/pdf/10.1007/JHEP08(2010)071.pdf
