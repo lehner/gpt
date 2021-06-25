@@ -41,7 +41,7 @@ class gradient_descent(base_iterative):
         @self.timed_function
         def opt(x, t):
             for i in range(self.maxiter):
-                d = f.gradient(x)
+                d = f.gradient(x, x)
 
                 c = self.line_search(d, x, d, f.gradient, -self.step)
 

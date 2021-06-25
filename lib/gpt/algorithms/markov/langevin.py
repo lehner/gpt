@@ -26,7 +26,7 @@ class langevin:
         self.eps = params["epsilon"]
 
     def __call__(self, fields, action):
-        gr = action.gradient(fields)
+        gr = action.gradient(fields, fields)
         for d, f in zip(gr, fields):
             f @= g.group.compose(
                 -d * self.eps

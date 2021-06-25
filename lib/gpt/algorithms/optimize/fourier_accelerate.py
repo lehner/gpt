@@ -51,8 +51,13 @@ class inverse_phat_square(differentiable_functional):
         # invert
         self.weight @= g.component.inv(self.weight) * complex(4.0 * len(dimensions))
 
-    def gradient(self, fields):
-        return g(g.inv(self.fft) * self.weight * self.fft * self.base.gradient(fields))
+    def gradient(self, fields, dfields):
+        return g(
+            g.inv(self.fft)
+            * self.weight
+            * self.fft
+            * self.base.gradient(fields, dfields)
+        )
 
     def __call__(self, *a):
         return self.base(*a)

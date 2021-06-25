@@ -56,7 +56,7 @@ class non_linear_cg(base_iterative):
             d_last = None
             s_last = None
             for i in range(self.maxiter):
-                d = f.gradient(x)
+                d = f.gradient(x, x)
 
                 if i == 0:
                     beta = 0

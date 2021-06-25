@@ -20,7 +20,8 @@ import gpt as g
 
 
 def line_search_quadratic(s, x, dv0, df, step):
-    dv1 = df(g(g.group.compose(step * s, x)))
+    xp = g(g.group.compose(step * s, x))
+    dv1 = df(xp, xp)
     # ansatz: f(x) = a + b*(x-c)^2, then solve for c from dv1 and dv0
     sv0 = dv0.otype.inner_product(s, dv0)
     sv1 = dv0.otype.inner_product(s, dv1)

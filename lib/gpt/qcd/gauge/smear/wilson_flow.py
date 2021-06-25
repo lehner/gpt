@@ -22,5 +22,5 @@ import gpt as g
 def wilson_flow(U, epsilon):
     action = g.qcd.gauge.action.wilson(2.0 * U[0].otype.shape[0])
     return g.algorithms.integrator.runge_kutta_4(
-        U, lambda Uprime: [g(-u) for u in action.gradient(Uprime)], epsilon
+        U, lambda Up: [g(-u) for u in action.gradient(Up, Up)], epsilon
     )

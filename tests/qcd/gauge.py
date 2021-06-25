@@ -132,11 +132,11 @@ for f, f_test, tag, expected_improvement in [
 ]:
     V1 = g.copy(V0)
 
-    eps0 = g.norm2(f_test.gradient(V1)) ** 0.5 / f_test(V1)
+    eps0 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
     g.message(f"df/f before {tag} gauge fix: {eps0}")
 
     opt(f)(V1)
 
-    eps1 = g.norm2(f_test.gradient(V1)) ** 0.5 / f_test(V1)
+    eps1 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
     g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")
     assert eps1 / eps0 < expected_improvement

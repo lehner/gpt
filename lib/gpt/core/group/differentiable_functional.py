@@ -30,8 +30,11 @@ class differentiable_functional:
         raise NotImplementedError()
 
     def one_field_gradient(inner):
-        def f(self, fields):
+        # can only differentiate with respect to a single argument, but
+        # handle both list and non-list arguments
+        def f(self, fields, dfields):
             if isinstance(fields, list):
+                assert len(fields) == len(dfields) and fields[0] is dfields[0]
                 return [inner(self, fields[0])]
             else:
                 return inner(self, fields)
@@ -84,7 +87,7 @@ class differentiable_functional:
     def assert_gradient_error(self, rng, fields, epsilon_approx, epsilon_assert):
         fields = g.util.to_list(fields)
         test_weight = rng.normal(g.singlet(fields[0].grid))
-        gr_val = [g.sum(x * test_weight) for x in self.gradient(fields)]
+        gr_val = [g.sum(x * test_weight) for x in self.gradient(fields, fields)]
         gr_app = self.approximate_gradient(fields, test_weight, epsilon=epsilon_approx)
         for mu in range(len(gr_val)):
             a = gr_val[mu]

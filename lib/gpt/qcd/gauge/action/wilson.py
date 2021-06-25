@@ -48,7 +48,7 @@ class wilson(differentiable_functional):
         vol = U[0].grid.gsites
         return self.beta * (1.0 - g.qcd.gauge.plaquette(U)) * (Nd - 1) * Nd * vol / 2.0
 
-    def gradient(self, U):
+    def gradient(self, U, dU):
         # Eq. (1.3) and Appendix A of https://link.springer.com/content/pdf/10.1007/JHEP08(2010)071.pdf
         # S(Umu) = -2/g^2 Re trace(Umu * staple)
         # dS(Umu) = lim_{eps->0} Ta ( S(e^{eps Ta} Umu) - S(Umu) ) / eps  with  \Tr[T_a T_b]=-1/2 \delta_{ab}
@@ -61,7 +61,8 @@ class wilson(differentiable_functional):
         # trace(T_a * r0) = -1/2 c_a
         # dS(Umu) = 1/g^2 tracelss_anti_hermitian(Umu * staple)
         dS = []
-        for mu, Umu in enumerate(U):
+        for Umu in dU:
+            mu = U.index(Umu)
             dSdU_mu = staple(U, mu)
             dSdU_mu @= g.qcd.gauge.project.traceless_anti_hermitian(
                 g(Umu * dSdU_mu)
