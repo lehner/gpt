@@ -65,6 +65,8 @@ def compose(left, right):
 
 
 def inner_product(left, right):
+    if isinstance(left, list):
+        return sum([inner_product(x, y) for x, y in zip(left, right)])
     # inner product over group's real vector space
     left_type = left.otype
     return left_type.inner_product(left, right)

@@ -39,15 +39,20 @@ class gradient_descent(base_iterative):
 
     def __call__(self, f):
         @self.timed_function
-        def opt(x, t):
+        def opt(x, dx, t):
+            x = g.util.to_list(x)
+            dx = g.util.to_list(dx)
             for i in range(self.maxiter):
-                d = f.gradient(x, x)
+                d = f.gradient(x, dx)
 
-                c = self.line_search(d, x, d, f.gradient, -self.step)
+                c = self.line_search(d, x, dx, d, f.gradient, -self.step)
 
-                x @= g.group.compose(-self.step * c * d, x)
+                for nu, x_mu in enumerate(dx):
+                    x_mu @= g.group.compose(-self.step * c * d[nu], x_mu)
 
-                rs = (g.norm2(d) / d.grid.gsites / d.otype.nfloats) ** 0.5
+                rs = (
+                    sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])
+                ) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 

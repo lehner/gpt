@@ -83,8 +83,8 @@ for t in range(Nt_split):
     else:
         Vt_split[t] @= g.identity(Vt_split[t])
 
-    if not cg(fa)(Vt_split[t]):
-        gd(fa)(Vt_split[t])
+    if not cg(fa)(Vt_split[t], Vt_split[t]):
+        gd(fa)(Vt_split[t], Vt_split[t])
 
 g.message("Unsplit")
 
@@ -99,7 +99,7 @@ g.message("Test")
 # test results
 for t in range(Nt):
     f = g.qcd.gauge.fix.landau([Usep[mu][t] for mu in range(3)])
-    dfv = f.gradient(Vt[t])
+    dfv = f.gradient(Vt[t], Vt[t])
     theta = g.norm2(dfv).real / Vt[t].grid.gsites / dfv.otype.Nc
     g.message(f"theta[{t}] = {theta}")
     g.message(f"V[{t}][0,0,0] = ", Vt[t][0, 0, 0])

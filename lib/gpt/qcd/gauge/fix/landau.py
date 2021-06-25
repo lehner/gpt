@@ -31,7 +31,7 @@ class landau(differentiable_functional):
             [g.sum(g.trace(u)) for u in g.qcd.gauge.transformed(self.U, V)]
         ).real * (-2.0)
 
-    @differentiable_functional.one_field_gradient
+    @differentiable_functional.single_field_gradient
     def gradient(self, V):
         A = [
             g(g.qcd.gauge.project.traceless_anti_hermitian(u) / 1j)

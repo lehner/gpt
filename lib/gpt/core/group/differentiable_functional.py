@@ -26,10 +26,10 @@ class differentiable_functional:
     def __call__(self, fields):
         raise NotImplementedError()
 
-    def gradient(self, fields):
+    def gradient(self, fields, dfields):
         raise NotImplementedError()
 
-    def one_field_gradient(inner):
+    def single_field_gradient(inner):
         # can only differentiate with respect to a single argument, but
         # handle both list and non-list arguments
         def f(self, fields, dfields):
@@ -41,13 +41,24 @@ class differentiable_functional:
 
         return f
 
-    def approximate_gradient(self, fields, site_weight, epsilon=1e-5):
+    def multi_field_gradient(inner):
+        def f(self, fields, dfields):
+            return_list = isinstance(dfields, list)
+            r = inner(self, g.util.to_list(fields), g.util.to_list(dfields))
+            if not return_list:
+                return r[0]
+            return r
+
+        return f
+
+    def approximate_gradient(self, fields, dfields, site_weight, epsilon=1e-5):
         return_list = isinstance(fields, list)
-        fields = g.util.to_list(fields)
+        fields, dfields = g.util.to_list(fields), g.util.to_list(dfields)
 
         a = []
 
-        for mu, x in enumerate(fields):
+        for x in dfields:
+            mu = fields.index(x)
 
             # vary argument mu
             L = fields[0:mu]
@@ -84,11 +95,15 @@ class differentiable_functional:
 
         return a
 
-    def assert_gradient_error(self, rng, fields, epsilon_approx, epsilon_assert):
-        fields = g.util.to_list(fields)
+    def assert_gradient_error(
+        self, rng, fields, dfields, epsilon_approx, epsilon_assert
+    ):
+        fields, dfields = g.util.to_list(fields), g.util.to_list(dfields)
         test_weight = rng.normal(g.singlet(fields[0].grid))
-        gr_val = [g.sum(x * test_weight) for x in self.gradient(fields, fields)]
-        gr_app = self.approximate_gradient(fields, test_weight, epsilon=epsilon_approx)
+        gr_val = [g.sum(x * test_weight) for x in self.gradient(fields, dfields)]
+        gr_app = self.approximate_gradient(
+            fields, dfields, test_weight, epsilon=epsilon_approx
+        )
         for mu in range(len(gr_val)):
             a = gr_val[mu]
             b = gr_app[mu]

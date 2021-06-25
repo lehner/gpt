@@ -63,7 +63,7 @@ for mu in range(len(C)):
 
 # Test gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43)]:
-    action.assert_gradient_error(rng, U, 1e-5, 1e-7)
+    action.assert_gradient_error(rng, U, U, 1e-5, 1e-7)
 
 # Test wilson flow and energy density
 U_wf = g.qcd.gauge.smear.wilson_flow(U, epsilon=0.1)
@@ -123,7 +123,7 @@ l = g.qcd.gauge.fix.landau(U)
 fal = g.algorithms.optimize.fourier_accelerate.inverse_phat_square(V0.grid, l)
 
 # test functionals
-l.assert_gradient_error(rng, V0, 1e-5, 1e-7)
+l.assert_gradient_error(rng, V0, V0, 1e-5, 1e-7)
 
 # test gauge fixing
 for f, f_test, tag, expected_improvement in [
@@ -135,7 +135,7 @@ for f, f_test, tag, expected_improvement in [
     eps0 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
     g.message(f"df/f before {tag} gauge fix: {eps0}")
 
-    opt(f)(V1)
+    opt(f)([V1], [V1])
 
     eps1 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
     g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")

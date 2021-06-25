@@ -19,12 +19,21 @@
 import gpt as g
 
 
-def line_search_quadratic(s, x, dv0, df, step):
-    xp = g(g.group.compose(step * s, x))
-    dv1 = df(xp, xp)
+def line_search_quadratic(s, x, dx, dv0, df, step):
+    x = g.util.to_list(x)
+    xp = g.copy(x)
+    dxp = []
+    for dx_mu, s_mu in g.util.to_list(dx, s):
+        mu = x.index(dx_mu)
+        xp[mu] @= g(g.group.compose(step * s_mu, xp[mu]))
+        dxp.append(xp[mu])
+
+    dv1 = df(xp, dxp)
+    assert isinstance(dv1, list)
+
     # ansatz: f(x) = a + b*(x-c)^2, then solve for c from dv1 and dv0
-    sv0 = dv0.otype.inner_product(s, dv0)
-    sv1 = dv0.otype.inner_product(s, dv1)
+    sv0 = g.group.inner_product(s, dv0)
+    sv1 = g.group.inner_product(s, dv1)
     r = sv0 / sv1
     if abs(r - 1.0) < 1e-15:
         return 1.0
@@ -32,5 +41,5 @@ def line_search_quadratic(s, x, dv0, df, step):
     return c
 
 
-def line_search_none(s, x, dv0, df, step):
+def line_search_none(s, x, dx, dv0, df, step):
     return 1.0

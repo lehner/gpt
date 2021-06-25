@@ -22,7 +22,9 @@ from gpt.algorithms.optimize import line_search_quadratic
 
 
 def fletcher_reeves(d, d_last):
-    return g.group.inner_product(d, d) / g.group.inner_product(d_last, d_last)
+    ip_dd = g.group.inner_product(d, d)
+    ip_ll = g.group.inner_product(d_last, d_last)
+    return ip_dd / ip_ll
 
 
 def polak_ribiere(d, d_last):
@@ -52,24 +54,31 @@ class non_linear_cg(base_iterative):
 
     def __call__(self, f):
         @self.timed_function
-        def opt(x, t):
+        def opt(x, dx, t):
+            x = g.util.to_list(x)
+            dx = g.util.to_list(dx)
             d_last = None
             s_last = None
             for i in range(self.maxiter):
-                d = f.gradient(x, x)
+                d = f.gradient(x, dx)
+                assert isinstance(d, list)
 
                 if i == 0:
                     beta = 0
                     s = d
                 else:
                     beta = self.beta(d, d_last)
-                    s = g(d + beta * s_last)
+                    for nu in range(len(s)):
+                        s[nu] = g(d[nu] + beta * s_last[nu])
 
-                c = self.line_search(s, x, d, f.gradient, -self.step)
+                c = self.line_search(s, x, dx, d, f.gradient, -self.step)
 
-                x @= g.group.compose(-self.step * c * s, x)
+                for nu, x_mu in enumerate(dx):
+                    x_mu @= g.group.compose(-self.step * c * s[nu], x_mu)
 
-                rs = (g.norm2(d) / d.grid.gsites / d.otype.nfloats) ** 0.5
+                rs = (
+                    sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])
+                ) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 
