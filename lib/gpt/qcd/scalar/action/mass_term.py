@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                        Mattia Bruno
+#                  2020  Mattia Bruno
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,7 +17,23 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.qcd.gauge
-import gpt.qcd.fermion
-import gpt.qcd.scalar
-from gpt.qcd.utils import ferm_to_prop, prop_to_ferm
+import gpt as g
+from gpt.core.group import differentiable_functional
+
+class mass_term(differentiable_functional):
+    def __init__(self, m = 1.0):
+        self.m = m * 0.5
+        
+    def __call__(self, pi):
+        act = 0.0
+        for p in g.core.util.to_list(pi):
+            act += g.norm2(p)
+        return act * self.m
+    
+    @differentiable_functional.multi_field_gradient
+    def gradient(self, pi, dpi):
+        dS = []
+        for _pi in dpi:
+            i = pi.index(_pi)
+            dS.append(g(self.m * (pi[i] + g.adj(pi[i]))))
+        return dS
