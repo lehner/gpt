@@ -19,9 +19,7 @@
 #
 import gpt as g
 from gpt.core.group import differentiable_functional
-
-def kappa2mass(k,l,D):
-    return numpy.sqrt((1 - 2.0 * l)/k - 2.*D)
+import numpy
 
 # -2 * kappa * sum_x,mu phi(x)^dag * phi(x+mu) + \sum_x |phi(x)|^2 + lambda * sum_x (|phi(x)|^2-1)^2
 # sum_x (|phi(x)|^2-1)^2 = sum_x |phi(x)|^4 - 2 sum_x |phi(x)|^2 + vol
@@ -30,7 +28,10 @@ class phi4(differentiable_functional):
         self.l = l
         self.kappa = k
         self.__name__ = f"phi4({self.kappa},{self.l})"
-            
+
+    def kappa2mass(self,k,l,D):
+        return numpy.sqrt((1 - 2.0 * l)/k - 2.*D)
+
     def __call__(self, phi):
         J = None
         act = 0.0
