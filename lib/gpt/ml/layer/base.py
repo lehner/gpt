@@ -16,40 +16,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core import *
-from gpt.params import params, params_convention
-from gpt.repository import repository
-import gpt.default
-import gpt.create
-import gpt.algorithms
-import gpt.qcd
-import gpt.qis
-import gpt.ml
-import socket
-import cgpt
-import sys
-import types
-
-"""
-GPT -- Grid Python Toolkit
-"""
-
-# initialize cgpt when gpt is loaded
-cgpt.init(sys.argv)
-
-# save my hostname
-hostname = socket.gethostname()
-
-# process flags
-gpt.default.process_flags()
-
-# synonyms
-eval = expr_eval
-
-# make module callable
-class GPTModule(types.ModuleType):
-    def __call__(self, *args):
-        return expr_eval(*args)
+import gpt as g
 
 
-sys.modules[__name__].__class__ = GPTModule
+class base:
+    def __init__(self, grid, n_weights):
+        self.n_weights = n_weights
+        self.grid = grid
+
+    def weights(self):
+        return [g.complex(self.grid) for i in range(self.n_weights)]
