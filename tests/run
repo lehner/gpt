@@ -50,6 +50,7 @@ for f in \
     ${test_path}/algorithms/arnoldi.py \
     ${test_path}/algorithms/solvers.py \
     ${test_path}/algorithms/integrators.py \
+    ${test_path}/algorithms/symplectic.py \
     ${test_path}/algorithms/optimize.py \
     ${test_path}/algorithms/polynomials.py \
     ${test_path}/algorithms/multi_grid.py \
