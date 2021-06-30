@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                        Mattia Bruno
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,3 +21,4 @@ from gpt.algorithms.markov.su2_heat_bath import su2_heat_bath
 from gpt.algorithms.markov.u1_heat_bath import u1_heat_bath
 from gpt.algorithms.markov.local_metropolis import local_metropolis
 from gpt.algorithms.markov.langevin import langevin
+from gpt.algorithms.markov.metropolis import metropolis

@@ -19,6 +19,12 @@
 import gpt as g
 
 
+def cartesian(field):
+    if isinstance(field, list):
+        return [g.lattice(f.grid, f.otype.cartesian()) for f in field]
+    return g.lattice(field.grid, field.otype.cartesian())
+
+
 def projected_convert(x, otype):
     return g.project(g.convert(x, otype), "defect")
 

@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Mattia Bruno
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,5 +17,24 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core.group.operation import cartesian, inner_product, compose, projected_convert
-from gpt.core.group.differentiable_functional import differentiable_functional
+import gpt as g
+from gpt.core.group import differentiable_functional
+
+class mass_term(differentiable_functional):
+    def __init__(self, m = 1.0):
+        self.m = m
+        self.__name__ = f"mass_term({m})"
+        
+    def __call__(self, pi):
+        act = 0.0
+        for p in g.core.util.to_list(pi):
+            act += g.norm2(p)
+        return act * self.m * 0.5
+    
+    @differentiable_functional.multi_field_gradient
+    def gradient(self, pi, dpi):
+        dS = []
+        for _pi in dpi:
+            i = pi.index(_pi)
+            dS.append(g(self.m * pi[i]))
+        return dS
