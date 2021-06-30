@@ -44,7 +44,7 @@ for k in range(M):
 qref = g.lattice(q)
 qref @= q
 
-integrator = [sympl.leap_frog, sympl.OMF2, sympl.OMF4]
+integrator = [sympl.LPFR, sympl.OMF2, sympl.OMF4]
 criterion = [1e-5, 1e-8, 1e-12]
 
 for i in range(3):

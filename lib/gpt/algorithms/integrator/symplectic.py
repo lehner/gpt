@@ -31,7 +31,6 @@ def update_q(dst, frc):
 
 def update(dst, frc, sign):
     dst = gpt.core.util.to_list(dst)
-    # src = gpt.core.util.to_list(src)
     force = frc
 
     def micro(eps):
@@ -92,7 +91,7 @@ class integrator_base:
             gpt.message(f"{self.__name__} Integrator ran in {time.dt['total']:g} secs")
 
 
-class leap_frog(integrator_base):
+class LPFR(integrator_base):
     def __init__(self, N, i0, i1):
         super().__init__(N, i0, i1, [0.5, 1.0, 0.5], "leap_frog")
 
@@ -103,7 +102,10 @@ class OMF2(integrator_base):
         super().__init__(N, i0, i1, [r0, 0.5, (1 - 2 * r0), 0.5, r0], "omf2")
 
 
-# add references + possibly define r from sqrt etc..
+# Omelyan, Mryglod, Folk, 4th order integrator
+#   ''Symplectic analytically integrable decomposition algorithms ...''
+#   https://doi.org/10.1016/S0010-4655(02)00754-3
+#      values of r's can be found @ page 292, sec 3.5.1, Variant 8
 class OMF4(integrator_base):
     def __init__(self, N, i0, i1):
         r = [
