@@ -28,16 +28,18 @@ def h(x):
 
 metro = g.algorithms.markov.metropolis(rng, lambda e: w(e, x, dx), h, x)
 
+
 def measure(x):
     return [g.sum(x).real / grid.fsites, g.norm2(x) / grid.fsites]
+
 
 for i in range(10):
     accept, dS = metro(0.08)
     res = measure(x)
 
 res_ref = [0.0011463214177638292, 0.004613301864105977]
-for a, b in zip(res,res_ref):
-    eps = abs(a-b) / abs(a)
+for a, b in zip(res, res_ref):
+    eps = abs(a - b) / abs(a)
     g.message(f"Check: {eps}")
     assert eps < 1e-8
 
@@ -70,4 +72,3 @@ for a, b in zip(res,res_ref):
 # g.message(f"<x^2> = {numpy.mean(data[:,1]):6f}, theory = {0.5}")
 #
 # assert abs(numpy.mean(data[:, 1]) - 0.5) < 1e-4
-
