@@ -32,8 +32,8 @@ tau = 1.0
 # integrators
 sympl = g.algorithms.integrator.symplectic
 
-ip = sympl.update_p(p, lambda : a1.gradient(q,q))
-iq = sympl.update_q(q, lambda : a0.gradient(p,p))
+ip = sympl.update_p(p, lambda: a1.gradient(q, q))
+iq = sympl.update_q(q, lambda: a0.gradient(p, p))
 
 # ref solution obtained with Euler scheme
 M = 1000
@@ -51,10 +51,10 @@ for i in range(3):
     # initial config
     q[:] = 0
     p @= p0
-    
+
     # solve
     integrator[i](10, ip, iq)(tau)
-    
+
     eps = g.norm2(q - qref)
-    print(f'{integrator[i].__name__ : <10}: |q - qref|^2 = {eps:.4e}')
+    print(f"{integrator[i].__name__ : <10}: |q - qref|^2 = {eps:.4e}")
     assert eps < criterion[i]

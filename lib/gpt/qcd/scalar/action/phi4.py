@@ -29,8 +29,8 @@ class phi4(differentiable_functional):
         self.kappa = k
         self.__name__ = f"phi4({self.kappa},{self.l})"
 
-    def kappa_to_mass(self,k,l,D):
-        return numpy.sqrt((1 - 2.0 * l)/k - 2.*D)
+    def kappa_to_mass(self, k, l, D):
+        return numpy.sqrt((1 - 2.0 * l) / k - 2.0 * D)
 
     def __call__(self, phi):
         J = None
@@ -38,7 +38,7 @@ class phi4(differentiable_functional):
         for p in g.core.util.to_list(phi):
             if J is None:
                 J = g.lattice(p)
-            
+
             J[:] = 0
             for mu in range(p.grid.nd):
                 J += g.cshift(p, mu, 1)
@@ -46,8 +46,8 @@ class phi4(differentiable_functional):
 
             p2 = g.norm2(p)
             act += p2
-        
-            if (self.l != 0.0):
+
+            if self.l != 0.0:
                 p4 = g.norm2(p * g.adj(p))
                 act += self.l * (p4 - 2.0 * p2 + p.grid.fsites)
 
@@ -68,5 +68,5 @@ class phi4(differentiable_functional):
         if self.l != 0.0:
             frc += 4.0 * self.l * phi * g.adj(phi) * phi
             frc -= 4.0 * self.l * phi
-            
+
         return frc

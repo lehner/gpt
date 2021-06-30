@@ -14,8 +14,7 @@ rng = g.random("scalar!")
 phi = g.real(grid)
 rng.element(phi)
 
-actions = [g.qcd.scalar.action.mass_term(), 
-           g.qcd.scalar.action.phi4(0.119, 0.01)]
+actions = [g.qcd.scalar.action.mass_term(), g.qcd.scalar.action.phi4(0.119, 0.01)]
 
 for a in actions:
     g.message(a.__name__)

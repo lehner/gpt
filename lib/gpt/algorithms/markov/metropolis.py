@@ -22,7 +22,7 @@ import numpy
 
 
 def copy(dst, src):
-    if isinstance(src,list):
+    if isinstance(src, list):
         for i in range(len(src)):
             dst[i] @= src[i]
     else:
@@ -30,7 +30,8 @@ def copy(dst, src):
 
 
 def boltzman_factor(h1, h0):
-    return numpy.exp(-h1+h0)
+    return numpy.exp(-h1 + h0)
+
 
 # Given the probability density P(f(x)), the metropolis algorithm:
 # - computes the initial probability P0 = P(f(x0))
@@ -45,17 +46,17 @@ def boltzman_factor(h1, h0):
 # - prob_ratio: the method to compute the ratio P(f(x1))/P(f(x0)), which implicitly defines P,
 #               e.g. boltzman_factor: P(f(x1))/P(f(x0)) = exp(-f(x1) + f(x0))
 class metropolis:
-    def __init__(self, rng, w, f, fields, prob_ratio = boltzman_factor):
+    def __init__(self, rng, w, f, fields, prob_ratio=boltzman_factor):
         self.rng = rng
         self.proposal = w
         self.f = f
         self.fields = gpt.core.util.to_list(fields)
         self.prob_ratio = prob_ratio
-        
+
         self.grid = None
         self.copies = []
         for f in self.fields:
-            if isinstance(f,list):
+            if isinstance(f, list):
                 tmp = []
                 for ff in f:
                     tmp.append(gpt.lattice(ff))
@@ -66,21 +67,21 @@ class metropolis:
                 if self.grid is None:
                     self.grid = f.grid
             self.copies.append(tmp)
-            
+
     def start(self):
         for i in range(len(self.fields)):
             copy(self.copies[i], self.fields[i])
         return self.f(*self.fields)
-    
+
     def restore(self):
         for i in range(len(self.fields)):
             copy(self.fields[i], self.copies[i])
-        
+
     def __call__(self, *vargs):
         f0 = self.start()
         self.proposal(*vargs)
         f1 = self.f(*self.fields)
-        
+
         # decision taken on master node, but for completeness all nodes throw one random number
         rr = self.rng.uniform_real(None, {"min": 0, "max": 1})
         accept = 0
@@ -93,4 +94,4 @@ class metropolis:
         if accept == 0:
             self.restore()
 
-        return [accept, f1-f0]
+        return [accept, f1 - f0]

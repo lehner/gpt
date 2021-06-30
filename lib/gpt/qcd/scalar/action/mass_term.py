@@ -20,17 +20,18 @@
 import gpt as g
 from gpt.core.group import differentiable_functional
 
+
 class mass_term(differentiable_functional):
-    def __init__(self, m = 1.0):
+    def __init__(self, m=1.0):
         self.m = m
         self.__name__ = f"mass_term({m})"
-        
+
     def __call__(self, pi):
         act = 0.0
         for p in g.core.util.to_list(pi):
             act += g.norm2(p)
         return act * self.m * 0.5
-    
+
     @differentiable_functional.multi_field_gradient
     def gradient(self, pi, dpi):
         dS = []
