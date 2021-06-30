@@ -29,7 +29,7 @@ class phi4(differentiable_functional):
         self.kappa = k
         self.__name__ = f"phi4({self.kappa},{self.l})"
 
-    def kappa2mass(self,k,l,D):
+    def kappa_to_mass(self,k,l,D):
         return numpy.sqrt((1 - 2.0 * l)/k - 2.*D)
 
     def __call__(self, phi):

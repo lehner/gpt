@@ -12,21 +12,23 @@ grid = g.grid([16, 16, 16, 16], g.double)
 rng = g.random("hmc-phi4")
 
 phi = g.real(grid)
-rng.element(phi, sigma=0.2)
+rng.element(phi, scale=0.2)
 
 # conjugate momenta
 mom = g.group.cartesian(phi)
 
 # action for conj. momenta
+g.message(f'Lattice = {grid.fdimensions}')
+g.message('Actions:')
 a0 = g.qcd.scalar.action.mass_term()
-g.message(a0.__name__)
+g.message(f' - {a0.__name__}')
 
 # phi^4 action
 kappa = 0.1119
 l = 0.01234
 a1 = g.qcd.scalar.action.phi4(kappa, l)
-g.message(a1.__name__)
-g.message(f'phi4 mass = {a1.kappa2mass(kappa, l, grid.nd)}')
+g.message(f' - {a1.__name__}')
+g.message(f'phi4 mass = {a1.kappa_to_mass(kappa, l, grid.nd)}')
 
 # hamiltonian
 h = lambda mom, phi: a0(mom) + a1(phi)
@@ -39,12 +41,14 @@ iq = sympl.update_q(phi, lambda : a0.gradient(mom,mom))
 
 # integrator
 mdint = sympl.OMF2(3, ip, iq)
+g.message(f'Integration scheme:\n{mdint}')
 
 # metropolis
 metro = g.algorithms.markov.metropolis(rng, mdint, h, [mom, phi])
 
 # MD units
 tau = 2.0
+g.message(f'tau = {tau} MD units')
 
 def hmc(tau, mom):
     rng.element(mom)
