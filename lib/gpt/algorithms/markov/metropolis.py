@@ -21,14 +21,6 @@ import gpt
 import numpy
 
 
-def copy(dst, src):
-    if isinstance(src, list):
-        for i in range(len(src)):
-            dst[i] @= src[i]
-    else:
-        dst @= src
-
-
 def boltzman_factor(h1, h0):
     return numpy.exp(-h1 + h0)
 
@@ -52,46 +44,27 @@ class metropolis:
         self.f = f
         self.fields = gpt.core.util.to_list(fields)
         self.prob_ratio = prob_ratio
-
-        self.grid = None
-        self.copies = []
-        for f in self.fields:
-            if isinstance(f, list):
-                tmp = []
-                for ff in f:
-                    tmp.append(gpt.lattice(ff))
-                    if self.grid is None:
-                        self.grid = ff.grid
-            else:
-                tmp = gpt.lattice(f)
-                if self.grid is None:
-                    self.grid = f.grid
-            self.copies.append(tmp)
-
-    def start(self):
-        for i in range(len(self.fields)):
-            copy(self.copies[i], self.fields[i])
-        return self.f(*self.fields)
-
-    def restore(self):
-        for i in range(len(self.fields)):
-            copy(self.fields[i], self.copies[i])
+        tmp = self.fields[0]
+        while isinstance(tmp, list):
+            tmp = tmp[0]
+        self.grid = tmp.grid
 
     def __call__(self, *vargs):
-        f0 = self.start()
+        previous_fields = gpt.copy(self.fields)
+        f0 = self.f(*self.fields)
         self.proposal(*vargs)
         f1 = self.f(*self.fields)
 
-        # decision taken on master node, but for completeness all nodes throw one random number
-        rr = self.rng.uniform_real(None, {"min": 0, "max": 1})
-        accept = 0
-        if gpt.rank() == 0:
-            if self.prob_ratio(f1, f0) >= rr:
-                accept = 1
-        gpt.barrier()
-        accept = self.grid.globalsum(accept)
-
+        # decision taken on master node
+        accept = (
+            1
+            if self.prob_ratio(f1, f0)
+            >= self.grid.globalsum(
+                self.rng.uniform_real(min=0, max=1) if self.grid.processor == 0 else 0.0
+            )
+            else 0
+        )
         if accept == 0:
-            self.restore()
+            gpt.copy(self.fields, previous_fields)
 
         return [accept, f1 - f0]
