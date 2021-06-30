@@ -32,18 +32,18 @@ def boltzman_factor(h1, h0):
 # - performs the accept/reject step, ie accepts with probability = min{1, P(f(x1))/P(f(x0))}
 # The class below accepts the following arguments:
 # - rng: random number generator
-# - w: proposal, a callable function
+# - proposal: a callable function
 # - f: the function, argument of the probability density
-# - fields: a list of fields
-# - prob_ratio: the method to compute the ratio P(f(x1))/P(f(x0)), which implicitly defines P,
+# - fields: the list of dynamical fields
+# - probability_ratio: the method to compute the ratio P(f(x1))/P(f(x0)), which implicitly defines P,
 #               e.g. boltzman_factor: P(f(x1))/P(f(x0)) = exp(-f(x1) + f(x0))
 class metropolis:
-    def __init__(self, rng, w, f, fields, prob_ratio=boltzman_factor):
+    def __init__(self, rng, proposal, f, fields, probability_ratio=boltzman_factor):
         self.rng = rng
-        self.proposal = w
+        self.proposal = proposal
         self.f = f
         self.fields = gpt.core.util.to_list(fields)
-        self.prob_ratio = prob_ratio
+        self.probability_ratio = probability_ratio
         tmp = self.fields[0]
         while isinstance(tmp, list):
             tmp = tmp[0]
@@ -51,14 +51,14 @@ class metropolis:
 
     def __call__(self, *vargs):
         previous_fields = gpt.copy(self.fields)
-        f0 = self.f(*self.fields)
+        f0 = self.f()
         self.proposal(*vargs)
-        f1 = self.f(*self.fields)
+        f1 = self.f()
 
         # decision taken on master node
         rr = self.rng.uniform_real(min=0, max=1)
         rr = self.grid.globalsum(rr if self.grid.processor == 0 else 0.0)
-        if self.prob_ratio(f1, f0) >= rr:
+        if self.probability_ratio(f1, f0) >= rr:
             accept = 1
         else:
             accept = 0
