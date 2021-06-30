@@ -57,13 +57,11 @@ class metropolis:
 
         # decision taken on master node
         rr = self.rng.uniform_real(min=0, max=1)
-        accept = (
-            1
-            if self.prob_ratio(f1, f0)
-            >= self.grid.globalsum(rr if self.grid.processor == 0 else 0.0)
-            else 0
-        )
-        if accept == 0:
+        rr = self.grid.globalsum(rr if self.grid.processor == 0 else 0.0)
+        if self.prob_ratio(f1, f0) >= rr:
+            accept = 1
+        else:
+            accept = 0
             gpt.copy(self.fields, previous_fields)
 
         return [accept, f1 - f0]
