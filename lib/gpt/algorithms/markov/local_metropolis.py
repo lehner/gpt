@@ -44,7 +44,7 @@ class local_metropolis:
         t = g.timer("local_metropolis")
 
         t("action")
-        action = g.component.real(g.eval(-g.trace(link * g.adj(staple)) * mask))
+        action = g.component.real(-g.trace(link * g.adj(staple)) * mask)
 
         t("lattice")
         V = g.lattice(link)
@@ -57,11 +57,9 @@ class local_metropolis:
         V = g.where(mask, V, V_eye)
 
         link_prime = g.eval(V * link)
-        action_prime = g.component.real(
-            g.eval(-g.trace(link_prime * g.adj(staple)) * mask)
-        )
+        action_prime = g.component.real(-g.trace(link_prime * g.adj(staple)) * mask)
 
-        dp = g.component.exp(g.eval(action - action_prime))
+        dp = g.component.exp(action - action_prime)
 
         rn = g.lattice(dp)
 

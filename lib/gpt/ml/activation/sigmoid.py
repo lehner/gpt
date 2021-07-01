@@ -25,9 +25,8 @@ class sigmoid:
         self.ones[:] = 1
 
     def __call__(self, x):
-        x = g(x)
-        return g.component.inv(g(self.ones + g.component.exp(g(-x))))
+        return g.component.inv(self.ones + g.component.exp(-x))
 
     def gradient(self, x):
-        e = g.component.exp(g(x))
-        return g(e * g.component.pow(-2)(g(self.ones + e)))
+        e = g.component.exp(x)
+        return g(e * g.component.pow(-2)(self.ones + e))
