@@ -61,7 +61,7 @@ class integrator_base:
 
         self.__name__ = f"{name}({N})"
 
-    def string_repr(self, lvl):
+    def string_representation(self, lvl):
         out = f" - Level {lvl} = {self.__name__}"
         for i in self.i1:
             if isinstance(i, integrator_base):
@@ -69,7 +69,7 @@ class integrator_base:
         return out
 
     def __str__(self):
-        return self.string_repr(0)
+        return self.string_representation(0)
 
     def __call__(self, tau):
         eps = tau / self.N
@@ -91,9 +91,9 @@ class integrator_base:
             gpt.message(f"{self.__name__} Integrator ran in {time.dt['total']:g} secs")
 
 
-class LPFR(integrator_base):
+class leap_frog(integrator_base):
     def __init__(self, N, i0, i1):
-        super().__init__(N, i0, i1, [0.5, 1.0, 0.5], "lpfr")
+        super().__init__(N, i0, i1, [0.5, 1.0, 0.5], "leap_frog")
 
 
 class OMF2(integrator_base):
