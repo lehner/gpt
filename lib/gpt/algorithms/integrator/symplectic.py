@@ -93,7 +93,7 @@ class integrator_base:
 
 class LPFR(integrator_base):
     def __init__(self, N, i0, i1):
-        super().__init__(N, i0, i1, [0.5, 1.0, 0.5], "leap_frog")
+        super().__init__(N, i0, i1, [0.5, 1.0, 0.5], "lpfr")
 
 
 class OMF2(integrator_base):
