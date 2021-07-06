@@ -8,6 +8,8 @@ import gpt as g
 import sys, os
 import numpy
 
+beta = g.default.get_float("--beta",5.96)
+
 g.default.set_verbose("omf4")
 
 grid = g.grid([8, 8, 8, 16], g.double)
@@ -27,7 +29,7 @@ a0 = g.qcd.scalar.action.mass_term()
 g.message(f" - {a0.__name__}")
 
 # wilson action
-a1 = g.qcd.gauge.action.wilson(5.96)
+a1 = g.qcd.gauge.action.wilson(beta)
 g.message(f" - {a1.__name__}")
 
 # molecular dynamics

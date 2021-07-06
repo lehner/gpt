@@ -27,10 +27,7 @@ class mass_term(differentiable_functional):
         self.__name__ = f"mass_term({m})"
 
     def __call__(self, pi):
-        act = 0.0
-        for p in g.core.util.to_list(pi):
-            act += g.group.inner_product(p, p)
-        return act * self.m * 0.5
+        return g.group.inner_product(pi, pi) * self.m * 0.5
 
     @differentiable_functional.multi_field_gradient
     def gradient(self, pi, dpi):
