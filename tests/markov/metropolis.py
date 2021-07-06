@@ -21,9 +21,10 @@ def w(eps, x, dx):
     rng.element(dx)
     x @= x + eps * dx
 
-h = lambda : g.norm2(x)
 
-metro = g.algorithms.markov.metropolis(rng, lambda e: w(e, x, dx), h, x)
+metro = g.algorithms.markov.metropolis(
+    rng, lambda e: w(e, x, dx), lambda: g.norm2(x), x
+)
 
 
 def measure(x):
