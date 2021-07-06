@@ -30,6 +30,6 @@ class langevin:
         for d, f in zip(gr, fields):
             f @= g.group.compose(
                 -d * self.eps
-                + self.rng.element(g.lattice(d), normal=True) * (self.eps * 2.0) ** 0.5,
+                + self.rng.normal_element(g.lattice(d)) * (self.eps * 2.0) ** 0.5,
                 f,
             )

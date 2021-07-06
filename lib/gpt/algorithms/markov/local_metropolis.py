@@ -51,7 +51,7 @@ class local_metropolis:
         V_eye = g.identity(link)
 
         t("random")
-        self.rng.element(V, scale=step_size, normal=True)
+        self.rng.normal_element(V, scale=step_size)
 
         t("update")
         V = g.where(mask, V, V_eye)

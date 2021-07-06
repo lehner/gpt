@@ -49,7 +49,7 @@ g.message(f"tau = {tau} MD units")
 
 
 def hmc(tau, mom):
-    rng.element(mom, normal=True)
+    rng.normal_element(mom)
     return metro(tau)
 
 

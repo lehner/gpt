@@ -14,7 +14,7 @@ grid = g.grid([8, 8, 8, 16], g.double)
 rng = g.random("hmc-pure-gauge")
 
 U = g.qcd.gauge.unit(grid)
-rng.element(U, scale=1.0, normal=True)
+rng.normal_element(U)
 
 # conjugate momenta
 mom = g.group.cartesian(U)
@@ -49,7 +49,7 @@ g.message(f"tau = {tau} MD units")
 
 
 def hmc(tau, mom):
-    rng.element(mom, normal=True)
+    rng.normal_element(mom)
     return metro(tau)
 
 

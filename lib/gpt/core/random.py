@@ -105,6 +105,10 @@ class random:
     def zn(self, t=None, p={}):
         return self.sample(t, {**{"distribution": "zn"}, **p})
 
+    @params_convention(scale=1.0):
+    def normal_element(self, out, p={}):
+        return self.element(out, p, normal=True)
+    
     @params_convention(scale=1.0, normal=False)
     def element(self, out, p={}):
 
