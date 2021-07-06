@@ -45,7 +45,7 @@ for mpi_layout in [[1, 1, 1, 1, 1], [1, 2, 2, 2, 2]]:
     )
 
     # and load again to verify
-    basis2, cevec2, feval2 = g.load(f"{work_dir}/cevec", {"grids": fgrid})
+    basis2, cevec2, feval2 = g.load(f"{work_dir}/cevec", grids=fgrid)
 
     assert len(basis) == len(basis2)
     assert len(cevec) == len(cevec2)
@@ -76,9 +76,7 @@ for mpi_layout in [[1, 1, 1, 1, 1], [1, 2, 2, 2, 2]]:
 
 """
         )
-        basis2, cevec2, feval2 = g.load(
-            f"{work_dir}/cevec", {"grids": fgrid, "nmax": ntrunc}
-        )
+        basis2, cevec2, feval2 = g.load(f"{work_dir}/cevec", grids=fgrid, nmax=ntrunc)
 
         assert min([len(basis), ntrunc]) == len(basis2)
         assert min([len(cevec), ntrunc]) == len(cevec2)

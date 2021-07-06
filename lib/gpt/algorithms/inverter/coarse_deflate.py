@@ -27,7 +27,14 @@ class coarse_deflate:
         self.mat = g.block.map(
             cevec[0].grid, basis, basis_n_block=params["fine_block"]
         ).fine_operator(
-            g.algorithms.modes.matrix(cevec, cevec, fev, lambda x: 1.0 / x, params)
+            g.algorithms.modes.matrix(
+                cevec,
+                cevec,
+                fev,
+                lambda x: 1.0 / x,
+                block=params["block"],
+                linear_combination_block=params["linear_combination_block"],
+            )
         )
 
     def __call__(self, matrix):

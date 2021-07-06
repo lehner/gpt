@@ -37,11 +37,12 @@ def get_local_name(root, cv):
 
 # gpt io class
 class gpt_io:
-    @params_convention()
+    @params_convention(mpi=None, grids=None, paths=None)
     def __init__(self, root, write, params):
         self.root = root
         self.params = params
-        self.params["grids"] = {}
+        if self.params["grids"] is None:
+            self.params["grids"] = {}
         self.verbose = gpt.default.is_verbose("io")
 
         if gpt.rank() == 0:
@@ -140,7 +141,7 @@ class gpt_io:
         nd = len(g.fdimensions)
 
         # create cartesian view for writing
-        if "mpi" in self.params:
+        if self.params["mpi"] is not None:
             mpi = self.params["mpi"]
         else:
             mpi = g.mpi
@@ -373,7 +374,7 @@ class gpt_io:
             assert 0
 
     def keep_context(self, ctx):
-        if "paths" not in self.params:
+        if self.params["paths"] is None:
             return True
         paths = self.params["paths"]
         if type(paths) == str:

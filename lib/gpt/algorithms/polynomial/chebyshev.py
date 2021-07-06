@@ -66,7 +66,7 @@ class chebyshev:
 
     """
 
-    @g.params_convention()
+    @g.params_convention(low=None, high=None, order=None, func=None)
     def __init__(self, params):
         self.params = params
         self.hi = params["high"]
@@ -75,7 +75,7 @@ class chebyshev:
         self.order = [y + 1 for y in make_list(params["order"])]
         self.morder = max(self.order)
         self.n = len(self.order)
-        if "func" in params:
+        if params["func"] is not None:
             self.func = make_list(params["func"])
             assert self.n == len(self.func)
             self.coeffs = coeffs_func(self.lo, self.hi, self.order, self.func)

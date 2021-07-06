@@ -18,7 +18,7 @@ dx = g.lattice(x)
 
 
 def w(eps, x, dx):
-    rng.element(dx)
+    rng.uniform_element(dx)
     x @= x + eps * dx
 
 

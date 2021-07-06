@@ -31,17 +31,24 @@ import copy
 # instantiate fermion operators
 
 
-@gpt.params_convention()
+@gpt.params_convention(
+    kappa=None,
+    mass=None,
+    cF=1,
+    use_legacy=False,
+    boundary_phases=None,
+    isAnisotropic=None,
+    csw_r=None,
+    csw_t=None,
+    nu=None,
+    xi_0=None,
+)
 def wilson_clover(U, params):
     params = copy.deepcopy(params)  # save current parameters
-    if "kappa" in params:
-        assert "mass" not in params
+    if params["kappa"] is not None:
+        assert params["mass"] is None
         params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
         del params["kappa"]
-    if "cF" not in params:
-        params["cF"] = 1.0  # default to 1.0 (i.e., doing nothing)
-    if "use_legacy" not in params:
-        params["use_legacy"] = False  # default to new, faster implementation
     if params["use_legacy"]:
         assert params["boundary_phases"][-1] != 0.0  # only new op supports open bc
     if params["boundary_phases"][-1] != 0.0:
@@ -51,7 +58,7 @@ def wilson_clover(U, params):
     )
 
 
-@gpt.params_convention()
+@gpt.params_convention(mass=None, cp=None, zeta=None, boundary_phases=None)
 def rhq_columbia(U, params):
     return wilson_clover(
         U,
@@ -66,23 +73,25 @@ def rhq_columbia(U, params):
     )
 
 
-@gpt.params_convention()
+@gpt.params_convention(
+    omega=None, mass=None, b=None, c=None, M5=None, boundary_phases=None
+)
 def zmobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
-    assert "Ls" not in params
     params["Ls"] = len(params["omega"])
     return fine_operator("zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
 
 
-@gpt.params_convention()
+@gpt.params_convention(
+    mass=None, b=None, c=None, M5=None, boundary_phases=None, Ls=None
+)
 def mobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
     return fine_operator("mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
 
 
-@gpt.params_convention(make_hermitian=False)
+@gpt.params_convention(make_hermitian=False, level=None)
 def coarse_fermion(A, params):
     params = copy.deepcopy(params)  # save current parameters
-    assert "nbasis" not in params
     params["nbasis"] = A[0].otype.v_n1[0]
     return coarse_operator("coarse", A, params, otype=A[0].otype.vector_type)

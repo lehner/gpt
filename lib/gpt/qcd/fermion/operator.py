@@ -146,8 +146,7 @@ class operator(gpt.matrix_operator):
             grid=self.F_grid,
         )
 
-    @params_convention()
-    def modified(self, params):
+    def modified(self, **params):
         return type(self)(
             name=self.name,
             U=self.U,
