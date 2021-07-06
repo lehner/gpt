@@ -30,11 +30,6 @@ a1 = g.qcd.scalar.action.phi4(kappa, l)
 g.message(f" - {a1.__name__}")
 g.message(f"phi4 mass = {a1.kappa_to_mass(kappa, l, grid.nd)}")
 
-# hamiltonian
-def h(mom, phi):
-    return a0(mom) + a1(phi)
-
-
 # molecular dynamics
 sympl = g.algorithms.integrator.symplectic
 
@@ -42,11 +37,11 @@ ip = sympl.update_p(mom, lambda: a1.gradient(phi, phi))
 iq = sympl.update_q(phi, lambda: a0.gradient(mom, mom))
 
 # integrator
-mdint = sympl.OMF2(3, ip, iq)
+mdint = sympl.OMF2(6, ip, iq)
 g.message(f"Integration scheme:\n{mdint}")
 
 # metropolis
-metro = g.algorithms.markov.metropolis(rng, mdint, h, [mom, phi])
+metro = g.algorithms.markov.metropolis(rng, mdint, lambda: a0(mom) + a1(phi), phi)
 
 # MD units
 tau = 2.0
@@ -54,7 +49,7 @@ g.message(f"tau = {tau} MD units")
 
 
 def hmc(tau, mom):
-    rng.element(mom)
+    rng.element(mom, normal=True)
     return metro(tau)
 
 
@@ -66,7 +61,7 @@ for i in range(1, 21):
     h = numpy.array(h)
     g.message(f"{i*5} % of thermalization completed")
     g.message(
-        f"Action = {a1(phi)}, Acceptance = {numpy.mean(h[:,0]):.2f}, dH = {numpy.mean(h[:,1]):.4e}"
+        f"Action = {a1(phi)}, Acceptance = {numpy.mean(h[:,0]):.2f}, |dH| = {numpy.mean(numpy.abs(h[:,1])):.4e}"
     )
 
 # measure <phi>, <phi^2>
@@ -85,7 +80,7 @@ for i in range(100):
 
 history = numpy.array(history)
 g.message(f"Acceptance rate = {numpy.mean(history[:,0]):.2f}")
-g.message(f"<dH> = {numpy.mean(history[:,1]):.4e}")
+g.message(f"<|dH|> = {numpy.mean(numpy.abs(history[:,1])):.4e}")
 
 data = numpy.array(data)
 g.message(f"<phi>   = {numpy.mean(data[:,0])}")

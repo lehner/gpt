@@ -31,7 +31,6 @@ def update_q(dst, frc):
 
 def update(dst, frc, sign):
     dst = gpt.core.util.to_list(dst)
-    # src = gpt.core.util.to_list(src)
     force = frc
 
     def micro(eps):
@@ -62,7 +61,7 @@ class integrator_base:
 
         self.__name__ = f"{name}({N})"
 
-    def string_repr(self, lvl):
+    def string_representation(self, lvl):
         out = f" - Level {lvl} = {self.__name__}"
         for i in self.i1:
             if isinstance(i, integrator_base):
@@ -70,7 +69,7 @@ class integrator_base:
         return out
 
     def __str__(self):
-        return self.string_repr(0)
+        return self.string_representation(0)
 
     def __call__(self, tau):
         eps = tau / self.N
@@ -103,7 +102,10 @@ class OMF2(integrator_base):
         super().__init__(N, i0, i1, [r0, 0.5, (1 - 2 * r0), 0.5, r0], "omf2")
 
 
-# add references + possibly define r from sqrt etc..
+# Omelyan, Mryglod, Folk, 4th order integrator
+#   ''Symplectic analytically integrable decomposition algorithms ...''
+#   https://doi.org/10.1016/S0010-4655(02)00754-3
+#      values of r's can be found @ page 292, sec 3.5.1, Variant 8
 class OMF4(integrator_base):
     def __init__(self, N, i0, i1):
         r = [

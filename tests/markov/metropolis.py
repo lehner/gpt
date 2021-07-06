@@ -21,10 +21,7 @@ def w(eps, x, dx):
     rng.element(dx)
     x @= x + eps * dx
 
-
-def h(x):
-    return g.norm2(x)
-
+h = lambda : g.norm2(x)
 
 metro = g.algorithms.markov.metropolis(rng, lambda e: w(e, x, dx), h, x)
 
