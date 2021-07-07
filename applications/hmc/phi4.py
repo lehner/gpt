@@ -30,6 +30,8 @@ a1 = g.qcd.scalar.action.phi4(kappa, l)
 g.message(f" - {a1.__name__}")
 g.message(f"phi4 mass = {a1.kappa_to_mass(kappa, l, grid.nd)}")
 
+hamiltonian = lambda : a0(mom) + a1(phi)
+
 # molecular dynamics
 sympl = g.algorithms.integrator.symplectic
 
@@ -41,16 +43,19 @@ mdint = sympl.OMF2(6, ip, iq)
 g.message(f"Integration scheme:\n{mdint}")
 
 # metropolis
-metro = g.algorithms.markov.metropolis(rng, mdint, lambda: a0(mom) + a1(phi), phi)
+metro = g.algorithms.markov.metropolis(rng)
 
 # MD units
 tau = 2.0
 g.message(f"tau = {tau} MD units")
 
-
 def hmc(tau, mom):
     rng.normal_element(mom)
-    return metro(tau)
+    accrej = metro(phi)
+    h0 = hamiltonian()
+    mdint(tau)
+    h1 = hamiltonian()
+    return [accrej(h1, h0), h1-h0]
 
 
 # thermalization

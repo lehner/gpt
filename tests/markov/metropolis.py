@@ -16,24 +16,21 @@ x = g.real(grid)
 x[:] = 0
 dx = g.lattice(x)
 
-
-def w(eps, x, dx):
-    rng.uniform_element(dx)
-    x @= x + eps * dx
-
-
-metro = g.algorithms.markov.metropolis(
-    rng, lambda e: w(e, x, dx), lambda: g.norm2(x), x
-)
-
+metro = g.algorithms.markov.metropolis(rng)
 
 def measure(x):
     return [g.sum(x).real / grid.fsites, g.norm2(x) / grid.fsites]
 
-
+eps = 0.08
 for i in range(10):
-    accept, dS = metro(0.08)
-    res = measure(x)
+    rng.uniform_element(dx)
+    accrej = metro(x)
+    f0 = g.norm2(x)
+    x @= x + eps * dx
+    f1 = g.norm2(x)
+    accept = accrej(f1, f0)
+    
+res = measure(x)
 
 res_ref = [0.0011463214177638292, 0.004613301864105977]
 for a, b in zip(res, res_ref):
