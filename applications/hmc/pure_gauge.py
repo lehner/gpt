@@ -8,7 +8,7 @@ import gpt as g
 import sys, os
 import numpy
 
-beta = g.default.get_float("--beta",5.96)
+beta = g.default.get_float("--beta", 5.96)
 
 g.default.set_verbose("omf4")
 
@@ -32,7 +32,10 @@ g.message(f" - {a0.__name__}")
 a1 = g.qcd.gauge.action.wilson(beta)
 g.message(f" - {a1.__name__}")
 
-hamiltonian = lambda : a0(mom) + a1(U)
+
+def hamiltonian():
+    return a0(mom) + a1(U)
+
 
 # molecular dynamics
 sympl = g.algorithms.integrator.symplectic
@@ -58,7 +61,7 @@ def hmc(tau, mom):
     h0 = hamiltonian()
     mdint(tau)
     h1 = hamiltonian()
-    return [accrej(h1, h0), h1-h0]
+    return [accrej(h1, h0), h1 - h0]
 
 
 # thermalization

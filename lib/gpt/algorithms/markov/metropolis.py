@@ -31,7 +31,6 @@ def boltzman_factor(h1, h0):
 # - computes the final probability P1 = P(f(x1))
 # - performs the accept/reject step, ie accepts with probability = min{1, P(f(x1))/P(f(x0))}
 def metropolis(rng, probability_ratio=boltzman_factor):
-
     def trial(fields):
 
         # save state
@@ -42,7 +41,7 @@ def metropolis(rng, probability_ratio=boltzman_factor):
         while isinstance(tmp, list):
             tmp = tmp[0]
         grid = tmp.grid
-        
+
         def accept_reject(f1, f0):
             rr = rng.uniform_real(min=0, max=1)
             rr = grid.globalsum(rr if grid.processor == 0 else 0.0)
@@ -52,5 +51,5 @@ def metropolis(rng, probability_ratio=boltzman_factor):
             return False
 
         return accept_reject
-    
+
     return trial

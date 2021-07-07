@@ -18,8 +18,10 @@ dx = g.lattice(x)
 
 metro = g.algorithms.markov.metropolis(rng)
 
+
 def measure(x):
     return [g.sum(x).real / grid.fsites, g.norm2(x) / grid.fsites]
+
 
 eps = 0.08
 for i in range(10):
@@ -29,7 +31,7 @@ for i in range(10):
     x @= x + eps * dx
     f1 = g.norm2(x)
     accept = accrej(f1, f0)
-    
+
 res = measure(x)
 
 res_ref = [0.0011463214177638292, 0.004613301864105977]
