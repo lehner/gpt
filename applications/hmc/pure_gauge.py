@@ -8,7 +8,7 @@ import gpt as g
 import sys, os
 import numpy
 
-beta = g.default.get_float("--beta",5.96)
+beta = g.default.get_float("--beta", 5.96)
 
 g.default.set_verbose("omf4")
 
@@ -32,6 +32,11 @@ g.message(f" - {a0.__name__}")
 a1 = g.qcd.gauge.action.wilson(beta)
 g.message(f" - {a1.__name__}")
 
+
+def hamiltonian():
+    return a0(mom) + a1(U)
+
+
 # molecular dynamics
 sympl = g.algorithms.integrator.symplectic
 
@@ -43,7 +48,7 @@ mdint = sympl.OMF4(5, ip, iq)
 g.message(f"Integration scheme:\n{mdint}")
 
 # metropolis
-metro = g.algorithms.markov.metropolis(rng, mdint, lambda: a0(mom) + a1(U), U)
+metro = g.algorithms.markov.metropolis(rng)
 
 # MD units
 tau = 2.0
@@ -52,7 +57,11 @@ g.message(f"tau = {tau} MD units")
 
 def hmc(tau, mom):
     rng.normal_element(mom)
-    return metro(tau)
+    accrej = metro(U)
+    h0 = hamiltonian()
+    mdint(tau)
+    h1 = hamiltonian()
+    return [accrej(h1, h0), h1 - h0]
 
 
 # thermalization
