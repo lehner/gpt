@@ -22,5 +22,6 @@ public:
   virtual ~cgpt_fermion_operator_base() { };
   virtual RealD unary(int opcode, PyObject* in, PyObject* out) = 0;
   virtual RealD dirdisp(int opcode, PyObject* in, PyObject* out, int dir, int disp) = 0;
+  virtual RealD deriv(int opcode, PyObject* mat, PyObject* in, PyObject* out) = 0;    
   virtual void update(PyObject* args) = 0;
 };

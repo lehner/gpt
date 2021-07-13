@@ -37,6 +37,10 @@ public:
   virtual RealD dirdisp(int opcode, PyObject* in, PyObject* out, int dir, int disp) {
     return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
   }
+    
+  virtual RealD deriv(int opcode, PyObject* mat, PyObject* in, PyObject* out) {
+    return cgpt_fermion_operator_deriv<T>(*op,opcode,mat,in,out);
+  }
 
   virtual void update(PyObject* args) {
     GaugeField U(op->GaugeGrid());
@@ -69,6 +73,10 @@ public:
 
   virtual RealD dirdisp(int opcode, PyObject* in, PyObject* out, int dir, int disp) {
     return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
+  }
+
+  virtual RealD deriv(int opcode, PyObject* mat, PyObject* in, PyObject* out) {
+    assert(0);
   }
 
   virtual void update(PyObject* args) {

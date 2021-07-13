@@ -23,6 +23,7 @@
 //#include "operators/register.h"
 #include "operators/base.h"
 #include "operators/unary.h"
+#include "operators/deriv.h"
 #include "operators/implementation.h"
 #include "operators/wilson_clover.h"
 #include "operators/zmobius.h"
@@ -102,5 +103,18 @@ EXPORT(apply_fermion_operator_dirdisp,{
     }
 
     return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->dirdisp((int)op,_src,_dst,(int)dir,(int)disp) );
+
+  });
+
+EXPORT(apply_fermion_operator_deriv,{
+
+    void* p;
+    PyObject* _mat, *_src, *_dst;
+    long op;
+    if (!PyArg_ParseTuple(args, "llOOO", &p,&op,&_mat,&_src,&_dst)) {
+      return NULL;
+    }
+
+    return PyFloat_FromDouble( ((cgpt_fermion_operator_base*)p)->deriv((int)op,_mat,_src,_dst) );
 
   });

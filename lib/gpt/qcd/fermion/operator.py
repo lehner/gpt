@@ -20,7 +20,16 @@
 import gpt, cgpt
 from gpt.params import params_convention
 
+def deriv_wrapper(func, dst, left, right):
+    _left = gpt.core.util.to_list(left)
+    _right = gpt.core.util.to_list(right)
+    assert(len(_left) == len(_right))
+    nd = dst[0].grid.nd
+    assert(nd*len(_left) == len(dst))
 
+    for i in range(len(_left)):
+        func(dst[i*nd:(i+1)*nd], _left[i], _right[i])
+    
 class operator(gpt.matrix_operator):
     def __init__(self, name, U, params, otype, with_even_odd):
         # keep constructor parameters
@@ -100,7 +109,9 @@ class operator(gpt.matrix_operator):
                 otype=otype,
                 grid=self.F_grid_eo,
             )
-
+            self._MoeDeriv = registry.MoeDeriv
+            self._MeoDeriv = registry.MeoDeriv
+            
         self.Mdiag = gpt.matrix_operator(registry.Mdiag, otype=otype, grid=self.F_grid)
         self.Dminus = gpt.matrix_operator(
             mat=registry.Dminus,
@@ -138,6 +149,8 @@ class operator(gpt.matrix_operator):
             grid=self.F_grid,
         )
         self._Mdir = registry.Mdir
+        self._MDeriv = registry.MDeriv
+        self._MDerivDag = registry.MDerivDag
 
     def Mdir(self, mu, fb):
         return gpt.matrix_operator(
@@ -145,7 +158,26 @@ class operator(gpt.matrix_operator):
             otype=self.otype,
             grid=self.F_grid,
         )
-
+    
+    # Future plan for interface:
+    # M.projected_gradient(..)
+    # M.adj().projected_gradient(...)
+    # M.Meooe.projected_gradient(...)
+    def gradient(self, dst, left, right):
+        deriv_wrapper(self._MDeriv, dst, left, right)
+        # different convention in group generators
+        # (-1j) * Ta^GRID = Ta^GPT
+        # additional -1 due to Grid
+        for d in dst:
+            d @= gpt.qcd.gauge.project.traceless_anti_hermitian(d)
+            d @= (1j) * d
+        
+    def gradientDag(self, dst, left, right):
+        deriv_wrapper(self._MDerivDag, dst, left, right)
+        for d in dst:
+            d @= gpt.qcd.gauge.project.traceless_anti_hermitian(d)
+            d @= (1j) * d
+    
     def modified(self, **params):
         return type(self)(
             name=self.name,
@@ -227,7 +259,10 @@ class fine_operator(operator):
             self.obj, opcode, i.v_obj, o.v_obj, dir, disp
         )
 
-
+    def apply_deriv_operator(self, opcode, m, u, v):
+        # Grid has different calling conventions which we adopt in cgpt:
+        return cgpt.apply_fermion_operator_deriv(self.obj, opcode, [y for x in m for y in x.v_obj], u.v_obj, v.v_obj)
+        
 class coarse_operator(operator):
     def __init__(self, name, U, params, otype=None):
         super().__init__(name, U, params, otype, True)
