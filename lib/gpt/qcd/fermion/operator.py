@@ -20,18 +20,6 @@
 import gpt, cgpt
 from gpt.params import params_convention
 
-def deriv_wrapper(func, U, left, right):
-    _left = gpt.core.util.to_list(left)
-    _right = gpt.core.util.to_list(right)
-    assert(len(_left) == len(_right))
-    dst = []
-    nd = len(U)
-    
-    for i in range(len(_left)):
-        dst += gpt.group.cartesian(U)
-        func(dst[i*nd:(i+1)*nd], _left[i], _right[i])
-
-    return dst
 
 class operator(gpt.matrix_operator):
     def __init__(self, name, U, params, otype, with_even_odd):
@@ -113,7 +101,9 @@ class operator(gpt.matrix_operator):
                 grid=self.F_grid_eo,
             )
             self._MoeDeriv = registry.MoeDeriv
+            self._MoeDerivDag = registry.MoeDerivDag
             self._MeoDeriv = registry.MeoDeriv
+            self._MeoDerivDag = registry.MeoDerivDag
             
         self.Mdiag = gpt.matrix_operator(registry.Mdiag, otype=otype, grid=self.F_grid)
         self.Dminus = gpt.matrix_operator(
@@ -166,8 +156,18 @@ class operator(gpt.matrix_operator):
     # M.projected_gradient(..)
     # M.adj().projected_gradient(...)
     # M.Meooe.projected_gradient(...)
-    def gradient(self, left, right):
-        ders = deriv_wrapper(self._MDeriv, self.U, left, right)
+    def deriv_core(self, func, left, right):
+        _left = gpt.core.util.to_list(left)
+        _right = gpt.core.util.to_list(right)
+        assert(len(_left) == len(_right))
+        ders = []
+        nd = len(self.U)
+        ot = self.U[0].otype.cartesian()     
+        gg = self.U_grid
+        ders = [gpt.lattice(gg, ot) for _ in range(nd * len(_left))]
+        for i in range(len(_left)):
+            func(ders[i*nd:(i+1)*nd], _left[i], _right[i])
+            
         # different convention in group generators
         # (-1j) * Ta^GRID = Ta^GPT
         # additional -1 due to Grid
@@ -175,14 +175,23 @@ class operator(gpt.matrix_operator):
             d @= gpt.qcd.gauge.project.traceless_anti_hermitian(d)
             d @= (1j) * d
         return ders
-    
-    def gradientDag(self, left, right):
-        ders = deriv_wrapper(self._MDerivDag, self.U, left, right)
-        for d in ders:
-            d @= gpt.qcd.gauge.project.traceless_anti_hermitian(d)
-            d @= (1j) * d
-        return ders
-    
+
+    # TODO: Meoderiv,... they always return a full checkerboard force
+    # which means some zeros are copied (and later added) unnecessarily
+    # To change this behavior must edit cgpt/lib/operators/deriv.h
+    def Mderiv(self, left, right):
+        return self.deriv_core(self._MDeriv, left, right)
+    def MderivDag(self, left, right):
+        return self.deriv_core(self._MDerivDag, left, right)
+    def Meoderiv(self, left, right):
+        return self.deriv_core(self._MeoDeriv, left, right)
+    def MeoderivDag(self, left, right):
+        return self.deriv_core(self._MeoDerivDag, left, right)
+    def Moederiv(self, left, right):
+        return self.deriv_core(self._MoeDeriv, left, right)
+    def MoederivDag(self, left, right):
+        return self.deriv_core(self._MoeDerivDag, left, right)
+        
     def modified(self, **params):
         return type(self)(
             name=self.name,

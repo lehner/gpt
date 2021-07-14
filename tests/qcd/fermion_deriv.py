@@ -33,7 +33,6 @@ mobius_params = {
 }
 Dops += [g.qcd.fermion.mobius(U, mobius_params)]
 
-
 mom = g.group.cartesian(U)
 rng.normal_element(mom)
 
@@ -41,35 +40,34 @@ rng.normal_element(mom)
 Uprime = g.qcd.gauge.unit(grid)
 eps = 1e-2
 
-# F = psi^dag Mdag M psi
+# F = psi^dag Mdag M psi = (chi, chi) ; chi = M psi
 # dF = psi^dag dMdag M psi + psi^dag Mdag dM psi
-for M in Dops:
-    g.message(M.name)
-
-    psi = g.vspincolor(M.F_grid)
-    chi = g.vspincolor(M.F_grid)
+#    = (psi, dMdag chi) + (chi, dM psi)
+def assert_gradient(mat, method, grid, dmat, dmatdag):
+    psi = g.vspincolor(grid)
+    chi = g.vspincolor(grid)
     rng.normal(psi)
 
-    chi @= M*psi
-    frc = M.gradient(chi, psi)
-    tmp = M.gradientDag(psi, chi)
+    getattr(mat, method)(chi, psi)
+    frc = dmat(chi, psi)
+    tmp = dmatdag(psi, chi)
     
     dS_ex = 0.0
     for mu in range(len(frc)):
         frc[mu] @= frc[mu] + tmp[mu]
         dS_ex += g.group.inner_product(frc[mu], mom[mu])
-        
     del frc, tmp
-
+    
     dS_num = 0.0
     for coeff in [(1.0, 2./3.), (2.0, -1./12.), (-1.0,-2./3.), (-2.0,1/12)]:
     #for coeff in [(1.0, 0.5), (-1.0, -0.5)]:
         f = eps * coeff[0]
-        for mu in range(grid.nd):
+        for mu in range(len(Uprime)):
             Uprime[mu] @= g.group.compose(g(f * mom[mu]), U[mu])
 
-        Mprime = M.updated(Uprime)
-        chi @= Mprime * psi
+        Mprime = mat.updated(Uprime)
+        #chi @= Mprime * psi
+        getattr(Mprime, method)(chi, psi)
         dS_num += (coeff[1]/eps) * g.norm2(chi)
 
     g.message(f"Exact gradient {dS_ex:.6e}")
@@ -77,3 +75,7 @@ for M in Dops:
     g.message(f"Difference {abs(dS_num - dS_ex)/abs(dS_ex):.6e}")
 
     assert abs(dS_num - dS_ex)/abs(dS_ex) < 1e-7
+    
+for M in Dops:
+    g.message(M.name, ' full M')
+    assert_gradient(M, 'mat', M.F_grid, M.Mderiv, M.MderivDag)      
