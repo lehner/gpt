@@ -104,7 +104,7 @@ class operator(gpt.matrix_operator):
             self._MoeDerivDag = registry.MoeDerivDag
             self._MeoDeriv = registry.MeoDeriv
             self._MeoDerivDag = registry.MeoDerivDag
-            
+
         self.Mdiag = gpt.matrix_operator(registry.Mdiag, otype=otype, grid=self.F_grid)
         self.Dminus = gpt.matrix_operator(
             mat=registry.Dminus,
@@ -136,10 +136,7 @@ class operator(gpt.matrix_operator):
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
         self.Dhop = gpt.matrix_operator(
-            mat=registry.Dhop,
-            adj_mat=registry.DhopDag,
-            otype=otype,
-            grid=self.F_grid,
+            mat=registry.Dhop, adj_mat=registry.DhopDag, otype=otype, grid=self.F_grid,
         )
         self._Mdir = registry.Mdir
         self._MDeriv = registry.MDeriv
@@ -151,7 +148,7 @@ class operator(gpt.matrix_operator):
             otype=self.otype,
             grid=self.F_grid,
         )
-    
+
     # Future plan for interface:
     # M.projected_gradient(..)
     # M.adj().projected_gradient(...)
@@ -159,15 +156,15 @@ class operator(gpt.matrix_operator):
     def deriv_core(self, func, left, right):
         _left = gpt.core.util.to_list(left)
         _right = gpt.core.util.to_list(right)
-        assert(len(_left) == len(_right))
+        assert len(_left) == len(_right)
         ders = []
         nd = len(self.U)
-        ot = self.U[0].otype.cartesian()     
+        ot = self.U[0].otype.cartesian()
         gg = self.U_grid
         ders = [gpt.lattice(gg, ot) for _ in range(nd * len(_left))]
         for i in range(len(_left)):
-            func(ders[i*nd:(i+1)*nd], _left[i], _right[i])
-            
+            func(ders[i * nd : (i + 1) * nd], _left[i], _right[i])
+
         # different convention in group generators
         # (-1j) * Ta^GRID = Ta^GPT
         # additional -1 due to Grid
@@ -181,17 +178,22 @@ class operator(gpt.matrix_operator):
     # To change this behavior must edit cgpt/lib/operators/deriv.h
     def Mderiv(self, left, right):
         return self.deriv_core(self._MDeriv, left, right)
+
     def MderivDag(self, left, right):
         return self.deriv_core(self._MDerivDag, left, right)
+
     def Meoderiv(self, left, right):
         return self.deriv_core(self._MeoDeriv, left, right)
+
     def MeoderivDag(self, left, right):
         return self.deriv_core(self._MeoDerivDag, left, right)
+
     def Moederiv(self, left, right):
         return self.deriv_core(self._MoeDeriv, left, right)
+
     def MoederivDag(self, left, right):
         return self.deriv_core(self._MoeDerivDag, left, right)
-        
+
     def modified(self, **params):
         return type(self)(
             name=self.name,
@@ -212,10 +214,7 @@ class operator(gpt.matrix_operator):
 
     def updated(self, U):
         return type(self)(
-            name=self.name,
-            U=U,
-            params=self.params_constructor,
-            otype=self.otype[0],
+            name=self.name, U=U, params=self.params_constructor, otype=self.otype[0],
         )
 
     def update(self, U):
@@ -275,8 +274,11 @@ class fine_operator(operator):
 
     def apply_deriv_operator(self, opcode, m, u, v):
         # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator_deriv(self.obj, opcode, [y for x in m for y in x.v_obj], u.v_obj, v.v_obj)
-        
+        return cgpt.apply_fermion_operator_deriv(
+            self.obj, opcode, [y for x in m for y in x.v_obj], u.v_obj, v.v_obj
+        )
+
+
 class coarse_operator(operator):
     def __init__(self, name, U, params, otype=None):
         super().__init__(name, U, params, otype, True)
@@ -299,10 +301,5 @@ class coarse_operator(operator):
 
     def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
         cgpt.apply_fermion_operator_dirdisp(
-            self.obj,
-            opcode,
-            i.v_obj,
-            o.v_obj,
-            direction,
-            disp,
+            self.obj, opcode, i.v_obj, o.v_obj, direction, disp,
         )
