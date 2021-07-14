@@ -16,7 +16,7 @@ x = g.real(grid)
 x[:] = 0
 dx = g.lattice(x)
 
-metro = g.algorithms.markov.metropolis(rng)
+metropolis = g.algorithms.markov.metropolis(rng)
 
 
 def measure(x):
@@ -26,11 +26,11 @@ def measure(x):
 eps = 0.08
 for i in range(10):
     rng.uniform_element(dx)
-    accrej = metro(x)
-    f0 = g.norm2(x)
-    x @= x + eps * dx
-    f1 = g.norm2(x)
-    accept = accrej(f1, f0)
+    trial = metropolis(x)
+    f_before = g.norm2(x)
+    x += eps * dx
+    f_after = g.norm2(x)
+    accept = trial(f_after, f_before)
 
 res = measure(x)
 
