@@ -25,11 +25,6 @@ approximation_scheme_4 = [
     (+1.0 / 12.0, -2.0),
 ]
 
-approximation_scheme_2 = [
-    (+0.5, +1.0),
-    (-0.5, -1.0),
-]
-
 
 class differentiable_functional:
     def __init__(self):
@@ -106,14 +101,7 @@ class differentiable_functional:
                 for gr, w in zip(self.gradient(fields, dfields), weights)
             ]
         )
-        scheme = (
-            approximation_scheme_2
-            if fields[0].grid.precision is g.single
-            else approximation_scheme_4
-        )
-        b = self.approximate_gradient(
-            fields, dfields, weights, epsilon=epsilon_approx, scheme=scheme
-        )
+        b = self.approximate_gradient(fields, dfields, weights, epsilon=epsilon_approx)
         eps = abs(a - b) / abs(b)
         g.message(f"Assert gradient error: {eps} < {epsilon_assert}")
         if eps > epsilon_assert:
