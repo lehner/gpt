@@ -62,11 +62,14 @@ class differentiable_fine_operator(fine_operator):
         _left = gpt.core.util.to_list(left)
         _right = gpt.core.util.to_list(right)
         assert len(_left) == len(_right)
-        ders = []
+        
         nd = len(self.U)
         ot = self.U[0].otype.cartesian()
-        gg = self.U_grid
+        gg = self.U_grid if (left.checkerboard()==gpt.none) else self.U_grid_eo
         ders = [gpt.lattice(gg, ot) for _ in range(nd * len(_left))]
+        for d in ders:
+            d.checkerboard(left.checkerboard())
+            
         for i in range(len(_left)):
             func(ders[i * nd : (i + 1) * nd], _left[i], _right[i])
 
