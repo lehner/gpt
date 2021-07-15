@@ -343,7 +343,7 @@ test_suite = {
 }
 
 
-finger_print_tolerance = 50.0
+finger_print_tolerance = 100.0
 
 
 def verify_projected_even_odd(M, Meo, dst_p, src_p, src):
