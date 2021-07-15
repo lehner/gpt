@@ -364,8 +364,14 @@ def verify_projected_even_odd(M, Meo, dst_p, src_p, src):
     assert eps < eps_ref
 
 
+def get_matrix(f, t):
+    if t == "":
+        return f
+    return getattr(f, t.replace(".", ""))
+
+
 def verify_matrix_element(fermion, dst, src, tag):
-    mat = eval(tag)
+    mat = get_matrix(fermion, tag)
     src_prime = g.eval(mat * src)
     dst.checkerboard(src_prime.checkerboard())
     X = g.inner_product(dst, src_prime)
@@ -385,7 +391,7 @@ def verify_matrix_element(fermion, dst, src, tag):
             g.message(f"Test adj(inv({tag})): {eps}")
             assert eps < eps_ref
     # do even/odd tests
-    even_odd_operators = {"fermion": ("fermion.Mooee", "fermion.Meooe")}
+    even_odd_operators = {"": ("Mooee", "Meooe")}
     if tag in even_odd_operators:
         g.message(f"Test eo versions of {tag}")
         grid_rb = fermion.F_grid_eo
@@ -393,38 +399,40 @@ def verify_matrix_element(fermion, dst, src, tag):
         dst_p = g.vspincolor(grid_rb)
 
         tag_Mooee, tag_Meooe = even_odd_operators[tag]
+        mat_Mooee = get_matrix(fermion, tag_Mooee)
+        mat_Meooe = get_matrix(fermion, tag_Meooe)
         for parity in [g.even, g.odd]:
             g.pick_checkerboard(parity, src_p, src)
             g.pick_checkerboard(parity, dst_p, src)
             verify_matrix_element(fermion, dst_p, src_p, tag_Mooee)
-            verify_projected_even_odd(mat, eval(tag_Mooee), dst_p, src_p, src)
+            verify_projected_even_odd(mat, mat_Mooee, dst_p, src_p, src)
 
             g.pick_checkerboard(parity.inv(), dst_p, src)
             verify_matrix_element(fermion, dst_p, src_p, tag_Meooe)
-            verify_projected_even_odd(mat, eval(tag_Meooe), dst_p, src_p, src)
+            verify_projected_even_odd(mat, mat_Meooe, dst_p, src_p, src)
     # do derivative tests
-    projected_gradient_operators = {"fermion": ("fermion.Mderiv", "fermion.MderivDag")}
+    projected_gradient_operators = {"": ("Mderiv", "MderivDag")}
     if tag in projected_gradient_operators and isinstance(
         fermion, g.qcd.fermion.differentiable_fine_operator
     ):
         g.message(f"Test projected_gradient versions of {tag}")
         tag_pg, tag_pgd = projected_gradient_operators[tag]
+        mat_pg = get_matrix(fermion, tag_pg)
+        mat_pgd = get_matrix(fermion, tag_pgd)
         dst_pg = g(mat * src)
 
         class df(g.group.differentiable_functional):
             # f = src^dag M^dag M src
             # df = src^dag dM^dag M src + src^dag M^dag dM src
             def __call__(self, Uprime):
-                ufermion = fermion.updated(Uprime)
-                return g.norm2(eval("u" + tag) * src)
+                mat = get_matrix(fermion.updated(Uprime), tag)
+                return g.norm2(mat * src)
 
             def gradient(self, Uprime, dUprime):
                 assert dUprime == Uprime
                 return [
                     g.eval(a + b)
-                    for a, b in zip(
-                        eval(tag_pg)(dst_pg, src), eval(tag_pgd)(src, dst_pg)
-                    )
+                    for a, b in zip(mat_pg(dst_pg, src), mat_pgd(src, dst_pg))
                 ]
 
         dfv = df()
@@ -473,9 +481,7 @@ for precision in [g.double, g.single]:
 """
             )
             finger_print = []
-            finger_print.append(
-                verify_matrix_element(fermion, dst, src, f"fermion{matrix}")
-            )
+            finger_print.append(verify_matrix_element(fermion, dst, src, matrix))
             if test["matrices"][matrix] is None:
                 g.message(f"Matrix {matrix} fingerprint: {finger_print}")
             else:
