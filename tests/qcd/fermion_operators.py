@@ -436,7 +436,7 @@ def verify_matrix_element(fermion, dst, src, tag):
                 ]
 
         dfv = df()
-        dfv.assert_gradient_error(rng, U, U, 1e-3, eps_ref ** 0.5)
+        dfv.assert_gradient_error(rng, U, U, 1e-2, eps_ref ** 0.5)
     return X
 
 
