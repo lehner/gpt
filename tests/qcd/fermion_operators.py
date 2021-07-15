@@ -436,7 +436,10 @@ def verify_matrix_element(fermion, dst, src, tag):
                 ]
 
         dfv = df()
-        dfv.assert_gradient_error(rng, U, U, eps_ref ** 0.2 / 10.0, eps_ref ** 0.5)
+        if dst.grid.precision is g.double:
+            dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+        else:
+            dfv.assert_gradient_error(rng, U, U, 1e-2, 1e-2)
     return X
 
 
