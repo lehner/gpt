@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Authors: Christoph Lehner 2020
+# Authors: Christoph Lehner, Mattia Bruno 2021
 #
 import gpt as g
 
@@ -8,7 +8,9 @@ import gpt as g
 rng = g.random("test")
 grid = g.grid([4, 4, 4, 8], g.double)
 
-
+#
+# Test integrationg ODEs
+#
 def dC_su_n(u):
     r = g(g.qcd.gauge.project.traceless_anti_hermitian(g(u * V * u * u * V)) * (1j))
     r.otype = u.otype.cartesian()
@@ -46,7 +48,7 @@ for group, dC in [(g.mcolor, dC_su_n), (g.u1, dC_u1)]:
     g.message(f"Test on {U.otype.__name__}: {eps_test} < {eps_ref}")
     assert eps_test < eps_ref
 
-# finally integrate a simple non-linear DGL
+# finally integrate a simple non-linear ODE
 # y'(t) = y(t)**2
 # y(0)  = 1
 # expected: y(t) = 1.0 / (1.0 - t)
@@ -59,3 +61,58 @@ eps_test = abs(U_eps - U_exp) / eps
 eps_ref = eps ** 3.0
 g.message(f"Test on geometric series: {eps_test} < {eps_ref}")
 assert eps_test < eps_ref
+
+
+#
+# Test symplectic integrators below
+#
+# Use harmonic oscillator Hamiltonian
+#
+q = g.real(grid)
+p = g.group.cartesian(q)
+p0 = g.lattice(p)
+
+# p^2 / 2m , m=1
+a0 = g.qcd.scalar.action.mass_term()
+
+# q^2 * k / 2
+k = 0.1234
+a1 = g.qcd.scalar.action.mass_term(k)
+
+# starting config
+q[:] = 0
+rng.element(p)
+p0 @= p
+
+# evolution
+tau = 1.0
+
+# integrators
+sympl = g.algorithms.integrator.symplectic
+
+ip = sympl.update_p(p, lambda: a1.gradient(q, q))
+iq = sympl.update_q(q, lambda: a0.gradient(p, p))
+
+# ref solution obtained with Euler scheme
+M = 1000
+eps = tau / M
+for k in range(M):
+    ip(eps)
+    iq(eps)
+qref = g.lattice(q)
+qref @= q
+
+integrator = [sympl.leap_frog, sympl.OMF2, sympl.OMF4]
+criterion = [1e-5, 1e-8, 1e-12]
+
+for i in range(3):
+    # initial config
+    q[:] = 0
+    p @= p0
+
+    # solve
+    integrator[i](10, ip, iq)(tau)
+
+    eps = g.norm2(q - qref)
+    print(f"{integrator[i].__name__ : <10}: |q - qref|^2 = {eps:.4e}")
+    assert eps < criterion[i]

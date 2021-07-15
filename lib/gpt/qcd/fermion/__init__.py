@@ -22,7 +22,11 @@ import gpt.qcd.fermion.preconditioner
 import gpt.qcd.fermion.coarse
 
 from gpt.qcd.fermion.register import register
-from gpt.qcd.fermion.operator import fine_operator, coarse_operator
+from gpt.qcd.fermion.operator import (
+    differentiable_fine_operator,
+    fine_operator,
+    coarse_operator,
+)
 from gpt.qcd.fermion.boundary_conditions import *
 
 import copy
@@ -53,7 +57,11 @@ def wilson_clover(U, params):
         assert params["boundary_phases"][-1] != 0.0  # only new op supports open bc
     if params["boundary_phases"][-1] != 0.0:
         assert params["cF"] == 1.0  # forbid usage of cF without open bc
-    return fine_operator(
+    if params["csw_r"] == 0.0 and params["csw_t"] == 0.0:
+        operator_class = differentiable_fine_operator
+    else:
+        operator_class = fine_operator
+    return operator_class(
         "wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3)
     )
 
@@ -79,7 +87,9 @@ def rhq_columbia(U, params):
 def zmobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
     params["Ls"] = len(params["omega"])
-    return fine_operator("zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
+    return differentiable_fine_operator(
+        "zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
+    )
 
 
 @gpt.params_convention(
@@ -87,7 +97,9 @@ def zmobius(U, params):
 )
 def mobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
-    return fine_operator("mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
+    return differentiable_fine_operator(
+        "mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
+    )
 
 
 @gpt.params_convention(make_hermitian=False, level=None)

@@ -136,7 +136,10 @@ class operator(gpt.matrix_operator):
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
         self.Dhop = gpt.matrix_operator(
-            mat=registry.Dhop, adj_mat=registry.DhopDag, otype=otype, grid=self.F_grid,
+            mat=registry.Dhop,
+            adj_mat=registry.DhopDag,
+            otype=otype,
+            grid=self.F_grid,
         )
         self._Mdir = registry.Mdir
         self._MDeriv = registry.MDeriv
@@ -148,51 +151,6 @@ class operator(gpt.matrix_operator):
             otype=self.otype,
             grid=self.F_grid,
         )
-
-    # Future plan for interface:
-    # M.projected_gradient(..)
-    # M.adj().projected_gradient(...)
-    # M.Meooe.projected_gradient(...)
-    def deriv_core(self, func, left, right):
-        _left = gpt.core.util.to_list(left)
-        _right = gpt.core.util.to_list(right)
-        assert len(_left) == len(_right)
-        ders = []
-        nd = len(self.U)
-        ot = self.U[0].otype.cartesian()
-        gg = self.U_grid
-        ders = [gpt.lattice(gg, ot) for _ in range(nd * len(_left))]
-        for i in range(len(_left)):
-            func(ders[i * nd : (i + 1) * nd], _left[i], _right[i])
-
-        # different convention in group generators
-        # (-1j) * Ta^GRID = Ta^GPT
-        # additional -1 due to Grid
-        for d in ders:
-            d @= gpt.qcd.gauge.project.traceless_anti_hermitian(d)
-            d @= (1j) * d
-        return ders
-
-    # TODO: Meoderiv,... they always return a full checkerboard force
-    # which means some zeros are copied (and later added) unnecessarily
-    # To change this behavior must edit cgpt/lib/operators/deriv.h
-    def Mderiv(self, left, right):
-        return self.deriv_core(self._MDeriv, left, right)
-
-    def MderivDag(self, left, right):
-        return self.deriv_core(self._MDerivDag, left, right)
-
-    def Meoderiv(self, left, right):
-        return self.deriv_core(self._MeoDeriv, left, right)
-
-    def MeoderivDag(self, left, right):
-        return self.deriv_core(self._MeoDerivDag, left, right)
-
-    def Moederiv(self, left, right):
-        return self.deriv_core(self._MoeDeriv, left, right)
-
-    def MoederivDag(self, left, right):
-        return self.deriv_core(self._MoeDerivDag, left, right)
 
     def modified(self, **params):
         return type(self)(
@@ -214,7 +172,10 @@ class operator(gpt.matrix_operator):
 
     def updated(self, U):
         return type(self)(
-            name=self.name, U=U, params=self.params_constructor, otype=self.otype[0],
+            name=self.name,
+            U=U,
+            params=self.params_constructor,
+            otype=self.otype[0],
         )
 
     def update(self, U):
@@ -279,6 +240,56 @@ class fine_operator(operator):
         )
 
 
+class differentiable_fine_operator(fine_operator):
+    def __init__(self, name, U, params, otype=None):
+        super().__init__(name, U, params, otype)
+
+    # Future plan for interface:
+    # M.projected_gradient(..)
+    # M.adj().projected_gradient(...)
+    # M.Meooe.projected_gradient(...)
+    def deriv_core(self, func, left, right):
+        _left = gpt.core.util.to_list(left)
+        _right = gpt.core.util.to_list(right)
+        assert len(_left) == len(_right)
+        ders = []
+        nd = len(self.U)
+        ot = self.U[0].otype.cartesian()
+        gg = self.U_grid
+        ders = [gpt.lattice(gg, ot) for _ in range(nd * len(_left))]
+        for i in range(len(_left)):
+            func(ders[i * nd : (i + 1) * nd], _left[i], _right[i])
+
+        # different convention in group generators
+        # (-1j) * Ta^GRID = Ta^GPT
+        # additional -1 due to Grid
+        for d in ders:
+            # d @= gpt.qcd.gauge.project.traceless_anti_hermitian(d)
+            d @= (1j) * d
+        return ders
+
+    # TODO: Meoderiv,... they always return a full checkerboard force
+    # which means some zeros are copied (and later added) unnecessarily
+    # To change this behavior must edit cgpt/lib/operators/deriv.h
+    def Mderiv(self, left, right):
+        return self.deriv_core(self._MDeriv, left, right)
+
+    def MderivDag(self, left, right):
+        return self.deriv_core(self._MDerivDag, left, right)
+
+    def Meoderiv(self, left, right):
+        return self.deriv_core(self._MeoDeriv, left, right)
+
+    def MeoderivDag(self, left, right):
+        return self.deriv_core(self._MeoDerivDag, left, right)
+
+    def Moederiv(self, left, right):
+        return self.deriv_core(self._MoeDeriv, left, right)
+
+    def MoederivDag(self, left, right):
+        return self.deriv_core(self._MoeDerivDag, left, right)
+
+
 class coarse_operator(operator):
     def __init__(self, name, U, params, otype=None):
         super().__init__(name, U, params, otype, True)
@@ -301,5 +312,10 @@ class coarse_operator(operator):
 
     def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
         cgpt.apply_fermion_operator_dirdisp(
-            self.obj, opcode, i.v_obj, o.v_obj, direction, disp,
+            self.obj,
+            opcode,
+            i.v_obj,
+            o.v_obj,
+            direction,
+            disp,
         )

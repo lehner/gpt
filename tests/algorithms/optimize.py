@@ -49,7 +49,7 @@ class test_functional(differentiable_functional):
 f = test_functional()
 
 # first establish correctness of df
-f.assert_gradient_error(rng, [U0, V0], [V0], 1e-5, 1e-8)
+f.assert_gradient_error(rng, [U0, V0], [U0], 1e-4, 1e-10)
 
 # now test minimizers
 fr = g.algorithms.optimize.fletcher_reeves

@@ -223,6 +223,15 @@ rhq = g.qcd.fermion.rhq_columbia(
 # These tests are only meaningfull if reference implementation is also
 # included
 #########################################################################
+wilson_params = {
+    "kappa": 0.13500,
+    "csw_r": 0.0,
+    "csw_t": 0.0,
+    "xi_0": 1.33111,
+    "nu": 2.61,
+    "isAnisotropic": True,
+    "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+}
 wilson_clover_params = {
     "kappa": 0.13500,
     "csw_r": 1.5,
@@ -242,68 +251,19 @@ wilson_clover_open_params = {
     "isAnisotropic": False,
     "boundary_phases": [1.0, 1.0, 1.0, 0.0],
 }
-wilson_clover_matrices_rb = {
-    ".Mooee": [
-        (-964.604747199766 + 1955.3204837295887j),
-        (-984.9379301006896 + 1812.470240028601j),
-    ],
-    ".Meooe": [
-        (-180.76784134943463 - 907.7516272233529j),
-        (563.2079135281185 - 720.151781978722j),
-    ],
-}
 wilson_clover_matrices = {
     "": [(-946.8714968698364 - 427.1253034080037j)],
     ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
 }
-wilson_clover_matrices_rb_open = {
-    ".Mooee": [
-        (-786.8010863449176 + 1070.7776954461517j),
-        (-799.9912213689927 + 868.0454954800668j),
-    ],
-    ".Meooe": [
-        (-515.6416289919217 - 727.8655685760094j),
-        (-186.16467422408803 - 815.6089918787717j),
-    ],
+wilson_matrices = {
+    "": [(-999.7564252326631 - 466.7758727463097j)],
+    ".Mdiag": [(-961.5053827614738 - 3468.430447866095j)],
 }
 wilson_clover_matrices_open = {
     "": [(-1634.2615676797234 + 239.27037187495998j)],
     ".Mdiag": [(-1239.3535155227526 - 1158.5295177146759j)],
 }
 test_suite = {
-    "wilson_clover": {
-        "fermion": g.qcd.fermion.wilson_clover,
-        "params": wilson_clover_params,
-        "matrices_rb": wilson_clover_matrices_rb,
-        "matrices": wilson_clover_matrices,
-    },
-    "wilson_clover_legacy": {
-        "fermion": g.qcd.fermion.wilson_clover,
-        "params": {
-            **wilson_clover_params,
-            "use_legacy": True,
-        },  # will be deprecated eventually
-        "matrices_rb": wilson_clover_matrices_rb,
-        "matrices": wilson_clover_matrices,
-    },
-    "wilson_clover_reference": {
-        "fermion": g.qcd.fermion.reference.wilson_clover,
-        "params": wilson_clover_params,
-        "matrices_rb": wilson_clover_matrices_rb,
-        "matrices": wilson_clover_matrices,
-    },
-    "wilson_clover_openbc_reference": {
-        "fermion": g.qcd.fermion.reference.wilson_clover,
-        "params": wilson_clover_open_params,
-        "matrices_rb": wilson_clover_matrices_rb_open,
-        "matrices": wilson_clover_matrices_open,
-    },
-    "wilson_clover_openbc": {
-        "fermion": g.qcd.fermion.wilson_clover,
-        "params": wilson_clover_open_params,
-        "matrices_rb": wilson_clover_matrices_rb_open,
-        "matrices": wilson_clover_matrices_open,
-    },
     "zmobius": {
         "fermion": g.qcd.fermion.zmobius,
         "params": {
@@ -325,16 +285,6 @@ test_suite = {
             ],
             "boundary_phases": [1.0, 1.0, 1.0, -1.0],
         },
-        "matrices_rb": {
-            ".Mooee": [
-                (-2446.6009975599286 + 5633.208069699162j),
-                (-2446.6009975599286 + 5633.208069699162j),
-            ],
-            ".Meooe": [
-                (2320.1432377385536 - 2611.1244058385605j),
-                (3083.8202044273708 - 1957.829867279577j),
-            ],
-        },
         "matrices": {
             "": [
                 (-2424.048033434305 + 10557.661684178218j),
@@ -342,13 +292,80 @@ test_suite = {
             ".Mdiag": [(2643.396577965267 + 6550.259431381319j)],
         },
     },
+    "mobius": {
+        "fermion": g.qcd.fermion.mobius,
+        "params": {
+            "mass": 0.08,
+            "M5": 1.8,
+            "b": 1.5,
+            "c": 0.5,
+            "Ls": 12,
+            "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+        },
+        "matrices": {
+            "": [(-8693.09425573421 - 4130.7793316734915j)],
+            ".Mdiag": [(-4966.960264746144 - 2525.83968136146j)],
+        },
+    },
+    "wilson": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": wilson_params,
+        "matrices": wilson_matrices,
+    },
+    "wilson_clover": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": wilson_clover_params,
+        "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_legacy": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": {
+            **wilson_clover_params,
+            "use_legacy": True,
+        },  # will be deprecated eventually
+        "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_reference": {
+        "fermion": g.qcd.fermion.reference.wilson_clover,
+        "params": wilson_clover_params,
+        "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_openbc_reference": {
+        "fermion": g.qcd.fermion.reference.wilson_clover,
+        "params": wilson_clover_open_params,
+        "matrices": wilson_clover_matrices_open,
+    },
+    "wilson_clover_openbc": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": wilson_clover_open_params,
+        "matrices": wilson_clover_matrices_open,
+    },
 }
 
 
 finger_print_tolerance = 50.0
 
 
-def verify_matrix_element(mat, dst, src, tag):
+def verify_projected_even_odd(M, Meo, dst_p, src_p, src):
+    src_proj_p = g.lattice(src)
+    src_proj_p[:] = 0
+    g.set_checkerboard(src_proj_p, src_p)
+
+    dst_proj_p = g.eval(M * src_proj_p)
+    g.pick_checkerboard(dst_p.checkerboard(), dst_p, dst_proj_p)
+
+    reference = g.copy(dst_p)
+
+    dst_p @= Meo * src_p
+
+    eps = (g.norm2(dst_p - reference) / g.norm2(reference)) ** 0.5
+    eps_ref = src.grid.precision.eps * finger_print_tolerance
+    g.message(f"Test projected full matrix result versus eo matrix: {eps}")
+    assert eps < eps_ref
+
+
+def verify_matrix_element(fermion, dst, src, tag):
+    mat = eval(tag)
     src_prime = g.eval(mat * src)
     dst.checkerboard(src_prime.checkerboard())
     X = g.inner_product(dst, src_prime)
@@ -367,11 +384,56 @@ def verify_matrix_element(mat, dst, src, tag):
             eps = abs(Y - Y_from_adj) / abs(Y)
             g.message(f"Test adj(inv({tag})): {eps}")
             assert eps < eps_ref
+    # do even/odd tests
+    even_odd_operators = {"fermion": ("fermion.Mooee", "fermion.Meooe")}
+    if tag in even_odd_operators:
+        g.message(f"Test eo versions of {tag}")
+        grid_rb = fermion.F_grid_eo
+        src_p = g.vspincolor(grid_rb)
+        dst_p = g.vspincolor(grid_rb)
+
+        tag_Mooee, tag_Meooe = even_odd_operators[tag]
+        for parity in [g.even, g.odd]:
+            g.pick_checkerboard(parity, src_p, src)
+            g.pick_checkerboard(parity, dst_p, src)
+            verify_matrix_element(fermion, dst_p, src_p, tag_Mooee)
+            verify_projected_even_odd(mat, eval(tag_Mooee), dst_p, src_p, src)
+
+            g.pick_checkerboard(parity.inv(), dst_p, src)
+            verify_matrix_element(fermion, dst_p, src_p, tag_Meooe)
+            verify_projected_even_odd(mat, eval(tag_Meooe), dst_p, src_p, src)
+    # do derivative tests
+    projected_gradient_operators = {"fermion": ("fermion.Mderiv", "fermion.MderivDag")}
+    if tag in projected_gradient_operators and isinstance(
+        fermion, g.qcd.fermion.differentiable_fine_operator
+    ):
+        g.message(f"Test projected_gradient versions of {tag}")
+        tag_pg, tag_pgd = projected_gradient_operators[tag]
+        dst_pg = g(mat * src)
+
+        class df(g.group.differentiable_functional):
+            # f = src^dag M^dag M src
+            # df = src^dag dM^dag M src + src^dag M^dag dM src
+            def __call__(self, Uprime):
+                ufermion = fermion.updated(Uprime)
+                return g.norm2(eval("u" + tag) * src)
+
+            def gradient(self, Uprime, dUprime):
+                assert dUprime == Uprime
+                return [
+                    g.eval(a + b)
+                    for a, b in zip(
+                        eval(tag_pg)(dst_pg, src), eval(tag_pgd)(src, dst_pg)
+                    )
+                ]
+
+        dfv = df()
+        dfv.assert_gradient_error(rng, U, U, 1e-3, eps_ref ** 0.5)
     return X
 
 
 g.default.set_verbose("random", False)
-for precision in [g.single, g.double]:
+for precision in [g.double, g.single]:
     # test suite
     for name in test_suite:
 
@@ -392,38 +454,6 @@ for precision in [g.single, g.double]:
         # create fermion
         fermion = test["fermion"](U, test["params"])
 
-        # do red/black tests
-        grid_rb = fermion.F_grid_eo
-        src = rng.cnormal(g.vspincolor(grid_rb))
-        dst = rng.cnormal(g.vspincolor(grid_rb))
-
-        # apply open boundaries to fields if necessary
-        if test["params"]["boundary_phases"][-1] == 0.0:
-            g.qcd.fermion.apply_open_boundaries(src)
-            g.qcd.fermion.apply_open_boundaries(dst)
-
-        g.message(f"<dst|src> = {g.inner_product(dst, src)}")
-        for matrix in test["matrices_rb"]:
-            finger_print = []
-            for cb in [g.even, g.odd]:
-                src.checkerboard(cb)
-                mat = eval(f"fermion{matrix}")
-                finger_print.append(
-                    verify_matrix_element(mat, dst, src, f"fermion{matrix}")
-                )
-            if test["matrices_rb"][matrix] is None:
-                g.message(f"Matrix {matrix} fingerprint: {finger_print}")
-            else:
-                fp = np.array(finger_print)
-                eps = np.linalg.norm(
-                    fp - np.array(test["matrices_rb"][matrix])
-                ) / np.linalg.norm(fp)
-                g.message(f"Test {matrix} fingerprint: {eps}")
-                if eps >= grid.precision.eps * finger_print_tolerance:
-                    g.message(finger_print)
-                    g.message(test["matrices_rb"][matrix])
-                assert eps < grid.precision.eps * finger_print_tolerance
-
         # do full tests
         grid = fermion.F_grid
         src = rng.cnormal(g.vspincolor(grid))
@@ -435,10 +465,16 @@ for precision in [g.single, g.double]:
             g.qcd.fermion.apply_open_boundaries(dst)
 
         for matrix in test["matrices"]:
+            g.message(
+                f"""
+
+            Testing {name}{matrix}
+
+"""
+            )
             finger_print = []
-            mat = eval(f"fermion{matrix}")
             finger_print.append(
-                verify_matrix_element(mat, dst, src, f"fermion{matrix}")
+                verify_matrix_element(fermion, dst, src, f"fermion{matrix}")
             )
             if test["matrices"][matrix] is None:
                 g.message(f"Matrix {matrix} fingerprint: {finger_print}")

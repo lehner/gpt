@@ -20,7 +20,7 @@ training_output = [rng.uniform_real(g.complex(grid)) for i in range(2)]
 c = n.cost(training_input, training_output)
 g.message("Cost:", c(W))
 
-c.assert_gradient_error(rng, W, W, 1e-5, 1e-3)
+c.assert_gradient_error(rng, W, W, 1e-4, 1e-8)
 
 ls0 = g.algorithms.optimize.line_search_none
 ls2 = g.algorithms.optimize.line_search_quadratic
