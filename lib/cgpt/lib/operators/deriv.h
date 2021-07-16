@@ -28,22 +28,22 @@ RealD cgpt_fermion_operator_deriv(T& op, int opcode, PyObject* _mat, PyObject* _
   typedef typename T::FermionField::vector_object vobj;
   typedef typename T::GaugeField GaugeField;
 
-  GaugeField frc(op.GaugeGrid());
-  frc = Zero();
-
   PVector<Lattice<vobj>> u, v;
   cgpt_basis_fill(u,_u);
   cgpt_basis_fill(v,_v);
+
+  typedef typename GaugeField::vector_type vCoeff_t;
+  PVector<Lattice<iColourMatrix<vCoeff_t>>> mat;
+  cgpt_basis_fill(mat, _mat);
+
+  GaugeField frc(mat[0].Grid());
+  frc = Zero();
     
   switch(opcode) {
 #include "register_deriv.h"
     default: ERR("Unknown opcode %d", opcode);
   }
 
-  typedef typename GaugeField::vector_type vCoeff_t;
-  PVector<Lattice<iColourMatrix<vCoeff_t>>> mat;
-  cgpt_basis_fill(mat, _mat);
-    
   for (int mu=0;mu<Nd;mu++)
     mat[mu] = PeekIndex<LorentzIndex>(frc,mu);
 
