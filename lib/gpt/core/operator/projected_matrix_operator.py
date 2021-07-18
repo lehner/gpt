@@ -16,6 +16,9 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import gpt as g
+
+
 class projected_matrix_operator:
     def __init__(self, mat, adj_mat=None):
         self.mat = mat
@@ -25,4 +28,4 @@ class projected_matrix_operator:
         return projected_matrix_operator(self.adj_mat, self.mat)
 
     def __call__(self, left, right):
-        return self.mat(left, right)
+        return self.mat(g(left), g(right))

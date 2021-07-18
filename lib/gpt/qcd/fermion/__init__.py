@@ -23,6 +23,7 @@ import gpt.qcd.fermion.coarse
 
 from gpt.qcd.fermion.register import register
 from gpt.qcd.fermion.operator import (
+    gauge_independent_g5_hermitian,
     differentiable_fine_operator,
     fine_operator,
     coarse_operator,
@@ -32,7 +33,19 @@ from gpt.qcd.fermion.boundary_conditions import *
 import copy
 
 ###
-# instantiate fermion operators
+# wilson class operators
+class wilson_class_operator(
+    differentiable_fine_operator, gauge_independent_g5_hermitian
+):
+    def __init__(self, name, U, params, otype=None):
+        differentiable_fine_operator.__init__(self, name, U, params, otype)
+
+        def _G5(dst, src):
+            dst @= gpt.gamma[5] * src
+
+        gauge_independent_g5_hermitian.__init__(
+            self, gpt.matrix_operator(_G5, grid=self.F_grid, otype=otype)
+        )
 
 
 @gpt.params_convention(
@@ -58,7 +71,8 @@ def wilson_clover(U, params):
     if params["boundary_phases"][-1] != 0.0:
         assert params["cF"] == 1.0  # forbid usage of cF without open bc
     if params["csw_r"] == 0.0 and params["csw_t"] == 0.0:
-        operator_class = differentiable_fine_operator
+        # for now Grid does not have MooeeDeriv for clover term
+        operator_class = wilson_class_operator
     else:
         operator_class = fine_operator
     return operator_class(
@@ -81,6 +95,8 @@ def rhq_columbia(U, params):
     )
 
 
+###
+# domain-wall class operators
 @gpt.params_convention(
     omega=None, mass=None, b=None, c=None, M5=None, boundary_phases=None
 )
@@ -102,6 +118,8 @@ def mobius(U, params):
     )
 
 
+###
+# coarse-grid operators
 @gpt.params_convention(make_hermitian=False, level=None)
 def coarse_fermion(A, params):
     params = copy.deepcopy(params)  # save current parameters

@@ -464,16 +464,14 @@ def verify_matrix_element(fermion, dst, src, tag):
     if tag in projected_gradient_operators and isinstance(
         fermion, g.qcd.fermion.differentiable_fine_operator
     ):
-        g.message(f"Test projected_gradient versions of {tag}")
+        # Test projected gradient for src^dag M^dag M src
+        g.message(f"Test projected_gradient of {tag} via src^dag M^dag M src")
         mat_pg = get_matrix(fermion, projected_gradient_operators[tag])
         dst_pg = g(mat * src)
 
         class df(g.group.differentiable_functional):
-            # f = src^dag M^dag M src
-            # df = src^dag dM^dag M src + src^dag M^dag dM src
             def __call__(self, Uprime):
-                mat = get_matrix(fermion.updated(Uprime), tag)
-                return g.norm2(mat * src)
+                return g.norm2(get_matrix(fermion.updated(Uprime), tag) * src)
 
             def gradient(self, Uprime, dUprime):
                 assert dUprime == Uprime
@@ -484,6 +482,42 @@ def verify_matrix_element(fermion, dst, src, tag):
 
         dfv = df()
         dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
+
+        # Test projected gradient for src^dag G5 M src
+        if isinstance(fermion, g.qcd.fermion.gauge_independent_g5_hermitian):
+            g.message(f"Test projected_gradient of {tag} via src^dag G5 M src")
+
+            class df(g.group.differentiable_functional):
+                def __call__(self, Uprime):
+                    return g.inner_product(
+                        src, fermion.G5 * get_matrix(fermion.updated(Uprime), tag) * src
+                    ).real
+
+                def gradient(self, Uprime, dUprime):
+                    assert dUprime == Uprime
+                    return mat_pg(fermion.G5 * src, src)
+
+            dfv = df()
+            dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
+
+            g.message(f"Test projected_gradient of {tag} via src^dag M^dag G5 src")
+
+            class df(g.group.differentiable_functional):
+                def __call__(self, Uprime):
+                    return g.inner_product(
+                        src,
+                        get_matrix(fermion.updated(Uprime), tag).adj()
+                        * fermion.G5
+                        * src,
+                    ).real
+
+                def gradient(self, Uprime, dUprime):
+                    assert dUprime == Uprime
+                    return mat_pg.adj()(src, fermion.G5 * src)
+
+            dfv = df()
+            dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
+
     return X
 
 

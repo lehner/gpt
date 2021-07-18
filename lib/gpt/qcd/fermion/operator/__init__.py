@@ -22,3 +22,9 @@ from gpt.qcd.fermion.operator.differentiable_fine_operator import (
     differentiable_fine_operator,
 )
 from gpt.qcd.fermion.operator.coarse_operator import coarse_operator
+
+
+# (G5 D(U))^\dagger = G5 D(U)
+class gauge_independent_g5_hermitian:
+    def __init__(self, G5):
+        self.G5 = G5
