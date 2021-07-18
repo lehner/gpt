@@ -21,7 +21,7 @@ import gpt, cgpt
 from gpt.params import params_convention
 
 
-class operator(gpt.matrix_operator):
+class base(gpt.matrix_operator):
     def __init__(self, name, U, params, otype, with_even_odd):
         # keep constructor parameters
         self.name = name

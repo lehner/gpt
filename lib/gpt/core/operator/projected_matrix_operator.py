@@ -1,7 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
+#    Copyright (C) 2021  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,7 +16,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.fermion.operator.fine_operator import fine_operator
-from gpt.qcd.fermion.operator.differentiable_fine_operator import differentiable_fine_operator
-from gpt.qcd.fermion.operator.coarse_operator import coarse_operator
+class projected_matrix_operator:
+    def __init__(self, mat, adj_mat = None):
+        self.mat = mat
+        self.adj_mat = adj_mat
 
+    def adj(self):
+        return projected_matrix_operator(self.adj_mat, self.mat)
+
+    def __call__(self, left, right):
+        return self.mat(left, right)

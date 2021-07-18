@@ -460,14 +460,12 @@ def verify_matrix_element(fermion, dst, src, tag):
             verify_matrix_element(fermion, dst_p, src_p, tag_Meooe)
             verify_projected_even_odd(mat, mat_Meooe, dst_p, src_p, src)
     # perform derivative tests
-    projected_gradient_operators = {"": ("Mderiv", "MderivDag")}
+    projected_gradient_operators = {"": "M_projected_gradient"}
     if tag in projected_gradient_operators and isinstance(
         fermion, g.qcd.fermion.differentiable_fine_operator
     ):
         g.message(f"Test projected_gradient versions of {tag}")
-        tag_pg, tag_pgd = projected_gradient_operators[tag]
-        mat_pg = get_matrix(fermion, tag_pg)
-        mat_pgd = get_matrix(fermion, tag_pgd)
+        mat_pg = get_matrix(fermion, projected_gradient_operators[tag])
         dst_pg = g(mat * src)
 
         class df(g.group.differentiable_functional):
@@ -481,7 +479,7 @@ def verify_matrix_element(fermion, dst, src, tag):
                 assert dUprime == Uprime
                 return [
                     g.eval(a + b)
-                    for a, b in zip(mat_pg(dst_pg, src), mat_pgd(src, dst_pg))
+                    for a, b in zip(mat_pg(dst_pg, src), mat_pg.adj()(src, dst_pg))
                 ]
 
         dfv = df()
