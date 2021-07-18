@@ -18,6 +18,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.qcd.fermion.operator.fine_operator import fine_operator
-from gpt.qcd.fermion.operator.differentiable_fine_operator import differentiable_fine_operator
+from gpt.qcd.fermion.operator.differentiable_fine_operator import (
+    differentiable_fine_operator,
+)
 from gpt.qcd.fermion.operator.coarse_operator import coarse_operator
-

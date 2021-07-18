@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 class projected_matrix_operator:
-    def __init__(self, mat, adj_mat = None):
+    def __init__(self, mat, adj_mat=None):
         self.mat = mat
         self.adj_mat = adj_mat
 

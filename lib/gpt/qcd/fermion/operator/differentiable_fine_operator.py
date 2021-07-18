@@ -22,9 +22,7 @@ from gpt.qcd.fermion.operator.fine_operator import fine_operator
 
 
 class differentiable_fine_operator(fine_operator):
-
     def _get_projected_operator(self, functor):
-        
         def _apply(left, right):
             left = gpt.core.util.to_list(left)
             right = gpt.core.util.to_list(right)
@@ -46,13 +44,21 @@ class differentiable_fine_operator(fine_operator):
             return ders
 
         return _apply
-    
+
     def _get_projected_matrix_operator(self, m, md):
-        return gpt.projected_matrix_operator(self._get_projected_operator(m), self._get_projected_operator(md))
+        return gpt.projected_matrix_operator(
+            self._get_projected_operator(m), self._get_projected_operator(md)
+        )
 
     def __init__(self, name, U, params, otype=None):
         super().__init__(name, U, params, otype)
 
-        self.M_projected_gradient = self._get_projected_matrix_operator(self._MDeriv, self._MDerivDag)
-        self.Meo_projected_gradient = self._get_projected_matrix_operator(self._MeoDeriv, self._MeoDerivDag)
-        self.Moe_projected_gradient = self._get_projected_matrix_operator(self._MoeDeriv, self._MoeDerivDag)
+        self.M_projected_gradient = self._get_projected_matrix_operator(
+            self._MDeriv, self._MDerivDag
+        )
+        self.Meo_projected_gradient = self._get_projected_matrix_operator(
+            self._MeoDeriv, self._MeoDerivDag
+        )
+        self.Moe_projected_gradient = self._get_projected_matrix_operator(
+            self._MoeDeriv, self._MoeDerivDag
+        )

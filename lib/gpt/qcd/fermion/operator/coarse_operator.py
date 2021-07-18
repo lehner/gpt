@@ -20,7 +20,7 @@
 import gpt, cgpt
 from gpt.qcd.fermion.operator.base import base
 
-    
+
 class coarse_operator(base):
     def __init__(self, name, U, params, otype=None):
         super().__init__(name, U, params, otype, True)
@@ -43,5 +43,10 @@ class coarse_operator(base):
 
     def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
         cgpt.apply_fermion_operator_dirdisp(
-            self.obj, opcode, i.v_obj, o.v_obj, direction, disp,
+            self.obj,
+            opcode,
+            i.v_obj,
+            o.v_obj,
+            direction,
+            disp,
         )
