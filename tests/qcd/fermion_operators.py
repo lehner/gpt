@@ -346,6 +346,55 @@ test_suite = {
 finger_print_tolerance = 100.0
 
 
+def verify_single_versus_double_precision(rng, fermion_dp, fermion_sp):
+    eps_ref = fermion_sp.F_grid.precision.eps * finger_print_tolerance
+    for atag in fermion_dp.__dict__.keys():
+        a_dp = getattr(fermion_dp, atag)
+        if isinstance(a_dp, g.matrix_operator):
+            a_sp = getattr(fermion_sp, atag)
+            rhs_dp = rng.cnormal(g.lattice(a_dp.grid[1], a_dp.otype[1]))
+            lhs_dp = rng.cnormal(g.lattice(a_dp.grid[0], a_dp.otype[0]))
+            if rhs_dp.grid.cb.n != 1:
+                # for now test only odd cb
+                rhs_dp.checkerboard(g.odd)
+                lhs_dp.checkerboard(g.odd)
+            rhs_sp = g.convert(rhs_dp, g.single)
+            lhs_sp = g.convert(lhs_dp, g.single)
+            # first test matrix
+            ref = a_dp(rhs_dp)
+            eps = (
+                g.norm2(ref - g.convert(a_sp(rhs_sp), g.double)) ** 0.5
+                / g.norm2(ref) ** 0.5
+            )
+            g.message(f"Verify single <> double for {atag}: {eps}")
+            assert eps < eps_ref
+            # then test adjoint matrix
+            if a_dp.adj_mat is not None:
+                ref = a_dp.adj()(lhs_dp)
+                eps = (
+                    g.norm2(ref - g.convert(a_sp.adj()(lhs_sp), g.double)) ** 0.5
+                    / g.norm2(ref) ** 0.5
+                )
+                g.message(f"Verify single <> double for {atag}.adj(): {eps}")
+                assert eps < eps_ref
+                if a_dp.inv_mat is not None:
+                    ref = a_dp.inv()(lhs_dp)
+                    eps = (
+                        g.norm2(ref - g.convert(a_sp.inv()(lhs_sp), g.double)) ** 0.5
+                        / g.norm2(ref) ** 0.5
+                    )
+                    g.message(f"Verify single <> double for {atag}.inv(): {eps}")
+                    assert eps < eps_ref
+                    ref = a_dp.adj().inv()(lhs_dp)
+                    eps = (
+                        g.norm2(ref - g.convert(a_sp.adj().inv()(lhs_sp), g.double))
+                        ** 0.5
+                        / g.norm2(ref) ** 0.5
+                    )
+                    g.message(f"Verify single <> double for {atag}.adj().inv(): {eps}")
+                    assert eps < eps_ref
+
+
 def verify_projected_even_odd(M, Meo, dst_p, src_p, src):
     src_proj_p = g.lattice(src)
     src_proj_p[:] = 0
@@ -371,7 +420,7 @@ def get_matrix(f, t):
 
 
 def verify_matrix_element(fermion, dst, src, tag):
-    mat = get_matrix(fermion, tag)
+    mat = get_matrix(fermion_dp, tag)
     src_prime = g.eval(mat * src)
     dst.checkerboard(src_prime.checkerboard())
     X = g.inner_product(dst, src_prime)
@@ -410,7 +459,7 @@ def verify_matrix_element(fermion, dst, src, tag):
             g.pick_checkerboard(parity.inv(), dst_p, src)
             verify_matrix_element(fermion, dst_p, src_p, tag_Meooe)
             verify_projected_even_odd(mat, mat_Meooe, dst_p, src_p, src)
-    # do derivative tests
+    # perform derivative tests
     projected_gradient_operators = {"": ("Mderiv", "MderivDag")}
     if tag in projected_gradient_operators and isinstance(
         fermion, g.qcd.fermion.differentiable_fine_operator
@@ -436,61 +485,63 @@ def verify_matrix_element(fermion, dst, src, tag):
                 ]
 
         dfv = df()
-        if dst.grid.precision is g.double:
-            dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
-        else:
-            dfv.assert_gradient_error(rng, U, U, 1e-2, 1e-2)
+        dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
     return X
 
 
 g.default.set_verbose("random", False)
-for precision in [g.double, g.single]:
-    # test suite
-    for name in test_suite:
 
-        # load configuration
-        rng = g.random("finger_print")
-        U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], precision), rng)
+# test suite
+for name in test_suite:
 
-        # default grid
-        grid = U[0].grid
+    # load configuration
+    rng = g.random("finger_print")
+    U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 
-        # check tolerance
-        eps = grid.precision.eps
+    # default grid
+    grid = U[0].grid
 
-        # params
-        test = test_suite[name]
-        g.message(f"Starting test suite for {precision.__name__} precision {name}")
+    # check tolerance
+    eps = grid.precision.eps
 
-        # create fermion
-        fermion = test["fermion"](U, test["params"])
+    # params
+    test = test_suite[name]
+    g.message(f"Starting test suite for {name}")
 
-        # do full tests
-        grid = fermion.F_grid
-        src = rng.cnormal(g.vspincolor(grid))
-        dst = rng.cnormal(g.vspincolor(grid))
+    # create fermion
+    fermion_dp = test["fermion"](U, test["params"])
 
-        # apply open boundaries to fields if necessary
-        if test["params"]["boundary_phases"][-1] == 0.0:
-            g.qcd.fermion.apply_open_boundaries(src)
-            g.qcd.fermion.apply_open_boundaries(dst)
+    # do full tests
+    grid = fermion_dp.F_grid
+    src = rng.cnormal(g.vspincolor(grid))
+    dst = rng.cnormal(g.vspincolor(grid))
 
-        for matrix in test["matrices"]:
-            g.message(
-                f"""
+    # apply open boundaries to fields if necessary
+    if test["params"]["boundary_phases"][-1] == 0.0:
+        g.qcd.fermion.apply_open_boundaries(src)
+        g.qcd.fermion.apply_open_boundaries(dst)
+
+    for matrix in test["matrices"]:
+        g.message(
+            f"""
 
             Testing {name}{matrix}
 
 """
-            )
-            finger_print = []
-            finger_print.append(verify_matrix_element(fermion, dst, src, matrix))
-            if test["matrices"][matrix] is None:
-                g.message(f"Matrix {matrix} fingerprint: {finger_print}")
-            else:
-                fp = np.array(finger_print)
-                eps = np.linalg.norm(
-                    fp - np.array(test["matrices"][matrix])
-                ) / np.linalg.norm(fp)
-                g.message(f"Test {matrix} fingerprint: {eps}")
-                assert eps < grid.precision.eps * finger_print_tolerance
+        )
+        finger_print = []
+        finger_print.append(verify_matrix_element(fermion_dp, dst, src, matrix))
+        if test["matrices"][matrix] is None:
+            g.message(f"Matrix {matrix} fingerprint: {finger_print}")
+        else:
+            fp = np.array(finger_print)
+            eps = np.linalg.norm(
+                fp - np.array(test["matrices"][matrix])
+            ) / np.linalg.norm(fp)
+            g.message(f"Test {matrix} fingerprint: {eps}")
+            assert eps < grid.precision.eps * finger_print_tolerance
+
+    # test single versus double precision
+    if isinstance(fermion_dp, g.qcd.fermion.fine_operator):
+        fermion_sp = fermion_dp.converted(g.single)
+        verify_single_versus_double_precision(rng, fermion_dp, fermion_sp)
