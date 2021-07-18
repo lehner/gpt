@@ -20,10 +20,9 @@
 #include "lib.h"
 
 #include "operators/types.h"
-//#include "operators/register.h"
 #include "operators/base.h"
 #include "operators/unary.h"
-#include "operators/deriv.h"
+#include "operators/derivative.h"
 #include "operators/implementation.h"
 #include "operators/wilson_clover.h"
 #include "operators/zmobius.h"
