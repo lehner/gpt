@@ -30,67 +30,69 @@ class MMdag:
             dst @= op * g(op.adj() * src)
         return operator
     def Mderiv(op):
-        return op.Mderiv
+        return op.M_projected_gradient
     def MderivDag(op):
-        return op.MderivDag
+        return op.M_projected_gradient.adj()
 
 #      ( EE EO )   ( 1    EO OO^-1 ) ( Mhat 0 ) ( 1  0  )
 #  M = ( OE OO ) = ( 0    1        ) ( 0    1 ) ( OE OO )
 # Mhat = EE - EO OO^-1 OE
 class MMdag_evenodd:
-    def __init__(self, M, parity=g.odd):
-        self.F_grid_eo = M.F_grid_eo
+    def __init__(self, parity=g.odd):
         self.parity = parity
-        self.tmp = [g.lattice(M.F_grid_eo, M.otype[0]) for _ in [0,1]]
-                
+
     def M(self, op):
+        tmp = g.lattice(op.F_grid_eo, op.otype[0])
         def operator(dst, src):
             op.Meooe.mat(dst, src)
-            op.Mooee.inv_mat(self.tmp[0], dst)
-            op.Meooe.mat(dst, self.tmp[0])
-            op.Mooee.mat(self.tmp[0], src)
-            dst @= self.tmp[0] - dst
+            op.Mooee.inv_mat(tmp, dst)
+            op.Meooe.mat(dst, tmp)
+            op.Mooee.mat(tmp, src)
+            dst @= tmp - dst
         return g.matrix_operator(
-            mat=operator, otype=op.otype, grid=self.F_grid_eo, cb=self.parity
+            mat=operator, otype=op.otype, grid=op.F_grid_eo, cb=self.parity
         )
     
     def Mdag(self, op):
+        tmp = g.lattice(op.F_grid_eo, op.otype[0])
         def operator(dst, src):
             op.Meooe.adj_mat(dst, src)
-            op.Mooee.adj_inv_mat(self.tmp[0], dst)
-            op.Meooe.adj_mat(dst, self.tmp[0])
-            op.Mooee.adj_mat(self.tmp[0], src)
-            dst @= self.tmp[0] - dst
+            op.Mooee.adj_inv_mat(tmp, dst)
+            op.Meooe.adj_mat(dst, tmp)
+            op.Mooee.adj_mat(tmp, src)
+            dst @= tmp - dst
         return g.matrix_operator(
-            mat=operator, otype=op.otype, grid=self.F_grid_eo, cb=self.parity
+            mat=operator, otype=op.otype, grid=op.F_grid_eo, cb=self.parity
         )
     
     def MMdag(self, op):
+        tmp = [g.lattice(op.F_grid_eo, op.otype[0]) for _ in [0,1]]
         def operator(dst, src):
             op.Meooe.adj_mat(dst, src)
-            op.Mooee.adj_inv_mat(self.tmp[0], dst)
-            op.Meooe.adj_mat(dst, self.tmp[0])
-            op.Mooee.adj_mat(self.tmp[0], src)
+            op.Mooee.adj_inv_mat(tmp[0], dst)
+            op.Meooe.adj_mat(dst, tmp[0])
+            op.Mooee.adj_mat(tmp[0], src)
             
-            self.tmp[1] @= self.tmp[0] - dst
+            tmp[1] @= tmp[0] - dst
     
-            op.Meooe.mat(dst, self.tmp[1])
-            op.Mooee.inv_mat(self.tmp[0], dst)
-            op.Meooe.mat(dst, self.tmp[0])
-            op.Mooee.mat(self.tmp[0], self.tmp[1])
+            op.Meooe.mat(dst, tmp[1])
+            op.Mooee.inv_mat(tmp[0], dst)
+            op.Meooe.mat(dst, tmp[0])
+            op.Mooee.mat(tmp[0], tmp[1])
             
-            dst @= self.tmp[0] - dst
+            dst @= tmp[0] - dst
         return operator
 
     def Mderiv(self, op):
+        tmp = [g.lattice(op.F_grid_eo, op.otype[0]) for _ in [0,1]]
         def operator(left, right):
-            op.Meooe.mat(self.tmp[0], right)
-            op.Mooee.inv_mat(self.tmp[1], self.tmp[0])
-            frc_o = op.Moederiv(left, self.tmp[1])
+            op.Meooe.mat(tmp[0], right)
+            op.Mooee.inv_mat(tmp[1], tmp[0])
+            frc_o = op.Meooe_projected_gradient(left, tmp[1])
 
-            op.Meooe.adj_mat(self.tmp[0], left)
-            op.Mooee.adj_inv_mat(self.tmp[1], self.tmp[0])
-            frc_e = op.Meoderiv(self.tmp[1], right)
+            op.Meooe.adj_mat(tmp[0], left)
+            op.Mooee.adj_inv_mat(tmp[1], tmp[0])
+            frc_e = op.Meooe_projected_gradient(tmp[1], right)
             
             frc = g.group.cartesian(op.U)
             for mu in range(len(frc)):
@@ -101,14 +103,15 @@ class MMdag_evenodd:
         return operator
 
     def MderivDag(self, op):
+        tmp = [g.lattice(op.F_grid_eo, op.otype[0]) for _ in [0,1]]
         def operator(left, right):
-            op.Meooe.adj_mat(self.tmp[0], right)
-            op.Mooee.adj_inv_mat(self.tmp[1], self.tmp[0])
-            frc_o = op.MoederivDag(left, self.tmp[1])
+            op.Meooe.adj_mat(tmp[0], right)
+            op.Mooee.adj_inv_mat(tmp[1], tmp[0])
+            frc_o = op.Meooe_projected_gradient.adj()(left, tmp[1])
             
-            op.Meooe.mat(self.tmp[0], left)
-            op.Mooee.inv_mat(self.tmp[1], self.tmp[0])
-            frc_e = op.MeoderivDag(self.tmp[1], right)
+            op.Meooe.mat(tmp[0], left)
+            op.Mooee.inv_mat(tmp[1], tmp[0])
+            frc_e = op.Meooe_projected_gradient.adj()(tmp[1], right)
             
             frc = g.group.cartesian(op.U)
             for mu in range(len(frc)):

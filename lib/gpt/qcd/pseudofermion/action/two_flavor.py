@@ -23,24 +23,43 @@ from gpt.core.group import differentiable_functional
 from gpt.qcd.pseudofermion.action.schur_differentiable_operator import *
 
 __all__ = []
-    
-# S = phi^dag Mdag^-1 M^-1 phi = phi^dag (M Mdag)^-1 phi = (psi, psi)
-# chi = Mdag^-1 psi = (M Mdag)^-1 phi
-# psi = M^-1 phi    = Mdag chi
-# dS = - (phi, (M Mdag)^-1 (dM Mdag + M dMdag) (M Mdag)^-1 phi)
-#    = - (chi, dM psi) - (psi, dMdag chi)
-class two_flavor_base(differentiable_functional):
+
+class action_base(differentiable_functional):
     def __init__(self, M, inverter, operator):
-        self.M = M
+        self.M = g.core.util.to_list(M)
         self.inverter = inverter
         self.operator = operator
         
     def _updated(self, fields):
         U = fields[0:-1]
         psi = fields[-1]
-        M = self.M.updated(U)
-        return [M, U, psi]
+        return [m.updated(U) for m in self.M] + [U, psi]
+    
+    def _allocate_force(self, U):
+        frc = g.group.cartesian(U)
+        for f in frc:
+            f[:] = 0
+        return frc
+    
+    def _accumulate(self, frc, frc1, sign):
+        for f, f1 in zip(frc, frc1):
+            f += sign * f1
+    
+    def __call__(self, fields):
+        raise NotImplementedError()
 
+    def draw(self, fields, rng):
+        raise NotImplementedError()
+
+    def gradient(self, fields, dfields):
+        raise NotImplementedError()
+
+# S = phi^dag Mdag^-1 M^-1 phi = phi^dag (M Mdag)^-1 phi = (psi, psi)
+# chi = Mdag^-1 psi = (M Mdag)^-1 phi
+# psi = M^-1 phi    = Mdag chi
+# dS = - (phi, (M Mdag)^-1 (dM Mdag + M dMdag) (M Mdag)^-1 phi)
+#    = - (chi, dM psi) - (psi, dMdag chi)
+class two_flavor_base(action_base):
     def __call__(self, fields):
         M, U, phi = self._updated(fields)
         
@@ -57,7 +76,6 @@ class two_flavor_base(differentiable_functional):
 
         phi @= self.operator.M(M) * eta
         return g.norm2(eta)
-
     
     def gradient(self, fields, dfields):
         M, U, phi = self._updated(fields)
@@ -67,11 +85,9 @@ class two_flavor_base(differentiable_functional):
         psi = g.lattice(phi)
         psi @= self.operator.Mdag(M) * chi
         
-        frc = self.operator.Mderiv(M)(chi, psi)
-        tmp = self.operator.MderivDag(M)(psi, chi)
-        for mu in range(len(frc)):
-            frc[mu] @= -frc[mu]-tmp[mu]
-        del tmp
+        frc = self._allocate_force(U)
+        self._accumulate(frc, self.operator.Mderiv(M)(chi, psi), -1)
+        self._accumulate(frc, self.operator.MderivDag(M)(psi, chi), -1)
         
         dS = []
         for f in dfields:
@@ -95,7 +111,7 @@ class two_flavor(two_flavor_base):
 __all__ += ['two_flavor_evenodd_schur']
 class two_flavor_evenodd_schur(two_flavor_base):
     def __init__(self, M, inverter):
-        super().__init__(M, inverter, MMdag_evenodd(M))
+        super().__init__(M, inverter, MMdag_evenodd(g.odd))
 
 __all__ += ['two_flavor_evenodd']
 class two_flavor_evenodd(differentiable_functional):
@@ -144,17 +160,10 @@ class two_flavor_evenodd(differentiable_functional):
 # det (M1 M1dag/M2 M2dag) -> S = phi^dag M2dag (M1 M1dag)^-1 M2 phi
 # chi = (M1 M1dag)^-1 M2 phi, psi = M1^-1 M2 phi
 # dS = (phi, dM2dag chi) + (chi, dM2 phi) - (chi, dM1 M1dag chi) - (chi, M1 dM1dag chi)
-class two_flavor_ratio_base(differentiable_functional):
+class two_flavor_ratio_base(action_base):
     def __init__(self, M, inverter, operator):
         assert(len(M)==2)
-        self.M = M
-        self.inverter = inverter
-        self.operator = operator
-
-    def _updated(self, fields):
-        U = fields[0:-1]
-        psi = fields[-1]
-        return [m.updated(U) for m in self.M] + [U, psi]
+        super().__init__(M, inverter, operator)
     
     def __call__(self, fields):
         M1, M2, U, phi = self._updated(fields)
@@ -179,10 +188,7 @@ class two_flavor_ratio_base(differentiable_functional):
     def gradient(self, fields, dfields):
         M1, M2, U, phi = self._updated(fields)
         
-        frc = g.group.cartesian(U)
-        def accumulate(f, sign):
-            for mu in range(len(frc)):
-                frc[mu] += sign * f[mu]
+        frc = self._allocate_force(U)
                 
         psi = g.lattice(phi)
         psi @= self.operator.M(M2) * phi
@@ -190,10 +196,10 @@ class two_flavor_ratio_base(differentiable_functional):
         chi @= self.inverter(self.operator.MMdag(M1)) * psi
         psi @= self.operator.Mdag(M1) * chi
         
-        accumulate(self.operator.Mderiv(M2)(chi, phi), +1)
-        accumulate(self.operator.MderivDag(M2)(phi, chi), +1)
-        accumulate(self.operator.Mderiv(M1)(chi, psi), -1)
-        accumulate(self.operator.MderivDag(M1)(psi, chi), -1)
+        self._accumulate(frc, self.operator.Mderiv(M2)(chi, phi), +1)
+        self._accumulate(frc, self.operator.MderivDag(M2)(phi, chi), +1)
+        self._accumulate(frc, self.operator.Mderiv(M1)(chi, psi), -1)
+        self._accumulate(frc, self.operator.MderivDag(M1)(psi, chi), -1)
         
         dS = []
         for f in dfields:
@@ -212,4 +218,4 @@ class two_flavor_ratio(two_flavor_ratio_base):
 __all__ += ['two_flavor_ratio_evenodd_schur']
 class two_flavor_ratio_evenodd_schur(two_flavor_ratio_base):    
     def __init__(self, M, inverter):
-        super().__init__(M, inverter, MMdag_evenodd(M[0]))
+        super().__init__(M, inverter, MMdag_evenodd(g.odd))
