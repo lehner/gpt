@@ -45,20 +45,35 @@ class differentiable_fine_operator(fine_operator):
 
         return _apply
 
-    def _get_projected_matrix_operator(self, m, md):
+    def _get_projected_matrix_operator(self, m, md, grid, otype, parity):
         return gpt.projected_matrix_operator(
-            self._get_projected_operator(m), self._get_projected_operator(md)
+            self._get_projected_operator(m),
+            self._get_projected_operator(md),
+            (grid, grid),
+            (otype, otype),
+            parity,
         )
+
+    def _combined_eooe(self, Meo, Moe):
+        def _apply(dst, left, right):
+            cb = right.checkerboard()
+            if cb is gpt.odd:
+                return Meo(dst, left, right)
+            else:
+                return Moe(dst, left, right)
+
+        return _apply
 
     def __init__(self, name, U, params, otype=None):
         super().__init__(name, U, params, otype)
 
         self.M_projected_gradient = self._get_projected_matrix_operator(
-            self._MDeriv, self._MDerivDag
+            self._MDeriv, self._MDerivDag, self.F_grid, otype, gpt.full
         )
-        self.Meo_projected_gradient = self._get_projected_matrix_operator(
-            self._MeoDeriv, self._MeoDerivDag
-        )
-        self.Moe_projected_gradient = self._get_projected_matrix_operator(
-            self._MoeDeriv, self._MoeDerivDag
+        self.Meooe_projected_gradient = self._get_projected_matrix_operator(
+            self._combined_eooe(self._MeoDeriv, self._MoeDeriv),
+            self._combined_eooe(self._MeoDerivDag, self._MoeDerivDag),
+            self.F_grid_eo,
+            otype,
+            gpt.odd,
         )

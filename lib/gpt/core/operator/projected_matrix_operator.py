@@ -20,12 +20,21 @@ import gpt as g
 
 
 class projected_matrix_operator:
-    def __init__(self, mat, adj_mat=None):
+    def __init__(self, mat, adj_mat, grid, otype, parity):
         self.mat = mat
         self.adj_mat = adj_mat
+        self.grid = grid
+        self.otype = otype
+        self.parity = parity
 
     def adj(self):
-        return projected_matrix_operator(self.adj_mat, self.mat)
+        return projected_matrix_operator(
+            self.adj_mat,
+            self.mat,
+            tuple(reversed(self.grid)),
+            tuple(reversed(self.otype)),
+            self.parity,
+        )
 
     def __call__(self, left, right):
         return self.mat(g(left), g(right))

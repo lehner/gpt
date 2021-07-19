@@ -127,9 +127,10 @@ class random:
 
         t("complex")
         ca = gpt.complex(grid)
+        ca.checkerboard(out.checkerboard())
 
         t("cartesian_space")
-        cartesian_space = gpt.lattice(out.grid, out.otype.cartesian())
+        cartesian_space = gpt.group.cartesian(out)
         t("csset")
         cartesian_space[:] = 0
 
