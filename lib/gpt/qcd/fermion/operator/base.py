@@ -21,7 +21,7 @@ import gpt, cgpt
 from gpt.params import params_convention
 
 
-class operator(gpt.matrix_operator):
+class base(gpt.matrix_operator):
     def __init__(self, name, U, params, otype, with_even_odd):
         # keep constructor parameters
         self.name = name
@@ -136,7 +136,10 @@ class operator(gpt.matrix_operator):
             lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
         )
         self.Dhop = gpt.matrix_operator(
-            mat=registry.Dhop, adj_mat=registry.DhopDag, otype=otype, grid=self.F_grid,
+            mat=registry.Dhop,
+            adj_mat=registry.DhopDag,
+            otype=otype,
+            grid=self.F_grid,
         )
         self._Mdir = registry.Mdir
         self._MDeriv = registry.MDeriv
@@ -169,7 +172,10 @@ class operator(gpt.matrix_operator):
 
     def updated(self, U):
         return type(self)(
-            name=self.name, U=U, params=self.params_constructor, otype=self.otype[0],
+            name=self.name,
+            U=U,
+            params=self.params_constructor,
+            otype=self.otype[0],
         )
 
     def update(self, U):

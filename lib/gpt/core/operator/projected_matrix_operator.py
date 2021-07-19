@@ -1,7 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
+#    Copyright (C) 2021  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,14 +16,25 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.fermion.operator.fine_operator import fine_operator
-from gpt.qcd.fermion.operator.differentiable_fine_operator import (
-    differentiable_fine_operator,
-)
-from gpt.qcd.fermion.operator.coarse_operator import coarse_operator
+import gpt as g
 
 
-# (G5 D(U))^\dagger = G5 D(U)
-class gauge_independent_g5_hermitian:
-    def __init__(self, G5):
-        self.G5 = G5
+class projected_matrix_operator:
+    def __init__(self, mat, adj_mat, grid, otype, parity):
+        self.mat = mat
+        self.adj_mat = adj_mat
+        self.grid = grid
+        self.otype = otype
+        self.parity = parity
+
+    def adj(self):
+        return projected_matrix_operator(
+            self.adj_mat,
+            self.mat,
+            tuple(reversed(self.grid)),
+            tuple(reversed(self.otype)),
+            self.parity,
+        )
+
+    def __call__(self, left, right):
+        return self.mat(g(left), g(right))

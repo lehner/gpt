@@ -346,6 +346,87 @@ test_suite = {
 finger_print_tolerance = 100.0
 
 
+def verify_single_versus_double_precision(rng, fermion_dp, fermion_sp):
+    eps_ref = fermion_sp.F_grid.precision.eps * finger_print_tolerance
+    for atag in fermion_dp.__dict__.keys():
+        a_dp = getattr(fermion_dp, atag)
+        if isinstance(a_dp, g.projected_matrix_operator):
+            a_sp = getattr(fermion_sp, atag)
+            rhs_dp = rng.cnormal(g.lattice(a_dp.grid[1], a_dp.otype[1]))
+            lhs_dp = rng.cnormal(g.lattice(a_dp.grid[0], a_dp.otype[0]))
+            if rhs_dp.grid.cb.n == 1:
+                parities = [(g.full, g.full)]
+            elif a_dp.parity == g.even:
+                parities = [(g.even, g.even), (g.odd, g.odd)]
+            elif a_dp.parity == g.odd:
+                parities = [(g.odd, g.even), (g.even, g.odd)]
+            else:
+                assert False
+            for lp, rp in parities:
+                if lp != g.full:
+                    rhs_dp.checkerboard(rp)
+                    lhs_dp.checkerboard(lp)
+                rhs_sp = g.convert(rhs_dp, g.single)
+                lhs_sp = g.convert(lhs_dp, g.single)
+                # first test matrix
+                ref_list = a_dp(lhs_dp, rhs_dp)
+                cmp_list = g.convert(a_sp(lhs_sp, rhs_sp), g.double)
+                for r, c in zip(ref_list, cmp_list):
+                    eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
+                    g.message(f"Verify single <> double for {atag}: {eps}")
+                    assert eps < eps_ref
+                # then test adjoint matrix
+                ref_list = a_dp.adj()(lhs_dp, rhs_dp)
+                cmp_list = g.convert(a_sp.adj()(lhs_sp, rhs_sp), g.double)
+                for r, c in zip(ref_list, cmp_list):
+                    eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
+                    g.message(f"Verify single <> double for {atag}.adj(): {eps}")
+                    assert eps < eps_ref
+        elif isinstance(a_dp, g.matrix_operator):
+            a_sp = getattr(fermion_sp, atag)
+            rhs_dp = rng.cnormal(g.lattice(a_dp.grid[1], a_dp.otype[1]))
+            lhs_dp = rng.cnormal(g.lattice(a_dp.grid[0], a_dp.otype[0]))
+            if rhs_dp.grid.cb.n != 1:
+                # for now test only odd cb
+                rhs_dp.checkerboard(g.odd)
+                lhs_dp.checkerboard(g.odd)
+            rhs_sp = g.convert(rhs_dp, g.single)
+            lhs_sp = g.convert(lhs_dp, g.single)
+            # first test matrix
+            ref = a_dp(rhs_dp)
+            eps = (
+                g.norm2(ref - g.convert(a_sp(rhs_sp), g.double)) ** 0.5
+                / g.norm2(ref) ** 0.5
+            )
+            g.message(f"Verify single <> double for {atag}: {eps}")
+            assert eps < eps_ref
+            # then test adjoint matrix
+            if a_dp.adj_mat is not None:
+                ref = a_dp.adj()(lhs_dp)
+                eps = (
+                    g.norm2(ref - g.convert(a_sp.adj()(lhs_sp), g.double)) ** 0.5
+                    / g.norm2(ref) ** 0.5
+                )
+                g.message(f"Verify single <> double for {atag}.adj(): {eps}")
+                assert eps < eps_ref
+                if a_dp.inv_mat is not None:
+                    ref = a_dp.inv()(lhs_dp)
+                    eps = (
+                        g.norm2(ref - g.convert(a_sp.inv()(lhs_sp), g.double)) ** 0.5
+                        / g.norm2(ref) ** 0.5
+                    )
+                    g.message(f"Verify single <> double for {atag}.inv(): {eps}")
+                    assert eps < eps_ref
+                    ref = a_dp.adj().inv()(lhs_dp)
+                    eps = (
+                        g.norm2(ref - g.convert(a_sp.adj().inv()(lhs_sp), g.double))
+                        ** 0.5
+                        / g.norm2(ref) ** 0.5
+                    )
+                    g.message(f"Verify single <> double for {atag}.adj().inv(): {eps}")
+                    assert eps < eps_ref
+
+
 def verify_projected_even_odd(M, Meo, dst_p, src_p, src):
     src_proj_p = g.lattice(src)
     src_proj_p[:] = 0
@@ -371,7 +452,7 @@ def get_matrix(f, t):
 
 
 def verify_matrix_element(fermion, dst, src, tag):
-    mat = get_matrix(fermion, tag)
+    mat = get_matrix(fermion_dp, tag)
     src_prime = g.eval(mat * src)
     dst.checkerboard(src_prime.checkerboard())
     X = g.inner_product(dst, src_prime)
@@ -410,87 +491,151 @@ def verify_matrix_element(fermion, dst, src, tag):
             g.pick_checkerboard(parity.inv(), dst_p, src)
             verify_matrix_element(fermion, dst_p, src_p, tag_Meooe)
             verify_projected_even_odd(mat, mat_Meooe, dst_p, src_p, src)
-    # do derivative tests
-    projected_gradient_operators = {"": ("Mderiv", "MderivDag")}
+    # perform derivative tests
+    projected_gradient_operators = {"": "M_projected_gradient"}
     if tag in projected_gradient_operators and isinstance(
         fermion, g.qcd.fermion.differentiable_fine_operator
     ):
-        g.message(f"Test projected_gradient versions of {tag}")
-        tag_pg, tag_pgd = projected_gradient_operators[tag]
-        mat_pg = get_matrix(fermion, tag_pg)
-        mat_pgd = get_matrix(fermion, tag_pgd)
+        # Test projected gradient for src^dag M^dag M src
+        g.message(f"Test projected_gradient of {tag} via src^dag M^dag M src")
+        mat_pg = get_matrix(fermion, projected_gradient_operators[tag])
         dst_pg = g(mat * src)
 
         class df(g.group.differentiable_functional):
-            # f = src^dag M^dag M src
-            # df = src^dag dM^dag M src + src^dag M^dag dM src
             def __call__(self, Uprime):
-                mat = get_matrix(fermion.updated(Uprime), tag)
-                return g.norm2(mat * src)
+                return g.norm2(get_matrix(fermion.updated(Uprime), tag) * src)
 
             def gradient(self, Uprime, dUprime):
                 assert dUprime == Uprime
                 return [
                     g.eval(a + b)
-                    for a, b in zip(mat_pg(dst_pg, src), mat_pgd(src, dst_pg))
+                    for a, b in zip(mat_pg(dst_pg, src), mat_pg.adj()(src, dst_pg))
                 ]
 
         dfv = df()
-        if dst.grid.precision is g.double:
+        dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
+
+        # Test projected gradient for src^dag G5 M src
+        if isinstance(fermion, g.qcd.fermion.gauge_independent_g5_hermitian):
+            g.message(f"Test projected_gradient of {tag} via src^dag G5 M src")
+
+            class df(g.group.differentiable_functional):
+                def __call__(self, Uprime):
+                    return g.inner_product(
+                        src, fermion.G5 * get_matrix(fermion.updated(Uprime), tag) * src
+                    ).real
+
+                def gradient(self, Uprime, dUprime):
+                    assert dUprime == Uprime
+                    return mat_pg(fermion.G5 * src, src)
+
+            dfv = df()
             dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
-        else:
-            dfv.assert_gradient_error(rng, U, U, 1e-2, 1e-2)
+
+            g.message(f"Test projected_gradient of {tag} via src^dag M^dag G5 src")
+
+            class df(g.group.differentiable_functional):
+                def __call__(self, Uprime):
+                    return g.inner_product(
+                        src,
+                        get_matrix(fermion.updated(Uprime), tag).adj()
+                        * fermion.G5
+                        * src,
+                    ).real
+
+                def gradient(self, Uprime, dUprime):
+                    assert dUprime == Uprime
+                    return mat_pg.adj()(src, fermion.G5 * src)
+
+            dfv = df()
+            dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
+
+    # perform even-odd derivative tests
+    projected_gradient_operators = {"Meooe": "Meooe_projected_gradient"}
+    if tag in projected_gradient_operators and isinstance(
+        fermion, g.qcd.fermion.differentiable_fine_operator
+    ):
+        # Test projected gradient for src_p^dag M^dag M src_p
+        g.message(f"Test projected_gradient of {tag} via src^dag M^dag M src")
+        mat_pg = get_matrix(fermion, projected_gradient_operators[tag])
+        src_p = g.lattice(fermion.F_grid_eo, fermion.otype[1])
+
+        for parity in [g.even, g.odd]:
+            g.pick_checkerboard(parity, src_p, src)
+            dst_p = g(mat * src_p)
+
+            class df(g.group.differentiable_functional):
+                def __call__(self, Uprime):
+                    return g.norm2(get_matrix(fermion.updated(Uprime), tag) * src_p)
+
+                def gradient(self, Uprime, dUprime):
+                    assert dUprime == Uprime
+                    R = g.group.cartesian(Uprime)
+                    for r, x in zip(
+                        R + R, mat_pg(dst_p, src_p) + mat_pg.adj()(src_p, dst_p)
+                    ):
+                        g.set_checkerboard(r, x)
+                    return R
+
+        dfv = df()
+        dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
+
     return X
 
 
 g.default.set_verbose("random", False)
-for precision in [g.double, g.single]:
-    # test suite
-    for name in test_suite:
 
-        # load configuration
-        rng = g.random("finger_print")
-        U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], precision), rng)
+# test suite
+for name in test_suite:
 
-        # default grid
-        grid = U[0].grid
+    # load configuration
+    rng = g.random("finger_print")
+    U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 
-        # check tolerance
-        eps = grid.precision.eps
+    # default grid
+    grid = U[0].grid
 
-        # params
-        test = test_suite[name]
-        g.message(f"Starting test suite for {precision.__name__} precision {name}")
+    # check tolerance
+    eps = grid.precision.eps
 
-        # create fermion
-        fermion = test["fermion"](U, test["params"])
+    # params
+    test = test_suite[name]
+    g.message(f"Starting test suite for {name}")
 
-        # do full tests
-        grid = fermion.F_grid
-        src = rng.cnormal(g.vspincolor(grid))
-        dst = rng.cnormal(g.vspincolor(grid))
+    # create fermion
+    fermion_dp = test["fermion"](U, test["params"])
 
-        # apply open boundaries to fields if necessary
-        if test["params"]["boundary_phases"][-1] == 0.0:
-            g.qcd.fermion.apply_open_boundaries(src)
-            g.qcd.fermion.apply_open_boundaries(dst)
+    # do full tests
+    grid = fermion_dp.F_grid
+    src = rng.cnormal(g.vspincolor(grid))
+    dst = rng.cnormal(g.vspincolor(grid))
 
-        for matrix in test["matrices"]:
-            g.message(
-                f"""
+    # apply open boundaries to fields if necessary
+    if test["params"]["boundary_phases"][-1] == 0.0:
+        g.qcd.fermion.apply_open_boundaries(src)
+        g.qcd.fermion.apply_open_boundaries(dst)
+
+    for matrix in test["matrices"]:
+        g.message(
+            f"""
 
             Testing {name}{matrix}
 
 """
-            )
-            finger_print = []
-            finger_print.append(verify_matrix_element(fermion, dst, src, matrix))
-            if test["matrices"][matrix] is None:
-                g.message(f"Matrix {matrix} fingerprint: {finger_print}")
-            else:
-                fp = np.array(finger_print)
-                eps = np.linalg.norm(
-                    fp - np.array(test["matrices"][matrix])
-                ) / np.linalg.norm(fp)
-                g.message(f"Test {matrix} fingerprint: {eps}")
-                assert eps < grid.precision.eps * finger_print_tolerance
+        )
+        finger_print = []
+        finger_print.append(verify_matrix_element(fermion_dp, dst, src, matrix))
+        if test["matrices"][matrix] is None:
+            g.message(f"Matrix {matrix} fingerprint: {finger_print}")
+        else:
+            fp = np.array(finger_print)
+            eps = np.linalg.norm(
+                fp - np.array(test["matrices"][matrix])
+            ) / np.linalg.norm(fp)
+            g.message(f"Test {matrix} fingerprint: {eps}")
+            assert eps < grid.precision.eps * finger_print_tolerance
+
+    # test single versus double precision
+    if isinstance(fermion_dp, g.qcd.fermion.fine_operator):
+        fermion_sp = fermion_dp.converted(g.single)
+        verify_single_versus_double_precision(rng, fermion_dp, fermion_sp)
