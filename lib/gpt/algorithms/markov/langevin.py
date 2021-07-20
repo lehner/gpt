@@ -44,19 +44,19 @@ class langevin_bf:
 
     def __call__(self, fields, action):
         gr = action.gradient(fields, fields)
-        CA = gr[0].CA
+        CA = gr[0].otype.CA
         sqrteps_eta = [g(self.rng.normal_element(g.lattice(d)) * (self.eps * 2.0) ** 0.5) for d in gr]
         fields_tilde = g.copy(fields)
-        for d, f in zip(gr, fields_tilde):
+        for d, f, n in zip(gr, fields_tilde, sqrteps_eta):
             f @= g.group.compose(
                 -d * self.eps
-                -sqrteps_eta,
+                -n,
                 f,
             )
         gr_tilde = action.gradient(fields_tilde, fields_tilde)
-        for d_tilde, d, f_tilde, f in zip(gr_tilde, gr, fields_tilde, fields):
+        for d_tilde, d, f_tilde, f, n in zip(gr_tilde, gr, fields_tilde, fields, sqrteps_eta):
             f @= g.group.compose(
                 -(d+d_tilde) * (self.eps * 0.5 * (1.0 + CA * self.eps / 6.0))
-                -sqrteps_eta,
+                -n,
                 f,
             )

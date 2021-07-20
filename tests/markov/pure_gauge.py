@@ -84,3 +84,11 @@ for it in range(10):
     g.message(f"Langevin_euler(eps=0.005) {it} has P = {plaq}")
 
 assert abs(plaq - 0.8241718345218234) < 1e-6
+
+l = g.algorithms.markov.langevin_bf(rng, epsilon=0.02)
+for it in range(10):
+    l(U, w)
+    plaq = g.qcd.gauge.plaquette(U)
+    g.message(f"Langevin_bf(eps=0.02) {it} has P = {plaq}")
+
+assert abs(plaq - 0.6483719083997939) < 1e-6
