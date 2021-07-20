@@ -20,5 +20,5 @@
 from gpt.algorithms.markov.su2_heat_bath import su2_heat_bath
 from gpt.algorithms.markov.u1_heat_bath import u1_heat_bath
 from gpt.algorithms.markov.local_metropolis import local_metropolis
-from gpt.algorithms.markov.langevin import langevin
+from gpt.algorithms.markov.langevin import langevin_euler, langevin_bf
 from gpt.algorithms.markov.metropolis import metropolis

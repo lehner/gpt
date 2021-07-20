@@ -42,6 +42,7 @@ for f in \
     ${test_path}/qcd/coarse_even_odd.py \
     ${test_path}/qcd/a2a.py \
     ${test_path}/qcd/fermion_operators.py \
+    ${test_path}/qcd/fermion_actions.py \
     ${test_path}/qcd/gauge.py \
     ${test_path}/qcd/scalar.py \
     ${test_path}/qcd/domain_wall.py \

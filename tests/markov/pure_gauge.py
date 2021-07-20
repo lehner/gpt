@@ -77,10 +77,10 @@ assert abs(R_2x1 - 0.3452021016014947) < 1e-6
 # langevin
 U = g.qcd.gauge.unit(grid)
 w = g.qcd.gauge.action.wilson(beta)
-l = g.algorithms.markov.langevin(rng, epsilon=0.005)
+l = g.algorithms.markov.langevin_euler(rng, epsilon=0.005)
 for it in range(10):
     l(U, w)
     plaq = g.qcd.gauge.plaquette(U)
-    g.message(f"Langevin(eps=0.005) {it} has P = {plaq}")
+    g.message(f"Langevin_euler(eps=0.005) {it} has P = {plaq}")
 
 assert abs(plaq - 0.8241718345218234) < 1e-6

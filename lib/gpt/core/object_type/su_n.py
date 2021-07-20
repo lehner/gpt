@@ -158,6 +158,7 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
                 dst, gpt.matrix.exp(src * 1j)
             )
         }
+        self.CA = Nc
 
     def generators(self, dt):
         r = []

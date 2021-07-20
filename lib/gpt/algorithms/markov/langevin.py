@@ -19,7 +19,7 @@
 import gpt as g
 
 
-class langevin:
+class langevin_euler:
     @g.params_convention(epsilon=0.01)
     def __init__(self, rng, params):
         self.rng = rng
@@ -31,5 +31,32 @@ class langevin:
             f @= g.group.compose(
                 -d * self.eps
                 + self.rng.normal_element(g.lattice(d)) * (self.eps * 2.0) ** 0.5,
+                f,
+            )
+
+
+# Phys. Rev. D 32, 2736 (1985); Phys. Rev. Lett. 55, 1854 (1985).
+class langevin_bf:
+    @g.params_convention(epsilon=0.01)
+    def __init__(self, rng, params):
+        self.rng = rng
+        self.eps = params["epsilon"]
+
+    def __call__(self, fields, action):
+        gr = action.gradient(fields, fields)
+        CA = gr[0].CA
+        sqrteps_eta = [g(self.rng.normal_element(g.lattice(d)) * (self.eps * 2.0) ** 0.5) for d in gr]
+        fields_tilde = g.copy(fields)
+        for d, f in zip(gr, fields_tilde):
+            f @= g.group.compose(
+                -d * self.eps
+                -sqrteps_eta,
+                f,
+            )
+        gr_tilde = action.gradient(fields_tilde, fields_tilde)
+        for d_tilde, d, f_tilde, f in zip(gr_tilde, gr, fields_tilde, fields):
+            f @= g.group.compose(
+                -(d+d_tilde) * (self.eps * 0.5 * (1.0 + CA * self.eps / 6.0))
+                -sqrteps_eta,
                 f,
             )
