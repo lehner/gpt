@@ -66,4 +66,4 @@ for _a in acts:
     da = a.draw(fields, rng) - a(fields)
     g.message(f"difference action drawn vs computed: da = {da:g}")
     assert abs(da) < 1e-7
-    a.assert_gradient_error(rng, fields, U, 1e-4, 5e-7)
+    a.assert_gradient_error(rng, fields, U, 1e-3, 5e-7)
