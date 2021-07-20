@@ -17,4 +17,10 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.pseudofermion.action.two_flavor import *
+from gpt.qcd.pseudofermion.action.two_flavor import (
+    two_flavor,
+    two_flavor_evenodd_schur,
+    two_flavor_evenodd,
+    two_flavor_ratio,
+    two_flavor_ratio_evenodd_schur,
+)

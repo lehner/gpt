@@ -22,8 +22,6 @@ import gpt as g
 from gpt.core.group import differentiable_functional
 from gpt.qcd.pseudofermion.action.schur_differentiable_operator import *
 
-__all__ = []
-
 
 class action_base(differentiable_functional):
     def __init__(self, M, inverter, operator):
@@ -100,9 +98,6 @@ class two_flavor_base(action_base):
         return dS
 
 
-__all__ += ["two_flavor"]
-
-
 class two_flavor(two_flavor_base):
     def __init__(self, M, inverter):
         super().__init__(M, inverter, MMdag)
@@ -112,15 +107,11 @@ class two_flavor(two_flavor_base):
 #  M = ( OE OO ) = ( 0    1        ) ( 0    1 ) ( OE OO )
 # Mhat = EE - EO OO^-1 OE
 # S = psi^dag (Mhat Mhatdag)^-1 psi
-__all__ += ["two_flavor_evenodd_schur"]
 
 
 class two_flavor_evenodd_schur(two_flavor_base):
     def __init__(self, M, inverter):
         super().__init__(M, inverter, MMdag_evenodd(g.odd))
-
-
-__all__ += ["two_flavor_evenodd"]
 
 
 class two_flavor_evenodd(differentiable_functional):
@@ -221,15 +212,9 @@ class two_flavor_ratio_base(action_base):
         return dS
 
 
-__all__ += ["two_flavor_ratio"]
-
-
 class two_flavor_ratio(two_flavor_ratio_base):
     def __init__(self, M, inverter):
         super().__init__(M, inverter, MMdag)
-
-
-__all__ += ["two_flavor_ratio_evenodd_schur"]
 
 
 class two_flavor_ratio_evenodd_schur(two_flavor_ratio_base):
