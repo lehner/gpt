@@ -27,12 +27,10 @@ q = params["fmatrix"](U)
 nbasis = params["nbasis"]
 fg_basis, fg_cevec, fg_feval = g.load(
     params["basis"],
-    {
-        "grids": q.F_grid_eo,
-        "nmax": nbasis,
-        "advise_basis": g.infrequent_use,
-        "advise_cevec": g.infrequent_use,
-    },
+    grids=q.F_grid_eo,
+    nmax=nbasis,
+    advise_basis=g.infrequent_use,
+    advise_cevec=g.infrequent_use,
 )
 
 # memory info
@@ -105,7 +103,7 @@ g.message(
 g.mem_report()
 
 try:
-    cevec, cev = g.load("cevec", {"grids": cgrid})
+    cevec, cev = g.load("cevec", grids=cgrid)
 except g.LoadError:
     cevec, cev = irl(cop, cstart, params["checkpointer"])
     g.save("cevec", (cevec, cev))

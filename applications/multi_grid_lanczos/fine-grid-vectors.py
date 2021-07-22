@@ -27,7 +27,7 @@ start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 start.checkerboard(g.odd)  # traditionally, calculate odd-site vectors
 
 try:
-    basis, ev = g.load("checkpoint", {"grids": grid})
+    basis, ev = g.load("checkpoint", grids=grid)
 except g.LoadError:
     basis, ev = irl(op, start, params["checkpointer"])
     g.save("checkpoint", (basis, ev))
