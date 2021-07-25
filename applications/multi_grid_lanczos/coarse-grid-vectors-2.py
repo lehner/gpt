@@ -75,7 +75,7 @@ g.message(
 g.mem_report()
 
 try:
-    cevec, cev = g.load("cevec", {"grids": cgrid})
+    cevec, cev = g.load("cevec", grids=cgrid)
 except g.LoadError:
     cevec, cev = irl(cop, cstart, params["checkpointer"])
     g.save("cevec", (cevec, cev))
