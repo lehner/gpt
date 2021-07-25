@@ -83,8 +83,24 @@ def complex_additive(grid):
     return gpt_object(grid, ot_complex_additive_group())
 
 
+def vector_complex_additive(grid, n):
+    return gpt_object(grid, ot_vector_complex_additive_group(n))
+
+
+def matrix_complex_additive(grid, n):
+    return gpt_object(grid, ot_matrix_complex_additive_group(n))
+
+
 def real_additive(grid):
     return gpt_object(grid, ot_real_additive_group())
+
+
+def vector_real_additive(grid, n):
+    return gpt_object(grid, ot_vector_real_additive_group(n))
+
+
+def matrix_real_additive(grid, n):
+    return gpt_object(grid, ot_matrix_real_additive_group(n))
 
 
 def matrix_su2_fundamental(grid):
@@ -144,8 +160,10 @@ def str_to_otype(s):
             "ot_u_1_algebra",
             "ot_complex_additive_group",
             "ot_real_additive_group",
-            "ot_vector_complex_additive_group",
             "ot_vector_real_additive_group",
+            "ot_matrix_real_additive_group",
+            "ot_vector_complex_additive_group",
+            "ot_matrix_complex_additive_group",
         ]
     )
 
@@ -164,12 +182,19 @@ def real(grid):
 
 
 def vcomplex(grid, n):
-    # TODO: move this to a vector_complex_additive
-    return vector_singlet(grid, n)
+    return vector_complex_additive(grid, n)
 
 
 def mcomplex(grid, n):
-    return matrix_singlet(grid, n)
+    return matrix_complex_additive(grid, n)
+
+
+def vreal(grid, n):
+    return vector_real_additive(grid, n)
+
+
+def mreal(grid, n):
+    return matrix_real_additive(grid, n)
 
 
 def mcolor(grid):

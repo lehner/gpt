@@ -148,9 +148,13 @@ for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
         g.u1,
         g.complex,
         g.real,
+        lambda grid: g.vreal(grid, 8),
+        lambda grid: g.mreal(grid, 8),
+        lambda grid: g.vcomplex(grid, 8),
+        lambda grid: g.mcomplex(grid, 8),
     ]:
-        g.message(f"Test {representation.__name__} on grid {grid.precision.__name__}")
         U = representation(grid)
+        g.message(f"Test {U.otype.__name__} on grid {grid.precision.__name__}")
         rng.element(U)
         check_element(U)
         check_representation(U, eps_ref)
@@ -181,4 +185,4 @@ for eps_ref, grid in [(1e-12, grid_dp)]:
         assert eps < eps_ref
 
         check_element(U)
-        check_representation(U, eps_ref)
+        check_representation
