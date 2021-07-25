@@ -511,7 +511,7 @@ def save(filename, objs, params):
     cgrid = cevec[0].grid
 
     # mpi layout
-    if "mpi" in params:
+    if params["mpi"] is not None:
         mpi = params["mpi"]
     else:
         mpi = fgrid.mpi
