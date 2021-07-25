@@ -72,7 +72,6 @@ class ot_real_additive_group(ot_singlet):
 ###
 # (\mathbb{R}^{n},+)
 class ot_vector_real_additive_group(ot_vector_singlet):
-
     def __init__(self, n):
         super().__init__(n)
         self.__name__ = f"ot_vector_real_additive_group({n})"
@@ -95,10 +94,12 @@ class ot_vector_real_additive_group(ot_vector_singlet):
 
     def generators(self, dt):
         n = self.shape[0]
+
         def basis(i):
             m = numpy.zeros(self.shape, dtype=dt)
             m[i] = 1.0
-            return gpt.vector_singlet(m,n)
+            return gpt.vector_singlet(m, n)
+
         return [basis(i) for i in range(n)]
 
     def inner_product(self, left, right):
@@ -129,7 +130,6 @@ class ot_vector_real_additive_group(ot_vector_singlet):
 ###
 # (\mathbb{R}^{n \times n},+)
 class ot_matrix_real_additive_group(ot_matrix_singlet):
-
     def __init__(self, n):
         self.Ndim = n
         super().__init__(n)
@@ -154,11 +154,13 @@ class ot_matrix_real_additive_group(ot_matrix_singlet):
 
     def generators(self, dt):
         n = self.shape[0]
+
         def basis(i, j):
             m = numpy.zeros(self.shape, dtype=dt)
-            m[i,j] = 1.0
-            return gpt.matrix_singlet(m,n)
-        return [basis(i,j) for i in range(n) for j in range(n)]
+            m[i, j] = 1.0
+            return gpt.matrix_singlet(m, n)
+
+        return [basis(i, j) for i in range(n) for j in range(n)]
 
     def inner_product(self, left, right):
         return gpt.sum(gpt.trace(gpt.adj(left) * right))

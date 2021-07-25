@@ -72,7 +72,6 @@ class ot_complex_additive_group(ot_singlet):
 ###
 # (\mathbb{C}^{n},+)
 class ot_vector_complex_additive_group(ot_vector_singlet):
-
     def __init__(self, n):
         super().__init__(n)
         self.__name__ = f"ot_vector_complex_additive_group({n})"
@@ -98,14 +97,17 @@ class ot_vector_complex_additive_group(ot_vector_singlet):
 
     def generators(self, dt):
         n = self.shape[0]
+
         def basis_real(i):
             m = numpy.zeros(self.shape, dtype=dt)
             m[i] = 1.0
-            return gpt.vector_singlet(m,n)
+            return gpt.vector_singlet(m, n)
+
         def basis_imag(i):
             m = numpy.zeros(self.shape, dtype=dt)
             m[i] = 1.0j
-            return gpt.vector_singlet(m,n)
+            return gpt.vector_singlet(m, n)
+
         return [basis_real(i) for i in range(n)] + [basis_imag(i) for i in range(n)]
 
     def inner_product(self, left, right):
@@ -131,10 +133,10 @@ class ot_vector_complex_additive_group(ot_vector_singlet):
     def project(self, U, method):
         return None
 
+
 ###
 # (\mathbb{C}^{n \times n},+)
 class ot_matrix_complex_additive_group(ot_matrix_singlet):
-
     def __init__(self, n):
         self.Ndim = n
         super().__init__(n)
@@ -143,7 +145,10 @@ class ot_matrix_complex_additive_group(ot_matrix_singlet):
         self.vector_type = ot_vector_complex_additive_group(n)
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
-            f"ot_vector_complex_additive_group({n})": (lambda: ot_vector_complex_additive_group(n), (1, 0)),
+            f"ot_vector_complex_additive_group({n})": (
+                lambda: ot_vector_complex_additive_group(n),
+                (1, 0),
+            ),
             "ot_singlet": (lambda: self, None),
             "ot_complex_additive_group": (lambda: self, None),
         }
@@ -160,15 +165,20 @@ class ot_matrix_complex_additive_group(ot_matrix_singlet):
 
     def generators(self, dt):
         n = self.shape[0]
+
         def basis_real(i, j):
             m = numpy.zeros(self.shape, dtype=dt)
-            m[i,j] = 1.0
-            return gpt.matrix_singlet(m,n)
+            m[i, j] = 1.0
+            return gpt.matrix_singlet(m, n)
+
         def basis_imag(i, j):
             m = numpy.zeros(self.shape, dtype=dt)
-            m[i,j] = 1.0j
-            return gpt.matrix_singlet(m,n)
-        return [basis_real(i,j) for i in range(n) for j in range(n)] + [basis_imag(i,j) for i in range(n) for j in range(n)]
+            m[i, j] = 1.0j
+            return gpt.matrix_singlet(m, n)
+
+        return [basis_real(i, j) for i in range(n) for j in range(n)] + [
+            basis_imag(i, j) for i in range(n) for j in range(n)
+        ]
 
     def inner_product(self, left, right):
         return gpt.sum(gpt.trace(gpt.adj(left) * right)).real
@@ -180,10 +190,9 @@ class ot_matrix_complex_additive_group(ot_matrix_singlet):
             nhalf = len(gen) // 2
             l_real = gpt.component.real(l)
             l_imag = gpt.component.imag(l)
-            return (
-                [gpt.eval(gpt.trace(gpt.adj(l_real) * Ta)) for Ta in gen[0:nhalf]] +
-                [gpt.eval(gpt.trace(gpt.adj(l_imag) * Ta)) for Ta in gen[0:nhalf]]
-            )
+            return [
+                gpt.eval(gpt.trace(gpt.adj(l_real) * Ta)) for Ta in gen[0:nhalf]
+            ] + [gpt.eval(gpt.trace(gpt.adj(l_imag) * Ta)) for Ta in gen[0:nhalf]]
         else:
             l[:] = 0
             for ca, Ta in zip(c, gen):
@@ -191,6 +200,6 @@ class ot_matrix_complex_additive_group(ot_matrix_singlet):
 
     def is_element(self, U):
         return True
-    
+
     def project(self, U, method):
         return None
