@@ -20,13 +20,14 @@ import gpt as g
 
 
 class sigmoid:
-    def __init__(self, grid):
-        self.ones = g.complex(grid)
+    def __init__(self, grid, ot_input):
+        self.ones = g.lattice(grid, ot_input)
         self.ones[:] = 1
 
     def __call__(self, x):
+        # 1 / (1 + e^-x)
         return g.component.inv(self.ones + g.component.exp(-x))
 
     def gradient(self, x):
         e = g.component.exp(x)
-        return g(e * g.component.pow(-2)(self.ones + e))
+        return g.component.multiply(e, g.component.pow(-2)(self.ones + e))

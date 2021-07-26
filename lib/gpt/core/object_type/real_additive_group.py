@@ -107,7 +107,7 @@ class ot_vector_real_additive_group(ot_vector_singlet):
         return [basis(i) for i in range(n)]
 
     def inner_product(self, left, right):
-        return gpt.inner_product(left, right)
+        return gpt.inner_product(left, right).real
 
     def coordinates(self, l, c=None):
         assert l.otype.__name__ == self.__name__
@@ -141,7 +141,10 @@ class ot_matrix_real_additive_group(ot_matrix_singlet):
         self.data_alias = lambda: ot_matrix_singlet(n)
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
-            f"ot_vector_singlet({n})": (lambda: ot_vector_singlet(n), (1, 0)),
+            f"ot_vector_real_additive_group({n})": (
+                lambda: ot_vector_real_additive_group(n),
+                (1, 0),
+            ),
             "ot_singlet": (lambda: self, None),
             "ot_real_additive_group": (lambda: self, None),
         }
@@ -167,7 +170,7 @@ class ot_matrix_real_additive_group(ot_matrix_singlet):
         return [basis(i, j) for i in range(n) for j in range(n)]
 
     def inner_product(self, left, right):
-        return gpt.sum(gpt.trace(gpt.adj(left) * right))
+        return gpt.sum(gpt.trace(gpt.adj(left) * right)).real
 
     def coordinates(self, l, c=None):
         assert l.otype.__name__ == self.__name__

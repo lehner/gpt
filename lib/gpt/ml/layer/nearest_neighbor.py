@@ -22,10 +22,14 @@ from gpt.ml.activation import sigmoid
 
 
 class nearest_neighbor(cshift):
-    def __init__(self, grid, activation=sigmoid):
+    def __init__(
+        self, grid, ot_input=g.ot_singlet, ot_weights=g.ot_singlet, activation=sigmoid
+    ):
         nd = grid.nd
         super().__init__(
             grid,
+            ot_input,
+            ot_weights,
             [(mu, 1) for mu in range(nd)] + [(mu, -1) for mu in range(nd)],
-            activation(grid),
+            activation(grid, ot_input),
         )

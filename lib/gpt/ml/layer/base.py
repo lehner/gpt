@@ -20,9 +20,13 @@ import gpt as g
 
 
 class base:
-    def __init__(self, grid, n_weights):
+    def __init__(self, grid, ot_input, ot_weights, n_weights):
         self.n_weights = n_weights
+        self.ot_input = ot_input
+        self.ot_weights = ot_weights
         self.grid = grid
 
     def weights(self):
-        return [g.complex(self.grid) for i in range(self.n_weights)]
+        return [g.lattice(self.grid, self.ot_input)] + [
+            g.lattice(self.grid, self.ot_weights) for i in range(self.n_weights - 1)
+        ]

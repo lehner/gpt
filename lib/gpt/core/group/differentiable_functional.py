@@ -105,5 +105,5 @@ class differentiable_functional:
         eps = abs(a - b) / abs(b)
         g.message(f"Assert gradient error: {eps} < {epsilon_assert}")
         if eps > epsilon_assert:
-            g.message(f"Error: {a} <> {b}")
+            g.message(f"Error: gradient = {a} <> approximate_gradient = {b}")
             assert False
