@@ -3,7 +3,6 @@
 # Authors: Christoph Lehner 2021
 #
 import gpt as g
-import sys
 
 grid = g.grid([4, 4, 4], g.double)
 
