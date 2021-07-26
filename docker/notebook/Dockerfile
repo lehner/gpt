@@ -11,4 +11,6 @@ COPY tutorials/ /notebooks/tutorials/
 
 VOLUME /notebooks
 
+ENV GPT_QUIET=YES
+
 CMD ["jupyter", "notebook", "--allow-root", "--port=8888", "--ip='*'", "--no-browser", "--notebook-dir=/notebooks"]
