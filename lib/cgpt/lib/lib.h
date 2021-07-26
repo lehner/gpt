@@ -27,6 +27,7 @@
 #include <map>
 #include <string>
 #include <iostream>
+#include <sstream>
 
 #include "pvector.h"
 #include "time.h"
