@@ -45,7 +45,7 @@ mat_f = g.qcd.fermion.wilson_clover(
 
 # number of basis vectors
 nbasis_f = 20
-nbasis_c = 30
+nbasis_c = 12
 
 # number of block orthogonalization steps
 nblockortho = 1
