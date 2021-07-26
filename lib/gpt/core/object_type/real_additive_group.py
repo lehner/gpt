@@ -84,6 +84,10 @@ class ot_vector_real_additive_group(ot_vector_singlet):
             "ot_singlet": (lambda: self, None),
             "ot_real_additive_group": (lambda: self, None),
         }
+        self.otab = {self.__name__: (lambda: ot_matrix_real_additive_group(n), [])}
+        self.itab = {
+            self.__name__: (lambda: ot_singlet, (0, 0)),
+        }
         self.cache = {}
 
     def compose(self, a, b):
