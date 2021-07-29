@@ -43,56 +43,26 @@ def cshift(first, second, third, fourth=None):
 
 def copy(first, second=None):
 
-    if type(first) == gpt.lattice:
-        if second is not None:
-            t = first
-            l = second
+    if second is not None:
+        t = first
+        l = second
+
+    else:
+        l = first
+        if type(l) == list:
+            t = [gpt.lattice(x) for x in l]
         else:
-            l = first
             t = gpt.lattice(l)
+
+    if isinstance(l, gpt.lattice):
         for i in t.otype.v_idx:
             cgpt.copy(t.v_obj[i], l.v_obj[i])
-        return t
-
     else:
-        assert 0
+        for j in range(len(l)):
+            for i in t[j].otype.v_idx:
+                cgpt.copy(t[j].v_obj[i], l[j].v_obj[i])
 
-
-def convert(first, second):
-    if second in [gpt.single, gpt.double]:
-
-        # if first is a list, distribute
-        if type(first) == list:
-            return [convert(x, second) for x in first]
-
-        # if first is no list, evaluate
-        src = gpt.eval(first)
-        dst_grid = src.grid.converted(second)
-        return convert(gpt.lattice(dst_grid, src.otype), src)
-
-    elif type(first) == list:
-
-        assert len(first) == len(second)
-        for i in range(len(first)):
-            convert(first[i], second[i])
-        return first
-
-    elif type(first) == gpt.lattice:
-
-        # second may be expression
-        second = gpt.eval(second)
-
-        # now second is lattice
-        assert len(first.otype.v_idx) == len(second.otype.v_idx)
-        for i in first.otype.v_idx:
-            cgpt.convert(first.v_obj[i], second.v_obj[i])
-
-        # set checkerboard
-        first.checkerboard(second.checkerboard())
-        return first
-
-    else:
-        assert 0
+    return t
 
 
 def rank_inner_product(a, b, use_accelerator=True):
@@ -122,8 +92,19 @@ def inner_product(a, b):
 def norm2(l):
     if type(l) == gpt.tensor:
         return l.norm2()
-    l = gpt.eval(l)  # otherwise it gets evaluated twice below
-    return inner_product(l, l).real
+    l = gpt.eval(l)
+    return_list = type(l) == list
+    l = gpt.util.to_list(l)
+    ip = (
+        l[0]
+        .grid.globalsum(
+            numpy.array([rank_inner_product(x, x) for x in l], dtype=numpy.complex128)
+        )
+        .real
+    )
+    if return_list:
+        return ip
+    return gpt.util.to_num(ip[0])
 
 
 def inner_product_norm2(a, b):
@@ -141,19 +122,6 @@ def inner_product_norm2(a, b):
     )  # todo, make local version of this too
 
 
-def axpy_norm2(d, a, x, y):
-    x = gpt.eval(x)
-    y = gpt.eval(y)
-    assert len(y.otype.v_idx) == len(x.otype.v_idx)
-    assert len(d.otype.v_idx) == len(x.otype.v_idx)
-    return sum(
-        [
-            cgpt.lattice_axpy_norm2(d.v_obj[i], a, x.v_obj[i], y.v_obj[i])
-            for i in x.otype.v_idx
-        ]
-    )
-
-
 def axpy(d, a, x, y):
     x = gpt.eval(x)
     y = gpt.eval(y)
@@ -161,6 +129,11 @@ def axpy(d, a, x, y):
     assert len(d.otype.v_idx) == len(x.otype.v_idx)
     for i in x.otype.v_idx:
         cgpt.lattice_axpy(d.v_obj[i], a, x.v_obj[i], y.v_obj[i])
+
+
+def axpy_norm2(d, a, x, y):
+    axpy(d, a, x, y)
+    return norm2(d)
 
 
 def slice(x, dim):
@@ -173,3 +146,38 @@ def identity(src):
     eye = gpt.lattice(src)
     eye[:] = src.otype.identity()
     return eye
+
+
+def project(src, method):
+    src.otype.project(src, method)
+    return src
+
+
+def where(first, second, third, fourth=None):
+    if fourth is None:
+        question = first
+        yes = second
+        no = third
+        answer = None
+    else:
+        question = second
+        yes = third
+        no = fourth
+        answer = first
+
+    question = gpt.eval(question)
+    yes = gpt.eval(yes)
+    no = gpt.eval(no)
+    if answer is None:
+        answer = gpt.lattice(yes)
+
+    assert len(question.v_obj) == 1
+    assert len(yes.v_obj) == len(no.v_obj)
+    assert len(answer.v_obj) == len(yes.v_obj)
+
+    params = {"operator": "?:"}
+
+    for a, y, n in zip(answer.v_obj, yes.v_obj, no.v_obj):
+        cgpt.ternary(a, question.v_obj[0], y, n, params)
+
+    return answer

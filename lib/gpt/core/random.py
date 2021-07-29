@@ -33,6 +33,7 @@ class random:
                 engine = "vectorized_ranlux24_389_64"
 
         self.verbose = gpt.default.is_verbose("random")
+        self.verbose_performance = gpt.default.is_verbose("random_performance")
         t0 = gpt.time()
         self.obj = cgpt.create_random(engine, s)
         t1 = gpt.time()
@@ -49,34 +50,31 @@ class random:
         if type(t) == list:
             for x in t:
                 self.sample(x, p)
+            return t
         elif t is None:
-            return cgpt.random_sample(self.obj, t, p)
+            return cgpt.random_sample(self.obj, p)
         elif type(t) == gpt.lattice:
-            if "pos" in p:
-                pos = p["pos"]
-            else:
-                pos = gpt.coordinates(t)
             t0 = gpt.time()
-            mv = cgpt.random_sample(
+            cgpt.random_sample(
                 self.obj,
-                pos,
                 {
                     **p,
-                    **{
-                        "shape": list(t.otype.shape),
-                        "grid": t.grid.obj,
-                        "precision": t.grid.precision,
-                    },
+                    **{"lattices": [t]},
                 },
             )
             t1 = gpt.time()
-            t[pos] = mv
-            if self.verbose:
-                szGB = mv.size * mv.itemsize / 1024.0 ** 3.0
+            assert "pos" not in p  # to ensure that deprecated code is not used
+
+            # optimize memory mapping
+            t.swap(gpt.copy(t))
+
+            if self.verbose_performance:
+                szGB = t.global_bytes() / 1024.0 ** 3.0
                 gpt.message(
                     "Generated %g GB of random data at %g GB/s"
                     % (szGB, szGB / (t1 - t0))
                 )
+
             return t
         else:
             assert 0
@@ -108,17 +106,53 @@ class random:
         return self.sample(t, {**{"distribution": "zn"}, **p})
 
     @params_convention(scale=1.0)
-    def lie(self, out, p={}):
-        scale = p["scale"]
-        grid = out.grid
-        ca = gpt.complex(grid)
-        lie = gpt.lattice(out)
+    def normal_element(self, out, p={}):
+        return self.element(out, p, normal=True)
 
-        lie[:] = 0
-        for ta in out.otype.generators(grid.precision.complex_dtype):
-            self.uniform_real(ca, {"min": -0.5, "max": 0.5})
-            lie += scale * 1j * ca * ta
-        out @= gpt.matrix.exp(lie)
+    @params_convention(scale=1.0)
+    def uniform_element(self, out, p={}):
+        return self.element(out, p, normal=False)
+
+    @params_convention(scale=1.0, normal=False)
+    def element(self, out, p={}):
+
+        if type(out) == list:
+            return [self.element(x, p) for x in out]
+
+        t = gpt.timer("element")
+
+        scale = p["scale"]
+        normal = p["normal"]
+        grid = out.grid
+
+        t("complex")
+        ca = gpt.complex(grid)
+        ca.checkerboard(out.checkerboard())
+
+        t("cartesian_space")
+        cartesian_space = gpt.group.cartesian(out)
+        t("csset")
+        cartesian_space[:] = 0
+
+        t("gen")
+        gen = cartesian_space.otype.generators(grid.precision.complex_dtype)
+        t()
+        for ta in gen:
+
+            t("rng")
+
+            if normal:
+                self.normal(ca)
+            else:
+                self.uniform_real(ca, {"min": -0.5, "max": 0.5})
+            t("lc")
+            cartesian_space += scale * ca * ta
+
+        t("conv")
+        gpt.convert(out, cartesian_space)
+        t()
+
+        # gpt.message(t)
         return out
 
 

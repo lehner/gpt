@@ -16,7 +16,11 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from gpt.algorithms.base import base, base_iterative
 import gpt.algorithms.inverter
 import gpt.algorithms.polynomial
 import gpt.algorithms.eigen
 import gpt.algorithms.modes
+import gpt.algorithms.integrator
+import gpt.algorithms.optimize
+import gpt.algorithms.markov

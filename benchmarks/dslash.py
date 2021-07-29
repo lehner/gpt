@@ -7,12 +7,14 @@
 import gpt as g
 
 g.default.set_verbose("random", False)
-rng = g.random("benchmark")
+rng = g.random(
+    "benchmark", "vectorized_ranlux24_24_64"
+)  # faster rng sufficient for benchmarking purposes
 
 for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
     N = g.default.get_int("--N", 1000)
-    Ls = g.default.get_int("--Ls", 12)
+    Ls = g.default.get_int("--Ls", 8)
     g.message(
         f"""
 DWF Dslash Benchmark with
@@ -39,6 +41,7 @@ DWF Dslash Benchmark with
     src = g.vspincolor(qm.F_grid)
     dst = g.vspincolor(qm.F_grid)
 
+    # random source
     rng.cnormal(src)
 
     # Flops

@@ -21,26 +21,19 @@ import gpt as g
 from gpt.params import params_convention
 
 
-# (2) of https://arxiv.org/pdf/hep-lat/0311018.pdf
-def project_to_traceless_anti_hermitian(src):
-    src = g.eval(src)
-    N = src.otype.shape[0]
-    ret = g(0.5 * src - 0.5 * g.adj(src))
-    ret -= g.identity(src) * g.trace(ret) / N
-    return ret
-
-
 @params_convention(rho=None)
 def stout_general(U, params):
     nd = len(U)
-    C = g.qcd.gauge.smear.staple_sum(U, params)
+    C = g.qcd.gauge.staple_sum(U, params)
     U_prime = []
     for mu in range(nd):
         U_mu_prime = g(
-            g.matrix.exp(project_to_traceless_anti_hermitian(C[mu] * g.adj(U[mu])))
+            g.matrix.exp(
+                g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(U[mu]))
+            )
             * U[mu]
         )
-        g.qcd.gauge.assert_unitary(U_mu_prime)
+        # assert U_mu_prime.otype.is_element(U_mu_prime)
         U_prime.append(U_mu_prime)
     return U_prime
 

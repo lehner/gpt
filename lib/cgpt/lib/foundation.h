@@ -28,26 +28,44 @@ using namespace Grid;
 #define GRID_HAS_ACCELERATOR
 #endif
 
-#define VECTOR_VIEW_OPEN(l,v,mode)				\
-  Vector< decltype(l[0].View(mode)) > v; v.reserve(l.size());	\
-  for(uint64_t k=0;k<l.size();k++)				\
-    v.push_back(l[k].View(mode));	       
+#if defined (GRID_COMMS_MPI3)
+#define CGPT_USE_MPI 1
+#endif
 
-#define VECTOR_VIEW_CLOSE(v)				\
-  for(uint64_t k=0;k<v.size();k++) v[k].ViewClose();
+
+#define VECTOR_VIEW_OPEN(l,v,mode)					\
+  Vector< decltype(l[0].View(mode)) > __ ## v; __ ## v.reserve(l.size()); \
+  Vector< decltype(&l[0].View(mode)[0]) > _ ## v; _ ## v.resize(l.size()); \
+  for(uint64_t k=0;k<l.size();k++) {					\
+    __ ## v.push_back(l[k].View(mode));					\
+    _ ## v[k] = &__ ## v[k][0];						\
+  }									\
+  auto v = & _ ## v[0];
+
+#define VECTOR_VIEW_CLOSE(v)						\
+  for(uint64_t k=0;k<__ ## v.size();k++) __ ## v[k].ViewClose();
 
 
 NAMESPACE_BEGIN(Grid);
 
-#if defined(GRID_CUDA)||defined(GRID_HIP)
-#include "foundation/reduce_gpu.h"
-#endif
+// aligned vector
+template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
 
+#include "foundation/access.h"
 #include "foundation/reduce.h"
 #include "foundation/unary.h"
+#include "foundation/binary.h"
+#include "foundation/ternary.h"
 #include "foundation/et.h"
-#include "foundation/block.h"
+#include "foundation/grid.h"
+#include "foundation/block_lookup_table.h"
+#include "foundation/block_core.h"
 #include "foundation/transfer.h"
 #include "foundation/basis.h"
+#include "foundation/eigen.h"
+#include "foundation/matrix.h"
+#include "foundation/clover.h"
+#include "foundation/coarse.h"
+
 
 NAMESPACE_END(Grid);

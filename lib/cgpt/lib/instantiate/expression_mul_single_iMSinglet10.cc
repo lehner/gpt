@@ -19,16 +19,15 @@
 */
 #include "../lib.h"
 
-#include "../expression/matmul.h"
 #include "../expression/mul.h"
 
 template<>
-cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSinglet10<vComplexF> >& la, Gamma::Algebra gamma, int unary_expr, bool rev) {
+cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSinglet10<vComplexF> >& la, Gamma::Algebra gamma, int unary_expr, bool rev, ComplexD coef) {
   ERR("Not implemented");
 }
 
 template<>
-cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSinglet10<vComplexF> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev) {
+cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSinglet10<vComplexF> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev, ComplexD coef) {
   typedef vComplexF vtype;
   if (unary_b == 0) {
     _MM_COMPATIBLE_RL_(iMSinglet10);
@@ -38,7 +37,7 @@ cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unar
 }
 
 template<>
-cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSinglet10<vComplexF> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr) {
+cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iMSinglet10<vComplexF> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr, ComplexD coef) {
   typedef vComplexF vtype;
   _COMPATIBLE_MSR_(iSinglet);
   _COMPATIBLE_(iVSinglet10);

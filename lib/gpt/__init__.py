@@ -24,13 +24,14 @@ import gpt.create
 import gpt.algorithms
 import gpt.qcd
 import gpt.qis
+import gpt.ml
 import socket
 import cgpt
 import sys
 import types
 
 """
-GPT -- Grit Python Toolkit
+GPT -- Grid Python Toolkit
 """
 
 # initialize cgpt when gpt is loaded

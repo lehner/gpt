@@ -39,7 +39,9 @@ g.default.set_verbose("mr", False)
 
 # sap inverter
 inv1 = inv.defect_correcting(
-    pc.sap_cycle(inv_pc(pc.eo2(), mr), bs=[4, 4, 4, 4]), eps=1e-6, maxiter=20,
+    pc.sap_cycle(inv_pc(pc.eo2(), mr), bs=[4, 4, 4, 4]),
+    eps=1e-6,
+    maxiter=20,
 )
 
 # point source
@@ -67,7 +69,7 @@ rr = g.norm2(dst2 - dst)
 g.message(
     f"Difference of results: {rr}, Time for SAP-based-solve: {t1-t0} s, Time for FGCR: {t3-t2} s"
 )
-assert rr < 1e-11
+assert rr < 1e-10
 
 # run the sap inverter with a guess
 fgcr = inv.fgcr({"eps": 1e-3, "maxiter": 1024, "restartlen": 8})
@@ -80,6 +82,6 @@ rr = g.norm2(dst3 - dst)
 g.message(
     f"Difference of results: {rr}, Time for SAP-based-solve after guess: {t5-t4} s"
 )
-assert rr < 1e-11
+assert rr < 1e-10
 g.message(f"Iteration count with guess reduced from {dc_iter} to {dc_iter_with_guess}")
 assert dc_iter_with_guess < dc_iter

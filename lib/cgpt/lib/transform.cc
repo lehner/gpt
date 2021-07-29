@@ -90,6 +90,40 @@ EXPORT(unary,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(binary,{
+    
+    void* _dst,* _a, * _b;
+    PyObject* params;
+    if (!PyArg_ParseTuple(args, "lllO", &_dst, &_a, &_b, &params)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
+    cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
+    
+    dst->binary_from(a,b,params);
+    
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(ternary,{
+    
+    void* _dst,* _a, * _b, * _c;
+    PyObject* params;
+    if (!PyArg_ParseTuple(args, "llllO", &_dst, &_a, &_b, &_c, &params)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
+    cgpt_Lattice_base* b = (cgpt_Lattice_base*)_b;
+    cgpt_Lattice_base* c = (cgpt_Lattice_base*)_c;
+    
+    dst->ternary_from(a,b,c,params);
+    
+    return PyLong_FromLong(0);
+  });
 
 EXPORT(convert,{
     
@@ -123,7 +157,7 @@ EXPORT(lattice_rank_inner_product,{
     dim[0] = left.size() / n_virtual_left;
     dim[1] = right.size() / n_virtual_right;
 
-    PyArrayObject* ret = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], NPY_COMPLEX128);
+    PyArrayObject* ret = cgpt_new_PyArray((int)dim.size(), &dim[0], NPY_COMPLEX128);
     ComplexD* result = (ComplexD*)PyArray_DATA(ret);
 
     ASSERT(left.size() > 0);
@@ -162,24 +196,6 @@ EXPORT(lattice_norm2,{
     
     cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
     return PyFloat_FromDouble(a->norm2());
-  });
-
-EXPORT(lattice_axpy_norm2,{
-    
-    void* _r,*_x,*_y;
-    PyObject* _a;
-    if (!PyArg_ParseTuple(args, "lOll", &_r,&_a,&_x,&_y)) {
-      return NULL;
-    }
-    
-    cgpt_Lattice_base* x = (cgpt_Lattice_base*)_x;
-    cgpt_Lattice_base* y = (cgpt_Lattice_base*)_y;
-    cgpt_Lattice_base* r = (cgpt_Lattice_base*)_r;
-    
-    ComplexD a;
-    cgpt_convert(_a,a);
-    
-    return PyFloat_FromDouble(r->axpy_norm2(a,x,y));
   });
 
 EXPORT(lattice_axpy,{

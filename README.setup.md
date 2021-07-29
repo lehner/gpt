@@ -2,31 +2,16 @@
 
 ## Prerequisites
 
-All the methods listed below rely on:
+* Grid based on the feature/gpt branch of https://github.com/lehner/Grid
+* Python 3.6 or newer
 
-* Specified Grid installation (--with-grid) has to be built with the `-fPIC` flag.  GPT is developed with the feature/gpt branch of https://github.com/lehner/Grid.
-* a `python3-config` or a python3 installation that
-  autotools can find
+## Bootstrap
 
-## Standard build with GNU autotools
-
-The build follows the default procedure:
-
-    cd /path/to/source
-    ./bootstrap.sh
-    mkdir /path/to/builddir
-    cd    /path/to/builddir
-    /path/to/source/configure --with-grid=/path/to/grid/installdir --prefix=/path/to/installdir
-    make -j7
-    make install
-
-You may, e.g., decide to install GPT in your home directory
-using `--prefix=$HOME/.local`.
-
-## Alternative make system
-You may also decide to use the `make` script in lib/cgpt for rapid development.  In this case
-use
+GPT includes scripts to automatically download and setup GPT and its dependencies
+for common architectures.  These scripts are listed in [gpt/scripts/bootstrap](https://github.com/lehner/gpt/tree/master/scripts/bootstrap)
+and should be invoked from the gpt directory, e.g., as
 ```bash
-source gpt/scripts/source.sh
+git clone https://github.com/lehner/gpt
+cd gpt
+scripts/bootstrap/debian10.clang.avx2.no-mpi
 ```
-to properly set the Python environment.

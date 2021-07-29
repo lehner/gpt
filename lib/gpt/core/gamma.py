@@ -19,19 +19,29 @@
 import gpt, cgpt
 import numpy as np
 from gpt.core.expr import factor
-from gpt.core.otype import ot_matrix_spin
+from gpt.core.object_type import ot_matrix_spin
 
 # otype for gamma matrices
 gamma_otype = ot_matrix_spin(4)
 
 # basic matrices defining the gamma representation
 matrices = {
-    0: np.array([[0, 0, 0, 1j], [0, 0, 1j, 0], [0, -1j, 0, 0], [-1j, 0, 0, 0]]),
-    1: np.array([[0, 0, 0, -1], [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]]),
-    2: np.array([[0, 0, 1j, 0], [0, 0, 0, -1j], [-1j, 0, 0, 0], [0, 1j, 0, 0]]),
-    3: np.array([[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]]),
-    4: np.diagflat([1, 1, -1, -1]),
-    11: np.diagflat([1, 1, 1, 1]),
+    0: np.array(
+        [[0, 0, 0, 1j], [0, 0, 1j, 0], [0, -1j, 0, 0], [-1j, 0, 0, 0]],
+        dtype=np.complex128,
+    ),
+    1: np.array(
+        [[0, 0, 0, -1], [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]], dtype=np.complex128
+    ),
+    2: np.array(
+        [[0, 0, 1j, 0], [0, 0, 0, -1j], [-1j, 0, 0, 0], [0, 1j, 0, 0]],
+        dtype=np.complex128,
+    ),
+    3: np.array(
+        [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.complex128
+    ),
+    4: np.diagflat([1, 1, -1, -1]).astype(dtype=np.complex128),
+    11: np.diagflat([1, 1, 1, 1]).astype(dtype=np.complex128),
 }
 
 # sigma_xy = 1/2 [gamma_x,gamma_y]
@@ -96,5 +106,11 @@ gamma = {
     "SigmaYZ": gamma_base(8),
     "SigmaYT": gamma_base(9),
     "SigmaZT": gamma_base(10),
+    (0, 1): gamma_base(5),  # other name for Sigma_ij
+    (0, 2): gamma_base(6),
+    (0, 3): gamma_base(7),
+    (1, 2): gamma_base(8),
+    (1, 3): gamma_base(9),
+    (2, 3): gamma_base(10),
     "I": gamma_base(11),  # identity matrix
 }

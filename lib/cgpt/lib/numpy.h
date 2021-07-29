@@ -17,6 +17,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+static int infer_numpy_type(const int32_t& v) { return NPY_INT32; }
 static int infer_numpy_type(const RealD& v) { return NPY_FLOAT64; }
 static int infer_numpy_type(const RealF& v) { return NPY_FLOAT32; }
 static int infer_numpy_type(const ComplexD& v) { return NPY_COMPLEX128; }
@@ -29,6 +30,31 @@ static int infer_numpy_type(const std::string & precision) {
   } else {
     ERR("Unknown precision %s",precision.c_str());
   }
+}
+
+static size_t numpy_dtype_size(int dtype) {
+  switch (dtype) {
+  case NPY_FLOAT32:
+  case NPY_INT32:
+    return 4;
+  case NPY_COMPLEX64:
+  case NPY_FLOAT64:
+    return 8;
+  case NPY_COMPLEX128:
+    return 16;
+  default:
+    ERR("Unknown dtype %d",dtype);
+  }
+}
+
+static PyArrayObject* cgpt_new_PyArray(long nd, long* dim, int dtype) {
+  size_t sz = numpy_dtype_size(dtype);
+  for (long i=0;i<nd;i++)
+    sz *= dim[i];
+  void* data = aligned_alloc(GRID_ALLOC_ALIGN, sz);
+  PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNewFromData((int)nd, dim, dtype, data);
+  PyArray_ENABLEFLAGS(a, NPY_ARRAY_OWNDATA);
+  return a;
 }
 
 static void cgpt_numpy_data_layout(const ComplexF& v, std::vector<long>& dim) {}
@@ -71,7 +97,7 @@ PyObject* cgpt_numpy_export(const sobj& v) {
   }
 
   
-  PyArrayObject* arr = (PyArrayObject*)PyArray_SimpleNew((int)dim.size(), &dim[0], infer_numpy_type(*c));
+  PyArrayObject* arr = cgpt_new_PyArray((int)dim.size(), &dim[0], infer_numpy_type(*c));
   memcpy(PyArray_DATA(arr),c,sizeof(sobj));
   return (PyObject*)arr;
 }

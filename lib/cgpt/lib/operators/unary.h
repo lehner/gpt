@@ -18,23 +18,27 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #define UNOP_VOID(name,opcode)						\
-  case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l); return 0.0;
+  case opcode: op.name(in,out); return 0.0;
 
 #define UNOP_VOID_DAG0(name,opcode)						\
-  case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l,0); return 0.0;
+  case opcode: op.name(in,out,0); return 0.0;
 
 #define UNOP_VOID_DAG1(name,opcode)						\
-  case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l,1); return 0.0;
+  case opcode: op.name(in,out,1); return 0.0;
 
 #define UNOP_REALD(name,opcode)						\
-  case opcode: return op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l);
+  case opcode: return op.name(in,out);
 
 #define DIRDISPOP_VOID(name,opcode)						\
-  case opcode: op.name(compatible<vobj>(in)->l,compatible<vobj>(out)->l,dir,disp); return 0.0;
+  case opcode: op.name(in,out,dir,disp); return 0.0;
 
 template<typename T>
-RealD cgpt_fermion_operator_unary(T& op, int opcode, cgpt_Lattice_base* in,cgpt_Lattice_base* out) {
+RealD cgpt_fermion_operator_unary(T& op, int opcode, PyObject* _in,PyObject* _out) {
   typedef typename T::FermionField::vector_object vobj;
+
+  PVector<Lattice<vobj>> in, out;
+  cgpt_basis_fill(in,_in);
+  cgpt_basis_fill(out,_out);
   
   switch (opcode) {
 #include "register.h"
@@ -44,8 +48,12 @@ RealD cgpt_fermion_operator_unary(T& op, int opcode, cgpt_Lattice_base* in,cgpt_
 }
 
 template<typename T>
-RealD cgpt_fermion_operator_dirdisp(T& op, int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
+RealD cgpt_fermion_operator_dirdisp(T& op, int opcode, PyObject* _in, PyObject* _out, int dir, int disp) {
   typedef typename T::FermionField::vector_object vobj;
+
+  PVector<Lattice<vobj>> in, out;
+  cgpt_basis_fill(in,_in);
+  cgpt_basis_fill(out,_out);
 
   switch(opcode) {
 #include "register_dirdisp.h"

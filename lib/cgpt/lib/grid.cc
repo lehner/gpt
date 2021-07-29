@@ -67,6 +67,20 @@ EXPORT(create_grid,{
     }
 
     GridBase* grid;
+
+    // graceful exit if grid not compatible with mpi/simd
+    for (long d=0;d<nd;d++) {
+      int cb_factor = cb_mask[d] ? 2 : 1;
+
+      if (fdimensions[d] % (simd[d] * mpi[d] * cb_factor) != 0) {
+	ERR("Dimension %d is not consistent:\n"
+	    " fdimension = %d\n"
+	    " simd = %d\n"
+	    " mpi = %d\n"
+	    " cb = %d\n",d,fdimensions[d],simd[d],mpi[d],cb_factor);
+      }
+    }
+
     grid = cgpt_create_grid(fdimensions,simd,cb_mask,mpi,parent_grid);
     return PyLong_FromVoidPtr(grid);
     

@@ -1,0 +1,97 @@
+# srun -N1 -n4 benchmarks/matrix_multiply.py --shm 2048 --device-mem 16000 --grid 48.48.48.128 --mpi 4.1.1.1 --accelerator-threads 8 --Ls 12
+OPENMPI detected
+AcceleratorCudaInit: using default device 
+AcceleratorCudaInit: assume user either uses a) IBM jsrun, or 
+AcceleratorCudaInit: b) invokes through a wrapping script to set CUDA_VISIBLE_DEVICES, UCX_NET_DEVICES, and numa binding 
+AcceleratorCudaInit: Configure options --enable-summit, --enable-select-gpu=no 
+AcceleratorCudaInit: ================================================
+SharedMemoryMpi:  World communicator of size 4
+SharedMemoryMpi:  Node  communicator of size 4
+0SharedMemoryMpi:  SharedMemoryMPI.cc acceleratorAllocDevice 2147483648bytes at 0x148120000000 for comms buffers 
+
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|_ |  |  |  |  |  |  |  |  |  |  |  | _|__
+__|_                                    _|__
+__|_   GGGG    RRRR    III    DDDD      _|__
+__|_  G        R   R    I     D   D     _|__
+__|_  G        R   R    I     D    D    _|__
+__|_  G  GG    RRRR     I     D    D    _|__
+__|_  G   G    R  R     I     D   D     _|__
+__|_   GGGG    R   R   III    DDDD      _|__
+__|_                                    _|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+__|__|__|__|__|__|__|__|__|__|__|__|__|__|__
+  |  |  |  |  |  |  |  |  |  |  |  |  |  |  
+
+
+Copyright (C) 2015 Peter Boyle, Azusa Yamaguchi, Guido Cossu, Antonin Portelli and other authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+Current Grid git commit hash=9c9566b9c9686a63755f39bb8910cf5325ef7177: (HEAD -> feature/gpt, origin/feature/gpt, origin/HEAD) clean
+
+Grid : Message : ================================================ 
+Grid : Message : MPI is initialised and logging filters activated 
+Grid : Message : ================================================ 
+Grid : Message : Requested 2147483648 byte stencil comms buffers 
+Grid : Message : MemoryManager Cache 16777216000 bytes 
+Grid : Message : MemoryManager::Init() setting up
+Grid : Message : MemoryManager::Init() cache pool for recent allocations: SMALL 32 LARGE 8
+Grid : Message : MemoryManager::Init() Non unified: Caching accelerator data in dedicated memory
+Grid : Message : MemoryManager::Init() Using cudaMalloc
+
+=============================================
+              Initialized GPT                
+     Copyright (C) 2020 Christoph Lehner     
+=============================================
+GPT :       1.589357 s : 
+                       : Matrix Multiply Benchmark with
+                       :     fdimensions  : [48, 48, 48, 128]
+                       :     precision    : single
+                       : 
+GPT :      10.985099 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_color(3)
+                       :     Time to complete            : 0.0058 s
+                       :     Effective memory bandwidth  : 5271.36 GB/s
+                       : 
+GPT :      16.689329 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_spin(4)
+                       :     Time to complete            : 0.01 s
+                       :     Effective memory bandwidth  : 5333.21 GB/s
+                       : 
+GPT :      62.092583 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_spin_color(4,3)
+                       :     Time to complete            : 0.097 s
+                       :     Effective memory bandwidth  : 5057.37 GB/s
+                       : 
+GPT :      62.262581 s : 
+                       : Matrix Multiply Benchmark with
+                       :     fdimensions  : [48, 48, 48, 128]
+                       :     precision    : double
+                       : 
+GPT :      72.003471 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_color(3)
+                       :     Time to complete            : 0.012 s
+                       :     Effective memory bandwidth  : 5264.01 GB/s
+                       : 
+GPT :      78.174681 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_spin(4)
+                       :     Time to complete            : 0.02 s
+                       :     Effective memory bandwidth  : 5439.91 GB/s
+                       : 
+GPT :     128.232979 s : 10 matrix_multiply
+                       :     Object type                 : ot_matrix_spin_color(4,3)
+                       :     Time to complete            : 0.22 s
+                       :     Effective memory bandwidth  : 4416.45 GB/s
+                       : 
+=============================================
+               Finalized GPT                 
+=============================================

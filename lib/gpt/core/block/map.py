@@ -37,12 +37,16 @@ class map:
             assert basis[0].grid is mask.grid
             assert len(mask.v_obj) == 1
 
-        c_otype = gpt.ot_vsinglet(len(basis))
+        c_otype = gpt.ot_vector_complex_additive_group(len(basis))
         basis_size = c_otype.v_n1[0]
         self.coarse_grid = coarse_grid
         self.basis = basis
         self.obj = cgpt.create_block_map(
-            coarse_grid.obj, basis, basis_size, basis_n_block, mask.v_obj[0],
+            coarse_grid.obj,
+            basis,
+            basis_size,
+            basis_n_block,
+            mask.v_obj[0],
         )
 
         def _project(coarse, fine):
@@ -75,6 +79,23 @@ class map:
     def orthonormalize(self):
         cgpt.block_orthonormalize(self.obj)
 
+    def check_orthogonality(self, tol=None):
+        c_otype = gpt.ot_vector_complex_additive_group(len(self.basis))
+        iproj = gpt.lattice(self.coarse_grid, c_otype)
+        eproj = gpt.lattice(self.coarse_grid, c_otype)
+        for i, v in enumerate(self.basis):
+            iproj @= self.project * v
+            eproj[:] = 0.0
+            eproj[:, :, :, :, i] = 1.0
+            err2 = gpt.norm2(eproj - iproj)
+            if tol is not None:
+                assert err2 <= tol
+                gpt.message(
+                    f"blockmap: ortho check for vector {i:d}: {err2:e} <= {tol:e}"
+                )
+            else:
+                gpt.message(f"blockmap: ortho check error for vector {i:d}: {err2:e}")
+
     def coarse_operator(self, fine_operator):
         verbose = gpt.default.is_verbose("block_operator")
 
@@ -95,14 +116,14 @@ class map:
                     % (len(src_coarse), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
                 )
 
-        otype = gpt.ot_vsinglet(len(self.basis))
+        otype = gpt.ot_vector_complex_additive_group(len(self.basis))
         return gpt.matrix_operator(
             mat=mat, otype=otype, grid=self.coarse_grid, accept_list=True
         )
 
     def fine_operator(self, coarse_operator):
         verbose = gpt.default.is_verbose("block_operator")
-        coarse_otype = gpt.ot_vsinglet(len(self.basis))
+        coarse_otype = gpt.ot_vector_complex_additive_group(len(self.basis))
         otype = self.basis[0].otype
         grid = self.basis[0].grid
         cb = self.basis[0].checkerboard()

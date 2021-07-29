@@ -131,3 +131,21 @@ EXPORT(mview,{
     return NULL;
 
   });
+
+EXPORT(ndarray,{
+    
+    PyObject* _dim;
+    PyObject* _dtype;
+    if (!PyArg_ParseTuple(args, "OO", &_dim, &_dtype)) {
+      return NULL;
+    }
+    
+    std::vector<long> dim;
+    cgpt_convert(_dim, dim);
+
+    int dtype;
+    cgpt_convert(_dtype,dtype);
+    
+    return (PyObject*)cgpt_new_PyArray((long)dim.size(), &dim[0], (int)dtype);
+    
+  });

@@ -19,35 +19,75 @@
 #
 import gpt.qcd.fermion.reference
 import gpt.qcd.fermion.preconditioner
+import gpt.qcd.fermion.coarse
 
 from gpt.qcd.fermion.register import register
-from gpt.qcd.fermion.operator import fine_operator, coarse_operator
+from gpt.qcd.fermion.operator import (
+    gauge_independent_g5_hermitian,
+    differentiable_fine_operator,
+    fine_operator,
+    coarse_operator,
+)
+from gpt.qcd.fermion.boundary_conditions import *
 
 import copy
 
 ###
-# instantiate fermion operators
+# wilson class operators
+class wilson_class_operator(
+    differentiable_fine_operator, gauge_independent_g5_hermitian
+):
+    def __init__(self, name, U, params, otype=None):
+        differentiable_fine_operator.__init__(self, name, U, params, otype)
+
+        def _G5(dst, src):
+            dst @= gpt.gamma[5] * src
+
+        gauge_independent_g5_hermitian.__init__(
+            self, gpt.matrix_operator(_G5, grid=self.F_grid, otype=otype)
+        )
 
 
-@gpt.params_convention()
+@gpt.params_convention(
+    kappa=None,
+    mass=None,
+    cF=1,
+    use_legacy=False,
+    boundary_phases=None,
+    isAnisotropic=None,
+    csw_r=None,
+    csw_t=None,
+    nu=None,
+    xi_0=None,
+)
 def wilson_clover(U, params):
     params = copy.deepcopy(params)  # save current parameters
-    if "kappa" in params:
-        assert "mass" not in params
+    if params["kappa"] is not None:
+        assert params["mass"] is None
         params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
         del params["kappa"]
-    return fine_operator(
+    if params["use_legacy"]:
+        assert params["boundary_phases"][-1] != 0.0  # only new op supports open bc
+    if params["boundary_phases"][-1] != 0.0:
+        assert params["cF"] == 1.0  # forbid usage of cF without open bc
+    if params["csw_r"] == 0.0 and params["csw_t"] == 0.0:
+        # for now Grid does not have MooeeDeriv for clover term
+        operator_class = wilson_class_operator
+    else:
+        operator_class = fine_operator
+    return operator_class(
         "wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3)
     )
 
 
-@gpt.params_convention()
+@gpt.params_convention(mass=None, cp=None, zeta=None, boundary_phases=None)
 def rhq_columbia(U, params):
     return wilson_clover(
         U,
         mass=params["mass"],
         csw_r=params["cp"],
         csw_t=params["cp"],
+        cF=1.0,
         xi_0=1.0,
         nu=params["zeta"],
         isAnisotropic=True,
@@ -55,23 +95,33 @@ def rhq_columbia(U, params):
     )
 
 
-@gpt.params_convention()
+###
+# domain-wall class operators
+@gpt.params_convention(
+    omega=None, mass=None, b=None, c=None, M5=None, boundary_phases=None
+)
 def zmobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
-    assert "Ls" not in params
     params["Ls"] = len(params["omega"])
-    return fine_operator("zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
+    return differentiable_fine_operator(
+        "zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
+    )
 
 
-@gpt.params_convention()
+@gpt.params_convention(
+    mass=None, b=None, c=None, M5=None, boundary_phases=None, Ls=None
+)
 def mobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
-    return fine_operator("mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
+    return differentiable_fine_operator(
+        "mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
+    )
 
 
-@gpt.params_convention(make_hermitian=False)
-def coarse(A, params):
+###
+# coarse-grid operators
+@gpt.params_convention(make_hermitian=False, level=None)
+def coarse_fermion(A, params):
     params = copy.deepcopy(params)  # save current parameters
-    assert "nbasis" not in params
     params["nbasis"] = A[0].otype.v_n1[0]
     return coarse_operator("coarse", A, params, otype=A[0].otype.vector_type)

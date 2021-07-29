@@ -25,6 +25,7 @@
 #       https://arxiv.org/abs/1710.06884 .
 #
 import cgpt, gpt, os, io, numpy, sys
+from gpt.params import params_convention
 
 # get local dir an filename
 def get_local_name(root, cv):
@@ -93,26 +94,7 @@ def get_xvec(d, n):
     return get_vec(d, n, lambda x: int(x, 16))
 
 
-def truncate(data, ndata, ntruncate, nelements):
-    if ndata == ntruncate or (ndata * nelements) == 0:
-        return data
-    ntotal = len(data)
-    assert ntotal % (nelements * ndata) == 0
-    szblock = ntotal // (nelements * ndata)
-    szelement = szblock * ndata
-    sztruncate = szblock * ntruncate
-    res = memoryview(bytearray(nelements * sztruncate))
-    # t0=gpt.time()
-    for j in range(nelements):
-        # memview copy internally uses memcpy and should be performant as long as szelement is sufficiently large
-        res[j * sztruncate : (j + 1) * sztruncate] = data[
-            j * szelement : (j * szelement + sztruncate)
-        ]
-    # t1=gpt.time()
-    # gpt.message("Truncate at %g GB/s" % (ntotal / 1024.**3 / (t1-t0)))
-    return res
-
-
+@params_convention(grids=None, nmax=None, advise_basis=None, advise_cevec=None)
 def load(filename, params):
 
     # first check if this is right file format
@@ -130,7 +112,7 @@ def load(filename, params):
     site_cb = gpt.odd
 
     # need grids parameter
-    assert "grids" in params
+    assert params["grids"] is not None
     assert type(params["grids"]) == gpt.grid
     fgrid = params["grids"]
     assert fgrid.precision == gpt.single
@@ -164,7 +146,7 @@ def load(filename, params):
     cgrid = gpt.block.grid(fgrid, blocksize)
 
     # allow for partial loading of data
-    if "nmax" in params:
+    if params["nmax"] is not None:
         nmax = params["nmax"]
         nbasis_max = min([nmax, nbasis])
         neigen_max = min([nmax, neigen])
@@ -174,16 +156,12 @@ def load(filename, params):
         neigen_max = neigen
         nsingleCap_max = nsingleCap
 
-    alternative_scheme = (
-        "alternative_scheme" in params and params["alternative_scheme"] is True
-    )
-
     # allocate all lattices
     basis = [gpt.vspincolor(fgrid) for i in range(nbasis_max)]
-    cevec = [gpt.vcomplex(cgrid, nbasis_max) for i in range(neigen_max)]
-    if "advise_basis" in params:
+    cevec = [gpt.vcomplex(cgrid, nbasis) for i in range(neigen_max)]
+    if params["advise_basis"] is not None:
         gpt.advise(basis, params["advise_basis"])
-    if "advise_cevec" in params:
+    if params["advise_cevec"] is not None:
         gpt.advise(cevec, params["advise_cevec"])
 
     # fix checkerboard of basis
@@ -263,6 +241,7 @@ def load(filename, params):
             block_data_size_fp16 *= 2
             read_blocks //= 2
             block_reduce *= 2
+        gpt.message("Read blocks", blocks)
 
         # make read-only to enable caching
         for x in pos:
@@ -273,7 +252,6 @@ def load(filename, params):
 
         # single-precision data
         data_munged = memoryview(bytearray(block_data_size_single * nsingleCap))
-        reduced_size = len(data_munged) // block_reduce
         for b in range(read_blocks):
             fgrid.barrier()
             dt_fread -= gpt.time()
@@ -291,24 +269,30 @@ def load(filename, params):
                 crc32_comp = gpt.crc32(data, crc32_comp)
                 dt_crc += gpt.time()
                 dt_munge -= gpt.time()
-                for l in range(block_reduce):
-                    cgpt.munge_inner_outer(
-                        data_munged[reduced_size * l : reduced_size * (l + 1)],
-                        data[reduced_size * l : reduced_size * (l + 1)],
-                        len(pos[b]) // block_reduce,
-                        nsingleCap,
-                    )
+                # data: lattice0_posA lattice1_posA .... lattice0_posB lattice1_posB
+                cgpt.munge_inner_outer(data_munged, data, nsingleCap, block_reduce)
+                # data_munged: lattice0 lattice1 lattice2 ...
                 dt_munge += gpt.time()
             else:
                 data_munged = data0
 
             fgrid.barrier()
             dt_distr -= gpt.time()
-            gpt.poke(
-                basis[0:nsingleCap_max],
-                pos[b],
-                truncate(data_munged, nsingleCap, nsingleCap_max, len(pos[b])),
+            rhs = data_munged[0:block_data_size_single]
+            distribute_plan = gpt.copy_plan(basis[0], rhs)
+            distribute_plan.destination += basis[0].view[pos[b]]
+            distribute_plan.source += gpt.global_memory_view(
+                fgrid, [[fgrid.processor, rhs, 0, rhs.nbytes]]
             )
+            rhs = None
+            distribute_plan = distribute_plan()
+            for i in range(nsingleCap_max):
+                distribute_plan(
+                    basis[i],
+                    data_munged[
+                        block_data_size_single * i : block_data_size_single * (i + 1)
+                    ],
+                )
             dt_distr += gpt.time()
 
             if verbose:
@@ -333,7 +317,6 @@ def load(filename, params):
             data_munged = memoryview(
                 bytearray(block_data_size_single * (nbasis - nsingleCap))
             )
-            reduced_size = len(data_munged) // block_reduce
             for b in range(read_blocks):
                 fgrid.barrier()
                 dt_fread -= gpt.time()
@@ -356,13 +339,12 @@ def load(filename, params):
                     cgpt.fp16_to_fp32(data_fp32, data, 24)
                     dt_fp16 += gpt.time()
                     dt_munge -= gpt.time()
-                    for l in range(block_reduce):
-                        cgpt.munge_inner_outer(
-                            data_munged[reduced_size * l : reduced_size * (l + 1)],
-                            data_fp32[reduced_size * l : reduced_size * (l + 1)],
-                            len(pos[b]) // block_reduce,
-                            nsingleCap if alternative_scheme else (nbasis - nsingleCap),
-                        )
+                    cgpt.munge_inner_outer(
+                        data_munged,
+                        data_fp32,
+                        nbasis - nsingleCap,
+                        block_reduce,
+                    )
                     dt_munge += gpt.time()
                 else:
                     data_munged = data0
@@ -370,16 +352,24 @@ def load(filename, params):
                 fgrid.barrier()
                 dt_distr -= gpt.time()
                 if nsingleCap < nbasis_max:
-                    gpt.poke(
-                        basis[nsingleCap:nbasis_max],
-                        pos[b],
-                        truncate(
-                            data_munged,
-                            nbasis - nsingleCap,
-                            nbasis_max - nsingleCap,
-                            len(pos[b]),
-                        ),
+                    rhs = data_munged[0:block_data_size_single]
+                    distribute_plan = gpt.copy_plan(basis[0], rhs)
+                    distribute_plan.destination += basis[0].view[pos[b]]
+                    distribute_plan.source += gpt.global_memory_view(
+                        fgrid, [[fgrid.processor, rhs, 0, rhs.nbytes]]
                     )
+                    rhs = None
+                    distribute_plan = distribute_plan()
+                    for i in range(nsingleCap, nbasis_max):
+                        j = i - nsingleCap
+                        distribute_plan(
+                            basis[i],
+                            data_munged[
+                                block_data_size_single
+                                * j : block_data_size_single
+                                * (j + 1)
+                            ],
+                        )
                 dt_distr += gpt.time()
 
                 if verbose:
@@ -398,6 +388,7 @@ def load(filename, params):
 
         # coarse grid data
         data_fp32 = memoryview(bytearray(coarse_fp32_vector_size))
+        distribute_plan = None
         for j in range(neigen):
             fgrid.barrier()
             dt_fread -= gpt.time()
@@ -430,9 +421,14 @@ def load(filename, params):
             fgrid.barrier()
             dt_distr -= gpt.time()
             if j < neigen_max:
-                cevec[j][pos_coarse] = truncate(
-                    data, nbasis, nbasis_max, len(pos_coarse)
-                )
+                if distribute_plan is None:
+                    distribute_plan = gpt.copy_plan(cevec[j], data)
+                    distribute_plan.destination += cevec[j].view[pos_coarse]
+                    distribute_plan.source += gpt.global_memory_view(
+                        cgrid, [[cgrid.processor, data, 0, data.nbytes]]
+                    )
+                    distribute_plan = distribute_plan()
+                distribute_plan(cevec[j], data)
             dt_distr += gpt.time()
 
             if verbose and j % (neigen // 10) == 0:
@@ -515,7 +511,7 @@ def save(filename, objs, params):
     cgrid = cevec[0].grid
 
     # mpi layout
-    if "mpi" in params:
+    if params["mpi"] is not None:
         mpi = params["mpi"]
     else:
         mpi = fgrid.mpi
@@ -643,25 +639,37 @@ def save(filename, objs, params):
 
         # single-precision data
         data = memoryview(bytearray(block_data_size_single * nsingleCap))
-        reduced_size = len(data) // block_reduce
+        data_munged = memoryview(bytearray(block_data_size_single * nsingleCap))
 
         for b in range(read_blocks):
             fgrid.barrier()
             dt_distr -= gpt.time()
-            data_munged = gpt.peek(
-                basis[0:nsingleCap], pos[b]
-            )  # TODO: can already munge here using new index interface
+            lhs_size = basis[0].otype.nfloats * 4 * len(pos[b])
+            lhs = data_munged[0:lhs_size]
+            distribute_plan = gpt.copy_plan(lhs, basis[0])
+            distribute_plan.destination += gpt.global_memory_view(
+                fgrid, [[fgrid.processor, lhs, 0, lhs.nbytes]]
+            )
+            distribute_plan.source += basis[0].view[pos[b]]
+            distribute_plan = distribute_plan()
+            lhs = None
+            for i in range(nsingleCap):
+                distribute_plan(
+                    data_munged[
+                        block_data_size_single * i : block_data_size_single * (i + 1)
+                    ],
+                    basis[i],
+                )
             dt_distr += gpt.time()
 
             if f is not None:
                 dt_munge -= gpt.time()
-                for l in range(block_reduce):
-                    cgpt.munge_inner_outer(
-                        data[reduced_size * l : reduced_size * (l + 1)],
-                        data_munged[reduced_size * l : reduced_size * (l + 1)],
-                        nsingleCap,
-                        len(pos[b]) // block_reduce,
-                    )
+                cgpt.munge_inner_outer(
+                    data,
+                    data_munged,
+                    block_reduce,
+                    nsingleCap,
+                )
                 dt_munge += gpt.time()
                 dt_crc -= gpt.time()
                 crc32_comp = gpt.crc32(data, crc32_comp)
@@ -696,23 +704,42 @@ def save(filename, objs, params):
             data_fp32 = memoryview(
                 bytearray(block_data_size_single * (nbasis - nsingleCap))
             )
+            data_munged = memoryview(
+                bytearray(block_data_size_single * (nbasis - nsingleCap))
+            )
             data = memoryview(bytearray(block_data_size_fp16 * (nbasis - nsingleCap)))
-            reduced_size = len(data_fp32) // block_reduce
             for b in range(read_blocks):
                 fgrid.barrier()
                 dt_distr -= gpt.time()
-                data_munged = gpt.peek(basis[nsingleCap:nbasis], pos[b])
+                lhs_size = basis[0].otype.nfloats * 4 * len(pos[b])
+                lhs = data_munged[0:lhs_size]
+                distribute_plan = gpt.copy_plan(lhs, basis[0])
+                distribute_plan.destination += gpt.global_memory_view(
+                    fgrid, [[fgrid.processor, lhs, 0, lhs.nbytes]]
+                )
+                distribute_plan.source += basis[0].view[pos[b]]
+                distribute_plan = distribute_plan()
+                lhs = None
+                for i in range(nsingleCap, nbasis):
+                    j = i - nsingleCap
+                    distribute_plan(
+                        data_munged[
+                            j
+                            * block_data_size_single : (j + 1)
+                            * block_data_size_single
+                        ],
+                        basis[i],
+                    )
                 dt_distr += gpt.time()
 
                 if f is not None:
                     dt_munge -= gpt.time()
-                    for l in range(block_reduce):
-                        cgpt.munge_inner_outer(
-                            data_fp32[reduced_size * l : reduced_size * (l + 1)],
-                            data_munged[reduced_size * l : reduced_size * (l + 1)],
-                            nbasis - nsingleCap,
-                            len(pos[b]) // block_reduce,
-                        )
+                    cgpt.munge_inner_outer(
+                        data_fp32,
+                        data_munged,
+                        block_reduce,
+                        nbasis - nsingleCap,
+                    )
                     dt_munge += gpt.time()
                     dt_fp16 -= gpt.time()
                     cgpt.fp32_to_fp16(data, data_fp32, 24)
@@ -747,10 +774,17 @@ def save(filename, objs, params):
 
         # coarse grid data
         data = memoryview(bytearray(coarse_vector_size))
+        data_fp32 = memoryview(bytearray(cevec[0].otype.nfloats * 4 * len(pos_coarse)))
+        distribute_plan = gpt.copy_plan(data_fp32, cevec[0])
+        distribute_plan.destination += gpt.global_memory_view(
+            cgrid, [[cgrid.processor, data_fp32, 0, data_fp32.nbytes]]
+        )
+        distribute_plan.source += cevec[0].view[pos_coarse]
+        distribute_plan = distribute_plan()
         for j in range(neigen):
             fgrid.barrier()
             dt_distr -= gpt.time()
-            data_fp32 = gpt.mview(cevec[j][pos_coarse])
+            distribute_plan(data_fp32, cevec[j])
             dt_distr += gpt.time()
 
             if f is not None:

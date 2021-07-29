@@ -25,14 +25,14 @@ def split_key_to_coordinates_and_indices(grid, key):
     list_types = [numpy.ndarray, list]
 
     # l[pos]
-    if type(key) in list_types:
+    if any([isinstance(key, t) for t in list_types]):
         return key, None
 
     # all other keys need to be a tuple
     assert type(key) == tuple
 
     # strip positions
-    if type(key[0]) in list_types:
+    if any([isinstance(key[0], t) for t in list_types]):
 
         # l[pos,...]
         pos = key[0]
@@ -46,7 +46,7 @@ def split_key_to_coordinates_and_indices(grid, key):
         key = key[nd:]
 
     # l[...,tidx]
-    if len(key) == 1 and type(key[0]) in list_types:
+    if len(key) == 1 and any([isinstance(key[0], t) for t in list_types]):
         tidx = key[0]
 
     # l[...,i0,i1,...]
@@ -66,7 +66,7 @@ def map_pos(grid, cb, key):
         key = numpy.array(key, dtype=numpy.int32)
 
     # if key is numpy array, no further processing needed
-    if type(key) == numpy.ndarray:
+    if isinstance(key, numpy.ndarray):
         return key
 
     # if not, we expect a tuple of slices
@@ -124,7 +124,7 @@ def map_tidx_and_shape(l, key):
         key = numpy.array(key, dtype=numpy.int32)
 
     # if key is numpy array, no further processing needed
-    if type(key) == numpy.ndarray:
+    if isinstance(key, numpy.ndarray):
         # Need to decide how to index tensor indices.  With lexicographical
         return key, (len(key),)
 
@@ -175,38 +175,3 @@ def map_key(target, key):
 
     # return triple of positions, tidx, and shape
     return pos, tidx, shape
-
-
-def peek(target, key):
-
-    if type(target) == gpt.lattice:
-        return gpt.mview(target[key])
-
-    elif type(target) == list:
-
-        pos, tidx, shape = map_key(target, key)
-        v_obj = [y for x in target for y in x.v_obj]
-
-        return gpt.mview(cgpt.lattice_export(v_obj, pos, tidx, shape))
-
-    else:
-        assert 0
-
-
-def poke(target, key, value):
-
-    assert type(value) == memoryview
-
-    if type(target) == gpt.lattice:
-
-        target[key] = value
-
-    elif type(target) == list:
-
-        pos, tidx, shape = map_key(target, key)
-        v_obj = [y for x in target for y in x.v_obj]
-
-        cgpt.lattice_import(v_obj, pos, tidx, value)
-
-    else:
-        assert 0

@@ -13,6 +13,8 @@ grid_sp = g.grid([8, 4, 4, 4], g.single)
 grid_large_dp = g.grid([8, 8, 4, 8], g.double)
 
 rng = g.random("block_seed_string_13")
+
+
 for grid, prec, ref_plaquette, scale in [
     (grid_dp, 1e-28, -0.00014108397456619623, 10),
     (grid_sp, 1e-14, -0.00014108397456619623, 10),
@@ -46,7 +48,7 @@ g.message(res)
 n = 10000
 res = {}
 for i in range(n):
-    z = rng.zn(p={"n": 3})
+    z = rng.zn(n=3)
     if z not in res:
         res[z] = 0
     res[z] += 1

@@ -26,11 +26,9 @@ def load_cgpt(*a):
     if r is None:
         raise gpt.LoadError()
     for gr in r:
-        grid = gpt.grid(
-            gr[1], eval("gpt.precision." + gr[2]), eval("gpt." + gr[3]), gr[0]
-        )
+        grid = gpt.grid(gr[1], eval("gpt." + gr[2]), eval("gpt." + gr[3]), gr[0])
         result_grid = []
-        otype = gpt.ot_matrix_su3_fundamental()
+        otype = gpt.ot_matrix_su_n_fundamental_group(3)
         for t_obj, s_ot, s_pr in gr[4]:
             assert s_pr == gr[2]
 
@@ -48,8 +46,7 @@ def load_cgpt(*a):
 
 
 # input
-@params_convention()
-def load(fn, p={}):
+def load(fn, **p):
 
     supported = [gpt.core.io.gpt_io, gpt.core.io.cevec_io, gpt.core.io.qlat_io]
 
@@ -57,6 +54,10 @@ def load(fn, p={}):
         try:
             return fmt.load(fn, p)
         except NotImplementedError:
+            pass
+        except KeyError:
+            # give parameters that are not known by file format,
+            # rules this one out as well
             pass
 
     a = [fn]

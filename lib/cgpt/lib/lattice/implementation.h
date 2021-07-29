@@ -51,13 +51,8 @@ public:
 			PyUnicode_FromString(get_prec(l).c_str()));
   }
 
-  void set_to_zero() {
-    l = Zero();
-  }
-
-  // use norm2 convention for squared norm, talked to Peter, Grid may also change to this cleaner notation
-  virtual RealD axpy_norm2(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
-    return ::axpy_norm(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
+  void set_to_number(ComplexD val) {
+    cgpt_set_to_number(l,val);
   }
 
   virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
@@ -85,24 +80,24 @@ public:
   }
 
   // ac == { true : add result to dst, false : replace dst }
-  virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr) {
+  virtual cgpt_Lattice_base* mul(cgpt_Lattice_base* dst, bool ac, cgpt_Lattice_base* b, int unary_a, int unary_b, int unary_expr, ComplexD coef) {
     if (typeid(T) == typeid(iSinglet<vCoeff_t>) && b->type() != type()) {
       // singlet multiplication always commutes, can save half cost of instantiation
-      return b->mul(dst,ac,this,unary_b,unary_a,unary_expr);
+      return b->mul(dst,ac,this,unary_b,unary_a,unary_expr,coef);
     }
-    return cgpt_lattice_mul(dst,ac,unary_a,l,unary_b,b,unary_expr);
+    return cgpt_lattice_mul(dst,ac,unary_a,l,unary_b,b,unary_expr,coef);
   }
 
   virtual cgpt_Lattice_base* compatible_linear_combination(cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_lattice_term>& f, int unary_factor, int unary_expr) {
     return cgpt_compatible_linear_combination(l,dst,ac,f,unary_factor,unary_expr);
   }
 
-  virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse) {
-    return cgpt_lattice_matmul(dst,ac,unary_a,l,b,bot,unary_b,unary_expr,reverse);
+  virtual cgpt_Lattice_base* matmul(cgpt_Lattice_base* dst, bool ac, PyArrayObject* b, std::string& bot, int unary_b, int unary_a, int unary_expr, bool reverse, ComplexD coef) {
+    return cgpt_lattice_matmul(dst,ac,unary_a,l,b,bot,unary_b,unary_expr,reverse,coef);
   }
 
-  virtual cgpt_Lattice_base* gammamul(cgpt_Lattice_base* dst, bool ac, Gamma::Algebra gamma, int unary_a, int unary_expr, bool reverse) {
-    return cgpt_lattice_gammamul(dst,ac,unary_a,l,gamma,unary_expr,reverse);
+  virtual cgpt_Lattice_base* gammamul(cgpt_Lattice_base* dst, bool ac, Gamma::Algebra gamma, int unary_a, int unary_expr, bool reverse, ComplexD coef) {
+    return cgpt_lattice_gammamul(dst,ac,unary_a,l,gamma,unary_expr,reverse,coef);
   }
 
   virtual void copy_from(cgpt_Lattice_base* _src) {
@@ -120,9 +115,22 @@ public:
     }
   }
 
-  virtual void unary_from(cgpt_Lattice_base* src, PyObject* params) {
-    cgpt_unary_from(l,compatible<T>(src)->l,params);
+  virtual void unary_from(cgpt_Lattice_base* a, PyObject* params) {
+    cgpt_unary_from(l,compatible<T>(a)->l,params);
   }
+
+  virtual void binary_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b, PyObject* params) {
+    cgpt_binary_from(l,compatible<T>(a)->l,compatible<T>(b)->l,params);
+  }
+
+  virtual void ternary_from(cgpt_Lattice_base* a, cgpt_Lattice_base* b, cgpt_Lattice_base* c, PyObject* params) {
+    cgpt_ternary_from(l,
+		      compatible<iSinglet<vCoeff_t>>(a)->l,
+		      compatible<T>(b)->l,
+		      compatible<T>(c)->l, params);
+  }
+  
+
 
   virtual void cshift_from(cgpt_Lattice_base* _src, int dir, int off) {
     cgpt_Lattice<T>* src = compatible<T>(_src);
@@ -150,11 +158,11 @@ public:
   }
 
   virtual void pick_checkerboard_from(int cb, cgpt_Lattice_base* src) {
-    pickCheckerboard(cb, l, compatible<T>(src)->l);
+    cgpt_pickCheckerboard(cb, l, compatible<T>(src)->l);
   }
 
   virtual void set_checkerboard_from(cgpt_Lattice_base* src) {
-    setCheckerboard(l, compatible<T>(src)->l);
+    cgpt_setCheckerboard(l, compatible<T>(src)->l);
   }
 
   virtual void change_checkerboard(int cb) {
@@ -165,16 +173,16 @@ public:
     return l.Checkerboard();
   }
 
-  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm) {
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,RealD* Qt,int j0, int j1, int k0,int k1,int Nm,bool use_accelerator) {
     PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis,_basis);
-    cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
+    cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm,use_accelerator);
   }
 
-  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt,int j0, int j1, int k0,int k1,int Nm) {
+  virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt,int j0, int j1, int k0,int k1,int Nm,bool use_accelerator) {
     PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis,_basis);
-    cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm);
+    cgpt_basis_rotate(basis,Qt,j0,j1,k0,k1,Nm,use_accelerator);
   }
 
   virtual void linear_combination(std::vector<cgpt_Lattice_base*> & _dst, std::vector<cgpt_Lattice_base*> &_basis,ComplexD* Qt, long n_virtual, long basis_n_block) {
@@ -184,20 +192,27 @@ public:
     cgpt_linear_combination(dst,basis,Qt,n_virtual,basis_n_block);
   }
 
-  virtual PyObject* memory_view() {
-    auto v = l.View(CpuWrite);
-    size_t sz = v.size() * sizeof(v[0]);
-    char* ptr = (char*)&v[0];
-    v.ViewClose();
+  virtual PyObject* memory_view(memory_type mt) {
 
-    // this marks Cpu as dirty, so data will be copied to Gpu; this is not fully safe
-    // and the ViewClose should be moved to the destructor of the PyMemoryView object.
-    // Do this in the same way as currently done in mview() in the future.
-    return PyMemoryView_FromMemory(ptr,sz,PyBUF_WRITE);
-  }
+    if (mt == mt_none) {
+      mt = mt_host;
+    }
 
-  virtual PyObject* memory_view_coordinates() {
-    return cgpt_memory_view_coordinates(l.Grid(),l.Checkerboard());
+    LatticeView<vobj>* v = new LatticeView<vobj>(l.View((mt == mt_host) ? CpuWrite : AcceleratorWrite));
+    size_t sz = v->size() * sizeof((*v)[0]);
+    char* ptr = (char*)&(*v)[0];
+
+    PyObject* r = PyMemoryView_FromMemory(ptr,sz,PyBUF_WRITE);
+    PyObject *capsule = PyCapsule_New((void*)v, NULL, [] (PyObject *capsule) -> void { 
+	//std::cout << "ViewClose" << std::endl; 
+	LatticeView<vobj>* v = (LatticeView<vobj>*)PyCapsule_GetPointer(capsule, NULL);
+	v->ViewClose();
+	delete v;
+      });
+    ASSERT(!((PyMemoryViewObject*)r)->mbuf->master.obj);
+    ((PyMemoryViewObject*)r)->mbuf->master.obj = capsule;
+
+    return r;
   }
 
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) {
@@ -230,28 +245,16 @@ public:
 
   }
 
+  virtual void invert_matrix(std::vector<cgpt_Lattice_base*>& matrix_inv, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) {
+    cgpt_invert_matrix(l,matrix_inv,matrix,n_virtual);
+  }
+
+  virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) {
+    cgpt_determinant(l,det,matrix,n_virtual);
+  }
+  
   virtual GridBase* get_grid() {
     return l.Grid();
-  }
-
-  virtual PyObject* advise(std::string type) {
-    if (type == "infrequent_use") {
-      l.Advise() = AdviseInfrequentUse;
-    } else {
-      ERR("Unknown advise %s",type.c_str());
-    }    
-    return PyLong_FromLong(0);
-  }
-
-  virtual PyObject* prefetch(std::string type) {
-    if (type == "accelerator") {
-      //l.AcceleratorPrefetch();
-    } else if (type == "host") {
-      //l.HostPrefetch();
-    } else {
-      ERR("Unknown prefetch %s",type.c_str());
-    }
-    return PyLong_FromLong(0);
   }
 
 };

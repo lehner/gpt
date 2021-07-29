@@ -12,7 +12,7 @@ import time
 # load configuration
 # U = g.load("/hpcgpfs01/work/clehner/configs/16I_0p01_0p04/ckpoint_lat.IEEE64BIG.1100")
 rng = g.random("test")
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.double), rng, scale=0.5)
+U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.double), rng, scale=2.0)
 g.message("Plaquette:", g.qcd.gauge.plaquette(U))
 
 # do everything in single-precision
@@ -33,10 +33,21 @@ mobius_params = {
 
 qm = g.qcd.fermion.mobius(g.qcd.gauge.unit(grid), mobius_params)
 
+# test operator update
+start = g.vspincolor(qm.F_grid)
+rng.cnormal(start)
+qm_new = g.qcd.fermion.mobius(U, mobius_params)
+qm.update(U)
+eps2 = g.norm2(qm * start - qm_new * start) / g.norm2(start)
+g.message(f"Operator update test: {eps2}")
+assert eps2 < 1e-15
+
+
+# study kernel spectrum
 w = g.qcd.fermion.wilson_clover(
     U,
     {
-        "mass": qm.params["M5"],
+        "mass": -qm.params["M5"],
         "csw_r": 0,
         "csw_t": 0,
         "xi_0": 1,
@@ -46,18 +57,7 @@ w = g.qcd.fermion.wilson_clover(
     },
 )
 
-# test operator update
-start = g.vspincolor(qm.F_grid)
-rng.cnormal(start)
-qm_new = g.qcd.fermion.mobius(U, mobius_params)
-qm.update(U)
-eps2 = g.norm2(qm * start - qm_new * start) / g.norm2(start)
-g.message(f"Operator update test: {eps2}")
-assert eps2 < 1e-10
-
-
 # solver
-pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-4, "maxiter": 1000})
 
@@ -84,8 +84,8 @@ a = g.algorithms.eigen.arnoldi(Nmin=20, Nmax=20, Nstep=0, Nstop=20, resid=1)
 _, evals_H5 = a(H5, start)
 g.default.pop_verbose()
 g.message(evals_H5)
-# H5 spectrum for 16c RBC lattice: [-1.6344227, ..., 1.6344227]
-# H5 spectrum for random lattice:  [-1.6442832, ..., 1.6442832]
+# H5 spectrum for 16c RBC lattice (b+c=2): [-2.72214117, ..., 2.68753147]
+# H5 spectrum for random lattice:  [-2.69115638, ..., 2.69136854]
 
 qz = g.qcd.fermion.zmobius(
     U,
@@ -110,6 +110,7 @@ qz = g.qcd.fermion.zmobius(
     },
 )
 
+
 # create point source
 src = g.mspincolor(grid)
 g.create.point(src, [0, 1, 0, 0])
@@ -118,40 +119,62 @@ g.create.point(src, [0, 1, 0, 0])
 pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-5, "maxiter": 1000})
+cg_e = inv.cg({"eps": 1e-8, "maxiter": 1000})
 
 slv_5d = inv.preconditioned(pc.eo2_ne(), cg)
+slv_5d_e = inv.preconditioned(pc.eo2_ne(), cg_e)
 slv_qm = qm.propagator(slv_5d)
+slv_qm_e = qm.propagator(slv_5d_e)
 slv_qz = qz.propagator(slv_5d)
 slv_madwf = qm.propagator(pc.mixed_dwf(slv_5d, slv_5d, qz))
+slv_madwf_dc = qm.propagator(
+    inv.defect_correcting(pc.mixed_dwf(slv_5d, slv_5d, qz), eps=1e-6, maxiter=10)
+)
 
-# propagator
-dst_qm = g.mspincolor(grid)
-dst_qz = g.mspincolor(grid)
 
-dst_qm @= slv_qm * src
-dst_qz @= slv_qz * src
+# inverse one spin color src
+src_sc = rng.cnormal(g.vspincolor(grid))
+dst_dwf_sc = g(slv_qm_e * src_sc)
 
 # test madwf
-src_sc = rng.cnormal(g.vspincolor(grid))
 dst_madwf_sc = g(slv_madwf * src_sc)
-dst_dwf_sc = g(slv_qm * src_sc)
 eps2 = g.norm2(dst_madwf_sc - dst_dwf_sc) / g.norm2(dst_dwf_sc)
 g.message(f"MADWF test: {eps2}")
 assert eps2 < 5e-4
 
+# test madwf with defect_correcting
+dst_madwf_dc_sc = g(slv_madwf_dc * src_sc)
+eps2 = g.norm2(dst_madwf_dc_sc - dst_dwf_sc) / g.norm2(dst_dwf_sc)
+g.message(f"MADWF defect_correcting test: {eps2}")
+assert eps2 < 1e-10
+
+
+# propagator
+# dst_qm_e = g.mspincolor(grid)
+dst_qm = g.mspincolor(grid)
+dst_qz = g.mspincolor(grid)
+
+# dst_qm_e @= slv_qm_e * src
+dst_qm @= slv_qm * src
+dst_qz @= slv_qz * src
+
 # two-point
-correlator_qm = g.slice(g.trace(dst_qm * g.adj(dst_qm)), 3)
-correlator_qz = g.slice(g.trace(dst_qz * g.adj(dst_qz)), 3)
+# correlator_ref= g.slice(g.trace(dst_qm_e * g.adj(dst_qm_e)), 3)
 correlator_ref = [
-    0.4873415231704712,
-    0.14763720333576202,
-    0.021136583760380745,
-    0.007964665070176125,
-    0.005833963863551617,
-    0.00796868372708559,
-    0.021054629236459732,
-    0.14703410863876343,
+    0.5534145832061768,
+    0.2355920523405075,
+    0.08622127771377563,
+    0.05764763802289963,
+    0.05238068848848343,
+    0.057377591729164124,
+    0.08141942322254181,
+    0.21931196749210358,
 ]
+correlator_qm = g.slice(
+    g.trace(g.gamma[0] * g.gamma[0] * dst_qm * g.gamma[0] * g.gamma[0] * g.adj(dst_qm)),
+    3,
+)
+correlator_qz = g.slice(g.trace(dst_qz * g.adj(dst_qz)), 3)
 
 # output
 eps_qm = 0.0

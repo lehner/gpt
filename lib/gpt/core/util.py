@@ -39,7 +39,8 @@ def to_num(x):
 
 # tensor
 def value_to_tensor(val, otype):
-    if otype == gpt.ot_singlet:
+    if otype.data_otype() == gpt.ot_singlet:
+        # this is not ideal, can we do a subclass of complex that preserves otype info?
         return complex(val)
     return gpt.tensor(val, otype)
 
@@ -55,10 +56,14 @@ def tensor_to_value(value, dtype=np.complex128):
 
 
 # list
-def to_list(value, count=None):
-    if type(value) == list:
-        return value
-    return [value] * count if count is not None else [value]
+def to_list(*values):
+    if len(values) > 1:
+        return zip(*tuple([to_list(v) for v in values]))
+    elif len(values) == 1:
+        value = values[0]
+        if type(value) == list:
+            return value
+        return [value]
 
 
 def from_list(value):

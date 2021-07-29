@@ -22,10 +22,19 @@ from gpt.params import params_convention
 
 
 class coarse_deflate:
-    @params_convention(block=32, linear_combination_block=4)
+    @params_convention(block=32, linear_combination_block=4, fine_block=8)
     def __init__(self, cevec, basis, fev, params):
-        self.mat = g.block.map(cevec[0].grid, basis).fine_operator(
-            g.algorithms.modes.matrix(cevec, cevec, fev, lambda x: 1.0 / x, params)
+        self.mat = g.block.map(
+            cevec[0].grid, basis, basis_n_block=params["fine_block"]
+        ).fine_operator(
+            g.algorithms.modes.matrix(
+                cevec,
+                cevec,
+                fev,
+                lambda x: 1.0 / x,
+                block=params["block"],
+                linear_combination_block=params["linear_combination_block"],
+            )
         )
 
     def __call__(self, matrix):

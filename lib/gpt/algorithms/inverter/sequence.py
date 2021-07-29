@@ -33,7 +33,7 @@ class sequence:
                 i(dst, src)
 
         otype, grid, cb = None, None, None
-        if type(outer_mat) == g.matrix_operator:
+        if isinstance(outer_mat, g.matrix_operator):
             otype, grid, cb = outer_mat.otype, outer_mat.grid, outer_mat.cb
 
         return g.matrix_operator(

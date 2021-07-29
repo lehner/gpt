@@ -30,12 +30,16 @@ public:
     delete op;
   }
 
-  virtual RealD unary(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out) {
+  virtual RealD unary(int opcode, PyObject* in, PyObject* out) {
     return cgpt_fermion_operator_unary<T>(*op,opcode,in,out);
   }
 
-  virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
+  virtual RealD dirdisp(int opcode, PyObject* in, PyObject* out, int dir, int disp) {
     return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
+  }
+    
+  virtual RealD deriv(int opcode, PyObject* mat, PyObject* in, PyObject* out) {
+    return cgpt_fermion_operator_deriv<T>(*op,opcode,mat,in,out);
   }
 
   virtual void update(PyObject* args) {
@@ -55,7 +59,6 @@ template<typename T>
 class cgpt_coarse_operator : public cgpt_fermion_operator_base {
 public:
   T* op;
-  typedef typename T::CoarseMatrix CoarseLinkField;
 
   cgpt_coarse_operator(T* _op) : op(_op) {
   }
@@ -64,21 +67,33 @@ public:
     delete op;
   }
 
-  virtual RealD unary(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out) {
+  virtual RealD unary(int opcode, PyObject* in, PyObject* out) {
     return cgpt_fermion_operator_unary<T>(*op,opcode,in,out);
   }
 
-  virtual RealD dirdisp(int opcode, cgpt_Lattice_base* in, cgpt_Lattice_base* out, int dir, int disp) {
+  virtual RealD dirdisp(int opcode, PyObject* in, PyObject* out, int dir, int disp) {
     return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
   }
 
-  virtual void update(PyObject* args) {
-    typedef typename CoarseLinkField::vector_type vCoeff_t;
-    const int nbasis = GridTypeMapper<typename T::CoarseVector::vector_object>::count;
+  virtual RealD deriv(int opcode, PyObject* mat, PyObject* in, PyObject* out) {
+    assert(0);
+  }
 
-    for(int p = 0; p < 9; p++) {
-      auto l = get_pointer<cgpt_Lattice_base>(args, "U", p);
-      op->A[p] = compatible<iMatrix<iSinglet<vCoeff_t>,nbasis>>(l)->l;
-    }
+  virtual void update(PyObject* args) {
+    typedef typename T::LinkField::vector_type vCoeff_t;
+    const int nbasis_virtual = GridTypeMapper<typename T::FermionField::vector_object>::count;
+    
+    auto ASelfInv_ptr_list = get_pointer_vec<cgpt_Lattice_base>(args,"U_self_inv");
+    auto A_ptr_list = get_pointer_vec<cgpt_Lattice_base>(args,"U");
+    
+    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis_virtual>>> ASelfInv;
+    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis_virtual>>> A;
+    
+    cgpt_basis_fill(ASelfInv, ASelfInv_ptr_list);
+    cgpt_basis_fill(A, A_ptr_list);
+
+    ASSERT(A.size() == 9*ASelfInv.size());
+
+    op->ImportGauge(A, ASelfInv);
   }
 };

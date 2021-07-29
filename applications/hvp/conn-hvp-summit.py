@@ -176,7 +176,12 @@ eig = g.load(groups[group]["evec_fmt"] % conf, grids=l_sloppy.F_grid_eo)
 light_innerL_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
     g.algorithms.inverter.sequence(
-        g.algorithms.inverter.coarse_deflate(eig[1], eig[0], eig[2], block=200,),
+        g.algorithms.inverter.coarse_deflate(
+            eig[1],
+            eig[0],
+            eig[2],
+            block=200,
+        ),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 200}),
             mpi_split=g.default.get_ivec("--mpi_split", None, 4),
@@ -187,7 +192,12 @@ light_innerL_inverter = g.algorithms.inverter.preconditioned(
 light_innerH_inverter = g.algorithms.inverter.preconditioned(
     g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd),
     g.algorithms.inverter.sequence(
-        g.algorithms.inverter.coarse_deflate(eig[1], eig[0], eig[2], block=200,),
+        g.algorithms.inverter.coarse_deflate(
+            eig[1],
+            eig[0],
+            eig[2],
+            block=200,
+        ),
         g.algorithms.inverter.split(
             g.algorithms.inverter.cg({"eps": 1e-8, "maxiter": 300}),
             mpi_split=g.default.get_ivec("--mpi_split", None, 4),
@@ -249,7 +259,7 @@ for group, job, conf, jid, n in run_jobs:
     use_source_time_slices = source_time_slices
     if not all_time_slices:
         use_source_time_slices = 1
-    
+
     g.message(f" positions_low = {source_positions_low}")
     g.message(f" positions_sloppy = {source_positions_sloppy}")
     g.message(f" positions_exact = {source_positions_exact}")

@@ -112,7 +112,8 @@ EXPORT(rotate,{
 
     PyObject* _basis,* _Qt;
     int j0,j1,k0,k1,idx;
-    if (!PyArg_ParseTuple(args, "OOiiiii", &_basis, &_Qt, &j0, &j1, &k0, &k1, &idx)) {
+    long use_accelerator;
+    if (!PyArg_ParseTuple(args, "OOiiiiil", &_basis, &_Qt, &j0, &j1, &k0, &k1, &idx, &use_accelerator)) {
       return NULL;
     }
     
@@ -130,11 +131,11 @@ EXPORT(rotate,{
     if (dtype == NPY_COMPLEX128) {
       ComplexD* data;
       cgpt_numpy_import_matrix(_Qt,data,Nm);
-      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm);
+      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm,use_accelerator);
     } else if (dtype == NPY_FLOAT64) {
       RealD* data;
       cgpt_numpy_import_matrix(_Qt,data,Nm);
-      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm);
+      basis[0]->basis_rotate(basis,data,j0,j1,k0,k1,Nm,use_accelerator);
     } else {
       ERR("Unknown dtype");
     }
@@ -166,8 +167,73 @@ EXPORT(linear_combination,{
     ASSERT((dst.size() / dst_n_virtual) == Nvec);
     ASSERT(Nm*basis_n_virtual == (int)basis.size());
 
-    //    std::cout << Nvec << ", " << dst.size() << std::endl; // 12, 180
     dst[0]->linear_combination(dst,basis,data,basis_n_virtual,basis_n_block);
     
     return PyLong_FromLong(0);
   });
+
+
+template<typename T>
+bool cgpt_bilinear_combination_helper(std::vector<cgpt_Lattice_base*> & _dst,
+				      std::vector<cgpt_Lattice_base*> & _left_basis,
+				      std::vector<cgpt_Lattice_base*> & _right_basis,
+				      ComplexD* Qt,
+				      int32_t* left_indices,
+				      int32_t* right_indices,
+				      long n_virtual, long Nm) {
+
+  if ( _dst[0]->type() != typeid(T).name() )
+    return false;
+  
+  PVector<Lattice<T>> dst, left_basis, right_basis;
+  cgpt_basis_fill(left_basis,_left_basis);
+  cgpt_basis_fill(right_basis,_right_basis);
+  cgpt_basis_fill(dst,_dst);
+
+  cgpt_bilinear_combination(dst, left_basis, right_basis, Qt, left_indices, right_indices, n_virtual, Nm);
+
+  return true;
+}
+
+EXPORT(bilinear_combination,{
+
+    PyObject* _dst, * _left_basis,* _right_basis, * _Qt, * _lidx, * _ridx;
+    if (!PyArg_ParseTuple(args, "OOOOOO", &_dst, &_left_basis,&_right_basis, &_Qt, &_lidx, &_ridx)) {
+      return NULL;
+    }
+    
+    std::vector<cgpt_Lattice_base*> left_basis, right_basis;
+    long basis_n_virtual = cgpt_basis_fill(left_basis,_left_basis);
+    ASSERT(basis_n_virtual == cgpt_basis_fill(right_basis,_right_basis));
+
+    std::vector<cgpt_Lattice_base*> dst;
+    long dst_n_virtual = cgpt_basis_fill(dst,_dst);
+
+    ASSERT(left_basis.size() > 0 && dst.size() > 0);
+    ASSERT(basis_n_virtual == dst_n_virtual);
+
+    ComplexD* data;
+    int Nvec,Nm;
+    cgpt_numpy_import_matrix(_Qt,data,Nvec,Nm);
+
+    int32_t* lidx;
+    int Nvec_lidx,Nm_lidx;
+    cgpt_numpy_import_matrix(_lidx,lidx,Nvec_lidx,Nm_lidx);
+    ASSERT(Nvec_lidx == Nvec && Nm_lidx == Nm);
+
+    int32_t* ridx;
+    int Nvec_ridx,Nm_ridx;
+    cgpt_numpy_import_matrix(_ridx,ridx,Nvec_ridx,Nm_ridx);
+    ASSERT(Nvec_ridx == Nvec && Nm_ridx == Nm);
+
+    ASSERT((dst.size() / dst_n_virtual) == Nvec);
+
+    if (cgpt_bilinear_combination_helper<iSinglet<vComplexF>>(dst,left_basis,right_basis,data,lidx,ridx,dst_n_virtual,Nm));
+    else if (cgpt_bilinear_combination_helper<iSinglet<vComplexD>>(dst,left_basis,right_basis,data,lidx,ridx,dst_n_virtual,Nm));
+    else {
+      ERR("Type %s unsupported", dst[0]->type().c_str() );
+    }
+
+    return PyLong_FromLong(0);
+  });
+

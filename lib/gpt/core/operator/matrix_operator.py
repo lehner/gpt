@@ -116,8 +116,12 @@ class matrix_operator(factor):
                 adj_mat=lambda dst, src: adj_other(dst, adj_self(src)),
                 inv_mat=lambda dst, src: inv_other(dst, inv_self(src)),
                 adj_inv_mat=lambda dst, src: adj_inv_self(dst, adj_inv_other(src)),
-                otype=(self.otype[0], other.otype[1]),
-                grid=(self.grid[0], other.grid[1]),
+                otype=(None, None)
+                if other.otype[1] is None
+                else (self.otype[0], other.otype[1]),
+                grid=(None, None)
+                if other.grid[1] is None
+                else (self.grid[0], other.grid[1]),
                 accept_guess=(self.accept_guess[0], other.accept_guess[1]),
                 cb=(self.cb[0], other.cb[1]),
                 accept_list=True,
@@ -128,7 +132,7 @@ class matrix_operator(factor):
     def __rmul__(self, other):
         return gpt.expr(other).__mul__(self)
 
-    def converted(self, to_precision, verbose=False):
+    def converted(self, to_precision, timing_wrapper=None):
         assert all([g is not None for g in self.grid])
         assert all([ot is not None for ot in self.otype])
         grid = tuple([g.converted(to_precision) for g in self.grid])
@@ -136,39 +140,57 @@ class matrix_operator(factor):
         accept_guess = self.accept_guess
         cb = self.cb
 
-        def _converted(dst, src, mat, l, r):
-            t0 = gpt.time()
-            conv_src = [gpt.lattice(self.grid[l], otype[l]) for x in src]
-            conv_dst = [gpt.lattice(self.grid[r], otype[r]) for x in src]
+        def _converted(dst, src, mat, l, r, t=lambda x: None):
+            t("converted: setup")
+
+            conv_src = [gpt.lattice(self.grid[r], otype[r]) for x in src]
+            conv_dst = [gpt.lattice(self.grid[l], otype[l]) for x in src]
+
+            t("converted: convert")
 
             gpt.convert(conv_src, src)
             if accept_guess[l]:
                 gpt.convert(conv_dst, dst)
-            t1 = gpt.time()
+
+            t("converted: matrix")
+
             mat(conv_dst, conv_src)
-            t2 = gpt.time()
+
+            t("converted: convert")
+
             gpt.convert(dst, conv_dst)
-            t3 = gpt.time()
-            if verbose:
-                gpt.message(
-                    "Converted to",
-                    to_precision.__name__,
-                    "in",
-                    t3 - t2 + t1 - t0,
-                    "s, matrix application in",
-                    t2 - t1,
-                    "s",
-                )
+
+            t()
+
+        if timing_wrapper is not None:
+            _converted = timing_wrapper(_converted)
 
         return matrix_operator(
-            mat=lambda dst, src: _converted(dst, src, self.mat, 0, 1),
-            adj_mat=lambda dst, src: _converted(dst, src, self.adj_mat, 1, 0),
-            inv_mat=lambda dst, src: _converted(dst, src, self.inv_mat, 1, 0),
-            adj_inv_mat=lambda dst, src: _converted(dst, src, self.adj_inv_mat, 0, 1),
+            mat=lambda dst, src: _converted(dst, src, self, 0, 1),
+            adj_mat=lambda dst, src: _converted(dst, src, self.adj(), 1, 0),
+            inv_mat=lambda dst, src: _converted(dst, src, self.inv(), 1, 0),
+            adj_inv_mat=lambda dst, src: _converted(dst, src, self.adj().inv(), 0, 1),
             otype=otype,
             grid=grid,
             accept_guess=accept_guess,
             cb=cb,
+            accept_list=True,
+        )
+
+    def grouped(self, max_group_size):
+        def _grouped(dst, src, mat):
+            for i in range(0, len(src), max_group_size):
+                mat(dst[i : i + max_group_size], src[i : i + max_group_size])
+
+        return matrix_operator(
+            mat=lambda dst, src: _grouped(dst, src, self),
+            adj_mat=lambda dst, src: _grouped(dst, src, self.adj()),
+            inv_mat=lambda dst, src: _grouped(dst, src, self.inv()),
+            adj_inv_mat=lambda dst, src: _grouped(dst, src, self.adj().inv()),
+            otype=self.otype,
+            grid=self.grid,
+            accept_guess=self.accept_guess,
+            cb=self.cb,
             accept_list=True,
         )
 
@@ -186,7 +208,7 @@ class matrix_operator(factor):
         first = gpt.util.to_list(first)
 
         if second is None:
-            src = first
+            src = [gpt(x) for x in first]
         else:
             dst = first
             src = gpt.util.to_list(second)
