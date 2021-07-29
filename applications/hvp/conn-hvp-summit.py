@@ -8,22 +8,22 @@ import gpt as g
 import sys, os
 
 # configure
-root_output = "/gpfs/alpine/phy138/proj-shared/phy138flavor/lehner/conn-hvp"
+root_output = "/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/conn-hvp"
 
 groups = {
     "phy131": {
         "confs": ["420", "500", "580"],
-        "evec_fmt": "/gpfs/alpine/phy131/world-shared/lehner/evec-cache/96I/%s/lanczos.output",
+        "evec_fmt": "/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/evec-cache/96I/%s/lanczos.output",
         "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
     },
     "phy138": {
         "confs": ["460", "640", "540", "720"],
-        "evec_fmt": "/gpfs/alpine/phy138/world-shared/lehner/evec-cache/96I/%s/lanczos.output",
+        "evec_fmt": "/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/evec-cache/96I/%s/lanczos.output",
         "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
     },
     "phy138n": {
         "confs": ["480", "520", "560", "600", "620"],
-        "evec_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/lehner/runs/summit-96I-%s-256/lanczos.output",
+        "evec_fmt": "/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/evec-cache/96I/%s/lanczos.output",
         "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
     },
 }
@@ -37,7 +37,41 @@ jobs = {
     "exact_0_correlated": {"exact": 1, "sloppy": 0, "low": 0, "all_time_slices": False},  # 1270 seconds + 660 to load ev
     "sloppy_0_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
     "low_0_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
+
+    "sloppy_2": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "sloppy_3": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "low_2": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "low_3": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "sloppy_1_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
+    "low_1_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
+
+    "sloppy_4": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "sloppy_5": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "sloppy_6": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "sloppy_7": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "low_4": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "low_5": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "low_6": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "low_7": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "sloppy_2_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
+    "low_2_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
+    "sloppy_3_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
+    "low_3_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
+
+    "sloppy_8": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "sloppy_9": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "sloppy_10": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "sloppy_11": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
+    "low_8": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "low_9": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "low_10": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "low_11": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
+    "sloppy_4_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
+    "low_4_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
+    "sloppy_5_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
+    "low_5_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
 }
+
 # At 32 jobs we break even with eigenvector generation
 
 simultaneous_low_positions = 3
