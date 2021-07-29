@@ -21,7 +21,7 @@ import gpt, cgpt
 from gpt.params import params_convention
 
 
-class operator(gpt.matrix_operator):
+class base(gpt.matrix_operator):
     def __init__(self, name, U, params, otype, with_even_odd):
         # keep constructor parameters
         self.name = name
@@ -100,6 +100,10 @@ class operator(gpt.matrix_operator):
                 otype=otype,
                 grid=self.F_grid_eo,
             )
+            self._MoeDeriv = registry.MoeDeriv
+            self._MoeDerivDag = registry.MoeDerivDag
+            self._MeoDeriv = registry.MeoDeriv
+            self._MeoDerivDag = registry.MeoDerivDag
 
         self.Mdiag = gpt.matrix_operator(registry.Mdiag, otype=otype, grid=self.F_grid)
         self.Dminus = gpt.matrix_operator(
@@ -138,6 +142,8 @@ class operator(gpt.matrix_operator):
             grid=self.F_grid,
         )
         self._Mdir = registry.Mdir
+        self._MDeriv = registry.MDeriv
+        self._MDerivDag = registry.MDerivDag
 
     def Mdir(self, mu, fb):
         return gpt.matrix_operator(
@@ -146,8 +152,7 @@ class operator(gpt.matrix_operator):
             grid=self.F_grid,
         )
 
-    @params_convention()
-    def modified(self, params):
+    def modified(self, **params):
         return type(self)(
             name=self.name,
             U=self.U,
@@ -204,57 +209,4 @@ class operator(gpt.matrix_operator):
             otype=(exp.otype[0], imp.otype[1]),
             grid=(exp.grid[0], imp.grid[1]),
             accept_list=True,
-        )
-
-
-class fine_operator(operator):
-    def __init__(self, name, U, params, otype=None):
-        super().__init__(name, U, params, otype, True)
-
-        self.obj = cgpt.create_fermion_operator(
-            name, self.U_grid.precision, self.params
-        )
-
-    def __del__(self):
-        cgpt.delete_fermion_operator(self.obj)
-
-    def apply_unary_operator(self, opcode, o, i):
-        # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj, o.v_obj)
-
-    def apply_dirdisp_operator(self, opcode, o, i, dir, disp):
-        # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator_dirdisp(
-            self.obj, opcode, i.v_obj, o.v_obj, dir, disp
-        )
-
-
-class coarse_operator(operator):
-    def __init__(self, name, U, params, otype=None):
-        super().__init__(name, U, params, otype, True)
-        self.tmp = gpt.lattice(self.F_grid, otype)
-        self.tmp_eo = gpt.lattice(self.F_grid_eo, otype)
-        self.U_self_inv = gpt.matrix.inv(self.U[8])
-        self.t = gpt.timer("coarse_operator")
-
-        self.params["U"] = [v_obj for u in U for v_obj in u.v_obj]
-        self.params["U_self_inv"] = self.U_self_inv.v_obj
-        self.obj = cgpt.create_fermion_operator(
-            self.name, self.U_grid.precision, self.params
-        )
-
-    def __del__(self):
-        cgpt.delete_fermion_operator(self.obj)
-
-    def apply_unary_operator(self, opcode, o, i):
-        cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj, o.v_obj)
-
-    def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
-        cgpt.apply_fermion_operator_dirdisp(
-            self.obj,
-            opcode,
-            i.v_obj,
-            o.v_obj,
-            direction,
-            disp,
         )

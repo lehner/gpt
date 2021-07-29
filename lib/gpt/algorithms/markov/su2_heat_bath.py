@@ -130,15 +130,13 @@ class su2_heat_bath:
             # update link
             a[0] @= g.where(mask, one - d, zero)
 
-            a123mag = g.component.sqrt(g.component.abs(g.eval(one - a[0] * a[0])))
+            a123mag = g.component.sqrt(g.component.abs(one - a[0] * a[0]))
 
             phi, cos_theta = g.complex(grid), g.complex(grid)
             self.rng.uniform_real([phi, cos_theta])
             phi @= phi * two_pi
             cos_theta @= (cos_theta * 2.0) - one
-            sin_theta = g.component.sqrt(
-                g.component.abs(g.eval(one - cos_theta * cos_theta))
-            )
+            sin_theta = g.component.sqrt(g.component.abs(one - cos_theta * cos_theta))
 
             a[1] @= a123mag * sin_theta * g.component.cos(phi)
             a[2] @= a123mag * sin_theta * g.component.sin(phi)

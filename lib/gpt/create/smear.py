@@ -41,12 +41,16 @@ def laplace(cov, dimensions):
     return g.matrix_operator(mat=mat)
 
 
-@params_convention(boundary_phases=[1, 1, 1, -1], dimensions=[0, 1, 2])
+@params_convention(
+    boundary_phases=[1, 1, 1, -1], dimensions=[0, 1, 2], sigma=None, steps=None
+)
 def gauss(U, params):
     sigma = params["sigma"]
     steps = params["steps"]
     dimensions = params["dimensions"]
-    lap = laplace(g.covariant.shift(U, params), dimensions)
+    lap = laplace(
+        g.covariant.shift(U, boundary_phases=params["boundary_phases"]), dimensions
+    )
 
     def mat(dst, src):
         assert dst != src

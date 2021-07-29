@@ -35,7 +35,6 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
   int lhs_singlet_dim  = size_to_singlet_dim(lhs_singlet_rank, (int)lhs_vl.size());
   int rhs_singlet_rank = _otype_singlet_rank_[rhs_v_otype[0]];
   int rhs_singlet_dim  = size_to_singlet_dim(rhs_singlet_rank, (int)rhs_v_otype.size());
-  ASSERT(lhs_singlet_dim == rhs_singlet_dim);
 
   // create temporary block arrays
   std::vector<PyArrayObject*> rhs_v_array(rhs_v_otype.size());
@@ -111,6 +110,21 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
     dst_vl.resize(1, 0);
     dst_vl[0] = lhs_vl[0]->matmul( dst_vl[0], ac, rhs_v_array[0], rhs_v_otype[0], rhs_unary, lhs_unary, unary, rev, coef);
 
+  } else if (lhs_singlet_rank == 0 && rhs_singlet_rank == 1) {
+
+    // SV -> V
+    dst_vl.resize(rhs_singlet_dim, 0);
+    for (int idx=0;idx<rhs_singlet_dim;idx++)
+      dst_vl[idx] = lhs_vl[0]->matmul( dst_vl[idx], ac, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev, coef);
+
+  } else if (lhs_singlet_rank == 0 && rhs_singlet_rank == 2) {
+
+    // SM -> M
+    int dim = rhs_singlet_dim;
+    dst_vl.resize(dim*dim, 0);
+    for (int idx=0;idx<dim*dim;idx++)
+      dst_vl[idx] = lhs_vl[0]->matmul( dst_vl[idx], ac, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev, coef);
+
   } else if (lhs_singlet_rank == 1 && rhs_singlet_rank == 1) {
 
     // VV -> V
@@ -143,6 +157,39 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
       }
     }
 
+  } else if (lhs_singlet_rank == 2 && rhs_singlet_rank == 2 && !rev) {
+
+#define matrix_index(i,j,trans) ((trans) ? ((i)*dim + (j)) : ((j) * dim + (i)))
+    // MM -> M
+    ASSERT(lhs_singlet_dim == rhs_singlet_dim);
+    int dim = lhs_singlet_dim;
+    bool ltrans = (lhs_unary & BIT_TRANS) != 0;
+    bool rtrans = (rhs_unary & BIT_TRANS) != 0;
+    bool trace = (unary & BIT_COLORTRACE) != 0;
+    dst_vl.resize(trace ? 1 : dim*dim, 0);
+    
+    for (int i=0;i<dim;i++) {
+      if (trace && i != 0)
+	ac = true;
+      for (int j=0;j<dim;j++) {
+	
+	if (trace && i != j)
+	  continue;
+	
+	int dst_idx = trace ? 0 : matrix_index(i,j,false);
+	
+	// init
+	dst_vl[dst_idx] = lhs_vl[matrix_index(i,0,ltrans)]->
+	  matmul( ac ? dst_vl[dst_idx] : 0, ac, rhs_v_array[matrix_index(0,j,rtrans)], rhs_v_otype[matrix_index(0,j,rtrans)], rhs_unary, lhs_unary, unary, rev, coef);
+	
+	for (int l=1;l<dim;l++) {
+	  lhs_vl[matrix_index(i,l,ltrans)]->
+	    matmul( dst_vl[dst_idx], true, rhs_v_array[matrix_index(l,j,rtrans)], rhs_v_otype[matrix_index(l,j,rtrans)], rhs_unary, lhs_unary, unary, rev, coef);
+	}
+      }
+    }
+#undef matrix_index
+    
   } else {
 
     ERR("Unknown multiplication of singlet rank %d with %d",lhs_singlet_rank,rhs_singlet_rank);

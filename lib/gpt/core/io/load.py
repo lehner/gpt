@@ -46,8 +46,7 @@ def load_cgpt(*a):
 
 
 # input
-@params_convention()
-def load(fn, p={}):
+def load(fn, **p):
 
     supported = [gpt.core.io.gpt_io, gpt.core.io.cevec_io, gpt.core.io.qlat_io]
 
@@ -55,6 +54,10 @@ def load(fn, p={}):
         try:
             return fmt.load(fn, p)
         except NotImplementedError:
+            pass
+        except KeyError:
+            # give parameters that are not known by file format,
+            # rules this one out as well
             pass
 
     a = [fn]

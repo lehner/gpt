@@ -48,7 +48,7 @@ g.message(res)
 n = 10000
 res = {}
 for i in range(n):
-    z = rng.zn(p={"n": 3})
+    z = rng.zn(n=3)
     if z not in res:
         res[z] = 0
     res[z] += 1

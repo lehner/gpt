@@ -71,3 +71,17 @@ inv = _simple_map("pow", {"exponent": -1.0})
 
 def pow(exponent):
     return _simple_map("pow", {"exponent": exponent})
+
+
+def multiply(a, b):
+    a = gpt(a)
+    b = gpt(b)
+    assert a.otype.__name__ == b.otype.__name__
+    res = gpt.lattice(a)
+    params = {"operator": "*"}
+    n = len(res.v_obj)
+    assert n == len(a.v_obj)
+    assert n == len(b.v_obj)
+    for i in range(n):
+        cgpt.binary(res.v_obj[i], a.v_obj[i], b.v_obj[i], params)
+    return res

@@ -45,3 +45,23 @@ inline void cgpt_lower_than(Lattice<iSinglet<vtype>>& answer, const Lattice<iSin
       }
     });
 }
+
+template<typename T>
+inline void cgpt_component_wise_multiply(Lattice<T>& answer, const Lattice<T>& a, const Lattice<T>& b) {
+  GridBase* grid = answer.Grid();
+  conformable(grid, a.Grid());
+  conformable(grid, b.Grid());
+
+  typedef typename Lattice<T>::vector_type vtype;
+
+  autoView(answer_v, answer, AcceleratorWriteDiscard);
+  autoView(a_v, a, AcceleratorRead);
+  autoView(b_v, b, AcceleratorRead);
+  auto answer_p = (vtype*)&answer_v[0];
+  auto a_p = (vtype*)&a_v[0];
+  auto b_p = (vtype*)&b_v[0];
+
+  accelerator_for(ss, grid->oSites() * sizeof(T) / sizeof(vtype), grid->Nsimd(), {
+      coalescedWrite(answer_p[ss], coalescedRead(a_p[ss]) * coalescedRead(b_p[ss]));
+    });
+}

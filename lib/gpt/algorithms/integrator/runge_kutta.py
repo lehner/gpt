@@ -19,29 +19,16 @@
 import gpt as g
 
 
-def left_increment(dst, src_left, scale):
-    dst = g.util.to_list(dst)
-    src_left = g.util.to_list(src_left)
-    group = dst[0].otype
-    algebra = group.cartesian()
-    assert src_left[0].otype.__name__ == algebra.__name__
-
-    for src_left_mu, dst_mu in zip(src_left, dst):
-        if group.__name__ != algebra.__name__:
-            dst_mu @= group.compose(
-                g.project(g.convert(g(scale * src_left_mu), group), "defect"), dst_mu
-            )
-        else:
-            dst_mu @= group.compose(g(scale * src_left_mu), dst_mu)
-
-
 def runge_kutta(src, d_src_cartesian, epsilon, code):
     dst = g.copy(src)
     z = d_src_cartesian(dst)
     for uf, zf in code:
-        left_increment(dst, z, uf * epsilon)
+        for dst_i, z_i in g.util.to_list(dst, z):
+            dst_i @= g.group.compose((uf * epsilon) * z_i, dst_i)
         if zf is not None:
-            left_increment(z, d_src_cartesian(dst), zf)
+            dsc = d_src_cartesian(dst)
+            for dsc_i, z_i in g.util.to_list(dsc, z):
+                z_i @= g.group.compose(zf * dsc_i, z_i)
     return dst
 
 

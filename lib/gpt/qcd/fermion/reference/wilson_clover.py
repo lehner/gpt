@@ -27,10 +27,21 @@ from gpt import matrix_operator
 class wilson_clover(shift_eo, matrix_operator):
     # M = sum_mu gamma[mu]*D[mu] + m0 - 1/2 sum_mu D^2[mu]
     # m0 + 4 = 1/2/kappa
-    @params_convention()
+    @params_convention(
+        kappa=None,
+        mass=None,
+        cF=1,
+        use_legacy=False,
+        boundary_phases=None,
+        xi_0=None,
+        csw_r=None,
+        csw_t=None,
+        nu=None,
+        isAnisotropic=None,
+    )
     def __init__(self, U, params):
 
-        shift_eo.__init__(self, U, params)
+        shift_eo.__init__(self, U, boundary_phases=params["boundary_phases"])
 
         Nc = U[0].otype.Nc
         otype = g.ot_vector_spin_color(4, Nc)
@@ -48,8 +59,8 @@ class wilson_clover(shift_eo, matrix_operator):
         self.dst_e.checkerboard(g.even)
         self.dst_o.checkerboard(g.odd)
 
-        if "kappa" in params:
-            assert "mass" not in params
+        if params["kappa"] is not None:
+            assert params["mass"] is None
             self.m0 = 1.0 / params["kappa"] / 2.0 - 4.0
         else:
             self.m0 = params["mass"]

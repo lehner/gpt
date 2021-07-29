@@ -43,6 +43,18 @@ def check_representation(U, eps_ref):
     assert eps < eps_ref
 
 
+def check_inner_product(left, right, eps_ref):
+    left_algebra = g.convert(left, left.otype.cartesian())
+    right_algebra = g.convert(right, right.otype.cartesian())
+    ip = left_algebra.otype.inner_product(left_algebra, right_algebra)
+    c_left = left_algebra.otype.coordinates(left_algebra)
+    c_right = right_algebra.otype.coordinates(right_algebra)
+    ipc = sum([g.inner_product(l, r).real for l, r in zip(c_left, c_right)])
+    eps = abs(ip - ipc) / abs(ip + ipc)
+    g.message(f"Test inner product: {eps}")
+    assert eps < eps_ref * 10.0
+
+
 ################################################################################
 # Test projection schemes on promoting SP to DP group membership
 ################################################################################
@@ -130,20 +142,28 @@ for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
 ################################################################################
 for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
     for representation in [
+        g.matrix_su2_fundamental,
         g.matrix_su2_adjoint,
         g.matrix_su3_fundamental,
         g.u1,
         g.complex,
         g.real,
+        lambda grid: g.vreal(grid, 8),
+        lambda grid: g.mreal(grid, 8),
+        lambda grid: g.vcomplex(grid, 8),
+        lambda grid: g.mcomplex(grid, 8),
     ]:
-        g.message(f"Test {representation.__name__} on grid {grid.precision.__name__}")
         U = representation(grid)
+        g.message(f"Test {U.otype.__name__} on grid {grid.precision.__name__}")
         rng.element(U)
         check_element(U)
         check_representation(U, eps_ref)
         for method in ["defect_left", "defect_right"]:
             g.project(U, method)
             check_element(U)
+        V = representation(grid)
+        rng.element(V)
+        check_inner_product(U, V, eps_ref)
 
 
 ################################################################################
@@ -156,17 +176,13 @@ for eps_ref, grid in [(1e-12, grid_dp)]:
     for sg in U.otype.su2_subgroups():
 
         rng.element(u2)
-        u2p = g.eval(u2 - g.adj(u2) + g.identity(u2) * g.trace(g.adj(u2)))
-        eps = (g.norm2(u2 - u2p) / g.norm2(u2)) ** 0.5
-        g.message(eps, g.norm2(u2), g.norm2(u2p))
 
         U.otype.block_insert(U, u2, sg)
         u2p[:] = 0
         U.otype.block_extract(u2p, U, sg)
 
         eps = (g.norm2(u2 - u2p) / g.norm2(u2)) ** 0.5
-        g.message(eps, g.norm2(u2), g.norm2(u2p))
         assert eps < eps_ref
 
         check_element(U)
-        check_representation(U, eps_ref)
+        check_representation

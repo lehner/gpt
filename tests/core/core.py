@@ -9,22 +9,25 @@ import gpt as g
 import numpy as np
 import sys, cgpt
 
-# grid
-L = [16, 12, 12, 24]
-grid_dp = g.grid(L, g.double)
-grid_sp = g.grid(L, g.single)
-
-# test fields
+# random
 rng = g.random("test")
-l_dp = rng.cnormal(g.vcolor(grid_dp))
-l_sp = g.convert(l_dp, g.single)
 
-# and convert precision
-l_dp_prime = g.convert(l_sp, g.double)
-eps2 = g.norm2(l_dp - l_dp_prime) / g.norm2(l_dp)
-assert eps2 < 1e-14
-eps2 = g.norm2(l_dp[0, 0, 0, 0] - l_sp[0, 0, 0, 0])
-assert eps2 < 1e-14
+# grid
+L = [8, 12, 24, 24]
+for rb in [g.redblack, g.full]:
+    grid_dp = g.grid(L, g.double, rb)
+    grid_sp = g.grid(L, g.single, rb)
+
+    # test fields
+    l_dp = rng.cnormal(g.vcolor(grid_dp))
+    l_sp = g.convert(l_dp, g.single)
+
+    # and convert precision
+    l_dp_prime = g.convert(l_sp, g.double)
+    eps2 = g.norm2(l_dp - l_dp_prime) / g.norm2(l_dp)
+    assert eps2 < 1e-14
+    eps2 = g.norm2(l_dp[0, 0, 0, 0] - l_sp[0, 0, 0, 0])
+    assert eps2 < 1e-14
 
 
 ################################################################################
@@ -238,7 +241,7 @@ g.copy(new, src)
 # cshift into a new lattice dst
 dst = g.cshift(src, 0, 1)
 # dst[x] = src[x+1] -> src[0] == dst[15]
-assert abs(dst[15, 0, 0, 0] - complex(2, 1)) < 1e-6
+assert abs(dst[7, 0, 0, 0] - complex(2, 1)) < 1e-6
 
 ################################################################################
 # Test multi inner_product

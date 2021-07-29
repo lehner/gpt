@@ -128,6 +128,35 @@ res = g.eval(cv * g.adj(cv) * cm * cv)
 eps2 = g.norm2(res - g.norm2(cv) ** 2.0 * cv)
 assert eps2 < 1e-13
 
+# test component-wise multiply
+cl = rng.cnormal(g.vcolor(grid))
+cr = rng.cnormal(g.vcolor(grid))
+cm @= cl * g.adj(cr)
+b = g.component.multiply(cl, g.adj(cr))
+for i in range(3):
+    eps = np.linalg.norm(cm[:, :, :, :, i, i].flatten() - b[:, :, :, :, i].flatten())
+    assert eps < 1e-10
+
+# outer product of vreal
+n = 12
+cm = g.mreal(grid, n)
+cl = rng.normal(g.vreal(grid, n))
+cr = rng.normal(g.vreal(grid, n))
+cm @= cl * g.adj(cr)
+for i in range(n):
+    for j in range(n):
+        eps = np.linalg.norm(
+            cm[0, 0, 0, 0, i, j] - cl[0, 0, 0, 0, i] * cr[0, 0, 0, 0, j].conj()
+        )
+        assert eps < 1e-13
+
+# once inner product is implemented, test:
+# cs = g.real(grid)
+# cs @= g.adj(cl) * cr
+# eps = abs(g.inner_product(cl, cr) - g.sum(cs))
+# g.message(f"Inner product vreal test: {eps}")
+# assert eps < 1e-8
+
 # create spin color matrix and peek spin index
 msc = g.mspincolor(grid)
 rng.cnormal(msc)
