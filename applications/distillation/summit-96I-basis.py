@@ -7,6 +7,8 @@ import os, glob
 
 # configure
 cnr = g.default.get("--config", None)
+t_groups = g.default.get_int("--t_groups", 1)
+t_group = g.default.get_int("--t_group", 0)
 config = glob.glob(f"/gpfs/alpine/phy157/proj-shared/phy157dwf/chulwoo/evols/96I2.8Gev/evol?/configurations/ckpoint_lat.{cnr}")
 assert len(config) == 1
 config = config[0]
@@ -23,14 +25,14 @@ irl = g.algorithms.eigen.irl(
         "Nk": 220,
         "Nstop": 200,
         "Nm": 250,
-        "resid": 1e-8,
+        "resid": 1e-14,
         "betastp": 0.0,
-        "maxiter": 10,
+        "maxiter": 20,
         "Nminres": 0,
     }
 )
 
-c = g.algorithms.polynomial.chebyshev({"low": 0.06, "high": 3.5, "order": 50})
+c = g.algorithms.polynomial.chebyshev({"low": 0.009, "high": 2.3, "order": 40})
 
 # create destination directory
 if not os.path.exists(destination):
@@ -78,6 +80,9 @@ for u in U:
 U3 = [g.separate(u,3) for u in U[0:3]]
 
 for t in range(Nt):
+    if t % t_groups != t_group:
+        continue
+
     g.message(f"Laplace basis for time-slice {t}")
 
     U3_t = [u[t] for u in U3]
