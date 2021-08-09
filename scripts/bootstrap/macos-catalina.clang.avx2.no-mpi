@@ -1,0 +1,170 @@
+#!/bin/bash
+#
+# First check package manager presence
+#
+which brew > /dev/null
+if [[ "$?" != "0" ]];
+then
+    echo "Expect package manager homebrew to be installed"
+    exit 1
+fi
+
+which clang > /dev/null
+if [[ "$?" != "0" ]];
+then
+    echo "clang is not installed"
+    exit 1
+fi
+
+#
+# Check packages
+#
+function check_package {
+    res=$(brew list | grep $1 | wc -l | awk '{ print $1 }')
+    if [[ "$res" != "1" ]];
+    then
+	echo "Package $1 needs to be installed first"
+        brew list | grep $1
+	exit 1
+    fi
+}
+
+check_package wget
+check_package autoconf
+check_package automake
+check_package openssl@1.1
+check_package fftw
+
+#
+# darwin should not have flock by default, make it available
+#
+which flock > /dev/null
+if [[ "$?" != "0" ]];
+then
+    echo "flock not available; to install do the following:"
+    echo "brew tap discoteq/discoteq"
+    echo "brew install flock"
+    exit 1
+fi
+
+
+#
+# Set python version
+#
+PYTHON=python3
+
+which $PYTHON > /dev/null
+if [[ "$?" != "0" ]];
+then
+    echo "$PYTHON is not installed"
+    echo "Run: brew install python@3"
+    exit 1
+fi
+
+which ${PYTHON}-config > /dev/null
+if [[ "$?" != "0" ]];
+then
+    echo "${PYTHON}-config is not installed"
+    exit 1
+fi
+
+
+#
+# Install python packages (add notebook and matplotlib for convenience to a local OSX install)
+#
+for package in numpy notebook matplotlib
+do
+    echo "Checking ${package}"
+    hasNumpy=$($PYTHON -c "import $package" 2>&1 | grep -c ModuleNotFound)
+    if [[ "$hasNumpy" == "1" ]];
+    then
+        echo "Install $package"
+        $PYTHON -m pip install --user $package
+    fi
+done
+
+#
+# Get root directory
+#
+root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
+
+#
+# Precompile python code
+#
+echo "Compile gpt"
+$PYTHON -m compileall ${root}/lib/gpt
+
+
+#
+# Create dependencies and download
+#
+dep=${root}/dependencies
+if [ ! -f ${dep}/Grid/build/Grid/libGrid.a ];
+then
+
+	if [ -d ${dep} ];
+	then
+	    echo "$dep already exists ; rm -rf $dep before bootstrapping again"
+	    exit 1
+	fi
+
+	mkdir -p ${dep}
+	cd ${dep}
+
+	#
+	# Lime
+	#
+	wget https://github.com/usqcd-software/c-lime/tarball/master
+	tar xzf master
+	mv usqcd-software-c-lime* lime
+	rm -f master
+	cd lime
+	./autogen.sh
+	./configure
+	make
+	cd ..
+
+	#
+	# Grid
+	#
+	git clone https://github.com/lehner/Grid.git
+	cd Grid
+	git checkout feature/gpt
+	./bootstrap.sh
+	mkdir build
+	cd build
+
+        # on darwin need c++17 to get aligned_alloc
+	../configure --enable-precision=double --enable-simd=AVX2 \
+                     --with-lime=${dep}/lime --enable-comms=none \
+                     --with-hdf5=no \
+                     --enable-gparity=no \
+                     CXXFLAGS="-fPIC -Xclang -fopenmp" LDFLAGS="-lomp" \
+                     CXX=clang
+	cd Grid
+	make -j 4
+fi
+
+if [ ! -f ${root}/lib/cgpt/build/cgpt.so ];
+then
+	#
+	# cgpt
+	#
+	cd ${root}/lib/cgpt
+	export CGPT_EXTRA_LDFLAGS="-undefined dynamic_lookup"
+        ./make ${root}/dependencies/Grid/build 4
+
+        if [ ! -f ${root}/lib/cgpt/build/cgpt.so ];
+        then
+            echo "Build failed"
+            exit 1
+        fi
+fi
+
+cd ${root}/tests
+source ${root}/lib/cgpt/build/source.sh
+./run "" "--mpi_split 1.1.1.1"
+
+echo "To use:"
+echo "source ${root}/lib/cgpt/build/source.sh"
+

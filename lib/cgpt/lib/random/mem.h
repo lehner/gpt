@@ -23,10 +23,7 @@
     allocators.
 */
 void* alignedAlloc(size_t size) {
-  void* r = aligned_alloc(sizeof(vInteger),size);
-  if (!r) // may happen on some implementations for size < sizeof(vInteger)
-    r = malloc(size);
-  return r;
+  return cgpt_alloc(sizeof(vInteger),size);
 }
 
 void alignedFree(void* p) {

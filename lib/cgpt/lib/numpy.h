@@ -51,7 +51,7 @@ static PyArrayObject* cgpt_new_PyArray(long nd, long* dim, int dtype) {
   size_t sz = numpy_dtype_size(dtype);
   for (long i=0;i<nd;i++)
     sz *= dim[i];
-  void* data = aligned_alloc(GRID_ALLOC_ALIGN, sz);
+  void* data = cgpt_alloc(GRID_ALLOC_ALIGN, sz);
   PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNewFromData((int)nd, dim, dtype, data);
   PyArray_ENABLEFLAGS(a, NPY_ARRAY_OWNDATA);
   return a;
