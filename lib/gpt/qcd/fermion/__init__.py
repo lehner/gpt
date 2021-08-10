@@ -38,6 +38,8 @@ from gpt.qcd.fermion.wilson import wilson_clover
 
 # coarse-grid operator
 import copy
+
+
 @gpt.params_convention(make_hermitian=False, level=None)
 def coarse_fermion(A, params):
     params = copy.deepcopy(params)  # save current parameters

@@ -126,7 +126,9 @@ slv_5d = inv.preconditioned(pc.eo2_ne(), cg)
 # kappa: RBC/UKQCD solver for zmobius strange quark
 # use cg_kappa instead of identical cg to keep
 # track of iteration counts separately
-slv_5d_kappa = inv.preconditioned(pc.similarity_transformation(pc.eo2_ne(), qz.kappa()), cg_kappa)
+slv_5d_kappa = inv.preconditioned(
+    pc.similarity_transformation(pc.eo2_ne(), qz.kappa()), cg_kappa
+)
 slv_5d_e = inv.preconditioned(pc.eo2_ne(), cg_e)
 slv_qm = qm.propagator(slv_5d)
 slv_qm_e = qm.propagator(slv_5d_e)

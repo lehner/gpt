@@ -18,11 +18,12 @@
 #
 import gpt
 
+
 class similarity_transformation_instance:
     def __init__(self, base, transformation):
 
         tmp = gpt.lattice(base.S.grid[0], base.S.otype[0])
-        
+
         def _R(op, i):
             transformation.mat(tmp, i)
             base.R.mat(op, tmp)
@@ -67,19 +68,21 @@ class similarity_transformation_instance:
 
 
 def similarity_transformed_matrix_operator(op, transformation, tmp):
-
     def st(mat, transformation):
         def m(dst, src):
             transformation.inv_mat(dst, src)
             mat(tmp, dst)
             transformation.mat(dst, tmp)
+
         return m
-    
+
     return gpt.matrix_operator(
-        mat=st(op.mat, transformation), # V mat V^-1
-        inv_mat=st(op.inv_mat, transformation), # V mat^-1 V^-1
-        adj_mat=st(op.adj_mat, transformation.adj().inv()), # V^-1^adj mat^adj V^adj
-        adj_inv_mat=st(op.adj_inv_mat, transformation.adj().inv()) # V^-1^adj mat^adj^-1 V^adj
+        mat=st(op.mat, transformation),  # V mat V^-1
+        inv_mat=st(op.inv_mat, transformation),  # V mat^-1 V^-1
+        adj_mat=st(op.adj_mat, transformation.adj().inv()),  # V^-1^adj mat^adj V^adj
+        adj_inv_mat=st(
+            op.adj_inv_mat, transformation.adj().inv()
+        ),  # V^-1^adj mat^adj^-1 V^adj
     )
 
 
@@ -91,11 +94,15 @@ class similarity_transformed_fermion_operator(gpt.matrix_operator):
         self.base = base
         self.transformation = transformation
 
-        if hasattr(self.base,"F_grid_eo"):
+        if hasattr(self.base, "F_grid_eo"):
             self.F_grid_eo = self.base.F_grid_eo
             tmp_eo = gpt.lattice(self.F_grid_eo, base.otype[0])
-            self.Mooee = similarity_transformed_matrix_operator(self.base.Mooee, transformation, tmp_eo)
-            self.Meooe = similarity_transformed_matrix_operator(self.base.Meooe, transformation, tmp_eo)
+            self.Mooee = similarity_transformed_matrix_operator(
+                self.base.Mooee, transformation, tmp_eo
+            )
+            self.Meooe = similarity_transformed_matrix_operator(
+                self.base.Meooe, transformation, tmp_eo
+            )
 
         self.F_grid = self.base.F_grid
         self.U_grid = self.base.U_grid
@@ -112,5 +119,9 @@ class similarity_transformation:
         self.transformation = transformation
 
     def __call__(self, op):
-        self.base_instance = self.base(similarity_transformed_fermion_operator(op, self.transformation))
-        return similarity_transformation_instance(self.base_instance, self.transformation)
+        self.base_instance = self.base(
+            similarity_transformed_fermion_operator(op, self.transformation)
+        )
+        return similarity_transformation_instance(
+            self.base_instance, self.transformation
+        )

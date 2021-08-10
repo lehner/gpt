@@ -20,7 +20,9 @@ from gpt.qcd.fermion.preconditioner.g5m import g5m_ne
 from gpt.qcd.fermion.preconditioner.eo1 import eo1_ne, eo1
 from gpt.qcd.fermion.preconditioner.eo2 import eo2_ne, eo2
 
-from gpt.qcd.fermion.preconditioner.similarity_transformation import similarity_transformation
+from gpt.qcd.fermion.preconditioner.similarity_transformation import (
+    similarity_transformation,
+)
 
 from gpt.qcd.fermion.preconditioner.sap import sap, sap_cycle
 from gpt.qcd.fermion.preconditioner.mixed_dwf import mixed_dwf

@@ -36,9 +36,14 @@ def zmobius(U, params):
         b = params["b"]
         c = params["c"]
         M5 = params["M5"]
-        bs = [ 1./2. * (  1./omega_s*(b+c) + (b-c) ) for omega_s in params["omega"] ]
+        bs = [
+            1.0 / 2.0 * (1.0 / omega_s * (b + c) + (b - c))
+            for omega_s in params["omega"]
+        ]
 
-        kappa = np.array([ 1.0 / ( 2.0 * (bsi *(4. - M5) + 1.0) ) for bsi in bs ], np.complex128)
+        kappa = np.array(
+            [1.0 / (2.0 * (bsi * (4.0 - M5) + 1.0)) for bsi in bs], np.complex128
+        )
         adj_kappa = np.conj(kappa)
         inv_kappa = 1.0 / kappa
         adj_inv_kappa = np.conj(inv_kappa)
@@ -56,11 +61,8 @@ def zmobius(U, params):
             gpt.scale_per_coordinate(dst, src, adj_inv_kappa, 0)
 
         return gpt.matrix_operator(
-            mat = _mat,
-            inv_mat = _inv_mat,
-            adj_mat = _adj_mat,
-            adj_inv_mat = _adj_inv_mat
+            mat=_mat, inv_mat=_inv_mat, adj_mat=_adj_mat, adj_inv_mat=_adj_inv_mat
         )
-    
+
     op.kappa = zmobius_kappa_create
     return op
