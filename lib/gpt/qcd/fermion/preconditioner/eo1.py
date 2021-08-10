@@ -199,7 +199,7 @@ class eo1_instance(eo1_base):
     def __init__(self, op, parity):
         super().__init__(op, parity)
 
-        def _R(self, op, i):
+        def _R(op, i):
             self.import_parity(i)
             self.op.Mooee.inv_mat(self.tmp, self.in_np)
             self.op.Meooe.mat(op, self.tmp)

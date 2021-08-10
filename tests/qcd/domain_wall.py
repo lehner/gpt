@@ -119,13 +119,19 @@ g.create.point(src, [0, 1, 0, 0])
 pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-5, "maxiter": 1000})
+cg_kappa = inv.cg({"eps": 1e-5, "maxiter": 1000})
 cg_e = inv.cg({"eps": 1e-8, "maxiter": 1000})
 
 slv_5d = inv.preconditioned(pc.eo2_ne(), cg)
+# kappa: RBC/UKQCD solver for zmobius strange quark
+# use cg_kappa instead of identical cg to keep
+# track of iteration counts separately
+slv_5d_kappa = inv.preconditioned(pc.similarity_transformation(pc.eo2_ne(), qz.kappa()), cg_kappa)
 slv_5d_e = inv.preconditioned(pc.eo2_ne(), cg_e)
 slv_qm = qm.propagator(slv_5d)
 slv_qm_e = qm.propagator(slv_5d_e)
 slv_qz = qz.propagator(slv_5d)
+slv_qz_kappa = qz.propagator(slv_5d_kappa)
 slv_madwf = qm.propagator(pc.mixed_dwf(slv_5d, slv_5d, qz))
 slv_madwf_dc = qm.propagator(
     inv.defect_correcting(pc.mixed_dwf(slv_5d, slv_5d, qz), eps=1e-6, maxiter=10)
@@ -153,10 +159,18 @@ assert eps2 < 1e-10
 # dst_qm_e = g.mspincolor(grid)
 dst_qm = g.mspincolor(grid)
 dst_qz = g.mspincolor(grid)
+dst_qz_kappa = g.mspincolor(grid)
 
 # dst_qm_e @= slv_qm_e * src
 dst_qm @= slv_qm * src
 dst_qz @= slv_qz * src
+dst_qz_kappa @= slv_qz_kappa * src
+
+# test similarity transformated solve
+eps2 = g.norm2(dst_qz - dst_qz_kappa) / g.norm2(dst_qz)
+g.message(f"Kappa similarity transformed solve: {eps2}")
+assert eps2 < 1e-6
+assert len(cg.history) > len(cg_kappa.history)
 
 # two-point
 # correlator_ref= g.slice(g.trace(dst_qm_e * g.adj(dst_qm_e)), 3)
