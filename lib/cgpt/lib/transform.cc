@@ -218,6 +218,30 @@ EXPORT(lattice_axpy,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(lattice_scale_per_coordinate,{
+    
+    void* _d,*_s;
+    PyObject* _a;
+    long dim;
+    if (!PyArg_ParseTuple(args, "llOl", &_d,&_s,&_a,&dim)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* d = (cgpt_Lattice_base*)_d;
+    cgpt_Lattice_base* s = (cgpt_Lattice_base*)_s;
+
+    ComplexD* a;
+    int L;
+    cgpt_numpy_import_vector(_a,a,L);
+
+    ASSERT((0 <= dim) && (dim < d->get_grid()->_gdimensions.size()));
+    ASSERT(d->get_grid()->_gdimensions[dim] == L);
+
+    d->scale_per_coordinate(s,a,dim);
+    
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(lattice_sum,{
     
     void* _a;

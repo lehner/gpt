@@ -29,47 +29,204 @@ groups = {
 }
 
 jobs = {
-    "exact_0": {"exact": 1, "sloppy": 0, "low": 0, "all_time_slices": True},  # 1270 seconds + 660 to load ev
-    "sloppy_0": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "sloppy_1": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "low_0": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "exact_0": {
+        "exact": 1,
+        "sloppy": 0,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 1270 seconds + 660 to load ev
+    "sloppy_0": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "sloppy_1": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "low_0": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": True,
+    },  # 2100 seconds + 600 to load ev
     "low_1": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "exact_0_correlated": {"exact": 1, "sloppy": 0, "low": 0, "all_time_slices": False},  # 1270 seconds + 660 to load ev
-    "sloppy_0_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
-    "low_0_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
-
-    "sloppy_2": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "sloppy_3": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "low_2": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "exact_0_correlated": {
+        "exact": 1,
+        "sloppy": 0,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 1270 seconds + 660 to load ev
+    "sloppy_0_correlated": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 2652 seconds + 580 to load ev
+    "low_0_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": False,
+    },  # 2100 seconds + 600 to load ev
+    "sloppy_2": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "sloppy_3": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "low_2": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": True,
+    },  # 2100 seconds + 600 to load ev
     "low_3": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "sloppy_1_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
-    "low_1_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
-
-    "sloppy_4": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "sloppy_5": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "sloppy_6": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "sloppy_7": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "low_4": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "sloppy_1_correlated": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 2652 seconds + 580 to load ev
+    "low_1_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": False,
+    },  # 2100 seconds + 600 to load ev
+    "sloppy_4": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "sloppy_5": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "sloppy_6": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "sloppy_7": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "low_4": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": True,
+    },  # 2100 seconds + 600 to load ev
     "low_5": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "low_6": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "low_6": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": True,
+    },  # 2100 seconds + 600 to load ev
     "low_7": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "sloppy_2_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
-    "low_2_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
-    "sloppy_3_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
-    "low_3_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
-
-    "sloppy_8": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "sloppy_9": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "sloppy_10": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "sloppy_11": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": True},  # 2652 seconds + 580 to load ev
-    "low_8": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "sloppy_2_correlated": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 2652 seconds + 580 to load ev
+    "low_2_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": False,
+    },  # 2100 seconds + 600 to load ev
+    "sloppy_3_correlated": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 2652 seconds + 580 to load ev
+    "low_3_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": False,
+    },  # 2100 seconds + 600 to load ev
+    "sloppy_8": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "sloppy_9": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "sloppy_10": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "sloppy_11": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": True,
+    },  # 2652 seconds + 580 to load ev
+    "low_8": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": True,
+    },  # 2100 seconds + 600 to load ev
     "low_9": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "low_10": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True}, # 2100 seconds + 600 to load ev
+    "low_10": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": True,
+    },  # 2100 seconds + 600 to load ev
     "low_11": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": True},
-    "sloppy_4_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
-    "low_4_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
-    "sloppy_5_correlated": {"exact": 0, "sloppy": 8, "low": 0, "all_time_slices": False},  # 2652 seconds + 580 to load ev
-    "low_5_correlated": {"exact": 0, "sloppy": 0, "low": 150, "all_time_slices": False}, # 2100 seconds + 600 to load ev
+    "sloppy_4_correlated": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 2652 seconds + 580 to load ev
+    "low_4_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": False,
+    },  # 2100 seconds + 600 to load ev
+    "sloppy_5_correlated": {
+        "exact": 0,
+        "sloppy": 8,
+        "low": 0,
+        "all_time_slices": False,
+    },  # 2652 seconds + 580 to load ev
+    "low_5_correlated": {
+        "exact": 0,
+        "sloppy": 0,
+        "low": 150,
+        "all_time_slices": False,
+    },  # 2100 seconds + 600 to load ev
 }
 
 # At 32 jobs we break even with eigenvector generation
@@ -126,7 +283,12 @@ def get_job(only_on_conf=None):
 if g.rank() == 0:
     first_job = get_job()
     run_jobs = str(
-        list(filter(lambda x: x is not None,[first_job] + [get_job(first_job[2]) for i in range(1, jobs_per_run)]))
+        list(
+            filter(
+                lambda x: x is not None,
+                [first_job] + [get_job(first_job[2]) for i in range(1, jobs_per_run)],
+            )
+        )
     ).encode("utf-8")
 else:
     run_jobs = bytes()
@@ -312,7 +474,7 @@ for group, job, conf, jid, n in run_jobs:
 
         # create time-sparsened source
         sign_of_slice = [rng.zn(n=2) for i in range(source_time_slices)]
-        for i in range(use_source_time_slices,source_time_slices):
+        for i in range(use_source_time_slices, source_time_slices):
             sign_of_slice[i] = 0.0
 
         pos_of_slice = [
