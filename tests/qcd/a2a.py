@@ -61,16 +61,16 @@ ie, io, oe, oo = tuple([g.vspincolor(q.F_grid_eo) for i in range(4)])
 exp = q.ExportPhysicalFermionSolution
 imp = q.ImportPhysicalFermionSource
 
-for p, tag in [
-    (pc.eo1_ne(parity=g.odd), "eo1-odd"),
-    (pc.eo2_ne(parity=g.odd), "eo2-odd"),
-    (pc.eo1_ne(parity=g.even), "eo1-even"),
-    (pc.eo2_ne(parity=g.even), "eo2-even"),
+for p, tag, parity in [
+    (pc.eo1_ne(parity=g.odd), "eo1-odd", g.odd),
+    (pc.eo2_ne(parity=g.odd), "eo2-odd", g.odd),
+    (pc.eo1_ne(parity=g.even), "eo1-even", g.even),
+    (pc.eo2_ne(parity=g.even), "eo2-even", g.even),
 ]:
     g.message("Test", tag)
 
     for x in evec:
-        x.checkerboard(p.params["parity"])
+        x.checkerboard(parity)
 
     p_q = p(q)
     a2a_p = g.algorithms.modes.a2a(pc.physical(p)(q))

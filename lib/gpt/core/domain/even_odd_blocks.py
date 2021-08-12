@@ -16,12 +16,23 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.base import base, base_iterative
-import gpt.algorithms.inverter
-import gpt.algorithms.polynomial
-import gpt.algorithms.eigen
-import gpt.algorithms.modes
-import gpt.algorithms.integrator
-import gpt.algorithms.optimize
-import gpt.algorithms.markov
-import gpt.algorithms.preconditioner
+import gpt
+
+class even_odd_blocks:
+
+    def __init__(self, grid, block_size, parity):
+        self.parity = parity
+        self.block_size = block_size
+        self.grid = grid
+        # split grid for local operator
+
+    def lattice(self, otype):
+        x = gpt.lattice(self.grid, otype)
+        # ?
+        return x
+    
+    def project(self, dst, src):
+        pass
+
+    def promote(self, dst, src):
+        pass
