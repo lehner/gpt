@@ -19,4 +19,6 @@
 from gpt.algorithms.preconditioner.schur_complement_one import schur_complement_one
 from gpt.algorithms.preconditioner.schur_complement_two import schur_complement_two
 from gpt.algorithms.preconditioner.normal_equation import normal_equation
-from gpt.algorithms.preconditioner.similarity_transformation import similarity_transformation
+from gpt.algorithms.preconditioner.similarity_transformation import (
+    similarity_transformation,
+)

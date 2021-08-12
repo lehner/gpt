@@ -215,7 +215,6 @@ class base(gpt.matrix_operator):
         )
 
     def even_odd_sites_decomposed(self, parity):
-
         class even_odd_sites:
             def __init__(me):
                 me.D_domain = gpt.domain.even_odd_sites(self.F_grid_eo, parity)

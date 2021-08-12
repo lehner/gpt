@@ -82,7 +82,7 @@ def eo2_kappa_ne(params):
                 gpt.algorithms.preconditioner.schur_complement_two(
                     op, lambda op: op.even_odd_sites_decomposed(parity)
                 ),
-                op.kappa()
+                op.kappa(),
             )
         )
 

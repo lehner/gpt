@@ -41,7 +41,7 @@ class similarity_transformation:
 
         def wrap(Mpc, L, R):
             tmp = gpt.lattice(Mpc.grid[0], Mpc.otype[0])
-        
+
             def _Mpc(o_d, i_d):
                 V.inv_mat(o_d, i_d)
                 Mpc.mat(tmp, o_d)

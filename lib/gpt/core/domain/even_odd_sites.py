@@ -18,8 +18,8 @@
 #
 import gpt
 
-class even_odd_sites:
 
+class even_odd_sites:
     def __init__(self, grid, parity):
         self.checkerboard = parity
         self.grid = grid
@@ -28,7 +28,7 @@ class even_odd_sites:
         x = gpt.lattice(self.grid, otype)
         x.checkerboard(self.checkerboard)
         return x
-    
+
     def project(self, dst, src):
         gpt.pick_checkerboard(self.checkerboard, dst, src)
 

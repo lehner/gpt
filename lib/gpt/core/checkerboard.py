@@ -21,6 +21,7 @@ import gpt
 
 
 class even:
+    # per convention sum(coordinates) % 2 == tag
     tag = 0
 
     def inv():

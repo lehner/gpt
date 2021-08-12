@@ -56,7 +56,7 @@ class schur_complement_one:
 
         otype = op.otype[0]
         op_domain = op.domain
-        
+
         dd_op = domain_decomposition(op)
 
         DD = dd_op.DD
@@ -99,7 +99,7 @@ class schur_complement_one:
             C_domain.project(tmp_c[0], i)
             CC.inv_mat(tmp_c[1], tmp_c[0])
             C_domain.promote(o, tmp_c[1])
-            
+
             tmp_d[0][:] = 0
             D_domain.promote(o, tmp_d[0])
 
@@ -125,7 +125,7 @@ class schur_complement_one:
             DC.adj_mat(tmp_c[0], tmp_d[0])
             tmp_c[0] @= -tmp_c[0]
             CC.adj_inv_mat(tmp_c[1], tmp_c[0])
-            C_domain.promote(o, tmp_c[1])            
+            C_domain.promote(o, tmp_c[1])
 
         self.R = gpt.matrix_operator(
             mat=_R,
@@ -136,14 +136,15 @@ class schur_complement_one:
         )
 
         self.S = gpt.matrix_operator(
-            mat=_S,
-            otype=otype,
-            grid=op_domain.grid,
-            cb=op_domain.checkerboard
+            mat=_S, otype=otype, grid=op_domain.grid, cb=op_domain.checkerboard
         )
 
         self.Mpc = gpt.matrix_operator(
-            mat=_N, adj_mat=_N_dag, otype=otype, grid=D_domain.grid, cb=D_domain.checkerboard
+            mat=_N,
+            adj_mat=_N_dag,
+            otype=otype,
+            grid=D_domain.grid,
+            cb=D_domain.checkerboard,
         )
 
         for undressed in ["Mpc"]:

@@ -18,8 +18,8 @@
 #
 import gpt
 
-class full:
 
+class full:
     def __init__(self, grid):
         assert grid.cb.n == 1
         self.grid = grid
@@ -27,7 +27,7 @@ class full:
 
     def lattice(self, otype):
         return gpt.lattice(self.grid, otype)
-    
+
     def project(self, dst, src):
         gpt.copy(dst, src)
 
