@@ -21,24 +21,17 @@ from gpt.qcd.fermion.operator import differentiable_fine_operator
 import numpy as np
 
 
-@gpt.params_convention(
-    omega=None, mass=None, b=None, c=None, M5=None, boundary_phases=None
-)
-def zmobius(U, params):
-    params = copy.deepcopy(params)  # save current parameters
-    params["Ls"] = len(params["omega"])
+class zmobius_class_operator(differentiable_fine_operator):
+    def __init__(self, name, U, params, otype=None):
+        differentiable_fine_operator.__init__(self, name, U, params, otype)
 
-    op = differentiable_fine_operator(
-        "zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
-    )
-
-    def zmobius_kappa_create():
-        b = params["b"]
-        c = params["c"]
-        M5 = params["M5"]
+    def kappa(self):
+        b = self.params["b"]
+        c = self.params["c"]
+        M5 = self.params["M5"]
         bs = [
             1.0 / 2.0 * (1.0 / omega_s * (b + c) + (b - c))
-            for omega_s in params["omega"]
+            for omega_s in self.params["omega"]
         ]
 
         kappa = np.array(
@@ -64,5 +57,14 @@ def zmobius(U, params):
             mat=_mat, inv_mat=_inv_mat, adj_mat=_adj_mat, adj_inv_mat=_adj_inv_mat
         )
 
-    op.kappa = zmobius_kappa_create
-    return op
+
+@gpt.params_convention(
+    omega=None, mass=None, b=None, c=None, M5=None, boundary_phases=None
+)
+def zmobius(U, params):
+    params = copy.deepcopy(params)  # save current parameters
+    params["Ls"] = len(params["omega"])
+
+    return zmobius_class_operator(
+        "zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
+    )
