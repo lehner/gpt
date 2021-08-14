@@ -232,17 +232,20 @@ static void micro_kernels(int lat) {
   GridParallelRNG          pRNG(&Grid);      pRNG.SeedFixedIntegers(std::vector<int>({45,12,81,9}));
   random(pRNG,a);   random(pRNG,b);
 
-  int N = 10;
-  double gb, t0, t1, t2, t3, t4;
+  int Nwarm = 10;
+  int N = 50;
+  double gb, t0, t1, t2, t3, t4, t5;
 
  
   gb = 4.0 * 3.0 * sizeof(Lat::scalar_object) * Grid._fsites / 1e9 * N;
-  t0 = cgpt_time();
-  for (int i=0;i<N;i++) {
+  for (int i=0;i<Nwarm+N;i++) {
+    if (i==Nwarm)
+      t0 = cgpt_time();
     c = a*b;
     d = a*c;
     c = a*b;
     d = a*c;
+    //d = a*a*b;
     //d = a*a*b;
   }
   t1 = cgpt_time();
@@ -268,10 +271,12 @@ static void micro_kernels(int lat) {
   expression.push_back({ mk_su3_mul, views_d_a_c });
 
   t3 = cgpt_time();
-  for (int i=0;i<N;i++) {
+  for (int i=0;i<Nwarm+N;i++) {
+    if (i==Nwarm)
+      t4 = cgpt_time();
     eval_micro_kernels(expression, block_size);
   }
-  t4 = cgpt_time();
+  t5 = cgpt_time();
 
   views_c_a_b.release();
   views_d_a_c.release();
@@ -279,7 +284,7 @@ static void micro_kernels(int lat) {
   d -= d_copy;
   double err2 = norm2(d);
   
-  std::cout << GridLogMessage << gb << " GB at (GridET) " << gb/(t1-t0) << " or (MK) " << gb/(t4-t3) << " GB/s (view open time = " << (t3-t2) << " versus " << (t4-t3) << " ), err = " << err2 << std::endl;
+  std::cout << GridLogMessage << gb << " GB at (GridET) " << gb/(t1-t0) << " or (MK) " << gb/(t5-t4) << " GB/s (view open time = " << (t3-t2) << " versus " << (t5-t4) << " ), err = " << err2 << std::endl;
 
   
 }
@@ -297,6 +302,8 @@ EXPORT(benchmarks,{
     micro_kernels(12);
     micro_kernels(16);
     micro_kernels(24);
+    micro_kernels(32);
+    //micro_kernels(48);
     return PyLong_FromLong(0);
   });
 
