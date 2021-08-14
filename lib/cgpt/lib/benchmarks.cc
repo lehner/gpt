@@ -246,6 +246,11 @@ static void micro_kernels(int lat) {
     //d = a*a*b;
   }
   t1 = cgpt_time();
+
+  Lat d_copy = d;
+  d = Zero();
+
+  t2 = cgpt_time();
   std::vector<micro_kernel_t> expression;
   micro_kernel_arg_t views_c_a_b, views_d_a_c;
 
@@ -262,11 +267,6 @@ static void micro_kernels(int lat) {
   expression.push_back({ mk_su3_mul, views_c_a_b });
   expression.push_back({ mk_su3_mul, views_d_a_c });
 
-  t2 = cgpt_time();
-    
-  Lat d_copy = d;
-  d = Zero();
-
   t3 = cgpt_time();
   for (int i=0;i<N;i++) {
     eval_micro_kernels(expression, block_size);
@@ -279,7 +279,7 @@ static void micro_kernels(int lat) {
   d -= d_copy;
   double err2 = norm2(d);
   
-  std::cout << GridLogMessage << gb << " GB at (GridET) " << gb/(t1-t0) << " or (MK) " << gb/(t4-t3) << " GB/s (view open time = " << (t2-t1) << " versus " << (t4-t3) << " ), err = " << err2 << std::endl;
+  std::cout << GridLogMessage << gb << " GB at (GridET) " << gb/(t1-t0) << " or (MK) " << gb/(t4-t3) << " GB/s (view open time = " << (t3-t2) << " versus " << (t4-t3) << " ), err = " << err2 << std::endl;
 
   
 }
