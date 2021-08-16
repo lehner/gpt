@@ -113,11 +113,16 @@ public:
 };
 
 struct micro_kernel_arg_t {
-  std::vector<ViewContainerBase*> views;
+  struct tuple_t {
+    ViewContainerBase* view;
+    bool persistant;
+  };
+  
+  std::vector<tuple_t> views;
   size_t o_sites;
 
   template<class T>
-  void add(Lattice<T>& l, ViewMode mode) {
+  void add(Lattice<T>& l, ViewMode mode, bool persistant = true) {
     size_t _o_sites = l.Grid()->oSites();
     if (views.size() == 0) {
       o_sites = _o_sites;
@@ -125,12 +130,12 @@ struct micro_kernel_arg_t {
       ASSERT(o_sites == _o_sites);
     }
     auto l_v = l.View(mode);
-    views.push_back(new ViewContainer<decltype(l_v)>(l_v));
+    views.push_back({ new ViewContainer<decltype(l_v)>(l_v), persistant });
   }
 
   void release() {
     for (auto x : views)
-      delete x;
+      delete x.view;
   }
 
 };
@@ -142,33 +147,31 @@ struct micro_kernel_t {
   micro_kernel_arg_t arg;
 };
 
-#define prefetch(a) {                                   \
-  vComplexD* tmp = (vComplexD*)&a;                      \
-  for (int z=0;z<sizeof(a)/sizeof(vComplexD);z++)       \
-    __builtin_prefetch (&tmp[z]);                       \
-}
-
 void mk_su3_mul(const micro_kernel_arg_t & arg, size_t i0, size_t i1) {
   typedef typename LatticeColourMatrixD::vector_object vobj;
   typedef typename LatticeColourMatrixD::scalar_object sobj;
 
-  auto a_v = ((ViewContainer<LatticeView<vobj>>*)arg.views[0])->v;
-  auto a_p = &a_v[i0];
+  auto a_v = ((ViewContainer<LatticeView<vobj>>*)arg.views[0].view)->v;
+  auto a_p = &a_v[arg.views[0].persistant ? i0 : 0];
 
-  auto b_v = ((ViewContainer<LatticeView<vobj>>*)arg.views[1])->v;
-  auto b_p = &b_v[i0];
+  auto b_v = ((ViewContainer<LatticeView<vobj>>*)arg.views[1].view)->v;
+  auto b_p = &b_v[arg.views[1].persistant ? i0 : 0];
 
-  auto c_v = ((ViewContainer<LatticeView<vobj>>*)arg.views[2])->v;
-  auto c_p = &c_v[i0];
+  auto c_v = ((ViewContainer<LatticeView<vobj>>*)arg.views[2].view)->v;
+  auto c_p = &c_v[arg.views[2].persistant ? i0 : 0];
 
   //size_t pf = 0;
+#define SUBBLOCK 16 // SUBBLOCK should help in scenarios where cache line is smaller than object size
 #ifndef GRID_HAS_ACCELERATOR
-  thread_for_in_region(idx, i1-i0, {
-      //prefetch(b_p[idx+pf]);
-      //prefetch(c_p[idx+pf]);
-    
-      a_p[idx] = b_p[idx] * c_p[idx];
-    });
+
+  int n_thread = omp_get_thread_num();
+  int n_threads = omp_get_num_threads();
+  for (size_t idx=SUBBLOCK*n_thread;idx<i1-i0;idx+=SUBBLOCK*n_threads) {
+    for (size_t i=idx;i<std::min(idx+SUBBLOCK,i1-i0);i++) {
+      a_p[i] = b_p[i] * c_p[i];
+    }
+  }
+  
 #else
   accelerator_forNB(idx, i1-i0, sizeof(vobj)/sizeof(sobj), {
       coalescedWrite(a_p[idx], coalescedRead(b_p[idx]) * coalescedRead(c_p[idx]));
@@ -234,7 +237,7 @@ static void micro_kernels(int lat) {
 
   int Nwarm = 10;
   int N = 50;
-  double gb, t0, t1, t2, t3, t4, t5;
+  double gb, t0, t1, t2, t3, t4, t5, t0b, t1b;
 
  
   gb = 4.0 * 3.0 * sizeof(Lat::scalar_object) * Grid._fsites / 1e9 * N;
@@ -245,10 +248,16 @@ static void micro_kernels(int lat) {
     d = a*c;
     c = a*b;
     d = a*c;
-    //d = a*a*b;
-    //d = a*a*b;
   }
   t1 = cgpt_time();
+
+  for (int i=0;i<Nwarm+N;i++) {
+    if (i==Nwarm)
+      t0b = cgpt_time();
+    d = a*a*b;
+    d = a*a*b;
+  }
+  t1b = cgpt_time();
 
   Lat d_copy = d;
   d = Zero();
@@ -257,13 +266,13 @@ static void micro_kernels(int lat) {
   std::vector<micro_kernel_t> expression;
   micro_kernel_arg_t views_c_a_b, views_d_a_c;
 
-  views_c_a_b.add(c, AcceleratorWriteDiscard);
+  views_c_a_b.add(c, AcceleratorWriteDiscard, false);
   views_c_a_b.add(a, AcceleratorRead);
   views_c_a_b.add(b, AcceleratorRead);
 
   views_d_a_c.add(d, AcceleratorWriteDiscard);
   views_d_a_c.add(a, AcceleratorRead);
-  views_d_a_c.add(c, AcceleratorRead);
+  views_d_a_c.add(c, AcceleratorRead, false);
 
   expression.push_back({ mk_su3_mul, views_c_a_b });
   expression.push_back({ mk_su3_mul, views_d_a_c });
@@ -284,7 +293,8 @@ static void micro_kernels(int lat) {
   d -= d_copy;
   double err2 = norm2(d);
   
-  std::cout << GridLogMessage << gb << " GB at (GridET) " << gb/(t1-t0) << " or (MK) " << gb/(t5-t4) << " GB/s (view open time = " << (t3-t2) << " versus " << (t5-t4) << " ), err = " << err2 << std::endl;
+  std::cout << GridLogMessage << gb << " GB at (GridET separate) " << gb/(t1-t0) <<
+    " (GridET joint) " << gb/(t1b-t0b) << " or (MK) " << gb/(t5-t4) << " GB/s (view open time = " << (t3-t2) << " versus " << (t5-t4) << " ), err = " << err2 << std::endl;
 
   
 }
@@ -301,8 +311,8 @@ EXPORT(benchmarks,{
     micro_kernels(10);
     micro_kernels(12);
     micro_kernels(16);
-    micro_kernels(24);
-    micro_kernels(32);
+    //micro_kernels(24);
+    //micro_kernels(32);
     //micro_kernels(48);
     return PyLong_FromLong(0);
   });
