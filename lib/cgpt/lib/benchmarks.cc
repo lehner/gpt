@@ -153,12 +153,12 @@ struct micro_kernel_t {
 #ifndef GRID_HAS_ACCELERATOR
 
 #define micro_kernel_for(idx, n_idx, nsimd, ...) {                      \
-  int n_thread = omp_get_thread_num();                                  \
-  int n_threads = omp_get_num_threads();                                \
-  for (size_t idx=SUBBLOCK*n_thread;idx<n_idx;idx+=SUBBLOCK*n_threads) { \
-  for (size_t i=idx;i<std::min(idx+SUBBLOCK,n_idx);i++) {               \
-    __VA_ARGS__;                                                        \
-  }}}
+    int n_thread = omp_get_thread_num();                                \
+    int n_threads = omp_get_num_threads();                              \
+    for (size_t ib=SUBBLOCK*n_thread;ib<n_idx;ib+=SUBBLOCK*n_threads) { \
+      for (size_t idx=ib;idx<std::min(ib+SUBBLOCK,n_idx);idx++) {       \
+        __VA_ARGS__;                                                    \
+      }}}
 #define micro_kernel_region(...) { thread_region { __VA_ARGS__ } }
 
 #else
@@ -246,7 +246,6 @@ void micro_kernels(int lat) {
   t1 = cgpt_time();
 
   Lat d_copy = a*a*b;
-  d = Zero();
 
   for (int i=0;i<Nwarm+N;i++) {
     if (i==Nwarm)
@@ -256,6 +255,8 @@ void micro_kernels(int lat) {
   }
   t1b = cgpt_time();
 
+  d = Zero();
+  
   t2 = cgpt_time();
   std::vector<micro_kernel_t> expression;
   micro_kernel_arg_t views_c_a_b, views_d_a_c;
