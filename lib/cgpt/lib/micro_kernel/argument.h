@@ -34,14 +34,14 @@ public:
 struct micro_kernel_arg_t {
   struct tuple_t {
     ViewContainerBase* view;
-    bool persistant;
+    bool persistent;
   };
   
   std::vector<tuple_t> views;
   size_t o_sites;
 
   template<class T>
-  void add(Lattice<T>& l, ViewMode mode, bool persistant = true) {
+  void add(Lattice<T>& l, ViewMode mode, bool persistent = true) {
     size_t _o_sites = l.Grid()->oSites();
     if (views.size() == 0) {
       o_sites = _o_sites;
@@ -49,7 +49,7 @@ struct micro_kernel_arg_t {
       ASSERT(o_sites == _o_sites);
     }
     auto l_v = l.View(mode);
-    views.push_back({ new ViewContainer<decltype(l_v)>(l_v), persistant });
+    views.push_back({ new ViewContainer<decltype(l_v)>(l_v), persistent });
   }
 
   void release() {

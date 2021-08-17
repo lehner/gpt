@@ -37,5 +37,5 @@
 
 #define micro_kernel_view(vobj, ptr, idx)                               \
   auto ptr ## _v = ((ViewContainer<LatticeView<vobj>>*)arg.views[idx].view)->v; \
-  auto ptr = &ptr ## _v[arg.views[idx].persistant ? i0 : 0];
+  auto ptr = &ptr ## _v[arg.views[idx].persistent ? i0 : 0];
 
