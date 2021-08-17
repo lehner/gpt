@@ -15,30 +15,29 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-
-    This file provides a playground for benchmarking new C++ functions
-    before they go into production.
-
 */
+#include "lib.h"
 
-class mk_timer {
-public:
-  double dt_best, dt_worst, dt_total;
-  size_t n;
+void eval_micro_kernels(const std::vector<micro_kernel_t> & kernels, const micro_kernel_blocking_t & blocking) {
 
-  mk_timer() : dt_best(10000000.0), dt_worst(0.0), dt_total(0.0), n(0) {};
+  size_t n = kernels.size();
 
-  void add(double dt) {
-    if (dt < dt_best)
-      dt_best = dt;
-    if (dt > dt_worst)
-      dt_worst = dt;
-    dt_total += dt;
-    n += 1;
-  }
+  size_t o_sites = kernels[0].arg.o_sites;
+  size_t block_size = blocking.block_size;
+  size_t subblock_size = blocking.subblock_size;
 
-  void print(std::string tag, double gb) {
-    std::cout << GridLogMessage << tag << ": " << gb/dt_worst << " -- " << gb/dt_best << " avg " << gb*n/dt_total << " GB/s" << std::endl;
-  }
-};
+  micro_kernel_region({
+      
+      for (size_t j=0;j<(o_sites + block_size - 1)/block_size;j++) {
+
+        for (size_t i=0;i<n;i++) {
+          auto& k = kernels[i];
+          
+          size_t j0 = std::min(j*block_size, o_sites);
+          size_t j1 = std::min(j0 + block_size, o_sites);
+          k.action(k.arg, j0, j1, subblock_size);
+        }
+
+      }
+    });
+}

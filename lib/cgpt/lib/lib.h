@@ -36,6 +36,7 @@
 #include "foundation.h"
 #include "reduce.h"
 #include "sort.h"
+#include "micro_kernel.h"
 #include "convert.h"
 #include "checksums.h"
 #include "parameters.h"

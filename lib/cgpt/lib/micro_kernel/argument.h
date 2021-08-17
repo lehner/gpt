@@ -15,30 +15,46 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-
-    This file provides a playground for benchmarking new C++ functions
-    before they go into production.
-
 */
 
-class mk_timer {
+class ViewContainerBase {
 public:
-  double dt_best, dt_worst, dt_total;
-  size_t n;
+  virtual ~ViewContainerBase() {};
+};
 
-  mk_timer() : dt_best(10000000.0), dt_worst(0.0), dt_total(0.0), n(0) {};
+template<class View> 
+class ViewContainer : public ViewContainerBase {
+public:
+  View v;
+  
+  ViewContainer(View &_v) : v(_v) {};
+  virtual ~ViewContainer() { v.ViewClose(); }
+};
 
-  void add(double dt) {
-    if (dt < dt_best)
-      dt_best = dt;
-    if (dt > dt_worst)
-      dt_worst = dt;
-    dt_total += dt;
-    n += 1;
+struct micro_kernel_arg_t {
+  struct tuple_t {
+    ViewContainerBase* view;
+    bool persistant;
+  };
+  
+  std::vector<tuple_t> views;
+  size_t o_sites;
+
+  template<class T>
+  void add(Lattice<T>& l, ViewMode mode, bool persistant = true) {
+    size_t _o_sites = l.Grid()->oSites();
+    if (views.size() == 0) {
+      o_sites = _o_sites;
+    } else {
+      ASSERT(o_sites == _o_sites);
+    }
+    auto l_v = l.View(mode);
+    views.push_back({ new ViewContainer<decltype(l_v)>(l_v), persistant });
   }
 
-  void print(std::string tag, double gb) {
-    std::cout << GridLogMessage << tag << ": " << gb/dt_worst << " -- " << gb/dt_best << " avg " << gb*n/dt_total << " GB/s" << std::endl;
+  void release() {
+    for (auto x : views)
+      delete x.view;
   }
+
 };
