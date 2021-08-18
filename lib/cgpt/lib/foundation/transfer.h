@@ -115,18 +115,21 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
   accelerator_for(in_oidx,in_grid->oSites(),in_nsimd,{
 
       Coordinate in_ocoor(ndim);
-      Coordinate lcoor(ndim);
+      int lcoor;
       
       gi.oCoorFromOindex(in_ocoor, in_oidx);
 
       accelerator_foreach_lane(in_lane,in_nsimd,{
+
+	  uint64_t out_lane = 0;
+	  uint64_t out_oidx = 0;
 	  
-	  for(int mu=0;mu<ndim;mu++)
-	    lcoor[mu] = in_ocoor[mu] + gi._rdimensions[mu]*in_icoor[in_lane][mu];
-	  
-	  auto out_lane = go.iIndex(lcoor);
-	  auto out_oidx = go.oIndex(lcoor);
-	  
+	  for(int mu=0;mu<ndim;mu++) {
+	    lcoor = in_ocoor[mu] + gi._rdimensions[mu]*in_icoor[in_lane][mu];
+	    out_lane += go._istride[mu] * (lcoor / go._rdimensions[mu]);
+	    out_oidx += go._ostride[mu] * (lcoor % go._rdimensions[mu]);
+	  }
+
 	  for (int i=0;i<n_elem;i++) {
 	    ((out_t*)&out_p[out_oidx])[i * out_nsimd + out_lane] = ((in_t*)&in_p[in_oidx])[i * in_nsimd + in_lane];
 	  }

@@ -67,6 +67,7 @@ template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
 #include "foundation/clover.h"
 #include "foundation/coarse.h"
 #include "foundation/laplacian.h"
+#include "foundation/transform.h"
 
 
 NAMESPACE_END(Grid);

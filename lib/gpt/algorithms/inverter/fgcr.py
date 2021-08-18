@@ -35,8 +35,7 @@ class fgcr(base_iterative):
         self.checkres = params["checkres"]
         self.prec = params["prec"]
 
-    @g.params_convention()
-    def modified(self, params):
+    def modified(self, **params):
         return fgcr({**self.params, **params})
 
     def update_psi(self, psi, alpha, beta, gamma, chi, p, i):

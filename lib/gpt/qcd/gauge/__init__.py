@@ -23,3 +23,5 @@ from gpt.qcd.gauge.staples import staple, staple_sum
 from gpt.qcd.gauge.transformation import transformed
 import gpt.qcd.gauge.project
 import gpt.qcd.gauge.smear
+import gpt.qcd.gauge.fix
+import gpt.qcd.gauge.action

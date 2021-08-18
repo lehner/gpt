@@ -59,14 +59,14 @@ class shift_base:
 
 
 class shift(shift_base):
-    @params_convention()
+    @params_convention(boundary_phases=None)
     def __init__(self, U, params):
         self.params = params
         super().__init__(U, params["boundary_phases"])
 
 
 class shift_eo(shift):
-    @params_convention()
+    @params_convention(boundary_phases=None)
     def __init__(self, U, params):
 
         # initialize full lattice

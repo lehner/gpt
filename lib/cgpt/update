@@ -40,6 +40,14 @@ cp lib/exports.h lib/exports.h~
     sed '1,/BEGIN_EXPORT_DIRDISP_VOID/d;/END_EXPORT_DIRDISP_VOID/,$d' lib/operators/types.h |
     awk '{ print "DIRDISPOP_VOID(" $1 "," NR + 5000 ")" }'
 ) > lib/operators/register_dirdisp.h
+(
+    echo "// ${WARNING}"
+    sed '1,/BEGIN_EXPORT_DERIV_DAG_VOID/d;/END_EXPORT_DERIV_DAG_VOID/,$d' lib/operators/types.h |
+    awk '{ 
+           print "DERIVOP_VOID_DAG0(" $1 "," NR + 6000 ")";
+           print "DERIVOP_VOID_DAG1(" $1 "," NR + 7000 ")"; 
+    }'
+) > lib/operators/register_deriv.h
 
 (
     echo "# ${WARNING}"
@@ -55,6 +63,11 @@ cp lib/exports.h lib/exports.h~
     }' 
     sed '1,/BEGIN_EXPORT_DIRDISP_VOID/d;/END_EXPORT_DIRDISP_VOID/,$d' lib/operators/types.h |
     awk '{ print "    reg." $1 " = lambda dst, src, dir, disp: op.apply_dirdisp_operator(" NR + 5000 ", dst, src, dir, disp)" }'
+    sed '1,/BEGIN_EXPORT_DERIV_DAG_VOID/d;/END_EXPORT_DERIV_DAG_VOID/,$d' lib/operators/types.h |
+    awk '{
+           print "    reg." $1 " = lambda mat, dst, src: op.apply_deriv_operator(" NR + 6000 ", mat, dst, src)";
+	   print "    reg." $1 "Dag = lambda mat, dst, src: op.apply_deriv_operator(" NR + 7000 ", mat, dst, src)";
+    }'
 ) > ../gpt/qcd/fermion/register.py
 
 # Automatically generated python files should be formatted with black

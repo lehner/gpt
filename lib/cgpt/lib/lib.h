@@ -27,13 +27,16 @@
 #include <map>
 #include <string>
 #include <iostream>
+#include <sstream>
 
 #include "pvector.h"
 #include "time.h"
 #include "exception.h"
+#include "allocator.h"
 #include "foundation.h"
 #include "reduce.h"
 #include "sort.h"
+#include "micro_kernel.h"
 #include "convert.h"
 #include "checksums.h"
 #include "parameters.h"

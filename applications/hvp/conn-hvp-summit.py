@@ -8,22 +8,22 @@ import gpt as g
 import sys, os
 
 # configure
-root_output = "/gpfs/alpine/phy138/proj-shared/phy138flavor/lehner/conn-hvp"
+root_output = "/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/conn-hvp"
 
 groups = {
     "phy131": {
         "confs": ["420", "500", "580"],
-        "evec_fmt": "/gpfs/alpine/phy131/world-shared/lehner/evec-cache/96I/%s/lanczos.output",
+        "evec_fmt": "/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/evec-cache/96I/%s/lanczos.output",
         "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
     },
     "phy138": {
         "confs": ["460", "640", "540", "720"],
-        "evec_fmt": "/gpfs/alpine/phy138/world-shared/lehner/evec-cache/96I/%s/lanczos.output",
+        "evec_fmt": "/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/evec-cache/96I/%s/lanczos.output",
         "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
     },
     "phy138n": {
         "confs": ["480", "520", "560", "600", "620"],
-        "evec_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/lehner/runs/summit-96I-%s-256/lanczos.output",
+        "evec_fmt": "/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/evec-cache/96I/%s/lanczos.output",
         "conf_fmt": "/gpfs/alpine/phy138/proj-shared/phy138flavor/chulwoo/evols/96I2.8Gev/evol0/configurations/ckpoint_lat.%s",
     },
 }

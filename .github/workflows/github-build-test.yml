@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2020-09-24
+  CACHE_KEY: 2021-05-30
 
 jobs:
   build-grid:
@@ -240,10 +240,6 @@ jobs:
       run: |
         # TODO: if the make and make.summit files are removed from ./gpt/lib/cgpt we can use the complete folder for hashing
         echo ${{ hashFiles('gpt/lib/cgpt/lib/**') }} >> cgpt_cache_key_file
-        echo ${{ hashFiles('gpt/bootstrap.sh') }} >> cgpt_cache_key_file
-        echo ${{ hashFiles('gpt/configure.ac') }} >> cgpt_cache_key_file
-        echo ${{ hashFiles('gpt/Makefile.am') }} >> cgpt_cache_key_file
-        echo ${{ hashFiles('gpt/cgpt/Makefile.am') }} >> cgpt_cache_key_file
         echo ${{ needs.build-grid.outputs.grid-version }} >> cgpt_cache_key_file
 
         echo "::set-output name=key::$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
@@ -254,9 +250,6 @@ jobs:
       # https://github.community/t/hashfiles-with-multiple-patterns/17168
       run: |
         echo ${{ hashFiles('gpt/lib/gpt/**') }} >> gpt_cache_key_file
-        echo ${{ hashFiles('gpt/bootstrap.sh') }} >> gpt_cache_key_file
-        echo ${{ hashFiles('gpt/configure.ac') }} >> gpt_cache_key_file
-        echo ${{ hashFiles('gpt/Makefile.am') }} >> gpt_cache_key_file
         echo "::set-output name=key::$(sha256sum gpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
 
     - name: Get python-gpt version
@@ -277,13 +270,12 @@ jobs:
       run: |
         PKGDIR=$PWD/cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}
         mkdir -p $PKGDIR
-        cd gpt
-        ./bootstrap.sh
-        mkdir -p build
-        cd build
-        CXX="$(grid-config --cxx)" ../configure --disable-gpt || cat config.log
-        make ${MAKE_BUILD_FLAGS}
-        DESTDIR=$PKGDIR make install
+        cd gpt/lib/cgpt
+        ./make %grid-config 2
+        SITEPACKAGES="/usr/local/lib/python${{ matrix.python-version}}/site-packages"
+        DST="${PKGDIR}/${SITEPACKAGES}"
+        mkdir -p ${DST}
+        cp build/cgpt.so ${DST}
 
         cd $PKGDIR
         mkdir -p DEBIAN
@@ -305,12 +297,11 @@ jobs:
         PKGDIR=$PWD/gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}
         mkdir -p $PKGDIR
         cd gpt
-        ./bootstrap.sh
-        mkdir -p build
-        cd build
-        ../configure --disable-cgpt || cat config.log
-        make ${MAKE_BUILD_FLAGS}
-        DESTDIR=$PKGDIR make install
+        python3 -m compileall lib/gpt
+        SITEPACKAGES="/usr/local/lib/python${{ matrix.python-version}}/site-packages"
+        DST="${PKGDIR}/${SITEPACKAGES}"
+        mkdir -p ${DST}
+        cp -r lib/gpt ${DST}
 
         cd $PKGDIR
         mkdir -p DEBIAN
@@ -421,7 +412,7 @@ jobs:
         export WORK_DIR=$(mktemp -d)
         mpirun -np 2 -mca btl ^openib -bind-to core python tests/core/scalar.py --mpi 1.1.1.2
         ./tests/run "mpirun -np 1 -mca btl ^openib coverage run" "--mpi_split 1.1.1.1"
-        ./tests/run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run" "--mpi 1.1.1.2 --mpi 1.1.2 --mpi 2 --mpi_split 1.1.1.1"
+        ./tests/run "mpirun -np 2 -bind-to core -mca btl ^openib coverage run" "--mpi 1.1.1.2 --mpi 1.1.2 --mpi 2 --mpi_split 1.1.1.1 --shm 256"
 
     - name: Run tests
       if: matrix.mpi == 'mpich'
@@ -430,7 +421,7 @@ jobs:
         cd gpt
         export WORK_DIR=$(mktemp -d)
         ./tests/run "mpirun -np 1 coverage run" "--mpi_split 1.1.1.1"
-        ./tests/run "mpirun -np 2 -bind-to core coverage run" "--mpi 1.1.1.2 --mpi 1.1.2 --mpi 2 --mpi_split 1.1.1.1"
+        ./tests/run "mpirun -np 2 -bind-to core coverage run" "--mpi 1.1.1.2 --mpi 1.1.2 --mpi 2 --mpi_split 1.1.1.1 --shm 256"
 
     - name: Coverage report
       run: |
@@ -581,7 +572,8 @@ jobs:
         id: get-docker-tags
         run: |
           tags="${{ matrix.compiler }}-${{ matrix.mpi }}"
-          [ "${{ matrix.compiler }}-${{ matrix.mpi }}" == "clang-none" ] && tags="${tags},latest"
+          # reset this to clang at a later time
+          [ "${{ matrix.compiler }}-${{ matrix.mpi }}" == "gcc-none" ] && tags="${tags},latest"
 
           echo "Image Tags: ${tags}"
           echo "::set-output name=tags::${tags}"

@@ -144,7 +144,6 @@ class arnoldi:
                     mat,
                     [a.single_evec(little_evec, idx)],
                     check_eps2=evals[-1] ** 2.0 * self.params["resid"],
-                    verbose=self.verbose,
                 )
             except g.algorithms.eigen.EvalsNotConverged:
                 break

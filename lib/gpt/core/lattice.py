@@ -128,12 +128,13 @@ class lattice(factor):
             elif cb == gpt.odd.tag:
                 return gpt.odd
             else:
-                assert 0
+                assert False
         else:
             if val != gpt.none:
                 assert self.grid.cb.n != 1
                 for o in self.v_obj:
                     cgpt.lattice_change_checkerboard(o, val.tag)
+            return self
 
     def describe(self):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
@@ -280,8 +281,8 @@ class lattice(factor):
         return self
 
     def __lt__(self, other):
-        assert self.otype == gpt.ot_singlet
-        assert other.otype == gpt.ot_singlet
+        assert self.otype.data_otype() == gpt.ot_singlet
+        assert other.otype.data_otype() == gpt.ot_singlet
         res = gpt.lattice(self)
         params = {"operator": "<"}
         cgpt.binary(res.v_obj[0], self.v_obj[0], other.v_obj[0], params)

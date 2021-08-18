@@ -22,12 +22,12 @@ from gpt.params import params_convention
 # format
 class format:
     class gpt:
-        @params_convention()
+        @params_convention(mpi=None)
         def __init__(self, params):
             self.params = params
 
     class cevec:
-        @params_convention()
+        @params_convention(nsingle=None, max_read_blocks=None, mpi=None)
         def __init__(self, params):
             self.params = params
 

@@ -1,0 +1,26 @@
+#!/bin/bash
+FILES=$(git status --porcelain | awk 'match($1, "M"){print $2}' | egrep "\.py$")
+
+# Remember git hypberblame; .git-blame-ignore-revs file
+
+N=0
+
+for f in ${FILES}
+do
+
+python3 -m black -t py36 ${f}
+python3 -m flake8 ${f}
+if [[ "$?" != "0" ]];
+then
+    echo "Need to fix $f"
+    N=$((N+1))
+    if ((N == 4))
+    then
+	echo "Too many errors, stop"
+	exit
+    fi
+fi
+
+done
+
+

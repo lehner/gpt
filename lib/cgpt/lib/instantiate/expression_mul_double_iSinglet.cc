@@ -43,6 +43,11 @@ cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unar
 #undef COLOR
 #undef SPIN
 #undef SPIN_COLOR
+#define BASIS_SIZE(n) \
+    _MM_COMPATIBLE_RL_(iVSinglet ## n); \
+    _MM_COMPATIBLE_RL_(iMSinglet ## n);
+#include "../basis_size.h"
+#undef BASIS_SIZE
   }
   ERR("Not implemented");
 }

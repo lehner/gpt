@@ -35,14 +35,14 @@ def staple(U, mu):
     return st
 
 
-# 10 metropolis sweeps
-g.default.push_verbose("metropolis", False)
-markov = g.algorithms.markov.metropolis(rng, step_size=0.5)
+# 10 local metropolis sweeps
+g.default.push_verbose("local_metropolis", False)
+markov = g.algorithms.markov.local_metropolis(rng, step_size=0.5)
 beta = 5.5
 
 for it in range(10):
     plaq = g.qcd.gauge.plaquette(U)
-    g.message(f"Metropolis {it} has P = {plaq}")
+    g.message(f"Local metropolis {it} has P = {plaq}")
     for cb in [g.even, g.odd]:
         mask[:] = 0
         mask_rb.checkerboard(cb)
@@ -73,3 +73,22 @@ for it in range(5):
 
 assert abs(plaq - 0.5596460567580329) < 1e-6
 assert abs(R_2x1 - 0.3452021016014947) < 1e-6
+
+# langevin
+U = g.qcd.gauge.unit(grid)
+w = g.qcd.gauge.action.wilson(beta)
+l = g.algorithms.markov.langevin_euler(rng, epsilon=0.005)
+for it in range(10):
+    l(U, w)
+    plaq = g.qcd.gauge.plaquette(U)
+    g.message(f"Langevin_euler(eps=0.005) {it} has P = {plaq}")
+
+assert abs(plaq - 0.8241718345218234) < 1e-6
+
+l = g.algorithms.markov.langevin_bf(rng, epsilon=0.02)
+for it in range(10):
+    l(U, w)
+    plaq = g.qcd.gauge.plaquette(U)
+    g.message(f"Langevin_bf(eps=0.02) {it} has P = {plaq}")
+
+assert abs(plaq - 0.6483719083997939) < 1e-6

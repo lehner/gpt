@@ -62,6 +62,9 @@ class ot_singlet(ot_base):
         "ot_singlet": (lambda: ot_singlet, None),
     }
 
+    def data_otype(self=None):
+        return ot_singlet
+
     def identity():
         return 1.0
 
@@ -283,12 +286,6 @@ class ot_vector_singlet(ot_base):
             self.__name__: (lambda: ot_singlet, (0, 0)),
         }
 
-    def distribute(mat, dst, src, zero_lhs):
-        # TODO does this need revisiting?
-        if zero_lhs:
-            dst[:] = 0
-        mat(dst, src)
-
 
 # and matrices
 class ot_matrix_singlet_base(ot_base):
@@ -325,4 +322,4 @@ class ot_matrix_singlet(ot_base):
         ]
 
     def identity(self):
-        return gpt.matrix_color(numpy.identity(self.shape[0]), self.shape[0])
+        return gpt.matrix_singlet(numpy.identity(self.shape[0]), self.shape[0])

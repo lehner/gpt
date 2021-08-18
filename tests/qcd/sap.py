@@ -71,9 +71,9 @@ g.message(
 )
 assert rr < 1e-10
 
-# run the sap inverter with a guess
+# run the sap inverter with a guess and eo1 inverter to test it as well
 fgcr = inv.fgcr({"eps": 1e-3, "maxiter": 1024, "restartlen": 8})
-dst3 = g(inv_pc(pc.eo2(), fgcr)(w)(src))
+dst3 = g(inv_pc(pc.eo1(), fgcr)(w)(src))
 t4 = g.time()
 inv1_w(dst3, src)
 t5 = g.time()

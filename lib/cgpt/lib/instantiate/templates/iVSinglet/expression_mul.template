@@ -39,5 +39,7 @@ template<>
 cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< {tensor_name}<{precision_vector}> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr, ComplexD coef) {
   typedef {precision_vector} vtype;
   _COMPATIBLE_MSR_(iSinglet);
+  _OUTER_PRODUCT_(iVSinglet{tensor_arg_1});
+  //  _INNER_PRODUCT_(iVSinglet{tensor_arg_1});
   ERR("Not implemented");
 }

@@ -9,7 +9,8 @@ import numpy as np
 
 # load configuration
 rng = g.random("test")
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
+grid = g.grid([8, 8, 8, 16], g.double)
+U = g.qcd.gauge.random(grid, rng)
 V = rng.element(g.lattice(U[0]))
 U_transformed = g.qcd.gauge.transformed(U, V)
 
@@ -60,6 +61,9 @@ for mu in range(len(C)):
     )
     assert eps < 1e-14
 
+# Test gauge actions
+for action in [g.qcd.gauge.action.wilson(5.43)]:
+    action.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 
 # Test wilson flow and energy density
 U_wf = g.qcd.gauge.smear.wilson_flow(U, epsilon=0.1)
@@ -108,3 +112,31 @@ P_comp = [0.7986848674527128, 0.9132213221481771, 0.9739960794712376]
 g.message(f"Plaquette fingerprint {P} and reference {P_comp}")
 for i in range(3):
     assert abs(P[i] - P_comp[i]) < 1e-12
+
+# Test gauge fixing
+opt = g.algorithms.optimize.non_linear_cg(maxiter=50, eps=1e-9, step=0.1)
+V0 = g.identity(U[0])
+rng.element(V0)
+
+# get functionals
+l = g.qcd.gauge.fix.landau(U)
+fal = g.algorithms.optimize.fourier_accelerate.inverse_phat_square(V0.grid, l)
+
+# test functionals
+l.assert_gradient_error(rng, V0, V0, 1e-3, 1e-8)
+
+# test gauge fixing
+for f, f_test, tag, expected_improvement in [
+    (l, l, "Landau", 1e-7),
+    (fal, l, "Fourier Accelerated Landau", 1e-9),
+]:
+    V1 = g.copy(V0)
+
+    eps0 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
+    g.message(f"df/f before {tag} gauge fix: {eps0}")
+
+    opt(f)([V1], [V1])
+
+    eps1 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
+    g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")
+    assert eps1 / eps0 < expected_improvement

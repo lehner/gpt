@@ -6,7 +6,8 @@ import gpt as g
 import numpy as np
 
 # load configuration
-U = g.load("/hpcgpfs01/work/clehner/configs/openQCD/A250t000n54")
+# U = g.load("/hpcgpfs01/work/clehner/configs/openQCD/A250t000n54")
+U = g.qcd.gauge.random(g.grid([24, 24, 24, 32], g.double), g.random("T"))
 
 # do everything in single-precision
 U = g.convert(U, g.single)
@@ -34,12 +35,13 @@ src = g.mspincolor(grid)
 g.create.point(src, [0, 0, 0, 0])
 
 # even-odd preconditioned matrix
-eo = g.qcd.fermion.preconditioner.eo2(w)
+eo = g.qcd.fermion.preconditioner.eo2_ne()
 
 # build solver
-s = g.qcd.fermion.solver
-cg = g.algorithms.iterative.cg({"eps": 1e-6, "maxiter": 1000})
-propagator = s.propagator(s.inv_eo_ne(eo, cg))
+inv = g.algorithms.inverter
+pc = g.qcd.fermion.preconditioner
+cg = inv.cg({"eps": 1e-6, "maxiter": 1000})
+propagator = w.propagator(inv.preconditioned(pc.eo1_ne(), cg))
 
 # propagator
 dst = g.mspincolor(grid)
