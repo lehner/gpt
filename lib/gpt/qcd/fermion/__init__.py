@@ -63,7 +63,7 @@ def rhq_columbia(U, params):
     )
 
 
-@gpt.params_convention()
+@gpt.params_convention(dimensions=None, boundary_phases=None)
 def covariant_laplacian(U, params):
     params = copy.deepcopy(params)  # save current parameters
     return fine_operator("laplacian", U, params, otype=gpt.ot_vector_spin_color(4, 3))
