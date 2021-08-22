@@ -31,6 +31,7 @@
 
 // TODO: for2d and use nsubblock
 #define micro_kernel_for(idx, n_idx, nsimd, nsubblock, ...) accelerator_forNB(idx, n_idx, nsimd, __VA_ARGS__)
+//#define micro_kernel_for(idx, n_idx, nsimd, nsubblock, ...) accelerator_for2dNB(ib, n_idx / nsubblock, jb, nsubblock, nsimd, uint64_t idx=ib__VA_ARGS__)
 #define micro_kernel_region(...) { __VA_ARGS__; accelerator_barrier(dummy); }
 
 #endif

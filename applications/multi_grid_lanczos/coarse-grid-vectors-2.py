@@ -43,11 +43,11 @@ for i in range(nbasis):
     g.mem_report(details=False)
 
 # coarse grid
-cgrid = params["cgrid"](q.F_grid_eo)
+cgrid = params["cgrid"](q.Mpc.grid[0])
 b = g.block.map(cgrid, basis)
 
 # cheby on coarse grid
-cop = params["cmatrix"](q.NDagN, b)
+cop = params["cmatrix"](q.Mpc, b)
 
 # implicitly restarted lanczos on coarse grid
 irl = params["method_evec"]
@@ -81,7 +81,7 @@ except g.LoadError:
     g.save("cevec", (cevec, cev))
 
 # smoother
-smoother = params["smoother"](q.NDagN)
+smoother = params["smoother"](q.Mpc)
 nsmoother = params["nsmoother"]
 v_fine = g.lattice(basis[0])
 v_fine_smooth = g.lattice(basis[0])
@@ -95,7 +95,7 @@ except g.LoadError:
             v_fine_smooth @= smoother * v_fine
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth) ** 0.5
         ev_smooth = g.algorithms.eigen.evals(
-            q.NDagN, [v_fine], check_eps2=1e-2, real=True
+            q.Mpc, [v_fine], check_eps2=1e-2, real=True
         )
         ev3[i] = ev_smooth[0]
         g.message("Eigenvalue %d = %.15g" % (i, ev3[i]))

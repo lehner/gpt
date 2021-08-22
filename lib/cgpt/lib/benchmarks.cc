@@ -58,6 +58,11 @@ void micro_kernels(int lat) {
   mk_timer t_et, t_eti;
   std::map<std::string, mk_timer> t_mk;
   std::vector<micro_kernel_blocking_t> blockings = {
+#ifdef GRID_HAS_ACCELERATOR
+    { 8*1024, 1 },
+    { 32*1024, 1 },
+    { 256*1024, 1 },
+#else
     { 512, 8 },
     { 512, 16 },
     { 512, 32 },
@@ -67,6 +72,7 @@ void micro_kernels(int lat) {
     { 256, 32 },
     { 128, 8 },
     { 128, 16 }
+#endif
   };
  
   gb = 4.0 * 3.0 * sizeof(sobj) * Grid._fsites / 1e9;

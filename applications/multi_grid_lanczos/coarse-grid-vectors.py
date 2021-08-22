@@ -27,7 +27,7 @@ q = params["fmatrix"](U)
 nbasis = params["nbasis"]
 fg_basis, fg_cevec, fg_feval = g.load(
     params["basis"],
-    grids=q.F_grid_eo,
+    grids=q.Mpc.grid[0],
     nmax=nbasis,
     advise_basis=g.infrequent_use,
     advise_cevec=g.infrequent_use,
@@ -51,7 +51,7 @@ assert nbasis > 0
 b = g.block.map(fg_cevec[0].grid, fg_basis)
 for i in range(nbasis):
     basis.append(
-        g.vspincolor(q.F_grid_eo)
+        g.vspincolor(q.Mpc.grid[0])
     )  # don't advise yet, let it be first touched on accelerator
     g.message(i)
     if i < params["nbasis_on_host"]:
@@ -71,11 +71,11 @@ g.message("Memory information after discarding original basis:")
 g.mem_report()
 
 # coarse grid
-cgrid = params["cgrid"](q.F_grid_eo)
+cgrid = params["cgrid"](q.Mpc.grid[0])
 b = g.block.map(cgrid, basis)
 
 # cheby on coarse grid
-cop = params["cmatrix"](q.NDagN, b)
+cop = params["cmatrix"](q.Mpc, b)
 
 # implicitly restarted lanczos on coarse grid
 irl = params["method_evec"]
@@ -109,7 +109,7 @@ except g.LoadError:
     g.save("cevec", (cevec, cev))
 
 # smoother
-smoother = params["smoother"](q.NDagN)
+smoother = params["smoother"](q.Mpc)
 nsmoother = params["nsmoother"]
 v_fine = g.lattice(basis[0])
 v_fine_smooth = g.lattice(basis[0])
@@ -123,7 +123,7 @@ except g.LoadError:
             v_fine_smooth @= smoother * v_fine
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth) ** 0.5
         ev_smooth = g.algorithms.eigen.evals(
-            q.NDagN, [v_fine], check_eps2=1e-2, real=True
+            q.Mpc, [v_fine], check_eps2=1e-2, real=True
         )
         ev3[i] = ev_smooth[0]
         g.message("Eigenvalue %d = %.15g" % (i, ev3[i]))
