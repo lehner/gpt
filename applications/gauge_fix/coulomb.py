@@ -8,9 +8,12 @@ import sys
 # Parameters
 p_mpi_split = g.default.get_ivec("--mpi_split", None, 3)
 p_maxiter_cg = g.default.get_int("--maxiter_cg", 500)
-p_maxiter_gd = g.default.get_int("--maxiter_gd", 100000)
-p_eps = g.default.get_float("--eps", 3e-8)
-p_step = g.default.get_float("--step", 0.03)
+p_maxiter_gd = g.default.get_int("--maxiter_gd", 100)
+p_maxcycle_cg = g.default.get_int("--maxcycle_cg", 10)
+p_log_every = g.default.get_int("--log_every", 10)
+p_eps = g.default.get_float("--eps", 1e-12)
+p_step = g.default.get_float("--step", 0.3)
+p_step_gd = g.default.get_float("--step_gd", 0.1)
 p_source = g.default.get("--source", None)
 p_rng_seed = g.default.get("--random", None)
 
@@ -21,8 +24,11 @@ g.message(
 
     maxiter_cg  = {p_maxiter_cg}
     maxiter_gd  = {p_maxiter_gd}
+    maxcycle_cg = {p_maxcycle_cg}
+    log_every   = {p_log_every}
     eps         = {p_eps}
     step        = {p_step}
+    step_gd     = {p_step_gd}
     source      = {p_source}
     random      = {p_rng_seed}
 
@@ -64,9 +70,15 @@ cg = opt.non_linear_cg(
     eps=p_eps,
     step=p_step,
     line_search=opt.line_search_quadratic,
+    log_functional_every=p_log_every,
     beta=opt.polak_ribiere,
 )
-gd = opt.gradient_descent(maxiter=p_maxiter_gd, eps=p_eps, step=p_step)
+gd = opt.gradient_descent(
+    maxiter=p_maxiter_gd,
+    eps=p_eps,
+    step=p_step_gd,
+    log_functional_every=p_log_every,
+)
 
 # Coulomb functional on each time-slice
 Nt_split = len(Vt_split)
@@ -83,8 +95,10 @@ for t in range(Nt_split):
     else:
         Vt_split[t] @= g.identity(Vt_split[t])
 
-    if not cg(fa)(Vt_split[t], Vt_split[t]):
-        gd(fa)(Vt_split[t], Vt_split[t])
+    if not gd(fa)(Vt_split[t], Vt_split[t]):
+        for i in range(p_maxcycle_cg):
+            if cg(fa)(Vt_split[t], Vt_split[t]):
+                break
 
 g.message("Unsplit")
 

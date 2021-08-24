@@ -18,6 +18,7 @@
 #
 import gpt as g
 
+import math
 
 def line_search_quadratic(s, x, dx, dv0, df, step):
     x = g.util.to_list(x)
@@ -34,10 +35,12 @@ def line_search_quadratic(s, x, dx, dv0, df, step):
     # ansatz: f(x) = a + b*(x-c)^2, then solve for c from dv1 and dv0
     sv0 = g.group.inner_product(s, dv0)
     sv1 = g.group.inner_product(s, dv1)
-    r = sv0 / sv1
-    if abs(r - 1.0) < 1e-15:
+    r = sv1 / sv0
+    assert not math.isnan(r)
+    if r > 0.0:
+        g.message(f"line_search_quadratic sv0={sv0} sv1={sv1} r={r} > 0.0")
         return 1.0
-    c = r / (r - 1.0)
+    c = 1 / (1 - r)
     return c
 
 

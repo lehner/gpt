@@ -55,6 +55,8 @@ class non_linear_cg(base_iterative):
     def __call__(self, f):
         @self.timed_function
         def opt(x, dx, t):
+            if self.maxiter <= 0:
+                return False
             x = g.util.to_list(x)
             dx = g.util.to_list(dx)
             d_last = None
