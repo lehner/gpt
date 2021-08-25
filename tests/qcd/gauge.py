@@ -114,7 +114,7 @@ for i in range(3):
     assert abs(P[i] - P_comp[i]) < 1e-12
 
 # Test gauge fixing
-opt = g.algorithms.optimize.non_linear_cg(maxiter=50, eps=1e-9, step=0.3)
+opt = g.algorithms.optimize.non_linear_cg(maxiter=50, eps=1e-9, step=0.1)
 V0 = g.identity(U[0])
 rng.element(V0)
 

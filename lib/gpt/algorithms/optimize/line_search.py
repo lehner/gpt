@@ -23,26 +23,40 @@ import math
 def line_search_quadratic(s, x, dx, dv0, df, step):
     x = g.util.to_list(x)
     xp = g.copy(x)
-    dxp = []
-    for dx_mu, s_mu in g.util.to_list(dx, s):
-        mu = x.index(dx_mu)
-        xp[mu] @= g(g.group.compose(step * s_mu, xp[mu]))
-        dxp.append(xp[mu])
-
-    dv1 = df(xp, dxp)
-    assert isinstance(dv1, list)
-
     # ansatz: f(x) = a + b*(x-c)^2, then solve for c from dv1 and dv0
+    # assume b > 0
     sv0 = g.group.inner_product(s, dv0)
-    sv1 = g.group.inner_product(s, dv1)
-    r = sv1 / sv0
-    assert not math.isnan(r)
-    if r > 0.0:
-        g.message(f"line_search_quadratic sv0={sv0} sv1={sv1} r={r} > 0.0")
-        return 1.0
-    c = 1 / (1 - r)
-    return c
+    assert not math.isnan(sv0)
+    sign = 1
+    if sv0 == 0.0:
+        return 0.0
+    elif sv0 < 0:
+        sign = -1
+    c = 0.0
+    sv_list = [ sv0, ]
+    while True:
+        dxp = []
+        for dx_mu, s_mu in g.util.to_list(dx, s):
+            mu = x.index(dx_mu)
+            xp[mu] @= g(g.group.compose(sign * step * s_mu, xp[mu]))
+            dxp.append(xp[mu])
 
+        dv1 = df(xp, dxp)
+        assert isinstance(dv1, list)
+
+        sv1 = g.group.inner_product(s, dv1)
+        sv_list.append(sv1)
+        if math.isnan(sv1):
+            print("line_search_quadratic", sv_list)
+            assert False
+        if sv0 > 0 and sv1 <= 0 or sv0 < 0 and sv1 >= 0:
+            c += sv0 / (sv0 - sv1)
+            return sign * c
+        elif sv0 == 0.0:
+            return sign * c
+        else:
+            c += 1
+            sv0 = sv1
 
 def line_search_none(s, x, dx, dv0, df, step):
     return 1.0
