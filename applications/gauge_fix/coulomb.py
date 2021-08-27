@@ -7,7 +7,7 @@ import sys
 
 # Parameters
 p_mpi_split = g.default.get_ivec("--mpi_split", None, 3)
-p_maxiter_cg = g.default.get_int("--maxiter_cg", 100)
+p_maxiter_cg = g.default.get_int("--maxiter_cg", 200)
 p_maxiter_gd = g.default.get_int("--maxiter_gd", 10)
 p_maxcycle_cg = g.default.get_int("--maxcycle_cg", 50)
 p_log_every = g.default.get_int("--log_every", 10)
