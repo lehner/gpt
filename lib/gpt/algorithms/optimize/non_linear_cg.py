@@ -74,7 +74,8 @@ class non_linear_cg(base_iterative):
                     beta = self.beta(d, d_last)
                     for nu in range(len(s)):
                         s[nu] = g(d[nu] + beta * s_last[nu])
-                        s[nu] = g.project(s[nu], "defect")
+                        if hasattr(s[nu].otype, "project"):
+                            s[nu] = g.project(s[nu], "defect")
 
                 c = self.line_search(s, x, dx, d, f.gradient, -self.step)
 
