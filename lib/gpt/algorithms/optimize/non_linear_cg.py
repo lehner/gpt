@@ -20,6 +20,8 @@ import gpt as g
 from gpt.algorithms import base_iterative
 from gpt.algorithms.optimize import line_search_quadratic
 
+import math
+
 
 def fletcher_reeves(d, d_last):
     ip_dd = g.group.inner_product(d, d)
@@ -65,18 +67,25 @@ class non_linear_cg(base_iterative):
                 d = f.gradient(x, dx)
                 assert isinstance(d, list)
 
-                if i == 0:
+                if s_last is None:
                     beta = 0
                     s = d
                 else:
                     beta = self.beta(d, d_last)
                     for nu in range(len(s)):
                         s[nu] = g(d[nu] + beta * s_last[nu])
+                        s[nu] = g.project(s[nu], "defect")
 
                 c = self.line_search(s, x, dx, d, f.gradient, -self.step)
 
+                if math.isnan(c):
+                    print(f"non_linear_cg: rank={g.rank()} c=nan reset s direction")
+                    s_last = None
+                    continue
+
                 for nu, x_mu in enumerate(dx):
                     x_mu @= g.group.compose(-self.step * c * s[nu], x_mu)
+                    x_mu @= g.project(x_mu, "defect")
 
                 rs = (
                     sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])

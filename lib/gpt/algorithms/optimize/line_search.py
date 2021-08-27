@@ -39,6 +39,12 @@ def line_search_quadratic(s, x, dx, dv0, df, step):
         for dx_mu, s_mu in g.util.to_list(dx, s):
             mu = x.index(dx_mu)
             xp[mu] @= g(g.group.compose(sign * step * s_mu, xp[mu]))
+            xp_mu = g.project(xp[mu], "defect")
+            project_diff2 = g.norm2(xp_mu - xp[mu])
+            if not (project_diff2 < 1e-8):
+                print(f"line_search_quadratic: rank={g.rank()} project_diff={math.sqrt(project_diff2)} {sv_list}")
+                return float("nan")
+            xp[mu] @= xp_mu
             dxp.append(xp[mu])
 
         dv1 = df(xp, dxp)
@@ -46,9 +52,10 @@ def line_search_quadratic(s, x, dx, dv0, df, step):
 
         sv1 = g.group.inner_product(s, dv1)
         sv_list.append(sv1)
+        if len(sv_list) > 10:
+            print(f"line_search_quadratic: rank={g.rank()} {sv_list}")
         if math.isnan(sv1):
-            print("line_search_quadratic", sv_list)
-            assert False
+            return float("nan")
         if sv0 > 0 and sv1 <= 0 or sv0 < 0 and sv1 >= 0:
             c += sv0 / (sv0 - sv1)
             return sign * c
