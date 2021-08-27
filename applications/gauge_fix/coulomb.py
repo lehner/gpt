@@ -7,12 +7,12 @@ import sys
 
 # Parameters
 p_mpi_split = g.default.get_ivec("--mpi_split", None, 3)
-p_maxiter_cg = g.default.get_int("--maxiter_cg", 500)
-p_maxiter_gd = g.default.get_int("--maxiter_gd", 100)
-p_maxcycle_cg = g.default.get_int("--maxcycle_cg", 10)
+p_maxiter_cg = g.default.get_int("--maxiter_cg", 100)
+p_maxiter_gd = g.default.get_int("--maxiter_gd", 10)
+p_maxcycle_cg = g.default.get_int("--maxcycle_cg", 50)
 p_log_every = g.default.get_int("--log_every", 10)
 p_eps = g.default.get_float("--eps", 1e-12)
-p_step = g.default.get_float("--step", 0.2)
+p_step = g.default.get_float("--step", 0.3)
 p_step_gd = g.default.get_float("--step_gd", 0.1)
 p_source = g.default.get("--source", None)
 p_rng_seed = g.default.get("--random", None)
