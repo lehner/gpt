@@ -79,18 +79,18 @@ class non_linear_cg(base_iterative):
 
                 c = self.line_search(s, x, dx, d, f.gradient, -self.step)
 
+                rs = (
+                    sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])
+                ) ** 0.5
+
                 if math.isnan(c):
-                    print(f"non_linear_cg: rank={g.rank()} c=nan reset s direction")
+                    print(f"non_linear_cg: rank={g.rank()} c={c} reset s. iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}")
                     s_last = None
                     continue
 
                 for nu, x_mu in enumerate(dx):
                     x_mu @= g.group.compose(-self.step * c * s[nu], x_mu)
                     x_mu @= g.project(x_mu, "defect")
-
-                rs = (
-                    sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])
-                ) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 
