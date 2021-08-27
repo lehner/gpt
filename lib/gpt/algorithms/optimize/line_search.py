@@ -55,6 +55,7 @@ def line_search_quadratic(s, x, dx, dv0, df, step):
         if len(sv_list) > 10:
             print(f"line_search_quadratic: rank={g.rank()} {sv_list}")
         if math.isnan(sv1):
+            print(f"line_search_quadratic: rank={g.rank()} {sv_list}")
             return float("nan")
         if sv0 > 0 and sv1 <= 0 or sv0 < 0 and sv1 >= 0:
             c += sv0 / (sv0 - sv1)
