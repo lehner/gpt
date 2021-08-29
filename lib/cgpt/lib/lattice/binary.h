@@ -22,6 +22,8 @@ void cgpt_binary_from(Lattice<T>& dst, const Lattice<T>& a, const Lattice<T>& b,
   auto op = get_str(params,"operator");
   if (op == "<") {
     cgpt_lower_than(dst, a, b);
+  } else if (op == "*") {
+    cgpt_component_wise_multiply(dst, a, b);
   } else {
     ERR("Unknown operator %s", op.c_str());
   }

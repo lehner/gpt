@@ -57,6 +57,37 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
     return;
   }
 
+  // VV -> S/M
+  if (lhs_singlet_rank == 1 && rhs_singlet_rank == 1) {
+    if (lhs_unary == 0 && rhs_unary == (BIT_TRANS|BIT_CONJ)) {
+      // outer product -> M
+      ASSERT(lhs_singlet_dim == rhs_singlet_dim);
+      dst_vl.resize(lhs_singlet_dim*rhs_singlet_dim, 0);
+      for (int i=0;i<lhs_singlet_dim;i++) {
+	for (int j=0;j<rhs_singlet_dim;j++) {
+	  int idx = j*lhs_singlet_dim + i;
+	  dst_vl[idx] = lhs_vl[i]->mul( dst_vl[idx], ac, rhs_vl[j], lhs_unary, rhs_unary, unary, coef);
+	}
+      }
+      return;
+    } else if (lhs_unary == (BIT_TRANS|BIT_CONJ) && rhs_unary == 0) {
+      ERR("Not implemented");
+      // inner product -> S
+      /*ASSERT(lhs_singlet_dim == rhs_singlet_dim);
+      dst_vl.resize(1, 0);
+      bool _ac = ac;
+      for (int i=0;i<lhs_singlet_dim;i++) {
+	for (int j=0;j<rhs_singlet_dim;j++) {
+	  dst_vl[0] = lhs_vl[i]->mul( dst_vl[0], _ac, rhs_vl[j], lhs_unary, rhs_unary, unary, coef);
+	  _ac = true;
+	}
+      }
+      return;*/
+    } else {
+      ERR("Invalid combination of two vectors");
+    }
+  }
+
   // SM -> M
   if (lhs_singlet_rank == 0 && rhs_singlet_rank == 2) {
     int dim = rhs_singlet_dim;

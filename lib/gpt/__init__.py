@@ -24,6 +24,7 @@ import gpt.create
 import gpt.algorithms
 import gpt.qcd
 import gpt.qis
+import gpt.ml
 import socket
 import cgpt
 import sys

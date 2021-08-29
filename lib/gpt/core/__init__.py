@@ -43,6 +43,7 @@ from gpt.core.transform import (
     identity,
     project,
     where,
+    scale_per_coordinate,
 )
 from gpt.core.copy_plan import copy_plan, lattice_view, global_memory_view
 from gpt.core.checkerboard import (
@@ -89,8 +90,10 @@ from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report, accelerator, host
 from gpt.core.merge import *
 from gpt.core.split import *
+import gpt.core.domain
 import gpt.core.covariant
 import gpt.core.util
 import gpt.core.block
 import gpt.core.matrix
 import gpt.core.component
+import gpt.core.group

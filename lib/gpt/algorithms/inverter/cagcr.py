@@ -39,8 +39,7 @@ class cagcr(base_iterative):
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
 
-    @g.params_convention()
-    def modified(self, params):
+    def modified(self, **params):
         return cagcr({**self.params, **params})
 
     def calc_res(self, mat, psi, mmpsi, src, r):

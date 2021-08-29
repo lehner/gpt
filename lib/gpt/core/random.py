@@ -105,6 +105,14 @@ class random:
     def zn(self, t=None, p={}):
         return self.sample(t, {**{"distribution": "zn"}, **p})
 
+    @params_convention(scale=1.0)
+    def normal_element(self, out, p={}):
+        return self.element(out, p, normal=True)
+
+    @params_convention(scale=1.0)
+    def uniform_element(self, out, p={}):
+        return self.element(out, p, normal=False)
+
     @params_convention(scale=1.0, normal=False)
     def element(self, out, p={}):
 
@@ -119,9 +127,10 @@ class random:
 
         t("complex")
         ca = gpt.complex(grid)
+        ca.checkerboard(out.checkerboard())
 
         t("cartesian_space")
-        cartesian_space = gpt.lattice(out.grid, out.otype.cartesian())
+        cartesian_space = gpt.group.cartesian(out)
         t("csset")
         cartesian_space[:] = 0
 

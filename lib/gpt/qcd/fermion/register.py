@@ -30,3 +30,9 @@ def register(reg, op):
     reg.Mdir = lambda dst, src, dir, disp: op.apply_dirdisp_operator(
         5001, dst, src, dir, disp
     )
+    reg.MDeriv = lambda mat, dst, src: op.apply_deriv_operator(6001, mat, dst, src)
+    reg.MDerivDag = lambda mat, dst, src: op.apply_deriv_operator(7001, mat, dst, src)
+    reg.MoeDeriv = lambda mat, dst, src: op.apply_deriv_operator(6002, mat, dst, src)
+    reg.MoeDerivDag = lambda mat, dst, src: op.apply_deriv_operator(7002, mat, dst, src)
+    reg.MeoDeriv = lambda mat, dst, src: op.apply_deriv_operator(6003, mat, dst, src)
+    reg.MeoDerivDag = lambda mat, dst, src: op.apply_deriv_operator(7003, mat, dst, src)

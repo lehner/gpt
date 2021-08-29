@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Barca Lorenzo    (lorenzo1.barca@ur.de)
+#                        Mattia Bruno
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,4 +19,6 @@
 #
 import gpt.qcd.gauge
 import gpt.qcd.fermion
+import gpt.qcd.scalar
+import gpt.qcd.pseudofermion
 from gpt.qcd.utils import ferm_to_prop, prop_to_ferm, reunitize

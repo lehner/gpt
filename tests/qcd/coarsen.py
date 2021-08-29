@@ -10,7 +10,7 @@ import numpy as np
 import sys
 
 # command line parameters
-grid_f_size = g.default.get_ivec("--fgrid", [16, 16, 32, 32], 4)
+grid_f_size = g.default.get_ivec("--fgrid", [16, 16, 32, 16], 4)
 grid_c_size = g.default.get_ivec("--cgrid", [8, 8, 16, 16], 4)
 grid_cc_size = g.default.get_ivec("--ccgrid", [4, 4, 8, 8], 4)
 
@@ -45,7 +45,7 @@ mat_f = g.qcd.fermion.wilson_clover(
 
 # number of basis vectors
 nbasis_f = 20
-nbasis_c = 30
+nbasis_c = 12
 
 # number of block orthogonalization steps
 nblockortho = 1

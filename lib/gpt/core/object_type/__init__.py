@@ -21,6 +21,9 @@ import gpt, sys
 from gpt.core.object_type.base import *
 from gpt.core.object_type.container import *
 from gpt.core.object_type.su_n import *
+from gpt.core.object_type.u_1 import *
+from gpt.core.object_type.complex_additive_group import *
+from gpt.core.object_type.real_additive_group import *
 import numpy
 
 ###
@@ -32,7 +35,7 @@ def gpt_object(first, ot):
 
 
 ###
-# Container objects without lie group structure
+# Container objects without (lie) group structure
 def singlet(grid):
     return gpt_object(grid, ot_singlet)
 
@@ -70,7 +73,36 @@ def matrix_singlet(grid, n):
 
 
 ###
-# Container objects with lie group structure
+# Container objects with (lie) group structure
+def u1(grid):
+    # there is no need to distinguish matrix/vector here
+    return gpt_object(grid, ot_u_1_group())
+
+
+def complex_additive(grid):
+    return gpt_object(grid, ot_complex_additive_group())
+
+
+def vector_complex_additive(grid, n):
+    return gpt_object(grid, ot_vector_complex_additive_group(n))
+
+
+def matrix_complex_additive(grid, n):
+    return gpt_object(grid, ot_matrix_complex_additive_group(n))
+
+
+def real_additive(grid):
+    return gpt_object(grid, ot_real_additive_group())
+
+
+def vector_real_additive(grid, n):
+    return gpt_object(grid, ot_vector_real_additive_group(n))
+
+
+def matrix_real_additive(grid, n):
+    return gpt_object(grid, ot_matrix_real_additive_group(n))
+
+
 def matrix_su2_fundamental(grid):
     return gpt_object(grid, ot_matrix_su_n_fundamental_group(2))
 
@@ -124,6 +156,14 @@ def str_to_otype(s):
             "ot_matrix_singlet4",
             "ot_matrix_singlet10",
             "ot_matrix_singlet60",
+            "ot_u_1_group",
+            "ot_u_1_algebra",
+            "ot_complex_additive_group",
+            "ot_real_additive_group",
+            "ot_vector_real_additive_group",
+            "ot_matrix_real_additive_group",
+            "ot_vector_complex_additive_group",
+            "ot_matrix_complex_additive_group",
         ]
     )
 
@@ -134,15 +174,27 @@ def str_to_otype(s):
 ###
 # aliases
 def complex(grid):
-    return singlet(grid)
+    return complex_additive(grid)
+
+
+def real(grid):
+    return real_additive(grid)
 
 
 def vcomplex(grid, n):
-    return vector_singlet(grid, n)
+    return vector_complex_additive(grid, n)
 
 
 def mcomplex(grid, n):
-    return matrix_singlet(grid, n)
+    return matrix_complex_additive(grid, n)
+
+
+def vreal(grid, n):
+    return vector_real_additive(grid, n)
+
+
+def mreal(grid, n):
+    return matrix_real_additive(grid, n)
 
 
 def mcolor(grid):

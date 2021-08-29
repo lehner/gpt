@@ -46,7 +46,7 @@ irl = g.algorithms.eigen.irl(
 )
 
 # start vector
-start = g.vspincolor(w.F_grid_eo)
+start = g.vspincolor(w.Mpc.grid[0])
 start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 start.checkerboard(parity)
 
@@ -85,7 +85,7 @@ assert eps2 < 1e-8
 assert niter_defl < niter_cg
 
 # block
-grid_coarse = g.block.grid(w.F_grid_eo, [2, 2, 2, 2])
+grid_coarse = g.block.grid(w.Mpc.grid[0], [2, 2, 2, 2])
 nbasis = 20
 cstart = g.vcomplex(grid_coarse, nbasis)
 cstart[:] = g.vcomplex([1] * nbasis, nbasis)

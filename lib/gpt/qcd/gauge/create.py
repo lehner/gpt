@@ -21,7 +21,7 @@ import numpy as np
 from gpt.params import params_convention
 
 
-@params_convention(otype=None, Nd=None)
+@params_convention(otype=None, Nd=None, scale=None)
 def create_links(first, init, params):
     if type(first) == g.grid:
 

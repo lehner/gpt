@@ -21,7 +21,7 @@ from gpt.algorithms import base_iterative
 
 
 class power_iteration(base_iterative):
-    @g.params_convention(real=False)
+    @g.params_convention(real=False, eps=None, maxiter=None)
     def __init__(self, params):
         super().__init__()
         self.params = params

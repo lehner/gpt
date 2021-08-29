@@ -236,5 +236,9 @@ def nearest_neighbor_operator(fine_matrix, coarse_grid, basis, params):
         A, fine_matrix, basis, make_hermitian=params["make_hermitian"], save_links=True
     )
 
-    level = 1 if isinstance(fine_matrix.otype[0], gpt.ot_matrix_singlet) else 0
+    level = (
+        1
+        if isinstance(fine_matrix.otype[0], gpt.ot_matrix_complex_additive_group)
+        else 0
+    )
     return gpt.qcd.fermion.coarse_fermion(A, level=level)

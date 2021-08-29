@@ -84,9 +84,19 @@ class ot_matrix_su_n_base(ot_matrix_color):
 class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
     def __init__(self, Nc, Ndim, name):
         super().__init__(Nc, Ndim, name)
+        self.trace_norm = None
 
     def cartesian(self):
         return self
+
+    def compose(self, a, b):
+        return a + b
+
+    def inner_product(self, left, right):
+        if self.trace_norm is None:
+            gen = self.generators(left.grid.precision.complex_dtype)
+            self.trace_norm = numpy.trace(gen[0].array @ gen[0].array)
+        return (gpt.sum(gpt(gpt.trace(left * right))) / self.trace_norm).real
 
     def coordinates(self, l, c=None):
         assert l.otype.__name__ == self.__name__
@@ -103,6 +113,9 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
 class ot_matrix_su_n_group(ot_matrix_su_n_base):
     def __init__(self, Nc, Ndim, name):
         super().__init__(Nc, Ndim, name)
+
+    def compose(self, a, b):
+        return a * b
 
     def is_element(self, U):
         I = gpt.identity(U)
@@ -145,6 +158,7 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
                 dst, gpt.matrix.exp(src * 1j)
             )
         }
+        self.CA = Nc
 
     def generators(self, dt):
         r = []

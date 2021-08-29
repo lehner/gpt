@@ -102,7 +102,7 @@ def fft(dims=None):
 
 def coordinate_mask(field, mask):
     assert isinstance(mask, numpy.ndarray)
-    assert field.otype == gpt.ot_singlet
+    assert field.otype.data_otype() == gpt.ot_singlet
 
     x = gpt.coordinates(field)
     field[x] = mask.astype(field.grid.precision.complex_dtype).reshape((len(mask), 1))

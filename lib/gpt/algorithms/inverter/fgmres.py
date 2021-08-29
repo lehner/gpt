@@ -35,8 +35,7 @@ class fgmres(base_iterative):
         self.checkres = params["checkres"]
         self.prec = params["prec"]
 
-    @g.params_convention()
-    def modified(self, params):
+    def modified(self, **params):
         return fgmres({**self.params, **params})
 
     def qr_update(self, s, c, H, gamma, i):

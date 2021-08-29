@@ -40,5 +40,7 @@ template<>
 cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSinglet4<vComplexF> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr, ComplexD coef) {
   typedef vComplexF vtype;
   _COMPATIBLE_MSR_(iSinglet);
+  _OUTER_PRODUCT_(iVSinglet4);
+  //  _INNER_PRODUCT_(iVSinglet4);
   ERR("Not implemented");
 }

@@ -15,14 +15,9 @@ grid_dp = g.grid(L, g.double)
 grid_sp = g.grid(L, g.single)
 rng = g.random("test")
 
-# unitarity test
-def check_unitarity(U, eps_ref):
-    eye = g.lattice(U)
-    eye[:] = np.eye(U.otype.shape[0], dtype=U.grid.precision.complex_dtype)
-    eps = (g.norm2(U * g.adj(U) - eye) / g.norm2(eye)) ** 0.5
-    g.message(f"Test unitarity: {eps}")
-    assert eps < eps_ref
-    U.otype.is_element(U)
+# unitarity test / element of group test
+def check_element(U):
+    assert U.otype.is_element(U)
 
 
 def check_representation(U, eps_ref):
@@ -46,6 +41,18 @@ def check_representation(U, eps_ref):
     eps = (g.norm2(algebra) / n0) ** 0.5
     g.message(f"Test representation: {eps}")
     assert eps < eps_ref
+
+
+def check_inner_product(left, right, eps_ref):
+    left_algebra = g.convert(left, left.otype.cartesian())
+    right_algebra = g.convert(right, right.otype.cartesian())
+    ip = left_algebra.otype.inner_product(left_algebra, right_algebra)
+    c_left = left_algebra.otype.coordinates(left_algebra)
+    c_right = right_algebra.otype.coordinates(right_algebra)
+    ipc = sum([g.inner_product(l, r).real for l, r in zip(c_left, c_right)])
+    eps = abs(ip - ipc) / abs(ip + ipc)
+    g.message(f"Test inner product: {eps}")
+    assert eps < eps_ref * 10.0
 
 
 ################################################################################
@@ -84,7 +91,7 @@ for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
     U.append(g.eval(U[0] * U[1]))
 
     for u in U:
-        check_unitarity(u, eps_ref)
+        check_element(u)
         check_representation(u, eps_ref)
 
     V = [g.matrix_su2_adjoint(grid) for x in U]
@@ -92,7 +99,7 @@ for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
         g.convert(
             V[i], U[i]
         )  # this used to be a separate function: fundamental_to_adjoint
-        check_unitarity(V[i], eps_ref)
+        check_element(V[i])
         check_representation(V[i], eps_ref)
 
     # check if fundamental_to_adjoint is a homomorphism
@@ -112,7 +119,7 @@ for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
         a_adj = g.lattice(a[i].grid, g.ot_matrix_su_n_adjoint_algebra(2))
         a_adj.otype.coordinates(a_adj, coor)
         v = g.convert(a_adj, g.ot_matrix_su_n_adjoint_group(2))
-        check_unitarity(v, eps_ref)
+        check_element(v)
         check_representation(v, eps_ref)
         V_c.append(v)
 
@@ -134,12 +141,29 @@ for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
 # Test all other representations
 ################################################################################
 for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
-    for representation in [g.matrix_su2_adjoint, g.matrix_su3_fundamental]:
-        g.message(f"Test {representation.__name__} on grid {grid.precision.__name__}")
+    for representation in [
+        g.matrix_su2_fundamental,
+        g.matrix_su2_adjoint,
+        g.matrix_su3_fundamental,
+        g.u1,
+        g.complex,
+        g.real,
+        lambda grid: g.vreal(grid, 8),
+        lambda grid: g.mreal(grid, 8),
+        lambda grid: g.vcomplex(grid, 8),
+        lambda grid: g.mcomplex(grid, 8),
+    ]:
         U = representation(grid)
+        g.message(f"Test {U.otype.__name__} on grid {grid.precision.__name__}")
         rng.element(U)
-        check_unitarity(U, eps_ref)
+        check_element(U)
         check_representation(U, eps_ref)
+        for method in ["defect_left", "defect_right"]:
+            g.project(U, method)
+            check_element(U)
+        V = representation(grid)
+        rng.element(V)
+        check_inner_product(U, V, eps_ref)
 
 
 ################################################################################
@@ -152,17 +176,13 @@ for eps_ref, grid in [(1e-12, grid_dp)]:
     for sg in U.otype.su2_subgroups():
 
         rng.element(u2)
-        u2p = g.eval(u2 - g.adj(u2) + g.identity(u2) * g.trace(g.adj(u2)))
-        eps = (g.norm2(u2 - u2p) / g.norm2(u2)) ** 0.5
-        g.message(eps, g.norm2(u2), g.norm2(u2p))
 
         U.otype.block_insert(U, u2, sg)
         u2p[:] = 0
         U.otype.block_extract(u2p, U, sg)
 
         eps = (g.norm2(u2 - u2p) / g.norm2(u2)) ** 0.5
-        g.message(eps, g.norm2(u2), g.norm2(u2p))
         assert eps < eps_ref
 
-        check_unitarity(U, eps_ref)
-        check_representation(U, eps_ref)
+        check_element(U)
+        check_representation

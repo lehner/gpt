@@ -22,48 +22,23 @@
 
 */
 
-#include "expression/mul.h"
+class mk_timer {
+public:
+  double dt_best, dt_worst, dt_total;
+  size_t n;
 
-static void benchmarks(int lat) {
-  std::cout << GridLogMessage << "-- Lat " << lat << std::endl;
-  Coordinate simd_layout = GridDefaultSimd(Nd,vComplex::Nsimd());
-  Coordinate mpi_layout  = GridDefaultMpi();
-  Coordinate latt_size  ({lat*mpi_layout[0],lat*mpi_layout[1],lat*mpi_layout[2],lat*mpi_layout[3]});
-  GridCartesian     Grid(latt_size,simd_layout,mpi_layout);
+  mk_timer() : dt_best(10000000.0), dt_worst(0.0), dt_total(0.0), n(0) {};
 
-  LatticeSpinColourMatrixD a(&Grid), b(&Grid), c(&Grid);
-
-  GridParallelRNG          pRNG(&Grid);      pRNG.SeedFixedIntegers(std::vector<int>({45,12,81,9}));
-
-  double t0 = cgpt_time();
-  random(pRNG,a);   random(pRNG,b);
-  double t1 = cgpt_time();
-  {
-    double gb = 2.0 * sizeof(LatticeSpinColourMatrixD::scalar_object) * Grid._fsites / 1e9;
-    std::cout << GridLogMessage << "RNG at " << gb/(t1-t0) << " GB/s" << std::endl;
+  void add(double dt) {
+    if (dt < dt_best)
+      dt_best = dt;
+    if (dt > dt_worst)
+      dt_worst = dt;
+    dt_total += dt;
+    n += 1;
   }
 
-  int N = 100;
-  double gb;
-
-  gb = 3.0 * sizeof(LatticeSpinColourMatrixD::scalar_object) * Grid._fsites / 1e9 * N;
-  cgpt_Lattice_base* dst = 0;
-  for (int i=0;i<=N;i++) {
-    if (i==1)
-      t0 = cgpt_time();
-    dst = lattice_mul(dst,false,0,a,0,b,0,1.0);
+  void print(std::string tag, double gb) {
+    std::cout << GridLogMessage << tag << ": " << gb/dt_worst << " -- " << gb/dt_best << " avg " << gb*n/dt_total << " GB/s" << std::endl;
   }
-  t1 = cgpt_time();
-  std::cout << GridLogMessage << gb << " in " << t1-t0 << " at " << gb/(t1-t0) << " GB/s" << std::endl;
-
-  
-  gb = 3.0 * sizeof(LatticeSpinColourMatrixD::scalar_object) * Grid._fsites / 1e9 * N;
-  t0 = cgpt_time();
-  for (int i=0;i<N;i++) {
-    c = a*b;
-  }
-  t1 = cgpt_time();
-  std::cout << GridLogMessage << gb << " in " << t1-t0 << " at " << gb/(t1-t0) << " GB/s" << std::endl;
-
-
-}
+};

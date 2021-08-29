@@ -25,6 +25,7 @@
 #       https://arxiv.org/abs/1710.06884 .
 #
 import cgpt, gpt, os, io, numpy, sys
+from gpt.params import params_convention
 
 # get local dir an filename
 def get_local_name(root, cv):
@@ -93,6 +94,7 @@ def get_xvec(d, n):
     return get_vec(d, n, lambda x: int(x, 16))
 
 
+@params_convention(grids=None, nmax=None, advise_basis=None, advise_cevec=None)
 def load(filename, params):
 
     # first check if this is right file format
@@ -110,7 +112,7 @@ def load(filename, params):
     site_cb = gpt.odd
 
     # need grids parameter
-    assert "grids" in params
+    assert params["grids"] is not None
     assert type(params["grids"]) == gpt.grid
     fgrid = params["grids"]
     assert fgrid.precision == gpt.single
@@ -144,7 +146,7 @@ def load(filename, params):
     cgrid = gpt.block.grid(fgrid, blocksize)
 
     # allow for partial loading of data
-    if "nmax" in params:
+    if params["nmax"] is not None:
         nmax = params["nmax"]
         nbasis_max = min([nmax, nbasis])
         neigen_max = min([nmax, neigen])
@@ -154,15 +156,12 @@ def load(filename, params):
         neigen_max = neigen
         nsingleCap_max = nsingleCap
 
-    # deprecate alternative_scheme
-    assert "alternative_scheme" not in params
-
     # allocate all lattices
     basis = [gpt.vspincolor(fgrid) for i in range(nbasis_max)]
     cevec = [gpt.vcomplex(cgrid, nbasis) for i in range(neigen_max)]
-    if "advise_basis" in params:
+    if params["advise_basis"] is not None:
         gpt.advise(basis, params["advise_basis"])
-    if "advise_cevec" in params:
+    if params["advise_cevec"] is not None:
         gpt.advise(cevec, params["advise_cevec"])
 
     # fix checkerboard of basis
@@ -512,7 +511,7 @@ def save(filename, objs, params):
     cgrid = cevec[0].grid
 
     # mpi layout
-    if "mpi" in params:
+    if params["mpi"] is not None:
         mpi = params["mpi"]
     else:
         mpi = fgrid.mpi

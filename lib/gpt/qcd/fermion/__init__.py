@@ -22,36 +22,33 @@ import gpt.qcd.fermion.preconditioner
 import gpt.qcd.fermion.coarse
 
 from gpt.qcd.fermion.register import register
-from gpt.qcd.fermion.operator import fine_operator, coarse_operator
+from gpt.qcd.fermion.operator import (
+    gauge_independent_g5_hermitian,
+    differentiable_fine_operator,
+    fine_operator,
+    coarse_operator,
+)
 from gpt.qcd.fermion.boundary_conditions import *
 
+# fine fermion operators
+from gpt.qcd.fermion.zmobius import zmobius
+from gpt.qcd.fermion.mobius import mobius
+from gpt.qcd.fermion.wilson import wilson_clover
+
+
+# coarse-grid operator
 import copy
 
-###
-# instantiate fermion operators
 
-
-@gpt.params_convention()
-def wilson_clover(U, params):
+@gpt.params_convention(make_hermitian=False, level=None)
+def coarse_fermion(A, params):
     params = copy.deepcopy(params)  # save current parameters
-    if "kappa" in params:
-        assert "mass" not in params
-        params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
-        del params["kappa"]
-    if "cF" not in params:
-        params["cF"] = 1.0  # default to 1.0 (i.e., doing nothing)
-    if "use_legacy" not in params:
-        params["use_legacy"] = False  # default to new, faster implementation
-    if params["use_legacy"]:
-        assert params["boundary_phases"][-1] != 0.0  # only new op supports open bc
-    if params["boundary_phases"][-1] != 0.0:
-        assert params["cF"] == 1.0  # forbid usage of cF without open bc
-    return fine_operator(
-        "wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3)
-    )
+    params["nbasis"] = A[0].otype.v_n1[0]
+    return coarse_operator("coarse", A, params, otype=A[0].otype.vector_type)
 
 
-@gpt.params_convention()
+# abbreviations / short-cuts
+@gpt.params_convention(mass=None, cp=None, zeta=None, boundary_phases=None)
 def rhq_columbia(U, params):
     return wilson_clover(
         U,
@@ -64,25 +61,3 @@ def rhq_columbia(U, params):
         isAnisotropic=True,
         boundary_phases=params["boundary_phases"],
     )
-
-
-@gpt.params_convention()
-def zmobius(U, params):
-    params = copy.deepcopy(params)  # save current parameters
-    assert "Ls" not in params
-    params["Ls"] = len(params["omega"])
-    return fine_operator("zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
-
-
-@gpt.params_convention()
-def mobius(U, params):
-    params = copy.deepcopy(params)  # save current parameters
-    return fine_operator("mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
-
-
-@gpt.params_convention(make_hermitian=False)
-def coarse_fermion(A, params):
-    params = copy.deepcopy(params)  # save current parameters
-    assert "nbasis" not in params
-    params["nbasis"] = A[0].otype.v_n1[0]
-    return coarse_operator("coarse", A, params, otype=A[0].otype.vector_type)

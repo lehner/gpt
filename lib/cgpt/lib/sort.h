@@ -41,7 +41,7 @@ void cgpt_sort(vec_t& data, const cmp_t & cmp) {
   while (n_per_thread < n) {
     //double t0 = cgpt_time();
     thread_for(i, threads, {
-	size_t start = std::min(i * 2 * n_per_thread, n);
+	size_t start = std::min((size_t)(i * 2 * n_per_thread), n);
 	size_t mid = std::min(start + n_per_thread, n);
 	size_t end = std::min(mid + n_per_thread, n);
 	auto b = std::begin(data);

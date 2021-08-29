@@ -20,6 +20,7 @@
 #include "lib.h"
 
 static bool cgpt_initialized = false;
+static bool cgpt_quiet = false;
 
 EXPORT(init,{
 
@@ -41,19 +42,31 @@ EXPORT(init,{
     int argc = (int)sargs.size();
     char** argv = &cargs[0];
 
+    // quiet mode
+    cgpt_quiet = getenv("GPT_QUIET") != 0;
+    std::streambuf* rb_prev = std::cout.rdbuf();
+    std::ostringstream rb_str;
+    if (cgpt_quiet) {
+      std::cout.rdbuf( rb_str.rdbuf() );
+    }
+    
     // initialize Grid
-    Grid_init(&argc,&argv);
+    Grid_init(&argc, &argv);
 
     // initialize numpy as well
     import_array();
-    
+
     std::cout << std::endl <<
       "=============================================" << std::endl <<
       "              Initialized GPT                " << std::endl <<
       "     Copyright (C) 2020 Christoph Lehner     " << std::endl <<
       "=============================================" << std::endl;
-
+    
     cgpt_initialized = true;
+
+    if (cgpt_quiet) {
+      std::cout.rdbuf( rb_prev );
+    }
 
     return PyLong_FromLong(0);
     
@@ -64,17 +77,15 @@ EXPORT(exit,{
 
     if (cgpt_initialized) {
 
-      std::cout <<
-	"=============================================" << std::endl <<
-	"               Finalized GPT                 " << std::endl <<
-	"=============================================" << std::endl;
-
-      // int rank = CartesianCommunicator::RankWorld();
-	    
+      if (!cgpt_quiet) {
+	std::cout <<
+	  "=============================================" << std::endl <<
+	  "               Finalized GPT                 " << std::endl <<
+	  "=============================================" << std::endl;
+      }
+      
       Grid_finalize();
       cgpt_initialized = false;
-
-      // printf("Rank %d done\n",rank);  fflush(stdout);
 
     }
 

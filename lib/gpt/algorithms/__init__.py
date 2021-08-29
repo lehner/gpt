@@ -21,4 +21,7 @@ import gpt.algorithms.inverter
 import gpt.algorithms.polynomial
 import gpt.algorithms.eigen
 import gpt.algorithms.modes
+import gpt.algorithms.integrator
+import gpt.algorithms.optimize
 import gpt.algorithms.markov
+import gpt.algorithms.preconditioner

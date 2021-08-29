@@ -208,7 +208,7 @@ class matrix_operator(factor):
         first = gpt.util.to_list(first)
 
         if second is None:
-            src = first
+            src = [gpt(x) for x in first]
         else:
             dst = first
             src = gpt.util.to_list(second)

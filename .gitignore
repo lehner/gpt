@@ -35,3 +35,4 @@ missing
 *.coverage*
 coverage.xml
 /docker/play/gpt-packages/*.deb
+*ipynb_checkpoints*

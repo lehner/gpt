@@ -26,7 +26,7 @@ class multi_grid_setup:
     def __init__(self, params):
         self.block_size = params["block_size"]
         self.n = len(self.block_size)
-        self.projector = g.util.to_list(params["projector"], self.n)
+        self.projector = g.util.to_list(params["projector"]) * self.n
 
     def __call__(self, matrix):
         levels = []

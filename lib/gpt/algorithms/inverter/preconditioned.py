@@ -55,7 +55,7 @@ class preconditioned(base):
             adj_mat=None,  # implement adj_mat when needed
             otype=mat.otype,
             accept_guess=(True, False),
-            grid=matrix.F_grid,
+            grid=mat.grid,
             cb=None,
             accept_list=True,
         )

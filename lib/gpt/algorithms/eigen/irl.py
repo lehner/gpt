@@ -28,7 +28,16 @@ import sys
 # Implicitly Restarted Lanczos
 class irl:
     @g.params_convention(
-        orthogonalize_nblock=4, mem_report=False, rotate_use_accelerator=True
+        orthogonalize_nblock=4,
+        mem_report=False,
+        rotate_use_accelerator=True,
+        Nm=None,
+        Nk=None,
+        Nstop=None,
+        resid=None,
+        betastp=None,
+        maxiter=None,
+        Nminres=None,
     )
     def __init__(self, params):
         self.params = params

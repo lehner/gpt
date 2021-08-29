@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.core.operator.matrix_operator import matrix_operator
+from gpt.core.operator.projected_matrix_operator import projected_matrix_operator
 from gpt.core.operator.unary import (
     adj,
     inv,

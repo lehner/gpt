@@ -29,7 +29,9 @@ class params_convention:
     # Guidelines:
     #
     # - Avoid defining default arguments if possible, it is better
-    #   to force the user to be aware of the chosen parameters.
+    #   to force the user to be aware of the chosen parameters.  A
+    #   good way to do this is to add parameter=None and then test
+    #   if the parameter is None.
     #
     # - If you define default parameters, make them a conservative
     #   choice, e.g., stopping conditions to machine precision.
@@ -78,6 +80,11 @@ class params_convention:
             for p, v in self.default.items():
                 if p not in params:
                     params[p] = v
+
+            # check if params are known
+            for p in params:
+                if p not in self.default:
+                    raise KeyError(f"Parameter {p} is not known")
             return f(*positional, params)
 
         return wrap

@@ -40,7 +40,7 @@ inline void matrixEigenFunctor(PVector<Lattice<vector_object>>&        matrix_re
   conformable(matrix_result[0].Grid(), matrix[0].Grid());
   GridBase *grid = matrix[0].Grid();
 
-  long lsites = grid->lSites();
+  long osites = grid->oSites();
 
   typedef typename vector_object::scalar_object scalar_object;
 
@@ -48,29 +48,27 @@ inline void matrixEigenFunctor(PVector<Lattice<vector_object>>&        matrix_re
   VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
 
   eigenConverter<scalar_object> converter(n_virtual);
-    
-  thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
-    auto site = _idx;
 
-    Eigen::MatrixXcd matrix_eigen = converter.matrix(), matrix_result_eigen = converter.matrix();
+  thread_for(_idx, osites, { // NOTE: Not on GPU because of Eigen
 
-    scalar_object matrix_result_tmp = Zero();
-    scalar_object matrix_tmp = Zero();
+      scalar_object matrix_result_tmp = Zero();
+      
+      for (int i=0;i<vector_object::Nsimd();i++) {
+	Eigen::MatrixXcd matrix_eigen = converter.matrix(), matrix_result_eigen = converter.matrix();
+	
+	for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
+	  auto src = extractLane(i,__matrix_v[lex_outer][_idx]);
+	  converter.fillMatrix(lex_outer, matrix_eigen, src);
+	}
+	
+	functor(matrix_result_eigen, matrix_eigen);
 
-    Coordinate lcoor;
-    grid->LocalIndexToLocalCoor(site, lcoor);
-
-    for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
-      peekLocalSite(matrix_tmp, __matrix_v[lex_outer], lcoor);
-      converter.fillMatrix(lex_outer, matrix_eigen, matrix_tmp);
-    }
-
-    functor(matrix_result_eigen, matrix_eigen);
-
-    for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
-      converter.fillObject(lex_outer, matrix_result_tmp, matrix_result_eigen);
-      pokeLocalSite(matrix_result_tmp, __matrix_result_v[lex_outer], lcoor);
-    }
+	for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
+	  converter.fillObject(lex_outer, matrix_result_tmp, matrix_result_eigen);
+	  insertLane(i,__matrix_result_v[lex_outer][_idx],matrix_result_tmp);
+	}
+      }
+      
   });
 
   VECTOR_VIEW_CLOSE(matrix_result_v);
@@ -93,37 +91,34 @@ inline void matrixEigenFunctor(Lattice<iSinglet<typename vector_object::vector_t
   conformable(matrix_result.Grid(), matrix[0].Grid());
   GridBase *grid = matrix[0].Grid();
 
-  long lsites = grid->lSites();
+  long osites = grid->oSites();
 
   typedef typename std::remove_reference<decltype(matrix[0])>::type::scalar_object scalar_object;
   typedef typename std::remove_reference<decltype(matrix_result)>::type::scalar_object       singlet_object;
+  typedef typename std::remove_reference<decltype(matrix_result)>::type::vector_object       vector_singlet_object;
 
   autoView(matrix_result_v, matrix_result, CpuWrite);
   VECTOR_VIEW_OPEN(matrix,matrix_v,CpuRead);
 
   eigenConverter<scalar_object> converter(n_virtual);
-    
-  thread_for(_idx, lsites, { // NOTE: Not on GPU because of Eigen & (peek/poke)LocalSite
-    auto site = _idx;
 
-    Eigen::MatrixXcd matrix_eigen = converter.matrix();
+  thread_for(_idx, osites, { // NOTE: Not on GPU because of Eigen
 
-    singlet_object singlet_tmp;
-    scalar_object matrix_tmp = Zero();
+      singlet_object singlet_tmp;
 
-    Coordinate lcoor;
-    grid->LocalIndexToLocalCoor(site, lcoor);
-
-    for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
-      peekLocalSite(matrix_tmp, __matrix_v[lex_outer], lcoor);
-      converter.fillMatrix(lex_outer, matrix_eigen, matrix_tmp);
-    }
-
-    singlet_tmp()()() = functor(matrix_eigen);
-    
-    pokeLocalSite(singlet_tmp, matrix_result_v, lcoor);
-  });
-
+      for (int i=0;i<vector_object::Nsimd();i++) {
+	Eigen::MatrixXcd matrix_eigen = converter.matrix();
+	
+	for (long lex_outer=0; lex_outer<n_virtual; lex_outer++) {
+	  auto src = extractLane(i,__matrix_v[lex_outer][_idx]);
+	  converter.fillMatrix(lex_outer, matrix_eigen, src);
+	}
+	
+	singlet_tmp()()() = functor(matrix_eigen);
+	insertLane(i,matrix_result_v[_idx],singlet_tmp);
+      }
+    });
+  
   VECTOR_VIEW_CLOSE(matrix_v);
 }
 

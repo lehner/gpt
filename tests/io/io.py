@@ -85,7 +85,7 @@ for i in range(4):
     g.message("Test first restore of U[%d]:" % i, eps2)
     assert eps2 < 1e-25
 
-res = g.load(f"{work_dir}/out2", {"paths": "/U/*"})
+res = g.load(f"{work_dir}/out2", paths="/U/*")
 for i in range(4):
     eps2 = g.norm2(res["U"][i] - U[i])
     g.message("Test second restore of U[%d]:" % i, eps2)
@@ -117,7 +117,7 @@ for i in range(len(corr)):
     assert abs(r.tags["test"][i] - corr[i]) == 0.0
 
 # NERSC
-fn = "ckpoint.0000"
+fn = f"{work_dir}/ckpoint.0000"
 g.save(fn, U, g.format.nersc())
 U_prime = g.load(fn)
 assert len(U_prime) == len(U)

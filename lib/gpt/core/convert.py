@@ -40,7 +40,7 @@ def convert(first, second):
         # if first is no list, evaluate
         src = gpt.eval(first)
         if src.otype.__name__ == second.__name__:
-            return src
+            return gpt.copy(src)
         return convert(gpt.lattice(src.grid, second), src)
 
     elif type(first) == list:

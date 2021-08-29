@@ -57,7 +57,9 @@ def laplace(gauge, site_field, dimensions):
 
 
 # TODO: add boundary_phases to laplace
-@params_convention(boundary_phases=[1, 1, 1, -1], dimensions=[0, 1, 2])
+@params_convention(
+    boundary_phases=[1, 1, 1, -1], dimensions=[0, 1, 2], sigma=None, steps=None
+)
 def gauss(U, params):
     sigma = params["sigma"]
     steps = params["steps"]
