@@ -84,7 +84,7 @@ class non_linear_cg(base_iterative):
                 ) ** 0.5
 
                 if math.isnan(c):
-                    print(f"non_linear_cg: rank={g.rank()} c={c} reset s. iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}")
+                    self.log(f"non_linear_cg: rank={g.rank()} c={c} reset s. iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}")
                     s_last = None
                     continue
 

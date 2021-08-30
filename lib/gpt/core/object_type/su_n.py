@@ -137,7 +137,7 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
             eps = gpt.eval(0.5 * gpt.adj(U) * U - 0.5 * I)
             eps_norm = gpt.norm2(eps)**0.5
             if not (eps_norm < 1e-5):
-                print(f"project eps norm too large rank={gpt.rank()} eps_norm={eps_norm}")
+                g.message(f"project eps norm too large rank={gpt.rank()} eps_norm={eps_norm}")
             U @= U * (I - eps)
         elif method == "defect_left":
             # V = (1 + eps)V0  with  dag(eps) = eps , dag(V0) V0 = 1
