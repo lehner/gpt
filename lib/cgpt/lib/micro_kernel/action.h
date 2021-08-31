@@ -15,30 +15,18 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-
-    This file provides a playground for benchmarking new C++ functions
-    before they go into production.
-
 */
 
-class mk_timer {
-public:
-  double dt_best, dt_worst, dt_total;
-  size_t n;
+typedef void (* micro_kernel_action_t)(const micro_kernel_arg_t & arg, size_t i0, size_t i1, size_t subblock_size);
 
-  mk_timer() : dt_best(10000000.0), dt_worst(0.0), dt_total(0.0), n(0) {};
-
-  void add(double dt) {
-    if (dt < dt_best)
-      dt_best = dt;
-    if (dt > dt_worst)
-      dt_worst = dt;
-    dt_total += dt;
-    n += 1;
-  }
-
-  void print(std::string tag, double gb) {
-    std::cout << GridLogMessage << tag << ": " << gb/dt_worst << " -- " << gb/dt_best << " avg " << gb*n/dt_total << " GB/s" << std::endl;
-  }
+struct micro_kernel_t {
+  micro_kernel_action_t action;
+  micro_kernel_arg_t arg;
 };
+
+struct micro_kernel_blocking_t {
+  size_t block_size;
+  size_t subblock_size;
+};
+
+void eval_micro_kernels(const std::vector<micro_kernel_t> & kernels, const micro_kernel_blocking_t & blocking);

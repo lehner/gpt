@@ -16,7 +16,7 @@ U = params["config"]
 # matrix to use
 fmatrix = params["fmatrix"](U)
 op = params["op"](fmatrix)
-grid = fmatrix.F_grid_eo
+grid = op.grid[0]
 
 # implicitly restarted lanczos
 irl = params["method_evec"]

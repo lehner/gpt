@@ -16,16 +16,6 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.fermion.preconditioner.g5m import g5m_ne
-
-from gpt.qcd.fermion.preconditioner.even_odd_sites import (
-    eo1,
-    eo1_ne,
-    eo2,
-    eo2_ne,
-    eo2_kappa_ne,
-)
-
-from gpt.qcd.fermion.preconditioner.sap import sap_cycle
-from gpt.qcd.fermion.preconditioner.mixed_dwf import mixed_dwf
-from gpt.qcd.fermion.preconditioner.physical import physical
+from gpt.core.domain.even_odd_sites import even_odd_sites
+from gpt.core.domain.even_odd_blocks import even_odd_blocks
+from gpt.core.domain.full import full

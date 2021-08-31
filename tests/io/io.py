@@ -117,7 +117,7 @@ for i in range(len(corr)):
     assert abs(r.tags["test"][i] - corr[i]) == 0.0
 
 # NERSC
-fn = "ckpoint.0000"
+fn = f"{work_dir}/ckpoint.0000"
 g.save(fn, U, g.format.nersc())
 U_prime = g.load(fn)
 assert len(U_prime) == len(U)

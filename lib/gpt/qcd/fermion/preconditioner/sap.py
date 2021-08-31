@@ -79,165 +79,30 @@
 import gpt, cgpt, numpy
 from gpt.params import params_convention
 
-# ix = x[0] + lat[0]*(x[1] + lat[2]*...)
-def index2coor(ix, lat):  # go through cgpt and order=lexicographic
-    x = [0] * len(lat)
-    for mu in range(len(lat)):
-        x[mu] = int(ix % lat[mu])
-        ix = numpy.floor(ix / lat[mu])
-    return x
+
+def set_domain_boundaries_of_U(U, domain):
+    colon = slice(None, None, None)
+    nd = len(U)
+    for dim in range(nd):
+        if domain.blocks_per_dimension[dim] > 1:
+            for i in range(1, domain.extended_local_blocks_per_dimension[dim] + 1):
+                U[dim][
+                    tuple(
+                        [colon] * dim
+                        + [i * domain.block_size[dim] - 1]
+                        + [colon] * (nd - dim - 1)
+                    )
+                ] = 0
 
 
-class SapError(Exception):
-    pass
-
-
-class sap_blk:
-    def __init__(self, grid, bs, eo):
-        self.eo = eo
-        self.bs = list(bs)
-        Nd = len(bs)
-        if Nd != grid.nd:
-            raise SapError("Block dimensions do not match lattice dimensions")
-        if numpy.any(self.bs > grid.ldimensions):
-            raise SapError("Block size should not exceed local lattice")
-
-        # block dimensions global
-        self.bd = numpy.floor_divide(grid.fdimensions, self.bs)
-        # block dimensions local
-        self.bdl = numpy.floor_divide(grid.ldimensions, self.bs)
-
-        # number of blocks per node
-        self.nb = int(numpy.prod(self.bd)) // grid.Nprocessors
-        if (self.nb < 2) or ((self.nb % 2) != 0):
-            raise SapError("Sap Blocks should define an even/odd grid")
-
-        # extended block sizes
-        self.ebs = [1] * Nd
-        for mu in reversed(range(Nd)):
-            if self.bd[mu] > 1:
-                self.ebs[mu] = int(self.nb / 2)
-                break
-        ebs = [bs[mu] * self.ebs[mu] for mu in range(Nd)]
-
-        # block grid local to the node
-        self.grid = grid.split([1] * Nd, ebs)
-
-        self.bv = int(numpy.prod(self.bs))
-        assert self.grid.gsites * 2 == (self.bv * self.nb)
-        if self.bv < 4:
-            raise SapError("Block volume should be bigger than 4")
-        self.pos()
-        gpt.message(
-            f'SAP Initialized {"even" if self.eo==0 else "odd"} blocks with grid {self.grid.fdimensions} from local lattice {grid.ldimensions}'
-        )
-
-    def coor(self, grid, tag=None):  # and pos -> core/block/
-        coor = numpy.zeros((self.grid.gsites, self.grid.nd), dtype=numpy.int32)
-
-        n = 0
-        # global offset of the local lattice
-        ofs = [grid.processor_coor[mu] * grid.ldimensions[mu] for mu in range(grid.nd)]
-        for ib in range(self.nb):
-            bc = index2coor(ib, self.bdl)
-            _eo = int(numpy.sum(bc) % 2)
-
-            if _eo == self.eo:
-                sl = slice(n * self.bv, (n + 1) * self.bv)
-                n += 1
-
-                top = [ofs[mu] + bc[mu] * self.bs[mu] for mu in range(len(ofs))]
-                bottom = [top[mu] + self.bs[mu] for mu in range(len(ofs))]
-                pos = cgpt.coordinates_from_cartesian_view(
-                    top, bottom, grid.cb.cb_mask, tag, "lexicographic"
-                )
-
-                coor[sl, :] = pos
-        assert n * 2 == self.nb
-        return coor
-
-    def pos(self, tag=None):
-        self.pos = numpy.zeros((self.grid.gsites, self.grid.nd), dtype=numpy.int32)
-        Nd = len(self.bs)
-        ofs = [0] * Nd
-        for mu in range(Nd):
-            if self.ebs[mu] > 1:
-                ofs[mu] = 1
-        for n in range(self.nb // 2):
-            sl = slice(n * self.bv, (n + 1) * self.bv)
-            top = [ofs[mu] * n * self.bs[mu] for mu in range(Nd)]
-            bottom = [top[mu] + self.bs[mu] for mu in range(Nd)]
-            _pos = cgpt.coordinates_from_cartesian_view(
-                top, bottom, self.grid.cb.cb_mask, tag, "lexicographic"
-            )
-
-            self.pos[sl, :] = _pos
-
-    def set_BC_Ufld(self, U):
-        if self.grid.nd == 4:
-            self.setBC_4D(U)
-        else:
-            assert 0
-
-    def setBC_4D(self, U):
-        # colon = slice(None,None,None)
-        # tuple([colon] * i + [ coor ] + [colon] * (nd-i))
-        if self.bd[0] > 1:
-            for i in range(1, self.ebs[0] + 1):
-                U[0][i * self.bs[0] - 1, :, :, :] = 0
-        if self.bd[1] > 1:
-            for i in range(1, self.ebs[1] + 1):
-                U[1][:, i * self.bs[1] - 1, :, :] = 0
-        if self.bd[2] > 1:
-            for i in range(1, self.ebs[2] + 1):
-                U[2][:, :, i * self.bs[2] - 1, :] = 0
-        if self.bd[3] > 1:
-            for i in range(1, self.ebs[3] + 1):
-                U[3][:, :, :, i * self.bs[3] - 1] = 0
-
-
-class sap_instance:
-    def __init__(self, op, bs):
-        self.op = op
-        self.op_blk = []
-        dt = -gpt.time()
-
-        # thanks to double copy inside operator, U only temporary
-        Ublk = [sap_blk(op.U_grid, bs, eo) for eo in range(2)]
-        U = [gpt.mcolor(Ublk[0].grid) for _ in range(4)]
-
-        for eo in range(2):
-            Ucoor = Ublk[eo].coor(op.U_grid)
-            for mu in range(4):
-                U[mu][Ublk[eo].pos] = op.U[mu][Ucoor]
-            Ublk[eo].set_BC_Ufld(U)
-            self.op_blk.append(op.updated(U))
-
-        if self.op.F_grid.nd == len(bs) + 1:
-            _bs = [self.op.F_grid.fdimensions[0]] + bs
-        else:
-            _bs = bs
-
-        blk = [sap_blk(self.op.F_grid, _bs, eo) for eo in range(2)]
-        self.pos = blk[0].pos
-        self.pos.flags["WRITEABLE"] = False
-        self.coor = [blk[eo].coor(op.F_grid) for eo in range(2)]
-
-        for eo in range(2):
-            self.coor[eo].flags["WRITEABLE"] = False
-
-        dt += gpt.time()
-        gpt.message(f"SAP Initialized in {dt:g} secs")
-
-
-class sap:
-    @params_convention(bs=None)
-    def __init__(self, params):
-        self.bs = params["bs"]
-        assert self.bs is not None
-
-    def __call__(self, op):
-        return sap_instance(op, self.bs)
+def domain_fermion_operator(op, domain):
+    U_domain = []
+    for u in op.U:
+        u_domain = domain.lattice(u.otype)
+        domain.project(u_domain, u)
+        U_domain.append(u_domain)
+    set_domain_boundaries_of_U(U_domain, domain)
+    return op.updated(U_domain)
 
 
 class sap_cycle:
@@ -248,73 +113,64 @@ class sap_cycle:
         assert self.bs is not None
 
     def __call__(self, op):
-        sap = sap_instance(op, self.bs)
-        otype = sap.op.otype[0]
-        src_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
-        dst_blk = gpt.lattice(sap.op_blk[0].F_grid, otype)
-        solver = [self.blk_solver(op) for op in sap.op_blk]
-        cache = {}
+
+        # for now ad-hoc treatment of 5d fermions
+        if op.F_grid.nd == len(self.bs) + 1:
+            F_bs = [op.F_grid.fdimensions[0]] + self.bs
+        else:
+            F_bs = self.bs
+
+        # create domains
+        F_domains = [
+            gpt.domain.even_odd_blocks(op.F_grid, F_bs, gpt.even),
+            gpt.domain.even_odd_blocks(op.F_grid, F_bs, gpt.odd),
+        ]
+
+        U_domains = [
+            gpt.domain.even_odd_blocks(op.U_grid, self.bs, gpt.even),
+            gpt.domain.even_odd_blocks(op.U_grid, self.bs, gpt.odd),
+        ]
+
+        solver = [
+            self.blk_solver(domain_fermion_operator(op, domain)) for domain in U_domains
+        ]
 
         def inv(dst, src):
             dst[:] = 0
             eta = gpt.copy(src)
             ws = [gpt.copy(src) for _ in range(2)]
-            cache_key_base = (
-                f"{dst.describe()}_{src.describe()}_{src.grid.obj}_{dst.grid.obj}"
-            )
 
-            dt_solv = dt_distr = dt_hop = 0.0
             for eo in range(2):
                 ws[0][:] = 0
-                dt_distr -= gpt.time()
-                cache_key = f"{cache_key_base}_{eo}_a"
-                if cache_key not in cache:
-                    plan = gpt.copy_plan(src_blk, eta, embed_in_communicator=eta.grid)
-                    plan.destination += src_blk.view[sap.pos]
-                    plan.source += eta.view[sap.coor[eo]]
-                    cache[cache_key] = plan()
-                cache[cache_key](src_blk, eta)
-                dt_distr += gpt.time()
 
-                dt_solv -= gpt.time()
+                src_blk = F_domains[eo].lattice(op.otype[0])
+                dst_blk = F_domains[eo].lattice(op.otype[0])
+
+                F_domains[eo].project(src_blk, eta)
+
                 dst_blk[:] = 0  # for now
                 solver[eo](dst_blk, src_blk)
-                dt_solv += gpt.time()
 
-                dt_distr -= gpt.time()
-                cache_key = f"{cache_key_base}_{eo}_b"
-                if cache_key not in cache:
-                    plan = gpt.copy_plan(
-                        ws[0], dst_blk, embed_in_communicator=ws[0].grid
-                    )
-                    plan.destination += ws[0].view[sap.coor[eo]]
-                    plan.source += dst_blk.view[sap.pos]
-                    cache[cache_key] = plan()
-                cache[cache_key](ws[0], dst_blk)
-                dt_distr += gpt.time()
+                F_domains[eo].promote(ws[0], dst_blk)
 
-                dt_hop -= gpt.time()
                 if eo == 0:
-                    sap.op(ws[1], ws[0])
+                    op(ws[1], ws[0])
+
                 eta -= ws[1]
                 dst += ws[0]
-                dt_hop += gpt.time()
 
                 gpt.message(
                     f"SAP cycle; |rho|^2 = {gpt.norm2(eta):g}; |dst|^2 = {gpt.norm2(dst):g}"
                 )
-                gpt.message(
-                    f"SAP Timings: distr {dt_distr:g} secs, blk_solver {dt_solv:g} secs, hop+update {dt_hop:g} secs"
-                )
 
         return gpt.matrix_operator(
             mat=inv,
-            inv_mat=sap.op,
-            adj_inv_mat=sap.op.adj(),
-            adj_mat=None,  # implement adj_mat when needed
-            otype=otype,
+            inv_mat=op,
+            adj_inv_mat=op.adj(),
+            adj_mat=None,
+            otype=op.otype,
             accept_guess=(True, False),
-            grid=sap.op.F_grid,
+            grid=op.F_grid,
             cb=None,
         )
 

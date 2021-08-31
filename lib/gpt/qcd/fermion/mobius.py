@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,16 +17,15 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.fermion.preconditioner.g5m import g5m_ne
+import gpt, copy
+from gpt.qcd.fermion.operator import differentiable_fine_operator
 
-from gpt.qcd.fermion.preconditioner.even_odd_sites import (
-    eo1,
-    eo1_ne,
-    eo2,
-    eo2_ne,
-    eo2_kappa_ne,
+
+@gpt.params_convention(
+    mass=None, b=None, c=None, M5=None, boundary_phases=None, Ls=None
 )
-
-from gpt.qcd.fermion.preconditioner.sap import sap_cycle
-from gpt.qcd.fermion.preconditioner.mixed_dwf import mixed_dwf
-from gpt.qcd.fermion.preconditioner.physical import physical
+def mobius(U, params):
+    params = copy.deepcopy(params)  # save current parameters
+    return differentiable_fine_operator(
+        "mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
+    )

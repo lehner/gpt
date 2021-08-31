@@ -16,16 +16,9 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.fermion.preconditioner.g5m import g5m_ne
-
-from gpt.qcd.fermion.preconditioner.even_odd_sites import (
-    eo1,
-    eo1_ne,
-    eo2,
-    eo2_ne,
-    eo2_kappa_ne,
+from gpt.algorithms.preconditioner.schur_complement_one import schur_complement_one
+from gpt.algorithms.preconditioner.schur_complement_two import schur_complement_two
+from gpt.algorithms.preconditioner.normal_equation import normal_equation
+from gpt.algorithms.preconditioner.similarity_transformation import (
+    similarity_transformation,
 )
-
-from gpt.qcd.fermion.preconditioner.sap import sap_cycle
-from gpt.qcd.fermion.preconditioner.mixed_dwf import mixed_dwf
-from gpt.qcd.fermion.preconditioner.physical import physical

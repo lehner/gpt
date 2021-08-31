@@ -2,6 +2,7 @@
     GPT - Grid Python Toolkit
     Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 
+
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
@@ -15,30 +16,36 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-
-    This file provides a playground for benchmarking new C++ functions
-    before they go into production.
-
 */
 
-class mk_timer {
-public:
-  double dt_best, dt_worst, dt_total;
-  size_t n;
+template<typename T>
+void cgpt_scale_per_coordinate(Lattice<T>& dst,Lattice<T>& src,ComplexD* s,int dim) {
 
-  mk_timer() : dt_best(10000000.0), dt_worst(0.0), dt_total(0.0), n(0) {};
+  GridBase* grid = dst.Grid();
+  conformable(grid, src.Grid());
 
-  void add(double dt) {
-    if (dt < dt_best)
-      dt_best = dt;
-    if (dt > dt_worst)
-      dt_worst = dt;
-    dt_total += dt;
-    n += 1;
+  dst.Checkerboard() = src.Checkerboard();
+
+  int L = grid->_gdimensions[dim];
+    
+  autoView(dst_v, dst, AcceleratorWriteDiscard);
+  autoView(src_v, src, AcceleratorRead);
+
+  auto dst_p = &dst_v[0];
+  auto src_p = &src_v[0];
+
+  Vector<ComplexD> S(L);
+  thread_for(idx, L, {
+      S[idx] = s[idx];
+    });
+
+  if (dim == 0 && grid->_simd_layout[0] == 1) {
+    accelerator_for(idx, grid->oSites(), T::Nsimd(), {
+        int s_idx = idx % L;
+        coalescedWrite(dst_p[idx], coalescedRead(src_p[idx]) * S[s_idx]);
+      });
+  } else {
+    ERR("Not implemented yet");
   }
-
-  void print(std::string tag, double gb) {
-    std::cout << GridLogMessage << tag << ": " << gb/dt_worst << " -- " << gb/dt_best << " avg " << gb*n/dt_total << " GB/s" << std::endl;
-  }
-};
+  
+}

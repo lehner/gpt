@@ -16,16 +16,21 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.fermion.preconditioner.g5m import g5m_ne
+import gpt
 
-from gpt.qcd.fermion.preconditioner.even_odd_sites import (
-    eo1,
-    eo1_ne,
-    eo2,
-    eo2_ne,
-    eo2_kappa_ne,
-)
 
-from gpt.qcd.fermion.preconditioner.sap import sap_cycle
-from gpt.qcd.fermion.preconditioner.mixed_dwf import mixed_dwf
-from gpt.qcd.fermion.preconditioner.physical import physical
+class even_odd_sites:
+    def __init__(self, grid, parity):
+        self.checkerboard = parity
+        self.grid = grid
+
+    def lattice(self, otype):
+        x = gpt.lattice(self.grid, otype)
+        x.checkerboard(self.checkerboard)
+        return x
+
+    def project(self, dst, src):
+        gpt.pick_checkerboard(self.checkerboard, dst, src)
+
+    def promote(self, dst, src):
+        gpt.set_checkerboard(dst, src)

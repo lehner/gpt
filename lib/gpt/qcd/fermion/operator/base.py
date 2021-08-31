@@ -79,6 +79,9 @@ class base(gpt.matrix_operator):
             mat=registry.M, adj_mat=registry.Mdag, otype=otype, grid=self.F_grid
         )
 
+        # create operator domain
+        self.domain = gpt.core.domain.full(self.F_grid)
+
         if with_even_odd:
             self.Meooe = gpt.matrix_operator(
                 mat=registry.Meooe,
@@ -210,3 +213,15 @@ class base(gpt.matrix_operator):
             grid=(exp.grid[0], imp.grid[1]),
             accept_list=True,
         )
+
+    def even_odd_sites_decomposed(self, parity):
+        class even_odd_sites:
+            def __init__(me):
+                me.D_domain = gpt.domain.even_odd_sites(self.F_grid_eo, parity)
+                me.C_domain = gpt.domain.even_odd_sites(self.F_grid_eo, parity.inv())
+                me.DD = self.Mooee
+                me.CC = self.Mooee
+                me.CD = self.Meooe
+                me.DC = self.Meooe
+
+        return even_odd_sites()
