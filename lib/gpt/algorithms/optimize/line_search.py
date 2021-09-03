@@ -44,7 +44,10 @@ def line_search_quadratic(s, x, dx, dv0, df, step):
             project_diff2 = g.norm2(xp[mu] - xp_mu)
             if not (project_diff2 < 1e-8):
                 g.message(f"line_search_quadratic: rank={g.rank()} project_diff={math.sqrt(project_diff2)} {sv_list}")
-                return float("nan")
+                if c == 0.0:
+                    return float("nan")
+                else:
+                    return sign * c
             dxp.append(xp[mu])
 
         dv1 = df(xp, dxp)
