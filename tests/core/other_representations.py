@@ -17,7 +17,7 @@ rng = g.random("test")
 
 # unitarity test / element of group test
 def check_element(U):
-    assert U.otype.is_element(U)
+    assert g.group.defect(U) < 10.0 * U.grid.precision.eps
 
 
 def check_representation(U, eps_ref):

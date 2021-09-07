@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.core.group.operation import (
+    defect,
     cartesian,
     inner_product,
     compose,

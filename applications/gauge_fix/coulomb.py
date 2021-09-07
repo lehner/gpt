@@ -86,6 +86,10 @@ for t in range(Nt_split):
     if not cg(fa)(Vt_split[t], Vt_split[t]):
         gd(fa)(Vt_split[t], Vt_split[t])
 
+    group_defect = g.group.defect(Vt_split[t])
+    g.message(f"Distance to group manifold: {group_defect}")
+    assert group_defect < 1e-12
+
 g.message("Unsplit")
 
 g.unsplit(Vt, Vt_split, cache)
