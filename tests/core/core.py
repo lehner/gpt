@@ -126,6 +126,28 @@ g.message("Momentum adj test (2): ", eps)
 assert eps < 1e-20
 
 ################################################################################
+# Test slice sums
+################################################################################
+for lattice_object in [
+    g.complex(grid_sp), g.vcomplex(grid_sp, 10),
+    g.vspin(grid_sp), g.vcolor(grid_sp), g.vspincolor(grid_sp),
+    g.mspin(grid_sp), g.mcolor(grid_sp), g.mspincolor(grid_sp),
+]:
+    g.message(f"Testing slice with random {lattice_object.describe()}")
+    obj_list = [g.copy(lattice_object) for _ in range(3)]
+    rng.cnormal(obj_list)
+
+    for dimension in range(4):
+        tmp = g.slice(obj_list, dimension)
+        full_sliced = np.array([[g.util.tensor_to_value(v) for v in obj] for obj in tmp])
+
+        for n, obj in enumerate(obj_list):
+            tmp = g.slice(obj, dimension)
+            sliced = np.array([g.util.tensor_to_value(v) for v in tmp])
+            assert np.allclose(full_sliced[n], sliced, atol=0.0, rtol=1e-15)
+
+
+################################################################################
 # Test FFT
 ################################################################################
 fft_l_sp = g.eval(g.fft() * l_sp)

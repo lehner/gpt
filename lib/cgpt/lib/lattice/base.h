@@ -43,7 +43,7 @@ public:
   virtual int singlet_rank() = 0;
   virtual PyObject* to_decl() = 0;
   virtual void convert_from(cgpt_Lattice_base* src) = 0;
-  virtual PyObject* slice(int dim) = 0;
+  virtual PyObject* slice(std::vector<cgpt_Lattice_base*> _basis, int dim) = 0;
   virtual void ferm_to_prop(cgpt_Lattice_base* prop, int spin, int color, bool f2p) = 0;
   virtual void pick_checkerboard_from(int cb, cgpt_Lattice_base* src) = 0;
   virtual void set_checkerboard_from(cgpt_Lattice_base* src) = 0;

@@ -256,13 +256,15 @@ EXPORT(lattice_sum,{
   
 EXPORT(lattice_slice,{
     
-    void* _a;
+    PyObject* _basis;
     long dim;
-    if (!PyArg_ParseTuple(args, "ll", &_a,&dim)) {
+    if (!PyArg_ParseTuple(args, "Ol", &_basis, &dim)) {
       return NULL;
     }
     
-    cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
-    return a->slice((int)dim);
+    std::vector<cgpt_Lattice_base*> basis;
+    cgpt_basis_fill(basis,_basis);
+
+    return basis[0]->slice(basis, (int)dim);
     
   });
