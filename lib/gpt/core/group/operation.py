@@ -19,6 +19,10 @@
 import gpt as g
 
 
+def defect(field):
+    return field.otype.defect(field)
+
+
 def cartesian(field):
     if isinstance(field, list):
         return [cartesian(f) for f in field]

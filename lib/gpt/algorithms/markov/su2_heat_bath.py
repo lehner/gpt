@@ -90,7 +90,7 @@ class su2_heat_bath:
             u2 @= 0.5 * u2 * inv(xi)
 
             # make sure that su2 subgroup projection worked
-            assert u2.otype.is_element(u2)
+            assert g.group.defect(u2) < u2.grid.precision.eps * 10.0
 
             xi @= 2.0 * xi
             alpha = g.component.real(xi)

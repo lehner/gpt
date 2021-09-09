@@ -30,7 +30,7 @@ def exp(i):
         x = gpt.copy(i)
     n = gpt.norm2(x) ** 0.5 / x.grid.gsites
     order = 19
-    maxn = 0.05
+    maxn = 0.01
     ns = 0
     if n > maxn:
         ns = int(numpy.log2(n / maxn))

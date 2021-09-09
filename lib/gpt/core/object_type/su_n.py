@@ -117,13 +117,12 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
     def compose(self, a, b):
         return a * b
 
-    def is_element(self, U):
+    def defect(self, U):
         I = gpt.identity(U)
         I_s = gpt.identity(gpt.complex(U.grid))
         err2 = gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)
         err2 += gpt.norm2(gpt.matrix.det(U) - I_s) / gpt.norm2(I_s)
-        # consider additional determinant check
-        return err2 ** 0.5 < U.grid.precision.eps * 10.0
+        return err2 ** 0.5
 
     def project(self, U, method):
         if method == "defect_right" or method == "defect":

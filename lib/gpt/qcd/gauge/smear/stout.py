@@ -33,7 +33,6 @@ def stout_general(U, params):
             )
             * U[mu]
         )
-        # assert U_mu_prime.otype.is_element(U_mu_prime)
         U_prime.append(U_mu_prime)
     return U_prime
 

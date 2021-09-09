@@ -62,8 +62,8 @@ class ot_complex_additive_group(ot_singlet):
         else:
             l @= c[0] + complex(0.0, 1.0) * c[1]
 
-    def is_element(self, U):
-        return True
+    def defect(self, U):
+        return 0.0
 
     def project(self, U, method):
         return None
@@ -127,8 +127,8 @@ class ot_vector_complex_additive_group(ot_vector_singlet):
             for ca, Ta in zip(c, self.generators(l.grid.precision.complex_dtype)):
                 l += ca * Ta
 
-    def is_element(self, U):
-        return True
+    def defect(self, U):
+        return 0.0
 
     def project(self, U, method):
         return None
@@ -198,8 +198,8 @@ class ot_matrix_complex_additive_group(ot_matrix_singlet):
             for ca, Ta in zip(c, gen):
                 l += ca * Ta
 
-    def is_element(self, U):
-        return True
+    def defect(self, U):
+        return 0.0
 
     def project(self, U, method):
         return None

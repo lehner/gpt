@@ -60,9 +60,9 @@ class ot_real_additive_group(ot_singlet):
         else:
             l @= c[0]
 
-    def is_element(self, U):
+    def defect(self, U):
         err2 = gpt.norm2(gpt.component.imag(U)) / U.grid.gsites
-        return err2 ** 0.5 < U.grid.precision.eps * 10.0
+        return err2 ** 0.5
 
     def project(self, U, method):
         # there is really only one sensible projection, ignore method
@@ -122,9 +122,9 @@ class ot_vector_real_additive_group(ot_vector_singlet):
             for ca, Ta in zip(c, self.generators(l.grid.precision.complex_dtype)):
                 l += ca * Ta
 
-    def is_element(self, U):
+    def defect(self, U):
         err2 = gpt.norm2(gpt.component.imag(U)) / U.grid.gsites / self.nfloats
-        return err2 ** 0.5 < U.grid.precision.eps * 10.0
+        return err2 ** 0.5
 
     def project(self, U, method):
         # there is really only one sensible projection, ignore method
@@ -182,9 +182,9 @@ class ot_matrix_real_additive_group(ot_matrix_singlet):
             for ca, Ta in zip(c, gen):
                 l += ca * Ta
 
-    def is_element(self, U):
+    def defect(self, U):
         err2 = gpt.norm2(gpt.component.imag(U)) / U.grid.gsites / self.nfloats
-        return err2 ** 0.5 < U.grid.precision.eps * 10.0
+        return err2 ** 0.5
 
     def project(self, U, method):
         # there is really only one sensible projection, ignore method

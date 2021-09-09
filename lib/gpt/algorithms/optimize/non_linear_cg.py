@@ -42,6 +42,7 @@ class non_linear_cg(base_iterative):
         log_functional_every=10,
         line_search=line_search_quadratic,
         beta=fletcher_reeves,
+        max_abs_step=1.0,
     )
     def __init__(self, params):
         super().__init__()
@@ -51,6 +52,7 @@ class non_linear_cg(base_iterative):
         self.nf = params["log_functional_every"]
         self.line_search = params["line_search"]
         self.beta = params["beta"]
+        self.max_abs_step = params["max_abs_step"]
 
     def __call__(self, f):
         @self.timed_function
@@ -71,10 +73,16 @@ class non_linear_cg(base_iterative):
                     for nu in range(len(s)):
                         s[nu] = g(d[nu] + beta * s_last[nu])
 
-                c = self.line_search(s, x, dx, d, f.gradient, -self.step)
+                next_step = (
+                    self.line_search(s, x, dx, d, f.gradient, -self.step) * self.step
+                )
+                if abs(next_step) > self.max_abs_step:
+                    self.log(f"max_abs_step adjustment for step = {next_step}")
+                    next_step *= self.max_abs_step / abs(next_step)
+                    beta = 0
 
                 for nu, x_mu in enumerate(dx):
-                    x_mu @= g.group.compose(-self.step * c * s[nu], x_mu)
+                    x_mu @= g.group.compose(-next_step * s[nu], x_mu)
 
                 rs = (
                     sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])
@@ -84,7 +92,7 @@ class non_linear_cg(base_iterative):
 
                 if i % self.nf == 0:
                     self.log(
-                        f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step = {c*self.step}"
+                        f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step = {next_step}"
                     )
 
                 if rs <= self.eps:

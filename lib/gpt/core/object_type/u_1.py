@@ -81,10 +81,10 @@ class ot_u_1_group(ot_u_1_base):
     def compose(self, a, b):
         return a * b
 
-    def is_element(self, U):
+    def defect(self, U):
         I = gpt.identity(U)
         err2 = gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)
-        return err2 ** 0.5 < U.grid.precision.eps * 10.0
+        return err2 ** 0.5
 
     def project(self, U, method):
         if method == "defect_right" or method == "defect":
