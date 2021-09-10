@@ -43,10 +43,10 @@ class mixed_dwf:
         inv_dwf_inner = self.solver(dwf_inner)
 
         def sep(x):
-            return g.separate(x, dimension=0)
+            return g.separate(g(x), dimension=0)
 
-        def mrg(x):
-            return g.merge(x, dimension=0)
+        def mrg(x, N=-1):
+            return g.merge(g(x), dimension=0, N=N)
 
         def _P(dst, src, offset):
             src_s = sep(src)
@@ -72,26 +72,33 @@ class mixed_dwf:
 
         def inv(dst_outer, src_outer):
             Ls_inner = dwf_inner.F_grid.fdimensions[0]
-            zero4d = g.lattice(dwf_outer.U_grid, src_outer.otype)
+            Ls_outer = dwf_outer.F_grid.fdimensions[0]
+            N = len(src_outer)
+
+            zero4d = g.lattice(dwf_outer.U_grid, src_outer[0].otype)
             zero4d[:] = 0
             c_s = sep(g.adj(P) * inv_dwf_outer_pv * src_outer)
+            wall = []
+            for i in range(N):
+                wall = wall + [c_s[i * Ls_outer]] + [zero4d] * (Ls_inner - 1)
+
             y0prime = sep(
-                g.adj(P)
-                * inv_dwf_inner
-                * dwf_inner_pv
-                * P
-                * mrg([c_s[0]] + [zero4d] * (Ls_inner - 1))
-            )[0]
-            dst_outer @= P * mrg(
-                [y0prime]
-                + sep(
-                    g.adj(P)
-                    * inv_dwf_outer_pv
-                    * dwf_outer
-                    * P
-                    * mrg([g(-y0prime)] + c_s[1:])
-                )[1:]
-            )
+                g.adj(P) * inv_dwf_inner * dwf_inner_pv * P * mrg(wall, Ls_inner)
+            )[::Ls_inner]
+
+            wall = []
+            for i in range(N):
+                wall = (
+                    wall + [g(-y0prime[i])] + c_s[i * Ls_outer + 1 : (i + 1) * Ls_outer]
+                )
+
+            y1 = sep(g.adj(P) * inv_dwf_outer_pv * dwf_outer * P * mrg(wall, Ls_outer))
+
+            wall = []
+            for i in range(N):
+                wall = wall + [y0prime[i]] + y1[i * Ls_outer + 1 : (i + 1) * Ls_outer]
+
+            g(dst_outer, P * mrg(wall, Ls_outer))
 
         return g.matrix_operator(
             mat=inv,
@@ -100,4 +107,5 @@ class mixed_dwf:
             accept_guess=(True, False),
             grid=dwf_outer.F_grid,
             cb=None,
+            accept_list=True,
         )
