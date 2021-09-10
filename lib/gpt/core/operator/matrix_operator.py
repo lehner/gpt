@@ -218,12 +218,15 @@ class matrix_operator(factor):
         )
 
         if second is None:
-            if self.grid[0] is None or not type_match:
+            if self.grid[0] is None:
                 dst_grid = src[0].grid
-                dst_otype = src[0].otype
-                # if types do not match or are not provided, assume mat : X -> X
             else:
                 dst_grid = self.grid[0]
+
+            # if not type_match assume X->X
+            if not type_match or self.otype[0] is None:
+                dst_otype = src[0].otype
+            else:
                 dst_otype = self.otype[0]
 
             dst = [gpt.lattice(dst_grid, dst_otype) for x in src]
