@@ -228,10 +228,11 @@ class ot_vector_spin_color(ot_base):
         src, dst = gpt.util.to_list(src), gpt.util.to_list(dst)
         if src[0].otype.__name__ == self.ot_matrix:
             assert dst[0].otype.__name__ == self.ot_matrix
-            grid = src[0].grid
+            src_grid = src[0].grid
+            dst_grid = dst[0].grid
             n = self.spin_ndim * self.color_ndim * len(src)
-            dst_sc = [gpt.gpt_object(grid, self) for i in range(n)]
-            src_sc = [gpt.gpt_object(grid, self) for i in range(n)]
+            dst_sc = [gpt.gpt_object(dst_grid, self) for i in range(n)]
+            src_sc = [gpt.gpt_object(src_grid, self) for i in range(n)]
             for i in range(len(src)):
                 for s in range(self.spin_ndim):
                     for c in range(self.color_ndim):
