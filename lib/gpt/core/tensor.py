@@ -28,7 +28,7 @@ class tensor:
         if array.shape != otype.shape:
             array = np.reshape(array, otype.shape)
 
-        self.array = array
+        self.array = np.ascontiguousarray(array)
         self.otype = otype
         assert self.array.shape == otype.shape
 
