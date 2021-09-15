@@ -34,7 +34,8 @@ void cgpt_scale_per_coordinate(Lattice<T>& dst,Lattice<T>& src,ComplexD* s,int d
   auto dst_p = &dst_v[0];
   auto src_p = &src_v[0];
 
-  Vector<ComplexD> S(L);
+  Vector<ComplexD> _S(L);
+  ComplexD* S = &_S[0];
   thread_for(idx, L, {
       S[idx] = s[idx];
     });

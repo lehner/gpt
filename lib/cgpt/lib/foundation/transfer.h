@@ -102,7 +102,8 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
 
   int ndim = out_grid->Nd();
 
-  Vector<Coordinate> in_icoor(in_grid->Nsimd());
+  Vector<Coordinate> _in_icoor(in_grid->Nsimd());
+  Coordinate* in_icoor = &_in_icoor[0];
 
   for(int lane=0; lane < in_grid->Nsimd(); lane++){
     in_icoor[lane].resize(ndim);
