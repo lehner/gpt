@@ -6,6 +6,9 @@ fail=0
 if [[ "$runner" != "" ]];
 then
     echo "Using runner = $runner with extra arguments = $extra"
+else
+    # default for single-node tests
+    extra="--mpi_split 1.1.1.1"
 fi
 
 LOG=$(mktemp)
