@@ -39,15 +39,19 @@ class shift_base:
         # now take boundary_phase from params and apply here
         self.Udag = [gpt.eval(gpt.adj(u)) for u in self.U]
 
+        # avoid reference loop
+        ref_U = self.U
+        ref_Udag = self.Udag
+
         def _forward(mu):
             def wrap(dst, src):
-                dst @= self.U[mu] * gpt.cshift(src, mu, +1)
+                dst @= ref_U[mu] * gpt.cshift(src, mu, +1)
 
             return wrap
 
         def _backward(mu):
             def wrap(dst, src):
-                dst @= gpt.cshift(self.Udag[mu] * src, mu, -1)
+                dst @= gpt.cshift(ref_Udag[mu] * src, mu, -1)
 
             return wrap
 
