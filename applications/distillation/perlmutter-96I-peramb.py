@@ -146,12 +146,13 @@ class job_perambulator(g.jobs.base):
         super().__init__(f"{conf}/pm_{solver}_t{t}_i{i0}",[])
 
     def perform(self, root):
-        if current_config not is None and current_config.conf_file != self.conf_file:
+        global current_config, current_light_quark
+        if current_config is not None and current_config.conf_file != self.conf_file:
             current_config = None
         if current_config is None:
             current_config = config(self.conf_file)
 
-        if current_light_quark not is None and current_light_quark.evec_dir != self.evec_dir:
+        if current_light_quark is not None and current_light_quark.evec_dir != self.evec_dir:
             current_light_quark = None
         if current_light_quark is None:
             current_light_quark = light_quark(current_config, self.evec_dir)
@@ -208,7 +209,7 @@ class job_contraction(g.jobs.base):
 jobs = []
 
 for group in groups:
-    for conf in groups[group]:
+    for conf in groups[group]["confs"]:
         conf_file = groups[group]["conf_fmt"] % conf
         evec_dir = groups[group]["evec_fmt"] % conf
         for t in [0,2]:#range(0, 192, 2):
@@ -222,7 +223,9 @@ for group in groups:
                 dep_group.append(j.name)
 
             # then once time-slice is complete, perform contractions and compress perambulators
-            jobs.append(job_contraction(conf, conf_file, basis_dir, t, "sloppy", dep_group))
+            jc = job_contraction(conf, conf_file, basis_dir, t, "sloppy", dep_group)
+            jobs.append(jc)
+            dep_group.append(jc.name)
 
             # once all of that is done, delete full perambulators (simple delete job)
 
