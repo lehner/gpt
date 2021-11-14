@@ -27,6 +27,7 @@ echo "Working directory = ${WORK_DIR}"
 for f in \
     ${test_path}/core/core.py \
     "${test_path}/core/core.py --verbose cg,deflate --verbose_add eval,cg --verbose_remove cg,deflate --help" \
+    ${test_path}/core/jobs.py \
     ${test_path}/core/tensors.py \
     ${test_path}/core/gamma.py \
     ${test_path}/core/block.py \
