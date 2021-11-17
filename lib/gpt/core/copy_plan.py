@@ -112,10 +112,7 @@ class copy_plan_executer:
 
 class copy_plan:
     def __init__(
-        self,
-        dst,
-        src,
-        embed_in_communicator=None,
+        self, dst, src, embed_in_communicator=None,
     ):
         self.destination = copy_plan_view(dst, embed_in_communicator)
         self.source = copy_plan_view(src, embed_in_communicator)

@@ -9,14 +9,10 @@ import os, glob, sys
 cnr = g.default.get("--config", None)
 t_groups = g.default.get_int("--t_groups", 1)
 t_group = g.default.get_int("--t_group", 0)
-config = glob.glob(
-    f"/global/cfs/projectdirs/mp13/lehner/96I/ckpoint_lat.{cnr}"
-)
+config = glob.glob(f"/global/cfs/projectdirs/mp13/lehner/96I/ckpoint_lat.{cnr}")
 assert len(config) == 1
 config = config[0]
-destination = (
-    f"/pscratch/sd/l/lehner/distillation/{cnr}_basis"
-)
+destination = f"/pscratch/sd/l/lehner/distillation/{cnr}_basis"
 
 t_smear_thick = 1
 rho_smear = 0.1

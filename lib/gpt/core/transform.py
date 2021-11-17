@@ -146,7 +146,9 @@ def slice(src, dim):
     result = cgpt.lattice_slice(src, dim)
 
     if return_list:
-        return [[gpt.util.value_to_tensor(v, src[0].otype) for v in res] for res in result]
+        return [
+            [gpt.util.value_to_tensor(v, src[0].otype) for v in res] for res in result
+        ]
     return [gpt.util.value_to_tensor(v, src[0].otype) for v in result[0]]
 
 

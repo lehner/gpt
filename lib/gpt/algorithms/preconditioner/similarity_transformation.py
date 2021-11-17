@@ -69,19 +69,11 @@ class similarity_transformation:
                 V.mat(o_d, tmp)
 
             wrapped_R = gpt.matrix_operator(
-                mat=_R,
-                adj_mat=_R_dag,
-                otype=R.otype,
-                grid=R.grid,
-                cb=R.cb,
+                mat=_R, adj_mat=_R_dag, otype=R.otype, grid=R.grid, cb=R.cb,
             )
 
             wrapped_L = gpt.matrix_operator(
-                mat=_L,
-                inv_mat=_L_inv,
-                otype=L.otype,
-                grid=L.grid,
-                cb=L.cb,
+                mat=_L, inv_mat=_L_inv, otype=L.otype, grid=L.grid, cb=L.cb,
             )
 
             wrapped_Mpc = gpt.matrix_operator(
