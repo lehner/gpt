@@ -78,6 +78,7 @@ def get_next_name(root, jobs):
             for dep_j in [lut[d] for d in j.needs]:
                 if not dep_j.has_completed(root):
                     dependencies_ok = False
+                    g.message(f"Dependency {dep_j.name} of {j.name} is not yet satisfied.")
                     break
             if dependencies_ok:
                 # last check if in meantime somebody else has started running same job
@@ -96,8 +97,16 @@ def next(root, jobs):
     j_name = g.broadcast(0, j).decode("utf-8")
     for j in jobs:
         if j.name == j_name:
-            g.message(f"Start {j.name}")
+            g.message(f"""
+--------------------------------------------------------------------------------
+   Start job {j.name}
+--------------------------------------------------------------------------------
+""")
             t0 = g.time()
             j(root)
             t1 = g.time()
-            g.message(f"Completed {j.name} in {t1-t0} seconds")
+            g.message(f"""
+--------------------------------------------------------------------------------
+   Completed {j.name} in {t1-t0} seconds
+--------------------------------------------------------------------------------
+""")
