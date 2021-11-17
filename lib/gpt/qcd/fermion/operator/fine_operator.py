@@ -18,31 +18,14 @@
 #
 import gpt, cgpt
 from gpt.qcd.fermion.operator.base import base
+from gpt.qcd.fermion.operator.interface import interface
 
 
 class fine_operator(base):
     def __init__(self, name, U, params, otype=None):
+
+        self.interface = interface()
+
         super().__init__(name, U, params, otype, True)
 
-        self.obj = cgpt.create_fermion_operator(
-            name, self.U_grid.precision, self.params
-        )
-
-    def __del__(self):
-        cgpt.delete_fermion_operator(self.obj)
-
-    def apply_unary_operator(self, opcode, o, i):
-        # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj, o.v_obj)
-
-    def apply_dirdisp_operator(self, opcode, o, i, dir, disp):
-        # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator_dirdisp(
-            self.obj, opcode, i.v_obj, o.v_obj, dir, disp
-        )
-
-    def apply_deriv_operator(self, opcode, m, u, v):
-        # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator_deriv(
-            self.obj, opcode, [y for x in m for y in x.v_obj], u.v_obj, v.v_obj
-        )
+        self.interface.setup(name, self.U_grid, self.params)

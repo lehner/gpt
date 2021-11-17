@@ -17,8 +17,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt
+import gpt
 from gpt.params import params_convention
+
+
+class method_registry:
+    pass
 
 
 class base(gpt.matrix_operator):
@@ -69,10 +73,8 @@ class base(gpt.matrix_operator):
             self.params[k] = params[k]
 
         # register matrix operators
-        class registry:
-            pass
-
-        gpt.qcd.fermion.register(registry, self)
+        registry = method_registry()
+        gpt.qcd.fermion.register(registry, self.interface)
 
         # map Grid matrix operations to clean matrix_operator structure
         super().__init__(
@@ -135,9 +137,12 @@ class base(gpt.matrix_operator):
             otype=otype,
             grid=(self.U_grid, self.F_grid),
         )
-        self.G5M = gpt.matrix_operator(
-            lambda dst, src: self._G5M(dst, src), otype=otype, grid=self.F_grid
-        )
+
+        def _G5M(dst, src):
+            registry.M(dst, src)
+            dst @= gpt.qcd.fermion.coarse.gamma5(dst) * dst
+
+        self.G5M = gpt.matrix_operator(_G5M, otype=otype, grid=self.F_grid)
         self.Dhop = gpt.matrix_operator(
             mat=registry.Dhop,
             adj_mat=registry.DhopDag,
@@ -184,7 +189,7 @@ class base(gpt.matrix_operator):
     def update(self, U):
         self.U = U
         self.params["U"] = [u.v_obj[0] for u in U]
-        cgpt.update_fermion_operator(self.obj, self.params)
+        self.interface.update(self.params)
 
     def split(self, mpi_split):
         split_grid = self.U_grid.split(mpi_split, self.U_grid.fdimensions)
@@ -193,10 +198,6 @@ class base(gpt.matrix_operator):
         for i, x in enumerate(U_split):
             x[pos_split] = self.U[i][pos_split]
         return self.updated(U_split)
-
-    def _G5M(self, dst, src):
-        self(dst, src)
-        dst @= gpt.qcd.fermion.coarse.gamma5(dst) * dst
 
     def propagator(self, solver):
         exp = self.ExportPhysicalFermionSolution

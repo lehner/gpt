@@ -605,6 +605,15 @@ for name in test_suite:
     # create fermion
     fermion_dp = test["fermion"](U, test["params"])
 
+    # make sure there are no reference loops in implementation
+    if isinstance(fermion_dp, g.qcd.fermion.operator.base.base):
+        g.message("Test for reference loops")
+        interface = fermion_dp.interface
+        del fermion_dp
+        assert sys.getrefcount(interface) == 2
+        del interface
+        fermion_dp = test["fermion"](U, test["params"])
+
     # do full tests
     grid = fermion_dp.F_grid
     src = rng.cnormal(g.vspincolor(grid))
