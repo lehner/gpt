@@ -28,6 +28,8 @@ inline void cgpt_lower_than(Lattice<iSinglet<vtype>>& answer, const Lattice<iSin
   conformable(grid, a.Grid());
   conformable(grid, b.Grid());
 
+  answer.Checkerboard() = a.Checkerboard();
+
   typedef typename Lattice<iSinglet<vtype>>::scalar_type stype;
   
   autoView(answer_v, answer, CpuWriteDiscard);
@@ -51,6 +53,8 @@ inline void cgpt_component_wise_multiply(Lattice<T>& answer, const Lattice<T>& a
   GridBase* grid = answer.Grid();
   conformable(grid, a.Grid());
   conformable(grid, b.Grid());
+
+  answer.Checkerboard() = a.Checkerboard();
 
   typedef typename Lattice<T>::vector_type vtype;
 

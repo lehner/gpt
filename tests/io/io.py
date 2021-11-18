@@ -26,6 +26,14 @@ else:
 rng = g.random("test")
 U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 
+sdomain = g.domain.sparse(U[0].grid, rng.choice(g.coordinates(U[0]), 13))
+S = sdomain.lattice(U[0].otype)
+sdomain.project(S, U[0])
+
+Ucpy = g.lattice(U[0])
+Ucpy[:] = 0
+sdomain.promote(Ucpy, S)
+
 # save in default gpt format
 g.save(
     f"{work_dir}/out",
@@ -41,6 +49,7 @@ g.save(
         ],  # fundamental data types
         "np": g.coordinates(U[0].grid),  # write numpy array from root node
         "U": U,  # write list of lattices
+        "S": S,  # write sparse lattice
     },
 )
 

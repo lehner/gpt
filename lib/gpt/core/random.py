@@ -155,6 +155,18 @@ class random:
         # gpt.message(t)
         return out
 
+    def choice(self, array, n):
+        if isinstance(array, numpy.ndarray):
+            return numpy.take(
+                array,
+                [self.uniform_int(min=0, max=len(array) - 1) for i in range(n)],
+                axis=0,
+            )
+        else:
+            return [
+                array[self.uniform_int(min=0, max=len(array) - 1)] for i in range(n)
+            ]
+
 
 # sha256
 def sha256(mv):
