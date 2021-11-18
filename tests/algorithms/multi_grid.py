@@ -105,12 +105,17 @@ coarsest_solver_lvl3 = coarsest_solver.modified()
 
 wrapper_solver_lvl2 = wrapper_solver.modified(
     prec=i.sequence(
-        i.coarse_grid(coarsest_solver_lvl3, *mg_setup_3lvl_sp[1]), smooth_solver_lvl3,
+        i.coarse_grid(coarsest_solver_lvl3, *mg_setup_3lvl_sp[1]),
+        smooth_solver_lvl3,
     )
 )
 
 mg_3lvl_kcycle_sp = i.sequence(
-    i.coarse_grid(wrapper_solver_lvl2, *mg_setup_3lvl_sp[0],), smooth_solver_lvl2,
+    i.coarse_grid(
+        wrapper_solver_lvl2,
+        *mg_setup_3lvl_sp[0],
+    ),
+    smooth_solver_lvl2,
 )
 
 # Shorter version if we do not want to create timing overview below:
@@ -153,7 +158,8 @@ assert niter_prec_2lvl_mg_vcycle_dp <= niter_prec_smooth
 
 # preconditioned inversion (3lvl mg -- kcycle -- mixed precision)
 fgmres_outer = i.fgmres(
-    fgmres_params, prec=i.mixed_precision(mg_3lvl_kcycle_sp, g.single, g.double),
+    fgmres_params,
+    prec=i.mixed_precision(mg_3lvl_kcycle_sp, g.single, g.double),
 )
 sol_prec_3lvl_mg_kcycle_mp = g.eval(fgmres_outer(w_dp) * src)
 

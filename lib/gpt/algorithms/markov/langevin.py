@@ -51,11 +51,15 @@ class langevin_bf:
         ]
         fields_tilde = g.copy(fields)
         for d, f, n in zip(gr, fields_tilde, sqrteps_eta):
-            f @= g.group.compose(-d * self.eps - n, f,)
+            f @= g.group.compose(
+                -d * self.eps - n,
+                f,
+            )
         gr_tilde = action.gradient(fields_tilde, fields_tilde)
         for d_tilde, d, f_tilde, f, n in zip(
             gr_tilde, gr, fields_tilde, fields, sqrteps_eta
         ):
             f @= g.group.compose(
-                -(d + d_tilde) * (self.eps * 0.5 * (1.0 + CA * self.eps / 6.0)) - n, f,
+                -(d + d_tilde) * (self.eps * 0.5 * (1.0 + CA * self.eps / 6.0)) - n,
+                f,
             )

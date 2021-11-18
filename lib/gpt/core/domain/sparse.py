@@ -19,29 +19,39 @@
 import gpt
 import numpy as np
 
+
 class sparse:
-    def __init__(self, grid, local_positions):
+    def __init__(self, grid, local_coordinates):
         assert grid.cb.n == 1
         self.grid = grid
-        self.local_positions = local_positions
+        self.local_coordinates = local_coordinates
 
         # create a minimally embedding lattice geometry
-        n = len(local_positions)
+        n = len(local_coordinates)
         N = self.grid.Nprocessors
         l = np.zeros(N, dtype=np.uint64)
-        l[self.grid.processor] = 2**int(np.ceil(np.log(n) / np.log(2)))
+        l[self.grid.processor] = 2 ** int(np.ceil(np.log(n) / np.log(2)))
         l = grid.globalsum(l)
-        self.L = [int(np.max(l))*self.grid.mpi[0]] + self.grid.mpi[1:]
+        self.L = [int(np.max(l)) * self.grid.mpi[0]] + self.grid.mpi[1:]
 
-        cb_simd_only_first_dimension = gpt.general(1, [0]*grid.nd, [1]+[0]*(grid.nd-1))
+        cb_simd_only_first_dimension = gpt.general(
+            1, [0] * grid.nd, [1] + [0] * (grid.nd - 1)
+        )
 
         # create grid as subcommunicator so that sparse domains play nice with split grid
-        self.embedding_grid = gpt.grid(self.L, grid.precision, cb_simd_only_first_dimension, None, self.grid.mpi, grid)
+        self.embedding_grid = gpt.grid(
+            self.L,
+            grid.precision,
+            cb_simd_only_first_dimension,
+            None,
+            self.grid.mpi,
+            grid,
+        )
 
-        print(type(self.embedding_grid),self.embedding_grid.cb.n)
-        self.embedded_positions = np.ascontiguousarray(gpt.coordinates(self.embedding_grid)[0:n])
+        self.embedded_coordinates = np.ascontiguousarray(
+            gpt.coordinates(self.embedding_grid)[0:n]
+        )
 
-        print(self.embedded_positions)
         self.cache = {}
 
     def lattice(self, otype):
@@ -52,7 +62,18 @@ class sparse:
         return x
 
     def project(self, dst, src):
-        dst[self.embedded_positions] = src[self.local_positions]
+        dst[self.embedded_coordinates] = src[self.local_coordinates]
 
     def promote(self, dst, src):
-        dst[self.local_positions] = src[self.embedded_positions]
+        dst[self.local_coordinates] = src[self.embedded_coordinates]
+
+    def coordinate_lattices(self):
+        ret = []
+        for i in range(self.grid.nd):
+            coor_i = gpt.complex(self.embedding_grid)
+            coor_i[:] = float("nan")
+            coor_i[self.embedded_coordinates] = self.local_coordinates[:, i].astype(
+                np.complex128
+            )
+            ret.append(coor_i)
+        return ret

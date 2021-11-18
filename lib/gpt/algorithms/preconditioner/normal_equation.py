@@ -53,7 +53,11 @@ class normal_equation:
                 R.adj_mat(o, tmp)
 
             wrapped_R = gpt.matrix_operator(
-                mat=_R, adj_mat=_R_dag, otype=R.otype, grid=R.grid, cb=R.cb,
+                mat=_R,
+                adj_mat=_R_dag,
+                otype=R.otype,
+                grid=R.grid,
+                cb=R.cb,
             )
 
             wrapped_Mpc = gpt.matrix_operator(

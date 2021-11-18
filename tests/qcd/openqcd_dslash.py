@@ -125,7 +125,11 @@ def read_openqcd_fermion(fname, cb=None):
 
     assert cb in [g.even, g.odd]
     cbgrid = g.grid(
-        grid.gdimensions, grid.precision, g.redblack, parent=grid.parent, mpi=grid.mpi,
+        grid.gdimensions,
+        grid.precision,
+        g.redblack,
+        parent=grid.parent,
+        mpi=grid.mpi,
     )
     cbfield = g.vspincolor(cbgrid)
     g.pick_checkerboard(cb, cbfield, field)

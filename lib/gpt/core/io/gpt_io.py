@@ -113,7 +113,7 @@ class gpt_io:
         dn, fn = get_local_name(self.root, cv)
         loc_desc = cv.describe() + "/" + ("Write" if write else "Read")
 
-        tag = "%d-%s" % (xk, str(iview))
+        tag = "%d-%s-%s" % (xk, str(iview), cv.fdimensions)
 
         if loc_desc != self.loc_desc:
             self.close_views()
@@ -326,6 +326,18 @@ class gpt_io:
             assert crc32_computed == crc32_compare
         return numpy.load(io.BytesIO(data))
 
+    def write_domain_sparse(self, ctx, sdomain):
+        return sdomain.grid.describe()
+
+    def read_domain_sparse(self, sdomain_grid, sdomain_cl):
+        def rmnan(x):
+            return x[~numpy.isnan(x)[:, 0]]
+
+        local_coordinates = numpy.hstack(
+            tuple([rmnan(x[:]).real.astype(numpy.int32) for x in sdomain_cl])
+        )
+        return gpt.domain.sparse(sdomain_grid, local_coordinates)
+
     def write(self, objs):
         self.create_index("", objs)
         self.flush()
@@ -369,6 +381,12 @@ class gpt_io:
             )  # improve: avoid implicit type conversion
         elif type(objs) == gpt.grid:
             f.write("grid %s\n" % objs.describe())
+        elif type(objs) == gpt.domain.sparse:
+            f.write("domain.sparse <\n")
+            f.write(self.write_domain_sparse(ctx, objs) + "\n")
+            for i, x in enumerate(objs.coordinate_lattices()):
+                f.write("lattice %s\n" % self.write_lattice(ctx + "/cl" + str(i), x))
+            f.write(">\n")
         else:
             print("Unknown type: ", type(objs))
             assert 0
@@ -435,6 +453,22 @@ class gpt_io:
             return self.read_lattice(a[1:])
         elif cmd == "grid":
             return gpt.grid_from_description(p.get()[1])
+        elif cmd == "domain.sparse":
+            p.skip()
+            a = p.get()
+            sdomain_grid = gpt.grid_from_description(a[0])
+            assert len(a) == 1
+            sdomain_cl = []
+            keep = self.keep_context(ctx)
+            for i in range(sdomain_grid.nd):
+                a = p.get()
+                assert a[0] == "lattice"
+                sdomain_cl.append(self.read_lattice(a[1:]) if keep else None)
+            a = p.get()
+            assert a == [">"]
+            if not keep:
+                return None
+            return self.read_domain_sparse(sdomain_grid, sdomain_cl)
         else:
             assert 0
 
