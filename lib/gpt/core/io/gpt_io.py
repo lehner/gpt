@@ -113,7 +113,8 @@ class gpt_io:
         dn, fn = get_local_name(self.root, cv)
         loc_desc = cv.describe() + "/" + ("Write" if write else "Read")
 
-        tag = "%d-%s-%s" % (xk, str(iview), cv.fdimensions)
+        tag = "%d-%s" % (xk, str(iview))
+        tag_pos = "%s-%s-%s-%s" % (tag, str(fdimensions), str(g_cb), str(l_cb))
 
         if loc_desc != self.loc_desc:
             self.close_views()
@@ -127,9 +128,11 @@ class gpt_io:
             self.loc[tag] = (
                 gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
             )
-            self.pos[tag] = gpt.coordinates(cv)
 
-        return self.loc[tag], self.pos[tag]
+        if tag_pos not in self.pos:
+            self.pos[tag_pos] = gpt.coordinates(cv)
+
+        return self.loc[tag], self.pos[tag_pos]
 
     def views_for_node(self, cv, grid):
         return cv.views_for_node(grid)
