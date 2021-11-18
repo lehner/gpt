@@ -70,7 +70,8 @@ class FILE:
         assert self.f is not None
         t = bytes(sz)
         if sz > 0:
-            assert cgpt.fread(self.f, sz, memoryview(t)) == 1
+            if cgpt.fread(self.f, sz, memoryview(t)) != 1:
+                t = bytes(0)
         return t
 
     def write(self, d):

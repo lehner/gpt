@@ -83,9 +83,7 @@ g.qcd.fermion.coarse.create_links(
 # compare link fields
 for p in range(9):
     err2 = g.norm2(A_c[p] - Asaved_c[p]) / g.norm2(A_c[p])
-    g.message(
-        f"Relative deviation of Asaved_c[{p}] from A_c[{p}] = {err2:e}",
-    )
+    g.message(f"Relative deviation of Asaved_c[{p}] from A_c[{p}] = {err2:e}",)
     assert err2 <= tol_links
 g.message("Tests for links passed for all directions")
 del Asaved_c
@@ -140,9 +138,7 @@ g.qcd.fermion.coarse.create_links(
 # compare link fields
 for p in range(9):
     err2 = g.norm2(A_cc[p] - Asaved_cc[p]) / g.norm2(A_cc[p])
-    g.message(
-        f"Relative deviation of Asaved_cc[{p}] from A_cc[{p}] = {err2:e}",
-    )
+    g.message(f"Relative deviation of Asaved_cc[{p}] from A_cc[{p}] = {err2:e}",)
     assert err2 <= tol_links
 g.message("Tests for links passed for all directions")
 del Asaved_cc

@@ -53,8 +53,10 @@ def str_to_checkerboarding(s, nd):
     else:
         a = s.split("_")
         if a[0] == "general":
-            print("TODO: implement")
-            sys.stdout.flush()
+            n = int(a[1])
+            cb_mask = [int(x) for x in a[2].strip("[]").split(",")]
+            simd_mask = [int(x) for x in a[3].strip("[]").split(",")]
+            return general(n, cb_mask, simd_mask)
         assert 0
 
 

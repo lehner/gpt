@@ -340,10 +340,7 @@ def load(filename, params):
                     dt_fp16 += gpt.time()
                     dt_munge -= gpt.time()
                     cgpt.munge_inner_outer(
-                        data_munged,
-                        data_fp32,
-                        nbasis - nsingleCap,
-                        block_reduce,
+                        data_munged, data_fp32, nbasis - nsingleCap, block_reduce,
                     )
                     dt_munge += gpt.time()
                 else:
@@ -665,10 +662,7 @@ def save(filename, objs, params):
             if f is not None:
                 dt_munge -= gpt.time()
                 cgpt.munge_inner_outer(
-                    data,
-                    data_munged,
-                    block_reduce,
-                    nsingleCap,
+                    data, data_munged, block_reduce, nsingleCap,
                 )
                 dt_munge += gpt.time()
                 dt_crc -= gpt.time()
@@ -735,10 +729,7 @@ def save(filename, objs, params):
                 if f is not None:
                     dt_munge -= gpt.time()
                     cgpt.munge_inner_outer(
-                        data_fp32,
-                        data_munged,
-                        block_reduce,
-                        nbasis - nsingleCap,
+                        data_fp32, data_munged, block_reduce, nbasis - nsingleCap,
                     )
                     dt_munge += gpt.time()
                     dt_fp16 -= gpt.time()

@@ -56,11 +56,7 @@ class random:
         elif type(t) == gpt.lattice:
             t0 = gpt.time()
             cgpt.random_sample(
-                self.obj,
-                {
-                    **p,
-                    **{"lattices": [t]},
-                },
+                self.obj, {**p, **{"lattices": [t]}}
             )
             t1 = gpt.time()
             assert "pos" not in p  # to ensure that deprecated code is not used
