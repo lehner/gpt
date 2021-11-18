@@ -168,13 +168,13 @@ class gpt_io:
         # need to write all views
         for xk, iview in enumerate(views_for_node):
 
-            cache_key = res + f"_{g.obj}_{xk}_{iview}_write"
-            if cache_key not in self.cache:
-                self.cache[cache_key] = {}
-
             f, p = self.open_view(
                 xk, iview, True, mpi, g.fdimensions, g.cb, l.checkerboard()
             )
+
+            cache_key = res + f"_{g.obj}_{xk}_{iview}_{id(p)}_write"
+            if cache_key not in self.cache:
+                self.cache[cache_key] = {}
 
             # all nodes are needed to communicate
             dt_distr -= gpt.time()
@@ -254,7 +254,7 @@ class gpt_io:
                 xk, iview, False, cv_desc, g.fdimensions, g.cb, l.checkerboard()
             )
 
-            cache_key = f"{a[0:3]}_{g.obj}_{xk}_{iview}_read"
+            cache_key = f"{a[0:3]}_{g.obj}_{xk}_{iview}_{id(pos)}_read"
             if cache_key not in self.cache:
                 self.cache[cache_key] = {}
 
