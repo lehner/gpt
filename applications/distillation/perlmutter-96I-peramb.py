@@ -150,6 +150,7 @@ class job_perambulator(g.jobs.base):
         self.i0 = i0
         self.ilist = list(range(i0, i0+sloppy_per_job))
         super().__init__(f"{conf}/pm_{solver}_t{t}_i{i0}",[])
+        self.weight = 2.0
 
     def perform(self, root):
         global current_config, current_light_quark
@@ -304,7 +305,10 @@ class job_contraction(g.jobs.base):
         output_correlator.close()
         
     def check(self, root):
-        return False
+        cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
+        exp = basis_size ** 2 * 16
+        g.message("check count",cnt,exp)
+        return cnt == exp
 
 
 class job_mom(g.jobs.base):
@@ -413,7 +417,10 @@ class job_local_insertion(g.jobs.base):
         output_correlator.close()
         
     def check(self, root):
-        return False
+        cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
+        exp = basis_size ** 2 * 16 * 5
+        g.message("check count",cnt,exp)
+        return cnt == exp
 
 
 class job_compress_half_peramb(g.jobs.base):
@@ -432,7 +439,7 @@ class job_compress_half_peramb(g.jobs.base):
             current_config = config(self.conf_file)
 
         U = current_config.U
-        reduced_mpi = U[0].grid.mpi
+        reduced_mpi = [x for x in U[0].grid.mpi]
         for i in range(len(reduced_mpi)):
             if reduced_mpi[i] % 2 == 0:
                 reduced_mpi[i] //= 2
@@ -495,35 +502,59 @@ class job_local_insertion_using_compressed(g.jobs.base):
         g.message("scale =",scale)
         gamma5_sign = [1.*scale,1.*scale,-1.*scale,-1.*scale]
 
-        for i in range(basis_size):
-            for spin in range(4):
-                g.message(i, spin)
-                hp_i = half_peramb[f"t{self.t}s{spin}c{i}_{self.solver}"]
-                for mu in indices:
-                    hp_i_gamma = g( g.gamma[5] * g.gamma[mu] * hp_i )
-                    for spin_prime in range(4):
-                        slc_j = [g(gamma5_sign[spin_prime]*g.adj(half_peramb[f"t{self.t}s{spin_prime}c{j}_{self.solver}"])*hp_i_gamma)
-                                 for j in range(basis_size)]
-                        slc = g.slice(slc_j, 3)
+        for i0 in range(0, basis_size, sloppy_per_job):
+            half_peramb_i = {}
+            for i in range(i0, i0 + sloppy_per_job):
+                for spin in range(4):
+                    f = g.vspincolor(sdomain.grid)
+                    f[:] = 0
+                    sdomain.promote(f, half_peramb[f"t{self.t}s{spin}c{i}_{self.solver}"])
+                    half_peramb_i[f"t{self.t}s{spin}c{i}_{self.solver}"] = f
+                    
+            for j0 in range(0, basis_size, sloppy_per_job):
+                if j0 == i0:
+                    half_peramb_j = half_peramb_i
+                else:
+                    half_peramb_j = {}
+                    for j in range(j0, j0 + sloppy_per_job):
+                        for spin in range(4):
+                            f = g.vspincolor(sdomain.grid)
+                            f[:] = 0
+                            sdomain.promote(f, half_peramb[f"t{self.t}s{spin}c{j}_{self.solver}"])
+                            half_peramb_j[f"t{self.t}s{spin}c{j}_{self.solver}"] = f
+
+                for i in range(i0, i0 + sloppy_per_job):
+                    for spin in range(4):
+                        g.message(i, spin)
+                        hp_i = half_peramb_i[f"t{self.t}s{spin}c{i}_{self.solver}"]
+                        for mu in indices:
+                            hp_i_gamma = g( g.gamma[5] * g.gamma[mu] * hp_i )
+                            for spin_prime in range(4):
+                                slc_j = [g(gamma5_sign[spin_prime]*g.adj(half_peramb_j[f"t{self.t}s{spin_prime}c{j}_{self.solver}"])*hp_i_gamma)
+                                         for j in range(j0, j0 + sloppy_per_job)]
+                                slc = g.slice(slc_j, 3)
                                
-                        for j in range(basis_size):
-                            output_correlator.write(f"output/G{mu}_prec{prec}/n_{j}_{i}_s_{spin_prime}_{spin}_t_{self.t}", slc[j])
+                                for j in range(j0, j0 + sloppy_per_job):
+                                    output_correlator.write(f"output/G{mu}_prec{prec}/n_{j}_{i}_s_{spin_prime}_{spin}_t_{self.t}", slc[j-j0])
                                     
         output_correlator.close()
         
     def check(self, root):
-        return False
+        cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
+        exp = basis_size ** 2 * 16 * 5
+        g.message("check count",cnt,exp)
+        return cnt == exp
 
 
 class job_delete_half_peramb(g.jobs.base):
     def __init__(self, targets, dependencies):
         self.targets = targets
-        super().__init__(f"{conf}/pm_{solver}_t{t}_i{i0}_delete",dependencies)
+        super().__init__(f"{conf}/pm_delete",dependencies)
 
     def perform(self, root):
         for target in self.targets:
             dst = f"{root}/{target}/propagators"
-            g.message(dst,"Delete")
+            g.message(dst,"Delete", os.path.exists(dst))
     
     def check(self, root):
         return False
@@ -592,7 +623,10 @@ for group in groups:
 
 
 # main job loop
-for jid in range(g.default.get_int("--gpt_jobs", 1)):
-    g.jobs.next(root_output, jobs)
-
-
+jobs_total = g.default.get_int("--gpt_jobs", 1)
+jobs_acc = 0
+while jobs_acc < jobs_total:
+    j = g.jobs.next(root_output, jobs)
+    if j is None:
+        break
+    jobs_acc += j.weight

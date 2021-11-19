@@ -141,7 +141,7 @@ def slice(src, dim):
     src = gpt.util.to_list(gpt.eval(src))
 
     # check for consistent otype
-    assert all([src[0].otype == obj.otype for obj in src])
+    assert all([src[0].otype.__name__ == obj.otype.__name__ for obj in src])
 
     result = cgpt.lattice_slice(src, dim)
 

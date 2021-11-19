@@ -150,6 +150,9 @@ assert "test" in r.glob("*")
 for i in range(len(corr)):
     assert abs(r.tags["test"][i] - corr[i]) == 0.0
 
+assert g.corr_io.count(f"{work_dir}/head.dat") == 1
+
+
 # NERSC
 fn = f"{work_dir}/ckpoint.0000"
 g.save(fn, U, g.format.nersc())

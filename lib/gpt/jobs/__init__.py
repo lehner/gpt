@@ -24,6 +24,7 @@ class base:
     def __init__(self, name, needs):
         self.name = name
         self.needs = needs
+        self.weight = 1.0
 
     def perform(self, root):
         raise NotImplementedError(f"{self.name} perform not implemented")
@@ -118,3 +119,5 @@ def next(root, jobs):
 --------------------------------------------------------------------------------
 """
             )
+            return j
+    return None
