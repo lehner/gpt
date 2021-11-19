@@ -48,6 +48,23 @@ class writer:
         gpt.barrier()
 
 
+def count(fn):
+    n = 0
+    f = open(fn, "r+b")
+    while True:
+        rd = f.read(4)
+        if len(rd) == 0:
+            break
+        ntag = struct.unpack("i", rd)[0]
+        tag = f.read(ntag).decode("utf-8")
+        (crc32, ln) = struct.unpack("II", f.read(4 * 2))
+
+        data = f.read(16 * ln)
+        n += 1
+    f.close()
+    return n
+
+    
 class reader:
     def __init__(self, fn):
         self.tags = {}

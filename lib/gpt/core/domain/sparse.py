@@ -20,6 +20,13 @@ import gpt
 import numpy as np
 
 
+def get_cache(c, l):
+    t = l.otype.__name__
+    if t not in c:
+        c[t] = {}
+    return c[t]
+
+
 class sparse:
     def __init__(self, grid, local_coordinates):
         assert grid.cb.n == 1
@@ -52,20 +59,19 @@ class sparse:
             gpt.coordinates(self.embedding_grid)[0:n]
         )
 
-        self.cache = {}
+        self.embedded_cache = {}
+        self.local_cache = {}
 
     def lattice(self, otype):
         x = gpt.lattice(self.embedding_grid, otype)
         x[:] = 0
-
-        # TODO: create copy plans for this otype and cache them
         return x
 
     def project(self, dst, src):
-        dst[self.embedded_coordinates] = src[self.local_coordinates]
+        dst[self.embedded_coordinates, get_cache(self.embedded_cache, dst)] = src[self.local_coordinates, get_cache(self.local_cache, src)]
 
     def promote(self, dst, src):
-        dst[self.local_coordinates] = src[self.embedded_coordinates]
+        dst[self.local_coordinates, get_cache(self.local_cache, dst)] = src[self.embedded_coordinates, get_cache(self.embedded_cache, src)]
 
     def coordinate_lattices(self):
         ret = []

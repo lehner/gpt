@@ -172,7 +172,7 @@ class gpt_io:
                 xk, iview, True, mpi, g.fdimensions, g.cb, l.checkerboard()
             )
 
-            cache_key = res + f"_{g.obj}_{xk}_{iview}_{id(p)}_write"
+            cache_key = res + f"_{g.obj}_{xk}_{iview}_{id(p)}_{l.otype.__name__}_write"
             if cache_key not in self.cache:
                 self.cache[cache_key] = {}
 
@@ -254,7 +254,7 @@ class gpt_io:
                 xk, iview, False, cv_desc, g.fdimensions, g.cb, l.checkerboard()
             )
 
-            cache_key = f"{a[0:3]}_{g.obj}_{xk}_{iview}_{id(pos)}_read"
+            cache_key = f"{a[0:3]}_{g.obj}_{xk}_{iview}_{id(pos)}_{l.otype.__name__}_read"
             if cache_key not in self.cache:
                 self.cache[cache_key] = {}
 
