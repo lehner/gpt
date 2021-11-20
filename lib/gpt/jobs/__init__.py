@@ -35,8 +35,12 @@ class base:
     def has_started(self, root):
         return os.path.exists(f"{root}/{self.name}")
 
-    def reserve_start(self, root):
-        os.makedirs(f"{root}/{self.name}", exist_ok=True)
+    def atomic_reserve_start(self, root):
+        try:
+            os.makedirs(f"{root}/{self.name}", exist_ok=False)
+            return True
+        except:
+            return False
 
     def has_completed(self, root):
         fd = f"{root}/{self.name}"
@@ -86,8 +90,7 @@ def get_next_name(root, jobs):
                     break
             if dependencies_ok:
                 # last check if in meantime somebody else has started running same job
-                if not j.has_started(root):
-                    j.reserve_start(root)
+                if j.atomic_reserve_start(root):
                     return j.name
 
     return ""
