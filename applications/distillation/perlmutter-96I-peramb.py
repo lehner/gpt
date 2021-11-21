@@ -7,7 +7,7 @@
 import gpt as g
 import numpy as np
 import sys, os, glob
-
+import shutil
 
 # configure
 root_output = "/pscratch/sd/l/lehner/distillation"
@@ -418,7 +418,7 @@ class job_local_insertion(g.jobs.base):
         
     def check(self, root):
         cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
-        exp = basis_size ** 2 * 16 * 5
+        exp = basis_size ** 2 * 16 * 4
         g.message("check count",cnt,exp)
         return cnt == exp
 
@@ -443,12 +443,23 @@ class job_compress_half_peramb(g.jobs.base):
         for i in range(len(reduced_mpi)):
             if reduced_mpi[i] % 2 == 0:
                 reduced_mpi[i] //= 2
-        rng = g.random(f"sparse_{conf}")
+
+        # create random selection of points with same spatial sites on each sink time slice
+        # use different spatial sites for each source time-slice
+        # this should be optimal for the local operator insertions
+        rng = g.random(f"sparse_{conf}_{self.t}")
+        grid = U[0].grid
+        t0 = grid.ldimensions[3] * grid.processor_coor[3]
+        t1 = t0 + grid.ldimensions[3]
+        spatial_sites = int(compress_ratio * np.prod(grid.ldimensions[0:3]))
+        spatial_coordinates = rng.choice(g.coordinates(U[0]), spatial_sites)
+        local_coordinates = np.repeat(spatial_coordinates, t1-t0, axis=0)
+        for t in range(t0, t1):
+            local_coordinates[t-t0::t1-t0,3] = t
+    
         sdomain = g.domain.sparse(
             current_config.l_exact.U_grid,
-            rng.choice(
-                g.coordinates(U[0]), int(compress_ratio * U[0].grid.gsites / U[0].grid.Nprocessors)
-            ),
+            local_coordinates
         )
 
         half_peramb = { "sparse_domain" : sdomain }
@@ -541,7 +552,7 @@ class job_local_insertion_using_compressed(g.jobs.base):
         
     def check(self, root):
         cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
-        exp = basis_size ** 2 * 16 * 5
+        exp = basis_size ** 2 * 16 * 4
         g.message("check count",cnt,exp)
         return cnt == exp
 
@@ -555,7 +566,11 @@ class job_delete_half_peramb(g.jobs.base):
         for target in self.targets:
             dst = f"{root}/{target}/propagators"
             g.message(dst,"Delete", os.path.exists(dst))
-    
+            if os.path.exists(dst) and g.rank() == 0:
+                shutil.rmtree(dst)
+
+        g.barrier()
+        
     def check(self, root):
         return False
 
@@ -585,7 +600,7 @@ for group in groups:
         jm = job_mom(conf, conf_file, momenta, "first", [jb.name])
         jobs.append(jm)
 
-        for t in [0,2]:#range(0, 192, 2):
+        for t in range(0, 96, 2):
             basis_dir = groups[group]["basis_fmt"] % (conf,t)
        
             # first need perambulators for each time-slice
@@ -618,12 +633,10 @@ for group in groups:
             j = job_delete_half_peramb(delete_names, dep_all)
             jobs.append(j)
             
-        break
-    break
 
 
 # main job loop
-jobs_total = g.default.get_int("--gpt_jobs", 1)
+jobs_total = g.default.get_int("--gpt_jobs", 1) * 2
 jobs_acc = 0
 while jobs_acc < jobs_total:
     j = g.jobs.next(root_output, jobs)
