@@ -71,14 +71,15 @@ class base:
         f.close()
 
 
-def get_next_name(root, jobs):
+def get_next_name(root, jobs, max_weight):
     # create lut
     lut = {}
     for j in jobs:
         lut[j.name] = j
 
     for j in jobs:
-        if not j.has_started(root):
+        weight_ok = max_weight is None or j.weight <= max_weight
+        if not j.has_started(root) and weight_ok:
             # check dependencies
             dependencies_ok = True
             for dep_j in [lut[d] for d in j.needs]:
@@ -96,9 +97,9 @@ def get_next_name(root, jobs):
     return ""
 
 
-def next(root, jobs):
+def next(root, jobs, max_weight = None):
     if g.rank() == 0:
-        j = get_next_name(root, jobs).encode("utf-8")
+        j = get_next_name(root, jobs, max_weight).encode("utf-8")
     else:
         j = bytes()
 

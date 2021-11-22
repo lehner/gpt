@@ -150,7 +150,7 @@ class job_perambulator(g.jobs.base):
         self.i0 = i0
         self.ilist = list(range(i0, i0+sloppy_per_job))
         super().__init__(f"{conf}/pm_{solver}_t{t}_i{i0}",[])
-        self.weight = 2.0
+        self.weight = 1.0
 
     def perform(self, root):
         global current_config, current_light_quark
@@ -248,6 +248,7 @@ class job_contraction(g.jobs.base):
         self.t = t
         self.solver = solver
         super().__init__(f"{conf}/pm_contr_{solver}_t{t}", dependencies)
+        self.weight = 0.5
 
     def perform(self, root):
         global basis_size, sloppy_per_job, T, current_config
@@ -368,7 +369,8 @@ class job_local_insertion(g.jobs.base):
         self.t = t
         self.solver = solver
         super().__init__(f"{conf}/pm_local_insertion_{solver}_t{t}", dependencies)
-
+        self.weight = 1.5
+        
     def perform(self, root):
         global basis_size, sloppy_per_job, T, current_config
         if current_config is not None and current_config.conf_file != self.conf_file:
@@ -430,6 +432,7 @@ class job_compress_half_peramb(g.jobs.base):
         self.t = t
         self.solver = solver
         super().__init__(f"{conf}/pm_compressed_half_peramb_{solver}_t{t}", dependencies)
+        self.weight = 0.2
 
     def perform(self, root):
         global basis_size, sloppy_per_job, T, current_config, compress_ratio
@@ -490,7 +493,8 @@ class job_local_insertion_using_compressed(g.jobs.base):
         self.t = t
         self.solver = solver
         super().__init__(f"{conf}/pm_local_insertion_using_compressed_{solver}_t{t}", dependencies)
-
+        self.weight = 1.5
+        
     def perform(self, root):
         global basis_size, sloppy_per_job, T, current_config
         if current_config is not None and current_config.conf_file != self.conf_file:
@@ -558,9 +562,10 @@ class job_local_insertion_using_compressed(g.jobs.base):
 
 
 class job_delete_half_peramb(g.jobs.base):
-    def __init__(self, targets, dependencies):
+    def __init__(self, t, targets, dependencies):
         self.targets = targets
-        super().__init__(f"{conf}/pm_delete",dependencies)
+        super().__init__(f"{conf}/pm_delete_t{t}",dependencies)
+        self.weight = 0.1
 
     def perform(self, root):
         for target in self.targets:
@@ -630,16 +635,16 @@ for group in groups:
 
             # once all of that is done, delete full perambulators (simple delete job)
             dep_all = dep_group + [jc.name, jcmp.name, jl.name, jlc.name]
-            j = job_delete_half_peramb(delete_names, dep_all)
+            j = job_delete_half_peramb(t, delete_names, dep_all)
             jobs.append(j)
             
 
 
 # main job loop
-jobs_total = g.default.get_int("--gpt_jobs", 1) * 2
+jobs_total = g.default.get_int("--gpt_jobs", 1) * 2.5
 jobs_acc = 0
 while jobs_acc < jobs_total:
-    j = g.jobs.next(root_output, jobs)
+    j = g.jobs.next(root_output, jobs, max_weight = jobs_total - jobs_acc)
     if j is None:
         break
     jobs_acc += j.weight
