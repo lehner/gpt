@@ -450,7 +450,7 @@ class job_compress_half_peramb(g.jobs.base):
         # create random selection of points with same spatial sites on each sink time slice
         # use different spatial sites for each source time-slice
         # this should be optimal for the local operator insertions
-        rng = g.random(f"sparse_{conf}_{self.t}")
+        rng = g.random(f"sparse2_{self.conf}_{self.t}")
         grid = U[0].grid
         t0 = grid.ldimensions[3] * grid.processor_coor[3]
         t1 = t0 + grid.ldimensions[3]
@@ -562,7 +562,7 @@ class job_local_insertion_using_compressed(g.jobs.base):
 
 
 class job_delete_half_peramb(g.jobs.base):
-    def __init__(self, t, targets, dependencies):
+    def __init__(self, conf, t, targets, dependencies):
         self.targets = targets
         super().__init__(f"{conf}/pm_delete_t{t}",dependencies)
         self.weight = 0.1
@@ -630,20 +630,22 @@ for group in groups:
             jobs.append(jl)
 
             # contract local operator insertions using compressed
-            jlc = job_local_insertion_using_compressed(conf, conf_file, t, "sloppy", dep_group + [jcmp.name])
-            jobs.append(jlc)
+            # jlc = job_local_insertion_using_compressed(conf, conf_file, t, "sloppy", dep_group + [jcmp.name])
+            # jobs.append(jlc)
 
             # once all of that is done, delete full perambulators (simple delete job)
-            dep_all = dep_group + [jc.name, jcmp.name, jl.name, jlc.name]
-            j = job_delete_half_peramb(t, delete_names, dep_all)
+            # dep_all = dep_group + [jc.name, jcmp.name, jl.name, jlc.name]
+            dep_all = dep_group + [jc.name, jcmp.name, jl.name]
+            j = job_delete_half_peramb(conf, t, delete_names, dep_all)
             jobs.append(j)
             
 
 
 # main job loop
-jobs_total = g.default.get_int("--gpt_jobs", 1) * 2.5
+jobs_total = g.default.get_int("--gpt_jobs", 1) * 3
 jobs_acc = 0
 while jobs_acc < jobs_total:
+    g.message("Weight left:", jobs_total - jobs_acc)
     j = g.jobs.next(root_output, jobs, max_weight = jobs_total - jobs_acc)
     if j is None:
         break
