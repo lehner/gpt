@@ -57,6 +57,24 @@ eps = abs(g(g.sum(g.trace(R_2x1_notp))).real / U[0].grid.gsites - R_2x1)
 g.message(f"R_2x1 field, no real and trace check: {eps}")
 assert eps < 1e-13
 
+# Test clover field strength against rectangles
+for mu in range(4):
+    for nu in range(4):
+        if mu != nu:
+            Fmunu = g.qcd.gauge.field_strength(U, mu, nu)
+
+            A, B = g.qcd.gauge.rectangle(U, [
+                [ (mu,1,nu,1), (nu,-1,mu,1), (mu,-1,nu,-1), (nu,1,mu,-1) ],
+                [ (nu,1,mu,1), (mu,-1,nu,1), (nu,-1,mu,-1), (mu,1,nu,-1) ]
+            ], real=False, trace=False, field=True)
+            Fmunutest = g(3/2*A - 3/2*B)
+            eps2 = g.norm2(Fmunutest - Fmunu)
+            g.message(f"F_{mu}{nu} test: {eps2}")
+            assert eps2 < 1e-25
+            eps2 = g.norm2(g.adj(A) - B)
+            g.message(f"F_{mu}{nu} adjoint test: {eps2}")
+            assert eps2 < 1e-25
+
 
 # Test gauge covariance of staple
 rho = np.array(
