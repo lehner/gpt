@@ -646,7 +646,7 @@ jobs_total = g.default.get_int("--gpt_jobs", 1) * 3
 jobs_acc = 0
 while jobs_acc < jobs_total:
     g.message("Weight left:", jobs_total - jobs_acc)
-    j = g.jobs.next(root_output, jobs, max_weight = jobs_total - jobs_acc)
+    j = g.jobs.next(root_output, jobs, max_weight = jobs_total - jobs_acc, stale_time = 3600 * 7)
     if j is None:
         break
     jobs_acc += j.weight

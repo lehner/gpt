@@ -25,12 +25,22 @@ if os.path.exists("test.root") and g.rank() == 0:
 
 g.barrier()
 
-for jid in range(4):
-    g.jobs.next(
+fail_B = True
+
+for jid in range(5):
+    j = g.jobs.next(
         "test.root",
         [
             job_create_file("A", []),
             job_create_file("C", ["B", "A"]),
             job_create_file("B", ["A"]),
         ],
+        stale_seconds=0.0,
     )
+
+    if j is not None and j.name == "file_B" and fail_B:
+        if g.rank() == 0:
+            os.unlink("test.root/file_B/.completed")
+            g.message("Fail B")
+        g.barrier()
+        fail_B = False
