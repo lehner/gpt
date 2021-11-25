@@ -37,11 +37,26 @@ g.message(
 )
 assert eps < 1e-13
 
+# Without trace and real projection
+R_2x1_notp = g.qcd.gauge.rectangle(U_transformed, 2, 1, trace=False, real=False)
+eps = abs(g.trace(R_2x1_notp).real - R_2x1)
+g.message(f"R_2x1 no real and trace check: {eps}")
+assert eps < 1e-13
+
 # Test field version
 R_2x1_field = g(g.sum(g.qcd.gauge.rectangle(U, 2, 1, field=True)) / U[0].grid.gsites)
 eps = abs(R_2x1 - R_2x1_field)
 g.message(f"R_2x1 field check: {eps}")
 assert eps < 1e-13
+
+# Without trace and real projection and field
+R_2x1_notp = g.qcd.gauge.rectangle(
+    U_transformed, 2, 1, trace=False, real=False, field=True
+)
+eps = abs(g(g.sum(g.trace(R_2x1_notp))).real / U[0].grid.gsites - R_2x1)
+g.message(f"R_2x1 field, no real and trace check: {eps}")
+assert eps < 1e-13
+
 
 # Test gauge covariance of staple
 rho = np.array(
