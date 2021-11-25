@@ -19,38 +19,81 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 
 default_rectangle_cache = {}
 
 
-class accumulator_average:
+class accumulator_base:
+    def scaled_project(self, scale, real):
+        if g.util.is_num(self.value):
+            return scale * (self.value.real if real else self.value)
+        else:
+            if real:
+                return g((g.adj(self.value) + self.value) * (scale / 2.0))
+            else:
+                return g(self.value * scale)
+
+
+class accumulator_average(accumulator_base):
     def __init__(self, like):
-        self.value = 0.0
+        self.value = g.tensor(
+            np.zeros(like.otype.shape, dtype=np.complex128), like.otype
+        )
 
     def __iadd__(self, v):
         v = g(v)
         self.value += g.sum(v) / v.grid.gsites
         return self
 
-    def scaled_real(self, scale):
-        return self.value.real * scale
 
-
-class accumulator_field:
+class accumulator_average_trace(accumulator_base):
     def __init__(self, like):
-        self.value = g.complex(like.grid)
+        self.value = 0.0
+
+    def __iadd__(self, v):
+        v = g(g.trace(v))
+        self.value += g.sum(v) / v.grid.gsites
+        return self
+
+
+class accumulator_field(accumulator_base):
+    def __init__(self, like):
+        self.value = g.lattice(like)
         self.value[:] = 0.0
 
     def __iadd__(self, v):
         self.value += v
         return self
 
-    def scaled_real(self, scale):
-        return g(g.component.real(self.value) * scale)
+
+class accumulator_field_trace(accumulator_base):
+    def __init__(self, like):
+        self.value = g.complex(like.grid)
+        self.value[:] = 0.0
+
+    def __iadd__(self, v):
+        self.value += g.trace(v)
+        return self
+
+
+accumulators = {
+    (False, False): accumulator_average,
+    (False, True): accumulator_average_trace,
+    (True, False): accumulator_field,
+    (True, True): accumulator_field_trace,
+}
 
 
 def rectangle(
-    U, first, second=None, third=None, cache=default_rectangle_cache, field=False
+    U,
+    first,
+    second=None,
+    third=None,
+    cache=default_rectangle_cache,
+    field=False,
+    trace=True,
+    real=True,
 ):
     #
     # Calling conventions:
@@ -62,7 +105,7 @@ def rectangle(
     # or specify explicit mu,L_mu,nu,L_nu configurations
     # rectangle(U, [ [ (0,1,3,2), (1,2,3,2) ] ])
     #
-    accumulator = accumulator_field if field else accumulator_average
+    accumulator = accumulators[(field, trace)]
     if second is not None:
         L_mu = first
         L_nu = second
@@ -87,7 +130,7 @@ def rectangle(
             else:
                 configurations.append(f)
 
-    cache_key = str(configurations)
+    cache_key = f"{len(U)}_{U[0].otype.__name__}_{U[0].grid}_" + str(configurations)
     if cache_key not in cache:
         paths = []
         elements = []
@@ -110,10 +153,10 @@ def rectangle(
     ridx = 0
     results = []
     for p in loops:
-        value += g.trace(p)
+        value += p
         idx += 1
         if idx == ranges[ridx]:
-            results.append(value.scaled_real(1.0 / idx / ndim))
+            results.append(value.scaled_project(1.0 / idx / ndim, real))
             idx = 0
             ridx = ridx + 1
             value = accumulator(U[0])
@@ -156,10 +199,10 @@ def field_strength(U, mu, nu):
 
 def energy_density(U, field=False):
     Nd = len(U)
-    accumulator = accumulator_field if field else accumulator_average
+    accumulator = accumulators[(field, True)]
     res = accumulator(U[0])
     for mu in range(Nd):
         for nu in range(mu):
             Fmunu = field_strength(U, mu, nu)
-            res += g.trace(Fmunu * Fmunu)
-    return res.scaled_real(-1.0)
+            res += Fmunu * Fmunu
+    return res.scaled_project(-1.0, True)
