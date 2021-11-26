@@ -613,38 +613,38 @@ for group in groups:
         jm = job_mom(conf, conf_file, momenta, "first", [jb.name])
         jobs.append(jm)
 
-        for t in range(0, 96, 2):
-            basis_dir = groups[group]["basis_fmt"] % (conf,t)
+        for tt in range(0, 96, 2):
+            basis_dir = groups[group]["basis_fmt"] % (conf,tt)
        
             # first need perambulators for each time-slice
             dep_group = [jb.name]
             delete_names = []
-            for i0 in range(0, basis_size, sloppy_per_job):
-                j = job_perambulator(conf, evec_dir, conf_file, basis_dir, t, i0, "sloppy", [jb.name])
+            for ii0 in range(0, basis_size, sloppy_per_job):
+                j = job_perambulator(conf, evec_dir, conf_file, basis_dir, tt, ii0, "sloppy", [jb.name])
                 jobs.append(j)
                 dep_group.append(j.name)
                 delete_names.append(j.name)
  
             # contract perambulators
-            jc = job_contraction(conf, conf_file, t, "sloppy", dep_group)
+            jc = job_contraction(conf, conf_file, tt, "sloppy", dep_group)
             jobs.append(jc)
 
             # compress half-perambulators
-            jcmp = job_compress_half_peramb(conf, conf_file, t, "sloppy", dep_group)
+            jcmp = job_compress_half_peramb(conf, conf_file, tt, "sloppy", dep_group)
             jobs.append(jcmp)
 
             # contract local operator insertions
-            jl = job_local_insertion(conf, conf_file, t, "sloppy", dep_group)
+            jl = job_local_insertion(conf, conf_file, tt, "sloppy", dep_group)
             jobs.append(jl)
 
             # contract local operator insertions using compressed
-            # jlc = job_local_insertion_using_compressed(conf, conf_file, t, "sloppy", dep_group + [jcmp.name])
+            # jlc = job_local_insertion_using_compressed(conf, conf_file, tt, "sloppy", dep_group + [jcmp.name])
             # jobs.append(jlc)
 
             # once all of that is done, delete full perambulators (simple delete job)
             # dep_all = dep_group + [jc.name, jcmp.name, jl.name, jlc.name]
             dep_all = dep_group + [jc.name, jcmp.name, jl.name]
-            j = job_delete_half_peramb(conf, t, delete_names, dep_all)
+            j = job_delete_half_peramb(conf, tt, delete_names, dep_all)
             jobs.append(j)
             
 
