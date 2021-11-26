@@ -140,7 +140,7 @@ def propagator_consistency_check(dn, n0):
 
 
 class job_perambulator(g.jobs.base):
-    def __init__(self, conf, evec_dir, conf_file, basis_dir, t, i0, solver):
+    def __init__(self, conf, evec_dir, conf_file, basis_dir, t, i0, solver, dependencies):
         self.conf = conf
         self.solver = solver
         self.conf_file = conf_file
@@ -149,7 +149,7 @@ class job_perambulator(g.jobs.base):
         self.t = t
         self.i0 = i0
         self.ilist = list(range(i0, i0+sloppy_per_job))
-        super().__init__(f"{conf}/pm_{solver}_t{t}_i{i0}",[])
+        super().__init__(f"{conf}/pm_{solver}_t{t}_i{i0}", dependencies)
         self.weight = 1.0
 
     def perform(self, root):
@@ -169,9 +169,11 @@ class job_perambulator(g.jobs.base):
             "exact" : current_light_quark.prop_l_exact
         }[self.solver]
         
-        basis_evec, basis_evals = g.load(self.basis_dir)
+        vcj = g.load(f"{root}/{self.conf}/pm_basis/basis")
+        c = g.coordinates(vcj[0])
+        c = c[c[:,3] == self.t]
 
-        g.message(f"t = {self.t}, ilist = {self.ilist}, basis size = {len(basis_evec)}, solver = {self.solver}")
+        g.message(f"t = {self.t}, ilist = {self.ilist}, basis size = {len(vcj)}, solver = {self.solver}")
 
         root_job = f"{root}/{self.name}"
         output = g.gpt_io.writer(f"{root_job}/propagators")
@@ -181,13 +183,14 @@ class job_perambulator(g.jobs.base):
 
         for i in self.ilist:
         
-            c = g.coordinates(basis_evec[i])
-
             for spin in range(4):
                 srcD[spin][:] = 0
-                srcD[spin][np.hstack((c, np.ones((len(c),1),dtype=np.int32)*t)),spin,:] = basis_evec[i][c]
+                srcD[spin][c,spin,:] = vcj[i][c]
 
                 g.message("Norm of source:",g.norm2(srcD[spin]))
+                if i == 0:
+                    g.message("Source at origin:", srcD[spin][0,0,0,0])
+                    g.message("Source at time-origin:", srcD[spin][0,0,0,self.t])
             
             prop = g.eval(prop_l * srcD)
             g.mem_report(details=False)
@@ -199,7 +202,7 @@ class job_perambulator(g.jobs.base):
     def check(self, root):
         return propagator_consistency_check(f"{root}/{self.name}/propagators", propagator_nodes_check)
 
-    
+
 class job_basis_layout(g.jobs.base):
     def __init__(self, conf, conf_file, basis_fmt, dependencies):
         self.conf = conf
@@ -577,7 +580,12 @@ class job_delete_half_peramb(g.jobs.base):
         g.barrier()
         
     def check(self, root):
-        return False
+        for target in self.targets:
+            dst = f"{root}/{target}/propagators"
+            if os.path.exists(dst):
+                return False
+
+        return True
 
 
 jobs = []
@@ -612,7 +620,7 @@ for group in groups:
             dep_group = [jb.name]
             delete_names = []
             for i0 in range(0, basis_size, sloppy_per_job):
-                j = job_perambulator(conf, evec_dir, conf_file, basis_dir, t, i0, "sloppy")
+                j = job_perambulator(conf, evec_dir, conf_file, basis_dir, t, i0, "sloppy", [jb.name])
                 jobs.append(j)
                 dep_group.append(j.name)
                 delete_names.append(j.name)
