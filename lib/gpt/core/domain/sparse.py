@@ -68,10 +68,14 @@ class sparse:
         return x
 
     def project(self, dst, src):
-        dst[self.embedded_coordinates, get_cache(self.embedded_cache, dst)] = src[self.local_coordinates, get_cache(self.local_cache, src)]
+        dst[self.embedded_coordinates, get_cache(self.embedded_cache, dst)] = src[
+            self.local_coordinates, get_cache(self.local_cache, src)
+        ]
 
     def promote(self, dst, src):
-        dst[self.local_coordinates, get_cache(self.local_cache, dst)] = src[self.embedded_coordinates, get_cache(self.embedded_cache, src)]
+        dst[self.local_coordinates, get_cache(self.local_cache, dst)] = src[
+            self.embedded_coordinates, get_cache(self.embedded_cache, src)
+        ]
 
     def coordinate_lattices(self):
         ret = []

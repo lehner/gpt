@@ -56,15 +56,15 @@ def count(fn):
         if len(rd) == 0:
             break
         ntag = struct.unpack("i", rd)[0]
-        tag = f.read(ntag).decode("utf-8")
+        f.read(ntag).decode("utf-8")
         (crc32, ln) = struct.unpack("II", f.read(4 * 2))
 
-        data = f.read(16 * ln)
+        f.read(16 * ln)
         n += 1
     f.close()
     return n
 
-    
+
 class reader:
     def __init__(self, fn):
         self.tags = {}

@@ -74,7 +74,7 @@ def random(first, rng, params):
     return create_links(first, init, params)
 
 
-@params_convention(Nd = None)
+@params_convention(Nd=None)
 def unit(first, params):
     def init(x, p):
         otype = x.otype

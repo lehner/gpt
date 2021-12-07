@@ -63,11 +63,27 @@ for mu in range(4):
         if mu != nu:
             Fmunu = g.qcd.gauge.field_strength(U, mu, nu)
 
-            A, B = g.qcd.gauge.rectangle(U, [
-                [ (mu,1,nu,1), (nu,-1,mu,1), (mu,-1,nu,-1), (nu,1,mu,-1) ],
-                [ (nu,1,mu,1), (mu,-1,nu,1), (nu,-1,mu,-1), (mu,1,nu,-1) ]
-            ], real=False, trace=False, field=True)
-            Fmunutest = g(3/2*A - 3/2*B)
+            A, B = g.qcd.gauge.rectangle(
+                U,
+                [
+                    [
+                        (mu, 1, nu, 1),
+                        (nu, -1, mu, 1),
+                        (mu, -1, nu, -1),
+                        (nu, 1, mu, -1),
+                    ],
+                    [
+                        (nu, 1, mu, 1),
+                        (mu, -1, nu, 1),
+                        (nu, -1, mu, -1),
+                        (mu, 1, nu, -1),
+                    ],
+                ],
+                real=False,
+                trace=False,
+                field=True,
+            )
+            Fmunutest = g(3 / 2 * A - 3 / 2 * B)
             eps2 = g.norm2(Fmunutest - Fmunu)
             g.message(f"F_{mu}{nu} test: {eps2}")
             assert eps2 < 1e-25
