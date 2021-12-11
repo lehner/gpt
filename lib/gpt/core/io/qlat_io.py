@@ -24,17 +24,16 @@
 #    https://github.com/waterret/Qlattice/blob/master/docs/file-format.md
 #
 import cgpt, gpt, numpy, os, sys
+from gpt.core.io.util import distribute_cartesian_file
 
 
 class qlat_io:
     def __init__(self, path):
         self.path = path
-        self.ldimensions = []
         self.fdimensions = []
         self.bytes_header = -1
         self.verbose = gpt.default.is_verbose("io")
         self.size = 1
-        gpt.barrier()
 
     def read_header(self):
 
@@ -82,8 +81,6 @@ class qlat_io:
             assert line == "END_HEADER"
             self.bytes_header = f.tell()
 
-        self.cv_desc = [1] * len(self.fdimensions)
-        self.ldimensions = [fd for fd in self.fdimensions]
         return True
 
     def getline(self, f):
@@ -114,17 +111,11 @@ class qlat_io:
         crc_comp = 0
         g.barrier()
         t0 = gpt.time()
-
-        # single file: only first rank reads, then distributes to all
-        g.barrier()
         dt_read -= gpt.time()
 
-        cv = gpt.cartesian_view(
-            gpt.rank(), self.cv_desc, g.fdimensions, g.cb, l.checkerboard()
-        )
-        pos = gpt.coordinates(cv)
+        pos, nreader = distribute_cartesian_file(self.fdimensions, g, l.checkerboard())
 
-        if gpt.rank() == 0:
+        if len(pos) > 0:
             f = gpt.FILE(self.path, "rb")
             f.seek(self.bytes_header, 0)
             sz = self.size * int(numpy.prod(g.fdimensions))
@@ -133,22 +124,31 @@ class qlat_io:
 
             dt_crc -= gpt.time()
             crc_comp = gpt.crc32(data)
-            crc_comp = f"{crc_comp:8X}"
-            assert crc_comp == self.crc_exp
             dt_crc += gpt.time()
 
             dt_misc -= gpt.time()
             self.swap(data)
             dt_misc += gpt.time()
 
-            sys.stdout.flush()
             szGB += len(data) / 1024.0 ** 3.0
         else:
-            assert len(pos) == 0
-            data = None
+            data = memoryview(bytearray())
 
         g.barrier()
         dt_read += gpt.time()
+
+        crc_array = numpy.array([0] * (2 * nreader), numpy.uint64)
+        if g.processor < nreader:
+            crc_array[2 * g.processor + 0] = sz
+            crc_array[2 * g.processor + 1] = crc_comp
+        g.globalsum(crc_array)
+        crc_comp = 0x0
+        for i in range(nreader):
+            crc_comp = cgpt.util_crc32_combine(
+                crc_comp, crc_array[2 * i + 1], crc_array[2 * i + 0]
+            )
+        crc_comp = f"{crc_comp:8X}"
+        assert crc_comp == self.crc_exp
 
         # distributes data accordingly
         dt_distr -= gpt.time()
@@ -162,14 +162,14 @@ class qlat_io:
         szGB = g.globalsum(szGB)
         if self.verbose and dt_crc != 0.0:
             gpt.message(
-                "Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for reading + checksum, %g GB/s for checksum, %d views per node)"
+                "Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for reading + checksum, %g GB/s for checksum, %d nreaders)"
                 % (
                     szGB,
                     szGB / (t1 - t0),
                     szGB / dt_distr,
                     szGB / dt_read,
                     szGB / dt_crc,
-                    1,
+                    nreader,
                 )
             )
         return l

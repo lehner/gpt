@@ -57,6 +57,16 @@ EXPORT(util_crc32,{
     return PyLong_FromLong(crc);
   });
 
+EXPORT(util_crc32_combine,{
+    
+    long crc32_prev, crc32;
+    long size;
+    if (!PyArg_ParseTuple(args, "lll", &crc32_prev, &crc32, &size)) {
+      return NULL;
+    }
+    return PyLong_FromLong(crc32_combine(crc32_prev,crc32,size));
+  });
+
 EXPORT(util_nersc_checksum,{
     
     PyObject* _mem;

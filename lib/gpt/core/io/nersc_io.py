@@ -17,18 +17,16 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import cgpt, gpt, numpy, os, sys
+from gpt.core.io.util import distribute_cartesian_file
 
 
 class nersc_io:
     def __init__(self, path):
         self.path = path
-        self.ldimensions = []
         self.fdimensions = []
         self.bytes_header = -1
         self.metadata = {}
         self.verbose = gpt.default.is_verbose("io")
-        self.size = 1
-        gpt.barrier()
 
     def read_header(self):
 
@@ -126,9 +124,6 @@ class nersc_io:
         return data_munged
 
     def read_lattice(self):
-        if self.bytes_header < 0:
-            raise
-
         # define grid from header
         g = gpt.grid(self.fdimensions, self.precision)
         # create lattice
@@ -140,29 +135,14 @@ class nersc_io:
         g.barrier()
         t0 = gpt.time()
 
-        g.barrier()
         dt_read -= gpt.time()
 
-        self.ldimensions = [fd for fd in self.fdimensions]
-        primes = [7, 5, 3, 2]
-        nreader = 1
-        while True:
-            for p in primes:
-                if self.ldimensions[-1] % p == 0 and nreader * p <= g.Nprocessors:
-                    nreader *= p
-                    self.ldimensions[-1] //= p
-                    continue
-            break
-
-        cv_desc = [1] * (len(self.ldimensions) - 1) + [nreader]
-        cv = gpt.cartesian_view(
-            g.processor, cv_desc, g.fdimensions, g.cb, l[0].checkerboard()
+        pos, nreader = distribute_cartesian_file(
+            self.fdimensions, g, l[0].checkerboard()
         )
-        pos = gpt.coordinates(cv)
 
         if len(pos) > 0:
-            nsites = int(numpy.prod(self.ldimensions))
-            sz = self.bytes_per_site * nsites
+            sz = self.bytes_per_site * len(pos)
             f = gpt.FILE(self.path, "rb")
             f.seek(self.bytes_header + g.processor * sz, 0)
             data = memoryview(f.read(sz))
@@ -181,7 +161,7 @@ class nersc_io:
 
             assert len(data) % 8 == 0
             data_munged = cgpt.mview(cgpt.ndarray([len(data) // 8], numpy.float64))
-            cgpt.munge_inner_outer(data_munged, data, self.nfields, nsites)
+            cgpt.munge_inner_outer(data_munged, data, self.nfields, len(pos))
             data = data_munged
             dt_misc += gpt.time()
 
@@ -225,7 +205,6 @@ class nersc_io:
             )
 
         # also check plaquette and link trace
-
         P_comp = gpt.qcd.gauge.plaquette(l)
         P_exp = float(self.metadata["PLAQUETTE"])
         P_digits = len(self.metadata["PLAQUETTE"].split(".")[1])
