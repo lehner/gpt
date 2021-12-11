@@ -128,7 +128,7 @@ class qlat_io:
         g.barrier()
         t0 = gpt.time()
 
-        # single file: each rank opens it and reads it all
+        # single file: only first rank reads, then distributes to all
         g.barrier()
         dt_read -= gpt.time()
 
@@ -141,7 +141,7 @@ class qlat_io:
             f = gpt.FILE(self.path, "rb")
             f.seek(self.bytes_header, 0)
             sz = self.size * int(numpy.prod(g.fdimensions))
-            data = memoryview(bytearray(f.read(sz)))
+            data = memoryview(f.read(sz))
             f.close()
 
             dt_crc -= gpt.time()

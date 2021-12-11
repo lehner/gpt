@@ -19,7 +19,7 @@
 import gpt, cgpt
 from gpt.params import params_convention
 
-# load through cgpt backend (NerscIO, openQCD, ...)
+# load through cgpt backend (openQCD, ...)
 def load_cgpt(*a):
     result = []
     r, metadata = cgpt.load(*a, gpt.default.is_verbose("io"))
@@ -48,7 +48,12 @@ def load_cgpt(*a):
 # input
 def load(fn, **p):
 
-    supported = [gpt.core.io.gpt_io, gpt.core.io.cevec_io, gpt.core.io.qlat_io]
+    supported = [
+        gpt.core.io.nersc_io,
+        gpt.core.io.gpt_io,
+        gpt.core.io.cevec_io,
+        gpt.core.io.qlat_io,
+    ]
 
     for fmt in supported:
         try:
