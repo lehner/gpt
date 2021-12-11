@@ -62,8 +62,6 @@ class nersc_io:
             self.bytes_data = f.tell() - self.bytes_header
 
         self.fdimensions = [int(self.metadata[f"DIMENSION_{i+1}"]) for i in range(4)]
-        self.cv_desc = "[" + ",".join(["1"] * len(self.fdimensions)) + "]"
-        self.ldimensions = [fd for fd in self.fdimensions]
         self.floating_point = self.metadata["FLOATING_POINT"]
         self.data_type = self.metadata["DATATYPE"]
 
@@ -127,7 +125,7 @@ class nersc_io:
         cgpt.munge_reconstruct_third_row(data_munged, data, self.precision.nbytes)
         return data_munged
 
-    def read_lattice_single(self):
+    def read_lattice(self):
         if self.bytes_header < 0:
             raise
 
@@ -142,20 +140,37 @@ class nersc_io:
         g.barrier()
         t0 = gpt.time()
 
-        # single file: only first rank reads, then distributes to all
         g.barrier()
         dt_read -= gpt.time()
 
+        self.ldimensions = [fd for fd in self.fdimensions]
+        primes = [7, 5, 3, 2]
+        nreader = 1
+        while True:
+            for p in primes:
+                if self.ldimensions[-1] % p == 0 and nreader * p <= g.Nprocessors:
+                    nreader *= p
+                    self.ldimensions[-1] //= p
+                    continue
+            break
+
+        cv_desc = (
+            "["
+            + ",".join(["1"] * (len(self.ldimensions) - 1))
+            + ","
+            + str(nreader)
+            + "]"
+        )
         cv = gpt.cartesian_view(
-            gpt.rank(), self.cv_desc, g.fdimensions, g.cb, l[0].checkerboard()
+            gpt.rank(), cv_desc, g.fdimensions, g.cb, l[0].checkerboard()
         )
         pos = gpt.coordinates(cv)
 
-        if gpt.rank() == 0:
-            f = gpt.FILE(self.path, "rb")
-            f.seek(self.bytes_header, 0)
-            nsites = int(numpy.prod(g.fdimensions))
+        if len(pos) > 0:
+            nsites = int(numpy.prod(self.ldimensions))
             sz = self.bytes_per_site * nsites
+            f = gpt.FILE(self.path, "rb")
+            f.seek(self.bytes_header + gpt.rank() * sz, 0)
             data = memoryview(f.read(sz))
             f.close()
 
@@ -165,10 +180,6 @@ class nersc_io:
 
             dt_cs -= gpt.time()
             cs_comp = cgpt.util_nersc_checksum(data, 0)
-            cs_comp = f"{cs_comp:8X}"
-            cs_exp = self.metadata["CHECKSUM"].upper()
-
-            assert cs_comp == cs_exp
             dt_cs += gpt.time()
 
             dt_misc -= gpt.time()
@@ -182,10 +193,14 @@ class nersc_io:
 
             szGB += len(data) / 1024.0 ** 3.0
         else:
-            assert len(pos) == 0
             data = memoryview(bytearray())
+            cs_comp = 0
 
-        g.barrier()
+        cs_comp = g.globalsum(cs_comp) & 0xFFFFFFFF
+        cs_comp = f"{cs_comp:8X}"
+        cs_exp = self.metadata["CHECKSUM"].upper()
+        assert cs_comp == cs_exp
+
         dt_read += gpt.time()
 
         # distributes data accordingly
@@ -203,7 +218,7 @@ class nersc_io:
         szGB = g.globalsum(szGB)
         if self.verbose and dt_cs != 0.0:
             gpt.message(
-                "Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for munged read, %g GB/s for checksum, %g GB/s for munging, %d views per node)"
+                "Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for munged read, %g GB/s for checksum, %g GB/s for munging, %d readers)"
                 % (
                     szGB,
                     szGB / (t1 - t0),
@@ -211,7 +226,7 @@ class nersc_io:
                     szGB / dt_read,
                     szGB / dt_cs,
                     szGB / dt_misc,
-                    1,
+                    nreader,
                 )
             )
 
@@ -249,4 +264,4 @@ def load(filename, p={}):
     if not lat.read_header():
         raise NotImplementedError()
 
-    return lat.read_lattice_single()
+    return lat.read_lattice()
