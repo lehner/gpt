@@ -154,13 +154,7 @@ class nersc_io:
                     continue
             break
 
-        cv_desc = (
-            "["
-            + ",".join(["1"] * (len(self.ldimensions) - 1))
-            + ","
-            + str(nreader)
-            + "]"
-        )
+        cv_desc = [1] * (len(self.ldimensions) - 1) + [nreader]
         cv = gpt.cartesian_view(
             gpt.rank(), cv_desc, g.fdimensions, g.cb, l[0].checkerboard()
         )

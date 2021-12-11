@@ -82,25 +82,12 @@ class qlat_io:
             assert line == "END_HEADER"
             self.bytes_header = f.tell()
 
-        self.cv_desc = "[" + ",".join(["1"] * len(self.fdimensions)) + "]"
+        self.cv_desc = [1] * len(self.fdimensions)
         self.ldimensions = [fd for fd in self.fdimensions]
         return True
 
     def getline(self, f):
-        line = []
-        while True:
-            try:
-                c = str(f.read(1), "utf-8")
-            except UnicodeDecodeError:
-                # this should not happen and likely indicates that we read an incompatible file
-                break
-            if c == "\n":
-                break
-            else:
-                line += [c]
-            if len(line) > 1024:
-                break
-        return "".join(line)
+        return f.readline().decode("utf-8").strip()
 
     def swap(self, data):
         if sys.byteorder == "big":
