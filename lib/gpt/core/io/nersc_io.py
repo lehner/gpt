@@ -156,7 +156,7 @@ class nersc_io:
 
         cv_desc = [1] * (len(self.ldimensions) - 1) + [nreader]
         cv = gpt.cartesian_view(
-            gpt.rank(), cv_desc, g.fdimensions, g.cb, l[0].checkerboard()
+            g.processor, cv_desc, g.fdimensions, g.cb, l[0].checkerboard()
         )
         pos = gpt.coordinates(cv)
 
@@ -164,7 +164,7 @@ class nersc_io:
             nsites = int(numpy.prod(self.ldimensions))
             sz = self.bytes_per_site * nsites
             f = gpt.FILE(self.path, "rb")
-            f.seek(self.bytes_header + gpt.rank() * sz, 0)
+            f.seek(self.bytes_header + g.processor * sz, 0)
             data = memoryview(f.read(sz))
             f.close()
 
