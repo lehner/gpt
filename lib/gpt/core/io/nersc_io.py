@@ -27,6 +27,7 @@ class nersc_io:
         self.bytes_header = -1
         self.metadata = {}
         self.verbose = gpt.default.is_verbose("io")
+        gpt.barrier()
 
     def read_header(self):
 

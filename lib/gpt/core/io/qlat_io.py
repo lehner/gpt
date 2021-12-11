@@ -34,6 +34,7 @@ class qlat_io:
         self.bytes_header = -1
         self.verbose = gpt.default.is_verbose("io")
         self.size = 1
+        gpt.barrier()
 
     def read_header(self):
 
@@ -117,8 +118,8 @@ class qlat_io:
 
         if len(pos) > 0:
             f = gpt.FILE(self.path, "rb")
-            f.seek(self.bytes_header, 0)
-            sz = self.size * int(numpy.prod(g.fdimensions))
+            sz = self.size * len(pos)
+            f.seek(self.bytes_header + g.processor * sz, 0)
             data = memoryview(f.read(sz))
             f.close()
 
