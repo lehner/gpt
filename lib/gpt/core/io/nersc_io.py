@@ -183,7 +183,7 @@ class nersc_io:
             szGB += len(data) / 1024.0 ** 3.0
         else:
             assert len(pos) == 0
-            data = None
+            data = memoryview(bytearray())
 
         g.barrier()
         dt_read += gpt.time()
