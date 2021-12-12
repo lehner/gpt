@@ -36,18 +36,21 @@ def crc32(view, crc32_prev=0):
 
 # distribute loading of cartesian file with lexicographic ordering
 def distribute_cartesian_file(fdimensions, grid, cb):
-    nt = fdimensions[-1]
+    ldimensions = [x for x in fdimensions]
+    dimdiv = len(ldimensions) - 1
     primes = [7, 5, 3, 2]
     nreader = 1
     found = True
     while found:
         found = False
         for p in primes:
-            if nt % p == 0 and nreader * p <= grid.Nprocessors:
+            if ldimensions[dimdiv] % p == 0 and nreader * p <= grid.Nprocessors:
                 nreader *= p
-                nt //= p
+                ldimensions[dimdiv] //= p
+                if ldimensions[dimdiv] == 1 and dimdiv > 0:
+                    dimdiv -= 1
                 found = True
 
-    cv_desc = [1] * (len(fdimensions) - 1) + [nreader]
+    cv_desc = [a // b for a, b in zip(fdimensions, ldimensions)]
     cv = gpt.cartesian_view(grid.processor, cv_desc, fdimensions, grid.cb, cb)
     return gpt.coordinates(cv), nreader

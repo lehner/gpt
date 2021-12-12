@@ -179,6 +179,7 @@ class nersc_io:
         dt_read += gpt.time()
 
         # distributes data accordingly
+        g.barrier()
         dt_distr -= gpt.time()
         cache = {}
         lblock = len(data) // self.nfields
