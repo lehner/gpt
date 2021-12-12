@@ -24,21 +24,12 @@ mask_rb[:] = 1
 # full mask
 mask = g.complex(grid)
 
-# simple plaquette action
-def staple(U, mu):
-    st = g.lattice(U[0])
-    st[:] = 0
-    Nd = len(U)
-    for nu in range(Nd):
-        if mu != nu:
-            st += g.qcd.gauge.staple(U, mu, nu) / U[0].otype.Nc
-    return st
-
+# action
+w = g.qcd.gauge.action.wilson(5.5)
 
 # 10 local metropolis sweeps
 g.default.push_verbose("local_metropolis", False)
 markov = g.algorithms.markov.local_metropolis(rng, step_size=0.5)
-beta = 5.5
 
 for it in range(10):
     plaq = g.qcd.gauge.plaquette(U)
@@ -49,8 +40,7 @@ for it in range(10):
         g.set_checkerboard(mask, mask_rb)
 
         for mu in range(Nd):
-            st = g.eval(beta * staple(U, mu))
-            markov(U[mu], st, mask)
+            markov(U[mu], w.staple(U, mu), mask)
 
 assert abs(plaq - 0.9118731021881104) < 1e-6
 
@@ -68,15 +58,13 @@ for it in range(5):
         g.set_checkerboard(mask, mask_rb)
 
         for mu in range(Nd):
-            st = g.eval(beta * staple(U, mu))
-            markov(U[mu], st, mask)
+            markov(U[mu], w.staple(U, mu), mask)
 
 assert abs(plaq - 0.5596460567580329) < 1e-6
 assert abs(R_2x1 - 0.3452021016014947) < 1e-6
 
 # langevin
 U = g.qcd.gauge.unit(grid)
-w = g.qcd.gauge.action.wilson(beta)
 l = g.algorithms.markov.langevin_euler(rng, epsilon=0.005)
 for it in range(10):
     l(U, w)
