@@ -21,10 +21,12 @@ from gpt.qcd.gauge.action import base
 
 
 class improved_with_rectangle(base):
-    def __init__(self, beta, c1):
+    def __init__(self, beta, c1, c0=None):
         self.beta = beta
         self.c1 = c1
-        self.c0 = 1.0 - 8 * c1
+        if c0 is None:
+            c0 = 1.0 - 8 * c1
+        self.c0 = c0
         self.staple_1x1 = {}
         self.staple_2x1 = {}
         self.__name__ = f"improved_with_rectangle({beta},{c1})"

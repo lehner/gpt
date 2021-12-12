@@ -80,3 +80,28 @@ for it in range(10):
     g.message(f"Langevin_bf(eps=0.02) {it} has P = {plaq}")
 
 assert abs(plaq - 0.6483719083997939) < 1e-6
+
+# improved gauge action test; footprint 2, so need more masks
+mask = [g.complex(grid) for i in range(4)]
+assert all([l % len(mask) == 0 for l in L])
+pos = g.coordinates(grid)
+for i, m in enumerate(mask):
+    m[:] = 0
+    m[pos[np.sum(pos, axis=1) % len(mask) == i]] = 1
+
+u0 = 0.797
+w = g.qcd.gauge.action.improved_with_rectangle(
+    1.719, c0=5.0 / 3.0 / u0 ** 4.0, c1=-1.0 / 12.0 / u0 ** 6.0
+)
+markov = g.algorithms.markov.su2_heat_bath(rng)
+U = g.qcd.gauge.unit(grid)
+for it in range(5):
+    plaq = g.qcd.gauge.plaquette(U)
+    R_2x1 = g.qcd.gauge.rectangle(U, 2, 1)
+    g.message(f"SU(2)-subgroup heatbath {it} has P = {plaq}, R_2x1 = {R_2x1}")
+    for m in mask:
+        for mu in range(Nd):
+            markov(U[mu], w.staple(U, mu), m)
+
+assert abs(plaq - 0.5803296367327372) < 1e-6
+assert abs(R_2x1 - 0.34469079309039646) < 1e-6
