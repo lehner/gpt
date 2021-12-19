@@ -172,9 +172,10 @@ class nersc_io:
             cs_comp = 0
 
         cs_comp = g.globalsum(cs_comp) & 0xFFFFFFFF
-        cs_comp = f"{cs_comp:8X}"
-        cs_exp = self.metadata["CHECKSUM"].upper()
-        assert cs_comp == cs_exp
+        cs_exp = int(self.metadata["CHECKSUM"].upper(), 16)
+        if cs_comp != cs_exp:
+            gpt.message(f"cs_comp={cs_comp:X} cs_exp={cs_exp:X}")
+            assert False
 
         dt_read += gpt.time()
 
