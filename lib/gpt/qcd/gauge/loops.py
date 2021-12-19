@@ -196,7 +196,6 @@ def field_strength(U, mu, nu):
     F @= 0.125 * (F - g.adj(F))
     return F
 
-
 def energy_density(U, field=False):
     Nd = len(U)
     accumulator = accumulators[(field, True)]
@@ -206,3 +205,79 @@ def energy_density(U, field=False):
             Fmunu = field_strength(U, mu, nu)
             res += Fmunu * Fmunu
     return res.scaled_project(-1.0, True)
+
+def topological_charge(U, field=False):
+    Nd = len(U)
+    accumulator = accumulators[(field, True)]
+    res = accumulator(U[0])
+    Bx = field_strength(U, 1, 2)
+    By = field_strength(U, 2, 0)
+    Bz = field_strength(U, 0, 1)
+    Ex = field_strength(U, 3, 0)
+    Ey = field_strength(U, 3, 1)
+    Ez = field_strength(U, 3, 2)
+    coeff = 8.0/(32.0*np.pi**2)
+    coeff *= U[0].grid.gsites
+    res += g(Bx*Ex+By*Ey+Bz*Ez)
+    return res.scaled_project(coeff, True)
+
+# O(a^4) improved def. of Q. See arXiv:hep-lat/9701012.
+def topological_charge_5LI(U, field=False):
+
+    Nd = len(U)
+    accumulator = accumulators[(field, True)]
+    c5=1/20.
+    c=[(19-55 * c5)/9., (1-64 * c5)/9., (-64+640 * c5)/45., (1/5.-2 * c5), c5]
+    sum = 0.0
+    # symmetric loops
+    for (loop,Lmu,Lnu) in [(0,1,1),(1,2,2),(4,3,3)]:
+
+       B=[]
+       E=[]
+
+       for (mu,nu) in [(1,2),(2,0),(0,1)]:
+          A = g.qcd.gauge.rectangle(U, [[(mu,Lmu,nu,Lnu),(nu,-Lnu,mu,Lmu),(mu,-Lmu,nu,-Lnu),(nu,Lnu,mu,-Lmu)]], real=False, trace=False, field=True)
+          B.append(g(A-g.adj(A)))
+
+       for (mu,nu) in [(3,0),(3,1),(3,2)]:
+          A = g.qcd.gauge.rectangle(U, [[(mu,Lmu,nu,Lnu),(nu,-Lnu,mu,Lmu),(mu,-Lmu,nu,-Lnu),(nu,Lnu,mu,-Lmu)]], real=False, trace=False, field=True)
+          E.append(g(A-g.adj(A)))
+
+       res = accumulator(U[0])
+       for i in range(0,3):
+          res += g( E[i] * B[i] )
+       coeff = c[loop] / Lmu**2 / Lnu**2
+       sum += res.scaled_project(coeff, True)
+       #print('loop', Lmu, Lnu, res.scaled_project(coeff, True))
+
+    # asymmetric loops
+    for (loop,Lmu,Lnu) in [(2,1,2),(3,1,3)]:
+
+       B=[]
+       E=[]
+
+       for (mu,nu) in [(1,2),(2,0),(0,1)]:
+          A = g.qcd.gauge.rectangle(U, [
+		[(mu,Lmu,nu,Lnu),(nu,-Lnu,mu,Lmu),(mu,-Lmu,nu,-Lnu),(nu,Lnu,mu,-Lmu), 
+		 (mu,Lnu,nu,Lmu),(nu,-Lmu,mu,Lnu),(mu,-Lnu,nu,-Lmu),(nu,Lmu,mu,-Lnu)]], 
+		real=False, trace=False, field=True)
+          B.append(g(A-g.adj(A)))
+
+       for (mu,nu) in [(3,0),(3,1),(3,2)]:
+          A = g.qcd.gauge.rectangle(U, [
+		[(mu,Lmu,nu,Lnu),(nu,-Lnu,mu,Lmu),(mu,-Lmu,nu,-Lnu),(nu,Lnu,mu,-Lmu), 
+		 (mu,Lnu,nu,Lmu),(nu,-Lmu,mu,Lnu),(mu,-Lnu,nu,-Lmu),(nu,Lmu,mu,-Lnu)]], 
+		real=False, trace=False, field=True)
+          E.append(g(A-g.adj(A)))
+
+       res = accumulator(U[0])
+       for i in range(0,3):
+          res += g( E[i] * B[i] )
+       coeff = c[loop] / Lmu**2 / Lnu**2
+       sum += res.scaled_project(coeff, True)
+       #print('loop', Lmu, Lnu, res.scaled_project(coeff, True))
+
+    # the first factor: 3 to remove rectangle norm by 3, 2 because we need to avg over 4 * 2 clover leaves, and rectangle only does 4.
+    coeff = (3/2.)**2 * 8.0/(32.0*np.pi**2)
+    coeff *= U[0].grid.gsites
+    return coeff * sum
