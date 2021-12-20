@@ -1,6 +1,4 @@
 import gpt as g
-import matplotlib.pyplot as plt
-import numpy as np
 
 NS=4
 NT=4
