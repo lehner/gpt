@@ -207,7 +207,7 @@ def energy_density(U, field=False):
     return res.scaled_project(-1.0, True)
 
 def topological_charge(U, field=False):
-    Nd = len(U)
+    assert len(U) == 4
     accumulator = accumulators[(field, True)]
     res = accumulator(U[0])
     Bx = field_strength(U, 1, 2)
@@ -223,8 +223,7 @@ def topological_charge(U, field=False):
 
 # O(a^4) improved def. of Q. See arXiv:hep-lat/9701012.
 def topological_charge_5LI(U, field=False):
-
-    Nd = len(U)
+    assert len(U) == 4
     accumulator = accumulators[(field, True)]
     c5=1/20.
     c=[(19-55 * c5)/9., (1-64 * c5)/9., (-64+640 * c5)/45., (1/5.-2 * c5), c5]
@@ -248,7 +247,6 @@ def topological_charge_5LI(U, field=False):
           res += g( E[i] * B[i] )
        coeff = c[loop] / Lmu**2 / Lnu**2
        sum += res.scaled_project(coeff, True)
-       #print('loop', Lmu, Lnu, res.scaled_project(coeff, True))
 
     # asymmetric loops
     for (loop,Lmu,Lnu) in [(2,1,2),(3,1,3)]:
@@ -275,7 +273,6 @@ def topological_charge_5LI(U, field=False):
           res += g( E[i] * B[i] )
        coeff = c[loop] / Lmu**2 / Lnu**2
        sum += res.scaled_project(coeff, True)
-       #print('loop', Lmu, Lnu, res.scaled_project(coeff, True))
 
     # the first factor: 3 to remove rectangle norm by 3, 2 because we need to avg over 4 * 2 clover leaves, and rectangle only does 4.
     coeff = (3/2.)**2 * 8.0/(32.0*np.pi**2)
