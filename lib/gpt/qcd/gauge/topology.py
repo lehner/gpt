@@ -52,12 +52,19 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
     ]
     sum = 0.0
     # symmetric loops
-    for (loop, Lmu, Lnu) in [(0, 1, 1), (1, 2, 2), (4, 3, 3)]:
+    for loop, Lmu, Lnu in [(0, 1, 1), (1, 2, 2), (4, 3, 3)]:
 
         B = []
         E = []
 
-        for (mu, nu) in [(1, 2), (2, 0), (0, 1)]:
+        for mu, nu, T in [
+            (1, 2, B),
+            (2, 0, B),
+            (0, 1, B),
+            (3, 0, E),
+            (3, 1, E),
+            (3, 2, E),
+        ]:
             A = g.qcd.gauge.rectangle(
                 U,
                 [
@@ -73,25 +80,7 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
                 trace=False,
                 field=True,
             )
-            B.append(g(A - g.adj(A)))
-
-        for (mu, nu) in [(3, 0), (3, 1), (3, 2)]:
-            A = g.qcd.gauge.rectangle(
-                U,
-                [
-                    [
-                        (mu, Lmu, nu, Lnu),
-                        (nu, -Lnu, mu, Lmu),
-                        (mu, -Lmu, nu, -Lnu),
-                        (nu, Lnu, mu, -Lmu),
-                    ]
-                ],
-                cache=cache,
-                real=False,
-                trace=False,
-                field=True,
-            )
-            E.append(g(A - g.adj(A)))
+            T.append(g(A - g.adj(A)))
 
         res = accumulator(U[0])
         for i in range(0, 3):
@@ -100,12 +89,19 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
         sum += res.scaled_project(coeff, True)
 
     # asymmetric loops
-    for (loop, Lmu, Lnu) in [(2, 1, 2), (3, 1, 3)]:
+    for loop, Lmu, Lnu in [(2, 1, 2), (3, 1, 3)]:
 
         B = []
         E = []
 
-        for (mu, nu) in [(1, 2), (2, 0), (0, 1)]:
+        for mu, nu, T in [
+            (1, 2, B),
+            (2, 0, B),
+            (0, 1, B),
+            (3, 0, E),
+            (3, 1, E),
+            (3, 2, E),
+        ]:
             A = g.qcd.gauge.rectangle(
                 U,
                 [
@@ -125,29 +121,7 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
                 trace=False,
                 field=True,
             )
-            B.append(g(A - g.adj(A)))
-
-        for (mu, nu) in [(3, 0), (3, 1), (3, 2)]:
-            A = g.qcd.gauge.rectangle(
-                U,
-                [
-                    [
-                        (mu, Lmu, nu, Lnu),
-                        (nu, -Lnu, mu, Lmu),
-                        (mu, -Lmu, nu, -Lnu),
-                        (nu, Lnu, mu, -Lmu),
-                        (mu, Lnu, nu, Lmu),
-                        (nu, -Lmu, mu, Lnu),
-                        (mu, -Lnu, nu, -Lmu),
-                        (nu, Lmu, mu, -Lnu),
-                    ]
-                ],
-                cache=cache,
-                real=False,
-                trace=False,
-                field=True,
-            )
-            E.append(g(A - g.adj(A)))
+            T.append(g(A - g.adj(A)))
 
         res = accumulator(U[0])
         for i in range(0, 3):
