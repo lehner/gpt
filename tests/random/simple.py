@@ -131,4 +131,17 @@ test_sequence_ref = np.array(
 err = np.linalg.norm(test_sequence_comp - test_sequence_ref)
 assert err < 1e-14
 
+assert rng.choice(["A", "B", "C"], 10) == [
+    "C",
+    "C",
+    "A",
+    "C",
+    "C",
+    "B",
+    "A",
+    "B",
+    "C",
+    "A",
+]
+assert np.all(rng.choice(np.array([1, 2, 3]), 5) == np.array([2, 3, 3, 3, 1]))
 g.message("All tests passed")

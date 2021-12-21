@@ -57,6 +57,35 @@ EXPORT(util_crc32,{
     return PyLong_FromLong(crc);
   });
 
+EXPORT(util_crc32_combine,{
+    
+    long crc32_prev, crc32;
+    long size;
+    if (!PyArg_ParseTuple(args, "lll", &crc32_prev, &crc32, &size)) {
+      return NULL;
+    }
+    return PyLong_FromLong(crc32_combine(crc32_prev,crc32,size));
+  });
+
+EXPORT(util_nersc_checksum,{
+    
+    PyObject* _mem;
+    long cs_prev;
+    if (!PyArg_ParseTuple(args, "Ol", &_mem,&cs_prev)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(_mem));
+    Py_buffer* buf = PyMemoryView_GET_BUFFER(_mem);
+    ASSERT(PyBuffer_IsContiguous(buf,'C'));
+    unsigned char* data = (unsigned char*)buf->buf;
+    int64_t len = (int64_t)buf->len;
+
+    uint32_t crc = cgpt_nersc_checksum(data,len,(uint32_t)cs_prev);
+    
+    return PyLong_FromLong(crc);
+  });
+
 EXPORT(util_sha256,{
     
     PyObject* _mem;

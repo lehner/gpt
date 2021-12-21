@@ -18,7 +18,7 @@
 #
 #    Generate U with
 #
-#      P(U) = e^{ Re Tr Staple U } dU
+#      P(U) = e^{ Re Tr adj(staple) U } dU
 #
 #    based on 1985 Kennedy and Pendleton paper (PLB 156 p393-399)
 import gpt as g

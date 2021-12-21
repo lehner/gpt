@@ -126,6 +126,51 @@ g.message("Momentum adj test (2): ", eps)
 assert eps < 1e-20
 
 ################################################################################
+# Test slice sums
+################################################################################
+for lattice_object in [
+    g.complex(grid_dp),
+    g.vcomplex(grid_dp, 10),
+    g.vspin(grid_dp),
+    g.vcolor(grid_dp),
+    g.vspincolor(grid_dp),
+    g.mspin(grid_dp),
+    g.mcolor(grid_dp),
+    g.mspincolor(grid_dp),
+]:
+    g.message(f"Testing slice with random {lattice_object.describe()}")
+    obj_list = [g.copy(lattice_object) for _ in range(3)]
+    rng.cnormal(obj_list)
+
+    for dimension in range(4):
+        tmp = g.slice(obj_list, dimension)
+        full_sliced = np.array(
+            [[g.util.tensor_to_value(v) for v in obj] for obj in tmp]
+        )
+
+        for n, obj in enumerate(obj_list):
+            tmp = g.slice(obj, dimension)
+            sliced = np.array([g.util.tensor_to_value(v) for v in tmp])
+            assert np.allclose(full_sliced[n], sliced, atol=0.0, rtol=1e-15)
+
+            sliced_numpy = np.array(
+                [
+                    np.sum(
+                        obj[
+                            slice(0, L[0]) if dimension != 0 else x,
+                            slice(0, L[1]) if dimension != 1 else x,
+                            slice(0, L[2]) if dimension != 2 else x,
+                            slice(0, L[3]) if dimension != 3 else x,
+                        ],
+                        axis=0,
+                    )
+                    for x in range(L[dimension])
+                ]
+            )
+            assert np.allclose(full_sliced[n], sliced_numpy, atol=0.0, rtol=1e-12)
+
+
+################################################################################
 # Test FFT
 ################################################################################
 fft_l_sp = g.eval(g.fft() * l_sp)

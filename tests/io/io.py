@@ -26,6 +26,25 @@ else:
 rng = g.random("test")
 U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 
+# create a sparse sub-domain and a sparse lattice S with 1% of points
+sdomain = g.domain.sparse(
+    U[0].grid,
+    rng.choice(
+        g.coordinates(U[0]), int(0.01 * U[0].grid.gsites / U[0].grid.Nprocessors)
+    ),
+)
+
+# test sparse domain
+S = sdomain.lattice(U[0].otype)
+sdomain.project(S, U[0])
+U0prime = g.lattice(U[0])
+U0prime[:] = 0
+sdomain.promote(U0prime, S)
+assert (
+    np.linalg.norm(U0prime[sdomain.local_coordinates] - U[0][sdomain.local_coordinates])
+    < 1e-14
+)
+
 # save in default gpt format
 g.save(
     f"{work_dir}/out",
@@ -41,6 +60,8 @@ g.save(
         ],  # fundamental data types
         "np": g.coordinates(U[0].grid),  # write numpy array from root node
         "U": U,  # write list of lattices
+        "sdomain": sdomain,
+        "S": S,
     },
 )
 
@@ -85,6 +106,19 @@ for i in range(4):
     g.message("Test first restore of U[%d]:" % i, eps2)
     assert eps2 < 1e-25
 
+eps2 = g.norm2(res["S"] - S)
+g.message("Test sparse field restore:", eps2)
+assert eps2 < 1e-25
+
+# check load sparse lattice
+U0prime2 = g.lattice(U[0])
+U0prime2[:] = 0
+res["sdomain"].promote(U0prime2, res["S"])
+eps2 = g.norm2(U0prime - U0prime2)
+g.message("Test sparse domain restore:", eps2)
+assert eps2 < 1e-25
+
+# check load out2 with fixed mpi
 res = g.load(f"{work_dir}/out2", paths="/U/*")
 for i in range(4):
     eps2 = g.norm2(res["U"][i] - U[i])
@@ -115,6 +149,9 @@ r = g.corr_io.reader(f"{work_dir}/head.dat")
 assert "test" in r.glob("*")
 for i in range(len(corr)):
     assert abs(r.tags["test"][i] - corr[i]) == 0.0
+
+assert g.corr_io.count(f"{work_dir}/head.dat") == 1
+
 
 # NERSC
 fn = f"{work_dir}/ckpoint.0000"

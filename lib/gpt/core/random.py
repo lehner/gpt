@@ -55,13 +55,7 @@ class random:
             return cgpt.random_sample(self.obj, p)
         elif type(t) == gpt.lattice:
             t0 = gpt.time()
-            cgpt.random_sample(
-                self.obj,
-                {
-                    **p,
-                    **{"lattices": [t]},
-                },
-            )
+            cgpt.random_sample(self.obj, {**p, **{"lattices": [t]}})
             t1 = gpt.time()
             assert "pos" not in p  # to ensure that deprecated code is not used
 
@@ -154,6 +148,18 @@ class random:
 
         # gpt.message(t)
         return out
+
+    def choice(self, array, n):
+        if isinstance(array, numpy.ndarray):
+            return numpy.take(
+                array,
+                [self.uniform_int(min=0, max=len(array) - 1) for i in range(n)],
+                axis=0,
+            )
+        else:
+            return [
+                array[self.uniform_int(min=0, max=len(array) - 1)] for i in range(n)
+            ]
 
 
 # sha256
