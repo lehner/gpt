@@ -18,7 +18,7 @@
 #
 from gpt.qcd.gauge.create import random, unit
 from gpt.qcd.gauge.transport import path, transport
-from gpt.qcd.gauge.loops import plaquette, rectangle, field_strength, energy_density
+from gpt.qcd.gauge.loops import plaquette, rectangle, field_strength, energy_density, topological_charge, topological_charge_5LI
 from gpt.qcd.gauge.staples import staple, staple_sum
 from gpt.qcd.gauge.transformation import transformed
 import gpt.qcd.gauge.project
