@@ -136,10 +136,20 @@ def axpy_norm2(d, a, x, y):
     return norm2(d)
 
 
-def slice(x, dim):
-    x = gpt.eval(x)
-    r = sum([numpy.array(cgpt.lattice_slice(o, dim)) for o in x.v_obj])
-    return [gpt.util.value_to_tensor(v, x.otype) for v in r]
+def slice(src, dim):
+    return_list = isinstance(src, list)
+    src = gpt.util.to_list(gpt.eval(src))
+
+    # check for consistent otype
+    assert all([src[0].otype.__name__ == obj.otype.__name__ for obj in src])
+
+    result = cgpt.lattice_slice(src, dim)
+
+    if return_list:
+        return [
+            [gpt.util.value_to_tensor(v, src[0].otype) for v in res] for res in result
+        ]
+    return [gpt.util.value_to_tensor(v, src[0].otype) for v in result[0]]
 
 
 def identity(src):

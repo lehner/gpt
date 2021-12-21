@@ -32,3 +32,25 @@ def crc32(view, crc32_prev=0):
         return cgpt.util_crc32(view, crc32_prev)
     else:
         return crc32(memoryview(view), crc32_prev)
+
+
+# distribute loading of cartesian file with lexicographic ordering
+def distribute_cartesian_file(fdimensions, grid, cb):
+    ldimensions = [x for x in fdimensions]
+    dimdiv = len(ldimensions) - 1
+    primes = [7, 5, 3, 2]
+    nreader = 1
+    found = True
+    while found:
+        found = False
+        for p in primes:
+            if ldimensions[dimdiv] % p == 0 and nreader * p <= grid.Nprocessors:
+                nreader *= p
+                ldimensions[dimdiv] //= p
+                if ldimensions[dimdiv] == 1 and dimdiv > 0:
+                    dimdiv -= 1
+                found = True
+
+    cv_desc = [a // b for a, b in zip(fdimensions, ldimensions)]
+    cv = gpt.cartesian_view(grid.processor, cv_desc, fdimensions, grid.cb, cb)
+    return gpt.coordinates(cv), nreader

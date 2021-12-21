@@ -19,38 +19,81 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 
 default_rectangle_cache = {}
 
 
-class accumulator_average:
+class accumulator_base:
+    def scaled_project(self, scale, real):
+        if g.util.is_num(self.value):
+            return scale * (self.value.real if real else self.value)
+        else:
+            if real:
+                return g((g.adj(self.value) + self.value) * (scale / 2.0))
+            else:
+                return g(self.value * scale)
+
+
+class accumulator_average(accumulator_base):
     def __init__(self, like):
-        self.value = 0.0
+        self.value = g.tensor(
+            np.zeros(like.otype.shape, dtype=np.complex128), like.otype
+        )
 
     def __iadd__(self, v):
         v = g(v)
         self.value += g.sum(v) / v.grid.gsites
         return self
 
-    def scaled_real(self, scale):
-        return self.value.real * scale
 
-
-class accumulator_field:
+class accumulator_average_trace(accumulator_base):
     def __init__(self, like):
-        self.value = g.complex(like.grid)
+        self.value = 0.0
+
+    def __iadd__(self, v):
+        v = g(g.trace(v))
+        self.value += g.sum(v) / v.grid.gsites
+        return self
+
+
+class accumulator_field(accumulator_base):
+    def __init__(self, like):
+        self.value = g.lattice(like)
         self.value[:] = 0.0
 
     def __iadd__(self, v):
         self.value += v
         return self
 
-    def scaled_real(self, scale):
-        return g(g.component.real(self.value) * scale)
+
+class accumulator_field_trace(accumulator_base):
+    def __init__(self, like):
+        self.value = g.complex(like.grid)
+        self.value[:] = 0.0
+
+    def __iadd__(self, v):
+        self.value += g.trace(v)
+        return self
+
+
+accumulators = {
+    (False, False): accumulator_average,
+    (False, True): accumulator_average_trace,
+    (True, False): accumulator_field,
+    (True, True): accumulator_field_trace,
+}
 
 
 def rectangle(
-    U, first, second=None, third=None, cache=default_rectangle_cache, field=False
+    U,
+    first,
+    second=None,
+    third=None,
+    cache=default_rectangle_cache,
+    field=False,
+    trace=True,
+    real=True,
 ):
     #
     # Calling conventions:
@@ -62,7 +105,7 @@ def rectangle(
     # or specify explicit mu,L_mu,nu,L_nu configurations
     # rectangle(U, [ [ (0,1,3,2), (1,2,3,2) ] ])
     #
-    accumulator = accumulator_field if field else accumulator_average
+    accumulator = accumulators[(field, trace)]
     if second is not None:
         L_mu = first
         L_nu = second
@@ -87,7 +130,7 @@ def rectangle(
             else:
                 configurations.append(f)
 
-    cache_key = str(configurations)
+    cache_key = f"{len(U)}_{U[0].otype.__name__}_{U[0].grid}_" + str(configurations)
     if cache_key not in cache:
         paths = []
         elements = []
@@ -110,10 +153,10 @@ def rectangle(
     ridx = 0
     results = []
     for p in loops:
-        value += g.trace(p)
+        value += p
         idx += 1
         if idx == ranges[ridx]:
-            results.append(value.scaled_real(1.0 / idx / ndim))
+            results.append(value.scaled_project(1.0 / idx / ndim, real))
             idx = 0
             ridx = ridx + 1
             value = accumulator(U[0])
@@ -153,13 +196,85 @@ def field_strength(U, mu, nu):
     F @= 0.125 * (F - g.adj(F))
     return F
 
-
 def energy_density(U, field=False):
     Nd = len(U)
-    accumulator = accumulator_field if field else accumulator_average
+    accumulator = accumulators[(field, True)]
     res = accumulator(U[0])
     for mu in range(Nd):
         for nu in range(mu):
             Fmunu = field_strength(U, mu, nu)
-            res += g.trace(Fmunu * Fmunu)
-    return res.scaled_real(-1.0)
+            res += Fmunu * Fmunu
+    return res.scaled_project(-1.0, True)
+
+def topological_charge(U, field=False):
+    assert len(U) == 4
+    accumulator = accumulators[(field, True)]
+    res = accumulator(U[0])
+    Bx = field_strength(U, 1, 2)
+    By = field_strength(U, 2, 0)
+    Bz = field_strength(U, 0, 1)
+    Ex = field_strength(U, 3, 0)
+    Ey = field_strength(U, 3, 1)
+    Ez = field_strength(U, 3, 2)
+    coeff = 8.0/(32.0*np.pi**2)
+    coeff *= U[0].grid.gsites
+    res += g(Bx*Ex+By*Ey+Bz*Ez)
+    return res.scaled_project(coeff, True)
+
+# O(a^4) improved def. of Q. See arXiv:hep-lat/9701012.
+def topological_charge_5LI(U, field=False):
+    assert len(U) == 4
+    accumulator = accumulators[(field, True)]
+    c5=1/20.
+    c=[(19-55 * c5)/9., (1-64 * c5)/9., (-64+640 * c5)/45., (1/5.-2 * c5), c5]
+    sum = 0.0
+    # symmetric loops
+    for (loop,Lmu,Lnu) in [(0,1,1),(1,2,2),(4,3,3)]:
+
+       B=[]
+       E=[]
+
+       for (mu,nu) in [(1,2),(2,0),(0,1)]:
+          A = g.qcd.gauge.rectangle(U, [[(mu,Lmu,nu,Lnu),(nu,-Lnu,mu,Lmu),(mu,-Lmu,nu,-Lnu),(nu,Lnu,mu,-Lmu)]], real=False, trace=False, field=True)
+          B.append(g(A-g.adj(A)))
+
+       for (mu,nu) in [(3,0),(3,1),(3,2)]:
+          A = g.qcd.gauge.rectangle(U, [[(mu,Lmu,nu,Lnu),(nu,-Lnu,mu,Lmu),(mu,-Lmu,nu,-Lnu),(nu,Lnu,mu,-Lmu)]], real=False, trace=False, field=True)
+          E.append(g(A-g.adj(A)))
+
+       res = accumulator(U[0])
+       for i in range(0,3):
+          res += g( E[i] * B[i] )
+       coeff = c[loop] / Lmu**2 / Lnu**2
+       sum += res.scaled_project(coeff, True)
+
+    # asymmetric loops
+    for (loop,Lmu,Lnu) in [(2,1,2),(3,1,3)]:
+
+       B=[]
+       E=[]
+
+       for (mu,nu) in [(1,2),(2,0),(0,1)]:
+          A = g.qcd.gauge.rectangle(U, [
+		[(mu,Lmu,nu,Lnu),(nu,-Lnu,mu,Lmu),(mu,-Lmu,nu,-Lnu),(nu,Lnu,mu,-Lmu), 
+		 (mu,Lnu,nu,Lmu),(nu,-Lmu,mu,Lnu),(mu,-Lnu,nu,-Lmu),(nu,Lmu,mu,-Lnu)]], 
+		real=False, trace=False, field=True)
+          B.append(g(A-g.adj(A)))
+
+       for (mu,nu) in [(3,0),(3,1),(3,2)]:
+          A = g.qcd.gauge.rectangle(U, [
+		[(mu,Lmu,nu,Lnu),(nu,-Lnu,mu,Lmu),(mu,-Lmu,nu,-Lnu),(nu,Lnu,mu,-Lmu), 
+		 (mu,Lnu,nu,Lmu),(nu,-Lmu,mu,Lnu),(mu,-Lnu,nu,-Lmu),(nu,Lmu,mu,-Lnu)]], 
+		real=False, trace=False, field=True)
+          E.append(g(A-g.adj(A)))
+
+       res = accumulator(U[0])
+       for i in range(0,3):
+          res += g( E[i] * B[i] )
+       coeff = c[loop] / Lmu**2 / Lnu**2
+       sum += res.scaled_project(coeff, True)
+
+    # the first factor: 3 to remove rectangle norm by 3, 2 because we need to avg over 4 * 2 clover leaves, and rectangle only does 4.
+    coeff = (3/2.)**2 * 8.0/(32.0*np.pi**2)
+    coeff *= U[0].grid.gsites
+    return coeff * sum

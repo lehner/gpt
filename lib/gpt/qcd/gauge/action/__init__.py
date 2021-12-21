@@ -16,4 +16,11 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from gpt.qcd.gauge.action.base import base
 from gpt.qcd.gauge.action.wilson import wilson
+from gpt.qcd.gauge.action.improved_with_rectangle import (
+    improved_with_rectangle,
+    iwasaki,
+    dbw2,
+    symanzik,
+)

@@ -143,10 +143,14 @@ src_sc = rng.cnormal(g.vspincolor(grid))
 dst_dwf_sc = g(slv_qm_e * src_sc)
 
 # test madwf
-dst_madwf_sc = g(slv_madwf * src_sc)
+dst_madwf_sc, dst_madwf_sc2 = g(slv_madwf * [src_sc, src_sc])
 eps2 = g.norm2(dst_madwf_sc - dst_dwf_sc) / g.norm2(dst_dwf_sc)
 g.message(f"MADWF test: {eps2}")
 assert eps2 < 5e-4
+
+eps2 = g.norm2(dst_madwf_sc - dst_madwf_sc2) / g.norm2(dst_madwf_sc)
+g.message(f"MADWF multi-rhs test: {eps2}")
+assert eps2 < 1e-13
 
 # test madwf with defect_correcting
 dst_madwf_dc_sc = g(slv_madwf_dc * src_sc)

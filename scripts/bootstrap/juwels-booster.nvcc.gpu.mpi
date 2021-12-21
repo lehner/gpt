@@ -4,8 +4,8 @@
 #
 module purge
 
-module load GCC/9.3.0
-module load OpenMPI/4.1.0rc1
+module load GCC/10.3.0
+module load OpenMPI/4.1.1
 module load mpi-settings/CUDA
 
 #

@@ -28,7 +28,7 @@ class tensor:
         if array.shape != otype.shape:
             array = np.reshape(array, otype.shape)
 
-        self.array = array
+        self.array = np.ascontiguousarray(array)
         self.otype = otype
         assert self.array.shape == otype.shape
 
@@ -95,8 +95,8 @@ class tensor:
             if len(mt) > 2:
                 a = np.transpose(a, mt[2])
             return tensor(a, mt[0]())
-        elif type(other) == complex:
-            return tensor(self.array * other, self.otype)
+        elif gpt.util.is_num(other):
+            return tensor(self.array * complex(other), self.otype)
         elif type(other) == gpt.expr and other.is_single(gpt.tensor):
             ue, uf, to = other.get_single()
             if ue == 0 and uf & gpt.factor_unary.BIT_TRANS != 0:

@@ -134,8 +134,9 @@ cr = rng.cnormal(g.vcolor(grid))
 cm @= cl * g.adj(cr)
 b = g.component.multiply(cl, g.adj(cr))
 for i in range(3):
-    eps = np.linalg.norm(cm[:, :, :, :, i, i].flatten() - b[:, :, :, :, i].flatten())
-    assert eps < 1e-10
+    ref = b[:, :, :, :, i].flatten()
+    eps = np.linalg.norm(cm[:, :, :, :, i, i].flatten() - ref) / np.linalg.norm(ref)
+    assert eps < 1e-7
 
 # outer product of vreal
 n = 12

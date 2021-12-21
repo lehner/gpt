@@ -145,8 +145,8 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	    
 	    if (lane == 0) {
 	      v = 0.0;
-	      for (int i=0;i<n_coalesce;i++)
-		v+=vc[i];
+	      for (int ii=0;ii<n_coalesce;ii++)
+		v+=vc[ii];
 	      dst_base[i*n_stride_prime + work] = v;
 	    }
 	    

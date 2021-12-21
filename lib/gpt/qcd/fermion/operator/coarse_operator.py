@@ -19,11 +19,16 @@
 #
 import gpt, cgpt
 from gpt.qcd.fermion.operator.base import base
+from gpt.qcd.fermion.operator.interface import interface
 
 
 class coarse_operator(base):
     def __init__(self, name, U, params, otype=None):
+
+        self.interface = interface()
+
         super().__init__(name, U, params, otype, True)
+
         self.tmp = gpt.lattice(self.F_grid, otype)
         self.tmp_eo = gpt.lattice(self.F_grid_eo, otype)
         self.U_self_inv = gpt.matrix.inv(self.U[8])
@@ -31,22 +36,5 @@ class coarse_operator(base):
 
         self.params["U"] = [v_obj for u in U for v_obj in u.v_obj]
         self.params["U_self_inv"] = self.U_self_inv.v_obj
-        self.obj = cgpt.create_fermion_operator(
-            self.name, self.U_grid.precision, self.params
-        )
 
-    def __del__(self):
-        cgpt.delete_fermion_operator(self.obj)
-
-    def apply_unary_operator(self, opcode, o, i):
-        cgpt.apply_fermion_operator(self.obj, opcode, i.v_obj, o.v_obj)
-
-    def apply_dirdisp_operator(self, opcode, o, i, direction, disp):
-        cgpt.apply_fermion_operator_dirdisp(
-            self.obj,
-            opcode,
-            i.v_obj,
-            o.v_obj,
-            direction,
-            disp,
-        )
+        self.interface.setup(name, self.U_grid, self.params)
