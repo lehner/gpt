@@ -115,11 +115,10 @@ Q = g.qcd.gauge.topological_charge(U)
 eps = abs(Q - 0.18736242691275048)
 g.message(f"Test field_strength Q definition: {eps}")
 assert eps < 1e-13
-Q = g.qcd.gauge.topological_charge_5LI(U)
+Q = g.qcd.gauge.topological_charge_5LI(U, cache={})
 eps = abs(Q - 0.32270083147744544)
 g.message(f"Test 5LI Q definition: {eps}")
 assert eps < 1e-13
-
 
 # Test gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:

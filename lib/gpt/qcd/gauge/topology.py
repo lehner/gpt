@@ -19,7 +19,7 @@
 #
 import gpt as g
 import numpy as np
-from gpt.qcd.gauge.loops import accumulators, field_strength
+from gpt.qcd.gauge.loops import accumulators, field_strength, default_rectangle_cache
 
 
 def topological_charge(U, field=False):
@@ -39,7 +39,7 @@ def topological_charge(U, field=False):
 
 
 # O(a^4) improved def. of Q. See arXiv:hep-lat/9701012.
-def topological_charge_5LI(U, field=False):
+def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
     assert len(U) == 4
     accumulator = accumulators[(field, True)]
     c5 = 1 / 20.0
@@ -68,6 +68,7 @@ def topological_charge_5LI(U, field=False):
                         (nu, Lnu, mu, -Lmu),
                     ]
                 ],
+                cache=cache,
                 real=False,
                 trace=False,
                 field=True,
@@ -85,6 +86,7 @@ def topological_charge_5LI(U, field=False):
                         (nu, Lnu, mu, -Lmu),
                     ]
                 ],
+                cache=cache,
                 real=False,
                 trace=False,
                 field=True,
@@ -118,6 +120,7 @@ def topological_charge_5LI(U, field=False):
                         (nu, Lmu, mu, -Lnu),
                     ]
                 ],
+                cache=cache,
                 real=False,
                 trace=False,
                 field=True,
@@ -139,6 +142,7 @@ def topological_charge_5LI(U, field=False):
                         (nu, Lmu, mu, -Lnu),
                     ]
                 ],
+                cache=cache,
                 real=False,
                 trace=False,
                 field=True,
