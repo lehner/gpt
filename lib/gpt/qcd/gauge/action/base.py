@@ -21,7 +21,6 @@ from gpt.core.group import differentiable_functional
 
 
 class base(differentiable_functional):
-
     def gradient(self, U, dU):
         # Eq. (1.3) and Appendix A of https://link.springer.com/content/pdf/10.1007/JHEP08(2010)071.pdf
         # S(Umu) = -2/g^2 Re trace(Umu * staple)

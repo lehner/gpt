@@ -151,7 +151,7 @@ for lattice_object in [
         for n, obj in enumerate(obj_list):
             tmp = g.slice(obj, dimension)
             sliced = np.array([g.util.tensor_to_value(v) for v in tmp])
-            assert np.allclose(full_sliced[n], sliced, atol=0.0, rtol=1e-15)
+            assert np.allclose(full_sliced[n], sliced, atol=0.0, rtol=1e-13)
 
             sliced_numpy = np.array(
                 [

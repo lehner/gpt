@@ -18,21 +18,23 @@
 #
 import cgpt, gpt, os, shutil
 
+
 def cache_file(root, src, md):
     if md != "rb":
         return src
-    dst = "%s/%s" % (root,src.replace("/","_"))
+    dst = "%s/%s" % (root, src.replace("/", "_"))
     src_size = os.stat(src).st_size
     if os.path.exists(dst):
         if os.stat(dst).st_size == src_size:
             return dst
         else:
             os.unlink(dst)
-    shutil.copyfile(src,dst)
+    shutil.copyfile(src, dst)
     return dst
 
 
 cache_root = gpt.default.get("--cache-root", None)
+
 
 class FILE:
     def __init__(self, fn, md):
