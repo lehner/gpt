@@ -83,8 +83,10 @@ EXPORT(exit,{
 	  "               Finalized GPT                 " << std::endl <<
 	  "=============================================" << std::endl;
       }
+
+      if (getenv("GPT_SUPPRESS_GRID_FINALIZE") == 0)
+	Grid_finalize();
       
-      Grid_finalize();
       cgpt_initialized = false;
 
     }

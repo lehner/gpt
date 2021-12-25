@@ -37,11 +37,60 @@ g.message(
 )
 assert eps < 1e-13
 
+# Without trace and real projection
+R_2x1_notp = g.qcd.gauge.rectangle(U_transformed, 2, 1, trace=False, real=False)
+eps = abs(g.trace(R_2x1_notp).real - R_2x1)
+g.message(f"R_2x1 no real and trace check: {eps}")
+assert eps < 1e-13
+
 # Test field version
 R_2x1_field = g(g.sum(g.qcd.gauge.rectangle(U, 2, 1, field=True)) / U[0].grid.gsites)
 eps = abs(R_2x1 - R_2x1_field)
 g.message(f"R_2x1 field check: {eps}")
 assert eps < 1e-13
+
+# Without trace and real projection and field
+R_2x1_notp = g.qcd.gauge.rectangle(
+    U_transformed, 2, 1, trace=False, real=False, field=True
+)
+eps = abs(g(g.sum(g.trace(R_2x1_notp))).real / U[0].grid.gsites - R_2x1)
+g.message(f"R_2x1 field, no real and trace check: {eps}")
+assert eps < 1e-13
+
+# Test clover field strength against rectangles
+for mu in range(4):
+    for nu in range(4):
+        if mu != nu:
+            Fmunu = g.qcd.gauge.field_strength(U, mu, nu)
+
+            A, B = g.qcd.gauge.rectangle(
+                U,
+                [
+                    [
+                        (mu, 1, nu, 1),
+                        (nu, -1, mu, 1),
+                        (mu, -1, nu, -1),
+                        (nu, 1, mu, -1),
+                    ],
+                    [
+                        (nu, 1, mu, 1),
+                        (mu, -1, nu, 1),
+                        (nu, -1, mu, -1),
+                        (mu, 1, nu, -1),
+                    ],
+                ],
+                real=False,
+                trace=False,
+                field=True,
+            )
+            Fmunutest = g(3 / 2 * A - 3 / 2 * B)
+            eps2 = g.norm2(Fmunutest - Fmunu)
+            g.message(f"F_{mu}{nu} test: {eps2}")
+            assert eps2 < 1e-25
+            eps2 = g.norm2(g.adj(A) - B)
+            g.message(f"F_{mu}{nu} adjoint test: {eps2}")
+            assert eps2 < 1e-25
+
 
 # Test gauge covariance of staple
 rho = np.array(
@@ -61,9 +110,35 @@ for mu in range(len(C)):
     )
     assert eps < 1e-14
 
+# Test topology
+Q = g.qcd.gauge.topological_charge(U)
+eps = abs(Q - 0.18736242691275048)
+g.message(f"Test field_strength Q definition: {eps}")
+assert eps < 1e-13
+Q = g.qcd.gauge.topological_charge_5LI(U, cache={})
+eps = abs(Q - 0.32270083147744544)
+g.message(f"Test 5LI Q definition: {eps}")
+assert eps < 1e-13
+
 # Test gauge actions
-for action in [g.qcd.gauge.action.wilson(5.43)]:
+for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:
     action.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+    for mu in range(len(U)):
+        adj_staple = g(g.adj(action.staple(U, mu)))
+        Uprime = g.copy(U)
+        Uprime[mu][0, 1, 2, 3] *= 1.1
+        action_diff = action(U) - action(Uprime)
+        action_a = -g.sum(g.trace(U[mu] * adj_staple)).real
+        action_b = -g.sum(g.trace(Uprime[mu] * adj_staple)).real
+        eps = abs(action_a - action_b - action_diff) / U[0].grid.gsites
+        g.message(
+            f"Action {action.__name__} staple representation in U_{mu} variation accurate to {eps}"
+        )
+        assert eps < 1e-13
+
+# test instantiation of additional short-hands
+g.qcd.gauge.action.dbw2(4.3)
+g.qcd.gauge.action.symanzik(4.3)
 
 # Test wilson flow and energy density
 U_wf = g.qcd.gauge.smear.wilson_flow(U, epsilon=0.1)

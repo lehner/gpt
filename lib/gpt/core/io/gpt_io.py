@@ -114,6 +114,7 @@ class gpt_io:
         loc_desc = cv.describe() + "/" + ("Write" if write else "Read")
 
         tag = "%d-%s" % (xk, str(iview))
+        tag_pos = "%s-%s-%s-%s" % (tag, str(fdimensions), str(g_cb), str(l_cb))
 
         if loc_desc != self.loc_desc:
             self.close_views()
@@ -127,9 +128,11 @@ class gpt_io:
             self.loc[tag] = (
                 gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
             )
-            self.pos[tag] = gpt.coordinates(cv)
 
-        return self.loc[tag], self.pos[tag]
+        if tag_pos not in self.pos:
+            self.pos[tag_pos] = gpt.coordinates(cv)
+
+        return self.loc[tag], self.pos[tag_pos]
 
     def views_for_node(self, cv, grid):
         return cv.views_for_node(grid)
@@ -165,13 +168,13 @@ class gpt_io:
         # need to write all views
         for xk, iview in enumerate(views_for_node):
 
-            cache_key = res + f"_{g.obj}_{xk}_{iview}_write"
-            if cache_key not in self.cache:
-                self.cache[cache_key] = {}
-
             f, p = self.open_view(
                 xk, iview, True, mpi, g.fdimensions, g.cb, l.checkerboard()
             )
+
+            cache_key = res + f"_{g.obj}_{xk}_{iview}_{id(p)}_{l.otype.__name__}_write"
+            if cache_key not in self.cache:
+                self.cache[cache_key] = {}
 
             # all nodes are needed to communicate
             dt_distr -= gpt.time()
@@ -251,7 +254,9 @@ class gpt_io:
                 xk, iview, False, cv_desc, g.fdimensions, g.cb, l.checkerboard()
             )
 
-            cache_key = f"{a[0:3]}_{g.obj}_{xk}_{iview}_read"
+            cache_key = (
+                f"{a[0:3]}_{g.obj}_{xk}_{iview}_{id(pos)}_{l.otype.__name__}_read"
+            )
             if cache_key not in self.cache:
                 self.cache[cache_key] = {}
 
@@ -326,6 +331,18 @@ class gpt_io:
             assert crc32_computed == crc32_compare
         return numpy.load(io.BytesIO(data))
 
+    def write_domain_sparse(self, ctx, sdomain):
+        return sdomain.grid.describe()
+
+    def read_domain_sparse(self, sdomain_grid, sdomain_cl):
+        def rmnan(x):
+            return x[~numpy.isnan(x)[:, 0]]
+
+        local_coordinates = numpy.hstack(
+            tuple([rmnan(x[:]).real.astype(numpy.int32) for x in sdomain_cl])
+        )
+        return gpt.domain.sparse(sdomain_grid, local_coordinates)
+
     def write(self, objs):
         self.create_index("", objs)
         self.flush()
@@ -369,6 +386,12 @@ class gpt_io:
             )  # improve: avoid implicit type conversion
         elif type(objs) == gpt.grid:
             f.write("grid %s\n" % objs.describe())
+        elif type(objs) == gpt.domain.sparse:
+            f.write("domain.sparse <\n")
+            f.write(self.write_domain_sparse(ctx, objs) + "\n")
+            for i, x in enumerate(objs.coordinate_lattices()):
+                f.write("lattice %s\n" % self.write_lattice(ctx + "/cl" + str(i), x))
+            f.write(">\n")
         else:
             print("Unknown type: ", type(objs))
             assert 0
@@ -435,6 +458,22 @@ class gpt_io:
             return self.read_lattice(a[1:])
         elif cmd == "grid":
             return gpt.grid_from_description(p.get()[1])
+        elif cmd == "domain.sparse":
+            p.skip()
+            a = p.get()
+            sdomain_grid = gpt.grid_from_description(a[0])
+            assert len(a) == 1
+            sdomain_cl = []
+            keep = self.keep_context(ctx)
+            for i in range(sdomain_grid.nd):
+                a = p.get()
+                assert a[0] == "lattice"
+                sdomain_cl.append(self.read_lattice(a[1:]) if keep else None)
+            a = p.get()
+            assert a == [">"]
+            if not keep:
+                return None
+            return self.read_domain_sparse(sdomain_grid, sdomain_cl)
         else:
             assert 0
 

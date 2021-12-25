@@ -16,32 +16,30 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt
+import cgpt, gpt, os, shutil
 
-# , os, shutil, sys
 
-# def cache_file(src,md):
-#     if md != "rb":
-#         return src
-#     root="/scratch"
-#     dst = "%s/%s" % (root,src.replace("/","_"))
-#     src_size = os.stat(src).st_size
-#     print(f"Caching {src} of size {src_size} to {dst}"); sys.stdout.flush()
-#     if os.path.exists(dst):
-#         if os.stat(dst).st_size == src_size:
-#             print("Use cached"); sys.stdout.flush()
-#             return dst
-#         else:
-#             os.unlink(dst)
-#     print("Start copy"); sys.stdout.flush()
-#     shutil.copyfile(src,dst)
-#     print("End copy"); sys.stdout.flush()
-#     return dst
+def cache_file(root, src, md):
+    if md != "rb":
+        return src
+    dst = "%s/%s" % (root, src.replace("/", "_"))
+    src_size = os.stat(src).st_size
+    if os.path.exists(dst):
+        if os.stat(dst).st_size == src_size:
+            return dst
+        else:
+            os.unlink(dst)
+    shutil.copyfile(src, dst)
+    return dst
+
+
+cache_root = gpt.default.get("--cache-root", None)
 
 
 class FILE:
     def __init__(self, fn, md):
-        # fn = cache_file(fn,md)
+        if cache_root is not None:
+            fn = cache_file(cache_root, fn, md)
         self.f = cgpt.fopen(fn, md)
         if self.f == 0:
             self.f = None
@@ -70,7 +68,8 @@ class FILE:
         assert self.f is not None
         t = bytes(sz)
         if sz > 0:
-            assert cgpt.fread(self.f, sz, memoryview(t)) == 1
+            if cgpt.fread(self.f, sz, memoryview(t)) != 1:
+                t = bytes(0)
         return t
 
     def write(self, d):

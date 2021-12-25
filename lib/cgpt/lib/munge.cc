@@ -17,6 +17,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
+#include "munge.h"
 
 // swap axes
 EXPORT(munge_inner_outer,{
@@ -79,6 +80,40 @@ EXPORT(munge_byte_order,{
 	  }
 	  memcpy(w_d,buf,word_size);
 	});
+
+    }
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(munge_reconstruct_third_row,{
+    // reconstructs third row in a unitary matrix
+    PyObject* _src,* _dst;
+    long float_size;
+    if (!PyArg_ParseTuple(args, "OOl", &_dst,&_src,&float_size)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(_src) && PyMemoryView_Check(_dst));
+    Py_buffer* buf_src = PyMemoryView_GET_BUFFER(_src);
+    Py_buffer* buf_dst = PyMemoryView_GET_BUFFER(_dst);
+    ASSERT(PyBuffer_IsContiguous(buf_src,'C'));
+    ASSERT(PyBuffer_IsContiguous(buf_dst,'C'));
+    char* s = (char*)buf_src->buf;
+    char* d = (char*)buf_dst->buf;
+    long len_src = buf_src->len;
+    long len_dst = buf_dst->len;
+    ASSERT(len_dst * 2 == len_src * 3);
+    if (len_src > 0) {
+
+      long blocks = len_src / (3*2*float_size*2);
+
+      if (float_size == 8) {
+        munger_reconstruct_third_row((ComplexD*)d, (ComplexD*)s, blocks);
+      } else if (float_size == 4) {
+        munger_reconstruct_third_row((ComplexF*)d, (ComplexF*)s, blocks);
+      } else {
+        ERR("Unknown float_size = %ld", float_size);
+      }
 
     }
     return PyLong_FromLong(0);

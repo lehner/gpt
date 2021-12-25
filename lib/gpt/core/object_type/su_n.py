@@ -223,7 +223,7 @@ class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
         assert u2.otype.Nc == 2 and u2.otype.Ndim == 2
         idx = list(idx)
         cache = ot_matrix_su_n_fundamental_group.cache
-        cache_key = f"{self.Nc}_{idx}"
+        cache_key = f"{self.Nc}_{idx}_{U.grid}"
         if cache_key not in cache:
             pos = tuple([slice(None, None, None) for i in range(u2.grid.nd)])
             plan = gpt.copy_plan(u2, U)
@@ -239,7 +239,7 @@ class ot_matrix_su_n_fundamental_group(ot_matrix_su_n_group):
         assert u2.otype.Nc == 2 and u2.otype.Ndim == 2
         idx = list(idx)
         cache = ot_matrix_su_n_fundamental_group.cache
-        cache_key = f"{self.Nc}_{idx}_rev"
+        cache_key = f"{self.Nc}_{idx}_{U.grid}_rev"
         if cache_key not in cache:
             pos = tuple([slice(None, None, None) for i in range(u2.grid.nd)])
             plan = gpt.copy_plan(U, u2)

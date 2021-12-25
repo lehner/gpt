@@ -29,9 +29,9 @@ def create_links(first, init, params):
         if params["otype"] is None:
             params["otype"] = g.ot_matrix_su_n_fundamental_group(3)
 
-        # default dimension is four
+        # default dimension is grid's dimension
         if params["Nd"] is None:
-            params["Nd"] = 4
+            params["Nd"] = first.nd
 
         # create lattices
         U = [g.lattice(first, params["otype"]) for i in range(params["Nd"])]
@@ -74,7 +74,7 @@ def random(first, rng, params):
     return create_links(first, init, params)
 
 
-@params_convention()
+@params_convention(Nd=None)
 def unit(first, params):
     def init(x, p):
         otype = x.otype

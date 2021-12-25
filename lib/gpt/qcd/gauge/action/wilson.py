@@ -17,20 +17,10 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.core.group import differentiable_functional
+from gpt.qcd.gauge.action import base
 
 
-def staple(U, mu):
-    st = g.lattice(U[0])
-    st[:] = 0
-    Nd = len(U)
-    for nu in range(Nd):
-        if mu != nu:
-            st += g.qcd.gauge.staple(U, mu, nu)
-    return g(g.adj(st))
-
-
-class wilson(differentiable_functional):
+class wilson(base):
     def __init__(self, beta):
         self.beta = beta
         self.__name__ = f"wilson({beta})"
@@ -48,25 +38,12 @@ class wilson(differentiable_functional):
         vol = U[0].grid.gsites
         return self.beta * (1.0 - g.qcd.gauge.plaquette(U)) * (Nd - 1) * Nd * vol / 2.0
 
-    def gradient(self, U, dU):
-        # Eq. (1.3) and Appendix A of https://link.springer.com/content/pdf/10.1007/JHEP08(2010)071.pdf
-        # S(Umu) = -2/g^2 Re trace(Umu * staple)
-        # dS(Umu) = lim_{eps->0} Ta ( S(e^{eps Ta} Umu) - S(Umu) ) / eps  with  \Tr[T_a T_b]=-1/2 \delta_{ab}
-        # dS(Umu) = -2/g^2 T_a Re trace(T_a * Umu * staple)
-        #         = -2/g^2 T_a 1/2 trace(T_a * Umu * staple + adj(staple) * adj(Umu) * adj(Ta))
-        #         = -2/g^2 T_a 1/2 trace(T_a * (Umu * staple - adj(staple) * adj(Umu)))
-        #         = -2/g^2 T_a 1/2 trace(T_a * (Umu * staple - adj(Umu*staple)))
-        #         = -2/g^2 T_a trace(T_a * r0)    with r0 = 1/2(Umu * staple - adj(Umu*staple))
-        # r0 = c_a T_a + imaginary_diagonal   with A^dag = -A
-        # trace(T_a * r0) = -1/2 c_a
-        # dS(Umu) = 1/g^2 tracelss_anti_hermitian(Umu * staple)
-        dS = []
-        for Umu in dU:
-            mu = U.index(Umu)
-            dSdU_mu = staple(U, mu)
-            dSdU_mu @= g.qcd.gauge.project.traceless_anti_hermitian(
-                g(Umu * dSdU_mu)
-            ) * (self.beta / (2.0 * Umu.otype.shape[0]) / 1j)
-            dSdU_mu.otype = Umu.otype.cartesian()
-            dS.append(dSdU_mu)
-        return dS
+    def staple(self, U, mu):
+        st = g.lattice(U[0])
+        st[:] = 0
+        Nd = len(U)
+        for nu in range(Nd):
+            if mu != nu:
+                st += g.qcd.gauge.staple(U, mu, nu)
+        scale = self.beta / U[0].otype.shape[0]
+        return g(scale * st)

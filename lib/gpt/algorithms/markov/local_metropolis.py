@@ -18,7 +18,7 @@
 #
 #    Generate U with
 #
-#      P(U) = e^{ Re Tr Staple U } dU
+#      P(U) = e^{ Re Tr adj(staple) U } dU
 #
 #    using the metropolis algorithm.  This interface is not yet
 #    stable.
