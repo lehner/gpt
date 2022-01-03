@@ -429,6 +429,43 @@ for i in range(3):
     g.message(f"Test basis rotate {i} on host: {eps}")
     assert eps < 1e-13
 
+
+################################################################################
+# Test sparse domain
+################################################################################
+nsparse = int(0.01 * l_dp.grid.gsites / l_dp.grid.Nprocessors)
+sdomain = g.domain.sparse(
+    l_dp.grid,
+    rng.choice(g.coordinates(l_dp), nsparse),
+)
+
+# test project/promote
+s_dp = g(sdomain.project * l_dp)
+l_prime_dp = g(sdomain.promote * s_dp)
+
+# test mask and its caching
+mask = sdomain.mask()
+mask2 = sdomain.mask()
+assert mask is mask2
+assert g.rank_inner_product(mask, mask) == nsparse
+
+eps = g.norm2(mask * (l_dp - l_prime_dp)) ** 0.5
+g.message(f"Test sparse reconstruction: {eps}")
+assert eps < 1e-13
+
+eps = (
+    g.norm2(mask * (exp_ixp * l_dp - sdomain.promote * sdomain.exp_ixp(p) * s_dp))
+    ** 0.5
+)
+g.message(f"Test sparse momentum implementation: {eps}")
+assert eps < 1e-11
+
+sl_original = g.slice(mask * l_dp, 3)
+sl_sparse = sdomain.slice(s_dp, 3)
+eps = sum([g.norm2(x - y) ** 0.5 for x, y in zip(sl_original, sl_sparse)])
+g.message(f"Test sparse slice: {eps}")
+assert eps < 1e-13
+
 ################################################################################
 # Test mem_report
 ################################################################################
