@@ -49,29 +49,33 @@ def coordinates(o, order="lexicographic"):
         assert 0
 
 
-def apply_exp_ixp(dst, src, p):
-    # TODO: add sparse field support (x.internal_coordinates(), x.coordinates())
-    x = gpt.coordinates(src)
+def apply_exp_ixp(dst, src, p, cache):
 
-    # create phase field
-    phase = gpt.complex(src.grid)
-    phase.checkerboard(src.checkerboard())
-    phase[x] = cgpt.coordinates_momentum_phase(x, p, src.grid.precision)
-    dst @= phase * src
+    cache_key = f"{src.grid.obj}_{src.checkerboard().__name__}_{p}"
+    if cache_key not in cache:
+        x = gpt.coordinates(src)
+        phase = gpt.complex(src.grid)
+        phase.checkerboard(src.checkerboard())
+        phase[x] = cgpt.coordinates_momentum_phase(x, p, src.grid.precision)
+        cache[cache_key] = phase
+
+    dst @= cache[cache_key] * src
 
 
-def exp_ixp(p):
+def exp_ixp(p):  # TODO: need origin parameter
 
     if type(p) == list:
         return [exp_ixp(x) for x in p]
     elif isinstance(p, numpy.ndarray):
         p = p.tolist()
 
+    cache = {}
+
     def mat(dst, src):
-        return apply_exp_ixp(dst, src, p)
+        return apply_exp_ixp(dst, src, p, cache)
 
     def inv_mat(dst, src):
-        return apply_exp_ixp(dst, src, [-x for x in p])
+        return apply_exp_ixp(dst, src, [-x for x in p], cache)
 
     # do not specify grid or otype, i.e., accept all
     return gpt.matrix_operator(

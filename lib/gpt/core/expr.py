@@ -59,6 +59,8 @@ class expr:
                 self.val = [(1.0, [(factor_unary.NONE, val)])]
         elif gpt.util.is_num(val):
             self.val = [(complex(val), [])]
+        elif val is None:
+            self.val = []
         else:
             raise Exception("Unknown type " + str(type(val)))
         self.unary = unary
@@ -305,6 +307,14 @@ def expr_eval(first, second=None, ac=False):
             return first
 
         e = expr(first)
+        dst = None
+
+    t("apply matrix ops")
+    # apply matrix_operators
+    e = apply_type_right_to_left(e, gpt.matrix_operator)
+
+    t("prepare")
+    if dst is None:
         lat = get_lattice(e)
         if lat is None:
             # cannot evaluate to a lattice object, leave expression unevaluated
@@ -313,11 +323,6 @@ def expr_eval(first, second=None, ac=False):
         lat = gpt.util.to_list(lat)
         grid = lat[0].grid
         nlat = len(lat)
-        dst = None
-
-    t("apply matrix ops")
-    # apply matrix_operators
-    e = apply_type_right_to_left(e, gpt.matrix_operator)
 
     t("fast return")
     # fast return if already a lattice

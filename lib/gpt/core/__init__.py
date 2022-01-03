@@ -40,6 +40,7 @@ from gpt.core.transform import (
     axpy,
     axpy_norm2,
     slice,
+    fields_to_tensors,
     identity,
     project,
     where,
