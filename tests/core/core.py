@@ -447,7 +447,7 @@ l_prime_dp = g(sdomain.promote * s_dp)
 mask = sdomain.mask()
 mask2 = sdomain.mask()
 assert mask is mask2
-assert g.rank_inner_product(mask, mask) == nsparse
+assert abs(g.rank_inner_product(mask, mask) - nsparse) < 1e-13
 
 eps = g.norm2(mask * (l_dp - l_prime_dp)) ** 0.5
 g.message(f"Test sparse reconstruction: {eps}")
