@@ -163,3 +163,28 @@ template<class obj> Lattice<obj> cgpt_pow(const Lattice<obj> &rhs_i,RealD y){
   });
   return ret_i;
 }
+
+
+static accelerator_inline ComplexD _cgpt_mod(const ComplexD & z, double y) { return ComplexD(fmod(z.real(),y),fmod(z.imag(),y)); };
+static accelerator_inline ComplexF _cgpt_mod(const ComplexF & z, double y) { return ComplexF(fmod(z.real(),(float)y),fmod(z.imag(),(float)y)); };
+template <class scalar>
+struct cgpt_mod_functor {
+  double y;
+  accelerator cgpt_mod_functor(double _y) : y(_y){};
+  accelerator scalar operator()(const scalar &a) const { return _cgpt_mod(a, y); }
+};
+template <class S, class V>
+accelerator_inline Grid_simd<S, V> cgpt_mod(const Grid_simd<S, V> &r, double y) {
+  return SimdApply(cgpt_mod_functor<S>(y), r);
+}
+BINARY_RSCALAR(cgpt_mod,RealD);
+template<class obj> Lattice<obj> cgpt_mod(const Lattice<obj> &rhs_i,RealD y){
+  Lattice<obj> ret_i(rhs_i.Grid());
+  autoView( rhs, rhs_i, AcceleratorRead);
+  autoView( ret, ret_i, AcceleratorWrite);
+  ret.Checkerboard() = rhs.Checkerboard();
+  accelerator_for(ss,rhs.size(),1,{
+      ret[ss]=cgpt_mod(rhs[ss],y);
+  });
+  return ret_i;
+}

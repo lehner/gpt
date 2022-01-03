@@ -33,6 +33,9 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     def pow3p45(x):
         return x ** 3.45
 
+    def mod0p1(x):
+        return complex(math.fmod(x.real, 0.1), math.fmod(x.imag, 0.1))
+
     for op in [
         (c.imag, np.imag),
         (c.real, np.real),
@@ -54,6 +57,7 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         (c.atan, np.arctan),
         (c.inv, inv),
         (c.pow(3.45), pow3p45),
+        (c.mod(0.1), mod0p1),
     ]:
         a = op[0](m)[0, 0, 0, 0, 1, 2]
         b = op[1](m[0, 0, 0, 0, 1, 2])

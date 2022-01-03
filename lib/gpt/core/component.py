@@ -73,6 +73,10 @@ def pow(exponent):
     return _simple_map("pow", {"exponent": exponent})
 
 
+def mod(n):
+    return _simple_map("mod", {"n": n})
+
+
 def multiply(a, b):
     a = gpt(a)
     b = gpt(b)

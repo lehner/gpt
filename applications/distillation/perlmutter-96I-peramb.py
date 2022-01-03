@@ -246,7 +246,6 @@ class job_basis_layout(g.jobs.base):
         for tprime in range(T):
             basis_evec, basis_evals = g.load(self.basis_fmt % (self.conf, tprime))
 
-            cache = {}
             plan = g.copy_plan(vcj[0], basis_evec[0], embed_in_communicator=vcj[0].grid)
             c = g.coordinates(basis_evec[0])
             plan.destination += vcj[0].view[
@@ -618,7 +617,10 @@ class job_local_insertion_using_compressed(g.jobs.base):
                 for i in range(i0, i0 + sloppy_per_job):
                     for spin in range(4):
                         g.message(i, spin)
-                        hp_i = half_peramb_i[f"t{self.t}s{spin}c{i}_{self.solver}"]
+                        hp_i = g(
+                            sdomain.weight()
+                            * half_peramb_i[f"t{self.t}s{spin}c{i}_{self.solver}"]
+                        )
                         for mu in indices:
                             hp_i_gamma = g(g.gamma[5] * g.gamma[mu] * hp_i)
                             for spin_prime in range(4):

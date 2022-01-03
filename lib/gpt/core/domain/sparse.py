@@ -62,12 +62,34 @@ class sparse_kernel:
         self.embedded_cache = {}
         self.local_cache = {}
         self.coordinate_lattices_cache = None
-        self.mask_cache = None
+        self.weight_cache = None
+        self.one_mask_cache = None
 
-    def exp_ixp(self, mom):
+    def one_mask(self):
+        if self.one_mask_cache is not None:
+            return self.one_mask_cache
+
+        ones = gpt.complex(self.embedding_grid)
+        ones[:] = 0
+        ones[self.embedded_coordinates] = 1
+        self.one_mask_cache = ones
+        return ones
+
+    def exp_ixp(self, mom, origin):
         r = gpt.expr(None)
-        for x, p in zip(self.coordinate_lattices(), mom):
-            r = r + x * p * 1j
+        if origin is None:
+            for x, p in zip(self.coordinate_lattices(), mom):
+                r = r + x * p * 1j
+        else:
+            for _x, p, _o, _l in zip(
+                self.coordinate_lattices(), mom, origin, self.grid.fdimensions
+            ):
+                lhalf, l, o = int(_l // 2), int(_l), int(_o)
+                x = gpt(
+                    gpt.component.mod(l)(_x + self.one_mask() * (l + lhalf - o))
+                    - lhalf * self.one_mask()
+                )
+                r = r + x * p * 1j
         return gpt.component.exp(r)
 
     def slice(self, fields, ortho_dim):
@@ -77,16 +99,22 @@ class sparse_kernel:
             fields, lambda src: cgpt.lattice_indexed_sum(src, coordinate_obj, length)
         )
 
-    def mask(self):
-        if self.mask_cache is not None:
-            return self.mask_cache
+    def weight(self):
+        if self.weight_cache is not None:
+            return self.weight_cache
 
-        mask = gpt.real(self.grid)
-        mask[:] = 0
-        mask[self.local_coordinates] = 1
+        unique_coordinates, count = np.unique(
+            self.local_coordinates, axis=0, return_counts=True
+        )
+        unique_coordinates = unique_coordinates.view(type(self.local_coordinates))
+        count = count.astype(np.complex128)
 
-        self.mask_cache = mask
-        return mask
+        weight = gpt.complex(self.grid)
+        weight[:] = 0
+        weight[unique_coordinates] = count
+
+        self.weight_cache = weight
+        return weight
 
     def lattice(self, otype):
         x = gpt.lattice(self.embedding_grid, otype)
@@ -145,8 +173,8 @@ class sparse:
 
         self.kernel = kernel
 
-    def mask(self):
-        return self.kernel.mask()
+    def weight(self):
+        return self.kernel.weight()
 
     def coordinate_lattices(self):
         return self.kernel.coordinate_lattices()
@@ -154,8 +182,8 @@ class sparse:
     def lattice(self, otype):
         return self.kernel.lattice(otype)
 
-    def exp_ixp(self, mom):
-        return self.kernel.exp_ixp(mom)
+    def exp_ixp(self, mom, origin=None):
+        return self.kernel.exp_ixp(mom, origin)
 
     def slice(self, fields, ortho_dim):
         return self.kernel.slice(fields, ortho_dim)

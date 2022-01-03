@@ -81,6 +81,7 @@ from gpt.core.basis import (
 from gpt.core.cartesian import cartesian_view
 from gpt.core.coordinates import (
     coordinates,
+    relative_coordinates,
     exp_ixp,
     fft,
     coordinate_mask,

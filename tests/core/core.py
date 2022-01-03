@@ -125,6 +125,21 @@ eps = g.norm2(g.adj(exp_ixp * exp_ixp) * exp_ixp * exp_ixp * l_dp - l_dp) / g.no
 g.message("Momentum adj test (2): ", eps)
 assert eps < 1e-20
 
+# arbitrary momentum / sinc reconstruction check
+p_arbitrary = 2.0 * np.pi * np.array([1.5, 2.3, 3.2, 4.1]) / L
+x_origin = np.array([7, 11, 4, 3])
+exp_ixp_rel = g.exp_ixp(p_arbitrary, origin=x_origin)
+xc = (2, 3, 1, 5)
+x = np.array(list(xc)) - x_origin
+for i in range(4):
+    while x[i] < -L[i] / 2:
+        x[i] += L[i]
+ref = np.exp(1j * np.dot(p_arbitrary, x)) * l_dp[xc]
+val = g.eval(exp_ixp_rel * l_dp)[xc]
+eps = g.norm2(ref - val)
+g.message("Reference value test (arbitrary momentum with origin): ", eps)
+assert eps < 1e-25
+
 ################################################################################
 # Test slice sums
 ################################################################################
@@ -443,24 +458,31 @@ sdomain = g.domain.sparse(
 s_dp = g(sdomain.project * l_dp)
 l_prime_dp = g(sdomain.promote * s_dp)
 
-# test mask and its caching
-mask = sdomain.mask()
-mask2 = sdomain.mask()
-assert mask is mask2
-assert abs(g.rank_inner_product(mask, mask) - nsparse) < 1e-13
+# test weight (choice draws with replacement) and its caching
+sweight = sdomain.weight()
+sweight2 = sdomain.weight()
+assert sweight is sweight2
 
-eps = g.norm2(mask * (l_dp - l_prime_dp)) ** 0.5
+nsparse_global = g.sum(sweight)
+assert abs(nsparse_global - nsparse * l_dp.grid.Nprocessors) < 1e-13
+
+eps = g.norm2(sweight * (l_dp - l_prime_dp)) ** 0.5
 g.message(f"Test sparse reconstruction: {eps}")
 assert eps < 1e-13
 
-eps = (
-    g.norm2(mask * (exp_ixp * l_dp - sdomain.promote * sdomain.exp_ixp(p) * s_dp))
-    ** 0.5
-)
+ft_original = g.sum(sweight * exp_ixp * l_dp)
+ft_sparse = g.sum(sdomain.exp_ixp(p) * s_dp)
+eps = g.norm2(ft_original - ft_sparse) ** 0.5
 g.message(f"Test sparse momentum implementation: {eps}")
 assert eps < 1e-11
 
-sl_original = g.slice(mask * l_dp, 3)
+ft_original = g.sum(sweight * exp_ixp_rel * l_dp)
+ft_sparse = g.sum(sdomain.exp_ixp(p_arbitrary, origin=x_origin) * s_dp)
+eps = g.norm2(ft_original - ft_sparse) ** 0.5
+g.message(f"Test sparse momentum implementation (arbitrary with origin): {eps}")
+assert eps < 1e-11
+
+sl_original = g.slice(sweight * l_dp, 3)
 sl_sparse = sdomain.slice(s_dp, 3)
 eps = sum([g.norm2(x - y) ** 0.5 for x, y in zip(sl_original, sl_sparse)])
 g.message(f"Test sparse slice: {eps}")

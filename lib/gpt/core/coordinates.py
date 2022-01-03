@@ -49,33 +49,44 @@ def coordinates(o, order="lexicographic"):
         assert 0
 
 
-def apply_exp_ixp(dst, src, p, cache):
+def relative_coordinates(x, o, l):
+    l = numpy.array(l, dtype=numpy.int32)
+    lhalf = l // 2
+    o = numpy.array(o, dtype=numpy.int32)
+    r = numpy.mod(x + (l - o + lhalf), l) - lhalf
+    return r
 
-    cache_key = f"{src.grid.obj}_{src.checkerboard().__name__}_{p}"
+
+def apply_exp_ixp(dst, src, p, origin, cache):
+
+    cache_key = f"{src.grid.obj}_{src.checkerboard().__name__}_{origin}_{p}"
     if cache_key not in cache:
         x = gpt.coordinates(src)
         phase = gpt.complex(src.grid)
         phase.checkerboard(src.checkerboard())
-        phase[x] = cgpt.coordinates_momentum_phase(x, p, src.grid.precision)
+        x_relative = x
+        if origin is not None:
+            x_relative = relative_coordinates(x, origin, src.grid.fdimensions)
+        phase[x] = cgpt.coordinates_momentum_phase(x_relative, p, src.grid.precision)
         cache[cache_key] = phase
 
     dst @= cache[cache_key] * src
 
 
-def exp_ixp(p):  # TODO: need origin parameter
+def exp_ixp(p, origin=None):
 
     if type(p) == list:
-        return [exp_ixp(x) for x in p]
+        return [exp_ixp(x, origin) for x in p]
     elif isinstance(p, numpy.ndarray):
         p = p.tolist()
 
     cache = {}
 
     def mat(dst, src):
-        return apply_exp_ixp(dst, src, p, cache)
+        return apply_exp_ixp(dst, src, p, origin, cache)
 
     def inv_mat(dst, src):
-        return apply_exp_ixp(dst, src, [-x for x in p], cache)
+        return apply_exp_ixp(dst, src, [-x for x in p], origin, cache)
 
     # do not specify grid or otype, i.e., accept all
     return gpt.matrix_operator(
