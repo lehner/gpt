@@ -216,7 +216,7 @@ inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
 
 	    for (int nb=0;nb<Nbasis;nb++) {
 	      for (int i=0;i<n_elem;i++) {
-		((scalar_type*)&lsSum[(nb * len + index)*index_osites_per_block + ii])[i] +=
+		((scalar_type*)&lsSum_p[(nb * len + index)*index_osites_per_block + ii])[i] +=
 		  ((scalar_type*)&Data_v[nb][data_oidx])[i * data_nsimd + data_lane];
 	      }
 	    }
@@ -230,7 +230,7 @@ inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
   thread_for(i, result.size(), {
       sobj x = Zero();
       for (size_t j=0;j<index_osites_per_block;j++)
-	x = x + lsSum[i*index_osites_per_block + j];
+	x = x + lsSum_p[i*index_osites_per_block + j];
       result[i] = x;
     });
   
