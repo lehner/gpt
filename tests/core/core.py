@@ -448,45 +448,48 @@ for i in range(3):
 ################################################################################
 # Test sparse domain
 ################################################################################
-nsparse = int(0.01 * l_dp.grid.gsites / l_dp.grid.Nprocessors)
-sdomain = g.domain.sparse(
-    l_dp.grid,
-    rng.choice(g.coordinates(l_dp), nsparse),
-)
+for l in [l_dp, l_sp]:
+    nsparse = int(0.01 * l.grid.gsites / l.grid.Nprocessors)
+    sdomain = g.domain.sparse(
+        l.grid,
+        rng.choice(g.coordinates(l), nsparse),
+    )
 
-# test project/promote
-s_dp = g(sdomain.project * l_dp)
-l_prime_dp = g(sdomain.promote * s_dp)
+    # test project/promote
+    s = g(sdomain.project * l)
+    l_prime = g(sdomain.promote * s)
 
-# test weight (choice draws with replacement) and its caching
-sweight = sdomain.weight()
-sweight2 = sdomain.weight()
-assert sweight is sweight2
+    # test weight (choice draws with replacement) and its caching
+    sweight = sdomain.weight()
+    sweight2 = sdomain.weight()
+    assert sweight is sweight2
 
-nsparse_global = g.sum(sweight)
-assert abs(nsparse_global - nsparse * l_dp.grid.Nprocessors) < 1e-13
+    nsparse_global = g.sum(sweight)
+    assert (
+        abs(nsparse_global - nsparse * l.grid.Nprocessors) < l.grid.precision.eps * 100
+    )
 
-eps = g.norm2(sweight * (l_dp - l_prime_dp)) ** 0.5
-g.message(f"Test sparse reconstruction: {eps}")
-assert eps < 1e-13
+    eps = g.norm2(sweight * (l - l_prime)) ** 0.5
+    g.message(f"Test sparse reconstruction: {eps}")
+    assert eps < l.grid.precision.eps * 100
 
-ft_original = g.sum(sweight * exp_ixp * l_dp)
-ft_sparse = g.sum(sdomain.exp_ixp(p) * s_dp)
-eps = g.norm2(ft_original - ft_sparse) ** 0.5
-g.message(f"Test sparse momentum implementation: {eps}")
-assert eps < 1e-11
+    ft_original = g.sum(sweight * exp_ixp * l)
+    ft_sparse = g.sum(sdomain.exp_ixp(p) * s)
+    eps = g.norm2(ft_original - ft_sparse) ** 0.5
+    g.message(f"Test sparse momentum implementation: {eps}")
+    assert eps < l.grid.precision.eps * 1e4
 
-ft_original = g.sum(sweight * exp_ixp_rel * l_dp)
-ft_sparse = g.sum(sdomain.exp_ixp(p_arbitrary, origin=x_origin) * s_dp)
-eps = g.norm2(ft_original - ft_sparse) ** 0.5
-g.message(f"Test sparse momentum implementation (arbitrary with origin): {eps}")
-assert eps < 1e-11
+    ft_original = g.sum(sweight * exp_ixp_rel * l)
+    ft_sparse = g.sum(sdomain.exp_ixp(p_arbitrary, origin=x_origin) * s)
+    eps = g.norm2(ft_original - ft_sparse) ** 0.5
+    g.message(f"Test sparse momentum implementation (arbitrary with origin): {eps}")
+    assert eps < l.grid.precision.eps * 1e4
 
-sl_original = g.slice(sweight * l_dp, 3)
-sl_sparse = sdomain.slice(s_dp, 3)
-eps = sum([g.norm2(x - y) ** 0.5 for x, y in zip(sl_original, sl_sparse)])
-g.message(f"Test sparse slice: {eps}")
-assert eps < 1e-13
+    sl_original = g.slice(sweight * l, 3)
+    sl_sparse = sdomain.slice(s, 3)
+    eps = sum([g.norm2(x - y) ** 0.5 for x, y in zip(sl_original, sl_sparse)])
+    g.message(f"Test sparse slice: {eps}")
+    assert eps < l.grid.precision.eps * 1e3
 
 ################################################################################
 # Test mem_report

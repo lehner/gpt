@@ -107,7 +107,7 @@ class sparse_kernel:
             self.local_coordinates, axis=0, return_counts=True
         )
         unique_coordinates = unique_coordinates.view(type(self.local_coordinates))
-        count = count.astype(np.complex128)
+        count = count.astype(self.grid.precision.complex_dtype)
 
         weight = gpt.complex(self.grid)
         weight[:] = 0
@@ -129,7 +129,7 @@ class sparse_kernel:
         for i in range(self.grid.nd):
             coor_i = self.lattice(gpt.ot_real_additive_group())
             coor_i[self.embedded_coordinates] = self.local_coordinates[:, i].astype(
-                np.complex128
+                self.grid.precision.complex_dtype
             )
             ret.append(coor_i)
 

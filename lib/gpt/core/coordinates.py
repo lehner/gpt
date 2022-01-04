@@ -59,7 +59,7 @@ def relative_coordinates(x, o, l):
 
 def apply_exp_ixp(dst, src, p, origin, cache):
 
-    cache_key = f"{src.grid.obj}_{src.checkerboard().__name__}_{origin}_{p}"
+    cache_key = f"{src.grid}_{src.checkerboard().__name__}_{origin}_{p}"
     if cache_key not in cache:
         x = gpt.coordinates(src)
         phase = gpt.complex(src.grid)
