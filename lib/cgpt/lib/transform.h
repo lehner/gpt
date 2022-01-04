@@ -44,7 +44,7 @@ PyObject* cgpt_lattice_slice(const PVector<Lattice<T>>& basis, int dim) {
 }
 
 template<typename T>
-PyObject* cgpt_lattice_indexed_sum(const PVector<Lattice<T>>& basis, const Lattice<iSinglet<vComplexD>>& idx, long Nsobj) {
+PyObject* cgpt_lattice_indexed_sum(const PVector<Lattice<T>>& basis, const Lattice<iSinglet<typename T::vector_type>>& idx, long Nsobj) {
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
 

@@ -162,7 +162,7 @@ public:
   virtual PyObject* indexed_sum(std::vector<cgpt_Lattice_base*> _basis, cgpt_Lattice_base* _idx, long len) {
     PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis, _basis);
-    return cgpt_lattice_indexed_sum(basis, compatible<iSinglet<vComplexD>>(_idx)->l, len);
+    return cgpt_lattice_indexed_sum(basis, compatible<iSinglet<vCoeff_t>>(_idx)->l, len);
   }
 
   virtual void ferm_to_prop(cgpt_Lattice_base* prop, int spin, int color, bool f2p) {

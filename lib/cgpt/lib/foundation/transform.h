@@ -140,14 +140,14 @@ inline void cgpt_slice_sum(const PVector<Lattice<vobj>> &Data,
 
 template<class vobj>
 inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
-			     const Lattice<iSinglet<vComplexD>> & Index,
+			     const Lattice<iSinglet<typename vobj::vector_type>> & Index,
 			     std::vector<typename vobj::scalar_object> &result)
 {
   typedef typename vobj::scalar_object sobj;
   typedef typename vobj::scalar_type scalar_type;
 
-  GridBase *data_grid = Data[0].Grid();
-  GridBase* index_grid = Index.Grid();
+  GridBase *grid = Data[0].Grid();
+  ASSERT(grid == Index.Grid());
   
   const int Nbasis = Data.size();
   constexpr int n_elem = GridTypeMapper<vobj>::count;
@@ -155,9 +155,7 @@ inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
   size_t len = result.size() / Nbasis;
   ASSERT(result.size() % Nbasis == 0);
 
-  ASSERT(data_grid->oSites() * data_grid->Nsimd() == index_grid->oSites() * index_grid->Nsimd());
-  
-  size_t index_osites_per_block = (index_grid->oSites() + len - 1) / len;
+  size_t index_osites_per_block = (grid->oSites() + len - 1) / len;
 
   Vector<sobj> lsSum(index_osites_per_block * len * Nbasis);
   auto lsSum_p = &lsSum[0];
@@ -167,23 +165,10 @@ inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
       lsSum_p[ss] = Zero();
     });
 
-  GridView gd(data_grid);
-  GridView gi(index_grid);
+  int Nsimd = grid->Nsimd();
+  int ndim = grid->Nd();
 
-  int ndim = data_grid->Nd();
-  ASSERT(ndim == index_grid->Nd());
-
-  Vector<Coordinate> _in_icoor(index_grid->Nsimd());
-  Coordinate* in_icoor = &_in_icoor[0];
-
-  for(int lane=0; lane < index_grid->Nsimd(); lane++){
-    in_icoor[lane].resize(ndim);
-    index_grid->iCoorFromIindex(in_icoor[lane], lane);
-  }
-
-  int in_nsimd = index_grid->Nsimd();
-  int data_nsimd = data_grid->Nsimd();
-  long index_osites = index_grid->oSites();
+  long index_osites = grid->oSites();
 
   autoView(Index_v, Index, AcceleratorRead);
   auto Index_p = &Index_v[0];
@@ -192,32 +177,18 @@ inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
   
   accelerator_for(ii,index_osites_per_block,1,{
 
-      Coordinate in_ocoor(ndim);
-      int lcoor;
-
       for (long jj=0;jj<len;jj++) {
-	long in_oidx = jj*index_osites_per_block + ii;
-	if (in_oidx < index_osites) {
+	long oidx = jj*index_osites_per_block + ii;
+	if (oidx < index_osites) {
       
-	  gi.oCoorFromOindex(in_ocoor, in_oidx);
+	  for (int lane=0;lane<Nsimd;lane++) {
 
-	  for (int in_lane=0;in_lane<in_nsimd;in_lane++) {
-
-	    long index = (long)((ComplexD*)&Index_p[in_oidx])[in_lane].real();
+	    long index = (long)((scalar_type*)&Index_p[oidx])[lane].real();
 			
-	    uint64_t data_lane = 0;
-	    uint64_t data_oidx = 0;
-	    
-	    for(int mu=0;mu<ndim;mu++) {
-	      lcoor = in_ocoor[mu] + gi._rdimensions[mu]*in_icoor[in_lane][mu];
-	      data_lane += gd._istride[mu] * (lcoor / gd._rdimensions[mu]);
-	      data_oidx += gd._ostride[mu] * (lcoor % gd._rdimensions[mu]);
-	    }
-
 	    for (int nb=0;nb<Nbasis;nb++) {
 	      for (int i=0;i<n_elem;i++) {
 		((scalar_type*)&lsSum_p[(nb * len + index)*index_osites_per_block + ii])[i] +=
-		  ((scalar_type*)&Data_v[nb][data_oidx])[i * data_nsimd + data_lane];
+		  ((scalar_type*)&Data_v[nb][oidx])[i * Nsimd + lane];
 	      }
 	    }
 	  }
@@ -236,5 +207,5 @@ inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
   
   scalar_type* ptr = (scalar_type *) &result[0];
   int words = len * sizeof(sobj) / sizeof(scalar_type) * Nbasis;
-  index_grid->GlobalSumVector(ptr, words);
+  grid->GlobalSumVector(ptr, words);
 }
