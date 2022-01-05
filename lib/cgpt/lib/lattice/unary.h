@@ -38,6 +38,8 @@ void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
     dst = cgpt_sin(src);
   } else if (op == "cos") {
     dst = cgpt_cos(src);
+  } else if (op == "mod") {
+    dst = cgpt_mod(src, get_float(params,"n"));
   } else if (op == "tan") {
     dst = cgpt_tan(src);
   } else if (op == "asin") {

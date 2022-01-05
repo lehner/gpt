@@ -88,7 +88,10 @@ for t in range(Nt_split):
 
     group_defect = g.group.defect(Vt_split[t])
     g.message(f"Distance to group manifold: {group_defect}")
-    assert group_defect < 1e-12
+    if group_defect > 1e-12:
+        raise Exception(
+            f"Time slice {t} on split grid {Vt_split[t].grid.srank} has group_defect = {group_defect}"
+        )
 
 g.message("Unsplit")
 

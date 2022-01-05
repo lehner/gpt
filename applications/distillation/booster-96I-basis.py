@@ -3,14 +3,14 @@
 # Authors: Christoph Lehner 2020
 #
 import gpt as g
-import os, glob
+import os, glob, sys
 
 # configure
 cnr = g.default.get("--config", None)
 t_groups = g.default.get_int("--t_groups", 1)
 t_group = g.default.get_int("--t_group", 0)
-config = glob.glob(f"/p/project/gm2dwf/configs/96I/evol?/ckpoint_lat.{cnr}")
-assert len(config) >= 1
+config = glob.glob(f"/p/project/gm2dwf/configs/96I/evol3/ckpoint_lat.{cnr}")
+assert len(config) == 1
 config = config[0]
 destination = f"/p/scratch/gm2dwf/distillation/96I/{cnr}_basis"
 
@@ -70,6 +70,7 @@ except g.LoadError:
 
     # save smeared gauge field
     g.save(config_smeared, U, g.format.nersc())
+    sys.exit(0)
 
 g.message("Plaquette after", g.qcd.gauge.plaquette(U))
 for u in U:

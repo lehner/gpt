@@ -268,3 +268,21 @@ EXPORT(lattice_slice,{
     return basis[0]->slice(basis, (int)dim);
     
   });
+
+EXPORT(lattice_indexed_sum,{
+    
+    PyObject* _basis;
+    long len;
+    void* _idx;
+    if (!PyArg_ParseTuple(args, "Oll", &_basis, &_idx, &len)) {
+      return NULL;
+    }
+    
+    std::vector<cgpt_Lattice_base*> basis;
+    cgpt_basis_fill(basis,_basis);
+
+    cgpt_Lattice_base* idx = (cgpt_Lattice_base*)_idx;
+
+    return basis[0]->indexed_sum(basis, idx, len);
+    
+  });
