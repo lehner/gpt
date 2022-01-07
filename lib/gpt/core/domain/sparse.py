@@ -93,11 +93,8 @@ class sparse_kernel:
         return gpt.component.exp(r)
 
     def slice(self, fields, ortho_dim):
-        coordinate_obj = self.coordinate_lattices()[ortho_dim].v_obj[0]
         length = self.grid.gdimensions[ortho_dim]
-        return gpt.fields_to_tensors(
-            fields, lambda src: cgpt.lattice_indexed_sum(src, coordinate_obj, length)
-        )
+        return gpt.indexed_sum(fields, self.coordinate_lattices()[ortho_dim], length)
 
     def weight(self):
         if self.weight_cache is not None:

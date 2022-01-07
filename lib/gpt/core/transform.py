@@ -156,6 +156,13 @@ def slice(src, dim):
     return fields_to_tensors(src, lambda s: cgpt.lattice_slice(s, dim))
 
 
+def indexed_sum(fields, index, length):
+    index_obj = index.v_obj[0]
+    return fields_to_tensors(
+        fields, lambda src: cgpt.lattice_indexed_sum(src, index_obj, length)
+    )
+
+
 def identity(src):
     eye = gpt.lattice(src)
     eye[:] = src.otype.identity()

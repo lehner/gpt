@@ -95,6 +95,10 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms, int 
 	int gamma = (int)PyLong_AsLong(tmp);
 	ASSERT(gamma >= 0 && gamma < gamma_algebra_map_max);
 	factor.gamma = gamma_algebra_map[gamma];
+        if ((factor.unary & BITS_ADJ) == BITS_ADJ) {
+          factor.unary -= factor.unary & BITS_ADJ;
+          factor.gamma = Gamma::adj[factor.gamma];
+        }
 	factor.type = _eval_factor_::GAMMA;
 	Py_DECREF(tmp);
       } else {
