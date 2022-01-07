@@ -190,6 +190,7 @@ assert len(cg.history) > len(cg_kappa.history)
 def get_Jq5(prop5D):
     # get all Ls slices
     prop4DLs=g.separate(prop5D,0)
+    Ls = len(prop4DLs)
     # create Correlator at the midpoint of the 5-th direction
     p_plus=g(prop4DLs[int((Ls/2)-1)] + g.gamma[5] * prop4DLs[int((Ls/2)-1)] )
     p_minus=g(prop4DLs[int(Ls/2)] - g.gamma[5] * prop4DLs[int(Ls/2)] )
@@ -205,6 +206,7 @@ g.message("real\t\t\timag")
 for i in range(len(Jq5)):
     g.message(f"{Jq5[i].real}\t{Jq5[i].imag}")
 
+g.message("")
 # two-point
 # correlator_ref= g.slice(g.trace(dst_qm_e * g.adj(dst_qm_e)), 3)
 correlator_ref = [
