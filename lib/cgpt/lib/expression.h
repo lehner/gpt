@@ -19,6 +19,7 @@
 // factor unary
 #define BIT_TRANS 1
 #define BIT_CONJ 2
+#define BITS_ADJ (BIT_TRANS|BIT_CONJ)
 #define NUM_FACTOR_UNARY 4
 
 // term unary

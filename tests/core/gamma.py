@@ -120,4 +120,12 @@ for s1 in range(4):
                 assert eps < 1e-14
 
 
+# test adjoint applied to lattice
+for gg in g.gamma:
+    l2 = g(g.adj(g.gamma[gg]) * l)
+    l2p = g(g.adj(g.gamma[gg].tensor()) * l)
+    eps = g.norm2(l2 - l2p) ** 0.5
+    g.message(f"Adjoint test {gg}: {eps}")
+    assert eps < 1e-13
+
 g.message("All tests passed")
