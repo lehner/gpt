@@ -380,7 +380,7 @@ def verify_single_versus_double_precision(rng, fermion_dp, fermion_sp):
                     eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
                     g.message(f"Verify single <> double for {atag}.adj(): {eps}")
                     assert eps < eps_ref
-        elif isinstance(a_dp, g.matrix_operator):
+        elif isinstance(a_dp, g.matrix_operator) and a_dp.otype[1] is not None:
             a_sp = getattr(fermion_sp, atag)
             rhs_dp = rng.cnormal(g.lattice(a_dp.grid[1], a_dp.otype[1]))
             lhs_dp = rng.cnormal(g.lattice(a_dp.grid[0], a_dp.otype[0]))
