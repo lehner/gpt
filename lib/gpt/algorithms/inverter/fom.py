@@ -21,7 +21,7 @@ import gpt as g
 import numpy as np
 from gpt.algorithms import base_iterative
 from gpt.algorithms.eigen.arnoldi import arnoldi_iteration
-        
+
 class fom(base_iterative):
     @g.params_convention(eps=1e-15, maxiter=1000, restartlen=20, checkres=True)
     def __init__(self, params):
@@ -31,24 +31,24 @@ class fom(base_iterative):
         self.maxiter = params["maxiter"]
         self.restartlen = params["restartlen"]
         self.checkres = params["checkres"]
-    
+
     def solve_hessenberg(self, H, r2):
         n = len(H)
         b = np.zeros(n, np.complex128)
         b[0] = r2 ** 0.5
-        for i in range(n-1):
+        for i in range(n - 1):
             k = -H[i][-1] / H[i][-2]
-            for j in range(n-i):
-                H[i+j][i+1] += k * H[i+j][i]
-            b[i+1] += k * b[i]
-        y = np.zeros(n, dtype = np.complex128)
+            for j in range(n - i):
+                H[i + j][i + 1] += k * H[i + j][i]
+            b[i + 1] += k * b[i]
+        y = np.zeros(n, np.complex128)
         for i in reversed(range(n)):
             y[i] = b[i] / H[i][i]
             for j, hj in enumerate(H[i][0:-1]):
                 b[j] -= hj * y[i]
         rn = -H[-1][-1] * y[-1]
         return y, rn
-    
+
     def calc_res(self, mat, psi, mmp, src, r):
         mat(mmp, psi)
         return g.axpy_norm2(r, -1.0, mmp, src)
@@ -59,49 +59,49 @@ class fom(base_iterative):
         if type(mat) == g.matrix_operator:
             otype, grid, cb = mat.otype, mat.grid, mat.cb
             mat = mat.mat
-         
+
         @self.timed_function
         def inv(psi, src, t):
             assert src != psi
-            
+
             t("setup")
             rlen = self.restartlen
             mmp, r = g.copy(src), g.copy(src)
             mat(mmp, psi)
             r2 = g.axpy_norm2(r,-1.0,mmp,src)
-            
+
             ssq = g.norm2(src)
             if ssq == 0.0:
                 assert r2 != 0.0
                 ssq = r2            
             rsq = self.eps ** 2.0 * ssq
-            
+
             a = arnoldi_iteration(mat, r)
-            
+
             for k in range(0, self.maxiter, rlen):
-                
+
                 t("arnoldi")
                 for i in range(rlen):
                     a()
                 Q, H = a.basis, a.H
-                
+
                 t("solve_hessenberg")
                 y, rn = self.solve_hessenberg(H, r2)
-                
+
                 t("update_psi")
                 g.linear_combination(mmp, Q[0:-1], y)
                 psi += mmp
-                  
+
                 if self.maxiter != rlen:
                     t("update_res")
                     r @= g.eval(Q[-1] * rn)
-                    
+ 
                 t("residual")
                 r2 = np.abs(rn) ** 2.0
 
                 t("other")
                 self.log_convergence(k, r2, rsq)   
-                
+
                 if r2 <= rsq:
                     msg = f"converged in {k+rlen} iterations"
                     if self.maxiter != rlen:
@@ -117,8 +117,7 @@ class fom(base_iterative):
                     a.basis = [Q[-1]]
                     a.H = []
                     self.debug("performed restart")
-                
-                
+
             msg = f"NOT converged in {k+rlen} iterations"
             if self.maxiter != rlen:
                 msg += f";  computed squared residual {r2:e} / {rsq:e}"
@@ -126,7 +125,6 @@ class fom(base_iterative):
                 res = self.calc_res(mat, psi, mmp, src, r)
                 msg += f";  true squared residual {res:e} / {rsq:e}"
             self.log(msg)
-        
 
         return g.matrix_operator(
                 mat=inv,
