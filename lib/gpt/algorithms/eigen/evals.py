@@ -27,6 +27,7 @@ class EvalsNotConverged(Exception):
 def evals(matrix, evec, params):
     check_eps2 = params["check_eps2"]
     skip = params["skip"]
+    verbose = g.default.is_verbose("evals")
     assert len(evec) > 0
     tmp = g.lattice(evec[0])
     ev = []
@@ -40,7 +41,8 @@ def evals(matrix, evec, params):
         ev.append(l)
         if check_eps2 is not None:
             eps2 = g.norm2(tmp - l * v)
-            g.message(f"eval[ {i} ] = {l}, eps^2 = {eps2}")
+            if verbose:
+                g.message(f"eval[ {i} ] = {l}, eps^2 = {eps2}")
             if eps2 > check_eps2:
                 raise EvalsNotConverged()
 
