@@ -52,7 +52,7 @@ class fom(base_iterative):
     def calc_res(self, mat, psi, mmp, src, r):
         mat(mmp, psi)
         return g.axpy_norm2(r, -1.0, mmp, src)
-     
+
     def __call__(self, mat):
 
         otype, grid, cb = None, None, None
@@ -68,12 +68,12 @@ class fom(base_iterative):
             rlen = self.restartlen
             mmp, r = g.copy(src), g.copy(src)
             mat(mmp, psi)
-            r2 = g.axpy_norm2(r,-1.0,mmp,src)
+            r2 = g.axpy_norm2(r, -1.0, mmp, src)
 
             ssq = g.norm2(src)
             if ssq == 0.0:
                 assert r2 != 0.0
-                ssq = r2            
+                ssq = r2
             rsq = self.eps ** 2.0 * ssq
 
             a = arnoldi_iteration(mat, r)
@@ -95,12 +95,12 @@ class fom(base_iterative):
                 if self.maxiter != rlen:
                     t("update_res")
                     r @= g.eval(Q[-1] * rn)
- 
+
                 t("residual")
                 r2 = np.abs(rn) ** 2.0
 
                 t("other")
-                self.log_convergence(k, r2, rsq)   
+                self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
                     msg = f"converged in {k+rlen} iterations"
@@ -113,7 +113,7 @@ class fom(base_iterative):
                     return
 
                 if self.maxiter != rlen:
-                    t("restart")                    
+                    t("restart")
                     a.basis = [Q[-1]]
                     a.H = []
                     self.debug("performed restart")
@@ -127,10 +127,10 @@ class fom(base_iterative):
             self.log(msg)
 
         return g.matrix_operator(
-                mat=inv,
-                inv_mat=mat,
-                otype=otype,
-                accept_guess=(True, False),
-                grid=grid,
-                cb=cb,
-            )
+            mat=inv,
+            inv_mat=mat,
+            otype=otype,
+            accept_guess=(True, False),
+            grid=grid,
+            cb=cb,
+        )
