@@ -22,6 +22,7 @@ import numpy as np
 from gpt.algorithms import base_iterative
 from gpt.algorithms.eigen.arnoldi import arnoldi_iteration
 
+
 class fom(base_iterative):
     @g.params_convention(eps=1e-15, maxiter=1000, restartlen=20, checkres=True)
     def __init__(self, params):
