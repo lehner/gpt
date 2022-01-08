@@ -17,13 +17,13 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, copy
-from gpt.qcd.fermion.operator import differentiable_fine_operator
+from gpt.qcd.fermion.mobius import mobius_class_operator
 import numpy as np
 
 
-class zmobius_class_operator(differentiable_fine_operator):
+class zmobius_class_operator(mobius_class_operator):
     def __init__(self, name, U, params, otype=None):
-        differentiable_fine_operator.__init__(self, name, U, params, otype)
+        mobius_class_operator.__init__(self, name, U, params, otype)
 
     def kappa(self):
         b = self.params["b"]
