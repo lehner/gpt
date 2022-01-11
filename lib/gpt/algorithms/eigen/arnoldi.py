@@ -62,7 +62,7 @@ class arnoldi_iteration:
         n = len(self.H)
         H = np.zeros((n, n), np.complex128)
         for i in range(n - 1):
-            H[0:(i + 2), i] = self.H[i]
+            H[0 : (i + 2), i] = self.H[i]
         H[:, n - 1] = self.H[n - 1][0:n]
         return H
 
@@ -115,7 +115,10 @@ class arnoldi_iteration:
         if self.verbose:
             g.message(f"Arnoldi: QR in {t1-t0} s")
 
-        r = g.eval(self.basis[k] * H[k, k - 1] + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1])
+        r = g.eval(
+            self.basis[k] * H[k, k - 1]
+            + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1]
+        )
         rn = g.norm2(r) ** 0.5
 
         t0 = g.time()
@@ -140,8 +143,13 @@ class arnoldi_iteration:
 
 class arnoldi:
     @g.params_convention(
-        Nmin=None, Nmax=None, Nstep=None, Nstop=None, resid=None,
-        restart=None, orthogonalize_nblock=4
+        Nmin=None,
+        Nmax=None,
+        Nstep=None,
+        Nstop=None,
+        resid=None,
+        restart=False,
+        orthogonalize_nblock=4,
     )
     def __init__(self, params):
         self.params = params
@@ -178,7 +186,12 @@ class arnoldi:
                     return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
                 if self.params["restart"]:
-                    a.restart(H, evals, self.params["Nstep"], self.params["orthogonalize_nblock"])
+                    a.restart(
+                        H,
+                        evals,
+                        self.params["Nstep"],
+                        self.params["orthogonalize_nblock"],
+                    )
 
         t0 = g.time()
         H = a.hessenberg()
