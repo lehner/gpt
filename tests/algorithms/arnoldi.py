@@ -33,8 +33,18 @@ start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 
 # arnoldi with modest convergence criterion
 a = g.algorithms.eigen.arnoldi(Nmin=50, Nmax=120, Nstep=10, Nstop=1, resid=1e-5)
-evec, evals = a(w, start)
+ira = g.algorithms.eigen.arnoldi(Nmin=50, Nmax=120, Nstep=10, Nstop=1, resid=1e-5, restart=True)
+
+
+def test(a, name):
+    t0 = g.time()
+    evec, evals = a(w, start)
+    t1 = g.time()
+    g.message(f"{name} finished in {t1-t0} s")
+    evals_test = g.algorithms.eigen.evals(w, evec[-1:])
+    assert abs(evals_test[-1] - expected_largest_eigenvalue) < 1e-3
+
 
 # expect the largest eigenvector to have converged somewhat
-evals_test = g.algorithms.eigen.evals(w, evec[-1:], check_eps2=1e5 * evals[-1] ** 2.0)
-assert abs(evals_test[-1] - expected_largest_eigenvalue) < 1e-3
+test(a, "Arnoldi")
+test(ira, "Implicitly Restarted Arnoldi")

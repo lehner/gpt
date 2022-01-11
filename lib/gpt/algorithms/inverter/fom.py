@@ -68,8 +68,7 @@ class fom(base_iterative):
             t("setup")
             rlen = self.restartlen
             mmp, r = g.copy(src), g.copy(src)
-            mat(mmp, psi)
-            r2 = g.axpy_norm2(r, -1.0, mmp, src)
+            r2 = self.calc_res(mat, psi, mmp, src, r)
 
             ssq = g.norm2(src)
             if ssq == 0.0:
