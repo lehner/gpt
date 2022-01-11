@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2022  Raphael Lehner (raphael.lehner@physik.uni-regensburg.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -61,21 +62,21 @@ class arnoldi_iteration:
         n = len(self.H)
         H = np.zeros((n, n), np.complex128)
         for i in range(n - 1):
-            H[0 : (i + 2), i] = self.H[i]
+            H[0:(i + 2), i] = self.H[i]
         H[:, n - 1] = self.H[n - 1][0:n]
         return H
 
-    def little_eig(self):
+    def little_eig(self, H):
 
         t0 = g.time()
-        H = self.hessenberg()
-        t1 = g.time()
         evals, little_evec = np.linalg.eig(H)
-        t2 = g.time()
+        t1 = g.time()
         idx = evals.argsort()
+        # # find z0 for better convergence
+        # idx = (np.abs(evals - z0)).argsort()
 
         if self.verbose:
-            g.message(f"Arnoldi: hessenberg() in {t1-t0} s and eig(H) in {t2-t1} s")
+            g.message(f"Arnoldi: eig(H) in {t1-t0} s")
 
         return evals[idx], little_evec[:, idx]
 
@@ -97,9 +98,51 @@ class arnoldi_iteration:
         g.linear_combination(test, self.basis[0:n], little_evec[:, i])
         return test
 
+    def restart(self, H, evals, p, orthogonalize_nblock):
+
+        n = len(self.H)
+        k = n - p
+        Q = np.identity(n, np.complex128)
+        eye = np.identity(n, np.complex128)
+
+        t0 = g.time()
+        for i in range(p):
+            Qi, Ri = np.linalg.qr(H - evals[i] * eye)
+            H = Ri @ Qi + evals[i] * eye
+            Q = Q @ Qi
+        t1 = g.time()
+
+        if self.verbose:
+            g.message(f"Arnoldi: QR in {t1-t0} s")
+
+        r = g.eval(self.basis[k] * H[k, k - 1] + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1])
+        rn = g.norm2(r) ** 0.5
+
+        t0 = g.time()
+        g.rotate(self.basis, np.ascontiguousarray(Q.T), 0, k, 0, n)
+        t1 = g.time()
+
+        if self.verbose:
+            g.message(f"Arnoldi: rotate in {t1-t0} s")
+
+        self.basis = self.basis[0:k]
+        self.H = [[H[j, i] for j in range(i + 2)] for i in range(k)]
+        self.H[-1][-1] = rn
+        self.basis.append(g.eval(r / rn))
+
+        t0 = g.time()
+        g.orthonormalize(self.basis, orthogonalize_nblock)
+        t1 = g.time()
+
+        if self.verbose:
+            g.message(f"Arnoldi: orthonormalize in {t1-t0} s")
+
 
 class arnoldi:
-    @params_convention(Nmin=None, Nmax=None, Nstep=None, Nstop=None, resid=None)
+    @g.params_convention(
+        Nmin=None, Nmax=None, Nstep=None, Nstop=None, resid=None,
+        restart=None, orthogonalize_nblock=4
+    )
     def __init__(self, params):
         self.params = params
         assert params["Nstop"] <= params["Nmin"]
@@ -121,9 +164,28 @@ class arnoldi:
             a()
 
             if i >= self.params["Nmin"] and i % self.params["Nstep"] == 0:
-                evals, little_evec = a.little_eig()
+
+                t0 = g.time()
+                H = a.hessenberg()
+                t1 = g.time()
+
+                if self.verbose:
+                    g.message(f"Arnoldi: hessenberg() in {t1-t0} s")
+
+                evals, little_evec = a.little_eig(H)
+
                 if self.converged(a, mat, evals, little_evec):
                     return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
+
+                if self.params["restart"]:
+                    a.restart(H, evals, self.params["Nstep"], self.params["orthogonalize_nblock"])
+
+        t0 = g.time()
+        H = a.hessenberg()
+        t1 = g.time()
+
+        if self.verbose:
+            g.message(f"Arnoldi: hessenberg() in {t1-t0} s")
 
         # return results wether converged or not
         evals, little_evec = a.little_eig()
@@ -143,7 +205,7 @@ class arnoldi:
                 g.algorithms.eigen.evals(
                     mat,
                     [a.single_evec(little_evec, idx)],
-                    check_eps2=evals[-1] ** 2.0 * self.params["resid"],
+                    check_eps2=np.abs(evals[-1]) ** 2.0 * self.params["resid"],
                 )
             except g.algorithms.eigen.EvalsNotConverged:
                 break
