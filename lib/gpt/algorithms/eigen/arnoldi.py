@@ -98,7 +98,7 @@ class arnoldi_iteration:
         g.linear_combination(test, self.basis[0:n], little_evec[:, i])
         return test
 
-    def restart(self, H, evals, p, orthogonalize_nblock):
+    def restart(self, H, evals, p):
 
         n = len(self.H)
         k = n - p
@@ -129,16 +129,9 @@ class arnoldi_iteration:
             g.message(f"Arnoldi: rotate in {t1-t0} s")
 
         self.basis = self.basis[0:k]
+        self.basis.append(g.eval(r / rn))
         self.H = [[H[j, i] for j in range(i + 2)] for i in range(k)]
         self.H[-1][-1] = rn
-        self.basis.append(g.eval(r / rn))
-
-        t0 = g.time()
-        g.orthonormalize(self.basis, orthogonalize_nblock)
-        t1 = g.time()
-
-        if self.verbose:
-            g.message(f"Arnoldi: orthonormalize in {t1-t0} s")
 
 
 class arnoldi:
@@ -149,7 +142,6 @@ class arnoldi:
         Nstop=None,
         resid=None,
         restart=False,
-        orthogonalize_nblock=4,
     )
     def __init__(self, params):
         self.params = params
@@ -190,7 +182,6 @@ class arnoldi:
                         H,
                         evals,
                         self.params["Nstep"],
-                        self.params["orthogonalize_nblock"],
                     )
 
         t0 = g.time()
