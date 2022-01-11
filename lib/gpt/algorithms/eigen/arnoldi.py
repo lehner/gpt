@@ -188,7 +188,7 @@ class arnoldi:
             g.message(f"Arnoldi: hessenberg() in {t1-t0} s")
 
         # return results wether converged or not
-        evals, little_evec = a.little_eig()
+        evals, little_evec = a.little_eig(H)
         return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
     def converged(self, a, mat, evals, little_evec):
