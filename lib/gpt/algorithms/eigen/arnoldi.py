@@ -138,7 +138,6 @@ class arnoldi_iteration:
             t0 = g.time()
             g.orthonormalize(self.basis, nblock)
             t1 = g.time()
-            g.message(rc)
 
             if self.verbose:
                 g.message(f"Arnoldi: orthonormalize in {t1-t0} s")
