@@ -92,12 +92,6 @@ class arnoldi_iteration:
 
         return self.basis[0:n]
 
-    def single_evec(self, little_evec, i):
-        n = len(self.H)
-        test = g.lattice(self.basis[0])
-        g.linear_combination(test, self.basis[0:n], little_evec[:, i])
-        return test
-
     def restart(self, H, evals, p, rc, skip, nblock):
 
         n = len(self.H)
@@ -164,6 +158,9 @@ class arnoldi:
         # verbosity
         self.verbose = g.default.is_verbose("arnoldi")
 
+        # squared residual
+        rsq = g.norm2(src) * self.params["resid"] ** 2.0
+
         # Nstop
         Nstop = self.params["Nstop"]
 
@@ -188,7 +185,7 @@ class arnoldi:
 
                 evals, little_evec = a.little_eig(H)
 
-                if self.converged(a, mat, evals, little_evec):
+                if self.converged(a, mat, evals, little_evec, rsq):
                     return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
                 if self.params["restart"]:
@@ -213,7 +210,7 @@ class arnoldi:
         evals, little_evec = a.little_eig(H)
         return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
-    def converged(self, a, mat, evals, little_evec):
+    def converged(self, a, mat, evals, little_evec, rsq):
 
         n = 1
         Nconv = 0
@@ -223,13 +220,7 @@ class arnoldi:
             if idx < 0:
                 idx = 0
 
-            try:
-                g.algorithms.eigen.evals(
-                    mat,
-                    [a.single_evec(little_evec, idx)],
-                    check_eps2=np.abs(evals[-1]) ** 2.0 * self.params["resid"],
-                )
-            except g.algorithms.eigen.EvalsNotConverged:
+            if np.abs(a.H[-1][-1] * little_evec[:,idx][-1]) ** 2.0 > rsq:
                 break
 
             Nconv = len(evals) - idx
