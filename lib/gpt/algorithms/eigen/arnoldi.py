@@ -220,7 +220,7 @@ class arnoldi:
             if idx < 0:
                 idx = 0
 
-            if np.abs(a.H[-1][-1] * little_evec[:,idx][-1]) ** 2.0 > rsq:
+            if np.abs(a.H[-1][-1] * little_evec[:, idx][-1]) ** 2.0 > rsq:
                 break
 
             Nconv = len(evals) - idx
