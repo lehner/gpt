@@ -216,11 +216,7 @@ class arnoldi:
                 idx = idx1 - 1
             n *= 2
 
-            ev, eps2 = g.algorithms.eigen.evals(
-                mat,
-                [a.single_evec(little_evec, idx)],
-                calculate_eps2=True,
-            )
+            ev, eps2 = g.algorithms.eigen.evals(mat, [a.single_evec(little_evec, idx)])
 
             eps2 = eps2[0] / evals_max ** 2.0
 

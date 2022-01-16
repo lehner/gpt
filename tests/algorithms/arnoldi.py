@@ -40,7 +40,7 @@ def test(a, name):
     t0 = g.time()
     evec, evals = a(w, start)
     t1 = g.time()
-    evals_test, evals_eps2 = g.algorithms.eigen.evals(w, evec, calculate_eps2=True)
+    evals_test, evals_eps2 = g.algorithms.eigen.evals(w, evec)
 
     largest_eval = 7.437
 

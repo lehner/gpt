@@ -57,7 +57,7 @@ evec, ev = irl(c(w.Mpc), start)  # , g.checkpointer("checkpoint")
 g.mem_report()
 
 # print eigenvalues of NDagN as well
-evals, eps2 = g.algorithms.eigen.evals(w.Mpc, evec, calculate_eps2=True, real=True)
+evals, eps2 = g.algorithms.eigen.evals(w.Mpc, evec, real=True)
 assert all([e2 < 1e-11 for e2 in eps2])
 
 # test low-mode approximation of inverse

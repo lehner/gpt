@@ -112,7 +112,7 @@ for t in range(Nt):
         )
 
     evec, ev = irl(c(slap), start)
-    evals, eps2 = g.algorithms.eigen.evals(slap, evec, calculate_eps2=True)
+    evals, eps2 = g.algorithms.eigen.evals(slap, evec)
     assert all([e2 < 0.1 for e2 in eps2])
 
     g.save(f"{destination}/basis_t{t}", [evec, evals])

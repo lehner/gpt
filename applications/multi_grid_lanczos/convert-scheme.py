@@ -64,7 +64,7 @@ for i in range(0, len(basis), nskip):
     g.message("Norm evec:", i, n)
     assert abs(n - 1) < eps_norm
 
-    ev, eps2 = g.algorithms.eigen.evals(Mpc, [evec], real=True, calculate_eps2=True)[0]
+    ev, eps2 = g.algorithms.eigen.evals(Mpc, [evec], real=True)[0]
     assert all([e2 < eps2_evec for e2 in eps2])
     g.message(i, ev, fev[i])
     assert abs(ev / fev[i] - 1) < eps_eval
