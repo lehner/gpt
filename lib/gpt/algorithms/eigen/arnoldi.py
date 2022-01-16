@@ -103,7 +103,7 @@ class arnoldi_iteration:
         g.linear_combination(test, self.basis[0:n], little_evec[:, i])
         return test
 
-    def implicit_restart(self, H, evals, p, orthogonalize_nblock):
+    def implicit_restart(self, H, evals, p):
         n = len(self.H)
         k = n - p
         Q = np.identity(n, np.complex128)
@@ -133,9 +133,9 @@ class arnoldi_iteration:
             g.message(f"Arnoldi: rotate in {t1-t0} s")
 
         self.basis = self.basis[0:k]
+        self.basis.append(g.eval(r / rn))
         self.H = [[H[j, i] for j in range(i + 2)] for i in range(k)]
         self.H[-1][-1] = rn
-        self.basis.append(g.eval(r / rn))
 
 
 class arnoldi:
@@ -146,7 +146,6 @@ class arnoldi:
         Nstop=None,
         resid=None,
         implicit_restart=False,
-        orthogonalize_nblock=4,
     )
     def __init__(self, params):
         self.params = params
@@ -183,12 +182,7 @@ class arnoldi:
                     return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
                 if self.params["implicit_restart"]:
-                    a.implicit_restart(
-                        H,
-                        evals,
-                        self.params["Nstep"],
-                        self.params["orthogonalize_nblock"],
-                    )
+                    a.implicit_restart(H, evals, self.params["Nstep"])
 
         t0 = g.time()
         H = a.hessenberg()
