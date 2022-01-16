@@ -59,7 +59,10 @@ for i in range(nbasis):
         # basis[i].advise( g.infrequent_use )
 
     basis[i] @= b.promote * fg_cevec[i]
-    g.algorithms.eigen.evals(q.Mpc, [basis[i]], check_eps2=1e-4, real=True)
+    _, ev_eps2 = g.algorithms.eigen.evals(
+        q.Mpc, [basis[i]], calculate_eps2=True, real=True
+    )
+    assert ev_eps2[0] < 1e-4
     g.message("Compare to: %g" % fg_feval[i])
 
     g.mem_report(details=False)
@@ -122,9 +125,10 @@ except g.LoadError:
         for j in range(nsmoother):
             v_fine_smooth @= smoother * v_fine
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth) ** 0.5
-        ev_smooth = g.algorithms.eigen.evals(
-            q.Mpc, [v_fine], check_eps2=1e-2, real=True
+        ev_smooth, ev_eps2 = g.algorithms.eigen.evals(
+            q.Mpc, [v_fine], calculate_eps2=True, real=True
         )
+        assert ev_eps2[0] < 1e-2
         ev3[i] = ev_smooth[0]
         g.message("Eigenvalue %d = %.15g" % (i, ev3[i]))
     g.save("ev3", ev3)

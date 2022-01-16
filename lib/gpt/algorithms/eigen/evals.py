@@ -19,18 +19,14 @@
 import gpt as g
 
 
-class EvalsNotConverged(Exception):
-    pass
-
-
-@g.params_convention(check_eps2=None, skip=1, real=False)
+@g.params_convention(calculate_eps2=True, skip=1, real=False)
 def evals(matrix, evec, params):
-    check_eps2 = params["check_eps2"]
+    calculate_eps2 = params["calculate_eps2"]
     skip = params["skip"]
-    verbose = g.default.is_verbose("evals")
     assert len(evec) > 0
     tmp = g.lattice(evec[0])
     ev = []
+    eps2 = []
     for i in range(0, len(evec), skip):
         v = evec[i]
         matrix(tmp, v)
@@ -39,11 +35,10 @@ def evals(matrix, evec, params):
         if params["real"]:
             l = l.real
         ev.append(l)
-        if check_eps2 is not None:
-            eps2 = g.norm2(tmp - l * v)
-            if verbose:
-                g.message(f"eval[ {i} ] = {l}, eps^2 = {eps2}")
-            if eps2 > check_eps2:
-                raise EvalsNotConverged()
+        if calculate_eps2 is not None:
+            eps2.append(g.norm2(tmp - l * v))
+
+    if calculate_eps2:
+        return ev, eps2
 
     return ev

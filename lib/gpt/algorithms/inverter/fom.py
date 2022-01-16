@@ -76,13 +76,18 @@ class fom(base_iterative):
                 ssq = r2
             rsq = self.eps ** 2.0 * ssq
 
+            g.default.push_verbose("arnoldi", False)
             a = arnoldi_iteration(mat, r)
+            g.default.pop_verbose()
 
             for k in range(0, self.maxiter, rlen):
 
                 t("arnoldi")
                 for i in range(rlen):
-                    a()
+                    # for sufficiently small restart length
+                    # should not need second orthogonalization
+                    # step
+                    a(second_orthogonalization=False)
                 Q, H = a.basis, a.H
 
                 t("solve_hessenberg")

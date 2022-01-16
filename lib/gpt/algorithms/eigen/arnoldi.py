@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2022  Raphael Lehner (raphael.lehner@physik.uni-regensburg.de)
+#    Copyright (C) 2020-22  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2022     Raphael Lehner (raphael.lehner@physik.uni-regensburg.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@ import sys
 # Arnoldi iteration
 class arnoldi_iteration:
     def __init__(self, mat, src):
-
         # params
         self.mat = mat
 
@@ -38,14 +37,15 @@ class arnoldi_iteration:
         # matrix elements
         self.H = []
 
-    def __call__(self):
-
+    def __call__(self, second_orthogonalization=True):
         t0 = g.time()
         new = g.lattice(self.basis[-1])
         self.mat(new, self.basis[-1])
         t1 = g.time()
         ips = np.zeros((len(self.basis) + 1,), np.complex128)
         g.orthogonalize(new, self.basis, ips[0:-1])
+        if second_orthogonalization:
+            g.orthogonalize(new, self.basis)
         ips[-1] = g.norm2(new) ** 0.5
         new /= ips[-1]
         self.basis.append(new)
@@ -58,7 +58,6 @@ class arnoldi_iteration:
             )
 
     def hessenberg(self):
-
         n = len(self.H)
         H = np.zeros((n, n), np.complex128)
         for i in range(n - 1):
@@ -67,16 +66,22 @@ class arnoldi_iteration:
         return H
 
     def little_eig(self, H):
-
         t0 = g.time()
         evals, little_evec = np.linalg.eig(H)
         t1 = g.time()
-        idx = evals.argsort()
-        # # find z0 for better convergence
-        # idx = (np.abs(evals - z0)).argsort()
+
+        eps = np.abs([little_evec[:, i][-1] for i in range(len(evals))])
+
+        # sort such that most converged are at end
+        idx = (-eps).argsort()
 
         if self.verbose:
             g.message(f"Arnoldi: eig(H) in {t1-t0} s")
+
+            if any(np.abs(evals) < 1e-14):
+                g.message(
+                    "Arnoldi: Warning: Some eigenvalues of H are tiny (< 1e-14), this may indicate insufficiently orthogonalized basis vectors"
+                )
 
         return evals[idx], little_evec[:, idx]
 
@@ -98,8 +103,7 @@ class arnoldi_iteration:
         g.linear_combination(test, self.basis[0:n], little_evec[:, i])
         return test
 
-    def restart(self, H, evals, p, orthogonalize_nblock):
-
+    def implicit_restart(self, H, evals, p, orthogonalize_nblock):
         n = len(self.H)
         k = n - p
         Q = np.identity(n, np.complex128)
@@ -133,13 +137,6 @@ class arnoldi_iteration:
         self.H[-1][-1] = rn
         self.basis.append(g.eval(r / rn))
 
-        t0 = g.time()
-        g.orthonormalize(self.basis, orthogonalize_nblock)
-        t1 = g.time()
-
-        if self.verbose:
-            g.message(f"Arnoldi: orthonormalize in {t1-t0} s")
-
 
 class arnoldi:
     @g.params_convention(
@@ -148,7 +145,7 @@ class arnoldi:
         Nstep=None,
         Nstop=None,
         resid=None,
-        restart=False,
+        implicit_restart=False,
         orthogonalize_nblock=4,
     )
     def __init__(self, params):
@@ -178,15 +175,15 @@ class arnoldi:
                 t1 = g.time()
 
                 if self.verbose:
-                    g.message(f"Arnoldi: hessenberg() in {t1-t0} s")
+                    g.message(f"Arnoldi {i}: hessenberg() in {t1-t0} s")
 
                 evals, little_evec = a.little_eig(H)
 
                 if self.converged(a, mat, evals, little_evec):
                     return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
-                if self.params["restart"]:
-                    a.restart(
+                if self.params["implicit_restart"]:
+                    a.implicit_restart(
                         H,
                         evals,
                         self.params["Nstep"],
@@ -206,29 +203,37 @@ class arnoldi:
 
     def converged(self, a, mat, evals, little_evec):
 
+        evals_max = np.max(np.abs(evals))
+
+        Nstop = self.params["Nstop"]
+        idx0 = len(evals) - Nstop
+        idx1 = len(evals)
         n = 1
         Nconv = 0
         while True:
-            idx = len(evals) - n
+            idx = idx0 + n - 1
+            if idx >= idx1:
+                idx = idx1 - 1
             n *= 2
-            if idx < 0:
-                idx = 0
 
-            try:
-                g.algorithms.eigen.evals(
-                    mat,
-                    [a.single_evec(little_evec, idx)],
-                    check_eps2=np.abs(evals[-1]) ** 2.0 * self.params["resid"],
-                )
-            except g.algorithms.eigen.EvalsNotConverged:
-                break
+            ev, eps2 = g.algorithms.eigen.evals(
+                mat,
+                [a.single_evec(little_evec, idx)],
+                calculate_eps2=True,
+            )
 
-            Nconv = len(evals) - idx
+            eps2 = eps2[0] / evals_max ** 2.0
 
-            if idx == 0:
+            if self.verbose:
+                g.message(f"eval[{idx1 - idx - 1}] = {ev[0]} ; eps^2 = {eps2}")
+
+            if eps2 < self.params["resid"]:
+                Nconv = max([Nconv, idx1 - idx])
+
+            if idx == idx1 - 1:
                 break
 
         if self.verbose:
             g.message(f"Arnoldi: {Nconv} eigenmodes converged")
 
-        return Nconv >= self.params["Nstop"]
+        return Nconv >= Nstop

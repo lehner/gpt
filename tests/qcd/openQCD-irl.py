@@ -70,7 +70,8 @@ except g.LoadError:
         start,
         g.checkpointer("/hpcgpfs01/scratch/clehner/openQCD/checkpoint"),
     )
-    ev = g.algorithms.eigen.evals(eo(w).Mpc, evec, check_eps2=1e-8, real=True)
+    ev, eps2 = g.algorithms.eigen.evals(eo(w).Mpc, evec, real=True)
+    assert eps2 < 1e-8
 
     # save eigenvectors
     g.save(path_to_evec, [evec, ev])

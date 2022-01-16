@@ -57,7 +57,8 @@ evec, ev = irl(c(w.Mpc), start)  # , g.checkpointer("checkpoint")
 g.mem_report()
 
 # print eigenvalues of NDagN as well
-evals = g.algorithms.eigen.evals(w.Mpc, evec, check_eps2=1e-11, real=True)
+evals, eps2 = g.algorithms.eigen.evals(w.Mpc, evec, calculate_eps2=True, real=True)
+assert all([e2 < 1e-11 for e2 in eps2])
 
 # test low-mode approximation of inverse
 inv = g.algorithms.inverter
@@ -113,7 +114,7 @@ tmpf = g.lattice(basis[0])
 for i, cv in enumerate(cevec):
     tmpf @= smoother * b.promote * cv
     smoothed_evals = smoothed_evals + g.algorithms.eigen.evals(
-        w.Mpc, [tmpf], check_eps2=1, real=True
+        w.Mpc, [tmpf], calculate_eps2=False, real=True
     )
 g.default.pop_verbose()
 

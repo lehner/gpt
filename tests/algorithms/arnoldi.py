@@ -25,16 +25,14 @@ w = g.qcd.fermion.wilson_clover(
     },
 )
 
-expected_largest_eigenvalue = 7.437868841644861 + 0.012044335728622612j
-
 # start vector
 start = g.vspincolor(w.F_grid)
 start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 
 # arnoldi with modest convergence criterion
-a = g.algorithms.eigen.arnoldi(Nmin=50, Nmax=120, Nstep=10, Nstop=1, resid=1e-5)
+a = g.algorithms.eigen.arnoldi(Nmin=50, Nmax=120, Nstep=10, Nstop=4, resid=1e-5)
 ira = g.algorithms.eigen.arnoldi(
-    Nmin=50, Nmax=120, Nstep=10, Nstop=1, resid=1e-5, restart=True
+    Nmin=50, Nmax=120, Nstep=10, Nstop=4, resid=1e-5, implicit_restart=True
 )
 
 
@@ -42,9 +40,15 @@ def test(a, name):
     t0 = g.time()
     evec, evals = a(w, start)
     t1 = g.time()
+    evals_test, evals_eps2 = g.algorithms.eigen.evals(w, evec, calculate_eps2=True)
+
+    largest_eval = 7.437
+
     g.message(f"{name} finished in {t1-t0} s")
-    evals_test = g.algorithms.eigen.evals(w, evec[-1:])
-    assert abs(evals_test[-1] - expected_largest_eigenvalue) < 1e-3
+
+    for i in range(len(evals_eps2)):
+        assert evals_eps2[i] / largest_eval ** 2.0 < 1e-5
+        assert abs(evals_test[i] - evals[i]) < 1e-6
 
 
 # expect the largest eigenvector to have converged somewhat
