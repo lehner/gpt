@@ -45,7 +45,10 @@ class arnoldi_iteration:
         ips = np.zeros((len(self.basis) + 1,), np.complex128)
         g.orthogonalize(new, self.basis, ips[0:-1])
         if second_orthogonalization:
-            g.orthogonalize(new, self.basis)
+            delta_ips = np.zeros((len(self.basis) + 1,), np.complex128)
+            g.orthogonalize(new, self.basis, delta_ips[0:-1])
+            # the following line may be omitted
+            ips += delta_ips
         ips[-1] = g.norm2(new) ** 0.5
         new /= ips[-1]
         self.basis.append(new)
