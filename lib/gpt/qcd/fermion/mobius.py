@@ -40,6 +40,23 @@ class mobius_class_operator(differentiable_fine_operator):
             accept_list=True,
         )
 
+        self.bulk_propagator_to_propagator = self.ExportPhysicalFermionSolution
+
+    def bulk_propagator(self, solver):
+        imp = self.ImportPhysicalFermionSource
+
+        inv_matrix = solver(self)
+
+        def prop(dst_sc, src_sc):
+            gpt.eval(dst_sc, inv_matrix * imp * src_sc)
+
+        return gpt.matrix_operator(
+            prop,
+            otype=(imp.otype[0], imp.otype[1]),
+            grid=(imp.grid[0], imp.grid[1]),
+            accept_list=True,
+        )
+
 
 @gpt.params_convention(
     mass=None, b=None, c=None, M5=None, boundary_phases=None, Ls=None

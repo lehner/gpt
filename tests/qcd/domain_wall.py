@@ -130,8 +130,8 @@ slv_5d = inv.preconditioned(pc.eo2_ne(), cg)
 slv_5d_kappa = inv.preconditioned(pc.eo2_kappa_ne(), cg_kappa)
 slv_5d_e = inv.preconditioned(pc.eo2_ne(), cg_e)
 
-# To calculate Jq5 which is necessary for the residual mass, we need a solver for the 5d propgator
-slv_qm_5d = slv_5d(qm)
+# To calculate Jq5 which is necessary for the residual mass, we need a solver for the bulk propgator
+slv_qm_bulk = qm.bulk_propagator(slv_5d)
 slv_qm_e = qm.propagator(slv_5d_e)
 slv_qz = qz.propagator(slv_5d)
 slv_qz_kappa = qz.propagator(slv_5d_kappa)
@@ -168,8 +168,9 @@ dst_qz = g.mspincolor(grid)
 dst_qz_kappa = g.mspincolor(grid)
 
 # Solve for the 5d and 4d propagator
-dst_qm_5d = g(slv_qm_5d * qm.ImportPhysicalFermionSource * src)
-dst_qm @= qm.ExportPhysicalFermionSolution * dst_qm_5d
+# qm.bulk_propagator_to_propagator * qm.bulk_propagator(slv) == qm.propagator(slv)
+dst_qm_bulk = g(slv_qm_bulk * src)
+dst_qm @= qm.bulk_propagator_to_propagator * dst_qm_bulk
 
 dst_qz @= slv_qz * src
 dst_qz_kappa @= slv_qz_kappa * src
@@ -181,7 +182,7 @@ assert eps2 < 1e-6
 assert len(cg.history) > len(cg_kappa.history)
 
 # calculate J5q
-p = qm.J5q(dst_qm_5d)
+p = qm.J5q(dst_qm_bulk)
 J5q = g.slice(g.trace(p * g.adj(p)), 3)
 
 g.message("J5q:")
