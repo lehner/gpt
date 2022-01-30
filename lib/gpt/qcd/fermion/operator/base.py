@@ -81,6 +81,9 @@ class base(gpt.matrix_operator):
             mat=registry.M, adj_mat=registry.Mdag, otype=otype, grid=self.F_grid
         )
 
+        # covariant shift (only create if needed)
+        self.covariant_shift_cache = None
+
         # create operator domain
         self.domain = gpt.core.domain.full(self.F_grid)
 
@@ -152,6 +155,13 @@ class base(gpt.matrix_operator):
         self._Mdir = registry.Mdir
         self._MDeriv = registry.MDeriv
         self._MDerivDag = registry.MDerivDag
+
+    def covariant_shift(self):
+        if not self.covariant_shift_cache:
+            self.covariant_shift_cache = gpt.covariant.shift(
+                self.U, boundary_phases=self.params["boundary_phases"]
+            )
+        return self.covariant_shift_cache
 
     def Mdir(self, mu, fb):
         return gpt.matrix_operator(

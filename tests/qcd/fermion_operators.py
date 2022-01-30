@@ -27,8 +27,8 @@ p = {
     "kappa": 0.137,
     "csw_r": 0.0,
     "csw_t": 0.0,
-    "xi_0": 1,
-    "nu": 1,
+    "xi_0": 1.0,
+    "nu": 1.0,
     "isAnisotropic": False,
     "boundary_phases": [cmath.exp(1j), cmath.exp(2j), cmath.exp(3j), cmath.exp(4j)],
 }
@@ -152,6 +152,29 @@ eps = np.linalg.norm(np.array(correlator) - np.array(correlator_ref))
 g.message("Expected correlator eps: ", eps)
 assert eps < 1e-5
 
+# test conserved current
+def divergence(f, current):
+    resN = g.lattice(f)
+    resN[:] = 0
+
+    b = g(g.gamma[5] * g.adj(f) * g.gamma[5])
+    for mu in range(4):
+        c_mu = current(f, b, mu)
+        resN += c_mu - g.cshift(c_mu, mu, -1)
+
+    return g.norm2(resN)
+
+
+def local_current(f, b, mu):
+    return g(g.gamma[mu] * f * b)
+
+
+div_J = divergence(dst, w.conserved_vector_current)
+assert div_J < 1e-13
+g.message(f"Divergence of conserved Wilson current {div_J}")
+
+div_J = divergence(dst, local_current)
+g.message(f"Divergence of local current {div_J}")
 
 # split grid solver check
 slv_split_eo1 = w.propagator(
@@ -506,7 +529,7 @@ def verify_matrix_element(fermion, dst, src, tag):
             def gradient(self, Uprime, dUprime):
                 assert dUprime == Uprime
                 return [
-                    g.eval(a + b)
+                    g.qcd.gauge.project.traceless_hermitian(g.eval(a + b))
                     for a, b in zip(mat_pg(dst_pg, src), mat_pg.adj()(src, dst_pg))
                 ]
 
@@ -525,7 +548,9 @@ def verify_matrix_element(fermion, dst, src, tag):
 
                 def gradient(self, Uprime, dUprime):
                     assert dUprime == Uprime
-                    return mat_pg(fermion.G5 * src, src)
+                    return g.qcd.gauge.project.traceless_hermitian(
+                        mat_pg(fermion.G5 * src, src)
+                    )
 
             dfv = df()
             dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
@@ -543,7 +568,9 @@ def verify_matrix_element(fermion, dst, src, tag):
 
                 def gradient(self, Uprime, dUprime):
                     assert dUprime == Uprime
-                    return mat_pg.adj()(src, fermion.G5 * src)
+                    return g.qcd.gauge.project.traceless_hermitian(
+                        mat_pg.adj()(src, fermion.G5 * src)
+                    )
 
             dfv = df()
             dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
@@ -572,7 +599,9 @@ def verify_matrix_element(fermion, dst, src, tag):
                     for r, x in zip(
                         R + R, mat_pg(dst_p, src_p) + mat_pg.adj()(src_p, dst_p)
                     ):
-                        g.set_checkerboard(r, x)
+                        g.set_checkerboard(
+                            r, g.qcd.gauge.project.traceless_hermitian(x)
+                        )
                     return R
 
         dfv = df()

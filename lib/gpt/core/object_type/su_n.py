@@ -89,6 +89,11 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
     def cartesian(self):
         return self
 
+    def defect(self, A):
+        err2 = gpt.norm2(gpt.adj(A) - A)
+        err2 += gpt.norm2(gpt.trace(A))
+        return err2 ** 0.5
+
     def compose(self, a, b):
         return a + b
 

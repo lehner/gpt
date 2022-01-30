@@ -38,6 +38,24 @@ class wilson_class_operator(
             self, gpt.matrix_operator(_G5, grid=self.F_grid, otype=otype)
         )
 
+    def conserved_vector_current(self, psi, psi_bar, mu, psi_bar_flavor=None):
+        assert self.params["xi_0"] == 1.0 and self.params["nu"] == 1.0
+        psi_shift = self.covariant_shift()
+        if psi_bar_flavor is None:
+            psi_bar_flavor = self
+        psi_bar_shift = psi_bar_flavor.covariant_shift()
+        return gpt(
+            +0.5
+            * psi_bar
+            * (gpt.gamma[mu].tensor() - gpt.gamma["I"].tensor())
+            * psi_shift.forward[mu]
+            * psi
+            + 0.5
+            * gpt.adj(psi_bar_shift.forward[mu](gpt.adj(psi_bar)))
+            * (gpt.gamma[mu].tensor() + gpt.gamma["I"].tensor())
+            * psi
+        )
+
 
 @gpt.params_convention(
     kappa=None,

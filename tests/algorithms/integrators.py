@@ -114,5 +114,11 @@ for i in range(3):
     integrator[i](10, ip, iq)(tau)
 
     eps = g.norm2(q - qref)
-    print(f"{integrator[i].__name__ : <10}: |q - qref|^2 = {eps:.4e}")
+    g.message(f"{integrator[i].__name__ : <10}: |q - qref|^2 = {eps:.4e}")
     assert eps < criterion[i]
+
+    # test reversibility
+    integrator[i](10, ip, iq)(-tau)
+    eps = g.norm2(q)
+    g.message(f"{integrator[i].__name__ : <10} reversibility test: {eps:.4e}")
+    assert eps < 1e-28

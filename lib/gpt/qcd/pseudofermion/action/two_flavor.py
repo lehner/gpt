@@ -71,7 +71,7 @@ class two_flavor_base(action_base):
         M, U, phi = self._updated(fields)
 
         eta = g.lattice(phi)
-        rng.normal(eta, sigma=2.0 ** -0.5)  # 1/sqrt(2)
+        rng.cnormal(eta, sigma=2.0 ** -0.5)  # 1/sqrt(2)
 
         phi @= self.operator.M(M) * eta
         return g.norm2(eta)
@@ -92,7 +92,7 @@ class two_flavor_base(action_base):
         for f in dfields:
             mu = fields.index(f)
             if mu < len(fields) - 1:
-                dS.append(frc[mu])
+                dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
                 raise Expcetion("not implemented")
         return dS
@@ -179,8 +179,10 @@ class two_flavor_ratio_base(action_base):
         M1, M2, U, phi = self._updated(fields)
 
         eta = g.lattice(phi)
-        rng.normal(eta, sigma=2.0 ** -0.5)  # 1/sqrt(2)
+        rng.cnormal(eta, sigma=2.0 ** -0.5)  # 1/sqrt(2)
 
+        # phi^dag M2dag (M1 M1dag)^-1 M2 phi
+        # eta = M1^-1 M2 phi
         chi = g.lattice(phi)
         chi @= self.inverter(self.operator.MMdag(M2)) * self.operator.M(M1) * eta
         phi @= self.operator.Mdag(M2) * chi
@@ -206,7 +208,7 @@ class two_flavor_ratio_base(action_base):
         for f in dfields:
             mu = fields.index(f)
             if mu < len(fields) - 1:
-                dS.append(frc[mu])
+                dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
                 raise Expcetion("not implemented")
         return dS

@@ -95,15 +95,21 @@ class differentiable_functional:
         g.message(f"Test that functional is real: {eps}")
         assert eps == 0.0
         # the gradient needs to be correct
-        a = sum(
-            [
-                g.group.inner_product(w, gr)
-                for gr, w in zip(self.gradient(fields, dfields), weights)
-            ]
-        )
+        gradient = self.gradient(fields, dfields)
+        a = sum([g.group.inner_product(w, gr) for gr, w in zip(gradient, weights)])
         b = self.approximate_gradient(fields, dfields, weights, epsilon=epsilon_approx)
         eps = abs(a - b) / abs(b)
         g.message(f"Assert gradient error: {eps} < {epsilon_assert}")
         if eps > epsilon_assert:
             g.message(f"Error: gradient = {a} <> approximate_gradient = {b}")
             assert False
+        # the gradient needs to live in cartesian
+        for gr in gradient:
+            if gr.otype.__name__ != weights[0].otype.__name__:
+                g.message(
+                    f"Gradient has incorrect object type: {gr.otype.__name__} != {weights[0].otype.__name__}"
+                )
+            eps = g.group.defect(gr)
+            if eps > epsilon_assert:
+                g.message(f"Error: cartesian defect: {eps} > {epsilon_assert}")
+                assert False

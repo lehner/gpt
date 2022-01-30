@@ -50,6 +50,10 @@ class ot_u_1_algebra(ot_u_1_base):
             "ot_u_1_group": lambda dst, src: gpt.eval(dst, gpt.component.exp(src * 1j))
         }
 
+    def defect(self, A):
+        err2 = gpt.norm2(gpt.adj(A) - A)
+        return err2 ** 0.5
+
     def cartesian(self):
         return self
 
