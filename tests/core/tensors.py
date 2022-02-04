@@ -421,3 +421,14 @@ for a_type in [
     b = rng.cnormal(g.lattice(grid, a_type))
 
     test_linear_combinations(a, b)
+
+
+# test epsilon tensor
+M = np.random.rand(5, 5)
+d1 = np.linalg.det(M)
+d2 = 0
+for idx, sign in g.epsilon(5):
+    d2 += (
+        M[0, idx[0]] * M[1, idx[1]] * M[2, idx[2]] * M[3, idx[3]] * M[4, idx[4]] * sign
+    )
+assert abs(d1 - d2) < 1e-13

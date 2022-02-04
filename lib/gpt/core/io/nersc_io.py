@@ -70,6 +70,12 @@ class nersc_io:
         elif self.floating_point == "IEEE64LITTLE" or self.floating_point == "IEEE64":
             self.munge = self.munge_ieee64little
             self.precision = gpt.double
+        elif self.floating_point == "IEEE32BIG":
+            self.munge = self.munge_ieee32big
+            self.precision = gpt.single
+        elif self.floating_point == "IEEE32LITTLE" or self.floating_point == "IEEE32":
+            self.munge = self.munge_ieee32little
+            self.precision = gpt.single
         else:
             gpt.message("Warning: unknown floating point format {self.floating_point}")
             return False
@@ -110,6 +116,16 @@ class nersc_io:
     def munge_ieee64little(self, data):
         if sys.byteorder == "big":
             cgpt.munge_byte_order(data, data, 8)
+        return data
+
+    def munge_ieee32big(self, data):
+        if sys.byteorder == "little":
+            cgpt.munge_byte_order(data, data, 4)
+        return data
+
+    def munge_ieee32little(self, data):
+        if sys.byteorder == "big":
+            cgpt.munge_byte_order(data, data, 4)
         return data
 
     def reconstruct_none(self, data):
