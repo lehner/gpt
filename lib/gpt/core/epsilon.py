@@ -18,14 +18,15 @@
 #
 import itertools as it
 
+
 def permutation_sign(permutation):
     permutation = list(permutation)
     n = len(permutation)
     sign = 1.0
-    for i in range(n-1):
+    for i in range(n - 1):
         if permutation[i] != i:
             sign *= -1.0
-            j = min(range(i,n), key=permutation.__getitem__)
+            j = min(range(i, n), key=permutation.__getitem__)
             permutation[i], permutation[j] = permutation[j], permutation[i]
     return sign
 
