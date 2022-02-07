@@ -41,26 +41,20 @@ def update(dst, frc, sign):
     return micro
 
 
-def multi_caller(funcs, arg):
-    for f in funcs:
-        f(arg)
+def step(funcs, c, n=1):
+    funcs = gpt.core.util.to_list(funcs)
+    def inner(eps):
+        for f in funcs:
+            f(c * eps**n)
+    return inner
 
 
-# i0: update_momenta, i1: update_dynamical_fields
 class integrator_base:
-    def __init__(self, N, i0, i1, coeffs, name):
+    def __init__(self, N, first_half, middle, name):
         self.N = N
-        self.i0 = gpt.core.util.to_list(i0)
-        self.i1 = gpt.core.util.to_list(i1)
-
-        self.coeffs = [coeffs[0]]
-        for i in range(N - 1):
-            self.coeffs.extend(coeffs[1:-1])
-            self.coeffs += [2.0 * coeffs[-1]]
-        self.coeffs.extend(coeffs[1:])
-
+        self.scheme = first_half + middle + list(reversed(first_half))
         self.__name__ = f"{name}({N})"
-
+        
     def string_representation(self, lvl):
         out = f" - Level {lvl} = {self.__name__}"
         for i in self.i1:
@@ -71,35 +65,78 @@ class integrator_base:
     def __str__(self):
         return self.string_representation(0)
 
+
     def __call__(self, tau):
         eps = tau / self.N
         verbose = gpt.default.is_verbose(self.__name__)
 
         time = gpt.timer(self.__name__)
         time(self.__name__)
-
-        multi_caller(self.i0, eps * self.coeffs[0])
-        k = 1
-        while k < len(self.coeffs):
-            multi_caller(self.i1, eps * self.coeffs[k])
-            k += 1
-            multi_caller(self.i0, eps * self.coeffs[k])
-            k += 1
-
+        
+        self.scheme[0](eps)
+        for i in range(self.N-1):
+            for s in self.scheme[1:-1]:
+                s(eps)
+            self.scheme[-1](2*eps)
+        for s in self.scheme[1:]:
+            s(eps)
+            
         if verbose:
             time()
             gpt.message(f"{self.__name__} Integrator ran in {time.dt['total']:g} secs")
 
 
+# p1 = 0
+# p1 -= d_1 S
+# q1  = exp(p1 * a) * q0 = exp(-dS * a) * q0 = q0  - d_1 S * q0 * a + O(a^2)
+# p  -= d_2 S * b = d_2 { S[q0] - d_1S[q0] * a + O(a^2) } * b 
+#    -= d_2 S[q0] * b - d_2 d_1 S[q0] * a * b
+class update_p_force_gradient:
+    def __init__(self, q, iq, p, ip_ex, ip_sl=None):
+        self.q = q
+        self.p = p
+        self.ip1 = ip_ex if ip_sl is None else ip_sl
+        self.iq = iq
+        self.ip2 = ip_ex
+        self.cache_p = None
+        self.cache_q = None
+        
+    def init(self, arg):
+        self.cache_p = gpt.copy(self.p)
+        self.cache_q = gpt.copy(self.q)
+        for p in gpt.core.util.to_list(self.p):
+            p[:] = 0
+        self.ip1(1.0)
+        self.iq(arg)
+        
+    def end(self, arg):
+        gpt.copy(self.p, self.cache_p)
+        self.ip2(arg)
+        gpt.copy(self.q, self.cache_q)
+        self.cache_p = None
+        self.cache_q = None
+
+
+# i0: update_momenta, i1: update_dynamical_fields
+
 class leap_frog(integrator_base):
     def __init__(self, N, i0, i1):
-        super().__init__(N, i0, i1, [0.5, 1.0, 0.5], "leap_frog")
-
+        super().__init__(N, [step(i0, 0.5)], [step(i1, 1.0)], "leap_frog")
+        
 
 class OMF2(integrator_base):
     def __init__(self, N, i0, i1, l=0.18):
         r0 = l
-        super().__init__(N, i0, i1, [r0, 0.5, (1 - 2 * r0), 0.5, r0], "omf2")
+        super().__init__(N, [step(i0, r0), step(i1, 0.5)], [step(i0, (1 - 2 * r0))], "omf2")
+
+
+class OMF2_force_gradient(integrator_base):
+    def __init__(self, N, i0, i1, ifg, l=1./6.):
+        r0 = l
+        super().__init__(N, [step(i0, r0), step(i1, 0.5)], [
+            step(ifg.init, 2./72./(1-2*r0), 2), 
+            step(ifg.end, (1-2*r0), 1)
+        ], "omf2_force_gradient")
 
 
 # Omelyan, Mryglod, Folk, 4th order integrator
@@ -116,10 +153,4 @@ class OMF4(integrator_base):
         ]
         f1 = 0.5 - r[0] - r[2]
         f2 = 1.0 - 2.0 * (r[1] + r[3])
-        super().__init__(
-            N,
-            i0,
-            i1,
-            [r[0], r[1], r[2], r[3], f1, f2, f1, r[3], r[2], r[1], r[0]],
-            "omf4",
-        )
+        super().__init__(N, [step(i0, r[0]), step(i1, r[1]), step(i0, r[2]),step(i1, r[3]),step(i0, f1)],[step(i1, f2)], "omf4")

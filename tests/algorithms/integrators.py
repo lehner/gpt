@@ -92,6 +92,7 @@ sympl = g.algorithms.integrator.symplectic
 
 ip = sympl.update_p(p, lambda: a1.gradient(q, q))
 iq = sympl.update_q(q, lambda: a0.gradient(p, p))
+ip_fg = sympl.update_p_force_gradient(q, iq, p, ip, ip)
 
 # ref solution obtained with Euler scheme
 M = 1000
@@ -102,23 +103,29 @@ for k in range(M):
 qref = g.lattice(q)
 qref @= q
 
-integrator = [sympl.leap_frog, sympl.OMF2, sympl.OMF4]
-criterion = [1e-5, 1e-8, 1e-12]
+nsteps = 10
+integrator = [
+    sympl.leap_frog(nsteps, ip, iq), 
+    sympl.OMF2(nsteps, ip, iq), 
+    sympl.OMF2_force_gradient(nsteps, ip, iq, ip_fg),
+    sympl.OMF4(nsteps, ip, iq)
+]
+criterion = [1e-5, 1e-8, 1e-11, 1e-12]
 
-for i in range(3):
+for i in range(len(integrator)):
     # initial config
     q[:] = 0
     p @= p0
 
     # solve
-    integrator[i](10, ip, iq)(tau)
+    integrator[i](tau)
 
     eps = g.norm2(q - qref)
     g.message(f"{integrator[i].__name__ : <10}: |q - qref|^2 = {eps:.4e}")
     assert eps < criterion[i]
 
     # test reversibility
-    integrator[i](10, ip, iq)(-tau)
+    integrator[i](-tau)
     eps = g.norm2(q)
     g.message(f"{integrator[i].__name__ : <10} reversibility test: {eps:.4e}")
     assert eps < 1e-28
