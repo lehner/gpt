@@ -50,16 +50,17 @@ def step(funcs, c, n=1):
 
 
 class integrator_base:
-    def __init__(self, N, first_half, middle, name):
+    def __init__(self, N, first_half, middle, inner, name):
         self.N = N
         self.scheme = first_half + middle + list(reversed(first_half))
+        self.inner = gpt.core.util.to_list(inner)
         self.__name__ = f"{name}({N})"
         
     def string_representation(self, lvl):
         out = f" - Level {lvl} = {self.__name__}"
-        for i in self.i1:
+        for i in self.inner:
             if isinstance(i, integrator_base):
-                out += "\n" + i.string_repr(lvl + 1)
+                out += "\n" + i.string_representation(lvl + 1)
         return out
 
     def __str__(self):
@@ -121,13 +122,13 @@ class update_p_force_gradient:
 
 class leap_frog(integrator_base):
     def __init__(self, N, i0, i1):
-        super().__init__(N, [step(i0, 0.5)], [step(i1, 1.0)], "leap_frog")
+        super().__init__(N, [step(i0, 0.5)], [step(i1, 1.0)], i1, "leap_frog")
         
 
 class OMF2(integrator_base):
     def __init__(self, N, i0, i1, l=0.18):
         r0 = l
-        super().__init__(N, [step(i0, r0), step(i1, 0.5)], [step(i0, (1 - 2 * r0))], "omf2")
+        super().__init__(N, [step(i0, r0), step(i1, 0.5)], [step(i0, (1 - 2 * r0))], i1, "omf2")
 
 
 class OMF2_force_gradient(integrator_base):
@@ -136,7 +137,7 @@ class OMF2_force_gradient(integrator_base):
         super().__init__(N, [step(i0, r0), step(i1, 0.5)], [
             step(ifg.init, 2./72./(1-2*r0), 2), 
             step(ifg.end, (1-2*r0), 1)
-        ], "omf2_force_gradient")
+        ], i1, "omf2_force_gradient")
 
 
 # Omelyan, Mryglod, Folk, 4th order integrator
@@ -153,4 +154,4 @@ class OMF4(integrator_base):
         ]
         f1 = 0.5 - r[0] - r[2]
         f2 = 1.0 - 2.0 * (r[1] + r[3])
-        super().__init__(N, [step(i0, r[0]), step(i1, r[1]), step(i0, r[2]),step(i1, r[3]),step(i0, f1)],[step(i1, f2)], "omf4")
+        super().__init__(N, [step(i0, r[0]), step(i1, r[1]), step(i0, r[2]),step(i1, r[3]),step(i0, f1)],[step(i1, f2)], i1, "omf4")
