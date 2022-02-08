@@ -54,10 +54,10 @@ class integrator_base:
         self.N = N
         self.scheme = first_half + middle + list(reversed(first_half))
         self.inner = gpt.core.util.to_list(inner)
-        self.__name__ = f"{name}({N})"
+        self.__name__ = f"{name}"
         
     def string_representation(self, lvl):
-        out = f" - Level {lvl} = {self.__name__}"
+        out = f" - Level {lvl} = {self.__name__}({self.N})"
         for i in self.inner:
             if isinstance(i, integrator_base):
                 out += "\n" + i.string_representation(lvl + 1)
