@@ -17,5 +17,6 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from gpt.algorithms.integrator.euler import euler
 from gpt.algorithms.integrator.runge_kutta import runge_kutta_4
 import gpt.algorithms.integrator.symplectic

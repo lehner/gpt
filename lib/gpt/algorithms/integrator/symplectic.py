@@ -19,7 +19,7 @@
 #
 
 import gpt
-from gpt.algorithms.integrator.ordinary_differential_equations import euler
+from gpt.algorithms.integrator import euler
 
 
 class log:
