@@ -89,9 +89,10 @@ tau = 1.0
 
 # integrators
 sympl = g.algorithms.integrator.symplectic
+log = sympl.log()
 
-ip = sympl.update_p(p, lambda: a1.gradient(q, q))
-iq = sympl.update_q(q, lambda: a0.gradient(p, p))
+ip = sympl.update_p(p, log(lambda: a1.gradient(q, q), "ip"))
+iq = sympl.update_q(q, log(lambda: a0.gradient(p, p), "iq"))
 ip_fg = sympl.update_p_force_gradient(q, iq, p, ip, ip)
 
 # ref solution obtained with Euler scheme
@@ -112,11 +113,18 @@ integrator = [
 ]
 criterion = [1e-5, 1e-8, 1e-11, 1e-12]
 
+for i in integrator:
+    g.default.set_verbose(i.__name__, True)
+    
 for i in range(len(integrator)):
     # initial config
     q[:] = 0
     p @= p0
 
+    # print/log
+    log.reset()
+    g.message(integrator[i])
+    
     # solve
     integrator[i](tau)
 
@@ -129,3 +137,5 @@ for i in range(len(integrator)):
     eps = g.norm2(q)
     g.message(f"{integrator[i].__name__ : <10} reversibility test: {eps:.4e}")
     assert eps < 1e-28
+
+    g.message(f"Max force = ", max(log.get("ip")))
