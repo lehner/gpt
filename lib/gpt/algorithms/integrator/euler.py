@@ -23,13 +23,16 @@ import gpt
 # dx/dt = f(t,x(t))
 # x(eps) = x(0) + eps * f(0, x(0))
 
+
 class euler:
     def __init__(self, dst, func, sign):
         self.dst = gpt.core.util.to_list(dst)
         self.func = func
         self.sign = sign
-        
+
     def __call__(self, eps):
         funcs = gpt.core.util.to_list(self.func())
         for i in range(len(funcs)):
-            self.dst[i] @= gpt.group.compose(gpt.eval(self.sign * eps * funcs[i]), self.dst[i])
+            self.dst[i] @= gpt.group.compose(
+                gpt.eval(self.sign * eps * funcs[i]), self.dst[i]
+            )

@@ -25,15 +25,15 @@ from gpt.algorithms.integrator import euler
 class log:
     def __init__(self):
         self.grad = {}
-    
+
     def reset(self):
         for key in self.grad:
             self.grad[key] = []
-            
+
     def __call__(self, grad, name):
-        if not name in self.grad:
+        if name not in self.grad:
             self.grad[name] = []
-            
+
         def inner():
             gs = grad()
             gn = 0.0
@@ -41,13 +41,14 @@ class log:
             for g in gpt.core.util.to_list(gs):
                 gn += gpt.norm2(g)
                 v += g.grid.gsites
-            self.grad[name].append(gn/v)
+            self.grad[name].append(gn / v)
             return gs
 
         return inner
-    
+
     def get(self, key):
         return self.grad[key]
+
 
 class step:
     def __init__(self, funcs, c, n=1):
@@ -55,18 +56,19 @@ class step:
         self.c = gpt.core.util.to_list(c)
         self.n = n
         self.nf = len(self.funcs)
-    
+
     def __add__(self, s):
         assert self.n == s.n
         return step(self.funcs + s.funcs, self.c + s.c, self.n)
 
     def __mul__(self, f):
-        return step(self.funcs, [c*f for c in self.c], self.n)
-    
+        return step(self.funcs, [c * f for c in self.c], self.n)
+
     def __call__(self, eps):
         for i in range(self.nf):
             self.funcs[i](self.c[i] * eps**self.n)
-            
+
+
 class symplectic_base:
     def __init__(self, N, half, middle, inner, name):
         self.N = N
@@ -75,43 +77,49 @@ class symplectic_base:
         self.inner = gpt.core.util.to_list(inner)
         self.__name__ = f"{name}"
         nc = len(self.cycle)
-        
+
         self.scheme = []
-        if N==1:
+        if N == 1:
             self.scheme = self.cycle
         else:
             for i in range(N):
-                self.scheme += [self.cycle[0]*(2 if i>0 else 1)]
-                j = nc if i==N-1 else nc-1
+                self.scheme += [self.cycle[0] * (2 if i > 0 else 1)]
+                j = nc if i == N - 1 else nc - 1
                 self.scheme += self.cycle[1:j]
 
     def string_representation(self, lvl):
-        out = f" - Level {lvl} " + self.__name__ + " " + ("" if self.N==1 else f"steps={self.N} ")
+        out = (
+            f" - Level {lvl} "
+            + self.__name__
+            + " "
+            + ("" if self.N == 1 else f"steps={self.N} ")
+        )
         for i in self.inner:
             if isinstance(i, symplectic_base):
-                out += "\n" + i.string_representation(lvl+1)
+                out += "\n" + i.string_representation(lvl + 1)
         return out
-    
+
     def __str__(self):
         return self.string_representation(0)
 
-
     def __getitem__(self, args):
         return self.scheme[args]
-    
+
     def __call__(self, tau):
         eps = tau / self.N
         verbose = gpt.default.is_verbose(self.__name__)
 
         time = gpt.timer(self.__name__)
         time(self.__name__)
-        
+
         for s in self.scheme:
             s(eps)
-            
+
         if verbose:
             time()
-            gpt.message(f"{self.__name__} [eps = {eps:.4e}] in {time.dt['total']:g} secs {time.dt['total']/self.N:g} secs/cycle")
+            gpt.message(
+                f"{self.__name__} [eps = {eps:.4e}] in {time.dt['total']:g} secs {time.dt['total']/self.N:g} secs/cycle"
+            )
 
 
 class update_p(symplectic_base):
@@ -124,11 +132,12 @@ class update_q(symplectic_base):
     def __init__(self, dst, frc, tag=None):
         iq = euler(dst, frc, +1)
         super().__init__(1, [], [iq], None, "euler")
-        
+
+
 # p1 = 0
 # p1 -= d_1 S
 # q1  = exp(p1 * a) * q0 = exp(-dS * a) * q0 = q0  - d_1 S * q0 * a + O(a^2)
-# p  -= d_2 S * b = d_2 { S[q0] - d_1S[q0] * a + O(a^2) } * b 
+# p  -= d_2 S * b = d_2 { S[q0] - d_1S[q0] * a + O(a^2) } * b
 #    -= d_2 S[q0] * b - d_2 d_1 S[q0] * a * b
 class update_p_force_gradient:
     def __init__(self, q, iq, p, ip_ex, ip_sl=None):
@@ -139,7 +148,7 @@ class update_p_force_gradient:
         self.ip2 = ip_ex
         self.cache_p = None
         self.cache_q = None
-        
+
     def init(self, arg):
         self.cache_p = gpt.copy(self.p)
         self.cache_q = gpt.copy(self.q)
@@ -147,7 +156,7 @@ class update_p_force_gradient:
             p[:] = 0
         self.ip1(1.0)
         self.iq(arg)
-        
+
     def end(self, arg):
         gpt.copy(self.p, self.cache_p)
         self.ip2(arg)
@@ -158,26 +167,44 @@ class update_p_force_gradient:
 
 # i0: update_momenta, i1: update_dynamical_fields
 
+
 class leap_frog(symplectic_base):
     def __init__(self, N, i0, i1):
-        super().__init__(N, [step(i0, 0.5) + step(i1[0], 1.0)], [step(i1[1:-1], 1.0)], i1, "leap_frog")
-        
+        super().__init__(
+            N,
+            [step(i0, 0.5) + step(i1[0], 1.0)],
+            [step(i1[1:-1], 1.0)],
+            i1,
+            "leap_frog",
+        )
+
 
 class OMF2(symplectic_base):
     def __init__(self, N, i0, i1, l=0.18):
         r0 = l
-        super().__init__(N, [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)], 
-                         [step(i0, (1 - 2 * r0)) + step(i1[0], 1.0)], i1, "omf2")
+        super().__init__(
+            N,
+            [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)],
+            [step(i0, (1 - 2 * r0)) + step(i1[0], 1.0)],
+            i1,
+            "omf2",
+        )
 
 
 class OMF2_force_gradient(symplectic_base):
-    def __init__(self, N, i0, i1, ifg, l=1./6.):
+    def __init__(self, N, i0, i1, ifg, l=1.0 / 6.0):
         r0 = l
-        super().__init__(N, [step(i0, r0) + step(i1[0], 0.5), 
-                             step(i1[1:-1], 0.5)],
-                         [step(ifg.init, 2./72./(1-2*r0), 2), 
-                          step(ifg.end, (1-2*r0), 1),
-                          step(i1[0], 1.0)], i1, "omf2_force_gradient")
+        super().__init__(
+            N,
+            [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)],
+            [
+                step(ifg.init, 2.0 / 72.0 / (1 - 2 * r0), 2),
+                step(ifg.end, (1 - 2 * r0), 1),
+                step(i1[0], 1.0),
+            ],
+            i1,
+            "omf2_force_gradient",
+        )
 
 
 # Omelyan, Mryglod, Folk, 4th order integrator
@@ -194,9 +221,16 @@ class OMF4(symplectic_base):
         ]
         f1 = 0.5 - r[0] - r[2]
         f2 = 1.0 - 2.0 * (r[1] + r[3])
-        super().__init__(N, [
-            step(i0, r[0]) + step(i1[0], r[1]), 
-            step(i1[1:-1], r[1]), 
-            step(i0, r[2]) + step(i1[0], r[1]+r[3]), 
-            step(i1[1:-1], r[3]), 
-            step(i0, f1) + step(i1[0], r[3]+f2)],[step(i1[1:-1], f2)], i1, "omf4")
+        super().__init__(
+            N,
+            [
+                step(i0, r[0]) + step(i1[0], r[1]),
+                step(i1[1:-1], r[1]),
+                step(i0, r[2]) + step(i1[0], r[1] + r[3]),
+                step(i1[1:-1], r[3]),
+                step(i0, f1) + step(i1[0], r[3] + f2),
+            ],
+            [step(i1[1:-1], f2)],
+            i1,
+            "omf4",
+        )
