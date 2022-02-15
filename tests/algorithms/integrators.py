@@ -89,9 +89,11 @@ tau = 1.0
 
 # integrators
 sympl = g.algorithms.integrator.symplectic
+log = sympl.log()
 
-ip = sympl.update_p(p, lambda: a1.gradient(q, q))
-iq = sympl.update_q(q, lambda: a0.gradient(p, p))
+ip = sympl.update_p(p, log(lambda: a1.gradient(q, q), "ip"))
+iq = sympl.update_q(q, log(lambda: a0.gradient(p, p), "iq"))
+ip_fg = sympl.update_p_force_gradient(q, iq, p, ip, ip)
 
 # ref solution obtained with Euler scheme
 M = 1000
@@ -103,18 +105,30 @@ qref = g.lattice(q)
 qref @= q
 
 # for test of multiple time-scale integrators
-ip1 = sympl.update_p(p, lambda: g(0.8*a1.gradient(q, q)))
-ip2 = sympl.update_p(p, lambda: g(0.2*a1.gradient(q, q)))
+#ip1 = sympl.update_p(p, lambda: g(0.8*a1.gradient(q, q)))
+#ip2 = sympl.update_p(p, lambda: g(0.2*a1.gradient(q, q)))
+#integrator = [sympl.leap_frog(10, ip, iq), sympl.OMF2(10, ip, iq), sympl.OMF4(10, ip, iq),
+#              sympl.OMF2(6, ip2, sympl.OMF4(1, ip1, iq))]
+#criterion = [1e-5, 1e-8, 1e-12, 1e-8]
 
-integrator = [sympl.leap_frog(10, ip, iq), sympl.OMF2(10, ip, iq), sympl.OMF4(10, ip, iq),
-              sympl.OMF2(6, ip2, sympl.OMF4(1, ip1, iq))]
-criterion = [1e-5, 1e-8, 1e-12, 1e-8]
+nsteps = 10
+integrator = [
+    sympl.leap_frog(nsteps, ip, iq), 
+    sympl.OMF2(nsteps, ip, iq), 
+    sympl.OMF2_force_gradient(nsteps, ip, iq, ip_fg),
+    sympl.OMF4(nsteps, ip, iq)
+]
+criterion = [1e-5, 1e-8, 1e-11, 1e-12]
 
-for i in range(4):
+for i in range(len(integrator)):
     # initial config
     q[:] = 0
     p @= p0
 
+    # print/log
+    log.reset()
+    g.message(integrator[i])
+    
     # solve
     integrator[i](tau)
 
@@ -127,3 +141,5 @@ for i in range(4):
     eps = g.norm2(q)
     g.message(f"{integrator[i].__name__ : <10} reversibility test: {eps:.4e}")
     assert eps < 1e-28
+
+    g.message(f"Max force = ", max(log.get("ip")))
