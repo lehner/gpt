@@ -26,23 +26,23 @@ class log:
     def __init__(self):
         self.grad = {}
         self.time = {}
-        
+
     def reset(self):
         for key in self.grad:
             self.grad[key] = []
             self.time[key] = []
-            
+
     def __call__(self, grad, name):
         if name not in self.grad:
             self.grad[name] = []
             self.time[name] = []
-            
+
         def inner():
             verbose = gpt.default.is_verbose(name)
             time = gpt.timer(name)
             time(name)
             gs = grad()
-            time('norm')
+            time("norm")
             gn = 0.0
             v = 0
             for g in gpt.core.util.to_list(gs):
@@ -51,7 +51,9 @@ class log:
             self.grad[name].append(gn / v)
             time()
             if verbose:
-                gpt.message(f"Force {name} |frc|^2/links = {gn/v:g} in {time.dt[name]:g} secs")
+                gpt.message(
+                    f"Force {name} |frc|^2/links = {gn/v:g} in {time.dt[name]:g} secs"
+                )
             self.time[name].append(time.dt[name])
             return gs
 
@@ -72,9 +74,9 @@ class step:
         self.c = gpt.core.util.to_list(c)
         self.n = n
         self.nf = len(self.funcs)
-        if (len(self.c)==1) and (self.nf>1):
-            self.c = self.c*self.nf
-            
+        if (len(self.c) == 1) and (self.nf > 1):
+            self.c = self.c * self.nf
+
     def __add__(self, s):
         assert self.n == s.n
         return step(self.funcs + s.funcs, self.c + s.c, self.n)
@@ -122,7 +124,7 @@ class symplectic_base:
     def __call__(self, tau):
         eps = tau / self.N
         verbose = gpt.default.is_verbose(self.__name__)
-        
+
         time = gpt.timer(self.__name__)
         time(self.__name__)
 
@@ -131,7 +133,9 @@ class symplectic_base:
 
         if verbose:
             time()
-            gpt.message(f"{self.__name__} [eps = {eps:.4e}] in {time.dt['total']:g} secs {time.dt['total']/self.N:g} secs/cycle")            
+            gpt.message(
+                f"{self.__name__} [eps = {eps:.4e}] in {time.dt['total']:g} secs {time.dt['total']/self.N:g} secs/cycle"
+            )
 
 
 class update_p(symplectic_base):
