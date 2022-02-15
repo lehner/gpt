@@ -25,23 +25,34 @@ from gpt.algorithms.integrator import euler
 class log:
     def __init__(self):
         self.grad = {}
-
+        self.time = {}
+        
     def reset(self):
         for key in self.grad:
             self.grad[key] = []
-
+            self.time[key] = []
+            
     def __call__(self, grad, name):
         if name not in self.grad:
             self.grad[name] = []
-
+            self.time[name] = []
+            
         def inner():
+            verbose = gpt.default.is_verbose(name)
+            time = gpt.timer(name)
+            time(name)
             gs = grad()
+            time('norm')
             gn = 0.0
             v = 0
             for g in gpt.core.util.to_list(gs):
                 gn += gpt.norm2(g)
                 v += g.grid.gsites
             self.grad[name].append(gn / v)
+            time()
+            if verbose:
+                gpt.message(f"Force {name} |frc|^2/links = {gn/v:g} in {time.dt[name]:g} secs")
+            self.time[name].append(time.dt[name])
             return gs
 
         return inner
@@ -50,13 +61,20 @@ class log:
         return self.grad[key]
 
 
+def set_verbose(val=True):
+    for i in ["leap_frog", "omf2", "omf2_force_gradient", "omf4"]:
+        gpt.default.set_verbose(i, val)
+
+
 class step:
     def __init__(self, funcs, c, n=1):
         self.funcs = gpt.core.util.to_list(funcs)
         self.c = gpt.core.util.to_list(c)
         self.n = n
         self.nf = len(self.funcs)
-
+        if (len(self.c)==1) and (self.nf>1):
+            self.c = self.c*self.nf
+            
     def __add__(self, s):
         assert self.n == s.n
         return step(self.funcs + s.funcs, self.c + s.c, self.n)
@@ -70,12 +88,13 @@ class step:
 
 
 class symplectic_base:
-    def __init__(self, N, half, middle, inner, name):
+    def __init__(self, N, half, middle, inner, name, tag=None):
         self.N = N
         half = [lambda x: None] if not half else half
         self.cycle = half + middle + list(reversed(half))
         self.inner = gpt.core.util.to_list(inner)
         self.__name__ = f"{name}"
+        self.tag = tag
         nc = len(self.cycle)
 
         self.scheme = []
@@ -88,12 +107,7 @@ class symplectic_base:
                 self.scheme += self.cycle[1:j]
 
     def string_representation(self, lvl):
-        out = (
-            f" - Level {lvl} "
-            + self.__name__
-            + " "
-            + ("" if self.N == 1 else f"steps={self.N} ")
-        )
+        out = f" - Level {lvl} {self.__name__} steps={self.N}"
         for i in self.inner:
             if isinstance(i, symplectic_base):
                 out += "\n" + i.string_representation(lvl + 1)
@@ -108,7 +122,7 @@ class symplectic_base:
     def __call__(self, tau):
         eps = tau / self.N
         verbose = gpt.default.is_verbose(self.__name__)
-
+        
         time = gpt.timer(self.__name__)
         time(self.__name__)
 
@@ -117,19 +131,17 @@ class symplectic_base:
 
         if verbose:
             time()
-            gpt.message(
-                f"{self.__name__} [eps = {eps:.4e}] in {time.dt['total']:g} secs {time.dt['total']/self.N:g} secs/cycle"
-            )
+            gpt.message(f"{self.__name__} [eps = {eps:.4e}] in {time.dt['total']:g} secs {time.dt['total']/self.N:g} secs/cycle")            
 
 
 class update_p(symplectic_base):
-    def __init__(self, dst, frc, tag=None):
+    def __init__(self, dst, frc):
         ip = euler(dst, frc, -1)
         super().__init__(1, [], [ip], None, "euler")
 
 
 class update_q(symplectic_base):
-    def __init__(self, dst, frc, tag=None):
+    def __init__(self, dst, frc):
         iq = euler(dst, frc, +1)
         super().__init__(1, [], [iq], None, "euler")
 
