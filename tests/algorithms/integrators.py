@@ -102,23 +102,28 @@ for k in range(M):
 qref = g.lattice(q)
 qref @= q
 
-integrator = [sympl.leap_frog, sympl.OMF2, sympl.OMF4]
-criterion = [1e-5, 1e-8, 1e-12]
+# for test of multiple time-scale integrators
+ip1 = sympl.update_p(p, lambda: g(0.8*a1.gradient(q, q)))
+ip2 = sympl.update_p(p, lambda: g(0.2*a1.gradient(q, q)))
 
-for i in range(3):
+integrator = [sympl.leap_frog(10, ip, iq), sympl.OMF2(10, ip, iq), sympl.OMF4(10, ip, iq),
+              sympl.OMF2(6, ip2, sympl.OMF4(1, ip1, iq))]
+criterion = [1e-5, 1e-8, 1e-12, 1e-8]
+
+for i in range(4):
     # initial config
     q[:] = 0
     p @= p0
 
     # solve
-    integrator[i](10, ip, iq)(tau)
+    integrator[i](tau)
 
     eps = g.norm2(q - qref)
     g.message(f"{integrator[i].__name__ : <10}: |q - qref|^2 = {eps:.4e}")
     assert eps < criterion[i]
 
     # test reversibility
-    integrator[i](10, ip, iq)(-tau)
+    integrator[i](-tau)
     eps = g.norm2(q)
     g.message(f"{integrator[i].__name__ : <10} reversibility test: {eps:.4e}")
     assert eps < 1e-28

@@ -19,17 +19,20 @@
 import itertools as it
 
 
-def permutation_sign(permutation):
+def sign_of_permutation(permutation, reference):
     permutation = list(permutation)
     n = len(permutation)
     sign = 1.0
     for i in range(n - 1):
-        if permutation[i] != i:
+        if permutation[i] != reference[i]:
             sign *= -1.0
-            j = min(range(i, n), key=permutation.__getitem__)
+            j = permutation.index(reference[i])
             permutation[i], permutation[j] = permutation[j], permutation[i]
+    for i in range(n):
+        assert permutation[i] == reference[i]
     return sign
 
 
 def epsilon(n):
-    return [(p, permutation_sign(p)) for p in it.permutations(range(n))]
+    reference = list(range(n))
+    return [(p, sign_of_permutation(p, reference)) for p in it.permutations(reference)]
