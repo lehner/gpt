@@ -152,9 +152,9 @@ class update_q(symplectic_base):
 
 # p1 = 0
 # p1 -= d_1 S
-# q1  = exp(p1 * a) * q0 = exp(-dS * a) * q0 = q0  - d_1 S * q0 * a + O(a^2)
-# p  -= d_2 S * b = d_2 { S[q0] - d_1S[q0] * a + O(a^2) } * b
-#    -= d_2 S[q0] * b - d_2 d_1 S[q0] * a * b
+# q1  = exp(p1 * a * eps^2) * q0 = exp(-dS * a * eps^2) * q0 = q0  - d_1 S * q0 * a * eps^2 + O(eps^4)
+# p  -= d_2 S * b * eps = d_2 { S[q0] - d_1S[q0] * a * eps^2+ O(eps^4) } * b * eps
+#    -= d_2 S[q0] * b * eps - d_2 d_1 S[q0] * a * b * eps^3
 class update_p_force_gradient:
     def __init__(self, q, iq, p, ip_ex, ip_sl=None):
         self.q = q
@@ -179,6 +179,15 @@ class update_p_force_gradient:
         gpt.copy(self.q, self.cache_q)
         self.cache_p = None
         self.cache_q = None
+
+    def __call__(self, a, b):
+        scheme = [step(self.init, a / b, 2), step(self.end, b, 1)]
+
+        def inner(eps):
+            for s in scheme:
+                s(eps)
+
+        return inner
 
 
 # i0: update_momenta, i1: update_dynamical_fields
@@ -210,14 +219,11 @@ class OMF2(symplectic_base):
 class OMF2_force_gradient(symplectic_base):
     def __init__(self, N, i0, i1, ifg, l=1.0 / 6.0):
         r0 = l
+        middle = [_ifg(2.0 / 72.0, 1 - 2 * r0) for _ifg in gpt.core.util.to_list(ifg)]
         super().__init__(
             N,
             [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)],
-            [
-                step(ifg.init, 2.0 / 72.0 / (1 - 2 * r0), 2),
-                step(ifg.end, (1 - 2 * r0), 1),
-                step(i1[0], 1.0),
-            ],
+            middle + [step(i1[0], 1.0)],
             i1,
             "omf2_force_gradient",
         )
