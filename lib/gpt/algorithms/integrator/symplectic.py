@@ -25,36 +25,28 @@ from gpt.algorithms.integrator import euler
 class log:
     def __init__(self):
         self.grad = {}
-        self.time = {}
+        self.time = gpt.timer()
 
     def reset(self):
+        self.time = gpt.timer()
         for key in self.grad:
             self.grad[key] = []
-            self.time[key] = []
 
     def __call__(self, grad, name):
         if name not in self.grad:
             self.grad[name] = []
-            self.time[name] = []
 
         def inner():
-            verbose = gpt.default.is_verbose(name)
-            time = gpt.timer(name)
-            time(name)
+            self.time(name)
             gs = grad()
-            time("norm")
+            self.time("norm")
             gn = 0.0
             v = 0
             for g in gpt.core.util.to_list(gs):
                 gn += gpt.norm2(g)
                 v += g.grid.gsites
             self.grad[name].append(gn / v)
-            time()
-            if verbose:
-                gpt.message(
-                    f"Force {name} |frc|^2/links = {gn/v:g} in {time.dt[name]:g} secs"
-                )
-            self.time[name].append(time.dt[name])
+            self.time()
             return gs
 
         return inner
