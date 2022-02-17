@@ -77,7 +77,8 @@ a0 = g.qcd.scalar.action.mass_term()
 
 # q^2 * k / 2
 k = 0.1234
-a1 = g.qcd.scalar.action.mass_term(k)
+l = 0.05
+a1 = g.qcd.scalar.action.phi4(k, l)
 
 # starting config
 q[:] = 0
@@ -111,14 +112,14 @@ qref @= q
 #              sympl.OMF2(6, ip2, sympl.OMF4(1, ip1, iq))]
 #criterion = [1e-5, 1e-8, 1e-12, 1e-8]
 
-nsteps = 10
+nsteps = 20
 integrator = [
     sympl.leap_frog(nsteps, ip, iq), 
     sympl.OMF2(nsteps, ip, iq), 
     sympl.OMF2_force_gradient(nsteps, ip, iq, ip_fg),
     sympl.OMF4(nsteps, ip, iq)
 ]
-criterion = [1e-5, 1e-8, 1e-11, 1e-12]
+criterion = [1e-5, 1e-7, 1e-11, 1e-11]
 
 for i in range(len(integrator)):
     # initial config
