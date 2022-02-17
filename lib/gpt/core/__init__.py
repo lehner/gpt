@@ -100,3 +100,4 @@ import gpt.core.block
 import gpt.core.matrix
 import gpt.core.component
 import gpt.core.group
+import gpt.core.sparse_tensor

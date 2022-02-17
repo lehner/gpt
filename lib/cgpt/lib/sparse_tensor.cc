@@ -128,8 +128,8 @@ EXPORT(sparse_tensor_set,{
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(d, &pos, &_key, &_value)) {
-        ASSERT(PyComplex_Check(_value));
-        ComplexD value = ComplexD(PyComplex_RealAsDouble(_value), PyComplex_ImagAsDouble(_value));
+        ComplexD value;
+        cgpt_convert(_value, value);
         
         ASSERT(PyTuple_Check(_key));
         
