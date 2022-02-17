@@ -25,23 +25,36 @@ from gpt.algorithms.integrator import euler
 class log:
     def __init__(self):
         self.grad = {}
+        self.time = {}
 
     def reset(self):
         for key in self.grad:
             self.grad[key] = []
+            self.time[key] = []
 
     def __call__(self, grad, name):
         if name not in self.grad:
             self.grad[name] = []
+            self.time[name] = []
 
         def inner():
+            verbose = gpt.default.is_verbose(name)
+            time = gpt.timer(name)
+            time(name)
             gs = grad()
+            time("norm")
             gn = 0.0
             v = 0
             for g in gpt.core.util.to_list(gs):
                 gn += gpt.norm2(g)
                 v += g.grid.gsites
             self.grad[name].append(gn / v)
+            time()
+            if verbose:
+                gpt.message(
+                    f"Force {name} |frc|^2/links = {gn/v:g} in {time.dt[name]:g} secs"
+                )
+            self.time[name].append(time.dt[name])
             return gs
 
         return inner
@@ -50,12 +63,19 @@ class log:
         return self.grad[key]
 
 
+def set_verbose(val=True):
+    for i in ["leap_frog", "omf2", "omf2_force_gradient", "omf4"]:
+        gpt.default.set_verbose(i, val)
+
+
 class step:
     def __init__(self, funcs, c, n=1):
         self.funcs = gpt.core.util.to_list(funcs)
         self.c = gpt.core.util.to_list(c)
         self.n = n
         self.nf = len(self.funcs)
+        if (len(self.c) == 1) and (self.nf > 1):
+            self.c = self.c * self.nf
 
     def __add__(self, s):
         assert self.n == s.n
@@ -70,12 +90,13 @@ class step:
 
 
 class symplectic_base:
-    def __init__(self, N, half, middle, inner, name):
+    def __init__(self, N, half, middle, inner, name, tag=None):
         self.N = N
         half = [lambda x: None] if not half else half
         self.cycle = half + middle + list(reversed(half))
         self.inner = gpt.core.util.to_list(inner)
         self.__name__ = f"{name}"
+        self.tag = tag
         nc = len(self.cycle)
 
         self.scheme = []
@@ -88,12 +109,7 @@ class symplectic_base:
                 self.scheme += self.cycle[1:j]
 
     def string_representation(self, lvl):
-        out = (
-            f" - Level {lvl} "
-            + self.__name__
-            + " "
-            + ("" if self.N == 1 else f"steps={self.N} ")
-        )
+        out = f" - Level {lvl} {self.__name__} steps={self.N}"
         for i in self.inner:
             if isinstance(i, symplectic_base):
                 out += "\n" + i.string_representation(lvl + 1)
@@ -123,22 +139,22 @@ class symplectic_base:
 
 
 class update_p(symplectic_base):
-    def __init__(self, dst, frc, tag=None):
+    def __init__(self, dst, frc):
         ip = euler(dst, frc, -1)
         super().__init__(1, [], [ip], None, "euler")
 
 
 class update_q(symplectic_base):
-    def __init__(self, dst, frc, tag=None):
+    def __init__(self, dst, frc):
         iq = euler(dst, frc, +1)
         super().__init__(1, [], [iq], None, "euler")
 
 
 # p1 = 0
 # p1 -= d_1 S
-# q1  = exp(p1 * a) * q0 = exp(-dS * a) * q0 = q0  - d_1 S * q0 * a + O(a^2)
-# p  -= d_2 S * b = d_2 { S[q0] - d_1S[q0] * a + O(a^2) } * b
-#    -= d_2 S[q0] * b - d_2 d_1 S[q0] * a * b
+# q1  = exp(p1 * a * eps^2) * q0 = exp(-dS * a * eps^2) * q0 = q0  - d_1 S * q0 * a * eps^2 + O(eps^4)
+# p  -= d_2 S * b * eps = d_2 { S[q0] - d_1S[q0] * a * eps^2+ O(eps^4) } * b * eps
+#    -= d_2 S[q0] * b * eps - d_2 d_1 S[q0] * a * b * eps^3
 class update_p_force_gradient:
     def __init__(self, q, iq, p, ip_ex, ip_sl=None):
         self.q = q
@@ -163,6 +179,15 @@ class update_p_force_gradient:
         gpt.copy(self.q, self.cache_q)
         self.cache_p = None
         self.cache_q = None
+
+    def __call__(self, a, b):
+        scheme = [step(self.init, a / b, 2), step(self.end, b, 1)]
+
+        def inner(eps):
+            for s in scheme:
+                s(eps)
+
+        return inner
 
 
 # i0: update_momenta, i1: update_dynamical_fields
@@ -194,14 +219,11 @@ class OMF2(symplectic_base):
 class OMF2_force_gradient(symplectic_base):
     def __init__(self, N, i0, i1, ifg, l=1.0 / 6.0):
         r0 = l
+        middle = [_ifg(2.0 / 72.0, 1 - 2 * r0) for _ifg in gpt.core.util.to_list(ifg)]
         super().__init__(
             N,
             [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)],
-            [
-                step(ifg.init, 2.0 / 72.0 / (1 - 2 * r0), 2),
-                step(ifg.end, (1 - 2 * r0), 1),
-                step(i1[0], 1.0),
-            ],
+            middle + [step(i1[0], 1.0)],
             i1,
             "omf2_force_gradient",
         )
