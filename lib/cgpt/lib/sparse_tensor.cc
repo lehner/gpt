@@ -319,3 +319,24 @@ EXPORT(sparse_tensor_contract,{
     return ret;
   });
 
+
+EXPORT(sparse_tensor_sum,{
+    
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+
+    std::vector<sparse_tensor>* t = (std::vector<sparse_tensor>*)p;
+    long n_parallel = t->size();
+    std::vector<sparse_tensor>* r = new std::vector<sparse_tensor>(1, (*t)[0].basis);
+
+    for (long i=0;i<n_parallel;i++)
+      (*r)[0] = (*r)[0] + (*t)[i];
+  
+    PyObject* ret = PyTuple_New(2);
+    PyTuple_SetItem(ret, 0, PyLong_FromVoidPtr(r));
+    PyTuple_SetItem(ret, 1, PyLong_FromVoidPtr(new std::shared_ptr<tensor_basis>((*r)[0].basis)));
+    return ret;
+    
+  });

@@ -22,6 +22,16 @@ EXPORT(global_rank,{
     return PyLong_FromLong(CartesianCommunicator::RankWorld());
   });
 
+EXPORT(global_ranks,{
+    int mpi_ranks;
+#ifdef CGPT_USE_MPI
+    MPI_Comm_size(CartesianCommunicator::communicator_world,&mpi_ranks);
+#else
+    mpi_ranks=1;
+#endif
+    return PyLong_FromLong(mpi_ranks);
+  });
+
 EXPORT(broadcast,{
 
     long root;

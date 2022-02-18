@@ -25,6 +25,13 @@ public:
   typedef uint64_t Index;
   Dimensions dimensions;
 
+  Index size() const {
+    Index i = 1;
+    for (size_t dim=0;dim<dimensions.size();dim++)
+      i = i*dimensions[dim].second;
+    return i;
+  }
+  
   Index c2i(const std::vector<int>& coor) {
     Index i = 0;
     ASSERT(coor.size() == dimensions.size());
@@ -99,8 +106,7 @@ public:
     return r;
   }
 
-  template<typename Functor>
-  sparse_tensor combine(const sparse_tensor& other, Functor f) {
+  sparse_tensor operator*(const sparse_tensor& other) {
     // first need a joint basis
     auto r_basis = std::make_shared<tensor_basis>();
 
@@ -130,7 +136,7 @@ public:
               break;
 
         if (l == c_other.size()) {
-          ComplexD val = f(i.second, j.second);
+          ComplexD val = i.second * j.second;
           if (val != 0.0) {
             auto r_i = r_basis->c2i(r_c);
             r.values[r_i] = val;
@@ -142,18 +148,69 @@ public:
     return r;
   }
 
-  sparse_tensor operator*(const sparse_tensor& other) {
-    struct {
-      ComplexD operator()(ComplexD a, ComplexD b) { return a*b; };
-    } op;
-    return combine(other, op);
-  }
+  void add(const sparse_tensor& a, std::vector<int>& v, std::vector<int>& v_other) {
 
+    tensor_basis ortho;
+    std::vector<int> ortho_idx;
+    for (int i=0;i<v_other.size();i++)
+      if (v_other[i] != -1) {
+        ortho.dimensions.push_back(basis->dimensions[v_other[i]]);
+        ortho_idx.push_back(v_other[i]);
+      }
+    Index ortho_size = ortho.size();
+    
+    std::vector<int> r_c = basis->i2c(0);
+      
+    // add in first terms
+    for (auto & i : a.values) {
+      auto c = a.basis->i2c(i.first);
+      for (int l=0;l<c.size();l++)
+        r_c[v[l]] = c[l];
+        
+      for (Index j=0;j<ortho_size;j++) {
+        auto c = ortho.i2c(j);
+        for (int l=0;l<c.size();l++)
+          r_c[ortho_idx[l]] = c[l];
+          
+        auto r_i = basis->c2i(r_c);
+        auto ff = values.find(r_i);
+        if (ff == values.end()) {
+          if (i.second != 0.0)
+            values[r_i] = i.second;
+        } else {
+          ComplexD val = ff->second + i.second;
+          if (val != 0.0)
+            ff->second = val;
+          else
+            values.erase(ff);
+        }
+      }
+    }
+  }
+  
   sparse_tensor operator+(const sparse_tensor& other) {
-    struct {
-      ComplexD operator()(ComplexD a, ComplexD b) { return a+b; };
-    } op;
-    return combine(other, op);
+    // first need a joint basis
+    auto r_basis = std::make_shared<tensor_basis>();
+
+    std::vector<int> v, v_other, w, w_other;
+    r_basis->merge(*basis, v, w); // v needs summing, w needs checking
+    r_basis->merge(*other.basis, v_other, w_other);
+
+    // A[v] one[v_other] + one[v - w_other] B[v_other + w_other]
+    sparse_tensor r(r_basis);
+    r.add(*this, v, v_other);
+
+    for (int i=0;i<v_other.size();i++)
+      if (w_other[i] != -1) {
+        v_other[i] = w_other[i];
+        for (int j=0;j<v.size();j++)
+          if (v[j] == w_other[i])
+            v[j] = -1;
+      }
+    
+    r.add(other, v_other, v);
+
+    return r;
   }
 
   static void contract_dimension(sparse_tensor& r,
@@ -240,69 +297,3 @@ public:
     std::cout << "}" << std::endl;
   }
 };
-  /*
-
-  
-
-            indices = list(set(self.indices + other.indices))
-
-            it = wick.iterator(indices)
-            c = {}
-            values = {}
-            
-            while it(c):
-                new_value = tuple([ (i, c[i]) for i in indices ])
-                a_value = tuple([ (i, c[i]) for i in self.indices ])
-                b_value = tuple([ (i, c[i]) for i in other.indices ])
-
-                if a_value in self.values and b_value in other.values:
-                    values[new_value] = self.values[a_value] * other.values[b_value]
-
-            return wick.tensor(
-                indices,
-                values
-            )
-
-        def __add__(self, other):
-            indices = list(set(self.indices + other.indices))
-
-            it = wick.iterator(indices)
-            c = {}
-            values = {}
-            
-            while it(c):
-                new_value = tuple([ (i, c[i]) for i in indices ])
-                a_value = tuple([ (i, c[i]) for i in self.indices ])
-                b_value = tuple([ (i, c[i]) for i in other.indices ])
-
-                terms = []
-                if a_value in self.values:
-                    terms.append(self.values[a_value])
-                if b_value in other.values:
-                    terms.append(other.values[b_value])
-                if len(terms) == 1:
-                    values[new_value] = terms[0]
-                elif len(terms) == 2:
-                    values[new_value] = terms[0] + terms[1]
-
-            return wick.tensor(
-                indices,
-                values
-            )
-
-        def evaluated(self):
-            return wick.tensor(
-                self.indices,
-                { v: g(self.values[v]) for v in self.values }
-            )
-
-        def tensor_removed(self):
-            if len(self.values) == 1 and () in self.values:
-                return self.values[()]
-            return self
-
-        def __setitem__(self, index_values, value):
-            self.values[
-                tuple([(i,j) for i, j in zip(self.indices, index_values)])
-            ] = value
-  */

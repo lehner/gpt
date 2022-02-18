@@ -77,6 +77,13 @@ assert cc[:] == [
 ]
 
 zero = g.sparse_tensor.contract([v],[b]) + g.sparse_tensor.contract([t,t2],[b]) * (-1)
+print(zero[:])
+assert zero[:] == [{}, {}, {}, {}]
+
+zero = g.sparse_tensor.contract([v],[b]) + (-1) * g.sparse_tensor.contract([t,t2],[b])
+assert zero[:] == [{}, {}, {}, {}]
+
+zero = g.sparse_tensor.contract([v],[b]) - g.sparse_tensor.contract([t,t2],[b])
 assert zero[:] == [{}, {}, {}, {}]
 
 trace = g.sparse_tensor.contract([v],[b,a,alpha])
@@ -88,3 +95,41 @@ assert trace[:] == [
     {(): -2j},
     {(): (2-2j)}
 ]
+
+
+
+# test general addition
+t1 = g.sparse_tensor.tensor(
+    g.sparse_tensor.basis([a]), 4
+)
+
+t1[0] = 0.5
+t1[2] = 2.0
+
+t2 = g.sparse_tensor.tensor(
+    g.sparse_tensor.basis([b]), 4
+)
+
+t2[0] = -1.0
+t2[1] = -3.5
+
+t = t1 + t2
+
+assert t[:] == [{
+    (1, 0): (-1+0j),
+    (1, 1): (-3.5+0j),
+    (0, 2): (0.5+0j),
+    (0, 0): (-0.5+0j),
+    (2, 2): (2+0j),
+    (2, 1): (-1.5+0j),
+    (0, 1): (-3+0j),
+    (2, 0): (1+0j)
+}] * 4
+
+trev = t2 + t1
+
+zero = t - trev
+assert zero[:] == [{}, {}, {}, {}]
+
+# call global sum
+gs = t.global_sum()
