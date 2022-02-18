@@ -78,7 +78,7 @@ class step:
 
     def __call__(self, eps):
         for i in range(self.nf):
-            self.funcs[i](self.c[i] * eps**self.n)
+            self.funcs[i](self.c[i] * eps ** self.n)
 
 
 class symplectic_base:

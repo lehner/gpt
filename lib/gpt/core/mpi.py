@@ -22,6 +22,7 @@ import cgpt
 def rank():
     return cgpt.global_rank()
 
+
 def ranks():
     return cgpt.global_ranks()
 

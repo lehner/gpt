@@ -106,16 +106,16 @@ qref = g.lattice(q)
 qref @= q
 
 # for test of multiple time-scale integrators
-ip1 = sympl.update_p(p, log(lambda: g(0.8*a1.gradient(q, q)), "ip"))
-ip2 = sympl.update_p(p, log(lambda: g(0.2*a1.gradient(q, q)), "ip"))
+ip1 = sympl.update_p(p, log(lambda: g(0.8 * a1.gradient(q, q)), "ip"))
+ip2 = sympl.update_p(p, log(lambda: g(0.2 * a1.gradient(q, q)), "ip"))
 
 nsteps = 20
 integrator = [
-    sympl.leap_frog(nsteps, ip, iq), 
-    sympl.OMF2(nsteps, ip, iq), 
+    sympl.leap_frog(nsteps, ip, iq),
+    sympl.OMF2(nsteps, ip, iq),
     sympl.OMF2_force_gradient(nsteps, ip, iq, ip_fg),
     sympl.OMF4(nsteps, ip, iq),
-    sympl.OMF2(12, ip2, sympl.OMF4(1, ip1, iq))
+    sympl.OMF2(12, ip2, sympl.OMF4(1, ip1, iq)),
 ]
 criterion = [1e-5, 1e-7, 1e-11, 1e-11, 1e-8]
 
@@ -127,7 +127,7 @@ for i in range(len(integrator)):
     # print/log
     log.reset()
     g.message(integrator[i])
-    
+
     # solve
     integrator[i](tau)
 
@@ -141,5 +141,5 @@ for i in range(len(integrator)):
     g.message(f"{integrator[i].__name__ : <10} reversibility test: {eps:.4e}")
     assert eps < 1e-28
 
-    g.message(f"Max force = ", max(log.get("ip")))
+    g.message("Max force = ", max(log.get("ip")))
     g.message(f"Timing:\n{log.time}")
