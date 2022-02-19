@@ -19,6 +19,7 @@
 import gpt
 import cgpt
 
+
 class basis:
     def __init__(self, arg):
         if type(arg) is int:
@@ -37,13 +38,13 @@ class basis:
 
     def to_array(self):
         return [self[i] for i in range(len(self))]
-    
+
     def __str__(self):
         return str(self.to_array())
 
 
 class tensor:
-    def __init__(self, b, n_parallel, obj = None):
+    def __init__(self, b, n_parallel, obj=None):
         assert isinstance(b, basis)
         self.basis = b
         if obj is None:
@@ -57,7 +58,7 @@ class tensor:
 
     def update(self, v):
         cgpt.sparse_tensor_set(self.obj, v)
-        
+
     def __setitem__(self, key, value):
         if key == slice(None, None, None):
             self.update(value)
@@ -76,16 +77,16 @@ class tensor:
         return cgpt.sparse_tensor_get(self.obj, key)
 
     def __mul__(self, other):
-        return self.binary(other,1)
+        return self.binary(other, 1)
 
     def __rmul__(self, other):
         if gpt.util.is_num(other):
             return self * other
         else:
-            raise NotImplemented()
+            raise NotImplementedError()
 
     def __add__(self, other):
-        return self.binary(other,0)
+        return self.binary(other, 0)
 
     def __sub__(self, other):
         return self + other * (-1)
@@ -102,12 +103,12 @@ class tensor:
             return self
 
     def global_sum(self):
-        me = str([self.basis.to_array(),self[:]]).encode("utf-8")
+        me = str([self.basis.to_array(), self[:]]).encode("utf-8")
 
         r = tensor(basis([]), self.n_parallel)
-        
+
         for i in range(gpt.ranks()):
-            b, t = eval(gpt.broadcast(i,me).decode("utf-8"))
+            b, t = eval(gpt.broadcast(i, me).decode("utf-8"))
             ti = tensor(basis(b), self.n_parallel)
             ti[:] = t
             r = r + ti
@@ -115,7 +116,9 @@ class tensor:
         return r
 
     def binary(self, other, l):
-        obj_t, obj_b = cgpt.sparse_tensor_binary(self.obj, other.obj if isinstance(other, tensor) else complex(other), l)
+        obj_t, obj_b = cgpt.sparse_tensor_binary(
+            self.obj, other.obj if isinstance(other, tensor) else complex(other), l
+        )
         return tensor(basis(obj_b), self.n_parallel, obj_t)
 
     def __str__(self):
@@ -124,7 +127,6 @@ class tensor:
 
 def contract(tensors, symbols):
     obj_t, obj_b = cgpt.sparse_tensor_contract(
-        [t.obj for t in tensors],
-        [s[0] for s in symbols]
+        [t.obj for t in tensors], [s[0] for s in symbols]
     )
     return tensor(basis(obj_b), tensors[0].n_parallel, obj_t)

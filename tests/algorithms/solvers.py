@@ -40,6 +40,7 @@ src[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
 # build solvers
 inv = g.algorithms.inverter
 inv_pc = inv.preconditioned
+ac = g.algorithms.assert_converged
 
 eo2_odd = g.qcd.fermion.preconditioner.eo2_ne(parity=g.odd)
 eo2_even = g.qcd.fermion.preconditioner.eo2_ne(parity=g.even)
@@ -53,7 +54,7 @@ eo2_sp = eo2_odd
 src_F = g.vspincolor(w.F_grid)
 src_F[:] = 0
 src_F[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
-eo2_inv = inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000}))(w)
+eo2_inv = inv_pc(eo2, ac(inv.cg({"eps": 1e-8, "maxiter": 500})))(w)
 dst_F = g(eo2_inv * src_F)
 for pc in [eo1_odd, eo1_even, eo2_odd, eo2_even]:
     cg = inv.cg({"eps": 1e-7, "maxiter": 1000})

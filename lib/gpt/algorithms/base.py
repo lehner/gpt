@@ -69,13 +69,21 @@ class base_iterative(base):
     def __init__(self, name=None):
         super().__init__(name)
         self.verbose_convergence = gpt.default.is_verbose(self.name + "_convergence")
+        self.converged = None
 
     def log_convergence(self, iteration, value, target=None):
         if (type(iteration) == int and iteration == 0) or (
             type(iteration) == tuple and all([x == 0 for x in iteration])
         ):
             self.history = []
+
         self.history.append(value)
+
+        if target is not None:
+            self.converged = value <= target
+        else:
+            self.converged = None
+
         if self.verbose_convergence:
             if target is None:
                 # expect to log a value that can be converted to a string
@@ -85,3 +93,29 @@ class base_iterative(base):
                 gpt.message(
                     f"{self.name}: iteration {iteration}: {value:e} / {target:e}"
                 )
+
+
+def assert_converged_functor(f, iterative):
+    def _ac(*arguments):
+        r = f(*arguments)
+        if iterative.converged is None:
+            gpt.message("Warning: could not determine converged state")
+        else:
+            assert iterative.converged
+        return r
+
+    return _ac
+
+
+class assert_converged:
+    def __init__(self, iterative):
+        self.iterative = iterative
+
+    def __call__(self, *arguments):
+        A = self.iterative(*arguments)
+        if isinstance(A, gpt.matrix_operator):
+            A.mat = assert_converged_functor(A.mat, self.iterative)
+            A.adj_mat = assert_converged_functor(A.adj_mat, self.iterative)
+        else:
+            A = assert_converged_functor(A, self.iterative)
+        return A
