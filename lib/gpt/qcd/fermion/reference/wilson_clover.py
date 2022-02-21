@@ -52,6 +52,12 @@ class wilson_clover(shift_eo, matrix_operator):
         self.F_grid_eo = grid_eo
         self.U_grid_eo = grid_eo
 
+        self.vector_space_F = g.vector_space.explicit_grid_otype(self.F_grid, otype)
+        self.vector_space_U = g.vector_space.explicit_grid_otype(self.U_grid, otype)
+        self.vector_space_F_eo = g.vector_space.explicit_grid_otype(
+            self.F_grid_eo, otype
+        )
+
         self.src_e = g.vspincolor(grid_eo)
         self.src_o = g.vspincolor(grid_eo)
         self.dst_e = g.vspincolor(grid_eo)
@@ -143,43 +149,37 @@ class wilson_clover(shift_eo, matrix_operator):
             self.clover_inv = None
 
         self.Meooe = g.matrix_operator(
-            mat=lambda dst, src: self._Meooe(dst, src), otype=otype, grid=grid_eo
+            mat=lambda dst, src: self._Meooe(dst, src),
+            vector_space=self.vector_space_F_eo,
         )
         self.Mooee = g.matrix_operator(
             mat=lambda dst, src: self._Mooee(dst, src),
             inv_mat=lambda dst, src: self._MooeeInv(dst, src),
-            otype=otype,
-            grid=grid_eo,
+            vector_space=self.vector_space_F_eo,
         )
         self.Dhop = g.matrix_operator(
-            mat=lambda dst, src: self._Dhop(dst, src), otype=otype, grid=grid
+            mat=lambda dst, src: self._Dhop(dst, src), vector_space=self.vector_space_F
         )
         matrix_operator.__init__(
-            self, lambda dst, src: self._M(dst, src), otype=otype, grid=grid
+            self, lambda dst, src: self._M(dst, src), vector_space=self.vector_space_F
         )
         self.G5M = g.matrix_operator(
-            lambda dst, src: self._G5M(dst, src), otype=otype, grid=grid
+            lambda dst, src: self._G5M(dst, src), vector_space=self.vector_space_F
         )
         self.Mdiag = g.matrix_operator(
-            lambda dst, src: self._Mdiag(dst, src), otype=otype, grid=grid
+            lambda dst, src: self._Mdiag(dst, src), vector_space=self.vector_space_F
         )
         self.ImportPhysicalFermionSource = g.matrix_operator(
-            lambda dst, src: g.copy(dst, src),
-            otype=otype,
-            grid=(self.U_grid, self.F_grid),
+            lambda dst, src: g.copy(dst, src), vector_space=self.vector_space_F
         )
         self.ExportPhysicalFermionSolution = g.matrix_operator(
-            lambda dst, src: g.copy(dst, src),
-            otype=otype,
-            grid=(self.U_grid, self.F_grid),
+            lambda dst, src: g.copy(dst, src), vector_space=self.vector_space_F
         )
         self.ExportPhysicalFermionSource = g.matrix_operator(
-            lambda dst, src: g.copy(dst, src),
-            otype=otype,
-            grid=(self.U_grid, self.F_grid),
+            lambda dst, src: g.copy(dst, src), vector_space=self.vector_space_F
         )
         self.Dminus = g.matrix_operator(
-            lambda dst, src: g.copy(dst, src), otype=otype, grid=grid
+            lambda dst, src: g.copy(dst, src), vector_space=self.vector_space_F
         )
 
     def apply_boundaries(self, dst):
@@ -283,7 +283,6 @@ class wilson_clover(shift_eo, matrix_operator):
 
         return g.matrix_operator(
             prop,
-            otype=(exp.otype[0], imp.otype[1]),
-            grid=(exp.grid[0], imp.grid[1]),
+            vector_space=self.vector_space_U,
             accept_list=True,
         )

@@ -94,6 +94,7 @@ from gpt.core.mem import mem_info, mem_report, accelerator, host
 from gpt.core.merge import *
 from gpt.core.split import *
 import gpt.core.domain
+import gpt.core.vector_space
 import gpt.core.covariant
 import gpt.core.util
 import gpt.core.block

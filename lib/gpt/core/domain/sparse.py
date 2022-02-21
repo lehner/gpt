@@ -156,14 +156,20 @@ class sparse:
 
         self.project = gpt.matrix_operator(
             mat=_project,
-            grid=(kernel.embedding_grid, kernel.grid),
+            vector_space=(
+                gpt.vector_space.explicit_grid(kernel.embedding_grid),
+                gpt.vector_space.explicit_grid(kernel.grid),
+            ),
             accept_list=True,
             accept_guess=True,
         )
 
         self.promote = gpt.matrix_operator(
             mat=_promote,
-            grid=(kernel.grid, kernel.embedding_grid),
+            vector_space=(
+                gpt.vector_space.explicit_grid(kernel.grid),
+                gpt.vector_space.explicit_grid(kernel.embedding_grid),
+            ),
             accept_list=True,
             accept_guess=True,
         )

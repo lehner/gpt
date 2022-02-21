@@ -53,9 +53,7 @@ class preconditioned(base):
             inv_mat=mat,
             adj_inv_mat=mat.adj(),
             adj_mat=None,  # implement adj_mat when needed
-            otype=mat.otype,
+            vector_space=mat.vector_space,
             accept_guess=(True, False),
-            grid=mat.grid,
-            cb=None,
             accept_list=True,
         )

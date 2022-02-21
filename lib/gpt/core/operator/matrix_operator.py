@@ -18,6 +18,12 @@
 #
 import gpt, sys
 from gpt.core.expr import factor
+from gpt.core.vector_space import implicit
+
+
+def make_list(accept_list):
+    return True if type(accept_list) != int else accept_list
+
 
 #
 # A^dag (A^-1)^dag = (A^-1 A)^dag = 1^\dag = 1
@@ -27,20 +33,21 @@ class matrix_operator(factor):
 
     #
     # lhs = A rhs
-    # otype = (lhs.otype,rhs.otype)
-    # grid = (lhs.grid,rhs.grid)
+    # vector_space = (lhs.vector_space,rhs.vector_space)
     # accept_guess = (accept_guess_for_mat,accept_guess_for_inv_mat)
     #
+    # accept_list:
+    #  False: lhs, rhs are lattice objects
+    #  True:  lhs, rhs are lists of lattice objects with len(lhs) == len(rhs)
+    #  int :  lhs, rhs are lists of lattice objects with len(lhs) == int * len(rhs)
     def __init__(
         self,
         mat,
         adj_mat=None,
         inv_mat=None,
         adj_inv_mat=None,
-        otype=(None, None),
-        grid=(None, None),
+        vector_space=None,
         accept_guess=(False, False),
-        cb=(None, None),
         accept_list=False,
     ):
 
@@ -49,10 +56,18 @@ class matrix_operator(factor):
         self.inv_mat = inv_mat
         self.adj_inv_mat = adj_inv_mat
         self.accept_list = accept_list
+        self.lhs_to_rhs_length_ratio = 1 if type(accept_list) != int else accept_list
 
         # this allows for automatic application of tensor versions
         # also should handle lists of lattices
-        self.otype = otype if type(otype) == tuple else (otype, otype)
+        if vector_space is None:
+            vector_space = implicit()
+
+        self.vector_space = (
+            vector_space
+            if type(vector_space) == tuple
+            else (vector_space, vector_space)
+        )
 
         # do we request, e.g., the lhs of lhs = A rhs to be initialized to zero
         # if it is not given?
@@ -62,22 +77,14 @@ class matrix_operator(factor):
             else (accept_guess, accept_guess)
         )
 
-        # the grids we expect
-        self.grid = grid if type(grid) == tuple else (grid, grid)
-
-        # the checkerboards we expect
-        self.cb = cb if type(cb) == tuple else (cb, cb)
-
     def inv(self):
         return matrix_operator(
             mat=self.inv_mat,
             adj_mat=self.adj_inv_mat,
             inv_mat=self.mat,
             adj_inv_mat=self.adj_mat,
-            otype=tuple(reversed(self.otype)),
-            grid=tuple(reversed(self.grid)),
+            vector_space=tuple(reversed(self.vector_space)),
             accept_guess=tuple(reversed(self.accept_guess)),
-            cb=tuple(reversed(self.cb)),
             accept_list=self.accept_list,
         )
 
@@ -87,10 +94,8 @@ class matrix_operator(factor):
             adj_mat=self.mat,
             inv_mat=self.adj_inv_mat,
             adj_inv_mat=self.inv_mat,
-            otype=tuple(reversed(self.otype)),
-            grid=tuple(reversed(self.grid)),
+            vector_space=tuple(reversed(self.vector_space)),
             accept_guess=tuple(reversed(self.accept_guess)),
-            cb=tuple(reversed(self.cb)),
             accept_list=self.accept_list,
         )
 
@@ -116,11 +121,9 @@ class matrix_operator(factor):
                 adj_mat=lambda dst, src: adj_other(dst, adj_self(src)),
                 inv_mat=lambda dst, src: inv_other(dst, inv_self(src)),
                 adj_inv_mat=lambda dst, src: adj_inv_self(dst, adj_inv_other(src)),
-                otype=(self.otype[0], other.otype[1]),
-                grid=(self.grid[0], other.grid[1]),
+                vector_space=(self.vector_space[0], other.vector_space[1]),
                 accept_guess=(self.accept_guess[0], other.accept_guess[1]),
-                cb=(self.cb[0], other.cb[1]),
-                accept_list=True,
+                accept_list=make_list(self.accept_list),
             )
         else:
             return gpt.expr(other).__rmul__(self)
@@ -129,18 +132,17 @@ class matrix_operator(factor):
         return gpt.expr(other).__mul__(self)
 
     def converted(self, to_precision, timing_wrapper=None):
-        assert all([g is not None for g in self.grid])
-        assert all([ot is not None for ot in self.otype])
-        grid = tuple([g.converted(to_precision) for g in self.grid])
-        otype = self.otype
+        assert all([d is not None for d in self.vector_space])
+
+        vector_space = tuple([d.converted(to_precision) for d in self.vector_space])
         accept_guess = self.accept_guess
-        cb = self.cb
+        n = self.lhs_to_rhs_length_ratio
 
         def _converted(dst, src, mat, l, r, t=lambda x: None):
             t("converted: setup")
 
-            conv_src = [gpt.lattice(self.grid[r], otype[r]) for x in src]
-            conv_dst = [gpt.lattice(self.grid[l], otype[l]) for x in src]
+            conv_src = [self.vector_space[r].lattice(x) for x in src]
+            conv_dst = [self.vector_space[l].lattice(x) for x in dst]
 
             t("converted: convert")
 
@@ -166,28 +168,27 @@ class matrix_operator(factor):
             adj_mat=lambda dst, src: _converted(dst, src, self.adj(), 1, 0),
             inv_mat=lambda dst, src: _converted(dst, src, self.inv(), 1, 0),
             adj_inv_mat=lambda dst, src: _converted(dst, src, self.adj().inv(), 0, 1),
-            otype=otype,
-            grid=grid,
+            vector_space=vector_space,
             accept_guess=accept_guess,
-            cb=cb,
-            accept_list=True,
+            accept_list=make_list(self.accept_list),
         )
 
     def grouped(self, max_group_size):
+
+        n = self.lhs_to_rhs_length_ratio
+
         def _grouped(dst, src, mat):
             for i in range(0, len(src), max_group_size):
-                mat(dst[i : i + max_group_size], src[i : i + max_group_size])
+                mat(dst[i * n : (i + max_group_size) * n], src[i : i + max_group_size])
 
         return matrix_operator(
             mat=lambda dst, src: _grouped(dst, src, self),
             adj_mat=lambda dst, src: _grouped(dst, src, self.adj()),
             inv_mat=lambda dst, src: _grouped(dst, src, self.inv()),
             adj_inv_mat=lambda dst, src: _grouped(dst, src, self.adj().inv()),
-            otype=self.otype,
-            grid=self.grid,
+            vector_space=self.vector_space,
             accept_guess=self.accept_guess,
-            cb=self.cb,
-            accept_list=True,
+            accept_list=make_list(self.accept_list),
         )
 
     def unary(self, u):
@@ -202,6 +203,7 @@ class matrix_operator(factor):
 
         return_list = type(first) == list
         first = gpt.util.to_list(first)
+        n = self.lhs_to_rhs_length_ratio
 
         if second is None:
             src = [gpt(x) for x in first]
@@ -209,26 +211,12 @@ class matrix_operator(factor):
             dst = first
             src = gpt.util.to_list(second)
 
-        type_match = (
-            self.otype[1] is None or self.otype[1].__name__ == src[0].otype.__name__
-        )
+        type_match = self.vector_space[1].type_match(src[0])
 
         if second is None:
-            if self.grid[0] is None:
-                dst_grid = src[0].grid
-            else:
-                dst_grid = self.grid[0]
-
-            # if not type_match assume X->X
-            if not type_match or self.otype[0] is None:
-                dst_otype = src[0].otype
-            else:
-                dst_otype = self.otype[0]
-
-            dst = [gpt.lattice(dst_grid, dst_otype) for x in src]
-            if self.cb[0] is not None:
-                for x in dst:
-                    x.checkerboard(self.cb[0])
+            dst = [
+                self.vector_space[0].lattice(type_match) for i in range(n * len(src))
+            ]
 
             if self.accept_guess[0]:
                 for x in dst:
@@ -243,10 +231,7 @@ class matrix_operator(factor):
                 for idx in range(len(dst)):
                     self.mat(dst[idx], src[idx])
 
-        if type_match:
-            mat(dst, src)
-        else:
-            self.otype[1].distribute(mat, dst, src, zero_lhs=self.accept_guess[0])
+        self.vector_space[1].evaluate(mat, dst, src, zero_lhs=self.accept_guess[0])
 
         if not return_list:
             return gpt.util.from_list(dst)

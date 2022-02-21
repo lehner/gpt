@@ -59,17 +59,19 @@ class map:
 
         self.project = gpt.matrix_operator(
             mat=_project,
-            otype=(c_otype, basis[0].otype),
-            grid=(coarse_grid, basis[0].grid),
-            cb=(None, basis[0].checkerboard()),
+            vector_space=(
+                gpt.vector_space.explicit_grid_otype(coarse_grid, c_otype),
+                gpt.vector_space.explicit_lattice(basis[0]),
+            ),
             accept_list=True,
         )
 
         self.promote = gpt.matrix_operator(
             mat=_promote,
-            otype=(basis[0].otype, c_otype),
-            grid=(basis[0].grid, coarse_grid),
-            cb=(basis[0].checkerboard(), None),
+            vector_space=(
+                gpt.vector_space.explicit_lattice(basis[0]),
+                gpt.vector_space.explicit_grid_otype(coarse_grid, c_otype),
+            ),
             accept_list=True,
         )
 
@@ -118,15 +120,14 @@ class map:
 
         otype = gpt.ot_vector_complex_additive_group(len(self.basis))
         return gpt.matrix_operator(
-            mat=mat, otype=otype, grid=self.coarse_grid, accept_list=True
+            mat=mat,
+            vector_space=gpt.vector_space.explicit_grid_otype(self.coarse_grid, otype),
+            accept_list=True,
         )
 
     def fine_operator(self, coarse_operator):
         verbose = gpt.default.is_verbose("block_operator")
         coarse_otype = gpt.ot_vector_complex_additive_group(len(self.basis))
-        otype = self.basis[0].otype
-        grid = self.basis[0].grid
-        cb = self.basis[0].checkerboard()
 
         def mat(dst, src):
             csrc = [gpt.lattice(self.coarse_grid, coarse_otype) for x in src]
@@ -146,10 +147,11 @@ class map:
                 )
 
         return gpt.matrix_operator(
-            mat=mat, otype=otype, grid=grid, cb=cb, accept_list=True
+            mat=mat,
+            vector_space=gpt.vector_space.explicit_lattice(self.basis[0]),
+            accept_list=True,
         )
 
 
 # TODO:
-# combine otype,grid,cb,n into gpt.vector_space object
 # zero -> expects_guess

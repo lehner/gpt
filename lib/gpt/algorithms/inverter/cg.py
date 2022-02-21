@@ -31,9 +31,9 @@ class cg(base_iterative):
 
     def __call__(self, mat):
 
-        otype, grid, cb = None, None, None
+        vector_space = None
         if type(mat) == g.matrix_operator:
-            otype, grid, cb = mat.otype, mat.grid, mat.cb
+            vector_space = mat.vector_space
             mat = mat.mat
             # remove wrapper for performance benefits
 
@@ -79,10 +79,5 @@ class cg(base_iterative):
             )
 
         return g.matrix_operator(
-            mat=inv,
-            inv_mat=mat,
-            otype=otype,
-            accept_guess=(True, False),
-            grid=grid,
-            cb=cb,
+            mat=inv, inv_mat=mat, accept_guess=(True, False), vector_space=vector_space
         )

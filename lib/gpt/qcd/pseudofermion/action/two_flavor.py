@@ -111,7 +111,7 @@ class two_flavor(two_flavor_base):
 
 class two_flavor_evenodd_schur(two_flavor_base):
     def __init__(self, M, inverter):
-        super().__init__(M, inverter, MMdag_evenodd(g.odd))
+        super().__init__(M, inverter, MMdag_evenodd())
 
 
 class two_flavor_evenodd(differentiable_functional):
@@ -221,4 +221,4 @@ class two_flavor_ratio(two_flavor_ratio_base):
 
 class two_flavor_ratio_evenodd_schur(two_flavor_ratio_base):
     def __init__(self, M, inverter):
-        super().__init__(M, inverter, MMdag_evenodd(g.odd))
+        super().__init__(M, inverter, MMdag_evenodd())

@@ -31,7 +31,7 @@ class split:
         mpi_split = self.params["mpi_split"]
         matrix_split = matrix.split(mpi_split)
         operation_split = self.operation(matrix_split)
-        nparallel = matrix_split.grid[0].sranks
+        nparallel = matrix_split.vector_space[0].grid.sranks
         cache = {}
 
         def inv(dst, src):
@@ -45,8 +45,8 @@ class split:
                 )
 
             t0 = g.time()
-            src_split = g.split(src, matrix_split.grid[1], cache)
-            dst_split = g.split(dst, matrix_split.grid[0], cache)
+            src_split = g.split(src, matrix_split.vector_space[1].grid, cache)
+            dst_split = g.split(dst, matrix_split.vector_space[0].grid, cache)
             t1 = g.time()
 
             operation_split(dst_split, src_split)
@@ -61,16 +61,14 @@ class split:
                     + f"Timing: {t1-t0} s (split), {t2-t1} s (operation), {t3-t2} s (unsplit)"
                 )
 
-        otype, grid, cb = None, None, None
+        vector_space = None
         if type(matrix) == g.matrix_operator:
-            otype, grid, cb = matrix.otype, matrix.grid, matrix.cb
+            vector_space = matrix.vector_space
 
         return g.matrix_operator(
             mat=inv,
             inv_mat=matrix,
-            otype=otype,
             accept_guess=(True, False),
-            grid=grid,
-            cb=cb,
+            vector_space=vector_space,
             accept_list=True,
         )

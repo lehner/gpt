@@ -143,8 +143,8 @@ class sap_cycle:
             for eo in range(2):
                 ws[0][:] = 0
 
-                src_blk = F_domains[eo].lattice(op.otype[0])
-                dst_blk = F_domains[eo].lattice(op.otype[0])
+                src_blk = F_domains[eo].lattice(op.otype)
+                dst_blk = F_domains[eo].lattice(op.otype)
 
                 F_domains[eo].project(src_blk, eta)
 
@@ -168,10 +168,8 @@ class sap_cycle:
             inv_mat=op,
             adj_inv_mat=op.adj(),
             adj_mat=None,
-            otype=op.otype,
+            vector_space=op.vector_space,
             accept_guess=(True, False),
-            grid=op.F_grid,
-            cb=None,
         )
 
 

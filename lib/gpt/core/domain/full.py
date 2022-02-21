@@ -33,3 +33,6 @@ class full:
 
     def promote(self, dst, src):
         gpt.copy(dst, src)
+
+    def converted(self, x):
+        return full(self.grid.converted(x))

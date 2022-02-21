@@ -30,10 +30,6 @@ def matrix(left, right, evals, f, params):
     assert len(left) == len(right) and len(left) <= len(evals) and len(left) > 0
     f_evals = [f(x) for x in evals]
 
-    otype = (left[0].otype, right[0].otype)
-    grid = (left[0].grid, right[0].grid)
-    cb = (left[0].checkerboard(), right[0].checkerboard())
-
     def approx(dst, src):
         assert src != dst
         verbose = g.default.is_verbose("modes")
@@ -61,9 +57,10 @@ def matrix(left, right, evals, f, params):
 
     return g.matrix_operator(
         mat=approx,
-        otype=otype,
         accept_guess=(False, False),
-        grid=grid,
-        cb=cb,
+        vector_space=(
+            g.vector_space.explicit_lattice(left[0]),
+            g.vector_space.explicit_lattice(right[0]),
+        ),
         accept_list=True,
     )

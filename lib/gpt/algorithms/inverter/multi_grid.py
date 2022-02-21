@@ -30,7 +30,7 @@ class multi_grid_setup:
 
     def __call__(self, matrix):
         levels = []
-        grid = matrix.grid[0]
+        grid = matrix.vector_space[0].grid
         for i in range(self.n):
             grid = g.block.grid(grid, self.block_size[i])
             basis = self.projector[i](matrix, grid)
@@ -52,7 +52,7 @@ class coarse_grid(base):
     def __call__(self, mat):
 
         assert isinstance(mat, g.matrix_operator)
-        otype, fine_grid, cb = mat.otype, mat.grid, mat.cb
+        vector_space = mat.vector_space
 
         bm = g.block.map(self.coarse_grid, self.basis)
 
@@ -81,9 +81,7 @@ class coarse_grid(base):
             inv_mat=mat,
             adj_mat=None,
             adj_inv_mat=None,
-            otype=otype,
+            vector_space=vector_space,
             accept_guess=(True, False),
             accept_list=True,
-            grid=fine_grid,
-            cb=cb,
         )

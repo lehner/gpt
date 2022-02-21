@@ -36,8 +36,8 @@ class mobius_class_operator(differentiable_fine_operator):
 
         self.J5q = gpt.matrix_operator(
             _J5q,
-            grid=(self.U_grid, self.F_grid),
-            accept_list=True,
+            vector_space=(self.vector_space_U, self.vector_space_F),
+            accept_list=False,
         )
 
         self.bulk_propagator_to_propagator = self.ExportPhysicalFermionSolution
@@ -52,8 +52,7 @@ class mobius_class_operator(differentiable_fine_operator):
 
         return gpt.matrix_operator(
             prop,
-            otype=(imp.otype[0], imp.otype[1]),
-            grid=(imp.grid[0], imp.grid[1]),
+            vector_space=imp.vector_space,
             accept_list=True,
         )
 

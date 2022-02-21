@@ -103,9 +103,7 @@ class mixed_dwf:
         return g.matrix_operator(
             mat=inv,
             inv_mat=dwf_outer,
-            otype=dwf_outer.otype,
             accept_guess=(True, False),
-            grid=dwf_outer.F_grid,
-            cb=None,
+            vector_space=dwf_outer.vector_space,
             accept_list=True,
         )

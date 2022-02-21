@@ -45,12 +45,12 @@ class g5m_ne_instance:
         def _S(dst, src):
             dst[:] = 0
 
-        self.Mpc = gpt.matrix_operator(mat=_Mpc, otype=matrix.otype, grid=self.F_grid)
+        self.Mpc = gpt.matrix_operator(mat=_Mpc, vector_space=matrix.vector_space)
         self.L = gpt.matrix_operator(
-            mat=_ident, inv_mat=_ident, otype=matrix.otype, grid=self.F_grid
+            mat=_ident, inv_mat=_ident, vector_space=matrix.vector_space
         )
-        self.R = gpt.matrix_operator(mat=_R, otype=matrix.otype, grid=self.F_grid)
-        self.S = gpt.matrix_operator(mat=_S, otype=matrix.otype, grid=self.F_grid)
+        self.R = gpt.matrix_operator(mat=_R, vector_space=matrix.vector_space)
+        self.S = gpt.matrix_operator(mat=_S, vector_space=matrix.vector_space)
 
 
 class g5m_ne:
