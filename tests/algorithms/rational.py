@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
-# Authors: Mattia Bruno 2020
-#          Christoph Lehner 2020
+# Authors: Mattia Bruno 2022
+#          Christoph Lehner 2022
 #
 import numpy
 import gpt as g
