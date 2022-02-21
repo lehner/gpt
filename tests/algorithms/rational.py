@@ -52,9 +52,9 @@ for x in numpy.arange(0.1, 4.5, 0.05):
     assert zol.relative_error(x) < 1e-9
 
 
-r = rat.rational_polynomial(zol.num, zol.poles)
+r = rat.rational_polynomial(zol.num, zol.poles, mscg)
 g.message(r)
-rr = r(MMdag, mscg)
+rr = r(MMdag)
 
 psi, phi = g.lattice(src), g.lattice(src)
 psi @= rr * src

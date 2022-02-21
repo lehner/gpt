@@ -66,10 +66,10 @@ class rational_polynomial:
             if type(mat) == gpt.matrix_operator:
                 otype, grid, cb = mat.otype, mat.grid, mat.cb
                 mat = mat.mat  # unwrap for performance benefit
-            if inverter is None:
+            if self.inverter is None:
                 raise NotImplementedError()
             
-            mat_inv = inverter(mat, self.poles)
+            mat_inv = self.inverter(mat, self.poles)
             
             def operator(dst, src):
                 chi = [gpt.lattice(src) for _ in range(self.npoles)]
