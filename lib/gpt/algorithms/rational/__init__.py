@@ -39,10 +39,11 @@ def partial_fractions(u,v):
 
 # \prod_i (z+u_i)/(z+v_i)
 class rational_polynomial:
-    def __init__(self, u, v):
+    def __init__(self, u, v, inverter=None):
         self.npoles = len(u)
         self.poles = numpy.array(v)
         self.r = partial_fractions(u,v)
+        self.inverter = inverter
         
     def eval(self, x):
         f = 1.0
@@ -57,7 +58,7 @@ class rational_polynomial:
             out += f"+ {r:g} / (x*x + {self.poles[i]:g}) + \n"
         return out
     
-    def __call__(self, mat, inverter=None):
+    def __call__(self, mat):
         if isinstance(mat, (float, complex, int, numpy.float32, numpy.float64)):
             return self.eval(mat)
         else:
@@ -79,3 +80,15 @@ class rational_polynomial:
                 
             return gpt.matrix_operator(operator, grid=grid, otype=otype, cb=cb)
 
+    def partial_fractions(self, mat):
+        mat_inv = inverter(mat, self.poles)
+
+        def operator(src):
+            chi = [gpt.lattice(src) for _ in range(self.npoles)]
+            mat_inv(chi, src)
+            for i in range(self.npoles):
+                chi[i] @= self.r[i] * chi[i]
+            return chi
+        
+        return operator
+        

@@ -25,3 +25,5 @@ import gpt.algorithms.integrator
 import gpt.algorithms.optimize
 import gpt.algorithms.markov
 import gpt.algorithms.preconditioner
+import gpt.algorithms.multi_inverter
+import gpt.algorithms.rational
