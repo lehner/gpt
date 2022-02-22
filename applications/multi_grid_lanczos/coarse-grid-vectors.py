@@ -51,7 +51,7 @@ assert nbasis > 0
 b = g.block.map(fg_cevec[0].grid, fg_basis)
 for i in range(nbasis):
     basis.append(
-        g.vspincolor(q.Mpc.grid[0])
+        g.vspincolor(fg_basis[0].grid)
     )  # don't advise yet, let it be first touched on accelerator
     g.message(i)
     if i < params["nbasis_on_host"]:
@@ -72,7 +72,7 @@ g.message("Memory information after discarding original basis:")
 g.mem_report()
 
 # coarse grid
-cgrid = params["cgrid"](q.Mpc.grid[0])
+cgrid = params["cgrid"](basis[0].grid)
 b = g.block.map(cgrid, basis)
 
 # cheby on coarse grid

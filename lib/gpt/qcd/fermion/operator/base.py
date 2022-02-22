@@ -30,6 +30,7 @@ class base(gpt.matrix_operator):
         # keep constructor parameters
         self.name = name
         self.U = U
+        self.otype = otype
         self.params_constructor = params
 
         # derived objects
@@ -76,81 +77,83 @@ class base(gpt.matrix_operator):
         registry = method_registry()
         gpt.qcd.fermion.register(registry, self.interface)
 
+        # create operator domain
+        self.domain = gpt.core.domain.full(self.F_grid)
+
+        # vector spaces
+        self.vector_space_F = gpt.vector_space.explicit_domain_otype(self.domain, otype)
+        self.vector_space_U = gpt.vector_space.explicit_grid_otype_checkerboard(
+            self.U_grid, otype, gpt.none
+        )
+        self.vector_space_F_eo = gpt.vector_space.explicit_grid_otype(
+            self.F_grid_eo, otype
+        )
+
         # map Grid matrix operations to clean matrix_operator structure
         super().__init__(
-            mat=registry.M, adj_mat=registry.Mdag, otype=otype, grid=self.F_grid
+            mat=registry.M, adj_mat=registry.Mdag, vector_space=self.vector_space_F
         )
 
         # covariant shift (only create if needed)
         self.covariant_shift_cache = None
 
-        # create operator domain
-        self.domain = gpt.core.domain.full(self.F_grid)
-
         if with_even_odd:
             self.Meooe = gpt.matrix_operator(
                 mat=registry.Meooe,
                 adj_mat=registry.MeooeDag,
-                otype=otype,
-                grid=self.F_grid_eo,
+                vector_space=self.vector_space_F_eo,
             )
             self.Mooee = gpt.matrix_operator(
                 mat=registry.Mooee,
                 adj_mat=registry.MooeeDag,
                 inv_mat=registry.MooeeInv,
                 adj_inv_mat=registry.MooeeInvDag,
-                otype=otype,
-                grid=self.F_grid_eo,
+                vector_space=self.vector_space_F_eo,
             )
             self.DhopEO = gpt.matrix_operator(
                 mat=registry.DhopEO,
                 adj_mat=registry.DhopEODag,
-                otype=otype,
-                grid=self.F_grid_eo,
+                vector_space=self.vector_space_F_eo,
             )
             self._MoeDeriv = registry.MoeDeriv
             self._MoeDerivDag = registry.MoeDerivDag
             self._MeoDeriv = registry.MeoDeriv
             self._MeoDerivDag = registry.MeoDerivDag
 
-        self.Mdiag = gpt.matrix_operator(registry.Mdiag, otype=otype, grid=self.F_grid)
+        self.Mdiag = gpt.matrix_operator(
+            registry.Mdiag, vector_space=self.vector_space_F
+        )
         self.Dminus = gpt.matrix_operator(
             mat=registry.Dminus,
             adj_mat=registry.DminusDag,
-            otype=otype,
-            grid=self.F_grid,
+            vector_space=self.vector_space_F,
         )
         self.ImportPhysicalFermionSource = gpt.matrix_operator(
             registry.ImportPhysicalFermionSource,
-            otype=otype,
-            grid=(self.F_grid, self.U_grid),
+            vector_space=(self.vector_space_F, self.vector_space_U),
         )
         self.ImportUnphysicalFermion = gpt.matrix_operator(
             registry.ImportUnphysicalFermion,
-            otype=otype,
-            grid=(self.F_grid, self.U_grid),
+            vector_space=(self.vector_space_F, self.vector_space_U),
         )
         self.ExportPhysicalFermionSolution = gpt.matrix_operator(
             registry.ExportPhysicalFermionSolution,
-            otype=otype,
-            grid=(self.U_grid, self.F_grid),
+            vector_space=(self.vector_space_U, self.vector_space_F),
         )
         self.ExportPhysicalFermionSource = gpt.matrix_operator(
             registry.ExportPhysicalFermionSource,
-            otype=otype,
-            grid=(self.U_grid, self.F_grid),
+            vector_space=(self.vector_space_U, self.vector_space_F),
         )
 
         def _G5M(dst, src):
             registry.M(dst, src)
             dst @= gpt.qcd.fermion.coarse.gamma5(dst) * dst
 
-        self.G5M = gpt.matrix_operator(_G5M, otype=otype, grid=self.F_grid)
+        self.G5M = gpt.matrix_operator(_G5M, vector_space=self.vector_space_F)
         self.Dhop = gpt.matrix_operator(
             mat=registry.Dhop,
             adj_mat=registry.DhopDag,
-            otype=otype,
-            grid=self.F_grid,
+            vector_space=self.vector_space_F,
         )
         self._Mdir = registry.Mdir
         self._MDeriv = registry.MDeriv
@@ -166,8 +169,7 @@ class base(gpt.matrix_operator):
     def Mdir(self, mu, fb):
         return gpt.matrix_operator(
             mat=lambda dst, src: self._Mdir(dst, src, mu, fb),
-            otype=self.otype,
-            grid=self.F_grid,
+            vector_space=self.vector_space_F,
         )
 
     def modified(self, **params):
@@ -175,7 +177,7 @@ class base(gpt.matrix_operator):
             name=self.name,
             U=self.U,
             params={**self.params_constructor, **params},
-            otype=self.otype[0],
+            otype=self.otype,
         )
 
     def converted(self, dst_precision):
@@ -193,7 +195,7 @@ class base(gpt.matrix_operator):
             name=self.name,
             U=U,
             params=self.params_constructor,
-            otype=self.otype[0],
+            otype=self.otype,
         )
 
     def update(self, U):
@@ -220,8 +222,7 @@ class base(gpt.matrix_operator):
 
         return gpt.matrix_operator(
             prop,
-            otype=(exp.otype[0], imp.otype[1]),
-            grid=(exp.grid[0], imp.grid[1]),
+            vector_space=(exp.vector_space[0], imp.vector_space[1]),
             accept_list=True,
         )
 

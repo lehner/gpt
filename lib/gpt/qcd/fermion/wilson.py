@@ -35,7 +35,7 @@ class wilson_class_operator(
             dst @= gpt.gamma[5] * src
 
         gauge_independent_g5_hermitian.__init__(
-            self, gpt.matrix_operator(_G5, grid=self.F_grid, otype=otype)
+            self, gpt.matrix_operator(_G5, vector_space=self.vector_space)
         )
 
     def conserved_vector_current(self, psi, psi_bar, mu, psi_bar_flavor=None):

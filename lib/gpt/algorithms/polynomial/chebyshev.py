@@ -139,9 +139,9 @@ class chebyshev:
         if type(mat) == float or type(mat) == complex or type(mat) == int:
             return self.eval(mat)
         else:
-            otype, grid, cb = None, None, None
+            vector_space = None
             if type(mat) == g.matrix_operator:
-                otype, grid, cb = mat.otype, mat.grid, mat.cb
+                vector_space = mat.vector_space
                 mat = mat.mat  # unwrap for performance benefit
 
             def evalOp(dst, src):
@@ -168,4 +168,4 @@ class chebyshev:
                             dst[i] += self.coeffs[i][n] * Tnp
                     Tnm, Tn, Tnp = Tn, Tnp, Tnm
 
-            return g.matrix_operator(evalOp, grid=grid, otype=otype, cb=cb)
+            return g.matrix_operator(evalOp, vector_space=vector_space)

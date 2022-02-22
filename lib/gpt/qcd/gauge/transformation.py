@@ -27,7 +27,7 @@ def transformed(obj, V):
         def _mat(dst, src):
             dst @= V * M * g.adj(V) * src
 
-        return g.matrix_operator(_mat, otype=M.otype, grid=M.grid)
+        return g.matrix_operator(_mat, vector_space=M.vector_space)
 
     else:
 

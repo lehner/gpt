@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2022  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,20 +17,29 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import sys
 
 
-class calculate_residual:
-    def __init__(self, tag=None):
-        self.tag = "" if tag is None else f"{tag}: "
+class multi_shift:
+    def __init__(self, inverter, shifts):
+        self.inverter = inverter
+        self.shifts = shifts
 
     def __call__(self, mat):
-        def inv(dst, src):
-            for i in range(len(dst)):
-                eps = g.norm2(mat * dst[i] - src[i]) ** 0.5
-                nrm = g.norm2(src[i]) ** 0.5
-                g.message(
-                    f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps/nrm}, | src[{i}] | = {nrm}"
+
+        inverter_mat = [
+            self.inverter(
+                g.matrix_operator(
+                    mat=lambda dst, src, s_val=s: g.eval(dst, mat * src + s_val * src),
+                    accept_list=True,
                 )
+            )
+            for s in self.shifts
+        ]
+
+        def inv(dst, src):
+            for j, i in enumerate(inverter_mat):
+                i(dst[j * len(src) : (j + 1) * len(src)], src)
 
         vector_space = None
         if isinstance(mat, g.matrix_operator):
@@ -38,8 +47,7 @@ class calculate_residual:
 
         return g.matrix_operator(
             mat=inv,
-            inv_mat=mat,
             vector_space=vector_space,
             accept_guess=(True, False),
-            accept_list=True,
+            accept_list=lambda src: len(src) * len(self.shifts),
         )

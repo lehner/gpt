@@ -26,7 +26,7 @@ class physical_instance:
         self.F_grid_eo = matrix.F_grid_eo
         self.F_grid = matrix.F_grid
         self.U_grid = matrix.U_grid
-        self.otype = matrix.otype[0]
+        self.otype = matrix.otype
 
         self.F_tmp = gpt.lattice(self.F_grid, self.otype)
         self.F_tmp_2 = gpt.lattice(self.F_grid, self.otype)
@@ -42,17 +42,15 @@ class physical_instance:
 
         self.L = gpt.matrix_operator(
             mat=_L,
-            otype=self.otype,
             accept_guess=(False, False),
-            grid=(self.U_grid, self.F_grid_eo),
+            vector_space=(self.matrix.vector_space_U, pc.L.vector_space[1]),
         )
 
         self.R = gpt.matrix_operator(
             mat=None,
             adj_mat=_R_adj,
-            otype=self.otype,
             accept_guess=(False, False),
-            grid=(self.F_grid_eo, self.U_grid),
+            vector_space=(pc.R.vector_space[0], self.matrix.vector_space_U),
         )
 
 

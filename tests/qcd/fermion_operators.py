@@ -403,10 +403,10 @@ def verify_single_versus_double_precision(rng, fermion_dp, fermion_sp):
                     eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
                     g.message(f"Verify single <> double for {atag}.adj(): {eps}")
                     assert eps < eps_ref
-        elif isinstance(a_dp, g.matrix_operator) and a_dp.otype[1] is not None:
+        elif isinstance(a_dp, g.matrix_operator):
             a_sp = getattr(fermion_sp, atag)
-            rhs_dp = rng.cnormal(g.lattice(a_dp.grid[1], a_dp.otype[1]))
-            lhs_dp = rng.cnormal(g.lattice(a_dp.grid[0], a_dp.otype[0]))
+            rhs_dp = rng.cnormal(a_dp.vector_space[1].lattice())
+            lhs_dp = rng.cnormal(a_dp.vector_space[0].lattice())
             if rhs_dp.grid.cb.n != 1:
                 # for now test only odd cb
                 rhs_dp.checkerboard(g.odd)
@@ -583,7 +583,7 @@ def verify_matrix_element(fermion, dst, src, tag):
         # Test projected gradient for src_p^dag M^dag M src_p
         g.message(f"Test projected_gradient of {tag} via src^dag M^dag M src")
         mat_pg = get_matrix(fermion, projected_gradient_operators[tag])
-        src_p = g.lattice(fermion.F_grid_eo, fermion.otype[1])
+        src_p = g.lattice(fermion.F_grid_eo, fermion.otype)
 
         for parity in [g.even, g.odd]:
             g.pick_checkerboard(parity, src_p, src)

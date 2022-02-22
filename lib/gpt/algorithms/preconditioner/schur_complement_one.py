@@ -54,9 +54,6 @@ import gpt
 class schur_complement_one:
     def __init__(self, op, domain_decomposition):
 
-        otype = op.otype[0]
-        op_domain = op.domain
-
         dd_op = domain_decomposition(op)
 
         DD = dd_op.DD
@@ -67,8 +64,12 @@ class schur_complement_one:
         D_domain = dd_op.D_domain
         C_domain = dd_op.C_domain
 
-        tmp_d = [D_domain.lattice(otype) for i in range(2)]
-        tmp_c = [C_domain.lattice(otype) for i in range(2)]
+        op_vector_space = op.vector_space[0]
+        D_vector_space = DD.vector_space[0]
+        C_vector_space = CC.vector_space[0]
+
+        tmp_d = [D_vector_space.lattice() for i in range(2)]
+        tmp_c = [C_vector_space.lattice() for i in range(2)]
 
         def _N(o_d, i_d):
             CD.mat(tmp_c[0], i_d)
@@ -106,9 +107,7 @@ class schur_complement_one:
         self.L = gpt.matrix_operator(
             mat=_L,
             inv_mat=_L_pseudo_inverse,
-            otype=otype,
-            grid=(op_domain.grid, D_domain.grid),
-            cb=(op_domain.checkerboard, D_domain.checkerboard),
+            vector_space=(op_vector_space, D_vector_space),
         )
 
         def _R(o_d, i):
@@ -128,23 +127,15 @@ class schur_complement_one:
             C_domain.promote(o, tmp_c[1])
 
         self.R = gpt.matrix_operator(
-            mat=_R,
-            adj_mat=_R_dag,
-            otype=otype,
-            grid=(D_domain.grid, op_domain.grid),
-            cb=(D_domain.checkerboard, op_domain.checkerboard),
+            mat=_R, adj_mat=_R_dag, vector_space=(D_vector_space, op_vector_space)
         )
 
         self.S = gpt.matrix_operator(
-            mat=_S, otype=otype, grid=op_domain.grid, cb=op_domain.checkerboard
+            mat=_S, vector_space=(op_vector_space, op_vector_space)
         )
 
         self.Mpc = gpt.matrix_operator(
-            mat=_N,
-            adj_mat=_N_dag,
-            otype=otype,
-            grid=D_domain.grid,
-            cb=D_domain.checkerboard,
+            mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space)
         )
 
         for undressed in ["Mpc"]:

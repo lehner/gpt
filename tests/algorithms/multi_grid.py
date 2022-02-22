@@ -51,7 +51,7 @@ p = g.qcd.fermion.preconditioner
 def find_near_null_vectors(w, cgrid):
     slv = i.fgmres(eps=1e-3, maxiter=50, restartlen=25, checkres=False)(w)
     basis = g.orthonormalize(
-        rng.cnormal([g.lattice(w.grid[0], w.otype[0]) for i in range(15)])
+        rng.cnormal([w.vector_space[0].lattice() for i in range(15)])
     )
     null = g.lattice(basis[0])
     null[:] = 0

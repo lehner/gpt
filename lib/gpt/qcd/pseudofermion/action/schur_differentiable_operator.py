@@ -45,11 +45,8 @@ class MMdag:
 #  M = ( OE OO ) = ( 0    1        ) ( 0    1 ) ( OE OO )
 # Mhat = EE - EO OO^-1 OE
 class MMdag_evenodd:
-    def __init__(self, parity=g.odd):
-        self.parity = parity
-
     def M(self, op):
-        tmp = g.lattice(op.F_grid_eo, op.otype[0])
+        tmp = op.Mooee.vector_space[0].lattice()
 
         def operator(dst, src):
             op.Meooe.mat(dst, src)
@@ -58,12 +55,10 @@ class MMdag_evenodd:
             op.Mooee.mat(tmp, src)
             dst @= tmp - dst
 
-        return g.matrix_operator(
-            mat=operator, otype=op.otype, grid=op.F_grid_eo, cb=self.parity
-        )
+        return g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
 
     def Mdag(self, op):
-        tmp = g.lattice(op.F_grid_eo, op.otype[0])
+        tmp = op.Mooee.vector_space[0].lattice()
 
         def operator(dst, src):
             op.Meooe.adj_mat(dst, src)
@@ -72,12 +67,10 @@ class MMdag_evenodd:
             op.Mooee.adj_mat(tmp, src)
             dst @= tmp - dst
 
-        return g.matrix_operator(
-            mat=operator, otype=op.otype, grid=op.F_grid_eo, cb=self.parity
-        )
+        return g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
 
     def MMdag(self, op):
-        tmp = [g.lattice(op.F_grid_eo, op.otype[0]) for _ in [0, 1]]
+        tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
         def operator(dst, src):
             op.Meooe.adj_mat(dst, src)
@@ -97,7 +90,7 @@ class MMdag_evenodd:
         return operator
 
     def Mderiv(self, op):
-        tmp = [g.lattice(op.F_grid_eo, op.otype[0]) for _ in [0, 1]]
+        tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
         def operator(left, right):
             op.Meooe.mat(tmp[0], right)
@@ -118,7 +111,7 @@ class MMdag_evenodd:
         return operator
 
     def MderivDag(self, op):
-        tmp = [g.lattice(op.F_grid_eo, op.otype[0]) for _ in [0, 1]]
+        tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
         def operator(left, right):
             op.Meooe.adj_mat(tmp[0], right)

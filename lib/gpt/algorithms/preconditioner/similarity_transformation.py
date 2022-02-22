@@ -40,7 +40,7 @@ class similarity_transformation:
         self.S = pc.S
 
         def wrap(Mpc, L, R):
-            tmp = gpt.lattice(Mpc.grid[0], Mpc.otype[0])
+            tmp = Mpc.vector_space[0].lattice()
 
             def _Mpc(o_d, i_d):
                 V.inv_mat(o_d, i_d)
@@ -71,21 +71,17 @@ class similarity_transformation:
             wrapped_R = gpt.matrix_operator(
                 mat=_R,
                 adj_mat=_R_dag,
-                otype=R.otype,
-                grid=R.grid,
-                cb=R.cb,
+                vector_space=R.vector_space,
             )
 
             wrapped_L = gpt.matrix_operator(
                 mat=_L,
                 inv_mat=_L_inv,
-                otype=L.otype,
-                grid=L.grid,
-                cb=L.cb,
+                vector_space=L.vector_space,
             )
 
             wrapped_Mpc = gpt.matrix_operator(
-                mat=_Mpc, adj_mat=_Mpc_dag, otype=Mpc.otype, grid=Mpc.grid, cb=Mpc.cb
+                mat=_Mpc, adj_mat=_Mpc_dag, vector_space=Mpc.vector_space
             )
 
             return wrapped_Mpc, wrapped_L, wrapped_R

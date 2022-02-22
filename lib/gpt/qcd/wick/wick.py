@@ -64,6 +64,9 @@ class wick:
     def spin_index(self, n=1, nspin=4):
         return self.index(self.indices, n, nspin)
 
+    def lorentz_index(self, n=1, dimensions=4):
+        return self.index(self.indices, n, dimensions)
+
     class field:
         def __init__(self, index, propagators, is_bar):
             self.index = index

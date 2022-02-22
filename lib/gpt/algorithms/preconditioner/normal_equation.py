@@ -38,7 +38,7 @@ class normal_equation:
         self.S = pc.S
 
         def wrap(Mpc, R):
-            tmp = gpt.lattice(Mpc.grid[0], Mpc.otype[0])
+            tmp = Mpc.vector_space[0].lattice()
 
             def _N_dag_N(o_d, i_d):
                 Mpc.mat(tmp, i_d)
@@ -53,19 +53,11 @@ class normal_equation:
                 R.adj_mat(o, tmp)
 
             wrapped_R = gpt.matrix_operator(
-                mat=_R,
-                adj_mat=_R_dag,
-                otype=R.otype,
-                grid=R.grid,
-                cb=R.cb,
+                mat=_R, adj_mat=_R_dag, vector_space=R.vector_space
             )
 
             wrapped_Mpc = gpt.matrix_operator(
-                mat=_N_dag_N,
-                adj_mat=_N_dag_N,
-                otype=Mpc.otype,
-                grid=Mpc.grid,
-                cb=Mpc.cb,
+                mat=_N_dag_N, adj_mat=_N_dag_N, vector_space=Mpc.vector_space
             )
 
             return wrapped_Mpc, wrapped_R

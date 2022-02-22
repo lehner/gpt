@@ -134,16 +134,14 @@ class defect_correcting(base_iterative):
                 for j in range(n):
                     psi[j] += _d[j] * norm2_of_source[j] ** 0.5
 
-        otype, grid, cb = None, None, None
+        vector_space = None
         if isinstance(outer_mat, g.matrix_operator):
-            otype, grid, cb = outer_mat.otype, outer_mat.grid, outer_mat.cb
+            vector_space = outer_mat.vector_space
 
         return g.matrix_operator(
             mat=inv,
             inv_mat=outer_mat,
-            otype=otype,
+            vector_space=vector_space,
             accept_guess=(True, False),
-            grid=grid,
-            cb=cb,
             accept_list=True,
         )

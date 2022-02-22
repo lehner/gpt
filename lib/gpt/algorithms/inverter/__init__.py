@@ -33,3 +33,4 @@ from gpt.algorithms.inverter.split import split
 from gpt.algorithms.inverter.preconditioned import preconditioned
 from gpt.algorithms.inverter.multi_grid import coarse_grid, multi_grid_setup
 from gpt.algorithms.inverter.calculate_residual import calculate_residual
+from gpt.algorithms.inverter.multi_shift import multi_shift

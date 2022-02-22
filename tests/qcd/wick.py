@@ -17,6 +17,7 @@ ud_propagators = {
 
 u = w.fermion(ud_propagators)
 d = w.fermion(ud_propagators)
+s = w.fermion(ud_propagators)
 
 na = w.color_index()
 nalpha, nbeta = w.spin_index(2)
@@ -51,7 +52,7 @@ Obar = nucleon_operator(w, u.bar(), d.bar(), y, nbeta, Cg5)
 proton_2pt = w.sum(Obar, Pp(nbeta, nalpha), O, nalpha, nbeta)
 
 
-def two_point(Q1, Q2, kernel):
+def uud_two_point(Q1, Q2, kernel):
     dq = g.qcd.baryon.diquark(g(Q1 * kernel), g(kernel * Q2))
     return g(g.color_trace(g.spin_trace(dq) * Q1 + dq * Q1))
 
@@ -60,7 +61,7 @@ def proton(Q1, Q2):
     C = 1j * g.gamma[1].tensor() * g.gamma[3].tensor()
     Gamma = C * g.gamma[5].tensor()
     Pp = (g.gamma["I"].tensor() + g.gamma[3].tensor()) * 0.5
-    return g(g.trace(two_point(Q1, Q2, Gamma) * Pp))[0, 0, 0, 0]
+    return g(g.trace(uud_two_point(Q1, Q2, Gamma) * Pp))[0, 0, 0, 0]
 
 
 C_proton_2pt = proton(prop, prop)
@@ -70,6 +71,39 @@ eps = abs(C_proton_2pt - W_proton_2pt) / abs(C_proton_2pt)
 g.message(f"Proton 2pt test: {eps}")
 assert eps < 1e-14
 
+# Omega
+Cgi = [w.spin_matrix(C * g.gamma[i].tensor()) for i in range(3)]
+
+
+def sss_two_point(Q1, kernel):
+    dq = g.qcd.baryon.diquark(g(Q1 * kernel), g(kernel * Q1))
+    return g(-2.0 * g.color_trace(g.spin_trace(dq) * Q1 + 2.0 * dq * Q1))
+
+
+def omega(Q1, mu):
+    C = 1j * g.gamma[1].tensor() * g.gamma[3].tensor()
+    Gamma = C * g.gamma[mu].tensor()
+    Pp = (g.gamma["I"].tensor() + g.gamma[3].tensor()) * 0.5
+    return g(g.trace(sss_two_point(Q1, Gamma) * Pp))[0, 0, 0, 0]
+
+
+for mu in range(3):
+    W_omega_2pt = w(
+        w.sum(
+            nucleon_operator(w, s, s, x, nalpha, Cgi[mu]),
+            Pp(nbeta, nalpha),
+            nucleon_operator(w, s.bar(), s.bar(), y, nbeta, Cgi[mu]),
+            nalpha,
+            nbeta,
+        ),
+        verbose=True,
+    )
+
+    C_omega_2pt = omega(prop, mu)
+
+    eps = abs(C_omega_2pt - W_omega_2pt) / abs(C_omega_2pt)
+    g.message(f"Omega_{mu} 2pt test: {eps}")
+    assert eps < 1e-14
 
 #####
 # Meson tests
