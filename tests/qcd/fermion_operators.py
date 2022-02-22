@@ -405,8 +405,8 @@ def verify_single_versus_double_precision(rng, fermion_dp, fermion_sp):
                     assert eps < eps_ref
         elif isinstance(a_dp, g.matrix_operator):
             a_sp = getattr(fermion_sp, atag)
-            rhs_dp = rng.cnormal(a_dp.vector_space[1].lattice(None))
-            lhs_dp = rng.cnormal(a_dp.vector_space[0].lattice(None))
+            rhs_dp = rng.cnormal(a_dp.vector_space[1].lattice())
+            lhs_dp = rng.cnormal(a_dp.vector_space[0].lattice())
             if rhs_dp.grid.cb.n != 1:
                 # for now test only odd cb
                 rhs_dp.checkerboard(g.odd)

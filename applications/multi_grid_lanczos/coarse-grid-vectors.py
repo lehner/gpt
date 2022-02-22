@@ -72,7 +72,7 @@ g.message("Memory information after discarding original basis:")
 g.mem_report()
 
 # coarse grid
-cgrid = params["cgrid"](fg_basis[0].grid)
+cgrid = params["cgrid"](basis[0].grid)
 b = g.block.map(cgrid, basis)
 
 # cheby on coarse grid

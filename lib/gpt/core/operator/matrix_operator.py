@@ -22,7 +22,7 @@ from gpt.core.vector_space import implicit
 
 
 def make_list(accept_list):
-    return True if type(accept_list) != int else accept_list
+    return True if accept_list is False else accept_list
 
 
 #
@@ -37,9 +37,9 @@ class matrix_operator(factor):
     # accept_guess = (accept_guess_for_mat,accept_guess_for_inv_mat)
     #
     # accept_list:
-    #  False: lhs, rhs are lattice objects
-    #  True:  lhs, rhs are lists of lattice objects with len(lhs) == len(rhs)
-    #  int :  lhs, rhs are lists of lattice objects with len(lhs) == int * len(rhs)
+    #  False    : lhs, rhs are lattice objects
+    #  True     : lhs, rhs are lists of lattice objects with len(lhs) == len(rhs)
+    #  callable : lhs, rhs are lists of lattice objects with len(lhs) == callable(rhs)
     def __init__(
         self,
         mat,
@@ -56,7 +56,9 @@ class matrix_operator(factor):
         self.inv_mat = inv_mat
         self.adj_inv_mat = adj_inv_mat
         self.accept_list = accept_list
-        self.lhs_to_rhs_length_ratio = 1 if type(accept_list) != int else accept_list
+        self.lhs_length = (
+            (lambda rhs: len(rhs)) if not callable(accept_list) else accept_list
+        )
 
         # this allows for automatic application of tensor versions
         # also should handle lists of lattices
@@ -136,13 +138,18 @@ class matrix_operator(factor):
 
         vector_space = tuple([d.converted(to_precision) for d in self.vector_space])
         accept_guess = self.accept_guess
-        n = self.lhs_to_rhs_length_ratio
 
         def _converted(dst, src, mat, l, r, t=lambda x: None):
             t("converted: setup")
 
-            conv_src = [self.vector_space[r].lattice(x) for x in src]
-            conv_dst = [self.vector_space[l].lattice(x) for x in dst]
+            conv_src = [
+                self.vector_space[r].lattice(None, x.otype, x.checkerboard())
+                for x in src
+            ]
+            conv_dst = [
+                self.vector_space[l].lattice(None, x.otype, x.checkerboard())
+                for x in dst
+            ]
 
             t("converted: convert")
 
@@ -174,10 +181,8 @@ class matrix_operator(factor):
         )
 
     def grouped(self, max_group_size):
-
-        n = self.lhs_to_rhs_length_ratio
-
         def _grouped(dst, src, mat):
+            n = self.lhs_length(src)
             for i in range(0, len(src), max_group_size):
                 mat(dst[i * n : (i + max_group_size) * n], src[i : i + max_group_size])
 
@@ -203,7 +208,6 @@ class matrix_operator(factor):
 
         return_list = type(first) == list
         first = gpt.util.to_list(first)
-        n = self.lhs_to_rhs_length_ratio
 
         if second is None:
             src = [gpt(x) for x in first]
@@ -211,11 +215,23 @@ class matrix_operator(factor):
             dst = first
             src = gpt.util.to_list(second)
 
-        type_match = self.vector_space[1].type_match(src[0])
+        distribute = not self.vector_space[1].match_otype(src[0].otype)
 
         if second is None:
+
+            if distribute:
+                dst_vector_space = self.vector_space[0].replaced_otype(src[0].otype)
+            else:
+                dst_vector_space = self.vector_space[0]
+
+            src_otype = src[0].otype
+            src_grid = src[0].grid
+            src_cb = src[0].checkerboard()
+
+            n = self.lhs_length(src)
+
             dst = [
-                self.vector_space[0].lattice(type_match) for i in range(n * len(src))
+                dst_vector_space.lattice(src_grid, src_otype, src_cb) for i in range(n)
             ]
 
             if self.accept_guess[0]:
@@ -231,7 +247,12 @@ class matrix_operator(factor):
                 for idx in range(len(dst)):
                     self.mat(dst[idx], src[idx])
 
-        self.vector_space[1].evaluate(mat, dst, src, zero_lhs=self.accept_guess[0])
+        if distribute:
+            self.vector_space[1].otype.distribute(
+                mat, dst, src, zero_lhs=self.accept_guess[0]
+            )
+        else:
+            mat(dst, src)
 
         if not return_list:
             return gpt.util.from_list(dst)

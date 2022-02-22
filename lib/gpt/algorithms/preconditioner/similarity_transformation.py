@@ -40,7 +40,7 @@ class similarity_transformation:
         self.S = pc.S
 
         def wrap(Mpc, L, R):
-            tmp = Mpc.vector_space[0].lattice(None)
+            tmp = Mpc.vector_space[0].lattice()
 
             def _Mpc(o_d, i_d):
                 V.inv_mat(o_d, i_d)

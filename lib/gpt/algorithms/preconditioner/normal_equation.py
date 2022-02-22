@@ -38,7 +38,7 @@ class normal_equation:
         self.S = pc.S
 
         def wrap(Mpc, R):
-            tmp = Mpc.vector_space[0].lattice(None)
+            tmp = Mpc.vector_space[0].lattice()
 
             def _N_dag_N(o_d, i_d):
                 Mpc.mat(tmp, i_d)

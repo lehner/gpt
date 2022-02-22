@@ -54,8 +54,6 @@ import gpt
 class schur_complement_one:
     def __init__(self, op, domain_decomposition):
 
-        op_domain = op.domain
-
         dd_op = domain_decomposition(op)
 
         DD = dd_op.DD
@@ -70,8 +68,8 @@ class schur_complement_one:
         D_vector_space = DD.vector_space[0]
         C_vector_space = CC.vector_space[0]
 
-        tmp_d = [D_vector_space.lattice(None) for i in range(2)]
-        tmp_c = [C_vector_space.lattice(None) for i in range(2)]
+        tmp_d = [D_vector_space.lattice() for i in range(2)]
+        tmp_c = [C_vector_space.lattice() for i in range(2)]
 
         def _N(o_d, i_d):
             CD.mat(tmp_c[0], i_d)

@@ -19,118 +19,67 @@
 import gpt
 
 
-def get_lattice(similar_to):
-    if similar_to is None:
-        return None
-    elif isinstance(similar_to, gpt.lattice):
-        return similar_to
-    else:
-        return similar_to[1]
-
-
-class base_explicit_otype:
-    def get_otype(self, similar_to):
-        if type(similar_to) == tuple and not similar_to[0]:
-            return similar_to[1].otype
-        else:
-            return self.otype
-
-    def evaluate(self, matrix, lhs, rhs, zero_lhs):
-        if self.otype.__name__ == rhs[0].otype.__name__:
-            matrix(lhs, rhs)
-        else:
-            # zero_lhs only if you create temporary new lhs variables
-            self.otype.distribute(matrix, lhs, rhs, zero_lhs=zero_lhs)
-
-    def type_match(self, rhs):
-        if self.otype.__name__ == rhs.otype.__name__:
-            return True, rhs
-        else:
-            return False, rhs
-
-
-class base_implicit_otype:
-    def evaluate(self, matrix, lhs, rhs, zero_lhs):
-        matrix(lhs, rhs)
-
-    def type_match(self, rhs):
-        return True, rhs
-
-
-class explicit_domain_otype(base_explicit_otype):
-    def __init__(self, domain, otype):
-        self.domain = domain
-        self.otype = otype
-
-    @property
-    def grid(self):
-        return self.domain.grid
-
-    def converted(self, precision):
-        return explicit_domain_otype(self.domain.converted(precision), self.otype)
-
-    def lattice(self, similar_to):
-        return self.domain.lattice(self.get_otype(similar_to))
-
-
-class explicit_grid_otype_checkerboard(base_explicit_otype):
+##
+# domain:
+# - explicit set of spacetime points that can be embedded in a full lattice
+#
+# vector_space:
+# - set of spacetime points and object type
+# - implemented through tuple (grid, otype, checkerboard)
+# - all components can be left undefined and inferred from
+#   a source vector
+class general:
     def __init__(self, grid, otype, cb):
         self.grid = grid
         self.otype = otype
         self.cb = cb
 
     def converted(self, precision):
-        return explicit_grid_otype_checkerboard(
-            self.grid.converted(precision), self.otype, self.cb
+        return general(self.grid.converted(precision), self.otype, self.cb)
+
+    def lattice(self, grid=None, otype=None, cb=None):
+        if self.grid is not None:
+            grid = self.grid
+        if self.otype is not None:
+            otype = self.otype
+        if self.cb is not None:
+            cb = self.cb
+
+        l = gpt.lattice(grid, otype)
+        if cb is not None and grid.cb.n != 1:
+            l.checkerboard(cb)
+        return l
+
+    def match_otype(self, otype):
+        return (
+            otype is None or self.otype is None or otype.__name__ == self.otype.__name__
         )
 
-    def lattice(self, similar_to):
-        l = gpt.lattice(self.grid, self.get_otype(similar_to))
-        l.checkerboard(self.cb)
-        return l
+    def replaced_otype(self, otype):
+        return general(self.grid, otype, self.cb)
 
 
-class explicit_grid_otype(base_explicit_otype):
-    def __init__(self, grid, otype):
-        self.grid = grid
-        self.otype = otype
-
-    def converted(self, precision):
-        return explicit_grid_otype(self.grid.converted(precision), self.otype)
-
-    def lattice(self, similar_to):
-        l = gpt.lattice(self.grid, self.get_otype(similar_to))
-        ls = get_lattice(similar_to)
-        if ls is not None:
-            l.checkerboard(ls.checkerboard())
-        return l
-
-
-class explicit_grid(base_implicit_otype):
-    def __init__(self, grid):
-        self.grid = grid
-
-    def converted(self, precision):
-        return explicit_grid(self.grid.converted(precision))
-
-    def lattice(self, similar_to):
-        ls = get_lattice(similar_to)
-        l = gpt.lattice(self.grid, ls.otype)
-        l.checkerboard(ls.checkerboard())
-        return l
-
-
-class implicit(base_implicit_otype):
-    def converted(self, precision):
-        return self
-
-    def lattice(self, similar_to):
-        ls = get_lattice(similar_to)
-        l = gpt.lattice(ls)
-        l.checkerboard(ls.checkerboard())
-        return l
-
-
+##
 # short-hand
+def implicit():
+    return general(None, None, None)
+
+
+def explicit_grid(grid):
+    return general(grid, None, None)
+
+
+def explicit_domain_otype(domain, otype):
+    return general(domain.grid, otype, None)
+
+
+def explicit_grid_otype_checkerboard(grid, otype, cb):
+    return general(grid, otype, cb)
+
+
+def explicit_grid_otype(grid, otype):
+    return general(grid, otype, None)
+
+
 def explicit_lattice(lat):
-    return explicit_grid_otype_checkerboard(lat.grid, lat.otype, lat.checkerboard())
+    return general(lat.grid, lat.otype, lat.checkerboard())

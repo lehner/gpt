@@ -13,7 +13,8 @@ import os.path
 
 # load configuration
 precision = g.double
-U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], precision), g.random("test"))
+rng = g.random("test")
+U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], precision), rng)
 
 # use the gauge configuration grid
 grid = U[0].grid
@@ -162,3 +163,25 @@ g.message(
 )
 for t in timings:
     g.message("%-38s %-25s %-25s" % (t, timings[t], resid[t]))
+
+
+# Multi-shift inverters:
+# the following code also tests that
+# the vector -> matrix distribution is
+# consistent with multi_shift inverter
+# ordering of dst fields.
+cg = inv.cg({"eps": 1e-8, "maxiter": 500})
+shifts = [0.2, 0.5, 1.0]
+mat = eo2_odd(w).Mpc
+src_eo = rng.cnormal(g.mspincolor(w.F_grid_eo))
+dst_eo_all = g(inv.multi_shift(cg, shifts)(mat) * src_eo)
+for i, s in enumerate(shifts):
+    sinv = cg(lambda dst, src: g.eval(dst, mat * src + s * src))
+    dst_eo = g(sinv * src_eo)
+    eps2 = g.norm2(dst_eo - dst_eo_all[i]) / g.norm2(dst_eo)
+    g.message(
+        f"Test general multi-shift inverter against individual inversions: {eps2}"
+    )
+    assert eps2 < 1e-15
+
+# TODO: add specialized multi-shift inverters and tests
