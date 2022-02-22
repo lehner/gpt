@@ -24,6 +24,8 @@ import numpy
 #      (z+u_1) (z+u_2)
 #  A * ------- ------- ... 
 #      (z+v_1) (z+v_2)
+#
+# for more details see documentation/algorithms/rational.ipynb
 
 #
 # ellipj code inspired by http://www.netlib.org/cephes/
@@ -89,13 +91,9 @@ def zolotarev_approx_inverse_square_root(n, eps):
     return [A, a[0::2], a[1::2], delta]
 
     
-# f(y) = 1/sqrt(y) is approximated by A prod_{i=1}^n (y+a_{2i-1})/(y+a_{2i})
-# in the range eps < y < 1; 
-# the goal is to approximate g(x) = 1/sqrt(x^2) in the range ra < x < rb, 
-# so we consider f(y = x^2/rb^2) / rb
-# the range becomes eps*rb^2 < x^2 < rb^2, which implies eps=ra^2/rb^2
-# instead all ratios (y+a_{2j-1})/(y+a_{2j}) go to (x^2 + rb^2 a_{2j-1})/(x^2 + rb^2 a_{2j})
-# g(x) is approximated by (A/rb) prod_{i=1}^n (x^2 + rb^2 a_{2j-1})/(x^2 + rb^2 a_{2j})
+
+# approximate g(x) = 1/sqrt(x^2) in the range ra < x < rb, 
+# with A \prod_i (x*x - u_i) / (x*x - v_i)
 class zolotarev_inverse_square_root:
     def __init__(self, low, high, order):
         self.ra = low
@@ -105,14 +103,13 @@ class zolotarev_inverse_square_root:
         eps = (self.ra/self.rb)**2
         A, u, v, self.delta = zolotarev_approx_inverse_square_root(self.n, eps)
         
-        self.num = u * self.rb**2
-        self.poles = v * self.rb**2
+        self.zeros = -u * self.rb**2
+        self.poles = -v * self.rb**2
         self.A = A/self.rb
 
 
-    def relative_error(self, x):
-        y = self.A * numpy.prod(x*x + self.num) / numpy.prod(x*x + self.poles)
-        return numpy.abs(1 - y*x)
+    def __call__(self, x):
+        return self.A * numpy.prod(x*x - self.zeros) / numpy.prod(x*x - self.poles)
 
     
     def __str__(self):
