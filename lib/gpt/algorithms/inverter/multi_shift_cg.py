@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Mattia Bruno 
+#    Copyright (C) 2022  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2022  Mattia Bruno 
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,69 +20,6 @@
 
 import gpt as g
 from gpt.algorithms import base_iterative
-
-# placeholder waiting for new interface  of matrix_operator
-# which can handle list of dests
-class multi_matrix_operator:
-    def __init__(self, n, mat, inv_mat=None):
-        self.n = n
-        self.mat = mat
-        self.inv_mat = inv_mat
-        
-    def __call__(self, first, second=None):
-        if not second is None:
-            src = second
-            dst = g.core.util.to_list(first)
-        if second is None:
-            src = first
-            if type(src) == g.lattice:
-                dst = [g.lattice(src) for  _ in range(self.n)]
-            else:
-                dst = g.copy(src)
-        
-        if type(src) == list:
-            assert len(src) == self.n
-            
-        assert len(dst) == self.n
-        self.mat(dst, src)
-        return dst
-
-
-class multi_shift_inverter_base(base_iterative):
-    def shifted_mat(self, mat, s):
-        def operator(dst, src):
-            mat(dst, src)
-            dst += s * src
-        return operator
-    
-class multi_shift_inverter(multi_shift_inverter_base):
-    def __init__(self, base_inverter):
-        super().__init__()
-        self.base_inverter = base_inverter
-            
-    def __call__(self, mat, shifts):
-        otype, grid, cb = None, None, None
-        if type(mat) == g.matrix_operator:
-            otype, grid, cb = mat.otype, mat.grid, mat.cb
-            mat = mat.mat
-            # remove wrapper for performance benefits
-
-        mats = [self.shifted_mat(mat, s) for s in shifts]
-        invs = [self.base_inverter(m) for m in mats]
-    
-        def _mat(dst, src):
-            for i, m in enumerate(mats):
-                m(dst[i],src[i])
-        
-        @self.timed_function
-        def inv(dst, src, t):
-            for i, solver in enumerate(invs):
-                dst[i] @= solver * src
-            self.log(f"completed")
-            
-        n = len(shifts)
-        return multi_matrix_operator(n, mat=inv, 
-                                     inv_mat=multi_matrix_operator(n, _mat))
 
 
 class shifted_cg:
@@ -116,31 +53,31 @@ class shifted_cg:
         return None
 
 
-class multi_shift_cg(multi_shift_inverter_base):
-    @g.params_convention(eps=1e-15, maxiter=1000000)
+class multi_shift_cg(base_iterative):
+    @g.params_convention(eps=1e-15, maxiter=1000000, shifts=[])
     def __init__(self, params):
         super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
+        self.shifts = params["shifts"]
 
-
-    def __call__(self, mat, shifts):
-        ns = len(shifts)
+    def __call__(self, mat):
+        ns = len(self.shifts)
         
-        otype, grid, cb = None, None, None
+        vector_space = None
         if type(mat) == g.matrix_operator:
-            otype, grid, cb = mat.otype, mat.grid, mat.cb
+            vector_space = mat.vector_space
             mat = mat.mat
             # remove wrapper for performance benefits
-    
-        def _mat(dst, src):
-            for i, m in enumerate([self.shifted_mat(mat, s) for s in shifts]):
-                m(dst[i],src[i])
-                            
+                                
         @self.timed_function
         def inv(psi, src, t):
-            scgs = [shifted_cg(psi[i], src, shifts[i]) for i in range(ns)]
+            assert len(src) == 1
+            src = src[0]
+            scgs = []
+            for j, s in enumerate(self.shifts):
+                scgs += [shifted_cg(psi[j], src, s)]
                         
             t("setup")
             p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
@@ -150,11 +87,8 @@ class multi_shift_cg(multi_shift_inverter_base):
             b = 0.0
             a = g.norm2(p)
             cp = a
-            ssq = g.norm2(src)
-            if ssq == 0.0:
-                assert a != 0.0  # need either source or psi to not be zero
-                ssq = a
-            rsq = self.eps ** 2.0 * ssq
+            assert a != 0.0  # need either source or psi to not be zero
+            rsq = self.eps ** 2.0 * a
             for k in range(self.maxiter):
                 c = cp
                 t("matrix")
@@ -184,14 +118,17 @@ class multi_shift_cg(multi_shift_inverter_base):
                 for cg in scgs:
                     msg = cg.check(cp, rsq)
                     if msg:
-                        self.log(f"{msg} in {k+1} iterations")
+                        self.log(f"{msg} at iteration {k+1}")
                 if sum([cg.converged for cg in scgs])==ns:
                     return
 
             self.log(
                 f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}"
             )
-            
-        n = len(shifts)
-        return multi_matrix_operator(n, mat=inv, 
-                                     inv_mat=multi_matrix_operator(n, _mat))
+
+        return g.matrix_operator(
+            mat=inv,
+            vector_space=vector_space,
+            accept_guess=(True, False),
+            accept_list=lambda src: len(src) * len(self.shifts),
+        )

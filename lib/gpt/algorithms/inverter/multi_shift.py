@@ -17,14 +17,15 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import sys
+from gpt.algorithms import base_iterative
 
 
-class multi_shift:
+class multi_shift(base_iterative):
     def __init__(self, inverter, shifts):
         self.inverter = inverter
         self.shifts = shifts
-
+        super().__init__()
+        
     def __call__(self, mat):
 
         inverter_mat = [
@@ -36,8 +37,9 @@ class multi_shift:
             )
             for s in self.shifts
         ]
-
-        def inv(dst, src):
+        
+        @self.timed_function
+        def inv(dst, src, t):
             for j, i in enumerate(inverter_mat):
                 i(dst[j * len(src) : (j + 1) * len(src)], src)
 
