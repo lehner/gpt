@@ -61,7 +61,7 @@ class multi_shift_cg(base_iterative):
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.shifts = params["shifts"]
-
+        
     def __call__(self, mat):
         ns = len(self.shifts)
         

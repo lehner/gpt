@@ -54,7 +54,7 @@ class rational_function:
         return f
     
     def __str__(self):
-        out =  f"Rational polynomial of degree {self.npoles}\n"
+        out =  f"Rational function of degree {self.npoles}\n"
         out += "1"
         for i, r in enumerate(self.r):
             out += f"\n+ {r:g} / (x*x - {self.poles[i]:g})"
@@ -72,16 +72,14 @@ class rational_function:
 
             if self.inverter is None:
                 raise NotImplementedError()
-            assert numpy.all(self.poles == self.inverter.shifts)
             
-            mat_inv = self.inverter(mat)
-            
+            pf = self.partial_fractions(mat)
+
             def operator(dst, src):
-                chi = [g.lattice(src) for _ in range(self.npoles)]
-                mat_inv(chi, src)
+                chi = pf(src)
                 dst @= src
-                for i in range(self.npoles):
-                    dst += self.r[i] * chi[i]
+                for i, c in enumerate(chi):
+                    dst += self.r[i] * c
                 
             return g.matrix_operator(
                 mat=operator,
@@ -94,13 +92,12 @@ class rational_function:
     
     # chi_i = [A+v_i]^{-1} phi
     def partial_fractions(self, mat):
-        mat_inv = inverter(mat, self.poles)
+        self.inverter.shifts = -self.poles
+        mat_inv = self.inverter(mat)
 
         def operator(src):
             chi = [g.lattice(src) for _ in range(self.npoles)]
             mat_inv(chi, src)
-            for i in range(self.npoles):
-                chi[i] @= chi[i]
             return chi
         
         return operator
