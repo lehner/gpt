@@ -25,7 +25,7 @@ import gpt as g
 
 # residues of the partial fractions
 # \prod_i (z-u_i)/(z-v_i) = 1 + \sum_i r[i]/(z-v_i)
-def partial_fractions(u,v):
+def partial_fractions(u, v):
     _v = numpy.array(v)
     n = len(u)
     r = numpy.zeros((n,))
@@ -44,22 +44,22 @@ class rational_function:
         self.poles = numpy.array(poles)
         self.zeros = numpy.array(zeros)
         assert len(zeros) == len(poles)
-        self.r = partial_fractions(zeros,poles)
+        self.r = partial_fractions(zeros, poles)
         self.inverter = inverter
-        
+
     def eval(self, x):
         f = 1.0
         for i, r in enumerate(self.r):
             f += r / (x - self.poles[i])
         return f
-    
+
     def __str__(self):
-        out =  f"Rational function of degree {self.npoles}\n"
+        out = f"Rational function of degree {self.npoles}\n"
         out += "1"
         for i, r in enumerate(self.r):
             out += f"\n+ {r:g} / (x*x - {self.poles[i]:g})"
         return out
-    
+
     def __call__(self, mat):
         if isinstance(mat, (float, complex, int, numpy.float32, numpy.float64)):
             return self.eval(mat)
@@ -72,7 +72,7 @@ class rational_function:
 
             if self.inverter is None:
                 raise NotImplementedError()
-            
+
             pf = self.partial_fractions(mat)
 
             def operator(dst, src):
@@ -80,16 +80,12 @@ class rational_function:
                 dst @= src
                 for i, c in enumerate(chi):
                     dst += self.r[i] * c
-                
-            return g.matrix_operator(
-                mat=operator,
-                vector_space=vector_space
-            )
+
+            return g.matrix_operator(mat=operator, vector_space=vector_space)
 
     def inv(self):
         return rational_function(self.poles, self.zeros, self.inverter)
-    
-    
+
     # chi_i = [A+v_i]^{-1} phi
     def partial_fractions(self, mat):
         self.inverter.shifts = -self.poles
@@ -99,6 +95,5 @@ class rational_function:
             chi = [g.lattice(src) for _ in range(self.npoles)]
             mat_inv(chi, src)
             return chi
-        
+
         return operator
-        

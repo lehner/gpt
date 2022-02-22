@@ -25,7 +25,7 @@ class multi_shift(base_iterative):
         self.inverter = inverter
         self.shifts = shifts
         super().__init__()
-        
+
     def __call__(self, mat):
 
         inverter_mat = [
@@ -37,7 +37,7 @@ class multi_shift(base_iterative):
             )
             for s in self.shifts
         ]
-        
+
         @self.timed_function
         def inv(dst, src, t):
             for j, i in enumerate(inverter_mat):

@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2022  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2022  Mattia Bruno 
+#                  2022  Mattia Bruno
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -33,18 +33,18 @@ class shifted_cg:
         self.gh = 1.0
         self.b = 0.0
         self.converged = False
-        
+
     def step1(self, a, b, om):
-        rh = 1.0 / (1.0 + self.s * a + (1.0-self.rh)*om)
+        rh = 1.0 / (1.0 + self.s * a + (1.0 - self.rh) * om)
         self.rh = rh
-        self.a = rh*a
-        self.b = rh**2*b
-        self.gh = self.gh*rh
-        
+        self.a = rh * a
+        self.b = rh**2 * b
+        self.gh = self.gh * rh
+
     def step2(self, r):
         self.x += self.a * self.p
         self.p @= self.b * self.p + self.gh * r
-        
+
     def check(self, cp, rsq):
         if not self.converged:
             if self.gh * cp <= rsq:
@@ -61,16 +61,16 @@ class multi_shift_cg(base_iterative):
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
         self.shifts = params["shifts"]
-        
+
     def __call__(self, mat):
         ns = len(self.shifts)
-        
+
         vector_space = None
         if type(mat) == g.matrix_operator:
             vector_space = mat.vector_space
             mat = mat.mat
             # remove wrapper for performance benefits
-                                
+
         @self.timed_function
         def inv(psi, src, t):
             assert len(src) == 1
@@ -78,7 +78,7 @@ class multi_shift_cg(base_iterative):
             scgs = []
             for j, s in enumerate(self.shifts):
                 scgs += [shifted_cg(psi[j], src, s)]
-                        
+
             t("setup")
             p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
             x = g.copy(src)
@@ -88,7 +88,7 @@ class multi_shift_cg(base_iterative):
             a = g.norm2(p)
             cp = a
             assert a != 0.0  # need either source or psi to not be zero
-            rsq = self.eps ** 2.0 * a
+            rsq = self.eps**2.0 * a
             for k in range(self.maxiter):
                 c = cp
                 t("matrix")
@@ -97,7 +97,7 @@ class multi_shift_cg(base_iterative):
                 t("inner_product")
                 dc = g.inner_product(p, mmp)
                 d = dc.real
-                om = b/a
+                om = b / a
                 a = c / d
                 om *= a
 
@@ -113,13 +113,13 @@ class multi_shift_cg(base_iterative):
                 p @= b * p + r
                 for cg in scgs:
                     cg.step2(r)
-                
+
                 t("other")
                 for cg in scgs:
                     msg = cg.check(cp, rsq)
                     if msg:
                         self.log(f"{msg} at iteration {k+1}")
-                if sum([cg.converged for cg in scgs])==ns:
+                if sum([cg.converged for cg in scgs]) == ns:
                     return
 
             self.log(
