@@ -38,7 +38,7 @@ class shifted_cg:
         rh = 1.0 / (1.0 + self.s * a + (1.0 - self.rh) * om)
         self.rh = rh
         self.a = rh * a
-        self.b = rh**2 * b
+        self.b = rh ** 2 * b
         self.gh = self.gh * rh
 
     def step2(self, r):
@@ -80,7 +80,7 @@ class multi_shift_cg(base_iterative):
                 for idx in range(n):
                     inv(psi[idx::n], [src[idx]])
                 return
-            
+
             src = src[0]
             scgs = []
             for j, s in enumerate(self.shifts):
@@ -95,7 +95,7 @@ class multi_shift_cg(base_iterative):
             a = g.norm2(p)
             cp = a
             assert a != 0.0  # need either source or psi to not be zero
-            rsq = self.eps**2.0 * a
+            rsq = self.eps ** 2.0 * a
             for k in range(self.maxiter):
                 c = cp
                 t("matrix")

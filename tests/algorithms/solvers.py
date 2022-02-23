@@ -172,8 +172,10 @@ for t in timings:
 # consistent with multi_shift inverter
 # ordering of dst fields.
 
+
 def mat_shift(dst, src, s):
     dst @= mat * src + s * src
+
 
 cg = inv.cg({"eps": 1e-8, "maxiter": 500})
 shifts = [0.5, 1.0, 1.7]
@@ -184,10 +186,10 @@ src = [rng.cnormal(g.mspincolor(w.F_grid_eo)), rng.cnormal(g.mspincolor(w.F_grid
 dst_all = g(inv.multi_shift(cg, shifts)(mat) * src)
 for i, s in enumerate(shifts):
     for jsrc in range(2):
-        eps2 = g.norm2(mat * dst_all[2*i + jsrc] + s * dst_all[2*i + jsrc] - src[jsrc]) / g.norm2(src[jsrc])
-        g.message(
-            f"Test general multi-shift inverter solution: {eps2}"
-        )
+        eps2 = g.norm2(
+            mat * dst_all[2 * i + jsrc] + s * dst_all[2 * i + jsrc] - src[jsrc]
+        ) / g.norm2(src[jsrc])
+        g.message(f"Test general multi-shift inverter solution: {eps2}")
         assert eps2 < 1e-14
 
 g.default.set_verbose("multi_shift_cg")
@@ -197,11 +199,13 @@ dst_mscg = g(mscg(mat) * src)
 for i, s in enumerate(shifts):
     g.message(f"General multi-shift vs multi_shift_cg for shift {i} = {s}")
     for jsrc in range(2):
-        eps2 = g.norm2(dst_all[2*i + jsrc] - dst_mscg[2*i + jsrc]) / g.norm2(dst_mscg[2*i + jsrc])
+        eps2 = g.norm2(dst_all[2 * i + jsrc] - dst_mscg[2 * i + jsrc]) / g.norm2(
+            dst_mscg[2 * i + jsrc]
+        )
         g.message(f"Test general solution versus mscg solution: {eps2}")
         assert eps2 < 1e-14
-        eps2 = g.norm2(mat * dst_mscg[2*i + jsrc] + s * dst_mscg[2*i + jsrc] - src[jsrc]) / g.norm2(src[jsrc])
-        g.message(
-            f"Test mscg inverter solution: {eps2}"
-        )
+        eps2 = g.norm2(
+            mat * dst_mscg[2 * i + jsrc] + s * dst_mscg[2 * i + jsrc] - src[jsrc]
+        ) / g.norm2(src[jsrc])
+        g.message(f"Test mscg inverter solution: {eps2}")
         assert eps2 < 1e-14

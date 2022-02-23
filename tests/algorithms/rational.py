@@ -48,10 +48,10 @@ r_inv = r.inv()
 
 g.message(r)
 for x in numpy.arange(0.1, 4.5, 0.05):
-    num = numpy.prod(x*x - zol.zeros) * zol.norm
-    den = numpy.prod(x*x - zol.poles)
-    assert abs(r(x*x) - num/den) < 1e-12
-    assert abs(r_inv(x*x) - den/num) < 1e-12
+    num = numpy.prod(x * x - zol.zeros) * zol.norm
+    den = numpy.prod(x * x - zol.poles)
+    assert abs(r(x * x) - num / den) < 1e-12
+    assert abs(r_inv(x * x) - den / num) < 1e-12
 
 # we test arbitrary function
 zeros = numpy.array([0.3, 0.5])
@@ -61,7 +61,7 @@ g.message(rp)
 for y in numpy.arange(1.0, 4.5, 0.05):
     num = numpy.prod(y - zeros)
     den = numpy.prod(y - poles)
-    assert abs(rp(y) - num/den) < 1e-12
+    assert abs(rp(y) - num / den) < 1e-12
 
 rr = r(mat)
 
@@ -75,8 +75,10 @@ inv = g.algorithms.inverter
 cg = inv.cg({"eps": 1e-12, "maxiter": 1024})
 g.default.set_verbose("cg")
 
+
 def mat_shift(dst, src, s):
     dst @= mat * src - s * src
+
 
 phi @= src
 for i in range(np):

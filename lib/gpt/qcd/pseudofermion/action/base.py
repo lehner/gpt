@@ -21,6 +21,7 @@
 import gpt as g
 from gpt.core.group import differentiable_functional
 
+
 class action_base(differentiable_functional):
     def __init__(self, M, inverter, operator):
         self.M = g.core.util.to_list(M)
