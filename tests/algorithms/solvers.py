@@ -185,3 +185,23 @@ for i, s in enumerate(shifts):
     assert eps2 < 1e-15
 
 # TODO: add specialized multi-shift inverters and tests
+g.default.set_verbose("multi_shift_cg")
+
+# multi-shift cg like cg works with vspincolor
+src_eo = rng.cnormal(g.vspincolor(w.F_grid_eo))
+dst = g(inv.multi_shift(cg, shifts)(mat) * src_eo)
+
+mscg = inv.multi_shift_cg({"eps": 1e-8, "maxiter": 1024, "shifts": shifts})
+dst_mscg = g(mscg(mat) * src_eo)
+
+def mat_shift(dst, src, s):
+    dst @= mat * src + s * src
+
+for i, s in enumerate(shifts):
+    g.message(f"General multi-shift vs multi_shift_cg for shift {i} = {s}")
+    eps2 = g.norm2(dst[i] - dst_mscg[i]) / g.norm2(dst_mscg[i])
+    g.message(f"Test solutions: {eps2}")
+    tmp = g.lattice(src_eo)
+    mat_shift(tmp, dst[i], shifts[i])
+    g.message(f"Test 1 - [mat + s][mat + s]^(-1) = {g.norm2(tmp) - g.norm2(src_eo)}")
+    

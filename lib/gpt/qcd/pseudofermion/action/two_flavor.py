@@ -20,38 +20,8 @@
 
 import gpt as g
 from gpt.core.group import differentiable_functional
+from gpt.qcd.pseudofermion.action.base import action_base
 from gpt.qcd.pseudofermion.action.schur_differentiable_operator import *
-
-
-class action_base(differentiable_functional):
-    def __init__(self, M, inverter, operator):
-        self.M = g.core.util.to_list(M)
-        self.inverter = inverter
-        self.operator = operator
-
-    def _updated(self, fields):
-        U = fields[0:-1]
-        psi = fields[-1]
-        return [m.updated(U) for m in self.M] + [U, psi]
-
-    def _allocate_force(self, U):
-        frc = g.group.cartesian(U)
-        for f in frc:
-            f[:] = 0
-        return frc
-
-    def _accumulate(self, frc, frc1, sign):
-        for f, f1 in zip(frc, frc1):
-            f += sign * f1
-
-    def __call__(self, fields):
-        raise NotImplementedError()
-
-    def draw(self, fields, rng):
-        raise NotImplementedError()
-
-    def gradient(self, fields, dfields):
-        raise NotImplementedError()
 
 
 # S = phi^dag Mdag^-1 M^-1 phi = phi^dag (M Mdag)^-1 phi = (psi, psi)

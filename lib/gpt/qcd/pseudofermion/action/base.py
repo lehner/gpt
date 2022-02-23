@@ -17,14 +17,36 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.pseudofermion.action.two_flavor import (
-    two_flavor,
-    two_flavor_evenodd_schur,
-    two_flavor_evenodd,
-    two_flavor_ratio,
-    two_flavor_ratio_evenodd_schur,
-)
-#from gpt.qcd.pseudofermion.action.two_flavor_rational import (
-#    two_flavor_rational,
-#    two_flavor_rational_evenodd,
-#)
+
+import gpt as g
+from gpt.core.group import differentiable_functional
+
+class action_base(differentiable_functional):
+    def __init__(self, M, inverter, operator):
+        self.M = g.core.util.to_list(M)
+        self.inverter = inverter
+        self.operator = operator
+
+    def _updated(self, fields):
+        U = fields[0:-1]
+        psi = fields[-1]
+        return [m.updated(U) for m in self.M] + [U, psi]
+
+    def _allocate_force(self, U):
+        frc = g.group.cartesian(U)
+        for f in frc:
+            f[:] = 0
+        return frc
+
+    def _accumulate(self, frc, frc1, sign):
+        for f, f1 in zip(frc, frc1):
+            f += sign * f1
+
+    def __call__(self, fields):
+        raise NotImplementedError()
+
+    def draw(self, fields, rng):
+        raise NotImplementedError()
+
+    def gradient(self, fields, dfields):
+        raise NotImplementedError()
