@@ -35,7 +35,7 @@ mat = eo2_odd(w).Mpc
 inv = g.algorithms.inverter
 g.default.set_verbose("multi_shift_cg")
 
-mscg = inv.multi_shift_cg({"eps": 1e-6, "maxiter": 1024})
+mscg = inv.multi_shift_cg({"eps": 1e-8, "maxiter": 1024})
 
 rat = g.algorithms.rational
 
@@ -43,12 +43,12 @@ np = 12
 zol = g.algorithms.rational.zolotarev_inverse_square_root(0.1, 4.5, np)
 g.message(zol)
 
-r = rat.rational_function(zol.zeros, zol.poles, zol.A, mscg)
+r = rat.rational_function(zol.zeros, zol.poles, zol.norm, mscg)
 r_inv = r.inv()
 
 g.message(r)
 for x in numpy.arange(0.1, 4.5, 0.05):
-    num = numpy.prod(x*x - zol.zeros) * zol.A
+    num = numpy.prod(x*x - zol.zeros) * zol.norm
     den = numpy.prod(x*x - zol.poles)
     assert abs(r(x*x) - num/den) < 1e-12
     assert abs(r_inv(x*x) - den/num) < 1e-12
@@ -84,9 +84,14 @@ for i in range(np):
     mat_inv = cg(lambda dst, src: mat_shift(dst, src, zol.poles[i]))
     tmp = mat_inv(phi)
     mat_shift(phi, tmp, zol.zeros[i])
-phi *= zol.A
+phi *= zol.norm
 
 g.message("Testing rat_polynomial against exact calculation")
 eps = g.inner_product(src, phi).real - g.inner_product(src, psi).real
 g.message(f"  = {abs(eps):e}")
-assert abs(eps) < 1e-9
+assert abs(eps) < 1e-8
+
+# test fundamental definition
+eps2 = g.norm2(mat * rr * rr * src - src) / g.norm2(src)
+g.message(f"Test 1/sqrt(mat) approximation: {eps2}")
+assert eps2 < 1e-15

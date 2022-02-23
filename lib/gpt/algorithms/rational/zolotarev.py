@@ -21,9 +21,9 @@
 import numpy
 
 # zolotarev_inverse_square_root approximates 1/sqrt(x^2) with
-#      (z+u_1) (z+u_2)
-#  A * ------- ------- ...
-#      (z+v_1) (z+v_2)
+#         (z+u_1) (z+u_2)
+#  norm * ------- ------- ...
+#         (z+v_1) (z+v_2)
 #
 # for more details see documentation/algorithms/rational.ipynb
 
@@ -105,7 +105,7 @@ class zolotarev_inverse_square_root:
 
         self.zeros = -u * self.rb**2
         self.poles = -v * self.rb**2
-        self.A = A / self.rb
+        self.norm = A / self.rb
 
     def __str__(self):
         out = f"Zolotarev approx of 1/sqrt(x^2) with {self.n} poles in the range [{self.ra},{self.rb}]\n"

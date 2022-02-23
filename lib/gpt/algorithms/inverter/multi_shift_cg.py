@@ -47,7 +47,7 @@ class shifted_cg:
 
     def check(self, cp, rsq):
         if not self.converged:
-            if self.gh * cp <= rsq:
+            if self.gh ** 2.0 * cp <= rsq:
                 self.converged = True
                 return f"shift {self.s} converged"
         return None
@@ -73,7 +73,14 @@ class multi_shift_cg(base_iterative):
 
         @self.timed_function
         def inv(psi, src, t):
-            assert len(src) == 1
+
+            if len(src) > 1:
+                n = len(src)
+                # do different sources separately
+                for idx in range(n):
+                    inv(psi[idx::n], [src[idx]])
+                return
+            
             src = src[0]
             scgs = []
             for j, s in enumerate(self.shifts):
@@ -107,12 +114,14 @@ class multi_shift_cg(base_iterative):
                 t("linear combination")
                 b = cp / c
                 for cg in scgs:
-                    cg.step1(a, b, om)
+                    if not cg.converged:
+                        cg.step1(a, b, om)
 
                 x += a * p
                 p @= b * p + r
                 for cg in scgs:
-                    cg.step2(r)
+                    if not cg.converged:
+                        cg.step2(r)
 
                 t("other")
                 for cg in scgs:

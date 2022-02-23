@@ -60,6 +60,7 @@ for f in \
     ${test_path}/algorithms/integrators.py \
     ${test_path}/algorithms/optimize.py \
     ${test_path}/algorithms/polynomials.py \
+    ${test_path}/algorithms/rational.py \
     ${test_path}/algorithms/multi_grid.py \
     ${test_path}/markov/metropolis.py \
     ${test_path}/markov/pure_gauge.py \
