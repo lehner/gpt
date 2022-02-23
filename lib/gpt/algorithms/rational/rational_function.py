@@ -27,7 +27,7 @@ import gpt as g
 # \prod_i (z-u_i)/(z-v_i) = 1 + \sum_i r[i]/(z-v_i)
 def partial_fractions(u, v):
     _v = numpy.array(v)
-    n = len(u)
+    n = len(v)
     r = numpy.zeros((n,))
     for i in range(n):
         _v[i] = 0.0
@@ -39,25 +39,32 @@ def partial_fractions(u, v):
 
 # \prod_i (z-u_i)/(z-v_i)
 class rational_function:
-    def __init__(self, zeros, poles, inverter=None):
+    def __init__(self, zeros, poles, norm=1.0, inverter=None):
         self.npoles = len(poles)
         self.poles = numpy.array(poles)
         self.zeros = numpy.array(zeros)
-        assert len(zeros) == len(poles)
+        self.norm = norm
         self.r = partial_fractions(zeros, poles)
         self.inverter = inverter
+        if len(poles) == len(zeros):
+            self.pf0 = 1.0
+        elif len(poles) > len(zeros):
+            self.pf0 = 0.0
+        else:
+            raise Exception("Rational function ill behaved at infinity")
 
     def eval(self, x):
-        f = 1.0
+        f = self.pf0
         for i, r in enumerate(self.r):
             f += r / (x - self.poles[i])
-        return f
+        return f * self.norm
 
     def __str__(self):
         out = f"Rational function of degree {self.npoles}\n"
-        out += "1"
+        out += f"{self.norm:g}(1 + "
         for i, r in enumerate(self.r):
             out += f"\n+ {r:g} / (x*x - {self.poles[i]:g})"
+        out += "\n)"
         return out
 
     def __call__(self, mat):
@@ -80,11 +87,13 @@ class rational_function:
                 dst @= src
                 for i, c in enumerate(chi):
                     dst += self.r[i] * c
+                if self.norm != 1.0:
+                    dst *= self.norm
 
             return g.matrix_operator(mat=operator, vector_space=vector_space)
 
     def inv(self):
-        return rational_function(self.poles, self.zeros, self.inverter)
+        return rational_function(self.poles, self.zeros, 1.0 / self.norm, self.inverter)
 
     # chi_i = [A+v_i]^{-1} phi
     def partial_fractions(self, mat):

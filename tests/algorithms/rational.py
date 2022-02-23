@@ -42,20 +42,26 @@ rat = g.algorithms.rational
 np = 12
 zol = g.algorithms.rational.zolotarev_inverse_square_root(0.1, 4.5, np)
 g.message(zol)
-for x in numpy.arange(0.1, 4.5, 0.05):
-    assert abs(zol(x)*x-1) < 1e-9
 
-
-r = rat.rational_function(zol.zeros, zol.poles, mscg)
+r = rat.rational_function(zol.zeros, zol.poles, zol.A, mscg)
 r_inv = r.inv()
 
 g.message(r)
 for x in numpy.arange(0.1, 4.5, 0.05):
-    num = numpy.prod(x*x - zol.zeros)
+    num = numpy.prod(x*x - zol.zeros) * zol.A
     den = numpy.prod(x*x - zol.poles)
     assert abs(r(x*x) - num/den) < 1e-12
     assert abs(r_inv(x*x) - den/num) < 1e-12
 
+# we test arbitrary function
+zeros = numpy.array([0.3, 0.5])
+poles = numpy.array([0.1, 0.4, 0.9])
+rp = rat.rational_function(zeros, poles)
+g.message(rp)
+for y in numpy.arange(1.0, 4.5, 0.05):
+    num = numpy.prod(y - zeros)
+    den = numpy.prod(y - poles)
+    assert abs(rp(y) - num/den) < 1e-12
 
 rr = r(mat)
 
@@ -78,8 +84,9 @@ for i in range(np):
     mat_inv = cg(lambda dst, src: mat_shift(dst, src, zol.poles[i]))
     tmp = mat_inv(phi)
     mat_shift(phi, tmp, zol.zeros[i])
-    
+phi *= zol.A
+
 g.message("Testing rat_polynomial against exact calculation")
 eps = g.inner_product(src, phi).real - g.inner_product(src, psi).real
-assert abs(eps) < 1e-6
 g.message(f"  = {abs(eps):e}")
+assert abs(eps) < 1e-9

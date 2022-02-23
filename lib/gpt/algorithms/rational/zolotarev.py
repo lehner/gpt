@@ -107,9 +107,6 @@ class zolotarev_inverse_square_root:
         self.poles = -v * self.rb**2
         self.A = A / self.rb
 
-    def __call__(self, x):
-        return self.A * numpy.prod(x * x - self.zeros) / numpy.prod(x * x - self.poles)
-
     def __str__(self):
         out = f"Zolotarev approx of 1/sqrt(x^2) with {self.n} poles in the range [{self.ra},{self.rb}]\n"
         out += f"   relative error delta = {self.delta}"
