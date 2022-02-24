@@ -328,6 +328,22 @@ test_suite = {
             ".Mdiag": [(-4966.960264746144 - 2525.83968136146j)],
         },
     },
+    "mobius_axial_mass": {
+        "fermion": g.qcd.fermion.mobius,
+        "params": {
+            "mass_plus": 0.08,
+            "mass_minus": 0.11,
+            "M5": 1.8,
+            "b": 1.5,
+            "c": 0.5,
+            "Ls": 12,
+            "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+        },
+        "matrices": {
+            "": [(-8690.547330400455 - 4127.148886222195j)],
+            ".Mdiag": [(-4967.102993398692 - 2525.589904941078j)],
+        },
+    },
     "wilson": {
         "fermion": g.qcd.fermion.wilson_clover,
         "params": wilson_params,

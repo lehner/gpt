@@ -51,8 +51,8 @@ class cg(base_iterative):
             cp = a
             ssq = g.norm2(src)
             if ssq == 0.0:
-                assert a != 0.0  # need either source or psi to not be zero
-                ssq = a
+                psi[:] = 0
+                return
             rsq = self.eps ** 2.0 * ssq
             for k in range(self.maxiter):
                 c = cp

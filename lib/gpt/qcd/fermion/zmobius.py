@@ -59,7 +59,14 @@ class zmobius_class_operator(mobius_class_operator):
 
 
 @gpt.params_convention(
-    omega=None, mass=None, b=None, c=None, M5=None, boundary_phases=None
+    omega=None,
+    mass=None,
+    mass_plus=None,
+    mass_minus=None,
+    b=None,
+    c=None,
+    M5=None,
+    boundary_phases=None,
 )
 def zmobius(U, params):
     params = copy.deepcopy(params)  # save current parameters

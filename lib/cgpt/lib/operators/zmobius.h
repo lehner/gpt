@@ -28,7 +28,8 @@ cgpt_fermion_operator_base* cgpt_create_zmobius(PyObject* args) {
   auto grid5_rb = get_pointer<GridRedBlackCartesian>(args,"F_grid_rb");
   auto grid4 = get_pointer<GridCartesian>(args,"U_grid");
   auto grid4_rb = get_pointer<GridRedBlackCartesian>(args,"U_grid_rb");
-  RealD mass = get_float(args,"mass");
+  RealD mass_plus = get_float(args,"mass_plus");
+  RealD mass_minus = get_float(args,"mass_minus");
   RealD M5 = get_float(args,"M5");
   RealD b = get_float(args,"b");
   RealD c = get_float(args,"c");
@@ -44,7 +45,10 @@ cgpt_fermion_operator_base* cgpt_create_zmobius(PyObject* args) {
   }
 
   auto f = new ZMobiusFermion<WI>(U,*grid5,*grid5_rb,*grid4,*grid4_rb,
-				  mass,M5,omega,b,c,wp);
+				  mass_plus,M5,omega,b,c,wp);
+
+  if (mass_plus != mass_minus)
+    f->SetMass(mass_plus, mass_minus);
 
   return new cgpt_fermion_operator<ZMobiusFermion<WI>>(f);
 }

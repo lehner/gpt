@@ -28,9 +28,14 @@ class calculate_residual:
             for i in range(len(dst)):
                 eps = g.norm2(mat * dst[i] - src[i]) ** 0.5
                 nrm = g.norm2(src[i]) ** 0.5
-                g.message(
-                    f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps/nrm}, | src[{i}] | = {nrm}"
-                )
+                if nrm != 0.0:
+                    g.message(
+                        f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps/nrm}, | src[{i}] | = {nrm}"
+                    )
+                else:
+                    g.message(
+                        f"{self.tag}| mat * dst[{i}] - src[{i}] | = {eps}, | src[{i}] | = {nrm}"
+                    )
 
         vector_space = None
         if isinstance(mat, g.matrix_operator):

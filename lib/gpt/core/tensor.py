@@ -115,7 +115,7 @@ class tensor:
             return other.__rmul__(self)
 
     def __rmul__(self, other):
-        if type(other) == complex:
+        if gpt.util.is_num(other):
             return tensor(self.array * other, self.otype)
         else:
             return other.__mul__(self)
