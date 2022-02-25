@@ -197,7 +197,7 @@ mscg = inv.multi_shift_cg({"eps": 1e-8, "maxiter": 1024, "shifts": shifts})
 
 g.default.set_verbose("multi_shift_fom")
 msfom = inv.multi_shift_fom(
-    {"eps": 1e-8, "maxiter": 1024, "restartlen":10, "shifts": shifts}
+    {"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts}
 )
 
 

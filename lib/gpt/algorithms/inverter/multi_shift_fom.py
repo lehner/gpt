@@ -30,7 +30,7 @@ class shifted_fom:
         self.x[:] = 0
         self.rho = 1.0
         self.r2 = 1.0
-        y = []
+        self.y = []
         self.converged = False
 
     def solve_hessenberg(self, H, r2):
@@ -41,11 +41,11 @@ class shifted_fom:
         n = len(Hs)
         b = np.zeros(n, np.complex128)
         b[0] = self.rho * r2 ** 0.5
-        for i in range(n-1):
+        for i in range(n - 1):
             k = -Hs[i][-1] / Hs[i][-2]
-            for j in range(n-i):
-                Hs[i+j][i+1] += k * Hs[i+j][i]
-            b[i+1] += k * b[i]
+            for j in range(n - i):
+                Hs[i + j][i + 1] += k * Hs[i + j][i]
+            b[i + 1] += k * b[i]
 
         self.y = np.zeros(n, np.complex128)
         for i in reversed(range(n)):
@@ -106,10 +106,10 @@ class multi_shift_fom(base_iterative):
         return H
 
     def restart(self, V):
-            V[0] @= g.copy(V[-1])
-            r2 = g.norm2(V[0])
-            V[0] /= r2 ** 0.5
-            return r2
+        V[0] @= g.copy(V[-1])
+        r2 = g.norm2(V[0])
+        V[0] /= r2 ** 0.5
+        return r2
 
     def __call__(self, mat):
 
@@ -203,7 +203,7 @@ class multi_shift_fom(base_iterative):
                         res = fom.calc_res(mat, src, mmp)
                         msg += f";  true squared residual {res:e} / {rsq:e}"
                     self.log(msg)
-            cs =sum([fom.converged for fom in sfoms if True])
+            cs = sum([fom.converged for fom in sfoms if True])
             ns = len(self.shifts)
             self.log(
                 f"NOT converged in {k+rlen} iterations; {cs} / {ns} converged shifts"
