@@ -235,7 +235,7 @@ qm2 = g.qcd.fermion.mobius(
 G1 = qm1.propagator(slv_5d_e)
 G2 = qm2.propagator(slv_5d_e)
 
-eps2 = g.norm2((m2 - m1) * G1 * G2 * src - (G1 * src - G2 * src)) / g.norm2(src)
+eps2 = g.norm2((m2 - m1) * G1 * G2 * src_sc - (G1 * src_sc - G2 * src_sc)) / g.norm2(src_sc)
 g.message(f"Test vector mass behavior: {eps2}")
 assert eps2 < 1e-13
 
@@ -343,8 +343,8 @@ Pminus = (g.gamma["I"].tensor() - g.gamma[5].tensor()) * 0.5
 # G(m,m2) - G(m,m1) = (m1 - m2) G(m,m1) Pm G(m,m2)
 # or
 # G(m,m1) - G(m,m2) = (m2 - m1) G(m,m2) Pm G(m,m1)
-eps2 = g.norm2((m2 - m1) * G2 * Pminus * G1 * src - (G1 * src - G2 * src)) / g.norm2(
-    src
+eps2 = g.norm2((m2 - m1) * G2 * Pminus * G1 * src_sc - (G1 * src_sc - G2 * src_sc)) / g.norm2(
+    src_sc
 )
 g.message(f"Test axial mass behavior: {eps2}")
 assert eps2 < 1e-13
@@ -374,6 +374,6 @@ qm2 = g.qcd.fermion.mobius(
 G1 = qm1.propagator(slv_5d_e)
 G2 = qm2.propagator(slv_5d_e)
 
-eps2 = g.norm2((m2 - m1) * G2 * Pplus * G1 * src - (G1 * src - G2 * src)) / g.norm2(src)
+eps2 = g.norm2((m2 - m1) * G2 * Pplus * G1 * src_sc - (G1 * src_sc - G2 * src_sc)) / g.norm2(src_sc)
 g.message(f"Test axial mass behavior: {eps2}")
 assert eps2 < 1e-13

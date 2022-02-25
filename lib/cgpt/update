@@ -134,8 +134,8 @@ do
 
     for tensor_name in ${TENSORS}
     do
-	tensor_root=$(echo ${tensor_name} | sed 's/[0-9]*//g')
-	tensor_args=$(echo ${tensor_name} | sed 's/[^0-9]\+/ /g')
+	tensor_root=$(echo ${tensor_name} | tr -d "[:digit:]")
+	tensor_args=$(echo ${tensor_name} | tr -s "[:alpha:]" " ")
 	tensor_arg_1=$(echo ${tensor_args} | awk '{ print $1 }')
 	tensor_arg_2=$(echo ${tensor_args} | awk '{ print $2 }')
 

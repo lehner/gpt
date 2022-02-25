@@ -32,6 +32,13 @@ cgpt_Lattice_base* cgpt_lattice_gammamul(cgpt_Lattice_base* dst, bool ac, int un
 template<>
 cgpt_Lattice_base* cgpt_lattice_matmul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4Color2<vComplexF> >& la, PyArrayObject* b, std::string& bot, int unary_b, int unary_expr, bool rev, ComplexD coef) {
   typedef vComplexF vtype;
+  if (unary_b == 0) {
+    _MM_COMPATIBLE_R_(iMSpin4);
+    _MM_COMPATIBLE_R_(iMColor2);
+    _MM_COMPATIBLE_R_(iMSpin4Color2);
+  }
+  _MM_INNER_OUTER_PRODUCT_(iVSpin4);
+  _MM_INNER_OUTER_PRODUCT_(iVColor2);
   _MM_INNER_OUTER_PRODUCT_(iVSpin4Color2);
   ERR("Not implemented");
 }
