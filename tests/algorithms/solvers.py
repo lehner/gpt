@@ -194,18 +194,31 @@ for i, s in enumerate(shifts):
 
 g.default.set_verbose("multi_shift_cg")
 mscg = inv.multi_shift_cg({"eps": 1e-8, "maxiter": 1024, "shifts": shifts})
-dst_mscg = g(mscg(mat) * src)
 
-for i, s in enumerate(shifts):
-    g.message(f"General multi-shift vs multi_shift_cg for shift {i} = {s}")
-    for jsrc in range(2):
-        eps2 = g.norm2(dst_all[2 * i + jsrc] - dst_mscg[2 * i + jsrc]) / g.norm2(
-            dst_mscg[2 * i + jsrc]
+g.default.set_verbose("multi_shift_fom")
+msfom = inv.multi_shift_fom(
+    {"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts}
+)
+
+
+def multi_shift_test(ms, name):
+    dst_ms = g(ms(mat) * src)
+    for i, s in enumerate(shifts):
+        g.message(
+            f"General multi-shift vs multi_shift_{name} for shift {i} = {s}"
         )
-        g.message(f"Test general solution versus mscg solution: {eps2}")
-        assert eps2 < 1e-14
-        eps2 = g.norm2(
-            mat * dst_mscg[2 * i + jsrc] + s * dst_mscg[2 * i + jsrc] - src[jsrc]
-        ) / g.norm2(src[jsrc])
-        g.message(f"Test mscg inverter solution: {eps2}")
-        assert eps2 < 1e-14
+        for jsrc in range(2):
+            eps2 = g.norm2(
+                dst_all[2 * i + jsrc] - dst_ms[2 * i + jsrc]
+            ) / g.norm2(dst_ms[2 * i + jsrc])
+            g.message(f"Test general solution versus ms{name} solution: {eps2}")
+            assert eps2 < 1e-14
+            eps2 = g.norm2(
+                mat * dst_ms[2 * i + jsrc] + s * dst_ms[2 * i + jsrc] - src[jsrc]
+            ) / g.norm2(src[jsrc])
+            g.message(f"Test ms{name} inverter solution: {eps2}")
+            assert eps2 < 1e-14
+
+
+multi_shift_test(mscg, "cg")
+multi_shift_test(msfom, "fom")
