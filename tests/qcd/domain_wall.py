@@ -349,7 +349,7 @@ eps2 = g.norm2((m2 - m1) * G2 * Pminus * G1 * src_sc - (G1 * src_sc - G2 * src_s
 g.message(f"Test axial mass behavior: {eps2}")
 assert eps2 < 1e-13
 
-# G(m2,m) - G(m2,m) = (m2 - m1) G(m2,m) Pp G(m1,m)
+# G(m1,m) - G(m2,m) = (m2 - m1) G(m2,m) Pp G(m1,m)
 qm1 = g.qcd.fermion.mobius(
     U,
     mass_plus=m1,
