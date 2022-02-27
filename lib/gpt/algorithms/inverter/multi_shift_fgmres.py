@@ -92,7 +92,7 @@ class shifted_fgmres:
         self.r2 = np.abs(b[-1]) ** 2.0
 
     def update_psi(self, mmp, V, prec):
-        ZV = self.Z if prec else V[0:-1]
+        ZV = self.Z if prec is not None else V[0:-1]
         g.linear_combination(mmp, ZV, self.y)
         self.x += mmp
 
