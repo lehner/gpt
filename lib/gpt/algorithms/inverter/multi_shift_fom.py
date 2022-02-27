@@ -79,6 +79,7 @@ class multi_shift_fom(base_iterative):
         restartlen=20,
         shifts=[],
         checkres=True,
+        rhos=False,
     )
     def __init__(self, params):
         super().__init__()
@@ -88,6 +89,7 @@ class multi_shift_fom(base_iterative):
         self.restartlen = params["restartlen"]
         self.shifts = params["shifts"]
         self.checkres = params["checkres"]
+        self.rhos = params["rhos"]
 
     def arnoldi(self, mat, V, rlen):
         H = []
@@ -155,13 +157,16 @@ class multi_shift_fom(base_iterative):
             V = [g.copy(src) for i in range(rlen + 1)]
             V[0] /= r2 ** 0.5
 
+            # return rhos for prec fgmres
+            rr = self.rhos
+
             for k in range(0, self.maxiter, rlen):
 
                 t("arnoldi")
                 H = self.arnoldi(mat, V, rlen)
 
                 for j, fom in enumerate(sfoms):
-                    if fom.converged is False:
+                    if fom.converged is False or rr:
 
                         t("solve_hessenberg")
                         fom.solve_hessenberg(H, r2)
@@ -186,7 +191,7 @@ class multi_shift_fom(base_iterative):
 
                 if all([fom.converged for fom in sfoms]):
                     self.log(f"converged in {k+rlen} iterations")
-                    return
+                    return [fom.rho for fom in sfoms] if rr else None
 
                 if self.maxiter != rlen:
                     t("restart")
@@ -208,6 +213,7 @@ class multi_shift_fom(base_iterative):
             self.log(
                 f"NOT converged in {k+rlen} iterations; {cs} / {ns} converged shifts"
             )
+            return [fom.rho for fom in sfoms] if rr else None
 
         return g.matrix_operator(
             mat=inv,
