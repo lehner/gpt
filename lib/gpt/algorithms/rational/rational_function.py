@@ -85,6 +85,8 @@ class rational_function:
             def operator(dst, src):
                 chi = pf(src)
                 dst @= src
+                if self.pf0 == 0.0:
+                    dst[:] = 0
                 for i, c in enumerate(chi):
                     dst += self.r[i] * c
                 if self.norm != 1.0:
