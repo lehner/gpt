@@ -36,3 +36,4 @@ from gpt.algorithms.inverter.calculate_residual import calculate_residual
 from gpt.algorithms.inverter.multi_shift import multi_shift
 from gpt.algorithms.inverter.multi_shift_cg import multi_shift_cg
 from gpt.algorithms.inverter.multi_shift_fom import multi_shift_fom
+from gpt.algorithms.inverter.multi_shift_fgmres import multi_shift_fgmres

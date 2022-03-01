@@ -200,6 +200,25 @@ msfom = inv.multi_shift_fom(
     {"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts}
 )
 
+g.default.set_verbose("multi_shift_fgmres")
+msfgmres = inv.multi_shift_fgmres(
+    {"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts}
+)
+
+prec_fom = inv.multi_shift_fom(
+    {"maxiter": 4, "restartlen": 2}
+)
+msfgmres_fom = inv.multi_shift_fgmres(
+    {"eps": 1e-8, "maxiter": 512, "restartlen": 5, "shifts": shifts, "prec": prec_fom}
+)
+
+prec_fgmres = inv.multi_shift_fom(
+    {"maxiter": 4, "restartlen": 2}
+)
+msfgmres_fgmres = inv.multi_shift_fgmres(
+    {"eps": 1e-8, "maxiter": 512, "restartlen": 5, "shifts": shifts, "prec": prec_fgmres}
+)
+
 
 def multi_shift_test(ms, name):
     dst_ms = g(ms(mat) * src)
@@ -222,3 +241,6 @@ def multi_shift_test(ms, name):
 
 multi_shift_test(mscg, "cg")
 multi_shift_test(msfom, "fom")
+multi_shift_test(msfgmres, "fgmres")
+multi_shift_test(msfgmres_fom, "fgmres(fom)")
+multi_shift_test(msfgmres_fgmres, "fgmres(fgmres)")
