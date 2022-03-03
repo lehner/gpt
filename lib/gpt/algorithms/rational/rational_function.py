@@ -70,7 +70,7 @@ class rational_function:
             out += f"{r:g} / (x*x - {self.poles[i]:g})"
             if i != rlen - 1:
                 out += f"\n+ "
-        out += "\n)"
+        out += f"\n)"
         return out
 
     def __call__(self, mat):
