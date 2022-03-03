@@ -61,9 +61,15 @@ class rational_function:
 
     def __str__(self):
         out = f"Rational function of degree {self.npoles}\n"
-        out += f"{self.norm:g}(1 + "
+        if self.pf0 == 0:
+            out += f"{self.norm:g}(\n"
+        else:
+            out += f"{self.norm:g}(1 + \n+ "
+        rlen = len(self.r)
         for i, r in enumerate(self.r):
-            out += f"\n+ {r:g} / (x*x - {self.poles[i]:g})"
+            out += f"{r:g} / (x*x - {self.poles[i]:g})"
+            if i != rlen - 1:
+                out += f"\n+ "
         out += "\n)"
         return out
 

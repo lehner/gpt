@@ -107,13 +107,17 @@ class multi_shift_fom(base_iterative):
             H.append(ips)
         return H
 
-    def restart(self, V):
-        V[0] @= g.copy(V[-1])
+    def restart(self, V, P):
+        if P is not None:
+            # projection step
+            P(V[0], V[-1])
+        else:
+            V[0] @= g.copy(V[-1])
         r2 = g.norm2(V[0])
         V[0] /= r2 ** 0.5
         return r2
 
-    def __call__(self, mat):
+    def __call__(self, mat, P=None):
 
         vector_space = None
         if type(mat) == g.matrix_operator:
@@ -195,7 +199,7 @@ class multi_shift_fom(base_iterative):
 
                 if self.maxiter != rlen:
                     t("restart")
-                    r2 = self.restart(V)
+                    r2 = self.restart(V, P)
                     self.debug("performed restart")
 
             t("other")

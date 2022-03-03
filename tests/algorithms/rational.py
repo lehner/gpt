@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 # Authors: Mattia Bruno 2022
+#          Raphael Lehner 2022
 #          Christoph Lehner 2022
 #
 import numpy
@@ -31,16 +32,22 @@ w = g.qcd.fermion.wilson_clover(
 eo2_odd = g.qcd.fermion.preconditioner.eo2_ne(parity=g.odd)
 mat = eo2_odd(w).Mpc
 
-# inverters
+# short-cuts
 inv = g.algorithms.inverter
+rat = g.algorithms.rational
 
+# inverters
 g.default.set_verbose("multi_shift_cg")
 mscg = inv.multi_shift_cg({"eps": 1e-8, "maxiter": 1024})
 
 g.default.set_verbose("cg")
 cg = inv.cg({"eps": 1e-12, "maxiter": 1024})
 
-rat = g.algorithms.rational
+g.default.set_verbose("multi_shift_fom")
+msfom = inv.multi_shift_fom({"restartlen": 10, "maxiter": 1024})
+
+g.default.set_verbose("multi_shift_fgmres")
+msfgmres = inv.multi_shift_fgmres({"restartlen": 10, "maxiter": 1024})
 
 # create point source
 src = rng.cnormal(g.vspincolor(w.F_grid_eo))
@@ -50,6 +57,25 @@ psi, phi = g.lattice(src), g.lattice(src)
 
 def mat_shift(dst, src, s):
     dst @= mat * src - s * src
+
+# arnoldi for deflation
+g.default.set_verbose("arnoldi")
+a = g.algorithms.eigen.arnoldi(
+    Nmin=200, Nmax=300, Nstep=50, Nstop=20, resid=1e-5
+)
+
+mms = g.copy(src)
+
+
+def msq(dst, src):
+    mat(mms, src)
+    mat(dst, mms)
+
+# eigenvalues and eigenvectors for deflation
+evec, evals = a(msq, src)
+idx = evals.argsort()
+evals = evals[idx]
+evec = [evec[i] for i in idx]
 
 
 # test arbitrary function
@@ -104,6 +130,14 @@ eps2 = g.norm2(mat * rrz * rrz * src - src) / g.norm2(src)
 g.message(f"Test zolotarev 1/sqrt(mat) approximation: {eps2}")
 assert eps2 < 1e-12
 
+# test zolotarev_sign and msfom with LR deflation
+signz = rat.zolotarev_sign(
+    {"eps": 1e-5, "inverter": msfom, "low": 0.4, "high": 3.4}
+)
+ssignz = signz(mat, msq_evals=evals[0:10], msq_evec=evec[0:10])
+eps2 = g.norm2(ssignz * ssignz * src - src) / g.norm2(src)
+g.message(f"Test zolotarev sign(mat) approximation: {eps2}")
+assert eps2 < 1e-5
 
 # test neuberger_inverse_square_root
 
@@ -143,4 +177,13 @@ assert abs(eps) < 1e-8
 # test fundamental definition
 eps2 = g.norm2(mat * rrn * rrn * src - src) / g.norm2(src)
 g.message(f"Test neuberger 1/sqrt(mat) approximation: {eps2}")
-assert eps2 < 1e-12, eps2
+assert eps2 < 1e-12
+
+# test neuberger_sign and msfgmres with LR deflation
+signn = rat.neuberger_sign(
+    {"eps": 1e-5, "inverter": msfgmres, "m": 1.9, "r": 1.5}
+)
+ssignn = signn(mat, msq_evals=evals[0:10], msq_evec=evec[0:10])
+eps2 = g.norm2(ssignn * ssignn * src - src) / g.norm2(src)
+g.message(f"Test neuberger sign(mat) approximation: {eps2}")
+assert eps2 < 1e-5

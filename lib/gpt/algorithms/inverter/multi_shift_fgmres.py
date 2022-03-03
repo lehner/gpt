@@ -162,9 +162,9 @@ class multi_shift_fgmres(base_iterative):
             H.append(ips)
         return H
 
-    def setup_prec(self, mat):
+    def setup_prec(self, mat, shifts):
         if self.prec is not None:
-            prec_shifts = self.shifts + [0.0]
+            prec_shifts = shifts + [0.0]
             self.prec.shifts = prec_shifts
             self.prec.rhos = True
             return self.prec(mat).mat
@@ -182,7 +182,7 @@ class multi_shift_fgmres(base_iterative):
         prec = self.prec(mat).mat
         return prec, idx
 
-    def __call__(self, mat):
+    def __call__(self, mat, P=None):
 
         vector_space = None
         if type(mat) == g.matrix_operator:
@@ -218,15 +218,17 @@ class multi_shift_fgmres(base_iterative):
             rlen = self.restartlen
 
             # prec
-            prec = self.setup_prec(mat)
+            sidx = np.argsort(self.shifts)
+            sorted_shifts = [self.shifts[i] for i in sidx]
+            prec = self.setup_prec(mat, sorted_shifts)
             plen = len(self.shifts)
             idx = [i for i in range(plen)]
 
             # shifted systems
             sfgmres = []
-            for j, s in enumerate(self.shifts):
+            for i in sidx:
                 sfgmres += [shifted_fgmres(
-                    psi[j], src, s, rlen, prec
+                    psi[i], src, self.shifts[i], rlen, prec
                 )]
 
             # krylov space
@@ -297,6 +299,10 @@ class multi_shift_fgmres(base_iterative):
                 if self.maxiter != rlen:
 
                     t("restart")
+                    if P is not None:
+                        # projection step
+                        P(mmp, r)
+                        r @= mmp
                     r2 = g.norm2(r)
                     V[0] @= r / r2 ** 0.5
 
