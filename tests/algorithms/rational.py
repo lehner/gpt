@@ -45,59 +45,66 @@ rat = g.algorithms.rational
 # create point source
 src = rng.cnormal(g.vspincolor(w.F_grid_eo))
 
-psi, phi = g.lattice(src), g.lattice(src)
+
+def test_matrix_application(rp):
+    rp_src = g(rp(mat) * src)
+    rp_src /= rp.norm
+
+    for p in rp.poles:
+        g.message(p)
+        rp_src @= mat * rp_src - p * rp_src
+
+    dst = g.copy(src)
+    for z in rp.zeros:
+        g.message(z)
+        dst @= mat * dst - z * dst
+
+    eps2 = g.norm2(dst - rp_src) / g.norm2(dst)
+    g.message(f"Test of matrix application: {eps2}")
+    assert eps2 < 1e-9
 
 
-def mat_shift(dst, src, s):
-    dst @= mat * src - s * src
-
-
-# test arbitrary function
-
-zeros = numpy.array([0.3, 0.5])
-poles = numpy.array([0.1, 0.4, 0.9])
-rp = rat.rational_function(zeros, poles)
+# test function with more poles than zeros
+zeros = numpy.array([0.32, 0.551])
+poles = numpy.array([0.17, 0.42, 0.911, 0.21])
+norm = 2.39
+rp = rat.rational_function(zeros, poles, norm)
 g.message(rp)
 
 for y in numpy.arange(1.0, 4.5, 0.05):
     num = numpy.prod(y - zeros)
     den = numpy.prod(y - poles)
-    assert abs(rp(y) - num / den) < 1e-12
+    assert abs(rp(y) - num / den * norm) < 1e-12
 
+test_matrix_application(rat.rational_function(zeros, -poles, norm, mscg))
+
+# test function with same number of poles and zeros
+zeros = numpy.array([0.32, 0.551, 0.1234])
+poles = numpy.array([0.17, 0.42, 0.911])
+rp = rat.rational_function(zeros, poles, norm)
+rp_inv = rp.inv()
+g.message(rp)
+
+for y in numpy.arange(1.0, 4.5, 0.05):
+    num = numpy.prod(y - zeros)
+    den = numpy.prod(y - poles)
+    assert abs(rp(y) - num / den * norm) < 1e-12
+    assert abs(rp_inv(y) - den / num / norm) < 1e-12
+
+test_matrix_application(rat.rational_function(zeros, -poles, norm, mscg))
 
 # test zolotarev_inverse_square_root
 
-# number of poles
-npz = 12
-
-zol = rat.zolotarev_inverse_square_root(0.1, 4.5, npz)
+zol = rat.zolotarev_inverse_square_root(0.1, 4.5, 12)
 g.message(zol)
 
 rz = rat.rational_function(zol.zeros, zol.poles, zol.norm, mscg)
-rz_inv = rz.inv()
 g.message(rz)
 
-for x in numpy.arange(0.1, 4.5, 0.05):
-    num = numpy.prod(x * x - zol.zeros) * zol.norm
-    den = numpy.prod(x * x - zol.poles)
-    assert abs(rz(x * x) - num / den) < 1e-12
-    assert abs(rz_inv(x * x) - den / num) < 1e-12
+eps = max([abs(rz(x * x) * x - 1.0) for x in numpy.arange(0.1, 4.5, 0.05)])
+g.message(f"Maximal tested error of Zolotarev: {eps}")
 
 rrz = rz(mat)
-psi @= rrz * src
-phi @= src
-
-for i in range(npz):
-    g.message(f" (mat - {zol.zeros[i]})/(mat - {zol.poles[i]})")
-    mat_inv = cg(lambda dst, src: mat_shift(dst, src, zol.poles[i]))
-    tmp = mat_inv(phi)
-    mat_shift(phi, tmp, zol.zeros[i])
-phi *= zol.norm
-
-g.message("Testing zolotarev_rational_polynomial against exact calculation")
-eps = g.inner_product(src, phi).real - g.inner_product(src, psi).real
-g.message(f"  = {abs(eps):e}")
-assert abs(eps) < 1e-8
 
 # test fundamental definition
 eps2 = g.norm2(mat * rrz * rrz * src - src) / g.norm2(src)
@@ -107,40 +114,18 @@ assert eps2 < 1e-12
 
 # test neuberger_inverse_square_root
 
-# number of poles
-npn = 24
-
-neu = rat.neuberger_inverse_square_root(2.3, 2.2, npn)
+neu = rat.neuberger_inverse_square_root(0.1, 4.5, 24)
 g.message(neu)
 
 rn = rat.rational_function(neu.zeros, neu.poles, neu.norm, mscg)
 g.message(rn)
 
-for x in numpy.arange(1.1, 3.5, 0.05):
-    num = numpy.prod(x * x - neu.zeros) * neu.norm
-    den = numpy.prod(x * x - neu.poles)
-    assert abs(rn(x * x) - num / den) < 1e-12
+eps = max([abs(rn(x * x) * x - 1.0) for x in numpy.arange(0.1, 4.5, 0.05)])
+g.message(f"Maximal tested error of Neuberger: {eps}")
 
 rrn = rn(mat)
-psi @= rrn * src
-phi @= src
-
-for i in range(npn - 1):
-    g.message(f" (mat - {neu.zeros[i]})/(mat - {neu.poles[i]})")
-    mat_inv = cg(lambda dst, src: mat_shift(dst, src, neu.poles[i]))
-    tmp = mat_inv(phi)
-    mat_shift(phi, tmp, neu.zeros[i])
-g.message(f" 1/(mat - {neu.poles[-1]})")
-mat_inv = cg(lambda dst, src: mat_shift(dst, src, neu.poles[-1]))
-tmp = mat_inv(phi)
-phi @= tmp * neu.norm
-
-g.message("Testing neuberger_rational_polynomial against exact calculation")
-eps = g.inner_product(src, phi) - g.inner_product(src, psi)
-g.message(f"  = {abs(eps):e}")
-assert abs(eps) < 1e-8
 
 # test fundamental definition
 eps2 = g.norm2(mat * rrn * rrn * src - src) / g.norm2(src)
 g.message(f"Test neuberger 1/sqrt(mat) approximation: {eps2}")
-assert eps2 < 1e-12, eps2
+assert eps2 < 1e-12

@@ -28,7 +28,9 @@ import numpy
 #         (z+v_1) (z+v_2)
 #
 class neuberger_inverse_square_root:
-    def __init__(self, m, r, order):
+    def __init__(self, low, high, order):
+        m = (high + low) / 2.0
+        r = (high - low) / 2.0
         assert 0.0 < r and r < m
         self.m = m
         self.r = r
@@ -37,17 +39,15 @@ class neuberger_inverse_square_root:
         c = 1.0 / ((m + r) * (m - r)) ** 0.5
         d = ((m + r) / (m - r)) ** 0.5
         e = numpy.pi / 2.0 / order
-        A = numpy.sum(
-            [1.0 / numpy.cos(e * (i + 0.5)) ** 2.0 for i in range(order)]
-        )
+        A = numpy.sum([1.0 / numpy.cos(e * (i + 0.5)) ** 2.0 for i in range(order)])
         a = numpy.array(
-            [-(numpy.tan(e / 2.0 * i) / c) ** 2.0 for i in range(1, 2 * order)]
+            [-((numpy.tan(e / 2.0 * i) / c) ** 2.0) for i in range(1, 2 * order)]
         )
 
         self.zeros = a[1::2]
         self.poles = a[0::2]
         self.norm = A / c / order
-        self.delta = 2.0 / (((d + 1) / ((d - 1))) ** (2.0 * order) - 1.0)
+        self.delta = 2.0 / (((d + 1.0) / ((d - 1.0))) ** (2.0 * order) - 1.0)
 
     def __str__(self):
         out = f"Neuberger approx of 1/sqrt(x^2) with {self.n} poles "

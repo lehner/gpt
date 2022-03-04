@@ -205,31 +205,31 @@ msfgmres = inv.multi_shift_fgmres(
     {"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts}
 )
 
-prec_fom = inv.multi_shift_fom(
-    {"maxiter": 4, "restartlen": 2}
-)
+prec_fom = inv.multi_shift_fom({"maxiter": 4, "restartlen": 2})
 msfgmres_fom = inv.multi_shift_fgmres(
     {"eps": 1e-8, "maxiter": 512, "restartlen": 5, "shifts": shifts, "prec": prec_fom}
 )
 
-prec_fgmres = inv.multi_shift_fom(
-    {"maxiter": 4, "restartlen": 2}
-)
+prec_fgmres = inv.multi_shift_fgmres({"maxiter": 4, "restartlen": 2})
 msfgmres_fgmres = inv.multi_shift_fgmres(
-    {"eps": 1e-8, "maxiter": 512, "restartlen": 5, "shifts": shifts, "prec": prec_fgmres}
+    {
+        "eps": 1e-8,
+        "maxiter": 512,
+        "restartlen": 5,
+        "shifts": shifts,
+        "prec": prec_fgmres,
+    }
 )
 
 
 def multi_shift_test(ms, name):
     dst_ms = g(ms(mat) * src)
     for i, s in enumerate(shifts):
-        g.message(
-            f"General multi-shift vs multi_shift_{name} for shift {i} = {s}"
-        )
+        g.message(f"General multi-shift vs multi_shift_{name} for shift {i} = {s}")
         for jsrc in range(2):
-            eps2 = g.norm2(
-                dst_all[2 * i + jsrc] - dst_ms[2 * i + jsrc]
-            ) / g.norm2(dst_ms[2 * i + jsrc])
+            eps2 = g.norm2(dst_all[2 * i + jsrc] - dst_ms[2 * i + jsrc]) / g.norm2(
+                dst_ms[2 * i + jsrc]
+            )
             g.message(f"Test general solution versus ms{name} solution: {eps2}")
             assert eps2 < 1e-14
             eps2 = g.norm2(

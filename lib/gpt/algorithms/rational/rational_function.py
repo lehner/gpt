@@ -44,7 +44,7 @@ class rational_function:
         self.poles = numpy.array(poles)
         self.zeros = numpy.array(zeros)
         self.norm = norm
-        self.r = partial_fractions(zeros, poles)
+        self.r = partial_fractions(self.zeros, self.poles)
         self.inverter = inverter
         if len(poles) == len(zeros):
             self.pf0 = 1.0
@@ -61,14 +61,14 @@ class rational_function:
 
     def __str__(self):
         out = f"Rational function of degree {self.npoles}\n"
-        out += f"{self.norm:g}(1 + "
+        out += f"{self.norm:g}({self.pf0} + "
         for i, r in enumerate(self.r):
-            out += f"\n+ {r:g} / (x*x - {self.poles[i]:g})"
+            out += f"\n+ {r:g} / (x - {self.poles[i]:g})"
         out += "\n)"
         return out
 
     def __call__(self, mat):
-        if isinstance(mat, (float, complex, int, numpy.float32, numpy.float64)):
+        if g.util.is_num(mat):
             return self.eval(mat)
         else:
             vector_space = None
