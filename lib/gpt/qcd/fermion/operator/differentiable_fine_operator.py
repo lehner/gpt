@@ -89,3 +89,12 @@ class differentiable_fine_operator(fine_operator):
             otype,
             gpt.odd,
         )
+        self.Dhop_projected_gradient = _get_projected_matrix_operator(
+            self.U,
+            self.U_grid,
+            self._DhopDeriv,
+            self._DhopDerivDag,
+            self.F_grid,
+            otype,
+            gpt.full,
+        )

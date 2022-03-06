@@ -158,6 +158,8 @@ class base(gpt.matrix_operator):
         self._Mdir = registry.Mdir
         self._MDeriv = registry.MDeriv
         self._MDerivDag = registry.MDerivDag
+        self._DhopDeriv = registry.DhopDeriv
+        self._DhopDerivDag = registry.DhopDerivDag
 
     def covariant_shift(self):
         if not self.covariant_shift_cache:

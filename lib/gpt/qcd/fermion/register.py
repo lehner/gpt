@@ -36,3 +36,15 @@ def register(reg, op):
     reg.MoeDerivDag = lambda mat, dst, src: op.apply_deriv_operator(7002, mat, dst, src)
     reg.MeoDeriv = lambda mat, dst, src: op.apply_deriv_operator(6003, mat, dst, src)
     reg.MeoDerivDag = lambda mat, dst, src: op.apply_deriv_operator(7003, mat, dst, src)
+    reg.DhopDeriv = lambda mat, dst, src: op.apply_deriv_operator(6004, mat, dst, src)
+    reg.DhopDerivDag = lambda mat, dst, src: op.apply_deriv_operator(
+        7004, mat, dst, src
+    )
+    reg.DhopDerivEO = lambda mat, dst, src: op.apply_deriv_operator(6005, mat, dst, src)
+    reg.DhopDerivEODag = lambda mat, dst, src: op.apply_deriv_operator(
+        7005, mat, dst, src
+    )
+    reg.DhopDerivOE = lambda mat, dst, src: op.apply_deriv_operator(6006, mat, dst, src)
+    reg.DhopDerivOEDag = lambda mat, dst, src: op.apply_deriv_operator(
+        7006, mat, dst, src
+    )
