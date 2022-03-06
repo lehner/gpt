@@ -22,8 +22,8 @@ import numpy as np
 
 
 class zmobius_class_operator(mobius_class_operator):
-    def __init__(self, name, U, params, otype=None):
-        mobius_class_operator.__init__(self, name, U, params, otype)
+    def __init__(self, name, U, params, otype=None, daggered=False):
+        mobius_class_operator.__init__(self, name, U, params, otype, daggered)
 
     def kappa(self):
         b = self.params["b"]

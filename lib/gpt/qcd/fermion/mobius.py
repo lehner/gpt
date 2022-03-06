@@ -24,13 +24,13 @@ from gpt.qcd.fermion.operator import differentiable_fine_operator
 
 
 class mobius_class_operator(differentiable_fine_operator):
-    def __init__(self, name, U, params, otype=None):
+    def __init__(self, name, U, params, otype=None, daggered=False):
 
         if params["mass"] is not None:
             params["mass_plus"] = params["mass"]
             params["mass_minus"] = params["mass"]
 
-        differentiable_fine_operator.__init__(self, name, U, params, otype)
+        differentiable_fine_operator.__init__(self, name, U, params, otype, daggered)
 
         def _J5q(dst4d, src5d):
             src4d = gpt.separate(src5d, 0)
@@ -65,6 +65,9 @@ class mobius_class_operator(differentiable_fine_operator):
             )
         Dhop_projected_gradient = self.Dhop_projected_gradient
         ImportUnphysicalFermion = self.ImportUnphysicalFermion
+        if daggered:
+            ImportUnphysicalFermion = ImportUnphysicalFermion.adj()
+            Dhop_projected_gradient = Dhop_projected_gradient.adj()
 
         def _negative_surface_projection(src):
             src = gpt((-1.0) * ImportUnphysicalFermion * src)
@@ -72,19 +75,22 @@ class mobius_class_operator(differentiable_fine_operator):
             gpt.scale_per_coordinate(dst, src, c_s, 0)
             return dst
 
-        self.ImportPhysicalFermionSource_projected_gradient = (
-            gpt.projected_matrix_operator(
-                lambda left, right: Dhop_projected_gradient.mat(
-                    left, _negative_surface_projection(right)
-                ),
-                lambda left, right: Dhop_projected_gradient.adj_mat(
-                    _negative_surface_projection(left), right
-                ),
-                grid=(self.F_grid, self.U_grid),
-                otype=(otype, otype),
-                parity=gpt.full,
-            )
+        op = gpt.projected_matrix_operator(
+            lambda left, right: Dhop_projected_gradient.mat(
+                left, _negative_surface_projection(right)
+            ),
+            lambda left, right: Dhop_projected_gradient.adj_mat(
+                _negative_surface_projection(left), right
+            ),
+            grid=(self.F_grid, self.U_grid),
+            otype=(otype, otype),
+            parity=gpt.full,
         )
+
+        if daggered:
+            op = op.adj()
+
+        self.ImportPhysicalFermionSource_projected_gradient = op
 
     def bulk_propagator(self, solver):
         imp = self.ImportPhysicalFermionSource
@@ -94,11 +100,16 @@ class mobius_class_operator(differentiable_fine_operator):
         def prop(dst_sc, src_sc):
             gpt.eval(dst_sc, inv_matrix * imp * src_sc)
 
-        return gpt.matrix_operator(
+        op = gpt.matrix_operator(
             prop,
             vector_space=imp.vector_space,
             accept_list=True,
         )
+
+        if self.daggered:
+            op = op.adj()
+
+        return op
 
 
 @gpt.params_convention(

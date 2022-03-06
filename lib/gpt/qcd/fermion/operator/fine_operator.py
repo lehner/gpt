@@ -22,10 +22,10 @@ from gpt.qcd.fermion.operator.interface import interface
 
 
 class fine_operator(base):
-    def __init__(self, name, U, params, otype=None):
+    def __init__(self, name, U, params, otype=None, daggered=False):
 
         self.interface = interface()
 
-        super().__init__(name, U, params, otype, True)
+        super().__init__(name, U, params, otype, True, daggered)
 
         self.interface.setup(name, self.U_grid, self.params)

@@ -23,11 +23,11 @@ from gpt.qcd.fermion.operator.interface import interface
 
 
 class coarse_operator(base):
-    def __init__(self, name, U, params, otype=None):
+    def __init__(self, name, U, params, otype=None, daggered=False):
 
         self.interface = interface()
 
-        super().__init__(name, U, params, otype, True)
+        super().__init__(name, U, params, otype, True, daggered)
 
         self.tmp = gpt.lattice(self.F_grid, otype)
         self.tmp_eo = gpt.lattice(self.F_grid_eo, otype)

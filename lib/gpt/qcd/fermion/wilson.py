@@ -28,8 +28,8 @@ from gpt.qcd.fermion.operator import (
 class wilson_class_operator(
     differentiable_fine_operator, gauge_independent_g5_hermitian
 ):
-    def __init__(self, name, U, params, otype=None):
-        differentiable_fine_operator.__init__(self, name, U, params, otype)
+    def __init__(self, name, U, params, otype=None, daggered=False):
+        differentiable_fine_operator.__init__(self, name, U, params, otype, daggered)
 
         def _G5(dst, src):
             dst @= gpt.gamma[5] * src
@@ -44,6 +44,9 @@ class wilson_class_operator(
         if psi_bar_flavor is None:
             psi_bar_flavor = self
         psi_bar_shift = psi_bar_flavor.covariant_shift()
+
+        assert not self.daggered
+
         return gpt(
             +0.5
             * psi_bar

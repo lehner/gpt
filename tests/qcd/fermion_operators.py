@@ -121,6 +121,16 @@ if True:
 
 dst = dst_eo2
 
+# invert daggered
+v1 = rng.cnormal(g.vspincolor(grid))
+v2 = rng.cnormal(g.vspincolor(grid))
+w_v1 = g(inv.preconditioned(pc.eo1_ne(), cg)(w) * v1)
+wadj_v2 = g(inv.preconditioned(pc.eo1_ne(), cg)(w.adj()) * v2)
+
+eps = abs(g.inner_product(v2, w_v1) / g.inner_product(v1, wadj_v2).conjugate() - 1.0)
+g.message(f"Test inv(dag(w)): {eps}")
+assert eps < 1e-5
+
 # two-point
 correlator = g.slice(g.trace(dst * g.adj(dst)), 3)
 
@@ -468,6 +478,73 @@ def verify_single_versus_double_precision(rng, fermion_dp, fermion_sp):
                     assert eps < eps_ref
 
 
+def verify_daggered(rng, fermion, fermion_daggered):
+    eps_ref = fermion.F_grid.precision.eps * finger_print_tolerance
+    for atag in fermion.__dict__.keys():
+        a = getattr(fermion, atag)
+        if isinstance(a, g.projected_matrix_operator):
+            a_daggered = getattr(fermion_daggered, atag)
+            rhs = rng.cnormal(g.lattice(a.grid[1], a.otype[1]))
+            lhs = rng.cnormal(g.lattice(a.grid[0], a.otype[0]))
+            if rhs.grid.cb.n == 1:
+                parities = [(g.full, g.full)]
+            elif a.parity == g.even:
+                parities = [(g.even, g.even), (g.odd, g.odd)]
+            elif a.parity == g.odd:
+                parities = [(g.odd, g.even), (g.even, g.odd)]
+            else:
+                assert False
+            for lp, rp in parities:
+                if lp != g.full:
+                    rhs.checkerboard(rp)
+                    lhs.checkerboard(lp)
+                # first test matrix
+                ref_list = a(lhs, rhs)
+                cmp_list = a_daggered.adj()(lhs, rhs)
+                for r, c in zip(ref_list, cmp_list):
+                    eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
+                    g.message(f"Verify operator <> daggered for {atag}: {eps}")
+                    assert eps < eps_ref
+                # then test adjoint matrix
+                ref_list = a.adj()(rhs, lhs)
+                cmp_list = a_daggered(rhs, lhs)
+                for r, c in zip(ref_list, cmp_list):
+                    eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
+                    g.message(f"Verify operator <> daggered for {atag}.adj(): {eps}")
+                    assert eps < eps_ref
+
+        elif isinstance(a, g.matrix_operator) and a.adj_mat is not None:
+            a_daggered = getattr(fermion_daggered, atag)
+            rhs = rng.cnormal(a.vector_space[1].lattice())
+            lhs = rng.cnormal(a.vector_space[0].lattice())
+            if rhs.grid.cb.n != 1:
+                # for now test only odd cb
+                rhs.checkerboard(g.odd)
+                lhs.checkerboard(g.odd)
+
+            # first test matrix
+            ref = a(rhs)
+            eps = g.norm2(ref - a_daggered.adj()(rhs)) ** 0.5 / g.norm2(ref) ** 0.5
+            g.message(f"Verify operator <> daggered for {atag}: {eps}")
+            assert eps < eps_ref
+            ref = a.adj()(lhs)
+            eps = g.norm2(ref - a_daggered(lhs)) ** 0.5 / g.norm2(ref) ** 0.5
+            g.message(f"Verify operator <> daggered for {atag}.adj(): {eps}")
+            assert eps < eps_ref
+            if a.inv_mat is not None:
+                ref = a.inv()(lhs)
+                eps = (
+                    g.norm2(ref - a_daggered.adj().inv()(lhs)) ** 0.5
+                    / g.norm2(ref) ** 0.5
+                )
+                g.message(f"Verify operator <> daggered for {atag}.inv(): {eps}")
+                assert eps < eps_ref
+                ref = a.adj().inv()(lhs)
+                eps = g.norm2(ref - a_daggered.inv()(lhs)) ** 0.5 / g.norm2(ref) ** 0.5
+                g.message(f"Verify operator <> daggered for {atag}.adj().inv(): {eps}")
+                assert eps < eps_ref
+
+
 def verify_projected_even_odd(M, Meo, dst_p, src_p, src):
     src_proj_p = g.lattice(src)
     src_proj_p[:] = 0
@@ -706,3 +783,6 @@ for name in test_suite:
     if isinstance(fermion_dp, g.qcd.fermion.fine_operator):
         fermion_sp = fermion_dp.converted(g.single)
         verify_single_versus_double_precision(rng, fermion_dp, fermion_sp)
+
+    # test daggering entire fermion operator
+    verify_daggered(rng, fermion_dp, fermion_dp.adj())

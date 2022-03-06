@@ -46,14 +46,19 @@ def _get_projected_operator(U, derivative_grid, functor):
     return _apply
 
 
-def _get_projected_matrix_operator(U, derivative_grid, m, md, grid, otype, parity):
-    return gpt.projected_matrix_operator(
+def _get_projected_matrix_operator(
+    U, derivative_grid, m, md, grid, otype, parity, daggered
+):
+    op = gpt.projected_matrix_operator(
         _get_projected_operator(U, derivative_grid, m),
         _get_projected_operator(U, derivative_grid, md),
         (grid, grid),
         (otype, otype),
         parity,
     )
+    if daggered:
+        op = op.adj()
+    return op
 
 
 def _combined_eooe(Meo, Moe):
@@ -68,8 +73,8 @@ def _combined_eooe(Meo, Moe):
 
 
 class differentiable_fine_operator(fine_operator):
-    def __init__(self, name, U, params, otype=None):
-        super().__init__(name, U, params, otype)
+    def __init__(self, name, U, params, otype=None, daggered=False):
+        super().__init__(name, U, params, otype, daggered)
 
         self.M_projected_gradient = _get_projected_matrix_operator(
             self.U,
@@ -79,6 +84,7 @@ class differentiable_fine_operator(fine_operator):
             self.F_grid,
             otype,
             gpt.full,
+            daggered,
         )
         self.Meooe_projected_gradient = _get_projected_matrix_operator(
             self.U,
@@ -88,6 +94,7 @@ class differentiable_fine_operator(fine_operator):
             self.F_grid_eo,
             otype,
             gpt.odd,
+            daggered,
         )
         self.Dhop_projected_gradient = _get_projected_matrix_operator(
             self.U,
@@ -97,4 +104,5 @@ class differentiable_fine_operator(fine_operator):
             self.F_grid,
             otype,
             gpt.full,
+            daggered,
         )
