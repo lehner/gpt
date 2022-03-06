@@ -229,8 +229,10 @@ def prefactor_dagger(A, v_idx=None):
     )
 
 
-def nearest_neighbor_operator(fine_matrix, coarse_grid, basis, params):
+def nearest_neighbor_operator(fine_matrix, coarse_grid, basis, params, daggered=False):
     A = [gpt.mcomplex(coarse_grid, len(basis)) for i in range(9)]
+
+    assert not daggered
 
     create_links(
         A, fine_matrix, basis, make_hermitian=params["make_hermitian"], save_links=True
