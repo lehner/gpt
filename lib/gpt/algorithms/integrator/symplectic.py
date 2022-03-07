@@ -78,7 +78,7 @@ class step:
 
     def __call__(self, eps):
         for i in range(self.nf):
-            self.funcs[i](self.c[i] * eps ** self.n)
+            self.funcs[i](self.c[i] * eps**self.n)
 
 
 class symplectic_base:
@@ -90,15 +90,15 @@ class symplectic_base:
         self.__name__ = f"{name}"
         self.tag = tag
         nc = len(self.cycle)
-        
+
         self.scheme = []
         if N == 1:
             self.scheme = self.cycle
         else:
             for i in range(N):
-                self.scheme += [self.cycle[0] * (2/N if i > 0 else 1/N)]
+                self.scheme += [self.cycle[0] * (2 / N if i > 0 else 1 / N)]
                 j = nc if i == N - 1 else nc - 1
-                self.scheme += [c * (1/N) for c in self.cycle[1:j]]
+                self.scheme += [c * (1 / N) for c in self.cycle[1:j]]
 
     def string_representation(self, lvl):
         out = f" - Level {lvl} {self.__name__} steps={self.N}"
@@ -177,7 +177,7 @@ class update_p_force_gradient:
             for s in scheme:
                 s(eps)
 
-        return inner
+        return step(inner, 1.0)
 
 
 # i0: update_momenta, i1: update_dynamical_fields
