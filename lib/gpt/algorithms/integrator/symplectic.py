@@ -90,15 +90,15 @@ class symplectic_base:
         self.__name__ = f"{name}"
         self.tag = tag
         nc = len(self.cycle)
-
+        
         self.scheme = []
         if N == 1:
             self.scheme = self.cycle
         else:
             for i in range(N):
-                self.scheme += [self.cycle[0] * (2 if i > 0 else 1)]
+                self.scheme += [self.cycle[0] * (2/N if i > 0 else 1/N)]
                 j = nc if i == N - 1 else nc - 1
-                self.scheme += self.cycle[1:j]
+                self.scheme += [c * (1/N) for c in self.cycle[1:j]]
 
     def string_representation(self, lvl):
         out = f" - Level {lvl} {self.__name__} steps={self.N}"
@@ -117,17 +117,15 @@ class symplectic_base:
         eps = tau / self.N
         verbose = gpt.default.is_verbose(self.__name__)
 
-        time = gpt.timer(self.__name__)
+        time = gpt.timer(f"Symplectic integrator {self.__name__} [eps = {eps:.4e}]")
         time(self.__name__)
 
         for s in self.scheme:
-            s(eps)
+            s(tau)
 
         if verbose:
             time()
-            gpt.message(
-                f"{self.__name__} [eps = {eps:.4e}] in {time.dt['total']:g} secs {time.dt['total']/self.N:g} secs/cycle"
-            )
+            gpt.message(time)
 
 
 class update_p(symplectic_base):
