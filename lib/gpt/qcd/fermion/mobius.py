@@ -95,7 +95,9 @@ class mobius_class_operator(differentiable_fine_operator):
         self.R = gpt.matrix_operator(
             lambda dst, src: gpt.eval(
                 dst, gpt.merge(list(reversed(gpt.separate(gpt(src), 0))), 0)
-            )
+            ),
+            vector_space=self.vector_space,
+            accept_list=False,
         )
 
     def bulk_propagator(self, solver):
