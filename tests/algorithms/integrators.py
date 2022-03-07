@@ -116,8 +116,9 @@ integrator = [
     sympl.OMF2_force_gradient(nsteps, ip, iq, ip_fg),
     sympl.OMF4(nsteps, ip, iq),
     sympl.OMF2(12, ip2, sympl.OMF4(1, ip1, iq)),
+    sympl.OMF2(12, ip2, sympl.OMF4(2, ip1, iq)),
 ]
-criterion = [1e-5, 1e-7, 1e-11, 1e-11, 1e-8]
+criterion = [1e-5, 1e-7, 1e-11, 1e-11, 1e-8, 1e-8]
 
 for i in range(len(integrator)):
     # initial config
