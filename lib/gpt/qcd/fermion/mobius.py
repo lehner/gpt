@@ -92,6 +92,12 @@ class mobius_class_operator(differentiable_fine_operator):
 
         self.ImportPhysicalFermionSource_projected_gradient = op
 
+        self.R = gpt.matrix_operator(
+            lambda dst, src: gpt.eval(
+                dst, gpt.merge(list(reversed(gpt.separate(gpt(src), 0))), 0)
+            )
+        )
+
     def bulk_propagator(self, solver):
         imp = self.ImportPhysicalFermionSource
 

@@ -64,7 +64,7 @@ class two_flavor_base(action_base):
             if mu < len(fields) - 1:
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
-                raise Expcetion("not implemented")
+                raise Exception("not implemented")
         return dS
 
 
@@ -125,7 +125,7 @@ class two_flavor_evenodd(differentiable_functional):
         if count == 0:
             return self.two_flavor_evenodd_schur.gradient(U + [phi_o], dfields)
         else:
-            raise Expcetion("not implemented")
+            raise Exception("not implemented")
 
 
 # det (M1 M1dag/M2 M2dag) -> S = phi^dag M2dag (M1 M1dag)^-1 M2 phi
@@ -180,7 +180,7 @@ class two_flavor_ratio_base(action_base):
             if mu < len(fields) - 1:
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
-                raise Expcetion("not implemented")
+                raise Exception("not implemented")
         return dS
 
 

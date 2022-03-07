@@ -25,6 +25,8 @@ from gpt.qcd.pseudofermion.action.two_flavor import (
     two_flavor_ratio_evenodd_schur,
 )
 
+from gpt.qcd.pseudofermion.action.exact_one_flavor import exact_one_flavor_ratio
+
 # from gpt.qcd.pseudofermion.action.two_flavor_rational import (
 #     two_flavor_rational,
 #     two_flavor_rational_evenodd,

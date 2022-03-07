@@ -38,32 +38,59 @@ p = {
 M2 = g.qcd.fermion.wilson_clover(U, p)
 
 
+def mobius(m_plus, m_minus):
+    return g.qcd.fermion.mobius(
+        U,
+        mass_plus=m_plus,
+        mass_minus=m_minus,
+        M5=1.8,
+        b=1.5,
+        c=0.5,
+        Ls=6,
+        boundary_phases=[1, 1, 1, -1],
+    )
+
+
 psi = g.vspincolor(M.F_grid)
 psi_o = g.vspincolor(M.F_grid_eo)
 rng.normal(psi)
 g.pick_checkerboard(g.odd, psi_o, psi)
 
 inv = g.algorithms.inverter
+pc = g.qcd.fermion.preconditioner
 sol = inv.cg({"eps": 1e-10, "maxiter": 1024})
+sol_pc = inv.preconditioned(pc.eo2_ne(), sol)
 a = g.qcd.pseudofermion.action
 
+rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0 ** 0.5, 3 ** 0.5, 7)
+rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm)
+
 acts = []
-acts += [(a.two_flavor(M, sol), "two_flavor", psi)]
-acts += [(a.two_flavor_evenodd(M, sol), "two_flavor_evenodd", psi)]
-acts += [(a.two_flavor_ratio([M, M2], sol), "two_flavor_ratio", psi)]
+acts += [(a.two_flavor(M, sol), "two_flavor", psi, [])]
+acts += [(a.two_flavor_evenodd(M, sol), "two_flavor_evenodd", psi, [])]
+acts += [(a.two_flavor_ratio([M, M2], sol), "two_flavor_ratio", psi, [])]
+acts += [
+    (
+        a.exact_one_flavor_ratio(mobius, 0.5, 1.0, sol_pc),
+        "exact_one_flavor_ratio",
+        psi,
+        [rat_fnc],
+    )
+]
 acts += [
     (
         a.two_flavor_ratio_evenodd_schur([M, M2], sol),
         "two_flavor_ratio_evenodd_schur",
         psi_o,
+        [],
     )
 ]
 
 for _a in acts:
-    a, name, pf = _a
+    a, name, pf, dargs = _a
     g.message(name)
     fields = U + [pf]
-    da = a.draw(fields, rng) - a(fields)
+    da = a.draw(fields, rng, *dargs) - a(fields)
     g.message(f"difference action drawn vs computed: da = {da:g}")
     assert abs(da) < 1e-7
     a.assert_gradient_error(rng, fields, U, 1e-3, 5e-7)
