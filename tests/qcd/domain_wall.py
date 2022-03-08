@@ -170,7 +170,7 @@ dst_qz_kappa = g.mspincolor(grid)
 
 # Solve for the 5d and 4d propagator
 # qm.bulk_propagator_to_propagator * qm.bulk_propagator(slv) == qm.propagator(slv)
-dst_qm_bulk = g(slv_qm_bulk * src)
+dst_qm_bulk = g(slv_qm_bulk.grouped(3) * src)
 dst_qm @= qm.bulk_propagator_to_propagator * dst_qm_bulk
 
 dst_qz @= slv_qz * src

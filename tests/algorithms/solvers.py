@@ -172,18 +172,13 @@ for t in timings:
 # consistent with multi_shift inverter
 # ordering of dst fields.
 
-
-def mat_shift(dst, src, s):
-    dst @= mat * src + s * src
-
-
 cg = inv.cg({"eps": 1e-8, "maxiter": 500})
 shifts = [0.5, 1.0, 1.7]
 mat = eo2_odd(w).Mpc
 
 # also test with multiple sources
 src = [rng.cnormal(g.mspincolor(w.F_grid_eo)), rng.cnormal(g.mspincolor(w.F_grid_eo))]
-dst_all = g(inv.multi_shift(cg, shifts)(mat) * src)
+dst_all = g(inv.multi_shift(cg, shifts)(mat).grouped(6) * src)
 for i, s in enumerate(shifts):
     for jsrc in range(2):
         eps2 = g.norm2(
