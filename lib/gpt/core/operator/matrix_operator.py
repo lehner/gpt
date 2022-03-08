@@ -182,7 +182,7 @@ class matrix_operator(factor):
 
     def grouped(self, max_group_size):
         def _grouped(dst, src, mat):
-            n = self.lhs_length(src)
+            n = 1
             for i in range(0, len(src), max_group_size):
                 mat(dst[i * n : (i + max_group_size) * n], src[i : i + max_group_size])
 
