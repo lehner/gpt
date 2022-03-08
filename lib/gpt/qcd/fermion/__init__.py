@@ -20,6 +20,7 @@
 import gpt.qcd.fermion.reference
 import gpt.qcd.fermion.preconditioner
 import gpt.qcd.fermion.coarse
+import gpt.qcd.fermion.domain
 
 from gpt.qcd.fermion.register import register
 from gpt.qcd.fermion.operator import (

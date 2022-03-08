@@ -39,7 +39,7 @@ g.default.set_verbose("mr", False)
 
 # sap inverter
 inv1 = inv.defect_correcting(
-    pc.sap_cycle(inv_pc(pc.eo2(), mr), bs=[4, 4, 4, 4]),
+    pc.sap_cycle(inv_pc(pc.eo2(), mr), block_size=[4, 4, 4, 4]),
     eps=1e-6,
     maxiter=20,
 )

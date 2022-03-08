@@ -76,64 +76,21 @@
 #
 #   -defect = 1 - outer_mat inner_mat^{-1} = 1 - M K
 #
-import gpt, cgpt, numpy
+import gpt
 from gpt.params import params_convention
 
 
-def set_domain_boundaries_of_U(U, domain):
-    colon = slice(None, None, None)
-    nd = len(U)
-    for dim in range(nd):
-        if domain.blocks_per_dimension[dim] > 1:
-            for i in range(1, domain.extended_local_blocks_per_dimension[dim] + 1):
-                U[dim][
-                    tuple(
-                        [colon] * dim
-                        + [i * domain.block_size[dim] - 1]
-                        + [colon] * (nd - dim - 1)
-                    )
-                ] = 0
-
-
-def domain_fermion_operator(op, domain):
-    U_domain = []
-    for u in op.U:
-        u_domain = domain.lattice(u.otype)
-        domain.project(u_domain, u)
-        U_domain.append(u_domain)
-    set_domain_boundaries_of_U(U_domain, domain)
-    return op.updated(U_domain)
-
-
 class sap_cycle:
-    @params_convention(bs=None)
+    @params_convention(block_size=None)
     def __init__(self, blk_solver, params):
-        self.bs = params["bs"]
+        self.bs = params["block_size"]
         self.blk_solver = blk_solver
         assert self.bs is not None
 
     def __call__(self, op):
 
-        # for now ad-hoc treatment of 5d fermions
-        if op.F_grid.nd == len(self.bs) + 1:
-            F_bs = [op.F_grid.fdimensions[0]] + self.bs
-        else:
-            F_bs = self.bs
-
-        # create domains
-        F_domains = [
-            gpt.domain.even_odd_blocks(op.F_grid, F_bs, gpt.even),
-            gpt.domain.even_odd_blocks(op.F_grid, F_bs, gpt.odd),
-        ]
-
-        U_domains = [
-            gpt.domain.even_odd_blocks(op.U_grid, self.bs, gpt.even),
-            gpt.domain.even_odd_blocks(op.U_grid, self.bs, gpt.odd),
-        ]
-
-        solver = [
-            self.blk_solver(domain_fermion_operator(op, domain)) for domain in U_domains
-        ]
+        bop = gpt.qcd.fermion.domain.even_odd_blocks(op, block_size=self.bs)
+        solver = [self.blk_solver(f) for f in bop.fermions]
 
         def inv(dst, src):
             dst[:] = 0
@@ -143,15 +100,15 @@ class sap_cycle:
             for eo in range(2):
                 ws[0][:] = 0
 
-                src_blk = F_domains[eo].lattice(op.otype)
-                dst_blk = F_domains[eo].lattice(op.otype)
+                src_blk = bop.F_domains[eo].lattice(op.otype)
+                dst_blk = bop.F_domains[eo].lattice(op.otype)
 
-                F_domains[eo].project(src_blk, eta)
+                bop.F_domains[eo].project(src_blk, eta)
 
                 dst_blk[:] = 0  # for now
                 solver[eo](dst_blk, src_blk)
 
-                F_domains[eo].promote(ws[0], dst_blk)
+                bop.F_domains[eo].promote(ws[0], dst_blk)
 
                 if eo == 0:
                     op(ws[1], ws[0])
