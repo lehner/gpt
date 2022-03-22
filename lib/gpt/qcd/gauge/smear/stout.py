@@ -52,8 +52,9 @@ class stout(diffeomorphism):
         self.params = params
 
     # apply the smearing
-    def __call__(self, U):
-        nd = len(U)
+    def __call__(self, fields):
+        nd = fields[0].grid.nd
+        U = fields[0:nd]
         C = g.qcd.gauge.staple_sum(U, rho=get_rho(U, self.params))
         U_prime = []
         for mu in range(nd):
@@ -63,12 +64,15 @@ class stout(diffeomorphism):
             )
             U_prime.append(U_mu_prime)
 
-        return U_prime
+        return U_prime + fields[nd:]
 
     # apply the jacobian
-    def jacobian(self, U, U_prime, src):
+    def jacobian(self, fields, fields_prime, src):
 
-        nd = len(U)
+        nd = fields[0].grid.nd
+        U = fields[0:nd]
+        U_prime = fields_prime[0:nd]
+
         rho = get_rho(U, self.params)
         C = g.qcd.gauge.staple_sum(U, rho=rho)
 

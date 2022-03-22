@@ -70,11 +70,7 @@ class differentiable_functional:
                 (cc / epsilon)
                 * self(
                     [
-                        g(
-                            g.group.compose(
-                                (dd * epsilon) * weights[dfields.index(f)], f
-                            )
-                        )
+                        g(g.group.compose((dd * epsilon) * weights[dfields.index(f)], f))
                         if f in dfields
                         else f
                         for f in fields
@@ -84,9 +80,7 @@ class differentiable_functional:
             ]
         )
 
-    def assert_gradient_error(
-        self, rng, fields, dfields, epsilon_approx, epsilon_assert
-    ):
+    def assert_gradient_error(self, rng, fields, dfields, epsilon_approx, epsilon_assert):
         fields = g.util.to_list(fields)
         dfields = g.util.to_list(dfields)
         weights = rng.normal_element(g.group.cartesian(dfields))
@@ -114,35 +108,29 @@ class differentiable_functional:
                 g.message(f"Error: cartesian defect: {eps} > {epsilon_assert}")
                 assert False
 
-    def transformed(self, t, n_field_transformed):
-        return transformed(self, t, n_field_transformed)
+    def transformed(self, t):
+        return transformed(self, t)
 
 
 class transformed(differentiable_functional):
-    def __init__(self, f, t, n_field_transformed):
+    def __init__(self, f, t):
         self.f = f
         self.t = t
-        self.n_field_transformed = n_field_transformed
 
     def __call__(self, fields):
-        return self.f(
-            self.t(fields[0 : self.n_field_transformed])
-            + fields[self.n_field_transformed :]
-        )
+        return self.f(self.t(fields))
 
     def gradient(self, fields, dfields):
 
         indices = [fields.index(d) for d in dfields]
 
-        fields_prime = (
-            self.t(fields[0 : self.n_field_transformed])
-            + fields[self.n_field_transformed :]
-        )
-        gradient_prime = self.f.gradient(
-            fields_prime, [fields_prime[i] for i in indices]
-        )
+        fields_prime = self.t(fields)
 
-        # for now, restrictive; later generalize below
-        assert fields[0 : self.n_field_transformed] == dfields
+        transformed_fields = [i for i in range(len(fields)) if fields_prime[i] is not fields[i]]
+
+        # for now only accept gradients with respect to all transformed fields
+        assert indices == transformed_fields
+
+        gradient_prime = self.f.gradient(fields_prime, [fields_prime[i] for i in indices])
 
         return self.t.jacobian(fields, fields_prime, gradient_prime)
