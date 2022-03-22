@@ -56,9 +56,7 @@ class matrix_operator(factor):
         self.inv_mat = inv_mat
         self.adj_inv_mat = adj_inv_mat
         self.accept_list = accept_list
-        self.lhs_length = (
-            (lambda rhs: len(rhs)) if not callable(accept_list) else accept_list
-        )
+        self.lhs_length = (lambda rhs: len(rhs)) if not callable(accept_list) else accept_list
 
         # this allows for automatic application of tensor versions
         # also should handle lists of lattices
@@ -66,17 +64,13 @@ class matrix_operator(factor):
             vector_space = implicit()
 
         self.vector_space = (
-            vector_space
-            if type(vector_space) == tuple
-            else (vector_space, vector_space)
+            vector_space if type(vector_space) == tuple else (vector_space, vector_space)
         )
 
         # do we request, e.g., the lhs of lhs = A rhs to be initialized to zero
         # if it is not given?
         self.accept_guess = (
-            accept_guess
-            if type(accept_guess) == tuple
-            else (accept_guess, accept_guess)
+            accept_guess if type(accept_guess) == tuple else (accept_guess, accept_guess)
         )
 
     def inv(self):
@@ -142,14 +136,8 @@ class matrix_operator(factor):
         def _converted(dst, src, mat, l, r, t=lambda x: None):
             t("converted: setup")
 
-            conv_src = [
-                self.vector_space[r].lattice(None, x.otype, x.checkerboard())
-                for x in src
-            ]
-            conv_dst = [
-                self.vector_space[l].lattice(None, x.otype, x.checkerboard())
-                for x in dst
-            ]
+            conv_src = [self.vector_space[r].lattice(None, x.otype, x.checkerboard()) for x in src]
+            conv_dst = [self.vector_space[l].lattice(None, x.otype, x.checkerboard()) for x in dst]
 
             t("converted: convert")
 
@@ -186,11 +174,7 @@ class matrix_operator(factor):
             r = self.lhs_length(src) // n
             for i in range(0, n, max_group_size):
                 mat(
-                    [
-                        dst[l * n + i + j]
-                        for l in range(r)
-                        for j in range(max_group_size)
-                    ],
+                    [dst[l * n + i + j] for l in range(r) for j in range(max_group_size)],
                     src[i : i + max_group_size],
                 )
 
@@ -238,9 +222,7 @@ class matrix_operator(factor):
 
             n = self.lhs_length(src)
 
-            dst = [
-                dst_vector_space.lattice(src_grid, src_otype, src_cb) for i in range(n)
-            ]
+            dst = [dst_vector_space.lattice(src_grid, src_otype, src_cb) for i in range(n)]
 
             if self.accept_guess[0]:
                 for x in dst:
@@ -256,9 +238,7 @@ class matrix_operator(factor):
                     self.mat(dst[idx], src[idx])
 
         if distribute:
-            self.vector_space[1].otype.distribute(
-                mat, dst, src, zero_lhs=self.accept_guess[0]
-            )
+            self.vector_space[1].otype.distribute(mat, dst, src, zero_lhs=self.accept_guess[0])
         else:
             mat(dst, src)
 

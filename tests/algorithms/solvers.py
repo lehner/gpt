@@ -77,42 +77,28 @@ slv_cg = w.propagator(inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 # solvers to test against CG
 slv_mr = w.propagator(inv_pc(eo2, inv.mr({"eps": 1e-6, "maxiter": 1000, "relax": 1.0})))
 slv_bicgstab = w.propagator(inv_pc(eo2, inv.bicgstab({"eps": 1e-6, "maxiter": 1000})))
-slv_fgcr = w.propagator(
-    inv_pc(eo2, inv.fgcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 20}))
-)
-slv_fgmres = w.propagator(
-    inv_pc(eo2, inv.fgmres({"eps": 1e-6, "maxiter": 1000, "restartlen": 20}))
-)
-slv_cagcr = w.propagator(
-    inv_pc(eo2, inv.cagcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 10}))
-)
-slv_fom = w.propagator(
-    inv_pc(eo2, inv.fom({"eps": 1e-6, "maxiter": 1000, "restartlen": 20}))
-)
+slv_fgcr = w.propagator(inv_pc(eo2, inv.fgcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
+slv_fgmres = w.propagator(inv_pc(eo2, inv.fgmres({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
+slv_cagcr = w.propagator(inv_pc(eo2, inv.cagcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 10})))
+slv_fom = w.propagator(inv_pc(eo2, inv.fom({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
 
 # defect-correcting solver at the full field level
 slv_dci = w.propagator(
-    inv.defect_correcting(
-        inv_pc(eo2, inv.cg({"eps": 1e-40, "maxiter": 25})), eps=1e-6, maxiter=10
-    ),
+    inv.defect_correcting(inv_pc(eo2, inv.cg({"eps": 1e-40, "maxiter": 25})), eps=1e-6, maxiter=10),
 )
 
 # defect-correcting solver at the even-odd level
 slv_dci_eo = w.propagator(
     inv_pc(
         eo2,
-        inv.defect_correcting(
-            inv.cg({"eps": 1e-40, "maxiter": 25}), eps=1e-6, maxiter=10
-        ),
+        inv.defect_correcting(inv.cg({"eps": 1e-40, "maxiter": 25}), eps=1e-6, maxiter=10),
     )
 )
 
 # mixed-precision defect-correcting solver at the full field level
 slv_dci_mp = w.propagator(
     inv.defect_correcting(
-        inv.mixed_precision(
-            inv_pc(eo2, inv.cg({"eps": 1e-40, "maxiter": 25})), g.single, g.double
-        ),
+        inv.mixed_precision(inv_pc(eo2, inv.cg({"eps": 1e-40, "maxiter": 25})), g.single, g.double),
         eps=1e-6,
         maxiter=10,
     )
@@ -151,16 +137,10 @@ test(slv_cagcr, "CAGCR")
 test(slv_fom, "FOM")
 
 # summary
-g.message(
-    "--------------------------------------------------------------------------------"
-)
+g.message("--------------------------------------------------------------------------------")
 g.message("                            Summary of solver tests")
-g.message(
-    "--------------------------------------------------------------------------------"
-)
-g.message(
-    "%-38s %-25s %-25s" % ("Solver name", "Solve time / s", "Difference with CG result")
-)
+g.message("--------------------------------------------------------------------------------")
+g.message("%-38s %-25s %-25s" % ("Solver name", "Solve time / s", "Difference with CG result"))
 for t in timings:
     g.message("%-38s %-25s %-25s" % (t, timings[t], resid[t]))
 
@@ -191,9 +171,7 @@ g.default.set_verbose("multi_shift_cg")
 mscg = inv.multi_shift_cg({"eps": 1e-8, "maxiter": 1024, "shifts": shifts})
 
 g.default.set_verbose("multi_shift_fom")
-msfom = inv.multi_shift_fom(
-    {"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts}
-)
+msfom = inv.multi_shift_fom({"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts})
 
 g.default.set_verbose("multi_shift_fgmres")
 msfgmres = inv.multi_shift_fgmres(

@@ -111,9 +111,7 @@ class defect_correcting(base_iterative):
 
                 # true resid
                 t("norm2")
-                eps = max(
-                    [(norm2_of_defect[j] / norm2_of_source[j]) ** 0.5 for j in range(n)]
-                )
+                eps = max([(norm2_of_defect[j] / norm2_of_source[j]) ** 0.5 for j in range(n)])
 
                 self.log_convergence(i, eps, self.eps)
 

@@ -31,9 +31,7 @@ def _get_projected_operator(U, derivative_grid, functor):
 
         ot = U[0].otype.cartesian()
         cb = left[0].checkerboard()
-        ders = [
-            gpt.lattice(derivative_grid, ot).checkerboard(cb) for _ in range(nd * N)
-        ]
+        ders = [gpt.lattice(derivative_grid, ot).checkerboard(cb) for _ in range(nd * N)]
         for i in range(N):
             functor(ders[i * nd : (i + 1) * nd], left[i], right[i])
 
@@ -46,9 +44,7 @@ def _get_projected_operator(U, derivative_grid, functor):
     return _apply
 
 
-def _get_projected_matrix_operator(
-    U, derivative_grid, m, md, grid, otype, parity, daggered
-):
+def _get_projected_matrix_operator(U, derivative_grid, m, md, grid, otype, parity, daggered):
     op = gpt.projected_matrix_operator(
         _get_projected_operator(U, derivative_grid, m),
         _get_projected_operator(U, derivative_grid, md),

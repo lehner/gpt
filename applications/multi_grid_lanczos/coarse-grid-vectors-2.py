@@ -123,9 +123,7 @@ solver(v_fine, start)
 save_history("cg_test.defl_all_ev3", test_solver.history)
 
 solver = g.algorithms.inverter.sequence(
-    g.algorithms.inverter.coarse_deflate(
-        cevec[0 : len(basis)], basis, ev3[0 : len(basis)]
-    ),
+    g.algorithms.inverter.coarse_deflate(cevec[0 : len(basis)], basis, ev3[0 : len(basis)]),
     params["test_solver"],
 )(q.Mpc)
 v_fine[:] = 0

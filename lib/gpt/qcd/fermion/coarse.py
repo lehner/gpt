@@ -96,9 +96,7 @@ def create_links(A, fmat, basis, params):
 
     # create block maps
     t("blockmap")
-    dirbms = [
-        gpt.block.map(c_grid, basis, dirmasks[p]) for p, (mu, fb) in enumerate(dirdisps)
-    ]
+    dirbms = [gpt.block.map(c_grid, basis, dirmasks[p]) for p, (mu, fb) in enumerate(dirdisps)]
     fullbm = gpt.block.map(c_grid, basis)
 
     for i0 in range(0, len(basis), rhs_n_block):
@@ -234,11 +232,7 @@ def nearest_neighbor_operator(fine_matrix, coarse_grid, basis, params, daggered=
 
     assert not daggered
 
-    create_links(
-        A, fine_matrix, basis, make_hermitian=params["make_hermitian"], save_links=True
-    )
+    create_links(A, fine_matrix, basis, make_hermitian=params["make_hermitian"], save_links=True)
 
-    level = (
-        1 if isinstance(fine_matrix.otype, gpt.ot_matrix_complex_additive_group) else 0
-    )
+    level = 1 if isinstance(fine_matrix.otype, gpt.ot_matrix_complex_additive_group) else 0
     return gpt.qcd.fermion.coarse_fermion(A, level=level)

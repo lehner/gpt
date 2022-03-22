@@ -31,9 +31,7 @@ def compute_structure_constant(T, dt):
         [
             [
                 [
-                    numpy.trace(
-                        (T[a].array @ T[b].array - T[b].array @ T[a].array) @ T[c].array
-                    )
+                    numpy.trace((T[a].array @ T[b].array - T[b].array @ T[a].array) @ T[c].array)
                     / numpy.trace(T[c].array @ T[c].array)
                     / 1j
                     for c in range(Ndim)
@@ -268,9 +266,7 @@ class ot_matrix_su_n_adjoint_algebra(ot_matrix_su_n_algebra):
     def generators(self, dt):
         T_f = ot_matrix_su_n_fundamental_algebra(self.Nc).generators(dt)
         if self.Nc not in ot_matrix_su_n_adjoint_algebra.f:
-            ot_matrix_su_n_adjoint_algebra.f[self.Nc] = compute_structure_constant(
-                T_f, dt
-            )
+            ot_matrix_su_n_adjoint_algebra.f[self.Nc] = compute_structure_constant(T_f, dt)
             # assert compute_structure_constant(ot_matrix_su_n_fundamental_algebra(2).generators(dt),dt)[0][1][2] == 1
             # assert compute_structure_constant(ot_matrix_su_n_adjoint_algebra(2).generators(dt),dt)[0][1][2] == 1
 

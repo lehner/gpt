@@ -29,9 +29,7 @@ def set_domain_boundaries_of_U(U, domain):
             for i in range(1, domain.extended_local_blocks_per_dimension[dim] + 1):
                 U[dim][
                     tuple(
-                        [colon] * dim
-                        + [i * domain.block_size[dim] - 1]
-                        + [colon] * (nd - dim - 1)
+                        [colon] * dim + [i * domain.block_size[dim] - 1] + [colon] * (nd - dim - 1)
                     )
                 ] = 0
 
@@ -70,9 +68,7 @@ class even_odd_blocks:
         ]
 
         # create operators living on domains
-        self.fermions = [
-            domain_fermion_operator(fermion, domain) for domain in self.U_domains
-        ]
+        self.fermions = [domain_fermion_operator(fermion, domain) for domain in self.U_domains]
 
         self.F_bs = F_bs
         self.U_bs = U_bs

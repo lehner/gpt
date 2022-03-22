@@ -50,9 +50,7 @@ p = g.qcd.fermion.preconditioner
 # define transitions between grids (setup)
 def find_near_null_vectors(w, cgrid):
     slv = i.fgmres(eps=1e-3, maxiter=50, restartlen=25, checkres=False)(w)
-    basis = g.orthonormalize(
-        rng.cnormal([w.vector_space[0].lattice() for i in range(15)])
-    )
+    basis = g.orthonormalize(rng.cnormal([w.vector_space[0].lattice() for i in range(15)]))
     null = g.lattice(basis[0])
     null[:] = 0
     for b in basis:
@@ -65,9 +63,7 @@ def find_near_null_vectors(w, cgrid):
     return basis
 
 
-mg_setup_2lvl = i.multi_grid_setup(
-    block_size=[[2, 2, 2, 2]], projector=find_near_null_vectors
-)
+mg_setup_2lvl = i.multi_grid_setup(block_size=[[2, 2, 2, 2]], projector=find_near_null_vectors)
 
 mg_setup_3lvl = i.multi_grid_setup(
     block_size=[[2, 2, 2, 2], [2, 1, 1, 1]], projector=find_near_null_vectors
@@ -78,15 +74,9 @@ mg_setup_2lvl_sp = mg_setup_2lvl(w_sp)
 mg_setup_3lvl_sp = mg_setup_3lvl(w_sp)
 
 # mg inner solvers
-wrapper_solver = i.fgmres(
-    {"eps": 1e-1, "maxiter": 10, "restartlen": 5, "checkres": False}
-)
-smooth_solver = i.fgmres(
-    {"eps": 1e-14, "maxiter": 8, "restartlen": 4, "checkres": False}
-)
-coarsest_solver = i.fgmres(
-    {"eps": 5e-2, "maxiter": 50, "restartlen": 25, "checkres": False}
-)
+wrapper_solver = i.fgmres({"eps": 1e-1, "maxiter": 10, "restartlen": 5, "checkres": False})
+smooth_solver = i.fgmres({"eps": 1e-14, "maxiter": 8, "restartlen": 4, "checkres": False})
+coarsest_solver = i.fgmres({"eps": 5e-2, "maxiter": 50, "restartlen": 25, "checkres": False})
 
 # mg solver/preconditioner objects
 mg_2lvl_vcycle_dp = i.sequence(
@@ -165,9 +155,7 @@ sol_prec_3lvl_mg_kcycle_mp = g.eval(fgmres_outer(w_dp) * src)
 
 eps2 = g.norm2(w_dp * sol_prec_3lvl_mg_kcycle_mp - src) / g.norm2(src)
 niter_prec_3lvl_mg_kcycle_mp = len(fgmres_outer.history)
-g.message(
-    "Test resid/iter fgmres + 3lvl kcycle mg mixed:", eps2, niter_prec_3lvl_mg_kcycle_mp
-)
+g.message("Test resid/iter fgmres + 3lvl kcycle mg mixed:", eps2, niter_prec_3lvl_mg_kcycle_mp)
 assert eps2 < 1e-12
 assert niter_prec_3lvl_mg_kcycle_mp < niter_prec_smooth
 

@@ -46,14 +46,14 @@ class _view:
 
 class copy_plan_view:
     def __init__(self, data, embed_in_communicator):
-        self.view = _view(
-            cgpt.copy_create_view(0, numpy.ndarray(shape=(0, 4), dtype=numpy.int64))
-        )
+        self.view = _view(cgpt.copy_create_view(0, numpy.ndarray(shape=(0, 4), dtype=numpy.int64)))
         self.embed_in_communicator = embed_in_communicator
 
         n = 0
         self.memory_layout = {}
-        self.data = data  # keep reference to data so that id(x) stays unique for lifetime of this instance
+        self.data = (
+            data  # keep reference to data so that id(x) stays unique for lifetime of this instance
+        )
         self.requires_host_memory = False
         for x in gpt.util.to_list(data):
             self.memory_layout[id(x)] = n
@@ -122,10 +122,7 @@ class copy_plan:
 
         data_location = (
             gpt.host
-            if (
-                self.destination.requires_host_memory
-                or self.source.requires_host_memory
-            )
+            if (self.destination.requires_host_memory or self.source.requires_host_memory)
             else gpt.accelerator
         )
 
@@ -182,7 +179,5 @@ class global_memory_view:
             processed_blocks.append([b[0], layout.get_index(b[1]), b[2], b[3]])
 
         return _view(
-            cgpt.copy_create_view(
-                grid_obj, numpy.array(processed_blocks, dtype=numpy.int64)
-            )
+            cgpt.copy_create_view(grid_obj, numpy.array(processed_blocks, dtype=numpy.int64))
         )

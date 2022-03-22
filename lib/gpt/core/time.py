@@ -97,16 +97,8 @@ class timer_component:
         self.n += 1
 
     def append(self, other):
-        self.dt_max = (
-            max([self.dt_max, other.dt_max])
-            if self.dt_max is not None
-            else other.dt_max
-        )
-        self.dt_min = (
-            min([self.dt_min, other.dt_min])
-            if self.dt_min is not None
-            else other.dt_min
-        )
+        self.dt_max = max([self.dt_max, other.dt_max]) if self.dt_max is not None else other.dt_max
+        self.dt_min = min([self.dt_min, other.dt_min]) if self.dt_min is not None else other.dt_min
         self.dt_sum += other.dt_sum
         self.dt_last = other.dt_last
         self.n += other.n
@@ -197,15 +189,11 @@ class timer:
                 bmin = self.time[k].byte_per_sec_min
                 bmax = self.time[k].byte_per_sec_max
                 bavg = self.time[k].byte_sum / self.time[k].dt_sum
-                s += (
-                    " " * len(s_time)
-                ) + f"  byte/s = {bmin:.2e}/{bmax:.2e}/{bavg:.2e}\n"
+                s += (" " * len(s_time)) + f"  byte/s = {bmin:.2e}/{bmax:.2e}/{bavg:.2e}\n"
             if self.time[k].flop_sum is not None:
                 fmin = self.time[k].flop_per_sec_min
                 fmax = self.time[k].flop_per_sec_max
                 favg = self.time[k].flop_sum / self.time[k].dt_sum
-                s += (
-                    " " * len(s_time)
-                ) + f"  flop/s = {fmin:.2e}/{fmax:.2e}/{favg:.2e}\n"
+                s += (" " * len(s_time)) + f"  flop/s = {fmin:.2e}/{fmax:.2e}/{favg:.2e}\n"
 
         return s[:-1]

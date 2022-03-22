@@ -90,9 +90,7 @@ class state:
                     " + "
                     + str(val)
                     + " "
-                    + self.bit_map.coordinate_to_basis_name(
-                        self.bit_map.coordinates[idx]
-                    )
+                    + self.bit_map.coordinate_to_basis_name(self.bit_map.coordinates[idx])
                 )
         if self.lattice.grid.Nprocessors != 1:
             r += "\n + ..."
@@ -164,9 +162,7 @@ class state:
             nrm = 1.0 / (p_zero ** 0.5)
             r = 0
 
-        g.bilinear_combination(
-            [self.lattice], [proj], [self.lattice], [[nrm]], [[0]], [[0]]
-        )
+        g.bilinear_combination([self.lattice], [proj], [self.lattice], [[nrm]], [[0]], [[0]])
 
         self.classical_bit[i] = r
         return r

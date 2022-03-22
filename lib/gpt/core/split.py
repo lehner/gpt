@@ -118,9 +118,7 @@ def unsplit(first, second, cache=None, group_policy=split_group_policy.separate)
     # Save memory by performing each group separately
     if N != 1 and group_policy == split_group_policy.separate:
         for i in range(N):
-            unsplit(
-                [first[q * N + i] for q in range(Q)], [second[i]], cache, group_policy
-            )
+            unsplit([first[q * N + i] for q in range(Q)], [second[i]], cache, group_policy)
         return
 
     split_grid = second[0].grid
@@ -163,9 +161,7 @@ def split_by_rank(first, group_policy=split_group_policy.separate):
     split_grid = grid.split(mpi_split, fdimensions)
     gcoor = gpt.coordinates(lattices[0])
     lcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
-    return split_lattices(
-        lattices, lcoor, gcoor, split_grid, len(lattices), group_policy
-    )
+    return split_lattices(lattices, lcoor, gcoor, split_grid, len(lattices), group_policy)
 
 
 def split(first, split_grid, cache=None, group_policy=split_group_policy.separate):
@@ -232,8 +228,7 @@ class split_map:
                 inputs_split[i * n_inputs_per_job + j] for j in range(n_inputs_per_job)
             ]
             this_job_outputs = [
-                outputs_split[i * n_outputs_per_job + j]
-                for j in range(n_outputs_per_job)
+                outputs_split[i * n_outputs_per_job + j] for j in range(n_outputs_per_job)
             ]
 
             if call_one_argument:

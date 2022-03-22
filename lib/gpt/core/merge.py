@@ -60,11 +60,7 @@ def merge(lattices, dimension=-1, N=-1):
         cb_mask = 0
     else:
         assert all(
-            [
-                cb[j * N + i] is cb[j * N + i + 1].inv()
-                for i in range(N - 1)
-                for j in range(batches)
-            ]
+            [cb[j * N + i] is cb[j * N + i + 1].inv() for i in range(N - 1) for j in range(batches)]
         )
         cb_mask = 1
 
@@ -143,9 +139,7 @@ def separate(lattices, dimension=-1):
 
     # all lattices need to have same otype
     otype = lattices[0].otype
-    assert all(
-        [lattices[i].otype.__name__ == otype.__name__ for i in range(1, batches)]
-    )
+    assert all([lattices[i].otype.__name__ == otype.__name__ for i in range(1, batches)])
 
     # create grid with dimension removed
     separated_grid = grid.removed_dimension(dimension)
@@ -163,17 +157,13 @@ def separate(lattices, dimension=-1):
     # construct coordinates
     separated_gcoor_zero = gpt.coordinates(separated_lattices[0])
     separated_gcoor_one = (
-        gpt.coordinates(separated_lattices[1])
-        if N > 1 and cb_mask == 1
-        else separated_gcoor_zero
+        gpt.coordinates(separated_lattices[1]) if N > 1 and cb_mask == 1 else separated_gcoor_zero
     )
     separated_gcoor = [separated_gcoor_zero, separated_gcoor_one]
 
     # move data
     for i in range(N):
-        gcoor = cgpt.coordinates_inserted_dimension(
-            separated_gcoor[i % 2], dimension, [i]
-        )
+        gcoor = cgpt.coordinates_inserted_dimension(separated_gcoor[i % 2], dimension, [i])
 
         plan = gpt.copy_plan(
             separated_lattices[i], lattices[0], embed_in_communicator=lattices[0].grid
@@ -259,9 +249,7 @@ def merge_indices(dst, src, st, cache=default_merge_indices_cache):
     rank = len(st) - 1
     islice = [slice(None, None, None) for i in range(len(dst.otype.shape))]
     ivec = [0] * rank
-    cache_key = (
-        f"merge_indices_{dst.describe()}_{result_otype.__name__}_{dst.grid.describe()}"
-    )
+    cache_key = f"merge_indices_{dst.describe()}_{result_otype.__name__}_{dst.grid.describe()}"
 
     tidx = []
     src_i = []

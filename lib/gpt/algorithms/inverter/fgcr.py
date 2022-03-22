@@ -23,9 +23,7 @@ from gpt.algorithms import base_iterative
 
 
 class fgcr(base_iterative):
-    @g.params_convention(
-        eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
-    )
+    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None)
     def __init__(self, params):
         super().__init__()
         self.params = params
@@ -41,9 +39,7 @@ class fgcr(base_iterative):
     def update_psi(self, psi, alpha, beta, gamma, chi, p, i):
         # backward substitution
         for j in reversed(range(i + 1)):
-            chi[j] = (
-                alpha[j] - np.dot(beta[j, j + 1 : i + 1], chi[j + 1 : i + 1])
-            ) / gamma[j]
+            chi[j] = (alpha[j] - np.dot(beta[j, j + 1 : i + 1], chi[j + 1 : i + 1])) / gamma[j]
 
         for j in range(i + 1):
             psi += chi[j] * p[j]

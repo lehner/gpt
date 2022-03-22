@@ -185,9 +185,7 @@ class ot_matrix_spin_color(ot_base):
 
     def identity(self):
         return gpt.matrix_spin_color(
-            numpy.multiply.outer(
-                numpy.identity(self.shape[0]), numpy.identity(self.shape[2])
-            ),
+            numpy.multiply.outer(numpy.identity(self.shape[0]), numpy.identity(self.shape[2])),
             self.shape[0],
             self.shape[2],
         )
@@ -217,10 +215,8 @@ class ot_vector_spin_color(ot_base):
             "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
-            "ot_matrix_spin(%d)"
-            % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
-            "ot_matrix_color(%d)"
-            % (color_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_matrix_spin(%d)" % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_matrix_color(%d)" % (color_ndim): (lambda: self, None),  # TODO: add proper indices
             "ot_singlet": (lambda: self, None),
         }
 
@@ -253,9 +249,7 @@ class ot_vector_spin_color(ot_base):
                         idx = c + self.color_ndim * (s + self.spin_ndim * i)
                         gpt.qcd.ferm_to_prop(dst[i], dst_sc[idx], s, c)
         else:
-            raise TypeError(
-                f"Unexpected type {src[0].otype.__name__} <> {self.ot_matrix}"
-            )
+            raise TypeError(f"Unexpected type {src[0].otype.__name__} <> {self.ot_matrix}")
 
 
 ###
@@ -280,9 +274,7 @@ class ot_vector_singlet(ot_base):
         decomposition = decompose(n, ot_vector_singlet.fundamental.keys(), 1)
         self.v_n0, self.v_n1 = get_range(decomposition, 1)
         self.v_idx = range(len(self.v_n0))
-        self.v_otype = [
-            ot_vector_singlet.fundamental[x].v_otype[0] for x in decomposition
-        ]
+        self.v_otype = [ot_vector_singlet.fundamental[x].v_otype[0] for x in decomposition]
         self.mtab = {
             "ot_singlet": (lambda: self, None),  # TODO: need to add info on contraction
         }
@@ -324,9 +316,7 @@ class ot_matrix_singlet(ot_base):
         decomposition = decompose(n, ot_matrix_singlet.fundamental.keys(), 2)
         self.v_n0, self.v_n1 = get_range(decomposition, 2)
         self.v_idx = range(len(self.v_n0))
-        self.v_otype = [
-            ot_matrix_singlet.fundamental[x].v_otype[0] for x in decomposition
-        ]
+        self.v_otype = [ot_matrix_singlet.fundamental[x].v_otype[0] for x in decomposition]
 
     def identity(self):
         return gpt.matrix_singlet(numpy.identity(self.shape[0]), self.shape[0])

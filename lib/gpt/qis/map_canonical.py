@@ -35,9 +35,7 @@ class map_canonical:
         t("coordinates")
         # TODO: need to split over multiple dimensions, single dimension can hold at most 32 bits
         self.coordinates = g.coordinates(self.grid)
-        self.not_coordinates = [
-            np.bitwise_xor(self.coordinates, 2 ** i) for i in range(n)
-        ]
+        self.not_coordinates = [np.bitwise_xor(self.coordinates, 2 ** i) for i in range(n)]
         for i in range(n):
             self.not_coordinates[i].flags["WRITEABLE"] = False
         t("masks")
@@ -86,10 +84,6 @@ class map_canonical:
         idx = coordinate[0]
         return (
             "|"
-            + (
-                "".join(
-                    [str(x) for x in reversed(self.index_to_bits(idx, bit_permutation))]
-                )
-            )
+            + ("".join([str(x) for x in reversed(self.index_to_bits(idx, bit_permutation))]))
             + ">"
         )

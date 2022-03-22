@@ -62,7 +62,7 @@ sol = inv.cg({"eps": 1e-10, "maxiter": 1024})
 sol_pc = inv.preconditioned(pc.eo2_ne(), sol)
 a = g.qcd.pseudofermion.action
 
-rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 3**0.5, 7)
+rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0 ** 0.5, 3 ** 0.5, 7)
 rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm)
 
 acts = []
@@ -89,7 +89,7 @@ acts += [
 sm = g.qcd.gauge.smear.stout(rho=0.157)
 a_sm = acts[0][0].transformed(sm)
 a_sm.assert_gradient_error(rng, U + [acts[0][2]], U, 1e-3, 5e-7)
-    
+
 for _a in acts:
     a, name, pf, dargs = _a
     g.message(name)
@@ -98,4 +98,3 @@ for _a in acts:
     g.message(f"difference action drawn vs computed: da = {da:g}")
     assert abs(da) < 1e-7
     a.assert_gradient_error(rng, fields, U, 1e-3, 5e-7)
-

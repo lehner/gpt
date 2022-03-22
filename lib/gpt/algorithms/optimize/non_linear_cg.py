@@ -73,9 +73,7 @@ class non_linear_cg(base_iterative):
                     for nu in range(len(s)):
                         s[nu] = g(d[nu] + beta * s_last[nu])
 
-                next_step = (
-                    self.line_search(s, x, dx, d, f.gradient, -self.step) * self.step
-                )
+                next_step = self.line_search(s, x, dx, d, f.gradient, -self.step) * self.step
                 if abs(next_step) > self.max_abs_step:
                     self.log(f"max_abs_step adjustment for step = {next_step}")
                     next_step *= self.max_abs_step / abs(next_step)
@@ -84,9 +82,7 @@ class non_linear_cg(base_iterative):
                 for nu, x_mu in enumerate(dx):
                     x_mu @= g.group.compose(-next_step * s[nu], x_mu)
 
-                rs = (
-                    sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])
-                ) ** 0.5
+                rs = (sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 
@@ -105,9 +101,7 @@ class non_linear_cg(base_iterative):
                 d_last = d
                 s_last = s
 
-            self.log(
-                f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
-            )
+            self.log(f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}")
             return False
 
         return opt

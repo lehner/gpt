@@ -25,9 +25,7 @@ from gpt.qcd.fermion.operator import (
 )
 
 
-class wilson_class_operator(
-    differentiable_fine_operator, gauge_independent_g5_hermitian
-):
+class wilson_class_operator(differentiable_fine_operator, gauge_independent_g5_hermitian):
     def __init__(self, name, U, params, otype=None, daggered=False):
         differentiable_fine_operator.__init__(self, name, U, params, otype, daggered)
 
@@ -87,6 +85,4 @@ def wilson_clover(U, params):
         operator_class = wilson_class_operator
     else:
         operator_class = fine_operator
-    return operator_class(
-        "wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3)
-    )
+    return operator_class("wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3))

@@ -16,9 +16,7 @@ V = rng.element(g.mcolor(grid))
 # Test covariance of gauss smearing operator
 smear = g.create.smear.gauss(U, sigma=0.5, steps=3, dimensions=[0, 1, 2])
 U_transformed = g.qcd.gauge.transformed(U, V)
-smear_transformed = g.create.smear.gauss(
-    U_transformed, sigma=0.5, steps=3, dimensions=[0, 1, 2]
-)
+smear_transformed = g.create.smear.gauss(U_transformed, sigma=0.5, steps=3, dimensions=[0, 1, 2])
 
 src = g.mspincolor(grid)
 rng.cnormal(src)
@@ -31,9 +29,7 @@ assert eps2 < 1e-29
 # Test smearing operator on point source over unit gauge field
 for dimensions in [[0, 1, 2], [0, 1, 2, 3]]:
     for sigma, steps in [(0.5, 3), (0.16, 2)]:
-        smear_unit = g.create.smear.gauss(
-            U_unit, sigma=sigma, steps=steps, dimensions=dimensions
-        )
+        smear_unit = g.create.smear.gauss(U_unit, sigma=sigma, steps=steps, dimensions=dimensions)
         src = g.vcolor(grid)
         src[:] = g.vcolor([1, 0, 0])
 

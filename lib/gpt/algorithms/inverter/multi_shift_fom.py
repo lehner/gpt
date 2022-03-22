@@ -98,7 +98,7 @@ class multi_shift_fom(base_iterative):
             mat(V[i + 1], V[i])
             g.orthogonalize(
                 V[i + 1],
-                V[0:i + 1],
+                V[0 : i + 1],
                 ips[0:-1],
                 nblock=10,
             )
@@ -210,9 +210,7 @@ class multi_shift_fom(base_iterative):
                     self.log(msg)
             cs = sum([fom.converged for fom in sfoms if True])
             ns = len(self.shifts)
-            self.log(
-                f"NOT converged in {k+rlen} iterations; {cs} / {ns} converged shifts"
-            )
+            self.log(f"NOT converged in {k+rlen} iterations; {cs} / {ns} converged shifts")
             return [fom.rho for fom in sfoms] if rr else None
 
         return g.matrix_operator(

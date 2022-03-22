@@ -31,12 +31,7 @@ def coordinate_tensor(indices, b, f):
 
     t = tensor(basis(b), n_stride[-1])
     t[:] = [
-        f(
-            [
-                (i // n_stride[j]) % (n_stride[j + 1] // n_stride[j])
-                for j in range(len(n_stride) - 1)
-            ]
-        )
+        f([(i // n_stride[j]) % (n_stride[j + 1] // n_stride[j]) for j in range(len(n_stride) - 1)])
         for i in range(n_stride[-1])
     ]
     return t
@@ -154,9 +149,7 @@ class wick:
                         propagators_indices,
                         [beta, b],
                         lambda i: {
-                            (beta_value, b_value): prop[(i[i_alpha], beta_value)][
-                                (i[i_a], b_value)
-                            ]
+                            (beta_value, b_value): prop[(i[i_alpha], beta_value)][(i[i_a], b_value)]
                             for beta_value in range(beta[1])
                             for b_value in range(b[1])
                         },
@@ -226,8 +219,7 @@ class wick:
         def _eval(context, path):
 
             ev = [
-                exp.evaluate(context, path + "/sum" + str(ii))
-                for ii, exp in enumerate(expressions)
+                exp.evaluate(context, path + "/sum" + str(ii)) for ii, exp in enumerate(expressions)
             ]
 
             t = g.sparse_tensor.contract(ev, indices)
@@ -277,9 +269,7 @@ class wick:
             e_context["n"] = 1
             for propagator in propagators:
                 for j, i in enumerate(f_context.index_arguments[propagator[0]]):
-                    e_context["propagators_indices"].append(
-                        (propagator[0] + "_i" + str(j), i[1])
-                    )
+                    e_context["propagators_indices"].append((propagator[0] + "_i" + str(j), i[1]))
                     e_context["n"] *= i[1]
 
             if diag_index % g.ranks() == g.rank():

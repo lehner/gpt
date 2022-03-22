@@ -37,9 +37,7 @@ class accumulator_base:
 
 class accumulator_average(accumulator_base):
     def __init__(self, like):
-        self.value = g.tensor(
-            np.zeros(like.otype.shape, dtype=np.complex128), like.otype
-        )
+        self.value = g.tensor(np.zeros(like.otype.shape, dtype=np.complex128), like.otype)
 
     def __iadd__(self, v):
         v = g(v)
@@ -121,11 +119,7 @@ def rectangle(
                 L_nu = f[1]
                 min_mu = f[2] if len(f) == 3 else 0
                 configurations.append(
-                    [
-                        (mu, L_mu, nu, L_nu)
-                        for mu in range(min_mu, len(U))
-                        for nu in range(mu)
-                    ]
+                    [(mu, L_mu, nu, L_nu) for mu in range(min_mu, len(U)) for nu in range(mu)]
                 )
             else:
                 configurations.append(f)
@@ -175,10 +169,7 @@ def plaquette(U):
         for nu in range(mu):
             tr += g.sum(
                 g.trace(
-                    U[mu]
-                    * g.cshift(U[nu], mu, 1)
-                    * g.adj(g.cshift(U[mu], nu, 1))
-                    * g.adj(U[nu])
+                    U[mu] * g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
                 )
             )
     return 2.0 * tr.real / vol / Nd / (Nd - 1) / ndim

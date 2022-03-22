@@ -126,7 +126,5 @@ class tensor:
 
 
 def contract(tensors, symbols):
-    obj_t, obj_b = cgpt.sparse_tensor_contract(
-        [t.obj for t in tensors], [s[0] for s in symbols]
-    )
+    obj_t, obj_b = cgpt.sparse_tensor_contract([t.obj for t in tensors], [s[0] for s in symbols])
     return tensor(basis(obj_b), tensors[0].n_parallel, obj_t)

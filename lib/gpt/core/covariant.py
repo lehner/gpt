@@ -56,8 +56,7 @@ class shift_base:
             return wrap
 
         self.forward = [
-            gpt.matrix_operator(mat=_forward(mu), inv_mat=_backward(mu))
-            for mu in range(self.nd)
+            gpt.matrix_operator(mat=_forward(mu), inv_mat=_backward(mu)) for mu in range(self.nd)
         ]
         self.backward = [o.inv() for o in self.forward]
 

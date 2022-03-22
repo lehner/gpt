@@ -140,6 +140,4 @@ class mobius_class_operator(differentiable_fine_operator):
 )
 def mobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
-    return mobius_class_operator(
-        "mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
-    )
+    return mobius_class_operator("mobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))

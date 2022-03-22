@@ -119,9 +119,7 @@ eps = g.norm2(g.adj(exp_ixp) * exp_ixp * l_dp - l_dp) / g.norm2(l_dp)
 g.message("Momentum adj test: ", eps)
 assert eps < 1e-20
 
-eps = g.norm2(g.adj(exp_ixp * exp_ixp) * exp_ixp * exp_ixp * l_dp - l_dp) / g.norm2(
-    l_dp
-)
+eps = g.norm2(g.adj(exp_ixp * exp_ixp) * exp_ixp * exp_ixp * l_dp - l_dp) / g.norm2(l_dp)
 g.message("Momentum adj test (2): ", eps)
 assert eps < 1e-20
 
@@ -159,9 +157,7 @@ for lattice_object in [
 
     for dimension in range(4):
         tmp = g.slice(obj_list, dimension)
-        full_sliced = np.array(
-            [[g.util.tensor_to_value(v) for v in obj] for obj in tmp]
-        )
+        full_sliced = np.array([[g.util.tensor_to_value(v) for v in obj] for obj in tmp])
 
         for n, obj in enumerate(obj_list):
             tmp = g.slice(obj, dimension)
@@ -197,9 +193,7 @@ eps = g.norm2(g.sum(exp_ixp * l_sp) / np.prod(L) - fft_l_sp[1, 2, 3, 4])
 g.message("FFT forward test:", eps)
 assert eps < 1e-12
 
-fft_mom_A = g.slice(
-    g.exp_ixp(2.0 * np.pi * np.array([1, 2, 3, 0]) / L) * l_sp, 3
-) / np.prod(L[0:3])
+fft_mom_A = g.slice(g.exp_ixp(2.0 * np.pi * np.array([1, 2, 3, 0]) / L) * l_sp, 3) / np.prod(L[0:3])
 fft_mom_B = [g.vcolor(x) for x in g.eval(g.fft([0, 1, 2]) * l_sp)[1, 2, 3, 0 : L[3]]]
 for t in range(L[3]):
     eps = g.norm2(fft_mom_A[t] - fft_mom_B[t])
@@ -232,9 +226,7 @@ def correlate_test_4d(a, b, x):
 
 
 A, B = rng.cnormal([g.complex(grid_dp) for i in range(2)])
-eps = abs(
-    g.correlate(A, B, [0, 1, 2])[1, 0, 3, 2] - correlate_test_3d(A, B, [1, 0, 3, 2])
-)
+eps = abs(g.correlate(A, B, [0, 1, 2])[1, 0, 3, 2] - correlate_test_3d(A, B, [1, 0, 3, 2]))
 g.message(f"Test correlate 3d: {eps}")
 assert eps < 1e-13
 eps = abs(g.correlate(A, B)[1, 0, 3, 2] - correlate_test_4d(A, B, [1, 0, 3, 2]))
@@ -320,13 +312,9 @@ for grid in [grid_dp, grid_sp]:
             for j in range(3):
                 host_result_individual = g.rank_inner_product(left[i], right[j], False)
                 acc_result_individual = g.rank_inner_product(left[i], right[j], True)
-                eps = abs(host_result_individual - host_result[i, j]) / abs(
-                    host_result[i, j]
-                )
+                eps = abs(host_result_individual - host_result[i, j]) / abs(host_result[i, j])
                 assert eps < 1e-13
-                eps = abs(acc_result_individual - acc_result[i, j]) / abs(
-                    acc_result[i, j]
-                )
+                eps = abs(acc_result_individual - acc_result[i, j]) / abs(acc_result[i, j])
                 assert eps < 1e-13
                 if i == 0 and j == 0:
                     ref = np.vdot(
@@ -399,12 +387,8 @@ rng.cnormal([yes, no])
 
 w = g.where(sel, yes, no)
 
-eps = np.linalg.norm(w[:] - np.where(sel[:] != 0.0, yes[:], no[:])) / np.linalg.norm(
-    w[:]
-)
-g.message(
-    f"Test gpt.where <> numpy.where with a selection of {g.norm2(sel)} points: {eps}"
-)
+eps = np.linalg.norm(w[:] - np.where(sel[:] != 0.0, yes[:], no[:])) / np.linalg.norm(w[:])
+g.message(f"Test gpt.where <> numpy.where with a selection of {g.norm2(sel)} points: {eps}")
 assert eps == 0.0
 
 
@@ -465,9 +449,7 @@ for l in [l_dp, l_sp]:
     assert sweight is sweight2
 
     nsparse_global = g.sum(sweight)
-    assert (
-        abs(nsparse_global - nsparse * l.grid.Nprocessors) < l.grid.precision.eps * 100
-    )
+    assert abs(nsparse_global - nsparse * l.grid.Nprocessors) < l.grid.precision.eps * 100
 
     eps = g.norm2(sweight * (l - l_prime)) ** 0.5
     g.message(f"Test sparse reconstruction: {eps}")

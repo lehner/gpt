@@ -74,9 +74,7 @@ class cg(base_iterative):
                     self.log(f"converged in {k+1} iterations")
                     return
 
-            self.log(
-                f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}"
-            )
+            self.log(f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}")
 
         return g.matrix_operator(
             mat=inv, inv_mat=mat, accept_guess=(True, False), vector_space=vector_space

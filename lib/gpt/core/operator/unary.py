@@ -44,10 +44,7 @@ def transpose(l):
             [
                 (
                     a[0],
-                    [
-                        (x[0] ^ (gpt.factor_unary.BIT_TRANS), x[1])
-                        for x in reversed(a[1])
-                    ],
+                    [(x[0] ^ (gpt.factor_unary.BIT_TRANS), x[1]) for x in reversed(a[1])],
                 )
                 for a in l.val
             ]
@@ -66,8 +63,7 @@ def adj(l):
                     complex(a[0]).conjugate(),
                     [
                         (
-                            x[0]
-                            ^ (gpt.factor_unary.BIT_TRANS | gpt.factor_unary.BIT_CONJ),
+                            x[0] ^ (gpt.factor_unary.BIT_TRANS | gpt.factor_unary.BIT_CONJ),
                             x[1],
                         )
                         for x in reversed(a[1])

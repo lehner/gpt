@@ -79,9 +79,7 @@ inv1_w(dst3, src)
 t5 = g.time()
 dc_iter_with_guess = len(inv1.history)
 rr = g.norm2(dst3 - dst)
-g.message(
-    f"Difference of results: {rr}, Time for SAP-based-solve after guess: {t5-t4} s"
-)
+g.message(f"Difference of results: {rr}, Time for SAP-based-solve after guess: {t5-t4} s")
 assert rr < 1e-10
 g.message(f"Iteration count with guess reduced from {dc_iter} to {dc_iter_with_guess}")
 assert dc_iter_with_guess < dc_iter

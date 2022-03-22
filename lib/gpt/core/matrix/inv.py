@@ -18,6 +18,7 @@
 #
 import gpt, cgpt
 
+
 def inv(A):
     A = gpt.eval(A)
     assert type(A) == gpt.lattice
@@ -25,6 +26,3 @@ def inv(A):
     to_list = gpt.util.to_list
     cgpt.invert_matrix(to_list(A_inv), to_list(A))
     return A_inv
-
-
-

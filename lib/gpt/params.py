@@ -49,9 +49,7 @@ class params_convention:
         last_fparam = fparams[-1]
 
         # If an annotation is of the last parameter is given, it should be a dict
-        assert (
-            last_fparam.annotation == inspect._empty or last_fparam.annotation == dict
-        )
+        assert last_fparam.annotation == inspect._empty or last_fparam.annotation == dict
 
         # Last argument is params
         nargs = len(fparams) - 1

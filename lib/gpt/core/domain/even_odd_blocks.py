@@ -45,9 +45,7 @@ class even_odd_blocks:
         self.local_blocks_per_dimension = [
             int(d // b) for d, b in zip(grid.ldimensions, block_size)
         ]
-        self.blocks_per_dimension = [
-            int(d // b) for d, b in zip(grid.gdimensions, block_size)
-        ]
+        self.blocks_per_dimension = [int(d // b) for d, b in zip(grid.gdimensions, block_size)]
         self.number_of_local_blocks = int(numpy.prod(self.local_blocks_per_dimension))
         assert self.number_of_local_blocks % 2 == 0
 
@@ -55,13 +53,10 @@ class even_odd_blocks:
         self.extended_local_blocks_per_dimension = [1] * nd
         for mu in reversed(range(nd)):
             if self.local_blocks_per_dimension[mu] > 1:
-                self.extended_local_blocks_per_dimension[mu] = (
-                    self.number_of_local_blocks // 2
-                )
+                self.extended_local_blocks_per_dimension[mu] = self.number_of_local_blocks // 2
                 break
         extended_block_size = [
-            block_size[mu] * self.extended_local_blocks_per_dimension[mu]
-            for mu in range(nd)
+            block_size[mu] * self.extended_local_blocks_per_dimension[mu] for mu in range(nd)
         ]
 
         # block grid local to the node
@@ -95,8 +90,7 @@ class even_odd_blocks:
                 n += 1
 
                 top = [
-                    offset[mu] + block_coordinate[mu] * block_size[mu]
-                    for mu in range(len(offset))
+                    offset[mu] + block_coordinate[mu] * block_size[mu] for mu in range(len(offset))
                 ]
                 bottom = [top[mu] + block_size[mu] for mu in range(len(offset))]
                 pos = cgpt.coordinates_from_cartesian_view(

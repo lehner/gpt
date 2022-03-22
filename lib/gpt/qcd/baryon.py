@@ -33,9 +33,7 @@ def diquark(Q1, Q2):
 
     for i1, sign1 in eps:
         for i2, sign2 in eps:
-            D[i2[0], i1[0]] += (
-                sign1 * sign2 * Q1[i1[1], i2[1]] * g.transpose(Q2[i1[2], i2[2]])
-            )
+            D[i2[0], i1[0]] += sign1 * sign2 * Q1[i1[1], i2[1]] * g.transpose(Q2[i1[2], i2[2]])
 
     g.merge_color(R, D)
     return R

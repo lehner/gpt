@@ -130,9 +130,7 @@ class schur_complement_one:
             mat=_R, adj_mat=_R_dag, vector_space=(D_vector_space, op_vector_space)
         )
 
-        self.S = gpt.matrix_operator(
-            mat=_S, vector_space=(op_vector_space, op_vector_space)
-        )
+        self.S = gpt.matrix_operator(mat=_S, vector_space=(op_vector_space, op_vector_space))
 
         self.Mpc = gpt.matrix_operator(
             mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space)

@@ -408,7 +408,5 @@ g.message(f"eps2 eo: {eps2}")
 assert eps2 < 1e-8
 
 # require that eo performs better
-g.message(
-    f"Test: niter_eo < niter_full: {'passed' if niter_eo < niter_full else 'failed'}"
-)
+g.message(f"Test: niter_eo < niter_full: {'passed' if niter_eo < niter_full else 'failed'}")
 assert niter_eo < niter_full

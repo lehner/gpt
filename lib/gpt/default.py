@@ -75,9 +75,7 @@ verbose_default = (
 )
 verbose_additional = "eval,merge,orthogonalize,copy_plan"
 verbose = set()
-verbose_candidates = ",".join(
-    sorted((verbose_default + "," + verbose_additional).split(","))
-)
+verbose_candidates = ",".join(sorted((verbose_default + "," + verbose_additional).split(",")))
 verbose_indent = max([len(x) for x in verbose_candidates.split(",")])
 verbose_stack = []
 
@@ -104,15 +102,10 @@ def pop_verbose():
 
 def parse_verbose():
     global verbose
-    verbose = set(
-        [y for x in get_all("--verbose", verbose_default) for y in x.split(",")]
-    )
+    verbose = set([y for x in get_all("--verbose", verbose_default) for y in x.split(",")])
     for status, mod in [(True, "add"), (False, "remove")]:
         for f in [
-            y
-            for x in get_all(f"--verbose_{mod}", None)
-            if x is not None
-            for y in x.split(",")
+            y for x in get_all(f"--verbose_{mod}", None) if x is not None for y in x.split(",")
         ]:
             set_verbose(f, status)
 

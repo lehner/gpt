@@ -93,9 +93,7 @@ class checkpointer:
                     allok = allok and self.load(r)
                     obj[i] = r[0]
                 if not allok:
-                    self.f.seek(
-                        pos, 0
-                    )  # reset position to overwrite corrupted data chunk
+                    self.f.seek(pos, 0)  # reset position to overwrite corrupted data chunk
                 return allok
             else:
                 if type(obj[0]) == gpt.lattice:

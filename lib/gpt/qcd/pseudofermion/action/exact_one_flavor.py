@@ -82,12 +82,10 @@ class exact_one_flavor_ratio(action_base):
         m2 = self.m2
 
         P11 = [
-            self.operator(m1, m1 + d * (m2 - m1)).updated(U).propagator(self.inverter)
-            for d in dm
+            self.operator(m1, m1 + d * (m2 - m1)).updated(U).propagator(self.inverter) for d in dm
         ]
         P12 = [
-            self.operator(m1 + d * (m2 - m1), m2).updated(U).propagator(self.inverter)
-            for d in dm
+            self.operator(m1 + d * (m2 - m1), m2).updated(U).propagator(self.inverter) for d in dm
         ]
 
         def _mat(dst, src):

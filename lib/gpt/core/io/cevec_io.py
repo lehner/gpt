@@ -67,9 +67,7 @@ def read_metadata(fn):
     return dict(
         [
             tuple([x.strip() for x in ln.split("=")])
-            for ln in filter(
-                lambda x: x != "" and x[0] != "#", open(fn).read().split("\n")
-            )
+            for ln in filter(lambda x: x != "" and x[0] != "#", open(fn).read().split("\n"))
         ]
     )
 
@@ -192,9 +190,7 @@ def load(filename, params):
     if verbose:
         gpt.message("Loading %s with %d views per node" % (filename, len(views)))
     for i, v in enumerate(views):
-        cv = gpt.cartesian_view(
-            v if v is not None else -1, mpi, fdimensions, fgrid.cb, site_cb
-        )
+        cv = gpt.cartesian_view(v if v is not None else -1, mpi, fdimensions, fgrid.cb, site_cb)
         cvc = gpt.cartesian_view(
             v if v is not None else -1, mpi, cgrid.fdimensions, gpt.full, gpt.none
         )
@@ -211,9 +207,7 @@ def load(filename, params):
         coarse_block_size_part_fp16 = 2 * (
             FP_16_SIZE(nbasis - nsingleCap, FP16_COEF_EXP_SHARE_FLOATS)
         )
-        coarse_vector_size = (
-            coarse_block_size_part_fp32 + coarse_block_size_part_fp16
-        ) * blocks
+        coarse_vector_size = (coarse_block_size_part_fp32 + coarse_block_size_part_fp16) * blocks
         coarse_fp32_vector_size = 2 * (4 * nbasis) * blocks
 
         # checksum
@@ -234,8 +228,7 @@ def load(filename, params):
         max_read_blocks = get_param(params, "max_read_blocks", 8)
         while read_blocks > max_read_blocks and read_blocks % 2 == 0:
             pos = [
-                numpy.concatenate((pos[2 * i + 0], pos[2 * i + 1]))
-                for i in range(read_blocks // 2)
+                numpy.concatenate((pos[2 * i + 0], pos[2 * i + 1])) for i in range(read_blocks // 2)
             ]
             block_data_size_single *= 2
             block_data_size_fp16 *= 2
@@ -289,9 +282,7 @@ def load(filename, params):
             for i in range(nsingleCap_max):
                 distribute_plan(
                     basis[i],
-                    data_munged[
-                        block_data_size_single * i : block_data_size_single * (i + 1)
-                    ],
+                    data_munged[block_data_size_single * i : block_data_size_single * (i + 1)],
                 )
             dt_distr += gpt.time()
 
@@ -311,19 +302,13 @@ def load(filename, params):
         # fp16 data
         if nbasis != nsingleCap:
             # allocate data buffer
-            data_fp32 = memoryview(
-                bytearray(block_data_size_single * (nbasis - nsingleCap))
-            )
-            data_munged = memoryview(
-                bytearray(block_data_size_single * (nbasis - nsingleCap))
-            )
+            data_fp32 = memoryview(bytearray(block_data_size_single * (nbasis - nsingleCap)))
+            data_munged = memoryview(bytearray(block_data_size_single * (nbasis - nsingleCap)))
             for b in range(read_blocks):
                 fgrid.barrier()
                 dt_fread -= gpt.time()
                 if f is not None:
-                    data = memoryview(
-                        f.read(block_data_size_fp16 * (nbasis - nsingleCap))
-                    )
+                    data = memoryview(f.read(block_data_size_fp16 * (nbasis - nsingleCap)))
                     globalReadGB = len(data) / 1024.0 ** 3.0
                 else:
                     globalReadGB = 0.0
@@ -365,9 +350,7 @@ def load(filename, params):
                         distribute_plan(
                             basis[i],
                             data_munged[
-                                block_data_size_single
-                                * j : block_data_size_single
-                                * (j + 1)
+                                block_data_size_single * j : block_data_size_single * (j + 1)
                             ],
                         )
                 dt_distr += gpt.time()
@@ -457,11 +440,7 @@ def load(filename, params):
         gpt.message("* load %g GB at %g GB/s" % (totalSizeGB, totalSizeGB / (t1 - t0)))
 
     # eigenvalues
-    evln = list(
-        filter(
-            lambda x: x != "", open(filename + "/eigen-values.txt").read().split("\n")
-        )
-    )
+    evln = list(filter(lambda x: x != "", open(filename + "/eigen-values.txt").read().split("\n")))
     nev = int(evln[0])
     ev = [float(x) for x in evln[1:]]
     assert len(ev) == nev
@@ -573,9 +552,7 @@ def save(filename, objs, params):
         gpt.message("Saving %s with %d views per node" % (filename, len(views)))
 
     for i, v in enumerate(views):
-        cv = gpt.cartesian_view(
-            v if v is not None else -1, mpi, fdimensions, fgrid.cb, site_cb
-        )
+        cv = gpt.cartesian_view(v if v is not None else -1, mpi, fdimensions, fgrid.cb, site_cb)
         cvc = gpt.cartesian_view(
             v if v is not None else -1, mpi, cgrid.fdimensions, gpt.full, gpt.none
         )
@@ -594,15 +571,10 @@ def save(filename, objs, params):
         coarse_block_size_part_fp16 = 2 * (
             FP_16_SIZE(nbasis - nsingleCap, FP16_COEF_EXP_SHARE_FLOATS)
         )
-        coarse_vector_size = (
-            coarse_block_size_part_fp32 + coarse_block_size_part_fp16
-        ) * blocks
+        coarse_vector_size = (coarse_block_size_part_fp32 + coarse_block_size_part_fp16) * blocks
         totalSize = (
             blocks
-            * (
-                block_data_size_single * nsingleCap
-                + block_data_size_fp16 * (nbasis - nsingleCap)
-            )
+            * (block_data_size_single * nsingleCap + block_data_size_fp16 * (nbasis - nsingleCap))
             + neigen * coarse_vector_size
         )
         totalSizeGB += totalSize / 1024.0 ** 3.0 if v is not None else 0.0
@@ -625,8 +597,7 @@ def save(filename, objs, params):
         max_read_blocks = get_param(params, "max_read_blocks", 8)
         while read_blocks > max_read_blocks and read_blocks % 2 == 0:
             pos = [
-                numpy.concatenate((pos[2 * i + 0], pos[2 * i + 1]))
-                for i in range(read_blocks // 2)
+                numpy.concatenate((pos[2 * i + 0], pos[2 * i + 1])) for i in range(read_blocks // 2)
             ]
             block_data_size_single *= 2
             block_data_size_fp16 *= 2
@@ -655,9 +626,7 @@ def save(filename, objs, params):
             lhs = None
             for i in range(nsingleCap):
                 distribute_plan(
-                    data_munged[
-                        block_data_size_single * i : block_data_size_single * (i + 1)
-                    ],
+                    data_munged[block_data_size_single * i : block_data_size_single * (i + 1)],
                     basis[i],
                 )
             dt_distr += gpt.time()
@@ -701,12 +670,8 @@ def save(filename, objs, params):
         # fp16 data
         if nbasis != nsingleCap:
             # allocate data buffer
-            data_fp32 = memoryview(
-                bytearray(block_data_size_single * (nbasis - nsingleCap))
-            )
-            data_munged = memoryview(
-                bytearray(block_data_size_single * (nbasis - nsingleCap))
-            )
+            data_fp32 = memoryview(bytearray(block_data_size_single * (nbasis - nsingleCap)))
+            data_munged = memoryview(bytearray(block_data_size_single * (nbasis - nsingleCap)))
             data = memoryview(bytearray(block_data_size_fp16 * (nbasis - nsingleCap)))
             for b in range(read_blocks):
                 fgrid.barrier()
@@ -723,11 +688,7 @@ def save(filename, objs, params):
                 for i in range(nsingleCap, nbasis):
                     j = i - nsingleCap
                     distribute_plan(
-                        data_munged[
-                            j
-                            * block_data_size_single : (j + 1)
-                            * block_data_size_single
-                        ],
+                        data_munged[j * block_data_size_single : (j + 1) * block_data_size_single],
                         basis[i],
                     )
                 dt_distr += gpt.time()

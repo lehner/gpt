@@ -126,9 +126,7 @@ def str_to_otype(s):
         root = a[0]
         # convert through int to avoid possibility of malicous code being executed in eval below
         args = "(%s)" % (
-            ",".join(
-                [str(int(x)) for x in filter(lambda x: x != "", a[1][:-1].split(","))]
-            )
+            ",".join([str(int(x)) for x in filter(lambda x: x != "", a[1][:-1].split(","))])
         )
     else:
         root = a[0]

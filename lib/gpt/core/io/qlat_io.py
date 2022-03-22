@@ -145,9 +145,7 @@ class qlat_io:
         g.globalsum(crc_array)
         crc_comp = 0x0
         for i in range(nreader):
-            crc_comp = cgpt.util_crc32_combine(
-                crc_comp, crc_array[2 * i + 1], crc_array[2 * i + 0]
-            )
+            crc_comp = cgpt.util_crc32_combine(crc_comp, crc_array[2 * i + 1], crc_array[2 * i + 0])
         crc_comp = f"{crc_comp:8X}"
         assert crc_comp == self.crc_exp
 

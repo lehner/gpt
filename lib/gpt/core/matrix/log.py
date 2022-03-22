@@ -19,7 +19,6 @@
 import gpt, numpy
 
 
-
 def log(i, convergence_threshold=0.5):
     i = gpt.eval(i)
     # i = n*(1 + x), log(i) = log(n) + log(1+x)

@@ -24,16 +24,12 @@ xc = g.separate_color(msc)
 
 for s1 in range(4):
     for s2 in range(4):
-        eps = np.linalg.norm(
-            msc[0, 0, 0, 0].array[s1, s2, :, :] - xs[s1, s2][0, 0, 0, 0].array
-        )
+        eps = np.linalg.norm(msc[0, 0, 0, 0].array[s1, s2, :, :] - xs[s1, s2][0, 0, 0, 0].array)
         assert eps < 1e-13
 
 for c1 in range(3):
     for c2 in range(3):
-        eps = np.linalg.norm(
-            msc[0, 0, 0, 0].array[:, :, c1, c2] - xc[c1, c2][0, 0, 0, 0].array
-        )
+        eps = np.linalg.norm(msc[0, 0, 0, 0].array[:, :, c1, c2] - xc[c1, c2][0, 0, 0, 0].array)
         assert eps < 1e-13
 
 
@@ -45,9 +41,7 @@ assert g.norm2(msc2 - msc) < 1e-13
 g.merge_color(msc2, xc)
 assert g.norm2(msc2 - msc) < 1e-13
 
-assert (
-    g.norm2(g.separate_color(xs[1, 2])[2, 0] - g.separate_spin(xc[2, 0])[1, 2]) < 1e-13
-)
+assert g.norm2(g.separate_color(xs[1, 2])[2, 0] - g.separate_spin(xc[2, 0])[1, 2]) < 1e-13
 
 
 ################################################################################
@@ -133,9 +127,7 @@ for src in [l, l_rb]:
             g.message(f"Iteration {it}, group_policy = {group_policy.__name__}")
             src_unsplit = [g.lattice(x) for x in src]
             t0 = g.time()
-            src_split = g.split(
-                src, split_grid, None if it == 0 else cache, group_policy
-            )
+            src_split = g.split(src, split_grid, None if it == 0 else cache, group_policy)
             t1 = g.time()
             g.unsplit(src_unsplit, src_split, None if it == 0 else cache, group_policy)
             t2 = g.time()

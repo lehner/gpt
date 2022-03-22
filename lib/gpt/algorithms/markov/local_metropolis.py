@@ -81,6 +81,4 @@ class local_metropolis:
 
         # g.message(t)
         if verbose:
-            g.message(
-                f"Local metropolis acceptance rate: {number_accept / possible_accept}"
-            )
+            g.message(f"Local metropolis acceptance rate: {number_accept / possible_accept}")

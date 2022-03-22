@@ -226,12 +226,8 @@ assert eps_qz < 5e-4
 # test G(m1) - G(m2) = (m2 - m1) * G(m1) * G(m2)
 m1 = 0.11
 m2 = 0.24
-qm1 = g.qcd.fermion.mobius(
-    U, mass=m1, M5=1.8, b=1.5, c=0.5, Ls=6, boundary_phases=[1, 1, 1, -1]
-)
-qm2 = g.qcd.fermion.mobius(
-    U, mass=m2, M5=1.8, b=1.5, c=0.5, Ls=6, boundary_phases=[1, 1, 1, -1]
-)
+qm1 = g.qcd.fermion.mobius(U, mass=m1, M5=1.8, b=1.5, c=0.5, Ls=6, boundary_phases=[1, 1, 1, -1])
+qm2 = g.qcd.fermion.mobius(U, mass=m2, M5=1.8, b=1.5, c=0.5, Ls=6, boundary_phases=[1, 1, 1, -1])
 G1 = qm1.propagator(slv_5d_e)
 G2 = qm2.propagator(slv_5d_e)
 

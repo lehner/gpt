@@ -62,9 +62,7 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         a = op[0](m)[0, 0, 0, 0, 1, 2]
         b = op[1](m[0, 0, 0, 0, 1, 2])
         eps2 = (abs(a - b) / abs(a)) ** 2.0
-        g.message(
-            f"Test {op[1].__name__}: {a} == {b} with argument {m[0, 0, 0, 0, 1, 2]}: {eps2}"
-        )
+        g.message(f"Test {op[1].__name__}: {a} == {b} with argument {m[0, 0, 0, 0, 1, 2]}: {eps2}")
         assert eps2 < eps ** 2.0
 
 # test inv
@@ -92,8 +90,6 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         g.message(f"exp(log(m)) == m: {eps2}")
         assert eps2 < eps ** 2.0
 
-        eps2 = g.norm2(
-            g.matrix.log(g.matrix.det(g.matrix.exp(m))) - g.trace(m)
-        ) / g.norm2(m)
+        eps2 = g.norm2(g.matrix.log(g.matrix.det(g.matrix.exp(m))) - g.trace(m)) / g.norm2(m)
         g.message(f"log(det(exp(m))) == tr(m): {eps2}")
         assert eps2 < eps ** 2.0

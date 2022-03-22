@@ -90,9 +90,7 @@ def read_sfld(fname):
 
         # print(f"Check norm difference = {abs(np.sum(fld**2)-norm)}")
 
-        fld = np.reshape(
-            fld[:, :, :, :, :, 0] + 1j * fld[:, :, :, :, :, 1], tuple(lat) + (4, 3)
-        )
+        fld = np.reshape(fld[:, :, :, :, :, 0] + 1j * fld[:, :, :, :, :, 1], tuple(lat) + (4, 3))
     return lat, norm, fld
 
 

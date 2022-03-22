@@ -163,7 +163,9 @@ class lattice(factor):
                     cgpt.lattice_set_to_number(o, value)
                 return
 
-            cache_key = f"{self.otype.__name__}_{self.checkerboard().__name__}_{self.grid.describe()}"
+            cache_key = (
+                f"{self.otype.__name__}_{self.checkerboard().__name__}_{self.grid.describe()}"
+            )
             cache = lattice.cache
 
         # general code path, map key
@@ -185,9 +187,7 @@ class lattice(factor):
             plan.destination += gpt.lattice_view(self, pos, tidx)
             plan.source += gpt.global_memory_view(
                 self.grid,
-                [[self.grid.processor, value, 0, value.nbytes]]
-                if value.nbytes > 0
-                else None,
+                [[self.grid.processor, value, 0, value.nbytes]] if value.nbytes > 0 else None,
             )
 
             # skip optimization if we only use it once
@@ -220,9 +220,7 @@ class lattice(factor):
             plan = gpt.copy_plan(value, self)
             plan.destination += gpt.global_memory_view(
                 self.grid,
-                [[self.grid.processor, value, 0, value.nbytes]]
-                if value.nbytes > 0
-                else None,
+                [[self.grid.processor, value, 0, value.nbytes]] if value.nbytes > 0 else None,
             )
             plan.source += gpt.lattice_view(self, pos, tidx)
             xp = plan()

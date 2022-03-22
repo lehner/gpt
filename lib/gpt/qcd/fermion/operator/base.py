@@ -86,9 +86,7 @@ class base(gpt.matrix_operator):
         self.vector_space_U = gpt.vector_space.explicit_grid_otype_checkerboard(
             self.U_grid, otype, gpt.none
         )
-        self.vector_space_F_eo = gpt.vector_space.explicit_grid_otype(
-            self.F_grid_eo, otype
-        )
+        self.vector_space_F_eo = gpt.vector_space.explicit_grid_otype(self.F_grid_eo, otype)
 
         # map Grid matrix operations to clean matrix_operator structure
         super().__init__(
@@ -132,9 +130,7 @@ class base(gpt.matrix_operator):
             self._MeoDeriv = registry.MeoDeriv
             self._MeoDerivDag = registry.MeoDerivDag
 
-        self.Mdiag = OP(
-            gpt.matrix_operator(registry.Mdiag, vector_space=self.vector_space_F)
-        )
+        self.Mdiag = OP(gpt.matrix_operator(registry.Mdiag, vector_space=self.vector_space_F))
         self.Dminus = OP(
             gpt.matrix_operator(
                 mat=registry.Dminus,

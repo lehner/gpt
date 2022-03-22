@@ -103,9 +103,7 @@ class bicgstab(base_iterative):
                     self.log(f"converged in {k+1} iterations")
                     return
 
-            self.log(
-                f"NOT converged in {k+1} iterations;  squared residual {r2:e} / {rsq:e}"
-            )
+            self.log(f"NOT converged in {k+1} iterations;  squared residual {r2:e} / {rsq:e}")
 
         return g.matrix_operator(
             mat=inv,

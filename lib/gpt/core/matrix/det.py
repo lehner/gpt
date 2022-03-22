@@ -18,6 +18,7 @@
 #
 import gpt, cgpt
 
+
 def det(A):
     A = gpt.eval(A)
     assert type(A) == gpt.lattice

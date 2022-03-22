@@ -41,9 +41,7 @@ class interface:
 
     def apply_dirdisp_operator(self, opcode, o, i, dir, disp):
         # Grid has different calling conventions which we adopt in cgpt:
-        return cgpt.apply_fermion_operator_dirdisp(
-            self.obj, opcode, i.v_obj, o.v_obj, dir, disp
-        )
+        return cgpt.apply_fermion_operator_dirdisp(self.obj, opcode, i.v_obj, o.v_obj, dir, disp)
 
     def apply_deriv_operator(self, opcode, m, u, v):
         # Grid has different calling conventions which we adopt in cgpt:

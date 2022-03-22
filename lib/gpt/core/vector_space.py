@@ -51,9 +51,7 @@ class general:
         return l
 
     def match_otype(self, otype):
-        return (
-            otype is None or self.otype is None or otype.__name__ == self.otype.__name__
-        )
+        return otype is None or self.otype is None or otype.__name__ == self.otype.__name__
 
     def replaced_otype(self, otype):
         return general(self.grid, otype, self.cb)

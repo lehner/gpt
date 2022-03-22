@@ -117,17 +117,13 @@ class light_quark:
         )
 
         light_exact_inverter = g.algorithms.inverter.defect_correcting(
-            g.algorithms.inverter.mixed_precision(
-                light_innerH_inverter, g.single, g.double
-            ),
+            g.algorithms.inverter.mixed_precision(light_innerH_inverter, g.single, g.double),
             eps=1e-8,
             maxiter=10,
         )
 
         light_sloppy_inverter = g.algorithms.inverter.defect_correcting(
-            g.algorithms.inverter.mixed_precision(
-                light_innerL_inverter, g.single, g.double
-            ),
+            g.algorithms.inverter.mixed_precision(light_innerL_inverter, g.single, g.double),
             eps=1e-8,
             maxiter=2,
         )
@@ -152,9 +148,7 @@ def propagator_consistency_check(dn, n0):
 
 
 class job_perambulator(g.jobs.base):
-    def __init__(
-        self, conf, evec_dir, conf_file, basis_dir, t, i0, solver, dependencies
-    ):
+    def __init__(self, conf, evec_dir, conf_file, basis_dir, t, i0, solver, dependencies):
         self.conf = conf
         self.solver = solver
         self.conf_file = conf_file
@@ -173,10 +167,7 @@ class job_perambulator(g.jobs.base):
         if current_config is None:
             current_config = config(self.conf_file)
 
-        if (
-            current_light_quark is not None
-            and current_light_quark.evec_dir != self.evec_dir
-        ):
+        if current_light_quark is not None and current_light_quark.evec_dir != self.evec_dir:
             current_light_quark = None
         if current_light_quark is None:
             current_light_quark = light_quark(current_config, self.evec_dir)
@@ -263,9 +254,7 @@ class job_basis_layout(g.jobs.base):
         g.save(f"{root}/{self.name}/basis", vcj)
 
     def check(self, root):
-        return propagator_consistency_check(
-            f"{root}/{self.name}/basis", propagator_nodes_check
-        )
+        return propagator_consistency_check(f"{root}/{self.name}/basis", propagator_nodes_check)
 
 
 class job_contraction(g.jobs.base):
@@ -290,9 +279,7 @@ class job_contraction(g.jobs.base):
 
         for i0 in range(0, basis_size, sloppy_per_job):
             half_peramb = {}
-            for l in g.load(
-                f"{root}/{self.conf}/pm_{self.solver}_t{self.t}_i{i0}/propagators"
-            ):
+            for l in g.load(f"{root}/{self.conf}/pm_{self.solver}_t{self.t}_i{i0}/propagators"):
                 for x in l:
                     half_peramb[x] = l[x]
 
@@ -333,9 +320,7 @@ class job_contraction(g.jobs.base):
 
                         t3 = g.time()
                         if i % 50 == 0:
-                            g.message(
-                                spin_prime, spin, i, "Timing", t1 - t0, t2 - t1, t3 - t2
-                            )
+                            g.message(spin_prime, spin, i, "Timing", t1 - t0, t2 - t1, t3 - t2)
 
         output_correlator.close()
 
@@ -362,10 +347,7 @@ class job_mom(g.jobs.base):
 
         for m in self.mom:
             mom_str = "_".join([str(x) for x in m])
-            p = np.array(
-                [2.0 * np.pi / vcj[0].grid.gdimensions[i] * m[i] for i in range(3)]
-                + [0]
-            )
+            p = np.array([2.0 * np.pi / vcj[0].grid.gdimensions[i] * m[i] for i in range(3)] + [0])
 
             phase = g.complex(vcj[0].grid)
             phase[:] = 1
@@ -378,17 +360,13 @@ class job_mom(g.jobs.base):
                 t0 = g.time()
                 vc_n = g(phase * vcj[n])
                 t1 = g.time()
-                slc_nprime = [
-                    g(g.adj(vcj[nprime]) * vc_n) for nprime in range(basis_size)
-                ]
+                slc_nprime = [g(g.adj(vcj[nprime]) * vc_n) for nprime in range(basis_size)]
                 t2 = g.time()
                 slc = g.slice(slc_nprime, 3)
                 t3 = g.time()
 
                 for nprime in range(basis_size):
-                    output_correlator.write(
-                        f"output/mom/{mom_str}_n_{nprime}_{n}", slc[nprime]
-                    )
+                    output_correlator.write(f"output/mom/{mom_str}_n_{nprime}_{n}", slc[nprime])
 
                 t4 = g.time()
 
@@ -431,9 +409,7 @@ class job_local_insertion(g.jobs.base):
 
         for i0 in range(0, basis_size, sloppy_per_job):
             half_peramb_i = {}
-            for l in g.load(
-                f"{root}/{self.conf}/pm_{self.solver}_t{self.t}_i{i0}/propagators"
-            ):
+            for l in g.load(f"{root}/{self.conf}/pm_{self.solver}_t{self.t}_i{i0}/propagators"):
                 for x in l:
                     half_peramb_i[x] = l[x]
 
@@ -490,9 +466,7 @@ class job_compress_half_peramb(g.jobs.base):
         self.conf_file = conf_file
         self.t = t
         self.solver = solver
-        super().__init__(
-            f"{conf}/pm_compressed_half_peramb_{solver}_t{t}", dependencies
-        )
+        super().__init__(f"{conf}/pm_compressed_half_peramb_{solver}_t{t}", dependencies)
         self.weight = 0.2
 
     def perform(self, root):
@@ -526,9 +500,7 @@ class job_compress_half_peramb(g.jobs.base):
         half_peramb = {"sparse_domain": sdomain}
         for i0 in range(0, basis_size, sloppy_per_job):
 
-            for l in g.load(
-                f"{root}/{self.conf}/pm_{self.solver}_t{self.t}_i{i0}/propagators"
-            ):
+            for l in g.load(f"{root}/{self.conf}/pm_{self.solver}_t{self.t}_i{i0}/propagators"):
                 for x in l:
 
                     S = sdomain.lattice(l[x].otype)
@@ -556,9 +528,7 @@ class job_local_insertion_using_compressed(g.jobs.base):
         self.conf_file = conf_file
         self.t = t
         self.solver = solver
-        super().__init__(
-            f"{conf}/pm_local_insertion_using_compressed_{solver}_t{t}", dependencies
-        )
+        super().__init__(f"{conf}/pm_local_insertion_using_compressed_{solver}_t{t}", dependencies)
         self.weight = 1.5
 
     def perform(self, root):
@@ -581,11 +551,7 @@ class job_local_insertion_using_compressed(g.jobs.base):
         )
 
         sdomain = half_peramb["sparse_domain"]
-        scale = (
-            sdomain.grid.gsites
-            / sdomain.grid.Nprocessors
-            / len(sdomain.local_coordinates)
-        )
+        scale = sdomain.grid.gsites / sdomain.grid.Nprocessors / len(sdomain.local_coordinates)
         g.message("scale =", scale)
         gamma5_sign = [1.0 * scale, 1.0 * scale, -1.0 * scale, -1.0 * scale]
 
@@ -595,9 +561,7 @@ class job_local_insertion_using_compressed(g.jobs.base):
                 for spin in range(4):
                     f = g.vspincolor(sdomain.grid)
                     f[:] = 0
-                    sdomain.promote(
-                        f, half_peramb[f"t{self.t}s{spin}c{i}_{self.solver}"]
-                    )
+                    sdomain.promote(f, half_peramb[f"t{self.t}s{spin}c{i}_{self.solver}"])
                     half_peramb_i[f"t{self.t}s{spin}c{i}_{self.solver}"] = f
 
             for j0 in range(0, basis_size, sloppy_per_job):
@@ -609,17 +573,14 @@ class job_local_insertion_using_compressed(g.jobs.base):
                         for spin in range(4):
                             f = g.vspincolor(sdomain.grid)
                             f[:] = 0
-                            sdomain.promote(
-                                f, half_peramb[f"t{self.t}s{spin}c{j}_{self.solver}"]
-                            )
+                            sdomain.promote(f, half_peramb[f"t{self.t}s{spin}c{j}_{self.solver}"])
                             half_peramb_j[f"t{self.t}s{spin}c{j}_{self.solver}"] = f
 
                 for i in range(i0, i0 + sloppy_per_job):
                     for spin in range(4):
                         g.message(i, spin)
                         hp_i = g(
-                            sdomain.weight()
-                            * half_peramb_i[f"t{self.t}s{spin}c{i}_{self.solver}"]
+                            sdomain.weight() * half_peramb_i[f"t{self.t}s{spin}c{i}_{self.solver}"]
                         )
                         for mu in indices:
                             hp_i_gamma = g(g.gamma[5] * g.gamma[mu] * hp_i)
@@ -751,9 +712,7 @@ jobs_total = g.default.get_int("--gpt_jobs", 1) * 3
 jobs_acc = 0
 while jobs_acc < jobs_total:
     g.message("Weight left:", jobs_total - jobs_acc)
-    j = g.jobs.next(
-        root_output, jobs, max_weight=jobs_total - jobs_acc, stale_seconds=3600 * 7
-    )
+    j = g.jobs.next(root_output, jobs, max_weight=jobs_total - jobs_acc, stale_seconds=3600 * 7)
     if j is None:
         break
     jobs_acc += j.weight

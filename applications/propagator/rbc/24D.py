@@ -96,18 +96,14 @@ g.default.push_verbose("cg_convergence", True)
 g.default.push_verbose("defect_correcting", True)
 g.default.push_verbose("defect_correcting_convergence", True)
 
-strange_sloppy_solver = inv.preconditioned(
-    pc.eo2_kappa_ne(), inv.cg({"eps": 1e-7, "maxiter": 400})
-)
+strange_sloppy_solver = inv.preconditioned(pc.eo2_kappa_ne(), inv.cg({"eps": 1e-7, "maxiter": 400}))
 
 # Alternative: split-grid inverter
 # strange_sloppy_solver = inv.preconditioned(
 #     pc.eo2_kappa_ne(), inv.split(inv.cg({"eps": 1e-7, "maxiter": 400}), mpi_split=g.default.get_ivec("--mpi_split", None, 4))
 # )
 
-pauli_villars_solver = inv.preconditioned(
-    pc.eo2_ne(), inv.cg({"eps": 1e-7, "maxiter": 150})
-)
+pauli_villars_solver = inv.preconditioned(pc.eo2_ne(), inv.cg({"eps": 1e-7, "maxiter": 150}))
 
 strange_exact_solver = inv.defect_correcting(
     inv.mixed_precision(

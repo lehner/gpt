@@ -29,14 +29,9 @@ class zmobius_class_operator(mobius_class_operator):
         b = self.params["b"]
         c = self.params["c"]
         M5 = self.params["M5"]
-        bs = [
-            1.0 / 2.0 * (1.0 / omega_s * (b + c) + (b - c))
-            for omega_s in self.params["omega"]
-        ]
+        bs = [1.0 / 2.0 * (1.0 / omega_s * (b + c) + (b - c)) for omega_s in self.params["omega"]]
 
-        kappa = np.array(
-            [1.0 / (2.0 * (bsi * (4.0 - M5) + 1.0)) for bsi in bs], np.complex128
-        )
+        kappa = np.array([1.0 / (2.0 * (bsi * (4.0 - M5) + 1.0)) for bsi in bs], np.complex128)
         adj_kappa = np.conj(kappa)
         inv_kappa = 1.0 / kappa
         adj_inv_kappa = np.conj(inv_kappa)
@@ -72,6 +67,4 @@ def zmobius(U, params):
     params = copy.deepcopy(params)  # save current parameters
     params["Ls"] = len(params["omega"])
 
-    return zmobius_class_operator(
-        "zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3)
-    )
+    return zmobius_class_operator("zmobius", U, params, otype=gpt.ot_vector_spin_color(4, 3))
