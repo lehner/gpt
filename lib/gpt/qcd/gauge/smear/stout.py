@@ -19,32 +19,20 @@
 import numpy as np
 import gpt as g
 from gpt.params import params_convention
+from gpt.qcd.gauge.smear import base
 
 
-@params_convention(rho=None)
-def stout_general(U, params):
-    nd = len(U)
-    C = g.qcd.gauge.staple_sum(U, params)
-    U_prime = []
-    for mu in range(nd):
-        U_mu_prime = g(
-            g.matrix.exp(
-                g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(U[mu]))
-            )
-            * U[mu]
-        )
-        U_prime.append(U_mu_prime)
-    return U_prime
-
-
-@params_convention(rho=0.1, orthogonal_dimension=None)
-def stout(U, params):
-    nd = len(U)
+def get_rho(U, params):
     rho = params["rho"]
+    if isinstance(rho, np.ndarray):
+        return rho
+
+    nd = len(U)
     orthogonal_dimension = params["orthogonal_dimension"]
     if orthogonal_dimension is None:
         orthogonal_dimension = -1
-    rho_matrix = np.array(
+
+    return np.array(
         [
             [
                 0.0
@@ -58,4 +46,126 @@ def stout(U, params):
         ],
         dtype=np.float64,
     )
-    return stout_general(U, rho=rho_matrix)
+
+
+class stout(base):
+    @params_convention(rho=None, orthogonal_dimension=None)
+    def __init__(self, params):
+        self.params = params
+
+    # apply the smearing
+    def __call__(self, U):
+        nd = len(U)
+        C = g.qcd.gauge.staple_sum(U, rho=get_rho(U, self.params))
+        U_prime = []
+        for mu in range(nd):
+            U_mu_prime = g(
+                g.matrix.exp(
+                    g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(U[mu]))
+                )
+                * U[mu]
+            )
+            U_prime.append(U_mu_prime)
+
+        return U_prime
+
+    # apply the jacobian
+    def jacobian(self, U, U_prime, src):
+
+        nd = len(U)
+        rho = get_rho(U, self.params)
+        C = g.qcd.gauge.staple_sum(U, rho=rho)
+
+        assert len(src) == nd
+
+        dst = [g.lattice(s) for s in src]
+        exp_iQ = [None] * nd
+        Lambda = [None] * nd
+        Sigma_prime = [None] * nd
+
+        # (75) of https://arxiv.org/pdf/hep-lat/0311018.pdf
+        for mu in range(nd):
+
+            #
+            # Sigma == g.adj(U) * gradient * 1j
+            #
+            Sigma_prime[mu] = g(g.adj(U_prime[mu]) * src[mu] * 1j)
+            U_Sigma_prime_mu = g(U[mu] * Sigma_prime[mu])
+
+            iQ_mu = g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(U[mu]))
+            exp_iQ[mu], Lambda[mu] = self.cayley_hamilton_exponential_and_jacobian(
+                iQ_mu, U_Sigma_prime_mu
+            )
+
+            dst[mu] @= Sigma_prime[mu] * exp_iQ[mu] + g.adj(C[mu]) * 1j * Lambda[mu]
+
+        for mu in range(nd):
+            for nu in range(nd):
+
+                if mu == nu:
+                    continue
+
+                rho_mu_nu = rho[mu, nu]
+                rho_nu_mu = rho[nu, mu]
+
+                if abs(rho_nu_mu) != 0.0 or abs(rho_mu_nu) != 0.0:
+                    U_nu_x_plus_mu = g.cshift(U[nu], mu, 1)
+                    U_mu_x_plus_nu = g.cshift(U[mu], nu, 1)
+                    Lambda_nu_x_plus_mu = g.cshift(Lambda[nu], mu, 1)
+                    Lambda_mu_x_plus_nu = g.cshift(Lambda[mu], nu, 1)
+
+                    dst[mu] -= (
+                        1j
+                        * rho_nu_mu
+                        * U_nu_x_plus_mu
+                        * g.adj(U_mu_x_plus_nu)
+                        * g.adj(U[nu])
+                        * Lambda[nu]
+                    )
+
+                    dst[mu] += (
+                        1j
+                        * rho_nu_mu
+                        * Lambda_nu_x_plus_mu
+                        * U_nu_x_plus_mu
+                        * g.adj(U_mu_x_plus_nu)
+                        * g.adj(U[nu])
+                    )
+
+                    dst[mu] -= (
+                        1j
+                        * rho_mu_nu
+                        * U_nu_x_plus_mu
+                        * g.adj(U_mu_x_plus_nu)
+                        * Lambda_mu_x_plus_nu
+                        * g.adj(U[nu])
+                    )
+
+                    dst[mu] += g.cshift(
+                        1j
+                        * rho_nu_mu
+                        * g.adj(U_nu_x_plus_mu)
+                        * g.adj(U[mu])
+                        * Lambda[nu]
+                        * U[nu]
+                        - 1j
+                        * rho_mu_nu
+                        * g.adj(U_nu_x_plus_mu)
+                        * g.adj(U[mu])
+                        * Lambda[mu]
+                        * U[nu]
+                        - 1j
+                        * rho_nu_mu
+                        * g.adj(U_nu_x_plus_mu)
+                        * Lambda_nu_x_plus_mu
+                        * g.adj(U[mu])
+                        * U[nu],
+                        nu,
+                        -1,
+                    )
+
+        for mu in range(nd):
+            dst[mu] @= U[mu] * dst[mu] * (-1j)
+            dst[mu] @= g.qcd.gauge.project.traceless_hermitian(dst[mu])
+
+        return dst

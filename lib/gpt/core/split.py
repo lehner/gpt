@@ -183,3 +183,68 @@ def split(first, split_grid, cache=None, group_policy=split_group_policy.separat
         cache,
         group_policy,
     )
+
+
+class split_map:
+    def __init__(self, grid, functions, mpi_split):
+        self.cache = {}
+        self.grid = grid
+        self.grid_split = grid.split(mpi_split, grid.fdimensions)
+        self.functions = functions
+
+    def __call__(self, outputs, inputs=None):
+
+        call_one_argument = inputs is None
+        if inputs is None:
+            inputs = [[]] * len(outputs)
+
+        # for now this only works if all fields live on same grid!
+        assert all([o.grid is self.grid for ls in outputs + inputs for o in ls])
+        srank = self.grid_split.srank
+        sranks = self.grid_split.sranks
+        n_jobs = len(outputs)
+
+        cache = self.cache
+        grid_split = self.grid_split
+        functions = self.functions
+
+        assert len(inputs) == n_jobs
+
+        assert n_jobs % sranks == 0
+        n_jobs_per_rank = n_jobs // sranks
+        n_inputs_per_job = len(inputs[0])
+        n_outputs_per_job = len(outputs[0])
+
+        flat_inputs = [f for function_inputs in inputs for f in function_inputs]
+        flat_outputs = [f for function_outputs in outputs for f in function_outputs]
+
+        if len(flat_inputs) > 0:
+            inputs_split = split(flat_inputs, grid_split, cache)
+        else:
+            inputs_split = []
+        outputs_split = split(flat_outputs, grid_split, cache)
+
+        results = numpy.zeros(shape=(n_jobs,), dtype=numpy.complex128)
+
+        for i in range(n_jobs_per_rank):
+            this_job_index = srank * n_jobs_per_rank + i
+            this_job_inputs = [
+                inputs_split[i * n_inputs_per_job + j] for j in range(n_inputs_per_job)
+            ]
+            this_job_outputs = [
+                outputs_split[i * n_outputs_per_job + j]
+                for j in range(n_outputs_per_job)
+            ]
+
+            if call_one_argument:
+                r = functions[this_job_index](this_job_outputs)
+            else:
+                r = functions[this_job_index](this_job_outputs, this_job_inputs)
+            if gpt.util.is_num(r) and grid_split.processor == 0:
+                results[this_job_index] = r
+
+        unsplit(flat_outputs, outputs_split, cache)
+
+        self.grid.globalsum(results)
+
+        return results

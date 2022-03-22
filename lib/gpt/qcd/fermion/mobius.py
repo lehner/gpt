@@ -92,10 +92,18 @@ class mobius_class_operator(differentiable_fine_operator):
 
         self.ImportPhysicalFermionSource_projected_gradient = op
 
+        Ls = self.F_grid.fdimensions[0]
+        rev0_cache = [{} for i in range(Ls)]
+
+        def _rev0(dst, src):
+            star = [slice(None, None, None)] * (src.grid.nd - 1)
+            for i in range(Ls):
+                dst[tuple([i] + star), rev0_cache[i]] = src[
+                    tuple([Ls - 1 - i] + star), rev0_cache[i]
+                ]
+
         self.R = gpt.matrix_operator(
-            lambda dst, src: gpt.eval(
-                dst, gpt.merge(list(reversed(gpt.separate(gpt(src), 0))), 0)
-            ),
+            _rev0,
             vector_space=self.vector_space,
             accept_list=False,
         )

@@ -113,3 +113,36 @@ class differentiable_functional:
             if eps > epsilon_assert:
                 g.message(f"Error: cartesian defect: {eps} > {epsilon_assert}")
                 assert False
+
+    def transformed(self, t, n_field_transformed):
+        return transformed(self, t, n_field_transformed)
+
+
+class transformed(differentiable_functional):
+    def __init__(self, f, t, n_field_transformed):
+        self.f = f
+        self.t = t
+        self.n_field_transformed = n_field_transformed
+
+    def __call__(self, fields):
+        return self.f(
+            self.t(fields[0 : self.n_field_transformed])
+            + fields[self.n_field_transformed :]
+        )
+
+    def gradient(self, fields, dfields):
+
+        indices = [fields.index(d) for d in dfields]
+
+        fields_prime = (
+            self.t(fields[0 : self.n_field_transformed])
+            + fields[self.n_field_transformed :]
+        )
+        gradient_prime = self.f.gradient(
+            fields_prime, [fields_prime[i] for i in indices]
+        )
+
+        # for now, restrictive; later generalize below
+        assert fields[0 : self.n_field_transformed] == dfields
+
+        return self.t.jacobian(fields, fields_prime, gradient_prime)
