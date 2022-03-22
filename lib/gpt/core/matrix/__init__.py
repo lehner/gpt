@@ -16,5 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.smear.stout import stout
-from gpt.qcd.gauge.smear.wilson_flow import wilson_flow
+from gpt.core.matrix.exp import exp
+from gpt.core.matrix.log import log
+from gpt.core.matrix.inv import inv
+from gpt.core.matrix.det import det

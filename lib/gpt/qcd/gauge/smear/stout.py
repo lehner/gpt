@@ -19,7 +19,7 @@
 import numpy as np
 import gpt as g
 from gpt.params import params_convention
-from gpt.qcd.gauge.smear import base
+from gpt.core.group import diffeomorphism
 
 
 def get_rho(U, params):
@@ -36,9 +36,7 @@ def get_rho(U, params):
         [
             [
                 0.0
-                if (
-                    mu == orthogonal_dimension or nu == orthogonal_dimension or mu == nu
-                )
+                if (mu == orthogonal_dimension or nu == orthogonal_dimension or mu == nu)
                 else rho
                 for nu in range(nd)
             ]
@@ -48,7 +46,7 @@ def get_rho(U, params):
     )
 
 
-class stout(base):
+class stout(diffeomorphism):
     @params_convention(rho=None, orthogonal_dimension=None)
     def __init__(self, params):
         self.params = params
@@ -60,9 +58,7 @@ class stout(base):
         U_prime = []
         for mu in range(nd):
             U_mu_prime = g(
-                g.matrix.exp(
-                    g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(U[mu]))
-                )
+                g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(U[mu])))
                 * U[mu]
             )
             U_prime.append(U_mu_prime)
@@ -93,9 +89,7 @@ class stout(base):
             U_Sigma_prime_mu = g(U[mu] * Sigma_prime[mu])
 
             iQ_mu = g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(U[mu]))
-            exp_iQ[mu], Lambda[mu] = self.cayley_hamilton_exponential_and_jacobian(
-                iQ_mu, U_Sigma_prime_mu
-            )
+            exp_iQ[mu], Lambda[mu] = g.matrix.exp.function_and_gradient(iQ_mu, U_Sigma_prime_mu)
 
             dst[mu] @= Sigma_prime[mu] * exp_iQ[mu] + g.adj(C[mu]) * 1j * Lambda[mu]
 
@@ -142,18 +136,8 @@ class stout(base):
                     )
 
                     dst[mu] += g.cshift(
-                        1j
-                        * rho_nu_mu
-                        * g.adj(U_nu_x_plus_mu)
-                        * g.adj(U[mu])
-                        * Lambda[nu]
-                        * U[nu]
-                        - 1j
-                        * rho_mu_nu
-                        * g.adj(U_nu_x_plus_mu)
-                        * g.adj(U[mu])
-                        * Lambda[mu]
-                        * U[nu]
+                        1j * rho_nu_mu * g.adj(U_nu_x_plus_mu) * g.adj(U[mu]) * Lambda[nu] * U[nu]
+                        - 1j * rho_mu_nu * g.adj(U_nu_x_plus_mu) * g.adj(U[mu]) * Lambda[mu] * U[nu]
                         - 1j
                         * rho_nu_mu
                         * g.adj(U_nu_x_plus_mu)

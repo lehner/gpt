@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2020-22  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,5 +16,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.smear.stout import stout
-from gpt.qcd.gauge.smear.wilson_flow import wilson_flow
+import gpt, cgpt
+
+def det(A):
+    A = gpt.eval(A)
+    assert type(A) == gpt.lattice
+    r = gpt.complex(A.grid)
+    to_list = gpt.util.to_list
+    cgpt.determinant(r.v_obj[0], to_list(A))
+    return r

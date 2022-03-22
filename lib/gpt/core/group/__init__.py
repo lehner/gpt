@@ -24,3 +24,4 @@ from gpt.core.group.operation import (
     projected_convert,
 )
 from gpt.core.group.differentiable_functional import differentiable_functional
+from gpt.core.group.diffeomorphism import diffeomorphism
