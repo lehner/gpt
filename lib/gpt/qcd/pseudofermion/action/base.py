@@ -51,3 +51,22 @@ class action_base(differentiable_functional):
 
     def gradient(self, fields, dfields):
         raise NotImplementedError()
+
+    def transformed(self, t):
+        return transformed_action(self, t)
+
+
+class transformed_action(action_base):
+    def __init__(self, a, t):
+        self.a = a
+        self.at = differentiable_functional.transformed(a, t)
+        self.t = t
+
+    def __call__(self, fields):
+        return self.at(fields)
+
+    def gradient(self, fields, dfields):
+        return self.at.gradient(fields, dfields)
+
+    def draw(self, fields, *x):
+        return self.a.draw(self.t(fields), *x)
