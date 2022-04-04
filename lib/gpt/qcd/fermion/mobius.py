@@ -30,6 +30,20 @@ class mobius_class_operator(differentiable_fine_operator):
             params["mass_plus"] = params["mass"]
             params["mass_minus"] = params["mass"]
 
+        if "omega" not in params:
+            params["c_s"] = np.array([params["c"]] * params["Ls"], dtype=np.complex128)
+        else:
+            params["c_s"] = np.array(
+                [
+                    0.5 * (1.0 / omega * (params["b"] + params["c"]) - (params["b"] - params["c"]))
+                    for omega in params["omega"]
+                ],
+                dtype=np.complex128,
+            )
+        params["b_s"] = np.array(
+            [params["b"] - params["c"] + c for c in params["c_s"]], dtype=np.complex128
+        )
+
         differentiable_fine_operator.__init__(self, name, U, params, otype, daggered)
 
         def _J5q(dst4d, src5d):
@@ -48,26 +62,13 @@ class mobius_class_operator(differentiable_fine_operator):
 
         self.bulk_propagator_to_propagator = self.ExportPhysicalFermionSolution
 
-        # avoid reference loops
-        if "omega" not in self.params:
-            c_s = np.array([self.params["c"]] * self.params["Ls"], dtype=np.complex128)
-        else:
-            c_s = np.array(
-                [
-                    0.5
-                    * (
-                        1.0 / omega * (self.params["b"] + self.params["c"])
-                        - (self.params["b"] - self.params["c"])
-                    )
-                    for omega in self.params["omega"]
-                ],
-                dtype=np.complex128,
-            )
         Dhop_projected_gradient = self.Dhop_projected_gradient
         ImportUnphysicalFermion = self.ImportUnphysicalFermion
         if daggered:
             ImportUnphysicalFermion = ImportUnphysicalFermion.adj()
             Dhop_projected_gradient = Dhop_projected_gradient.adj()
+
+        c_s = params["c_s"]
 
         def _negative_surface_projection(src):
             src = gpt((-1.0) * ImportUnphysicalFermion * src)
@@ -126,6 +127,182 @@ class mobius_class_operator(differentiable_fine_operator):
             op = op.adj()
 
         return op
+
+    def conserved_current(
+        self, psi_left, src_left, psi_right, src_right, mu, sign, psi_left_flavor=None
+    ):
+        # sign = +1 (vector), -1 (axial vector)
+
+        mass_plus = self.params["mass_plus"]
+        mass_minus = self.params["mass_minus"]
+
+        psi_right_shift = self.covariant_shift()
+
+        assert not self.daggered
+        assert mass_plus == mass_minus
+        mass = mass_plus
+
+        psi_left_shift = (
+            psi_left_flavor.covariant_shift() if psi_left_flavor is not None else psi_right_shift
+        )
+
+        L_Q = gpt.separate(psi_left, 0)
+        R_Q = gpt.separate(psi_right, 0)
+        Ls = len(L_Q)
+
+        Pplus = (gpt.gamma["I"].tensor() + gpt.gamma[5].tensor()) * 0.5
+        Pminus = (gpt.gamma["I"].tensor() - gpt.gamma[5].tensor()) * 0.5
+
+        L_Q_4d = gpt(Pminus * L_Q[0] + Pplus * L_Q[Ls - 1])
+        R_Q_4d = gpt(Pminus * R_Q[0] + Pplus * R_Q[Ls - 1])
+
+        L_TopRowWithSource = gpt(src_left + (1.0 - mass) * L_Q_4d)
+        R_TopRowWithSource = gpt(src_right + (1.0 - mass) * R_Q_4d)
+
+        TermA = gpt(Pplus * L_Q_4d)
+        TermB = gpt(Pminus * L_Q_4d)
+        TermC = gpt(Pminus * L_TopRowWithSource)
+        TermD = gpt(Pplus * L_TopRowWithSource)
+
+        L_TmLsGq0 = gpt(TermD - TermA + TermB)
+        L_TmLsTmp = gpt(TermC - TermB + TermA)
+
+        TermA = gpt(Pplus * R_Q_4d)
+        TermB = gpt(Pminus * R_Q_4d)
+        TermC = gpt(Pminus * R_TopRowWithSource)
+        TermD = gpt(Pplus * R_TopRowWithSource)
+
+        R_TmLsGq0 = gpt(TermD - TermA + TermB)
+        R_TmLsTmp = gpt(TermC - TermB + TermA)
+
+        R_TmLsGq = [gpt(Pminus * R_Q[s] + Pplus * R_Q[(s - 1 + Ls) % Ls]) for s in range(Ls)]
+        L_TmLsGq = [gpt(Pminus * L_Q[s] + Pplus * L_Q[(s - 1 + Ls) % Ls]) for s in range(Ls)]
+
+        dst = gpt.lattice(src_left)
+        dst[:] = 0
+
+        for s in range(Ls):
+            sp = (s + 1) % Ls
+            sr = Ls - 1 - s
+            srp = (sr + 1) % Ls
+
+            b = self.params["b_s"][s]
+            c = self.params["c_s"][s]
+            bpc = -0.5 / (b + c)
+
+            if s == 0:
+                p5d = gpt(
+                    b * Pminus * L_TmLsGq[Ls - 1]
+                    + c * Pplus * L_TmLsGq[Ls - 1]
+                    + b * Pplus * L_TmLsTmp
+                    + c * Pminus * L_TmLsTmp
+                )
+                tmp = gpt(
+                    b * Pminus * R_TmLsGq0
+                    + c * Pplus * R_TmLsGq0
+                    + b * Pplus * R_TmLsGq[1]
+                    + c * Pminus * R_TmLsGq[1]
+                )
+            elif s == Ls - 1:
+                p5d = gpt(
+                    b * Pminus * L_TmLsGq0
+                    + c * Pplus * L_TmLsGq0
+                    + b * Pplus * L_TmLsGq[1]
+                    + c * Pminus * L_TmLsGq[1]
+                )
+                tmp = gpt(
+                    b * Pminus * R_TmLsGq[Ls - 1]
+                    + c * Pplus * R_TmLsGq[Ls - 1]
+                    + b * Pplus * R_TmLsTmp
+                    + c * Pminus * R_TmLsTmp
+                )
+            else:
+                p5d = gpt(
+                    b * Pminus * L_TmLsGq[sr]
+                    + c * Pplus * L_TmLsGq[sr]
+                    + b * Pplus * L_TmLsGq[srp]
+                    + c * Pminus * L_TmLsGq[srp]
+                )
+                tmp = gpt(
+                    b * Pminus * R_TmLsGq[s]
+                    + c * Pplus * R_TmLsGq[s]
+                    + b * Pplus * R_TmLsGq[sp]
+                    + c * Pminus * R_TmLsGq[sp]
+                )
+
+            us_p5d = gpt(psi_right_shift.forward[mu] * tmp)
+            gp5d = gpt(gpt.gamma[5] * p5d * gpt.gamma[5])
+            gus_p5d = gpt(gpt.gamma[mu] * us_p5d)
+
+            C = gpt(bpc * gpt.adj(gp5d) * (us_p5d - gus_p5d))
+
+            if s == 0:
+                p5d = gpt(
+                    b * Pminus * R_TmLsGq0
+                    + c * Pplus * R_TmLsGq0
+                    + b * Pplus * R_TmLsGq[1]
+                    + c * Pminus * R_TmLsGq[1]
+                )
+                tmp = gpt(
+                    b * Pminus * L_TmLsGq[Ls - 1]
+                    + c * Pplus * L_TmLsGq[Ls - 1]
+                    + b * Pplus * L_TmLsTmp
+                    + c * Pminus * L_TmLsTmp
+                )
+            elif s == Ls - 1:
+                p5d = gpt(
+                    b * Pminus * R_TmLsGq[Ls - 1]
+                    + c * Pplus * R_TmLsGq[Ls - 1]
+                    + b * Pplus * R_TmLsTmp
+                    + c * Pminus * R_TmLsTmp
+                )
+                tmp = gpt(
+                    b * Pminus * L_TmLsGq0
+                    + c * Pplus * L_TmLsGq0
+                    + b * Pplus * L_TmLsGq[1]
+                    + c * Pminus * L_TmLsGq[1]
+                )
+            else:
+                p5d = gpt(
+                    b * Pminus * R_TmLsGq[s]
+                    + c * Pplus * R_TmLsGq[s]
+                    + b * Pplus * R_TmLsGq[sp]
+                    + c * Pminus * R_TmLsGq[sp]
+                )
+                tmp = gpt(
+                    b * Pminus * L_TmLsGq[sr]
+                    + c * Pplus * L_TmLsGq[sr]
+                    + b * Pplus * L_TmLsGq[srp]
+                    + c * Pminus * L_TmLsGq[srp]
+                )
+
+            us_p5d = gpt(psi_left_shift.forward[mu] * tmp)
+
+            gp5d = gpt(gpt.gamma[mu] * p5d)
+            gus_p5d = gpt(gpt.gamma[5] * us_p5d * gpt.gamma[5])
+
+            C -= gpt(bpc * gpt.adj(gus_p5d) * (gp5d + p5d))
+
+            if s < Ls // 2:
+                dst += sign * C
+            else:
+                dst += C
+
+        return dst
+
+    def conserved_vector_current(
+        self, psi_left, src_left, psi_right, src_right, mu, psi_left_flavor=None
+    ):
+        return self.conserved_current(
+            psi_left, src_left, psi_right, src_right, mu, +1.0, psi_left_flavor
+        )
+
+    def conserved_axial_current(
+        self, psi_left, src_left, psi_right, src_right, mu, psi_left_flavor=None
+    ):
+        return self.conserved_current(
+            psi_left, src_left, psi_right, src_right, mu, -1.0, psi_left_flavor
+        )
 
 
 @gpt.params_convention(

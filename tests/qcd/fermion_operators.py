@@ -165,16 +165,15 @@ def divergence(f, current):
     resN = g.lattice(f)
     resN[:] = 0
 
-    b = g(g.gamma[5] * g.adj(f) * g.gamma[5])
     for mu in range(4):
-        c_mu = current(f, b, mu)
+        c_mu = current(f, f, mu)
         resN += c_mu - g.cshift(c_mu, mu, -1)
 
     return g.norm2(resN)
 
 
 def local_current(f, b, mu):
-    return g(g.gamma[mu] * f * b)
+    return g(g.gamma[mu] * g.gamma[5] * g.adj(f) * g.gamma[5] * b)
 
 
 div_J = divergence(dst, w.conserved_vector_current)
