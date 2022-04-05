@@ -163,11 +163,11 @@ def separate(lattices, dimension=-1, cache=None):
 
     # move data
     for i in range(N):
-        gcoor = cgpt.coordinates_inserted_dimension(separated_gcoor[i % 2], dimension, [i])
-
-        if cache is not None and i in cache:
-            plan = cache[i]
+        cache_key = (i,N,otype.__name__,cb.__name__,dimension,str(grid))
+        if cache is not None and cache_key in cache:
+            plan = cache[cache_key]
         else:
+            gcoor = cgpt.coordinates_inserted_dimension(separated_gcoor[i % 2], dimension, [i])
             plan = gpt.copy_plan(
                 separated_lattices[i], lattices[0], embed_in_communicator=lattices[0].grid
             )
@@ -175,7 +175,7 @@ def separate(lattices, dimension=-1, cache=None):
             plan.source += lattices[0].view[gcoor]
             plan = plan()
             if cache is not None:
-                cache[i] = plan
+                cache[cache_key] = plan
 
         for j in range(batches):
             plan(separated_lattices[j * N + i], lattices[j])
