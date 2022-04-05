@@ -46,8 +46,11 @@ class mobius_class_operator(differentiable_fine_operator):
 
         differentiable_fine_operator.__init__(self, name, U, params, otype, daggered)
 
+        separate_cache = {}
+        self.separate_cache = separate_cache
+
         def _J5q(dst4d, src5d):
-            src4d = gpt.separate(src5d, 0)
+            src4d = gpt.separate(src5d, 0, separate_cache)
             Ls = len(src4d)
             # create correlator at the midpoint of the 5-th direction
             p_plus = gpt.eval(src4d[Ls // 2 - 1] + gpt.gamma[5] * src4d[Ls // 2 - 1])
@@ -146,8 +149,8 @@ class mobius_class_operator(differentiable_fine_operator):
             psi_left_flavor.covariant_shift() if psi_left_flavor is not None else psi_right_shift
         )
 
-        L_Q = gpt.separate(psi_left, 0)
-        R_Q = gpt.separate(psi_right, 0)
+        L_Q = gpt.separate(psi_left, 0, self.separate_cache)
+        R_Q = gpt.separate(psi_right, 0, self.separate_cache)
         Ls = len(L_Q)
 
         Pplus = (gpt.gamma["I"].tensor() + gpt.gamma[5].tensor()) * 0.5

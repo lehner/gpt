@@ -105,7 +105,7 @@ def merge(lattices, dimension=-1, N=-1):
     return merged_lattices
 
 
-def separate(lattices, dimension=-1):
+def separate(lattices, dimension=-1, cache=None):
 
     # expect list below
     if type(lattices) != list:
@@ -165,12 +165,17 @@ def separate(lattices, dimension=-1):
     for i in range(N):
         gcoor = cgpt.coordinates_inserted_dimension(separated_gcoor[i % 2], dimension, [i])
 
-        plan = gpt.copy_plan(
-            separated_lattices[i], lattices[0], embed_in_communicator=lattices[0].grid
-        )
-        plan.destination += separated_lattices[i].view[separated_gcoor[i % 2]]
-        plan.source += lattices[0].view[gcoor]
-        plan = plan()
+        if cache is not None and i in cache:
+            plan = cache[i]
+        else:
+            plan = gpt.copy_plan(
+                separated_lattices[i], lattices[0], embed_in_communicator=lattices[0].grid
+            )
+            plan.destination += separated_lattices[i].view[separated_gcoor[i % 2]]
+            plan.source += lattices[0].view[gcoor]
+            plan = plan()
+            if cache is not None:
+                cache[i] = plan
 
         for j in range(batches):
             plan(separated_lattices[j * N + i], lattices[j])
@@ -201,7 +206,7 @@ def separate_indices(x, st, cache=default_merge_indices_cache):
     keys = []
     tidx = []
     dst = []
-    for i in range(ndim ** rank):
+    for i in range(ndim**rank):
         idx = i
         for j in range(rank):
             c = idx % ndim
@@ -253,7 +258,7 @@ def merge_indices(dst, src, st, cache=default_merge_indices_cache):
 
     tidx = []
     src_i = []
-    for i in range(ndim ** rank):
+    for i in range(ndim**rank):
         idx = i
         for j in range(rank):
             c = idx % ndim
@@ -265,7 +270,7 @@ def merge_indices(dst, src, st, cache=default_merge_indices_cache):
 
     if cache_key not in cache:
         plan = gpt.copy_plan(dst, src_i)
-        for i in range(ndim ** rank):
+        for i in range(ndim**rank):
             plan.destination += dst.view[(pos,) + tidx[i]]
             plan.source += src_i[i].view[:]
         cache[cache_key] = plan()
