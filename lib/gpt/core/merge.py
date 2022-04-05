@@ -163,7 +163,7 @@ def separate(lattices, dimension=-1, cache=None):
 
     # move data
     for i in range(N):
-        cache_key = (i,N,otype.__name__,cb.__name__,dimension,str(grid))
+        cache_key = (i, N, otype.__name__, cb.__name__, dimension, str(grid))
         if cache is not None and cache_key in cache:
             plan = cache[cache_key]
         else:
