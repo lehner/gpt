@@ -40,9 +40,7 @@ class neuberger_inverse_square_root:
         d = ((m + r) / (m - r)) ** 0.5
         e = numpy.pi / 2.0 / order
         A = numpy.sum([1.0 / numpy.cos(e * (i + 0.5)) ** 2.0 for i in range(order)])
-        a = numpy.array(
-            [-((numpy.tan(e / 2.0 * i) / c) ** 2.0) for i in range(1, 2 * order)]
-        )
+        a = numpy.array([-((numpy.tan(e / 2.0 * i) / c) ** 2.0) for i in range(1, 2 * order)])
 
         self.zeros = a[1::2]
         self.poles = a[0::2]

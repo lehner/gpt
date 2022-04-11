@@ -39,13 +39,9 @@ l_low_inverter = params["light_low_inverter"](U, l_sloppy_eigensystem)
 # propagators
 prop_l_low = l_sloppy.propagator(l_low_inverter)
 prop_l_sloppy = l_sloppy.propagator(l_sloppy_inverter)
-prop_l_approx = l_exact.propagator(
-    params["light_approx_inverter"](U, l_sloppy_inverter)
-)
+prop_l_approx = l_exact.propagator(params["light_approx_inverter"](U, l_sloppy_inverter))
 prop_l_exact = l_exact.propagator(params["light_exact_inverter"](U, l_sloppy_inverter))
-prop_l_corrected_low = l_exact.propagator(
-    params["light_corrected_low_inverter"](U, l_low_inverter)
-)
+prop_l_corrected_low = l_exact.propagator(params["light_corrected_low_inverter"](U, l_low_inverter))
 del l_sloppy_inverter
 
 # random number generator
@@ -89,9 +85,7 @@ def contract(pos, prop, tag, may_save_prop=True):
     for op_snk, op_src in correlators:
         G_snk = operators[op_snk]
         G_src = operators[op_src]
-        corr = g.slice(
-            g.trace(G_src * g.gamma[5] * g.adj(prop) * g.gamma[5] * G_snk * prop), 3
-        )
+        corr = g.slice(g.trace(G_src * g.gamma[5] * g.adj(prop) * g.gamma[5] * G_snk * prop), 3)
         corr = corr[t0:] + corr[:t0]
 
         corr_tag = "%s/snk%s-src%s" % (prop_tag, op_snk, op_src)
@@ -101,9 +95,7 @@ def contract(pos, prop, tag, may_save_prop=True):
 
 # calculate correlators for exact positions
 vol3d = (
-    l_exact.U_grid.fdimensions[0]
-    * l_exact.U_grid.fdimensions[1]
-    * l_exact.U_grid.fdimensions[2]
+    l_exact.U_grid.fdimensions[0] * l_exact.U_grid.fdimensions[1] * l_exact.U_grid.fdimensions[2]
 )
 # vol3d = 8
 # spacing = [48, 48, 48, 192]
@@ -188,8 +180,7 @@ test_right = a2a_right(g.block.promote(cevec[0], tmpf, basis))
 # create basis based on left vector
 t0 = g.time()
 a2a_basis = [
-    a2a_left(g.block.promote(cevec[i], tmpf, basis))
-    for i in range(params["a2a_coarse_nbasis"])
+    a2a_left(g.block.promote(cevec[i], tmpf, basis)) for i in range(params["a2a_coarse_nbasis"])
 ]
 t1 = g.time()
 for i in range(params["a2a_coarse_basis_ortho_steps"]):
@@ -236,9 +227,7 @@ g.message("Test right[0]", g.norm2(tmpf - test_right) / g.norm2(tmpf + test_righ
 
 # save vectors
 if params["a2a_save_vectors"]:
-    output.write(
-        {"a2a_basis": a2a_basis, "a2a_cleft": a2a_cleft, "a2a_cright": a2a_cright}
-    )
+    output.write({"a2a_basis": a2a_basis, "a2a_cleft": a2a_cleft, "a2a_cright": a2a_cright})
 
 # create coarse approximation matrix
 prop_a2a = (

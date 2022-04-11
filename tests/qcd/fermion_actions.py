@@ -66,9 +66,6 @@ rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0 ** 0.5, 3 ** 0.5, 
 rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm)
 
 acts = []
-acts += [(a.two_flavor(M, sol), "two_flavor", psi, [])]
-acts += [(a.two_flavor_evenodd(M, sol), "two_flavor_evenodd", psi, [])]
-acts += [(a.two_flavor_ratio([M, M2], sol), "two_flavor_ratio", psi, [])]
 acts += [
     (
         a.exact_one_flavor_ratio(mobius, 0.5, 1.0, sol_pc),
@@ -77,6 +74,9 @@ acts += [
         [rat_fnc],
     )
 ]
+acts += [(a.two_flavor(M, sol), "two_flavor", psi, [])]
+acts += [(a.two_flavor_evenodd(M, sol), "two_flavor_evenodd", psi, [])]
+acts += [(a.two_flavor_ratio([M, M2], sol), "two_flavor_ratio", psi, [])]
 acts += [
     (
         a.two_flavor_ratio_evenodd_schur([M, M2], sol),
@@ -85,6 +85,10 @@ acts += [
         [],
     )
 ]
+
+sm = g.qcd.gauge.smear.stout(rho=0.157)
+a_sm = acts[0][0].transformed(sm)
+a_sm.assert_gradient_error(rng, U + [acts[0][2]], U, 1e-3, 5e-7)
 
 for _a in acts:
     a, name, pf, dargs = _a

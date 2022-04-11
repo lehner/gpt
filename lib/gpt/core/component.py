@@ -24,9 +24,7 @@ import cgpt
 def _simple_matrix(operator, extra_params={}):
     def _mat(dst, src):
         for i in dst.otype.v_idx:
-            cgpt.unary(
-                dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params}
-            )
+            cgpt.unary(dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params})
 
     return matrix_operator(_mat)
 
@@ -40,9 +38,7 @@ def _simple_map(operator, extra_params={}):
             src = gpt.eval(first)
             dst = gpt.lattice(src)
         for i in dst.otype.v_idx:
-            cgpt.unary(
-                dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params}
-            )
+            cgpt.unary(dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params})
         return dst
 
     return _mat

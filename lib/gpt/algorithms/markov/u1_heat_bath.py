@@ -65,9 +65,7 @@ class u1_heat_bath:
 
         def h(x):
             return g.eval(
-                2.0
-                * inv(alpha)
-                * atanh(g.eval(beta_s * tan(g.eval((2.0 * x - one) * tmp))))
+                2.0 * inv(alpha) * atanh(g.eval(beta_s * tan(g.eval((2.0 * x - one) * tmp))))
             )
 
         def gg(x):
@@ -78,11 +76,7 @@ class u1_heat_bath:
                 one
                 - cos(x)
                 - a_inv
-                * log(
-                    g.eval(
-                        one + (cosh(g.eval(alpha * x)) - one) * inv(g.eval(one + beta))
-                    )
-                )
+                * log(g.eval(one + (cosh(g.eval(alpha * x)) - one) * inv(g.eval(one + beta))))
             )
 
         # temporaries
@@ -130,16 +124,12 @@ class u1_heat_bath:
             self.rng.uniform_real(x2, min=0.0, max=1.0)
             Unew = g.where(accepted, Unew, exp(g.eval(1j * h(x1))))
             newly_accepted = g.where(x2 < gg(x1), one, zero)
-            accepted = g.where(
-                mask, g.where(newly_accepted, newly_accepted, accepted), zero
-            )
+            accepted = g.where(mask, g.where(newly_accepted, newly_accepted, accepted), zero)
             num_accepted = round(g.norm2(g.where(accepted, one, zero)))
             nohit += num_sites - num_accepted
 
         if verbose:
-            g.message(
-                f"Acceptance ratio for U(1) heatbath update = {num_sites/(num_sites+nohit)}"
-            )
+            g.message(f"Acceptance ratio for U(1) heatbath update = {num_sites/(num_sites+nohit)}")
 
         # Unew was drawn with phase angle centered about zero
         # -> need to shift this by phase angle of staple

@@ -77,9 +77,7 @@ g.message("Grid time/s (with expressions): ", t4 - t3)
 
 # create point source
 src = g.mspincolor(grid)
-g.create.point(
-    src, [1, 0, 0, 0]
-)  # pick point 1 so that "S" in preconditioner contributes to test
+g.create.point(src, [1, 0, 0, 0])  # pick point 1 so that "S" in preconditioner contributes to test
 
 # build solver using g5m and cg
 inv = g.algorithms.inverter
@@ -167,16 +165,15 @@ def divergence(f, current):
     resN = g.lattice(f)
     resN[:] = 0
 
-    b = g(g.gamma[5] * g.adj(f) * g.gamma[5])
     for mu in range(4):
-        c_mu = current(f, b, mu)
+        c_mu = current(f, f, mu)
         resN += c_mu - g.cshift(c_mu, mu, -1)
 
     return g.norm2(resN)
 
 
 def local_current(f, b, mu):
-    return g(g.gamma[mu] * f * b)
+    return g(g.gamma[mu] * g.gamma[5] * g.adj(f) * g.gamma[5] * b)
 
 
 div_J = divergence(dst, w.conserved_vector_current)
@@ -225,9 +222,7 @@ quark0 = g.qcd.fermion.mobius(
     M5=1.8,
     boundary_phases=[np.exp(1j * theta), 1, 1, 1],
 )
-q0prop = quark0.propagator(
-    inv.preconditioned(pc.eo2_ne(), inv.cg(eps=1e-7, maxiter=1000))
-)
+q0prop = quark0.propagator(inv.preconditioned(pc.eo2_ne(), inv.cg(eps=1e-7, maxiter=1000)))
 src = g.vspincolor(U_unit[0].grid)
 src[:] = 0
 src[:, :, :, 0, 0, 0] = 1
@@ -242,9 +237,7 @@ assert eps < 1e-6
 
 
 # test instantiation of other actions
-rhq = g.qcd.fermion.rhq_columbia(
-    U, mass=4.0, cp=3.0, zeta=2.5, boundary_phases=[1, 1, 1, -1]
-)
+rhq = g.qcd.fermion.rhq_columbia(U, mass=4.0, cp=3.0, zeta=2.5, boundary_phases=[1, 1, 1, -1])
 
 
 #########################################################################
@@ -321,9 +314,7 @@ test_suite = {
         "matrices": {
             "": [(-2424.048033434305 + 10557.661684178218j)],
             ".Mdiag": [(2643.396577965267 + 6550.259431381319j)],
-            ".ImportPhysicalFermionSource": [
-                (4064.7879718582053 - 1357.0856808000196j)
-            ],
+            ".ImportPhysicalFermionSource": [(4064.7879718582053 - 1357.0856808000196j)],
         },
     },
     "mobius": {
@@ -445,10 +436,7 @@ def verify_single_versus_double_precision(rng, fermion_dp, fermion_sp):
             lhs_sp = g.convert(lhs_dp, g.single)
             # first test matrix
             ref = a_dp(rhs_dp)
-            eps = (
-                g.norm2(ref - g.convert(a_sp(rhs_sp), g.double)) ** 0.5
-                / g.norm2(ref) ** 0.5
-            )
+            eps = g.norm2(ref - g.convert(a_sp(rhs_sp), g.double)) ** 0.5 / g.norm2(ref) ** 0.5
             g.message(f"Verify single <> double for {atag}: {eps}")
             assert eps < eps_ref
             # then test adjoint matrix
@@ -470,8 +458,7 @@ def verify_single_versus_double_precision(rng, fermion_dp, fermion_sp):
                     assert eps < eps_ref
                     ref = a_dp.adj().inv()(lhs_dp)
                     eps = (
-                        g.norm2(ref - g.convert(a_sp.adj().inv()(lhs_sp), g.double))
-                        ** 0.5
+                        g.norm2(ref - g.convert(a_sp.adj().inv()(lhs_sp), g.double)) ** 0.5
                         / g.norm2(ref) ** 0.5
                     )
                     g.message(f"Verify single <> double for {atag}.adj().inv(): {eps}")
@@ -533,10 +520,7 @@ def verify_daggered(rng, fermion, fermion_daggered):
             assert eps < eps_ref
             if a.inv_mat is not None:
                 ref = a.inv()(lhs)
-                eps = (
-                    g.norm2(ref - a_daggered.adj().inv()(lhs)) ** 0.5
-                    / g.norm2(ref) ** 0.5
-                )
+                eps = g.norm2(ref - a_daggered.adj().inv()(lhs)) ** 0.5 / g.norm2(ref) ** 0.5
                 g.message(f"Verify operator <> daggered for {atag}.inv(): {eps}")
                 assert eps < eps_ref
                 ref = a.adj().inv()(lhs)
@@ -652,9 +636,7 @@ def verify_matrix_element(fermion, dst, src, tag):
 
                 def gradient(self, Uprime, dUprime):
                     assert dUprime == Uprime
-                    return g.qcd.gauge.project.traceless_hermitian(
-                        mat_pg(fermion.G5 * src, src)
-                    )
+                    return g.qcd.gauge.project.traceless_hermitian(mat_pg(fermion.G5 * src, src))
 
             dfv = df()
             dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
@@ -665,9 +647,7 @@ def verify_matrix_element(fermion, dst, src, tag):
                 def __call__(self, Uprime):
                     return g.inner_product(
                         src,
-                        get_matrix(fermion.updated(Uprime), tag).adj()
-                        * fermion.G5
-                        * src,
+                        get_matrix(fermion.updated(Uprime), tag).adj() * fermion.G5 * src,
                     ).real
 
                 def gradient(self, Uprime, dUprime):
@@ -700,12 +680,8 @@ def verify_matrix_element(fermion, dst, src, tag):
                 def gradient(self, Uprime, dUprime):
                     assert dUprime == Uprime
                     R = g.group.cartesian(Uprime)
-                    for r, x in zip(
-                        R + R, mat_pg(dst_p, src_p) + mat_pg.adj()(src_p, dst_p)
-                    ):
-                        g.set_checkerboard(
-                            r, g.qcd.gauge.project.traceless_hermitian(x)
-                        )
+                    for r, x in zip(R + R, mat_pg(dst_p, src_p) + mat_pg.adj()(src_p, dst_p)):
+                        g.set_checkerboard(r, g.qcd.gauge.project.traceless_hermitian(x))
                     return R
 
         dfv = df()
@@ -773,9 +749,7 @@ for name in test_suite:
             g.message(f"Matrix {matrix} fingerprint: {finger_print}")
         else:
             fp = np.array(finger_print)
-            eps = np.linalg.norm(
-                fp - np.array(test["matrices"][matrix])
-            ) / np.linalg.norm(fp)
+            eps = np.linalg.norm(fp - np.array(test["matrices"][matrix])) / np.linalg.norm(fp)
             g.message(f"Test {matrix} fingerprint: {eps}")
             assert eps < grid.precision.eps * finger_print_tolerance
 

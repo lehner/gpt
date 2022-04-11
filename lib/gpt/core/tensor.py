@@ -55,9 +55,7 @@ class tensor:
     def adj(self):
         if not self.transposable():
             return gpt.adj(gpt.expr(self))
-        return tensor(
-            np.transpose(self.array.conj(), self.otype.transposed), self.otype
-        )
+        return tensor(np.transpose(self.array.conj(), self.otype.transposed), self.otype)
 
     def trace(self, t):
         res = self
@@ -65,16 +63,12 @@ class tensor:
             st = res.otype.spintrace
             assert st is not None and len(st) == 3  # do not yet support tracing vectors
             if st[0] is not None:
-                res = tensor(
-                    np.trace(res.array, offset=0, axis1=st[0], axis2=st[1]), st[2]()
-                )
+                res = tensor(np.trace(res.array, offset=0, axis1=st[0], axis2=st[1]), st[2]())
         if t & gpt.expr_unary.BIT_COLORTRACE:
             ct = res.otype.colortrace
             assert ct is not None and len(ct) == 3
             if ct[0] is not None:
-                res = tensor(
-                    np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]()
-                )
+                res = tensor(np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]())
 
         if res.otype == gpt.ot_singlet:
             res = complex(res.array)

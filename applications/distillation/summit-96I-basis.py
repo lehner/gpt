@@ -14,9 +14,7 @@ config = glob.glob(
 )
 assert len(config) == 1
 config = config[0]
-destination = (
-    f"/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/distillation/96I/{cnr}_basis"
-)
+destination = f"/gpfs/alpine/phy157/proj-shared/phy157dwf/lehner/distillation/96I/{cnr}_basis"
 
 t_smear_thick = 1
 rho_smear = 0.1

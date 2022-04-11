@@ -99,8 +99,7 @@ Blocking Benchmark with
         #
         # Flops (count flops and bytes of nvec sequential operations as reference)
         flops_per_fine_site = (
-            fine_complex * nbasis * flops_per_cmul
-            + fine_complex * (nbasis - 1) * flops_per_cadd
+            fine_complex * nbasis * flops_per_cmul + fine_complex * (nbasis - 1) * flops_per_cadd
         )
         flops = flops_per_fine_site * fine[0].grid.gsites * N * nvec
         nbytes = (

@@ -190,9 +190,9 @@ class ot_matrix_complex_additive_group(ot_matrix_singlet):
             nhalf = len(gen) // 2
             l_real = gpt.component.real(l)
             l_imag = gpt.component.imag(l)
-            return [
-                gpt.eval(gpt.trace(gpt.adj(l_real) * Ta)) for Ta in gen[0:nhalf]
-            ] + [gpt.eval(gpt.trace(gpt.adj(l_imag) * Ta)) for Ta in gen[0:nhalf]]
+            return [gpt.eval(gpt.trace(gpt.adj(l_real) * Ta)) for Ta in gen[0:nhalf]] + [
+                gpt.eval(gpt.trace(gpt.adj(l_imag) * Ta)) for Ta in gen[0:nhalf]
+            ]
         else:
             l[:] = 0
             for ca, Ta in zip(c, gen):

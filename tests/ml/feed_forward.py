@@ -38,9 +38,7 @@ ls0 = g.algorithms.optimize.line_search_none
 #     maxiter=40, eps=1e-7, step=1e-1, line_search=ls2, beta=pr
 # )
 
-opt = g.algorithms.optimize.gradient_descent(
-    maxiter=40, eps=1e-7, step=0.5, line_search=ls0
-)
+opt = g.algorithms.optimize.gradient_descent(maxiter=40, eps=1e-7, step=0.5, line_search=ls0)
 
 # Train network
 opt(c)(W, W)

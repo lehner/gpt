@@ -30,16 +30,12 @@ matrices = {
         [[0, 0, 0, 1j], [0, 0, 1j, 0], [0, -1j, 0, 0], [-1j, 0, 0, 0]],
         dtype=np.complex128,
     ),
-    1: np.array(
-        [[0, 0, 0, -1], [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]], dtype=np.complex128
-    ),
+    1: np.array([[0, 0, 0, -1], [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]], dtype=np.complex128),
     2: np.array(
         [[0, 0, 1j, 0], [0, 0, 0, -1j], [-1j, 0, 0, 0], [0, 1j, 0, 0]],
         dtype=np.complex128,
     ),
-    3: np.array(
-        [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.complex128
-    ),
+    3: np.array([[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.complex128),
     4: np.diagflat([1, 1, -1, -1]).astype(dtype=np.complex128),
     11: np.diagflat([1, 1, 1, 1]).astype(dtype=np.complex128),
 }
@@ -49,9 +45,7 @@ def fill_sigmas():
     idx = 5
     for mu in range(4):
         for nu in range(mu + 1, 4):
-            matrices[idx] = (
-                1 / 2 * (matrices[mu] @ matrices[nu] - matrices[nu] @ matrices[mu])
-            )
+            matrices[idx] = 1 / 2 * (matrices[mu] @ matrices[nu] - matrices[nu] @ matrices[mu])
             idx = idx + 1
 
 
@@ -66,9 +60,7 @@ class gamma_base(factor):
     def __mul__(self, other):
         if type(other) == gpt.tensor:
             return gpt.tensor(
-                cgpt.gamma_tensor_mul(
-                    other.array, other.otype.v_otype[0], self.gamma, 1
-                ),
+                cgpt.gamma_tensor_mul(other.array, other.otype.v_otype[0], self.gamma, 1),
                 other.otype,
             )
         else:
@@ -77,9 +69,7 @@ class gamma_base(factor):
     def __rmul__(self, other):
         if type(other) == gpt.tensor:
             return gpt.tensor(
-                cgpt.gamma_tensor_mul(
-                    other.array, other.otype.v_otype[0], self.gamma, 0
-                ),
+                cgpt.gamma_tensor_mul(other.array, other.otype.v_otype[0], self.gamma, 0),
                 other.otype,
             )
         else:

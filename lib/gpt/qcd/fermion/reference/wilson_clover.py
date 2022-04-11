@@ -54,9 +54,7 @@ class wilson_clover(shift_eo, matrix_operator):
 
         self.vector_space_F = g.vector_space.explicit_grid_otype(self.F_grid, otype)
         self.vector_space_U = g.vector_space.explicit_grid_otype(self.U_grid, otype)
-        self.vector_space_F_eo = g.vector_space.explicit_grid_otype(
-            self.F_grid_eo, otype
-        )
+        self.vector_space_F_eo = g.vector_space.explicit_grid_otype(self.F_grid_eo, otype)
 
         self.src_e = g.vspincolor(grid_eo)
         self.src_o = g.vspincolor(grid_eo)
@@ -103,11 +101,7 @@ class wilson_clover(shift_eo, matrix_operator):
                     else:
                         cp = self.csw_r
                     self.clover += (
-                        -0.5
-                        * cp
-                        * g.gamma[mu, nu]
-                        * I
-                        * g.qcd.gauge.field_strength(U, mu, nu)
+                        -0.5 * cp * g.gamma[mu, nu] * I * g.qcd.gauge.field_strength(U, mu, nu)
                     )
 
             if self.open_bc:

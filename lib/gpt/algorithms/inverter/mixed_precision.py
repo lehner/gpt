@@ -29,6 +29,4 @@ class mixed_precision(base):
 
     def __call__(self, mat):
         matrix = mat.converted(self.inner_precision)
-        return self.inverter(matrix).converted(
-            self.outer_precision, self.timed_function
-        )
+        return self.inverter(matrix).converted(self.outer_precision, self.timed_function)

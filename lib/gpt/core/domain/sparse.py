@@ -41,9 +41,7 @@ class sparse_kernel:
         l = grid.globalsum(l)
         self.L = [int(np.max(l)) * self.grid.mpi[0]] + self.grid.mpi[1:]
 
-        cb_simd_only_first_dimension = gpt.general(
-            1, [0] * grid.nd, [1] + [0] * (grid.nd - 1)
-        )
+        cb_simd_only_first_dimension = gpt.general(1, [0] * grid.nd, [1] + [0] * (grid.nd - 1))
 
         # create grid as subcommunicator so that sparse domains play nice with split grid
         self.embedding_grid = gpt.grid(
@@ -55,9 +53,7 @@ class sparse_kernel:
             grid,
         )
 
-        self.embedded_coordinates = np.ascontiguousarray(
-            gpt.coordinates(self.embedding_grid)[0:n]
-        )
+        self.embedded_coordinates = np.ascontiguousarray(gpt.coordinates(self.embedding_grid)[0:n])
 
         self.embedded_cache = {}
         self.local_cache = {}
@@ -100,9 +96,7 @@ class sparse_kernel:
         if self.weight_cache is not None:
             return self.weight_cache
 
-        unique_coordinates, count = np.unique(
-            self.local_coordinates, axis=0, return_counts=True
-        )
+        unique_coordinates, count = np.unique(self.local_coordinates, axis=0, return_counts=True)
         unique_coordinates = unique_coordinates.view(type(self.local_coordinates))
         count = count.astype(self.grid.precision.complex_dtype)
 

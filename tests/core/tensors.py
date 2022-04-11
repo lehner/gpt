@@ -68,9 +68,7 @@ assert eps2 < 1e-13
 
 # demonstrate matrix * vector
 ntest = 30
-mc_comp = g.mcomplex(
-    [[rng.cnormal() for i in range(ntest)] for j in range(ntest)], ntest
-)
+mc_comp = g.mcomplex([[rng.cnormal() for i in range(ntest)] for j in range(ntest)], ntest)
 mc = g.mcomplex(grid, ntest)
 mc[:] = mc_comp
 vc_comp = g.vcomplex([rng.cnormal() for i in range(ntest)], ntest)
@@ -146,9 +144,7 @@ cr = rng.normal(g.vreal(grid, n))
 cm @= cl * g.adj(cr)
 for i in range(n):
     for j in range(n):
-        eps = np.linalg.norm(
-            cm[0, 0, 0, 0, i, j] - cl[0, 0, 0, 0, i] * cr[0, 0, 0, 0, j].conj()
-        )
+        eps = np.linalg.norm(cm[0, 0, 0, 0, i, j] - cl[0, 0, 0, 0, i] * cr[0, 0, 0, 0, j].conj())
         assert eps < 1e-13
 
 # once inner product is implemented, test:
@@ -307,9 +303,7 @@ def test_multiply(a, b):
     # traces
     for tr in [g.trace, g.color_trace, g.spin_trace]:
         mul_lat = g(tr(lam1 * a * b + lam2 * c * d))[0, 0, 0, 0]
-        mul_np = tr(
-            lam1 * a[0, 0, 0, 0] * b[0, 0, 0, 0] + lam2 * c[0, 0, 0, 0] * d[0, 0, 0, 0]
-        )
+        mul_np = tr(lam1 * a[0, 0, 0, 0] * b[0, 0, 0, 0] + lam2 * c[0, 0, 0, 0] * d[0, 0, 0, 0])
         if type(mul_lat) == complex:
             eps2 = abs(mul_lat - mul_np) ** 2.0 / abs(mul_lat) ** 2.0
         else:
@@ -360,9 +354,7 @@ for a_type in [
                 mul_lat = g(g.adj(a) * g.adj(b))[0, 0, 0, 0]
                 mul_np = g.adj(a[0, 0, 0, 0]) * g.adj(b[0, 0, 0, 0])
                 eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
-                g.message(
-                    f"Test adj({a_type.__name__}) * adj({b_type.__name__}): {eps2}"
-                )
+                g.message(f"Test adj({a_type.__name__}) * adj({b_type.__name__}): {eps2}")
                 assert eps2 < 1e-11
 
     # rmtab
@@ -388,9 +380,7 @@ def test_linear_combinations(a, b):
             lat = g(unary(a + b))[0, 0, 0, 0]
             np = unary(a[0, 0, 0, 0] + b[0, 0, 0, 0])
             eps2 = g.norm2(lat - np) / g.norm2(lat)
-            g.message(
-                f"Test {unary.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}"
-            )
+            g.message(f"Test {unary.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}")
             assert eps2 < 1e-11
 
     if a_type.spintrace[0] is not None or a_type.colortrace[0] is not None:
@@ -401,9 +391,7 @@ def test_linear_combinations(a, b):
                 eps2 = abs(lat - np) ** 2.0 / abs(lat) ** 2.0
             else:
                 eps2 = g.norm2(lat - np) / g.norm2(lat)
-            g.message(
-                f"Test {tr.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}"
-            )
+            g.message(f"Test {tr.__name__}({a_type.__name__} + {b_type.__name__}): {eps2}")
             assert eps2 < 1e-11
 
 
@@ -428,7 +416,5 @@ M = np.random.rand(5, 5)
 d1 = np.linalg.det(M)
 d2 = 0
 for idx, sign in g.epsilon(5):
-    d2 += (
-        M[0, idx[0]] * M[1, idx[1]] * M[2, idx[2]] * M[3, idx[3]] * M[4, idx[4]] * sign
-    )
+    d2 += M[0, idx[0]] * M[1, idx[1]] * M[2, idx[2]] * M[3, idx[3]] * M[4, idx[4]] * sign
 assert abs(d1 - d2) < 1e-13

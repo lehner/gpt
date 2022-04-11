@@ -19,21 +19,12 @@
 import gpt as g
 
 
-def diquark(Q1, Q2):
-    eps = g.epsilon(Q1.otype.shape[2])
-    R = g.lattice(Q1)
+class diffeomorphism:
+    def __init__(self):
+        return
 
-    # D_{a2,a1} = epsilon_{a1,b1,c1}*epsilon_{a2,b2,c2}*spin_transpose(Q1_{b1,b2})*Q2_{c1,c2}
-    Q1 = g.separate_color(Q1)
-    Q2 = g.separate_color(Q2)
+    def __call__(self, fields):
+        raise NotImplementedError()
 
-    D = {x: g.lattice(Q1[x]) for x in Q1}
-    for d in D:
-        D[d][:] = 0
-
-    for i1, sign1 in eps:
-        for i2, sign2 in eps:
-            D[i2[0], i1[0]] += sign1 * sign2 * Q1[i1[1], i2[1]] * g.transpose(Q2[i1[2], i2[2]])
-
-    g.merge_color(R, D)
-    return R
+    def jacobian(self, fields, fields_prime, dfields):
+        raise NotImplementedError()

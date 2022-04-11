@@ -23,9 +23,7 @@ for grid, prec, ref_plaquette, scale in [
     U = g.qcd.gauge.random(grid, rng, scale=scale)
     comp_plaquette = g.qcd.gauge.plaquette(U)
     eps2 = abs(comp_plaquette - ref_plaquette) ** 2.0
-    g.message(
-        f"Computed plaquette {comp_plaquette} versus reference {ref_plaquette}: {eps2}"
-    )
+    g.message(f"Computed plaquette {comp_plaquette} versus reference {ref_plaquette}: {eps2}")
     assert eps2 < prec
     for i in range(4):
         test = g.norm2(g.adj(U[i]) * U[i] - g.qcd.gauge.unit(grid)[0]) / g.norm2(U[i])

@@ -125,6 +125,7 @@ cg_kappa = inv.cg({"eps": 1e-5, "maxiter": 1000})
 cg_e = inv.cg({"eps": 1e-8, "maxiter": 1000})
 
 slv_5d = inv.preconditioned(pc.eo2_ne(), cg)
+
 # kappa: RBC/UKQCD solver for zmobius strange quark
 # use cg_kappa instead of identical cg to keep
 # track of iteration counts separately
@@ -186,12 +187,55 @@ assert len(cg.history) > len(cg_kappa.history)
 p = qm.J5q(dst_qm_bulk)
 J5q = g.slice(g.trace(p * g.adj(p)), 3)
 
-g.message("J5q:")
-g.message("real\t\t\timag")
-for i in range(len(J5q)):
-    g.message(f"{J5q[i].real}\t{J5q[i].imag}")
+J5q_ref = [
+    1.3814802514389157e-05,
+    8.530755621904973e-06,
+    7.805140739947092e-06,
+    5.135065748618217e-06,
+    5.082366897113388e-06,
+    4.842216185352299e-06,
+    7.341488071688218e-06,
+    7.706037649768405e-06,
+]
 
-g.message("")
+eps = np.linalg.norm(np.array(J5q) - np.array(J5q_ref))
+g.message(f"J5q test: {eps}")
+assert eps < 1e-5
+
+# compute conserved current divergence
+div = g.mspin(grid)
+div[:] = 0
+
+for mu in range(4):
+    tmp = qm.conserved_vector_current(dst_qm_bulk, src, dst_qm_bulk, src, mu)
+    tmp -= g.cshift(tmp, mu, -1)
+    div += g.color_trace(tmp)
+
+div = g(g.trace(g.adj(div) * div))
+
+g.message("div(conserved_current) contact term", div[0, 1, 0, 0].real)
+
+div[0, 1, 0, 0] = 0
+
+eps = g.sum(div).real
+g.message(f"div(conserved_current) = {eps} without contact term")
+assert eps < 1e-11
+
+# compute partially conserved axial current divergence (zero momentum projected)
+AP = g.slice(
+    g.trace(qm.conserved_axial_current(dst_qm_bulk, src, dst_qm_bulk, src, 3) * g.gamma[5]), 3
+)
+PP = g.slice(g.trace(dst_qm * g.adj(dst_qm)), 3)
+
+Nt = grid.gdimensions[3]
+for t in range(Nt):
+    dAP_t = AP[t] - AP[(t - 1 + Nt) % Nt]
+    mass_term = (PP[t] * 0.08 + J5q[t]) * 2.0
+    eps = abs(dAP_t - mass_term) / abs(dAP_t + mass_term)
+    if t != 0:
+        g.message(f"axial vector current divergence residuum at t={t}: {eps}")
+        assert eps < 1e-5
+
 # two-point
 # correlator_ref= g.slice(g.trace(dst_qm_e * g.adj(dst_qm_e)), 3)
 correlator_ref = [
@@ -226,12 +270,8 @@ assert eps_qz < 5e-4
 # test G(m1) - G(m2) = (m2 - m1) * G(m1) * G(m2)
 m1 = 0.11
 m2 = 0.24
-qm1 = g.qcd.fermion.mobius(
-    U, mass=m1, M5=1.8, b=1.5, c=0.5, Ls=6, boundary_phases=[1, 1, 1, -1]
-)
-qm2 = g.qcd.fermion.mobius(
-    U, mass=m2, M5=1.8, b=1.5, c=0.5, Ls=6, boundary_phases=[1, 1, 1, -1]
-)
+qm1 = g.qcd.fermion.mobius(U, mass=m1, M5=1.8, b=1.5, c=0.5, Ls=6, boundary_phases=[1, 1, 1, -1])
+qm2 = g.qcd.fermion.mobius(U, mass=m2, M5=1.8, b=1.5, c=0.5, Ls=6, boundary_phases=[1, 1, 1, -1])
 G1 = qm1.propagator(slv_5d_e)
 G2 = qm2.propagator(slv_5d_e)
 

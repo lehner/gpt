@@ -75,9 +75,7 @@ for i in range(1, 11):
     h = numpy.array(h)
     timer()
     g.message(f"{i*10} % of thermalization completed")
-    g.message(
-        f'Average time per trajectory = {timer.dt["trajectory"]/ntherm*10:g} secs'
-    )
+    g.message(f'Average time per trajectory = {timer.dt["trajectory"]/ntherm*10:g} secs')
     g.message(
         f"Plaquette = {g.qcd.gauge.plaquette(U)}, Acceptance = {numpy.mean(h[:,0]):.2f}, |dH| = {numpy.mean(numpy.abs(h[:,1])):.4e}"
     )

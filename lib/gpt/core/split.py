@@ -118,9 +118,7 @@ def unsplit(first, second, cache=None, group_policy=split_group_policy.separate)
     # Save memory by performing each group separately
     if N != 1 and group_policy == split_group_policy.separate:
         for i in range(N):
-            unsplit(
-                [first[q * N + i] for q in range(Q)], [second[i]], cache, group_policy
-            )
+            unsplit([first[q * N + i] for q in range(Q)], [second[i]], cache, group_policy)
         return
 
     split_grid = second[0].grid
@@ -163,9 +161,7 @@ def split_by_rank(first, group_policy=split_group_policy.separate):
     split_grid = grid.split(mpi_split, fdimensions)
     gcoor = gpt.coordinates(lattices[0])
     lcoor = gpt.coordinates((split_grid, lattices[0].checkerboard()))
-    return split_lattices(
-        lattices, lcoor, gcoor, split_grid, len(lattices), group_policy
-    )
+    return split_lattices(lattices, lcoor, gcoor, split_grid, len(lattices), group_policy)
 
 
 def split(first, split_grid, cache=None, group_policy=split_group_policy.separate):
@@ -183,3 +179,153 @@ def split(first, split_grid, cache=None, group_policy=split_group_policy.separat
         cache,
         group_policy,
     )
+
+
+# class split_map:
+#     def __init__(self, mpi_split):
+#         self.mpi_split = mpi_split
+#         self.split_grids = {}
+#         self.verbose = gpt.default.is_verbose("split_map")
+
+#     def __call__(self, functions, outputs, inputs = None, groups = None):
+
+#         n_functions = len(functions)
+#         n_outputs = len(outputs)
+
+#         assert n_functions == n_outputs
+
+#         if groups is None:
+#             groups = [[i] for i in range(n_functions)]
+
+#         one_argument_call = inputs is None
+#         if inputs is None:
+#             inputs = [[] for i in range(n_outputs)]
+
+#         n_inputs = len(inputs)
+
+#         assert n_inputs == n_outputs
+
+#         n_groups = len(groups)
+
+#         if self.verbose:
+#             gpt.message(f"Split map for {n_functions} functions in {n_groups} groups")
+
+#         all_grids = [x.grid for y in outputs + inputs for x in y]
+#         grids = []
+#         for gr in all_grids:
+#             if gr not in grids:
+#                 grids.append(gr)
+
+#         srank = None
+#         sranks = None
+#         log_node = True
+
+#         # split grids
+#         for gr in grids:
+#             if gr not in self.split_grids:
+#                 mpi_split = [1]*(gr.nd - len(self.mpi_split)) + self.mpi_split
+#                 self.split_grids[gr] = (gr.split(mpi_split, gr.fdimensions),{})
+
+#             sgr = self.split_grids[gr][0]
+#             if srank is not None:
+#                 assert sgr.srank == srank and sgr.sranks == sranks
+#             else:
+#                 srank, sranks = sgr.srank, sgr.sranks
+#                 log_node = sgr.processor == 0
+
+#         # my jobs
+#         srank_jobs = [[j for gr in groups[s::sranks] for j in gr] for s in range(sranks)]
+
+#         if self.verbose:
+#             gpt.message(f"S[{srank}/{sranks}] : jobs {srank_jobs[srank]}", force_output = log_node)
+
+#         # go through each srank and make sure they have the fields they need
+#         t = gpt.timer("split map call")
+
+#         t("field layout")
+#         this_srank_fields = {}
+#         for i in range(sranks):
+#             for j in srank_jobs[i]:
+#                 for f in inputs[j] + outputs[j]:
+#                     sgrid, cache = self.split_grids[f.grid]
+
+#                     # create a target
+#                     target = gpt.lattice(sgrid, f.otype)
+#                     target.checkerboard(f.checkerboard())
+
+#                     ckey = target.checkerboard()
+#                     if ckey not in cache:
+#                         cache[ckey] = gpt.coordinates(target)
+
+#                     # fill it
+#                     cc = cache[ckey] if i == srank else cache[ckey][0:0]
+
+#                     dkey = f"{ckey.__name__}_{f.otype.__name__}_{i}"
+#                     if dkey not in cache:
+#                         cache[dkey] = {}
+
+#                     target[cc, cache[dkey]] = f[cc, cache[dkey]]
+
+#                     # keep it
+#                     if i == srank:
+#                         if j not in this_srank_fields:
+#                             this_srank_fields[j] = []
+#                         this_srank_fields[j].append(target)
+
+#         t("wait")
+
+#         all_grids[0].barrier()
+
+#         t("compute")
+
+#         # now perform my jobs
+#         results = numpy.zeros(shape=(n_functions,), dtype=numpy.complex128)
+#         for j in srank_jobs[srank]:
+
+#             check = list(set([(x.grid.srank,x.grid.sranks) for x in this_srank_fields[j]] + [(srank,sranks)]))
+#             assert len(check) == 1
+
+#             if one_argument_call:
+#                 r = functions[j](this_srank_fields[j])
+#             else:
+#                 r = functions[j](this_srank_fields[j][len(inputs[j]):], this_srank_fields[j][0:len(inputs[j])])
+#             if gpt.util.is_num(r) and log_node:
+#                 results[j] = r
+
+#         t("wait")
+
+#         all_grids[0].barrier()
+
+#         sys.exit(0)
+
+#         t("field layout")
+
+#         for i in range(sranks):
+#             for j in srank_jobs[i]:
+#                 for idx, f in enumerate(outputs[j]):
+#                     sgrid, cache = self.split_grids[f.grid]
+
+#                     if j in this_srank_fields:
+#                         target = this_srank_fields[j][len(inputs[j]) + idx]
+#                     else:
+#                         target = gpt.lattice(sgrid, f.otype)
+#                         target.checkerboard(f.checkerboard())
+
+#                     # coordinates
+#                     ckey = target.checkerboard()
+#                     cc = cache[ckey] if i == srank else cache[ckey][0:0]
+
+#                     dkey = f"{ckey.__name__}_{f.otype.__name__}_{i}_r"
+#                     if dkey not in cache:
+#                         cache[dkey] = {}
+
+#                     f[cc, cache[dkey]] = target[cc, cache[dkey]]
+
+#         t()
+
+#         all_grids[0].globalsum(results)
+
+#         if self.verbose:
+#             gpt.message(f"S[{srank}/{sranks}] : {t}", force_output = log_node)
+
+#         return results

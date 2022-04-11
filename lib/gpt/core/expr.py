@@ -123,9 +123,7 @@ class expr:
             if self.unary == l.unary:
                 return expr(self.val + l.val, self.unary)
             else:
-                return expr(
-                    gpt.apply_expr_unary(self).val + gpt.apply_expr_unary(l).val
-                )
+                return expr(gpt.apply_expr_unary(self).val + gpt.apply_expr_unary(l).val)
         else:
             return self.__add__(expr(l))
 
@@ -209,9 +207,7 @@ def apply_type_right_to_left(e, t):
                 operator = e[i][1].unary(e[i][0])
 
                 # apply operator
-                e = e[0:i] + [
-                    (factor_unary.NONE, operator(expr_eval(expr([(1.0, e[i + 1 :])]))))
-                ]
+                e = e[0:i] + [(factor_unary.NONE, operator(expr_eval(expr([(1.0, e[i + 1 :])]))))]
 
         return e
     assert 0
@@ -235,13 +231,9 @@ def get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj):
     else:
         if f_otype.__name__ not in rtab:
             if f_otype.data_alias is not None:
-                return get_otype_from_multiplication(
-                    t_otype, t_adj, f_otype.data_alias(), f_adj
-                )
+                return get_otype_from_multiplication(t_otype, t_adj, f_otype.data_alias(), f_adj)
             elif t_otype.data_alias is not None:
-                return get_otype_from_multiplication(
-                    t_otype.data_alias(), t_adj, f_otype, f_adj
-                )
+                return get_otype_from_multiplication(t_otype.data_alias(), t_adj, f_otype, f_adj)
             else:
                 gpt.message(
                     "Missing entry in multiplication table: %s x %s"
@@ -265,9 +257,7 @@ def get_otype_from_expression(e):
                     t_otype = f_otype
                     t_adj = f_adj
                 else:
-                    t_otype = get_otype_from_multiplication(
-                        t_otype, t_adj, f_otype, f_adj
-                    )
+                    t_otype = get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj)
 
         if bare_otype is None:
             bare_otype = t_otype

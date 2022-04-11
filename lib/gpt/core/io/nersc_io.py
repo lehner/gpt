@@ -154,9 +154,7 @@ class nersc_io:
 
         dt_read -= gpt.time()
 
-        pos, nreader = distribute_cartesian_file(
-            self.fdimensions, g, l[0].checkerboard()
-        )
+        pos, nreader = distribute_cartesian_file(self.fdimensions, g, l[0].checkerboard())
 
         if len(pos) > 0:
             sz = self.bytes_per_site * len(pos)
@@ -233,9 +231,7 @@ class nersc_io:
         assert P_eps < P_eps_threshold
 
         L_comp = (
-            sum(
-                [gpt.sum(gpt.trace(x)) / x.grid.gsites / x.otype.shape[0] for x in l]
-            ).real
+            sum([gpt.sum(gpt.trace(x)) / x.grid.gsites / x.otype.shape[0] for x in l]).real
             / self.nfields
         )
         L_exp = float(self.metadata["LINK_TRACE"])

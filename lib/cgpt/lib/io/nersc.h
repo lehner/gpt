@@ -43,6 +43,13 @@ static void save_nersc(const std::string& filename,
   std::vector< cgpt_Lattice_base* > U;
   long npl = cgpt_basis_fill(U, objs);
 
+  PyObject* params = PyObject_GetAttrString(format, "params");
+  ASSERT(params);
+  std::string label = get_str(params, "label");
+  std::string id = get_str(params, "id");
+  int sequence_number = get_int(params, "sequence_number");
+  Py_DECREF(params);
+  
   ASSERT(npl == 1);
   ASSERT(U.size() == 4);
 
@@ -53,7 +60,8 @@ static void save_nersc(const std::string& filename,
     PokeIndex<LorentzIndex>(Umu,lat->l,mu);
   }
 
-  NerscIO::writeConfiguration(Umu,filename,0,0);
+  NerscIO::writeConfiguration(Umu,filename,0,0,
+			      label,id,(unsigned int)sequence_number);
 
 }
 

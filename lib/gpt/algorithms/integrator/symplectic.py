@@ -32,21 +32,25 @@ class log:
         for key in self.grad:
             self.grad[key] = []
 
-    def __call__(self, grad, name):
+    def gradient(self, gs, name):
         if name not in self.grad:
             self.grad[name] = []
 
+        self.time("norm")
+        gn = 0.0
+        v = 0
+        for g in gpt.core.util.to_list(gs):
+            gn += gpt.norm2(g)
+            v += g.grid.gsites
+        self.time()
+        self.grad[name].append(gn / v)
+
+    def __call__(self, grad, name):
         def inner():
             self.time(name)
             gs = grad()
-            self.time("norm")
-            gn = 0.0
-            v = 0
-            for g in gpt.core.util.to_list(gs):
-                gn += gpt.norm2(g)
-                v += g.grid.gsites
-            self.grad[name].append(gn / v)
             self.time()
+            self.gradient(gs, name)
             return gs
 
         return inner
@@ -78,7 +82,8 @@ class step:
 
     def __call__(self, eps):
         for i in range(self.nf):
-            self.funcs[i](self.c[i] * eps**self.n)
+            gpt.message(f"call eps = {eps}, {i} / {self.nf}")
+            self.funcs[i](self.c[i] * eps ** self.n)
 
 
 class symplectic_base:

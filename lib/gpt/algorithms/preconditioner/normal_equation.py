@@ -52,9 +52,7 @@ class normal_equation:
                 Mpc.mat(tmp, i_d)
                 R.adj_mat(o, tmp)
 
-            wrapped_R = gpt.matrix_operator(
-                mat=_R, adj_mat=_R_dag, vector_space=R.vector_space
-            )
+            wrapped_R = gpt.matrix_operator(mat=_R, adj_mat=_R_dag, vector_space=R.vector_space)
 
             wrapped_Mpc = gpt.matrix_operator(
                 mat=_N_dag_N, adj_mat=_N_dag_N, vector_space=Mpc.vector_space

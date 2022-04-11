@@ -57,9 +57,7 @@ G_snk = g.gamma[5] * g.adj(P)
 G_op = g.gamma["T"]
 
 # 2pt
-correlator_2pt = g.slice(
-    g.trace(G_src * g.gamma[5] * g.adj(dst) * g.gamma[5] * G_snk * dst), 3
-)
+correlator_2pt = g.slice(g.trace(G_src * g.gamma[5] * g.adj(dst) * g.gamma[5] * G_snk * dst), 3)
 
 # sequential solve through t=8
 t_op = 8
@@ -73,9 +71,7 @@ src_seq @= G_op * src_seq
 dst_seq @= propagator * src_seq
 
 # 3pt
-correlator_3pt = g.slice(
-    g.trace(G_src * g.gamma[5] * g.adj(dst) * g.gamma[5] * G_snk * dst_seq), 3
-)
+correlator_3pt = g.slice(g.trace(G_src * g.gamma[5] * g.adj(dst) * g.gamma[5] * G_snk * dst_seq), 3)
 
 # output
 for t in range(len(correlator_2pt)):

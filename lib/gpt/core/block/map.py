@@ -92,9 +92,7 @@ class map:
             err2 = gpt.norm2(eproj - iproj)
             if tol is not None:
                 assert err2 <= tol
-                gpt.message(
-                    f"blockmap: ortho check for vector {i:d}: {err2:e} <= {tol:e}"
-                )
+                gpt.message(f"blockmap: ortho check for vector {i:d}: {err2:e} <= {tol:e}")
             else:
                 gpt.message(f"blockmap: ortho check error for vector {i:d}: {err2:e}")
 

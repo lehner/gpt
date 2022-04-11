@@ -83,9 +83,7 @@ class reader:
             if crc32comp != crc32:
                 raise Exception("Data corrupted!")
 
-            self.tags[tag[0:-1]] = numpy.frombuffer(
-                data, dtype=numpy.complex128, count=ln
-            )
+            self.tags[tag[0:-1]] = numpy.frombuffer(data, dtype=numpy.complex128, count=ln)
         f.close()
 
     def glob(self, pattern):

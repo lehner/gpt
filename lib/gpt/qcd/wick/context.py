@@ -120,14 +120,9 @@ class fields_context:
                 flavor_contractions = []
                 for bar_permutation in it.permutations(bar_fermion_indices):
                     flavor_contractions.append(
-                        [
-                            (fermion_indices[i], bar_permutation[i])
-                            for i in range(n_fermions)
-                        ]
+                        [(fermion_indices[i], bar_permutation[i]) for i in range(n_fermions)]
                     )
-                contractions = [
-                    c + d for c in contractions for d in flavor_contractions
-                ]
+                contractions = [c + d for c in contractions for d in flavor_contractions]
 
             # sign of contractions
             if "*" in cfields:

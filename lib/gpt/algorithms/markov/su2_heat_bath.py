@@ -62,9 +62,7 @@ class su2_heat_bath:
         pauli1, pauli2, pauli3 = tuple([g.lattice(u2) for i in range(3)])
         ident = g.identity(u2)
         pauli1[:] = 1j * np.array([[0, 1], [1, 0]], dtype=grid.precision.complex_dtype)
-        pauli2[:] = 1j * np.array(
-            [[0, 1j], [-1j, 0]], dtype=grid.precision.complex_dtype
-        )
+        pauli2[:] = 1j * np.array([[0, 1j], [-1j, 0]], dtype=grid.precision.complex_dtype)
         pauli3[:] = 1j * np.array([[1, 0], [0, -1]], dtype=grid.precision.complex_dtype)
 
         # counter
@@ -116,9 +114,7 @@ class su2_heat_bath:
                 xrsq @= xr[0] * xr[0]
 
                 newly_accepted = g.where(xrsq < thresh, one, zero)
-                accepted = g.where(
-                    mask, g.where(newly_accepted, newly_accepted, accepted), zero
-                )
+                accepted = g.where(mask, g.where(newly_accepted, newly_accepted, accepted), zero)
 
                 num_accepted = round(g.norm2(g.where(accepted, one, zero)))
 

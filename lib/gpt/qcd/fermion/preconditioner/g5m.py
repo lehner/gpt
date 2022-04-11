@@ -46,9 +46,7 @@ class g5m_ne_instance:
             dst[:] = 0
 
         self.Mpc = gpt.matrix_operator(mat=_Mpc, vector_space=matrix.vector_space)
-        self.L = gpt.matrix_operator(
-            mat=_ident, inv_mat=_ident, vector_space=matrix.vector_space
-        )
+        self.L = gpt.matrix_operator(mat=_ident, inv_mat=_ident, vector_space=matrix.vector_space)
         self.R = gpt.matrix_operator(mat=_R, vector_space=matrix.vector_space)
         self.S = gpt.matrix_operator(mat=_S, vector_space=matrix.vector_space)
 

@@ -32,7 +32,7 @@ class format:
             self.params = params
 
     class nersc:
-        @params_convention()
+        @params_convention(label="", id="gpt", sequence_number=1)
         def __init__(self, params):
             self.params = params
 

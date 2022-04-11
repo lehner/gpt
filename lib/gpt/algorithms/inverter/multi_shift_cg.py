@@ -131,9 +131,7 @@ class multi_shift_cg(base_iterative):
                 if sum([cg.converged for cg in scgs]) == ns:
                     return
 
-            self.log(
-                f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}"
-            )
+            self.log(f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}")
 
         return g.matrix_operator(
             mat=inv,

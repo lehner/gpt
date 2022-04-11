@@ -90,9 +90,7 @@ class base_iterative(base):
                 gpt.message(f"{self.name}: iteration {iteration}: {value}")
             else:
                 # expect residual
-                gpt.message(
-                    f"{self.name}: iteration {iteration}: {value:e} / {target:e}"
-                )
+                gpt.message(f"{self.name}: iteration {iteration}: {value:e} / {target:e}")
 
 
 def assert_converged_functor(f, iterative):

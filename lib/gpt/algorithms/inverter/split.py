@@ -40,9 +40,7 @@ class split:
             verbose = g.default.is_verbose("split")
 
             if len(src) % nparallel != 0:
-                raise Exception(
-                    f"Cannot divide {len(src)} global vectors into {nparallel} groups"
-                )
+                raise Exception(f"Cannot divide {len(src)} global vectors into {nparallel} groups")
 
             t0 = g.time()
             src_split = g.split(src, matrix_split.vector_space[1].grid, cache)

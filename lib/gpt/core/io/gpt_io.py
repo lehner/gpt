@@ -107,9 +107,7 @@ class gpt_io:
         self.close_views()
 
     def open_view(self, xk, iview, write, mpi, fdimensions, g_cb, l_cb):
-        cv = gpt.cartesian_view(
-            iview if iview is not None else -1, mpi, fdimensions, g_cb, l_cb
-        )
+        cv = gpt.cartesian_view(iview if iview is not None else -1, mpi, fdimensions, g_cb, l_cb)
         dn, fn = get_local_name(self.root, cv)
         loc_desc = cv.describe() + "/" + ("Write" if write else "Read")
 
@@ -125,9 +123,7 @@ class gpt_io:
         if tag not in self.loc:
             if write and dn is not None:
                 os.makedirs(dn, exist_ok=True)
-            self.loc[tag] = (
-                gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
-            )
+            self.loc[tag] = gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
 
         if tag_pos not in self.pos:
             self.pos[tag_pos] = gpt.coordinates(cv)
@@ -168,9 +164,7 @@ class gpt_io:
         # need to write all views
         for xk, iview in enumerate(views_for_node):
 
-            f, p = self.open_view(
-                xk, iview, True, mpi, g.fdimensions, g.cb, l.checkerboard()
-            )
+            f, p = self.open_view(xk, iview, True, mpi, g.fdimensions, g.cb, l.checkerboard())
 
             cache_key = res + f"_{g.obj}_{xk}_{iview}_{id(p)}_{l.otype.__name__}_write"
             if cache_key not in self.cache:
@@ -254,9 +248,7 @@ class gpt_io:
                 xk, iview, False, cv_desc, g.fdimensions, g.cb, l.checkerboard()
             )
 
-            cache_key = (
-                f"{a[0:3]}_{g.obj}_{xk}_{iview}_{id(pos)}_{l.otype.__name__}_read"
-            )
+            cache_key = f"{a[0:3]}_{g.obj}_{xk}_{iview}_{id(pos)}_{l.otype.__name__}_read"
             if cache_key not in self.cache:
                 self.cache[cache_key] = {}
 
@@ -356,9 +348,7 @@ class gpt_io:
                 f.write(x.encode("unicode_escape").decode("utf-8") + "\n")
                 self.create_index("%s/%s" % (ctx, x), objs[x])
             f.write("}\n")
-        elif isinstance(
-            objs, numpy.ndarray
-        ):  # needs to be above list for proper precedence
+        elif isinstance(objs, numpy.ndarray):  # needs to be above list for proper precedence
             f.write("array %d %d\n" % self.write_numpy(objs))
         elif type(objs) == list:
             f.write("[\n")
@@ -381,9 +371,7 @@ class gpt_io:
         elif type(objs) == gpt.lattice:
             f.write("lattice %s\n" % self.write_lattice(ctx, objs))
         elif type(objs) == numpy.float64:
-            f.write(
-                "float %.16g\n" % float(objs)
-            )  # improve: avoid implicit type conversion
+            f.write("float %.16g\n" % float(objs))  # improve: avoid implicit type conversion
         elif type(objs) == gpt.grid:
             f.write("grid %s\n" % objs.describe())
         elif type(objs) == gpt.domain.sparse:
@@ -532,10 +520,7 @@ def save(filename, objs, params):
 def load(filename, params):
 
     # first check if this is right file format
-    if not (
-        os.path.exists(filename + "/index.crc32")
-        and os.path.exists(filename + "/global")
-    ):
+    if not (os.path.exists(filename + "/index.crc32") and os.path.exists(filename + "/global")):
         raise NotImplementedError()
 
     # timing

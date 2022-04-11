@@ -110,9 +110,7 @@ for mu in range(3):
 def meson(w, ubar, d, x, matrix):
     a = w.color_index()
     alpha, beta = w.spin_index(2)
-    return w.sum(
-        ubar(x, alpha, a) * matrix(alpha, beta) * d(x, beta, a), alpha, beta, a
-    )
+    return w.sum(ubar(x, alpha, a) * matrix(alpha, beta) * d(x, beta, a), alpha, beta, a)
 
 
 meson_2pt = meson(w, u.bar(), d, x, Cg5) * meson(w, d.bar(), u, y, Cg5)

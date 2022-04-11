@@ -38,9 +38,9 @@ class base(differentiable_functional):
         for Umu in dU:
             mu = U.index(Umu)
             dSdU_mu = self.staple(U, mu)
-            dSdU_mu @= g.qcd.gauge.project.traceless_anti_hermitian(
-                g(Umu * g.adj(dSdU_mu))
-            ) * (1.0 / 2.0 / 1j)
+            dSdU_mu @= g.qcd.gauge.project.traceless_anti_hermitian(g(Umu * g.adj(dSdU_mu))) * (
+                1.0 / 2.0 / 1j
+            )
             dSdU_mu.otype = Umu.otype.cartesian()
             dS.append(dSdU_mu)
         return dS

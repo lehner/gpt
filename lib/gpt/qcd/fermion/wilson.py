@@ -25,9 +25,7 @@ from gpt.qcd.fermion.operator import (
 )
 
 
-class wilson_class_operator(
-    differentiable_fine_operator, gauge_independent_g5_hermitian
-):
+class wilson_class_operator(differentiable_fine_operator, gauge_independent_g5_hermitian):
     def __init__(self, name, U, params, otype=None, daggered=False):
         differentiable_fine_operator.__init__(self, name, U, params, otype, daggered)
 
@@ -38,25 +36,27 @@ class wilson_class_operator(
             self, gpt.matrix_operator(_G5, vector_space=self.vector_space)
         )
 
-    def conserved_vector_current(self, psi, psi_bar, mu, psi_bar_flavor=None):
+    def conserved_vector_current(self, psi_left, psi_right, mu, psi_left_flavor=None):
         assert self.params["xi_0"] == 1.0 and self.params["nu"] == 1.0
-        psi_shift = self.covariant_shift()
-        if psi_bar_flavor is None:
-            psi_bar_flavor = self
-        psi_bar_shift = psi_bar_flavor.covariant_shift()
+        psi_right_shift = self.covariant_shift()
+        if psi_left_flavor is None:
+            psi_left_flavor = self
+        psi_left_shift = psi_left_flavor.covariant_shift()
 
         assert not self.daggered
 
+        psi_left_bar = gpt(gpt.gamma[5] * gpt.adj(psi_left) * gpt.gamma[5])
+
         return gpt(
             +0.5
-            * psi_bar
+            * psi_left_bar
             * (gpt.gamma[mu].tensor() - gpt.gamma["I"].tensor())
-            * psi_shift.forward[mu]
-            * psi
+            * psi_right_shift.forward[mu]
+            * psi_right
             + 0.5
-            * gpt.adj(psi_bar_shift.forward[mu](gpt.adj(psi_bar)))
+            * gpt.adj(psi_left_shift.forward[mu](gpt.adj(psi_left_bar)))
             * (gpt.gamma[mu].tensor() + gpt.gamma["I"].tensor())
-            * psi
+            * psi_right
         )
 
 
@@ -87,6 +87,4 @@ def wilson_clover(U, params):
         operator_class = wilson_class_operator
     else:
         operator_class = fine_operator
-    return operator_class(
-        "wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3)
-    )
+    return operator_class("wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3))

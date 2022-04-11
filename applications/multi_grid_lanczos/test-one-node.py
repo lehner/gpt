@@ -35,9 +35,7 @@ rng = g.random("test")
 try:
     fg_basis = g.load("basis", {"grids": q.F_grid_eo})[0]
 except g.LoadError:
-    fg_basis = g.advise(
-        [g.vspincolor(q.F_grid_eo) for i in range(nbasis)], g.infrequent_use
-    )
+    fg_basis = g.advise([g.vspincolor(q.F_grid_eo) for i in range(nbasis)], g.infrequent_use)
     rng.zn(fg_basis)
     g.save("basis", [fg_basis])
 
@@ -120,8 +118,7 @@ ctmp = g.lattice(cstart)
 g.block.promote(cstart, ftmp, basis)
 g.block.project(ctmp, ftmp, basis)
 g.message(
-    "Test precision of promote-project chain: %g"
-    % (g.norm2(cstart - ctmp) / g.norm2(cstart))
+    "Test precision of promote-project chain: %g" % (g.norm2(cstart - ctmp) / g.norm2(cstart))
 )
 
 g.mem_report()
@@ -147,9 +144,7 @@ except g.LoadError:
             v_fine_smooth[:] = 0
             smoother(q.NDagN, v_fine, v_fine_smooth)
             v_fine @= v_fine_smooth / g.norm2(v_fine_smooth) ** 0.5
-        ev_smooth = g.algorithms.approx.evals(
-            q.NDagN, [v_fine], check_eps2=1e-2, real=True
-        )
+        ev_smooth = g.algorithms.approx.evals(q.NDagN, [v_fine], check_eps2=1e-2, real=True)
         ev3[i] = ev_smooth[0]
         g.message("Eigenvalue %d = %.15g" % (i, ev3[i]))
     g.save("ev3", ev3)
@@ -176,9 +171,7 @@ solver(v_fine, start)
 save_history("cg_test.defl_all_ev3", test_solver.history)
 
 solver = g.algorithms.iniverter.sequence(
-    g.algorithms.inverter.coarse_deflate(
-        cevec[0 : len(basis)], basis, ev3[0 : len(basis)]
-    ),
+    g.algorithms.inverter.coarse_deflate(cevec[0 : len(basis)], basis, ev3[0 : len(basis)]),
     params["test_solver"],
 )(q.Mpc)
 v_fine[:] = 0

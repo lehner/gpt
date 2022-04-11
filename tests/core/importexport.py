@@ -30,9 +30,7 @@ for x in range(4):
     for y in range(4):
         for z in range(8):
             for t in range(8):
-                src[x, y, z, t] = g.vcomplex(
-                    [x + t * 1j, y + t * 1j, z + t * 1j] * 10, 30
-                )
+                src[x, y, z, t] = g.vcomplex([x + t * 1j, y + t * 1j, z + t * 1j] * 10, 30)
 
 # now create a random partition of this lattice distributed over all nodes
 c = (

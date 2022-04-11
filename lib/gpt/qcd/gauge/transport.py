@@ -74,9 +74,7 @@ class transport:
 
         self.site_fields_indices = []
         for i in range(self.n_site_fields):
-            self.site_fields_indices.append(
-                plan.add(site_fields[i], site_displacements)
-            )
+            self.site_fields_indices.append(plan.add(site_fields[i], site_displacements))
 
         self.cshifts = plan()
 

@@ -74,15 +74,11 @@ assert cc[:] == [
     {(2, 0): -2j, (0, 1): (2 + 0j)},
 ]
 
-zero = g.sparse_tensor.contract([v], [b]) + g.sparse_tensor.contract([t, t2], [b]) * (
-    -1
-)
+zero = g.sparse_tensor.contract([v], [b]) + g.sparse_tensor.contract([t, t2], [b]) * (-1)
 print(zero[:])
 assert zero[:] == [{}, {}, {}, {}]
 
-zero = g.sparse_tensor.contract([v], [b]) + (-1) * g.sparse_tensor.contract(
-    [t, t2], [b]
-)
+zero = g.sparse_tensor.contract([v], [b]) + (-1) * g.sparse_tensor.contract([t, t2], [b])
 assert zero[:] == [{}, {}, {}, {}]
 
 zero = g.sparse_tensor.contract([v], [b]) - g.sparse_tensor.contract([t, t2], [b])

@@ -26,9 +26,7 @@ def defect(field):
 def cartesian(field):
     if isinstance(field, list):
         return [cartesian(f) for f in field]
-    return g.lattice(field.grid, field.otype.cartesian()).checkerboard(
-        field.checkerboard()
-    )
+    return g.lattice(field.grid, field.otype.cartesian()).checkerboard(field.checkerboard())
 
 
 def projected_convert(x, otype):
@@ -55,20 +53,16 @@ def compose(left, right):
 
         if left_type.__name__ == right_type_cartesian.__name__:
             dst = [
-                right_type.compose(projected_convert(l, right_type), r)
-                for l, r in zip(left, right)
+                right_type.compose(projected_convert(l, right_type), r) for l, r in zip(left, right)
             ]
 
         elif left_type_cartesian.__name__ == right_type.__name__:
             dst = [
-                left_type.compose(l, projected_convert(r, left_type))
-                for l, r in zip(left, right)
+                left_type.compose(l, projected_convert(r, left_type)) for l, r in zip(left, right)
             ]
 
         else:
-            raise TypeError(
-                f"{left_type.__name__} and {right_type.__name__} are not composable"
-            )
+            raise TypeError(f"{left_type.__name__} and {right_type.__name__} are not composable")
 
     if as_list:
         return dst

@@ -206,9 +206,7 @@ class state:
             nrm = 1.0 / (p_zero ** 0.5)
             r = 0
 
-        g.bilinear_combination(
-            [self.lattice], [proj], [self.lattice], [[nrm]], [[0]], [[0]]
-        )
+        g.bilinear_combination([self.lattice], [proj], [self.lattice], [[nrm]], [[0]], [[0]])
 
         self.classical_bit[i] = r
         return r

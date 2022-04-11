@@ -23,9 +23,7 @@ from gpt.algorithms import base_iterative
 
 
 class fgmres(base_iterative):
-    @g.params_convention(
-        eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None
-    )
+    @g.params_convention(eps=1e-15, maxiter=1000000, restartlen=20, checkres=True, prec=None)
     def __init__(self, params):
         super().__init__()
         self.params = params

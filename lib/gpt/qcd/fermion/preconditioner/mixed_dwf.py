@@ -54,10 +54,7 @@ class mixed_dwf:
             Pplus = 0.5 * (g.gamma["I"] + g.gamma[5])
             Pminus = 0.5 * (g.gamma["I"] - g.gamma[5])
             dst @= mrg(
-                [
-                    g(Pminus * src_s[s] + Pplus * src_s[(s + Ls + offset) % Ls])
-                    for s in range(Ls)
-                ]
+                [g(Pminus * src_s[s] + Pplus * src_s[(s + Ls + offset) % Ls]) for s in range(Ls)]
             )
 
         def _P_mat(dst, src):
@@ -82,15 +79,13 @@ class mixed_dwf:
             for i in range(N):
                 wall = wall + [c_s[i * Ls_outer]] + [zero4d] * (Ls_inner - 1)
 
-            y0prime = sep(
-                g.adj(P) * inv_dwf_inner * dwf_inner_pv * P * mrg(wall, Ls_inner)
-            )[::Ls_inner]
+            y0prime = sep(g.adj(P) * inv_dwf_inner * dwf_inner_pv * P * mrg(wall, Ls_inner))[
+                ::Ls_inner
+            ]
 
             wall = []
             for i in range(N):
-                wall = (
-                    wall + [g(-y0prime[i])] + c_s[i * Ls_outer + 1 : (i + 1) * Ls_outer]
-                )
+                wall = wall + [g(-y0prime[i])] + c_s[i * Ls_outer + 1 : (i + 1) * Ls_outer]
 
             y1 = sep(g.adj(P) * inv_dwf_outer_pv * dwf_outer * P * mrg(wall, Ls_outer))
 

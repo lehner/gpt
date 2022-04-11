@@ -57,21 +57,11 @@ pr = g.algorithms.optimize.polak_ribiere
 ls0 = g.algorithms.optimize.line_search_none
 ls2 = g.algorithms.optimize.line_search_quadratic
 for gd in [
-    g.algorithms.optimize.gradient_descent(
-        maxiter=40, eps=1e-7, step=1e-1, line_search=ls0
-    ),
-    g.algorithms.optimize.gradient_descent(
-        maxiter=40, eps=1e-7, step=1e-1, line_search=ls2
-    ),
-    g.algorithms.optimize.non_linear_cg(
-        maxiter=40, eps=1e-7, step=1e-1, line_search=ls0, beta=fr
-    ),
-    g.algorithms.optimize.non_linear_cg(
-        maxiter=40, eps=1e-7, step=1e-1, line_search=ls2, beta=fr
-    ),
-    g.algorithms.optimize.non_linear_cg(
-        maxiter=40, eps=1e-7, step=1e-1, line_search=ls2, beta=pr
-    ),
+    g.algorithms.optimize.gradient_descent(maxiter=40, eps=1e-7, step=1e-1, line_search=ls0),
+    g.algorithms.optimize.gradient_descent(maxiter=40, eps=1e-7, step=1e-1, line_search=ls2),
+    g.algorithms.optimize.non_linear_cg(maxiter=40, eps=1e-7, step=1e-1, line_search=ls0, beta=fr),
+    g.algorithms.optimize.non_linear_cg(maxiter=40, eps=1e-7, step=1e-1, line_search=ls2, beta=fr),
+    g.algorithms.optimize.non_linear_cg(maxiter=40, eps=1e-7, step=1e-1, line_search=ls2, beta=pr),
 ]:
     U1, V1 = g.copy([U0, V0])
     assert f([U1, V1]) > 1e2

@@ -122,10 +122,7 @@ class arnoldi_iteration:
         if self.verbose:
             g.message(f"Arnoldi: QR in {t1-t0} s")
 
-        r = g.eval(
-            self.basis[k] * H[k, k - 1]
-            + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1]
-        )
+        r = g.eval(self.basis[k] * H[k, k - 1] + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1])
         rn = g.norm2(r) ** 0.5
 
         t0 = g.time()

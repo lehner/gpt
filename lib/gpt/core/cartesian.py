@@ -73,12 +73,8 @@ class cartesian_view:
             self.top = [0] * self.nd
             self.bottom = [0] * self.nd
         else:
-            self.top = [
-                self.view_dimensions[i] * self.processor_coor[i] for i in range(self.nd)
-            ]
-            self.bottom = [
-                self.top[i] + self.view_dimensions[i] for i in range(self.nd)
-            ]
+            self.top = [self.view_dimensions[i] * self.processor_coor[i] for i in range(self.nd)]
+            self.bottom = [self.top[i] + self.view_dimensions[i] for i in range(self.nd)]
 
     def describe(self):
         return str(self.mpi).replace(" ", "")

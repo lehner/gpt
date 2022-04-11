@@ -307,16 +307,13 @@ for group, job, conf, jid, n in run_jobs:
     rng = g.random(f"hvp-conn-a2a-ensemble-{conf}-{job_seed}")
 
     source_positions_low = [
-        [rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)]
-        for j in range(jobs[job]["low"])
+        [rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)] for j in range(jobs[job]["low"])
     ]
     source_positions_sloppy = [
-        [rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)]
-        for j in range(jobs[job]["sloppy"])
+        [rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)] for j in range(jobs[job]["sloppy"])
     ]
     source_positions_exact = [
-        [rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)]
-        for j in range(jobs[job]["exact"])
+        [rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)] for j in range(jobs[job]["exact"])
     ]
 
     all_time_slices = jobs[job]["all_time_slices"]
@@ -349,9 +346,7 @@ for group, job, conf, jid, n in run_jobs:
         for op_snk, op_src in correlators:
             G_snk = operators[op_snk]
             G_src = operators[op_src]
-            corr = g.slice(
-                g.trace(G_src * g.gamma[5] * g.adj(prop) * g.gamma[5] * G_snk * prop), 3
-            )
+            corr = g.slice(g.trace(G_src * g.gamma[5] * g.adj(prop) * g.gamma[5] * G_snk * prop), 3)
             corr = corr[t0:] + corr[:t0]
 
             corr_tag = "%s/snk%s-src%s" % (prop_tag, op_snk, op_src)
@@ -380,18 +375,13 @@ for group, job, conf, jid, n in run_jobs:
             sign_of_slice[i] = 0.0
 
         pos_of_slice = [
-            [
-                pos[i] if i < 3 else (pos[i] + j * sparse_time) % full_time
-                for i in range(4)
-            ]
+            [pos[i] if i < 3 else (pos[i] + j * sparse_time) % full_time for i in range(4)]
             for j in range(source_time_slices)
         ]
         g.message(f"Signature: {pos} -> {pos_of_slice} with signs {sign_of_slice}")
         for i in range(source_time_slices):
             if point:
-                srcD += (
-                    g.create.point(g.lattice(srcD), pos_of_slice[i]) * sign_of_slice[i]
-                )
+                srcD += g.create.point(g.lattice(srcD), pos_of_slice[i]) * sign_of_slice[i]
             else:
                 srcD += g.create.wall.z2(g.lattice(srcD), pos_of_slice[i][3], rng) * (
                     sign_of_slice[i] / vol3d ** 0.5

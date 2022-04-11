@@ -28,10 +28,7 @@ class shifted_fgmres:
         self.s = s
         self.x = psi
         self.x[:] = 0
-        self.Z = (
-            [g.copy(src) for i in range(rlen)]
-            if prec is not None else None
-        )
+        self.Z = [g.copy(src) for i in range(rlen)] if prec is not None else None
         self.rho = 1.0
         self.gamma = np.zeros(rlen, np.complex128)
         self.r2 = 1.0
@@ -134,9 +131,7 @@ class multi_shift_fgmres(base_iterative):
         self.prec = params["prec"]
         self.rhos = params["rhos"]
 
-    def arnoldi(
-        self, mat, V, rlen, mmp, sfgmres, prec, idx, t
-    ):
+    def arnoldi(self, mat, V, rlen, mmp, sfgmres, prec, idx, t):
         H = []
         for i in range(rlen):
             if prec is not None:
@@ -153,7 +148,7 @@ class multi_shift_fgmres(base_iterative):
             mat(V[i + 1], zv)
             g.orthogonalize(
                 V[i + 1],
-                V[0:i + 1],
+                V[0 : i + 1],
                 ips[0:-1],
                 nblock=10,
             )
@@ -225,9 +220,7 @@ class multi_shift_fgmres(base_iterative):
             # shifted systems
             sfgmres = []
             for j, s in enumerate(self.shifts):
-                sfgmres += [shifted_fgmres(
-                    psi[j], src, s, rlen, prec
-                )]
+                sfgmres += [shifted_fgmres(psi[j], src, s, rlen, prec)]
 
             # krylov space
             V = [g.copy(src) for i in range(rlen + 1)]
@@ -238,9 +231,7 @@ class multi_shift_fgmres(base_iterative):
 
             for k in range(0, self.maxiter, rlen):
                 # arnoldi
-                H = self.arnoldi(
-                    mat, V, rlen, mmp, sfgmres, prec, idx, t
-                )
+                H = self.arnoldi(mat, V, rlen, mmp, sfgmres, prec, idx, t)
 
                 t("hessenberg")
                 fgmres = sfgmres[0]
@@ -302,9 +293,7 @@ class multi_shift_fgmres(base_iterative):
 
                     if prec is not None and rr is False:
                         t("restart_prec")
-                        plen_new = sum(
-                            [not fgmres.converged for fgmres in sfgmres[1:]]
-                        ) + 1
+                        plen_new = sum([not fgmres.converged for fgmres in sfgmres[1:]]) + 1
                         if plen_new != plen:
                             plen = plen_new
                             prec, idx = self.restart_prec(mat, sfgmres)
@@ -322,9 +311,7 @@ class multi_shift_fgmres(base_iterative):
                     self.log(msg)
             cs = sum([fgmres.converged for fgmres in sfgmres if True])
             ns = len(self.shifts)
-            self.log(
-                f"NOT converged in {k+rlen} iterations; {cs} / {ns} converged shifts"
-            )
+            self.log(f"NOT converged in {k+rlen} iterations; {cs} / {ns} converged shifts")
             return [fgmres.rho for fgmres in sfgmres] if rr else None
 
         return g.matrix_operator(

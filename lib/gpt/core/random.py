@@ -39,9 +39,7 @@ class random:
         t1 = gpt.time()
 
         if self.verbose:
-            gpt.message(
-                "Initializing gpt.random(%s,%s) took %g s" % (s, engine, t1 - t0)
-            )
+            gpt.message("Initializing gpt.random(%s,%s) took %g s" % (s, engine, t1 - t0))
 
     def __del__(self):
         cgpt.delete_random(self.obj)
@@ -64,10 +62,7 @@ class random:
 
             if self.verbose_performance:
                 szGB = t.global_bytes() / 1024.0 ** 3.0
-                gpt.message(
-                    "Generated %g GB of random data at %g GB/s"
-                    % (szGB, szGB / (t1 - t0))
-                )
+                gpt.message("Generated %g GB of random data at %g GB/s" % (szGB, szGB / (t1 - t0)))
 
             return t
         else:
@@ -157,9 +152,7 @@ class random:
                 axis=0,
             )
         else:
-            return [
-                array[self.uniform_int(min=0, max=len(array) - 1)] for i in range(n)
-            ]
+            return [array[self.uniform_int(min=0, max=len(array) - 1)] for i in range(n)]
 
 
 # sha256

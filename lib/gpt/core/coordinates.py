@@ -32,13 +32,11 @@ def coordinates(o, order="lexicographic"):
         cb = o[1].tag
         checker_dim_mask = o[0].cb.cb_mask
         cbf = [o[0].fdimensions[i] // o[0].gdimensions[i] for i in range(dim)]
-        top = [
-            o[0].processor_coor[i] * o[0].ldimensions[i] * cbf[i] for i in range(dim)
-        ]
+        top = [o[0].processor_coor[i] * o[0].ldimensions[i] * cbf[i] for i in range(dim)]
         bottom = [top[i] + o[0].ldimensions[i] * cbf[i] for i in range(dim)]
-        return cgpt.coordinates_from_cartesian_view(
-            top, bottom, checker_dim_mask, cb, order
-        ).view(local_coordinates)
+        return cgpt.coordinates_from_cartesian_view(top, bottom, checker_dim_mask, cb, order).view(
+            local_coordinates
+        )
     elif type(o) == gpt.lattice:
         return coordinates((o.grid, o.checkerboard()), order=order)
     elif type(o) == gpt.cartesian_view:
@@ -89,9 +87,7 @@ def exp_ixp(p, origin=None):
         return apply_exp_ixp(dst, src, [-x for x in p], origin, cache)
 
     # do not specify grid or otype, i.e., accept all
-    return gpt.matrix_operator(
-        mat=mat, adj_mat=inv_mat, inv_mat=inv_mat, adj_inv_mat=mat
-    )
+    return gpt.matrix_operator(mat=mat, adj_mat=inv_mat, inv_mat=inv_mat, adj_inv_mat=mat)
 
 
 def fft(dims=None):

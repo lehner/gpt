@@ -41,10 +41,7 @@ class improved_with_rectangle(base):
         return (
             vol
             * self.beta
-            * (
-                self.c0 * (1.0 - P) * (Nd - 1) * Nd / 2.0
-                + self.c1 * (1.0 - R) * (Nd - 1) * Nd
-            )
+            * (self.c0 * (1.0 - P) * (Nd - 1) * Nd / 2.0 + self.c1 * (1.0 - R) * (Nd - 1) * Nd)
         )
 
     def staple(self, U, mu):

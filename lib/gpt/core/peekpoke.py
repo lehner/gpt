@@ -81,9 +81,7 @@ def map_pos(grid, cb, key):
     key = tuple([k if type(k) == slice else slice(k, k + 1) for k in key])
     assert all([k.step is None for k in key])
     top = [
-        grid.fdimensions[i] // grid.mpi[i] * grid.processor_coor[i]
-        if k.start is None
-        else k.start
+        grid.fdimensions[i] // grid.mpi[i] * grid.processor_coor[i] if k.start is None else k.start
         for i, k in enumerate(key)
     ]
     bottom = [
@@ -136,12 +134,7 @@ def map_tidx_and_shape(l, key):
     assert all([k.step is None for k in key])
     top = [0 if k.start is None else k.start for i, k in enumerate(key)]
     bottom = [shape[i] if k.stop is None else k.stop for i, k in enumerate(key)]
-    assert all(
-        [
-            0 <= top[i] and top[i] <= bottom[i] and bottom[i] <= shape[i]
-            for i in range(nd)
-        ]
-    )
+    assert all([0 <= top[i] and top[i] <= bottom[i] and bottom[i] <= shape[i] for i in range(nd)])
     tidx = cgpt.coordinates_from_cartesian_view(
         top, bottom, [0] * nd, gpt.none.tag, "reverse_lexicographic"
     )

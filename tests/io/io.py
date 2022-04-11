@@ -29,9 +29,7 @@ U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 # create a sparse sub-domain and a sparse lattice S with 1% of points
 sdomain = g.domain.sparse(
     U[0].grid,
-    rng.choice(
-        g.coordinates(U[0]), int(0.01 * U[0].grid.gsites / U[0].grid.Nprocessors)
-    ),
+    rng.choice(g.coordinates(U[0]), int(0.01 * U[0].grid.gsites / U[0].grid.Nprocessors)),
 )
 
 # test sparse domain
@@ -40,10 +38,7 @@ sdomain.project(S, U[0])
 U0prime = g.lattice(U[0])
 U0prime[:] = 0
 sdomain.promote(U0prime, S)
-assert (
-    np.linalg.norm(U0prime[sdomain.local_coordinates] - U[0][sdomain.local_coordinates])
-    < 1e-14
-)
+assert np.linalg.norm(U0prime[sdomain.local_coordinates] - U[0][sdomain.local_coordinates]) < 1e-14
 
 # save in default gpt format
 g.save(

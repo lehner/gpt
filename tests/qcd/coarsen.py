@@ -104,8 +104,7 @@ vec_out_constructed_c = g(mat_c * vec_in_c)
 # report error
 err2 = g.norm2(vec_out_chained_c - vec_out_constructed_c) / g.norm2(vec_out_chained_c)
 g.message(
-    "Relative deviation of constructed from chained coarse operator on coarse grid = %e"
-    % err2
+    "Relative deviation of constructed from chained coarse operator on coarse grid = %e" % err2
 )
 assert err2 <= tol_operator
 g.message("Test passed for coarse operator, %e <= %e" % (err2, tol_operator))
@@ -159,9 +158,7 @@ vec_out_chained_cc = g(bm_c.project * mat_c * bm_c.promote * vec_in_cc)
 vec_out_constructed_cc = g(mat_cc * vec_in_cc)
 
 # report error
-err2 = g.norm2(vec_out_chained_cc - vec_out_constructed_cc) / g.norm2(
-    vec_out_chained_cc
-)
+err2 = g.norm2(vec_out_chained_cc - vec_out_constructed_cc) / g.norm2(vec_out_chained_cc)
 g.message(
     "Relative deviation of constructed from chained coarse coarse operator on coarse coarse grid = %e"
     % err2
@@ -181,9 +178,7 @@ rng.cnormal(vec_in_c)
 
 # apply the link matrix
 vec_out_link_c @= A_c[8] * vec_in_c
-mat_c.Mdir(0, 0)(
-    vec_out_mat_c, vec_in_c
-)  # exploit the self coupling link, this uses Grid
+mat_c.Mdir(0, 0)(vec_out_mat_c, vec_in_c)  # exploit the self coupling link, this uses Grid
 
 # define check tolerance
 tol = 1e-12
@@ -205,9 +200,7 @@ rng.cnormal(vec_in_cc)
 
 # apply the link matrix
 vec_out_link_cc @= A_cc[8] * vec_in_cc
-mat_cc.Mdir(0, 0)(
-    vec_out_mat_cc, vec_in_cc
-)  # exploit the self coupling link, this uses Grid
+mat_cc.Mdir(0, 0)(vec_out_mat_cc, vec_in_cc)  # exploit the self coupling link, this uses Grid
 
 # define check tolerance
 tol = 1e-12

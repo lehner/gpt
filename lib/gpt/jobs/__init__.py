@@ -102,9 +102,7 @@ def get_next_name(root, jobs, max_weight, stale_seconds):
                 if not j.has_completed(root):
                     run_time = j.run_time(root)
                     if run_time > stale_seconds:
-                        g.message(
-                            f"Job {j.name} is stale after {run_time} seconds; purge"
-                        )
+                        g.message(f"Job {j.name} is stale after {run_time} seconds; purge")
                         j.purge(root)
                         has_started = False
 
@@ -114,9 +112,7 @@ def get_next_name(root, jobs, max_weight, stale_seconds):
                 for dep_j in [lut[d] for d in j.needs]:
                     if not dep_j.has_completed(root):
                         dependencies_ok = False
-                        g.message(
-                            f"Dependency {dep_j.name} of {j.name} is not yet satisfied."
-                        )
+                        g.message(f"Dependency {dep_j.name} of {j.name} is not yet satisfied.")
                         break
                 if dependencies_ok:
                     # last check if in meantime somebody else has started running same job

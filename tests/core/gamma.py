@@ -114,8 +114,7 @@ for s1 in range(4):
         for c1 in range(3):
             for c2 in range(3):
                 eps = abs(
-                    prop[s1, s2, c1, c2] / propPrime[s1, s2, c1, c2]
-                    - (-1) ** (s1 // 2 + s2 // 2)
+                    prop[s1, s2, c1, c2] / propPrime[s1, s2, c1, c2] - (-1) ** (s1 // 2 + s2 // 2)
                 )
                 assert eps < 1e-14
 

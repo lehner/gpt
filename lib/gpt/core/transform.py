@@ -21,11 +21,7 @@ import cgpt, gpt, numpy
 
 def cshift(first, second, third, fourth=None):
 
-    if (
-        type(first) == gpt.lattice
-        and type(second) == gpt.lattice
-        and fourth is not None
-    ):
+    if type(first) == gpt.lattice and type(second) == gpt.lattice and fourth is not None:
         t = first
         l = gpt.eval(second)
         d = third
@@ -70,9 +66,7 @@ def rank_inner_product(a, b, use_accelerator=True):
     a = gpt.util.to_list(a)
     b = gpt.util.to_list(b)
     if type(a[0]) == gpt.tensor and type(b[0]) == gpt.tensor:
-        res = numpy.array(
-            [[gpt.adj(x) * y for y in b] for x in a], dtype=numpy.complex128
-        )
+        res = numpy.array([[gpt.adj(x) * y for y in b] for x in a], dtype=numpy.complex128)
     else:
         a = [gpt.eval(x) for x in a]
         b = [gpt.eval(x) for x in b]
@@ -97,9 +91,7 @@ def norm2(l):
     l = gpt.util.to_list(l)
     ip = (
         l[0]
-        .grid.globalsum(
-            numpy.array([rank_inner_product(x, x) for x in l], dtype=numpy.complex128)
-        )
+        .grid.globalsum(numpy.array([rank_inner_product(x, x) for x in l], dtype=numpy.complex128))
         .real
     )
     if return_list:
@@ -113,9 +105,7 @@ def inner_product_norm2(a, b):
     a = gpt.eval(a)
     b = gpt.eval(b)
     assert len(a.otype.v_idx) == len(b.otype.v_idx)
-    r = [
-        cgpt.lattice_inner_product_norm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx
-    ]
+    r = [cgpt.lattice_inner_product_norm2(a.v_obj[i], b.v_obj[i]) for i in a.otype.v_idx]
     return (
         sum([x[0] for x in r]),
         sum([x[1] for x in r]),
@@ -146,9 +136,7 @@ def fields_to_tensors(src, functor):
     result = functor(src)
 
     if return_list:
-        return [
-            [gpt.util.value_to_tensor(v, src[0].otype) for v in res] for res in result
-        ]
+        return [[gpt.util.value_to_tensor(v, src[0].otype) for v in res] for res in result]
     return [gpt.util.value_to_tensor(v, src[0].otype) for v in result[0]]
 
 
@@ -158,9 +146,7 @@ def slice(src, dim):
 
 def indexed_sum(fields, index, length):
     index_obj = index.v_obj[0]
-    return fields_to_tensors(
-        fields, lambda src: cgpt.lattice_indexed_sum(src, index_obj, length)
-    )
+    return fields_to_tensors(fields, lambda src: cgpt.lattice_indexed_sum(src, index_obj, length))
 
 
 def identity(src):

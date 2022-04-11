@@ -32,9 +32,7 @@ assert eps < 1e-13
 # Test gauge invariance of R_2x1
 R_2x1_transformed = g.qcd.gauge.rectangle(U_transformed, 2, 1)
 eps = abs(R_2x1 - R_2x1_transformed)
-g.message(
-    f"R_2x1 before {R_2x1} and after {R_2x1_transformed} gauge transformation: {eps}"
-)
+g.message(f"R_2x1 before {R_2x1} and after {R_2x1_transformed} gauge transformation: {eps}")
 assert eps < 1e-13
 
 # Without trace and real projection
@@ -50,9 +48,7 @@ g.message(f"R_2x1 field check: {eps}")
 assert eps < 1e-13
 
 # Without trace and real projection and field
-R_2x1_notp = g.qcd.gauge.rectangle(
-    U_transformed, 2, 1, trace=False, real=False, field=True
-)
+R_2x1_notp = g.qcd.gauge.rectangle(U_transformed, 2, 1, trace=False, real=False, field=True)
 eps = abs(g(g.sum(g.trace(R_2x1_notp))).real / U[0].grid.gsites - R_2x1)
 g.message(f"R_2x1 field, no real and trace check: {eps}")
 assert eps < 1e-13
@@ -93,21 +89,15 @@ for mu in range(4):
 
 
 # Test gauge covariance of staple
-rho = np.array(
-    [[0.0 if i == j else 0.1 for i in range(4)] for j in range(4)], dtype=np.float64
-)
+rho = np.array([[0.0 if i == j else 0.1 for i in range(4)] for j in range(4)], dtype=np.float64)
 C = g.qcd.gauge.staple_sum(U, rho=rho)
 C_transformed = g.qcd.gauge.staple_sum(U_transformed, rho=rho)
 for mu in range(len(C)):
     q = g.sum(g.trace(C[mu] * g.adj(U[mu]))) / U[0].grid.gsites
-    q_transformed = (
-        g.sum(g.trace(C_transformed[mu] * g.adj(U_transformed[mu]))) / U[0].grid.gsites
-    )
+    q_transformed = g.sum(g.trace(C_transformed[mu] * g.adj(U_transformed[mu]))) / U[0].grid.gsites
 
     eps = abs(q - q_transformed)
-    g.message(
-        f"Staple q[{mu}] before {q} and after {q_transformed} gauge transformation: {eps}"
-    )
+    g.message(f"Staple q[{mu}] before {q} and after {q_transformed} gauge transformation: {eps}")
     assert eps < 1e-14
 
 # Test topology
@@ -122,7 +112,15 @@ assert eps < 1e-13
 
 # Test gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:
+
+    # test original action gradient
     action.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+
+    # test stout smearing chain rule
+    sm = g.qcd.gauge.smear.stout(rho=0.136)
+    action_sm = action.transformed(sm)
+    action_sm.assert_gradient_error(rng, U, U, 1e-3, 1e-7)
+
     for mu in range(len(U)):
         adj_staple = g(g.adj(action.staple(U, mu)))
         Uprime = g.copy(U)
@@ -143,9 +141,7 @@ g.qcd.gauge.action.symanzik(4.3)
 # Test wilson flow and energy density
 U_wf = g.qcd.gauge.smear.wilson_flow(U, epsilon=0.1)
 E = g.qcd.gauge.energy_density(U_wf)
-E_from_field = g(
-    g.sum(g.qcd.gauge.energy_density(U_wf, field=True)) / U_wf[0].grid.gsites
-)
+E_from_field = g(g.sum(g.qcd.gauge.energy_density(U_wf, field=True)) / U_wf[0].grid.gsites)
 eps = abs(E - 0.3032029987236007)
 g.message(f"Energy density check after wilson flow at t=0.1: {eps}")
 assert eps < 1e-10
@@ -156,8 +152,9 @@ assert eps < 1e-10
 # Test stout smearing
 U_stout = U
 P_stout = []
+sm = g.qcd.gauge.smear.stout(rho=0.1)
 for i in range(3):
-    U_stout = g.qcd.gauge.smear.stout(U_stout, rho=0.1)
+    U_stout = sm(U_stout)
 
     for mu in range(len(U_stout)):
         I = g.identity(U_stout[mu])
@@ -172,7 +169,7 @@ assert sorted(P_stout) == P_stout  # make sure plaquettes go towards one
 # for given gauge configuration, cross-check against previous Grid code
 # this establishes the randomized check value used below
 # U = g.load("/hpcgpfs01/work/clehner/configs/24I_0p005/ckpoint_lat.IEEE64BIG.5000")
-# P = [g.qcd.gauge.plaquette(U),g.qcd.gauge.plaquette(g.qcd.gauge.smear.stout(U, rho=0.15, orthogonal_dimension=3)),g.qcd.gauge.plaquette(g.qcd.gauge.smear.stout(U, rho=0.1))]
+# P = [g.qcd.gauge.plaquette(U),g.qcd.gauge.plaquette(g.qcd.gauge.smear.stout(rho=0.15, orthogonal_dimension=3)(U)),g.qcd.gauge.plaquette(g.qcd.gauge.smear.stout(rho=0.1)(U))]
 # P_comp = [0.588074,0.742136,0.820262]
 # for i in range(3):
 #    assert abs(P[i] - P_comp[i]) < 1e-5
@@ -180,8 +177,8 @@ assert sorted(P_stout) == P_stout  # make sure plaquettes go towards one
 
 P = [
     g.qcd.gauge.plaquette(U),
-    g.qcd.gauge.plaquette(g.qcd.gauge.smear.stout(U, rho=0.15, orthogonal_dimension=3)),
-    g.qcd.gauge.plaquette(g.qcd.gauge.smear.stout(U, rho=0.1)),
+    g.qcd.gauge.plaquette(g.qcd.gauge.smear.stout(rho=0.15, orthogonal_dimension=3)(U)),
+    g.qcd.gauge.plaquette(g.qcd.gauge.smear.stout(rho=0.1)(U)),
 ]
 P_comp = [0.7986848674527128, 0.9132213221481771, 0.9739960794712376]
 g.message(f"Plaquette fingerprint {P} and reference {P_comp}")
