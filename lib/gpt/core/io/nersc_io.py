@@ -225,7 +225,7 @@ class nersc_io:
         P_comp = gpt.qcd.gauge.plaquette(l)
         P_exp = float(self.metadata["PLAQUETTE"])
         P_digits = len(self.metadata["PLAQUETTE"].split(".")[1])
-        P_eps = abs(P_comp - P_exp)
+        P_eps = abs(P_comp / P_exp - 1.0)
         P_eps_threshold = 10.0 ** (-P_digits + 2)
         P_eps_threshold = max([1e2 * self.precision.eps, P_eps_threshold])
         assert P_eps < P_eps_threshold
@@ -238,7 +238,7 @@ class nersc_io:
         L_digits = len(self.metadata["LINK_TRACE"].split(".")[1].lower().split("e")[0])
         L_eps_threshold = 10.0 ** (-L_digits + 2)
         L_eps_threshold = max([1e2 * self.precision.eps, L_eps_threshold])
-        L_eps = abs(L_comp - L_exp)
+        L_eps = abs(L_comp / L_exp - 1.0)
         assert L_eps < L_eps_threshold
 
         return l
