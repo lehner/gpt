@@ -25,9 +25,12 @@ def transformed(obj, V):
         M = obj
 
         def _mat(dst, src):
-            dst @= V * M * g.adj(V) * src
+            src_prime = [g(g.adj(V) * s) for s in src]
+            M(dst, src_prime)
+            for d in dst:
+                d @= V * d
 
-        return g.matrix_operator(_mat, vector_space=M.vector_space)
+        return g.matrix_operator(_mat, vector_space=M.vector_space, accept_list=True)
 
     else:
 
