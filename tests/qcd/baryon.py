@@ -83,6 +83,7 @@ def sss_two_point(Q1, kernel):
 
 
 def omega(Q1, mu):
+    # Note: mu=1 has different sign from mu=0,2 in this way!
     C = 1j * g.gamma[1].tensor() * g.gamma[3].tensor()
     Gamma = C * g.gamma[mu].tensor()
     Pp = (g.gamma["I"].tensor() + g.gamma[3].tensor()) * 0.5
