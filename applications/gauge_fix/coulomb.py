@@ -3,6 +3,7 @@
 # Author: Christoph Lehner 2021
 #
 import gpt as g
+import numpy as np
 import sys
 
 # Parameters
@@ -118,7 +119,7 @@ for t in range(Nt):
     theta = g.norm2(dfv).real / Vt[t].grid.gsites / dfv.otype.Nc
     g.message(f"theta[{t}] = {theta}")
     g.message(f"V[{t}][0,0,0] = ", Vt[t][0, 0, 0])
-    if theta > p_theta_eps:
+    if theta > p_theta_eps or np.isnan(theta):
         g.message(f"Time slice{t} did not converge: {theta} >= {p_theta_eps}")
         sys.exit(1)
 
