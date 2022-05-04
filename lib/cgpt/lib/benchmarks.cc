@@ -20,7 +20,7 @@
 #include "benchmarks.h"
 
 /*
-EXPORT(test_legacy_omega,{
+E X P O R T(test_legacy_omega,{
     
     void* _dst, *_src;
     long type, mu;
