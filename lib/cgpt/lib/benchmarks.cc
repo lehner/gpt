@@ -19,6 +19,26 @@
 #include "lib.h"
 #include "benchmarks.h"
 
+/*
+EXPORT(test_legacy_omega,{
+    
+    void* _dst, *_src;
+    long type, mu;
+    if (!PyArg_ParseTuple(args, "llll", &_dst, &_src, &type, &mu)) {
+      return NULL;
+    }
+    
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+    cgpt_Lattice_base* src = (cgpt_Lattice_base*)_src;
+
+    auto& src_l = compatible<iMSpin4Color3<vComplexD>>(src)->l;
+    auto& dst_l = compatible<iMSpin4<vComplexD>>(dst)->l;
+
+    omega(dst_l, src_l, type, mu);
+    
+    return PyLong_FromLong(0);
+  });
+*/
 
 template<typename vobj_a, typename vobj_b>
 void mk_binary_mul_ll(const micro_kernel_arg_t & arg, size_t i0, size_t i1, size_t n_subblock) {

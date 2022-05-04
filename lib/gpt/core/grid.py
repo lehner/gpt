@@ -62,11 +62,16 @@ def str_to_checkerboarding(s, nd):
 
 def grid_from_description(description):
     p = description.split(";")
-    fdimensions = [int(x) for x in p[0].strip("[]").split(",")]
-    precision = gpt.str_to_precision(p[1])
-    cb = str_to_checkerboarding(p[2], len(fdimensions))
-    obj = None
-    return grid(fdimensions, precision, cb, obj)
+    assert len(p) % 3 == 0
+    parent = None
+    for i in reversed(range(len(p) // 3)):
+        fdimensions = [int(x) for x in p[3 * i + 0].strip("[]").split(",")]
+        precision = gpt.str_to_precision(p[3 * i + 1])
+        cb = str_to_checkerboarding(p[3 * i + 2], len(fdimensions))
+        obj = None
+        mpi = None if parent is None else parent.mpi
+        parent = grid(fdimensions, precision, cb, obj, parent=parent, mpi=mpi)
+    return parent
 
 
 def grid_get_mpi_default(fdimensions, cb):

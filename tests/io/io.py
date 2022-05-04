@@ -39,6 +39,7 @@ U0prime = g.lattice(U[0])
 U0prime[:] = 0
 sdomain.promote(U0prime, S)
 assert np.linalg.norm(U0prime[sdomain.local_coordinates] - U[0][sdomain.local_coordinates]) < 1e-14
+s_slice = sdomain.slice(S, 3)
 
 # save in default gpt format
 g.save(
@@ -112,6 +113,14 @@ res["sdomain"].promote(U0prime2, res["S"])
 eps2 = g.norm2(U0prime - U0prime2)
 g.message("Test sparse domain restore:", eps2)
 assert eps2 < 1e-25
+
+# check slice
+s_slice_2 = res["sdomain"].slice(res["S"], 3)
+eps2 = 0.0
+for a, b in zip(s_slice, s_slice_2):
+    eps2 += g.norm2(a - b)
+assert eps2 < 1e-25
+
 
 # check load out2 with fixed mpi
 res = g.load(f"{work_dir}/out2", paths="/U/*")
