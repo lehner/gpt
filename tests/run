@@ -75,7 +75,7 @@ do
 printf "%-120s" " [TEST] $f"
 
 start=$SECONDS
-${runner} $f ${extra} 2>&1 > ${LOG}
+source ${runner} $f ${extra} 2>&1 > ${LOG}
 res=$?
 elapsed=$((SECONDS-start))
 
