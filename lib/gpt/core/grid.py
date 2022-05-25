@@ -96,7 +96,9 @@ def grid_get_mpi_default(fdimensions, cb):
 
 
 class grid:
-    def __init__(self, fdimensions, precision, cb=None, obj=None, mpi=None, parent=None):
+    def __init__(
+        self, fdimensions, precision, cb=None, obj=None, mpi=None, parent=None
+    ):
 
         self.fdimensions = fdimensions
         self.fsites = np.prod(self.fdimensions)
@@ -146,7 +148,11 @@ class grid:
         self,
     ):  # creates a string without spaces that can be used to construct it again, this should only describe the grid geometry not the mpi
         s = (
-            str(self.fdimensions) + ";" + self.precision.__name__ + ";" + self.cb.__name__
+            str(self.fdimensions)
+            + ";"
+            + self.precision.__name__
+            + ";"
+            + self.cb.__name__
         ).replace(" ", "")
         if self.parent is not None:
             s += ";" + self.parent.describe()
@@ -194,7 +200,9 @@ class grid:
         cb = general(
             self.cb.n,
             self.cb.cb_mask[0:dimension] + [cb_mask] + self.cb.cb_mask[dimension:],
-            self.cb.simd_mask[0:dimension] + [simd_mask] + self.cb.simd_mask[dimension:],
+            self.cb.simd_mask[0:dimension]
+            + [simd_mask]
+            + self.cb.simd_mask[dimension:],
         )
 
         if self.parent is None:
@@ -259,3 +267,11 @@ class grid:
             return x
         else:
             return cgpt.grid_globalsum(self.obj, x)
+
+    def lexicographic_index(self, coordinates):
+        # order of coordinates x,y,z,t
+        # s = x + Lx*y + Lx*Ly*z + Lx*Ly*Lz*t
+        l = [1] + list(np.cumprod(self.fdimensions[:-1]))
+        n, d = coordinates.shape
+        assert d == self.nd
+        return coordinates @ np.array(l)

@@ -41,7 +41,9 @@ class sparse_kernel:
         l = grid.globalsum(l)
         self.L = [int(np.max(l)) * self.grid.mpi[0]] + self.grid.mpi[1:]
 
-        cb_simd_only_first_dimension = gpt.general(1, [0] * grid.nd, [1] + [0] * (grid.nd - 1))
+        cb_simd_only_first_dimension = gpt.general(
+            1, [0] * grid.nd, [1] + [0] * (grid.nd - 1)
+        )
 
         # create grid as subcommunicator so that sparse domains play nice with split grid
         self.embedding_grid = gpt.grid(
@@ -53,7 +55,9 @@ class sparse_kernel:
             grid,
         )
 
-        self.embedded_coordinates = np.ascontiguousarray(gpt.coordinates(self.embedding_grid)[0:n])
+        self.embedded_coordinates = np.ascontiguousarray(
+            gpt.coordinates(self.embedding_grid)[0:n]
+        )
 
         self.embedded_cache = {}
         self.local_cache = {}
@@ -61,7 +65,7 @@ class sparse_kernel:
         self.weight_cache = None
         self.one_mask_cache = None
 
-    def one_mask(self):
+    def cached_one_mask(self):
         if self.one_mask_cache is not None:
             return self.one_mask_cache
 
@@ -82,8 +86,8 @@ class sparse_kernel:
             ):
                 lhalf, l, o = int(_l // 2), int(_l), int(_o)
                 x = gpt(
-                    gpt.component.mod(l)(_x + self.one_mask() * (l + lhalf - o))
-                    - lhalf * self.one_mask()
+                    gpt.component.mod(l)(_x + self.cached_one_mask() * (l + lhalf - o))
+                    - lhalf * self.cached_one_mask()
                 )
                 r = r + x * p * 1j
         return gpt.component.exp(r)
@@ -96,7 +100,9 @@ class sparse_kernel:
         if self.weight_cache is not None:
             return self.weight_cache
 
-        unique_coordinates, count = np.unique(self.local_coordinates, axis=0, return_counts=True)
+        unique_coordinates, count = np.unique(
+            self.local_coordinates, axis=0, return_counts=True
+        )
         unique_coordinates = unique_coordinates.view(type(self.local_coordinates))
         count = count.astype(self.grid.precision.complex_dtype)
 
@@ -172,6 +178,19 @@ class sparse:
 
     def weight(self):
         return self.kernel.weight()
+
+    def embedded_coordinates(self, coordinates):
+        idx1 = self.grid.lexicographic_index(coordinates)
+        idx2 = self.grid.lexicographic_index(self.kernel.local_coordinates)
+        idx_common = np.nonzero(np.in1d(idx2, idx1))[0]
+        return self.kernel.embedded_coordinates[idx_common, :]
+
+    def one_mask(self, coordinates):
+        emb_coor = self.embedded_coordinates(coordinates)
+        one = self.lattice(gpt.ot_singlet())
+        one[:] = 0
+        one[emb_coor] = 1
+        return one
 
     def coordinate_lattices(self):
         return self.kernel.coordinate_lattices()
