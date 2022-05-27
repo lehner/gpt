@@ -37,5 +37,5 @@ from gpt.algorithms.inverter.multi_shift import multi_shift
 from gpt.algorithms.inverter.multi_shift_cg import multi_shift_cg
 from gpt.algorithms.inverter.multi_shift_fom import multi_shift_fom
 from gpt.algorithms.inverter.multi_shift_fgmres import multi_shift_fgmres
-from gpt.algorithms.inverter.minimal_residual_extrapolation import minimal_residual_extrapolation
-from gpt.algorithms.inverter.chronological import chronological
+from gpt.algorithms.inverter.subspace_minimal_residual import subspace_minimal_residual
+from gpt.algorithms.inverter.solution_history import solution_history

@@ -21,12 +21,11 @@ import gpt as g
 from gpt.algorithms import base
 
 
-class chronological(base):
-    def __init__(self, solution_space, extrapolate_inverter, inverter, N):
+class solution_history(base):
+    def __init__(self, solution_space, inverter, N):
         super().__init__()
         self.inverter = inverter
         self.N = N
-        self.extrapolate_inverter = extrapolate_inverter
         self.solution_space = solution_space
 
     def __call__(self, mat):
@@ -35,7 +34,7 @@ class chronological(base):
         if type(mat) == g.matrix_operator:
             vector_space = mat.vector_space
 
-        inv_mat = g.algorithms.inverter.sequence(self.extrapolate_inverter, self.inverter)(mat)
+        inv_mat = self.inverter(mat)
 
         @self.timed_function
         def inv(psi, src, t):
@@ -49,9 +48,7 @@ class chronological(base):
                 space.pop()
             space.insert(0, psi)
 
-            self.log(
-                f"chronological inverter now has {len(self.solution_space)} / {self.N} solution space"
-            )
+            self.log(f"solution space now has {len(self.solution_space)} / {self.N} elements")
 
         return g.matrix_operator(
             mat=inv,

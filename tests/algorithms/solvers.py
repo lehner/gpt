@@ -146,7 +146,7 @@ for t in timings:
 
 
 ####
-# Minimal Residual Extrapolation
+# Minimal Residual Extrapolation (Chronological Inverter)
 ####
 g.message("Minimal Residual Extrapolation")
 U_eps = [[g(u * rng.element(g.mcolor(U[0].grid), scale=1e-3)) for u in U] for i in range(3)]
@@ -155,8 +155,10 @@ w_eps = [w.updated(u) for u in U_eps]
 inv_cg = inv.cg({"eps": 1e-8, "maxiter": 500})
 
 solution_space = []
-inv_chron = inv.chronological(
-    solution_space, inv.minimal_residual_extrapolation(solution_space), inv_pc(eo2, inv_cg), 2
+inv_chron = inv.solution_history(
+    solution_space,
+    inv.sequence(inv.subspace_minimal_residual(solution_space), inv_pc(eo2, inv_cg)),
+    2,
 )
 
 history = []

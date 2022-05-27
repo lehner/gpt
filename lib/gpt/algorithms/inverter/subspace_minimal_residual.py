@@ -23,7 +23,7 @@ import numpy as np
 from gpt.algorithms import base
 
 
-class minimal_residual_extrapolation(base):
+class subspace_minimal_residual(base):
     def __init__(self, solution_space):
         super().__init__()
         self.solution_space = solution_space
@@ -75,7 +75,7 @@ class minimal_residual_extrapolation(base):
 
             eps2 = g.norm2(mat * psi - src) / g.norm2(src)
             self.log(
-                f"minimal residual extrapolation with {len(v)}-dimensional solution space has eps^2 = {eps2}"
+                f"minimal residual with {len(v)}-dimensional solution space has eps^2 = {eps2}"
             )
 
         return g.matrix_operator(
