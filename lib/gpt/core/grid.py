@@ -259,3 +259,11 @@ class grid:
             return x
         else:
             return cgpt.grid_globalsum(self.obj, x)
+
+    def lexicographic_index(self, coordinates):
+        # order of coordinates x,y,z,t
+        # s = x + Lx*y + Lx*Ly*z + Lx*Ly*Lz*t
+        l = [1] + list(np.cumprod(self.fdimensions[:-1]))
+        n, d = coordinates.shape
+        assert d == self.nd
+        return coordinates @ np.array(l)
