@@ -120,7 +120,10 @@ def coordinate_mask(field, mask):
 
 
 def correlate(a, b, dims=None):
-    # c[x] = (1/vol) sum_y a[y]*b[y+x]
+    # c[x] = (1/vol) sum_y a[y]*adj(b[y+x])
     F = gpt.fft(dims=dims)
-    G = gpt.adj(F)
-    return F(gpt(F(a) * G(b)))
+    if dims is not None:
+        norm = numpy.prod([a.grid.gdimensions[d] for d in dims])
+    else:
+        norm = a.grid.fsites
+    return F(gpt(float(norm) * F(a) * gpt.adj(F(b))))

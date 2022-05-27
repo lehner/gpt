@@ -84,6 +84,7 @@ class ot_vector_complex_additive_group(ot_vector_singlet):
             "ot_singlet": (lambda: self, None),
             "ot_complex_additive_group": (lambda: self, None),
         }
+        self.otab = {self.__name__: (lambda: ot_matrix_complex_additive_group(n), [])}
         self.itab = {
             self.__name__: (lambda: ot_singlet, (0, 0)),
         }

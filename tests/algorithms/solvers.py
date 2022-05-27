@@ -144,6 +144,30 @@ g.message("%-38s %-25s %-25s" % ("Solver name", "Solve time / s", "Difference wi
 for t in timings:
     g.message("%-38s %-25s %-25s" % (t, timings[t], resid[t]))
 
+
+####
+# Minimal Residual Extrapolation
+####
+g.message("Minimal Residual Extrapolation")
+U_eps = [[g(u * rng.element(g.mcolor(U[0].grid), scale=1e-3)) for u in U] for i in range(3)]
+w_eps = [w.updated(u) for u in U_eps]
+
+inv_cg = inv.cg({"eps": 1e-8, "maxiter": 500})
+
+solution_space = []
+inv_chron = inv.chronological(
+    solution_space, inv.minimal_residual_extrapolation(solution_space), inv_pc(eo2, inv_cg), 2
+)
+
+history = []
+for we in w_eps:
+    dst_F_we = g(inv_chron(we) * src_F)
+    history.append(len(inv_cg.history))
+
+g.message(f"MRE history: {history}")
+assert all([h * 1.5 < history[0] for h in history[1:]])
+
+
 ####
 # Multi-shift inverters:
 ####

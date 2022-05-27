@@ -206,7 +206,7 @@ def separate_indices(x, st, cache=default_merge_indices_cache):
     keys = []
     tidx = []
     dst = []
-    for i in range(ndim**rank):
+    for i in range(ndim ** rank):
         idx = i
         for j in range(rank):
             c = idx % ndim
@@ -258,7 +258,7 @@ def merge_indices(dst, src, st, cache=default_merge_indices_cache):
 
     tidx = []
     src_i = []
-    for i in range(ndim**rank):
+    for i in range(ndim ** rank):
         idx = i
         for j in range(rank):
             c = idx % ndim
@@ -270,7 +270,7 @@ def merge_indices(dst, src, st, cache=default_merge_indices_cache):
 
     if cache_key not in cache:
         plan = gpt.copy_plan(dst, src_i)
-        for i in range(ndim**rank):
+        for i in range(ndim ** rank):
             plan.destination += dst.view[(pos,) + tidx[i]]
             plan.source += src_i[i].view[:]
         cache[cache_key] = plan()

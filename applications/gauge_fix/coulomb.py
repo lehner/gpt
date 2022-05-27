@@ -15,7 +15,7 @@ p_step = g.default.get_float("--step", 0.03)
 p_gd_step = g.default.get_float("--gd_step", 0.05)
 p_source = g.default.get("--source", None)
 p_rng_seed = g.default.get("--random", None)
-p_theta_eps=g.default.get_float("--theta_eps", 1e-14)
+p_theta_eps = g.default.get_float("--theta_eps", 1e-14)
 p_max_abs_step = g.default.get_float("--max_abs_step", 0.3)
 
 g.message(
@@ -72,7 +72,7 @@ cg = opt.non_linear_cg(
     step=p_step,
     line_search=opt.line_search_quadratic,
     beta=opt.polak_ribiere,
-    max_abs_step=p_max_abs_step
+    max_abs_step=p_max_abs_step,
 )
 gd = opt.gradient_descent(maxiter=p_maxiter_gd, eps=p_eps, step=p_gd_step)
 

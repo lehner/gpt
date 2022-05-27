@@ -218,7 +218,7 @@ def get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj):
         # inner
         tab = f_otype.itab
         rtab = {}
-    elif not t_adj and f_adj and f_otype.otab is not None:
+    elif t_adj and not f_adj and f_otype.otab is not None:
         # outer
         tab = f_otype.otab
         rtab = {}

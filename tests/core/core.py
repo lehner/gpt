@@ -204,8 +204,8 @@ for t in range(L[3]):
 # Test correlate
 ################################################################################
 def correlate_test_3d(a, b, x):
-    # c[x] = (1/vol) sum_y a[y]*b[y+x]
-    bprime = b
+    # c[x] = (1/vol) sum_y a[y]*adj(b[y+x])
+    bprime = g(g.adj(b))
     L = a.grid.gdimensions
     vol = L[0] * L[1] * L[2]
     for i in range(3):
@@ -215,8 +215,8 @@ def correlate_test_3d(a, b, x):
 
 
 def correlate_test_4d(a, b, x):
-    # c[x] = (1/vol) sum_y a[y]*b[y+x]
-    bprime = b
+    # c[x] = (1/vol) sum_y a[y]*adj(b[y+x])
+    bprime = g(g.adj(b))
     L = a.grid.gdimensions
     vol = L[0] * L[1] * L[2] * L[3]
     for i in range(4):

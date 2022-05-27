@@ -74,7 +74,9 @@ class ot_u_1_algebra(ot_u_1_base):
 class ot_u_1_group(ot_u_1_base):
     def __init__(self):
         super().__init__("ot_u_1_group()")
-        self.ctab = {"ot_u_1_algebra()": lambda dst, src: gpt.eval(dst, gpt.component.log(src) / 1j)}
+        self.ctab = {
+            "ot_u_1_algebra()": lambda dst, src: gpt.eval(dst, gpt.component.log(src) / 1j)
+        }
 
     def compose(self, a, b):
         return a * b
