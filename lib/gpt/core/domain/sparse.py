@@ -61,7 +61,7 @@ class sparse_kernel:
         self.weight_cache = None
         self.one_mask_cache = None
 
-    def one_mask(self):
+    def cached_one_mask(self):
         if self.one_mask_cache is not None:
             return self.one_mask_cache
 
@@ -82,8 +82,8 @@ class sparse_kernel:
             ):
                 lhalf, l, o = int(_l // 2), int(_l), int(_o)
                 x = gpt(
-                    gpt.component.mod(l)(_x + self.one_mask() * (l + lhalf - o))
-                    - lhalf * self.one_mask()
+                    gpt.component.mod(l)(_x + self.cached_one_mask() * (l + lhalf - o))
+                    - lhalf * self.cached_one_mask()
                 )
                 r = r + x * p * 1j
         return gpt.component.exp(r)
@@ -172,6 +172,19 @@ class sparse:
 
     def weight(self):
         return self.kernel.weight()
+
+    def embedded_coordinates(self, coordinates):
+        idx1 = self.grid.lexicographic_index(coordinates)
+        idx2 = self.grid.lexicographic_index(self.kernel.local_coordinates)
+        idx_common = np.nonzero(np.in1d(idx2, idx1))[0]
+        return self.kernel.embedded_coordinates[idx_common, :]
+
+    def one_mask(self, coordinates):
+        emb_coor = self.embedded_coordinates(coordinates)
+        one = self.lattice(gpt.ot_singlet())
+        one[:] = 0
+        one[emb_coor] = 1
+        return one
 
     def coordinate_lattices(self):
         return self.kernel.coordinate_lattices()
