@@ -109,7 +109,21 @@ def color_trace(l):
 
 def sum(e):
     l = gpt.eval(e)
-    val = cgpt.lattice_sum(l.v_obj[0])
-    for i in l.otype.v_idx[1:]:
-        val = np.append(val, cgpt.lattice_sum(l.v_obj[i]))
+    val = [cgpt.lattice_sum(x) for x in l.v_obj]
+    vrank = len(val)
+    if vrank == 1:
+        val = val[0]
+    else:
+        vdim = len(l.otype.shape)
+        if vdim == 1:
+            val = np.concatenate(val)
+        elif vdim == 2:
+            n = int(vrank ** 0.5)
+            assert n * n == vrank
+            val = np.concatenate(
+                [np.concatenate([val[i * n + j] for j in range(n)], axis=0) for i in range(n)],
+                axis=1,
+            )
+        else:
+            raise NotImplementedError()
     return gpt.util.value_to_tensor(val, l.otype)
