@@ -33,7 +33,9 @@ class subspace_minimal_residual(base):
         vector_space = None
         if type(mat) == g.matrix_operator:
             vector_space = mat.vector_space
-
+        else:
+            mat = g.matrix_operator(mat=mat)
+            
         @self.timed_function
         def inv(psi, src, t):
 
@@ -59,12 +61,15 @@ class subspace_minimal_residual(base):
             # with b_i = v_i^dag M^dag src,  G_ij = v_i^dag M^dag M v_j
             #
 
+            t("mat v")
+            mat_v = [mat(x) for x in v]
+            
             t("projected source")
-            b = g.inner_product(v, g.adj(mat) * src)[:, 0]
+            b = g.inner_product(mat_v, src)[:, 0]
 
             t("projected matrix")
             G_ij = np.matrix(
-                [g.inner_product(v, g.adj(mat) * mat * v[j])[:, 0] for j in range(len(v))]
+                [g.inner_product(mat_v, mat_v[j])[:, 0] for j in range(len(v))]
             ).T
 
             t("solve")
@@ -73,7 +78,7 @@ class subspace_minimal_residual(base):
             t("linear combination")
             g.linear_combination(psi, v, a)
 
-            eps2 = g.norm2(mat * psi - src) / g.norm2(src)
+            eps2 = g.norm2(mat(psi) - src) / g.norm2(src)
             self.log(
                 f"minimal residual with {len(v)}-dimensional solution space has eps^2 = {eps2}"
             )
