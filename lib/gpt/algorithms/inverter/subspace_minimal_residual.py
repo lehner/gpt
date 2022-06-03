@@ -35,7 +35,7 @@ class subspace_minimal_residual(base):
             vector_space = mat.vector_space
         else:
             mat = g.matrix_operator(mat=mat)
-            
+
         @self.timed_function
         def inv(psi, src, t):
 
@@ -63,7 +63,7 @@ class subspace_minimal_residual(base):
 
             t("mat v")
             mat_v = [mat(x) for x in v]
-            
+
             t("projected source")
             b = g.inner_product(mat_v, src)[:, 0]
 
