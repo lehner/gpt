@@ -116,7 +116,7 @@ class defect_correcting(base_iterative):
                 self.log_convergence(i, eps, self.eps)
 
                 if eps < self.eps:
-                    self.log(f"converged in {i+1} iterations")
+                    self.log(f"converged after {i} iterations")
                     break
 
                 # normalize _s to avoid floating-point underflow in inner_inv_mat

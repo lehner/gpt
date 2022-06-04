@@ -70,24 +70,30 @@ class MMdag_evenodd:
         return g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
 
     def MMdag(self, op):
-        tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
-        def operator(dst, src):
-            op.Meooe.adj_mat(dst, src)
-            op.Mooee.adj_inv_mat(tmp[0], dst)
-            op.Meooe.adj_mat(dst, tmp[0])
-            op.Mooee.adj_mat(tmp[0], src)
+        def spawn(op):
+            tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
-            tmp[1] @= tmp[0] - dst
+            def operator(dst, src):
+                op.Meooe.adj_mat(dst, src)
+                op.Mooee.adj_inv_mat(tmp[0], dst)
+                op.Meooe.adj_mat(dst, tmp[0])
+                op.Mooee.adj_mat(tmp[0], src)
 
-            op.Meooe.mat(dst, tmp[1])
-            op.Mooee.inv_mat(tmp[0], dst)
-            op.Meooe.mat(dst, tmp[0])
-            op.Mooee.mat(tmp[0], tmp[1])
+                tmp[1] @= tmp[0] - dst
 
-            dst @= tmp[0] - dst
+                op.Meooe.mat(dst, tmp[1])
+                op.Mooee.inv_mat(tmp[0], dst)
+                op.Meooe.mat(dst, tmp[0])
+                op.Mooee.mat(tmp[0], tmp[1])
 
-        return operator
+                dst @= tmp[0] - dst
+
+            mdagm = g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
+            mdagm.converted = lambda precision: spawn(op.converted(precision))
+            return mdagm
+        
+        return spawn(op)
 
     def Mderiv(self, op):
         tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
