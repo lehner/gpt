@@ -22,12 +22,14 @@ from gpt.algorithms import base_iterative
 
 
 class cg(base_iterative):
-    @g.params_convention(eps=1e-15, maxiter=1000000)
+    @g.params_convention(eps=1e-15, maxiter=1000000, eps_abs=None, miniter=0)
     def __init__(self, params):
         super().__init__()
         self.params = params
         self.eps = params["eps"]
+        self.eps_abs = params["eps_abs"]
         self.maxiter = params["maxiter"]
+        self.miniter = params["miniter"]
 
     def __call__(self, mat):
 
@@ -70,9 +72,13 @@ class cg(base_iterative):
                 p @= b * p + r
                 t("other")
                 self.log_convergence(k, cp, rsq)
-                if cp <= rsq:
-                    self.log(f"converged in {k+1} iterations")
-                    return
+                if k + 1 >= self.miniter:
+                    if self.eps_abs is not None and cp <= self.eps_abs ** 2.0:
+                        self.log(f"converged in {k+1} iterations (absolute criterion)")
+                        return
+                    if cp <= rsq:
+                        self.log(f"converged in {k+1} iterations")
+                        return
 
             self.log(f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}")
 
