@@ -68,9 +68,7 @@ class subspace_minimal_residual(base):
             b = g.inner_product(mat_v, src)[:, 0]
 
             t("projected matrix")
-            G_ij = np.matrix(
-                [g.inner_product(mat_v, mat_v[j])[:, 0] for j in range(len(v))]
-            ).T
+            G_ij = np.matrix([g.inner_product(mat_v, mat_v[j])[:, 0] for j in range(len(v))]).T
 
             t("solve")
             a = np.linalg.solve(G_ij, b)

@@ -70,7 +70,6 @@ class MMdag_evenodd:
         return g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
 
     def MMdag(self, op):
-
         def spawn(op):
             tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
@@ -92,7 +91,7 @@ class MMdag_evenodd:
             mdagm = g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
             mdagm.converted = lambda precision: spawn(op.converted(precision))
             return mdagm
-        
+
         return spawn(op)
 
     def Mderiv(self, op):
