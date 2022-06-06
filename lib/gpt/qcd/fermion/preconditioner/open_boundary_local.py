@@ -98,11 +98,15 @@ class open_boundary_local(base_iterative):
         @self.timed_function
         def inv(dst, src, t):
             timer[0] = t
+            t("project")
             F_ldomain_bulk.project(_src, src)
             F_ldomain_bulk.project(_dst, dst)
             F_ldomain_margin.project(_dst, z)
+            t("inner inverter")
             pml_inv(_dst, _src)
+            t("promote")
             F_ldomain_bulk.promote(dst, _dst)
+            t()
 
         return g.matrix_operator(
             mat=inv, inv_mat=proj_mat, accept_guess=(True, False), vector_space=vector_space
