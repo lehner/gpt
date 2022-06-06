@@ -34,7 +34,7 @@ class local(two_grid_base):
         dim = grid.nd
 
         self.local_grid = grid.split(
-            [1] * dim, [grid.fdimensions[i] + 2 * margin[i] for i in range(dim)]
+            [1] * dim, [grid.fdimensions[i] // grid.mpi[i] + 2 * margin[i] for i in range(dim)]
         )
         self.gcoor = g.coordinates((grid, cb), margin=margin)
         self.lcoor = g.coordinates((self.local_grid, cb))

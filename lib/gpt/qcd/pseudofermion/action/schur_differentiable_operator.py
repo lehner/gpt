@@ -88,9 +88,9 @@ class MMdag_evenodd:
 
                 dst @= tmp[0] - dst
 
-            mdagm = g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
-            mdagm.converted = lambda precision: spawn(op.converted(precision))
-            return mdagm
+            return g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space).inherit(
+                op, lambda nop: spawn(nop)
+            )
 
         return spawn(op)
 
