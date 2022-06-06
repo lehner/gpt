@@ -49,18 +49,20 @@ class cg(base_iterative):
         def inv(psi, src, t):
             assert src != psi
             t("setup")
-            p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
+            p, mmp, r = g.lattice(src), g.lattice(src), g.lattice(src)
             if prec is not None:
-                z = g.copy(src)
+                z = g.lattice(src)
+            t("matrix")
             mat(mmp, psi)  # in, out
-            r @= src - mmp
+            t("setup")
+            g.axpy(r, -1.0, mmp, src)
             if prec is not None:
                 z[:] = 0
                 prec(z, r)
-                p @= z
+                g.copy(p, z)
                 cp = g.inner_product(r, z).real
             else:
-                p @= r
+                g.copy(p, r)
                 cp = g.norm2(p)
             ssq = g.norm2(src)
             if ssq == 0.0:
@@ -89,9 +91,9 @@ class cg(base_iterative):
                 b = cp / c
                 psi += a * p
                 if prec is not None:
-                    p @= b * p + z
+                    g.axpy(p, b, p, z)
                 else:
-                    p @= b * p + r
+                    g.axpy(p, b, p, r)
                 t("other")
                 res = abs(cp)
                 self.log_convergence(k, res, rsq)
