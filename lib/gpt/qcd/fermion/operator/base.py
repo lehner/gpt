@@ -181,6 +181,27 @@ class base(gpt.matrix_operator):
         self._DhopDeriv = registry.DhopDeriv
         self._DhopDerivDag = registry.DhopDerivDag
 
+        # inheritance
+        def inherit_factory(parent, name, factory):
+            def _f(*args):
+                return factory(getattr(parent, name)(*args))
+
+            return _f
+
+        def inherit_query(parent, name, factory):
+            def _f(*args):
+                return getattr(parent, name)(*args)
+
+            return _f
+
+        self.inheritance = [
+            ("split", inherit_factory),
+            ("updated", inherit_factory),
+            ("converted", inherit_factory),
+            ("modified", inherit_factory),
+            ("arguments", inherit_query),
+        ]
+
     def covariant_shift(self):
         if not self.covariant_shift_cache:
             self.covariant_shift_cache = gpt.covariant.shift(
@@ -215,6 +236,9 @@ class base(gpt.matrix_operator):
         return gpt.qcd.fermion.coarse.nearest_neighbor_operator(
             self, coarse_grid, basis, params, self.daggered
         )
+
+    def arguments(self):
+        return self.U
 
     def updated(self, U):
         return type(self)(
@@ -270,9 +294,17 @@ class base(gpt.matrix_operator):
             def __init__(me):
                 me.D_domain = gpt.domain.even_odd_sites(self.F_grid_eo, parity)
                 me.C_domain = gpt.domain.even_odd_sites(self.F_grid_eo, parity.inv())
-                me.DD = self.Mooee
-                me.CC = self.Mooee
-                me.CD = self.Meooe
-                me.DC = self.Meooe
+                me.DD = self.Mooee.clone()
+                me.CC = self.Mooee.clone()
+                me.CD = self.Meooe.clone()
+                me.DC = self.Meooe.clone()
+                me.DD.vector_space[1].cb = parity
+                me.DD.vector_space[0].cb = parity
+                me.CC.vector_space[1].cb = parity.inv()
+                me.CC.vector_space[0].cb = parity.inv()
+                me.CD.vector_space[1].cb = parity
+                me.CD.vector_space[0].cb = parity.inv()
+                me.DC.vector_space[1].cb = parity.inv()
+                me.DC.vector_space[0].cb = parity
 
         return even_odd_sites()

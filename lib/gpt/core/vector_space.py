@@ -56,6 +56,9 @@ class general:
     def replaced_otype(self, otype):
         return general(self.grid, otype, self.cb)
 
+    def clone(self):
+        return general(self.grid, self.otype, self.cb)
+
 
 ##
 # short-hand

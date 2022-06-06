@@ -22,7 +22,7 @@ from gpt.algorithms import base_iterative
 
 
 class cg(base_iterative):
-    @g.params_convention(eps=1e-15, maxiter=1000000, eps_abs=None, miniter=0)
+    @g.params_convention(eps=1e-15, maxiter=1000000, eps_abs=None, miniter=0, prec=None)
     def __init__(self, params):
         super().__init__()
         self.params = params
@@ -30,8 +30,14 @@ class cg(base_iterative):
         self.eps_abs = params["eps_abs"]
         self.maxiter = params["maxiter"]
         self.miniter = params["miniter"]
+        self.prec = params["prec"]
+
+    def modified(self, **params):
+        return cg({**self.params, **params})
 
     def __call__(self, mat):
+
+        prec = self.prec(mat) if self.prec is not None else None
 
         vector_space = None
         if type(mat) == g.matrix_operator:
@@ -44,13 +50,18 @@ class cg(base_iterative):
             assert src != psi
             t("setup")
             p, mmp, r = g.copy(src), g.copy(src), g.copy(src)
+            if prec is not None:
+                z = g.copy(src)
             mat(mmp, psi)  # in, out
-            d = g.inner_product(psi, mmp).real
-            b = g.norm2(mmp)
             r @= src - mmp
-            p @= r
-            a = g.norm2(p)
-            cp = a
+            if prec is not None:
+                z[:] = 0
+                prec(z, r)
+                p @= z
+                cp = g.inner_product(r, z).real
+            else:
+                p @= r
+                cp = g.norm2(p)
             ssq = g.norm2(src)
             if ssq == 0.0:
                 psi[:] = 0
@@ -61,26 +72,38 @@ class cg(base_iterative):
                 t("matrix")
                 mat(mmp, p)
                 t("inner_product")
-                dc = g.inner_product(p, mmp)
-                d = dc.real
+                d = g.inner_product(p, mmp).real
                 a = c / d
                 t("axpy_norm2")
-                cp = g.axpy_norm2(r, -a, mmp, r)
+                if prec is not None:
+                    # c = <r,z>, d = <p,A p>
+                    g.axpy(r, -a, mmp, r)
+                    t("prec")
+                    z[:] = 0
+                    prec(z, r)
+                    t("axpy_norm2")
+                    cp = g.inner_product(r, z).real
+                else:
+                    cp = g.axpy_norm2(r, -a, mmp, r)
                 t("linear combination")
                 b = cp / c
                 psi += a * p
-                p @= b * p + r
+                if prec is not None:
+                    p @= b * p + z
+                else:
+                    p @= b * p + r
                 t("other")
-                self.log_convergence(k, cp, rsq)
+                res = abs(cp)
+                self.log_convergence(k, res, rsq)
                 if k + 1 >= self.miniter:
-                    if self.eps_abs is not None and cp <= self.eps_abs ** 2.0:
+                    if self.eps_abs is not None and res <= self.eps_abs ** 2.0:
                         self.log(f"converged in {k+1} iterations (absolute criterion)")
                         return
-                    if cp <= rsq:
+                    if res <= rsq:
                         self.log(f"converged in {k+1} iterations")
                         return
 
-            self.log(f"NOT converged in {k+1} iterations;  squared residual {cp:e} / {rsq:e}")
+            self.log(f"NOT converged in {k+1} iterations;  squared residual {res:e} / {rsq:e}")
 
         return g.matrix_operator(
             mat=inv, inv_mat=mat, accept_guess=(True, False), vector_space=vector_space

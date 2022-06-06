@@ -134,9 +134,4 @@ class schur_complement_two:
 
         self.Mpc = gpt.matrix_operator(
             mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space)
-        )
-
-        for undressed in ["Mpc"]:
-            self.__dict__[undressed].split = lambda mpi: schur_complement_two(
-                op.split(mpi), domain_decomposition
-            ).__dict__[undressed]
+        ).inherit(op, lambda nop: schur_complement_two(nop, domain_decomposition).Mpc)

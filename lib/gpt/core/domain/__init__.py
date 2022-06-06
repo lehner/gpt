@@ -20,3 +20,4 @@ from gpt.core.domain.even_odd_sites import even_odd_sites
 from gpt.core.domain.even_odd_blocks import even_odd_blocks
 from gpt.core.domain.full import full
 from gpt.core.domain.sparse import sparse
+from gpt.core.domain.local import local

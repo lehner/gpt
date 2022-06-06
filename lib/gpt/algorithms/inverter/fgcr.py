@@ -104,6 +104,7 @@ class fgcr(base_iterative):
 
                 t("prec")
                 if prec is not None:
+                    p[i][:] = 0
                     prec(p[i], r)
                 else:
                     p[i] @= r

@@ -51,6 +51,7 @@ class matrix_operator(factor):
         accept_list=False,
     ):
 
+        self.inheritance = None
         self.mat = mat
         self.adj_mat = adj_mat
         self.inv_mat = inv_mat
@@ -127,6 +128,17 @@ class matrix_operator(factor):
     def __rmul__(self, other):
         return gpt.expr(other).__mul__(self)
 
+    def clone(self):
+        return matrix_operator(
+            mat=self.mat,
+            adj_mat=self.adj_mat,
+            inv_mat=self.inv_mat,
+            adj_inv_mat=self.adj_inv_mat,
+            vector_space=(self.vector_space[0].clone(), self.vector_space[1].clone()),
+            accept_guess=self.accept_guess,
+            accept_list=self.accept_list,
+        )
+
     def converted(self, to_precision, timing_wrapper=None):
         assert all([d is not None for d in self.vector_space])
 
@@ -194,6 +206,14 @@ class matrix_operator(factor):
         elif u == gpt.factor_unary.NONE:
             return self
         assert 0
+
+    def inherit(self, parent, factory):
+        if parent.inheritance is not None:
+            for name, functor in parent.inheritance:
+                self.__dict__[name] = functor(parent, name, factory)
+            self.inheritance = parent.inheritance
+
+        return self
 
     def __call__(self, first, second=None):
         assert self.mat is not None

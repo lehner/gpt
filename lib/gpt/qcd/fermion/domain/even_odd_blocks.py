@@ -25,13 +25,10 @@ def set_domain_boundaries_of_U(U, domain):
     colon = slice(None, None, None)
     nd = len(U)
     for dim in range(nd):
-        if domain.blocks_per_dimension[dim] > 1:
-            for i in range(1, domain.extended_local_blocks_per_dimension[dim] + 1):
-                U[dim][
-                    tuple(
-                        [colon] * dim + [i * domain.block_size[dim] - 1] + [colon] * (nd - dim - 1)
-                    )
-                ] = 0
+        for i in range(1, domain.extended_local_blocks_per_dimension[dim] + 1):
+            U[dim][
+                tuple([colon] * dim + [i * domain.block_size[dim] - 1] + [colon] * (nd - dim - 1))
+            ] = 0
 
 
 def domain_fermion_operator(op, domain):

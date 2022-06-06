@@ -29,3 +29,4 @@ from gpt.qcd.fermion.preconditioner.even_odd_sites import (
 from gpt.qcd.fermion.preconditioner.sap import sap_cycle
 from gpt.qcd.fermion.preconditioner.mixed_dwf import mixed_dwf
 from gpt.qcd.fermion.preconditioner.physical import physical
+from gpt.qcd.fermion.preconditioner.open_boundary_local import open_boundary_local

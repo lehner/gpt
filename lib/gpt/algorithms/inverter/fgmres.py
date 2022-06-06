@@ -141,6 +141,7 @@ class fgmres(base_iterative):
 
                 t("prec")
                 if prec is not None:
+                    ZV[i][:] = 0
                     prec(ZV[i], V[i])
 
                 t("mat")

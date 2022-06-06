@@ -18,6 +18,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt, numpy
+from gpt.core.domain.two_grid_base import two_grid_base
 
 # ix = x[0] + lat[0]*(x[1] + lat[2]*...)
 def index_to_coordinate(ix, lat):  # go through cgpt and order=lexicographic
@@ -28,15 +29,14 @@ def index_to_coordinate(ix, lat):  # go through cgpt and order=lexicographic
     return x
 
 
-class even_odd_blocks:
+class even_odd_blocks(two_grid_base):
     def __init__(self, grid, block_size, parity):
+        super().__init__()
         self.parity = parity
         self.block_size = block_size
         self.block_volume = int(numpy.prod(block_size))
         self.grid = grid
         assert grid.cb.n == 1  # for now only full grids are supported
-        self.promote_plan = {}
-        self.project_plan = {}
 
         # general blocking info
         nd = len(block_size)
@@ -98,24 +98,3 @@ class even_odd_blocks:
                 )
                 self.gcoor[sl, :] = pos
         assert n * 2 == self.number_of_local_blocks
-
-    def lattice(self, otype):
-        return gpt.lattice(self.local_grid, otype)
-
-    def project(self, dst, src):
-        tag = src.otype.__name__
-        if tag not in self.project_plan:
-            plan = gpt.copy_plan(dst, src, embed_in_communicator=src.grid)
-            plan.destination += dst.view[self.lcoor]
-            plan.source += src.view[self.gcoor]
-            self.project_plan[tag] = plan()
-        self.project_plan[tag](dst, src)
-
-    def promote(self, dst, src):
-        tag = src.otype.__name__
-        if tag not in self.promote_plan:
-            plan = gpt.copy_plan(dst, src, embed_in_communicator=dst.grid)
-            plan.destination += dst.view[self.gcoor]
-            plan.source += src.view[self.lcoor]
-            self.promote_plan[tag] = plan()
-        self.promote_plan[tag](dst, src)

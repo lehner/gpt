@@ -24,9 +24,9 @@ class local_coordinates(numpy.ndarray):
     pass
 
 
-def coordinates(o, order="lexicographic"):
+def coordinates(o, order="lexicographic", margin=None):
     if type(o) == gpt.grid and o.cb.n == 1:
-        return coordinates((o, gpt.none), order=order)
+        return coordinates((o, gpt.none), order=order, margin=margin)
     elif type(o) == tuple and type(o[0]) == gpt.grid and len(o) == 2:
         dim = len(o[0].ldimensions)
         cb = o[1].tag
@@ -34,12 +34,24 @@ def coordinates(o, order="lexicographic"):
         cbf = [o[0].fdimensions[i] // o[0].gdimensions[i] for i in range(dim)]
         top = [o[0].processor_coor[i] * o[0].ldimensions[i] * cbf[i] for i in range(dim)]
         bottom = [top[i] + o[0].ldimensions[i] * cbf[i] for i in range(dim)]
-        return cgpt.coordinates_from_cartesian_view(top, bottom, checker_dim_mask, cb, order).view(
-            local_coordinates
-        )
+
+        if margin is not None:
+            top = [t - m for t, m in zip(top, margin)]
+            bottom = [b + m for b, m in zip(bottom, margin)]
+
+        x = cgpt.coordinates_from_cartesian_view(top, bottom, checker_dim_mask, cb, order)
+
+        if margin is None:
+            x = x.view(local_coordinates)
+        else:
+            L = numpy.array(o[0].gdimensions, dtype=numpy.int32)
+            x = numpy.mod(x, L)
+
+        return x
     elif type(o) == gpt.lattice:
-        return coordinates((o.grid, o.checkerboard()), order=order)
+        return coordinates((o.grid, o.checkerboard()), order=order, margin=margin)
     elif type(o) == gpt.cartesian_view:
+        assert margin is None
         return cgpt.coordinates_from_cartesian_view(
             o.top, o.bottom, o.checker_dim_mask, o.cb, order
         )

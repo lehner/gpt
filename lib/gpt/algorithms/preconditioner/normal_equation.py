@@ -62,4 +62,4 @@ class normal_equation:
 
         self.Mpc, self.R = wrap(pc.Mpc, pc.R)
 
-        self.Mpc.split = lambda mpi: wrap(pc.Mpc.split(mpi), pc.R)[0]
+        self.Mpc.inherit(pc.Mpc, lambda nop: wrap(nop, pc.R)[0])

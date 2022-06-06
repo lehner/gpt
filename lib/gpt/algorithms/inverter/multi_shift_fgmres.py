@@ -138,6 +138,8 @@ class multi_shift_fgmres(base_iterative):
 
                 t("prec")
                 Z = [sfgmres[j].Z[i] for j in idx] + [mmp]
+                for z in Z:
+                    z[:] = 0
                 rhos = prec(Z, [V[i]])
                 for j, rho in zip(idx, rhos[0:-1]):
                     sfgmres[j].gamma[i] = rho / rhos[-1]
