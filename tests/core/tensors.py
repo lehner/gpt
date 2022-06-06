@@ -162,11 +162,13 @@ for i in range(n):
 # test g.sum
 s1 = g.sum(cm).array
 s2 = np.sum(cm[:, :, :, :], axis=0)
+cm.grid.globalsum(s2)
 eps = np.linalg.norm(s2 - s1) ** 2.0 / grid.gsites / (n * n)
 assert eps < 1e-10
 
 s1 = g.sum(cv).array
 s2 = np.sum(cv[:, :, :, :], axis=0)
+cm.grid.globalsum(s2)
 eps = np.linalg.norm(s2 - s1) ** 2.0 / grid.gsites / (n)
 assert eps < 1e-10
 
