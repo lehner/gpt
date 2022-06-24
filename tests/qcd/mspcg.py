@@ -67,7 +67,7 @@ assert eps2 < 1e-10
 
 speedup = len(cg1.history) / len(cg2.history)
 g.message(f"Speedup in terms of outer CG iterations: {speedup}")
-assert speedup > 1.9
+assert speedup > 1.0
 
 
 
