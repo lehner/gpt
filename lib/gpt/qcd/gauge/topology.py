@@ -50,7 +50,7 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
         (1 / 5.0 - 2 * c5),
         c5,
     ]
-    sum = 0.0
+    res = accumulator(U[0])
     # symmetric loops
     for loop, Lmu, Lnu in [(0, 1, 1), (1, 2, 2), (4, 3, 3)]:
 
@@ -82,11 +82,9 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
             )
             T.append(g(A - g.adj(A)))
 
-        res = accumulator(U[0])
-        for i in range(0, 3):
-            res += g(E[i] * B[i])
         coeff = c[loop] / Lmu ** 2 / Lnu ** 2
-        sum += res.scaled_project(coeff, True)
+        for i in range(0, 3):
+            res += g(coeff * E[i] * B[i])
 
     # asymmetric loops
     for loop, Lmu, Lnu in [(2, 1, 2), (3, 1, 3)]:
@@ -123,15 +121,13 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
             )
             T.append(g(A - g.adj(A)))
 
-        res = accumulator(U[0])
-        for i in range(0, 3):
-            res += g(E[i] * B[i])
         coeff = c[loop] / Lmu ** 2 / Lnu ** 2
-        sum += res.scaled_project(coeff, True)
+        for i in range(0, 3):
+            res += g(coeff * E[i] * B[i])
 
     # the first factor: 3 to remove rectangle norm by 3,
     # 2 because we need to avg over 4 * 2 clover leaves,
     # and rectangle only does 4.
     coeff = (3 / 2.0) ** 2 * 8.0 / (32.0 * np.pi ** 2)
     coeff *= U[0].grid.gsites
-    return coeff * sum
+    return res.scaled_project(coeff, True)
