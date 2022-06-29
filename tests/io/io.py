@@ -114,6 +114,9 @@ eps2 = g.norm2(U0prime - U0prime2)
 g.message("Test sparse domain restore:", eps2)
 assert eps2 < 1e-25
 
+# check local coordinates
+assert np.array_equal(res["sdomain"].local_coordinates, sdomain.local_coordinates)
+
 # check slice
 s_slice_2 = res["sdomain"].slice(res["S"], 3)
 eps2 = 0.0

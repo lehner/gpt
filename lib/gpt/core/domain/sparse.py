@@ -57,7 +57,7 @@ class sparse_kernel:
 
         self.embedded_cache = {}
         self.local_cache = {}
-        self.coordinate_lattices_cache = None
+        self.coordinate_lattices_cache = {}
         self.weight_cache = None
         self.one_mask_cache = None
 
@@ -112,19 +112,20 @@ class sparse_kernel:
         x[:] = 0
         return x
 
-    def coordinate_lattices(self):
-        if self.coordinate_lattices_cache is not None:
-            return self.coordinate_lattices_cache
+    def coordinate_lattices(self, mark_empty=0):
+        if mark_empty in self.coordinate_lattices_cache:
+            return self.coordinate_lattices_cache[mark_empty]
 
         ret = []
         for i in range(self.grid.nd):
             coor_i = self.lattice(gpt.ot_real_additive_group())
+            coor_i[:] = mark_empty
             coor_i[self.embedded_coordinates] = self.local_coordinates[:, i].astype(
                 self.grid.precision.complex_dtype
             )
             ret.append(coor_i)
 
-        self.coordinate_lattices_cache = ret
+        self.coordinate_lattices_cache[mark_empty] = ret
         return ret
 
 
@@ -186,8 +187,8 @@ class sparse:
         one[emb_coor] = 1
         return one
 
-    def coordinate_lattices(self):
-        return self.kernel.coordinate_lattices()
+    def coordinate_lattices(self, **args):
+        return self.kernel.coordinate_lattices(**args)
 
     def lattice(self, otype):
         return self.kernel.lattice(otype)

@@ -327,12 +327,13 @@ class gpt_io:
         return sdomain.grid.describe()
 
     def read_domain_sparse(self, sdomain_grid, sdomain_cl):
-        def rmnan(x):
-            return x[~numpy.isnan(x)[:, 0]]
+        def remove_empty(x):
+            return x[(x >= 0)[:, 0]]
 
         local_coordinates = numpy.hstack(
-            tuple([rmnan(x[:]).real.astype(numpy.int32) for x in sdomain_cl])
+            tuple([remove_empty(x[:]).real.astype(numpy.int32) for x in sdomain_cl])
         )
+        
         return gpt.domain.sparse(sdomain_grid, local_coordinates)
 
     def write(self, objs):
@@ -377,7 +378,7 @@ class gpt_io:
         elif type(objs) == gpt.domain.sparse:
             f.write("domain.sparse <\n")
             f.write(self.write_domain_sparse(ctx, objs) + "\n")
-            for i, x in enumerate(objs.coordinate_lattices()):
+            for i, x in enumerate(objs.coordinate_lattices(mark_empty=-1)):
                 f.write("lattice %s\n" % self.write_lattice(ctx + "/cl" + str(i), x))
             f.write(">\n")
         else:
