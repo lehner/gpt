@@ -28,7 +28,7 @@ def get_cache(c, l):
 
 
 class sparse_kernel:
-    def __init__(self, grid, local_coordinates):
+    def __init__(self, grid, local_coordinates, divisible_by):
         assert grid.cb.n == 1
         self.grid = grid
         self.local_coordinates = local_coordinates
@@ -37,9 +37,9 @@ class sparse_kernel:
         n = len(local_coordinates)
         N = self.grid.Nprocessors
         l = np.zeros(N, dtype=np.uint64)
-        l[self.grid.processor] = 2 ** int(np.ceil(np.log(n) / np.log(2)))
+        l[self.grid.processor] = 2 ** int(np.ceil(np.log(n / divisible_by) / np.log(2)))
         l = grid.globalsum(l)
-        self.L = [int(np.max(l)) * self.grid.mpi[0]] + self.grid.mpi[1:]
+        self.L = [int(np.max(l) * divisible_by) * self.grid.mpi[0]] + self.grid.mpi[1:]
 
         cb_simd_only_first_dimension = gpt.general(1, [0] * grid.nd, [1] + [0] * (grid.nd - 1))
 
@@ -130,12 +130,12 @@ class sparse_kernel:
 
 
 class sparse:
-    def __init__(self, grid, local_coordinates):
+    def __init__(self, grid, local_coordinates, divisible_by=1):
         self.local_coordinates = local_coordinates
         self.grid = grid
 
         # kernel to avoid circular references through captures below
-        kernel = sparse_kernel(grid, local_coordinates)
+        kernel = sparse_kernel(grid, local_coordinates, divisible_by)
 
         def _project(dst, src):
             for d, s in zip(dst, src):
