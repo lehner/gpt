@@ -37,9 +37,12 @@ class sparse_kernel:
         n = len(local_coordinates)
         N = self.grid.Nprocessors
         l = np.zeros(N, dtype=np.uint64)
-        l[self.grid.processor] = 2 ** int(np.ceil(np.log(n / divisible_by) / np.log(2)))
+        m = np.prod(divisible_by)
+        l[self.grid.processor] = 2 ** int(np.ceil(np.log(n / m) / np.log(2)))
         l = grid.globalsum(l)
-        self.L = [int(np.max(l) * divisible_by) * self.grid.mpi[0]] + self.grid.mpi[1:]
+        self.L = [int(np.max(l) * divisible_by[0]) * self.grid.mpi[0]] + [
+            self.grid.mpi[mu] * divisible_by[mu] for mu in range(1, self.grid.nd)
+        ]
 
         cb_simd_only_first_dimension = gpt.general(1, [0] * grid.nd, [1] + [0] * (grid.nd - 1))
 
@@ -130,9 +133,14 @@ class sparse_kernel:
 
 
 class sparse:
-    def __init__(self, grid, local_coordinates, divisible_by=1):
+    def __init__(self, grid, local_coordinates, divisible_by=None):
         self.local_coordinates = local_coordinates
         self.grid = grid
+
+        if type(divisible_by) is int:
+            divisible_by = [divisible_by] + [1] * (grid.nd - 1)
+        if divisible_by is None:
+            divisible_by = [1] * grid.nd
 
         # kernel to avoid circular references through captures below
         kernel = sparse_kernel(grid, local_coordinates, divisible_by)
