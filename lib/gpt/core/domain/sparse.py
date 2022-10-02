@@ -28,24 +28,34 @@ def get_cache(c, l):
 
 
 class sparse_kernel:
-    def __init__(self, grid, local_coordinates):
+    def __init__(self, grid, unmasked_local_coordinates, dimensions_divisible_by, mask):
         assert grid.cb.n == 1
         self.grid = grid
-        self.local_coordinates = local_coordinates
+
+        if mask is None:
+            mask = [True] * len(unmasked_local_coordinates)
+
+        self.local_coordinates = unmasked_local_coordinates[mask]
+
+        if dimensions_divisible_by is None:
+            dimensions_divisible_by = [16] + [1] * (self.grid.nd - 1)
 
         # create a minimally embedding lattice geometry
-        n = len(local_coordinates)
+        n = len(self.local_coordinates)
         N = self.grid.Nprocessors
         l = np.zeros(N, dtype=np.uint64)
-        l[self.grid.processor] = 2 ** int(np.ceil(np.log(n) / np.log(2)))
+        l[self.grid.processor] = n
         l = grid.globalsum(l)
-        self.L = [int(np.max(l)) * self.grid.mpi[0]] + self.grid.mpi[1:]
+        f_sites = int(np.max(l) * np.prod(self.grid.mpi))
+        f_dimensions = np.lcm(self.grid.mpi, dimensions_divisible_by).tolist()
+        n_block = int(np.prod(f_dimensions))
+        f_dimensions[0] *= (f_sites + n_block - 1) // n_block
 
         cb_simd_only_first_dimension = gpt.general(1, [0] * grid.nd, [1] + [0] * (grid.nd - 1))
 
         # create grid as subcommunicator so that sparse domains play nice with split grid
         self.embedding_grid = gpt.grid(
-            self.L,
+            f_dimensions,
             grid.precision,
             cb_simd_only_first_dimension,
             None,
@@ -53,7 +63,9 @@ class sparse_kernel:
             grid,
         )
 
-        self.embedded_coordinates = np.ascontiguousarray(gpt.coordinates(self.embedding_grid)[0:n])
+        self.embedded_coordinates = np.ascontiguousarray(
+            gpt.coordinates(self.embedding_grid)[0 : len(mask)][mask]
+        )
 
         self.embedded_cache = {}
         self.local_cache = {}
@@ -130,12 +142,11 @@ class sparse_kernel:
 
 
 class sparse:
-    def __init__(self, grid, local_coordinates):
-        self.local_coordinates = local_coordinates
+    def __init__(self, grid, unmasked_local_coordinates, dimensions_divisible_by=None, mask=None):
         self.grid = grid
 
         # kernel to avoid circular references through captures below
-        kernel = sparse_kernel(grid, local_coordinates)
+        kernel = sparse_kernel(grid, unmasked_local_coordinates, dimensions_divisible_by, mask)
 
         def _project(dst, src):
             for d, s in zip(dst, src):
@@ -170,6 +181,7 @@ class sparse:
         )
 
         self.kernel = kernel
+        self.local_coordinates = kernel.local_coordinates
 
     def weight(self):
         return self.kernel.weight()

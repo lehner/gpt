@@ -327,14 +327,16 @@ class gpt_io:
         return sdomain.grid.describe()
 
     def read_domain_sparse(self, sdomain_grid, sdomain_cl):
-        def remove_empty(x):
-            return x[(x >= 0)[:, 0]]
+        mask = (sdomain_cl[0][:] >= 0)[:, 0]
 
-        local_coordinates = numpy.hstack(
-            tuple([remove_empty(x[:]).real.astype(numpy.int32) for x in sdomain_cl])
+        local_coordinates = numpy.hstack(tuple([x[:].real.astype(numpy.int32) for x in sdomain_cl]))
+
+        return gpt.domain.sparse(
+            sdomain_grid,
+            local_coordinates,
+            dimensions_divisible_by=sdomain_cl[0].grid.fdimensions,
+            mask=mask,
         )
-        
-        return gpt.domain.sparse(sdomain_grid, local_coordinates)
 
     def write(self, objs):
         self.create_index("", objs)

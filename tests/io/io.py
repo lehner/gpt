@@ -30,6 +30,7 @@ U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 sdomain = g.domain.sparse(
     U[0].grid,
     rng.choice(g.coordinates(U[0]), int(0.01 * U[0].grid.gsites / U[0].grid.Nprocessors)),
+    dimensions_divisible_by=[2, 2, 2, 1],
 )
 
 # test sparse domain
@@ -42,41 +43,28 @@ assert np.linalg.norm(U0prime[sdomain.local_coordinates] - U[0][sdomain.local_co
 s_slice = sdomain.slice(S, 3)
 
 # save in default gpt format
-g.save(
-    f"{work_dir}/out",
-    {
-        "va\nl": [
-            0,
-            1,
-            3,
-            "tes\n\0t",
-            3.123456789123456789,
-            1.123456789123456789e-7,
-            1 + 3.1231251251234123413j,
-        ],  # fundamental data types
-        "np": g.coordinates(U[0].grid),  # write numpy array from root node
-        "U": U,  # write list of lattices
-        "sdomain": sdomain,
-        "S": S,
-    },
-)
+to_save = {
+    "va\nl": [
+        0,
+        1,
+        3,
+        "tes\n\0t",
+        3.123456789123456789,
+        1.123456789123456789e-7,
+        1 + 3.1231251251234123413j,
+    ],  # fundamental data types
+    "np": g.coordinates(U[0].grid),  # write numpy array from root node
+    "U": U,  # write list of lattices
+    "sdomain": sdomain,
+    "S": S,
+}
+
+g.save(f"{work_dir}/out", to_save)
 
 # save in custom gpt format with different mpi distribution of local views
 g.save(
     f"{work_dir}/out2",
-    {
-        "val": [
-            0,
-            1,
-            3,
-            "test",
-            3.123456789123456789,
-            1.123456789123456789e-7,
-            1 + 3.1231251251234123413j,
-        ],  # fundamental data types
-        "np": g.coordinates(U[0].grid),  # write numpy array from root node
-        "U": U,  # write list of lattices
-    },
+    to_save,
     g.format.gpt(
         {
             "mpi": [
@@ -95,35 +83,43 @@ g.save(
 # - g.load(fn)          loads everything in fn and creates new grids as needed
 # - g.load(fn,{ "grids" : ..., "paths" :  ... })  both grids and paths are optional parameters and may be lists,
 #                                                 grids are re-used when loading, paths restricts which items to load (allows for glob.glob syntax /U/*)
-res = g.load(f"{work_dir}/out")
+def check_all(res, tag):
+    g.message(
+        f"""
 
-for i in range(4):
-    eps2 = g.norm2(res["U"][i] - U[i])
-    g.message("Test first restore of U[%d]:" % i, eps2)
+    Run tests with {tag}
+
+"""
+    )
+    for i in range(4):
+        eps2 = g.norm2(res["U"][i] - U[i])
+        g.message("Test first restore of U[%d]:" % i, eps2)
+        assert eps2 < 1e-25
+
+    eps2 = g.norm2(res["S"] - S)
+    g.message("Test sparse field restore:", eps2)
     assert eps2 < 1e-25
 
-eps2 = g.norm2(res["S"] - S)
-g.message("Test sparse field restore:", eps2)
-assert eps2 < 1e-25
+    # check load sparse lattice
+    U0prime2 = g.lattice(U[0])
+    U0prime2[:] = 0
+    res["sdomain"].promote(U0prime2, res["S"])
+    eps2 = g.norm2(U0prime - U0prime2)
+    g.message("Test sparse domain restore:", eps2)
+    assert eps2 < 1e-25
 
-# check load sparse lattice
-U0prime2 = g.lattice(U[0])
-U0prime2[:] = 0
-res["sdomain"].promote(U0prime2, res["S"])
-eps2 = g.norm2(U0prime - U0prime2)
-g.message("Test sparse domain restore:", eps2)
-assert eps2 < 1e-25
+    # check local coordinates
+    assert np.array_equal(res["sdomain"].local_coordinates, sdomain.local_coordinates)
 
-# check local coordinates
-assert np.array_equal(res["sdomain"].local_coordinates, sdomain.local_coordinates)
+    # check slice
+    s_slice_2 = res["sdomain"].slice(res["S"], 3)
+    eps2 = 0.0
+    for a, b in zip(s_slice, s_slice_2):
+        eps2 += g.norm2(a - b)
+    assert eps2 < 1e-25
 
-# check slice
-s_slice_2 = res["sdomain"].slice(res["S"], 3)
-eps2 = 0.0
-for a, b in zip(s_slice, s_slice_2):
-    eps2 += g.norm2(a - b)
-assert eps2 < 1e-25
 
+check_all(g.load(f"{work_dir}/out"), "original mpi geometry")
 
 # check load out2 with fixed mpi
 res = g.load(f"{work_dir}/out2", paths="/U/*")
@@ -131,6 +127,9 @@ for i in range(4):
     eps2 = g.norm2(res["U"][i] - U[i])
     g.message("Test second restore of U[%d]:" % i, eps2)
     assert eps2 < 1e-25
+
+# check all with different mpi geometry
+check_all(g.load(f"{work_dir}/out2"), "different mpi geometry")
 
 # checkpointer save
 ckpt = g.checkpointer(f"{work_dir}/ckpt")
