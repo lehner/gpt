@@ -41,7 +41,7 @@ class sparse_kernel:
             dimensions_divisible_by = [16] + [1] * (self.grid.nd - 1)
 
         # create a minimally embedding lattice geometry
-        n = len(self.local_coordinates)
+        n = len(unmasked_local_coordinates)
         N = self.grid.Nprocessors
         l = np.zeros(N, dtype=np.uint64)
         l[self.grid.processor] = n
