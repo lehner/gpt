@@ -31,7 +31,7 @@ nsparse = int(0.01 * U[0].grid.gsites / U[0].grid.Nprocessors)
 sdomain = g.domain.sparse(
     U[0].grid,
     rng.choice(g.coordinates(U[0]), nsparse),
-    dimensions_divisible_by=[2, 2, 2, 1],
+    dimensions_divisible_by=[4, 2, 2, 1],
     mask=rng.choice([True, False], nsparse),
 )
 
