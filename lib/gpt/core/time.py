@@ -131,7 +131,7 @@ class timer:
     def __iadd__(self, other):
         if isinstance(other, dict):
             for key in other:
-                if key not in self.dt:
+                if key not in self.time:
                     self.time[key] = timer_component()
                 self.time[key].register_time_step(other[key]["time"], None, None)
         else:

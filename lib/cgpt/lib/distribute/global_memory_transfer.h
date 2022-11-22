@@ -473,6 +473,14 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
     //t("gather");
     // gather my blocks
     gather_my_blocks();
+  }
+
+  //t("opt");
+  // optimize blocks after gathering all of my blocks
+  if (!skip_optimize)
+    optimize();
+
+  if (!local_only) {
 
     //t("createcom");
     // optionally create communication buffers
@@ -482,12 +490,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
   //t("createbounds");
   // create bounds
   create_bounds();
-
-  //t("opt");
-  // optimize blocks after gathering all of my blocks
-  if (!skip_optimize)
-    optimize();
-  
+ 
   //t.report();
 }
 

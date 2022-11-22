@@ -114,7 +114,8 @@ EXPORT(copy_create_plan,{
 
 EXPORT(copy_get_plan_info,{
     long _plan;
-    if (!PyArg_ParseTuple(args, "l", &_plan)) {
+    long details;
+    if (!PyArg_ParseTuple(args, "ll", &_plan, &details)) {
       return NULL;
     }
 
@@ -137,6 +138,17 @@ EXPORT(copy_get_plan_info,{
 	PyDict_SetItemString(data,"blocks",data_blocks); Py_XDECREF(data_blocks);
 	PyObject* data_size = PyLong_FromLong((long)size);
 	PyDict_SetItemString(data,"size",data_size); Py_XDECREF(data_size);
+
+	if (details > 0) {
+	  PyObject* data_block = PyList_New(blocks);
+	  for (size_t i=0;i<blocks;i++) {
+	    PyObject* data_block_i = Py_BuildValue("(ll)", index.second[i].start_dst,
+						   index.second[i].start_src);
+	    PyList_SetItem(data_block, i, data_block_i);
+	  }
+	  PyDict_SetItemString(data,"block",data_block); Py_XDECREF(data_block);	  
+	}
+	
 	PyObject* key = Py_BuildValue("(ll)",index_dst, index_src);
 	PyDict_SetItem(ret_rank, key, data); Py_XDECREF(key); Py_XDECREF(data);
       }
