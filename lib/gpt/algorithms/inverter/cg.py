@@ -42,7 +42,7 @@ class cg(base_iterative):
         vector_space = None
         if type(mat) == g.matrix_operator:
             vector_space = mat.vector_space
-            mat = mat.specialize_singlet_callable()
+            mat = mat.specialized_singlet_callable()
 
         @self.timed_function
         def inv(psi, src, t):
