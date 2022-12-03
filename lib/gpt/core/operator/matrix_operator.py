@@ -74,6 +74,10 @@ class matrix_operator(factor):
             accept_guess if type(accept_guess) == tuple else (accept_guess, accept_guess)
         )
 
+    def specialize_singlet_callable(self):
+        # removing possible overhead for specialized call
+        return self.mat if not self.accept_list else self
+
     def inv(self):
         return matrix_operator(
             mat=self.inv_mat,
