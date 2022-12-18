@@ -42,8 +42,7 @@ class cg(base_iterative):
         vector_space = None
         if type(mat) == g.matrix_operator:
             vector_space = mat.vector_space
-            mat = mat.mat
-            # remove wrapper for performance benefits
+            mat = mat.specialized_singlet_callable()
 
         @self.timed_function
         def inv(psi, src, t):
@@ -68,7 +67,7 @@ class cg(base_iterative):
             if ssq == 0.0:
                 psi[:] = 0
                 return
-            rsq = self.eps ** 2.0 * ssq
+            rsq = self.eps**2.0 * ssq
             for k in range(self.maxiter):
                 c = cp
                 t("matrix")
@@ -98,7 +97,7 @@ class cg(base_iterative):
                 res = abs(cp)
                 self.log_convergence(k, res, rsq)
                 if k + 1 >= self.miniter:
-                    if self.eps_abs is not None and res <= self.eps_abs ** 2.0:
+                    if self.eps_abs is not None and res <= self.eps_abs**2.0:
                         self.log(f"converged in {k+1} iterations (absolute criterion)")
                         return
                     if res <= rsq:

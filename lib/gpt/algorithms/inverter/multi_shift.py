@@ -27,11 +27,15 @@ class multi_shift(base_iterative):
         super().__init__()
 
     def __call__(self, mat):
+        def _mat(dst, src, s_val):
+            g.eval(dst, mat * src)
+            for d, s in zip(dst, src):
+                d += s_val * s
 
         inverter_mat = [
             self.inverter(
                 g.matrix_operator(
-                    mat=lambda dst, src, s_val=s: g.eval(dst, mat * src + s_val * src),
+                    mat=lambda dst, src, s_val=s: _mat(dst, src, s_val),
                     accept_list=True,
                 )
             )
