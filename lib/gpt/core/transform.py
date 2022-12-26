@@ -141,7 +141,7 @@ def fields_to_tensors(src, functor):
 
 
 def slice(src, dim):
-    return fields_to_tensors(src, lambda s: cgpt.lattice_slice(s, dim))
+    return fields_to_tensors(src, lambda s: s[0].grid.globalsum(cgpt.lattice_rank_slice(s, dim)))
 
 
 def indexed_sum(fields, index, length):

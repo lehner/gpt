@@ -153,10 +153,10 @@ public:
     cgpt_lattice_convert_from(l,src);
   }
 
-  virtual PyObject* slice(std::vector<cgpt_Lattice_base*> _basis, int dim) {
+  virtual PyObject* rank_slice(std::vector<cgpt_Lattice_base*> _basis, int dim) {
     PVector<Lattice<T>> basis;
     cgpt_basis_fill(basis, _basis);
-    return cgpt_lattice_slice(basis, dim);
+    return cgpt_lattice_rank_slice(basis, dim);
   }
 
   virtual PyObject* indexed_sum(std::vector<cgpt_Lattice_base*> _basis, cgpt_Lattice_base* _idx, long len) {

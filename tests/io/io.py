@@ -148,17 +148,20 @@ assert abs(alpha - 0.125) < 1e-25
 assert g.norm2(U0_test - U[0]) == 0.0
 
 # corr-io
-corr = [rng.normal().real for i in range(32)]
 w = g.corr_io.writer(f"{work_dir}/head.dat")
+
+corr = [rng.normal().real for i in range(32)]
 w.write("test", corr)
+w.write("test2", np.array(corr))
 w.close()
 
 r = g.corr_io.reader(f"{work_dir}/head.dat")
 assert "test" in r.glob("*")
 for i in range(len(corr)):
     assert abs(r.tags["test"][i] - corr[i]) == 0.0
+    assert abs(r.tags["test2"][i] - corr[i]) == 0.0
 
-assert g.corr_io.count(f"{work_dir}/head.dat") == 1
+assert g.corr_io.count(f"{work_dir}/head.dat") == 2
 
 
 # NERSC

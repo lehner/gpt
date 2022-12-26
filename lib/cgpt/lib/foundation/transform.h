@@ -53,9 +53,9 @@ void cgpt_scale_per_coordinate(Lattice<T>& dst,Lattice<T>& src,ComplexD* s,int d
 
 // sliceSum from Grid but with vector of lattices as input
 template<class vobj>
-inline void cgpt_slice_sum(const PVector<Lattice<vobj>> &Data,
-			   std::vector<typename vobj::scalar_object> &result,
-			   int orthogdim)
+inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
+				std::vector<typename vobj::scalar_object> &result,
+				int orthogdim)
 {
   ///////////////////////////////////////////////////////
   // FIXME precision promoted summation
@@ -133,9 +133,6 @@ inline void cgpt_slice_sum(const PVector<Lattice<vobj>> &Data,
       }
     }
   });
-  scalar_type* ptr = (scalar_type *) &result[0];
-  int words = fd * sizeof(sobj) / sizeof(scalar_type) * Nbasis;
-  grid->GlobalSumVector(ptr, words);
 }
 
 template<class vobj>

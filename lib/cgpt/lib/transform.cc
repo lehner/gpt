@@ -254,7 +254,7 @@ EXPORT(lattice_rank_sum,{
     
   });
   
-EXPORT(lattice_slice,{
+EXPORT(lattice_rank_slice,{
     
     PyObject* _basis;
     long dim;
@@ -265,7 +265,7 @@ EXPORT(lattice_slice,{
     std::vector<cgpt_Lattice_base*> basis;
     cgpt_basis_fill(basis,_basis);
 
-    return basis[0]->slice(basis, (int)dim);
+    return basis[0]->rank_slice(basis, (int)dim);
     
   });
 
