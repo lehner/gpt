@@ -261,8 +261,8 @@ for t in range(len(correlator_ref)):
     eps_qm += (correlator_qm[t].real - correlator_ref[t]) ** 2.0
     eps_qz += (correlator_qz[t].real - correlator_ref[t]) ** 2.0
     g.message(t, correlator_qm[t].real, correlator_qz[t].real, correlator_ref[t])
-eps_qm = eps_qm ** 0.5 / len(correlator_ref)
-eps_qz = eps_qz ** 0.5 / len(correlator_ref)
+eps_qm = eps_qm**0.5 / len(correlator_ref)
+eps_qz = eps_qz**0.5 / len(correlator_ref)
 g.message("Test results: %g %g" % (eps_qm, eps_qz))
 assert eps_qm < 1e-5
 assert eps_qz < 5e-4

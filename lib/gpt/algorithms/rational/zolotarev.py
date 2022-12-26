@@ -79,16 +79,16 @@ def zolotarev_approx_inverse_square_root(n, eps):
     for i in range(2 * n):
         sn, cn, dn, _ = ellipj((i + 1) * v, k)
         a[i] = (cn / sn) ** 2
-        c[i] = sn ** 2
+        c[i] = sn**2
     # index go from 1 to 2*n
     c_odd = numpy.prod(c[0::2])
     c_even = numpy.prod(c[1::2])
 
-    d = numpy.power(k, 2 * n + 1) * c_odd ** 2
+    d = numpy.power(k, 2 * n + 1) * c_odd**2
     den = 1 + numpy.sqrt(1 - d * d)
     A = 2.0 / den * c_odd / c_even
 
-    delta = d ** 2 / den ** 2
+    delta = d**2 / den**2
     return [A, a[0::2], a[1::2], delta]
 
 
@@ -103,8 +103,8 @@ class zolotarev_inverse_square_root:
         eps = (self.ra / self.rb) ** 2
         A, u, v, self.delta = zolotarev_approx_inverse_square_root(self.n, eps)
 
-        self.zeros = -u * self.rb ** 2
-        self.poles = -v * self.rb ** 2
+        self.zeros = -u * self.rb**2
+        self.poles = -v * self.rb**2
         self.norm = A / self.rb
 
     def __str__(self):

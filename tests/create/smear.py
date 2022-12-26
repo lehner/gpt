@@ -39,7 +39,7 @@ for dimensions in [[0, 1, 2], [0, 1, 2, 3]]:
         src_mom = g(g.exp_ixp(p) * src)
 
         laplace = sum([2.0 * (np.cos(p[i]) - 1.0) for i in dimensions])
-        factor = (1.0 + laplace * sigma ** 2.0 / steps / 4.0) ** steps
+        factor = (1.0 + laplace * sigma**2.0 / steps / 4.0) ** steps
         dst = g(smear_unit * src_mom)
         eps2 = g.norm2(dst - factor * src_mom) / g.norm2(dst)
         g.message(f"Gaussian test using eigen representation: {eps2}")

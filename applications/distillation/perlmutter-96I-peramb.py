@@ -326,7 +326,7 @@ class job_contraction(g.jobs.base):
 
     def check(self, root):
         cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
-        exp = basis_size ** 2 * 16
+        exp = basis_size**2 * 16
         g.message("check count", cnt, exp)
         return cnt == exp
 
@@ -377,7 +377,7 @@ class job_mom(g.jobs.base):
 
     def check(self, root):
         cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
-        exp = basis_size ** 2 * len(self.mom)
+        exp = basis_size**2 * len(self.mom)
         g.message("check count", cnt, exp)
         return cnt == exp
 
@@ -455,7 +455,7 @@ class job_local_insertion(g.jobs.base):
 
     def check(self, root):
         cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
-        exp = basis_size ** 2 * 16 * 4
+        exp = basis_size**2 * 16 * 4
         g.message("check count", cnt, exp)
         return cnt == exp
 
@@ -609,7 +609,7 @@ class job_local_insertion_using_compressed(g.jobs.base):
 
     def check(self, root):
         cnt = g.corr_io.count(f"{root}/{self.name}/head.dat")
-        exp = basis_size ** 2 * 16 * 4
+        exp = basis_size**2 * 16 * 4
         g.message("check count", cnt, exp)
         return cnt == exp
 
@@ -655,7 +655,7 @@ for group in groups:
         for nx in range(-5, 6):
             for ny in range(-5, 6):
                 for nz in range(-5, 6):
-                    nsqr = nx ** 2 + ny ** 2 + nz ** 2
+                    nsqr = nx**2 + ny**2 + nz**2
                     if nsqr <= momenta_max_nsqr:
                         momenta.append([nx, ny, nz])
         g.message(len(momenta))

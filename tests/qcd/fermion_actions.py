@@ -62,7 +62,7 @@ sol = inv.cg({"eps": 1e-10, "maxiter": 1024})
 sol_pc = inv.preconditioned(pc.eo2_ne(), sol)
 a = g.qcd.pseudofermion.action
 
-rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0 ** 0.5, 3 ** 0.5, 7)
+rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 3**0.5, 7)
 rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm)
 
 acts = []

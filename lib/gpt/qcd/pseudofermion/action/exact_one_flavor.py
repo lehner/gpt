@@ -75,7 +75,7 @@ class exact_one_flavor_ratio(action_base):
         for r, p in zip(rational_function.r, rational_function.poles):
             gamma_i = 1.0 / (1.0 - p)
             diag += r * gamma_i
-            cs.append(-r * gamma_i ** 2.0)
+            cs.append(-r * gamma_i**2.0)
             dm.append(gamma_i)
 
         m1 = self.m1
@@ -103,7 +103,7 @@ class exact_one_flavor_ratio(action_base):
         inv_sqrt_M = self.inv_sqrt_matrix(fields, rational_function)
 
         eta = g.lattice(phi)
-        rng.cnormal(eta, sigma=2.0 ** -0.5)  # 1/sqrt(2)
+        rng.cnormal(eta, sigma=2.0**-0.5)  # 1/sqrt(2)
 
         phi @= inv_sqrt_M * eta
 

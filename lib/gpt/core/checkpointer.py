@@ -60,7 +60,7 @@ class checkpointer:
         elif type(obj) == memoryview:
             self.f.seek(0, 1)
             sz = len(obj)
-            szGB = sz / 1024.0 ** 3
+            szGB = sz / 1024.0**3
             self.f.write(sz.to_bytes(8, "little"))
             t0 = gpt.time()
             self.f.write(gpt.crc32(obj).to_bytes(4, "little"))
@@ -127,7 +127,7 @@ class checkpointer:
             self.f.seek(pos, 0)
             # try to read
             sz = int.from_bytes(self.f.read(8), "little")
-            szGB = sz / 1024.0 ** 3
+            szGB = sz / 1024.0**3
             flags[2] = szGB
             crc32_expected = int.from_bytes(self.f.read(4), "little")
             if len(obj) == sz:

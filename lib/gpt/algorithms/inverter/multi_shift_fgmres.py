@@ -48,7 +48,7 @@ class shifted_fgmres:
     def solve_hessenberg(self, Hs, r2, r2_new):
         n = len(Hs)
         b = np.zeros(n, np.complex128)
-        b[0] = self.rho * r2 ** 0.5
+        b[0] = self.rho * r2**0.5
         for i in range(n - 1):
             k = -Hs[i][-1] / Hs[i][-2]
             for j in range(n - i):
@@ -68,7 +68,7 @@ class shifted_fgmres:
     def qr(self, Hs, r2):
         n = len(Hs)
         b = np.zeros(n + 1, np.complex128)
-        b[0] = r2 ** 0.5
+        b[0] = r2**0.5
         for i in range(n):
             den = (Hs[i][-1] ** 2.0 + Hs[i][-2] ** 2.0) ** 0.5
             s = Hs[i][-1] / den
@@ -209,7 +209,7 @@ class multi_shift_fgmres(base_iterative):
             assert r2 != 0.0
 
             # target residual
-            rsq = self.eps ** 2.0 * r2
+            rsq = self.eps**2.0 * r2
 
             # restartlen
             rlen = self.restartlen
@@ -226,7 +226,7 @@ class multi_shift_fgmres(base_iterative):
 
             # krylov space
             V = [g.copy(src) for i in range(rlen + 1)]
-            V[0] /= r2 ** 0.5
+            V[0] /= r2**0.5
 
             # return rhos for prec fgmres
             rr = self.rhos
@@ -291,7 +291,7 @@ class multi_shift_fgmres(base_iterative):
 
                     t("restart")
                     r2 = g.norm2(r)
-                    V[0] @= r / r2 ** 0.5
+                    V[0] @= r / r2**0.5
 
                     if prec is not None and rr is False:
                         t("restart_prec")

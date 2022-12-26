@@ -40,7 +40,7 @@ class shifted_fom:
 
         n = len(Hs)
         b = np.zeros(n, np.complex128)
-        b[0] = self.rho * r2 ** 0.5
+        b[0] = self.rho * r2**0.5
         for i in range(n - 1):
             k = -Hs[i][-1] / Hs[i][-2]
             for j in range(n - i):
@@ -110,7 +110,7 @@ class multi_shift_fom(base_iterative):
     def restart(self, V):
         V[0] @= g.copy(V[-1])
         r2 = g.norm2(V[0])
-        V[0] /= r2 ** 0.5
+        V[0] /= r2**0.5
         return r2
 
     def __call__(self, mat):
@@ -143,7 +143,7 @@ class multi_shift_fom(base_iterative):
             assert r2 != 0.0
 
             # target residual
-            rsq = self.eps ** 2.0 * r2
+            rsq = self.eps**2.0 * r2
 
             # restartlen
             rlen = self.restartlen
@@ -155,7 +155,7 @@ class multi_shift_fom(base_iterative):
 
             # krylov space
             V = [g.copy(src) for i in range(rlen + 1)]
-            V[0] /= r2 ** 0.5
+            V[0] /= r2**0.5
 
             # return rhos for prec fgmres
             rr = self.rhos

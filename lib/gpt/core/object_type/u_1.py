@@ -50,7 +50,7 @@ class ot_u_1_algebra(ot_u_1_base):
 
     def defect(self, A):
         err2 = gpt.norm2(gpt.adj(A) - A)
-        return err2 ** 0.5
+        return err2**0.5
 
     def cartesian(self):
         return self
@@ -84,7 +84,7 @@ class ot_u_1_group(ot_u_1_base):
     def defect(self, U):
         I = gpt.identity(U)
         err2 = gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)
-        return err2 ** 0.5
+        return err2**0.5
 
     def project(self, U, method):
         if method == "defect_right" or method == "defect":

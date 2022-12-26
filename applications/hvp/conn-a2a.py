@@ -121,7 +121,7 @@ for pos in source_positions_exact:
     for i in range(source_time_slices):
         # srcD += g.create.point(g.lattice(srcD), pos_of_slice[i]) * sign_of_slice[i]
         srcD += g.create.wall.z2(g.lattice(srcD), pos_of_slice[i][3], rng) * (
-            sign_of_slice[i] / vol3d ** 0.5
+            sign_of_slice[i] / vol3d**0.5
         )
 
     # g.create.wall.z2(srcD, pos[3], rng)

@@ -60,9 +60,9 @@ for i in range(n):
     z = rng.normal()
     res[0] += 1
     res[1] += z
-    res[2] += z ** 2
-    res[3] += z ** 3
-    res[4] += z ** 4
+    res[2] += z**2
+    res[3] += z**3
+    res[4] += z**4
 
 g.message(res[1] / res[0], res[2] / res[0], res[3] / res[0], res[4] / res[0])
 

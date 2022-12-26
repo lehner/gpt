@@ -50,7 +50,6 @@ DWF Dslash Benchmark with
     )
 
     U_ldomain = g.domain.local(qm.U[0].grid, [0] * 4)
-  
 
     U_local = []
     for i in range(4):
@@ -61,14 +60,12 @@ DWF Dslash Benchmark with
     qm = qm.updated(U_local)
     mat = qm.Dhop.mat
 
-    
     # Source and destination
     src = g.vspincolor(qm.F_grid)
     dst = g.vspincolor(qm.F_grid)
 
     # random source
     rng.cnormal(src)
-
 
     # Warmup
     for n in range(5):

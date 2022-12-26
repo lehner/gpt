@@ -40,7 +40,7 @@ class checkpointed(base):
         def inv(psi, src, t):
 
             checkpointer.grid = psi[0].grid
-            
+
             t("checkpointer")
             if not checkpointer.load(psi):
 
@@ -55,5 +55,5 @@ class checkpointed(base):
             inv_mat=mat,
             vector_space=vector_space,
             accept_guess=(True, False),
-            accept_list=True
+            accept_list=True,
         )

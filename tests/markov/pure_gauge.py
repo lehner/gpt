@@ -91,7 +91,7 @@ for i, m in enumerate(mask):
 
 u0 = 0.797
 w = g.qcd.gauge.action.improved_with_rectangle(
-    1.719, c0=5.0 / 3.0 / u0 ** 4.0, c1=-1.0 / 12.0 / u0 ** 6.0
+    1.719, c0=5.0 / 3.0 / u0**4.0, c1=-1.0 / 12.0 / u0**6.0
 )
 markov = g.algorithms.markov.su2_heat_bath(rng)
 U = g.qcd.gauge.unit(grid)

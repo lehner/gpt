@@ -93,7 +93,7 @@ class fgcr(base_iterative):
                 ssq = r2
 
             # target residual
-            rsq = self.eps ** 2.0 * ssq
+            rsq = self.eps**2.0 * ssq
 
             for k in range(self.maxiter):
                 # iteration within current krylov space
@@ -117,7 +117,7 @@ class fgcr(base_iterative):
 
                 t("linalg")
                 ip, z2 = g.inner_product_norm2(z[i], r)
-                gamma[i] = z2 ** 0.5
+                gamma[i] = z2**0.5
                 if gamma[i] == 0.0:
                     self.debug(f"breakdown, gamma[{i:d}] = 0")
                     break

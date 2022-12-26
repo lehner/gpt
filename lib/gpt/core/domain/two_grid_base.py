@@ -23,7 +23,7 @@ class two_grid_base:
     def __init__(self):
         self.project_plan = {}
         self.promote_plan = {}
-        
+
     def lattice(self, otype):
         return gpt.lattice(self.local_grid, otype)
 

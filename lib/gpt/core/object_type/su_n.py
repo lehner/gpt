@@ -90,7 +90,7 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
     def defect(self, A):
         err2 = gpt.norm2(gpt.adj(A) - A)
         err2 += gpt.norm2(gpt.trace(A))
-        return err2 ** 0.5
+        return err2**0.5
 
     def compose(self, a, b):
         return a + b
@@ -125,7 +125,7 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
         I_s = gpt.identity(gpt.complex(U.grid))
         err2 = gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)
         err2 += gpt.norm2(gpt.matrix.det(U) - I_s) / gpt.norm2(I_s)
-        return err2 ** 0.5
+        return err2**0.5
 
     def project(self, U, method):
         if method == "defect_right" or method == "defect":

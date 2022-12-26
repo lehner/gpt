@@ -180,7 +180,7 @@ class nersc_io:
             data = data_munged
             dt_misc += gpt.time()
 
-            szGB += len(data) / 1024.0 ** 3.0
+            szGB += len(data) / 1024.0**3.0
         else:
             data = memoryview(bytearray())
             cs_comp = 0

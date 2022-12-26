@@ -61,7 +61,7 @@ class random:
             t.swap(gpt.copy(t))
 
             if self.verbose_performance:
-                szGB = t.global_bytes() / 1024.0 ** 3.0
+                szGB = t.global_bytes() / 1024.0**3.0
                 gpt.message("Generated %g GB of random data at %g GB/s" % (szGB, szGB / (t1 - t0)))
 
             return t
@@ -161,7 +161,7 @@ def sha256(mv):
         a = cgpt.util_sha256(mv)
         r = a[0]
         for i in range(7):
-            r = r * (2 ** 32) + a[1 + i]
+            r = r * (2**32) + a[1 + i]
         return r
     else:
         return sha256(memoryview(mv))

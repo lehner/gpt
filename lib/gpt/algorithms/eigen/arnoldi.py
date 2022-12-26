@@ -212,7 +212,7 @@ class arnoldi:
 
             ev, eps2 = g.algorithms.eigen.evals(mat, [a.single_evec(little_evec, idx)])
 
-            eps2 = eps2[0] / evals_max ** 2.0
+            eps2 = eps2[0] / evals_max**2.0
 
             if self.verbose:
                 g.message(f"eval[{idx1 - idx - 1}] = {ev[0]} ; eps^2 = {eps2}")

@@ -62,7 +62,7 @@ class ot_real_additive_group(ot_singlet):
 
     def defect(self, U):
         err2 = gpt.norm2(gpt.component.imag(U)) / U.grid.gsites
-        return err2 ** 0.5
+        return err2**0.5
 
     def project(self, U, method):
         # there is really only one sensible projection, ignore method
@@ -124,7 +124,7 @@ class ot_vector_real_additive_group(ot_vector_singlet):
 
     def defect(self, U):
         err2 = gpt.norm2(gpt.component.imag(U)) / U.grid.gsites / self.nfloats
-        return err2 ** 0.5
+        return err2**0.5
 
     def project(self, U, method):
         # there is really only one sensible projection, ignore method
@@ -184,7 +184,7 @@ class ot_matrix_real_additive_group(ot_matrix_singlet):
 
     def defect(self, U):
         err2 = gpt.norm2(gpt.component.imag(U)) / U.grid.gsites / self.nfloats
-        return err2 ** 0.5
+        return err2**0.5
 
     def project(self, U, method):
         # there is really only one sensible projection, ignore method

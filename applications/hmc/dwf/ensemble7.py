@@ -10,8 +10,8 @@ U = g.qcd.gauge.unit(g.grid([24, 24, 24, 48], g.double))
 
 latest_it = None
 it0 = 0
-dst=g.default.get("--root", None)
-N=4000
+dst = g.default.get("--root", None)
+N = 4000
 for it in range(N):
     if os.path.exists(f"{dst}/ckpoint_lat.{it}"):
         latest_it = it
@@ -26,10 +26,12 @@ pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 eofa_ratio = g.qcd.pseudofermion.action.exact_one_flavor_ratio
 
+
 def two_flavor_ratio(fermion, m1, m2, solver):
     M1 = fermion(m1, m1)
     M2 = fermion(m2, m2)
     return g.qcd.pseudofermion.action.two_flavor_ratio_evenodd_schur([M1, M2], solver)
+
 
 def light(U0, m_plus, m_minus):
     return g.qcd.fermion.mobius(
@@ -43,12 +45,16 @@ def light(U0, m_plus, m_minus):
         boundary_phases=[1, 1, 1, -1],
     )
 
+
 stout = g.qcd.gauge.smear.stout(rho=0.1)
+
+
 def eofa_ratio_smeared(fermion, m1, m2, solver):
     a = eofa_ratio(fermion, m1, m2, solver)
     for i in range(3):
         a = a.transformed(stout)
     return a
+
 
 def charm(U0, m_plus, m_minus):
     return g.qcd.fermion.mobius(
@@ -70,11 +76,11 @@ sympl = g.algorithms.integrator.symplectic
 F_grid_eo = light(U, 1, 1).F_grid_eo
 
 cg_e = inv.cg({"eps": 1e-10, "maxiter": 20000})
-cg_s = inv.cg({"eps": 1e-7, "maxiter": 20000}) # 1e-5 -> dH=O(5), 1e-6 -> dH=O(0.18), 1e-7 -> dH=O(0.048)
+cg_s = inv.cg(
+    {"eps": 1e-7, "maxiter": 20000}
+)  # 1e-5 -> dH=O(5), 1e-6 -> dH=O(0.18), 1e-7 -> dH=O(0.048)
 slv_e = inv.preconditioned(pc.eo2_ne(), cg_e)
-slv_s = inv.mixed_precision(
-    inv.preconditioned(pc.eo2_ne(), cg_s), g.single, g.double
-)
+slv_s = inv.mixed_precision(inv.preconditioned(pc.eo2_ne(), cg_s), g.single, g.double)
 
 # conjugate momenta
 U_mom = g.group.cartesian(U)
@@ -92,14 +98,13 @@ rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 11**0.5, 7)
 rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm)
 
 # see params.py for parameter motivation
-hasenbusch_ratios = [ # Nf=2+1
+hasenbusch_ratios = [  # Nf=2+1
     (0.45, 1.0, None, two_flavor_ratio, cg_e, cg_s, light),
     (0.18, 0.45, None, two_flavor_ratio, cg_e, cg_s, light),
     (0.07, 0.18, None, two_flavor_ratio, cg_e, cg_s, light),
     (0.017, 0.07, None, two_flavor_ratio, cg_e, cg_s, light),
     (0.0049, 0.017, None, two_flavor_ratio, cg_e, cg_s, light),
     (0.0362, 1.0, rat_fnc, eofa_ratio, slv_e, slv_s, light),
-
     (0.35, 1.0, rat_fnc, eofa_ratio_smeared, slv_e, slv_s, charm),
 ]
 
@@ -110,34 +115,31 @@ fields = [
     (U + [g.vspincolor(F_grid_eo)]),
     (U + [g.vspincolor(F_grid_eo)]),
     (U + [g.vspincolor(U[0].grid)]),
-
-    (U + [g.vspincolor(U[0].grid)])
+    (U + [g.vspincolor(U[0].grid)]),
 ]
 # test test
-#rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 4**0.5, 2)
-#rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm)
-#hasenbusch_ratios = [ # Nf=2+1
-#(0.6, 1.0, rat_fnc),
-#(0.6, 1.0, rat_fnc),
-#(0.6, 1.0, rat_fnc),
-#(0.3, 0.6, rat_fnc),
-#(0.3, 0.6, rat_fnc)
-#]
+# rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 4**0.5, 2)
+# rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm)
+# hasenbusch_ratios = [ # Nf=2+1
+# (0.6, 1.0, rat_fnc),
+# (0.6, 1.0, rat_fnc),
+# (0.6, 1.0, rat_fnc),
+# (0.3, 0.6, rat_fnc),
+# (0.3, 0.6, rat_fnc)
+# ]
 # test test end
 
 # exact actions
-action_fermions_e = [af(
-    lambda m_plus, m_minus, qqi=qq: qqi(U, m_plus, m_minus),
-    m1, m2,
-    se
-) for m1, m2, rf, af, se, ss, qq in hasenbusch_ratios]
+action_fermions_e = [
+    af(lambda m_plus, m_minus, qqi=qq: qqi(U, m_plus, m_minus), m1, m2, se)
+    for m1, m2, rf, af, se, ss, qq in hasenbusch_ratios
+]
 
 # sloppy actions
-action_fermions_s = [af(
-    lambda m_plus, m_minus, qqi=qq: qqi(U, m_plus, m_minus),
-    m1, m2,
-    ss
-) for m1, m2, rf, af, se, ss, qq in hasenbusch_ratios]
+action_fermions_s = [
+    af(lambda m_plus, m_minus, qqi=qq: qqi(U, m_plus, m_minus), m1, m2, ss)
+    for m1, m2, rf, af, se, ss, qq in hasenbusch_ratios
+]
 
 
 metro = g.algorithms.markov.metropolis(rng)
@@ -145,8 +147,7 @@ metro = g.algorithms.markov.metropolis(rng)
 pure_gauge = True
 
 split_rng = [
-    g.random(f"{[rng.cnormal() for i in range(4)]}")
-    for j in range(len(hasenbusch_ratios))
+    g.random(f"{[rng.cnormal() for i in range(4)]}") for j in range(len(hasenbusch_ratios))
 ]
 
 # sd = g.split_map(
@@ -167,18 +168,18 @@ def hamiltonian(draw):
         rng.normal_element(U_mom)
         s = action_gauge(U)
         if not pure_gauge:
-            #sp = sd(fields)
+            # sp = sd(fields)
             for i in range(len(hasenbusch_ratios)):
                 if hasenbusch_ratios[i][3] is not two_flavor_ratio:
                     si = action_fermions_e[i].draw(fields[i], rng, hasenbusch_ratios[i][2])
 
-                    #si = sp[i]
+                    # si = sp[i]
                     si_check = action_fermions_e[i](fields[i])
-                    g.message("action",i,si_check)
+                    g.message("action", i, si_check)
 
                     r = f"{hasenbusch_ratios[i][0]}/{hasenbusch_ratios[i][1]}"
-                    e = abs(si/si_check - 1)
-                
+                    e = abs(si / si_check - 1)
+
                     g.message(f"Error of rational approximation for Hasenbusch ratio {r}: {e}")
                 else:
                     si = action_fermions_e[i].draw(fields[i], rng)
@@ -192,6 +193,7 @@ def hamiltonian(draw):
         h = s + action_gauge_mom(U_mom)
     return h, s
 
+
 log = sympl.log()
 
 
@@ -204,18 +206,19 @@ log = sympl.log()
 #     [1,2,2,2]
 # )
 
+
 def fermion_force():
     x = [g.group.cartesian(u) for u in U]
     for y in x:
         y[:] = 0
-        
+
     if not pure_gauge:
 
         forces = [[g.lattice(y) for y in x] for i in fields]
 
         log.time("fermion forces")
         for i in range(len(hasenbusch_ratios)):
-            forces[i] = action_fermions_s[i].gradient(fields[i], fields[i][0:len(U)])
+            forces[i] = action_fermions_s[i].gradient(fields[i], fields[i][0 : len(U)])
         log.time()
 
         for i in range(len(hasenbusch_ratios)):
@@ -224,25 +227,24 @@ def fermion_force():
                 x[j] += forces[i][j]
     return x
 
+
 iq = sympl.update_q(U, log(lambda: action_gauge_mom.gradient(U_mom, U_mom), "gauge_mom"))
 
 ip_gauge = sympl.update_p(U_mom, log(lambda: action_gauge.gradient(U, U), "gauge"))
 ip_fermion = sympl.update_p(U_mom, fermion_force)
 
 
-#mdint = sympl.OMF4(1, ip_fermion, sympl.OMF2(4, ip_gauge, iq))
+# mdint = sympl.OMF4(1, ip_fermion, sympl.OMF2(4, ip_gauge, iq))
 
 mdint = sympl.OMF2(15, ip_fermion, sympl.OMF2(4, ip_gauge, iq))
 
-   
+
 def hmc(tau):
     accrej = metro(U)
     h0, s0 = hamiltonian(True)
     mdint(tau)
     h1, s1 = hamiltonian(False)
     return [accrej(h1, h0), s1 - s0, h1 - h0]
-
-
 
 
 accept, total = 0, 0
@@ -262,5 +264,4 @@ for it in range(it0, N):
         log.reset()
         g.message("Reset log")
     g.save(f"{dst}/ckpoint_lat.{it}", U, g.format.nersc())
-    #g.save(f"{dst}/ckpoint_lat.{it}", U)
-
+    # g.save(f"{dst}/ckpoint_lat.{it}", U)

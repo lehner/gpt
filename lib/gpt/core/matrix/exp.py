@@ -145,7 +145,7 @@ def series_approximation(i):
     ns = 0
     if n > maxn:
         ns = int(np.log2(n / maxn))
-        x /= 2 ** ns
+        x /= 2**ns
     o = g.lattice(x)
     t("mem")
     o[:] = 0

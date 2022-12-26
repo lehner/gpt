@@ -118,7 +118,7 @@ def rank_sum(e):
         if vdim == 1:
             val = np.concatenate(val)
         elif vdim == 2:
-            n = int(vrank ** 0.5)
+            n = int(vrank**0.5)
             assert n * n == vrank
             val = np.concatenate(
                 [np.concatenate([val[i * n + j] for j in range(n)], axis=0) for i in range(n)],

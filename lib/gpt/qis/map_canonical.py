@@ -27,7 +27,7 @@ import numpy as np
 class map_canonical:
     def __init__(self, n, precision):
         self.n = n
-        self.fdimensions = [2 ** n]
+        self.fdimensions = [2**n]
         self.grid = g.grid(self.fdimensions, precision)
         self.verbose = g.default.is_verbose("qis_map")
         self.zero_coordinate = (0,)  # |00000 ... 0> state
@@ -35,14 +35,14 @@ class map_canonical:
         t("coordinates")
         # TODO: need to split over multiple dimensions, single dimension can hold at most 32 bits
         self.coordinates = g.coordinates(self.grid)
-        self.not_coordinates = [np.bitwise_xor(self.coordinates, 2 ** i) for i in range(n)]
+        self.not_coordinates = [np.bitwise_xor(self.coordinates, 2**i) for i in range(n)]
         for i in range(n):
             self.not_coordinates[i].flags["WRITEABLE"] = False
         t("masks")
         self.one_mask = []
         self.zero_mask = []
         for i in range(n):
-            proj = np.bitwise_and(self.coordinates, 2 ** i)
+            proj = np.bitwise_and(self.coordinates, 2**i)
 
             mask = g.complex(self.grid)
             g.coordinate_mask(mask, proj != 0)
@@ -62,7 +62,7 @@ class map_canonical:
         coor = np.copy(zeros)
         for i in range(self.n):
             coor += np.where(
-                np.bitwise_and(self.coordinates, 2 ** i) != 0,
+                np.bitwise_and(self.coordinates, 2**i) != 0,
                 (2 ** bit_permutation[i]) * ones,
                 zeros,
             )

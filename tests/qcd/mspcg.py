@@ -7,7 +7,7 @@ import gpt as g
 
 # gauge field
 rng = g.random("test")
-U = g.qcd.gauge.random(g.grid([8,8,8,8], g.single), rng)
+U = g.qcd.gauge.random(g.grid([8, 8, 8, 8], g.single), rng)
 g.message("Plaquette:", g.qcd.gauge.plaquette(U))
 
 mobius_params = {
@@ -28,7 +28,6 @@ inv_pc = inv.preconditioned
 pc = g.qcd.fermion.preconditioner
 
 
-        
 # point source
 ssrc = g.vspincolor(w.F_grid_eo)
 rng.cnormal(ssrc)
@@ -68,6 +67,3 @@ assert eps2 < 1e-10
 speedup = len(cg1.history) / len(cg2.history)
 g.message(f"Speedup in terms of outer CG iterations: {speedup}")
 assert speedup > 1.0
-
-
-

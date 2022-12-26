@@ -36,7 +36,7 @@ class fom(base_iterative):
     def solve_hessenberg(self, H, r2):
         n = len(H)
         b = np.zeros(n, np.complex128)
-        b[0] = r2 ** 0.5
+        b[0] = r2**0.5
         for i in range(n - 1):
             k = -H[i][-1] / H[i][-2]
             for j in range(n - i):
@@ -74,7 +74,7 @@ class fom(base_iterative):
             if ssq == 0.0:
                 assert r2 != 0.0
                 ssq = r2
-            rsq = self.eps ** 2.0 * ssq
+            rsq = self.eps**2.0 * ssq
 
             g.default.push_verbose("arnoldi", False)
             a = arnoldi_iteration(mat, r)
