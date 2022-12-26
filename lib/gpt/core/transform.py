@@ -146,7 +146,9 @@ def slice(src, dim):
 
 def indexed_sum(fields, index, length):
     index_obj = index.v_obj[0]
-    return fields_to_tensors(fields, lambda src: cgpt.lattice_indexed_sum(src, index_obj, length))
+    return fields_to_tensors(
+        fields, lambda s: s[0].grid.globalsum(cgpt.lattice_rank_indexed_sum(s, index_obj, length))
+    )
 
 
 def identity(src):

@@ -31,25 +31,13 @@ PyObject* cgpt_lattice_rank_slice(const PVector<Lattice<T>>& basis, int dim) {
 }
 
 template<typename T>
-PyObject* cgpt_lattice_indexed_sum(const PVector<Lattice<T>>& basis, const Lattice<iSinglet<typename T::vector_type>>& idx, long Nsobj) {
+PyObject* cgpt_lattice_rank_indexed_sum(const PVector<Lattice<T>>& basis, const Lattice<iSinglet<typename T::vector_type>>& idx, long Nsobj) {
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
 
   int Nbasis = basis.size();
   std::vector<sobj> result(Nbasis * Nsobj);
-  cgpt_indexed_sum(basis, idx, result);
+  cgpt_rank_indexed_sum(basis, idx, result);
 
-  PyObject* ret = PyList_New(Nbasis);
-  for (size_t ii = 0; ii < Nbasis; ii++) {
-
-    PyObject* corr = PyList_New(Nsobj);
-    for (size_t jj = 0; jj < Nsobj; jj++) {
-      int nn = ii * Nsobj + jj;
-      PyList_SET_ITEM(corr, jj, cgpt_numpy_export(result[nn]));
-    }
-
-    PyList_SET_ITEM(ret, ii, corr);
-  }
-
-  return ret;
+  return cgpt_numpy_export(result, Nsobj);
 }

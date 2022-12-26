@@ -269,7 +269,7 @@ EXPORT(lattice_rank_slice,{
     
   });
 
-EXPORT(lattice_indexed_sum,{
+EXPORT(lattice_rank_indexed_sum,{
     
     PyObject* _basis;
     long len;
@@ -283,6 +283,6 @@ EXPORT(lattice_indexed_sum,{
 
     cgpt_Lattice_base* idx = (cgpt_Lattice_base*)_idx;
 
-    return basis[0]->indexed_sum(basis, idx, len);
+    return basis[0]->rank_indexed_sum(basis, idx, len);
     
   });
