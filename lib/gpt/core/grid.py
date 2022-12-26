@@ -260,6 +260,12 @@ class grid:
         else:
             return cgpt.grid_globalsum(self.obj, x)
 
+    def broadcast(self, root, array):
+        cgpt.grid_broadcast(self.obj, root, array)
+
+    def exchange(self, send_to, recv_from, send_array, recv_array):
+        cgpt.grid_exchange(self.obj, send_to, recv_from, send_array, recv_array)
+
     def lexicographic_index(self, coordinates):
         # order of coordinates x,y,z,t
         # s = x + Lx*y + Lx*Ly*z + Lx*Ly*Lz*t
@@ -267,3 +273,19 @@ class grid:
         n, d = coordinates.shape
         assert d == self.nd
         return coordinates @ np.array(l)
+
+    def reduce(self, array, functor):
+        me = np.copy(array)
+        other = np.copy(array)
+
+        planes = int(np.ceil(np.log2(self.Nprocessors)))
+
+        for i in range(planes):
+            j = self.processor ^ (2**i)
+            if j < self.Nprocessors:
+                self.exchange(j, j, me, other)
+                functor(me, other)
+
+        self.broadcast(0, me)
+
+        return me
