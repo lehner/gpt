@@ -242,7 +242,7 @@ EXPORT(lattice_scale_per_coordinate,{
     return PyLong_FromLong(0);
   });
 
-EXPORT(lattice_sum,{
+EXPORT(lattice_rank_sum,{
     
     void* _a;
     if (!PyArg_ParseTuple(args, "l", &_a)) {
@@ -250,7 +250,7 @@ EXPORT(lattice_sum,{
     }
     
     cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
-    return a->sum();
+    return a->rank_sum();
     
   });
   

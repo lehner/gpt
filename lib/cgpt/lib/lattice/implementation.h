@@ -141,8 +141,8 @@ public:
     l = Cshift(src->l, dir, off);
   }
 
-  virtual PyObject* sum() {
-    return cgpt_numpy_export( ::sum(l) );
+  virtual PyObject* rank_sum() {
+    return cgpt_numpy_export( ::rankSum(l) );
   }
 
   virtual PyObject* to_str() {
