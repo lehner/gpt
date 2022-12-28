@@ -201,6 +201,7 @@ EXPORT(grid_broadcast,{
     ASSERT(sz < INT_MAX);
 
     grid->Broadcast((int)root, data_p, (int)sz);
+    Py_INCREF(Py_None);
     return Py_None;
 
   });
@@ -230,6 +231,8 @@ EXPORT(grid_exchange,{
     ASSERT(sz_send < INT_MAX);
 
     grid->SendToRecvFrom(send_p, (int)send_to, recv_p, (int)recv_from, sz_send);
+
+    Py_INCREF(Py_None);
     return Py_None;
 
   });

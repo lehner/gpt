@@ -94,7 +94,16 @@ for _a in acts:
     a, name, pf, dargs = _a
     g.message(name)
     fields = U + [pf]
-    da = a.draw(fields, rng, *dargs) - a(fields)
+    a_fields_draw = a.draw(fields, rng, *dargs)
+    a_fields = a(fields)
+    da = a_fields_draw - a_fields
     g.message(f"difference action drawn vs computed: da = {da:g}")
     assert abs(da) < 1e-7
     a.assert_gradient_error(rng, fields, U, 1e-3, 5e-7)
+
+    # test action double precision versus quadruple precision
+    fields_quad = g.convert(fields, g.double_quadruple)
+    a_fields_quad = a(fields_quad)
+    eps = abs((float(a_fields_quad) - a_fields) / a_fields)
+    g.message(f"quad precision regression against double precision: {eps}")
+    assert eps < 1e-14

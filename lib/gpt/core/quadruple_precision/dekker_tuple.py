@@ -63,6 +63,18 @@ class dekker_tuple:
         self.x, self.y = _dekker_add_one_eps(self.x, self.y)
         return self
 
+    def __eq__(self, other):
+        if not isinstance(other, dekker_tuple):
+            other = self.__class__(other)
+
+        return np.logical_and(self.x == other.x, self.y == other.y)
+
+    def __le__(self, other):
+        if not isinstance(other, dekker_tuple):
+            other = self.__class__(other)
+
+        return self.x <= other.x
+
     def __neg__(self):
         return self.__class__(-self.x, -self.y)
 
@@ -103,7 +115,10 @@ class dekker_tuple:
 
     def __mul__(self, other):
         if not isinstance(other, dekker_tuple):
-            other = self.__class__(other)
+            try:
+                other = self.__class__(other)
+            except NotImplementedError:
+                return other.__rmul__(self)
         l, c = _dekker_mul(self.x, other.x, self.__class__._medium)
         c += self.x * other.y + self.y * other.x
         return self.__class__(l, c).normalize()

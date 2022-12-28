@@ -20,3 +20,4 @@ from gpt.core.quadruple_precision.qfloat_array import qfloat_array
 from gpt.core.quadruple_precision.qfloat import qfloat
 from gpt.core.quadruple_precision.qcomplex_array import qcomplex_array
 from gpt.core.quadruple_precision.qcomplex import qcomplex
+from gpt.core.quadruple_precision.global_sum import global_sum_quadruple

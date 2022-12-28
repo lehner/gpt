@@ -115,6 +115,7 @@ def inner_product_norm2(a, b):
 def axpy(d, a, x, y):
     x = gpt.eval(x)
     y = gpt.eval(y)
+    a = complex(a)
     assert len(y.otype.v_idx) == len(x.otype.v_idx)
     assert len(d.otype.v_idx) == len(x.otype.v_idx)
     for i in x.otype.v_idx:

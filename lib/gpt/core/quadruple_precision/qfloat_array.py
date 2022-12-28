@@ -41,6 +41,8 @@ class qfloat_array(dekker_tuple, np.lib.mixins.NDArrayOperatorsMixin):
         x[m] = v
 
     def __init__(self, x, y=None):
+        if not isinstance(x, (int, float, np.ndarray, list, np.float64, np.int64)):
+            raise NotImplementedError()
         x = np.array(x, dtype=np.float64)
         if y is None:
             y = np.zeros(shape=x.shape, dtype=np.float64)
@@ -52,10 +54,22 @@ class qfloat_array(dekker_tuple, np.lib.mixins.NDArrayOperatorsMixin):
     def __array__(self, dtype=None):
         return NotImplemented
 
+    def __getitem__(self, index):
+        if isinstance(index, int):
+            return g.qfloat(self.x[index], self.y[index])
+        else:
+            raise NotImplementedError(f"Array slicing not yet implemented: {index}")
+
     def __float__(self):
         if self.x.shape != (1,):
             return float("nan")
         return float(self.x[0])
+
+    def to_serial(self):
+        return np.stack([self.x, self.y])
+
+    def from_serial(self, serial):
+        return self.__class__(serial[0], serial[1])
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if ufunc not in HANDLED_FUNCTIONS or method != "__call__":
@@ -96,6 +110,11 @@ def np_real(arr):
 @implements(np.imag)
 def np_imag(arr):
     return 0.0 * arr
+
+
+@implements(np.multiply)
+def np_multiply(a, b):
+    return b * a
 
 
 @implements(np.linalg.norm)

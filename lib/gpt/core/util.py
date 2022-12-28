@@ -23,7 +23,9 @@ import copy
 
 # test if of number type
 def is_num(x):
-    return isinstance(x, (int, float, complex)) and not isinstance(x, bool)
+    return isinstance(x, (int, float, complex, gpt.qfloat, gpt.qcomplex)) and not isinstance(
+        x, bool
+    )
 
 
 # convert to number type

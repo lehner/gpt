@@ -17,6 +17,8 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import numpy
+from gpt.core.quadruple_precision import global_sum_quadruple
+from gpt.core.grid import global_sum_default
 
 
 class precision:
@@ -25,9 +27,11 @@ class precision:
 
 class single(precision):
     nbytes = 4
+    cgpt_dtype = "single"
     real_dtype = numpy.float32
     complex_dtype = numpy.complex64
     eps = 1e-7
+    global_sum_policy = global_sum_default
 
     def __init__(self):
         pass
@@ -35,9 +39,23 @@ class single(precision):
 
 class double(precision):
     nbytes = 8
+    cgpt_dtype = "double"
     real_dtype = numpy.float64
     complex_dtype = numpy.complex128
     eps = 1e-15
+    global_sum_policy = global_sum_default
+
+    def __init__(self):
+        pass
+
+
+class double_quadruple(precision):
+    nbytes = 8
+    cgpt_dtype = "double"
+    real_dtype = numpy.float64
+    complex_dtype = numpy.complex128
+    eps = 1e-15
+    global_sum_policy = global_sum_quadruple
 
     def __init__(self):
         pass
@@ -48,5 +66,7 @@ def str_to_precision(s):
         return single
     elif s == "double":
         return double
+    elif s == "double_quadruple":
+        return double_quadruple
     else:
         assert 0

@@ -16,6 +16,9 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import numpy as np
+
+
 class gcomplex:
     def __init__(self, x, y=None):
         self.real = x
@@ -90,3 +93,9 @@ class gcomplex:
 
     def __repr__(self):
         return f"{self.real} + {self.imag}j"
+
+    def to_serial(self):
+        return np.stack([self.real.to_serial(), self.imag.to_serial()])
+
+    def from_serial(self, serial):
+        return self.__class__(self.real.from_serial(serial[0]), self.imag.from_serial(serial[1]))

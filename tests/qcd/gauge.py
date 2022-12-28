@@ -14,6 +14,9 @@ U = g.qcd.gauge.random(grid, rng)
 V = rng.element(g.lattice(U[0]))
 U_transformed = g.qcd.gauge.transformed(U, V)
 
+# quadruple precision global sum version
+U_quad = g.convert(U, g.double_quadruple)
+
 # reference plaquette
 P = g.qcd.gauge.plaquette(U)
 
@@ -112,6 +115,13 @@ assert eps < 1e-13
 
 # Test gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:
+
+    # test action double precision versus quadruple precision
+    a_ref = action(U)
+    a_quad = action(U_quad)
+    eps = abs((float(a_quad) - a_ref) / a_ref)
+    g.message(f"Action {action.__name__} quad precision regression against double precision: {eps}")
+    assert eps < 1e-14
 
     # test original action gradient
     action.assert_gradient_error(rng, U, U, 1e-3, 1e-8)

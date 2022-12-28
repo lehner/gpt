@@ -220,3 +220,31 @@ for binary in trivialities:
     )
     assert eps < 1e-28
     assert epsr < 1e-14
+
+
+#
+# global sum tests
+#
+grid = g.grid([16, 16, 16, 32], g.double_quadruple)
+
+num_ranks_real = grid.globalsum(1.0)
+num_ranks_complex = grid.globalsum(1.0 + 2.0j)
+
+assert isinstance(num_ranks_real, g.qfloat)
+assert isinstance(num_ranks_complex, g.qcomplex)
+
+assert int(float(num_ranks_real)) == grid.Nprocessors
+assert int(float(num_ranks_complex.real)) == grid.Nprocessors
+assert int(float(num_ranks_complex.imag)) == 2 * grid.Nprocessors
+
+num_ranks_real = grid.globalsum(np.array([1.0, 1.0]))
+num_ranks_complex = grid.globalsum(np.array([1.0 + 3.0j, 1.0 + 4.0j]))
+
+assert isinstance(num_ranks_real, g.qfloat_array)
+assert isinstance(num_ranks_complex, g.qcomplex_array)
+
+for i in range(2):
+    assert int(float(num_ranks_real[i])) == grid.Nprocessors
+    assert int(float(num_ranks_complex.real[i])) == grid.Nprocessors
+assert int(float(num_ranks_complex.imag[0])) == 3 * grid.Nprocessors
+assert int(float(num_ranks_complex.imag[1])) == 4 * grid.Nprocessors

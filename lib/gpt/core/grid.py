@@ -95,6 +95,14 @@ def grid_get_mpi_default(fdimensions, cb):
     return mpi
 
 
+def global_sum_default(grid, x):
+    if type(x) == gpt.tensor:
+        cgpt.grid_globalsum(grid.obj, x.array)
+        return x
+    else:
+        return cgpt.grid_globalsum(grid.obj, x)
+
+
 class grid:
     def __init__(self, fdimensions, precision, cb=None, obj=None, mpi=None, parent=None):
 
@@ -125,7 +133,7 @@ class grid:
 
         if obj is None:
             self.obj = cgpt.create_grid(
-                fdimensions, precision, cb.cb_mask, cb.simd_mask, self.mpi, parent_obj
+                fdimensions, precision.cgpt_dtype, cb.cb_mask, cb.simd_mask, self.mpi, parent_obj
             )
         else:
             self.obj = obj
@@ -254,11 +262,7 @@ class grid:
         cgpt.grid_barrier(self.obj)
 
     def globalsum(self, x):
-        if type(x) == gpt.tensor:
-            cgpt.grid_globalsum(self.obj, x.array)
-            return x
-        else:
-            return cgpt.grid_globalsum(self.obj, x)
+        return self.precision.global_sum_policy(self, x)
 
     def broadcast(self, root, array):
         cgpt.grid_broadcast(self.obj, root, array)
