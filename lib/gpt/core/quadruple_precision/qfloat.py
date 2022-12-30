@@ -18,15 +18,14 @@
 #
 from gpt.core.quadruple_precision.qfloat_array import qfloat_array
 
+
 class qfloat(qfloat_array):
-    
     def __init__(self, x, y=None):
         if isinstance(x, float):
-            x=[x]
+            x = [x]
         if isinstance(y, float):
-            y=[y]
-        super().__init__(x,y)
-        
+            y = [y]
+        super().__init__(x, y)
+
     def __repr__(self):
         return f"({self.x[0]} + {self.y[0]})"
-
