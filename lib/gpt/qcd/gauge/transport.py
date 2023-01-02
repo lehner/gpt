@@ -36,6 +36,9 @@ class path:
         self.forward(mu, -distance)
         return self
 
+    def inverse(self):
+        return path([(mu,-distance) for (mu, distance) in reversed(self.path)])
+
 
 # define short-cuts
 path.f = path.forward
