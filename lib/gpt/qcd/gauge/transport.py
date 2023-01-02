@@ -105,9 +105,7 @@ class transport:
             # pr.disable()
             # pr.print_stats(sort="cumulative")
             assert r is not None
-            yield g.eval(r)
-
-        for i in range(self.n_site_fields):
-            site_fields_indices_i = self.site_fields_indices[i]
-            for sfi in site_fields_indices_i:
-                yield (sfi, buffers[site_fields_indices_i[sfi]])
+            if self.n_site_fields == 0:
+                yield g.eval(r)
+            else:
+                yield g.eval(r), [buffers[self.site_fields_indices[i][tuple(d)]] for i in range(self.n_site_fields)]
