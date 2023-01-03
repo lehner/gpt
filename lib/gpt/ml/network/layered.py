@@ -39,6 +39,6 @@ class layered:
         i0, i1 = self.weights_index[layer_index]
         return self.layers[layer_index](weights[i0:i1], source)
 
-    def dforward(self, layer_index, weights, source, left):
+    def dforward_adj(self, layer_index, weights, source, left):
         i0, i1 = self.weights_index[layer_index]
-        return self.layers[layer_index].projected_gradient(weights[i0:i1], source, left)
+        return self.layers[layer_index].projected_gradient_adj(weights[i0:i1], source, left)

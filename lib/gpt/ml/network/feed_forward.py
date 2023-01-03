@@ -34,7 +34,7 @@ class feed_forward(layered):
 
     # out = layer2(w2, layer1(w1, in))
     # left_i partial_i out
-    def projected_gradient(self, weights, input_layer, left):
+    def projected_gradient_adj(self, weights, input_layer, left):
         r = [None for x in weights]
         layer_value = [input_layer]
         # forward propagation
@@ -43,7 +43,7 @@ class feed_forward(layered):
         # backward propagation
         current_left = left
         for i in reversed(range(len(self.layers))):
-            gr = self.dforward(i, weights, layer_value[i], current_left)
+            gr = self.dforward_adj(i, weights, layer_value[i], current_left)
             current_left = gr[-1]
             i0, i1 = self.weights_index[i]
             for j in range(i0, i1):
@@ -61,15 +61,16 @@ class feed_forward(layered):
                     r += g.norm2(child.parent(weights, i) - o)
                 return r
 
+            # d/dx + i d/dy = 2 \partial_{z^*}  for z = x + i y
             # cost = (forward - o)^dag (forward - o)
-            # dcost = dforward^dag (forward - o) + (forward - o)^dag dforward
+            # (d/dx + i d/dy)cost = 2.0 * (d/dz^* forward^dag) (forward - o)
             def gradient(child, weights, dweights):
                 r = g.group.cartesian(dweights)
                 for x in r:
                     x[:] = 0
                 for i, o in zip(training_input, training_output):
                     delta = g(2.0 * child.parent(weights, i) - 2.0 * o)
-                    gr = child.parent.projected_gradient(weights, i, delta)
+                    gr = child.parent.projected_gradient_adj(weights, i, delta)
                     for nu, dw in enumerate(dweights):
                         mu = weights.index(dw)
                         r[nu] += gr[mu]
