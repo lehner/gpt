@@ -62,12 +62,12 @@ class feed_forward(layered):
                 return r
 
             # cost = (forward - o)^dag (forward - o)
+            # dcost = dforward^dag (forward - o) + (forward - o)^dag dforward
             def gradient(child, weights, dweights):
                 r = g.group.cartesian(dweights)
                 for x in r:
                     x[:] = 0
                 for i, o in zip(training_input, training_output):
-                    # next works only if real
                     delta = g(2.0 * child.parent(weights, i) - 2.0 * o)
                     gr = child.parent.projected_gradient(weights, i, delta)
                     for nu, dw in enumerate(dweights):
