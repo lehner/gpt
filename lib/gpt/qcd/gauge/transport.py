@@ -37,7 +37,7 @@ class path:
         return self
 
     def inverse(self):
-        return path([(mu,-distance) for (mu, distance) in reversed(self.path)])
+        return path([(mu, -distance) for (mu, distance) in reversed(self.path)])
 
 
 # define short-cuts
@@ -111,4 +111,7 @@ class transport:
             if self.n_site_fields == 0:
                 yield g.eval(r)
             else:
-                yield g.eval(r), [buffers[self.site_fields_indices[i][tuple(d)]] for i in range(self.n_site_fields)]
+                yield g.eval(r), [
+                    buffers[self.site_fields_indices[i][tuple(d)]]
+                    for i in range(self.n_site_fields)
+                ]

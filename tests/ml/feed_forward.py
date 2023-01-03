@@ -15,18 +15,18 @@ n_depth = 2
 n_training = 2
 
 # data type of input layer
-#ot_i = g.ot_vector_real_additive_group(n_dense)
+# ot_i = g.ot_vector_real_additive_group(n_dense)
 ot_i = g.ot_vector_complex_additive_group(n_dense)
 
 # data type of weights
-#ot_w = g.ot_matrix_real_additive_group(n_dense)
+# ot_w = g.ot_matrix_real_additive_group(n_dense)
 ot_w = g.ot_matrix_complex_additive_group(n_dense)
 
 n = g.ml.network.feed_forward([g.ml.layer.nearest_neighbor(grid, ot_i, ot_w)] * n_depth)
 W = n.random_weights(rng)
 
-#training_input = [rng.uniform_real(g.lattice(grid, ot_i)) for i in range(n_training)]
-#training_output = [rng.uniform_real(g.lattice(grid, ot_i)) for i in range(n_training)]
+# training_input = [rng.uniform_real(g.lattice(grid, ot_i)) for i in range(n_training)]
+# training_output = [rng.uniform_real(g.lattice(grid, ot_i)) for i in range(n_training)]
 
 training_input = [rng.cnormal(g.lattice(grid, ot_i)) for i in range(n_training)]
 training_output = [rng.cnormal(g.lattice(grid, ot_i)) for i in range(n_training)]
