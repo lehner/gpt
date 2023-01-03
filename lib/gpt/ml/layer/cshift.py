@@ -73,10 +73,10 @@ class cshift(base):
         for i in range(2, len(weights)):
             dinput += g(self.ishift(g(g.adj(weights[i]) * left_dactivation), i))
 
-        r = [g(left_dactivation)]
+        r = [left_dactivation]
         for i in range(1, self.n_weights):
             o = g.group.cartesian(weights[i])
             o @= left_dactivation * g.adj(shifts[i])
-            r.append(g(o))
+            r.append(o)
         r.append(g(dinput))
         return r
