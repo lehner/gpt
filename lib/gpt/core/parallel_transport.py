@@ -45,7 +45,7 @@ path.f = path.forward
 path.b = path.backward
 
 
-class transport:
+class parallel_transport:
     def __init__(self, links, paths, site_fields=None):
         self.paths = paths
         self.dim = len(links)

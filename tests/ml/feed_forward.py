@@ -47,3 +47,59 @@ opt = g.algorithms.optimize.gradient_descent(maxiter=40, eps=1e-7, step=1e-7, li
 
 # Train network
 opt(c)(W, W)
+
+
+# PTC
+grid = g.grid([8, 8, 8, 8], g.double)
+U = g.qcd.gauge.random(grid, rng)
+V = rng.element(g.mcolor(grid))
+U_prime = g.qcd.gauge.transformed(U, V)
+
+paths = [
+    g.path().forward(0),
+    g.path().forward(1),
+    g.path().forward(2),
+    g.path().forward(3),
+    g.path().backward(0),
+    g.path().backward(1),
+    g.path().backward(2),
+    g.path().backward(3),
+    g.path().f(0).f(1).b(0).b(1),
+]
+
+ot_i = g.ot_vector_spin_color(4, 3)
+ot_w = g.ot_matrix_spin(4)
+
+n = g.ml.network.feed_forward(
+    [
+        g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
+        g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
+        g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
+    ]
+)
+
+n_prime = g.ml.network.feed_forward(
+    [
+        g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 1, 3),
+        g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 3),
+        g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 1),
+    ]
+)
+
+W = n.random_weights(rng)
+
+src = g.vspincolor(grid)
+rng.normal(src)
+A = n_prime(W, g(V * src))
+B = g(V * n(W, src))
+
+eps = (g.norm2(A - B) / g.norm2(A)) ** 0.5
+g.message(f"Gauge equivariance test of PTC: {eps} < 1e-13")
+assert eps < 1e-13
+
+n_training = 3
+training_output = [rng.normal(g.lattice(grid, ot_i)) for i in range(n_training)]
+training_input = [rng.normal(g.lattice(grid, ot_i)) for i in range(n_training)]
+c = n.cost(training_input, training_output)
+
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)

@@ -19,3 +19,7 @@
 from gpt.ml.layer.base import base
 from gpt.ml.layer.cshift import cshift
 from gpt.ml.layer.nearest_neighbor import nearest_neighbor
+from gpt.ml.layer.parallel_transport_convolution import (
+    parallel_transport_convolution,
+    projector_color_trace,
+)

@@ -130,12 +130,12 @@ def rectangle(
         elements = []
         for configuration in configurations:
             c_paths = [
-                g.qcd.gauge.path().f(mu, L_mu).f(nu, L_nu).b(mu, L_mu).b(nu, L_nu)
+                g.path().f(mu, L_mu).f(nu, L_nu).b(mu, L_mu).b(nu, L_nu)
                 for mu, L_mu, nu, L_nu in configuration
             ]
             elements.append(len(c_paths))
             paths = paths + c_paths
-        cache[cache_key] = (g.qcd.gauge.transport(U, paths), elements)
+        cache[cache_key] = (g.parallel_transport(U, paths), elements)
 
     transport = cache[cache_key][0]
     ranges = cache[cache_key][1]
