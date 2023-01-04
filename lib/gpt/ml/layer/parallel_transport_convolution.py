@@ -111,13 +111,20 @@ class parallel_transport_convolution(base):
         left = g.util.to_list(left)
 
         assert len(weights) == 1
+
+        t = g.timer("projected_gradient_adj")
+        t("weight list")
         w = self._get_weight_list(weights)
+        t("field list")
         f = self._get_field_list(layer_input, self.transport)
 
         if self.itransport is None:
             self.itransport = g.parallel_transport(self.U, [p.inverse() for p in self.paths], left)
+
+        t("inverse field list")
         ileft = self._get_field_list(left, self.itransport)
 
+        t()
         n = (len(self.paths) + 1) * self.n_input
 
         o = g.group.cartesian(weights[0])
@@ -127,12 +134,16 @@ class parallel_transport_convolution(base):
 
         for i in range(len(left)):
             for j in range(n):
+                t("sums")
                 ip_left_f = g.sum(self.projector(left[i] * g.adj(f[j])))
                 pos = n * i + j
-                o[
-                    pos,
-                ] = ip_left_f
+                if pos not in self.access_cache:
+                    self.access_cache[pos] = {}
+                t("sets")
+                o[(pos,), self.access_cache[pos]] = ip_left_f
+                t()
 
+        t("accumulate")
         dinput = [g.lattice(self.data_grid, self.ot_data) for i in range(self.n_input)]
         for i in range(self.n_input):
             dinput[i][:] = 0
@@ -142,5 +153,10 @@ class parallel_transport_convolution(base):
             for l in range(len(left)):
                 for j in range(npath):
                     dinput[i] += g.adj(w[l][i * npath + j]) * ileft[l * npath + j]
+
+        t()
+
+        if g.default.is_verbose("parallel_transport_convolution_performance"):
+            g.message(t)
 
         return [o, dinput]
