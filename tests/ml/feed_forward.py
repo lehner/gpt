@@ -103,3 +103,15 @@ training_input = [rng.normal(g.lattice(grid, ot_i)) for i in range(n_training)]
 c = n.cost(training_input, training_output)
 
 c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+
+# lPTC
+n = g.ml.network.feed_forward(
+    [
+        g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 1),
+        g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 1),
+    ]
+)
+W = n.random_weights(rng)
+c = n.cost(training_input, training_output)
+
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)

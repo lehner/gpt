@@ -16,10 +16,11 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.ml.layer.base import base
+from gpt.ml.layer.base import base, base_no_bias
 from gpt.ml.layer.cshift import cshift
 from gpt.ml.layer.nearest_neighbor import nearest_neighbor
 from gpt.ml.layer.parallel_transport_convolution import (
     parallel_transport_convolution,
     projector_color_trace,
 )
+from gpt.ml.layer.local_parallel_transport_convolution import local_parallel_transport_convolution

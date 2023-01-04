@@ -17,70 +17,53 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ml.layer import base
+from gpt.ml.layer import base_no_bias
+from gpt.ml.layer.parallel_transport_convolution import projector_color_trace
 
 
-def projector_color_trace(x):
-    return g.color_trace(x)
-
-
-class parallel_transport_convolution(base):
+class local_parallel_transport_convolution(base_no_bias):
     def __init__(
         self,
-        data_grid,
+        grid,
         U,
         paths,
         ot_input,
         ot_weights,
         n_input,
         n_output,
-        min_weight_dim=8,
         projector=projector_color_trace,
     ):
 
-        nweights = (len(paths) + 1) * n_output * n_input
+        self.nweights = (len(paths) + 1) * n_output * n_input
 
         self.projector = projector
 
-        wdim = min_weight_dim
-        while wdim < nweights:
-            wdim *= 2
+        super().__init__(grid, ot_input, ot_weights, self.nweights)
 
-        self.weight_grid = g.grid([wdim], g.double)
-
-        super().__init__(self.weight_grid, ot_weights, ot_weights, 1)
-
-        self.data_grid = data_grid
-        self.ot_data = ot_input
         self.paths = paths
         self.U = U
         self.n_output = n_output
         self.n_input = n_input
 
-        self.access_cache = {}
-
-        tmp = [g.lattice(data_grid, ot_input) for i in range(n_input)]
+        tmp = [g.lattice(grid, ot_input) for i in range(n_input)]
         self.transport = g.parallel_transport(self.U, paths, tmp)
         self.itransport = None
 
     def _get_weight_list(self, weights):
-        assert len(weights) == 1
+        assert len(weights) == self.nweights
         n = (len(self.paths) + 1) * self.n_input
-        wall = weights[0][:, self.access_cache]
-        return [
-            [g.tensor(wall[n * i + j], self.ot_weights) for j in range(n)]
-            for i in range(self.n_output)
-        ]
+        return [[weights[n * i + j] for j in range(n)] for i in range(self.n_output)]
 
-    def _get_field_list(self, layer_input, ttr):
+    def _get_field_list(self, layer_input, ttr, local):
         layer_input = g.util.to_list(layer_input)
 
         tr = list(ttr(self.U, layer_input))
-        n = len(self.paths)
+        n = len(self.paths) if local else 1
 
         ret_f = []
         for j in range(len(layer_input)):
-            ret_f.append(layer_input[j])
+            if local:
+                ret_f.append(layer_input[j])
             for l in range(n):
                 ret_f.append(g(tr[l][0] * tr[l][1][j]))
         return ret_f
@@ -88,7 +71,7 @@ class parallel_transport_convolution(base):
     def _contract(self, w, f):
         ret = []
         for i in range(len(w)):
-            s = g.lattice(self.data_grid, self.ot_data)
+            s = g.lattice(self.grid, self.ot_input)
             s[:] = 0
 
             assert len(w[i]) == len(f)
@@ -103,58 +86,71 @@ class parallel_transport_convolution(base):
 
     def __call__(self, weights, layer_input):
         w = self._get_weight_list(weights)
-        f = self._get_field_list(layer_input, self.transport)
+        f = self._get_field_list(layer_input, self.transport, True)
         return self._contract(w, f)
 
     def projected_gradient_adj(self, weights, layer_input, left):
 
         left = g.util.to_list(left)
 
-        assert len(weights) == 1
-
         t = g.timer("projected_gradient_adj")
         t("weight list")
         w = self._get_weight_list(weights)
         t("field list")
-        f = self._get_field_list(layer_input, self.transport)
+        f = self._get_field_list(layer_input, self.transport, True)
 
         if self.itransport is None:
-            self.itransport = g.parallel_transport(self.U, [p.inverse() for p in self.paths], left)
-
-        t("inverse field list")
-        ileft = self._get_field_list(left, self.itransport)
+            self.itransport = [
+                g.parallel_transport(self.U, [p.inverse()], left) for p in self.paths
+            ]
 
         t()
         n = (len(self.paths) + 1) * self.n_input
 
-        o = g.group.cartesian(weights[0])
-        o[:] = 0
+        o = []
 
         for i in range(len(left)):
             for j in range(n):
-                t("sums")
-                ip_left_f = g.sum(self.projector(left[i] * g.adj(f[j])))
-                pos = n * i + j
-                if pos not in self.access_cache:
-                    self.access_cache[pos] = {}
-                t("sets")
-                o[(pos,), self.access_cache[pos]] = ip_left_f
+                o_n = g.group.cartesian(weights[0])
+                t("outer products")
+                o_n @= self.projector(left[i] * g.adj(f[j]))
                 t()
+                o.append(o_n)
+
+        t("inverse field list")
+        npath = len(self.paths) + 1
+        ileft = [
+            [
+                g(g.adj(w[l][i * npath]) * left[l])
+                for l in range(len(left))
+                for i in range(self.n_input)
+            ]  # i runs faster than l
+        ] + [
+            self._get_field_list(
+                [
+                    g(g.adj(w[l][i * npath + j]) * left[l])
+                    for l in range(len(left))
+                    for i in range(self.n_input)
+                ],
+                self.itransport[j - 1],
+                False,
+            )[0]
+            for j in range(1, npath)
+        ]
 
         t("accumulate")
-        dinput = [g.lattice(self.data_grid, self.ot_data) for i in range(self.n_input)]
+        dinput = [g.lattice(self.grid, self.ot_input) for i in range(self.n_input)]
         for i in range(self.n_input):
             dinput[i][:] = 0
 
-            npath = len(self.paths) + 1
-
             for l in range(len(left)):
                 for j in range(npath):
-                    dinput[i] += g.adj(w[l][i * npath + j]) * ileft[l * npath + j]
+                    t("accumulate")
+                    dinput[i] += ileft[j * len(left) * self.n_input + l * self.n_input + i]
 
         t()
 
-        if g.default.is_verbose("parallel_transport_convolution_performance"):
+        if g.default.is_verbose("local_parallel_transport_convolution_performance"):
             g.message(t)
 
-        return [o, dinput]
+        return o + [dinput]
