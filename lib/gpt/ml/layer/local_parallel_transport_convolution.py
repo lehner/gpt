@@ -58,13 +58,12 @@ class local_parallel_transport_convolution(base_no_bias):
         layer_input = g.util.to_list(layer_input)
 
         tr = list(ttr(self.U, layer_input))
-        n = len(self.paths) if local else 1
 
         ret_f = []
         for j in range(len(layer_input)):
             if local:
                 ret_f.append(layer_input[j])
-            for l in range(n):
+            for l in range(len(tr)):
                 ret_f.append(g(tr[l][0] * tr[l][1][j]))
         return ret_f
 
@@ -101,7 +100,15 @@ class local_parallel_transport_convolution(base_no_bias):
 
         if self.itransport is None:
             self.itransport = [
-                g.parallel_transport(self.U, [p.inverse()], left) for p in self.paths
+                g.parallel_transport(
+                    self.U,
+                    [p.inverse()],
+                    [
+                        g.lattice(self.grid, self.ot_input)
+                        for i in range(self.n_input * self.n_output)
+                    ],
+                )
+                for p in self.paths
             ]
 
         t()
@@ -120,13 +127,12 @@ class local_parallel_transport_convolution(base_no_bias):
         t("inverse field list")
         npath = len(self.paths) + 1
         ileft = [
-            [
-                g(g.adj(w[l][i * npath]) * left[l])
-                for l in range(len(left))
-                for i in range(self.n_input)
-            ]  # i runs faster than l
-        ] + [
-            self._get_field_list(
+            g(g.adj(w[l][i * npath]) * left[l])
+            for l in range(len(left))
+            for i in range(self.n_input)
+        ]
+        for j in range(1, npath):
+            ileft = ileft + self._get_field_list(
                 [
                     g(g.adj(w[l][i * npath + j]) * left[l])
                     for l in range(len(left))
@@ -134,9 +140,7 @@ class local_parallel_transport_convolution(base_no_bias):
                 ],
                 self.itransport[j - 1],
                 False,
-            )[0]
-            for j in range(1, npath)
-        ]
+            )
 
         t("accumulate")
         dinput = [g.lattice(self.grid, self.ot_input) for i in range(self.n_input)]
