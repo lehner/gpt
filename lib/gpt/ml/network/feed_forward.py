@@ -26,11 +26,20 @@ class feed_forward(layered):
         super().__init__(layers)
 
     # input to output
-    def __call__(self, weights, input_layer):
-        current = input_layer
-        for i in range(len(self.layers)):
-            current = self.forward(i, weights, current)
-        return current
+    def __call__(self, weights, input_layer=None):
+        def __mat(src):
+            current = src
+            for i in range(len(self.layers)):
+                current = self.forward(i, weights, current)
+            return current
+
+        def _mat(dst, src):
+            dst @= __mat(src)
+
+        if input_layer is None:
+            return g.matrix_operator(mat=_mat)
+
+        return __mat(input_layer)
 
     # out = layer2(w2, layer1(w1, in))
     # left_i partial_i out

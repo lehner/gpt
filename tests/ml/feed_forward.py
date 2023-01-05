@@ -116,3 +116,7 @@ W = n.random_weights(rng)
 c = n.cost(training_input, training_output)
 
 c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+
+# networks can also generate matrix_operator
+matrix = n(W)
+test = g(matrix * training_input[0])
