@@ -66,7 +66,7 @@ class parallel_transport_convolution(base):
     def _get_weight_list(self, weights):
         assert len(weights) == 1
         n = (len(self.paths) + 1) * self.n_input
-        wall = weights[0][(slice(0,n*self.n_output),), self.access_cache]
+        wall = weights[0][(slice(0, n * self.n_output),), self.access_cache]
         return [
             [g.tensor(wall[n * i + j], self.ot_weights) for j in range(n)]
             for i in range(self.n_output)

@@ -75,7 +75,7 @@ for i in range(1, 11):
     h = numpy.array(h)
     timer()
     g.message(f"{i*10} % of thermalization completed")
-    g.message(f'Average time per trajectory = {timer.dt["trajectory"]/ntherm*10:g} secs')
+    g.message(timer)
     g.message(
         f"Plaquette = {g.qcd.gauge.plaquette(U)}, Acceptance = {numpy.mean(h[:,0]):.2f}, |dH| = {numpy.mean(numpy.abs(h[:,1])):.4e}"
     )
@@ -83,17 +83,19 @@ for i in range(1, 11):
 # production
 history = []
 data = []
-n = 100
+n = 10
 dtrj = 10
 for i in range(n):
     for k in range(dtrj):
         history += [hmc(tau, mom)]
     data += [g.qcd.gauge.plaquette(U)]
-    g.message(f"Trajectory {i}, {history[-1]}")
+    g.message(f"Trajectory {i}, {history[-1]}, {data[-1]}")
 
 history = numpy.array(history)
 g.message(f"Acceptance rate = {numpy.mean(history[:,0]):.2f}")
 g.message(f"<|dH|> = {numpy.mean(numpy.abs(history[:,1])):.4e}")
 
 data = numpy.array(data)
-g.message(f"<plaq>   = {numpy.mean(data[:,0])}")
+g.message(f"<plaq>   = {numpy.mean(data)}")
+
+g.save("ckpoint_lat", U, g.format.nersc())

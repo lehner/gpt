@@ -24,3 +24,4 @@ from gpt.ml.layer.parallel_transport_convolution import (
     projector_color_trace,
 )
 from gpt.ml.layer.local_parallel_transport_convolution import local_parallel_transport_convolution
+import gpt.ml.layer.block

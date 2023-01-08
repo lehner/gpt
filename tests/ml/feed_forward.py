@@ -120,3 +120,30 @@ c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 # networks can also generate matrix_operator
 matrix = n(W)
 test = g(matrix * training_input[0])
+
+# multi-grid networks
+ncoarse = 4
+coarse_grid = g.grid([4, 4, 4, 4], g.double)
+basis = [rng.normal(g.vspincolor(grid)) for i in range(ncoarse)]
+b = g.block.map(coarse_grid, basis)
+b.orthonormalize()
+
+I = g.complex(coarse_grid)
+I[:] = 1
+I = [I] * 4
+
+ot_ci = g.ot_vector_complex_additive_group(ncoarse)
+ot_cw = g.ot_matrix_complex_additive_group(ncoarse)
+
+n = g.ml.network.feed_forward(
+    [
+        g.ml.layer.block.project(b),
+        g.ml.layer.local_parallel_transport_convolution(coarse_grid, I, paths, ot_ci, ot_cw, 1, 1),
+        g.ml.layer.block.promote(b),
+    ]
+)
+W = n.random_weights(rng)
+c = n.cost(training_input, training_output)
+
+g.message("Coarse network weight:", c(W))
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
