@@ -86,8 +86,7 @@ class fgmres(base_iterative):
         vector_space = None
         if type(mat) == g.matrix_operator:
             vector_space = mat.vector_space
-            mat = mat.mat
-            # remove wrapper for performance benefits
+            mat = mat.specialized_singlet_callable()
 
         prec = self.prec(mat) if self.prec is not None else None
 

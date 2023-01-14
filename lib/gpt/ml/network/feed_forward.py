@@ -17,47 +17,26 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ml.network import layered
+from gpt.ml.layer import sequence
 from gpt.core.group import differentiable_functional
 
 
-class feed_forward(layered):
-    def __init__(self, layers):
+class feed_forward(sequence):
+    def __init__(self, *layers):
         super().__init__(layers)
 
     # input to output
     def __call__(self, weights, input_layer=None):
-        def __mat(src):
-            current = src
-            for i in range(len(self.layers)):
-                current = self.forward(i, weights, current)
-            return current
-
         def _mat(dst, src):
-            dst @= __mat(src)
+            dst @= sequence.__call__(self, weights, src)
 
         if input_layer is None:
             return g.matrix_operator(mat=_mat)
 
-        return __mat(input_layer)
+        return sequence.__call__(self, weights, input_layer)
 
-    # out = layer2(w2, layer1(w1, in))
-    # left_i partial_i out
-    def projected_gradient_adj(self, weights, input_layer, left):
-        r = [None for x in weights]
-        layer_value = [input_layer]
-        # forward propagation
-        for i in range(len(self.layers) - 1):
-            layer_value.append(self.forward(i, weights, layer_value[-1]))
-        # backward propagation
-        current_left = left
-        for i in reversed(range(len(self.layers))):
-            gr = self.dforward_adj(i, weights, layer_value[i], current_left)
-            current_left = gr[-1]
-            i0, i1 = self.weights_index[i]
-            for j in range(i0, i1):
-                r[j] = gr[j - i0]
-        return r
+    def random_weights(self, rng):
+        return rng.normal(self.weights())
 
     def cost(self, training_input, training_output):
         class cost_functional(differentiable_functional):

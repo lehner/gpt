@@ -70,20 +70,17 @@ paths = [
 ot_i = g.ot_vector_spin_color(4, 3)
 ot_w = g.ot_matrix_spin(4)
 
+# test equivariance
 n = g.ml.network.feed_forward(
-    [
-        g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
-        g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
-        g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
-    ]
+    g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
+    g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
+    g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
 )
 
 n_prime = g.ml.network.feed_forward(
-    [
-        g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 1, 3),
-        g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 3),
-        g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 1),
-    ]
+    g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 1, 3),
+    g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 3),
+    g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 1),
 )
 
 W = n.random_weights(rng)
@@ -104,13 +101,32 @@ c = n.cost(training_input, training_output)
 
 c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 
+# parallel and sequence layers
+n = g.ml.network.feed_forward(
+    g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 1),
+    g.ml.layer.parallel(
+        g.ml.layer.sequence(
+            g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 1),
+            g.ml.layer.sequence(
+                g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 2),
+                g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 2, 1),
+            ),
+            g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 1),
+        ),
+        g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 1),
+    ),
+    g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 2, 1),
+)
+W = n.random_weights(rng)
+c = n.cost(training_input, training_output)
+
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+
 # lPTC
 n = g.ml.network.feed_forward(
-    [
-        g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
-        g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
-        g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
-    ]
+    g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
+    g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
+    g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
 )
 W = n.random_weights(rng)
 c = n.cost(training_input, training_output)
@@ -136,11 +152,9 @@ ot_ci = g.ot_vector_complex_additive_group(ncoarse)
 ot_cw = g.ot_matrix_complex_additive_group(ncoarse)
 
 n = g.ml.network.feed_forward(
-    [
-        g.ml.layer.block.project(b),
-        g.ml.layer.local_parallel_transport_convolution(coarse_grid, I, paths, ot_ci, ot_cw, 1, 1),
-        g.ml.layer.block.promote(b),
-    ]
+    g.ml.layer.block.project(b),
+    g.ml.layer.local_parallel_transport_convolution(coarse_grid, I, paths, ot_ci, ot_cw, 1, 1),
+    g.ml.layer.block.promote(b),
 )
 W = n.random_weights(rng)
 c = n.cost(training_input, training_output)
