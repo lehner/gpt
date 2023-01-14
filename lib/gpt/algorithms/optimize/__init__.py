@@ -24,3 +24,4 @@ from gpt.algorithms.optimize.non_linear_cg import (
     polak_ribiere,
 )
 import gpt.algorithms.optimize.fourier_accelerate
+from gpt.algorithms.optimize.adam import adam
