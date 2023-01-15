@@ -58,7 +58,7 @@ class cshift(base):
     # = activation'(...)_a left_a shift[1,in]_b
     # pg_{in_a} = left_j partial_{in_a} out_j
     # = activation'(...)_j left_j ishift[1,w[1]_{ja}]
-    def projected_gradient(self, weights, layer_input, left):
+    def projected_gradient_adj(self, weights, layer_input, left):
         assert len(weights) == self.n_weights
         shifts = [self.shift(layer_input, j) for j in range(self.n_weights)]
 
@@ -67,7 +67,7 @@ class cshift(base):
             s += w * sh
 
         dactivation = self.activation.gradient(g(s))
-        left_dactivation = g.component.multiply(left, dactivation)
+        left_dactivation = g.component.multiply(left, g.conj(dactivation))
 
         dinput = g.adj(weights[1]) * left_dactivation
         for i in range(2, len(weights)):

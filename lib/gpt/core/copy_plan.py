@@ -106,8 +106,8 @@ class copy_plan_executer:
                 f"copy_plan: execute: {GB:g} GB at {GB/(t1-t0):g} GB/s/rank with block_size {block_size}"
             )
 
-    def info(self):
-        return cgpt.copy_get_plan_info(self.obj)
+    def info(self, details=False):
+        return cgpt.copy_get_plan_info(self.obj, 1 if details else 0)
 
 
 class copy_plan:
@@ -129,12 +129,12 @@ class copy_plan:
         self.communication_buffer_location = data_location
         self.lattice_view_location = data_location
 
-    def __call__(self, local_only=False, skip_optimize=False):
+    def __call__(self, local_only=False, skip_optimize=False, use_communication_buffers=True):
         return copy_plan_executer(
             cgpt.copy_create_plan(
                 self.destination.view.obj,
                 self.source.view.obj,
-                self.communication_buffer_location,
+                self.communication_buffer_location if use_communication_buffers else "none",
                 local_only,
                 skip_optimize,
             ),

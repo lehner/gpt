@@ -180,3 +180,60 @@ EXPORT(grid_get_processor,{
     
   });
  
+EXPORT(grid_broadcast,{
+
+    long root;
+    PyObject* _data;
+    void* p;
+    if (!PyArg_ParseTuple(args, "llO", &p,&root,&_data)) {
+      return NULL;
+    }
+
+    GridBase* grid = (GridBase*)p;
+
+    ASSERT(cgpt_PyArray_Check(_data));
+    PyArrayObject* data = (PyArrayObject*)_data;
+    
+    char* data_p = (char*)PyArray_DATA(data);
+    
+    long sz = (long)PyArray_NBYTES(data);
+
+    ASSERT(sz < INT_MAX);
+
+    grid->Broadcast((int)root, data_p, (int)sz);
+    Py_INCREF(Py_None);
+    return Py_None;
+
+  });
+
+EXPORT(grid_exchange,{
+
+    long send_to, recv_from;
+    PyObject* _send_data, * _recv_data;
+    void* p;
+    if (!PyArg_ParseTuple(args, "lllOO", &p,&send_to,&recv_from,&_send_data,&_recv_data)) {
+      return NULL;
+    }
+
+    GridBase* grid = (GridBase*)p;
+
+    ASSERT(cgpt_PyArray_Check(_send_data) && cgpt_PyArray_Check(_recv_data));
+    PyArrayObject* send_data = (PyArrayObject*)_send_data;
+    PyArrayObject* recv_data = (PyArrayObject*)_recv_data;
+    
+    char* send_p = (char*)PyArray_DATA(send_data);
+    char* recv_p = (char*)PyArray_DATA(recv_data);
+    
+    long sz_send = (long)PyArray_NBYTES(send_data);
+    long sz_recv = (long)PyArray_NBYTES(recv_data);
+
+    ASSERT(sz_send == sz_recv);
+    ASSERT(sz_send < INT_MAX);
+
+    grid->SendToRecvFrom(send_p, (int)send_to, recv_p, (int)recv_from, sz_send);
+
+    Py_INCREF(Py_None);
+    return Py_None;
+
+  });
+

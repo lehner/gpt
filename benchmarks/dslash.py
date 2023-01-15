@@ -15,6 +15,8 @@ for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
     N = g.default.get_int("--N", 1000)
     Ls = g.default.get_int("--Ls", 8)
+    full = g.default.has("--full")
+
     g.message(
         f"""
 DWF Dslash Benchmark with
@@ -40,6 +42,8 @@ DWF Dslash Benchmark with
     # Source and destination
     src = g.vspincolor(qm.F_grid)
     dst = g.vspincolor(qm.F_grid)
+    src_eo = g.vspincolor(qm.F_grid_eo)
+    dst_eo = g.vspincolor(qm.F_grid_eo)
 
     # random source
     rng.cnormal(src)
@@ -75,3 +79,24 @@ DWF Dslash Benchmark with
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
     )
+
+    # Full timings
+    if full:
+        g.message()
+
+        t = g.timer("Full Timings")
+
+        for n in range(N):
+            t("Dhop", flops // N, nbytes // N)
+            qm.Dhop.mat(dst, src)
+            t("Project to even/odd")
+            g.pick_checkerboard(g.even, src_eo, src)
+            t("Meooe")
+            qm.Meooe.mat(dst_eo, src_eo)
+            t("Mooee")
+            qm.Mooee.mat(dst_eo, src_eo)
+            t("Promote to full")
+            g.set_checkerboard(dst, dst_eo)
+            t()
+
+        g.message(t)

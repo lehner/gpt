@@ -53,7 +53,7 @@ def download(dst, src):
             mode = "download"
         t1 = gpt.time()
         filesize = os.path.getsize(dst)
-        speedMBs = filesize / 1024.0 ** 2.0 / (t1 - t0)
+        speedMBs = filesize / 1024.0**2.0 / (t1 - t0)
         if verbose:
             gpt.message(f"Repository {mode} {src} in {t1-t0:g} s at {speedMBs:g} MB/s")
 

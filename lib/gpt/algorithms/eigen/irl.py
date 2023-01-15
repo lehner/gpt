@@ -178,7 +178,7 @@ class irl:
                             mat(v, B)
                             ckpt.save(v)
                         ev_test = g.inner_product(B, v).real
-                        eps2 = g.norm2(v - ev_test * B) / lambda_max ** 2.0
+                        eps2 = g.norm2(v - ev_test * B) / lambda_max**2.0
                         if verbose:
                             g.message(
                                 "%-65s %-45s %-50s"

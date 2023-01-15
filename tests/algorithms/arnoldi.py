@@ -47,7 +47,7 @@ def test(a, name):
     g.message(f"{name} finished in {t1-t0} s")
 
     for i in range(len(evals_eps2)):
-        assert evals_eps2[i] / largest_eval ** 2.0 < 1e-5
+        assert evals_eps2[i] / largest_eval**2.0 < 1e-5
         assert abs(evals_test[i] - evals[i]) < 1e-6
 
 

@@ -482,7 +482,7 @@ for group, job, conf, jid, n in run_jobs:
                 srcD += g.create.point(g.lattice(srcD), pos_of_slice[i]) * sign_of_slice[i]
             else:
                 srcD += g.create.wall.z2(g.lattice(srcD), pos_of_slice[i][3], rng) * (
-                    sign_of_slice[i] / vol3d ** 0.5
+                    sign_of_slice[i] / vol3d**0.5
                 )
 
         return srcD, pos_of_slice, sign_of_slice

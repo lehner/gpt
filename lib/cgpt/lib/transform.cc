@@ -242,7 +242,7 @@ EXPORT(lattice_scale_per_coordinate,{
     return PyLong_FromLong(0);
   });
 
-EXPORT(lattice_sum,{
+EXPORT(lattice_rank_sum,{
     
     void* _a;
     if (!PyArg_ParseTuple(args, "l", &_a)) {
@@ -250,11 +250,11 @@ EXPORT(lattice_sum,{
     }
     
     cgpt_Lattice_base* a = (cgpt_Lattice_base*)_a;
-    return a->sum();
+    return a->rank_sum();
     
   });
   
-EXPORT(lattice_slice,{
+EXPORT(lattice_rank_slice,{
     
     PyObject* _basis;
     long dim;
@@ -265,11 +265,11 @@ EXPORT(lattice_slice,{
     std::vector<cgpt_Lattice_base*> basis;
     cgpt_basis_fill(basis,_basis);
 
-    return basis[0]->slice(basis, (int)dim);
+    return basis[0]->rank_slice(basis, (int)dim);
     
   });
 
-EXPORT(lattice_indexed_sum,{
+EXPORT(lattice_rank_indexed_sum,{
     
     PyObject* _basis;
     long len;
@@ -283,6 +283,6 @@ EXPORT(lattice_indexed_sum,{
 
     cgpt_Lattice_base* idx = (cgpt_Lattice_base*)_idx;
 
-    return basis[0]->indexed_sum(basis, idx, len);
+    return basis[0]->rank_indexed_sum(basis, idx, len);
     
   });

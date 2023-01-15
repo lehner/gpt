@@ -65,7 +65,7 @@ class lattice(factor):
                 self.otype = gpt.str_to_otype(p[0])
                 cb = gpt.str_to_cb(p[1])
                 self.v_obj = [
-                    cgpt.create_lattice(self.grid.obj, t, self.grid.precision)
+                    cgpt.create_lattice(self.grid.obj, t, self.grid.precision.cgpt_dtype)
                     for t in self.otype.v_otype
                 ]
             else:
@@ -74,7 +74,7 @@ class lattice(factor):
                     self.v_obj = third
                 else:
                     self.v_obj = [
-                        cgpt.create_lattice(self.grid.obj, t, self.grid.precision)
+                        cgpt.create_lattice(self.grid.obj, t, self.grid.precision.cgpt_dtype)
                         for t in self.otype.v_otype
                     ]
         elif type(first) == gpt.lattice:
@@ -82,7 +82,7 @@ class lattice(factor):
             self.grid = first.grid
             self.otype = first.otype
             self.v_obj = [
-                cgpt.create_lattice(self.grid.obj, t, self.grid.precision)
+                cgpt.create_lattice(self.grid.obj, t, self.grid.precision.cgpt_dtype)
                 for t in self.otype.v_otype
             ]
             cb = first.checkerboard()

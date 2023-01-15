@@ -23,14 +23,16 @@ import copy
 
 # test if of number type
 def is_num(x):
-    return isinstance(x, (int, float, complex)) and not isinstance(x, bool)
+    return isinstance(x, (int, float, complex, gpt.qfloat, gpt.qcomplex)) and not isinstance(
+        x, bool
+    )
 
 
 # convert to number type
 def to_num(x):
-    if isinstance(x, (np.complex128, np.complex64)):
+    if isinstance(x, (np.complex64, np.complex128)):
         return complex(x)
-    elif isinstance(x, (np.float64, np.float128)):
+    elif isinstance(x, (np.float32, np.float64)):
         return float(x)
     elif isinstance(x, (np.int32, np.int64)):
         return int(x)

@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2020-22  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,11 +16,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
 
 
-class layered:
+class group:
     def __init__(self, layers):
+        while len(layers) == 1 and isinstance(layers[0], (list, tuple)):
+            layers = layers[0]
         self.layers = layers
         self.weights_index = []
         i0 = 0
@@ -28,17 +29,18 @@ class layered:
             i1 = i0 + l.n_weights
             self.weights_index.append((i0, i1))
             i0 = i1
+        self.n_weights = i0
 
-    def random_weights(self, rng):
+    def weights(self):
         w = []
         for l in self.layers:
             w = w + l.weights()
-        return rng.normal(w)
+        return w
 
     def forward(self, layer_index, weights, source):
         i0, i1 = self.weights_index[layer_index]
         return self.layers[layer_index](weights[i0:i1], source)
 
-    def dforward(self, layer_index, weights, source, left):
+    def dforward_adj(self, layer_index, weights, source, left):
         i0, i1 = self.weights_index[layer_index]
-        return self.layers[layer_index].projected_gradient(weights[i0:i1], source, left)
+        return self.layers[layer_index].projected_gradient_adj(weights[i0:i1], source, left)

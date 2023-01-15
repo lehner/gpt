@@ -53,9 +53,9 @@ void cgpt_scale_per_coordinate(Lattice<T>& dst,Lattice<T>& src,ComplexD* s,int d
 
 // sliceSum from Grid but with vector of lattices as input
 template<class vobj>
-inline void cgpt_slice_sum(const PVector<Lattice<vobj>> &Data,
-			   std::vector<typename vobj::scalar_object> &result,
-			   int orthogdim)
+inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
+				std::vector<typename vobj::scalar_object> &result,
+				int orthogdim)
 {
   ///////////////////////////////////////////////////////
   // FIXME precision promoted summation
@@ -63,7 +63,6 @@ inline void cgpt_slice_sum(const PVector<Lattice<vobj>> &Data,
   // But easily avoided by using double precision fields
   ///////////////////////////////////////////////////////
   typedef typename vobj::scalar_object sobj;
-  typedef typename vobj::scalar_type scalar_type;
 
   GridBase *grid = Data[0].Grid();
   assert(grid!=NULL);
@@ -133,15 +132,12 @@ inline void cgpt_slice_sum(const PVector<Lattice<vobj>> &Data,
       }
     }
   });
-  scalar_type* ptr = (scalar_type *) &result[0];
-  int words = fd * sizeof(sobj) / sizeof(scalar_type) * Nbasis;
-  grid->GlobalSumVector(ptr, words);
 }
 
 template<class vobj>
-inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
-			     const Lattice<iSinglet<typename vobj::vector_type>> & Index,
-			     std::vector<typename vobj::scalar_object> &result)
+inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
+				  const Lattice<iSinglet<typename vobj::vector_type>> & Index,
+				  std::vector<typename vobj::scalar_object> &result)
 {
   typedef typename vobj::scalar_object sobj;
   typedef typename vobj::scalar_type scalar_type;
@@ -204,8 +200,4 @@ inline void cgpt_indexed_sum(const PVector<Lattice<vobj>> &Data,
 	x = x + lsSum_p[i*index_osites_per_block + j];
       result[i] = x;
     });
-  
-  scalar_type* ptr = (scalar_type *) &result[0];
-  int words = len * sizeof(sobj) / sizeof(scalar_type) * Nbasis;
-  grid->GlobalSumVector(ptr, words);
 }

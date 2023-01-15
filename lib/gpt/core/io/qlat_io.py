@@ -131,7 +131,7 @@ class qlat_io:
             self.swap(data)
             dt_misc += gpt.time()
 
-            szGB += len(data) / 1024.0 ** 3.0
+            szGB += len(data) / 1024.0**3.0
         else:
             data = memoryview(bytearray())
 

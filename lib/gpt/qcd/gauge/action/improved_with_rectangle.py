@@ -50,12 +50,12 @@ class improved_with_rectangle(base):
         st[:] = 0
 
         O = [nu for nu in range(Nd) if nu != mu]
-        path = g.qcd.gauge.path
+        path = g.path
         if (Nd, mu) not in self.staple_1x1:
             p = []
             p += [path().f(nu).f(mu).b(nu) for nu in O]
             p += [path().b(nu).f(mu).f(nu) for nu in O]
-            self.staple_1x1[(Nd, mu)] = g.qcd.gauge.transport(U, p)
+            self.staple_1x1[(Nd, mu)] = g.parallel_transport(U, p)
 
         if (Nd, mu) not in self.staple_2x1:
             p = []
@@ -65,7 +65,7 @@ class improved_with_rectangle(base):
             p += [path().b(nu).f(mu, 2).f(nu).b(mu) for nu in O]
             p += [path().b(mu).b(nu).f(mu, 2).f(nu) for nu in O]
             p += [path().b(mu).f(nu).f(mu, 2).b(nu) for nu in O]
-            self.staple_2x1[(Nd, mu)] = g.qcd.gauge.transport(U, p)
+            self.staple_2x1[(Nd, mu)] = g.parallel_transport(U, p)
 
         for s in self.staple_1x1[(Nd, mu)](U):
             st += (self.beta * self.c0 / U[0].otype.shape[0]) * s

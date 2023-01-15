@@ -81,7 +81,7 @@ class cagcr(base_iterative):
                 ssq = r2
 
             # target residual
-            rsq = self.eps ** 2.0 * ssq
+            rsq = self.eps**2.0 * ssq
 
             for k in range(0, self.maxiter, rlen):
                 t("mat")

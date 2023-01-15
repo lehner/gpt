@@ -67,7 +67,7 @@ for q in [g.qis.backends.static, g.qis.backends.dynamic]:
         assert psi2.classical_bit == ref  # then test coefficients and m
 
         # test that direct access is compatible
-        assert (abs(psi[2 ** i]) - 1.0) < 1e-7
+        assert (abs(psi[2**i]) - 1.0) < 1e-7
 
     # now test X^2 = 1
     g.message("Test X^2")

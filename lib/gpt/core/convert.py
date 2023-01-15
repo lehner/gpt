@@ -20,7 +20,7 @@ import cgpt, gpt, numpy, sys
 
 
 def convert(first, second):
-    if second in [gpt.single, gpt.double]:
+    if second in [gpt.single, gpt.double, gpt.double_quadruple]:
 
         # if first is a list, distribute
         if type(first) == list:

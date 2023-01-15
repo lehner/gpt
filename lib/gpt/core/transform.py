@@ -115,6 +115,7 @@ def inner_product_norm2(a, b):
 def axpy(d, a, x, y):
     x = gpt.eval(x)
     y = gpt.eval(y)
+    a = complex(a)
     assert len(y.otype.v_idx) == len(x.otype.v_idx)
     assert len(d.otype.v_idx) == len(x.otype.v_idx)
     for i in x.otype.v_idx:
@@ -141,12 +142,14 @@ def fields_to_tensors(src, functor):
 
 
 def slice(src, dim):
-    return fields_to_tensors(src, lambda s: cgpt.lattice_slice(s, dim))
+    return fields_to_tensors(src, lambda s: s[0].grid.globalsum(cgpt.lattice_rank_slice(s, dim)))
 
 
 def indexed_sum(fields, index, length):
     index_obj = index.v_obj[0]
-    return fields_to_tensors(fields, lambda src: cgpt.lattice_indexed_sum(src, index_obj, length))
+    return fields_to_tensors(
+        fields, lambda s: s[0].grid.globalsum(cgpt.lattice_rank_indexed_sum(s, index_obj, length))
+    )
 
 
 def identity(src):

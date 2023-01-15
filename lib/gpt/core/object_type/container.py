@@ -133,6 +133,36 @@ class ot_matrix_spin(ot_base):
             "ot_singlet": (lambda: self, None),
         }
 
+    def cartesian(self):
+        return self
+
+    def compose(self, a, b):
+        return a + b
+
+    def defect(self, field):
+        return 0.0
+
+    def inner_product(self, left, right):
+        # adj(left_{ij}) = a_{ij} - i b_{ij}
+        # right_{ij} = c_{ij} + i d_{ij}
+        return gpt.sum(gpt(gpt.trace(gpt.adj(left) * right))).real
+
+    def generators(self, dt):
+        r = []
+
+        ndim = self.shape[0]
+        for i in range(ndim):
+            for j in range(ndim):
+                alg = numpy.zeros(shape=self.shape, dtype=dt)
+                alg[i, j] = 1.0
+                r.append(alg)
+
+                alg = numpy.zeros(shape=self.shape, dtype=dt)
+                alg[i, j] = 1.0j
+                r.append(alg)
+
+        return [gpt.gpt_object(i, self) for i in r]
+
     def identity(self):
         return gpt.matrix_spin(numpy.identity(self.shape[0]), self.shape[0])
 

@@ -39,6 +39,7 @@ for f in \
     ${test_path}/core/matrix.py \
     ${test_path}/core/split.py \
     ${test_path}/core/other_representations.py \
+    ${test_path}/core/quadruple_precision.py \
     ${test_path}/random/simple.py \
     ${test_path}/create/create.py \
     ${test_path}/create/smear.py \

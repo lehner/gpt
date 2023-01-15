@@ -1,0 +1,39 @@
+\documentclass[landscape]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref,xcolor}
+
+\newcommand{\gr}[1]{{\color{gray} #1}}
+
+
+\begin{document}
+
+\section{Ensemble list generated for g-2 HVP project}
+
+Values marked in gray are not yet measured and only estimated.
+
+\begin{center}
+
+\begin{tabular}{l|lllllllll|l}
+  ID & $a^{-1}$/GeV & $N_f$ & $L^3 \times T \times L_s$ & $b+c$ & $m_{\rm res} \times 10^4$ & $m_\pi$/MeV & $m_K$/MeV & $m_{D_s}$/GeV & $m_\pi L$ & Code \\\hline
+  48I & $1.73$ & 2+1 & $48^3 \times 96 \times 24$ & 2 & $6.1$ & 139 & 499 & -- & 3.87 & CPS\\
+  64I & $2.35$ & 2+1 & $64^3 \times 128 \times 12$ & 2 & $3.1$ & 139 & 507 & -- & 3.77 & CPS\\
+  96I & $2.69$ & 2+1 & $96^3 \times 192 \times 12$ & 2 & $2.3$ & 132 & 486 & -- & 4.70 & CPS\\\hline
+  1 & $1.73$ & 2+1 & $32^3 \times 64 \times 24$ & 2 & $6.3$ & 208 & 513 & -- & 3.85 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble1.py}{GPT script} \\
+  2 & $1.73$ & 2+1 & $24^3 \times 48 \times 32$ & 2 & $4.6$ & 284 & 534 & -- & 3.96 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble2.py}{GPT script} \\
+  3 & $1.73$ & 2+1 & $32^3 \times 64 \times 24$ & 2 & $6.5$ & 210 & 597 & -- & 3.88 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble3.py}{GPT script} \\
+  4 & $1.74$ & 2+1 & $24^3 \times 48 \times 24$ & 2 & $6.2$ & 279 & 534 & -- & 3.84 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble4.py}{GPT script} \\
+  5 & $1.75$ & 2+1+1 & $24^3 \times 48 \times 24$ & 2 & $6.7$ & 280 & 536 & 1.99 & 3.84 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble5.py}{GPT script} \\
+  6 & \gr{$1.75$} & 2+1+1 & $24^3 \times 48 \times 24$ & 2 & \gr{$6.7$} & \gr{280} & \gr{536} & \gr{1.5} & \gr{3.84} & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble6.py}{GPT script} \\
+  7 & $1.76$ & 2+1+1 & $24^3 \times 48 \times 24$ & 2 & $7.9$ & 284 & 540 & 1.39 & 3.88 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble7.py}{GPT script} \\
+  8 & \gr{$2.37$} & 2+1+1 & $32^3 \times 64 \times 12$ & 2 & \gr{$3.0$} & \gr{280} & \gr{536} & \gr{1.99} & \gr{3.88} & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble8.py}{GPT script} \\
+  9 & $2.37$ & 2+1 & $32^3 \times 64 \times 12$ & 2 & $3.0$ & 281 & 535 & -- & 3.80 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensemble9.py}{GPT script} \\
+  A & $1.76$ & 2+1 & $24^3 \times 48 \times 8$ & 2 & $41.5$ & 303 & 548 & -- & 4.15 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensembleA.py}{GPT script} \\
+  B & $1.73$ & 2+1 & $32^3 \times 64 \times 24$ & 2 & $6.1$ & \gr{139} & \gr{499} & -- & \gr{2.58} &  \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensembleB.py}{GPT script}\\
+  C & $1.73$ & 2+1 & $64^3 \times 128 \times 24$ & 2 & $6.1$ & \gr{139} & \gr{499} & -- & \gr{5.16} &  \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensembleC.py}{GPT script}\\
+  D & $1.74$ & 2+1 & $32^3 \times 64 \times 24$ & 2 & $6.2$ & 279 & 534 & -- & 5.12 & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensembleD.py}{GPT script} \\
+  E & \gr{$3.50$} & 2+1 & $48^3 \times 192 \times 12$, openBC & 2 & \gr{$1.4$} & \gr{280} & \gr{535} & -- & \gr{3.87} & \href{https://github.com/lehner/gpt/tree/master/applications/hmc/dwf/ensembleE.py}{GPT script} \\
+\end{tabular}
+
+\end{center}
+
+\end{document}

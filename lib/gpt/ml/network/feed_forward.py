@@ -17,38 +17,26 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ml.network import layered
+from gpt.ml.layer import sequence
 from gpt.core.group import differentiable_functional
 
 
-class feed_forward(layered):
-    def __init__(self, layers):
+class feed_forward(sequence):
+    def __init__(self, *layers):
         super().__init__(layers)
 
     # input to output
-    def __call__(self, weights, input_layer):
-        current = input_layer
-        for i in range(len(self.layers)):
-            current = self.forward(i, weights, current)
-        return current
+    def __call__(self, weights, input_layer=None):
+        def _mat(dst, src):
+            dst @= sequence.__call__(self, weights, src)
 
-    # out = layer2(w2, layer1(w1, in))
-    # left_i partial_i out
-    def projected_gradient(self, weights, input_layer, left):
-        r = [None for x in weights]
-        layer_value = [input_layer]
-        # forward propagation
-        for i in range(len(self.layers) - 1):
-            layer_value.append(self.forward(i, weights, layer_value[-1]))
-        # backward propagation
-        current_left = left
-        for i in reversed(range(len(self.layers))):
-            gr = self.dforward(i, weights, layer_value[i], current_left)
-            current_left = gr[-1]
-            i0, i1 = self.weights_index[i]
-            for j in range(i0, i1):
-                r[j] = gr[j - i0]
-        return r
+        if input_layer is None:
+            return g.matrix_operator(mat=_mat)
+
+        return sequence.__call__(self, weights, input_layer)
+
+    def random_weights(self, rng):
+        return rng.normal(self.weights())
 
     def cost(self, training_input, training_output):
         class cost_functional(differentiable_functional):
@@ -61,15 +49,16 @@ class feed_forward(layered):
                     r += g.norm2(child.parent(weights, i) - o)
                 return r
 
+            # d/dx + i d/dy = 2 \partial_{z^*}  for z = x + i y
             # cost = (forward - o)^dag (forward - o)
+            # (d/dx + i d/dy)cost = 2.0 * (d/dz^* forward^dag) (forward - o)
             def gradient(child, weights, dweights):
                 r = g.group.cartesian(dweights)
                 for x in r:
                     x[:] = 0
                 for i, o in zip(training_input, training_output):
-                    # next works only if real
                     delta = g(2.0 * child.parent(weights, i) - 2.0 * o)
-                    gr = child.parent.projected_gradient(weights, i, delta)
+                    gr = child.parent.projected_gradient_adj(weights, i, delta)
                     for nu, dw in enumerate(dweights):
                         mu = weights.index(dw)
                         r[nu] += gr[mu]

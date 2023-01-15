@@ -119,7 +119,7 @@ def test(slv, name):
     eps2 = g.norm2(dst_cg - dst) / g.norm2(dst_cg)
     g.message("%s finished: eps^2(CG) = %g" % (name, eps2))
     timings[name] = t1 - t0
-    resid[name] = eps2 ** 0.5
+    resid[name] = eps2**0.5
     assert eps2 < 5e-7
 
 

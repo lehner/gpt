@@ -17,8 +17,9 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from gpt.core.quadruple_precision import qfloat, qfloat_array, qcomplex, qcomplex_array
 from gpt.core.grid import grid, grid_from_description, full, redblack, general
-from gpt.core.precision import single, double, precision, str_to_precision
+from gpt.core.precision import single, double, double_quadruple, precision, str_to_precision
 from gpt.core.expr import expr, factor, expr_unary, factor_unary, expr_eval
 from gpt.core.lattice import lattice, get_mem_book
 from gpt.core.peekpoke import map_key
@@ -31,6 +32,7 @@ from gpt.core.pin import pin
 from gpt.core.stack import get_call_stack
 from gpt.core.convert import convert
 from gpt.core.cshift_plan import cshift_plan
+from gpt.core.parallel_transport import path, parallel_transport
 from gpt.core.transform import (
     cshift,
     copy,

@@ -26,7 +26,7 @@ class interface:
         self.obj = None
 
     def setup(self, name, grid, params):
-        self.obj = cgpt.create_fermion_operator(name, grid.precision, params)
+        self.obj = cgpt.create_fermion_operator(name, grid.precision.cgpt_dtype, params)
 
     def __del__(self):
         if self.obj is not None:

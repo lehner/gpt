@@ -18,7 +18,7 @@ src[0, 0, 0, 0] = 1
 # Create a free Klein-Gordon operator (spectrum from mass^2-16 .. mass^2)
 def A(dst, src, mass):
     assert dst != src
-    dst @= (mass ** 2.0) * src
+    dst @= (mass**2.0) * src
     for i in range(4):
         dst += g.cshift(src, i, 1) + g.cshift(src, i, -1) - 2 * src
 

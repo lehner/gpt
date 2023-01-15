@@ -124,7 +124,7 @@ class state:
 
     def H(self, i):
         bfl = self.bit_flipped_lattice(i)
-        nrm = 1.0 / 2.0 ** 0.5
+        nrm = 1.0 / 2.0**0.5
         g.bilinear_combination(
             [self.lattice],
             [self.bit_map.zero_mask[i], self.bit_map.one_mask[i]],
@@ -155,11 +155,11 @@ class state:
         l = self.rng.uniform_real()
         if l <= p_one:
             proj = self.bit_map.one_mask[i]
-            nrm = 1.0 / (p_one ** 0.5)
+            nrm = 1.0 / (p_one**0.5)
             r = 1
         else:
             proj = self.bit_map.zero_mask[i]
-            nrm = 1.0 / (p_zero ** 0.5)
+            nrm = 1.0 / (p_zero**0.5)
             r = 0
 
         g.bilinear_combination([self.lattice], [proj], [self.lattice], [[nrm]], [[0]], [[0]])

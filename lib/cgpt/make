@@ -5,6 +5,7 @@ root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
 # Python environment
 NUMPY_INCLUDE=$(python3 -c "import numpy; print(numpy.get_include())")
 CXXFLAGS_PYTHON="-I${NUMPY_INCLUDE} $(python3-config --includes)"
+LDFLAGS_PYTHON="$(python3-config --ldflags)"
 
 # Arguments
 GRID=$1
@@ -22,7 +23,7 @@ then
     CXX=$(grid-config --cxx)
     CXXLD=$(grid-config --cxxld)
     CXXFLAGS="$(grid-config --cxxflags) ${CXXFLAGS_PYTHON}"
-    LDFLAGS=$(grid-config --ldflags)
+    LDFLAGS="$(grid-config --ldflags) ${LDFLAGS_PYTHON}"
     LIBS=$(grid-config --libs)
     BUILD="build"
 
@@ -47,7 +48,7 @@ else
     CXX=$(grep "GRID_CXX " ${GRID}/Makefile | sed "s/^[^=]*=//")
     CXXLD=$(grep "GRID_CXXLD " ${GRID}/Makefile | sed "s/^[^=]*=//")
     CXXFLAGS="$(grep "GRID_CXXFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_CFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") -I${GRID} -I${GRID}/Grid ${CXXFLAGS_PYTHON}"
-    LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//")"
+    LDFLAGS="$(grep "GRID_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") $(grep "AM_LDFLAGS " ${GRID}/Makefile | sed "s/^[^=]*=//") ${LDFLAGS_PYTHON}"
     LIBS=$(grep "GRID_LIBS " ${GRID}/Makefile | sed "s/^[^=]*=//")
     BUILD=$(basename $GRID)
 

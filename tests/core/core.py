@@ -29,6 +29,11 @@ for rb in [g.redblack, g.full]:
     eps2 = g.norm2(l_dp[0, 0, 0, 0] - l_sp[0, 0, 0, 0])
     assert eps2 < 1e-14
 
+    # communication test
+    x = np.array([l_dp.grid.processor * 0.23 + 3], dtype=np.complex128)
+    eps = np.linalg.norm(l_dp.grid.reduce(x, lambda a, b: a.__iadd__(b)) - l_dp.grid.globalsum(x))
+    assert eps < 1e-14
+
 
 ################################################################################
 # Test mview

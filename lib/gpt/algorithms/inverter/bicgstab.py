@@ -60,7 +60,7 @@ class bicgstab(base_iterative):
             if ssq == 0.0:
                 assert r2 != 0.0  # need either source or psi to not be zero
                 ssq = r2
-            rsq = self.eps ** 2.0 * ssq
+            rsq = self.eps**2.0 * ssq
 
             for k in range(self.maxiter):
                 t("inner")

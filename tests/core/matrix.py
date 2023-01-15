@@ -22,16 +22,16 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     # and test unitarity
     eps2 = g.norm2(g.adj(m) - g.matrix.inv(m)) / g.norm2(m)
     g.message(f"adj(U) == inv(U): {eps2}")
-    assert eps2 < eps ** 2.0
+    assert eps2 < eps**2.0
 
     # then test component operators
     c = g.component
 
     def inv(x):
-        return x ** -1.0
+        return x**-1.0
 
     def pow3p45(x):
-        return x ** 3.45
+        return x**3.45
 
     def mod0p1(x):
         return complex(math.fmod(x.real, 0.1), math.fmod(x.imag, 0.1))
@@ -63,7 +63,7 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         b = op[1](m[0, 0, 0, 0, 1, 2])
         eps2 = (abs(a - b) / abs(a)) ** 2.0
         g.message(f"Test {op[1].__name__}: {a} == {b} with argument {m[0, 0, 0, 0, 1, 2]}: {eps2}")
-        assert eps2 < eps ** 2.0
+        assert eps2 < eps**2.0
 
 # test inv
 for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
@@ -81,15 +81,15 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         eye = g.identity(m)
         eps2 = g.norm2(m * minv - eye) / (12 * grid.fsites)
         g.message(f"test M*M^-1 = 1 for {m.otype.__name__}: {eps2}")
-        assert eps2 < eps ** 2
+        assert eps2 < eps**2
 
         # make logarithm well defined
         m @= eye + 0.01 * m
         m2 = g.matrix.exp(g.matrix.log(m))
         eps2 = g.norm2(m - m2) / g.norm2(m)
         g.message(f"exp(log(m)) == m: {eps2}")
-        assert eps2 < eps ** 2.0
+        assert eps2 < eps**2.0
 
         eps2 = g.norm2(g.matrix.log(g.matrix.det(g.matrix.exp(m))) - g.trace(m)) / g.norm2(m)
         g.message(f"log(det(exp(m))) == tr(m): {eps2}")
-        assert eps2 < eps ** 2.0
+        assert eps2 < eps**2.0

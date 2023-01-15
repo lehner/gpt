@@ -103,6 +103,24 @@ PyObject* cgpt_numpy_export(const sobj& v) {
 }
 
 template<typename sobj>
+PyObject* cgpt_numpy_export(const std::vector<sobj>& v, long ngroup) {
+  typedef typename sobj::scalar_type t;
+  std::vector<long> dim;
+  cgpt_numpy_data_layout(v[0],dim);
+
+  ASSERT(v.size() % ngroup == 0);
+  
+  dim.insert(dim.begin(), ngroup);
+  dim.insert(dim.begin(), v.size() / ngroup);
+
+  t* c = (t*)&v[0];
+
+  PyArrayObject* arr = cgpt_new_PyArray((int)dim.size(), &dim[0], infer_numpy_type(*c));
+  memcpy(PyArray_DATA(arr),c,sizeof(sobj)*v.size());
+  return (PyObject*)arr;
+}
+
+template<typename sobj>
 bool cgpt_numpy_import(sobj& dst,PyArrayObject* src,std::vector<long>& dim) {
   typedef typename sobj::scalar_type t;
 

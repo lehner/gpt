@@ -82,7 +82,7 @@ def mem_report(details=True):
         smsg_prev = ""
         for i, page in enumerate(mem_book):
             grid, otype, created, stack = mem_book[page]
-            g_gb = grid.fsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.0 ** 3.0
+            g_gb = grid.fsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.0**3.0
             l_gb = g_gb / grid.Nprocessors
             g_tot_gb += g_gb
             l_tot_gb += l_gb
@@ -118,15 +118,15 @@ def mem_report(details=True):
     )
     gpt.message(" %-39s %g GB" % ("Lattice fields on all ranks", g_tot_gb))
     gpt.message(" %-39s %g GB" % ("Lattice fields per rank", l_tot_gb))
-    gpt.message(" %-39s %g GB" % ("Resident memory per rank", info["maxrss"] / 1024 ** 3.0))
+    gpt.message(" %-39s %g GB" % ("Resident memory per rank", info["maxrss"] / 1024**3.0))
     gpt.message(
-        " %-39s %g GB" % ("Total memory available (host)", info["host_available"] / 1024 ** 3.0)
+        " %-39s %g GB" % ("Total memory available (host)", info["host_available"] / 1024**3.0)
     )
     gpt.message(
         " %-39s %g GB"
         % (
             "Total memory available (accelerator)",
-            info["accelerator_available"] / 1024 ** 3.0,
+            info["accelerator_available"] / 1024**3.0,
         )
     )
     gpt.message(

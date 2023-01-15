@@ -50,7 +50,7 @@ def get_param(params, a, v):
 
 
 def mem_avail():
-    return gpt.mem_info()["host_available"] / 1024 ** 3.0
+    return gpt.mem_info()["host_available"] / 1024**3.0
 
 
 def conformDiv(a, b):
@@ -250,7 +250,7 @@ def load(filename, params):
             dt_fread -= gpt.time()
             if f is not None:
                 data = memoryview(f.read(block_data_size_single * nsingleCap))
-                globalReadGB = len(data) / 1024.0 ** 3.0
+                globalReadGB = len(data) / 1024.0**3.0
             else:
                 globalReadGB = 0.0
             globalReadGB = fgrid.globalsum(globalReadGB)
@@ -309,7 +309,7 @@ def load(filename, params):
                 dt_fread -= gpt.time()
                 if f is not None:
                     data = memoryview(f.read(block_data_size_fp16 * (nbasis - nsingleCap)))
-                    globalReadGB = len(data) / 1024.0 ** 3.0
+                    globalReadGB = len(data) / 1024.0**3.0
                 else:
                     globalReadGB = 0.0
                 globalReadGB = fgrid.globalsum(globalReadGB)
@@ -377,7 +377,7 @@ def load(filename, params):
             dt_fread -= gpt.time()
             if f is not None:
                 data = memoryview(f.read(coarse_vector_size))
-                globalReadGB = len(data) / 1024.0 ** 3.0
+                globalReadGB = len(data) / 1024.0**3.0
             else:
                 globalReadGB = 0.0
             globalReadGB = fgrid.globalsum(globalReadGB)
@@ -577,7 +577,7 @@ def save(filename, objs, params):
             * (block_data_size_single * nsingleCap + block_data_size_fp16 * (nbasis - nsingleCap))
             + neigen * coarse_vector_size
         )
-        totalSizeGB += totalSize / 1024.0 ** 3.0 if v is not None else 0.0
+        totalSizeGB += totalSize / 1024.0**3.0 if v is not None else 0.0
 
         # checksum
         crc32_comp = 0
@@ -648,7 +648,7 @@ def save(filename, objs, params):
             dt_fwrite -= gpt.time()
             if f is not None:
                 f.write(data)
-                globalWriteGB = len(data) / 1024.0 ** 3.0
+                globalWriteGB = len(data) / 1024.0**3.0
             else:
                 globalWriteGB = 0.0
             globalWriteGB = fgrid.globalsum(globalWriteGB)
@@ -713,7 +713,7 @@ def save(filename, objs, params):
                 dt_fwrite -= gpt.time()
                 if f is not None:
                     f.write(data)
-                    globalWriteGB = len(data) / 1024.0 ** 3.0
+                    globalWriteGB = len(data) / 1024.0**3.0
                 else:
                     globalWriteGB = 0.0
                 globalWriteGB = fgrid.globalsum(globalWriteGB)
@@ -766,7 +766,7 @@ def save(filename, objs, params):
             dt_fwrite -= gpt.time()
             if f is not None:
                 f.write(data)
-                globalWriteGB = len(data) / 1024.0 ** 3.0
+                globalWriteGB = len(data) / 1024.0**3.0
             else:
                 globalWriteGB = 0.0
             globalWriteGB = fgrid.globalsum(globalWriteGB)
