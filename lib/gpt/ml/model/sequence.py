@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2020-22  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,23 +17,23 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ml.layer import sequence
+from gpt.ml.layer import sequence as layer_sequence
 from gpt.core.group import differentiable_functional
 
 
-class feed_forward(sequence):
+class sequence(layer_sequence):
     def __init__(self, *layers):
         super().__init__(layers)
 
     # input to output
     def __call__(self, weights, input_layer=None):
         def _mat(dst, src):
-            dst @= sequence.__call__(self, weights, src)
+            dst @= layer_sequence.__call__(self, weights, src)
 
         if input_layer is None:
             return g.matrix_operator(mat=_mat)
 
-        return sequence.__call__(self, weights, input_layer)
+        return layer_sequence.__call__(self, weights, input_layer)
 
     def random_weights(self, rng):
         return rng.normal(self.weights())

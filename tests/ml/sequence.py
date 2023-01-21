@@ -22,7 +22,7 @@ ot_i = g.ot_vector_complex_additive_group(n_dense)
 # ot_w = g.ot_matrix_real_additive_group(n_dense)
 ot_w = g.ot_matrix_complex_additive_group(n_dense)
 
-n = g.ml.network.feed_forward([g.ml.layer.nearest_neighbor(grid, ot_i, ot_w)] * n_depth)
+n = g.ml.model.sequence([g.ml.layer.nearest_neighbor(grid, ot_i, ot_w)] * n_depth)
 W = n.random_weights(rng)
 
 # training_input = [rng.uniform_real(g.lattice(grid, ot_i)) for i in range(n_training)]
@@ -71,13 +71,13 @@ ot_i = g.ot_vector_spin_color(4, 3)
 ot_w = g.ot_matrix_spin(4)
 
 # test equivariance
-n = g.ml.network.feed_forward(
+n = g.ml.model.sequence(
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
 )
 
-n_prime = g.ml.network.feed_forward(
+n_prime = g.ml.model.sequence(
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 1, 3),
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 3),
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 1),
@@ -102,7 +102,7 @@ c = n.cost(training_input, training_output)
 c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 
 # parallel and sequence layers
-n = g.ml.network.feed_forward(
+n = g.ml.model.sequence(
     g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 1),
     g.ml.layer.parallel(
         g.ml.layer.sequence(
@@ -123,7 +123,7 @@ c = n.cost(training_input, training_output)
 c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 
 # lPTC
-n = g.ml.network.feed_forward(
+n = g.ml.model.sequence(
     g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
     g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
     g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
@@ -151,7 +151,7 @@ I = [I] * 4
 ot_ci = g.ot_vector_complex_additive_group(ncoarse)
 ot_cw = g.ot_matrix_complex_additive_group(ncoarse)
 
-n = g.ml.network.feed_forward(
+n = g.ml.model.sequence(
     g.ml.layer.block.project(b),
     g.ml.layer.local_parallel_transport_convolution(coarse_grid, I, paths, ot_ci, ot_cw, 1, 1),
     g.ml.layer.block.promote(b),

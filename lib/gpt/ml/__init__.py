@@ -18,4 +18,4 @@
 #
 import gpt.ml.activation
 import gpt.ml.layer
-import gpt.ml.network
+import gpt.ml.model
