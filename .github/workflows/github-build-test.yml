@@ -63,7 +63,7 @@ jobs:
         sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Clone c-lime
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: usqcd-software/c-lime
         path: c-lime
@@ -72,10 +72,10 @@ jobs:
       id: c-lime-version
       run: |
         cd c-lime
-        echo "::set-output name=key::$(git rev-parse HEAD)-${CACHE_KEY}"
+        echo "key=$(git rev-parse HEAD)-${CACHE_KEY}" >> $GITHUB_OUTPUT
 
     - name: c-lime package cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       id: c-lime-package-cache
       with:
         path: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -104,7 +104,7 @@ jobs:
         sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Clone Grid
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: lehner/Grid
         ref: ${{ env.GRID_REPOSITORY_REF }}
@@ -127,10 +127,10 @@ jobs:
 
         cd Grid
         make version-cache Version.h
-        echo "::set-output name=key::$(sha256sum version-cache|cut -f 1 -d " ")-${CACHE_KEY}"
+        echo "key=$(sha256sum version-cache|cut -f 1 -d " ")-${CACHE_KEY}" >> $GITHUB_OUTPUT
 
     - name: Grid package cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       id: grid-package-cache
       with:
         path: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -197,7 +197,7 @@ jobs:
         sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
         architecture: x64
@@ -207,7 +207,7 @@ jobs:
         pip install numpy
 
     - name: c-lime package cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       id: c-lime-package-cache
       with:
         path: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -218,7 +218,7 @@ jobs:
         sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Grid package cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       id: grid-package-cache
       with:
         path: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -229,7 +229,7 @@ jobs:
         sudo dpkg -i grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Clone gpt
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: gpt
 
@@ -242,7 +242,7 @@ jobs:
         echo ${{ hashFiles('gpt/lib/cgpt/lib/**') }} >> cgpt_cache_key_file
         echo ${{ needs.build-grid.outputs.grid-version }} >> cgpt_cache_key_file
 
-        echo "::set-output name=key::$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
+        echo "key=$(sha256sum cgpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}" >> $GITHUB_OUTPUT
 
     - name: Get gpt cache key
       id: gpt-version
@@ -250,16 +250,16 @@ jobs:
       # https://github.community/t/hashfiles-with-multiple-patterns/17168
       run: |
         echo ${{ hashFiles('gpt/lib/gpt/**') }} >> gpt_cache_key_file
-        echo "::set-output name=key::$(sha256sum gpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}"
+        echo "key=$(sha256sum gpt_cache_key_file|cut -f 1 -d " ")-${CACHE_KEY}" >> $GITHUB_OUTPUT
 
     - name: Get python-gpt version
       id: python-gpt-version
       run: |
         gpt_version=$(printf "0.0.0r%s" "$(cd gpt && git rev-parse --short HEAD)")
-        echo "::set-output name=version::${gpt_version}"
+        echo "version=${gpt_version}" >> $GITHUB_OUTPUT
 
     - name: cgpt package cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       id: cgpt-package-cache
       with:
         path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -285,7 +285,7 @@ jobs:
         dpkg-deb --build $PKGDIR
 
     - name: gpt package cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       id: gpt-package-cache
       with:
         path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -328,7 +328,7 @@ jobs:
         dpkg-deb --build $PKGDIR
 
     - name: Create artifact for python-gpt package
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         path: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
         name: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.python-gpt-version.outputs.version }}
@@ -371,7 +371,7 @@ jobs:
         sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
         architecture: x64
@@ -381,7 +381,7 @@ jobs:
         pip install numpy coverage
 
     - name: Download prebuild python-gpt
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
 
@@ -390,7 +390,7 @@ jobs:
         sudo dpkg -i python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Clone gpt
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: gpt
 
@@ -459,7 +459,7 @@ jobs:
         sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Setup python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.8
         architecture: x64
@@ -469,7 +469,7 @@ jobs:
         pip install numpy sphinx ipython sphinxcontrib-napoleon
 
     - name: Download prebuild python-gpt
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: python-gpt-${{ runner.os }}-python-3.8-gcc-none-${{ needs.build-gpt.outputs.python-gpt-version }}
 
@@ -478,7 +478,7 @@ jobs:
         sudo dpkg -i python-gpt-${{ runner.os }}-python-3.8-gcc-none.deb
 
     - name: Clone gpt
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: gpt
 
@@ -490,7 +490,7 @@ jobs:
         cd gpt/documentation
         make html
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: documentation
         path: gpt/documentation/build
@@ -506,17 +506,17 @@ jobs:
           if [ "${{ secrets.DOCKER_USERNAME }}" != "" ] && [ "${{ secrets.DOCKER_PASSWORD }}" != "" ] \
             && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ]
           then
-            echo ::set-output name=should-build::'true'
+            echo "build=1" >> $GITHUB_OUTPUT
           else
             echo "Skipping docker build."
           fi
 
       - name: Clone gpt
-        if: ${{ steps.check-build.outputs.should-build }}
-        uses: actions/checkout@v2
+        if: ${{ steps.check-build.outputs.build }}
+        uses: actions/checkout@v3
 
       - name: Build docker gpt/base image
-        if: ${{ steps.check-build.outputs.should-build }}
+        if: ${{ steps.check-build.outputs.build }}
         uses: docker/build-push-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -545,30 +545,30 @@ jobs:
           if [ "${{ secrets.DOCKER_USERNAME }}" != "" ] && [ "${{ secrets.DOCKER_PASSWORD }}" != "" ] \
             && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ]
           then
-            echo ::set-output name=should-build::'true'
+            echo "build=1" >> $GITHUB_OUTPUT
           else
             echo "Skipping docker build."
           fi
 
       - name: Clone gpt
-        if: ${{ steps.check-build.outputs.should-build }}
-        uses: actions/checkout@v2
+        if: ${{ steps.check-build.outputs.build }}
+        uses: actions/checkout@v3
 
       - name: Download prebuild python-gpt
-        if: ${{ steps.check-build.outputs.should-build }}
-        uses: actions/download-artifact@v2
+        if: ${{ steps.check-build.outputs.build }}
+        uses: actions/download-artifact@v3
         with:
           name: python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
 
       - name: Move python-gpt package to docker folder
-        if: ${{ steps.check-build.outputs.should-build }}
+        if: ${{ steps.check-build.outputs.build }}
         run: |
           mv python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/shell/gpt-packages
           cp -r documentation/tutorials/ docker/notebook
           cp -r tests/ benchmarks/ applications/ docker/shell
 
       - name: Get Tags
-        if: ${{ steps.check-build.outputs.should-build }}
+        if: ${{ steps.check-build.outputs.build }}
         id: get-docker-tags
         run: |
           tags="${{ matrix.compiler }}-${{ matrix.mpi }}"
@@ -576,10 +576,10 @@ jobs:
           [ "${{ matrix.compiler }}-${{ matrix.mpi }}" == "gcc-none" ] && tags="${tags},latest"
 
           echo "Image Tags: ${tags}"
-          echo "::set-output name=tags::${tags}"
+          echo "tags=${tags}" >> $GITHUB_OUTPUT
 
       - name: Build docker gpt/shell image
-        if: ${{ steps.check-build.outputs.should-build }}
+        if: ${{ steps.check-build.outputs.build }}
         uses: docker/build-push-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -592,7 +592,7 @@ jobs:
           always_pull: true
 
       - name: Build docker gpt/notebook image
-        if: ${{ steps.check-build.outputs.should-build }}
+        if: ${{ steps.check-build.outputs.build }}
         uses: docker/build-push-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
