@@ -52,6 +52,7 @@ class transfer:
 
         self.sum = gpt.matrix_operator(
             mat=_sum,
+            adj_mat=_embed,
             vector_space=(
                 gpt.vector_space.explicit_grid_otype(coarse_grid, otype),
                 gpt.vector_space.explicit_grid_otype(fine_grid, otype),
@@ -61,6 +62,7 @@ class transfer:
 
         self.embed = gpt.matrix_operator(
             mat=_embed,
+            adj_mat=_sum,
             vector_space=(
                 gpt.vector_space.explicit_grid_otype(fine_grid, otype),
                 gpt.vector_space.explicit_grid_otype(coarse_grid, otype),

@@ -29,7 +29,7 @@ class project(base_no_bias):
         return self.block.project(layer_input)
 
     def projected_gradient_adj(self, weights, layer_input, left):
-        return [self.block.promote(left)]
+        return [self.block.project.adj()(left)]
 
 
 class promote(base_no_bias):
@@ -41,4 +41,4 @@ class promote(base_no_bias):
         return self.block.promote(layer_input)
 
     def projected_gradient_adj(self, weights, layer_input, left):
-        return [self.block.project(left)]
+        return [self.block.promote.adj()(left)]

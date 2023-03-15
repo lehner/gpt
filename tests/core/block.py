@@ -58,12 +58,39 @@ for fine_grid, cb in [
         g.message(f"Error^2 of promote-project cycle: {err2}")
         assert err2 < 1e-12
 
+        # test project^dag == promote
+        tfine = rng.cnormal(dtype())
+        if cb is not None:
+            tfine.checkerboard(cb)
+        tcoarse = lcoarse[0]
+        err = (
+            abs(
+                g.inner_product(tcoarse, b.project * tfine).conjugate()
+                - g.inner_product(tfine, b.promote * tcoarse)
+            )
+            / tfine.grid.gsites**0.5
+        )
+        g.message(f"Test promote^dag == project: {err}")
+        assert err < 1e-5
+
         # test block transfer on full grid
         if fine_grid.cb.n == 1:
             t = g.block.transfer(fine_grid, coarse_grid, basis[0].otype)
 
             bsum = t.sum(basis[0])
             fembed = t.embed(bsum)
+
+            tcoarse = rng.cnormal(g.copy(bsum))
+            err = (
+                abs(
+                    g.inner_product(tcoarse, t.sum * tfine).conjugate()
+                    - g.inner_product(tfine, t.embed * tcoarse)
+                )
+                / tfine.grid.gsites**0.5
+            )
+            g.message(f"Test sum^dag == embed: {err}")
+            assert err < 1e-5
+
             block_size = [fine_grid.gdimensions[i] // coarse_grid.gdimensions[i] for i in range(4)]
             for test_point in [(1, 2, 3, 4)]:
                 comp_bsum = bsum[test_point]
