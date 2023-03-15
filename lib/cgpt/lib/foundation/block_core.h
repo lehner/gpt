@@ -266,6 +266,12 @@ inline void vectorizableBlockSum(PVector<Lattice<vobj>>&                        
   VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorRead);
   VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorWriteDiscard);
 
+#ifdef GRID_SIMT
+  typedef typename vobj::scalar_object reduce_obj;
+#else
+  typedef vobj reduce_obj;
+#endif
+
   accelerator_for(_idx, coarse_osites*vec_n, vobj::Nsimd(), {
       auto idx = _idx;
       auto vec_i = idx % vec_n; idx /= vec_n;
@@ -273,7 +279,7 @@ inline void vectorizableBlockSum(PVector<Lattice<vobj>>&                        
    
       for (long virtual_i=0; virtual_i<fine_n_virtual; virtual_i++) {
 
-	vobj reduce = Zero();
+	reduce_obj reduce = Zero();
 	
 	for(long j=0; j<sizes_v[sc]; ++j) {
 	  long sf = lut_v[sc][j];
