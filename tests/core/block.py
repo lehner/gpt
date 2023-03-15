@@ -55,5 +55,55 @@ for fine_grid, cb in [
             g.message(eps2)
             assert eps2 < 1e-12
         err2 = g.norm2(lcoarse2[0] - lcoarse[0]) / g.norm2(lcoarse[0])
-        g.message(err2)
+        g.message(f"Error^2 of promote-project cycle: {err2}")
         assert err2 < 1e-12
+
+        # test block transfer on full grid
+        if fine_grid.cb.n == 1:
+            t = g.block.transfer(fine_grid, coarse_grid, basis[0].otype)
+
+            bsum = t.sum(basis[0])
+            fembed = t.embed(bsum)
+            block_size = [fine_grid.gdimensions[i] // coarse_grid.gdimensions[i] for i in range(4)]
+            for test_point in [(1, 2, 3, 4)]:
+                comp_bsum = bsum[test_point]
+
+                block_data = [
+                    basis[0][
+                        test_point[0] * block_size[0] + bx,
+                        test_point[1] * block_size[1] + by,
+                        test_point[2] * block_size[2] + bz,
+                        test_point[3] * block_size[3] + bt,
+                    ]
+                    for bx in range(block_size[0])
+                    for by in range(block_size[1])
+                    for bz in range(block_size[2])
+                    for bt in range(block_size[3])
+                ]
+
+                ref_bsum = block_data[0]
+                for i in range(1, len(block_data)):
+                    ref_bsum += block_data[i]
+
+                err2 = g.norm2(comp_bsum - ref_bsum)
+                g.message(f"Error^2 in sum: {err2}")
+                assert err2 < 1e-12
+
+                block_data = [
+                    fembed[
+                        test_point[0] * block_size[0] + bx,
+                        test_point[1] * block_size[1] + by,
+                        test_point[2] * block_size[2] + bz,
+                        test_point[3] * block_size[3] + bt,
+                    ]
+                    for bx in range(block_size[0])
+                    for by in range(block_size[1])
+                    for bz in range(block_size[2])
+                    for bt in range(block_size[3])
+                ]
+
+                err2 = 0.0
+                for cc in block_data:
+                    err2 += g.norm2(cc - ref_bsum) / len(block_data)
+                g.message(f"Error^2 in embed: {err2}")
+                assert err2 < 1e-12

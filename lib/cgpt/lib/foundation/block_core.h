@@ -230,3 +230,116 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
   VECTOR_VIEW_CLOSE(fine_v);
   VECTOR_VIEW_CLOSE(coarse_v);
 }
+
+template<class vobj,class T_singlet>
+inline void vectorizableBlockSum(PVector<Lattice<vobj>>&                                    coarse,
+				 long                                                       coarse_n_virtual,
+				 const PVector<Lattice<vobj>>&                              fine,
+				 long                                                       fine_n_virtual,
+				 const cgpt_block_lookup_table<T_singlet>&                  lut)
+{
+
+  assert(fine.size() > 0 && coarse.size() > 0);
+
+  assert(fine.size() % fine_n_virtual == 0);
+  long fine_n = fine.size() / fine_n_virtual;
+
+  assert(coarse.size() % coarse_n_virtual == 0);
+  long coarse_n = coarse.size() / coarse_n_virtual;
+
+  assert(fine_n == coarse_n);
+  long vec_n = fine_n;
+
+  assert(coarse_n_virtual == fine_n_virtual);
+
+  GridBase *fine_grid   = fine[0].Grid();
+  GridBase *coarse_grid = coarse[0].Grid();
+
+  long coarse_osites = coarse_grid->oSites();
+
+  assert(fine_grid->_ndimension == coarse_grid->_ndimension);
+  assert(lut.gridsMatch(coarse_grid, fine_grid));
+
+  auto lut_v = lut.View();
+  auto sizes_v = lut.Sizes();
+
+  VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorRead);
+  VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorWriteDiscard);
+
+  accelerator_for(_idx, coarse_osites*vec_n, vobj::Nsimd(), {
+      auto idx = _idx;
+      auto vec_i = idx % vec_n; idx /= vec_n;
+      auto sc = idx % coarse_osites; idx /= coarse_osites;
+   
+      for (long virtual_i=0; virtual_i<fine_n_virtual; virtual_i++) {
+
+	vobj reduce = Zero();
+	
+	for(long j=0; j<sizes_v[sc]; ++j) {
+	  long sf = lut_v[sc][j];
+	  reduce = reduce + coalescedRead(fine_v[vec_i*fine_n_virtual + virtual_i][sf]);
+	}
+
+	coalescedWrite(coarse_v[vec_i*coarse_n_virtual + virtual_i][sc], reduce);
+      }
+    });
+  
+  VECTOR_VIEW_CLOSE(fine_v);
+  VECTOR_VIEW_CLOSE(coarse_v);
+}
+
+
+template<class vobj,class T_singlet>
+inline void vectorizableBlockEmbed(PVector<Lattice<vobj>>&                                    coarse,
+				   long                                                       coarse_n_virtual,
+				   const PVector<Lattice<vobj>>&                              fine,
+				   long                                                       fine_n_virtual,
+				   const cgpt_block_lookup_table<T_singlet>&                  lut)
+{
+
+  assert(fine.size() > 0 && coarse.size() > 0);
+
+  assert(fine.size() % fine_n_virtual == 0);
+  long fine_n = fine.size() / fine_n_virtual;
+
+  assert(coarse.size() % coarse_n_virtual == 0);
+  long coarse_n = coarse.size() / coarse_n_virtual;
+
+  assert(fine_n == coarse_n);
+  long vec_n = fine_n;
+
+  assert(coarse_n_virtual == fine_n_virtual);
+
+  GridBase *fine_grid   = fine[0].Grid();
+  GridBase *coarse_grid = coarse[0].Grid();
+
+  long coarse_osites = coarse_grid->oSites();
+
+  assert(fine_grid->_ndimension == coarse_grid->_ndimension);
+  assert(lut.gridsMatch(coarse_grid, fine_grid));
+
+  auto lut_v = lut.View();
+  auto sizes_v = lut.Sizes();
+
+  VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorWriteDiscard);
+  VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorRead);
+
+  accelerator_for(_idx, coarse_osites*vec_n, vobj::Nsimd(), {
+      auto idx = _idx;
+      auto vec_i = idx % vec_n; idx /= vec_n;
+      auto sc = idx % coarse_osites; idx /= coarse_osites;
+   
+      for (long virtual_i=0; virtual_i<fine_n_virtual; virtual_i++) {
+
+	auto val = coalescedRead(coarse_v[vec_i*coarse_n_virtual + virtual_i][sc]);
+	
+	for(long j=0; j<sizes_v[sc]; ++j) {
+	  long sf = lut_v[sc][j];
+	  coalescedWrite(fine_v[vec_i*fine_n_virtual + virtual_i][sf], val);
+	}
+      }
+    });
+  
+  VECTOR_VIEW_CLOSE(fine_v);
+  VECTOR_VIEW_CLOSE(coarse_v);
+}

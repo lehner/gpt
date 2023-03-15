@@ -25,6 +25,10 @@ public:
   virtual void promote(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
 		       std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual)  = 0;
   virtual void orthonormalize() = 0;
+  virtual void sum(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
+		   std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual) = 0;
+  virtual void embed(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
+		     std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual) = 0;
 };
 
 template<class T, class C>
@@ -88,5 +92,27 @@ public:
   virtual void orthonormalize() {
     Lattice<T_singlet> c(coarse_grid);
     vectorBlockOrthonormalize(c,basis,basis_n_virtual);
+  }
+
+  virtual void sum(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
+		   std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual) {
+
+    PVector<Lattice<T>> fine;
+    PVector<Lattice<T>> coarse;
+    cgpt_basis_fill(fine,_fine);
+    cgpt_basis_fill(coarse,_coarse);
+
+    vectorizableBlockSum(coarse, coarse_n_virtual, fine, fine_n_virtual, lut);
+  }
+
+  virtual void embed(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
+		     std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual) {
+
+    PVector<Lattice<T>> fine;
+    PVector<Lattice<T>> coarse;
+    cgpt_basis_fill(fine,_fine);
+    cgpt_basis_fill(coarse,_coarse);
+
+    vectorizableBlockEmbed(coarse, coarse_n_virtual, fine, fine_n_virtual, lut);
   }
 };

@@ -108,3 +108,46 @@ EXPORT(block_orthonormalize,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(block_sum,{
+
+    void* _map;
+    PyObject * _coarse, * _fine;
+    if (!PyArg_ParseTuple(args, "lOO", &_map, &_coarse,&_fine)) {
+      return NULL;
+    }
+
+    cgpt_block_map_base* map = (cgpt_block_map_base*)_map;
+
+    std::vector<cgpt_Lattice_base*> fine;
+    long fine_n_virtual = cgpt_basis_fill(fine, _fine);
+
+    std::vector<cgpt_Lattice_base*> coarse;
+    long coarse_n_virtual = cgpt_basis_fill(coarse, _coarse);
+
+    map->sum(coarse, coarse_n_virtual, 
+	     fine, fine_n_virtual);
+
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(block_embed,{
+
+    void* _map;
+    PyObject * _coarse, * _fine;
+    if (!PyArg_ParseTuple(args, "lOO", &_map, &_coarse,&_fine)) {
+      return NULL;
+    }
+
+    cgpt_block_map_base* map = (cgpt_block_map_base*)_map;
+
+    std::vector<cgpt_Lattice_base*> fine;
+    long fine_n_virtual = cgpt_basis_fill(fine, _fine);
+
+    std::vector<cgpt_Lattice_base*> coarse;
+    long coarse_n_virtual = cgpt_basis_fill(coarse, _coarse);
+
+    map->embed(coarse, coarse_n_virtual, 
+	       fine, fine_n_virtual);
+
+    return PyLong_FromLong(0);
+  });
