@@ -56,9 +56,9 @@ bool bcopy_host_host(size_t bs, const std::vector<blocks_t> & arg) {
 	    auto & x = b[i / npb];
 	    size_t i_dst = x.start_dst / sizeof(T);
 	    size_t i_src = x.start_src / sizeof(T);
-	size_t j = i % npb;
+	    size_t j = i % npb;
 	
-	dst[i_dst + j] = src[i_src + j];
+	    dst[i_dst + j] = src[i_src + j];
 	  });
       }
   }
