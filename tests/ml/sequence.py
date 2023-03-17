@@ -137,19 +137,53 @@ c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 matrix = n(W)
 test = g(matrix * training_input[0])
 
-# multi-grid networks
-ncoarse = 4
+# multi-grid networks (I)
 coarse_grid = g.grid([4, 4, 4, 4], g.double)
+ot_ci = g.ot_vector_spin_color(4, 3)
+ot_cw = g.ot_matrix_spin(4)
+t = g.ml.layer.parallel_transport_block.transfer(grid, coarse_grid, ot_ci, U)
+
+n = g.ml.model.sequence(
+    g.ml.layer.parallel_transport_block.project(t),
+    g.ml.layer.local_parallel_transport_convolution(
+        coarse_grid, t.coarse_gauge, paths, ot_ci, ot_cw, 1, 1
+    ),
+    g.ml.layer.parallel_transport_block.promote(t),
+)
+W = n.random_weights(rng)
+c = n.cost(training_input, training_output)
+
+g.message("Coarse network weight:", c(W))
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+
+t_prime = g.ml.layer.parallel_transport_block.transfer(grid, coarse_grid, ot_ci, U_prime)
+n_prime = g.ml.model.sequence(
+    g.ml.layer.parallel_transport_block.project(t_prime),
+    g.ml.layer.local_parallel_transport_convolution(
+        coarse_grid, t_prime.coarse_gauge, paths, ot_ci, ot_cw, 1, 1
+    ),
+    g.ml.layer.parallel_transport_block.promote(t_prime),
+)
+A = n_prime(W, g(V * src))
+B = g(V * n(W, src))
+
+eps = (g.norm2(A - B) / g.norm2(A)) ** 0.5
+g.message(f"Gauge equivariance test of parallel transport block model: {eps} < 1e-13")
+assert eps < 1e-13
+
+
+# multi-grid networks (II)
+ncoarse = 4
 basis = [rng.normal(g.vspincolor(grid)) for i in range(ncoarse)]
 b = g.block.map(coarse_grid, basis)
 b.orthonormalize()
 
+ot_ci = g.ot_vector_complex_additive_group(ncoarse)
+ot_cw = g.ot_matrix_complex_additive_group(ncoarse)
+
 I = g.complex(coarse_grid)
 I[:] = 1
 I = [I] * 4
-
-ot_ci = g.ot_vector_complex_additive_group(ncoarse)
-ot_cw = g.ot_matrix_complex_additive_group(ncoarse)
 
 n = g.ml.model.sequence(
     g.ml.layer.block.project(b),

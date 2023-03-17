@@ -21,24 +21,24 @@ from gpt.ml.layer import base_no_bias
 
 
 class project(base_no_bias):
-    def __init__(self, block):
-        self.block = block
+    def __init__(self, block_map):
+        self.block_map = block_map
         super().__init__(None, None, None, 0)
 
     def __call__(self, weights, layer_input):
-        return self.block.project(layer_input)
+        return self.block_map.project(layer_input)
 
     def projected_gradient_adj(self, weights, layer_input, left):
-        return [self.block.project.adj()(left)]
+        return [self.block_map.project.adj()(left)]
 
 
 class promote(base_no_bias):
-    def __init__(self, block):
-        self.block = block
+    def __init__(self, block_map):
+        self.block_map = block_map
         super().__init__(None, None, None, 0)
 
     def __call__(self, weights, layer_input):
-        return self.block.promote(layer_input)
+        return self.block_map.promote(layer_input)
 
     def projected_gradient_adj(self, weights, layer_input, left):
-        return [self.block.promote.adj()(left)]
+        return [self.block_map.promote.adj()(left)]
