@@ -57,6 +57,11 @@ class tensor:
             return gpt.adj(gpt.expr(self))
         return tensor(np.transpose(self.array.conj(), self.otype.transposed), self.otype)
 
+    def reduced(self):
+        if self.otype.data_otype() == gpt.ot_singlet:
+            return complex(self.array)
+        return self
+
     def trace(self, t):
         res = self
         if t & gpt.expr_unary.BIT_SPINTRACE:
