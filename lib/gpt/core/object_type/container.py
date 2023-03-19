@@ -213,6 +213,12 @@ class ot_matrix_spin_color(ot_base):
             "ot_singlet": (lambda: self, None),
         }
 
+    def cartesian(self):
+        return self
+
+    def compose(self, a, b):
+        return a + b
+
     def identity(self):
         return gpt.matrix_spin_color(
             numpy.multiply.outer(numpy.identity(self.shape[0]), numpy.identity(self.shape[2])),
