@@ -21,35 +21,36 @@ import numpy as np
 from gpt.ml.layer import base_no_bias
 
 
-def get_fine_gauge_for_paths(block_transfer, U):
+def get_fine_gauge_for_paths(block_transfer, U, reference_point):
     grid = U[0].grid
     u = g.lattice(U[0])
     u[:] = 0
     pos = g.coordinates(u)
-    zero = np.array([0] * grid.nd, dtype=np.int32)
 
     block_size = [
         grid.gdimensions[i] // block_transfer.coarse_grid.gdimensions[i] for i in range(grid.nd)
     ]
+
+    zero = np.array([0] * grid.nd, dtype=np.int32)
     sparsegrid = pos[(pos % block_size == zero).all(axis=1)]
 
     for block_pos in np.ndindex(tuple(block_size)):
-        if np.all(block_pos == zero):
+        if np.all(block_pos == reference_point):
             mat = g.identity(U[0])
         else:
             path = g.path()
             for i in range(grid.nd):
-                path.f(i, block_pos[i])
+                path.f(i, int(block_pos[i] - reference_point[i]))
             pt = g.parallel_transport(U, [path])
             mat = [x for x in pt(U)][0]
-        psrc = sparsegrid
+        psrc = sparsegrid + reference_point
         pdst = sparsegrid + np.array(block_pos, dtype=np.int32)
         u[pdst] = mat[psrc]
 
     return u
 
 
-def get_coarse_gauge_for_paths(block_transfer, U):
+def get_coarse_gauge_for_paths(block_transfer, U, reference_point):
     grid = U[0].grid
     coarse_U = [g.lattice(block_transfer.coarse_grid, u.otype) for u in U]
     pos = g.coordinates(coarse_U[0])
@@ -59,7 +60,7 @@ def get_coarse_gauge_for_paths(block_transfer, U):
         dtype=np.int32,
     )
 
-    sparse_pos = block_size * pos
+    sparse_pos = block_size * pos + reference_point
 
     for mu in range(grid.nd):
         pt = g.parallel_transport(U, [g.path().f(mu, int(block_size[mu]))])
@@ -70,10 +71,16 @@ def get_coarse_gauge_for_paths(block_transfer, U):
 
 
 class transfer:
-    def __init__(self, fine_grid, coarse_grid, otype, U):
+    def __init__(self, fine_grid, coarse_grid, otype, U, reference_point=None):
+
+        if reference_point is None:
+            reference_point = np.array([0] * fine_grid.nd, dtype=np.int32)
+        else:
+            reference_point = np.array(reference_point, dtype=np.int32)
+
         self.block_transfer = g.block.transfer(fine_grid, coarse_grid, otype)
-        self.gauge = get_fine_gauge_for_paths(self.block_transfer, U)
-        self.coarse_gauge = get_coarse_gauge_for_paths(self.block_transfer, U)
+        self.gauge = get_fine_gauge_for_paths(self.block_transfer, U, reference_point)
+        self.coarse_gauge = get_coarse_gauge_for_paths(self.block_transfer, U, reference_point)
 
 
 class project(base_no_bias):
