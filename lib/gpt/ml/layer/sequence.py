@@ -45,5 +45,8 @@ class sequence(group):
             current_left = gr[-1]
             i0, i1 = self.weights_index[i]
             for j in range(i0, i1):
-                r[j] = gr[j - i0]
+                if r[j] is None:
+                    r[j] = gr[j - i0]
+                else:
+                    r[j] += gr[j - i0]
         return r + [current_left]

@@ -141,22 +141,47 @@ test = g(matrix * training_input[0])
 coarse_grid = g.grid([4, 4, 4, 4], g.double)
 ot_ci = g.ot_vector_spin_color(4, 3)
 ot_cw = g.ot_matrix_spin(4)
+ot_embedding = g.ot_matrix_spin_color(4, 3)
+projector = g.ml.layer.projector_color_trace
 
-t0 = (
-    g.ml.layer.parallel_transport_block.transfer(grid, coarse_grid, ot_ci, U),
-    g.ml.layer.parallel_transport_block.transfer(grid, coarse_grid, ot_ci, U_prime),
-)
-
-t1 = (
-    g.ml.layer.parallel_transport_block.transfer(
-        grid, coarse_grid, ot_ci, U, reference_point=[0, 1, 3, 2]
+ts = [
+    (
+        g.ml.layer.parallel_transport_block.static_transfer(grid, coarse_grid, ot_ci, U),
+        g.ml.layer.parallel_transport_block.static_transfer(grid, coarse_grid, ot_ci, U_prime),
     ),
-    g.ml.layer.parallel_transport_block.transfer(
-        grid, coarse_grid, ot_ci, U_prime, reference_point=[0, 1, 3, 2]
+    (
+        g.ml.layer.parallel_transport_block.local_transfer(
+            grid, coarse_grid, ot_ci, ot_cw, U, ot_embedding=ot_embedding, projector=projector
+        ),
+        g.ml.layer.parallel_transport_block.local_transfer(
+            grid, coarse_grid, ot_ci, ot_cw, U_prime, ot_embedding=ot_embedding, projector=projector
+        ),
     ),
-)
+    (
+        g.ml.layer.parallel_transport_block.local_transfer(
+            grid,
+            coarse_grid,
+            ot_ci,
+            ot_cw,
+            U,
+            reference_point=[0, 1, 3, 2],
+            ot_embedding=ot_embedding,
+            projector=projector,
+        ),
+        g.ml.layer.parallel_transport_block.local_transfer(
+            grid,
+            coarse_grid,
+            ot_ci,
+            ot_cw,
+            U_prime,
+            reference_point=[0, 1, 3, 2],
+            ot_embedding=ot_embedding,
+            projector=projector,
+        ),
+    ),
+]
 
-for t, t_prime in [t1, t0]:
+for t, t_prime in ts:
 
     n = g.ml.model.sequence(
         g.ml.layer.parallel_transport_block.project(t),

@@ -18,7 +18,6 @@
 #
 import gpt as g
 import numpy as np
-from gpt.ml.layer import base_no_bias
 
 
 def get_fine_gauge_for_paths(block_transfer, U, reference_point):
@@ -68,40 +67,3 @@ def get_coarse_gauge_for_paths(block_transfer, U, reference_point):
         coarse_U[mu][pos] = mat[sparse_pos]
 
     return coarse_U
-
-
-class transfer:
-    def __init__(self, fine_grid, coarse_grid, otype, U, reference_point=None):
-
-        if reference_point is None:
-            reference_point = np.array([0] * fine_grid.nd, dtype=np.int32)
-        else:
-            reference_point = np.array(reference_point, dtype=np.int32)
-
-        self.block_transfer = g.block.transfer(fine_grid, coarse_grid, otype)
-        self.gauge = get_fine_gauge_for_paths(self.block_transfer, U, reference_point)
-        self.coarse_gauge = get_coarse_gauge_for_paths(self.block_transfer, U, reference_point)
-
-
-class project(base_no_bias):
-    def __init__(self, transfer):
-        self.transfer = transfer
-        super().__init__(None, None, None, 0)
-
-    def __call__(self, weights, layer_input):
-        return self.transfer.block_transfer.sum(g(self.transfer.gauge * layer_input))
-
-    def projected_gradient_adj(self, weights, layer_input, left):
-        return [g(g.adj(self.transfer.gauge) * self.transfer.block_transfer.sum.adj()(left))]
-
-
-class promote(base_no_bias):
-    def __init__(self, transfer):
-        self.transfer = transfer
-        super().__init__(None, None, None, 0)
-
-    def __call__(self, weights, layer_input):
-        return g(g.adj(self.transfer.gauge) * self.transfer.block_transfer.embed(layer_input))
-
-    def projected_gradient_adj(self, weights, layer_input, left):
-        return [self.transfer.block_transfer.embed.adj()(self.transfer.gauge * left)]
