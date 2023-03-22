@@ -8,6 +8,7 @@ grid = g.grid([4, 4, 4], g.double)
 
 rng = g.random("test")
 
+
 # test layers based on 12 densely connected neurons per layer that live on a nearest-neighbor 4^3 grid
 # for now real weights only
 n_dense = 12
