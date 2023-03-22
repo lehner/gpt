@@ -19,7 +19,10 @@
 import gpt as g
 import numpy as np
 
-import gpt.ml.layer.parallel_transport_block.util as util
+from gpt.ml.layer.parallel_transport_block.util import (
+    get_fine_gauge_for_paths,
+    get_coarse_gauge_for_paths,
+)
 
 
 class local_transfer:
@@ -49,12 +52,12 @@ class local_transfer:
             else block_transfer
         )
         self.gauge = (
-            util.get_fine_gauge_for_paths(self.block_transfer, U, reference_point)
+            get_fine_gauge_for_paths(self.block_transfer, U, reference_point)
             if gauge is None
             else gauge
         )
         self.coarse_gauge = (
-            util.get_coarse_gauge_for_paths(self.block_transfer, U, reference_point)
+            get_coarse_gauge_for_paths(self.block_transfer, U, reference_point)
             if coarse_gauge is None
             else coarse_gauge
         )
