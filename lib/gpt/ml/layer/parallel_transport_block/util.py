@@ -20,9 +20,9 @@ import gpt as g
 import numpy as np
 
 
-def get_fine_gauge_for_paths(block_transfer, U, reference_point):
-    grid = U[0].grid
-    u = g.lattice(U[0])
+def get_fine_gauge_for_paths(block_transfer, links_and_paths, reference_point):
+    grid = links_and_paths[0][0][0].grid
+    u = g.lattice(links_and_paths[0][0][0])
     u[:] = 0
     pos = g.coordinates(u)
 
@@ -33,20 +33,20 @@ def get_fine_gauge_for_paths(block_transfer, U, reference_point):
     zero = np.array([0] * grid.nd, dtype=np.int32)
     sparsegrid = pos[(pos % block_size == zero).all(axis=1)]
 
-    for block_pos in np.ndindex(tuple(block_size)):
-        if np.all(block_pos == reference_point):
-            mat = g.identity(U[0])
-        else:
-            path = g.path()
-            for i in range(grid.nd):
-                path.f(i, int(block_pos[i] - reference_point[i]))
-            pt = g.parallel_transport(U, [path])
-            mat = [x for x in pt(U)][0]
-        psrc = sparsegrid + reference_point
-        pdst = sparsegrid + np.array(block_pos, dtype=np.int32)
-        u[pdst] = mat[psrc]
+    ret = []
+    for U, get_path in links_and_paths:
+        for block_pos in np.ndindex(tuple(block_size)):
+            if np.all(block_pos == reference_point):
+                mat = g.identity(U[0])
+            else:
+                pt = g.parallel_transport(U, [get_path(block_pos - reference_point)])
+                mat = [x for x in pt(U)][0]
+            psrc = sparsegrid + reference_point
+            pdst = sparsegrid + np.array(block_pos, dtype=np.int32)
+            u[pdst] = mat[psrc]
+        ret.append(g.copy(u))
 
-    return u
+    return ret
 
 
 def get_coarse_gauge_for_paths(block_transfer, U, reference_point):

@@ -144,37 +144,55 @@ ot_ci = g.ot_vector_spin_color(4, 3)
 ot_cw = g.ot_matrix_spin(4)
 ot_embedding = g.ot_matrix_spin_color(4, 3)
 projector = g.ml.layer.projector_color_trace
+get_path_1 = g.ml.layer.parallel_transport_block.path.lexicographic
+get_path_2 = g.ml.layer.parallel_transport_block.path.one_step_lexicographic
 
 ts = [
     (
-        g.ml.layer.parallel_transport_block.static_transfer(grid, coarse_grid, ot_ci, U),
-        g.ml.layer.parallel_transport_block.static_transfer(grid, coarse_grid, ot_ci, U_prime),
-    ),
-    (
-        g.ml.layer.parallel_transport_block.local_transfer(
-            grid, coarse_grid, ot_ci, ot_cw, U, ot_embedding=ot_embedding, projector=projector
+        g.ml.layer.parallel_transport_block.static_transfer(
+            grid, coarse_grid, ot_ci, U, get_path_1
         ),
-        g.ml.layer.parallel_transport_block.local_transfer(
-            grid, coarse_grid, ot_ci, ot_cw, U_prime, ot_embedding=ot_embedding, projector=projector
+        g.ml.layer.parallel_transport_block.static_transfer(
+            grid, coarse_grid, ot_ci, U_prime, get_path_1
         ),
     ),
     (
-        g.ml.layer.parallel_transport_block.local_transfer(
+        g.ml.layer.parallel_transport_block.transfer(
             grid,
             coarse_grid,
             ot_ci,
             ot_cw,
-            U,
+            [(U, get_path_1)],
+            ot_embedding=ot_embedding,
+            projector=projector,
+        ),
+        g.ml.layer.parallel_transport_block.transfer(
+            grid,
+            coarse_grid,
+            ot_ci,
+            ot_cw,
+            [(U_prime, get_path_1)],
+            ot_embedding=ot_embedding,
+            projector=projector,
+        ),
+    ),
+    (
+        g.ml.layer.parallel_transport_block.transfer(
+            grid,
+            coarse_grid,
+            ot_ci,
+            ot_cw,
+            [(U, get_path_1), (U, get_path_2)],
             reference_point=[0, 1, 3, 2],
             ot_embedding=ot_embedding,
             projector=projector,
         ),
-        g.ml.layer.parallel_transport_block.local_transfer(
+        g.ml.layer.parallel_transport_block.transfer(
             grid,
             coarse_grid,
             ot_ci,
             ot_cw,
-            U_prime,
+            [(U_prime, get_path_1), (U_prime, get_path_2)],
             reference_point=[0, 1, 3, 2],
             ot_embedding=ot_embedding,
             projector=projector,

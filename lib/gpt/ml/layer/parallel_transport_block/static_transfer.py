@@ -26,7 +26,7 @@ from gpt.ml.layer.parallel_transport_block.util import (
 
 
 class static_transfer:
-    def __init__(self, fine_grid, coarse_grid, ot_input, U, reference_point=None):
+    def __init__(self, fine_grid, coarse_grid, ot_input, link, path, reference_point=None):
 
         if reference_point is None:
             reference_point = np.array([0] * fine_grid.nd, dtype=np.int32)
@@ -34,8 +34,10 @@ class static_transfer:
             reference_point = np.array(reference_point, dtype=np.int32)
 
         self.block_transfer = g.block.transfer(fine_grid, coarse_grid, ot_input)
-        self.gauge = get_fine_gauge_for_paths(self.block_transfer, U, reference_point)
-        self.coarse_gauge = get_coarse_gauge_for_paths(self.block_transfer, U, reference_point)
+        self.gauge = get_fine_gauge_for_paths(self.block_transfer, [(link, path)], reference_point)[
+            0
+        ]
+        self.coarse_gauge = get_coarse_gauge_for_paths(self.block_transfer, link, reference_point)
         self.fine_grid = fine_grid
         self.ot_input = ot_input
         self.ot_weights = None

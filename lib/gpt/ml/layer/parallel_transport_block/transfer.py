@@ -25,14 +25,14 @@ from gpt.ml.layer.parallel_transport_block.util import (
 )
 
 
-class local_transfer:
+class transfer:
     def __init__(
         self,
         fine_grid,
         coarse_grid,
         ot_input,
         ot_weights,
-        U,
+        links_and_paths,
         reference_point=None,
         block_transfer=None,
         gauge=None,
@@ -52,29 +52,29 @@ class local_transfer:
             else block_transfer
         )
         self.gauge = (
-            get_fine_gauge_for_paths(self.block_transfer, U, reference_point)
+            get_fine_gauge_for_paths(self.block_transfer, links_and_paths, reference_point)
             if gauge is None
             else gauge
         )
         self.coarse_gauge = (
-            get_coarse_gauge_for_paths(self.block_transfer, U, reference_point)
+            get_coarse_gauge_for_paths(self.block_transfer, links_and_paths[0][0], reference_point)
             if coarse_gauge is None
             else coarse_gauge
         )
         self.fine_grid = fine_grid
         self.ot_input = ot_input
         self.ot_weights = ot_weights
-        self.n_weights = 1
-        self.weights = [g.lattice(fine_grid, ot_weights)]
+        self.n_weights = len(self.gauge)
+        self.weights = [g.lattice(fine_grid, ot_weights) for i in range(self.n_weights)]
         self.projector = projector
 
         if ot_embedding is not None:
             I = g.lattice(self.fine_grid, ot_embedding)
             I = g.identity(I)
-            self.gauge = g(I * self.gauge)
+            self.gauge = [g(I * x) for x in self.gauge]
 
     def clone(self):
-        return local_transfer(
+        return transfer(
             self.fine_grid,
             None,
             self.ot_input,
@@ -89,8 +89,16 @@ class local_transfer:
         )
 
     def get_gauge(self, weights):
-        return g(weights[0] * self.gauge)
+        assert len(weights) == len(self.gauge)
+        for i in range(self.n_weights):
+            x = g(weights[i] * self.gauge[i])
+            if i == 0:
+                ret = x
+            else:
+                ret += x
+        return ret
 
     def get_gauge_projected_gradient_adj(self, weights, right, left):
-        t = g(g.adj(self.gauge) * right)
-        return [g(self.projector(t * g.adj(left)))]
+        assert len(weights) == len(self.gauge)
+        t = g(right * g.adj(left))
+        return [g(self.projector(g.adj(x) * t)) for x in self.gauge]

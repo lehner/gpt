@@ -14,12 +14,15 @@ U = g.qcd.gauge.random(grid, rng)
 training_input = rng.cnormal([g.vspincolor(coarse_grid)])
 training_output = rng.cnormal([g.vspincolor(grid)])
 
-t = g.ml.layer.parallel_transport_block.local_transfer(
+t = g.ml.layer.parallel_transport_block.transfer(
     grid,
     coarse_grid,
     ot_ci,
     ot_cw,
-    U,
+    [
+        (U, g.ml.layer.parallel_transport_block.path.lexicographic),
+        (U, g.ml.layer.parallel_transport_block.path.one_step_lexicographic),
+    ],
     ot_embedding=g.ot_matrix_spin_color(4, 3),
     projector=g.ml.layer.projector_color_trace,
 )
