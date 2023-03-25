@@ -28,4 +28,4 @@ from gpt.ml.layer.group import group
 from gpt.ml.layer.parallel import parallel
 from gpt.ml.layer.sequence import sequence
 import gpt.ml.layer.block
-import gpt.ml.layer.parallel_transport_block
+import gpt.ml.layer.parallel_transport_pooling

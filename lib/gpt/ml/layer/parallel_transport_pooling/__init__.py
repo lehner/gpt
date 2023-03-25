@@ -20,9 +20,9 @@ import gpt as g
 import numpy as np
 
 from gpt.ml.layer import base_no_bias
-import gpt.ml.layer.parallel_transport_block.path
-from gpt.ml.layer.parallel_transport_block.static_transfer import static_transfer
-from gpt.ml.layer.parallel_transport_block.transfer import transfer
+import gpt.ml.layer.parallel_transport_pooling.path
+from gpt.ml.layer.parallel_transport_pooling.static_transfer import static_transfer
+from gpt.ml.layer.parallel_transport_pooling.transfer import transfer
 
 
 class project(base_no_bias):

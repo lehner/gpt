@@ -14,20 +14,20 @@ U = g.qcd.gauge.random(grid, rng)
 training_input = rng.cnormal([g.vspincolor(coarse_grid)])
 training_output = rng.cnormal([g.vspincolor(grid)])
 
-t = g.ml.layer.parallel_transport_block.transfer(
+t = g.ml.layer.parallel_transport_pooling.transfer(
     grid,
     coarse_grid,
     ot_ci,
     ot_cw,
     [
-        (U, g.ml.layer.parallel_transport_block.path.lexicographic),
-        (U, g.ml.layer.parallel_transport_block.path.one_step_lexicographic),
+        (U, g.ml.layer.parallel_transport_pooling.path.lexicographic),
+        (U, g.ml.layer.parallel_transport_pooling.path.one_step_lexicographic),
     ],
     ot_embedding=g.ot_matrix_spin_color(4, 3),
     projector=g.ml.layer.projector_color_trace,
 )
 
-n = g.ml.model.sequence(g.ml.layer.parallel_transport_block.promote(t))
+n = g.ml.model.sequence(g.ml.layer.parallel_transport_pooling.promote(t))
 
 W = n.random_weights(rng)
 c = n.cost(training_input, training_output)
@@ -36,7 +36,7 @@ g.message("Coarse network weight:", c(W))
 c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 
 
-n = g.ml.model.sequence(g.ml.layer.parallel_transport_block.project(t))
+n = g.ml.model.sequence(g.ml.layer.parallel_transport_pooling.project(t))
 
 W = n.random_weights(rng)
 c = n.cost(training_output, training_input)
@@ -46,8 +46,8 @@ c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 
 
 n = g.ml.model.sequence(
-    g.ml.layer.parallel_transport_block.project(t),
-    g.ml.layer.parallel_transport_block.promote(t.clone()),
+    g.ml.layer.parallel_transport_pooling.project(t),
+    g.ml.layer.parallel_transport_pooling.promote(t.clone()),
 )
 
 W = n.random_weights(rng)
@@ -58,7 +58,7 @@ c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 
 
 n = g.ml.model.sequence(
-    g.ml.layer.parallel_transport_block.project(t), g.ml.layer.parallel_transport_block.promote(t)
+    g.ml.layer.parallel_transport_pooling.project(t), g.ml.layer.parallel_transport_pooling.promote(t)
 )
 
 W = n.random_weights(rng)

@@ -19,7 +19,7 @@
 import gpt as g
 import numpy as np
 
-from gpt.ml.layer.parallel_transport_block.util import (
+from gpt.ml.layer.parallel_transport_pooling.util import (
     get_fine_gauge_for_paths,
     get_coarse_gauge_for_paths,
 )
