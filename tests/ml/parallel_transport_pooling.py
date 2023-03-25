@@ -47,7 +47,7 @@ c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
 
 n = g.ml.model.sequence(
     g.ml.layer.parallel_transport_pooling.project(t),
-    g.ml.layer.parallel_transport_pooling.promote(t.clone()),
+    g.ml.layer.parallel_transport_pooling.promote(t.cloned()),
 )
 
 W = n.random_weights(rng)

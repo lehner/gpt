@@ -73,7 +73,7 @@ class transfer:
             I = g.identity(I)
             self.gauge = [g(I * x) for x in self.gauge]
 
-    def clone(self):
+    def cloned(self):
         return transfer(
             self.fine_grid,
             None,

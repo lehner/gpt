@@ -44,7 +44,7 @@ class static_transfer:
         self.n_weights = 0
         self.weights = []
 
-    def clone(self):
+    def cloned(self):
         return self
 
     def get_gauge(self, weights):
