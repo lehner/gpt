@@ -39,3 +39,24 @@ def one_step_lexicographic(coordinate):
                 path.b(i, 1)
                 nleft[i] += 1
     return path
+
+
+def reversed_lexicographic(coordinate):
+    path = g.path()
+    for i in reversed(range(len(coordinate))):
+        path.f(i, int(coordinate[i]))
+    return path
+
+
+def one_step_reversed_lexicographic(coordinate):
+    path = g.path()
+    nleft = np.array([c for c in coordinate], dtype=np.int32)
+    while not np.all(nleft == 0):
+        for i in reversed(range(len(coordinate))):
+            if nleft[i] > 0:
+                path.f(i, 1)
+                nleft[i] -= 1
+            elif nleft[i] < 0:
+                path.b(i, 1)
+                nleft[i] += 1
+    return path
