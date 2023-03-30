@@ -34,7 +34,13 @@ def get_fine_gauge_for_paths(block_transfer, links_and_paths, reference_point):
     sparsegrid = pos[(pos % block_size == zero).all(axis=1)]
 
     ret = []
-    for U, get_path in links_and_paths:
+    for lp in links_and_paths:
+        if len(lp) == 2:
+            U, get_path = lp
+            V = g.identity(u)
+        else:
+            U, get_path, V = lp
+
         for block_pos in np.ndindex(tuple(block_size)):
             if np.all(block_pos == reference_point):
                 mat = g.identity(U[0])
@@ -44,7 +50,7 @@ def get_fine_gauge_for_paths(block_transfer, links_and_paths, reference_point):
             psrc = sparsegrid + reference_point
             pdst = sparsegrid + np.array(block_pos, dtype=np.int32)
             u[pdst] = mat[psrc]
-        ret.append(g.copy(u))
+        ret.append(g(u * g.adj(V)))
 
     return ret
 

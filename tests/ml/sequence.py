@@ -147,6 +147,9 @@ projector = g.ml.layer.projector_color_trace
 get_path_1 = g.ml.layer.parallel_transport_pooling.path.lexicographic
 get_path_2 = g.ml.layer.parallel_transport_pooling.path.one_step_lexicographic
 
+Fc = g.qcd.gauge.rectangle(U, 1, 1, trace=False, field=True, real=False)
+Fc_prime = g.qcd.gauge.rectangle(U_prime, 1, 1, trace=False, field=True, real=False)
+
 ts = [
     (
         g.ml.layer.parallel_transport_pooling.static_transfer(
@@ -162,7 +165,7 @@ ts = [
             coarse_grid,
             ot_ci,
             ot_cw,
-            [(U, get_path_1)],
+            [(U, get_path_1, Fc)],
             ot_embedding=ot_embedding,
             projector=projector,
         ),
@@ -171,7 +174,7 @@ ts = [
             coarse_grid,
             ot_ci,
             ot_cw,
-            [(U_prime, get_path_1)],
+            [(U_prime, get_path_1, Fc_prime)],
             ot_embedding=ot_embedding,
             projector=projector,
         ),

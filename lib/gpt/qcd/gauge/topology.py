@@ -22,9 +22,9 @@ import numpy as np
 from gpt.qcd.gauge.loops import accumulators, field_strength, default_rectangle_cache
 
 
-def topological_charge(U, field=False):
+def topological_charge(U, field=False, trace=True):
     assert len(U) == 4
-    accumulator = accumulators[(field, True)]
+    accumulator = accumulators[(field, trace)]
     res = accumulator(U[0])
     Bx = field_strength(U, 1, 2)
     By = field_strength(U, 2, 0)
@@ -32,16 +32,16 @@ def topological_charge(U, field=False):
     Ex = field_strength(U, 3, 0)
     Ey = field_strength(U, 3, 1)
     Ez = field_strength(U, 3, 2)
-    coeff = 8.0 / (32.0 * np.pi**2)
+    coeff = 8.0 / (32.0 * np.pi ** 2)
     coeff *= U[0].grid.gsites
     res += g(Bx * Ex + By * Ey + Bz * Ez)
     return res.scaled_project(coeff, True)
 
 
 # O(a^4) improved def. of Q. See arXiv:hep-lat/9701012.
-def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
+def topological_charge_5LI(U, field=False, trace=True, cache=default_rectangle_cache):
     assert len(U) == 4
-    accumulator = accumulators[(field, True)]
+    accumulator = accumulators[(field, trace)]
     c5 = 1 / 20.0
     c = [
         (19 - 55 * c5) / 9.0,
@@ -82,7 +82,7 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
             )
             T.append(g(A - g.adj(A)))
 
-        coeff = c[loop] / Lmu**2 / Lnu**2
+        coeff = c[loop] / Lmu ** 2 / Lnu ** 2
         for i in range(0, 3):
             res += g(coeff * E[i] * B[i])
 
@@ -121,13 +121,13 @@ def topological_charge_5LI(U, field=False, cache=default_rectangle_cache):
             )
             T.append(g(A - g.adj(A)))
 
-        coeff = c[loop] / Lmu**2 / Lnu**2
+        coeff = c[loop] / Lmu ** 2 / Lnu ** 2
         for i in range(0, 3):
             res += g(coeff * E[i] * B[i])
 
     # the first factor: 3 to remove rectangle norm by 3,
     # 2 because we need to avg over 4 * 2 clover leaves,
     # and rectangle only does 4.
-    coeff = (3 / 2.0) ** 2 * 8.0 / (32.0 * np.pi**2)
+    coeff = (3 / 2.0) ** 2 * 8.0 / (32.0 * np.pi ** 2)
     coeff *= U[0].grid.gsites
     return res.scaled_project(coeff, True)
