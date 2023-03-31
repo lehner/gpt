@@ -56,6 +56,8 @@ class transfer:
             if gauge is None
             else gauge
         )
+        for x in self.gauge:
+            x *= g.norm2(x) ** -0.5
         self.coarse_gauge = (
             get_coarse_gauge_for_paths(self.block_transfer, links_and_paths[0][0], reference_point)
             if coarse_gauge is None
