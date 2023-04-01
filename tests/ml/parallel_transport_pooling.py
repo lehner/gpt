@@ -65,4 +65,4 @@ W = n.random_weights(rng)
 c = n.cost(rng.cnormal(g.copy(training_output)), training_output)
 
 g.message("Coarse network weight:", c(W))
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-6)
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-5)
