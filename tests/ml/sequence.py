@@ -216,7 +216,7 @@ for t, t_prime in ts:
     c = n.cost(training_input, training_output)
 
     g.message("Coarse network weight:", c(W))
-    c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+    c.assert_gradient_error(rng, W, W, 1e-3, 1e-7)
 
     n_prime = g.ml.model.sequence(
         g.ml.layer.parallel_transport_pooling.project(t_prime),

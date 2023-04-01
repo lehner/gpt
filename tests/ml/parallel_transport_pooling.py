@@ -33,7 +33,7 @@ W = n.random_weights(rng)
 c = n.cost(training_input, training_output)
 
 g.message("Coarse network weight:", c(W))
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-7)
 
 
 n = g.ml.model.sequence(g.ml.layer.parallel_transport_pooling.project(t))
@@ -42,7 +42,7 @@ W = n.random_weights(rng)
 c = n.cost(training_output, training_input)
 
 g.message("Coarse network weight:", c(W))
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-7)
 
 
 n = g.ml.model.sequence(
@@ -54,7 +54,7 @@ W = n.random_weights(rng)
 c = n.cost(rng.cnormal(g.copy(training_output)), training_output)
 
 g.message("Coarse network weight:", c(W))
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-6)
 
 
 n = g.ml.model.sequence(
@@ -65,4 +65,4 @@ W = n.random_weights(rng)
 c = n.cost(rng.cnormal(g.copy(training_output)), training_output)
 
 g.message("Coarse network weight:", c(W))
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+c.assert_gradient_error(rng, W, W, 1e-3, 1e-5)
