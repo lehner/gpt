@@ -29,6 +29,7 @@ cgpt_fermion_operator_base* cgpt_create_wilson_twisted_mass(PyObject* args) {
   RealD mass = get_float(args,"mass");
   RealD mu = get_float(args,"mu");
 
+  wp.boundary_phases = get_complex_vec<Nd>(args,"boundary_phases");
   wp.overlapCommsCompute = true;
 
   Lattice< iLorentzColourMatrix< vCoeff_t > > U(grid);
