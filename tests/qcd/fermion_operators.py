@@ -277,6 +277,11 @@ wilson_clover_open_params = {
     "isAnisotropic": False,
     "boundary_phases": [1.0, 1.0, 1.0, 0.0],
 }
+wilson_twisted_mass_params = {
+    "mass": -1.8,
+    "mu": 0.2,
+    "boundary_phases": [1.0, 1.0, 1.0, -1.0],
+}
 wilson_clover_matrices = {
     "": [(-946.8714968698364 - 427.1253034080037j)],
     ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
@@ -288,6 +293,10 @@ wilson_matrices = {
 wilson_clover_matrices_open = {
     "": [(-1634.2615676797234 + 239.27037187495998j)],
     ".Mdiag": [(-1239.3535155227526 - 1158.5295177146759j)],
+}
+wilson_twisted_mass_matrices = {
+    "": [(-220.76791946940523 + 242.92546601856372j)],
+    ".Mdiag": [(-440.5312395819657 - 1102.362512575698j)],
 }
 test_suite = {
     "zmobius": {
@@ -381,6 +390,11 @@ test_suite = {
         "fermion": g.qcd.fermion.wilson_clover,
         "params": wilson_clover_open_params,
         "matrices": wilson_clover_matrices_open,
+    },
+    "wilson_twisted_mass": {
+        "fermion": g.qcd.fermion.wilson_twisted_mass,
+        "params": wilson_twisted_mass_params,
+        "matrices": wilson_twisted_mass_matrices,
     },
 }
 

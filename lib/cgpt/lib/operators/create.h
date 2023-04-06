@@ -28,6 +28,8 @@ cgpt_fermion_operator_base* cgpt_create_fermion_operator(const std::string& opty
     return cgpt_create_mobius<vCoeff_t>(args);
   } else if (optype == "coarse") {
     return cgpt_create_coarsenedmatrix<vCoeff_t>(args);
+  } else if (optype == "wilson_twisted_mass") {
+    return cgpt_create_wilson_twisted_mass<vCoeff_t>(args);
   } else {
     ERR("Unknown operator type");
   }
