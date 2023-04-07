@@ -90,7 +90,7 @@ class map:
         for i, v in enumerate(self.basis):
             iproj @= self.project * v
             eproj[:] = 0.0
-            eproj[:, :, :, :, i] = 1.0
+            eproj[tuple([slice(None, None, None)] * self.coarse_grid.nd + [i])] = 1.0
             err2 = gpt.norm2(eproj - iproj)
             if tol is not None:
                 assert err2 <= tol

@@ -84,11 +84,15 @@ class fgmres(base_iterative):
     def __call__(self, mat):
 
         vector_space = None
-        if type(mat) == g.matrix_operator:
+
+        prec = self.prec(mat) if self.prec is not None else None
+
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
             mat = mat.specialized_singlet_callable()
 
-        prec = self.prec(mat) if self.prec is not None else None
+        if isinstance(prec, g.matrix_operator):
+            prec = prec.specialized_singlet_callable()
 
         @self.timed_function
         def inv(psi, src, t):

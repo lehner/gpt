@@ -25,6 +25,7 @@
 #include "operators/derivative.h"
 #include "operators/implementation.h"
 #include "operators/wilson_clover.h"
+#include "operators/wilson_twisted_mass.h"
 #include "operators/zmobius.h"
 #include "operators/mobius.h"
 #include "operators/coarse.h"

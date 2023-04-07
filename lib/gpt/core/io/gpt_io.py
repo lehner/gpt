@@ -124,6 +124,9 @@ class gpt_io:
             if write and dn is not None:
                 os.makedirs(dn, exist_ok=True)
             self.loc[tag] = gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
+            if write:
+                # seek immediately to have proper .tell result
+                self.loc[tag].seek(0, 2)
 
         if tag_pos not in self.pos:
             self.pos[tag_pos] = gpt.coordinates(cv)

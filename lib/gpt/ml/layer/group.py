@@ -24,18 +24,23 @@ class group:
             layers = layers[0]
         self.layers = layers
         self.weights_index = []
+        self.weights_list = []
         i0 = 0
+        weights_ids = []
         for l in layers:
-            i1 = i0 + l.n_weights
-            self.weights_index.append((i0, i1))
-            i0 = i1
+            w = l.weights()
+            if id(w) in weights_ids:
+                self.weights_index.append(self.weights_index[weights_ids.index(id(w))])
+            else:
+                weights_ids.append(id(w))
+                self.weights_list = self.weights_list + w
+                i1 = i0 + l.n_weights
+                self.weights_index.append((i0, i1))
+                i0 = i1
         self.n_weights = i0
 
     def weights(self):
-        w = []
-        for l in self.layers:
-            w = w + l.weights()
-        return w
+        return self.weights_list
 
     def forward(self, layer_index, weights, source):
         i0, i1 = self.weights_index[layer_index]

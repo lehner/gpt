@@ -75,6 +75,25 @@ g.message("Grid time/s (reuse lattices): ", t2 - t1)
 g.message("Grid time/s (with temporaries): ", t3 - t2)
 g.message("Grid time/s (with expressions): ", t4 - t3)
 
+# manual test of twisted mass term
+tm_test_wilson = g.qcd.fermion.wilson_clover(
+    U,
+    mass=-1.8,
+    csw_r=0,
+    csw_t=0,
+    cF=1.0,
+    xi_0=1.0,
+    nu=1,
+    isAnisotropic=True,
+    boundary_phases=[-1, 1, 1, -1],
+)
+tm_test_wilson_tm = g.qcd.fermion.wilson_twisted_mass(
+    U, mass=-1.8, mu=0.3, boundary_phases=[-1, 1, 1, -1]
+)
+eps2 = g.norm2(tm_test_wilson * src + 1j * 0.3 * g.gamma[5] * src - tm_test_wilson_tm * src)
+g.message(f"Test of twisted mass term: {eps2}")
+assert eps2 < 1e-7
+
 # create point source
 src = g.mspincolor(grid)
 g.create.point(src, [1, 0, 0, 0])  # pick point 1 so that "S" in preconditioner contributes to test
@@ -277,6 +296,11 @@ wilson_clover_open_params = {
     "isAnisotropic": False,
     "boundary_phases": [1.0, 1.0, 1.0, 0.0],
 }
+wilson_twisted_mass_params = {
+    "mass": -1.8,
+    "mu": 0.2,
+    "boundary_phases": [1.0, 1.0, 1.0, -1.0],
+}
 wilson_clover_matrices = {
     "": [(-946.8714968698364 - 427.1253034080037j)],
     ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
@@ -288,6 +312,10 @@ wilson_matrices = {
 wilson_clover_matrices_open = {
     "": [(-1634.2615676797234 + 239.27037187495998j)],
     ".Mdiag": [(-1239.3535155227526 - 1158.5295177146759j)],
+}
+wilson_twisted_mass_matrices = {
+    "": [(-5.665095757463064 + 373.96051873176737j)],
+    ".Mdiag": [(-440.5312395819657 - 1102.362512575698j)],
 }
 test_suite = {
     "zmobius": {
@@ -381,6 +409,11 @@ test_suite = {
         "fermion": g.qcd.fermion.wilson_clover,
         "params": wilson_clover_open_params,
         "matrices": wilson_clover_matrices_open,
+    },
+    "wilson_twisted_mass": {
+        "fermion": g.qcd.fermion.wilson_twisted_mass,
+        "params": wilson_twisted_mass_params,
+        "matrices": wilson_twisted_mass_matrices,
     },
 }
 

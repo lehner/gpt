@@ -188,9 +188,9 @@ def field_strength(U, mu, nu):
     return F
 
 
-def energy_density(U, field=False):
+def energy_density(U, field=False, trace=True):
     Nd = len(U)
-    accumulator = accumulators[(field, True)]
+    accumulator = accumulators[(field, trace)]
     res = accumulator(U[0])
     for mu in range(Nd):
         for nu in range(mu):

@@ -68,7 +68,7 @@ class parallel_transport_convolution(base):
         n = (len(self.paths) + 1) * self.n_input
         wall = weights[0][(slice(0, n * self.n_output),), self.access_cache]
         return [
-            [g.tensor(wall[n * i + j], self.ot_weights) for j in range(n)]
+            [g.tensor(wall[n * i + j], self.ot_weights).reduced() for j in range(n)]
             for i in range(self.n_output)
         ]
 

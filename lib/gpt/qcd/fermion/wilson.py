@@ -88,3 +88,14 @@ def wilson_clover(U, params):
     else:
         operator_class = fine_operator
     return operator_class("wilson_clover", U, params, otype=gpt.ot_vector_spin_color(4, 3))
+
+
+@gpt.params_convention(
+    mass=None,
+    mu=None,
+    boundary_phases=None,
+)
+def wilson_twisted_mass(U, params):
+    params = copy.deepcopy(params)  # save current parameters
+    operator_class = wilson_class_operator
+    return operator_class("wilson_twisted_mass", U, params, otype=gpt.ot_vector_spin_color(4, 3))

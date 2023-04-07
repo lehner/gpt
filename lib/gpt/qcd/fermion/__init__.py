@@ -34,7 +34,7 @@ from gpt.qcd.fermion.boundary_conditions import *
 # fine fermion operators
 from gpt.qcd.fermion.zmobius import zmobius
 from gpt.qcd.fermion.mobius import mobius
-from gpt.qcd.fermion.wilson import wilson_clover
+from gpt.qcd.fermion.wilson import wilson_clover, wilson_twisted_mass
 
 
 # coarse-grid operator
