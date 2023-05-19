@@ -18,6 +18,90 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+// cgpt_convertType
+////////////////////////////////////////////////////////////////////////////////////////////
+accelerator_inline void cgpt_convertType(ComplexD & out, const std::complex<double> & in) {
+  out = in;
+}
+
+accelerator_inline void cgpt_convertType(ComplexF & out, const std::complex<float> & in) {
+  out = in;
+}
+
+template<typename T>
+accelerator_inline EnableIf<isGridFundamental<T>> cgpt_convertType(T & out, const T & in) {
+  out = in;
+}
+
+#ifdef GRID_SIMT
+accelerator_inline void cgpt_convertType(vComplexF & out, const ComplexF & in) {
+  ((ComplexF*)&out)[acceleratorSIMTlane(vComplexF::Nsimd())] = in;
+}
+accelerator_inline void cgpt_convertType(vComplexF & out, const ComplexD & in) {
+  ((ComplexF*)&out)[acceleratorSIMTlane(vComplexF::Nsimd())] = in;
+}
+accelerator_inline void cgpt_convertType(vComplexD & out, const ComplexD & in) {
+  ((ComplexD*)&out)[acceleratorSIMTlane(vComplexD::Nsimd())] = in;
+}
+accelerator_inline void cgpt_convertType(vComplexD2 & out, const ComplexD & in) {
+  ((ComplexD*)&out)[acceleratorSIMTlane(vComplexD::Nsimd()*2)] = in;
+}
+#endif
+
+accelerator_inline void cgpt_convertType(vComplexF & out, const vComplexD2 & in) {
+  //out.v = Optimization::PrecisionChange::DtoS(in.v[0],in.v[1]);
+  precisionChange(out,in);
+}
+
+accelerator_inline void cgpt_convertType(vComplexD2 & out, const vComplexF & in) {
+  //Optimization::PrecisionChange::StoD(in.v,out.v[0],out.v[1]);
+  precisionChange(out,in);
+}
+
+template<typename T1,typename T2>
+accelerator_inline void cgpt_convertType(iScalar<T1> & out, const iScalar<T2> & in) {
+  cgpt_convertType(out._internal,in._internal);
+}
+
+template<typename T1,typename T2>
+accelerator_inline NotEnableIf<isGridScalar<T1>> cgpt_convertType(T1 & out, const iScalar<T2> & in) {
+  cgpt_convertType(out,in._internal);
+}
+
+template<typename T1,typename T2>
+accelerator_inline NotEnableIf<isGridScalar<T2>> cgpt_convertType(iScalar<T1> & out, const T2 & in) {
+  cgpt_convertType(out._internal,in);
+}
+
+template<typename T1,typename T2,int N>
+accelerator_inline void cgpt_convertType(iMatrix<T1,N> & out, const iMatrix<T2,N> & in) {
+  for (int i=0;i<N;i++)
+    for (int j=0;j<N;j++)
+      cgpt_convertType(out._internal[i][j],in._internal[i][j]);
+}
+
+template<typename T1,typename T2,int N>
+accelerator_inline void cgpt_convertType(iVector<T1,N> & out, const iVector<T2,N> & in) {
+  for (int i=0;i<N;i++)
+    cgpt_convertType(out._internal[i],in._internal[i]);
+}
+
+template<typename T1,typename T2>
+accelerator_inline void cgpt_convertType(Lattice<T1> & out, const Lattice<T2> & in) {
+  autoView( out_v , out,AcceleratorWrite);
+  autoView( in_v  , in ,AcceleratorRead);
+  accelerator_for(ss,out_v.size(),T1::Nsimd(),{
+      cgpt_convertType(out_v[ss],in_v(ss));
+  });
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 template<class CComplex,class VLattice>
 inline void vectorBlockOrthonormalize(Lattice<CComplex> &ip,VLattice &Basis, size_t n_virtual)
 {
@@ -130,7 +214,7 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
 	
 	long coarse_virtual_i = basis_i_abs / coarse_virtual_size;
 	long coarse_i = basis_i_abs % coarse_virtual_size;
-	convertType(coarse_v[vec_i*coarse_n_virtual + coarse_virtual_i][sc](coarse_i), TensorRemove(reduce));
+	cgpt_convertType(coarse_v[vec_i*coarse_n_virtual + coarse_virtual_i][sc](coarse_i), TensorRemove(reduce));
       });
 
     VECTOR_VIEW_CLOSE(basis_v);
@@ -214,9 +298,9 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
 	    long basis_i_abs = basis_i_rel + basis_i0;
 	    long coarse_virtual_i = basis_i_abs / coarse_virtual_size;
 	    long coarse_i = basis_i_abs % coarse_virtual_size;
-	    convertType(cA,TensorRemove(coalescedRead(coarse_v[vec_i*coarse_n_virtual + coarse_virtual_i][sc])(coarse_i)));
+	    cgpt_convertType(cA,TensorRemove(coalescedRead(coarse_v[vec_i*coarse_n_virtual + coarse_virtual_i][sc])(coarse_i)));
 	    auto prod = cA*coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]);
-	    convertType(cAx,prod);
+	    cgpt_convertType(cAx,prod);
 	    fine_t = fine_t + cAx;
 	  }
 	

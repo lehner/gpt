@@ -167,6 +167,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
   // serialize my blocks to approprate communication buffers
   std::map<rank_t, comm_message> tasks_for_rank;
 
+  Timer("gather: reserve comms");
+
   // reserve comm buffers
   for (auto & ranks : blocks) {
     if (ranks.first.dst_rank != this->rank)
@@ -175,11 +177,14 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
 	(ranks.first.src_rank != this->rank))
       prepare_comm_message(tasks_for_rank[ranks.first.src_rank], ranks, false);
   }
+
+  Timer("gather: alloc comms");
   
   for (auto & x : tasks_for_rank) {
     x.second.alloc();
   }
 
+  Timer("gather: prepare comm");
   for (auto & ranks : blocks) {
     if (ranks.first.dst_rank != this->rank)
       prepare_comm_message(tasks_for_rank[ranks.first.dst_rank], ranks, true);
@@ -187,14 +192,18 @@ void global_memory_transfer<offset_t,rank_t,index_t>::gather_my_blocks() {
 	(ranks.first.src_rank != this->rank))
       prepare_comm_message(tasks_for_rank[ranks.first.src_rank], ranks, true);
   }
-  
+
+  Timer("gather: send_recv");
 
   std::map<rank_t, comm_message> tasks_from_rank;
   this->multi_send_recv(tasks_for_rank, tasks_from_rank);
 
+  Timer("gather: merge");
   // de-serialize my blocks from appropriate communication buffers
   merge_comm_blocks(tasks_from_rank);
 
+  Timer("gather: clean");
+  
   // and finally remove all blocks from this rank in which it does not participate
   auto i = std::begin(blocks);
   while (i != std::end(blocks)) {
@@ -454,9 +463,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
   //  this->global_sum(&d,1);
   //}
 
-  //cgpt_timer t("create");
-
-  //t("fill blocks");
+  Timer("fill blocks");
   // reset
   blocks.clear();
 
@@ -470,28 +477,28 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
     //  this->global_sum(&d,1);
     //}
 
-    //t("gather");
+    Timer("gather");
     // gather my blocks
     gather_my_blocks();
   }
 
-  //t("opt");
+  Timer("optimize");
   // optimize blocks after gathering all of my blocks
   if (!skip_optimize)
     optimize();
 
   if (!local_only) {
 
-    //t("createcom");
+    Timer("createcom");
     // optionally create communication buffers
     create_comm_buffers(use_comm_buffers_of_type);
   }
 
-  //t("createbounds");
+  Timer("createbounds");
   // create bounds
   create_bounds();
  
-  //t.report();
+  Timer();
 }
 
 template<typename offset_t, typename rank_t, typename index_t>

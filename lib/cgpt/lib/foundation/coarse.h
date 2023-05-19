@@ -218,7 +218,7 @@ public: // type definitions ///////////////////////////////////////////////////
   typedef std::vector<GaugeField>          PhysicalGaugeField;
 
   // used by the outside world
-  typedef CartesianStencil<SiteSpinor,SiteSpinor,int> Stencil;
+  typedef CartesianStencil<SiteSpinor,SiteSpinor,DefaultImplParams> Stencil;
   typedef typename SiteSpinor::vector_type            vCoeff_t;
   typedef PVector<FermionField>                       VFermionField;
   typedef PVector<LinkField>                          VLinkField;
@@ -602,9 +602,9 @@ public: // member functions (additional) //////////////////////////////////////
     MComputeTime = 0;
     MTotalTime   = 0;
 
-    stencilMultiArg_.ZeroCounters();
-    stencilEvenMultiArg_.ZeroCounters();
-    stencilOddMultiArg_.ZeroCounters();
+    //stencilMultiArg_.ZeroCounters();
+    //stencilEvenMultiArg_.ZeroCounters();
+    //stencilOddMultiArg_.ZeroCounters();
   }
 
   void copyToTmp5dField(const VFermionField& in, FermionField& tmp, int Nsite, int NvirtualFermion, int Narg) {
@@ -645,13 +645,13 @@ public: // member functions (additional) //////////////////////////////////////
     , fermion_n_virtual_(uint64_t(sqrt(UcSelfInv.size())))
     , n_arg_(numArg)
     , nbasis_global_(fermion_n_virtual_*NbasisVirtual)
-    , stencilMultiArg_(gridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
-    , stencilEvenMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
-    , stencilOddMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Odd, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
+    , stencilMultiArg_(gridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements)
+    , stencilEvenMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Even, geomMultiArg_.directions, geomMultiArg_.displacements)
+    , stencilOddMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint, Odd, geomMultiArg_.directions, geomMultiArg_.displacements)
 #if 0 // for separating the self-stencil from the directions
-    , stencilMultiArg_(gridMultiArg_, geomMultiArg_.npoint-1, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
-    , stencilEvenMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint-1, Even, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
-    , stencilOddMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint-1, Odd, geomMultiArg_.directions, geomMultiArg_.displacements, 0)
+    , stencilMultiArg_(gridMultiArg_, geomMultiArg_.npoint-1, Even, geomMultiArg_.directions, geomMultiArg_.displacements)
+    , stencilEvenMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint-1, Even, geomMultiArg_.directions, geomMultiArg_.displacements)
+    , stencilOddMultiArg_(cbGridMultiArg_, geomMultiArg_.npoint-1, Odd, geomMultiArg_.directions, geomMultiArg_.displacements)
 #endif
 #if defined (TENSOR_LAYOUT)
     , Uc_(link_n_virtual_, grid_)
