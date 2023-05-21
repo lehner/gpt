@@ -142,7 +142,7 @@ class copy_plan:
         )
         t1 = gpt.time()
         if verbose_performance:
-            t_cgpt = gpt.timer("cgpt_eval", True)
+            t_cgpt = gpt.timer("cgpt_copy_create_plan", True)
             t_cgpt += cgpt.timer_end()
             gpt.message(t_cgpt)
 
