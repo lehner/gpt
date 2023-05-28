@@ -93,13 +93,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
   virtual ~cgpt_stencil_matrix() {
   }
-
-  virtual void execute(const std::vector<cgpt_Lattice_base*>& __fields) {
-    PVector<LatticeColourMatrixD> fields;
-    cgpt_basis_fill(fields,__fields);
-    execute(fields);
-  }
-  
+ 
   virtual void execute(PVector<Lattice<T>> &fields) {
 
     VECTOR_VIEW_OPEN(fields,fields_v,AcceleratorWrite);
@@ -139,6 +133,12 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     
     VECTOR_VIEW_CLOSE(fields_v);
   }
+
+  virtual void execute(const std::vector<cgpt_Lattice_base*>& __fields) {
+    PVector<Lattice<T>> fields;
+    cgpt_basis_fill(fields,__fields);
+    execute(fields);
+  }
 };
 
 static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_factor_t& out) {
@@ -168,7 +168,7 @@ template<typename T, int N>     struct isEndomorphism<iVector<T,N>>    : public 
 template<typename T>
 NotEnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
 cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code) {
-  ERR("cgpt_stencil_matrix not implemented for type %s",get_otype(T()).c_str());
+  ERR("cgpt_stencil_matrix not implemented for type %s",typeid(T).name());
 }
 
 // implemented for endomorphisms
