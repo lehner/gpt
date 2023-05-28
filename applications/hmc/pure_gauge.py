@@ -94,5 +94,3 @@ for i in range(n):
 history = numpy.array(history)
 g.message(f"Acceptance rate = {numpy.mean(history[:,0]):.2f}")
 g.message(f"<|dH|> = {numpy.mean(numpy.abs(history[:,1])):.4e}")
-
-
