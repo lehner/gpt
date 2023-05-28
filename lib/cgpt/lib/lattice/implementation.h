@@ -269,4 +269,8 @@ public:
     return l.Grid();
   }
 
+  virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code) {
+    return cgpt_stencil_matrix_create<T>(grid, shifts, code);
+  }
+
 };

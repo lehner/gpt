@@ -18,7 +18,7 @@
 */
 
 template<typename T>
-void cgpt_basis_fill(PVector<Lattice<T>>& basis, std::vector<cgpt_Lattice_base*>& _basis) {
+void cgpt_basis_fill(PVector<Lattice<T>>& basis, const std::vector<cgpt_Lattice_base*>& _basis) {
   basis.resize(_basis.size());
   for (size_t i=0;i<basis.size();i++)
     basis(i) = &compatible<T>(_basis[i])->l;

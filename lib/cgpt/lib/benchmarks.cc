@@ -183,7 +183,58 @@ void mk_bench_mul() {
 #endif
 }
 
+EXPORT(plaquette_stencil,{
+    
+    PyObject* _fields;
+    if (!PyArg_ParseTuple(args, "O", &_fields)) {
+      return NULL;
+    }
+
+    std::vector<cgpt_Lattice_base*> __fields;
+    cgpt_basis_fill(__fields,_fields);
+    PVector<LatticeColourMatrixD> fields;
+    cgpt_basis_fill(fields,__fields);
+    
+    const std::vector<Coordinate> shifts = {
+      Coordinate({0,0,0,0}),
+      Coordinate({1,0,0,0}),
+      Coordinate({0,1,0,0}),
+      Coordinate({0,0,1,0}),
+      Coordinate({0,0,0,1}),
+      Coordinate({-1,0,0,0}),
+      Coordinate({0,-1,0,0}),
+      Coordinate({0,0,-1,0}),
+      Coordinate({0,0,0,-1})
+    };
+
+    // say fields = [P, Ux, Uy, Uz, Ut, UxDag, UyDag, UzDag, UtDag]
+    int U[4] = {1,2,3,4};
+    int Udag[4] = {5,6,7,8};
+    // want plaquette
+#define P 0
+    int Sp[4] = {1,2,3,4};
+    int Sm[4] = {5,6,7,8};
+
+    std::vector<cgpt_stencil_matrix_code_t> code;
+    for (int mu=0;mu<4;mu++)
+      for (int nu=0;nu<mu;nu++)
+	code.push_back({0, code.size() == 0 ? -1 : 0, 1.0, { {U[mu], P }, {U[nu], Sp[mu]}, {Udag[mu], Sp[nu]}, {Udag[nu], P} }});
+
+    double t0 = cgpt_time();
+    cgpt_stencil_matrix<vColourMatrixD> stencil(fields[0].Grid(),shifts,code);
+    double t1 = cgpt_time();
+
+    stencil.execute(fields);
+
+    double t2 = cgpt_time();
+
+    std::cout << GridLogMessage << "TIMING:" << t2 -t1 << " s for execute and " << t1-t0 << "s for create" << std::endl;
+    return PyLong_FromLong(0);
+  });
+
+
 EXPORT(benchmarks,{
+    
     //mask();
     //half();
     //benchmarks(8);

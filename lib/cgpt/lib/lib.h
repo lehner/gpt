@@ -43,6 +43,7 @@
 #include "numpy.h"
 #include "distribute.h"
 #include "transform.h"
+#include "stencil.h"
 #include "grid.h"
 #include "lattice.h"
 #include "util.h"
