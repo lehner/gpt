@@ -18,17 +18,40 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#ifndef GRID_HAS_ACCELERATOR
+
 // cpu fetch version
 #define fetch(obj, point, site, view) {					\
-  auto _SE = stencil.GetEntry(point,site);				\
-  obj = coalescedRead(view[_SE->_offset]);				\
-  auto tmp = obj;							\
-  if (_SE->_permute)							\
-    for (int d=0;d<nd;d++)						\
-      if (_SE->_permute & (0x1 << d)) { permute(obj,tmp,d); tmp=obj;}	\
+    auto _SE = sview.GetEntry(point,site);				\
+    obj = coalescedRead(view[_SE->_offset]);				\
+    auto tmp = obj;							\
+    if (_SE->_permute)							\
+      for (int d=0;d<nd;d++)						\
+	if (_SE->_permute & (0x1 << d)) { permute(obj,tmp,d); tmp=obj;}	\
+  }
+
+#else
+
+template<class vobj> accelerator_inline
+typename vobj::scalar_object coalescedReadGeneralPermute(const vobj & __restrict__ vec,int permute,int nd,int lane=acceleratorSIMTlane(vobj::Nsimd()))
+{
+  int plane = lane;
+  for (int d=0;d<nd;d++)
+    plane = (permute & (0x1 << d)) ? plane ^ (vobj::Nsimd() >> (d + 1)) : plane;
+  return extractLane(plane,vec);
 }
 
-  //obj = coalescedReadPermute(view[_SE->_offset],ptype,SE->_permute);	\
+// gpu fetch version
+#define fetch(obj, point, site, view) {					\
+    auto _SE = sview.GetEntry(point,site);				\
+    if (_SE->_permute) {						\
+      obj = coalescedReadGeneralPermute(view[_SE->_offset], _SE->_permute,nd); \
+    } else {								\
+      obj = coalescedRead(view[_SE->_offset]);				\
+    }									\
+  }
+
+#endif
   
 struct cgpt_stencil_matrix_factor_t {
   int index; // index of field
@@ -38,6 +61,7 @@ struct cgpt_stencil_matrix_factor_t {
 struct cgpt_stencil_matrix_code_offload_t {
   int target;
   int accumulate;
+  int adj;
   ComplexD weight;
   int size;
   cgpt_stencil_matrix_factor_t* factor;
@@ -46,6 +70,7 @@ struct cgpt_stencil_matrix_code_offload_t {
 struct cgpt_stencil_matrix_code_t {
   int target; // target field index
   int accumulate; // field index to accumulate or -1
+  int adj; // add adjoint of term
   ComplexD weight; // weight of term
   std::vector<cgpt_stencil_matrix_factor_t> factor; 
 };
@@ -84,6 +109,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       code[i].target = _code[i].target;
       code[i].accumulate = _code[i].accumulate;
       code[i].weight = _code[i].weight;
+      code[i].adj = _code[i].adj;
       code[i].size = (int)_code[i].factor.size();
       code[i].factor = &factors[nfactors];
       memcpy(code[i].factor, &_code[i].factor[0], sizeof(cgpt_stencil_matrix_factor_t) * code[i].size);
@@ -104,6 +130,8 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     typedef decltype(coalescedRead(fields_v[0][0])) obj_t;
 
     int nd = fields[0].Grid()->Nd();
+
+    auto sview = stencil.View();
     
     accelerator_for(ss,fields[0].Grid()->oSites(),T::Nsimd(),{
 
@@ -123,6 +151,8 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	    t = t * f;
 	  }
 
+	  if (p_code[i].adj)
+	    t = adj(t);
 	  obj_t r = p_code[i].weight * t;
 	  if (p_code[i].accumulate != -1)
 	    r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
@@ -154,6 +184,7 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_code_t& out) {
   out.target = get_int(in, "target");
   out.accumulate = get_int(in, "accumulate");
   out.weight = get_complex(in, "weight");
+  out.adj = get_int(in, "adj");
 
   cgpt_convert(get_key(in, "factor"), out.factor);
 }

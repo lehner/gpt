@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, numpy
+import gpt as g
 
 # Needs: local_grid, lcoor, gcoor
 class two_grid_base:
@@ -25,22 +25,30 @@ class two_grid_base:
         self.promote_plan = {}
 
     def lattice(self, otype):
-        return gpt.lattice(self.local_grid, otype)
+        return g.lattice(self.local_grid, otype)
 
     def project(self, dst, src):
-        tag = src.otype.__name__
+        dst = g.util.to_list(dst)
+        src = g.util.to_list(src)
+        tag = str([s.otype.__name__ for s in src])
         if tag not in self.project_plan:
-            plan = gpt.copy_plan(dst, src, embed_in_communicator=src.grid)
-            plan.destination += dst.view[self.lcoor]
-            plan.source += src.view[self.gcoor]
+            plan = g.copy_plan(dst, src, embed_in_communicator=src[0].grid)
+            assert len(dst) == len(src)
+            for i in range(len(dst)):
+                plan.destination += dst[i].view[self.lcoor_project]
+                plan.source += src[i].view[self.gcoor_project]
             self.project_plan[tag] = plan()
         self.project_plan[tag](dst, src)
 
     def promote(self, dst, src):
-        tag = src.otype.__name__
+        dst = g.util.to_list(dst)
+        src = g.util.to_list(src)
+        tag = str([s.otype.__name__ for s in src])
         if tag not in self.promote_plan:
-            plan = gpt.copy_plan(dst, src, embed_in_communicator=dst.grid)
-            plan.destination += dst.view[self.gcoor]
-            plan.source += src.view[self.lcoor]
+            plan = g.copy_plan(dst, src, embed_in_communicator=dst[0].grid)
+            assert len(dst) == len(src)
+            for i in range(len(dst)):
+                plan.destination += dst[i].view[self.gcoor_promote]
+                plan.source += src[i].view[self.lcoor_promote]
             self.promote_plan[tag] = plan()
         self.promote_plan[tag](dst, src)

@@ -22,27 +22,36 @@ from gpt.core.domain.two_grid_base import two_grid_base
 
 
 class local(two_grid_base):
-    def __init__(self, grid, margin, cb=None):
+    def __init__(self, grid, margin_top, margin_bottom=None, cb=None):
         super().__init__()
 
         if cb is None:
             cb = g.none
+
+        if margin_bottom is None:
+            margin_bottom = margin_top
 
         self.grid = grid
         self.cb = cb
 
         dim = grid.nd
 
+        local_grid_padding = [margin_top[i] + margin_bottom[i] for i in range(dim)]
         self.local_grid = grid.split(
-            [1] * dim, [grid.fdimensions[i] // grid.mpi[i] + 2 * margin[i] for i in range(dim)]
+            [1] * dim,
+            [grid.fdimensions[i] // grid.mpi[i] + local_grid_padding[i] for i in range(dim)],
         )
-        self.gcoor = g.coordinates((grid, cb), margin=margin)
-        self.lcoor = g.coordinates((self.local_grid, cb))
-        top = np.array(margin, dtype=np.int32)
-        bottom = np.array(self.local_grid.fdimensions, dtype=np.int32) - top
-        self.bcoor = np.sum(np.logical_and(self.lcoor >= top, self.lcoor < bottom), axis=1) == len(
-            top
+        self.gcoor_project = g.coordinates(
+            (grid, cb), margin_top=margin_top, margin_bottom=margin_bottom
         )
+        self.lcoor_project = g.coordinates((self.local_grid, cb))
+        top = np.array(margin_top, dtype=np.int32)
+        bottom = np.array(self.local_grid.fdimensions, dtype=np.int32) - margin_bottom
+        self.bcoor = np.sum(
+            np.logical_and(self.lcoor_project >= top, self.lcoor_project < bottom), axis=1
+        ) == len(top)
+        self.lcoor_promote = self.lcoor_project[self.bcoor]
+        self.gcoor_promote = self.gcoor_project[self.bcoor]
 
     def bulk(self):
         class _bulk_domain(two_grid_base):
@@ -50,8 +59,13 @@ class local(two_grid_base):
                 super().__init__()
                 me.local_grid = self.local_grid
                 me.gcoor = g.coordinates((self.grid, self.cb))
-                me.lcoor = self.lcoor[self.bcoor]
+                me.lcoor = self.lcoor_project[self.bcoor]
                 assert len(me.gcoor) == len(me.lcoor)
+
+                me.gcoor_project = me.gcoor
+                me.gcoor_promote = me.gcoor
+                me.lcoor_project = me.lcoor
+                me.lcoor_promote = me.lcoor
 
         return _bulk_domain()
 
@@ -61,7 +75,12 @@ class local(two_grid_base):
                 super().__init__()
                 me.local_grid = self.local_grid
 
-                me.lcoor = self.lcoor[~self.bcoor]
+                me.lcoor = self.lcoor_project[~self.bcoor]
                 me.gcoor = me.lcoor
+
+                me.gcoor_project = me.gcoor
+                me.gcoor_promote = me.gcoor
+                me.lcoor_project = me.lcoor
+                me.lcoor_promote = me.lcoor
 
         return _margin_domain()
