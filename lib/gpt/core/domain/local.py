@@ -22,24 +22,31 @@ from gpt.core.domain.two_grid_base import two_grid_base
 
 
 class local(two_grid_base):
-    def __init__(self, grid, margin, cb=None):
+    def __init__(self, grid, margin_top, margin_bottom=None, cb=None):
         super().__init__()
 
         if cb is None:
             cb = g.none
+
+        if margin_bottom is None:
+            margin_bottom = margin_top
 
         self.grid = grid
         self.cb = cb
 
         dim = grid.nd
 
+        local_grid_padding = [margin_top[i] + margin_bottom[i] for i in range(dim)]
         self.local_grid = grid.split(
-            [1] * dim, [grid.fdimensions[i] // grid.mpi[i] + 2 * margin[i] for i in range(dim)]
+            [1] * dim,
+            [grid.fdimensions[i] // grid.mpi[i] + local_grid_padding[i] for i in range(dim)],
         )
-        self.gcoor_project = g.coordinates((grid, cb), margin=margin)
+        self.gcoor_project = g.coordinates(
+            (grid, cb), margin_top=margin_top, margin_bottom=margin_bottom
+        )
         self.lcoor_project = g.coordinates((self.local_grid, cb))
-        top = np.array(margin, dtype=np.int32)
-        bottom = np.array(self.local_grid.fdimensions, dtype=np.int32) - top
+        top = np.array(margin_top, dtype=np.int32)
+        bottom = np.array(self.local_grid.fdimensions, dtype=np.int32) - margin_bottom
         self.bcoor = np.sum(
             np.logical_and(self.lcoor_project >= top, self.lcoor_project < bottom), axis=1
         ) == len(top)

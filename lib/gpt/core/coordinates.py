@@ -24,9 +24,11 @@ class local_coordinates(numpy.ndarray):
     pass
 
 
-def coordinates(o, order="lexicographic", margin=None):
+def coordinates(o, order="lexicographic", margin_top=None, margin_bottom=None):
     if type(o) == gpt.grid and o.cb.n == 1:
-        return coordinates((o, gpt.none), order=order, margin=margin)
+        return coordinates(
+            (o, gpt.none), order=order, margin_top=margin_top, margin_bottom=margin_bottom
+        )
     elif type(o) == tuple and type(o[0]) == gpt.grid and len(o) == 2:
         dim = len(o[0].ldimensions)
         cb = o[1].tag
@@ -35,13 +37,14 @@ def coordinates(o, order="lexicographic", margin=None):
         top = [o[0].processor_coor[i] * o[0].ldimensions[i] * cbf[i] for i in range(dim)]
         bottom = [top[i] + o[0].ldimensions[i] * cbf[i] for i in range(dim)]
 
-        if margin is not None:
-            top = [t - m for t, m in zip(top, margin)]
-            bottom = [b + m for b, m in zip(bottom, margin)]
+        if margin_top is not None:
+            top = [t - m for t, m in zip(top, margin_top)]
+        if margin_bottom is not None:
+            bottom = [b + m for b, m in zip(bottom, margin_bottom)]
 
         x = cgpt.coordinates_from_cartesian_view(top, bottom, checker_dim_mask, cb, order)
 
-        if margin is None:
+        if margin_top is None and margin_bottom is None:
             x = x.view(local_coordinates)
         else:
             L = numpy.array(o[0].gdimensions, dtype=numpy.int32)
@@ -49,9 +52,14 @@ def coordinates(o, order="lexicographic", margin=None):
 
         return x
     elif type(o) == gpt.lattice:
-        return coordinates((o.grid, o.checkerboard()), order=order, margin=margin)
+        return coordinates(
+            (o.grid, o.checkerboard()),
+            order=order,
+            margin_top=margin_top,
+            margin_bottom=margin_bottom,
+        )
     elif type(o) == gpt.cartesian_view:
-        assert margin is None
+        assert margin_top is None and margin_bottom is None
         return cgpt.coordinates_from_cartesian_view(
             o.top, o.bottom, o.checker_dim_mask, o.cb, order
         )

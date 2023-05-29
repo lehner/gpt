@@ -105,3 +105,4 @@ import gpt.core.component
 import gpt.core.group
 import gpt.core.sparse_tensor
 import gpt.core.stencil
+from gpt.core.padding import padded_local_fields
