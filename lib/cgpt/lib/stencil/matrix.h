@@ -135,9 +135,6 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     
     accelerator_for(ss,fields[0].Grid()->oSites(),T::Nsimd(),{
 
-	// future directions:
-	// 1) add matrix operations such as adjoint; will need branching but saves on memory traffic
-	// 2) add manual prefetching, not sure if needed on current architectures
 	for (int i=0;i<n_code;i++) {
 	  obj_t t;
 
