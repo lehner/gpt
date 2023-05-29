@@ -31,8 +31,8 @@ class two_grid_base:
         tag = src.otype.__name__
         if tag not in self.project_plan:
             plan = gpt.copy_plan(dst, src, embed_in_communicator=src.grid)
-            plan.destination += dst.view[self.lcoor]
-            plan.source += src.view[self.gcoor]
+            plan.destination += dst.view[self.lcoor_project]
+            plan.source += src.view[self.gcoor_project]
             self.project_plan[tag] = plan()
         self.project_plan[tag](dst, src)
 
@@ -40,7 +40,7 @@ class two_grid_base:
         tag = src.otype.__name__
         if tag not in self.promote_plan:
             plan = gpt.copy_plan(dst, src, embed_in_communicator=dst.grid)
-            plan.destination += dst.view[self.gcoor]
-            plan.source += src.view[self.lcoor]
+            plan.destination += dst.view[self.gcoor_promote]
+            plan.source += src.view[self.lcoor_promote]
             self.promote_plan[tag] = plan()
         self.promote_plan[tag](dst, src)

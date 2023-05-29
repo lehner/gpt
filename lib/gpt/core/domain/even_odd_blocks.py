@@ -97,4 +97,10 @@ class even_odd_blocks(two_grid_base):
                     top, bottom, grid.cb.cb_mask, None, "lexicographic"
                 )
                 self.gcoor[sl, :] = pos
+
+        self.gcoor_project = self.gcoor
+        self.gcoor_promote = self.gcoor
+        self.lcoor_project = self.lcoor
+        self.lcoor_promote = self.lcoor
+
         assert n * 2 == self.number_of_local_blocks
