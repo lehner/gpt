@@ -52,7 +52,7 @@ class local(two_grid_base):
                 super().__init__()
                 me.local_grid = self.local_grid
                 me.gcoor = g.coordinates((self.grid, self.cb))
-                me.lcoor = self.lcoor[self.bcoor]
+                me.lcoor = self.lcoor_project[self.bcoor]
                 assert len(me.gcoor) == len(me.lcoor)
 
                 me.gcoor_project = me.gcoor
@@ -68,7 +68,7 @@ class local(two_grid_base):
                 super().__init__()
                 me.local_grid = self.local_grid
 
-                me.lcoor = self.lcoor[~self.bcoor]
+                me.lcoor = self.lcoor_project[~self.bcoor]
                 me.gcoor = me.lcoor
 
                 me.gcoor_project = me.gcoor
