@@ -35,12 +35,16 @@ class base(differentiable_functional):
         # dS(Umu) = 1/g^2 tracelss_anti_hermitian(Umu * staple)
         # define staple here as adjoint
         dS = []
+        st = self.staples(U)
         for Umu in dU:
             mu = U.index(Umu)
-            dSdU_mu = self.staple(U, mu)
+            dSdU_mu = st[mu]
             dSdU_mu @= g.qcd.gauge.project.traceless_anti_hermitian(g(Umu * g.adj(dSdU_mu))) * (
                 1.0 / 2.0 / 1j
             )
             dSdU_mu.otype = Umu.otype.cartesian()
             dS.append(dSdU_mu)
         return dS
+
+    def staple(self, U, mu):
+        return self.staples(U, mu_target=mu)[0]

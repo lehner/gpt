@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2023  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,15 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-
-
-def staple(U, mu, nu):
-    assert mu != nu
-    U_nu_x_plus_mu = g.cshift(U[nu], mu, 1)
-    U_mu_x_plus_nu = g.cshift(U[mu], nu, 1)
-    U_nu_x_minus_nu = g.cshift(U[nu], nu, -1)
-    return g(
-        U[nu] * U_mu_x_plus_nu * g.adj(U_nu_x_plus_mu)
-        + g.adj(U_nu_x_minus_nu) * g.cshift(U[mu] * U_nu_x_plus_mu, nu, -1)
-    )
+from gpt.qcd.gauge.stencil.plaquette import plaquette
+from gpt.qcd.gauge.stencil.staple import staple_sum

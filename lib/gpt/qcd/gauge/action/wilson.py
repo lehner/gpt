@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.qcd.gauge.action import base
 
 
@@ -38,12 +39,15 @@ class wilson(base):
         vol = U[0].grid.gsites
         return self.beta * (1.0 - g.qcd.gauge.plaquette(U)) * (Nd - 1) * Nd * vol / 2.0
 
-    def staple(self, U, mu):
+    def staples(self, U, mu_target=None):
         st = g.lattice(U[0])
         st[:] = 0
         Nd = len(U)
-        for nu in range(Nd):
-            if mu != nu:
-                st += g.qcd.gauge.staple(U, mu, nu)
+        rho = np.ones(shape=(Nd, Nd), dtype=np.float64) - np.eye(Nd)
+
+        if mu_target is not None:
+            rho = rho[mu_target : mu_target + 1, :]
+
+        st = g.qcd.gauge.staple_sum(U, rho=rho, mu=mu_target)
         scale = self.beta / U[0].otype.shape[0]
-        return g(scale * st)
+        return [g(scale * x) for x in st]

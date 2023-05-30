@@ -44,36 +44,44 @@ class improved_with_rectangle(base):
             * (self.c0 * (1.0 - P) * (Nd - 1) * Nd / 2.0 + self.c1 * (1.0 - R) * (Nd - 1) * Nd)
         )
 
-    def staple(self, U, mu):
+    def staples(self, U, mu_target=None):
         Nd = len(U)
-        st = g.lattice(U[0])
-        st[:] = 0
 
-        O = [nu for nu in range(Nd) if nu != mu]
-        path = g.path
-        if (Nd, mu) not in self.staple_1x1:
-            p = []
-            p += [path().f(nu).f(mu).b(nu) for nu in O]
-            p += [path().b(nu).f(mu).f(nu) for nu in O]
-            self.staple_1x1[(Nd, mu)] = g.parallel_transport(U, p)
+        ret = []
+        for mu in range(Nd):
 
-        if (Nd, mu) not in self.staple_2x1:
-            p = []
-            p += [path().f(nu, 2).f(mu).b(nu, 2) for nu in O]
-            p += [path().b(nu, 2).f(mu).f(nu, 2) for nu in O]
-            p += [path().f(nu).f(mu, 2).b(nu).b(mu) for nu in O]
-            p += [path().b(nu).f(mu, 2).f(nu).b(mu) for nu in O]
-            p += [path().b(mu).b(nu).f(mu, 2).f(nu) for nu in O]
-            p += [path().b(mu).f(nu).f(mu, 2).b(nu) for nu in O]
-            self.staple_2x1[(Nd, mu)] = g.parallel_transport(U, p)
+            if mu_target is not None and mu_target != mu:
+                continue
 
-        for s in self.staple_1x1[(Nd, mu)](U):
-            st += (self.beta * self.c0 / U[0].otype.shape[0]) * s
+            st = g.lattice(U[0])
+            st[:] = 0
 
-        for s in self.staple_2x1[(Nd, mu)](U):
-            st += (self.beta * self.c1 / U[0].otype.shape[0]) * s
+            O = [nu for nu in range(Nd) if nu != mu]
+            path = g.path
+            if (Nd, mu) not in self.staple_1x1:
+                p = []
+                p += [path().f(nu).f(mu).b(nu) for nu in O]
+                p += [path().b(nu).f(mu).f(nu) for nu in O]
+                self.staple_1x1[(Nd, mu)] = g.parallel_transport(U, p)
 
-        return st
+            if (Nd, mu) not in self.staple_2x1:
+                p = []
+                p += [path().f(nu, 2).f(mu).b(nu, 2) for nu in O]
+                p += [path().b(nu, 2).f(mu).f(nu, 2) for nu in O]
+                p += [path().f(nu).f(mu, 2).b(nu).b(mu) for nu in O]
+                p += [path().b(nu).f(mu, 2).f(nu).b(mu) for nu in O]
+                p += [path().b(mu).b(nu).f(mu, 2).f(nu) for nu in O]
+                p += [path().b(mu).f(nu).f(mu, 2).b(nu) for nu in O]
+                self.staple_2x1[(Nd, mu)] = g.parallel_transport(U, p)
+
+            for s in self.staple_1x1[(Nd, mu)](U):
+                st += (self.beta * self.c0 / U[0].otype.shape[0]) * s
+
+            for s in self.staple_2x1[(Nd, mu)](U):
+                st += (self.beta * self.c1 / U[0].otype.shape[0]) * s
+
+            ret.append(st)
+        return ret
 
 
 class iwasaki(improved_with_rectangle):

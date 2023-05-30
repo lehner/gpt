@@ -95,10 +95,6 @@ class differentiable_functional:
         eps = abs(a - b) / abs(b)
         g.message(f"Assert gradient error: {eps} < {epsilon_assert}")
         if eps > epsilon_assert:
-            g.message("Weights norm:", g.norm2(weights))
-            g.message("Gradient norm:", g.norm2(gradient))
-            g.message("Fields norm:", g.norm2(fields))
-            g.message("call norm:", g.norm2(self(fields)))
             g.message(f"Error: gradient = {a} <> approximate_gradient = {b}")
             assert False
         # the gradient needs to live in cartesian

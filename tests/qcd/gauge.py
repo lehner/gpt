@@ -131,8 +131,9 @@ for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)
     action_sm = action.transformed(sm)
     action_sm.assert_gradient_error(rng, U, U, 1e-3, 1e-7)
 
+    st = action.staples(U)
     for mu in range(len(U)):
-        adj_staple = g(g.adj(action.staple(U, mu)))
+        adj_staple = g(g.adj(st[mu]))
         Uprime = g.copy(U)
         Uprime[mu][0, 1, 2, 3] *= 1.1
         action_diff = action(U) - action(Uprime)

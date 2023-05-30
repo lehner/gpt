@@ -26,8 +26,8 @@ class padded_local_fields:
         self.otype = fields[0].otype
         self.margin_top = margin_top
         self.margin_bottom = margin_bottom
-        assert all([f.otype == self.otype for f in fields])
-        assert all([f.grid == self.grid for f in fields])
+        assert all([f.otype.__name__ == self.otype.__name__ for f in fields])
+        assert all([f.grid.obj == self.grid.obj for f in fields])
 
         self.domain = g.domain.local(self.grid, margin_top, margin_bottom)
 
