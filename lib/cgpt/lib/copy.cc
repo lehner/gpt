@@ -138,6 +138,10 @@ EXPORT(copy_get_plan_info,{
 	PyDict_SetItemString(data,"blocks",data_blocks); Py_XDECREF(data_blocks);
 	PyObject* data_size = PyLong_FromLong((long)size);
 	PyDict_SetItemString(data,"size",data_size); Py_XDECREF(data_size);
+	PyObject* data_block_size = PyLong_FromLong((long)plan->block_size);
+	PyDict_SetItemString(data,"block_size",data_block_size); Py_XDECREF(data_block_size);
+	PyObject* data_alignment = PyLong_FromLong((long)plan->global_alignment);
+	PyDict_SetItemString(data,"alignment",data_alignment); Py_XDECREF(data_alignment);
 
 	if (details > 0) {
 	  PyObject* data_block = PyList_New(blocks);

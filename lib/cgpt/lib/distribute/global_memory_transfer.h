@@ -335,7 +335,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
   }
 
   // now skip
-  if (block_size != 1) {
+  if (global_gcd != 1) {
     for (auto & ranks : blocks)
       for (auto & indices : ranks.second)
 	skip(indices.second, global_gcd);
@@ -399,7 +399,8 @@ long global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks)
 						       return (a.start_dst + bs == b.start_dst &&
 							       a.start_src + bs == b.start_src);
 						     });
-  
+
+
   //t("move");
   blocks = std::move(unique_blocks);
 
@@ -409,7 +410,7 @@ long global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks)
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::create_bounds() {
+void global_memory_transfer<offset_t,rank_t,index_t>::create_bounds_and_alignment() {
 
   for (auto & ranks : blocks) {
     rank_t dst_rank = ranks.first.dst_rank;
@@ -422,20 +423,32 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_bounds() {
 	bounds_dst.resize(dst_idx+1,0);
       if (src_rank == this->rank && src_idx >= bounds_src.size())
 	bounds_src.resize(src_idx+1,0);
+      if (src_idx >= alignment.size())
+	alignment.resize(src_idx+1,0);
+      if (dst_idx >= alignment.size())
+	alignment.resize(dst_idx+1,0);
 
       auto & a = indices.second;
       thread_region
 	{
 	  offset_t t_max_dst = 0;
 	  offset_t t_max_src = 0;
+
+	  offset_t alignment_src = alignment[src_idx];
+	  offset_t alignment_dst = alignment[dst_idx];
 	  
 	  thread_for_in_region(i, a.size(), {
-	      offset_t end_dst = a[i].start_dst + block_size;
-	      offset_t end_src = a[i].start_src + block_size;
+	      offset_t start_dst = a[i].start_dst;
+	      offset_t start_src = a[i].start_src;
+	      offset_t end_dst = start_dst + block_size;
+	      offset_t end_src = start_src + block_size;
 	      if (dst_rank == this->rank && end_dst > t_max_dst)
 		t_max_dst = end_dst;
 	      if (src_rank == this->rank && end_src > t_max_src)
 		t_max_src = end_src;
+
+	      alignment_src = (!alignment_src) ? start_src : cgpt_gcd(alignment_src, start_src);
+	      alignment_dst = (!alignment_dst) ? start_dst : cgpt_gcd(alignment_dst, start_dst);
 	    });
 
 	  thread_critical
@@ -444,10 +457,17 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_bounds() {
 		bounds_dst[dst_idx] = t_max_dst;
 	      if (src_rank == this->rank && t_max_src > bounds_src[src_idx])
 		bounds_src[src_idx] = t_max_src;
+
+	      alignment[src_idx] = (!alignment[src_idx]) ? alignment_src : cgpt_gcd(alignment_src, alignment[src_idx]);
+	      alignment[dst_idx] = (!alignment[dst_idx]) ? alignment_dst : cgpt_gcd(alignment_dst, alignment[dst_idx]);
 	    }
 	}
     }
   }
+
+  global_alignment = alignment.size() ? alignment[0] : 1;
+  for (size_t i=1;i<alignment.size();i++)
+    global_alignment = cgpt_gcd(global_alignment, alignment[i]);
 
 }
 
@@ -489,14 +509,15 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
 
   if (!local_only) {
 
-    Timer("createcom");
+    Timer("create_com_buffers");
     // optionally create communication buffers
     create_comm_buffers(use_comm_buffers_of_type);
   }
 
-  Timer("createbounds");
-  // create bounds
-  create_bounds();
+  Timer("create_bounds_and_alignment");
+  // create bounds and alignment information
+  create_bounds_and_alignment();
+
  
   Timer();
 }
@@ -640,7 +661,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bc
     const char* p_src = (const char*)base_src.ptr;
 
     bca[bcopy_map_idx(mt_dst,mt_src)].push_back({blocks, p_dst, p_src});
-  }  
+  }
 
   for (auto & bcc : bca) {
     size_t idx = bcc.first;
@@ -648,10 +669,10 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bc
 
     switch (idx) {
     case mt_host * mt_int_len + mt_host:
-      if (bcopy_host_host<vComplexF>(block_size,bc));
-      else if (bcopy_host_host<ComplexF>(block_size,bc));
-      else if (bcopy_host_host<double>(block_size,bc));
-      else if (bcopy_host_host<float>(block_size,bc));
+      if (bcopy_host_host<vComplexF>(block_size,global_alignment,bc));
+      else if (bcopy_host_host<ComplexF>(block_size,global_alignment,bc));
+      else if (bcopy_host_host<double>(block_size,global_alignment,bc));
+      else if (bcopy_host_host<float>(block_size,global_alignment,bc));
       else {
 	ERR("No fast copy method for block size %ld host<>host implemented", (long)block_size);
       }
@@ -673,12 +694,12 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bc
       }
       break;
     case mt_accelerator * mt_int_len + mt_accelerator:
-      if (bcopy_accelerator_accelerator<SpinMatrixF,vSpinMatrixF>(block_size,bc));
-      else if (bcopy_accelerator_accelerator<ColourMatrixF,vColourMatrixF>(block_size,bc));
-      else if (bcopy_accelerator_accelerator<SpinVectorF,vSpinVectorF>(block_size,bc));
-      else if (bcopy_accelerator_accelerator<ColourVectorF,vColourVectorF>(block_size,bc));
-      else if (bcopy_accelerator_accelerator<TComplexF,vTComplexF>(block_size,bc));
-      else if (bcopy_accelerator_accelerator<TComplexF,TComplexF>(block_size,bc)); // fallback option
+      if (bcopy_accelerator_accelerator<SpinMatrixF,vSpinMatrixF>(block_size,global_alignment,bc));
+      else if (bcopy_accelerator_accelerator<ColourMatrixF,vColourMatrixF>(block_size,global_alignment,bc));
+      else if (bcopy_accelerator_accelerator<SpinVectorF,vSpinVectorF>(block_size,global_alignment,bc));
+      else if (bcopy_accelerator_accelerator<ColourVectorF,vColourVectorF>(block_size,global_alignment,bc));
+      else if (bcopy_accelerator_accelerator<TComplexF,vTComplexF>(block_size,global_alignment,bc));
+      else if (bcopy_accelerator_accelerator<TComplexF,TComplexF>(block_size,global_alignment,bc)); // fallback option
       else {
 	ERR("No fast copy method for block size %ld accelerator<>accelerator implemented", (long)block_size);
       }

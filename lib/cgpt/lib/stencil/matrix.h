@@ -21,13 +21,15 @@
 #ifndef GRID_HAS_ACCELERATOR
 
 // cpu fetch version
-#define fetch(obj, point, site, view) {					\
+#define fetch(obj, point, site, view, do_adj) {				\
     auto _SE = sview.GetEntry(point,site);				\
     obj = coalescedRead(view[_SE->_offset]);				\
     auto tmp = obj;							\
     if (_SE->_permute)							\
       for (int d=0;d<nd;d++)						\
 	if (_SE->_permute & (0x1 << d)) { permute(obj,tmp,d); tmp=obj;}	\
+    if (do_adj)								\
+      obj = adj(obj);							\
   }
 
 #else
@@ -42,13 +44,15 @@ typename vobj::scalar_object coalescedReadGeneralPermute(const vobj & __restrict
 }
 
 // gpu fetch version
-#define fetch(obj, point, site, view) {					\
+#define fetch(obj, point, site, view, do_adj) {				\
     auto _SE = sview.GetEntry(point,site);				\
     if (_SE->_permute) {						\
       obj = coalescedReadGeneralPermute(view[_SE->_offset], _SE->_permute,nd); \
     } else {								\
       obj = coalescedRead(view[_SE->_offset]);				\
     }									\
+    if (do_adj)								\
+      obj = adj(obj);							\
   }
 
 #endif
@@ -56,12 +60,12 @@ typename vobj::scalar_object coalescedReadGeneralPermute(const vobj & __restrict
 struct cgpt_stencil_matrix_factor_t {
   int index; // index of field
   int point; // index of shift
+  int adj; // adjoint of matrix
 };
 
 struct cgpt_stencil_matrix_code_offload_t {
   int target;
   int accumulate;
-  int adj;
   ComplexD weight;
   int size;
   cgpt_stencil_matrix_factor_t* factor;
@@ -70,7 +74,6 @@ struct cgpt_stencil_matrix_code_offload_t {
 struct cgpt_stencil_matrix_code_t {
   int target; // target field index
   int accumulate; // field index to accumulate or -1
-  int adj; // add adjoint of term
   ComplexD weight; // weight of term
   std::vector<cgpt_stencil_matrix_factor_t> factor; 
 };
@@ -109,7 +112,6 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       code[i].target = _code[i].target;
       code[i].accumulate = _code[i].accumulate;
       code[i].weight = _code[i].weight;
-      code[i].adj = _code[i].adj;
       code[i].size = (int)_code[i].factor.size();
       code[i].factor = &factors[nfactors];
       memcpy(code[i].factor, &_code[i].factor[0], sizeof(cgpt_stencil_matrix_factor_t) * code[i].size);
@@ -139,17 +141,15 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	  obj_t t;
 
 	  auto _f0 = &p_code[i].factor[0];
-	  fetch(t, _f0->point, ss, fields_v[_f0->index]);
+	  fetch(t, _f0->point, ss, fields_v[_f0->index], _f0->adj);
 
 	  for (int j=1;j<p_code[i].size;j++) {
 	    obj_t f;
 	    auto _f = &p_code[i].factor[j];
-	    fetch(f, _f->point, ss, fields_v[_f->index]);
+	    fetch(f, _f->point, ss, fields_v[_f->index], _f->adj);
 	    t = t * f;
 	  }
 
-	  if (p_code[i].adj)
-	    t = adj(t);
 	  obj_t r = p_code[i].weight * t;
 	  if (p_code[i].accumulate != -1)
 	    r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
@@ -170,9 +170,10 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
 static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_factor_t& out) {
   ASSERT(PyTuple_Check(in));
-  ASSERT(PyTuple_Size(in) == 2);
+  ASSERT(PyTuple_Size(in) == 3);
   cgpt_convert(PyTuple_GetItem(in, 0), out.index);
   cgpt_convert(PyTuple_GetItem(in, 1), out.point);
+  cgpt_convert(PyTuple_GetItem(in, 2), out.adj);
 }
 
 static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_code_t& out) {
@@ -181,7 +182,6 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_code_t& out) {
   out.target = get_int(in, "target");
   out.accumulate = get_int(in, "accumulate");
   out.weight = get_complex(in, "weight");
-  out.adj = get_int(in, "adj");
 
   cgpt_convert(get_key(in, "factor"), out.factor);
 }

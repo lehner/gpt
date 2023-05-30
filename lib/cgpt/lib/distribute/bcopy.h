@@ -28,9 +28,9 @@ struct bcopy_ptr_arg_t {
 };
 
 template<typename T, typename blocks_t>
-bool bcopy_host_host(size_t bs, const std::vector<blocks_t> & arg) {
+bool bcopy_host_host(size_t bs, size_t alignment, const std::vector<blocks_t> & arg) {
   
-  if (bs % sizeof(T) != 0)
+  if ((bs % sizeof(T) != 0) || (alignment % sizeof(T) != 0))
     return false;
 
   for (auto & a : arg) {
@@ -74,8 +74,9 @@ accelerator_inline void coalescedWrite(TComplexF& x, const TComplexF & y) {
 }
 
 template<typename T, typename vT, typename blocks_t>
-bool bcopy_accelerator_accelerator(size_t bs, const std::vector<blocks_t> & arg) {
-  if (bs % sizeof(vT) != 0)
+bool bcopy_accelerator_accelerator(size_t bs, size_t alignment, const std::vector<blocks_t> & arg) {
+
+  if ((bs % sizeof(vT) != 0) || (alignment % sizeof(vT) != 0))
     return false;
 
   size_t npb = bs / sizeof(vT);

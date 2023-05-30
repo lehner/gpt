@@ -267,8 +267,9 @@ class global_memory_transfer : public global_transfer<rank_t> {
   memory_type comm_buffers_type;
   std::map<rank_t, std::map< index_t, blocks_t > > send_blocks, recv_blocks;
 
-  // bounds
-  std::vector<offset_t> bounds_dst, bounds_src;
+  // bounds and alignment
+  std::vector<offset_t> bounds_dst, bounds_src, alignment;
+  offset_t global_alignment;
 
   // public interface
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
@@ -291,7 +292,7 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void optimize();
   long optimize(blocks_t& blocks);
   void skip(blocks_t& blocks, long gcd);
-  void create_bounds();
+  void create_bounds_and_alignment();
   void create_comm_buffers(memory_type mt);
 
   template<typename ranks_t>

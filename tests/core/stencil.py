@@ -30,7 +30,7 @@ def stencil_cshift(src, direction):
     stencil = g.stencil.matrix(
         padded_src,
         [direction],
-        [{"target": 0, "accumulate": -1, "adj": 0, "weight": 1.0, "factor": [(1, 0)]}],
+        [{"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 0, 0)]}],
     )
 
     padded_dst = g.lattice(padded_src)
@@ -65,7 +65,6 @@ Pref = 0.7980707694878268
 
 _P = 0
 _U = [1, 2, 3, 4]
-_Udag = [5, 6, 7, 8]
 _Sp = [1, 2, 3, 4]
 
 code = []
@@ -76,12 +75,11 @@ for mu in range(4):
                 "target": 0,
                 "accumulate": -1 if len(code) == 0 else 0,
                 "weight": 1.0,
-                "adj": 0,
                 "factor": [
-                    (_U[mu], _P),
-                    (_U[nu], _Sp[mu]),
-                    (_Udag[mu], _Sp[nu]),
-                    (_Udag[nu], _P),
+                    (_U[mu], _P, 0),
+                    (_U[nu], _Sp[mu], 0),
+                    (_U[mu], _Sp[nu], 1),
+                    (_U[nu], _P, 1),
                 ],
             }
         )
@@ -91,7 +89,6 @@ p_U = g.padded_local_fields(U, [1, 1, 1, 1])
 p = g.padded_local_fields(P, [1, 1, 1, 1])
 
 padded_U = p_U(U)
-padded_Udag = [g(g.adj(u)) for u in padded_U]
 padded_P = p(P)
 
 stencil_plaquette = g.stencil.matrix(
@@ -100,7 +97,7 @@ stencil_plaquette = g.stencil.matrix(
     code,
 )
 
-stencil_plaquette(padded_P, *padded_U, *padded_Udag)
+stencil_plaquette(padded_P, *padded_U)
 
 p.extract(Ps, padded_P)
 
@@ -115,9 +112,8 @@ assert eps < 1e-14
 # t = g.timer("test")
 # t("halo exchange")
 # padded_U = p_U(U)
-# padded_Udag = [g(g.adj(u)) for u in padded_U]
 # t("stencil")
-# stencil_plaquette(padded_P, *padded_U, *padded_Udag)
+# stencil_plaquette(padded_P, *padded_U)
 # t("extract")
 # p.extract(Ps, padded_P)
 # t("sum")

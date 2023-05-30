@@ -19,11 +19,18 @@
 import cgpt
 
 
+def parse(c):
+    if isinstance(c, tuple):
+        assert len(c) == 4
+        return {"target": c[0], "accumulate": c[1], "weight": c[2], "factor": c[3]}
+    return c
+
+
 class matrix:
     def __init__(self, lat, points, code):
         self.points = points
-        self.code = code
-        self.obj = cgpt.stencil_matrix_create(lat.v_obj[0], lat.grid.obj, points, code)
+        self.code = [parse(c) for c in code]
+        self.obj = cgpt.stencil_matrix_create(lat.v_obj[0], lat.grid.obj, points, self.code)
 
     def __call__(self, *fields):
         cgpt.stencil_matrix_execute(self.obj, list(fields))
