@@ -34,6 +34,7 @@ def staple_sum(U, rho, mu=None, cache=default_staple_cache):
 
     Ntarget = len(target_mu)
 
+    t = g.timer("staples")
     if tag not in cache:
         code = []
         nwr = [0] * Ntarget
