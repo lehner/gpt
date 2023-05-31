@@ -175,10 +175,16 @@ def series_approximation(i):
 
 class functor:
     def __init__(self):
-        pass
+        self.verbose = g.default.is_verbose("exp_performance")
 
     def __call__(self, i):
-        return series_approximation(i)
+        t = g.timer("exp")
+        t("matrix")
+        r = series_approximation(i)
+        t()
+        if self.verbose:
+            g.message(t)
+        return r
 
     def function_and_gradient(self, x, dx):
         return cayley_hamilton_function_and_gradient(x, dx)

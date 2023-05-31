@@ -20,6 +20,9 @@ import gpt as g
 import numpy as np
 from gpt.params import params_convention
 
+
+verbose = g.default.is_verbose("staple_performance")
+
 # @params_convention(rho=None, mu=None)
 # def staple_sum_reference(U, params):
 #     nd = len(U)
@@ -62,8 +65,10 @@ def staple_sum(U, rho, mu=None, cache=default_staple_cache):
 
     Ntarget = len(target_mu)
 
+    t = g.timer("staples")
     if tag not in cache:
 
+        t("create")
         padding_U = g.padded_local_fields(U, [1] * Nd)
         padding_T = g.padded_local_fields([g.lattice(U[0]) for i in range(Ntarget)], [1] * Nd)
 
@@ -140,21 +145,29 @@ def staple_sum(U, rho, mu=None, cache=default_staple_cache):
                     nidx[idx] += 1
 
         cache[tag] = (g.stencil.matrix(padded_U[0], points, code), padding_U, padding_T)
+        t()
 
     c = cache[tag]
 
+    t("halo")
     # halo exchange
     padded_U = c[1](U)
     padded_Temp = g.lattice(padded_U[0])
     padded_T = [g.lattice(padded_U[0]) for i in range(Ntarget)]
 
+    t("stencil")
     # stencil staple sum calculation
     c[0](*padded_T, padded_Temp, *padded_U)
 
+    t("bulk")
     # get bulk
     T = [g.lattice(U[0]) for i in range(Ntarget)]
     c[2].extract(T, padded_T)
 
+    t()
+
+    if verbose:
+        g.message(t)
     # return
     # ref = staple_sum_reference(U, rho=rho, mu=mu)
     # for i in range(Ntarget):
