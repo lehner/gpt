@@ -130,46 +130,63 @@ def cayley_hamilton_function_and_gradient(x, dx):
     raise NotImplementedError()
 
 
-def series_approximation(i):
-    t = g.timer("exp")
-    t("eval")
+default_exp_cache = {}
+
+
+def series_approximation(i, cache=default_exp_cache):
+
     i = g.eval(i)  # accept expressions
-    t("prep")
     if i.grid.precision != g.double:
         x = g.convert(i, g.double)
     else:
         x = g.copy(i)
+
     n = g.norm2(x) ** 0.5 / x.grid.gsites
-    order = 19
     maxn = 0.01
     ns = 0
     if n > maxn:
         ns = int(np.log2(n / maxn))
         x /= 2**ns
+
     o = g.lattice(x)
-    t("mem")
     o[:] = 0
-    nfac = 1.0
-    xn = g.copy(x)
-    t("id")
     o @= g.identity(o)
-    t("add")
-    o += xn
-    t("loop")
-    for j in range(2, order + 1):
-        nfac /= j
-        xn @= xn * x
-        o += xn * nfac
-    t("reduce")
+    xn = g.copy(x)
+
+    if len(x.v_obj) == 1:
+        tag = f"{x.otype.__name__}_{x.grid}"
+
+        if tag not in cache:
+            points = [(0,) * x.grid.nd]
+            _o = 0
+            _xn = 1
+            _x = 2
+            nfac = 1.0
+            code = [(_o, _o, 1.0, [(_xn, 0, 0)])]
+            order = 19
+            for j in range(2, order + 1):
+                nfac /= j
+                code.append((_xn, -1, 1.0, [(_xn, 0, 0), (_x, 0, 0)]))
+                code.append((_o, _o, nfac, [(_xn, 0, 0)]))
+
+            cache[tag] = g.stencil.matrix(x, points, code)
+
+        cache[tag](o, xn, x)
+    else:
+        o += xn
+        nfac = 1.0
+        order = 19
+        for j in range(2, order + 1):
+            nfac /= j
+            xn @= xn * x
+            o += xn * nfac
+
     for j in range(ns):
         o @= o * o
-        t("conv")
     if i.grid.precision != g.double:
         r = g.lattice(i)
         g.convert(r, o)
         o = r
-    t()
-    # g.message(t)
     return o
 
 
