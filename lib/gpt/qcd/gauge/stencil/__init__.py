@@ -18,3 +18,4 @@
 #
 from gpt.qcd.gauge.stencil.plaquette import plaquette
 from gpt.qcd.gauge.stencil.staple import staple_sum
+from gpt.qcd.gauge.stencil.energy_density import energy_density

@@ -170,14 +170,3 @@ def field_strength(U, mu, nu):
     F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
     F @= 0.125 * (F - g.adj(F))
     return F
-
-
-def energy_density(U, field=False, trace=True):
-    Nd = len(U)
-    accumulator = accumulators[(field, trace)]
-    res = accumulator(U[0])
-    for mu in range(Nd):
-        for nu in range(mu):
-            Fmunu = field_strength(U, mu, nu)
-            res += Fmunu * Fmunu
-    return res.scaled_project(-1.0, True)
