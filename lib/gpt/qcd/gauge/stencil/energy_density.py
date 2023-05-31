@@ -34,7 +34,7 @@ def energy_density(U, field=False, trace=True, cache=default_energy_density_cach
         _temp1 = 1
         _target = 0
         nwr = 0
-        _P = (0, 0, 0, 0)
+        _P = (0,) * Nd
         for mu in range(Nd):
             for nu in range(mu):
                 code.append((_temp1, -1, 1.0, g.path().f(mu).f(nu).b(mu).b(nu)))
