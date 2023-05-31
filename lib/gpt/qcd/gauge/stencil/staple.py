@@ -20,40 +20,45 @@ import gpt as g
 import numpy as np
 from gpt.params import params_convention
 
-# @params_convention(rho=None, mu=None)
-# def staple_sum_reference(U, params):
-#     nd = len(U)
-#     rho = params["rho"]
-#     mu = params["mu"]
-#     assert rho is not None
-#     assert len(rho.shape) == 2
-#     assert rho.shape[1] == nd
-#     n = rho.shape[0]
-
-#     if mu is None:
-#         mu=[i for i in range(n)]
-#     else:
-#         mu=[mu]
-
-#     U_prime = []
-#     for i in range(n):
-#         U_mu_prime = g.lattice(U[0])
-#         U_mu_prime[:] = 0
-#         for nu in range(nd):
-#             if mu[i] != nu:
-#                 if abs(rho[i, nu]) != 0.0:
-#                     U_mu_prime += rho[i, nu] * g.qcd.gauge.staple(U, mu[i], nu)
-#         U_prime.append(U_mu_prime)
-#     return U_prime
 
 default_staple_cache = {}
+
+
+def create_points_for_staple(Nd):
+    points = []
+
+    points.append((0,) * Nd)
+    _P = 0
+
+    evec = [np.array([1 if idx == j else 0 for idx in range(Nd)]) for j in range(Nd)]
+
+    _Sp = [0] * Nd
+    _Sm = [0] * Nd
+    _Smp = [[0] * Nd for i in range(Nd)]
+
+    def _conv(x):
+        return tuple([int(y) for y in x])
+
+    for d in range(Nd):
+        _Sp[d] = len(points)
+        points.append(_conv(evec[d]))
+
+        _Sm[d] = len(points)
+        points.append(_conv(-evec[d]))
+
+        for s in range(Nd):
+            if s != d:
+                _Smp[d][s] = len(points)
+                points.append(_conv(evec[s] - evec[d]))
+
+    return points, _P, _Sp, _Sm, _Smp
 
 
 def staple_sum(U, rho, mu=None, cache=default_staple_cache):
 
     Nd = len(U)
 
-    tag = f"{U[0].otype}_{U[0].grid}_{Nd}_{str(rho)}_{str(mu)}"
+    tag = f"{U[0].otype.__name__}_{U[0].grid}_{Nd}_{str(rho)}_{str(mu)}"
 
     if mu is None:
         target_mu = [i for i in range(Nd)]
@@ -76,31 +81,8 @@ def staple_sum(U, rho, mu=None, cache=default_staple_cache):
         _temp = Ntarget
 
         code = []
-        points = []
 
-        points.append((0,) * Nd)
-        _P = 0
-
-        evec = [np.array([1 if idx == j else 0 for idx in range(Nd)]) for j in range(Nd)]
-
-        _Sp = [0] * Nd
-        _Sm = [0] * Nd
-        _Smp = [[0] * Nd for i in range(Nd)]
-
-        def _conv(x):
-            return tuple([int(y) for y in x])
-
-        for d in range(Nd):
-            _Sp[d] = len(points)
-            points.append(_conv(evec[d]))
-
-            _Sm[d] = len(points)
-            points.append(_conv(-evec[d]))
-
-            for s in range(Nd):
-                if s != d:
-                    _Smp[d][s] = len(points)
-                    points.append(_conv(evec[s] - evec[d]))
+        points, _P, _Sp, _Sm, _Smp = create_points_for_staple(Nd)
 
         nidx = [0] * Ntarget
         for idx in range(Ntarget):
@@ -156,7 +138,4 @@ def staple_sum(U, rho, mu=None, cache=default_staple_cache):
     c[2].extract(T, padded_T)
 
     # return
-    # ref = staple_sum_reference(U, rho=rho, mu=mu)
-    # for i in range(Ntarget):
-    #     print(i, g.norm2(ref[i] - T[i]), g.norm2(ref[i]))
     return T

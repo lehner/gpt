@@ -28,7 +28,7 @@ def plaquette(U, cache=default_plaquette_cache):
     Nd = len(U)
     ndim = U[0].otype.shape[0]
 
-    tag = f"{U[0].otype}_{U[0].grid}_{Nd}"
+    tag = f"{U[0].otype.__name__}_{U[0].grid}_{Nd}"
 
     if tag not in cache:
 
