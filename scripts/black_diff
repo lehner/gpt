@@ -1,5 +1,8 @@
 #!/bin/bash
-FILES=$(git status --porcelain | awk 'match($1, "M"){print $2}' | egrep "\.py$")
+FILES=$(
+    git status --porcelain | awk 'match($1, "M"){print $2}' | egrep "\.py$" ;
+    git status --porcelain | awk 'match($1, "A"){print $2}' | egrep "\.py$" ;
+)
 
 # Remember git hypberblame; .git-blame-ignore-revs file
 

@@ -32,7 +32,7 @@ from gpt.core.pin import pin
 from gpt.core.stack import get_call_stack
 from gpt.core.convert import convert
 from gpt.core.cshift_plan import cshift_plan
-from gpt.core.parallel_transport import path, parallel_transport
+from gpt.core.parallel_transport import path, parallel_transport, parallel_transport_matrix
 from gpt.core.transform import (
     cshift,
     copy,

@@ -2,6 +2,7 @@
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2023  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
+#
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation; either version 2 of the License, or
@@ -16,29 +17,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-
-
-default_plaquette_cache = {}
-
-
-def plaquette(U, cache=default_plaquette_cache):
-
-    vol = float(U[0].grid.fsites)
-    Nd = len(U)
-    ndim = U[0].otype.shape[0]
-
-    tag = f"{U[0].otype.__name__}_{U[0].grid}_{Nd}"
-
-    if tag not in cache:
-
-        code = []
-        for mu in range(Nd):
-            for nu in range(mu):
-                code.append((0, -1 if len(code) == 0 else 0, 1.0, g.path().f(mu).f(nu).b(mu).b(nu)))
-
-        cache[tag] = g.parallel_transport_matrix(U, code, 1)
-
-    P = cache[tag](U)
-
-    return 2 * g.sum(g.trace(P)).real / vol / Nd / (Nd - 1) / ndim
+from gpt.core.parallel_transport.legacy import path, parallel_transport
+from gpt.core.parallel_transport.matrix import parallel_transport_matrix

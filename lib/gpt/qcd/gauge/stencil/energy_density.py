@@ -19,42 +19,8 @@
 import gpt as g
 import numpy as np
 
-
-def create_points_for_field_strength(Nd):
-    points = []
-
-    points.append((0,) * Nd)
-    _P = 0
-
-    evec = [np.array([1 if idx == j else 0 for idx in range(Nd)]) for j in range(Nd)]
-
-    _Sp = [0] * Nd
-    _Sm = [0] * Nd
-    _Smp = [[0] * Nd for i in range(Nd)]
-    _Smm = [[0] * Nd for i in range(Nd)]
-
-    def _conv(x):
-        return tuple([int(y) for y in x])
-
-    for d in range(Nd):
-        _Sp[d] = len(points)
-        points.append(_conv(evec[d]))
-
-        _Sm[d] = len(points)
-        points.append(_conv(-evec[d]))
-
-        for s in range(Nd):
-            if s != d:
-                _Smp[d][s] = len(points)
-                points.append(_conv(evec[s] - evec[d]))
-
-                _Smm[d][s] = len(points)
-                points.append(_conv(-evec[s] - evec[d]))
-
-    return points, _P, _Sp, _Sm, _Smp, _Smm
-
-
 default_energy_density_cache = {}
+
 
 def energy_density(U, field=False, trace=True, cache=default_energy_density_cache):
 
@@ -64,62 +30,17 @@ def energy_density(U, field=False, trace=True, cache=default_energy_density_cach
 
     if tag not in cache:
 
-        padding_U = g.padded_local_fields(U, [1] * Nd)
-        padding_T = g.padded_local_fields(g.lattice(U[0]), [1] * Nd)
-
-        padded_U = padding_U(U)
-
-        Ntemp = 1
-
-        Ntarget = 1
-
-        _U = list(range(Ntarget + Ntemp, Ntarget + Ntemp + Nd))
-
-        _temp1 = Ntarget
-
-        _target = 0
-
         code = []
-
-        points, _P, _Sp, _Sm, _Smp, _Smm = create_points_for_field_strength(Nd)
-
+        _temp1 = 1
+        _target = 0
         nwr = 0
+        _P = (0, 0, 0, 0)
         for mu in range(Nd):
             for nu in range(mu):
-                code.append(
-                    (
-                        _temp1,
-                        -1,
-                        1.0,
-                        [(_U[mu], _P, 0), (_U[nu], _Sp[mu], 0), (_U[mu], _Sp[nu], 1), (_U[nu], _P, 1)],
-                    )
-                )
-                code.append(
-                    (
-                        _temp1,
-                        _temp1,
-                        -1.0,
-                        [(_U[mu], _P, 0), (_U[nu], _Smp[nu][mu], 1), (_U[mu], _Sm[nu], 1), (_U[nu], _Sm[nu], 0)],
-                    )
-                )
-
-                code.append(
-                    (
-                        _temp1,
-                        _temp1,
-                        1.0,
-                        [(_U[nu], _P, 0), (_U[mu], _Smp[mu][nu], 1), (_U[nu], _Sm[mu], 1), (_U[mu], _Sm[mu], 0)],
-                    )
-                )
-                code.append(
-                    (
-                        _temp1,
-                        _temp1,
-                        -1.0,
-                        [(_U[nu], _Sm[nu], 1), (_U[mu], _Smm[nu][mu], 1), (_U[nu], _Smm[nu][mu], 0), (_U[mu], _Sm[mu], 0)],
-                    )
-                )
-
+                code.append((_temp1, -1, 1.0, g.path().f(mu).f(nu).b(mu).b(nu)))
+                code.append((_temp1, _temp1, -1.0, g.path().f(mu).b(nu).b(mu).f(nu)))
+                code.append((_temp1, _temp1, 1.0, g.path().f(nu).b(mu).b(nu).f(mu)))
+                code.append((_temp1, _temp1, -1.0, g.path().b(nu).b(mu).f(nu).f(mu)))
                 code.append(
                     (
                         _temp1,
@@ -132,28 +53,15 @@ def energy_density(U, field=False, trace=True, cache=default_energy_density_cach
                     (
                         _target,
                         -1 if nwr == 0 else _target,
-                        -0.125**2.,
+                        -(0.125**2.0),
                         [(_temp1, _P, 0), (_temp1, _P, 0)],
                     )
                 )
                 nwr += 1
-                
 
-        cache[tag] = (g.stencil.matrix(padded_U[0], points, code), padding_U, padding_T)
+        cache[tag] = g.parallel_transport_matrix(U, code, 1)
 
-    c = cache[tag]
-
-    # halo exchange
-    padded_U = c[1](U)
-    padded_Temp = g.lattice(padded_U[0])
-    padded_T = g.lattice(padded_U[0])
-
-    # stencil staple sum calculation
-    c[0](padded_T, padded_Temp, *padded_U)
-
-    # get bulk
-    T = g.lattice(U[0])
-    c[2].extract(T, padded_T)
+    T = cache[tag](U)
 
     # return
     if trace:
@@ -161,5 +69,5 @@ def energy_density(U, field=False, trace=True, cache=default_energy_density_cach
 
     if not field:
         T = g.sum(T) / T.grid.gsites
-        
+
     return T
