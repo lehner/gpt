@@ -124,7 +124,7 @@ class gpt_io:
             if write and dn is not None:
                 os.makedirs(dn, exist_ok=True)
             self.loc[tag] = gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
-            if write:
+            if write and fn is not None:
                 # seek immediately to have proper .tell result
                 self.loc[tag].seek(0, 2)
 
