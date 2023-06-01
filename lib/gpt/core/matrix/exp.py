@@ -141,7 +141,7 @@ def series_approximation(i, cache=default_exp_cache):
     else:
         x = g.copy(i)
 
-    n = g.norm2(x) ** 0.5 / x.grid.gsites
+    n = g.rank_inner_product(x, x).real ** 0.5 / x.grid.gsites * x.grid.Nprocessors
     maxn = 0.01
     ns = 0
     if n > maxn:
