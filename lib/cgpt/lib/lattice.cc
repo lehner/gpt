@@ -100,7 +100,18 @@ EXPORT(lattice_set_to_number,{
 
     return PyLong_FromLong(0);
   });
-  
+
+EXPORT(lattice_set_to_identity,{
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+
+    ((cgpt_Lattice_base*)p)->set_to_identity();
+
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(lattice_memory_view,{
     void* p;
     PyObject* _lattice_view_location;

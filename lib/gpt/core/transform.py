@@ -154,7 +154,16 @@ def indexed_sum(fields, index, length):
 
 def identity(src):
     eye = gpt.lattice(src)
-    eye[:] = src.otype.identity()
+    # identity only works for matrix types
+    n2 = len(eye.v_obj)
+    n = int(n2**0.5)
+    assert n * n == n2
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                cgpt.lattice_set_to_identity(eye.v_obj[i * n + j])
+            else:
+                cgpt.lattice_set_to_number(eye.v_obj[i * n + j], 0.0)
     return eye
 
 

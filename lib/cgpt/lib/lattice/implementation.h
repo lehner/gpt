@@ -55,6 +55,10 @@ public:
     cgpt_set_to_number(l,val);
   }
 
+  void set_to_identity() {
+    l = 1.0;
+  }
+
   virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
     return ::axpy(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
   }

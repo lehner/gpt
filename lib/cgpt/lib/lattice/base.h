@@ -23,6 +23,7 @@ public:
   virtual ~cgpt_Lattice_base() { };
   virtual cgpt_Lattice_base* create_lattice_of_same_type() = 0;
   virtual void set_to_number(ComplexD val) = 0;
+  virtual void set_to_identity() = 0;
   virtual PyObject* to_str() = 0;
   virtual PyObject* rank_sum() = 0;
   virtual RealD norm2() = 0;
