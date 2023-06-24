@@ -226,15 +226,17 @@ def load(filename, params):
         read_blocks = blocks
         block_reduce = 1
         max_read_blocks = get_param(params, "max_read_blocks", 8)
-        while read_blocks > max_read_blocks and read_blocks % 2 == 0:
-            pos = [
-                numpy.concatenate((pos[2 * i + 0], pos[2 * i + 1])) for i in range(read_blocks // 2)
-            ]
-            block_data_size_single *= 2
-            block_data_size_fp16 *= 2
-            read_blocks //= 2
-            block_reduce *= 2
-        gpt.message("Read blocks", blocks)
+        for divisor in [2,3,5]:
+            while read_blocks > max_read_blocks and read_blocks % divisor == 0:
+                pos = [
+                    numpy.concatenate(tuple([pos[divisor * i + j] for j in range(divisor)])) for i in range(read_blocks // divisor)
+                ]
+                block_data_size_single *= divisor
+                block_data_size_fp16 *= divisor
+                read_blocks //= divisor
+                block_reduce *= divisor
+        if verbose:
+            gpt.message("Read blocks", read_blocks)
 
         # make read-only to enable caching
         for x in pos:
@@ -370,13 +372,27 @@ def load(filename, params):
                     )
 
         # coarse grid data
-        data_fp32 = memoryview(bytearray(coarse_fp32_vector_size))
         distribute_plan = None
-        for j in range(neigen):
+
+        neigen_blocks = neigen
+        coarse_block_size = coarse_vector_size
+        neigen_per_block = 1
+
+        for divisor in [2,3,5]:
+            while neigen_blocks > max_read_blocks and neigen_blocks % divisor == 0:
+                neigen_blocks //= divisor
+                coarse_block_size *= divisor
+                neigen_per_block *= divisor
+
+        data_fp32 = memoryview(bytearray(coarse_fp32_vector_size * neigen_per_block))
+        if verbose:
+            gpt.message("Coarse read blocks", neigen_blocks)
+        
+        for j in range(neigen_blocks):
             fgrid.barrier()
             dt_fread -= gpt.time()
             if f is not None:
-                data = memoryview(f.read(coarse_vector_size))
+                data = memoryview(f.read(coarse_block_size))
                 globalReadGB = len(data) / 1024.0**3.0
             else:
                 globalReadGB = 0.0
@@ -403,18 +419,21 @@ def load(filename, params):
 
             fgrid.barrier()
             dt_distr -= gpt.time()
-            if j < neigen_max:
-                if distribute_plan is None:
-                    distribute_plan = gpt.copy_plan(cevec[j], data)
-                    distribute_plan.destination += cevec[j].view[pos_coarse]
-                    distribute_plan.source += gpt.global_memory_view(
-                        cgrid, [[cgrid.processor, data, 0, data.nbytes]]
-                    )
-                    distribute_plan = distribute_plan()
-                distribute_plan(cevec[j], data)
+            for l in range(neigen_per_block*j, neigen_per_block*(j+1)):
+                if l < neigen_max:
+                    lidx = l - neigen_per_block*j
+                    data_l = data[lidx*coarse_fp32_vector_size:(lidx+1)*coarse_fp32_vector_size]
+                    if distribute_plan is None:
+                        distribute_plan = gpt.copy_plan(cevec[l], data_l)
+                        distribute_plan.destination += cevec[l].view[pos_coarse]
+                        distribute_plan.source += gpt.global_memory_view(
+                            cgrid, [[cgrid.processor, data_l, 0, data_l.nbytes]]
+                        )
+                        distribute_plan = distribute_plan()
+                    distribute_plan(cevec[l], data_l)
             dt_distr += gpt.time()
 
-            if verbose and j % (neigen // 10) == 0:
+            if verbose: # and j % (neigen_blocks // 10) == 0
                 gpt.message(
                     "* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s; available = %g GB"
                     % (

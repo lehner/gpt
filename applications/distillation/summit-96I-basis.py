@@ -3,7 +3,7 @@
 # Authors: Christoph Lehner 2020
 #
 import gpt as g
-import os, glob
+import os, glob, sys
 
 # configure
 cnr = g.default.get("--config", None)
@@ -51,9 +51,9 @@ g.message("Plaquette before", g.qcd.gauge.plaquette(U))
 
 config_smeared = f"{destination}/smeared_lat.{cnr}"
 
-try:
+if os.path.exists(config_smeared):
     U = g.load(config_smeared)
-except g.LoadError:
+else:
     U0 = g.copy(U)
     for t in range(Nt):
         g.message("Time slice", t)
@@ -64,14 +64,16 @@ except g.LoadError:
             tp = (t + Nt + dt) % Nt
             for u_dst, u_src in zip(U_temp, U0):
                 u_dst[:, :, :, tp] = u_src[:, :, :, tp]
+        sm = g.qcd.gauge.smear.stout(rho=rho_smear)
         for i in range(n_smear):
             g.message("smear", i)
-            U_temp = g.qcd.gauge.smear.stout(U_temp, rho=rho_smear)
+            U_temp = sm(U_temp)
         for u_dst, u_src in zip(U, U_temp):
             u_dst[:, :, :, t] = u_src[:, :, :, t]
 
     # save smeared gauge field
     g.save(config_smeared, U, g.format.nersc())
+    sys.exit(0)
 
 g.message("Plaquette after", g.qcd.gauge.plaquette(U))
 for u in U:
