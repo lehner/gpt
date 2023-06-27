@@ -70,6 +70,7 @@ class base_iterative(base):
         super().__init__(name)
         self.verbose_convergence = gpt.default.is_verbose(self.name + "_convergence")
         self.converged = None
+        self.history = []
 
     def log_convergence(self, iteration, value, target=None):
         if (type(iteration) == int and iteration == 0) or (
