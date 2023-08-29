@@ -145,11 +145,6 @@ class sparse:
     def __init__(self, grid, unmasked_local_coordinates, dimensions_divisible_by=None, mask=None):
         self.grid = grid
 
-        if type(divisible_by) is int:
-            divisible_by = [divisible_by] + [1] * (grid.nd - 1)
-        if divisible_by is None:
-            divisible_by = [1] * grid.nd
-
         # kernel to avoid circular references through captures below
         kernel = sparse_kernel(grid, unmasked_local_coordinates, dimensions_divisible_by, mask)
 
