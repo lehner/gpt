@@ -8,6 +8,7 @@ import gpt as g
 import sys, os
 import numpy
 
+g.default.set_verbose("step_size", False)
 grid = g.grid([42, 42], g.double)
 rng = g.random("hmc-cpn-model")
 

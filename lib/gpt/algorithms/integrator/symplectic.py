@@ -81,8 +81,11 @@ class step:
         return step(self.funcs, [c * f for c in self.c], self.n)
 
     def __call__(self, eps):
+        verbose = gpt.default.is_verbose("step_size")
+        
         for i in range(self.nf):
-            gpt.message(f"call eps = {eps}, {i} / {self.nf}")
+            if verbose:
+                gpt.message(f"call eps = {eps}, {i} / {self.nf}")
             self.funcs[i](self.c[i] * eps**self.n)
 
 
