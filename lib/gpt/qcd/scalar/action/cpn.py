@@ -42,32 +42,36 @@ class cpn(differentiable_functional):
         J[:] = 0.0
         for mu in range(z.grid.nd):
             J += g.cshift(z, mu, +1) * g.adj(l[mu])
-            
+
         action = -2 * self.N * self.beta * (g.inner_product(J, z).real - z.grid.fsites * z.grid.nd)
         return action
-
 
     @differentiable_functional.multi_field_gradient
     def gradient(self, fields, dfields):
         def gradient_l(z, l, mu):
-            frc  = g.lattice(l[0])
-            frc @= 2 * self.beta * self.N * g.component.imag(g.trace(z * g.adj(g.cshift(z, mu, +1))) * l[mu])
+            frc = g.lattice(l[0])
+            frc @= (
+                2
+                * self.beta
+                * self.N
+                * g.component.imag(g.trace(z * g.adj(g.cshift(z, mu, +1))) * l[mu])
+            )
             frc.otype = l[0].otype.cartesian()
             return frc
-         
+
         def gradient_z(z, l):
             J = g.lattice(z)
             J[:] = 0.0
             for mu in range(z.grid.nd):
-                J += g.cshift(z, mu, +1) * g.adj(l[mu]) 
+                J += g.cshift(z, mu, +1) * g.adj(l[mu])
                 J += g.cshift(z * l[mu], mu, -1)
 
             frc = g.lattice(z)
-            frc @= - 2 * self.beta * self.N * J
+            frc @= -2 * self.beta * self.N * J
 
             frc -= g.trace(frc * g.adj(z)) * z
             return frc
-        
+
         z, l = self.split(fields)
         frc = []
         for df in g.core.util.to_list(dfields):
@@ -75,7 +79,7 @@ class cpn(differentiable_functional):
             if k == 0:
                 frc.append(gradient_z(z, l))
             else:
-                frc.append(gradient_l(z,l,k-1))
+                frc.append(gradient_l(z, l, k - 1))
         return frc
 
     # https://arxiv.org/abs/1102.1852
@@ -84,25 +88,25 @@ class cpn(differentiable_functional):
         def dot(v1, v2):
             return g.trace(v2 * g.adj(v1))
 
-        n  = g.real(z.grid)
-        n @= g.component.sqrt(g.component.real(dot(mom_z, mom_z))) 
+        n = g.real(z.grid)
+        n @= g.component.sqrt(g.component.real(dot(mom_z, mom_z)))
 
         # z'      =  cos(alpha) z + (1/|pi|) sin(alpha) mom_z
         # mom_z'  = -|pi| sin(alpha) z + cos(alpha) mom_z
         # alpha = eps |pi|
         _z = g.lattice(z)
         _z @= z
-        
-        cos  = g.real(z.grid) 
+
+        cos = g.real(z.grid)
         cos @= g.component.cos(eps * n)
 
-        sin  = g.real(z.grid)
+        sin = g.real(z.grid)
         sin @= g.component.sin(eps * n)
-        
+
         z @= cos * _z + g(g.component.inv(n) * sin) * mom_z
-        mom_z @= - g(n * sin) * _z + cos * mom_z
+        mom_z @= -g(n * sin) * _z + cos * mom_z
         del _z, cos, sin, n
-        
+
     # https://arxiv.org/abs/1102.1852
     def draw(self, field, rng, constraint=None):
         if constraint is None:

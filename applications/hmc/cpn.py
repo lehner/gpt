@@ -27,7 +27,7 @@ g.message(f" - {a1.__name__}")
 # fields
 z = g.vcomplex(grid, N)
 a1.draw(z, rng)
-l = [g.u1(grid) for _ in range(grid.nd)] 
+l = [g.u1(grid) for _ in range(grid.nd)]
 rng.element(l)
 fields = [z] + l
 
@@ -35,6 +35,7 @@ fields = [z] + l
 mom_z = g.group.cartesian(z)
 mom_l = g.group.cartesian(l)
 moms = [mom_z] + mom_l
+
 
 def hamiltonian():
     return a0(mom_z) + a0(mom_l) + a1(fields)
@@ -45,6 +46,7 @@ sympl = g.algorithms.integrator.symplectic
 
 ip_z = sympl.update_p(mom_z, lambda: a1.gradient(fields, z))
 ip_l = sympl.update_p(mom_l, lambda: a1.gradient(fields, l))
+
 
 class constrained_iq(sympl.symplectic_base):
     def __init__(self, fields, moms):
@@ -58,8 +60,10 @@ class constrained_iq(sympl.symplectic_base):
         def inner(eps):
             a1.constrained_leap_frog(eps, z, mom_z)
             iq_l(eps)
+
         super().__init__(1, [], [inner], None, "constrained iq")
-        
+
+
 iq = constrained_iq(fields, moms)
 
 # integrator
@@ -77,10 +81,10 @@ g.message(f"tau = {tau} MD units")
 def hmc(tau, moms):
     mom_z = moms[0]
     mom_l = moms[1:]
-    
+
     rng.normal_element(mom_l)
     a1.draw(mom_z, rng, z)
-    
+
     accrej = metro(fields)
     h0 = hamiltonian()
     mdint(tau)
