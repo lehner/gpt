@@ -46,7 +46,7 @@ public:
   }
 
   virtual PyObject* to_decl() {   
-    return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
+    return Py_BuildValue("(NNN)",PyLong_FromVoidPtr(this),
 			PyUnicode_FromString(get_otype(l).c_str()),
 			PyUnicode_FromString(get_prec(l).c_str()));
   }

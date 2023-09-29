@@ -182,7 +182,7 @@ EXPORT(lattice_inner_product_norm2,{
 
     a->inner_product_norm2(ip,a2,b);
 
-    return PyTuple_Pack(2,
+    return Py_BuildValue("(NN)",
                         PyComplex_FromDoubles(ip.real(),ip.imag()),
                         PyFloat_FromDouble(a2));
   });
