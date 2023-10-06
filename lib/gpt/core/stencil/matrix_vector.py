@@ -21,18 +21,33 @@ import cgpt
 
 def parse(c):
     if isinstance(c, tuple):
-        assert len(c) == 4
-        return {"target": c[0], "accumulate": c[1], "weight": c[2], "factor": c[3]}
+        assert len(c) == 6
+        return {
+            "target": c[0],
+            "source": c[1],
+            "source_point": c[2],
+            "accumulate": c[3],
+            "weight": c[4],
+            "factor": c[5],
+        }
     return c
 
 
 class matrix_vector:
-    def __init__(self, lat_matrix, lat_vector, points, code):
+    def __init__(self, lat_matrix, lat_vector, points, code, code_parallel_block_size=None):
         self.points = points
         self.code = [parse(c) for c in code]
+        self.code_parallel_block_size = code_parallel_block_size
+        if code_parallel_block_size is None:
+            code_parallel_block_size = len(code)
         assert lat_matrix.grid == lat_vector.grid
         self.obj = cgpt.stencil_matrix_vector_create(
-            lat_matrix.v_obj[0], lat_vector.v_obj[0], lat_matrix.grid.obj, points, self.code
+            lat_matrix.v_obj[0],
+            lat_vector.v_obj[0],
+            lat_matrix.grid.obj,
+            points,
+            self.code,
+            code_parallel_block_size,
         )
 
     def __call__(self, matrix_fields, vector_fields):

@@ -52,11 +52,18 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
   GeneralLocalStencil stencil;
   Vector<cgpt_stencil_matrix_code_offload_t> code;
   Vector<cgpt_stencil_matrix_factor_t> factors;
-    
+  int n_code_parallel_block_size, n_code_parallel_blocks;
+  
   cgpt_stencil_matrix(GridBase* grid,
 		      const std::vector<Coordinate>& shifts,
-		      const std::vector<cgpt_stencil_matrix_code_t>& _code) :
-  stencil(grid,shifts), code(_code.size()) {
+		      const std::vector<cgpt_stencil_matrix_code_t>& _code,
+		      int _n_code_parallel_block_size) :
+    stencil(grid,shifts), code(_code.size()),
+    n_code_parallel_block_size(_n_code_parallel_block_size) {
+
+    ASSERT(_code.size() % n_code_parallel_block_size == 0);
+    n_code_parallel_blocks = (int)_code.size() / n_code_parallel_block_size;
+    
     // total number of factors
     int nfactors = 0;
     for (int i=0;i<_code.size();i++)
@@ -83,7 +90,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     VECTOR_VIEW_OPEN(fields,fields_v,AcceleratorWrite);
 
     int n_code = code.size();
-    cgpt_stencil_matrix_code_offload_t* p_code = &code[0];
+    const cgpt_stencil_matrix_code_offload_t* p_code = &code[0];
 
     typedef decltype(coalescedRead(fields_v[0][0])) obj_t;
 
@@ -91,9 +98,15 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
     auto sview = stencil.View();
     
-    accelerator_for(ss,fields[0].Grid()->oSites(),T::Nsimd(),{
+    accelerator_for(ss_block,fields[0].Grid()->oSites() * n_code_parallel_blocks,M::Nsimd(),{
 
-	for (int i=0;i<n_code;i++) {
+	auto ss = ss_block / n_code_parallel_blocks;
+	auto oblock = ss_block % n_code_parallel_blocks;
+
+	for (int iblock=0;iblock<n_code_parallel_block_size;iblock++) {
+
+	  int i = oblock * n_code_parallel_block_size + iblock;
+
 	  obj_t t;
 
 	  auto _f0 = &p_code[i].factor[0];
@@ -101,7 +114,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
 	  for (int j=1;j<p_code[i].size;j++) {
 	    obj_t f;
-	    auto _f = &p_code[i].factor[j];
+	    const auto _f = &p_code[i].factor[j];
 	    fetch(f, _f->point, ss, fields_v[_f->index], _f->adj);
 	    t = t * f;
 	  }
@@ -145,14 +158,14 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_code_t& out) {
 // not implemented message
 template<typename T>
 NotEnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
-cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code) {
+cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code, long code_parallel_block_size) {
   ERR("cgpt_stencil_matrix not implemented for type %s",typeid(T).name());
 }
 
 // implemented for endomorphisms
 template<typename T>
 EnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
-cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code) {
+cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code, long code_parallel_block_size) {
 
   std::vector<Coordinate> shifts;
   cgpt_convert(_shifts,shifts);
@@ -160,5 +173,5 @@ cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code) {
   std::vector<cgpt_stencil_matrix_code_t> code;
   cgpt_convert(_code,code);
   
-  return new cgpt_stencil_matrix<T>(grid,shifts,code);
+  return new cgpt_stencil_matrix<T>(grid,shifts,code,code_parallel_block_size);
 }

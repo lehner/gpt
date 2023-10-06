@@ -27,10 +27,15 @@ def parse(c):
 
 
 class matrix:
-    def __init__(self, lat, points, code):
+    def __init__(self, lat, points, code, code_parallel_block_size=None):
         self.points = points
         self.code = [parse(c) for c in code]
-        self.obj = cgpt.stencil_matrix_create(lat.v_obj[0], lat.grid.obj, points, self.code)
+        self.code_parallel_block_size = code_parallel_block_size
+        if code_parallel_block_size is None:
+            code_parallel_block_size = len(code)
+        self.obj = cgpt.stencil_matrix_create(
+            lat.v_obj[0], lat.grid.obj, points, self.code, code_parallel_block_size
+        )
 
     def __call__(self, *fields):
         cgpt.stencil_matrix_execute(self.obj, list(fields))

@@ -55,11 +55,18 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
   GeneralLocalStencil stencil;
   Vector<cgpt_stencil_matrix_vector_code_offload_t> code;
   Vector<cgpt_stencil_matrix_vector_factor_t> factors;
+  int n_code_parallel_block_size, n_code_parallel_blocks;
     
   cgpt_stencil_matrix_vector(GridBase* grid,
-		      const std::vector<Coordinate>& shifts,
-		      const std::vector<cgpt_stencil_matrix_vector_code_t>& _code) :
-  stencil(grid,shifts), code(_code.size()) {
+			     const std::vector<Coordinate>& shifts,
+			     const std::vector<cgpt_stencil_matrix_vector_code_t>& _code,
+			     int _n_code_parallel_block_size) :
+    stencil(grid,shifts), code(_code.size()),
+    n_code_parallel_block_size(_n_code_parallel_block_size) {
+
+    ASSERT(_code.size() % n_code_parallel_block_size == 0);
+    n_code_parallel_blocks = (int)_code.size() / n_code_parallel_block_size;
+    
     // total number of factors
     int nfactors = 0;
     for (int i=0;i<_code.size();i++)
@@ -89,7 +96,7 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
     VECTOR_VIEW_OPEN(vector_fields,fields_v_v,AcceleratorWrite);
 
     int n_code = code.size();
-    cgpt_stencil_matrix_vector_code_offload_t* p_code = &code[0];
+    const cgpt_stencil_matrix_vector_code_offload_t* p_code = &code[0];
 
     typedef decltype(coalescedRead(fields_v_v[0][0])) obj_v_t;
     typedef decltype(coalescedRead(fields_m_v[0][0])) obj_m_t;
@@ -98,16 +105,21 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
 
     auto sview = stencil.View();
 
-    accelerator_for(ss,matrix_fields[0].Grid()->oSites(),M::Nsimd(),{
+    accelerator_for(ss_block,matrix_fields[0].Grid()->oSites() * n_code_parallel_blocks,M::Nsimd(),{
 
-	for (int i=0;i<n_code;i++) {
+	auto ss = ss_block / n_code_parallel_blocks;
+	auto oblock = ss_block % n_code_parallel_blocks;
+
+	for (int iblock=0;iblock<n_code_parallel_block_size;iblock++) {
+
+	  int i = oblock * n_code_parallel_block_size + iblock;
 	  obj_v_t t;
 
 	  fetch(t, p_code[i].source_point, ss, fields_v_v[p_code[i].source], 0);
 
 	  for (int j=p_code[i].size-1;j>=0;j--) {
 	    obj_m_t f;
-	    auto _f = &p_code[i].factor[j];
+	    const auto _f = &p_code[i].factor[j];
 	    fetch(f, _f->point, ss, fields_m_v[_f->index], _f->adj);
 	    t = f * t;
 	  }
@@ -155,7 +167,8 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_vector_code_t& out) {
 
 template<typename V>
 cgpt_stencil_matrix_vector_base*
-cgpt_stencil_matrix_vector_create(cgpt_Lattice_base* __matrix, GridBase* grid, PyObject* _shifts, PyObject* _code) {
+cgpt_stencil_matrix_vector_create(cgpt_Lattice_base* __matrix, GridBase* grid, PyObject* _shifts, PyObject* _code,
+				  long code_parallel_block_size) {
 
   std::vector<Coordinate> shifts;
   cgpt_convert(_shifts,shifts);
@@ -166,13 +179,13 @@ cgpt_stencil_matrix_vector_create(cgpt_Lattice_base* __matrix, GridBase* grid, P
   // test __matrix type against matrix in spin space,
   // color space spin+color space, and singlet space
   if (is_compatible<typename matrixFromTypeAtLevel<V,2>::type>(__matrix)) {
-    return new cgpt_stencil_matrix_vector<typename matrixFromTypeAtLevel<V,2>::type,V>(grid,shifts,code);
+    return new cgpt_stencil_matrix_vector<typename matrixFromTypeAtLevel<V,2>::type,V>(grid,shifts,code,code_parallel_block_size);
   } else if (is_compatible<typename matrixFromTypeAtLevel<V,1>::type>(__matrix)) {
-    return new cgpt_stencil_matrix_vector<typename matrixFromTypeAtLevel<V,1>::type,V>(grid,shifts,code);
+    return new cgpt_stencil_matrix_vector<typename matrixFromTypeAtLevel<V,1>::type,V>(grid,shifts,code,code_parallel_block_size);
   } else if (is_compatible<typename matrixFromTypeAtLevel<V,0>::type>(__matrix)) {
-    return new cgpt_stencil_matrix_vector<typename matrixFromTypeAtLevel<V,0>::type,V>(grid,shifts,code);
+    return new cgpt_stencil_matrix_vector<typename matrixFromTypeAtLevel<V,0>::type,V>(grid,shifts,code,code_parallel_block_size);
   } else if (is_compatible<typename matrixFromTypeAtLevel2<V,1,2>::type>(__matrix)) {
-    return new cgpt_stencil_matrix_vector<typename matrixFromTypeAtLevel2<V,1,2>::type,V>(grid,shifts,code);
+    return new cgpt_stencil_matrix_vector<typename matrixFromTypeAtLevel2<V,1,2>::type,V>(grid,shifts,code,code_parallel_block_size);
   } else {
     ERR("Unknown matrix type for matrix_vector stencil with vector type %s",typeid(V).name());
   }
