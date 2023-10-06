@@ -64,11 +64,17 @@ def load(fn, **p):
         if(not os.access(fn, os.R_OK)):
             raise PermissionError(f"[Errno 13] Permission denied: '{fn}'")
     if(os.path.isdir(fn)):
+        # This part is for gpt's own format which uses directories
+        # instead of files.
         if(not os.access(fn, os.X_OK)):
             raise PermissionError(f"[Errno 13] Permission denied: '{fn}'")
         if(not os.access(fn, os.R_OK)):
-            warnings.warn(f"Permission denied: '{fn}'. File access may be possible.", ResourceWarning)
-            gpt.message(f"Permission denied: '{fn}'. File access may be possible.")
+            # Here, handling the access is a bit tricky:
+            # It is not necessary to have directory read access. 
+            # But it is very likely that the individual files will lack
+            # read access.
+            warnings.warn(f"Permission denied: '{fn}' (directory). File access may be possible.", ResourceWarning)
+            gpt.message(f"Permission denied: '{fn} (directory)'. File access may be possible.")
 
 
     for fmt in supported:
