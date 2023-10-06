@@ -47,6 +47,7 @@ gpt.default.process_flags()
 # synonyms
 eval = expr_eval
 
+
 # make module callable
 class GPTModule(types.ModuleType):
     def __call__(self, *args):

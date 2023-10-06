@@ -15,6 +15,7 @@ grid_dp = g.grid(L, g.double)
 grid_sp = g.grid(L, g.single)
 rng = g.random("test")
 
+
 # unitarity test / element of group test
 def check_element(U):
     assert g.group.defect(U) < 10.0 * U.grid.precision.eps
@@ -162,7 +163,6 @@ for eps_ref, grid in [(1e-12, grid_dp)]:
     u2 = g.lattice(grid, g.ot_matrix_su_n_fundamental_group(2))
     u2p = g.lattice(grid, g.ot_matrix_su_n_fundamental_group(2))
     for sg in U.otype.su2_subgroups():
-
         rng.element(u2)
 
         U.otype.block_insert(U, u2, sg)

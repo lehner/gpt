@@ -74,7 +74,7 @@ class FILE:
 
     def write(self, d):
         assert self.f is not None
-        if type(d) != memoryview:
+        if not isinstance(d, memoryview):
             d = memoryview(d)
         assert cgpt.fwrite(self.f, len(d), d) == 1
 

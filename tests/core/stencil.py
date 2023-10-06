@@ -155,3 +155,55 @@ assert eps < 1e-14
 #                       : stencil              3.50e-03 s (=   0.52 %); time/s = 3.50e-03/3.50e-03/3.50e-03 (min/max/avg)
 #                       : sum                  8.67e-04 s (=   0.13 %); time/s = 8.67e-04/8.67e-04/8.67e-04 (min/max/avg)
 #                       : extract              8.11e-04 s (=   0.12 %); time/s = 8.11e-04/8.11e-04/8.11e-04 (min/max/avg)
+
+
+# now test matrix_vector
+v = g.vspincolor(grid)
+m = g.mcolor(grid)
+nevec = [tuple([-x for x in y]) for y in evec]
+src = g.vspincolor(grid)
+rng.cnormal(src)
+cov = g.covariant.shift(U, boundary_phases=[1.0, 1.0, 1.0, 1.0])
+for mu in range(4):
+    st = g.stencil.matrix_vector(
+        m,
+        v,
+        [(0, 0, 0, 0), evec[mu], nevec[mu]],
+        [
+            {
+                "target": 0,
+                "source": 1,
+                "source_point": 0,
+                "accumulate": -1,
+                "weight": -2.0,
+                "factor": [],
+            },
+            {
+                "target": 0,
+                "source": 1,
+                "source_point": 1,
+                "accumulate": 0,
+                "weight": 1.0,
+                "factor": [(mu, 0, 0)],
+            },
+            {
+                "target": 0,
+                "source": 1,
+                "source_point": 2,
+                "accumulate": 0,
+                "weight": 1.0,
+                "factor": [(mu, 2, 1)],
+            },
+        ],
+    )
+
+    def lap(dst, src):
+        dst @= -2.0 * src + cov.forward[mu] * src + cov.backward[mu] * src
+
+    ref = g.lattice(src)
+    stv = g.lattice(src)
+    lap(ref, src)
+    st(U, [stv, src])
+    eps2 = g.norm2(stv - ref)
+    g.message(f"Stencil covariant laplace versus cshift version: {eps2}")
+    assert eps2 < 1e-25

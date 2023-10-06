@@ -21,6 +21,7 @@ import gpt as g
 from gpt.core.group import differentiable_functional
 import numpy
 
+
 # -2 * kappa * sum_x,mu phi(x)^dag * phi(x+mu) + \sum_x |phi(x)|^2 + lambda * sum_x (|phi(x)|^2-1)^2
 # sum_x (|phi(x)|^2-1)^2 = sum_x |phi(x)|^4 - 2 sum_x |phi(x)|^2 + vol
 class phi4(differentiable_functional):

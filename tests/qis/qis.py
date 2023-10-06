@@ -15,6 +15,7 @@ r = g.random("qis_test")
 N = 11
 g.message(f"Run tests with {N} qubits")
 
+
 # helper functions
 def set_value_of_qubit(state, i, val):
     s = state.cloned()

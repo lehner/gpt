@@ -27,6 +27,7 @@ basis_sizes = sorted(
     [int(x[11:]) for x in filter(lambda x: x[0:11] == "ot_msinglet", lattice_types)]
 )
 
+
 ###
 # Helper
 def decompose(n, ns, rank):

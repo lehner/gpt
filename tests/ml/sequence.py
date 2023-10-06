@@ -204,7 +204,6 @@ ts = [
 ]
 
 for t, t_prime in ts:
-
     n = g.ml.model.sequence(
         g.ml.layer.parallel_transport_pooling.project(t),
         g.ml.layer.local_parallel_transport_convolution(

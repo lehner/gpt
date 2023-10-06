@@ -277,4 +277,8 @@ public:
     return cgpt_stencil_matrix_create<T>(grid, shifts, code);
   }
 
+  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code) {
+    return cgpt_stencil_matrix_vector_create<T>(matrix, grid, shifts, code);
+  }
+
 };

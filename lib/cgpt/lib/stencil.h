@@ -17,4 +17,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "stencil/common.h"
 #include "stencil/matrix.h"
+#include "stencil/matrix_vector.h"
+
+// remove common definitions
+#undef fetch

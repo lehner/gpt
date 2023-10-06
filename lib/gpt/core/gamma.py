@@ -40,6 +40,7 @@ matrices = {
     11: np.diagflat([1, 1, 1, 1]).astype(dtype=np.complex128),
 }
 
+
 # sigma_xy = 1/2 [gamma_x,gamma_y]
 def fill_sigmas():
     idx = 5
@@ -58,7 +59,7 @@ class gamma_base(factor):
         self.otype = gamma_otype
 
     def __mul__(self, other):
-        if type(other) == gpt.tensor:
+        if isinstance(other, gpt.tensor):
             return gpt.tensor(
                 cgpt.gamma_tensor_mul(other.array, other.otype.v_otype[0], self.gamma, 1),
                 other.otype,
@@ -67,7 +68,7 @@ class gamma_base(factor):
             return super().__mul__(other)
 
     def __rmul__(self, other):
-        if type(other) == gpt.tensor:
+        if isinstance(other, gpt.tensor):
             return gpt.tensor(
                 cgpt.gamma_tensor_mul(other.array, other.otype.v_otype[0], self.gamma, 0),
                 other.otype,

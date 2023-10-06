@@ -82,7 +82,6 @@ class fgmres(base_iterative):
         return g.axpy_norm2(r, -1.0, mmpsi, src)
 
     def __call__(self, mat):
-
         vector_space = None
 
         prec = self.prec(mat) if self.prec is not None else None

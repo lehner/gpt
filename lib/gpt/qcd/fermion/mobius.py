@@ -25,7 +25,6 @@ from gpt.qcd.fermion.operator import differentiable_fine_operator
 
 class mobius_class_operator(differentiable_fine_operator):
     def __init__(self, name, U, params, otype=None, daggered=False):
-
         if params["mass"] is not None:
             params["mass_plus"] = params["mass"]
             params["mass_minus"] = params["mass"]

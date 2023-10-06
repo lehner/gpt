@@ -20,6 +20,7 @@ import cgpt
 import numpy as np
 import pickle
 
+
 # global rank
 def rank():
     return cgpt.global_rank()

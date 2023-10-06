@@ -21,7 +21,6 @@ from gpt.algorithms import base_iterative
 
 
 class defect_correcting(base_iterative):
-
     #
     # Less numerically stable (leads to suppression of critical low-mode space before inner_mat^{-1}):
     #
@@ -81,7 +80,6 @@ class defect_correcting(base_iterative):
         self.inner_inverter = inner_inverter
 
     def __call__(self, outer_mat):
-
         inner_inv_mat = self.inner_inverter(outer_mat)
 
         @self.timed_function
@@ -101,7 +99,6 @@ class defect_correcting(base_iterative):
                         norm2_of_source[j] = 1.0
 
             for i in range(self.maxiter):
-
                 t("outer matrix")
                 for j in range(n):
                     _s[j] @= src[j] - outer_mat * psi[j]  # remaining src

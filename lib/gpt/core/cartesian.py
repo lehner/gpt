@@ -21,7 +21,7 @@ import gpt, math
 
 class cartesian_view:
     def __init__(self, first, second=None, third=None, fourth=None, fifth=None):
-        if type(first) == gpt.grid and first.cb == gpt.full:
+        if isinstance(first, gpt.grid) and first.cb == gpt.full:
             g = first
             rank = g.processor
             fdimensions = g.fdimensions
@@ -31,7 +31,7 @@ class cartesian_view:
                 mpi = g.mpi
             else:
                 assert 0
-        elif type(first) == gpt.lattice:
+        elif isinstance(first, gpt.lattice):
             g = first.grid
             rank = g.processor
             fdimensions = g.fdimensions
@@ -43,7 +43,7 @@ class cartesian_view:
                 assert 0
         else:
             rank, fdimensions, g_cb, l_cb = first, third, fourth, fifth
-            if type(second) == str:
+            if isinstance(second, str):
                 mpi = [int(x) for x in second.strip("[]").split(",")]
             else:
                 mpi = second

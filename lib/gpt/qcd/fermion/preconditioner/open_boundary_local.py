@@ -29,7 +29,6 @@ class open_boundary_local(base_iterative):
         self.inner_inverter = inner_inverter
 
     def __call__(self, mat):
-
         # now create a local matrix
         U = mat.arguments()
         U_dim = len(U)
@@ -82,7 +81,7 @@ class open_boundary_local(base_iterative):
 
         # vector space
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
 
         _src = mat_local.vector_space[1].lattice()

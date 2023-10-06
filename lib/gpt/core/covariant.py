@@ -71,7 +71,6 @@ class shift(shift_base):
 class shift_eo(shift):
     @params_convention(boundary_phases=None)
     def __init__(self, U, params):
-
         # initialize full lattice
         super().__init__(U, params)
         U = None  # do not use anymore / force use including boundary phase

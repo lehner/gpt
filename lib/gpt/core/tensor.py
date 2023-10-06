@@ -23,7 +23,6 @@ import numpy as np
 
 class tensor:
     def __init__(self, array, otype):
-
         # allow to match compatible shapes
         if array.shape != otype.shape:
             array = np.reshape(array, otype.shape)
@@ -83,7 +82,7 @@ class tensor:
         return np.linalg.norm(self.array) ** 2.0
 
     def __mul__(self, other):
-        if type(other) == gpt.tensor:
+        if isinstance(other, gpt.tensor):
             self_tag = self.otype.__name__
             other_tag = other.otype.__name__
             if other_tag in self.otype.mtab:
@@ -96,7 +95,7 @@ class tensor:
             return tensor(a, mt[0]())
         elif gpt.util.is_num(other):
             return tensor(self.array * complex(other), self.otype)
-        elif type(other) == gpt.expr and other.is_single(gpt.tensor):
+        elif isinstance(other, gpt.expr) and other.is_single(gpt.tensor):
             ue, uf, to = other.get_single()
             if ue == 0 and uf & gpt.factor_unary.BIT_TRANS != 0:
                 tag = to.otype.__name__

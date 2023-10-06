@@ -17,45 +17,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-
-#ifndef GRID_HAS_ACCELERATOR
-
-// cpu fetch version
-#define fetch(obj, point, site, view, do_adj) {				\
-    auto _SE = sview.GetEntry(point,site);				\
-    obj = coalescedRead(view[_SE->_offset]);				\
-    auto tmp = obj;							\
-    if (_SE->_permute)							\
-      for (int d=0;d<nd;d++)						\
-	if (_SE->_permute & (0x1 << d)) { permute(obj,tmp,d); tmp=obj;}	\
-    if (do_adj)								\
-      obj = adj(obj);							\
-  }
-
-#else
-
-template<class vobj> accelerator_inline
-typename vobj::scalar_object coalescedReadGeneralPermute(const vobj & __restrict__ vec,int permute,int nd,int lane=acceleratorSIMTlane(vobj::Nsimd()))
-{
-  int plane = lane;
-  for (int d=0;d<nd;d++)
-    plane = (permute & (0x1 << d)) ? plane ^ (vobj::Nsimd() >> (d + 1)) : plane;
-  return extractLane(plane,vec);
-}
-
-// gpu fetch version
-#define fetch(obj, point, site, view, do_adj) {				\
-    auto _SE = sview.GetEntry(point,site);				\
-    if (_SE->_permute) {						\
-      obj = coalescedReadGeneralPermute(view[_SE->_offset], _SE->_permute,nd); \
-    } else {								\
-      obj = coalescedRead(view[_SE->_offset]);				\
-    }									\
-    if (do_adj)								\
-      obj = adj(obj);							\
-  }
-
-#endif
   
 struct cgpt_stencil_matrix_factor_t {
   int index; // index of field
@@ -78,16 +39,11 @@ struct cgpt_stencil_matrix_code_t {
   std::vector<cgpt_stencil_matrix_factor_t> factor; 
 };
 
-#include <Grid/stencil/GeneralLocalStencil.h>
-
 class cgpt_stencil_matrix_base {
  public:
   virtual ~cgpt_stencil_matrix_base() {};
   virtual void execute(const std::vector<cgpt_Lattice_base*>& fields) = 0;
 };
-
-template<typename T>
-void cgpt_basis_fill(PVector<Lattice<T>>& basis, const std::vector<cgpt_Lattice_base*>& _basis);
 
 template<typename T>
 class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
@@ -186,12 +142,6 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_code_t& out) {
   cgpt_convert(get_key(in, "factor"), out.factor);
 }
 
-// traits to identify types for which type(a*a) = type(a)
-template<typename T>     struct isEndomorphism                : public std::true_type { static constexpr bool notvalue = false; };
-template<typename T>     struct isEndomorphism<iScalar<T>>    : public isEndomorphism<T> { static constexpr bool notvalue = isEndomorphism<T>::notvalue; };
-template<typename T, int N>     struct isEndomorphism<iMatrix<T,N>>    : public isEndomorphism<T> { static constexpr bool notvalue = isEndomorphism<T>::notvalue; };
-template<typename T, int N>     struct isEndomorphism<iVector<T,N>>    : public std::false_type { static constexpr bool notvalue = true; };
-
 // not implemented message
 template<typename T>
 NotEnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
@@ -212,5 +162,3 @@ cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code) {
   
   return new cgpt_stencil_matrix<T>(grid,shifts,code);
 }
-
-#undef fetch

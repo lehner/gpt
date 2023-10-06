@@ -51,7 +51,6 @@ class improved_with_rectangle(base):
             Nret = 0
             path = g.path
             for mu in range(Nd):
-
                 if mu_target is not None and mu_target != mu:
                     continue
 

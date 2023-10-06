@@ -21,7 +21,7 @@ import gpt, cgpt
 
 def det(A):
     A = gpt.eval(A)
-    assert type(A) == gpt.lattice
+    assert isinstance(A, gpt.lattice)
     r = gpt.complex(A.grid)
     to_list = gpt.util.to_list
     cgpt.determinant(r.v_obj[0], to_list(A))

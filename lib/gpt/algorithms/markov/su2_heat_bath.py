@@ -73,7 +73,6 @@ class su2_heat_bath:
 
         # go through subgroups
         for subgroup in link.otype.su2_subgroups():
-
             V = g.eval(link * g.adj(staple))
 
             # extract u2 subgroup following Kennedy/Pendleton

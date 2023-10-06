@@ -80,7 +80,6 @@ gd = opt.gradient_descent(maxiter=p_maxiter_gd, eps=p_eps, step=p_gd_step)
 Nt_split = len(Vt_split)
 g.message(f"This rank has {Nt_split} time slices")
 for t in range(Nt_split):
-
     f = g.qcd.gauge.fix.landau([Usep_split[mu][t] for mu in range(3)])
     fa = opt.fourier_accelerate.inverse_phat_square(Vt_split[t].grid, f)
 

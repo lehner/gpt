@@ -134,7 +134,6 @@ default_exp_cache = {}
 
 
 def series_approximation(i, cache=default_exp_cache):
-
     i = g.eval(i)  # accept expressions
     if i.grid.precision != g.double:
         x = g.convert(i, g.double)

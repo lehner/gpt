@@ -115,7 +115,6 @@ assert eps < 1e-13
 
 # Test gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:
-
     # test action double precision versus quadruple precision
     a_ref = action(U)
     a_quad = action(U_quad)

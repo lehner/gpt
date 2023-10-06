@@ -65,6 +65,7 @@ public:
   virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0; // this determines type of matrix[0]
   virtual GridBase* get_grid() = 0;
   virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code) = 0;
+  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code) = 0;
 
 };
 
@@ -78,4 +79,9 @@ cgpt_Lattice<T>* compatible(cgpt_Lattice_base* other) {
     ERR("Expected type %s, got type %s", expected_name.c_str(), given_name.c_str());
   }
   return (cgpt_Lattice<T>*)other;
+}
+
+template<typename T>
+bool is_compatible(cgpt_Lattice_base* other) {
+  return typeid(T).name() == other->type();
 }

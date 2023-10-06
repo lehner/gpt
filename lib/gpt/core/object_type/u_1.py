@@ -22,6 +22,7 @@ import numpy
 # need a basic container
 from gpt.core.object_type import ot_singlet
 
+
 ###
 # U1
 class ot_u_1_base(ot_singlet):

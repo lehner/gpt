@@ -37,7 +37,6 @@ class parallel_transport_convolution(base):
         min_weight_dim=8,
         projector=projector_color_trace,
     ):
-
         nweights = (len(paths) + 1) * n_output * n_input
 
         self.projector = projector
@@ -107,7 +106,6 @@ class parallel_transport_convolution(base):
         return self._contract(w, f)
 
     def projected_gradient_adj(self, weights, layer_input, left):
-
         left = g.util.to_list(left)
 
         assert len(weights) == 1

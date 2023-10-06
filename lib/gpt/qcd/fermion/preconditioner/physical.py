@@ -21,7 +21,6 @@ import gpt
 
 class physical_instance:
     def __init__(self, matrix, pc):
-
         self.matrix = matrix
         self.F_grid_eo = matrix.F_grid_eo
         self.F_grid = matrix.F_grid

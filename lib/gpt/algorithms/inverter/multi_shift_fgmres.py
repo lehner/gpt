@@ -135,7 +135,6 @@ class multi_shift_fgmres(base_iterative):
         H = []
         for i in range(rlen):
             if prec is not None:
-
                 t("prec")
                 Z = [sfgmres[j].Z[i] for j in idx] + [mmp]
                 for z in Z:
@@ -180,16 +179,14 @@ class multi_shift_fgmres(base_iterative):
         return prec, idx
 
     def __call__(self, mat):
-
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
             mat = mat.mat
             # remove wrapper for performance benefits
 
         @self.timed_function
         def inv(psi, src, t):
-
             if len(src) > 1:
                 n = len(src)
                 # do different sources separately
@@ -257,7 +254,6 @@ class multi_shift_fgmres(base_iterative):
 
                 for j, fgmres in enumerate(sfgmres[1:]):
                     if fgmres.converged is False or rr:
-
                         t("hessenberg")
                         Hs = fgmres.hessenberg(H, prec)
                         Hs.append(vr.copy())
@@ -288,7 +284,6 @@ class multi_shift_fgmres(base_iterative):
                     return [fgmres.rho for fgmres in sfgmres] if rr else None
 
                 if self.maxiter != rlen:
-
                     t("restart")
                     r2 = g.norm2(r)
                     V[0] @= r / r2**0.5

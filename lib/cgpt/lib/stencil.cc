@@ -33,6 +33,23 @@ EXPORT(stencil_matrix_create,{
     return PyLong_FromVoidPtr(lattice->stencil_matrix(grid, _shifts, _code));
   });
 
+EXPORT(stencil_matrix_vector_create,{
+
+    void* _grid;
+    void* _lattice_matrix;
+    void* _lattice_vector;
+    PyObject* _shifts, * _code;
+    if (!PyArg_ParseTuple(args, "lllOO", &_lattice_matrix, &_lattice_vector, &_grid, &_shifts, &_code)) {
+      return NULL;
+    }
+    
+    GridBase* grid = (GridBase*)_grid;
+    cgpt_Lattice_base* lattice_matrix = (cgpt_Lattice_base*)_lattice_matrix;
+    cgpt_Lattice_base* lattice_vector = (cgpt_Lattice_base*)_lattice_vector;
+
+    return PyLong_FromVoidPtr(lattice_vector->stencil_matrix_vector(lattice_matrix, grid, _shifts, _code));
+  });
+
 EXPORT(stencil_matrix_execute,{
 
     void* _stencil;
@@ -51,6 +68,27 @@ EXPORT(stencil_matrix_execute,{
     return PyLong_FromLong(0);
   });
 
+
+EXPORT(stencil_matrix_vector_execute,{
+
+    void* _stencil;
+    PyObject* _matrix_fields;
+    PyObject* _vector_fields;
+    if (!PyArg_ParseTuple(args, "lOO", &_stencil, &_matrix_fields, &_vector_fields)) {
+      return NULL;
+    }
+    
+    cgpt_stencil_matrix_vector_base* stencil = (cgpt_stencil_matrix_vector_base*)_stencil;
+
+    std::vector<cgpt_Lattice_base*> __matrix_fields, __vector_fields;
+    cgpt_basis_fill(__matrix_fields,_matrix_fields);
+    cgpt_basis_fill(__vector_fields,_vector_fields);
+
+    stencil->execute(__matrix_fields, __vector_fields);
+
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(stencil_matrix_delete,{
 
     void* _stencil;
@@ -59,6 +97,20 @@ EXPORT(stencil_matrix_delete,{
     }
     
     cgpt_stencil_matrix_base* stencil = (cgpt_stencil_matrix_base*)_stencil;
+
+    delete stencil;
+
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(stencil_matrix_vector_delete,{
+
+    void* _stencil;
+    if (!PyArg_ParseTuple(args, "l", &_stencil)) {
+      return NULL;
+    }
+    
+    cgpt_stencil_matrix_vector_base* stencil = (cgpt_stencil_matrix_vector_base*)_stencil;
 
     delete stencil;
 

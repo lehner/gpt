@@ -37,7 +37,6 @@ class qlat_io:
         gpt.barrier()
 
     def read_header(self):
-
         # make sure this is a file
         if not os.path.isfile(self.path):
             return False
@@ -175,7 +174,6 @@ class qlat_io:
 
 
 def load(filename, p={}):
-
     qlat = qlat_io(filename)
 
     # check if this is right file format from header

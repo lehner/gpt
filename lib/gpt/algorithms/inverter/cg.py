@@ -36,11 +36,10 @@ class cg(base_iterative):
         return cg({**self.params, **params})
 
     def __call__(self, mat):
-
         prec = self.prec(mat) if self.prec is not None else None
 
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
             mat = mat.specialized_singlet_callable()
 

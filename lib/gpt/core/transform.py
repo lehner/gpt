@@ -20,8 +20,7 @@ import cgpt, gpt, numpy
 
 
 def cshift(first, second, third, fourth=None):
-
-    if type(first) == gpt.lattice and type(second) == gpt.lattice and fourth is not None:
+    if isinstance(first, gpt.lattice) and isinstance(second, gpt.lattice) and fourth is not None:
         t = first
         l = gpt.eval(second)
         d = third
@@ -38,14 +37,13 @@ def cshift(first, second, third, fourth=None):
 
 
 def copy(first, second=None):
-
     if second is not None:
         t = first
         l = second
 
     else:
         l = first
-        if type(l) == list:
+        if isinstance(l, list):
             t = [gpt.lattice(x) for x in l]
         else:
             t = gpt.lattice(l)
@@ -62,10 +60,10 @@ def copy(first, second=None):
 
 
 def rank_inner_product(a, b, use_accelerator=True):
-    return_list = (type(a) == list) or (type(b) == list)
+    return_list = (isinstance(a, list)) or (isinstance(b, list))
     a = gpt.util.to_list(a)
     b = gpt.util.to_list(b)
-    if type(a[0]) == gpt.tensor and type(b[0]) == gpt.tensor:
+    if isinstance(a[0], gpt.tensor) and isinstance(b[0], gpt.tensor):
         res = numpy.array([[gpt.adj(x) * y for y in b] for x in a], dtype=numpy.complex128)
     else:
         a = [gpt.eval(x) for x in a]
@@ -84,10 +82,10 @@ def inner_product(a, b):
 
 
 def norm2(l):
-    if type(l) == gpt.tensor:
+    if isinstance(l, gpt.tensor):
         return l.norm2()
     l = gpt.eval(l)
-    return_list = type(l) == list
+    return_list = isinstance(l, list)
     l = gpt.util.to_list(l)
     ip = (
         l[0]
@@ -100,7 +98,7 @@ def norm2(l):
 
 
 def inner_product_norm2(a, b):
-    if type(a) == gpt.tensor and type(b) == gpt.tensor:
+    if isinstance(a, gpt.tensor) and isinstance(b, gpt.tensor):
         return gpt.adj(a) * b, a.norm2()
     a = gpt.eval(a)
     b = gpt.eval(b)

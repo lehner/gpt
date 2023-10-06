@@ -25,6 +25,7 @@ mask_rb[:] = 1
 # full mask
 mask = g.complex(grid)
 
+
 # simple plaquette action
 def staple(U, mu):
     st = g.lattice(U[0])

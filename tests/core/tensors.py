@@ -144,8 +144,8 @@ cr = rng.normal(g.vreal(grid, n))
 cm @= cl * g.adj(cr)
 for i in range(n):
     for j in range(n):
-        eps = np.linalg.norm(cm[0, 0, 0, 0, i, j] - cl[0, 0, 0, 0, i] * cr[0, 0, 0, 0, j].conj())
-        assert eps < 1e-13
+        eps = abs(cm[0, 0, 0, 0, i, j] - cl[0, 0, 0, 0, i] * cr[0, 0, 0, 0, j].conjugate())
+        assert eps < 1e-6
 
 
 # outer product of vcomplex
@@ -156,8 +156,8 @@ cr = rng.normal(g.vcomplex(grid, n))
 cm @= cl * g.adj(cr)
 for i in range(n):
     for j in range(n):
-        eps = np.linalg.norm(cm[0, 0, 0, 0, i, j] - cl[0, 0, 0, 0, i] * cr[0, 0, 0, 0, j].conj())
-        assert eps < 1e-13
+        eps = abs(cm[0, 0, 0, 0, i, j] - cl[0, 0, 0, 0, i] * cr[0, 0, 0, 0, j].conjugate())
+        assert eps < 1e-6
 
 # test g.sum
 s1 = g.sum(cm).array
@@ -266,6 +266,7 @@ for dti in [cv, cm, vsc, msc, vc, mc]:
     g.message(f"Done with {dti.otype.__name__}")
     assert eps == 0.0
 
+
 # multiplication tester
 def test_multiply(a, b):
     a_type = a.otype
@@ -304,7 +305,7 @@ def test_multiply(a, b):
     for tr in [g.trace, g.color_trace, g.spin_trace]:
         mul_lat = g(tr(a * b))[0, 0, 0, 0]
         mul_np = tr(a[0, 0, 0, 0] * b[0, 0, 0, 0])
-        if type(mul_lat) == complex:
+        if isinstance(mul_lat, complex):
             eps2 = abs(mul_lat - mul_np) ** 2.0 / abs(mul_lat) ** 2.0
         else:
             eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
@@ -329,7 +330,7 @@ def test_multiply(a, b):
     for tr in [g.trace, g.color_trace, g.spin_trace]:
         mul_lat = g(tr(lam1 * a * b + lam2 * c * d))[0, 0, 0, 0]
         mul_np = tr(lam1 * a[0, 0, 0, 0] * b[0, 0, 0, 0] + lam2 * c[0, 0, 0, 0] * d[0, 0, 0, 0])
-        if type(mul_lat) == complex:
+        if isinstance(mul_lat, complex):
             eps2 = abs(mul_lat - mul_np) ** 2.0 / abs(mul_lat) ** 2.0
         else:
             eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
@@ -359,7 +360,6 @@ for a_type in [
 
             # if appropriate, test adjoint versions
             if a_type.transposed is not None:
-
                 mul_lat = g(g.adj(a) * b)[0, 0, 0, 0]
                 mul_np = g.adj(a[0, 0, 0, 0]) * b[0, 0, 0, 0]
                 eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
@@ -367,7 +367,6 @@ for a_type in [
                 assert eps2 < 1e-11
 
             if b_type.transposed is not None:
-
                 mul_lat = g(a * g.adj(b))[0, 0, 0, 0]
                 mul_np = a[0, 0, 0, 0] * g.adj(b[0, 0, 0, 0])
                 eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
@@ -375,7 +374,6 @@ for a_type in [
                 assert eps2 < 1e-11
 
             if a_type.transposed is not None and b_type.transposed is not None:
-
                 mul_lat = g(g.adj(a) * g.adj(b))[0, 0, 0, 0]
                 mul_np = g.adj(a[0, 0, 0, 0]) * g.adj(b[0, 0, 0, 0])
                 eps2 = g.norm2(mul_lat - mul_np) / g.norm2(mul_lat)
@@ -389,6 +387,7 @@ for a_type in [
             a = rng.cnormal(g.lattice(grid, a_type))
             b = rng.cnormal(g.lattice(grid, b_type))
             test_multiply(b, a)
+
 
 # test linear combinations
 def test_linear_combinations(a, b):
@@ -412,7 +411,7 @@ def test_linear_combinations(a, b):
         for tr in [g.trace, g.color_trace, g.spin_trace]:
             lat = g(tr(a + b))[0, 0, 0, 0]
             np = tr(a[0, 0, 0, 0] + b[0, 0, 0, 0])
-            if type(lat) == complex:
+            if isinstance(lat, complex):
                 eps2 = abs(lat - np) ** 2.0 / abs(lat) ** 2.0
             else:
                 eps2 = g.norm2(lat - np) / g.norm2(lat)

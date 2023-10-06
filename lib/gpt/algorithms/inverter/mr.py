@@ -23,7 +23,6 @@ from gpt.algorithms import base_iterative
 
 
 class mr(base_iterative):
-
     # Y. Saad calls it MR, states mat must be positive definite
     # SciPy, Wikipedia call it MINRES, state mat must be symmetric
 
@@ -36,16 +35,14 @@ class mr(base_iterative):
         self.relax = params["relax"]
 
     def __call__(self, mat):
-
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
             mat = mat.mat
             # remove wrapper for performance benefits
 
         @self.timed_function
         def inv(psi, src, t):
-
             t("setup")
 
             r, mmr = g.copy(src), g.copy(src)

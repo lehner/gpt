@@ -26,7 +26,6 @@ base = {"gpt:": "https://raw.githubusercontent.com/lehner/gpt-repository/master"
 
 
 def download(dst, src):
-
     src_a = src.split("/")
     assert len(src_a) >= 3
 
@@ -66,7 +65,6 @@ def download(dst, src):
 
 class repository:
     def load(first, second=None):
-
         # params
         if second is None:
             src = first

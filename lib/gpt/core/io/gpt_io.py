@@ -19,6 +19,7 @@
 import cgpt, gpt, os, io, numpy, sys, fnmatch, glob
 from gpt.params import params_convention
 
+
 # get local dir an filename
 def get_local_name(root, cv):
     if cv.rank < 0:
@@ -166,7 +167,6 @@ class gpt_io:
 
         # need to write all views
         for xk, iview in enumerate(views_for_node):
-
             f, p = self.open_view(xk, iview, True, mpi, g.fdimensions, g.cb, l.checkerboard())
 
             cache_key = res + f"_{g.obj}_{xk}_{iview}_{id(p)}_{l.otype.__name__}_write"
@@ -348,7 +348,7 @@ class gpt_io:
     def create_index(self, ctx, objs):
         f = self.index_file
         assert f is not None
-        if type(objs) == dict:
+        if isinstance(objs, dict):
             f.write("{\n")
             for x in objs:
                 f.write(x.encode("unicode_escape").decode("utf-8") + "\n")
@@ -356,31 +356,31 @@ class gpt_io:
             f.write("}\n")
         elif isinstance(objs, numpy.ndarray):  # needs to be above list for proper precedence
             f.write("array %d %d\n" % self.write_numpy(objs))
-        elif type(objs) == list:
+        elif isinstance(objs, list):
             f.write("[\n")
             for i, x in enumerate(objs):
                 self.create_index("%s/%d" % (ctx, i), x)
             f.write("]\n")
-        elif type(objs) == tuple:
+        elif isinstance(objs, tuple):
             f.write("(\n")
             for i, x in enumerate(objs):
                 self.create_index("%s/%d" % (ctx, i), x)
             f.write(")\n")
-        elif type(objs) == float:
+        elif isinstance(objs, float):
             f.write("float %.16g\n" % objs)
-        elif type(objs) == int:
+        elif isinstance(objs, int):
             f.write("int %d\n" % objs)
-        elif type(objs) == str:
+        elif isinstance(objs, str):
             f.write("str " + objs.encode("unicode_escape").decode("utf-8") + "\n")
-        elif type(objs) == complex:
+        elif isinstance(objs, complex):
             f.write("complex %.16g %.16g\n" % (objs.real, objs.imag))
-        elif type(objs) == gpt.lattice:
+        elif isinstance(objs, gpt.lattice):
             f.write("lattice %s\n" % self.write_lattice(ctx, objs))
-        elif type(objs) == numpy.float64:
+        elif isinstance(objs, numpy.float64):
             f.write("float %.16g\n" % float(objs))  # improve: avoid implicit type conversion
-        elif type(objs) == gpt.grid:
+        elif isinstance(objs, gpt.grid):
             f.write("grid %s\n" % objs.describe())
-        elif type(objs) == gpt.domain.sparse:
+        elif isinstance(objs, gpt.domain.sparse):
             f.write("domain.sparse <\n")
             f.write(self.write_domain_sparse(ctx, objs) + "\n")
             for i, x in enumerate(objs.coordinate_lattices(mark_empty=-1)):
@@ -394,7 +394,7 @@ class gpt_io:
         if self.params["paths"] is None:
             return True
         paths = self.params["paths"]
-        if type(paths) == str:
+        if isinstance(paths, str):
             paths = [paths]
         return sum([1 if fnmatch.fnmatch(ctx, p) else 0 for p in paths]) != 0
 
@@ -505,7 +505,6 @@ def writer(filename, params):
 
 
 def save(filename, objs, params):
-
     t0 = gpt.time()
 
     # create io
@@ -524,7 +523,6 @@ def save(filename, objs, params):
 
 
 def load(filename, params):
-
     # first check if this is right file format
     if not (os.path.exists(filename + "/index.crc32") and os.path.exists(filename + "/global")):
         raise NotImplementedError()

@@ -21,10 +21,10 @@ import gpt
 
 
 def apply_open_boundaries(field):
-    if type(field) == list:
+    if isinstance(field, list):
         return [apply_open_boundaries(x) for x in field]
 
-    assert type(field) == gpt.lattice
+    assert isinstance(field, gpt.lattice)
     T = field.grid.fdimensions[3]
     field[:, :, :, 0] = 0.0
     field[:, :, :, T - 1] = 0.0

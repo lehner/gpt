@@ -16,5 +16,27 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core.stencil.matrix import matrix
-from gpt.core.stencil.matrix_vector import matrix_vector
+import cgpt
+
+
+def parse(c):
+    if isinstance(c, tuple):
+        assert len(c) == 4
+        return {"target": c[0], "accumulate": c[1], "weight": c[2], "factor": c[3]}
+    return c
+
+
+class matrix_vector:
+    def __init__(self, lat_matrix, lat_vector, points, code):
+        self.points = points
+        self.code = [parse(c) for c in code]
+        assert lat_matrix.grid == lat_vector.grid
+        self.obj = cgpt.stencil_matrix_vector_create(
+            lat_matrix.v_obj[0], lat_vector.v_obj[0], lat_matrix.grid.obj, points, self.code
+        )
+
+    def __call__(self, matrix_fields, vector_fields):
+        cgpt.stencil_matrix_vector_execute(self.obj, matrix_fields, vector_fields)
+
+    def __del__(self):
+        cgpt.stencil_matrix_vector_delete(self.obj)

@@ -25,13 +25,13 @@ import numpy as np
 
 
 def make_list(a):
-    if type(a) == list:
+    if isinstance(a, list):
         return a
     return [a]
 
 
 def undo_list(a):
-    if type(a) == list and len(a) == 1:
+    if isinstance(a, list) and len(a) == 1:
         return a[0]
     return a
 
@@ -135,12 +135,11 @@ class chebyshev:
         return undo_list([v / (0.5 * (self.hi - self.lo)) for v in s])
 
     def __call__(self, mat):
-
-        if type(mat) == float or type(mat) == complex or type(mat) == int:
+        if isinstance(mat, (float, complex, int)):
             return self.eval(mat)
         else:
             vector_space = None
-            if type(mat) == g.matrix_operator:
+            if isinstance(mat, g.matrix_operator):
                 vector_space = mat.vector_space
                 mat = mat.mat  # unwrap for performance benefit
 

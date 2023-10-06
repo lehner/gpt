@@ -27,6 +27,7 @@ import numpy
 #
 # for more details see documentation/algorithms/rational.ipynb
 
+
 #
 # ellipj code inspired by http://www.netlib.org/cephes/
 #

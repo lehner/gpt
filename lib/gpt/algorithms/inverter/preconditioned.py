@@ -19,6 +19,7 @@
 import gpt as g
 from gpt.algorithms import base
 
+
 # M^-1 = L Mpc^-1 R + S
 class preconditioned(base):
     @g.params_convention()

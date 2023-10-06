@@ -21,6 +21,7 @@ import numpy as np
 
 # General dense map, add sparse maps
 
+
 # TODO
 # - once happy with design, move time-critical aspects (creation of maps)
 #   to cgpt

@@ -55,9 +55,8 @@ class fom(base_iterative):
         return g.axpy_norm2(r, -1.0, mmp, src)
 
     def __call__(self, mat):
-
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
             mat = mat.mat
 
@@ -81,7 +80,6 @@ class fom(base_iterative):
             g.default.pop_verbose()
 
             for k in range(0, self.maxiter, rlen):
-
                 t("arnoldi")
                 for i in range(rlen):
                     # for sufficiently small restart length

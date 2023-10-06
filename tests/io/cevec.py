@@ -36,7 +36,6 @@ for i in range(2):
     b.orthonormalize()
 
 for mpi_layout in [[1, 1, 1, 1, 1], [1, 2, 2, 2, 2]]:
-
     # save in fixed layout
     g.save(
         f"{work_dir}/cevec",

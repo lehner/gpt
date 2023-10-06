@@ -22,7 +22,7 @@ import cgpt
 
 class basis:
     def __init__(self, arg):
-        if type(arg) is int:
+        if isinstance(arg, int):
             self.obj = arg
         else:
             self.obj = cgpt.create_tensor_basis(arg)
@@ -63,16 +63,16 @@ class tensor:
         if key == slice(None, None, None):
             self.update(value)
         else:
-            if type(value) != list:
+            if not isinstance(value, list):
                 value = [value] * self.n_parallel
-            if type(key) == int:
+            if isinstance(key, int):
                 key = (key,)
             self.update([{key: complex(v)} for v in value])
 
     def __getitem__(self, key):
         if key == slice(None, None, None):
             key = None
-        if type(key) == int:
+        if isinstance(key, int):
             key = (key,)
         return cgpt.sparse_tensor_get(self.obj, key)
 

@@ -35,7 +35,6 @@ class point_manager:
 
 class parallel_transport_matrix:
     def __init__(self, U, code, n_target):
-
         self.verbose = g.default.is_verbose("parallel_transport_matrix_performance")
 
         Nd = len(U)
@@ -84,7 +83,6 @@ class parallel_transport_matrix:
         # create code for loops
         self.code = []
         for c in code:
-
             if isinstance(c[-1], g.path):
                 coor = [0] * Nd
                 factors = []
@@ -122,7 +120,6 @@ class parallel_transport_matrix:
         self.stencil = g.stencil.matrix(padded_U[0], points.points, self.code)
 
     def __call__(self, U):
-
         t = g.timer(
             f"parallel_transport_matrix(margin={self.margin}, ncode={self.ncode}, ntarget={self.Ntarget}, ntemp={self.Ntemporary})"
         )

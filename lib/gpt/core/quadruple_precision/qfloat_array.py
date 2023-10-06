@@ -28,7 +28,6 @@ HANDLED_FUNCTIONS = {}
 
 
 class qfloat_array(dekker_tuple, np.lib.mixins.NDArrayOperatorsMixin):
-
     _medium = float(2**27 + 1)  # 1 .. 52
     _zero = 0.0
 

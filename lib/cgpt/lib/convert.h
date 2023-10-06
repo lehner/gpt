@@ -176,7 +176,7 @@ static Coordinate cgpt_to_coordinate(const std::vector<int>& in) {
 
 static std::string cgpt_str(long l) {
   char buf[64];
-  sprintf(buf,"%ld",l);
+  snprintf(buf,64,"%ld",l);
   return buf;
 }
 

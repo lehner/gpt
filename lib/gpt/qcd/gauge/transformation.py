@@ -21,7 +21,6 @@ import gpt as g
 
 def transformed(obj, V):
     if isinstance(obj, g.matrix_operator):
-
         M = obj
 
         def _mat(dst, src):
@@ -33,7 +32,6 @@ def transformed(obj, V):
         return g.matrix_operator(_mat, vector_space=M.vector_space, accept_list=True)
 
     else:
-
         U = obj
 
         return [g(V * U[mu] * g.cshift(g.adj(V), mu, 1)) for mu in range(len(U))]

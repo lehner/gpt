@@ -23,6 +23,7 @@ import numpy
 # need a basic container to store the group/algebra data
 from gpt.core.object_type import ot_matrix_color, ot_vector_color
 
+
 ###
 # Compute structure constant
 def compute_structure_constant(T, dt):
@@ -168,7 +169,6 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
         # accumulate generators in pauli / Gell-Mann ordering
         for i in range(self.Nc):
             for j in range(i + 1, self.Nc):
-
                 # sigma_x
                 alg = numpy.zeros(shape=(self.Nc, self.Nc), dtype=dt)
                 alg[i, j] = 1.0

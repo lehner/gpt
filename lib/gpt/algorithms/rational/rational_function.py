@@ -23,6 +23,7 @@
 import numpy
 import gpt as g
 
+
 # residues of the partial fractions
 # \prod_i (z-u_i)/(z-v_i) = 1 + \sum_i r[i]/(z-v_i)
 def partial_fractions(u, v):
@@ -72,7 +73,7 @@ class rational_function:
             return self.eval(mat)
         else:
             vector_space = None
-            if type(mat) == g.matrix_operator:
+            if isinstance(mat, g.matrix_operator):
                 vector_space = mat.vector_space
                 mat = mat.mat
                 # remove wrapper for performance benefits

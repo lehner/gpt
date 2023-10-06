@@ -22,7 +22,7 @@ import numpy as np
 
 
 def conj(l):
-    if type(l) == gpt.expr:
+    if isinstance(l, gpt.expr):
         return gpt.expr(
             [
                 (
@@ -32,14 +32,14 @@ def conj(l):
                 for a in l.val
             ]
         )
-    elif type(l) == gpt.tensor:
+    elif isinstance(l, gpt.tensor):
         return l.conj()
     else:
         return conj(gpt.expr(l))
 
 
 def transpose(l):
-    if type(l) == gpt.expr:
+    if isinstance(l, gpt.expr):
         return gpt.expr(
             [
                 (
@@ -49,14 +49,14 @@ def transpose(l):
                 for a in l.val
             ]
         )
-    elif type(l) == gpt.tensor and l.transposable():
+    elif isinstance(l, gpt.tensor) and l.transposable():
         return l.transpose()
     else:
         return transpose(gpt.expr(l))
 
 
 def adj(l):
-    if type(l) == gpt.expr:
+    if isinstance(l, gpt.expr):
         return gpt.expr(
             [
                 (
@@ -72,14 +72,14 @@ def adj(l):
                 for a in l.val
             ]
         )
-    elif (type(l) == gpt.tensor and l.transposable()) or type(l) == gpt.matrix_operator:
+    elif (isinstance(l, gpt.tensor) and l.transposable()) or isinstance(l, gpt.matrix_operator):
         return l.adj()
     else:
         return adj(gpt.expr(l))
 
 
 def inv(l):
-    if type(l) == gpt.matrix_operator:
+    if isinstance(l, gpt.matrix_operator):
         return l.inv()
     else:
         assert 0
@@ -94,7 +94,7 @@ def apply_expr_unary(l):
 def trace(l, t=None):
     if t is None:
         t = gpt.expr_unary.BIT_SPINTRACE | gpt.expr_unary.BIT_COLORTRACE
-    if type(l) == gpt.tensor:
+    if isinstance(l, gpt.tensor):
         return l.trace(t)
     return gpt.expr(l, t)
 

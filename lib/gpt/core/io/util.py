@@ -19,16 +19,17 @@
 import cgpt, gpt
 import numpy as np
 
+
 # memoryview(data) is unnecessarily slow, cgpt version is faster
 def mview(data):
-    if type(data) == memoryview:
+    if isinstance(data, memoryview):
         return data
     return cgpt.mview(data)
 
 
 # fast threaded checksum of memoryviews
 def crc32(view, crc32_prev=0):
-    if type(view) == memoryview:
+    if isinstance(view, memoryview):
         return cgpt.util_crc32(view, crc32_prev)
     else:
         return crc32(memoryview(view), crc32_prev)

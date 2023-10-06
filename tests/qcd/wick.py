@@ -26,6 +26,7 @@ C = 1j * g.gamma[1].tensor() * g.gamma[3].tensor()
 Cg5 = w.spin_matrix(C * g.gamma[5].tensor())
 Pp = w.spin_matrix((g.gamma["I"].tensor() + g.gamma[3].tensor()) * 0.5)
 
+
 #####
 # Baryon tests
 def nucleon_operator(w, u, d, x, alpha, matrix):
@@ -104,6 +105,7 @@ for mu in range(3):
     eps = abs(C_omega_2pt - W_omega_2pt) / abs(C_omega_2pt)
     g.message(f"Omega_{mu} 2pt test: {eps}")
     assert eps < 1e-14
+
 
 #####
 # Meson tests

@@ -47,6 +47,7 @@ src[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 i = g.algorithms.inverter
 p = g.qcd.fermion.preconditioner
 
+
 # define transitions between grids (setup)
 def find_near_null_vectors(w, cgrid):
     slv = i.fgmres(eps=1e-3, maxiter=50, restartlen=25, checkres=False)(w)

@@ -73,6 +73,7 @@ for i in range(1, 21):
         f"Action = {a1(phi)}, Acceptance = {numpy.mean(h[:,0]):.2f}, |dH| = {numpy.mean(numpy.abs(h[:,1])):.4e}"
     )
 
+
 # measure <phi>, <phi^2>
 def measure(phi):
     return [g.sum(phi).real / grid.fsites, g.norm2(phi) / grid.fsites]

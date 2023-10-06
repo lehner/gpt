@@ -23,8 +23,7 @@ from gpt.params import params_convention
 
 @params_convention(otype=None, Nd=None, scale=None)
 def create_links(first, init, params):
-    if type(first) == g.grid:
-
+    if isinstance(first, g.grid):
         # default representation is SU3 fundamental
         if params["otype"] is None:
             params["otype"] = g.ot_matrix_su_n_fundamental_group(3)
@@ -40,8 +39,7 @@ def create_links(first, init, params):
         create_links(U, init, params)
         return U
 
-    elif type(first) == list:
-
+    elif isinstance(first, list):
         # if given a list, the dimensionality can be inferred
         if params["Nd"] is None:
             params["Nd"] = len(first)
@@ -53,8 +51,7 @@ def create_links(first, init, params):
             create_links(x, init, params)
         return first
 
-    elif type(first) == g.lattice:
-
+    elif isinstance(first, g.lattice):
         # if otype is given, make sure it is expected
         if params["otype"] is not None:
             assert params["otype"].__name__ == first.otype.__name__

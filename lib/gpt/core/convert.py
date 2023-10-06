@@ -21,9 +21,8 @@ import cgpt, gpt, numpy, sys
 
 def convert(first, second):
     if second in [gpt.single, gpt.double, gpt.double_quadruple]:
-
         # if first is a list, distribute
-        if type(first) == list:
+        if isinstance(first, list):
             return [convert(x, second) for x in first]
 
         # if first is no list, evaluate
@@ -32,9 +31,8 @@ def convert(first, second):
         return convert(gpt.lattice(dst_grid, src.otype), src)
 
     elif isinstance(second, gpt.ot_base):
-
         # if first is a list, distribute
-        if type(first) == list:
+        if isinstance(first, list):
             return [convert(x, second) for x in first]
 
         # if first is no list, evaluate
@@ -43,15 +41,13 @@ def convert(first, second):
             return gpt.copy(src)
         return convert(gpt.lattice(src.grid, second), src)
 
-    elif type(first) == list:
-
+    elif isinstance(first, list):
         assert len(first) == len(second)
         for i in range(len(first)):
             convert(first[i], second[i])
         return first
 
-    elif type(first) == gpt.lattice:
-
+    elif isinstance(first, gpt.lattice):
         # second may be expression
         second = gpt.eval(second)
 

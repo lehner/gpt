@@ -47,12 +47,12 @@ class expr_unary:
 
 class expr:
     def __init__(self, val, unary=expr_unary.NONE):
-        if isinstance(val, gpt.factor) or type(val) in [gpt.tensor]:
+        if isinstance(val, (gpt.factor, gpt.tensor)):
             self.val = [(1.0, [(factor_unary.NONE, val)])]
-        elif type(val) == expr:
+        elif isinstance(val, expr):
             self.val = val.val
             unary = unary | val.unary
-        elif type(val) == list:
+        elif isinstance(val, list):
             if isinstance(val[0], tuple):
                 self.val = val
             else:
@@ -79,7 +79,7 @@ class expr:
         )
 
     def __mul__(self, l):
-        if type(l) == expr:
+        if isinstance(l, expr):
             lhs = gpt.apply_expr_unary(self)
             rhs = gpt.apply_expr_unary(l)
             # Attempt to close before product to avoid exponential growth of terms.
@@ -90,7 +90,7 @@ class expr:
             if len(rhs.val) > 1:
                 rhs = expr(gpt.eval(rhs))
             return expr([(a[0] * b[0], a[1] + b[1]) for a in lhs.val for b in rhs.val])
-        elif type(l) == gpt.tensor and self.is_single(gpt.tensor):
+        elif isinstance(l, gpt.tensor) and self.is_single(gpt.tensor):
             ue, uf, to = self.get_single()
             if ue == 0 and uf & factor_unary.BIT_TRANS != 0:
                 tag = l.otype.__name__
@@ -108,7 +108,7 @@ class expr:
             return self.__mul__(expr(l))
 
     def __rmul__(self, l):
-        if type(l) == expr:
+        if isinstance(l, expr):
             return l.__mul__(self)
         else:
             return self.__rmul__(expr(l))
@@ -119,7 +119,7 @@ class expr:
         return self.__mul__(expr(1.0 / l))
 
     def __add__(self, l):
-        if type(l) == expr:
+        if isinstance(l, expr):
             if self.unary == l.unary:
                 return expr(self.val + l.val, self.unary)
             else:
@@ -185,10 +185,10 @@ class factor:
 
 
 def get_lattice(e):
-    if type(e) == expr:
+    if isinstance(e, expr):
         assert len(e.val) > 0
         return get_lattice(e.val[0][1])
-    elif type(e) == list:
+    elif isinstance(e, list):
         for i in e:
             if gpt.util.is_list_instance(i[1], gpt.lattice):
                 return i[1]
@@ -196,13 +196,12 @@ def get_lattice(e):
 
 
 def apply_type_right_to_left(e, t):
-    if type(e) == expr:
+    if isinstance(e, expr):
         return expr([(x[0], apply_type_right_to_left(x[1], t)) for x in e.val], e.unary)
-    elif type(e) == list:
+    elif isinstance(e, list):
         n = len(e)
         for i in reversed(range(n)):
             if isinstance(e[i][1], t):
-
                 # create operator
                 operator = e[i][1].unary(e[i][0])
 
@@ -280,7 +279,6 @@ def get_otype_from_expression(e):
 
 
 def expr_eval(first, second=None, ac=False):
-
     t = gpt.timer("eval", verbose_performance)
 
     # this will always evaluate to a (list of) lattice object(s)
@@ -309,7 +307,7 @@ def expr_eval(first, second=None, ac=False):
         if lat is None:
             # cannot evaluate to a lattice object, leave expression unevaluated
             return first
-        return_list = type(lat) == list
+        return_list = isinstance(lat, list)
         lat = gpt.util.to_list(lat)
         grid = lat[0].grid
         nlat = len(lat)

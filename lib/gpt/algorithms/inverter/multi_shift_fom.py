@@ -114,16 +114,14 @@ class multi_shift_fom(base_iterative):
         return r2
 
     def __call__(self, mat):
-
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
             mat = mat.mat
             # remove wrapper for performance benefits
 
         @self.timed_function
         def inv(psi, src, t):
-
             if len(src) > 1:
                 n = len(src)
                 # do different sources separately
@@ -161,13 +159,11 @@ class multi_shift_fom(base_iterative):
             rr = self.rhos
 
             for k in range(0, self.maxiter, rlen):
-
                 t("arnoldi")
                 H = self.arnoldi(mat, V, rlen)
 
                 for j, fom in enumerate(sfoms):
                     if fom.converged is False or rr:
-
                         t("solve_hessenberg")
                         fom.solve_hessenberg(H, r2)
 

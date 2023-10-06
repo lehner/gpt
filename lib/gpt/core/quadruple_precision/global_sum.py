@@ -21,7 +21,6 @@ import numpy as np
 
 
 def global_sum_quadruple(grid, data):
-
     # first promote
     if isinstance(data, complex):
         data = g.qcomplex(data)

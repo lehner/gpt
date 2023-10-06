@@ -22,6 +22,7 @@ import numpy
 # need a basic container
 from gpt.core.object_type import ot_singlet, ot_matrix_singlet, ot_vector_singlet
 
+
 ###
 # (\mathbb{C},+)
 class ot_complex_additive_group(ot_singlet):

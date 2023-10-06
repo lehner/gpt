@@ -39,7 +39,7 @@ class lattice_view_constructor:
 
 
 def unpack_cache_key(key):
-    if type(key) == tuple and type(key[-1]) == dict:
+    if isinstance(key, tuple) and isinstance(key[-1], dict):
         cache = key[-1]
         key = key[0:-1]
         if len(key) == 1:
@@ -57,9 +57,9 @@ class lattice(factor):
     def __init__(self, first, second=None, third=None):
         self.metadata = {}
         cb = None
-        if type(first) == gpt.grid:
+        if isinstance(first, gpt.grid):
             self.grid = first
-            if type(second) == str:
+            if isinstance(second, str):
                 # from desc
                 p = second.split(";")
                 self.otype = gpt.str_to_otype(p[0])
@@ -77,7 +77,7 @@ class lattice(factor):
                         cgpt.create_lattice(self.grid.obj, t, self.grid.precision.cgpt_dtype)
                         for t in self.otype.v_otype
                     ]
-        elif type(first) == gpt.lattice:
+        elif isinstance(first, gpt.lattice):
             # Note that copy constructor only creates a compatible lattice but does not copy its contents!
             self.grid = first.grid
             self.otype = first.otype
@@ -156,8 +156,7 @@ class lattice(factor):
         cache_key = None if cache is None else "set"
 
         # short code path to zero lattice
-        if type(key) == slice and key == slice(None, None, None):
-
+        if isinstance(key, slice) and key == slice(None, None, None):
             if gpt.util.is_num(value):
                 for o in self.v_obj:
                     cgpt.lattice_set_to_number(o, value)
@@ -203,7 +202,6 @@ class lattice(factor):
         xp(self, value)
 
     def __getitem__(self, key):
-
         # unpack cache
         cache, key = unpack_cache_key(key)
         cache_key = None if cache is None else "get"
@@ -234,8 +232,11 @@ class lattice(factor):
 
         # if only a single element is returned and we have the full shape,
         # wrap in a tensor
-        if len(value) == 1 and shape == self.otype.shape:
-            return gpt.util.value_to_tensor(value[0], self.otype)
+        if len(value) == 1:
+            if shape == self.otype.shape:
+                return gpt.util.value_to_tensor(value[0], self.otype)
+            elif numpy.prod(shape) == 1:
+                value = value.item()
 
         return value
 

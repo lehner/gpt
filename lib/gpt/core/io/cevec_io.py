@@ -27,6 +27,7 @@
 import cgpt, gpt, os, io, numpy, sys
 from gpt.params import params_convention
 
+
 # get local dir an filename
 def get_local_name(root, cv):
     if cv.rank < 0:
@@ -94,7 +95,6 @@ def get_xvec(d, n):
 
 @params_convention(grids=None, nmax=None, advise_basis=None, advise_cevec=None)
 def load(filename, params):
-
     # first check if this is right file format
     if not os.path.exists(filename + "/00/0000000000.compressed") or not os.path.exists(
         filename + "/metadata.txt"
@@ -111,7 +111,7 @@ def load(filename, params):
 
     # need grids parameter
     assert params["grids"] is not None
-    assert type(params["grids"]) == gpt.grid
+    assert isinstance(params["grids"], gpt.grid)
     fgrid = params["grids"]
     assert fgrid.precision == gpt.single
     fdimensions = fgrid.fdimensions
@@ -226,10 +226,11 @@ def load(filename, params):
         read_blocks = blocks
         block_reduce = 1
         max_read_blocks = get_param(params, "max_read_blocks", 8)
-        for divisor in [2,3,5]:
+        for divisor in [2, 3, 5]:
             while read_blocks > max_read_blocks and read_blocks % divisor == 0:
                 pos = [
-                    numpy.concatenate(tuple([pos[divisor * i + j] for j in range(divisor)])) for i in range(read_blocks // divisor)
+                    numpy.concatenate(tuple([pos[divisor * i + j] for j in range(divisor)]))
+                    for i in range(read_blocks // divisor)
                 ]
                 block_data_size_single *= divisor
                 block_data_size_fp16 *= divisor
@@ -378,7 +379,7 @@ def load(filename, params):
         coarse_block_size = coarse_vector_size
         neigen_per_block = 1
 
-        for divisor in [2,3,5]:
+        for divisor in [2, 3, 5]:
             while neigen_blocks > max_read_blocks and neigen_blocks % divisor == 0:
                 neigen_blocks //= divisor
                 coarse_block_size *= divisor
@@ -387,7 +388,7 @@ def load(filename, params):
         data_fp32 = memoryview(bytearray(coarse_fp32_vector_size * neigen_per_block))
         if verbose:
             gpt.message("Coarse read blocks", neigen_blocks)
-        
+
         for j in range(neigen_blocks):
             fgrid.barrier()
             dt_fread -= gpt.time()
@@ -419,10 +420,12 @@ def load(filename, params):
 
             fgrid.barrier()
             dt_distr -= gpt.time()
-            for l in range(neigen_per_block*j, neigen_per_block*(j+1)):
+            for l in range(neigen_per_block * j, neigen_per_block * (j + 1)):
                 if l < neigen_max:
-                    lidx = l - neigen_per_block*j
-                    data_l = data[lidx*coarse_fp32_vector_size:(lidx+1)*coarse_fp32_vector_size]
+                    lidx = l - neigen_per_block * j
+                    data_l = data[
+                        lidx * coarse_fp32_vector_size : (lidx + 1) * coarse_fp32_vector_size
+                    ]
                     if distribute_plan is None:
                         distribute_plan = gpt.copy_plan(cevec[l], data_l)
                         distribute_plan.destination += cevec[l].view[pos_coarse]
@@ -433,7 +436,7 @@ def load(filename, params):
                     distribute_plan(cevec[l], data_l)
             dt_distr += gpt.time()
 
-            if verbose: # and j % (neigen_blocks // 10) == 0
+            if verbose:  # and j % (neigen_blocks // 10) == 0
                 gpt.message(
                     "* read %g GB: fread at %g GB/s, crc32 at %g GB/s, munge at %g GB/s, distribute at %g GB/s, fp16 at %g GB/s; available = %g GB"
                     % (
@@ -467,7 +470,6 @@ def load(filename, params):
 
 
 def save(filename, objs, params):
-
     # split data to save
     assert len(objs) == 3
     basis = objs[0]

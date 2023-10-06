@@ -40,7 +40,6 @@ class wilson_clover(shift_eo, matrix_operator):
         isAnisotropic=None,
     )
     def __init__(self, U, params):
-
         shift_eo.__init__(self, U, boundary_phases=params["boundary_phases"])
 
         Nc = U[0].otype.Nc

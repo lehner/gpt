@@ -67,7 +67,6 @@ class adam(base_iterative):
                     a[:] = self.eps_regulator
 
             for i in range(self.maxiter):
-
                 context.t += 1
 
                 # x = theta(t-1)

@@ -18,6 +18,7 @@
 #
 import gpt
 
+
 #
 # M^-1 = L Mpc^-1 R + S
 #
@@ -36,7 +37,6 @@ import gpt
 #
 class similarity_transformation:
     def __init__(self, pc, V):
-
         self.S = pc.S
 
         def wrap(Mpc, L, R):

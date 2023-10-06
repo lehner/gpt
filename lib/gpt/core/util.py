@@ -21,6 +21,7 @@ import gpt
 import numpy as np
 import copy
 
+
 # test if of number type
 def is_num(x):
     return isinstance(x, (int, float, complex, gpt.qfloat, gpt.qcomplex)) and not isinstance(
@@ -48,7 +49,7 @@ def value_to_tensor(val, otype):
 
 
 def tensor_to_value(value, dtype=np.complex128):
-    if type(value) == gpt.tensor:
+    if isinstance(value, gpt.tensor):
         value = value.array
         if value.dtype != dtype:
             value = dtype(value)
@@ -63,34 +64,34 @@ def to_list(*values):
         return zip(*tuple([to_list(v) for v in values]))
     elif len(values) == 1:
         value = values[0]
-        if type(value) == list:
+        if isinstance(value, list):
             return value
         return [value]
 
 
 def from_list(value):
-    if type(value) == list and len(value) == 1:
+    if isinstance(value, list) and len(value) == 1:
         return value[0]
     return value
 
 
 def is_list_instance(value, t):
-    return isinstance(value, t) or (type(value) == list and isinstance(value[0], t))
+    return isinstance(value, t) or (isinstance(value, list) and isinstance(value[0], t))
 
 
 def entries_have_length(value, count):
-    if type(value) == list:
+    if isinstance(value, list):
         return all([len(v) == count for v in value])
 
 
 # callable
 def is_callable(value):
-    if type(value) == list:
+    if isinstance(value, list):
         return all([is_callable(v) for v in value])
     return callable(value) or value is None
 
 
 def all_have_attribute(value, a):
-    if type(value) == list and len(value) > 0:
+    if isinstance(value, list) and len(value) > 0:
         return all([all_have_attribute(v, a) for v in value])
     return hasattr(value, a)

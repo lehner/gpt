@@ -30,7 +30,6 @@ def make_list(accept_list):
 # (A^dag)^-1 = (A^-1)^dag
 #
 class matrix_operator(factor):
-
     #
     # lhs = A rhs
     # vector_space = (lhs.vector_space,rhs.vector_space)
@@ -50,7 +49,6 @@ class matrix_operator(factor):
         accept_guess=(False, False),
         accept_list=False,
     ):
-
         self.inheritance = None
         self.mat = mat
         self.adj_mat = adj_mat
@@ -65,13 +63,13 @@ class matrix_operator(factor):
             vector_space = implicit()
 
         self.vector_space = (
-            vector_space if type(vector_space) == tuple else (vector_space, vector_space)
+            vector_space if isinstance(vector_space, tuple) else (vector_space, vector_space)
         )
 
         # do we request, e.g., the lhs of lhs = A rhs to be initialized to zero
         # if it is not given?
         self.accept_guess = (
-            accept_guess if type(accept_guess) == tuple else (accept_guess, accept_guess)
+            accept_guess if isinstance(accept_guess, tuple) else (accept_guess, accept_guess)
         )
 
     def specialized_singlet_callable(self):
@@ -101,8 +99,7 @@ class matrix_operator(factor):
         )
 
     def __mul__(self, other):
-
-        if type(other) == matrix_operator:
+        if isinstance(other, matrix_operator):
             # mat = self * other
             # mat^dag = other^dag self^dag
             # (mat^dag)^-1 = (other^dag self^dag)^-1 = self^dag^-1 other^dag^-1
@@ -222,7 +219,7 @@ class matrix_operator(factor):
     def __call__(self, first, second=None):
         assert self.mat is not None
 
-        return_list = type(first) == list
+        return_list = isinstance(first, list)
         first = gpt.util.to_list(first)
 
         if second is None:
@@ -234,7 +231,6 @@ class matrix_operator(factor):
         distribute = not self.vector_space[1].match_otype(src[0].otype)
 
         if second is None:
-
             if distribute:
                 dst_vector_space = self.vector_space[0].replaced_otype(src[0].otype)
             else:
