@@ -75,7 +75,7 @@ def load(fn, **p):
         if not os.access(fn, os.R_OK):
             raise PermissionError(f"[Errno 13] Permission denied: '{fn}'")
     if os.path.isdir(fn):
-        raise LoadError(f"Error: '{fn}' is a directory and gpt_io failed to process it (permissions[+x] ok? wrong path?).")
+        raise gpt.LoadError(f"Error: '{fn}' is a directory and gpt_io failed to process it (permissions[+x] ok? wrong path?).")
 
     a = [fn]
     if len(p) > 0:
