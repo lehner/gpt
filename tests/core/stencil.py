@@ -165,9 +165,15 @@ src = g.vspincolor(grid)
 rng.cnormal(src)
 cov = g.covariant.shift(U, boundary_phases=[1.0, 1.0, 1.0, 1.0])
 for mu in range(4):
+    pad_U = g.padded_local_fields(U, list(evec[mu]))
+    pad_src = g.padded_local_fields(src, list(evec[mu]))
+
+    p_U = pad_U(U)
+    p_src = pad_src(src)
+
     st = g.stencil.matrix_vector(
-        m,
-        v,
+        p_U[0],
+        p_src,
         [(0, 0, 0, 0), evec[mu], nevec[mu]],
         [
             {
@@ -200,10 +206,16 @@ for mu in range(4):
     def lap(dst, src):
         dst @= -2.0 * src + cov.forward[mu] * src + cov.backward[mu] * src
 
+    p_dst = g.lattice(p_src)
+    dst = g.lattice(src)
+
     ref = g.lattice(src)
     stv = g.lattice(src)
+
     lap(ref, src)
-    st(U, [stv, src])
+    st(p_U, [p_dst, p_src])
+    pad_src.extract(stv, p_dst)
+
     eps2 = g.norm2(stv - ref)
     g.message(f"Stencil covariant laplace versus cshift version: {eps2}")
     assert eps2 < 1e-25

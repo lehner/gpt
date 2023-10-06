@@ -40,7 +40,6 @@ class matrix_vector:
         self.code_parallel_block_size = code_parallel_block_size
         if code_parallel_block_size is None:
             code_parallel_block_size = len(code)
-        assert lat_matrix.grid == lat_vector.grid
         self.obj = cgpt.stencil_matrix_vector_create(
             lat_matrix.v_obj[0],
             lat_vector.v_obj[0],
