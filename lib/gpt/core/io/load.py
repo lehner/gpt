@@ -18,6 +18,8 @@
 #
 import gpt, cgpt
 from gpt.params import params_convention
+import os
+import warnings
 
 
 # load through cgpt backend (openQCD, ...)
@@ -54,6 +56,20 @@ def load(fn, **p):
         gpt.core.io.cevec_io,
         gpt.core.io.qlat_io,
     ]
+
+    if(not os.path.exists(fn)):
+        raise FileNotFoundError(f"[Errno 2] No such file or directory: '{fn}'")
+
+    if(os.path.isfile(fn)):
+        if(not os.access(fn, os.R_OK)):
+            raise PermissionError(f"[Errno 13] Permission denied: '{fn}'")
+    if(os.path.isdir(fn)):
+        if(not os.access(fn, os.X_OK)):
+            raise PermissionError(f"[Errno 13] Permission denied: '{fn}'")
+        if(not os.access(fn, os.R_OK)):
+            warnings.warn(f"Permission denied: '{fn}'. File access may be possible.", ResourceWarning)
+            g.message(f"Permission denied: '{fn}'. File access may be possible.")
+
 
     for fmt in supported:
         try:
