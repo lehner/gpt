@@ -68,7 +68,7 @@ def load(fn, **p):
             raise PermissionError(f"[Errno 13] Permission denied: '{fn}'")
         if(not os.access(fn, os.R_OK)):
             warnings.warn(f"Permission denied: '{fn}'. File access may be possible.", ResourceWarning)
-            g.message(f"Permission denied: '{fn}'. File access may be possible.")
+            gpt.message(f"Permission denied: '{fn}'. File access may be possible.")
 
 
     for fmt in supported:
