@@ -100,16 +100,19 @@ class cgpt_stencil_matrix_matrix_vector : public cgpt_stencil_matrix_matrix_vect
 
     int nd = matrix_fields[0].Grid()->Nd();
 
+    int _npb = n_code_parallel_blocks;
+    int _npbs = n_code_parallel_block_size;
+    
     auto sview = stencil.View();
+    
+    accelerator_for(ss_block,matrix_fields[0].Grid()->oSites() * _npb,M::Nsimd(),{
+					    
+        auto ss = ss_block / _npb;
+	auto oblock = ss_block % _npb;
 
-    accelerator_for(ss_block,matrix_fields[0].Grid()->oSites() * n_code_parallel_blocks,M::Nsimd(),{
+	for (int iblock=0;iblock<_npbs;iblock++) {
 
-	auto ss = ss_block / n_code_parallel_blocks;
-	auto oblock = ss_block % n_code_parallel_blocks;
-
-	for (int iblock=0;iblock<n_code_parallel_block_size;iblock++) {
-
-	  int i = oblock * n_code_parallel_block_size + iblock;
+	  int i = oblock * _npbs + iblock;
 	  obj_v_t t;
 
 	  fetch(t, p_code[i].source_point, ss, fields_v_v[p_code[i].source], 0);

@@ -96,20 +96,23 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
     int nd = fields[0].Grid()->Nd();
 
+    int _npb = n_code_parallel_blocks;
+    int _npbs = n_code_parallel_block_size;
+
     auto sview = stencil.View();
-    
-    accelerator_for(ss_block,fields[0].Grid()->oSites() * n_code_parallel_blocks,M::Nsimd(),{
 
-	auto ss = ss_block / n_code_parallel_blocks;
-	auto oblock = ss_block % n_code_parallel_blocks;
+    accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
 
-	for (int iblock=0;iblock<n_code_parallel_block_size;iblock++) {
+	auto ss = ss_block / _npb;
+	auto oblock = ss_block % _npb;
 
-	  int i = oblock * n_code_parallel_block_size + iblock;
+	for (int iblock=0;iblock<_npbs;iblock++) {
+
+	  int i = oblock * _npbs + iblock;
 
 	  obj_t t;
 
-	  auto _f0 = &p_code[i].factor[0];
+	  const auto _f0 = &p_code[i].factor[0];
 	  fetch(t, _f0->point, ss, fields_v[_f0->index], _f0->adj);
 
 	  for (int j=1;j<p_code[i].size;j++) {
@@ -126,7 +129,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	}
 	
       });
-    
+
     VECTOR_VIEW_CLOSE(fields_v);
   }
 

@@ -50,7 +50,7 @@ typename vobj::scalar_object coalescedReadGeneralPermute(const vobj & __restrict
     } else {								\
       obj = coalescedRead(view[_SE->_offset]);				\
     }									\
-    acceleratorSynchronize();						\
+    acceleratorSynchronise();						\
     if (do_adj)								\
       obj = adj(obj);							\
   }
