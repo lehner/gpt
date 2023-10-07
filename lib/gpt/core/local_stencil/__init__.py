@@ -16,5 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core.stencil.matrix import matrix
-from gpt.core.stencil.matrix_vector import matrix_vector
+from gpt.core.local_stencil.matrix import matrix
+from gpt.core.local_stencil.matrix_vector import matrix_vector

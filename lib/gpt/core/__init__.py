@@ -104,5 +104,5 @@ import gpt.core.matrix
 import gpt.core.component
 import gpt.core.group
 import gpt.core.sparse_tensor
-import gpt.core.stencil
+import gpt.core.local_stencil
 from gpt.core.padding import padded_local_fields

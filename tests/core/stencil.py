@@ -27,7 +27,7 @@ def stencil_cshift(src, direction):
 
     padded_src = p(src)
 
-    stencil = g.stencil.matrix(
+    stencil = g.local_stencil.matrix(
         padded_src,
         [direction],
         [{"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 0, 0)]}],
@@ -91,7 +91,7 @@ p = g.padded_local_fields(P, [1, 1, 1, 1])
 padded_U = p_U(U)
 padded_P = p(P)
 
-stencil_plaquette = g.stencil.matrix(
+stencil_plaquette = g.local_stencil.matrix(
     padded_P,
     [(0, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)],
     code,
@@ -171,7 +171,7 @@ for mu in range(4):
     p_U = pad_U(U)
     p_src = pad_src(src)
 
-    st = g.stencil.matrix_vector(
+    st = g.local_stencil.matrix_vector(
         p_U[0],
         p_src,
         [(0, 0, 0, 0), evec[mu], nevec[mu]],

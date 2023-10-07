@@ -168,7 +168,7 @@ def series_approximation(i, cache=default_exp_cache):
                 code.append((_xn, -1, 1.0, [(_xn, 0, 0), (_x, 0, 0)]))
                 code.append((_o, _o, nfac, [(_xn, 0, 0)]))
 
-            cache[tag] = g.stencil.matrix(x, points, code)
+            cache[tag] = g.local_stencil.matrix(x, points, code)
 
         cache[tag](o, xn, x)
     else:

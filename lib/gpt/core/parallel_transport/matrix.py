@@ -113,11 +113,11 @@ class parallel_transport_matrix:
         self.margin = margin
         self.ncode = len(self.code)
 
-        # create stencil and padding
+        # create local stencil and padding; TODO: wrap this in stencil class
         self.padding_U = g.padded_local_fields(U, margin)
         self.padding_T = g.padded_local_fields([g.lattice(U[0]) for i in range(Ntarget)], margin)
         padded_U = self.padding_U(U)
-        self.stencil = g.stencil.matrix(padded_U[0], points.points, self.code)
+        self.local_stencil = g.local_stencil.matrix(padded_U[0], points.points, self.code)
 
     def __call__(self, U):
         t = g.timer(
@@ -131,8 +131,8 @@ class parallel_transport_matrix:
         padded_T = [g.lattice(padded_U[0]) for i in range(self.Ntarget)]
 
         # stencil computation
-        t("stencil computation")
-        self.stencil(*padded_T, *padded_Temp, *padded_U)
+        t("local stencil computation")
+        self.local_stencil(*padded_T, *padded_Temp, *padded_U)
 
         # get bulk
         t("extract bulk")
