@@ -15,7 +15,7 @@ for precision in [g.single, g.double]:
     
     g.message(
         f"""
-    Stencil Benchmark with
+    Local Stencil Benchmark with
     fdimensions  : {grid.fdimensions}
     precision    : {precision.__name__}
 """
@@ -33,7 +33,7 @@ for precision in [g.single, g.double]:
         for nu in range(0, mu):
             code.append({"target": 0, "accumulate": -1 if (mu == 1 and nu == 0) else 0, "weight": 1.0, "factor":
                          [(_U[mu], _X, 0),(_U[nu], _Xp[mu], 0),(_U[mu], _Xp[nu], 1),(_U[nu], _X, 1)]})
-    st = g.stencil.matrix(U[0], [(0,0,0,0),(1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1)], code)
+    st = g.local_stencil.matrix(U[0], [(0,0,0,0),(1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1)], code)
     # test plaquette (local stencil, so no comms, only agrees on single rank)
     P = g.lattice(U[0])
     st(P, *U)
