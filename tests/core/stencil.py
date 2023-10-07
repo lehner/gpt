@@ -23,22 +23,14 @@ Ps = g.copy(U[0])
 
 # test simple cshifts
 def stencil_cshift(src, direction):
-    p = g.padded_local_fields(src, [1, 2, 1, 1])
-
-    padded_src = p(src)
-
-    stencil = g.local_stencil.matrix(
-        padded_src,
-        [direction],
+    stencil = g.stencil.matrix(
+        src,
+        [direction], [1,2,1,1], [0], [1],
         [{"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 0, 0)]}],
     )
 
-    padded_dst = g.lattice(padded_src)
-    stencil(padded_dst, padded_src)
-
     dst = g.lattice(src)
-    p.extract(dst, padded_dst)
-
+    stencil(dst, src)
     return dst
 
 
