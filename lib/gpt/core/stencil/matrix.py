@@ -40,8 +40,12 @@ class matrix:
         )
         self.write_fields = write_fields
         self.read_fields = read_fields
+        self.verbose_performance = g.default.is_verbose("stencil_performance")
 
     def __call__(self, *fields):
+        if self.verbose_performance:
+            t = g.timer("stencil.matrix")
+            t("create fields")
         padded_fields = []
         padded_field = None
         for i in range(len(fields)):
@@ -54,6 +58,13 @@ class matrix:
         for i in range(len(fields)):
             if padded_fields[i] is None:
                 padded_fields[i] = g.lattice(padded_field)
+        if self.verbose_performance:
+            t("local stencil")
         self.local_stencil(*padded_fields)
+        if self.verbose_performance:
+            t("extract")
         for i in self.write_fields:
             self.padding.extract(fields[i], padded_fields[i])
+        if self.verbose_performance:
+            t()
+            g.message(t)
