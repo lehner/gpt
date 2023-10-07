@@ -25,7 +25,9 @@ Ps = g.copy(U[0])
 def stencil_cshift(src, direction):
     stencil = g.stencil.matrix(
         src,
-        [direction], [1,2,1,1], [0], [1],
+        [direction],
+        [0],
+        [1],
         [{"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 0, 0)]}],
     )
 

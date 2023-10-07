@@ -26,9 +26,18 @@ import gpt as g
 # - SIMD in multi-rhs ?  maybe add --simd_mask flag to command line ?
 # - should do margins automatically seems best
 class matrix:
-    def __init__(self, lat, points, margin_top, write_fields, read_fields, code, code_parallel_block_size=None):
-        self.padding = g.padded_local_fields(lat, margin_top)
-        self.local_stencil = g.local_stencil.matrix(self.padding(lat), points, code, code_parallel_block_size)
+    def __init__(self, lat, points, write_fields, read_fields, code, code_parallel_block_size=None):
+        margin = [0] * lat.grid.nd
+        for p in points:
+            for i in range(lat.grid.nd):
+                x = abs(p[i])
+                if x > margin[i]:
+                    margin[i] = x
+
+        self.padding = g.padded_local_fields(lat, margin)
+        self.local_stencil = g.local_stencil.matrix(
+            self.padding(lat), points, code, code_parallel_block_size
+        )
         self.write_fields = write_fields
         self.read_fields = read_fields
 
