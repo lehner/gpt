@@ -24,8 +24,9 @@ EXPORT(stencil_matrix_create,{
     void* _lattice;
     PyObject* _shifts, * _code;
     long _code_parallel_block_size;
-    if (!PyArg_ParseTuple(args, "llOOl", &_lattice, &_grid, &_shifts, &_code,
-			  &_code_parallel_block_size)) {
+    long _local;
+    if (!PyArg_ParseTuple(args, "llOOll", &_lattice, &_grid, &_shifts, &_code,
+			  &_code_parallel_block_size, &_local)) {
       return NULL;
     }
     
@@ -33,7 +34,8 @@ EXPORT(stencil_matrix_create,{
     cgpt_Lattice_base* lattice = (cgpt_Lattice_base*)_lattice;
 
     return PyLong_FromVoidPtr(lattice->stencil_matrix(grid, _shifts, _code,
-						      _code_parallel_block_size));
+						      _code_parallel_block_size,
+						      _local));
   });
 
 EXPORT(stencil_matrix_vector_create,{
@@ -43,8 +45,9 @@ EXPORT(stencil_matrix_vector_create,{
     void* _lattice_vector;
     PyObject* _shifts, * _code;
     long _code_parallel_block_size;
-    if (!PyArg_ParseTuple(args, "lllOOl", &_lattice_matrix, &_lattice_vector, &_grid, &_shifts, &_code,
-			  &_code_parallel_block_size)) {
+    long _local;
+    if (!PyArg_ParseTuple(args, "lllOOll", &_lattice_matrix, &_lattice_vector, &_grid, &_shifts, &_code,
+			  &_code_parallel_block_size, &_local)) {
       return NULL;
     }
     
@@ -53,7 +56,8 @@ EXPORT(stencil_matrix_vector_create,{
     cgpt_Lattice_base* lattice_vector = (cgpt_Lattice_base*)_lattice_vector;
 
     return PyLong_FromVoidPtr(lattice_vector->stencil_matrix_vector(lattice_matrix, grid, _shifts, _code,
-								    _code_parallel_block_size));
+								    _code_parallel_block_size,
+								    _local));
   });
 
 EXPORT(stencil_matrix_execute,{

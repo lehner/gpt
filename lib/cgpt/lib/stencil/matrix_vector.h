@@ -171,13 +171,16 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_vector_code_t& out) {
 template<typename V>
 cgpt_stencil_matrix_vector_base*
 cgpt_stencil_matrix_vector_create(cgpt_Lattice_base* __matrix, GridBase* grid, PyObject* _shifts, PyObject* _code,
-				  long code_parallel_block_size) {
+				  long code_parallel_block_size, long local) {
 
   std::vector<Coordinate> shifts;
   cgpt_convert(_shifts,shifts);
 
   std::vector<cgpt_stencil_matrix_vector_code_t> code;
   cgpt_convert(_code,code);
+
+  // for now only local is implemented
+  ASSERT(local);
 
   // test __matrix type against matrix in spin space,
   // color space spin+color space, and singlet space

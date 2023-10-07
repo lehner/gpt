@@ -49,16 +49,28 @@ template<typename T>
 class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
  public:
 
-  GeneralLocalStencil stencil;
+  typedef CartesianStencil<T, T, SimpleStencilParams> CartesianStencil_t;
+  typedef CartesianStencilView<T, T, SimpleStencilParams> CartesianStencilView_t;
+  
   Vector<cgpt_stencil_matrix_code_offload_t> code;
   Vector<cgpt_stencil_matrix_factor_t> factors;
+    
   int n_code_parallel_block_size, n_code_parallel_blocks;
+  int local;
+
+  // local == true
+  GeneralLocalStencil* general_local_stencil;
+
+  // local == false
+  SimpleCompressor<T>* compressor;
+  CartesianStencilManager<CartesianStencil_t>* sm;
   
   cgpt_stencil_matrix(GridBase* grid,
 		      const std::vector<Coordinate>& shifts,
 		      const std::vector<cgpt_stencil_matrix_code_t>& _code,
-		      int _n_code_parallel_block_size) :
-    stencil(grid,shifts), code(_code.size()),
+		      int _n_code_parallel_block_size,
+		      int _local) :
+    code(_code.size()), local(_local),
     n_code_parallel_block_size(_n_code_parallel_block_size) {
 
     ASSERT(_code.size() % n_code_parallel_block_size == 0);
@@ -80,9 +92,37 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       memcpy(code[i].factor, &_code[i].factor[0], sizeof(cgpt_stencil_matrix_factor_t) * code[i].size);
       nfactors += code[i].size;
     }
+
+    if (local) {
+      general_local_stencil = new GeneralLocalStencil(grid,shifts);
+    } else {
+
+      sm = new CartesianStencilManager<CartesianStencil_t>(grid, shifts);
+
+      // for all factors that require a non-trivial shift, create a separate stencil object
+      for (int i=0;i<nfactors;i++) {
+	sm->register_point(factors[i].index, factors[i].point);
+      }
+
+      sm->create_stencils();
+
+      for (int i=0;i<nfactors;i++) {
+	factors[i].point = sm->map_point(factors[i].index, factors[i].point);
+      }      
+
+      compressor = new SimpleCompressor<T>();
+    }
+
+
   }
 
   virtual ~cgpt_stencil_matrix() {
+    if (local) {
+      delete general_local_stencil;
+    } else {
+      delete compressor;
+      delete sm;
+    }
   }
  
   virtual void execute(PVector<Lattice<T>> &fields) {
@@ -99,36 +139,98 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     int _npb = n_code_parallel_blocks;
     int _npbs = n_code_parallel_block_size;
 
-    auto sview = stencil.View();
+    if (local) {
 
-    accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
-
-	auto ss = ss_block / _npb;
-	auto oblock = ss_block % _npb;
-
-	for (int iblock=0;iblock<_npbs;iblock++) {
-
-	  int i = oblock * _npbs + iblock;
-
-	  obj_t t;
-
-	  const auto _f0 = &p_code[i].factor[0];
-	  fetch(t, _f0->point, ss, fields_v[_f0->index], _f0->adj);
-
-	  for (int j=1;j<p_code[i].size;j++) {
-	    obj_t f;
-	    const auto _f = &p_code[i].factor[j];
-	    fetch(f, _f->point, ss, fields_v[_f->index], _f->adj);
-	    t = t * f;
+      auto sview = general_local_stencil->View();
+      
+      accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
+	  
+	  auto ss = ss_block / _npb;
+	  auto oblock = ss_block % _npb;
+	  
+	  for (int iblock=0;iblock<_npbs;iblock++) {
+	    
+	    int i = oblock * _npbs + iblock;
+	    
+	    obj_t t;
+	    
+	    const auto _f0 = &p_code[i].factor[0];
+	    fetch(t, _f0->point, ss, fields_v[_f0->index], _f0->adj);
+	    
+	    for (int j=1;j<p_code[i].size;j++) {
+	      obj_t f;
+	      const auto _f = &p_code[i].factor[j];
+	      fetch(f, _f->point, ss, fields_v[_f->index], _f->adj);
+	      t = t * f;
+	    }
+	    
+	    obj_t r = p_code[i].weight * t;
+	    if (p_code[i].accumulate != -1)
+	      r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
+	    coalescedWrite(fields_v[p_code[i].target][ss], r);
 	  }
+	  
+	});
+      
+    } else {
 
-	  obj_t r = p_code[i].weight * t;
-	  if (p_code[i].accumulate != -1)
-	    r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
-	  coalescedWrite(fields_v[p_code[i].target][ss], r);
+      Vector<obj_t*> _buf;
+      Vector<CartesianStencilView_t> _sview;
+
+      int* stencil_map = &sm->stencil_map[0];
+      for (int i=0;i<(int)sm->stencil_map.size();i++) {
+	int s = stencil_map[i];
+	if (s != -1) {
+	  sm->stencils[s].HaloExchange(fields[i], *compressor);
 	}
-	
-      });
+      }
+
+      for (int i=0;i<(int)sm->stencils.size();i++) {
+	_buf.push_back(sm->stencils[i].CommBuf());
+	_sview.push_back(sm->stencils[i].View(AcceleratorRead));
+      }
+
+      obj_t** buf = &_buf[0];
+      CartesianStencilView_t* sview = &_sview[0];
+
+      // now loop
+      accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
+
+	  const int lane=acceleratorSIMTlane(T::Nsimd());
+	  
+	  auto ss = ss_block / _npb;
+	  auto oblock = ss_block % _npb;
+	  
+	  for (int iblock=0;iblock<_npbs;iblock++) {
+	    
+	    int i = oblock * _npbs + iblock;
+	    
+	    obj_t t;
+	    
+	    const auto _f0 = &p_code[i].factor[0];
+	    fetch_cs(stencil_map[_f0->index], t, _f0->point, ss, fields_v[_f0->index], _f0->adj);
+	    
+	    for (int j=1;j<p_code[i].size;j++) {
+	      obj_t f;
+	      const auto _f = &p_code[i].factor[j];
+	      fetch_cs(stencil_map[_f->index], f, _f->point, ss, fields_v[_f->index], _f->adj);
+	      t = t * f;
+	    }
+	    
+	    obj_t r = p_code[i].weight * t;
+	    if (p_code[i].accumulate != -1)
+	      r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
+	    coalescedWrite(fields_v[p_code[i].target][ss], r);
+	  }
+	  
+	});
+
+      // and cleanup
+
+      for (auto & sv : _sview)
+      	sv.ViewClose();
+      
+    }
 
     VECTOR_VIEW_CLOSE(fields_v);
   }
@@ -161,20 +263,22 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_code_t& out) {
 // not implemented message
 template<typename T>
 NotEnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
-cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code, long code_parallel_block_size) {
+cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts,
+			   PyObject* _code, long code_parallel_block_size, long local) {
   ERR("cgpt_stencil_matrix not implemented for type %s",typeid(T).name());
 }
 
 // implemented for endomorphisms
 template<typename T>
 EnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
-cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code, long code_parallel_block_size) {
+cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts,
+			   PyObject* _code, long code_parallel_block_size, long local) {
 
   std::vector<Coordinate> shifts;
   cgpt_convert(_shifts,shifts);
 
   std::vector<cgpt_stencil_matrix_code_t> code;
   cgpt_convert(_code,code);
-  
-  return new cgpt_stencil_matrix<T>(grid,shifts,code,code_parallel_block_size);
+
+  return new cgpt_stencil_matrix<T>(grid,shifts,code,code_parallel_block_size, local);
 }

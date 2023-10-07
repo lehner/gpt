@@ -47,6 +47,7 @@ class matrix_vector:
             points,
             self.code,
             code_parallel_block_size,
+            1
         )
 
     def __call__(self, matrix_fields, vector_fields):

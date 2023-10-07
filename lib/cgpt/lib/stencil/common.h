@@ -17,6 +17,26 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// cartesian stencil fetch
+#define fetch_cs(sidx, obj, point, site, view, do_adj) {		\
+    if (point == -1) {							\
+      obj = coalescedRead(view[site]);					\
+    } else {								\
+      int ptype;							\
+      auto SE = sview[sidx].GetEntry(ptype, point, ss);		\
+      if (SE->_is_local ) {						\
+	int perm = SE->_permute;					\
+	obj = coalescedReadPermute(view[SE->_offset],ptype,perm,lane);	\
+      } else {								\
+	obj = coalescedRead(buf[sidx][SE->_offset],lane);		\
+      }									\
+      acceleratorSynchronise();						\
+    }									\
+    if (do_adj)								\
+      obj = adj(obj);							\
+  }
+
+// general local stencil fetch
 #ifndef GRID_HAS_ACCELERATOR
 
 // cpu fetch version
@@ -91,3 +111,80 @@ template<typename T, int N1, int N2, int M>    struct matrixFromTypeAtLevel2<iMa
 template<typename T, int N2>    struct matrixFromTypeAtLevel2<iScalar<T>,0,N2> { typedef iScalar<typename matrixFromTypeAtLevel<T,N2-1>::type> type; };
 template<typename T, int N2, int M>    struct matrixFromTypeAtLevel2<iVector<T,M>,0,N2> { typedef iMatrix<typename matrixFromTypeAtLevel<T,N2-1>::type,M> type; };
 template<typename T, int N2, int M>    struct matrixFromTypeAtLevel2<iMatrix<T,M>,0,N2> { typedef iMatrix<typename matrixFromTypeAtLevel<T,N2-1>::type,M> type; };
+
+// cartesian
+static void cgpt_shift_to_cartesian_dir_disp(const Coordinate& s, int& dir, int& disp) {
+  dir = -1;
+  for (int i=0;i<s.size();i++) {
+    if (s[i] != 0) {
+      if (dir != -1) {
+	ERR("Only cartesian stencil allowed!  s[%d] != 0 and s[%d] != 0", dir, i);
+      } else {
+	dir = i;
+	disp = s[i];
+      }
+    }
+  }
+}
+
+template<typename CartesianStencil_t>
+class CartesianStencilManager {
+public:
+  GridBase* grid;
+  const std::vector<Coordinate>& shifts;
+  std::map<int, std::set<int> > field_points;
+  std::vector<CartesianStencil_t> stencils;
+  Vector<int> stencil_map;
+  std::map<int, std::map<int, int> > field_point_map;
+	
+  CartesianStencilManager(GridBase* _grid, const std::vector<Coordinate>& _shifts) : grid(_grid), shifts(_shifts) {
+  }
+
+  bool is_trivial(int point) {
+    for (auto s : shifts[point])
+      if (s != 0)
+	return false;
+    return true;
+  }
+
+  void register_point(int index, int point) {
+    // register non-trivial points
+    if (is_trivial(point))
+      return;
+	  
+    field_points[index].insert(point);
+	    
+    if ((int)stencil_map.size() < index + 1)
+      stencil_map.resize(index + 1, -1);
+  }
+
+  void create_stencils() {
+    // all fields in field_points now need a stencil
+    for (auto & fp : field_points) {
+
+      int index = fp.first;
+	    
+      std::vector<int> dirs, disps;
+      for (auto p : fp.second) {
+	int dir, disp;
+	cgpt_shift_to_cartesian_dir_disp(shifts[p], dir, disp);
+	ASSERT(dir != -1);
+
+	field_point_map[index][p] = (int)dirs.size();
+	      
+	dirs.push_back(dir);
+	disps.push_back(disp);
+
+	stencil_map[index] = (int)stencils.size();
+	stencils.push_back(CartesianStencil_t(grid,dirs.size(),Even,dirs,disps,SimpleStencilParams()));
+      }
+    }
+  }
+
+  int map_point(int index, int point) {
+    if (is_trivial(point))
+      return -1;
+    return field_point_map[index][point];
+  }
+	
+};

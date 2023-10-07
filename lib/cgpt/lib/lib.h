@@ -25,6 +25,7 @@
 #include <numpy/arrayobject.h>
 #include <vector>
 #include <map>
+#include <set>
 #include <string>
 #include <iostream>
 #include <sstream>

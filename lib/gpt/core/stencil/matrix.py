@@ -19,13 +19,7 @@
 import gpt as g
 
 
-# TODO: explore this thoroughly
-# - SIMD mask in lat.grid restrictions?  dimensions plus margin needs to play nice with simd.
-# - overlap comms and compute; need padding.start_communicate and padding.wait_communicate
-#   and a list of margin and inner points
-# - SIMD in multi-rhs ?  maybe add --simd_mask flag to command line ?
-# - should do margins automatically seems best
-class matrix:
+class matrix_padded:
     def __init__(self, lat, points, write_fields, read_fields, code, code_parallel_block_size=None):
         margin = [0] * lat.grid.nd
         for p in points:
@@ -68,3 +62,13 @@ class matrix:
         if self.verbose_performance:
             t()
             g.message(t)
+        
+
+def matrix(lat, points, write_fields, read_fields, code, code_parallel_block_size=None):
+    # check if all points are cartesian
+    for p in points:
+        if len([s for s in p if s != 0]) > 1:
+            return matrix_padded(
+                lat, points, write_fields, read_fields, code, code_parallel_block_size
+            )
+    return g.local_stencil.matrix(lat, points, code, code_parallel_block_size, local=0)
