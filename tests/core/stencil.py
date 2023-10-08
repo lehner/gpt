@@ -22,34 +22,40 @@ Ps = g.copy(U[0])
 
 
 # test simple cshifts
-def stencil_cshift(src, direction):
+def stencil_cshift(src, direction1, direction2):
     stencil = g.stencil.matrix(
         src,
-        [direction],
+        [direction1, direction2, (0, 0, 0, 0)],
         [0],
-        [1],
-        [{"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 0, 0)]}],
+        [1, 2],
+        [
+            {"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 0, 0)]},
+            {"target": 0, "accumulate": 0, "weight": 1.0, "factor": [(2, 1, 0)]},
+            {"target": 0, "accumulate": 0, "weight": 1.0, "factor": [(2, 2, 0)]},
+        ],
     )
-
     dst = g.lattice(src)
-    stencil(dst, src)
+    stencil(dst, src, src)
     return dst
 
 
 evec = [(1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)]
-for d in range(4):
-    Ps1 = stencil_cshift(P, evec[d])
-    Ps2 = g.cshift(P, d, 1)
-    eps2 = g.norm2(Ps1 - Ps2)
+for d1 in range(4):
+    for d2 in range(d1):
+        Ps1 = stencil_cshift(P, evec[d1], evec[d2])
+        Ps2 = g.cshift(P, d1, 1)
+        Ps2 += g.cshift(P, d2, 1)
+        Ps2 += P
+        eps2 = g.norm2(Ps1 - Ps2)
 
-    g.message(f"Test matrix stencil versus cshift in dimension {d}: {eps2}")
-    assert eps2 < 1e-13
+        g.message(f"Test matrix stencil versus cshift in dimension {d1} x {d2}: {eps2}")
+        assert eps2 < 1e-13
 
 # test general cshift
-Ps1 = stencil_cshift(P, (0, 2, 1, 1))
-Ps2 = g.cshift(g.cshift(g.cshift(P, 3, 1), 2, 1), 1, 2)
+Ps1 = stencil_cshift(P, (0, 2, 1, 1), (0, 0, 0, 0))
+Ps2 = g(g.cshift(g.cshift(g.cshift(P, 3, 1), 2, 1), 1, 2) + 2.0 * P)
 eps2 = g.norm2(Ps1 - Ps2)
-g.message(f"Test matrix stencil verrsus cshift for displacement = (0,2,1,1): {eps2}")
+g.message(f"Test matrix stencil versus cshift for displacement = (0,2,1,1): {eps2}")
 assert eps2 < 1e-25
 
 

@@ -23,12 +23,11 @@
       obj = coalescedRead(view[site]);					\
     } else {								\
       int ptype;							\
-      auto SE = sview[sidx].GetEntry(ptype, point, ss);		\
-      if (SE->_is_local ) {						\
-	int perm = SE->_permute;					\
-	obj = coalescedReadPermute(view[SE->_offset],ptype,perm,lane);	\
+      auto SE = sview[sidx].GetEntry(ptype, point, site);		\
+      if (SE->_is_local) {						\
+	obj = coalescedReadPermute(view[SE->_offset],ptype,SE->_permute); \
       } else {								\
-	obj = coalescedRead(buf[sidx][SE->_offset],lane);		\
+	obj = coalescedRead(buf[sidx][SE->_offset]);			\
       }									\
       acceleratorSynchronise();						\
     }									\
@@ -158,12 +157,14 @@ public:
       stencil_map.resize(index + 1, -1);
   }
 
-  void create_stencils() {
+  bool create_stencils(bool first_stencil) {
     // all fields in field_points now need a stencil
     for (auto & fp : field_points) {
 
       int index = fp.first;
-	    
+
+      //std::cout << GridLogMessage << "Field " << index << " needs the following stencil:" << std::endl;
+
       std::vector<int> dirs, disps;
       for (auto p : fp.second) {
 	int dir, disp;
@@ -175,10 +176,16 @@ public:
 	dirs.push_back(dir);
 	disps.push_back(disp);
 
-	stencil_map[index] = (int)stencils.size();
-	stencils.push_back(CartesianStencil_t(grid,dirs.size(),Even,dirs,disps,SimpleStencilParams()));
+	//std::cout << GridLogMessage << " dir = " << dir << ", disp = " << disp << std::endl;
       }
+      
+      stencil_map[index] = (int)stencils.size();
+      stencils.push_back(CartesianStencil_t(grid,dirs.size(),Even,dirs,disps,SimpleStencilParams(),!first_stencil));
+
+      first_stencil = false;
     }
+
+    return first_stencil;
   }
 
   int map_point(int index, int point) {

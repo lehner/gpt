@@ -104,7 +104,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	sm->register_point(factors[i].index, factors[i].point);
       }
 
-      sm->create_stencils();
+      sm->create_stencils(true);
 
       for (int i=0;i<nfactors;i++) {
 	factors[i].point = sm->map_point(factors[i].index, factors[i].point);
@@ -181,6 +181,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       for (int i=0;i<(int)sm->stencil_map.size();i++) {
 	int s = stencil_map[i];
 	if (s != -1) {
+	  //std::cout << GridLogMessage << "Perform halo exchange for field " << i << " with stencil " << s << std::endl;
 	  sm->stencils[s].HaloExchange(fields[i], *compressor);
 	}
       }
@@ -188,6 +189,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       for (int i=0;i<(int)sm->stencils.size();i++) {
 	_buf.push_back(sm->stencils[i].CommBuf());
 	_sview.push_back(sm->stencils[i].View(AcceleratorRead));
+	//std::cout << GridLogMessage << "Comm buffer for stencil " << i << " has pointer " << _buf[i] << std::endl;
       }
 
       obj_t** buf = &_buf[0];
@@ -196,8 +198,6 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       // now loop
       accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
 
-	  const int lane=acceleratorSIMTlane(T::Nsimd());
-	  
 	  auto ss = ss_block / _npb;
 	  auto oblock = ss_block % _npb;
 	  
