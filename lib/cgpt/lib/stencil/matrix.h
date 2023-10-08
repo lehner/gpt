@@ -174,7 +174,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       
     } else {
 
-      Vector<obj_t*> _buf;
+      Vector<T*> _buf;
       Vector<CartesianStencilView_t> _sview;
 
       int* stencil_map = &sm->stencil_map[0];
@@ -192,7 +192,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	//std::cout << GridLogMessage << "Comm buffer for stencil " << i << " has pointer " << _buf[i] << std::endl;
       }
 
-      obj_t** buf = &_buf[0];
+      T** buf = &_buf[0];
       CartesianStencilView_t* sview = &_sview[0];
 
       // now loop
