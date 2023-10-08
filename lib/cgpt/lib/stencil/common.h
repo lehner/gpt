@@ -18,16 +18,16 @@
 */
 
 // cartesian stencil fetch
-#define fetch_cs(sidx, obj, point, site, view, do_adj) {		\
+#define fetch_cs(sidx, obj, point, site, view, do_adj, tag) {		\
     if (point == -1) {							\
       obj = coalescedRead(view[site]);					\
     } else {								\
       int ptype;							\
-      auto SE = sview[sidx].GetEntry(ptype, point, site);		\
+      auto SE = sview ## tag[sidx].GetEntry(ptype, point, site);	\
       if (SE->_is_local) {						\
 	obj = coalescedReadPermute(view[SE->_offset],ptype,SE->_permute); \
       } else {								\
-	obj = coalescedRead(buf[sidx][SE->_offset]);			\
+	obj = coalescedRead(buf ## tag[sidx][SE->_offset]);		\
       }									\
       acceleratorSynchronise();						\
     }									\
@@ -158,12 +158,16 @@ public:
   }
 
   bool create_stencils(bool first_stencil) {
+
+    bool verbose = getenv("CGPT_CARTESIAN_STENCIL_DEBUG") != 0;
+    
     // all fields in field_points now need a stencil
     for (auto & fp : field_points) {
 
       int index = fp.first;
 
-      //std::cout << GridLogMessage << "Field " << index << " needs the following stencil:" << std::endl;
+      if (verbose)
+	std::cout << GridLogMessage << "Field " << index << " needs the following stencil:" << std::endl;
 
       std::vector<int> dirs, disps;
       for (auto p : fp.second) {
@@ -176,7 +180,8 @@ public:
 	dirs.push_back(dir);
 	disps.push_back(disp);
 
-	//std::cout << GridLogMessage << " dir = " << dir << ", disp = " << disp << std::endl;
+	if (verbose)
+	  std::cout << GridLogMessage << " dir = " << dir << ", disp = " << disp << std::endl;
       }
       
       stencil_map[index] = (int)stencils.size();
@@ -195,3 +200,25 @@ public:
   }
 	
 };
+
+// cartesian halo exchange macros
+#define CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(TT, tag)			\
+  Vector<TT*> _buf ## tag;						\
+  Vector<CartesianStencilView ## tag ## _t> _sview ## tag;		\
+  int* stencil_map ## tag = &sm ## tag ->stencil_map[0];		\
+  for (int i=0;i<(int)sm ## tag ->stencil_map.size();i++) {		\
+    int s = stencil_map ## tag[i];					\
+    if (s != -1) {							\
+      sm ## tag->stencils[s].HaloExchange(fields ## tag[i], *compressor ## tag); \
+    }									\
+  }									\
+  for (int i=0;i<(int)sm ## tag->stencils.size();i++) {			\
+    _buf ## tag.push_back(sm ## tag->stencils[i].CommBuf());		\
+    _sview ## tag.push_back(sm ## tag->stencils[i].View(AcceleratorRead)); \
+  }									\
+  TT** buf ## tag = &_buf ## tag[0];					\
+  CartesianStencilView ## tag ## _t* sview ## tag = &_sview ## tag[0];
+
+#define CGPT_CARTESIAN_STENCIL_CLEANUP(T, tag)				\
+  for (auto & sv : _sview ## tag)					\
+    sv.ViewClose();

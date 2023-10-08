@@ -174,27 +174,8 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       
     } else {
 
-      Vector<T*> _buf;
-      Vector<CartesianStencilView_t> _sview;
-
-      int* stencil_map = &sm->stencil_map[0];
-      for (int i=0;i<(int)sm->stencil_map.size();i++) {
-	int s = stencil_map[i];
-	if (s != -1) {
-	  //std::cout << GridLogMessage << "Perform halo exchange for field " << i << " with stencil " << s << std::endl;
-	  sm->stencils[s].HaloExchange(fields[i], *compressor);
-	}
-      }
-
-      for (int i=0;i<(int)sm->stencils.size();i++) {
-	_buf.push_back(sm->stencils[i].CommBuf());
-	_sview.push_back(sm->stencils[i].View(AcceleratorRead));
-	//std::cout << GridLogMessage << "Comm buffer for stencil " << i << " has pointer " << _buf[i] << std::endl;
-      }
-
-      T** buf = &_buf[0];
-      CartesianStencilView_t* sview = &_sview[0];
-
+      CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(T,);
+      
       // now loop
       accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
 
@@ -208,12 +189,12 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	    obj_t t;
 	    
 	    const auto _f0 = &p_code[i].factor[0];
-	    fetch_cs(stencil_map[_f0->index], t, _f0->point, ss, fields_v[_f0->index], _f0->adj);
+	    fetch_cs(stencil_map[_f0->index], t, _f0->point, ss, fields_v[_f0->index], _f0->adj,);
 	    
 	    for (int j=1;j<p_code[i].size;j++) {
 	      obj_t f;
 	      const auto _f = &p_code[i].factor[j];
-	      fetch_cs(stencil_map[_f->index], f, _f->point, ss, fields_v[_f->index], _f->adj);
+	      fetch_cs(stencil_map[_f->index], f, _f->point, ss, fields_v[_f->index], _f->adj,);
 	      t = t * f;
 	    }
 	    
@@ -226,9 +207,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	});
 
       // and cleanup
-
-      for (auto & sv : _sview)
-      	sv.ViewClose();
+      CGPT_CARTESIAN_STENCIL_CLEANUP(T,);
       
     }
 
