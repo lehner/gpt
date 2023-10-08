@@ -42,3 +42,6 @@ class matrix:
 
     def __del__(self):
         cgpt.stencil_matrix_delete(self.obj)
+
+    def data_access_hints(self, *hints):
+        pass

@@ -275,9 +275,6 @@ cgpt_stencil_matrix_vector_create(cgpt_Lattice_base* __matrix, GridBase* grid, P
   std::vector<cgpt_stencil_matrix_vector_code_t> code;
   cgpt_convert(_code,code);
 
-  // for now only local is implemented
-  ASSERT(local);
-
   // test __matrix type against matrix in spin space,
   // color space spin+color space, and singlet space
   if (is_compatible<typename matrixFromTypeAtLevel<V,2>::type>(__matrix)) {

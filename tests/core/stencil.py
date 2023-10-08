@@ -26,14 +26,13 @@ def stencil_cshift(src, direction1, direction2):
     stencil = g.stencil.matrix(
         src,
         [direction1, direction2, (0, 0, 0, 0)],
-        [0],
-        [1, 2],
         [
             {"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 0, 0)]},
             {"target": 0, "accumulate": 0, "weight": 1.0, "factor": [(2, 1, 0)]},
             {"target": 0, "accumulate": 0, "weight": 1.0, "factor": [(2, 2, 0)]},
         ],
     )
+    stencil.data_access_hints([0], [1,2,3,4], [])
     dst = g.lattice(src)
     stencil(dst, src, src)
     return dst
@@ -104,8 +103,22 @@ p.extract(Ps, padded_P)
 pval = 2 * g.sum(g.trace(Ps)).real / P.grid.gsites / 4 / 3 / 3
 
 eps = abs(Pref - pval)
+g.message(f"Stencil plaquette (local + padding): {pval} versus reference {Pref}: {eps}")
+assert eps < 1e-14
+
+stencil_plaquette = g.stencil.matrix(
+    P,
+    [(0, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)],
+    code,
+)
+
+stencil_plaquette(Ps, *U)
+pval = 2 * g.sum(g.trace(Ps)).real / P.grid.gsites / 4 / 3 / 3
+
+eps = abs(Pref - pval)
 g.message(f"Stencil plaquette: {pval} versus reference {Pref}: {eps}")
 assert eps < 1e-14
+
 
 
 # run again for benchmark:
@@ -165,15 +178,9 @@ src = g.vspincolor(grid)
 rng.cnormal(src)
 cov = g.covariant.shift(U, boundary_phases=[1.0, 1.0, 1.0, 1.0])
 for mu in range(4):
-    pad_U = g.padded_local_fields(U, list(evec[mu]))
-    pad_src = g.padded_local_fields(src, list(evec[mu]))
-
-    p_U = pad_U(U)
-    p_src = pad_src(src)
-
-    st = g.local_stencil.matrix_vector(
-        p_U[0],
-        p_src,
+    st = g.stencil.matrix_vector(
+        U[0],
+        src,
         [(0, 0, 0, 0), evec[mu], nevec[mu]],
         [
             {
@@ -206,15 +213,11 @@ for mu in range(4):
     def lap(dst, src):
         dst @= -2.0 * src + cov.forward[mu] * src + cov.backward[mu] * src
 
-    p_dst = g.lattice(p_src)
-    dst = g.lattice(src)
-
     ref = g.lattice(src)
     stv = g.lattice(src)
 
     lap(ref, src)
-    st(p_U, [p_dst, p_src])
-    pad_src.extract(stv, p_dst)
+    st(U, [stv, src])
 
     eps2 = g.norm2(stv - ref)
     g.message(f"Stencil covariant laplace versus cshift version: {eps2}")

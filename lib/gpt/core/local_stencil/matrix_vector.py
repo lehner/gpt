@@ -34,7 +34,7 @@ def parse(c):
 
 
 class matrix_vector:
-    def __init__(self, lat_matrix, lat_vector, points, code, code_parallel_block_size=None):
+    def __init__(self, lat_matrix, lat_vector, points, code, code_parallel_block_size=None, local=1):
         self.points = points
         self.code = [parse(c) for c in code]
         self.code_parallel_block_size = code_parallel_block_size
@@ -47,7 +47,7 @@ class matrix_vector:
             points,
             self.code,
             code_parallel_block_size,
-            1
+            local
         )
 
     def __call__(self, matrix_fields, vector_fields):
@@ -55,3 +55,6 @@ class matrix_vector:
 
     def __del__(self):
         cgpt.stencil_matrix_vector_delete(self.obj)
+
+    def data_access_hints(self, *hints):
+        pass

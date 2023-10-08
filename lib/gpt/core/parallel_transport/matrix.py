@@ -107,7 +107,8 @@ class parallel_transport_matrix:
         write_fields = list(range(Ntarget))
         read_fields = list(range(Ntarget + Ntemporary, Ntarget + Ntemporary + Nd))
 
-        self.stencil = g.stencil.matrix(U[0], points.points, write_fields, read_fields, self.code)
+        self.stencil = g.stencil.matrix(U[0], points.points, self.code)
+        self.stencil.data_access_hints(write_fields, read_fields, [])
 
     def __call__(self, U):
         T = [g.lattice(U[0]) for i in range(self.Ntarget)]

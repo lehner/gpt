@@ -16,5 +16,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core.stencil.matrix import matrix
-from gpt.core.stencil.matrix_vector import matrix_vector
+import gpt as g
+
+
+def matrix_vector(lat_matrix, lat_vector, points, code, code_parallel_block_size=None):
+    # check if all points are cartesian
+    for p in points:
+        if len([s for s in p if s != 0]) > 1:
+            raise Exception("General stencil matrix_vector not yet implemented")
+    return g.local_stencil.matrix_vector(lat_matrix, lat_vector, points, code, code_parallel_block_size, local=0)
