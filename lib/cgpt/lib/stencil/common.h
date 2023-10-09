@@ -17,6 +17,16 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// indexing
+#define MAP_INDEXING(ss, oblock)		\
+  if (_fast_osites) {				\
+    oblock = ss_block / osites;			\
+    ss = ss_block % osites;			\
+  } else {					\
+    ss = ss_block / _npb;			\
+    oblock = ss_block % _npb;			\
+  }
+  
 // cartesian stencil fetch
 #define fetch_cs(sidx, obj, point, site, view, do_adj, tag) {		\
     if (point == -1) {							\
@@ -29,8 +39,8 @@
       } else {								\
 	obj = coalescedRead(buf ## tag[sidx][SE->_offset]);		\
       }									\
-      acceleratorSynchronise();						\
     }									\
+    acceleratorSynchronise();						\
     if (do_adj)								\
       obj = adj(obj);							\
   }

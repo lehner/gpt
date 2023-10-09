@@ -64,7 +64,8 @@ EXPORT(stencil_matrix_execute,{
 
     void* _stencil;
     PyObject* _fields;
-    if (!PyArg_ParseTuple(args, "lO", &_stencil, &_fields)) {
+    long fast_osites;
+    if (!PyArg_ParseTuple(args, "lOl", &_stencil, &_fields, &fast_osites)) {
       return NULL;
     }
     
@@ -73,7 +74,7 @@ EXPORT(stencil_matrix_execute,{
     std::vector<cgpt_Lattice_base*> __fields;
     cgpt_basis_fill(__fields,_fields);
 
-    stencil->execute(__fields);
+    stencil->execute(__fields, fast_osites);
 
     return PyLong_FromLong(0);
   });
@@ -84,7 +85,8 @@ EXPORT(stencil_matrix_vector_execute,{
     void* _stencil;
     PyObject* _matrix_fields;
     PyObject* _vector_fields;
-    if (!PyArg_ParseTuple(args, "lOO", &_stencil, &_matrix_fields, &_vector_fields)) {
+    long fast_osites;
+    if (!PyArg_ParseTuple(args, "lOOl", &_stencil, &_matrix_fields, &_vector_fields, &fast_osites)) {
       return NULL;
     }
     
@@ -94,7 +96,7 @@ EXPORT(stencil_matrix_vector_execute,{
     cgpt_basis_fill(__matrix_fields,_matrix_fields);
     cgpt_basis_fill(__vector_fields,_vector_fields);
 
-    stencil->execute(__matrix_fields, __vector_fields);
+    stencil->execute(__matrix_fields, __vector_fields, fast_osites);
 
     return PyLong_FromLong(0);
   });

@@ -49,12 +49,16 @@ class matrix_vector:
             code_parallel_block_size,
             local
         )
+        self.fast_osites = 1
 
     def __call__(self, matrix_fields, vector_fields):
-        cgpt.stencil_matrix_vector_execute(self.obj, matrix_fields, vector_fields)
+        cgpt.stencil_matrix_vector_execute(self.obj, matrix_fields, vector_fields, self.fast_osites)
 
     def __del__(self):
         cgpt.stencil_matrix_vector_delete(self.obj)
 
     def data_access_hints(self, *hints):
         pass
+
+    def memory_access_pattern(self, fast_osites):
+        self.fast_osites = fast_osites

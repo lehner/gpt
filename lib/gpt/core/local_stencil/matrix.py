@@ -36,12 +36,16 @@ class matrix:
         self.obj = cgpt.stencil_matrix_create(
             lat.v_obj[0], lat.grid.obj, points, self.code, code_parallel_block_size, local
         )
+        self.fast_osites = 1
 
     def __call__(self, *fields):
-        cgpt.stencil_matrix_execute(self.obj, list(fields))
+        cgpt.stencil_matrix_execute(self.obj, list(fields), self.fast_osites)
 
     def __del__(self):
         cgpt.stencil_matrix_delete(self.obj)
 
     def data_access_hints(self, *hints):
         pass
+
+    def memory_access_pattern(self, fast_osites):
+        self.fast_osites = fast_osites

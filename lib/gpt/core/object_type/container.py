@@ -30,8 +30,11 @@ basis_sizes = sorted(
 
 ###
 # Helper
+max_fundamental_singlet_size = gpt.default.get_int("--max_fundamental_singlet_size", 100000)
 def decompose(n, ns, rank):
     for x in reversed(sorted(ns)):
+        if x > max_fundamental_singlet_size:
+            continue
         if n % x == 0:
             return [x] * ((n // x) ** rank)
     raise Exception("Cannot decompose %d in available fundamentals %s" % (n, ns))

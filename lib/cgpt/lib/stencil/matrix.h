@@ -42,7 +42,7 @@ struct cgpt_stencil_matrix_code_t {
 class cgpt_stencil_matrix_base {
  public:
   virtual ~cgpt_stencil_matrix_base() {};
-  virtual void execute(const std::vector<cgpt_Lattice_base*>& fields) = 0;
+  virtual void execute(const std::vector<cgpt_Lattice_base*>& fields, int fast_osites) = 0;
 };
 
 template<typename T>
@@ -125,7 +125,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     }
   }
  
-  virtual void execute(PVector<Lattice<T>> &fields) {
+  virtual void execute(PVector<Lattice<T>> &fields, int fast_osites) {
 
     VECTOR_VIEW_OPEN(fields,fields_v,AcceleratorWrite);
 
@@ -139,14 +139,19 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     int _npb = n_code_parallel_blocks;
     int _npbs = n_code_parallel_block_size;
 
+    uint64_t osites = fields[0].Grid()->oSites();
+
+    int _fast_osites = fast_osites;
+    
     if (local) {
 
       auto sview = general_local_stencil->View();
       
-      accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
+      accelerator_for(ss_block,osites * _npb,T::Nsimd(),{
 	  
-	  auto ss = ss_block / _npb;
-	  auto oblock = ss_block % _npb;
+          uint64_t ss, oblock;
+					      
+	  MAP_INDEXING(ss, oblock);
 	  
 	  for (int iblock=0;iblock<_npbs;iblock++) {
 	    
@@ -179,8 +184,9 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       // now loop
       accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
 
-	  auto ss = ss_block / _npb;
-	  auto oblock = ss_block % _npb;
+          uint64_t ss, oblock;
+					      
+	  MAP_INDEXING(ss, oblock);
 	  
 	  for (int iblock=0;iblock<_npbs;iblock++) {
 	    
@@ -214,10 +220,10 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     VECTOR_VIEW_CLOSE(fields_v);
   }
 
-  virtual void execute(const std::vector<cgpt_Lattice_base*>& __fields) {
+  virtual void execute(const std::vector<cgpt_Lattice_base*>& __fields, int fast_osites) {
     PVector<Lattice<T>> fields;
     cgpt_basis_fill(fields,__fields);
-    execute(fields);
+    execute(fields, fast_osites);
   }
 };
 

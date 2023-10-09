@@ -45,7 +45,7 @@ struct cgpt_stencil_matrix_vector_code_t {
 class cgpt_stencil_matrix_vector_base {
  public:
   virtual ~cgpt_stencil_matrix_vector_base() {};
-  virtual void execute(const std::vector<cgpt_Lattice_base*>& matrix_fields, const std::vector<cgpt_Lattice_base*>& vector_fields) = 0;
+  virtual void execute(const std::vector<cgpt_Lattice_base*>& matrix_fields, const std::vector<cgpt_Lattice_base*>& vector_fields, int fast_osites) = 0;
 };
 
 template<typename M, typename V>
@@ -146,7 +146,7 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
     }
   }
  
-  virtual void execute(PVector<Lattice<M>> &fields_matrix, PVector<Lattice<V>> &fields_vector) {
+  virtual void execute(PVector<Lattice<M>> &fields_matrix, PVector<Lattice<V>> &fields_vector, int fast_osites) {
 
     VECTOR_VIEW_OPEN(fields_matrix,fields_m_v,AcceleratorRead);
     VECTOR_VIEW_OPEN(fields_vector,fields_v_v,AcceleratorWrite);
@@ -162,13 +162,18 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
     int _npb = n_code_parallel_blocks;
     int _npbs = n_code_parallel_block_size;
 
+    uint64_t osites = fields_matrix[0].Grid()->oSites();
+
+    int _fast_osites = fast_osites;
+
     if (local) {
       auto sview = general_local_stencil->View();
       
-      accelerator_for(ss_block,fields_matrix[0].Grid()->oSites() * _npb,M::Nsimd(),{
+      accelerator_for(ss_block,osites * _npb,M::Nsimd(),{
 	  
-	  auto ss = ss_block / _npb;
-	  auto oblock = ss_block % _npb;
+          uint64_t ss, oblock;
+					      
+	  MAP_INDEXING(ss, oblock);
 	  
 	  for (int iblock=0;iblock<_npbs;iblock++) {
 	    
@@ -196,11 +201,12 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
 
       CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(M, _matrix);
       CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(V, _vector);
-
-      accelerator_for(ss_block,fields_matrix[0].Grid()->oSites() * _npb,M::Nsimd(),{
+     
+      accelerator_for(ss_block,osites * _npb,M::Nsimd(),{
 	  
-	  auto ss = ss_block / _npb;
-	  auto oblock = ss_block % _npb;
+	  uint64_t ss, oblock;
+
+	  MAP_INDEXING(ss, oblock);
 	  
 	  for (int iblock=0;iblock<_npbs;iblock++) {
 	    
@@ -235,12 +241,12 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
     VECTOR_VIEW_CLOSE(fields_v_v);
   }
 
-  virtual void execute(const std::vector<cgpt_Lattice_base*>& __matrix_fields, const std::vector<cgpt_Lattice_base*>& __vector_fields) {
+  virtual void execute(const std::vector<cgpt_Lattice_base*>& __matrix_fields, const std::vector<cgpt_Lattice_base*>& __vector_fields, int fast_osites) {
     PVector<Lattice<M>> matrix_fields;
     PVector<Lattice<V>> vector_fields;
     cgpt_basis_fill(matrix_fields,__matrix_fields);
     cgpt_basis_fill(vector_fields,__vector_fields);
-    execute(matrix_fields, vector_fields);
+    execute(matrix_fields, vector_fields, fast_osites);
   }
 };
 
