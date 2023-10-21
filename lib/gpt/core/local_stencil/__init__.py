@@ -18,3 +18,4 @@
 #
 from gpt.core.local_stencil.matrix import matrix
 from gpt.core.local_stencil.matrix_vector import matrix_vector
+from gpt.core.local_stencil.tensor import tensor

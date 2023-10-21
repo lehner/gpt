@@ -20,6 +20,7 @@
 #include "stencil/common.h"
 #include "stencil/matrix.h"
 #include "stencil/matrix_vector.h"
+#include "stencil/tensor.h"
 
 // remove common definitions
 #undef fetch

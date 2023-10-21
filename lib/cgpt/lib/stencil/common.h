@@ -45,6 +45,23 @@
       obj = adj(obj);							\
   }
 
+#define fetch_cs_element(sidx, obj, point, site, view, do_adj, tag, e) { \
+    if (point == -1) {							\
+      obj = coalescedReadElement(view[site], e);			\
+    } else {								\
+      int ptype;							\
+      auto SE = sview ## tag[sidx].GetEntry(ptype, point, site);	\
+      if (SE->_is_local) {						\
+	obj = coalescedReadPermute(((obj_t*)&(view[SE->_offset]))[e],ptype,SE->_permute); \
+      } else {								\
+	obj = coalescedReadElement(buf ## tag[sidx][SE->_offset], e);	\
+      }									\
+    }									\
+    acceleratorSynchronise();						\
+    if (do_adj)								\
+      obj = adj(obj);							\
+  }
+
 // general local stencil fetch
 #ifndef GRID_HAS_ACCELERATOR
 

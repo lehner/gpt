@@ -16,7 +16,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core.stencil.matrix import matrix
-from gpt.core.stencil.matrix_vector import matrix_vector
-from gpt.core.stencil.tensor import tensor
-import gpt.core.stencil.tensor_instructions
+import gpt as g
+
+
+def tensor(lat, points, code, code_parallel_block_size=None):
+    # check if all points are cartesian
+    for p in points:
+        if len([s for s in p if s != 0]) > 1:
+            raise Exception("Only cartesian version currently implemented")
+    return g.local_stencil.tensor(lat, points, code, code_parallel_block_size, local=0)

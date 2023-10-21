@@ -281,4 +281,7 @@ public:
     return cgpt_stencil_matrix_vector_create<T>(matrix, grid, shifts, code, code_parallel_block_size, local);
   }
 
+  virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) {
+    return cgpt_stencil_tensor_create<T>(grid, shifts, code, code_parallel_block_size, local);
+  }
 };

@@ -47,6 +47,16 @@ static void cgpt_convert(PyObject* in, long& out) {
   out = PyLong_AsLong(in);
 }
 
+static void cgpt_convert(PyObject* in, uint16_t& out) {
+  ASSERT(PyLong_Check(in));
+  out = (uint16_t)PyLong_AsLong(in);
+}
+
+static void cgpt_convert(PyObject* in, int16_t& out) {
+  ASSERT(PyLong_Check(in));
+  out = (int16_t)PyLong_AsLong(in);
+}
+
 static void cgpt_convert(PyObject* in, bool& out) {
   ASSERT(PyBool_Check(in));
   out = in == Py_True;

@@ -16,7 +16,12 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.core.stencil.matrix import matrix
-from gpt.core.stencil.matrix_vector import matrix_vector
-from gpt.core.stencil.tensor import tensor
-import gpt.core.stencil.tensor_instructions
+mov = 0
+inc = 1
+mov_neg = 2
+dec = 3
+mov_cc = 4
+inc_cc = 5
+mov_neg_cc = 6
+dec_cc = 7
+mul = 8
