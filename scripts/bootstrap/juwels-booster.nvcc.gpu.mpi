@@ -3,17 +3,12 @@
 # Get compilers
 #
 module purge
-
-module load GCC/10.3.0
-module load OpenMPI/4.1.1
-module load mpi-settings/CUDA
-
-#
-# Get and set other things
-#
-module load MPFR/4.1.0
-module load FFTW/3.3.8
-module load Python/3.8.5
+ml Stages/2023
+ml NVHPC/23.1
+ml OpenMPI/4.1.4
+ml MPFR/4.1.0
+ml FFTW/3.3.10
+ml Python/3.10.4
 
 export OMPI_MCA_btl=^uct,openib
 export UCX_MEMTYPE_CACHE=n
@@ -68,20 +63,23 @@ then
         ./bootstrap.sh
         mkdir build
         cd build
-        CXX=nvcc MPICXX=mpicxx \
-        CXXFLAGS="-ccbin g++ -gencode arch=compute_80,code=sm_80 -std=c++14 --cudart shared --compiler-options -fPIC" \
-        LIBS="-lrt -lmpi" \
-        LDFLAGS="--cudart shared --compiler-options -fopenmp" \
-        ../configure \
-          --enable-unified=no \
-          --enable-accelerator=cuda \
-          --enable-alloc-align=4k \
-          --enable-accelerator-cshift \
-          --enable-shm=nvlink \
-          --enable-comms=mpi-auto \
-          --disable-comms-threads \
-          --with-lime=${dep}/lime \
-          --enable-simd=GPU
+	../configure \
+	    --enable-unified=no \
+	    --enable-accelerator=cuda \
+	    --enable-alloc-align=4k \
+	    --enable-accelerator-cshift \
+	    --enable-shm=nvlink \
+	    --enable-gparity=no \
+	    --enable-comms=mpi-auto \
+	    --disable-comms-threads \
+	    --with-fftw=/p/project/gm2dwf/lehner/local \
+	    --with-lime=/p/project/gm2dwf/lehner/lime \
+	    --enable-simd=GPU \
+	    MPICXX=mpicxx \
+	    CXX=nvcc \
+	    CXXFLAGS="-ccbin g++ -gencode arch=compute_80,code=sm_80 -std=c++14 --cudart shared --compiler-options -fPIC" \
+	    LDFLAGS="--cudart shared --compiler-options -fopenmp" \
+	    LIBS="-lrt -lmpi"
 
         cd Grid
         make -j 16
