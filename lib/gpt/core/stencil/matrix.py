@@ -39,10 +39,12 @@ class matrix_padded:
         self.write_fields = write_fields
         self.read_fields = read_fields
         self.cache_fields = cache_fields
-        
+
     def __call__(self, *fields):
         if self.write_fields is None:
-            raise Exception("Generalized matrix stencil needs more information.  Call stencil.data_access_hints.")
+            raise Exception(
+                "Generalized matrix stencil needs more information.  Call stencil.data_access_hints."
+            )
         if self.verbose_performance:
             t = g.timer("stencil.matrix")
             t("create fields")
@@ -69,13 +71,11 @@ class matrix_padded:
             t()
             g.message(t)
         # todo: make use of cache_fields
-        
+
 
 def matrix(lat, points, code, code_parallel_block_size=None):
     # check if all points are cartesian
     for p in points:
         if len([s for s in p if s != 0]) > 1:
-            return matrix_padded(
-                lat, points, code, code_parallel_block_size
-            )
+            return matrix_padded(lat, points, code, code_parallel_block_size)
     return g.local_stencil.matrix(lat, points, code, code_parallel_block_size, local=0)

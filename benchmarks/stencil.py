@@ -11,14 +11,14 @@ evec = [(1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)]
 nevec = [tuple([-x for x in y]) for y in evec]
 
 for precision in [g.single, g.double]:
-    for fast_osites in [0,1]:
+    for fast_osites in [0, 1]:
         grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
         N = g.default.get_int("--N", 1000)
 
         g.message(
-        f"""
+            f"""
 
-        
+
     Local Stencil Benchmark with
     fdimensions  : {grid.fdimensions}
     precision    : {precision.__name__}
@@ -26,7 +26,7 @@ for precision in [g.single, g.double]:
 """
         )
 
-        # plaquette    
+        # plaquette
         U = g.qcd.gauge.random(grid, rng, scale=0.5)
         _U = [1, 2, 3, 4]
         _X = 0
@@ -61,7 +61,7 @@ for precision in [g.single, g.double]:
         st(P, *U)
         pl = g.sum(g.trace(P)).real / P.grid.gsites / 3 / 2 / 3
         assert abs(g.qcd.gauge.plaquette(U) - pl) < precision.eps * 100
-        
+
         # Flops
         gauge_otype = U[0].otype
         Nc = gauge_otype.shape[0]
@@ -69,7 +69,7 @@ for precision in [g.single, g.double]:
         flops_per_site = 3 * flops_per_matrix_multiply * 4 * 3
         flops = flops_per_site * P.grid.gsites * N
         nbytes = (5 * Nc * Nc * 2) * precision.nbytes * P.grid.gsites * N
-    
+
         # Warmup
         for n in range(5):
             st(P, *U)
@@ -95,32 +95,27 @@ for precision in [g.single, g.double]:
         src = g.vspincolor(grid)
         rng.cnormal(src)
         UdagShift = [g(g.adj(g.cshift(U[mu], mu, -1))) for mu in range(4)]
-        _U = [0,1,2,3]
-        _UdagShift = [4,5,6,7]
+        _U = [0, 1, 2, 3]
+        _UdagShift = [4, 5, 6, 7]
         _X = 0
-        _Xp = [1,2,3,4]
-        _Xm = [5,6,7,8]
-        code = [(0,1,_X,-1,-8.0,[])]
+        _Xp = [1, 2, 3, 4]
+        _Xm = [5, 6, 7, 8]
+        code = [(0, 1, _X, -1, -8.0, [])]
         for mu in range(4):
-            code.append((0,1,_Xp[mu], 0, 1.0,[(_U[mu], _X, 0)]))
-            code.append((0,1,_Xm[mu], 0, 1.0,[(_UdagShift[mu], _X, 0)]))
+            code.append((0, 1, _Xp[mu], 0, 1.0, [(_U[mu], _X, 0)]))
+            code.append((0, 1, _Xm[mu], 0, 1.0, [(_UdagShift[mu], _X, 0)]))
             # can switch last line to next one
-            #code.append((0,1,_Xm[mu], 0, 1.0,[(_U[mu], _Xm[mu], 1)]))
-        st = g.stencil.matrix_vector(
-            U[0],
-            src,
-            [(0, 0, 0, 0)] + evec + nevec,
-            code
-        )
+            # code.append((0,1,_Xm[mu], 0, 1.0,[(_U[mu], _Xm[mu], 1)]))
+        st = g.stencil.matrix_vector(U[0], src, [(0, 0, 0, 0)] + evec + nevec, code)
         st.memory_access_pattern(fast_osites=fast_osites)
         # test laplace
         dst = g.lattice(src)
-        st(U + UdagShift, [dst,src])
-        
-        lap = g.create.smear.laplace(g.covariant.shift(U, boundary_phases=[1]*4), [0,1,2,3])
+        st(U + UdagShift, [dst, src])
+
+        lap = g.create.smear.laplace(g.covariant.shift(U, boundary_phases=[1] * 4), [0, 1, 2, 3])
         dst2 = lap(src)
         eps2 = g.norm2(dst - dst2) / g.norm2(dst)
-        assert eps2 ** 0.5 < precision.eps * 100
+        assert eps2**0.5 < precision.eps * 100
 
         # Flops
         gauge_otype = U[0].otype
@@ -131,22 +126,22 @@ for precision in [g.single, g.double]:
         flops_per_site = 8 * flops_per_matrix_vector_multiply + 8 * flops_per_vector_add
         flops = flops_per_site * src.grid.gsites * N
         nbytes = (8 * Nc * Nc * 2 + Nc * Ns * 2) * precision.nbytes * src.grid.gsites * N
-        
+
         # Warmup
         for n in range(5):
-            st(U + UdagShift, [dst,src])
-            
+            st(U + UdagShift, [dst, src])
+
         # Time
         t0 = g.time()
         for n in range(N):
-            st(U + UdagShift, [dst,src])
+            st(U + UdagShift, [dst, src])
         t1 = g.time()
-            
+
         # Report
         GFlopsPerSec = flops / (t1 - t0) / 1e9
         GBPerSec = nbytes / (t1 - t0) / 1e9
         g.message(
-        f"""
+            f"""
 {N} applications of laplace stencil
     Time to complete            : {t1-t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s

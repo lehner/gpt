@@ -32,7 +32,7 @@ def stencil_cshift(src, direction1, direction2):
             {"target": 0, "accumulate": 0, "weight": 1.0, "factor": [(2, 2, 0)]},
         ],
     )
-    stencil.data_access_hints([0], [1,2,3,4], [])
+    stencil.data_access_hints([0], [1, 2, 3, 4], [])
     dst = g.lattice(src)
     stencil(dst, src, src)
     return dst
@@ -118,7 +118,6 @@ pval = 2 * g.sum(g.trace(Ps)).real / P.grid.gsites / 4 / 3 / 3
 eps = abs(Pref - pval)
 g.message(f"Stencil plaquette: {pval} versus reference {Pref}: {eps}")
 assert eps < 1e-14
-
 
 
 # run again for benchmark:

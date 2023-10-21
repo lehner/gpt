@@ -24,4 +24,6 @@ def matrix_vector(lat_matrix, lat_vector, points, code, code_parallel_block_size
     for p in points:
         if len([s for s in p if s != 0]) > 1:
             raise Exception("General stencil matrix_vector not yet implemented")
-    return g.local_stencil.matrix_vector(lat_matrix, lat_vector, points, code, code_parallel_block_size, local=0)
+    return g.local_stencil.matrix_vector(
+        lat_matrix, lat_vector, points, code, code_parallel_block_size, local=0
+    )
