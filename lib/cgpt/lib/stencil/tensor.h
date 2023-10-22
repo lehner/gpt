@@ -139,9 +139,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
     int n_code = code.size();
     const cgpt_stencil_tensor_code_offload_t* p_code = &code[0];
 
-    typedef decltype(coalescedRead(fields_v[0][0])) obj_t;
-    typedef decltype(coalescedReadElement(fields_v[0][0],0)) element_t;
-    typedef typename obj_t::scalar_type coeff_t;
+    typedef typename T::scalar_type coeff_t;
 
     int nd = fields[0].Grid()->Nd();
 
@@ -149,8 +147,9 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
     int _npbs = n_code_parallel_block_size;
 
     uint64_t osites = fields[0].Grid()->oSites();
+    uint64_t osite_blocks = osites;
 
-    int _fast_osites = fast_osites;
+    int _fast_osites, BLOCK_SIZE;
     
     if (local) {
 
@@ -160,36 +159,13 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 
       CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(T,);
       
-      // now loop
-      uint64_t osites = fields[0].Grid()->oSites();
-
-      ASSERT(_npb == 1);
-
-#define BLOCK_SIZE 16
-
-      // TODO: not-divisible by block_size fix
-      ASSERT(osites % BLOCK_SIZE == 0);
-
-      
-      accelerator_for(ss_block,osites * _npb / BLOCK_SIZE,T::Nsimd(),{
-
-          uint64_t ss, oblock;
-
-	  MAP_INDEXING(ss, oblock);
-
-#define NN (sizeof(obj_t) / sizeof(element_t))
-
-	  for (int iblock=0;iblock<_npbs;iblock++) {
-	    
-	    int i = oblock * _npbs + iblock;
-
-	    const auto _p = &p_code[i];
-	    const auto _f0 = &_p->factor[0];
-	    const auto _f1 = &_p->factor[1];
-
-	    element_t* e_a = (element_t*)&fields_v[_f0->index][BLOCK_SIZE * ss];
-	    element_t* e_b = (element_t*)&fields_v[_f1->index][BLOCK_SIZE * ss];
-	    element_t* e_c = (element_t*)&fields_v[_p->target][BLOCK_SIZE * ss];
+      if (fast_osites > 0) {
+	BLOCK_SIZE = fast_osites;
+	_fast_osites = 1;
+      } else {
+	BLOCK_SIZE = -fast_osites;
+	_fast_osites = 0;
+      }
 
 #define TC_MOV 0
 #define TC_INC 1
@@ -200,47 +176,89 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 #define TC_MOV_NEG_CC 6
 #define TC_DEC_CC 7
 #define TC_MUL 8
+
+#define _ID(a) a
+#define _CONJ(a) adj(a)
+#define _INC(a,b,c)      a + b*c
+#define _MOV(a,b,c)          b*c
+#define _MOV_NEG(a,b,c)    - b*c
+#define _DEC(a,b,c)      a - b*c
+#define _MUL(a,b,c)      a*((coeff_t)_p->weight)
+#define KERNEL(composition, mod_first)					\
+      for (int ff=0;ff < BLOCK_SIZE;ff++)				\
+	coalescedWriteElement(fields_v[_p->target][BLOCK_SIZE * ss + ff], \
+			      composition(coalescedReadElement(fields_v[_p->target][BLOCK_SIZE * ss + ff], _p->element), \
+					  mod_first(coalescedReadElement(fields_v[_f0->index][BLOCK_SIZE * ss + ff], _f0->element)), \
+					  coalescedReadElement(fields_v[_f1->index][BLOCK_SIZE * ss + ff], _f1->element)), \
+			      _p->element);
+      
+
+      osite_blocks = osites / BLOCK_SIZE;
+
+      for (int iter=0;iter<((osites % BLOCK_SIZE == 0) ? 1 : 2);iter++) {
+
+	uint64_t osite_offset = (iter == 0) ? 0 : osite_blocks * BLOCK_SIZE;
+	if (iter == 1) {
+	  BLOCK_SIZE = 1;
+	  osite_blocks = osites - osite_offset;
+	}
+	
+	accelerator_forNB(ss_block,osite_blocks * _npb,T::Nsimd(),{
 	    
-#define ID(a) a
-#define CONJ(a) adj(a)
-#define KERNEL(signature, functor)					\
-	    for (int ff=0;ff<BLOCK_SIZE;ff++)				\
-	      e_c[NN * ff + _p->element] signature functor(e_a[NN * ff +_f0->element]) * e_b[NN * ff + _f1->element];
-
-	    switch (_p->instruction) {
-	    case TC_INC:
-	      KERNEL(+=,ID);
-	      break;
-	    case TC_MOV:
-	      KERNEL(=,ID);
-	      break;
-	    case TC_DEC:
-	      KERNEL(-=,ID);
-	      break;
-	    case TC_MOV_NEG:
-	      KERNEL(=-,ID);
-	      break;
-	    case TC_INC_CC:
-	      KERNEL(+=,CONJ);
-	      break;
-	    case TC_MOV_CC:
-	      KERNEL(=,CONJ);
-	      break;
-	    case TC_DEC_CC:
-	      KERNEL(-=,CONJ);
-	      break;
-	    case TC_MOV_NEG_CC:
-	      KERNEL(=-,CONJ);
-	      break;
-	    case TC_MUL:
-	      for (int ff=0;ff<BLOCK_SIZE;ff++)	\
-		e_c[NN * ff + _p->element] *= ((coeff_t)_p->weight);
-	      break;
+	    uint64_t ss, oblock;
+	    
+	    if (_fast_osites) {
+	      oblock = ss_block / osite_blocks;
+	      ss = osite_offset + ss_block % osite_blocks;
+	    } else {
+	      ss = osite_offset + ss_block / _npb;
+	      oblock = ss_block % _npb;
 	    }
-	  }
-	  
-	});
-
+	    
+	    for (int iblock=0;iblock<_npbs;iblock++) {
+	      
+	      int i = oblock * _npbs + iblock;
+	      
+	      const auto _p = &p_code[i];
+	      const auto _f0 = &_p->factor[0];
+	      const auto _f1 = &_p->factor[1];
+	      
+	      switch (_p->instruction) {
+	      case TC_INC:
+		KERNEL(_INC,_ID);
+		break;
+	      case TC_MOV:
+		KERNEL(_MOV,_ID);
+		break;
+	      case TC_DEC:
+		KERNEL(_DEC,_ID);
+		break;
+	      case TC_MOV_NEG:
+		KERNEL(_MOV_NEG,_ID);
+		break;
+	      case TC_INC_CC:
+		KERNEL(_INC,_CONJ);
+		break;
+	      case TC_MOV_CC:
+		KERNEL(_MOV,_CONJ);
+		break;
+	      case TC_DEC_CC:
+		KERNEL(_DEC,_CONJ);
+		break;
+	      case TC_MOV_NEG_CC:
+		KERNEL(_MOV_NEG,_CONJ);
+		break;
+	      case TC_MUL:
+		KERNEL(_MUL,_ID);
+		break;
+	      }
+	    }
+	    
+	  });
+      }
+      
+      accelerator_barrier();
+      
       // and cleanup
       CGPT_CARTESIAN_STENCIL_CLEANUP(T,);
       
@@ -273,8 +291,6 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_tensor_code_t& out) {
   out.weight = get_complex(in, "weight");
 
   cgpt_convert(get_key(in, "factor"), out.factor);
-
-  //
 }
 
 template<typename T>
