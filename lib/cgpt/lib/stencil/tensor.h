@@ -148,7 +148,8 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
     typedef typename T::scalar_type element_t;
 #define NSIMD (sizeof(typename T::vector_type) / sizeof(typename T::scalar_type))
 #endif
-    typedef typename element_t::scalar_type coeff_t;
+    typedef typename T::scalar_type coeff_t;
+
       
     VECTOR_ELEMENT_VIEW_OPEN(element_t, fields, fields_v, AcceleratorWrite);
 
