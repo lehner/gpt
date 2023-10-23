@@ -2,7 +2,8 @@
 import gpt as g
 #grid = g.grid([64,64,64,64], g.double)
 #grid = g.grid([32,32,32,32], g.double)
-grid = g.grid([32,16,16,16], g.double)
+#grid = g.grid([32,16,16,16], g.double)
+grid = g.grid([16,16,16,32], g.double)
 m1 = g.mcolor(grid)
 m2 = g.mcolor(grid)
 m3 = g.mcolor(grid)
@@ -20,15 +21,15 @@ for i in range(3):
                 (0,dst,ti.mov if l == 0 else ti.inc,1.0,[(1,0,3*i + l),(2,0,3*l + j)])
             )
 
-ein = g.stencil.tensor(m1, [(0, 0, 0, 0), (1, 0, 0, 0)], code, len(code) // 9)
+ein = g.stencil.tensor(m1, [(0, 0, 0, 0), (1, 0, 0, 0)], code, len(code))# // 9
 
-ein.memory_access_pattern(fast_osites=-3)
+#ein.memory_access_pattern(fast_osites=-3)
 
 ein(m3,m1,m2)
 g.message(g.norm2(m3 - m3ref))
 
 
-for block_size in [1,4,8,-1,-4,-5,-8]:
+for block_size in [1,4,8,-1,-4,-8,-16,-32,-64]:
     ein.memory_access_pattern(fast_osites=block_size)
 
     g.message(block_size)
@@ -85,7 +86,7 @@ g.message(g.norm2(R - R2) / g.norm2(R))
 #            D[i2[0], i1[0]] += sign1 * sign2 * Q1[i1[1], i2[1]] * g.transpose(Q2[i1[2], i2[2]])
 
 
-for block_size in [1,4,8,-1,-4,-5,-8]:
+for block_size in [1,4,8,-1,-4,-8,-16,-32]:
     ein.memory_access_pattern(fast_osites=block_size)
 
     g.message(block_size)

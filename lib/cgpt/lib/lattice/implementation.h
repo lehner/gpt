@@ -20,6 +20,7 @@ template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
   Lattice<T> l;
+  ViewMode view_mode;
 
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
@@ -208,6 +209,15 @@ public:
     cgpt_linear_combination(dst,basis,Qt,n_virtual,basis_n_block);
   }
 
+  virtual void* memory_view_open(ViewMode mode) {
+    view_mode = mode;
+    return MemoryManager::ViewOpen(l.getHostPointer(),l.oSites()*sizeof(T), mode, l.Advise()); 
+  }
+  
+  virtual void memory_view_close() {
+    MemoryManager::ViewClose(l.getHostPointer(), view_mode);
+  }
+
   virtual PyObject* memory_view(memory_type mt) {
 
     if (mt == mt_none) {
@@ -231,11 +241,13 @@ public:
     return r;
   }
 
-  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) {
-    GridBase* grid = l.Grid();
-    Nsimd = grid->Nsimd();
+  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word) {
+    Nsimd = l.Grid()->Nsimd();
     word = sizeof(sobj);
     simd_word = sizeof(Coeff_t);
+  }
+
+  virtual void describe_data_shape(std::vector<long> & ishape) {
     ishape.resize(0);
     cgpt_numpy_data_layout(sobj(),ishape);
     if (ishape.size() == 0) // treat complex numbers as 1d array with one element

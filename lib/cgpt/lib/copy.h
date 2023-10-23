@@ -214,7 +214,8 @@ static void cgpt_tensor_indices_to_memory_offsets(std::vector<long>& t_indices,
 
     long Nsimd, word, simd_word;
     std::vector<long> _lshape;
-    l->describe_data_layout(Nsimd,word,simd_word,_lshape);
+    l->describe_data_layout(Nsimd,word,simd_word);
+    l->describe_data_shape(_lshape);
     ASSERT(_lshape.size() == dim_indices);
 
     // virtual memory layout
@@ -280,7 +281,8 @@ static int cgpt_get_vlat_data_layout(GridBase* & grid,
 
     std::vector<long> ishape;
     long Nsimd, word, simd_word;
-    l->describe_data_layout(Nsimd,word,simd_word,ishape);
+    l->describe_data_layout(Nsimd,word,simd_word);
+    l->describe_data_shape(ishape);
 
     long _sz_scalar = simd_word;
     long _sz_vector = simd_word * Nsimd;

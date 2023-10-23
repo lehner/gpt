@@ -18,6 +18,10 @@
 */
 class cgpt_block_map_base;
 class cgpt_lattice_term;
+class cgpt_stencil_matrix_base;
+class cgpt_stencil_matrix_vector_base;
+class cgpt_stencil_tensor_base;
+
 class cgpt_Lattice_base {
 public:
   virtual ~cgpt_Lattice_base() { };
@@ -56,7 +60,10 @@ public:
   virtual void basis_rotate(std::vector<cgpt_Lattice_base*> &basis,ComplexD* Qt,int j0, int j1, int k0,int k1,int Nm,bool use_accelerator) = 0;
   virtual void linear_combination(std::vector<cgpt_Lattice_base*>& dst, std::vector<cgpt_Lattice_base*> &basis,ComplexD* Qt, long n_virtual, long basis_n_block) = 0;
   virtual PyObject* memory_view(memory_type mt) = 0; // access to internal memory storage, can be simd format
-  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) = 0;
+  virtual void* memory_view_open(ViewMode mode) = 0;
+  virtual void memory_view_close() = 0;
+  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word) = 0;
+  virtual void describe_data_shape(std::vector<long> & ishape) = 0;
   virtual int get_numpy_dtype() = 0;
   virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<cgpt_Lattice_base*>& basis, 
 					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,

@@ -131,25 +131,39 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       delete sm;
     }
   }
- 
-  virtual void execute(PVector<Lattice<T>> &fields, int fast_osites) {
+  /*
 
-    VECTOR_VIEW_OPEN(fields,fields_v,AcceleratorWrite);
+    TODO:
+    
+    stencils should return different options for current hardware for performance (including max _npb)
+
+  */
+  template<int BLOCK_SIZE>
+  void block_execute(const std::vector<cgpt_Lattice_base*>& fields, int fast_osites) {
+
+#ifndef GRID_HAS_ACCELERATOR
+    typedef typename T::vector_type element_t;
+#define NSIMD 1
+#else
+    typedef typename T::scalar_type element_t;
+#define NSIMD (sizeof(typename T::vector_type) / sizeof(typename T::scalar_type))
+#endif
+    typedef typename element_t::scalar_type coeff_t;
+      
+    VECTOR_ELEMENT_VIEW_OPEN(element_t, fields, fields_v, AcceleratorWrite);
 
     int n_code = code.size();
     const cgpt_stencil_tensor_code_offload_t* p_code = &code[0];
 
-    typedef typename T::scalar_type coeff_t;
-
-    int nd = fields[0].Grid()->Nd();
+    int nd = fields[0]->get_grid()->Nd();
 
     int _npb = n_code_parallel_blocks;
     int _npbs = n_code_parallel_block_size;
 
-    uint64_t osites = fields[0].Grid()->oSites();
+    uint64_t osites = fields[0]->get_grid()->oSites();
     uint64_t osite_blocks = osites;
 
-    int _fast_osites, BLOCK_SIZE;
+    int _fast_osites;
     
     if (local) {
 
@@ -157,16 +171,8 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       
     } else {
 
-      CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(T,);
+      //CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(T,);
       
-      if (fast_osites > 0) {
-	BLOCK_SIZE = fast_osites;
-	_fast_osites = 1;
-      } else {
-	BLOCK_SIZE = -fast_osites;
-	_fast_osites = 0;
-      }
-
 #define TC_MOV 0
 #define TC_INC 1
 #define TC_MOV_NEG 2
@@ -177,6 +183,11 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 #define TC_DEC_CC 7
 #define TC_MUL 8
 
+      /*
+#ifdef GRID_HAS_ACCELERATOR
+
+
+      
 #define _ID(a) a
 #define _CONJ(a) adj(a)
 #define _INC(a,b,c)      a + b*c
@@ -258,19 +269,123 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       }
       
       accelerator_barrier();
+
+
+#else
+      */
+      
+      // CPU version
+      ASSERT(osites % BLOCK_SIZE == 0);
+      osites /= BLOCK_SIZE;
+
+      int _fast_osites = fast_osites;
+      
+      accelerator_for(ss_block,osites * _npb,T::Nsimd(),{
+
+          uint64_t ss, oblock;
+
+	  MAP_INDEXING(ss, oblock);
+
+	  for (int iblock=0;iblock<_npbs;iblock++) {
+	    
+	    int i = oblock * _npbs + iblock;
+
+	    const auto _p = &p_code[i];
+	    const auto _f0 = &_p->factor[0];
+	    const auto _f1 = &_p->factor[1];
+
+	    int aNN = nelements[_f0->index] * NSIMD;
+	    int bNN = nelements[_f1->index] * NSIMD;
+	    int cNN = nelements[_p->target] * NSIMD;
+
+	    int lane = acceleratorSIMTlane(T::Nsimd());
+	    element_t* __restrict__ e_a = &fields_v[_f0->index][aNN * BLOCK_SIZE * ss + _f0->element * NSIMD + lane];
+	    element_t* __restrict__ e_b = &fields_v[_f1->index][bNN * BLOCK_SIZE * ss + _f1->element * NSIMD + lane];
+	    element_t* __restrict__ e_c = &fields_v[_p->target][cNN * BLOCK_SIZE * ss + _p->element * NSIMD + lane];
+
+#define TC_MOV 0
+#define TC_INC 1
+#define TC_MOV_NEG 2
+#define TC_DEC 3
+#define TC_MOV_CC 4
+#define TC_INC_CC 5
+#define TC_MOV_NEG_CC 6
+#define TC_DEC_CC 7
+#define TC_MUL 8
+	    
+#define ID(a) a
+#define CONJ(a) adj(a)
+#define KERNEL(signature, functor)					\
+	    for (int ff=0;ff<BLOCK_SIZE;ff++)				\
+	      e_c[cNN * ff] signature functor(e_a[aNN * ff]) * e_b[bNN * ff];
+
+	    switch (_p->instruction) {
+	    case TC_INC:
+	      KERNEL(+=,ID);
+	      break;
+	    case TC_MOV:
+	      KERNEL(=,ID);
+	      break;
+	    case TC_DEC:
+	      KERNEL(-=,ID);
+	      break;
+	    case TC_MOV_NEG:
+	      KERNEL(=-,ID);
+	      break;
+	    case TC_INC_CC:
+	      KERNEL(+=,CONJ);
+	      break;
+	    case TC_MOV_CC:
+	      KERNEL(=,CONJ);
+	      break;
+	    case TC_DEC_CC:
+	      KERNEL(-=,CONJ);
+	      break;
+	    case TC_MOV_NEG_CC:
+	      KERNEL(=-,CONJ);
+	      break;
+	    case TC_MUL:
+	      for (int ff=0;ff<BLOCK_SIZE;ff++)	\
+		e_c[cNN * ff] *= ((coeff_t)_p->weight);
+	      break;
+	    }
+	  }
+	  
+	});
+
+
+      //#endif
       
       // and cleanup
-      CGPT_CARTESIAN_STENCIL_CLEANUP(T,);
+      //CGPT_CARTESIAN_STENCIL_CLEANUP(T,);
       
     }
 
-    VECTOR_VIEW_CLOSE(fields_v);
+    VECTOR_ELEMENT_VIEW_CLOSE(fields);
   }
 
-  virtual void execute(const std::vector<cgpt_Lattice_base*>& __fields, int fast_osites) {
-    PVector<Lattice<T>> fields;
-    cgpt_basis_fill(fields,__fields);
-    execute(fields, fast_osites);
+  virtual void execute(const std::vector<cgpt_Lattice_base*>& fields, int kernel_param) {
+    
+    int _BLOCK_SIZE, _fast_osites;
+    if (kernel_param > 0) {
+      _BLOCK_SIZE = kernel_param;
+      _fast_osites = 1;
+    } else {
+      _BLOCK_SIZE = -kernel_param;
+      _fast_osites = 0;
+    }
+
+    switch (_BLOCK_SIZE) {
+    case 1: block_execute<1>(fields, _fast_osites); break;
+    case 2: block_execute<2>(fields, _fast_osites); break;
+    case 4: block_execute<4>(fields, _fast_osites); break;
+    case 8: block_execute<8>(fields, _fast_osites); break;
+    case 16: block_execute<16>(fields, _fast_osites); break;
+    case 32: block_execute<32>(fields, _fast_osites); break;
+    case 64: block_execute<64>(fields, _fast_osites); break;
+    default: ERR("BLOCK_SIZE = %d not implemented", _BLOCK_SIZE);
+    }
+
   }
 };
 
