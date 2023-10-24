@@ -29,13 +29,15 @@ struct cgpt_stencil_tensor_execute_params_t {
 };
 
 struct cgpt_stencil_tensor_factor_t {
-  uint16_t index; // index of field
+  int16_t index; // index of field
   int16_t point; // index of shift
   uint16_t element; // index of tensor element
+  int16_t is_temporary;
 };
 
 struct cgpt_stencil_tensor_code_offload_t {
-  uint16_t target;
+  int16_t target;
+  int16_t is_temporary;
   uint16_t element;
   int16_t instruction;
   ComplexD weight;
@@ -45,6 +47,7 @@ struct cgpt_stencil_tensor_code_offload_t {
 
 struct cgpt_stencil_tensor_code_t {
   int target; // target field index
+  int is_temporary;
   int element;
   int instruction;
   ComplexD weight; // weight of term
@@ -100,6 +103,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
     nfactors = 0;
     for (int i=0;i<_code.size();i++) {
       code[i].target = _code[i].target;
+      code[i].is_temporary = _code[i].is_temporary;
       code[i].element = _code[i].element;
       code[i].instruction = _code[i].instruction;
       code[i].weight = _code[i].weight;
@@ -183,20 +187,22 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 #define TC_MOV_NEG_CC 6
 #define TC_DEC_CC 7
 #define TC_MUL 8
+#define TC_ADD 9
 #define ID(a) a
 #define CONJ(a) adj(a)
 	      
 #define EXECUTE(KB, NN)							\
 	      switch (_p->instruction)					\
 		{							\
-		case TC_INC: KB(+=,ID,NN); break;			\
-		case TC_MOV: KB(=,ID,NN); break;			\
-		case TC_DEC: KB(-=,ID,NN); break;			\
-		case TC_MOV_NEG: KB(=-,ID,NN); break;			\
-		case TC_INC_CC: KB(+=,CONJ,NN); break;			\
-		case TC_MOV_CC: KB(=,CONJ,NN); break;			\
-		case TC_DEC_CC: KB(-=,CONJ,NN); break;			\
-		case TC_MOV_NEG_CC: KB(=-,CONJ,NN); break;		\
+		case TC_INC: KB(+=,*,ID,NN); break;			\
+		case TC_MOV: KB(=,*,ID,NN); break;			\
+		case TC_DEC: KB(-=,*,ID,NN); break;			\
+		case TC_MOV_NEG: KB(=-,*,ID,NN); break;			\
+		case TC_INC_CC: KB(+=,*,CONJ,NN); break;		\
+		case TC_MOV_CC: KB(=,*,CONJ,NN); break;			\
+		case TC_DEC_CC: KB(-=,*,CONJ,NN); break;		\
+		case TC_MOV_NEG_CC: KB(=-,*,CONJ,NN); break;		\
+		case TC_ADD: KB(=,+,ID,NN); break;			\
 		case TC_MUL:						\
 		  {							\
 		    auto w = ((coeff_t)_p->weight);			\
@@ -205,17 +211,22 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 		  }							\
 		  break;						\
 		}
-
-#define KERNEL_BIN(signature, functor, NN) {				\
+      
+#define KERNEL_BIN(signature, op, functor, NN) {			\
 	int bNN = nelements[_f1->index] * NSIMD;			\
-	element_t* __restrict__ e_b = &fields_v[_f1->index][bNN * NN * ss + _f1->element * NSIMD + lane]; \
+	int ss_b = (_f1->is_temporary) ? ss : ss + oblock0;		\
+	element_t* __restrict__ e_b = &fields_v[_f1->index][bNN * NN * ss_b + _f1->element * NSIMD + lane]; \
 	for (int ff=0;ff<NN;ff++)					\
-	  e_c[cNN * ff] signature functor(e_a[aNN * ff]) * e_b[bNN * ff]; \
+	  e_c[cNN * ff] signature functor(e_a[aNN * ff]) op e_b[bNN * ff]; \
       }
       
 
       ASSERT(osites_per_cache_block % osites_per_instruction == 0);
-      
+
+#ifndef GRID_HAS_ACCELERATOR
+      thread_region {
+#endif
+	
       uint64_t ocache_blocks = (osites + osites_per_cache_block - 1) / osites_per_cache_block;
       for (uint64_t ocache_block = 0;ocache_block < ocache_blocks;ocache_block++) {
 	uint64_t osites0 = std::min(ocache_block * osites_per_cache_block, osites);
@@ -235,16 +246,17 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	for (auto & segment : segments) {
 	  int _npb = segment.number_of_blocks;
 	  int _npbs = segment.block_size;
-#else
-	  #define _npb 1
-	  #define _npbs n_code
-	  #define coffset 0
-#endif
-	  
 	  accelerator_forNB(ss_block, oblocks * _npb, T::Nsimd(), {
-	      
-	      uint64_t ss = ss_block / _npb + oblock0;
 	      uint64_t cc = ss_block % _npb;
+#else
+#define _npb 1
+#define _npbs n_code
+#define coffset 0
+#define cc 0
+	  thread_for_in_region(ss_block, oblocks * _npb, {
+#endif
+      
+	      uint64_t ss = ss_block / _npb;
 	      
 	      for (int ic=0;ic<_npbs;ic++) {
 		
@@ -256,8 +268,10 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 		int cNN = nelements[_p->target] * NSIMD;
 	      
 		int lane = acceleratorSIMTlane(T::Nsimd());
-		element_t* __restrict__ e_a = &fields_v[_f0->index][aNN * osites_per_instruction * ss + _f0->element * NSIMD + lane];
-		element_t* __restrict__ e_c = &fields_v[_p->target][cNN * osites_per_instruction * ss + _p->element * NSIMD + lane];
+		int ss_a = (_f0->is_temporary) ? ss : ss + oblock0;
+		int ss_c = (_p->is_temporary) ? ss : ss + oblock0;
+		element_t* __restrict__ e_a = &fields_v[_f0->index][aNN * osites_per_instruction * ss_a + _f0->element * NSIMD + lane];
+		element_t* __restrict__ e_c = &fields_v[_p->target][cNN * osites_per_instruction * ss_c + _p->element * NSIMD + lane];
 		
 		EXECUTE(KERNEL_BIN, osites_per_instruction);
 	      }
@@ -265,11 +279,16 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	    });
 	  
 	  if (osites_extra) {
+#ifdef GRID_HAS_ACCELERATOR
 	    accelerator_forNB(ss_block, osites_extra * _npb, T::Nsimd(), {
-		
-		uint64_t ss = ss_block / _npb + osites0 + osites_extra_start;
 		uint64_t cc = ss_block % _npb;
+#else
+#define cc 0
+            thread_for_in_region(ss_block, osites_extra * _npb, {
+#endif
 		
+		uint64_t ss = ss_block / _npb + osites_extra_start;
+
 		for (int ic=0;ic<_npbs;ic++) {
 		  
 		  const auto _p = &p_code[coffset + cc * _npbs + ic];
@@ -280,8 +299,10 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 		  int cNN = nelements[_p->target] * NSIMD;
 		  
 		  int lane = acceleratorSIMTlane(T::Nsimd());
-		  element_t* __restrict__ e_a = &fields_v[_f0->index][aNN * ss + _f0->element * NSIMD + lane];
-		  element_t* __restrict__ e_c = &fields_v[_p->target][cNN * ss + _p->element * NSIMD + lane];
+		  int ss_a = (_f0->is_temporary) ? ss : ss + oblock0; // on M1 did not find a single case for which cache re-use for temporaries worked
+		  int ss_c = (_p->is_temporary) ? ss : ss + oblock0;
+		  element_t* __restrict__ e_a = &fields_v[_f0->index][aNN * ss_a + _f0->element * NSIMD + lane];
+		  element_t* __restrict__ e_c = &fields_v[_p->target][cNN * ss_c + _p->element * NSIMD + lane];
 		  
 		  EXECUTE(KERNEL_BIN, 1);
 		}	    
@@ -300,6 +321,10 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       //CGPT_CARTESIAN_STENCIL_CLEANUP(T,);
     }
 
+#ifndef GRID_HAS_ACCELERATOR
+    }
+#endif
+    
     VECTOR_ELEMENT_VIEW_CLOSE(fields);
   }
 
@@ -314,7 +339,9 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
     case 16: block_execute<16>(fields, params.osites_per_cache_block); break;
     case 32: block_execute<32>(fields, params.osites_per_cache_block); break;
     case 64: block_execute<64>(fields, params.osites_per_cache_block); break;
-    default: ERR("params.osites_per_instruction = %d not implemented", params.osites_per_cache_block);
+    case 128: block_execute<128>(fields, params.osites_per_cache_block); break;
+    case 256: block_execute<256>(fields, params.osites_per_cache_block); break;
+    default: ERR("params.osites_per_instruction = %d not implemented", params.osites_per_instruction);
     }
 
   }
@@ -326,6 +353,13 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_tensor_factor_t& out) {
   cgpt_convert(PyTuple_GetItem(in, 0), out.index);
   cgpt_convert(PyTuple_GetItem(in, 1), out.point);
   cgpt_convert(PyTuple_GetItem(in, 2), out.element);
+
+  if (out.index < 0) {
+    out.is_temporary = 1;
+    out.index = - out.index;
+  } else {
+    out.is_temporary = 0;
+  }
 }
 
 static void cgpt_convert(PyObject* in, cgpt_stencil_tensor_code_segment_t& out) {
@@ -339,6 +373,12 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_tensor_code_t& out) {
   ASSERT(PyDict_Check(in));
 
   out.target = get_int(in, "target");
+  if (out.target < 0) {
+    out.target = - out.target;
+    out.is_temporary = 1;
+  } else {
+    out.is_temporary = 0;
+  }
   out.element = get_int(in, "element");
   out.instruction = get_int(in, "instruction");
   out.weight = get_complex(in, "weight");

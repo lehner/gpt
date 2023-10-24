@@ -25,3 +25,4 @@ inc_cc = 5
 mov_neg_cc = 6
 dec_cc = 7
 mul = 8
+add = 9
