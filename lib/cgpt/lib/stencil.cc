@@ -139,8 +139,8 @@ EXPORT(stencil_tensor_execute,{
 
     cgpt_stencil_tensor_execute_params_t params =
       {
-       osites_per_instruction,
-       osites_per_cache_block
+	(int)osites_per_instruction,
+	(int)osites_per_cache_block
       };
     stencil->execute(__fields, params);
 

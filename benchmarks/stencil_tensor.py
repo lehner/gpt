@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import gpt as g
 #grid = g.grid([64,64,64,64], g.double)
-grid = g.grid([32,32,32,32], g.double)
+#grid = g.grid([32,32,32,32], g.double)
 #grid = g.grid([32,16,16,16], g.double)
-#grid = g.grid([16,16,16,32], g.double)
+grid = g.grid([16,16,16,32], g.double)
 #grid = g.grid([2*4,4*3,3*4,3*3*4], g.double)
 m1 = g.mcolor(grid)
 m2 = g.mcolor(grid)
@@ -30,7 +30,7 @@ g.message(g.norm2(m3 - m3ref))
 
 
 for osites_per_instruction in [1,4,8,16,32,64]:
-    for osites_per_cache_block in [2048*4, 4096*4, 8192*4]:
+    for osites_per_cache_block in [2048*4, 4096*4, 8192*4, grid.gsites]:
         ein.memory_access_pattern(osites_per_instruction, osites_per_cache_block)
 
         g.message(osites_per_instruction, osites_per_cache_block)
@@ -89,7 +89,7 @@ g.message(g.norm2(R - R2) / g.norm2(R))
 #
 #            D[i2[0], i1[0]] += sign1 * sign2 * Q1[i1[1], i2[1]] * g.transpose(Q2[i1[2], i2[2]])
 for osites_per_instruction in [1,4,8,16,32,64]:
-    for osites_per_cache_block in [2048*4, 4096*4, 8192*4]:
+    for osites_per_cache_block in [2048*4, 4096*4, 8192*4, grid.gsites]:
         ein.memory_access_pattern(osites_per_instruction, osites_per_cache_block)
 
         g.message(osites_per_instruction, osites_per_cache_block)

@@ -144,13 +144,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       delete sm;
     }
   }
-  /*
 
-    TODO:
-    
-    stencils should return different options for current hardware for performance (including max _npb)
-
-  */
   template<int osites_per_instruction>
   void block_execute(const std::vector<cgpt_Lattice_base*>& fields, int osites_per_cache_block) {
 
@@ -163,7 +157,6 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 #endif
     typedef typename T::scalar_type coeff_t;
 
-      
     VECTOR_ELEMENT_VIEW_OPEN(element_t, fields, fields_v, AcceleratorWrite);
 
     int n_code = code.size();
@@ -225,8 +218,8 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       
       uint64_t ocache_blocks = (osites + osites_per_cache_block - 1) / osites_per_cache_block;
       for (uint64_t ocache_block = 0;ocache_block < ocache_blocks;ocache_block++) {
-	uint64_t osites0 = min(ocache_block * osites_per_cache_block, osites);
-	uint64_t osites1 = min(osites0 + osites_per_cache_block, osites);
+	uint64_t osites0 = std::min(ocache_block * osites_per_cache_block, osites);
+	uint64_t osites1 = std::min(osites0 + osites_per_cache_block, osites);
 
 	uint64_t osites_in_cache_block = osites1 - osites0;
 	
@@ -237,11 +230,16 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	uint64_t osites_extra = osites_in_cache_block - osites_extra_start;
 
 	//std::cout << GridLogMessage<< "Group " << osites0 << " to " << osites1 << " has oblocks " << oblocks << " and extra " << osites_extra << " from " << osites_extra_start << " compare to " << osites << std::endl;
-
+#ifdef GRID_HAS_ACCELERATOR
 	int coffset = 0;
 	for (auto & segment : segments) {
 	  int _npb = segment.number_of_blocks;
 	  int _npbs = segment.block_size;
+#else
+	  #define _npb 1
+	  #define _npbs n_code
+	  #define coffset 0
+#endif
 	  
 	  accelerator_forNB(ss_block, oblocks * _npb, T::Nsimd(), {
 	      
@@ -290,8 +288,10 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	      });
 	  }
 
+#ifdef GRID_HAS_ACCELERATOR
 	  coffset += _npb * _npbs;
 	}
+#endif
       }
       
       accelerator_barrier();
