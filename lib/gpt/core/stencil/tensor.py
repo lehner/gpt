@@ -19,9 +19,9 @@
 import gpt as g
 
 
-def tensor(lat, points, code, code_parallel_block_size=None):
+def tensor(lat, points, code, segments):
     # check if all points are cartesian
     for p in points:
         if len([s for s in p if s != 0]) > 1:
             raise Exception("Only cartesian version currently implemented")
-    return g.local_stencil.tensor(lat, points, code, code_parallel_block_size, local=0)
+    return g.local_stencil.tensor(lat, points, code, segments, local=0)

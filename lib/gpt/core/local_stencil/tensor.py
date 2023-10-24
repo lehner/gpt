@@ -33,19 +33,20 @@ def parse(c):
 
 
 class tensor:
-    def __init__(self, lat, points, code, code_parallel_block_size=None, local=1):
+    def __init__(self, lat, points, code, segments, local=1):
         self.points = points
         self.code = [parse(c) for c in code]
-        self.code_parallel_block_size = code_parallel_block_size
-        if code_parallel_block_size is None:
-            code_parallel_block_size = len(code)
+        self.segments = segments
         self.obj = cgpt.stencil_tensor_create(
-            lat.v_obj[0], lat.grid.obj, points, self.code, code_parallel_block_size, local
+            lat.v_obj[0], lat.grid.obj, points, self.code, self.segments, local
         )
-        self.fast_osites = 1
+        self.osites_per_instruction = 4
+        self.osites_per_cache_block = 4096
 
     def __call__(self, *fields):
-        cgpt.stencil_tensor_execute(self.obj, list(fields), self.fast_osites)
+        cgpt.stencil_tensor_execute(self.obj, list(fields),
+                                    self.osites_per_instruction,
+                                    self.osites_per_cache_block)
 
     def __del__(self):
         cgpt.stencil_tensor_delete(self.obj)
@@ -53,5 +54,6 @@ class tensor:
     def data_access_hints(self, *hints):
         pass
 
-    def memory_access_pattern(self, fast_osites):
-        self.fast_osites = fast_osites
+    def memory_access_pattern(self, osites_per_instruction, osites_per_cache_block):
+        self.osites_per_instruction = osites_per_instruction
+        self.osites_per_cache_block = osites_per_cache_block

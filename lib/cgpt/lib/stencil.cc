@@ -64,11 +64,11 @@ EXPORT(stencil_tensor_create,{
 
     void* _grid;
     void* _lattice;
-    PyObject* _shifts, * _code;
+    PyObject* _shifts, * _code, * _segments;
     long _code_parallel_block_size;
     long _local;
-    if (!PyArg_ParseTuple(args, "llOOll", &_lattice, &_grid, &_shifts, &_code,
-			  &_code_parallel_block_size, &_local)) {
+    if (!PyArg_ParseTuple(args, "llOOOl", &_lattice, &_grid, &_shifts, &_code,
+			  &_segments, &_local)) {
       return NULL;
     }
     
@@ -76,8 +76,7 @@ EXPORT(stencil_tensor_create,{
     cgpt_Lattice_base* lattice = (cgpt_Lattice_base*)_lattice;
 
     return PyLong_FromVoidPtr(lattice->stencil_tensor(grid, _shifts, _code,
-						      _code_parallel_block_size,
-						      _local));
+						      _segments, _local));
   });
 
 EXPORT(stencil_matrix_execute,{
@@ -125,8 +124,11 @@ EXPORT(stencil_tensor_execute,{
 
     void* _stencil;
     PyObject* _fields;
-    long fast_osites;
-    if (!PyArg_ParseTuple(args, "lOl", &_stencil, &_fields, &fast_osites)) {
+    long osites_per_instruction;
+    long osites_per_cache_block;
+    if (!PyArg_ParseTuple(args, "lOll", &_stencil, &_fields,
+			  &osites_per_instruction,
+			  &osites_per_cache_block)) {
       return NULL;
     }
     
@@ -135,7 +137,12 @@ EXPORT(stencil_tensor_execute,{
     std::vector<cgpt_Lattice_base*> __fields;
     cgpt_basis_fill(__fields,_fields);
 
-    stencil->execute(__fields, fast_osites);
+    cgpt_stencil_tensor_execute_params_t params =
+      {
+       osites_per_instruction,
+       osites_per_cache_block
+      };
+    stencil->execute(__fields, params);
 
     return PyLong_FromLong(0);
   });

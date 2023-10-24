@@ -73,7 +73,7 @@ public:
   virtual GridBase* get_grid() = 0;
   virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) = 0;
   virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) = 0;
-  virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) = 0;
+  virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, PyObject* segments, long local) = 0;
 
 };
 
