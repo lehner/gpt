@@ -30,7 +30,7 @@ g.message("m3 = m1 * m2")
 g.message(g.norm2(m3 - m3ref))
 
 
-for osites_per_instruction in [32,128,256]: #[1,8,16,32,64]:
+for osites_per_instruction in [16,32,128,256]: #[1,8,16,32,64]:
     for osites_per_cache_block in [2**15, grid.gsites]: #[2**11, 2**13, 2**15, grid.gsites]:
         ein.memory_access_pattern(osites_per_instruction, osites_per_cache_block)
 

@@ -29,6 +29,8 @@ struct cgpt_stencil_tensor_execute_params_t {
 };
 
 struct cgpt_stencil_tensor_factor_t {
+  void* base_ptr;
+  uint64_t stride;
   int16_t index; // index of field
   int16_t point; // index of shift
   uint16_t element; // index of tensor element
@@ -36,6 +38,8 @@ struct cgpt_stencil_tensor_factor_t {
 };
 
 struct cgpt_stencil_tensor_code_offload_t {
+  void* base_ptr;
+  uint64_t stride;
   int16_t target;
   int16_t is_temporary;
   uint16_t element;
@@ -164,7 +168,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
     VECTOR_ELEMENT_VIEW_OPEN(element_t, fields, fields_v, AcceleratorWrite);
 
     int n_code = code.size();
-    const cgpt_stencil_tensor_code_offload_t* p_code = &code[0];
+    cgpt_stencil_tensor_code_offload_t* p_code = &code[0];
 
     int nd = fields[0]->get_grid()->Nd();
 
@@ -211,11 +215,10 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 		  }							\
 		  break;						\
 		}
-      
+     
 #define KERNEL_BIN(signature, op, functor, NN) {			\
-	int bNN = nelements[_f1->index] * NSIMD;			\
-	int ss_b = (_f1->is_temporary) ? ss : ss + oblock0;		\
-	element_t* __restrict__ e_b = &fields_v[_f1->index][bNN * NN * ss_b + _f1->element * NSIMD + lane]; \
+	auto bNN = _f1->stride;						\
+	element_t* __restrict__ e_b = ((element_t*)_f1->base_ptr) + bNN * NN * MAP_INDEX(_f1,ss) + lane; \
 	for (int ff=0;ff<NN;ff++)					\
 	  e_c[cNN * ff] signature functor(e_a[aNN * ff]) op e_b[bNN * ff]; \
       }
@@ -226,7 +229,6 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 #ifndef GRID_HAS_ACCELERATOR
       thread_region {
 #endif
-	
       uint64_t ocache_blocks = (osites + osites_per_cache_block - 1) / osites_per_cache_block;
       for (uint64_t ocache_block = 0;ocache_block < ocache_blocks;ocache_block++) {
 	uint64_t osites0 = std::min(ocache_block * osites_per_cache_block, osites);
@@ -240,8 +242,29 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	uint64_t osites_extra_start = oblocks * osites_per_instruction;
 	uint64_t osites_extra = osites_in_cache_block - osites_extra_start;
 
+	// set base_ptr for current views
+	for (int i=0;i<n_code;i++) {
+	  cgpt_stencil_tensor_code_offload_t* _p = &p_code[i];
+	  _p->stride = fields_v_nelements[_p->target] * NSIMD;
+	  if (_p->is_temporary) {
+	    _p->base_ptr = &fields_v[_p->target][_p->element * NSIMD];
+	  } else {
+	    _p->base_ptr = &fields_v[_p->target][_p->stride * osites_per_instruction * oblock0 + _p->element * NSIMD];
+	  }
+	  for (int j=0;j<_p->size;j++) {
+	    cgpt_stencil_tensor_factor_t* _f = &_p->factor[j];
+	    _f->stride = fields_v_nelements[_f->index] * NSIMD;
+	    if (_f->is_temporary) {
+	      _f->base_ptr = &fields_v[_f->index][_f->element * NSIMD];
+	    } else {
+	      _f->base_ptr = &fields_v[_f->index][_f->stride * osites_per_instruction * oblock0 + _f->element * NSIMD];
+	    }
+	  }
+	}
+	
 	//std::cout << GridLogMessage<< "Group " << osites0 << " to " << osites1 << " has oblocks " << oblocks << " and extra " << osites_extra << " from " << osites_extra_start << " compare to " << osites << std::endl;
 #ifdef GRID_HAS_ACCELERATOR
+#define MAP_INDEX(x,ss) ss
 	int coffset = 0;
 	for (auto & segment : segments) {
 	  int _npb = segment.number_of_blocks;
@@ -249,6 +272,8 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	  accelerator_forNB(ss_block, oblocks * _npb, T::Nsimd(), {
 	      uint64_t cc = ss_block % _npb;
 #else
+#define MAP_INDEX(x,ss) ss
+	      //(x->is_temporary ? ss : ss)
 #define _npb 1
 #define _npbs n_code
 #define coffset 0
@@ -259,19 +284,17 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	      uint64_t ss = ss_block / _npb;
 	      
 	      for (int ic=0;ic<_npbs;ic++) {
+
+		const cgpt_stencil_tensor_code_offload_t* __restrict__ _p = &p_code[coffset + cc * _npbs + ic];
+		const cgpt_stencil_tensor_factor_t* __restrict__ _f0 = &_p->factor[0];
+		const cgpt_stencil_tensor_factor_t* __restrict__ _f1 = &_p->factor[1];
 		
-		const auto _p = &p_code[coffset + cc * _npbs + ic];
-		const auto _f0 = &_p->factor[0];
-		const auto _f1 = &_p->factor[1];
-		
-		int aNN = nelements[_f0->index] * NSIMD;
-		int cNN = nelements[_p->target] * NSIMD;
-	      
 		int lane = acceleratorSIMTlane(T::Nsimd());
-		int ss_a = (_f0->is_temporary) ? ss : ss + oblock0;
-		int ss_c = (_p->is_temporary) ? ss : ss + oblock0;
-		element_t* __restrict__ e_a = &fields_v[_f0->index][aNN * osites_per_instruction * ss_a + _f0->element * NSIMD + lane];
-		element_t* __restrict__ e_c = &fields_v[_p->target][cNN * osites_per_instruction * ss_c + _p->element * NSIMD + lane];
+		auto aNN = _f0->stride;
+		element_t* __restrict__ e_a = ((element_t*)_f0->base_ptr) + aNN * osites_per_instruction * MAP_INDEX(_f0,ss) + lane;
+
+		auto cNN = _p->stride;
+		element_t* __restrict__ e_c = ((element_t*)_p->base_ptr) + cNN * osites_per_instruction * MAP_INDEX(_p,ss) + lane;
 		
 		EXECUTE(KERNEL_BIN, osites_per_instruction);
 	      }
@@ -291,19 +314,17 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 
 		for (int ic=0;ic<_npbs;ic++) {
 		  
-		  const auto _p = &p_code[coffset + cc * _npbs + ic];
-		  const auto _f0 = &_p->factor[0];
-		  const auto _f1 = &_p->factor[1];
-		  
-		  int aNN = nelements[_f0->index] * NSIMD;
-		  int cNN = nelements[_p->target] * NSIMD;
+		  const cgpt_stencil_tensor_code_offload_t* __restrict__ _p = &p_code[coffset + cc * _npbs + ic];
+		  const cgpt_stencil_tensor_factor_t* __restrict__ _f0 = &_p->factor[0];
+		  const cgpt_stencil_tensor_factor_t* __restrict__ _f1 = &_p->factor[1];
 		  
 		  int lane = acceleratorSIMTlane(T::Nsimd());
-		  int ss_a = (_f0->is_temporary) ? ss : ss + oblock0; // on M1 did not find a single case for which cache re-use for temporaries worked
-		  int ss_c = (_p->is_temporary) ? ss : ss + oblock0;
-		  element_t* __restrict__ e_a = &fields_v[_f0->index][aNN * ss_a + _f0->element * NSIMD + lane];
-		  element_t* __restrict__ e_c = &fields_v[_p->target][cNN * ss_c + _p->element * NSIMD + lane];
+		  auto aNN = _f0->stride;
+		  element_t* __restrict__ e_a = ((element_t*)_f0->base_ptr) + aNN * MAP_INDEX(_f0,ss) + lane;
 		  
+		  auto cNN = _p->stride;
+		  element_t* __restrict__ e_c = ((element_t*)_p->base_ptr) + cNN * MAP_INDEX(_p,ss) + lane;
+
 		  EXECUTE(KERNEL_BIN, 1);
 		}	    
 	      });

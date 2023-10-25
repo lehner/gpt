@@ -56,7 +56,7 @@ using namespace Grid;
     __ ## v.push_back(word / simd_word);				\
   }									\
   auto v = & _ ## v[0];							\
-  auto nelements = & __ ## v[0];
+  auto v ## _nelements = & __ ## v[0];
 
 #define VECTOR_ELEMENT_VIEW_CLOSE(l)					\
   for(uint64_t k=0;k<l.size();k++) l[k]->memory_view_close();
