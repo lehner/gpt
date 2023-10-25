@@ -19,7 +19,6 @@
 import gpt, cgpt
 from gpt.params import params_convention
 import os
-import warnings
 
 
 # load through cgpt backend (openQCD, ...)
