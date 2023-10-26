@@ -51,7 +51,7 @@ class matrix_vector:
             code_parallel_block_size,
             local,
         )
-        self.fast_osites = 1
+        self.fast_osites = 0
 
     def __call__(self, matrix_fields, vector_fields):
         cgpt.stencil_matrix_vector_execute(self.obj, matrix_fields, vector_fields, self.fast_osites)

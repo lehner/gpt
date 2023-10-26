@@ -36,7 +36,7 @@ class matrix:
         self.obj = cgpt.stencil_matrix_create(
             lat.v_obj[0], lat.grid.obj, points, self.code, code_parallel_block_size, local
         )
-        self.fast_osites = 1
+        self.fast_osites = 0
 
     def __call__(self, *fields):
         cgpt.stencil_matrix_execute(self.obj, list(fields), self.fast_osites)

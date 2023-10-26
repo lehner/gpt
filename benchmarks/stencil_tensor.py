@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 import gpt as g
 
-#grid = g.grid([64,64,64,64], g.double)
-grid = g.grid([32,32,32,32], g.double)
-#grid = g.grid([32,16,16,16], g.double)
-#grid = g.grid([16,16,16,32], g.double)
-#grid = g.grid([2*4,4*3,3*4,3*3*4], g.double)
+grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), g.double)
+
 m1 = g.mcolor(grid)
 m2 = g.mcolor(grid)
 m3 = g.mcolor(grid)
@@ -69,6 +66,7 @@ if True:
                     (0,dst,ti.mov if l == 0 else ti.inc,1.0,[(2,0,3*i + l),(-1,0,3*l + j)])
                 )
     segments = [(3, 9), (3, 9)]
+    #segments = [(27*2, 1)]
 else:
     for i in range(3):
         for j in range(3):
@@ -153,7 +151,7 @@ R2 = g.qcd.baryon.diquark(Q1,Q2)
 g.message(g.norm2(R - R2) / g.norm2(R))
 #
 #            D[i2[0], i1[0]] += sign1 * sign2 * Q1[i1[1], i2[1]] * g.transpose(Q2[i1[2], i2[2]])
-for osites_per_instruction in [4,16,32,64,256]:
+for osites_per_instruction in [1,2,4,16,32,64,256]:
     for osites_per_cache_block in [ grid.gsites]:
         ein.memory_access_pattern(osites_per_instruction, osites_per_cache_block)
 

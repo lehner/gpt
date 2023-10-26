@@ -30,8 +30,11 @@ Matrix Multiply Benchmark with
         three = g.lattice(grid, tp)
         rng.cnormal([one, two])
 
-        # Rank inner product
+        # matrix multiply
         nbytes = 3.0 * one.global_bytes() * N
+        n = (one.otype.nfloats // 2)**0.5
+        flops_per_matrix_multiply = n * n * (n * 6 + (n - 1) * 2)
+        flops = flops_per_matrix_multiply = grid.gsites * N * flops_per_matrix_multiply
 
         # Time
         dt = 0.0
@@ -44,10 +47,12 @@ Matrix Multiply Benchmark with
 
         # Report
         GBPerSec = nbytes / dt / 1e9
+        GFLPerSec = flops / dt / 1e9
         g.message(
             f"""{N} matrix_multiply
     Object type                 : {tp.__name__}
     Time to complete            : {dt:.2g} s
+    GFlops/s                    : {GFLPerSec:.2f}
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s
 """
         )
