@@ -221,3 +221,67 @@ for mu in range(4):
     eps2 = g.norm2(stv - ref)
     g.message(f"Stencil covariant laplace versus cshift version: {eps2}")
     assert eps2 < 1e-25
+
+# tensor stencil test for case of diquark
+def serial_diquark(Q1, Q2):
+    eps = g.epsilon(Q1.otype.shape[2])
+    R = g.lattice(Q1)
+
+    # D_{a2,a1} = epsilon_{a1,b1,c1}*epsilon_{a2,b2,c2}*spin_transpose(Q1_{b1,b2})*Q2_{c1,c2}
+    Q1 = g.separate_color(Q1)
+    Q2 = g.separate_color(Q2)
+
+    D = {x: g.lattice(Q1[x]) for x in Q1}
+    for d in D:
+        D[d][:] = 0
+
+    for i1, sign1 in eps:
+        for i2, sign2 in eps:
+            D[i2[0], i1[0]] += sign1 * sign2 * Q1[i1[1], i2[1]] * g.transpose(Q2[i1[2], i2[2]])
+
+    g.merge_color(R, D)
+    return R
+
+def stencil_diquark(Q1, Q2):
+    Nc = Q1.otype.shape[2]
+    Ns = Q1.otype.shape[0]
+    eps = g.epsilon(Nc)
+    R = g.mspincolor(grid)
+    code = []
+    acc = {}
+    ti = g.stencil.tensor_instructions
+    for i in range(Ns):
+        for j in range(Ns):
+            for l in range(Ns):
+                for i1, sign1 in eps:
+                    for i2, sign2 in eps:
+                        dst = (i*Ns + j)*Nc*Nc + i2[0]*Nc + i1[0]
+                        aa = (Ns*i + l)*Nc*Nc + i1[1]*Nc + i2[1]
+                        bb = (Ns*j + l)*Nc*Nc + i1[2]*Nc + i2[2]
+                        if dst not in acc:
+                            acc[dst] = True
+                            mode = ti.mov if sign1 * sign2 > 0 else ti.mov_neg
+                        else:
+                            mode = ti.inc if sign1 * sign2 > 0 else ti.dec
+                        code.append(
+                            (0,dst,mode,1.0,[(1,0,aa),(2,0,bb)])
+                        )
+
+    segments = [(len(code) // (Ns*Ns), Ns*Ns)]
+    ein = g.stencil.tensor(Q1, [(0, 0, 0, 0)], code, segments)
+    ein(R, Q1, Q2)
+    return R
+
+Q1 = g.mspincolor(grid)
+Q2 = g.mspincolor(grid)
+rng.cnormal([Q1,Q2])
+st_di = stencil_diquark(Q1, Q2)
+se_di = serial_diquark(Q1, Q2)
+std_di = g.qcd.baryon.diquark(Q1, Q2)
+eps2 = g.norm2(st_di - se_di) / g.norm2(se_di)
+g.message(f"Diquark stencil test (stencil <> serial): {eps2}")
+assert eps2 < 1e-25
+
+eps2 = g.norm2(st_di - std_di) / g.norm2(std_di)
+g.message(f"Diquark stencil test (stencil <> g.qcd.gauge.diquark): {eps2}")
+assert eps2 < 1e-25
