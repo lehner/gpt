@@ -20,9 +20,11 @@ import gpt as g
 
 
 default_cache = {}
+
+
 def diquark(Q1, Q2, cache=default_cache):
     R = g.lattice(Q1)
-    # D_{a2,a1} = epsilon_{a1,b1,c1}*epsilon_{a2,b2,c2}*spin_transpose(Q1_{b1,b2})*Q2_{c1,c2}
+    # D_{a2,a1} = epsilon_{a1,b1,c1}*epsilon_{a2,b2,c2}*Q1_{b1,b2}*spin_transpose(Q2_{c1,c2})
     cache_key = f"{Q1.otype.__name__}_{Q1.checkerboard().__name__}_{Q1.grid.describe()}"
     if cache_key not in cache:
         Nc = Q1.otype.shape[2]
@@ -36,19 +38,17 @@ def diquark(Q1, Q2, cache=default_cache):
                 for l in range(Ns):
                     for i1, sign1 in eps:
                         for i2, sign2 in eps:
-                            dst = (i*Ns + j)*Nc*Nc + i2[0]*Nc + i1[0]
-                            aa = (Ns*i + l)*Nc*Nc + i1[1]*Nc + i2[1]
-                            bb = (Ns*j + l)*Nc*Nc + i1[2]*Nc + i2[2]
+                            dst = (i * Ns + j) * Nc * Nc + i2[0] * Nc + i1[0]
+                            aa = (Ns * i + l) * Nc * Nc + i1[1] * Nc + i2[1]
+                            bb = (Ns * j + l) * Nc * Nc + i1[2] * Nc + i2[2]
                             if dst not in acc:
                                 acc[dst] = True
                                 mode = ti.mov if sign1 * sign2 > 0 else ti.mov_neg
                             else:
                                 mode = ti.inc if sign1 * sign2 > 0 else ti.dec
-                            code.append(
-                                (0,dst,mode,1.0,[(1,0,aa),(2,0,bb)])
-                            )
+                            code.append((0, dst, mode, 1.0, [(1, 0, aa), (2, 0, bb)]))
 
-        segments = [(len(code) // (Ns*Ns), Ns*Ns)]
+        segments = [(len(code) // (Ns * Ns), Ns * Ns)]
         cache[cache_key] = g.stencil.tensor(Q1, [(0, 0, 0, 0)], code, segments)
 
     cache[cache_key](R, Q1, Q2)

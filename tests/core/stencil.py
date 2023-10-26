@@ -222,12 +222,13 @@ for mu in range(4):
     g.message(f"Stencil covariant laplace versus cshift version: {eps2}")
     assert eps2 < 1e-25
 
+
 # tensor stencil test for case of diquark
 def serial_diquark(Q1, Q2):
     eps = g.epsilon(Q1.otype.shape[2])
     R = g.lattice(Q1)
 
-    # D_{a2,a1} = epsilon_{a1,b1,c1}*epsilon_{a2,b2,c2}*spin_transpose(Q1_{b1,b2})*Q2_{c1,c2}
+    # D_{a2,a1} = epsilon_{a1,b1,c1}*epsilon_{a2,b2,c2}*Q1_{b1,b2}*spin_transpose(Q2_{c1,c2})
     Q1 = g.separate_color(Q1)
     Q2 = g.separate_color(Q2)
 
@@ -242,6 +243,7 @@ def serial_diquark(Q1, Q2):
     g.merge_color(R, D)
     return R
 
+
 def stencil_diquark(Q1, Q2):
     Nc = Q1.otype.shape[2]
     Ns = Q1.otype.shape[0]
@@ -255,26 +257,26 @@ def stencil_diquark(Q1, Q2):
             for l in range(Ns):
                 for i1, sign1 in eps:
                     for i2, sign2 in eps:
-                        dst = (i*Ns + j)*Nc*Nc + i2[0]*Nc + i1[0]
-                        aa = (Ns*i + l)*Nc*Nc + i1[1]*Nc + i2[1]
-                        bb = (Ns*j + l)*Nc*Nc + i1[2]*Nc + i2[2]
+                        dst = (i * Ns + j) * Nc * Nc + i2[0] * Nc + i1[0]
+                        aa = (Ns * i + l) * Nc * Nc + i1[1] * Nc + i2[1]
+                        bb = (Ns * j + l) * Nc * Nc + i1[2] * Nc + i2[2]
                         if dst not in acc:
                             acc[dst] = True
                             mode = ti.mov if sign1 * sign2 > 0 else ti.mov_neg
                         else:
                             mode = ti.inc if sign1 * sign2 > 0 else ti.dec
-                        code.append(
-                            (0,dst,mode,1.0,[(1,0,aa),(2,0,bb)])
-                        )
+                        code.append((0, dst, mode, 1.0, [(1, 0, aa), (2, 0, bb)]))
 
-    segments = [(len(code) // (Ns*Ns), Ns*Ns)]
+    segments = [(len(code) // (Ns * Ns), Ns * Ns)]
     ein = g.stencil.tensor(Q1, [(0, 0, 0, 0)], code, segments)
     ein(R, Q1, Q2)
     return R
 
+
 Q1 = g.mspincolor(grid)
 Q2 = g.mspincolor(grid)
-rng.cnormal([Q1,Q2])
+
+rng.cnormal([Q1, Q2])
 st_di = stencil_diquark(Q1, Q2)
 se_di = serial_diquark(Q1, Q2)
 std_di = g.qcd.baryon.diquark(Q1, Q2)
@@ -284,4 +286,41 @@ assert eps2 < 1e-25
 
 eps2 = g.norm2(st_di - std_di) / g.norm2(std_di)
 g.message(f"Diquark stencil test (stencil <> g.qcd.gauge.diquark): {eps2}")
+assert eps2 < 1e-25
+
+# and use this to test einsum
+# D_{a2,a1} = epsilon_{a1,b1,c1}*epsilon_{a2,b2,c2}*Q1_{b1,b2}*spin_transpose(Q2_{c1,c2})
+einsum_di = g.einsum("acd,bef,ACce,BCdf->ABba", g.epsilon, g.epsilon, Q1, Q2, Q1)
+es_di = einsum_di(Q1, Q2)
+
+eps2 = g.norm2(st_di - es_di) / g.norm2(st_di)
+g.message(f"Diquark stencil test (stencil <> einsum): {eps2}")
+assert eps2 < 1e-25
+
+einsum_trace = g.einsum("AAaa->", Q1, g.complex(Q1.grid))
+xx = einsum_trace(Q1)
+yy = g(g.trace(Q1))
+eps2 = g.norm2(xx - yy) / g.norm2(yy)
+g.message(f"Einsum trace test: {eps2}")
+assert eps2 < 1e-25
+
+einsum_spintrace = g.einsum("AAab->ab", Q1, g.mcolor(Q1.grid))
+xx = einsum_spintrace(Q1)
+yy = g(g.spin_trace(Q1))
+eps2 = g.norm2(xx - yy) / g.norm2(yy)
+g.message(f"Einsum spintrace test: {eps2}")
+assert eps2 < 1e-25
+
+einsum_transpose = g.einsum("ABab->BAba", Q1, Q1)
+xx = einsum_transpose(Q1)
+yy = g(g.transpose(Q1))
+eps2 = g.norm2(xx - yy) / g.norm2(yy)
+g.message(f"Einsum transpose test: {eps2}")
+assert eps2 < 1e-25
+
+einsum_mm = g.einsum("ABab,BCbc->ACac", Q1, Q1, Q1)
+xx = einsum_mm(Q1, Q2)
+yy = g(Q1 * Q2)
+eps2 = g.norm2(xx - yy) / g.norm2(yy)
+g.message(f"Einsum mm test: {eps2}")
 assert eps2 < 1e-25

@@ -111,7 +111,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       code[i].element = _code[i].element;
       code[i].instruction = _code[i].instruction;
       code[i].weight = _code[i].weight;
-      code[i].size = (int)_code[i].factor.size();
+      code[i].size = (uint32_t)_code[i].factor.size();
       if (code[i].size == 0)
 	ERR("Cannot create empty factor");
       code[i].factor = &factors[nfactors];
@@ -217,10 +217,15 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 		}
      
 #define KERNEL_BIN(signature, op, functor, NN) {			\
-	auto bNN = _f1->stride;						\
-	element_t* __restrict__ e_b = ((element_t*)_f1->base_ptr) + bNN * NN * MAP_INDEX(_f1,ss) + lane; \
-	for (int ff=0;ff<NN;ff++)					\
-	  e_c[cNN * ff] signature functor(e_a[aNN * ff]) op e_b[bNN * ff]; \
+	if (_p->size == 2) {						\
+	  auto bNN = _f1->stride;					\
+	  element_t* __restrict__ e_b = ((element_t*)_f1->base_ptr) + bNN * NN * MAP_INDEX(_f1,ss) + lane; \
+	  for (int ff=0;ff<NN;ff++)					\
+	    e_c[cNN * ff] signature functor(e_a[aNN * ff]) op e_b[bNN * ff]; \
+	} else {							\
+	  for (int ff=0;ff<NN;ff++)					\
+	    e_c[cNN * ff] signature functor(e_a[aNN * ff]);		\
+	}								\
       }
       
 
