@@ -41,7 +41,7 @@ class tensor:
             lat.v_obj[0], lat.grid.obj, points, self.code, self.segments, local
         )
         self.osites_per_instruction = 4
-        self.osites_per_cache_block = 4096
+        self.osites_per_cache_block = lat.grid.gsites
 
     def __call__(self, *fields):
         cgpt.stencil_tensor_execute(self.obj, list(fields),

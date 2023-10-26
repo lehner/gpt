@@ -263,6 +263,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	}
 	
 	//std::cout << GridLogMessage<< "Group " << osites0 << " to " << osites1 << " has oblocks " << oblocks << " and extra " << osites_extra << " from " << osites_extra_start << " compare to " << osites << std::endl;
+	
 #ifdef GRID_HAS_ACCELERATOR
 #define MAP_INDEX(x,ss) ss
 	int coffset = 0;
