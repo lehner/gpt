@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import gpt as g
+
 #grid = g.grid([64,64,64,64], g.double)
 #grid = g.grid([32,32,32,32], g.double)
 #grid = g.grid([32,16,16,16], g.double)
@@ -29,9 +30,8 @@ ein(m3,m1,m2)
 g.message("m3 = m1 * m2")
 g.message(g.norm2(m3 - m3ref))
 
-
-for osites_per_instruction in [16,32,128,256]: #[1,8,16,32,64]:
-    for osites_per_cache_block in [2**15, grid.gsites]: #[2**11, 2**13, 2**15, grid.gsites]:
+for osites_per_instruction in [4,16,32,128,256]: #[1,8,16,32,64]:
+    for osites_per_cache_block in [4096, 2**15, grid.gsites]: #[2**11, 2**13, 2**15, grid.gsites]:
         ein.memory_access_pattern(osites_per_instruction, osites_per_cache_block)
 
         g.message(osites_per_instruction, osites_per_cache_block)

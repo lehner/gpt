@@ -332,12 +332,12 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 
 #ifdef GRID_HAS_ACCELERATOR
 	  coffset += _npb * _npbs;
+
+          accelerator_barrier();
 	}
 #endif
-      }
-      
-      accelerator_barrier();
-      
+      } 
+    
       // and cleanup
       //CGPT_CARTESIAN_STENCIL_CLEANUP(T,);
     }
