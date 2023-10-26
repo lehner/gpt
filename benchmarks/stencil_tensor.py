@@ -2,9 +2,9 @@
 import gpt as g
 
 #grid = g.grid([64,64,64,64], g.double)
-#grid = g.grid([32,32,32,32], g.double)
+grid = g.grid([32,32,32,32], g.double)
 #grid = g.grid([32,16,16,16], g.double)
-grid = g.grid([16,16,16,32], g.double)
+#grid = g.grid([16,16,16,32], g.double)
 #grid = g.grid([2*4,4*3,3*4,3*3*4], g.double)
 m1 = g.mcolor(grid)
 m2 = g.mcolor(grid)
