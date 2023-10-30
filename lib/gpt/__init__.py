@@ -25,6 +25,7 @@ import gpt.algorithms
 import gpt.qcd
 import gpt.qis
 import gpt.ml
+import gpt.ad
 import gpt.jobs
 import socket
 import cgpt

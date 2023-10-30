@@ -118,6 +118,9 @@ class ot_vector_color(ot_base):
             self.__name__: (lambda: ot_singlet, (0, 0)),
         }
 
+    def compose(self, a, b):
+        return a + b
+
 
 ###
 # Matrices and vectors of spin
@@ -190,6 +193,9 @@ class ot_vector_spin(ot_base):
         self.otab = {self.__name__: (lambda: ot_matrix_spin(ndim), [])}
         self.itab = {self.__name__: (lambda: ot_singlet, (0, 0))}
 
+    def compose(self, a, b):
+        return a + b
+
 
 ###
 # Matrices and vectors of both spin and color
@@ -261,6 +267,9 @@ class ot_vector_spin_color(ot_base):
             "ot_matrix_color(%d)" % (color_ndim): (lambda: self, None),  # TODO: add proper indices
             "ot_singlet": (lambda: self, None),
         }
+
+    def compose(self, a, b):
+        return a + b
 
     def distribute(self, mat, dst, src, zero_lhs):
         src, dst = gpt.util.to_list(src), gpt.util.to_list(dst)

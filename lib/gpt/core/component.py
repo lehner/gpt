@@ -69,6 +69,14 @@ def pow(exponent):
     return _simple_map("pow", {"exponent": exponent})
 
 
+def relu(a=0.0):
+    return _simple_map("relu", {"a": a})
+
+
+def drelu(a=0.0):
+    return _simple_map("drelu", {"a": a})
+
+
 def mod(n):
     return _simple_map("mod", {"n": n})
 

@@ -188,3 +188,53 @@ template<class obj> Lattice<obj> cgpt_mod(const Lattice<obj> &rhs_i,RealD y){
   });
   return ret_i;
 }
+
+
+static accelerator_inline ComplexD _cgpt_relu(const ComplexD & z, double y) { return (z.real() > 0) ? z : y*z; };
+static accelerator_inline ComplexF _cgpt_relu(const ComplexF & z, double y) { return (z.real() > 0) ? z : ((float)y)*z; };
+template <class scalar>
+struct cgpt_relu_functor {
+  double y;
+  accelerator cgpt_relu_functor(double _y) : y(_y){};
+  accelerator scalar operator()(const scalar &a) const { return _cgpt_relu(a, y); }
+};
+template <class S, class V>
+accelerator_inline Grid_simd<S, V> cgpt_relu(const Grid_simd<S, V> &r, double y) {
+  return SimdApply(cgpt_relu_functor<S>(y), r);
+}
+BINARY_RSCALAR(cgpt_relu,RealD);
+template<class obj> Lattice<obj> cgpt_relu(const Lattice<obj> &rhs_i,RealD y){
+  Lattice<obj> ret_i(rhs_i.Grid());
+  autoView( rhs, rhs_i, AcceleratorRead);
+  autoView( ret, ret_i, AcceleratorWrite);
+  ret.Checkerboard() = rhs.Checkerboard();
+  accelerator_for(ss,rhs.size(),1,{
+      ret[ss]=cgpt_relu(rhs[ss],y);
+  });
+  return ret_i;
+}
+
+
+static accelerator_inline ComplexD _cgpt_drelu(const ComplexD & z, double y) { return (z.real() > 0) ? 1 : y; };
+static accelerator_inline ComplexF _cgpt_drelu(const ComplexF & z, double y) { return (z.real() > 0) ? 1 : ((float)y); };
+template <class scalar>
+struct cgpt_drelu_functor {
+  double y;
+  accelerator cgpt_drelu_functor(double _y) : y(_y){};
+  accelerator scalar operator()(const scalar &a) const { return _cgpt_drelu(a, y); }
+};
+template <class S, class V>
+accelerator_inline Grid_simd<S, V> cgpt_drelu(const Grid_simd<S, V> &r, double y) {
+  return SimdApply(cgpt_drelu_functor<S>(y), r);
+}
+BINARY_RSCALAR(cgpt_drelu,RealD);
+template<class obj> Lattice<obj> cgpt_drelu(const Lattice<obj> &rhs_i,RealD y){
+  Lattice<obj> ret_i(rhs_i.Grid());
+  autoView( rhs, rhs_i, AcceleratorRead);
+  autoView( ret, ret_i, AcceleratorWrite);
+  ret.Checkerboard() = rhs.Checkerboard();
+  accelerator_for(ss,rhs.size(),1,{
+      ret[ss]=cgpt_drelu(rhs[ss],y);
+  });
+  return ret_i;
+}
