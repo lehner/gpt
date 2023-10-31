@@ -50,6 +50,28 @@ def traverse(nodes, n, visited=None):
         return forward_free
 
 
+
+class node_differentiable_functional(g.group.differentiable_functional):
+    def __init__(self, node, arguments):
+        self.node = node
+        self.arguments = arguments
+
+    def __call__(self, fields):
+        assert len(fields) == len(self.arguments)
+        for i in range(len(fields)):
+            self.arguments[i].value @= fields[i]
+        return self.node(with_gradients=False).real
+
+    def gradient(self, fields, dfields):
+        for a in self.arguments:
+            a.with_gradient = False
+        indices = [fields.index(df) for df in dfields]
+        for i in indices:
+            self.arguments[i].gradient = None
+            self.arguments[i].with_gradient = True
+        self.node()
+        return [self.arguments[i].gradient for i in indices]
+
 # gctr = 0
 
 
@@ -178,6 +200,10 @@ class node_base:
             self.backward(nodes, first_gradient=forward_free)
         nodes = None
         return self.value
+
+    def functional(self, *arguments):
+        return node_differentiable_functional(self, arguments)
+
 
 
 def node(x, with_gradient=True):

@@ -140,9 +140,6 @@ class tensor:
     def __truediv__(self, other):
         return tensor(self.array / other, self.otype)
 
-    def __eq__(self, other):
-        return np.array_equal(self.array, other.array)
-
     def __neg__(self):
         return tensor(-self.array, self.otype)
 

@@ -60,25 +60,7 @@ for prec in [g.double]:
             assert err < 1e-4
 
         # create something to minimize
-        class fnc(g.group.differentiable_functional):
-            def __init__(self):
-                pass
-
-            def __call__(self, fields):
-                global a1, b1, a2, b2, t1
-                a1.value @= fields[0]
-                b1.value @= fields[1]
-                a2.value @= fields[2]
-                b2.value @= fields[3]
-                t1.value @= fields[4]
-                return c(with_gradients=False).real
-
-            def gradient(self, fields, dfields):
-                c()
-                assert dfields == fields
-                return [a1.gradient, b1.gradient, a2.gradient, b2.gradient, t1.gradient]
-
-        f = fnc()
+        f = c.functional(a1, b1, a2, b2, t1)
         ff = [a1.value, b1.value, a2.value, b2.value, t1.value]
         v0 = f(ff)
         opt = g.algorithms.optimize.adam(maxiter=40, eps=1e-7, alpha=learn_rate)
