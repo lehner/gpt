@@ -17,37 +17,71 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.ad.reverse.util import accumulate
 
 
-def traverse(nodes, visited, n):
-    if id(n) not in visited:
-        visited.add(id(n))
+verbose_memory = g.default.is_verbose("ad_memory")
+
+
+def traverse(nodes, n, visited=None):
+    # forward(children) = value
+    # last usage
+    root = visited is None
+    if root:
+        visited = set([])
+    if n not in visited:
+        visited.add(n)
         for c in n._children:
-            traverse(nodes, visited, c)
+            traverse(nodes, c, visited)
         nodes.append(n)
 
+    if root:
+        last_need = {}
+        for n in nodes:
+            for x in n._children:
+                last_need[x] = n
 
-class node:
+        forward_free = dict([(x, []) for x in nodes])
+        for x in last_need:
+            forward_free[last_need[x]].append(x)
+
+        # forward free contains information for when we can
+        # release the node.value for forward propagation
+        return forward_free
+
+
+# gctr = 0
+
+
+class node_base:
     def __init__(self, _forward, _backward=lambda z: None, _children=(), with_gradient=True):
+        # global gctr
+        # gctr+=1
         if not callable(_forward):
-            self._forward = lambda: _forward
+            self._forward = None
+            self.value = _forward
         else:
             self._forward = _forward
+            self.value = None
         self._backward = _backward
         self._children = _children
         self.with_gradient = with_gradient
-        self.value = None
         self.gradient = None
+
+    # def __del__(self):
+    # global gctr
+    # gctr-=1
+    # print(gctr)
 
     def zero_gradient(self):
         self.gradient = g(0 * self.value)
 
     def __mul__(x, y):
-        if not isinstance(x, node):
-            x = node(x, with_gradient=False)
+        if not isinstance(x, node_base):
+            x = node_base(x, with_gradient=False)
 
-        if not isinstance(y, node):
-            y = node(y, with_gradient=False)
+        if not isinstance(y, node_base):
+            y = node_base(y, with_gradient=False)
 
         def _forward():
             return x.value * y.value
@@ -55,14 +89,14 @@ class node:
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                x.gradient += z.gradient * g.adj(y.value)
+                accumulate(x.gradient, z.gradient * g.adj(y.value))
             if y.with_gradient:
-                y.gradient += g.adj(x.value) * z.gradient
+                accumulate(y.gradient, g.adj(x.value) * z.gradient)
 
-        return node(_forward, _backward, (x, y))
+        return node_base(_forward, _backward, (x, y))
 
     def __rmul__(x, y):
-        return node.__mul__(y, x)
+        return node_base.__mul__(y, x)
 
     def __add__(x, y):
         def _forward():
@@ -71,11 +105,11 @@ class node:
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                x.gradient += z.gradient
+                accumulate(x.gradient, z.gradient)
             if y.with_gradient:
-                y.gradient += z.gradient
+                accumulate(y.gradient, z.gradient)
 
-        return node(_forward, _backward, (x, y))
+        return node_base(_forward, _backward, (x, y))
 
     def __sub__(x, y):
         def _forward():
@@ -84,32 +118,67 @@ class node:
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                x.gradient += z.gradient
+                accumulate(x.gradient, z.gradient)
             if y.with_gradient:
-                y.gradient -= z.gradient
+                accumulate(y.gradient, -z.gradient)
 
-        return node(_forward, _backward, (x, y))
+        return node_base(_forward, _backward, (x, y))
 
-    def forward(self, nodes, eager=True):
+    def forward(self, nodes, eager=True, free=None):
+        max_fields_allocated = 0
+        fields_allocated = 0
         for n in nodes:
-            n.value = n._forward()
-            if eager:
-                n.value = g(n.value)
+            if n._forward is not None:
+                n.value = n._forward()
+                fields_allocated += 1
+                max_fields_allocated = max(max_fields_allocated, fields_allocated)
+                if free is not None:
+                    free_n = free[n]
+                    for m in free_n:
+                        if m._forward is not None:
+                            m.value = None
+                            fields_allocated -= 1
+                if eager:
+                    n.value = g(n.value)
 
-    def backward(self, nodes):
-        for n in nodes:
-            n.zero_gradient()
+        if verbose_memory:
+            g.message(
+                f"Forward propagation through graph with {len(nodes)} nodes with maximum allocated fields: {max_fields_allocated}"
+            )
+
+    def backward(self, nodes, first_gradient):
+        fields_allocated = len(nodes)  # .values
+        max_fields_allocated = fields_allocated
         self.gradient = 1
         for n in reversed(nodes):
+            first_gradient_n = first_gradient[n]
+            for m in first_gradient_n:
+                if m is not self:
+                    m.zero_gradient()
+                    fields_allocated += 1
+                    max_fields_allocated = max(max_fields_allocated, fields_allocated)
             n._backward(n)
+            if n._forward is not None:
+                n.gradient = None
+                fields_allocated -= 1
+                if n._forward is not None:
+                    n.value = None
+                    fields_allocated -= 1
+
+        if verbose_memory:
+            g.message(
+                f"Backward propagation through graph with {len(nodes)} nodes with maximum allocated fields: {max_fields_allocated}"
+            )
 
     def __call__(self, with_gradients=True):
-        visited = set([])
         nodes = []
-        traverse(nodes, visited, self)
-        self.forward(nodes)
+        forward_free = traverse(nodes, self)
+        self.forward(nodes, free=forward_free if not with_gradients else None)
         if with_gradients:
-            self.backward(nodes)
+            self.backward(nodes, first_gradient=forward_free)
         nodes = None
-        visited = None
         return self.value
+
+
+def node(x, with_gradient=True):
+    return node_base(x, with_gradient=with_gradient)

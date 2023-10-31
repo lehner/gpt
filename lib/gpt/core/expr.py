@@ -78,6 +78,13 @@ class expr:
             self.val[0][1][0][1],
         )
 
+    def lattice(self):
+        for v in self.val:
+            for i in v[1]:
+                if gpt.util.is_list_instance(i[1], gpt.lattice):
+                    return i[1]
+        return None
+
     def __mul__(self, l):
         if isinstance(l, expr):
             lhs = gpt.apply_expr_unary(self)
@@ -184,17 +191,6 @@ class factor:
         return expr(self) * (-1.0)
 
 
-def get_lattice(e):
-    if isinstance(e, expr):
-        assert len(e.val) > 0
-        return get_lattice(e.val[0][1])
-    elif isinstance(e, list):
-        for i in e:
-            if gpt.util.is_list_instance(i[1], gpt.lattice):
-                return i[1]
-    return None
-
-
 def apply_type_right_to_left(e, t):
     if isinstance(e, expr):
         return expr([(x[0], apply_type_right_to_left(x[1], t)) for x in e.val], e.unary)
@@ -291,7 +287,7 @@ def expr_eval(first, second=None, ac=False):
         return_list = False
     else:
         assert ac is False
-        if gpt.util.is_list_instance(first, gpt.lattice):
+        if gpt.util.is_list_instance(first, (gpt.lattice, gpt.tensor)):
             return first
 
         e = expr(first)
@@ -303,7 +299,7 @@ def expr_eval(first, second=None, ac=False):
 
     t("prepare")
     if dst is None:
-        lat = get_lattice(e)
+        lat = e.lattice()
         if lat is None:
             # cannot evaluate to a lattice object, leave expression unevaluated
             return first

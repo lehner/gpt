@@ -50,6 +50,12 @@ class random:
             return t
         elif t is None:
             return cgpt.random_sample(self.obj, p)
+        elif isinstance(t, gpt.tensor):
+            t.array = numpy.array(
+                [cgpt.random_sample(self.obj, p) for i in range(t.otype.nfloats // 2)],
+                dtype=t.array.dtype,
+            ).reshape(t.otype.shape)
+            return t
         elif isinstance(t, gpt.lattice):
             t0 = gpt.time()
             cgpt.random_sample(self.obj, {**p, **{"lattices": [t]}})

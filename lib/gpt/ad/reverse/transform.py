@@ -17,7 +17,8 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse import node
+from gpt.ad.reverse import node_base
+from gpt.ad.reverse.util import accumulate
 
 
 def inner_product(x, y):
@@ -27,11 +28,11 @@ def inner_product(x, y):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            x.gradient += y.value * g.adj(z.gradient)
+            accumulate(x.gradient, y.value * g.adj(z.gradient))
         if y.with_gradient:
-            y.gradient += x.value * g.adj(z.gradient)
+            accumulate(y.gradient, x.value * g.adj(z.gradient))
 
-    return node(_forward, _backward, (x, y))
+    return node_base(_forward, _backward, (x, y))
 
 
 def norm2(x):
@@ -46,6 +47,18 @@ def relu(x, a=0.0):
     def _backward(z):
         if x.with_gradient:
             active = g.component.drelu(a)(x.value)
-            x.gradient += g.component.multiply(active, z.gradient)
+            accumulate(x.gradient, g.component.multiply(active, z.gradient))
 
-    return node(_forward, _backward, (x,))
+    return node_base(_forward, _backward, (x,))
+
+
+def cshift(x, direction, displacement):
+    def _forward():
+        return g.cshift(x.value, direction, displacement)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if x.with_gradient:
+            accumulate(x.gradient, g.cshift(z.gradient, direction, -displacement))
+
+    return node_base(_forward, _backward, (x,))

@@ -16,5 +16,21 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.ad.reverse.node import node, node_base
-from gpt.ad.reverse.transform import inner_product, relu, norm2, cshift
+import gpt as g
+
+
+def is_field(x):
+    if isinstance(x, g.lattice):
+        return True
+    elif isinstance(x, g.tensor):
+        return False
+    elif isinstance(x, g.expr):
+        return x.lattice() is not None
+    else:
+        raise Exception(f"Unknown object type {type(x)}")
+
+
+def accumulate(lhs, rhs):
+    if is_field(rhs) and not is_field(lhs):
+        rhs = g.sum(rhs)
+    lhs += rhs

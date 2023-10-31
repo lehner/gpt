@@ -22,7 +22,13 @@ import numpy as np
 
 
 class tensor:
-    def __init__(self, array, otype):
+    def __init__(self, first, second=None):
+        if second is not None:
+            array, otype = first, second
+        else:
+            otype = first
+            array = np.zeros(otype.shape, dtype=np.complex128)
+
         # allow to match compatible shapes
         if array.shape != otype.shape:
             array = np.reshape(array, otype.shape)
@@ -40,6 +46,9 @@ class tensor:
     def __setitem__(self, a, b):
         return self.array.__setitem__(a, b)
 
+    def nfloats(self):
+        return self.otype.nfloats
+
     def transposable(self):
         return self.otype.transposed is not None
 
@@ -50,6 +59,12 @@ class tensor:
 
     def conj(self):
         return tensor(self.array.conj(), self.otype)
+
+    def copy(self):
+        return tensor(np.copy(self.array), self.otype)
+
+    def new(self):
+        return tensor(np.zeros(shape=self.array.shape, dtype=self.array.dtype), self.otype)
 
     def adj(self):
         if not self.transposable():
@@ -147,4 +162,9 @@ class tensor:
 
     def __itruediv__(self, other):
         self.array /= other
+        return self
+
+    def __imatmul__(self, other):
+        assert self.otype.__name__ == other.otype.__name__
+        self.array = other.array.copy()
         return self
