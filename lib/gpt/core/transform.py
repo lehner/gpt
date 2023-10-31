@@ -89,15 +89,16 @@ def norm2(l):
     l = gpt.util.to_list(l)
     l_lattices = [(i, l[i]) for i in range(len(l)) if isinstance(l[i], gpt.lattice)]
     l_tensors = [(i, l[i]) for i in range(len(l)) if isinstance(l[i], gpt.tensor)]
-    ip_l = (
-        l_lattices[0][1]
-        .grid.globalsum(
-            numpy.array([rank_inner_product(x, x) for i, x in l_lattices], dtype=numpy.complex128)
+    if len(l_lattices) > 0:
+        ip_l = (
+            l_lattices[0][1]
+            .grid.globalsum(
+                numpy.array([rank_inner_product(x, x) for i, x in l_lattices], dtype=numpy.complex128)
+            )
+            .real
         )
-        .real
-    )
-    ip_t = [x.norm2() for i, x in l_tensors]
-    ip = numpy.ndarray(dtype=numpy.complex128, shape=(len(l),))
+    ip_t = [x.norm2().real for i, x in l_tensors]
+    ip = numpy.ndarray(dtype=numpy.float64, shape=(len(l),))
     for i, j in enumerate(l_lattices):
         ip[j[0]] = ip_l[i]
     for i, j in enumerate(l_tensors):

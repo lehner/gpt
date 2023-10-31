@@ -23,6 +23,8 @@ import numpy
 
 def _simple_map(operator, numpy_operator=None, extra_params={}):
     def _mat(first, second=None):
+        if isinstance(first, list):
+            return [_mat(x) for x in first]
         if second is not None:
             dst = first
             src = gpt.eval(second)
