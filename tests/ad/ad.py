@@ -42,11 +42,7 @@ for prec in [g.double]:
         eps = prec.eps**0.5
         g.message(f"Numerical derivatives with eps = {eps}")
         for var in [a1, a2, b1, b2, x, t1]:
-            if isinstance(var.value, g.lattice):
-                lt = g.lattice(var.value)
-            else:
-                lt = var.value.copy()
-            rng.cnormal(lt)
+            lt = rng.cnormal(var.value.new())
             var.value += lt * eps
             v1 = c(with_gradients=False)
             var.value -= 2 * lt * eps
