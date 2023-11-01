@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.util import accumulate
+from gpt.ad.reverse.util import accumulate_gradient
 
 
 verbose_memory = g.default.is_verbose("ad_memory")
@@ -96,7 +96,7 @@ class node_base:
     # print(gctr)
 
     def zero_gradient(self):
-        self.gradient = g(0 * self.value)
+        self.gradient = g(0.0 * self.value)
 
     def __mul__(x, y):
         if not isinstance(x, node_base):
@@ -111,9 +111,9 @@ class node_base:
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                accumulate(x.gradient, z.gradient * g.adj(y.value))
+                accumulate_gradient(x, z.gradient * g.adj(y.value))
             if y.with_gradient:
-                accumulate(y.gradient, g.adj(x.value) * z.gradient)
+                accumulate_gradient(y, g.adj(x.value) * z.gradient)
 
         return node_base(_forward, _backward, (x, y))
 
@@ -127,9 +127,9 @@ class node_base:
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                accumulate(x.gradient, z.gradient)
+                accumulate_gradient(x, z.gradient)
             if y.with_gradient:
-                accumulate(y.gradient, z.gradient)
+                accumulate_gradient(y, z.gradient)
 
         return node_base(_forward, _backward, (x, y))
 
@@ -140,9 +140,9 @@ class node_base:
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                accumulate(x.gradient, z.gradient)
+                accumulate_gradient(x, z.gradient)
             if y.with_gradient:
-                accumulate(y.gradient, -z.gradient)
+                accumulate_gradient(y, -z.gradient)
 
         return node_base(_forward, _backward, (x, y))
 
@@ -171,7 +171,7 @@ class node_base:
     def backward(self, nodes, first_gradient):
         fields_allocated = len(nodes)  # .values
         max_fields_allocated = fields_allocated
-        self.gradient = 1
+        self.gradient = 1.0
         for n in reversed(nodes):
             first_gradient_n = first_gradient[n]
             for m in first_gradient_n:
@@ -184,8 +184,9 @@ class node_base:
                 n.gradient = None
                 fields_allocated -= 1
                 if n._forward is not None:
-                    n.value = None
-                    fields_allocated -= 1
+                    if n is not self:
+                        n.value = None
+                        fields_allocated -= 1
 
         if verbose_memory:
             g.message(

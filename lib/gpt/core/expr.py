@@ -78,6 +78,12 @@ class expr:
             self.val[0][1][0][1],
         )
 
+    def is_num(self):
+        return len(self.val) == 1 and len(self.val[0][1]) == 0
+
+    def get_num(self):
+        return self.val[0][0]
+
     def lattice(self):
         for v in self.val:
             for i in v[1]:
@@ -297,6 +303,16 @@ def expr_eval(first, second=None, ac=False):
     # apply matrix_operators
     e = apply_type_right_to_left(e, gpt.matrix_operator)
 
+    t("fast return")
+    # fast return if already a lattice
+    if dst is None:
+        if e.is_single(gpt.lattice):
+            ue, uf, v = e.get_single()
+            if uf == factor_unary.NONE and ue == expr_unary.NONE:
+                return v
+        elif e.is_num():
+            return e.get_num()
+
     t("prepare")
     if dst is None:
         lat = e.lattice()
@@ -307,14 +323,6 @@ def expr_eval(first, second=None, ac=False):
         lat = gpt.util.to_list(lat)
         grid = lat[0].grid
         nlat = len(lat)
-
-    t("fast return")
-    # fast return if already a lattice
-    if dst is None:
-        if e.is_single(gpt.lattice):
-            ue, uf, v = e.get_single()
-            if uf == factor_unary.NONE and ue == expr_unary.NONE:
-                return v
 
     # verbose output
     if verbose:

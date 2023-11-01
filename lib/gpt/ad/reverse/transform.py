@@ -18,7 +18,7 @@
 #
 import gpt as g
 from gpt.ad.reverse import node_base
-from gpt.ad.reverse.util import accumulate
+from gpt.ad.reverse.util import accumulate_gradient
 
 
 def inner_product(x, y):
@@ -28,9 +28,9 @@ def inner_product(x, y):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            accumulate(x.gradient, y.value * g.adj(z.gradient))
+            accumulate_gradient(x, y.value * g.adj(z.gradient))
         if y.with_gradient:
-            accumulate(y.gradient, x.value * g.adj(z.gradient))
+            accumulate_gradient(y, x.value * g.adj(z.gradient))
 
     return node_base(_forward, _backward, (x, y))
 
@@ -47,7 +47,7 @@ def relu(x, a=0.0):
     def _backward(z):
         if x.with_gradient:
             active = g.component.drelu(a)(x.value)
-            accumulate(x.gradient, g.component.multiply(active, z.gradient))
+            accumulate_gradient(x, g.component.multiply(active, z.gradient))
 
     return node_base(_forward, _backward, (x,))
 
@@ -59,6 +59,6 @@ def cshift(x, direction, displacement):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            accumulate(x.gradient, g.cshift(z.gradient, direction, -displacement))
+            accumulate_gradient(x, g.cshift(z.gradient, direction, -displacement))
 
     return node_base(_forward, _backward, (x,))

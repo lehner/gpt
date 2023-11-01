@@ -26,11 +26,17 @@ def is_field(x):
         return False
     elif isinstance(x, g.expr):
         return x.lattice() is not None
+    elif g.util.is_num(x):
+        return False
     else:
         raise Exception(f"Unknown object type {type(x)}")
 
 
-def accumulate(lhs, rhs):
-    if is_field(rhs) and not is_field(lhs):
-        rhs = g.sum(rhs)
-    lhs += rhs
+def accumulate_gradient(lhs, rhs_gradient):
+    rhs_field = is_field(rhs_gradient)
+    lhs_field = is_field(lhs.gradient)
+    if rhs_field and not lhs_field:
+        rhs_gradient = g.sum(rhs_gradient)
+    if g.util.is_num(lhs.gradient) and isinstance(rhs_gradient, g.expr):
+        rhs_gradient = g(rhs_gradient)
+    lhs.gradient += rhs_gradient

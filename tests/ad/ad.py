@@ -21,11 +21,9 @@ for prec in [g.double]:
     x = rad.node(g.vspincolor(grid))
     t1 = rad.node(g.tensor(a1.value.otype))
 
-    # randomize values
-    rng.cnormal([a1.value, a2.value, b1.value, b2.value, x.value, t1.value])
-
     # test a few simple models
     for c, learn_rate in [
+        (rad.norm2(a1) + 3.0*rad.norm2(a2*b1 + b2 + t1*x), 1e-1),
         (rad.norm2(rad.relu(a2 * rad.relu(a1 * x + b1) + t1 * x + b2) - x), 1e-1),
         (
             rad.norm2(
@@ -36,10 +34,13 @@ for prec in [g.double]:
             1e-1,
         ),
     ]:
+        # randomize values
+        rng.cnormal([a1.value, a2.value, b1.value, b2.value, x.value, t1.value])
+
         v0 = c()
 
         # numerically test derivatives
-        eps = prec.eps**0.5
+        eps = prec.eps**0.5 * 100
         g.message(f"Numerical derivatives with eps = {eps}")
         for var in [a1, a2, b1, b2, x, t1]:
             lt = rng.cnormal(var.value.new())
