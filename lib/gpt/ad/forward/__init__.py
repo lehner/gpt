@@ -16,5 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.ad.reverse
-import gpt.ad.forward
+from gpt.ad.forward.infinitesimal import infinitesimal
+from gpt.ad.forward.landau import landau
+from gpt.ad.forward.series import series
+from gpt.ad.forward.transform import norm2, inner_product, cshift

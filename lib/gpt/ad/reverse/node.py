@@ -50,7 +50,6 @@ def traverse(nodes, n, visited=None):
         return forward_free
 
 
-
 class node_differentiable_functional(g.group.differentiable_functional):
     def __init__(self, node, arguments):
         self.node = node
@@ -71,6 +70,7 @@ class node_differentiable_functional(g.group.differentiable_functional):
             self.arguments[i].with_gradient = True
         self.node()
         return [self.arguments[i].gradient for i in indices]
+
 
 # gctr = 0
 
@@ -121,6 +121,12 @@ class node_base:
         return node_base.__mul__(y, x)
 
     def __add__(x, y):
+        if not isinstance(x, node_base):
+            x = node_base(x, with_gradient=False)
+
+        if not isinstance(y, node_base):
+            y = node_base(y, with_gradient=False)
+
         def _forward():
             return x.value + y.value
 
@@ -134,6 +140,12 @@ class node_base:
         return node_base(_forward, _backward, (x, y))
 
     def __sub__(x, y):
+        if not isinstance(x, node_base):
+            x = node_base(x, with_gradient=False)
+
+        if not isinstance(y, node_base):
+            y = node_base(y, with_gradient=False)
+
         def _forward():
             return x.value - y.value
 
@@ -204,7 +216,6 @@ class node_base:
 
     def functional(self, *arguments):
         return node_differentiable_functional(self, arguments)
-
 
 
 def node(x, with_gradient=True):

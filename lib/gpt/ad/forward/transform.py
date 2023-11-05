@@ -16,5 +16,16 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.ad.reverse
-import gpt.ad.forward
+import gpt as g
+
+
+def inner_product(sx, sy):
+    return sx.distribute2(sy, lambda a, b: g.inner_product(a, b))
+
+
+def norm2(sx):
+    return inner_product(sx, sx)
+
+
+def cshift(sx, mu, disp):
+    return sx.distribute1(lambda a: g.cshift(a, mu, disp))
