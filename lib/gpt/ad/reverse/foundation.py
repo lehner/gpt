@@ -53,6 +53,18 @@ def cshift(x, direction, displacement, none):
     return g.ad.reverse.node_base(_forward, _backward, (x,))
 
 
+def adj(x):
+    def _forward():
+        return g.adj(x.value)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if x.with_gradient:
+            accumulate_gradient(x, g.adj(z.gradient))
+
+    return g.ad.reverse.node_base(_forward, _backward, (x,))
+
+    
 def component_simple_map(operator, numpy_operator, extra_params, first, second):
     if operator == "relu":
         assert second is None

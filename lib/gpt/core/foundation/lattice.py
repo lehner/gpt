@@ -74,3 +74,32 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
     for i in dst.otype.v_idx:
         cgpt.unary(dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params})
     return dst
+
+
+def adj(l):
+    return gpt.adj(gpt.expr(l))
+
+
+def rank_sum(l):
+    val = [cgpt.lattice_rank_sum(x) for x in l.v_obj]
+    vrank = len(val)
+    if vrank == 1:
+        val = val[0]
+    else:
+        vdim = len(l.otype.shape)
+        if vdim == 1:
+            val = numpy.concatenate(val)
+        elif vdim == 2:
+            n = int(vrank**0.5)
+            assert n * n == vrank
+            val = numpy.concatenate(
+                [numpy.concatenate([val[i * n + j] for j in range(n)], axis=0) for i in range(n)],
+                axis=1,
+            )
+        else:
+            raise NotImplementedError()
+    return gpt.util.value_to_tensor(val, l.otype)
+
+
+def sum(l):
+    return l.grid.globalsum(rank_sum(l))

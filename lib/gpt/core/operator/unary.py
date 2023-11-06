@@ -72,8 +72,10 @@ def adj(l):
                 for a in l.val
             ]
         )
-    elif (isinstance(l, gpt.tensor) and l.transposable()) or isinstance(l, gpt.matrix_operator):
+    elif isinstance(l, gpt.matrix_operator):
         return l.adj()
+    elif isinstance(l, gpt.core.foundation.base):
+        return l.__class__.foundation.adj(l)
     else:
         return adj(gpt.expr(l))
 
@@ -111,27 +113,11 @@ def color_trace(l):
 
 
 def rank_sum(e):
-    l = gpt.eval(e)
-    val = [cgpt.lattice_rank_sum(x) for x in l.v_obj]
-    vrank = len(val)
-    if vrank == 1:
-        val = val[0]
-    else:
-        vdim = len(l.otype.shape)
-        if vdim == 1:
-            val = np.concatenate(val)
-        elif vdim == 2:
-            n = int(vrank**0.5)
-            assert n * n == vrank
-            val = np.concatenate(
-                [np.concatenate([val[i * n + j] for j in range(n)], axis=0) for i in range(n)],
-                axis=1,
-            )
-        else:
-            raise NotImplementedError()
-    return gpt.util.value_to_tensor(val, l.otype)
-
+    if isinstance(e, gpt.expr):
+        e = gpt.eval(e)
+    return e.__class__.foundation.rank_sum(e)
 
 def sum(e):
-    l = gpt.eval(e)
-    return l.grid.globalsum(rank_sum(l))
+    if isinstance(e, gpt.expr):
+        e = gpt.eval(e)
+    return e.__class__.foundation.sum(e)

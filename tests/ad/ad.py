@@ -31,7 +31,7 @@ for prec in [g.double]:
     # test a few simple models
     for c, learn_rate in [
         (g.norm2(a1) + 3.0 * g.norm2(a2 * b1 + b2 + t1 * x), 1e-1),
-        (g.norm2(relu(a2 * relu(a1 * x + b1) + t1 * x + b2) - x), 1e-1),
+        (g.norm2(relu(a2 * relu(a1 * x + b1) + g.adj(t1 * x + b2)) - x), 1e-1),
         (
             g.norm2(
                 2.0 * a2 * t1 * a1 * relu(a1 * x + b1)

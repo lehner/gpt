@@ -46,3 +46,9 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
     res = first.new()
     res.array = numpy_operator(first.array)
     return res
+
+
+def adj(l):
+    if l.transposable():
+        return l.adj()
+    return gpt.adj(gpt.expr(l))

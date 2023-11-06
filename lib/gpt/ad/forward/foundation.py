@@ -38,3 +38,11 @@ def cshift(sx, mu, disp, none=None):
 
 def trace(sx, t):
     return sx.distribute1(lambda a: g.trace(a, t))
+
+
+def adj(sx):
+    return sx.distribute1(lambda a: g.adj(a))
+
+
+def sum(sx):
+    return sx.distribute1(lambda a: g.sum(a))
