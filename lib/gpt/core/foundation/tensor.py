@@ -26,3 +26,23 @@ def rank_inner_product(a, b, use_accelerator):
 
 def inner_product(a, b, use_accelerator):
     return rank_inner_product(a, b, use_accelerator)
+
+
+def norm2(a):
+    res = inner_product(a, a, True).real
+    ip = numpy.ndarray(dtype=numpy.float64, shape=(len(a),))
+    for i in range(len(a)):
+        ip[i] = res[i, i]
+    return ip
+
+
+def trace(a, t):
+    return a.trace(t)
+
+
+def component_simple_map(operator, numpy_operator, extra_params, first, second):
+    assert second is None
+    assert numpy_operator is not None
+    res = first.new()
+    res.array = numpy_operator(first.array)
+    return res

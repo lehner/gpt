@@ -25,15 +25,18 @@ for prec in [g.double]:
     x = rad.node(g.vspincolor(grid))
     t1 = rad.node(g.tensor(a1.value.otype))
 
+    # relu without leakage
+    relu = g.component.relu()
+
     # test a few simple models
     for c, learn_rate in [
-        (rad.norm2(a1) + 3.0 * rad.norm2(a2 * b1 + b2 + t1 * x), 1e-1),
-        (rad.norm2(rad.relu(a2 * rad.relu(a1 * x + b1) + t1 * x + b2) - x), 1e-1),
+        (g.norm2(a1) + 3.0 * g.norm2(a2 * b1 + b2 + t1 * x), 1e-1),
+        (g.norm2(relu(a2 * relu(a1 * x + b1) + t1 * x + b2) - x), 1e-1),
         (
-            rad.norm2(
-                2.0 * a2 * t1 * a1 * rad.relu(a1 * x + b1)
+            g.norm2(
+                2.0 * a2 * t1 * a1 * relu(a1 * x + b1)
                 - 3.5 * a2 * b2
-                + t1 * rad.cshift(a1 * x, 1, -1)
+                + t1 * g.cshift(a1 * x, 1, -1)
             ),
             1e-1,
         ),
@@ -184,20 +187,20 @@ def scale(lam):
 
 
 est = (scale(eps) - scale(-eps)) / 2 / eps
-exa = fad.inner_product(ly, lx * ly)[dm]
+exa = g.inner_product(ly, lx * ly)[dm]
 err = abs(est - exa) / abs(exa)
 g.message(f"d <.,.> / dm : {err}")
 assert err < 1e-7
 
 
 est = (scale(eps) + scale(-eps) - 2 * scale(0)) / eps**2 / 2
-exa = fad.inner_product(ly, lx * ly)[dm**2]
+exa = g.inner_product(ly, lx * ly)[dm**2]
 err = abs(est - exa) / abs(exa)
 g.message(f"d <.,.> / dm**2 : {err}")
 assert err < 1e-5
 
 
-test = fad.norm2(fad.cshift(fad.cshift(lz, 0, 1), 0, -1) - lz)
+test = g.norm2(g.cshift(g.cshift(lz, 0, 1), 0, -1) - lz)
 g.message(test)
 
 # TODO:

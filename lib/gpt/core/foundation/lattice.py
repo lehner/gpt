@@ -18,11 +18,10 @@
 #
 import gpt
 import cgpt
+import numpy
 
 
 def rank_inner_product(a, b, use_accelerator):
-    a = [gpt.eval(x) for x in a]
-    b = [gpt.eval(x) for x in b]
     otype = a[0].otype
     assert len(otype.v_idx) == len(b[0].otype.v_idx)
     return cgpt.lattice_rank_inner_product(a, b, use_accelerator)
@@ -30,3 +29,48 @@ def rank_inner_product(a, b, use_accelerator):
 
 def inner_product(a, b, use_accelerator):
     return a[0].grid.globalsum(rank_inner_product(a, b, use_accelerator))
+
+
+def norm2(l):
+    return (
+        l[0]
+        .grid.globalsum(
+            numpy.array(
+                [rank_inner_product([x], [x], True)[0, 0] for x in l], dtype=numpy.complex128
+            )
+        )
+        .real
+    )
+
+
+def cshift(first, second, third, fourth):
+    if fourth is not None:
+        l = second
+        d = third
+        o = fourth
+        t = first
+    else:
+        l = first
+        d = second
+        o = third
+        t = gpt.lattice(l)
+
+    for i in t.otype.v_idx:
+        cgpt.cshift(t.v_obj[i], l.v_obj[i], d, o)
+    return t
+
+
+def trace(l, t):
+    return gpt.expr(l, t)
+
+
+def component_simple_map(operator, numpy_operator, extra_params, first, second):
+    if second is not None:
+        dst = first
+        src = second
+    else:
+        src = first
+        dst = gpt.lattice(src)
+    for i in dst.otype.v_idx:
+        cgpt.unary(dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params})
+    return dst

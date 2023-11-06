@@ -19,4 +19,4 @@
 from gpt.ad.forward.infinitesimal import infinitesimal
 from gpt.ad.forward.landau import landau
 from gpt.ad.forward.series import series
-from gpt.ad.forward.transform import norm2, inner_product, cshift
+import gpt.ad.forward.foundation

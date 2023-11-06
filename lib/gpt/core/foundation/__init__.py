@@ -18,3 +18,8 @@
 #
 import gpt.core.foundation.lattice
 import gpt.core.foundation.tensor
+
+
+# base class
+class base:
+    pass

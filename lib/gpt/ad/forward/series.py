@@ -18,6 +18,8 @@
 #
 import gpt as g
 from gpt.ad.forward import infinitesimal
+from gpt.ad.forward import foundation
+from gpt.core.foundation import base
 
 
 def promote(other, landau_O):
@@ -28,7 +30,9 @@ def promote(other, landau_O):
     return other
 
 
-class series:
+class series(base):
+    foundation = foundation
+
     def __init__(self, terms, landau_O):
         self.landau_O = landau_O
         if not isinstance(terms, dict):

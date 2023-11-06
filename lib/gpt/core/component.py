@@ -25,20 +25,13 @@ def _simple_map(operator, numpy_operator=None, extra_params={}):
     def _mat(first, second=None):
         if isinstance(first, list):
             return [_mat(x) for x in first]
-        if second is not None:
-            dst = first
-            src = gpt.eval(second)
-        else:
-            if isinstance(first, gpt.tensor):
-                assert numpy_operator is not None
-                res = first.new()
-                res.array = numpy_operator(first.array)
-                return res
-            src = gpt.eval(first)
-            dst = gpt.lattice(src)
-        for i in dst.otype.v_idx:
-            cgpt.unary(dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params})
-        return dst
+        if isinstance(first, gpt.expr):
+            first = gpt(first)
+        if isinstance(second, gpt.expr):
+            second = gpt(second)
+        return first.__class__.foundation.component_simple_map(
+            operator, numpy_operator, extra_params, first, second
+        )
 
     return _mat
 

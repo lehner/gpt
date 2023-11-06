@@ -94,11 +94,12 @@ def apply_expr_unary(l):
 def trace(l, t=None):
     if t is None:
         t = gpt.expr_unary.BIT_SPINTRACE | gpt.expr_unary.BIT_COLORTRACE
-    if isinstance(l, gpt.tensor):
-        return l.trace(t)
+    if isinstance(l, gpt.core.foundation.base):
+        return l.__class__.foundation.trace(l, t)
     elif gpt.util.is_num(l):
         return l
-    return gpt.expr(l, t)
+    else:
+        return gpt.expr(l, t)
 
 
 def spin_trace(l):

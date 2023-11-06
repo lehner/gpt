@@ -19,10 +19,10 @@
 import cgpt
 import gpt
 import numpy as np
-from gpt.core.foundation import tensor as foundation
+from gpt.core.foundation import tensor as foundation, base as foundation_base
 
 
-class tensor:
+class tensor(foundation_base):
     foundation = foundation
 
     def __init__(self, first, second=None):

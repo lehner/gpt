@@ -18,7 +18,8 @@
 #
 import gpt as g
 from gpt.ad.reverse.util import accumulate_gradient
-
+from gpt.ad.reverse import foundation
+from gpt.core.foundation import base
 
 verbose_memory = g.default.is_verbose("ad_memory")
 
@@ -75,7 +76,9 @@ class node_differentiable_functional(g.group.differentiable_functional):
 # gctr = 0
 
 
-class node_base:
+class node_base(base):
+    foundation = foundation
+
     def __init__(self, _forward, _backward=lambda z: None, _children=(), with_gradient=True):
         # global gctr
         # gctr+=1

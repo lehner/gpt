@@ -17,4 +17,5 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.ad.reverse.node import node, node_base
-from gpt.ad.reverse.transform import inner_product, relu, norm2, cshift
+import gpt.ad.reverse.transform
+import gpt.ad.reverse.foundation

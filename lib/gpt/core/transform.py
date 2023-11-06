@@ -20,20 +20,11 @@ import cgpt, gpt, numpy
 
 
 def cshift(first, second, third, fourth=None):
-    if isinstance(first, gpt.lattice) and isinstance(second, gpt.lattice) and fourth is not None:
-        t = first
-        l = gpt.eval(second)
-        d = third
-        o = fourth
-    else:
-        l = gpt.eval(first)
-        d = second
-        o = third
-        t = gpt.lattice(l)
-
-    for i in t.otype.v_idx:
-        cgpt.cshift(t.v_obj[i], l.v_obj[i], d, o)
-    return t
+    if isinstance(first, gpt.expr):
+        first = gpt.eval(first)
+    if isinstance(first, gpt.expr):
+        second = gpt.eval(second)
+    return first.__class__.foundation.cshift(first, second, third, fourth)
 
 
 def copy(first, second=None):
@@ -59,14 +50,43 @@ def copy(first, second=None):
     return t
 
 
+def eval_list(a):
+    return [gpt.eval(x) if isinstance(x, gpt.expr) else x for x in a]
+
+
 def call_binary_aa_num(functional, a, b):
     return_list = (isinstance(a, list)) or (isinstance(b, list))
     a = gpt.util.to_list(a)
     b = gpt.util.to_list(b)
-    res = functional(a, b)
+    res = functional(eval_list(a), eval_list(b))
     if return_list:
         return res
     return gpt.util.to_num(res[0, 0])
+
+
+def call_unary_a_num(functional, a):
+    return_list = isinstance(a, list)
+    if not return_list:
+        a = [a]
+    a = eval_list(a)
+    objects = {}
+    indices = {}
+    for n, x in enumerate(a):
+        fnd = x.foundation
+        if fnd not in objects:
+            objects[fnd] = []
+            indices[fnd] = []
+        objects[fnd].append(x)
+        indices[fnd].append(n)
+    res = [None] * len(a)
+    for fnd in objects:
+        idx = indices[fnd]
+        res_fnd = functional(objects[fnd])
+        for i in range(len(idx)):
+            res[idx[i]] = res_fnd[i]
+    if return_list:
+        return res
+    return gpt.util.to_num(res[0])
 
 
 def rank_inner_product(a, b, use_accelerator=True):
@@ -82,27 +102,7 @@ def inner_product(a, b, use_accelerator=True):
 
 
 def norm2(l):
-    l = gpt.eval(l)
-    return_list = isinstance(l, list)
-    l = gpt.util.to_list(l)
-    objects = {}
-    indices = {}
-    for n, x in enumerate(l):
-        fnd = x.foundation
-        if x not in objects:
-            objects[fnd] = []
-            indices[fnd] = []
-        objects[fnd].append(x)
-        indices[fnd].append(n)
-    ip = numpy.ndarray(dtype=numpy.float64, shape=(len(l),))
-    for fnd in objects:
-        obj = objects[fnd]
-        ip_o = fnd.inner_product(obj, obj, True).real
-        for n, i in enumerate(indices[fnd]):
-            ip[i] = ip_o[n]
-    if return_list:
-        return ip
-    return gpt.util.to_num(ip[0])
+    return call_unary_a_num(lambda la: la[0].__class__.foundation.norm2(la), l)
 
 
 def inner_product_norm2(a, b):

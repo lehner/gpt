@@ -17,18 +17,44 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse import node_base
 from gpt.ad.reverse.util import accumulate_gradient
 
 
-def relu(x, a=0.0):
+def inner_product(x, y):
     def _forward():
-        return g.component.relu(a)(x.value)
+        return g.inner_product(x.value, y.value)
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            active = g.component.drelu(a)(x.value)
-            accumulate_gradient(x, g.component.multiply(active, z.gradient))
+            accumulate_gradient(x, y.value * g.adj(z.gradient))
+        if y.with_gradient:
+            accumulate_gradient(y, x.value * g.adj(z.gradient))
 
-    return node_base(_forward, _backward, (x,))
+    return g.ad.reverse.node_base(_forward, _backward, (x, y))
+
+
+def norm2(x):
+    assert len(x) == 1
+    return [inner_product(x[0], x[0])]
+
+
+def cshift(x, direction, displacement, none):
+    assert none is None
+
+    def _forward():
+        return g.cshift(x.value, direction, displacement)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if x.with_gradient:
+            accumulate_gradient(x, g.cshift(z.gradient, direction, -displacement))
+
+    return g.ad.reverse.node_base(_forward, _backward, (x,))
+
+
+def component_simple_map(operator, numpy_operator, extra_params, first, second):
+    if operator == "relu":
+        assert second is None
+        return g.ad.reverse.transform.relu(first, a=extra_params["a"])
+    raise Exception(f"component-wise operator {operator} not implemented in rev-AD")

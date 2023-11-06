@@ -19,13 +19,22 @@
 import gpt as g
 
 
-def inner_product(sx, sy):
-    return sx.distribute2(sy, lambda a, b: g.inner_product(a, b))
+def inner_product(sx, sy, use_accelerator):
+    assert len(sx) == 1 and len(sy) == 1
+    sx = sx[0]
+    sy = sy[0]
+    return {(0, 0): sx.distribute2(sy, lambda a, b: g.inner_product(a, b, use_accelerator))}
 
 
 def norm2(sx):
-    return inner_product(sx, sx)
+    assert len(sx) == 1
+    return [inner_product(sx, sx, True)[0, 0]]
 
 
-def cshift(sx, mu, disp):
+def cshift(sx, mu, disp, none=None):
+    assert none is None
     return sx.distribute1(lambda a: g.cshift(a, mu, disp))
+
+
+def trace(sx, t):
+    return sx.distribute1(lambda a: g.trace(a, t))
