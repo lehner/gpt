@@ -186,14 +186,14 @@ def scale(lam):
 est = (scale(eps) - scale(-eps)) / 2 / eps
 exa = fad.inner_product(ly, lx * ly)[dm]
 err = abs(est - exa) / abs(exa)
-g.message(f"d <.,.> / dm : {err2}")
+g.message(f"d <.,.> / dm : {err}")
 assert err < 1e-7
 
 
 est = (scale(eps) + scale(-eps) - 2 * scale(0)) / eps**2 / 2
 exa = fad.inner_product(ly, lx * ly)[dm**2]
 err = abs(est - exa) / abs(exa)
-g.message(f"d <.,.> / dm**2 : {err2}")
+g.message(f"d <.,.> / dm**2 : {err}")
 assert err < 1e-5
 
 
