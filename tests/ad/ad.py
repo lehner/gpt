@@ -83,7 +83,7 @@ assert fad.landau(dm**4, dm * alpha) + fad.landau(
     dm**2, alpha**2, dm**3 * alpha
 ) == fad.landau(dm**2, alpha**2, dm * alpha)
 
-# landau O notation to keep series with O(1), O(dm), O(alpha), O(alpha*dm) terms
+# landau O notation to keep series with O(1), O(dm), O(alpha), O(dm**2), O(alpha**2), O(alpha*dm) terms
 # On determines terms that are neglected
 On = fad.landau(dm**3, alpha**3, dm**2 * alpha, dm * alpha**2)
 x = fad.series(3, On)
