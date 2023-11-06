@@ -96,6 +96,8 @@ def trace(l, t=None):
         t = gpt.expr_unary.BIT_SPINTRACE | gpt.expr_unary.BIT_COLORTRACE
     if isinstance(l, gpt.tensor):
         return l.trace(t)
+    elif gpt.util.is_num(l):
+        return l
     return gpt.expr(l, t)
 
 

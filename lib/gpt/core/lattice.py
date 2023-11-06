@@ -20,6 +20,7 @@ import cgpt, gpt, numpy
 from gpt.default import is_verbose
 from gpt.core.expr import factor
 from gpt.core.mem import host
+from gpt.core.foundation import lattice as foundation
 
 mem_book = {}
 verbose_lattice_creation = is_verbose("lattice_creation")
@@ -53,6 +54,7 @@ def unpack_cache_key(key):
 class lattice(factor):
     __array_priority__ = 1000000
     cache = {}
+    foundation = foundation
 
     def __init__(self, first, second=None, third=None):
         self.metadata = {}

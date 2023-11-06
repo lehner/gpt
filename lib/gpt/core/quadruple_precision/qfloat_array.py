@@ -54,10 +54,7 @@ class qfloat_array(dekker_tuple, np.lib.mixins.NDArrayOperatorsMixin):
         return NotImplemented
 
     def __getitem__(self, index):
-        if isinstance(index, int):
-            return g.qfloat(self.x[index], self.y[index])
-        else:
-            raise NotImplementedError(f"Array slicing not yet implemented: {index}")
+        return g.qfloat(self.x[index], self.y[index])
 
     def __float__(self):
         if self.x.shape != (1,):

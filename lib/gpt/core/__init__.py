@@ -17,6 +17,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import gpt.core.foundation
 from gpt.core.quadruple_precision import qfloat, qfloat_array, qcomplex, qcomplex_array
 from gpt.core.grid import grid, grid_from_description, full, redblack, general
 from gpt.core.precision import single, double, double_quadruple, precision, str_to_precision

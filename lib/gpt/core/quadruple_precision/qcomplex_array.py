@@ -48,6 +48,9 @@ class qcomplex_array(gcomplex, np.lib.mixins.NDArrayOperatorsMixin):
     def __array__(self, dtype=None):
         return NotImplemented
 
+    def __getitem__(self, index):
+        return gcomplex(self.real[index], self.imag[index])
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if ufunc not in HANDLED_FUNCTIONS or method != "__call__":
             return NotImplemented

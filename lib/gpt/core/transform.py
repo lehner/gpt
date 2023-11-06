@@ -59,50 +59,47 @@ def copy(first, second=None):
     return t
 
 
-def rank_inner_product(a, b, use_accelerator=True):
+def call_binary_aa_num(functional, a, b):
     return_list = (isinstance(a, list)) or (isinstance(b, list))
     a = gpt.util.to_list(a)
     b = gpt.util.to_list(b)
-    if isinstance(a[0], gpt.tensor) and isinstance(b[0], gpt.tensor):
-        res = numpy.array([[gpt.adj(x) * y for y in b] for x in a], dtype=numpy.complex128)
-    else:
-        a = [gpt.eval(x) for x in a]
-        b = [gpt.eval(x) for x in b]
-        otype = a[0].otype
-        assert len(otype.v_idx) == len(b[0].otype.v_idx)
-        res = cgpt.lattice_rank_inner_product(a, b, use_accelerator)
+    res = functional(a, b)
     if return_list:
         return res
     return gpt.util.to_num(res[0, 0])
 
 
-def inner_product(a, b):
-    if isinstance(a, gpt.tensor):
-        return gpt.trace(gpt.adj(a) * b)
-    grid = gpt.util.to_list(a)[0].grid
-    return grid.globalsum(rank_inner_product(a, b))
+def rank_inner_product(a, b, use_accelerator=True):
+    return call_binary_aa_num(
+        lambda la, lb: la[0].__class__.foundation.rank_inner_product(la, lb, use_accelerator), a, b
+    )
+
+
+def inner_product(a, b, use_accelerator=True):
+    return call_binary_aa_num(
+        lambda la, lb: la[0].__class__.foundation.inner_product(la, lb, use_accelerator), a, b
+    )
 
 
 def norm2(l):
     l = gpt.eval(l)
     return_list = isinstance(l, list)
     l = gpt.util.to_list(l)
-    l_lattices = [(i, l[i]) for i in range(len(l)) if isinstance(l[i], gpt.lattice)]
-    l_tensors = [(i, l[i]) for i in range(len(l)) if isinstance(l[i], gpt.tensor)]
-    if len(l_lattices) > 0:
-        ip_l = (
-            l_lattices[0][1]
-            .grid.globalsum(
-                numpy.array([rank_inner_product(x, x) for i, x in l_lattices], dtype=numpy.complex128)
-            )
-            .real
-        )
-    ip_t = [x.norm2().real for i, x in l_tensors]
+    objects = {}
+    indices = {}
+    for n, x in enumerate(l):
+        fnd = x.foundation
+        if x not in objects:
+            objects[fnd] = []
+            indices[fnd] = []
+        objects[fnd].append(x)
+        indices[fnd].append(n)
     ip = numpy.ndarray(dtype=numpy.float64, shape=(len(l),))
-    for i, j in enumerate(l_lattices):
-        ip[j[0]] = ip_l[i]
-    for i, j in enumerate(l_tensors):
-        ip[j[0]] = ip_t[i]
+    for fnd in objects:
+        obj = objects[fnd]
+        ip_o = fnd.inner_product(obj, obj, True).real
+        for n, i in enumerate(indices[fnd]):
+            ip[i] = ip_o[n]
     if return_list:
         return ip
     return gpt.util.to_num(ip[0])

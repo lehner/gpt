@@ -19,9 +19,12 @@
 import cgpt
 import gpt
 import numpy as np
+from gpt.core.foundation import tensor as foundation
 
 
 class tensor:
+    foundation = foundation
+
     def __init__(self, first, second=None):
         if second is not None:
             array, otype = first, second
