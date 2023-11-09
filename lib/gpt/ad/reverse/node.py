@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.util import accumulate_gradient
+from gpt.ad.reverse.util import accumulate_gradient, is_field
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
 
@@ -99,7 +99,9 @@ class node_base(base):
     # print(gctr)
 
     def zero_gradient(self):
-        self.gradient = g(0.0 * self.value)
+        self.gradient = 0.0 * self.value
+        if isinstance(self.gradient, g.expr):
+            self.gradient = g(self.gradient)
 
     def __mul__(x, y):
         if not isinstance(x, node_base):
@@ -122,6 +124,9 @@ class node_base(base):
 
     def __rmul__(x, y):
         return node_base.__mul__(y, x)
+
+    def __truediv__(self, other):
+        return (1.0 / other) * self
 
     def __add__(x, y):
         if not isinstance(x, node_base):
@@ -161,6 +166,12 @@ class node_base(base):
 
         return node_base(_forward, _backward, (x, y))
 
+    def __rsub__(x, y):
+        return node_base.__sub__(y, x)
+
+    def __radd__(x, y):
+        return node_base.__add__(y, x)
+
     def forward(self, nodes, eager=True, free=None):
         max_fields_allocated = 0
         fields_allocated = 0
@@ -175,7 +186,7 @@ class node_base(base):
                         if m._forward is not None:
                             m.value = None
                             fields_allocated -= 1
-                if eager:
+                if eager and isinstance(n.value, g.expr):
                     n.value = g(n.value)
 
         if verbose_memory:
@@ -186,7 +197,10 @@ class node_base(base):
     def backward(self, nodes, first_gradient):
         fields_allocated = len(nodes)  # .values
         max_fields_allocated = fields_allocated
-        self.gradient = 1.0
+        if is_field(self.value):
+            raise Exception("Expression evaluates to a field.  Gradient calculation is not unique.")
+        self.zero_gradient()
+        self.gradient += 1.0
         for n in reversed(nodes):
             first_gradient_n = first_gradient[n]
             for m in first_gradient_n:
@@ -198,10 +212,11 @@ class node_base(base):
             if n._forward is not None:
                 n.gradient = None
                 fields_allocated -= 1
-                if n._forward is not None:
-                    if n is not self:
-                        n.value = None
-                        fields_allocated -= 1
+                if n is not self:
+                    n.value = None
+                    fields_allocated -= 1
+            else:
+                n.gradient = g.infinitesimal_to_cartesian(n.value, n.gradient)
 
         if verbose_memory:
             g.message(
@@ -219,6 +234,11 @@ class node_base(base):
 
     def functional(self, *arguments):
         return node_differentiable_functional(self, arguments)
+
+    def get_grid(self):
+        return self.value.grid
+
+    grid = property(get_grid)
 
 
 def node(x, with_gradient=True):

@@ -29,6 +29,16 @@ def is_num(x):
     )
 
 
+# adj a number
+def adj_num(x):
+    if isinstance(x, (int, float, gpt.qfloat)):
+        return x
+    elif isinstance(x, complex):
+        return x.conjugate()
+    else:
+        raise Exception(f"adj_num not yet implemented for type {type(x)}")
+
+
 # convert to number type
 def to_num(x):
     if isinstance(x, (np.complex64, np.complex128)):

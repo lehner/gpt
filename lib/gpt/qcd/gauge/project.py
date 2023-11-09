@@ -23,8 +23,8 @@ import gpt as g
 def traceless_anti_hermitian(src):
     if isinstance(src, list):
         return [traceless_anti_hermitian(x) for x in src]
-
-    src = g.eval(src)
+    if isinstance(src, g.expr):
+        src = g.eval(src)
     N = src.otype.shape[0]
     ret = g(0.5 * src - 0.5 * g.adj(src))
     ret -= g.identity(src) * g.trace(ret) / N

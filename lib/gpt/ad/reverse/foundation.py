@@ -64,7 +64,31 @@ def adj(x):
 
     return g.ad.reverse.node_base(_forward, _backward, (x,))
 
-    
+
+def trace(x, t):
+    def _forward():
+        return g.trace(x.value, t)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if x.with_gradient:
+            accumulate_gradient(x, g.identity(x.value) * z.gradient)
+
+    return g.ad.reverse.node_base(_forward, _backward, (x,))
+
+
+def sum(x):
+    def _forward():
+        return g.sum(x.value)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if x.with_gradient:
+            accumulate_gradient(x, g.identity(x.value) * z.gradient)
+
+    return g.ad.reverse.node_base(_forward, _backward, (x,))
+
+
 def component_simple_map(operator, numpy_operator, extra_params, first, second):
     if operator == "relu":
         assert second is None

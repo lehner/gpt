@@ -52,3 +52,7 @@ def adj(l):
     if l.transposable():
         return l.adj()
     return gpt.adj(gpt.expr(l))
+
+
+def infinitesimal_to_cartesian(src, dsrc):
+    return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)

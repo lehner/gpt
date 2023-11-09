@@ -46,3 +46,12 @@ def adj(sx):
 
 def sum(sx):
     return sx.distribute1(lambda a: g.sum(a))
+
+
+def identity(sx):
+    idsx = g.identity(sx[1])
+    return g.ad.forward.series({g.ad.forward.infinitesimal({}): idsx}, sx.landau_O)
+
+
+def infinitesimal_to_cartesian(src, dsrc):
+    return dsrc[1].otype.infinitesimal_to_cartesian(src, dsrc)

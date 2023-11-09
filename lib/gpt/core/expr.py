@@ -293,7 +293,7 @@ def expr_eval(first, second=None, ac=False):
         return_list = False
     else:
         assert ac is False
-        if gpt.util.is_list_instance(first, (gpt.lattice, gpt.tensor)):
+        if not gpt.util.is_list_instance(first, gpt.expr):
             return first
 
         e = expr(first)

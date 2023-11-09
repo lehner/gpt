@@ -28,6 +28,8 @@ def is_field(x):
         return x.lattice() is not None
     elif g.util.is_num(x):
         return False
+    elif isinstance(x, g.ad.forward.series):
+        return is_field(x[1])
     else:
         raise Exception(f"Unknown object type {type(x)}")
 
@@ -39,4 +41,18 @@ def accumulate_gradient(lhs, rhs_gradient):
         rhs_gradient = g.sum(rhs_gradient)
     if g.util.is_num(lhs.gradient) and isinstance(rhs_gradient, g.expr):
         rhs_gradient = g(rhs_gradient)
+
+    if isinstance(lhs.gradient, g.lattice) and isinstance(rhs_gradient, g.expr):
+        rhs_otype = rhs_gradient.lattice().otype
+        lhs_otype = lhs.gradient.otype
+        if lhs_otype.__name__ != rhs_otype.__name__:
+            if rhs_otype.spintrace[2] is not None:
+                if lhs_otype.__name__ == rhs_otype.spintrace[2]().__name__:
+                    rhs_gradient = g(g.spin_trace(rhs_gradient))
+                    rhs_otype = rhs_gradient.otype
+            if rhs_otype.colortrace[2] is not None:
+                if lhs_otype.__name__ == rhs_otype.colortrace[2]().__name__:
+                    rhs_gradient = g(g.color_trace(rhs_gradient))
+                    rhs_otype = rhs_gradient.otype
+
     lhs.gradient += rhs_gradient

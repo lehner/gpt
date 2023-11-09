@@ -46,6 +46,7 @@ from gpt.core.transform import (
     slice,
     indexed_sum,
     identity,
+    infinitesimal_to_cartesian,
     project,
     where,
     scale_per_coordinate,

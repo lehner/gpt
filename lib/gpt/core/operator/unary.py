@@ -76,6 +76,8 @@ def adj(l):
         return l.adj()
     elif isinstance(l, gpt.core.foundation.base):
         return l.__class__.foundation.adj(l)
+    elif gpt.util.is_num(l):
+        return gpt.util.adj_num(l)
     else:
         return adj(gpt.expr(l))
 
@@ -116,6 +118,7 @@ def rank_sum(e):
     if isinstance(e, gpt.expr):
         e = gpt.eval(e)
     return e.__class__.foundation.rank_sum(e)
+
 
 def sum(e):
     if isinstance(e, gpt.expr):

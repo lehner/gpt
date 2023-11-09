@@ -35,7 +35,9 @@ for prec in [g.double]:
         (
             g.norm2(
                 2.0 * a2 * t1 * a1 * relu(a1 * x + b1)
-                - 3.5 * a2 * b2
+                - 3.5 * a2 * b2 * g.trace(a1)
+                - 1.5 * g.color_trace(a1) * a2 * b2
+                + 2.5 * a2 * g.spin_trace(a1) * b2
                 + t1 * g.cshift(a1 * x, 1, -1)
             ),
             1e-1,
@@ -201,11 +203,88 @@ assert err < 1e-5
 
 
 test = g.norm2(g.cshift(g.cshift(lz, 0, 1), 0, -1) - lz)
-g.message(test)
+err = abs(test[1] + test[dm] + test[alpha] + test[alpha**2] + test[dm**2] + test[dm * alpha])
+assert err < 1e-6
 
-# TODO:
-# - fad.series, rad.node need to play nice with g.eval
-#   (inherit from g.evaluable)
-# - fad.series, rad.node play nice with regular g.inner_product etc.
-#   for use in regular algorithms; inherit from lattice_like which
-#   should add maps to rad.inner_product, etc.
+
+#####################################
+# combined forward/reverse AD tests
+#####################################
+dbeta = g.ad.forward.infinitesimal("dbeta")
+On = g.ad.forward.landau(dbeta**2)
+
+U = []
+for mu in range(4):
+    U_mu_0 = rng.element(g.mcolor(grid))
+    U_mu = g.ad.forward.series(U_mu_0, On)
+    U_mu[dbeta] = g(1j * U_mu_0 * rng.element(g.lattice(grid, U_mu_0.otype.cartesian())))
+    U.append(U_mu)
+
+Id = g.ad.forward.series(g.identity(U_mu_0), On)
+
+# unitarity
+for mu in range(4):
+    eps2 = g.norm2(U[mu] * g.adj(U[mu]) - Id)
+    eps2 = eps2[1].real + eps2[dbeta].real
+    assert eps2 < 1e-25
+
+# compare to wilson action
+a = g.qcd.gauge.action.wilson(1)
+
+
+def plaquette(U):
+    res = None
+    for mu in range(4):
+        for nu in range(mu):
+            nn = g(
+                g.trace(
+                    g.adj(U[nu]) * U[mu] * g.cshift(U[nu], mu, 1) * g.cshift(g.adj(U[mu]), nu, 1)
+                )
+            )
+            if res is None:
+                res = nn
+            else:
+                res += nn
+    res = (res + g.adj(res)) / 12 / 3
+    vol = U[0].grid.gsites
+    Nd = 4
+    res = g.sum(res) / vol
+    return (Nd - 1) * Nd * vol / 2.0 * (1.0 - res)
+
+
+# first test action
+res = plaquette(U)
+U1 = [u[1] for u in U]
+err = abs(res[1] - a(U1))
+g.message(f"Action test: {err}")
+assert err < 1e-6
+
+U_2 = [g.ad.reverse.node(u) for u in U]
+res = plaquette(U_2)()
+err = abs(res[1] - a(U1))
+g.message(f"Action test (FW/REV): {err}")
+assert err < 1e-6
+
+# gradient test
+gradients = a.gradient(U1, U1)
+gradients2 = [u.gradient[1] for u in U_2]
+for mu in range(4):
+    err = (g.norm2(gradients[mu] - gradients2[mu]) / g.norm2(gradients[mu])) ** 0.5
+    g.message(f"Gradient test [{mu}]: {err}")
+    assert err < 1e-10
+
+# numerical derivative of action value test
+eps = 1e-4
+U_plus = [g(u[1] + eps * u[dbeta]) for u in U]
+U_minus = [g(u[1] - eps * u[dbeta]) for u in U]
+da_dbeta = (plaquette(U_plus) - plaquette(U_minus)) / 2 / eps
+err = abs(da_dbeta - res[dbeta]) / abs(da_dbeta)
+g.message(f"Numerical action derivative test: {err}")
+assert err < 1e-5
+
+# numerical derivative of gradient test
+for mu in range(4):
+    dg_dbeta = g((a.gradient(U_plus, U_plus)[mu] - a.gradient(U_minus, U_minus)[mu]) / 2 / eps)
+    err = (g.norm2(dg_dbeta - U_2[mu].gradient[dbeta]) / g.norm2(dg_dbeta)) ** 0.5
+    g.message(f"Numerical action gradient [{mu}] derivative test: {err}")
+    assert err < 1e-5

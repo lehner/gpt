@@ -121,6 +121,9 @@ class ot_vector_color(ot_base):
     def compose(self, a, b):
         return a + b
 
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
+
 
 ###
 # Matrices and vectors of spin
@@ -147,6 +150,9 @@ class ot_matrix_spin(ot_base):
 
     def compose(self, a, b):
         return a + b
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
     def defect(self, field):
         return 0.0
@@ -196,6 +202,9 @@ class ot_vector_spin(ot_base):
     def compose(self, a, b):
         return a + b
 
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
+
 
 ###
 # Matrices and vectors of both spin and color
@@ -230,6 +239,9 @@ class ot_matrix_spin_color(ot_base):
 
     def compose(self, a, b):
         return a + b
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
     def identity(self):
         return gpt.matrix_spin_color(
@@ -270,6 +282,9 @@ class ot_vector_spin_color(ot_base):
 
     def compose(self, a, b):
         return a + b
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
     def distribute(self, mat, dst, src, zero_lhs):
         src, dst = gpt.util.to_list(src), gpt.util.to_list(dst)

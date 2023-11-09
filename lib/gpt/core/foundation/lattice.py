@@ -103,3 +103,22 @@ def rank_sum(l):
 
 def sum(l):
     return l.grid.globalsum(rank_sum(l))
+
+
+def identity(src):
+    eye = gpt.lattice(src)
+    # identity only works for matrix types
+    n2 = len(eye.v_obj)
+    n = int(n2**0.5)
+    assert n * n == n2
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                cgpt.lattice_set_to_identity(eye.v_obj[i * n + j])
+            else:
+                cgpt.lattice_set_to_number(eye.v_obj[i * n + j], 0.0)
+    return eye
+
+
+def infinitesimal_to_cartesian(src, dsrc):
+    return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)

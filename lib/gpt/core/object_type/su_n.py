@@ -96,6 +96,9 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
     def compose(self, a, b):
         return a + b
 
+    def infinitesimal_to_cartesian(self, A, dA):
+        return dA
+
     def inner_product(self, left, right):
         if self.trace_norm is None:
             gen = self.generators(left.grid.precision.complex_dtype)
@@ -127,6 +130,15 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
         err2 = gpt.norm2(U * gpt.adj(U) - I) / gpt.norm2(I)
         err2 += gpt.norm2(gpt.matrix.det(U) - I_s) / gpt.norm2(I_s)
         return err2**0.5
+
+    def infinitesimal_to_cartesian(self, U, dU):
+        src = gpt(dU * gpt.adj(U))
+        N = self.shape[0]
+        ret = 0.5 * src - 0.5 * gpt.adj(src)
+        ret -= gpt.identity(src) * gpt.trace(ret) / N
+        ret = gpt(ret / 2j)
+        ret.otype = self.cartesian()
+        return ret
 
     def project(self, U, method):
         if method == "defect_right" or method == "defect":

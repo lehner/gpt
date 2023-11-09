@@ -59,6 +59,9 @@ class ot_u_1_algebra(ot_u_1_base):
     def compose(self, a, b):
         return a + b
 
+    def infinitesimal_to_cartesian(self, A, dA):
+        return dA
+
     def generators(self, dt):
         return [complex(1.0, 0)]
 
@@ -81,6 +84,11 @@ class ot_u_1_group(ot_u_1_base):
 
     def compose(self, a, b):
         return a * b
+
+    def infinitesimal_to_cartesian(self, U, dU):
+        ret = gpt(dU * gpt.adj(U) / 1j)
+        ret.otype = self.cartesian()
+        return ret
 
     def defect(self, U):
         I = gpt.identity(U)

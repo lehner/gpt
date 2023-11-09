@@ -25,9 +25,10 @@ from gpt.core.foundation import base
 def promote(other, landau_O):
     if isinstance(other, infinitesimal):
         other = series({other: 1}, landau_O)
-    elif g.util.is_num(other):
-        other = series({infinitesimal({}): other}, landau_O)
-    return other
+    elif isinstance(other, series):
+        return other
+
+    return series({infinitesimal({}): other}, landau_O)
 
 
 class series(base):
@@ -104,6 +105,7 @@ class series(base):
         return res
 
     def __iadd__(self, other):
+        other = promote(other, self.landau_O)
         res = self + other
         self.landau_O = res.landau_O
         self.terms = res.terms
@@ -150,16 +152,24 @@ class series(base):
             if not landau_O.accept(t2):
                 continue
             if t2 not in terms:
-                terms[t2] = other.terms[t2]
+                terms[t2] = -other.terms[t2]
             else:
                 terms[t2] = g(terms[t2] - other.terms[t2])
         return series(terms, landau_O)
+
+    def __rsub__(self, other):
+        other = promote(other, self.landau_O)
+        return other - self
+
+    def __neg__(self):
+        return (-1.0) * self
 
     def __truediv__(self, other):
         return (1.0 / other) * self
 
     def __radd__(self, other):
-        return self.__add__(other, self)
+        other = promote(other, self.landau_O)
+        return other + self
 
     def __getitem__(self, tag):
         if tag == 1:
@@ -170,3 +180,8 @@ class series(base):
         if tag == 1:
             tag = infinitesimal({})
         self.terms[tag] = value
+
+    def get_grid(self):
+        return self.terms[infinitesimal({})].grid
+
+    grid = property(get_grid)
