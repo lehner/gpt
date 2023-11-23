@@ -24,7 +24,7 @@ from gpt.core.foundation import base
 
 def promote(other, landau_O):
     if isinstance(other, infinitesimal):
-        other = series({other: 1}, landau_O)
+        return series({other: 1}, landau_O)
     elif isinstance(other, series):
         return other
 
@@ -40,6 +40,10 @@ class series(base):
             i0 = infinitesimal({})
             terms = {i0: terms}
         self.terms = terms
+
+    def new(self):
+        terms = {t1: self.terms[t1].new() for t1 in self.terms}
+        return series(terms, self.landau_O)
 
     def __str__(self):
         r = ""
@@ -94,15 +98,7 @@ class series(base):
                 tn = tn * t
                 n += 1
             maxn = max([maxn, n])
-        res = series({i0: functional(root, 0)}, self.landau_O)
-        delta = nilpotent
-        nfac = 1.0
-        for i in range(1, maxn):
-            nfac *= i
-            res += delta * functional(root, i) / nfac
-            if i != maxn - 1:
-                delta = delta * nilpotent
-        return res
+        return functional(root, nilpotent, maxn)
 
     def __iadd__(self, other):
         other = promote(other, self.landau_O)
@@ -113,6 +109,12 @@ class series(base):
 
     def __mul__(self, other):
         return self.distribute2(other, lambda a, b: a * b)
+
+    def __imul__(self, other):
+        res = self * other
+        self.landau_O = res.landau_O
+        self.terms = res.terms
+        return self
 
     def __rmul__(self, other):
         if g.util.is_num(other):
@@ -182,6 +184,37 @@ class series(base):
         self.terms[tag] = value
 
     def get_grid(self):
-        return self.terms[infinitesimal({})].grid
+        for t1 in self.terms:
+            return self.terms[t1].grid
+
+    def get_otype(self):
+        for t1 in self.terms:
+            return self.terms[t1].otype
+
+    def set_otype(self, otype):
+        for t1 in self.terms:
+            self.terms[t1].otype = otype
+
+    def __imatmul__(self, other):
+        assert self.landau_O is other.landau_O
+        terms = {}
+        for t1 in other.terms:
+            terms[t1] = g.copy(other.terms[t1])
+        self.terms = terms
+        return self
+
+    def get_real(self):
+        return self.distribute1(lambda a: a.real)
 
     grid = property(get_grid)
+    real = property(get_real)
+    otype = property(get_otype, set_otype)
+
+
+def make(landau_O, O1, *args):
+    x = series(O1, landau_O)
+    n = len(args)
+    assert n % 2 == 0
+    for i in range(n // 2):
+        x[args[2 * i + 0]] = args[2 * i + 1]
+    return x

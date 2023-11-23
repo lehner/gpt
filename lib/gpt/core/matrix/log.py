@@ -28,12 +28,14 @@ def log(i, convergence_threshold=0.5):
         x = gpt.convert(i, gpt.double)
     else:
         x = gpt.copy(i)
-    lI = gpt.identity(gpt.lattice(x))
+    lI = gpt.identity(x.new())
     n = gpt.norm2(x) / gpt.inner_product(x, lI).real
     x /= n
     x -= lI
     n2 = gpt.norm2(x) ** 0.5 / x.grid.gsites
     order = 8 * int(16 / (-numpy.log10(n2)))
+    # n2 = (gpt.norm2(x) / x.grid.gsites / x.otype.shape[0]) ** 0.5
+    # order = int(16 / (-numpy.log10(n2)))
     assert n2 < convergence_threshold
     o = gpt.copy(x)
     xn = gpt.copy(x)

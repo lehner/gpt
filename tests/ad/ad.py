@@ -28,9 +28,24 @@ for prec in [g.double]:
     # relu without leakage
     relu = g.component.relu()
 
+    def real(x):
+        return 0.5 * (x + g.adj(x))
+
     # test a few simple models
     for c, learn_rate in [
-        (g.norm2(a1) + 3.0 * g.norm2(a2 * b1 + b2 + t1 * x), 1e-1),
+        (
+            g.norm2(b1 + 1j * b2)
+            + g.inner_product(a1 + 1j * a2, a1 - 1j * a2)
+            + g.norm2(t1)
+            + g.norm2(x),
+            1e-1,
+        ),
+        (
+            g.norm2(a1)
+            + 3.0 * g.norm2(a2 * b1 + b2 + t1 * x)
+            + g.inner_product(b1 + 1j * b2, b1 + 1j * b2),
+            1e-1,
+        ),
         (g.norm2(relu(a2 * relu(a1 * x + b1) + g.adj(t1 * x + b2)) - x), 1e-1),
         (
             g.norm2(
@@ -46,27 +61,45 @@ for prec in [g.double]:
         # randomize values
         rng.cnormal([a1.value, a2.value, b1.value, b2.value, x.value, t1.value])
 
-        v0 = c()
+        # get gradient for real and imaginary part
+        for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
+            v0 = c(initial_gradient=ig)
 
-        # numerically test derivatives
-        eps = prec.eps**0.5 * 100
-        g.message(f"Numerical derivatives with eps = {eps}")
-        for var in [a1, a2, b1, b2, x, t1]:
-            lt = rng.cnormal(var.value.new())
-            var.value += lt * eps
-            v1 = c(with_gradients=False)
-            var.value -= 2 * lt * eps
-            v2 = c(with_gradients=False)
-            var.value += lt * eps
+            # numerically test derivatives
+            eps = prec.eps**0.5 * 100
+            g.message(f"Numerical derivatives with eps = {eps} with initial gradient {ig}")
+            for var in [a1, a2, b1, b2, x, t1]:
+                lt = rng.normal(var.value.new())
+                var.value += lt * eps
+                v1 = part(c(with_gradients=False))
+                var.value -= 2 * lt * eps
+                v2 = part(c(with_gradients=False))
+                var.value += lt * eps
 
-            num_result = (v1 - v2).real / eps / 2.0 + 1e-15
-            ad_result = g.inner_product(var.gradient, lt).real + 1e-15
-            err = abs(num_result / ad_result - 1)
-            g.message(f"Error: {err}")
-            assert err < 1e-4
+                num_result = (v1 - v2) / eps / 2.0
+                ad_result = g.inner_product(lt, var.gradient).real
+                err = abs(num_result - ad_result) / (
+                    abs(num_result) + abs(ad_result) + grid.gsites**0.5
+                )
+                g.message(f"Error of gradient's real part: {err} {num_result} {ad_result}")
+                assert err < 1e-4
+
+                var.value += lt * eps * 1j
+                v1 = part(c(with_gradients=False))
+                var.value -= 2 * lt * eps * 1j
+                v2 = part(c(with_gradients=False))
+                var.value += lt * eps * 1j
+
+                num_result = (v1 - v2) / eps / 2.0
+                ad_result = g.inner_product(lt, var.gradient).imag
+                err = abs(num_result - ad_result) / (
+                    abs(num_result) + abs(ad_result) + grid.gsites**0.5
+                )
+                g.message(f"Error of gradient's imaginary part: {err} {num_result} {ad_result}")
+                assert err < 1e-4
 
         # create something to minimize
-        f = c.functional(a1, b1, a2, b2, t1)
+        f = real(c).functional(a1, b1, a2, b2, t1)
         ff = [a1.value, b1.value, a2.value, b2.value, t1.value]
         v0 = f(ff)
         opt = g.algorithms.optimize.adam(maxiter=40, eps=1e-7, alpha=learn_rate)
@@ -104,11 +137,19 @@ assert abs(y[alpha] - 29.28) < 1e-8
 
 
 # define function
-def fcos(x, nderiv):
-    if nderiv % 2 == 0:
-        return (-1) ** (nderiv // 2) * np.cos(x)
-    else:
-        return (-1) ** ((nderiv + 1) // 2) * np.sin(x)
+def fcos(x, dx, nmax):
+    r = 0
+    delta = 1
+    for nderiv in range(nmax):
+        if nderiv == 1:
+            delta = dx
+        elif nderiv > 1:
+            delta = delta * dx / nderiv
+        if nderiv % 2 == 0:
+            r += (-1) ** (nderiv // 2) * np.cos(x) * delta
+        else:
+            r += (-1) ** ((nderiv + 1) // 2) * np.sin(x) * delta
+    return r
 
 
 fy = y.function(fcos)
@@ -168,18 +209,40 @@ g.message(f"Error O(alpha*dm): {err}")
 assert err < 1e-5
 
 # now test with lattice
+
+eps = 1e-4
+
+
 lx = fad.series(rng.cnormal(g.mcolor(grid)), On)
 lx[dm] = rng.cnormal(g.mcolor(grid))
 lx[alpha] = rng.cnormal(g.mcolor(grid))
-ly = 2 * lx + 3 * lx * lx
+ly = 2 * lx + 3 * lx * lx + g.component.pow(2)(lx)
+
+
+def scale0(lam):
+    lxv = lx[1] + lx[dm] * lam
+    return 2 * lxv + 3 * lxv * lxv + g.component.pow(2)(lxv)
+
+
+est = g((scale0(eps) - scale0(-eps)) / 2 / eps)
+exa = ly[dm]
+err = g.norm2(est - exa) ** 0.5 / g.norm2(exa) ** 0.5
+g.message(f"d (2 x + 3 x^2 + component.pow(2)(x)) / dm : {err}")
+assert err < 1e-7
+
+
+est = g((scale0(eps) + scale0(-eps) - 2 * scale0(0)) / 2 / eps**2)
+exa = ly[dm**2]
+err = g.norm2(est - exa) ** 0.5 / g.norm2(exa) ** 0.5
+g.message(f"d^2 (2 x + 3 x^2 + component.pow(2)(x)) / dm^2 : {err}")
+assert err < 1e-7
+
 
 ly = fad.series(rng.cnormal(g.vcolor(grid)), On)
 ly[dm] = rng.cnormal(g.vcolor(grid))
 ly[alpha] = rng.cnormal(g.vcolor(grid))
 
 lz = lx * ly
-
-eps = 1e-4
 
 
 def scale(lam):
@@ -198,7 +261,7 @@ assert err < 1e-7
 est = (scale(eps) + scale(-eps) - 2 * scale(0)) / eps**2 / 2
 exa = g.inner_product(ly, lx * ly)[dm**2]
 err = abs(est - exa) / abs(exa)
-g.message(f"d <.,.> / dm**2 : {err}")
+g.message(f"d^2 <.,.> / dm^2 : {err}")
 assert err < 1e-5
 
 
@@ -288,3 +351,44 @@ for mu in range(4):
     err = (g.norm2(dg_dbeta - U_2[mu].gradient[dbeta]) / g.norm2(dg_dbeta)) ** 0.5
     g.message(f"Numerical action gradient [{mu}] derivative test: {err}")
     assert err < 1e-5
+
+# test simple combination of forward and reverse
+a = g.ad.forward.make(On, 1.3333 + 3.21j, dbeta, 2.1 + 0.7j)
+b = g.ad.forward.make(On, 0.9 + 0.756j, dbeta, 1.3j + 0.21)
+
+na = g.ad.reverse.node(a, infinitesimal_to_cartesian=False)
+nb = g.ad.reverse.node(b, infinitesimal_to_cartesian=False)
+
+nz = na * nb + g.adj(nb) * g.adj(na)
+
+v0 = nz(initial_gradient=1)
+
+ref_a_grad = na.gradient
+ref_b_grad = nb.gradient
+
+eps = 1e-8
+
+na.value += eps
+v1 = nz(with_gradients=False)
+na.value -= eps
+
+na.value += eps * 1j
+v2 = nz(with_gradients=False)
+na.value -= eps * 1j
+
+num_a_grad = (v1 - v0) / eps + 1j * (v2 - v0) / eps
+
+nb.value += eps
+v1 = nz(with_gradients=False)
+nb.value -= eps
+
+nb.value += eps * 1j
+v2 = nz(with_gradients=False)
+nb.value -= eps * 1j
+
+num_b_grad = (v1 - v0) / eps + 1j * (v2 - v0) / eps
+
+err2 = abs((ref_a_grad - num_a_grad)[1]) ** 2 + abs((ref_a_grad - num_a_grad)[dbeta]) ** 2
+err2 += abs((ref_b_grad - num_b_grad)[1]) ** 2 + abs((ref_b_grad - num_b_grad)[dbeta]) ** 2
+g.message(f"Simple combined forward/reverse test: {err2}")
+assert err2 < 1e-12

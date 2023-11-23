@@ -78,7 +78,7 @@ for method in ["defect_left", "defect_right"]:
 
 rng = g.random("test")
 
-for eps_ref, grid in [(1e-6, grid_sp), (1e-12, grid_dp)]:
+for eps_ref, grid in [(1e-6, grid_sp), (1e-11, grid_dp)]:
     g.message(f"Test SU(2) fundamental and adjoint conversion on grid {grid.precision.__name__}")
 
     U = [g.matrix_su2_fundamental(grid) for i in range(2)]

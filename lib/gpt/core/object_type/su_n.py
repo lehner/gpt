@@ -97,7 +97,12 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
         return a + b
 
     def infinitesimal_to_cartesian(self, A, dA):
-        return dA
+        N = self.shape[0]
+        ret = gpt(0.5 * dA + 0.5 * gpt.adj(dA))
+        ret -= gpt.identity(dA) * gpt.trace(ret) / N
+        ret.otype = self
+        ret *= 0.5
+        return ret
 
     def inner_product(self, left, right):
         if self.trace_norm is None:
@@ -132,11 +137,10 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
         return err2**0.5
 
     def infinitesimal_to_cartesian(self, U, dU):
-        src = gpt(dU * gpt.adj(U))
+        src = gpt(dU * gpt.adj(U) / 2j)
         N = self.shape[0]
-        ret = 0.5 * src - 0.5 * gpt.adj(src)
+        ret = gpt(0.5 * src + 0.5 * gpt.adj(src))
         ret -= gpt.identity(src) * gpt.trace(ret) / N
-        ret = gpt(ret / 2j)
         ret.otype = self.cartesian()
         return ret
 
@@ -168,11 +172,11 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
 class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
     def __init__(self, Nc):
         super().__init__(Nc, Nc, f"ot_matrix_su_n_fundamental_algebra({Nc})")
-        self.ctab = {
-            f"ot_matrix_su_n_fundamental_group({Nc})": lambda dst, src: gpt.eval(
-                dst, gpt.matrix.exp(src * 1j)
-            )
-        }
+
+        def _convert(dst, src):
+            dst @= gpt.matrix.exp(src * 1j)
+
+        self.ctab = {f"ot_matrix_su_n_fundamental_group({Nc})": _convert}
         self.CA = Nc
 
     def generators(self, dt):

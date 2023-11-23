@@ -56,3 +56,9 @@ def adj(l):
 
 def infinitesimal_to_cartesian(src, dsrc):
     return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)
+
+
+def component_multiply(a, b):
+    res = a.new()
+    res.array = numpy.multiply(a.array, b.array)
+    return res

@@ -29,22 +29,27 @@ def is_field(x):
     elif g.util.is_num(x):
         return False
     elif isinstance(x, g.ad.forward.series):
-        return is_field(x[1])
+        for t in x.terms:
+            return is_field(x[t])
+        raise Exception("Empty series")
     else:
         raise Exception(f"Unknown object type {type(x)}")
 
 
-def accumulate_gradient(lhs, rhs_gradient):
+def accumulate_gradient(lhs, rhs_gradient, getter=None, setter=None):
+    lhs_gradient = lhs.gradient
+    if getter is not None:
+        lhs_gradient = getter(lhs_gradient)
     rhs_field = is_field(rhs_gradient)
-    lhs_field = is_field(lhs.gradient)
+    lhs_field = is_field(lhs_gradient)
     if rhs_field and not lhs_field:
         rhs_gradient = g.sum(rhs_gradient)
-    if g.util.is_num(lhs.gradient) and isinstance(rhs_gradient, g.expr):
+    if g.util.is_num(lhs_gradient) and isinstance(rhs_gradient, g.expr):
         rhs_gradient = g(rhs_gradient)
 
-    if isinstance(lhs.gradient, g.lattice) and isinstance(rhs_gradient, g.expr):
+    if isinstance(lhs_gradient, g.lattice) and isinstance(rhs_gradient, g.expr):
         rhs_otype = rhs_gradient.lattice().otype
-        lhs_otype = lhs.gradient.otype
+        lhs_otype = lhs_gradient.otype
         if lhs_otype.__name__ != rhs_otype.__name__:
             if rhs_otype.spintrace[2] is not None:
                 if lhs_otype.__name__ == rhs_otype.spintrace[2]().__name__:
@@ -55,4 +60,7 @@ def accumulate_gradient(lhs, rhs_gradient):
                     rhs_gradient = g(g.color_trace(rhs_gradient))
                     rhs_otype = rhs_gradient.otype
 
-    lhs.gradient += rhs_gradient
+    if setter is not None:
+        setter(lhs.gradient, lhs_gradient + rhs_gradient)
+    else:
+        lhs.gradient += rhs_gradient

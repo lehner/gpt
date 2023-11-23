@@ -76,18 +76,4 @@ def mod(n):
 
 
 def multiply(a, b):
-    if isinstance(a, gpt.tensor) and isinstance(b, gpt.tensor):
-        res = a.new()
-        res.array = numpy.multiply(a.array, b.array)
-        return res
-    a = gpt(a)
-    b = gpt(b)
-    assert a.otype.__name__ == b.otype.__name__
-    res = gpt.lattice(a)
-    params = {"operator": "*"}
-    n = len(res.v_obj)
-    assert n == len(a.v_obj)
-    assert n == len(b.v_obj)
-    for i in range(n):
-        cgpt.binary(res.v_obj[i], a.v_obj[i], b.v_obj[i], params)
-    return res
+    return a.__class__.foundation.component_multiply(a, b)

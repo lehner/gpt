@@ -43,6 +43,10 @@ def norm2(l):
     )
 
 
+def object_rank_norm2(l):
+    return rank_inner_product(l, l, True).real
+
+
 def cshift(first, second, third, fourth):
     if fourth is not None:
         l = second
@@ -122,3 +126,79 @@ def identity(src):
 
 def infinitesimal_to_cartesian(src, dsrc):
     return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)
+
+
+def group_inner_product(left, right):
+    # inner product over group's real vector space
+    left_type = left.otype
+    return left_type.inner_product(left, right)
+
+
+def copy(dst, src):
+    for j in range(len(dst)):
+        for i in dst[j].otype.v_idx:
+            cgpt.copy(dst[j].v_obj[i], src[j].v_obj[i])
+
+
+def convert(first, second):
+    # following should go in foundation
+    if second in [gpt.single, gpt.double, gpt.double_quadruple]:
+        # if first is no list, evaluate
+        src = gpt.eval(first)
+        dst_grid = src.grid.converted(second)
+        return convert(gpt.lattice(dst_grid, src.otype), src)
+
+    elif isinstance(second, gpt.ot_base):
+        # if first is no list, evaluate
+        src = gpt.eval(first)
+        if src.otype.__name__ == second.__name__:
+            return gpt.copy(src)
+        return convert(gpt.lattice(src.grid, second), src)
+
+    elif isinstance(first, gpt.lattice):
+        # second may be expression
+        second = gpt.eval(second)
+
+        # if otypes differ, attempt otype conversion first
+        if first.otype.__name__ != second.otype.__name__:
+            assert first.otype.__name__ in second.otype.ctab
+            tmp = gpt.lattice(first)
+            second.otype.ctab[first.otype.__name__](tmp, second)
+            second = tmp
+            assert first.otype.__name__ == second.otype.__name__
+
+        # convert precision if needed
+        if first.grid == second.grid:
+            gpt.copy(first, second)
+
+        else:
+            assert len(first.otype.v_idx) == len(second.otype.v_idx)
+            for i in first.otype.v_idx:
+                cgpt.convert(first.v_obj[i], second.v_obj[i])
+            first.checkerboard(second.checkerboard())
+
+        return first
+
+    else:
+        assert 0
+
+
+def matrix_det(A):
+    r = gpt.complex(A.grid)
+    to_list = gpt.util.to_list
+    cgpt.determinant(r.v_obj[0], to_list(A))
+    return r
+
+
+def component_multiply(a, b):
+    a = gpt(a)
+    b = gpt(b)
+    assert a.otype.__name__ == b.otype.__name__
+    res = gpt.lattice(a)
+    params = {"operator": "*"}
+    n = len(res.v_obj)
+    assert n == len(a.v_obj)
+    assert n == len(b.v_obj)
+    for i in range(n):
+        cgpt.binary(res.v_obj[i], a.v_obj[i], b.v_obj[i], params)
+    return res

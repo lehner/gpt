@@ -79,7 +79,15 @@ class node_differentiable_functional(g.group.differentiable_functional):
 class node_base(base):
     foundation = foundation
 
-    def __init__(self, _forward, _backward=lambda z: None, _children=(), with_gradient=True):
+    # TODO: deprecate infinitesimal_to_cartesian and make it default
+    def __init__(
+        self,
+        _forward,
+        _backward=lambda z: None,
+        _children=(),
+        with_gradient=True,
+        infinitesimal_to_cartesian=True,
+    ):
         # global gctr
         # gctr+=1
         if not callable(_forward):
@@ -91,6 +99,7 @@ class node_base(base):
         self._backward = _backward
         self._children = _children
         self.with_gradient = with_gradient
+        self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         self.gradient = None
 
     # def __del__(self):
@@ -127,6 +136,29 @@ class node_base(base):
 
     def __truediv__(self, other):
         return (1.0 / other) * self
+
+    def __neg__(self):
+        return (-1.0) * self
+
+    def __getitem__(x, item):
+        def getter(y):
+            return y[item]
+
+        def setter(y, z):
+            y[item] = z
+
+        return x.project(getter, setter)
+
+    def project(x, getter, setter):
+        def _forward():
+            return getter(x.value)
+
+        # not allowed to capture z, otherwise have reference loop!
+        def _backward(z):
+            if x.with_gradient:
+                accumulate_gradient(x, z.gradient, getter, setter)
+
+        return node_base(_forward, _backward, (x,))
 
     def __add__(x, y):
         if not isinstance(x, node_base):
@@ -194,13 +226,23 @@ class node_base(base):
                 f"Forward propagation through graph with {len(nodes)} nodes with maximum allocated fields: {max_fields_allocated}"
             )
 
-    def backward(self, nodes, first_gradient):
+    def backward(self, nodes, first_gradient, initial_gradient):
         fields_allocated = len(nodes)  # .values
         max_fields_allocated = fields_allocated
-        if is_field(self.value):
-            raise Exception("Expression evaluates to a field.  Gradient calculation is not unique.")
+        if initial_gradient is None:
+            if is_field(self.value):
+                raise Exception(
+                    "Expression evaluates to a field.  Gradient calculation is not unique."
+                )
+            if isinstance(self.value, complex) and abs(self.value.imag) > 1e-12 * abs(
+                self.value.real
+            ):
+                raise Exception(
+                    f"Expression does not evaluate to a real number ({self.value}).  Gradient calculation is not unique."
+                )
+            initial_gradient = 1.0
         self.zero_gradient()
-        self.gradient += 1.0
+        self.gradient += initial_gradient
         for n in reversed(nodes):
             first_gradient_n = first_gradient[n]
             for m in first_gradient_n:
@@ -216,19 +258,21 @@ class node_base(base):
                     n.value = None
                     fields_allocated -= 1
             else:
-                n.gradient = g.infinitesimal_to_cartesian(n.value, n.gradient)
+                if n.with_gradient and n.infinitesimal_to_cartesian:
+                    n.gradient = g.infinitesimal_to_cartesian(n.value, n.gradient)
 
         if verbose_memory:
             g.message(
                 f"Backward propagation through graph with {len(nodes)} nodes with maximum allocated fields: {max_fields_allocated}"
             )
 
-    def __call__(self, with_gradients=True):
+    # TODO: allow for lists of initial_gradients (could save forward runs at sake of more memory)
+    def __call__(self, with_gradients=True, initial_gradient=None):
         nodes = []
         forward_free = traverse(nodes, self)
         self.forward(nodes, free=forward_free if not with_gradients else None)
         if with_gradients:
-            self.backward(nodes, first_gradient=forward_free)
+            self.backward(nodes, first_gradient=forward_free, initial_gradient=initial_gradient)
         nodes = None
         return self.value
 
@@ -238,8 +282,20 @@ class node_base(base):
     def get_grid(self):
         return self.value.grid
 
+    def get_real(self):
+        def getter(y):
+            return y.real
+
+        def setter(y, z):
+            y @= z
+
+        return self.project(getter, setter)
+
     grid = property(get_grid)
+    real = property(get_real)
 
 
-def node(x, with_gradient=True):
-    return node_base(x, with_gradient=with_gradient)
+def node(x, with_gradient=True, infinitesimal_to_cartesian=True):
+    return node_base(
+        x, with_gradient=with_gradient, infinitesimal_to_cartesian=infinitesimal_to_cartesian
+    )

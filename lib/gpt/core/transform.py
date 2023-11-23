@@ -28,25 +28,17 @@ def cshift(first, second, third, fourth=None):
 
 
 def copy(first, second=None):
+    return_list = isinstance(first, list)
     if second is not None:
-        t = first
-        l = second
-
+        t = gpt.util.to_list(first)
+        l = gpt.util.to_list(second)
     else:
-        l = first
-        if isinstance(l, list):
-            t = [gpt.lattice(x) for x in l]
-        else:
-            t = gpt.lattice(l)
+        l = gpt.util.to_list(first)
+        t = [x.new() for x in l]
 
-    if isinstance(l, gpt.lattice):
-        for i in t.otype.v_idx:
-            cgpt.copy(t.v_obj[i], l.v_obj[i])
-    else:
-        for j in range(len(l)):
-            for i in t[j].otype.v_idx:
-                cgpt.copy(t[j].v_obj[i], l[j].v_obj[i])
-
+    l[0].__class__.foundation.copy(t, l)
+    if not return_list:
+        return t[0]
     return t
 
 
@@ -103,6 +95,10 @@ def inner_product(a, b, use_accelerator=True):
 
 def norm2(l):
     return call_unary_a_num(lambda la: la[0].__class__.foundation.norm2(la), l)
+
+
+def object_rank_norm2(l):
+    return call_unary_a_num(lambda la: la[0].__class__.foundation.object_rank_norm2(la), l)
 
 
 def inner_product_norm2(a, b):
@@ -169,7 +165,9 @@ def infinitesimal_to_cartesian(src, dsrc):
 
 
 def project(src, method):
-    src.otype.project(src, method)
+    otype = src.otype
+    otype.project(src, method)
+    src.otype = otype
     return src
 
 

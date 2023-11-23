@@ -38,6 +38,7 @@ from gpt.core.transform import (
     cshift,
     copy,
     norm2,
+    object_rank_norm2,
     inner_product,
     rank_inner_product,
     inner_product_norm2,

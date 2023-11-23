@@ -20,23 +20,27 @@ import gpt as g
 from gpt.ad.reverse.util import accumulate_gradient
 
 
-def inner_product(x, y):
+def inner_product(x, y, use_accelerator):
+    assert len(x) == 1 and len(y) == 1
+    x = x[0]
+    y = y[0]
+
     def _forward():
-        return g.inner_product(x.value, y.value)
+        return g.inner_product(x.value, y.value, use_accelerator)
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
-        if x.with_gradient:
+        if x.with_gradient:  # z = adj(x) y   ->    x z = y  -> x = y adj(z)
             accumulate_gradient(x, y.value * g.adj(z.gradient))
-        if y.with_gradient:
-            accumulate_gradient(y, x.value * g.adj(z.gradient))
+        if y.with_gradient:  # z = adj(x) y   ->    y = x z
+            accumulate_gradient(y, x.value * z.gradient)
 
-    return g.ad.reverse.node_base(_forward, _backward, (x, y))
+    return {(0, 0): g.ad.reverse.node_base(_forward, _backward, (x, y))}
 
 
 def norm2(x):
     assert len(x) == 1
-    return [inner_product(x[0], x[0])]
+    return [g.inner_product(x, x)[0, 0]]
 
 
 def cshift(x, direction, displacement, none):
