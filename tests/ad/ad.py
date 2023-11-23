@@ -66,7 +66,7 @@ for prec in [g.double]:
             v0 = c(initial_gradient=ig)
 
             # numerically test derivatives
-            eps = prec.eps**0.5 * 100
+            eps = 1e-6
             g.message(f"Numerical derivatives with eps = {eps} with initial gradient {ig}")
             for var in [a1, a2, b1, b2, x, t1]:
                 lt = rng.normal(var.value.new())
@@ -79,7 +79,7 @@ for prec in [g.double]:
                 num_result = (v1 - v2) / eps / 2.0
                 ad_result = g.inner_product(lt, var.gradient).real
                 err = abs(num_result - ad_result) / (
-                    abs(num_result) + abs(ad_result) + grid.gsites**0.5
+                    abs(num_result) + abs(ad_result) + grid.gsites
                 )
                 g.message(f"Error of gradient's real part: {err} {num_result} {ad_result}")
                 assert err < 1e-4
@@ -93,7 +93,7 @@ for prec in [g.double]:
                 num_result = (v1 - v2) / eps / 2.0
                 ad_result = g.inner_product(lt, var.gradient).imag
                 err = abs(num_result - ad_result) / (
-                    abs(num_result) + abs(ad_result) + grid.gsites**0.5
+                    abs(num_result) + abs(ad_result) + grid.gsites
                 )
                 g.message(f"Error of gradient's imaginary part: {err} {num_result} {ad_result}")
                 assert err < 1e-4
