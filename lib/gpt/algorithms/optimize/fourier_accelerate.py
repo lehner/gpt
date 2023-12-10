@@ -44,7 +44,7 @@ class inverse_phat_square(differentiable_functional):
             self.weight += c_mu_l
 
         # special consideration for zero
-        self.weight[0, 0, 0, 0] = (2.0 * np.pi) ** 2.0 / np.prod(
+        self.weight[coor[0:1]] = (2.0 * np.pi) ** 2.0 / np.prod(
             [grid.gdimensions[mu] for mu in dimensions]
         ) ** (2.0 / len(dimensions))
 
