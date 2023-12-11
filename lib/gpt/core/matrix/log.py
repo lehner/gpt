@@ -19,32 +19,33 @@
 import gpt, numpy
 
 
-def log(i, convergence_threshold=0.5):
-    i = gpt.eval(i)
-    # i = n*(1 + x), log(i) = log(n) + log(1+x)
-    # x = i/n - 1, |x|^2 = <i/n - 1, i/n - 1> = |i|^2/n^2 + |1|^2 - (<i,1> + <1,i>)/n
-    # d/dn |x|^2 = -2 |i|^2/n^3 + (<i,1> + <1,i>)/n^2 = 0 -> 2|i|^2 == n (<i,1> + <1,i>)
-    if i.grid.precision != gpt.double:
-        x = gpt.convert(i, gpt.double)
-    else:
-        x = gpt.copy(i)
-    lI = gpt.identity(x.new())
-    n = gpt.norm2(x) / gpt.inner_product(x, lI).real
-    x /= n
-    x -= lI
-    n2 = gpt.norm2(x) ** 0.5 / x.grid.gsites
-    order = 8 * int(16 / (-numpy.log10(n2)))
-    # n2 = (gpt.norm2(x) / x.grid.gsites / x.otype.shape[0]) ** 0.5
-    # order = int(16 / (-numpy.log10(n2)))
-    assert n2 < convergence_threshold
+def log(i, convergence_threshold=0.0001):
+    x = gpt.eval(i)
+
+    if x.grid.precision is gpt.single:
+        # perform intermediate calculation with enhanced precision
+        return gpt.convert(log(gpt.convert(x, gpt.double)), gpt.single)
+
+    Id = gpt.identity(x)
+
+    nrm = gpt.norm2(Id)
+
+    # log(x^{1/2^n}) = 1/2^n log(x)
+    scale = 1.0
+    for n in range(20):
+        x = gpt.matrix.sqrt(x)
+
+        eps2 = gpt.norm2(x - Id) / nrm
+        scale *= 2.0
+        if eps2 < convergence_threshold:
+            break
+
+    x = gpt(x - Id)
     o = gpt.copy(x)
-    xn = gpt.copy(x)
-    for j in range(2, order + 1):
-        xn @= xn * x
+    xn = x
+    for j in range(2, 8):
+        xn = gpt(xn * x)
         o -= xn * ((-1.0) ** j / j)
-    o += lI * numpy.log(n)
-    if i.grid.precision != gpt.double:
-        r = gpt.lattice(i)
-        gpt.convert(r, o)
-        o = r
+
+    o = gpt(scale * o)
     return o

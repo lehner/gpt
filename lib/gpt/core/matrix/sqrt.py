@@ -16,20 +16,30 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt
+import gpt
 
 
-def inv(A):
-    A = gpt.eval(A)
-    assert isinstance(A, gpt.lattice)
+def sqrt(A):
+    # Denman and Beavers 1976
+    Mk = A
+    Xk = gpt.identity(A)
+    norm = gpt.norm2(Xk)
+    for k in range(100):
+        Xkp1 = gpt(0.5 * Xk + 0.5 * gpt.matrix.inv(Mk))
+        Mkp1 = gpt(0.5 * Mk + 0.5 * gpt.matrix.inv(Xk))
 
-    to_list = gpt.util.to_list
+        eps = (gpt.norm2(Mk - Mkp1) / norm) ** 0.5
+        Xk = Xkp1
+        Mk = Mkp1
 
-    Al = to_list(A)
+        if eps < 1e3 * A.grid.precision.eps:
+            # gpt.message(f"Converged after {k} iterations")
+            # one final Newton iteration (including the original A to avoid error accumulation)
+            Mk = gpt(0.5 * Mk + 0.5 * gpt.matrix.inv(Mk) * A)
 
-    if Al[0].otype.shape == (1,):
-        return gpt.component.inv(A)
+            # compute error
+            # gpt.message("err",gpt.norm2(Mk * Mk - A) / gpt.norm2(A))
+            return Mk
 
-    A_inv = gpt.lattice(A)
-    cgpt.invert_matrix(to_list(A_inv), Al)
-    return A_inv
+    gpt.message("Warning: sqrt not converged")
+    return Mk

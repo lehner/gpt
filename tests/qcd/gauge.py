@@ -222,3 +222,23 @@ for f, f_test, tag, expected_improvement in [
     eps1 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
     g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")
     assert eps1 / eps0 < expected_improvement
+
+
+# test temporal gauge
+def identity(U, mu=3):
+    # U'(x) = V(x) U_mu(x) Vdag(x+mu)
+    # V = [1, U[0], U[0] U[1], U[0] U[1] U[2], ...]
+    U_n = g.separate(U[mu], mu)
+    V_n = [g.identity(U_n[0])]
+    N = len(U_n)
+    for n in range(N - 1):
+        V_n.append(g(V_n[n] * U_n[n]))
+    return g.merge(V_n, mu)
+
+
+V = identity(U)
+
+Up = g.qcd.gauge.transformed(U, V)
+
+for t in range(16):
+    print(t, Up[3][0, 0, 0, t])
