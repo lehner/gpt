@@ -225,20 +225,13 @@ for f, f_test, tag, expected_improvement in [
 
 
 # test temporal gauge
-def identity(U, mu=3):
-    # U'(x) = V(x) U_mu(x) Vdag(x+mu)
-    # V = [1, U[0], U[0] U[1], U[0] U[1] U[2], ...]
-    U_n = g.separate(U[mu], mu)
-    V_n = [g.identity(U_n[0])]
-    N = len(U_n)
-    for n in range(N - 1):
-        V_n.append(g(V_n[n] * U_n[n]))
-    return g.merge(V_n, mu)
-
-
-V = identity(U)
+V = g.qcd.gauge.fix.identity(U, mu=3)
 
 Up = g.qcd.gauge.transformed(U, V)
 
-for t in range(16):
-    print(t, Up[3][0, 0, 0, t])
+ref = g.identity(V)[0, 0, 0, 0]
+
+for t in range(grid.gdimensions[3] - 1):
+    eps2 = g.norm2(Up[3][0, 0, 0, t] - ref)
+    g.message(f"Test temporal gauge at t={t}: {eps2}")
+    assert eps2 < 1e-25

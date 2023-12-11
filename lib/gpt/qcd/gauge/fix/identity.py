@@ -16,5 +16,15 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.fix.landau import landau
-from gpt.qcd.gauge.fix.identity import identity
+import gpt as g
+
+
+def identity(U, mu=3):
+    # U'(x) = V(x) U_mu(x) Vdag(x+mu)
+    # V = [1, U[0], U[0] U[1], U[0] U[1] U[2], ...]
+    U_n = g.separate(U[mu], mu)
+    V_n = [g.identity(U_n[0])]
+    N = len(U_n)
+    for n in range(N - 1):
+        V_n.append(g(V_n[n] * U_n[n]))
+    return g.merge(V_n, mu)
