@@ -68,7 +68,7 @@ def count(fn):
 class reader:
     def __init__(self, fn):
         self.tags = {}
-        f = open(fn, "r+b")
+        f = open(fn, "rb")
         while True:
             rd = f.read(4)
             if len(rd) == 0:
