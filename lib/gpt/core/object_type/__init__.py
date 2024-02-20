@@ -38,7 +38,7 @@ def gpt_object(first, ot):
 ###
 # Container objects without (lie) group structure
 def singlet(grid):
-    return gpt_object(grid, ot_singlet)
+    return gpt_object(grid, ot_singlet())
 
 
 def matrix_color(grid, ndim):

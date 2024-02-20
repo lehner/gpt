@@ -68,10 +68,10 @@ class ot_singlet(ot_base):
         "ot_singlet": (lambda: ot_singlet, None),
     }
 
-    def data_otype(self=None):
+    def data_otype(self):
         return ot_singlet
 
-    def identity():
+    def identity(self):
         return 1.0
 
 
