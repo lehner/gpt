@@ -26,7 +26,7 @@ def coordinates(src, position, spacing):
 
 
 def zn(src, position, spacing, rng, n):
-    singlet = gpt.lattice(src.grid, gpt.ot_singlet)
+    singlet = gpt.lattice(src.grid, gpt.ot_singlet())
     singlet.checkerboard(src.checkerboard())
     pos = coordinates(src, position, spacing)
     singlet_full = gpt.lattice(singlet)

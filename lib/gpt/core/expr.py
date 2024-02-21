@@ -247,7 +247,7 @@ def get_otype_from_expression(e):
     bare_otype = None
     for coef, term in e.val:
         if len(term) == 0:
-            t_otype = gpt.ot_singlet
+            t_otype = gpt.ot_singlet()
         else:
             t_otype = None
             t_adj = False

@@ -34,13 +34,13 @@ class ot_u_1_base(ot_singlet):
 
     def __init__(self, name):
         self.__name__ = name
-        self.data_alias = lambda: ot_singlet
+        self.data_alias = lambda: ot_singlet()
         self.rmtab = {
-            "ot_singlet": (lambda: ot_singlet, None),
+            "ot_singlet": (lambda: ot_singlet(), None),
         }
         self.mtab = {
             self.__name__: (lambda: self, None),
-            "ot_singlet": (lambda: ot_singlet, None),
+            "ot_singlet": (lambda: ot_singlet(), None),
         }
 
 

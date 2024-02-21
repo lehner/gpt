@@ -30,13 +30,13 @@ class ot_complex_additive_group(ot_singlet):
 
     def __init__(self):
         self.__name__ = "ot_complex_additive_group"
-        self.data_alias = lambda: ot_singlet
+        self.data_alias = lambda: ot_singlet()
         self.rmtab = {
-            "ot_singlet": (lambda: ot_singlet, None),
+            "ot_singlet": (lambda: ot_singlet(), None),
         }
         self.mtab = {
             self.__name__: (lambda: self, None),
-            "ot_singlet": (lambda: ot_singlet, None),
+            "ot_singlet": (lambda: ot_singlet(), None),
         }
 
     # this is always multiplicative identity, not neutral element of group
@@ -87,7 +87,7 @@ class ot_vector_complex_additive_group(ot_vector_singlet):
         }
         self.otab = {self.__name__: (lambda: ot_matrix_complex_additive_group(n), [])}
         self.itab = {
-            self.__name__: (lambda: ot_singlet, (0, 0)),
+            self.__name__: (lambda: ot_singlet(), (0, 0)),
         }
         self.cache = {}
 
@@ -119,7 +119,7 @@ class ot_vector_complex_additive_group(ot_vector_singlet):
         assert l.otype.__name__ == self.__name__
         if c is None:
             r = [None] * self.shape[0] * 2
-            a = gpt.separate_indices(l, (0, lambda: ot_singlet), self.cache)
+            a = gpt.separate_indices(l, (0, lambda: ot_singlet()), self.cache)
             for i in a:
                 r[i[0]] = gpt.component.real(a[i])
                 r[i[0] + self.shape[0]] = gpt.component.imag(a[i])
