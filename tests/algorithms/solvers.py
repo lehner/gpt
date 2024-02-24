@@ -179,7 +179,7 @@ assert all([h * 1.5 < history[0] for h in history[1:]])
 # ordering of dst fields.
 
 cg = inv.cg({"eps": 1e-8, "maxiter": 500})
-shifts = [0.5, 1.0, 1.7]
+shifts = [0.5, 1.7, 1.0]
 mat = eo2_odd(w).Mpc
 
 # also test with multiple sources
@@ -197,24 +197,28 @@ g.default.set_verbose("multi_shift_cg")
 mscg = inv.multi_shift_cg({"eps": 1e-8, "maxiter": 1024, "shifts": shifts})
 
 g.default.set_verbose("multi_shift_fom")
-msfom = inv.multi_shift_fom({"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts})
+msfom = inv.multi_shift_fom({"eps": 1e-8, "maxiter": 1024, "restartlen": 4, "shifts": shifts})
 
 g.default.set_verbose("multi_shift_fgmres")
 msfgmres = inv.multi_shift_fgmres(
-    {"eps": 1e-8, "maxiter": 1024, "restartlen": 10, "shifts": shifts}
+    {"eps": 1e-8, "maxiter": 1024, "restartlen": 4, "shifts": shifts}
 )
 
+g.default.set_verbose("multi_shift_fom", False)
 prec_fom = inv.multi_shift_fom({"maxiter": 4, "restartlen": 2})
+g.default.set_verbose("multi_shift_fgmres")
 msfgmres_fom = inv.multi_shift_fgmres(
-    {"eps": 1e-8, "maxiter": 512, "restartlen": 5, "shifts": shifts, "prec": prec_fom}
+    {"eps": 1e-8, "maxiter": 512, "restartlen": 2, "shifts": shifts, "prec": prec_fom}
 )
 
+g.default.set_verbose("multi_shift_fgmres", False)
 prec_fgmres = inv.multi_shift_fgmres({"maxiter": 4, "restartlen": 2})
+g.default.set_verbose("multi_shift_fgmres")
 msfgmres_fgmres = inv.multi_shift_fgmres(
     {
         "eps": 1e-8,
         "maxiter": 512,
-        "restartlen": 5,
+        "restartlen": 2,
         "shifts": shifts,
         "prec": prec_fgmres,
     }
