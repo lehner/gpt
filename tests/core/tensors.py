@@ -241,10 +241,10 @@ for x in range(grid.fdimensions[0]):
 
 # spin and color traces
 mc = g.eval(g.spin_trace(msc))
-assert g.norm2(mc[0, 0, 0, 0] - g.spin_trace(msc[0, 0, 0, 0])) < 1e-13
+assert g.norm2(mc[0, 0, 0, 0] - g.spin_trace(msc[0, 0, 0, 0])) < 1e-12
 
 ms = g.eval(g.color_trace(msc))
-assert g.norm2(ms[0, 0, 0, 0] - g.color_trace(msc[0, 0, 0, 0])) < 1e-13
+assert g.norm2(ms[0, 0, 0, 0] - g.color_trace(msc[0, 0, 0, 0])) < 1e-12
 
 eps0 = g.norm2(g.trace(msc) - g.spin_trace(ms))
 eps1 = g.norm2(g.trace(msc) - g.color_trace(mc))

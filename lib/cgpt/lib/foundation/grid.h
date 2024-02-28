@@ -42,11 +42,11 @@ class GridView {
   }
   
   
-  accelerator_inline void oCoorFromOindex (Coordinate& coor,int Oindex) {
+  accelerator_inline void oCoorFromOindex (Coordinate& coor,int Oindex) const {
     Lexicographic::CoorFromIndex(coor,Oindex,_rdimensions);
   }
 
-  accelerator_inline int oIndex(Coordinate &coor) {
+  accelerator_inline int oIndex(Coordinate &coor) const {
     int idx = 0;
     for (int d = 0; d < coor.size(); d++) {
       if (d == _checker_dim) {
@@ -58,7 +58,7 @@ class GridView {
     return idx;
   }
 
-  accelerator_inline int iIndex(Coordinate &lcoor) {
+  accelerator_inline int iIndex(Coordinate &lcoor) const {
     int idx = 0;
     for (int d = 0; d < lcoor.size(); d++) {
       if (d == _checker_dim) {
@@ -71,7 +71,7 @@ class GridView {
   }
 
 
-  accelerator_inline int CheckerBoard(const Coordinate &site) {
+  accelerator_inline int CheckerBoard(const Coordinate &site) const {
     int linear=0;
     for(int d=0;d<site.size();d++){ 
       if(_checker_dim_mask[d])

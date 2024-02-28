@@ -68,7 +68,7 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
     VECTOR_VIEW_OPEN(basis.slice(basis_i0*n_virtual,basis_i1*n_virtual),basis_v,AcceleratorRead);
     long Nsimd = grid->Nsimd();
     long oSites = grid->oSites();
-    accelerator_for(_idx, oSites*n_vec*n_virtual,Nsimd,{
+    accelerator_for(_idx, oSites*n_vec*n_virtual,(size_t)Nsimd,{
 	auto idx = _idx;
 	auto ss = idx % oSites; idx /= oSites;
 	auto vec_i = idx % n_vec; idx /= n_vec;
@@ -159,7 +159,7 @@ void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &r
 
   long Nsimd = grid->Nsimd();
   long oSites = grid->oSites();
-  accelerator_for(_idx, oSites*n_vec*n_virtual/**n_elements*/,Nsimd,{
+  accelerator_for(_idx, oSites*n_vec*n_virtual/**n_elements*/,(size_t)Nsimd,{
       auto idx = _idx;
       auto ss = idx % oSites; idx /= oSites;
       auto vec_i = idx % n_vec; idx /= n_vec;

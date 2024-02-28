@@ -79,15 +79,6 @@
 
 #else
 
-template<class vobj> accelerator_inline
-typename vobj::scalar_object coalescedReadGeneralPermute(const vobj & __restrict__ vec,int permute,int nd,int lane=acceleratorSIMTlane(vobj::Nsimd()))
-{
-  int plane = lane;
-  for (int d=0;d<nd;d++)
-    plane = (permute & (0x1 << d)) ? plane ^ (vobj::Nsimd() >> (d + 1)) : plane;
-  return extractLane(plane,vec);
-}
-
 // gpu fetch version
 #define fetch(obj, point, site, view, do_adj) {				\
     auto _SE = sview.GetEntry(point,site);				\

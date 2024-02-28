@@ -175,7 +175,7 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
 
     Timer("loop");
 
-    accelerator_for(ss, grid->oSites() * U::n_elements, grid->Nsimd(), {
+    accelerator_for(ss, grid->oSites() * U::n_elements, (size_t)grid->Nsimd(), {
 	auto osite = ss / U::n_elements;
 	auto j = ss - osite * U::n_elements;
 	U::eval(ac, osite, p_a, p_b, n, j);

@@ -74,18 +74,25 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
   assert(orthogdim >= 0);
   assert(orthogdim < Nd);
 
-  int fd = grid->_fdimensions[orthogdim];
-  int ld = grid->_ldimensions[orthogdim];
-  int rd = grid->_rdimensions[orthogdim];
+  size_t eblock = 1;
+  size_t min_block = 64; // TODO: make this configurable
+    
+  size_t fd = grid->_fdimensions[orthogdim];
+  size_t ld = grid->_ldimensions[orthogdim];
+  size_t rd = grid->_rdimensions[orthogdim];
 
-  Vector<vobj> lvSum(rd * Nbasis);         // will locally sum vectors first
+  while (eblock * rd < min_block)
+    eblock *= 2;
+
+  Vector<vobj> lvSum(rd * eblock * Nbasis);         // will locally sum vectors first
   Vector<sobj> lsSum(ld * Nbasis, Zero()); // sum across these down to scalars
   result.resize(fd * Nbasis);              // And then global sum to return the same vector to every node
 
-  int      e1 = grid->_slice_nblock[orthogdim];
-  int      e2 = grid->_slice_block [orthogdim];
-  int  stride = grid->_slice_stride[orthogdim];
-  int ostride = grid->_ostride[orthogdim];
+  size_t   e1 = grid->_slice_nblock[orthogdim];
+  size_t   e2 = grid->_slice_block [orthogdim];
+  size_t   e  = (e1 * e2 + eblock - 1) / eblock;
+  size_t   stride = grid->_slice_stride[orthogdim];
+  size_t   ostride = grid->_ostride[orthogdim];
 
   // sum over reduced dimension planes, breaking out orthog dir
   // Parallel over orthog direction
@@ -93,18 +100,23 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
   auto lvSum_p = &lvSum[0];
   typedef decltype(coalescedRead(Data_v[0][0])) CalcElem;
 
-  accelerator_for(r, rd * Nbasis, grid->Nsimd(), {
+  accelerator_for(rr, rd * eblock * Nbasis, (size_t)grid->Nsimd(), {
     CalcElem elem = Zero();
 
-    int n_base = r / rd;
-    int so = (r % rd) * ostride; // base offset for start of plane
-    for(int n = 0; n < e1; n++){
-      for(int b = 0; b < e2; b++){
-        int ss = so + n * stride + b;
-        elem += coalescedRead(Data_v[n_base][ss]);
+    size_t eb = rr % eblock;
+    size_t r = rr / eblock;
+    size_t n_base = r / rd;
+    size_t so = (r % rd) * ostride; // base offset for start of plane
+    for(size_t i = 0; i < e; i++) {
+      size_t j = eb + i * eblock;
+      if (j < e1*e2) {
+	size_t n = j / e2;
+	size_t b = j % e2;
+	size_t ss = so + n * stride + b;
+	elem += coalescedRead(Data_v[n_base][ss]);
       }
     }
-    coalescedWrite(lvSum_p[r], elem);
+    coalescedWrite(lvSum_p[rr], elem);
   });
   VECTOR_VIEW_CLOSE(Data_v);
 
@@ -113,12 +125,14 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
     ExtractBuffer<sobj> extracted(Nsimd); // splitting the SIMD
     Coordinate icoor(Nd);
 
-    for(int rt = 0; rt < rd; rt++){
-      extract(lvSum[n_base * rd + rt], extracted);
-      for(int idx = 0; idx < Nsimd; idx++){
-        grid->iCoorFromIindex(icoor, idx);
-        int ldx = rt + icoor[orthogdim] * rd;
-        lsSum[n_base * ld + ldx] = lsSum[n_base * ld + ldx] + extracted[idx];
+    for (size_t eb=0;eb<eblock;eb++) {
+      for(size_t rt = 0; rt < rd; rt++) {
+	extract(lvSum[(n_base * rd + rt) * eblock + eb], extracted);
+	for(size_t idx = 0; idx < Nsimd; idx++){
+	  grid->iCoorFromIindex(icoor, idx);
+	  size_t ldx = rt + icoor[orthogdim] * rd;
+	  lsSum[n_base * ld + ldx] = lsSum[n_base * ld + ldx] + extracted[idx];
+	}
       }
     }
 

@@ -275,6 +275,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	for (auto & segment : segments) {
 	  int _npb = segment.number_of_blocks;
 	  int _npbs = segment.block_size;
+	  acceleratorFenceComputeStream();
 	  accelerator_forNB(ss_block, oblocks * _npb, T::Nsimd(), {
 	      uint64_t cc = ss_block % _npb;
 #else
@@ -309,6 +310,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	  
 	  if (osites_extra) {
 #ifdef GRID_HAS_ACCELERATOR
+	    acceleratorFenceComputeStream();
 	    accelerator_forNB(ss_block, osites_extra * _npb, T::Nsimd(), {
 		uint64_t cc = ss_block % _npb;
 #else

@@ -65,7 +65,7 @@ inline void cgpt_component_wise_multiply(Lattice<T>& answer, const Lattice<T>& a
   auto a_p = (vtype*)&a_v[0];
   auto b_p = (vtype*)&b_v[0];
 
-  accelerator_for(ss, grid->oSites() * sizeof(T) / sizeof(vtype), grid->Nsimd(), {
+  accelerator_for(ss, grid->oSites() * sizeof(T) / sizeof(vtype), (size_t)grid->Nsimd(), {
       coalescedWrite(answer_p[ss], coalescedRead(a_p[ss]) * coalescedRead(b_p[ss]));
     });
 }

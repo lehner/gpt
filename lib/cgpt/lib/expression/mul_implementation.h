@@ -70,7 +70,7 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
     
     // TODO: if c==a or c==b, need to copy to new memory region
 #ifndef GRID_HAS_ACCELERATOR
-    accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+    accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
 	PREFETCH(p_a[osite]);
 	PREFETCH(p_b[osite]);
 	for (int j=0;j<MT::n_elements;j++) {
@@ -78,7 +78,7 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 	}
       });
 #else
-    accelerator_for(ss, grid->oSites() * MT::n_elements, grid->Nsimd(), {
+    accelerator_for(ss, grid->oSites() * MT::n_elements, (size_t)grid->Nsimd(), {
 	auto osite = ss / MT::n_elements;
 	auto j = ss - osite * MT::n_elements;
 	MT::eval(ac, osite, p_a[osite], p_b[osite], j);
@@ -141,7 +141,7 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
     auto * p_b = &v_b[0];
     
 #ifndef GRID_HAS_ACCELERATOR
-    accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+    accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
 	PREFETCH(p_a[osite]);
 	PREFETCH(p_b[osite]);
 	for (int j=0;j<MT::n_elements;j++) {
@@ -149,7 +149,7 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 	}
       });
 #else
-    accelerator_for(ss, grid->oSites() * MT::n_elements, grid->Nsimd(), {
+    accelerator_for(ss, grid->oSites() * MT::n_elements, (size_t)grid->Nsimd(), {
 	auto osite = ss / MT::n_elements;
 	auto j = ss - osite * MT::n_elements;
 	MT::eval(ac, osite, p_a[osite], *p_b, j);
