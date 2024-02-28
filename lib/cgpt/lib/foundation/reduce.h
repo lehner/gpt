@@ -80,7 +80,7 @@
 #define accelerator_forNB_with_shared( iter1, num1, nsimd, shared_type, shared_name, ... ) { \
     auto _stored_nt = acceleratorThreads();				\
     acceleratorThreads(1);						\
-    accelerator_forNB(iter1, num1, nsimd, {__shared__ shared_type shared_name[nsimd]; __VA_ARGS__}); \
+    accelerator_forNB(iter1, num1, nsimd, {accelerator_shared shared_type shared_name[nsimd]; __VA_ARGS__}); \
     acceleratorThreads(_stored_nt);					\
   }
 
