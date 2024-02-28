@@ -165,9 +165,24 @@ def einsum(contraction, *tensors):
             else:
                 index_value[j] = 0
 
+    # now sort by target index
+    code = sorted(code, key=lambda c: c[1])
+
+    # now verify that segmentation works
     assert len(code) % nsegment == 0
+    use_segmentation = all(
+        [
+            len(set([c[1] for c in code[i : i + nsegment]])) == 1
+            for i in range(0, len(code), nsegment)
+        ]
+    )
+    if not use_segmentation:
+        nsegment = 1
+
+    # create segmentation
     segments = [(len(code) // nsegment, nsegment)]
 
+    # and tensor
     ein = g.stencil.tensor(tensors_destination[0], [(0, 0, 0, 0)], code, segments)
 
     def exec(*src):
