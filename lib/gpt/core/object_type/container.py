@@ -67,25 +67,7 @@ class ot_singlet(ot_base):
     mtab = {
         "ot_singlet": (lambda: ot_singlet(), None),
     }
-
-    # FIXME: I am not sure if this is a good idea wrt. parellelism.
-    # Make singlet and all its derived subclasses singleton.
-    _instance = None
-    def __new__(cls, *args, **kwargs):
-        if not isinstance(cls._instance, cls):
-            cls._instance = object.__new__(cls, *args, **kwargs)
-        return cls._instance
-
-    # There are many LoCs like
-    #   res.otype == g.ot_singlet
-    # This will allow this behaviour to continue.
-    def __eq__(self, o):
-        if isinstance(o, type):
-            return type(self) == o
-        # This works because singleton.
-        if self is o:
-            return True
-        return o.__eq__(self)
+    is_singlet = True
 
     def data_otype(self):
         return ot_singlet()

@@ -113,7 +113,7 @@ class expr:
                 if uf & gpt.factor_unary.BIT_CONJ != 0:
                     lhs = lhs.conj()
                 res = gpt.tensor(np.tensordot(lhs, l.array, axes=mt[1]), mt[0]())
-                if res.otype == gpt.ot_singlet:
+                if res.otype.is_singlet:
                     res = complex(res.array)
                 return res
             assert 0

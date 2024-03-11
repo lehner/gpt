@@ -36,6 +36,7 @@ class ot_base:
 
     # list of object types to which I can convert and converter function
     ctab = {}
+    is_singlet = False
 
     # safe cast of data_alias
     def data_otype(self):

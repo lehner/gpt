@@ -75,7 +75,7 @@ class tensor(foundation_base):
         return tensor(np.transpose(self.array.conj(), self.otype.transposed), self.otype)
 
     def reduced(self):
-        if self.otype.data_otype() == gpt.ot_singlet:
+        if self.otype.is_singlet:
             return complex(self.array)
         return self
 
@@ -92,7 +92,7 @@ class tensor(foundation_base):
             if ct[0] is not None:
                 res = tensor(np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]())
 
-        if res.otype == gpt.ot_singlet:
+        if res.otype.is_singlet:
             res = complex(res.array)
         return res
 

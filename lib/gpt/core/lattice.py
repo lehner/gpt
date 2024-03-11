@@ -288,8 +288,8 @@ class lattice(factor, foundation_base):
         return self
 
     def __lt__(self, other):
-        assert self.otype.data_otype() == gpt.ot_singlet
-        assert other.otype.data_otype() == gpt.ot_singlet
+        assert self.otype.is_singlet
+        assert other.otype.is_singlet
         res = gpt.lattice(self)
         params = {"operator": "<"}
         cgpt.binary(res.v_obj[0], self.v_obj[0], other.v_obj[0], params)
