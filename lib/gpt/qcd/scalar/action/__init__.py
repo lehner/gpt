@@ -18,4 +18,5 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.qcd.scalar.action.phi4 import phi4
+from gpt.qcd.scalar.action.cpn import cpn
 from gpt.qcd.scalar.action.mass_term import mass_term
