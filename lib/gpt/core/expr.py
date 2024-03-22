@@ -236,8 +236,8 @@ def get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj):
             elif t_otype.data_alias is not None:
                 return get_otype_from_multiplication(t_otype.data_alias(), t_adj, f_otype, f_adj)
             else:
-                ajd_str_t = ".T" if t_adj else ""
-                ajd_str_f = ".T" if f_adj else ""
+                ajd_str_t = ".H" if t_adj else ""
+                ajd_str_f = ".H" if f_adj else ""
                 gpt.message(
                     f"Missing entry in multiplication table: {t_otype.__name__}{ajd_str_t} x {f_otype.__name__}{ajd_str_f}"
                 )
