@@ -52,7 +52,7 @@ def to_num(x):
 
 # tensor
 def value_to_tensor(val, otype):
-    if otype.data_otype() == gpt.ot_singlet:
+    if isinstance(otype.data_otype(), gpt.ot_singlet):
         # this is not ideal, can we do a subclass of complex that preserves otype info?
         return complex(val)
     return gpt.tensor(val, otype)

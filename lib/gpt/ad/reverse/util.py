@@ -25,7 +25,7 @@ def is_field(x):
     elif isinstance(x, g.tensor):
         return False
     elif isinstance(x, g.expr):
-        return x.lattice() is not None
+        return x.container()[0] is not None
     elif g.util.is_num(x):
         return False
     elif isinstance(x, g.ad.forward.series):
@@ -48,7 +48,8 @@ def accumulate_gradient(lhs, rhs_gradient, getter=None, setter=None):
         rhs_gradient = g(rhs_gradient)
 
     if isinstance(lhs_gradient, g.lattice) and isinstance(rhs_gradient, g.expr):
-        rhs_otype = rhs_gradient.lattice().otype
+        grid, rhs_otype, is_list, nlist = rhs_gradient.container()
+        assert not is_list # for now
         lhs_otype = lhs_gradient.otype
         if lhs_otype.__name__ != rhs_otype.__name__:
             if rhs_otype.spintrace[2] is not None:

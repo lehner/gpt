@@ -37,6 +37,73 @@ class expr_unary:
     BIT_COLORTRACE = 2
 
 
+def get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj):
+    if f_adj and not t_adj and f_otype.itab is not None:
+        # inner
+        tab = f_otype.itab
+        rtab = {}
+    elif t_adj and not f_adj and f_otype.otab is not None:
+        # outer
+        tab = f_otype.otab
+        rtab = {}
+    else:
+        tab = f_otype.mtab
+        rtab = t_otype.rmtab
+
+    if t_otype.__name__ in tab:
+        return tab[t_otype.__name__][0]()
+    else:
+        if f_otype.__name__ not in rtab:
+            if f_otype.data_alias is not None:
+                return get_otype_from_multiplication(t_otype, t_adj, f_otype.data_alias(), f_adj)
+            elif t_otype.data_alias is not None:
+                return get_otype_from_multiplication(t_otype.data_alias(), t_adj, f_otype, f_adj)
+            else:
+                ajd_str_t = ".H" if t_adj else ""
+                ajd_str_f = ".H" if f_adj else ""
+                gpt.message(
+                    f"Missing entry in multiplication table: {t_otype.__name__}{ajd_str_t} x {f_otype.__name__}{ajd_str_f}"
+                )
+        return rtab[f_otype.__name__][0]()
+
+
+def get_otype_from_expression(e):
+    bare_otype = None
+    for coef, term in e.val:
+        if len(term) == 0:
+            t_otype = gpt.ot_singlet()
+        else:
+            t_otype = None
+            t_adj = False
+            for unary, factor in reversed(term):
+                f_otype = gpt.util.to_list(factor)[0].otype
+                f_adj = unary == factor_unary.ADJ and not f_otype.is_self_dual()
+                if t_otype is None:
+                    t_otype = f_otype
+                    t_adj = f_adj
+                else:
+                    t_otype = get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj)
+
+        if bare_otype is None:
+            bare_otype = t_otype
+        else:
+            # all elements of a sum must have same data type
+            assert t_otype.data_otype().__name__ == bare_otype.data_otype().__name__
+
+    # apply unaries
+    if e.unary & expr_unary.BIT_SPINTRACE:
+        st = bare_otype.spintrace
+        assert st is not None
+        if st[2] is not None:
+            bare_otype = st[2]()
+    if e.unary & expr_unary.BIT_COLORTRACE:
+        ct = bare_otype.colortrace
+        assert ct is not None
+        if ct[2] is not None:
+            bare_otype = ct[2]()
+    return bare_otype
+
+
 # expr:
 # - each expression can have a unary operation such as trace
 # - each expression has linear combination of terms
@@ -84,12 +151,19 @@ class expr:
     def get_num(self):
         return self.val[0][0]
 
-    def lattice(self):
+    def container(self):
+        # returns triple grid, otype, n ; n can be None or an integer for a list of length n
         for v in self.val:
             for i in v[1]:
                 if gpt.util.is_list_instance(i[1], gpt.lattice):
-                    return i[1]
-        return None
+                    representative = i[1]
+                    return_list = isinstance(representative, list)
+                    representative = gpt.util.to_list(representative)
+                    grid = representative[0].grid
+                    n = len(representative)
+                    otype = get_otype_from_expression(self)
+                    return grid, otype, return_list, n
+        return None, None, None, None
 
     def __mul__(self, l):
         if isinstance(l, expr):
@@ -113,7 +187,7 @@ class expr:
                 if uf & gpt.factor_unary.BIT_CONJ != 0:
                     lhs = lhs.conj()
                 res = gpt.tensor(np.tensordot(lhs, l.array, axes=mt[1]), mt[0]())
-                if res.otype == gpt.ot_singlet:
+                if isinstance(res.otype, gpt.ot_singlet):
                     res = complex(res.array)
                 return res
             assert 0
@@ -214,73 +288,6 @@ def apply_type_right_to_left(e, t):
     assert 0
 
 
-def get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj):
-    if f_adj and not t_adj and f_otype.itab is not None:
-        # inner
-        tab = f_otype.itab
-        rtab = {}
-    elif t_adj and not f_adj and f_otype.otab is not None:
-        # outer
-        tab = f_otype.otab
-        rtab = {}
-    else:
-        tab = f_otype.mtab
-        rtab = t_otype.rmtab
-
-    if t_otype.__name__ in tab:
-        return tab[t_otype.__name__][0]()
-    else:
-        if f_otype.__name__ not in rtab:
-            if f_otype.data_alias is not None:
-                return get_otype_from_multiplication(t_otype, t_adj, f_otype.data_alias(), f_adj)
-            elif t_otype.data_alias is not None:
-                return get_otype_from_multiplication(t_otype.data_alias(), t_adj, f_otype, f_adj)
-            else:
-                ajd_str_t = ".H" if t_adj else ""
-                ajd_str_f = ".H" if f_adj else ""
-                gpt.message(
-                    f"Missing entry in multiplication table: {t_otype.__name__}{ajd_str_t} x {f_otype.__name__}{ajd_str_f}"
-                )
-        return rtab[f_otype.__name__][0]()
-
-
-def get_otype_from_expression(e):
-    bare_otype = None
-    for coef, term in e.val:
-        if len(term) == 0:
-            t_otype = gpt.ot_singlet
-        else:
-            t_otype = None
-            t_adj = False
-            for unary, factor in reversed(term):
-                f_otype = gpt.util.to_list(factor)[0].otype
-                f_adj = unary == factor_unary.ADJ
-                if t_otype is None:
-                    t_otype = f_otype
-                    t_adj = f_adj
-                else:
-                    t_otype = get_otype_from_multiplication(t_otype, t_adj, f_otype, f_adj)
-
-        if bare_otype is None:
-            bare_otype = t_otype
-        else:
-            # all elements of a sum must have same data type
-            assert t_otype.data_otype().__name__ == bare_otype.data_otype().__name__
-
-    # apply unaries
-    if e.unary & expr_unary.BIT_SPINTRACE:
-        st = bare_otype.spintrace
-        assert st is not None
-        if st[2] is not None:
-            bare_otype = st[2]()
-    if e.unary & expr_unary.BIT_COLORTRACE:
-        ct = bare_otype.colortrace
-        assert ct is not None
-        if ct[2] is not None:
-            bare_otype = ct[2]()
-    return bare_otype
-
-
 def expr_eval(first, second=None, ac=False):
     t = gpt.timer("eval", verbose_performance)
 
@@ -316,14 +323,10 @@ def expr_eval(first, second=None, ac=False):
 
     t("prepare")
     if dst is None:
-        lat = e.lattice()
-        if lat is None:
+        grid, otype, return_list, nlat = e.container()
+        if grid is None:
             # cannot evaluate to a lattice object, leave expression unevaluated
             return first
-        return_list = isinstance(lat, list)
-        lat = gpt.util.to_list(lat)
-        grid = lat[0].grid
-        nlat = len(lat)
 
     # verbose output
     if verbose:
@@ -339,12 +342,8 @@ def expr_eval(first, second=None, ac=False):
         ret = dst
     else:
         assert ac is False
-        t("get otype")
-        # now find return type
-        otype = get_otype_from_expression(e)
 
         ret = []
-
         for idx in range(nlat):
             t("cgpt.eval")
             res = cgpt.eval(None, e.val, e.unary, False, idx)
