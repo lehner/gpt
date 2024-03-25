@@ -74,8 +74,11 @@ class ot_singlet(ot_base):
     def is_self_dual(self):
         return True
 
-    def identity():
+    def identity(self):
         return 1.0
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
 
 ###

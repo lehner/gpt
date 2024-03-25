@@ -36,6 +36,14 @@ def is_field(x):
         raise Exception(f"Unknown object type {type(x)}")
 
 
+def accumulate_compatible(a, b):
+    if a.data_alias is not None:
+        a = a.data_alias()
+    if b.data_alias is not None:
+        b = b.data_alias()
+    return a.__name__ == b.__name__
+
+
 def accumulate_gradient(lhs, rhs_gradient, getter=None, setter=None):
     lhs_gradient = lhs.gradient
     if getter is not None:
@@ -49,15 +57,20 @@ def accumulate_gradient(lhs, rhs_gradient, getter=None, setter=None):
 
     if isinstance(lhs_gradient, g.lattice) and isinstance(rhs_gradient, g.expr):
         grid, rhs_otype, is_list, nlist = rhs_gradient.container()
-        assert not is_list # for now
+        assert not is_list  # for now
         lhs_otype = lhs_gradient.otype
         if lhs_otype.__name__ != rhs_otype.__name__:
             if rhs_otype.spintrace[2] is not None:
-                if lhs_otype.__name__ == rhs_otype.spintrace[2]().__name__:
+                rhs_spintrace_otype = rhs_otype.spintrace[2]()
+                if accumulate_compatible(lhs_otype, rhs_spintrace_otype):
                     rhs_gradient = g(g.spin_trace(rhs_gradient))
                     rhs_otype = rhs_gradient.otype
+                elif rhs_spintrace_otype.colortrace[2] is not None:
+                    if accumulate_compatible(lhs_otype, rhs_spintrace_otype.colortrace[2]()):
+                        rhs_gradient = g(g.trace(rhs_gradient))
+                        rhs_otype = rhs_gradient.otype
             if rhs_otype.colortrace[2] is not None:
-                if lhs_otype.__name__ == rhs_otype.colortrace[2]().__name__:
+                if accumulate_compatible(lhs_otype, rhs_otype.colortrace[2]()):
                     rhs_gradient = g(g.color_trace(rhs_gradient))
                     rhs_otype = rhs_gradient.otype
 
