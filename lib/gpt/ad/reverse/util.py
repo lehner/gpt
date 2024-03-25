@@ -59,6 +59,7 @@ def accumulate_gradient(lhs, rhs_gradient, getter=None, setter=None):
         grid, rhs_otype, is_list, nlist = rhs_gradient.container()
         assert not is_list  # for now
         lhs_otype = lhs_gradient.otype
+
         if lhs_otype.__name__ != rhs_otype.__name__:
             if rhs_otype.spintrace[2] is not None:
                 rhs_spintrace_otype = rhs_otype.spintrace[2]()
