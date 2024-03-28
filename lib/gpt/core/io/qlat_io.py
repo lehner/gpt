@@ -42,7 +42,11 @@ class qlat_io:
             return False
 
         with open(self.path, "rb") as f:
-            line = self.getline(f)
+            try:
+                line = self.getline(f)
+            except UnicodeDecodeError:
+                return False
+
             if line != "BEGIN_FIELD_HEADER":
                 return False
 
