@@ -88,7 +88,7 @@ jobs:
         mkdir -p $PKGDIR
         cd c-lime
         ./autogen.sh
-        ./configure || cat config.log
+        ./configure CFLAGS="-fPIC" CXXFLAGS="-fPIC" || cat config.log
         make ${MAKE_BUILD_FLAGS}
         DESTDIR=$PKGDIR make install
 
