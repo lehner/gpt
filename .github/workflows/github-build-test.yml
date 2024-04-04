@@ -72,7 +72,7 @@ jobs:
       id: c-lime-version
       run: |
         cd c-lime
-        echo "key=$(git rev-parse HEAD)-${CACHE_KEY}" >> $GITHUB_OUTPUT
+        echo "key=$(git rev-parse HEAD)-${CACHE_KEY}-PIC" >> $GITHUB_OUTPUT
 
     - name: c-lime package cache
       uses: actions/cache@v3
@@ -88,7 +88,7 @@ jobs:
         mkdir -p $PKGDIR
         cd c-lime
         ./autogen.sh
-        ./configure || cat config.log
+        ./configure CFLAGS="-fPIC" CXXFLAGS="-fPIC" || cat config.log
         make ${MAKE_BUILD_FLAGS}
         DESTDIR=$PKGDIR make install
 
