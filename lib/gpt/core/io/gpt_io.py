@@ -48,9 +48,9 @@ class gpt_io:
         self.verbose_paths = gpt.default.is_verbose("io_paths")
 
         # escape paths
-        if "paths" in params:
+        if self.params["paths"] is not None:
             replace = str.maketrans({ "[" : "[[]", "]" : "[]]" })
-            params["paths"] = [p.translate(replace) for p in params["paths"]]
+            self.params["paths"] = [p.translate(replace) for p in self.params["paths"]]
 
         if gpt.rank() == 0:
             os.makedirs(self.root, exist_ok=True)
