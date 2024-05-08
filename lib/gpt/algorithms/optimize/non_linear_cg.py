@@ -21,6 +21,7 @@ import numpy as np
 from gpt.algorithms import base_iterative
 from gpt.algorithms.optimize import line_search_quadratic
 
+
 def fletcher_reeves(d, d_last):
     ip_dd = g.group.inner_product(d, d)
     ip_ll = g.group.inner_product(d_last, d_last)

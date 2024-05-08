@@ -31,7 +31,7 @@ class mass_term(differentiable_functional):
         return g.group.inner_product(pi, pi) * self.m * 0.5
 
     def draw(self, pi, rng):
-        rng.normal_element(pi, scale = self.m**0.5)
+        rng.normal_element(pi, scale=self.m**0.5)
         return self.__call__(pi)
 
     @differentiable_functional.multi_field_gradient
@@ -46,11 +46,10 @@ class mass_term(differentiable_functional):
 class fourier_mass_term(differentiable_functional):
     def __init__(self, fourier_sqrt_mass_field):
         self.n = len(fourier_sqrt_mass_field)
-        
+
         self.fourier_sqrt_mass_field = fourier_sqrt_mass_field
         self.fourier_mass_field = [
-            [g.lattice(fourier_sqrt_mass_field[0][0]) for i in range(self.n)]
-            for j in range(self.n)
+            [g.lattice(fourier_sqrt_mass_field[0][0]) for i in range(self.n)] for j in range(self.n)
         ]
         for i in range(self.n):
             for j in range(self.n):
@@ -84,7 +83,7 @@ class fourier_mass_term(differentiable_functional):
             pi[mu] @= g.inv(self.fft) * pi[mu]
             pi[mu] @= g(0.5 * (pi[mu] + g.adj(pi[mu])))
         return self.__call__(pi)
-    
+
     @differentiable_functional.multi_field_gradient
     def gradient(self, pi, dpi):
         dS = []
@@ -93,13 +92,13 @@ class fourier_mass_term(differentiable_functional):
             mu = pi.index(_pi)
             ret = g.lattice(pi[mu])
             ret[:] = 0
-            
+
             for nu in range(self.n):
                 ret += self.fourier_mass_field[mu][nu] * fft_pi[nu]
 
             ret @= g.inv(self.fft) * ret
-            
+
             ret = g(0.5 * (ret + g.adj(ret)))
             dS.append(ret)
-            
+
         return dS
