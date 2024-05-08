@@ -17,9 +17,9 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.algorithms import base_iterative
 from gpt.algorithms.optimize import line_search_quadratic
-
 
 def fletcher_reeves(d, d_last):
     ip_dd = g.group.inner_product(d, d)
@@ -78,6 +78,13 @@ class non_linear_cg(base_iterative):
                     self.log(f"max_abs_step adjustment for step = {next_step}")
                     next_step *= self.max_abs_step / abs(next_step)
                     beta = 0
+
+                if np.isnan(next_step):
+                    self.log(f"nan adjustment for step, beta = {beta}")
+                    next_step = self.max_abs_step
+                    beta = 0
+                    for nu in range(len(s)):
+                        s[nu] @= d[nu]
 
                 for nu, x_mu in enumerate(dx):
                     x_mu @= g.group.compose(-next_step * s[nu], x_mu)
