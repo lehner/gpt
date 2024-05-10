@@ -180,11 +180,14 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
 
   long index_osites = grid->oSites();
 
+  Timer("ris: view");
+  
   autoView(Index_v, Index, AcceleratorRead);
   auto Index_p = &Index_v[0];
 
   VECTOR_VIEW_OPEN(Data, Data_v, AcceleratorRead);
 
+  Timer("ris: accelerator reduction");
   accelerator_for(_idx,index_osites_per_block * n_elem * Nbasis,1,{
 
       uint64_t idx = _idx;
@@ -206,12 +209,16 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
       }	
   });
 
+  Timer("ris: view");
   VECTOR_VIEW_CLOSE(Data_v);
 
+  Timer("ris: thread reduction");
   thread_for(i, result.size(), {
       sobj x = Zero();
       for (size_t j=0;j<index_osites_per_block;j++)
 	x = x + lsSum_p[i*index_osites_per_block + j];
       result[i] = x;
     });
+
+  Timer();
 }

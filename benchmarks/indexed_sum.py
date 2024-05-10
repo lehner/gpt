@@ -41,7 +41,7 @@ Indexed Sum Benchmark with
 
             # Time global
             dt = 0.0
-            # cgpt.timer_begin()
+            cgpt.timer_begin()
             for it in range(N + Nwarmup):
                 if it >= Nwarmup:
                     dt -= g.time()
@@ -54,7 +54,7 @@ Indexed Sum Benchmark with
             for it in range(N + Nwarmup):
                 if it >= Nwarmup:
                     rank_dt -= g.time()
-                cgpt.lattice_rank_indexed_sum(one, idx.v_obj[0], grid.gdimensions[3])
+                g.slice(one, 3)
                 if it >= Nwarmup:
                     rank_dt += g.time()
 
@@ -62,17 +62,18 @@ Indexed Sum Benchmark with
             # Report
             GBPerSec = nbytes / dt / 1e9
             rank_GBPerSec = nbytes / rank_dt / 1e9
-            # cgpt_t = g.timer("rip")
-            # cgpt_t += cgpt.timer_end()
+            cgpt_t = g.timer("ris")
+            cgpt_t += cgpt.timer_end()
             g.message(
                 f"""{N} indexed_sum
     Object type                 : {tp.__name__}
     Block                       : {n}
-    Time to complete            : {dt:.2f} s (global)
-    Time to complete            : {rank_dt:.2f} s (rank)
-    Effective memory bandwidth  : {GBPerSec:.2f} GB/s (global)
-    Effective memory bandwidth  : {rank_GBPerSec:.2f} GB/s (rank)
+    Time to complete            : {dt:.2f} s (indexed_sum)
+    Time to complete            : {rank_dt:.2f} s (slice)
+    Effective memory bandwidth  : {GBPerSec:.2f} GB/s (indexed_sum)
+    Effective memory bandwidth  : {rank_GBPerSec:.2f} GB/s (slice)
 
+     {cgpt_t}
 """
                 )
-#     {cgpt_t}
+
