@@ -27,6 +27,18 @@ EXPORT(benchmarks,{
     //benchmarks(16);
     //benchmarks(32);
 
+    GridCartesian         * UGrid   = SpaceTimeGrid::makeFourDimGrid(GridDefaultLatt(), GridDefaultSimd(4,vComplexD::Nsimd()), GridDefaultMpi());
+    
+    LatticeSpinColourMatrixD data1(UGrid);
+    LatticeSpinColourMatrixD data2(UGrid);
+    LatticeComplexD index(UGrid);
+    index = Zero();
+    std::vector<typename LatticeSpinColourMatrixD::scalar_object> res(192);
+    PVector<LatticeSpinColourMatrixD> v;
+    v.push_back(&data1);
+    v.push_back(&data2);
+    cgpt_rank_indexed_sum(v, index, res);
+
     return PyLong_FromLong(0);
   });
 

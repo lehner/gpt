@@ -184,23 +184,23 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
   auto Index_p = &Index_v[0];
 
   VECTOR_VIEW_OPEN(Data, Data_v, AcceleratorRead);
-  
-  accelerator_for(ii,index_osites_per_block,1,{
 
+  accelerator_for(_idx,index_osites_per_block * n_elem * Nbasis,1,{
+
+      uint64_t idx = _idx;
+      uint64_t ii = _idx % index_osites_per_block; _idx /= index_osites_per_block;
+      uint64_t i = _idx % n_elem; _idx /= n_elem;
+      uint64_t nb = _idx % Nbasis; _idx /= Nbasis;
+      
       for (long jj=0;jj<len;jj++) {
 	long oidx = jj*index_osites_per_block + ii;
 	if (oidx < index_osites) {
       
 	  for (int lane=0;lane<Nsimd;lane++) {
-
 	    long index = (long)((scalar_type*)&Index_p[oidx])[lane].real();
 			
-	    for (int nb=0;nb<Nbasis;nb++) {
-	      for (int i=0;i<n_elem;i++) {
-		((scalar_type*)&lsSum_p[(nb * len + index)*index_osites_per_block + ii])[i] +=
-		  ((scalar_type*)&Data_v[nb][oidx])[i * Nsimd + lane];
-	      }
-	    }
+	    ((scalar_type*)&lsSum_p[(nb * len + index)*index_osites_per_block + ii])[i] +=
+	      ((scalar_type*)&Data_v[nb][oidx])[i * Nsimd + lane];
 	  }
 	}
       }	
