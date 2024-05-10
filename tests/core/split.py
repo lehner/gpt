@@ -54,6 +54,7 @@ for i in range(Nlat):
 rng.cnormal(l_rb)
 rng.cnormal(l)
 
+
 ################################################################################
 # Reverse lattice in time order in two ways and cross-check
 ################################################################################

@@ -21,8 +21,15 @@ import gpt, cgpt
 
 def inv(A):
     A = gpt.eval(A)
-    assert type(A) == gpt.lattice
-    A_inv = gpt.lattice(A)
+    assert isinstance(A, gpt.lattice)
+
     to_list = gpt.util.to_list
-    cgpt.invert_matrix(to_list(A_inv), to_list(A))
+
+    Al = to_list(A)
+
+    if Al[0].otype.shape == (1,):
+        return gpt.component.inv(A)
+
+    A_inv = gpt.lattice(A)
+    cgpt.invert_matrix(to_list(A_inv), Al)
     return A_inv

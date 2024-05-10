@@ -299,6 +299,8 @@ void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>
 
 static inline void simplify(_eval_term_& term) {
   auto& factors = term.factors;
+  if (!factors.size())
+    return;
   for (size_t i=0;i<factors.size()-1;) {
     if ((factors[i  ].type == _eval_factor_::GAMMA) &&
 	(factors[i+1].type == _eval_factor_::GAMMA)) {
@@ -345,7 +347,7 @@ EXPORT(eval,{
     // if (expr_class_prod()) 
     //   eval_prod()
     // else
-    
+
     // General code path:
     eval_general(dst,terms,unary,ac);
 

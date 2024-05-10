@@ -25,6 +25,7 @@
 #include <numpy/arrayobject.h>
 #include <vector>
 #include <map>
+#include <set>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -36,16 +37,16 @@
 #include "foundation.h"
 #include "reduce.h"
 #include "sort.h"
-#include "micro_kernel.h"
 #include "convert.h"
 #include "checksums.h"
 #include "parameters.h"
 #include "numpy.h"
 #include "distribute.h"
 #include "transform.h"
-#include "stencil.h"
 #include "grid.h"
 #include "lattice.h"
+#include "stencil.h"
+#include "lattice/implementation.h"
 #include "util.h"
 #include "precision.h"
 #include "expression.h"

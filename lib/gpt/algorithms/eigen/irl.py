@@ -25,6 +25,7 @@ import gpt as g
 import numpy as np
 import sys
 
+
 # Implicitly Restarted Lanczos
 class irl:
     @g.params_convention(
@@ -44,7 +45,6 @@ class irl:
         self.napply = 0
 
     def __call__(self, mat, src, ckpt=None):
-
         # verbosity
         verbose = g.default.is_verbose("irl")
 

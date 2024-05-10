@@ -26,10 +26,11 @@ from gpt.core.object_type.complex_additive_group import *
 from gpt.core.object_type.real_additive_group import *
 import numpy
 
+
 ###
 # Helper to create lattice / tensor of specific type
 def gpt_object(first, ot):
-    if type(first) == gpt.grid:
+    if isinstance(first, gpt.grid):
         return gpt.lattice(first, ot)
     return gpt.tensor(numpy.array(first, dtype=numpy.complex128), ot)
 
@@ -37,7 +38,7 @@ def gpt_object(first, ot):
 ###
 # Container objects without (lie) group structure
 def singlet(grid):
-    return gpt_object(grid, ot_singlet)
+    return gpt_object(grid, ot_singlet())
 
 
 def matrix_color(grid, ndim):
@@ -118,7 +119,6 @@ def matrix_su3_fundamental(grid):
 ###
 # String conversion for safe file input
 def str_to_otype(s):
-
     # first parse string
     a = s.split("(")
     if len(a) == 2:

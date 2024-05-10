@@ -22,6 +22,7 @@ from gpt.params import params_convention
 import numpy as np
 import sys
 
+
 # Arnoldi iteration
 class arnoldi_iteration:
     def __init__(self, mat, src):
@@ -153,7 +154,6 @@ class arnoldi:
 
     # TODO: add checkpointing along lines of irl.py
     def __call__(self, mat, src):
-
         # verbosity
         self.verbose = g.default.is_verbose("arnoldi")
 
@@ -168,7 +168,6 @@ class arnoldi:
             a()
 
             if i >= self.params["Nmin"] and i % self.params["Nstep"] == 0:
-
                 t0 = g.time()
                 H = a.hessenberg()
                 t1 = g.time()
@@ -196,7 +195,6 @@ class arnoldi:
         return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
     def converged(self, a, mat, evals, little_evec):
-
         evals_max = np.max(np.abs(evals))
 
         Nstop = self.params["Nstop"]

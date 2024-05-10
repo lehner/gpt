@@ -18,6 +18,7 @@
 #
 import gpt as g
 
+
 # Needs: local_grid, lcoor, gcoor
 class two_grid_base:
     def __init__(self):

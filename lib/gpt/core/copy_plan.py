@@ -147,7 +147,7 @@ class copy_plan:
             gpt.message(t_cgpt)
 
             gpt.message(
-                f"copy_plan: create: {t1-t0} s (local_only = {local_only}, skip_optimize = {skip_optimize}, use_communication_buffers = {use_communication_buffers})"
+                f"copy_plan: create: {t1-t0} s (local_only = {local_only}, skip_optimize = {skip_optimize}, use_communication_buffers = {use_communication_buffers}, communication_buffer_location = {self.communication_buffer_location.__name__})"
             )
 
         return copy_plan_executer(

@@ -19,6 +19,7 @@
 import gpt, cgpt
 from gpt.params import params_convention
 
+
 # load through cgpt backend (openQCD, ...)
 def load_cgpt(*a):
     result = []
@@ -47,7 +48,6 @@ def load_cgpt(*a):
 
 # input
 def load(fn, **p):
-
     supported = [
         gpt.core.io.nersc_io,
         gpt.core.io.gpt_io,

@@ -157,7 +157,7 @@ public:
 
   template<typename T, typename V>
   accelerator_inline
-  void coalescedWriteElement(T & d, T & c, const V & v, int e) {
+  void coalescedWriteElement(T & d, T & c, const V & v, int e) const {
     auto r = coalescedReadElement(c, e);
     r += v;
     ::coalescedWriteElement(d, r, e);
@@ -165,7 +165,7 @@ public:
 
   template<typename T, typename V>
   accelerator_inline
-  void coalescedWrite(T & d, T & c, const V & v) {
+  void coalescedWrite(T & d, T & c, const V & v) const {
     auto r = coalescedRead(c);
     r += v;
     ::coalescedWrite(d, r);
@@ -180,13 +180,13 @@ public:
 
   template<typename T, typename V>
   accelerator_inline
-  void coalescedWriteElement(T & d, T & c, const V & v, int e) {
+  void coalescedWriteElement(T & d, T & c, const V & v, int e) const {
     ::coalescedWriteElement(d, v, e);
   }
 
   template<typename T, typename V>
   accelerator_inline
-  void coalescedWrite(T & d, T & c, const V & v) {
+  void coalescedWrite(T & d, T & c, const V & v) const {
     ::coalescedWrite(d, v);
   }
 
@@ -209,73 +209,73 @@ public:
 
   template<typename V>
   accelerator_inline
-  void coalescedWriteElement(uint64_t osite, const V & v, int e) {
+  void coalescedWriteElement(uint64_t osite, const V & v, int e) const {
     Base::coalescedWriteElement(p_d[osite],p_c[osite],((typename T::scalar_type)coef)*v,e);
   }
   
   template<typename V>
   accelerator_inline
-  void coalescedWrite(uint64_t osite, const V & v) {
+  void coalescedWrite(uint64_t osite, const V & v) const {
     Base::coalescedWrite(p_d[osite],p_c[osite],((typename T::scalar_type)coef)*v);
   }
   
   template<typename V>
   accelerator_inline
-  void coalescedWriteElement(uint64_t osite, const iScalar<V> & v, int e) {
+  void coalescedWriteElement(uint64_t osite, const iScalar<V> & v, int e) const {
     coalescedWriteElement(osite,v(),e);
   }
   
   template<typename V>
   accelerator_inline
-  void coalescedWriteSinglet(uint64_t osite, const V & v) {
+  void coalescedWriteSinglet(uint64_t osite, const V & v) const {
     coalescedWriteElement(osite, v, 0);
   }
   
   template<typename C, int n>
   accelerator_inline
-  int getIndex(iMatrix<C,n> & c, int i, int j) {
+  int getIndex(iMatrix<C,n> & c, int i, int j) const {
     return i*n + j;
   }
   
   template<typename C, int n1, int n2>
   accelerator_inline
-  int getIndex(iVector<iVector<C,n2>,n1> & c, int i, int j) {
+  int getIndex(iVector<iVector<C,n2>,n1> & c, int i, int j) const {
     return i*n2 + j;
   }
   
   template<typename C>
   accelerator_inline
-  int getIndex(iScalar<C> & c, int i, int j) {
+  int getIndex(iScalar<C> & c, int i, int j) const {
     return getIndex(c(), i, j);
   }
   
   template<typename C, int n1, int n2>
   accelerator_inline
-  int getIndex(iMatrix<iMatrix<C,n2>,n1> & c, int i1, int j1, int i2, int j2) {
+  int getIndex(iMatrix<iMatrix<C,n2>,n1> & c, int i1, int j1, int i2, int j2) const {
     return i2*n2 + j2 + n2*n2*(i1*n1 + j1);
   }
   
   template<typename C>
   accelerator_inline
-  int getIndex(iScalar<C> & c, int i1, int j1, int i2, int j2) {
+  int getIndex(iScalar<C> & c, int i1, int j1, int i2, int j2) const {
     return getIndex(c(), i1, j1, i2, j2);
   }
   
   template<typename V>
   accelerator_inline
-  void coalescedWrite(uint64_t osite, int i, int j, const V & v) {
+  void coalescedWrite(uint64_t osite, int i, int j, const V & v) const {
     coalescedWriteElement(osite, v, getIndex(p_c[osite],i,j));
   }
   
   template<typename V>
   accelerator_inline
-  void coalescedWrite(uint64_t osite, int i1, int j1, int i2, int j2, const V & v) {
+  void coalescedWrite(uint64_t osite, int i1, int j1, int i2, int j2, const V & v) const {
     coalescedWriteElement(osite, v, getIndex(p_c[osite],i1,j1,i2,j2));
   }
   
   template<typename V>
   accelerator_inline
-  void coalescedWrite(uint64_t osite, int i, const V & v) {
+  void coalescedWrite(uint64_t osite, int i, const V & v) const {
     coalescedWriteElement(osite, v, i);
   }
 };

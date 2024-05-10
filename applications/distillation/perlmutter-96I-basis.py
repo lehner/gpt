@@ -62,9 +62,10 @@ except g.LoadError:
             tp = (t + Nt + dt) % Nt
             for u_dst, u_src in zip(U_temp, U0):
                 u_dst[:, :, :, tp] = u_src[:, :, :, tp]
+        sm = g.qcd.gauge.smear.stout(rho=rho_smear)
         for i in range(n_smear):
             g.message("smear", i)
-            U_temp = g.qcd.gauge.smear.stout(U_temp, rho=rho_smear)
+            U_temp = sm(U_temp)
         for u_dst, u_src in zip(U, U_temp):
             u_dst[:, :, :, t] = u_src[:, :, :, t]
 

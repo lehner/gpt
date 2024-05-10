@@ -17,3 +17,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.core.stencil.matrix import matrix
+from gpt.core.stencil.matrix_vector import matrix_vector
+from gpt.core.stencil.tensor import tensor
+import gpt.core.stencil.tensor_instructions

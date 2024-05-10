@@ -54,11 +54,11 @@ class adam(base_iterative):
 
             # momentum vectors
             if context.m is None:
-                context.m = [g.lattice(a) for a in dx]
-                context.v = [g.lattice(a) for a in dx]
-                context.mhat = [g.lattice(a) for a in dx]
-                context.vhat = [g.lattice(a) for a in dx]
-                context.epsfield = [g.lattice(a) for a in dx]
+                context.m = [a.new() for a in dx]
+                context.v = [a.new() for a in dx]
+                context.mhat = [a.new() for a in dx]
+                context.vhat = [a.new() for a in dx]
+                context.epsfield = [a.new() for a in dx]
 
                 for a in context.m + context.v:
                     a[:] = 0
@@ -67,7 +67,6 @@ class adam(base_iterative):
                     a[:] = self.eps_regulator
 
             for i in range(self.maxiter):
-
                 context.t += 1
 
                 # x = theta(t-1)
@@ -98,12 +97,12 @@ class adam(base_iterative):
                     )
 
                     # make sure object type is correct
-                    tmp = g.lattice(gt[nu])
+                    tmp = gt[nu].new()
                     tmp @= -self.alpha * (reg_mhat_real + 1j * reg_mhat_imag)
 
                     dx[nu] @= g.group.compose(tmp, dx[nu])
 
-                rs = (sum(g.norm2(gt)) / sum([s.grid.gsites * s.otype.nfloats for s in gt])) ** 0.5
+                rs = (sum(g.norm2(gt)) / sum([s.nfloats() for s in gt])) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 

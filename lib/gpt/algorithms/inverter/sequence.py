@@ -25,7 +25,6 @@ class sequence:
         self.inverters = inverters
 
     def __call__(self, outer_mat):
-
         inverters_mat = [i(outer_mat) for i in self.inverters]
 
         def inv(dst, src):

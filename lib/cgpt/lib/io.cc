@@ -19,6 +19,7 @@
 #include "lib.h"
 #include "io/common.h"
 #include "io/nersc.h"
+#include "io/ildg.h"
 #include "io/openQCD.h"
 
 EXPORT(load,{
@@ -26,6 +27,10 @@ EXPORT(load,{
 
     // nersc gauge configuration
     if ((ret = load_nersc(args)))
+      return ret;
+
+    // ildg gauge configuration
+    if ((ret = load_ildg(args)))
       return ret;
 
     // openQCD file format is minimal, not distinctive, test last

@@ -16,10 +16,13 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
+
 template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
   Lattice<T> l;
+  ViewMode view_mode;
 
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
@@ -46,7 +49,7 @@ public:
   }
 
   virtual PyObject* to_decl() {   
-    return PyTuple_Pack(3,PyLong_FromVoidPtr(this),
+    return Py_BuildValue("(NNN)",PyLong_FromVoidPtr(this),
 			PyUnicode_FromString(get_otype(l).c_str()),
 			PyUnicode_FromString(get_prec(l).c_str()));
   }
@@ -208,6 +211,15 @@ public:
     cgpt_linear_combination(dst,basis,Qt,n_virtual,basis_n_block);
   }
 
+  virtual void* memory_view_open(ViewMode mode) {
+    view_mode = mode;
+    return MemoryManager::ViewOpen(l.getHostPointer(),l.oSites()*sizeof(T), mode, l.Advise()); 
+  }
+  
+  virtual void memory_view_close() {
+    MemoryManager::ViewClose(l.getHostPointer(), view_mode);
+  }
+
   virtual PyObject* memory_view(memory_type mt) {
 
     if (mt == mt_none) {
@@ -231,11 +243,13 @@ public:
     return r;
   }
 
-  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word, std::vector<long> & ishape) {
-    GridBase* grid = l.Grid();
-    Nsimd = grid->Nsimd();
+  virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word) {
+    Nsimd = l.Grid()->Nsimd();
     word = sizeof(sobj);
     simd_word = sizeof(Coeff_t);
+  }
+
+  virtual void describe_data_shape(std::vector<long> & ishape) {
     ishape.resize(0);
     cgpt_numpy_data_layout(sobj(),ishape);
     if (ishape.size() == 0) // treat complex numbers as 1d array with one element
@@ -273,8 +287,15 @@ public:
     return l.Grid();
   }
 
-  virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code) {
-    return cgpt_stencil_matrix_create<T>(grid, shifts, code);
+  virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) {
+    return cgpt_stencil_matrix_create<T>(grid, shifts, code, code_parallel_block_size, local);
   }
 
+  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) {
+    return cgpt_stencil_matrix_vector_create<T>(matrix, grid, shifts, code, code_parallel_block_size, local);
+  }
+
+  virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, PyObject* segments, long local) {
+    return cgpt_stencil_tensor_create<T>(grid, shifts, code, segments, local);
+  }
 };

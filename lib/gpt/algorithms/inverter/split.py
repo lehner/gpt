@@ -27,7 +27,6 @@ class split:
         self.operation = operation
 
     def __call__(self, matrix):
-
         mpi_split = self.params["mpi_split"]
         matrix_split = matrix.split(mpi_split)
         operation_split = self.operation(matrix_split)
@@ -35,7 +34,6 @@ class split:
         cache = {}
 
         def inv(dst, src):
-
             # verbosity
             verbose = g.default.is_verbose("split")
 
@@ -60,7 +58,7 @@ class split:
                 )
 
         vector_space = None
-        if type(matrix) == g.matrix_operator:
+        if isinstance(matrix, g.matrix_operator):
             vector_space = matrix.vector_space
 
         return g.matrix_operator(

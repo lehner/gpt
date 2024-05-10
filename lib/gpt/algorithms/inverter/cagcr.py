@@ -47,9 +47,8 @@ class cagcr(base_iterative):
         return g.axpy_norm2(r, -1.0, mmpsi, src)
 
     def __call__(self, mat):
-
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
             mat = mat.mat
             # remove wrapper for performance benefits

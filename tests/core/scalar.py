@@ -15,6 +15,7 @@ src = g.complex(grid)
 src[:] = 0
 src[0, 0, 0, 0] = 1
 
+
 # Create a free Klein-Gordon operator (spectrum from mass^2-16 .. mass^2)
 def A(dst, src, mass):
     assert dst != src

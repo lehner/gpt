@@ -30,6 +30,10 @@ void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
     dst = cgpt_sqrt(src);
   } else if (op == "pow") {
     dst = cgpt_pow(src, get_float(params,"exponent"));
+  } else if (op == "relu") {
+    dst = cgpt_relu(src, get_float(params,"a"));
+  } else if (op == "drelu") {
+    dst = cgpt_drelu(src, get_float(params,"a"));
   } else if (op == "exp") {
     dst = exp(src);
   } else if (op == "log") {

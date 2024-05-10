@@ -35,7 +35,6 @@ class point_manager:
 
 class parallel_transport_matrix:
     def __init__(self, U, code, n_target):
-
         self.verbose = g.default.is_verbose("parallel_transport_matrix_performance")
 
         Nd = len(U)
@@ -84,7 +83,6 @@ class parallel_transport_matrix:
         # create code for loops
         self.code = []
         for c in code:
-
             if isinstance(c[-1], g.path):
                 coor = [0] * Nd
                 factors = []
@@ -104,48 +102,18 @@ class parallel_transport_matrix:
 
             self.code.append((c[0], c[1], c[2], factors))
 
-        # create halo margin
-        margin = [0] * Nd
-        for p in points.points:
-            for i in range(Nd):
-                x = abs(p[i])
-                if x > margin[i]:
-                    margin[i] = x
-
-        self.margin = margin
         self.ncode = len(self.code)
 
-        # create stencil and padding
-        self.padding_U = g.padded_local_fields(U, margin)
-        self.padding_T = g.padded_local_fields([g.lattice(U[0]) for i in range(Ntarget)], margin)
-        padded_U = self.padding_U(U)
-        self.stencil = g.stencil.matrix(padded_U[0], points.points, self.code)
+        write_fields = list(range(Ntarget))
+        read_fields = list(range(Ntarget + Ntemporary, Ntarget + Ntemporary + Nd))
+
+        self.stencil = g.stencil.matrix(U[0], points.points, self.code)
+        self.stencil.data_access_hints(write_fields, read_fields, [])
 
     def __call__(self, U):
-
-        t = g.timer(
-            f"parallel_transport_matrix(margin={self.margin}, ncode={self.ncode}, ntarget={self.Ntarget}, ntemp={self.Ntemporary})"
-        )
-
-        # halo exchange
-        t("halo exchange")
-        padded_U = self.padding_U(U)
-        padded_Temp = [g.lattice(padded_U[0]) for i in range(self.Ntemporary)]
-        padded_T = [g.lattice(padded_U[0]) for i in range(self.Ntarget)]
-
-        # stencil computation
-        t("stencil computation")
-        self.stencil(*padded_T, *padded_Temp, *padded_U)
-
-        # get bulk
-        t("extract bulk")
         T = [g.lattice(U[0]) for i in range(self.Ntarget)]
-        self.padding_T.extract(T, padded_T)
-
-        t()
-
-        if self.verbose:
-            g.message(t)
+        Temp = [g.lattice(U[0]) for i in range(self.Ntemporary)]
+        self.stencil(*T, *Temp, *U)
 
         if self.Ntarget == 1:
             return T[0]

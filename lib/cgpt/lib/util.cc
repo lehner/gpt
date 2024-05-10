@@ -102,7 +102,7 @@ EXPORT(util_sha256,{
     uint32_t sha256[8];
     cgpt_sha256(sha256,data,len);
     
-    return PyTuple_Pack(8,
+    return Py_BuildValue("(NNNNNNNN)",
 			PyLong_FromLong(sha256[0]),
 			PyLong_FromLong(sha256[1]),
 			PyLong_FromLong(sha256[2]),

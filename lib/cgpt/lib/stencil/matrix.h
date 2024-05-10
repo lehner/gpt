@@ -17,45 +17,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-
-#ifndef GRID_HAS_ACCELERATOR
-
-// cpu fetch version
-#define fetch(obj, point, site, view, do_adj) {				\
-    auto _SE = sview.GetEntry(point,site);				\
-    obj = coalescedRead(view[_SE->_offset]);				\
-    auto tmp = obj;							\
-    if (_SE->_permute)							\
-      for (int d=0;d<nd;d++)						\
-	if (_SE->_permute & (0x1 << d)) { permute(obj,tmp,d); tmp=obj;}	\
-    if (do_adj)								\
-      obj = adj(obj);							\
-  }
-
-#else
-
-template<class vobj> accelerator_inline
-typename vobj::scalar_object coalescedReadGeneralPermute(const vobj & __restrict__ vec,int permute,int nd,int lane=acceleratorSIMTlane(vobj::Nsimd()))
-{
-  int plane = lane;
-  for (int d=0;d<nd;d++)
-    plane = (permute & (0x1 << d)) ? plane ^ (vobj::Nsimd() >> (d + 1)) : plane;
-  return extractLane(plane,vec);
-}
-
-// gpu fetch version
-#define fetch(obj, point, site, view, do_adj) {				\
-    auto _SE = sview.GetEntry(point,site);				\
-    if (_SE->_permute) {						\
-      obj = coalescedReadGeneralPermute(view[_SE->_offset], _SE->_permute,nd); \
-    } else {								\
-      obj = coalescedRead(view[_SE->_offset]);				\
-    }									\
-    if (do_adj)								\
-      obj = adj(obj);							\
-  }
-
-#endif
   
 struct cgpt_stencil_matrix_factor_t {
   int index; // index of field
@@ -78,29 +39,43 @@ struct cgpt_stencil_matrix_code_t {
   std::vector<cgpt_stencil_matrix_factor_t> factor; 
 };
 
-#include <Grid/stencil/GeneralLocalStencil.h>
-
 class cgpt_stencil_matrix_base {
  public:
   virtual ~cgpt_stencil_matrix_base() {};
-  virtual void execute(const std::vector<cgpt_Lattice_base*>& fields) = 0;
+  virtual void execute(const std::vector<cgpt_Lattice_base*>& fields, int fast_osites) = 0;
 };
-
-template<typename T>
-void cgpt_basis_fill(PVector<Lattice<T>>& basis, const std::vector<cgpt_Lattice_base*>& _basis);
 
 template<typename T>
 class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
  public:
 
-  GeneralLocalStencil stencil;
+  typedef CartesianStencil<T, T, SimpleStencilParams> CartesianStencil_t;
+  typedef CartesianStencilView<T, T, SimpleStencilParams> CartesianStencilView_t;
+  
   Vector<cgpt_stencil_matrix_code_offload_t> code;
   Vector<cgpt_stencil_matrix_factor_t> factors;
     
+  int n_code_parallel_block_size, n_code_parallel_blocks;
+  int local;
+
+  // local == true
+  GeneralLocalStencil* general_local_stencil;
+
+  // local == false
+  SimpleCompressor<T>* compressor;
+  CartesianStencilManager<CartesianStencil_t>* sm;
+  
   cgpt_stencil_matrix(GridBase* grid,
 		      const std::vector<Coordinate>& shifts,
-		      const std::vector<cgpt_stencil_matrix_code_t>& _code) :
-  stencil(grid,shifts), code(_code.size()) {
+		      const std::vector<cgpt_stencil_matrix_code_t>& _code,
+		      int _n_code_parallel_block_size,
+		      int _local) :
+    code(_code.size()), local(_local),
+    n_code_parallel_block_size(_n_code_parallel_block_size) {
+
+    ASSERT(_code.size() % n_code_parallel_block_size == 0);
+    n_code_parallel_blocks = (int)_code.size() / n_code_parallel_block_size;
+    
     // total number of factors
     int nfactors = 0;
     for (int i=0;i<_code.size();i++)
@@ -117,54 +92,138 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       memcpy(code[i].factor, &_code[i].factor[0], sizeof(cgpt_stencil_matrix_factor_t) * code[i].size);
       nfactors += code[i].size;
     }
+
+    if (local) {
+      general_local_stencil = new GeneralLocalStencil(grid,shifts);
+    } else {
+
+      sm = new CartesianStencilManager<CartesianStencil_t>(grid, shifts);
+
+      // for all factors that require a non-trivial shift, create a separate stencil object
+      for (int i=0;i<nfactors;i++) {
+	sm->register_point(factors[i].index, factors[i].point);
+      }
+
+      sm->create_stencils(true);
+
+      for (int i=0;i<nfactors;i++) {
+	factors[i].point = sm->map_point(factors[i].index, factors[i].point);
+      }      
+
+      compressor = new SimpleCompressor<T>();
+    }
+
+
   }
 
   virtual ~cgpt_stencil_matrix() {
+    if (local) {
+      delete general_local_stencil;
+    } else {
+      delete compressor;
+      delete sm;
+    }
   }
  
-  virtual void execute(PVector<Lattice<T>> &fields) {
+  virtual void execute(PVector<Lattice<T>> &fields, int fast_osites) {
 
     VECTOR_VIEW_OPEN(fields,fields_v,AcceleratorWrite);
 
     int n_code = code.size();
-    cgpt_stencil_matrix_code_offload_t* p_code = &code[0];
+    const cgpt_stencil_matrix_code_offload_t* p_code = &code[0];
 
     typedef decltype(coalescedRead(fields_v[0][0])) obj_t;
 
     int nd = fields[0].Grid()->Nd();
 
-    auto sview = stencil.View();
+    int _npb = n_code_parallel_blocks;
+    int _npbs = n_code_parallel_block_size;
+
+    uint64_t osites = fields[0].Grid()->oSites();
+
+    int _fast_osites = fast_osites;
     
-    accelerator_for(ss,fields[0].Grid()->oSites(),T::Nsimd(),{
+    if (local) {
 
-	for (int i=0;i<n_code;i++) {
-	  obj_t t;
-
-	  auto _f0 = &p_code[i].factor[0];
-	  fetch(t, _f0->point, ss, fields_v[_f0->index], _f0->adj);
-
-	  for (int j=1;j<p_code[i].size;j++) {
-	    obj_t f;
-	    auto _f = &p_code[i].factor[j];
-	    fetch(f, _f->point, ss, fields_v[_f->index], _f->adj);
-	    t = t * f;
+      auto sview = general_local_stencil->View();
+      
+      accelerator_for(ss_block,osites * _npb,T::Nsimd(),{
+	  
+          uint64_t ss, oblock;
+					      
+	  MAP_INDEXING(ss, oblock);
+	  
+	  for (int iblock=0;iblock<_npbs;iblock++) {
+	    
+	    int i = oblock * _npbs + iblock;
+	    
+	    obj_t t;
+	    
+	    const auto _f0 = &p_code[i].factor[0];
+	    fetch(t, _f0->point, ss, fields_v[_f0->index], _f0->adj);
+	    
+	    for (int j=1;j<p_code[i].size;j++) {
+	      obj_t f;
+	      const auto _f = &p_code[i].factor[j];
+	      fetch(f, _f->point, ss, fields_v[_f->index], _f->adj);
+	      t = t * f;
+	    }
+	    
+	    obj_t r = p_code[i].weight * t;
+	    if (p_code[i].accumulate != -1)
+	      r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
+	    coalescedWrite(fields_v[p_code[i].target][ss], r);
 	  }
+	  
+	});
+      
+    } else {
 
-	  obj_t r = p_code[i].weight * t;
-	  if (p_code[i].accumulate != -1)
-	    r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
-	  coalescedWrite(fields_v[p_code[i].target][ss], r);
-	}
-	
-      });
-    
+      CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(T,);
+      
+      // now loop
+      accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
+
+          uint64_t ss, oblock;
+					      
+	  MAP_INDEXING(ss, oblock);
+	  
+	  for (int iblock=0;iblock<_npbs;iblock++) {
+	    
+	    int i = oblock * _npbs + iblock;
+	    
+	    obj_t t;
+	    
+	    const auto _f0 = &p_code[i].factor[0];
+	    fetch_cs(stencil_map[_f0->index], t, _f0->point, ss, fields_v[_f0->index], _f0->adj,);
+	    
+	    for (int j=1;j<p_code[i].size;j++) {
+	      obj_t f;
+	      const auto _f = &p_code[i].factor[j];
+	      fetch_cs(stencil_map[_f->index], f, _f->point, ss, fields_v[_f->index], _f->adj,);
+	      t = t * f;
+	    }
+	    
+	    obj_t r = p_code[i].weight * t;
+	    if (p_code[i].accumulate != -1)
+	      r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
+	    coalescedWrite(fields_v[p_code[i].target][ss], r);
+	  }
+	  
+	});
+
+      // and cleanup
+      CGPT_CARTESIAN_STENCIL_CLEANUP(T,);
+      
+    }
+
     VECTOR_VIEW_CLOSE(fields_v);
   }
 
-  virtual void execute(const std::vector<cgpt_Lattice_base*>& __fields) {
+  virtual void execute(const std::vector<cgpt_Lattice_base*>& __fields, int fast_osites) {
     PVector<Lattice<T>> fields;
     cgpt_basis_fill(fields,__fields);
-    execute(fields);
+    execute(fields, fast_osites);
   }
 };
 
@@ -186,31 +245,25 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_code_t& out) {
   cgpt_convert(get_key(in, "factor"), out.factor);
 }
 
-// traits to identify types for which type(a*a) = type(a)
-template<typename T>     struct isEndomorphism                : public std::true_type { static constexpr bool notvalue = false; };
-template<typename T>     struct isEndomorphism<iScalar<T>>    : public isEndomorphism<T> { static constexpr bool notvalue = isEndomorphism<T>::notvalue; };
-template<typename T, int N>     struct isEndomorphism<iMatrix<T,N>>    : public isEndomorphism<T> { static constexpr bool notvalue = isEndomorphism<T>::notvalue; };
-template<typename T, int N>     struct isEndomorphism<iVector<T,N>>    : public std::false_type { static constexpr bool notvalue = true; };
-
 // not implemented message
 template<typename T>
 NotEnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
-cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code) {
+cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts,
+			   PyObject* _code, long code_parallel_block_size, long local) {
   ERR("cgpt_stencil_matrix not implemented for type %s",typeid(T).name());
 }
 
 // implemented for endomorphisms
 template<typename T>
 EnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
-cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts, PyObject* _code) {
+cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts,
+			   PyObject* _code, long code_parallel_block_size, long local) {
 
   std::vector<Coordinate> shifts;
   cgpt_convert(_shifts,shifts);
 
   std::vector<cgpt_stencil_matrix_code_t> code;
   cgpt_convert(_code,code);
-  
-  return new cgpt_stencil_matrix<T>(grid,shifts,code);
-}
 
-#undef fetch
+  return new cgpt_stencil_matrix<T>(grid,shifts,code,code_parallel_block_size, local);
+}

@@ -50,7 +50,10 @@ class gradient_descent(base_iterative):
                 for nu, x_mu in enumerate(dx):
                     x_mu @= g.group.compose(-self.step * c * d[nu], x_mu)
 
-                rs = (sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])) ** 0.5
+                if self.eps is None:
+                    continue
+
+                rs = (sum(g.norm2(d)) / sum([s.nfloats() for s in d])) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 
@@ -65,7 +68,10 @@ class gradient_descent(base_iterative):
                     )
                     return True
 
-            self.log(f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}")
+            if self.eps is not None:
+                self.log(
+                    f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
+                )
             return False
 
         return opt

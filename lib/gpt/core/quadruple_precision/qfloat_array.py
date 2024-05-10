@@ -28,7 +28,6 @@ HANDLED_FUNCTIONS = {}
 
 
 class qfloat_array(dekker_tuple, np.lib.mixins.NDArrayOperatorsMixin):
-
     _medium = float(2**27 + 1)  # 1 .. 52
     _zero = 0.0
 
@@ -55,10 +54,7 @@ class qfloat_array(dekker_tuple, np.lib.mixins.NDArrayOperatorsMixin):
         return NotImplemented
 
     def __getitem__(self, index):
-        if isinstance(index, int):
-            return g.qfloat(self.x[index], self.y[index])
-        else:
-            raise NotImplementedError(f"Array slicing not yet implemented: {index}")
+        return g.qfloat(self.x[index], self.y[index])
 
     def __float__(self):
         if self.x.shape != (1,):

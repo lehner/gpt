@@ -27,10 +27,16 @@ basis_sizes = sorted(
     [int(x[11:]) for x in filter(lambda x: x[0:11] == "ot_msinglet", lattice_types)]
 )
 
+
 ###
 # Helper
+max_fundamental_singlet_size = gpt.default.get_int("--max_fundamental_singlet_size", 100000)
+
+
 def decompose(n, ns, rank):
     for x in reversed(sorted(ns)):
+        if x > max_fundamental_singlet_size:
+            continue
         if n % x == 0:
             return [x] * ((n // x) ** rank)
     raise Exception("Cannot decompose %d in available fundamentals %s" % (n, ns))
@@ -59,14 +65,20 @@ class ot_singlet(ot_base):
     colortrace = (None, None, None)
     v_otype = ["ot_singlet"]
     mtab = {
-        "ot_singlet": (lambda: ot_singlet, None),
+        "ot_singlet": (lambda: ot_singlet(), None),
     }
 
-    def data_otype(self=None):
-        return ot_singlet
+    def data_otype(self):
+        return ot_singlet()
 
-    def identity():
+    def is_self_dual(self):
+        return True
+
+    def identity(self):
         return 1.0
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
 
 ###
@@ -78,7 +90,7 @@ class ot_matrix_color(ot_base):
         self.shape = (ndim, ndim)
         self.transposed = (1, 0)
         self.spintrace = (None, None, None)  # do nothing
-        self.colortrace = (0, 1, lambda: ot_singlet)
+        self.colortrace = (0, 1, lambda: ot_singlet())
         self.v_otype = ["ot_mcolor%d" % ndim]  # cgpt data types
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
@@ -109,8 +121,14 @@ class ot_vector_color(ot_base):
         }
         self.otab = {self.__name__: (lambda: ot_matrix_color(ndim), [])}
         self.itab = {
-            self.__name__: (lambda: ot_singlet, (0, 0)),
+            self.__name__: (lambda: ot_singlet(), (0, 0)),
         }
+
+    def compose(self, a, b):
+        return a + b
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
 
 ###
@@ -121,7 +139,7 @@ class ot_matrix_spin(ot_base):
         self.nfloats = 2 * ndim * ndim
         self.shape = (ndim, ndim)
         self.transposed = (1, 0)
-        self.spintrace = (0, 1, lambda: ot_singlet)
+        self.spintrace = (0, 1, lambda: ot_singlet())
         self.colortrace = (None, None, None)  # do nothing
         self.v_otype = ["ot_mspin%d" % ndim]
         self.mtab = {
@@ -138,6 +156,9 @@ class ot_matrix_spin(ot_base):
 
     def compose(self, a, b):
         return a + b
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
     def defect(self, field):
         return 0.0
@@ -182,7 +203,13 @@ class ot_vector_spin(ot_base):
             "ot_singlet": (lambda: self, None),
         }
         self.otab = {self.__name__: (lambda: ot_matrix_spin(ndim), [])}
-        self.itab = {self.__name__: (lambda: ot_singlet, (0, 0))}
+        self.itab = {self.__name__: (lambda: ot_singlet(), (0, 0))}
+
+    def compose(self, a, b):
+        return a + b
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
 
 ###
@@ -219,6 +246,9 @@ class ot_matrix_spin_color(ot_base):
     def compose(self, a, b):
         return a + b
 
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
+
     def identity(self):
         return gpt.matrix_spin_color(
             numpy.multiply.outer(numpy.identity(self.shape[0]), numpy.identity(self.shape[2])),
@@ -245,7 +275,7 @@ class ot_vector_spin_color(ot_base):
             ),
         }
         self.itab = {
-            self.__name__: (lambda: ot_singlet, ([0, 1], [0, 1])),
+            self.__name__: (lambda: ot_singlet(), ([0, 1], [0, 1])),
         }
         self.mtab = {
             "ot_singlet": (lambda: self, None),
@@ -255,6 +285,12 @@ class ot_vector_spin_color(ot_base):
             "ot_matrix_color(%d)" % (color_ndim): (lambda: self, None),  # TODO: add proper indices
             "ot_singlet": (lambda: self, None),
         }
+
+    def compose(self, a, b):
+        return a + b
+
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
 
     def distribute(self, mat, dst, src, zero_lhs):
         src, dst = gpt.util.to_list(src), gpt.util.to_list(dst)
@@ -267,15 +303,13 @@ class ot_vector_spin_color(ot_base):
             dst_sc = [gpt.gpt_object(dst_grid, self) for i in range(n_dst)]
             src_sc = [gpt.gpt_object(src_grid, self) for i in range(n_src)]
 
-            if zero_lhs:
-                for idx in range(n_dst):
-                    dst_sc[idx][:] = 0
-
             for i in range(len(src)):
                 for s in range(self.spin_ndim):
                     for c in range(self.color_ndim):
                         idx = c + self.color_ndim * (s + self.spin_ndim * i)
                         gpt.qcd.prop_to_ferm(src_sc[idx], src[i], s, c)
+                        if zero_lhs:
+                            gpt.qcd.prop_to_ferm(dst_sc[idx], dst[i], s, c)
 
             mat(dst_sc, src_sc)
 
@@ -318,7 +352,7 @@ class ot_vector_singlet(ot_base):
             "ot_singlet": (lambda: self, None),
         }
         self.itab = {
-            self.__name__: (lambda: ot_singlet, (0, 0)),
+            self.__name__: (lambda: ot_singlet(), (0, 0)),
         }
 
 
@@ -339,7 +373,7 @@ class ot_matrix_singlet(ot_base):
         self.shape = (n, n)
         self.transposed = (1, 0)
         self.spintrace = (None, None, None)
-        self.colortrace = (0, 1, lambda: ot_singlet)
+        self.colortrace = (0, 1, lambda: ot_singlet())
         self.vector_type = ot_vector_singlet(n)
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),

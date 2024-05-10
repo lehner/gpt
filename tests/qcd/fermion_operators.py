@@ -179,6 +179,7 @@ eps = np.linalg.norm(np.array(correlator) - np.array(correlator_ref))
 g.message("Expected correlator eps: ", eps)
 assert eps < 1e-5
 
+
 # test conserved current
 def divergence(f, current):
     resN = g.lattice(f)
@@ -727,7 +728,6 @@ g.default.set_verbose("random", False)
 
 # test suite
 for name in test_suite:
-
     # load configuration
     rng = g.random("finger_print")
     U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)

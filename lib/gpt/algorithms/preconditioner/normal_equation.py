@@ -18,6 +18,7 @@
 #
 import gpt
 
+
 #
 # M^-1 = L Mpc^-1 R + S
 #
@@ -33,7 +34,6 @@ import gpt
 #
 class normal_equation:
     def __init__(self, pc):
-
         self.L = pc.L
         self.S = pc.S
 

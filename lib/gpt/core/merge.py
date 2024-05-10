@@ -27,9 +27,8 @@ import sys
 # Merging / Separating along space-time coordinates
 ################################################################################
 def merge(lattices, dimension=-1, N=-1):
-
     # if only one lattice is given, return immediately
-    if type(lattices) != list:
+    if not isinstance(lattices, list):
         return lattices
 
     # number of lattices
@@ -106,9 +105,8 @@ def merge(lattices, dimension=-1, N=-1):
 
 
 def separate(lattices, dimension=-1, cache=None):
-
     # expect list below
-    if type(lattices) != list:
+    if not isinstance(lattices, list):
         lattices = [lattices]
 
     # evaluate in case it is an expression

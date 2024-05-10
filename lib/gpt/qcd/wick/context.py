@@ -66,7 +66,6 @@ class fields_context:
         self.index_arguments[path] = index_argument
 
         for fields in self.fields:
-
             if index not in fields:
                 fields[index] = ([], [])
 
@@ -88,7 +87,6 @@ class fields_context:
         index_tag = {}
 
         for cfields in self.fields:
-
             contractions = [[]]
             for f in cfields:
                 if f == "*":

@@ -22,7 +22,7 @@ import numpy as np
 
 
 def conj(l):
-    if type(l) == gpt.expr:
+    if isinstance(l, gpt.expr):
         return gpt.expr(
             [
                 (
@@ -32,14 +32,14 @@ def conj(l):
                 for a in l.val
             ]
         )
-    elif type(l) == gpt.tensor:
+    elif isinstance(l, gpt.tensor):
         return l.conj()
     else:
         return conj(gpt.expr(l))
 
 
 def transpose(l):
-    if type(l) == gpt.expr:
+    if isinstance(l, gpt.expr):
         return gpt.expr(
             [
                 (
@@ -49,14 +49,14 @@ def transpose(l):
                 for a in l.val
             ]
         )
-    elif type(l) == gpt.tensor and l.transposable():
+    elif isinstance(l, gpt.tensor) and l.transposable():
         return l.transpose()
     else:
         return transpose(gpt.expr(l))
 
 
 def adj(l):
-    if type(l) == gpt.expr:
+    if isinstance(l, gpt.expr):
         return gpt.expr(
             [
                 (
@@ -72,14 +72,18 @@ def adj(l):
                 for a in l.val
             ]
         )
-    elif (type(l) == gpt.tensor and l.transposable()) or type(l) == gpt.matrix_operator:
+    elif isinstance(l, gpt.matrix_operator):
         return l.adj()
+    elif isinstance(l, gpt.core.foundation.base):
+        return l.__class__.foundation.adj(l)
+    elif gpt.util.is_num(l):
+        return gpt.util.adj_num(l)
     else:
         return adj(gpt.expr(l))
 
 
 def inv(l):
-    if type(l) == gpt.matrix_operator:
+    if isinstance(l, gpt.matrix_operator):
         return l.inv()
     else:
         assert 0
@@ -94,9 +98,12 @@ def apply_expr_unary(l):
 def trace(l, t=None):
     if t is None:
         t = gpt.expr_unary.BIT_SPINTRACE | gpt.expr_unary.BIT_COLORTRACE
-    if type(l) == gpt.tensor:
-        return l.trace(t)
-    return gpt.expr(l, t)
+    if isinstance(l, gpt.core.foundation.base):
+        return l.__class__.foundation.trace(l, t)
+    elif gpt.util.is_num(l):
+        return l
+    else:
+        return gpt.expr(l, t)
 
 
 def spin_trace(l):
@@ -108,27 +115,12 @@ def color_trace(l):
 
 
 def rank_sum(e):
-    l = gpt.eval(e)
-    val = [cgpt.lattice_rank_sum(x) for x in l.v_obj]
-    vrank = len(val)
-    if vrank == 1:
-        val = val[0]
-    else:
-        vdim = len(l.otype.shape)
-        if vdim == 1:
-            val = np.concatenate(val)
-        elif vdim == 2:
-            n = int(vrank**0.5)
-            assert n * n == vrank
-            val = np.concatenate(
-                [np.concatenate([val[i * n + j] for j in range(n)], axis=0) for i in range(n)],
-                axis=1,
-            )
-        else:
-            raise NotImplementedError()
-    return gpt.util.value_to_tensor(val, l.otype)
+    if isinstance(e, gpt.expr):
+        e = gpt.eval(e)
+    return e.__class__.foundation.rank_sum(e)
 
 
 def sum(e):
-    l = gpt.eval(e)
-    return l.grid.globalsum(rank_sum(l))
+    if isinstance(e, gpt.expr):
+        e = gpt.eval(e)
+    return e.__class__.foundation.sum(e)

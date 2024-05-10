@@ -20,7 +20,6 @@ import gpt, cgpt, numpy, sys
 
 
 def split_key_to_coordinates_and_indices(grid, key):
-
     nd = grid.nd
     list_types = [numpy.ndarray, list]
 
@@ -29,17 +28,15 @@ def split_key_to_coordinates_and_indices(grid, key):
         return key, None
 
     # all other keys need to be a tuple
-    assert type(key) == tuple
+    assert isinstance(key, tuple)
 
     # strip positions
     if any([isinstance(key[0], t) for t in list_types]):
-
         # l[pos,...]
         pos = key[0]
         key = key[1:]
 
     else:
-
         # l[x,y,z,...]
         assert len(key) >= nd
         pos = key[:nd]
@@ -60,9 +57,8 @@ def split_key_to_coordinates_and_indices(grid, key):
 
 
 def map_pos(grid, cb, key):
-
     # if list, convert to numpy array
-    if type(key) == list:
+    if isinstance(key, list):
         key = numpy.array(key, dtype=numpy.int32)
 
     # if key is numpy array, no further processing needed
@@ -70,7 +66,7 @@ def map_pos(grid, cb, key):
         return key
 
     # if not, we expect a tuple of slices
-    assert type(key) == tuple
+    assert isinstance(key, tuple)
 
     # slices without specified start/stop corresponds to memory view limitation for this rank
     if all([k == slice(None, None, None) for k in key]):
@@ -78,7 +74,7 @@ def map_pos(grid, cb, key):
         return gpt.coordinates((grid, cb), order="lexicographic")
 
     nd = grid.nd
-    key = tuple([k if type(k) == slice else slice(k, k + 1) for k in key])
+    key = tuple([k if isinstance(k, slice) else slice(k, k + 1) for k in key])
     assert all([k.step is None for k in key])
     top = [
         grid.fdimensions[i] // grid.mpi[i] * grid.processor_coor[i] if k.start is None else k.start
@@ -103,7 +99,6 @@ def map_pos(grid, cb, key):
 
 
 def map_tidx_and_shape(l, key):
-
     # create shape of combined lattices
     shapes = [x.otype.shape for x in l]
     assert all([shapes[0][1:] == s[1:] for s in shapes[1:]])
@@ -118,7 +113,7 @@ def map_tidx_and_shape(l, key):
         return tidx, shape
 
     # if key is a list, convert to numpy array
-    if type(key) == list:
+    if isinstance(key, list):
         key = numpy.array(key, dtype=numpy.int32)
 
     # if key is numpy array, no further processing needed
@@ -127,10 +122,10 @@ def map_tidx_and_shape(l, key):
         return key, (len(key),)
 
     # if not, we expect a tuple of either coordinates or slices
-    assert type(key) == tuple
+    assert isinstance(key, tuple)
 
     # slices
-    key = tuple([k if type(k) == slice else slice(k, k + 1) for k in key])
+    key = tuple([k if isinstance(k, slice) else slice(k, k + 1) for k in key])
     assert all([k.step is None for k in key])
     top = [0 if k.start is None else k.start for i, k in enumerate(key)]
     bottom = [shape[i] if k.stop is None else k.stop for i, k in enumerate(key)]
@@ -143,9 +138,8 @@ def map_tidx_and_shape(l, key):
 
 
 def map_key(target, key):
-
     # work on list of lattices
-    if type(target) == gpt.lattice:
+    if isinstance(target, gpt.lattice):
         return map_key([target], key)
 
     # all lattices need to have the same grid and checkerboard
@@ -156,7 +150,7 @@ def map_key(target, key):
     )
 
     # special case to select all
-    if type(key) == slice and key == slice(None, None, None):
+    if isinstance(key, slice) and key == slice(None, None, None):
         key = tuple([slice(None, None, None) for i in range(grid.nd)])
 
     # split coordinate and tensor index descriptors

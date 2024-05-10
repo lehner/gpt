@@ -42,3 +42,6 @@ class ot_base:
         if self.data_alias is not None:
             return self.data_alias()
         return self
+
+    def is_self_dual(self):
+        return False

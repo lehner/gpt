@@ -18,6 +18,7 @@
 #
 import gpt
 
+
 # General block matrix with domain D and its complement C
 #
 #      ( DD DC )   ( DD   DC CC^-1 ) ( Mpc  0 ) ( 1  0  )
@@ -53,7 +54,6 @@ import gpt
 #
 class schur_complement_one:
     def __init__(self, op, domain_decomposition):
-
         dd_op = domain_decomposition(op)
 
         DD = dd_op.DD

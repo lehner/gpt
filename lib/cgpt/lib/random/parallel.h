@@ -217,7 +217,8 @@ PyObject* cgpt_random_sample(DIST & dist,sRNG& srng,pRNG& prng,
     for (auto & l : lattices) {
       long Nsimd, word, simd_word;
       std::vector<long> ishape;
-      l->describe_data_layout(Nsimd, word, simd_word, ishape);
+      l->describe_data_layout(Nsimd, word, simd_word);
+      l->describe_data_shape(ishape);
       long l_n_per_site = word / simd_word;
       n_per_site += (size_t)l_n_per_site;
       if (complex_size) {

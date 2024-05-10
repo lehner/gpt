@@ -48,16 +48,16 @@ class checkpointer:
         self.verbose = gpt.default.is_verbose("checkpointer")
 
     def save(self, obj):
-        if type(obj) == list:
+        if isinstance(obj, list):
             for o in obj:
                 self.save(o)
-        elif type(obj) == gpt.lattice:
+        elif isinstance(obj, gpt.lattice):
             self.save(obj.mview())
-        elif type(obj) == float:
+        elif isinstance(obj, float):
             self.save(memoryview(struct.pack("d", obj)))
-        elif type(obj) == complex:
+        elif isinstance(obj, complex):
             self.save(memoryview(struct.pack("dd", obj.real, obj.imag)))
-        elif type(obj) == memoryview:
+        elif isinstance(obj, memoryview):
             self.f.seek(0, 1)
             sz = len(obj)
             szGB = sz / 1024.0**3
@@ -84,7 +84,7 @@ class checkpointer:
             assert 0
 
     def load(self, obj):
-        if type(obj) == list:
+        if isinstance(obj, list):
             if len(obj) != 1:
                 allok = True
                 pos = self.f.tell()
@@ -96,24 +96,24 @@ class checkpointer:
                     self.f.seek(pos, 0)  # reset position to overwrite corrupted data chunk
                 return allok
             else:
-                if type(obj[0]) == gpt.lattice:
+                if isinstance(obj[0], gpt.lattice):
                     res = self.load(obj[0].mview())
-                elif type(obj[0]) == float:
+                elif isinstance(obj[0], float):
                     v = memoryview(bytearray(8))
                     res = self.load(v)
                     obj[0] = struct.unpack("d", v)[0]
-                elif type(obj[0]) == complex:
+                elif isinstance(obj[0], complex):
                     v = memoryview(bytearray(16))
                     res = self.load(v)
                     obj[0] = complex(*struct.unpack("dd", v)[0, 1])
-                elif type(obj[0]) == memoryview:
+                elif isinstance(obj[0], memoryview):
                     return self.read_view(obj[0])
                 else:
                     assert 0
                 return res
-        elif type(obj) == memoryview:
+        elif isinstance(obj, memoryview):
             return self.read_view(obj)
-        elif type(obj) == gpt.lattice:
+        elif isinstance(obj, gpt.lattice):
             return self.load(obj.mview())
         else:
             assert 0

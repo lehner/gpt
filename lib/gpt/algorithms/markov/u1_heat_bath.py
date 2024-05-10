@@ -42,7 +42,7 @@ class u1_heat_bath:
         verbose = g.default.is_verbose(
             "u1_heat_bath"
         )  # need verbosity categories [ performance, progress ]
-        assert type(link) == g.lattice and type(staple) == g.lattice
+        assert isinstance(link, g.lattice) and isinstance(staple, g.lattice)
 
         # component-wise functions needed below
         exp = g.component.exp

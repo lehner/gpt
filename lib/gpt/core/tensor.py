@@ -19,10 +19,18 @@
 import cgpt
 import gpt
 import numpy as np
+from gpt.core.foundation import tensor as foundation, base as foundation_base
 
 
-class tensor:
-    def __init__(self, array, otype):
+class tensor(foundation_base):
+    foundation = foundation
+
+    def __init__(self, first, second=None):
+        if second is not None:
+            array, otype = first, second
+        else:
+            otype = first
+            array = np.zeros(otype.shape, dtype=np.complex128)
 
         # allow to match compatible shapes
         if array.shape != otype.shape:
@@ -41,6 +49,9 @@ class tensor:
     def __setitem__(self, a, b):
         return self.array.__setitem__(a, b)
 
+    def nfloats(self):
+        return self.otype.nfloats
+
     def transposable(self):
         return self.otype.transposed is not None
 
@@ -51,6 +62,12 @@ class tensor:
 
     def conj(self):
         return tensor(self.array.conj(), self.otype)
+
+    def copy(self):
+        return tensor(np.copy(self.array), self.otype)
+
+    def new(self):
+        return tensor(np.zeros(shape=self.array.shape, dtype=self.array.dtype), self.otype)
 
     def adj(self):
         if not self.transposable():
@@ -75,7 +92,7 @@ class tensor:
             if ct[0] is not None:
                 res = tensor(np.trace(res.array, offset=0, axis1=ct[0], axis2=ct[1]), ct[2]())
 
-        if res.otype == gpt.ot_singlet:
+        if isinstance(res.otype, gpt.ot_singlet):
             res = complex(res.array)
         return res
 
@@ -83,7 +100,7 @@ class tensor:
         return np.linalg.norm(self.array) ** 2.0
 
     def __mul__(self, other):
-        if type(other) == gpt.tensor:
+        if isinstance(other, gpt.tensor):
             self_tag = self.otype.__name__
             other_tag = other.otype.__name__
             if other_tag in self.otype.mtab:
@@ -96,7 +113,7 @@ class tensor:
             return tensor(a, mt[0]())
         elif gpt.util.is_num(other):
             return tensor(self.array * complex(other), self.otype)
-        elif type(other) == gpt.expr and other.is_single(gpt.tensor):
+        elif isinstance(other, gpt.expr) and other.is_single(gpt.tensor):
             ue, uf, to = other.get_single()
             if ue == 0 and uf & gpt.factor_unary.BIT_TRANS != 0:
                 tag = to.otype.__name__
@@ -126,9 +143,6 @@ class tensor:
     def __truediv__(self, other):
         return tensor(self.array / other, self.otype)
 
-    def __eq__(self, other):
-        return np.array_equal(self.array, other.array)
-
     def __neg__(self):
         return tensor(-self.array, self.otype)
 
@@ -148,4 +162,9 @@ class tensor:
 
     def __itruediv__(self, other):
         self.array /= other
+        return self
+
+    def __imatmul__(self, other):
+        assert self.otype.__name__ == other.otype.__name__
+        self.array = other.array.copy()
         return self

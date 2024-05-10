@@ -22,8 +22,7 @@ from gpt.params import params_convention
 
 class random:
     def __init__(self, first, second=None):
-
-        if type(first) == dict and second is None:
+        if isinstance(first, dict) and second is None:
             s = first["seed"]
             engine = first["engine"]
         else:
@@ -45,13 +44,19 @@ class random:
         cgpt.delete_random(self.obj)
 
     def sample(self, t, p):
-        if type(t) == list:
+        if isinstance(t, list):
             for x in t:
                 self.sample(x, p)
             return t
         elif t is None:
             return cgpt.random_sample(self.obj, p)
-        elif type(t) == gpt.lattice:
+        elif isinstance(t, gpt.tensor):
+            t.array = numpy.array(
+                [cgpt.random_sample(self.obj, p) for i in range(t.otype.nfloats // 2)],
+                dtype=t.array.dtype,
+            ).reshape(t.otype.shape)
+            return t
+        elif isinstance(t, gpt.lattice):
             t0 = gpt.time()
             cgpt.random_sample(self.obj, {**p, **{"lattices": [t]}})
             t1 = gpt.time()
@@ -104,8 +109,7 @@ class random:
 
     @params_convention(scale=1.0, normal=False)
     def element(self, out, p={}):
-
-        if type(out) == list:
+        if isinstance(out, list):
             return [self.element(x, p) for x in out]
 
         t = gpt.timer("element")
@@ -127,7 +131,6 @@ class random:
         gen = cartesian_space.otype.generators(grid.precision.complex_dtype)
         t()
         for ta in gen:
-
             t("rng")
 
             if normal:
@@ -157,7 +160,7 @@ class random:
 
 # sha256
 def sha256(mv):
-    if type(mv) == memoryview:
+    if isinstance(mv, memoryview):
         a = cgpt.util_sha256(mv)
         r = a[0]
         for i in range(7):

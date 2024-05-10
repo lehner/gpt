@@ -68,7 +68,6 @@ class stout(diffeomorphism):
 
     # apply the jacobian
     def jacobian(self, fields, fields_prime, src):
-
         nd = fields[0].grid.nd
         U = fields[0:nd]
         U_prime = fields_prime[0:nd]
@@ -85,7 +84,6 @@ class stout(diffeomorphism):
 
         # (75) of https://arxiv.org/pdf/hep-lat/0311018.pdf
         for mu in range(nd):
-
             #
             # Sigma == g.adj(U) * gradient * 1j
             #
@@ -99,7 +97,6 @@ class stout(diffeomorphism):
 
         for mu in range(nd):
             for nu in range(nd):
-
                 if mu == nu:
                     continue
 

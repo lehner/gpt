@@ -107,7 +107,6 @@ sparse_time = full_time // source_time_slices
 
 
 for pos in source_positions_exact:
-
     srcD = g.mspincolor(l_exact.U_grid)
     srcD[:] = 0
 
@@ -148,7 +147,6 @@ sys.exit(0)
 
 # calculate correlators for sloppy positions
 for pos in source_positions_sloppy:
-
     # sloppy
     src = g.mspincolor(l_sloppy.U_grid)
     g.create.point(src, pos)
@@ -239,7 +237,6 @@ prop_a2a = (
 
 # calculate correlators for sloppy positions
 for pos in source_positions_sloppy + source_positions_exact:
-
     # sloppy
     src = g.mspincolor(l_sloppy.U_grid)
     g.create.point(src, pos)

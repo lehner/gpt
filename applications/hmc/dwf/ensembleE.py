@@ -21,6 +21,7 @@ if latest_it is not None:
     rng = g.random(f"test{dst}{latest_it}", "vectorized_ranlux24_24_64")
     it0 = latest_it + 1
 
+
 # gauge field obc
 def project_open_bc(f):
     f[3][:, :, :, f[3].grid.gdimensions[3] - 1] = 0
@@ -101,6 +102,7 @@ cg_e = inv.defect_correcting(
     eps=exact_prec,
     maxiter=100,
 )
+
 
 # chronological inverter
 def mk_chron(slv):
@@ -288,7 +290,6 @@ def fermion_force():
         y[:] = 0
 
     if not pure_gauge:
-
         forces = [[g.lattice(y) for y in x] for i in fields]
 
         log.time("fermion forces")

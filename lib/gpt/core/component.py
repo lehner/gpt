@@ -17,71 +17,63 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
-from gpt.core.operator.matrix_operator import matrix_operator
 import cgpt
+import numpy
 
 
-def _simple_matrix(operator, extra_params={}):
-    def _mat(dst, src):
-        for i in dst.otype.v_idx:
-            cgpt.unary(dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params})
-
-    return matrix_operator(_mat)
-
-
-def _simple_map(operator, extra_params={}):
+def _simple_map(operator, numpy_operator=None, extra_params={}):
     def _mat(first, second=None):
-        if second is not None:
-            dst = first
-            src = gpt.eval(second)
-        else:
-            src = gpt.eval(first)
-            dst = gpt.lattice(src)
-        for i in dst.otype.v_idx:
-            cgpt.unary(dst.v_obj[i], src.v_obj[i], {**{"operator": operator}, **extra_params})
-        return dst
+        if isinstance(first, list):
+            return [_mat(x) for x in first]
+        if isinstance(first, gpt.expr):
+            first = gpt(first)
+        if isinstance(second, gpt.expr):
+            second = gpt(second)
+        return first.__class__.foundation.component_simple_map(
+            operator, numpy_operator, extra_params, first, second
+        )
 
     return _mat
 
 
-imag = _simple_matrix("imag")
-real = _simple_matrix("real")
-abs = _simple_map("abs")
-sqrt = _simple_map("sqrt")
-exp = _simple_map("exp")
-log = _simple_map("log")
-sin = _simple_map("sin")
-asin = _simple_map("asin")
-cos = _simple_map("cos")
-acos = _simple_map("acos")
-tan = _simple_map("tan")
-atan = _simple_map("atan")
-sinh = _simple_map("sinh")
-asinh = _simple_map("asinh")
-cosh = _simple_map("cosh")
-acosh = _simple_map("acosh")
-tanh = _simple_map("tanh")
-atanh = _simple_map("atanh")
-inv = _simple_map("pow", {"exponent": -1.0})
+imag = _simple_map("imag", numpy.imag)
+real = _simple_map("real", numpy.real)
+abs = _simple_map("abs", numpy.abs)
+sqrt = _simple_map("sqrt", numpy.sqrt)
+exp = _simple_map("exp", numpy.exp)
+log = _simple_map("log", numpy.log)
+sin = _simple_map("sin", numpy.sin)
+asin = _simple_map("asin", numpy.arcsin)
+cos = _simple_map("cos", numpy.cos)
+acos = _simple_map("acos", numpy.arccos)
+tan = _simple_map("tan", numpy.tan)
+atan = _simple_map("atan", numpy.arctan)
+sinh = _simple_map("sinh", numpy.sinh)
+asinh = _simple_map("asinh", numpy.arcsinh)
+cosh = _simple_map("cosh", numpy.cosh)
+acosh = _simple_map("acosh", numpy.arccosh)
+tanh = _simple_map("tanh", numpy.tanh)
+atanh = _simple_map("atanh", numpy.arctanh)
+inv = _simple_map("pow", lambda x: numpy.power(x, -1), extra_params={"exponent": -1.0})
 
 
 def pow(exponent):
-    return _simple_map("pow", {"exponent": exponent})
+    return _simple_map(
+        "pow", lambda x: numpy.power(x, exponent), extra_params={"exponent": exponent}
+    )
+
+
+def relu(a=0.0):
+    return _simple_map("relu", extra_params={"a": a})
+
+
+def drelu(a=0.0):
+    return _simple_map("drelu", extra_params={"a": a})
 
 
 def mod(n):
-    return _simple_map("mod", {"n": n})
+    return _simple_map("mod", extra_params={"n": n})
 
 
 def multiply(a, b):
-    a = gpt(a)
-    b = gpt(b)
-    assert a.otype.__name__ == b.otype.__name__
-    res = gpt.lattice(a)
-    params = {"operator": "*"}
-    n = len(res.v_obj)
-    assert n == len(a.v_obj)
-    assert n == len(b.v_obj)
-    for i in range(n):
-        cgpt.binary(res.v_obj[i], a.v_obj[i], b.v_obj[i], params)
-    return res
+    return a.__class__.foundation.component_multiply(a, b)

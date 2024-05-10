@@ -23,6 +23,7 @@ import numpy
 # need a basic container to store the group/algebra data
 from gpt.core.object_type import ot_matrix_color, ot_vector_color
 
+
 ###
 # Compute structure constant
 def compute_structure_constant(T, dt):
@@ -95,6 +96,14 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
     def compose(self, a, b):
         return a + b
 
+    def infinitesimal_to_cartesian(self, A, dA):
+        N = self.shape[0]
+        ret = gpt(0.5 * dA + 0.5 * gpt.adj(dA))
+        ret -= gpt.identity(dA) * gpt.trace(ret) / N
+        ret.otype = self
+        ret *= 0.5
+        return ret
+
     def inner_product(self, left, right):
         if self.trace_norm is None:
             gen = self.generators(left.grid.precision.complex_dtype)
@@ -127,6 +136,14 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
         err2 += gpt.norm2(gpt.matrix.det(U) - I_s) / gpt.norm2(I_s)
         return err2**0.5
 
+    def infinitesimal_to_cartesian(self, U, dU):
+        src = gpt(dU * gpt.adj(U) / 2j)
+        N = self.shape[0]
+        ret = gpt(0.5 * src + 0.5 * gpt.adj(src))
+        ret -= gpt.identity(src) * gpt.trace(ret) / N
+        ret.otype = self.cartesian()
+        return ret
+
     def project(self, U, method):
         if method == "defect_right" or method == "defect":
             # V = V0(1 + eps)  with  dag(eps) = eps , dag(V0) V0 = 1
@@ -155,11 +172,11 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
 class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
     def __init__(self, Nc):
         super().__init__(Nc, Nc, f"ot_matrix_su_n_fundamental_algebra({Nc})")
-        self.ctab = {
-            f"ot_matrix_su_n_fundamental_group({Nc})": lambda dst, src: gpt.eval(
-                dst, gpt.matrix.exp(src * 1j)
-            )
-        }
+
+        def _convert(dst, src):
+            dst @= gpt.matrix.exp(src * 1j)
+
+        self.ctab = {f"ot_matrix_su_n_fundamental_group({Nc})": _convert}
         self.CA = Nc
 
     def generators(self, dt):
@@ -168,7 +185,6 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
         # accumulate generators in pauli / Gell-Mann ordering
         for i in range(self.Nc):
             for j in range(i + 1, self.Nc):
-
                 # sigma_x
                 alg = numpy.zeros(shape=(self.Nc, self.Nc), dtype=dt)
                 alg[i, j] = 1.0

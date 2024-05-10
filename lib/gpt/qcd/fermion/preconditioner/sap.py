@@ -88,7 +88,6 @@ class sap_cycle:
         assert self.bs is not None
 
     def __call__(self, op):
-
         bop = gpt.qcd.fermion.domain.even_odd_blocks(op, block_size=self.bs)
         solver = [self.blk_solver(f) for f in bop.fermions]
 

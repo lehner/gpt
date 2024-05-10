@@ -33,7 +33,6 @@ class local_parallel_transport_convolution(base_no_bias):
         n_output,
         projector=projector_color_trace,
     ):
-
         self.nweights = (len(paths) + 1) * n_output * n_input
 
         self.projector = projector
@@ -89,7 +88,6 @@ class local_parallel_transport_convolution(base_no_bias):
         return self._contract(w, f)
 
     def projected_gradient_adj(self, weights, layer_input, left):
-
         left = g.util.to_list(left)
 
         t = g.timer("projected_gradient_adj")

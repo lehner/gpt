@@ -26,12 +26,65 @@
 #define rankInnerProduct rankInnerProductCpu
 #endif  
 
+#if defined(GRID_SYCL)
+
+#define accelerator_threads_sync() item.barrier(sycl::access::fence_space::local_space);
+
+#define SYCL_SIMD_WIDTH 16
+
+#define accelerator_forNB_with_shared( iter1, num1, nsimd, shared_type, shared_name, ... ) { \
+    acceleratorFenceComputeStream();					\
+    theGridAccelerator->submit([&](cl::sycl::handler &cgh) {		\
+      unsigned long unum1 = num1;					\
+      unsigned long unum1_divisible_by = ((unum1 + SYCL_SIMD_WIDTH - 1) / SYCL_SIMD_WIDTH) * SYCL_SIMD_WIDTH; \
+      cl::sycl::range<3> local {1,1,nsimd};				\
+      cl::sycl::range<3> global{unum1_divisible_by,1,nsimd};		\
+      cl::sycl::local_accessor<shared_type> shm_acc(cl::sycl::range<1>(nsimd), cgh); \
+      if (unum1 != unum1_divisible_by) {				\
+	cgh.parallel_for(						\
+			 cl::sycl::nd_range<3>(global,local),		\
+			 [=] (cl::sycl::nd_item<3> item)		\
+			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
+			 {						\
+			   auto iter1    = item.get_global_id(0);	\
+			   auto lane     = item.get_global_id(2);	\
+			   shared_type* shared_name = shm_acc.get_pointer(); \
+			   { if (iter1 < unum1) { __VA_ARGS__ } };	\
+			 });						\
+      } else {								\
+	cgh.parallel_for(						\
+			 cl::sycl::nd_range<3>(global,local),		\
+			 [=] (cl::sycl::nd_item<3> item)		\
+			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
+			 {						\
+			   auto iter1    = item.get_global_id(0);	\
+			   auto lane     = item.get_global_id(2);	\
+			   shared_type* shared_name = shm_acc.get_pointer(); \
+			   { __VA_ARGS__ };				\
+			 });						\
+      }									\
+    });									\
+  }
+
+
+#else
+
+#define accelerator_threads_sync acceleratorSynchronise
+
 #ifdef GRID_SIMT
 #define accelerator_shared __shared__
 #else
 #define accelerator_shared
 #endif
 
+#define accelerator_forNB_with_shared( iter1, num1, nsimd, shared_type, shared_name, ... ) { \
+    auto _stored_nt = acceleratorThreads();				\
+    acceleratorThreads(1);						\
+    accelerator_forNB(iter1, num1, nsimd, {accelerator_shared shared_type shared_name[nsimd]; __VA_ARGS__}); \
+    acceleratorThreads(_stored_nt);					\
+  }
+
+#endif
 
 template<int n_per_thread, int n_coalesce, typename T>
 inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint64_t n_left, uint64_t n_right, uint64_t n_virtual,
@@ -57,17 +110,13 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
   auto inner_tmp_v = &inner_tmp[0];
 
   Timer("rip: loop");
-  auto nt = acceleratorThreads();
-  acceleratorThreads(1);
   {
     for (int i=0;i<n_virtual;i++) {
 
       for (int kl=0;kl<n_left;kl++) {
 	scalar_type* a = (scalar_type*)left_v[kl*n_virtual+i];
 
-	accelerator_forNB(work, n_outer, n_coalesce, {
-
-	    accelerator_shared double vr[2*n_coalesce];
+	accelerator_forNB_with_shared(work, n_outer, n_coalesce, ComplexD, vc, {
 	    
 	    int lane = acceleratorSIMTlane(n_coalesce);
 	    uint64_t idx0 = work * n_per_thread * n_coalesce;
@@ -96,21 +145,21 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	        }
 	      }	      
 	    
-	      vr[2*lane + 0] = v.real();
-	      vr[2*lane + 1] = v.imag();
+	      vc[lane] = v;
 
-	      acceleratorSynchronise();
+	      accelerator_threads_sync();
 
 	      if (lane == 0) {
 		v = 0.0;
 		for (int j=0;j<n_coalesce;j++)
-		  v+=ComplexD(vr[2*j + 0],vr[2*j + 1]);
+		  v+=vc[j];
 		c[work] = v;
 	      }
 
-	      acceleratorSynchronise();
+	      accelerator_threads_sync();
 	    }
 	  });
+
       }
     }
     // now reduce from n_outer -> n_outer / n_coalesce
@@ -122,9 +171,7 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
       
       uint64_t n_stride_prime = (n_stride + n_coalesce - 1) / n_coalesce;
 
-      accelerator_forNB(work, n_stride_prime, n_coalesce, {
-
-	  accelerator_shared ComplexD vc[n_coalesce];
+      accelerator_forNB_with_shared(work, n_stride_prime, n_coalesce, ComplexD, vc, {
 	    
 	  int lane = acceleratorSIMTlane(n_coalesce);
 
@@ -141,7 +188,7 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	    
 	    vc[lane] = v;
 	    
-	    acceleratorSynchronise();
+	    accelerator_threads_sync();
 	    
 	    if (lane == 0) {
 	      v = 0.0;
@@ -150,7 +197,7 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	      dst_base[i*n_stride_prime + work] = v;
 	    }
 	    
-	    acceleratorSynchronise();
+	    accelerator_threads_sync();
 	  }
 	});
       
@@ -163,7 +210,6 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
       result[i] = src_base[i];
     }
   }
-  acceleratorThreads(nt);
 }
 
 class tensor_ComplexD : public ComplexD {

@@ -40,7 +40,6 @@ class transfer:
         ot_embedding=None,
         projector=None,
     ):
-
         if reference_point is None:
             reference_point = np.array([0] * fine_grid.nd, dtype=np.int32)
         else:

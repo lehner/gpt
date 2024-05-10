@@ -32,7 +32,6 @@ def boltzman_factor(h1, h0):
 # - performs the accept/reject step, ie accepts with probability = min{1, P(f(x1))/P(f(x0))}
 def metropolis(rng, probability_ratio=boltzman_factor):
     def trial(fields):
-
         # save state
         previous_state = g.copy(fields)
 

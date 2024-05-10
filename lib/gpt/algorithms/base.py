@@ -72,8 +72,8 @@ class base_iterative(base):
         self.converged = None
 
     def log_convergence(self, iteration, value, target=None):
-        if (type(iteration) == int and iteration == 0) or (
-            type(iteration) == tuple and all([x == 0 for x in iteration])
+        if (isinstance(iteration, int) and iteration == 0) or (
+            isinstance(iteration, tuple) and all([x == 0 for x in iteration])
         ):
             self.history = []
 

@@ -449,6 +449,7 @@ public: // member functions (additional) //////////////////////////////////////
 #endif
       // new layout with Lorentz in tensor
       for(int p=0; p<Npoint; p++) {
+	acceleratorFenceComputeStream();
         accelerator_forNB(ss, Nsite, Nsimd, {
           coalescedWrite(Uc_member_v[v_link][ss](p), coalescedRead(Uc_arg_v[p*NvirtualLink+v][ss]));
         });
@@ -484,6 +485,7 @@ public: // member functions (additional) //////////////////////////////////////
         // const int gauge_idx_row_col_point = v_row * NvirtualFermion * Npoint + v_col * Npoint + p;
         // const int gauge_idx_col_row_point = v_col * NvirtualFermion * Npoint + v_row * Npoint + p;
 
+	acceleratorFenceComputeStream();
         accelerator_forNB(ss, Nsite, Nsimd, {
           // coalescedWrite(Uc_member_p[v_point_link][ss], coalescedRead(Uc_arg_p[p*NvirtualLink+v][ss]));
           coalescedWrite(Uc_member_v[v_link_point][ss], coalescedRead(Uc_arg_v[p*NvirtualLink+v][ss]));
@@ -814,6 +816,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
       /*
 	Checked multiple streams and breaking this up in more NB, did not improve
       */
+      acceleratorFenceComputeStream();
       accelerator_forNB(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
 	  int _idx  = idx;
 	  const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
@@ -1026,6 +1029,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
       typedef decltype(coalescedRead(tmpMultiArg_v[0](0))) calcComplex;
 
       MComputeTime -= usecond();
+      acceleratorFenceComputeStream();
       accelerator_forNB(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
 	  int _idx  = idx;
 	  const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
@@ -1139,6 +1143,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
       typedef decltype(coalescedRead(tmp_v[0](0))) calcComplex;
 
       MComputeTime -= usecond();
+      acceleratorFenceComputeStream();
       accelerator_forNB(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
               int _idx  = idx;
         const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
@@ -1250,6 +1255,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
       typedef decltype(coalescedRead(tmp_v[0](0))) calcComplex;
 
       MComputeTime -= usecond();
+      acceleratorFenceComputeStream();
       accelerator_forNB(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
               int _idx  = idx;
         const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
@@ -1362,6 +1368,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
       typedef decltype(coalescedRead(tmp_v[0](0))) calcComplex;
 
       MComputeTime -= usecond();
+      acceleratorFenceComputeStream();
       accelerator_forNB(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
               int _idx  = idx;
         const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
@@ -1458,6 +1465,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
       typedef decltype(coalescedRead(in_v[0][0](0))) calcComplex;
 
       MComputeTime -= usecond();
+      acceleratorFenceComputeStream();
       accelerator_forNB(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
               int _idx  = idx;
         const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;
@@ -1546,6 +1554,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
       typedef decltype(coalescedRead(in_v[0][0](0))) calcComplex;
 
       MComputeTime -= usecond();
+      acceleratorFenceComputeStream();
       accelerator_forNB(idx, Nsite*NvirtualFermion*Narg*NbasisVirtual, Nsimd, {
               int _idx  = idx;
         const int b     = _idx%NbasisVirtual; _idx/=NbasisVirtual;

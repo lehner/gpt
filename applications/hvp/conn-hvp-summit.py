@@ -253,6 +253,7 @@ correlators = [
     ("G5", "G5"),
 ]
 
+
 # find jobs for this run
 def get_job(only_on_conf=None):
     # statistics
@@ -515,7 +516,6 @@ for group, job, conf, jid, n in run_jobs:
 
     # low positions
     for pos_idx in range(0, len(source_positions_low), simultaneous_low_positions):
-
         array_srcF = []
         array_pos_of_slice = []
         array_sign_of_slice = []

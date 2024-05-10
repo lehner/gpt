@@ -33,11 +33,11 @@ def fields_agree_openqcd(ref, res):
     """
     Implements the correctness check as it is used in openqcd, sarchive.c:614
     """
-    if type(ref) == g.lattice and type(res) == g.lattice:
+    if isinstance(ref, g.lattice) and isinstance(res, g.lattice):
         assert ref.grid.precision == g.double and res.grid.precision == g.double
 
-    norm2_ref = g.norm2(ref) if type(ref) == g.lattice else ref
-    norm2_res = g.norm2(res) if type(res) == g.lattice else res
+    norm2_ref = g.norm2(ref) if isinstance(ref, g.lattice) else ref
+    norm2_res = g.norm2(res) if isinstance(res, g.lattice) else res
 
     diff = abs(norm2_res - norm2_ref)
     tol = 64.0 * (norm2_ref + norm2_res) * sys.float_info.epsilon
@@ -52,10 +52,10 @@ def fields_agree(ref, res, tol):
     """
     Implements the standard correctness check between two fields with their relative deviation
     """
-    norm2_ref = g.norm2(ref) if type(ref) == g.lattice else ref
-    norm2_res = g.norm2(res) if type(res) == g.lattice else res
+    norm2_ref = g.norm2(ref) if isinstance(ref, g.lattice) else ref
+    norm2_res = g.norm2(res) if isinstance(res, g.lattice) else res
 
-    if type(ref) == g.lattice and type(res) == g.lattice:
+    if isinstance(ref, g.lattice) and isinstance(res, g.lattice):
         diff = g.norm2(res - ref)
     else:
         diff = abs(norm2_ref - norm2_res)

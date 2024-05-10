@@ -27,8 +27,7 @@ class improved_with_rectangle(base):
         if c0 is None:
             c0 = 1.0 - 8 * c1
         self.c0 = c0
-        self.staple_1x1 = {}
-        self.staple_2x1 = {}
+        self.cache = {}
         self.__name__ = f"improved_with_rectangle({beta},{c1})"
 
     def __call__(self, U):
@@ -47,40 +46,66 @@ class improved_with_rectangle(base):
     def staples(self, U, mu_target=None):
         Nd = len(U)
 
-        ret = []
-        for mu in range(Nd):
-
-            if mu_target is not None and mu_target != mu:
-                continue
-
-            st = g.lattice(U[0])
-            st[:] = 0
-
-            O = [nu for nu in range(Nd) if nu != mu]
+        if mu_target not in self.cache:
+            code = []
+            Nret = 0
             path = g.path
-            if (Nd, mu) not in self.staple_1x1:
-                p = []
-                p += [path().f(nu).f(mu).b(nu) for nu in O]
-                p += [path().b(nu).f(mu).f(nu) for nu in O]
-                self.staple_1x1[(Nd, mu)] = g.parallel_transport(U, p)
+            for mu in range(Nd):
+                if mu_target is not None and mu_target != mu:
+                    continue
 
-            if (Nd, mu) not in self.staple_2x1:
-                p = []
-                p += [path().f(nu, 2).f(mu).b(nu, 2) for nu in O]
-                p += [path().b(nu, 2).f(mu).f(nu, 2) for nu in O]
-                p += [path().f(nu).f(mu, 2).b(nu).b(mu) for nu in O]
-                p += [path().b(nu).f(mu, 2).f(nu).b(mu) for nu in O]
-                p += [path().b(mu).b(nu).f(mu, 2).f(nu) for nu in O]
-                p += [path().b(mu).f(nu).f(mu, 2).b(nu) for nu in O]
-                self.staple_2x1[(Nd, mu)] = g.parallel_transport(U, p)
+                O = [nu for nu in range(Nd) if nu != mu]
+                code_mu = []
+                for nu in O:
+                    # 1x1 staples
+                    s0 = self.beta * self.c0 / U[0].otype.shape[0]
+                    code_mu.append(
+                        (Nret, -1 if len(code_mu) == 0 else Nret, s0, path().f(nu).f(mu).b(nu))
+                    )
+                    code_mu.append(
+                        (Nret, -1 if len(code_mu) == 0 else Nret, s0, path().b(nu).f(mu).f(nu))
+                    )
 
-            for s in self.staple_1x1[(Nd, mu)](U):
-                st += (self.beta * self.c0 / U[0].otype.shape[0]) * s
+                    # 2x1 staples
+                    s1 = self.beta * self.c1 / U[0].otype.shape[0]
+                    dst = -1 if len(code_mu) == 0 else Nret
+                    code_mu.append(
+                        (
+                            Nret,
+                            dst,
+                            s1,
+                            path().f(nu, 2).f(mu).b(nu, 2),
+                        )
+                    )
+                    dst = Nret
+                    code_mu.append(
+                        (
+                            Nret,
+                            Nret,
+                            s1,
+                            path().b(nu, 2).f(mu).f(nu, 2),
+                        )
+                    )
+                    code_mu.append(
+                        (
+                            Nret,
+                            Nret,
+                            s1,
+                            path().f(nu).f(mu, 2).b(nu).b(mu),
+                        )
+                    )
+                    code_mu.append((Nret, Nret, s1, path().b(nu).f(mu, 2).f(nu).b(mu)))
+                    code_mu.append((Nret, Nret, s1, path().b(mu).b(nu).f(mu, 2).f(nu)))
+                    code_mu.append((Nret, Nret, s1, path().b(mu).f(nu).f(mu, 2).b(nu)))
 
-            for s in self.staple_2x1[(Nd, mu)](U):
-                st += (self.beta * self.c1 / U[0].otype.shape[0]) * s
+                code = code + code_mu
+                Nret += 1
 
-            ret.append(st)
+            self.cache[mu_target] = g.parallel_transport_matrix(U, code, Nret)
+
+        ret = self.cache[mu_target](U)
+        if mu_target is not None:
+            ret = [ret]
         return ret
 
 

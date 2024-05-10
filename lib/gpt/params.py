@@ -20,7 +20,6 @@ import os, inspect, gpt, cgpt
 
 
 class params_convention:
-
     # Allows for definition of default parameters and allows for
     # convenient calling with combination of dict (as, e.g., from
     # gpt.params("txt")) and kwargs.  params must be last parameter
@@ -104,5 +103,5 @@ def params(fn, verbose=False):
             "********************************************************************************"
         )
     r = eval(dat, globals())
-    assert type(r) == dict
+    assert isinstance(r, dict)
     return r

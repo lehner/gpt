@@ -134,26 +134,23 @@ default_exp_cache = {}
 
 
 def series_approximation(i, cache=default_exp_cache):
-
     i = g.eval(i)  # accept expressions
     if i.grid.precision != g.double:
         x = g.convert(i, g.double)
     else:
         x = g.copy(i)
 
-    n = g.rank_inner_product(x, x).real ** 0.5 / x.grid.gsites * x.grid.Nprocessors
+    n = g.object_rank_norm2(x) ** 0.5 / x.grid.gsites * x.grid.Nprocessors
     maxn = 0.01
     ns = 0
     if n > maxn:
         ns = int(np.log2(n / maxn))
         x /= 2**ns
 
-    o = g.lattice(x)
-    o[:] = 0
-    o @= g.identity(o)
+    o = g.identity(x)
     xn = g.copy(x)
 
-    if len(x.v_obj) == 1:
+    if isinstance(x, g.lattice) and len(x.v_obj) == 1:
         tag = f"{x.otype.__name__}_{x.grid}"
 
         if tag not in cache:
@@ -169,7 +166,7 @@ def series_approximation(i, cache=default_exp_cache):
                 code.append((_xn, -1, 1.0, [(_xn, 0, 0), (_x, 0, 0)]))
                 code.append((_o, _o, nfac, [(_xn, 0, 0)]))
 
-            cache[tag] = g.stencil.matrix(x, points, code)
+            cache[tag] = g.local_stencil.matrix(x, points, code)
 
         cache[tag](o, xn, x)
     else:
@@ -187,6 +184,7 @@ def series_approximation(i, cache=default_exp_cache):
         r = g.lattice(i)
         g.convert(r, o)
         o = r
+
     return o
 
 

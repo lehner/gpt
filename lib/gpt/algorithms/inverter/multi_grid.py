@@ -50,7 +50,6 @@ class coarse_grid(base):
         self.basis = basis
 
     def __call__(self, mat):
-
         assert isinstance(mat, g.matrix_operator)
         vector_space = mat.vector_space
 

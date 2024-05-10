@@ -25,6 +25,7 @@ import gpt.algorithms
 import gpt.qcd
 import gpt.qis
 import gpt.ml
+import gpt.ad
 import gpt.jobs
 import socket
 import cgpt
@@ -46,6 +47,7 @@ gpt.default.process_flags()
 
 # synonyms
 eval = expr_eval
+
 
 # make module callable
 class GPTModule(types.ModuleType):

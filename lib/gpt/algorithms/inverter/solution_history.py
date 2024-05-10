@@ -29,16 +29,14 @@ class solution_history(base):
         self.solution_space = solution_space
 
     def __call__(self, mat):
-
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
 
         inv_mat = self.inverter(mat)
 
         @self.timed_function
         def inv(psi, src, t):
-
             t("inverter")
             inv_mat(psi, src)
 

@@ -27,7 +27,6 @@ from gpt.ml.layer.parallel_transport_pooling.util import (
 
 class static_transfer:
     def __init__(self, fine_grid, coarse_grid, ot_input, link, path, reference_point=None):
-
         if reference_point is None:
             reference_point = np.array([0] * fine_grid.nd, dtype=np.int32)
         else:

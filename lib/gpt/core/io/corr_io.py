@@ -28,8 +28,9 @@ class writer:
 
     def write(self, t, cc):
         if self.f is not None:
-            self.f.write(struct.pack("i", len(t) + 1))
-            self.f.write((t + "\0").encode("utf-8"))
+            tag_data = (t + "\0").encode("utf-8")
+            self.f.write(struct.pack("i", len(tag_data)))
+            self.f.write(tag_data)
             ln = len(cc)
             ccr = [fff for sublist in ((c.real, c.imag) for c in cc) for fff in sublist]
             bindata = struct.pack("d" * 2 * ln, *ccr)
@@ -68,7 +69,7 @@ def count(fn):
 class reader:
     def __init__(self, fn):
         self.tags = {}
-        f = open(fn, "r+b")
+        f = open(fn, "rb")
         while True:
             rd = f.read(4)
             if len(rd) == 0:

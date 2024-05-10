@@ -29,16 +29,14 @@ class subspace_minimal_residual(base):
         self.solution_space = solution_space
 
     def __call__(self, mat):
-
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
         else:
             mat = g.matrix_operator(mat=mat)
 
         @self.timed_function
         def inv(psi, src, t):
-
             if len(self.solution_space) == 0:
                 return
 

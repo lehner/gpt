@@ -20,6 +20,7 @@
 import gpt, numpy
 from gpt.params import params_convention
 
+
 #
 # rhs_n_block: How many vectors are acted on at the same time
 #
@@ -149,7 +150,7 @@ def create_links(A, fmat, basis, params):
 
 
 def communicate_links(A, dirdisps_forward, make_hermitian):
-    assert type(A) == list
+    assert isinstance(A, list)
     assert len(A) == 2 * len(dirdisps_forward) + 1
     for p, (mu, fb) in enumerate(dirdisps_forward):
         p_other = p + 4
@@ -198,7 +199,7 @@ def unsplit_chiral(basis, factor=None):
 
 
 def prefactor_dagger(A, v_idx=None):
-    assert type(A) == gpt.lattice
+    assert isinstance(A, gpt.lattice)
     nbasis = A.otype.shape[0]
     assert nbasis % 2 == 0
     nb = nbasis // 2

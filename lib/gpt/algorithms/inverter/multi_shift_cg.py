@@ -66,14 +66,13 @@ class multi_shift_cg(base_iterative):
         ns = len(self.shifts)
 
         vector_space = None
-        if type(mat) == g.matrix_operator:
+        if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
             mat = mat.mat
             # remove wrapper for performance benefits
 
         @self.timed_function
         def inv(psi, src, t):
-
             if len(src) > 1:
                 n = len(src)
                 # do different sources separately

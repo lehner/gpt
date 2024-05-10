@@ -49,7 +49,10 @@ Coarse Operator Benchmark with
     )
 
     # Warmup
+    # dst2 = g.copy(dst)
+    # src2 = g.copy(src)
     for n in range(5):
+        # co.mat([dst, dst2], [src, src2])
         co.mat(dst, src)
 
     # Time cgpt

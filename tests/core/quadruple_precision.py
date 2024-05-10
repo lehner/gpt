@@ -9,6 +9,7 @@ rng = g.random("test")
 
 n = 8
 
+
 # first regress binary ops against double versions
 def add(a, b):
     return a + b
@@ -34,6 +35,7 @@ def bsqrt(a):
 
 
 unaries = [np.real, np.imag, bsqrt, np.abs, np.linalg.norm]
+
 
 # now devise trivial identities
 def comm(a, b):

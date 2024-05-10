@@ -46,6 +46,23 @@ using namespace Grid;
   for(uint64_t k=0;k<__ ## v.size();k++) __ ## v[k].ViewClose();
 
 
+#define VECTOR_ELEMENT_VIEW_OPEN(ET, l, v, mode)			\
+  Vector<ET*> _ ## v; _ ## v.reserve(l.size());				\
+  Vector<int> __ ## v; __ ## v.reserve(l.size());			\
+  for(uint64_t k=0;k<l.size();k++) {					\
+    _ ## v.push_back((ET*)l[k]->memory_view_open(mode));			\
+    long Nsimd, word, simd_word;					\
+    l[k]->describe_data_layout(Nsimd,word,simd_word);			\
+    __ ## v.push_back(word / simd_word);				\
+  }									\
+  auto v = & _ ## v[0];							\
+  auto v ## _nelements = & __ ## v[0];
+
+#define VECTOR_ELEMENT_VIEW_CLOSE(l)					\
+  for(uint64_t k=0;k<l.size();k++) l[k]->memory_view_close();
+
+
+
 NAMESPACE_BEGIN(Grid);
 
 // aligned vector

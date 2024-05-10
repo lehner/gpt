@@ -20,6 +20,7 @@ import cgpt, gpt, numpy
 from gpt.default import is_verbose
 from gpt.core.expr import factor
 from gpt.core.mem import host
+from gpt.core.foundation import lattice as foundation, base as foundation_base
 
 mem_book = {}
 verbose_lattice_creation = is_verbose("lattice_creation")
@@ -39,7 +40,7 @@ class lattice_view_constructor:
 
 
 def unpack_cache_key(key):
-    if type(key) == tuple and type(key[-1]) == dict:
+    if isinstance(key, tuple) and isinstance(key[-1], dict):
         cache = key[-1]
         key = key[0:-1]
         if len(key) == 1:
@@ -50,16 +51,17 @@ def unpack_cache_key(key):
 
 
 # lattice class
-class lattice(factor):
+class lattice(factor, foundation_base):
     __array_priority__ = 1000000
     cache = {}
+    foundation = foundation
 
     def __init__(self, first, second=None, third=None):
         self.metadata = {}
         cb = None
-        if type(first) == gpt.grid:
+        if isinstance(first, gpt.grid):
             self.grid = first
-            if type(second) == str:
+            if isinstance(second, str):
                 # from desc
                 p = second.split(";")
                 self.otype = gpt.str_to_otype(p[0])
@@ -77,7 +79,7 @@ class lattice(factor):
                         cgpt.create_lattice(self.grid.obj, t, self.grid.precision.cgpt_dtype)
                         for t in self.otype.v_otype
                     ]
-        elif type(first) == gpt.lattice:
+        elif isinstance(first, gpt.lattice):
             # Note that copy constructor only creates a compatible lattice but does not copy its contents!
             self.grid = first.grid
             self.otype = first.otype
@@ -103,6 +105,9 @@ class lattice(factor):
         del mem_book[self.v_obj[0]]
         for o in self.v_obj:
             cgpt.delete_lattice(o)
+
+    def new(self):
+        return lattice(self)
 
     def swap(self, other):
         assert self.grid == other.grid
@@ -140,8 +145,11 @@ class lattice(factor):
         # creates a string without spaces that can be used to construct it again (may be combined with self.grid.describe())
         return self.otype.__name__ + ";" + self.checkerboard().__name__
 
+    def nfloats(self):
+        return self.otype.nfloats * self.grid.gsites
+
     def global_bytes(self):
-        return self.otype.nfloats * self.grid.gsites * self.grid.precision.nbytes
+        return self.nfloats() * self.grid.precision.nbytes
 
     def rank_bytes(self):
         return self.global_bytes() // self.grid.Nprocessors
@@ -156,8 +164,7 @@ class lattice(factor):
         cache_key = None if cache is None else "set"
 
         # short code path to zero lattice
-        if type(key) == slice and key == slice(None, None, None):
-
+        if isinstance(key, slice) and key == slice(None, None, None):
             if gpt.util.is_num(value):
                 for o in self.v_obj:
                     cgpt.lattice_set_to_number(o, value)
@@ -203,7 +210,6 @@ class lattice(factor):
         xp(self, value)
 
     def __getitem__(self, key):
-
         # unpack cache
         cache, key = unpack_cache_key(key)
         cache_key = None if cache is None else "get"
@@ -234,8 +240,11 @@ class lattice(factor):
 
         # if only a single element is returned and we have the full shape,
         # wrap in a tensor
-        if len(value) == 1 and shape == self.otype.shape:
-            return gpt.util.value_to_tensor(value[0], self.otype)
+        if len(value) == 1:
+            if shape == self.otype.shape:
+                return gpt.util.value_to_tensor(value[0], self.otype)
+            elif numpy.prod(shape) == 1:
+                value = value.item()
 
         return value
 
@@ -279,8 +288,8 @@ class lattice(factor):
         return self
 
     def __lt__(self, other):
-        assert self.otype.data_otype() == gpt.ot_singlet
-        assert other.otype.data_otype() == gpt.ot_singlet
+        assert isinstance(self.otype.data_otype(), gpt.ot_singlet)
+        assert isinstance(other.otype.data_otype(), gpt.ot_singlet)
         res = gpt.lattice(self)
         params = {"operator": "<"}
         cgpt.binary(res.v_obj[0], self.v_obj[0], other.v_obj[0], params)

@@ -26,7 +26,7 @@ import gpt, cgpt
 #
 class map:
     def __init__(self, coarse_grid, basis, mask=None, basis_n_block=8):
-        assert type(coarse_grid) == gpt.grid
+        assert isinstance(coarse_grid, gpt.grid)
         assert len(basis) > 0
 
         if mask is None:

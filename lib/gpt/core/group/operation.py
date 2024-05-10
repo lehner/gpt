@@ -33,6 +33,12 @@ def projected_convert(x, otype):
     return g.project(g.convert(x, otype), "defect")
 
 
+def inner_product(left, right):
+    if isinstance(left, list):
+        return sum([inner_product(x, y) for x, y in zip(left, right)])
+    return left.__class__.foundation.group_inner_product(left, right)
+
+
 def compose(left, right):
     as_list = isinstance(left, list)
 
@@ -68,11 +74,3 @@ def compose(left, right):
         return dst
 
     return dst[0]
-
-
-def inner_product(left, right):
-    if isinstance(left, list):
-        return sum([inner_product(x, y) for x, y in zip(left, right)])
-    # inner product over group's real vector space
-    left_type = left.otype
-    return left_type.inner_product(left, right)

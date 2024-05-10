@@ -107,7 +107,7 @@ def split_lattices(lattices, lcoor, gcoor, split_grid, N, cache, group_policy):
 
 
 def unsplit(first, second, cache=None, group_policy=split_group_policy.separate):
-    if type(first) != list:
+    if not isinstance(first, list):
         return unsplit([first], [second])
 
     n = len(first)
@@ -148,7 +148,7 @@ def unsplit(first, second, cache=None, group_policy=split_group_policy.separate)
 
 
 def split_by_rank(first, group_policy=split_group_policy.separate):
-    if type(first) != list:
+    if not isinstance(first, list):
         return split_by_rank([first])[0]
 
     assert len(first) > 0

@@ -23,7 +23,6 @@ default_staple_cache = {}
 
 
 def staple_sum(U, rho, mu=None, cache=default_staple_cache):
-
     Nd = len(U)
 
     tag = f"{U[0].otype.__name__}_{U[0].grid}_{Nd}_{str(rho)}_{str(mu)}"
@@ -36,7 +35,6 @@ def staple_sum(U, rho, mu=None, cache=default_staple_cache):
     Ntarget = len(target_mu)
 
     if tag not in cache:
-
         code = []
         nwr = [0] * Ntarget
         for idx in range(Ntarget):

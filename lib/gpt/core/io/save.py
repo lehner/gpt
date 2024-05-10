@@ -19,6 +19,7 @@
 import gpt, cgpt
 from gpt.params import params_convention
 
+
 # format
 class format:
     class gpt:
@@ -39,10 +40,9 @@ class format:
 
 # output
 def save(filename, objs, fmt=format.gpt()):
-
-    if type(fmt) == format.gpt:
+    if isinstance(fmt, format.gpt):
         return gpt.core.io.gpt_io.save(filename, objs, fmt.params)
-    elif type(fmt) == format.cevec:
+    elif isinstance(fmt, format.cevec):
         return gpt.core.io.cevec_io.save(filename, objs, fmt.params)
 
     return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))

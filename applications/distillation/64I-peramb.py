@@ -191,7 +191,6 @@ class job_perambulator(g.jobs.base):
         srcD = [g.vspincolor(current_config.l_exact.U_grid) for spin in range(4)]
 
         for i in self.ilist:
-
             for spin in range(4):
                 srcD[spin][:] = 0
                 srcD[spin][c, spin, :] = vcj[i][c]
@@ -289,11 +288,9 @@ class job_contraction(g.jobs.base):
             prec = {"sloppy": 0, "exact": 1}[self.solver]
 
             for spin_prime in range(4):
-
                 plan = None
 
                 for spin in range(4):
-
                     for i in range(i0, i0 + sloppy_per_job):
                         hp = half_peramb[f"t{self.t}s{spin}c{i}_{self.solver}"]
 
@@ -498,10 +495,8 @@ class job_compress_half_peramb(g.jobs.base):
 
         half_peramb = {"sparse_domain": sdomain}
         for i0 in range(0, basis_size, sloppy_per_job):
-
             for l in g.load(f"{root}/{self.conf}/pm_{self.solver}_t{self.t}_i{i0}/propagators"):
                 for x in l:
-
                     S = sdomain.lattice(l[x].otype)
                     sdomain.project(S, l[x])
 

@@ -20,6 +20,7 @@ import gpt as g
 import numpy as np
 from gpt.params import params_convention
 
+
 #
 # Create a matrix A from a mode representation
 #

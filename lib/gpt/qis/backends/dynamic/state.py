@@ -82,7 +82,6 @@ class state:
         return s
 
     def prefetch(self, local_qubits):
-
         high_qubits = []
         for i in range(self.number_of_qubits):
             if i not in local_qubits:

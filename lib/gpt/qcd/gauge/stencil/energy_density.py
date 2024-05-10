@@ -23,13 +23,11 @@ default_energy_density_cache = {}
 
 
 def energy_density(U, field=False, trace=True, cache=default_energy_density_cache):
-
     Nd = len(U)
 
     tag = f"{U[0].otype.__name__}_{U[0].grid}_{Nd}"
 
     if tag not in cache:
-
         code = []
         _temp1 = 1
         _target = 0

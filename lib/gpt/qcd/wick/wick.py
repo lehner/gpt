@@ -69,8 +69,7 @@ class wick:
 
             self.propagators = {}
             for p in propagators:
-
-                if type(propagators[p]) == dict:
+                if isinstance(propagators[p], dict):
                     self.propagators[p] = propagators[p]
                 else:
                     p_sc = {}
@@ -99,7 +98,6 @@ class wick:
 
         def __call__(self, x, spin_index, color_index):
             def _eval(context, path):
-
                 propagators = context["propagators"]
                 propagators_indices = context["propagators_indices"]
 
@@ -168,11 +166,9 @@ class wick:
         return wick.field(self.index(self.fermions, 1, -1), propagators, False)
 
     def epsilon(self, *indices):
-
         indices = list(indices)
 
         def _eval(context, path):
-
             t = tensor(basis(indices), context["n"])
             for idx, sign in g.epsilon(len(indices)):
                 t[tuple(idx)] = sign
@@ -189,7 +185,6 @@ class wick:
             self.tensor = tensor
 
         def __call__(self, alpha, beta):
-
             # order needs to match order in eval tensor
             indices = [alpha, beta]
 
@@ -217,7 +212,6 @@ class wick:
         result_indices = [i for i in expression_indices if i not in indices]
 
         def _eval(context, path):
-
             ev = [
                 exp.evaluate(context, path + "/sum" + str(ii)) for ii, exp in enumerate(expressions)
             ]
@@ -233,7 +227,6 @@ class wick:
         return expression(result_indices, _contract, _eval)
 
     def __call__(self, expression, verbose=False, separate_diagrams=False):
-
         if verbose:
             g.message(f"Open indices: {expression.indices}")
 
@@ -255,7 +248,6 @@ class wick:
         results = []
         diag_index = 0
         for sign, propagators in contractions:
-
             e_context = evaluation_context()
             e_context["propagators"] = propagators
 

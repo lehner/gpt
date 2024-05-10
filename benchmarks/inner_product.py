@@ -7,6 +7,7 @@
 import gpt as g
 import cgpt
 
+
 # helper functions to access data on host or accelerator
 def access_host(a):
     for x in a:
@@ -48,7 +49,6 @@ Inner Product Benchmark with
                 (False, "host", access_host),
                 (True, "accelerator", access_accelerator),
             ]:
-
                 # Time
                 dt = 0.0
                 cgpt.timer_begin()

@@ -81,7 +81,6 @@ def grid_get_mpi_default(fdimensions, cb):
     # first try to find mpi layout for dimension nd
     mpi = gpt.default.get_ivec(tag, None, nd)
     if mpi is None and nd > 4:
-
         # if not found but dimension is larger than four, we try to extend the four-dimensional grid
         mpi = gpt.default.get_ivec(tag, None, 4)
         if mpi is not None:
@@ -96,7 +95,7 @@ def grid_get_mpi_default(fdimensions, cb):
 
 
 def global_sum_default(grid, x):
-    if type(x) == gpt.tensor:
+    if isinstance(x, gpt.tensor):
         cgpt.grid_globalsum(grid.obj, x.array)
         return x
     else:
@@ -105,7 +104,6 @@ def global_sum_default(grid, x):
 
 class grid:
     def __init__(self, fdimensions, precision, cb=None, obj=None, mpi=None, parent=None):
-
         self.fdimensions = fdimensions
         self.fsites = np.prod(self.fdimensions)
         self.precision = precision

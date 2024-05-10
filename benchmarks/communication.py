@@ -44,13 +44,10 @@ for i in range(N):
         j_coordinates = g.broadcast(j, local_coordinates)
 
         if i != j:
-
             msg = ""
 
             for tag, lat in [("host", lattice_host), ("acc", lattice_accelerator)]:
-
                 for use_communication_buffers in [False, True]:
-
                     plan = g.copy_plan(lat, lat)
                     plan.destination += lat.view[i_coordinates]
                     plan.source += lat.view[j_coordinates]

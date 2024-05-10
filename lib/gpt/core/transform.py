@@ -20,87 +20,89 @@ import cgpt, gpt, numpy
 
 
 def cshift(first, second, third, fourth=None):
-
-    if type(first) == gpt.lattice and type(second) == gpt.lattice and fourth is not None:
-        t = first
-        l = gpt.eval(second)
-        d = third
-        o = fourth
-    else:
-        l = gpt.eval(first)
-        d = second
-        o = third
-        t = gpt.lattice(l)
-
-    for i in t.otype.v_idx:
-        cgpt.cshift(t.v_obj[i], l.v_obj[i], d, o)
-    return t
+    if isinstance(first, gpt.expr):
+        first = gpt.eval(first)
+    if isinstance(first, gpt.expr):
+        second = gpt.eval(second)
+    return first.__class__.foundation.cshift(first, second, third, fourth)
 
 
 def copy(first, second=None):
-
+    return_list = isinstance(first, list)
     if second is not None:
-        t = first
-        l = second
-
+        t = gpt.util.to_list(first)
+        l = gpt.util.to_list(second)
     else:
-        l = first
-        if type(l) == list:
-            t = [gpt.lattice(x) for x in l]
-        else:
-            t = gpt.lattice(l)
+        l = gpt.util.to_list(first)
+        t = [x.new() for x in l]
 
-    if isinstance(l, gpt.lattice):
-        for i in t.otype.v_idx:
-            cgpt.copy(t.v_obj[i], l.v_obj[i])
-    else:
-        for j in range(len(l)):
-            for i in t[j].otype.v_idx:
-                cgpt.copy(t[j].v_obj[i], l[j].v_obj[i])
-
+    l[0].__class__.foundation.copy(t, l)
+    if not return_list:
+        return t[0]
     return t
 
 
-def rank_inner_product(a, b, use_accelerator=True):
-    return_list = (type(a) == list) or (type(b) == list)
+def eval_list(a):
+    return [gpt.eval(x) if isinstance(x, gpt.expr) else x for x in a]
+
+
+def call_binary_aa_num(functional, a, b):
+    return_list = (isinstance(a, list)) or (isinstance(b, list))
     a = gpt.util.to_list(a)
     b = gpt.util.to_list(b)
-    if type(a[0]) == gpt.tensor and type(b[0]) == gpt.tensor:
-        res = numpy.array([[gpt.adj(x) * y for y in b] for x in a], dtype=numpy.complex128)
-    else:
-        a = [gpt.eval(x) for x in a]
-        b = [gpt.eval(x) for x in b]
-        otype = a[0].otype
-        assert len(otype.v_idx) == len(b[0].otype.v_idx)
-        res = cgpt.lattice_rank_inner_product(a, b, use_accelerator)
+    res = functional(eval_list(a), eval_list(b))
     if return_list:
         return res
     return gpt.util.to_num(res[0, 0])
 
 
-def inner_product(a, b):
-    grid = gpt.util.to_list(a)[0].grid
-    return grid.globalsum(rank_inner_product(a, b))
+def call_unary_a_num(functional, a):
+    return_list = isinstance(a, list)
+    if not return_list:
+        a = [a]
+    a = eval_list(a)
+    objects = {}
+    indices = {}
+    for n, x in enumerate(a):
+        fnd = x.foundation
+        if fnd not in objects:
+            objects[fnd] = []
+            indices[fnd] = []
+        objects[fnd].append(x)
+        indices[fnd].append(n)
+    res = [None] * len(a)
+    for fnd in objects:
+        idx = indices[fnd]
+        res_fnd = functional(objects[fnd])
+        for i in range(len(idx)):
+            res[idx[i]] = res_fnd[i]
+    if return_list:
+        return res
+    return gpt.util.to_num(res[0])
+
+
+def rank_inner_product(a, b, use_accelerator=True):
+    return call_binary_aa_num(
+        lambda la, lb: la[0].__class__.foundation.rank_inner_product(la, lb, use_accelerator), a, b
+    )
+
+
+def inner_product(a, b, use_accelerator=True):
+    return call_binary_aa_num(
+        lambda la, lb: la[0].__class__.foundation.inner_product(la, lb, use_accelerator), a, b
+    )
 
 
 def norm2(l):
-    if type(l) == gpt.tensor:
-        return l.norm2()
-    l = gpt.eval(l)
-    return_list = type(l) == list
-    l = gpt.util.to_list(l)
-    ip = (
-        l[0]
-        .grid.globalsum(numpy.array([rank_inner_product(x, x) for x in l], dtype=numpy.complex128))
-        .real
-    )
-    if return_list:
-        return ip
-    return gpt.util.to_num(ip[0])
+    return call_unary_a_num(lambda la: la[0].__class__.foundation.norm2(la), l)
+
+
+def object_rank_norm2(l):
+    return call_unary_a_num(lambda la: la[0].__class__.foundation.object_rank_norm2(la), l)
 
 
 def inner_product_norm2(a, b):
-    if type(a) == gpt.tensor and type(b) == gpt.tensor:
+    if isinstance(a, gpt.tensor) and isinstance(b, gpt.tensor):
         return gpt.adj(a) * b, a.norm2()
     a = gpt.eval(a)
     b = gpt.eval(b)
@@ -153,22 +155,19 @@ def indexed_sum(fields, index, length):
 
 
 def identity(src):
-    eye = gpt.lattice(src)
-    # identity only works for matrix types
-    n2 = len(eye.v_obj)
-    n = int(n2**0.5)
-    assert n * n == n2
-    for i in range(n):
-        for j in range(n):
-            if i == j:
-                cgpt.lattice_set_to_identity(eye.v_obj[i * n + j])
-            else:
-                cgpt.lattice_set_to_number(eye.v_obj[i * n + j], 0.0)
-    return eye
+    return src.__class__.foundation.identity(src)
+
+
+def infinitesimal_to_cartesian(src, dsrc):
+    if gpt.util.is_num(src):
+        return dsrc
+    return dsrc.__class__.foundation.infinitesimal_to_cartesian(src, dsrc)
 
 
 def project(src, method):
-    src.otype.project(src, method)
+    otype = src.otype
+    otype.project(src, method)
+    src.otype = otype
     return src
 
 

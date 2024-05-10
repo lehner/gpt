@@ -30,13 +30,16 @@ class nersc_io:
         gpt.barrier()
 
     def read_header(self):
-
         # make sure this is a file
         if not os.path.isfile(self.path):
             return False
 
         with open(self.path, "rb") as f:
-            line = self.getline(f)
+            try:
+                line = self.getline(f)
+            except UnicodeDecodeError:
+                return False
+
             if line != "BEGIN_HEADER":
                 return False
 
@@ -245,11 +248,13 @@ class nersc_io:
 
 
 def load(filename, p={}):
-
     lat = nersc_io(filename)
 
     # check if this is right file format from header
     if not lat.read_header():
         raise NotImplementedError()
 
-    return lat.read_lattice()
+    ret = lat.read_lattice()
+    for r in ret:
+        r.metadata = lat.metadata
+    return ret

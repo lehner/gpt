@@ -31,7 +31,6 @@ class expression:
         return other.__mul__(self)
 
     def __mul__(self, other):
-
         if g.util.is_num(other):
 
             def _neval(context, path):

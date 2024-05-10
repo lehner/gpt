@@ -297,9 +297,9 @@ qm1 = g.qcd.fermion.mobius(
     boundary_phases=[1, 1, 1, -1],
 )
 
+
 # reference implementation
 def D_DWF(dst, src, b, c, mass_plus, mass_minus):
-
     D_W = g.qcd.fermion.wilson_clover(
         U,
         mass=-1.8,

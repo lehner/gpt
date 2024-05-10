@@ -82,7 +82,7 @@ class step:
 
     def __call__(self, eps):
         for i in range(self.nf):
-            gpt.message(f"call eps = {eps}, {i} / {self.nf}")
+            # gpt.message(f"call eps = {eps}, {i} / {self.nf}")
             self.funcs[i](self.c[i] * eps**self.n)
 
 

@@ -37,7 +37,7 @@ template<class vobj> inline void cgpt_pickCheckerboard(int cb,Lattice<vobj> &hal
   GridView gf(full.Grid());
   GridView gh(half.Grid());
   
-  accelerator_for(ss, full.Grid()->oSites(),full.Grid()->Nsimd(),{
+  accelerator_for(ss, full.Grid()->oSites(),(size_t)full.Grid()->Nsimd(),{
     int cbos;
     Coordinate coor;
     gf.oCoorFromOindex(coor,ss);
@@ -62,7 +62,7 @@ template<class vobj> inline void cgpt_setCheckerboard(Lattice<vobj> &full,const 
   GridView gf(full.Grid());
   GridView gh(half.Grid());
 
-  accelerator_for(ss,full.Grid()->oSites(),full.Grid()->Nsimd(),{
+  accelerator_for(ss,full.Grid()->oSites(),(size_t)full.Grid()->Nsimd(),{
 
     Coordinate coor;
     int cbos;
@@ -113,7 +113,7 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
   int in_nsimd = in_grid->Nsimd();
   int out_nsimd = out_grid->Nsimd();
 
-  accelerator_for(in_oidx,in_grid->oSites(),in_nsimd,{
+  accelerator_for(in_oidx,in_grid->oSites(),(size_t)in_nsimd,{
 
       Coordinate in_ocoor(ndim);
       int lcoor;

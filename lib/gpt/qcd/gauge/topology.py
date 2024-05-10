@@ -53,7 +53,6 @@ def topological_charge_5LI(U, field=False, trace=True, cache=default_rectangle_c
     res = accumulator(U[0])
     # symmetric loops
     for loop, Lmu, Lnu in [(0, 1, 1), (1, 2, 2), (4, 3, 3)]:
-
         B = []
         E = []
 
@@ -88,7 +87,6 @@ def topological_charge_5LI(U, field=False, trace=True, cache=default_rectangle_c
 
     # asymmetric loops
     for loop, Lmu, Lnu in [(2, 1, 2), (3, 1, 3)]:
-
         B = []
         E = []
 

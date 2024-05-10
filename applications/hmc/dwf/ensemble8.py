@@ -94,6 +94,7 @@ cg_e = inv.defect_correcting(
     maxiter=100,
 )
 
+
 # chronological inverter
 def mk_chron(slv):
     solution_space = []
@@ -257,7 +258,6 @@ def fermion_force():
         y[:] = 0
 
     if not pure_gauge:
-
         forces = [[g.lattice(y) for y in x] for i in fields]
 
         log.time("fermion forces")

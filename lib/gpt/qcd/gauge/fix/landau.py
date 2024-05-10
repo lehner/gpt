@@ -35,8 +35,9 @@ class landau(differentiable_functional):
             g(g.qcd.gauge.project.traceless_anti_hermitian(u) / 1j)
             for u in g.qcd.gauge.transformed(self.U, V)
         ]
-        dmuAmu = g.lattice(V.grid, V.otype.cartesian())
-        dmuAmu[:] = 0
+        dmuAmu = V.new()
+        dmuAmu.otype = V.otype.cartesian()
+        dmuAmu = g(0.0 * dmuAmu)
         for mu, Amu in enumerate(A):
             dmuAmu += Amu - g.cshift(Amu, mu, -1)
         return dmuAmu

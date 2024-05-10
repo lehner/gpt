@@ -23,7 +23,6 @@ default_plaquette_cache = {}
 
 
 def plaquette(U, cache=default_plaquette_cache):
-
     vol = float(U[0].grid.fsites)
     Nd = len(U)
     ndim = U[0].otype.shape[0]
@@ -31,7 +30,6 @@ def plaquette(U, cache=default_plaquette_cache):
     tag = f"{U[0].otype.__name__}_{U[0].grid}_{Nd}"
 
     if tag not in cache:
-
         code = []
         for mu in range(Nd):
             for nu in range(mu):

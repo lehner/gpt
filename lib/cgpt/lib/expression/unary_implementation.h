@@ -111,17 +111,17 @@ void cgpt_unary(cgpt_Lattice<T> * pc, int unary) {
     
     switch (unary) {
     case BIT_TRANS|BIT_CONJ:
-      accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+      accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
 	  cgpt_adj(p_r[osite], p_l[osite]);
 	});
       break;
     case BIT_TRANS:
-      accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+      accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
 	  cgpt_trans(p_r[osite], p_l[osite]);
 	});
       break;
     case BIT_CONJ:
-      accelerator_for(osite, grid->oSites(), grid->Nsimd(), {
+      accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
 	  cgpt_conj(p_r[osite], p_l[osite]);
 	});
       break;

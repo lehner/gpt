@@ -20,6 +20,7 @@
 import gpt, cgpt, numpy
 from gpt.core.domain.two_grid_base import two_grid_base
 
+
 # ix = x[0] + lat[0]*(x[1] + lat[2]*...)
 def index_to_coordinate(ix, lat):  # go through cgpt and order=lexicographic
     x = [0] * len(lat)

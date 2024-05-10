@@ -25,11 +25,11 @@ class local_coordinates(numpy.ndarray):
 
 
 def coordinates(o, order="lexicographic", margin_top=None, margin_bottom=None):
-    if type(o) == gpt.grid and o.cb.n == 1:
+    if isinstance(o, gpt.grid) and o.cb.n == 1:
         return coordinates(
             (o, gpt.none), order=order, margin_top=margin_top, margin_bottom=margin_bottom
         )
-    elif type(o) == tuple and type(o[0]) == gpt.grid and len(o) == 2:
+    elif isinstance(o, tuple) and isinstance(o[0], gpt.grid) and len(o) == 2:
         dim = len(o[0].ldimensions)
         cb = o[1].tag
         checker_dim_mask = o[0].cb.cb_mask
@@ -51,14 +51,14 @@ def coordinates(o, order="lexicographic", margin_top=None, margin_bottom=None):
             x = numpy.mod(x, L)
 
         return x
-    elif type(o) == gpt.lattice:
+    elif isinstance(o, gpt.lattice):
         return coordinates(
             (o.grid, o.checkerboard()),
             order=order,
             margin_top=margin_top,
             margin_bottom=margin_bottom,
         )
-    elif type(o) == gpt.cartesian_view:
+    elif isinstance(o, gpt.cartesian_view):
         assert margin_top is None and margin_bottom is None
         return cgpt.coordinates_from_cartesian_view(
             o.top, o.bottom, o.checker_dim_mask, o.cb, order
@@ -76,7 +76,6 @@ def relative_coordinates(x, o, l):
 
 
 def apply_exp_ixp(dst, src, p, origin, cache):
-
     cache_key = f"{src.grid}_{src.checkerboard().__name__}_{origin}_{p}"
     if cache_key not in cache:
         x = gpt.coordinates(src)
@@ -92,8 +91,7 @@ def apply_exp_ixp(dst, src, p, origin, cache):
 
 
 def exp_ixp(p, origin=None):
-
-    if type(p) == list:
+    if isinstance(p, list):
         return [exp_ixp(x, origin) for x in p]
     elif isinstance(p, numpy.ndarray):
         p = p.tolist()
@@ -133,7 +131,7 @@ def fft(dims=None):
 
 def coordinate_mask(field, mask):
     assert isinstance(mask, numpy.ndarray)
-    assert field.otype.data_otype() == gpt.ot_singlet
+    assert isinstance(field.otype.data_otype(), gpt.ot_singlet)
 
     x = gpt.coordinates(field)
     field[x] = mask.astype(field.grid.precision.complex_dtype).reshape((len(mask), 1))

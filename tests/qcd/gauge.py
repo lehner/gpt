@@ -115,7 +115,6 @@ assert eps < 1e-13
 
 # Test gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:
-
     # test action double precision versus quadruple precision
     a_ref = action(U)
     a_quad = action(U_quad)
@@ -223,3 +222,16 @@ for f, f_test, tag, expected_improvement in [
     eps1 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
     g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")
     assert eps1 / eps0 < expected_improvement
+
+
+# test temporal gauge
+V = g.qcd.gauge.fix.identity(U, mu=3)
+
+Up = g.qcd.gauge.transformed(U, V)
+
+ref = g.identity(V)[0, 0, 0, 0]
+
+for t in range(grid.gdimensions[3] - 1):
+    eps2 = g.norm2(Up[3][0, 0, 0, t] - ref)
+    g.message(f"Test temporal gauge at t={t}: {eps2}")
+    assert eps2 < 1e-25

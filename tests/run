@@ -72,6 +72,7 @@ for f in \
     ${test_path}/io/io.py \
     ${test_path}/io/qlat.py \
     ${test_path}/qis/qis.py \
+    ${test_path}/ad/ad.py \
     ${test_path}/ml/sequence.py \
     ${test_path}/ml/parallel_transport_pooling.py
 do

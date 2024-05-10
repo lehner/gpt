@@ -16,13 +16,9 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt
+import gpt
 
 
 def det(A):
     A = gpt.eval(A)
-    assert type(A) == gpt.lattice
-    r = gpt.complex(A.grid)
-    to_list = gpt.util.to_list
-    cgpt.determinant(r.v_obj[0], to_list(A))
-    return r
+    return A.__class__.foundation.matrix_det(A)
