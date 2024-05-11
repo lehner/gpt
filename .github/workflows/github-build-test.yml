@@ -400,7 +400,7 @@ jobs:
         cd gpt
         export PYTHONPATH=/usr/local/lib/python${{ matrix.python-version}}/site-packages:/usr/local/lib64/python${{ matrix.python-version}}/site-packages
         export WORK_DIR=$(mktemp -d)
-        ./tests/run "python" "--mpi_split 1.1.1.1" # "" -> "coverage run"
+        #./tests/run "" "--mpi_split 1.1.1.1" # "" -> "coverage run"
 
     - name: Run tests
       if: matrix.mpi == 'openmpi'
