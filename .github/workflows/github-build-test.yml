@@ -461,7 +461,7 @@ jobs:
     - name: Setup python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.10
+        python-version: '3.10'
         architecture: x64
 
     - name: Setup python dependencies
