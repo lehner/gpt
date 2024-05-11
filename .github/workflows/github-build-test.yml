@@ -184,10 +184,10 @@ jobs:
       if: matrix.compiler == 'clang'
       run: |
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-10 1
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 1
 
         sudo update-alternatives --set cc /usr/bin/clang-10
-        sudo update-alternatives --set c++ /usr/bin/clang++-9
+        sudo update-alternatives --set c++ /usr/bin/clang++-10
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -340,7 +340,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.6', '3.7', '3.8']
+        python-version: ['3.8','3.9','3.10']
         compiler: ['gcc', 'clang']
         mpi: ['none', 'mpich', 'openmpi']
 
@@ -358,10 +358,10 @@ jobs:
       if: matrix.compiler == 'clang'
       run: |
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-10 1
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 1
 
         sudo update-alternatives --set cc /usr/bin/clang-10
-        sudo update-alternatives --set c++ /usr/bin/clang++-9
+        sudo update-alternatives --set c++ /usr/bin/clang++-10
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
