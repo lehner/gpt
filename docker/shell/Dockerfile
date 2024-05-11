@@ -8,7 +8,7 @@ ARG MPI=none
 RUN \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-        libfftw3-double3 libfftw3-single3 libomp5-9 libmpfr6 && \
+        libfftw3-double3 libfftw3-single3 libomp5 libmpfr6 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY gpt-packages/python-gpt-Linux-python-3.10-${COMPILER}-${MPI}.deb /app/
