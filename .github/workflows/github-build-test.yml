@@ -461,7 +461,7 @@ jobs:
     - name: Setup python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: 3.10
         architecture: x64
 
     - name: Setup python dependencies
@@ -471,11 +471,11 @@ jobs:
     - name: Download prebuild python-gpt
       uses: actions/download-artifact@v3
       with:
-        name: python-gpt-${{ runner.os }}-python-3.8-gcc-none-${{ needs.build-gpt.outputs.python-gpt-version }}
+        name: python-gpt-${{ runner.os }}-python-3.10-gcc-none-${{ needs.build-gpt.outputs.python-gpt-version }}
 
     - name: Install python-gpt
       run: |
-        sudo dpkg -i python-gpt-${{ runner.os }}-python-3.8-gcc-none.deb
+        sudo dpkg -i python-gpt-${{ runner.os }}-python-3.10-gcc-none.deb
 
     - name: Clone gpt
       uses: actions/checkout@v3
@@ -485,7 +485,7 @@ jobs:
     - name: Build documentation
       id: build-documentation
       env:
-        PYTHONPATH: /usr/local/lib/python3.8/site-packages:/usr/local/lib64/python3.8/site-packages
+        PYTHONPATH: /usr/local/lib/python3.10/site-packages:/usr/local/lib64/python3.10/site-packages
       run: |
         cd gpt/documentation
         make html
@@ -558,12 +558,12 @@ jobs:
         if: ${{ steps.check-build.outputs.build }}
         uses: actions/download-artifact@v3
         with:
-          name: python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
+          name: python-gpt-${{ runner.os }}-python-3.10-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
 
       - name: Move python-gpt package to docker folder
         if: ${{ steps.check-build.outputs.build }}
         run: |
-          mv python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/shell/gpt-packages
+          mv python-gpt-${{ runner.os }}-python-3.10-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/shell/gpt-packages
           cp -r documentation/tutorials/ docker/notebook
           cp -r tests/ benchmarks/ applications/ docker/shell
 
