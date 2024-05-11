@@ -38,16 +38,16 @@ jobs:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-10 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
+        sudo apt-get install -y clang libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
-    - name: Set compiler alternatives to clang-10
+    - name: Set compiler alternatives to clang
       if: matrix.compiler == 'clang'
       run: |
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-10 1
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 1
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 1
 
-        sudo update-alternatives --set cc /usr/bin/clang-10
-        sudo update-alternatives --set c++ /usr/bin/clang++-10
+        sudo update-alternatives --set cc /usr/bin/clang
+        sudo update-alternatives --set c++ /usr/bin/clang++
 
     - name: Set compiler to cc and c++
       if: matrix.mpi == 'none'
@@ -178,16 +178,16 @@ jobs:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-10 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
+        sudo apt-get install -y clang libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
-    - name: Set compiler alternatives to clang-10
+    - name: Set compiler alternatives to clang
       if: matrix.compiler == 'clang'
       run: |
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-10 1
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 1
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 1
 
-        sudo update-alternatives --set cc /usr/bin/clang-10
-        sudo update-alternatives --set c++ /usr/bin/clang++-10
+        sudo update-alternatives --set cc /usr/bin/clang
+        sudo update-alternatives --set c++ /usr/bin/clang++
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -352,16 +352,16 @@ jobs:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-10 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
+        sudo apt-get install -y clang libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
-    - name: Set compiler alternatives to clang-10
+    - name: Set compiler alternatives to clang
       if: matrix.compiler == 'clang'
       run: |
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-10 1
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 1
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 1
 
-        sudo update-alternatives --set cc /usr/bin/clang-10
-        sudo update-alternatives --set c++ /usr/bin/clang++-10
+        sudo update-alternatives --set cc /usr/bin/clang
+        sudo update-alternatives --set c++ /usr/bin/clang++
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -456,7 +456,7 @@ jobs:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-10 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+        sudo apt-get install -y clang libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Setup python
       uses: actions/setup-python@v4
