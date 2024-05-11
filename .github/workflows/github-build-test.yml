@@ -14,7 +14,7 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2024-05-11
+  CACHE_KEY: 2024-05-11b
 
 jobs:
   build-grid:
@@ -197,7 +197,7 @@ jobs:
         sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         architecture: x64
@@ -371,7 +371,7 @@ jobs:
         sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         architecture: x64
@@ -459,7 +459,7 @@ jobs:
         sudo apt-get install -y clang libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Setup python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
         architecture: x64
