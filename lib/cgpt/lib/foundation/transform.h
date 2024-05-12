@@ -191,9 +191,9 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
   accelerator_for(_idx,index_osites_per_block * n_elem * Nbasis,1,{
 
       uint64_t idx = _idx;
-      uint64_t ii = _idx % index_osites_per_block; _idx /= index_osites_per_block;
-      uint64_t i = _idx % n_elem; _idx /= n_elem;
-      uint64_t nb = _idx % Nbasis; _idx /= Nbasis;
+      uint64_t ii = idx % index_osites_per_block; idx /= index_osites_per_block;
+      uint64_t i = idx % n_elem; idx /= n_elem;
+      uint64_t nb = idx % Nbasis; idx /= Nbasis;
       
       for (long jj=0;jj<len;jj++) {
 	long oidx = jj*index_osites_per_block + ii;
