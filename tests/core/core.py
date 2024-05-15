@@ -161,13 +161,22 @@ for lattice_object in [
     rng.cnormal(obj_list)
 
     for dimension in range(4):
+        clat = g.complex(obj_list[0].grid)
+        clat[:] = np.ascontiguousarray(g.coordinates(clat)[:, dimension].astype(np.complex128))
+
         tmp = g.slice(obj_list, dimension)
         full_sliced = np.array([[g.util.tensor_to_value(v) for v in obj] for obj in tmp])
+        tmp2 = g.indexed_sum(obj_list, clat, clat.grid.gdimensions[dimension])
+        full_sliced2 = np.array([[g.util.tensor_to_value(v) for v in obj] for obj in tmp2])
 
         for n, obj in enumerate(obj_list):
             tmp = g.slice(obj, dimension)
+            tmp2 = g.indexed_sum(obj, clat, obj.grid.gdimensions[dimension])
             sliced = np.array([g.util.tensor_to_value(v) for v in tmp])
+            sliced2 = np.array([g.util.tensor_to_value(v) for v in tmp2])
             assert np.allclose(full_sliced[n], sliced, atol=0.0, rtol=1e-13)
+            assert np.allclose(full_sliced2[n], sliced2, atol=0.0, rtol=1e-13)
+            assert np.allclose(sliced, sliced2, atol=0.0, rtol=1e-12)
 
             sliced_numpy = np.array(
                 [

@@ -44,9 +44,9 @@ class tensor:
         self.osites_per_cache_block = lat.grid.gsites
 
     def __call__(self, *fields):
-        cgpt.stencil_tensor_execute(self.obj, list(fields),
-                                    self.osites_per_instruction,
-                                    self.osites_per_cache_block)
+        cgpt.stencil_tensor_execute(
+            self.obj, list(fields), self.osites_per_instruction, self.osites_per_cache_block
+        )
 
     def __del__(self):
         cgpt.stencil_tensor_delete(self.obj)
