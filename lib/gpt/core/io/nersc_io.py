@@ -254,4 +254,7 @@ def load(filename, p={}):
     if not lat.read_header():
         raise NotImplementedError()
 
-    return lat.read_lattice()
+    ret = lat.read_lattice()
+    for r in ret:
+        r.metadata = lat.metadata
+    return ret

@@ -32,7 +32,7 @@ Matrix Multiply Benchmark with
 
         # matrix multiply
         nbytes = 3.0 * one.global_bytes() * N
-        n = (one.otype.nfloats // 2)**0.5
+        n = (one.otype.nfloats // 2) ** 0.5
         flops_per_matrix_multiply = n * n * (n * 6 + (n - 1) * 2)
         flops = flops_per_matrix_multiply = grid.gsites * N * flops_per_matrix_multiply
 

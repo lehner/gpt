@@ -45,6 +45,12 @@ class gpt_io:
         if self.params["grids"] is None:
             self.params["grids"] = {}
         self.verbose = gpt.default.is_verbose("io")
+        self.verbose_paths = gpt.default.is_verbose("io_paths")
+
+        # escape paths
+        if self.params["paths"] is not None:
+            replace = str.maketrans({"[": "[[]", "]": "[]]"})
+            self.params["paths"] = [p.translate(replace) for p in self.params["paths"]]
 
         if gpt.rank() == 0:
             os.makedirs(self.root, exist_ok=True)
@@ -351,7 +357,7 @@ class gpt_io:
         if isinstance(objs, dict):
             f.write("{\n")
             for x in objs:
-                f.write(x.encode("unicode_escape").decode("utf-8") + "\n")
+                f.write(str(x).encode("unicode_escape").decode("utf-8") + "\n")
                 self.create_index("%s/%s" % (ctx, x), objs[x])
             f.write("}\n")
         elif isinstance(objs, numpy.ndarray):  # needs to be above list for proper precedence
@@ -396,6 +402,8 @@ class gpt_io:
         paths = self.params["paths"]
         if isinstance(paths, str):
             paths = [paths]
+        if self.verbose_paths:
+            gpt.message(f"Found path {ctx}")
         return sum([1 if fnmatch.fnmatch(ctx, p) else 0 for p in paths]) != 0
 
     def read_index(self, p, ctx=""):
@@ -499,7 +507,7 @@ class index_parser:
         return self.line == (len(self.lines) - 1)
 
 
-@params_convention()
+@params_convention(mpi=None, grids=None, paths=None)
 def writer(filename, params):
     return gpt_io(filename, True, params)
 

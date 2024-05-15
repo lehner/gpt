@@ -19,4 +19,4 @@
 #
 from gpt.qcd.scalar.action.phi4 import phi4
 from gpt.qcd.scalar.action.cpn import cpn
-from gpt.qcd.scalar.action.mass_term import mass_term
+from gpt.qcd.scalar.action.mass_term import mass_term, fourier_mass_term
