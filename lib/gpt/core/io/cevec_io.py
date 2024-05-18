@@ -452,6 +452,8 @@ def load(filename, params):
 
         # crc checks
         if f is not None:
+            if crc32_comp != crc32[cv.rank]:
+                print("File",fn,"is corrupted on rank",gpt.rank())
             assert crc32_comp == crc32[cv.rank]
 
     # timing

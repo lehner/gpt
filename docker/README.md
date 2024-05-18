@@ -5,7 +5,7 @@ For more information on how to use Docker, please see the [Docker documentation]
 
 ### Shell
 
-This image includes a user preinstalled Python 3.8 and GPT setup.  Start the session with
+This image includes a user preinstalled Python 3.10 and GPT setup.  Start the session with
 ```
 docker run --rm -it -v$(pwd):/gpt-code gptdev/shell
 ```
