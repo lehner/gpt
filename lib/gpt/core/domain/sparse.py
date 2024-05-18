@@ -186,10 +186,19 @@ class sparse:
     def weight(self):
         return self.kernel.weight()
 
-    def embedded_coordinates(self, coordinates):
+    def embedded_coordinates(self, coordinates, stable=False):
+        # If stable == False, only return the set of embedded_coordinates that are locally
+        # available, irrespective of the order in which they appeared in coordinates.
         idx1 = self.grid.lexicographic_index(coordinates)
         idx2 = self.grid.lexicographic_index(self.kernel.local_coordinates)
-        idx_common = np.nonzero(np.in1d(idx2, idx1))[0]
+
+        if stable:
+            m = {}
+            for i, j in enumerate(idx2):
+                m[j] = i
+            return [tuple([int(x) for x in self.kernel.embedded_coordinates[m[j], :]]) if j in m else None for j in idx1]
+            
+        idx_common = np.nonzero(np.isin(idx2, idx1))[0]
         return self.kernel.embedded_coordinates[idx_common, :]
 
     def one_mask(self, coordinates):
