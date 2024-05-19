@@ -59,7 +59,10 @@ def split_key_to_coordinates_and_indices(grid, key):
 def map_pos(grid, cb, key):
     # if list, convert to numpy array
     if isinstance(key, list):
-        key = numpy.array(key, dtype=numpy.int32)
+        if key == []:
+            key = numpy.ndarray(shape=(0,grid.nd), dtype=numpy.int32)
+        else:
+            key = numpy.array(key, dtype=numpy.int32)
 
     # if key is numpy array, no further processing needed
     if isinstance(key, numpy.ndarray):
