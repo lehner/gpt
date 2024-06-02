@@ -164,6 +164,7 @@ class local_stout(local_diffeomorphism):
     def __init__(self, params):
         self.params = params
         self.cache = {}
+        self.verbose = g.default.is_verbose("stout_performance")
 
     def get_C(self, fields):
         grid = fields[0].grid
@@ -210,6 +211,9 @@ class local_stout(local_diffeomorphism):
         nd = fields[0].grid.nd
         U_prime = fields_prime[0:nd]
 
+        t = g.timer("local_stout_jacobian")
+
+        t("local")
         C_mu, U, fm = self.get_C(fields)
 
         assert len(src) == nd
@@ -242,6 +246,7 @@ class local_stout(local_diffeomorphism):
             if mu == nu:
                 continue
 
+            t("non-local")
             U_nu_x_plus_mu = g.cshift(U[nu], mu, 1)
             U_mu_x_plus_nu = g.cshift(U[mu], nu, 1)
             Lambda_mu_x_plus_nu = g.cshift(Lambda_mu, nu, 1)
@@ -279,9 +284,14 @@ class local_stout(local_diffeomorphism):
                 -1,
             )
 
+        t("local")
         for mu in range(nd):
             dst[mu] @= U[mu] * dst[mu] * (-1j)
             dst[mu] @= g.qcd.gauge.project.traceless_hermitian(dst[mu])
+
+        t()
+        if self.verbose:
+            g.message(t)
 
         return dst
 
@@ -354,7 +364,7 @@ class local_stout(local_diffeomorphism):
 class local_stout_action_log_det_jacobian(differentiable_functional):
     def __init__(self, stout):
         self.stout = stout
-        self.verbose = g.default.is_verbose("stout_performance")
+        self.verbose = stout.verbose
 
     def __call__(self, U):
         log_det = g.sum(self.stout.log_det_jacobian(U))
