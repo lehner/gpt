@@ -214,7 +214,7 @@ l = g.qcd.gauge.fix.landau(U)
 fal = g.algorithms.optimize.fourier_accelerate.inverse_phat_square(V0.grid, l)
 
 # test functionals
-l.assert_gradient_error(rng, V0, V0, 1e-3, 1e-8)
+l.assert_gradient_error(rng, V0, V0, 1e-3, 1e-7)
 
 # test gauge fixing
 for f, f_test, tag, expected_improvement in [

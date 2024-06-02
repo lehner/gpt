@@ -58,6 +58,11 @@ def compute_adj_abc(A, B, C, V, generators):
     t()
     # print(t)
 
+    # stencil version:
+    # 0) create ng times generators fields
+    # 1) compute ng times UtaU AND compute ng times ng fD in a single stencil
+    # 2) need to make them traceless, could be done in general tensor stencil
+
 
 def csf(link, mu, field=None):
     if field is None:
@@ -274,6 +279,7 @@ class local_stout(local_diffeomorphism):
 class local_stout_action_log_det_jacobian(differentiable_functional):
     def __init__(self, stout):
         self.stout = stout
+        self.verbose = g.default.is_verbose("stout_performance")
 
     def __call__(self, U):
         log_det = g.sum(self.stout.log_det_jacobian(U))
@@ -453,5 +459,6 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         force = [g((0.5 * 1j) * (x + y)) for x, y in zip(Fdet1, Fdet2)]
 
         t()
-        print(t)
+        if self.verbose:
+            g.message(t)
         return force
