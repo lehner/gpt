@@ -94,13 +94,13 @@ def get_otype_from_expression(e):
     if e.unary & expr_unary.BIT_SPINTRACE:
         st = bare_otype.spintrace
         assert st is not None
-        if st[2] is not None:
-            bare_otype = st[2]()
+        if st[-1] is not None:
+            bare_otype = st[-1]()
     if e.unary & expr_unary.BIT_COLORTRACE:
         ct = bare_otype.colortrace
         assert ct is not None
-        if ct[2] is not None:
-            bare_otype = ct[2]()
+        if ct[-1] is not None:
+            bare_otype = ct[-1]()
     return bare_otype
 
 

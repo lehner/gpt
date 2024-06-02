@@ -282,5 +282,6 @@ def merge_spin(dst, src):
 
 
 def merge_color(dst, src):
-    merge_indices(dst, src, dst.otype.colortrace)
+    ot = dst.otype
+    merge_indices(dst, src, ot.colormerge if ot.colormerge is not None else ot.colortrace)
     return dst
