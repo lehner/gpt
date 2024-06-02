@@ -136,6 +136,9 @@ for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)
     action_sm.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
     lsm.assert_log_det_jacobian(U, 1e-5, (2, 2, 2, 0), 1e-8)
 
+    action_log_det = lsm.action_log_det_jacobian()
+    action_log_det.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+
     st = action.staples(U)
     for mu in range(len(U)):
         adj_staple = g(g.adj(st[mu]))

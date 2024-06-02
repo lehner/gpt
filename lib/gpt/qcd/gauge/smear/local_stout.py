@@ -36,6 +36,9 @@ def compute_adj_ab(A, B, C, generators):
 
 
 def compute_adj_abc(A, B, C, V, generators):
+    # this is the bottle neck computationally right now ; TODO: make faster
+    t = g.timer("compute_adj_abc")
+    t("other")
     ng = len(generators)
     tmp = {}
     tmp2 = {}
@@ -45,10 +48,35 @@ def compute_adj_abc(A, B, C, V, generators):
         for c in range(ng):
             fD = g.qcd.gauge.project.traceless_anti_hermitian(2j * generators[c] * UtaU)
             for d in range(ng):
-                tmp[d, c] = g(-g.trace(1j * generators[d] * fD))  # TODO: check factors
+                tmp[d, c] = g(-g.trace(1j * generators[d] * fD))
+        t("merge")
         g.merge_color(D, tmp)
+        t("other")
         tmp2[a,] = g(g.trace(C * D))
+    t("merge")
     g.merge_color(V, tmp2)
+    t()
+    # print(t)
+
+
+def csf(link, mu, field=None):
+    if field is None:
+        field = g.identity(link)
+    return link * g.cshift(field, mu, 1)
+
+
+def csb(link, mu, field=None):
+    if field is None:
+        field = g.identity(link)
+    return g.cshift(g.adj(link) * field, mu, -1)
+
+
+def adjoint_to_fundamental(fund, adj, generators):
+    ng = len(generators)
+    fund[:] = 0
+    adj_c = g.separate_color(adj)
+    for e in range(ng):
+        fund += 1j * adj_c[e,] * generators[e]
 
 
 class local_stout(local_diffeomorphism):
@@ -247,21 +275,25 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
     def __init__(self, stout):
         self.stout = stout
 
-    def __call__(self, fields):
-        log_det = g.sum(self.stout.log_det_jacobian(fields))
+    def __call__(self, U):
+        log_det = g.sum(self.stout.log_det_jacobian(U))
         return -log_det.real
 
-    def gradient(self, fields, dfields):
-        J_ac, N_cb, Z_ac, M, fm, M_ab = self.stout.jacobian_components(fields)
+    def gradient(self, U, dU):
+        assert dU == U
+
+        J_ac, NxxAd, Z_ac, M, fm, M_ab = self.stout.jacobian_components(U)
 
         grid = J_ac.grid
         dtype = grid.precision.complex_dtype
-        otype = fields[0].otype.cartesian()
+        otype = U[0].otype.cartesian()
         adjoint_otype = J_ac.otype
         adjoint_vector_otype = g.ot_vector_color(adjoint_otype.Ndim)
         adjoint_generators = adjoint_otype.generators(dtype)
         generators = otype.generators(dtype)
         ng = len(adjoint_generators)
+
+        rho = self.stout.params["rho"]
 
         one = g.complex(grid)
         one[:] = 1
@@ -288,24 +320,138 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         inv_M_ab = g.matrix.inv(M_ab)
 
         t("N M^-1")
-        # nMpInv = g(N_cb * inv_M_ab)
+        nMpInv = g(NxxAd * inv_M_ab)
         MpInvJx = g((-1.0) * inv_M_ab * J_ac)
 
-        PlaqL = g.identity(fields[0])
+        PlaqL = g.identity(U[0])
         PlaqR = g(M * fm)
         FdetV = g.lattice(grid, adjoint_vector_otype)
         compute_adj_abc(PlaqL, PlaqR, MpInvJx, FdetV, generators)
 
-        # Fdet2_mu=FdetV;
-        # Fdet1_mu=Zero();
+        Fdet2_mu = g.copy(FdetV)
+        Fdet1_mu = g(0 * FdetV)
 
-        # for e in range(ng):
-        #    tr = trace(dJdX[e] * nMpInv);
-        #    pokeColour(dJdXe_nMpInv,tr,e);
+        tmp = {}
+        for e in range(ng):
+            tmp[e,] = g(g.trace(dJdX[e] * nMpInv))
+        dJdXe_nMpInv = g.lattice(grid, adjoint_vector_otype)
+        g.merge_color(dJdXe_nMpInv, tmp)
+        dJdXe_nMpInv @= dJdXe_nMpInv * fm
 
-        # auto tmp=PeekIndex<LorentzIndex>(masks[smr],mu);
-        # dJdXe_nMpInv = dJdXe_nMpInv*tmp;
+        mu = self.stout.params["dimension"]
+        U_mu_masked = g(U[mu] * fm)
+
+        # fundamental forces
+        Fdet1 = [g.lattice(grid, otype) for nu in range(len(U))]
+        Fdet2 = [g.lattice(grid, otype) for nu in range(len(U))]
+
+        t("non-local")
+        Nxy = g.lattice(NxxAd)
+        for nu in range(len(U)):
+            if nu == mu:
+                continue
+
+            # + nu cw
+            PlaqL = g.identity(U[0])
+            PlaqR = g((-rho) * csf(U[nu], nu, csf(U[mu], mu, csb(U[nu], nu, csb(U_mu_masked, mu)))))
+
+            dJdXe_nMpInv_y = dJdXe_nMpInv
+            compute_adj_ab(PlaqL, PlaqR, Nxy, generators)
+            Fdet1_nu = g(g.transpose(Nxy) * dJdXe_nMpInv_y)
+
+            PlaqR = g((-1.0) * PlaqR)
+            t("compute_adj_abc")
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx, FdetV, generators)
+            t("non-local")
+            Fdet2_nu = g.copy(FdetV)
+
+            # + nw acw
+            PlaqR = g(rho * csf(U[nu], nu, csb(U[mu], mu, csb(U[nu], nu))))
+            PlaqL = csb(U_mu_masked, mu)
+
+            dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, mu, -1)
+            compute_adj_ab(PlaqL, PlaqR, Nxy, generators)
+            Fdet1_nu += g.transpose(Nxy) * dJdXe_nMpInv_y
+
+            MpInvJx_nu = g.cshift(MpInvJx, mu, -1)
+            t("compute_adj_abc")
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            t("non-local")
+            Fdet2_nu += FdetV
+
+            # - nu cw
+            PlaqL = g(rho * csf(U[mu], mu, csf(U[nu], nu, csb(U_mu_masked, mu))))
+            PlaqR = csf(U[nu], nu)
+
+            dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, nu, 1)
+            compute_adj_ab(PlaqL, PlaqR, Nxy, generators)
+            Fdet1_nu += g.transpose(Nxy) * dJdXe_nMpInv_y
+
+            MpInvJx_nu = g.cshift(MpInvJx, nu, 1)
+            t("compute_adj_abc")
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            t("non-local")
+            Fdet2_nu += FdetV
+
+            # -nu acw
+            PlaqL = g((-rho) * csf(U[nu], nu, csb(U_mu_masked, mu)))
+            PlaqR = csb(U[mu], mu, csf(U[nu], nu))
+
+            dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, mu, -1)
+            dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv_y, nu, 1)
+
+            compute_adj_ab(PlaqL, PlaqR, Nxy, generators)
+            Fdet1_nu += g.transpose(Nxy) * dJdXe_nMpInv_y
+
+            MpInvJx_nu = g.cshift(MpInvJx, mu, -1)
+            MpInvJx_nu = g.cshift(MpInvJx_nu, nu, 1)
+            t("compute_adj_abc")
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            t("non-local")
+            Fdet2_nu += FdetV
+
+            # force contributions to fundamental representation
+            adjoint_to_fundamental(Fdet1[nu], Fdet1_nu, generators)
+            adjoint_to_fundamental(Fdet2[nu], Fdet2_nu, generators)
+
+            # mu cw
+            PlaqL = g((-rho) * csf(U[mu], mu, csb(U[nu], nu, csb(U_mu_masked, mu))))
+            PlaqR = csb(U[nu], nu)
+
+            dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, nu, -1)
+            compute_adj_ab(PlaqL, PlaqR, Nxy, generators)
+            Fdet1_mu += g.transpose(Nxy) * dJdXe_nMpInv_y
+
+            MpInvJx_nu = g.cshift(MpInvJx, nu, -1)
+            t("compute_adj_abc")
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            t("non-local")
+            Fdet2_mu += FdetV
+
+            # mu acw
+            PlaqL = g((-rho) * csf(U[mu], mu, csf(U[nu], nu, csb(U_mu_masked, mu))))
+            PlaqR = csf(U[nu], nu)
+
+            dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, nu, 1)
+
+            compute_adj_ab(PlaqL, PlaqR, Nxy, generators)
+            Fdet1_mu += g.transpose(Nxy) * dJdXe_nMpInv_y
+
+            MpInvJx_nu = g.cshift(MpInvJx, nu, 1)
+
+            t("compute_adj_abc")
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            t("non-local")
+            Fdet2_mu += FdetV
+
+        t("aggregate")
+        Fdet1_mu += g.transpose(NxxAd) * dJdXe_nMpInv
+
+        adjoint_to_fundamental(Fdet1[mu], Fdet1_mu, generators)
+        adjoint_to_fundamental(Fdet2[mu], Fdet2_mu, generators)
+
+        force = [g((0.5 * 1j) * (x + y)) for x, y in zip(Fdet1, Fdet2)]
 
         t()
         print(t)
-        sys.exit(0)
+        return force
