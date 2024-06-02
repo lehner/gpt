@@ -39,6 +39,10 @@ def inner_product(left, right):
     return left.__class__.foundation.group_inner_product(left, right)
 
 
+def inverse(left):
+    return left.otype.inverse(left)
+
+
 def compose(left, right):
     as_list = isinstance(left, list)
 
