@@ -35,33 +35,108 @@ def compute_adj_ab(A, B, C, generators):
     g.merge_color(C, tmp)
 
 
-def compute_adj_abc(A, B, C, V, generators):
+# def adjoint_from_right(D, UtaU, generators):
+#    ng = len(generators)
+#    tmp = {}
+#    for c in range(ng):
+#        fD = g.qcd.gauge.project.traceless_anti_hermitian(2j * generators[c] * UtaU)
+#        for d in range(ng):
+#            tmp[d, c] = g(-g.trace(1j * generators[d] * fD))
+#    g.merge_color(D, tmp)
+
+
+def adjoint_from_right_fast(D, UtaU, generators, cache):
+    # is a factor of 10 faster than the above
+    ng = len(generators)
+    if "stencil" not in cache:
+        code = []
+        idst = 0
+        iUtaU = 1
+        igen = 2
+        itmp1 = -(igen + ng)
+        itmp2 = -(igen + ng + 1)
+        ndim = UtaU.otype.shape[0]
+        ti = g.stencil.tensor_instructions
+        for c in range(ng):
+            # itmp1 = 2j * generators[c] * UtaU
+            for ia in range(ndim):
+                for ib in range(ndim):
+                    dst = ia * ndim + ib
+                    for ic in range(ndim):
+                        aa = ia * ndim + ic
+                        bb = ic * ndim + ib
+                        mode = ti.mov if ic == 0 else ti.inc
+                        code.append((itmp1, dst, mode, 1.0, [(igen + c, 0, aa), (iUtaU, 0, bb)]))
+                    code.append((itmp1, dst, ti.mul, 2j, [(itmp1, 0, dst)]))
+            # itmp2 = 0.5 * itmp1 - 0.5 * adj(itmp1)
+            for ia in range(ndim):
+                for ib in range(ndim):
+                    dst = ia * ndim + ib
+                    dst_adj = ib * ndim + ia
+                    code.append((itmp2, dst, ti.mov, 1.0, [(itmp1, 0, dst)]))
+                    code.append((itmp2, dst, ti.dec_cc, 1.0, [(itmp1, 0, dst_adj)]))
+                    code.append((itmp2, dst, ti.mul, 0.5, [(itmp2, 0, dst)]))
+            # itmp1[0,0] = g.trace(itmp2) / 3.0
+            for ia in range(ndim):
+                mode = ti.mov if ia == 0 else ti.inc
+                src = ia * ndim + ia
+                code.append((itmp1, 0, mode, 1.0, [(itmp2, 0, src)]))
+            code.append((itmp1, 0, ti.mul, 1.0 / 3.0, [(itmp1, 0, 0)]))
+
+            # itmp2[i,i] -= itmp1[0,0]
+            for ia in range(ndim):
+                src = ia * ndim + ia
+                code.append((itmp2, src, ti.dec, 1.0, [(itmp1, 0, 0)]))
+
+            # itmp2 = g.qcd.gauge.project.traceless_anti_hermitian(2j * generators[c] * UtaU) at this point
+
+            # now Dprime[d, c] = g(-g.trace(1j * generators[d] * itmp2))
+            for d in range(ng):
+                mode = ti.mov
+                dst = d * ng + c
+                for ia in range(ndim):
+                    for ib in range(ndim):
+                        aa = ia * ndim + ib
+                        bb = ib * ndim + ia
+                        code.append((idst, dst, mode, 1.0, [(igen + d, 0, aa), (itmp2, 0, bb)]))
+                        mode = ti.inc
+                code.append((idst, dst, ti.mul, -1j, [(idst, 0, dst)]))
+
+        segments = [(len(code) // 1, 1)]
+        ein = g.stencil.tensor(D, [(0, 0, 0, 0)], code, segments)
+
+        fgenerators = [g.lattice(UtaU) for d in range(ng + 2)]
+        for d in range(ng):
+            fgenerators[d][:] = generators[d]
+
+        cache["stencil"] = ein, fgenerators
+
+    else:
+        ein, fgenerators = cache["stencil"]
+
+    ein(D, UtaU, *fgenerators)
+
+
+def compute_adj_abc(A, B, C, V, generators, cache):
     # this is the bottle neck computationally right now ; TODO: make faster
     t = g.timer("compute_adj_abc")
     t("other")
     ng = len(generators)
-    tmp = {}
     tmp2 = {}
     D = g.lattice(C)
     for a in range(ng):
         UtaU = g(g.adj(A) * 2j * generators[a] * B)
-        for c in range(ng):
-            fD = g.qcd.gauge.project.traceless_anti_hermitian(2j * generators[c] * UtaU)
-            for d in range(ng):
-                tmp[d, c] = g(-g.trace(1j * generators[d] * fD))
-        t("merge")
-        g.merge_color(D, tmp)
+
+        # move the loop below to a stencil.tensor
+        t("adj_from_right")
+        adjoint_from_right_fast(D, UtaU, generators, cache)
+
         t("other")
         tmp2[a,] = g(g.trace(C * D))
     t("merge")
     g.merge_color(V, tmp2)
     t()
-    # print(t)
-
-    # stencil version:
-    # 0) create ng times generators fields
-    # 1) compute ng times UtaU AND compute ng times ng fD in a single stencil
-    # 2) need to make them traceless, could be done in general tensor stencil
+    # g.message(t)
 
 
 def csf(link, mu, field=None):
@@ -332,7 +407,8 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         PlaqL = g.identity(U[0])
         PlaqR = g(M * fm)
         FdetV = g.lattice(grid, adjoint_vector_otype)
-        compute_adj_abc(PlaqL, PlaqR, MpInvJx, FdetV, generators)
+        cache = {}
+        compute_adj_abc(PlaqL, PlaqR, MpInvJx, FdetV, generators, cache)
 
         Fdet2_mu = g.copy(FdetV)
         Fdet1_mu = g(0 * FdetV)
@@ -367,7 +443,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
 
             PlaqR = g((-1.0) * PlaqR)
             t("compute_adj_abc")
-            compute_adj_abc(PlaqL, PlaqR, MpInvJx, FdetV, generators)
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx, FdetV, generators, cache)
             t("non-local")
             Fdet2_nu = g.copy(FdetV)
 
@@ -381,7 +457,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
 
             MpInvJx_nu = g.cshift(MpInvJx, mu, -1)
             t("compute_adj_abc")
-            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators, cache)
             t("non-local")
             Fdet2_nu += FdetV
 
@@ -395,7 +471,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
 
             MpInvJx_nu = g.cshift(MpInvJx, nu, 1)
             t("compute_adj_abc")
-            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators, cache)
             t("non-local")
             Fdet2_nu += FdetV
 
@@ -412,7 +488,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             MpInvJx_nu = g.cshift(MpInvJx, mu, -1)
             MpInvJx_nu = g.cshift(MpInvJx_nu, nu, 1)
             t("compute_adj_abc")
-            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators, cache)
             t("non-local")
             Fdet2_nu += FdetV
 
@@ -430,7 +506,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
 
             MpInvJx_nu = g.cshift(MpInvJx, nu, -1)
             t("compute_adj_abc")
-            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators, cache)
             t("non-local")
             Fdet2_mu += FdetV
 
@@ -446,7 +522,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             MpInvJx_nu = g.cshift(MpInvJx, nu, 1)
 
             t("compute_adj_abc")
-            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators)
+            compute_adj_abc(PlaqL, PlaqR, MpInvJx_nu, FdetV, generators, cache)
             t("non-local")
             Fdet2_mu += FdetV
 
