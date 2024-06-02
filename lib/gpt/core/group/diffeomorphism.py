@@ -110,6 +110,9 @@ class local_diffeomorphism(diffeomorphism):
 
         t = g.timer("assert_log_det_jacobian")
 
+        t("evaluate")
+        log_det = self.log_det_jacobian(fields)[origin]
+
         t("estimate")
 
         coor = g.coordinates(one)
@@ -123,15 +126,12 @@ class local_diffeomorphism(diffeomorphism):
         nm = Jac.shape[1] * Jac.shape[3]
         Jac_flat = Jac.swapaxes(3, 2).reshape((Jac.shape[0], nm, nm))
 
-        if len(iorigin) == 0:
-            return
-
-        iorigin = iorigin[0]
-
-        log_det_appx = np.log(np.linalg.det(Jac_flat[iorigin]))
-
-        t("evaluate")
-        log_det = self.log_det_jacobian(fields)[origin]
+        if len(iorigin) == 1:
+            iorigin = iorigin[0]
+            log_det_appx = float(np.log(np.linalg.det(Jac_flat[iorigin])).real)
+        else:
+            log_det_appx = 0.0
+        log_det_appx = grid.globalsum(log_det_appx)
 
         t()
 
