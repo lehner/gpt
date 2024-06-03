@@ -26,3 +26,54 @@ mov_neg_cc = 6
 dec_cc = 7
 mul = 8
 add = 9
+
+
+def matrix_multiply(code, ndim, factor, idst, ifirst, isecond):
+    for ia in range(ndim):
+        for ib in range(ndim):
+            dst = ia * ndim + ib
+            for ic in range(ndim):
+                aa = ia * ndim + ic
+                bb = ic * ndim + ib
+                mode = mov if ic == 0 else inc
+                code.append((idst, dst, mode, 1.0, [(ifirst, 0, aa), (isecond, 0, bb)]))
+
+            if factor != 1.0:
+                code.append((idst, dst, mul, factor, [(idst, 0, dst)]))
+
+
+def matrix_anti_hermitian(code, ndim, idst, isrc):
+    for ia in range(ndim):
+        for ib in range(ndim):
+            dst = ia * ndim + ib
+            dst_adj = ib * ndim + ia
+            code.append((idst, dst, mov, 1.0, [(isrc, 0, dst)]))
+            code.append((idst, dst, dec_cc, 1.0, [(isrc, 0, dst_adj)]))
+            code.append((idst, dst, mul, 0.5, [(idst, 0, dst)]))
+
+
+def matrix_trace(code, ndim, dst, factor, idst, isrc):
+    for ia in range(ndim):
+        mode = mov if ia == 0 else inc
+        src = ia * ndim + ia
+        code.append((idst, dst, mode, 1.0, [(isrc, 0, src)]))
+    if factor != 1.0:
+        code.append((idst, dst, mul, factor, [(isrc, 0, 0)]))
+
+
+def matrix_trace_ab(code, ndim, dst, factor, idst, ifirst, isecond):
+    mode = mov
+    for ia in range(ndim):
+        for ib in range(ndim):
+            aa = ia * ndim + ib
+            bb = ib * ndim + ia
+            code.append((idst, dst, mode, 1.0, [(ifirst, 0, aa), (isecond, 0, bb)]))
+            mode = inc
+    if factor != 1.0:
+        code.append((idst, dst, mul, factor, [(idst, 0, dst)]))
+
+
+def matrix_diagonal_subtract(code, ndim, idst, isrc):
+    for ia in range(ndim):
+        src = ia * ndim + ia
+        code.append((idst, src, dec, 1.0, [(isrc, 0, 0)]))

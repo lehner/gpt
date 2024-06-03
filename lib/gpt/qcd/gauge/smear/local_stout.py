@@ -24,27 +24,6 @@ from gpt.params import params_convention
 from gpt.core.group import local_diffeomorphism, differentiable_functional
 
 
-# def compute_adj_ab_slow(A, B, C, generators, cache):
-#    # factors checked
-#    ng = len(generators)
-#    tmp = {}
-#    for b in range(ng):
-#        N_b = 2 * g.qcd.gauge.project.traceless_anti_hermitian(g.adj(A) * 1j * generators[b] * B)
-#        for c in range(ng):
-#            tmp[c, b] = g(-g.trace(1j * generators[c] * N_b))
-#    g.merge_color(C, tmp)
-
-
-# def adjoint_from_right(D, UtaU, generators):
-#    ng = len(generators)
-#    tmp = {}
-#    for c in range(ng):
-#        fD = g.qcd.gauge.project.traceless_anti_hermitian(2j * generators[c] * UtaU)
-#        for d in range(ng):
-#            tmp[d, c] = g(-g.trace(1j * generators[d] * fD))
-#    g.merge_color(D, tmp)
-
-
 def create_adjoint_projector(D, B, generators, nfactors):
     ng = len(generators)
     code = []
@@ -62,57 +41,19 @@ def create_adjoint_projector(D, B, generators, nfactors):
     for c in range(ng):
         # itmp1 = 2j * generators[c] * B
         imm = itmp1 if nfactors == 1 else itmp2
-        for ia in range(ndim):
-            for ib in range(ndim):
-                dst = ia * ndim + ib
-                for ic in range(ndim):
-                    aa = ia * ndim + ic
-                    bb = ic * ndim + ib
-                    mode = ti.mov if ic == 0 else ti.inc
-                    code.append((imm, dst, mode, 1.0, [(igen + c, 0, aa), (iB, 0, bb)]))
-                code.append((imm, dst, ti.mul, 2j, [(imm, 0, dst)]))
+        ti.matrix_multiply(code, ndim, 2j, imm, igen + c, iB)
         if nfactors == 2:
-            for ia in range(ndim):
-                for ib in range(ndim):
-                    dst = ia * ndim + ib
-                    for ic in range(ndim):
-                        aa = ia * ndim + ic
-                        bb = ic * ndim + ib
-                        mode = ti.mov if ic == 0 else ti.inc
-                        code.append((itmp1, dst, mode, 1.0, [(iA, 0, aa), (itmp2, 0, bb)]))
+            ti.matrix_multiply(code, ndim, 1.0, itmp1, iA, itmp2)
         # itmp2 = 0.5 * itmp1 - 0.5 * adj(itmp1)
-        for ia in range(ndim):
-            for ib in range(ndim):
-                dst = ia * ndim + ib
-                dst_adj = ib * ndim + ia
-                code.append((itmp2, dst, ti.mov, 1.0, [(itmp1, 0, dst)]))
-                code.append((itmp2, dst, ti.dec_cc, 1.0, [(itmp1, 0, dst_adj)]))
-                code.append((itmp2, dst, ti.mul, 0.5, [(itmp2, 0, dst)]))
+        ti.matrix_anti_hermitian(code, ndim, itmp2, itmp1)
         # itmp1[0,0] = g.trace(itmp2) / 3.0
-        for ia in range(ndim):
-            mode = ti.mov if ia == 0 else ti.inc
-            src = ia * ndim + ia
-            code.append((itmp1, 0, mode, 1.0, [(itmp2, 0, src)]))
-        code.append((itmp1, 0, ti.mul, 1.0 / 3.0, [(itmp1, 0, 0)]))
-
+        ti.matrix_trace(code, ndim, 0, 1.0 / 3.0, itmp1, itmp2)
         # itmp2[i,i] -= itmp1[0,0]
-        for ia in range(ndim):
-            src = ia * ndim + ia
-            code.append((itmp2, src, ti.dec, 1.0, [(itmp1, 0, 0)]))
-
-        # itmp2 = g.qcd.gauge.project.traceless_anti_hermitian(2j * generators[c] * B) at this point
-
+        ti.matrix_diagonal_subtract(code, ndim, itmp2, itmp1)
         # now Dprime[d, c] = g(-g.trace(1j * generators[d] * itmp2))
         for d in range(ng):
-            mode = ti.mov
             dst = d * ng + c
-            for ia in range(ndim):
-                for ib in range(ndim):
-                    aa = ia * ndim + ib
-                    bb = ib * ndim + ia
-                    code.append((idst, dst, mode, 1.0, [(igen + d, 0, aa), (itmp2, 0, bb)]))
-                    mode = ti.inc
-            code.append((idst, dst, ti.mul, -1j, [(idst, 0, dst)]))
+            ti.matrix_trace_ab(code, ndim, dst, -1j, idst, igen + d, itmp2)
 
     segments = [(len(code) // 1, 1)]
     ein = g.stencil.tensor(D, [(0, 0, 0, 0)], code, segments)
