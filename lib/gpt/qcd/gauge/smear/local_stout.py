@@ -23,6 +23,8 @@ import sys
 from gpt.params import params_convention
 from gpt.core.group import local_diffeomorphism, differentiable_functional
 
+local_stout_parallel_projector = g.default.get_int("--local-stout-parallel-projector", 1)
+
 
 def create_adjoint_projector(D, B, generators, nfactors):
     ng = len(generators)
@@ -34,11 +36,15 @@ def create_adjoint_projector(D, B, generators, nfactors):
         iA = 1
         iB = 2
     igen = iB + 1
-    itmp1 = -(igen + ng)
-    itmp2 = -(igen + ng + 1)
     ndim = B.otype.shape[0]
     ti = g.stencil.tensor_instructions
     for c in range(ng):
+        if local_stout_parallel_projector:
+            itmp1 = -(igen + ng + 2 * c)
+            itmp2 = -(igen + ng + 2 * c + 1)
+        else:
+            itmp1 = -(igen + ng)
+            itmp2 = -(igen + ng + 1)
         # itmp1 = 2j * generators[c] * B
         imm = itmp1 if nfactors == 1 else itmp2
         ti.matrix_multiply(code, ndim, 2j, imm, igen + c, iB)
@@ -55,10 +61,14 @@ def create_adjoint_projector(D, B, generators, nfactors):
             dst = d * ng + c
             ti.matrix_trace_ab(code, ndim, dst, -1j, idst, igen + d, itmp2)
 
-    segments = [(len(code) // 1, 1)]
+    if local_stout_parallel_projector:
+        segments = [(len(code) // ng, ng)]
+    else:
+        segments = [(len(code) // 1, 1)]
     ein = g.stencil.tensor(D, [(0, 0, 0, 0)], code, segments)
 
-    fgenerators = [g.lattice(B) for d in range(ng + 2)]
+    nx = 2 * ng if local_stout_parallel_projector else 2
+    fgenerators = [g.lattice(B) for d in range(ng + nx)]
     for d in range(ng):
         fgenerators[d][:] = generators[d]
 
