@@ -70,6 +70,7 @@ class auto_tuned_class:
         self.at_params = params
         self.at_default_param = default_param
         self.at_active = g.default.has("--auto-tune")
+        self.at_verbose = g.default.is_verbose("auto_tune")
 
         hash_tag = str(hashlib.sha256(tag.encode("utf-8")).hexdigest())
 
@@ -77,7 +78,8 @@ class auto_tuned_class:
         if os.path.exists(self.at_fn) and self.at_active:
             self.at_tuned_params = json.load(open(self.at_fn, "rt"))
             assert self.at_tuned_params["tag"] == tag
-            g.message(f"Use tuned results from {self.at_fn}")
+            if self.at_verbose:
+                g.message(f"Use tuned results from {self.at_fn}")
         else:
             self.at_tuned_params = None
         # in future versions allow masking by tags
