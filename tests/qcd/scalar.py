@@ -201,3 +201,10 @@ x /= 4
 eps = abs(x - 1)
 g.message("Compare variance:", x, eps)
 assert eps < 0.01
+
+# coupling action
+for otype, cart in [(U[0].otype, False), (U_mom[0].otype, True)]:
+    A3 = g.qcd.scalar.action.coupling(omega=0.132, cartesian=cart)
+    fields = [g.lattice(grid, otype) for i in range(8)]
+    rng.element(fields)
+    A3.assert_gradient_error(rng, fields, fields, 1e-3, 1e-8)
