@@ -119,7 +119,7 @@ for mu in range(4):
 A1 = g.qcd.scalar.action.fourier_mass_term(sqrt_mass)
 A1.assert_gradient_error(rng, U_mom, U_mom, 1e-3, 1e-8)
 r = A1.draw(U_mom, rng)
-assert abs(A1(U_mom)/r - 1) < 1e-10
+assert abs(A1(U_mom) / r - 1) < 1e-10
 
 # group defect would be triggered if sqrt_mass does not have sqrt_mass[k] = sqrt_mass[-k]
 eps = g.group.defect(U_mom[0])
@@ -165,6 +165,7 @@ lap = g.qcd.gauge.algebra_laplace(U)
 
 tmp = g.copy(U_mom)
 tmp2 = g.copy(U_mom)
+
 lap(tmp, U_mom)
 __slap(tmp2, U_mom)
 
@@ -174,7 +175,7 @@ for mu in range(4):
     assert eps < 1e-10
 
 cg = g.algorithms.inverter.block_cg({"eps": 1e-12, "maxiter": 100})
-slap = g.matrix_operator(mat=lap, inv_mat=cg(lap), accept_list=True)
+slap = g.matrix_operator(mat=lap, inv_mat=cg(lap), accept_list=True, accept_guess=(False, True))
 slap2 = slap * slap
 
 A2 = g.qcd.scalar.action.general_mass_term(M=slap2, sqrt_M=slap)

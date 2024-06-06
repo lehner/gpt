@@ -154,7 +154,7 @@ class general_mass_term(differentiable_functional):
 
         pi_prime = self.inv_sqrt_M(pi)
         for mu in range(n):
-            pi[mu] @= pi_prime[mu]
+            pi[mu] @= g.project(pi_prime[mu], "defect")
 
         return value
 
@@ -172,7 +172,7 @@ class general_mass_term(differentiable_functional):
 
             ret = pi_prime[mu]
 
-            ret = g(g.qcd.gauge.project.traceless_hermitian(ret))
+            ret = g(g.project(ret, "defect"))
             dS.append(ret)
 
         return dS

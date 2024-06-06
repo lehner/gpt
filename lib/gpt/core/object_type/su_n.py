@@ -182,6 +182,9 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
         self.ctab = {f"ot_matrix_su_n_fundamental_group({Nc})": _convert}
         self.CA = Nc
 
+    def project(self, A, method):
+        A @= gpt.qcd.gauge.project.traceless_hermitian(A)
+
     def generators(self, dt):
         r = []
 

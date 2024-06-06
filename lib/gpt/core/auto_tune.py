@@ -46,11 +46,17 @@ def auto_tuned_method(method):
         if self.at_tuned_params is not None:
             return method(self, self.at_tuned_params["params"], *args)
 
+        # create a snapshot of parameters to restore
+        args = list(args)
+        args_snapshot = g.copy(args)
+
         # do experiments
         dt_warmup = -g.time()
         g.message(f"Auto-tune {self.at_tag} warmup")
         method(self, self.at_default_param, *args)
         dt_warmup += g.time()
+
+        g.copy(args, args_snapshot)
 
         dts = []
         for p in self.at_params:
@@ -58,6 +64,8 @@ def auto_tuned_method(method):
             g.message(f"Auto-tune {self.at_tag} with {p}")
             method(self, p, *args)
             dt += g.time()
+
+            g.copy(args, args_snapshot)
             dts.append(dt)
 
         g.message(f"Tuning result for {self.at_tag}:")
