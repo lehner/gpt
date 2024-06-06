@@ -32,7 +32,9 @@ def ranks():
 
 # broadcast
 def broadcast(root, data):
-    if isinstance(data, str):
+    if isinstance(data, int):
+        return int(broadcast(root, str(data)))
+    elif isinstance(data, str):
         return broadcast(root, data.encode("utf-8")).decode("utf-8")
     elif isinstance(data, np.ndarray):
         return pickle.loads(broadcast(root, pickle.dumps(data)))

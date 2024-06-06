@@ -17,6 +17,12 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import cgpt
+from gpt.core import auto_tuned_class, auto_tuned_method
+import hashlib
+
+
+def hash_code(code):
+    return str(len(code)) + "-" + str(hashlib.sha256(str(code).encode("utf-8")).hexdigest())
 
 
 def parse(c):
@@ -26,7 +32,7 @@ def parse(c):
     return c
 
 
-class matrix:
+class matrix(auto_tuned_class):
     def __init__(self, lat, points, code, code_parallel_block_size=None, local=1):
         self.points = points
         self.code = [parse(c) for c in code]
@@ -36,16 +42,17 @@ class matrix:
         self.obj = cgpt.stencil_matrix_create(
             lat.v_obj[0], lat.grid.obj, points, self.code, code_parallel_block_size, local
         )
-        self.fast_osites = 0
 
-    def __call__(self, *fields):
-        cgpt.stencil_matrix_execute(self.obj, list(fields), self.fast_osites)
+        # auto tuner
+        tag = f"local_matrix({lat.otype.__name__}, {lat.grid.describe()}, {str(points)}, {code_parallel_block_size}, {hash_code(code)}, {local})"
+        super().__init__(tag, [0, 1], 0)
+
+    @auto_tuned_method
+    def __call__(self, fast_osites, *fields):
+        cgpt.stencil_matrix_execute(self.obj, list(fields), fast_osites)
 
     def __del__(self):
         cgpt.stencil_matrix_delete(self.obj)
 
     def data_access_hints(self, *hints):
         pass
-
-    def memory_access_pattern(self, fast_osites):
-        self.fast_osites = fast_osites

@@ -76,6 +76,10 @@ class matrix_operator(factor):
         # removing possible overhead for specialized call
         return self.mat if not self.accept_list else self
 
+    def specialized_list_callable(self):
+        # removing possible overhead for specialized call
+        return self.mat if self.accept_list else self
+
     def inv(self):
         return matrix_operator(
             mat=self.inv_mat,

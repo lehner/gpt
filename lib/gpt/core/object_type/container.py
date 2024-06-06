@@ -113,6 +113,7 @@ class ot_vector_color(ot_base):
         self.v_otype = ["ot_vcolor%d" % ndim]
         self.spintrace = (None, None, None)
         self.colortrace = (None, None, None)
+        self.colormerge = (0, lambda: ot_singlet())
         self.mtab = {
             "ot_singlet": (lambda: self, None),
         }

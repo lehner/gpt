@@ -136,6 +136,9 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
         err2 += gpt.norm2(gpt.matrix.det(U) - I_s) / gpt.norm2(I_s)
         return err2**0.5
 
+    def inverse(self, U):
+        return gpt.adj(U)
+
     def infinitesimal_to_cartesian(self, U, dU):
         src = gpt(dU * gpt.adj(U) / 2j)
         N = self.shape[0]
@@ -178,6 +181,9 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
 
         self.ctab = {f"ot_matrix_su_n_fundamental_group({Nc})": _convert}
         self.CA = Nc
+
+    def project(self, A, method):
+        A @= gpt.qcd.gauge.project.traceless_hermitian(A)
 
     def generators(self, dt):
         r = []

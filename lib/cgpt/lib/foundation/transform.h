@@ -180,38 +180,45 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
 
   long index_osites = grid->oSites();
 
+  Timer("ris: view");
+  
   autoView(Index_v, Index, AcceleratorRead);
   auto Index_p = &Index_v[0];
 
   VECTOR_VIEW_OPEN(Data, Data_v, AcceleratorRead);
-  
-  accelerator_for(ii,index_osites_per_block,1,{
 
+  Timer("ris: accelerator reduction");
+  accelerator_for(_idx,index_osites_per_block * n_elem * Nbasis,1,{
+
+      uint64_t idx = _idx;
+      uint64_t ii = idx % index_osites_per_block; idx /= index_osites_per_block;
+      uint64_t i = idx % n_elem; idx /= n_elem;
+      uint64_t nb = idx % Nbasis; idx /= Nbasis;
+      
       for (long jj=0;jj<len;jj++) {
 	long oidx = jj*index_osites_per_block + ii;
 	if (oidx < index_osites) {
       
 	  for (int lane=0;lane<Nsimd;lane++) {
-
 	    long index = (long)((scalar_type*)&Index_p[oidx])[lane].real();
 			
-	    for (int nb=0;nb<Nbasis;nb++) {
-	      for (int i=0;i<n_elem;i++) {
-		((scalar_type*)&lsSum_p[(nb * len + index)*index_osites_per_block + ii])[i] +=
-		  ((scalar_type*)&Data_v[nb][oidx])[i * Nsimd + lane];
-	      }
-	    }
+	    ((scalar_type*)&lsSum_p[(nb * len + index)*index_osites_per_block + ii])[i] +=
+	      ((scalar_type*)&Data_v[nb][oidx])[i * Nsimd + lane];
 	  }
 	}
       }	
   });
 
+  Timer("ris: view");
   VECTOR_VIEW_CLOSE(Data_v);
 
+  Timer("ris: thread reduction");
   thread_for(i, result.size(), {
       sobj x = Zero();
       for (size_t j=0;j<index_osites_per_block;j++)
 	x = x + lsSum_p[i*index_osites_per_block + j];
       result[i] = x;
     });
+
+  Timer();
 }

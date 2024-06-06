@@ -29,6 +29,7 @@ from gpt.core.epsilon import epsilon, sign_of_permutation
 from gpt.core.gamma import gamma, gamma_base
 from gpt.core.time import time, timer
 from gpt.core.log import message
+from gpt.core.auto_tune import auto_tuned_class, auto_tuned_method
 from gpt.core.pin import pin
 from gpt.core.stack import get_call_stack
 from gpt.core.convert import convert

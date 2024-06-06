@@ -111,6 +111,26 @@ class differentiable_functional:
     def transformed(self, t):
         return transformed(self, t)
 
+    def __add__(self, other):
+        return added(self, other)
+
+
+class added(differentiable_functional):
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def __call__(self, fields):
+        a = self.a(fields)
+        b = self.b(fields)
+        # g.message("Action",a,b)
+        return a + b
+
+    def gradient(self, fields, dfields):
+        a_grad = self.a.gradient(fields, dfields)
+        b_grad = self.b.gradient(fields, dfields)
+        return [g(x + y) for x, y in zip(a_grad, b_grad)]
+
 
 class transformed(differentiable_functional):
     def __init__(self, f, t):

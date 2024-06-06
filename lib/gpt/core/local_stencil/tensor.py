@@ -17,6 +17,13 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import cgpt
+import gpt as g
+from gpt.core import auto_tuned_class, auto_tuned_method
+import hashlib
+
+
+def hash_code(code):
+    return str(len(code)) + "-" + str(hashlib.sha256(str(code).encode("utf-8")).hexdigest())
 
 
 def parse(c):
@@ -32,7 +39,7 @@ def parse(c):
     return c
 
 
-class tensor:
+class tensor(auto_tuned_class):
     def __init__(self, lat, points, code, segments, local=1):
         self.points = points
         self.code = [parse(c) for c in code]
@@ -40,20 +47,21 @@ class tensor:
         self.obj = cgpt.stencil_tensor_create(
             lat.v_obj[0], lat.grid.obj, points, self.code, self.segments, local
         )
-        self.osites_per_instruction = 4
-        self.osites_per_cache_block = lat.grid.gsites
 
-    def __call__(self, *fields):
-        cgpt.stencil_tensor_execute(self.obj, list(fields),
-                                    self.osites_per_instruction,
-                                    self.osites_per_cache_block)
+        # auto tuner
+        gsites = int(lat.grid.gsites)
+        tag = f"local_tensor({lat.otype.__name__}, {lat.grid.describe()}, {hash_code(code)}, {len(segments)}, {local})"
+        super().__init__(tag, [
+            (opi, opi * opcb) for opi in [2, 4, 8, 16, 32, 64, 128, 256] for opcb in [256, 1024, 8192, gsites]
+        ], (4, gsites))
+
+    @auto_tuned_method
+    def __call__(self, performance_args, *fields):
+        opi, opcb = performance_args
+        cgpt.stencil_tensor_execute(self.obj, list(fields), opi, opcb)
 
     def __del__(self):
         cgpt.stencil_tensor_delete(self.obj)
 
     def data_access_hints(self, *hints):
         pass
-
-    def memory_access_pattern(self, osites_per_instruction, osites_per_cache_block):
-        self.osites_per_instruction = osites_per_instruction
-        self.osites_per_cache_block = osites_per_cache_block

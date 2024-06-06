@@ -26,6 +26,8 @@ class log:
     def __init__(self):
         self.grad = {}
         self.time = gpt.timer()
+        self.verbose = gpt.default.is_verbose("symplectic_log")
+        self.last_log = None
 
     def reset(self):
         self.time = gpt.timer()
@@ -44,6 +46,13 @@ class log:
             v += g.grid.gsites
         self.time()
         self.grad[name].append(gn / v)
+        if self.verbose:
+            if self.last_log is None:
+                self.last_log = gpt.time()
+            if gpt.time() - self.last_log > 10:
+                self.last_log = gpt.time()
+                gpt.message("Force status")
+                gpt.message(self.time)
 
     def __call__(self, grad, name):
         def inner():

@@ -14,11 +14,11 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2021-05-30
+  CACHE_KEY: 2024-05-18
 
 jobs:
   build-grid:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -38,16 +38,16 @@ jobs:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
+        sudo apt-get install -y clang-14 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
-    - name: Set compiler alternatives to clang-9
+    - name: Set compiler alternatives to clang
       if: matrix.compiler == 'clang'
       run: |
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-9 1
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 1
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 1
 
-        sudo update-alternatives --set cc /usr/bin/clang-9
-        sudo update-alternatives --set c++ /usr/bin/clang++-9
+        sudo update-alternatives --set cc /usr/bin/clang
+        sudo update-alternatives --set c++ /usr/bin/clang++
 
     - name: Set compiler to cc and c++
       if: matrix.mpi == 'none'
@@ -156,12 +156,12 @@ jobs:
 
   build-gpt:
     needs: build-grid
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.6', '3.7', '3.8']
+        python-version: ['3.8','3.9','3.10']
         compiler: ['gcc', 'clang']
         mpi: ['none', 'mpich', 'openmpi']
 
@@ -178,16 +178,16 @@ jobs:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
+        sudo apt-get install -y clang-14 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
-    - name: Set compiler alternatives to clang-9
+    - name: Set compiler alternatives to clang
       if: matrix.compiler == 'clang'
       run: |
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-9 1
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 1
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 1
 
-        sudo update-alternatives --set cc /usr/bin/clang-9
-        sudo update-alternatives --set c++ /usr/bin/clang++-9
+        sudo update-alternatives --set cc /usr/bin/clang
+        sudo update-alternatives --set c++ /usr/bin/clang++
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -197,7 +197,7 @@ jobs:
         sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         architecture: x64
@@ -335,12 +335,12 @@ jobs:
 
   test-gpt:
     needs: [build-grid, build-gpt]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.6', '3.7', '3.8']
+        python-version: ['3.8','3.9','3.10']
         compiler: ['gcc', 'clang']
         mpi: ['none', 'mpich', 'openmpi']
 
@@ -352,16 +352,16 @@ jobs:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
+        sudo apt-get install -y clang-14 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
-    - name: Set compiler alternatives to clang-9
+    - name: Set compiler alternatives to clang
       if: matrix.compiler == 'clang'
       run: |
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-9 1
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 1
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 1
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 1
 
-        sudo update-alternatives --set cc /usr/bin/clang-9
-        sudo update-alternatives --set c++ /usr/bin/clang++-9
+        sudo update-alternatives --set cc /usr/bin/clang
+        sudo update-alternatives --set c++ /usr/bin/clang++
 
     - name: Set MPI alternatives to mpich
       if: matrix.mpi == 'mpich'
@@ -371,7 +371,7 @@ jobs:
         sudo update-alternatives --set mpi-x86_64-linux-gnu /usr/include/x86_64-linux-gnu/mpich
 
     - name: Setup python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         architecture: x64
@@ -439,7 +439,7 @@ jobs:
       run: |
         cd gpt
         if [ "${{ secrets.CODECOV_USERNAME }}" != "" ] \
-            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ]
+            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ] && 0
         then
           bash <(curl -s https://codecov.io/bash) \
           -f ./coverage.xml
@@ -450,18 +450,18 @@ jobs:
 
   build-gpt-doc:
     needs: [build-grid, build-gpt]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-9 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
+        sudo apt-get install -y clang-14 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev
 
     - name: Setup python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: '3.10'
         architecture: x64
 
     - name: Setup python dependencies
@@ -471,11 +471,11 @@ jobs:
     - name: Download prebuild python-gpt
       uses: actions/download-artifact@v3
       with:
-        name: python-gpt-${{ runner.os }}-python-3.8-gcc-none-${{ needs.build-gpt.outputs.python-gpt-version }}
+        name: python-gpt-${{ runner.os }}-python-3.10-gcc-none-${{ needs.build-gpt.outputs.python-gpt-version }}
 
     - name: Install python-gpt
       run: |
-        sudo dpkg -i python-gpt-${{ runner.os }}-python-3.8-gcc-none.deb
+        sudo dpkg -i python-gpt-${{ runner.os }}-python-3.10-gcc-none.deb
 
     - name: Clone gpt
       uses: actions/checkout@v3
@@ -485,7 +485,7 @@ jobs:
     - name: Build documentation
       id: build-documentation
       env:
-        PYTHONPATH: /usr/local/lib/python3.8/site-packages:/usr/local/lib64/python3.8/site-packages
+        PYTHONPATH: /usr/local/lib/python3.10/site-packages:/usr/local/lib64/python3.10/site-packages
       run: |
         cd gpt/documentation
         make html
@@ -497,7 +497,7 @@ jobs:
 
   build-gpt-docker-base:
     needs: [build-grid, build-gpt, test-gpt]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check for rebuild
@@ -529,7 +529,7 @@ jobs:
 
   build-gpt-docker:
     needs: [build-grid, build-gpt, test-gpt, build-gpt-docker-base]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -558,12 +558,12 @@ jobs:
         if: ${{ steps.check-build.outputs.build }}
         uses: actions/download-artifact@v3
         with:
-          name: python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
+          name: python-gpt-${{ runner.os }}-python-3.10-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
 
       - name: Move python-gpt package to docker folder
         if: ${{ steps.check-build.outputs.build }}
         run: |
-          mv python-gpt-${{ runner.os }}-python-3.8-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/shell/gpt-packages
+          mv python-gpt-${{ runner.os }}-python-3.10-${{ matrix.compiler }}-${{ matrix.mpi }}.deb docker/shell/gpt-packages
           cp -r documentation/tutorials/ docker/notebook
           cp -r tests/ benchmarks/ applications/ docker/shell
 

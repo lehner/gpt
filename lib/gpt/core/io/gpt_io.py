@@ -49,7 +49,7 @@ class gpt_io:
 
         # escape paths
         if self.params["paths"] is not None:
-            replace = str.maketrans({ "[" : "[[]", "]" : "[]]" })
+            replace = str.maketrans({"[": "[[]", "]": "[]]"})
             self.params["paths"] = [p.translate(replace) for p in self.params["paths"]]
 
         if gpt.rank() == 0:

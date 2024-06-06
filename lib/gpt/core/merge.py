@@ -238,7 +238,8 @@ def separate_spin(x):
 
 
 def separate_color(x):
-    return separate_indices(x, x.otype.colortrace)
+    ot = x.otype
+    return separate_indices(x, ot.colormerge if ot.colormerge is not None else ot.colortrace)
 
 
 def merge_indices(dst, src, st, cache=default_merge_indices_cache):
@@ -282,5 +283,6 @@ def merge_spin(dst, src):
 
 
 def merge_color(dst, src):
-    merge_indices(dst, src, dst.otype.colortrace)
+    ot = dst.otype
+    merge_indices(dst, src, ot.colormerge if ot.colormerge is not None else ot.colortrace)
     return dst
