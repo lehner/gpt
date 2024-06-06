@@ -91,6 +91,9 @@ class ot_vector_complex_additive_group(ot_vector_singlet):
         }
         self.cache = {}
 
+    def infinitesimal_to_cartesian(self, a, da):
+        return da
+
     def compose(self, a, b):
         return a + b
 
