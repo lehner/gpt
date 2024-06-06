@@ -94,6 +94,9 @@ class fourier_mass_term(differentiable_functional):
     def draw(self, pi, rng):
         # P(pi) = e^{-sum(trace(pi^dag scale^2 fft^dag mass fft pi)) * 2 / 2}    # fft^dag fft = 1/scale^2 ; inv(fft) = fft^dag / scale^2
         rng.normal_element(pi)
+
+        value = g.group.inner_product(pi, pi) * 0.5
+
         pi_mom = [g(self.scale_unitary * self.fft * p) for p in pi]
         for mu in range(self.n):
             r = g.lattice(pi_mom[mu])
@@ -101,7 +104,8 @@ class fourier_mass_term(differentiable_functional):
             for nu in range(self.n):
                 r += self.fourier_inv_sqrt_mass_field[mu][nu] * pi_mom[nu]
             pi[mu] @= g.inv(self.fft) * r / self.scale_unitary
-        return self.__call__(pi)
+
+        return value
 
     @differentiable_functional.multi_field_gradient
     def gradient(self, pi, dpi):
@@ -118,6 +122,57 @@ class fourier_mass_term(differentiable_functional):
             ret @= g.inv(self.fft) * ret
 
             ret = g(0.5 * (ret + g.adj(ret)))
+            dS.append(ret)
+
+        return dS
+
+
+class general_mass_term(differentiable_functional):
+    def __init__(self, M, sqrt_M):
+        self.M = M
+        self.sqrt_M = sqrt_M
+        self.inv_sqrt_M = sqrt_M.inv()
+        # Need:
+        # - sqrt_M^dag = sqrt_M
+        # - sqrt_M^2 = M
+
+    def __call__(self, pi):
+        pi_prime = self.M(pi)
+        n = len(pi)
+        A = 0.0
+        for mu in range(n):
+            A += g.inner_product(pi[mu], pi_prime[mu])
+        return A.real
+
+    def draw(self, pi, rng):
+        # P(pi) = e^{-pi^dag sqrt_M^dag sqrt_M pi * 2 / 2}
+        rng.normal_element(pi)  # pi = sqrt(2) sqrt_M pi_desired -> pi_desired = inv_sqrt_M pi
+
+        n = len(pi)
+
+        value = g.group.inner_product(pi, pi) * 0.5
+
+        pi_prime = self.inv_sqrt_M(pi)
+        for mu in range(n):
+            pi[mu] @= pi_prime[mu]
+
+        return value
+
+    # U -> V(0) U V(1)^-1
+    # e^{i A} U -> V(0) e^{i A} U V(1)^{-1} -> A -> V(0) A V(0)^-1
+
+    @differentiable_functional.multi_field_gradient
+    def gradient(self, pi, dpi):
+        dS = []
+
+        pi_prime = self.M(pi)
+
+        for _pi in dpi:
+            mu = pi.index(_pi)
+
+            ret = pi_prime[mu]
+
+            ret = g(g.qcd.gauge.project.traceless_hermitian(ret))
             dS.append(ret)
 
         return dS

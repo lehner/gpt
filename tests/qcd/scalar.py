@@ -35,7 +35,7 @@ eps = abs(A1(U_mom) / A0(U_mom) - 1.0)
 g.message(f"Regress fourier mass term: {eps}")
 assert eps < 1e-10
 
-# now test with general Hermitian mass matrix
+# now test with general Hermitian Fourier mass matrix
 L = grid.gdimensions
 scale_unitary = float(np.prod(L)) ** 0.5
 
@@ -55,7 +55,7 @@ A1.assert_gradient_error(rng, U_mom, U_mom, 1e-3, 1e-8)
 
 # test distribution of A0 draw
 r = A0.draw(U_mom, rng)
-assert abs(A0(U_mom) - r) < 1e-10
+assert abs(A0(U_mom) / r - 1) < 1e-10
 eps = g.group.defect(U_mom[0])
 g.message("Group defect:", eps)
 assert eps < 1e-10
@@ -69,7 +69,7 @@ assert eps < 0.01
 
 # test distribution of A1 draw P ~ e^{-momdag inv(FT) mass FT mom}
 r = A1.draw(U_mom, rng)
-assert abs(A1(U_mom) - r) < 1e-10
+assert abs(A1(U_mom) / r - 1) < 1e-10
 
 # group defect would be triggered if sqrt_mass does not have sqrt_mass[k] = sqrt_mass[-k]
 eps = g.group.defect(U_mom[0])
@@ -142,3 +142,51 @@ for mu in range(4):
     eps = abs(x - 1)
     g.message("Compare variance:", x, eps)
     assert eps < 0.01
+
+# Test general mass term
+U = g.qcd.gauge.random(U_mom[0].grid, rng)
+
+
+def __slap(dst, src):
+    assert len(src) == 4
+    for nu in range(len(dst)):
+        dst[nu][:] = 0
+        for mu in range(4):
+            src_p = g.cshift(src[nu], mu, 1)
+            src_m = g.cshift(src[nu], mu, -1)
+            U_m = g.cshift(U[mu], mu, -1)
+            dst[nu] += (
+                1 / 16 * (U[mu] * src_p * g.adj(U[mu]) + g.adj(U_m) * src_m * U_m - 2 * src[nu])
+            )
+
+
+cg = g.algorithms.inverter.block_cg({"eps": 1e-12, "maxiter": 100})
+_slap = g.matrix_operator(__slap, accept_list=True)
+slap = g.matrix_operator(mat=_slap, inv_mat=cg(_slap), accept_list=True)
+slap2 = slap * slap
+
+# TODO: need stencil version of __slap
+
+A2 = g.qcd.scalar.action.general_mass_term(M=slap2, sqrt_M=slap)
+
+A2.assert_gradient_error(rng, U_mom, U_mom, 1e-3, 1e-8)
+
+# test distribution
+r = A2.draw(U_mom, rng)
+assert abs(A2(U_mom) / r - 1) < 1e-10
+eps = g.group.defect(U_mom[0])
+g.message("Group defect:", eps)
+assert eps < 1e-10
+
+ngen = len(U_mom[0].otype.generators(np.complex128))
+x = 0.0
+U_mom_prime = g(slap2 * U_mom)
+for mu in range(4):
+    x += (
+        g.sum(g(g.trace(g.adj(U_mom[mu]) * U_mom_prime[mu]) * 2.0 / ngen)).real
+        / U_mom[0].grid.gsites
+    )
+x /= 4
+eps = abs(x - 1)
+g.message("Compare variance:", x, eps)
+assert eps < 0.01
