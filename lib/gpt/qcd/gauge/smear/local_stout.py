@@ -384,7 +384,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         for b in range(ng):
             dJdX[b] = g(-dJdX[b])
 
-        t("Invert M_ab")
+        t("invert M_ab")
         inv_M_ab = g.matrix.inv(M_ab)
 
         t("N M^-1")
@@ -425,7 +425,9 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             PlaqR = g((-rho) * csf(U[nu], nu, csf(U[mu], mu, csb(U[nu], nu, csb(U_mu_masked, mu)))))
 
             dJdXe_nMpInv_y = dJdXe_nMpInv
+            t("compute_adj_ab")
             compute_adj_ab(PlaqL, PlaqR, Nxy, generators, cache_ab)
+            t("non-local")
             Fdet1_nu = g(g.transpose(Nxy) * dJdXe_nMpInv_y)
 
             PlaqR = g((-1.0) * PlaqR)
@@ -439,7 +441,9 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             PlaqL = csb(U_mu_masked, mu)
 
             dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, mu, -1)
+            t("compute_adj_ab")
             compute_adj_ab(PlaqL, PlaqR, Nxy, generators, cache_ab)
+            t("non-local")
             Fdet1_nu += g.transpose(Nxy) * dJdXe_nMpInv_y
 
             MpInvJx_nu = g.cshift(MpInvJx, mu, -1)
@@ -453,7 +457,9 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             PlaqR = csf(U[nu], nu)
 
             dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, nu, 1)
+            t("compute_adj_ab")
             compute_adj_ab(PlaqL, PlaqR, Nxy, generators, cache_ab)
+            t("non-local")
             Fdet1_nu += g.transpose(Nxy) * dJdXe_nMpInv_y
 
             MpInvJx_nu = g.cshift(MpInvJx, nu, 1)
@@ -469,7 +475,9 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, mu, -1)
             dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv_y, nu, 1)
 
+            t("compute_adj_ab")
             compute_adj_ab(PlaqL, PlaqR, Nxy, generators, cache_ab)
+            t("non-local")
             Fdet1_nu += g.transpose(Nxy) * dJdXe_nMpInv_y
 
             MpInvJx_nu = g.cshift(MpInvJx, mu, -1)
@@ -480,15 +488,19 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             Fdet2_nu += FdetV
 
             # force contributions to fundamental representation
+            t("adj_to_fund")
             adjoint_to_fundamental(Fdet1[nu], Fdet1_nu, generators)
             adjoint_to_fundamental(Fdet2[nu], Fdet2_nu, generators)
+            t("non-local")
 
             # mu cw
             PlaqL = g((-rho) * csf(U[mu], mu, csb(U[nu], nu, csb(U_mu_masked, mu))))
             PlaqR = csb(U[nu], nu)
 
             dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, nu, -1)
+            t("compute_adj_ab")
             compute_adj_ab(PlaqL, PlaqR, Nxy, generators, cache_ab)
+            t("non-local")
             Fdet1_mu += g.transpose(Nxy) * dJdXe_nMpInv_y
 
             MpInvJx_nu = g.cshift(MpInvJx, nu, -1)
@@ -503,7 +515,9 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
 
             dJdXe_nMpInv_y = g.cshift(dJdXe_nMpInv, nu, 1)
 
+            t("compute_adj_ab")
             compute_adj_ab(PlaqL, PlaqR, Nxy, generators, cache_ab)
+            t("non-local")
             Fdet1_mu += g.transpose(Nxy) * dJdXe_nMpInv_y
 
             MpInvJx_nu = g.cshift(MpInvJx, nu, 1)
@@ -516,8 +530,10 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         t("aggregate")
         Fdet1_mu += g.transpose(NxxAd) * dJdXe_nMpInv
 
+        t("adj_to_fund")
         adjoint_to_fundamental(Fdet1[mu], Fdet1_mu, generators)
         adjoint_to_fundamental(Fdet2[mu], Fdet2_mu, generators)
+        t("aggregate")
 
         force = [g((0.5 * 1j) * (x + y)) for x, y in zip(Fdet1, Fdet2)]
 

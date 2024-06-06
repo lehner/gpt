@@ -61,6 +61,3 @@ class matrix_vector:
 
     def data_access_hints(self, *hints):
         pass
-
-    def memory_access_pattern(self, fast_osites):
-        self.fast_osites = fast_osites
