@@ -147,6 +147,7 @@ for mu in range(4):
 U = g.qcd.gauge.random(U_mom[0].grid, rng)
 
 
+# first test laplacian
 def __slap(dst, src):
     assert len(src) == 4
     for nu in range(len(dst)):
@@ -160,9 +161,20 @@ def __slap(dst, src):
             )
 
 
+lap = g.qcd.gauge.algebra_laplace(U)
+
+tmp = g.copy(U_mom)
+tmp2 = g.copy(U_mom)
+lap(tmp, U_mom)
+__slap(tmp2, U_mom)
+
+for mu in range(4):
+    eps = g.norm2(tmp[mu] - tmp2[mu])
+    g.message(f"Test laplacian: {eps}")
+    assert eps < 1e-10
+
 cg = g.algorithms.inverter.block_cg({"eps": 1e-12, "maxiter": 100})
-_slap = g.matrix_operator(__slap, accept_list=True)
-slap = g.matrix_operator(mat=_slap, inv_mat=cg(_slap), accept_list=True)
+slap = g.matrix_operator(mat=lap, inv_mat=cg(lap), accept_list=True)
 slap2 = slap * slap
 
 # TODO: need stencil version of __slap
