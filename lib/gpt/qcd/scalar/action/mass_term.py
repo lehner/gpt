@@ -128,51 +128,77 @@ class fourier_mass_term(differentiable_functional):
 
 
 class general_mass_term(differentiable_functional):
-    def __init__(self, M, sqrt_M):
+    def __init__(self, M, sqrt_M, M_projected_gradient):
         self.M = M
         self.sqrt_M = sqrt_M
         self.inv_sqrt_M = sqrt_M.inv()
+        self.M_projected_gradient = M_projected_gradient
         # Need:
         # - sqrt_M^dag = sqrt_M
         # - sqrt_M^2 = M
+        # - M_projected_gradient = D[vec^dag M(e^{iTa eps} U) vec, eps] iTa
 
-    def __call__(self, pi):
-        pi_prime = self.M(pi)
-        n = len(pi)
+    def __call__(self, fields):
+        # fields = U + pi
+        n = len(fields)
+        assert n % 2 == 0
+        n //= 2
+        pi = fields[n:]
+        pi_prime = self.M(fields)[n:]
         A = 0.0
         for mu in range(n):
             A += g.inner_product(pi[mu], pi_prime[mu])
         return A.real
 
-    def draw(self, pi, rng):
+    def draw(self, fields, rng):
+        # fields = U + pi
+        n = len(fields)
+        assert n % 2 == 0
+        n //= 2
+        pi = fields[n:]
+
         # P(pi) = e^{-pi^dag sqrt_M^dag sqrt_M pi * 2 / 2}
         rng.normal_element(pi)  # pi = sqrt(2) sqrt_M pi_desired -> pi_desired = inv_sqrt_M pi
-
-        n = len(pi)
 
         value = g.group.inner_product(pi, pi) * 0.5
 
         pi_prime = self.inv_sqrt_M(pi)
         for mu in range(n):
+            pi_prime[mu].otype = pi[mu].otype
             pi[mu] @= g.project(pi_prime[mu], "defect")
 
         return value
 
-    # U -> V(0) U V(1)^-1
-    # e^{i A} U -> V(0) e^{i A} U V(1)^{-1} -> A -> V(0) A V(0)^-1
-
     @differentiable_functional.multi_field_gradient
-    def gradient(self, pi, dpi):
+    def gradient(self, fields, dfields):
+        # fields = U + pi
+        n = len(fields)
+        assert n % 2 == 0
+        n //= 2
+        U = fields[0:n]
+        pi = fields[n:]
+
         dS = []
 
-        pi_prime = self.M(pi)
+        pi_prime = self.M(fields)[n:]
+        dU = [f for f in dfields if f in U]
+        if len(dU) > 0:
+            grad_U = self.M_projected_gradient(U, pi)
+        else:
+            grad_U = None
 
-        for _pi in dpi:
-            mu = pi.index(_pi)
+        for _field in dfields:
+            mu = fields.index(_field)
 
-            ret = pi_prime[mu]
+            if mu >= n:
+                mu -= n
+                # pi[mu]
+                ret = pi_prime[mu]
+                ret = g(g.project(ret, "defect"))
+            else:
+                # U[mu]
+                ret = grad_U[mu]
 
-            ret = g(g.project(ret, "defect"))
             dS.append(ret)
 
         return dS

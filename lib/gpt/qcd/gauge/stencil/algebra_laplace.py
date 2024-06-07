@@ -20,6 +20,15 @@ import gpt as g
 import numpy as np
 
 
+class fixed_gauge_algebra_laplace:
+    def __init__(self, parent, U):
+        self.parent = parent
+        self.U = U
+
+    def __call__(self, dst, src):
+        self.parent(self.U + dst, self.U + src)
+
+
 class algebra_laplace:
     def __init__(self, U):
         self.U = U
@@ -37,39 +46,126 @@ class algebra_laplace:
         _Sm = list(range(1 + self.nd, 1 + 2 * self.nd))
 
         # indices
-        _dst = list(range(self.nd))
-        _src = [x + self.nd for x in _dst]
-        _U = [x + self.nd for x in _src]
+        _dU = list(range(self.nd))
+        _dV = [x + self.nd for x in _dU]
+        _sU = [x + self.nd for x in _dV]
+        _sV = [x + self.nd for x in _sU]
 
         # code
         code = []
         for nu in range(self.nd):
+            code.append((_dU[nu], -1, 1.0, [(_sU[nu], _P, 0)]))
+            code.append((_dV[nu], -1, -2 * self.nd / 16, [(_sV[nu], _P, 0)]))
+
             for mu in range(self.nd):
                 code.append(
                     (
-                        _dst[nu],
-                        -1 if mu == 0 else _dst[nu],
+                        _dV[nu],
+                        _dV[nu],
                         1 / 16,
-                        [(_U[mu], _P, 0), (_src[nu], _Sp[mu], 0), (_U[mu], _P, 1)],
+                        [(_sU[mu], _P, 0), (_sV[nu], _Sp[mu], 0), (_sU[mu], _P, 1)],
                     )
                 )
 
                 code.append(
                     (
-                        _dst[nu],
-                        _dst[nu],
+                        _dV[nu],
+                        _dV[nu],
                         1 / 16,
-                        [(_U[mu], _Sm[mu], 1), (_src[nu], _Sm[mu], 0), (_U[mu], _Sm[mu], 0)],
+                        [(_sU[mu], _Sm[mu], 1), (_sV[nu], _Sm[mu], 0), (_sU[mu], _Sm[mu], 0)],
                     )
                 )
-
-                code.append((_dst[nu], _dst[nu], -2 / 16, [(_src[nu], _P, 0)]))
 
         # stencil
         self.st = g.stencil.matrix(U[0], [origin] + evec + nevec, code)
 
-    def __call__(self, dst, src):
-        assert len(src) == len(dst)
-        assert len(src) == self.nd
+        # indices for gradient (ret, left, U, right)
+        _ret = list(range(self.nd))
+        _left = [x + self.nd for x in _ret]
+        _U = [x + self.nd for x in _left]
+        _right = [x + self.nd for x in _U]
 
-        self.st(*dst, *src, *self.U)
+        # code
+        code = []
+        for mu in range(self.nd):
+            for nu in range(self.nd):
+                code.append(
+                    (
+                        _ret[mu],
+                        _ret[mu] if nu > 0 else -1,
+                        1j / 32,
+                        [
+                            (_U[mu], _P, 0),
+                            (_right[nu], _Sp[mu], 0),
+                            (_U[mu], _P, 1),
+                            (_left[nu], _P, 1),
+                        ],
+                    )
+                )
+                code.append(
+                    (
+                        _ret[mu],
+                        _ret[mu],
+                        -1j / 32,
+                        [
+                            (_right[nu], _P, 0),
+                            (_U[mu], _P, 0),
+                            (_left[nu], _Sp[mu], 1),
+                            (_U[mu], _P, 1),
+                        ],
+                    )
+                )
+                code.append(
+                    (
+                        _ret[mu],
+                        _ret[mu],
+                        -1j / 32,
+                        [
+                            (_left[nu], _P, 1),
+                            (_U[mu], _P, 0),
+                            (_right[nu], _Sp[mu], 0),
+                            (_U[mu], _P, 1),
+                        ],
+                    )
+                )
+                code.append(
+                    (
+                        _ret[mu],
+                        _ret[mu],
+                        1j / 32,
+                        [
+                            (_U[mu], _P, 0),
+                            (_left[nu], _Sp[mu], 1),
+                            (_U[mu], _P, 1),
+                            (_right[nu], _P, 0),
+                        ],
+                    )
+                )
+
+        # stencil
+        self.st_pg = g.stencil.matrix(U[0], [origin] + evec + nevec, code)
+
+    def __call__(self, dst, src):
+        # src = U + V
+        assert len(dst) == 2 * self.nd
+        assert len(src) == 2 * self.nd
+
+        for i in range(len(dst)):
+            dst[i].otype = src[i].otype
+
+        self.st(*dst, *src)
+
+    def projected_gradient(self, left, U, right):
+        assert len(left) == self.nd
+        assert len(right) == self.nd
+        assert len(U) == self.nd
+
+        ret = [g.group.cartesian(u) for u in U]
+        self.st_pg(*ret, *left, *U, *right)
+        for mu in range(self.nd):
+            # could create a stencil version of project.traceless_hermitian that works on all ret[mu] at the same time
+            ret[mu] @= g.qcd.gauge.project.traceless_hermitian(ret[mu])
+        return ret
+
+    def fixed_gauge(self, U):
+        return fixed_gauge_algebra_laplace(self, U)
