@@ -20,15 +20,6 @@ import gpt as g
 import numpy as np
 
 
-class fixed_gauge_algebra_laplace:
-    def __init__(self, parent, U):
-        self.parent = parent
-        self.U = U
-
-    def __call__(self, dst, src):
-        self.parent(self.U + dst, self.U + src)
-
-
 class algebra_laplace:
     def __init__(self, U):
         self.U = U
@@ -167,5 +158,22 @@ class algebra_laplace:
             ret[mu] @= g.qcd.gauge.project.traceless_hermitian(ret[mu])
         return ret
 
-    def fixed_gauge(self, U):
-        return fixed_gauge_algebra_laplace(self, U)
+    def inverse(self, inverter):
+        def _mat(dst, src):
+            U = src[0 : self.nd]
+
+            def _inv_mat(_dst, _src):
+                self(U + _dst, U + _src)
+
+            inv_mat = g.matrix_operator(mat=_inv_mat, accept_list=True, accept_guess=(True, False))
+
+            im = inverter(inv_mat)
+
+            g.eval(dst[self.nd :], im * src[self.nd :])
+
+            for d in dst[self.nd :]:
+                d.otype = src[self.nd].otype
+
+            g.copy(dst[0 : self.nd], U)
+
+        return g.matrix_operator(mat=_mat, accept_list=True)

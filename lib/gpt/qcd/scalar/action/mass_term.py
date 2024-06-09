@@ -162,7 +162,9 @@ class general_mass_term(differentiable_functional):
 
         value = g.group.inner_product(pi, pi) * 0.5
 
-        pi_prime = self.inv_sqrt_M(pi)
+        fields_prime = self.inv_sqrt_M(fields)
+        pi_prime = fields_prime[n:]
+
         for mu in range(n):
             pi_prime[mu].otype = pi[mu].otype
             pi[mu] @= g.project(pi_prime[mu], "defect")
@@ -180,12 +182,17 @@ class general_mass_term(differentiable_functional):
 
         dS = []
 
-        pi_prime = self.M(fields)[n:]
         dU = [f for f in dfields if f in U]
         if len(dU) > 0:
             grad_U = self.M_projected_gradient(U, pi)
         else:
             grad_U = None
+
+        dpi = [f for f in dfields if f in pi]
+        if len(dpi) > 0:
+            pi_prime = self.M(fields)[n:]
+        else:
+            pi_prime = None
 
         for _field in dfields:
             mu = fields.index(_field)

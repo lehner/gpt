@@ -244,3 +244,49 @@ for t in range(grid.gdimensions[3] - 1):
     eps2 = g.norm2(Up[3][0, 0, 0, t] - ref)
     g.message(f"Test temporal gauge at t={t}: {eps2}")
     assert eps2 < 1e-25
+
+# test reversibility of local_stout
+# ran once, confirmed |rho| < 1/8 bound, disable for now
+# class inv_functional(g.core.group.differentiable_functional):
+#     def __init__(self, U0, fnc):
+#         self.U0 = U0
+#         self.fnc = fnc
+
+#     def __call__(self, U1):
+#         U0test = self.fnc(U1)
+#         vol = U1[0].grid.gsites*3*4
+#         return vol - sum([g.inner_product(self.U0[mu], U0test[mu]).real for mu in range(len(self.U0))])
+
+#     def gradient(self, U1, dU1):
+#         assert U1 == dU1
+
+#         U0test = self.fnc(U1)
+
+#         ret = [g(-1.0 / 2j * g.qcd.gauge.project.traceless_anti_hermitian(self.U0[mu] * g.adj(U0test[mu]))) for mu in range(len(self.U0))]
+#         for r in ret:
+#             r.otype = U1[0].otype.cartesian()
+
+#         dsrc = self.fnc.jacobian(U1, U0test, ret)
+
+#         return dsrc
+
+# for rho in [0.25, 0.05, 0.124]:
+#     lsm = g.qcd.gauge.smear.local_stout(rho=rho, dimension=1, checkerboard=g.even)
+#     for i in range(10):
+#         rng.element(U, scale=100)
+#     for u in U:
+#         g.project(u, "defect")
+#     U0 = g.copy(U)
+#     g.message(rho, g.qcd.gauge.plaquette(U))
+#     U1 = lsm(U)
+#     # now find reverse and check
+
+#     invf = inv_functional(U1, lsm)
+#     opt = g.algorithms.optimize
+#     ls0 = g.algorithms.optimize.line_search_none
+#     gd = g.algorithms.optimize.gradient_descent(maxiter=2000, eps=1e-10, step=0.15, line_search=ls0)
+#     rng.element(U, scale=10)
+#     gd(invf)(U, U)
+
+#     for mu in range(4):
+#         g.message(mu, g.norm2(U[mu] - U0[mu]), g.norm2(U[mu]))

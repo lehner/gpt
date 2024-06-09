@@ -185,7 +185,7 @@ for mu in range(8):
 
 cg = g.algorithms.inverter.block_cg({"eps": 1e-12, "maxiter": 100})
 slap = g.matrix_operator(
-    mat=lap, inv_mat=cg(lap.fixed_gauge(U)), accept_list=True, accept_guess=(False, True)
+    mat=lap, inv_mat=lap.inverse(cg), accept_list=True, accept_guess=(False, True)
 )
 slap2 = slap * slap
 
