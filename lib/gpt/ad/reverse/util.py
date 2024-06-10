@@ -55,7 +55,7 @@ def accumulate_gradient(lhs, rhs_gradient, getter=None, setter=None):
     if g.util.is_num(lhs_gradient) and isinstance(rhs_gradient, g.expr):
         rhs_gradient = g(rhs_gradient)
 
-    if not g.util.is_num(lhs_gradient):
+    if isinstance(lhs_gradient, (g.lattice, g.tensor)):
         lhs_otype = lhs_gradient.otype
         if isinstance(rhs_gradient, g.expr):
             grid, rhs_otype, is_list, nlist = rhs_gradient.container()
