@@ -137,6 +137,6 @@ class local_diffeomorphism(diffeomorphism):
 
         # g.message(t)
 
-        err = abs(log_det / log_det_appx - 1)
-        g.message(f"assert_log_det_jacobian: {err} < {eps_test}")
+        err = abs(log_det - log_det_appx)
+        g.message(f"assert_log_det_jacobian: {err} < {eps_test} ; log_det = {log_det} , log_det_appx = {log_det_appx}")
         assert err <= eps_test

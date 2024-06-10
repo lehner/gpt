@@ -379,7 +379,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             t3 = g(t2 * (1 / (j + 1)) + aunit)
             t2 @= X * t3
             for b in range(ng):
-                dJdX[b] = 1j * adjoint_generators[b] * t3 + X * dJdX[b] * (1 / (j + 1))
+                dJdX[b] @= 1j * adjoint_generators[b] * t3 + X * dJdX[b] * (1 / (j + 1))
 
         for b in range(ng):
             dJdX[b] = g(-dJdX[b])
