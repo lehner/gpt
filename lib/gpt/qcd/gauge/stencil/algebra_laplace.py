@@ -21,7 +21,7 @@ import numpy as np
 
 
 class algebra_laplace:
-    def __init__(self, U):
+    def __init__(self, U, mass=0.0):
         self.U = U
         self.grid = U[0].grid
         self.nd = len(U)
@@ -46,7 +46,7 @@ class algebra_laplace:
         code = []
         for nu in range(self.nd):
             code.append((_dU[nu], -1, 1.0, [(_sU[nu], _P, 0)]))
-            code.append((_dV[nu], -1, -2 * self.nd / 16, [(_sV[nu], _P, 0)]))
+            code.append((_dV[nu], -1, -2 * self.nd / 16 + mass, [(_sV[nu], _P, 0)]))
 
             for mu in range(self.nd):
                 code.append(
