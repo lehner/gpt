@@ -20,6 +20,30 @@ U_quad = g.convert(U, g.double_quadruple)
 # reference plaquette
 P = g.qcd.gauge.plaquette(U)
 
+# import cgpt, sys
+
+# smr = []
+# for mu in range(4):
+#     for cb in [g.even, g.odd]:
+#         smr.append(g.qcd.gauge.smear.local_stout(rho=0.124, dimension=mu, checkerboard=cb))
+
+# smrr = list(reversed(smr))
+# act = smrr[0].action_log_det_jacobian()
+# for s in smrr[1:]:
+#     act = act.transformed(s) + s.action_log_det_jacobian()
+
+# Usm = U
+# for s in smr:
+#     Usm = s(Usm)
+# g.message(P, g.qcd.gauge.plaquette(Usm), act(U))
+
+# cgpt.test_grid(U + Usm + [g(1j*x) for x in act.gradient(U, U)])
+
+# act.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+
+# sys.exit(0)
+
+
 # test rectangle calculation using parallel transport and copy_plan
 R_1x1, R_2x1 = g.qcd.gauge.rectangle(U, [(1, 1), (2, 1)])
 eps = abs(P - R_1x1)
