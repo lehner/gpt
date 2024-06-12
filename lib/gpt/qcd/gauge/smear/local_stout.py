@@ -182,6 +182,29 @@ class local_stout(local_diffeomorphism):
         )
         return U_prime
 
+    def inv(self, fields, max_iter=100):
+        C_mu, U, fm = self.get_C(fields)
+        mu = self.params["dimension"]
+        U_prime = g.copy(U)
+        for it in range(max_iter):
+            U_prime_mu_last = g.copy(U_prime[mu])
+            U_prime[mu] @= g(
+                g.matrix.exp(
+                    -g.qcd.gauge.project.traceless_anti_hermitian(C_mu * g.adj(U_prime[mu]))
+                )
+                * U[mu]
+            )
+            eps2 = g.norm2(U_prime_mu_last - U_prime[mu]) / U_prime_mu_last.grid.gsites
+            if eps2 < U_prime_mu_last.grid.precision.eps**2:
+                break
+        if it == max_iter - 1:
+            # indicate failure
+            g.message(
+                f"Warning: local_stout could not be inverted; last eps^2 = {eps2} after {max_iter} iterations"
+            )
+            return None
+        return U_prime
+
     def jacobian(self, fields, fields_prime, src):
         nd = fields[0].grid.nd
         U_prime = fields_prime[0:nd]
