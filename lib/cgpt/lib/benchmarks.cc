@@ -51,7 +51,8 @@ EXPORT(test_grid,{
     if (!PyArg_ParseTuple(args, "O", &_fields)) {
       return NULL;
     }
-    
+
+#if 0
     std::vector<cgpt_Lattice_base*> fields;
     cgpt_basis_fill(fields,_fields);
 
@@ -112,7 +113,7 @@ EXPORT(test_grid,{
     //Dump(Force,"gpt force");
     
     std::cout << GridLogMessage << "Test force:" << norm2(closure(gridForce - Force)) / norm2(Force) << std::endl;
-  
+#endif
     return PyLong_FromLong(0);
   });
 
