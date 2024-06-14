@@ -42,9 +42,9 @@ EXPORT(benchmarks,{
     return PyLong_FromLong(0);
   });
 
-#include <Grid/qcd/smearing/GaugeConfigurationMasked.h>
-#include <Grid/qcd/smearing/JacobianAction.h>
-using namespace Grid;
+//#include <Grid/qcd/smearing/GaugeConfigurationMasked.h>
+//#include <Grid/qcd/smearing/JacobianAction.h>
+//using namespace Grid;
 
 EXPORT(test_grid,{
     PyObject* _fields;
@@ -113,6 +113,11 @@ EXPORT(test_grid,{
     //Dump(Force,"gpt force");
     
     std::cout << GridLogMessage << "Test force:" << norm2(closure(gridForce - Force)) / norm2(Force) << std::endl;
+
+    for(int mu=0;mu<4;mu++) {
+      cfields[mu + 8] = PeekIndex<LorentzIndex>(gridForce,mu);
+    }
+
 #endif
     return PyLong_FromLong(0);
   });

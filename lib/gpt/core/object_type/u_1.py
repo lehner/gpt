@@ -87,6 +87,9 @@ class ot_u_1_group(ot_u_1_base):
     def compose(self, a, b):
         return a * b
 
+    def inverse(self, a):
+        return gpt.adj(a)
+
     def infinitesimal_to_cartesian(self, U, dU):
         ret = gpt(dU * gpt.adj(U) / 1j)
         ret = gpt(0.5 * ret + 0.5 * gpt.adj(ret))
