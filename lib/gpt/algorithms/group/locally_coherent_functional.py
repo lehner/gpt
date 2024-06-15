@@ -19,6 +19,7 @@
 import gpt as g
 from gpt.core.group import differentiable_functional
 
+
 class locally_coherent_functional(differentiable_functional):
     def __init__(self, inner, block):
         self.inner = inner
@@ -29,10 +30,10 @@ class locally_coherent_functional(differentiable_functional):
         assert n % 2 == 0
         n //= 2
 
-        right = self.block.embed(fields[n:2*n])
+        right = self.block.embed(fields[n : 2 * n])
 
-        return [g(g.group.compose(x,y)) for x, y in zip(fields[0:n], right)]
-        
+        return [g(g.group.compose(x, y)) for x, y in zip(fields[0:n], right)]
+
     def __call__(self, fields):
         return self.inner(self.reduce(fields))
 
@@ -41,14 +42,16 @@ class locally_coherent_functional(differentiable_functional):
         assert n % 2 == 0
         n //= 2
         left = fields[0:n]
-        right = fields[n:2*n]
+        right = fields[n : 2 * n]
 
         # f(left right)
         # left derivative is like original: f(idA left right)
         # right derivative is: f(left idA right  ) = f(idA2 left right)
         # with dA2 = left dA left^dag
 
-        indices = [mu for mu in range(n) if dfields[mu] in fields or dfields[mu + n] in fields]
+        indices = [
+            mu for mu in range(n) if dfields[mu] in fields or dfields[mu + n] in fields
+        ]
 
         r = self.reduce(fields)
 

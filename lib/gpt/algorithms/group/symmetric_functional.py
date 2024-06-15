@@ -19,6 +19,7 @@
 import gpt as g
 from gpt.core.group import differentiable_functional
 
+
 class symmetric_functional(differentiable_functional):
     def __init__(self, inner):
         self.inner = inner
@@ -27,8 +28,11 @@ class symmetric_functional(differentiable_functional):
         n = len(fields)
         assert n % 2 == 0
         n //= 2
-        return [g(g.group.compose(x, g.group.inverse(y))) for x, y in zip(fields[0:n], fields[n:2*n])]
-        
+        return [
+            g(g.group.compose(x, g.group.inverse(y)))
+            for x, y in zip(fields[0:n], fields[n : 2 * n])
+        ]
+
     def __call__(self, fields):
         return self.inner(self.reduce(fields))
 
@@ -37,14 +41,16 @@ class symmetric_functional(differentiable_functional):
         assert n % 2 == 0
         n //= 2
         left = fields[0:n]
-        right = fields[n:2*n]
+        right = fields[n : 2 * n]
 
         # f(left right^dag)
         # left derivative is like original: f(idA left right^dag)
         # right derivative is: f(left right^dag (-i)dA ) = f(idA2 left right^dag)
         # with dA2 = -left right^dag dA right left^dag = -r dA r^dag
 
-        indices = [mu for mu in range(n) if dfields[mu] in fields or dfields[mu + n] in fields]
+        indices = [
+            mu for mu in range(n) if dfields[mu] in fields or dfields[mu + n] in fields
+        ]
 
         r = self.reduce(fields)
 

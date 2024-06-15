@@ -9,7 +9,7 @@ for f in ${FILES}
 do
 
 python3 -m black -t py36 --line-length 100 ${f}
-python3 -m flake8 ${f}
+python3 -m flake8 --ignore=E401,E226 ${f}
 if [[ "$?" != "0" ]];
 then
     echo "Need to fix $f"

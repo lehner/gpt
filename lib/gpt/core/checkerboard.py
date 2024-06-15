@@ -53,13 +53,13 @@ def str_to_cb(s):
         assert 0
 
 
-def pick_checkerboard(cb, dst, src = None):
+def pick_checkerboard(cb, dst, src=None):
     if src is None:
         src = dst
         dst = gpt.lattice(src.grid.checkerboarded(gpt.redblack), src.otype)
         pick_checkerboard(cb, dst, src)
         return dst
-        
+
     assert len(src.v_obj) == len(dst.v_obj)
     for i in src.otype.v_idx:
         cgpt.lattice_pick_checkerboard(cb.tag, src.v_obj[i], dst.v_obj[i])
