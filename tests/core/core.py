@@ -488,6 +488,21 @@ for l in [l_dp, l_sp]:
     assert eps < l.grid.precision.eps * 1e3
 
 ################################################################################
+# Test checkerboard
+################################################################################
+a = a[0]
+b = b[0]
+a_even = g.pick_checkerboard(g.even, a)
+a_odd = g.pick_checkerboard(g.odd, a)
+b[:] = 0
+g.set_checkerboard(b, a_even)
+g.set_checkerboard(b, a_odd)
+eps2 = g.norm2(a-b)
+g.message(f"Checkerboard: {eps2}")
+assert eps2 == 0.0
+
+################################################################################
 # Test mem_report
 ################################################################################
 g.mem_report()
+
