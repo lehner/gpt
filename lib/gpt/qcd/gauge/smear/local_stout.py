@@ -405,8 +405,11 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
     def gradient(self, U, dU):
         assert dU == U
 
+        t = g.timer("action_log_det_jacobian")
+
         cb = self.stout.params["checkerboard"]
 
+        t("jac_comp")
         cache_ab = {}
         J_ac, NxxAd, Z_ac, M, fm, M_ab = self.stout.jacobian_components(U, cache_ab)
 
@@ -424,37 +427,22 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         one = g.complex(grid)
         one[:] = 1
 
-        t = g.timer("action_log_det_jacobian")
         t("dJdX")
 
         # dJdX -> stencil version
-        ag_fields = [g(1j * adjoint_generators[b] * one) for b in range(ng)]
-        dJdX = g.copy(ag_fields)
+        dJdX = [g(1j * adjoint_generators[b] * one) for b in range(ng)]
         aunit = g.identity(J_ac)
 
         X = g.copy(Z_ac)
         t2 = g.copy(X)
-        t3 = g.lattice(t2)
-
-        code = []
-        _X = 0
-        _t2 = 1
-        _t3 = 2
-        _aunit = 3
-        _dJdX = [4 + b for b in range(ng)]
-        _adjoint_generators = [4 + ng + b for b in range(ng)]
         for j in reversed(range(2, 13)):
-            code.append((_t3, _aunit, 1 / (j + 1), [(_t2, 0, 0)]))
-            code.append((_t2, -1, 1, [(_X, 0, 0), (_t3, 0, 0)]))
+            t3 = g(t2 * (1 / (j + 1)) + aunit)
+            t2 @= X * t3
             for b in range(ng):
-                code.append((_dJdX[b], -1, 1 / (j + 1), [(_X, 0, 0), (_dJdX[b], 0, 0)]))
-                code.append((_dJdX[b], _dJdX[b], 1, [(_adjoint_generators[b], 0, 0), (_t3, 0, 0)]))
+                dJdX[b] @= 1j * adjoint_generators[b] * t3 + X * dJdX[b] * (1 / (j + 1))
 
         for b in range(ng):
-            code.append((_dJdX[b], -1, -1, [(_dJdX[b], 0, 0)]))
-
-        dJdX_stencil = g.local_stencil.matrix(X, [tuple([0] * len(U))], code)
-        dJdX_stencil(X, t2, t3, aunit, *dJdX, *ag_fields)
+            dJdX[b] = g(-dJdX[b])
 
         t("invert M_ab")
         inv_M_ab = g.matrix.inv(M_ab)
