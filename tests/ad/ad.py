@@ -27,6 +27,7 @@ for prec in [g.double]:
     s1 = rad.node(g.complex(grid))
     s2 = rad.node(g.complex(grid))
     m1 = rad.node(g.mspin(grid))
+    p1 = rad.node(g.tensor(m1.value.otype))
 
     # use additive group instead of matrix multiplication
     u1 = rad.node(g.mcolor(grid), infinitesimal_to_cartesian=False)
@@ -77,7 +78,7 @@ for prec in [g.double]:
         (g.norm2(s1 * s2), 1e-1, [s1, s2]),
         (g.norm2((s1 * s2) * x), 1e-1, [s1, s2, x]),
         (g.norm2(u1 * x), 1e-1, [x, u1]),
-        (g.norm2(m1 * x + u1 * x), 1e-1, [m1, x, u1]),
+        (g.norm2(p1 * x + m1 * x + u1 * x), 1e-1, [p1, m1, x, u1]),
     ]:
         # randomize values
         rng.cnormal([vv.value for vv in args])

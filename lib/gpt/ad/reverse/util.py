@@ -55,10 +55,13 @@ def accumulate_gradient(lhs, rhs_gradient, getter=None, setter=None):
     if g.util.is_num(lhs_gradient) and isinstance(rhs_gradient, g.expr):
         rhs_gradient = g(rhs_gradient)
 
-    if isinstance(lhs_gradient, g.lattice) and isinstance(rhs_gradient, g.expr):
-        grid, rhs_otype, is_list, nlist = rhs_gradient.container()
-        assert not is_list  # for now
+    if isinstance(lhs_gradient, (g.lattice, g.tensor)):
         lhs_otype = lhs_gradient.otype
+        if isinstance(rhs_gradient, g.expr):
+            grid, rhs_otype, is_list, nlist = rhs_gradient.container()
+            assert not is_list  # for now
+        else:
+            rhs_otype = rhs_gradient.otype
 
         if lhs_otype.__name__ != rhs_otype.__name__:
             if rhs_otype.spintrace[2] is not None:
