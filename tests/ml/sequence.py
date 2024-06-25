@@ -49,7 +49,7 @@ ls0 = g.algorithms.optimize.line_search_none
 opt = g.algorithms.optimize.gradient_descent(maxiter=40, eps=1e-7, step=1e-7, line_search=ls0)
 
 # Train network
-opt(c)(W, W)
+opt(c)(W + training_input + training_output, W)
 
 
 # PTC
