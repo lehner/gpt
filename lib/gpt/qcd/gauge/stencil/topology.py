@@ -22,7 +22,9 @@ import numpy as np
 default_topological_charge_cache = {}
 
 
-def topological_charge(U, field=False, trace=True, cache=default_topological_charge_cache):
+def topological_charge(
+    U, field=False, trace=True, cache=default_topological_charge_cache
+):
     Nd = len(U)
 
     assert Nd == 4
@@ -34,12 +36,12 @@ def topological_charge(U, field=False, trace=True, cache=default_topological_cha
         _target = 0
         _P = (0,) * Nd
         temporaries = [
-            (0, 1, 2), # Bx
-            (1, 2, 0), # By
-            (2, 0, 1), # Bz
-            (3, 3, 0), # Ex
-            (4, 3, 1), # Ey
-            (5, 3, 2), # Ez
+            (0, 1, 2),  # Bx
+            (1, 2, 0),  # By
+            (2, 0, 1),  # Bz
+            (3, 3, 0),  # Ex
+            (4, 3, 1),  # Ey
+            (5, 3, 2),  # Ez
         ]
         for tmp, mu, nu in temporaries:
             _temp1 = 1 + tmp
@@ -55,13 +57,18 @@ def topological_charge(U, field=False, trace=True, cache=default_topological_cha
                     [(_temp1, _P, 1)],
                 )
             )
-        
+
         coeff = 8.0 / (32.0 * np.pi**2) * (0.125**2.0)
         coeff *= U[0].grid.gsites
-        
+
         for i in range(3):
             code.append(
-                (_target, -1 if i == 0 else _target, coeff, [(1 + i, _P, 0), (4 + i, _P, 0)])
+                (
+                    _target,
+                    -1 if i == 0 else _target,
+                    coeff,
+                    [(1 + i, _P, 0), (4 + i, _P, 0)],
+                )
             )
 
         cache[tag] = g.parallel_transport_matrix(U, code, 1)
