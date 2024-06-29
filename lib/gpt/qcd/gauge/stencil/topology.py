@@ -18,13 +18,12 @@
 #
 import gpt as g
 import numpy as np
+from gpt.core.group import differentiable_functional
 
 default_topological_charge_cache = {}
 
 
-def topological_charge(
-    U, field=False, trace=True, cache=default_topological_charge_cache
-):
+def topological_charge(U, field=False, trace=True, cache=default_topological_charge_cache):
     Nd = len(U)
 
     assert Nd == 4
@@ -83,3 +82,120 @@ def topological_charge(
         T = g.sum(T).real / T.grid.gsites
 
     return T
+
+
+def v_projected_gradient(U, mu, nu, left, right):
+    Nd = len(U)
+    assert Nd == 4
+
+    grad = [g.group.cartesian(U[0]) for i in range(Nd)]
+    for gr in grad:
+        gr[:] = 0
+
+    # last piece: add one mu derivative first, then two nu ones
+    grad[mu] += g.cshift(g.adj(U[nu]) * right * left * g.cshift(U[nu], mu, 1), nu, -1) * g.adj(
+        U[mu]
+    )
+    grad[mu] -= U[nu] * g.cshift(right * left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu])
+
+    grad[nu] -= U[nu] * g.cshift(
+        g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) * right * left, mu, -1
+    )
+    grad[nu] -= g.cshift(g.adj(U[mu]) * U[nu] * g.cshift(right * left, nu, 1), mu, -1) * g.adj(
+        U[nu]
+    )
+
+    grad[nu] += right * left * g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
+    grad[nu] += U[nu] * g.cshift(right * left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu])
+
+    grad[mu] @= g.qcd.gauge.project.traceless_hermitian(grad[mu] / 2j)
+    grad[nu] @= g.qcd.gauge.project.traceless_hermitian(grad[nu] / 2j)
+
+    return grad
+
+
+def v(U, mu, nu):
+    return g.eval(
+        g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
+        - g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1)
+    )
+
+
+def F_projected_gradient(U, mu, nu, left, right):
+    Nd = len(U)
+    assert Nd == 4
+
+    left_s = g.cshift(left, mu, 1)
+    right_s = g.cshift(right, mu, 1)
+    v_val = v(U, mu, nu)
+    grad = v_projected_gradient(U, mu, nu, g(left * U[mu]), right)
+    grad2 = v_projected_gradient(U, mu, nu, left_s, g(U[mu] * right_s))
+    for rho in range(Nd):
+        grad[rho] += grad2[rho]
+
+    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * v_val * right * left / 2j)
+    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * right_s * left_s * v_val / 2j)
+
+    # left * U[mu] * v * right + left * g.cshift(v * U[mu], mu, -1) * right
+    return grad
+
+
+def field_strength_projected_gradient(U, mu, nu, left, right):
+    Nd = len(U)
+    assert Nd == 4
+
+    fg1 = F_projected_gradient(U, mu, nu, left, right)
+    fg2 = F_projected_gradient(U, mu, nu, g.adj(right), g.adj(left))
+    grad = []
+    for mu in range(Nd):
+        grad.append(g(0.125 * (fg1[mu] - g.adj(fg2[mu]))))
+    return grad
+
+
+def topological_charge_gradient(U):
+    field_strength = g.qcd.gauge.field_strength
+
+    Bx = field_strength(U, 1, 2)
+    By = field_strength(U, 2, 0)
+    Bz = field_strength(U, 0, 1)
+
+    Ex = field_strength(U, 3, 0)
+    Ey = field_strength(U, 3, 1)
+    Ez = field_strength(U, 3, 2)
+
+    one = g.complex(U[0].grid)
+    one[:] = 1.0
+
+    delta = g(
+        g.expr(field_strength_projected_gradient(U, 1, 2, one, Ex))
+        + g.expr(field_strength_projected_gradient(U, 3, 0, one, Bx))
+        + g.expr(field_strength_projected_gradient(U, 2, 0, one, Ey))
+        + g.expr(field_strength_projected_gradient(U, 3, 1, one, By))
+        + g.expr(field_strength_projected_gradient(U, 0, 1, one, Ez))
+        + g.expr(field_strength_projected_gradient(U, 3, 2, one, Bz))
+    )
+
+    coeff = 8.0 / (32.0 * np.pi**2)
+
+    ret = []
+    for d in delta:
+        dQ = g(coeff * d)
+        dQ.otype = U[0].otype.cartesian()
+        ret.append(dQ)
+
+    return ret
+
+
+class differentiable_topology(differentiable_functional):
+    def __init__(self):
+        pass
+
+    def __call__(self, U):
+        return topological_charge(U)
+
+    def gradient(self, U, dU):
+        gradient = topological_charge_gradient(U)
+        ret = []
+        for u in dU:
+            ret.append(gradient[U.index(u)])
+        return ret

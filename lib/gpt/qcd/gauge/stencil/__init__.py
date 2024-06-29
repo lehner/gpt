@@ -19,5 +19,5 @@
 from gpt.qcd.gauge.stencil.plaquette import plaquette
 from gpt.qcd.gauge.stencil.staple import staple_sum
 from gpt.qcd.gauge.stencil.energy_density import energy_density
-from gpt.qcd.gauge.stencil.topology import topological_charge
+from gpt.qcd.gauge.stencil.topology import topological_charge, differentiable_topology
 from gpt.qcd.gauge.stencil.algebra_laplace import algebra_laplace

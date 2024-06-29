@@ -132,6 +132,11 @@ Q = g.qcd.gauge.topological_charge(U)
 eps = abs(Q - 0.18736242691275048)
 g.message(f"Test field_strength Q definition: {eps}")
 assert eps < 1e-13
+
+diff_Q = g.qcd.gauge.differentiable_topology()
+diff_Q.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+assert abs(Q - diff_Q(U)) < 1e-13
+
 Q = g.qcd.gauge.topological_charge_5LI(U, cache={})
 eps = abs(Q - 0.32270083147744544)
 g.message(f"Test 5LI Q definition: {eps}")
@@ -253,7 +258,7 @@ for f, f_test, tag, expected_improvement in [
     opt(f)([V1], [V1])
 
     eps1 = g.norm2(f_test.gradient(V1, V1)) ** 0.5 / f_test(V1)
-    g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1/eps0}")
+    g.message(f"df/f after {tag} gauge fix: {eps1}, improvement: {eps1 / eps0}")
     assert eps1 / eps0 < expected_improvement
 
 
