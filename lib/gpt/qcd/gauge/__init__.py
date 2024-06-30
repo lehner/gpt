@@ -21,7 +21,14 @@ from gpt.qcd.gauge.loops import rectangle, field_strength
 from gpt.qcd.gauge.topology import topological_charge_5LI
 from gpt.qcd.gauge.staples import staple
 from gpt.qcd.gauge.transformation import transformed
-from gpt.qcd.gauge.stencil import *
+from gpt.qcd.gauge.stencil import (
+    plaquette,
+    staple_sum,
+    energy_density,
+    topological_charge,
+    differentiable_topology,
+    algebra_laplace,
+)
 import gpt.qcd.gauge.project
 import gpt.qcd.gauge.smear
 import gpt.qcd.gauge.fix
