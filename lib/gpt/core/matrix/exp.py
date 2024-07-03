@@ -18,9 +18,10 @@
 #
 import gpt as g
 import numpy as np
+from gpt.core.compiler import compiler
 
 
-def cayley_hamilton_function_and_gradient_3(iQ, gradient_prime):
+def cayley_hamilton_function_and_gradient_3(iQ, gradient_prime, c):
     # For now use Cayley Hamilton Decomposition for traceless Hermitian 3x3 matrices,
     # see https://arxiv.org/pdf/hep-lat/0311018.pdf
 
@@ -42,73 +43,76 @@ def cayley_hamilton_function_and_gradient_3(iQ, gradient_prime):
     w = g(g.component.sqrt(c1) * g.component.sin(theta / 3.0))
     u2 = g(u * u)
     w2 = g(w * w)
+    fden = g.component.inv(9.0 * u2 - w2)
+    fden2 = g(fden * fden / 2.0)
 
     xi0 = g(g.component.sin(w) * g.component.inv(w))
     xi1 = g(g.component.cos(w) * g.component.inv(w2) - g.component.sin(w) * g.component.inv(w * w2))
     cosw = g.component.cos(w)
 
-    ixi0 = g(1j * xi0)
     emiu = g(g.component.cos(u) - 1j * g.component.sin(u))
     e2iu = g(g.component.cos(2.0 * u) + 1j * g.component.sin(2.0 * u))
 
-    h0 = g(e2iu * (u2 - w2) + emiu * ((8.0 * u2 * cosw) + (2.0 * u * (3.0 * u2 + w2) * ixi0)))
-    h1 = g(e2iu * (2.0 * u) - emiu * ((2.0 * u * cosw) - (3.0 * u2 - w2) * ixi0))
-    h2 = g(e2iu - emiu * (cosw + (3.0 * u) * ixi0))
+    # can do in stencil:
+    with c.code() as cc:
+        ixi0 = cc(1j * xi0)
+        h0 = cc(e2iu * (u2 - w2) + emiu * ((8.0 * u2 * cosw) + (2.0 * u * (3.0 * u2 + w2) * ixi0)))
+        h1 = cc(e2iu * (2.0 * u) - emiu * ((2.0 * u * cosw) - (3.0 * u2 - w2) * ixi0))
+        h2 = cc(e2iu - emiu * (cosw + (3.0 * u) * ixi0))
 
-    fden = g.component.inv(9.0 * u2 - w2)
-    f0 = g(h0 * fden)
-    f1 = g(h1 * fden)
-    f2 = g(h2 * fden)
+        f0 = cc(h0 * fden)
+        f1 = cc(h1 * fden)
+        f2 = cc(h2 * fden)
 
-    # first result, exp_iQ
-    exp_iQ = g(f0 * I + f1 * Q + f2 * Q2)
-
-    # next, compute jacobian components
-    r01 = g(
-        (2.0 * u + 1j * 2.0 * (u2 - w2)) * e2iu
-        + emiu
-        * (
-            (16.0 * u * cosw + 2.0 * u * (3.0 * u2 + w2) * xi0)
-            + 1j * (-8.0 * u2 * cosw + 2.0 * (9.0 * u2 + w2) * xi0)
+        r01 = cc(
+            (2.0 * u + 1j * 2.0 * (u2 - w2)) * e2iu
+            + emiu
+            * (
+                (16.0 * u * cosw + 2.0 * u * (3.0 * u2 + w2) * xi0)
+                + 1j * (-8.0 * u2 * cosw + 2.0 * (9.0 * u2 + w2) * xi0)
+            )
         )
-    )
 
-    r11 = g(
-        (2.0 * one + 4j * u) * e2iu
-        + emiu * ((-2.0 * cosw + (3.0 * u2 - w2) * xi0) + 1j * ((2.0 * u * cosw + 6.0 * u * xi0)))
-    )
+        r11 = cc(
+            (2.0 * one + 4j * u) * e2iu
+            + emiu
+            * ((-2.0 * cosw + (3.0 * u2 - w2) * xi0) + 1j * ((2.0 * u * cosw + 6.0 * u * xi0)))
+        )
 
-    r21 = g(2j * e2iu + emiu * (-3.0 * u * xi0 + 1j * (cosw - 3.0 * xi0)))
+        r21 = cc(2j * e2iu + emiu * (-3.0 * u * xi0 + 1j * (cosw - 3.0 * xi0)))
 
-    r02 = g(-2.0 * e2iu + emiu * (-8.0 * u2 * xi0 + 1j * (2.0 * u * (cosw + xi0 + 3.0 * u2 * xi1))))
+        r02 = cc(
+            -2.0 * e2iu + emiu * (-8.0 * u2 * xi0 + 1j * (2.0 * u * (cosw + xi0 + 3.0 * u2 * xi1)))
+        )
 
-    r12 = g(emiu * (2.0 * u * xi0 + 1j * (-cosw - xi0 + 3.0 * u2 * xi1)))
+        r12 = cc(emiu * (2.0 * u * xi0 + 1j * (-cosw - xi0 + 3.0 * u2 * xi1)))
 
-    r22 = g(emiu * (xi0 - 1j * (3.0 * u * xi1)))
+        r22 = cc(emiu * (xi0 - 1j * (3.0 * u * xi1)))
 
-    fden = g.component.inv((2.0 * (9.0 * u2 - w2) * (9.0 * u2 - w2)))
+        b10 = cc(2.0 * u * r01 + (3.0 * u2 - w2) * r02 - (30.0 * u2 + 2.0 * w2) * f0)
+        b11 = cc(2.0 * u * r11 + (3.0 * u2 - w2) * r12 - (30.0 * u2 + 2.0 * w2) * f1)
+        b12 = cc(2.0 * u * r21 + (3.0 * u2 - w2) * r22 - (30.0 * u2 + 2.0 * w2) * f2)
 
-    b10 = g(2.0 * u * r01 + (3.0 * u2 - w2) * r02 - (30.0 * u2 + 2.0 * w2) * f0)
-    b11 = g(2.0 * u * r11 + (3.0 * u2 - w2) * r12 - (30.0 * u2 + 2.0 * w2) * f1)
-    b12 = g(2.0 * u * r21 + (3.0 * u2 - w2) * r22 - (30.0 * u2 + 2.0 * w2) * f2)
+        b20 = cc(r01 - (3.0 * u) * r02 - (24.0 * u) * f0)
+        b21 = cc(r11 - (3.0 * u) * r12 - (24.0 * u) * f1)
+        b22 = cc(r21 - (3.0 * u) * r22 - (24.0 * u) * f2)
 
-    b20 = g(r01 - (3.0 * u) * r02 - (24.0 * u) * f0)
-    b21 = g(r11 - (3.0 * u) * r12 - (24.0 * u) * f1)
-    b22 = g(r21 - (3.0 * u) * r22 - (24.0 * u) * f2)
+        b10 *= fden2
+        b11 *= fden2
+        b12 *= fden2
+        b20 *= fden2
+        b21 *= fden2
+        b22 *= fden2
 
-    b10 *= fden
-    b11 *= fden
-    b12 *= fden
-    b20 *= fden
-    b21 *= fden
-    b22 *= fden
+    c.execute()
 
+    # assemble results
     B1 = g(b10 * I + b11 * Q + b12 * Q2)
     B2 = g(b20 * I + b21 * Q + b22 * Q2)
 
     U_Sigma_prime = gradient_prime
 
-    # gradient_prime = U * Sigma_prime
+    exp_iQ = g(f0 * I + f1 * Q + f2 * Q2)
 
     Gamma = g(
         g.trace(U_Sigma_prime * B1) * Q
@@ -123,9 +127,9 @@ def cayley_hamilton_function_and_gradient_3(iQ, gradient_prime):
     return exp_iQ, Lambda
 
 
-def cayley_hamilton_function_and_gradient(x, dx):
+def cayley_hamilton_function_and_gradient(x, dx, c):
     if x.otype.shape[0] == 3:
-        return cayley_hamilton_function_and_gradient_3(x, dx)
+        return cayley_hamilton_function_and_gradient_3(x, dx, c)
 
     raise NotImplementedError()
 
@@ -191,6 +195,7 @@ def series_approximation(i, cache=default_exp_cache):
 class functor:
     def __init__(self):
         self.verbose = g.default.is_verbose("exp_performance")
+        self.c = compiler()
 
     def __call__(self, i):
         t = g.timer("exp")
@@ -202,7 +207,7 @@ class functor:
         return r
 
     def function_and_gradient(self, x, dx):
-        return cayley_hamilton_function_and_gradient(x, dx)
+        return cayley_hamilton_function_and_gradient(x, dx, self.c)
 
 
 exp = functor()

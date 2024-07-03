@@ -268,23 +268,23 @@ class lattice(factor, foundation_base):
             return s
 
     def __iadd__(self, expr):
-        gpt.eval(self, expr, ac=True)
+        gpt.expr.stack_eval(self, expr, ac=True)
         return self
 
     def __isub__(self, expr):
-        gpt.eval(self, -expr, ac=True)
+        gpt.expr.stack_eval(self, -expr, ac=True)
         return self
 
     def __imatmul__(self, expr):
-        gpt.eval(self, expr, ac=False)
+        gpt.expr.stack_eval(self, expr, ac=False)
         return self
 
     def __imul__(self, expr):
-        gpt.eval(self, self * expr, ac=False)
+        gpt.expr.stack_eval(self, self * expr, ac=False)
         return self
 
     def __itruediv__(self, expr):
-        gpt.eval(self, self / expr, ac=False)
+        gpt.expr.stack_eval(self, self / expr, ac=False)
         return self
 
     def __lt__(self, other):

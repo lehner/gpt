@@ -113,6 +113,16 @@ def get_otype_from_expression(e):
 
 
 class expr:
+    auto_closure_stack = []
+
+    def stack_eval(x, y=None, ac=False):
+        if len(expr.auto_closure_stack) == 0:
+            return gpt.eval(x, y, ac)
+        return expr.auto_closure_stack[-1](x, y, ac)
+
+    def auto_closure(x):
+        return expr(expr.stack_eval(x))
+
     def __init__(self, val, unary=expr_unary.NONE):
         if isinstance(val, (gpt.factor, gpt.tensor)):
             self.val = [(1.0, [(factor_unary.NONE, val)])]
@@ -173,9 +183,9 @@ class expr:
             # This does not work for sub-expressions without lattice fields, so
             # lhs and rhs may still contain multiple terms.
             if len(lhs.val) > 1:
-                lhs = expr(gpt.eval(lhs))
-            if len(rhs.val) > 1:
-                rhs = expr(gpt.eval(rhs))
+                lhs = expr.auto_closure(lhs)
+            if len(rhs.val) > 1 and expr.auto_closure:
+                rhs = expr.auto_closure(rhs)
             return expr([(a[0] * b[0], a[1] + b[1]) for a in lhs.val for b in rhs.val])
         elif isinstance(l, gpt.tensor) and self.is_single(gpt.tensor):
             ue, uf, to = self.get_single()

@@ -35,9 +35,11 @@ def get_rho(U, params):
     return np.array(
         [
             [
-                0.0
-                if (mu == orthogonal_dimension or nu == orthogonal_dimension or mu == nu)
-                else rho
+                (
+                    0.0
+                    if (mu == orthogonal_dimension or nu == orthogonal_dimension or mu == nu)
+                    else rho
+                )
                 for nu in range(nd)
             ]
             for mu in range(nd)
@@ -50,6 +52,7 @@ class stout(diffeomorphism):
     @params_convention(rho=None, orthogonal_dimension=None)
     def __init__(self, params):
         self.params = params
+        self.verbose = g.default.is_verbose("stout_performance")
 
     # apply the smearing
     def __call__(self, fields):
@@ -72,7 +75,12 @@ class stout(diffeomorphism):
         U = fields[0:nd]
         U_prime = fields_prime[0:nd]
 
+        tt = g.timer("jacobian")
+
+        tt("rho")
         rho = get_rho(U, self.params)
+
+        tt("staple sum")
         C = g.qcd.gauge.staple_sum(U, rho=rho)
 
         assert len(src) == nd
@@ -87,12 +95,17 @@ class stout(diffeomorphism):
             #
             # Sigma == g.adj(U) * gradient * 1j
             #
+            tt("expr")
             Sigma_prime[mu] = g(g.adj(U_prime[mu]) * src[mu] * 1j)
             U_Sigma_prime_mu = g(U[mu] * Sigma_prime[mu])
 
+            tt("traceless anti hermitian")
             iQ_mu = g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(U[mu]))
+
+            tt("exponential")
             exp_iQ[mu], Lambda[mu] = g.matrix.exp.function_and_gradient(iQ_mu, U_Sigma_prime_mu)
 
+            tt("expr")
             dst[mu] @= Sigma_prime[mu] * exp_iQ[mu] + g.adj(C[mu]) * 1j * Lambda[mu]
 
         for mu in range(nd):
@@ -104,10 +117,13 @@ class stout(diffeomorphism):
                 rho_nu_mu = rho[nu, mu]
 
                 if abs(rho_nu_mu) != 0.0 or abs(rho_mu_nu) != 0.0:
+                    tt("cshift")
                     U_nu_x_plus_mu = g.cshift(U[nu], mu, 1)
                     U_mu_x_plus_nu = g.cshift(U[mu], nu, 1)
                     Lambda_nu_x_plus_mu = g.cshift(Lambda[nu], mu, 1)
                     Lambda_mu_x_plus_nu = g.cshift(Lambda[mu], nu, 1)
+
+                    tt("expr")
 
                     dst[mu] -= (
                         1j
@@ -136,6 +152,7 @@ class stout(diffeomorphism):
                         * g.adj(U[nu])
                     )
 
+                    tt("cshift")
                     dst[mu] += g.cshift(
                         1j * rho_nu_mu * g.adj(U_nu_x_plus_mu) * g.adj(U[mu]) * Lambda[nu] * U[nu]
                         - 1j * rho_mu_nu * g.adj(U_nu_x_plus_mu) * g.adj(U[mu]) * Lambda[mu] * U[nu]
@@ -148,6 +165,11 @@ class stout(diffeomorphism):
                         nu,
                         -1,
                     )
+
+                    tt()
+
+        if self.verbose:
+            g.message(tt)
 
         for mu in range(nd):
             dst[mu] @= U[mu] * dst[mu] * (-1j)

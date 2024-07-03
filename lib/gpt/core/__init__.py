@@ -22,6 +22,7 @@ from gpt.core.quadruple_precision import qfloat, qfloat_array, qcomplex, qcomple
 from gpt.core.grid import grid, grid_from_description, full, redblack, general
 from gpt.core.precision import single, double, double_quadruple, precision, str_to_precision
 from gpt.core.expr import expr, factor, expr_unary, factor_unary, expr_eval
+from gpt.core.compiler import compiler
 from gpt.core.lattice import lattice, get_mem_book
 from gpt.core.peekpoke import map_key
 from gpt.core.tensor import tensor
