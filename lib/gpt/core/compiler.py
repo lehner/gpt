@@ -44,6 +44,8 @@ class compiler:
         self.n_lattices = None
         self.tt = timer("compiler")
         self.verbose = g.default.is_verbose("compiler_performance")
+        self.lattice_cache = []
+        self.lattice_cache_index = 0
 
     def code(self):
         return coder(self)
@@ -68,6 +70,7 @@ class compiler:
 
         self.lattices = []
         self.lattice_index = {}
+        self.lattice_cache_index = 0
 
         if self.verbose:
             g.message(self.tt)
@@ -84,10 +87,14 @@ class compiler:
         self.tt("code eval")
         if second is None:
             second = first
-            grid, otype, return_list, nlat = first.container()
-            assert nlat == 1 and not return_list
-
-            first = g.lattice(grid, otype)
+            if not self.compiled:
+                grid, otype, return_list, nlat = first.container()
+                assert nlat == 1 and not return_list
+                first = g.lattice(grid, otype)
+                self.lattice_cache.append(first)
+            else:
+                first = self.lattice_cache[self.lattice_cache_index]
+                self.lattice_cache_index += 1
 
         if self.representative is None:
             self.representative = first
