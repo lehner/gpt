@@ -133,9 +133,16 @@ eps = abs(Q - 0.18736242691275048)
 g.message(f"Test field_strength Q definition: {eps}")
 assert eps < 1e-13
 
+g.message("Test diff top")
 diff_Q = g.qcd.gauge.differentiable_topology()
 diff_Q.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 assert abs(Q - diff_Q(U)) < 1e-13
+
+g.message("Test masked diff top")
+msk = g.complex(grid)
+rng.normal(msk)
+diff_Q = g.qcd.gauge.differentiable_topology(mask=msk)
+diff_Q.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 
 Q = g.qcd.gauge.topological_charge_5LI(U, cache={})
 eps = abs(Q - 0.32270083147744544)

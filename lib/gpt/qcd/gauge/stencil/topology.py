@@ -23,7 +23,9 @@ from gpt.core.group import differentiable_functional
 default_topological_charge_cache = {}
 
 
-def topological_charge(U, field=False, trace=True, cache=default_topological_charge_cache):
+def topological_charge(
+    U, field=False, trace=True, mask=None, cache=default_topological_charge_cache
+):
     Nd = len(U)
 
     assert Nd == 4
@@ -77,6 +79,9 @@ def topological_charge(U, field=False, trace=True, cache=default_topological_cha
     # return
     if trace:
         T = g(g.trace(T))
+
+    if mask is not None:
+        T *= mask
 
     if not field:
         T = g.sum(T).real / T.grid.gsites
@@ -152,7 +157,7 @@ def field_strength_projected_gradient(U, mu, nu, left, right):
     return grad
 
 
-def topological_charge_gradient(U):
+def topological_charge_gradient(U, mask):
     field_strength = g.qcd.gauge.field_strength
 
     Bx = field_strength(U, 1, 2)
@@ -163,16 +168,17 @@ def topological_charge_gradient(U):
     Ey = field_strength(U, 3, 1)
     Ez = field_strength(U, 3, 2)
 
-    one = g.complex(U[0].grid)
-    one[:] = 1.0
+    if mask is None:
+        mask = g.complex(U[0].grid)
+        mask[:] = 1.0
 
     delta = g(
-        g.expr(field_strength_projected_gradient(U, 1, 2, one, Ex))
-        + g.expr(field_strength_projected_gradient(U, 3, 0, one, Bx))
-        + g.expr(field_strength_projected_gradient(U, 2, 0, one, Ey))
-        + g.expr(field_strength_projected_gradient(U, 3, 1, one, By))
-        + g.expr(field_strength_projected_gradient(U, 0, 1, one, Ez))
-        + g.expr(field_strength_projected_gradient(U, 3, 2, one, Bz))
+        g.expr(field_strength_projected_gradient(U, 1, 2, mask, Ex))
+        + g.expr(field_strength_projected_gradient(U, 3, 0, mask, Bx))
+        + g.expr(field_strength_projected_gradient(U, 2, 0, mask, Ey))
+        + g.expr(field_strength_projected_gradient(U, 3, 1, mask, By))
+        + g.expr(field_strength_projected_gradient(U, 0, 1, mask, Ez))
+        + g.expr(field_strength_projected_gradient(U, 3, 2, mask, Bz))
     )
 
     coeff = 8.0 / (32.0 * np.pi**2)
@@ -187,14 +193,14 @@ def topological_charge_gradient(U):
 
 
 class differentiable_topology(differentiable_functional):
-    def __init__(self):
-        pass
+    def __init__(self, mask=None):
+        self.mask = mask
 
     def __call__(self, U):
-        return topological_charge(U)
+        return topological_charge(U, mask=self.mask)
 
     def gradient(self, U, dU):
-        gradient = topological_charge_gradient(U)
+        gradient = topological_charge_gradient(U, mask=self.mask)
         ret = []
         for u in dU:
             ret.append(gradient[U.index(u)])
