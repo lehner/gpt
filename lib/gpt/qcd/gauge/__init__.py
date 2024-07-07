@@ -27,6 +27,7 @@ from gpt.qcd.gauge.stencil import (
     energy_density,
     topological_charge,
     differentiable_topology,
+    projected_topology_gradient,
     algebra_laplace,
 )
 import gpt.qcd.gauge.project
