@@ -89,7 +89,7 @@ def topological_charge(
     return T
 
 
-def v_projected_gradient(U, mu, nu, left, right):
+def v_projected_gradient(U, mu, nu, right_left):
     Nd = len(U)
     assert Nd == 4
 
@@ -97,20 +97,20 @@ def v_projected_gradient(U, mu, nu, left, right):
     for gr in grad:
         gr[:] = 0
 
-    grad[mu] += g.cshift(g.adj(U[nu]) * right * left * g.cshift(U[nu], mu, 1), nu, -1) * g.adj(
+    grad[mu] += g.cshift(g.adj(U[nu]) * right_left * g.cshift(U[nu], mu, 1), nu, -1) * g.adj(
         U[mu]
     )
-    grad[mu] -= U[nu] * g.cshift(right * left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu])
+    grad[mu] -= U[nu] * g.cshift(right_left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu])
 
     grad[nu] -= U[nu] * g.cshift(
-        g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) * right * left, mu, -1
+        g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) * right_left, mu, -1
     )
-    grad[nu] -= g.cshift(g.adj(U[mu]) * U[nu] * g.cshift(right * left, nu, 1), mu, -1) * g.adj(
+    grad[nu] -= g.cshift(g.adj(U[mu]) * U[nu] * g.cshift(right_left, nu, 1), mu, -1) * g.adj(
         U[nu]
     )
 
-    grad[nu] += right * left * g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
-    grad[nu] += U[nu] * g.cshift(right * left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu])
+    grad[nu] += right_left * g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
+    grad[nu] += U[nu] * g.cshift(right_left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu])
 
     grad[mu] @= g.qcd.gauge.project.traceless_hermitian(grad[mu] / 2j)
     grad[nu] @= g.qcd.gauge.project.traceless_hermitian(grad[nu] / 2j)
@@ -125,31 +125,30 @@ def v(U, mu, nu):
     )
 
 
-def F_projected_gradient(U, mu, nu, left, right):
+def F_projected_gradient(U, mu, nu, right_left):
     Nd = len(U)
     assert Nd == 4
 
-    left_s = g.cshift(left, mu, 1)
-    right_s = g.cshift(right, mu, 1)
+    right_left_s = g.cshift(right_left, mu, 1)
     v_val = v(U, mu, nu)
-    grad = v_projected_gradient(U, mu, nu, g(left * U[mu]), right)
-    grad2 = v_projected_gradient(U, mu, nu, left_s, g(U[mu] * right_s))
+    grad = v_projected_gradient(U, mu, nu, g(right_left * U[mu]))
+    grad2 = v_projected_gradient(U, mu, nu, g(U[mu] * right_left_s))
     for rho in range(Nd):
         grad[rho] += grad2[rho]
 
-    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * v_val * right * left / 2j)
-    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * right_s * left_s * v_val / 2j)
+    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * v_val * right_left / 2j)
+    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * right_left_s * v_val / 2j)
 
     # left * U[mu] * v * right + left * g.cshift(v * U[mu], mu, -1) * right
     return grad
 
 
-def field_strength_projected_gradient(U, mu, nu, left, right):
+def field_strength_projected_gradient(U, mu, nu, right_left):
     Nd = len(U)
     assert Nd == 4
 
-    fg1 = F_projected_gradient(U, mu, nu, left, right)
-    fg2 = F_projected_gradient(U, mu, nu, g.adj(right), g.adj(left))
+    fg1 = F_projected_gradient(U, mu, nu, g(right_left))
+    fg2 = F_projected_gradient(U, mu, nu, g(g.adj(right_left)))
     grad = []
     for mu in range(Nd):
         grad.append(g(0.125 * (fg1[mu] - g.adj(fg2[mu]))))
@@ -172,12 +171,12 @@ def topological_charge_gradient(U, mask=None):
         mask[:] = 1.0
 
     delta = g(
-        g.expr(field_strength_projected_gradient(U, 1, 2, mask, Ex))
-        + g.expr(field_strength_projected_gradient(U, 3, 0, mask, Bx))
-        + g.expr(field_strength_projected_gradient(U, 2, 0, mask, Ey))
-        + g.expr(field_strength_projected_gradient(U, 3, 1, mask, By))
-        + g.expr(field_strength_projected_gradient(U, 0, 1, mask, Ez))
-        + g.expr(field_strength_projected_gradient(U, 3, 2, mask, Bz))
+        g.expr(field_strength_projected_gradient(U, 1, 2, g(mask * Ex)))
+        + g.expr(field_strength_projected_gradient(U, 3, 0, g(mask * Bx)))
+        + g.expr(field_strength_projected_gradient(U, 2, 0, g(mask * Ey)))
+        + g.expr(field_strength_projected_gradient(U, 3, 1, g(mask * By)))
+        + g.expr(field_strength_projected_gradient(U, 0, 1, g(mask * Ez)))
+        + g.expr(field_strength_projected_gradient(U, 3, 2, g(mask * Bz)))
     )
 
     coeff = 8.0 / (32.0 * np.pi**2)
@@ -206,35 +205,35 @@ class differentiable_topology(differentiable_functional):
         return ret
 
 
-def projected_gradient_F_projected_gradient(U, mu, nu, left, right, outer_left, outer_right):
+def projected_gradient_F_projected_gradient(U, mu, nu, right_left, outer_right_left):
     Nd = len(U)
     assert Nd == 4
 
-    left_s = g.cshift(left, mu, 1)
-    right_s = g.cshift(right, mu, 1)
+    right_left_s = g.cshift(right_left, mu, 1)
     v_val = v(U, mu, nu)
-    grad = v_projected_gradient(U, mu, nu, g(left * U[mu]), right)
-    grad2 = v_projected_gradient(U, mu, nu, left_s, g(U[mu] * right_s))
+    grad = v_projected_gradient(U, mu, nu, g(right_left * U[mu]))
+    grad2 = v_projected_gradient(U, mu, nu, g(U[mu] * right_left_s))
     for rho in range(Nd):
         grad[rho] += grad2[rho]
 
-    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * v_val * right * left / 2j)
-    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * right_s * left_s * v_val / 2j)
+    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * v_val * right_left / 2j)
+    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * right_left_s * v_val / 2j)
 
     # left * U[mu] * v * right + left * g.cshift(v * U[mu], mu, -1) * right
     assert False
     return grad
 
 
-def projected_gradient_field_strength_projected_gradient(U, mu, nu, left, right, outer_left, outer_right):
+def projected_gradient_field_strength_projected_gradient(U, mu, nu, right_left, outer_right_left):
     Nd = len(U)
     assert Nd == 4
 
-    fg1 = projected_gradient_F_projected_gradient(U, mu, nu, left, right, outer_left, outer_right)
-    fg2 = projected_gradient_F_projected_gradient(U, mu, nu, g.adj(right), g.adj(left), g.adj(outer_right), g.adj(outer_left))
+    fg1 = F_projected_gradient(U, mu, nu, g(right_left))
+    fg2 = F_projected_gradient(U, mu, nu, g(g.adj(right_left)))
     grad = []
     for mu in range(Nd):
         grad.append(g(0.125 * (fg1[mu] - g.adj(fg2[mu]))))
+    assert False
     return grad
 
 
@@ -249,16 +248,17 @@ def projected_gradient_topological_charge_gradient(left, U):
     Ey = field_strength(U, 3, 1)
     Ez = field_strength(U, 3, 2)
 
-    mask = g.complex(U[0].grid)
-    mask[:] = 1.0
+    if mask is None:
+        mask = g.complex(U[0].grid)
+        mask[:] = 1.0
 
     delta = g(
-        g.expr(projected_gradient_field_strength_projected_gradient(U, 1, 2, mask, Ex, left, mask))
-        + g.expr(projected_gradient_field_strength_projected_gradient(U, 3, 0, mask, Bx, left, mask))
-        + g.expr(projected_gradient_field_strength_projected_gradient(U, 2, 0, mask, Ey, left, mask))
-        + g.expr(projected_gradient_field_strength_projected_gradient(U, 3, 1, mask, By, left))
-        + g.expr(projected_gradient_field_strength_projected_gradient(U, 0, 1, mask, Ez, left))
-        + g.expr(projected_gradient_field_strength_projected_gradient(U, 3, 2, mask, Bz, left))
+        g.expr(field_strength_projected_gradient(U, 1, 2, g(mask * Ex)))
+        + g.expr(field_strength_projected_gradient(U, 3, 0, g(mask * Bx)))
+        + g.expr(field_strength_projected_gradient(U, 2, 0, g(mask * Ey)))
+        + g.expr(field_strength_projected_gradient(U, 3, 1, g(mask * By)))
+        + g.expr(field_strength_projected_gradient(U, 0, 1, g(mask * Ez)))
+        + g.expr(field_strength_projected_gradient(U, 3, 2, g(mask * Bz)))
     )
 
     coeff = 8.0 / (32.0 * np.pi**2)
@@ -268,7 +268,7 @@ def projected_gradient_topological_charge_gradient(left, U):
         dQ = g(coeff * d)
         dQ.otype = U[0].otype.cartesian()
         ret.append(dQ)
-
+    assert False
     return ret
 
 
@@ -280,8 +280,6 @@ def projected_gradient_traceless_hermitian(U_L, U_R, R_L, otype):
     Ndim = otype.shape[0]
     A = g(g.qcd.gauge.project.traceless_anti_hermitian(g(U_L * R_L * U_R * 0.5 - 0.5 * g.adj(U_R) * R_L * g.adj(U_L))) * 0.5j)
     A -= 1.0 / Ndim / 2.0 * g.qcd.gauge.project.traceless_anti_hermitian(U - g.adj(U)) * g.trace(R_L + g.adj(R_L)) * 0.25j
-    #A = g(g.qcd.gauge.project.traceless_anti_hermitian(g(U * R_L * 0.5 - 0.5 * R_L * g.adj(U))) * 0.5j)
-    #A -= 1.0 / Ndim / 2.0 * g.qcd.gauge.project.traceless_anti_hermitian(U - g.adj(U)) * g.trace(R_L + g.adj(R_L)) * 0.25j
     A.otype = otype
     return A
 
@@ -455,7 +453,7 @@ class projected_topology_gradient(differentiable_functional):
 
     def __call__(self, U):
         #        return g.inner_product(self.left, g.qcd.gauge.project.traceless_hermitian(U[0])).real
-        gradient = v_projected_gradient(U, 0, 1, self.left, self.right)
+        gradient = v_projected_gradient(U, 0, 1, g(self.right * self.left))
         return sum([g.inner_product(self.vector[mu], gradient[mu]).real for mu in range(len(gradient))])
 
     def gradient(self, U, dU):
