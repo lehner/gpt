@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.util import accumulate_gradient
+from gpt.ad.reverse.util import container, get_unary_container
 
 
 def inner_product(x, y, use_accelerator):
@@ -31,11 +31,11 @@ def inner_product(x, y, use_accelerator):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:  # z = adj(x) y   ->    x z = y  -> x = y adj(z)
-            accumulate_gradient(x, y.value * g.adj(z.gradient))
+            x.gradient += y.value * g.adj(z.gradient) # y.value * g.adj(z.gradient)
         if y.with_gradient:  # z = adj(x) y   ->    y = x z
-            accumulate_gradient(y, x.value * z.gradient)
+            y.gradient += x.value * z.gradient
 
-    return {(0, 0): g.ad.reverse.node_base(_forward, _backward, (x, y))}
+    return {(0, 0): g.ad.reverse.node_base(_forward, _backward, (x, y), _container=container(complex), _tag="inner_product")}
 
 
 def norm2(x):
@@ -52,9 +52,9 @@ def cshift(x, direction, displacement, none):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            accumulate_gradient(x, g.cshift(z.gradient, direction, -displacement))
+            x.gradient += g.cshift(z.gradient, direction, -displacement)
 
-    return g.ad.reverse.node_base(_forward, _backward, (x,))
+    return g.ad.reverse.node_base(_forward, _backward, (x,), _container=x._container, _tag="cshift(" + str(direction) + ", " + str(displacement) + ")")
 
 
 def adj(x):
@@ -64,9 +64,9 @@ def adj(x):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            accumulate_gradient(x, g.adj(z.gradient))
+            x.gradient += g.adj(z.gradient)
 
-    return g.ad.reverse.node_base(_forward, _backward, (x,))
+    return g.ad.reverse.node_base(_forward, _backward, (x,), _container=x._container, _tag="adj")
 
 
 def trace(x, t):
@@ -76,9 +76,11 @@ def trace(x, t):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            accumulate_gradient(x, g.identity(x.value) * z.gradient)
+            x.gradient += g.identity(x.value) * z.gradient
 
-    return g.ad.reverse.node_base(_forward, _backward, (x,))
+    z_container = get_unary_container(x._container, lambda v: g.trace(v, t))
+
+    return g.ad.reverse.node_base(_forward, _backward, (x,), _container=z_container)
 
 
 def sum(x):
@@ -88,9 +90,9 @@ def sum(x):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            accumulate_gradient(x, g.identity(x.value) * z.gradient)
+            x.gradient += g.identity(x.value) * z.gradient
 
-    return g.ad.reverse.node_base(_forward, _backward, (x,))
+    return g.ad.reverse.node_base(_forward, _backward, (x,), _container=x._container.lattice_to_tensor())
 
 
 def component_simple_map(operator, numpy_operator, extra_params, first, second):
@@ -98,3 +100,18 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
         assert second is None
         return g.ad.reverse.transform.relu(first, a=extra_params["a"])
     raise Exception(f"component-wise operator {operator} not implemented in rev-AD")
+
+
+def infinitesimal_to_cartesian(src, dsrc):
+    return src.value.otype.infinitesimal_to_cartesian(src, dsrc)
+
+
+def identity(x):
+    def _forward():
+        return g.identity(x.value)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        pass
+
+    return g.ad.reverse.node_base(_forward, _backward, (x,), _container=x._container, _tag="identity(" + str(x._container) + ")")

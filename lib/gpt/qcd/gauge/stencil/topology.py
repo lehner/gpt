@@ -211,16 +211,133 @@ def projected_gradient_F_projected_gradient(U, mu, nu, right_left, outer_right_l
 
     right_left_s = g.cshift(right_left, mu, 1)
     v_val = v(U, mu, nu)
-    grad = v_projected_gradient(U, mu, nu, g(right_left * U[mu]))
-    grad2 = v_projected_gradient(U, mu, nu, g(U[mu] * right_left_s))
+
+    one = g.identity(g.group.cartesian(U[0]))
+    grad = projected_gradient_v_projected_gradient(U, mu, nu, right_left, one, outer_right_left)
+    grad2 = projected_gradient_v_projected_gradient(U, mu, nu, one, right_left_s, outer_right_left)
     for rho in range(Nd):
         grad[rho] += grad2[rho]
 
-    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * v_val * right_left / 2j)
-    grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * right_left_s * v_val / 2j)
+    one = g.identity(g.lattice(grad[0]))
+    otype = grad[0].otype
 
-    # left * U[mu] * v * right + left * g.cshift(v * U[mu], mu, -1) * right
-    assert False
+    #grad[mu] -= g.qcd.gauge.project.traceless_hermitian(U[mu] * v_val * right_left / 2j)
+    # v_val_1
+    grad[mu] -= projected_gradient_traceless_hermitian(
+        U[mu] * g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) * right_left / 2j,
+        one,
+        outer_right_left[mu],
+        otype
+    )
+        
+    grad[mu] -= projected_gradient_traceless_hermitian(
+        - U[mu] * g.adj(g.cshift(U[mu] * g.cshift(U[nu], mu, 1), nu, -1)) / 2j,
+        g.cshift(g.adj(right_left) * U[nu], nu, -1),
+        g.cshift(outer_right_left[mu], nu, -1),
+        otype
+    )
+        
+    grad[nu] -= projected_gradient_traceless_hermitian(
+        U[nu] * g.cshift(g.cshift(g.adj(U[mu]), nu, 1) * g.adj(U[nu]) * right_left, mu, -1) / 2j,
+        g.cshift(U[mu], mu, -1),
+        g.cshift(outer_right_left[mu], mu, -1),
+        otype
+    )
+        
+    grad[nu] -= projected_gradient_traceless_hermitian(
+        - U[nu] * g.cshift(U[mu], nu, 1) * g.cshift(g.adj(U[nu]), mu, 1) * g.adj(U[mu]) / 2j,
+        g.adj(right_left),
+        outer_right_left[mu],
+        otype
+    )
+
+    # v_val_2
+    grad[mu] += projected_gradient_traceless_hermitian(
+        U[mu] * g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1) * right_left / 2j,
+        one,
+        outer_right_left[mu],
+        otype
+    )
+        
+    grad[mu] += projected_gradient_traceless_hermitian(
+        - U[mu] * g.adj(g.cshift(U[mu], nu, 1) * g.adj(g.cshift(U[nu], mu, 1)))/ 2j,
+        g.adj(U[nu] * g.cshift(right_left, nu, 1)),
+        g.cshift(outer_right_left[mu], nu, 1),
+        otype
+    )
+        
+    grad[nu] += projected_gradient_traceless_hermitian(
+        - U[nu] * g.cshift(g.cshift(g.adj(U[mu]), nu, 1), mu, -1) / 2j,
+        g.adj(g.cshift(g.adj(U[mu]) * U[nu] * g.cshift(right_left, nu, 1), mu, -1)),
+        g.cshift(g.cshift(outer_right_left[mu], nu, 1), mu, -1),
+        otype
+    )
+
+    grad[nu] += projected_gradient_traceless_hermitian(
+        U[nu] * g.cshift(right_left, nu, 1) / 2j,
+        g.cshift(U[mu], nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]),
+        g.cshift(outer_right_left[mu], nu, 1),
+        otype
+    )
+
+    #grad[mu] -= g.qcd.gauge.project.traceless_hermitian(g(U[mu] * right_left_s * v_val) / 2j)
+    grad[mu] -= projected_gradient_traceless_hermitian(
+        U[mu] * right_left_s * g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) / 2j,
+        one,
+        outer_right_left[mu],
+        otype
+    )
+        
+    grad[mu] -= projected_gradient_traceless_hermitian(
+        - U[mu] * g.adj(g.cshift(U[mu] * right_left_s * g.cshift(U[nu], mu, 1), nu, -1)) / 2j,
+        g.adj(g.cshift(g.adj(U[nu]), nu, -1)),
+        g.cshift(outer_right_left[mu], nu, -1),
+        otype
+    )
+
+    grad[nu] -= projected_gradient_traceless_hermitian(
+        U[nu] * g.cshift(g.cshift(g.adj(U[mu]), nu, 1) * g.adj(U[nu]), mu, -1) / 2j,
+        g.cshift(U[mu] * right_left_s, mu, -1),
+        g.cshift(outer_right_left[mu], mu, -1),
+        otype
+    )
+        
+    grad[nu] -= projected_gradient_traceless_hermitian(
+        - U[nu] * g.cshift(U[mu], nu, 1) * g.cshift(g.adj(U[nu]), mu, 1) * g.adj(U[mu] * right_left_s) / 2j,
+        one,
+        outer_right_left[mu],
+        otype
+    )
+
+    #v_val_2
+    grad[mu] += projected_gradient_traceless_hermitian(
+        U[mu] * right_left_s * g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1) / 2j,
+        one,
+        outer_right_left[mu],
+        otype
+    )
+        
+    grad[mu] += projected_gradient_traceless_hermitian(
+        - U[mu] * g.adj(g.cshift(U[mu] * right_left_s, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)))/ 2j,
+        g.adj(U[nu]),
+        g.cshift(outer_right_left[mu], nu, 1),
+        otype
+    )
+        
+    grad[nu] += projected_gradient_traceless_hermitian(
+        - U[nu] * g.cshift(g.cshift(g.adj(U[mu] * right_left_s), nu, 1), mu, -1) / 2j,
+        g.adj(g.cshift(g.adj(U[mu]) * U[nu], mu, -1)),
+        g.cshift(g.cshift(outer_right_left[mu], nu, 1), mu, -1),
+        otype
+    )
+
+    grad[nu] += projected_gradient_traceless_hermitian(
+        U[nu] / 2j,
+        g.cshift(U[mu] * right_left_s, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]),
+        g.cshift(outer_right_left[mu], nu, 1),
+        otype
+    )
+
     return grad
 
 
@@ -228,16 +345,36 @@ def projected_gradient_field_strength_projected_gradient(U, mu, nu, right_left, 
     Nd = len(U)
     assert Nd == 4
 
-    fg1 = F_projected_gradient(U, mu, nu, g(right_left))
-    fg2 = F_projected_gradient(U, mu, nu, g(g.adj(right_left)))
+    fg1 = projected_gradient_F_projected_gradient(U, mu, nu, g(right_left), outer_right_left)
+    fg2 = projected_gradient_F_projected_gradient(U, mu, nu, g(g.adj(right_left)), outer_right_left)
     grad = []
     for mu in range(Nd):
         grad.append(g(0.125 * (fg1[mu] - g.adj(fg2[mu]))))
-    assert False
+        
     return grad
 
 
-def projected_gradient_topological_charge_gradient(left, U):
+def topological_charge_gradient2(U):
+    field_strength = g.qcd.gauge.field_strength
+
+    Bx = field_strength(U, 1, 2)
+
+    delta = g(
+        + g.expr(field_strength_projected_gradient(U, 3, 0, Bx))
+    )
+
+    coeff = 8.0 / (32.0 * np.pi**2)
+
+    ret = []
+    for d in delta:
+        dQ = g(coeff * d)
+        dQ.otype = U[0].otype.cartesian()
+        ret.append(dQ)
+
+    return ret
+
+
+def projected_gradient_topological_charge_gradient(U, outer):
     field_strength = g.qcd.gauge.field_strength
 
     Bx = field_strength(U, 1, 2)
@@ -248,17 +385,15 @@ def projected_gradient_topological_charge_gradient(left, U):
     Ey = field_strength(U, 3, 1)
     Ez = field_strength(U, 3, 2)
 
-    if mask is None:
-        mask = g.complex(U[0].grid)
-        mask[:] = 1.0
-
     delta = g(
-        g.expr(field_strength_projected_gradient(U, 1, 2, g(mask * Ex)))
-        + g.expr(field_strength_projected_gradient(U, 3, 0, g(mask * Bx)))
-        + g.expr(field_strength_projected_gradient(U, 2, 0, g(mask * Ey)))
-        + g.expr(field_strength_projected_gradient(U, 3, 1, g(mask * By)))
-        + g.expr(field_strength_projected_gradient(U, 0, 1, g(mask * Ez)))
-        + g.expr(field_strength_projected_gradient(U, 3, 2, g(mask * Bz)))
+        #g.expr(field_strength_projected_gradient(U, 1, 2, g(mask * Ex)))
+        + g.expr(projected_gradient_field_strength_projected_gradient(U, 3, 0, Bx, outer))
+        #+ g.expr(field_strength_projected_gradient(U, 3, 0, field_strength_projected_gradient_dinput(U, 3, 0, outer)))
+        
+        #+ g.expr(field_strength_projected_gradient(U, 2, 0, g(mask * Ey)))
+        #+ g.expr(field_strength_projected_gradient(U, 3, 1, g(mask * By)))
+        #+ g.expr(field_strength_projected_gradient(U, 0, 1, g(mask * Ez)))
+        #+ g.expr(field_strength_projected_gradient(U, 3, 2, g(mask * Bz)))
     )
 
     coeff = 8.0 / (32.0 * np.pi**2)
@@ -284,9 +419,11 @@ def projected_gradient_traceless_hermitian(U_L, U_R, R_L, otype):
     return A
 
     
-def projected_gradient_v_projected_gradient(U, mu, nu, right_left, outer_right_left):
+def projected_gradient_v_projected_gradient(U, mu, nu, right, left, outer_right_left):
     Nd = len(U)
     assert Nd == 4
+
+    right_left = g(right * U[mu] * left)
 
     grad = [g.group.cartesian(U[0]) for i in range(Nd)]
     for gr in grad:
@@ -306,7 +443,14 @@ def projected_gradient_v_projected_gradient(U, mu, nu, right_left, outer_right_l
         outer_right_left[mu],
         otype
     )
-    
+
+    grad[mu] += projected_gradient_traceless_hermitian(
+        U[mu] * left * g.cshift(U[nu], mu, 1) * g.cshift(g.adj(U[mu]), nu, 1) / 2j,
+        g.adj(U[nu]) * right,
+        g.cshift(outer_right_left[mu], nu, 1),
+        otype
+    )
+
     grad[nu] += projected_gradient_traceless_hermitian(
         - U[nu] / 2j,
         g.cshift(U[mu], nu, 1) * g.cshift(g.adj(U[nu]), mu, 1) * g.adj(right_left),
@@ -330,6 +474,13 @@ def projected_gradient_v_projected_gradient(U, mu, nu, right_left, outer_right_l
         otype
     )
 
+    grad[mu] -= projected_gradient_traceless_hermitian(
+        U[mu] * left * g.cshift(g.cshift(g.adj(U[nu]), mu, 1) * g.adj(U[mu]), nu, -1) / 2j,
+        g.cshift(U[nu], nu, -1) * right,
+        g.cshift(outer_right_left[mu], nu, -1),
+        otype
+    )
+
     grad[nu] -= projected_gradient_traceless_hermitian(
         U[nu] * g.cshift(right_left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) / 2j,
         one,
@@ -344,10 +495,7 @@ def projected_gradient_v_projected_gradient(U, mu, nu, right_left, outer_right_l
         otype
     )
 
-    #grad[nu] -= U[nu] * g.cshift(
-    #    g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) * right * left, mu, -1
-    #)
-    
+    #grad[nu] -= U[nu] * g.cshift(g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) * right * left, mu, -1)
     grad[mu] -= projected_gradient_traceless_hermitian(
         - U[mu] * g.cshift(g.cshift(g.adj(U[nu]), mu, 1), nu, -1) / 2j,
         g.cshift(g.adj(right_left) * U[nu], nu, -1),
@@ -355,22 +503,28 @@ def projected_gradient_v_projected_gradient(U, mu, nu, right_left, outer_right_l
         otype
     )
 
+    grad[mu] -= projected_gradient_traceless_hermitian(
+        U[mu] * left / 2j,
+        g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) * right,
+        g.cshift(outer_right_left[nu], mu, 1),
+        otype
+    )
+    
     grad[nu] -= projected_gradient_traceless_hermitian(
         U[nu] * g.cshift(g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) * right_left, mu, -1) / 2j,
         one,
         outer_right_left[nu],
         otype
     )
-
+    
     grad[nu] -= projected_gradient_traceless_hermitian(
         -U[nu] * g.cshift(U[mu], nu, 1) * g.cshift(g.adj(U[nu]), mu, 1) / 2j,
         g.adj(right_left),
         g.cshift(outer_right_left[nu], mu, 1),
         otype
     )
-
+        
     #grad[nu] -= g.cshift(g.adj(U[mu]) * U[nu] * g.cshift(right_left, nu, 1), mu, -1) * g.adj(U[nu])
-    
     grad[mu] -= projected_gradient_traceless_hermitian(
         - U[mu] / 2j,
         g.cshift(U[nu], mu, 1) * g.cshift(g.adj(right_left), nu, 1) * g.adj(U[nu]),
@@ -378,25 +532,39 @@ def projected_gradient_v_projected_gradient(U, mu, nu, right_left, outer_right_l
         otype
     )
 
+    grad[mu] -= projected_gradient_traceless_hermitian(
+        U[mu] * left * g.cshift(g.cshift(g.adj(U[nu]), mu, 1), nu, -1) / 2j,
+        g.cshift(g.adj(U[mu]) * U[nu], nu, -1) * right,
+        g.cshift(g.cshift(outer_right_left[nu], mu, 1), nu, -1),
+        otype
+    )
+    
     grad[nu] -= projected_gradient_traceless_hermitian(
         U[nu] * g.cshift(right_left, nu, 1) * g.cshift(g.adj(U[nu]), mu, 1) / 2j,
         g.adj(U[mu]),
         g.cshift(outer_right_left[nu], mu, 1),
         otype
     )
-
+    
     grad[nu] -= projected_gradient_traceless_hermitian(
         -U[nu] * g.cshift(g.cshift(g.adj(right_left), nu, 1) * g.adj(U[nu]) * U[mu], mu, -1) / 2j,
         one,
         outer_right_left[nu],
         otype
     )
-
+        
     # grad[nu] += right_left * g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
     grad[mu] += projected_gradient_traceless_hermitian(
         - U[mu] * g.cshift(g.cshift(g.adj(U[nu]), mu, 1) * g.adj(right_left), nu, -1) / 2j,
         g.cshift(U[nu], nu, -1),
         g.cshift(outer_right_left[nu], nu, -1),
+        otype
+    )
+
+    grad[mu] += projected_gradient_traceless_hermitian(
+        U[mu] * left * g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu]) / 2j,
+        right,
+        outer_right_left[nu],
         otype
     )
 
@@ -406,14 +574,14 @@ def projected_gradient_v_projected_gradient(U, mu, nu, right_left, outer_right_l
         g.cshift(outer_right_left[nu], mu, -1),
         otype
     )
-
+    
     grad[nu] += projected_gradient_traceless_hermitian(
         - U[nu] * g.cshift(U[mu], nu, 1) * g.cshift(g.adj(U[nu]), mu, 1) * g.adj(right_left) / 2j,
         one,
         outer_right_left[nu],
         otype
     )
-
+        
     # grad[nu] += U[nu] * g.cshift(right_left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu])
     grad[mu] += projected_gradient_traceless_hermitian(
         - U[mu] * g.cshift(U[nu], mu, 1) * g.cshift(g.adj(right_left), nu, 1) * g.adj(U[nu]) / 2j,
@@ -422,13 +590,20 @@ def projected_gradient_v_projected_gradient(U, mu, nu, right_left, outer_right_l
         otype
     )
 
+    grad[mu] += projected_gradient_traceless_hermitian(
+        U[mu] * left * g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]), nu, -1) / 2j,
+        g.cshift(U[nu], nu, -1) * right,
+        g.cshift(outer_right_left[nu], nu, -1),
+        otype
+    )
+    
     grad[nu] += projected_gradient_traceless_hermitian(
         U[nu] * g.cshift(right_left, nu, 1) * g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) / 2j,
         one,
         outer_right_left[nu],
         otype
     )
-
+    
     grad[nu] += projected_gradient_traceless_hermitian(
         - U[nu] * g.adj(g.cshift(U[nu] * g.cshift(right_left, nu, 1), mu, -1)) / 2j,
         g.cshift(U[mu], mu, -1),
@@ -453,14 +628,20 @@ class projected_topology_gradient(differentiable_functional):
 
     def __call__(self, U):
         #        return g.inner_product(self.left, g.qcd.gauge.project.traceless_hermitian(U[0])).real
-        gradient = v_projected_gradient(U, 0, 1, g(self.right * self.left))
+        gradient = v_projected_gradient(U, 0, 1, g(self.right * U[0] * self.left))
+        #gradient = F_projected_gradient(U, 0, 1, g(self.right * self.left))
+        #gradient = field_strength_projected_gradient(U, 0, 1, g(self.right * self.left))
+        #gradient = topological_charge_gradient2(U)
         return sum([g.inner_product(self.vector[mu], gradient[mu]).real for mu in range(len(gradient))])
 
     def gradient(self, U, dU):
         #gradient = projected_gradient_traceless_hermitian(U[0], g.adj(self.left))
         #ret = [gradient]
         
-        gradient = projected_gradient_v_projected_gradient(U, 0, 1, g(self.right * self.left), g(g.adj(self.vector)))
+        gradient = projected_gradient_v_projected_gradient(U, 0, 1, self.right, self.left, g(g.adj(self.vector)))
+        #gradient = projected_gradient_F_projected_gradient(U, 0, 1, g(self.right * self.left), g(g.adj(self.vector)))
+        #gradient = projected_gradient_field_strength_projected_gradient(U, 0, 1, g(self.right * self.left), g(g.adj(self.vector)))
+        #gradient = projected_gradient_topological_charge_gradient(U, g(g.adj(self.vector)))
         ret = []
         for u in dU:
             ret.append(gradient[U.index(u)])

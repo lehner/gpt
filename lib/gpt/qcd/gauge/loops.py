@@ -168,5 +168,5 @@ def field_strength(U, mu, nu):
     )
 
     F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
-    F @= 0.125 * (F - g.adj(F))
+    F = 0.125 * (F - g.adj(F))
     return F

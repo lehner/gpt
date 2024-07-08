@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.util import accumulate_gradient, is_field
+from gpt.ad.reverse.util import get_container, get_mul_container, convert_container
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
 
@@ -73,8 +73,22 @@ class node_differentiable_functional(g.group.differentiable_functional):
         return [self.arguments[i].gradient for i in indices]
 
 
-# gctr = 0
+def str_traverse(node, indent=0):
+    if not callable(node._forward):
+        return (" "*indent) + "leaf(" + str(node._container) + ")"
+    else:
+        pre = " "*indent
+        if node._tag is not None:
+            tag = node._tag
+        else:
+            tag = str(node._forward)
+        ret = pre + "(" + tag + "):"
+        for x in node._children:
+            ret = ret + "\n" + str_traverse(x, indent+1)
+        return ret
 
+    
+# gctr = 0
 
 class node_base(base):
     foundation = foundation
@@ -87,30 +101,47 @@ class node_base(base):
         _children=(),
         with_gradient=True,
         infinitesimal_to_cartesian=True,
+        _container=None,
+        _tag=None
     ):
         # global gctr
         # gctr+=1
-        if not callable(_forward):
+        if not callable(_forward) or isinstance(_forward, node_base):
             self._forward = None
             self.value = _forward
+            _container = get_container(_forward)
         else:
             self._forward = _forward
             self.value = None
+            assert _container is not None
+        self._container = _container
         self._backward = _backward
         self._children = _children
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         self.gradient = None
+        self._tag = _tag
 
     # def __del__(self):
     # global gctr
     # gctr-=1
     # print(gctr)
 
+    def __str__(self):
+        return str_traverse(self)
+
     def zero_gradient(self):
-        self.gradient = 0.0 * self.value
-        if isinstance(self.gradient, g.expr):
-            self.gradient = g(self.gradient)
+        self.gradient = self._container.zero()
+        if isinstance(self.value, g.ad.forward.series):
+            gradient = 0.0 * self.value
+            for t in gradient.terms:
+                gradient.terms[t] = self.gradient
+            self.gradient = gradient
+
+        value = self.value
+        while isinstance(value, node_base):
+            value = value.value
+            self.gradient = node_base(self.gradient)
 
     def __mul__(x, y):
         if not isinstance(x, node_base):
@@ -119,17 +150,25 @@ class node_base(base):
         if not isinstance(y, node_base):
             y = node_base(y, with_gradient=False)
 
+        z_container = get_mul_container(x._container, y._container)
+
+        if x.with_gradient:
+            x = convert_container(x, z_container, y._container, lambda a, b: a * g.adj(b))
+
+        if y.with_gradient:
+            y = convert_container(y, x._container, z_container, lambda a, b: g.adj(a) * b)
+
         def _forward():
             return x.value * y.value
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                accumulate_gradient(x, z.gradient * g.adj(y.value))
+                x.gradient += z.gradient * g.adj(y.value)
             if y.with_gradient:
-                accumulate_gradient(y, g.adj(x.value) * z.gradient)
+                y.gradient += g.adj(x.value) * z.gradient
 
-        return node_base(_forward, _backward, (x, y))
+        return node_base(_forward, _backward, (x, y), _container=z_container, _tag="*")
 
     def __rmul__(x, y):
         return node_base.__mul__(y, x)
@@ -150,13 +189,15 @@ class node_base(base):
         return x.project(getter, setter)
 
     def project(x, getter, setter):
+        assert False # for future use
+        
         def _forward():
             return getter(x.value)
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                accumulate_gradient(x, z.gradient, getter, setter)
+                x.gradient += z.gradient
 
         return node_base(_forward, _backward, (x,))
 
@@ -167,17 +208,20 @@ class node_base(base):
         if not isinstance(y, node_base):
             y = node_base(y, with_gradient=False)
 
+        assert x._container == y._container
+        _container = x._container
+
         def _forward():
             return x.value + y.value
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                accumulate_gradient(x, z.gradient)
+                x.gradient += z.gradient
             if y.with_gradient:
-                accumulate_gradient(y, z.gradient)
+                y.gradient += z.gradient
 
-        return node_base(_forward, _backward, (x, y))
+        return node_base(_forward, _backward, (x, y), _container=_container, _tag="+")
 
     def __sub__(x, y):
         if not isinstance(x, node_base):
@@ -186,17 +230,20 @@ class node_base(base):
         if not isinstance(y, node_base):
             y = node_base(y, with_gradient=False)
 
+        assert x._container == y._container
+        _container = x._container
+
         def _forward():
             return x.value - y.value
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                accumulate_gradient(x, z.gradient)
+                x.gradient += z.gradient
             if y.with_gradient:
-                accumulate_gradient(y, -z.gradient)
+                y.gradient -= z.gradient
 
-        return node_base(_forward, _backward, (x, y))
+        return node_base(_forward, _backward, (x, y), _container=_container, _tag="-")
 
     def __rsub__(x, y):
         return node_base.__sub__(y, x)
@@ -219,7 +266,8 @@ class node_base(base):
                             m.value = None
                             fields_allocated -= 1
                 if eager and isinstance(n.value, g.expr):
-                    n.value = g(n.value)
+                    if not n.value.is_adj():
+                        n.value = g(n.value)
 
         if verbose_memory:
             g.message(
@@ -230,16 +278,16 @@ class node_base(base):
         fields_allocated = len(nodes)  # .values
         max_fields_allocated = fields_allocated
         if initial_gradient is None:
-            if is_field(self.value):
+            if self._container.is_field():
                 raise Exception(
                     "Expression evaluates to a field.  Gradient calculation is not unique."
                 )
-            if isinstance(self.value, complex) and abs(self.value.imag) > 1e-12 * abs(
-                self.value.real
-            ):
-                raise Exception(
-                    f"Expression does not evaluate to a real number ({self.value}).  Gradient calculation is not unique."
-                )
+            #if isinstance(self._container[0], complex) and abs(self.value.imag) > 1e-12 * abs(
+            #            self.value.real
+            #):
+            #        raise Exception(
+            #            f"Expression does not evaluate to a real number ({self.value}).  Gradient calculation is not unique."
+            #        )
             initial_gradient = 1.0
         self.zero_gradient()
         self.gradient += initial_gradient

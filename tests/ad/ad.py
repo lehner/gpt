@@ -82,6 +82,9 @@ for prec in [g.double]:
         # randomize values
         rng.cnormal([vv.value for vv in args])
 
+        # string representation
+        assert type(str(c)) == str
+
         # get gradient for real and imaginary part
         for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
             v0 = c(initial_gradient=ig)

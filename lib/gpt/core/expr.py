@@ -142,6 +142,10 @@ class expr:
             raise Exception("Unknown type " + str(type(val)))
         self.unary = unary
 
+    def is_adj(self):
+        b = len(self.val) == 1 and len(self.val[0][1]) == 1 and self.val[0][1][0][0] == factor_unary.ADJ
+        return b
+
     def is_single(self, t=None):
         b = len(self.val) == 1 and self.val[0][0] == 1.0 and len(self.val[0][1]) == 1
         if t is not None:
@@ -173,6 +177,18 @@ class expr:
                     n = len(representative)
                     otype = get_otype_from_expression(self)
                     return grid, otype, return_list, n
+
+        for v in self.val:
+            for i in v[1]:
+                if gpt.util.is_list_instance(i[1], gpt.tensor):
+                    representative = i[1]
+                    return_list = isinstance(representative, list)
+                    representative = gpt.util.to_list(representative)
+                    grid = None
+                    n = len(representative)
+                    otype = get_otype_from_expression(self)
+                    return grid, otype, return_list, n
+
         return None, None, None, None
 
     def __mul__(self, l):
