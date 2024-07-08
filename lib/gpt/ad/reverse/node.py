@@ -17,7 +17,12 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.util import get_container, get_mul_container, convert_container
+from gpt.ad.reverse.util import (
+    get_container,
+    get_mul_container,
+    get_div_container,
+    convert_container,
+)
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
 
@@ -177,8 +182,27 @@ class node_base(base):
     def __rmul__(x, y):
         return node_base.__mul__(y, x)
 
-    def __truediv__(self, other):
-        return (1.0 / other) * self
+    def __truediv__(x, y):
+        if not isinstance(x, node_base):
+            x = node_base(x, with_gradient=False)
+
+        if not isinstance(y, node_base):
+            y = node_base(y, with_gradient=False)
+
+        z_container = get_div_container(x._container, y._container)
+
+        def _forward():
+            return x.value / y.value
+
+        # not allowed to capture z, otherwise have reference loop!
+        def _backward(z):
+            # z = x / y -> dz = dx/y - x/y^2 dy
+            if x.with_gradient:
+                x.gradient += z.gradient / g.adj(y.value)
+            if y.with_gradient:
+                y.gradient -= g.adj(x.value) / y.value / y.value * z.gradient
+
+        return node_base(_forward, _backward, (x, y), _container=z_container, _tag="/")
 
     def __neg__(self):
         return (-1.0) * self

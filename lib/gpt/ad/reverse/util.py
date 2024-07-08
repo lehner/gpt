@@ -37,11 +37,11 @@ class container:
         if isinstance(tag[0], tuple):
             tag = tag[0]
             if tag[1] is None:
-                tag=[complex]
+                tag = [complex]
             elif tag[0] is None:
-                tag=[g.tensor,tag[1]]
+                tag = [g.tensor, tag[1]]
             else:
-                tag=[g.lattice, tag[0], tag[1]]
+                tag = [g.lattice, tag[0], tag[1]]
 
         self.tag = tag
 
@@ -73,7 +73,7 @@ class container:
         else:
             raise Exception("Unknown type")
         return r
-    
+
     def __eq__(self, other):
         return str(self) == str(other)
 
@@ -85,7 +85,7 @@ class container:
             r = r + ";" + str(self.tag[1].obj)
         return r
 
-    
+
 def get_container(x):
     if isinstance(x, g.ad.reverse.node_base):
         return get_container(x.value)
@@ -109,6 +109,11 @@ def get_mul_container(x, y):
     return container((g.expr(rx) * g.expr(ry)).container())
 
 
+def get_div_container(x, y):
+    assert isinstance(y.representative(), complex)
+    return x
+
+
 def get_unary_container(x, unary):
     rx = x.representative()
     return container(g.expr(unary(rx)).container())
@@ -129,7 +134,7 @@ def convert_container(v, x, y, operand):
     backward_spin_trace = False
     backward_color_trace = False
     backward_trace = False
-    
+
     if v._container.tag[0] != g.lattice and c.tag[0] == g.lattice:
         backward_sum = True
 
@@ -137,7 +142,7 @@ def convert_container(v, x, y, operand):
     if v._container.tag[-1].__name__ != c.tag[-1].__name__:
         rhs_otype = c.tag[-1]
         lhs_otype = v._container.tag[-1]
-        
+
         if rhs_otype.spintrace[2] is not None:
             rhs_spintrace_otype = rhs_otype.spintrace[2]()
             if accumulate_compatible(lhs_otype, rhs_spintrace_otype):
@@ -155,41 +160,52 @@ def convert_container(v, x, y, operand):
                 rhs_otype = rhs_colortrace_otype
 
         if not accumulate_compatible(rhs_otype, lhs_otype):
-            raise Exception("Conversion incomplete:" + rhs_otype.__name__ + ":" + lhs_otype.__name__)
+            raise Exception(
+                "Conversion incomplete:" + rhs_otype.__name__ + ":" + lhs_otype.__name__
+            )
 
     # g.message("Need to modify to",v._container,"from",c,":",backward_sum, backward_trace, backward_spin_trace, backward_color_trace)
     assert backward_trace or backward_color_trace or backward_spin_trace or backward_sum
-    
 
     def _forward():
         value = v.value
 
-        #if backward_sum:
+        # if backward_sum:
         #    r = c.representative()
         #    r[:] = value
         #    value = r
         #    print("test",backward_trace,backward_spin_trace,backward_color_trace)
-            
+
         return value
 
     def _backward(z):
         if v.with_gradient:
             gradient = z.gradient
-            
+
             if backward_trace:
                 gradient = g.trace(gradient)
-                
+
             if backward_color_trace:
                 gradient = g.color_trace(gradient)
 
             if backward_spin_trace:
                 gradient = g.spin_trace(gradient)
-                
+
             if backward_sum:
                 gradient = g.sum(gradient)
 
-            v.gradient += g(gradient) if backward_trace or backward_color_trace or backward_spin_trace else gradient
+            v.gradient += (
+                g(gradient)
+                if backward_trace or backward_color_trace or backward_spin_trace
+                else gradient
+            )
 
             # print("Ran conversion with sum/tr",backward_sum,backward_trace,backward_spin_trace,backward_color_trace)
 
-    return g.ad.reverse.node_base(_forward, _backward, (v,), _container=c, _tag="change to " + str(c) + " from " + str(v._container))
+    return g.ad.reverse.node_base(
+        _forward,
+        _backward,
+        (v,),
+        _container=c,
+        _tag="change to " + str(c) + " from " + str(v._container),
+    )
