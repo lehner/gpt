@@ -170,3 +170,33 @@ def field_strength(U, mu, nu):
     F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
     F = 0.125 * (F - g.adj(F))
     return F
+
+
+def differentiable_topology(aU):
+    Bx = field_strength(aU, 1, 2)
+    By = field_strength(aU, 2, 0)
+    Bz = field_strength(aU, 0, 1)
+
+    Ex = field_strength(aU, 3, 0)
+    Ey = field_strength(aU, 3, 1)
+    Ez = field_strength(aU, 3, 2)
+
+    coeff = 8.0 / (32.0 * np.pi**2)
+
+    Q = g.sum(g.trace(Bx * Ex) + g.trace(By * Ey) + g.trace(Bz * Ez)) * coeff
+
+    return Q
+
+
+def differentiable_energy_density(aU):
+    Nd = len(aU)
+    grid = aU[0].grid
+    res = None
+    for mu in range(Nd):
+        for nu in range(mu):
+            Fmunu = field_strength(aU, mu, nu)
+            if res is None:
+                res = Fmunu * Fmunu
+            else:
+                res += Fmunu * Fmunu
+    return (-1.0 / grid.gsites) * g.sum(g.trace(res))

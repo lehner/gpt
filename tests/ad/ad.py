@@ -122,7 +122,7 @@ for prec in [g.double]:
 
         # create something to minimize
         f = real(c).functional(*args)
-        ff = [vv.value for vv in args]
+        ff = [g.copy(vv.value) for vv in args]
         v0 = f(ff)
         opt = g.algorithms.optimize.adam(maxiter=40, eps=1e-7, alpha=learn_rate)
         opt(f)(ff, ff)

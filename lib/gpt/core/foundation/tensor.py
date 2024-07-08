@@ -62,3 +62,8 @@ def component_multiply(a, b):
     res = a.new()
     res.array = numpy.multiply(a.array, b.array)
     return res
+
+
+def copy(a, b):
+    for i in range(len(a)):
+        a[i].array[:] = b[i].array[:]

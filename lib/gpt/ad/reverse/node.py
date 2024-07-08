@@ -69,26 +69,30 @@ class node_differentiable_functional(g.group.differentiable_functional):
         for i in indices:
             self.arguments[i].gradient = None
             self.arguments[i].with_gradient = True
+        for i in range(len(fields)):
+            assert fields[i] not in [a.value for a in self.arguments]
+            self.arguments[i].value @= fields[i]
         self.node()
         return [self.arguments[i].gradient for i in indices]
 
 
 def str_traverse(node, indent=0):
     if not callable(node._forward):
-        return (" "*indent) + "leaf(" + str(node._container) + ")"
+        return (" " * indent) + "leaf(" + str(node._container) + ")"
     else:
-        pre = " "*indent
+        pre = " " * indent
         if node._tag is not None:
             tag = node._tag
         else:
             tag = str(node._forward)
         ret = pre + "(" + tag + "):"
         for x in node._children:
-            ret = ret + "\n" + str_traverse(x, indent+1)
+            ret = ret + "\n" + str_traverse(x, indent + 1)
         return ret
 
-    
+
 # gctr = 0
+
 
 class node_base(base):
     foundation = foundation
@@ -102,7 +106,7 @@ class node_base(base):
         with_gradient=True,
         infinitesimal_to_cartesian=True,
         _container=None,
-        _tag=None
+        _tag=None,
     ):
         # global gctr
         # gctr+=1
@@ -189,8 +193,8 @@ class node_base(base):
         return x.project(getter, setter)
 
     def project(x, getter, setter):
-        assert False # for future use
-        
+        assert False  # for future use
+
         def _forward():
             return getter(x.value)
 
@@ -282,9 +286,9 @@ class node_base(base):
                 raise Exception(
                     "Expression evaluates to a field.  Gradient calculation is not unique."
                 )
-            #if isinstance(self._container[0], complex) and abs(self.value.imag) > 1e-12 * abs(
+            # if isinstance(self._container[0], complex) and abs(self.value.imag) > 1e-12 * abs(
             #            self.value.real
-            #):
+            # ):
             #        raise Exception(
             #            f"Expression does not evaluate to a real number ({self.value}).  Gradient calculation is not unique."
             #        )

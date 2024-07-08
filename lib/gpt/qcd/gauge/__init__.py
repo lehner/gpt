@@ -17,7 +17,12 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.qcd.gauge.create import random, unit
-from gpt.qcd.gauge.loops import rectangle, field_strength
+from gpt.qcd.gauge.loops import (
+    rectangle,
+    field_strength,
+    differentiable_topology,
+    differentiable_energy_density,
+)
 from gpt.qcd.gauge.topology import topological_charge_5LI
 from gpt.qcd.gauge.staples import staple
 from gpt.qcd.gauge.transformation import transformed
@@ -26,8 +31,6 @@ from gpt.qcd.gauge.stencil import (
     staple_sum,
     energy_density,
     topological_charge,
-    differentiable_topology,
-    projected_topology_gradient,
     algebra_laplace,
 )
 import gpt.qcd.gauge.project
