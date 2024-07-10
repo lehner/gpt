@@ -159,6 +159,7 @@ class exact_one_flavor_ratio(action_base):
             if mu < len(fields) - 1:
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
-                raise Exception("not implemented")
+                # not yet implemented
+                dS.append(None)
 
         return dS

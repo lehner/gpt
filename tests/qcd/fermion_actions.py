@@ -87,7 +87,7 @@ acts += [
 ]
 
 sm = g.qcd.gauge.smear.stout(rho=0.157)
-a_sm = acts[0][0].transformed(sm)
+a_sm = acts[0][0].transformed(sm, indices=[0, 1, 2, 3])
 a_sm.assert_gradient_error(rng, U + [acts[0][2]], U, 1e-3, 5e-7)
 
 for _a in acts:
