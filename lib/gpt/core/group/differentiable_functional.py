@@ -70,9 +70,11 @@ class differentiable_functional:
                 (cc / epsilon)
                 * self(
                     [
-                        g(g.group.compose((dd * epsilon) * weights[dfields.index(f)], f))
-                        if f in dfields
-                        else f
+                        (
+                            g(g.group.compose((dd * epsilon) * weights[dfields.index(f)], f))
+                            if f in dfields
+                            else f
+                        )
                         for f in fields
                     ]
                 )
@@ -108,11 +110,23 @@ class differentiable_functional:
                 g.message(f"Error: cartesian defect: {eps} > {epsilon_assert}")
                 assert False
 
-    def transformed(self, t):
-        return transformed(self, t)
+    def transformed(self, t, indices=None):
+        return transformed(self, t, indices)
 
     def __add__(self, other):
         return added(self, other)
+
+    def __radd__(self, other):
+        # called if not isinstance(other, differentiable_functional)
+        # needed to make sum([ f1, f2, ... ]) work
+        assert other == 0
+        return self
+
+    def __mul__(self, other):
+        return scaled(other, self)
+
+    def __rmul__(self, other):
+        return scaled(other, self)
 
 
 class added(differentiable_functional):
@@ -132,24 +146,56 @@ class added(differentiable_functional):
         return [g(x + y) for x, y in zip(a_grad, b_grad)]
 
 
-class transformed(differentiable_functional):
-    def __init__(self, f, t):
+class scaled(differentiable_functional):
+    def __init__(self, s, f):
+        self.s = s
         self.f = f
-        self.t = t
 
     def __call__(self, fields):
-        return self.f(self.t(fields))
+        return self.s * self.f(fields)
 
     def gradient(self, fields, dfields):
-        indices = [fields.index(d) for d in dfields]
+        grad = self.f.gradient(fields, dfields)
+        return [g(self.s * x) for x in grad]
 
-        fields_prime = self.t(fields)
 
-        transformed_fields = [i for i in range(len(fields)) if fields_prime[i] is not fields[i]]
+class transformed(differentiable_functional):
+    def __init__(self, f, t, indices):
+        self.f = f
+        self.t = t
+        self.indices = indices
 
-        # for now only accept gradients with respect to all transformed fields
-        assert indices == transformed_fields
+    def __call__(self, fields):
+        indices = self.indices if self.indices is not None else range(len(fields))
+        fields_indices = [fields[i] for i in indices]
+        fields_transformed = self.t(fields_indices)
+        fields_prime = [None if i in indices else fields[i] for i in range(len(fields))]
+        for i, j in zip(range(len(indices)), indices):
+            fields_prime[j] = fields_transformed[i]
+        return self.f(fields_prime)
 
-        gradient_prime = self.f.gradient(fields_prime, [fields_prime[i] for i in indices])
+    def gradient(self, fields, dfields):
 
-        return self.t.jacobian(fields, fields_prime, gradient_prime)
+        # save indices w.r.t. which we want the gradients
+        derivative_indices = [fields.index(d) for d in dfields]
+
+        # do the forward pass
+        indices = self.indices if self.indices is not None else range(len(fields))
+        fields_indices = [fields[i] for i in indices]
+        fields_transformed = self.t(fields_indices)
+        fields_prime = [None if i in indices else fields[i] for i in range(len(fields))]
+        for i, j in zip(range(len(indices)), indices):
+            fields_prime[j] = fields_transformed[i]
+
+        # start the backwards pass with a calculation of the gradient with the transformed fields
+        gradient_prime = self.f.gradient(fields_prime, fields_prime)
+
+        # now apply the jacobian to the transformed gradients
+        gradient_transformed = self.t.jacobian(
+            fields_indices, fields_transformed, [gradient_prime[i] for i in indices]
+        )
+
+        for i, j in zip(range(len(indices)), indices):
+            gradient_prime[j] = gradient_transformed[i]
+
+        return [gradient_prime[i] for i in derivative_indices]
