@@ -159,14 +159,16 @@ def rectangle(
     return results
 
 
+def staples(U, mu, nu):
+    staple_up = g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
+    staple_down = g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1)
+    return staple_up, staple_down
+
+
 def field_strength(U, mu, nu):
     assert mu != nu
-    # v = staple_up - staple_down
-    v = g.eval(
-        g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
-        - g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1)
-    )
-
+    staple_up, staple_down = staples(U, mu, nu)
+    v = g(staple_up - staple_down)
     F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
     F = 0.125 * (F - g.adj(F))
     return F
@@ -200,3 +202,5 @@ def differentiable_energy_density(aU):
             else:
                 res += Fmunu * Fmunu
     return (-1.0 / grid.gsites) * g.sum(g.trace(res))
+
+
