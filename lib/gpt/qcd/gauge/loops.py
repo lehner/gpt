@@ -204,3 +204,25 @@ def differentiable_energy_density(aU):
     return (-1.0 / grid.gsites) * g.sum(g.trace(res))
 
 
+def differentiable_P_and_R(aU):
+    Nd = len(aU)
+    grid = aU[0].grid
+    ndim = aU[0].otype.shape[0]
+    res_P = None
+    res_R = None
+    for mu in range(Nd):
+        for nu in range(Nd):
+            if mu == nu:
+                continue
+
+            staple_up, staple_down = staples(aU, mu, nu)
+
+            P = g.sum(g.trace(aU[mu] * staple_up))
+            R = g.sum(g.trace(g.adj(staple_down) * staple_up))
+
+            res_P = P if res_P is None else P + res_P
+            res_R = R if res_R is None else R + res_R
+
+    res_P = (res_P + g.adj(res_P)) * (0.5 / (Nd - 1) / Nd / ndim / grid.gsites)
+    res_R = (res_R + g.adj(res_R)) * (0.5 / (Nd - 1) / Nd / ndim / grid.gsites)
+    return res_P, res_R

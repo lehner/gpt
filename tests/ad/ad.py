@@ -132,6 +132,35 @@ for prec in [g.double]:
         nid += 1
 
 
+# improved action test
+U = g.qcd.gauge.random(grid, rng)
+U_2 = [rad.node(g.copy(u)) for u in U]
+P, R = g.qcd.gauge.differentiable_P_and_R(U_2)
+a1 = g.qcd.gauge.action.iwasaki(1.0)
+c1 = -0.331
+c0 = 1.0 - 8.0 * c1
+Nd = len(U)
+ndim = U[0].otype.shape[0]
+vol = grid.gsites
+
+A = vol * (c0 * (1.0 - P) * (Nd - 1) * Nd / 2.0 + c1 * (1.0 - R) * (Nd - 1) * Nd)
+
+a1p = A.functional(*U_2)
+eps = abs(a1p(U) / a1(U) - 1)
+g.message("Iwasaki test", eps)
+assert eps < 1e-10
+
+t0 = g.time()
+grad = a1.gradient(U, U)
+t1 = g.time()
+gradp = a1p.gradient(U, U)
+t2 = g.time()
+g.message(f"Force time {t1 - t0}, AD force time {t2 - t1}")
+for mu in range(4):
+    eps2 = g.norm2(grad[mu] - gradp[mu]) / g.norm2(grad[mu])
+    g.message("Force test", mu, eps2)
+    assert eps2 < 1e-20
+
 #####################################
 # forward AD tests
 #####################################
@@ -374,6 +403,7 @@ for mu in range(4):
     err = (g.norm2(dg_dbeta - U_2[mu].gradient[dbeta]) / g.norm2(dg_dbeta)) ** 0.5
     g.message(f"Numerical action gradient [{mu}] derivative test: {err}")
     assert err < 1e-5
+
 
 # test simple combination of forward and reverse
 a = g.ad.forward.make(On, 1.3333 + 3.21j, dbeta, 2.1 + 0.7j)

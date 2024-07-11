@@ -22,6 +22,7 @@ from gpt.qcd.gauge.loops import (
     field_strength,
     differentiable_topology,
     differentiable_energy_density,
+    differentiable_P_and_R,
 )
 from gpt.qcd.gauge.topology import topological_charge_5LI
 from gpt.qcd.gauge.staples import staple
