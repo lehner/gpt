@@ -359,7 +359,10 @@ class node_base(base):
         return self.value.grid
 
     def get_otype(self):
-        return self.value.otype
+        return self._container.get_otype()
+
+    def set_otype(self, v):
+        self._container.set_otype(v)
 
     def get_real(self):
         def getter(y):
@@ -371,7 +374,7 @@ class node_base(base):
         return self.project(getter, setter)
 
     grid = property(get_grid)
-    otype = property(get_otype)
+    otype = property(get_otype, set_otype)
     real = property(get_real)
 
 
