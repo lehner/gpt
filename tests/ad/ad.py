@@ -71,6 +71,7 @@ for prec in [g.double]:
             1e-1,
             [b1, b2, a1, a2, t1, x],
         ),
+        (g.sum(g.trace(g.matrix.exp(a1))), 1e-1, [a1]),
         (g.norm2(s1 * x + s2 * x), 1e-1, [s1, s2, x]),
         (g.norm2((s1 + s2) * x), 1e-1, [s1, s2, x]),
         (g.norm2(s1 + s2), 1e-1, [s1, s2]),
@@ -136,15 +137,8 @@ for prec in [g.double]:
 U = g.qcd.gauge.random(grid, rng)
 U_2 = [rad.node(g.copy(u)) for u in U]
 P, R = g.qcd.gauge.differentiable_P_and_R(U_2)
-a1 = g.qcd.gauge.action.iwasaki(1.0)
-c1 = -0.331
-c0 = 1.0 - 8.0 * c1
-Nd = len(U)
-ndim = U[0].otype.shape[0]
-vol = grid.gsites
-
-A = vol * (c0 * (1.0 - P) * (Nd - 1) * Nd / 2.0 + c1 * (1.0 - R) * (Nd - 1) * Nd)
-
+a1 = g.qcd.gauge.action.iwasaki(2.5)
+A = g.qcd.gauge.action.differentiable_iwasaki(2.5)(U_2)
 a1p = A.functional(*U_2)
 eps = abs(a1p(U) / a1(U) - 1)
 g.message("Iwasaki test", eps)
@@ -160,6 +154,28 @@ for mu in range(4):
     eps2 = g.norm2(grad[mu] - gradp[mu]) / g.norm2(grad[mu])
     g.message("Force test", mu, eps2)
     assert eps2 < 1e-20
+
+
+# stout
+Usm = g.qcd.gauge.smear.differentiable_stout(rho=0.124)(U_2)
+A = g.qcd.gauge.action.differentiable_iwasaki(2.5)(Usm)
+a1p = A.functional(*U_2)
+a1s = a1.transformed(g.qcd.gauge.smear.stout(rho=0.124))
+eps = abs(a1p(U) / a1s(U) - 1)
+g.message("Stout test", eps)
+assert eps < 1e-10
+
+t0 = g.time()
+grad = a1s.gradient(U, U)
+t1 = g.time()
+gradp = a1p.gradient(U, U)
+t2 = g.time()
+g.message(f"Force time {t1 - t0}, AD force time {t2 - t1}")
+for mu in range(4):
+    eps2 = g.norm2(grad[mu] - gradp[mu]) / g.norm2(grad[mu])
+    g.message("Force test", mu, eps2)
+    assert eps2 < 1e-20
+
 
 #####################################
 # forward AD tests

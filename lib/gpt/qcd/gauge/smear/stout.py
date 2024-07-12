@@ -200,3 +200,33 @@ class stout(diffeomorphism):
             dst[mu] @= g.qcd.gauge.project.traceless_hermitian(dst[mu])
 
         return dst
+
+
+class differentiable_stout:
+    def __init__(self, rho):
+        self.rho = rho
+
+    def __call__(self, aU):
+        nd = len(aU)
+        C = [None] * nd
+        for mu in range(nd):
+            for nu in range(nd):
+                if nu == mu:
+                    continue
+                su, sd = g.qcd.gauge.differentiable_staple(aU, mu, nu)
+                c = g.adj(su + sd)
+                if C[mu] is None:
+                    C[mu] = c
+                else:
+                    C[mu] = C[mu] + c
+            C[mu] = self.rho * C[mu]
+
+        U_prime = []
+        for mu in range(nd):
+            U_mu_prime = (
+                g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(aU[mu])))
+                * aU[mu]
+            )
+            U_prime.append(U_mu_prime)
+
+        return U_prime

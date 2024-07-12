@@ -19,6 +19,7 @@
 import gpt
 import cgpt
 import numpy
+import gpt.core.foundation.lattice.matrix
 
 
 def rank_inner_product(a, b, use_accelerator):

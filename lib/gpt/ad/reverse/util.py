@@ -62,6 +62,11 @@ class container:
         assert self.tag[0] == g.lattice
         return container(g.tensor, self.tag[2])
 
+    def get_grid(self):
+        if len(self.tag) > 2:
+            return self.tag[1]
+        raise Exception("Container does not have a grid")
+
     def get_otype(self):
         if len(self.tag) > 1:
             return self.tag[-1]

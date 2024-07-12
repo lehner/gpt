@@ -20,6 +20,7 @@ from gpt.qcd.gauge.create import random, unit
 from gpt.qcd.gauge.loops import (
     rectangle,
     field_strength,
+    differentiable_staple,
     differentiable_topology,
     differentiable_energy_density,
     differentiable_P_and_R,

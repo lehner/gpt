@@ -122,3 +122,27 @@ class dbw2(improved_with_rectangle):
 class symanzik(improved_with_rectangle):
     def __init__(self, beta):
         super().__init__(beta, -1.0 / 12.0)
+
+
+class differentiable_improved_with_rectangle:
+    def __init__(self, beta, c1):
+        self.beta = beta
+        self.c1 = c1
+
+    def __call__(self, aU):
+        P, R = g.qcd.gauge.differentiable_P_and_R(aU)
+        c0 = 1.0 - 8.0 * self.c1
+        Nd = len(aU)
+        grid = aU[0].grid
+        vol = grid.gsites
+        A = (
+            self.beta
+            * vol
+            * (c0 * (1.0 - P) * (Nd - 1) * Nd / 2.0 + self.c1 * (1.0 - R) * (Nd - 1) * Nd)
+        )
+        return A
+
+
+class differentiable_iwasaki(differentiable_improved_with_rectangle):
+    def __init__(self, beta):
+        super().__init__(beta, -0.331)

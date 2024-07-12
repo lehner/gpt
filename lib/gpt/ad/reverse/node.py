@@ -356,7 +356,7 @@ class node_base(base):
         return node_differentiable_functional(self, arguments)
 
     def get_grid(self):
-        return self.value.grid
+        return self._container.get_grid()
 
     def get_otype(self):
         return self._container.get_otype()

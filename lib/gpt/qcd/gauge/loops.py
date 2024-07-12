@@ -159,7 +159,7 @@ def rectangle(
     return results
 
 
-def staples(U, mu, nu):
+def differentiable_staple(U, mu, nu):
     staple_up = g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
     staple_down = g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1)
     return staple_up, staple_down
@@ -167,7 +167,7 @@ def staples(U, mu, nu):
 
 def field_strength(U, mu, nu):
     assert mu != nu
-    staple_up, staple_down = staples(U, mu, nu)
+    staple_up, staple_down = differentiable_staple(U, mu, nu)
     v = g(staple_up - staple_down)
     F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
     F = 0.125 * (F - g.adj(F))
@@ -215,7 +215,7 @@ def differentiable_P_and_R(aU):
             if mu == nu:
                 continue
 
-            staple_up, staple_down = staples(aU, mu, nu)
+            staple_up, staple_down = differentiable_staple(aU, mu, nu)
 
             P = g.sum(g.trace(aU[mu] * staple_up))
             R = g.sum(g.trace(g.adj(staple_down) * staple_up))

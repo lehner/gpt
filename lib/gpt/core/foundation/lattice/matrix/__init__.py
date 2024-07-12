@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2024  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,6 +16,4 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.smear.stout import stout, differentiable_stout
-from gpt.qcd.gauge.smear.local_stout import local_stout
-from gpt.qcd.gauge.smear.wilson_flow import wilson_flow
+import gpt.core.foundation.lattice.matrix.exp
