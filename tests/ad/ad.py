@@ -176,6 +176,17 @@ for mu in range(4):
     g.message("Force test", mu, eps2)
     assert eps2 < 1e-20
 
+# keep some links unchanged, save time in gradient calculation
+for u in U_2[1:]:
+    u.with_gradient = False
+
+A = g.qcd.gauge.action.differentiable_iwasaki(2.5)(U_2)
+a1p = A.functional(*U_2)
+a1p.assert_gradient_error(rng, U, [U[0]], 1e-4, 1e-10)
+
+for u in U_2:
+    u.with_gradient = True
+
 
 #####################################
 # forward AD tests

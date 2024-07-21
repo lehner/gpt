@@ -126,6 +126,8 @@ class node_base(base):
         self._container = _container
         self._backward = _backward
         self._children = _children
+        if len(_children) > 0:
+            with_gradient = any([c.with_gradient for c in _children])
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         self.gradient = None
@@ -236,7 +238,10 @@ class node_base(base):
         if not isinstance(y, node_base):
             y = node_base(y, with_gradient=False)
 
-        assert x._container == y._container
+        if not x._container.accumulate_compatible(y._container):
+            raise Exception(
+                f"Containers incompatible in addition: {x._container} and {y._container}"
+            )
         _container = x._container
 
         def _forward():

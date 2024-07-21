@@ -78,6 +78,23 @@ class container:
         else:
             raise Exception("Container does not have an otype")
 
+    def accumulate_compatible(self, other):
+        if len(self.tag) > 1 and len(other.tag) > 1:
+            if len(self.tag) != len(other.tag):
+                return False
+            if len(self.tag) > 2:
+                if self.get_grid().obj != other.get_grid().obj:
+                    return False
+            a = self.get_otype()
+            b = other.get_otype()
+            if a.data_alias is not None:
+                a = a.data_alias()
+            if b.data_alias is not None:
+                b = b.data_alias()
+            return a.__name__ == b.__name__
+
+        return self.__eq__(other)
+
     def zero(self):
         r = self.representative()
         if isinstance(r, g.lattice):
@@ -142,7 +159,7 @@ def convert_container(v, x, y, operand):
     r = g.expr(operand(rx, ry))
     c = container(r.container())
 
-    if v._container == c:
+    if v._container.accumulate_compatible(c):
         return v
 
     # conversions from tensor to matrix

@@ -301,3 +301,66 @@ for rho in [0.05, 0.1, 0.124, 0.25]:
                     eps2 += g.norm2(U[nu] - U0[nu]) / g.norm2(U0[nu])
                 g.message(eps2)
                 assert eps2 < 1e-28
+
+
+# test general differentiable field transformation framework
+ft_stout = g.qcd.gauge.smear.differentiable_stout(rho=0.05)
+
+fr = g.algorithms.optimize.fletcher_reeves
+ls2 = g.algorithms.optimize.line_search_quadratic
+
+dft = g.qcd.gauge.smear.differentiable_field_transformation(
+    U,
+    ft_stout,
+    # g.algorithms.inverter.fgmres(eps=1e-15, maxiter=1000, restartlen=60),
+    g.algorithms.inverter.fgcr(eps=1e-15, maxiter=1000, restartlen=60),
+    g.algorithms.optimize.non_linear_cg(
+        maxiter=1000, eps=1e-15, step=1e-1, line_search=ls2, beta=fr
+    ),
+)
+
+dfm = dft.diffeomorphism()
+ald = dft.action_log_det_jacobian()
+
+# test diffeomorphism of stout against reference implementation
+dfm_ref = g.qcd.gauge.smear.stout(rho=0.05)
+Uft = dfm(U)
+Uft_ref = dfm_ref(U)
+for mu in range(4):
+    eps2 = g.norm2(Uft[mu] - Uft_ref[mu]) / g.norm2(Uft[mu])
+    g.message("Test ft:", eps2)
+    assert eps2 < 1e-25
+
+mom = [g.group.cartesian(u) for u in U]
+mom_prime = g.copy(mom)
+rng.normal_element(mom_prime)
+t0 = g.time()
+mom = dfm.jacobian(U, Uft, mom_prime)
+t1 = g.time()
+mom_ref = dfm_ref.jacobian(U, Uft, mom_prime)
+t2 = g.time()
+for mu in range(4):
+    eps2 = g.norm2(mom[mu] - mom_ref[mu]) / g.norm2(mom[mu])
+    g.message("Test jacobian:", eps2)
+    assert eps2 < 1e-25
+
+g.message("Time for dfm.jacobian", t1 - t0, "seconds")
+g.message("Time for dfm_ref.jacobian", t2 - t1, "seconds")
+
+mom2 = g.copy(mom)
+g.message("Action log det jac:", ald(U + mom2))
+
+ald.assert_gradient_error(rng, U + mom2, U + mom2, 1e-3, 1e-7)
+
+act = ald.draw(U + mom2, rng)
+act2 = ald(U + mom2)
+eps = abs(act / act2 - 1)
+g.message("Draw from log det action:", eps)
+assert eps < 1e-10
+
+if True:
+    U0 = dft.inverse(Uft)
+    for mu in range(4):
+        eps2 = g.norm2(U0[mu] - U[mu]) / g.norm2(U[mu])
+        g.message("Test invertibility:", eps2)
+        assert eps2 < 1e-25
