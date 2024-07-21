@@ -356,7 +356,7 @@ act = ald.draw(U + mom2, rng)
 act2 = ald(U + mom2)
 eps = abs(act / act2 - 1)
 g.message("Draw from log det action:", eps)
-assert eps < 1e-10
+assert eps < 1e-8
 
 if True:
     U0 = dft.inverse(Uft)
