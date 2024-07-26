@@ -304,7 +304,7 @@ for rho in [0.05, 0.1, 0.124, 0.25]:
 
 
 # test general differentiable field transformation framework
-ft_stout = g.qcd.gauge.smear.differentiable_stout(rho=0.05)
+ft_stout = g.qcd.gauge.smear.differentiable_stout(rho=0.01)
 
 fr = g.algorithms.optimize.fletcher_reeves
 ls2 = g.algorithms.optimize.line_search_quadratic
@@ -313,7 +313,9 @@ dft = g.qcd.gauge.smear.differentiable_field_transformation(
     U,
     ft_stout,
     # g.algorithms.inverter.fgmres(eps=1e-15, maxiter=1000, restartlen=60),
-    g.algorithms.inverter.fgcr(eps=1e-15, maxiter=1000, restartlen=60),
+    # g.algorithms.inverter.fgmres(eps=1e-15, maxiter=1000, restartlen=60),
+    g.algorithms.inverter.fgcr(eps=1e-13, maxiter=1000, restartlen=60),
+    g.algorithms.inverter.fgcr(eps=1e-13, maxiter=1000, restartlen=60),
     g.algorithms.optimize.non_linear_cg(
         maxiter=1000, eps=1e-15, step=1e-1, line_search=ls2, beta=fr
     ),
@@ -323,7 +325,7 @@ dfm = dft.diffeomorphism()
 ald = dft.action_log_det_jacobian()
 
 # test diffeomorphism of stout against reference implementation
-dfm_ref = g.qcd.gauge.smear.stout(rho=0.05)
+dfm_ref = g.qcd.gauge.smear.stout(rho=0.01)
 Uft = dfm(U)
 Uft_ref = dfm_ref(U)
 for mu in range(4):
@@ -350,7 +352,7 @@ g.message("Time for dfm_ref.jacobian", t2 - t1, "seconds")
 mom2 = g.copy(mom)
 g.message("Action log det jac:", ald(U + mom2))
 
-ald.assert_gradient_error(rng, U + mom2, U + mom2, 1e-3, 1e-7)
+ald.assert_gradient_error(rng, U + mom2, U, 1e-3, 1e-7)
 
 act = ald.draw(U + mom2, rng)
 act2 = ald(U + mom2)

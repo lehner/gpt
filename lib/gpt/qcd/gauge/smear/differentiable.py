@@ -34,8 +34,7 @@ class dft_diffeomorphism(diffeomorphism):
     def jacobian(self, fields, fields_prime, dfields):
         N = len(fields_prime)
         assert len(fields) == N
-        assert len(fields) == N
-        assert len(fields) == N
+        assert len(dfields) == N
         aU_prime = [g(2j * dfields[mu] * fields_prime[mu]) for mu in range(N)]
         for mu in range(N):
             self.aU[mu].value = fields[mu]
@@ -50,34 +49,99 @@ class dft_diffeomorphism(diffeomorphism):
 
         return gradient
 
+    def adjoint_jacobian(self, fields, dfields):
+        N = len(fields)
+        assert len(dfields) == N
+
+        fad = g.ad.forward
+        eps = fad.infinitesimal("eps")
+
+        On = fad.landau(eps**2)
+        aU = [fad.series(fields[mu], On) for mu in range(N)]
+        for mu in range(N):
+            aU[mu][eps] = g(1j * dfields[mu] * fields[mu])
+
+        aU_prime = self.ft(aU)
+
+        gradient = [g(aU_prime[mu][eps] * g.adj(aU_prime[mu][1]) / 1j) for mu in range(N)]
+
+        return gradient
+
 
 class dft_action_log_det_jacobian(differentiable_functional):
-    def __init__(self, U, ft, dfm, inverter):
+    def __init__(self, U, ft, dfm, inverter_force, inverter_action):
         self.dfm = dfm
-        self.inverter = inverter
+        self.inverter_force = inverter_force
+        self.inverter_action = inverter_action
         self.N = len(U)
         mom = [g.group.cartesian(u) for u in U]
         rad = g.ad.reverse
 
         _U = [rad.node(g.copy(u)) for u in U]
-        _mom = [rad.node(g.copy(u)) for u in mom]
+        _left = [rad.node(g.copy(u), with_gradient=False) for u in mom]
+        _right = [rad.node(g.copy(u), with_gradient=False) for u in mom]
         _Up = dfm(_U)
-        momp = dfm.jacobian(_U, _Up, _mom)
+        J_right = dfm.jacobian(_U, _Up, _right)
 
         act = None
         for mu in range(self.N):
             if mu == 0:
-                act = g.norm2(momp[mu])
+                act = g.inner_product(_left[mu], J_right[mu])
             else:
-                act = g(act + g.norm2(momp[mu]))
+                act = g(act + g.inner_product(_left[mu], J_right[mu]))
 
-        self.action = act.functional(*(_U + _mom))
+        self.left_J_right = act.functional(*(_U + _left + _right))
+
+    def mat_J(self, U, U_prime):
+        def _mat(dst_5d, src_5d):
+            src = g.separate(src_5d, dimension=0)
+            dst = self.dfm.jacobian(U, U_prime, src)
+            dst_5d @= g.merge(dst, dimension=0)
+
+        return _mat
+
+    def mat_Jdag(self, U):
+        def _mat(dst_5d, src_5d):
+            src = g.separate(src_5d, dimension=0)
+            dst = self.dfm.adjoint_jacobian(U, src)
+            dst_5d @= g.merge(dst, dimension=0)
+
+        return _mat
 
     def __call__(self, fields):
-        return self.action(fields)
+        U = fields[0 : self.N]
+        mom = fields[self.N :]
+        mom_xd = g.merge(mom, dimension=0)
+        U_prime = [g(x) for x in self.dfm.ft(U)]
+        mom_prime_xd = self.inverter_action(self.mat_J(U, U_prime))(mom_xd)
+        mom_prime2_xd = self.inverter_action(self.mat_Jdag(U))(mom_prime_xd)
+        return g.inner_product(mom_xd, mom_prime2_xd).real
 
     def gradient(self, fields, dfields):
-        return self.action.gradient(fields, dfields)
+        U = fields[0 : self.N]
+        mom = fields[self.N :]
+
+        # all eigenvalues of J need to be positive because for trivial FT they are all 1 and we
+        # stay invertible so none of them can have crossed a zero
+
+        # M = J J^dag
+        # ->  S = pi^dag J^{-1}^dag J^{-1} pi
+        # -> dS = -pi^dag J^{-1}^dag dJ^dag J^{-1}^dag J^{-1} pi
+        #         -pi^dag J^{-1}^dag J^{-1} dJ J^{-1} pi
+        #       = -pi^dag J^{-1}^dag J^{-1} dJ J^{-1} pi + C.C.  ->  need two inverse of J
+        assert dfields == U
+
+        U_prime = [g(x) for x in self.dfm.ft(U)]
+
+        mom_xd = g.merge(mom, dimension=0)
+        mom_prime_xd = self.inverter_force(self.mat_J(U, U_prime))(mom_xd)
+        mom_prime2_xd = self.inverter_force(self.mat_Jdag(U))(mom_prime_xd)
+
+        mom_prime2 = g.separate(mom_prime2_xd, dimension=0)
+        mom_prime = g.separate(mom_prime_xd, dimension=0)
+
+        gradients = self.left_J_right.gradient(U + mom_prime2 + mom_prime, U)
+        return [g(-x - g.adj(x)) for x in gradients]
 
     def draw(self, fields, rng):
         U = fields[0 : self.N]
@@ -86,18 +150,9 @@ class dft_action_log_det_jacobian(differentiable_functional):
         assert len(U) == self.N
 
         rng.normal_element(mom, scale=1.0)
+        U_prime = [g(x) for x in self.dfm.ft(U)]
 
-        U_prime = self.dfm(U)
-
-        def _mat(dst_5d, src_5d):
-            src = g.separate(src_5d, dimension=0)
-            dst = self.dfm.jacobian(U, U_prime, src)
-            dst_5d @= g.merge(dst, dimension=0)
-
-        mom_xd = g.merge(mom, dimension=0)
-
-        mom_prime_xd = self.inverter(_mat)(mom_xd)
-        mom_prime = g.separate(mom_prime_xd, dimension=0)
+        mom_prime = self.dfm.jacobian(U, U_prime, mom)
 
         act = 0.0
         for mu in range(self.N):
@@ -108,11 +163,12 @@ class dft_action_log_det_jacobian(differentiable_functional):
 
 
 class differentiable_field_transformation:
-    def __init__(self, U, ft, inverter, optimizer):
+    def __init__(self, U, ft, inverter_force, inverter_action, optimizer):
         self.ft = ft
         self.U = U
         self.dfm = dft_diffeomorphism(self.U, self.ft)
-        self.inverter = inverter
+        self.inverter_force = inverter_force
+        self.inverter_action = inverter_action
         self.optimizer = optimizer
 
     def diffeomorphism(self):
@@ -129,4 +185,6 @@ class differentiable_field_transformation:
         return U
 
     def action_log_det_jacobian(self):
-        return dft_action_log_det_jacobian(self.U, self.ft, self.dfm, self.inverter)
+        return dft_action_log_det_jacobian(
+            self.U, self.ft, self.dfm, self.inverter_force, self.inverter_action
+        )

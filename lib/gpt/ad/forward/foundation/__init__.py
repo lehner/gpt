@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-
+import gpt.ad.forward.foundation.matrix
 
 python_sum = sum
 
@@ -124,7 +124,7 @@ def matrix_det(sx):
             tr_adjx2 = g.trace(adjx2)
             v += v0 * (tr_adjx * tr_adjx - tr_adjx2) / 2.0
         if maxn >= 4:
-            raise Exception(f"{maxn-1}-derivative of g.matrix.det not yet implemented")
+            raise Exception(f"{maxn - 1}-derivative of g.matrix.det not yet implemented")
         v.otype = v0.otype
         return v
 
