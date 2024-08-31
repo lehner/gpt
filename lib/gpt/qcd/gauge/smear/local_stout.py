@@ -149,7 +149,7 @@ def adjoint_to_fundamental(fund, adj, generators):
 
 
 class local_stout(local_diffeomorphism):
-    @params_convention(dimension=None, checkerboard=None, rho=None)
+    @params_convention(dimension=None, checkerboard=None, rho=None, staple_field=None)
     def __init__(self, params):
         self.params = params
         self.cache = {}
@@ -185,6 +185,9 @@ class local_stout(local_diffeomorphism):
 
         fm = g(mask + 1e-15 * imask)
         st = g.qcd.gauge.staple_sum(U, mu=self.params["dimension"], rho=rho)[0]
+        sf = self.params["staple_field"]
+        if sf is not None:
+            st = sf(st)
         return g(st * fm), U, fm
 
     def __call__(self, fields):

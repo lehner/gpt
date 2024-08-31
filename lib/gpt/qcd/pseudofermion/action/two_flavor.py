@@ -64,7 +64,8 @@ class two_flavor_base(action_base):
             if mu < len(fields) - 1:
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
-                raise Exception("not implemented")
+                dS.append(None)
+                #raise Exception("not implemented")
         return dS
 
 
@@ -180,7 +181,8 @@ class two_flavor_ratio_base(action_base):
             if mu < len(fields) - 1:
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
-                raise Exception("not implemented")
+                #raise Exception("not implemented")
+                dS.append(None)
         return dS
 
 
