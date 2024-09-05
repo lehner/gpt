@@ -16,7 +16,8 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, sys
+import gpt, sys, os
+from datetime import datetime
 
 
 class base:
@@ -69,15 +70,34 @@ class base_iterative(base):
     def __init__(self, name=None):
         super().__init__(name)
         self.verbose_convergence = gpt.default.is_verbose(self.name + "_convergence")
+        self.verbose_log_convergence = gpt.default.is_verbose(self.name + "_log_convergence")
         self.converged = None
+
+    def get_log_file(self):
+        if not self.verbose_log_convergence or gpt.rank() != 0:
+            return None
+
+        self.log_directory = "log/" + datetime.today().strftime("%Y-%m-%d")
+        if not os.path.exists(self.log_directory):
+            os.makedirs(self.log_directory, exist_ok=True)
+
+        log_filename = f"{self.log_directory}/{self.name}." + datetime.now().strftime("%H-%M-%f")
+        gpt.message(f"Convergence of {self.name} saved in {log_filename}")
+        return open(log_filename, "wt")
 
     def log_convergence(self, iteration, value, target=None):
         if (isinstance(iteration, int) and iteration == 0) or (
             isinstance(iteration, tuple) and all([x == 0 for x in iteration])
         ):
             self.history = []
+            self.log_file = self.get_log_file()
 
         self.history.append(value)
+        if self.log_file is not None:
+            if target is None:
+                self.log_file.write(f"{iteration} {value}\n")
+            else:
+                self.log_file.write(f"{iteration} {value:e} {target:e}\n")
 
         if target is not None:
             self.converged = value <= target

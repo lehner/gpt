@@ -20,6 +20,28 @@ U_quad = g.convert(U, g.double_quadruple)
 # reference plaquette
 P = g.qcd.gauge.plaquette(U)
 
+# invariant distance (test axioms)
+ds = g.group.invariant_distance(U[0], U[1])
+dsp = g.group.invariant_distance(g.group.compose(V, U[0]), g.group.compose(V, U[1]))
+assert abs(ds / dsp - 1) < 1e-12
+
+ds = g.group.invariant_distance(U[0], U[1])
+dsp = g.group.invariant_distance(g.group.compose(U[0], V), g.group.compose(U[1], V))
+assert abs(ds / dsp - 1) < 1e-12
+
+ds = g.group.invariant_distance(U[0], U[0])
+assert ds < 1e-12
+
+ds = g.group.invariant_distance(U[0], U[1])
+dsp = g.group.invariant_distance(U[1], U[0])
+assert abs(ds / dsp - 1) < 1e-12
+
+mom = [g.group.cartesian(u) for u in U]
+rng.element(mom)
+ds = g.group.invariant_distance(mom[0], mom[1])
+dsp = g.group.invariant_distance(g.group.compose(mom[2], mom[0]), g.group.compose(mom[2], mom[1]))
+assert abs(ds / dsp - 1) < 1e-12
+
 # import cgpt, sys
 
 # smr = []

@@ -23,6 +23,12 @@ def defect(field):
     return field.otype.defect(field)
 
 
+def invariant_distance(field, field_prime):
+    field = g(field)
+    field_prime = g(field_prime)
+    return field.otype.invariant_distance(field, field_prime)
+
+
 def cartesian(field):
     if isinstance(field, list):
         return [cartesian(f) for f in field]

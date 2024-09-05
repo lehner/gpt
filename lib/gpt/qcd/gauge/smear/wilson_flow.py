@@ -19,8 +19,12 @@
 import gpt as g
 
 
-def wilson_flow(U, epsilon):
-    action = g.qcd.gauge.action.wilson(2.0 * U[0].otype.shape[0])
+def gradient_flow(U, epsilon, action):
     return g.algorithms.integrator.runge_kutta_4(
         U, lambda Up: [g(-u) for u in action.gradient(Up, Up)], epsilon
     )
+
+
+def wilson_flow(U, epsilon):
+    action = g.qcd.gauge.action.wilson(2.0 * U[0].otype.shape[0])
+    return gradient_flow(U, epsilon, action)

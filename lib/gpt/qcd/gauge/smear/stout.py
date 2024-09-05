@@ -223,7 +223,7 @@ class differentiable_stout:
 
         U_prime = []
         for mu in range(nd):
-            U_mu_prime = (
+            U_mu_prime = g(
                 g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(C[mu] * g.adj(aU[mu])))
                 * aU[mu]
             )

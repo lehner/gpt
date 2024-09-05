@@ -88,6 +88,11 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
     def cartesian(self):
         return self
 
+    def invariant_distance(self, a, b):
+        c = gpt(a - b)
+        ds2 = 2.0 * gpt.sum(gpt.trace(c * c)).real
+        return ds2**0.5
+
     def defect(self, A):
         err2 = gpt.norm2(gpt.adj(A) - A)
         err2 += gpt.norm2(gpt.trace(A))
@@ -128,6 +133,13 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
 
     def compose(self, a, b):
         return a * b
+
+    def invariant_distance(self, a, b):
+        d = gpt(a - b)
+        v = gpt(a + b)
+        c = self.infinitesimal_to_cartesian(v, d)
+        ds2 = 2.0 * gpt.sum(gpt.trace(c * c)).real
+        return ds2**0.5
 
     def defect(self, U):
         I = gpt.identity(U)

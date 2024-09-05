@@ -18,16 +18,24 @@
 #
 import gpt as g
 from gpt.core.group import diffeomorphism, differentiable_functional
+from gpt.ad import reverse as rad
+
+
+def assert_compatible(a, b, tag=""):
+    if type(a) is not type(b):
+        raise Exception(f"Incompatible types: {type(a)} and {type(b)}{tag}")
+    if isinstance(a, rad.node_base):
+        assert_compatible(a.value, b.value, " root " + str(type(a)))
 
 
 class dft_diffeomorphism(diffeomorphism):
     def __init__(self, U, ft):
-        rad = g.ad.reverse
         self.ft = ft
-        self.aU = [rad.node(u.new()) for u in U]
+        self.aU = [rad.node(u) for u in U]
         self.aUft = ft(self.aU)
 
     def __call__(self, fields):
+        # ft needs to be callable with a node or a lattice
         res = self.ft(fields)
         return [g(x) for x in res]
 
@@ -37,6 +45,7 @@ class dft_diffeomorphism(diffeomorphism):
         assert len(dfields) == N
         aU_prime = [g(2j * dfields[mu] * fields_prime[mu]) for mu in range(N)]
         for mu in range(N):
+            assert_compatible(self.aU[mu].value, fields[mu])
             self.aU[mu].value = fields[mu]
         gradient = [None] * N
         for mu in range(N):
@@ -69,19 +78,19 @@ class dft_diffeomorphism(diffeomorphism):
 
 
 class dft_action_log_det_jacobian(differentiable_functional):
-    def __init__(self, U, ft, dfm, inverter_force, inverter_action):
+    def __init__(self, U, ft, dfm, dfm_node, inverter_force, inverter_action):
         self.dfm = dfm
+        self.dfm_node = dfm_node
         self.inverter_force = inverter_force
         self.inverter_action = inverter_action
         self.N = len(U)
         mom = [g.group.cartesian(u) for u in U]
-        rad = g.ad.reverse
 
         _U = [rad.node(g.copy(u)) for u in U]
         _left = [rad.node(g.copy(u), with_gradient=False) for u in mom]
         _right = [rad.node(g.copy(u), with_gradient=False) for u in mom]
-        _Up = dfm(_U)
-        J_right = dfm.jacobian(_U, _Up, _right)
+        _Up = dfm_node(_U)
+        J_right = dfm_node.jacobian(_U, _Up, _right)
 
         act = None
         for mu in range(self.N):
@@ -167,6 +176,7 @@ class differentiable_field_transformation:
         self.ft = ft
         self.U = U
         self.dfm = dft_diffeomorphism(self.U, self.ft)
+        self.dfm_node = dft_diffeomorphism([rad.node(u) for u in self.U], self.ft)
         self.inverter_force = inverter_force
         self.inverter_action = inverter_action
         self.optimizer = optimizer
@@ -175,7 +185,6 @@ class differentiable_field_transformation:
         return self.dfm
 
     def inverse(self, Uft):
-        rad = g.ad.reverse
         aU = [rad.node(g.copy(u)) for u in Uft]
         aUft_target = [rad.node(u, with_gradient=False) for u in Uft]
         aUft = self.ft(aU)
@@ -186,5 +195,5 @@ class differentiable_field_transformation:
 
     def action_log_det_jacobian(self):
         return dft_action_log_det_jacobian(
-            self.U, self.ft, self.dfm, self.inverter_force, self.inverter_action
+            self.U, self.ft, self.dfm, self.dfm_node, self.inverter_force, self.inverter_action
         )
