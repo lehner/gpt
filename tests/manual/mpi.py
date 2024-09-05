@@ -43,18 +43,6 @@ def D_DWF(dst, src, U, b, c, mass, M5):
 for precision in [g.single, g.double]:
     grid = g.grid(arg_grid, precision)
 
-    # test global sums
-    local_value = g.random(str(grid.processor)).cnormal()
-    global_value = grid.globalsum(local_value)
-
-    ref_global_value = 0.0
-    for i in range(grid.Nprocessors):
-        ref_global_value += g.random(str(i)).cnormal()
-
-    eps = abs(global_value - ref_global_value) / abs(global_value)
-    g.message(f"Test global sum: {eps}")
-    assert eps < precision.eps * 100
-
     # test mobius dwf against cshift version
     U = g.qcd.gauge.random(grid, rng)
     Ls = 12
@@ -82,4 +70,36 @@ for precision in [g.single, g.double]:
     eps = (g.norm2(dst_ref - dst) / g.norm2(dst_ref)) ** 0.5
     g.message(f"Test mobius implementation: {eps}")
     assert eps < precision.eps * 100
-    
+
+    # test global sums
+    for it in range(10):
+        local_value = g.random(str(it) + "-" + str(grid.processor)).cnormal()
+        global_value = grid.globalsum(local_value)
+
+        ref_global_value = 0.0
+        for i in range(grid.Nprocessors):
+            ref_global_value += g.random(str(it) + "-" + str(i)).cnormal()
+
+        eps = abs(global_value - ref_global_value) / abs(global_value)
+        g.message(f"Test global sum {i}: {eps}")
+        assert eps < precision.eps * 100
+
+# now have double-precision grid
+exact_prec = 1e-10
+pc = g.qcd.fermion.preconditioner
+inv = g.algorithms.inverter
+g.default.set_verbose("cg_convergence")
+cg_e_inner = inv.cg({"eps": 1e-4, "eps_abs": exact_prec * 0.3, "maxiter": 40000, "miniter": 50})
+cg_e = inv.defect_correcting(
+    #inv.mixed_precision(inv.preconditioned(pc.eo2_ne(), cg_e_inner), g.single, g.double),
+    inv.preconditioned(pc.eo2_ne(), cg_e_inner),
+    eps=exact_prec,
+    maxiter=100,
+)
+
+prop = cg_e(mobius)
+dst0 = g(prop * src)
+dst1 = g(prop * src)
+eps = (g.norm2(dst0 - dst1)/g.norm2(dst0))**0.5
+g.message(f"Reproduce mixed precision solve: {eps}")
+assert eps < precision.eps * 100
