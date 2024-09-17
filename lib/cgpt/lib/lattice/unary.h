@@ -21,9 +21,9 @@ void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
   ASSERT(PyDict_Check(params));
   auto op = get_str(params,"operator");
   if (op == "imag") {
-    dst = imag(src);
+    dst = cgpt_imag(src);
   } else if (op == "real") {
-    dst = real(src);
+    dst = cgpt_real(src);
   } else if (op == "abs") {
     dst = cgpt_abs(src);
   } else if (op == "sqrt") {
