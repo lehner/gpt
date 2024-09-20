@@ -62,9 +62,11 @@ for i in range(N):
                     for l in range(nwarm):
                         plan(lat, lat)
 
+                    g.barrier()
                     t0 = g.time()
                     for l in range(n):
                         plan(lat, lat)
+                    g.barrier()
                     t1 = g.time()
 
                     msg = (

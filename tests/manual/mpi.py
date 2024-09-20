@@ -89,10 +89,11 @@ exact_prec = 1e-10
 pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 g.default.set_verbose("cg_convergence")
+g.default.set_verbose("mixed_precision_performance")
 cg_e_inner = inv.cg({"eps": 1e-4, "eps_abs": exact_prec * 0.3, "maxiter": 40000, "miniter": 50})
 cg_e = inv.defect_correcting(
-    #inv.mixed_precision(inv.preconditioned(pc.eo2_ne(), cg_e_inner), g.single, g.double),
-    inv.preconditioned(pc.eo2_ne(), cg_e_inner),
+    inv.mixed_precision(inv.preconditioned(pc.eo2_ne(), cg_e_inner), g.single, g.double),
+    # inv.preconditioned(pc.eo2_ne(), cg_e_inner),
     eps=exact_prec,
     maxiter=100,
 )

@@ -208,7 +208,7 @@ void cgpt_unary(const Lattice<T> * & pl, const Lattice<T> & l, int unary) {
     pl = &l;
     break;
   case BIT_TRANS|BIT_CONJ:
-    pl = new Lattice<T>( adj(l) );
+    pl = new Lattice<T>( transpose(conjugate(l)) ); // temporary fix
     break;
   case BIT_TRANS:
     pl = new Lattice<T>( transpose(l) );

@@ -16,13 +16,23 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, sys
+import gpt, sys, os
+from inspect import getframeinfo, stack
 
+verbose = gpt.default.is_verbose("message_context")
 
 def message(*a, force_output=False):
     # conversion to string can be an mpi process (i.e. for lattice),
     # so need to do it on all ranks
     s = " ".join([str(x) for x in a])
+    if verbose:
+        slines = []
+        for st in stack()[1:]:
+            caller = getframeinfo(st[0])
+            slines.append(f"{caller.filename}:{caller.lineno}")
+        cpath = os.path.commonpath(slines)
+        cs = ";".join([ x[len(cpath)+1:] for x in slines ])
+        s = f"[{cpath}|{cs}]\n{s}"
     if gpt.rank() == 0 or force_output:
         lines = s.split("\n")
         if len(lines) > 0:
