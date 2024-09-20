@@ -38,6 +38,8 @@ def broadcast(root, data):
         return broadcast(root, data.encode("utf-8")).decode("utf-8")
     elif isinstance(data, np.ndarray):
         return pickle.loads(broadcast(root, pickle.dumps(data)))
+    elif isinstance(data, dict):
+        return pickle.loads(broadcast(root, pickle.dumps(data)))
     return cgpt.broadcast(root, data)
 
 

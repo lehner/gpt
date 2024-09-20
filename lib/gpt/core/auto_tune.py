@@ -97,11 +97,18 @@ class auto_tuned_class:
         hash_tag = str(hashlib.sha256(tag.encode("utf-8")).hexdigest())
 
         self.at_fn = f".gpt_auto_tune/{hash_tag}.json"
-        if os.path.exists(self.at_fn) and self.at_active:
-            self.at_tuned_params = load_cache(self.at_fn)
-            assert self.at_tuned_params["tag"] == tag
-            if self.at_verbose:
-                g.message(f"Use tuned results from {self.at_fn}")
+        if g.rank() == 0 and os.path.exists(self.at_fn) and self.at_active:
+            try:
+                self.at_tuned_params = load_cache(self.at_fn)
+                assert self.at_tuned_params["tag"] == tag
+                if self.at_verbose:
+                    g.message(f"Use tuned results from {self.at_fn}")
+            except:
+                self.at_tuned_params = {}
         else:
+            self.at_tuned_params = {}
+
+        self.at_tuned_params = g.broadcast(0, self.at_tuned_params)
+
+        if len(self.at_tuned_params) == 0:
             self.at_tuned_params = None
-        # in future versions allow masking by tags
