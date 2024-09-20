@@ -73,6 +73,19 @@ def matrix_trace_ab(code, ndim, dst, factor, idst, ifirst, isecond):
         code.append((idst, dst, mul, factor, [(idst, 0, dst)]))
 
 
+def matrix_trace_ab_sparseb(code, ndim, dst, factor, idst, ifirst, isecond, b):
+    mode = mov
+    for ia in range(ndim):
+        for ib in range(ndim):
+            aa = ia * ndim + ib
+            bb = ib * ndim + ia
+            if abs(b[ib, ia]) != 0.0:
+                code.append((idst, dst, mode, 1.0, [(ifirst, 0, aa), (isecond, 0, bb)]))
+                mode = inc
+    if factor != 1.0:
+        code.append((idst, dst, mul, factor, [(idst, 0, dst)]))
+
+
 def matrix_diagonal_subtract(code, ndim, idst, isrc):
     for ia in range(ndim):
         src = ia * ndim + ia

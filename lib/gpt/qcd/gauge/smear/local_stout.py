@@ -61,7 +61,11 @@ def create_adjoint_projector(D, B, generators, nfactors):
         # now Dprime[d, c] = g(-g.trace(1j * generators[d] * itmp2))
         for d in range(ng):
             dst = d * ng + c
-            ti.matrix_trace_ab(code, ndim, dst, -1j, idst, igen + d, itmp2)
+            # ti.matrix_trace_ab(code, ndim, dst, -1j, idst, igen + d, itmp2)
+            # ti.matrix_trace_ab(code, ndim, dst, -1j, idst, itmp2, igen + d)
+            ti.matrix_trace_ab_sparseb(
+                code, ndim, dst, -1j, idst, itmp2, -(igen + d), generators[d]
+            )
 
     if local_stout_parallel_projector:
         segments = [(len(code) // ng, ng)]
