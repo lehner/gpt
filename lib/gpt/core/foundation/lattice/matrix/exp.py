@@ -21,7 +21,7 @@ import gpt as g
 import numpy as np
 
 
-c = None
+c = {}
 
 
 def cayley_hamilton_function_and_gradient_3(iQ, gradient_prime, c):
@@ -197,6 +197,14 @@ def function(i, cache=default_exp_cache):
 
 def function_and_gradient(x, dx):
     global c
-    if c is None:
-        c = g.compiler()
-    return cayley_hamilton_function_and_gradient(x, dx, c)
+
+    if x.grid.precision != g.double:
+        x_dp = g.convert(x, g.double)
+        dx_dp = g.convert(dx, g.double)
+        A, B = function_and_gradient(x_dp, dx_dp)
+        return g.convert(A, x.grid.precision), g.convert(B, x.grid.precision)
+
+    key = f"{x.otype.__name__};{x.grid}"
+    if key not in c:
+        c[key] = g.compiler()
+    return cayley_hamilton_function_and_gradient(x, dx, c[key])
