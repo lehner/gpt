@@ -53,6 +53,7 @@ def staple_sum(U, rho, mu=None, cache=default_staple_cache):
                     nwr[idx] = 1
 
         cache[tag] = g.parallel_transport_matrix(U, code, Ntarget)
+        # g.message("NEW STAPLE SUM", tag)
 
     T = cache[tag](U)
 

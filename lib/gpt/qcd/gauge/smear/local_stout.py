@@ -120,7 +120,9 @@ def compute_adj_abc(_A, _B, _C, _V, generators, cache, parity):
         adjoint_from_right_fast(D, UtaU, generators, cache)
 
         t("other")
-        tmp2[a,] = g(g.trace(C * D))
+        tmp2[
+            a,
+        ] = g(g.trace(C * D))
     t("merge")
     g.merge_color(V, tmp2)
     t("checkerboarding")
@@ -149,7 +151,13 @@ def adjoint_to_fundamental(fund, adj, generators):
     fund[:] = 0
     adj_c = g.separate_color(adj)
     for e in range(ng):
-        fund += 1j * adj_c[e,] * generators[e]
+        fund += (
+            1j
+            * adj_c[
+                e,
+            ]
+            * generators[e]
+        )
 
 
 class local_stout(local_diffeomorphism):
@@ -188,7 +196,18 @@ class local_stout(local_diffeomorphism):
         mask, imask = masks[self.params["checkerboard"]], masks[self.params["checkerboard"].inv()]
 
         fm = g(mask + 1e-15 * imask)
-        st = g.qcd.gauge.staple_sum(U, mu=self.params["dimension"], rho=rho)[0]
+        if False:
+            st = g.qcd.gauge.staple_sum(U, mu=self.params["dimension"], rho=rho)[0]
+        else:
+            st = g.lattice(U[0])
+            st[:] = 0
+            for nu in range(len(U)):
+                if nu == self.params["dimension"]:
+                    continue
+                st += self.params["rho"] * g.qcd.gauge.staple(U, self.params["dimension"], nu)
+            # stref = g.qcd.gauge.staple_sum(U, mu=self.params["dimension"], rho=rho)[0]
+            # g.message("TEST", g.norm2(st), g.norm2(st-stref))
+            # sys.exit(0)
         sf = self.params["staple_field"]
         if sf is not None:
             st = sf(st)
@@ -385,6 +404,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
     def __init__(self, stout):
         self.stout = stout
         self.verbose = stout.verbose
+        self.cache = {}
 
     def plaquette_stencil(self, U, rho, mu, nu):
         key = f"{U[0].grid.describe()}_{U[0].otype.__name__}_{mu}_{nu}_{rho}"
@@ -412,12 +432,19 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
     def gradient(self, U, dU):
         assert dU == U
 
+        cache_key = f"{U[0].grid.describe()}_{U[0].otype.__name__}"
+
         t = g.timer("action_log_det_jacobian")
 
         cb = self.stout.params["checkerboard"]
 
         t("jac_comp")
-        cache_ab = {}
+        if cache_key not in self.cache:
+            self.cache[cache_key] = {"ab": {}, "gen": {}}
+
+        cache_ab = self.cache[cache_key]["ab"]
+        cache = self.cache[cache_key]["gen"]
+
         J_ac, NxxAd, Z_ac, M, fm, M_ab = self.stout.jacobian_components(U, cache_ab)
 
         grid = J_ac.grid
@@ -461,7 +488,6 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         PlaqL = g.identity(U[0])
         PlaqR = g(M * fm)
         FdetV = g.lattice(grid, adjoint_vector_otype)
-        cache = {}
 
         compute_adj_abc(PlaqL, PlaqR, MpInvJx, FdetV, generators, cache, cb)
 
@@ -470,7 +496,9 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
 
         tmp = {}
         for e in range(ng):
-            tmp[e,] = g(g.trace(dJdX[e] * nMpInv))
+            tmp[
+                e,
+            ] = g(g.trace(dJdX[e] * nMpInv))
         dJdXe_nMpInv = g.lattice(grid, adjoint_vector_otype)
         g.merge_color(dJdXe_nMpInv, tmp)
         dJdXe_nMpInv @= dJdXe_nMpInv * fm

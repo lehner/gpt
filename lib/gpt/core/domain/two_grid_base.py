@@ -31,7 +31,7 @@ class two_grid_base:
     def project(self, dst, src):
         dst = g.util.to_list(dst)
         src = g.util.to_list(src)
-        tag = str([s.otype.__name__ for s in src])
+        tag = str([(s.otype.__name__, str(s.grid)) for s in src])
         if tag not in self.project_plan:
             plan = g.copy_plan(dst, src, embed_in_communicator=src[0].grid)
             assert len(dst) == len(src)
@@ -44,7 +44,7 @@ class two_grid_base:
     def promote(self, dst, src):
         dst = g.util.to_list(dst)
         src = g.util.to_list(src)
-        tag = str([s.otype.__name__ for s in src])
+        tag = str([(s.otype.__name__, str(s.grid)) for s in src])
         if tag not in self.promote_plan:
             plan = g.copy_plan(dst, src, embed_in_communicator=dst[0].grid)
             assert len(dst) == len(src)

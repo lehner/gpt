@@ -18,9 +18,11 @@
 #
 import gpt as g
 
+default_padding_cache = {}
+
 
 class padded_local_fields:
-    def __init__(self, fields, margin_top, margin_bottom=None):
+    def __init__(self, fields, margin_top, margin_bottom=None, cache=default_padding_cache):
         fields = g.util.to_list(fields)
         self.grid = fields[0].grid
         self.otype = fields[0].otype
@@ -29,7 +31,10 @@ class padded_local_fields:
         assert all([f.otype.__name__ == self.otype.__name__ for f in fields])
         assert all([f.grid.obj == self.grid.obj for f in fields])
 
-        self.domain = g.domain.local(self.grid, margin_top, margin_bottom)
+        tag = f"{self.grid}_{margin_top}_{margin_bottom}"
+        if tag not in cache:
+            cache[tag] = g.domain.local(self.grid, margin_top, margin_bottom)
+        self.domain = cache[tag]
 
     def __call__(self, fields):
         return_list = isinstance(fields, list)

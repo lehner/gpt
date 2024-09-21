@@ -510,7 +510,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
   if (!local_only) {
 
     Timer("create_com_buffers");
-    // optionally create communication buffers
+    // optionalrly create communication buffers
     create_comm_buffers(use_comm_buffers_of_type);
   }
 
@@ -612,17 +612,32 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create_comm_buffers(memory
   }
 
   // allocate buffers
+#define BUFFER_ALIGN 4096
+#define BUFFER_ROUNDUP(a)  (((size_t)((a + BUFFER_ALIGN - 1) / BUFFER_ALIGN)) * BUFFER_ALIGN)
+  
+  size_t sz_total = 0;
+  for (auto & s : send_size)
+    sz_total += BUFFER_ROUNDUP(s.second);
+  for (auto & s : recv_size)
+    sz_total += BUFFER_ROUNDUP(s.second);
+  
+  // std::cout << GridLogMessage << "Allocate memory buffer of size " << sz_total << std::endl;
+  ASSERT(buffers.size() == 0);
+  buffers.push_back(memory_buffer(sz_total, mt));
+
+  sz_total = 0;
+  char* base = (char*)buffers[0].view.ptr;
   for (auto & s : send_size) {
-    //printf("Rank %d has a send_buffer of size %d for rank %d\n",
-    //	   this->rank, (int)s.second, (int)s.first);
-    send_buffers.insert(std::make_pair(s.first,memory_buffer(s.second, mt)));
+    memory_view mv = {mt,(void*)(base + sz_total),s.second};
+    send_buffers.insert(std::make_pair(s.first, mv));
+    sz_total += BUFFER_ROUNDUP(s.second);
+  }
+  for (auto & s : recv_size) {
+    memory_view mv = {mt,(void*)(base + sz_total),s.second};
+    recv_buffers.insert(std::make_pair(s.first, mv));
+    sz_total += BUFFER_ROUNDUP(s.second);
   }
 
-  for (auto & s : recv_size) {
-    //printf("Rank %d has a recv_buffer of size %d for rank %d\n",
-    //	   this->rank, (int)s.second, (int)s.first);
-    recv_buffers.insert(std::make_pair(s.first,memory_buffer(s.second, mt)));
-  }
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
@@ -775,7 +790,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     // if there is a buffer, first gather in communication buffer
     for (auto & ranks : send_blocks) {
       rank_t dst_rank = ranks.first;
-      auto & dst = send_buffers.at(dst_rank).view;
+      auto & dst = send_buffers.at(dst_rank);
 
       for (auto & indices : ranks.second) {
 	index_t src_idx = indices.first;
@@ -787,14 +802,14 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
     // send/recv buffers
     for (auto & buf : send_buffers) {
-      this->isend(buf.first, buf.second.view.ptr, buf.second.view.sz);
+      this->isend(buf.first, buf.second.ptr, buf.second.sz);
       stats_isends += 1;
-      stats_send_bytes += buf.second.view.sz;
+      stats_send_bytes += buf.second.sz;
     }
     for (auto & buf : recv_buffers) {
-      this->irecv(buf.first, buf.second.view.ptr, buf.second.view.sz);
+      this->irecv(buf.first, buf.second.ptr, buf.second.sz);
       stats_irecvs += 1;
-      stats_recv_bytes += buf.second.view.sz;
+      stats_recv_bytes += buf.second.sz;
     }
   }
 
@@ -835,7 +850,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     for (auto & ranks : recv_blocks) {
 
       rank_t src_rank = ranks.first;
-      auto & src = recv_buffers.at(src_rank).view;
+      auto & src = recv_buffers.at(src_rank);
 
       for (auto & indices : ranks.second) {
 	index_t dst_idx = indices.first;
