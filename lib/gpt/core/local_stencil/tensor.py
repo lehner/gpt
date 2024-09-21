@@ -49,11 +49,11 @@ class tensor(auto_tuned_class):
         )
 
         # auto tuner
-        gsites = int(lat.grid.gsites)
+        lsites = int(lat.grid.gsites) // int(lat.grid.Nprocessors)
         tag = f"local_tensor({lat.otype.__name__}, {lat.grid.describe()}, {hash_code(code)}, {len(segments)}, {local})"
         super().__init__(tag, [
-            (opi, opi * opcb) for opi in [2, 4, 8, 16, 32, 64, 128, 256] for opcb in [256, 1024, 8192, gsites]
-        ], (4, gsites))
+            (opi, opi * opcb) for opi in [2, 4, 8, 16, 32, 64, 128, 256] for opcb in [256, 1024, 8192, lsites]
+        ], (4, lsites))
 
     @auto_tuned_method
     def __call__(self, performance_args, *fields):
