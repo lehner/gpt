@@ -30,17 +30,20 @@ class exact_one_flavor_ratio(action_base):
         self.m2 = m2
         M12 = fermion(m1, m2)
         M11 = fermion(m1, m1)
-        super().__init__([M12, M11], inverter, fermion)
+        M12_adj = M12.adj()
+        M11_adj = M11.adj()
+        super().__init__([M12, M11, M12_adj, M11_adj], inverter, fermion)
         self.P12 = M12.propagator(inverter)
         self.P11 = M11.propagator(inverter)
-
+        self.inv_M12_adj = inverter(M12_adj)
+        self.inv_M11_adj = inverter(M11_adj)
 
     def matrix(self, fields):
-        M12, M11, U, phi = self._updated(fields)
+        M12, M11, M12_adj, M11_adj, U, phi = self._updated(fields)
 
         P12 = self.P12
         P11 = self.P11
-        
+
         m1 = self.m1
         m2 = self.m2
 
@@ -115,7 +118,7 @@ class exact_one_flavor_ratio(action_base):
         return g.norm2(eta)
 
     def gradient(self, fields, dfields):
-        M12, M11, U, phi = self._updated(fields)
+        M12, M11, M12_adj, M11_adj, U, phi = self._updated(fields)
 
         frc = self._allocate_force(U)
 
@@ -123,20 +126,10 @@ class exact_one_flavor_ratio(action_base):
         m2 = self.m2
 
         w_plus = g(
-            self.inverter(M12.adj())
-            * M12.R
-            * g.gamma[5]
-            * M12.ImportUnphysicalFermion
-            * Pplus
-            * phi
+            self.inv_M12_adj * M12.R * g.gamma[5] * M12.ImportUnphysicalFermion * Pplus * phi
         )
         w_minus = g(
-            self.inverter(M11.adj())
-            * M11.R
-            * g.gamma[5]
-            * M11.ImportUnphysicalFermion
-            * Pminus
-            * phi
+            self.inv_M11_adj * M11.R * g.gamma[5] * M11.ImportUnphysicalFermion * Pminus * phi
         )
 
         w2_plus = g(g.gamma[5] * M12.R * M12.Dminus.adj() * w_plus)
