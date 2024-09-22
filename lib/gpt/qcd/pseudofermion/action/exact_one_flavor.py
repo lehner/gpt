@@ -28,14 +28,19 @@ class exact_one_flavor_ratio(action_base):
     def __init__(self, fermion, m1, m2, inverter):
         self.m1 = m1
         self.m2 = m2
-        super().__init__([fermion(m1, m2), fermion(m1, m1)], inverter, fermion)
+        M12 = fermion(m1, m2)
+        M11 = fermion(m1, m1)
+        super().__init__([M12, M11], inverter, fermion)
+        self.P12 = M12.propagator(inverter)
+        self.P11 = M11.propagator(inverter)
+
 
     def matrix(self, fields):
         M12, M11, U, phi = self._updated(fields)
 
-        P12 = M12.propagator(self.inverter)
-        P11 = M11.propagator(self.inverter)
-
+        P12 = self.P12
+        P11 = self.P11
+        
         m1 = self.m1
         m2 = self.m2
 
