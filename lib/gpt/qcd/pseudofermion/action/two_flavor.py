@@ -65,7 +65,7 @@ class two_flavor_base(action_base):
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
                 dS.append(None)
-                #raise Exception("not implemented")
+                # raise Exception("not implemented")
         return dS
 
 
@@ -137,8 +137,6 @@ class two_flavor_ratio_base(action_base):
         assert len(M) == 2
         super().__init__(M, inverter, operator)
         M1, M2 = M
-        self.inv_MMdag_M1 = inverter(operator.MMdag(M1))
-        self.inv_MMdag_M2 = inverter(operator.MMdag(M2))
 
     def __call__(self, fields):
         M1, M2, U, phi = self._updated(fields)
@@ -146,7 +144,8 @@ class two_flavor_ratio_base(action_base):
         psi = g.lattice(phi)
         psi @= self.operator.M(M2) * phi
         chi = g.lattice(phi)
-        chi @= self.inv_MMdag_M1 * psi
+
+        chi @= self.inverter(self.operator.MMdag(M1)) * psi
         return g.inner_product(psi, chi).real
 
     def draw(self, fields, rng):
@@ -158,7 +157,7 @@ class two_flavor_ratio_base(action_base):
         # phi^dag M2dag (M1 M1dag)^-1 M2 phi
         # eta = M1^-1 M2 phi
         chi = g.lattice(phi)
-        chi @= self.inv_MMdag_M2 * self.operator.M(M1) * eta
+        chi @= self.inverter(self.operator.MMdag(M2)) * self.operator.M(M1) * eta
         phi @= self.operator.Mdag(M2) * chi
         return g.norm2(eta)
 
@@ -170,7 +169,7 @@ class two_flavor_ratio_base(action_base):
         psi = g.lattice(phi)
         psi @= self.operator.M(M2) * phi
         chi = g.lattice(phi)
-        chi @= self.inv_MMdag_M1 * psi
+        chi @= self.inverter(self.operator.MMdag(M1)) * psi
         psi @= self.operator.Mdag(M1) * chi
 
         self._accumulate(frc, self.operator.Mderiv(M2)(chi, phi), +1)
@@ -184,7 +183,7 @@ class two_flavor_ratio_base(action_base):
             if mu < len(fields) - 1:
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
-                #raise Exception("not implemented")
+                # raise Exception("not implemented")
                 dS.append(None)
         return dS
 
