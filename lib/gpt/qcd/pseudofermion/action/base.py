@@ -31,7 +31,9 @@ class action_base(differentiable_functional):
     def _updated(self, fields):
         U = fields[0:-1]
         psi = fields[-1]
-        return [m.updated(U) for m in self.M] + [U, psi]
+        for m in self.M:
+            m.update(U)
+        return self.M + [U, psi]
 
     def _allocate_force(self, U):
         frc = g.group.cartesian(U)
