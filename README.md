@@ -8,28 +8,111 @@
 GPT is a [Python](https://www.python.org) measurement toolkit built on [Grid](https://github.com/paboyle/Grid) data parallelism (MPI, OpenMP, SIMD, and SIMT).
 It provides a physics library for lattice QCD and related theories, a QIS module including a digital quantum computing simulator, and a machine learning module.
 
-## Quick Start
-The fastest way to try GPT is to install [Docker](https://docs.docker.com/get-docker/),
-start a [Jupyter](https://jupyter.org/) notebook server with the latest GPT version by running
-```
-docker run --rm -p 8888:8888 gptdev/notebook
-```
-and then open the shown link `http://127.0.0.1:8888/?token=<token>` in a browser.
-You should see the tutorials folder pre-installed.
+## System Requirements
 
-Note that this session does not retain data after termination.  Run
-```
-docker run --rm -p 8888:8888 -v $(pwd):/notebooks gptdev/notebook
-```
-to instead mount the current working directory on your machine.
+Before installing GPT, ensure your system meets the following requirements:
 
-Please consult the [GPT Docker documentation](https://github.com/lehner/gpt/tree/master/docker/README.md) for additional options.
+- **Operating System:** Linux (Ubuntu 18.04+, Debian 10+, CentOS 7+) or macOS (10.14+)
+- **CPU:** x86_64 architecture with AVX2 support (Intel Haswell or newer, AMD Excavator or newer)
+- **Memory:** Minimum 8GB RAM, 16GB or more recommended for larger simulations
+- **Storage:** At least 10GB of free disk space
+- **Python:** Version 3.6 or newer
 
+## Prerequisites
+
+GPT requires the following components:
+
+1. Grid: Based on the `feature/gpt` branch of https://github.com/lehner/Grid
+2. Python 3.6 or newer
+3. MPI implementation (e.g., OpenMPI, MPICH)
+4. BLAS and LAPACK libraries
 
 ## Installation
-A detailed description on how to install GPT
-locally can be found [here](README.setup.md).
 
+### Quick Start with Docker
+
+The fastest way to try GPT is using Docker:
+
+1. Install Docker on your system (https://docs.docker.com/get-docker/)
+2. Run the following command to start a Jupyter notebook server:
+
+   ```bash
+   docker run --rm -p 8888:8888 gptdev/notebook
+   ```
+
+3. Open the displayed link (http://127.0.0.1:8888/?token=<token>) in your browser
+
+Note: This session doesn't retain data after termination. To mount your current directory, use:
+
+```bash
+docker run --rm -p 8888:8888 -v $(pwd):/notebooks gptdev/notebook
+```
+
+### Local Installation
+
+For a detailed local installation, follow these steps:
+
+1. Clone the GPT repository:
+
+   ```bash
+   git clone https://github.com/lehner/gpt
+   cd gpt
+   ```
+
+2. Install Grid dependencies. On Ubuntu/Debian, you can use:
+
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y build-essential cmake libmpich-dev libopenmpi-dev liblapack-dev libatlas-base-dev
+   ```
+
+3. Build and install Grid:
+
+   ```bash
+   git clone https://github.com/lehner/Grid.git
+   cd Grid
+   git checkout feature/gpt
+   ./bootstrap.sh
+   mkdir build
+   cd build
+   ../configure --enable-simd=AVX2
+   make -j$(nproc)
+   sudo make install
+   ```
+
+4. Install GPT:
+
+   ```bash
+   cd ../../
+   pip install -e .
+   ```
+
+### Bootstrap Script
+
+GPT includes bootstrap scripts for common architectures. From the GPT directory, run:
+
+```bash
+scripts/bootstrap/debian10.clang.avx2.no-mpi
+```
+
+Replace with the appropriate script for your system.
+
+## Connecting GPT to Grid
+
+GPT is built on top of Grid and utilizes its data parallelism features. Here's how they connect:
+
+1. Grid provides the underlying lattice structure and parallelization.
+2. GPT uses Grid's data types and parallel primitives to implement high-level physics algorithms.
+3. The `feature/gpt` branch of Grid contains specific optimizations and features for GPT.
+
+## Running GPT Efficiently
+
+To run GPT efficiently:
+
+1. Use MPI for distributed computing across multiple nodes.
+2. Enable OpenMP for shared-memory parallelism on multi-core systems.
+3. Utilize SIMD instructions (AVX2 or AVX-512) for vectorization.
+4. For GPU acceleration, use CUDA-enabled builds of Grid and GPT.
 
 ## Tutorials
 You may also visit a static version of the tutorials [here](https://github.com/lehner/gpt/tree/master/documentation/tutorials).
