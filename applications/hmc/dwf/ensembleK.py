@@ -221,10 +221,11 @@ rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm
 css = [
     ([], 8, F_grid_eo),
     ([], 16, F_grid_eo),
-    ([], 8, F_grid)
+    ([], 4, F_grid)
 ]
 
 def store_css():
+    global css
     ckp_css = g.checkpointer(f"{dst}/checkpoint3")
     ckp_css.grid = U[0].grid
 
@@ -235,23 +236,44 @@ def store_css():
             g.message("with grid", str(cc[i].grid))
             ckp_css.save(cc[i])
 
-    # g.save(f"{dst}/css", css)
+def load_css():
+    global css
 
-if os.path.exists(f"{dst}/checkpoint3"):
-    ckp_css = g.checkpointer(f"{dst}/checkpoint3")
+    if os.path.exists(f"{dst}/checkpoint3"):
+        ckp_css = g.checkpointer(f"{dst}/checkpoint3")
+        ckp_css.grid = U[0].grid
+
+        for cc, ncc, cgrid in css:
+            params = [0.0]
+            if not ckp_css.load(params):
+                g.message("No more fields to load")
+                break
+            g.message(f"Loading {int(params[0])} solution fields")
+            for i in range(int(params[0])):
+                nn = g.vspincolor(cgrid)
+                if ckp_css.load(nn):
+                    cc.append(nn)
+
+def store_cfields(tag, flds):
+    ckp_css = g.checkpointer(f"{dst}/checkpoint.{tag}")
     ckp_css.grid = U[0].grid
 
-    for cc, ncc, cgrid in css:
-        params = [0.0]
-        if not ckp_css.load(params):
-            g.message("No more fields to load")
-            break
-        g.message(f"Loading {int(params[0])} solution fields")
-        for i in range(int(params[0])):
-            nn = g.vspincolor(cgrid)
-            if ckp_css.load(nn):
-                g.message("Field norm2", g.norm2(nn))
-                cc.append(nn)
+    for i in range(len(flds)):
+        flds.save(flds[i])
+
+def load_cfields(tag, flds):
+    if not os.path.exists(f"{dst}/checkpoint.{tag}"):
+        ckp_css = g.checkpointer(f"{dst}/checkpoint.{tag}")
+        ckp_css.grid = U[0].grid
+
+        for i in range(len(flds)):
+            if not ckp_css.load(flds[i]):
+                return False
+    g.message(f"Successfully restored {tag}")
+    return True
+
+
+load_css()
 
 hasenbusch_ratios = [  # Nf=2+1
     (0.65, 1.0, None, two_flavor_ratio, mk_chron(cg_e, *css[0]), mk_chron(cg_s, *css[0]), light),
@@ -380,12 +402,17 @@ def fermion_force():
         for i in range(len(hasenbusch_ratios)):
             g.message(f"Hasenbusch ratio {hasenbusch_ratios[i][0]}/{hasenbusch_ratios[i][1]}")
             forces[i] = action_fermions_s[i].gradient(fields[i], fields[i][0 : len(U)])
+            g.message("Ratio complete")
+
+        g.message("Log Time")
         log.time()
 
+        g.message("Add and log forces")
         for i in range(len(hasenbusch_ratios)):
             log.gradient(forces[i], f"{hasenbusch_ratios[i][0]}/{hasenbusch_ratios[i][1]} {i}")
             for j in range(len(x)):
                 x[j] += forces[i][j]
+        g.message("Done")
 
     g.message(f"Fermion force done")
     return x
@@ -430,7 +457,7 @@ ip_fermion_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_fermion, ip_fermi
 ip_log_det_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_log_det, ip_log_det_sp)
 
 mdint = sympl.OMF2_force_gradient(
-    4, ip_fermion,
+    1, ip_fermion,
     sympl.OMF2_force_gradient(2, ip_log_det,
                               sympl.OMF2_force_gradient(2, ip_gauge, iq, ip_gauge_fg),
                               ip_log_det_fg),
@@ -457,13 +484,16 @@ def hmc(tau):
     else:
         h0, s0 = params[-2:]
     g.message("After H(true)",h0,s0)
-    for its in range(10):
-        g.message(f"tau-iteration: {its} -> {tau/10*its}")
+    for its in range(40):
+        g.message(f"tau-iteration: {its} -> {tau/40*its}")
         if not ckp.load(params + U):
-            mdint(tau / 10)
+            mdint(tau / 40)
             ckp.save(params + U)
-            if it % 2 == 1:
+            if it % 2 == 0:
                 store_css()
+
+            store_cfields(f"{its}", params + U)
+            # sys.exit(0)
     g.message("After mdint(tau)")
     h1, s1 = hamiltonian(False)
     g.message("After H(false)")
