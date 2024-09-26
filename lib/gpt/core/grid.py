@@ -19,6 +19,35 @@
 import cgpt, gpt, sys
 import numpy as np
 
+global_sum_algorithm = gpt.default.get("--global-sum-algorithm", "default")
+
+if global_sum_algorithm == "default":
+
+    def global_sum_default(grid, x):
+        if isinstance(x, gpt.tensor):
+            cgpt.grid_globalsum(grid.obj, x.array)
+            return x
+        else:
+            return cgpt.grid_globalsum(grid.obj, x)
+
+elif global_sum_algorithm == "binary-tree":
+
+    print("Use btree")
+
+    def global_sum_default(grid, x):
+        if isinstance(x, gpt.tensor):
+            global_sum_default(grid, x.array)
+            return x
+
+        if isinstance(x, np.ndarray):
+            return grid.reduce(x, lambda a, b: a.__iadd__(b))
+        elif gpt.util.is_num(x):
+            x = np.array([x], dtype=np.complex128)
+            global_sum_default(grid, x)
+            return gpt.util.to_num(x[0])
+        else:
+            raise Exception(f"Unknown data type in global sum: {type(x)}")
+
 
 class full:
     def __init__(self, nd):
@@ -92,14 +121,6 @@ def grid_get_mpi_default(fdimensions, cb):
 
     assert nd == len(mpi)
     return mpi
-
-
-def global_sum_default(grid, x):
-    if isinstance(x, gpt.tensor):
-        cgpt.grid_globalsum(grid.obj, x.array)
-        return x
-    else:
-        return cgpt.grid_globalsum(grid.obj, x)
 
 
 class grid:
