@@ -42,9 +42,10 @@ elif global_sum_algorithm == "binary-tree":
         if isinstance(x, np.ndarray):
             return grid.reduce(x, lambda a, b: a.__iadd__(b))
         elif gpt.util.is_num(x):
+            t = type(x)
             x = np.array([x], dtype=np.complex128)
             global_sum_default(grid, x)
-            return gpt.util.to_num(x[0])
+            return t(x[0])
         else:
             raise Exception(f"Unknown data type in global sum: {type(x)}")
 

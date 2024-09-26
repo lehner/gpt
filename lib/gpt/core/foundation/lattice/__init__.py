@@ -29,7 +29,22 @@ def rank_inner_product(a, b, use_accelerator):
 
 
 def inner_product(a, b, use_accelerator):
-    return a[0].grid.globalsum(rank_inner_product(a, b, use_accelerator))
+    t = gpt.timer("inner_product")
+    gpt.barrier()
+    t("rank inner product")
+    rip = rank_inner_product(a, b, use_accelerator)
+    t("barrier")
+    gpt.barrier()
+    t("global sum")
+    rip2 = numpy.array(rip)
+    gs = a[0].grid.globalsum(rip)
+    t("barrier")
+    gpt.barrier()
+    t("reduce")
+    gs2 = a[0].grid.reduce(rip2, lambda a, b: a.__iadd__(b))
+    t()
+    gpt.message(t, gs, gs2)
+    return gs
 
 
 def norm2(l):
