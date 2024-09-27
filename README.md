@@ -13,7 +13,8 @@ It provides a physics library for lattice QCD and related theories, a QIS module
 Before installing GPT, ensure your system meets the following requirements:
 
 - **Operating System:** Linux (Ubuntu 18.04+, Debian 10+, CentOS 7+) or macOS (10.14+)
-- **CPU:** x86_64 architecture with AVX2 support (Intel Haswell or newer, AMD Excavator or newer)
+- **CPU:** x86_64 architecture with at least AVX support (including all recent Intel and AMD CPUs), ARM architecture with NEON/SVE support (such as Apple silicon M1 and newer, A64FX)
+- **GPU:** GPT can make use of accelerators using CUDA/HIP/SYCL (optional)
 - **Memory:** Minimum 8GB RAM, 16GB or more recommended for larger simulations
 - **Storage:** At least 10GB of free disk space
 - **Python:** Version 3.6 or newer
@@ -22,9 +23,9 @@ Before installing GPT, ensure your system meets the following requirements:
 
 GPT requires the following components:
 
-1. Grid: Based on the `feature/gpt` branch of https://github.com/lehner/Grid
+1. Grid: Based on the `feature/gpt` branch of https://github.com/lehner/Grid ; please also consult [Grid's README](https://github.com/lehner/Grid/blob/feature/gpt/README.md) for supported architectures
 2. Python 3.6 or newer
-3. MPI implementation (e.g., OpenMPI, MPICH)
+3. Optionally an MPI implementation (e.g., OpenMPI, MPICH); Grid needs to be compiled with "--enable-comms=none" in the absence of MPI.
 4. BLAS and LAPACK libraries
 
 ## Installation
@@ -48,6 +49,8 @@ Note: This session doesn't retain data after termination. To mount your current 
 docker run --rm -p 8888:8888 -v $(pwd):/notebooks gptdev/notebook
 ```
 
+Please consult the [GPT Docker documentation](https://github.com/lehner/gpt/tree/master/docker/README.md) for additional options.
+
 ### Local Installation
 
 For a detailed local installation, follow these steps:
@@ -56,7 +59,6 @@ For a detailed local installation, follow these steps:
 
    ```bash
    git clone https://github.com/lehner/gpt
-   cd gpt
    ```
 
 2. Install Grid dependencies. On Ubuntu/Debian, you can use:
@@ -66,7 +68,7 @@ For a detailed local installation, follow these steps:
    sudo apt-get install -y build-essential cmake libmpich-dev libopenmpi-dev liblapack-dev libatlas-base-dev
    ```
 
-3. Build and install Grid:
+3. Build and install Grid (here an example for a AVX2 compatible CPU):
 
    ```bash
    git clone https://github.com/lehner/Grid.git
@@ -76,16 +78,22 @@ For a detailed local installation, follow these steps:
    mkdir build
    cd build
    ../configure --enable-simd=AVX2
-   make -j$(nproc)
+   make -j
    sudo make install
    ```
 
 4. Install GPT:
 
    ```bash
-   cd ../../
-   pip install -e .
+   cd ../gpt/lib/cgpt
+   ./make
    ```
+
+   This produces a source.sh file in the gpt/lib/cgpt/build directory.  This file needs
+   to be loaded (e.g., via source gpt-path/gpt/lib/cgpt/build/source.sh) to add gpt
+   to the PYTHONPATH environment variable.
+
+   You can add a Grid build directory as an argument to the "./make" command to have serveral different builds at the same time.  This may be useful to test both CPU and GPU based builds or with and without MPI communication.
 
 ### Bootstrap Script
 
@@ -111,8 +119,8 @@ To run GPT efficiently:
 
 1. Use MPI for distributed computing across multiple nodes.
 2. Enable OpenMP for shared-memory parallelism on multi-core systems.
-3. Utilize SIMD instructions (AVX2 or AVX-512) for vectorization.
-4. For GPU acceleration, use CUDA-enabled builds of Grid and GPT.
+3. Utilize SIMD instructions (such as AVX2 or AVX-512) for vectorization.
+4. For GPU acceleration, use CUDA/HIP/SYCL-enabled builds of Grid and GPT.
 
 ## Tutorials
 You may also visit a static version of the tutorials [here](https://github.com/lehner/gpt/tree/master/documentation/tutorials).
@@ -156,3 +164,4 @@ prop = g( fermion_propagator * src )
 # Pion correlator
 g.message(g.slice(g.trace(prop * g.adj(prop)), 3))
 ```
+
