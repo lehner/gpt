@@ -84,6 +84,7 @@ def create_adjoint_projector(D, B, generators, nfactors):
 def adjoint_from_right_fast(D, UtaU, generators, cache):
     if "stencil" not in cache:
         cache["stencil"] = create_adjoint_projector(D, UtaU, generators, 1)
+        g.message(cache.keys())
 
     ein, fgenerators = cache["stencil"]
 
@@ -93,6 +94,7 @@ def adjoint_from_right_fast(D, UtaU, generators, cache):
 def compute_adj_ab(A, B, C, generators, cache):
     if "stencil_ab" not in cache:
         cache["stencil_ab"] = create_adjoint_projector(C, A, generators, 2)
+        g.message(cache.keys())
 
     ein, fgenerators = cache["stencil_ab"]
 
@@ -120,9 +122,7 @@ def compute_adj_abc(_A, _B, _C, _V, generators, cache, parity):
         adjoint_from_right_fast(D, UtaU, generators, cache)
 
         t("other")
-        tmp2[
-            a,
-        ] = g(g.trace(C * D))
+        tmp2[a,] = g(g.trace(C * D))
     t("merge")
     g.merge_color(V, tmp2)
     t("checkerboarding")
@@ -151,13 +151,7 @@ def adjoint_to_fundamental(fund, adj, generators):
     fund[:] = 0
     adj_c = g.separate_color(adj)
     for e in range(ng):
-        fund += (
-            1j
-            * adj_c[
-                e,
-            ]
-            * generators[e]
-        )
+        fund += 1j * adj_c[e,] * generators[e]
 
 
 class local_stout(local_diffeomorphism):
@@ -178,6 +172,7 @@ class local_stout(local_diffeomorphism):
 
         if grid in self.cache:
             masks = self.cache[grid]
+            g.message(self.cache.keys())
         else:
             grid_cb = grid.checkerboarded(g.redblack)
             one_cb = g.complex(grid_cb)
@@ -422,6 +417,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             code.append((9, -1, 1.0, g.path().b(mu).f(nu)))
 
             self.stout.cache[key] = g.parallel_transport_matrix(U, code, 10)
+            g.message(self.stout.cache.keys())
 
         return self.stout.cache[key](U)
 
@@ -441,6 +437,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         t("jac_comp")
         if cache_key not in self.cache:
             self.cache[cache_key] = {"ab": {}, "gen": {}}
+            g.message(self.cache.keys())
 
         cache_ab = self.cache[cache_key]["ab"]
         cache = self.cache[cache_key]["gen"]
@@ -496,9 +493,7 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
 
         tmp = {}
         for e in range(ng):
-            tmp[
-                e,
-            ] = g(g.trace(dJdX[e] * nMpInv))
+            tmp[e,] = g(g.trace(dJdX[e] * nMpInv))
         dJdXe_nMpInv = g.lattice(grid, adjoint_vector_otype)
         g.merge_color(dJdXe_nMpInv, tmp)
         dJdXe_nMpInv @= dJdXe_nMpInv * fm

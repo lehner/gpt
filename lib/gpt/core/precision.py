@@ -18,7 +18,7 @@
 #
 import numpy
 from gpt.core.quadruple_precision import global_sum_quadruple
-from gpt.core.grid import global_sum_default
+from gpt.core.global_sum import global_sum_default
 
 
 class precision:

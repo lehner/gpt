@@ -113,3 +113,4 @@ import gpt.core.local_stencil
 from gpt.core.padding import padded_local_fields
 import gpt.core.stencil
 from gpt.core.einsum import einsum
+import gpt.core.global_sum
