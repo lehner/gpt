@@ -57,6 +57,16 @@ static GridBase* cgpt_create_grid(const Coordinate& fdimensions,
   GridCartesian* grid_full = 0;
   int srank, sranks;
   std::string tag = cgpt_grid_tag(fdimensions,simd,cb_mask,mpi,parent);
+
+  /*
+    TODO: go through cache and free unused cache entries if a threshold is reached, right now, we have an infinite threshold
+    if (c->second.ref == 0) {
+    delete grid;
+    cgpt_grid_cache_tag.erase(tag);
+    cgpt_grid_cache.erase(c);
+  }
+  std::cout << GridLogMessage << "Number of grids in cache: " << cgpt_grid_cache.size() << std::endl;
+  */
   
   auto rg = cgpt_grid_cache.find(tag);
   if (rg != cgpt_grid_cache.end()) {
@@ -112,10 +122,5 @@ static void cgpt_delete_grid(GridBase* grid) {
   auto tag = cgpt_grid_cache_tag.find(grid);
   auto c = cgpt_grid_cache.find(tag->second);
   c->second.ref--;
-  if (c->second.ref == 0) {
-    //std::cout << GridLogMessage << "Delete" << grid << std::endl;
-    delete grid;
-    cgpt_grid_cache_tag.erase(tag);
-    cgpt_grid_cache.erase(c);
-  }
+  // do not immediately delete even if no reference is left
 }

@@ -22,7 +22,7 @@ from gpt.algorithms import base
 
 
 class solution_history(base):
-    def __init__(self, solution_space, inverter, N, optimize = None):
+    def __init__(self, solution_space, inverter, N, optimize=None):
         super().__init__()
         self.inverter = inverter
         self.optimize = optimize
@@ -44,8 +44,11 @@ class solution_history(base):
             t("update")
             space = self.solution_space
             if len(space) == self.N:
-                space.pop()
-            space.insert(0, psi)
+                last = space.pop()
+                g.copy(last, psi)
+                space.insert(0, last)
+            else:
+                space.insert(0, psi)
 
             if self.optimize is not None:
                 self.optimize(space, mat, self.N)

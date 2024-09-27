@@ -20,17 +20,36 @@
 import cgpt
 import gpt as g
 
+operator_tag = {}
+operator_limbo = {}
+
 
 class interface:
     def __init__(self):
         self.obj = None
 
     def setup(self, name, grid, params):
-        self.obj = cgpt.create_fermion_operator(name, grid.precision.cgpt_dtype, params)
+
+        tag_params = {x: params[x] for x in params if x not in ["U"]}
+        tag = f"{name}_{grid.precision.cgpt_dtype}_{tag_params}"
+
+        if tag in operator_limbo and len(operator_limbo[tag]) > 0:
+            self.obj = operator_limbo[tag].pop()
+            cgpt.update_fermion_operator(self.obj, params)
+        else:
+            # create new operator
+            self.obj = cgpt.create_fermion_operator(name, grid.precision.cgpt_dtype, params)
+            operator_tag[self.obj] = tag
 
     def __del__(self):
         if self.obj is not None:
-            cgpt.delete_fermion_operator(self.obj)
+            tag = operator_tag[self.obj]
+            if tag not in operator_limbo:
+                operator_limbo[tag] = [self.obj]
+            else:
+                operator_limbo[tag].append(self.obj)
+
+            # cgpt.delete_fermion_operator(self.obj)
 
     def update(self, params):
         cgpt.update_fermion_operator(self.obj, params)

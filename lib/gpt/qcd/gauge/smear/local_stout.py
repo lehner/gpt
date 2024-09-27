@@ -84,7 +84,6 @@ def create_adjoint_projector(D, B, generators, nfactors):
 def adjoint_from_right_fast(D, UtaU, generators, cache):
     if "stencil" not in cache:
         cache["stencil"] = create_adjoint_projector(D, UtaU, generators, 1)
-        g.message(cache.keys())
 
     ein, fgenerators = cache["stencil"]
 
@@ -94,7 +93,6 @@ def adjoint_from_right_fast(D, UtaU, generators, cache):
 def compute_adj_ab(A, B, C, generators, cache):
     if "stencil_ab" not in cache:
         cache["stencil_ab"] = create_adjoint_projector(C, A, generators, 2)
-        g.message(cache.keys())
 
     ein, fgenerators = cache["stencil_ab"]
 
@@ -172,7 +170,6 @@ class local_stout(local_diffeomorphism):
 
         if grid in self.cache:
             masks = self.cache[grid]
-            g.message(self.cache.keys())
         else:
             grid_cb = grid.checkerboarded(g.redblack)
             one_cb = g.complex(grid_cb)
@@ -417,7 +414,6 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
             code.append((9, -1, 1.0, g.path().b(mu).f(nu)))
 
             self.stout.cache[key] = g.parallel_transport_matrix(U, code, 10)
-            g.message(self.stout.cache.keys())
 
         return self.stout.cache[key](U)
 
@@ -437,7 +433,6 @@ class local_stout_action_log_det_jacobian(differentiable_functional):
         t("jac_comp")
         if cache_key not in self.cache:
             self.cache[cache_key] = {"ab": {}, "gen": {}}
-            g.message(self.cache.keys())
 
         cache_ab = self.cache[cache_key]["ab"]
         cache = self.cache[cache_key]["gen"]

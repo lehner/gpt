@@ -50,7 +50,7 @@ def mem_info():
     }
 
 
-def mem_report(details=True):
+def mem_report(details=True, after_time=0):
     info = mem_info()
     mem_book = gpt.get_mem_book()
     fmt = " %-8s %-30s %-12s %-30s %-12s %-16s %-20s"
@@ -82,6 +82,8 @@ def mem_report(details=True):
         smsg_prev = ""
         for i, page in enumerate(mem_book):
             grid, otype, created, stack = mem_book[page]
+            if created < after_time:
+                continue
             g_gb = grid.fsites * grid.precision.nbytes * otype.nfloats / grid.cb.n / 1024.0**3.0
             l_gb = g_gb / grid.Nprocessors
             g_tot_gb += g_gb

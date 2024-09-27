@@ -143,7 +143,10 @@ class added(differentiable_functional):
     def gradient(self, fields, dfields):
         a_grad = self.a.gradient(fields, dfields)
         b_grad = self.b.gradient(fields, dfields)
-        return [g(x + y) for x, y in zip(a_grad, b_grad)]
+        assert len(a_grad) == len(b_grad)
+        for x, y in zip(a_grad, b_grad):
+            x += y
+        return a_grad
 
 
 class scaled(differentiable_functional):
@@ -183,6 +186,7 @@ class transformed(differentiable_functional):
         indices = self.indices if self.indices is not None else range(len(fields))
         fields_indices = [fields[i] for i in indices]
         fields_transformed = self.t(fields_indices)
+
         fields_prime = [None if i in indices else fields[i] for i in range(len(fields))]
         for i, j in zip(range(len(indices)), indices):
             fields_prime[j] = fields_transformed[i]

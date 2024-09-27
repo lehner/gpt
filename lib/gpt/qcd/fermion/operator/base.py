@@ -29,7 +29,7 @@ class base(gpt.matrix_operator):
     def __init__(self, name, U, params, otype, with_even_odd, daggered):
         # keep constructor parameters
         self.name = name
-        self.U = U
+        self.U = gpt.copy(U)
         self.otype = otype
         self.params_constructor = params
         self.daggered = daggered
@@ -259,8 +259,7 @@ class base(gpt.matrix_operator):
         )
 
     def update(self, U):
-        self.U = U
-        self.params["U"] = [u.v_obj[0] for u in U]
+        gpt.copy(self.U, U)
         self.interface.update(self.params)
 
     def split(self, mpi_split):
