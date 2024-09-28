@@ -27,6 +27,7 @@ class action_base(differentiable_functional):
         self.M = g.core.util.to_list(M)
         self.inverter = inverter
         self.operator = operator
+        self._suspend()
 
     def _updated(self, fields):
         U = fields[0:-1]
@@ -34,6 +35,11 @@ class action_base(differentiable_functional):
         for m in self.M:
             m.update(U)
         return self.M + [U, psi]
+
+    def _suspend(self):
+        for m in self.M:
+            # suspend operator until it is reactivated by update
+            m.suspend()
 
     def _allocate_force(self, U):
         frc = g.group.cartesian(U)

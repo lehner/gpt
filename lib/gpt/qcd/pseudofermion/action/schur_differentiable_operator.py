@@ -45,7 +45,7 @@ class MMdag:
 #  M = ( OE OO ) = ( 0    1        ) ( 0    1 ) ( OE OO )
 # Mhat = EE - EO OO^-1 OE
 class MMdag_evenodd:
-    def M(self, op):
+    def M(op):
         tmp = op.Mooee.vector_space[0].lattice()
 
         def operator(dst, src):
@@ -57,7 +57,7 @@ class MMdag_evenodd:
 
         return g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
 
-    def Mdag(self, op):
+    def Mdag(op):
         tmp = op.Mooee.vector_space[0].lattice()
 
         def operator(dst, src):
@@ -69,7 +69,7 @@ class MMdag_evenodd:
 
         return g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space)
 
-    def MMdag(self, op):
+    def MMdag(op):
         def spawn(op):
             tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
@@ -94,7 +94,7 @@ class MMdag_evenodd:
 
         return spawn(op)
 
-    def Mderiv(self, op):
+    def Mderiv(op):
         tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
         def operator(left, right):
@@ -115,7 +115,7 @@ class MMdag_evenodd:
 
         return operator
 
-    def MderivDag(self, op):
+    def MderivDag(op):
         tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
         def operator(left, right):

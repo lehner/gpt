@@ -54,12 +54,14 @@ class exact_one_flavor_ratio(action_base):
 
     def matrix_spectral_range(self, fields, algorithm):
         evec, evals = algorithm(self.matrix(fields), fields[-1])
+        self._suspend()
         return (min(evals.real), max(evals.real))
 
     def __call__(self, fields):
         phi = fields[-1]
         M = self.matrix(fields)
         psi = g(M * phi)
+        self._suspend()
         return g.inner_product(phi, psi).real
 
     def inv_sqrt_matrix(self, fields, rational_function):
@@ -85,18 +87,30 @@ class exact_one_flavor_ratio(action_base):
         m1 = self.m1
         m2 = self.m2
 
-        P11 = [
-            self.operator(m1, m1 + d * (m2 - m1)).updated(U).propagator(self.inverter) for d in dm
-        ]
-        P12 = [
-            self.operator(m1 + d * (m2 - m1), m2).updated(U).propagator(self.inverter) for d in dm
-        ]
+        operator = self.operator
+        inverter = self.inverter
 
         def _mat(dst, src):
             dst @= diag * src
             for i in range(len(cs)):
-                dst += cs[i] * (m2 - m1) * Pplus * g.gamma[5] * P12[i] * Pplus * src
-                dst -= cs[i] * (m2 - m1) * Pminus * g.gamma[5] * P11[i] * Pminus * src
+
+                op = operator(m1 + dm[i] * (m2 - m1), m2)
+                op.update(U)
+                P12_i = op.propagator(inverter)
+
+                dst += cs[i] * (m2 - m1) * Pplus * g.gamma[5] * P12_i * Pplus * src
+
+                P12_i = None
+
+                op = operator(m1, m1 + dm[i] * (m2 - m1))
+                op.update(U)
+                P11_i = op.propagator(inverter)
+
+                dst -= cs[i] * (m2 - m1) * Pminus * g.gamma[5] * P11_i * Pminus * src
+
+                P11_i = None
+                op = None
+
             dst *= rational_function.norm
 
         return g.matrix_operator(_mat)
@@ -118,48 +132,47 @@ class exact_one_flavor_ratio(action_base):
 
         frc = self._allocate_force(U)
 
-        g.barrier()
-        g.message("checkmark 0")
-        g.barrier()
-        
+        # g.barrier()
+        # g.message("checkmark 0")
+        # g.barrier()
+
         inv_M12_adj = self.inverter(M12_adj)
 
-        g.barrier()
-        g.message("checkmark 1")
-        g.barrier()
-        
+        # g.barrier()
+        # g.message("checkmark 1")
+        # g.barrier()
+
         inv_M11_adj = self.inverter(M11_adj)
 
-        g.barrier()
-        g.message("checkmark 2")
-        g.barrier()
-        
+        # g.barrier()
+        # g.message("checkmark 2")
+        # g.barrier()
 
         m1 = self.m1
         m2 = self.m2
 
         w_plus = g(inv_M12_adj * M12.R * g.gamma[5] * M12.ImportUnphysicalFermion * Pplus * phi)
 
-        g.barrier()
-        g.message("checkmark 3")
-        g.barrier()
-        
+        # g.barrier()
+        # g.message("checkmark 3")
+        # g.barrier()
+
         w_minus = g(inv_M11_adj * M11.R * g.gamma[5] * M11.ImportUnphysicalFermion * Pminus * phi)
 
-        g.barrier()
-        g.message("checkmark 4")
-        g.barrier()
-        
+        # g.barrier()
+        # g.message("checkmark 4")
+        # g.barrier()
+
         w2_plus = g(g.gamma[5] * M12.R * M12.Dminus.adj() * w_plus)
         w3_plus = g(Pplus * phi)
 
         w2_minus = g(g.gamma[5] * M11.R * M11.Dminus.adj() * w_minus)
         w3_minus = g(Pminus * phi)
 
-        g.barrier()
-        g.message("checkmark 5")
-        g.barrier()
-        
+        # g.barrier()
+        # g.message("checkmark 5")
+        # g.barrier()
+
         self._accumulate(frc, M12.M_projected_gradient(w_plus, w2_plus), m1 - m2)
         self._accumulate(
             frc,
@@ -182,4 +195,5 @@ class exact_one_flavor_ratio(action_base):
                 # not yet implemented
                 dS.append(None)
 
+        self._suspend()
         return dS

@@ -17,6 +17,23 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
+template<typename WI> void cgpt_fermion_set_mass(WilsonFermion<WI>& op, PyObject* args) {
+  RealD mass = get_float(args,"mass");
+  op.mass = mass;
+  if  (op.anisotropyCoeff.isAnisotropic){
+    op.diag_mass = op.mass + 1.0 + (Nd-1)*(op.anisotropyCoeff.nu / op.anisotropyCoeff.xi_0);
+  } else {
+    op.diag_mass = 4.0 + op.mass;
+  }
+}
+
+template<typename WI> void cgpt_fermion_set_mass(CayleyFermion5D<WI>& op, PyObject* args) {
+  RealD mass_plus = get_float(args,"mass_plus");
+  RealD mass_minus = get_float(args,"mass_minus");
+  op.SetMass(mass_plus, mass_minus);
+}
+
 template<typename T>
 class cgpt_fermion_operator : public cgpt_fermion_operator_base {
 public:
@@ -51,6 +68,10 @@ public:
       PokeIndex<LorentzIndex>(U,Umu,mu);
     }
     op->ImportGauge(U);
+  }
+
+  virtual void set_mass(PyObject* args) {
+    cgpt_fermion_set_mass(*op, args);
   }
 
 };
@@ -95,5 +116,8 @@ public:
     ASSERT(A.size() == 9*ASelfInv.size());
 
     op->ImportGauge(A, ASelfInv);
+  }
+
+  virtual void set_mass(PyObject* args) {
   }
 };

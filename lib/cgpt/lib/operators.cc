@@ -69,6 +69,19 @@ EXPORT(update_fermion_operator,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(set_mass_fermion_operator,{
+    
+    void* p;
+    PyObject* _args;
+    if (!PyArg_ParseTuple(args, "lO", &p, &_args)) {
+      return NULL;
+    }
+    
+    ((cgpt_fermion_operator_base*)p)->set_mass(_args);
+
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(delete_fermion_operator,{
     
     void* p;
