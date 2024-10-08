@@ -77,7 +77,7 @@ For a detailed local installation, follow these steps:
    ./bootstrap.sh
    mkdir build
    cd build
-   ../configure --enable-simd=AVX2
+   ../configure --enable-simd=AVX2 CXXFLAGS=-fPIC
    make -j
    sudo make install
    ```
