@@ -504,7 +504,7 @@ no_accept_reject = True
 nsteps = 40
 tau = 8.0
 
-tau = 10.0
+tau = 12.0
 nsteps = 4 # TODO: modify
 
 def refresh_momentum():
