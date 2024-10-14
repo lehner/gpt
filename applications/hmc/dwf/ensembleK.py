@@ -10,8 +10,9 @@ rng = g.random("test")
 
 # cold start
 # target 128x128x128x288
-U = g.qcd.gauge.unit(g.grid([128, 128, 128, 288], g.double))
-#U = g.qcd.gauge.unit(g.grid([64,64,64,96], g.double))
+#U = g.qcd.gauge.unit(g.grid([128, 128, 128, 288], g.double)) TODO
+
+U = g.qcd.gauge.random(g.grid([4,4,4,4], g.double), rng)
 
 latest_it = None
 it0 = 0
@@ -42,6 +43,8 @@ if latest_it is not None:
 
         eps2 = g.norm2(g.matrix.det(U[mu]) - g.identity(g.complex(U[0].grid))) / U[0].grid.gsites
         g.message("Determinant defect for mu=",mu,"is",eps2)
+else:
+    latest_it = -1
 
 if False:
     Lold = U[0].grid.gdimensions
@@ -145,9 +148,9 @@ F_grid_eo = lq.F_grid_eo
 F_grid = lq.F_grid
 lq = None
 
-sloppy_prec = 1e-8
-sloppy_prec_light = 1e-7
-exact_prec = 1e-10
+sloppy_prec = 1e-9
+sloppy_prec_light = 1e-9
+exact_prec = 1e-11
 
 cg_s_inner = inv.cg({"eps": 1e-4, "eps_abs": sloppy_prec * 0.15, "maxiter": 40000, "miniter": 50})
 cg_s_light_inner = inv.cg({"eps": 1e-4, "eps_abs": sloppy_prec_light * 0.15, "maxiter": 40000, "miniter": 50})
@@ -161,7 +164,7 @@ cg_s = inv.defect_correcting(
 
 cg_s_light = inv.defect_correcting(
     inv.mixed_precision(cg_s_light_inner, g.single, g.double),
-    eps=sloppy_prec,
+    eps=sloppy_prec_light,
     maxiter=100,
 )
 
@@ -208,10 +211,36 @@ U_mom = g.group.cartesian(U)
 
 action_gauge_mom = g.qcd.scalar.action.mass_term()
 action_gauge = g.qcd.gauge.action.iwasaki(2.44)  # changed from 2.41 at traj=295
+
+# first estimate based on crude E extrapolation, likely 4% off for m_l and m_s:
 #( (0.0003546 + 0.0176)/27.34 - 0.0003546) = 0.00030211543525969275
 
+# new estimation based on global fit should do better:
+# m_s = 0.01682836
+# m_l = 0.00028884
 
-rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 70.0**0.5, 9)
+if latest_it <= 603:
+    g.message("Use first-generation masses")
+    m_l = 0.000302
+    m_s = 0.0176
+
+else:
+    g.message("Use second-generation masses")
+
+    # global fit estimate (mk)
+    # m_l = 0.000289
+    # m_s = 0.0168
+
+    # simple estimate via m_SS msw0Zh dependence ; then use 27.2 as quark mass ratio incl. m_res
+    # m_l = 0.000282
+    # m_s = 0.0170   (another estimate mk5 agrees with this)
+
+    m_l = 0.000286
+    m_s = 0.0169
+
+
+
+rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 70.0**0.5, 11)
 # before 11 highest, led to 1e-9 error, 6 led to 1.2435650287301314e-08,
 # 13 led to 8e-10, 20 to 1.320967779605553e-10, 3 to 7.120046807695957e-08
 # ran power method below, seems like 70 is best upper level
@@ -259,18 +288,19 @@ def store_cfields(tag, flds):
     ckp_css.grid = U[0].grid
 
     for i in range(len(flds)):
-        flds.save(flds[i])
+        ckp_css.save(flds[i])
 
 def load_cfields(tag, flds):
-    if not os.path.exists(f"{dst}/checkpoint.{tag}"):
+    if os.path.exists(f"{dst}/checkpoint.{tag}"):
         ckp_css = g.checkpointer(f"{dst}/checkpoint.{tag}")
         ckp_css.grid = U[0].grid
 
-        for i in range(len(flds)):
-            if not ckp_css.load(flds[i]):
-                return False
-    g.message(f"Successfully restored {tag}")
-    return True
+        if not ckp_css.load(flds):
+            return False
+        g.message(f"Successfully restored {tag}")
+        return True
+    return False
+
 
 
 load_css()
@@ -282,9 +312,9 @@ hasenbusch_ratios = [  # Nf=2+1
     (0.017, 0.11, None, two_flavor_ratio, mk_chron(cg_e, *css[0]), mk_chron(cg_s, *css[0]), light),
     (0.004, 0.017, None, two_flavor_ratio, mk_chron(cg_e, *css[0]), mk_chron(cg_s, *css[0]), light),
     (0.0019, 0.004, None, two_flavor_ratio, mk_chron(cg_e, *css[1]), mk_chron(cg_s, *css[1]), light),
-    (0.000302, 0.0019, None, two_flavor_ratio, mk_chron(cg_e, *css[1]), mk_chron(cg_s_light, *css[1]), light),
+    (m_l, 0.0019, None, two_flavor_ratio, mk_chron(cg_e, *css[1]), mk_chron(cg_s_light, *css[1]), light),
     (0.23, 1.0, rat_fnc, eofa_ratio, mk_slv_e(*css[2]), mk_slv_s(*css[2]), light),
-    (0.0176, 0.23, rat_fnc, eofa_ratio, mk_slv_e(*css[2]), mk_slv_s(*css[2]), light),
+    (m_s, 0.23, rat_fnc, eofa_ratio, mk_slv_e(*css[2]), mk_slv_s(*css[2]), light),
 ]
 
 fields = [
@@ -367,7 +397,7 @@ def hamiltonian(draw):
                     r = f"{hasenbusch_ratios[i][0]}/{hasenbusch_ratios[i][1]}"
                     e = abs(si / si_check - 1)
 
-                    g.message(f"Error of rational approximation for Hasenbusch ratio {r}: {e}")
+                    g.message(f"Error of rational approximation for Hasenbusch ratio {r}: {e} or absolute {si-si_check}")
                 else:
                     si = action_fermions_e[i].draw(fields[i], rng)
                 s += si
@@ -376,8 +406,9 @@ def hamiltonian(draw):
         s = action_gauge(U)
         if not pure_gauge:
             for i in range(len(hasenbusch_ratios)):
-                g.message(f"Calculate Hamiltonian for {hasenbusch_ratios[i][0]}/{hasenbusch_ratios[i][1]}")
-                s += action_fermions_e[i](fields[i])
+                sa = action_fermions_e[i](fields[i])
+                g.message(f"Calculate Hamiltonian for {hasenbusch_ratios[i][0]}/{hasenbusch_ratios[i][1]} = {sa}")
+                s += sa
         h = s + action_gauge_mom(U_mom) + ald
     return h, s
 
@@ -395,6 +426,7 @@ def fermion_force():
     for y in x:
         y[:] = 0
 
+    g.mem_report(details=False)
     if not pure_gauge:
         forces = [[g.lattice(y) for y in x] for i in fields]
 
@@ -403,6 +435,7 @@ def fermion_force():
             g.message(f"Hasenbusch ratio {hasenbusch_ratios[i][0]}/{hasenbusch_ratios[i][1]}")
             forces[i] = action_fermions_s[i].gradient(fields[i], fields[i][0 : len(U)])
             g.message("Ratio complete")
+            g.mem_report(details=False)
 
         g.message("Log Time")
         log.time()
@@ -454,10 +487,10 @@ ip_log_det_sp = sympl.update_p(U_mom, log_det_force_sp)
 
 ip_gauge_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_gauge, ip_gauge)
 ip_fermion_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_fermion, ip_fermion)
-ip_log_det_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_log_det, ip_log_det_sp)
+ip_log_det_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_log_det, ip_log_det)#_sp
 
 mdint = sympl.OMF2_force_gradient(
-    1, ip_fermion,
+    2, ip_fermion,
     sympl.OMF2_force_gradient(2, ip_log_det,
                               sympl.OMF2_force_gradient(2, ip_gauge, iq, ip_gauge_fg),
                               ip_log_det_fg),
@@ -468,11 +501,14 @@ mdint = sympl.OMF2_force_gradient(
 no_accept_reject = True
 
 
-def hmc(tau):
-    global ff_iterator, ckp
-    ff_iterator = 0
-    accrej = metro(U)
-    g.message("After metro")
+nsteps = 40
+tau = 8.0
+
+tau = 10.0
+nsteps = 4 # TODO: modify
+
+def refresh_momentum():
+    global ckp
     params = U_mom + [x[-1] for x in fields] + [0.0, 0.0]
     if not ckp.load(params):
         h0, s0 = hamiltonian(True)
@@ -480,40 +516,122 @@ def hmc(tau):
         params[-1] = s0
         ckp.save(params)
         store_css()
-        # sys.exit(0)
+        g.barrier()
+        sys.exit(0)
     else:
         h0, s0 = params[-2:]
-    g.message("After H(true)",h0,s0)
-    for its in range(40):
-        g.message(f"tau-iteration: {its} -> {tau/40*its}")
-        if not ckp.load(params + U):
-            mdint(tau / 40)
-            ckp.save(params + U)
-            if it % 2 == 0:
-                store_css()
+    return h0, s0
 
-            store_cfields(f"{its}", params + U)
-            # sys.exit(0)
-    g.message("After mdint(tau)")
-    h1, s1 = hamiltonian(False)
-    g.message("After H(false)")
-    store_css()
-    if no_accept_reject:
-        return [True, s1 - s0, h1 - h0]
+def evolve(tau_local, nsteps_local):
+    global ckp
+
+    if not ckp.load(U_mom + U):
+        its0 = nsteps_local - 1
+        while its0 >= 0:
+            g.message(f"Try to load fields after iteration {its0}")
+            if load_cfields(f"{its0}", U_mom + U):
+                break
+            its0 -= 1
+        its0 += 1
+        for its in range(its0, nsteps_local):
+            g.message(f"tau-iteration: {its} -> {tau/nsteps_local*its}")
+            mdint(tau_local / nsteps_local)
+            store_css()
+            store_cfields(f"{its}", U_mom + U)
+
+            if g.rank() == 0:
+                flog = open(f"{dst}/current.log.{its}","wt")
+                for x in log.grad:
+                    flog.write(f"{x} force norm2/sites = {np.mean(log.get(x))} +- {np.std(log.get(x))}\n")
+                flog.write(f"Timing:\n{log.time}\n")
+                flog.close()
+
+            if its < nsteps_local - 1:
+                g.barrier()
+                sys.exit(0)
+                
+        ckp.save(U_mom + U)
+
+        g.barrier()
+
+        # reset checkpoint
+        g.message("Reset evolve checkpoints")
+        if g.rank() == 0:
+            for it in range(nsteps_local):
+                if os.path.exists(f"{dst}/checkpoint.{it}"):
+                    shutil.rmtree(f"{dst}/checkpoint.{it}")
+
+        g.barrier()
+
+
+def metropolis_evolve(tau_local, nsteps_local, h0, s0, params):
+    global ckp
+    
+    accrej = metro(U_mom + U)
+
+    evolve(tau_local, nsteps_local)
+
+    params = [0.0, 0.0]
+    if not ckp.load(params):
+        h1, s1 = hamiltonian(False)
+        g.message(f"dH = {h1-h0}")
+        ckp.save([h1,s1])
+        sys.exit(0)        
     else:
-        return [accrej(h1, h0), s1 - s0, h1 - h0]
+        h1, s1 = params
+        
+    g.message(f"dH = {h1-h0}")
+    params.append(h1-h0)
+    params.append(s1-s0)
+    
+    if not no_accept_reject:
+        if not accrej(h1, h0):
+            # restore to zero state
+            g.message("Reject update with dH=",h1-h0)
+            # flip momenta
+            for um in U_mom:
+                um *= -1
+            h1, s1 = h0, s0
+            acc = False
+        else:
+            g.message("Accept update with dH=",h1-h0)
+            acc = True
+    else:
+        acc = True
 
+    params.append(acc)
+    
+    return h1, s1, acc
+    
 
+def hmc(tau):
+    global ff_iterator, ckp
+    ff_iterator = 0
+    g.message("After metro")
+
+    h0, s0 = refresh_momentum()
+    
+    g.message("After H(true)",h0,s0)
+
+    params = []
+    h1, s1, acc1 = metropolis_evolve(tau/2, nsteps//2, h0, s0, params)
+
+    g.message("After first evolution")
+    h2, s2, acc2 = metropolis_evolve(tau/2, nsteps//2, h1, s1, params)
+
+    g.message("After second evolution")
+    
+    store_css()
+
+    return params
+    
 accept, total = 0, 0
 for it in range(it0, N):
-    pure_gauge = it < 10
-    no_accept_reject = it < 1000
+    pure_gauge = it < 100
+    no_accept_reject = it < 1 # TODO modify
     g.message(pure_gauge, no_accept_reject)
 
-    a, dS, dH = hmc(8.0)
-    accept += a
-    total += 1
-
+    dH_1, dS_1, acc_1, dH_2, dS_2, acc_2 = hmc(tau)
 
     Uft = U
     for s in reversed(sm):
@@ -521,20 +639,19 @@ for it in range(it0, N):
         
     plaq = g.qcd.gauge.plaquette(U)
     plaqft = g.qcd.gauge.plaquette(Uft)
-    g.message(f"HMC {it} has P = {plaqft}, Pft = {plaq}, dS = {dS}, dH = {dH}, acceptance = {accept/total}")
-    for x in log.grad:
-        g.message(f"{x} force norm2/sites =", np.mean(log.get(x)), "+-", np.std(log.get(x)))
-    g.message(f"Timing:\n{log.time}")
+    g.message(f"HMC {it} has P = {plaqft}, Pft = {plaq}, dS_1 = {dS_1}, dS_2 = {dS_2}, dH_1 = {dH_1}, dH_2 = {dH_2}, acceptance = {acc_1} {acc_2}")
+    #for x in log.grad:
+    #    g.message(f"{x} force norm2/sites =", np.mean(log.get(x)), "+-", np.std(log.get(x)))
+    #g.message(f"Timing:\n{log.time}")
 
     if g.rank() == 0:
         flog = open(f"{dst}/ckpoint_lat.{it}.log","wt")
-        flog.write(f"dH {dH}\n")
+        flog.write(f"dH_1 {dH_1}\n")
+        flog.write(f"dH_2 {dH_2}\n")
+        flog.write(f"accept_1 {acc_1}\n")
+        flog.write(f"accept_2 {acc_2}\n")
         flog.write(f"P {plaqft}\n")
         flog.write(f"Pft {plaq}\n")
-        for x in log.grad:
-            flog.write(f"{x} force norm2/sites = {np.mean(log.get(x))} +- {np.std(log.get(x))}\n")
-        flog.write(f"Timing:\n{log.time}\n")
-
         flog.close()
 
     if it % 10 == 0:
@@ -542,16 +659,17 @@ for it in range(it0, N):
         log.reset()
         g.message("Reset log")
 
+    g.save(f"{dst}/config.{it}", Uft)
+    
+    g.barrier()
+
+    g.save(f"{dst}/ckpoint_lat.{it}", Uft, g.format.nersc())
+
+    g.barrier()
+
     # reset checkpoint
     if g.rank() == 0:
         shutil.rmtree(f"{dst}/checkpoint2")
-
-    g.barrier()
-    #ckp = g.checkpointer(f"{dst}/checkpoint2")
-    #ckp.grid = U[0].grid
-
-    g.save(f"{dst}/ckpoint_lat.{it}", Uft, g.format.nersc())
-    store_css()
     
     #rng = g.random(f"new{dst}-{it}", "vectorized_ranlux24_24_64")
 
