@@ -564,7 +564,7 @@ def evolve(tau_local, nsteps_local):
         g.barrier()
 
 
-def metropolis_evolve(tau_local, nsteps_local, h0, s0, params):
+def metropolis_evolve(tau_local, nsteps_local, h0, s0, status):
     global ckp
     
     accrej = metro(U_mom + U)
@@ -581,8 +581,8 @@ def metropolis_evolve(tau_local, nsteps_local, h0, s0, params):
         h1, s1 = params
         
     g.message(f"dH = {h1-h0}")
-    params.append(h1-h0)
-    params.append(s1-s0)
+    status.append(h1-h0)
+    status.append(s1-s0)
     
     if not no_accept_reject:
         if not accrej(h1, h0):
@@ -599,7 +599,7 @@ def metropolis_evolve(tau_local, nsteps_local, h0, s0, params):
     else:
         acc = True
 
-    params.append(acc)
+    status.append(acc)
     
     return h1, s1, acc
     
@@ -613,17 +613,17 @@ def hmc(tau):
     
     g.message("After H(true)",h0,s0)
 
-    params = []
-    h1, s1, acc1 = metropolis_evolve(tau/2, nsteps//2, h0, s0, params)
+    status = []
+    h1, s1, acc1 = metropolis_evolve(tau/2, nsteps//2, h0, s0, status)
 
     g.message("After first evolution")
-    h2, s2, acc2 = metropolis_evolve(tau/2, nsteps//2, h1, s1, params)
+    h2, s2, acc2 = metropolis_evolve(tau/2, nsteps//2, h1, s1, status)
 
     g.message("After second evolution")
     
     store_css()
 
-    return params
+    return status
     
 accept, total = 0, 0
 for it in range(it0, N):
