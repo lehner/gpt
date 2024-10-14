@@ -600,6 +600,8 @@ def metropolis_evolve(tau_local, nsteps_local, h0, s0, status):
         acc = True
 
     status.append(acc)
+
+    g.message(f"Plaquette after evolution with accept/reject is {g.qcd.gauge.plaquette(U)}")
     
     return h1, s1, acc
     
