@@ -89,6 +89,11 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         g.message(f"test M*M^-1 = 1 for {m.otype.__name__}: {eps2}")
         assert eps2 < eps**2
 
+        eps2 = g.norm2(
+            g.matrix.inv(m[0, 0, 0, 0]) * m[0, 0, 0, 0] - g.identity(m[0, 0, 0, 0])
+        ) / g.norm2(g.identity(m[0, 0, 0, 0]))
+        assert eps2 < eps**2 * 10
+
         m2 = g.matrix.exp(g.matrix.log(m))
         eps2 = g.norm2(m - m2) / g.norm2(m)
         g.message(f"exp(log(m)) == m: {eps2}")

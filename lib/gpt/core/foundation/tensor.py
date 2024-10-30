@@ -48,6 +48,24 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
     return res
 
 
+def identity(t):
+    e = gpt.tensor(t.otype)
+    if len(e.array.shape) == 2:
+        e.array = numpy.eye(dtype=e.array.dtype, N=e.array.shape[0])
+    elif len(e.array.shape) == 4:
+        n1 = e.array.shape[0]
+        n2 = e.array.shape[2]
+        for i in range(n1):
+            for j in range(n1):
+                if i == j:
+                    e.array[i, j] = numpy.eye(dtype=e.array.dtype, N=n2)
+                else:
+                    e.array[i, j] = numpy.zeros(dtype=e.array.dtype, shape=(n2, n2))
+    else:
+        raise Exception(f"Unknown shape of tensor.identity {e.array.shape}")
+    return e
+
+
 def adj(l):
     if l.transposable():
         return l.adj()
