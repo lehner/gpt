@@ -28,6 +28,8 @@ class tensor(foundation_base):
     def __init__(self, first, second=None):
         if second is not None:
             array, otype = first, second
+            if isinstance(otype, str):
+                otype = gpt.str_to_otype(otype)
         else:
             otype = first
             array = np.zeros(otype.shape, dtype=np.complex128)
@@ -42,6 +44,9 @@ class tensor(foundation_base):
 
     def __repr__(self):
         return "tensor(%s,%s)" % (str(self.array), self.otype.__name__)
+
+    def describe(self):
+        return self.otype.__name__
 
     def __getitem__(self, a):
         return self.array.__getitem__(a)

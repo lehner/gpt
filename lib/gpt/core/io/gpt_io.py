@@ -362,6 +362,8 @@ class gpt_io:
             f.write("}\n")
         elif isinstance(objs, numpy.ndarray):  # needs to be above list for proper precedence
             f.write("array %d %d\n" % self.write_numpy(objs))
+        elif isinstance(objs, gpt.tensor):
+            f.write("tensor %s %d %d\n" % (objs.describe(), *self.write_numpy(objs.array)))
         elif isinstance(objs, list):
             f.write("[\n")
             for i, x in enumerate(objs):
@@ -453,6 +455,11 @@ class gpt_io:
             if not self.keep_context(ctx):
                 return None
             return self.read_numpy(int(a[1]), int(a[2]))
+        elif cmd == "tensor":
+            a = p.get()  # array start end
+            if not self.keep_context(ctx):
+                return None
+            return gpt.tensor(self.read_numpy(int(a[2]), int(a[3])), a[1])
         elif cmd == "lattice":
             a = p.get()
             if not self.keep_context(ctx):

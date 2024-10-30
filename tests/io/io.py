@@ -59,6 +59,7 @@ to_save = {
     "U": U,  # write list of lattices
     "sdomain": sdomain,
     "S": S,
+    "tu": U[0][1, 1, 1, 1],
 }
 
 g.save(f"{work_dir}/out", to_save)
@@ -119,6 +120,10 @@ def check_all(res, tag):
     eps2 = 0.0
     for a, b in zip(s_slice, s_slice_2):
         eps2 += g.norm2(a - b)
+    assert eps2 < 1e-25
+
+    # tensor test
+    eps2 = g.norm2(U[0][1, 1, 1, 1] - res["tu"])
     assert eps2 < 1e-25
 
 
