@@ -1,5 +1,6 @@
 [![Build/Test](https://github.com/lehner/gpt/workflows/Build/Test/badge.svg)](https://github.com/lehner/gpt/actions?query=workflow%3ABuild%2FTest)
 [![codecov](https://codecov.io/gh/lehner/gpt/branch/master/graph/badge.svg)](https://codecov.io/gh/lehner/gpt/branch/master)
+[![DOI](https://zenodo.org/badge/242580638.svg)](https://doi.org/10.5281/zenodo.4679297)
 
 ![GPT Logo](/documentation/logo/logo-1280-640.png)
 
@@ -164,4 +165,27 @@ prop = g( fermion_propagator * src )
 # Pion correlator
 g.message(g.slice(g.trace(prop * g.adj(prop)), 3))
 ```
+
+### Citation
+You can cite the use of GPT using the BibTeX entry
+> @software{lehner_2024_14017415,
+> author       = {Lehner, Christoph and
+>                 Bruno, Mattia and
+>                 Richtmann, Daniel and
+>                 Schlemmer, Maximilian and
+>                 Lehner, Raphael and
+>                 Knüttel, Daniel and
+>                 Wurm, Thomas and
+>                 Jin, Luchang and
+>                 Bürger, Simon and
+>                 Hackl, Andreas and
+>                 Klein, Alexander},
+>  title        = {lehner/gpt: 2024-10},
+>  month        = oct,
+>  year         = 2024,
+>  publisher    = {Zenodo},
+>  version      = {2024-10},
+>  doi          = {10.5281/zenodo.14017415},
+>  url          = {https://doi.org/10.5281/zenodo.14017415}
+>}
 
