@@ -181,7 +181,7 @@ You can cite the use of GPT using the BibTeX entry
                  Bürger, Simon and
                  Hackl, Andreas and
                  Klein, Alexander},
-  title        = {Grid Python Toolkit (GPT), 2024-10},
+  title        = {{Grid Python Toolkit (GPT), 2024-10}},
   month        = 10,
   year         = 2024,
   publisher    = {Zenodo},
