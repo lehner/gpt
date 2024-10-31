@@ -168,24 +168,26 @@ g.message(g.slice(g.trace(prop * g.adj(prop)), 3))
 
 ### Citation
 You can cite the use of GPT using the BibTeX entry
-> @software{lehner_2024_14017415,
-> author       = {Lehner, Christoph and
->                 Bruno, Mattia and
->                 Richtmann, Daniel and
->                 Schlemmer, Maximilian and
->                 Lehner, Raphael and
->                 Knüttel, Daniel and
->                 Wurm, Thomas and
->                 Jin, Luchang and
->                 Bürger, Simon and
->                 Hackl, Andreas and
->                 Klein, Alexander},
->  title        = {lehner/gpt: 2024-10},
->  month        = oct,
->  year         = 2024,
->  publisher    = {Zenodo},
->  version      = {2024-10},
->  doi          = {10.5281/zenodo.14017415},
->  url          = {https://doi.org/10.5281/zenodo.14017415}
->}
+```
+@software{GPT,
+  author       = {Lehner, Christoph and
+                 Bruno, Mattia and
+                 Richtmann, Daniel and
+                 Schlemmer, Maximilian and
+                 Lehner, Raphael and
+                 Knüttel, Daniel and
+                 Wurm, Thomas and
+                 Jin, Luchang and
+                 Bürger, Simon and
+                 Hackl, Andreas and
+                 Klein, Alexander},
+  title        = {Grid Python Toolkit (GPT), 2024-10},
+  month        = 10,
+  year         = 2024,
+  publisher    = {Zenodo},
+  version      = {2024-10},
+  doi          = {10.5281/zenodo.14017415},
+  url          = {https://doi.org/10.5281/zenodo.14017415}
+}
+```
 
