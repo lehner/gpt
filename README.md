@@ -166,7 +166,7 @@ prop = g( fermion_propagator * src )
 g.message(g.slice(g.trace(prop * g.adj(prop)), 3))
 ```
 
-### Citation
+## Citation
 You can cite the use of GPT using the BibTeX entry
 ```
 @software{GPT,
