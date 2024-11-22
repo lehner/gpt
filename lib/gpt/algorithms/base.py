@@ -72,6 +72,7 @@ class base_iterative(base):
         self.verbose_convergence = gpt.default.is_verbose(self.name + "_convergence")
         self.verbose_log_convergence = gpt.default.is_verbose(self.name + "_log_convergence")
         self.converged = None
+        self.history = []
 
     def get_log_file(self):
         if not self.verbose_log_convergence or gpt.rank() != 0:
