@@ -66,7 +66,7 @@ class fom(base_iterative):
 
             t("setup")
             rlen = self.restartlen
-            mmp, r = g.copy(src), g.copy(src)
+            mmp, r = g.lattice(src), g.lattice(src)
             r2 = self.calc_res(mat, psi, mmp, src, r)
 
             ssq = g.norm2(src)
@@ -117,7 +117,7 @@ class fom(base_iterative):
 
                 if self.maxiter != rlen:
                     t("restart")
-                    a.basis = [Q[-1]]
+                    a.basis = [g.eval(r / g.norm2(r) ** 0.5)]
                     a.H = []
                     self.debug("performed restart")
 
