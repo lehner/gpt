@@ -221,7 +221,7 @@ if latest_it <= 603:
     m_l = 0.000302
     m_s = 0.0176
 
-else:
+elif latest_it <= 615:
     g.message("Use second-generation masses")
 
     # global fit estimate (mk)
@@ -235,6 +235,10 @@ else:
     m_l = 0.000286
     m_s = 0.0169
 
+else:
+    g.message("Use third-generation masses")
+    m_l = 0.000262
+    m_s = 0.01643
 
 
 rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 70.0**0.5, 11)
