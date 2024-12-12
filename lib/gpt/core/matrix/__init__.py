@@ -21,3 +21,4 @@ from gpt.core.matrix.sqrt import sqrt
 from gpt.core.matrix.exp import exp
 from gpt.core.matrix.log import log
 from gpt.core.matrix.det import det
+import gpt.core.matrix.polar

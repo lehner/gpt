@@ -20,7 +20,13 @@ import gpt
 import numpy
 
 # need a basic container
-from gpt.core.object_type import ot_singlet, ot_matrix_singlet, ot_vector_singlet
+from gpt.core.object_type import (
+    ot_singlet,
+    ot_matrix_singlet,
+    ot_vector_singlet,
+    ot_matrix_color,
+    ot_vector_color,
+)
 
 
 ###
@@ -177,6 +183,75 @@ class ot_matrix_complex_additive_group(ot_matrix_singlet):
             m = numpy.zeros(self.shape, dtype=dt)
             m[i, j] = 1.0j
             return gpt.matrix_singlet(m, n)
+
+        return [basis_real(i, j) for i in range(n) for j in range(n)] + [
+            basis_imag(i, j) for i in range(n) for j in range(n)
+        ]
+
+    def inner_product(self, left, right):
+        return gpt.sum(gpt.trace(gpt.adj(left) * right)).real
+
+    def coordinates(self, l, c=None):
+        assert l.otype.__name__ == self.__name__
+        gen = self.generators(l.grid.precision.complex_dtype)
+        if c is None:
+            nhalf = len(gen) // 2
+            l_real = gpt.component.real(l)
+            l_imag = gpt.component.imag(l)
+            return [gpt.eval(gpt.trace(gpt.adj(l_real) * Ta)) for Ta in gen[0:nhalf]] + [
+                gpt.eval(gpt.trace(gpt.adj(l_imag) * Ta)) for Ta in gen[0:nhalf]
+            ]
+        else:
+            l[:] = 0
+            for ca, Ta in zip(c, gen):
+                l += ca * Ta
+
+    def defect(self, U):
+        return 0.0
+
+    def project(self, U, method):
+        return None
+
+
+class ot_matrix_color_complex_additive_group(ot_matrix_color):
+    def __init__(self, n):
+        self.Ndim = n
+        super().__init__(n)
+        self.__name__ = f"ot_matrix_color_complex_additive_group({n})"
+        self.data_alias = lambda: ot_matrix_color(n)
+        self.vector_type = ot_vector_color(n)
+        self.mtab = {
+            self.__name__: (lambda: self, (1, 0)),
+            f"ot_vector_color({n})": (
+                lambda: ot_vector_color(n),
+                (1, 0),
+            ),
+            "ot_singlet": (lambda: self, None),
+            "ot_complex_additive_group": (lambda: self, None),
+        }
+        self.rmtab = {
+            "ot_singlet": (lambda: self, None),
+            "ot_complex_additive_group": (lambda: self, None),
+        }
+
+    def compose(self, a, b):
+        return a + b
+
+    def cartesian(self):
+        return self
+
+    def generators(self, dt):
+        n = self.shape[0]
+
+        def basis_real(i, j):
+            m = numpy.zeros(self.shape, dtype=dt)
+            m[i, j] = 1.0
+            return gpt.matrix_color(m, n)
+
+        def basis_imag(i, j):
+            m = numpy.zeros(self.shape, dtype=dt)
+            m[i, j] = 1.0j
+            return gpt.matrix_color(m, n)
 
         return [basis_real(i, j) for i in range(n) for j in range(n)] + [
             basis_imag(i, j) for i in range(n) for j in range(n)

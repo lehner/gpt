@@ -70,6 +70,26 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     g.message(
         f"""
 
+    Test polar.decomposition for {grid.precision.__name__}
+
+"""
+    )
+    rng = g.random("test")
+    W = rng.normal_element(g.matrix_color_complex_additive(grid, 3))
+    H, U = g.matrix.polar.decompose(W)
+    err2 = g.norm2(H * U - W) / g.norm2(W)
+    g.message(f"Polar decomposition closure: {err2}")
+    assert err2 < eps**2
+    err2 = g.norm2(H - g.adj(H)) / g.norm2(H)
+    g.message(f"Polar decomposition H: {err2}")
+    assert err2 < eps**2
+    err2 = g.norm2(U * g.adj(U) - g.identity(U)) / g.norm2(U)
+    g.message(f"Polar decomposition U: {err2}")
+    assert err2 < eps**2
+
+    g.message(
+        f"""
+
     Test sqrt,log,exp,det,tr for {grid.precision.__name__}
 
 """

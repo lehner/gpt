@@ -16,8 +16,25 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.algorithms.group.symmetric_functional import symmetric_functional
-from gpt.algorithms.group.locally_coherent_functional import locally_coherent_functional
-from gpt.algorithms.group.repeat_arguments_functional import repeat_arguments_functional
-from gpt.algorithms.group.polar_decomposition_functional import polar_decomposition_functional
-from gpt.algorithms.group.polar_regulator import polar_regulator
+import gpt as g
+
+
+def angle(w):
+    # Heron's method
+    uk = g(w / g.norm2(w) ** 0.5 * 1e3)
+    I = g.identity(w)
+    nrm = g.norm2(I)
+    for i in range(20):
+        uk = g(0.5 * uk + g.matrix.inv(g.adj(uk)) * 0.5)
+        err2 = g.norm2(uk * g.adj(uk) - I) / nrm
+        if err2 < w.grid.precision.eps**2 * 10:
+            return uk
+    raise Exception("angle did not converge")
+
+
+def decompose(w):
+    u = angle(w)
+    h = g(w * g.adj(u))
+    err2 = g.norm2(h - g.adj(h)) / g.norm2(h)
+    assert err2 < w.grid.precision.eps**2 * 100
+    return h, u
