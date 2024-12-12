@@ -130,7 +130,7 @@ def str_to_otype(s):
         )
     else:
         root = a[0]
-        args = ""
+        args = "()"
 
     # then map to type
     known_types = set(
