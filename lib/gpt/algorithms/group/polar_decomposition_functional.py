@@ -21,38 +21,65 @@ import numpy as np
 
 from gpt.core.group import differentiable_functional
 
+# Ansatz:
+# W = H e^{i \theta T} U
+# T^2 = T, tr(T) = 1
+# e^{i \theta T} = 1 + i \theta T - 1/2 \theta^2 T + ... = (e^{i\theta} - 1) T + 1 = (1-T) + T e^{i\theta}
 
-def decompose(w, phase0=None):
-    if phase0 is None:
-        phase0 = g.complex(w.grid)
-        phase0[:] = 0
+# \Theta = dU U^{-1} = i T_a \Theta_a  ->  dU = i T_a \Theta_a U
+# H = T_a \phi_a + \phi_0
+# tr(T_a T_b) = 1/2 \delta_{ab}
 
+# dW = d\phi_a T_a e^{i \theta T} U + d\phi_0 e^{i \theta T} U + i H d\theta T e^{i\theta T} U + i H e^{i \theta T} T_a U \Theta_a = e_{ij} dx_{ij} + i e_{ij} dy_{ij}
+
+# The invariant length element is therefore:
+#
+# ds^2 = tr[dW dW^\dagger]
+#      = + tr[H e^{i\theta T} T_a T_b e^{-i\theta T} H^\dagger] \Theta_a \Theta_b
+#        + ...
+# Important point is that since dW = dA U and dA is free of U, we always find tr[dW dW^\dagger] to be independent of U and therefore the
+# metric tensor and the measure is invariant of U !
+
+# with matrices (e_{ij})_{ab} = \delta_{ia} \delta_{jb}
+
+
+def embedded_phase(u, phase):
+    ep = g.identity(u)
+
+    # TODO: generalize to n dimensions
+    ep[:, :, :, :, 0, 0] = phase[:]
+
+    return ep
+
+
+def decompose(w):
     h, u = g.matrix.polar.decompose(w)
-    rel_det = g(g.matrix.det(g.component.exp(-1j * phase0) * u))
-    rel_phase = g(g.component.log(rel_det) / 1j / u.otype.Ndim)
-    phase = g(phase0 + rel_phase)
-    su = g(g.component.exp(-1j * phase) * u)
+
+    # u = e^{i \theta T_first_row} su
+    # (T_first_row)_{ij} = \delta_{i0} \delta_{j0}  ->  det(u) = e^{i theta tr(T_first_row)} = e^{i theta}
+    # need tr(T) = 1 but also e^{i 2pi T} = 1 for continuous behavior
+    det = g(g.matrix.det(u))
+    theta = g(g.component.log(det) / 1j)
+    phase = g(g.component.exp(-1j * theta))
+    su = g(embedded_phase(u, phase) * u)
     su.otype = g.ot_matrix_su_n_fundamental_group(u.otype.Ndim)
-    return h, phase, su
+    return h, theta, su
 
 
 class polar_decomposition_functional(differentiable_functional):
     def __init__(self, u_functional, h_functional):
         self.u_functional = u_functional
         self.h_functional = h_functional
-        self.reference_phases = None
 
     def reduce(self, fields):
         h = []
         p = []
         u = []
-        p0 = self.reference_phases if self.reference_phases is not None else [None] * len(fields)
         for i in range(len(fields)):
-            hf, pf, uf = decompose(fields[i], p0[i])
+            hf, pf, uf = decompose(fields[i])
             h.append(hf)
             p.append(pf)
             u.append(uf)
-        self.reference_phases = p
         return h, p, u
 
     def __call__(self, fields):
@@ -80,15 +107,19 @@ class polar_decomposition_functional(differentiable_functional):
             N = Nc**2 * 2
             Na = len(gen)
             jac = np.ndarray(shape=(lsites, N, N), dtype=np.float64)
+            ep = embedded_phase(u[mu], g.component.exp(1j * p[mu]))
+
+            # dW =
+            # + d\phi_a v_eitheta_ta_u
+            # + d\phi_0 v_eitheta_u
+            # + i d\theta v_w
+            # + i v_eitheta_h_ta_u \Theta_a
+            # = e_{ij} dx_{ij} + i e_{ij} dy_{ij}
+
             for a in range(Na):
                 ta = gen[a]
-                ta_u = g(ta * u[mu])
-                h_ta_u = g(h[mu] * ta_u)
-                eitheta_h_ta_u = g(g.component.exp(1j * p[mu]) * h_ta_u)
-                eitheta_ta_u = g(g.component.exp(1j * p[mu]) * ta_u)
-
-                v_eitheta_h_ta_u = eitheta_h_ta_u[:]
-                v_eitheta_ta_u = eitheta_ta_u[:]
+                v_eitheta_h_ta_u = g(h[mu] * ep * ta * u[mu])[:]
+                v_eitheta_ta_u = g(ta * ep * u[mu])[:]
                 for i in range(Nc):
                     for j in range(Nc):
                         jac[:, 0 * Na + a, 0 * Nc * Nc + i * Nc + j] = -v_eitheta_h_ta_u[
@@ -100,9 +131,9 @@ class polar_decomposition_functional(differentiable_functional):
                         jac[:, 1 * Na + a, 0 * Nc * Nc + i * Nc + j] = v_eitheta_ta_u[:, i, j].real
                         jac[:, 1 * Na + a, 1 * Nc * Nc + i * Nc + j] = v_eitheta_ta_u[:, i, j].imag
 
-            v_w = fields[mu][:]
-            eitheta_u = g(g.component.exp(1j * p[mu]) * u[mu])
-            v_eitheta_u = eitheta_u[:]
+            That = g.mcolor([[1 if i == 0 and j == 0 else 0 for i in range(Nc)] for j in range(Nc)])
+            v_w = g(h[mu] * That * ep * u[mu])[:]
+            v_eitheta_u = g(ep * u[mu])[:]
             for i in range(Nc):
                 for j in range(Nc):
                     jac[:, 2 * Na + 0, 0 * Nc * Nc + i * Nc + j] = -v_w[:, i, j].imag
