@@ -22,7 +22,10 @@ import numpy as np
 from gpt.core.group import differentiable_functional
 
 # Ansatz:
-# W = H e^{i \theta T} U
+# W = H U
+# U = e^{i \theta T} SU
+# det(U) = e^{i\theta},   \theta \in [0,2\pi]   e^{i \theta T}
+
 # T^2 = T, tr(T) = 1
 # e^{i \theta T} = 1 + i \theta T - 1/2 \theta^2 T + ... = (e^{i\theta} - 1) T + 1 = (1-T) + T e^{i\theta}
 
