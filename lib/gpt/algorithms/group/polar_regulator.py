@@ -21,16 +21,17 @@ from gpt.core.group import differentiable_functional
 
 
 class polar_regulator(differentiable_functional):
-    def __init__(self, lam, kap):
+    def __init__(self, lam, kap, c):
         self.lam = lam
         self.kap = kap
+        self.c = c
 
     def __call__(self, fields):
         I = g.identity(fields[0])
         Nc = fields[0].otype.Ndim
         r = 0.0
         for mu in range(len(fields)):
-            r += (self.lam / 2 / Nc) * g.sum(g.trace((fields[mu] - I) * (fields[mu] - I))).real
+            r += (self.lam / 2 / Nc) * g.sum(g.component.pow(self.c)(g.trace((fields[mu] - I) * (fields[mu] - I)))).real
             r -= (self.kap / Nc) * g.sum(g.component.log(g.matrix.det(fields[mu]))).real
         return r
 
@@ -41,6 +42,6 @@ class polar_regulator(differentiable_functional):
         I = g.identity(dfields[0])
         Nc = fields[0].otype.Ndim
         for df in dfields:
-            x = g(2.0 * (self.lam / 2 / Nc) * (df - I) - (self.kap / Nc) * g.matrix.inv(df))
+            x = g(2.0 * (self.lam / 2 / Nc) * self.c * g.component.pow(self.c-1)(g.trace((df - I)*(df-I)))* (df - I) - (self.kap / Nc) * g.matrix.inv(df))
             dAdS.append(x)
         return dAdS
