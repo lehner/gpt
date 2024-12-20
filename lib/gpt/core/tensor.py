@@ -22,6 +22,16 @@ import numpy as np
 from gpt.core.foundation import tensor as foundation, base as foundation_base
 
 
+def get_mt_entry(self_otype, other_otype):
+    self_tag = self_otype.__name__
+    other_tag = other_otype.__name__
+    if other_tag in self_otype.mtab:
+        return self_otype.mtab[other_tag]
+    elif self_tag in other_otype.rmtab:
+        return other_otype.rmtab[self_tag]
+    return None
+
+
 class tensor(foundation_base):
     foundation = foundation
 
@@ -106,12 +116,10 @@ class tensor(foundation_base):
 
     def __mul__(self, other):
         if isinstance(other, gpt.tensor):
-            self_tag = self.otype.__name__
-            other_tag = other.otype.__name__
-            if other_tag in self.otype.mtab:
-                mt = self.otype.mtab[other_tag]
-            elif self_tag in other.otype.rmtab:
-                mt = other.otype.rmtab[self_tag]
+            mt = get_mt_entry(self.otype, other.otype)
+            if mt is None:
+                mt = get_mt_entry(self.otype.data_otype(), other.otype.data_otype())
+                assert mt is not None
             a = np.tensordot(self.array, other.array, axes=mt[1])
             if len(mt) > 2:
                 a = np.transpose(a, mt[2])
