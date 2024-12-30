@@ -28,11 +28,21 @@ U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 
 # create a sparse sub-domain and a sparse lattice S with 1% of points
 nsparse = int(0.01 * U[0].grid.gsites / U[0].grid.Nprocessors)
+local_coordinates = g.random("test" + str(U[0].grid.processor)).choice(g.coordinates(U[0]), nsparse)
+local_coordinates = np.concatenate(
+    (
+        local_coordinates,
+        g.random("test." + str(U[0].grid.processor)).choice(local_coordinates, 10),
+        g.random("test." + str(U[0].grid.processor)).choice(
+            g.random("test" + str(U[0].grid.processor + 1)).choice(g.coordinates(U[0]), nsparse), 10
+        ),
+    )
+)
 sdomain = g.domain.sparse(
     U[0].grid,
-    rng.choice(g.coordinates(U[0]), nsparse),
+    local_coordinates,
     dimensions_divisible_by=[4, 2, 2, 1],
-    mask=rng.choice([True, False], nsparse),
+    mask=rng.choice([True, False], len(local_coordinates)),
 )
 
 # test sparse domain

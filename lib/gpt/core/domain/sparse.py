@@ -70,8 +70,8 @@ class sparse_kernel:
         self.embedded_cache = {}
         self.local_cache = {}
         self.coordinate_lattices_cache = {}
-        self.weight_cache = None
         self.one_mask_cache = None
+        self.weight_cache = None
 
     def cached_one_mask(self):
         if self.one_mask_cache is not None:
@@ -108,8 +108,17 @@ class sparse_kernel:
         if self.weight_cache is not None:
             return self.weight_cache
 
-        unique_coordinates, count = np.unique(self.local_coordinates, axis=0, return_counts=True)
-        unique_coordinates = unique_coordinates.view(type(self.local_coordinates))
+        # this function is mostly used for tests, so it is not performance critical
+        for rank in range(self.grid.Nprocessors):
+            local_coordinates = np.copy(self.local_coordinates)
+            self.grid.broadcast(rank, local_coordinates)
+            if rank == 0:
+                global_coordinates = local_coordinates
+            else:
+                global_coordinates = np.concatenate((global_coordinates, local_coordinates))
+
+        unique_coordinates, count = np.unique(global_coordinates, axis=0, return_counts=True)
+        unique_coordinates = unique_coordinates.view(type(global_coordinates))
         count = count.astype(self.grid.precision.complex_dtype)
 
         weight = gpt.complex(self.grid)
@@ -186,27 +195,43 @@ class sparse:
     def weight(self):
         return self.kernel.weight()
 
-    def embedded_coordinates(self, coordinates, stable=False):
-        # If stable == False, only return the set of embedded_coordinates that are locally
-        # available, irrespective of the order in which they appeared in coordinates.
+    def unique_embedded_coordinates(self, coordinates):
         idx1 = self.grid.lexicographic_index(coordinates)
         idx2 = self.grid.lexicographic_index(self.kernel.local_coordinates)
 
-        if stable:
-            m = {}
-            for i, j in enumerate(idx2):
-                m[j] = i
-            return [tuple([int(x) for x in self.kernel.embedded_coordinates[m[j], :]]) if j in m else None for j in idx1]
-            
-        idx_common = np.nonzero(np.isin(idx2, idx1))[0]
-        return self.kernel.embedded_coordinates[idx_common, :]
+        # all nodes first in parallel create lists of coordinates they can offer locally
+        m = {}
+        for i, j in enumerate(idx2):
+            ec = self.kernel.embedded_coordinates[i, :]
+            ij = int(j)
+            if ij not in m:
+                m[ij] = [ec]
+            else:
+                m[ij].append(ec)
 
-    def one_mask(self, coordinates):
-        emb_coor = self.embedded_coordinates(coordinates)
-        one = self.lattice(gpt.ot_singlet())
-        one[:] = 0
-        one[emb_coor] = 1
-        return one
+        # now create a map that we fill in with information from one rank at a time
+        mp = np.full(
+            shape=(len(coordinates) + 1, self.kernel.embedding_grid.nd),
+            fill_value=-1,
+            dtype=np.int32,
+        )
+        mp[-1, 0] = len(coordinates)
+        for rank in range(self.kernel.embedding_grid.Nprocessors):
+            if rank == self.kernel.embedding_grid.processor:
+                left = mp[-1, 0]
+                for i in range(len(coordinates)):
+                    idx1_i = idx1[i]
+                    if mp[i, 0] == -1 and idx1_i in m:
+                        mm = m[idx1_i]
+                        if len(mm) > 0:
+                            mp[i] = mm.pop()
+                            left -= 1
+                mp[-1, 0] = left
+            self.kernel.embedding_grid.broadcast(rank, mp)
+            if mp[-1, 0] == 0:
+                break
+
+        return np.ascontiguousarray(mp[0:-1])
 
     def coordinate_lattices(self, **args):
         return self.kernel.coordinate_lattices(**args)

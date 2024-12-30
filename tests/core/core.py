@@ -448,14 +448,43 @@ for i in range(3):
 ################################################################################
 for l in [l_dp, l_sp]:
     nsparse = int(0.01 * l.grid.gsites / l.grid.Nprocessors)
-    sdomain = g.domain.sparse(
-        l.grid,
-        rng.choice(g.coordinates(l), nsparse),
-    )
+
+    def get_lc(rank):
+        rng = g.random("test" + str(rank))
+        base = np.array(
+            [[rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)] for j in range(nsparse)],
+            dtype=np.int32,
+        )
+        lc = np.concatenate(
+            (
+                base,
+                g.random("test." + str(rank)).choice(base, 10),
+                g.random("test." + str(rank)).choice(
+                    g.random("test" + str(rank + 1)).choice(base, nsparse), 10
+                ),
+            )
+        )
+        return lc
+
+    local_coordinates = get_lc(l.grid.processor)
+    sdomain = g.domain.sparse(l.grid, local_coordinates)
+
+    # test embedding
+    all_local_coordinates = np.concatenate(tuple([get_lc(r) for r in range(l.grid.Nprocessors)]))
+    uec = sdomain.unique_embedded_coordinates(all_local_coordinates)
+
+    # make sure the coordinates are unique indeed
+    _, uec_count = np.unique(uec, axis=0, return_counts=True)
+    assert all(uec_count == 1)
 
     # test project/promote
     s = g(sdomain.project * l)
     l_prime = g(sdomain.promote * s)
+
+    # consistency check for uec
+    for i in range(len(all_local_coordinates)):
+        eps2 = g.norm2(s[uec[i]] - l[all_local_coordinates[i]])
+        assert eps2 == 0.0
 
     # test weight (choice draws with replacement) and its caching
     sweight = sdomain.weight()
@@ -463,7 +492,10 @@ for l in [l_dp, l_sp]:
     assert sweight is sweight2
 
     nsparse_global = g.sum(sweight)
-    assert abs(nsparse_global - nsparse * l.grid.Nprocessors) < l.grid.precision.eps * 100
+    assert (
+        abs(nsparse_global - len(local_coordinates) * l.grid.Nprocessors)
+        < l.grid.precision.eps * 100
+    )
 
     eps = g.norm2(sweight * (l - l_prime)) ** 0.5
     g.message(f"Test sparse reconstruction: {eps}")
@@ -497,7 +529,7 @@ a_odd = g.pick_checkerboard(g.odd, a)
 b[:] = 0
 g.set_checkerboard(b, a_even)
 g.set_checkerboard(b, a_odd)
-eps2 = g.norm2(a-b)
+eps2 = g.norm2(a - b)
 g.message(f"Checkerboard: {eps2}")
 assert eps2 == 0.0
 
@@ -505,4 +537,3 @@ assert eps2 == 0.0
 # Test mem_report
 ################################################################################
 g.mem_report()
-
