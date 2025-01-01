@@ -4,8 +4,15 @@
 #
 import gpt as g
 import numpy as np
-import os
+import os, sys
 
+# adjust mpi setup
+for i in range(len(sys.argv)):
+    if sys.argv[i] == "--mpi":
+        mpi = [int(x) for x in sys.argv[i+1].split(".")]
+        if len(mpi) == 4:
+            mpi = list(reversed(mpi))
+        sys.argv[i+1] = ".".join([str(x) for x in mpi])
 
 # workdir
 if "WORK_DIR" in os.environ:
