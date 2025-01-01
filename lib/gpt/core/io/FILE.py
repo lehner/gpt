@@ -114,7 +114,7 @@ class FILE_base:
 
 
 def FILE(fn, mode):
-    if mode[0] == "w" or os.path.exists(fn):
+    if mode[0] != "r" or os.path.exists(fn):
         return FILE_base(fn, mode)
 
     # if file does not exists but should be read, try zip route

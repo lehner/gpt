@@ -9,17 +9,17 @@ import os
 
 # workdir
 if "WORK_DIR" in os.environ:
-    work_dir = os.environ["WORK_DIR"]
+    work_dir = os.environ["WORK_DIR"] + "/"
 else:
-    work_dir = "."
+    work_dir = ""
 
 # request test files
 files = ["30_combined.zip"]
 for f in files:
-    g.repository.load(f"{work_dir}/{f}", f"gpt://tests/qcd/propagators/{f}")
+    g.repository.load(f"{work_dir}{f}", f"gpt://tests/qcd/propagators/{f}")
 
 cache_params = (16, 4)
-quark = g.qcd.sparse_propagator.flavor("30_combined/light.e", *cache_params)
+quark = g.qcd.sparse_propagator.flavor(f"{work_dir}30_combined/light.e", *cache_params)
 
 coordinates = quark.sink_domain.coordinates
 nsrc = quark.source_domain.sampled_sites
