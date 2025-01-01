@@ -119,9 +119,9 @@ class FILE_windowed_reader:
         self.offset = offset
         self.pos = 0
         self.size = size
+        self.f.seek(self.offset, 0)
 
     def read(self, sz=None):
-        self.f.seek(self.offset + self.pos, 0)
         left = self.size - self.pos
         assert left >= 0
         if sz is None:
@@ -134,6 +134,10 @@ class FILE_windowed_reader:
 
     def seek(self, offset, whence):
         if whence == 0:
+            if offset < 0:
+                offset = 0
+            if offset >= self.size:
+                offset = self.size    
             self.f.seek(self.offset + offset, 0)
             self.pos = offset
         else:
