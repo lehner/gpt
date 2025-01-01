@@ -261,7 +261,7 @@ def flavor(root, *cache_param):
 
     # TODO: if root is a list, return a list of flavors that have
     # a uniform sink sparse domain
-    tag, prec = root.split(".")
+    tag, prec = root.rsplit(".", maxsplit=1)
 
     ttag = f"{tag}.{prec}"
     if ttag in prop:
