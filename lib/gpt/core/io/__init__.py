@@ -21,7 +21,7 @@ import gpt.core.io.gpt_io
 import gpt.core.io.cevec_io
 import gpt.core.io.qlat_io
 import gpt.core.io.nersc_io
-from gpt.core.io.FILE import FILE
+from gpt.core.io.FILE import FILE, FILE_exists
 from gpt.core.io.error import LoadError
 from gpt.core.io.util import mview, crc32
 from gpt.core.io.load import load

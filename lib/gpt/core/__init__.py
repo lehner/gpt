@@ -73,6 +73,7 @@ from gpt.core.io import (
     format,
     mview,
     FILE,
+    FILE_exists,
     LoadError,
     gpt_io,
     corr_io,
