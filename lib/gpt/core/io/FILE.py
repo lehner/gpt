@@ -113,11 +113,51 @@ class FILE_base:
         cgpt.fflush(self.f)
 
 
+class FILE_windowed_reader:
+    def __init__(self, f, offset, size):
+        self.f = FILE_base(f, "rb")
+        self.offset = offset
+        self.pos = 0
+        self.size = size
+
+    def read(self, sz=None):
+        self.f.seek(self.offset + self.pos, 0)
+        left = self.size - self.pos
+        assert left >= 0
+        if sz is None:
+            sz = left
+        if sz > left:
+            sz = left
+        data = self.f.read(sz)
+        self.pos += sz
+        return data
+
+    def seek(self, offset, whence):
+        if whence == 0:
+            self.f.seek(self.offset + offset, 0)
+            self.pos = offset
+        else:
+            raise Exception("Not yet implemented")
+
+    def close(self):
+        self.f.close()
+
+
 def FILE(fn, mode):
-    if mode[0] != "r" or os.path.exists(fn):
+    if mode[0] != "r" or "+" in mode or os.path.exists(fn):
         return FILE_base(fn, mode)
 
     # if file does not exists but should be read, try zip route
     fn_zip, fn_element = zip_split(fn)
     zip_file = zipfile.ZipFile(fn_zip, "r")
-    return zip_file.open(fn_element, "r")
+    f = zip_file.open(fn_element, "r")
+    if f._compress_type != zipfile.ZIP_STORED:
+        # slow random access (seek), however, it may be useful if we do not plan to randomly access files
+        return f
+
+    # return my own reader that has O(1) seek cost, currently zipfile does not implement such O(1) seeks
+    offset = f._orig_compress_start
+    compress_size = f._orig_compress_size
+    file_size = f._orig_file_size
+    assert compress_size == file_size
+    return FILE_windowed_reader(fn_zip, offset, file_size)
