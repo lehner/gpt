@@ -41,6 +41,8 @@ for tag in ["e", "s", "ems", "l", "sml"]:
     coordinates = quark.sink_domain.coordinates
     nsrc = quark.source_domain.sampled_sites
 
+    g.message(f"Has {nsrc} source points and {quark.sink_domain.sampled_sites} sink points")
+
     # test cache optimized sampler
     rng = g.random("test")
     to_sample = [[rng.uniform_int(min=0, max=nsrc - 1) for i in range(3)] for j in range(20)]
