@@ -92,13 +92,8 @@ class flavor_multi:
         self.cache_hits = 0
         self.cache_misses = 0
 
-        self.sink_domain_update()
-
-    def sink_domain_update(self):
+    def sink_domain_update(self, min_source_sampled_sites):
         self.cache = []
-        min_source_sampled_sites = min(
-            [flav.source_domain.sampled_sites for fac, flav in self.array]
-        )
         self.coordinates = self.sink_domain.coordinates
         self.ec = self.sink_domain.sdomain.unique_embedded_coordinates(
             self.coordinates[0:min_source_sampled_sites]
@@ -296,14 +291,21 @@ def flavor(roots, *cache_param):
 
         ret.append(prp)
 
-    # make common sink domain
+    # select common sink domain
     common_sink_domain = ret[0].sink_domain
     for flav in ret[1:]:
         common_sink_domain.restrict(flav.sink_domain)
+    max_ec_size = max(
+        [
+            min([flav.source_domain.sampled_sites for fac, flav in flav_mult.array])
+            for flav_mult in ret
+        ]
+    )
+
+    # prepare common sink domain
     for flav in ret:
-        if flav.sink_domain is not common_sink_domain:
-            flav.sink_domain = common_sink_domain
-            flav.sink_domain_update()
+        flav.sink_domain = common_sink_domain
+        flav.sink_domain_update(max_ec_size)
 
     if len(ret) == 1:
         ret = ret[0]

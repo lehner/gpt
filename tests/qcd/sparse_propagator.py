@@ -129,6 +129,9 @@ assert np.array_equal(
     quark_l.sink_domain.sdomain.kernel.local_coordinates,
 )
 
+assert len(quark_s.coordinates) == len(quark_l.coordinates)
+assert len(quark_s.ec) == len(quark_l.ec)
+
 for i in range(quark_sml.source_domain.sampled_sites):
     qs_i = quark_s[i]
     ql_i = quark_l[i]
