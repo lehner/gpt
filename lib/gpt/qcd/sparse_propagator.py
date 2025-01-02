@@ -20,21 +20,12 @@ import numpy as np
 import gpt as g
 
 
-def sparse_domain_conformable(a_sdomain, b_sdomain):
-    a = a_sdomain.coordinate_lattices()
-    b = b_sdomain.coordinate_lattices()
-    if len(a) != len(b):
-        return False
-    for mu in range(len(a)):
-        eps2 = g.norm2(g.convert(b[mu], g.double) - g.convert(a[mu], g.double))
-        if eps2 > 1e-13:
-            return False
-    return True
-
-
 class source_domain:
     def __init__(self, sampled_sites):
         self.sampled_sites = sampled_sites
+
+    def copy(self):
+        return source_domain(self.sampled_sites)
 
     def __eq__(self, other):
         return self.sampled_sites == other.sampled_sites
@@ -50,10 +41,26 @@ class sink_domain:
         self.sampled_sites = header["number_of_sink_positions"]
         self.L = np.array(self.sdomain.grid.gdimensions, dtype=np.int32)
         self.total_sites = float(np.prod(self.L.astype(np.float64)))
-        self.coordinates = header["all_positions"]
+        self.coordinates = header["all_positions"][0 : self.sampled_sites]
+
+    def copy(self):
+        return sink_domain(
+            {
+                "sparse_domain": self.sdomain,
+                "number_of_sink_positions": self.sampled_sites,
+                "all_positions": self.coordinates,
+            }
+        )
 
     def __eq__(self, other):
-        return sparse_domain_conformable(self.sdomain, other.sdomain)
+        return self.sdomain.conformable(other.sdomain)
+
+    def restrict(self, other):
+        if other.sampled_sites < self.sampled_sites:
+            self.sampled_sites = other.sampled_sites
+            self.sdomain = other.sdomain
+            self.coordinates = self.coordinates[0 : self.sampled_sites]
+            # sdomain is always smallest domain
 
 
 class flavor_base:
@@ -72,26 +79,30 @@ class flavor_multi:
 
         # test conformality
         flav0 = array[0][1]
-        self.source_domain = flav0.source_domain
-        self.sink_domain = flav0.sink_domain
-
-        max_source_sampled_sites = max([flav.source_domain.sampled_sites for fac, flav in array])
+        self.source_domain = flav0.source_domain.copy()
+        self.sink_domain = flav0.sink_domain.copy()
 
         for fac, flav in array[1:]:
-            assert flav0.sink_domain == flav.sink_domain
+            self.sink_domain.restrict(flav.sink_domain)
             self.source_domain.restrict(flav.source_domain)
-
-        self.coordinates = self.sink_domain.coordinates
-
-        self.ec = self.sink_domain.sdomain.unique_embedded_coordinates(
-            self.coordinates[0:max_source_sampled_sites]
-        )
 
         self.cache_size = cache_size
         self.cache_line_size = cache_line_size
         self.cache = []
         self.cache_hits = 0
         self.cache_misses = 0
+
+        self.sink_domain_update()
+
+    def sink_domain_update(self):
+        self.cache = []
+        min_source_sampled_sites = min(
+            [flav.source_domain.sampled_sites for fac, flav in self.array]
+        )
+        self.coordinates = self.sink_domain.coordinates
+        self.ec = self.sink_domain.sdomain.unique_embedded_coordinates(
+            self.coordinates[0:min_source_sampled_sites]
+        )
 
     def get_propagator_full(self, i):
 
@@ -137,6 +148,10 @@ class flavor_multi:
             prp_il = None
             for fac, flav in self.array:
                 prop = g.convert(data[flav][1 + il][key]["propagator"], g.double)
+                if self.sink_domain.sdomain is not flav.sink_domain.sdomain:
+                    prop = g(
+                        self.sink_domain.sdomain.project * flav.sink_domain.sdomain.promote * prop
+                    )
                 if prp_il is None:
                     prp_il = g(fac * prop)
                 else:
@@ -225,22 +240,9 @@ def get_quark(fn):
         grid = sdomain.kernel.grid
         if grid.precision is not g.double:
             g.message(f"Embed domain {fn} in double precision fields")
+            sdomain_dp = sdomain.converted(g.double)
 
-            sdomain_cl = sdomain.coordinate_lattices()
-
-            mask = (sdomain_cl[0][:] >= 0)[:, 0]
-            local_coordinates = np.hstack(tuple([x[:].real.astype(np.int32) for x in sdomain_cl]))
-
-            grid_dp = grid.converted(g.double)
-
-            sdomain_dp = g.domain.sparse(
-                grid_dp,
-                local_coordinates,
-                dimensions_divisible_by=sdomain_cl[0].grid.fdimensions,
-                mask=mask,
-            )
-
-            assert sparse_domain_conformable(sdomain, sdomain_dp)
+            assert sdomain.conformable(sdomain_dp)
             quark[0]["header"]["sparse_domain"] = sdomain_dp
             g.message("Done")
 
@@ -256,29 +258,55 @@ def get_quark(fn):
 prop = {}
 
 
-def flavor(root, *cache_param):
+def flavor(roots, *cache_param):
     global prop
 
-    # TODO: if root is a list, return a list of flavors that have
-    # a uniform sink sparse domain
-    tag, prec = root.rsplit(".", maxsplit=1)
+    if not isinstance(roots, list):
+        roots = [roots]
 
-    ttag = f"{tag}.{prec}"
+    tag_prec = [root.rsplit(".", maxsplit=1) for root in roots]
+    ttag = [f"{tag}.{prec}" for tag, prec in tag_prec]
+    ttag = str(ttag)
+
     if ttag in prop:
         return prop[ttag]
 
-    sloppy_file = f"{tag}/full/sloppy"
-    exact_file = f"{tag}/full/exact"
+    ret = []
+    for tag, prec in tag_prec:
+        low_file = f"{tag}/full/low"
+        sloppy_file = f"{tag}/full/sloppy"
+        exact_file = f"{tag}/full/exact"
 
-    if prec == "s":
-        prop[ttag] = flavor_multi([(1.0, get_quark(sloppy_file))], *cache_param)
-    elif prec == "e":
-        prop[ttag] = flavor_multi([(1.0, get_quark(exact_file))], *cache_param)
-    elif prec == "ems":
-        prop[ttag] = flavor_multi(
-            [(1.0, get_quark(exact_file)), (-1.0, get_quark(sloppy_file))], *cache_param
-        )
-    else:
-        raise Exception(f"Unknown precision: {prec}")
+        if prec == "s":
+            prp = flavor_multi([(1.0, get_quark(sloppy_file))], *cache_param)
+        elif prec == "e":
+            prp = flavor_multi([(1.0, get_quark(exact_file))], *cache_param)
+        elif prec == "l":
+            prp = flavor_multi([(1.0, get_quark(low_file))], *cache_param)
+        elif prec == "ems":
+            prp = flavor_multi(
+                [(1.0, get_quark(exact_file)), (-1.0, get_quark(sloppy_file))], *cache_param
+            )
+        elif prec == "sml":
+            prp = flavor_multi(
+                [(1.0, get_quark(sloppy_file)), (-1.0, get_quark(low_file))], *cache_param
+            )
+        else:
+            raise Exception(f"Unknown precision: {prec}")
 
-    return prop[ttag]
+        ret.append(prp)
+
+    # make common sink domain
+    common_sink_domain = ret[0].sink_domain
+    for flav in ret[1:]:
+        common_sink_domain.restrict(flav.sink_domain)
+    for flav in ret:
+        if flav.sink_domain is not common_sink_domain:
+            flav.sink_domain = common_sink_domain
+            flav.sink_domain_update()
+
+    if len(ret) == 1:
+        ret = ret[0]
+
+    prop[ttag] = ret
+    return ret

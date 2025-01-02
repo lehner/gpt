@@ -192,6 +192,22 @@ class sparse:
         self.kernel = kernel
         self.local_coordinates = kernel.local_coordinates
 
+    def converted(self, precision):
+        if self.kernel.grid.precision is precision:
+            return self
+
+        grid_embed = self.kernel.grid.converted(precision)
+        cl = self.coordinate_lattices(mark_empty=-1)
+        mask = (cl[0][:] >= 0)[:, 0]
+        local_coordinates = np.hstack(tuple([x[:].real.astype(np.int32) for x in cl]))
+
+        return sparse(
+            grid_embed,
+            local_coordinates,
+            dimensions_divisible_by=cl[0].grid.fdimensions,
+            mask=mask,
+        )
+
     def weight(self):
         return self.kernel.weight()
 
@@ -244,3 +260,15 @@ class sparse:
 
     def slice(self, fields, ortho_dim):
         return self.kernel.slice(fields, ortho_dim)
+
+    def conformable(self, other):
+        # conformable up to lattice precision
+        a = self.coordinate_lattices(mark_empty=-1)
+        b = other.coordinate_lattices(mark_empty=-1)
+        if len(a) != len(b):
+            return False
+        for mu in range(len(a)):
+            eps2 = gpt.norm2(gpt.convert(b[mu], gpt.double) - gpt.convert(a[mu], gpt.double))
+            if eps2 > 1e-13:
+                return False
+        return True
