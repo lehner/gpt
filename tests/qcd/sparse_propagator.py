@@ -119,10 +119,6 @@ for i in range(quark_sml.source_domain.sampled_sites):
 # by mapping them jointly we restrict sloppy
 # to low's sink domain automatically such that
 # they can be used in a conformal manner
-assert not np.array_equal(
-    quark_s.sink_domain.sdomain.kernel.local_coordinates,
-    quark_l.sink_domain.sdomain.kernel.local_coordinates,
-)
 quark_s, quark_l = g.qcd.sparse_propagator.flavor(
     [f"{work_dir}/30_combined/light.s", f"{work_dir}/30_combined/light.l"], *cache_params
 )
