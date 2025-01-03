@@ -82,7 +82,7 @@ class flavor_multi:
         self.source_domain = flav0.source_domain.copy()
         self.sink_domain = flav0.sink_domain.copy()
 
-        for fac, flav in array[1:]:
+        for tag, flav in array[1:]:
             self.sink_domain.restrict(flav.sink_domain)
             self.source_domain.restrict(flav.source_domain)
 
@@ -134,23 +134,21 @@ class flavor_multi:
         keys = [f"{self.coordinates[il].tolist()}" for il in ilist]
         paths = [f"/{key}/propagator" for key in keys]
         g.default.push_verbose("io", False)
-        data = {flav: g.load(flav.filename, paths=paths) for fac, flav in self.array}
+        data = {flav: g.load(flav.filename, paths=paths) for tag, flav in self.array}
         g.default.pop_verbose()
 
         # process cache
         prp = []
         for il, key in zip(ilist, keys):
-            prp_il = None
-            for fac, flav in self.array:
-                prop = g.convert(data[flav][1 + il][key]["propagator"], g.double)
+            prp_il = {}
+            for tag, flav in self.array:
+                prp_il[tag] = g.convert(data[flav][1 + il][key]["propagator"], g.double)
                 if self.sink_domain.sdomain is not flav.sink_domain.sdomain:
-                    prop = g(
-                        self.sink_domain.sdomain.project * flav.sink_domain.sdomain.promote * prop
+                    prp_il[tag] = g(
+                        self.sink_domain.sdomain.project
+                        * flav.sink_domain.sdomain.promote
+                        * prp_il[tag]
                     )
-                if prp_il is None:
-                    prp_il = g(fac * prop)
-                else:
-                    prp_il += fac * prop
             prp.append(prp_il)
 
         self.cache.append((cache_line_idx, prp))
@@ -159,12 +157,13 @@ class flavor_multi:
 
     def __getitem__(self, args):
 
-        if isinstance(args, tuple):
-            i, without = args
+        assert isinstance(args, tuple)
+        if len(args) == 3:
+            tag, i, without = args
         else:
-            i, without = args, None
+            tag, i, without = *args, None
 
-        prp = self.get_propagator_full(i)
+        prp = self.get_propagator_full(i)[tag]
 
         # sparsen sink if requested
         if without is not None:
@@ -174,9 +173,9 @@ class flavor_multi:
 
         return prp
 
-    def __call__(self, i_sink, i_src):
+    def __call__(self, tag, i_sink, i_src):
         # should also work if I give a list of i_sink
-        prp = self.get_propagator_full(i_src)
+        prp = self.get_propagator_full(i_src)[tag]
         return prp[self.ec[i_sink]]
 
     def source_mask(self):
@@ -266,25 +265,37 @@ def flavor(roots, *cache_param):
     if ttag in prop:
         return prop[ttag]
 
+    weights = [(1.0, [])]
     ret = []
     for tag, prec in tag_prec:
         low_file = f"{tag}/full/low"
         sloppy_file = f"{tag}/full/sloppy"
         exact_file = f"{tag}/full/exact"
 
+        if len(prec) == 1:
+            for w in weights:
+                w[1].append(prec)
+        elif len(prec) == 3:
+            weights_a = []
+            weights_b = []
+            for w in weights:
+                weights_a.append((w[0], w[1] + [prec[0]]))
+                weights_b.append((-w[0], w[1] + [prec[2]]))
+            weights = weights_a + weights_b
+
         if prec == "s":
-            prp = flavor_multi([(1.0, get_quark(sloppy_file))], *cache_param)
+            prp = flavor_multi([("s", get_quark(sloppy_file))], *cache_param)
         elif prec == "e":
-            prp = flavor_multi([(1.0, get_quark(exact_file))], *cache_param)
+            prp = flavor_multi([("e", get_quark(exact_file))], *cache_param)
         elif prec == "l":
-            prp = flavor_multi([(1.0, get_quark(low_file))], *cache_param)
+            prp = flavor_multi([("l", get_quark(low_file))], *cache_param)
         elif prec == "ems":
             prp = flavor_multi(
-                [(1.0, get_quark(exact_file)), (-1.0, get_quark(sloppy_file))], *cache_param
+                [("e", get_quark(exact_file)), ("s", get_quark(sloppy_file))], *cache_param
             )
         elif prec == "sml":
             prp = flavor_multi(
-                [(1.0, get_quark(sloppy_file)), (-1.0, get_quark(low_file))], *cache_param
+                [("s", get_quark(sloppy_file)), ("l", get_quark(low_file))], *cache_param
             )
         else:
             raise Exception(f"Unknown precision: {prec}")
@@ -307,8 +318,5 @@ def flavor(roots, *cache_param):
         flav.sink_domain = common_sink_domain
         flav.sink_domain_update(max_ec_size)
 
-    if len(ret) == 1:
-        ret = ret[0]
-
-    prop[ttag] = ret
-    return ret
+    prop[ttag] = [weights] + ret
+    return prop[ttag]
