@@ -37,7 +37,9 @@ class parallel_transport:
         self.access_cache = {}
 
         tmp = [g.lattice(data_grid, ot_input) for i in range(len(paths))]
-        self.transport = [g.parallel_transport(self.U, [p], [t]) for t, p in zip(tmp, paths)]
+        self.transport = [
+            g.parallel_transport(self.U, [p], [t]) for t, p in zip(tmp, paths)
+        ]
         self.itransport = None
 
     def weights(self):
@@ -48,8 +50,8 @@ class parallel_transport:
 
         assert len(layer_input) == 1 + len(self.paths)
         assert len(ttr) == len(self.paths)
-        
-        ret_f = [ layer_input[0] ]
+
+        ret_f = [layer_input[0]]
 
         for ttrl, l in zip(ttr, layer_input[1:]):
             xx = list(ttrl(self.U, [l]))
@@ -74,7 +76,10 @@ class parallel_transport:
         t = g.timer("projected_gradient_adj")
         t("field list")
         if self.itransport is None:
-            self.itransport = [ g.parallel_transport(self.U, [p.inverse()], [l]) for p, l in zip(self.paths, left) ]
+            self.itransport = [
+                g.parallel_transport(self.U, [p.inverse()], [l])
+                for p, l in zip(self.paths, left)
+            ]
 
         t("inverse field list")
         ileft = self._get_field_list(left, self.itransport)
