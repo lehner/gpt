@@ -77,12 +77,18 @@ ot_w = g.ot_matrix_spin(4)
 n = g.ml.model.sequence(
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
+    g.ml.layer.linear(grid, ot_i, ot_w, 3, 1 + len(paths)*0+1),
+    g.ml.layer.parallel_transport(grid, U, [paths[0]], ot_i), #paths
+    g.ml.layer.linear(grid, ot_i, ot_w, 1 + len(paths)*0+1, 3),
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
 )
 
 n_prime = g.ml.model.sequence(
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 1, 3),
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 3),
+    g.ml.layer.linear(grid, ot_i, ot_w, 3, 1 + len(paths)*0+1),
+    g.ml.layer.parallel_transport(grid, U_prime, [paths[0]], ot_i), #paths
+    g.ml.layer.linear(grid, ot_i, ot_w, 1 + len(paths)*0+1, 3),
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 1),
 )
 
