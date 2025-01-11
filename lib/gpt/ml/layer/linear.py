@@ -80,10 +80,12 @@ class linear(base):
         return ret
 
     def __call__(self, weights, layer_input):
+        layer_input = g.util.to_list(layer_input)
         w = self._get_weight_list(weights)
         return self._contract(w, layer_input)
 
     def projected_gradient_adj(self, weights, layer_input, left):
+        layer_input = g.util.to_list(layer_input)
         left = g.util.to_list(left)
 
         assert len(weights) == 1
