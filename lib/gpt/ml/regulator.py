@@ -30,4 +30,32 @@ class L2(differentiable_functional):
         return (self.lam / 2) * sum([g.norm2(a[i]) for i in self.indices])
 
     def gradient(self, a, da):
-        return [g(self.lam * x) for x in da]
+        return [g((self.lam if a.index(x) in self.indices else 0.0) * x) for x in da]
+
+
+class L1(differentiable_functional):
+    def __init__(self, lam, indices):
+        self.lam = lam
+        self.indices = indices
+
+    def __call__(self, a):
+        a = g.util.to_list(a)
+        r = 0.0
+        for i in self.indices:
+            x = g(
+                g.component.sqrt(g.component.abs(g.component.real(a[i])))
+                + 1j * g.component.sqrt(g.component.abs(g.component.imag(a[i])))
+            )
+            r += g.sum(
+                g.trace(g.adj(x) * x)
+            )
+        return r * self.lam
+
+    def gradient(self, a, da):
+        dabs = g.component.drelu(-1)
+        return [
+            g(
+                (self.lam if a.index(x) in self.indices else 0.0) *
+                (dabs(g.component.real(x)) + 1j * dabs(g.component.imag(x)))
+            ) for x in da
+        ]

@@ -32,7 +32,7 @@ W = n.random_weights(rng)
 training_input = [rng.cnormal(g.lattice(grid, ot_i)) for i in range(n_training)]
 training_output = [rng.cnormal(g.lattice(grid, ot_i)) for i in range(n_training)]
 
-c = n.cost() + g.ml.regulator.L2(0.1, range(len(W)))
+c = n.cost() + g.ml.regulator.L2(0.1, [1,2])
 g.message("Cost:", c(W + training_input + training_output))
 
 c.assert_gradient_error(
@@ -110,7 +110,7 @@ assert eps < 1e-13
 n_training = 3
 training_output = [rng.normal(g.lattice(grid, ot_i)) for i in range(n_training)]
 training_input = [rng.normal(g.lattice(grid, ot_i)) for i in range(n_training)]
-c = n.cost()
+c = n.cost() + g.ml.regulator.L1(0.1, [0])
 
 c.assert_gradient_error(rng, W + training_input + training_output, W, 1e-3, 1e-8)
 
