@@ -34,8 +34,6 @@ class parallel_transport:
         self.n_weights = 0
         self.o_weights = []
 
-        self.access_cache = {}
-
         t = g.timer("parallel_transport")
 
         t("pre-compute")
@@ -50,7 +48,7 @@ class parallel_transport:
                 m @= U_dim * g.cshift(m, dim, 1)
                 disp -= 1
             while disp < 0:
-                m @= g.cshift(m * g.adj(U_dim), dim, -1)
+                m @= g.cshift(g.adj(U_dim) * m, dim, -1)
                 disp += 1
             self.matrices.append(m)
         t()
@@ -103,5 +101,5 @@ class parallel_transport:
 
         if g.default.is_verbose("parallel_transport_performance"):
             g.message(t)
-
+            
         return [ileft]
