@@ -63,7 +63,13 @@ class parallel_transport:
         return ret_f
 
     def __call__(self, weights, layer_input):
-        return self._get_field_list(layer_input, self.transport)
+        t = g.timer("parallel_transport")
+        t("get fields")
+        x = self._get_field_list(layer_input, self.transport)
+        t()
+        if g.default.is_verbose("parallel_transport_performance"):
+            g.message(t)
+        return x
 
     def projected_gradient_adj(self, weights, layer_input, left):
         left = g.util.to_list(left)
@@ -73,7 +79,7 @@ class parallel_transport:
         assert len(left) == len(layer_input)
         assert len(left) == 1 + len(self.paths)
 
-        t = g.timer("projected_gradient_adj")
+        t = g.timer("parallel_transport.projected_gradient_adj")
         t("field list")
         if self.itransport is None:
             self.itransport = [
@@ -86,4 +92,7 @@ class parallel_transport:
 
         t()
 
+        if g.default.is_verbose("parallel_transport_performance"):
+            g.message(t)
+            
         return [ileft]

@@ -20,9 +20,38 @@ import gpt as g
 from gpt.ml.layer import base
 
 
-def projector_color_trace(x):
-    return g.color_trace(x)
+cache = {}
+def projector_color_trace(a, b):
+    cache_tag = f"{a.otype.__name__}_{a.grid}_{b.otype.__name__}_{b.grid}"
 
+    if cache_tag not in cache:
+        ti = g.stencil.tensor_instructions
+        Ns = a.otype.spin_ndim
+        Nc = a.otype.color_ndim
+        code = []
+        for spin1 in range(Ns):
+            for spin2 in range(Ns):
+                for color in range(Nc):
+                    aa = spin1 * Nc + color
+                    bb = spin2 * Nc + color
+                    dst = spin1 * Ns + spin2
+                    code.append((0, dst, ti.mov_cc if color == 0 else ti.inc_cc, 1.0, [(2, 0, bb), (1, 0, aa)]))
+
+        res = g(g.color_trace(a * g.adj(b)))
+        res2 = g.lattice(res)
+        segments = [(len(code) // (Ns * Ns), Ns * Ns)]
+        ein = g.stencil.tensor(res2, [(0, 0, 0, 0)], code, segments)
+        ein(res2, a, b)
+
+        eps2 = g.norm2(res - res2) / g.norm2(res)
+        assert eps2 < 1e-10
+
+        cache[cache_tag] = (res2, ein)
+
+    res2, ein = cache[cache_tag]
+    res3 = g.lattice(res2)
+    ein(res3, a, b)
+    return res3
 
 class linear(base):
     def __init__(
@@ -80,17 +109,24 @@ class linear(base):
         return ret
 
     def __call__(self, weights, layer_input):
+        t = g.timer("linear")
+        t("weights")
         layer_input = g.util.to_list(layer_input)
         w = self._get_weight_list(weights)
-        return self._contract(w, layer_input)
-
+        t("contract")
+        x = self._contract(w, layer_input)
+        t()
+        if g.default.is_verbose("linear_performance"):
+            g.message(t)
+        return x
+    
     def projected_gradient_adj(self, weights, layer_input, left):
         layer_input = g.util.to_list(layer_input)
         left = g.util.to_list(left)
 
         assert len(weights) == 1
 
-        t = g.timer("projected_gradient_adj")
+        t = g.timer("linear.projected_gradient_adj")
         t("weight list")
         w = self._get_weight_list(weights)
         t("field list")
@@ -104,7 +140,7 @@ class linear(base):
         for i in range(len(left)):
             for j in range(n):
                 t("sums")
-                ip_left_f = g.sum(self.projector(left[i] * g.adj(layer_input[j])))
+                ip_left_f = g.sum(self.projector(left[i], layer_input[j]))
                 pos = n * i + j
                 if pos not in self.access_cache:
                     self.access_cache[pos] = {}
