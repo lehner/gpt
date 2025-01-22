@@ -71,6 +71,7 @@ for f in \
     ${test_path}/markov/u1_gauge.py \
     ${test_path}/io/cevec.py \
     ${test_path}/io/io.py \
+    ${test_path}/io/hdf5.py \
     ${test_path}/io/qlat.py \
     ${test_path}/qis/qis.py \
     ${test_path}/ad/ad.py \
