@@ -42,7 +42,7 @@ irl = g.algorithms.eigen.irl(
         "maxiter": 20,
         "Nminres": 7,
         #    "maxapply" : 100
-        "sort_eigenvalues": lambda x: reversed(sorted(x))
+        "sort_eigenvalues": lambda x: sorted(x)
     }
 )
 
