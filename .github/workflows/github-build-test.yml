@@ -328,7 +328,7 @@ jobs:
         dpkg-deb --build $PKGDIR
 
     - name: Create artifact for python-gpt package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         path: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
         name: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ steps.python-gpt-version.outputs.version }}
@@ -381,7 +381,7 @@ jobs:
         pip install numpy coverage
 
     - name: Download prebuild python-gpt
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: python-gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
 
@@ -469,7 +469,7 @@ jobs:
         pip install numpy sphinx ipython sphinxcontrib-napoleon
 
     - name: Download prebuild python-gpt
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: python-gpt-${{ runner.os }}-python-3.10-gcc-none-${{ needs.build-gpt.outputs.python-gpt-version }}
 
@@ -490,7 +490,7 @@ jobs:
         cd gpt/documentation
         make html
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: gpt/documentation/build
@@ -556,7 +556,7 @@ jobs:
 
       - name: Download prebuild python-gpt
         if: ${{ steps.check-build.outputs.build }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-gpt-${{ runner.os }}-python-3.10-${{ matrix.compiler }}-${{ matrix.mpi }}-${{ needs.build-gpt.outputs.python-gpt-version }}
 
