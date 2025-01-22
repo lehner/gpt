@@ -75,7 +75,7 @@ jobs:
         echo "key=$(git rev-parse HEAD)-${CACHE_KEY}-PIC" >> $GITHUB_OUTPUT
 
     - name: c-lime package cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: c-lime-package-cache
       with:
         path: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -130,7 +130,7 @@ jobs:
         echo "key=$(sha256sum version-cache|cut -f 1 -d " ")-${CACHE_KEY}" >> $GITHUB_OUTPUT
 
     - name: Grid package cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: grid-package-cache
       with:
         path: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -207,7 +207,7 @@ jobs:
         pip install numpy h5py
 
     - name: c-lime package cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: c-lime-package-cache
       with:
         path: c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -218,7 +218,7 @@ jobs:
         sudo dpkg -i c-lime-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
 
     - name: Grid package cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: grid-package-cache
       with:
         path: grid-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -259,7 +259,7 @@ jobs:
         echo "version=${gpt_version}" >> $GITHUB_OUTPUT
 
     - name: cgpt package cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cgpt-package-cache
       with:
         path: cgpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
@@ -285,7 +285,7 @@ jobs:
         dpkg-deb --build $PKGDIR
 
     - name: gpt package cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: gpt-package-cache
       with:
         path: gpt-${{ runner.os }}-python-${{ matrix.python-version }}-${{ matrix.compiler }}-${{ matrix.mpi }}.deb
