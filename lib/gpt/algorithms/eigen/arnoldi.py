@@ -147,6 +147,7 @@ class arnoldi:
         Nstop=None,
         resid=None,
         implicit_restart=False,
+        sort_eigenvalues=None
     )
     def __init__(self, params):
         self.params = params
@@ -159,7 +160,8 @@ class arnoldi:
 
         # Nstop
         Nstop = self.params["Nstop"]
-
+        sort_eigenvalues = self.params["sort_eigenvalues"]
+        
         # arnoldi base
         a = arnoldi_iteration(mat, src)
 
@@ -181,6 +183,8 @@ class arnoldi:
                     return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
                 if self.params["implicit_restart"]:
+                    if sort_eigenvalues is not None:
+                        evals = sort_eigenvalues(evals)
                     a.implicit_restart(H, evals, self.params["Nstep"])
 
         t0 = g.time()
