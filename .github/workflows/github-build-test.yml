@@ -378,7 +378,7 @@ jobs:
 
     - name: Setup python dependencies
       run: |
-        pip install numpy coverage
+        pip install numpy coverage h5py
 
     - name: Download prebuild python-gpt
       uses: actions/download-artifact@v4
