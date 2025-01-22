@@ -42,6 +42,7 @@ irl = g.algorithms.eigen.irl(
         "maxiter": 20,
         "Nminres": 7,
         #    "maxapply" : 100
+        "sort_eigenvalues": lambda x: reversed(sorted(x))
     }
 )
 
@@ -52,6 +53,7 @@ start.checkerboard(parity)
 
 # generate eigenvectors
 evec, ev = irl(c(w.Mpc), start)  # , g.checkpointer("checkpoint")
+
 
 # memory info
 g.mem_report()
