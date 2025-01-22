@@ -204,7 +204,7 @@ jobs:
 
     - name: Setup python dependencies
       run: |
-        pip install numpy
+        pip install numpy h5py
 
     - name: c-lime package cache
       uses: actions/cache@v3
