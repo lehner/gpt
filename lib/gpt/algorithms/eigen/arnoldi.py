@@ -123,7 +123,10 @@ class arnoldi_iteration:
         if self.verbose:
             g.message(f"Arnoldi: QR in {t1-t0} s")
 
-        r = g.eval(self.basis[k] * H[k, k - 1] + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1])
+        r = g.eval(
+            self.basis[k] * H[k, k - 1]
+            + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1]
+        )
         rn = g.norm2(r) ** 0.5
 
         t0 = g.time()
@@ -147,7 +150,7 @@ class arnoldi:
         Nstop=None,
         resid=None,
         implicit_restart=False,
-        sort_eigenvalues=None
+        sort_eigenvalues=None,
     )
     def __init__(self, params):
         self.params = params
@@ -161,7 +164,7 @@ class arnoldi:
         # Nstop
         Nstop = self.params["Nstop"]
         sort_eigenvalues = self.params["sort_eigenvalues"]
-        
+
         # arnoldi base
         a = arnoldi_iteration(mat, src)
 

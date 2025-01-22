@@ -39,7 +39,7 @@ class irl:
         betastp=None,
         maxiter=None,
         Nminres=None,
-        sort_eigenvalues=None
+        sort_eigenvalues=None,
     )
     def __init__(self, params):
         self.params = params
@@ -242,7 +242,8 @@ class irl:
 
             if verbose:
                 g.message(
-                    "%-65s %-45s" % ("alpha[ %d ] = %s" % (k, alph), "beta[ %d ] = %s" % (k, beta))
+                    "%-65s %-45s"
+                    % ("alpha[ %d ] = %s" % (k, alph), "beta[ %d ] = %s" % (k, beta))
                 )
 
         else:
@@ -275,7 +276,9 @@ class irl:
 
             t2 = g.time()
             if k > 0:
-                g.orthogonalize(w, evec[0:k], nblock=self.params["orthogonalize_nblock"])
+                g.orthogonalize(
+                    w, evec[0:k], nblock=self.params["orthogonalize_nblock"]
+                )
             t3 = g.time()
 
             ckpt.save([w, alph, beta])
