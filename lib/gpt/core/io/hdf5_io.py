@@ -18,6 +18,7 @@
 #
 import gpt as g
 import numpy as np
+import os
 
 try:
     import h5py
@@ -41,7 +42,7 @@ default_type_map = {
 def load(file, params):
 
     # check file format
-    if open(file, "rb").read(4)[1:4].decode("utf-8") != "HDF":
+    if not os.path.isfile(file) or open(file, "rb").read(4)[1:4].decode("utf-8") != "HDF":
         raise NotImplementedError()
 
     # dependency check
