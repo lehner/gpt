@@ -145,7 +145,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     
     if (local) {
 
-      auto sview = general_local_stencil->View();
+      auto sview = general_local_stencil->View(AcceleratorRead);
       
       accelerator_for(ss_block,osites * _npb,T::Nsimd(),{
 	  

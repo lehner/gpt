@@ -167,7 +167,7 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
     int _fast_osites = fast_osites;
 
     if (local) {
-      auto sview = general_local_stencil->View();
+      auto sview = general_local_stencil->View(AcceleratorRead);
       
       accelerator_for(ss_block,osites * _npb,M::Nsimd(),{
 	  
