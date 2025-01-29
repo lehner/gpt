@@ -58,7 +58,7 @@ def OMF2_force_gradient(N, i0, i1, ifg, l=1.0 / 6.0):
     q = [0, 1, 2, 3]  # 3 is never used in this scheme
     complete_coefficients(r)
     ifg = ifg(2.0 / 72.0, 2.0 * r[-2])
-    return generic(N, [i0, i1, ifg], r, q, "OMF2_force_gradient")
+    return generic(N, [i0, i1, ifg], r, q, f"OMF2_force_gradient({l})")
 
 
 # force integrators
@@ -78,11 +78,11 @@ def OMF4(N, i0, i1):
     return generic(N, [i0, i1], r, q, "OMF4")
 
 
-def OMF2(N, i0, i1, l=0.18):
-    r = [l, 0.5]
+def OMF2(N, i0, i1, l1=0.18, l2=0.5):
+    r = [l1, l2]
     complete_coefficients(r)
     q = [0, 1, 0, 1]
-    return generic(N, [i0, i1], r, q, "OMF2")
+    return generic(N, [i0, i1], r, q, f"OMF2({l1},{l2})")
 
 
 def leap_frog(N, i0, i1):
