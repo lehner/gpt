@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2020-25  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #                  2020  Mattia Bruno
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -73,86 +73,117 @@ def set_verbose(val=True):
         gpt.default.set_verbose(i, val)
 
 
-class step:
-    def __init__(self, funcs, c, n=1):
-        self.funcs = gpt.core.util.to_list(funcs)
-        self.c = gpt.core.util.to_list(c)
-        self.n = n
-        self.nf = len(self.funcs)
-        if (len(self.c) == 1) and (self.nf > 1):
-            self.c = self.c * self.nf
-
-    def __add__(self, s):
-        assert self.n == s.n
-        return step(self.funcs + s.funcs, self.c + s.c, self.n)
-
-    def __mul__(self, f):
-        return step(self.funcs, [c * f for c in self.c], self.n)
-
-    def __call__(self, eps):
-        for i in range(self.nf):
-            # gpt.message(f"call eps = {eps}, {i} / {self.nf}")
-            self.funcs[i](self.c[i] * eps**self.n)
-
-
 class symplectic_base:
-    def __init__(self, N, half, middle, inner, name, tag=None):
-        self.N = N
-        half = [lambda x: None] if not half else half
-        self.cycle = half + middle + list(reversed(half))
-        self.inner = gpt.core.util.to_list(inner)
-        self.__name__ = f"{name}"
-        self.tag = tag
-        nc = len(self.cycle)
-
+    def __init__(self, name):
+        self.__name__ = name
         self.scheme = []
-        if N == 1:
-            self.scheme = self.cycle
-        else:
-            for i in range(N):
-                self.scheme += [self.cycle[0] * (2 / N if i > 0 else 1 / N)]
-                j = nc if i == N - 1 else nc - 1
-                self.scheme += [c * (1 / N) for c in self.cycle[1:j]]
 
-    def string_representation(self, lvl):
-        out = f" - Level {lvl} {self.__name__} steps={self.N}"
-        for i in self.inner:
-            if isinstance(i, symplectic_base):
-                out += "\n" + i.string_representation(lvl + 1)
+    def add(self, op, step, direction):
+        self.scheme.append((op, step, direction))
 
-        return out
+    def simplify(self):
+        found = False
+        prev_scheme = self.scheme
+        while True:
+            self.scheme = []
+            for op, step, direction in prev_scheme:
+                if abs(step) > 1e-15:
+                    new_scheme = (op, step, 0)
+                    if len(self.scheme) > 0 and self.scheme[-1][0] == op:
+                        self.scheme[-1] = (op, step + self.scheme[-1][1], 0)
+                        found = True
+                    else:
+                        self.scheme.append(new_scheme)
+                else:
+                    found = True
+
+            if not found:
+                break
+
+            prev_scheme = self.scheme
+            found = False
 
     def __str__(self):
-        return self.string_representation(0)
+        r = f"{self.__name__}"
+        for op, step, direction in self.scheme:
+            if isinstance(op, int):
+                tag = f"I{op}"
+            else:
+                assert isinstance(op, tuple)
+                tag = op[-1]
+            r = r + f"\n  {tag}({step}, {direction})"
+        return r
 
-    def __getitem__(self, args):
-        return self.scheme[args]
+    def insert(self, *ip):
+        scheme = []
+        for op, step, direction in self.scheme:
+            i = ip[op]
+            if isinstance(i, symplectic_base):
+                for op2, step2, direction2 in i.scheme:
+                    scheme.append((op2, step * step2, 0))
+            else:
+                scheme.append((i, step, 0))
+        self.scheme = scheme
+
+    def unwrap(self):
+        assert len(self.scheme) == 1
+        op, step, direction = self.scheme[0]
+        assert step == +1 and direction == 0
+        assert isinstance(op, tuple)
+        return op[1], op[2]
+
+    def add_directions(self):
+        n = len(self.scheme)
+        if n % 2 == 1:
+            pos = (n - 1) // 2
+            if isinstance(self.scheme[pos], tuple) and not self.scheme[pos][0][-2]:
+                i, step, direction = self.scheme[pos]
+                mid = [(i, step / 2, +1), (i, step / 2, -1)]
+                self.scheme = self.scheme[0:pos] + mid + self.scheme[pos + 1 :]
+
+        n = len(self.scheme)
+        for pos in range(n // 2):
+            if isinstance(self.scheme[pos], tuple) and not self.scheme[pos][0][-2]:
+                i, step, direction = self.scheme[pos]
+                self.scheme[pos] = (i, step, +1)
+                i, step, direction = self.scheme[n - pos - 1]
+                self.scheme[n - pos - 1] = (i, step, -1)
 
     def __call__(self, tau):
-        eps = tau / self.N
         verbose = gpt.default.is_verbose(self.__name__)
 
-        time = gpt.timer(f"Symplectic integrator {self.__name__} [eps = {eps:.4e}]")
+        time = gpt.timer(f"Symplectic integrator {self.__name__}")
         time(self.__name__)
 
-        for s in self.scheme:
-            s(tau)
+        n = len(self.scheme)
+        for i in range(n):
+            op, step, direction = self.scheme[i]
+            if isinstance(op, int):
+                raise Exception("Integrator not completely defined")
+            else:
+                assert isinstance(op, tuple)
+
+                if verbose:
+                    gpt.message(
+                        f"{self.__name__} on step {i}/{n}: {op[-1]}({step * tau}, {direction})"
+                    )
+
+                op[1](step * tau, direction)
 
         if verbose:
             time()
             gpt.message(time)
 
 
-class update_p(symplectic_base):
-    def __init__(self, dst, frc):
-        ip = euler(dst, frc, -1)
-        super().__init__(1, [], [ip], None, "euler")
+def update_variable_general(dst, frc, explicit, tag):
+    s = symplectic_base(tag)
+    s.add((dst, frc, explicit, tag), +1, 0)
+    return s
 
 
-class update_q(symplectic_base):
-    def __init__(self, dst, frc):
-        iq = euler(dst, frc, +1)
-        super().__init__(1, [], [iq], None, "euler")
+def update_p(dst, frc, tag="P"):
+    ip = euler(dst, frc, -1)
+    return update_variable_general(dst, ip, True, tag)
 
 
 # p1 = 0
@@ -160,104 +191,172 @@ class update_q(symplectic_base):
 # q1  = exp(p1 * a * eps^2) * q0 = exp(-dS * a * eps^2) * q0 = q0  - d_1 S * q0 * a * eps^2 + O(eps^4)
 # p  -= d_2 S * b * eps = d_2 { S[q0] - d_1S[q0] * a * eps^2+ O(eps^4) } * b * eps
 #    -= d_2 S[q0] * b * eps - d_2 d_1 S[q0] * a * b * eps^3
-class update_p_force_gradient:
-    def __init__(self, q, iq, p, ip_ex, ip_sl=None):
-        self.q = q
-        self.p = p
-        self.ip1 = ip_ex if ip_sl is None else ip_sl
-        self.iq = iq
-        self.ip2 = ip_ex
-        self.cache_p = None
-        self.cache_q = None
+def update_p_force_gradient(q, iq, p, ip_ex, ip_sl=None, tag="P"):
+    q = gpt.util.to_list(q)
+    p = gpt.util.to_list(p)
 
-    def init(self, arg):
-        self.cache_p = gpt.copy(self.p)
-        self.cache_q = gpt.copy(self.q)
-        for p in gpt.core.util.to_list(self.p):
-            p[:] = 0
-        self.ip1(1.0)
-        self.iq(arg)
+    ip1 = ip_ex if ip_sl is None else ip_sl
+    ip2 = ip_ex
 
-    def end(self, arg):
-        gpt.copy(self.p, self.cache_p)
-        self.ip2(arg)
-        gpt.copy(self.q, self.cache_q)
-        self.cache_p = None
-        self.cache_q = None
+    ip1, ip1_explicit = ip1.unwrap()
+    ip2, ip2_explicit = ip2.unwrap()
+    iq, iq_explicit = iq.unwrap()
 
-    def __call__(self, a, b):
-        scheme = [step(self.init, a / b, 2), step(self.end, b, 1)]
+    explicit = ip1_explicit
+    assert explicit == iq_explicit and explicit == ip2_explicit
 
-        def inner(eps):
-            for s in scheme:
-                s(eps)
+    def _create(a, b):
 
-        return step(inner, 1.0)
+        def _inner(b_eps, direction):
 
+            if explicit:
+                assert direction == 0
+            else:
+                assert direction in [+1, -1]
 
-# i0: update_momenta, i1: update_dynamical_fields
+            if direction in [0, +1]:
+                cache_p = gpt.copy(p)
+                cache_q = gpt.copy(q)
 
+                for pi in p:
+                    pi[:] = 0
 
-class leap_frog(symplectic_base):
-    def __init__(self, N, i0, i1):
-        super().__init__(
-            N,
-            [step(i0, 0.5) + step(i1[0], 1.0)],  # half
-            [step(i1[1:-1], 1.0)],  # middle
-            i1,
-            "leap_frog",
-        )
+                ip1(1.0, direction)
+                iq(a / b**3 * b_eps**2, direction)
 
+                gpt.copy(p, cache_p)
+                ip2(b_eps, direction)
 
-class OMF2(symplectic_base):
-    def __init__(self, N, i0, i1, l=0.18):
-        r0 = l
-        super().__init__(
-            N,
-            [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)],  # half
-            [step(i0, (1 - 2 * r0)) + step(i1[0], 1.0)],  # middle
-            i1,
-            "omf2",
-        )
+                gpt.copy(q, cache_q)
+
+            else:
+                assert False
+
+            cache_p = None
+            cache_q = None
+
+        return update_variable_general(p + q, _inner, explicit, tag)
+
+    return _create
 
 
-class OMF2_force_gradient(symplectic_base):
-    def __init__(self, N, i0, i1, ifg, l=1.0 / 6.0):
-        r0 = l
-        middle = [_ifg(2.0 / 72.0, 1 - 2 * r0) for _ifg in gpt.core.util.to_list(ifg)]
-        super().__init__(
-            N,
-            [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)],
-            middle + [step(i1[0], 1.0)],
-            i1,
-            "omf2_force_gradient",
-        )
+def update_q(dst, frc, tag="Q"):
+    ip = euler(dst, frc, +1)
+    return update_variable_general(dst, ip, True, tag)
 
 
-# Omelyan, Mryglod, Folk, 4th order integrator
-#   ''Symplectic analytically integrable decomposition algorithms ...''
-#   https://doi.org/10.1016/S0010-4655(02)00754-3
-#      values of r's can be found @ page 292, sec 3.5.1, Variant 8
-class OMF4(symplectic_base):
-    def __init__(self, N, i0, i1):
-        r = [
-            0.08398315262876693,
-            0.2539785108410595,
-            0.6822365335719091,
-            -0.03230286765269967,
-        ]
-        f1 = 0.5 - r[0] - r[2]
-        f2 = 1.0 - 2.0 * (r[1] + r[3])
-        super().__init__(
-            N,
-            [
-                step(i0, r[0]) + step(i1[0], r[1]),
-                step(i1[1:-1], r[1]),
-                step(i0, r[2]) + step(i1[0], r[1] + r[3]),
-                step(i1[1:-1], r[3]),
-                step(i0, f1) + step(i1[0], r[3] + f2),
-            ],
-            [step(i1[1:-1], f2)],
-            i1,
-            "omf4",
-        )
+def implicit_update(f, f2, explicit, tag=None, max_iter=100, eps=1e-10):
+
+    if not isinstance(explicit, symplectic_base):
+
+        def _create(*args):
+            return implicit_update(f, f2, explicit(*args), tag, max_iter, eps)
+
+        return _create
+
+    f = gpt.util.to_list(f)
+    f2 = gpt.util.to_list(f2)
+    verbose = gpt.default.is_verbose("implicit_update")
+
+    if tag is None:
+        tag = explicit.__name__
+
+    def _update(dt, direction):
+        if direction not in [+1, -1]:
+            raise Exception(f"Implicit update without well-defined direction {direction}")
+
+        if direction == +1:
+            gpt.copy(f2, f)
+            return explicit(dt)
+
+        t = gpt.timer("Implicit update")
+        t("copy")
+        f0 = gpt.copy(f)
+        for i in range(max_iter):
+            gpt.copy(f2, f)
+            gpt.copy(f, f0)
+            t(f"iteration {i}")
+            explicit(dt)
+            t()
+            resid = 0.0
+            for j in range(len(f)):
+                resid += gpt.norm2(f2[j] - f[j]) / f[j].grid.gsites
+            resid = resid**0.5
+
+            if verbose:
+                gpt.message(f"Implicit update step {i}: {resid:e} / {eps:e}")
+
+            if resid < eps:
+                if verbose:
+                    gpt.message(t)
+                break
+
+    return update_variable_general(f + f2, _update, False, tag)
+
+
+def complete_coefficients(r):
+    x0 = sum(r[0::2])
+    x1 = sum(r[1::2])
+    r.append(0.5 - x0)
+    r.append(0.5 - x1)
+
+
+def force_general(N, ia, r, q, tag):
+    s = symplectic_base(f"{tag}({N}, {ia[0].__name__}, {ia[1].__name__})")
+
+    for j in range(N):
+        for i in range(len(r) // 2):
+            s.add(q[2 * i + 0], r[2 * i + 0] / N, 0)
+            s.add(q[2 * i + 1], r[2 * i + 1] / N, 0)
+
+        for i in reversed(range(len(r) // 2)):
+            s.add(q[2 * i + 1], r[2 * i + 1] / N, 0)
+            s.add(q[2 * i + 0], r[2 * i + 0] / N, 0)
+
+    s.simplify()
+
+    s.insert(*ia)
+
+    s.simplify()
+
+    s.add_directions()
+
+    return s
+
+
+# force-gradient integrators
+def OMF2_force_gradient(N, i0, i1, ifg, l=1.0 / 6.0):
+    # https://arxiv.org/pdf/0910.2950
+    r = [l, 0.5]
+    q = [0, 1, 2, 3]  # 3 is never used in this scheme
+    complete_coefficients(r)
+    ifg = ifg(2.0 / 72.0, 2.0 * r[-2])
+    return force_general(N, [i0, i1, ifg], r, q, "OMF2_force_gradient")
+
+
+# force integrators
+def OMF4(N, i0, i1):
+    # Omelyan, Mryglod, Folk, 4th order integrator
+    #   ''Symplectic analytically integrable decomposition algorithms ...''
+    #   https://doi.org/10.1016/S0010-4655(02)00754-3
+    #      values of r's can be found @ page 292, sec 3.5.1, Variant 8
+    r = [
+        0.08398315262876693,
+        0.2539785108410595,
+        0.6822365335719091,
+        -0.03230286765269967,
+    ]
+    complete_coefficients(r)
+    q = [0, 1, 0, 1, 0, 1]
+    return force_general(N, [i0, i1], r, q, "OMF4")
+
+
+def OMF2(N, i0, i1, l=0.18):
+    r = [l, 0.5]
+    complete_coefficients(r)
+    q = [0, 1, 0, 1]
+    return force_general(N, [i0, i1], r, q, "OMF2")
+
+
+def leap_frog(N, i0, i1):
+    return force_general(N, [i0, i1], [0.5, 0.5], [0, 1], "leap_frog")

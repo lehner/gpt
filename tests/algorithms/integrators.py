@@ -88,17 +88,12 @@ p0 @= p
 tau = 1.0
 
 # integrators
-sympl = g.algorithms.integrator.symplectic2
-sympl_orig = g.algorithms.integrator.symplectic
+sympl = g.algorithms.integrator.symplectic
 log = sympl.log()
 
 ip = sympl.update_p(p, log(lambda: a1.gradient(q, q), "ip"), "P1")
 iq = sympl.update_q(q, log(lambda: a0.gradient(p, p), "iq"), "Q1")
 ip_fg = sympl.update_p_force_gradient(q, iq, p, ip, ip, "P_FG")
-
-ip_orig = sympl_orig.update_p(p, log(lambda: a1.gradient(q, q), "ip"))
-iq_orig = sympl_orig.update_q(q, log(lambda: a0.gradient(p, p), "iq"))
-ip_fg_orig = sympl_orig.update_p_force_gradient(q, iq_orig, p, ip_orig, ip_orig)
 
 # ref solution obtained with Euler scheme
 M = 1000
@@ -125,9 +120,6 @@ qref_imp @= q
 # for test of multiple time-scale integrators
 ip1 = sympl.update_p(p, log(lambda: g(0.8 * a1.gradient(q, q)), "ip"))
 ip2 = sympl.update_p(p, log(lambda: g(0.2 * a1.gradient(q, q)), "ip"))
-
-ip1_orig = sympl_orig.update_p(p, log(lambda: g(0.8 * a1.gradient(q, q)), "ip"))
-ip2_orig = sympl_orig.update_p(p, log(lambda: g(0.2 * a1.gradient(q, q)), "ip"))
 
 # for test of implicit integrators
 p2 = g.copy(p)
@@ -193,37 +185,3 @@ for i in range(len(integrator)):
     g.message("Max force = ", max(log.get("ip")))
     g.message(f"Timing:\n{log.time}")
 
-# regression test
-regress = sympl.OMF2(12, ip2, sympl.OMF4(2, ip1, iq))
-regress_orig = sympl_orig.OMF2(12, ip2_orig, sympl_orig.OMF4(2, ip1_orig, iq_orig))
-
-p0 = g.copy(p)
-q0 = g.copy(q)
-regress(1.5)
-
-p1 = g.copy(p)
-q1 = g.copy(q)
-g.copy(p, p0)
-g.copy(q, q0)
-regress_orig(1.5)
-
-eps = g.norm2(p1 - p) + g.norm2(q1 - q)
-g.message(f"Regression test: {eps} movement {g.norm2(p1 - p0)}")
-assert eps < 1e-28
-
-regress = sympl.OMF2_force_gradient(nsteps, ip, iq, ip_fg)
-regress_orig = sympl_orig.OMF2_force_gradient(nsteps, ip_orig, iq_orig, ip_fg_orig)
-
-g.copy(p, p0)
-g.copy(q, q0)
-regress(1.5)
-
-p1 = g.copy(p)
-q1 = g.copy(q)
-g.copy(p, p0)
-g.copy(q, q0)
-regress_orig(1.5)
-
-eps = g.norm2(p1 - p) + g.norm2(q1 - q)
-g.message(f"Regression test: {eps} movement {g.norm2(p1 - p0)}")
-assert eps < 1e-28

@@ -20,4 +20,3 @@
 from gpt.algorithms.integrator.euler import euler
 from gpt.algorithms.integrator.runge_kutta import runge_kutta_4
 import gpt.algorithms.integrator.symplectic
-import gpt.algorithms.integrator.symplectic2
