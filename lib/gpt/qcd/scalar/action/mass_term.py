@@ -23,15 +23,15 @@ from gpt.core.group import differentiable_functional
 
 
 class mass_term(differentiable_functional):
-    def __init__(self, mass=1.0):
-        self.mass = mass
-        self.__name__ = f"mass_term({mass})"
+    def __init__(self, inv_mass=1.0):
+        self.inv_mass = inv_mass
+        self.__name__ = f"mass_term(m^{-1} = {inv_mass})"
 
     def __call__(self, pi):
-        return g.group.inner_product(pi, pi) * 0.5 * (1.0 / self.mass)
+        return g.group.inner_product(pi, pi) * 0.5 * self.inv_mass
 
     def draw(self, pi, rng):
-        rng.normal_element(pi, scale=self.mass**0.5)
+        rng.normal_element(pi, scale=self.inv_mass**-0.5)
         return self.__call__(pi)
 
     @differentiable_functional.multi_field_gradient
@@ -39,7 +39,7 @@ class mass_term(differentiable_functional):
         dS = []
         for _pi in dpi:
             i = pi.index(_pi)
-            dS.append(g((1.0 / self.mass) * pi[i]))
+            dS.append(g(self.inv_mass * pi[i]))
         return dS
 
 
