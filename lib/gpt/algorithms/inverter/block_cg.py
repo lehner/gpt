@@ -58,6 +58,10 @@ class block_cg(base_iterative):
 
             t("reductions")
             ssq = g.norm2(B)
+            if sum(ssq) == 0.0:
+                for x in X:
+                    x[:] = 0
+                return
 
             AD = [g.lattice(x) for x in B]
             Q = [g.lattice(x) for x in B]
