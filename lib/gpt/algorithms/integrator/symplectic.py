@@ -119,6 +119,7 @@ class symplectic_base:
         for i in self.inner:
             if isinstance(i, symplectic_base):
                 out += "\n" + i.string_representation(lvl + 1)
+
         return out
 
     def __str__(self):
@@ -201,8 +202,8 @@ class leap_frog(symplectic_base):
     def __init__(self, N, i0, i1):
         super().__init__(
             N,
-            [step(i0, 0.5) + step(i1[0], 1.0)],
-            [step(i1[1:-1], 1.0)],
+            [step(i0, 0.5) + step(i1[0], 1.0)],  # half
+            [step(i1[1:-1], 1.0)],  # middle
             i1,
             "leap_frog",
         )
@@ -213,8 +214,8 @@ class OMF2(symplectic_base):
         r0 = l
         super().__init__(
             N,
-            [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)],
-            [step(i0, (1 - 2 * r0)) + step(i1[0], 1.0)],
+            [step(i0, r0) + step(i1[0], 0.5), step(i1[1:-1], 0.5)],  # half
+            [step(i0, (1 - 2 * r0)) + step(i1[0], 1.0)],  # middle
             i1,
             "omf2",
         )

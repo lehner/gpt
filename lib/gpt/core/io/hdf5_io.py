@@ -42,7 +42,7 @@ default_type_map = {
 def load(file, params):
 
     # check file format
-    if not os.path.isfile(file) or open(file, "rb").read(4)[1:4].decode("utf-8") != "HDF":
+    if not os.path.isfile(file) or open(file, "rb").read(4)[1:4] != "HDF".encode("utf-8"):
         raise NotImplementedError()
 
     # dependency check

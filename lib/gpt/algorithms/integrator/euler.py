@@ -30,7 +30,7 @@ class euler:
         self.func = func
         self.sign = sign
 
-    def __call__(self, eps):
+    def __call__(self, eps, direction=None):
         funcs = gpt.core.util.to_list(self.func())
         for i in range(len(funcs)):
             self.dst[i] @= gpt.group.compose(gpt.eval(self.sign * eps * funcs[i]), self.dst[i])
