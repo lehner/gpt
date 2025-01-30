@@ -158,12 +158,16 @@ class algebra_laplace:
             ret[mu] @= g.qcd.gauge.project.traceless_hermitian(ret[mu])
         return ret
 
-    def inverse(self, inverter):
+    def inverse(self, inverter, function=None):
+
+        if function is None:
+            function = self
+
         def _mat(dst, src):
             U = src[0 : self.nd]
 
             def _inv_mat(_dst, _src):
-                self(U + _dst, U + _src)
+                function(U + _dst, U + _src)
 
             inv_mat = g.matrix_operator(mat=_inv_mat, accept_list=True, accept_guess=(True, False))
 
@@ -177,3 +181,40 @@ class algebra_laplace:
             g.copy(dst[0 : self.nd], U)
 
         return g.matrix_operator(mat=_mat, accept_list=True)
+
+
+class algebra_laplace_polynomial:
+    def __init__(self, U, scale, mass):
+        self.scale = scale
+        self.lap = [g.qcd.gauge.algebra_laplace(U, mass=m) for m in mass]
+        self.mass = mass
+        self.nd = len(U)
+
+    def __call__(self, dst, src):
+        for lap in self.lap:
+            lap(dst, src)
+            src = g.copy(dst)
+        g(dst[self.nd :], self.scale * g.expr(src[self.nd :]))
+
+    def inverse(self, solver):
+        return self.lap[0].inverse(solver, self)
+
+    def projected_gradient(self, left, U, right):
+        ret = None
+        right_i = [right]
+        left_i = [left]
+        for i in range(len(self.mass) - 1):
+            right_i.append(g.copy(right_i[-1]))
+            self.lap[len(self.mass) - 1 - i](U + right_i[-1], U + right_i[-2])
+
+            left_i.append(g.copy(left_i[-1]))
+            self.lap[i](U + left_i[-1], U + left_i[-2])
+
+        for i in range(len(self.mass)):
+            ret_i = self.lap[i].projected_gradient(left_i[i], U, right_i[len(self.mass) - 1 - i])
+            if ret is None:
+                ret = [g(self.scale * x) for x in ret_i]
+            else:
+                for j in range(len(ret)):
+                    ret[j] += self.scale * ret_i[j]
+        return ret

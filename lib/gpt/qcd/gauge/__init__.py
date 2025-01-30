@@ -34,6 +34,7 @@ from gpt.qcd.gauge.stencil import (
     energy_density,
     topological_charge,
     algebra_laplace,
+    algebra_laplace_polynomial,
 )
 import gpt.qcd.gauge.project
 import gpt.qcd.gauge.smear

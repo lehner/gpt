@@ -52,13 +52,13 @@ def generic(N, ia, r, q, tag):
 
 
 # force-gradient integrators
-def OMF2_force_gradient(N, i0, i1, ifg, l=1.0 / 6.0):
+def OMF2_force_gradient(N, i0, i1, ifg, l1=1.0 / 6.0, l2=0.5):
     # https://arxiv.org/pdf/0910.2950
-    r = [l, 0.5]
+    r = [l1, l2]
     q = [0, 1, 2, 3]  # 3 is never used in this scheme
     complete_coefficients(r)
     ifg = ifg(2.0 / 72.0, 2.0 * r[-2])
-    return generic(N, [i0, i1, ifg], r, q, f"OMF2_force_gradient({l})")
+    return generic(N, [i0, i1, ifg], r, q, f"OMF2_force_gradient({l1},{l2})")
 
 
 # force integrators
