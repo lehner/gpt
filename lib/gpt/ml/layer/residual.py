@@ -20,23 +20,34 @@ import gpt as g
 from gpt.ml.layer.group import group
 
 
-def add(a, b):
-    if isinstance(a, list):
-        return [g(x + y) for x, y in zip(a, b)]
-    else:
-        return g(a + b)
-
-
 class residual(group):
-    def __init__(self, *layers):
+    def __init__(self, *layers, features=None):
+        self.features = features
         super().__init__(layers)
 
+    def add(self, a, b):
+        return_list = isinstance(a, list)
+        a = g.util.to_list(a)
+        b = g.util.to_list(b)
+        features = self.features
+        if features is None:
+            features = range(len(a))
+
+        a = g.copy(a)
+        for f in features:
+            a[f] += b[f]
+
+        if not return_list:
+            return a[0]
+        
+        return a
+    
     def __call__(self, weights, input_layer):
         current = input_layer
         for i in range(len(self.layers)):
             current = self.forward(i, weights, current)
 
-        return add(current, input_layer)
+        return self.add(current, input_layer)
 
     # out = layer2(w2, layer1(w1, in))
     # left_i partial_i out
@@ -57,4 +68,5 @@ class residual(group):
                     r[j] = gr[j - i0]
                 else:
                     r[j] += gr[j - i0]
-        return r + [add(current_left, left)]
+            
+        return r + [self.add(current_left, left)]
