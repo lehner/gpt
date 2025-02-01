@@ -34,16 +34,16 @@
 
 #define accelerator_forNB_with_shared( iter1, num1, nsimd, shared_type, shared_name, ... ) { \
     acceleratorFenceComputeStream();					\
-    theGridAccelerator->submit([&](cl::sycl::handler &cgh) {		\
+    theGridAccelerator->submit([&](sycl::handler &cgh) {		\
       unsigned long unum1 = num1;					\
       unsigned long unum1_divisible_by = ((unum1 + SYCL_SIMD_WIDTH - 1) / SYCL_SIMD_WIDTH) * SYCL_SIMD_WIDTH; \
-      cl::sycl::range<3> local {1,1,nsimd};				\
-      cl::sycl::range<3> global{unum1_divisible_by,1,nsimd};		\
-      cl::sycl::local_accessor<shared_type> shm_acc(cl::sycl::range<1>(nsimd), cgh); \
+      sycl::range<3> local {1,1,nsimd};				\
+      sycl::range<3> global{unum1_divisible_by,1,nsimd};		\
+      sycl::local_accessor<shared_type> shm_acc(sycl::range<1>(nsimd), cgh); \
       if (unum1 != unum1_divisible_by) {				\
 	cgh.parallel_for(						\
-			 cl::sycl::nd_range<3>(global,local),		\
-			 [=] (cl::sycl::nd_item<3> item)		\
+			 sycl::nd_range<3>(global,local),		\
+			 [=] (sycl::nd_item<3> item)		\
 			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
 			 {						\
 			   auto iter1    = item.get_global_id(0);	\
@@ -53,8 +53,8 @@
 			 });						\
       } else {								\
 	cgh.parallel_for(						\
-			 cl::sycl::nd_range<3>(global,local),		\
-			 [=] (cl::sycl::nd_item<3> item)		\
+			 sycl::nd_range<3>(global,local),		\
+			 [=] (sycl::nd_item<3> item)		\
 			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
 			 {						\
 			   auto iter1    = item.get_global_id(0);	\
