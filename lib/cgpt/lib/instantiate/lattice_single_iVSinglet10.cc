@@ -25,6 +25,7 @@ extern std::map<std::string,int> _otype_singlet_rank_;
 
 // explicitly instantiate
 template class cgpt_Lattice<iVSinglet10<vComplexF>>;
+template void cgpt_unary_from<iVSinglet10<vComplexF>>(Lattice<iVSinglet10<vComplexF>>& dst, const Lattice<iVSinglet10<vComplexF>>& src, PyObject* params);
 
 void lattice_init_single_iVSinglet10() {
   std::string prec = "single";

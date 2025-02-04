@@ -68,3 +68,10 @@ void cgpt_unary_from(Lattice<T>& dst, const Lattice<T>& src, PyObject* params) {
     ERR("Unknown operator %s", op.c_str());
   }
 }
+
+// prevent implicit instantiation
+#define INSTANTIATE(v,t,n) extern template void cgpt_unary_from<n<v>>(Lattice<n<v>>& dst, const Lattice<n<v>>& src, PyObject* params);
+#include "../instantiate/instantiate.h"
+#undef INSTANTIATE
+
+

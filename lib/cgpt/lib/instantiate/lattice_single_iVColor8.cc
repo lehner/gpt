@@ -25,6 +25,7 @@ extern std::map<std::string,int> _otype_singlet_rank_;
 
 // explicitly instantiate
 template class cgpt_Lattice<iVColor8<vComplexF>>;
+template void cgpt_unary_from<iVColor8<vComplexF>>(Lattice<iVColor8<vComplexF>>& dst, const Lattice<iVColor8<vComplexF>>& src, PyObject* params);
 
 void lattice_init_single_iVColor8() {
   std::string prec = "single";
