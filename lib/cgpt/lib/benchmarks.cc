@@ -19,6 +19,29 @@
 #include "lib.h"
 #include "benchmarks.h"
 
+/*
+template<typename vtype>
+void cgpt_tensor_contract(vtype* C, vtype* A, vtype* B,
+			  uint64_t n, uint64_t m, uint64_t k,
+			  uint64_t a_ostride, uint64_t a_offset, uint64_t a_istride,
+			  uint64_t b_ostride, uint64_t b_offset, uint64_t b_istride,
+			  uint64_t c_ostride, uint64_t c_offset, uint64_t c_istride) {
+  // take MM as example
+  // C[i + j*ldc] = sum(A[i + l*lda] * B[l + j*ldb], l)
+  accelerator_for(i, n, {
+      uint64_t a0 = i*a_ostride + a_offset;
+      uint64_t b0 = i*b_ostride + b_offset;
+      uint64_t c0 = i*c_ostride + c_offset;
+      typedef decltype(acceleratorRead(A[0])) t;
+      for (uint64_t l=0;l<k;l++) {
+	t = Zero();
+	for (uint64_t j=0;j<m;j++)
+	  t += acceleratorRead(A[a0 + a_istride*j]) * acceleratorRead(B[b0 + b_istride*j]);
+	acceleratorWrite(C[c0 + l*c_istride], t);
+      }
+    });
+}
+*/			  
 EXPORT(benchmarks,{
     
     //mask();
@@ -30,6 +53,11 @@ EXPORT(benchmarks,{
     GridCartesian         * UGrid   = SpaceTimeGrid::makeFourDimGrid(GridDefaultLatt(), GridDefaultSimd(4,vComplexD::Nsimd()), GridDefaultMpi());
     
     LatticeSpinColourMatrixD data1(UGrid);
+
+    //typedef typename LatticeSpinColourMatrixD::vector_object vobj;
+    //std::vector<
+    //cgpt_get_shape<vobj>()
+		       
     LatticeSpinColourMatrixD data2(UGrid);
     LatticeComplexD index(UGrid);
     index = Zero();

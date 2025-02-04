@@ -299,3 +299,8 @@ public:
     return cgpt_stencil_tensor_create<T>(grid, shifts, code, segments, local);
   }
 };
+
+// prevent implicit instantiation of cgpt_Lattice<>
+#define INSTANTIATE(v,t,n) extern template class cgpt_Lattice<n<v>>;
+#include "../instantiate/instantiate.h"
+#undef INSTANTIATE
