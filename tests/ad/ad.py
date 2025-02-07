@@ -472,3 +472,13 @@ err2 = abs((ref_a_grad - num_a_grad)[1]) ** 2 + abs((ref_a_grad - num_a_grad)[db
 err2 += abs((ref_b_grad - num_b_grad)[1]) ** 2 + abs((ref_b_grad - num_b_grad)[dbeta]) ** 2
 g.message(f"Simple combined forward/reverse test: {err2}")
 assert err2 < 1e-12
+
+#####################################
+# Test numpy array compatibility
+#####################################
+
+On = fad.landau(alpha**2)
+series = fad.series(3, On)
+arr = np.arange(1, 10, 1)
+
+assert isinstance(((series + arr) - (arr + series)), fad.series)
