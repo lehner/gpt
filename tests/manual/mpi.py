@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Idea: test communication for correctness in arbitrary setups
 import gpt as g
+import sys
+import socket
 
 arg_grid = g.default.get_ivec("--grid", None, 4)
 
@@ -69,7 +71,14 @@ for precision in [g.single, g.double]:
 
     eps = (g.norm2(dst_ref - dst) / g.norm2(dst_ref)) ** 0.5
     g.message(f"Test mobius implementation: {eps}")
-    assert eps < precision.eps * 100
+    if eps > precision.eps * 100:
+
+        eps = (g.object_rank_norm2(dst_ref - dst) / g.object_rank_norm2(dst_ref)) ** 0.5
+        if eps > precision.eps * 100:
+            sys.stderr.write(f"ERROR {eps} on rank {grid.processor} is host {socket.gethostname()}\n")
+            sys.stderr.flush()
+        g.barrier()
+        sys.exit(1)
 
     # test global sums
     for it in range(10):
