@@ -57,7 +57,7 @@ def backtrace_signal_handler(sig, frame):
         os.makedirs(log_directory, exist_ok=True)
 
     log_filename = f"{log_directory}/backtrace.{gpt.rank()}." + now.strftime("%H-%M-%f")
-    sys.stderr.write(f"Requested GPT backtrace; saved in {log_filename}\n")
+    sys.stderr.write(f"Requested GPT backtrace {sig}; saved in {log_filename}\n")
     sys.stderr.flush()
 
     fout = open(log_filename, "wt")
@@ -71,3 +71,17 @@ def backtrace_signal_handler(sig, frame):
 
 
 signal.signal(signal.SIGUSR2, backtrace_signal_handler)
+
+if gpt.default.is_verbose("all_signals_backtrace"):
+    for s in [
+        signal.SIGABRT,
+        signal.SIGBREAK,
+        signal.SIGBUS,
+        signal.SIGFPE,
+        signal.SIGHUP,
+        signal.SIGINT,
+        signal.SIGKILL,
+        signal.SIGSEGV,
+        signal.SIGTERM,
+    ]:
+        signal.signal(s, backtrace_signal_handler)
