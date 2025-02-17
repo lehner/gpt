@@ -19,6 +19,7 @@
 import gpt
 from gpt.core.block.map import map
 from gpt.core.block.transfer import transfer
+import gpt.core.block.matrix_operator
 
 
 def grid(fgrid, nblock):

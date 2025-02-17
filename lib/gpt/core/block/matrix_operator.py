@@ -22,10 +22,10 @@ import gpt.core.block.compiler as compiler
 import numpy as np
 
 
-class compiled_coarse_matrix_operator(matrix_operator):
-    def __init__(self, points, vector_space):
+class compiled(matrix_operator):
+    def __init__(self, points, grid, otype):
         self.points = points
-        self.grid = vector_space[0].grid
+        self.grid = grid
 
         if self.grid.cb.n == 1:
             self.M = compiler.create_stencil_operator(points, 0, gpt.none)
@@ -45,7 +45,7 @@ class compiled_coarse_matrix_operator(matrix_operator):
         else:
             self.M = compiler.create_stencil_operator(points, 0, gpt.even)
 
-        super().__init__(mat=self.M.mat, vector_space=vector_space, accept_list=True)
+        super().__init__(mat=self.M.mat, vector_space=gpt.vector_space.explicit_grid_otype(grid, otype), accept_list=True)
 
     def even_odd_sites_decomposed(self, parity):
         assert self.grid.cb.n == 1
@@ -77,7 +77,7 @@ class compiled_coarse_matrix_operator(matrix_operator):
         return even_odd_sites()
 
 
-class coarse_matrix_operator(matrix_operator):
+class projected(matrix_operator):
     def __init__(self, map, fine_operator):
         verbose = gpt.default.is_verbose("block_operator")
 
@@ -121,7 +121,7 @@ class coarse_matrix_operator(matrix_operator):
         points = {p: gpt.mcomplex(self.map.coarse_grid, len(self.map.basis)) for p in min_lpoints}
         compiler.create(self, points)
 
-        op = compiled_coarse_matrix_operator(points, self.vector_space)
+        op = compiled(points, self.vector_space[0].grid, self.vector_space[0].otype)
 
         # for now always to a test run that identifies potential issues
         test = self.vector_space[1].lattice()

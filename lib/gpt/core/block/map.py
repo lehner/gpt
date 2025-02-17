@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
-from gpt.core.block.coarse_matrix_operator import coarse_matrix_operator
+import gpt.core.block.matrix_operator as coarse_matrix_operator
 
 
 #
@@ -100,7 +100,7 @@ class map:
                 gpt.message(f"blockmap: ortho check error for vector {i:d}: {err2:e}")
 
     def coarse_operator(self, fine_operator):
-        return coarse_matrix_operator(self, fine_operator)
+        return coarse_matrix_operator.projected(self, fine_operator)
 
     def fine_operator(self, coarse_operator):
         verbose = gpt.default.is_verbose("block_operator")
