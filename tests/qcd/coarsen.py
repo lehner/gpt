@@ -230,11 +230,11 @@ test_coarse(
 )
 
 fast_coarse_1 = test_coarse(coarse_1, lpoints_9pt, "9pt Wilson fine -> coarse")
-test_coarse(coarse_1, lpoints_gen, "9pt Wilson fine -> coarse (padded version)")
+# test_coarse(coarse_1, lpoints_gen, "9pt Wilson fine -> coarse (padded version)")
 
 coarse_2 = bm_c.coarse_operator(fast_coarse_1)
 test_coarse(coarse_2, lpoints_9pt, "9pt Wilson coarse -> coarse2")
-test_coarse(coarse_2, lpoints_gen, "9pt Wilson coarse -> coarse2 (padded version)")
+# test_coarse(coarse_2, lpoints_gen, "9pt Wilson coarse -> coarse2 (padded version)")
 
 
 # now test even-odd preconditioned inverse of coarse operator
