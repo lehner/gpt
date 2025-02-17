@@ -19,7 +19,7 @@
 import cgpt, gpt, numpy
 
 verbose_performance = gpt.default.is_verbose("copy_plan_performance")
-
+force_host_comms = gpt.default.has("--force-host-comms")
 
 class _view:
     def __init__(self, obj):
@@ -125,6 +125,9 @@ class copy_plan:
             if (self.destination.requires_host_memory or self.source.requires_host_memory)
             else gpt.accelerator
         )
+
+        if force_host_comms:
+            data_location = gpt.host
 
         self.communication_buffer_location = data_location
         self.lattice_view_location = data_location

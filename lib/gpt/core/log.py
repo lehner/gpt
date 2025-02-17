@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, sys, os, signal, datetime
+import gpt, sys, os, signal, datetime, socket
 from inspect import getframeinfo, stack
 
 verbose = gpt.default.is_verbose("message_context")
@@ -57,10 +57,11 @@ def backtrace_signal_handler(sig, frame):
         os.makedirs(log_directory, exist_ok=True)
 
     log_filename = f"{log_directory}/backtrace.{gpt.rank()}." + now.strftime("%H-%M-%f")
-    sys.stderr.write(f"Requested GPT backtrace; saved in {log_filename}\n")
+    sys.stderr.write(f"Requested GPT backtrace {sig}; saved in {log_filename}\n")
     sys.stderr.flush()
 
     fout = open(log_filename, "wt")
+    fout.write(f"Host: {socket.gethostname()}\n")
 
     while frame is not None:
         caller = getframeinfo(frame)
@@ -71,3 +72,15 @@ def backtrace_signal_handler(sig, frame):
 
 
 signal.signal(signal.SIGUSR2, backtrace_signal_handler)
+
+if gpt.default.is_verbose("all_signals_backtrace"):
+    for s in [
+            signal.SIGABRT,
+            signal.SIGBUS,
+            signal.SIGFPE,
+            signal.SIGHUP,
+            signal.SIGINT,
+            signal.SIGTERM,
+            signal.SIGSEGV,
+    ]:
+        signal.signal(s, backtrace_signal_handler)
