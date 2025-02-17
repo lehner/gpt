@@ -101,13 +101,15 @@ template<typename order_t, typename coor_t>
 	  for (int i=0;i<Nd;i++)
 	    if (checker_dim_mask[i])
 	      site_cb += top[i] + coor[i];
-	  if (site_cb % 2 == cb) {
+	  if (abs(site_cb % 2) == cb) {
 	    for (int i=0;i<Nd;i++)
 	      d[Nd*idx_cb + i] = top[i] + coor[i];
 	    if (!idx)
 	      first_on_grid = true;
 	  }
-	});
+      });
     }
+
   return first_on_grid;
 }
+

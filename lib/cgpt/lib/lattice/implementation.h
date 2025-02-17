@@ -291,8 +291,9 @@ public:
     return cgpt_stencil_matrix_create<T>(grid, shifts, code, code_parallel_block_size, local);
   }
 
-  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) {
-    return cgpt_stencil_matrix_vector_create<T>(matrix, grid, shifts, code, code_parallel_block_size, local);
+  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local,
+								 int matrix_parity, int vector_parity) {
+    return cgpt_stencil_matrix_vector_create<T>(matrix, grid, shifts, code, code_parallel_block_size, local, matrix_parity, vector_parity);
   }
 
   virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, PyObject* segments, long local) {

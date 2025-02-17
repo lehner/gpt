@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
+from gpt.core.block.coarse_matrix_operator import coarse_matrix_operator
 
 
 #
@@ -99,31 +100,7 @@ class map:
                 gpt.message(f"blockmap: ortho check error for vector {i:d}: {err2:e}")
 
     def coarse_operator(self, fine_operator):
-        verbose = gpt.default.is_verbose("block_operator")
-
-        def mat(dst_coarse, src_coarse):
-            src_fine = [gpt.lattice(self.basis[0]) for x in src_coarse]
-            dst_fine = [gpt.lattice(self.basis[0]) for x in src_coarse]
-
-            t0 = gpt.time()
-            self.promote(src_fine, src_coarse)
-            t1 = gpt.time()
-            fine_operator(dst_fine, src_fine)
-            t2 = gpt.time()
-            self.project(dst_coarse, dst_fine)
-            t3 = gpt.time()
-            if verbose:
-                gpt.message(
-                    "coarse_operator acting on %d vector(s) in %g s (promote %g s, fine_operator %g s, project %g s)"
-                    % (len(src_coarse), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
-                )
-
-        otype = gpt.ot_vector_complex_additive_group(len(self.basis))
-        return gpt.matrix_operator(
-            mat=mat,
-            vector_space=gpt.vector_space.explicit_grid_otype(self.coarse_grid, otype),
-            accept_list=True,
-        )
+        return coarse_matrix_operator(self, fine_operator)
 
     def fine_operator(self, coarse_operator):
         verbose = gpt.default.is_verbose("block_operator")

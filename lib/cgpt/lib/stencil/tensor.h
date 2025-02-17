@@ -79,7 +79,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
   int local;
 
   // local == true
-  GeneralLocalStencil* general_local_stencil;
+  cgpt_GeneralLocalStencil* general_local_stencil;
 
   // local == false
   SimpleCompressor<T>* compressor;
@@ -120,7 +120,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
     }
 
     if (local) {
-      general_local_stencil = new GeneralLocalStencil(grid,shifts);
+      general_local_stencil = new cgpt_GeneralLocalStencil(grid,shifts,-1);
     } else {
 
       sm = new CartesianStencilManager<CartesianStencil_t>(grid, shifts);
@@ -130,7 +130,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	sm->register_point(factors[i].index, factors[i].point);
       }
 
-      sm->create_stencils(true);
+      sm->create_stencils(true, Even);
 
       for (int i=0;i<nfactors;i++) {
 	factors[i].point = sm->map_point(factors[i].index, factors[i].point);
