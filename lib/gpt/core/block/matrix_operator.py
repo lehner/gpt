@@ -111,7 +111,7 @@ class projected(matrix_operator):
             accept_list=True,
         )
 
-    def compile(self, lpoints=None, max_point_norm=None, max_point_per_dimension=None, tolerance=None):
+    def compile(self, lpoints=None, max_point_norm=None, max_point_per_dimension=None, tolerance=None, nblock=None):
 
         # accept also max length squared of points
         if lpoints is None:
@@ -135,7 +135,7 @@ class projected(matrix_operator):
 
         # create irreducible points
         points = {p: gpt.mcomplex(self.map.coarse_grid, len(self.map.basis)) for p in min_lpoints}
-        compiler.create(self, points)
+        compiler.create(self, points, nblock=nblock)
 
         op = compiled(points)
 

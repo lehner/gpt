@@ -182,8 +182,11 @@ def project_points_parity(points, parity_p, parity_s):
     return res
 
 
-def create(coarse_matrix, points):
+def create(coarse_matrix, points, nblock):
 
+    if nblock is None:
+        nblock = 8
+        
     # src_i = exp(i x.point_i 2pi/l)
     # dst_i = matrix_j exp(i (x+point_j).point_i 2pi/l)
     # src_i.dst_i = matrix_j exp(i (x+point_j).point_i 2pi/l) exp(-i x.point_i 2pi/l)
@@ -243,10 +246,15 @@ def create(coarse_matrix, points):
     cache_right = {}
     for i in range(nbasis):
         t("apply coarse")
-        srcdag_mat_src_p = [
-            g(g.adj(point_masks[ip]) * coarse_matrix * (point_masks[ip] * src_mask[i]))
-            for ip in range(npoints)
-        ]
+        srcdag_mat_src_p = []
+        for ip in range(0, npoints, nblock):
+            i0 = ip
+            i1 = min(npoints, i0 + nblock)
+            
+            cm = g(coarse_matrix * g.expr([g(point_masks[ipi] * src_mask[i]) for ipi in range(i0, i1)]))
+
+            for ipi in range(i0, i1):
+                srcdag_mat_src_p.append(g(g.adj(point_masks[ipi]) * cm[ipi - i0]))
         t("rotate")
         g.rotate(srcdag_mat_src_p, Minv, 0, npoints, 0, npoints)
         t("accumulate")
