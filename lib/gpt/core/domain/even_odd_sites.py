@@ -29,8 +29,12 @@ class even_odd_sites:
         x.checkerboard(self.checkerboard)
         return x
 
-    def project(self, dst, src):
+    def project(self, dst, src=None):
+        if src is None:
+            src = dst
+            dst = [self.lattice(x.otype) for x in src]
         gpt.pick_checkerboard(self.checkerboard, dst, src)
+        return dst
 
     def promote(self, dst, src):
         gpt.set_checkerboard(dst, src)

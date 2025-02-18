@@ -20,6 +20,7 @@ U = g.qcd.gauge.random(g.grid(grid_f_size, g.double), rng)
 
 # do everything in single precision
 # U = g.convert(U, g.single)
+eps2_threshold = 1e-20
 
 # setup grids
 grid_f = U[0].grid
@@ -65,7 +66,6 @@ def test_coarse(slow_coarse, lpoints, tag):
     )
     cgrid = slow_coarse.vector_space[0].grid
     nbasis = len(slow_coarse.map.basis)
-    eps2_threshold = 1e-10
 
     # first find footprint
     if False:
@@ -139,6 +139,48 @@ def test_coarse(slow_coarse, lpoints, tag):
         stencil_dst_eo = g(cop_st_eo * csrc_o)
         stencil_dst_oe = g(cop_st_oe * csrc_e)
 
+        lhs = rng.cnormal(g.copy(csrc[0]))
+        lhs_e = g.pick_checkerboard(g.even, lhs)
+        lhs_o = g.pick_checkerboard(g.odd, lhs)
+
+        # adj-ee
+        A = g.inner_product(lhs_e, cop_st_ee * csrc_e[0]).conjugate()
+        B = g.inner_product(csrc_e[0], cop_st_ee.adj() * lhs_e)
+        assert abs((A - B) / A) < eps2_threshold**0.5
+
+        # adj-oo
+        A = g.inner_product(lhs_o, cop_st_oo * csrc_o[0]).conjugate()
+        B = g.inner_product(csrc_o[0], cop_st_oo.adj() * lhs_o)
+        assert abs((A - B) / A) < eps2_threshold**0.5
+
+        # adj-eo
+        A = g.inner_product(lhs_e, cop_st_eo * csrc_o[0]).conjugate()
+        B = g.inner_product(csrc_o[0], cop_st_eo.adj() * lhs_e)
+        assert abs((A - B) / A) < eps2_threshold**0.5
+
+        if cop_st_ee.inv_mat is not None:
+            g.message("Can test inverse")
+
+            # inv-ee
+            A = g(cop_st_ee.inv() * cop_st_ee * csrc_e[0])
+            eps2 = g.norm2(A - csrc_e[0]) / g.norm2(A)
+            assert eps2 < eps2_threshold
+
+            # inv-oo
+            A = g(cop_st_oo.inv() * cop_st_oo * csrc_o[0])
+            eps2 = g.norm2(A - csrc_o[0]) / g.norm2(A)
+            assert eps2 < eps2_threshold
+
+            # adj-inv-ee
+            A = g(cop_st_ee.inv().adj() * cop_st_ee.adj() * csrc_e[0])
+            eps2 = g.norm2(A - csrc_e[0]) / g.norm2(A)
+            assert eps2 < eps2_threshold
+
+            # adj-inv-oo
+            A = g(cop_st_oo.inv().adj() * cop_st_oo.adj() * csrc_o[0])
+            eps2 = g.norm2(A - csrc_o[0]) / g.norm2(A)
+            assert eps2 < eps2_threshold
+
         for i in range(len(csrc)):
             eps2 = g.norm2(dst_ee[i] - stencil_dst_ee[i]) / g.norm2(csrc_e[i])
             g.message("EE:", eps2)
@@ -191,6 +233,7 @@ lpoints_gen = lpoints_9pt + [
 
 coarse_1 = bm_f.coarse_operator(mat_f)
 
+
 # now coarsen the the even-odd preconditioned operator
 pc = g.qcd.fermion.preconditioner
 Mpc = pc.eo1(parity=g.even)(mat_f).Mpc
@@ -236,10 +279,40 @@ coarse_2 = bm_c.coarse_operator(fast_coarse_1)
 test_coarse(coarse_2, lpoints_9pt, "9pt Wilson coarse -> coarse2")
 # test_coarse(coarse_2, lpoints_gen, "9pt Wilson coarse -> coarse2 (padded version)")
 
-
 # now test even-odd preconditioned inverse of coarse operator
+inv = g.algorithms.inverter
+
+g.default.set_verbose("block_cg_convergence")
+g.default.set_verbose("block_cg_performance")
+solver_pc = inv.preconditioned(
+    # g.qcd.fermion.preconditioner.eo2_ne(parity=g.even),
+    # g.qcd.fermion.preconditioner.eo2_ne(parity=g.odd),
+    g.qcd.fermion.preconditioner.eo1_ne(parity=g.even),
+    inv.block_cg({"eps": 1e-15, "maxiter": 1000}),
+)(fast_coarse_1)
+
+g.default.set_verbose("fgmres_convergence")
+solver = inv.fgmres({"eps": 1e-15, "maxiter": 1000, "restartlen": 20})(fast_coarse_1)
+
+test = [fast_coarse_1.vector_space[0].lattice() for i in range(6)]
+rng.cnormal(test)
+
+g.message("Coarse solve without and with preconditioning")
+t = g.timer("solves")
+t("fgmres")
+res1 = g(solver * test)
+t("pc_block_cg")
+res2 = g(solver_pc * test)
+t()
+g.message(t)
+
+for i in range(len(test)):
+    eps2 = g.norm2(res1[i] - res2[i]) / g.norm2(res1[i])
+    g.message(f"Solutions agree to: {eps2}")
+    assert eps2 < eps2_threshold
 
 # TODO:
+# - preconditioner breaks multi-rhs ; two ways out: 1) packing, 2) change pc logic
 # - need to re-pack list of vectors putting simd in nvector dimension (packing infrastructure, operator.packed, g.pack, g.unpack)
 # - after packing infrastructure is there can efficiently select points to sum over ; add to matrix_vector local stencil the restriction to interior points in sum
 # - add blas version of local_stencil.matrix_vector

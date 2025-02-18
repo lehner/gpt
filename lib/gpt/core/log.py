@@ -75,12 +75,21 @@ signal.signal(signal.SIGUSR2, backtrace_signal_handler)
 
 if gpt.default.is_verbose("all_signals_backtrace"):
     for s in [
-            signal.SIGABRT,
-            signal.SIGBUS,
-            signal.SIGFPE,
-            signal.SIGHUP,
-            signal.SIGINT,
-            signal.SIGTERM,
-            signal.SIGSEGV,
+        signal.SIGBUS,
+        signal.SIGFPE,
+        signal.SIGHUP,
+        signal.SIGINT,
+        signal.SIGTERM,
+        signal.SIGSEGV,
     ]:
         signal.signal(s, backtrace_signal_handler)
+
+    import ctypes
+
+    c_globals = ctypes.CDLL(None)
+
+    @ctypes.CFUNCTYPE(None, ctypes.c_int)
+    def sigabrt_handler(sig):
+        backtrace_signal_handler(sig, sys._getframe(0))
+
+    c_globals.signal(signal.SIGABRT, sigabrt_handler)

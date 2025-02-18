@@ -101,19 +101,76 @@ def create_stencil_operator_n_rhs(points, vector_parity, n_rhs, target_checkerbo
     return g.matrix_operator(_mat, accept_list=(True, True))
 
 
+def adj_points(points):
+    ret = {}
+    for p in points:
+        np = tuple([-x for x in p])
+        x = g(g.adj(points[p]))
+        for i in range(len(p)):
+            if p[i] != 0:
+                x = g.cshift(x, i, np[i])
+        ret[np] = x
+    return ret
+
+
 def create_stencil_operator(points, vector_parity, target_checkerboard):
     cache = {}
 
-    def _mat(dst, src):
-        n_rhs = len(src)
-        if n_rhs not in cache:
-            cache[n_rhs] = create_stencil_operator_n_rhs(
-                points, vector_parity, n_rhs, target_checkerboard
+    grid = None
+    for p in points:
+        grid = points[p].grid
+        nbasis = points[p].otype.shape[0]
+        otype = g.ot_vector_complex_additive_group(nbasis)
+        break
+
+    verbose = g.default.is_verbose("compiled_stencil_operator")
+
+    vector_space = g.vector_space.explicit_grid_otype_checkerboard(grid, otype, target_checkerboard)
+
+    def delayed_matrix(get_points, tag, ip, ocb):
+        def _mat(dst, src):
+            n_rhs = len(src)
+            key = (n_rhs, tag)
+            if key not in cache:
+                cache[key] = create_stencil_operator_n_rhs(get_points(), ip, n_rhs, ocb)
+
+            if verbose:
+                g.message(f"Call compiled_stencil_operator with {n_rhs} right-hand sides")
+            cache[key](dst, src)
+
+        return _mat
+
+    cb = {0: g.even, 1: g.odd}
+    _mat = delayed_matrix(lambda: points, 0, vector_parity, target_checkerboard)
+    _adj_mat = delayed_matrix(
+        lambda: adj_points(points), 1, target_checkerboard.tag, cb[vector_parity]
+    )
+    _inv_mat = None
+    _adj_inv_mat = None
+    if len(points) == 1:
+        k = list(points.keys())[0]
+        if sum([x**2 for x in k]) == 0:
+            _inv_mat = delayed_matrix(
+                lambda: {k: g(g.matrix.inv(points[k]))},
+                2,
+                target_checkerboard.tag,
+                cb[vector_parity],
+            )
+            _adj_inv_mat = delayed_matrix(
+                lambda: {k: g(g.adj(g.matrix.inv(points[k])))},
+                3,
+                vector_parity,
+                target_checkerboard,
             )
 
-        cache[n_rhs](dst, src)
-
-    return g.matrix_operator(_mat, accept_list=(True, True))
+    return g.matrix_operator(
+        mat=_mat,
+        inv_mat=_inv_mat,
+        adj_mat=_adj_mat,
+        adj_inv_mat=_adj_inv_mat,
+        accept_list=(True, True),
+        vector_space=vector_space,
+    )
 
 
 def project_points_parity(points, parity_p, parity_s):

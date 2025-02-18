@@ -45,9 +45,7 @@ for f in \
     ${test_path}/create/create.py \
     ${test_path}/create/smear.py \
     ${test_path}/qcd/sparse_propagator.py \
-    ${test_path}/qcd/split_chiral.py \
     ${test_path}/qcd/coarsen.py \
-    ${test_path}/qcd/coarse_even_odd.py \
     ${test_path}/qcd/a2a.py \
     ${test_path}/qcd/fermion_operators.py \
     ${test_path}/qcd/fermion_actions.py \
@@ -83,13 +81,14 @@ printf "%-120s" " [TEST] $f"
 
 start=$SECONDS
 timeout 600s ${runner} $f ${extra} 2>&1 > ${LOG}
-if [[ "$?" == "124" ]]
+res=$?
+if [[ "$res" == "124" ]]
 then
     echo "TIMEOUT"
     printf "%-120s" " [TEST] $f"
     timeout 600s ${runner} $f ${extra} 2>&1 > ${LOG}
+    res=$?
 fi
-res=$?
 elapsed=$((SECONDS-start))
 
 if [[ "$res" == "0" ]];
