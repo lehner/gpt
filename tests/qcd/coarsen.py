@@ -60,7 +60,7 @@ for i in range(nblockortho):
 
 
 # tester
-def test_coarse(slow_coarse, lpoints, tag):
+def test_coarse(slow_coarse, lpoints, tag, skip_eo_tests=False):
     g.message(
         f"================================================================================\nRun tests for {tag}"
     )
@@ -100,7 +100,7 @@ def test_coarse(slow_coarse, lpoints, tag):
         assert eps2 < eps2_threshold
 
     # checkerboarding?
-    if cgrid.cb.n == 1:
+    if cgrid.cb.n == 1 and not skip_eo_tests:
         cop_st_pc = cop_st.even_odd_sites_decomposed(g.even)
         cop_st_ee = cop_st_pc.DD
         cop_st_oo = cop_st_pc.CC
@@ -247,7 +247,6 @@ lpoints_Mpc = [
 ]
 coarse_3 = bm_eo_f.coarse_operator(Mpc)
 
-
 def _Mpc(dst, src):
     for i in range(len(dst)):
         dst[i] @= src[i] * 1.1 + 2.3j * g.cshift(src[i], 0, 2)
@@ -270,6 +269,7 @@ test_coarse(
     coarse_3,
     lpoints_Mpc,
     f"e/o preconditooned fine -> coarse (padded version) {len(lpoints_Mpc)}-point stencil",
+    skip_eo_tests=True # with sufficient simd, padding loses too many factors of 2
 )
 
 fast_coarse_1 = test_coarse(coarse_1, lpoints_9pt, "9pt Wilson fine -> coarse")
