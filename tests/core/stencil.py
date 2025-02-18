@@ -328,6 +328,7 @@ assert eps2 < 1e-25
 # test combination of checkerpointing and simd
 L = [16, 12, 24, 32]
 grid = g.grid(L, g.single, g.redblack)
+grid = grid.split([1]*4, L) # create a local grid
 test = g.complex(grid)
 rng.cnormal(test)
 for mu in range(4):
