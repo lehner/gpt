@@ -1,7 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2020  Daniel Richtmann (daniel.richtmann@ur.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,56 +20,33 @@ import gpt as g
 from gpt.algorithms import base
 
 
-class multi_grid_setup:
-    @g.params_convention(block_size=None, projector=None)
-    def __init__(self, params):
-        self.block_size = params["block_size"]
-        self.n = len(self.block_size)
-        self.projector = g.util.to_list(params["projector"]) * self.n
-
-    def __call__(self, matrix):
-        levels = []
-        grid = matrix.vector_space[0].grid
-        for i in range(self.n):
-            grid = g.block.grid(grid, self.block_size[i])
-            basis = self.projector[i](matrix, grid)
-            levels.append((grid, basis))
-            if i != self.n - 1:
-                matrix = matrix.coarsened(*levels[-1])
-        return levels
-
-
 class coarse_grid(base):
-    @g.params_convention(make_hermitian=False, save_links=True)
-    def __init__(self, coarse_inverter, coarse_grid, basis, params):
+    def __init__(self, coarse_inverter, block_map, coarsen_matrix):
         super().__init__()
-        self.params = params
         self.coarse_inverter = coarse_inverter
-        self.coarse_grid = coarse_grid
-        self.basis = basis
+        self.block_map = block_map
+        self.coarsen_matrix = coarsen_matrix
 
     def __call__(self, mat):
         assert isinstance(mat, g.matrix_operator)
         vector_space = mat.vector_space
 
-        bm = g.block.map(self.coarse_grid, self.basis)
-
-        cmat = mat.coarsened(self.coarse_grid, self.basis)
+        cmat = self.coarsen_matrix(self.block_map, mat)
 
         cinv = self.coarse_inverter(cmat)
 
         @self.timed_function
         def inv(dst, src, t):
             assert dst != src
-            self.log(f"{self.coarse_grid.fdimensions}" + " {")
+            self.log(f"{self.block_map.coarse_grid.fdimensions}" + " {")
 
             t("project")
-            src_c = bm.project(src)
+            src_c = self.block_map.project(src)
             t("coarse inverter")
             dst_c = cinv(src_c)
             del src_c
             t("promote")
-            bm.promote(dst, dst_c)
+            self.block_map.promote(dst, dst_c)
             t()
 
             self.log("}")

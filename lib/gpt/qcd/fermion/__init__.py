@@ -19,7 +19,6 @@
 #
 import gpt.qcd.fermion.reference
 import gpt.qcd.fermion.preconditioner
-import gpt.qcd.fermion.coarse
 import gpt.qcd.fermion.domain
 
 from gpt.qcd.fermion.register import register
@@ -27,7 +26,6 @@ from gpt.qcd.fermion.operator import (
     gauge_independent_g5_hermitian,
     differentiable_fine_operator,
     fine_operator,
-    coarse_operator,
 )
 from gpt.qcd.fermion.boundary_conditions import *
 
@@ -35,17 +33,6 @@ from gpt.qcd.fermion.boundary_conditions import *
 from gpt.qcd.fermion.zmobius import zmobius
 from gpt.qcd.fermion.mobius import mobius
 from gpt.qcd.fermion.wilson import wilson_clover, wilson_twisted_mass
-
-
-# coarse-grid operator
-import copy
-
-
-@gpt.params_convention(make_hermitian=False, level=None)
-def coarse_fermion(A, params):
-    params = copy.deepcopy(params)  # save current parameters
-    params["nbasis"] = A[0].otype.v_n1[0]
-    return coarse_operator("coarse", A, params, otype=A[0].otype.vector_type)
 
 
 # abbreviations / short-cuts

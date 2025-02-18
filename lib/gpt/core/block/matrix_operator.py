@@ -23,8 +23,12 @@ import numpy as np
 
 
 class compiled(matrix_operator):
-    def __init__(self, points, grid, otype):
+    def __init__(self, points):
         self.points = points
+        for p in points:
+            grid = points[p].grid
+            otype = points[p].otype.vector_type
+            break
         self.grid = grid
 
         if self.grid.cb.n == 1:
@@ -107,7 +111,19 @@ class projected(matrix_operator):
             accept_list=True,
         )
 
-    def compile(self, lpoints):
+    def compile(self, lpoints=None, max_point_norm=None, max_point_per_dimension=None, tolerance=None):
+
+        # accept also max length squared of points
+        if lpoints is None:
+            assert max_point_norm is not None and max_point_per_dimension is not None
+            n, dm = max_point_norm, max_point_per_dimension
+            nd = self.vector_space[0].grid.nd
+            lpoints = np.mgrid[tuple([slice(-x,x+1,1) for x in dm])].reshape(nd, -1).T
+            lpoints = lpoints[np.sum(lpoints*lpoints, axis=1) <= n]
+            lpoints = [tuple([int(y) for y in x]) for x in lpoints.tolist()]
+            gpt.message(len(lpoints),"points",lpoints)
+
+        assert lpoints is not None
 
         # are all points indistinguishable?
         L = np.array(self.map.coarse_grid.fdimensions)
@@ -121,7 +137,7 @@ class projected(matrix_operator):
         points = {p: gpt.mcomplex(self.map.coarse_grid, len(self.map.basis)) for p in min_lpoints}
         compiler.create(self, points)
 
-        op = compiled(points, self.vector_space[0].grid, self.vector_space[0].otype)
+        op = compiled(points)
 
         # for now always to a test run that identifies potential issues
         test = self.vector_space[1].lattice()
@@ -130,7 +146,10 @@ class projected(matrix_operator):
         gpt.default.pop_verbose()
 
         # test stencil implementation
-        eps2_ref = (test.grid.precision.eps * 1000) ** 2
+        if tolerance is None:
+            eps2_ref = (test.grid.precision.eps * 1000) ** 2
+        else:
+            eps2_ref = tolerance
         rop = compiler.reference_operator(points)
         eps2 = gpt.norm2(rop * test - op * test) / gpt.norm2(test)
         assert eps2 < eps2_ref
