@@ -312,7 +312,6 @@ for i in range(len(test)):
     assert eps2 < eps2_threshold
 
 # TODO:
-# - preconditioner breaks multi-rhs ; two ways out: 1) packing, 2) change pc logic
 # - need to re-pack list of vectors putting simd in nvector dimension (packing infrastructure, operator.packed, g.pack, g.unpack)
 # - after packing infrastructure is there can efficiently select points to sum over ; add to matrix_vector local stencil the restriction to interior points in sum
 # - add blas version of local_stencil.matrix_vector
