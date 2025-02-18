@@ -39,8 +39,7 @@ for precision in [g.single, g.double]:
 
     otype = g.ot_vector_complex_additive_group(nbasis)
     cop = g.block.matrix_operator.compiled(
-        {points[i] : mcoarse[i] for i in range(npoints)},
-        grid, otype
+        {points[i] : mcoarse[i] for i in range(npoints)}
     )
 
     # Flops
