@@ -326,7 +326,7 @@ g.message(f"Einsum mm test: {eps2}")
 assert eps2 < 1e-25
 
 # test combination of checkerpointing and simd
-L = [16, 12, 24, 24]
+L = [16, 12, 24, 32]
 grid = g.grid(L, g.single, g.general(2, [0, 0, 0, 1], [1, 1, 1, 1]))
 test = g.complex(grid)
 rng.cnormal(test)
