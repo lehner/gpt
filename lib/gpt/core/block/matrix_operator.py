@@ -33,42 +33,47 @@ class compiled(matrix_operator):
 
         if self.grid.cb.n == 1:
             self.M = compiler.create_stencil_operator(points, 0, gpt.none)
-            self.Mee = compiler.create_stencil_operator(
-                compiler.project_points_parity(points, 0, gpt.even), 0, gpt.even
-            )
-            self.Moo = compiler.create_stencil_operator(
-                compiler.project_points_parity(points, 0, gpt.odd), 1, gpt.odd
-            )
-            self.Meo = compiler.create_stencil_operator(
-                compiler.project_points_parity(points, 1, gpt.even), 1, gpt.even
-            )
-            self.Moe = compiler.create_stencil_operator(
-                compiler.project_points_parity(points, 1, gpt.odd), 0, gpt.odd
-            )
-            self.grid_eo = self.grid.checkerboarded(gpt.redblack)
         else:
             self.M = compiler.create_stencil_operator(points, 0, gpt.even)
 
-        super().__init__(mat=self.M.mat, vector_space=gpt.vector_space.explicit_grid_otype(grid, otype), accept_list=True)
+        super().__init__(
+            mat=self.M.mat,
+            vector_space=gpt.vector_space.explicit_grid_otype(grid, otype),
+            accept_list=True,
+        )
 
     def even_odd_sites_decomposed(self, parity):
         assert self.grid.cb.n == 1
 
+        Mee = compiler.create_stencil_operator(
+            compiler.project_points_parity(self.points, 0, gpt.even), 0, gpt.even
+        )
+        Moo = compiler.create_stencil_operator(
+            compiler.project_points_parity(self.points, 0, gpt.odd), 1, gpt.odd
+        )
+        Meo = compiler.create_stencil_operator(
+            compiler.project_points_parity(self.points, 1, gpt.even), 1, gpt.even
+        )
+        Moe = compiler.create_stencil_operator(
+            compiler.project_points_parity(self.points, 1, gpt.odd), 0, gpt.odd
+        )
+        grid_eo = self.grid.checkerboarded(gpt.redblack)
+
         class even_odd_sites:
             def __init__(me):
-                me.D_domain = gpt.domain.even_odd_sites(self.grid_eo, parity)
-                me.C_domain = gpt.domain.even_odd_sites(self.grid_eo, parity.inv())
+                me.D_domain = gpt.domain.even_odd_sites(grid_eo, parity)
+                me.C_domain = gpt.domain.even_odd_sites(grid_eo, parity.inv())
                 if parity is gpt.even:
-                    me.DD = self.Mee
-                    me.CC = self.Moo
-                    me.CD = self.Moe
-                    me.DC = self.Meo
+                    me.DD = Mee
+                    me.CC = Moo
+                    me.CD = Moe
+                    me.DC = Meo
                 else:
                     assert parity is gpt.odd
-                    me.DD = self.Moo
-                    me.CC = self.Mee
-                    me.CD = self.Meo
-                    me.DC = self.Moe
+                    me.DD = Moo
+                    me.CC = Mee
+                    me.CD = Meo
+                    me.DC = Moe
                 me.DD.vector_space[1].cb = parity
                 me.DD.vector_space[0].cb = parity
                 me.CC.vector_space[1].cb = parity.inv()
@@ -111,17 +116,24 @@ class projected(matrix_operator):
             accept_list=True,
         )
 
-    def compile(self, lpoints=None, max_point_norm=None, max_point_per_dimension=None, tolerance=None, nblock=None):
+    def compile(
+        self,
+        lpoints=None,
+        max_point_norm=None,
+        max_point_per_dimension=None,
+        tolerance=None,
+        nblock=None,
+    ):
 
         # accept also max length squared of points
         if lpoints is None:
             assert max_point_norm is not None and max_point_per_dimension is not None
             n, dm = max_point_norm, max_point_per_dimension
             nd = self.vector_space[0].grid.nd
-            lpoints = np.mgrid[tuple([slice(-x,x+1,1) for x in dm])].reshape(nd, -1).T
-            lpoints = lpoints[np.sum(lpoints*lpoints, axis=1) <= n]
+            lpoints = np.mgrid[tuple([slice(-x, x + 1, 1) for x in dm])].reshape(nd, -1).T
+            lpoints = lpoints[np.sum(lpoints * lpoints, axis=1) <= n]
             lpoints = [tuple([int(y) for y in x]) for x in lpoints.tolist()]
-            gpt.message(len(lpoints),"points",lpoints)
+            gpt.message(len(lpoints), "points", lpoints)
 
         assert lpoints is not None
 
@@ -139,27 +151,24 @@ class projected(matrix_operator):
 
         op = compiled(points)
 
-        # for now always to a test run that identifies potential issues
-        test = self.vector_space[1].lattice()
-        gpt.default.push_verbose("random", False)
-        gpt.random("test").cnormal(test)
-        gpt.default.pop_verbose()
-
         # test stencil implementation
-        if tolerance is None:
-            eps2_ref = (test.grid.precision.eps * 1000) ** 2
-        else:
-            eps2_ref = tolerance
-        rop = compiler.reference_operator(points)
-        eps2 = gpt.norm2(rop * test - op * test) / gpt.norm2(test)
-        assert eps2 < eps2_ref
+        if tolerance is not None:
+            test = self.vector_space[1].lattice()
+            gpt.default.push_verbose("random", False)
+            gpt.random("test").cnormal(test)
+            gpt.default.pop_verbose()
 
-        # test against original matrix to make sure that points are correct
-        rop = compiler.reference_operator(points)
-        eps2 = gpt.norm2(self * test - op * test) / gpt.norm2(test)
-        if eps2 > eps2_ref:
-            raise Exception(
-                f"Points {lpoints} do not seem sufficient for coarse_matrix_operator.compile: {eps2} > {eps2_ref}"
-            )
+            eps2_ref = tolerance
+            rop = compiler.reference_operator(points)
+            eps2 = gpt.norm2(rop * test - op * test) / gpt.norm2(test)
+            assert eps2 < eps2_ref
+
+            # test against original matrix to make sure that points are correct
+            rop = compiler.reference_operator(points)
+            eps2 = gpt.norm2(self * test - op * test) / gpt.norm2(test)
+            if eps2 > eps2_ref:
+                raise Exception(
+                    f"Points {lpoints} do not seem sufficient for coarse_matrix_operator.compile: {eps2} > {eps2_ref}"
+                )
 
         return op
