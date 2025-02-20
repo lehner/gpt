@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import resource, gpt, cgpt, os
+import numpy as np
 
 
 class accelerator:
@@ -134,3 +135,43 @@ def mem_report(details=True, after_time=0):
     gpt.message(
         "===================================================================================================================================="
     )
+
+
+class accelerator_buffer:
+    def __init__(self, nbytes, shape=None, dtype=None):
+        assert nbytes % 4 == 0
+        self.view = cgpt.create_device_memory_view(nbytes)
+        if dtype is None:
+            dtype = np.int8
+            shape = (len(self.view),)
+        self.shape = shape
+        self.dtype = dtype
+
+    def check_size(self):
+        if self.shape is not None and self.dtype is not None:
+            sites = int(np.prod(self.shape))
+            assert len(self.view) % sites == 0
+            bytes_per_site = len(self.view) // sites
+            if self.dtype is np.complex64:
+                assert bytes_per_site == 8
+            elif self.dtype is np.complex128:
+                assert bytes_per_site == 16
+            elif self.dtype is np.int8:
+                assert bytes_per_site == 1
+            else:
+                assert False
+
+    def __str__(self):
+        return f"accelerator_buffer({len(self.view)}, {self.shape}, {self.dtype})"
+
+    def to_array(self):
+        self.check_size()
+
+        array = cgpt.ndarray(self.shape, self.dtype)
+        cgpt.transfer_array_device_memory_view(array, self.view, True)
+
+        return array
+
+    def from_array(self, array):
+        cgpt.transfer_array_device_memory_view(array, self.view, False)
+        return self

@@ -537,3 +537,39 @@ assert eps2 == 0.0
 # Test mem_report
 ################################################################################
 g.mem_report()
+
+
+################################################################################
+# Test pack
+################################################################################
+def test_pack(template, tag):
+    g.message(f"Test pack for {tag}")
+    lat = [g.lattice(template) for _ in range(3)]
+    lat2 = [g.lattice(template) for _ in range(3)]
+    rng.cnormal(lat + lat2)
+    p = g.pack(lat)
+    av = p.to_accelerator_buffer()
+
+    p2 = g.pack(lat2)
+    p2.from_accelerator_buffer(av)
+    for i in range(len(lat)):
+        eps2 = g.norm2(lat[i] - lat2[i])
+        g.message(f"Test copy chain using accelerator views: {eps2}")
+        assert eps2 == 0.0
+
+    # reset target
+    for l in lat2:
+        l[:] = 1
+
+    p2.from_accelerator_buffer(p2.allocate_accelerator_buffer().from_array(av.to_array()))
+
+    for i in range(len(lat)):
+        eps2 = g.norm2(lat[i] - lat2[i])
+        g.message(f"Test copy chain using accelerator views AND numpy arrays: {eps2}")
+        assert eps2 == 0.0
+
+
+test_pack(g.complex(grid_sp), "complex sp")
+test_pack(g.mspincolor(grid_sp), "mspincolor sp")
+test_pack(g.vcomplex(grid_sp, 12), "vcomplex(12) sp")
+test_pack(g.mcomplex(grid_sp, 12), "mcomplex(12) sp")

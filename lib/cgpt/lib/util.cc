@@ -178,3 +178,63 @@ EXPORT(ndarray,{
     return (PyObject*)cgpt_new_PyArray((long)dim.size(), &dim[0], (int)dtype);
     
   });
+
+EXPORT(create_device_memory_view,{
+    
+    long bytes;
+    if (!PyArg_ParseTuple(args, "l", &bytes)) {
+      return NULL;
+    }
+
+    ASSERT(bytes % sizeof(float) == 0);
+    long nfloat = bytes / sizeof(float);
+    
+    deviceVector<float>* devVec = new deviceVector<float>(nfloat);
+
+    if (cgpt_verbose_memory_view)
+      std::cout << GridLogMessage << "cgpt::device_memory_create ptr=" << std::hex << &(*devVec)[0] << " for " << std::dec << bytes << " bytes" << std::endl;
+
+    PyObject* r = PyMemoryView_FromMemory((char*)&(*devVec)[0],bytes,PyBUF_WRITE);
+
+    PyObject *capsule = PyCapsule_New((void*)devVec, NULL, [] (PyObject *capsule) -> void {
+      deviceVector<float>* devVec = (deviceVector<float>*)PyCapsule_GetPointer(capsule, NULL);
+      if (cgpt_verbose_memory_view)
+	std::cout << GridLogMessage << "cgpt::device_memory_free ptr=" << std::hex << &(*devVec)[0] << std::endl;
+      delete devVec;
+    });
+
+    ASSERT(!((PyMemoryViewObject*)r)->mbuf->master.obj);
+    ((PyMemoryViewObject*)r)->mbuf->master.obj = capsule;
+
+    return r;
+  });
+
+EXPORT(transfer_array_device_memory_view,{
+    
+    long exp;
+    PyObject* array, *dmv;
+    if (!PyArg_ParseTuple(args, "OOl", &array,&dmv,&exp)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(dmv));
+    ASSERT(PyArray_Check(array));
+
+    void* data_array = PyArray_DATA((PyArrayObject*)array);
+    size_t size_array = PyArray_NBYTES((PyArrayObject*)array);
+
+    Py_buffer* buf = PyMemoryView_GET_BUFFER(dmv);
+    ASSERT(PyBuffer_IsContiguous(buf,'C'));
+    void* data_dmv = buf->buf;
+    size_t size_dmv = buf->len;
+
+    ASSERT(size_array == size_dmv);
+
+    if (exp) {
+      acceleratorCopyFromDevice(data_dmv, data_array, size_dmv);
+    } else {
+      acceleratorCopyToDevice(data_array, data_dmv, size_dmv);
+    }
+
+    return PyLong_FromLong(0);
+  });

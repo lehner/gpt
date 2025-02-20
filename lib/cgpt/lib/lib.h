@@ -22,6 +22,8 @@
 #ifndef _THIS_IS_INIT_
 #define NO_IMPORT_ARRAY
 #endif
+
+// external
 #include <numpy/arrayobject.h>
 #include <vector>
 #include <map>
@@ -30,6 +32,10 @@
 #include <iostream>
 #include <sstream>
 
+// verbosity flags
+extern bool cgpt_verbose_memory_view;
+
+// internal
 #include "pvector.h"
 #include "time.h"
 #include "exception.h"

@@ -17,7 +17,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-
 template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
@@ -213,10 +212,14 @@ public:
 
   virtual void* memory_view_open(ViewMode mode) {
     view_mode = mode;
+    if (cgpt_verbose_memory_view)
+      std::cout << GridLogMessage << "cgpt::memory_view_open " << l.getHostPointer() << " mode " << mode << std::endl;
     return MemoryManager::ViewOpen(l.getHostPointer(),l.oSites()*sizeof(T), mode, l.Advise()); 
   }
   
   virtual void memory_view_close() {
+    if (cgpt_verbose_memory_view)
+      std::cout << GridLogMessage << "cgpt::memory_view_close " << l.getHostPointer() << " mode " << view_mode << std::endl;
     MemoryManager::ViewClose(l.getHostPointer(), view_mode);
   }
 
@@ -230,13 +233,21 @@ public:
     size_t sz = v->size() * sizeof((*v)[0]);
     char* ptr = (char*)&(*v)[0];
 
+    if (cgpt_verbose_memory_view)
+      std::cout << GridLogMessage << "cgpt::memory_view " << ptr << " ishost=" << (mt == mt_host) << std::endl;
+
     PyObject* r = PyMemoryView_FromMemory(ptr,sz,PyBUF_WRITE);
     PyObject *capsule = PyCapsule_New((void*)v, NULL, [] (PyObject *capsule) -> void { 
-	//std::cout << "ViewClose" << std::endl; 
-	LatticeView<vobj>* v = (LatticeView<vobj>*)PyCapsule_GetPointer(capsule, NULL);
-	v->ViewClose();
-	delete v;
-      });
+      LatticeView<vobj>* v = (LatticeView<vobj>*)PyCapsule_GetPointer(capsule, NULL);
+
+      if (cgpt_verbose_memory_view) {
+	char* ptr = (char*)&(*v)[0];
+	std::cout << GridLogMessage << "cgpt::memory_view_close " << ptr << std::endl;
+      }
+
+      v->ViewClose();
+      delete v;
+    });
     ASSERT(!((PyMemoryViewObject*)r)->mbuf->master.obj);
     ((PyMemoryViewObject*)r)->mbuf->master.obj = capsule;
 
@@ -254,6 +265,10 @@ public:
     cgpt_numpy_data_layout(sobj(),ishape);
     if (ishape.size() == 0) // treat complex numbers as 1d array with one element
       ishape.push_back(1);
+  }
+
+  virtual void transfer_scalar_device_buffer(void* ptr, long size, long offset, long stride, long word_line, long word_stride, bool exp) {
+    cgpt_lattice_transfer_scalar_device_buffer(l, ptr, size, offset, stride, word_line, word_stride, exp);
   }
   
   virtual int get_numpy_dtype() {

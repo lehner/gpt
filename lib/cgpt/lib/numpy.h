@@ -52,11 +52,17 @@ static PyArrayObject* cgpt_new_PyArray(long nd, long* dim, int dtype) {
   for (long i=0;i<nd;i++)
     sz *= dim[i];
   void* data = cgpt_alloc(GRID_ALLOC_ALIGN, sz);
-  //printf("Alloc %p\n",data);
+
+  if (cgpt_verbose_memory_view) {
+    std::cout << GridLogMessage << "cgpt::pyarray_open " << data << std::endl;
+  }
+
   PyArrayObject* arr = (PyArrayObject*)PyArray_SimpleNewFromData((int)nd, dim, dtype, data);
   PyObject *capsule = PyCapsule_New(data, NULL, [] (PyObject *capsule) -> void {
     void* mdata = (void*)PyCapsule_GetPointer(capsule, NULL);
-    //printf("Free %p\n", mdata);
+    if (cgpt_verbose_memory_view) {
+      std::cout << GridLogMessage << "cgpt::pyarray_close " << mdata << std::endl;
+    }
     free(mdata);
   });
   PyArray_SetBaseObject((PyArrayObject *) arr, capsule);

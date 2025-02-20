@@ -64,6 +64,7 @@ public:
   virtual void memory_view_close() = 0;
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word) = 0;
   virtual void describe_data_shape(std::vector<long> & ishape) = 0;
+  virtual void transfer_scalar_device_buffer(void* ptr, long size, long offset, long stride, long word_line, long word_stride, bool exp) = 0;
   virtual int get_numpy_dtype() = 0;
   virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<cgpt_Lattice_base*>& basis, 
 					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,

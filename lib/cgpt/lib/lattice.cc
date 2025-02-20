@@ -139,7 +139,7 @@ EXPORT(lattice_memory_view,{
     
     PyObject *capsule =
       PyCapsule_New((void*)pm, NULL,
-		    [] (PyObject *capsule) -> void { 
+		    [] (PyObject *capsule) -> void {
 		      _mvc* pm = (_mvc*)PyCapsule_GetPointer(capsule, NULL);
 		      Py_DECREF(pm->_base);
 		      Py_DECREF(pm->_lattice);
@@ -205,4 +205,23 @@ EXPORT(lattice_get_checkerboard,{
     }
     cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
     return PyLong_FromLong(dst->get_checkerboard() == Even ? 0 : 1);
+  });
+
+EXPORT(lattice_transfer_scalar_device_buffer,{
+    void* _dst;
+    PyObject* _device_buffer;
+    long offset, stride, word_line, word_stride, exp;
+    if (!PyArg_ParseTuple(args, "lOlllll", &_dst,&_device_buffer,&offset,&stride,&word_line,&word_stride,&exp)) {
+      return NULL;
+    }
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+
+    ASSERT(PyMemoryView_Check(_device_buffer));
+    Py_buffer* buf = PyMemoryView_GET_BUFFER(_device_buffer);
+    ASSERT(PyBuffer_IsContiguous(buf,'C'));
+    void* ptr = buf->buf;
+    long size = buf->len;
+
+    dst->transfer_scalar_device_buffer(ptr, size, offset, stride, word_line, word_stride, (bool)exp);
+    return PyLong_FromLong(0);
   });
