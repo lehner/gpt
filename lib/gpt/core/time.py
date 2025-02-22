@@ -177,13 +177,14 @@ class timer:
             return "No time spent here"
 
         s = f"{self.name}:\n" if self.name != "" else ""
+        nc = max([ len(k) for k in dtp ] + [20])
         for k, v in reversed(sorted(dtp.items(), key=lambda x: x[1])):
             frac = v / total_time * 100
             tmin = self.time[k].dt_min
             tmax = self.time[k].dt_max
             tavg = self.time[k].dt_sum / self.time[k].n
 
-            s_time = f"{k:20s} {v:.2e} s (= {frac:6.2f} %)"
+            s_time = f"{k:{nc}s} {v:.2e} s (= {frac:6.2f} %)"
             s += f"{s_time}; time/s = {tmin:.2e}/{tmax:.2e}/{tavg:.2e} (min/max/avg)\n"
             if self.time[k].byte_sum is not None:
                 bmin = self.time[k].byte_per_sec_min

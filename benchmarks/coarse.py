@@ -75,3 +75,51 @@ for precision in [g.single, g.double]:
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
     )
+
+    
+    # now time components of a coarse-grid operator using blas
+    pA = g.pack(rng.cnormal(g.mcomplex(grid, nbasis)))
+    pB = g.pack(rng.cnormal([g.vcomplex(grid, nbasis) for _ in range(n_rhs)]))
+    pC = g.pack(rng.cnormal([g.vcomplex(grid, nbasis) for _ in range(n_rhs)]))
+
+    bA = pA.to_accelerator_buffer()
+    bB = pB.to_accelerator_buffer()
+    bC = pC.to_accelerator_buffer()
+
+    bA = bA.merged_axes(-3, -2)
+
+    idx = pC.buffer_coordinate_indices()
+
+    j = g.blas().gemm(1.0, bA[idx], bB[idx].T, 0.0, bC[idx].T)
+
+    # warmup
+    for n in range(5):
+        pB.to_accelerator_buffer(bB)
+        for p in range(9):
+            j()
+        pC.from_accelerator_buffer(bC)
+
+    t = g.timer()
+    t0 = g.time()
+    for n in range(N):
+        t("to_accelerator_buffer")
+        pB.to_accelerator_buffer(bB)
+        t("gemm")
+        for p in range(9):
+            j()
+        t("from_accelerator_buffer")
+        pC.from_accelerator_buffer(bC)
+    t()
+    t1 = g.time()
+
+    GFlopsPerSec = flops / (t1 - t0) / 1e9
+    GBPerSec = nbytes / (t1 - t0) / 1e9
+    g.message(
+        f"""
+{N} applications of {nbasis} x {nbasis}, 9-point operator, blas version
+    Time to complete            : {t1-t0:.2g} s
+    Total performance           : {GFlopsPerSec:.2f} GFlops/s
+    Effective memory bandwidth  : {GBPerSec:.2f} GB/s
+
+{t}"""
+    )
