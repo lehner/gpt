@@ -116,3 +116,4 @@ import gpt.core.stencil
 from gpt.core.einsum import einsum
 import gpt.core.global_sum
 from gpt.core.pack import pack
+from gpt.core.blas import blas

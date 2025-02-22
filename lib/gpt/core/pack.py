@@ -33,6 +33,20 @@ class pack:
     def rank_bytes(self):
         return sum([l.rank_bytes() for l in self.lattices])
 
+    def buffer_coordinates(self, global_coordinates=True):
+        nd = self.grid.nd
+        L = [self.grid.fdimensions[i] // self.grid.mpi[i] for i in range(nd)]
+        if global_coordinates:
+            offset = [self.grid.processor_coor[i] * L[i] for i in range(nd)]
+        else:
+            offset = [0] * nd
+        args = [slice(offset[i], offset[i] + L[i]) for i in reversed(range(nd))]
+        assert self.grid.cb.n == 1  # in future sieve out wrong parity instead
+        return np.mgrid[tuple(args)].reshape(nd, -1).T
+
+    def buffer_coordinate_indices(self):
+        return np.arange(self.grid.gsites // self.grid.Nprocessors)
+
     def allocate_accelerator_buffer(self):
         return g.accelerator_buffer(
             self.rank_bytes(),

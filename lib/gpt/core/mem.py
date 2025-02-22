@@ -137,8 +137,34 @@ def mem_report(details=True, after_time=0):
     )
 
 
+class accelerator_buffer_view:
+    op_N = 0
+    op_T = 1
+    op_C = 2
+
+    def __init__(self, buffer, idx, op=op_N):
+        self.buffer = buffer
+        self.idx = idx
+        self.op = op
+
+    @property
+    def T(self):
+        return accelerator_buffer_view(self.buffer, self.idx, self.op ^ self.op_T)
+
+    @property
+    def H(self):
+        return accelerator_buffer_view(self.buffer, self.idx, self.op ^ (self.op_T | self.op_C))
+
+
 class accelerator_buffer:
     def __init__(self, nbytes, shape=None, dtype=None):
+
+        if isinstance(nbytes, accelerator_buffer):
+            self.view = nbytes.view
+            self.shape = nbytes.shape
+            self.dtype = nbytes.dtype
+            return
+
         assert nbytes % 4 == 0
         self.view = cgpt.create_device_memory_view(nbytes)
         if dtype is None:
@@ -146,6 +172,22 @@ class accelerator_buffer:
             shape = (len(self.view),)
         self.shape = shape
         self.dtype = dtype
+
+    def merged_axes(self, axes0, axes1):
+        if axes0 < 0:
+            axes0 += len(self.shape)
+        if axes1 < 0:
+            axes1 += len(self.shape)
+        shape = list(self.shape)
+        shape = tuple(
+            shape[0:axes0] + [int(np.prod(shape[axes0 : axes1 + 1]))] + shape[axes1 + 1 :]
+        )
+        copy = accelerator_buffer(self)
+        copy.shape = shape
+        return copy
+
+    def __getitem__(self, idx):
+        return accelerator_buffer_view(self, idx)
 
     def check_size(self):
         if self.shape is not None and self.dtype is not None:
@@ -162,7 +204,7 @@ class accelerator_buffer:
                 assert False
 
     def __str__(self):
-        return f"accelerator_buffer({len(self.view)}, {self.shape}, {self.dtype})"
+        return f"accelerator_buffer({len(self.view)}, {self.shape}, {self.dtype.__name__})"
 
     def to_array(self):
         self.check_size()
