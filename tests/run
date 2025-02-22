@@ -30,6 +30,7 @@ for f in \
     ${test_path}/core/stencil.py \
     ${test_path}/core/jobs.py \
     ${test_path}/core/tensors.py \
+    ${test_path}/core/blas.py \
     ${test_path}/core/sparse_tensor.py \
     ${test_path}/core/gamma.py \
     ${test_path}/core/block.py \

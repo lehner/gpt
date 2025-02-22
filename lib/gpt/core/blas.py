@@ -37,55 +37,72 @@ class blas:
         assert bv_A.buffer.dtype == bv_B.buffer.dtype
         assert bv_A.buffer.dtype == bv_C.buffer.dtype
 
-        # re-distribute operators away from C
-        if bv_C.op & bv_C.op_C:
-            bv_C.op ^= bv_C.op_C
-            bv_A.op ^= bv_C.op_C
-            bv_B.op ^= bv_C.op_C
+        op_A = bv_A.op
+        op_B = bv_B.op
+        op_C = bv_C.op
 
-        if bv_C.op & bv_C.op_T:
-            bv_C.op ^= bv_C.op_T
-            bv_A.op ^= bv_C.op_T
-            bv_B.op ^= bv_C.op_T
-            bv_A, bv_B = bv_B, bv_A
+        # AB = C row-major is BA = C column-major
+        # numpy and usual Grid order is row-major
+        # GridBlas order is column-major
+        bv_A, bv_B, op_A, op_B = bv_B, bv_A, op_B, op_A
+
+        # operators
+        N = bv_C.op_N
+        T = bv_C.op_T
+        C = bv_C.op_C
+
+        # re-distribute operators away from C
+        if op_C & C:
+            op_C ^= C
+            op_A ^= C
+            bv_B.op ^= C
+
+        if op_C & T:
+            op_C ^= T
+            op_A ^= T
+            op_B ^= T
+            bv_A, bv_B, op_A, op_B = bv_B, bv_A, op_B, op_A
 
         # none shall remain
-        assert bv_C.op == bv_C.op_N
+        assert op_C == N
+
+        # for now do not allow just complex conjugation (blas does not support this)
+        assert op_A != C
+        assert op_B != C
+        assert op_C != C
 
         # m, n, k, Amk, Bkn, Cmn
-        if bv_A.op & bv_A.op_T:
-            k, m = bv_A.buffer.shape[-2:]
-        else:
-            m, k = bv_A.buffer.shape[-2:]
+        a, b = bv_A.buffer.shape[-2:]
+        c, d = bv_B.buffer.shape[-2:]
+        e, f = bv_C.buffer.shape[-2:]
 
-        if bv_B.op & bv_A.op_T:
-            _k, n = bv_B.buffer.shape[-2:]
-        else:
-            n, _k = bv_B.buffer.shape[-2:]
+        j, i = (a, b) if not (op_A & T) else (b, a)
+        k, _j = (c, d) if not (op_B & T) else (d, c)
+        _k, _i = e, f
 
-        _n, _m = bv_C.buffer.shape[-2:]
-
-        assert m == _m
-        assert n == _n
+        assert j == _j
+        assert i == _i
         assert k == _k
 
         cgpt.blas_gemm(
             self.obj,
-            m,
-            n,
+            i,
             k,
+            j,
             alpha,
             bv_A.buffer.view,
             np.ascontiguousarray(bv_A.idx, dtype=np.int64),
-            bv_A.op,
+            op_A,
             bv_B.buffer.view,
             np.ascontiguousarray(bv_B.idx, dtype=np.int64),
-            bv_B.op,
+            op_B,
             beta,
             bv_C.buffer.view,
             np.ascontiguousarray(bv_C.idx, dtype=np.int64),
             bv_C.buffer.dtype,
         )
+        return self
 
     def __call__(self):
         cgpt.blas_execute(self.obj)
+        return self

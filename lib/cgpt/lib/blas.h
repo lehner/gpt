@@ -81,10 +81,7 @@ class cgpt_gemm_job : public cgpt_blas_job_base {
   }
 
   virtual void execute(GridBLAS& blas) {
-    std::cout << GridLogMessage << "Call batched gemm " << m << ", " << n << ", " << k << std::endl;
     blas.gemmBatched(opA, opB, m, n, k, (dtype)alpha, BLAS_A, BLAS_B, (dtype)beta, BLAS_C);
-    //blas.gemmBatched(m, n, k, (dtype)alpha, BLAS_A, BLAS_B, (dtype)beta, BLAS_C);
-    std::cout << GridLogMessage << "Done" << std::endl;
   }
 };
 

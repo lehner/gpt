@@ -157,13 +157,16 @@ class accelerator_buffer_view:
 
 
 class accelerator_buffer:
-    def __init__(self, nbytes, shape=None, dtype=None):
+    def __init__(self, nbytes=None, shape=None, dtype=None):
 
         if isinstance(nbytes, accelerator_buffer):
             self.view = nbytes.view
             self.shape = nbytes.shape
             self.dtype = nbytes.dtype
             return
+
+        if nbytes is None:
+            nbytes = self.calculate_size(shape, dtype)
 
         assert nbytes % 4 == 0
         self.view = cgpt.create_device_memory_view(nbytes)
@@ -172,6 +175,18 @@ class accelerator_buffer:
             shape = (len(self.view),)
         self.shape = shape
         self.dtype = dtype
+
+    def calculate_size(self, shape, dtype):
+        sites = int(np.prod(shape))
+        if dtype is np.complex64:
+            sites *= 8
+        elif dtype is np.complex128:
+            sites *= 16
+        elif dtype is np.int8:
+            sites *= 1
+        else:
+            assert False
+        return sites
 
     def merged_axes(self, axes0, axes1):
         if axes0 < 0:
@@ -191,17 +206,7 @@ class accelerator_buffer:
 
     def check_size(self):
         if self.shape is not None and self.dtype is not None:
-            sites = int(np.prod(self.shape))
-            assert len(self.view) % sites == 0
-            bytes_per_site = len(self.view) // sites
-            if self.dtype is np.complex64:
-                assert bytes_per_site == 8
-            elif self.dtype is np.complex128:
-                assert bytes_per_site == 16
-            elif self.dtype is np.int8:
-                assert bytes_per_site == 1
-            else:
-                assert False
+            assert len(self.view) == self.calculate_size(self.shape, self.dtype)
 
     def __str__(self):
         return f"accelerator_buffer({len(self.view)}, {self.shape}, {self.dtype.__name__})"
