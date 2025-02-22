@@ -71,7 +71,7 @@ for precision in [g.single, g.double]:
     g.message(
         f"""
 {N} applications of {nbasis} x {nbasis}, 9-point operator
-    Time to complete            : {t1-t0:.2f} s
+    Time to complete            : {t1-t0:.2g} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
     )
