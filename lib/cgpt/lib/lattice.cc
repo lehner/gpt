@@ -208,13 +208,16 @@ EXPORT(lattice_get_checkerboard,{
   });
 
 EXPORT(lattice_transfer_scalar_device_buffer,{
-    void* _dst;
-    PyObject* _device_buffer;
-    long offset, stride, word_line, word_stride, exp;
-    if (!PyArg_ParseTuple(args, "lOlllll", &_dst,&_device_buffer,&offset,&stride,&word_line,&word_stride,&exp)) {
+
+    PyObject* _device_buffer, *_dst;
+    long r, exp;
+    if (!PyArg_ParseTuple(args, "OOll", &_dst,&_device_buffer,&r,&exp)) {
       return NULL;
     }
-    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+
+    std::vector<cgpt_Lattice_base*> dst;
+    long n_virtual = cgpt_basis_fill(dst,_dst);
+    ASSERT(dst.size() > 0);
 
     ASSERT(PyMemoryView_Check(_device_buffer));
     Py_buffer* buf = PyMemoryView_GET_BUFFER(_device_buffer);
@@ -222,6 +225,6 @@ EXPORT(lattice_transfer_scalar_device_buffer,{
     void* ptr = buf->buf;
     long size = buf->len;
 
-    dst->transfer_scalar_device_buffer(ptr, size, offset, stride, word_line, word_stride, (bool)exp);
+    dst[0]->transfer_scalar_device_buffer(dst, n_virtual, r, ptr, size, exp);
     return PyLong_FromLong(0);
   });

@@ -69,37 +69,11 @@ class pack:
 
     def transfer_accelerator_buffer(self, buffer, export):
         buf = buffer.view
-        n_lat = len(self.lattices)
-        n = len(self.lattices[0].v_obj)
         r = len(self.otype.shape)
-        assert self.words % n == 0
-        line = self.words // n
-        stride = line
 
-        # if we have a g.mcomplex, need to modify line and stride
-        if n > 1 and r == 2:
-            nsqrt = int(n**0.5)
-            assert nsqrt * nsqrt == n
-            line = self.otype.shape[1] // nsqrt
-            stride = self.otype.shape[1]
-
-        # to = to_v[idx * stride * words + offset * word_line];
-        # to[(w / word_line) * word_stride + w % word_line];
-
-        # copy all bits
-        for j in range(n_lat):
-            for i in range(n):
-                idx = i
-                if n > 1 and r == 2:
-                    a = idx % nsqrt
-                    b = idx // nsqrt
-                    idx = a * self.otype.shape[0] + b
-                cgpt.lattice_transfer_scalar_device_buffer(
-                    self.lattices[j].v_obj[i],
-                    buf,
-                    idx + j * self.words // line,
-                    n * n_lat,
-                    line,
-                    stride,
-                    1 if export else 0,
-                )
+        cgpt.lattice_transfer_scalar_device_buffer(
+            self.lattices,
+            buf,
+            r,
+            1 if export else 0,
+        )

@@ -19,7 +19,7 @@ def test_mm_blas(nc, nrhs, precision):
 
     rng.cnormal(A)
     rng.cnormal(B)
-    rng.cnormal(C) # just initialize some values (need to avoid nan)
+    rng.cnormal(C)  # just initialize some values (need to avoid nan)
 
     pA = g.pack(A)
     pB = g.pack(B)
@@ -49,11 +49,12 @@ def test_mm_blas(nc, nrhs, precision):
         eps = (g.norm2(C[i] - C2[i]) / g.norm2(C[i])) ** 0.5
         g.message(f"Error for rhs[{i}] = {eps}")
         if eps > precision.eps * 100:
-            g.message(C[i][0,0,0,0,0,0], C2[i][0,0,0,0,0,0])
+            g.message(C[i][0, 0, 0, 0, 0, 0], C2[i][0, 0, 0, 0, 0, 0])
             assert False
 
-test_mm_blas(12, 8, g.double)
+
 test_mm_blas(12, 8, g.single)
+test_mm_blas(12, 8, g.double)
 
 
 # more tests
