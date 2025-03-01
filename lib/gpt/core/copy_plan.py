@@ -21,6 +21,7 @@ import cgpt, gpt, numpy
 verbose_performance = gpt.default.is_verbose("copy_plan_performance")
 force_host_comms = gpt.default.has("--force-host-comms")
 
+
 class _view:
     def __init__(self, obj):
         self.obj = obj
@@ -59,6 +60,8 @@ class copy_plan_view:
             self.memory_layout[id(x)] = n
             if isinstance(x, gpt.lattice):
                 n += len(x.v_obj)
+            elif isinstance(x, gpt.accelerator_buffer):
+                n += 1
             elif isinstance(x, memoryview):
                 n += 1
                 self.requires_host_memory = True
@@ -103,7 +106,7 @@ class copy_plan_executer:
             block_size = size // blocks
             GB = 2 * size / 1e9  # read + write = factor of 2
             gpt.message(
-                f"copy_plan: execute: {GB:g} GB at {GB/(t1-t0):g} GB/s/rank with block_size {block_size}"
+                f"copy_plan: execute: {GB:g} GB at {GB / (t1 - t0):g} GB/s/rank with block_size {block_size}"
             )
 
     def info(self, details=False):
@@ -150,7 +153,7 @@ class copy_plan:
             gpt.message(t_cgpt)
 
             gpt.message(
-                f"copy_plan: create: {t1-t0} s (local_only = {local_only}, skip_optimize = {skip_optimize}, use_communication_buffers = {use_communication_buffers}, communication_buffer_location = {self.communication_buffer_location.__name__})"
+                f"copy_plan: create: {t1 - t0} s (local_only = {local_only}, skip_optimize = {skip_optimize}, use_communication_buffers = {use_communication_buffers}, communication_buffer_location = {self.communication_buffer_location.__name__})"
             )
 
         return copy_plan_executer(
@@ -190,10 +193,12 @@ class global_memory_view:
         if self.blocks is None:
             return _view(cgpt.copy_create_view(grid_obj, None))
 
-        processed_blocks = []
-        for b in self.blocks:
-            processed_blocks.append([b[0], layout.get_index(b[1]), b[2], b[3]])
+        if isinstance(self.blocks, list):
+            processed_blocks = []
+            for b in self.blocks:
+                processed_blocks.append([b[0], layout.get_index(b[1]), b[2], b[3]])
+            processed_blocks = numpy.array(processed_blocks, dtype=numpy.int64)
+        else:
+            processed_blocks = self.blocks
 
-        return _view(
-            cgpt.copy_create_view(grid_obj, numpy.array(processed_blocks, dtype=numpy.int64))
-        )
+        return _view(cgpt.copy_create_view(grid_obj, processed_blocks))

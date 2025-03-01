@@ -10,7 +10,9 @@ def test_mm_blas(nc, nrhs, precision):
     g.message(f"Test MM {nc}x{nc} with {nrhs} right-hand sides with precision {precision.__name__}")
 
     # test matrix-matrix multiplication
-    grid = g.grid([16, 16, 16, 32], precision)
+    L = [16, 16, 16, 32]
+    grid = g.grid(L, precision)
+    rL = list(reversed(grid.ldimensions))
 
     A = g.mcomplex(grid, nc)
     B = [g.vcomplex(grid, nc) for _ in range(nrhs)]
@@ -25,16 +27,33 @@ def test_mm_blas(nc, nrhs, precision):
     pB = g.pack(B)
     pC = g.pack(C)
 
+    margin = [1, 1, 1, 1]
     bA = pA.to_accelerator_buffer()
-    bB = pB.to_accelerator_buffer()
+    bB = pB.to_accelerator_buffer(margin=margin)
     bC = pC.to_accelerator_buffer()
 
     bA = bA.merged_axes(-3, -2)
 
-    # cA = pC.buffer_coordinates(global_coordinates=False)
-    idx = pC.buffer_coordinate_indices()
+    cA = bA.coordinates(range(4))
+    cB = bB.coordinates(range(4))
 
-    g.blas().gemm(1.0, bA[idx], bB[idx].T, 0.0, bC[idx].T)()
+    bulkB = bB.bulk(cB, margin=margin)
+
+    halo_exchange = bB.halo_exchange(grid, margin=margin)
+
+    halo_exchange()
+
+    idxA = bA.indices(range(4))
+    idxB = bB.indices(range(4), shift=[0, 0, 1, 0])[bulkB]
+
+    # test cshift of indices
+    for sh in [[0, 0, 0, 1], [0, 1, 0, 0], [1, 0, 0, 0], [1, -1, 3, 2]]:
+        idxA2 = bA.indices(range(4), shift=sh)
+        eps = np.linalg.norm(np.mod(cA[idxA2] - cA[idxA] + rL - sh, rL))
+        g.message(f"Test cshift with {sh}: {eps}")
+        assert eps < 1e-14
+
+    g.blas().gemm(1.0, bA[idxA], bB[idxB].T, 0.0, bC[idxA].T)()
 
     pC.from_accelerator_buffer(bC)
 
@@ -43,13 +62,14 @@ def test_mm_blas(nc, nrhs, precision):
         x[:] = 0
 
     for i in range(nrhs):
-        g.eval(C2[i], A * B[i])
+        g.eval(C2[i], A * g.cshift(B[i], 1, 1))
 
     for i in range(nrhs):
         eps = (g.norm2(C[i] - C2[i]) / g.norm2(C[i])) ** 0.5
         g.message(f"Error for rhs[{i}] = {eps}")
         if eps > precision.eps * 100:
-            g.message(C[i][0, 0, 0, 0, 0, 0], C2[i][0, 0, 0, 0, 0, 0])
+            for y in range(L[1]):
+                g.message(y, C[i][0, y, 0, 0, 0], C2[i][0, y, 0, 0, 0])
             assert False
 
 

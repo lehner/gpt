@@ -19,7 +19,7 @@
 
 template<typename vobj>
 void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, long _from_n_virtual, long r,
-						void* ptr, long size,
+						void* ptr, long size, std::vector<long>& padding, std::vector<long>& offset,
 						bool exp) {
 
   typedef typename vobj::scalar_object sobj;
@@ -30,6 +30,10 @@ void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, l
   ASSERT(!Fg->_isCheckerBoarded);
   int nd = Fg->_ndimension;
 
+  int ps = (int)padding.size();
+  int os = (int)offset.size();
+  ASSERT(ps == os);
+
   VECTOR_VIEW_OPEN(_from,_from_v,exp ? AcceleratorRead : AcceleratorWrite); 
 
   ASSERT(_from.size() % _from_n_virtual == 0);
@@ -39,12 +43,28 @@ void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, l
   size_t leading_dim = 1;
 
   size_t _from_size = _from.size();
-         
-  ASSERT( (Fg->lSites() * sizeof(sobj) * _from_size) == size );
-      
+
   Coordinate LocalLatt = Fg->LocalDimensions();
-  size_t nsite = 1;
-  for(int i=0;i<nd;i++) nsite *= LocalLatt[i];
+  size_t nsite = 1, nsite_padded = 1;
+  Coordinate to_stride(nd);
+  Coordinate to_dimensions(nd);
+  Coordinate to_offset(nd);
+  
+  // padding has ordering t,z,y,x
+  for(int i=0;i<nd;i++) {
+    nsite *= LocalLatt[i];
+    if (i<ps) {
+      to_dimensions[i] = LocalLatt[i] + padding[ps-i-1];
+      to_offset[i] = offset[ps-i-1];
+    } else {
+      to_dimensions[i] = LocalLatt[i];
+      to_offset[i] = 0;
+    }
+    to_stride[i] = nsite_padded;
+    nsite_padded *= to_dimensions[i];
+  }
+
+  ASSERT( (nsite_padded * sizeof(sobj) * _from_size) == size );
       
   Coordinate f_ostride = Fg->_ostride;
   Coordinate f_istride = Fg->_istride;
@@ -100,12 +120,13 @@ void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, l
       
       size_t from_oidx = 0; for(int d=0;d<nd;d++) from_oidx+=f_ostride[d]*(from_coor[d]%f_rdimensions[d]);
       size_t from_lane = 0; for(int d=0;d<nd;d++) from_lane+=f_istride[d]*(from_coor[d]/f_rdimensions[d]);
+      size_t to_site = 0; for(int d=0;d<nd;d++) to_site+=to_stride[d]*(from_coor[d] + to_offset[d]);
 
       for (size_t c=0;c<c_dim;c++) {
 	for (size_t b=0;b<b_dim;b++) {
 
 	  size_t idx_inner = (a * c_dim + c) * b_dim + b;
-	  size_t line_idx = idx_site_lat * a_dim * c_dim * b_dim + idx_inner;
+	  size_t line_idx = (to_site * n_lat + rhs) * a_dim * c_dim * b_dim + idx_inner;
 	  size_t _i = a + b * a_dim;
 
 	  const vector_type* from = &((const vector_type *)&_from_v[rhs*n+_i][from_oidx])[c * word_line];
@@ -136,12 +157,13 @@ void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, l
       
       size_t from_oidx = 0; for(int d=0;d<nd;d++) from_oidx+=f_ostride[d]*(from_coor[d]%f_rdimensions[d]);
       size_t from_lane = 0; for(int d=0;d<nd;d++) from_lane+=f_istride[d]*(from_coor[d]/f_rdimensions[d]);
-
+      size_t to_site = 0; for(int d=0;d<nd;d++) to_site+=to_stride[d]*(from_coor[d] + to_offset[d]);
+      
       for (size_t c=0;c<c_dim;c++) {
 	for (size_t b=0;b<b_dim;b++) {
 
 	  size_t idx_inner = (a * c_dim + c) * b_dim + b;
-	  size_t line_idx = idx_site_lat * a_dim * c_dim * b_dim + idx_inner;
+	  size_t line_idx = (to_site * n_lat + rhs) * a_dim * c_dim * b_dim + idx_inner;
 	  size_t _i = a + b * a_dim;
 
 	  vector_type* from = &((vector_type *)&_from_v[rhs*n+_i][from_oidx])[c * word_line]; // from/to switch language

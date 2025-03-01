@@ -21,6 +21,15 @@ import numpy as np
 import cgpt
 
 
+def margin_to_padding_offset(margin, top_margin, bottom_margin):
+    if margin is not None:
+        top_margin = margin
+        bottom_margin = margin
+    if top_margin is not None and bottom_margin is not None:
+        return [x + y for x, y in zip(top_margin, bottom_margin)], top_margin
+    return None, None
+
+
 class pack:
     def __init__(self, lattices):
         self.lattices = g.util.to_list(lattices)
@@ -33,47 +42,46 @@ class pack:
     def rank_bytes(self):
         return sum([l.rank_bytes() for l in self.lattices])
 
-    def buffer_coordinates(self, global_coordinates=True):
-        nd = self.grid.nd
-        L = [self.grid.fdimensions[i] // self.grid.mpi[i] for i in range(nd)]
-        if global_coordinates:
-            offset = [self.grid.processor_coor[i] * L[i] for i in range(nd)]
-        else:
-            offset = [0] * nd
-        args = [slice(offset[i], offset[i] + L[i]) for i in reversed(range(nd))]
-        assert self.grid.cb.n == 1  # in future sieve out wrong parity instead
-        return np.mgrid[tuple(args)].reshape(nd, -1).T
-
-    def buffer_coordinate_indices(self):
-        return np.arange(self.grid.gsites // self.grid.Nprocessors)
-
-    def allocate_accelerator_buffer(self):
+    def allocate_accelerator_buffer(self, padding=None):
+        shape = (
+            list(reversed(self.grid.ldimensions)) + [len(self.lattices)] + list(self.otype.shape)
+        )
+        bytes_scale_num = 1
+        bytes_scale_denom = 1
+        if padding is not None:
+            bytes_scale_denom = int(np.prod(shape))
+            if len(padding) < len(shape):
+                padding = padding + [0] * (len(shape) - len(padding))
+            shape = [x + y for x, y in zip(shape, padding)]
+            bytes_scale_num = int(np.prod(shape))
         return g.accelerator_buffer(
-            self.rank_bytes(),
-            tuple(
-                list(reversed(self.grid.ldimensions))
-                + [len(self.lattices)]
-                + list(self.otype.shape)
-            ),
+            (self.rank_bytes() * bytes_scale_num) // bytes_scale_denom,
+            tuple(shape),
             self.grid.precision.complex_dtype,
         )
 
-    def to_accelerator_buffer(self, target_buffer=None):
+    def to_accelerator_buffer(
+        self, target_buffer=None, margin=None, top_margin=None, bottom_margin=None
+    ):
+        padding, offset = margin_to_padding_offset(margin, top_margin, bottom_margin)
         if target_buffer is None:
-            target_buffer = self.allocate_accelerator_buffer()
-        self.transfer_accelerator_buffer(target_buffer, True)
+            target_buffer = self.allocate_accelerator_buffer(padding=padding)
+        self.transfer_accelerator_buffer(target_buffer, True, padding, offset)
         return target_buffer
 
-    def from_accelerator_buffer(self, buffer):
-        self.transfer_accelerator_buffer(buffer, False)
+    def from_accelerator_buffer(self, buffer, margin=None, top_margin=None, bottom_margin=None):
+        padding, offset = margin_to_padding_offset(margin, top_margin, bottom_margin)
+        self.transfer_accelerator_buffer(buffer, False, padding, offset)
 
-    def transfer_accelerator_buffer(self, buffer, export):
+    def transfer_accelerator_buffer(self, buffer, export, padding, offset):
         buf = buffer.view
         r = len(self.otype.shape)
 
         cgpt.lattice_transfer_scalar_device_buffer(
             self.lattices,
             buf,
+            padding,
+            offset,
             r,
             1 if export else 0,
         )

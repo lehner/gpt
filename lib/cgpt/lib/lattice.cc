@@ -209,9 +209,9 @@ EXPORT(lattice_get_checkerboard,{
 
 EXPORT(lattice_transfer_scalar_device_buffer,{
 
-    PyObject* _device_buffer, *_dst;
+    PyObject* _device_buffer, *_dst, *_padding, *_offset;
     long r, exp;
-    if (!PyArg_ParseTuple(args, "OOll", &_dst,&_device_buffer,&r,&exp)) {
+    if (!PyArg_ParseTuple(args, "OOOOll", &_dst,&_device_buffer,&_padding,&_offset,&r,&exp)) {
       return NULL;
     }
 
@@ -219,12 +219,18 @@ EXPORT(lattice_transfer_scalar_device_buffer,{
     long n_virtual = cgpt_basis_fill(dst,_dst);
     ASSERT(dst.size() > 0);
 
+    std::vector<long> padding, offset;
+    if (_padding != Py_None)
+      cgpt_convert(_padding, padding);
+    if (_offset != Py_None)
+      cgpt_convert(_offset, offset);
+
     ASSERT(PyMemoryView_Check(_device_buffer));
     Py_buffer* buf = PyMemoryView_GET_BUFFER(_device_buffer);
     ASSERT(PyBuffer_IsContiguous(buf,'C'));
     void* ptr = buf->buf;
     long size = buf->len;
 
-    dst[0]->transfer_scalar_device_buffer(dst, n_virtual, r, ptr, size, exp);
+    dst[0]->transfer_scalar_device_buffer(dst, n_virtual, r, ptr, size, padding, offset, exp);
     return PyLong_FromLong(0);
   });

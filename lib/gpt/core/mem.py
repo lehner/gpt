@@ -17,7 +17,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import resource, gpt, cgpt, os
-import numpy as np
 
 
 class accelerator:
@@ -135,90 +134,3 @@ def mem_report(details=True, after_time=0):
     gpt.message(
         "===================================================================================================================================="
     )
-
-
-class accelerator_buffer_view:
-    op_N = 0
-    op_T = 1
-    op_C = 2
-
-    def __init__(self, buffer, idx, op=op_N):
-        self.buffer = buffer
-        self.idx = idx
-        self.op = op
-
-    @property
-    def T(self):
-        return accelerator_buffer_view(self.buffer, self.idx, self.op ^ self.op_T)
-
-    @property
-    def H(self):
-        return accelerator_buffer_view(self.buffer, self.idx, self.op ^ (self.op_T | self.op_C))
-
-
-class accelerator_buffer:
-    def __init__(self, nbytes=None, shape=None, dtype=None):
-
-        if isinstance(nbytes, accelerator_buffer):
-            self.view = nbytes.view
-            self.shape = nbytes.shape
-            self.dtype = nbytes.dtype
-            return
-
-        if nbytes is None:
-            nbytes = self.calculate_size(shape, dtype)
-
-        assert nbytes % 4 == 0
-        self.view = cgpt.create_device_memory_view(nbytes)
-        if dtype is None:
-            dtype = np.int8
-            shape = (len(self.view),)
-        self.shape = shape
-        self.dtype = dtype
-
-    def calculate_size(self, shape, dtype):
-        sites = int(np.prod(shape))
-        if dtype is np.complex64:
-            sites *= 8
-        elif dtype is np.complex128:
-            sites *= 16
-        elif dtype is np.int8:
-            sites *= 1
-        else:
-            assert False
-        return sites
-
-    def merged_axes(self, axes0, axes1):
-        if axes0 < 0:
-            axes0 += len(self.shape)
-        if axes1 < 0:
-            axes1 += len(self.shape)
-        shape = list(self.shape)
-        shape = tuple(
-            shape[0:axes0] + [int(np.prod(shape[axes0 : axes1 + 1]))] + shape[axes1 + 1 :]
-        )
-        copy = accelerator_buffer(self)
-        copy.shape = shape
-        return copy
-
-    def __getitem__(self, idx):
-        return accelerator_buffer_view(self, idx)
-
-    def check_size(self):
-        if self.shape is not None and self.dtype is not None:
-            assert len(self.view) == self.calculate_size(self.shape, self.dtype)
-
-    def __str__(self):
-        return f"accelerator_buffer({len(self.view)}, {self.shape}, {self.dtype.__name__})"
-
-    def to_array(self):
-        self.check_size()
-
-        array = cgpt.ndarray(self.shape, self.dtype)
-        cgpt.transfer_array_device_memory_view(array, self.view, True)
-
-        return array
-
-    def from_array(self, array):
-        cgpt.transfer_array_device_memory_view(array, self.view, False)
-        return self

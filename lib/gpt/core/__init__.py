@@ -98,7 +98,8 @@ from gpt.core.coordinates import (
     correlate,
 )
 from gpt.core.random import random, sha256
-from gpt.core.mem import mem_info, mem_report, accelerator, host, accelerator_buffer
+from gpt.core.mem import mem_info, mem_report, accelerator, host
+from gpt.core.accelerator_buffer import accelerator_buffer
 from gpt.core.merge import *
 from gpt.core.split import *
 import gpt.core.domain
