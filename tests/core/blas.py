@@ -39,6 +39,7 @@ def test_mm_blas(nc, nrhs, precision):
 
     bulkB = bB.bulk(cB, margin=margin)
 
+    # TODO: add points to halo_exchange to minimize data
     halo_exchange = bB.halo_exchange(grid, margin=margin)
 
     halo_exchange()

@@ -82,19 +82,25 @@ for precision in [g.single, g.double]:
     pB = g.pack(rng.cnormal([g.vcomplex(grid, nbasis) for _ in range(n_rhs)]))
     pC = g.pack(rng.cnormal([g.vcomplex(grid, nbasis) for _ in range(n_rhs)]))
 
+    margin=[1,1,1,1]
     bA = pA.to_accelerator_buffer()
-    bB = pB.to_accelerator_buffer()
+    bB = pB.to_accelerator_buffer(margin=margin)
     bC = pC.to_accelerator_buffer()
 
     bA = bA.merged_axes(-3, -2)
 
-    idx = pC.buffer_coordinate_indices()
+    idxA = bA.indices(range(4))
+    idxB = bB.indices(range(4))[bB.bulk(bB.coordinates(range(4)),margin=margin)]
 
-    j = g.blas().gemm(1.0, bA[idx], bB[idx].T, 0.0, bC[idx].T)
+    # TODO: add points to halo_exchange to minimize data
+    halo_exchange = bB.halo_exchange(grid, margin=margin)
+
+    j = g.blas().gemm(1.0, bA[idxA], bB[idxB].T, 0.0, bC[idxA].T)
 
     # warmup
     for n in range(5):
-        pB.to_accelerator_buffer(bB)
+        pB.to_accelerator_buffer(bB,margin=[1,1,1,1])
+        halo_exchange()
         for p in range(9):
             j()
         pC.from_accelerator_buffer(bC)
@@ -103,7 +109,9 @@ for precision in [g.single, g.double]:
     t0 = g.time()
     for n in range(N):
         t("to_accelerator_buffer")
-        pB.to_accelerator_buffer(bB)
+        pB.to_accelerator_buffer(bB,margin=[1,1,1,1])
+        t("halo exchange")
+        halo_exchange()
         t("gemm")
         for p in range(9):
             j()
