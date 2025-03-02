@@ -39,14 +39,14 @@ for precision in [g.single, g.double]:
     rng.cnormal(vcoarse)
 
     otype = g.ot_vector_complex_additive_group(nbasis)
-    cop = g.block.matrix_operator.compiled(
-        {points[i] : mcoarse[i] for i in range(npoints)}
-    )
+    cop = g.block.matrix_operator.compiled({points[i]: mcoarse[i] for i in range(npoints)})
 
     # Flops
     flops_per_matrix_vector_multiply = nbasis * (nbasis * 6 + (nbasis - 1) * 2)
     flops_per_vector_add = nbasis * 2
-    flops_per_site = len(points) * flops_per_matrix_vector_multiply + (len(points) - 1) * flops_per_vector_add
+    flops_per_site = (
+        len(points) * flops_per_matrix_vector_multiply + (len(points) - 1) * flops_per_vector_add
+    )
     flops = flops_per_site * vcoarse[0].grid.gsites * N * n_rhs
     nbytes = (
         (len(points) * nbasis**2 * 2 + 2 * nbasis * 2)
@@ -63,6 +63,10 @@ for precision in [g.single, g.double]:
     # Time
     t0 = g.time()
     for n in range(N):
+        if n == 10:
+            c.profile_trigger(1)
+        elif n == 40:
+            c.profile_trigger(0)
         cop(vdst, vcoarse)
     t1 = g.time()
 
@@ -72,66 +76,7 @@ for precision in [g.single, g.double]:
     g.message(
         f"""
 {N} applications of {nbasis} x {nbasis}, 9-point operator
-    Time to complete            : {t1-t0:.2g} s
+    Time to complete            : {t1 - t0:.2g} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
-    )
-
-    
-    # now time components of a coarse-grid operator using blas
-    pA = g.pack(rng.cnormal(g.mcomplex(grid, nbasis)))
-    pB = g.pack(rng.cnormal([g.vcomplex(grid, nbasis) for _ in range(n_rhs)]))
-    pC = g.pack(rng.cnormal([g.vcomplex(grid, nbasis) for _ in range(n_rhs)]))
-
-    margin=[1,1,1,1]
-    bA = pA.to_accelerator_buffer()
-    bB = pB.to_accelerator_buffer(margin=margin)
-    bC = pC.to_accelerator_buffer()
-
-    bA = bA.merged_axes(-3, -2)
-
-    idxA = bA.indices(range(4))
-    idxB = bB.indices(range(4))[bB.bulk(bB.coordinates(range(4)),margin=margin)]
-
-    halo_exchange = bB.halo_exchange(grid, margin=margin, max_point_sqr=1)
-
-    j = g.blas().gemm(1.0, bA[idxA], bB[idxB].T, 0.0, bC[idxA].T)
-
-    # warmup
-    for n in range(5):
-        pB.to_accelerator_buffer(bB,margin=[1,1,1,1])
-        halo_exchange()
-        for p in range(9):
-            j()
-        pC.from_accelerator_buffer(bC)
-
-    t = g.timer()
-    t0 = g.time()
-    for n in range(N):
-        if n == 10:
-            c.profile_trigger(1)
-        elif n == 40:
-            c.profile_trigger(0)
-        t("to_accelerator_buffer")
-        pB.to_accelerator_buffer(bB,margin=[1,1,1,1])
-        t("halo exchange")
-        halo_exchange()
-        t("gemm")
-        for p in range(9):
-            j()
-        t("from_accelerator_buffer")
-        pC.from_accelerator_buffer(bC)
-    t()
-    t1 = g.time()
-
-    GFlopsPerSec = flops / (t1 - t0) / 1e9
-    GBPerSec = nbytes / (t1 - t0) / 1e9
-    g.message(
-        f"""
-{N} applications of {nbasis} x {nbasis}, 9-point operator, blas version
-    Time to complete            : {t1-t0:.2g} s
-    Total performance           : {GFlopsPerSec:.2f} GFlops/s
-    Effective memory bandwidth  : {GBPerSec:.2f} GB/s
-
-{t}"""
     )

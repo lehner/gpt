@@ -31,13 +31,14 @@ def margin_to_padding_offset(margin, top_margin, bottom_margin):
 
 
 class pack:
-    def __init__(self, lattices):
+    def __init__(self, lattices, fast=False):
         self.lattices = g.util.to_list(lattices)
         self.otype = self.lattices[0].otype
         self.grid = self.lattices[0].grid
         self.words = int(np.prod(self.otype.shape))
-        assert all([l.otype.__name__ == self.otype.__name__ for l in self.lattices])
-        assert all([l.grid.obj == self.grid.obj for l in self.lattices])
+        if not fast:
+            assert all([l.otype.__name__ == self.otype.__name__ for l in self.lattices])
+            assert all([l.grid.obj == self.grid.obj for l in self.lattices])
 
     def rank_bytes(self):
         return sum([l.rank_bytes() for l in self.lattices])

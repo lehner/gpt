@@ -19,6 +19,8 @@
 import gpt as g
 import numpy as np
 from gpt.params import params_convention
+import gpt.core.block.implementation_stencil as implementation_stencil
+import gpt.core.block.implementation_blas as implementation_blas
 
 
 def reference_operator(points):
@@ -33,70 +35,6 @@ def reference_operator(points):
                 assert dst[i].checkerboard() == src_i.checkerboard()
                 assert points[p].checkerboard() == src_i.checkerboard()
                 dst[i] += points[p] * src_i
-
-    return g.matrix_operator(_mat, accept_list=(True, True))
-
-
-def create_stencil_operator_n_rhs(points, vector_parity, n_rhs, target_checkerboard):
-
-    # get vector type
-    vector_type = None
-    for p in points:
-        vector_type = points[p].otype.vector_type
-        grid = points[p].grid
-        break
-    assert vector_type is not None
-    nbasis = vector_type.shape[0]
-    npoints = len(points)
-    lpoints = list(points.keys())
-    mcoarse = [points[lpoints[ip]] for ip in range(npoints)]
-    vcoarse = [g.vcomplex(grid, nbasis) for _ in range(n_rhs)]
-    nbasis_blocks = len(vcoarse[0].v_obj)
-
-    # identify zero point
-    zero_point = None
-    for ip in range(npoints):
-        if sum([x**2 for x in lpoints[ip]]) == 0:
-            zero_point = ip
-    if zero_point is None:
-        lpoints.append(tuple([0] * grid.nd))
-        zero_point = npoints
-
-    # create stencil
-    code = []
-    for i in range(n_rhs):
-        ioff = nbasis_blocks * i
-        for iblock in range(nbasis_blocks):
-            for jblock in range(nbasis_blocks):
-                matrix_index = nbasis_blocks * jblock + iblock
-                for ip in range(npoints):
-                    code.append(
-                        (
-                            iblock + ioff,  # target
-                            nbasis_blocks * n_rhs + jblock + ioff,  # source
-                            ip,  # source point
-                            -1 if jblock == 0 and ip == 0 else iblock + ioff,  # accumulate
-                            1.0,
-                            [(nbasis_blocks**2 * ip + matrix_index, zero_point, 0)],
-                        )
-                    )
-    st = g.stencil.matrix_vector(
-        mcoarse[0],
-        vcoarse[0],
-        lpoints,
-        code,
-        len(code) // nbasis_blocks // n_rhs,
-        vector_parity=vector_parity,
-    )
-    st.data_access_hints(
-        list(range(n_rhs)), list(range(n_rhs, 2 * n_rhs)), list(range(len(lpoints)))
-    )
-
-    def _mat(dst, src):
-        assert len(src) == n_rhs
-        st(mcoarse, dst + src)
-        for d in dst:
-            d.checkerboard(target_checkerboard)
 
     return g.matrix_operator(_mat, accept_list=(True, True))
 
@@ -132,7 +70,14 @@ def create_stencil_operator(points, vector_parity, target_checkerboard):
             n_rhs = len(src)
             key = (n_rhs, tag)
             if key not in cache:
-                cache[key] = create_stencil_operator_n_rhs(get_points(), ip, n_rhs, ocb)
+                if grid.cb.n == 2:
+                    cache[key] = implementation_stencil.create_stencil_operator_n_rhs(
+                        get_points(), ip, n_rhs, ocb
+                    )
+                else:
+                    cache[key] = implementation_blas.create_stencil_operator_n_rhs(
+                        get_points(), n_rhs
+                    )
 
             if verbose:
                 g.message(f"Call compiled_stencil_operator with {n_rhs} right-hand sides")
@@ -186,7 +131,7 @@ def create(coarse_matrix, points, nblock):
 
     if nblock is None:
         nblock = 8
-        
+
     # src_i = exp(i x.point_i 2pi/l)
     # dst_i = matrix_j exp(i (x+point_j).point_i 2pi/l)
     # src_i.dst_i = matrix_j exp(i (x+point_j).point_i 2pi/l) exp(-i x.point_i 2pi/l)
@@ -250,8 +195,10 @@ def create(coarse_matrix, points, nblock):
         for ip in range(0, npoints, nblock):
             i0 = ip
             i1 = min(npoints, i0 + nblock)
-            
-            cm = g(coarse_matrix * g.expr([g(point_masks[ipi] * src_mask[i]) for ipi in range(i0, i1)]))
+
+            cm = g(
+                coarse_matrix * g.expr([g(point_masks[ipi] * src_mask[i]) for ipi in range(i0, i1)])
+            )
 
             for ipi in range(i0, i1):
                 srcdag_mat_src_p.append(g(g.adj(point_masks[ipi]) * cm[ipi - i0]))
