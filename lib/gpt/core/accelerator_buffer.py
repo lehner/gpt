@@ -147,7 +147,7 @@ class accelerator_buffer:
 
         return np.all(np.logical_and(coordinates >= top, coordinates <= bottom), axis=1)
 
-    def halo_exchange(self, grid, margin):
+    def halo_exchange(self, grid, margin, max_point_sqr=None):
         nd = len(margin)
         L = np.array([self.shape[i] - 2 * margin[i] for i in range(nd)], dtype=np.int64)
         idx = self.indices(range(nd))
@@ -177,14 +177,27 @@ class accelerator_buffer:
         for dim in range(nd):
             # get lower/upper planes
             t("mask")
-            lower_margin = idx[lc[:, dim] < margin[dim]]
+            ortho_mask = np.full(shape=idx.shape, fill_value=True)
+            if max_point_sqr == 1:
+                for odim in range(nd):
+                    if odim == dim:
+                        continue
+                    ortho_mask = np.logical_and(ortho_mask, lc[:, odim] >= margin[odim])
+                    ortho_mask = np.logical_and(ortho_mask, lc[:, odim] < margin[odim] + L[odim])
+            lower_margin = idx[np.logical_and(ortho_mask, lc[:, dim] < margin[dim])]
             lower_bulk = idx[
-                np.logical_and(margin[dim] <= lc[:, dim], lc[:, dim] < 2 * margin[dim])
+                np.logical_and(
+                    ortho_mask,
+                    np.logical_and(margin[dim] <= lc[:, dim], lc[:, dim] < 2 * margin[dim]),
+                )
             ]
 
-            upper_margin = idx[lc[:, dim] >= (L[dim] + margin[dim])]
+            upper_margin = idx[np.logical_and(ortho_mask, lc[:, dim] >= (L[dim] + margin[dim]))]
             upper_bulk = idx[
-                np.logical_and(lc[:, dim] < (L[dim] + margin[dim]), lc[:, dim] >= L[dim])
+                np.logical_and(
+                    ortho_mask,
+                    np.logical_and(lc[:, dim] < (L[dim] + margin[dim]), lc[:, dim] >= L[dim]),
+                )
             ]
 
             processor_coor_minus = np.copy(processor_coor)

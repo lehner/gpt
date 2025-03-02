@@ -93,8 +93,7 @@ for precision in [g.single, g.double]:
     idxA = bA.indices(range(4))
     idxB = bB.indices(range(4))[bB.bulk(bB.coordinates(range(4)),margin=margin)]
 
-    # TODO: add points to halo_exchange to minimize data
-    halo_exchange = bB.halo_exchange(grid, margin=margin)
+    halo_exchange = bB.halo_exchange(grid, margin=margin, max_point_sqr=1)
 
     j = g.blas().gemm(1.0, bA[idxA], bB[idxB].T, 0.0, bC[idxA].T)
 
