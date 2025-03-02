@@ -3,6 +3,7 @@
 # Authors: Christoph Lehner 2025
 #
 import gpt as g
+import cgpt as c
 
 g.default.set_verbose("random", False)
 rng = g.random("benchmark", "vectorized_ranlux24_24_64")
@@ -108,6 +109,10 @@ for precision in [g.single, g.double]:
     t = g.timer()
     t0 = g.time()
     for n in range(N):
+        if n == 10:
+            c.profile_trigger(1)
+        elif n == 40:
+            c.profile_trigger(0)
         t("to_accelerator_buffer")
         pB.to_accelerator_buffer(bB,margin=[1,1,1,1])
         t("halo exchange")

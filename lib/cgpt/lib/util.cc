@@ -18,6 +18,11 @@
 */
 #include "lib.h"
 
+#ifdef GRID_CUDA
+#include <cuda_profiler_api.h>
+#endif
+
+
 EXPORT(util_ferm2prop,{
     
     void* _ferm,* _prop;
@@ -236,5 +241,25 @@ EXPORT(transfer_array_device_memory_view,{
       acceleratorCopyToDevice(data_array, data_dmv, size_dmv);
     }
 
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(profile_trigger,{
+    
+    long start;
+    if (!PyArg_ParseTuple(args, "l", &start)) {
+      return NULL;
+    }
+
+    if (start) {
+#ifdef GRID_CUDA
+      cudaProfilerStart();
+#endif
+    } else {
+#ifdef GRID_CUDA
+      cudaProfilerStop();
+#endif
+    }
+    
     return PyLong_FromLong(0);
   });
