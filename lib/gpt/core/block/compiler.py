@@ -21,22 +21,7 @@ import numpy as np
 from gpt.params import params_convention
 import gpt.core.block.implementation_stencil as implementation_stencil
 import gpt.core.block.implementation_blas as implementation_blas
-
-
-def reference_operator(points):
-    def _mat(dst, src):
-        for i in range(len(src)):
-            dst[i][:] = 0
-            for p in points:
-                src_i = src[i]
-                for mu in range(len(p)):
-                    if p[mu] != 0:
-                        src_i = g.cshift(src_i, mu, p[mu])
-                assert dst[i].checkerboard() == src_i.checkerboard()
-                assert points[p].checkerboard() == src_i.checkerboard()
-                dst[i] += points[p] * src_i
-
-    return g.matrix_operator(_mat, accept_list=(True, True))
+import gpt.core.block.implementation_reference as implementation_reference
 
 
 def adj_points(points):
@@ -51,7 +36,7 @@ def adj_points(points):
     return ret
 
 
-def create_stencil_operator(points, vector_parity, target_checkerboard):
+def create_stencil_operator(points, vector_parity, target_checkerboard, implementation):
     cache = {}
 
     grid = None
@@ -65,19 +50,31 @@ def create_stencil_operator(points, vector_parity, target_checkerboard):
 
     vector_space = g.vector_space.explicit_grid_otype_checkerboard(grid, otype, target_checkerboard)
 
+    # select implementation
+    if implementation is None:
+        # default is blas
+        implementation = "blas"
+
+    # blas so far does not exist on checkerboarded grids, fall back to stencil
+    if grid.cb.n == 2:
+        if implementation == "blas":
+            implementation = "stencil"
+
+    # selection map
+    implementation_map = {
+        "stencil": implementation_stencil,
+        "reference": implementation_reference,
+        "blas": implementation_blas,
+    }
+
     def delayed_matrix(get_points, tag, ip, ocb):
         def _mat(dst, src):
             n_rhs = len(src)
             key = (n_rhs, tag)
             if key not in cache:
-                if grid.cb.n == 2:
-                    cache[key] = implementation_stencil.create_stencil_operator_n_rhs(
-                        get_points(), ip, n_rhs, ocb
-                    )
-                else:
-                    cache[key] = implementation_blas.create_stencil_operator_n_rhs(
-                        get_points(), n_rhs
-                    )
+                cache[key] = implementation_map[implementation].create_stencil_operator_n_rhs(
+                    get_points(), ip, n_rhs, ocb
+                )
 
             if verbose:
                 g.message(f"Call compiled_stencil_operator with {n_rhs} right-hand sides")

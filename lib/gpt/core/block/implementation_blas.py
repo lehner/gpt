@@ -19,7 +19,7 @@
 import gpt as g
 
 
-def create_stencil_operator_n_rhs(points, n_rhs):
+def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb):
 
     # get vector type
     vector_type = None

@@ -8,23 +8,33 @@ import cgpt as c
 g.default.set_verbose("random", False)
 rng = g.random("benchmark", "vectorized_ranlux24_24_64")
 
-evec = [(1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)]
-nevec = [tuple([-x for x in y]) for y in evec]
-points = [(0, 0, 0, 0)] + evec + nevec
+max_point_sqr = g.default.get_int("--max_point_sqr", 1)
+
+points = [
+    (x, y, z, t)
+    for x in range(-1, 2)
+    for y in range(-1, 2)
+    for z in range(-1, 2)
+    for t in range(-1, 2)
+    if x**2 + y**2 + z**2 + t**2 <= max_point_sqr
+]
 npoints = len(points)
+
+N = g.default.get_int("--N", 1000)
+n_rhs = g.default.get_int("--n_rhs", 12)
+implementation = g.default.get("--implementation", None)
 
 for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
-    N = g.default.get_int("--N", 1000)
-    n_rhs = g.default.get_int("--n_rhs", 12)
     g.message(
         f"""
 
 
-    9-point coarse operator with
-    fdimensions  : {grid.fdimensions}
-    n_rhs        : {n_rhs}
-    precision    : {precision.__name__}
+    {npoints}-point coarse operator with
+    fdimensions     : {grid.fdimensions}
+    n_rhs           : {n_rhs}
+    precision       : {precision.__name__}
+    implementation  : {"default" if implementation is None else implementation}
 """
     )
 
@@ -39,22 +49,35 @@ for precision in [g.single, g.double]:
     rng.cnormal(vcoarse)
 
     otype = g.ot_vector_complex_additive_group(nbasis)
-    cop = g.block.matrix_operator.compiled({points[i]: mcoarse[i] for i in range(npoints)})
+    points_dictionary = {points[i]: mcoarse[i] for i in range(npoints)}
+    cop = g.block.matrix_operator.compiled(points_dictionary, implementation=implementation)
+    rcop = g.block.matrix_operator.compiled(points_dictionary, implementation="reference")
 
     # Flops
     flops_per_matrix_vector_multiply = nbasis * (nbasis * 6 + (nbasis - 1) * 2)
     flops_per_vector_add = nbasis * 2
     flops_per_site = (
-        len(points) * flops_per_matrix_vector_multiply + (len(points) - 1) * flops_per_vector_add
+        npoints * flops_per_matrix_vector_multiply + (npoints - 1) * flops_per_vector_add
     )
     flops = flops_per_site * vcoarse[0].grid.gsites * N * n_rhs
     nbytes = (
-        (len(points) * nbasis**2 * 2 + 2 * nbasis * 2)
+        (npoints * nbasis**2 * 2 + 2 * nbasis * 2)
         * precision.nbytes
         * vcoarse[0].grid.gsites
         * N
         * n_rhs
     )
+
+    # Test
+    vref = g.copy(vdst)
+    cop(vdst, vcoarse)
+    rcop(vref, vcoarse)
+
+    for i in range(n_rhs):
+        eps = (g.norm2(vdst[i] - vref[i]) / g.norm2(vref[i])) ** 0.5
+        eps_ref = grid.precision.eps
+        g.message(f"Test implementation: {eps} {eps_ref}")
+        assert eps < eps_ref * 10
 
     # Warmup
     for n in range(5):
@@ -75,7 +98,7 @@ for precision in [g.single, g.double]:
     GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""
-{N} applications of {nbasis} x {nbasis}, 9-point operator
+{N} applications of {nbasis} x {nbasis}, {npoints}-point operator
     Time to complete            : {t1 - t0:.2g} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""

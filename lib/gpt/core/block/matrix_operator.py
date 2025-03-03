@@ -23,8 +23,9 @@ import numpy as np
 
 
 class compiled(matrix_operator):
-    def __init__(self, points):
+    def __init__(self, points, implementation=None):
         self.points = points
+        self.implementation = implementation
         for p in points:
             grid = points[p].grid
             otype = points[p].otype.vector_type
@@ -32,9 +33,9 @@ class compiled(matrix_operator):
         self.grid = grid
 
         if self.grid.cb.n == 1:
-            self.M = compiler.create_stencil_operator(points, 0, gpt.none)
+            self.M = compiler.create_stencil_operator(points, 0, gpt.none, self.implementation)
         else:
-            self.M = compiler.create_stencil_operator(points, 0, gpt.even)
+            self.M = compiler.create_stencil_operator(points, 0, gpt.even, self.implementation)
 
         super().__init__(
             mat=self.M.mat,
@@ -46,16 +47,22 @@ class compiled(matrix_operator):
         assert self.grid.cb.n == 1
 
         Mee = compiler.create_stencil_operator(
-            compiler.project_points_parity(self.points, 0, gpt.even), 0, gpt.even
+            compiler.project_points_parity(self.points, 0, gpt.even),
+            0,
+            gpt.even,
+            self.implementation,
         )
         Moo = compiler.create_stencil_operator(
-            compiler.project_points_parity(self.points, 0, gpt.odd), 1, gpt.odd
+            compiler.project_points_parity(self.points, 0, gpt.odd), 1, gpt.odd, self.implementation
         )
         Meo = compiler.create_stencil_operator(
-            compiler.project_points_parity(self.points, 1, gpt.even), 1, gpt.even
+            compiler.project_points_parity(self.points, 1, gpt.even),
+            1,
+            gpt.even,
+            self.implementation,
         )
         Moe = compiler.create_stencil_operator(
-            compiler.project_points_parity(self.points, 1, gpt.odd), 0, gpt.odd
+            compiler.project_points_parity(self.points, 1, gpt.odd), 0, gpt.odd, self.implementation
         )
         grid_eo = self.grid.checkerboarded(gpt.redblack)
 
@@ -149,22 +156,25 @@ class projected(matrix_operator):
         points = {p: gpt.mcomplex(self.map.coarse_grid, len(self.map.basis)) for p in min_lpoints}
         compiler.create(self, points, nblock=nblock)
 
+        # get default implementation
         op = compiled(points)
 
-        # test stencil implementation
+        # test implementation
         if tolerance is not None:
             test = self.vector_space[1].lattice()
             gpt.default.push_verbose("random", False)
             gpt.random("test").cnormal(test)
             gpt.default.pop_verbose()
 
+            # get reference implementation
+            rop = compiled(points, implementation="reference")
+
+            # test against reference matrix to make sure implementation is correct
             eps2_ref = tolerance
-            rop = compiler.reference_operator(points)
             eps2 = gpt.norm2(rop * test - op * test) / gpt.norm2(test)
             assert eps2 < eps2_ref
 
             # test against original matrix to make sure that points are correct
-            rop = compiler.reference_operator(points)
             eps2 = gpt.norm2(self * test - op * test) / gpt.norm2(test)
             if eps2 > eps2_ref:
                 raise Exception(
