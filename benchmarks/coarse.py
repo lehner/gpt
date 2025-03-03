@@ -73,11 +73,10 @@ for precision in [g.single, g.double]:
     cop(vdst, vcoarse)
     rcop(vref, vcoarse)
 
-    for i in range(n_rhs):
-        eps = (g.norm2(vdst[i] - vref[i]) / g.norm2(vref[i])) ** 0.5
-        eps_ref = grid.precision.eps
-        g.message(f"Test implementation: {eps} {eps_ref}")
-        assert eps < eps_ref * 10
+    eps = (sum([g.norm2(vdst[i] - vref[i]) for i in range(n_rhs)]) / sum([g.norm2(vref[i]) for i in range(n_rhs)])) ** 0.5
+    eps_ref = grid.precision.eps * 10
+    g.message(f"Test implementation: {eps}")
+    assert eps < eps_ref
 
     # Warmup
     for n in range(5):

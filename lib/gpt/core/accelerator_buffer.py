@@ -157,20 +157,40 @@ class accelerator_buffer:
         processor_stride = np.array([1] + list(np.cumprod(mpi[:-1])), dtype=np.int64)
         processor_coor = np.array(list(reversed(grid.processor_coor)), dtype=np.int64)
 
+        G = L * mpi
+
         plan = gpt.copy_plan(self, self)
 
         my_rank = grid.processor
 
         block_size = self.calculate_size(self.shape[nd:], dtype=self.dtype)
 
-        def _mk(rank, idx):
+        lcstride = np.array(list(reversed([1] + list(np.cumprod(list(reversed(self.shape[0:nd]))[0:-1])))), dtype=np.int64)
+
+        # assert np.linalg.norm(np.sum(lcstride * lc, axis=1) - idx) == 0
+
+        def _mk_local(idx):
             dst = np.zeros(shape=(len(idx), 4), dtype=np.int64)
-            dst[:, 0] = rank
+            dst[:, 0] = my_rank
             # dst[:,1] = 0
             dst[:, 2] = idx * block_size
             dst[:, 3] = block_size
             return gpt.global_memory_view(grid, dst)
 
+        def _mk_remote(idx):
+            gc = np.mod(lc[idx] - margin + processor_coor * L + G, G)
+            mpc = gc // L
+            ranks = mpc @ processor_stride
+            mlc = gc - mpc * L + margin
+            midx = np.sum(lcstride * mlc, axis=1)
+
+            dst = np.zeros(shape=(len(idx), 4), dtype=np.int64)
+            dst[:, 0] = ranks
+            # dst[:,1] = 0
+            dst[:, 2] = midx * block_size
+            dst[:, 3] = block_size
+            return gpt.global_memory_view(grid, dst)
+            
         assert my_rank == processor_stride @ processor_coor
 
         t = gpt.timer("create halo exchange")
@@ -185,35 +205,14 @@ class accelerator_buffer:
                     ortho_mask = np.logical_and(ortho_mask, lc[:, odim] >= margin[odim])
                     ortho_mask = np.logical_and(ortho_mask, lc[:, odim] < margin[odim] + L[odim])
             lower_margin = idx[np.logical_and(ortho_mask, lc[:, dim] < margin[dim])]
-            lower_bulk = idx[
-                np.logical_and(
-                    ortho_mask,
-                    np.logical_and(margin[dim] <= lc[:, dim], lc[:, dim] < 2 * margin[dim]),
-                )
-            ]
-
             upper_margin = idx[np.logical_and(ortho_mask, lc[:, dim] >= (L[dim] + margin[dim]))]
-            upper_bulk = idx[
-                np.logical_and(
-                    ortho_mask,
-                    np.logical_and(lc[:, dim] < (L[dim] + margin[dim]), lc[:, dim] >= L[dim]),
-                )
-            ]
-
-            processor_coor_minus = np.copy(processor_coor)
-            processor_coor_minus[dim] = (processor_coor[dim] + mpi[dim] - 1) % mpi[dim]
-            processor_coor_plus = np.copy(processor_coor)
-            processor_coor_plus[dim] = (processor_coor[dim] + 1) % mpi[dim]
-
-            lower_rank = processor_stride @ processor_coor_plus
-            upper_rank = processor_stride @ processor_coor_minus
 
             t("plan view")
-            plan.destination += _mk(my_rank, lower_margin)
-            plan.source += _mk(lower_rank, upper_bulk)
+            plan.destination += _mk_local(lower_margin)
+            plan.source += _mk_remote(lower_margin)
 
-            plan.destination += _mk(my_rank, upper_margin)
-            plan.source += _mk(upper_rank, lower_bulk)
+            plan.destination += _mk_local(upper_margin)
+            plan.source += _mk_remote(upper_margin)
 
         t("plan create")
         plan = plan()
