@@ -143,12 +143,15 @@ def create(coarse_matrix, points, nblock):
     vector_type = None
     for p in points:
         vector_type = points[p].otype.vector_type
-        grid = points[p].grid
+        grid_orig = points[p].grid
         break
     assert vector_type is not None
     nbasis = vector_type.shape[0]
     npoints = len(points)
     lpoints = list(points.keys())
+
+    # algebra in double precision
+    grid = grid_orig.converted(g.double)
 
     # create point masks
     point_masks = [g.complex(grid) for i in range(npoints)]
@@ -189,12 +192,16 @@ def create(coarse_matrix, points, nblock):
     for i in range(nbasis):
         t("apply coarse")
         srcdag_mat_src_p = []
+        g.message(f"compile: {i} / {nbasis}")
         for ip in range(0, npoints, nblock):
             i0 = ip
             i1 = min(npoints, i0 + nblock)
 
-            cm = g(
-                coarse_matrix * g.expr([g(point_masks[ipi] * src_mask[i]) for ipi in range(i0, i1)])
+            cm = g.convert(
+                g(
+                    coarse_matrix * g.expr([g.convert(g(point_masks[ipi] * src_mask[i]), grid_orig.precision) for ipi in range(i0, i1)])
+                ),
+                g.double
             )
 
             for ipi in range(i0, i1):
@@ -206,7 +213,7 @@ def create(coarse_matrix, points, nblock):
         for ip in range(npoints):
             points[lpoints[ip]][
                 tuple([slice(None, None, None)] * (grid.nd + 1) + [i]), cache_left
-            ] = srcdag_mat_src_p[ip][:, cache_right]
+            ] = g.convert(srcdag_mat_src_p[ip], grid_orig.precision)[:, cache_right]
 
     t()
 
