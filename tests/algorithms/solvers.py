@@ -111,9 +111,28 @@ slv_dci_mp = w.propagator(
 # chebyshev
 slv_chebyshev = w.propagator(
     inv.chebyshev(
-        low=1.0, high=10, eps=1e-14, maxiter=1000
+        low=1.0, high=10, eps=1e-14, maxiter=12
     )  # for complex low and high need to be focal points of ellipsis
 )
+
+slv_chebyshev2 = w.propagator(
+    inv.relaxation(
+        g.algorithms.polynomial.chebyshev(low=1.0, high=10, order=11, func=lambda x: 1/x)
+    )
+)
+
+dst1 = g(slv_chebyshev * src)
+dst2 = g(slv_chebyshev2 * src)
+eps2 = g.norm2(dst1 - dst2) / g.norm2(dst1)
+g.message(f"Fixed-order chebyshev needs to be the same: {eps2}")
+assert eps2 < 1e-25
+
+slv_chebyshev = w.propagator(
+    inv.chebyshev(
+        low=1.0, high=10, eps=1e-14, maxiter=1000
+    )
+)
+
 
 # perform solves (reference)
 dst_cg = g.eval(slv_cg * src)
