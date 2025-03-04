@@ -23,7 +23,7 @@ grid = U[0].grid
 w = g.qcd.fermion.wilson_clover(
     U,
     {
-        "kappa": 0.13565,
+        "kappa": 0.12,
         "csw_r": 2.0171 / 2.0,  # for now test with very heavy quark
         "csw_t": 2.0171 / 2.0,
         "xi_0": 1,
@@ -37,6 +37,10 @@ w = g.qcd.fermion.wilson_clover(
 src = g.vspincolor(grid)
 src[:] = 0
 src[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
+
+# a = g.algorithms.eigen.arnoldi(Nmin=50, Nmax=500, Nstep=50, Nstop=30, resid=1e-5)
+# print(a(w, src))
+# sys.exit(0)
 
 # build solvers
 inv = g.algorithms.inverter
@@ -104,6 +108,13 @@ slv_dci_mp = w.propagator(
     )
 )
 
+# chebyshev
+slv_chebyshev = w.propagator(
+    inv.chebyshev(
+        low=1.0, high=10, eps=1e-14, maxiter=1000
+    )  # for complex low and high need to be focal points of ellipsis
+)
+
 # perform solves (reference)
 dst_cg = g.eval(slv_cg * src)
 g.message("CG finished")
@@ -123,6 +134,7 @@ def test(slv, name):
     assert eps2 < 5e-7
 
 
+test(slv_chebyshev, "Chebyshev")
 test(slv_cg_eo2_even, "CG eo2_even")
 test(slv_cg_eo1_even, "CG eo1_even")
 test(slv_cg_eo1_odd, "CG eo1_odd")
