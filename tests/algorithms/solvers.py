@@ -51,6 +51,8 @@ eo2_odd = g.qcd.fermion.preconditioner.eo2_ne(parity=g.odd)
 eo2_even = g.qcd.fermion.preconditioner.eo2_ne(parity=g.even)
 eo1_odd = g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd)
 eo1_even = g.qcd.fermion.preconditioner.eo1_ne(parity=g.even)
+eo3_odd = g.qcd.fermion.preconditioner.eo3_ne(parity=g.odd)
+eo3_even = g.qcd.fermion.preconditioner.eo3_ne(parity=g.even)
 # default
 eo2 = eo2_odd
 eo2_sp = eo2_odd
@@ -61,7 +63,7 @@ src_F[:] = 0
 src_F[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
 eo2_inv = inv_pc(eo2, ac(inv.cg({"eps": 1e-8, "maxiter": 500})))(w)
 dst_F = g(eo2_inv * src_F)
-for pc in [eo1_odd, eo1_even, eo2_odd, eo2_even]:
+for pc in [eo1_odd, eo1_even, eo2_odd, eo2_even, eo3_odd, eo3_even]:
     cg = inv.cg({"eps": 1e-7, "maxiter": 1000})
     gen_inv = inv_pc(pc, cg)(w)
     dst_gen = g.copy(dst_F)
@@ -75,6 +77,8 @@ slv_cg = w.propagator(inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 slv_cg_eo2_even = w.propagator(inv_pc(eo2_even, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 slv_cg_eo1_odd = w.propagator(inv_pc(eo1_odd, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 slv_cg_eo1_even = w.propagator(inv_pc(eo1_even, inv.cg({"eps": 1e-8, "maxiter": 1000})))
+slv_cg_eo3_even = w.propagator(inv_pc(eo3_even, inv.cg({"eps": 1e-8, "maxiter": 1000})))
+slv_cg_eo3_odd = w.propagator(inv_pc(eo3_odd, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 # other parity/pc
 slv_cg = w.propagator(inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 
@@ -117,7 +121,7 @@ slv_chebyshev = w.propagator(
 
 slv_chebyshev2 = w.propagator(
     inv.relaxation(
-        g.algorithms.polynomial.chebyshev(low=1.0, high=10, order=11, func=lambda x: 1/x)
+        g.algorithms.polynomial.chebyshev(low=1.0, high=10, order=11, func=lambda x: 1 / x)
     )
 )
 
@@ -127,11 +131,7 @@ eps2 = g.norm2(dst1 - dst2) / g.norm2(dst1)
 g.message(f"Fixed-order chebyshev needs to be the same: {eps2}")
 assert eps2 < 1e-25
 
-slv_chebyshev = w.propagator(
-    inv.chebyshev(
-        low=1.0, high=10, eps=1e-14, maxiter=1000
-    )
-)
+slv_chebyshev = w.propagator(inv.chebyshev(low=1.0, high=10, eps=1e-14, maxiter=1000))
 
 
 # perform solves (reference)
@@ -157,6 +157,8 @@ test(slv_chebyshev, "Chebyshev")
 test(slv_cg_eo2_even, "CG eo2_even")
 test(slv_cg_eo1_even, "CG eo1_even")
 test(slv_cg_eo1_odd, "CG eo1_odd")
+test(slv_cg_eo3_even, "CG eo3_even")
+test(slv_cg_eo3_odd, "CG eo3_odd")
 test(slv_dci, "Defect-correcting solver")
 test(slv_dci_eo, "Defect-correcting (eo)")
 test(slv_dci_mp, "Defect-correcting (mixed-precision)")
