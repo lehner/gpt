@@ -21,6 +21,7 @@ from gpt.algorithms.inverter.sequence import sequence
 from gpt.algorithms.inverter.deflate import deflate
 from gpt.algorithms.inverter.coarse_deflate import coarse_deflate
 from gpt.algorithms.inverter.cg import cg
+from gpt.algorithms.inverter.fcg import fcg
 from gpt.algorithms.inverter.relaxation import relaxation
 from gpt.algorithms.inverter.chebyshev import chebyshev
 from gpt.algorithms.inverter.block_cg import block_cg

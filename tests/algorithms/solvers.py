@@ -133,6 +133,14 @@ assert eps2 < 1e-25
 
 slv_chebyshev = w.propagator(inv.chebyshev(low=1.0, high=10, eps=1e-14, maxiter=1000))
 
+# flexible cg solver
+slv_fcg_cg = w.propagator(
+    inv_pc(eo2, inv.fcg(eps=1e-8, maxiter=100, restartlen=5, prec=inv.cg(eps=1e-8, maxiter=5)))
+)  # 10 iter
+
+slv_cg_cg = w.propagator(
+    inv_pc(eo2, inv.cg(eps=1e-8, maxiter=100, prec=inv.cg(eps=1e-8, maxiter=5)))
+)  # 12 iter
 
 # perform solves (reference)
 dst_cg = g.eval(slv_cg * src)
@@ -153,6 +161,8 @@ def test(slv, name):
     assert eps2 < 5e-7
 
 
+test(slv_fcg_cg, "FCG prec=CG")
+test(slv_cg_cg, "CG prec=CG")
 test(slv_chebyshev, "Chebyshev")
 test(slv_cg_eo2_even, "CG eo2_even")
 test(slv_cg_eo1_even, "CG eo1_even")
