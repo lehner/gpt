@@ -156,7 +156,15 @@ def create(coarse_matrix, points, nblock):
     # create point masks
     point_masks = [g.complex(grid) for i in range(npoints)]
     ppoints = []
-    L = grid.fdimensions
+    L = [2] * grid.nd
+    mL = [
+        np.max([lpoints[i][mu] for i in range(npoints)])
+        - np.min([lpoints[i][mu] for i in range(npoints)])
+        for mu in range(grid.nd)
+    ]
+    for i in range(grid.nd):
+        while L[i] < 2 * mL[i]:
+            L[i] *= 2
     for i in range(npoints):
         l = point_masks[i]
         l[:] = 1.0
@@ -199,9 +207,15 @@ def create(coarse_matrix, points, nblock):
 
             cm = g.convert(
                 g(
-                    coarse_matrix * g.expr([g.convert(g(point_masks[ipi] * src_mask[i]), grid_orig.precision) for ipi in range(i0, i1)])
+                    coarse_matrix
+                    * g.expr(
+                        [
+                            g.convert(g(point_masks[ipi] * src_mask[i]), grid_orig.precision)
+                            for ipi in range(i0, i1)
+                        ]
+                    )
                 ),
-                g.double
+                g.double,
             )
 
             for ipi in range(i0, i1):
