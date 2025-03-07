@@ -166,11 +166,6 @@ if False:
 MM = p.eo2_ne()(dwf_sp).Mpc
 cop = coarsen_operator_hdcg(bm, MM)
 
-#x=rng.cnormal(g.vspincolor(dwf_sp.F_grid_eo))
-#x.checkerboard(g.odd)
-#print(g.algorithms.eigen.power_iteration(eps=1e-3,maxiter=30)(MM, x))
-#sys.exit(0)
-                                     
 if not os.path.exists("coarse_deflate2.48I.60"):
     # cop spectrum to 1.86
     # MM to 4.6
@@ -203,12 +198,6 @@ if False:
         g.message(i, evals[i], evals2, eps22)
     sys.exit(0)
 
-MM = p.eo2_ne()(dwf_dp).Mpc
-
-x=rng.cnormal(g.vspincolor(dwf_dp.F_grid_eo))
-x.checkerboard(g.odd)
-x /= g.norm2(x) ** 0.5
-
 if False:
     x=rng.cnormal(g.vspincolor(dwf_sp.F_grid_eo))
     x.checkerboard(g.odd)
@@ -218,73 +207,15 @@ if False:
     cop = coarsen_operator_hdcg(bm, MM)
     g.message(g.algorithms.eigen.power_iteration(eps=1e-3,maxiter=50)(cop, v))
     sys.exit(0)
-#g.message("Coarse solve")
-#coarse_solver(cop)(v)
-#coarse_cg(cop)(v)
 
-g.default.push_verbose("cg_convergence", True)
-#smooth_solver = i.chebyshev(eps=1e-8, maxiter=60, low=0.5, high=5)
-smooth_solver = i.cg({"eps": 1e-8, "maxiter": 800})
 
-#i.cg(eps=1e-8, maxiter=1000,
-# hdcg_inner = i.fgmres(
-#     eps=1e-8, maxiter=1000, restartlen=5,
-#     prec=i.mixed_precision(
-#         i.sequence(
-#             i.coarse_grid(coarse_solver, bm, coarsen_operator_hdcg),
-#             smooth_solver,
-#         ),
-#         g.single,
-#         g.double
-#     )
-# )
+# prepare solve tests
+MM = p.eo2_ne()(dwf_dp).Mpc
 
-if False:
-    g.message("coarse_deflate, defect-correct")
-    hdcg_inner = i.defect_correcting(
-        i.mixed_precision(
-            i.sequence(
-                i.coarse_deflate(
-                    evec, bm.basis, evals
-                ),
-                i.cg({"eps": 1e-8, "maxiter": 100})
-            ),
-            g.single,
-            g.double
-        ),
-        eps=1e-8, maxiter=100
-    )
+x=rng.cnormal(g.vspincolor(dwf_dp.F_grid_eo))
+x.checkerboard(g.odd)
+x /= g.norm2(x) ** 0.5
 
-    hdcg_inner(MM)(x)
-
-if False:
-    # 206 outer iterations
-    g.message("coarse_deflate, fgmres")
-    g.default.set_verbose("cg_convergence", False)
-    xxx = i.sequence(
-        i.relaxation(i.cg({"eps": 1e-8, "maxiter": 12})),
-        i.relaxation(i.coarse_grid(
-            i.sequence(
-                i.deflate(evec, evals),
-                i.cg(eps=1e-6, maxiter=100)
-            ),
-            bm, coarsen_operator_hdcg
-        )),
-        i.relaxation(i.cg({"eps": 1e-8, "maxiter": 12}))
-    )
-    g.default.set_verbose("cg_convergence", True)
-    hdcg_inner = i.fgmres(
-        eps=1e-8, maxiter=1000, restartlen=30,
-    #hdcg_inner = i.cg(
-    #    eps=1e-8, maxiter=1000,
-        prec=i.mixed_precision(
-            xxx,
-            g.single,
-            g.double
-        ),
-    )
-
-    hdcg_inner(MM)(x)
 
 if True:
     g.message("coarse_deflate, fgmres")
@@ -313,172 +244,8 @@ if True:
         ),
     )
 
-    # 416 outer iterations with fgmres -> 3744 fine matrix
+    # 124 outer iterations with FGMRES and new setup -> 1116 fine-grid multiplies
     hdcg_inner(MM)(x)
-
-if False:
-    g.message("coarse_deflate, fgmres")
-    g.default.set_verbose("cg_convergence", False)
-    class shifted_operator:
-        def __init__(self, inner, shift):
-            self.inner = inner
-            self.shift = shift
-            
-        def __call__(self, matrix):
-            def _mat(dst, src):
-                for x in dst:
-                    x[:] = 0 # zero out guess
-                matrix(dst, src)
-                for i in range(len(src)):
-                    dst[i] += self.shift * src[i]
-                        
-            mat = g.matrix_operator(mat=_mat, accept_list=True)
-
-            return self.inner(mat)
-
-    xxx = i.sequence(
-        shifted_operator(i.cg({"eps": 1e-8, "maxiter": 12}), 0.0),
-        i.relaxation(i.coarse_grid(
-            i.sequence(
-                i.deflate(evec, evals),
-                i.cg(eps=0.04, maxiter=300)
-            ),
-            bm, coarsen_operator_hdcg
-        )),
-    )
-    g.default.set_verbose("cg_convergence", True)
-    #hdcg_inner = i.fgmres(
-    #    eps=1e-8, maxiter=1000, restartlen=30,
-    hdcg_inner = i.fcg(restartlen=3,
-        eps=1e-8, maxiter=1000,
-        prec=i.mixed_precision(
-            xxx,
-            g.single,
-            g.double
-        ),
-    )
-
-    # 256 outer iterations with fgmres
-    hdcg_inner(MM)(x)
-
-if False:
-    g.message("coarse_deflate, fgmres")
-    g.default.set_verbose("cg_convergence", False)
-    class shifted_operator:
-        def __init__(self, inner, shift):
-            self.inner = inner
-            self.shift = shift
-            
-        def __call__(self, matrix):
-            def _mat(dst, src):
-                matrix(dst, src)
-                for i in range(len(src)):
-                    dst[i] += self.shift * src[i]
-                        
-            mat = g.matrix_operator(mat=_mat, accept_list=True)
-
-            return self.inner(mat)
-
-    xxx = i.sequence(
-        #i.relaxation(shifted_operator(i.cg({"eps": 1e-8, "maxiter": 6}), 0.0)),
-        i.relaxation(i.coarse_grid(
-            i.sequence(
-                i.deflate(evec, evals),
-                i.cg(eps=0.04, maxiter=200)
-            ),
-            bm, coarsen_operator_hdcg
-        )),
-        i.relaxation(shifted_operator(i.cg({"eps": 1e-8, "maxiter": 12}), 0.0))
-    )
-    g.default.set_verbose("cg_convergence", True)
-    hdcg_inner = i.fgmres(
-        eps=1e-8, maxiter=1000, restartlen=40,
-    #hdcg_inner = i.fcg(
-    #    eps=1e-8, maxiter=1000, restartlen=3,
-        prec=i.mixed_precision(
-            xxx,
-            g.single,
-            g.double
-        ),
-    )
-
-    # 233 if coarse solve has maxiter=100
-    # 222 if coarse solve has maxiter=200
-    # TODO: need to replace fgmres by flexible_cg from peter's paper
-    hdcg_inner(MM)(x)
-
-if False:
-    g.message("Only coarse solve, no deflation")
-    hdcg_inner = i.mixed_precision(
-        i.sequence(
-            i.coarse_grid(
-                coarse_cg,
-                bm, coarsen_operator_hdcg
-            ),
-            smooth_solver,
-        ),
-        g.single,
-        g.double
-    )
-
-    hdcg_inner(MM)(x)
-
-if False:
-    g.message("With deflated coarse solve")
-    # Basis size of 60 was OK but only gave O(100) low mode vectors on 24ID ensemble
-    # check this again on 48I, lattice much finer; once I have O(2000) we should get good performance!
-    # right now the deflation gets all the benefit since only the deflated 96 low modes are in the subspace; nothing more to gain
-    
-    hdcg_inner = i.mixed_precision(
-        i.sequence(
-            i.coarse_grid(
-                i.sequence(
-                    i.deflate(evec, evals),
-                    coarse_cg
-                ),
-                bm, coarsen_operator_hdcg
-            ),
-            smooth_solver,
-        ),
-        g.single,
-        g.double
-    )
-    
-    hdcg_inner(MM)(x)
-
-if False:
-    g.message("Now with only coarse deflation")
-
-    hdcg_inner = i.mixed_precision(
-        i.sequence(
-            i.coarse_grid(
-                i.sequence(
-                    i.deflate(evec, evals),
-                    #coarse_cg
-                ),
-                bm, coarsen_operator_hdcg
-            ),
-            smooth_solver,
-        ),
-        g.single,
-        g.double
-    )
-
-    hdcg_inner(MM)(x)
-
-if False:
-    g.message("Now without coarse deflation")
-    hdcg_inner = i.mixed_precision(
-        smooth_solver,
-        g.single,
-        g.double
-    )
-    g.default.pop_verbose()
-    
-    hdcg_inner(MM)(x)
-    
-    g.barrier()
-
     
 sys.exit(0)
 
