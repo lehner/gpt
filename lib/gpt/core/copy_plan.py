@@ -96,10 +96,14 @@ class copy_plan_executer:
         dst = gpt.util.to_list(dst)
         src = gpt.util.to_list(src)
         if verbose_performance:
+            cgpt.timer_begin()
             t0 = gpt.time()
         cgpt.copy_execute_plan(self.obj, dst, src, self.lattice_view_location)
         if verbose_performance:
             t1 = gpt.time()
+            t_cgpt = gpt.timer("cgpt_copy_execute_plan", True)
+            t_cgpt += cgpt.timer_end()
+            gpt.message(t_cgpt)
             info = [a for v in self.info().values() for a in v.values()]
             blocks = sum([a["blocks"] for a in info])
             size = sum([a["size"] for a in info])
