@@ -20,7 +20,7 @@
 template<typename vobj>
 void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, long _from_n_virtual, long r,
 						void* ptr, long size, std::vector<long>& padding, std::vector<long>& offset,
-						bool exp) {
+						bool exp, long threads) {
 
   typedef typename vobj::scalar_object sobj;
   typedef typename vobj::scalar_type scalar_type;
@@ -108,21 +108,18 @@ void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, l
 
   size_t n_site_lat_a = nsite * n_lat * a_dim;
 
-  size_t simd_lanes = 1;
-  size_t target_simd_lanes = 32;
-  size_t lane_outer = word_line;
+  auto _stored_nt = acceleratorThreads();
+  //_stored_nt * sizeof(vComplexF) / sizeof(ComplexF)
+  acceleratorThreads(threads);
 
-  while (simd_lanes < target_simd_lanes && lane_outer % 2 == 0) {
-    lane_outer /= 2;
-    simd_lanes *= 2;
-  }
-
-  //std::cout << GridLogMessage << "simd_lanes = " << simd_lanes << " lane_outer = " << lane_outer << std::endl;
-  
   if (exp) {
-    accelerator_for(idx_site_lat_a_lane,n_site_lat_a*lane_outer,simd_lanes,{
-      size_t idx_site_lat_a = idx_site_lat_a_lane / lane_outer;
-      size_t idx_lane = idx_site_lat_a_lane % lane_outer;
+#ifdef GRID_HAS_ACCELERATOR
+    accelerator_for(idx_site_lat_a_lane,n_site_lat_a*word_line,1,{
+      size_t idx_site_lat_a = idx_site_lat_a_lane / word_line;
+      size_t idx_lane = idx_site_lat_a_lane % word_line;
+#else
+    accelerator_for(idx_site_lat_a,n_site_lat_a,1,{
+#endif
       
       size_t idx_site_lat = idx_site_lat_a / a_dim;
       size_t a = idx_site_lat_a % a_dim;
@@ -148,22 +145,25 @@ void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, l
 	  scalar_type* to = &to_v[line_idx * word_line];
 	  
 	  scalar_type stmp;
-#ifndef GRID_SIMT
-	  for (long w_fast=0;w_fast<simd_lanes;w_fast++) {
+#ifndef GRID_HAS_ACCELERATOR
+	  for (long w_fast=0;w_fast<word_line;w_fast++) {
 #else
-	  { long w_fast = acceleratorSIMTlane(simd_lanes);
+          { auto w_fast = idx_lane;
 #endif
-	    size_t w_fast_idx = w_fast + idx_lane * simd_lanes;
-	    stmp = getlane(from[w_fast_idx], from_lane);
-	    to[w_fast_idx] = stmp;
+	    stmp = getlane(from[w_fast], from_lane);
+	    to[w_fast] = stmp;
 	  }
 	}
       }
     });
   } else {
-    accelerator_for(idx_site_lat_a_lane,n_site_lat_a*lane_outer,simd_lanes,{
-      size_t idx_site_lat_a = idx_site_lat_a_lane / lane_outer;
-      size_t idx_lane = idx_site_lat_a_lane % lane_outer;
+#ifdef GRID_HAS_ACCELERATOR
+    accelerator_for(idx_site_lat_a_lane,n_site_lat_a*word_line,1,{
+      size_t idx_site_lat_a = idx_site_lat_a_lane / word_line;
+      size_t idx_lane = idx_site_lat_a_lane % word_line;
+#else
+    accelerator_for(idx_site_lat_a,n_site_lat_a,1,{
+#endif
 
       size_t idx_site_lat = idx_site_lat_a / a_dim;
       size_t a = idx_site_lat_a % a_dim;
@@ -189,19 +189,19 @@ void cgpt_lattice_transfer_scalar_device_buffer(PVector<Lattice<vobj>>& _from, l
 	  scalar_type* to = &to_v[line_idx * word_line];
 	  
 	  scalar_type stmp;
-#ifndef GRID_SIMT
-	  for (long w_fast=0;w_fast<simd_lanes;w_fast++) {
+#ifndef GRID_HAS_ACCELERATOR
+	  for (long w_fast=0;w_fast<word_line;w_fast++) {
 #else
-	  { long w_fast = acceleratorSIMTlane(simd_lanes);
+          { auto w_fast = idx_lane;
 #endif
-	    size_t w_fast_idx = w_fast + idx_lane * simd_lanes;
-	    stmp = to[w_fast_idx];
-	    putlane(from[w_fast_idx], stmp, from_lane);
+	    stmp = to[w_fast];
+	    putlane(from[w_fast], stmp, from_lane);
 	  }
 	}
       }
     });
   }
 
+  acceleratorThreads(_stored_nt);
   VECTOR_VIEW_CLOSE(_from_v);
 }

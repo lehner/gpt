@@ -210,8 +210,8 @@ EXPORT(lattice_get_checkerboard,{
 EXPORT(lattice_transfer_scalar_device_buffer,{
 
     PyObject* _device_buffer, *_dst, *_padding, *_offset;
-    long r, exp;
-    if (!PyArg_ParseTuple(args, "OOOOll", &_dst,&_device_buffer,&_padding,&_offset,&r,&exp)) {
+    long r, exp, threads;
+    if (!PyArg_ParseTuple(args, "OOOOlll", &_dst,&_device_buffer,&_padding,&_offset,&r,&exp,&threads)) {
       return NULL;
     }
 
@@ -231,6 +231,6 @@ EXPORT(lattice_transfer_scalar_device_buffer,{
     void* ptr = buf->buf;
     long size = buf->len;
 
-    dst[0]->transfer_scalar_device_buffer(dst, n_virtual, r, ptr, size, padding, offset, exp);
+    dst[0]->transfer_scalar_device_buffer(dst, n_virtual, r, ptr, size, padding, offset, exp, threads);
     return PyLong_FromLong(0);
   });

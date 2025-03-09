@@ -267,10 +267,10 @@ public:
       ishape.push_back(1);
   }
 
-  virtual void transfer_scalar_device_buffer(std::vector<cgpt_Lattice_base*>& from, long from_n_virtual, long r, void* ptr, long size, std::vector<long>& padding, std::vector<long>& offset, bool exp) {
+  virtual void transfer_scalar_device_buffer(std::vector<cgpt_Lattice_base*>& from, long from_n_virtual, long r, void* ptr, long size, std::vector<long>& padding, std::vector<long>& offset, bool exp, long t) {
     PVector<Lattice<T>> _from;
     cgpt_basis_fill(_from,from);
-    cgpt_lattice_transfer_scalar_device_buffer(_from, from_n_virtual, r, ptr, size, padding, offset, exp);
+    cgpt_lattice_transfer_scalar_device_buffer(_from, from_n_virtual, r, ptr, size, padding, offset, exp, t);
   }
   
   virtual int get_numpy_dtype() {

@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.core import auto_tuned_class, auto_tuned_method
 import numpy as np
 import cgpt
 
@@ -30,7 +31,7 @@ def margin_to_padding_offset(margin, top_margin, bottom_margin):
     return None, None
 
 
-class pack:
+class pack(auto_tuned_class):
     def __init__(self, lattices, fast=False):
         self.lattices = g.util.to_list(lattices)
         self.otype = self.lattices[0].otype
@@ -39,6 +40,10 @@ class pack:
         if not fast:
             assert all([l.otype.__name__ == self.otype.__name__ for l in self.lattices])
             assert all([l.grid.obj == self.grid.obj for l in self.lattices])
+
+        # auto tuner
+        tag = f"pack({self.otype.__name__}, {len(self.lattices)}, {self.grid.describe()})"
+        super().__init__(tag, [2,4,8,16,32,64,128,256], 32)
 
     def rank_bytes(self):
         return sum([l.rank_bytes() for l in self.lattices])
@@ -74,7 +79,8 @@ class pack:
         padding, offset = margin_to_padding_offset(margin, top_margin, bottom_margin)
         self.transfer_accelerator_buffer(buffer, False, padding, offset)
 
-    def transfer_accelerator_buffer(self, buffer, export, padding, offset):
+    @auto_tuned_method(skip_snapshot=True)
+    def transfer_accelerator_buffer(self, threads, buffer, export, padding, offset):
         buf = buffer.view
         r = len(self.otype.shape)
 
@@ -85,4 +91,5 @@ class pack:
             offset,
             r,
             1 if export else 0,
+            threads
         )

@@ -38,52 +38,58 @@ def load_cache(fn):
     return runtime_tune_cache[fn]
 
 
-def auto_tuned_method(method):
-    def wrapper(self, *args):
-        if not self.at_active:
-            return method(self, self.at_default_param, *args)
+def auto_tuned_method(skip_snapshot=False):
+    def _method(method):
+        def wrapper(self, *args):
+            if not self.at_active:
+                return method(self, self.at_default_param, *args)
 
-        if self.at_tuned_params is not None:
+            if self.at_tuned_params is not None:
+                return method(self, self.at_tuned_params["params"], *args)
+
+            # create a snapshot of parameters to restore
+            args = list(args)
+            if not skip_snapshot:
+                args_snapshot = g.copy(args)
+
+            # do experiments
+            dt_warmup = -g.time()
+            g.message(f"Auto-tune {self.at_tag} warmup")
+            method(self, self.at_default_param, *args)
+            dt_warmup += g.time()
+
+            if not skip_snapshot:
+                g.copy(args, args_snapshot)
+
+            dts = []
+            for p in self.at_params:
+                dt = -g.time()
+                g.message(f"Auto-tune {self.at_tag} with {p}")
+                method(self, p, *args)
+                dt += g.time()
+                
+                if not skip_snapshot:
+                    g.copy(args, args_snapshot)
+                dts.append(dt)
+
+            g.message(f"Tuning result for {self.at_tag}:")
+            g.message(f"- Warmup with {self.at_default_param} took {dt_warmup:g} s")
+            for i in range(len(dts)):
+                g.message(f"- {self.at_params[i]} took {dts[i]:g} s")
+            imin = min(range(len(dts)), key=dts.__getitem__)
+            imin = g.broadcast(0, imin)
+            self.at_tuned_params = {"tag": self.at_tag, "params": self.at_params[imin], "results": dts}
+            g.message(f"Tuning result (use {self.at_tuned_params} will be saved in {self.at_fn}")
+            save_cache(self.at_fn, self.at_tuned_params)
+            
+            g.barrier()
+
+            # run with tuned params
             return method(self, self.at_tuned_params["params"], *args)
 
-        # create a snapshot of parameters to restore
-        args = list(args)
-        args_snapshot = g.copy(args)
+        return wrapper
 
-        # do experiments
-        dt_warmup = -g.time()
-        g.message(f"Auto-tune {self.at_tag} warmup")
-        method(self, self.at_default_param, *args)
-        dt_warmup += g.time()
-
-        g.copy(args, args_snapshot)
-
-        dts = []
-        for p in self.at_params:
-            dt = -g.time()
-            g.message(f"Auto-tune {self.at_tag} with {p}")
-            method(self, p, *args)
-            dt += g.time()
-
-            g.copy(args, args_snapshot)
-            dts.append(dt)
-
-        g.message(f"Tuning result for {self.at_tag}:")
-        g.message(f"- Warmup with {self.at_default_param} took {dt_warmup:g} s")
-        for i in range(len(dts)):
-            g.message(f"- {self.at_params[i]} took {dts[i]:g} s")
-        imin = min(range(len(dts)), key=dts.__getitem__)
-        imin = g.broadcast(0, imin)
-        self.at_tuned_params = {"tag": self.at_tag, "params": self.at_params[imin], "results": dts}
-        g.message(f"Tuning result (use {self.at_tuned_params} will be saved in {self.at_fn}")
-        save_cache(self.at_fn, self.at_tuned_params)
-
-        g.barrier()
-
-        # run with tuned params
-        return method(self, self.at_tuned_params["params"], *args)
-
-    return wrapper
+    return _method
 
 
 class auto_tuned_class:
