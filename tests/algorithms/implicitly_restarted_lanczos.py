@@ -29,7 +29,7 @@ w = g.qcd.fermion.preconditioner.eo1_ne(parity=parity)(
 
 
 # cheby
-c = g.algorithms.polynomial.chebyshev({"low": 0.5, "high": 2.0, "order": 10})
+c = g.algorithms.polynomial.chebyshev({"low": 0.13, "high": 2.0, "order": 10})
 
 # implicitly restarted lanczos
 irl = g.algorithms.eigen.irl(
@@ -42,9 +42,11 @@ irl = g.algorithms.eigen.irl(
         "maxiter": 20,
         "Nminres": 7,
         #    "maxapply" : 100
-        "sort_eigenvalues": lambda x: sorted(x)
+        "sort_eigenvalues": lambda x: sorted(x),
     }
 )
+
+bl = g.algorithms.eigen.block_lanczos(maxiter=200, Nstop=60, miniter=30, step=10, resid=1e-8)
 
 # start vector
 start = g.vspincolor(w.Mpc.vector_space[0].grid)
@@ -53,6 +55,23 @@ start.checkerboard(parity)
 
 # generate eigenvectors
 evec, ev = irl(c(w.Mpc), start)  # , g.checkpointer("checkpoint")
+
+bstart = [g.vspincolor(w.Mpc.vector_space[0].grid) for _ in range(4)]
+g.random("test").cnormal(bstart)
+for b in bstart:
+    b.checkerboard(parity)
+evc0, ev0 = bl(c(w.Mpc), bstart)
+
+
+for i in range(60):
+    print(i, sorted(ev)[-1 - i] / sorted(ev0)[-1 - i])
+
+evals, eps2 = g.algorithms.eigen.evals(c(w.Mpc), evc0, real=True)
+for i in range(60):
+    print(evals[i] / ev0[i])
+
+
+sys.exit(0)
 
 
 # memory info
