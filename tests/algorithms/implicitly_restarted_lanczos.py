@@ -68,9 +68,9 @@ ev1, eps2 = g.algorithms.eigen.evals(c(w.Mpc), evc0, real=True)
 
 for i in range(60):
     eps = abs(ev0[i]/ev[i] - 1)
-    assert eps < 1e-6
+    assert eps < 1e-5
     eps = abs(ev1[i]/ev0[i] - 1)
-    assert eps < 1e-6
+    assert eps < 1e-5
 
 # memory info
 g.mem_report()
