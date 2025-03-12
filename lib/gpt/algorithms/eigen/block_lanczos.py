@@ -159,16 +159,15 @@ class block_lanczos:
                 if allconv:
                     if verbose:
                         g.message("Converged in %d iterations" % (n + 1))
+                    break
+                
+        t("rotate")
+        g.rotate(
+            Y[0:space_size], np.ascontiguousarray(eig_vec.T), 0, Nstop, 0, space_size
+        )
+        t()
 
-                    t("rotate")
-                    g.rotate(
-                        Y[0:space_size], np.ascontiguousarray(eig_vec.T), 0, Nstop, 0, space_size
-                    )
-                    t()
+        if verbose_performance:
+            g.message(t)
 
-                    if verbose_performance:
-                        g.message(t)
-
-                    return Y[0:Nstop], eig_val[0:Nstop]
-
-        return None, None
+        return Y[0:Nstop], eig_val[0:Nstop]
