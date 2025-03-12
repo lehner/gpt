@@ -111,7 +111,7 @@ Replace with the appropriate script for your system.
 GPT is built on top of Grid and utilizes its data parallelism features. Here's how they connect:
 
 1. Grid provides the underlying lattice structure and parallelization.
-2. GPT uses Grid's data types and parallel primitives as well as optimized fermion operators to implement high-level physics algorithms.
+2. GPT uses Grid's data types and parallel primitives as well as optimized fermion operators and the stencil layer to implement high-level physics algorithms.
 3. The `feature/gpt` branch of Grid contains specific optimizations and features for GPT.
 
 ## Running GPT Efficiently
