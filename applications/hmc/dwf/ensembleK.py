@@ -86,6 +86,125 @@ if False:
     g.save(f"{dst}/ckpoint_lat.{it0}", U, g.format.nersc())
     sys.exit(0)
 
+
+
+
+######### INSERT TEST CODE
+
+
+def D_DWF(dst, src, U, b, c, mass, M5):
+    src_s = g.separate(src, 0)
+    dst_s = [g.lattice(s) for s in src_s]
+
+    D_W = g.qcd.fermion.reference.wilson_clover(U, mass=-M5, csw_r=0.0, csw_t=0.0, nu=1.0, xi_0=1.0,
+                                                isAnisotropic=False,
+                                                boundary_phases=[1,1,1,-1])
+
+    Ls = len(src_s)
+    
+    src_plus_s = []
+    src_minus_s = []
+    for s in range(Ls):
+        src_plus_s.append(g(0.5 * src_s[s] + 0.5 * g.gamma[5]*src_s[s]))
+        src_minus_s.append(g(0.5 * src_s[s] - 0.5 * g.gamma[5]*src_s[s]))
+    for d in dst_s:
+        d[:] = 0
+    for s in range(Ls):
+        dst_s[s] += b*D_W* src_s[s] + src_s[s]
+    for s in range(1,Ls):
+        dst_s[s] += c*D_W * src_plus_s[s-1] - src_plus_s[s-1]
+    for s in range(0,Ls-1):
+        dst_s[s] += c*D_W * src_minus_s[s+1] - src_minus_s[s+1]
+    dst_s[0] -= mass*(c*D_W * src_plus_s[Ls-1] - src_plus_s[Ls-1])
+    dst_s[Ls-1] -= mass*(c*D_W * src_minus_s[0] - src_minus_s[0])
+            
+    dst @= g.merge(dst_s, 0)
+
+def test_reference():
+    Ls = 12
+    b = 1.5
+    c = 0.5
+    M5 = 1.8
+    mass = 0.123
+    mobius = g.qcd.fermion.mobius(
+        U,
+        Ls=Ls,
+        mass=mass,
+        b=b,
+        c=c,
+        M5=M5,
+        boundary_phases=[1,1,1,-1]
+    )
+
+    src = rng.cnormal(g.vspincolor(mobius.F_grid))
+    dst = g(mobius * src)
+
+    dst_ref = g.lattice(dst)
+    dst_ref[:] = 0
+    D_DWF(dst_ref, src, U, b, c, mass, M5)
+
+    eps = (g.norm2(dst_ref - dst) / g.norm2(dst_ref)) ** 0.5
+    g.message(f"Test mobius implementation: {eps}")
+    if eps > 1e-13:
+
+        eps = (g.object_rank_norm2(dst_ref - dst) / g.object_rank_norm2(dst_ref)) ** 0.5
+        if eps > 1e-13:
+            sys.stderr.write(f"ERROR {eps} on rank {grid.processor} is host {socket.gethostname()}\n")
+            sys.stderr.flush()
+        g.barrier()
+        sys.exit(1)
+
+test_reference()
+
+########## END TEST CODE
+
+
+# first estimate based on crude E extrapolation, likely 4% off for m_l and m_s:
+#( (0.0003546 + 0.0176)/27.34 - 0.0003546) = 0.00030211543525969275
+
+# new estimation based on global fit should do better:
+# m_s = 0.01682836
+# m_l = 0.00028884
+
+if latest_it <= 603:
+    g.message("Use first-generation masses")
+    m_l = 0.000302
+    m_s = 0.0176
+    b = 1.5
+    c = 0.5
+
+elif latest_it <= 615:
+    g.message("Use second-generation masses")
+
+    # global fit estimate (mk)
+    # m_l = 0.000289
+    # m_s = 0.0168
+
+    # simple estimate via m_SS msw0Zh dependence ; then use 27.2 as quark mass ratio incl. m_res
+    # m_l = 0.000282
+    # m_s = 0.0170   (another estimate mk5 agrees with this)
+
+    m_l = 0.000286
+    m_s = 0.0169
+    b = 1.5
+    c = 0.5
+
+elif latest_it <= 621:
+    g.message("Use third-generation masses")
+    m_l = 0.000262
+    m_s = 0.01643
+    b = 1.5
+    c = 0.5
+
+else:
+    g.message("Use fourth-generation masses and alpha")
+    m_l = 0.0005464
+    m_s = 0.016715
+    b = 1.25
+    c = 0.25
+
+
+    
 ckp = g.checkpointer(f"{dst}/checkpoint2")
 ckp.grid = U[0].grid
 
@@ -127,8 +246,8 @@ def light(U0, m_plus, m_minus):
         mass_plus=m_plus,
         mass_minus=m_minus,
         M5=1.8,
-        b=1.5,
-        c=0.5,
+        b=b,
+        c=c,
         Ls=12,
         boundary_phases=[1, 1, 1, -1],
     )
@@ -148,6 +267,11 @@ lq = None
 sloppy_prec = 1e-9
 sloppy_prec_light = 1e-9
 exact_prec = 1e-11
+
+# test after 624 to go down from two dH \approx 2-3 in a row, if this does not help, increase number of steps
+sloppy_prec = 1e-10
+sloppy_prec_light = 1e-10
+exact_prec = 1e-12
 
 cg_s_inner = inv.cg({"eps": 1e-4, "eps_abs": sloppy_prec * 0.15, "maxiter": 40000, "miniter": 50})
 cg_s_light_inner = inv.cg({"eps": 1e-4, "eps_abs": sloppy_prec_light * 0.15, "maxiter": 40000, "miniter": 50})
@@ -208,38 +332,6 @@ U_mom = g.group.cartesian(U)
 
 action_gauge_mom = g.qcd.scalar.action.mass_term()
 action_gauge = g.qcd.gauge.action.iwasaki(2.44)  # changed from 2.41 at traj=295
-
-# first estimate based on crude E extrapolation, likely 4% off for m_l and m_s:
-#( (0.0003546 + 0.0176)/27.34 - 0.0003546) = 0.00030211543525969275
-
-# new estimation based on global fit should do better:
-# m_s = 0.01682836
-# m_l = 0.00028884
-
-if latest_it <= 603:
-    g.message("Use first-generation masses")
-    m_l = 0.000302
-    m_s = 0.0176
-
-elif latest_it <= 615:
-    g.message("Use second-generation masses")
-
-    # global fit estimate (mk)
-    # m_l = 0.000289
-    # m_s = 0.0168
-
-    # simple estimate via m_SS msw0Zh dependence ; then use 27.2 as quark mass ratio incl. m_res
-    # m_l = 0.000282
-    # m_s = 0.0170   (another estimate mk5 agrees with this)
-
-    m_l = 0.000286
-    m_s = 0.0169
-
-else:
-    g.message("Use third-generation masses")
-    m_l = 0.000262
-    m_s = 0.01643
-
 
 rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 70.0**0.5, 11)
 # before 11 highest, led to 1e-9 error, 6 led to 1.2435650287301314e-08,
@@ -482,28 +574,30 @@ iq = sympl.update_q(
 )
 
 ip_gauge = sympl.update_p(U_mom, gauge_force)
-ip_fermion = sympl.update_p(U_mom, fermion_force)
+ip_fermion = sympl.update_p(U_mom, fermion_force, tag="Q_fermion")
 ip_log_det = sympl.update_p(U_mom, log_det_force)
 ip_log_det_sp = sympl.update_p(U_mom, log_det_force_sp)
 
 ip_gauge_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_gauge, ip_gauge)
-ip_fermion_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_fermion, ip_fermion)
+ip_fermion_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_fermion, ip_fermion, tag="Q_fg_fermion")
 ip_log_det_fg = sympl.update_p_force_gradient(U, iq, U_mom, ip_log_det, ip_log_det)#_sp
 
 mdint = sympl.OMF2_force_gradient(
-    2, ip_fermion,
+    1, ip_fermion,
     sympl.OMF2_force_gradient(2, ip_log_det,
                               sympl.OMF2_force_gradient(2, ip_gauge, iq, ip_gauge_fg),
                               ip_log_det_fg),
     ip_fermion_fg
 )
 
+g.message(mdint)
+
 
 #no_accept_reject = True
 no_accept_reject = False
 
 tau = 8.0
-nsteps = 40
+nsteps = 80
 
 def hmc(tau):
     global ff_iterator, ckp
@@ -533,24 +627,25 @@ def hmc(tau):
     for its in range(its0, nsteps):
         g.message(f"tau-iteration: {its} -> {tau/nsteps*its}")
         mdint(tau / nsteps)
+
+        if its % 10 == 0:
+            h1, s1 = hamiltonian(False)
+            g.message(f"dH = {h1-h0}")
+        else:
+            h1 = None
+        if g.rank() == 0:
+            flog = open(f"{dst}/current.log.{its}","wt")
+            if h1 is not None:
+                flog.write(f"dH_{its} = {h1} - {h0} = {h1-h0}\n")
+            for x in log.grad:
+                flog.write(f"{x} force norm2/sites = {np.mean(log.get(x))} +- {np.std(log.get(x))}\n")
+            flog.write(f"Timing:\n{log.time}\n")
+            flog.close()
+
         store_cfields(f"{its}", params + U)
         store_css()
         nrun += 1
-        if nrun >= 1:
-            if its % (nsteps//2) == 0:
-                h1, s1 = hamiltonian(False)
-                g.message(f"dH = {h1-h0}")
-            else:
-                h1 = None
-            if g.rank() == 0:
-                flog = open(f"{dst}/current.log.{its}","wt")
-                if h1 is not None:
-                    flog.write(f"dH_{its} = {h1} - {h0} = {h1-h0}\n")
-                for x in log.grad:
-                    flog.write(f"{x} force norm2/sites = {np.mean(log.get(x))} +- {np.std(log.get(x))}\n")
-                flog.write(f"Timing:\n{log.time}\n")
-                flog.close()
-
+        if nrun >= 2:
             g.barrier()
             sys.exit(0)
 
@@ -611,10 +706,12 @@ for it in range(it0, N):
 
     # reset checkpoint
     if g.rank() == 0:
-        shutil.rmtree(f"{dst}/checkpoint2")
+        #shutil.rmtree(f"{dst}/checkpoint2")
+        os.rename(f"{dst}/checkpoint2", f"{dst}/checkpoint2.restore")
         for it in range(nsteps):
             if os.path.exists(f"{dst}/checkpoint.{it}"):
-                shutil.rmtree(f"{dst}/checkpoint.{it}")
+                #shutil.rmtree(f"{dst}/checkpoint.{it}")
+                os.rename(f"{dst}/checkpoint.{it}", f"{dst}/checkpoint.{it}.restore")
     
     #rng = g.random(f"new{dst}-{it}", "vectorized_ranlux24_24_64")
 
