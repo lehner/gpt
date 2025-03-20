@@ -20,6 +20,7 @@
 
 #ifdef GRID_CUDA
 #include <cuda_profiler_api.h>
+#include <nvToolsExt.h>
 #endif
 
 
@@ -258,6 +259,30 @@ EXPORT(profile_trigger,{
     } else {
 #ifdef GRID_CUDA
       cudaProfilerStop();
+#endif
+    }
+    
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(profile_range,{
+    
+    long start;
+    PyObject* _label;
+    std::string label;
+    if (!PyArg_ParseTuple(args, "lO", &start, &_label)) {
+      return NULL;
+    }
+
+    cgpt_convert(_label, label);
+
+    if (start) {
+#ifdef GRID_CUDA
+      nvtxRangePushA(label.c_str());
+#endif
+    } else {
+#ifdef GRID_CUDA
+      nvtxRangePop();
 #endif
     }
     

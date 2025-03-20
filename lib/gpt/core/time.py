@@ -123,6 +123,9 @@ class timer:
         self.enabled = enabled
         self.reset()
 
+    def __del__(self):
+        self.__call__()
+
     def reset(self):
         self.time = {}
         self.active = False
@@ -147,15 +150,17 @@ class timer:
 
         if not self.enabled:
             return
-
+       
         if self.active is False and which is not None:
             self.active = True
 
         if self.current is not None:
+            cgpt.profile_range(0, self.current)
             self.time[self.current].commit()
             self.current = None
 
         if which is not None:
+            cgpt.profile_range(1, which)
             if which not in self.time:
                 self.time[which] = timer_component()
             self.current = which
