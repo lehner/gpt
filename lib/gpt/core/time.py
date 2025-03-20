@@ -23,6 +23,9 @@ import gpt
 t0 = cgpt.time()
 
 
+verbose_profile = None
+
+
 def time():
     return cgpt.time() - t0
 
@@ -119,9 +122,12 @@ def iadd(dst, src):
 
 class timer:
     def __init__(self, name="", enabled=True):
+        global verbose_profile
         self.name = name
         self.enabled = enabled
         self.reset()
+        if verbose_profile is None:
+            verbose_profile = gpt.default.is_verbose("profile")
 
     def __del__(self):
         self.__call__()
@@ -155,12 +161,14 @@ class timer:
             self.active = True
 
         if self.current is not None:
-            cgpt.profile_range(0, self.current)
+            if verbose_profile:
+                cgpt.profile_range(0, self.current)
             self.time[self.current].commit()
             self.current = None
 
         if which is not None:
-            cgpt.profile_range(1, which)
+            if verbose_profile:
+                cgpt.profile_range(1, which)
             if which not in self.time:
                 self.time[which] = timer_component()
             self.current = which

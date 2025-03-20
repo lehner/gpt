@@ -20,7 +20,6 @@
 
 #ifdef GRID_CUDA
 #include <cuda_profiler_api.h>
-#include <nvToolsExt.h>
 #endif
 
 
@@ -277,13 +276,9 @@ EXPORT(profile_range,{
     cgpt_convert(_label, label);
 
     if (start) {
-#ifdef GRID_CUDA
-      nvtxRangePushA(label.c_str());
-#endif
+      tracePush(label.c_str());
     } else {
-#ifdef GRID_CUDA
-      nvtxRangePop();
-#endif
+      tracePop(label.c_str());
     }
     
     return PyLong_FromLong(0);
