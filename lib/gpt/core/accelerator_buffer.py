@@ -59,6 +59,12 @@ class accelerator_buffer:
         self.shape = shape
         self.dtype = dtype
 
+    def empty_clone(self, shape=None):
+        if shape is None:
+            shape = self.shape
+        nbytes = self.calculate_size(shape, self.dtype)
+        return accelerator_buffer(nbytes, shape, self.dtype)
+
     def calculate_size(self, shape, dtype):
         sites = int(np.prod(shape))
         if dtype is np.complex64:
@@ -165,7 +171,10 @@ class accelerator_buffer:
 
         block_size = self.calculate_size(self.shape[nd:], dtype=self.dtype)
 
-        lcstride = np.array(list(reversed([1] + list(np.cumprod(list(reversed(self.shape[0:nd]))[0:-1])))), dtype=np.int64)
+        lcstride = np.array(
+            list(reversed([1] + list(np.cumprod(list(reversed(self.shape[0:nd]))[0:-1])))),
+            dtype=np.int64,
+        )
 
         # assert np.linalg.norm(np.sum(lcstride * lc, axis=1) - idx) == 0
 
@@ -190,7 +199,7 @@ class accelerator_buffer:
             dst[:, 2] = midx * block_size
             dst[:, 3] = block_size
             return gpt.global_memory_view(grid, dst)
-            
+
         assert my_rank == processor_stride @ processor_coor
 
         t = gpt.timer("create halo exchange")

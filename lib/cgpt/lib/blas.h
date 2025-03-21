@@ -21,6 +21,18 @@ class cgpt_blas_job_base {
   virtual ~cgpt_blas_job_base() {
   }
 
+  template<typename dtype>
+  void fill_pointers(deviceVector<dtype*>& dst, dtype* base, int64_t* idx, long num, long words) {
+    deviceVector<int64_t> d_idx(num);
+    acceleratorCopyToDevice(idx, &d_idx[0], num*sizeof(int64_t));
+    int64_t* p = &d_idx[0];
+    dtype** _dst = &dst[0];
+    accelerator_for(idx, num, 1, {
+	_dst[idx] = &base[p[idx]*words];
+      });
+  }
+
+
   virtual void execute(GridBLAS& blas) = 0;
 };
 
@@ -33,16 +45,6 @@ class cgpt_gemm_job : public cgpt_blas_job_base {
   long m,n,k;
   ComplexD alpha, beta;
   
-  void fill_pointers(deviceVector<dtype*>& dst, dtype* base, int64_t* idx, long num, long words) {
-    deviceVector<int64_t> d_idx(num);
-    acceleratorCopyToDevice(idx, &d_idx[0], num*sizeof(int64_t));
-    int64_t* p = &d_idx[0];
-    dtype** _dst = &dst[0];
-    accelerator_for(idx, num, 1, {
-	_dst[idx] = &base[p[idx]*words];
-      });
-  }
-
   GridBLASOperation_t convert_op_code(long op) {
     switch (op) {
     case 0:
@@ -82,6 +84,64 @@ class cgpt_gemm_job : public cgpt_blas_job_base {
 
   virtual void execute(GridBLAS& blas) {
     blas.gemmBatched(opA, opB, m, n, k, (dtype)alpha, BLAS_A, BLAS_B, (dtype)beta, BLAS_C);
+  }
+};
+
+template<typename dtype>
+class cgpt_det_job : public cgpt_blas_job_base {
+ public:
+  
+  deviceVector<dtype*> BLAS_A, BLAS_C;
+  long n;
+  
+  cgpt_det_job(long _n,
+	       void* _data_A, int64_t* idxA,
+	       void* _data_C, int64_t* idxC,
+	       long num_elements) :
+    
+    BLAS_A(num_elements),
+    BLAS_C(num_elements),
+    n(_n) {
+    
+    fill_pointers(BLAS_A, (dtype*)_data_A, idxA, num_elements, n*n);
+    fill_pointers(BLAS_C, (dtype*)_data_C, idxC, num_elements, 1);
+
+  }
+  
+  virtual ~cgpt_det_job() {
+  }
+
+  virtual void execute(GridBLAS& blas) {
+    blas.determinantBatched(n, BLAS_A, BLAS_C);
+  }
+};
+
+template<typename dtype>
+class cgpt_inv_job : public cgpt_blas_job_base {
+ public:
+  
+  deviceVector<dtype*> BLAS_A, BLAS_C;
+  long n;
+  
+  cgpt_inv_job(long _n,
+		void* _data_A, int64_t* idxA,
+		void* _data_C, int64_t* idxC,
+		long num_elements) :
+  
+    BLAS_A(num_elements),
+    BLAS_C(num_elements),
+    n(_n) {
+    
+    fill_pointers(BLAS_A, (dtype*)_data_A, idxA, num_elements, n*n);
+    fill_pointers(BLAS_C, (dtype*)_data_C, idxC, num_elements, n*n);
+
+  }
+  
+  virtual ~cgpt_inv_job() {
+  }
+
+  virtual void execute(GridBLAS& blas) {
+    blas.inverseBatched(n, BLAS_A, BLAS_C);
   }
 };
 

@@ -103,6 +103,61 @@ class blas:
         )
         return self
 
+    def inv(self, bv_A, bv_C):
+        # add references so that memory used will not be deallocated
+        self.references.append(bv_A.buffer.view)
+        self.references.append(bv_C.buffer.view)
+
+        assert bv_A.buffer.dtype == bv_C.buffer.dtype
+
+        # cannot work with transformations
+        assert bv_A.op == bv_C.op_N
+        assert bv_C.op == bv_C.op_N
+
+        # dimension
+        n1, n2 = bv_A.buffer.shape[-2:]
+        n3, n4 = bv_C.buffer.shape[-2:]
+
+        assert n1 == n2 and n1 == n3 and n1 == n4
+
+        cgpt.blas_inv(
+            self.obj,
+            n1,
+            bv_A.buffer.view,
+            np.ascontiguousarray(bv_A.idx, dtype=np.int64),
+            bv_C.buffer.view,
+            np.ascontiguousarray(bv_C.idx, dtype=np.int64),
+            bv_C.buffer.dtype,
+        )
+        return self
+
+    def det(self, bv_A, bv_C):
+        # add references so that memory used will not be deallocated
+        self.references.append(bv_A.buffer.view)
+        self.references.append(bv_C.buffer.view)
+
+        assert bv_A.buffer.dtype == bv_C.buffer.dtype
+
+        # cannot work with transformations
+        assert bv_A.op == bv_C.op_N
+        assert bv_C.op == bv_C.op_N
+
+        # dimension
+        n1, n2 = bv_A.buffer.shape[-2:]
+
+        assert n1 == n2
+
+        cgpt.blas_det(
+            self.obj,
+            n1,
+            bv_A.buffer.view,
+            np.ascontiguousarray(bv_A.idx, dtype=np.int64),
+            bv_C.buffer.view,
+            np.ascontiguousarray(bv_C.idx, dtype=np.int64),
+            bv_C.buffer.dtype,
+        )
+        return self
+
     def __call__(self):
         cgpt.blas_execute(self.obj)
         return self

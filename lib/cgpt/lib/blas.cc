@@ -100,6 +100,72 @@ EXPORT(blas_gemm,{
     return PyLong_FromLong(0);
   });
 
+template<typename jobCF, typename jobCD>
+PyObject* blas_unary(PyObject* args, bool to_scalar) {
+  void* p;
+  long n;
+  PyObject* vA, *vC, *iA, *iC, *_dtype;
+  
+  if (!PyArg_ParseTuple(args, "llOOOOO", &p,&n,
+			&vA, &iA,
+			&vC, &iC,&_dtype)) {
+    return NULL;
+  }
+  
+  ASSERT(PyMemoryView_Check(vA) && PyMemoryView_Check(vC));
+  ASSERT(PyArray_Check(iA) && PyArray_Check(iC));
+  
+  PyArrayObject* _iA = (PyArrayObject*)iA;
+  PyArrayObject* _iC = (PyArrayObject*)iC;
+  
+  ASSERT(PyArray_TYPE(_iA)==NPY_INT64);
+  ASSERT(PyArray_TYPE(_iC)==NPY_INT64);
+  
+  long nA = PyArray_SIZE(_iA);
+  long nC = PyArray_SIZE(_iC);
+  
+  int64_t* idxA = (int64_t*)PyArray_DATA(_iA);
+  int64_t* idxC = (int64_t*)PyArray_DATA(_iC);
+  
+  if (to_scalar) {
+    ASSERT(nC == 1);
+  } else {
+    ASSERT(nA == nC);
+  }
+  
+  Py_buffer* bufA = PyMemoryView_GET_BUFFER(vA);
+  Py_buffer* bufC = PyMemoryView_GET_BUFFER(vC);
+  
+  ASSERT(PyBuffer_IsContiguous(bufA,'C'));
+  ASSERT(PyBuffer_IsContiguous(bufC,'C'));
+  
+  void* data_A = bufA->buf;
+  void* data_C = bufC->buf;
+  
+  size_t size_A = bufA->len;
+  size_t size_C = bufC->len;
+  
+  ASSERT(PyType_Check(_dtype));
+  const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
+  
+  if (!strcmp(__dtype,"numpy.complex64")) {
+    ((cgpt_blas*)p)->jobs.push_back(new jobCF(n,data_A, idxA, data_C,idxC,nA));
+  } else if (!strcmp(__dtype,"numpy.complex128")) {
+    ((cgpt_blas*)p)->jobs.push_back(new jobCD(n,data_A, idxA, data_C,idxC,nA));
+  } else {
+    ERR("Unknown dtype = %s\n", __dtype);
+  }
+  return PyLong_FromLong(0);
+}
+
+EXPORT(blas_inv,{
+    return blas_unary<cgpt_inv_job<ComplexF>, cgpt_inv_job<ComplexD> >(args, false);
+  });
+
+EXPORT(blas_det,{
+    return blas_unary<cgpt_det_job<ComplexF>, cgpt_det_job<ComplexD> >(args, false);
+  });
+
 EXPORT(blas_execute,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {

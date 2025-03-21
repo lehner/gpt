@@ -140,3 +140,44 @@ def run_gemm_versus_numpy(m, k, n, dtype, eps_ref):
 
 run_gemm_versus_numpy(4, 6, 8, np.complex128, 1e-14)
 run_gemm_versus_numpy(4, 6, 8, np.complex64, 1e-6)
+
+# test matrix inverse
+L = [16, 16, 16, 32]
+rng = g.random("test")
+for precision in [g.single, g.double]:
+    grid = g.grid(L, precision)
+    M = g.mcomplex(grid, 12)
+    rng.cnormal(M)
+    A = g.pack(M).to_accelerator_buffer()
+
+    # test inverse
+    C = A.empty_clone()
+    idx = A.indices([0, 1, 2, 3])
+    g.blas().inv(A[idx], C[idx])()
+    Minv = g.lattice(M)
+    g.pack(Minv).from_accelerator_buffer(C)
+    eps2 = g.norm2(M * Minv - g.identity(M)) / g.norm2(M)
+    assert eps2 < precision.eps**2 * 100
+
+    # test determinant
+    t = g.timer("determinant")
+    t("blas")
+    C = A.empty_clone(A.shape[0:-2])
+    g.blas().det(A[idx], C[idx])()
+    Mdet = g.complex(grid)
+    g.pack(Mdet).from_accelerator_buffer(C)
+
+    t("numpy")
+    cache = {}
+    Mdet_ref = g.complex(grid)
+    Mdet_ref[:] = np.linalg.det(M[:, cache])
+
+    t("numpy cache")
+    Mdet_ref = g.complex(grid)
+    Mdet_ref[:] = np.linalg.det(M[:, cache])
+    t()
+
+    eps2 = g.norm2(Mdet - Mdet_ref) / g.norm2(Mdet)
+    assert eps2 < precision.eps**2 * 100
+
+    g.message(t)
