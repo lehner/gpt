@@ -120,6 +120,48 @@ def iadd(dst, src):
             dst[x] = src[x].clone()
 
 
+class profiler_summary:
+    def __init__(self, dt = 1.0, max_summarize = 20):
+        self.tags = {}
+        self.dt = dt
+        self.max_summarize = max_summarize
+        self.current = []
+        self.t0 = gpt.time() + self.dt
+
+    def __call__(self, start, tag):
+        if tag not in self.tags:
+            self.tags[tag] = 0.0
+
+        if start == 1:
+            self.current.append(tag)
+            path = "/".join(self.current)
+            if path not in self.tags:
+                self.tags[path] = 0.0
+            self.tags[path] -= gpt.time()
+
+        else:
+            while len(self.current) > 0:
+                path = "/".join(self.current)
+                self.tags[path] += gpt.time()
+                last = self.current.pop()
+                if last == tag:
+                    break
+
+        if len(self.current) == 0:
+            t1 = gpt.time()
+            if t1 > self.t0:
+                sorted_tags = sorted(list(self.tags), key=lambda x: -self.tags[x])
+                total = sum([self.tags[x] for x in self.tags])
+                total_timed = sum([self.tags[x] for x in self.tags if "/" not in x])
+                self.t0 = t1 + self.dt
+                gpt.message("--------------------------------------------------------------------------------")
+                gpt.message(f" Total time spent in:       ( {total_timed:g} s total )")
+                gpt.message("--------------------------------------------------------------------------------")
+                for tag in sorted_tags[0:self.max_summarize]:
+                    gpt.message(f" {self.tags[tag]/total*100:6.2f} %    {self.tags[tag]:.2e} s    {tag}")
+                gpt.message("--------------------------------------------------------------------------------")
+
+
 class timer:
     def __init__(self, name="", enabled=True):
         global verbose_profile
@@ -127,7 +169,12 @@ class timer:
         self.enabled = enabled
         self.reset()
         if verbose_profile is None:
-            verbose_profile = gpt.default.is_verbose("profile")
+            if gpt.default.is_verbose("profile"):
+                verbose_profile = cgpt.profile_range
+            elif gpt.default.is_verbose("profile_summary"):
+                verbose_profile = profiler_summary()
+        if verbose_profile is not None:
+            self.enabled = True
 
     def __del__(self):
         self.__call__()
@@ -161,14 +208,15 @@ class timer:
             self.active = True
 
         if self.current is not None:
-            if verbose_profile:
-                cgpt.profile_range(0, self.current)
+            if verbose_profile is not None:
+                verbose_profile(0, f"{self.name}::{self.current}")
+        
             self.time[self.current].commit()
             self.current = None
 
         if which is not None:
-            if verbose_profile:
-                cgpt.profile_range(1, which)
+            if verbose_profile is not None:
+                verbose_profile(1, f"{self.name}::{which}")
             if which not in self.time:
                 self.time[which] = timer_component()
             self.current = which
