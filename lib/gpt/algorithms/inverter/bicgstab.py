@@ -34,53 +34,67 @@ class bicgstab(base_iterative):
         vector_space = None
         if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
-            mat = mat.specialized_singlet_callable()
+            mat = mat.mat
+            # remove wrapper for performance benefits
 
         @self.timed_function
-        def inv(x, b, t):
+        def inv(psi, src, t):
             t("setup")
 
-            r = g(b - mat * x)
-            rhat = r
-            rho = g.inner_product(rhat, r)
-            p = r
+            r, rhat, p, s = g.copy(src), g.copy(src), g.copy(src), g.copy(src)
+            mmpsi, mmp, mms = g.copy(src), g.copy(src), g.copy(src)
 
-            r2 = g.norm2(x)
-            ssq = g.norm2(b)
+            rho, rhoprev, alpha, omega = 1.0, 1.0, 1.0, 1.0
+
+            mat(mmpsi, psi)
+            r @= src - mmpsi
+
+            rhat @= r
+            p @= r
+            mmp @= r
+
+            r2 = g.norm2(r)
+            ssq = g.norm2(src)
             if ssq == 0.0:
                 assert r2 != 0.0  # need either source or psi to not be zero
                 ssq = r2
             rsq = self.eps**2.0 * ssq
 
             for k in range(self.maxiter):
-                t("mat")
-                nu = g(mat * p)
-                t("linear algebra")
-                alpha = rho/g.inner_product(rhat, nu)
-                h = g(x + alpha * p)
-                s = g(r - alpha * nu)
-                res1 = g.norm2(s)
-                if res1 <= rsq:
-                    x @= h
-                    self.log(f"converged in {k+1} iterations")
-                    break
-
-                t = g(mat * s)
-                omega = g.inner_product(t,s) / g.norm2(t)
-                x @= h + omega * s
-                r @= s - omega * t
-                res2 = g.norm2(r)
-                if res2 <= rsq:
-                    self.log(f"converged in {k+1} iterations")
-                    break
-
+                t("inner")
                 rhoprev = rho
-                rho = g.inner_product(rhat, r)
-                beta = (rho / rhoprev) * (alpha/omega)
-                p @= r + beta * p - (beta*omega) * nu
+                rho = g.inner_product(rhat, r).real
 
-                g.message(k, res1, res2)
-                r2 = min(res1,res2)
+                t("linearcomb")
+                beta = (rho / rhoprev) * (alpha / omega)
+                p @= r + beta * p - beta * omega * mmp
+
+                t("mat")
+                mat(mmp, p)
+
+                t("inner")
+                alpha = rho / g.inner_product(rhat, mmp).real
+
+                t("linearcomb")
+                s @= r - alpha * mmp
+
+                t("mat")
+                mat(mms, s)
+
+                t("inner")
+                ip, mms2 = g.inner_product_norm2(mms, s)
+                if mms2 == 0.0:
+                    continue
+
+                t("linearcomb")
+                omega = ip.real / mms2
+                psi += alpha * p + omega * s
+
+                t("axpy_norm")
+                r2 = g.axpy_norm2(r, -omega, mms, s)
+
+                t("other")
+
                 self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
