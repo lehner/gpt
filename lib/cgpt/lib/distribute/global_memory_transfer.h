@@ -800,6 +800,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
       }
     }
 
+    // TODO: compression could act here
     bcopy(bca);
 
     // send/recv buffers
@@ -865,6 +866,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 	bca.push_back({indices.second, base_dst[dst_idx], src});
       }
     }
+    // TODO: decompression could act here
     bcopy(bca);
   }
 
