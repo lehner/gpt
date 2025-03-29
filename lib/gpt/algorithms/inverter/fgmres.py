@@ -76,9 +76,9 @@ class fgmres(base_iterative):
         return r2
 
     def calc_res(self, mat, psi, mmpsi, src, r, t):
-        t("res - mat")
+        t("mat")
         mat(mmpsi, psi)
-        t("res - axpy")
+        t("axpy")
         return g.axpy_norm2(r, -1.0, mmpsi, src)
 
     def __call__(self, mat):

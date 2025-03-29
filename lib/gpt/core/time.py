@@ -121,7 +121,7 @@ def iadd(dst, src):
 
 
 class profiler_summary:
-    def __init__(self, dt = 1.0, max_summarize = 20):
+    def __init__(self, dt=1.0, max_summarize=20):
         self.tags = {}
         self.dt = dt
         self.max_summarize = max_summarize
@@ -140,26 +140,71 @@ class profiler_summary:
             self.tags[path] -= gpt.time()
 
         else:
-            while len(self.current) > 0:
+            if len(self.current) > 0:
                 path = "/".join(self.current)
                 self.tags[path] += gpt.time()
                 last = self.current.pop()
-                if last == tag:
-                    break
+                assert last == tag
 
-        if len(self.current) == 0:
-            t1 = gpt.time()
-            if t1 > self.t0:
-                sorted_tags = sorted(list(self.tags), key=lambda x: -self.tags[x])
-                total = sum([self.tags[x] for x in self.tags])
-                total_timed = sum([self.tags[x] for x in self.tags if "/" not in x])
-                self.t0 = t1 + self.dt
-                gpt.message("--------------------------------------------------------------------------------")
-                gpt.message(f" Total time spent in:       ( {total_timed:g} s total )")
-                gpt.message("--------------------------------------------------------------------------------")
-                for tag in sorted_tags[0:self.max_summarize]:
-                    gpt.message(f" {self.tags[tag]/total*100:6.2f} %    {self.tags[tag]:.2e} s    {tag}")
-                gpt.message("--------------------------------------------------------------------------------")
+        t1 = gpt.time()
+        if t1 > self.t0:
+            path = "/".join(self.current)
+
+            closed_tags = {
+                tg: self.tags[tg] if self.tags[tg] >= 0.0 else self.tags[tg] + t1
+                for tg in self.tags
+            }
+
+            sorted_tags = sorted(list(closed_tags), key=lambda x: -closed_tags[x])
+            total_timed = sum([closed_tags[x] for x in closed_tags if "/" not in x])
+            self.t0 = t1 + self.dt
+            gpt.message(
+                "--------------------------------------------------------------------------------"
+            )
+            gpt.message(
+                f" Total time spent in:       ( timed: {total_timed:g} s  untimed: {gpt.time() - total_timed:g} s )"
+            )
+            gpt.message(
+                "--------------------------------------------------------------------------------"
+            )
+
+            def find_path(ctx, p):
+                for c in ctx:
+                    if c[0] == p:
+                        return c[1]
+                return None
+
+            display_candidates = sorted_tags[0 : self.max_summarize]
+            to_display = []
+            for tag in display_candidates:
+                path = tag.split("/")
+                context = to_display
+                for lvl, p in enumerate(path):
+                    ip = find_path(context, p)
+                    if ip is None:
+                        context.append((p, []))
+                        context = context[-1][1]
+                    else:
+                        context = ip
+
+            def walk(current, paths):
+                mark = ["+", "*", "-", ">"]
+                for ctag, children in paths:
+                    ccurrent = current + [ctag]
+
+                    etag = "  " * (len(current)) + mark[len(current) % len(mark)] + " " + ctag
+                    tag = "/".join(ccurrent)
+
+                    gpt.message(
+                        f" {closed_tags[tag]/total_timed*100:6.2f} %    {closed_tags[tag]:.2e} s    {etag}"
+                    )
+
+                    walk(ccurrent, children)
+
+            walk([], to_display)
+            gpt.message(
+                "--------------------------------------------------------------------------------"
+            )
 
 
 class timer:
@@ -203,14 +248,14 @@ class timer:
 
         if not self.enabled:
             return
-       
+
         if self.active is False and which is not None:
             self.active = True
 
         if self.current is not None:
             if verbose_profile is not None:
                 verbose_profile(0, f"{self.name}::{self.current}")
-        
+
             self.time[self.current].commit()
             self.current = None
 
@@ -238,7 +283,7 @@ class timer:
             return "No time spent here"
 
         s = f"{self.name}:\n" if self.name != "" else ""
-        nc = max([ len(k) for k in dtp ] + [20])
+        nc = max([len(k) for k in dtp] + [20])
         for k, v in reversed(sorted(dtp.items(), key=lambda x: x[1])):
             frac = v / total_time * 100
             tmin = self.time[k].dt_min
