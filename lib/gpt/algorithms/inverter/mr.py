@@ -38,8 +38,7 @@ class mr(base_iterative):
         vector_space = None
         if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
-            mat = mat.mat
-            # remove wrapper for performance benefits
+            mat = mat.specialized_singlet_callable()
 
         @self.timed_function
         def inv(psi, src, t):
