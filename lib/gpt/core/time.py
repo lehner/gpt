@@ -129,29 +129,46 @@ class profiler_summary:
         self.t0 = gpt.time() + self.dt
 
     def __call__(self, start, tag):
-        if tag not in self.tags:
-            self.tags[tag] = 0.0
 
         if start == 1:
             self.current.append(tag)
             path = "/".join(self.current)
             if path not in self.tags:
-                self.tags[path] = 0.0
-            self.tags[path] -= gpt.time()
+                tg = [0.0, None, 0.0, 0.0, 0]
+                self.tags[path] = tg
+            else:
+                tg = self.tags[path]
+            assert tg[1] is None
+            tg[1] = gpt.time()
 
-        else:
-            if len(self.current) > 0:
-                path = "/".join(self.current)
-                self.tags[path] += gpt.time()
-                last = self.current.pop()
-                assert last == tag
+        elif len(self.current) > 0:
+            path = "/".join(self.current)
+            tg = self.tags[path]
+            assert tg[1] is not None
+            dt = gpt.time() - tg[1]
+            tg[1] = None
+            if tg[0] == 0.0:
+                tg[2] = dt
+                tg[3] = dt
+                tg[4] = 1
+            else:
+                tg[2] = min(tg[2], dt)
+                tg[3] = max(tg[3], dt)
+                tg[4] += 1
+            tg[0] += dt
+            last = self.current.pop()
+            assert last == tag
 
         t1 = gpt.time()
         if t1 > self.t0:
             path = "/".join(self.current)
 
             closed_tags = {
-                tg: self.tags[tg] if self.tags[tg] >= 0.0 else self.tags[tg] + t1
+                tg: (
+                    self.tags[tg][0]
+                    if self.tags[tg][1] is None
+                    else self.tags[tg][0] + t1 - self.tags[tg][1]
+                )
                 for tg in self.tags
             }
 
@@ -159,13 +176,15 @@ class profiler_summary:
             total_timed = sum([closed_tags[x] for x in closed_tags if "/" not in x])
             self.t0 = t1 + self.dt
             gpt.message(
-                "--------------------------------------------------------------------------------"
+                "----------------------------------------------------------------------------------------------------------------------------------------------------------------\n"
+                f" Profile Summary with {total_timed:g} s timed and {gpt.time() - total_timed:g} s untimed so far\n"
+                "----------------------------------------------------------------------------------------------------------------------------------------------------------------"
             )
             gpt.message(
-                f" Total time spent in:       ( timed: {total_timed:g} s  untimed: {gpt.time() - total_timed:g} s )"
+                " Total                     Path                                                                     Min        Mean       Max           Count"
             )
             gpt.message(
-                "--------------------------------------------------------------------------------"
+                "----------------------------------------------------------------------------------------------------------------------------------------------------------------"
             )
 
             def find_path(ctx, p):
@@ -194,16 +213,20 @@ class profiler_summary:
 
                     etag = "  " * (len(current)) + mark[len(current) % len(mark)] + " " + ctag
                     tag = "/".join(ccurrent)
+                    tg = self.tags[tag]
 
+                    base = f" {closed_tags[tag] / total_timed * 100:6.2f} %    {closed_tags[tag]:.2e} s    {etag}"
                     gpt.message(
-                        f" {closed_tags[tag]/total_timed*100:6.2f} %    {closed_tags[tag]:.2e} s    {etag}"
+                        base
+                        + " " * (100 - len(base))
+                        + f"{tg[2]:.2e} / {tg[0] / tg[4]:.2e} / {tg[3]:.2e} s    {tg[4]}"
                     )
 
                     walk(ccurrent, children)
 
             walk([], to_display)
             gpt.message(
-                "--------------------------------------------------------------------------------"
+                "----------------------------------------------------------------------------------------------------------------------------------------------------------------"
             )
 
 
