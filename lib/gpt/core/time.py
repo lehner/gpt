@@ -188,7 +188,7 @@ class profiler_summary:
                         context = ip
 
             def walk(current, paths):
-                mark = ["+", "*", "-", ">"]
+                mark = ["+", "*", "-", ">", "#", "$"]
                 for ctag, children in paths:
                     ccurrent = current + [ctag]
 
