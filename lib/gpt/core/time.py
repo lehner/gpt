@@ -134,7 +134,7 @@ class profiler_summary:
             self.current.append(tag)
             path = "/".join(self.current)
             if path not in self.tags:
-                tg = [0.0, None, 0.0, 0.0, 0]
+                tg = [0.0, None, 0.0, 0.0, 1]
                 self.tags[path] = tg
             else:
                 tg = self.tags[path]
