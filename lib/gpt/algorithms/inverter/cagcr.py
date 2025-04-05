@@ -42,16 +42,20 @@ class cagcr(base_iterative):
     def modified(self, **params):
         return cagcr({**self.params, **params})
 
-    def calc_res(self, mat, psi, mmpsi, src, r):
+    def calc_res(self, mat, psi, mmpsi, src, r, t):
+        t("mat")
         mat(mmpsi, psi)
-        return g.axpy_norm2(r, -1.0, mmpsi, src)
+        t("axpy")
+        for r_i, mmpsi_i, src_i in zip(r, mmpsi, src):
+            g.axpy(r_i, -1.0, mmpsi_i, src_i)
+        t("norm2")
+        return g.norm2(r)
 
     def __call__(self, mat):
         vector_space = None
         if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
-            mat = mat.mat
-            # remove wrapper for performance benefits
+            # mat = mat.specialized_list_callable()
 
         @self.timed_function
         def inv(psi, src, t):
@@ -59,22 +63,23 @@ class cagcr(base_iterative):
 
             # parameters
             rlen = self.restartlen
+            n_rhs = len(src)
 
             # tensors
-            alpha = np.empty((rlen), g.double.complex_dtype)
+            alpha = np.empty((rlen, n_rhs), g.double.complex_dtype)
 
             # fields
             r, mmpsi = g.copy(src), g.copy(src)
-            p = [g.lattice(src) for i in range(rlen + 1)]
+            p = [[g.lattice(s) for s in src] for i in range(rlen + 1)]
             # in QUDA, q is just an "alias" to p with q[k] = p[k+1]
             # don't alias here, but just use slicing
 
             # initial residual
-            r2 = self.calc_res(mat, psi, mmpsi, src, r)
-            p[0] @= r
+            r2 = sum(self.calc_res(mat, psi, mmpsi, src, r, t))
+            g.copy(p[0], r)
 
             # source
-            ssq = g.norm2(src)
+            ssq = sum(g.norm2(src))
             if ssq == 0.0:
                 assert r2 != 0.0  # need either source or psi to not be zero
                 ssq = r2
@@ -88,27 +93,31 @@ class cagcr(base_iterative):
                     mat(p[i + 1], p[i])
 
                 t("inner_product")
-                ips = g.inner_product(p[1:], p[1:] + [p[0]])  # single reduction
+                ips = [g.inner_product([x[j] for x in p[1:]], [x[j] for x in p[1:] + [p[0]]]) for j in range(n_rhs)]  # single reduction
 
                 t("solve")
-                rhs = ips[:, -1]  # last column
-                A = ips[:, :-1]  # all but last column
-                alpha = np.linalg.solve(A, rhs)
+                alpha = []
+                for j in range(n_rhs):
+                    rhs_j = ips[j][:, -1]  # last column
+                    A_j = ips[j][:, :-1]  # all but last column
+                    alpha.append(np.linalg.solve(A_j, rhs_j))
 
                 # # check that solution is correct
                 # g.message(np.allclose(np.dot(A, alpha), rhs))
 
                 t("update_psi")
                 for i in range(rlen):
-                    g.axpy(psi, alpha[i], p[i], psi)
+                    for j in range(n_rhs):
+                        g.axpy(psi[j], alpha[j][i], p[i][j], psi[j])
 
                 if self.maxiter != rlen:
                     t("update_residual")
                     for i in range(rlen):
-                        g.axpy(r, -alpha[i], p[i + 1], r)
+                        for j in range(n_rhs):
+                            g.axpy(r[j], -alpha[j][i], p[i + 1][j], r[j])
 
                     t("residual")
-                    r2 = g.norm2(r)
+                    r2 = sum(g.norm2(r))
 
                     t("other")
                     self.log_convergence(k, r2, rsq)
@@ -118,21 +127,21 @@ class cagcr(base_iterative):
                     if self.maxiter != rlen:
                         msg += f";  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
-                        res = self.calc_res(mat, psi, mmpsi, src, r)
+                        res = sum(self.calc_res(mat, psi, mmpsi, src, r))
                         msg += f";  true squared residual {res:e} / {rsq:e}"
                     self.log(msg)
                     return
 
                 if self.maxiter != rlen:
                     t("restart")
-                    p[0] @= r
+                    g.copy(p[0], r)
                     self.debug("performed restart")
 
             msg = f"NOT converged in {k+rlen} iterations"
             if self.maxiter != rlen:
                 msg += f";  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:
-                res = self.calc_res(mat, psi, mmpsi, src, r)
+                res = sum(self.calc_res(mat, psi, mmpsi, src, r))
                 msg += f";  true squared residual {res:e} / {rsq:e}"
             self.log(msg)
 
@@ -141,4 +150,5 @@ class cagcr(base_iterative):
             inv_mat=mat,
             vector_space=vector_space,
             accept_guess=(True, False),
+            accept_list=True
         )

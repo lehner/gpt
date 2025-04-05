@@ -122,9 +122,12 @@ def iadd(dst, src):
 
 class profiler_summary:
     def __init__(self, dt=1.0, max_summarize=20):
-        self.tags = {}
         self.dt = dt
         self.max_summarize = max_summarize
+        self.reset()
+
+    def reset(self):
+        self.tags = {}
         self.current = []
         self.t0 = gpt.time() + self.dt
 

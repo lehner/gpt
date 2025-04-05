@@ -56,30 +56,37 @@ class fgmres(base_iterative):
         gamma[i + 1] = -s[i] * gamma[i]
         gamma[i] *= np.conjugate(c[i])
 
+
     def update_psi(self, psi, gamma, H, y, V, i):
         # backward substitution
-        for j in reversed(range(i + 1)):
-            y[j] = (gamma[j] - np.dot(H[j, j + 1 : i + 1], y[j + 1 : i + 1])) / H[j, j]
+        for l in range(len(psi)):
+            for j in reversed(range(i + 1)):
+                y[j, l] = (gamma[j, l] - np.dot(H[j, j + 1 : i + 1, l], y[j + 1 : i + 1, l])) / H[j, j, l]
 
-        for j in range(i + 1):
-            psi += y[j] * V[j]
+            for j in range(i + 1):
+                psi[l] += y[j, l] * V[j][l]
 
     def restart(self, mat, psi, mmpsi, src, r, V, Z, gamma, t):
         r2 = self.calc_res(mat, psi, mmpsi, src, r, t)
         t("restart - misc")
-        gamma[0] = r2**0.5
-        V[0] @= r / gamma[0]
+        gamma[0] = np.array(r2)**0.5
+        for i in range(len(src)):
+            g.axpy(V[0][i], 1.0 / gamma[0][i] - 1.0, r[i], r[i])
         t("restart - zero")
         if Z is not None:
             for z in Z:
-                z[:] = 0
-        return r2
+                for z_i in z:
+                    z_i[:] = 0
+        return sum(r2)
 
     def calc_res(self, mat, psi, mmpsi, src, r, t):
         t("mat")
         mat(mmpsi, psi)
         t("axpy")
-        return g.axpy_norm2(r, -1.0, mmpsi, src)
+        for r_i, mmpsi_i, src_i in zip(r, mmpsi, src):
+            g.axpy(r_i, -1.0, mmpsi_i, src_i)
+        t("norm2")
+        return g.norm2(r)
 
     def __call__(self, mat):
         vector_space = None
@@ -88,10 +95,10 @@ class fgmres(base_iterative):
 
         if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
-            mat = mat.specialized_singlet_callable()
+            mat = mat.specialized_list_callable()
 
         if isinstance(prec, g.matrix_operator):
-            prec = prec.specialized_singlet_callable()
+            prec = prec.specialized_list_callable()
 
         @self.timed_function
         def inv(psi, src, t):
@@ -99,24 +106,25 @@ class fgmres(base_iterative):
             t("setup")
 
             # parameters
+            n_rhs = len(src)
             rlen = self.restartlen
 
             # tensors
             dtype = g.double.complex_dtype
-            H = np.zeros((rlen + 1, rlen), dtype)
-            c = np.zeros((rlen + 1), dtype)
-            s = np.zeros((rlen + 1), dtype)
-            y = np.zeros((rlen + 1), dtype)
-            gamma = np.zeros((rlen + 1), dtype)
+            H = np.zeros((rlen + 1, rlen, n_rhs), dtype)
+            c = np.zeros((rlen + 1, n_rhs), dtype)
+            s = np.zeros((rlen + 1, n_rhs), dtype)
+            y = np.zeros((rlen + 1, n_rhs), dtype)
+            gamma = np.zeros((rlen + 1, n_rhs), dtype)
 
             # fields
             mmpsi, r = (
                 g.copy(src),
                 g.copy(src),
             )
-            V = [g.lattice(src) for i in range(rlen + 1)]
+            V = [[g.lattice(s) for s in src] for i in range(rlen + 1)]
             Z = (
-                [g.lattice(src) for i in range(rlen + 1)] if prec is not None else None
+                [[g.lattice(s) for s in src] for i in range(rlen + 1)] if prec is not None else None
             )  # save vectors if unpreconditioned
             ZV = Z if prec is not None else V
 
@@ -126,7 +134,7 @@ class fgmres(base_iterative):
             t("setup")
 
             # source
-            ssq = g.norm2(src)
+            ssq = sum(g.norm2(src))
             if ssq == 0.0:
                 assert r2 != 0.0  # need either source or psi to not be zero
                 ssq = r2
@@ -143,28 +151,30 @@ class fgmres(base_iterative):
 
                 t("prec")
                 if prec is not None:
-                    ZV[i][:] = 0
+                    for z in ZV[i]:
+                        z[:] = 0
                     prec(ZV[i], V[i])
 
                 t("mat")
                 mat(V[i + 1], ZV[i])
 
                 t("ortho")
-                g.orthogonalize(V[i + 1], V[0 : i + 1], H[:, i], nblock=10)
+                for j in range(n_rhs):
+                    g.orthogonalize(V[i + 1][j], [V[l][j] for l in range(0, i + 1)], H[:, i, j], nblock=10)
 
                 t("linalg norm2")
-                H[i + 1, i] = g.norm2(V[i + 1]) ** 0.5
-                if H[i + 1, i] == 0.0:
-                    self.debug(f"breakdown, H[{i+1:d}, {i:d}] = 0")
-                    break
+                H[i + 1, i] = np.array(g.norm2(V[i + 1])) ** 0.5
+                for j in range(n_rhs):
+                    assert H[i + 1, i, j] != 0.0
                 t("linalg div")
-                V[i + 1] /= H[i + 1, i]
+                for j in range(n_rhs):
+                    V[i + 1][j] /= H[i + 1, i, j]
 
                 t("qr")
                 self.qr_update(s, c, H, gamma, i)
-
+                
                 t("other")
-                r2 = np.absolute(gamma[i + 1]) ** 2
+                r2 = np.sum(np.absolute(gamma[i + 1]) ** 2)
                 self.log_convergence((k, i), r2, rsq)
 
                 if r2 <= rsq or need_restart:
@@ -174,7 +184,7 @@ class fgmres(base_iterative):
                 if r2 <= rsq:
                     msg = f"converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
-                        res = self.calc_res(mat, psi, mmpsi, src, r, t)
+                        res = sum(self.calc_res(mat, psi, mmpsi, src, r, t))
                         msg += f";  true squared residual {res:e} / {rsq:e}"
                     self.log(msg)
                     return
@@ -186,7 +196,7 @@ class fgmres(base_iterative):
 
             msg = f"NOT converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:
-                res = self.calc_res(mat, psi, mmpsi, src, r, t)
+                res = sum(self.calc_res(mat, psi, mmpsi, src, r, t))
                 msg += f";  true squared residual {res:e} / {rsq:e}"
             self.log(msg)
 
@@ -195,4 +205,5 @@ class fgmres(base_iterative):
             inv_mat=mat,
             vector_space=vector_space,
             accept_guess=(True, False),
+            accept_list=True
         )
