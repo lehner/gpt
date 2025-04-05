@@ -93,7 +93,10 @@ class cagcr(base_iterative):
                     mat(p[i + 1], p[i])
 
                 t("inner_product")
-                ips = [g.inner_product([x[j] for x in p[1:]], [x[j] for x in p[1:] + [p[0]]]) for j in range(n_rhs)]  # single reduction
+                ips = [
+                    g.inner_product([x[j] for x in p[1:]], [x[j] for x in p[1:] + [p[0]]])
+                    for j in range(n_rhs)
+                ]  # single reduction
 
                 t("solve")
                 alpha = []
@@ -123,11 +126,11 @@ class cagcr(base_iterative):
                     self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
-                    msg = f"converged in {k+rlen} iterations"
+                    msg = f"converged in {k + rlen} iterations"
                     if self.maxiter != rlen:
                         msg += f";  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
-                        res = sum(self.calc_res(mat, psi, mmpsi, src, r))
+                        res = sum(self.calc_res(mat, psi, mmpsi, src, r, t))
                         msg += f";  true squared residual {res:e} / {rsq:e}"
                     self.log(msg)
                     return
@@ -137,11 +140,11 @@ class cagcr(base_iterative):
                     g.copy(p[0], r)
                     self.debug("performed restart")
 
-            msg = f"NOT converged in {k+rlen} iterations"
+            msg = f"NOT converged in {k + rlen} iterations"
             if self.maxiter != rlen:
                 msg += f";  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:
-                res = sum(self.calc_res(mat, psi, mmpsi, src, r))
+                res = sum(self.calc_res(mat, psi, mmpsi, src, r, t))
                 msg += f";  true squared residual {res:e} / {rsq:e}"
             self.log(msg)
 
@@ -150,5 +153,5 @@ class cagcr(base_iterative):
             inv_mat=mat,
             vector_space=vector_space,
             accept_guess=(True, False),
-            accept_list=True
+            accept_list=True,
         )

@@ -88,6 +88,7 @@ slv_bicgstab = w.propagator(inv_pc(eo2, inv.bicgstab({"eps": 1e-6, "maxiter": 10
 slv_fgcr = w.propagator(inv_pc(eo2, inv.fgcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
 slv_fgmres = w.propagator(inv_pc(eo2, inv.fgmres({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
 slv_cagcr = w.propagator(inv_pc(eo2, inv.cagcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 10})))
+slv_recording_gcr = w.propagator(inv.recording_gcr({"eps": 1e-6, "maxiter": 1000}))
 slv_fom = w.propagator(inv_pc(eo2, inv.fom({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
 
 # defect-correcting solver at the full field level
@@ -177,6 +178,7 @@ test(slv_bicgstab, "BICGSTAB")
 test(slv_fgcr, "FGCR")
 test(slv_fgmres, "FGMRES")
 test(slv_cagcr, "CAGCR")
+test(slv_recording_gcr, "RGCR")
 test(slv_fom, "FOM")
 
 # summary
