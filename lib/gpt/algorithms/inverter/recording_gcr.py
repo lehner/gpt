@@ -21,6 +21,52 @@ import numpy as np
 from gpt.algorithms import base_iterative
 
 
+class playback_gcr(base_iterative):
+    def __init__(self, alphas):
+        super().__init__()
+        self.alphas = alphas
+
+    def __call__(self, value):
+        alphas = self.alphas
+
+        if g.util.is_num(value):
+            y = alphas[0]
+            r = 1.0
+            for i in range(len(alphas) - 1):
+                r -= alphas[i] * value * r
+                y += alphas[i + 1] * r
+            return y
+        else:
+            mat = value
+
+            vector_space = None
+            if isinstance(mat, g.matrix_operator):
+                vector_space = mat.vector_space
+                mat = mat.specialized_list_callable()
+
+            @self.timed_function
+            def inv(y, src, t):
+                t("setup")
+                g(y, alphas[0] * g.expr(src))
+                r = g.copy(src)
+                mat_r = [g.lattice(s) for s in src]
+                for i in range(len(alphas) - 1):
+                    t("mat")
+                    mat(mat_r, r)
+                    t("axpy")
+                    for j in range(len(src)):
+                        g.axpy(r[j], -alphas[i], mat_r[j], r[j])
+                        g.axpy(y[j], alphas[i + 1], r[j], y[j])
+
+            return g.matrix_operator(
+                mat=inv,
+                inv_mat=mat,
+                vector_space=vector_space,
+                accept_guess=False,
+                accept_list=True,
+            )
+
+
 class recording_gcr(base_iterative):
 
     @g.params_convention(eps=1e-15, maxiter=1000000)
@@ -29,7 +75,7 @@ class recording_gcr(base_iterative):
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
-        self.recorded_polynomial = []
+        self.alphas = []
 
     def modified(self, **params):
         return recording_gcr({**self.params, **params})
@@ -60,7 +106,7 @@ class recording_gcr(base_iterative):
             # target residual
             rsq = self.eps**2.0 * ssq
 
-            alphas = []
+            self.alphas.clear()
             for k in range(0, self.maxiter):
                 t("mat")
                 mat_r = g(mat * r)
@@ -70,7 +116,7 @@ class recording_gcr(base_iterative):
 
                 t("solve")
                 alpha = rhs / A
-                alphas.append(alpha)
+                self.alphas.append(alpha)
 
                 t("update_psi")
                 psi += alpha * r
@@ -88,17 +134,6 @@ class recording_gcr(base_iterative):
                     msg = f"converged in {k + 1} iterations"
                     msg += f";  computed squared residual {r2:e} / {rsq:e}"
                     self.log(msg)
-
-                    # replay test
-                    test = g(alphas[0] * src)
-                    r = g.copy(src)
-                    for i in range(k):
-                        r = g(r - alphas[i] * mat * r)  # r_{i+1} = (1 + alpha_i mat) r_i
-                        test = g(
-                            test + alphas[i + 1] * r
-                        )  # test_{i+1} = test_i + alpha_{i+1} r_{i+1}  # -> r_i = (test_i - test_{i-1}) / alpha_i
-                    eps2 = g.norm2(test - psi)
-                    g.message("TEST replay", eps2)
                     return
 
             msg = f"NOT converged in {k + 1} iterations"

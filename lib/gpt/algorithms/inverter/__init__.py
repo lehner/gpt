@@ -27,7 +27,7 @@ from gpt.algorithms.inverter.chebyshev import chebyshev
 from gpt.algorithms.inverter.block_cg import block_cg
 from gpt.algorithms.inverter.bicgstab import bicgstab
 from gpt.algorithms.inverter.cagcr import cagcr
-from gpt.algorithms.inverter.recording_gcr import recording_gcr
+from gpt.algorithms.inverter.recording_gcr import recording_gcr, playback_gcr
 from gpt.algorithms.inverter.fom import fom
 from gpt.algorithms.inverter.fgcr import fgcr
 from gpt.algorithms.inverter.fgmres import fgmres
