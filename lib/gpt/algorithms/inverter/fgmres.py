@@ -56,7 +56,6 @@ class fgmres(base_iterative):
         gamma[i + 1] = -s[i] * gamma[i]
         gamma[i] *= np.conjugate(c[i])
 
-
     def update_psi(self, psi, gamma, H, y, V, i):
         # backward substitution
         for l in range(len(psi)):
@@ -172,7 +171,7 @@ class fgmres(base_iterative):
 
                 t("qr")
                 self.qr_update(s, c, H, gamma, i)
-                
+
                 t("other")
                 r2 = np.sum(np.absolute(gamma[i + 1]) ** 2)
                 self.log_convergence((k, i), r2, rsq)

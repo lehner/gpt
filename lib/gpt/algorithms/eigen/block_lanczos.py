@@ -160,7 +160,7 @@ class block_lanczos:
                     if verbose:
                         g.message("Converged in %d iterations" % (n + 1))
                     break
-                
+
         t("rotate")
         g.rotate(
             Y[0:space_size], np.ascontiguousarray(eig_vec.T), 0, Nstop, 0, space_size

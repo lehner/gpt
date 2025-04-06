@@ -24,7 +24,7 @@ class relaxation(base_iterative):
     def __init__(self, inner):
         super().__init__()
         self.inner = inner
-        
+
     def modified(self, **params):
         return relaxation(self.inner)
 
