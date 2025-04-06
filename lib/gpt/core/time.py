@@ -26,6 +26,11 @@ t0 = cgpt.time()
 verbose_profile = None
 
 
+def reset_profile():
+    if verbose_profile is not None:
+        verbose_profile.reset()
+
+
 def time():
     return cgpt.time() - t0
 
