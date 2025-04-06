@@ -43,7 +43,7 @@ class pack(auto_tuned_class):
 
         # auto tuner
         tag = f"pack({self.otype.__name__}, {len(self.lattices)}, {self.grid.describe()})"
-        super().__init__(tag, [2,4,8,16,32,64,128,256], 32)
+        super().__init__(tag, [2, 4, 8, 16, 32, 64, 128, 256], 32)
 
     def rank_bytes(self):
         return sum([l.rank_bytes() for l in self.lattices])

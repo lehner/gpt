@@ -106,7 +106,7 @@ class fom(base_iterative):
                 self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
-                    msg = f"converged in {k+rlen} iterations"
+                    msg = f"converged in {k + rlen} iterations"
                     if self.maxiter != rlen:
                         msg += f";  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
@@ -121,7 +121,7 @@ class fom(base_iterative):
                     a.H = []
                     self.debug("performed restart")
 
-            msg = f"NOT converged in {k+rlen} iterations"
+            msg = f"NOT converged in {k + rlen} iterations"
             if self.maxiter != rlen:
                 msg += f";  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:

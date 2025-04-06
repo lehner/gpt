@@ -30,7 +30,7 @@ class calculate_residual:
                 nrm = g.norm2(src[i]) ** 0.5
                 if nrm != 0.0:
                     g.message(
-                        f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps/nrm}, | src[{i}] | = {nrm}"
+                        f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps / nrm}, | src[{i}] | = {nrm}"
                     )
                 else:
                     g.message(

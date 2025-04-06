@@ -108,7 +108,7 @@ class lattice(factor, foundation_base):
             if water_mark > water_mark_max:
                 water_mark_max = water_mark
                 gpt.message(
-                    f"Water mark: create lattice with {self.global_bytes()/1e9} GB increases maximum water mark to {water_mark_max/1e9} GB"
+                    f"Water mark: create lattice with {self.global_bytes() / 1e9} GB increases maximum water mark to {water_mark_max / 1e9} GB"
                 )
         if cb is not None:
             self.checkerboard(cb)

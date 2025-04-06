@@ -181,7 +181,7 @@ class fgmres(base_iterative):
                     self.update_psi(psi, gamma, H, y, ZV, i)
 
                 if r2 <= rsq:
-                    msg = f"converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+                    msg = f"converged in {k + 1} iterations;  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
                         res = sum(self.calc_res(mat, psi, mmpsi, src, r, t))
                         msg += f";  true squared residual {res:e} / {rsq:e}"
@@ -193,7 +193,7 @@ class fgmres(base_iterative):
                     r2 = self.restart(mat, psi, mmpsi, src, r, V, Z, gamma, t)
                     self.debug("performed restart")
 
-            msg = f"NOT converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+            msg = f"NOT converged in {k + 1} iterations;  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:
                 res = sum(self.calc_res(mat, psi, mmpsi, src, r, t))
                 msg += f";  true squared residual {res:e} / {rsq:e}"
