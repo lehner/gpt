@@ -261,7 +261,9 @@ class timer:
             if gpt.default.is_verbose("profile"):
                 verbose_profile = cgpt.profile_range
             elif gpt.default.is_verbose("profile_summary"):
-                verbose_profile = profiler_summary()
+                verbose_profile = profiler_summary(
+                    dt=gpt.default.get_float("--profile_period", 1.0)
+                )
         if verbose_profile is not None:
             self.enabled = True
 
