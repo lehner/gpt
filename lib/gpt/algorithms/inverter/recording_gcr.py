@@ -22,9 +22,11 @@ from gpt.algorithms import base_iterative
 
 
 class playback_gcr(base_iterative):
-    def __init__(self, alphas):
+    @g.params_convention(monitor_convergence=None)
+    def __init__(self, alphas, params):
         super().__init__()
         self.alphas = alphas
+        self.monitor_convergence = params["monitor_convergence"]
 
     def __call__(self, value):
         alphas = self.alphas
@@ -57,6 +59,11 @@ class playback_gcr(base_iterative):
                     for j in range(len(src)):
                         g.axpy(r[j], -alphas[i], mat_r[j], r[j])
                         g.axpy(y[j], alphas[i + 1], r[j], y[j])
+
+                    if self.monitor_convergence is not None:
+                        if i % self.monitor_convergence == 0:
+                            r2 = sum(g.norm2(r))
+                            self.log_convergence(i, r2)
 
             return g.matrix_operator(
                 mat=inv,

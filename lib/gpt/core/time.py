@@ -26,9 +26,14 @@ t0 = cgpt.time()
 verbose_profile = None
 
 
-def reset_profile():
+def profile_reset():
     if verbose_profile is not None:
         verbose_profile.reset()
+
+
+def profile_save(fn):
+    if verbose_profile is not None:
+        verbose_profile.save(fn)
 
 
 def time():
@@ -169,73 +174,81 @@ class profiler_summary:
 
         t1 = gpt.time()
         if t1 > self.t0:
-            path = "/".join(self.current)
-
-            closed_tags = {
-                tg: (
-                    self.tags[tg][0]
-                    if self.tags[tg][1] is None
-                    else self.tags[tg][0] + t1 - self.tags[tg][1]
-                )
-                for tg in self.tags
-            }
-
-            sorted_tags = sorted(list(closed_tags), key=lambda x: -closed_tags[x])
-            total_timed = sum([closed_tags[x] for x in closed_tags if "/" not in x])
+            gpt.message(self.__str__()[0:-1])
             self.t0 = t1 + self.dt
-            gpt.message(
-                "----------------------------------------------------------------------------------------------------------------------------------------------------------------\n"
-                f" Profile Summary with {total_timed:g} s timed and {gpt.time() - total_timed:g} s untimed so far\n"
-                "----------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    def save(self, fn):
+        f = open(fn, "wt")
+        f.write(self.__str__())
+        f.close()
+
+    def __str__(self):
+        t1 = gpt.time()
+        path = "/".join(self.current)
+
+        closed_tags = {
+            tg: (
+                self.tags[tg][0]
+                if self.tags[tg][1] is None
+                else self.tags[tg][0] + t1 - self.tags[tg][1]
             )
-            gpt.message(
-                " Total                     Path                                                                     Min        Mean       Max           Count"
-            )
-            gpt.message(
-                "----------------------------------------------------------------------------------------------------------------------------------------------------------------"
-            )
+            for tg in self.tags
+        }
 
-            def find_path(ctx, p):
-                for c in ctx:
-                    if c[0] == p:
-                        return c[1]
-                return None
+        sorted_tags = sorted(list(closed_tags), key=lambda x: -closed_tags[x])
+        total_timed = sum([closed_tags[x] for x in closed_tags if "/" not in x])
 
-            display_candidates = sorted_tags[0 : self.max_summarize]
-            to_display = []
-            for tag in display_candidates:
-                path = tag.split("/")
-                context = to_display
-                for lvl, p in enumerate(path):
-                    ip = find_path(context, p)
-                    if ip is None:
-                        context.append((p, []))
-                        context = context[-1][1]
-                    else:
-                        context = ip
+        sep = "----------------------------------------------------------------------------------------------------------------------------------------------------------------\n"
+        ret = ""
+        ret += sep
+        ret += f" Profile Summary with {total_timed:g} s timed and {gpt.time() - total_timed:g} s untimed so far\n"
+        ret += sep
+        ret += " Total                     Path                                                                     Min        Mean       Max           Count\n"
+        ret += sep
 
-            def walk(current, paths):
-                mark = ["+", "*", "-", ">", "#", "$"]
-                for ctag, children in paths:
-                    ccurrent = current + [ctag]
+        def find_path(ctx, p):
+            for c in ctx:
+                if c[0] == p:
+                    return c[1]
+            return None
 
-                    etag = "  " * (len(current)) + mark[len(current) % len(mark)] + " " + ctag
-                    tag = "/".join(ccurrent)
-                    tg = self.tags[tag]
+        display_candidates = sorted_tags[0 : self.max_summarize]
+        to_display = []
+        for tag in display_candidates:
+            path = tag.split("/")
+            context = to_display
+            for lvl, p in enumerate(path):
+                ip = find_path(context, p)
+                if ip is None:
+                    context.append((p, []))
+                    context = context[-1][1]
+                else:
+                    context = ip
 
-                    base = f" {closed_tags[tag] / total_timed * 100:6.2f} %    {closed_tags[tag]:.2e} s    {etag}"
-                    gpt.message(
-                        base
-                        + " " * (100 - len(base))
-                        + f"{tg[2]:.2e} / {tg[0] / tg[4]:.2e} / {tg[3]:.2e} s    {tg[4]}"
-                    )
+        def walk(current, paths, ret):
+            mark = ["+", "*", "-", ">", "#", "$"]
+            for ctag, children in paths:
+                ccurrent = current + [ctag]
 
-                    walk(ccurrent, children)
+                etag = "  " * (len(current)) + mark[len(current) % len(mark)] + " " + ctag
+                tag = "/".join(ccurrent)
+                tg = self.tags[tag]
 
-            walk([], to_display)
-            gpt.message(
-                "----------------------------------------------------------------------------------------------------------------------------------------------------------------"
-            )
+                base = f" {closed_tags[tag] / total_timed * 100:6.2f} %    {closed_tags[tag]:.2e} s    {etag}"
+                ret += (
+                    base
+                    + " " * (100 - len(base))
+                    + f"{tg[2]:.2e} / {tg[0] / tg[4]:.2e} / {tg[3]:.2e} s    {tg[4]}"
+                    + "\n"
+                )
+                ret = walk(ccurrent, children, ret)
+
+            return ret
+
+        ret = walk([], to_display, ret)
+        ret += sep
+
+        return ret
 
 
 class timer:

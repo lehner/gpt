@@ -28,7 +28,7 @@ from gpt.core.peekpoke import map_key
 from gpt.core.tensor import tensor
 from gpt.core.epsilon import epsilon, sign_of_permutation
 from gpt.core.gamma import gamma, gamma_base
-from gpt.core.time import time, timer, reset_profile
+from gpt.core.time import time, timer, profile_reset, profile_save
 from gpt.core.log import message
 from gpt.core.auto_tune import auto_tuned_class, auto_tuned_method
 from gpt.core.pin import pin
