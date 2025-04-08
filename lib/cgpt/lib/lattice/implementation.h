@@ -61,10 +61,19 @@ public:
     l = 1.0;
   }
 
-  virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
-    return ::axpy(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
-  }
+  /*virtual void axpy(std::vector<cgpt_Lattice_base*>& z, std::vector<ComplexD>& a, std::vector<cgpt_Lattice_base*>& x, std::vector<cgpt_Lattice_base*>& y) {
+    PVector<Lattice<T>> _x, _y, _z;
+    cgpt_basis_fill(_x,x);
+    cgpt_basis_fill(_y,y);
+    cgpt_basis_fill(_z,z);
 
+    cgpt_axpy(_z,a,_x,_y);
+    }*/
+  
+  virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
+    return cgpt_axpy(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
+  }
+  
   virtual void scale_per_coordinate(cgpt_Lattice_base* src,ComplexD* s,int dim) {
     cgpt_scale_per_coordinate(l,compatible<T>(src)->l,s,dim);
   }

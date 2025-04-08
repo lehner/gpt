@@ -31,6 +31,7 @@ public:
   virtual PyObject* to_str() = 0;
   virtual PyObject* rank_sum() = 0;
   virtual RealD norm2() = 0;
+  //virtual void axpy(std::vector<cgpt_Lattice_base*>& z, std::vector<ComplexD>& a, std::vector<cgpt_Lattice_base*>& x, std::vector<cgpt_Lattice_base*>& y) = 0;
   virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
   virtual void rank_inner_product(ComplexD* result, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, bool use_accelerator) = 0;
   virtual void inner_product_norm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;

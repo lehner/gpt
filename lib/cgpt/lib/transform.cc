@@ -199,7 +199,24 @@ EXPORT(lattice_norm2,{
   });
 
 EXPORT(lattice_axpy,{
+
+    /*
+    PyObject* _a,* _r, *_x, *_y;
+    if (!PyArg_ParseTuple(args, "OOOO", &_r,&_a,&_x,&_y)) {
+      return NULL;
+    }
+
+    std::vector<cgpt_Lattice_base*> x, y, r;
+    cgpt_basis_fill(x,_x);
+    cgpt_basis_fill(y,_y);
+    cgpt_basis_fill(r,_r);
     
+    std::vector<ComplexD> a;
+    cgpt_convert(_a,a);
+
+    r[0]->axpy(r,a,x,y);
+    */
+
     void* _r,*_x,*_y;
     PyObject* _a;
     if (!PyArg_ParseTuple(args, "lOll", &_r,&_a,&_x,&_y)) {

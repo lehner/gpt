@@ -46,8 +46,7 @@ class cagcr(base_iterative):
         t("mat")
         mat(mmpsi, psi)
         t("axpy")
-        for r_i, mmpsi_i, src_i in zip(r, mmpsi, src):
-            g.axpy(r_i, -1.0, mmpsi_i, src_i)
+        g.axpy(r, [-1.0]*len(mmpsi), mmpsi, src)
         t("norm2")
         return g.norm2(r)
 
@@ -110,14 +109,12 @@ class cagcr(base_iterative):
 
                 t("update_psi")
                 for i in range(rlen):
-                    for j in range(n_rhs):
-                        g.axpy(psi[j], alpha[j][i], p[i][j], psi[j])
+                    g.axpy(psi, [alpha[j][i] for j in range(n_rhs)], p[i], psi)
 
                 if self.maxiter != rlen:
                     t("update_residual")
                     for i in range(rlen):
-                        for j in range(n_rhs):
-                            g.axpy(r[j], -alpha[j][i], p[i + 1][j], r[j])
+                        g.axpy(r, [-alpha[j][i] for j in range(n_rhs)], p[i + 1], r)
 
                     t("residual")
                     r2 = sum(g.norm2(r))

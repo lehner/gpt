@@ -115,13 +115,20 @@ def inner_product_norm2(a, b):
 
 
 def axpy(d, a, x, y):
-    x = gpt.eval(x)
-    y = gpt.eval(y)
-    a = complex(a)
-    assert len(y.otype.v_idx) == len(x.otype.v_idx)
-    assert len(d.otype.v_idx) == len(x.otype.v_idx)
-    for i in x.otype.v_idx:
-        cgpt.lattice_axpy(d.v_obj[i], a, x.v_obj[i], y.v_obj[i])
+    d = gpt.util.to_list(d)
+    a = gpt.util.to_list(a)
+    x = gpt.util.to_list(x)
+    y = gpt.util.to_list(y)
+    
+    x = [gpt(v) for v in x]
+    y = [gpt(v) for v in y]
+    a = [complex(v) for v in a]
+
+    for j in range(len(x)):
+        for i in x[j].otype.v_idx:
+            cgpt.lattice_axpy(d[j].v_obj[i], a[j], x[j].v_obj[i], y[j].v_obj[i])
+    #cgpt.lattice_axpy(d, a, x, y)
+    cgpt.accelerator_barrier()
 
 
 def axpy_norm2(d, a, x, y):

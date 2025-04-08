@@ -283,3 +283,8 @@ EXPORT(profile_range,{
     
     return PyLong_FromLong(0);
   });
+
+EXPORT(accelerator_barrier,{
+    accelerator_barrier();
+    return PyLong_FromLong(0);
+  });
