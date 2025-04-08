@@ -92,10 +92,9 @@ class cagcr(base_iterative):
                     mat(p[i + 1], p[i])
 
                 t("inner_product")
-                ips = [
-                    g.inner_product([x[j] for x in p[1:]], [x[j] for x in p[1:] + [p[0]]])
-                    for j in range(n_rhs)
-                ]  # single reduction
+                ips = g.inner_product([x[j] for j in range(n_rhs) for x in p[1:]], [x[j] for j in range(n_rhs) for x in p[1:] + [p[0]]], n_block=n_rhs)
+                if n_rhs == 1:
+                    ips = [ips]
 
                 t("solve")
                 alpha = []
