@@ -317,15 +317,15 @@ for grid in [grid_dp, grid_sp]:
         left = [dtype(grid) for i in range(2)]
         right = [dtype(grid) for i in range(3)]
         rng.cnormal([left, right])
-        host_result = g.rank_inner_product(left, right, False)
-        acc_result = g.rank_inner_product(left, right, True)
+        host_result = g.rank_inner_product(left, right, use_accelerator=False)
+        acc_result = g.rank_inner_product(left, right, use_accelerator=True)
         eps = np.linalg.norm(host_result - acc_result) / np.linalg.norm(host_result)
         g.message(f"Test multi inner product host<>accelerator: {eps}")
         assert eps < 1e-13
         for i in range(2):
             for j in range(3):
-                host_result_individual = g.rank_inner_product(left[i], right[j], False)
-                acc_result_individual = g.rank_inner_product(left[i], right[j], True)
+                host_result_individual = g.rank_inner_product(left[i], right[j], 1, use_accelerator=False)
+                acc_result_individual = g.rank_inner_product(left[i], right[j], use_accelerator=True)
                 eps = abs(host_result_individual - host_result[i, j]) / abs(host_result[i, j])
                 assert eps < 1e-13
                 eps = abs(acc_result_individual - acc_result[i, j]) / abs(acc_result[i, j])

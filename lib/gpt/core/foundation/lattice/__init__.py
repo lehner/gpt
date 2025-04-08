@@ -36,9 +36,7 @@ def norm2(l):
     return (
         l[0]
         .grid.globalsum(
-            numpy.array(
-                [rank_inner_product([x], [x], 1, True)[0, 0] for x in l], dtype=numpy.complex128
-            )
+            rank_inner_product(l, l, len(l), True).reshape(len(l))
         )
         .real
     )
