@@ -82,15 +82,15 @@ public:
     return ::norm2(l);
   }
 
-  virtual void rank_inner_product(ComplexD* res, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, bool use_accelerator) {
+  virtual void rank_inner_product(ComplexD* res, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, long n_block, bool use_accelerator) {
     PVector<Lattice<T>> _left;
     PVector<Lattice<T>> _right;
     cgpt_basis_fill(_left,left);
     cgpt_basis_fill(_right,right);
     if (use_accelerator) {
-      ::rankInnerProduct(res,_left,_right,n_virtual);
+      ::rankInnerProduct(res,_left,_right,n_virtual,n_block);
     } else {
-      ::rankInnerProductCpu(res,_left,_right,n_virtual);
+      ::rankInnerProductCpu(res,_left,_right,n_virtual,n_block);
     }
   }
 

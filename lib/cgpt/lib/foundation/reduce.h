@@ -269,7 +269,8 @@ template<class vobj>
 inline void rankInnerProductCpu(ComplexD* result, 
 				PVector<Lattice<vobj>> &multi_left,
 				PVector<Lattice<vobj>> &multi_right,
-				size_t n_virtual)
+				size_t n_virtual,
+				size_t n_block)
 {
   typedef typename vobj::scalar_type scalar_type;
   typedef typename vobj::vector_type vector_type;
@@ -277,11 +278,12 @@ inline void rankInnerProductCpu(ComplexD* result,
   
   GridBase *grid = multi_left[0].Grid();
 
-  assert(multi_left.size() % n_virtual == 0);
-  assert(multi_right.size() % n_virtual == 0);
+  size_t n_v_block = n_virtual * n_block;
+  assert(multi_left.size() % n_v_block == 0);
+  assert(multi_right.size() % n_v_block == 0);
 
-  const uint64_t n_left = multi_left.size() / n_virtual;
-  const uint64_t n_right = multi_right.size() / n_virtual;
+  const uint64_t n_left = multi_left.size() / n_v_block;
+  const uint64_t n_right = multi_right.size() / n_v_block;
   const uint64_t words_per_osite = sizeof(vobj) / sizeof(vector_type);
   const uint64_t words = grid->oSites() * words_per_osite;
   const uint64_t max_parallel = thread_max();
@@ -290,33 +292,40 @@ inline void rankInnerProductCpu(ComplexD* result,
   VECTOR_VIEW_OPEN(multi_right,right_v,CpuRead);
   
   {
-    AlignedVector<ComplexD> all_thread_sum_reduce(max_parallel * n_left*n_right);
+    size_t stride = n_left*n_right*n_block;
+    AlignedVector<ComplexD> all_thread_sum_reduce(max_parallel * stride);
     
     thread_region
       {
-	ComplexD * thread_sum_reduce = &all_thread_sum_reduce[thread_num()*n_left*n_right];
+	ComplexD * thread_sum_reduce = &all_thread_sum_reduce[thread_num()*stride];
 	thread_for_in_region(i, all_thread_sum_reduce.size(), {
 	    all_thread_sum_reduce[i] = 0.0;
 	  });
 
 	thread_for_in_region( w, words, {
-	    for (uint64_t kl=0;kl<n_left;kl++) {
-	      for (uint64_t kr=0;kr<n_right;kr++) {
-		ComplexD s = 0.0;
-		for (size_t i=0;i<n_virtual;i++) {
-		  vector_type* l = (vector_type*)&left_v[kl*n_virtual + i][0];
-		  vector_type* r = (vector_type*)&right_v[kr*n_virtual + i][0];
-		  s += Reduce(innerProductD(l[w],r[w]));
+	    for (uint64_t kb=0;kb<n_block;kb++) {
+	      uint64_t l0 = kb*n_virtual*n_left;
+	      uint64_t r0 = kb*n_virtual*n_right;
+	      uint64_t t0 = kb*n_left*n_right;
+	      
+	      for (uint64_t kl=0;kl<n_left;kl++) {
+		for (uint64_t kr=0;kr<n_right;kr++) {
+		  ComplexD s = 0.0;
+		  for (size_t i=0;i<n_virtual;i++) {
+		    vector_type* l = (vector_type*)&left_v[l0 + kl*n_virtual + i][0];
+		    vector_type* r = (vector_type*)&right_v[r0 + kr*n_virtual + i][0];
+		    s += Reduce(innerProductD(l[w],r[w]));
+		  }
+		  thread_sum_reduce[t0 + kl * n_right + kr] += s;
 		}
-		thread_sum_reduce[kl * n_right + kr] += s;
 	      }
 	    }
 	  });
 
-	thread_for_in_region( i, n_left*n_right, {
+	thread_for_in_region( i, stride, {
 	    result[i] = 0.0;
 	    for (uint64_t j=0;j<max_parallel;j++) {
-	      ComplexD * thread_sum_reduce = &all_thread_sum_reduce[j*n_left*n_right];
+	      ComplexD * thread_sum_reduce = &all_thread_sum_reduce[j*stride];
 	      result[i] += thread_sum_reduce[i];
 	    }
 	  });

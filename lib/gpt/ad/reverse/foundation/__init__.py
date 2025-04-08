@@ -21,13 +21,13 @@ from gpt.ad.reverse.util import container, get_unary_container
 import gpt.ad.reverse.foundation.matrix
 
 
-def inner_product(x, y, use_accelerator):
-    assert len(x) == 1 and len(y) == 1
+def inner_product(x, y, n_block, use_accelerator):
+    assert len(x) == 1 and len(y) == 1 and n_block == 1
     x = x[0]
     y = y[0]
 
     def _forward():
-        return g.inner_product(x.value, y.value, use_accelerator)
+        return g.inner_product(x.value, y.value, n_block, use_accelerator)
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):

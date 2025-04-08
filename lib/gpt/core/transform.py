@@ -81,15 +81,15 @@ def call_unary_a_num(functional, a):
     return gpt.util.to_num(res[0])
 
 
-def rank_inner_product(a, b, use_accelerator=True):
+def rank_inner_product(a, b, n_block=1, use_accelerator=True):
     return call_binary_aa_num(
-        lambda la, lb: la[0].__class__.foundation.rank_inner_product(la, lb, use_accelerator), a, b
+        lambda la, lb: la[0].__class__.foundation.rank_inner_product(la, lb, n_block, use_accelerator), a, b
     )
 
 
-def inner_product(a, b, use_accelerator=True):
+def inner_product(a, b, n_block=1, use_accelerator=True):
     return call_binary_aa_num(
-        lambda la, lb: la[0].__class__.foundation.inner_product(la, lb, use_accelerator), a, b
+        lambda la, lb: la[0].__class__.foundation.inner_product(la, lb, n_block, use_accelerator), a, b
     )
 
 
@@ -127,7 +127,7 @@ def axpy(d, a, x, y):
     for j in range(len(x)):
         for i in x[j].otype.v_idx:
             cgpt.lattice_axpy(d[j].v_obj[i], a[j], x[j].v_obj[i], y[j].v_obj[i])
-    #cgpt.lattice_axpy(d, a, x, y)
+
     cgpt.accelerator_barrier()
 
 

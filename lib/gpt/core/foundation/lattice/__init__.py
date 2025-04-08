@@ -22,14 +22,14 @@ import numpy
 import gpt.core.foundation.lattice.matrix
 
 
-def rank_inner_product(a, b, use_accelerator):
+def rank_inner_product(a, b, n_block, use_accelerator):
     otype = a[0].otype
     assert len(otype.v_idx) == len(b[0].otype.v_idx)
-    return cgpt.lattice_rank_inner_product(a, b, use_accelerator)
+    return cgpt.lattice_rank_inner_product(a, b, n_block, use_accelerator)
 
 
-def inner_product(a, b, use_accelerator):
-    return a[0].grid.globalsum(rank_inner_product(a, b, use_accelerator))
+def inner_product(a, b, n_block, use_accelerator):
+    return a[0].grid.globalsum(rank_inner_product(a, b, n_block, use_accelerator))
 
 
 def norm2(l):
@@ -37,7 +37,7 @@ def norm2(l):
         l[0]
         .grid.globalsum(
             numpy.array(
-                [rank_inner_product([x], [x], True)[0, 0] for x in l], dtype=numpy.complex128
+                [rank_inner_product([x], [x], 1, True)[0, 0] for x in l], dtype=numpy.complex128
             )
         )
         .real
@@ -45,7 +45,7 @@ def norm2(l):
 
 
 def object_rank_norm2(l):
-    return rank_inner_product(l, l, True).real
+    return rank_inner_product(l, l, 1, True).real
 
 
 def cshift(first, second, third, fourth):

@@ -143,8 +143,8 @@ EXPORT(convert,{
 EXPORT(lattice_rank_inner_product,{
     
     PyObject* _left,* _right;
-    long use_accelerator;
-    if (!PyArg_ParseTuple(args, "OOl", &_left, &_right, &use_accelerator)) {
+    long use_accelerator, n_block;
+    if (!PyArg_ParseTuple(args, "OOll", &_left, &_right, &n_block, &use_accelerator)) {
       return NULL;
     }
     
@@ -153,16 +153,26 @@ EXPORT(lattice_rank_inner_product,{
     long n_virtual_right = cgpt_basis_fill(right,_right);
     ASSERT(n_virtual_left == n_virtual_right);
 
-    std::vector<long> dim(2);
-    dim[0] = left.size() / n_virtual_left;
-    dim[1] = right.size() / n_virtual_right;
+    std::vector<long> dim;
+    if (n_block == 1) {
+      dim.resize(2);
+      dim[0] = left.size() / n_virtual_left;
+      dim[1] = right.size() / n_virtual_right;
+    } else {
+      dim.resize(3);
+      dim[0] = n_block;
+      dim[1] = left.size() / n_virtual_left / n_block;
+      dim[2] = right.size() / n_virtual_right / n_block;
+      ASSERT(left.size() % (n_virtual_left * n_block) == 0);
+      ASSERT(right.size() % (n_virtual_right * n_block) == 0);
+    }
 
     PyArrayObject* ret = cgpt_new_PyArray((int)dim.size(), &dim[0], NPY_COMPLEX128);
     ComplexD* result = (ComplexD*)PyArray_DATA(ret);
 
     ASSERT(left.size() > 0);
     
-    left[0]->rank_inner_product(result,left,right,n_virtual_left,use_accelerator);
+    left[0]->rank_inner_product(result,left,right,n_virtual_left,n_block,use_accelerator);
 
     return (PyObject*)ret;
   });

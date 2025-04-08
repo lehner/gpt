@@ -22,23 +22,23 @@ import gpt.ad.forward.foundation.matrix
 python_sum = sum
 
 
-def inner_product(sx, sy, use_accelerator):
+def inner_product(sx, sy, n_block, use_accelerator):
     assert len(sx) == 1 and len(sy) == 1
     sx = sx[0]
     sy = sy[0]
-    return {(0, 0): sx.distribute2(sy, lambda a, b: g.inner_product(a, b, use_accelerator))}
+    return {(0, 0): sx.distribute2(sy, lambda a, b: g.inner_product(a, b, n_block, use_accelerator))}
 
 
-def rank_inner_product(sx, sy, use_accelerator):
+def rank_inner_product(sx, sy, n_block, use_accelerator):
     assert len(sx) == 1 and len(sy) == 1
     sx = sx[0]
     sy = sy[0]
-    return {(0, 0): sx.distribute2(sy, lambda a, b: g.rank_inner_product(a, b, use_accelerator))}
+    return {(0, 0): sx.distribute2(sy, lambda a, b: g.rank_inner_product(a, b, n_block, use_accelerator))}
 
 
 def norm2(sx):
     assert len(sx) == 1
-    return [inner_product(sx, sx, True)[0, 0]]
+    return [inner_product(sx, sx, 1, True)[0, 0]]
 
 
 def object_rank_norm2(sx):
