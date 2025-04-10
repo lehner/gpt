@@ -23,23 +23,28 @@ import numpy as np
 
 
 class compiled(matrix_operator):
-    def __init__(self, points, implementation=None):
+    def __init__(self, points, implementation=None, packed=False):
         self.points = points
         self.implementation = implementation
         for p in points:
             grid = points[p].grid
-            otype = points[p].otype.vector_type
             break
+
         self.grid = grid
+        self.is_packed = packed
 
         if self.grid.cb.n == 1:
-            self.M = compiler.create_stencil_operator(points, 0, gpt.none, self.implementation)
+            self.M = compiler.create_stencil_operator(
+                points, 0, gpt.none, self.implementation, packed
+            )
         else:
-            self.M = compiler.create_stencil_operator(points, 0, gpt.even, self.implementation)
+            self.M = compiler.create_stencil_operator(
+                points, 0, gpt.even, self.implementation, packed
+            )
 
         super().__init__(
             mat=self.M.mat,
-            vector_space=gpt.vector_space.explicit_grid_otype(grid, otype),
+            vector_space=self.M.vector_space,
             accept_list=True,
         )
 
@@ -51,18 +56,28 @@ class compiled(matrix_operator):
             0,
             gpt.even,
             self.implementation,
+            self.is_packed,
         )
         Moo = compiler.create_stencil_operator(
-            compiler.project_points_parity(self.points, 0, gpt.odd), 1, gpt.odd, self.implementation
+            compiler.project_points_parity(self.points, 0, gpt.odd),
+            1,
+            gpt.odd,
+            self.implementation,
+            self.is_packed,
         )
         Meo = compiler.create_stencil_operator(
             compiler.project_points_parity(self.points, 1, gpt.even),
             1,
             gpt.even,
             self.implementation,
+            self.is_packed,
         )
         Moe = compiler.create_stencil_operator(
-            compiler.project_points_parity(self.points, 1, gpt.odd), 0, gpt.odd, self.implementation
+            compiler.project_points_parity(self.points, 1, gpt.odd),
+            0,
+            gpt.odd,
+            self.implementation,
+            self.is_packed,
         )
         grid_eo = self.grid.checkerboarded(gpt.redblack)
 
@@ -130,6 +145,7 @@ class projected(matrix_operator):
         max_point_per_dimension=None,
         tolerance=None,
         nblock=None,
+        packed=False,
     ):
 
         # accept also max length squared of points
@@ -157,7 +173,7 @@ class projected(matrix_operator):
         compiler.create(self, points, nblock=nblock)
 
         # get default implementation
-        op = compiled(points)
+        op = compiled(points, packed=packed)
 
         # test implementation
         if tolerance is not None:
@@ -167,7 +183,7 @@ class projected(matrix_operator):
             gpt.default.pop_verbose()
 
             # get reference implementation
-            rop = compiled(points, implementation="reference")
+            rop = compiled(points, implementation="reference", packed=packed)
 
             # test against reference matrix to make sure implementation is correct
             eps2_ref = tolerance

@@ -80,23 +80,38 @@ def test_coarse(slow_coarse, lpoints, tag, skip_eo_tests=False):
         g.message(len(vv), "points in stencil")
         g.message(vv, lpoints)
 
+    # sources for testing
     csrc = [rng.cnormal(g.vcomplex(cgrid, nbasis)) for i in range(6)]
+
+    # compile fast version
     cop_st = slow_coarse.compile(lpoints)
+
+    # compile fast version that has right-hand sides in grid-dimension 0
+    # the .packed() makes it such that it can act on lists of right-hand side
+    # the idea is to have the .packed() act on larger operations in packed state
+    cop_packed = slow_coarse.compile(lpoints, packed=True).packed()
 
     # warmup
     test2 = g(slow_coarse * csrc)
     test3 = g(cop_st * csrc)
 
+    # check operator correctness
     tt = g.timer("apply")
     tt("projected fine")
     test2 = g(slow_coarse * csrc)
     tt("stencil")
     test3 = g(cop_st * csrc)
+    tt("packed")
+    test4 = g(cop_packed * csrc)
     tt()
     g.message(tt)
     for i in range(len(csrc)):
         eps2 = g.norm2(test3[i] - test2[i]) / g.norm2(test2[i])
         g.message(f"Test coarse operator against vector {i}: {eps2}")
+        assert eps2 < eps2_threshold
+
+        eps2 = g.norm2(test4[i] - test2[i]) / g.norm2(test2[i])
+        g.message(f"Test coarse operator packing {i}: {eps2}")
         assert eps2 < eps2_threshold
 
     # checkerboarding?
@@ -247,6 +262,7 @@ lpoints_Mpc = [
 ]
 coarse_3 = bm_eo_f.coarse_operator(Mpc)
 
+
 def _Mpc(dst, src):
     for i in range(len(dst)):
         dst[i] @= src[i] * 1.1 + 2.3j * g.cshift(src[i], 0, 2)
@@ -269,7 +285,7 @@ test_coarse(
     coarse_3,
     lpoints_Mpc,
     f"e/o preconditooned fine -> coarse (padded version) {len(lpoints_Mpc)}-point stencil",
-    skip_eo_tests=True # with sufficient simd, padding loses too many factors of 2
+    skip_eo_tests=True,  # with sufficient simd, padding loses too many factors of 2
 )
 
 fast_coarse_1 = test_coarse(coarse_1, lpoints_9pt, "9pt Wilson fine -> coarse")

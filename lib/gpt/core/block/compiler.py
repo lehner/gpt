@@ -36,7 +36,7 @@ def adj_points(points):
     return ret
 
 
-def create_stencil_operator(points, vector_parity, target_checkerboard, implementation):
+def create_stencil_operator(points, vector_parity, target_checkerboard, implementation, packed):
     cache = {}
 
     grid = None
@@ -48,7 +48,12 @@ def create_stencil_operator(points, vector_parity, target_checkerboard, implemen
 
     verbose = g.default.is_verbose("compiled_stencil_operator")
 
-    vector_space = g.vector_space.explicit_grid_otype_checkerboard(grid, otype, target_checkerboard)
+    if not packed:
+        vector_space = g.vector_space.explicit_grid_otype_checkerboard(
+            grid, otype, target_checkerboard
+        )
+    else:
+        vector_space = g.vector_space.implicit()
 
     # select implementation
     if implementation is None:
@@ -69,15 +74,17 @@ def create_stencil_operator(points, vector_parity, target_checkerboard, implemen
 
     def delayed_matrix(get_points, tag, ip, ocb):
         def _mat(dst, src):
-            n_rhs = len(src)
+            n_rhs = len(src) if not packed else src[0].grid.gdimensions[0]
             key = (n_rhs, tag)
             if key not in cache:
                 cache[key] = implementation_map[implementation].create_stencil_operator_n_rhs(
-                    get_points(), ip, n_rhs, ocb
+                    get_points(), ip, n_rhs, ocb, packed
                 )
 
             if verbose:
-                g.message(f"Call compiled_stencil_operator with {n_rhs} right-hand sides")
+                g.message(
+                    f"Call compiled_stencil_operator with {n_rhs} right-hand sides (packed={packed})"
+                )
             cache[key](dst, src)
 
         return _mat

@@ -19,7 +19,7 @@
 import gpt as g
 
 
-def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb):
+def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed):
 
     # get vector type
     vector_type = None
@@ -27,6 +27,13 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb):
         vector_type = points[p].otype.vector_type
         grid = points[p].grid
         break
+
+    dim_offset = 0
+    if packed:
+        grid = grid.inserted_dimension(0, n_rhs)
+        dim_offset = 1
+        n_rhs = 1
+
     assert vector_type is not None
     nbasis = vector_type.shape[0]
     npoints = len(points)
@@ -44,8 +51,10 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb):
     for ip in range(npoints):
         point_sqr = sum([x**2 for x in lpoints[ip]])
         max_point_sqr = max(point_sqr, max_point_sqr)
-        for j in range(nd):
+        for j in range(nd - dim_offset):
             margin[j] = max(margin[j], abs(lpoints[ip][j]))
+
+    margin_reduced = margin if not packed else margin[:-1]
 
     # create packs
     pM = [g.pack(m) for m in mcoarse]
@@ -55,16 +64,21 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb):
     bM = [m.to_accelerator_buffer().merged_axes(-3, -2) for m in pM]
     bR = pV.to_accelerator_buffer(margin=margin)
     bL = pV.to_accelerator_buffer()
-    idxL = bL.indices(range(nd))
+
+    if packed:
+        bR = bR.merged_axes(-3, -2)
+        bL = bL.merged_axes(-3, -2)
+
+    idxL = bL.indices(range(nd - dim_offset))
 
     halo_exchange = bR.halo_exchange(grid, margin=margin, max_point_sqr=max_point_sqr)
 
-    cR = bR.coordinates(range(nd))
-    bulkR = bR.bulk(cR, margin=margin)
+    cR = bR.coordinates(range(nd - dim_offset))
+    bulkR = bR.bulk(cR, margin=margin_reduced)
 
     blas = g.blas()
     for ip in range(npoints):
-        idxR = bR.indices(range(nd), shift=lpoints[ip])[bulkR]
+        idxR = bR.indices(range(nd - dim_offset), shift=lpoints[ip])[bulkR]
         blas.gemm(1.0, bM[ip][idxL], bR[idxR].T, 0.0 if ip == 0 else 1.0, bL[idxL].T)
 
     def _mat(dst, src):

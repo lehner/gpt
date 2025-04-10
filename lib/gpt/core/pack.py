@@ -82,14 +82,8 @@ class pack(auto_tuned_class):
     @auto_tuned_method(skip_snapshot=True)
     def transfer_accelerator_buffer(self, threads, buffer, export, padding, offset):
         buf = buffer.view
-        r = len(self.otype.shape)
+        r = self.otype.v_rank
 
         cgpt.lattice_transfer_scalar_device_buffer(
-            self.lattices,
-            buf,
-            padding,
-            offset,
-            r,
-            1 if export else 0,
-            threads
+            self.lattices, buf, padding, offset, r, 1 if export else 0, threads
         )
