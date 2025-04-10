@@ -29,6 +29,7 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed):
         break
 
     dim_offset = 0
+    grid_reduced = grid
     if packed:
         grid = grid.inserted_dimension(0, n_rhs)
         dim_offset = 1
@@ -71,7 +72,7 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed):
 
     idxL = bL.indices(range(nd - dim_offset))
 
-    halo_exchange = bR.halo_exchange(grid, margin=margin, max_point_sqr=max_point_sqr)
+    halo_exchange = bR.halo_exchange(grid_reduced, margin=margin_reduced, max_point_sqr=max_point_sqr)
 
     cR = bR.coordinates(range(nd - dim_offset))
     bulkR = bR.bulk(cR, margin=margin_reduced)
