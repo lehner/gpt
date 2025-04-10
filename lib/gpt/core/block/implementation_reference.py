@@ -19,8 +19,8 @@
 import gpt as g
 
 
-def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed):
-    assert not packed
+def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_sides):
+    assert packed_right_hand_sides is None
 
     def _mat(dst, src):
         for i in range(len(src)):

@@ -19,7 +19,7 @@
 import gpt as g
 
 
-def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed):
+def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_sides):
 
     # get vector type
     vector_type = None
@@ -30,10 +30,10 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed):
 
     dim_offset = 0
     grid_reduced = grid
-    if packed:
-        grid = grid.inserted_dimension(0, n_rhs)
+    if packed_right_hand_sides is not None:
+        grid = grid.inserted_dimension(0, packed_right_hand_sides)
         dim_offset = 1
-        n_rhs = 1
+        assert n_rhs == 1
 
     assert vector_type is not None
     nbasis = vector_type.shape[0]
@@ -55,7 +55,7 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed):
         for j in range(nd - dim_offset):
             margin[j] = max(margin[j], abs(lpoints[ip][j]))
 
-    margin_reduced = margin if not packed else margin[:-1]
+    margin_reduced = margin if packed_right_hand_sides is None else margin[:-1]
 
     # create packs
     pM = [g.pack(m) for m in mcoarse]
@@ -66,13 +66,15 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed):
     bR = pV.to_accelerator_buffer(margin=margin)
     bL = pV.to_accelerator_buffer()
 
-    if packed:
+    if packed_right_hand_sides is not None:
         bR = bR.merged_axes(-3, -2)
         bL = bL.merged_axes(-3, -2)
 
     idxL = bL.indices(range(nd - dim_offset))
 
-    halo_exchange = bR.halo_exchange(grid_reduced, margin=margin_reduced, max_point_sqr=max_point_sqr)
+    halo_exchange = bR.halo_exchange(
+        grid_reduced, margin=margin_reduced, max_point_sqr=max_point_sqr
+    )
 
     cR = bR.coordinates(range(nd - dim_offset))
     bulkR = bR.bulk(cR, margin=margin_reduced)

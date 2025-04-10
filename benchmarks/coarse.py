@@ -57,7 +57,9 @@ for precision in [g.single, g.double]:
     otype = g.ot_vector_complex_additive_group(nbasis)
     points_dictionary = {points[i]: mcoarse[i] for i in range(npoints)}
     cop = g.block.matrix_operator.compiled(
-        points_dictionary, implementation=implementation, packed=packed
+        points_dictionary,
+        implementation=implementation,
+        packed_right_hand_sides=None if packed == 0 else n_rhs,
     )
     if not packed:
         rcop = g.block.matrix_operator.compiled(points_dictionary, implementation="reference")

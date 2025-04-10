@@ -23,23 +23,23 @@ import numpy as np
 
 
 class compiled(matrix_operator):
-    def __init__(self, points, implementation=None, packed=False):
+    def __init__(self, points, implementation=None, packed_right_hand_sides=None):
         self.points = points
         self.implementation = implementation
         for p in points:
-            grid = points[p].grid
+            point_grid = points[p].grid
             break
 
-        self.grid = grid
-        self.is_packed = packed
+        self.point_grid = point_grid
+        self.packed_right_hand_sides = packed_right_hand_sides
 
-        if self.grid.cb.n == 1:
+        if self.point_grid.cb.n == 1:
             self.M = compiler.create_stencil_operator(
-                points, 0, gpt.none, self.implementation, packed
+                points, 0, gpt.none, self.implementation, packed_right_hand_sides
             )
         else:
             self.M = compiler.create_stencil_operator(
-                points, 0, gpt.even, self.implementation, packed
+                points, 0, gpt.even, self.implementation, packed_right_hand_sides
             )
 
         super().__init__(
@@ -49,42 +49,42 @@ class compiled(matrix_operator):
         )
 
     def even_odd_sites_decomposed(self, parity):
-        assert self.grid.cb.n == 1
+        assert self.point_grid.cb.n == 1
 
         Mee = compiler.create_stencil_operator(
             compiler.project_points_parity(self.points, 0, gpt.even),
             0,
             gpt.even,
             self.implementation,
-            self.is_packed,
+            self.packed_right_hand_sides,
         )
         Moo = compiler.create_stencil_operator(
             compiler.project_points_parity(self.points, 0, gpt.odd),
             1,
             gpt.odd,
             self.implementation,
-            self.is_packed,
+            self.packed_right_hand_sides,
         )
         Meo = compiler.create_stencil_operator(
             compiler.project_points_parity(self.points, 1, gpt.even),
             1,
             gpt.even,
             self.implementation,
-            self.is_packed,
+            self.packed_right_hand_sides,
         )
         Moe = compiler.create_stencil_operator(
             compiler.project_points_parity(self.points, 1, gpt.odd),
             0,
             gpt.odd,
             self.implementation,
-            self.is_packed,
+            self.packed_right_hand_sides,
         )
-        grid_eo = self.grid.checkerboarded(gpt.redblack)
+        point_grid_eo = self.point_grid.checkerboarded(gpt.redblack)
 
         class even_odd_sites:
             def __init__(me):
-                me.D_domain = gpt.domain.even_odd_sites(grid_eo, parity)
-                me.C_domain = gpt.domain.even_odd_sites(grid_eo, parity.inv())
+                me.D_domain = gpt.domain.even_odd_sites(point_grid_eo, parity)
+                me.C_domain = gpt.domain.even_odd_sites(point_grid_eo, parity.inv())
                 if parity is gpt.even:
                     me.DD = Mee
                     me.CC = Moo
@@ -145,7 +145,7 @@ class projected(matrix_operator):
         max_point_per_dimension=None,
         tolerance=None,
         nblock=None,
-        packed=False,
+        packed_right_hand_sides=None,
     ):
 
         # accept also max length squared of points
@@ -156,7 +156,7 @@ class projected(matrix_operator):
             lpoints = np.mgrid[tuple([slice(-x, x + 1, 1) for x in dm])].reshape(nd, -1).T
             lpoints = lpoints[np.sum(lpoints * lpoints, axis=1) <= n]
             lpoints = [tuple([int(y) for y in x]) for x in lpoints.tolist()]
-            gpt.message(len(lpoints), "points", lpoints)
+            # gpt.message(len(lpoints), "points", lpoints)
 
         assert lpoints is not None
 
@@ -173,7 +173,7 @@ class projected(matrix_operator):
         compiler.create(self, points, nblock=nblock)
 
         # get default implementation
-        op = compiled(points, packed=packed)
+        op = compiled(points, packed_right_hand_sides=packed_right_hand_sides)
 
         # test implementation
         if tolerance is not None:
@@ -183,7 +183,9 @@ class projected(matrix_operator):
             gpt.default.pop_verbose()
 
             # get reference implementation
-            rop = compiled(points, implementation="reference", packed=packed)
+            rop = compiled(
+                points, implementation="reference", packed_right_hand_sides=packed_right_hand_sides
+            )
 
             # test against reference matrix to make sure implementation is correct
             eps2_ref = tolerance

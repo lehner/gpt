@@ -94,6 +94,44 @@ eps2 = g.norm2(tm_test_wilson * src + 1j * 0.3 * g.gamma[5] * src - tm_test_wils
 g.message(f"Test of twisted mass term: {eps2}")
 assert eps2 < 1e-7
 
+# test packed wilson
+wilson_single_rhs = g.qcd.fermion.wilson_clover(
+    U,
+    mass=0.123,
+    csw_r=0.6,
+    csw_t=0.6,
+    cF=1.0,
+    xi_0=1.0,
+    nu=1.0,
+    isAnisotropic=False,
+    boundary_phases=[1, 1, 1, -1],
+)
+
+wilson_multi_rhs = g.qcd.fermion.wilson_clover(
+    U,
+    mass=0.123,
+    csw_r=0.6,
+    csw_t=0.6,
+    cF=1.0,
+    xi_0=1.0,
+    nu=1.0,
+    isAnisotropic=False,
+    boundary_phases=[1, 1, 1, -1],
+    n_rhs=4,
+).packed()
+
+test = [g.vspincolor(grid) for _ in range(4)]
+rng.cnormal(test)
+
+test0 = g(wilson_single_rhs * test)
+test1 = g(wilson_multi_rhs * test)
+
+for i in range(4):
+    eps2 = g.norm2(test0[i] - test1[i]) / g.norm2(test0[i])
+    g.message(f"Test multi-rhs Wilson {i}: {eps2}")
+    assert eps2 < 1e-15
+
+
 # create point source
 src = g.mspincolor(grid)
 g.create.point(src, [1, 0, 0, 0])  # pick point 1 so that "S" in preconditioner contributes to test
@@ -393,6 +431,14 @@ test_suite = {
         "params": {
             **wilson_clover_params,
             "use_legacy": True,
+        },  # will be deprecated eventually
+        "matrices": wilson_clover_matrices,
+    },
+    "wilson_clover_packed": {
+        "fermion": g.qcd.fermion.wilson_clover,
+        "params": {
+            **wilson_clover_params,
+            "n_rhs": 1,
         },  # will be deprecated eventually
         "matrices": wilson_clover_matrices,
     },

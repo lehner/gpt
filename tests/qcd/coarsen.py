@@ -89,7 +89,7 @@ def test_coarse(slow_coarse, lpoints, tag, skip_eo_tests=False):
     # compile fast version that has right-hand sides in grid-dimension 0
     # the .packed() makes it such that it can act on lists of right-hand side
     # the idea is to have the .packed() act on larger operations in packed state
-    cop_packed = slow_coarse.compile(lpoints, packed=True).packed()
+    cop_packed = slow_coarse.compile(lpoints, packed_right_hand_sides=len(csrc)).packed()
 
     # warmup
     test2 = g(slow_coarse * csrc)

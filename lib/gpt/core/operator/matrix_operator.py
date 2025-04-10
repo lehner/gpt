@@ -206,20 +206,20 @@ class matrix_operator(factor):
         )
 
     def packed(self):
-        if self.accept_list is False:
-            return self
-
         accept_guess = self.accept_guess
-        grid_cache = {}
         t = gpt.timer("packed")
+
+        grid = self.vector_space[1].grid
+        assert grid is not None
+        n_rhs = grid.gdimensions[0]
+        vector_space = tuple([x.unpacked(n_rhs) for x in self.vector_space])
+        self_vector_space = self.vector_space
 
         def _packed(dst, src, mat, guess_id):
             t("setup")
-            grid_key = str(src[0].grid)
-            if grid_key not in grid_cache:
-                grid_cache[grid_key] = src[0].grid.inserted_dimension(0, len(src))
-            t_src = gpt.lattice(grid_cache[grid_key], src[0].otype)
-            t_dst = gpt.lattice(grid_cache[grid_key], src[0].otype)
+            assert len(src) == n_rhs
+            t_src = self_vector_space[1].lattice(otype=src[0].otype, cb=src[0].checkerboard())
+            t_dst = self_vector_space[0].lattice(otype=dst[0].otype, cb=dst[0].checkerboard())
             t("layout")
             p_t_s = gpt.pack(t_src, fast=True)
             p_t_d = gpt.pack(t_dst, fast=True)
@@ -239,7 +239,7 @@ class matrix_operator(factor):
             adj_mat=lambda dst, src: _packed(dst, src, self.adj(), 1),
             inv_mat=lambda dst, src: _packed(dst, src, self.inv(), 1),
             adj_inv_mat=lambda dst, src: _packed(dst, src, self.adj().inv(), 0),
-            vector_space=self.vector_space,
+            vector_space=vector_space,
             accept_guess=self.accept_guess,
             accept_list=make_list(self.accept_list),
         )

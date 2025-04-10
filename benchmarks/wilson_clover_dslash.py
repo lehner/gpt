@@ -15,6 +15,7 @@ for precision in [g.single, g.double]:
     grid = g.grid(g.default.get_ivec("--grid", [16, 16, 16, 32], 4), precision)
     N = g.default.get_int("--N", 1000)
     full = g.default.has("--full")
+    n_rhs = g.default.get_int("--n_rhs", 1)
 
     g.message(
         f"""
@@ -34,6 +35,7 @@ Wilson Clover Dslash Benchmark with
         nu=1,
         isAnisotropic=False,
         boundary_phases=[1, 1, 1, -1],
+        n_rhs=n_rhs,
     )
 
     # Source and destination
@@ -51,10 +53,7 @@ Wilson Clover Dslash Benchmark with
     flops_per_site = 8 * Nc * (7 + 16 * Nc)
     flops = flops_per_site * src.grid.gsites * N
     nbytes = (
-        (8 * 2 * 4 * Nc + 8 * 2 * Nc * Nc + 2 * 4 * Nc)
-        * precision.nbytes
-        * src.grid.gsites
-        * N
+        (8 * 2 * 4 * Nc + 8 * 2 * Nc * Nc + 2 * 4 * Nc) * precision.nbytes * src.grid.gsites * N
     )
 
     # Warmup
@@ -72,7 +71,7 @@ Wilson Clover Dslash Benchmark with
     GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""{N} applications of Dhop
-    Time to complete            : {t1-t0:.2f} s
+    Time to complete            : {t1 - t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
     )
