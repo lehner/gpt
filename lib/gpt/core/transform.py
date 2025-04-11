@@ -119,7 +119,7 @@ def axpy(d, a, x, y):
     a = gpt.util.to_list(a)
     x = gpt.util.to_list(x)
     y = gpt.util.to_list(y)
-    
+
     x = [gpt(v) for v in x]
     y = [gpt(v) for v in y]
     a = [complex(v) for v in a]

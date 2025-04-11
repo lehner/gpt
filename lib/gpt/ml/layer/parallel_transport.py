@@ -101,5 +101,5 @@ class parallel_transport:
 
         if g.default.is_verbose("parallel_transport_performance"):
             g.message(t)
-            
+
         return [ileft]

@@ -439,7 +439,7 @@ jobs:
       run: |
         cd gpt
         if [ "${{ secrets.CODECOV_USERNAME }}" != "" ] \
-            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ]
+            && [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/master" ] && 0
         then
           bash <(curl -s https://codecov.io/bash) \
           -f ./coverage.xml
