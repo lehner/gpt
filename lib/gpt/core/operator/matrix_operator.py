@@ -104,29 +104,7 @@ class matrix_operator(factor):
 
     def __mul__(self, other):
         if isinstance(other, matrix_operator):
-            # mat = self * other
-            # mat^dag = other^dag self^dag
-            # (mat^dag)^-1 = (other^dag self^dag)^-1 = self^dag^-1 other^dag^-1
-
-            # TODO:
-            # Depending on other.accept_guess flag and if self.inv_mat is set, we should
-            # attempt to properly propagate dst as well.
-
-            adj_other = other.adj()
-            adj_self = self.adj()
-            inv_other = other.inv()
-            inv_self = self.inv()
-            adj_inv_other = adj_other.inv()
-            adj_inv_self = adj_self.inv()
-            return matrix_operator(
-                mat=lambda dst, src: self(dst, other(src)),
-                adj_mat=lambda dst, src: adj_other(dst, adj_self(src)),
-                inv_mat=lambda dst, src: inv_other(dst, inv_self(src)),
-                adj_inv_mat=lambda dst, src: adj_inv_self(dst, adj_inv_other(src)),
-                vector_space=(self.vector_space[0], other.vector_space[1]),
-                accept_guess=(self.accept_guess[0], other.accept_guess[1]),
-                accept_list=make_list(self.accept_list),
-            )
+            return matrix_operator_product([self, other])
         else:
             return gpt.expr(other).__rmul__(self)
 
@@ -285,6 +263,7 @@ class matrix_operator(factor):
 
             n = self.lhs_length(src)
 
+            gpt.message("Need to allocate destination")
             dst = [dst_vector_space.lattice(src_grid, src_otype, src_cb) for i in range(n)]
 
             if self.accept_guess[0]:
@@ -309,3 +288,54 @@ class matrix_operator(factor):
             return gpt.util.from_list(dst)
 
         return dst
+
+
+class matrix_operator_product(matrix_operator):
+    def __init__(self, factors):
+        self.factors = factors
+
+        first, second = factors[0], factors[-1]
+
+        def _mat(dst, src):
+            of = list(reversed(factors))
+            for f in of[:-1]:
+                src = f(src)
+            of[-1](dst, src)
+
+        def _adj_mat(dst, src):
+            of = factors
+            for f in of[:-1]:
+                src = f.adj()(src)
+            of[-1].adj()(dst, src)
+
+        def _inv_mat(dst, src):
+            of = factors
+            for f in of[:-1]:
+                src = f.inv()(src)
+            of[-1].inv()(dst, src)
+
+        def _adj_inv_mat(dst, src):
+            of = list(reversed(factors))
+            for f in of[:-1]:
+                src = f.adj().inv()(src)
+            of[-1].adj().inv()(dst, src)
+
+        super().__init__(
+            mat=_mat,
+            adj_mat=_adj_mat,
+            inv_mat=_inv_mat,
+            adj_inv_mat=_adj_inv_mat,
+            vector_space=(first.vector_space[0], second.vector_space[1]),
+            accept_guess=(first.accept_guess[0], second.accept_guess[1]),
+            accept_list=make_list(first.accept_list),
+        )
+
+    def __mul__(self, other):
+        if isinstance(other, matrix_operator_product):
+            return matrix_operator_product(self.factors + other.factors)
+        elif isinstance(other, matrix_operator):
+            return matrix_operator_product(self.factors + [other])
+        return matrix_operator.__mul__(self, other)
+
+    def __rmul__(self, other):
+        return other.__mul__(self)
