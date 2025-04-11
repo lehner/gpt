@@ -194,18 +194,20 @@ class matrix_operator(factor):
         self_vector_space = self.vector_space
 
         def _packed(dst, src, mat, guess_id):
-            t("setup")
+            t("layout")
+            
             assert len(src) == n_rhs
             t_src = self_vector_space[1].lattice(otype=src[0].otype, cb=src[0].checkerboard())
-            t_dst = self_vector_space[0].lattice(otype=dst[0].otype, cb=dst[0].checkerboard())
-            t("layout")
             p_t_s = gpt.pack(t_src, fast=True)
-            p_t_d = gpt.pack(t_dst, fast=True)
             p_s = gpt.pack(src, fast=True)
-            p_d = gpt.pack(dst, fast=True)
             p_t_s.from_accelerator_buffer(p_s.to_accelerator_buffer())
+            
+            t_dst = self_vector_space[0].lattice(otype=dst[0].otype, cb=dst[0].checkerboard())
+            p_t_d = gpt.pack(t_dst, fast=True)
+            p_d = gpt.pack(dst, fast=True)
             if accept_guess[guess_id]:
                 p_t_d.from_accelerator_buffer(p_d.to_accelerator_buffer())
+                
             t("matrix")
             mat(t_dst, t_src)
             t("layout")
@@ -263,7 +265,6 @@ class matrix_operator(factor):
 
             n = self.lhs_length(src)
 
-            gpt.message("Need to allocate destination")
             dst = [dst_vector_space.lattice(src_grid, src_otype, src_cb) for i in range(n)]
 
             if self.accept_guess[0]:
