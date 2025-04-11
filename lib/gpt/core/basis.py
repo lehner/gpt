@@ -48,7 +48,7 @@ def orthogonalize(w, basis, ips=None, nblock=4):
             for j in range(len(lip)):
                 ips[i + j] = -lip[j]
         t("linear combination")
-        gpt.linear_combination(w, [w] + basis[i:i+len(lip)], [1.0] + lip, len(lip)+1)
+        gpt.linear_combination(w, [w] + basis[i:i + len(lip)], [1.0] + lip, len(lip) + 1)
         t()
     if verbose_performance:
         t_cgpt = gpt.timer("cgpt_orthogonalize", True)

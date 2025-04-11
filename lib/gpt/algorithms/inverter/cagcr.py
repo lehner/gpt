@@ -46,7 +46,7 @@ class cagcr(base_iterative):
         t("mat")
         mat(mmpsi, psi)
         t("axpy")
-        g.axpy(r, [-1.0]*len(mmpsi), mmpsi, src)
+        g.axpy(r, [-1.0] * len(mmpsi), mmpsi, src)
         t("norm2")
         return g.norm2(r)
 

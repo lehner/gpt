@@ -67,7 +67,7 @@ def auto_tuned_method(skip_snapshot=False):
                 g.message(f"Auto-tune {self.at_tag} with {p}")
                 method(self, p, *args)
                 dt += g.time()
-                
+
                 if not skip_snapshot:
                     g.copy(args, args_snapshot)
                 dts.append(dt)
@@ -81,7 +81,7 @@ def auto_tuned_method(skip_snapshot=False):
             self.at_tuned_params = {"tag": self.at_tag, "params": self.at_params[imin], "results": dts}
             g.message(f"Tuning result (use {self.at_tuned_params} will be saved in {self.at_fn}")
             save_cache(self.at_fn, self.at_tuned_params)
-            
+
             g.barrier()
 
             # run with tuned params
@@ -109,7 +109,7 @@ class auto_tuned_class:
                 assert self.at_tuned_params["tag"] == tag
                 if self.at_verbose:
                     g.message(f"Use tuned results from {self.at_fn}")
-            except:
+            except Exception:
                 self.at_tuned_params = {}
         else:
             self.at_tuned_params = {}
