@@ -150,7 +150,7 @@ class matrix_operator(factor):
         vector_space = tuple([d.converted(to_precision) for d in self.vector_space])
         accept_guess = self.accept_guess
 
-        def _converted(dst, src, mat, l, r, t=lambda x: None):
+        def _converted(dst, src, mat, l, r, t=lambda x=None: None):
             t("converted: setup")
 
             conv_src = [self.vector_space[r].lattice(None, x.otype, x.checkerboard()) for x in src]
