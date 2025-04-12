@@ -293,17 +293,11 @@ public:
 
     ASSERT(basis.size() > 0 && basis.size() % basis_n_virtual == 0);
 
-#ifdef GRID_HAS_ACCELERATOR
-    typedef typename T::scalar_object R;
-#else
-    typedef T R;
-#endif
-
 #define BASIS_SIZE(n) if (n == basis_virtual_size) {			\
       if (tensor_projectors == Py_None) {				\
-	return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t>, cgpt_project_identity<R> >(coarse,basis,basis_n_virtual,basis_n_block,mask,tensor_projectors); \
+	return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t>, cgpt_project_identity<T> >(coarse,basis,basis_n_virtual,basis_n_block,mask,tensor_projectors); \
       } else {								\
-	return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t>, cgpt_project_tensor<R> >(coarse,basis,basis_n_virtual,basis_n_block,mask,tensor_projectors); \
+	return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t>, cgpt_project_tensor<T> >(coarse,basis,basis_n_virtual,basis_n_block,mask,tensor_projectors); \
       }									\
     }
 #include "../basis_size.h"

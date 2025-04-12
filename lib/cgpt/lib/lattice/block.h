@@ -34,6 +34,7 @@ public:
 
 template<typename obj>
 struct cgpt_project_identity {
+  typedef typename obj::scalar_object tensor_t;
 
   void* get_args() { return 0; }
 
@@ -42,6 +43,11 @@ struct cgpt_project_identity {
   static accelerator_inline obj projector(obj x, long idx, void* args) {
     return x;
   }
+
+  static accelerator_inline tensor_t projector(tensor_t x, long idx, void* args) {
+    return x;
+  }
+
 };
 
 template<typename obj>
@@ -71,11 +77,17 @@ struct cgpt_project_tensor {
   static accelerator_inline obj projector(obj x, long idx, void* args) {
     tensor_t* p_tensor = (tensor_t*)args;
 
-#ifdef GRID_HAS_ACCELERATOR
-    scalar_t* s = (scalar_t*)&x;
-#else
     vector_t* s = (vector_t*)&x;
-#endif
+    scalar_t* t = (scalar_t*)&p_tensor[idx];
+    for (int i=0;i<sizeof(tensor_t) / sizeof(scalar_t);i++)
+      s[i] *= t[i];
+    return x;
+  }
+
+  static accelerator_inline tensor_t projector(tensor_t x, long idx, void* args) {
+    tensor_t* p_tensor = (tensor_t*)args;
+
+    scalar_t* s = (scalar_t*)&x;
     scalar_t* t = (scalar_t*)&p_tensor[idx];
     for (int i=0;i<sizeof(tensor_t) / sizeof(scalar_t);i++)
       s[i] *= t[i];
@@ -84,7 +96,7 @@ struct cgpt_project_tensor {
 };
 
 template<class T, class C, typename projector_t>
-class cgpt_block_map : public cgpt_block_map_base, public projector_t {
+class cgpt_block_map : public cgpt_block_map_base {
 
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
@@ -97,6 +109,8 @@ class cgpt_block_map : public cgpt_block_map_base, public projector_t {
   cgpt_block_lookup_table<T_singlet> lut;
   GridBase* coarse_grid;
   GridBase* fine_grid;
+
+  projector_t projector;
   
 public:
 
@@ -112,7 +126,7 @@ public:
     fine_grid(_basis[0]->get_grid()),
     basis_n_virtual(_basis_n_virtual),
     basis_n_block(_basis_n_block),
-    projector_t(tensor_projectors)
+    projector(tensor_projectors)
   {
     cgpt_basis_fill(basis,_basis);
     ASSERT(basis.size() % basis_n_virtual == 0);
@@ -127,7 +141,7 @@ public:
     cgpt_basis_fill(fine,_fine);
     cgpt_basis_fill(coarse,_coarse);
 
-    vectorizableBlockProject(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block, projector_t::projector, projector_t::get_args());
+    vectorizableBlockProject(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block, projector);
   }
 
   virtual void promote(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
@@ -139,7 +153,7 @@ public:
     cgpt_basis_fill(fine,_fine);
     cgpt_basis_fill(coarse,_coarse);
 
-    vectorizableBlockPromote(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block, projector_t::projector, projector_t::get_args());
+    vectorizableBlockPromote(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block, projector);
   }
 
   virtual void orthonormalize() {
