@@ -146,7 +146,7 @@ inline void vectorBlockOrthonormalize(Lattice<CComplex> &ip,VLattice &Basis, siz
 }
 
 
-template<class vobj,class CComplex,int basis_virtual_size,class VLattice,class T_singlet>
+template<class vobj,class CComplex,int basis_virtual_size,class VLattice,class T_singlet,typename basis_access_t>
 inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_virtual_size>>>&   coarse,
 				     long                                                       coarse_n_virtual,
 				     const PVector<Lattice<vobj>>&                              fine,
@@ -154,7 +154,9 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
 				     const VLattice&                                            basis,
 				     long                                                       basis_n_virtual,
 				     const cgpt_block_lookup_table<T_singlet>&                  lut,
-				     long                                                       basis_n_block)
+				     long                                                       basis_n_block,
+				     basis_access_t                                             basis_access,
+				     void*                                                      basis_access_args)
 {
 
   assert(fine.size() > 0 && coarse.size() > 0 && basis.size() > 0);
@@ -207,8 +209,11 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
 	for (long fine_virtual_i=0; fine_virtual_i<fine_n_virtual; fine_virtual_i++) {
 	  for(long j=0; j<sizes_v[sc]; ++j) {
 	    long sf = lut_v[sc][j];
-	    reduce = reduce + innerProductD2(coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]),
-					     coalescedRead(fine_v[vec_i*fine_n_virtual + fine_virtual_i][sf]));
+	    reduce = reduce
+	      + innerProductD2(
+			       basis_access(coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]), basis_i_abs, basis_access_args),
+			       coalescedRead(fine_v[vec_i*fine_n_virtual + fine_virtual_i][sf])
+			       );
 	  }
 	}
 	
@@ -224,7 +229,7 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
   VECTOR_VIEW_CLOSE(coarse_v);
 }
 
-template<class vobj,class CComplex,int basis_virtual_size,class VLattice,class T_singlet>
+template<class vobj,class CComplex,int basis_virtual_size,class VLattice,class T_singlet,typename basis_access_t>
 inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_virtual_size>>>&   coarse,
 				     long                                                       coarse_n_virtual,
 				     const PVector<Lattice<vobj>>&                              fine,
@@ -232,7 +237,9 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
 				     const VLattice&                                            basis,
 				     long                                                       basis_n_virtual,
 				     const cgpt_block_lookup_table<T_singlet>&                  lut,
-				     long                                                       basis_n_block)
+				     long                                                       basis_n_block,
+				     basis_access_t                                             basis_access,
+				     void*                                                      basis_access_args)
 {
 
   assert(fine.size() > 0 && coarse.size() > 0 && basis.size() > 0);
@@ -299,7 +306,7 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
 	    long coarse_virtual_i = basis_i_abs / coarse_virtual_size;
 	    long coarse_i = basis_i_abs % coarse_virtual_size;
 	    cgpt_convertType(cA,TensorRemove(coalescedRead(coarse_v[vec_i*coarse_n_virtual + coarse_virtual_i][sc])(coarse_i)));
-	    auto prod = cA*coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]);
+	    auto prod = cA*basis_access(coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]), basis_i_abs, basis_access_args);
 	    cgpt_convertType(cAx,prod);
 	    fine_t = fine_t + cAx;
 	  }

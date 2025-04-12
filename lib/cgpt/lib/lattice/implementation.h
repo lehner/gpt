@@ -289,11 +289,23 @@ public:
   virtual cgpt_block_map_base* block_map(GridBase* coarse, 
 					 std::vector<cgpt_Lattice_base*>& basis,
 					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
-					 cgpt_Lattice_base* mask) {
+					 cgpt_Lattice_base* mask, PyObject* tensor_projectors) {
 
     ASSERT(basis.size() > 0 && basis.size() % basis_n_virtual == 0);
 
-#define BASIS_SIZE(n) if (n == basis_virtual_size) { return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t> >(coarse,basis,basis_n_virtual,basis_n_block,mask); }
+#ifdef GRID_HAS_ACCELERATOR
+    typedef typename T::scalar_object R;
+#else
+    typedef T R;
+#endif
+
+#define BASIS_SIZE(n) if (n == basis_virtual_size) {			\
+      if (tensor_projectors == Py_None) {				\
+	return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t>, cgpt_project_identity<R> >(coarse,basis,basis_n_virtual,basis_n_block,mask,tensor_projectors); \
+      } else {								\
+	return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t>, cgpt_project_tensor<R> >(coarse,basis,basis_n_virtual,basis_n_block,mask,tensor_projectors); \
+      }									\
+    }
 #include "../basis_size.h"
 #undef BASIS_SIZE
     

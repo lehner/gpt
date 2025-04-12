@@ -28,6 +28,38 @@ for fine_grid, cb in [
     nvec = 2
     res = None
     tmpf_prev = None
+
+    # test tensor projection
+    left = g.vspincolor([[1, 1, 1]] * 2 + [[0, 0, 0]] * 2)  # 1 + g[5]
+    right = g.vspincolor([[0, 0, 0]] * 2 + [[1, 1, 1]] * 2)  # 1 - g[5]
+    rng = g.random("block_seed_string_13")
+    basis = rng.cnormal([g.vspincolor(fine_grid) for i in range(n)])
+    if cb is not None:
+        for x in basis:
+            x.checkerboard(cb)
+    b = g.block.map(coarse_grid, basis)
+    b.orthonormalize()
+    b.orthonormalize()
+    b = g.block.map(coarse_grid, basis + basis, tensor_projectors=[left] * n + [right] * n)
+    fine_test = rng.cnormal(g.vspincolor(fine_grid))
+    if cb is not None:
+        fine_test.checkerboard(cb)
+    test1 = g(b.project * fine_test)
+    test2 = g(b.promote * test1)
+
+    b = g.block.map(
+        coarse_grid,
+        [g(0.5 * x + 0.5 * g.gamma[5] * x) for x in basis]
+        + [g(0.5 * x - 0.5 * g.gamma[5] * x) for x in basis],
+    )
+    test3 = g(b.project * fine_test)
+    test4 = g(b.promote * test3)
+
+    eps2 = g.norm2(test1 - test3) + g.norm2(test2 - test4)
+    g.message("Chiral basis projector test:", eps2)
+    assert eps2 < 1e-14
+
+    # complete test
     for dtype in [vsc, vc12]:
         g.message(f"Data type {dtype.__name__}")
         basis = [dtype() for i in range(n)]
@@ -38,7 +70,6 @@ for fine_grid, cb in [
         rng.cnormal(basis)
 
         b = g.block.map(coarse_grid, basis)
-
         for i in range(2):
             g.message("Ortho step %d" % i)
             b.orthonormalize()

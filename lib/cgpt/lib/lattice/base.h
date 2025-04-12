@@ -69,7 +69,7 @@ public:
   virtual int get_numpy_dtype() = 0;
   virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<cgpt_Lattice_base*>& basis, 
 					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
-					 cgpt_Lattice_base* mask) = 0;
+					 cgpt_Lattice_base* mask, PyObject* tensor_projectors) = 0;
   virtual void invert_matrix(std::vector<cgpt_Lattice_base*>& matrix_inv, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0;
   virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0; // this determines type of matrix[0]
   virtual GridBase* get_grid() = 0;

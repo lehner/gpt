@@ -23,8 +23,8 @@ EXPORT(create_block_map,{
 
     void* _grid_c,*_mask;
     long  basis_virtual_size, basis_n_block;
-    PyObject* _basis;
-    if (!PyArg_ParseTuple(args, "lOlll", &_grid_c, &_basis, &basis_virtual_size, &basis_n_block, &_mask)) {
+    PyObject* _basis, * tensor_projectors;
+    if (!PyArg_ParseTuple(args, "lOlllO", &_grid_c, &_basis, &basis_virtual_size, &basis_n_block, &_mask, &tensor_projectors)) {
       return NULL;
     }
 
@@ -36,7 +36,7 @@ EXPORT(create_block_map,{
 
     ASSERT(basis.size() > 0);
 
-    return PyLong_FromVoidPtr((void*) basis[0]->block_map(grid_c, basis, basis_n_virtual, basis_virtual_size, basis_n_block, mask));
+    return PyLong_FromVoidPtr((void*) basis[0]->block_map(grid_c, basis, basis_n_virtual, basis_virtual_size, basis_n_block, mask, tensor_projectors));
   });
 
 EXPORT(delete_block_map,{

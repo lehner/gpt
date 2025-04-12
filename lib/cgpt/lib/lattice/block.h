@@ -31,8 +31,60 @@ public:
 		     std::vector<cgpt_Lattice_base*>& _fine, long fine_n_virtual) = 0;
 };
 
-template<class T, class C>
-class cgpt_block_map : public cgpt_block_map_base {
+
+template<typename obj>
+struct cgpt_project_identity {
+
+  void* get_args() { return 0; }
+
+  cgpt_project_identity(PyObject* args) { }
+  
+  static accelerator_inline obj projector(obj x, long idx, void* args) {
+    return x;
+  }
+};
+
+template<typename obj>
+struct cgpt_project_tensor {
+  typedef typename obj::scalar_object tensor_t;
+  typedef typename obj::scalar_type scalar_t;
+  typedef typename obj::vector_type vector_t;
+  
+  Vector<tensor_t> tensors;
+
+  void* get_args() {
+    return (void*)&tensors[0];
+  }
+
+  void cgpt_convert(PyObject* src, tensor_t& dst) {
+    cgpt_numpy_import(dst, src);
+  }
+  
+  cgpt_project_tensor(PyObject* args) {
+    ASSERT(PyList_Check(args));
+    
+    tensors.resize(PyList_Size(args));
+    for (size_t i = 0; i < tensors.size(); i++)
+      cgpt_convert(PyList_GetItem(args,i),tensors[i]);
+  }
+
+  static accelerator_inline obj projector(obj x, long idx, void* args) {
+    tensor_t* p_tensor = (tensor_t*)args;
+
+#ifdef GRID_HAS_ACCELERATOR
+    scalar_t* s = (scalar_t*)&x;
+#else
+    vector_t* s = (vector_t*)&x;
+#endif
+    scalar_t* t = (scalar_t*)&p_tensor[idx];
+    for (int i=0;i<sizeof(tensor_t) / sizeof(scalar_t);i++)
+      s[i] *= t[i];
+    return x;
+  }
+};
+
+template<class T, class C, typename projector_t>
+class cgpt_block_map : public cgpt_block_map_base, public projector_t {
 
   typedef typename Lattice<T>::vector_object vobj;
   typedef typename vobj::scalar_object sobj;
@@ -45,7 +97,7 @@ class cgpt_block_map : public cgpt_block_map_base {
   cgpt_block_lookup_table<T_singlet> lut;
   GridBase* coarse_grid;
   GridBase* fine_grid;
-
+  
 public:
 
   virtual ~cgpt_block_map() {
@@ -53,13 +105,14 @@ public:
 
   cgpt_block_map(GridBase* _coarse_grid, 
 		 std::vector<cgpt_Lattice_base*>& _basis, long _basis_n_virtual, long _basis_n_block,
-		 cgpt_Lattice_base* _mask) 
+		 cgpt_Lattice_base* _mask, PyObject* tensor_projectors)
     :
     lut(_coarse_grid, compatible<T_singlet>(_mask)->l),
     coarse_grid(_coarse_grid),
     fine_grid(_basis[0]->get_grid()),
     basis_n_virtual(_basis_n_virtual),
-    basis_n_block(_basis_n_block)
+    basis_n_block(_basis_n_block),
+    projector_t(tensor_projectors)
   {
     cgpt_basis_fill(basis,_basis);
     ASSERT(basis.size() % basis_n_virtual == 0);
@@ -74,7 +127,7 @@ public:
     cgpt_basis_fill(fine,_fine);
     cgpt_basis_fill(coarse,_coarse);
 
-    vectorizableBlockProject(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block);
+    vectorizableBlockProject(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block, projector_t::projector, projector_t::get_args());
   }
 
   virtual void promote(std::vector<cgpt_Lattice_base*>& _coarse, long coarse_n_virtual,
@@ -86,7 +139,7 @@ public:
     cgpt_basis_fill(fine,_fine);
     cgpt_basis_fill(coarse,_coarse);
 
-    vectorizableBlockPromote(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block);
+    vectorizableBlockPromote(coarse, coarse_n_virtual, fine, fine_n_virtual, basis, basis_n_virtual, lut, basis_n_block, projector_t::projector, projector_t::get_args());
   }
 
   virtual void orthonormalize() {
