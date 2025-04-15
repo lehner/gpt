@@ -22,7 +22,7 @@ import cgpt, gpt, numpy
 def cshift(first, second, third, fourth=None):
     if isinstance(first, gpt.expr):
         first = gpt.eval(first)
-    if isinstance(first, gpt.expr):
+    if isinstance(second, gpt.expr):
         second = gpt.eval(second)
     return first.__class__.foundation.cshift(first, second, third, fourth)
 
