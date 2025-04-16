@@ -21,6 +21,7 @@ import numpy as np
 from gpt.params import params_convention
 import gpt.core.block.implementation_stencil as implementation_stencil
 import gpt.core.block.implementation_blas as implementation_blas
+import gpt.core.block.implementation_blas_parallel as implementation_blas_parallel
 import gpt.core.block.implementation_reference as implementation_reference
 
 
@@ -70,6 +71,7 @@ def create_stencil_operator(
         "stencil": implementation_stencil,
         "reference": implementation_reference,
         "blas": implementation_blas,
+        "blas_parallel": implementation_blas_parallel,
     }
 
     def delayed_matrix(get_points, tag, ip, ocb):

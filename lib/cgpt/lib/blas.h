@@ -22,16 +22,14 @@ class cgpt_blas_job_base {
   }
 
   template<typename dtype>
-  void fill_pointers(deviceVector<dtype*>& dst, dtype* base, int64_t* idx, long num, long words) {
+  void fill_pointers(dtype** _dst, dtype* base, int64_t* idx, long num, long words) {
     deviceVector<int64_t> d_idx(num);
     acceleratorCopyToDevice(idx, &d_idx[0], num*sizeof(int64_t));
     int64_t* p = &d_idx[0];
-    dtype** _dst = &dst[0];
     accelerator_for(idx, num, 1, {
 	_dst[idx] = &base[p[idx]*words];
       });
   }
-
 
   virtual void execute(GridBLAS& blas) = 0;
 };
@@ -60,19 +58,30 @@ class cgpt_gemm_job : public cgpt_blas_job_base {
 
   cgpt_gemm_job(long _m, long _n,long _k,
 		ComplexD _alpha,
-		void* _data_A, int64_t* idxA, long _opA,
-		void* _data_B, int64_t* idxB, long _opB,
+		std::vector<void*>& _data_A, std::vector<int64_t*>& idxA, long _opA,
+		std::vector<void*>& _data_B, std::vector<int64_t*>& idxB, long _opB,
 		ComplexD _beta,
-		void* _data_C, int64_t* idxC, long num_elements) :
-  
-    BLAS_A(num_elements),
-    BLAS_B(num_elements),
-      BLAS_C(num_elements),
-      m(_m), n(_n), k(_k), alpha(_alpha), beta(_beta) {
+		std::vector<void*>& _data_C, std::vector<int64_t*>& idxC, std::vector<long> num_elements) :
+    m(_m), n(_n), k(_k), alpha(_alpha), beta(_beta) {
+
+    // total number of elements
+    long total_num_elements = 0;
+    for (long elements : num_elements)
+      total_num_elements += elements;
     
-    fill_pointers(BLAS_A, (dtype*)_data_A, idxA, num_elements, m*k);
-    fill_pointers(BLAS_B, (dtype*)_data_B, idxB, num_elements, k*n);
-    fill_pointers(BLAS_C, (dtype*)_data_C, idxC, num_elements, m*n);
+    BLAS_A.resize(total_num_elements);
+    BLAS_B.resize(total_num_elements);
+    BLAS_C.resize(total_num_elements);
+    
+    total_num_elements = 0;
+    for (int i=0;i<(int)num_elements.size();i++) {
+
+      fill_pointers(&BLAS_A[total_num_elements], (dtype*)_data_A[i], idxA[i], num_elements[i], m*k);
+      fill_pointers(&BLAS_B[total_num_elements], (dtype*)_data_B[i], idxB[i], num_elements[i], k*n);
+      fill_pointers(&BLAS_C[total_num_elements], (dtype*)_data_C[i], idxC[i], num_elements[i], m*n);
+
+      total_num_elements += num_elements[i];
+    }
 
     opA = convert_op_code(_opA);
     opB = convert_op_code(_opB);
@@ -103,8 +112,8 @@ class cgpt_det_job : public cgpt_blas_job_base {
     BLAS_C(num_elements),
     n(_n) {
     
-    fill_pointers(BLAS_A, (dtype*)_data_A, idxA, num_elements, n*n);
-    fill_pointers(BLAS_C, (dtype*)_data_C, idxC, num_elements, 1);
+    fill_pointers(&BLAS_A[0], (dtype*)_data_A, idxA, num_elements, n*n);
+    fill_pointers(&BLAS_C[0], (dtype*)_data_C, idxC, num_elements, 1);
 
   }
   
@@ -132,8 +141,8 @@ class cgpt_inv_job : public cgpt_blas_job_base {
     BLAS_C(num_elements),
     n(_n) {
     
-    fill_pointers(BLAS_A, (dtype*)_data_A, idxA, num_elements, n*n);
-    fill_pointers(BLAS_C, (dtype*)_data_C, idxC, num_elements, n*n);
+    fill_pointers(&BLAS_A[0], (dtype*)_data_A, idxA, num_elements, n*n);
+    fill_pointers(&BLAS_C[0], (dtype*)_data_C, idxC, num_elements, n*n);
 
   }
   
@@ -142,6 +151,47 @@ class cgpt_inv_job : public cgpt_blas_job_base {
 
   virtual void execute(GridBLAS& blas) {
     blas.inverseBatched(n, BLAS_A, BLAS_C);
+  }
+};
+
+template<typename dtype>
+class cgpt_accumulate_job : public cgpt_blas_job_base {
+ public:
+  
+  deviceVector<dtype*> BLAS_A;
+  long n;
+  
+  cgpt_accumulate_job(long _n,
+		      std::vector<void*>& _data_A) :
+    BLAS_A(_data_A.size()),
+    n(_n) {
+
+    acceleratorCopyToDevice(&_data_A[0], &BLAS_A[0], sizeof(dtype*)*BLAS_A.size());
+
+  }
+  
+  virtual ~cgpt_accumulate_job() {
+  }
+
+  virtual void execute(GridBLAS& blas) {
+    constexpr int Nsimd = sizeof(vComplexF) / sizeof(ComplexF);
+    dtype** p = &BLAS_A[0];
+    ASSERT(n % Nsimd == 0);
+    long m = BLAS_A.size();
+
+    accelerator_for(i,n/Nsimd,Nsimd,{
+#ifdef GRID_SIMT
+	long j = acceleratorSIMTlane(Nsimd);
+#else
+	for (long j=0;j<Nsimd;j++) {
+#endif
+	long l = i * Nsimd + j;
+	for (long k=1;k<m;k++)
+	  p[0][l] += p[k][l];
+#ifndef GRID_SIMT
+	}
+#endif
+      });
   }
 };
 
