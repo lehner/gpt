@@ -32,6 +32,7 @@ for precision in [g.single, g.double]:
     # test matrix-matrix multiplication
     flops_per_matrix_vector_multiply = m * (k * 6 + (k - 1) * 2) 
     flops = flops_per_matrix_vector_multiply * grid.gsites * N * n
+    nbytes = (m * k + k * n + m * n) * precision.nbytes * 2 * N * grid.gsites
 
     dtype = precision.complex_dtype
     sites = int(grid.gsites // grid.Nprocessors)
@@ -71,11 +72,13 @@ for precision in [g.single, g.double]:
 
     # Report
     GFlopsPerSec = flops / (t1 - t0) / 1e9
+    GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""
 {N} applications of A_mk B_kn = C_mn
     Time to complete            : {t1-t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
+    Total bandwidth             : {GBPerSec:.2f} GB/s
     """)
 
     j = g.blas().gemm(1.0, A_T[idx].H, B[idx], 0.0, C[idx])
@@ -91,11 +94,13 @@ for precision in [g.single, g.double]:
 
     # Report
     GFlopsPerSec = flops / (t1 - t0) / 1e9
+    GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""
 {N} applications of adj(A)_mk B_kn = C_mn 
     Time to complete            : {t1-t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
+    Total bandwidth             : {GBPerSec:.2f} GB/s
     """)
 
     j = g.blas().gemm(1.0, A[idx], B_T[idx].H, 0.0, C[idx])
@@ -111,9 +116,11 @@ for precision in [g.single, g.double]:
 
     # Report
     GFlopsPerSec = flops / (t1 - t0) / 1e9
+    GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""
 {N} applications of A_mk adj(B)_kn = C_mn 
     Time to complete            : {t1-t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
+    Total bandwidth             : {GBPerSec:.2f} GB/s
     """)
