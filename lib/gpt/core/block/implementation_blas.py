@@ -19,7 +19,7 @@
 import gpt as g
 
 
-def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_sides):
+def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_sides, args):
 
     # get vector type
     vector_type = None
@@ -38,6 +38,21 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_side
     assert vector_type is not None
     nbasis = vector_type.shape[0]
     npoints = len(points)
+
+    # parse arguments
+    if len(args) > 0:
+        nparallel = int(args[0])
+        assert npoints % nparallel == 0
+    else:
+        nparallel = 1
+
+    if len(args) > 1:
+        compute_precision = args[1]
+    else:
+        compute_precision = None
+
+    npoints_parallel = npoints // nparallel
+    
     lpoints_orig = list(points.keys())
     lpoints = [tuple(reversed(list(x))) for x in lpoints_orig]
     mcoarse = [points[lpoints_orig[ip]] for ip in range(npoints)]
@@ -64,13 +79,14 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_side
     # create buffers
     bM = [m.to_accelerator_buffer().merged_axes(-3, -2) for m in pM]
     bR = pV.to_accelerator_buffer(margin=margin)
-    bL = pV.to_accelerator_buffer()
+    bL = [pV.to_accelerator_buffer() for _ in range(nparallel)]
 
     if packed_right_hand_sides is not None:
         bR = bR.merged_axes(-3, -2)
-        bL = bL.merged_axes(-3, -2)
+        for b in range(nparallel):
+            bL[b] = bL[b].merged_axes(-3, -2)
 
-    idxL = bL.indices(range(nd - dim_offset))
+    idxL = bL[0].indices(range(nd - dim_offset))
 
     halo_exchange = bR.halo_exchange(
         grid_reduced, margin=margin_reduced, max_point_sqr=max_point_sqr
@@ -80,9 +96,20 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_side
     bulkR = bR.bulk(cR, margin=margin_reduced)
 
     blas = g.blas()
-    for ip in range(npoints):
-        idxR = bR.indices(range(nd - dim_offset), shift=lpoints[ip])[bulkR]
-        blas.gemm(1.0, bM[ip][idxL], bR[idxR].T, 0.0 if ip == 0 else 1.0, bL[idxL].T)
+    for a in range(npoints_parallel):
+        A = []
+        B = []
+        C = []
+        for b in range(nparallel):
+            ip = a * nparallel + b
+            idxR = bR.indices(range(nd - dim_offset), shift=lpoints[ip])[bulkR]
+            A.append(bM[ip][idxL])
+            B.append(bR[idxR].T)
+            C.append(bL[b][idxL].T)
+        blas.gemm(1.0, A, B, 0.0 if a == 0 else 1.0, C, precision=compute_precision)
+
+    if nparallel > 1:
+        blas.accumulate(bL)
 
     def _mat(dst, src):
         assert len(src) == n_rhs
@@ -98,7 +125,7 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_side
         t("gemm")
         blas()
         t("export")
-        pL.from_accelerator_buffer(bL)
+        pL.from_accelerator_buffer(bL[0])
         t()
 
         if verbose:

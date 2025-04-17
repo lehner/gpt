@@ -42,6 +42,7 @@ class cgpt_gemm_job : public cgpt_blas_job_base {
   GridBLASOperation_t opA, opB;
   long m,n,k;
   ComplexD alpha, beta;
+  GridBLASPrecision_t precision;  
   
   GridBLASOperation_t convert_op_code(long op) {
     switch (op) {
@@ -61,7 +62,8 @@ class cgpt_gemm_job : public cgpt_blas_job_base {
 		std::vector<void*>& _data_A, std::vector<int64_t*>& idxA, long _opA,
 		std::vector<void*>& _data_B, std::vector<int64_t*>& idxB, long _opB,
 		ComplexD _beta,
-		std::vector<void*>& _data_C, std::vector<int64_t*>& idxC, std::vector<long> num_elements) :
+		std::vector<void*>& _data_C, std::vector<int64_t*>& idxC, std::vector<long> num_elements,
+		std::string _precision) :
     m(_m), n(_n), k(_k), alpha(_alpha), beta(_beta) {
 
     // total number of elements
@@ -86,13 +88,24 @@ class cgpt_gemm_job : public cgpt_blas_job_base {
     opA = convert_op_code(_opA);
     opB = convert_op_code(_opB);
 
+    if (_precision == "default") {
+      precision = GridBLAS_PRECISION_DEFAULT;
+    } else if (_precision == "16F") {
+      precision = GridBLAS_PRECISION_16F;
+    } else if (_precision == "16BF") {
+      precision = GridBLAS_PRECISION_16BF;
+    } else if (_precision == "TF32") {
+      precision = GridBLAS_PRECISION_TF32;
+    } else {
+      ERR("Unknown precision for compute of gemm: %s", _precision.c_str());
+    }
   }
   
   virtual ~cgpt_gemm_job() {
   }
 
   virtual void execute(GridBLAS& blas) {
-    blas.gemmBatched(opA, opB, m, n, k, (dtype)alpha, BLAS_A, BLAS_B, (dtype)beta, BLAS_C);
+    blas.gemmBatched(opA, opB, m, n, k, (dtype)alpha, BLAS_A, BLAS_B, (dtype)beta, BLAS_C, precision);
   }
 };
 

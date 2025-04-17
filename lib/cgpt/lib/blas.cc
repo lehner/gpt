@@ -73,19 +73,22 @@ EXPORT(blas_accumulate,{
 EXPORT(blas_gemm,{
     void* p;
     long m,n,k,oA,oB,oC;
-    PyObject* _alpha, *_beta, *vA, *vB, *vC, *iA, *iB, *iC, *_dtype;
+    PyObject* _alpha, *_beta, *vA, *vB, *vC, *iA, *iB, *iC, *_dtype, *_precision;
 
-    if (!PyArg_ParseTuple(args, "llllOOOlOOlOOOO", &p,&m,&n,&k,&_alpha,
+    if (!PyArg_ParseTuple(args, "llllOOOlOOlOOOOO", &p,&m,&n,&k,&_alpha,
 			  &vA, &iA, &oA,
 			  &vB, &iB, &oB,
 			  &_beta,
-			  &vC, &iC,&_dtype)) {
+			  &vC, &iC,&_dtype,
+			  &_precision)) {
       return NULL;
     }
 
     ComplexD alpha, beta;
+    std::string precision; // compute precision
     cgpt_convert(_alpha,alpha);
     cgpt_convert(_beta,beta);
+    cgpt_convert(_precision,precision);
 
     ASSERT(PyList_Check(vA) && PyList_Check(vB) && PyList_Check(vC));
     ASSERT(PyList_Check(iA) && PyList_Check(iB) && PyList_Check(iC));
@@ -156,9 +159,9 @@ EXPORT(blas_gemm,{
     const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
 
     if (!strcmp(__dtype,"numpy.complex64")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_gemm_job<ComplexF>(m,n,k,alpha,a_data_A, a_idxA, oA,a_data_B,a_idxB, oB,beta,a_data_C,a_idxC,a_n));
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_gemm_job<ComplexF>(m,n,k,alpha,a_data_A, a_idxA, oA,a_data_B,a_idxB, oB,beta,a_data_C,a_idxC,a_n,precision));
     } else if (!strcmp(__dtype,"numpy.complex128")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_gemm_job<ComplexD>(m,n,k,alpha,a_data_A, a_idxA, oA,a_data_B,a_idxB, oB,beta,a_data_C,a_idxC,a_n));
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_gemm_job<ComplexD>(m,n,k,alpha,a_data_A, a_idxA, oA,a_data_B,a_idxB, oB,beta,a_data_C,a_idxC,a_n,precision));
     } else {
       ERR("Unknown dtype = %s\n", __dtype);
     }

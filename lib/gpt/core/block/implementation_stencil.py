@@ -20,9 +20,10 @@ import gpt as g
 
 
 def create_stencil_operator_n_rhs(
-    points, vector_parity, n_rhs, target_checkerboard, packed_right_hand_sides
+    points, vector_parity, n_rhs, target_checkerboard, packed_right_hand_sides, args
 ):
     assert packed_right_hand_sides is None
+    assert args == []
 
     # get vector type
     vector_type = None

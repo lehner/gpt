@@ -38,7 +38,7 @@ class blas:
             buffers[0].dtype
         )
 
-    def gemm(self, alpha, bv_A, bv_B, beta, bv_C):
+    def gemm(self, alpha, bv_A, bv_B, beta, bv_C, precision=None):
         bv_A = g.util.to_list(bv_A)
         bv_B = g.util.to_list(bv_B)
         bv_C = g.util.to_list(bv_C)
@@ -105,6 +105,9 @@ class blas:
         assert i == _i
         assert k == _k
 
+        if precision is None:
+            precision = "default"
+            
         cgpt.blas_gemm(
             self.obj,
             i,
@@ -121,6 +124,7 @@ class blas:
             [x.buffer.view for x in bv_C],
             [np.ascontiguousarray(x.idx, dtype=np.int64) for x in bv_C],
             bv_C[0].buffer.dtype,
+            precision
         )
         return self
 
