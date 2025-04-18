@@ -33,6 +33,8 @@ def promote(other, landau_O):
 
 class series(base):
     foundation = foundation
+    __array_ufunc__ = None
+    __numpy_ufunc__ = None
 
     def __init__(self, terms, landau_O):
         self.landau_O = landau_O
