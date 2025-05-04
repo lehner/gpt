@@ -100,13 +100,10 @@ def save(file, objects, params):
     grid = objects[0].grid
 
     w = lime_writer(file)
-    w.create_tag(params["binary_data_tag"], size * len(objects))
+    for et in params["tag_order"]:
+        w.write_text(et, params["tags"][et])
 
-    w.write_xml(
-        "gpt-format",
-        "gptFormat",
-        {"grid": grid.describe(), "n": len(objects), "otype": objects[0].describe()},
-    )
+    w.create_tag(params["binary_data_tag"], size * len(objects))
 
     verbose = g.default.is_verbose("io")
 
@@ -173,8 +170,11 @@ def save(file, objects, params):
         {"version": "1.0", "suma": crc_comp_a, "sumb": crc_comp_b},
     )
 
-    for et in params["extra_tags"]:
-        w.write_text(et, params["extra_tags"][et])
+    w.write_xml(
+        "gpt-format",
+        "gptFormat",
+        {"grid": grid.describe(), "n": len(objects), "otype": objects[0].describe()},
+    )
 
     grid.barrier()
     t1 = g.time()

@@ -146,6 +146,51 @@ EXPORT(test_grid,{
       cfields[mu + 8] = PeekIndex<LorentzIndex>(gridForce,mu);
     }
 
+#elif 0
+
+    std::vector<cgpt_Lattice_base*> fields;
+    cgpt_basis_fill(fields,_fields);
+
+    PVector<LatticeColourMatrixD> cfields;
+    cgpt_basis_fill(cfields,fields);
+
+    GridCartesian* grid = (GridCartesian*)cfields[0].Grid();
+    LatticeGaugeFieldD Umu(grid);
+
+    for(int mu=0;mu<4;mu++) {
+      PokeIndex<LorentzIndex>(Umu,cfields[mu],mu);
+    }
+
+    ScidacWriter w(grid->IsBoss());
+    w.open("grid.lime");
+    emptyUserRecord record;
+    w.writeScidacFieldRecord(Umu, record, 0, Grid::BinaryIO::BINARYIO_LEXICOGRAPHIC);
+    w.close();
+
+#else
+    
+    std::vector<cgpt_Lattice_base*> fields;
+    cgpt_basis_fill(fields,_fields);
+
+    PVector<LatticeColourMatrixD> cfields;
+    cgpt_basis_fill(cfields,fields);
+
+    GridCartesian* grid = (GridCartesian*)cfields[0].Grid();
+    LatticeGaugeFieldD Umu(grid);
+    LatticeGaugeFieldD UmuR(grid);
+
+    for(int mu=0;mu<4;mu++) {
+      PokeIndex<LorentzIndex>(Umu,cfields[mu],mu);
+    }
+
+    ScidacReader w;
+    w.open("test");
+    emptyUserRecord record;
+    w.readScidacFieldRecord(UmuR, record);
+    w.close();
+
+    std::cout << GridLogMessage << "Test:" << norm2(closure(UmuR - Umu)) << std::endl;
+
 #endif
     return PyLong_FromLong(0);
   });
