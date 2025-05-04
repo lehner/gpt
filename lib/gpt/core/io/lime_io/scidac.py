@@ -22,7 +22,7 @@ import numpy as np
 
 def checksums(data, grid, pos):
     site_crc = g.crc32(data, n=len(pos))
-    global_site = np.astype(grid.lexicographic_index(pos), np.uint32)
+    global_site = grid.lexicographic_index(pos).astype(np.uint32)
     global_site_29 = np.mod(global_site, 29)
     global_site_31 = np.mod(global_site, 31)
     checksums_a = np.bitwise_or(
