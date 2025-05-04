@@ -37,6 +37,11 @@ class format:
         def __init__(self, params):
             self.params = params
 
+    class lime:
+        @params_convention(binary_data_tag="gpt-binary-data", extra_tags={})
+        def __init__(self, params):
+            self.params = params
+
 
 # output
 def save(filename, objs, fmt=format.gpt()):
@@ -44,5 +49,7 @@ def save(filename, objs, fmt=format.gpt()):
         return gpt.core.io.gpt_io.save(filename, objs, fmt.params)
     elif isinstance(fmt, format.cevec):
         return gpt.core.io.cevec_io.save(filename, objs, fmt.params)
+    elif isinstance(fmt, format.lime):
+        return gpt.core.io.lime_io.save(filename, objs, fmt.params)
 
     return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))
