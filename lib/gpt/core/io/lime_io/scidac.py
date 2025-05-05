@@ -41,6 +41,6 @@ def checksums_reduce(checksum_a, checksum_b, nreader, grid):
     crc_comp_a = 0x0
     crc_comp_b = 0x0
     for i in range(nreader):
-        crc_comp_a ^= crc_array[2 * i + 0]
-        crc_comp_b ^= crc_array[2 * i + 1]
+        crc_comp_a ^= int(crc_array[2 * i + 0])
+        crc_comp_b ^= int(crc_array[2 * i + 1])
     return crc_comp_a, crc_comp_b
