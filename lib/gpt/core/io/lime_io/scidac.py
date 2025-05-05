@@ -25,14 +25,8 @@ def checksums(data, grid, pos):
     global_site = grid.lexicographic_index(pos).astype(np.uint32)
     global_site_29 = np.mod(global_site, 29)
     global_site_31 = np.mod(global_site, 31)
-    checksums_a = np.bitwise_or(
-        np.bitwise_left_shift(site_crc, global_site_29),
-        np.bitwise_right_shift(site_crc, 32 - global_site_29),
-    )
-    checksums_b = np.bitwise_or(
-        np.bitwise_left_shift(site_crc, global_site_31),
-        np.bitwise_right_shift(site_crc, 32 - global_site_31),
-    )
+    checksums_a = (site_crc << global_site_29) | (site_crc >> (32 - global_site_29))
+    checksums_b = (site_crc << global_site_31) | (site_crc >> (32 - global_site_31))
     checksum_a = np.bitwise_xor.reduce(checksums_a)
     checksum_b = np.bitwise_xor.reduce(checksums_b)
     return checksum_a, checksum_b
