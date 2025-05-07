@@ -69,7 +69,11 @@ class subspace_minimal_residual(base):
             G_ij = np.matrix([g.inner_product(mat_v, mat_v[j])[:, 0] for j in range(len(v))]).T
 
             t("solve")
-            a = np.linalg.solve(G_ij, b)
+            try:
+                a = np.linalg.solve(G_ij, b)
+            except np.linalg.LinAlgError:
+                g.message("Solve failed in subspace_minimal_residual")
+                return
 
             t("linear combination")
             g.linear_combination(psi, v, a)

@@ -28,11 +28,11 @@ def mview(data):
 
 
 # fast threaded checksum of memoryviews
-def crc32(view, crc32_prev=0):
+def crc32(view, crc32_prev=0, n=1):
     if isinstance(view, memoryview):
-        return cgpt.util_crc32(view, crc32_prev)
+        return cgpt.util_crc32(view, crc32_prev, n)
     else:
-        return crc32(memoryview(view), crc32_prev)
+        return crc32(memoryview(view), crc32_prev, n)
 
 
 # distribute loading of cartesian file with lexicographic ordering
@@ -45,7 +45,7 @@ def distribute_cartesian_file(fdimensions, grid, cb):
     while found:
         found = False
         for p in primes:
-            if ldimensions[dimdiv] % p == 0 and nreader * p <= grid.Nprocessors:
+            if ldimensions[dimdiv] % p == 0 and nreader * p <= min(grid.Nprocessors, gpt.default.max_io_nodes):
                 nreader *= p
                 ldimensions[dimdiv] //= p
                 if ldimensions[dimdiv] == 1 and dimdiv > 0:

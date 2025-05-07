@@ -20,6 +20,7 @@ import gpt.core.io.corr_io
 import gpt.core.io.gpt_io
 import gpt.core.io.cevec_io
 import gpt.core.io.hdf5_io
+import gpt.core.io.lime_io
 import gpt.core.io.qlat_io
 import gpt.core.io.nersc_io
 from gpt.core.io.FILE import FILE, FILE_exists

@@ -137,7 +137,7 @@ class FILE_windowed_reader:
             if offset < 0:
                 offset = 0
             if offset >= self.size:
-                offset = self.size    
+                offset = self.size
             self.f.seek(self.offset + offset, 0)
             self.pos = offset
         else:

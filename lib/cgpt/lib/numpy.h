@@ -36,9 +36,12 @@ static size_t numpy_dtype_size(int dtype) {
   switch (dtype) {
   case NPY_FLOAT32:
   case NPY_INT32:
+  case NPY_UINT32:
     return 4;
   case NPY_COMPLEX64:
   case NPY_FLOAT64:
+  case NPY_INT64:
+  case NPY_UINT64:
     return 8;
   case NPY_COMPLEX128:
     return 16;

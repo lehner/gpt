@@ -96,10 +96,13 @@ def get_xvec(d, n):
 @params_convention(grids=None, nmax=None, advise_basis=None, advise_cevec=None)
 def load(filename, params):
     # first check if this is right file format
-    if not os.path.exists(filename + "/00/0000000000.compressed") or not os.path.exists(
-        filename + "/metadata.txt"
-    ):
+    if not os.path.exists(filename + "/metadata.txt"):
         raise NotImplementedError()
+    if not os.path.exists(filename + "/eigen-values.txt"):
+        raise NotImplementedError()
+    if not os.path.exists(filename + "/00/0000000000.compressed"):
+        if not os.path.exists(filename + "/00.zip"):
+            raise NotImplementedError()
 
     # verbosity
     verbose = gpt.default.is_verbose("io")
@@ -453,7 +456,7 @@ def load(filename, params):
         # crc checks
         if f is not None:
             if crc32_comp != crc32[cv.rank]:
-                print("File",fn,"is corrupted on rank",gpt.rank())
+                print("File", fn, "is corrupted on rank", gpt.rank())
             assert crc32_comp == crc32[cv.rank]
 
     # timing
