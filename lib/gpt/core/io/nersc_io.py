@@ -318,6 +318,10 @@ def save(file, U, params):
     # global checksum
     cs_comp = grid.globalsum(cs_comp) & 0xFFFFFFFF
 
+    # measures
+    L = sum([gpt.sum(gpt.trace(x)) / x.grid.gsites / x.otype.shape[0] for x in U]).real / len(U)
+    P = gpt.qcd.gauge.plaquette(U)
+    
     # can only save QCD gauge configurations
     f = gpt.FILE(file, "wb")
     if grid.processor == 0:
@@ -330,8 +334,8 @@ DIMENSION_1 = {grid.fdimensions[0]}
 DIMENSION_2 = {grid.fdimensions[1]}
 DIMENSION_3 = {grid.fdimensions[2]}
 DIMENSION_4 = {grid.fdimensions[3]}
-LINK_TRACE = {sum([gpt.sum(gpt.trace(x)) / x.grid.gsites / x.otype.shape[0] for x in U]).real / len(U):.15g}
-PLAQUETTE  = {gpt.qcd.gauge.plaquette(U):.15g}
+LINK_TRACE = {L:.15g}
+PLAQUETTE  = {P:.15g}
 BOUNDARY_1 = PERIODIC
 BOUNDARY_2 = PERIODIC
 BOUNDARY_3 = PERIODIC
@@ -352,7 +356,8 @@ END_HEADER
         header = header.encode("utf-8")
         f.write(header)
         f.seek(0, 1)
-        offset = f.tell()
+        offset = int(f.tell())
+        print(type(offset))
     else:
         offset = 0
 
