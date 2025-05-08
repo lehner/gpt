@@ -190,7 +190,7 @@ def load(file, params):
 
         szGB += len(data) / 1024.0**3.0
     else:
-        data = memoryview(bytearray())
+        data_munged = memoryview(bytearray())
 
     g.barrier()
     dt_read += g.time()

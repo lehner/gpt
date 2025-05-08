@@ -27,8 +27,9 @@ import gpt.core.io.lime_io.scidac as scidac
 class lime_writer:
     magic = 1164413355
 
-    def __init__(self, fn):
+    def __init__(self, fn, comm):
         self.fn = fn
+        self.comm = comm
         self.f = g.FILE(fn, "wb")
         self.append_offset = 0
 
@@ -36,7 +37,7 @@ class lime_writer:
 
     def create_tag(self, tag, size):
         size = int(size)
-        if g.rank() == 0:
+        if self.comm.processor == 0:
             self.f.seek(self.append_offset, 0)
             self.f.write(struct.pack(">L", self.magic))
             self.f.write(struct.pack(">H", 1))
@@ -47,34 +48,38 @@ class lime_writer:
             bin_tag = bin_tag + ("\0" * (128 - len(bin_tag))).encode("utf-8")
             self.f.write(bin_tag)
 
+            self.f.seek(0, 1)
             offset = int(self.f.tell())
-            self.f.seek(size, 1)
-            if size % 8 != 0:
-                self.f.seek(8 - size % 8, 1)
-
-            self.append_offset = self.f.tell()
-
         else:
             offset = 0
             size = 0
 
-        offset = g.broadcast(0, offset)
-        size = g.broadcast(0, size)
+        offset = self.comm.globalsum(offset)
+        size = self.comm.globalsum(size)
+
+        if size % 8 != 0:
+            dsize = 8 - size % 8
+        else:
+            dsize = 0
+
+        self.append_offset = offset + size + dsize
 
         self.index[tag] = (offset, size)
 
     def write(self, tag, element_offset, data):
         assert tag in self.index
         tag_offset, size = self.index[tag]
-        assert element_offset < size
+        assert element_offset + len(data) <= size
 
         self.f.seek(tag_offset + element_offset, 0)
         self.f.write(data)
 
     def write_text(self, tag, text):
-        text = (text + "\0").encode("utf-8")
+        assert isinstance(text, str)
+        text = text.encode("utf-8")
         self.create_tag(tag, len(text))
-        self.write(tag, 0, text)
+        if self.comm.processor == 0:
+            self.write(tag, 0, text)
 
     def _xml_build(self, root, xml):
         root = ET.Element(root)
@@ -99,7 +104,7 @@ def save(file, objects, params):
     assert all([x.global_bytes() == size for x in objects])
     grid = objects[0].grid
 
-    w = lime_writer(file)
+    w = lime_writer(file, grid)
     for et in params["tag_order"]:
         w.write_text(et, params["tags"][et])
 
@@ -182,7 +187,7 @@ def save(file, objects, params):
     szGB = grid.globalsum(szGB)
     if verbose and dt_crc != 0.0:
         g.message(
-            "Write %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for writeing + checksum, %g GB/s for checksum, %d writers)"
+            "Write %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for writing + checksum, %g GB/s for checksum, %d writers)"
             % (
                 szGB,
                 szGB / (t1 - t0),
