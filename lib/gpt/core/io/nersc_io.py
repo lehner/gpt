@@ -357,7 +357,6 @@ END_HEADER
         f.write(header)
         f.seek(0, 1)
         offset = int(f.tell())
-        print(type(offset))
     else:
         offset = 0
 
