@@ -63,7 +63,7 @@ class nersc_io:
             f.seek(0, 2)
             self.bytes_data = f.tell() - self.bytes_header
 
-        self.fdimensions = [int(self.metadata[f"DIMENSION_{i+1}"]) for i in range(4)]
+        self.fdimensions = [int(self.metadata[f"DIMENSION_{i + 1}"]) for i in range(4)]
         self.floating_point = self.metadata["FLOATING_POINT"]
         self.data_type = self.metadata["DATATYPE"]
 
@@ -267,7 +267,9 @@ def save(file, U, params):
     grid = U[0].grid
     assert all([u.grid is grid for u in U])
     assert otype.shape == (3, 3)
-    assert grid.precision is gpt.double # don't support single-precision nersc configuration writing
+    assert (
+        grid.precision is gpt.double
+    )  # don't support single-precision nersc configuration writing
 
     verbose = gpt.default.is_verbose("io")
 
@@ -275,14 +277,13 @@ def save(file, U, params):
     dt_distr, dt_crc, dt_write, dt_misc = 0.0, 0.0, 0.0, 0.0
     grid.barrier()
     t0 = gpt.time()
-    dt_write -= gpt.time()
 
     cb = U[0].checkerboard()
     pos, nwriter = distribute_cartesian_file(grid.fdimensions, grid, cb)
     ssize = U[0].global_bytes() // grid.gsites
     size = ssize * len(U)
     sz = size * len(pos)
-    
+
     # distributes data accordingly
     data_munged = memoryview(bytearray(len(U) * len(pos) * ssize))
     dt_distr -= gpt.time()
@@ -320,7 +321,7 @@ def save(file, U, params):
     # can only save QCD gauge configurations
     f = gpt.FILE(file, "wb")
     if grid.processor == 0:
-        utcnow = datetime.datetime.utcnow().strftime('%c %Z')
+        utcnow = datetime.datetime.utcnow().strftime("%c %Z")
         header = f"""BEGIN_HEADER
 HDR_VERSION = 1.0
 DATATYPE = 4D_SU3_GAUGE_3x3
@@ -359,7 +360,7 @@ END_HEADER
 
     dt_write -= gpt.time()
     if len(pos) > 0:
-        f.seek(offset + grid.processor*sz, 0)
+        f.seek(offset + grid.processor * sz, 0)
         f.write(data)
         szGB = len(data) / 1024.0**3.0
     else:
@@ -373,7 +374,7 @@ END_HEADER
     szGB = grid.globalsum(szGB)
     if verbose and dt_crc != 0.0:
         gpt.message(
-            "Write %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for writing + checksum, %g GB/s for checksum, %d writers)"
+            "Write %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for writing, %g GB/s for checksum, %d writers)"
             % (
                 szGB,
                 szGB / (t1 - t0),
