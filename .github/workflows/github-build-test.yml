@@ -449,6 +449,7 @@ jobs:
 
 
   build-gpt-doc:
+    if: false
     needs: [build-grid, build-gpt]
     runs-on: ubuntu-22.04
 
