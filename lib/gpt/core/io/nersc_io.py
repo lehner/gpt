@@ -321,10 +321,12 @@ def save(file, U, params):
     # measures
     L = sum([gpt.sum(gpt.trace(x)) / x.grid.gsites / x.otype.shape[0] for x in U]).real / len(U)
     P = gpt.qcd.gauge.plaquette(U)
-    
+
     # can only save QCD gauge configurations
-    f = gpt.FILE(file, "wb")
     if grid.processor == 0:
+        f = gpt.FILE(file, "wb")
+        f.unbuffer()
+
         utcnow = datetime.datetime.utcnow().strftime("%c %Z")
         header = f"""BEGIN_HEADER
 HDR_VERSION = 1.0
@@ -357,8 +359,14 @@ END_HEADER
         f.write(header)
         f.seek(0, 1)
         offset = int(f.tell())
+        f.close()
     else:
         offset = 0
+
+    grid.barrier()
+    
+    f = gpt.FILE(file, "r+b")
+    f.unbuffer()
 
     offset = grid.globalsum(offset)
 
