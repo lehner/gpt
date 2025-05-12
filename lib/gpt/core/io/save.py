@@ -67,5 +67,7 @@ def save(filename, objs, fmt=format.gpt()):
         return gpt.core.io.cevec_io.save(filename, objs, fmt.params)
     elif isinstance(fmt, format.lime):
         return gpt.core.io.lime_io.save(filename, objs, fmt.params)
+    elif isinstance(fmt, format.nersc):
+        return gpt.core.io.nersc_io.save(filename, objs, fmt.params)
 
     return cgpt.save(filename, objs, fmt, gpt.default.is_verbose("io"))

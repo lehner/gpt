@@ -124,16 +124,11 @@ class lime_reader:
 def load(file, params):
 
     # check file format
-    g.message("Test if",file,"is a lime file")
     if not lime_reader.is_file(file):
-        g.message("It is not")
         raise NotImplementedError()
 
-    g.message("It is!")
     # open lime_reader
     r = lime_reader(file)
-
-    g.message("Lime reader found",r.index)
 
     # first get dimensions
     U = r.allocate_fields(params)

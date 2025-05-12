@@ -30,7 +30,16 @@ class lime_writer:
     def __init__(self, fn, comm):
         self.fn = fn
         self.comm = comm
-        self.f = g.FILE(fn, "wb")
+
+        if self.comm.processor == 0:
+            self.f = g.FILE(fn, "wb")
+
+        self.comm.barrier()
+
+        if self.comm.processor != 0:
+            self.f = g.FILE(fn, "r+b")
+        
+        self.f.unbuffer()
         self.append_offset = 0
 
         self.index = {}
@@ -65,7 +74,6 @@ class lime_writer:
         self.append_offset = offset + size + dsize
 
         self.index[tag] = (offset, size)
-        g.message(f"lime_writer {tag} at {offset} .. {offset+size}")
 
     def write(self, tag, element_offset, data):
         assert tag in self.index
