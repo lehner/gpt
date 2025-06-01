@@ -46,8 +46,8 @@ EXPORT(util_ferm2prop,{
 EXPORT(util_crc32,{
     
     PyObject* _mem;
-    long crc32_prev;
-    if (!PyArg_ParseTuple(args, "Ol", &_mem,&crc32_prev)) {
+    long crc32_prev, n;
+    if (!PyArg_ParseTuple(args, "Oll", &_mem,&crc32_prev,&n)) {
       return NULL;
     }
 
@@ -56,10 +56,20 @@ EXPORT(util_crc32,{
     ASSERT(PyBuffer_IsContiguous(buf,'C'));
     unsigned char* data = (unsigned char*)buf->buf;
     int64_t len = (int64_t)buf->len;
+    ASSERT(len % n == 0);
 
-    uint32_t crc = cgpt_crc32(data,len,(uint32_t)crc32_prev);
-    
-    return PyLong_FromLong(crc);
+    if (n == 1) {
+      uint32_t crc = cgpt_crc32(data,len,(uint32_t)crc32_prev);
+      return PyLong_FromLong(crc);
+    } else {
+      long block_len = len / n;
+      PyArrayObject* ret = cgpt_new_PyArray(1, &n, NPY_UINT32);
+      uint32_t* rarr = (uint32_t*)PyArray_DATA(ret);
+      thread_for(i,n,{
+	rarr[i] = crc32(crc32_prev,&data[block_len*i],block_len);
+	});
+      return (PyObject*)ret;
+    }
   });
 
 EXPORT(util_crc32_combine,{

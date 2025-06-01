@@ -6,6 +6,8 @@ import os, sys, shutil
 g.default.set_verbose("defect_correcting_convergence")
 g.default.set_verbose("cg_log_convergence")
 
+visualization = g.default.has("--visualization")
+
 rng = g.random("test")
 
 # cold start
@@ -448,6 +450,31 @@ metro = g.algorithms.markov.metropolis(rng)
 
 pure_gauge = True
 
+force_visualization = {}
+
+class gradient_density_logger(g.core.group.diffeomorphism): # TODO: move to g.core.group
+    def __init__(self, storage, tag):
+        self.storage = storage
+        self.tag = tag
+        
+    def __call__(self, fields):
+        # do nothing
+        return fields
+
+    # apply the jacobian
+    def jacobian(self, fields, fields_prime, src):
+        density = None
+        for s in src:
+            d = g(g.trace(g.adj(s) * s))
+            if density is None:
+                density = d
+            else:
+                density += d
+        self.storage[self.tag] = density
+
+        return src
+
+
 def transform(aa, s, i):
     aa_transformed = aa[i].transformed(s, indices=list(range(len(U))))
     aa_orig = aa[i]
@@ -457,7 +484,13 @@ def transform(aa, s, i):
         return x
     aa_transformed.draw = draw
     aa[i] = aa_transformed
-    
+
+if visualization:
+    action_gauge = action_gauge.transformed(gradient_density_logger(force_visualization, "gauge_U"))
+    for i in range(len(hasenbusch_ratios)):
+        m1, m2, *rest = hasenbusch_ratios[i]
+        transform(action_fermions_s, gradient_density_logger(force_visualization, f"fermion_{m1}_over_{m2}_U"), i)
+
 a_log_det = None
 for s in sm:
     action_gauge = action_gauge.transformed(s)
@@ -468,6 +501,13 @@ for s in sm:
         a_log_det = s.action_log_det_jacobian()
     else:
         a_log_det = a_log_det.transformed(s) + s.action_log_det_jacobian()
+
+if visualization:
+    action_gauge = action_gauge.transformed(gradient_density_logger(force_visualization, "gauge_U_integration"))
+    a_log_det = a_log_det.transformed(gradient_density_logger(force_visualization, "log_det_U_integration"))
+    for i in range(len(hasenbusch_ratios)):
+        m1, m2, *rest = hasenbusch_ratios[i]
+        transform(action_fermions_s, gradient_density_logger(force_visualization, f"fermion_{m1}_over_{m2}_U_integration"), i)
 
 def hamiltonian(draw):
     ald = a_log_det(U)
@@ -628,7 +668,41 @@ def hmc(tau):
         g.message(f"tau-iteration: {its} -> {tau/nsteps*its}")
         mdint(tau / nsteps)
 
-        if its % 10 == 0:
+        if visualization:
+            g.message("Visualization data output")
+            
+            if g.rank() == 0:
+                os.makedirs(f"{dst}/visualization/{it0}_to_{it0+1}/{its}_of_{nsteps}", exist_ok=True)
+
+            g.barrier()
+
+            g.message("Save U_integration")
+            
+            # save forces and gauge field
+            g.save(f"{dst}/visualization/{it0}_to_{it0+1}/{its}_of_{nsteps}/U_integration", U, g.format.nersc())
+
+            g.message("Create U")
+            Uft = U
+            for s in reversed(sm):
+                Uft = s(Uft)
+
+            g.message("Save U")
+
+            g.save(f"{dst}/visualization/{it0}_to_{it0+1}/{its}_of_{nsteps}/U", Uft, g.format.nersc())
+
+            for tag in force_visualization:
+                g.message(f"Save {tag}")
+                g.save(f"{dst}/visualization/{it0}_to_{it0+1}/{its}_of_{nsteps}/{tag}", force_visualization[tag], g.format.grid_scidac)
+
+                x = g.load(f"{dst}/visualization/{it0}_to_{it0+1}/{its}_of_{nsteps}/{tag}")
+                err = g.norm2(x - force_visualization[tag])
+                g.message("Check", err)
+                assert err == 0.0 # paranoid mode for new file format
+
+        
+            g.message("Done")
+
+        if its % 1 == 0: # temporarily check all of them
             h1, s1 = hamiltonian(False)
             g.message(f"dH = {h1-h0}")
         else:

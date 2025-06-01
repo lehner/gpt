@@ -72,6 +72,10 @@ class FILE_base:
         if self.f is not None:
             cgpt.fclose(self.f)
 
+    def unbuffer(self):
+        assert self.f is not None
+        cgpt.funbuffer(self.f)
+
     def close(self):
         assert self.f is not None
         cgpt.fclose(self.f)
