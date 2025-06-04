@@ -20,6 +20,7 @@ import cgpt, gpt
 import numpy as np
 
 global_sum_algorithm = gpt.default.get("--global-sum-algorithm", "default")
+fingerprint = gpt.default.has("--fingerprint")
 
 
 def global_sum_grid(grid, x):
@@ -66,3 +67,13 @@ def global_sum_reduce(grid, x):
 global_sum_default = {"default": global_sum_grid, "binary-tree": global_sum_reduce}[
     global_sum_algorithm
 ]
+
+
+if fingerprint:
+    global_sum_fingerprint = global_sum_default
+
+    def global_sum_default(grid, x):
+        gpt.fingerprint.log(x)
+        r = global_sum_fingerprint(grid, x)
+        gpt.fingerprint.log(r)
+        return r
