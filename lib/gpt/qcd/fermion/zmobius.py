@@ -49,7 +49,11 @@ class zmobius_class_operator(mobius_class_operator):
             gpt.scale_per_coordinate(dst, src, adj_inv_kappa, 0)
 
         return gpt.matrix_operator(
-            mat=_mat, inv_mat=_inv_mat, adj_mat=_adj_mat, adj_inv_mat=_adj_inv_mat
+            mat=_mat,
+            inv_mat=_inv_mat,
+            adj_mat=_adj_mat,
+            adj_inv_mat=_adj_inv_mat,
+            vector_space=gpt.vector_space.explicit_grid_otype(self.F_grid_eo, self.otype),
         )
 
 

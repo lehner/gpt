@@ -19,3 +19,4 @@
 import gpt.ml.activation
 import gpt.ml.layer
 import gpt.ml.model
+import gpt.ml.regulator

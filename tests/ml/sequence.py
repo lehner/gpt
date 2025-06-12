@@ -32,10 +32,12 @@ W = n.random_weights(rng)
 training_input = [rng.cnormal(g.lattice(grid, ot_i)) for i in range(n_training)]
 training_output = [rng.cnormal(g.lattice(grid, ot_i)) for i in range(n_training)]
 
-c = n.cost(training_input, training_output)
-g.message("Cost:", c(W))
+c = n.cost() + g.ml.regulator.L2(0.1, [1, 2])
+g.message("Cost:", c(W + training_input + training_output))
 
-c.assert_gradient_error(rng, W, [W[0], W[1], W[8], W[9]], 1e-6, 1e-8)
+c.assert_gradient_error(
+    rng, W + training_input + training_output, [W[0], W[1], W[8], W[9]], 1e-6, 1e-8
+)
 
 ls0 = g.algorithms.optimize.line_search_none
 # ls2 = g.algorithms.optimize.line_search_quadratic
@@ -47,7 +49,7 @@ ls0 = g.algorithms.optimize.line_search_none
 opt = g.algorithms.optimize.gradient_descent(maxiter=40, eps=1e-7, step=1e-7, line_search=ls0)
 
 # Train network
-opt(c)(W, W)
+opt(c)(W + training_input + training_output, W)
 
 
 # PTC
@@ -65,6 +67,7 @@ paths = [
     g.path().backward(1),
     g.path().backward(2),
     g.path().backward(3),
+    g.path().forward(1, 3),
     g.path().f(0).f(1).b(0).b(1),
 ]
 
@@ -75,12 +78,22 @@ ot_w = g.ot_matrix_spin(4)
 n = g.ml.model.sequence(
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 1, 3),
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 3),
+    g.ml.layer.residual(
+        g.ml.layer.linear(grid, ot_i, ot_w, 3, 1 + len(paths) - 1),
+        g.ml.layer.parallel_transport(grid, U, paths[0:-1], ot_i),
+        g.ml.layer.linear(grid, ot_i, ot_w, 1 + len(paths) - 1, 3),
+    ),
     g.ml.layer.parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
 )
 
 n_prime = g.ml.model.sequence(
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 1, 3),
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 3),
+    g.ml.layer.residual(
+        g.ml.layer.linear(grid, ot_i, ot_w, 3, 1 + len(paths) - 1),
+        g.ml.layer.parallel_transport(grid, U_prime, paths[0:-1], ot_i),
+        g.ml.layer.linear(grid, ot_i, ot_w, 1 + len(paths) - 1, 3),
+    ),
     g.ml.layer.parallel_transport_convolution(grid, U_prime, paths, ot_i, ot_w, 3, 1),
 )
 
@@ -98,9 +111,9 @@ assert eps < 1e-13
 n_training = 3
 training_output = [rng.normal(g.lattice(grid, ot_i)) for i in range(n_training)]
 training_input = [rng.normal(g.lattice(grid, ot_i)) for i in range(n_training)]
-c = n.cost(training_input, training_output)
+c = n.cost() + g.ml.regulator.L1(0.1, [0])
 
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+c.assert_gradient_error(rng, W + training_input + training_output, W, 1e-3, 1e-8)
 
 # parallel and sequence layers
 n = g.ml.model.sequence(
@@ -119,9 +132,9 @@ n = g.ml.model.sequence(
     g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 2, 1),
 )
 W = n.random_weights(rng)
-c = n.cost(training_input, training_output)
+c = n.cost()
 
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+c.assert_gradient_error(rng, W + training_input + training_output, W, 1e-3, 1e-8)
 
 # lPTC
 n = g.ml.model.sequence(
@@ -130,9 +143,9 @@ n = g.ml.model.sequence(
     g.ml.layer.local_parallel_transport_convolution(grid, U, paths, ot_i, ot_w, 3, 1),
 )
 W = n.random_weights(rng)
-c = n.cost(training_input, training_output)
+c = n.cost()
 
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+c.assert_gradient_error(rng, W + training_input + training_output, W, 1e-3, 1e-8)
 
 # networks can also generate matrix_operator
 matrix = n(W)
@@ -212,10 +225,10 @@ for t, t_prime in ts:
         g.ml.layer.parallel_transport_pooling.promote(t),
     )
     W = n.random_weights(rng)
-    c = n.cost(training_input, training_output)
+    c = n.cost()
 
-    g.message("Coarse network weight:", c(W))
-    c.assert_gradient_error(rng, W, W, 1e-3, 1e-7)
+    g.message("Coarse network weight:", c(W + training_input + training_output))
+    c.assert_gradient_error(rng, W + training_input + training_output, W, 1e-3, 1e-7)
 
     n_prime = g.ml.model.sequence(
         g.ml.layer.parallel_transport_pooling.project(t_prime),
@@ -251,7 +264,7 @@ n = g.ml.model.sequence(
     g.ml.layer.block.promote(b),
 )
 W = n.random_weights(rng)
-c = n.cost(training_input, training_output)
+c = n.cost()
 
-g.message("Coarse network weight:", c(W))
-c.assert_gradient_error(rng, W, W, 1e-3, 1e-8)
+g.message("Coarse network weight:", c(W + training_input + training_output))
+c.assert_gradient_error(rng, W + training_input + training_output, W, 1e-3, 1e-8)

@@ -22,6 +22,8 @@ from gpt.core.group.operation import (
     inner_product,
     compose,
     projected_convert,
+    inverse,
+    invariant_distance,
 )
 from gpt.core.group.differentiable_functional import differentiable_functional
-from gpt.core.group.diffeomorphism import diffeomorphism
+from gpt.core.group.diffeomorphism import diffeomorphism, local_diffeomorphism

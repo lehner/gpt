@@ -92,6 +92,10 @@ def matrix_complex_additive(grid, n):
     return gpt_object(grid, ot_matrix_complex_additive_group(n))
 
 
+def matrix_color_complex_additive(grid, n):
+    return gpt_object(grid, ot_matrix_color_complex_additive_group(n))
+
+
 def real_additive(grid):
     return gpt_object(grid, ot_real_additive_group())
 
@@ -130,7 +134,7 @@ def str_to_otype(s):
         )
     else:
         root = a[0]
-        args = ""
+        args = "()"
 
     # then map to type
     known_types = set(
@@ -162,6 +166,7 @@ def str_to_otype(s):
             "ot_matrix_real_additive_group",
             "ot_vector_complex_additive_group",
             "ot_matrix_complex_additive_group",
+            "ot_matrix_color_complex_additive_group",
         ]
     )
 

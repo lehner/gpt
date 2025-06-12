@@ -21,6 +21,9 @@ from gpt.core.expr import factor
 from gpt.core.vector_space import implicit
 
 
+fingerprint = gpt.default.has("--fingerprint")
+
+
 def make_list(accept_list):
     return True if accept_list is False else accept_list
 
@@ -57,6 +60,15 @@ class matrix_operator(factor):
         self.accept_list = accept_list
         self.lhs_length = (lambda rhs: len(rhs)) if not callable(accept_list) else accept_list
 
+        if fingerprint:
+
+            def call_matrix_operator(dst, src):
+                gpt.fingerprint.log(src)
+                mat(dst, src)
+                gpt.fingerprint.log(dst)
+
+            self.mat = call_matrix_operator
+
         # this allows for automatic application of tensor versions
         # also should handle lists of lattices
         if vector_space is None:
@@ -75,6 +87,10 @@ class matrix_operator(factor):
     def specialized_singlet_callable(self):
         # removing possible overhead for specialized call
         return self.mat if not self.accept_list else self
+
+    def specialized_list_callable(self):
+        # removing possible overhead for specialized call
+        return self.mat if self.accept_list else self
 
     def inv(self):
         return matrix_operator(
@@ -100,29 +116,7 @@ class matrix_operator(factor):
 
     def __mul__(self, other):
         if isinstance(other, matrix_operator):
-            # mat = self * other
-            # mat^dag = other^dag self^dag
-            # (mat^dag)^-1 = (other^dag self^dag)^-1 = self^dag^-1 other^dag^-1
-
-            # TODO:
-            # Depending on other.accept_guess flag and if self.inv_mat is set, we should
-            # attempt to properly propagate dst as well.
-
-            adj_other = other.adj()
-            adj_self = self.adj()
-            inv_other = other.inv()
-            inv_self = self.inv()
-            adj_inv_other = adj_other.inv()
-            adj_inv_self = adj_self.inv()
-            return matrix_operator(
-                mat=lambda dst, src: self(dst, other(src)),
-                adj_mat=lambda dst, src: adj_other(dst, adj_self(src)),
-                inv_mat=lambda dst, src: inv_other(dst, inv_self(src)),
-                adj_inv_mat=lambda dst, src: adj_inv_self(dst, adj_inv_other(src)),
-                vector_space=(self.vector_space[0], other.vector_space[1]),
-                accept_guess=(self.accept_guess[0], other.accept_guess[1]),
-                accept_list=make_list(self.accept_list),
-            )
+            return matrix_operator_product([self, other])
         else:
             return gpt.expr(other).__rmul__(self)
 
@@ -146,7 +140,7 @@ class matrix_operator(factor):
         vector_space = tuple([d.converted(to_precision) for d in self.vector_space])
         accept_guess = self.accept_guess
 
-        def _converted(dst, src, mat, l, r, t=lambda x: None):
+        def _converted(dst, src, mat, l, r, t=lambda x=None: None):
             t("converted: setup")
 
             conv_src = [self.vector_space[r].lattice(None, x.otype, x.checkerboard()) for x in src]
@@ -197,6 +191,47 @@ class matrix_operator(factor):
             inv_mat=lambda dst, src: _grouped(dst, src, self.inv()),
             adj_inv_mat=lambda dst, src: _grouped(dst, src, self.adj().inv()),
             vector_space=self.vector_space,
+            accept_guess=self.accept_guess,
+            accept_list=make_list(self.accept_list),
+        )
+
+    def packed(self):
+        accept_guess = self.accept_guess
+        t = gpt.timer("packed")
+
+        grid = self.vector_space[1].grid
+        assert grid is not None
+        n_rhs = grid.gdimensions[0]
+        vector_space = tuple([x.unpacked(n_rhs) for x in self.vector_space])
+        self_vector_space = self.vector_space
+
+        def _packed(dst, src, mat, guess_id):
+            t("layout")
+
+            assert len(src) == n_rhs
+            t_src = self_vector_space[1].lattice(otype=src[0].otype, cb=src[0].checkerboard())
+            p_t_s = gpt.pack(t_src, fast=True)
+            p_s = gpt.pack(src, fast=True)
+            p_t_s.from_accelerator_buffer(p_s.to_accelerator_buffer())
+
+            t_dst = self_vector_space[0].lattice(otype=dst[0].otype, cb=dst[0].checkerboard())
+            p_t_d = gpt.pack(t_dst, fast=True)
+            p_d = gpt.pack(dst, fast=True)
+            if accept_guess[guess_id]:
+                p_t_d.from_accelerator_buffer(p_d.to_accelerator_buffer())
+
+            t("matrix")
+            mat(t_dst, t_src)
+            t("layout")
+            p_d.from_accelerator_buffer(p_t_d.to_accelerator_buffer())
+            t()
+
+        return matrix_operator(
+            mat=lambda dst, src: _packed(dst, src, self, 0),
+            adj_mat=lambda dst, src: _packed(dst, src, self.adj(), 1),
+            inv_mat=lambda dst, src: _packed(dst, src, self.inv(), 1),
+            adj_inv_mat=lambda dst, src: _packed(dst, src, self.adj().inv(), 0),
+            vector_space=vector_space,
             accept_guess=self.accept_guess,
             accept_list=make_list(self.accept_list),
         )
@@ -266,3 +301,54 @@ class matrix_operator(factor):
             return gpt.util.from_list(dst)
 
         return dst
+
+
+class matrix_operator_product(matrix_operator):
+    def __init__(self, factors):
+        self.factors = factors
+
+        first, second = factors[0], factors[-1]
+
+        def _mat(dst, src):
+            of = list(reversed(factors))
+            for f in of[:-1]:
+                src = f(src)
+            of[-1](dst, src)
+
+        def _adj_mat(dst, src):
+            of = factors
+            for f in of[:-1]:
+                src = f.adj()(src)
+            of[-1].adj()(dst, src)
+
+        def _inv_mat(dst, src):
+            of = factors
+            for f in of[:-1]:
+                src = f.inv()(src)
+            of[-1].inv()(dst, src)
+
+        def _adj_inv_mat(dst, src):
+            of = list(reversed(factors))
+            for f in of[:-1]:
+                src = f.adj().inv()(src)
+            of[-1].adj().inv()(dst, src)
+
+        super().__init__(
+            mat=_mat,
+            adj_mat=_adj_mat,
+            inv_mat=_inv_mat,
+            adj_inv_mat=_adj_inv_mat,
+            vector_space=(first.vector_space[0], second.vector_space[1]),
+            accept_guess=(first.accept_guess[0], second.accept_guess[1]),
+            accept_list=make_list(first.accept_list),
+        )
+
+    def __mul__(self, other):
+        if isinstance(other, matrix_operator_product):
+            return matrix_operator_product(self.factors + other.factors)
+        elif isinstance(other, matrix_operator):
+            return matrix_operator_product(self.factors + [other])
+        return matrix_operator.__mul__(self, other)
+
+    def __rmul__(self, other):
+        return other.__mul__(self)

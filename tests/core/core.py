@@ -317,15 +317,15 @@ for grid in [grid_dp, grid_sp]:
         left = [dtype(grid) for i in range(2)]
         right = [dtype(grid) for i in range(3)]
         rng.cnormal([left, right])
-        host_result = g.rank_inner_product(left, right, False)
-        acc_result = g.rank_inner_product(left, right, True)
+        host_result = g.rank_inner_product(left, right, use_accelerator=False)
+        acc_result = g.rank_inner_product(left, right, use_accelerator=True)
         eps = np.linalg.norm(host_result - acc_result) / np.linalg.norm(host_result)
         g.message(f"Test multi inner product host<>accelerator: {eps}")
         assert eps < 1e-13
         for i in range(2):
             for j in range(3):
-                host_result_individual = g.rank_inner_product(left[i], right[j], False)
-                acc_result_individual = g.rank_inner_product(left[i], right[j], True)
+                host_result_individual = g.rank_inner_product(left[i], right[j], 1, use_accelerator=False)
+                acc_result_individual = g.rank_inner_product(left[i], right[j], use_accelerator=True)
                 eps = abs(host_result_individual - host_result[i, j]) / abs(host_result[i, j])
                 assert eps < 1e-13
                 eps = abs(acc_result_individual - acc_result[i, j]) / abs(acc_result[i, j])
@@ -448,14 +448,43 @@ for i in range(3):
 ################################################################################
 for l in [l_dp, l_sp]:
     nsparse = int(0.01 * l.grid.gsites / l.grid.Nprocessors)
-    sdomain = g.domain.sparse(
-        l.grid,
-        rng.choice(g.coordinates(l), nsparse),
-    )
+
+    def get_lc(rank):
+        rng = g.random("test" + str(rank))
+        base = np.array(
+            [[rng.uniform_int(min=0, max=L[i] - 1) for i in range(4)] for j in range(nsparse)],
+            dtype=np.int32,
+        )
+        lc = np.concatenate(
+            (
+                base,
+                g.random("test." + str(rank)).choice(base, 10),
+                g.random("test." + str(rank)).choice(
+                    g.random("test" + str(rank + 1)).choice(base, nsparse), 10
+                ),
+            )
+        )
+        return lc
+
+    local_coordinates = get_lc(l.grid.processor)
+    sdomain = g.domain.sparse(l.grid, local_coordinates)
+
+    # test embedding
+    all_local_coordinates = np.concatenate(tuple([get_lc(r) for r in range(l.grid.Nprocessors)]))
+    uec = sdomain.unique_embedded_coordinates(all_local_coordinates)
+
+    # make sure the coordinates are unique indeed
+    _, uec_count = np.unique(uec, axis=0, return_counts=True)
+    assert all(uec_count == 1)
 
     # test project/promote
     s = g(sdomain.project * l)
     l_prime = g(sdomain.promote * s)
+
+    # consistency check for uec
+    for i in range(len(all_local_coordinates)):
+        eps2 = g.norm2(s[uec[i]] - l[all_local_coordinates[i]])
+        assert eps2 == 0.0
 
     # test weight (choice draws with replacement) and its caching
     sweight = sdomain.weight()
@@ -463,7 +492,10 @@ for l in [l_dp, l_sp]:
     assert sweight is sweight2
 
     nsparse_global = g.sum(sweight)
-    assert abs(nsparse_global - nsparse * l.grid.Nprocessors) < l.grid.precision.eps * 100
+    assert (
+        abs(nsparse_global - len(local_coordinates) * l.grid.Nprocessors)
+        < l.grid.precision.eps * 100
+    )
 
     eps = g.norm2(sweight * (l - l_prime)) ** 0.5
     g.message(f"Test sparse reconstruction: {eps}")
@@ -488,6 +520,56 @@ for l in [l_dp, l_sp]:
     assert eps < l.grid.precision.eps * 1e3
 
 ################################################################################
+# Test checkerboard
+################################################################################
+a = a[0]
+b = b[0]
+a_even = g.pick_checkerboard(g.even, a)
+a_odd = g.pick_checkerboard(g.odd, a)
+b[:] = 0
+g.set_checkerboard(b, a_even)
+g.set_checkerboard(b, a_odd)
+eps2 = g.norm2(a - b)
+g.message(f"Checkerboard: {eps2}")
+assert eps2 == 0.0
+
+################################################################################
 # Test mem_report
 ################################################################################
 g.mem_report()
+
+
+################################################################################
+# Test pack
+################################################################################
+def test_pack(template, tag):
+    g.message(f"Test pack for {tag}")
+    lat = [g.lattice(template) for _ in range(3)]
+    lat2 = [g.lattice(template) for _ in range(3)]
+    rng.cnormal(lat + lat2)
+    p = g.pack(lat)
+    av = p.to_accelerator_buffer()
+
+    p2 = g.pack(lat2)
+    p2.from_accelerator_buffer(av)
+    for i in range(len(lat)):
+        eps2 = g.norm2(lat[i] - lat2[i])
+        g.message(f"Test copy chain using accelerator views: {eps2}")
+        assert eps2 == 0.0
+
+    # reset target
+    for l in lat2:
+        l[:] = 1
+
+    p2.from_accelerator_buffer(p2.allocate_accelerator_buffer().from_array(av.to_array()))
+
+    for i in range(len(lat)):
+        eps2 = g.norm2(lat[i] - lat2[i])
+        g.message(f"Test copy chain using accelerator views AND numpy arrays: {eps2}")
+        assert eps2 == 0.0
+
+
+test_pack(g.complex(grid_sp), "complex sp")
+test_pack(g.mspincolor(grid_sp), "mspincolor sp")
+test_pack(g.vcomplex(grid_sp, 12), "vcomplex(12) sp")
+test_pack(g.mcomplex(grid_sp, 12), "mcomplex(12) sp")

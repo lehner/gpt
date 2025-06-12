@@ -52,6 +52,8 @@ def load(fn, **p):
         gpt.core.io.nersc_io,
         gpt.core.io.gpt_io,
         gpt.core.io.cevec_io,
+        gpt.core.io.hdf5_io,
+        gpt.core.io.lime_io,
         gpt.core.io.qlat_io,
     ]
 

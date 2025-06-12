@@ -24,14 +24,14 @@ import copy
 
 # test if of number type
 def is_num(x):
-    return isinstance(x, (int, float, complex, gpt.qfloat, gpt.qcomplex)) and not isinstance(
-        x, bool
-    )
+    return isinstance(
+        x, (int, float, complex, np.int64, gpt.qfloat, gpt.qcomplex)
+    ) and not isinstance(x, bool)
 
 
 # adj a number
 def adj_num(x):
-    if isinstance(x, (int, float, gpt.qfloat)):
+    if isinstance(x, (int, float, gpt.qfloat, np.int64)):
         return x
     elif isinstance(x, complex):
         return x.conjugate()

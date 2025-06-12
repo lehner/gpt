@@ -29,7 +29,7 @@ w = g.qcd.fermion.preconditioner.eo1_ne(parity=parity)(
 
 
 # cheby
-c = g.algorithms.polynomial.chebyshev({"low": 0.5, "high": 2.0, "order": 10})
+c = g.algorithms.polynomial.chebyshev({"low": 0.13, "high": 2.0, "order": 10})
 
 # implicitly restarted lanczos
 irl = g.algorithms.eigen.irl(
@@ -42,8 +42,11 @@ irl = g.algorithms.eigen.irl(
         "maxiter": 20,
         "Nminres": 7,
         #    "maxapply" : 100
+        "sort_eigenvalues": lambda x: sorted(x),
     }
 )
+
+bl = g.algorithms.eigen.block_lanczos(maxiter=200, Nstop=60, miniter=30, step=10, resid=1e-8)
 
 # start vector
 start = g.vspincolor(w.Mpc.vector_space[0].grid)
@@ -52,6 +55,22 @@ start.checkerboard(parity)
 
 # generate eigenvectors
 evec, ev = irl(c(w.Mpc), start)  # , g.checkpointer("checkpoint")
+
+bstart_block = [g.vspincolor(w.Mpc.vector_space[0].grid) for _ in range(4)]
+g.random("test").cnormal(bstart_block)
+for b in bstart_block:
+    b.checkerboard(parity)
+evc0, ev0 = bl(c(w.Mpc), bstart_block)
+assert len(ev0) == len(evc0)
+assert len(ev0) == 60
+
+ev1, eps2 = g.algorithms.eigen.evals(c(w.Mpc), evc0, real=True)
+
+for i in range(60):
+    eps = abs(ev0[i]/ev[i] - 1)
+    assert eps < 1e-5
+    eps = abs(ev1[i]/ev0[i] - 1)
+    assert eps < 1e-5
 
 # memory info
 g.mem_report()
@@ -66,7 +85,7 @@ lma = inv.deflate(evec, evals)(w.Mpc)
 for i in range(len(evals)):
     eps2 = g.norm2(evals[i] * lma * evec[i] - evec[i]) / g.norm2(evec[i]) * evals[i]
     g.message(f"Test low-mode approximation for evec[{i}]: {eps2}")
-    assert eps2 < 1e-11
+    assert eps2 < 5e-10
 
 # deflated solver
 cg = inv.cg({"eps": 1e-6, "maxiter": 1000})

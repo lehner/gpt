@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, sys
+import cgpt, gpt
 import numpy as np
 
 
@@ -92,14 +92,6 @@ def grid_get_mpi_default(fdimensions, cb):
 
     assert nd == len(mpi)
     return mpi
-
-
-def global_sum_default(grid, x):
-    if isinstance(x, gpt.tensor):
-        cgpt.grid_globalsum(grid.obj, x.array)
-        return x
-    else:
-        return cgpt.grid_globalsum(grid.obj, x)
 
 
 class grid:

@@ -24,6 +24,9 @@ from gpt.core.foundation import lattice as foundation, base as foundation_base
 
 mem_book = {}
 verbose_lattice_creation = is_verbose("lattice_creation")
+verbose_water_mark = is_verbose("lattice_water_mark")
+water_mark = 0
+water_mark_max = 0
 
 
 def get_mem_book():
@@ -98,10 +101,22 @@ class lattice(factor, foundation_base):
             gpt.time(),
             gpt.get_call_stack() if verbose_lattice_creation else None,
         )
+
+        if verbose_water_mark:
+            global water_mark, water_mark_max
+            water_mark += self.global_bytes()
+            if water_mark > water_mark_max:
+                water_mark_max = water_mark
+                gpt.message(
+                    f"Water mark: create lattice with {self.global_bytes() / 1e9} GB increases maximum water mark to {water_mark_max / 1e9} GB"
+                )
         if cb is not None:
             self.checkerboard(cb)
 
     def __del__(self):
+        if verbose_water_mark:
+            global water_mark
+            water_mark -= self.global_bytes()
         del mem_book[self.v_obj[0]]
         for o in self.v_obj:
             cgpt.delete_lattice(o)
@@ -268,23 +283,23 @@ class lattice(factor, foundation_base):
             return s
 
     def __iadd__(self, expr):
-        gpt.eval(self, expr, ac=True)
+        gpt.expr.stack_eval(self, expr, ac=True)
         return self
 
     def __isub__(self, expr):
-        gpt.eval(self, -expr, ac=True)
+        gpt.expr.stack_eval(self, -expr, ac=True)
         return self
 
     def __imatmul__(self, expr):
-        gpt.eval(self, expr, ac=False)
+        gpt.expr.stack_eval(self, expr, ac=False)
         return self
 
     def __imul__(self, expr):
-        gpt.eval(self, self * expr, ac=False)
+        gpt.expr.stack_eval(self, self * expr, ac=False)
         return self
 
     def __itruediv__(self, expr):
-        gpt.eval(self, self / expr, ac=False)
+        gpt.expr.stack_eval(self, self / expr, ac=False)
         return self
 
     def __lt__(self, other):

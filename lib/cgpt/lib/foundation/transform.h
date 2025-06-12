@@ -222,3 +222,105 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
 
   Timer();
 }
+
+template<class sobj,class vobj> inline
+void cgpt_axpy(Lattice<vobj> &ret,sobj a,const Lattice<vobj> &x,const Lattice<vobj> &y) {
+  GRID_TRACE("axpy");
+  ret.Checkerboard() = x.Checkerboard();
+  conformable(ret,x);
+  conformable(x,y);
+  autoView( ret_v , ret, AcceleratorWrite);
+  autoView( x_v , x, AcceleratorRead);
+  autoView( y_v , y, AcceleratorRead);
+
+  /*
+  static GridBLAS theBLAS;
+
+  Vector<ComplexF> a_p(1);
+  a_p[0] = a;
+
+  int n = GridTypeMapper<vobj>::count * vobj::Nsimd();
+  auto err = cublasCaxpy(theBLAS.gridblasHandle, n,
+			 (const cuComplex *)&a_p[0],
+			 (const cuComplex *)&x_v[0], 1,
+                         (cuComplex *)&ret_v[0], 1);
+  assert(err==CUBLAS_STATUS_SUCCESS);
+
+  theBLAS.synchronise();
+  */
+  
+  /*
+    int n_elements_inner = GridTypeMapper<vobj>::count;
+    int n_elements_outer = 5;
+    n_elements_inner /= n_elements_outer;
+    
+    accelerator_forNB(gg,x_v.size()*n_elements_outer,vobj::Nsimd(),{
+    size_t ss = gg / n_elements_outer;
+    size_t o = gg % n_elements_outer;
+    for (int i=0;i<n_elements_inner;i++) {
+      int e = n_elements_outer * i + o;
+      auto tmp = a*coalescedReadElement(x_v[ss], e)+coalescedReadElement(y_v[ss], e);
+      coalescedWriteElement(ret_v[ss],tmp, e);
+    }
+  });
+  */
+
+  accelerator_forNB(ss,x_v.size(),vobj::Nsimd(),{
+    auto tmp = a*coalescedRead(x_v[ss])+coalescedRead(y_v[ss]);
+    coalescedWrite(ret_v[ss],tmp);
+  });
+
+}
+
+
+/*template<class sobj,class vobj> inline
+void cgpt_axpy(PVector<Lattice<vobj>> &ret,std::vector<sobj>& a,const PVector<Lattice<vobj>> &x,const PVector<Lattice<vobj>> &y) {
+
+  double t0 = usecond();
+  
+  VECTOR_VIEW_OPEN(ret, ret_v, AcceleratorWrite);
+  VECTOR_VIEW_OPEN(x, x_v, AcceleratorRead);
+  VECTOR_VIEW_OPEN(y, y_v, AcceleratorRead);
+
+  double t1 = usecond();
+
+  constexpr int n_elements = GridTypeMapper<vobj>::count;
+  typedef typename vobj::scalar_type Coeff_t;
+  
+  const int Nbasis = ret.size();
+  ASSERT(Nbasis == x.size() && Nbasis == y.size() && Nbasis == a.size());
+  Vector<Coeff_t> A(Nbasis);
+  
+  size_t sz = x[0].oSites();
+  thread_for(i, A.size(), {
+      A[i] = (Coeff_t)a[i];
+      ret[i].Checkerboard() = x[i].Checkerboard();
+      ASSERT(sz == x[i].oSites() && sz == y[i].oSites() && sz == ret[i].oSites());
+    });
+
+  Coeff_t* pA = &A[0];
+
+  double t2 = usecond();
+  
+  accelerator_for(i,sz * Nbasis,vobj::Nsimd(),{
+    size_t ss = i / Nbasis;
+    size_t j = i % Nbasis;
+    auto tmp = pA[j]*coalescedRead(x_v[j][ss])+coalescedRead(y_v[j][ss]);
+    coalescedWrite(ret_v[j][ss],tmp);
+  });
+
+  double t3 = usecond();
+
+  VECTOR_VIEW_CLOSE(y_v);
+  VECTOR_VIEW_CLOSE(x_v);
+  VECTOR_VIEW_CLOSE(ret_v);
+
+  double t4 = usecond();
+
+  std::cout << GridLogMessage
+	    << "VECTOR_VIEW_OPEN: " << (t1-t0) << std::endl
+    	    << "COEFF: " << (t2-t1) << std::endl
+	    << "LOOP: " << (t3-t2) << std::endl
+    	    << "VECTOR_VIEW_CLOSE: " << (t4-t3) << std::endl;
+}
+*/

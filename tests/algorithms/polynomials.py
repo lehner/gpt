@@ -102,3 +102,18 @@ for order in hard_code_T.keys():
             assert eps < 1e-13
             eps = abs(res[i] - lattice_result[i]) / abs(resi)
             assert eps < 1e-13
+
+
+# krylov
+def _op(dst, src):
+    dst @= src + g.cshift(src, 0, 1)
+
+
+op = g.matrix_operator(_op)
+src = rng.cnormal(g.complex(grid))
+cref = [0.5, 1 / 6.0, 0.7j + 0.3]
+c = g.algorithms.polynomial.krylov(
+    g(cref[0] * src + cref[1] * op * src + cref[2] * op * op * src), op, src, 2
+)
+eps = np.linalg.norm(c - cref)
+assert eps < 1e-13

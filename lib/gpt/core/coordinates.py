@@ -42,13 +42,17 @@ def coordinates(o, order="lexicographic", margin_top=None, margin_bottom=None):
         if margin_bottom is not None:
             bottom = [b + m for b, m in zip(bottom, margin_bottom)]
 
+        if order != "lexicographic":
+            # have not checked this combination yet
+            assert cb == 0
+
         x = cgpt.coordinates_from_cartesian_view(top, bottom, checker_dim_mask, cb, order)
 
         if margin_top is None and margin_bottom is None:
             x = x.view(local_coordinates)
         else:
-            L = numpy.array(o[0].gdimensions, dtype=numpy.int32)
-            x = numpy.mod(x, L)
+            L = numpy.array(o[0].fdimensions, dtype=numpy.int32)
+            x = numpy.mod(x + L, L)
 
         return x
     elif isinstance(o, gpt.lattice):

@@ -71,6 +71,7 @@ for prec in [g.double]:
             1e-1,
             [b1, b2, a1, a2, t1, x],
         ),
+        (g.sum(g.trace(g.matrix.exp(a1))), 1e-1, [a1]),
         (g.norm2(s1 * x + s2 * x), 1e-1, [s1, s2, x]),
         (g.norm2((s1 + s2) * x), 1e-1, [s1, s2, x]),
         (g.norm2(s1 + s2), 1e-1, [s1, s2]),
@@ -81,6 +82,9 @@ for prec in [g.double]:
     ]:
         # randomize values
         rng.cnormal([vv.value for vv in args])
+
+        # string representation
+        assert type(str(c)) == str
 
         # get gradient for real and imaginary part
         for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
@@ -119,7 +123,7 @@ for prec in [g.double]:
 
         # create something to minimize
         f = real(c).functional(*args)
-        ff = [vv.value for vv in args]
+        ff = [g.copy(vv.value) for vv in args]
         v0 = f(ff)
         opt = g.algorithms.optimize.adam(maxiter=40, eps=1e-7, alpha=learn_rate)
         opt(f)(ff, ff)
@@ -127,6 +131,61 @@ for prec in [g.double]:
         g.message(f"Reduced value from {v0} to {v1} with Adam")
         assert v1 < v0
         nid += 1
+
+
+# improved action test
+U = g.qcd.gauge.random(grid, rng)
+U_2 = [rad.node(g.copy(u)) for u in U]
+P, R = g.qcd.gauge.differentiable_P_and_R(U_2)
+a1 = g.qcd.gauge.action.iwasaki(2.5)
+A = g.qcd.gauge.action.differentiable_iwasaki(2.5)(U_2)
+a1p = A.functional(*U_2)
+eps = abs(a1p(U) / a1(U) - 1)
+g.message("Iwasaki test", eps)
+assert eps < 1e-10
+
+t0 = g.time()
+grad = a1.gradient(U, U)
+t1 = g.time()
+gradp = a1p.gradient(U, U)
+t2 = g.time()
+g.message(f"Force time {t1 - t0}, AD force time {t2 - t1}")
+for mu in range(4):
+    eps2 = g.norm2(grad[mu] - gradp[mu]) / g.norm2(grad[mu])
+    g.message("Force test", mu, eps2)
+    assert eps2 < 1e-20
+
+
+# stout
+Usm = g.qcd.gauge.smear.differentiable_stout(rho=0.124)(U_2)
+A = g.qcd.gauge.action.differentiable_iwasaki(2.5)(Usm)
+a1p = A.functional(*U_2)
+a1s = a1.transformed(g.qcd.gauge.smear.stout(rho=0.124))
+eps = abs(a1p(U) / a1s(U) - 1)
+g.message("Stout test", eps)
+assert eps < 1e-10
+
+t0 = g.time()
+grad = a1s.gradient(U, U)
+t1 = g.time()
+gradp = a1p.gradient(U, U)
+t2 = g.time()
+g.message(f"Force time {t1 - t0}, AD force time {t2 - t1}")
+for mu in range(4):
+    eps2 = g.norm2(grad[mu] - gradp[mu]) / g.norm2(grad[mu])
+    g.message("Force test", mu, eps2)
+    assert eps2 < 1e-20
+
+# keep some links unchanged, save time in gradient calculation
+for u in U_2[1:]:
+    u.with_gradient = False
+
+A = g.qcd.gauge.action.differentiable_iwasaki(2.5)(U_2)
+a1p = A.functional(*U_2)
+a1p.assert_gradient_error(rng, U, [U[0]], 1e-4, 1e-10)
+
+for u in U_2:
+    u.with_gradient = True
 
 
 #####################################
@@ -371,6 +430,7 @@ for mu in range(4):
     err = (g.norm2(dg_dbeta - U_2[mu].gradient[dbeta]) / g.norm2(dg_dbeta)) ** 0.5
     g.message(f"Numerical action gradient [{mu}] derivative test: {err}")
     assert err < 1e-5
+
 
 # test simple combination of forward and reverse
 a = g.ad.forward.make(On, 1.3333 + 3.21j, dbeta, 2.1 + 0.7j)

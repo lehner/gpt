@@ -22,13 +22,15 @@ from gpt.core.quadruple_precision import qfloat, qfloat_array, qcomplex, qcomple
 from gpt.core.grid import grid, grid_from_description, full, redblack, general
 from gpt.core.precision import single, double, double_quadruple, precision, str_to_precision
 from gpt.core.expr import expr, factor, expr_unary, factor_unary, expr_eval
+from gpt.core.compiler import compiler
 from gpt.core.lattice import lattice, get_mem_book
 from gpt.core.peekpoke import map_key
 from gpt.core.tensor import tensor
 from gpt.core.epsilon import epsilon, sign_of_permutation
 from gpt.core.gamma import gamma, gamma_base
-from gpt.core.time import time, timer
+from gpt.core.time import time, timer, profile_reset, profile_save
 from gpt.core.log import message
+from gpt.core.auto_tune import auto_tuned_class, auto_tuned_method
 from gpt.core.pin import pin
 from gpt.core.stack import get_call_stack
 from gpt.core.convert import convert
@@ -71,6 +73,7 @@ from gpt.core.io import (
     format,
     mview,
     FILE,
+    FILE_exists,
     LoadError,
     gpt_io,
     corr_io,
@@ -96,6 +99,7 @@ from gpt.core.coordinates import (
 )
 from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report, accelerator, host
+from gpt.core.accelerator_buffer import accelerator_buffer
 from gpt.core.merge import *
 from gpt.core.split import *
 import gpt.core.domain
@@ -111,3 +115,7 @@ import gpt.core.local_stencil
 from gpt.core.padding import padded_local_fields
 import gpt.core.stencil
 from gpt.core.einsum import einsum
+import gpt.core.global_sum
+from gpt.core.pack import pack
+from gpt.core.blas import blas
+import gpt.core.fingerprint

@@ -70,6 +70,26 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
     g.message(
         f"""
 
+    Test polar.decomposition for {grid.precision.__name__}
+
+"""
+    )
+    rng = g.random("test")
+    W = rng.normal_element(g.matrix_color_complex_additive(grid, 3))
+    H, U = g.matrix.polar.decompose(W)
+    err2 = g.norm2(H * U - W) / g.norm2(W)
+    g.message(f"Polar decomposition closure: {err2}")
+    assert err2 < eps**2
+    err2 = g.norm2(H - g.adj(H)) / g.norm2(H)
+    g.message(f"Polar decomposition H: {err2}")
+    assert err2 < eps**2
+    err2 = g.norm2(U * g.adj(U) - g.identity(U)) / g.norm2(U)
+    g.message(f"Polar decomposition U: {err2}")
+    assert err2 < eps**2
+
+    g.message(
+        f"""
+
     Test sqrt,log,exp,det,tr for {grid.precision.__name__}
 
 """
@@ -88,6 +108,11 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         eps2 = g.norm2(m * minv - eye) / g.norm2(eye)
         g.message(f"test M*M^-1 = 1 for {m.otype.__name__}: {eps2}")
         assert eps2 < eps**2
+
+        eps2 = g.norm2(
+            g.matrix.inv(m[0, 0, 0, 0]) * m[0, 0, 0, 0] - g.identity(m[0, 0, 0, 0])
+        ) / g.norm2(g.identity(m[0, 0, 0, 0]))
+        assert eps2 < eps**2 * 10
 
         m2 = g.matrix.exp(g.matrix.log(m))
         eps2 = g.norm2(m - m2) / g.norm2(m)

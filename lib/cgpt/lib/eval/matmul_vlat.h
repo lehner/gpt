@@ -39,6 +39,7 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
   // create temporary block arrays
   std::vector<PyArrayObject*> rhs_v_array(rhs_v_otype.size());
   if (rhs_v_otype.size() == 1) {
+    Py_INCREF(rhs_array);
     rhs_v_array[0] = rhs_array;
   } else {
     // create array
@@ -152,7 +153,7 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
       for (int j=1;j<dim;j++) {
 	idx = mtrans ? (i*dim + j) : (j * dim + i);
 
-	lhs_vl[j]->
+	dst_vl[i] = lhs_vl[j]->
 	  matmul( dst_vl[i], true, rhs_v_array[idx], rhs_v_otype[idx], rhs_unary, lhs_unary, unary, rev, coef);
       }
     }
@@ -183,7 +184,7 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 	  matmul( ac ? dst_vl[dst_idx] : 0, ac, rhs_v_array[matrix_index(0,j,rtrans)], rhs_v_otype[matrix_index(0,j,rtrans)], rhs_unary, lhs_unary, unary, rev, coef);
 	
 	for (int l=1;l<dim;l++) {
-	  lhs_vl[matrix_index(i,l,ltrans)]->
+	  dst_vl[dst_idx] = lhs_vl[matrix_index(i,l,ltrans)]->
 	    matmul( dst_vl[dst_idx], true, rhs_v_array[matrix_index(l,j,rtrans)], rhs_v_otype[matrix_index(l,j,rtrans)], rhs_unary, lhs_unary, unary, rev, coef);
 	}
       }
@@ -197,8 +198,6 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
   }
 
   // release temporary arrays
-  if (rhs_v_array.size() != 1) {
-    for (auto&a : rhs_v_array)
-      Py_DECREF(a);
-  }
+  for (auto&a : rhs_v_array)
+    Py_DECREF(a);
 }

@@ -113,6 +113,7 @@ class ot_vector_color(ot_base):
         self.v_otype = ["ot_vcolor%d" % ndim]
         self.spintrace = (None, None, None)
         self.colortrace = (None, None, None)
+        self.colormerge = (0, lambda: ot_singlet())
         self.mtab = {
             "ot_singlet": (lambda: self, None),
         }
@@ -345,6 +346,7 @@ class ot_vector_singlet(ot_base):
         self.v_n0, self.v_n1 = get_range(decomposition, 1)
         self.v_idx = range(len(self.v_n0))
         self.v_otype = [ot_vector_singlet.fundamental[x].v_otype[0] for x in decomposition]
+        self.v_rank = 1
         self.mtab = {
             "ot_singlet": (lambda: self, None),  # TODO: need to add info on contraction
         }
@@ -387,6 +389,7 @@ class ot_matrix_singlet(ot_base):
         self.v_n0, self.v_n1 = get_range(decomposition, 2)
         self.v_idx = range(len(self.v_n0))
         self.v_otype = [ot_matrix_singlet.fundamental[x].v_otype[0] for x in decomposition]
+        self.v_rank = 2
 
     def identity(self):
         return gpt.matrix_singlet(numpy.identity(self.shape[0]), self.shape[0])

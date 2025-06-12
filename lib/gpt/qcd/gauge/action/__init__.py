@@ -23,4 +23,6 @@ from gpt.qcd.gauge.action.improved_with_rectangle import (
     iwasaki,
     dbw2,
     symanzik,
+    differentiable_improved_with_rectangle,
+    differentiable_iwasaki,
 )

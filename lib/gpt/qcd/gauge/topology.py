@@ -22,22 +22,6 @@ import numpy as np
 from gpt.qcd.gauge.loops import accumulators, field_strength, default_rectangle_cache
 
 
-def topological_charge(U, field=False, trace=True):
-    assert len(U) == 4
-    accumulator = accumulators[(field, trace)]
-    res = accumulator(U[0])
-    Bx = field_strength(U, 1, 2)
-    By = field_strength(U, 2, 0)
-    Bz = field_strength(U, 0, 1)
-    Ex = field_strength(U, 3, 0)
-    Ey = field_strength(U, 3, 1)
-    Ez = field_strength(U, 3, 2)
-    coeff = 8.0 / (32.0 * np.pi**2)
-    coeff *= U[0].grid.gsites
-    res += g(Bx * Ex + By * Ey + Bz * Ez)
-    return res.scaled_project(coeff, True)
-
-
 # O(a^4) improved def. of Q. See arXiv:hep-lat/9701012.
 def topological_charge_5LI(U, field=False, trace=True, cache=default_rectangle_cache):
     assert len(U) == 4

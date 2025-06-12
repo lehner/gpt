@@ -39,6 +39,7 @@ class irl:
         betastp=None,
         maxiter=None,
         Nminres=None,
+        sort_eigenvalues=None,
     )
     def __init__(self, params):
         self.params = params
@@ -64,6 +65,10 @@ class irl:
         Nm = self.params["Nm"]
         Nk = self.params["Nk"]
         Nstop = self.params["Nstop"]
+        sort_eigenvalues = self.params["sort_eigenvalues"]
+        if sort_eigenvalues is None:
+            def sort_eigenvalues(x):
+                return sorted(x)
         rotate_use_accelerator = self.params["rotate_use_accelerator"]
         assert Nm >= Nk and Nstop <= Nk
 
@@ -116,7 +121,7 @@ class irl:
 
             # sort
             ev2_copy = ev2.copy()
-            ev2 = list(reversed(sorted(ev2)))
+            ev2 = list(reversed(sort_eigenvalues(ev2)))
 
             # implicitly shifted QR transformations
             Qt = np.identity(Nm, dtype)
@@ -238,7 +243,8 @@ class irl:
 
             if verbose:
                 g.message(
-                    "%-65s %-45s" % ("alpha[ %d ] = %s" % (k, alph), "beta[ %d ] = %s" % (k, beta))
+                    "%-65s %-45s"
+                    % ("alpha[ %d ] = %s" % (k, alph), "beta[ %d ] = %s" % (k, beta))
                 )
 
         else:
@@ -271,7 +277,9 @@ class irl:
 
             t2 = g.time()
             if k > 0:
-                g.orthogonalize(w, evec[0:k], nblock=self.params["orthogonalize_nblock"])
+                g.orthogonalize(
+                    w, evec[0:k], nblock=self.params["orthogonalize_nblock"]
+                )
             t3 = g.time()
 
             ckpt.save([w, alph, beta])

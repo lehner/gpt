@@ -165,7 +165,7 @@ class base(gpt.matrix_operator):
 
         def _G5M(dst, src):
             registry.M(dst, src)
-            dst @= gpt.qcd.fermion.coarse.gamma5(dst) * dst
+            dst @= gpt.gamma[5] * dst
 
         self.G5M = OP(gpt.matrix_operator(_G5M, vector_space=self.vector_space_F))
         self.Dhop = OP(
@@ -230,13 +230,6 @@ class base(gpt.matrix_operator):
     def converted(self, dst_precision):
         return self.updated(gpt.convert(self.U, dst_precision))
 
-    @params_convention(make_hermitian=False)
-    def coarsened(self, coarse_grid, basis, params):
-        # TODO: allow for non-nearest-neighbor operators as well
-        return gpt.qcd.fermion.coarse.nearest_neighbor_operator(
-            self, coarse_grid, basis, params, self.daggered
-        )
-
     def arguments(self):
         return self.U
 
@@ -260,8 +253,11 @@ class base(gpt.matrix_operator):
 
     def update(self, U):
         self.U = U
-        self.params["U"] = [u.v_obj[0] for u in U]
+        self.params["U"] = [u.v_obj[0] for u in self.U]
         self.interface.update(self.params)
+
+    def suspend(self):
+        self.interface.suspend()
 
     def split(self, mpi_split):
         split_grid = self.U_grid.split(mpi_split, self.U_grid.fdimensions)

@@ -71,6 +71,7 @@ class wilson_class_operator(differentiable_fine_operator, gauge_independent_g5_h
     csw_t=None,
     nu=None,
     xi_0=None,
+    n_rhs=1,
 )
 def wilson_clover(U, params):
     params = copy.deepcopy(params)  # save current parameters
@@ -78,6 +79,11 @@ def wilson_clover(U, params):
         assert params["mass"] is None
         params["mass"] = 1.0 / params["kappa"] / 2.0 - 4.0
         del params["kappa"]
+    if params["n_rhs"] > 1:
+        params["multi_rhs"] = True
+        params["Ls"] = params["n_rhs"]
+    else:
+        params["multi_rhs"] = False
     if params["use_legacy"]:
         assert params["boundary_phases"][-1] != 0.0  # only new op supports open bc
     if params["boundary_phases"][-1] != 0.0:

@@ -35,6 +35,9 @@ class two_flavor_base(action_base):
 
         chi = g.lattice(phi)
         chi @= self.inverter(self.operator.MMdag(M)) * phi
+
+        self._suspend()
+
         return g.inner_product(phi, chi).real
 
     def draw(self, fields, rng):
@@ -44,6 +47,9 @@ class two_flavor_base(action_base):
         rng.cnormal(eta, sigma=2.0**-0.5)  # 1/sqrt(2)
 
         phi @= self.operator.M(M) * eta
+
+        self._suspend()
+
         return g.norm2(eta)
 
     def gradient(self, fields, dfields):
@@ -64,7 +70,10 @@ class two_flavor_base(action_base):
             if mu < len(fields) - 1:
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
-                raise Exception("not implemented")
+                dS.append(None)
+                # raise Exception("not implemented")
+
+        self._suspend()
         return dS
 
 
@@ -81,7 +90,7 @@ class two_flavor(two_flavor_base):
 
 class two_flavor_evenodd_schur(two_flavor_base):
     def __init__(self, M, inverter):
-        super().__init__(M, inverter, MMdag_evenodd())
+        super().__init__(M, inverter, MMdag_evenodd)
 
 
 class two_flavor_evenodd(differentiable_functional):
@@ -142,7 +151,10 @@ class two_flavor_ratio_base(action_base):
         psi = g.lattice(phi)
         psi @= self.operator.M(M2) * phi
         chi = g.lattice(phi)
+
         chi @= self.inverter(self.operator.MMdag(M1)) * psi
+
+        self._suspend()
         return g.inner_product(psi, chi).real
 
     def draw(self, fields, rng):
@@ -156,6 +168,8 @@ class two_flavor_ratio_base(action_base):
         chi = g.lattice(phi)
         chi @= self.inverter(self.operator.MMdag(M2)) * self.operator.M(M1) * eta
         phi @= self.operator.Mdag(M2) * chi
+
+        self._suspend()
         return g.norm2(eta)
 
     def gradient(self, fields, dfields):
@@ -180,7 +194,10 @@ class two_flavor_ratio_base(action_base):
             if mu < len(fields) - 1:
                 dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
             else:
-                raise Exception("not implemented")
+                # raise Exception("not implemented")
+                dS.append(None)
+
+        self._suspend()
         return dS
 
 
@@ -191,4 +208,4 @@ class two_flavor_ratio(two_flavor_ratio_base):
 
 class two_flavor_ratio_evenodd_schur(two_flavor_ratio_base):
     def __init__(self, M, inverter):
-        super().__init__(M, inverter, MMdag_evenodd())
+        super().__init__(M, inverter, MMdag_evenodd)

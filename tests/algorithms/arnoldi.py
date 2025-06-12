@@ -32,7 +32,8 @@ start[:] = g.vspincolor([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
 # arnoldi with modest convergence criterion
 a = g.algorithms.eigen.arnoldi(Nmin=50, Nmax=120, Nstep=10, Nstop=4, resid=1e-5)
 ira = g.algorithms.eigen.arnoldi(
-    Nmin=50, Nmax=120, Nstep=10, Nstop=4, resid=1e-5, implicit_restart=True
+    Nmin=50, Nmax=120, Nstep=10, Nstop=4, resid=1e-5, implicit_restart=True,
+    sort_eigenvalues=lambda ev: sorted(ev, key=lambda x: -abs(x))
 )
 
 

@@ -18,6 +18,11 @@
 */
 #include "lib.h"
 
+#ifdef GRID_CUDA
+#include <cuda_profiler_api.h>
+#endif
+
+
 EXPORT(util_ferm2prop,{
     
     void* _ferm,* _prop;
@@ -41,8 +46,8 @@ EXPORT(util_ferm2prop,{
 EXPORT(util_crc32,{
     
     PyObject* _mem;
-    long crc32_prev;
-    if (!PyArg_ParseTuple(args, "Ol", &_mem,&crc32_prev)) {
+    long crc32_prev, n;
+    if (!PyArg_ParseTuple(args, "Oll", &_mem,&crc32_prev,&n)) {
       return NULL;
     }
 
@@ -51,10 +56,20 @@ EXPORT(util_crc32,{
     ASSERT(PyBuffer_IsContiguous(buf,'C'));
     unsigned char* data = (unsigned char*)buf->buf;
     int64_t len = (int64_t)buf->len;
+    ASSERT(len % n == 0);
 
-    uint32_t crc = cgpt_crc32(data,len,(uint32_t)crc32_prev);
-    
-    return PyLong_FromLong(crc);
+    if (n == 1) {
+      uint32_t crc = cgpt_crc32(data,len,(uint32_t)crc32_prev);
+      return PyLong_FromLong(crc);
+    } else {
+      long block_len = len / n;
+      PyArrayObject* ret = cgpt_new_PyArray(1, &n, NPY_UINT32);
+      uint32_t* rarr = (uint32_t*)PyArray_DATA(ret);
+      thread_for(i,n,{
+	rarr[i] = crc32(crc32_prev,&data[block_len*i],block_len);
+	});
+      return (PyObject*)ret;
+    }
   });
 
 EXPORT(util_crc32_combine,{
@@ -177,4 +192,109 @@ EXPORT(ndarray,{
     
     return (PyObject*)cgpt_new_PyArray((long)dim.size(), &dim[0], (int)dtype);
     
+  });
+
+EXPORT(create_device_memory_view,{
+    
+    long bytes;
+    if (!PyArg_ParseTuple(args, "l", &bytes)) {
+      return NULL;
+    }
+
+    ASSERT(bytes % sizeof(float) == 0);
+    long nfloat = bytes / sizeof(float);
+    
+    deviceVector<float>* devVec = new deviceVector<float>(nfloat);
+
+    if (cgpt_verbose_memory_view)
+      std::cout << GridLogMessage << "cgpt::device_memory_create ptr=" << std::hex << &(*devVec)[0] << " for " << std::dec << bytes << " bytes" << std::endl;
+
+    PyObject* r = PyMemoryView_FromMemory((char*)&(*devVec)[0],bytes,PyBUF_WRITE);
+
+    PyObject *capsule = PyCapsule_New((void*)devVec, NULL, [] (PyObject *capsule) -> void {
+      deviceVector<float>* devVec = (deviceVector<float>*)PyCapsule_GetPointer(capsule, NULL);
+      if (cgpt_verbose_memory_view)
+	std::cout << GridLogMessage << "cgpt::device_memory_free ptr=" << std::hex << &(*devVec)[0] << std::endl;
+      delete devVec;
+    });
+
+    ASSERT(!((PyMemoryViewObject*)r)->mbuf->master.obj);
+    ((PyMemoryViewObject*)r)->mbuf->master.obj = capsule;
+
+    return r;
+  });
+
+EXPORT(transfer_array_device_memory_view,{
+    
+    long exp;
+    PyObject* array, *dmv;
+    if (!PyArg_ParseTuple(args, "OOl", &array,&dmv,&exp)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(dmv));
+    ASSERT(PyArray_Check(array));
+
+    void* data_array = PyArray_DATA((PyArrayObject*)array);
+    size_t size_array = PyArray_NBYTES((PyArrayObject*)array);
+
+    Py_buffer* buf = PyMemoryView_GET_BUFFER(dmv);
+    ASSERT(PyBuffer_IsContiguous(buf,'C'));
+    void* data_dmv = buf->buf;
+    size_t size_dmv = buf->len;
+
+    ASSERT(size_array == size_dmv);
+
+    if (exp) {
+      acceleratorCopyFromDevice(data_dmv, data_array, size_dmv);
+    } else {
+      acceleratorCopyToDevice(data_array, data_dmv, size_dmv);
+    }
+
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(profile_trigger,{
+    
+    long start;
+    if (!PyArg_ParseTuple(args, "l", &start)) {
+      return NULL;
+    }
+
+    if (start) {
+#ifdef GRID_CUDA
+      cudaProfilerStart();
+#endif
+    } else {
+#ifdef GRID_CUDA
+      cudaProfilerStop();
+#endif
+    }
+    
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(profile_range,{
+    
+    long start;
+    PyObject* _label;
+    std::string label;
+    if (!PyArg_ParseTuple(args, "lO", &start, &_label)) {
+      return NULL;
+    }
+
+    cgpt_convert(_label, label);
+
+    if (start) {
+      tracePush(label.c_str());
+    } else {
+      tracePop(label.c_str());
+    }
+    
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(accelerator_barrier,{
+    accelerator_barrier();
+    return PyLong_FromLong(0);
   });

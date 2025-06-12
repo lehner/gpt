@@ -26,3 +26,4 @@ import gpt.algorithms.optimize
 import gpt.algorithms.markov
 import gpt.algorithms.preconditioner
 import gpt.algorithms.rational
+import gpt.algorithms.group

@@ -19,10 +19,16 @@
 #
 from gpt.algorithms.inverter.sequence import sequence
 from gpt.algorithms.inverter.deflate import deflate
+from gpt.algorithms.inverter.packed import packed
 from gpt.algorithms.inverter.coarse_deflate import coarse_deflate
 from gpt.algorithms.inverter.cg import cg
+from gpt.algorithms.inverter.fcg import fcg
+from gpt.algorithms.inverter.relaxation import relaxation
+from gpt.algorithms.inverter.chebyshev import chebyshev
+from gpt.algorithms.inverter.block_cg import block_cg
 from gpt.algorithms.inverter.bicgstab import bicgstab
 from gpt.algorithms.inverter.cagcr import cagcr
+from gpt.algorithms.inverter.recording_gcr import recording_gcr, playback_gcr
 from gpt.algorithms.inverter.fom import fom
 from gpt.algorithms.inverter.fgcr import fgcr
 from gpt.algorithms.inverter.fgmres import fgmres
@@ -31,7 +37,7 @@ from gpt.algorithms.inverter.defect_correcting import defect_correcting
 from gpt.algorithms.inverter.mixed_precision import mixed_precision
 from gpt.algorithms.inverter.split import split
 from gpt.algorithms.inverter.preconditioned import preconditioned
-from gpt.algorithms.inverter.multi_grid import coarse_grid, multi_grid_setup
+from gpt.algorithms.inverter.coarse_grid import coarse_grid
 from gpt.algorithms.inverter.calculate_residual import calculate_residual
 from gpt.algorithms.inverter.multi_shift import multi_shift
 from gpt.algorithms.inverter.multi_shift_cg import multi_shift_cg

@@ -20,20 +20,18 @@ import gpt
 import numpy
 
 
-def rank_inner_product(a, b, use_accelerator):
+def rank_inner_product(a, b, n_block, use_accelerator):
+    assert n_block == 1
     return numpy.array([[gpt.trace(gpt.adj(x) * y) for y in b] for x in a], dtype=numpy.complex128)
 
 
-def inner_product(a, b, use_accelerator):
-    return rank_inner_product(a, b, use_accelerator)
+def inner_product(a, b, n_block, use_accelerator):
+    assert n_block == 1
+    return rank_inner_product(a, b, n_block, use_accelerator)
 
 
 def norm2(a):
-    res = inner_product(a, a, True).real
-    ip = numpy.ndarray(dtype=numpy.float64, shape=(len(a),))
-    for i in range(len(a)):
-        ip[i] = res[i, i]
-    return ip
+    return inner_product(a, a, len(a), True).real.reshape(len(a)).astype(numpy.float64)
 
 
 def trace(a, t):
@@ -46,6 +44,24 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
     res = first.new()
     res.array = numpy_operator(first.array)
     return res
+
+
+def identity(t):
+    e = gpt.tensor(t.otype)
+    if len(e.array.shape) == 2:
+        e.array = numpy.eye(dtype=e.array.dtype, N=e.array.shape[0])
+    elif len(e.array.shape) == 4:
+        n1 = e.array.shape[0]
+        n2 = e.array.shape[2]
+        for i in range(n1):
+            for j in range(n1):
+                if i == j:
+                    e.array[i, j] = numpy.eye(dtype=e.array.dtype, N=n2)
+                else:
+                    e.array[i, j] = numpy.zeros(dtype=e.array.dtype, shape=(n2, n2))
+    else:
+        raise Exception(f"Unknown shape of tensor.identity {e.array.shape}")
+    return e
 
 
 def adj(l):
@@ -62,3 +78,8 @@ def component_multiply(a, b):
     res = a.new()
     res.array = numpy.multiply(a.array, b.array)
     return res
+
+
+def copy(a, b):
+    for i in range(len(a)):
+        a[i].array[:] = b[i].array[:]

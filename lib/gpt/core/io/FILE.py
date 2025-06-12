@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, os, shutil
+import cgpt, gpt, os, shutil, zipfile
 
 
 def cache_file(root, src, md):
@@ -36,7 +36,30 @@ def cache_file(root, src, md):
 cache_root = gpt.default.get("--cache-root", None)
 
 
-class FILE:
+def zip_split(fn):
+    # check if any of the directories is a .zip archive
+    fn_split = fn.split("/")
+    fn_partial = fn_split[0]
+    for i, fn_part in enumerate(fn_split[1:]):
+        zip_candidate = fn_partial + ".zip"
+        if os.path.exists(zip_candidate):
+            return zip_candidate, "/".join(fn_split[i:])
+        fn_partial = f"{fn_partial}/{fn_part}"
+    return None, None
+
+
+def FILE_exists(fn):
+    if os.path.exists(fn):
+        return True
+
+    fn_zip, fn_element = zip_split(fn)
+    if fn_zip is not None:
+        return True
+
+    return False
+
+
+class FILE_base:
     def __init__(self, fn, md):
         if cache_root is not None:
             fn = cache_file(cache_root, fn, md)
@@ -48,6 +71,10 @@ class FILE:
     def __del__(self):
         if self.f is not None:
             cgpt.fclose(self.f)
+
+    def unbuffer(self):
+        assert self.f is not None
+        cgpt.funbuffer(self.f)
 
     def close(self):
         assert self.f is not None
@@ -64,7 +91,14 @@ class FILE:
         r = cgpt.fseek(self.f, offset, whence)
         return r
 
-    def read(self, sz):
+    def read(self, sz=None):
+        if sz is None:
+            pos = self.tell()
+            self.seek(0, 2)
+            size = self.tell()
+            self.seek(pos, 0)
+            return self.read(size - pos)
+
         assert self.f is not None
         t = bytes(sz)
         if sz > 0:
@@ -81,3 +115,57 @@ class FILE:
     def flush(self):
         assert self.f is not None
         cgpt.fflush(self.f)
+
+
+class FILE_windowed_reader:
+    def __init__(self, f, offset, size):
+        self.f = FILE_base(f, "rb")
+        self.offset = offset
+        self.pos = 0
+        self.size = size
+        self.f.seek(self.offset, 0)
+
+    def read(self, sz=None):
+        left = self.size - self.pos
+        assert left >= 0
+        if sz is None:
+            sz = left
+        if sz > left:
+            sz = left
+        data = self.f.read(sz)
+        self.pos += sz
+        return data
+
+    def seek(self, offset, whence):
+        if whence == 0:
+            if offset < 0:
+                offset = 0
+            if offset >= self.size:
+                offset = self.size
+            self.f.seek(self.offset + offset, 0)
+            self.pos = offset
+        else:
+            raise Exception("Not yet implemented")
+
+    def close(self):
+        self.f.close()
+
+
+def FILE(fn, mode):
+    if mode[0] != "r" or "+" in mode or os.path.exists(fn):
+        return FILE_base(fn, mode)
+
+    # if file does not exists but should be read, try zip route
+    fn_zip, fn_element = zip_split(fn)
+    zip_file = zipfile.ZipFile(fn_zip, "r")
+    f = zip_file.open(fn_element, "r")
+    if f._compress_type != zipfile.ZIP_STORED:
+        # slow random access (seek), however, it may be useful if we do not plan to randomly access files
+        return f
+
+    # return my own reader that has O(1) seek cost, currently zipfile does not implement such O(1) seeks
+    offset = f._orig_compress_start
+    compress_size = f._orig_compress_size
+    file_size = f._orig_file_size
+    assert compress_size == file_size
+    return FILE_windowed_reader(fn_zip, offset, file_size)

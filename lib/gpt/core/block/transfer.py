@@ -31,11 +31,7 @@ class transfer:
         self.coarse_grid = coarse_grid
 
         self.obj = cgpt.create_block_map(
-            coarse_grid.obj,
-            [template] * basis_size,
-            basis_size,
-            basis_size,
-            mask.v_obj[0],
+            coarse_grid.obj, [template] * basis_size, basis_size, basis_size, mask.v_obj[0], None
         )
 
         def _sum(coarse, fine):

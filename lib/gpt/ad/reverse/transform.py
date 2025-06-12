@@ -18,7 +18,6 @@
 #
 import gpt as g
 from gpt.ad.reverse import node_base
-from gpt.ad.reverse.util import accumulate_gradient
 
 
 def relu(x, a=0.0):
@@ -29,6 +28,6 @@ def relu(x, a=0.0):
     def _backward(z):
         if x.with_gradient:
             active = g.component.drelu(a)(x.value)
-            accumulate_gradient(x, g.component.multiply(active, z.gradient))
+            x.gradient += g.component.multiply(active, z.gradient)
 
-    return node_base(_forward, _backward, (x,))
+    return node_base(_forward, _backward, (x,), _container=x._container)

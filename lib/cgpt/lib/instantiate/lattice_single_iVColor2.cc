@@ -23,6 +23,10 @@ typedef void* (* create_lattice_prec_otype)(GridBase* grid);
 extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
 extern std::map<std::string,int> _otype_singlet_rank_;
 
+// explicitly instantiate
+template class cgpt_Lattice<iVColor2<vComplexF>>;
+template void cgpt_unary_from<iVColor2<vComplexF>>(Lattice<iVColor2<vComplexF>>& dst, const Lattice<iVColor2<vComplexF>>& src, PyObject* params);
+
 void lattice_init_single_iVColor2() {
   std::string prec = "single";
   _create_otype_[prec + ":" + get_otype(iVColor2<vComplexF>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< iVColor2< vComplexF > >(grid); };

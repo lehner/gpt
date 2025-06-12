@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.algorithms.eigen.irl import irl
+from gpt.algorithms.eigen.block_lanczos import block_lanczos
 from gpt.algorithms.eigen.arnoldi import arnoldi_iteration, arnoldi
 from gpt.algorithms.eigen.power_iteration import power_iteration
 from gpt.algorithms.eigen.evals import evals

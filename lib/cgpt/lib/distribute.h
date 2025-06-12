@@ -245,7 +245,6 @@ class global_memory_transfer : public global_transfer<rank_t> {
       } else if (view.type == mt_host) {
 	acceleratorFreeCpu(view.ptr);
       }
-
     }
   };
 
@@ -263,7 +262,8 @@ class global_memory_transfer : public global_transfer<rank_t> {
   }
 
   // memory buffers
-  std::map<rank_t, memory_buffer> send_buffers, recv_buffers;
+  std::vector<memory_buffer> buffers;
+  std::map<rank_t, memory_view> send_buffers, recv_buffers;
   memory_type comm_buffers_type;
   std::map<rank_t, std::map< index_t, blocks_t > > send_blocks, recv_blocks;
 

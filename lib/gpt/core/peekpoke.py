@@ -59,10 +59,15 @@ def split_key_to_coordinates_and_indices(grid, key):
 def map_pos(grid, cb, key):
     # if list, convert to numpy array
     if isinstance(key, list):
-        key = numpy.array(key, dtype=numpy.int32)
+        if key == []:
+            key = numpy.ndarray(shape=(0, grid.nd), dtype=numpy.int32)
+        else:
+            key = numpy.array(key, dtype=numpy.int32)
 
     # if key is numpy array, no further processing needed
     if isinstance(key, numpy.ndarray):
+        if len(key.shape) == 1:
+            key = key.reshape((1, grid.nd))
         return key
 
     # if not, we expect a tuple of slices
@@ -81,9 +86,11 @@ def map_pos(grid, cb, key):
         for i, k in enumerate(key)
     ]
     bottom = [
-        grid.fdimensions[i] // grid.mpi[i] * (1 + grid.processor_coor[i])
-        if k.stop is None
-        else k.stop
+        (
+            grid.fdimensions[i] // grid.mpi[i] * (1 + grid.processor_coor[i])
+            if k.stop is None
+            else k.stop
+        )
         for i, k in enumerate(key)
     ]
     assert all(

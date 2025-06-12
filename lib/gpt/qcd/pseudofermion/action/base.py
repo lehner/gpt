@@ -27,11 +27,19 @@ class action_base(differentiable_functional):
         self.M = g.core.util.to_list(M)
         self.inverter = inverter
         self.operator = operator
+        self._suspend()
 
     def _updated(self, fields):
         U = fields[0:-1]
         psi = fields[-1]
-        return [m.updated(U) for m in self.M] + [U, psi]
+        for m in self.M:
+            m.update(U)
+        return self.M + [U, psi]
+
+    def _suspend(self):
+        for m in self.M:
+            # suspend operator until it is reactivated by update
+            m.suspend()
 
     def _allocate_force(self, U):
         frc = g.group.cartesian(U)
@@ -52,14 +60,14 @@ class action_base(differentiable_functional):
     def gradient(self, fields, dfields):
         raise NotImplementedError()
 
-    def transformed(self, t):
-        return transformed_action(self, t)
+    def transformed(self, t, **args):
+        return transformed_action(self, t, **args)
 
 
 class transformed_action(action_base):
-    def __init__(self, a, t):
+    def __init__(self, a, t, **args):
         self.a = a
-        self.at = differentiable_functional.transformed(a, t)
+        self.at = differentiable_functional.transformed(a, t, **args)
         self.t = t
 
     def __call__(self, fields):

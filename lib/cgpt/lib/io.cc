@@ -155,3 +155,12 @@ EXPORT(fwrite,{
     ASSERT(len >= size);
     return PyLong_FromLong(fwrite(s,size,1,(FILE*)_file));
   });
+
+EXPORT(funbuffer,{
+    void* _file;
+    if (!PyArg_ParseTuple(args, "l", &_file)) {
+      return NULL;
+    }
+    setbuf((FILE*)_file, 0);
+    return PyLong_FromLong(0);
+  });

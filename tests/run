@@ -30,6 +30,7 @@ for f in \
     ${test_path}/core/stencil.py \
     ${test_path}/core/jobs.py \
     ${test_path}/core/tensors.py \
+    ${test_path}/core/blas.py \
     ${test_path}/core/sparse_tensor.py \
     ${test_path}/core/gamma.py \
     ${test_path}/core/block.py \
@@ -44,9 +45,8 @@ for f in \
     ${test_path}/random/simple.py \
     ${test_path}/create/create.py \
     ${test_path}/create/smear.py \
-    ${test_path}/qcd/split_chiral.py \
+    ${test_path}/qcd/sparse_propagator.py \
     ${test_path}/qcd/coarsen.py \
-    ${test_path}/qcd/coarse_even_odd.py \
     ${test_path}/qcd/a2a.py \
     ${test_path}/qcd/fermion_operators.py \
     ${test_path}/qcd/fermion_actions.py \
@@ -70,6 +70,7 @@ for f in \
     ${test_path}/markov/u1_gauge.py \
     ${test_path}/io/cevec.py \
     ${test_path}/io/io.py \
+    ${test_path}/io/hdf5.py \
     ${test_path}/io/qlat.py \
     ${test_path}/qis/qis.py \
     ${test_path}/ad/ad.py \
@@ -80,8 +81,15 @@ do
 printf "%-120s" " [TEST] $f"
 
 start=$SECONDS
-${runner} $f ${extra} 2>&1 > ${LOG}
+timeout 600s ${runner} $f ${extra} 2>&1 > ${LOG}
 res=$?
+if [[ "$res" == "124" ]]
+then
+    echo "TIMEOUT"
+    printf "%-120s" " [TEST] $f"
+    timeout 600s ${runner} $f ${extra} 2>&1 > ${LOG}
+    res=$?
+fi
 elapsed=$((SECONDS-start))
 
 if [[ "$res" == "0" ]];

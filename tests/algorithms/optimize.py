@@ -75,3 +75,29 @@ for gd in [
     assert f([U1, V1]) > 1e2
     gd(f)([U1, V1], [U1, V1])
     assert f([U1, V1]) < 1e-5
+
+# test symmetric update functional
+s = g.algorithms.group.symmetric_functional(f)
+U1 = g.copy(U0)
+V1 = g.copy(V1)
+rng.element([U1, V1])
+s.assert_gradient_error(rng, [U0, V0, U1, V1], [U0, U1], 1e-4, 1e-10)
+
+# test locally coherent functional
+cgrid = g.grid([4, 4, 4, 4], g.double)
+block = g.block.transfer(grid, cgrid, U0.otype)
+lc = g.algorithms.group.locally_coherent_functional(f, block)
+U1 = g.lattice(cgrid, U0.otype)
+V1 = g.lattice(cgrid, V0.otype)
+rng.element([U1, V1])
+lc.assert_gradient_error(rng, [U0, V0, U1, V1], [U0, U1], 1e-4, 1e-10)
+
+# test polar decomposition functional
+r = g.algorithms.group.polar_regulator(1.3, 0.6, 2)
+f = g.qcd.gauge.action.wilson(5.3)
+s = g.algorithms.group.polar_decomposition_functional(f, r)
+W = [g.matrix_color_complex_additive(grid, 3) for _ in range(4)]
+rng.element(W)
+for w in W:
+    w += g.identity(w) * 2
+s.assert_gradient_error(rng, W, W, 1e-4, 1e-8)

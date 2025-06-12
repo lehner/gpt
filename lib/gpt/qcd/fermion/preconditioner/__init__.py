@@ -24,6 +24,8 @@ from gpt.qcd.fermion.preconditioner.even_odd_sites import (
     eo2,
     eo2_ne,
     eo2_kappa_ne,
+    eo3,
+    eo3_ne,
 )
 
 from gpt.qcd.fermion.preconditioner.sap import sap_cycle

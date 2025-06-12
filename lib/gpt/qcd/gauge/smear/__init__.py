@@ -16,5 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.qcd.gauge.smear.stout import stout
-from gpt.qcd.gauge.smear.wilson_flow import wilson_flow
+from gpt.qcd.gauge.smear.stout import stout, differentiable_stout
+from gpt.qcd.gauge.smear.local_stout import local_stout
+from gpt.qcd.gauge.smear.wilson_flow import wilson_flow, gradient_flow
+from gpt.qcd.gauge.smear.differentiable import differentiable_field_transformation

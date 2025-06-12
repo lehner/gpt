@@ -23,9 +23,11 @@ class ot_base:
     v_n0 = [0]
     v_n1 = [1]
     v_idx = [0]
+    v_rank = 0
     transposed = None
     spintrace = None
     colortrace = None
+    colormerge = None
     data_alias = None  # ot can be cast as fundamental type data_alias (such as SU(3) -> 3x3 matrix)
     mtab = {}  # x's multiplication table for x * y
     rmtab = {}  # y's multiplication table for x * y

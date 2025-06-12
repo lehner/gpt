@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, numpy, os, sys
+import cgpt, gpt, numpy, os, sys, getpass, socket, datetime
 from gpt.core.io.util import distribute_cartesian_file
 
 
@@ -63,7 +63,7 @@ class nersc_io:
             f.seek(0, 2)
             self.bytes_data = f.tell() - self.bytes_header
 
-        self.fdimensions = [int(self.metadata[f"DIMENSION_{i+1}"]) for i in range(4)]
+        self.fdimensions = [int(self.metadata[f"DIMENSION_{i + 1}"]) for i in range(4)]
         self.floating_point = self.metadata["FLOATING_POINT"]
         self.data_type = self.metadata["DATATYPE"]
 
@@ -152,7 +152,7 @@ class nersc_io:
         # performance
         dt_distr, dt_cs, dt_read, dt_misc = 0.0, 0.0, 0.0, 0.0
         szGB = 0.0
-        g.barrier()
+        gpt.barrier()
         t0 = gpt.time()
 
         dt_read -= gpt.time()
@@ -258,3 +258,141 @@ def load(filename, p={}):
     for r in ret:
         r.metadata = lat.metadata
     return ret
+
+
+def save(file, U, params):
+    assert len(U) == 4
+    otype = U[0].otype
+    assert all([u.otype.__name__ == otype.__name__ for u in U])
+    grid = U[0].grid
+    assert all([u.grid is grid for u in U])
+    assert otype.shape == (3, 3)
+    assert (
+        grid.precision is gpt.double
+    )  # don't support single-precision nersc configuration writing
+
+    verbose = gpt.default.is_verbose("io")
+
+    # get data that I need to write and perform checksum
+    dt_distr, dt_crc, dt_write, dt_misc = 0.0, 0.0, 0.0, 0.0
+    grid.barrier()
+    t0 = gpt.time()
+
+    cb = U[0].checkerboard()
+    pos, nwriter = distribute_cartesian_file(grid.fdimensions, grid, cb)
+    ssize = U[0].global_bytes() // grid.gsites
+    size = ssize * len(U)
+    sz = size * len(pos)
+
+    # distributes data accordingly
+    data_munged = memoryview(bytearray(len(U) * len(pos) * ssize))
+    dt_distr -= gpt.time()
+    for mu in range(len(U)):
+        data_munged[mu * len(pos) * ssize : (mu + 1) * len(pos) * ssize] = gpt.mview(U[mu][pos])
+    grid.barrier()
+    dt_distr += gpt.time()
+
+    if len(pos) > 0:
+        dt_misc -= gpt.time()
+        data = memoryview(bytearray(len(data_munged)))
+        cgpt.munge_inner_outer(
+            data,
+            data_munged,
+            len(pos),
+            len(U),
+        )
+        dt_misc += gpt.time()
+
+        dt_crc -= gpt.time()
+        cs_comp = cgpt.util_nersc_checksum(data, 0)
+        dt_crc += gpt.time()
+
+        dt_misc -= gpt.time()
+        if sys.byteorder != "big":
+            cgpt.munge_byte_order(data, data, 8)
+        dt_misc += gpt.time()
+    else:
+        cs_comp = 0
+        data = memoryview(bytearray())
+
+    # global checksum
+    cs_comp = grid.globalsum(cs_comp) & 0xFFFFFFFF
+
+    # measures
+    L = sum([gpt.sum(gpt.trace(x)) / x.grid.gsites / x.otype.shape[0] for x in U]).real / len(U)
+    P = gpt.qcd.gauge.plaquette(U)
+
+    # can only save QCD gauge configurations
+    if grid.processor == 0:
+        f = gpt.FILE(file, "wb")
+        f.unbuffer()
+
+        utcnow = datetime.datetime.utcnow().strftime("%c %Z")
+        header = f"""BEGIN_HEADER
+HDR_VERSION = 1.0
+DATATYPE = 4D_SU3_GAUGE_3x3
+STORAGE_FORMAT =
+DIMENSION_1 = {grid.fdimensions[0]}
+DIMENSION_2 = {grid.fdimensions[1]}
+DIMENSION_3 = {grid.fdimensions[2]}
+DIMENSION_4 = {grid.fdimensions[3]}
+LINK_TRACE = {L:.15g}
+PLAQUETTE  = {P:.15g}
+BOUNDARY_1 = PERIODIC
+BOUNDARY_2 = PERIODIC
+BOUNDARY_3 = PERIODIC
+BOUNDARY_4 = PERIODIC
+CHECKSUM =   {cs_comp:x}
+SCIDAC_CHECKSUMA =          0
+SCIDAC_CHECKSUMB =          0
+ENSEMBLE_ID = {params['id']}
+ENSEMBLE_LABEL = {params['label']}
+SEQUENCE_NUMBER = {params['sequence_number']}
+CREATOR = {getpass.getuser()}
+CREATOR_HARDWARE = {socket.gethostname()}
+CREATION_DATE = {utcnow}
+ARCHIVE_DATE = {utcnow}
+FLOATING_POINT = IEEE64BIG
+END_HEADER
+"""
+        header = header.encode("utf-8")
+        f.write(header)
+        f.seek(0, 1)
+        offset = int(f.tell())
+        f.close()
+    else:
+        offset = 0
+
+    grid.barrier()
+
+    f = gpt.FILE(file, "r+b")
+    f.unbuffer()
+
+    offset = grid.globalsum(offset)
+
+    dt_write -= gpt.time()
+    if len(pos) > 0:
+        f.seek(offset + grid.processor * sz, 0)
+        f.write(data)
+        szGB = len(data) / 1024.0**3.0
+    else:
+        szGB = 0.0
+    f.close()
+    grid.barrier()
+    dt_write += gpt.time()
+
+    t1 = gpt.time()
+
+    szGB = grid.globalsum(szGB)
+    if verbose and dt_crc != 0.0:
+        gpt.message(
+            "Write %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for writing, %g GB/s for checksum, %d writers)"
+            % (
+                szGB,
+                szGB / (t1 - t0),
+                szGB / dt_distr,
+                szGB / dt_write,
+                szGB / dt_crc,
+                nwriter,
+            )
+        )

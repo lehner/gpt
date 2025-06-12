@@ -38,24 +38,24 @@ class normal_equation:
         self.S = pc.S
 
         def wrap(Mpc, R):
-            tmp = Mpc.vector_space[0].lattice()
+            Mpc_adj = Mpc.adj()
+            R_adj = R.adj()
 
             def _N_dag_N(o_d, i_d):
-                Mpc.mat(tmp, i_d)
-                Mpc.adj_mat(o_d, tmp)
+                gpt.eval(o_d, Mpc_adj * Mpc * gpt.expr(i_d))
 
             def _R(o_d, i):
-                R.mat(tmp, i)
-                Mpc.adj_mat(o_d, tmp)
+                gpt.eval(o_d, Mpc_adj * R * gpt.expr(i))
 
             def _R_dag(o, i_d):
-                Mpc.mat(tmp, i_d)
-                R.adj_mat(o, tmp)
+                gpt.eval(o, R_adj * Mpc * gpt.expr(i_d))
 
-            wrapped_R = gpt.matrix_operator(mat=_R, adj_mat=_R_dag, vector_space=R.vector_space)
+            wrapped_R = gpt.matrix_operator(
+                mat=_R, adj_mat=_R_dag, vector_space=R.vector_space, accept_list=True
+            )
 
             wrapped_Mpc = gpt.matrix_operator(
-                mat=_N_dag_N, adj_mat=_N_dag_N, vector_space=Mpc.vector_space
+                mat=_N_dag_N, adj_mat=_N_dag_N, vector_space=Mpc.vector_space, accept_list=True
             )
 
             return wrapped_Mpc, wrapped_R

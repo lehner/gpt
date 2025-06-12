@@ -31,6 +31,7 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
   RealD csw_r = get_float(args,"csw_r");
   RealD csw_t = get_float(args,"csw_t");
   RealD cF = get_float(args,"cF");
+  bool multi_rhs = get_bool(args,"multi_rhs");
   bool use_legacy = get_bool(args,"use_legacy");
   wac.isAnisotropic = get_bool(args,"isAnisotropic");
   wac.xi_0 = get_float(args,"xi_0");
@@ -51,8 +52,18 @@ cgpt_fermion_operator_base* cgpt_create_wilson_clover(PyObject* args) {
   }
 
   if (!use_legacy) {
-    auto f = new CompactWilsonClover<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,cF,wac,wp);
-    return new cgpt_fermion_operator<CompactWilsonClover<WI>>(f);
+    if (!multi_rhs) {
+      auto f = new CompactWilsonClover<WI>(U,*grid,*grid_rb,mass,csw_r,csw_t,cF,wac,wp);
+      return new cgpt_fermion_operator<CompactWilsonClover<WI>>(f);
+    } else {
+      auto grid5d = get_pointer<GridCartesian>(args,"F_grid");
+      auto grid5d_rb = get_pointer<GridRedBlackCartesian>(args,"F_grid_rb");
+
+      ASSERT(!wac.isAnisotropic && wac.xi_0 == 1.0 && wac.nu == 1.0);
+      
+      auto f = new CompactWilsonClover5D<WI>(U,*grid5d,*grid5d_rb,*grid,*grid_rb,mass,csw_r,csw_t,cF,wp);
+      return new cgpt_fermion_operator<CompactWilsonClover5D<WI>>(f);
+    }
   } else { // TODO: deprecate soon
     auto f = new WilsonClover<WI>(U, *grid, *grid_rb, mass, csw_r, csw_t, wac, wp);
     return new cgpt_fermion_operator<WilsonClover<WI>>(f);

@@ -28,11 +28,21 @@ U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
 
 # create a sparse sub-domain and a sparse lattice S with 1% of points
 nsparse = int(0.01 * U[0].grid.gsites / U[0].grid.Nprocessors)
+local_coordinates = g.random("test" + str(U[0].grid.processor)).choice(g.coordinates(U[0]), nsparse)
+local_coordinates = np.concatenate(
+    (
+        local_coordinates,
+        g.random("test." + str(U[0].grid.processor)).choice(local_coordinates, 10),
+        g.random("test." + str(U[0].grid.processor)).choice(
+            g.random("test" + str(U[0].grid.processor + 1)).choice(g.coordinates(U[0]), nsparse), 10
+        ),
+    )
+)
 sdomain = g.domain.sparse(
     U[0].grid,
-    rng.choice(g.coordinates(U[0]), nsparse),
+    local_coordinates,
     dimensions_divisible_by=[4, 2, 2, 1],
-    mask=rng.choice([True, False], nsparse),
+    mask=rng.choice([True, False], len(local_coordinates)),
 )
 
 # test sparse domain
@@ -59,6 +69,7 @@ to_save = {
     "U": U,  # write list of lattices
     "sdomain": sdomain,
     "S": S,
+    "tu": U[0][1, 1, 1, 1],
 }
 
 g.save(f"{work_dir}/out", to_save)
@@ -121,6 +132,10 @@ def check_all(res, tag):
         eps2 += g.norm2(a - b)
     assert eps2 < 1e-25
 
+    # tensor test
+    eps2 = g.norm2(U[0][1, 1, 1, 1] - res["tu"])
+    assert eps2 < 1e-25
+
 
 check_all(g.load(f"{work_dir}/out"), "original mpi geometry")
 
@@ -173,4 +188,14 @@ assert len(U_prime) == len(U)
 for u_prime, u in zip(U_prime, U):
     eps = (g.norm2(u_prime - u) / g.norm2(u)) ** 0.5
     g.message(f"Test NERSC IO: {eps}")
+    assert eps < 1e-14
+
+# LIME
+fn = f"{work_dir}/lime.0000"
+g.save(fn, U, g.format.lime())
+U_prime = g.load(fn)
+assert len(U_prime) == len(U)
+for u_prime, u in zip(U_prime, U):
+    eps = (g.norm2(u_prime - u) / g.norm2(u)) ** 0.5
+    g.message(f"Test LIME IO: {eps}")
     assert eps < 1e-14

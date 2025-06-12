@@ -159,14 +159,70 @@ def rectangle(
     return results
 
 
+def differentiable_staple(U, mu, nu):
+    staple_up = g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
+    staple_down = g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1)
+    return staple_up, staple_down
+
+
 def field_strength(U, mu, nu):
     assert mu != nu
-    # v = staple_up - staple_down
-    v = g.eval(
-        g.cshift(U[nu], mu, 1) * g.adj(g.cshift(U[mu], nu, 1)) * g.adj(U[nu])
-        - g.cshift(g.adj(g.cshift(U[nu], mu, 1)) * g.adj(U[mu]) * U[nu], nu, -1)
-    )
-
+    staple_up, staple_down = differentiable_staple(U, mu, nu)
+    v = g(staple_up - staple_down)
     F = g.eval(U[mu] * v + g.cshift(v * U[mu], mu, -1))
-    F @= 0.125 * (F - g.adj(F))
+    F = 0.125 * (F - g.adj(F))
     return F
+
+
+def differentiable_topology(aU):
+    Bx = field_strength(aU, 1, 2)
+    By = field_strength(aU, 2, 0)
+    Bz = field_strength(aU, 0, 1)
+
+    Ex = field_strength(aU, 3, 0)
+    Ey = field_strength(aU, 3, 1)
+    Ez = field_strength(aU, 3, 2)
+
+    coeff = 8.0 / (32.0 * np.pi**2)
+
+    Q = g.sum(g.trace(Bx * Ex) + g.trace(By * Ey) + g.trace(Bz * Ez)) * coeff
+
+    return Q
+
+
+def differentiable_energy_density(aU):
+    Nd = len(aU)
+    grid = aU[0].grid
+    res = None
+    for mu in range(Nd):
+        for nu in range(mu):
+            Fmunu = field_strength(aU, mu, nu)
+            if res is None:
+                res = Fmunu * Fmunu
+            else:
+                res += Fmunu * Fmunu
+    return (-1.0 / grid.gsites) * g.sum(g.trace(res))
+
+
+def differentiable_P_and_R(aU):
+    Nd = len(aU)
+    grid = aU[0].grid
+    ndim = aU[0].otype.shape[0]
+    res_P = None
+    res_R = None
+    for mu in range(Nd):
+        for nu in range(Nd):
+            if mu == nu:
+                continue
+
+            staple_up, staple_down = differentiable_staple(aU, mu, nu)
+
+            P = g.sum(g.trace(aU[mu] * staple_up))
+            R = g.sum(g.trace(g.adj(staple_down) * staple_up))
+
+            res_P = P if res_P is None else P + res_P
+            res_R = R if res_R is None else R + res_R
+
+    res_P = (res_P + g.adj(res_P)) * (0.5 / (Nd - 1) / Nd / ndim / grid.gsites)
+    res_R = (res_R + g.adj(res_R)) * (0.5 / (Nd - 1) / Nd / ndim / grid.gsites)
+    return res_P, res_R

@@ -23,6 +23,10 @@ typedef void* (* create_lattice_prec_otype)(GridBase* grid);
 extern std::map<std::string,create_lattice_prec_otype> _create_otype_;
 extern std::map<std::string,int> _otype_singlet_rank_;
 
+// explicitly instantiate
+template class cgpt_Lattice<iVSpin4Color2<vComplexD>>;
+template void cgpt_unary_from<iVSpin4Color2<vComplexD>>(Lattice<iVSpin4Color2<vComplexD>>& dst, const Lattice<iVSpin4Color2<vComplexD>>& src, PyObject* params);
+
 void lattice_init_double_iVSpin4Color2() {
   std::string prec = "double";
   _create_otype_[prec + ":" + get_otype(iVSpin4Color2<vComplexD>())] = [](GridBase* grid) { return (void*)new cgpt_Lattice< iVSpin4Color2< vComplexD > >(grid); };

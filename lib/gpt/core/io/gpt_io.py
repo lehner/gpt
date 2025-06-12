@@ -53,8 +53,8 @@ class gpt_io:
             self.params["paths"] = [p.translate(replace) for p in self.params["paths"]]
 
         if gpt.rank() == 0:
-            os.makedirs(self.root, exist_ok=True)
             if write:
+                os.makedirs(self.root, exist_ok=True)
                 self.glb = gpt.FILE(root + "/global", "wb")
                 for f in glob.glob("%s/??/*.field" % self.root):
                     os.unlink(f)
@@ -362,6 +362,8 @@ class gpt_io:
             f.write("}\n")
         elif isinstance(objs, numpy.ndarray):  # needs to be above list for proper precedence
             f.write("array %d %d\n" % self.write_numpy(objs))
+        elif isinstance(objs, gpt.tensor):
+            f.write("tensor %s %d %d\n" % (objs.describe(), *self.write_numpy(objs.array)))
         elif isinstance(objs, list):
             f.write("[\n")
             for i, x in enumerate(objs):
@@ -453,6 +455,11 @@ class gpt_io:
             if not self.keep_context(ctx):
                 return None
             return self.read_numpy(int(a[1]), int(a[2]))
+        elif cmd == "tensor":
+            a = p.get()  # array start end
+            if not self.keep_context(ctx):
+                return None
+            return gpt.tensor(self.read_numpy(int(a[2]), int(a[3])), a[1])
         elif cmd == "lattice":
             a = p.get()
             if not self.keep_context(ctx):
@@ -532,7 +539,7 @@ def save(filename, objs, params):
 
 def load(filename, params):
     # first check if this is right file format
-    if not (os.path.exists(filename + "/index.crc32") and os.path.exists(filename + "/global")):
+    if not (gpt.FILE_exists(filename + "/index.crc32") and gpt.FILE_exists(filename + "/global")):
         raise NotImplementedError()
 
     # timing
@@ -544,8 +551,8 @@ def load(filename, params):
         gpt.message("Reading %s" % filename)
 
     # read index
-    idx = open(filename + "/index", "rb").read()
-    crc_expected = int(open(filename + "/index.crc32", "rt").read(), 16)
+    idx = gpt.FILE(filename + "/index", "rb").read()
+    crc_expected = int(gpt.FILE(filename + "/index.crc32", "rt").read(), 16)
     crc_computed = gpt.crc32(memoryview(idx))
     assert crc_expected == crc_computed
 

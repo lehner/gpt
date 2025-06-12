@@ -18,23 +18,42 @@
 #
 import gpt as g
 
+default_padding_cache = {}
+
 
 class padded_local_fields:
-    def __init__(self, fields, margin_top, margin_bottom=None):
+    def __init__(self, fields, margin_top, margin_bottom=None, cache=default_padding_cache):
         fields = g.util.to_list(fields)
         self.grid = fields[0].grid
         self.otype = fields[0].otype
+        self.checkerboard = fields[0].checkerboard()
+        self.padded_checkerboard = self.checkerboard
+
+        if margin_bottom is None:
+            margin_bottom = margin_top
+
+        if self.checkerboard is not g.none:
+            boundary_parity = sum(margin_top) % 2
+            assert boundary_parity == sum(margin_bottom) % 2
+
         self.margin_top = margin_top
         self.margin_bottom = margin_bottom
         assert all([f.otype.__name__ == self.otype.__name__ for f in fields])
         assert all([f.grid.obj == self.grid.obj for f in fields])
 
-        self.domain = g.domain.local(self.grid, margin_top, margin_bottom)
+        tag = f"{self.grid}_{self.checkerboard}_{margin_top}_{margin_bottom}"
+        if tag not in cache:
+            cache[tag] = g.domain.local(
+                self.grid, margin_top, margin_bottom, cb=self.padded_checkerboard
+            )
+        self.domain = cache[tag]
 
     def __call__(self, fields):
         return_list = isinstance(fields, list)
         fields = g.util.to_list(fields)
         padded_fields = [self.domain.lattice(self.otype) for f in fields]
+        for p in padded_fields:
+            p.checkerboard(self.checkerboard)
         self.domain.project(padded_fields, fields)
         return padded_fields if return_list else padded_fields[0]
 

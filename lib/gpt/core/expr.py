@@ -94,13 +94,13 @@ def get_otype_from_expression(e):
     if e.unary & expr_unary.BIT_SPINTRACE:
         st = bare_otype.spintrace
         assert st is not None
-        if st[2] is not None:
-            bare_otype = st[2]()
+        if st[-1] is not None:
+            bare_otype = st[-1]()
     if e.unary & expr_unary.BIT_COLORTRACE:
         ct = bare_otype.colortrace
         assert ct is not None
-        if ct[2] is not None:
-            bare_otype = ct[2]()
+        if ct[-1] is not None:
+            bare_otype = ct[-1]()
     return bare_otype
 
 
@@ -113,6 +113,16 @@ def get_otype_from_expression(e):
 
 
 class expr:
+    auto_closure_stack = []
+
+    def stack_eval(x, y=None, ac=False):
+        if len(expr.auto_closure_stack) == 0:
+            return gpt.eval(x, y, ac)
+        return expr.auto_closure_stack[-1](x, y, ac)
+
+    def auto_closure(x):
+        return expr(expr.stack_eval(x))
+
     def __init__(self, val, unary=expr_unary.NONE):
         if isinstance(val, (gpt.factor, gpt.tensor)):
             self.val = [(1.0, [(factor_unary.NONE, val)])]
@@ -131,6 +141,10 @@ class expr:
         else:
             raise Exception("Unknown type " + str(type(val)))
         self.unary = unary
+
+    def is_adj(self):
+        b = len(self.val) == 1 and len(self.val[0][1]) == 1 and self.val[0][1][0][0] == factor_unary.ADJ
+        return b
 
     def is_single(self, t=None):
         b = len(self.val) == 1 and self.val[0][0] == 1.0 and len(self.val[0][1]) == 1
@@ -163,6 +177,18 @@ class expr:
                     n = len(representative)
                     otype = get_otype_from_expression(self)
                     return grid, otype, return_list, n
+
+        for v in self.val:
+            for i in v[1]:
+                if gpt.util.is_list_instance(i[1], gpt.tensor):
+                    representative = i[1]
+                    return_list = isinstance(representative, list)
+                    representative = gpt.util.to_list(representative)
+                    grid = None
+                    n = len(representative)
+                    otype = get_otype_from_expression(self)
+                    return grid, otype, return_list, n
+
         return None, None, None, None
 
     def __mul__(self, l):
@@ -173,9 +199,9 @@ class expr:
             # This does not work for sub-expressions without lattice fields, so
             # lhs and rhs may still contain multiple terms.
             if len(lhs.val) > 1:
-                lhs = expr(gpt.eval(lhs))
-            if len(rhs.val) > 1:
-                rhs = expr(gpt.eval(rhs))
+                lhs = expr.auto_closure(lhs)
+            if len(rhs.val) > 1 and expr.auto_closure:
+                rhs = expr.auto_closure(rhs)
             return expr([(a[0] * b[0], a[1] + b[1]) for a in lhs.val for b in rhs.val])
         elif isinstance(l, gpt.tensor) and self.is_single(gpt.tensor):
             ue, uf, to = self.get_single()

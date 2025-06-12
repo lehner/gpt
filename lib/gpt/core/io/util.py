@@ -28,11 +28,11 @@ def mview(data):
 
 
 # fast threaded checksum of memoryviews
-def crc32(view, crc32_prev=0):
+def crc32(view, crc32_prev=0, n=1):
     if isinstance(view, memoryview):
-        return cgpt.util_crc32(view, crc32_prev)
+        return cgpt.util_crc32(view, crc32_prev, n)
     else:
-        return crc32(memoryview(view), crc32_prev)
+        return crc32(memoryview(view), crc32_prev, n)
 
 
 # distribute loading of cartesian file with lexicographic ordering

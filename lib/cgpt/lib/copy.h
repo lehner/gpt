@@ -130,6 +130,12 @@ static void cgpt_copy_add_memory_views(std::vector<gm_transfer::memory_view>& mv
     } else if (PyMemoryView_Check(item)) {
       Py_buffer* buf = PyMemoryView_GET_BUFFER(item);
       mv.push_back( { mt_host, buf->buf, (size_t)buf->len} );
+    } else if (PyObject_HasAttrString(item,"dtype")) {
+      PyObject* v_obj = PyObject_GetAttrString(item,"view");
+      ASSERT(PyMemoryView_Check(v_obj));
+      Py_buffer* buf = PyMemoryView_GET_BUFFER(v_obj);
+      mv.push_back( { mt_accelerator, buf->buf, (size_t)buf->len} );
+      Py_DECREF(v_obj);
     } else {
       PyObject* v_obj = PyObject_GetAttrString(item,"v_obj");
       ASSERT(v_obj && PyList_Check(v_obj));

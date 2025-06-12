@@ -23,6 +23,12 @@ def defect(field):
     return field.otype.defect(field)
 
 
+def invariant_distance(field, field_prime):
+    field = g(field)
+    field_prime = g(field_prime)
+    return field.otype.invariant_distance(field, field_prime)
+
+
 def cartesian(field):
     if isinstance(field, list):
         return [cartesian(f) for f in field]
@@ -37,6 +43,10 @@ def inner_product(left, right):
     if isinstance(left, list):
         return sum([inner_product(x, y) for x, y in zip(left, right)])
     return left.__class__.foundation.group_inner_product(left, right)
+
+
+def inverse(left):
+    return left.otype.inverse(left)
 
 
 def compose(left, right):

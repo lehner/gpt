@@ -58,7 +58,7 @@ class arnoldi_iteration:
 
         if self.verbose:
             g.message(
-                f"Arnoldi: len(H) = {len(self.H)} took {t1-t0} s for matrix and {t2-t1} s for linear algebra"
+                f"Arnoldi: len(H) = {len(self.H)} took {t1 - t0} s for matrix and {t2 - t1} s for linear algebra"
             )
 
     def hessenberg(self):
@@ -80,7 +80,7 @@ class arnoldi_iteration:
         idx = (-eps).argsort()
 
         if self.verbose:
-            g.message(f"Arnoldi: eig(H) in {t1-t0} s")
+            g.message(f"Arnoldi: eig(H) in {t1 - t0} s")
 
             if any(np.abs(evals) < 1e-14):
                 g.message(
@@ -97,7 +97,7 @@ class arnoldi_iteration:
         t1 = g.time()
 
         if self.verbose:
-            g.message(f"Arnoldi: rotate in {t1-t0} s")
+            g.message(f"Arnoldi: rotate in {t1 - t0} s")
 
         return self.basis[0:n]
 
@@ -121,9 +121,12 @@ class arnoldi_iteration:
         t1 = g.time()
 
         if self.verbose:
-            g.message(f"Arnoldi: QR in {t1-t0} s")
+            g.message(f"Arnoldi: QR in {t1 - t0} s")
 
-        r = g.eval(self.basis[k] * H[k, k - 1] + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1])
+        r = g.eval(
+            self.basis[k] * H[k, k - 1]
+            + self.basis[-1] * self.H[-1][-1] * Q[n - 1, k - 1]
+        )
         rn = g.norm2(r) ** 0.5
 
         t0 = g.time()
@@ -131,7 +134,7 @@ class arnoldi_iteration:
         t1 = g.time()
 
         if self.verbose:
-            g.message(f"Arnoldi: rotate in {t1-t0} s")
+            g.message(f"Arnoldi: rotate in {t1 - t0} s")
 
         self.basis = self.basis[0:k]
         self.basis.append(g.eval(r / rn))
@@ -147,6 +150,7 @@ class arnoldi:
         Nstop=None,
         resid=None,
         implicit_restart=False,
+        sort_eigenvalues=None,
     )
     def __init__(self, params):
         self.params = params
@@ -159,6 +163,7 @@ class arnoldi:
 
         # Nstop
         Nstop = self.params["Nstop"]
+        sort_eigenvalues = self.params["sort_eigenvalues"]
 
         # arnoldi base
         a = arnoldi_iteration(mat, src)
@@ -173,7 +178,7 @@ class arnoldi:
                 t1 = g.time()
 
                 if self.verbose:
-                    g.message(f"Arnoldi {i}: hessenberg() in {t1-t0} s")
+                    g.message(f"Arnoldi {i}: hessenberg() in {t1 - t0} s")
 
                 evals, little_evec = a.little_eig(H)
 
@@ -181,6 +186,8 @@ class arnoldi:
                     return a.rotate_basis_to_evec(little_evec)[-Nstop:], evals[-Nstop:]
 
                 if self.params["implicit_restart"]:
+                    if sort_eigenvalues is not None:
+                        evals = sort_eigenvalues(evals)
                     a.implicit_restart(H, evals, self.params["Nstep"])
 
         t0 = g.time()
@@ -188,7 +195,7 @@ class arnoldi:
         t1 = g.time()
 
         if self.verbose:
-            g.message(f"Arnoldi: hessenberg() in {t1-t0} s")
+            g.message(f"Arnoldi: hessenberg() in {t1 - t0} s")
 
         # return results wether converged or not
         evals, little_evec = a.little_eig(H)
