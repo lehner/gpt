@@ -20,11 +20,55 @@ import os, time, datetime, sys, shutil
 import gpt as g
 
 
+class scheduler_slurm:
+    def __init__(self, env):
+        self.env = env
+
+    def get_step(self):
+        return self.env["SLURM_JOB_ID"] + "." + self.env["SLURM_STEP_ID"]
+
+    def is_step_running(self, step):
+        stat = os.system(f"sstat -j {step} 2>&1 | grep -q error") != 0
+        return stat
+
+
+class scheduler_unknown:
+    def __init__(self):
+        pass
+
+    def get_step(self):
+        return "unknown"
+
+    def is_step_running(self, step):
+        return True
+    
+
+class scheduler:
+    def __init__(self):
+        env = dict(os.environ)
+        if "SLURM_JOB_ID" in env:
+            self.kernel = scheduler_slurm(env)
+        else:
+            self.kernel = scheduler_unknown()
+
+    def get_step(self):
+        return self.kernel.get_step()
+
+    def is_step_running(self, step):
+        return self.kernel.is_step_running(step)
+
+
+scd = None
+
+
 class base:
     def __init__(self, name, needs):
+        global scd
         self.name = name
         self.needs = needs
         self.weight = 1.0
+        if scd is None:
+            scd = scheduler()
 
     def perform(self, root):
         raise NotImplementedError(f"{self.name} perform not implemented")
@@ -35,6 +79,15 @@ class base:
     def has_started(self, root):
         return os.path.exists(f"{root}/{self.name}")
 
+    def is_running(self, root):
+        if not os.path.exists(f"{root}/{self.name}/.started"):
+            return False
+        step = open(f"{root}/{self.name}/.started").read().split("\n")[2]
+        return scd.is_step_running(step)
+    
+    def has_failed(self, root):
+        return self.has_started(root) and not self.is_running(root) and not self.has_completed(root)
+
     def run_time(self, root):
         return (
             datetime.datetime.now()
@@ -42,6 +95,9 @@ class base:
         ).total_seconds()
 
     def purge(self, root):
+        if g.rank() != 0:
+            return
+        
         # if directory has structure of a job directory, purge (sanity check)
         if os.path.exists(f"{root}/{self.name}/.started"):
             shutil.rmtree(f"{root}/{self.name}")
@@ -70,23 +126,30 @@ class base:
                 f.write(time.asctime() + "\n")
                 f.close()
                 return True
+                
         return False
 
     def __call__(self, root):
         fd = f"{root}/{self.name}"
-        os.makedirs(fd, exist_ok=True)
 
-        f = open(f"{fd}/.started", "wt")
-        f.write(time.asctime() + "\n")
-        f.write(str(sys.argv) + "\n")
-        f.write(str(os.environ) + "\n")
-        f.close()
+        if g.rank() == 0:
+            os.makedirs(fd, exist_ok=True)
+            f = open(f"{fd}/.started", "wt")
+            f.write(time.asctime() + "\n")
+            f.write(str(sys.argv) + "\n")
+            f.write(scd.get_step() + "\n")
+            f.close()
+
+        g.barrier()
 
         self.perform(root)
 
-        f = open(f"{fd}/.completed", "wt")
-        f.write(time.asctime() + "\n")
-        f.close()
+        if g.rank() == 0:
+            f = open(f"{fd}/.completed", "wt")
+            f.write(time.asctime() + "\n")
+            f.close()
+
+        g.barrier()
 
 
 def get_next_name(root, jobs, max_weight, stale_seconds):
@@ -98,6 +161,11 @@ def get_next_name(root, jobs, max_weight, stale_seconds):
     for j in jobs:
         if max_weight is None or j.weight <= max_weight:
             has_started = j.has_started(root)
+            if has_started:
+                if j.has_failed(root):
+                    g.message(f"Job {j.name} has failed; purge")
+                    j.purge(root)
+                    has_started = False
             if has_started and stale_seconds is not None:
                 if not j.has_completed(root):
                     run_time = j.run_time(root)
