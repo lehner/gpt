@@ -548,7 +548,8 @@ class job_release(g.jobs.base):
         for dn in self.directories:
             self.log(root, f"Remove {dn}")
             if g.rank() == 0:
-                shutil.rmtree(dn)
+                if os.path.exists(dn):
+                    shutil.rmtree(dn)
         g.barrier()
         
     def check(self, root):
@@ -737,8 +738,60 @@ class job_hamiltonian(job_reproduction_base):
         return True
 
 
+################################################################################
+# Job - write checkpoint
+################################################################################
+class job_write_checkpoint(g.jobs.base):
+    def __init__(self, stream, conf, step, name, dependencies):
+        self.stream = stream
+        self.conf = conf
+        self.step = step
+        self.tag = name
+        super().__init__(
+            f"{ensemble_tag}{stream}/{conf}_write_checkpoint_{step}",
+            dependencies
+        )
+        self.weight = 1.0
 
-# hamiltonian job
+    def perform(self, root):
+        global U, U_mom, css
+
+        fn = f"{root}/{ensemble_tag}{self.stream}/{self.conf}_md_{self.step}/0/state.0"
+
+        l_css, l_U, l_U_mom = g.load(fn)
+
+        Uft = l_U
+        for s in reversed(sm):
+            Uft = s(Uft)
+
+        fn = f"{root}/{ensemble_tag}{self.stream}/{self.conf}_H_{self.step}/0/H"
+        H = g.load(fn)
+        dH = H[2]
+        
+        plaq = g.qcd.gauge.plaquette(l_U)
+        plaqft = g.qcd.gauge.plaquette(Uft)
+        if g.rank() == 0:
+            flog = open(f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}.log","wt")
+            flog.write(f"dH {dH}\n")
+            flog.write(f"P {plaqft}\n")
+            flog.write(f"Pft {plaq}\n")
+            flog.close()
+
+        g.save(
+            f"{root}/{ensemble_tag}{self.stream}/config.{self.tag}",
+            l_U
+        )
+
+        g.save(
+            f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}",
+            l_U,
+            g.format.nersc()
+        )
+        
+    def check(self, root):
+        return True
+
+
 # visualization job
 
 #        if visualization and:
@@ -809,7 +862,7 @@ for stream in streams:
             jobs = jobs + job_step + job_verify
 
             # and possibly a Hamiltonian calculation
-            if its % nsteps_hamiltonian == nsteps_hamiltonian - 1 or True:
+            if its % nsteps_hamiltonian == nsteps_hamiltonian - 1:
                 job_step = [job_hamiltonian(stream, latest_conf, its, r, [j.name for j in job_verify]) for r in run_replicas]
                 job_verify = [job_reproduction_verify(job_step)]
                 jobs = jobs + job_step + job_verify
@@ -834,9 +887,18 @@ for stream in streams:
                     )
                 ]
 
-                
+        # now write checkpoint
+        job_verify = [job_write_checkpoint(stream, latest_conf, nsteps - 1, latest_conf + 1, [job_verify[0].name])]
+        jobs = jobs + job_verify
 
-# SLURM_STEP_ID
+        # and release draw and last state
+        #jobs = jobs + [
+        #    job_release([
+        #   f"{ensemble_tag}{stream}/{latest_conf}_md_{nsteps-1}/0/state.0",
+        #   f"{ensemble_tag}{stream}/{latest_conf}_draw/0/state.draw"
+        #], job_Verify[0])
+        #]
+
 
 ################################################################################
 # Execute one job at a time ;  allow for nodefile shuffle outside
@@ -894,27 +956,6 @@ no_accept_reject = False
 #     total += 1
 
 
-#     Uft = U
-#     for s in reversed(sm):
-#         Uft = s(Uft)
-        
-#     plaq = g.qcd.gauge.plaquette(U)
-#     plaqft = g.qcd.gauge.plaquette(Uft)
-#     g.message(f"HMC {it} has P = {plaqft}, Pft = {plaq}, dS = {dS}, dH = {dH}, acceptance = {accept/total}")
-#     for x in log.grad:
-#         g.message(f"{x} force norm2/sites =", np.mean(log.get(x)), "+-", np.std(log.get(x)))
-#     g.message(f"Timing:\n{log.time}")
-
-#     if g.rank() == 0:
-#         flog = open(f"{dst}/ckpoint_lat.{it}.log","wt")
-#         flog.write(f"dH {dH}\n")
-#         flog.write(f"P {plaqft}\n")
-#         flog.write(f"Pft {plaq}\n")
-#         for x in log.grad:
-#             flog.write(f"{x} force norm2/sites = {np.mean(log.get(x))} +- {np.std(log.get(x))}\n")
-#         flog.write(f"Timing:\n{log.time}\n")
-
-#         flog.close()
 
 #     if it % 10 == 0:
 #         # reset statistics
