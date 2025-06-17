@@ -76,14 +76,16 @@ class schur_complement_two:
             CD.mat(tmp_c[0], tmp_d[0])
             CC.inv_mat(tmp_c[1], tmp_c[0])
             DC.mat(o_d, tmp_c[1])
-            o_d @= i_d - o_d
-
+            # o_d @= i_d - o_d
+            gpt.axpy(o_d, -1.0, o_d, i_d)
+            
         def _N_dag(o_d, i_d):
             DC.adj_mat(tmp_c[0], i_d)
             CC.adj_inv_mat(tmp_c[1], tmp_c[0])
             CD.adj_mat(tmp_d[0], tmp_c[1])
             DD.adj_inv_mat(o_d, tmp_d[0])
-            o_d @= i_d - o_d
+            # o_d @= i_d - o_d
+            gpt.axpy(o_d, -1.0, o_d, i_d)
 
         def _L(o, i_d):
             DD.inv_mat(tmp_d[0], i_d)

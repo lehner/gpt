@@ -28,7 +28,7 @@ fingerprint_index = 0
 
 def start(tag):
     global fingerprint_file, fingerprint_index
-    if not g.default.has("--fingerprint"):
+    if g.default.get_int("--fingerprint", 0) < 1:
         return
 
     if g.rank() == 0:
@@ -42,37 +42,50 @@ def start(tag):
     fingerprint_file.write(f"Environment: {dict(os.environ)}\n\n")
 
 
-def log(x):
-    global fingerprint_file, fingerprint_index
-
-    if fingerprint_file is None:
-        start("default")
-
-    if isinstance(x, np.ndarray):
+class log:
+    def __init__(self):
         frame = sys._getframe(1)
         stack = ""
         while frame is not None:
             caller = getframeinfo(frame)
             stack = f"{stack}{caller.filename}:{caller.lineno}\n"
             frame = frame.f_back
+        self.stack = stack
+        self.messages = []
 
-        fingerprint_file.write(f"Log {fingerprint_index}:\n{stack}")
-        np.savetxt(fingerprint_file, x)
-        fingerprint_file.write("\n")
-        fingerprint_file.flush()
-        fingerprint_index += 1
-        return
+    def __call__(self, first=None, second=None):
+        global fingerprint_file, fingerprint_index
 
-    x = g.util.to_list(x)
-    if isinstance(x[0], g.lattice):
-        # create fingerprint
-        fp = []
-        for y in x:
-            tag = f"{y.otype.__name__}.{y.grid}"
-            if tag not in fingerprints:
-                fingerprints[tag] = g.random(tag).cnormal(g.lattice(y))
-            fp.append(g.rank_inner_product(fingerprints[tag], y))
-        return log(np.array(fp, dtype=np.complex128))
+        if second is not None:
+            if isinstance(second, np.ndarray):
+                self.messages.append((first, np.copy(second)))
+            elif isinstance(second, list):
+                for i, x in enumerate(second):
+                    self(f"{first}.{i}", x)
+            elif isinstance(second, g.lattice):
+                # create fingerprint
+                fp = []
+                for y in x:
+                    tag = f"{y.otype.__name__}.{y.grid}"
+                    if tag not in fingerprints:
+                        fingerprints[tag] = g.random(tag).cnormal(g.lattice(y))
+                    fp.append(g.rank_inner_product(fingerprints[tag], y))
+                self(first, np.array(fp, dtype=np.complex128))
+            else:
+                self(first, np.array(g.util.to_list(second), dtype=np.complex128))
 
-    elif isinstance(x[0], complex):
-        return log(np.array(x, dtype=np.complex128))
+        else:
+
+            if fingerprint_file is None:
+                return
+
+            fingerprint_file.write(f"Log {fingerprint_index}:\n{self.stack}")
+            for a, b in self.messages:
+                fingerprint_file.write(f"Entry {a}:\n")
+                #fingerprint_file.write(f"Type: {type(b)}\n")
+                #fingerprint_file.write(f"Value: {b}\n")
+                np.savetxt(fingerprint_file, b)
+            fingerprint_file.write("\n")
+            fingerprint_file.flush()
+            fingerprint_index += 1
+

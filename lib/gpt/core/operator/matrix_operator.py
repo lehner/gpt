@@ -21,7 +21,7 @@ from gpt.core.expr import factor
 from gpt.core.vector_space import implicit
 
 
-fingerprint = gpt.default.has("--fingerprint")
+fingerprint = gpt.default.get_int("--fingerprint", 0) > 1
 
 
 def make_list(accept_list):
@@ -63,9 +63,11 @@ class matrix_operator(factor):
         if fingerprint:
 
             def call_matrix_operator(dst, src):
-                gpt.fingerprint.log(src)
+                l = gpt.fingerprint.log()
+                l("source", src)
                 mat(dst, src)
-                gpt.fingerprint.log(dst)
+                l("destination", dst)
+                l()
 
             self.mat = call_matrix_operator
 
@@ -258,7 +260,6 @@ class matrix_operator(factor):
             accept_list=make_list(self.accept_list),
         )
 
->>>>>>> 7bb2d712 (fingerprinting)
     def unary(self, u):
         if u == gpt.factor_unary.BIT_TRANS | gpt.factor_unary.BIT_CONJ:
             return self.adj()
