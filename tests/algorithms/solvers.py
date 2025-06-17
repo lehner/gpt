@@ -23,7 +23,7 @@ grid = U[0].grid
 w = g.qcd.fermion.wilson_clover(
     U,
     {
-        "kappa": 0.13565,
+        "kappa": 0.12,
         "csw_r": 2.0171 / 2.0,  # for now test with very heavy quark
         "csw_t": 2.0171 / 2.0,
         "xi_0": 1,
@@ -38,6 +38,10 @@ src = g.vspincolor(grid)
 src[:] = 0
 src[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
 
+# a = g.algorithms.eigen.arnoldi(Nmin=50, Nmax=500, Nstep=50, Nstop=30, resid=1e-5)
+# print(a(w, src))
+# sys.exit(0)
+
 # build solvers
 inv = g.algorithms.inverter
 inv_pc = inv.preconditioned
@@ -47,6 +51,8 @@ eo2_odd = g.qcd.fermion.preconditioner.eo2_ne(parity=g.odd)
 eo2_even = g.qcd.fermion.preconditioner.eo2_ne(parity=g.even)
 eo1_odd = g.qcd.fermion.preconditioner.eo1_ne(parity=g.odd)
 eo1_even = g.qcd.fermion.preconditioner.eo1_ne(parity=g.even)
+eo3_odd = g.qcd.fermion.preconditioner.eo3_ne(parity=g.odd)
+eo3_even = g.qcd.fermion.preconditioner.eo3_ne(parity=g.even)
 # default
 eo2 = eo2_odd
 eo2_sp = eo2_odd
@@ -57,7 +63,7 @@ src_F[:] = 0
 src_F[0, 1, 0, 0] = g.vspincolor([[1] * 3] * 4)
 eo2_inv = inv_pc(eo2, ac(inv.cg({"eps": 1e-8, "maxiter": 500})))(w)
 dst_F = g(eo2_inv * src_F)
-for pc in [eo1_odd, eo1_even, eo2_odd, eo2_even]:
+for pc in [eo1_odd, eo1_even, eo2_odd, eo2_even, eo3_odd, eo3_even]:
     cg = inv.cg({"eps": 1e-7, "maxiter": 1000})
     gen_inv = inv_pc(pc, cg)(w)
     dst_gen = g.copy(dst_F)
@@ -71,6 +77,8 @@ slv_cg = w.propagator(inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 slv_cg_eo2_even = w.propagator(inv_pc(eo2_even, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 slv_cg_eo1_odd = w.propagator(inv_pc(eo1_odd, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 slv_cg_eo1_even = w.propagator(inv_pc(eo1_even, inv.cg({"eps": 1e-8, "maxiter": 1000})))
+slv_cg_eo3_even = w.propagator(inv_pc(eo3_even, inv.cg({"eps": 1e-8, "maxiter": 1000})))
+slv_cg_eo3_odd = w.propagator(inv_pc(eo3_odd, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 # other parity/pc
 slv_cg = w.propagator(inv_pc(eo2, inv.cg({"eps": 1e-8, "maxiter": 1000})))
 
@@ -80,6 +88,11 @@ slv_bicgstab = w.propagator(inv_pc(eo2, inv.bicgstab({"eps": 1e-6, "maxiter": 10
 slv_fgcr = w.propagator(inv_pc(eo2, inv.fgcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
 slv_fgmres = w.propagator(inv_pc(eo2, inv.fgmres({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
 slv_cagcr = w.propagator(inv_pc(eo2, inv.cagcr({"eps": 1e-6, "maxiter": 1000, "restartlen": 10})))
+
+rgcr = inv.recording_gcr({"eps": 1e-6, "maxiter": 1000})
+pgcr = inv.playback_gcr(rgcr.alphas)
+slv_recording_gcr = w.propagator(rgcr)
+slv_playback_gcr = w.propagator(pgcr)
 slv_fom = w.propagator(inv_pc(eo2, inv.fom({"eps": 1e-6, "maxiter": 1000, "restartlen": 20})))
 
 # defect-correcting solver at the full field level
@@ -104,6 +117,36 @@ slv_dci_mp = w.propagator(
     )
 )
 
+# chebyshev
+slv_chebyshev = w.propagator(
+    inv.chebyshev(
+        low=1.0, high=10, eps=1e-14, maxiter=12
+    )  # for complex low and high need to be focal points of ellipsis
+)
+
+slv_chebyshev2 = w.propagator(
+    inv.relaxation(
+        g.algorithms.polynomial.chebyshev(low=1.0, high=10, order=11, func=lambda x: 1 / x)
+    )
+)
+
+dst1 = g(slv_chebyshev * src)
+dst2 = g(slv_chebyshev2 * src)
+eps2 = g.norm2(dst1 - dst2) / g.norm2(dst1)
+g.message(f"Fixed-order chebyshev needs to be the same: {eps2}")
+assert eps2 < 1e-25
+
+slv_chebyshev = w.propagator(inv.chebyshev(low=1.0, high=10, eps=1e-14, maxiter=1000))
+
+# flexible cg solver
+slv_fcg_cg = w.propagator(
+    inv_pc(eo2, inv.fcg(eps=1e-8, maxiter=100, restartlen=5, prec=inv.cg(eps=1e-8, maxiter=5)))
+)  # 10 iter
+
+slv_cg_cg = w.propagator(
+    inv_pc(eo2, inv.cg(eps=1e-8, maxiter=100, prec=inv.cg(eps=1e-8, maxiter=5)))
+)  # 12 iter
+
 # perform solves (reference)
 dst_cg = g.eval(slv_cg * src)
 g.message("CG finished")
@@ -123,9 +166,14 @@ def test(slv, name):
     assert eps2 < 5e-7
 
 
+test(slv_fcg_cg, "FCG prec=CG")
+test(slv_cg_cg, "CG prec=CG")
+test(slv_chebyshev, "Chebyshev")
 test(slv_cg_eo2_even, "CG eo2_even")
 test(slv_cg_eo1_even, "CG eo1_even")
 test(slv_cg_eo1_odd, "CG eo1_odd")
+test(slv_cg_eo3_even, "CG eo3_even")
+test(slv_cg_eo3_odd, "CG eo3_odd")
 test(slv_dci, "Defect-correcting solver")
 test(slv_dci_eo, "Defect-correcting (eo)")
 test(slv_dci_mp, "Defect-correcting (mixed-precision)")
@@ -134,6 +182,13 @@ test(slv_bicgstab, "BICGSTAB")
 test(slv_fgcr, "FGCR")
 test(slv_fgmres, "FGMRES")
 test(slv_cagcr, "CAGCR")
+test(slv_recording_gcr, "RGCR")
+
+for v in np.linspace(0.1, 10.0, 100):
+    x = v + 0.1j
+    g.message(x, abs(pgcr(x) - 1.0 / x))
+
+test(slv_playback_gcr, "PGCR")
 test(slv_fom, "FOM")
 
 # summary

@@ -42,6 +42,6 @@ class polar_regulator(differentiable_functional):
         I = g.identity(dfields[0])
         Nc = fields[0].otype.Ndim
         for df in dfields:
-            x = g(2.0 * (self.lam / 2 / Nc) * self.c * g.component.pow(self.c-1)(g.trace((df - I)*(df-I)))* (df - I) - (self.kap / Nc) * g.matrix.inv(df))
+            x = g(2.0 * (self.lam / 2 / Nc) * self.c * g.component.pow(self.c - 1)(g.trace((df - I) * (df - I))) * (df - I) - (self.kap / Nc) * g.matrix.inv(df))
             dAdS.append(x)
         return dAdS

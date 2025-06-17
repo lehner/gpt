@@ -38,8 +38,7 @@ class mr(base_iterative):
         vector_space = None
         if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
-            mat = mat.mat
-            # remove wrapper for performance benefits
+            mat = mat.specialized_singlet_callable()
 
         @self.timed_function
         def inv(psi, src, t):
@@ -78,10 +77,10 @@ class mr(base_iterative):
                 self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
-                    self.log(f"converged in {k+1} iterations")
+                    self.log(f"converged in {k + 1} iterations")
                     return
 
-            self.log(f"NOT converged in {k+1} iterations;  squared residual {r2:e} / {rsq:e}")
+            self.log(f"NOT converged in {k + 1} iterations;  squared residual {r2:e} / {rsq:e}")
 
         return g.matrix_operator(
             mat=inv,

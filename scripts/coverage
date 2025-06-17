@@ -1,0 +1,9 @@
+#!/bin/bash
+coverage erase
+coverage run -m gpt --cgpt-tests --cgpt-benchmarks
+./tests/run "coverage run" "--mpi_split 1.1.1.1 --auto-tune"
+coverage combine
+coverage report -m
+coverage xml
+coverage html
+# bash <(curl -s https://codecov.io/bash) -f ./coverage.xml

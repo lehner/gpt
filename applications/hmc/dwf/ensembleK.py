@@ -539,7 +539,6 @@ class job_reproduction_verify(g.jobs.base):
                 )
 
         g.barrier()
-
         
     def check(self, root):
         return os.path.exists(f"{root}/{self.name}/verified")
@@ -585,7 +584,7 @@ class job_draw(job_reproduction_base):
             dependencies
         )
         self.weight = 1.0
-
+        
     def perform_inner(self, root):
         global U
         
@@ -926,6 +925,7 @@ sys.exit(0)
 
 #no_accept_reject = True
 no_accept_reject = False
+
 
 
 # g.message(f"tau-iteration: {its} -> {tau/nsteps*its}")

@@ -132,7 +132,7 @@ class fgcr(base_iterative):
                     self.update_psi(psi, alpha, beta, gamma, chi, p, i)
 
                 if r2 <= rsq:
-                    msg = f"converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+                    msg = f"converged in {k + 1} iterations;  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
                         res = self.calc_res(mat, psi, mmpsi, src, r)
                         msg += f";  true squared residual {res:e} / {rsq:e}"
@@ -144,7 +144,7 @@ class fgcr(base_iterative):
                     r2 = self.restart(mat, psi, mmpsi, src, r, p)
                     self.debug("performed restart")
 
-            msg = f"NOT converged in {k+1} iterations;  computed squared residual {r2:e} / {rsq:e}"
+            msg = f"NOT converged in {k + 1} iterations;  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:
                 res = self.calc_res(mat, psi, mmpsi, src, r)
                 msg += f";  true squared residual {res:e} / {rsq:e}"

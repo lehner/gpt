@@ -87,3 +87,29 @@ def eo2_kappa_ne(params):
         )
 
     return instantiate
+
+
+@params_convention(parity=gpt.odd)
+def eo3(params):
+    parity = params["parity"]
+
+    def instantiate(op):
+        return gpt.algorithms.preconditioner.schur_complement_three(
+            op, lambda op: op.even_odd_sites_decomposed(parity)
+        )
+
+    return instantiate
+
+
+@params_convention(parity=gpt.odd)
+def eo3_ne(params):
+    parity = params["parity"]
+
+    def instantiate(op):
+        return gpt.algorithms.preconditioner.normal_equation(
+            gpt.algorithms.preconditioner.schur_complement_three(
+                op, lambda op: op.even_odd_sites_decomposed(parity)
+            )
+        )
+
+    return instantiate

@@ -141,7 +141,7 @@ class chebyshev:
             vector_space = None
             if isinstance(mat, g.matrix_operator):
                 vector_space = mat.vector_space
-                mat = mat.mat  # unwrap for performance benefit
+                mat = mat.specialized_singlet_callable()
 
             def evalOp(dst, src):
                 dst = make_list(dst)

@@ -119,7 +119,7 @@ class linear(base):
         if g.default.is_verbose("linear_performance"):
             g.message(t)
         return x
-    
+
     def projected_gradient_adj(self, weights, layer_input, left):
         layer_input = g.util.to_list(layer_input)
         left = g.util.to_list(left)

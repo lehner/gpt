@@ -102,7 +102,7 @@ class adam(base_iterative):
 
                     dx[nu] @= g.group.compose(tmp, dx[nu])
 
-                rs = (sum(g.norm2(gt)) / sum([s.nfloats() for s in gt])) ** 0.5
+                rs = (sum([g.norm2(x) for x in gt]) / sum([s.nfloats() for s in gt])) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 

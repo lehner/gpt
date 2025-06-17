@@ -67,7 +67,8 @@ class irl:
         Nstop = self.params["Nstop"]
         sort_eigenvalues = self.params["sort_eigenvalues"]
         if sort_eigenvalues is None:
-            sort_eigenvalues = lambda x: sorted(x)
+            def sort_eigenvalues(x):
+                return sorted(x)
         rotate_use_accelerator = self.params["rotate_use_accelerator"]
         assert Nm >= Nk and Nstop <= Nk
 

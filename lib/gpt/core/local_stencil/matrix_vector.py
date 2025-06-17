@@ -35,7 +35,15 @@ def parse(c):
 
 class matrix_vector:
     def __init__(
-        self, lat_matrix, lat_vector, points, code, code_parallel_block_size=None, local=1
+        self,
+        lat_matrix,
+        lat_vector,
+        points,
+        code,
+        code_parallel_block_size=None,
+        local=1,
+        matrix_parity=0,
+        vector_parity=0,
     ):
         self.points = points
         self.code = [parse(c) for c in code]
@@ -50,6 +58,8 @@ class matrix_vector:
             self.code,
             code_parallel_block_size,
             local,
+            matrix_parity,
+            vector_parity,
         )
         self.fast_osites = 0
 

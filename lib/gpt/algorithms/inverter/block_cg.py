@@ -130,14 +130,14 @@ class block_cg(base_iterative):
                 self.log_convergence(k, max_resid_rel, self.eps**2.0)
                 if k + 1 >= self.miniter:
                     if self.eps_abs is not None and max_resid_abs <= self.eps_abs**2.0:
-                        self.log(f"converged in {k+1} iterations (absolute criterion)")
+                        self.log(f"converged in {k + 1} iterations (absolute criterion)")
                         return
                     if max_resid_rel <= self.eps**2.0:
-                        self.log(f"converged in {k+1} iterations")
+                        self.log(f"converged in {k + 1} iterations")
                         return
 
             self.log(
-                f"NOT converged in {k+1} iterations;  squared resudial relative {max_resid_rel} and absolute {max_resid_abs}"
+                f"NOT converged in {k + 1} iterations;  squared resudial relative {max_resid_rel} and absolute {max_resid_abs}"
             )
 
         return g.matrix_operator(

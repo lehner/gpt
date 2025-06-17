@@ -66,7 +66,7 @@ class fom(base_iterative):
 
             t("setup")
             rlen = self.restartlen
-            mmp, r = g.copy(src), g.copy(src)
+            mmp, r = g.lattice(src), g.lattice(src)
             r2 = self.calc_res(mat, psi, mmp, src, r)
 
             ssq = g.norm2(src)
@@ -106,7 +106,7 @@ class fom(base_iterative):
                 self.log_convergence(k, r2, rsq)
 
                 if r2 <= rsq:
-                    msg = f"converged in {k+rlen} iterations"
+                    msg = f"converged in {k + rlen} iterations"
                     if self.maxiter != rlen:
                         msg += f";  computed squared residual {r2:e} / {rsq:e}"
                     if self.checkres:
@@ -117,11 +117,11 @@ class fom(base_iterative):
 
                 if self.maxiter != rlen:
                     t("restart")
-                    a.basis = [Q[-1]]
+                    a.basis = [g.eval(r / g.norm2(r) ** 0.5)]
                     a.H = []
                     self.debug("performed restart")
 
-            msg = f"NOT converged in {k+rlen} iterations"
+            msg = f"NOT converged in {k + rlen} iterations"
             if self.maxiter != rlen:
                 msg += f";  computed squared residual {r2:e} / {rsq:e}"
             if self.checkres:

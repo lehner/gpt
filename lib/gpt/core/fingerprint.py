@@ -89,3 +89,4 @@ class log:
             fingerprint_file.flush()
             fingerprint_index += 1
 
+

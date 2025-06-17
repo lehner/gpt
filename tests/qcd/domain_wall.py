@@ -171,11 +171,18 @@ dst_qz_kappa = g.mspincolor(grid)
 
 # Solve for the 5d and 4d propagator
 # qm.bulk_propagator_to_propagator * qm.bulk_propagator(slv) == qm.propagator(slv)
+
 dst_qm_bulk = g(slv_qm_bulk.grouped(3) * src)
+
 dst_qm @= qm.bulk_propagator_to_propagator * dst_qm_bulk
 
 dst_qz @= slv_qz * src
+
+g.message("------------ 4 -----------")
+
 dst_qz_kappa @= slv_qz_kappa * src
+
+g.message("------------ 5 -----------")
 
 # test similarity transformated solve
 eps2 = g.norm2(dst_qz - dst_qz_kappa) / g.norm2(dst_qz)

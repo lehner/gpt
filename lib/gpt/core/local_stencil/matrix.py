@@ -47,7 +47,7 @@ class matrix(auto_tuned_class):
         tag = f"local_matrix({lat.otype.__name__}, {lat.grid.describe()}, {str(points)}, {code_parallel_block_size}, {hash_code(code)}, {local})"
         super().__init__(tag, [0, 1], 0)
 
-    @auto_tuned_method
+    @auto_tuned_method()
     def __call__(self, fast_osites, *fields):
         cgpt.stencil_matrix_execute(self.obj, list(fields), fast_osites)
 

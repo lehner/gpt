@@ -39,9 +39,9 @@ class residual(group):
 
         if not return_list:
             return a[0]
-        
+
         return a
-    
+
     def __call__(self, weights, input_layer):
         current = input_layer
         for i in range(len(self.layers)):
@@ -68,5 +68,5 @@ class residual(group):
                     r[j] = gr[j - i0]
                 else:
                     r[j] += gr[j - i0]
-            
+
         return r + [self.add(current_left, left)]

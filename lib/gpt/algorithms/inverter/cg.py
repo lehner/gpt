@@ -97,13 +97,15 @@ class cg(base_iterative):
                 self.log_convergence(k, res, rsq)
                 if k + 1 >= self.miniter:
                     if self.eps_abs is not None and res <= self.eps_abs**2.0:
-                        self.log(f"converged in {k+1} iterations (absolute criterion)")
+                        self.log(f"converged in {k + 1} iterations (absolute criterion)")
                         return
                     if res <= rsq:
-                        self.log(f"converged in {k+1} iterations")
+                        self.log(f"converged in {k + 1} iterations")
                         return
 
-            self.log(f"NOT converged in {k+1} iterations;  squared residual {res:e} / {rsq:e}")
+            self.log(
+                f"NOT converged in {k + 1} iterations;  squared residual {res:e} / {rsq:e}"
+            )
 
         return g.matrix_operator(
             mat=inv, inv_mat=mat, accept_guess=(True, False), vector_space=vector_space

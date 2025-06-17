@@ -26,5 +26,4 @@
 #include "lattice/binary.h"
 #include "lattice/ternary.h"
 #include "lattice/tostring.h"
-#include "lattice/coordinates.h"
-
+#include "lattice/scalar.h"

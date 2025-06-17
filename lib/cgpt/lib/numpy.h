@@ -55,9 +55,21 @@ static PyArrayObject* cgpt_new_PyArray(long nd, long* dim, int dtype) {
   for (long i=0;i<nd;i++)
     sz *= dim[i];
   void* data = cgpt_alloc(GRID_ALLOC_ALIGN, sz);
-  PyArrayObject* a = (PyArrayObject*)PyArray_SimpleNewFromData((int)nd, dim, dtype, data);
-  PyArray_ENABLEFLAGS(a, NPY_ARRAY_OWNDATA);
-  return a;
+
+  if (cgpt_verbose_memory_view) {
+    std::cout << GridLogMessage << "cgpt::pyarray_open " << data << std::endl;
+  }
+
+  PyArrayObject* arr = (PyArrayObject*)PyArray_SimpleNewFromData((int)nd, dim, dtype, data);
+  PyObject *capsule = PyCapsule_New(data, NULL, [] (PyObject *capsule) -> void {
+    void* mdata = (void*)PyCapsule_GetPointer(capsule, NULL);
+    if (cgpt_verbose_memory_view) {
+      std::cout << GridLogMessage << "cgpt::pyarray_close " << mdata << std::endl;
+    }
+    free(mdata);
+  });
+  PyArray_SetBaseObject((PyArrayObject *) arr, capsule);
+  return arr;
 }
 
 static void cgpt_numpy_data_layout(const ComplexF& v, std::vector<long>& dim) {}

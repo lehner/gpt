@@ -39,49 +39,43 @@ class similarity_transformation:
     def __init__(self, pc, V):
         self.S = pc.S
 
+        V_inv = V.inv()
+        V_adj = V.adj()
+        V_adj_inv = V_adj.inv()
+
         def wrap(Mpc, L, R):
-            tmp = Mpc.vector_space[0].lattice()
+            Mpc_adj = Mpc.adj()
+            R_adj = R.adj()
+            L_inv = L.inv()
 
             def _Mpc(o_d, i_d):
-                V.inv_mat(o_d, i_d)
-                Mpc.mat(tmp, o_d)
-                V.mat(o_d, tmp)
+                gpt.eval(o_d, V * Mpc * V_inv * gpt.expr(i_d))
 
             def _Mpc_dag(o_d, i_d):
-                V.adj_mat(o_d, i_d)
-                Mpc.adj_mat(tmp, o_d)
-                V.adj_inv_mat(o_d, tmp)
+                gpt.eval(o_d, V_adj_inv * Mpc_adj * V_adj * gpt.expr(i_d))
 
             def _R(o_d, i):
-                R.mat(tmp, i)
-                V.mat(o_d, tmp)
+                gpt.eval(o_d, V * R * gpt.expr(i))
 
             def _R_dag(o, i_d):
-                V.adj_mat(tmp, i_d)
-                R.adj_mat(o, tmp)
+                gpt.eval(o, R_adj * V_adj * gpt.expr(i_d))
 
             def _L(o, i_d):
-                V.inv_mat(tmp, i_d)
-                L.mat(o, tmp)
+                gpt.eval(o, L * V_inv * gpt.expr(i_d))
 
             def _L_inv(o_d, i):
-                L.inv_mat(tmp, i)
-                V.mat(o_d, tmp)
+                gpt.eval(o_d, V * L_inv * gpt.expr(i))
 
             wrapped_R = gpt.matrix_operator(
-                mat=_R,
-                adj_mat=_R_dag,
-                vector_space=R.vector_space,
+                mat=_R, adj_mat=_R_dag, vector_space=R.vector_space, accept_list=True
             )
 
             wrapped_L = gpt.matrix_operator(
-                mat=_L,
-                inv_mat=_L_inv,
-                vector_space=L.vector_space,
+                mat=_L, inv_mat=_L_inv, vector_space=L.vector_space, accept_list=True
             )
 
             wrapped_Mpc = gpt.matrix_operator(
-                mat=_Mpc, adj_mat=_Mpc_dag, vector_space=Mpc.vector_space
+                mat=_Mpc, adj_mat=_Mpc_dag, vector_space=Mpc.vector_space, accept_list=True
             )
 
             return wrapped_Mpc, wrapped_L, wrapped_R

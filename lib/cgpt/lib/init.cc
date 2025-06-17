@@ -21,6 +21,7 @@
 
 static bool cgpt_initialized = false;
 static bool cgpt_quiet = false;
+bool cgpt_verbose_memory_view = false;
 
 EXPORT(init,{
 
@@ -49,7 +50,7 @@ EXPORT(init,{
     if (cgpt_quiet) {
       std::cout.rdbuf( rb_str.rdbuf() );
     }
-    
+
     // initialize Grid
     Grid_init(&argc, &argv);
 
@@ -61,7 +62,12 @@ EXPORT(init,{
       "              Initialized GPT                " << std::endl <<
       "     Copyright (C) 2020 Christoph Lehner     " << std::endl <<
       "=============================================" << std::endl;
-    
+
+    // get cgpt verbosity flags
+    cgpt_verbose_memory_view = getenv("CGPT_VERBOSE_MEMORY_VIEW") != 0;
+    if (cgpt_verbose_memory_view)
+      std::cout << "cgpt::verbose memory view" << std::endl;
+
     cgpt_initialized = true;
 
     if (cgpt_quiet) {

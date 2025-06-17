@@ -324,3 +324,48 @@ yy = g(Q1 * Q2)
 eps2 = g.norm2(xx - yy) / g.norm2(yy)
 g.message(f"Einsum mm test: {eps2}")
 assert eps2 < 1e-25
+
+# test combination of checkerpointing and simd
+L = [16, 12, 24, 32]
+grid = g.grid(L, g.single, g.redblack)
+grid = grid.split([1]*4, L) # create a local grid
+test = g.complex(grid)
+rng.cnormal(test)
+for mu in range(4):
+    for nu in range(4):
+
+        if mu == nu:
+            continue
+
+        dd = [0] * 4
+        dd[mu] = -2
+        dd[nu] = -2
+        dd = tuple(dd)
+
+        for p in [g.even, g.odd]:
+            test.checkerboard(p)
+
+            st = g.local_stencil.matrix_vector(
+                test,
+                test,
+                [(0, 0, 0, 0), dd],
+                [
+                    {
+                        "target": 0,
+                        "source": 1,
+                        "source_point": 1,
+                        "accumulate": -1,
+                        "weight": -2.0,
+                        "factor": [],
+                    }
+                ],
+                vector_parity=p.tag,
+            )
+
+            reference = g(-2.0 * g.cshift(g.cshift(test, mu, -2), nu, -2))
+            out = g.lattice(test)  # 0: 00, 1: 20, 2: 11, 3: 31, 4: 02, 5: 22, 6: 13, 7: 33
+            st([test], [out, test])
+
+            eps2 = g.norm2(reference - out) / g.norm2(reference)
+            g.message(f"{p.__name__} {mu} {nu} {eps2}")
+            assert eps2 < 1e-12

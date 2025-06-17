@@ -43,15 +43,12 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         t("global_sum")
         grid.globalsum(lip)
         t("create expression")
-        lip = [complex(x) for x in lip]
+        lip = [-complex(x) for x in lip]
         if ips is not None:
             for j in range(len(lip)):
-                ips[i + j] = lip[j]
-        expr = w - lip[0] * basis[i + 0]
-        for j in range(1, len(lip)):
-            expr -= lip[j] * basis[i + j]
+                ips[i + j] = -lip[j]
         t("linear combination")
-        w @= expr
+        gpt.linear_combination(w, [w] + basis[i:i + len(lip)], [1.0] + lip, len(lip) + 1)
         t()
     if verbose_performance:
         t_cgpt = gpt.timer("cgpt_orthogonalize", True)

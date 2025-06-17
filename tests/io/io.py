@@ -189,3 +189,13 @@ for u_prime, u in zip(U_prime, U):
     eps = (g.norm2(u_prime - u) / g.norm2(u)) ** 0.5
     g.message(f"Test NERSC IO: {eps}")
     assert eps < 1e-14
+
+# LIME
+fn = f"{work_dir}/lime.0000"
+g.save(fn, U, g.format.lime())
+U_prime = g.load(fn)
+assert len(U_prime) == len(U)
+for u_prime, u in zip(U_prime, U):
+    eps = (g.norm2(u_prime - u) / g.norm2(u)) ** 0.5
+    g.message(f"Test LIME IO: {eps}")
+    assert eps < 1e-14

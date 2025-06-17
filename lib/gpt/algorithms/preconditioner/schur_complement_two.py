@@ -61,15 +61,20 @@ class schur_complement_two:
         CD = dd_op.CD
         DC = dd_op.DC
 
+        CC_inv = CC.inv()
+        CC_adj_inv = CC_inv.adj()
+
+        DD_inv = DD.inv()
+        DD_adj_inv = DD_inv.adj()
+
+        CD_adj = CD.adj()
+        DC_adj = DC.adj()
+
         D_domain = dd_op.D_domain
         C_domain = dd_op.C_domain
 
         op_vector_space = op.vector_space[0]
         D_vector_space = DD.vector_space[0]
-        C_vector_space = CC.vector_space[0]
-
-        tmp_d = [D_vector_space.lattice() for i in range(2)]
-        tmp_c = [C_vector_space.lattice() for i in range(2)]
 
         def _N(o_d, i_d):
             DD.inv_mat(tmp_d[0], i_d)
@@ -78,6 +83,7 @@ class schur_complement_two:
             DC.mat(o_d, tmp_c[1])
             # o_d @= i_d - o_d
             gpt.axpy(o_d, -1.0, o_d, i_d)
+            # gpt.eval(o_d, gpt.expr(i_d) - DC * CC_inv * CD * DD_inv * gpt.expr(i_d))
             
         def _N_dag(o_d, i_d):
             DC.adj_mat(tmp_c[0], i_d)
@@ -86,54 +92,44 @@ class schur_complement_two:
             DD.adj_inv_mat(o_d, tmp_d[0])
             # o_d @= i_d - o_d
             gpt.axpy(o_d, -1.0, o_d, i_d)
+            # gpt.eval(o_d, gpt.expr(i_d) - DD_adj_inv * CD_adj * CC_adj_inv * DC_adj * gpt.expr(i_d))
 
         def _L(o, i_d):
-            DD.inv_mat(tmp_d[0], i_d)
-            D_domain.promote(o, tmp_d[0])
-
-            CD.mat(tmp_c[0], tmp_d[0])
-            CC.inv_mat(tmp_c[1], tmp_c[0])
-            tmp_c[1] @= -tmp_c[1]
-            C_domain.promote(o, tmp_c[1])
+            tmp = gpt(DD_inv * gpt.expr(i_d))
+            D_domain.promote(o, tmp)
+            tmp = gpt(-CC_inv * CD * tmp)
+            C_domain.promote(o, tmp)
 
         def _L_pseudo_inverse(o_d, i):
-            D_domain.project(tmp_d[0], i)
-            DD.mat(o_d, tmp_d[0])
-
-        def _S(o, i):
-            C_domain.project(tmp_c[0], i)
-            CC.inv_mat(tmp_c[1], tmp_c[0])
-            C_domain.promote(o, tmp_c[1])
-
-            tmp_d[0][:] = 0
-            D_domain.promote(o, tmp_d[0])
+            D_domain.project(o_d, i)
+            gpt.eval(o_d, DD * o_d)
 
         self.L = gpt.matrix_operator(
             mat=_L,
             inv_mat=_L_pseudo_inverse,
             vector_space=(op_vector_space, D_vector_space),
+            accept_list=True,
         )
 
         def _R(o_d, i):
-            C_domain.project(tmp_c[0], i)
-            D_domain.project(tmp_d[0], i)
-            CC.inv_mat(tmp_c[1], tmp_c[0])
-            DC.mat(o_d, tmp_c[1])
-            o_d @= tmp_d[0] - o_d
+            gpt.eval(o_d, gpt.expr(D_domain.project(i)) - DC * CC_inv * C_domain.project(i))
 
         def _R_dag(o, i_d):
             D_domain.promote(o, i_d)
-            DC.adj_mat(tmp_c[0], i_d)
-            tmp_c[0] @= -tmp_c[0]
-            CC.adj_inv_mat(tmp_c[1], tmp_c[0])
-            C_domain.promote(o, tmp_c[1])
+            C_domain.promote(o, gpt(-CC_adj_inv * DC_adj * gpt.expr(i_d)))
 
         self.R = gpt.matrix_operator(
-            mat=_R, adj_mat=_R_dag, vector_space=(D_vector_space, op_vector_space)
+            mat=_R, adj_mat=_R_dag, vector_space=(D_vector_space, op_vector_space), accept_list=True
         )
 
-        self.S = gpt.matrix_operator(mat=_S, vector_space=(op_vector_space, op_vector_space))
+        def _S(o, i):
+            C_domain.promote(o, gpt(CC_inv * C_domain.project(i)))
+            D_domain.promote(o, gpt(0.0 * gpt.expr(D_domain.project(i))))
+
+        self.S = gpt.matrix_operator(
+            mat=_S, vector_space=(op_vector_space, op_vector_space), accept_list=True
+        )
 
         self.Mpc = gpt.matrix_operator(
-            mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space)
+            mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space), accept_list=True
         ).inherit(op, lambda nop: schur_complement_two(nop, domain_decomposition).Mpc)
