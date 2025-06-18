@@ -31,6 +31,9 @@ def start(tag):
     if g.default.get_int("--fingerprint", 0) < 1:
         return
 
+    # make sure we all agree on the tag
+    tag = g.broadcast(0, tag)
+    
     if g.rank() == 0:
         if not os.path.exists(tag):
             os.makedirs(tag)
