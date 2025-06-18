@@ -326,7 +326,6 @@ def save(file, U, params):
     if grid.processor == 0:
         f = gpt.FILE(file, "wb")
         f.unbuffer()
-
         utcnow = datetime.datetime.utcnow().strftime("%c %Z")
         header = f"""BEGIN_HEADER
 HDR_VERSION = 1.0
@@ -364,10 +363,8 @@ END_HEADER
         offset = 0
 
     grid.barrier()
-
     f = gpt.FILE(file, "r+b")
     f.unbuffer()
-
     offset = grid.globalsum(offset)
 
     dt_write -= gpt.time()

@@ -206,15 +206,15 @@ EXPORT(create_device_memory_view,{
     
     deviceVector<float>* devVec = new deviceVector<float>(nfloat);
 
-    if (cgpt_verbose_memory_view)
-      std::cout << GridLogMessage << "cgpt::device_memory_create ptr=" << std::hex << &(*devVec)[0] << " for " << std::dec << bytes << " bytes" << std::endl;
+    //if (cgpt_verbose_memory_view)
+    //  std::cout << GridLogMessage << "cgpt::device_memory_create ptr=" << std::hex << &(*devVec)[0] << " for " << std::dec << bytes << " bytes" << std::endl;
 
     PyObject* r = PyMemoryView_FromMemory((char*)&(*devVec)[0],bytes,PyBUF_WRITE);
 
     PyObject *capsule = PyCapsule_New((void*)devVec, NULL, [] (PyObject *capsule) -> void {
       deviceVector<float>* devVec = (deviceVector<float>*)PyCapsule_GetPointer(capsule, NULL);
-      if (cgpt_verbose_memory_view)
-	std::cout << GridLogMessage << "cgpt::device_memory_free ptr=" << std::hex << &(*devVec)[0] << std::endl;
+      //if (cgpt_verbose_memory_view)
+      //	std::cout << GridLogMessage << "cgpt::device_memory_free ptr=" << std::hex << &(*devVec)[0] << std::endl;
       delete devVec;
     });
 

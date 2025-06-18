@@ -25,7 +25,7 @@ rat = g.algorithms.rational.zolotarev_inverse_square_root(1.0**0.5, 70.0**0.5, 1
 # ran power method below, seems like 70 is best upper level
 rat_fnc = g.algorithms.rational.rational_function(rat.zeros, rat.poles, rat.norm)
 
-root_output = "/p/scratch/gm2dwf/128I"
+root_output = "/lus/flare/projects/LatticeFlavor/lehner"
 
 ######
 # setup
@@ -40,7 +40,7 @@ nsteps = 80
 nsteps_hamiltonian = 10
 
 run_replicas = [0,1] # run with reproduction replica
-streams = ["a", "b", "c", "d"]
+streams = ["a","d","b","c"]
 conf_range = range(600, 700)
 ensemble_tag = "ensemble-K"
 
@@ -406,10 +406,19 @@ class job_reproduction_base(g.jobs.base):
         if g.rank() == 0:
             np.savetxt(f"{root}/{self.name}/hosts", hosts, fmt='%s')
 
+        # fingerprinting support
+        for i in range(1000):
+            fn = f"{root}/fingerprints/{self.name}/{i}"
+            if not os.path.exists(fn):
+                break
+
+        g.message(f"Fingerprints saved in {fn}")
+        g.fingerprint.start(fn)
+        
         # and perform task
         self.perform_inner(root)
-            
-        
+
+
 ################################################################################
 # Job - checkpoint
 # Establishes that checkpointed configuration is healthy
@@ -524,6 +533,11 @@ class job_reproduction_verify(g.jobs.base):
             for rep in self.replica_jobs:
                 rep.purge(root)
 
+            if g.rank() == 0:
+                open(f"{root}/reproduction.failures", "at").write(
+                    open(f"{root}/{self.name}/log").read()
+                )
+
         g.barrier()
         
     def check(self, root):
@@ -570,8 +584,8 @@ class job_draw(job_reproduction_base):
             dependencies
         )
         self.weight = 1.0
-
-    def perform(self, root):
+        
+    def perform_inner(self, root):
         global U
         
         next_U = g.load(f"{ensemble_tag}{self.stream}/{self.conf}_checkpoint/0/config.0")
@@ -637,7 +651,7 @@ class job_md(job_reproduction_base):
         )
         self.weight = 1.0
 
-    def perform(self, root):
+    def perform_inner(self, root):
         global U, U_mom, css
 
         h0, s0, flds = g.load(f"{root}/{ensemble_tag}{self.stream}/{self.conf}_draw/0/state.draw")
@@ -699,7 +713,7 @@ class job_hamiltonian(job_reproduction_base):
         )
         self.weight = 1.0
 
-    def perform(self, root):
+    def perform_inner(self, root):
         global U, U_mom, css
 
         h0, s0, flds = g.load(f"{root}/{ensemble_tag}{self.stream}/{self.conf}_draw/0/state.draw")
@@ -911,6 +925,7 @@ sys.exit(0)
 
 #no_accept_reject = True
 no_accept_reject = False
+
 
 
 # g.message(f"tau-iteration: {its} -> {tau/nsteps*its}")

@@ -75,12 +75,28 @@ class schur_complement_two:
 
         op_vector_space = op.vector_space[0]
         D_vector_space = DD.vector_space[0]
+        C_vector_space = CC.vector_space[0]
+
+        tmp_d = [D_vector_space.lattice() for i in range(2)]
+        tmp_c = [C_vector_space.lattice() for i in range(2)]
 
         def _N(o_d, i_d):
-            gpt.eval(o_d, gpt.expr(i_d) - DC * CC_inv * CD * DD_inv * gpt.expr(i_d))
-
+            DD.inv_mat(tmp_d[0], i_d)
+            CD.mat(tmp_c[0], tmp_d[0])
+            CC.inv_mat(tmp_c[1], tmp_c[0])
+            DC.mat(o_d, tmp_c[1])
+            # o_d @= i_d - o_d
+            gpt.axpy(o_d, -1.0, o_d, i_d)
+            # gpt.eval(o_d, gpt.expr(i_d) - DC * CC_inv * CD * DD_inv * gpt.expr(i_d))
+            
         def _N_dag(o_d, i_d):
-            gpt.eval(o_d, gpt.expr(i_d) - DD_adj_inv * CD_adj * CC_adj_inv * DC_adj * gpt.expr(i_d))
+            DC.adj_mat(tmp_c[0], i_d)
+            CC.adj_inv_mat(tmp_c[1], tmp_c[0])
+            CD.adj_mat(tmp_d[0], tmp_c[1])
+            DD.adj_inv_mat(o_d, tmp_d[0])
+            # o_d @= i_d - o_d
+            gpt.axpy(o_d, -1.0, o_d, i_d)
+            # gpt.eval(o_d, gpt.expr(i_d) - DD_adj_inv * CD_adj * CC_adj_inv * DC_adj * gpt.expr(i_d))
 
         def _L(o, i_d):
             tmp = gpt(DD_inv * gpt.expr(i_d))
@@ -119,5 +135,5 @@ class schur_complement_two:
         )
 
         self.Mpc = gpt.matrix_operator(
-            mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space), accept_list=True
+            mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space), accept_list=False
         ).inherit(op, lambda nop: schur_complement_two(nop, domain_decomposition).Mpc)

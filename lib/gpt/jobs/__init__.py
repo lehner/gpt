@@ -32,6 +32,19 @@ class scheduler_slurm:
         return stat
 
 
+class scheduler_pbs:
+    def __init__(self, env):
+        self.env = env
+
+    def get_step(self):
+        return self.env["PBS_JOBID"].split(".")[0]
+
+    def is_step_running(self, step):
+        field = "'{ print $5 }'"
+        stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -q R") == 0
+        return stat
+
+
 class scheduler_unknown:
     def __init__(self):
         pass
@@ -48,6 +61,8 @@ class scheduler:
         env = dict(os.environ)
         if "SLURM_JOB_ID" in env:
             self.kernel = scheduler_slurm(env)
+        elif "PBS_JOBID" in env:
+            self.kernel = scheduler_pbs(env)
         else:
             self.kernel = scheduler_unknown()
 
