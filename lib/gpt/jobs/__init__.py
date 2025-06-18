@@ -125,8 +125,15 @@ class base:
                 g.message("Directory was not empty")
 
     def atomic_reserve_start(self, root):
+
+        lock_dir = f"{root}/{self.name}"
+        
+        # first create parent directory in non-atomic manner
+        os.makedirs(os.path.dirname(lock_dir), exist_ok=True)
+
+        # then create final directory in atomic manner
         try:
-            os.makedirs(f"{root}/{self.name}", exist_ok=False)
+            os.mkdir(lock_dir)
             return True
         except FileExistsError:
             return False
