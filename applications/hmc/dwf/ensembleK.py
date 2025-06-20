@@ -395,6 +395,12 @@ class job_reproduction_base(g.jobs.base):
         self.replica = replica
         super().__init__(f"{tag}/{replica}", dependencies)
 
+    def purge(self, root):
+        if g.rank() == 0:
+            if os.path.exists(f"{root}/{self.name}/hosts"):
+                os.unlink(f"{root}/{self.name}/hosts")
+        super().purge(root)
+
     def perform(self, root):
         # now save list of nodes on which this job was performed
         # need to make sure that when releasing a reproduction job
