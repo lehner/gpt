@@ -769,7 +769,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 	  index_t src_idx = indices.first.src_index;
 
 	  for (auto & block : indices.second) {
-	    this->isend(dst_rank, (char*)base_src[src_idx].ptr + block.start_src, block_size);
+	    this->isend(dst_rank, (char*)base_src[src_idx].ptr + block.start_src, block_size, base_src[src_idx].type);
 	  }
 	}
       } else if (src_rank != this->rank && dst_rank == this->rank) {
@@ -777,7 +777,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 	  index_t dst_idx = indices.first.dst_index;
 
 	  for (auto & block : indices.second) {
-	    this->irecv(src_rank, (char*)base_dst[dst_idx].ptr + block.start_dst, block_size);
+	    this->irecv(src_rank, (char*)base_dst[dst_idx].ptr + block.start_dst, block_size, base_dst[dst_idx].type);
 	  }
 	}
       }
@@ -802,12 +802,12 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
     // send/recv buffers
     for (auto & buf : send_buffers) {
-      this->isend(buf.first, buf.second.ptr, buf.second.sz);
+      this->isend(buf.first, buf.second.ptr, buf.second.sz, buf.second.type);
       stats_isends += 1;
       stats_send_bytes += buf.second.sz;
     }
     for (auto & buf : recv_buffers) {
-      this->irecv(buf.first, buf.second.ptr, buf.second.sz);
+      this->irecv(buf.first, buf.second.ptr, buf.second.sz, buf.second.type);
       stats_irecvs += 1;
       stats_recv_bytes += buf.second.sz;
     }

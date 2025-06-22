@@ -139,20 +139,27 @@ class global_transfer {
 		       std::map<rank_t, comm_message>& recv);
 
 
-  void isend(rank_t other_rank, const void* pdata, size_t sz);
-  void irecv(rank_t other_rank, void* pdata, size_t sz);
+  void isend(rank_t other_rank, const void* pdata, size_t sz, memory_type type);
+  void irecv(rank_t other_rank, void* pdata, size_t sz, memory_type type);
 
   template<typename vec_t>
   void isend(rank_t other_rank, const vec_t& data) {
-    isend(other_rank,&data[0],data.size()*sizeof(data[0]));
+    isend(other_rank,&data[0],data.size()*sizeof(data[0]), mt_host);
   }
 
   template<typename vec_t>
   void irecv(rank_t other_rank, vec_t& data) {
-    irecv(other_rank,&data[0],data.size()*sizeof(data[0]));
+    irecv(other_rank,&data[0],data.size()*sizeof(data[0]), mt_host);
   }
 
   void waitall();
+
+#ifndef ACCELERATOR_AWARE_MPI
+  hostVector<char> host_bounce_buffer;
+  size_t host_bounce_offset;
+  struct hostDevicePair_t { void* host, * device; size_t size; };
+  hostVector<hostDevicePair_t> host_bounce_copies;
+#endif
 
 };
 

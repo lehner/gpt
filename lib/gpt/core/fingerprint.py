@@ -24,7 +24,15 @@ from inspect import getframeinfo
 fingerprints = {}
 fingerprint_file = None
 fingerprint_index = 0
+fingerprint_paused = False
 
+def pause():
+    global fingerprint_paused
+    fingerprint_paused = True
+
+def unpause():
+    global fingerprint_paused
+    fingerprint_paused = False
 
 def start(tag):
     global fingerprint_file, fingerprint_index
@@ -47,6 +55,9 @@ def start(tag):
 
 class log:
     def __init__(self):
+        if fingerprint_paused:
+            return
+        
         frame = sys._getframe(1)
         stack = ""
         while frame is not None:
@@ -59,6 +70,9 @@ class log:
     def __call__(self, first=None, second=None):
         global fingerprint_file, fingerprint_index
 
+        if fingerprint_paused:
+            return
+        
         if second is not None:
             if isinstance(second, np.ndarray):
                 self.messages.append((first, np.copy(second)))
@@ -67,12 +81,10 @@ class log:
                     self(f"{first}.{i}", x)
             elif isinstance(second, g.lattice):
                 # create fingerprint
-                fp = []
-                for y in x:
-                    tag = f"{y.otype.__name__}.{y.grid}"
-                    if tag not in fingerprints:
-                        fingerprints[tag] = g.random(tag).cnormal(g.lattice(y))
-                    fp.append(g.rank_inner_product(fingerprints[tag], y))
+                tag = f"{second.otype.__name__}.{second.grid}"
+                if tag not in fingerprints:
+                    fingerprints[tag] = g.random(tag).cnormal(g.lattice(second))
+                fp = [g.rank_inner_product(fingerprints[tag], second)]
                 self(first, np.array(fp, dtype=np.complex128))
             else:
                 self(first, np.array(g.util.to_list(second), dtype=np.complex128))
