@@ -34,9 +34,6 @@ global_transfer<rank_t>::global_transfer(rank_t _rank, Grid_MPI_Comm _comm) : ra
   ASSERT(rank == 0);
 #endif
 
-#ifndef ACCELERATOR_AWARE_MPI
-  host_bounce_offset = 0;
-#endif
 }
 
 template<typename rank_t>
@@ -161,11 +158,13 @@ void global_transfer<rank_t>::waitall() {
   requests.clear();
 
 #ifndef ACCELERATOR_AWARE_MPI
-  host_bounce_offset = 0;
-  for (auto & c : host_bounce_copies) {
-    acceleratorCopyToDevice(c.host, c.device, c.size);
+
+  for (auto & b : host_bounce_buffer) {
+    if (b.device)
+      acceleratorCopyToDevice(b.host, b.device, b.size);
   }
-  host_bounce_copies.clear();
+  host_bounce_reset();
+
 #endif
 
 #endif
@@ -180,13 +179,9 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
 #ifndef ACCELERATOR_AWARE_MPI
 
     if (type == mt_accelerator) {
-      size_t cur = host_bounce_offset;
-      host_bounce_offset += BCOPY_ALIGN(sz);
-      host_bounce_buffer.resize(host_bounce_offset);
-
-      acceleratorCopyFromDevice(pdata, &host_bounce_buffer[cur], sz);
-      isend(other_rank, &host_bounce_buffer[cur], sz, mt_host);
-      std::cout << GridLogMessage << "HostBounce isend" << std::endl;
+      void* host = host_bounce_allocate(sz, 0);
+      acceleratorCopyFromDevice(pdata, host, sz);
+      isend(other_rank, host, sz, mt_host);
       return;
     }
     
@@ -215,14 +210,8 @@ void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz, m
 #ifndef ACCELERATOR_AWARE_MPI
 
     if (type == mt_accelerator) {
-      size_t cur = host_bounce_offset;
-      host_bounce_offset += BCOPY_ALIGN(sz);
-      host_bounce_buffer.resize(host_bounce_offset);
-
-      irecv(other_rank, &host_bounce_buffer[cur], sz, mt_host);
-      host_bounce_copies.push_back({ &host_bounce_buffer[cur], pdata, sz });
-
-      std::cout << GridLogMessage << "HostBounce irecv" << std::endl;
+      void* host = host_bounce_allocate(sz, pdata);
+      irecv(other_rank, host, sz, mt_host);
       return;
     }
     

@@ -106,6 +106,12 @@ class global_transfer {
  public:
   global_transfer(rank_t rank, Grid_MPI_Comm comm);
 
+  ~global_transfer() {
+#ifndef ACCELERATOR_AWARE_MPI
+    host_bounce_cleanup();
+#endif
+  }
+
   const size_t size_mpi_max = INT_MAX;
   rank_t rank;
   Grid_MPI_Comm comm;
@@ -155,10 +161,48 @@ class global_transfer {
   void waitall();
 
 #ifndef ACCELERATOR_AWARE_MPI
-  hostVector<char> host_bounce_buffer;
-  size_t host_bounce_offset;
-  struct hostDevicePair_t { void* host, * device; size_t size; };
-  hostVector<hostDevicePair_t> host_bounce_copies;
+  struct hostBounceBuffer_t { void* host; void * device; size_t size; size_t reserved; };
+  std::vector<hostBounceBuffer_t> host_bounce_buffer;
+
+  void host_bounce_cleanup() {
+    for (auto & b : host_bounce_buffer) {
+      	acceleratorFreeCpu(b.host);
+    }
+    host_bounce_buffer.clear();
+  }
+  
+  void host_bounce_reset() {
+    for (auto & b : host_bounce_buffer) {
+      b.size = 0;
+      b.device = 0;
+    }
+  }
+
+  void* host_bounce_allocate(size_t sz, void* device) {
+    for (auto & b : host_bounce_buffer) {
+      if (b.size == 0) {
+	if (b.reserved < sz) {
+	  acceleratorFreeCpu(b.host);
+	  b.host = acceleratorAllocCpu(sz);
+	  printf("Allocate %p\n", b.host);
+	  b.reserved = sz;
+	}
+	b.size = sz;
+	b.device = device;
+	return b.host;
+      }
+    }
+
+    hostBounceBuffer_t bb;
+    host_bounce_buffer.push_back(bb);
+
+    auto & b = host_bounce_buffer.back();
+    b.host = acceleratorAllocCpu(sz);
+    b.reserved = sz;
+    b.device = device;
+    b.size = sz;
+    return b.host;
+  }
 #endif
 
 };
