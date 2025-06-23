@@ -184,7 +184,6 @@ class global_transfer {
 	if (b.reserved < sz) {
 	  acceleratorFreeCpu(b.host);
 	  b.host = acceleratorAllocCpu(sz);
-	  printf("Allocate %p\n", b.host);
 	  b.reserved = sz;
 	}
 	b.size = sz;
