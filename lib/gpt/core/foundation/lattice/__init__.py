@@ -60,12 +60,12 @@ def cshift(first, second, third, fourth):
         o = third
         t = gpt.lattice(l)
 
-    lll = gpt.fingerprint.log()
-    lll("l", l)
+    #lll = gpt.fingerprint.log()
+    #lll("l", l)
     for i in t.otype.v_idx:
         cgpt.cshift(t.v_obj[i], l.v_obj[i], d, o)
-    lll("t", t)
-    lll()
+    #lll("t", t)
+    #lll()
     return t
 
 

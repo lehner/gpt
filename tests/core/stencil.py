@@ -50,6 +50,7 @@ for d1 in range(4):
         g.message(f"Test matrix stencil versus cshift in dimension {d1} x {d2}: {eps2}")
         assert eps2 < 1e-13
 
+
 # test general cshift
 Ps1 = stencil_cshift(P, (0, 2, 1, 1), (0, 0, 0, 0))
 Ps2 = g(g.cshift(g.cshift(g.cshift(P, 3, 1), 2, 1), 1, 2) + 2.0 * P)
@@ -269,7 +270,9 @@ def stencil_diquark(Q1, Q2):
 
     segments = [(len(code) // (Ns * Ns), Ns * Ns)]
     ein = g.stencil.tensor(Q1, [(0, 0, 0, 0)], code, segments)
+    g.message("Before stencil.tensor")
     ein(R, Q1, Q2)
+    g.message("After stencil.tensor")
     return R
 
 

@@ -34,11 +34,11 @@ void cgpt_scale_per_coordinate(Lattice<T>& dst,Lattice<T>& src,ComplexD* s,int d
   auto dst_p = &dst_v[0];
   auto src_p = &src_v[0];
 
-  Vector<ComplexD> _S(L);
-  ComplexD* S = &_S[0];
+  HostDeviceVector<ComplexD> _S(L);
   thread_for(idx, L, {
-      S[idx] = s[idx];
+      _S[idx] = s[idx];
     });
+  ComplexD* S = _S.toDevice();
 
   if (dim == 0 && grid->_simd_layout[0] == 1) {
     accelerator_for(idx, grid->oSites(), T::Nsimd(), {
@@ -84,8 +84,11 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
   while (eblock * rd < min_block)
     eblock *= 2;
 
-  Vector<vobj> lvSum(rd * eblock * Nbasis);         // will locally sum vectors first
-  Vector<sobj> lsSum(ld * Nbasis, Zero()); // sum across these down to scalars
+  HostDeviceVector<vobj> lvSum(rd * eblock * Nbasis);         // will locally sum vectors first
+  AlignedVector<sobj> lsSum(ld * Nbasis);
+  thread_for(i, ld*Nbasis,{
+      lsSum[i] = Zero();
+    });
   result.resize(fd * Nbasis);              // And then global sum to return the same vector to every node
 
   size_t   e1 = grid->_slice_nblock[orthogdim];
@@ -97,7 +100,7 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
   // sum over reduced dimension planes, breaking out orthog dir
   // Parallel over orthog direction
   VECTOR_VIEW_OPEN(Data, Data_v, AcceleratorRead);
-  auto lvSum_p = &lvSum[0];
+  auto lvSum_p = lvSum.device;
   typedef decltype(coalescedRead(Data_v[0][0])) CalcElem;
 
   accelerator_for(rr, rd * eblock * Nbasis, (size_t)grid->Nsimd(), {
@@ -119,6 +122,8 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
     coalescedWrite(lvSum_p[rr], elem);
   });
   VECTOR_VIEW_CLOSE(Data_v);
+
+  lvSum.toHost();
 
   thread_for(n_base, Nbasis, {
     // Sum across simd lanes in the plane, breaking out orthog dir.
@@ -167,8 +172,8 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
 
   size_t index_osites_per_block = (grid->oSites() + len - 1) / len;
 
-  Vector<sobj> lsSum(index_osites_per_block * len * Nbasis);
-  auto lsSum_p = &lsSum[0];
+  HostDeviceVector<sobj> lsSum(index_osites_per_block * len * Nbasis);
+  auto lsSum_p = lsSum.device;
   
   // first zero blocks
   accelerator_for(ss, lsSum.size(), 1, {
@@ -209,6 +214,8 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
       }	
   });
 
+  lsSum.toHost();
+
   Timer("ris: view");
   VECTOR_VIEW_CLOSE(Data_v);
 
@@ -216,7 +223,7 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
   thread_for(i, result.size(), {
       sobj x = Zero();
       for (size_t j=0;j<index_osites_per_block;j++)
-	x = x + lsSum_p[i*index_osites_per_block + j];
+	x = x + lsSum[i*index_osites_per_block + j];
       result[i] = x;
     });
 

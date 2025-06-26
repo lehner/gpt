@@ -30,16 +30,6 @@ void global_memory_transfer<offset_t,rank_t,index_t>::distribute_merge_into(thre
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::distribute_merge_into(blocks_t & target, const thread_blocks_t & src) {
-  size_t target_size = target.size();
-  size_t src_size = src.size();
-  target.resize(src_size + target_size);
-  thread_for(i, src_size, {
-      target[i + target_size] = src[i];
-    });
-}
-
-template<typename offset_t, typename rank_t, typename index_t>
 template<typename K, typename V1, typename V2>
 void global_memory_transfer<offset_t,rank_t,index_t>::distribute_merge_into(std::map<K,V1> & target, const std::map<K,V2> & src) {
   for (auto & x : src) {
@@ -258,7 +248,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::merge_comm_blocks(std::map
     for (auto & y : x.second) {
       auto & idx0 = r[y.first];
 
-      Vector<block_t> tmp(y.second.n_blocks);
+      thread_blocks_t tmp(y.second.n_blocks);
       thread_for(i, idx0.size(), {
 	  tmp[i] = idx0[i];
 	});
@@ -353,12 +343,12 @@ void global_memory_transfer<offset_t,rank_t,index_t>::optimize() {
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-void global_memory_transfer<offset_t,rank_t,index_t>::skip(blocks_t& blocks, long gcd) {
+void global_memory_transfer<offset_t,rank_t,index_t>::skip(thread_blocks_t& blocks, long gcd) {
 
   ASSERT(blocks.size() % gcd == 0);
   size_t n = blocks.size() / gcd;
 
-  Vector<block_t> tmp(n);
+  thread_blocks_t tmp(n);
   thread_for(i, n, {
       tmp[i] = blocks[i*gcd];
     });
@@ -367,7 +357,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::skip(blocks_t& blocks, lon
 }
 
 template<typename offset_t, typename rank_t, typename index_t>
-long global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks) {
+long global_memory_transfer<offset_t,rank_t,index_t>::optimize(thread_blocks_t& blocks) {
 
   struct {
     bool operator()(const block_t& a, const block_t& b) const
@@ -384,7 +374,7 @@ long global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks)
   cgpt_sort(blocks, less);
 
   //t("unique");
-  Vector<block_t> unique_blocks;
+  std::vector<block_t> unique_blocks;
   cgpt_sorted_unique(unique_blocks, blocks, [](const block_t & a, const block_t & b) {
 					      return (a.start_dst == b.start_dst && a.start_src == b.start_src);
 					    });
@@ -393,7 +383,7 @@ long global_memory_transfer<offset_t,rank_t,index_t>::optimize(blocks_t& blocks)
   //std::cout << GridLogMessage << "Unique " << blocks.second.size() << " -> " << unique_blocks.size() << std::endl;
   
   //t("rle");
-  Vector<size_t> start, repeats;
+  std::vector<size_t> start, repeats;
   size_t bs = block_size;
   long gcd = cgpt_rle(start, repeats, unique_blocks, [bs](const block_t & a, const block_t & b) {
 						       return (a.start_dst + bs == b.start_dst &&
@@ -518,6 +508,10 @@ void global_memory_transfer<offset_t,rank_t,index_t>::create(const view_t& _dst,
   // create bounds and alignment information
   create_bounds_and_alignment();
 
+  Timer("populate_hd");
+  populate_hd(blocks_hd, blocks);
+  populate_hd(send_blocks_hd, send_blocks);
+  populate_hd(recv_blocks_hd, recv_blocks);
  
   Timer();
 }
@@ -660,7 +654,13 @@ void global_memory_transfer<offset_t,rank_t,index_t>::print() {
 template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bcopy_arg_t>& args) {
 
-  std::unordered_map<size_t,std::vector<bcopy_ptr_arg_t<block_t>>> bca;
+  struct bcopy_ptr_arg_t {
+    const blocks_t & blocks;
+    char* p_dst;
+    const char* p_src;
+  };
+
+  std::unordered_map<size_t,std::vector<bcopy_ptr_arg_t>> bca;
 
 #define bcopy_map_idx(mt_dst, mt_src) (mt_dst * mt_int_len + mt_src)
 
@@ -788,7 +788,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     std::vector<bcopy_arg_t> bca;
     
     // if there is a buffer, first gather in communication buffer
-    for (auto & ranks : send_blocks) {
+    for (auto & ranks : send_blocks_hd) {
       rank_t dst_rank = ranks.first;
       auto & dst = send_buffers.at(dst_rank);
 
@@ -818,7 +818,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
   //tt("local");
   {
     std::vector<bcopy_arg_t> bca;
-    for (auto & ranks : blocks) {
+    for (auto & ranks : blocks_hd) {
       rank_t dst_rank = ranks.first.dst_rank;
       rank_t src_rank = ranks.first.src_rank;
       
@@ -847,7 +847,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
   // if buffer was used, need to re-distribute locally
   if (comm_buffers_type != mt_none) {
     std::vector<bcopy_arg_t> bca;
-    for (auto & ranks : recv_blocks) {
+    for (auto & ranks : recv_blocks_hd) {
 
       rank_t src_rank = ranks.first;
       auto & src = recv_buffers.at(src_rank);

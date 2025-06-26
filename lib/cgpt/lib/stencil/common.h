@@ -151,7 +151,7 @@ public:
   const std::vector<Coordinate>& shifts;
   std::map<int, std::set<int> > field_points;
   std::vector<CartesianStencil_t> stencils;
-  Vector<int> stencil_map;
+  std::vector<int> stencil_map;
   std::map<int, std::map<int, int> > field_point_map;
 	
   CartesianStencilManager(GridBase* _grid, const std::vector<Coordinate>& _shifts) : grid(_grid), shifts(_shifts) {
@@ -221,22 +221,25 @@ public:
 
 // cartesian halo exchange macros
 #define CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(TT, tag)			\
-  Vector<TT*> _buf ## tag;						\
-  Vector<CartesianStencilView ## tag ## _t> _sview ## tag;		\
-  int* stencil_map ## tag = &sm ## tag ->stencil_map[0];		\
+  HostDeviceVector<int> stencil_map ## tag ## _hd(sm ## tag -> stencil_map.size()); \
+  for (int i=0;i<stencil_map ## tag ## _hd.size();i++)			\
+    stencil_map ## tag ## _hd[i] = sm ## tag->stencil_map[i];		\
+  int* stencil_map ## tag = stencil_map ## tag ## _hd.toDevice();	\
   for (int i=0;i<(int)sm ## tag ->stencil_map.size();i++) {		\
-    int s = stencil_map ## tag[i];					\
+    int s = stencil_map ## tag ## _hd[i];				\
     if (s != -1) {							\
       sm ## tag->stencils[s].HaloExchange(fields ## tag[i], *compressor ## tag); \
     }									\
   }									\
+  HostDeviceVector<TT*> _buf ## tag((int)sm ## tag->stencils.size());	\
+  HostDeviceVector<CartesianStencilView ## tag ## _t> _sview ## tag((int)sm ## tag->stencils.size()); \
   for (int i=0;i<(int)sm ## tag->stencils.size();i++) {			\
-    _buf ## tag.push_back(sm ## tag->stencils[i].CommBuf());		\
-    _sview ## tag.push_back(sm ## tag->stencils[i].View(AcceleratorRead)); \
+    _buf ## tag[i] = sm ## tag->stencils[i].CommBuf();			\
+    _sview ## tag[i] = sm ## tag->stencils[i].View(AcceleratorRead);	\
   }									\
-  TT** buf ## tag = &_buf ## tag[0];					\
-  CartesianStencilView ## tag ## _t* sview ## tag = &_sview ## tag[0];
+  TT** buf ## tag = _buf ## tag.toDevice();				\
+  CartesianStencilView ## tag ## _t* sview ## tag = _sview ## tag.toDevice();
 
 #define CGPT_CARTESIAN_STENCIL_CLEANUP(T, tag)				\
-  for (auto & sv : _sview ## tag)					\
-    sv.ViewClose();
+  for (int i=0;i<(int)sm ## tag->stencils.size();i++)			\
+    _sview ## tag[i].ViewClose();

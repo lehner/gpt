@@ -246,7 +246,7 @@ class global_memory_transfer : public global_transfer<rank_t> {
     }
   };
 
-  typedef Vector<block_t> blocks_t;
+  typedef HostDeviceVector<block_t> blocks_t;
   typedef std::vector<block_t> thread_blocks_t;
 
   struct abstract_blocks_t {
@@ -315,7 +315,8 @@ class global_memory_transfer : public global_transfer<rank_t> {
   std::vector<memory_buffer> buffers;
   std::map<rank_t, memory_view> send_buffers, recv_buffers;
   memory_type comm_buffers_type;
-  std::map<rank_t, std::map< index_t, blocks_t > > send_blocks, recv_blocks;
+  std::map<rank_t, std::map< index_t, thread_blocks_t > > send_blocks, recv_blocks;
+  std::map<rank_t, std::map< index_t, blocks_t > > send_blocks_hd, recv_blocks_hd;
 
   // bounds and alignment
   std::vector<offset_t> bounds_dst, bounds_src, alignment;
@@ -325,7 +326,24 @@ class global_memory_transfer : public global_transfer<rank_t> {
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
 
   offset_t block_size;
-  std::map< rank_pair_t , std::map< index_pair_t, blocks_t > > blocks;
+  std::map< rank_pair_t , std::map< index_pair_t, thread_blocks_t > > blocks;
+  std::map< rank_pair_t , std::map< index_pair_t, blocks_t > > blocks_hd;
+
+  template<typename A, typename B>
+  void populate_hd(std::map<A, std::map<B, blocks_t>>& b_hd,
+		   const std::map<A, std::map<B, thread_blocks_t>>& b) {
+    for (auto & ta : b) {
+      auto & da = b_hd[ta.first];
+      for (auto & tb : ta.second) {
+	auto & db = da[tb.first];
+	db.resize(tb.second.size());
+	thread_for(i, tb.second.size(), {
+	    db[i] = tb.second[i];
+	  });
+	db.toDevice();
+      }
+    }
+  }
 
   void create(const view_t& dst, const view_t& src,
 	      memory_type use_comm_buffers_of_type = mt_none,
@@ -340,8 +358,8 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void fill_blocks_from_view_pair(const view_t& dst, const view_t& src, bool local_only);
   void gather_my_blocks();
   void optimize();
-  long optimize(blocks_t& blocks);
-  void skip(blocks_t& blocks, long gcd);
+  long optimize(thread_blocks_t& blocks);
+  void skip(thread_blocks_t& blocks, long gcd);
   void create_bounds_and_alignment();
   void create_comm_buffers(memory_type mt);
 
@@ -351,7 +369,6 @@ class global_memory_transfer : public global_transfer<rank_t> {
 
   template<typename K, typename V1, typename V2>
   void distribute_merge_into(std::map<K,V1> & target, const std::map<K,V2> & src);
-  void distribute_merge_into(blocks_t & target, const thread_blocks_t & src);
   void distribute_merge_into(thread_blocks_t & target, const thread_blocks_t & src);
 
   struct bcopy_arg_t {

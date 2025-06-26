@@ -33,30 +33,110 @@ using namespace Grid;
 #endif
 
 
+template<typename T>
+class HostDeviceVector {
+public:
+  HostDeviceVector() {
+    host = 0;
+    device = 0;
+    _size = 0;
+  }
+  
+  HostDeviceVector(size_t size) {
+    _size = 0;
+    resize(size);
+  }
+
+  void resize(size_t size) {
+    assert(!_size);
+    _size = size;
+    host = (T*)acceleratorAllocCpu(size * sizeof(T));
+#ifdef GRID_HAS_ACCELERATOR
+    device = (T*)acceleratorAllocDevice(size * sizeof(T));
+#else
+    device = host;
+#endif
+  }
+
+  ~HostDeviceVector() {
+    acceleratorFreeCpu(host);
+#ifdef GRID_HAS_ACCELERATOR
+    acceleratorFreeDevice(device);
+#endif
+  }
+
+  size_t _size;
+  T* host, * device;
+
+  size_t size() const {
+    return _size;
+  }
+
+  const T& operator[](size_t i) const {
+    return host[i];
+  }
+
+  T& operator[](size_t i) {
+    return host[i];
+  }
+
+  T* toDevice() {
+#ifdef GRID_HAS_ACCELERATOR
+    acceleratorCopyToDevice(host, device, _size * sizeof(T));
+#endif
+    return device;
+  }
+
+  T* toHost() {
+#ifdef GRID_HAS_ACCELERATOR
+    acceleratorCopyFromDevice(device, host, _size * sizeof(T));
+#endif
+    return host;
+  }
+
+  T* toHost(size_t idx0, size_t idx1) {
+    assert(idx1 <= _size);
+#ifdef GRID_HAS_ACCELERATOR
+    acceleratorCopyFromDevice(&device[idx0], &host[idx0], (idx1 - idx0) * sizeof(T));
+#endif
+    return host;
+  }
+};
+
+
 #define VECTOR_VIEW_OPEN(l,v,mode)					\
-  Vector< decltype(l[0].View(mode)) > __ ## v; __ ## v.reserve(l.size()); \
-  Vector< decltype(&l[0].View(mode)[0]) > _ ## v; _ ## v.resize(l.size()); \
+  std::vector< decltype(l[0].View(mode)) > __ ## v; __ ## v.reserve(l.size()); \
+  HostDeviceVector< decltype(&l[0].View(mode)[0]) > _ ## v(l.size());	\
   for(uint64_t k=0;k<l.size();k++) {					\
     __ ## v.push_back(l[k].View(mode));					\
     _ ## v[k] = &__ ## v[k][0];						\
   }									\
-  auto v = & _ ## v[0];
+  auto v = _ ## v.toDevice();
+
+#define VECTOR_VIEW_OPEN_CPU(l,v,mode)					\
+  std::vector< decltype(l[0].View(mode)) > __ ## v; __ ## v.reserve(l.size()); \
+  std::vector< decltype(&l[0].View(mode)[0]) > _ ## v(l.size());	\
+  for(uint64_t k=0;k<l.size();k++) {					\
+    __ ## v.push_back(l[k].View(mode));					\
+    _ ## v[k] = &__ ## v[k][0];						\
+  }									\
+  auto v = &_ ## v[0];
 
 #define VECTOR_VIEW_CLOSE(v)						\
   for(uint64_t k=0;k<__ ## v.size();k++) __ ## v[k].ViewClose();
 
 
-#define VECTOR_ELEMENT_VIEW_OPEN(ET, l, v, mode)			\
-  Vector<ET*> _ ## v; _ ## v.reserve(l.size());				\
-  Vector<int> __ ## v; __ ## v.reserve(l.size());			\
+#define VECTOR_ELEMENT_VIEW_OPEN_CPU(ET, l, v, mode)			\
+  std::vector<ET*> _ ## v(l.size());					\
+  std::vector<int> __ ## v(l.size());					\
   for(uint64_t k=0;k<l.size();k++) {					\
-    _ ## v.push_back((ET*)l[k]->memory_view_open(mode));			\
+    _ ## v[k] = (ET*)l[k]->memory_view_open(mode);			\
     long Nsimd, word, simd_word;					\
     l[k]->describe_data_layout(Nsimd,word,simd_word);			\
-    __ ## v.push_back(word / simd_word);				\
+    __ ## v[k] = word / simd_word;					\
   }									\
-  auto v = & _ ## v[0];							\
-  auto v ## _nelements = & __ ## v[0];
+  auto v = &_ ## v[0];							\
+  auto v ## _nelements = &__ ## v[0];
 
 #define VECTOR_ELEMENT_VIEW_CLOSE(l)					\
   for(uint64_t k=0;k<l.size();k++) l[k]->memory_view_close();

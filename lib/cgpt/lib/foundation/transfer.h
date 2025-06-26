@@ -102,13 +102,14 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
 
   int ndim = out_grid->Nd();
 
-  Vector<Coordinate> _in_icoor(in_grid->Nsimd());
-  Coordinate* in_icoor = &_in_icoor[0];
+  HostDeviceVector<Coordinate> _in_icoor(in_grid->Nsimd());
 
   for(int lane=0; lane < in_grid->Nsimd(); lane++){
-    in_icoor[lane].resize(ndim);
-    in_grid->iCoorFromIindex(in_icoor[lane], lane);
+    _in_icoor[lane].resize(ndim);
+    in_grid->iCoorFromIindex(_in_icoor[lane], lane);
   }
+
+  Coordinate* in_icoor = _in_icoor.toDevice();
 
   int in_nsimd = in_grid->Nsimd();
   int out_nsimd = out_grid->Nsimd();

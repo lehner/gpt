@@ -31,11 +31,10 @@ public:
 private:
   GridBase*                       coarse_;
   GridBase*                       fine_;
-  std::vector<Vector<index_type>> lut_vec_;
-    // WARNING: this introduces an un-threaded Vector() constructor operation osites times, avoid in future when time-critical (using AlignedVector or similar with empty construct)
-  Vector<index_type*>             lut_ptr_;
-  Vector<size_type>               sizes_;
-  Vector<index_type>              reverse_lut_vec_;
+  std::vector<HostDeviceVector<index_type>> lut_vec_;
+  HostDeviceVector<index_type*>             lut_ptr_;
+  HostDeviceVector<size_type>               sizes_;
+  HostDeviceVector<index_type>              reverse_lut_vec_;
 
   /////////////////////////////////////////////
   // Member Functions
@@ -58,17 +57,17 @@ public:
 
   virtual accelerator_inline
   index_type const* const* View() const {
-    return &lut_ptr_[0];
+    return lut_ptr_.device;
   } // GPU access
 
   virtual accelerator_inline
   size_type const* Sizes() const {
-    return &sizes_[0];
+    return sizes_.device;
   }  // also needed for GPU access
 
   virtual accelerator_inline
   index_type const* ReverseView() const {
-    return &reverse_lut_vec_[0];
+    return reverse_lut_vec_.device;
   }
 
   virtual bool gridsMatch(GridBase* coarse, GridBase* fine) const {
@@ -89,13 +88,8 @@ private:
     }
     assert(block_v == fine_->oSites()/coarse_->oSites());
 
-    lut_vec_.resize(coarse_->oSites());
-    lut_ptr_.resize(coarse_->oSites());
-    sizes_.resize(coarse_->oSites());
-    reverse_lut_vec_.resize(fine_->oSites());
     for(index_type sc = 0; sc < coarse_->oSites(); ++sc) {
       lut_vec_[sc].resize(block_v);
-      lut_ptr_[sc] = &lut_vec_[sc][0];
       sizes_[sc]  = 0;
     }
 
@@ -127,13 +121,23 @@ private:
 	for (int lane=1;lane<Nsimd;lane++)
 	  ASSERT(bset == (fmask[lane] != zz));
         if(bset) {
-          lut_ptr_[sc][count] = sf;
+          lut_vec_[sc][count] = sf;
           sizes_[sc]++;
           count++;
         }
         reverse_lut_vec_[sf] = sc; // reverse table will never have holes
       }
-      lut_vec_[sc].resize(sizes_[sc]);
+      ASSERT(lut_vec_[sc].size() >= sizes_[sc]);
     });
+
+    for(index_type sc = 0; sc < coarse_->oSites(); ++sc) {
+      lut_ptr_[sc] = lut_vec_[sc].toDevice();
+    }
+    
+    lut_ptr_.toDevice();
+    sizes_.toDevice();
+    reverse_lut_vec_.toDevice();
+
   }
+
 };

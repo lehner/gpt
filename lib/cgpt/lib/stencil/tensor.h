@@ -46,7 +46,7 @@ struct cgpt_stencil_tensor_code_offload_t {
   int16_t instruction;
   ComplexD weight;
   uint32_t size;
-  cgpt_stencil_tensor_factor_t* factor;
+  cgpt_stencil_tensor_factor_t* factor_device, * factor_host;
 };
 
 struct cgpt_stencil_tensor_code_t {
@@ -72,8 +72,8 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
   typedef CartesianStencil<T, T, SimpleStencilParams> CartesianStencil_t;
   typedef CartesianStencilView<T, T, SimpleStencilParams> CartesianStencilView_t;
   
-  Vector<cgpt_stencil_tensor_code_offload_t> code;
-  Vector<cgpt_stencil_tensor_factor_t> factors;
+  HostDeviceVector<cgpt_stencil_tensor_code_offload_t> code;
+  HostDeviceVector<cgpt_stencil_tensor_factor_t> factors;
 
   std::vector<cgpt_stencil_tensor_code_segment_t> segments;
   int local;
@@ -114,8 +114,9 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       code[i].size = (uint32_t)_code[i].factor.size();
       if (code[i].size == 0)
 	ERR("Cannot create empty factor");
-      code[i].factor = &factors[nfactors];
-      memcpy(code[i].factor, &_code[i].factor[0], sizeof(cgpt_stencil_tensor_factor_t) * code[i].size);
+      code[i].factor_device = &factors.device[nfactors];
+      code[i].factor_host = &factors.host[nfactors];
+      memcpy(code[i].factor_host, &_code[i].factor[0], sizeof(cgpt_stencil_tensor_factor_t) * code[i].size);
       nfactors += code[i].size;
     }
 
@@ -141,7 +142,8 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
       compressor = new SimpleCompressor<T>();
     }
 
-
+    code.toDevice();
+    factors.toDevice();
   }
 
   virtual ~cgpt_stencil_tensor() {
@@ -165,10 +167,10 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 #endif
     typedef typename T::scalar_type coeff_t;
 
-    VECTOR_ELEMENT_VIEW_OPEN(element_t, fields, fields_v, AcceleratorWrite);
+    VECTOR_ELEMENT_VIEW_OPEN_CPU(element_t, fields, fields_v, AcceleratorWrite);
 
     int n_code = code.size();
-    cgpt_stencil_tensor_code_offload_t* p_code = &code[0];
+    cgpt_stencil_tensor_code_offload_t* p_code = code.device;
 
     int nd = fields[0]->get_grid()->Nd();
 
@@ -249,7 +251,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 
 	// set base_ptr for current views
 	for (int i=0;i<n_code;i++) {
-	  cgpt_stencil_tensor_code_offload_t* _p = &p_code[i];
+	  cgpt_stencil_tensor_code_offload_t* _p = &code[i];
 	  _p->stride = fields_v_nelements[_p->target] * NSIMD;
 	  if (_p->is_temporary) {
 	    _p->base_ptr = &fields_v[_p->target][_p->element * NSIMD];
@@ -257,7 +259,7 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	    _p->base_ptr = &fields_v[_p->target][_p->stride * osites_per_instruction * oblock0 + _p->element * NSIMD];
 	  }
 	  for (int j=0;j<_p->size;j++) {
-	    cgpt_stencil_tensor_factor_t* _f = &_p->factor[j];
+	    cgpt_stencil_tensor_factor_t* _f = &_p->factor_host[j];
 	    _f->stride = fields_v_nelements[_f->index] * NSIMD;
 	    if (_f->is_temporary) {
 	      _f->base_ptr = &fields_v[_f->index][_f->element * NSIMD];
@@ -266,7 +268,9 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	    }
 	  }
 	}
-	
+
+	code.toDevice();
+	factors.toDevice();
 	//std::cout << GridLogMessage<< "Group " << osites0 << " to " << osites1 << " has oblocks " << oblocks << " and extra " << osites_extra << " from " << osites_extra_start << " compare to " << osites << std::endl;
 	
 #ifdef GRID_HAS_ACCELERATOR
@@ -293,8 +297,8 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 	      for (int ic=0;ic<_npbs;ic++) {
 
 		const cgpt_stencil_tensor_code_offload_t* __restrict__ _p = &p_code[coffset + cc * _npbs + ic];
-		const cgpt_stencil_tensor_factor_t* __restrict__ _f0 = &_p->factor[0];
-		const cgpt_stencil_tensor_factor_t* __restrict__ _f1 = &_p->factor[1];
+		const cgpt_stencil_tensor_factor_t* __restrict__ _f0 = &_p->factor_device[0];
+		const cgpt_stencil_tensor_factor_t* __restrict__ _f1 = &_p->factor_device[1];
 		
 		int lane = acceleratorSIMTlane(T::Nsimd());
 		auto aNN = _f0->stride;
@@ -323,8 +327,8 @@ class cgpt_stencil_tensor : public cgpt_stencil_tensor_base {
 		for (int ic=0;ic<_npbs;ic++) {
 		  
 		  const cgpt_stencil_tensor_code_offload_t* __restrict__ _p = &p_code[coffset + cc * _npbs + ic];
-		  const cgpt_stencil_tensor_factor_t* __restrict__ _f0 = &_p->factor[0];
-		  const cgpt_stencil_tensor_factor_t* __restrict__ _f1 = &_p->factor[1];
+		  const cgpt_stencil_tensor_factor_t* __restrict__ _f0 = &_p->factor_device[0];
+		  const cgpt_stencil_tensor_factor_t* __restrict__ _f1 = &_p->factor_device[1];
 		  
 		  int lane = acceleratorSIMTlane(T::Nsimd());
 		  auto aNN = _f0->stride;
