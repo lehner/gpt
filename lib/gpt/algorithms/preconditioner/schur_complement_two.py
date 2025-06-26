@@ -135,5 +135,5 @@ class schur_complement_two:
         )
 
         self.Mpc = gpt.matrix_operator(
-            mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space), accept_list=True
+            mat=_N, adj_mat=_N_dag, vector_space=(D_vector_space, D_vector_space), accept_list=False
         ).inherit(op, lambda nop: schur_complement_two(nop, domain_decomposition).Mpc)

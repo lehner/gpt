@@ -64,8 +64,10 @@ imp = q.ImportPhysicalFermionSource
 for p, tag, parity in [
     (pc.eo1_ne(parity=g.odd), "eo1-odd", g.odd),
     (pc.eo2_ne(parity=g.odd), "eo2-odd", g.odd),
+    (pc.eo3_ne(parity=g.odd), "eo3-odd", g.odd),
     (pc.eo1_ne(parity=g.even), "eo1-even", g.even),
     (pc.eo2_ne(parity=g.even), "eo2-even", g.even),
+    (pc.eo3_ne(parity=g.even), "eo3-even", g.even),
 ]:
     g.message("Test", tag)
 
