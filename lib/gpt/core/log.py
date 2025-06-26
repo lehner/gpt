@@ -72,6 +72,21 @@ def backtrace_signal_handler(sig, frame):
 
 signal.signal(signal.SIGUSR2, backtrace_signal_handler)
 
+if gpt.default.has("--signal-heartbeat"):
+    import time
+    
+    def signal_handler_noop(sig, frame):
+        g.message("Heartbeat received")
+
+    signal.signal(signal.SIGUSR1, signal_handler_noop)
+
+    pid = os.fork()
+    if pid == 0:
+        parentid = os.getppid()
+        while True:
+            time.sleep(60)
+            os.kill(parentid, signal.SIGUSR1)
+
 if gpt.default.is_verbose("all_signals_backtrace"):
     for s in [
         signal.SIGBUS,
