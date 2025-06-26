@@ -76,7 +76,7 @@ if gpt.default.has("--signal-heartbeat"):
     import time
     
     def signal_handler_noop(sig, frame):
-        g.message("Heartbeat received")
+        message("Heartbeat received")
 
     signal.signal(signal.SIGUSR1, signal_handler_noop)
 

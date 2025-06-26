@@ -237,3 +237,59 @@ EXPORT(grid_exchange,{
 
   });
 
+
+EXPORT(grid_gather_dimension,{
+
+    long dim;
+    PyObject* _send_data, * _recv_data;
+    void* p;
+    if (!PyArg_ParseTuple(args, "lOOl", &p,&_send_data,&_recv_data,&dim)) {
+      return NULL;
+    }
+
+    GridBase* grid = (GridBase*)p;
+
+    ASSERT(cgpt_PyArray_Check(_send_data) && cgpt_PyArray_Check(_recv_data));
+    PyArrayObject* send_data = (PyArrayObject*)_send_data;
+    PyArrayObject* recv_data = (PyArrayObject*)_recv_data;
+
+    int nd_send = PyArray_NDIM(send_data);
+    int nd_recv = PyArray_NDIM(recv_data);
+    long* tdim_send = PyArray_DIMS(send_data);
+    long* tdim_recv = PyArray_DIMS(recv_data);
+
+    ASSERT(nd_recv == nd_send + 1);
+    for (int i=0;i<nd_send;i++)
+      ASSERT(tdim_send[i] == tdim_recv[i+1]);
+    
+    char* send_p = (char*)PyArray_DATA(send_data);
+    char* recv_p = (char*)PyArray_DATA(recv_data);
+    
+    long sz_send = (long)PyArray_NBYTES(send_data);
+    long sz_recv = (long)PyArray_NBYTES(recv_data);
+
+    ASSERT(dim < grid->_ndimension);
+    ASSERT(sz_send * grid->_processors[dim] == sz_recv);
+    ASSERT(sz_send < INT_MAX);
+
+    int source,dest;
+    std::vector<MpiCommsRequest_t> list;
+    memcpy(recv_p, send_p, sz_send);
+    for(int p=1;p<grid->_processors[dim];p++){
+      grid->ShiftedRanks(dim,p,source,dest);
+      grid->SendToRecvFromBegin(list,
+				send_p,
+				dest,
+				recv_p + sz_send * p,
+				source,
+				sz_send,dim*10000+p);
+      
+    }
+    if (!list.empty()) // avoid triggering assert in comms == none
+	grid->CommsComplete(list);
+
+    Py_INCREF(Py_None);
+    return Py_None;
+
+  });
+

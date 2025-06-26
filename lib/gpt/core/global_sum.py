@@ -34,37 +34,45 @@ def global_sum_grid(grid, x):
 verbose = True
 
 
-def global_sum_reduce(grid, x):
+def global_sum_reduce(x, reduce_function):
     global verbose
     if verbose:
-        gpt.message("Using binary tree global sums")
+        gpt.message(f"Using {global_sum_algorithm} global sums")
         verbose = False
 
     if isinstance(x, gpt.tensor):
-        global_sum_reduce(grid, x.array)
+        global_sum_reduce(x.array, reduce_function)
         return x
 
     if isinstance(x, np.ndarray):
-        y = grid.reduce(x, lambda a, b: a.__iadd__(b))
+        y = reduce_function(x, lambda a, b: a.__iadd__(b))
         np.copyto(x, y)
         return y
     elif isinstance(x, complex):
         x = np.array([x], dtype=np.complex128)
-        global_sum_reduce(grid, x)
+        global_sum_reduce(x, reduce_function)
         return complex(x[0])
     elif isinstance(x, float):
         x = np.array([x], dtype=np.float64)
-        global_sum_reduce(grid, x)
+        global_sum_reduce(x, reduce_function)
         return float(x[0])
     elif isinstance(x, int):
         x = np.array([x], dtype=np.int64)
-        global_sum_reduce(grid, x)
+        global_sum_reduce(x, reduce_function)
         return int(x[0])
     else:
         raise Exception(f"Unknown data type in global sum: {type(x)}")
 
+    
+def global_sum_binary_tree(grid, x):
+    return global_sum_reduce(x, lambda y, functor: grid.reduce_binary_tree(y, functor))
 
-global_sum_default = {"default": global_sum_grid, "binary-tree": global_sum_reduce}[
+
+def global_sum_dimensional_reduction(grid, x):
+    return global_sum_reduce(x, lambda y, functor: grid.reduce_dimensional_reduction(y, functor))
+
+
+global_sum_default = {"default": global_sum_grid, "binary-tree": global_sum_binary_tree, "dimensional-reduction": global_sum_dimensional_reduction}[
     global_sum_algorithm
 ]
 
