@@ -169,7 +169,6 @@ do
 
 		echo " [CXX] $bn"
 		start=$SECONDS
-		echo "${CXX} --shared ${CXXFLAGS} -c $src -o $dst"
 		${CXX} --shared ${CXXFLAGS} -c $src -o $dst 1> ${BUILD}/logs/${bn}.out 2> ${BUILD}/logs/${bn}.err
 		success=$?
 		elapsed=$((SECONDS-start))
