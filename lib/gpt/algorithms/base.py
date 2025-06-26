@@ -29,7 +29,7 @@ class base:
         self.timer = gpt.timer(self.name, self.verbose_performance)
 
     def timed_start(self):
-        return gpt.timer(self.name) if self.verbose_performance else self.timer
+        return gpt.timer(self.name, self.verbose_performance)
 
     def timed_end(self, t):
         if self.verbose_performance:

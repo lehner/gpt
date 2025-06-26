@@ -163,6 +163,7 @@ template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
 #include "foundation/matrix.h"
 #include "foundation/coarse.h"
 #include "foundation/transform.h"
+#include "foundation/general_local_stencil.h"
 
 
 NAMESPACE_END(Grid);

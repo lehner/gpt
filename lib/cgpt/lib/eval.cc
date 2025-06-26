@@ -90,6 +90,7 @@ void eval_convert_factors(PyObject* _list, std::vector<_eval_term_>& terms, int 
 	factor.type = _eval_factor_::ARRAY;
 	Py_DECREF(otype);
 	Py_DECREF(v_otype);
+	Py_DECREF(factor.array); // steal reference
       } else if (PyObject_HasAttrString(f,"gamma")) {
 	PyObject* tmp = PyObject_GetAttrString(f,"gamma");
 	int gamma = (int)PyLong_AsLong(tmp);
@@ -335,7 +336,7 @@ EXPORT(eval,{
 
     std::vector<_eval_term_> terms;
     eval_convert_factors(_list,terms,idx);
-    
+
     std::vector<cgpt_Lattice_base*> dst;
     if (!new_lattice)
       cgpt_convert(_dst,dst);
@@ -359,5 +360,6 @@ EXPORT(eval,{
       for (long i=0;i<dst.size();i++)
 	PyList_SetItem(ret,i,PyLong_FromVoidPtr(dst[i]));
     }
+
     return ret;    
   });

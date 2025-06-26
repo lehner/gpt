@@ -55,7 +55,7 @@ class L1(differentiable_functional):
         dabs = g.component.drelu(-1)
         return [
             g(
-                (self.lam if a.index(x) in self.indices else 0.0) *
-                (dabs(g.component.real(x)) + 1j * dabs(g.component.imag(x)))
+                (self.lam if a.index(x) in self.indices else 0.0)
+                * (dabs(g.component.real(x)) + 1j * dabs(g.component.imag(x)))
             ) for x in da
         ]

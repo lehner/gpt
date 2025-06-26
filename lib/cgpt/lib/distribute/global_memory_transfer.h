@@ -696,17 +696,19 @@ void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bc
       for (auto & bi : bc) {
 	for (size_t i=0;i<bi.blocks.size();i++) {
 	  auto&b=bi.blocks[i];
-	  acceleratorCopyFromDevice((void*)&bi.p_src[b.start_src],(void*)&bi.p_dst[b.start_dst],block_size);
+	  acceleratorCopyFromDeviceAsync((void*)&bi.p_src[b.start_src],(void*)&bi.p_dst[b.start_dst],block_size);
 	}
       }
+      acceleratorCopySynchronise();
       break;
     case mt_accelerator * mt_int_len + mt_host:
       for (auto & bi : bc) {
 	for (size_t i=0;i<bi.blocks.size();i++) {
 	  auto&b=bi.blocks[i];
-	  acceleratorCopyToDevice((void*)&bi.p_src[b.start_src],(void*)&bi.p_dst[b.start_dst],block_size);
+	  acceleratorCopyToDeviceAsync((void*)&bi.p_src[b.start_src],(void*)&bi.p_dst[b.start_dst],block_size);
 	}
       }
+      acceleratorCopySynchronise();
       break;
     case mt_accelerator * mt_int_len + mt_accelerator:
       if (bcopy_accelerator_accelerator<SpinMatrixF,vSpinMatrixF>(block_size,global_alignment,bc));
@@ -748,8 +750,8 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
   //  uint64_t d = 0;
   //  this->global_sum(&d,1);
   //}
-  //cgpt_timer tt("execute");
-  //tt("pre");
+
+  Timer("pre");
   
   // if there is no buffer, directly issue separate isend / irecv for each block
   int stats_isends = 0;
@@ -798,6 +800,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
       }
     }
 
+    // TODO: compression could act here
     bcopy(bca);
 
     // send/recv buffers
@@ -815,7 +818,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 
 
   // then do local copies
-  //tt("local");
+  Timer("local");
   {
     std::vector<bcopy_arg_t> bca;
     for (auto & ranks : blocks_hd) {
@@ -834,7 +837,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
     bcopy(bca);
   }
   
-  //tt("wait");
+  Timer("wait");
   // then wait for remote copies to finish
   //double t0 = cgpt_time();
   this->waitall();
@@ -843,7 +846,7 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
   //  " bytes " << stats_send_bytes << " recvs " << stats_irecvs << " bytes " << stats_recv_bytes << std::endl;
   
 
-  //tt("post");
+  Timer("post");
   // if buffer was used, need to re-distribute locally
   if (comm_buffers_type != mt_none) {
     std::vector<bcopy_arg_t> bca;
@@ -863,9 +866,10 @@ void global_memory_transfer<offset_t,rank_t,index_t>::execute(std::vector<memory
 	bca.push_back({indices.second, base_dst[dst_idx], src});
       }
     }
+    // TODO: decompression could act here
     bcopy(bca);
   }
 
-  //tt.report();
+  Timer();
 
 }

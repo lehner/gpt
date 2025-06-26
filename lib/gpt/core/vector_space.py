@@ -59,6 +59,15 @@ class general:
     def clone(self):
         return general(self.grid, self.otype, self.cb)
 
+    def unpacked(self, n_rhs):
+        assert self.grid is not None
+        assert self.grid.gdimensions[0] == n_rhs
+        return general(self.grid.removed_dimension(0), self.otype, self.cb)
+
+    def packed(self, n_rhs):
+        assert self.grid is not None
+        return general(self.grid.inserted_dimension(0, n_rhs), self.otype, self.cb)
+
 
 ##
 # short-hand

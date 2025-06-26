@@ -54,6 +54,11 @@ def str_to_cb(s):
 
 
 def pick_checkerboard(cb, dst, src=None):
+    if isinstance(dst, list):
+        for i in range(len(dst)):
+            pick_checkerboard(cb, dst[i], src[i])
+        return
+
     if src is None:
         src = dst
         dst = gpt.lattice(src.grid.checkerboarded(gpt.redblack), src.otype)
@@ -66,6 +71,11 @@ def pick_checkerboard(cb, dst, src=None):
 
 
 def set_checkerboard(dst, src):
+    if isinstance(dst, list):
+        for i in range(len(dst)):
+            set_checkerboard(dst[i], src[i])
+        return
+
     assert len(src.v_obj) == len(dst.v_obj)
     for i in src.otype.v_idx:
         cgpt.lattice_set_checkerboard(src.v_obj[i], dst.v_obj[i])

@@ -53,7 +53,7 @@ class gradient_descent(base_iterative):
                 if self.eps is None:
                     continue
 
-                rs = (sum(g.norm2(d)) / sum([s.nfloats() for s in d])) ** 0.5
+                rs = (sum([g.norm2(x) for x in d]) / sum([s.nfloats() for s in d])) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 

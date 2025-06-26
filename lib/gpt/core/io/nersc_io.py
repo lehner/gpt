@@ -363,9 +363,10 @@ END_HEADER
         offset = 0
 
     grid.barrier()
-    
+
     f = gpt.FILE(file, "r+b")
     f.unbuffer()
+
     offset = grid.globalsum(offset)
 
     dt_write -= gpt.time()

@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt, cgpt
+import gpt.core.block.matrix_operator as coarse_matrix_operator
 
 
 #
@@ -25,9 +26,12 @@ import gpt, cgpt
 #                 cache/accelerator memory.
 #
 class map:
-    def __init__(self, coarse_grid, basis, mask=None, basis_n_block=8):
+    def __init__(self, coarse_grid, basis, mask=None, basis_n_block=8, tensor_projectors=None):
         assert isinstance(coarse_grid, gpt.grid)
         assert len(basis) > 0
+        assert tensor_projectors is None or len(tensor_projectors) == len(basis)
+        if tensor_projectors is not None:
+            tensor_projectors = [x.array for x in tensor_projectors]
 
         if mask is None:
             mask = gpt.complex(basis[0].grid)
@@ -39,14 +43,11 @@ class map:
 
         c_otype = gpt.ot_vector_complex_additive_group(len(basis))
         basis_size = c_otype.v_n1[0]
+        self.tensor_projectors = tensor_projectors
         self.coarse_grid = coarse_grid
         self.basis = basis
         self.obj = cgpt.create_block_map(
-            coarse_grid.obj,
-            basis,
-            basis_size,
-            basis_n_block,
-            mask.v_obj[0],
+            coarse_grid.obj, basis, basis_size, basis_n_block, mask.v_obj[0], tensor_projectors
         )
 
         def _project(coarse, fine):
@@ -81,9 +82,11 @@ class map:
         cgpt.delete_block_map(self.obj)
 
     def orthonormalize(self):
+        assert self.tensor_projectors is None
         cgpt.block_orthonormalize(self.obj)
 
     def check_orthogonality(self, tol=None):
+        assert self.tensor_projectors is None
         c_otype = gpt.ot_vector_complex_additive_group(len(self.basis))
         iproj = gpt.lattice(self.coarse_grid, c_otype)
         eproj = gpt.lattice(self.coarse_grid, c_otype)
@@ -99,31 +102,7 @@ class map:
                 gpt.message(f"blockmap: ortho check error for vector {i:d}: {err2:e}")
 
     def coarse_operator(self, fine_operator):
-        verbose = gpt.default.is_verbose("block_operator")
-
-        def mat(dst_coarse, src_coarse):
-            src_fine = [gpt.lattice(self.basis[0]) for x in src_coarse]
-            dst_fine = [gpt.lattice(self.basis[0]) for x in src_coarse]
-
-            t0 = gpt.time()
-            self.promote(src_fine, src_coarse)
-            t1 = gpt.time()
-            fine_operator(dst_fine, src_fine)
-            t2 = gpt.time()
-            self.project(dst_coarse, dst_fine)
-            t3 = gpt.time()
-            if verbose:
-                gpt.message(
-                    "coarse_operator acting on %d vector(s) in %g s (promote %g s, fine_operator %g s, project %g s)"
-                    % (len(src_coarse), t3 - t0, t1 - t0, t2 - t1, t3 - t2)
-                )
-
-        otype = gpt.ot_vector_complex_additive_group(len(self.basis))
-        return gpt.matrix_operator(
-            mat=mat,
-            vector_space=gpt.vector_space.explicit_grid_otype(self.coarse_grid, otype),
-            accept_list=True,
-        )
+        return coarse_matrix_operator.projected(self, fine_operator)
 
     def fine_operator(self, coarse_operator):
         verbose = gpt.default.is_verbose("block_operator")

@@ -31,8 +31,9 @@ public:
   virtual PyObject* to_str() = 0;
   virtual PyObject* rank_sum() = 0;
   virtual RealD norm2() = 0;
+  //virtual void axpy(std::vector<cgpt_Lattice_base*>& z, std::vector<ComplexD>& a, std::vector<cgpt_Lattice_base*>& x, std::vector<cgpt_Lattice_base*>& y) = 0;
   virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) = 0;
-  virtual void rank_inner_product(ComplexD* result, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, bool use_accelerator) = 0;
+  virtual void rank_inner_product(ComplexD* result, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, long n_block, bool use_accelerator) = 0;
   virtual void inner_product_norm2(ComplexD& ip, RealD& a2, cgpt_Lattice_base* other) = 0;
   virtual void copy_from(cgpt_Lattice_base* src) = 0;
   virtual void fft_from(cgpt_Lattice_base* src, const std::vector<int> & dims, int sign) = 0;
@@ -64,15 +65,17 @@ public:
   virtual void memory_view_close() = 0;
   virtual void describe_data_layout(long & Nsimd, long & word, long & simd_word) = 0;
   virtual void describe_data_shape(std::vector<long> & ishape) = 0;
+  virtual void transfer_scalar_device_buffer(std::vector<cgpt_Lattice_base*>& from, long from_n_virtual, long r, void* ptr, long size, std::vector<long>& padding, std::vector<long>& offset, bool exp, long t) = 0;
   virtual int get_numpy_dtype() = 0;
   virtual cgpt_block_map_base* block_map(GridBase* coarse, std::vector<cgpt_Lattice_base*>& basis, 
 					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
-					 cgpt_Lattice_base* mask) = 0;
+					 cgpt_Lattice_base* mask, PyObject* tensor_projectors) = 0;
   virtual void invert_matrix(std::vector<cgpt_Lattice_base*>& matrix_inv, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0;
   virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0; // this determines type of matrix[0]
   virtual GridBase* get_grid() = 0;
   virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) = 0;
-  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) = 0;
+  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local,
+								 int matrix_vector, int vector_parity) = 0;
   virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, PyObject* segments, long local) = 0;
 
 };

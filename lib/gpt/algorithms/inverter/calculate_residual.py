@@ -20,8 +20,9 @@ import gpt as g
 
 
 class calculate_residual:
-    def __init__(self, tag=None):
+    def __init__(self, tag=None, threshold_residual=None):
         self.tag = "" if tag is None else f"{tag}: "
+        self.threshold_residual = threshold_residual
 
     def __call__(self, mat):
         def inv(dst, src):
@@ -30,12 +31,16 @@ class calculate_residual:
                 nrm = g.norm2(src[i]) ** 0.5
                 if nrm != 0.0:
                     g.message(
-                        f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps/nrm}, | src[{i}] | = {nrm}"
+                        f"{self.tag}| mat * dst[{i}] - src[{i}] | / | src | = {eps / nrm}, | src[{i}] | = {nrm}"
                     )
+                    if self.threshold_residual is not None:
+                        assert eps / nrm <= self.threshold_residual
                 else:
                     g.message(
                         f"{self.tag}| mat * dst[{i}] - src[{i}] | = {eps}, | src[{i}] | = {nrm}"
                     )
+                    if self.threshold_residual is not None:
+                        assert eps <= self.threshold_residual
 
         vector_space = None
         if isinstance(mat, g.matrix_operator):

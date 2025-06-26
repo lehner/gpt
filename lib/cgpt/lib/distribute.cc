@@ -28,7 +28,6 @@ template class global_memory_view<uint64_t,int,uint32_t>;
 template class global_memory_transfer<uint64_t,int,uint32_t>;
 
 void test_global_memory_system() {
-
   int rank = CartesianCommunicator::RankWorld();
   gm_transfer plan(rank, CartesianCommunicator::communicator_world);
   gm_transfer plan_host_buf(rank, CartesianCommunicator::communicator_world);

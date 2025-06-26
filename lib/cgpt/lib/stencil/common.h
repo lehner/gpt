@@ -96,8 +96,6 @@
 
 #endif
 
-#include <Grid/stencil/GeneralLocalStencil.h>
-
 // forward declarations
 template<typename T>
 void cgpt_basis_fill(PVector<Lattice<T>>& basis, const std::vector<cgpt_Lattice_base*>& _basis);
@@ -154,7 +152,9 @@ public:
   std::vector<int> stencil_map;
   std::map<int, std::map<int, int> > field_point_map;
 	
-  CartesianStencilManager(GridBase* _grid, const std::vector<Coordinate>& _shifts) : grid(_grid), shifts(_shifts) {
+  CartesianStencilManager(GridBase* _grid,
+			  const std::vector<Coordinate>& _shifts) :
+    grid(_grid), shifts(_shifts) {
   }
 
   bool is_trivial(int point) {
@@ -175,7 +175,7 @@ public:
       stencil_map.resize(index + 1, -1);
   }
 
-  bool create_stencils(bool first_stencil) {
+  bool create_stencils(bool first_stencil, int parity) {
 
     bool verbose = getenv("CGPT_CARTESIAN_STENCIL_DEBUG") != 0;
     
@@ -203,7 +203,7 @@ public:
       }
       
       stencil_map[index] = (int)stencils.size();
-      stencils.push_back(CartesianStencil_t(grid,dirs.size(),Even,dirs,disps,SimpleStencilParams(),!first_stencil));
+      stencils.push_back(CartesianStencil_t(grid,dirs.size(),parity,dirs,disps,SimpleStencilParams(),!first_stencil));
 
       first_stencil = false;
     }

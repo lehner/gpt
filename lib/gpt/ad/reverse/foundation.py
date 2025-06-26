@@ -31,7 +31,7 @@ def inner_product(x, y, use_accelerator):
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:  # z = adj(x) y   ->    x z = y  -> x = y adj(z)
-            x.gradient += y.value * g.adj(z.gradient) # y.value * g.adj(z.gradient)
+            x.gradient += y.value * g.adj(z.gradient)  # y.value * g.adj(z.gradient)
         if y.with_gradient:  # z = adj(x) y   ->    y = x z
             y.gradient += x.value * z.gradient
 

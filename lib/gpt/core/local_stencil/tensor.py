@@ -55,7 +55,7 @@ class tensor(auto_tuned_class):
             (opi, opi * opcb) for opi in [2, 4, 8, 16, 32, 64, 128, 256] for opcb in [256, 1024, 8192, lsites]
         ], (4, lsites))
 
-    @auto_tuned_method
+    @auto_tuned_method()
     def __call__(self, performance_args, *fields):
         opi, opcb = performance_args
         cgpt.stencil_tensor_execute(self.obj, list(fields), opi, opcb)

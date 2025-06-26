@@ -28,6 +28,16 @@ template<typename WI> void cgpt_fermion_set_mass(WilsonFermion<WI>& op, PyObject
   }
 }
 
+template<typename WI> void cgpt_fermion_set_mass(CompactWilsonClover5D<WI>& op, PyObject* args) {
+  RealD mass = get_float(args,"mass");
+  op.M5 = mass;
+  //if (op.anisotropyCoeff.isAnisotropic){
+  //  op.diag_mass = mass + 1.0 + (Nd-1)*(op.anisotropyCoeff.nu / op.anisotropyCoeff.xi_0);
+  //} else {
+  //  op.diag_mass = 4.0 + mass;
+  //}
+}
+
 template<typename WI> void cgpt_fermion_set_mass(CayleyFermion5D<WI>& op, PyObject* args) {
   RealD mass_plus = get_float(args,"mass_plus");
   RealD mass_minus = get_float(args,"mass_minus");
@@ -74,50 +84,4 @@ public:
     cgpt_fermion_set_mass(*op, args);
   }
 
-};
-
-template<typename T>
-class cgpt_coarse_operator : public cgpt_fermion_operator_base {
-public:
-  T* op;
-
-  cgpt_coarse_operator(T* _op) : op(_op) {
-  }
-
-  virtual ~cgpt_coarse_operator() {
-    delete op;
-  }
-
-  virtual RealD unary(int opcode, PyObject* in, PyObject* out) {
-    return cgpt_fermion_operator_unary<T>(*op,opcode,in,out);
-  }
-
-  virtual RealD dirdisp(int opcode, PyObject* in, PyObject* out, int dir, int disp) {
-    return cgpt_fermion_operator_dirdisp<T>(*op, opcode, in, out, dir, disp);
-  }
-
-  virtual RealD deriv(int opcode, PyObject* mat, PyObject* in, PyObject* out) {
-    assert(0);
-  }
-
-  virtual void update(PyObject* args) {
-    typedef typename T::LinkField::vector_type vCoeff_t;
-    const int nbasis_virtual = GridTypeMapper<typename T::FermionField::vector_object>::count;
-    
-    auto ASelfInv_ptr_list = get_pointer_vec<cgpt_Lattice_base>(args,"U_self_inv");
-    auto A_ptr_list = get_pointer_vec<cgpt_Lattice_base>(args,"U");
-    
-    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis_virtual>>> ASelfInv;
-    PVector<Lattice<iMatrix<iSinglet<vCoeff_t>,nbasis_virtual>>> A;
-    
-    cgpt_basis_fill(ASelfInv, ASelfInv_ptr_list);
-    cgpt_basis_fill(A, A_ptr_list);
-
-    ASSERT(A.size() == 9*ASelfInv.size());
-
-    op->ImportGauge(A, ASelfInv);
-  }
-
-  virtual void set_mass(PyObject* args) {
-  }
 };

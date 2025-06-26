@@ -44,6 +44,7 @@ streams = ["a","d","b","c"]
 conf_range = range(600, 700)
 ensemble_tag = "ensemble-K"
 
+
 pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 eofa_ratio = g.qcd.pseudofermion.action.exact_one_flavor_ratio
@@ -224,6 +225,31 @@ class gradient_density_logger(g.core.group.diffeomorphism): # TODO: move to g.co
         return src
 
 
+force_visualization = {}
+
+class gradient_density_logger(g.core.group.diffeomorphism): # TODO: move to g.core.group
+    def __init__(self, storage, tag):
+        self.storage = storage
+        self.tag = tag
+        
+    def __call__(self, fields):
+        # do nothing
+        return fields
+
+    # apply the jacobian
+    def jacobian(self, fields, fields_prime, src):
+        density = None
+        for s in src:
+            d = g(g.trace(g.adj(s) * s))
+            if density is None:
+                density = d
+            else:
+                density += d
+        self.storage[self.tag] = density
+
+        return src
+
+
 def transform(aa, s, i):
     aa_transformed = aa[i].transformed(s, indices=list(range(len(U))))
     aa_orig = aa[i]
@@ -239,7 +265,6 @@ if visualization:
     for i in range(len(hasenbusch_ratios)):
         m1, m2, *rest = hasenbusch_ratios[i]
         transform(action_fermions_s, gradient_density_logger(force_visualization, f"fermion_{m1}_over_{m2}_U"), i)
-
 
 
 a_log_det = None
@@ -382,7 +407,6 @@ mdint = sympl.OMF2_force_gradient(
 )
 
 g.message(mdint)
-
 
 
 ################################################################################
@@ -929,16 +953,13 @@ g.jobs.next(root_output, jobs, max_weight=100.0, stale_seconds=3600 * 4)
 sys.exit(0)
 
 
-
 #no_accept_reject = True
 no_accept_reject = False
 
 
 # g.message(f"tau-iteration: {its} -> {tau/nsteps*its}")
 #         
-        
 #             g.message("Done")
-
 #         if its % 1 == 0: # temporarily check all of them
 #             h1, s1 = hamiltonian(False)
 #             g.message(f"dH = {h1-h0}")
@@ -999,9 +1020,7 @@ no_accept_reject = False
 #             if os.path.exists(f"{dst}/checkpoint.{it}"):
 #                 #shutil.rmtree(f"{dst}/checkpoint.{it}")
 #                 os.rename(f"{dst}/checkpoint.{it}", f"{dst}/checkpoint.{it}.restore")
-    
 #     #rng = g.random(f"new{dst}-{it}", "vectorized_ranlux24_24_64")
-
 #     g.barrier()
 #     break
 #        metro = g.algorithms.markov.metropolis(rng)

@@ -20,20 +20,18 @@ import gpt
 import numpy
 
 
-def rank_inner_product(a, b, use_accelerator):
+def rank_inner_product(a, b, n_block, use_accelerator):
+    assert n_block == 1
     return numpy.array([[gpt.trace(gpt.adj(x) * y) for y in b] for x in a], dtype=numpy.complex128)
 
 
-def inner_product(a, b, use_accelerator):
-    return rank_inner_product(a, b, use_accelerator)
+def inner_product(a, b, n_block, use_accelerator):
+    assert n_block == 1
+    return rank_inner_product(a, b, n_block, use_accelerator)
 
 
 def norm2(a):
-    res = inner_product(a, a, True).real
-    ip = numpy.ndarray(dtype=numpy.float64, shape=(len(a),))
-    for i in range(len(a)):
-        ip[i] = res[i, i]
-    return ip
+    return inner_product(a, a, len(a), True).real.reshape(len(a)).astype(numpy.float64)
 
 
 def trace(a, t):

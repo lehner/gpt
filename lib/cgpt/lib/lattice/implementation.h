@@ -17,7 +17,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-
 template<class T>
 class cgpt_Lattice : public cgpt_Lattice_base {
 public:
@@ -62,10 +61,19 @@ public:
     l = 1.0;
   }
 
-  virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
-    return ::axpy(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
-  }
+  /*virtual void axpy(std::vector<cgpt_Lattice_base*>& z, std::vector<ComplexD>& a, std::vector<cgpt_Lattice_base*>& x, std::vector<cgpt_Lattice_base*>& y) {
+    PVector<Lattice<T>> _x, _y, _z;
+    cgpt_basis_fill(_x,x);
+    cgpt_basis_fill(_y,y);
+    cgpt_basis_fill(_z,z);
 
+    cgpt_axpy(_z,a,_x,_y);
+    }*/
+  
+  virtual void axpy(ComplexD a, cgpt_Lattice_base* x, cgpt_Lattice_base* y) {
+    return cgpt_axpy(l,(Coeff_t)a,compatible<T>(x)->l,compatible<T>(y)->l);
+  }
+  
   virtual void scale_per_coordinate(cgpt_Lattice_base* src,ComplexD* s,int dim) {
     cgpt_scale_per_coordinate(l,compatible<T>(src)->l,s,dim);
   }
@@ -74,15 +82,15 @@ public:
     return ::norm2(l);
   }
 
-  virtual void rank_inner_product(ComplexD* res, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, bool use_accelerator) {
+  virtual void rank_inner_product(ComplexD* res, std::vector<cgpt_Lattice_base*> & left, std::vector<cgpt_Lattice_base*> & right, long n_virtual, long n_block, bool use_accelerator) {
     PVector<Lattice<T>> _left;
     PVector<Lattice<T>> _right;
     cgpt_basis_fill(_left,left);
     cgpt_basis_fill(_right,right);
     if (use_accelerator) {
-      ::rankInnerProduct(res,_left,_right,n_virtual);
+      ::rankInnerProduct(res,_left,_right,n_virtual,n_block);
     } else {
-      ::rankInnerProductCpu(res,_left,_right,n_virtual);
+      ::rankInnerProductCpu(res,_left,_right,n_virtual,n_block);
     }
   }
 
@@ -213,10 +221,14 @@ public:
 
   virtual void* memory_view_open(ViewMode mode) {
     view_mode = mode;
+    if (cgpt_verbose_memory_view)
+      std::cout << GridLogMessage << "cgpt::memory_view_open " << l.getHostPointer() << " mode " << mode << std::endl;
     return MemoryManager::ViewOpen(l.getHostPointer(),l.oSites()*sizeof(T), mode, l.Advise()); 
   }
   
   virtual void memory_view_close() {
+    if (cgpt_verbose_memory_view)
+      std::cout << GridLogMessage << "cgpt::memory_view_close " << l.getHostPointer() << " mode " << view_mode << std::endl;
     MemoryManager::ViewClose(l.getHostPointer(), view_mode);
   }
 
@@ -230,13 +242,21 @@ public:
     size_t sz = v->size() * sizeof((*v)[0]);
     char* ptr = (char*)&(*v)[0];
 
+    if (cgpt_verbose_memory_view)
+      std::cout << GridLogMessage << "cgpt::memory_view " << ptr << " ishost=" << (mt == mt_host) << std::endl;
+
     PyObject* r = PyMemoryView_FromMemory(ptr,sz,PyBUF_WRITE);
     PyObject *capsule = PyCapsule_New((void*)v, NULL, [] (PyObject *capsule) -> void { 
-	//std::cout << "ViewClose" << std::endl; 
-	LatticeView<vobj>* v = (LatticeView<vobj>*)PyCapsule_GetPointer(capsule, NULL);
-	v->ViewClose();
-	delete v;
-      });
+      LatticeView<vobj>* v = (LatticeView<vobj>*)PyCapsule_GetPointer(capsule, NULL);
+
+      if (cgpt_verbose_memory_view) {
+	char* ptr = (char*)&(*v)[0];
+	std::cout << GridLogMessage << "cgpt::memory_view_close " << ptr << std::endl;
+      }
+
+      v->ViewClose();
+      delete v;
+    });
     ASSERT(!((PyMemoryViewObject*)r)->mbuf->master.obj);
     ((PyMemoryViewObject*)r)->mbuf->master.obj = capsule;
 
@@ -255,6 +275,12 @@ public:
     if (ishape.size() == 0) // treat complex numbers as 1d array with one element
       ishape.push_back(1);
   }
+
+  virtual void transfer_scalar_device_buffer(std::vector<cgpt_Lattice_base*>& from, long from_n_virtual, long r, void* ptr, long size, std::vector<long>& padding, std::vector<long>& offset, bool exp, long t) {
+    PVector<Lattice<T>> _from;
+    cgpt_basis_fill(_from,from);
+    cgpt_lattice_transfer_scalar_device_buffer(_from, from_n_virtual, r, ptr, size, padding, offset, exp, t);
+  }
   
   virtual int get_numpy_dtype() {
     return infer_numpy_type(Coeff_t());
@@ -263,11 +289,17 @@ public:
   virtual cgpt_block_map_base* block_map(GridBase* coarse, 
 					 std::vector<cgpt_Lattice_base*>& basis,
 					 long basis_n_virtual, long basis_virtual_size, long basis_n_block,
-					 cgpt_Lattice_base* mask) {
+					 cgpt_Lattice_base* mask, PyObject* tensor_projectors) {
 
     ASSERT(basis.size() > 0 && basis.size() % basis_n_virtual == 0);
 
-#define BASIS_SIZE(n) if (n == basis_virtual_size) { return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t> >(coarse,basis,basis_n_virtual,basis_n_block,mask); }
+#define BASIS_SIZE(n) if (n == basis_virtual_size) {			\
+      if (tensor_projectors == Py_None) {				\
+	return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t>, cgpt_project_identity<T> >(coarse,basis,basis_n_virtual,basis_n_block,mask,tensor_projectors); \
+      } else {								\
+	return new cgpt_block_map<T, iVSinglet ## n<vCoeff_t>, cgpt_project_tensor<T> >(coarse,basis,basis_n_virtual,basis_n_block,mask,tensor_projectors); \
+      }									\
+    }
 #include "../basis_size.h"
 #undef BASIS_SIZE
     
@@ -291,8 +323,9 @@ public:
     return cgpt_stencil_matrix_create<T>(grid, shifts, code, code_parallel_block_size, local);
   }
 
-  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local) {
-    return cgpt_stencil_matrix_vector_create<T>(matrix, grid, shifts, code, code_parallel_block_size, local);
+  virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local,
+								 int matrix_parity, int vector_parity) {
+    return cgpt_stencil_matrix_vector_create<T>(matrix, grid, shifts, code, code_parallel_block_size, local, matrix_parity, vector_parity);
   }
 
   virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, PyObject* segments, long local) {

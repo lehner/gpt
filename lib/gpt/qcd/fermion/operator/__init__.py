@@ -21,7 +21,6 @@ from gpt.qcd.fermion.operator.fine_operator import fine_operator
 from gpt.qcd.fermion.operator.differentiable_fine_operator import (
     differentiable_fine_operator,
 )
-from gpt.qcd.fermion.operator.coarse_operator import coarse_operator
 
 
 # (G5 D(U))^\dagger = G5 D(U)

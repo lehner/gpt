@@ -23,85 +23,95 @@ from gpt.algorithms import base_iterative
 
 
 class bicgstab(base_iterative):
-    @g.params_convention(eps=1e-15, maxiter=1000000)
+    @g.params_convention(eps=1e-15, maxiter=1000000, r0hat=None)
     def __init__(self, params):
         super().__init__()
         self.params = params
         self.eps = params["eps"]
         self.maxiter = params["maxiter"]
+        self.r0hat = params["r0hat"]
 
     def __call__(self, mat):
         vector_space = None
         if isinstance(mat, g.matrix_operator):
             vector_space = mat.vector_space
-            mat = mat.mat
-            # remove wrapper for performance benefits
 
         @self.timed_function
-        def inv(psi, src, t):
-            t("setup")
+        def inv(psi, src, time):
+            time("setup")
 
-            r, rhat, p, s = g.copy(src), g.copy(src), g.copy(src), g.copy(src)
-            mmpsi, mmp, mms = g.copy(src), g.copy(src), g.copy(src)
-
-            rho, rhoprev, alpha, omega = 1.0, 1.0, 1.0, 1.0
-
-            mat(mmpsi, psi)
-            r @= src - mmpsi
-
-            rhat @= r
-            p @= r
-            mmp @= r
-
-            r2 = g.norm2(r)
+            r2 = g.norm2(psi)
             ssq = g.norm2(src)
             if ssq == 0.0:
                 assert r2 != 0.0  # need either source or psi to not be zero
                 ssq = r2
             rsq = self.eps**2.0 * ssq
 
+            r = g(src - mat * psi)
+            rhat = g.copy(r) if self.r0hat is None else self.r0hat
+            rho = 1
+            alpha = 1
+            omega = 1
+            p = g(0.0 * r)
+            v = g(0.0 * r)
+
             for k in range(self.maxiter):
-                t("inner")
-                rhoprev = rho
-                rho = g.inner_product(rhat, r).real
+                rho_prev = rho
 
-                t("linearcomb")
-                beta = (rho / rhoprev) * (alpha / omega)
-                p @= r + beta * p - beta * omega * mmp
+                time("inner_product")
+                Crho = g.inner_product(rhat, r)
+                rho = Crho.real
+                beta = (rho / rho_prev) * (alpha / omega)
+                bo = beta * omega
 
-                t("mat")
-                mat(mmp, p)
+                time("linear algebra")
+                p = g(beta * p - bo * v + r)
 
-                t("inner")
-                alpha = rho / g.inner_product(rhat, mmp).real
+                time("matrix")
+                v = g(mat * p)
 
-                t("linearcomb")
-                s @= r - alpha * mmp
-
-                t("mat")
-                mat(mms, s)
-
-                t("inner")
-                ip, mms2 = g.inner_product_norm2(mms, s)
-                if mms2 == 0.0:
+                time("inner_product")
+                Calpha = g.inner_product(rhat, v)
+                if Calpha.real == 0.0:
+                    time("restart")
+                    rho = 1
+                    alpha = 1
+                    omega = 1
+                    v[:] = 0
+                    p[:] = 0
+                    r = g(src - mat * psi)
+                    g.message("Restart due to numerical instability")
                     continue
 
-                t("linearcomb")
-                omega = ip.real / mms2
-                psi += alpha * p + omega * s
+                alpha = rho / Calpha.real
 
-                t("axpy_norm")
-                r2 = g.axpy_norm2(r, -omega, mms, s)
+                time("linear algebra")
+                h = g(alpha * p + psi)
+                s = g(-alpha * v + r)
 
-                t("other")
+                time("matrix")
+                t = g(mat * s)
+
+                time("inner_product")
+                Comega = g.inner_product(t, s)
+                omega = Comega.real / g.norm2(t)
+
+                time("linear_algebra")
+                psi @= g(h + omega * s)
+                r = g(-omega * t + s)
+
+                time("inner_product")
+                r2 = g.norm2(r)
+
+                time()
+
+                if r2 <= rsq:
+                    self.log(f"converged in {k + 1} iterations")
+                    return
 
                 self.log_convergence(k, r2, rsq)
 
-                if r2 <= rsq:
-                    self.log(f"converged in {k+1} iterations")
-                    return
-
-            self.log(f"NOT converged in {k+1} iterations;  squared residual {r2:e} / {rsq:e}")
+            self.log(f"NOT converged in {k + 1} iterations;  squared residual {r2:e} / {rsq:e}")
 
         return g.matrix_operator(
             mat=inv,
