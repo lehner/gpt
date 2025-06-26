@@ -76,9 +76,10 @@ class schur_complement_two:
         op_vector_space = op.vector_space[0]
         C_vector_space = CC.vector_space[0]
         D_vector_space = DD.vector_space[0]
+        C_vector_space = CC.vector_space[0]
 
-        tmp_c = [C_vector_space.lattice() for i in range(2)]
         tmp_d = [D_vector_space.lattice() for i in range(2)]
+        tmp_c = [C_vector_space.lattice() for i in range(2)]
 
         def _N(o_d, i_d):
             DD.inv_mat(tmp_d[0], i_d)

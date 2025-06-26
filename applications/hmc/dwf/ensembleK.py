@@ -44,7 +44,6 @@ streams = ["a","d","b","c"]
 conf_range = range(600, 700)
 ensemble_tag = "ensemble-K"
 
-
 pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
 eofa_ratio = g.qcd.pseudofermion.action.exact_one_flavor_ratio
@@ -198,31 +197,6 @@ action_fermions_s = [
     for m1, m2, rf, af, se, ss, qq in hasenbusch_ratios
 ]
 
-
-
-force_visualization = {}
-
-class gradient_density_logger(g.core.group.diffeomorphism): # TODO: move to g.core.group
-    def __init__(self, storage, tag):
-        self.storage = storage
-        self.tag = tag
-        
-    def __call__(self, fields):
-        # do nothing
-        return fields
-
-    # apply the jacobian
-    def jacobian(self, fields, fields_prime, src):
-        density = None
-        for s in src:
-            d = g(g.trace(g.adj(s) * s))
-            if density is None:
-                density = d
-            else:
-                density += d
-        self.storage[self.tag] = density
-
-        return src
 
 
 force_visualization = {}
@@ -569,7 +543,6 @@ class job_reproduction_verify(g.jobs.base):
                 )
 
         g.barrier()
-
         
     def check(self, root):
         return os.path.exists(f"{root}/{self.name}/verified")
@@ -615,7 +588,7 @@ class job_draw(job_reproduction_base):
             dependencies
         )
         self.weight = 1.0
-
+        
     def perform_inner(self, root):
         global U
         
@@ -954,7 +927,7 @@ sys.exit(0)
 
 
 #no_accept_reject = True
-no_accept_reject = False
+# no_accept_reject = False
 
 
 # g.message(f"tau-iteration: {its} -> {tau/nsteps*its}")
