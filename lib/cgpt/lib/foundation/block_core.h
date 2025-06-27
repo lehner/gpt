@@ -155,7 +155,7 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
 				     long                                                       basis_n_virtual,
 				     const cgpt_block_lookup_table<T_singlet>&                  lut,
 				     long                                                       basis_n_block,
-				     basis_access_t                                             basis_access)
+				     basis_access_t&                                            basis_access)
 {
 
   assert(fine.size() > 0 && coarse.size() > 0 && basis.size() > 0);
@@ -192,6 +192,7 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
   VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorWriteDiscard);
 
   void* basis_access_args = basis_access.get_args();
+  typename basis_access_t::static_functions static_access;
 
   for (long basis_i0=0;basis_i0<basis_n;basis_i0+=basis_n_block) {
     long basis_i1 = std::min(basis_i0 + basis_n_block, basis_n);
@@ -212,7 +213,7 @@ inline void vectorizableBlockProject(PVector<Lattice<iVector<CComplex, basis_vir
 	    long sf = lut_v[sc][j];
 	    reduce = reduce
 	      + innerProductD2(
-			       basis_access.projector(coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]), basis_i_abs, basis_access_args),
+			       static_access.projector(coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]), basis_i_abs, basis_access_args),
 			       coalescedRead(fine_v[vec_i*fine_n_virtual + fine_virtual_i][sf])
 			       );
 	  }
@@ -239,7 +240,7 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
 				     long                                                       basis_n_virtual,
 				     const cgpt_block_lookup_table<T_singlet>&                  lut,
 				     long                                                       basis_n_block,
-				     basis_access_t                                             basis_access)
+				     basis_access_t&                                            basis_access)
 {
 
   assert(fine.size() > 0 && coarse.size() > 0 && basis.size() > 0);
@@ -275,6 +276,7 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
   VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorRead);
 
   void* basis_access_args = basis_access.get_args();
+  typename basis_access_t::static_functions static_access;
 
   for (long basis_i0=0;basis_i0<basis_n;basis_i0+=basis_n_block) {
     long basis_i1 = std::min(basis_i0 + basis_n_block, basis_n);
@@ -308,7 +310,7 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
 	    long coarse_virtual_i = basis_i_abs / coarse_virtual_size;
 	    long coarse_i = basis_i_abs % coarse_virtual_size;
 	    cgpt_convertType(cA,TensorRemove(coalescedRead(coarse_v[vec_i*coarse_n_virtual + coarse_virtual_i][sc])(coarse_i)));
-	    auto prod = cA*basis_access.projector(coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]), basis_i_abs, basis_access_args);
+	    auto prod = cA*static_access.projector(coalescedRead(basis_v[basis_i_rel*fine_n_virtual + fine_virtual_i][sf]), basis_i_abs, basis_access_args);
 	    cgpt_convertType(cAx,prod);
 	    fine_t = fine_t + cAx;
 	  }

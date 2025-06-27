@@ -72,8 +72,7 @@ public:
     return accessor;
   }
 
-  // Resident in managed memory
-  Vector<GeneralStencilEntry>  _entries;
+  HostDeviceVector<GeneralStencilEntry>  _entries;
 
   cgpt_GeneralLocalStencil(GridBase *grid, const std::vector<Coordinate> &shifts, int parity)
   {
@@ -86,7 +85,6 @@ public:
     this->_grid    = grid;
     this->_npoints = npoints;
     this->_entries.resize(npoints* osites);
-    this->_entries_p = &_entries[0];
 
     thread_for(site, osites, {
 	Coordinate Coor;
@@ -160,6 +158,8 @@ public:
 
 	}
     });
+
+    this->_entries_p = _entries.toDevice();
   }
   
 };

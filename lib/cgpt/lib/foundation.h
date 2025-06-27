@@ -50,18 +50,18 @@ public:
   void resize(size_t size) {
     assert(!_size);
     _size = size;
-    host = (T*)acceleratorAllocCpu(size * sizeof(T));
+    host = (T*)MemoryManager::CpuAllocate(size * sizeof(T));
 #ifdef GRID_HAS_ACCELERATOR
-    device = (T*)acceleratorAllocDevice(size * sizeof(T));
+    device = (T*)MemoryManager::AcceleratorAllocate(size * sizeof(T));
 #else
     device = host;
 #endif
   }
 
   ~HostDeviceVector() {
-    acceleratorFreeCpu(host);
+    MemoryManager::CpuFree(host, _size * sizeof(T));
 #ifdef GRID_HAS_ACCELERATOR
-    acceleratorFreeDevice(device);
+    MemoryManager::AcceleratorFree(device, _size * sizeof(T));
 #endif
   }
 
