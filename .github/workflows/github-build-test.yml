@@ -14,11 +14,11 @@ env:
   MPICH_CC: cc
   MPICH_CXX: c++
   # Note if this is changed, all caches will be not be valid anymore
-  CACHE_KEY: 2025-01-22b
+  CACHE_KEY: 2025-06-27
 
 jobs:
   build-grid:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -156,7 +156,7 @@ jobs:
 
   build-gpt:
     needs: build-grid
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -335,7 +335,7 @@ jobs:
 
   test-gpt:
     needs: [build-grid, build-gpt]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -451,7 +451,7 @@ jobs:
   build-gpt-doc:
     if: false
     needs: [build-grid, build-gpt]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Install Ubuntu packages
@@ -498,7 +498,7 @@ jobs:
 
   build-gpt-docker-base:
     needs: [build-grid, build-gpt, test-gpt]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check for rebuild
@@ -530,7 +530,7 @@ jobs:
 
   build-gpt-docker:
     needs: [build-grid, build-gpt, test-gpt, build-gpt-docker-base]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
