@@ -148,29 +148,10 @@ for precision in [g.single, g.double]:
     grid = g.grid(L, precision)
     M = g.mcomplex(grid, 16)
     rng.cnormal(M)
-    A = g.pack(M).to_accelerator_buffer()
-
-    # test inverse
-    t = g.timer("inverse")
-    t("blas_setup")
-    C = A.empty_clone()
-    idx = A.indices([0, 1, 2, 3])
-    blas = g.blas().inv(A[idx], C[idx])
-    t("blas_exec")
-    blas()
-    t("blas_setup")
-    Minv = g.lattice(M)
-    g.pack(Minv).from_accelerator_buffer(C)
-    t("grid")
-    g(g.matrix.inv(M))
-    t()
-
-    g.message(t)
-    eps2 = g.norm2(M * Minv - g.identity(M)) / g.norm2(M)
-    assert eps2 < precision.eps**2 * 100
 
     # test determinant
     A = g.pack(M).to_accelerator_buffer()
+    idx = A.indices([0, 1, 2, 3])
 
     t = g.timer("determinant")
     t("blas")
@@ -190,6 +171,31 @@ for precision in [g.single, g.double]:
     t()
 
     eps2 = g.norm2(Mdet - Mdet_ref) / g.norm2(Mdet)
+    g.message("DET", eps2)
     assert eps2 < precision.eps**2 * 100
 
     g.message(t)
+
+    # test inverse
+    A = g.pack(M).to_accelerator_buffer()
+    idx = A.indices([0, 1, 2, 3])
+    
+    t = g.timer("inverse")
+    t("blas_setup")
+    C = A.empty_clone()
+    blas = g.blas().inv(A[idx], C[idx]) # inv and det do not guarantee that A remains unchanged
+    t("blas_exec")
+    blas()
+    t("blas_setup")
+    Minv = g.lattice(M)
+    g.pack(Minv).from_accelerator_buffer(C)
+    t("grid")
+    g(g.matrix.inv(M))
+    t()
+
+    g.message(t)
+    eps2 = g.norm2(M * Minv - g.identity(M)) / g.norm2(M)
+    g.message("INVERSE", eps2)
+    assert eps2 < precision.eps**2 * 100
+    
+
