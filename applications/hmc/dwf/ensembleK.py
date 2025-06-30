@@ -41,7 +41,7 @@ nsteps_hamiltonian = 10
 
 run_replicas = [0,1] # run with reproduction replica
 streams = ["a","d","b","c"]
-conf_range = range(600, 700)
+conf_range = range(635, 642)
 ensemble_tag = "ensemble-K"
 
 pc = g.qcd.fermion.preconditioner
@@ -92,9 +92,9 @@ sloppy_prec = 1e-10
 sloppy_prec_light = 1e-10
 exact_prec = 1e-12
 
-cg_s_inner = inv.cg({"eps": 1e-4, "eps_abs": sloppy_prec * 0.15, "maxiter": 40000, "miniter": 50})
-cg_s_light_inner = inv.cg({"eps": 1e-4, "eps_abs": sloppy_prec_light * 0.15, "maxiter": 40000, "miniter": 50})
-cg_e_inner = inv.cg({"eps": 1e-4, "eps_abs": exact_prec * 0.3, "maxiter": 40000, "miniter": 50})
+cg_s_inner = inv.cg({"eps": 1e-4, "eps_abs": sloppy_prec * 0.15, "maxiter": 40000, "miniter": 50, "fail_if_not_converged": True})
+cg_s_light_inner = inv.cg({"eps": 1e-4, "eps_abs": sloppy_prec_light * 0.15, "maxiter": 40000, "miniter": 50, "fail_if_not_converged": True})
+cg_e_inner = inv.cg({"eps": 1e-4, "eps_abs": exact_prec * 0.3, "maxiter": 40000, "miniter": 50, "fail_if_not_converged": True})
 
 cg_s = inv.defect_correcting(
     inv.mixed_precision(cg_s_inner, g.single, g.double),
@@ -241,6 +241,7 @@ if visualization:
         transform(action_fermions_s, gradient_density_logger(force_visualization, f"fermion_{m1}_over_{m2}_U"), i)
 
 
+
 a_log_det = None
 for s in sm:
     action_gauge = action_gauge.transformed(s)
@@ -383,6 +384,7 @@ mdint = sympl.OMF2_force_gradient(
 g.message(mdint)
 
 
+
 ################################################################################
 # Job - general reproduction
 ################################################################################
@@ -507,7 +509,7 @@ class job_reproduction_verify(g.jobs.base):
             return A == B
         elif isinstance(A, g.lattice):
             eps2 = g.norm2(A - B)
-            g.message("Result", eps2)
+            g.message("Result", eps2, g.norm2(A))
             self.log(root, f"Verify lattice {A.otype} {A.grid}: {eps2}")
             return eps2 == 0.0
         else:
@@ -543,6 +545,7 @@ class job_reproduction_verify(g.jobs.base):
                 )
 
         g.barrier()
+
         
     def check(self, root):
         return os.path.exists(f"{root}/{self.name}/verified")
@@ -588,7 +591,7 @@ class job_draw(job_reproduction_base):
             dependencies
         )
         self.weight = 1.0
-        
+
     def perform_inner(self, root):
         global U
         
@@ -921,18 +924,22 @@ for stream in streams:
 ################################################################################
 # Execute one job at a time ;  allow for nodefile shuffle outside
 ################################################################################
-g.jobs.next(root_output, jobs, max_weight=100.0, stale_seconds=3600 * 4)
+for i in range(5):
+    g.jobs.next(root_output, jobs, max_weight=100.0, stale_seconds=3600 * 2)
 
 sys.exit(0)
 
 
+
 #no_accept_reject = True
-# no_accept_reject = False
+no_accept_reject = False
 
 
 # g.message(f"tau-iteration: {its} -> {tau/nsteps*its}")
 #         
+        
 #             g.message("Done")
+
 #         if its % 1 == 0: # temporarily check all of them
 #             h1, s1 = hamiltonian(False)
 #             g.message(f"dH = {h1-h0}")
@@ -993,7 +1000,9 @@ sys.exit(0)
 #             if os.path.exists(f"{dst}/checkpoint.{it}"):
 #                 #shutil.rmtree(f"{dst}/checkpoint.{it}")
 #                 os.rename(f"{dst}/checkpoint.{it}", f"{dst}/checkpoint.{it}.restore")
+    
 #     #rng = g.random(f"new{dst}-{it}", "vectorized_ranlux24_24_64")
+
 #     g.barrier()
 #     break
 #        metro = g.algorithms.markov.metropolis(rng)

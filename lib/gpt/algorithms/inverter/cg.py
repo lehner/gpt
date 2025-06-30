@@ -22,7 +22,7 @@ from gpt.algorithms import base_iterative
 
 
 class cg(base_iterative):
-    @g.params_convention(eps=1e-15, maxiter=1000000, eps_abs=None, miniter=0, prec=None)
+    @g.params_convention(eps=1e-15, maxiter=1000000, eps_abs=None, miniter=0, prec=None, fail_if_not_converged=False)
     def __init__(self, params):
         super().__init__()
         self.params = params
@@ -31,6 +31,7 @@ class cg(base_iterative):
         self.maxiter = params["maxiter"]
         self.miniter = params["miniter"]
         self.prec = params["prec"]
+        self.fail_if_not_converged = params["fail_if_not_converged"]
 
     def modified(self, **params):
         return cg({**self.params, **params})
@@ -106,6 +107,11 @@ class cg(base_iterative):
             self.log(
                 f"NOT converged in {k + 1} iterations;  squared residual {res:e} / {rsq:e}"
             )
+
+            if self.fail_if_not_converged:
+                g.message("FATAL error: CG not converged")
+                import sys
+                sys.exit(1)
 
         return g.matrix_operator(
             mat=inv, inv_mat=mat, accept_guess=(True, False), vector_space=vector_space
