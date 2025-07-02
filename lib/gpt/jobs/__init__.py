@@ -41,7 +41,6 @@ class scheduler_pbs:
 
     def is_step_running(self, step):
         field = "'{ print $5 }'"
-        g.message("HAVE TO LOOK FOR", step)
         stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -q R") == 0
         return stat
 
