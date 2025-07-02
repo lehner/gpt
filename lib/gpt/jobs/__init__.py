@@ -41,6 +41,7 @@ class scheduler_pbs:
 
     def is_step_running(self, step):
         field = "'{ print $5 }'"
+        g.message("HAVE TO LOOK FOR", step)
         stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -q R") == 0
         return stat
 
@@ -101,7 +102,7 @@ class base:
         return scd.is_step_running(step)
     
     def has_failed(self, root):
-        return self.has_started(root) and not self.is_running(root) and not self.has_completed(root)
+        return self.has_started(root) and not self.has_completed(root) and not self.is_running(root)
 
     def run_time(self, root):
         return (
