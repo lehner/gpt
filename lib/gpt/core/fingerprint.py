@@ -25,6 +25,8 @@ fingerprints = {}
 fingerprint_file = None
 fingerprint_index = 0
 fingerprint_paused = False
+fingerprint_status_time = 0.0
+fingerprint_global_timer = None
 
 def pause():
     global fingerprint_paused
@@ -52,27 +54,35 @@ def start(tag):
     fingerprint_file.write(f"Host: {socket.gethostname()}\n\n")
     fingerprint_file.write(f"Environment: {dict(os.environ)}\n\n")
 
+def flush():
+    global fingerprint_file
+    if fingerprint_file is not None:
+        fingerprint_file.flush()
+        
+
 
 class log:
     def __init__(self):
+        global fingerprint_global_timer
+        
         if fingerprint_paused:
             return
 
-        self.tm_stats = 0.0
-        self.t = g.timer("fingerprint.log")
-        self.t("backtrace.getframe")
+        if fingerprint_global_timer is None:
+            fingerprint_global_timer = g.timer("fingerprint.log")
+        fingerprint_global_timer("backtrace.getframe")
         frame = sys._getframe(1)
         stack = ""
-        self.t("backtrace.format")
+        fingerprint_global_timer("backtrace.format")
         while frame is not None:
-            stack = f"{stack}{frame.f_code.co_filename}:{frame.f_lineno}\n"
+            stack = f"{stack}{os.path.basename(frame.f_code.co_filename)}:{frame.f_lineno}\n"
             frame = frame.f_back
         self.stack = stack
         self.messages = []
-        self.t()
+        fingerprint_global_timer()
 
     def __call__(self, first=None, second=None):
-        global fingerprint_file, fingerprint_index
+        global fingerprint_file, fingerprint_index, fingerprint_status_time, fingerprint_global_timer
 
         if fingerprint_paused:
             return
@@ -87,13 +97,13 @@ class log:
                 # create fingerprint
                 tag = f"{second.otype.__name__}.{second.grid}"
                 if tag not in fingerprints:
-                    self.t("create fingerprint field")
+                    fingerprint_global_timer("create fingerprint field")
                     fingerprints[tag] = g.random(tag).cnormal(g.lattice(second))
-                    self.t()
+                    fingerprint_global_timer()
 
-                self.t("compute fingerprint field")
+                fingerprint_global_timer("compute fingerprint field")
                 fp = [g.rank_inner_product(fingerprints[tag], second)]
-                self.t()
+                fingerprint_global_timer()
                 
                 self(first, np.array(fp, dtype=np.complex128))
             else:
@@ -104,20 +114,21 @@ class log:
             if fingerprint_file is None:
                 return
 
-            self.t("write fingerprint")
+            fingerprint_global_timer("write fingerprint")
             fingerprint_file.write(f"Log {fingerprint_index}:\n{self.stack}")
             for a, b in self.messages:
                 fingerprint_file.write(f"Entry {a}:\n")
                 #fingerprint_file.write(f"Type: {type(b)}\n")
                 #fingerprint_file.write(f"Value: {b}\n")
+                fingerprint_global_timer("write fingerprint.numpy")
                 np.savetxt(fingerprint_file, b)
+                fingerprint_global_timer("write fingerprint")
             fingerprint_file.write("\n")
-            fingerprint_file.flush()
             fingerprint_index += 1
-            self.t()
+            fingerprint_global_timer()
 
             tm = g.time()
-            if tm > self.tm_stats + 30:
-                self.tm_stats = tm
-
-                g.message(self.t)
+            if tm > fingerprint_status_time + 30:
+                fingerprint_status_time = tm
+                fingerprint_file.flush()
+                g.message(fingerprint_global_timer)
