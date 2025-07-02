@@ -57,15 +57,19 @@ class log:
     def __init__(self):
         if fingerprint_paused:
             return
-        
+
+        self.tm_stats = 0.0
+        self.t = g.timer("fingerprint.log")
+        self.t("backtrace.getframe")
         frame = sys._getframe(1)
         stack = ""
+        self.t("backtrace.format")
         while frame is not None:
-            caller = getframeinfo(frame)
-            stack = f"{stack}{caller.filename}:{caller.lineno}\n"
+            stack = f"{stack}{frame.f_code.co_filename}:{frame.f_lineno}\n"
             frame = frame.f_back
         self.stack = stack
         self.messages = []
+        self.t()
 
     def __call__(self, first=None, second=None):
         global fingerprint_file, fingerprint_index
@@ -83,8 +87,14 @@ class log:
                 # create fingerprint
                 tag = f"{second.otype.__name__}.{second.grid}"
                 if tag not in fingerprints:
+                    self.t("create fingerprint field")
                     fingerprints[tag] = g.random(tag).cnormal(g.lattice(second))
+                    self.t()
+
+                self.t("compute fingerprint field")
                 fp = [g.rank_inner_product(fingerprints[tag], second)]
+                self.t()
+                
                 self(first, np.array(fp, dtype=np.complex128))
             else:
                 self(first, np.array(g.util.to_list(second), dtype=np.complex128))
@@ -94,6 +104,7 @@ class log:
             if fingerprint_file is None:
                 return
 
+            self.t("write fingerprint")
             fingerprint_file.write(f"Log {fingerprint_index}:\n{self.stack}")
             for a, b in self.messages:
                 fingerprint_file.write(f"Entry {a}:\n")
@@ -103,4 +114,10 @@ class log:
             fingerprint_file.write("\n")
             fingerprint_file.flush()
             fingerprint_index += 1
+            self.t()
 
+            tm = g.time()
+            if tm > self.tm_stats + 30:
+                self.tm_stats = tm
+
+                g.message(self.t)

@@ -21,7 +21,7 @@ from gpt.core.expr import factor
 from gpt.core.vector_space import implicit
 
 
-fingerprint = gpt.default.get_int("--fingerprint", 0) > 1
+fingerprint = gpt.default.get_int("--fingerprint", 0) > 2
 
 
 def make_list(accept_list):
