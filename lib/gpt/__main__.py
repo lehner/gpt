@@ -30,5 +30,9 @@ if "--cgpt-benchmarks" in sys.argv:
 
 
 if "--terminal" in sys.argv:
-    gpt.terminal.terminal_handler(None, None)
+    import time
+    while True:
+        gpt.terminal.terminal_handler(None, None)
+        time.sleep(10)
+        
     
