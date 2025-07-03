@@ -91,7 +91,7 @@ if terminal_root is not None:
                         
                 else:
                     try:
-                        exec(command, globals=glb)
+                        exec(command, glb)
                         sys.stdout.flush()
                         sys.stderr.flush()
                     except Exception as inst:

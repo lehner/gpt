@@ -89,8 +89,8 @@ def main(stdscr):
                     offset = (len(lines) - 10) // 10 * 10
 
             if a is not None:
-                
-                if c == 127: # backspace
+
+                if c == 127 or c == 263: # backspace
                     if cursor > 0:
                         cmd = cmd[0:cursor-1] + cmd[cursor:]
                         cursor -= 1

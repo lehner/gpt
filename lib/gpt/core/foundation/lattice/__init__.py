@@ -63,7 +63,7 @@ def cshift(first, second, third, fourth):
 
     if fingerprint:
         lll = gpt.fingerprint.log()
-        lll("l", l)
+        lll(f"l.{d}.{o}.{l.grid.processor_coor}.{l.grid.processor}", l)
         
     for i in t.otype.v_idx:
         cgpt.cshift(t.v_obj[i], l.v_obj[i], d, o)
