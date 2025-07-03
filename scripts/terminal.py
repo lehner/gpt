@@ -4,6 +4,7 @@ import os
 import time
 from curses import wrapper
 import curses
+import curses.textpad
 
 stdout=sys.argv[1]
 
@@ -40,10 +41,12 @@ def main(stdscr):
     cmd_idx = -1
     editing = True
     cursor = 0
-    
+    last_box = ""
     title = f"GPT terminal connected to {stdout}"
+    helpstr = "ctrl + N for multi-line input, ctrl + O to continue editing, ctrl + G to submit it"
     stdscr.addstr(1, (W - len(title)) // 2, title)
-    stdscr.addstr(2, 0, "-" * W, curses.color_pair(2))
+    stdscr.addstr(2, (W - len(helpstr)) // 2, helpstr)
+    stdscr.addstr(3, 0, "-" * W, curses.color_pair(2))
     stdscr.nodelay(True)
     stdscr.addstr(H - 3, 0, "-" * W, curses.color_pair(2))
     stdscr.keypad(True)
@@ -54,19 +57,19 @@ def main(stdscr):
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
     
-    L = H - 6
+    L = H - 7
     assert L > 0
     
     while True:
         update_stdout()
 
-        stdscr.addstr(2, W//2 - 2, "[" + str(offset) + "]" + "-" * 10, curses.color_pair(2))
+        stdscr.addstr(3, W//2 - 2, "[" + str(offset) + "]" + "-" * 10, curses.color_pair(2))
 
         for j in range(min(L, len(lines) - offset)):
             ln = lines[-j-1 - offset].replace("\t", " "*4)
-            stdscr.addstr(L + 2 - j, 0, ln + " "*(W-len(ln)))
+            stdscr.addstr(L + 3 - j, 0, ln + " "*(W-len(ln)))
         for j in range(min(L, len(lines) - offset), L):
-            stdscr.addstr(L + 2 - j, 0, "*" + " "*(W-1))
+            stdscr.addstr(L + 3 - j, 0, "*" + " "*(W-1))
 
         stdscr.refresh()
         c = stdscr.getch()
@@ -94,6 +97,19 @@ def main(stdscr):
                     cursor = 0
                 elif c == 5: # ctrl+E
                     cursor = len(cmd)
+                elif c == 14 or c == 15: # ctrl+N or ctrl+O
+                    win = curses.newwin(L, W, 4, 0)
+                    win.clear()
+                    if c == 15:
+                        for l, ln in enumerate(last_box.split("\n")):
+                            win.addstr(l, 0, ln)
+                    x = curses.textpad.Textbox(win)
+                    y = x.edit()
+                    last_box = y
+
+                    g = open(f"{a}/command", "wt")
+                    g.write(y + "\n")
+                    g.close()
                 elif c == 10: # enter
                     g = open(f"{a}/command", "wt")
                     g.write(cmd + "\n")

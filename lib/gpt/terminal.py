@@ -48,6 +48,11 @@ if terminal_root is not None:
             
         if os.path.exists(terminal_root):
 
+            # security: only accept if directory was created by current user
+            if os.geteuid() != os.stat(terminal_root).st_uid:
+                g.message("UserID mismatch!")
+                return
+
             signal.setitimer(
                 signal.ITIMER_REAL,
                 0.0,
@@ -61,7 +66,6 @@ if terminal_root is not None:
             g.message("")
 
             glb = globals()
-            loc = locals()
             while True:
                 command = get_command(cmd)
 
@@ -87,7 +91,7 @@ if terminal_root is not None:
                         
                 else:
                     try:
-                        exec(command, globals=glb, locals=loc)
+                        exec(command, globals=glb)
                         sys.stdout.flush()
                         sys.stderr.flush()
                     except Exception as inst:
