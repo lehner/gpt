@@ -25,6 +25,8 @@ def update_stdout():
             a = a[1].split("</TERMINAL>")
             assert len(a) == 2
             a = a[0]
+            if not os.path.exists(a):
+                os.makedirs(a, exist_ok=True)
         else:
             lines.append(line.rstrip("\n"))
 
@@ -161,5 +163,13 @@ def main(stdscr):
             stdscr.addstr(H - 2, 0, " > waiting for terminal setup to complete (takes up to 60 seconds)")
         time.sleep(0.001)
 
-wrapper(main)
+try:
+    wrapper(main)
+except KeyboardInterrupt:
+    pass
 
+if a is not None:
+    try:
+        os.rmdir(a)
+    except FileNotFoundError:
+        pass
