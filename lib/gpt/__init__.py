@@ -27,6 +27,7 @@ import gpt.qis
 import gpt.ml
 import gpt.ad
 import gpt.jobs
+import gpt.terminal
 import socket
 import cgpt
 import sys

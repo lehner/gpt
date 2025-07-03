@@ -19,7 +19,6 @@
 import gpt as g
 import sys, socket, os
 import numpy as np
-from inspect import getframeinfo
 
 fingerprints = {}
 fingerprint_file = None
