@@ -34,6 +34,9 @@ global_transfer<rank_t>::global_transfer(rank_t _rank, Grid_MPI_Comm _comm) : ra
   ASSERT(rank == 0);
 #endif
 
+#ifndef ACCELERATOR_AWARE_MPI
+  host_checksum_index = 0;
+#endif
 }
 
 template<typename rank_t>
@@ -167,7 +170,7 @@ void global_transfer<rank_t>::waitall() {
       } else {
 	memcpy(b.device, b.host, b.size - 8);
       }
-      uint64_t computed_cs = host_bounce_checksum((uint64_t*)b.device, b.size / 8 - 1, b.device_mt);
+      uint64_t computed_cs = host_bounce_checksum((uint64_t*)b.device, b.size / 8 - 1, b.device_mt) ^ (13 + host_checksum_index + 1000 * b.tag);
       uint64_t expected_cs = *(uint64_t*)(((char*)b.host) + b.size - 8);
       ASSERT(computed_cs == expected_cs);
 #else
@@ -186,6 +189,7 @@ template<typename rank_t>
 void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t sz, memory_type type) {
   if (sz <= size_mpi_max) {
 #ifdef CGPT_USE_MPI
+    int tag = other_rank * 65100 + rank;
     //printf("Send from %d to %d, %d bytes from %p (%g double)\n",this->rank,other_rank,(int)sz,pdata,*(double*)pdata);
 
 #ifndef ACCELERATOR_AWARE_MPI
@@ -197,7 +201,7 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
 	) {
 
 #ifdef GRID_CHECKSUM_COMMS
-      void* host = host_bounce_allocate(sz + 8, 0, type);
+      void* host = host_bounce_allocate(sz + 8, 0, type, tag);
       if (type == mt_accelerator) {
 	acceleratorCopyFromDevice(pdata, host, sz);
       } else {
@@ -205,7 +209,7 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
       }
 
       ASSERT(sz % 8 == 0);
-      *(uint64_t*)(((char*)host) + sz) = host_bounce_checksum((uint64_t*)pdata, sz / 8, type);
+      *(uint64_t*)(((char*)host) + sz) = host_bounce_checksum((uint64_t*)pdata, sz / 8, type) ^ (13 + host_checksum_index + 1000 * tag);
 
       pdata = host;
       sz += 8;
@@ -220,7 +224,7 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
 #endif
     
     MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Isend(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Isend(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],tag,comm,&r));
     requests.push_back(r);
 #endif
     
@@ -238,6 +242,7 @@ template<typename rank_t>
 void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz, memory_type type) {
   if (sz <= size_mpi_max) {
 #ifdef CGPT_USE_MPI
+    int tag = rank * 65100 + other_rank;
     
 #ifndef ACCELERATOR_AWARE_MPI
   
@@ -251,7 +256,7 @@ void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz, m
       sz += 8;
 #endif
 
-      void* host = host_bounce_allocate(sz, pdata, type);
+      void* host = host_bounce_allocate(sz, pdata, type, tag);
       pdata = host;
     }
     
@@ -259,7 +264,7 @@ void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz, m
     
     //printf("Recv from %d to %d, %d bytes to %p\n",other_rank,this->rank,(int)sz,pdata);
     MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Irecv(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Irecv(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],tag,comm,&r));
     requests.push_back(r);
 #endif
   } else {

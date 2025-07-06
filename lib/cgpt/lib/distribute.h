@@ -161,8 +161,9 @@ class global_transfer {
   void waitall();
 
 #ifndef ACCELERATOR_AWARE_MPI
-  struct hostBounceBuffer_t { void* host; void * device; size_t size; size_t reserved; memory_type device_mt; };
+  struct hostBounceBuffer_t { void* host; void * device; size_t size; size_t reserved; memory_type device_mt; int tag; };
   std::vector<hostBounceBuffer_t> host_bounce_buffer;
+  uint64_t host_checksum_index;
 
   void host_bounce_cleanup() {
     for (auto & b : host_bounce_buffer) {
@@ -176,29 +177,31 @@ class global_transfer {
       b.size = 0;
       b.device = 0;
     }
+    host_checksum_index++;
   }
 
   uint64_t host_bounce_checksum(uint64_t* pdata, size_t n, memory_type mt) {
     if (mt == mt_accelerator) {
-      return svm_xor(pdata, n) ^ 1;
+      return checksum_gpu(pdata, n);
     } else {
       uint64_t v = 0;
       thread_region
 	{
 	  uint64_t vt = 0;
 	  thread_for_in_region(i, n, {
-	      vt ^= pdata[i];
+	      auto l = i % 61;
+	      vt ^= pdata[i]<<l | pdata[i]>>(64-l);
 	    });
 	  thread_critical
 	    {
 	      v ^= vt;
 	    }
 	}
-      return v ^ 1;
+      return v;
     }
   }
 
-  void* host_bounce_allocate(size_t sz, void* device, memory_type device_mt) {
+  void* host_bounce_allocate(size_t sz, void* device, memory_type device_mt, int tag) {
     for (auto & b : host_bounce_buffer) {
       if (b.size == 0) {
 	if (b.reserved < sz) {
@@ -209,6 +212,7 @@ class global_transfer {
 	b.size = sz;
 	b.device = device;
 	b.device_mt = device_mt;
+	b.tag = tag;
 	return b.host;
       }
     }
@@ -222,6 +226,7 @@ class global_transfer {
     b.device = device;
     b.size = sz;
     b.device_mt = device_mt;
+    b.tag = tag;
     return b.host;
   }
 #endif
