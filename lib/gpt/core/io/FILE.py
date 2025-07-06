@@ -61,9 +61,15 @@ def FILE_exists(fn):
 
 class FILE_base:
     def __init__(self, fn, md):
+        # do not support appending
         if cache_root is not None:
             fn = cache_file(cache_root, fn, md)
         self.f = cgpt.fopen(fn, md)
+        if "a" in md:
+            cgpt.fseek(self.f, 0, 2)
+            self.pos = cgpt.ftell(self.f)
+        else:
+            self.pos = 0
         if self.f == 0:
             self.f = None
             raise FileNotFoundError("Can not open file %s" % fn)
@@ -84,11 +90,20 @@ class FILE_base:
     def tell(self):
         assert self.f is not None
         r = cgpt.ftell(self.f)
+        assert r == self.pos
         return r
 
     def seek(self, offset, whence):
         assert self.f is not None
         r = cgpt.fseek(self.f, offset, whence)
+        if whence == 0:
+            self.pos = offset
+        elif whence == 1:
+            self.pos += offset
+        elif whence == 2:
+            self.pos = cgpt.ftell(self.f)
+        else:
+            assert False
         return r
 
     def read(self, sz=None):
@@ -104,13 +119,19 @@ class FILE_base:
         if sz > 0:
             if cgpt.fread(self.f, sz, memoryview(t)) != 1:
                 t = bytes(0)
+            else:
+                self.pos += sz
         return t
 
     def write(self, d):
         assert self.f is not None
         if not isinstance(d, memoryview):
             d = memoryview(d)
-        assert cgpt.fwrite(self.f, len(d), d) == 1
+        for retry in range(3):
+            if cgpt.fwrite(self.f, len(d), d) == 1:
+                self.pos += len(d)
+                return
+            cgpt.fseek(self.f, self.pos, 0)
 
     def flush(self):
         assert self.f is not None
