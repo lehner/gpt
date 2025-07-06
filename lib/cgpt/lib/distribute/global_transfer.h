@@ -160,8 +160,20 @@ void global_transfer<rank_t>::waitall() {
 #ifndef ACCELERATOR_AWARE_MPI
 
   for (auto & b : host_bounce_buffer) {
-    if (b.device)
+    if (b.device) {
+#ifdef GRID_CHECKSUM_COMMS
+      if (b.device_mt == mt_accelerator) {
+	acceleratorCopyToDevice(b.host, b.device, b.size - 8);
+      } else {
+	memcpy(b.device, b.host, b.size - 8);
+      }
+      uint64_t computed_cs = host_bounce_checksum((uint64_t*)b.device, b.size / 8 - 1, b.device_mt);
+      uint64_t expected_cs = *(uint64_t*)(((char*)b.host) + b.size - 8);
+      ASSERT(computed_cs == expected_cs);
+#else
       acceleratorCopyToDevice(b.host, b.device, b.size);
+#endif
+    }
   }
   host_bounce_reset();
 
@@ -178,11 +190,31 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
 
 #ifndef ACCELERATOR_AWARE_MPI
 
-    if (type == mt_accelerator) {
-      void* host = host_bounce_allocate(sz, 0);
+    if (type == mt_accelerator
+#ifdef GRID_CHECKSUM_COMMS
+	|| true
+#endif
+	) {
+
+#ifdef GRID_CHECKSUM_COMMS
+      void* host = host_bounce_allocate(sz + 8, 0, type);
+      if (type == mt_accelerator) {
+	acceleratorCopyFromDevice(pdata, host, sz);
+      } else {
+	memcpy(host, pdata, sz);
+      }
+
+      ASSERT(sz % 8 == 0);
+      *(uint64_t*)(((char*)host) + sz) = host_bounce_checksum((uint64_t*)pdata, sz / 8, type);
+
+      pdata = host;
+      sz += 8;
+#else
+      void* host = host_bounce_allocate(sz, 0, type);
       acceleratorCopyFromDevice(pdata, host, sz);
-      isend(other_rank, host, sz, mt_host);
-      return;
+      pdata = host;
+#endif
+
     }
     
 #endif
@@ -208,11 +240,19 @@ void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz, m
 #ifdef CGPT_USE_MPI
     
 #ifndef ACCELERATOR_AWARE_MPI
+  
+    if (type == mt_accelerator
+#ifdef GRID_CHECKSUM_COMMS
+	|| true
+#endif
+	) {
 
-    if (type == mt_accelerator) {
-      void* host = host_bounce_allocate(sz, pdata);
-      irecv(other_rank, host, sz, mt_host);
-      return;
+#ifdef GRID_CHECKSUM_COMMS
+      sz += 8;
+#endif
+
+      void* host = host_bounce_allocate(sz, pdata, type);
+      pdata = host;
     }
     
 #endif

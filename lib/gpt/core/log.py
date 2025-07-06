@@ -75,9 +75,15 @@ signal.signal(signal.SIGUSR2, backtrace_signal_handler)
 
 if gpt.default.has("--signal-heartbeat"):
     import time
-    
+
+    bpm = gpt.default.get_int("--signal-heartbeat-bpm", 1)
+    beats = 0
     def signal_handler_noop(sig, frame):
-        message("Heartbeat received")
+        global beats
+        beats += 1
+        if beats >= bpm:
+            message(f"{beats} heartbeat(s) received")
+            beats = 0
 
     signal.signal(signal.SIGUSR1, signal_handler_noop)
 
@@ -85,8 +91,11 @@ if gpt.default.has("--signal-heartbeat"):
     if pid == 0:
         parentid = os.getppid()
         while True:
-            time.sleep(60)
-            os.kill(parentid, signal.SIGUSR1)
+            time.sleep(60 / bpm)
+            try:
+                os.kill(parentid, signal.SIGUSR1)
+            except ProcessLookupError:
+                sys.exit(0)
 
 if gpt.default.is_verbose("all_signals_backtrace"):
     for s in [
