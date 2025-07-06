@@ -131,7 +131,8 @@ class FILE_base:
             if cgpt.fwrite(self.f, len(d), d) == 1:
                 self.pos += len(d)
                 return
-            cgpt.fseek(self.f, self.pos, 0)
+            assert cgpt.fseek(self.f, self.pos, 0) == 0
+        raise IOError()
 
     def flush(self):
         assert self.f is not None
