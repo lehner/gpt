@@ -8,6 +8,7 @@ arg_grid = g.default.get_ivec("--grid", None, 4)
 
 assert arg_grid is not None
 
+g.fingerprint.start("fingerprints/manual")
 
 g.default.set_verbose("random", False)
 rng = g.random(

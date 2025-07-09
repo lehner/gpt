@@ -19,6 +19,7 @@
 import gpt as g
 import sys, socket, os
 import numpy as np
+import cgpt
 
 fingerprints = {}
 fingerprint_file = None
@@ -79,6 +80,7 @@ class log:
         self.stack = stack
         self.messages = []
         fingerprint_global_timer()
+        cgpt.view_log_trigger(1)
 
     def __call__(self, first=None, second=None):
         global fingerprint_file, fingerprint_index, fingerprint_status_time, fingerprint_global_timer
@@ -110,11 +112,16 @@ class log:
 
         else:
 
+            view_log = cgpt.view_log_trigger(0)
             if fingerprint_file is None:
                 return
 
             fingerprint_global_timer("write fingerprint")
             fingerprint_file.write(f"Log {fingerprint_index}:\n{self.stack}")
+            if len(view_log) > 0:
+                fingerprint_file.write(f"Entry view_log:\n")
+                for vl in view_log:
+                    fingerprint_file.write(f"{vl}\n")
             for a, b in self.messages:
                 fingerprint_file.write(f"Entry {a}:\n")
                 #fingerprint_file.write(f"Type: {type(b)}\n")

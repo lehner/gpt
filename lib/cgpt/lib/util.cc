@@ -298,3 +298,44 @@ EXPORT(accelerator_barrier,{
     accelerator_barrier();
     return PyLong_FromLong(0);
   });
+
+EXPORT(view_log_trigger,{
+    
+    long start;
+    if (!PyArg_ParseTuple(args, "l", &start)) {
+      return NULL;
+    }
+
+#ifdef GRID_LOG_VIEWS
+    if (start) {
+      ViewLogger::Begin();
+      return PyLong_FromLong(0);
+    } else {
+      ViewLogger::End();
+
+      size_t n = ViewLogger::LogVector.size();
+      PyObject* ret = PyList_New(n);
+      for (size_t i=0;i<n;i++) {
+	char buf[512];
+	const char* fn_head = strrchr(ViewLogger::LogVector[i].filename, '/');
+	ASSERT(fn_head);
+	snprintf(buf, sizeof(buf), "%s:%d:%d %ld %ld", fn_head+1,
+		ViewLogger::LogVector[i].line,
+		ViewLogger::LogVector[i].index,
+		ViewLogger::LogVector[i].head,
+		ViewLogger::LogVector[i].tail);
+	PyList_SetItem(ret,i,PyUnicode_FromStringAndSize(buf,strlen(buf)));
+      }
+      return ret;
+    }
+
+#else
+    if (start) {
+      return PyLong_FromLong(1);
+    } else {
+      return PyList_New(0);
+    }
+
+#endif
+    
+  });
