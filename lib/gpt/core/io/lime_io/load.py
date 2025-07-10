@@ -97,10 +97,14 @@ class lime_reader:
             d = self.get_xml_dict("ildg-format")
             L = [int(d["lx"]), int(d["ly"]), int(d["lz"]), int(d["lt"])]
             assert d["field"] == "su3gauge"
-            assert d["precision"] == "64"
 
             # define grid from header
-            grid = g.grid(L, g.double)
+            if d["precision"] == "64":
+                grid = g.grid(L, g.double)
+            elif d["precision"] == "32":
+                grid = g.grid(L, g.single)
+            else:
+                raise TypeError(f"Unknown precision in lime file: {d['precision']}")
 
             # create lattice
             return [g.mcolor(grid) for mu in range(4)]
