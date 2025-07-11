@@ -64,6 +64,13 @@ EXPORT(save,{
     
   });
 
+
+struct cgpt_FILE {
+  int fd;
+  bool write;
+  off_t pos;
+};
+
 EXPORT(fopen,{
     PyObject* _fn,* _md;
     std::string fn, md;
@@ -73,36 +80,92 @@ EXPORT(fopen,{
     cgpt_convert(_fn,fn);
     cgpt_convert(_md,md);
 
-    return PyLong_FromVoidPtr(fopen(fn.c_str(),md.c_str()));
+    bool binary = (md.find("b") != std::string::npos);
+    bool read = (md.find("r") != std::string::npos);
+    bool write = (md.find("w") != std::string::npos);
+    bool append = (md.find("a") != std::string::npos);
+    bool readwrite = (md.find("+") != std::string::npos);
+
+    ASSERT(_FILE_OFFSET_BITS >=  64);
+    ASSERT(sizeof(off_t) >= 8);
+
+    cgpt_FILE* file = new cgpt_FILE();
+
+    int flags = 0;
+
+    if (write || append)
+      flags |= O_CREAT|O_TRUNC;
+
+    if (readwrite) {
+      flags |= O_RDWR;
+      file->write = true;
+    } else if (read) {
+      flags |= O_RDONLY;
+      file->write = false;
+    } else if (write) {
+      flags |= O_WRONLY;
+      file->write = true;
+    } else if (append) {
+      flags |= O_WRONLY;
+      file->write = true;
+    } else {
+      ERR("Neither read nor write in %s", md.c_str());
+    }
+
+    if (append)
+      flags |= O_APPEND;
+
+    file->fd = open(fn.c_str(), flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    file->pos = 0;
+
+    if (append) {
+      file->pos = lseek(file->fd, 0, SEEK_CUR);
+      if (file->pos == (off_t)-1) {
+	ERR("Could not determine file offset in append mode for %s", fn.c_str());
+      }
+    }
+      
+    if (file->fd == -1) {
+      delete file;
+      file = 0;
+    }
+    
+    return PyLong_FromVoidPtr(file);
   });
 
 EXPORT(fclose,{
-    void* _file;
+    cgpt_FILE* _file;
     if (!PyArg_ParseTuple(args, "l", &_file)) {
       return NULL;
     }
-    fclose((FILE*)_file);
+
+    int err;
+    if (_file->write) {
+      while ((err = fsync(_file->fd)) == EINTR);
+
+      if (err)
+	ERR("fsync failed during fclose: %d\n", err);
+    }
+    
+    err = close(_file->fd);
+    if (err)
+      ERR("fclose failed: %d\n", err);
+
+    delete _file;
+    
     return PyLong_FromLong(0);
   });
 
 EXPORT(ftell,{
-    void* _file;
+    cgpt_FILE* _file;
     if (!PyArg_ParseTuple(args, "l", &_file)) {
       return NULL;
     }
-    return PyLong_FromLong((long)ftello((FILE*)_file));
-  });
-
-EXPORT(fflush,{
-    void* _file;
-    if (!PyArg_ParseTuple(args, "l", &_file)) {
-      return NULL;
-    }
-    return PyLong_FromLong((long)fflush((FILE*)_file));
+    return PyLong_FromLong((long)_file->pos);
   });
 
 EXPORT(fseek,{
-    void* _file;
+    cgpt_FILE* _file;
     long offset, _whence;
     int whence;
     if (!PyArg_ParseTuple(args, "lll", &_file,&offset,&_whence)) {
@@ -121,11 +184,16 @@ EXPORT(fseek,{
     default:
       ERR("Unknown seek whence");
     }
-    return PyLong_FromLong((long)fseeko((FILE*)_file,offset,whence));
+
+    _file->pos = lseek(_file->fd, offset, whence);
+    if (_file->pos == (off_t)-1)
+      return PyLong_FromLong(-1);
+    else
+      return PyLong_FromLong(0);
   });
 
 EXPORT(fread,{
-    void* _file;
+    cgpt_FILE* _file;
     long size;
     PyObject* dst;
     if (!PyArg_ParseTuple(args, "llO", &_file,&size,&dst)) {
@@ -134,14 +202,35 @@ EXPORT(fread,{
     ASSERT(PyMemoryView_Check(dst));
     Py_buffer* buf = PyMemoryView_GET_BUFFER(dst);
     ASSERT(PyBuffer_IsContiguous(buf,'C'));
-    void* d = buf->buf;
+    char* d = (char*)buf->buf;
     long len = buf->len;
     ASSERT(len >= size);
-    return PyLong_FromLong(fread(d,size,1,(FILE*)_file));
+
+    while (size > 0) {
+      size_t n = read(_file->fd, d, size);
+      if (n == (size_t)-1) {
+	if (errno == EAGAIN || errno == EINTR)
+	  continue;
+	else
+	  ERR("Error in read of %ld bytes: %d\n", (long)size, errno);
+      }
+
+      if (n == 0) {
+	return PyLong_FromLong(0);
+      }
+
+      ASSERT(n <= size);
+      
+      d += n;
+      size -= n;
+      _file->pos += n;
+    }
+    
+    return PyLong_FromLong(1);
   });
 
 EXPORT(fwrite,{
-    void* _file;
+    cgpt_FILE* _file;
     long size;
     PyObject* src;
     if (!PyArg_ParseTuple(args, "llO", &_file,&size,&src)) {
@@ -150,17 +239,25 @@ EXPORT(fwrite,{
     ASSERT(PyMemoryView_Check(src));
     Py_buffer* buf = PyMemoryView_GET_BUFFER(src);
     ASSERT(PyBuffer_IsContiguous(buf,'C'));
-    void* s = buf->buf;
+    char* s = (char*)buf->buf;
     long len = buf->len;
     ASSERT(len >= size);
-    return PyLong_FromLong(fwrite(s,size,1,(FILE*)_file));
-  });
 
-EXPORT(funbuffer,{
-    void* _file;
-    if (!PyArg_ParseTuple(args, "l", &_file)) {
-      return NULL;
+    while (size > 0) {
+      size_t n = write(_file->fd, s, size);
+      if (n == (size_t)-1) {
+	if (errno == EAGAIN || errno == EINTR)
+	  continue;
+	else
+	  ERR("Error in read of %ld bytes: %d\n", (long)size, errno);
+      }
+
+      ASSERT(n <= size);
+      
+      s += n;
+      size -= n;
+      _file->pos += n;
     }
-    setbuf((FILE*)_file, 0);
-    return PyLong_FromLong(0);
+    
+    return PyLong_FromLong(1);
   });

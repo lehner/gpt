@@ -39,7 +39,6 @@ class lime_writer:
         if self.comm.processor != 0:
             self.f = g.FILE(fn, "r+b")
 
-        self.f.unbuffer()
         self.append_offset = 0
 
         self.index = {}

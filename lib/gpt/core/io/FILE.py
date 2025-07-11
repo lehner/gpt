@@ -65,11 +65,6 @@ class FILE_base:
         if cache_root is not None:
             fn = cache_file(cache_root, fn, md)
         self.f = cgpt.fopen(fn, md)
-        if "a" in md:
-            cgpt.fseek(self.f, 0, 2)
-            self.pos = cgpt.ftell(self.f)
-        else:
-            self.pos = 0
         if self.f == 0:
             self.f = None
             raise FileNotFoundError("Can not open file %s" % fn)
@@ -78,10 +73,6 @@ class FILE_base:
         if self.f is not None:
             cgpt.fclose(self.f)
 
-    def unbuffer(self):
-        assert self.f is not None
-        cgpt.funbuffer(self.f)
-
     def close(self):
         assert self.f is not None
         cgpt.fclose(self.f)
@@ -89,22 +80,11 @@ class FILE_base:
 
     def tell(self):
         assert self.f is not None
-        r = cgpt.ftell(self.f)
-        assert r == self.pos
-        return r
+        return cgpt.ftell(self.f)
 
     def seek(self, offset, whence):
         assert self.f is not None
-        r = cgpt.fseek(self.f, offset, whence)
-        if whence == 0:
-            self.pos = offset
-        elif whence == 1:
-            self.pos += offset
-        elif whence == 2:
-            self.pos = cgpt.ftell(self.f)
-        else:
-            assert False
-        return r
+        assert cgpt.fseek(self.f, offset, whence) == 0
 
     def read(self, sz=None):
         if sz is None:
@@ -119,24 +99,13 @@ class FILE_base:
         if sz > 0:
             if cgpt.fread(self.f, sz, memoryview(t)) != 1:
                 t = bytes(0)
-            else:
-                self.pos += sz
         return t
 
     def write(self, d):
         assert self.f is not None
         if not isinstance(d, memoryview):
             d = memoryview(d)
-        for retry in range(3):
-            if cgpt.fwrite(self.f, len(d), d) == 1:
-                self.pos += len(d)
-                return
-            assert cgpt.fseek(self.f, self.pos, 0) == 0
-        raise IOError()
-
-    def flush(self):
-        assert self.f is not None
-        cgpt.fflush(self.f)
+        assert cgpt.fwrite(self.f, len(d), d) == 1
 
 
 class FILE_windowed_reader:

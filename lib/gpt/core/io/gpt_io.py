@@ -202,7 +202,6 @@ class gpt_io:
                     f.write(g.mpi[i].to_bytes(4, byteorder="little"))
                 f.write(len(mv).to_bytes(8, byteorder="little"))
                 f.write(mv)
-                f.flush()
                 dt_write += gpt.time()
                 szGB += len(mv) / 1024.0**3.0
 

@@ -557,7 +557,6 @@ def save(filename, objs, params):
         fmeta.write("nkeep_single = %d\n" % nsingle)
         fmeta.write("blocks = %d\n" % blocks)
         fmeta.write("FP16_COEF_EXP_SHARE_FLOATS = %d\n" % FP16_COEF_EXP_SHARE_FLOATS)
-        fmeta.flush()  # write crc32 later
 
     # create cartesian view on fine grid
     cv0 = gpt.cartesian_view(-1, mpi, fdimensions, fgrid.cb, site_cb)
