@@ -236,7 +236,7 @@ void cgpt_axpy(Lattice<vobj> &ret,sobj a,const Lattice<vobj> &x,const Lattice<vo
   ret.Checkerboard() = x.Checkerboard();
   conformable(ret,x);
   conformable(x,y);
-  autoView( ret_v , ret, AcceleratorWrite);
+  autoView( ret_v , ret, AcceleratorWriteDiscard);
   autoView( x_v , x, AcceleratorRead);
   autoView( y_v , y, AcceleratorRead);
 

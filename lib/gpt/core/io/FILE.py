@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, os, sys, shutil, zipfile
+import cgpt, gpt, os, sys, shutil, zipfile, time
 
 
 def cache_file(root, src, md):
@@ -95,7 +95,10 @@ class FILE_base:
             return self.read(size - pos)
 
         assert self.f is not None
-        t = bytes(sz)
+        try:
+            t = bytes(sz)
+        except OverflowError:
+            raise IOError(f"Cannot allocate {sz} bytes")
         if sz > 0:
             if cgpt.fread(self.f, sz, memoryview(t)) != 1:
                 t = bytes(0)

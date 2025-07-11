@@ -78,11 +78,14 @@ if gpt.default.has("--signal-heartbeat"):
 
     bpm = gpt.default.get_int("--signal-heartbeat-bpm", 1)
     beats = 0
+
     def signal_handler_noop(sig, frame):
         global beats
         beats += 1
         if beats >= bpm:
-            message(f"{beats} heartbeat(s) received")
+            if gpt.rank() == 0:
+                msg = f"{beats} heartbeat(s) received\n"
+                os.write(sys.stdout.fileno(), msg.encode("utf-8"))
             beats = 0
 
     signal.signal(signal.SIGUSR1, signal_handler_noop)

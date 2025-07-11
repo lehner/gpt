@@ -79,8 +79,9 @@ class log:
             frame = frame.f_back
         self.stack = stack
         self.messages = []
-        fingerprint_global_timer()
+        fingerprint_global_timer("view.log")
         cgpt.view_log_trigger(1)
+        fingerprint_global_timer()
 
     def __call__(self, first=None, second=None):
         global fingerprint_file, fingerprint_index, fingerprint_status_time, fingerprint_global_timer
@@ -112,8 +113,11 @@ class log:
 
         else:
 
+            fingerprint_global_timer("view.log")
             view_log = cgpt.view_log_trigger(0)
+
             if fingerprint_file is None:
+                fingerprint_global_timer()
                 return
 
             fingerprint_global_timer("write fingerprint")
