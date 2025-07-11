@@ -26,8 +26,14 @@ class cshift_executer:
         self.buffer_descriptions = buffer_descriptions
         self.plan = plan
 
-    def __call__(self, fields):
-        buffers = [g.lattice(b[0], b[1]) for b in self.buffer_descriptions]
+    def __call__(self, first, second=None):
+        if second is None:
+            fields = first
+            buffers = [g.lattice(b[0], b[1]) for b in self.buffer_descriptions]
+        else:
+            buffers = g.util.to_list(first)
+            fields = second
+
         for i in range(len(self.buffer_descriptions)):
             buffers[i].checkerboard(self.buffer_descriptions[i][2])
         self.plan(buffers, fields)
@@ -48,7 +54,13 @@ class cshift_plan:
         indices = {}
         for d in displacements:
             indices[d] = self.index
-            self.destinations.append(g.lattice(field))
+            dst = g.lattice(field)
+            self.destinations.append(dst)
+
+            if dst.grid.cb.n == 2:
+                if sum(d) % 2 != 0:
+                    dst.checkerboard(field.checkerboard().inv())
+
             self.index += 1
         self.indices.append(indices)
         return indices
@@ -58,11 +70,13 @@ class cshift_plan:
         buffer_descriptions = []
         for i in range(len(self.sources)):
             src = self.sources[i]
-            src_cb = src.checkerboard()
             coordinates = g.coordinates(src)
             L = src.grid.fdimensions
             for x in self.displacements[i]:
-                buffer_descriptions.append((src.grid, src.otype, src_cb))
-                plan.destination += self.destinations[self.indices[i][x]].view[:]
-                plan.source += src.view[cgpt.coordinates_shift(coordinates, x, L)]
+                dst = self.destinations[self.indices[i][x]]
+                buffer_descriptions.append((src.grid, src.otype, dst.checkerboard()))
+                plan.destination += dst.view[
+                    cgpt.coordinates_shift(coordinates, tuple([-y for y in x]), L)
+                ]
+                plan.source += src.view[:]
         return cshift_executer(buffer_descriptions, plan())
