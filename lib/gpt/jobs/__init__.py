@@ -43,7 +43,6 @@ class scheduler_pbs:
         field = "'{ print $5 }'"
         # setup in a manner that an error in calling qstat translates to the job being presumed running
         stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -qv R") != 0
-        g.message(f"SCHEDULER_PBS, job {step} is running {stat}")
         return stat
 
 
