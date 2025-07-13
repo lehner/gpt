@@ -25,6 +25,7 @@ else:
 # g.message("Metadata", U[0].metadata)
 rng = g.random("test")
 U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
+U2 = rng.cnormal(g.vspincolor(g.grid([4, 8, 8, 8, 16], g.double)))
 
 # create a sparse sub-domain and a sparse lattice S with 1% of points
 nsparse = int(0.01 * U[0].grid.gsites / U[0].grid.Nprocessors)
@@ -67,12 +68,15 @@ to_save = {
     ],  # fundamental data types
     "np": g.coordinates(U[0].grid),  # write numpy array from root node
     "U": U,  # write list of lattices
+    "U2": U2,
     "sdomain": sdomain,
     "S": S,
     "tu": U[0][1, 1, 1, 1],
 }
 
 g.save(f"{work_dir}/out", to_save)
+
+del to_save["U2"]
 
 # save in custom gpt format with different mpi distribution of local views
 g.save(
@@ -108,6 +112,11 @@ def check_all(res, tag):
     for i in range(4):
         eps2 = g.norm2(res["U"][i] - U[i])
         g.message("Test first restore of U[%d]:" % i, eps2)
+        assert eps2 < 1e-25
+
+    if "U2" in res:
+        eps2 = g.norm2(res["U2"] - U2)
+        g.message("Test U2 restore:", eps2)
         assert eps2 < 1e-25
 
     eps2 = g.norm2(res["S"] - S)

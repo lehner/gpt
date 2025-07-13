@@ -94,7 +94,7 @@ EXPORT(fopen,{
     int flags = 0;
 
     if (write || append)
-      flags |= O_CREAT|O_TRUNC;
+      flags |= O_CREAT;
 
     if (readwrite) {
       flags |= O_RDWR;
@@ -103,7 +103,7 @@ EXPORT(fopen,{
       flags |= O_RDONLY;
       file->write = false;
     } else if (write) {
-      flags |= O_WRONLY;
+      flags |= O_WRONLY|O_TRUNC;
       file->write = true;
     } else if (append) {
       flags |= O_WRONLY;
@@ -119,7 +119,7 @@ EXPORT(fopen,{
     file->pos = 0;
 
     if (append) {
-      file->pos = lseek(file->fd, 0, SEEK_CUR);
+      file->pos = lseek(file->fd, 0, SEEK_END);
       if (file->pos == (off_t)-1) {
 	ERR("Could not determine file offset in append mode for %s", fn.c_str());
       }
