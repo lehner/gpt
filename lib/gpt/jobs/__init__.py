@@ -41,7 +41,8 @@ class scheduler_pbs:
 
     def is_step_running(self, step):
         field = "'{ print $5 }'"
-        stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -q R") == 0
+        # setup in a manner that an error in calling qstat translates to the job being presumed running
+        stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -qv R") != 0
         return stat
 
 

@@ -243,7 +243,7 @@ if visualization:
 
 
 a_log_det = None
-for s in sm:
+for s in sm: # sm = [ Sx Sy Sz St ] ->   f(U) -> f(Sx(U)) -> ... -> f(Sx(Sy(Sz(St(U)))))
     action_gauge = action_gauge.transformed(s)
     for i in range(len(hasenbusch_ratios)):
         transform(action_fermions_e, s, i)
@@ -423,6 +423,8 @@ class job_reproduction_base(g.jobs.base):
         
         # and perform task
         self.perform_inner(root)
+
+        g.fingerprint.flush()
 
 
 ################################################################################
