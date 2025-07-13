@@ -21,6 +21,9 @@
 import gpt as g
 
 
+fingerprint = g.default.get_int("--fingerprint", 0) > 1
+
+
 class MMdag:
     def M(op):
         return op
@@ -74,19 +77,25 @@ class MMdag_evenodd:
             tmp = [op.Mooee.vector_space[0].lattice() for _ in [0, 1]]
 
             def operator(dst, src):
+                if fingerprint:
+                    lll = g.fingerprint.log()
+            
                 op.Meooe.adj_mat(dst, src)
                 op.Mooee.adj_inv_mat(tmp[0], dst)
                 op.Meooe.adj_mat(dst, tmp[0])
                 op.Mooee.adj_mat(tmp[0], src)
 
-                tmp[1] @= tmp[0] - dst
-
+                g.axpy(tmp[1], -1.0, dst, tmp[0])
+                       
                 op.Meooe.mat(dst, tmp[1])
                 op.Mooee.inv_mat(tmp[0], dst)
                 op.Meooe.mat(dst, tmp[0])
                 op.Mooee.mat(tmp[0], tmp[1])
 
-                dst @= tmp[0] - dst
+                g.axpy(dst, -1.0, dst, tmp[0])
+
+                if fingerprint:
+                    lll()
 
             return g.matrix_operator(mat=operator, vector_space=op.Mooee.vector_space).inherit(
                 op, lambda nop: spawn(nop)

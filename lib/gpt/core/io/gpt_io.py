@@ -272,7 +272,8 @@ class gpt_io:
                 dt_crc -= gpt.time()
                 crc_comp = gpt.crc32(data)
                 dt_crc += gpt.time()
-                assert crc_comp == crc_exp
+                if crc_comp != crc_exp:
+                    raise IOError(f"Checksum verification failed {crc_comp} <> {crc_exp}")
                 sys.stdout.flush()
                 szGB += len(data) / 1024.0**3.0
             else:
