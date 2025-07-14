@@ -167,7 +167,8 @@ class gpt_io:
 
         # performance
         dt_distr, dt_crc, dt_write = 0.0, 0.0, 0.0
-        # g.barrier()
+
+        g.barrier()
         t0 = gpt.time()
         szGB = 0.0
 
@@ -205,9 +206,9 @@ class gpt_io:
                 dt_write += gpt.time()
                 szGB += len(mv) / 1024.0**3.0
 
-        t1 = gpt.time()
-
         szGB = g.globalsum(szGB)
+        t1 = gpt.time()
+        
         if self.verbose and dt_crc != 0.0:
             gpt.message(
                 "Wrote %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for checksum, %g GB/s for writing, %d views per node)"
@@ -244,6 +245,7 @@ class gpt_io:
         # performance
         dt_distr, dt_crc, dt_read = 0.0, 0.0, 0.0
         szGB = 0.0
+
         g.barrier()
         t0 = gpt.time()
 
@@ -287,10 +289,10 @@ class gpt_io:
             g.barrier()
             dt_distr += gpt.time()
 
-        g.barrier()
-        t1 = gpt.time()
 
         szGB = g.globalsum(szGB)
+        t1 = gpt.time()
+
         if self.verbose and dt_crc != 0.0:
             gpt.message(
                 "Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for reading + checksum, %g GB/s for checksum, %d views per node)"
