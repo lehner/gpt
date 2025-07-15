@@ -25,6 +25,9 @@ class lock:
         self.lock_dir = f"{root}/.gpt_jobs_lock"
         t0 = g.time()
 
+        # make root directory if it does not exist
+        os.makedirs(root, exist_ok=True)
+
         g.message(f"Lock on {self.lock_dir} query")
         if os.path.exists(self.lock_dir):
             timeout = (
@@ -49,10 +52,7 @@ class lock:
         sys.exit(1)
 
     def __del__(self):
-        try:
-            os.rmdir(self.lock_dir)
-        except FileNotFoundError:
-            pass
+        os.rmdir(self.lock_dir)
         g.message(f"Lock released on {self.lock_dir}")
     
 
