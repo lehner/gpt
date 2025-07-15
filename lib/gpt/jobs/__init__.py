@@ -49,7 +49,10 @@ class lock:
         sys.exit(1)
 
     def __del__(self):
-        os.rmdir(self.lock_dir)
+        try:
+            os.rmdir(self.lock_dir)
+        except FileNotFoundError:
+            pass
         g.message(f"Lock released on {self.lock_dir}")
     
 
