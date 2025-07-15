@@ -802,12 +802,12 @@ class job_write_checkpoint(g.jobs.base):
 
         g.save(
             f"{root}/{ensemble_tag}{self.stream}/config.{self.tag}",
-            l_U
+            Uft
         )
 
         g.save(
             f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}",
-            l_U,
+            Uft,
             g.format.nersc()
         )
         
@@ -926,7 +926,7 @@ for stream in streams:
 ################################################################################
 # Execute one job at a time ;  allow for nodefile shuffle outside
 ################################################################################
-for i in range(5):
+for i in range(6):
     g.jobs.next(root_output, jobs, max_weight=100.0, stale_seconds=3600 * 2)
 
 sys.exit(0)

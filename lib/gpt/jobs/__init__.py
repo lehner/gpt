@@ -20,6 +20,39 @@ import os, time, datetime, sys, shutil
 import gpt as g
 
 
+class lock:
+    def __init__(self, root, timeout_wait=300, timeout_stale=3600, throttle_time=1e-3):
+        self.lock_dir = f"{root}/.gpt_jobs_lock"
+        t0 = g.time()
+
+        g.message(f"Lock on {self.lock_dir} query")
+        if os.path.exists(self.lock_dir):
+            timeout = (
+                datetime.datetime.now()
+                - datetime.datetime.fromtimestamp(os.stat(self.lock_dir).st_ctime)
+            ).total_seconds()
+            if timeout > timeout_stale:
+                os.rmdir(self.lock_dir)
+                g.message(f"Lock {self.lock_dir} became stale, remove")
+
+        while g.time() - t0 < timeout_wait:
+            if not os.path.exists(self.lock_dir):
+                try:
+                    os.mkdir(self.lock_dir)
+                    g.message(f"Lock acquired on {self.lock_dir}")
+                    return
+                except FileExistsError:
+                    pass
+            time.sleep(throttle_time)
+
+        g.message(f"Lock on {self.lock_dir} expired")
+        sys.exit(1)
+
+    def __del__(self):
+        os.rmdir(self.lock_dir)
+        g.message(f"Lock released on {self.lock_dir}")
+    
+
 class scheduler_slurm:
     def __init__(self, env):
         self.env = env
@@ -216,7 +249,9 @@ def get_next_name(root, jobs, max_weight, stale_seconds):
 
 def next(root, jobs, max_weight=None, stale_seconds=None):
     if g.rank() == 0:
+        l = lock(root)
         j = get_next_name(root, jobs, max_weight, stale_seconds).encode("utf-8")
+        del l
     else:
         j = bytes()
 
