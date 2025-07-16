@@ -161,9 +161,20 @@ class global_transfer {
   void waitall();
 
 #ifndef ACCELERATOR_AWARE_MPI
-  struct hostBounceBuffer_t { void* host; void * device; size_t size; size_t reserved; memory_type device_mt; int tag; };
+  struct hostBounceBuffer_t { void* host; void * device; size_t size; size_t reserved; memory_type device_mt; int tag; rank_t sender; };
   std::vector<hostBounceBuffer_t> host_bounce_buffer;
-  uint64_t host_checksum_index;
+  std::map<uint64_t, uint64_t> host_checksum_index;
+
+  uint64_t host_checksum_increment(rank_t sender, rank_t receiver) {
+    uint64_t tg = (uint64_t)sender << 32 + (uint64_t)receiver;
+    if (auto search = host_checksum_index.find(tg); search != host_checksum_index.end()) {
+      search->second ++;
+      return search->second;
+    } else {
+      host_checksum_index[tg] = 0;
+      return 0;
+    }
+  }
 
   void host_bounce_cleanup() {
     for (auto & b : host_bounce_buffer) {
@@ -177,7 +188,6 @@ class global_transfer {
       b.size = 0;
       b.device = 0;
     }
-    host_checksum_index++;
   }
 
   uint64_t host_bounce_checksum(uint64_t* pdata, size_t n, memory_type mt) {
@@ -201,7 +211,7 @@ class global_transfer {
     }
   }
 
-  void* host_bounce_allocate(size_t sz, void* device, memory_type device_mt, int tag) {
+  void* host_bounce_allocate(size_t sz, void* device, memory_type device_mt, int tag, rank_t sender) {
     for (auto & b : host_bounce_buffer) {
       if (b.size == 0) {
 	if (b.reserved < sz) {
@@ -213,6 +223,7 @@ class global_transfer {
 	b.device = device;
 	b.device_mt = device_mt;
 	b.tag = tag;
+	b.sender = sender;
 	return b.host;
       }
     }
@@ -227,6 +238,7 @@ class global_transfer {
     b.size = sz;
     b.device_mt = device_mt;
     b.tag = tag;
+    b.sender = sender;
     return b.host;
   }
 #endif
