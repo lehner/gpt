@@ -163,13 +163,19 @@ void global_transfer<rank_t>::waitall() {
     if (b.device) {
 #ifdef GRID_CHECKSUM_COMMS
       if (b.device_mt == mt_accelerator) {
-	acceleratorCopyToDevice(b.host, b.device, b.size - 8);
+	acceleratorCopyToDevice(b.host, b.device, b.size - 8*3);
       } else {
-	memcpy(b.device, b.host, b.size - 8);
+	memcpy(b.device, b.host, b.size - 8*3);
       }
-      uint64_t computed_cs = host_bounce_checksum((uint64_t*)b.device, b.size / 8 - 1, b.device_mt) ^ (13 + host_checksum_increment(b.sender, rank) + 1000 * b.tag);
-      uint64_t expected_cs = *(uint64_t*)(((char*)b.host) + b.size - 8);
-      ASSERT(computed_cs == expected_cs);
+      uint64_t computed_cs = host_bounce_checksum((uint64_t*)b.device, b.size / 8 - 1*3, b.device_mt);// ^ (13 + *0 + 1000 * b.tag);
+      uint64_t expected_cs = *(uint64_t*)(((char*)b.host) + b.size - 8*3);
+      uint64_t tag = *(uint64_t*)(((char*)b.host) + b.size - 8*2);
+      uint64_t inc = *(uint64_t*)(((char*)b.host) + b.size - 8*1);
+      uint64_t inc_exp = host_checksum_increment(b.sender, rank);
+      
+      if (computed_cs != expected_cs || inc != inc_exp || tag != b.tag)
+	ERR("Packet receive checksum mismatch: %ld != %ld, tag %ld != %ld, inc %ld != %ld, bsender,rank = %ld, %ld", (long)computed_cs, (long)expected_cs,
+	    (long)tag, (long)b.tag, inc, inc_exp,(long)b.sender, (long)rank);
 #else
       acceleratorCopyToDevice(b.host, b.device, b.size);
 #endif
@@ -198,7 +204,7 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
 	) {
 
 #ifdef GRID_CHECKSUM_COMMS
-      void* host = host_bounce_allocate(sz + 8, 0, type, tag, rank);
+      void* host = host_bounce_allocate(sz + 8*3, 0, type, tag, rank);
       if (type == mt_accelerator) {
 	acceleratorCopyFromDevice(pdata, host, sz);
       } else {
@@ -206,10 +212,11 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
       }
 
       ASSERT(sz % 8 == 0);
-      *(uint64_t*)(((char*)host) + sz) = host_bounce_checksum((uint64_t*)pdata, sz / 8, type) ^ (13 + host_checksum_increment(rank, other_rank) + 1000 * tag);
-
+      *(uint64_t*)(((char*)host) + sz) = host_bounce_checksum((uint64_t*)pdata, sz / 8, type);// ^ (13 + host_checksum_increment(rank, other_rank)*0 + 1000 * tag);
+      *(uint64_t*)(((char*)host) + sz + 8) = tag;
+      *(uint64_t*)(((char*)host) + sz + 16) = host_checksum_increment(rank, other_rank);
       pdata = host;
-      sz += 8;
+      sz += 8*3;
 #else
       void* host = host_bounce_allocate(sz, 0, type, tag, rank);
       acceleratorCopyFromDevice(pdata, host, sz);
@@ -250,7 +257,7 @@ void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz, m
 	) {
 
 #ifdef GRID_CHECKSUM_COMMS
-      sz += 8;
+      sz += 8*3;
 #endif
 
       void* host = host_bounce_allocate(sz, pdata, type, tag, other_rank);

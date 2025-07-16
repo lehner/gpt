@@ -166,7 +166,7 @@ class global_transfer {
   std::map<uint64_t, uint64_t> host_checksum_index;
 
   uint64_t host_checksum_increment(rank_t sender, rank_t receiver) {
-    uint64_t tg = (uint64_t)sender << 32 + (uint64_t)receiver;
+    uint64_t tg = ((uint64_t)sender << (uint64_t)32) ^ ((uint64_t)receiver);
     if (auto search = host_checksum_index.find(tg); search != host_checksum_index.end()) {
       search->second ++;
       return search->second;
