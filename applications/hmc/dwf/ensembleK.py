@@ -816,18 +816,15 @@ class job_write_checkpoint(job_reproduction_base):
                 Uft,
                 g.format.nersc()
             )
-        
-    def check(self, root):
-        if self.replica != 0:
-            return True
-        
+
         A = g.load(f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}")
         B = g.load(f"{root}/{self.name}/config")
         for mu in range(4):
             eps2 = g.norm2(A[mu] - B[mu])
             g.message("CHECK", eps2)
-            if eps2 != 0.0:
-                return False
+            assert eps2 == 0.0
+
+    def check(self, root):
         return True
 
 
@@ -1076,12 +1073,13 @@ for stream in streams:
         jobs = jobs + job_step + job_verify
 
         # and release draw and last state
-        #jobs = jobs + [
-        #    job_release([
-        #   f"{ensemble_tag}{stream}/{latest_conf}_md_{nsteps-1}/0/state.0",
-        #   f"{ensemble_tag}{stream}/{latest_conf}_draw/0/state.draw"
-        #], job_Verify[0])
-        #]
+        jobs = jobs + [
+            job_release([
+                f"{ensemble_tag}{stream}/{latest_conf}_md_{nsteps-1}/{r}/state.0" for r in run_replicas
+            ] + [
+                f"{ensemble_tag}{stream}/{latest_conf}_draw/0/state.draw"
+            ], job_verify[0])
+        ]
 
 
 ################################################################################
