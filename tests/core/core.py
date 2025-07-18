@@ -12,6 +12,9 @@ import sys, cgpt
 # random
 rng = g.random("test")
 
+# enable fingerprinting
+g.fingerprint.start("core")
+
 # grid
 L = [8, 12, 24, 24]
 for rb in [g.redblack, g.full]:

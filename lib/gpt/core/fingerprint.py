@@ -19,7 +19,7 @@
 import gpt as g
 import sys, socket, os
 import numpy as np
-import cgpt
+import cgpt, gzip
 
 fingerprints = {}
 fingerprint_file = None
@@ -50,7 +50,7 @@ def start(tag):
     g.barrier()
 
     fingerprint_index = 0
-    fingerprint_file = open(f"{tag}/fingerprint.{g.rank()}", "wt")
+    fingerprint_file = gzip.open(f"{tag}/fingerprint.{g.rank()}.gz", "wt")
     fingerprint_file.write(f"Host: {socket.gethostname()}\n\n")
     fingerprint_file.write(f"Environment: {dict(os.environ)}\n\n")
 
@@ -108,6 +108,8 @@ class log:
                 fingerprint_global_timer()
                 
                 self(first, np.array(fp, dtype=np.complex128))
+            elif isinstance(second, g.tensor):
+                self(first, second.array)
             else:
                 self(first, np.array(g.util.to_list(second), dtype=np.complex128))
 
@@ -131,7 +133,7 @@ class log:
                 #fingerprint_file.write(f"Type: {type(b)}\n")
                 #fingerprint_file.write(f"Value: {b}\n")
                 fingerprint_global_timer("write fingerprint.numpy")
-                np.savetxt(fingerprint_file, b)
+                np.savetxt(fingerprint_file, b.flatten())
                 fingerprint_global_timer("write fingerprint")
             fingerprint_file.write("\n")
             fingerprint_index += 1

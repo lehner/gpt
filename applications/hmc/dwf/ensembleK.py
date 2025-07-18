@@ -764,19 +764,21 @@ class job_hamiltonian(job_reproduction_base):
 ################################################################################
 # Job - write checkpoint
 ################################################################################
-class job_write_checkpoint(g.jobs.base):
-    def __init__(self, stream, conf, step, name, dependencies):
+class job_write_checkpoint(job_reproduction_base):
+    def __init__(self, stream, conf, step, name, replica, dependencies):
         self.stream = stream
         self.conf = conf
         self.step = step
         self.tag = name
         super().__init__(
             f"{ensemble_tag}{stream}/{conf}_write_checkpoint_{step}",
+            ["config"],
+            replica,
             dependencies
         )
         self.weight = 1.0
 
-    def perform(self, root):
+    def perform_inner(self, root):
         global U, U_mom, css
 
         fn = f"{root}/{ensemble_tag}{self.stream}/{self.conf}_md_{self.step}/0/state.0"
@@ -800,19 +802,160 @@ class job_write_checkpoint(g.jobs.base):
             flog.write(f"Pft {plaq}\n")
             flog.close()
 
-        g.save(
-            f"{root}/{ensemble_tag}{self.stream}/config.{self.tag}",
-            Uft
-        )
+        if self.replica == 0:
+            g.save(
+                f"{root}/{ensemble_tag}{self.stream}/config.{self.tag}",
+                Uft
+            )
 
-        g.save(
-            f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}",
-            Uft,
-            g.format.nersc()
-        )
+        g.save(f"{root}/{self.name}/config", Uft)
+
+        if self.replica == 0:
+            g.save(
+                f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}",
+                Uft,
+                g.format.nersc()
+            )
         
     def check(self, root):
+        if self.replica != 0:
+            return True
+        
+        A = g.load(f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}")
+        B = g.load(f"{root}/{self.name}/config")
+        for mu in range(4):
+            eps2 = g.norm2(A[mu] - B[mu])
+            g.message("CHECK", eps2)
+            if eps2 != 0.0:
+                return False
         return True
+
+
+
+################################################################################
+# Job - gluonic measurements
+################################################################################
+class job_measure_glue(job_reproduction_base):
+    def __init__(self, stream, conf, name, replica, dependencies):
+        self.stream = stream
+        self.conf = conf
+        self.tag = name
+        super().__init__(
+            f"{ensemble_tag}{stream}/{conf}_measure_glue",
+            ["glue"],
+            replica,
+            dependencies
+        )
+        self.weight = 1.0
+
+    def perform_inner(self, root):
+        global U, U_mom, css
+
+        config = f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}"
+
+        eps = 0.01
+        nsteps = 1200
+        ntop = 200
+
+        U = g.load(config)
+
+        vol3d = float(np.prod(U[0].grid.gdimensions[0:3]))
+
+        if self.replica != 0:
+            config = config + "." + str(self.replica)
+
+        res = []
+        
+        w = g.corr_io.writer(f"{config}.gluonic")
+
+        # first plaquette
+        g.message("Plaquette")
+        P = g.slice(g.qcd.gauge.rectangle(U, 1, 1, field=True) / vol3d, 3)
+        w.write("P", P)
+        res.append(P)
+        
+        # test wilson flow
+        U_wf = U
+        U_wf = g.qcd.gauge.smear.wilson_flow(U_wf, epsilon=eps)
+        U_wf = g.qcd.gauge.smear.wilson_flow(U_wf, epsilon=-eps)
+        g.message(f"Test result: {(g.norm2(U[0]-U_wf[0])/g.norm2(U[0]))**0.5}")
+
+        if g.rank() == 0:
+            fQ = open(f"{config}.Q","wt")
+            fE = open(f"{config}.E","wt")
+            ft0 = open(f"{config}.t0","wt")
+        else:
+            fQ = None
+            fE = None
+            ft0 = None
+        
+        tau = 0.0
+        U_wf = U
+        c = {}
+        for i in range(nsteps):
+        
+            U_wf = g.qcd.gauge.smear.wilson_flow(U_wf, epsilon=eps)
+            tau += eps
+            g.message("%g" % tau)
+
+            g.message("Field Strength")
+            E = g.slice(g.qcd.gauge.energy_density(U_wf, field=True) / vol3d, 3)
+            w.write("E(%g)" % tau, E)
+            res.append(E)
+
+            E = sum(E).real / len(E)
+            t2E = tau**2 * E
+            g.message("t2E = ", t2E)
+
+            if t2E < 0.3:
+                t2E_below = t2E
+                tau_below = tau
+            elif ft0 is not None:
+                t2E_above = t2E
+                tau_above = tau
+                
+                lam = (0.3 - t2E_below) / (t2E_above - t2E_below)
+                t0 = tau_above * lam + tau_below * (1.0 - lam)
+
+                ainv_sqrt_t0 = t0**0.5
+                sqrt_t0_in_OneOverGeV = 0.7292 # this is only an approximation for a quick peek
+        
+                ainvInGeV = ainv_sqrt_t0 / sqrt_t0_in_OneOverGeV
+                ft0.write("%.15g %g" % (t0,ainvInGeV))
+                ft0.close()
+                ft0 = None
+
+                g.message(f"t0 = {t0}, a^-1 / GeV = {ainvInGeV}")
+
+            if i % ntop == ntop-1 or i == nsteps - 1:
+                g.message("Topology")
+                Q = g.slice(g.qcd.gauge.topological_charge_5LI(U_wf, cache=c, field=True) / vol3d, 3)
+                w.write("Q(%g)" % tau, Q)
+                res.append(Q)
+
+                Q = sum(Q).real / len(Q)
+                if fQ is not None:
+                    fQ.write("%g %.15g\n" % (tau, Q))
+                    fQ.flush()
+
+            if fE is not None:
+                fE.write("%g %.15g\n" % (tau, E))
+                fE.flush()
+
+        g.save(f"{root}/{self.name}/glue", res)
+        
+    def check(self, root):
+        if self.replica != 0:
+            return True
+        
+        config = f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}"
+        n = g.corr_io.count(f"{config}.gluonic")
+        g.message("Checking", n)
+        return n == 1207
+
+
+
+
 
 
 # visualization job
@@ -854,11 +997,28 @@ jobs = []
 
 for stream in streams:
     latest_conf = None
+    g.message(f"Finding latest config for stream {stream}")
     for conf in conf_range:
         fn = f"{root_output}/{ensemble_tag}{stream}/ckpoint_lat.{conf}"
         if os.path.exists(fn):
-            latest_conf = conf
+            g.message(f"Can start from {fn}")
+            if not os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_write_checkpoint_79"):
+                # if we did not write it but it was provided externally, start from here
+                latest_conf = conf
+                g.message(f"Allowed import {conf}")
+            elif (
+                    os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_write_checkpoint_79/verify/.checked")
+                    and os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_measure_glue/verify/.checked")
+            ):
+                # if we wrote it, insist that it is verified
+                latest_conf = conf
+                g.message(f"Allowed complete {conf}")
     if latest_conf is not None:
+        # measure glue on latest existing configuration
+        job_glue = [job_measure_glue(stream, latest_conf - 1, latest_conf, r, []) for r in run_replicas]
+        job_verify = [job_reproduction_verify(job_glue)]
+        jobs = jobs + job_glue + job_verify
+
         # first load checkpoint into a state and cleanup non-unitary errors
         job_ckp = [job_checkpoint(stream, latest_conf, r, []) for r in run_replicas]
         job_verify = [job_reproduction_verify(job_ckp)]
@@ -911,8 +1071,9 @@ for stream in streams:
                 ]
 
         # now write checkpoint
-        job_verify = [job_write_checkpoint(stream, latest_conf, nsteps - 1, latest_conf + 1, [job_verify[0].name])]
-        jobs = jobs + job_verify
+        job_step = [job_write_checkpoint(stream, latest_conf, nsteps - 1, latest_conf + 1, r, [j.name for j in job_verify]) for r in run_replicas]
+        job_verify = [job_reproduction_verify(job_step)]
+        jobs = jobs + job_step + job_verify
 
         # and release draw and last state
         #jobs = jobs + [
