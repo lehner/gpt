@@ -40,7 +40,7 @@ nsteps = 80
 nsteps_hamiltonian = 10
 
 run_replicas = [0,1] # run with reproduction replica
-streams = ["a","d","b","c"]
+all_streams = ["a","d","b","c"]
 conf_range = range(635, 642)
 ensemble_tag = "ensemble-K"
 
@@ -992,6 +992,19 @@ class job_measure_glue(job_reproduction_base):
 ################################################################################
 jobs = []
 
+# sort streams such that the least developed comes first
+streams = []
+
+for conf in conf_range:
+    for stream in all_streams:
+        if stream in streams:
+            continue
+        if not os.path.exists(f"{root_output}/{ensemble_tag}{stream}/ckpoint_lat.{conf}"):
+            streams.append(stream)
+    if len(streams) == len(all_streams):
+        break
+
+g.message(f"Current stream priority: {streams}")
 for stream in streams:
     latest_conf = None
     g.message(f"Finding latest config for stream {stream}")

@@ -50,7 +50,7 @@ def start(tag):
     g.barrier()
 
     fingerprint_index = 0
-    fingerprint_file = gzip.open(f"{tag}/fingerprint.{g.rank()}.gz", "wt")
+    fingerprint_file = gzip.open(f"{tag}/fingerprint.{g.rank()}.gz", "wt", compresslevel=6)
     fingerprint_file.write(f"Host: {socket.gethostname()}\n\n")
     fingerprint_file.write(f"Environment: {dict(os.environ)}\n\n")
 
@@ -142,5 +142,7 @@ class log:
             tm = g.time()
             if tm > fingerprint_status_time + 30:
                 fingerprint_status_time = tm
+                fingerprint_global_timer("flush")
                 fingerprint_file.flush()
+                fingerprint_global_timer()
                 g.message(fingerprint_global_timer)

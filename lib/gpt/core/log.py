@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, sys, os, signal, datetime, socket
+import gpt, sys, os, signal, datetime, socket, cgpt
 from inspect import getframeinfo, stack
 
 verbose = gpt.default.is_verbose("message_context")
@@ -49,6 +49,7 @@ def message(*a, force_output=False):
         sys.stdout.flush()
 
 
+# allow backtraces to be triggered by a signal
 def backtrace_signal_handler(sig, frame):
 
     now = datetime.datetime.now()
@@ -70,36 +71,62 @@ def backtrace_signal_handler(sig, frame):
 
     fout.close()
 
-
 signal.signal(signal.SIGUSR2, backtrace_signal_handler)
 
+
+# signal heartbeats for machines that are prone to hangs
 if gpt.default.has("--signal-heartbeat"):
     import time
 
     bpm = gpt.default.get_int("--signal-heartbeat-bpm", 1)
     beats = 0
 
+    pid = None
     def signal_handler_noop(sig, frame):
-        global beats
+        global beats, pid
         beats += 1
         if beats >= bpm:
             if gpt.rank() == 0:
-                msg = f"{beats} heartbeat(s) received\n"
+                # report heartbeats every minite to stdout
+                msg = f"GPT : {gpt.time():14.6f} s : {beats} heartbeat(s) received\n"
                 os.write(sys.stdout.fileno(), msg.encode("utf-8"))
+            # and tell the monitor that we are still alive
+            os.kill(pid, signal.SIGUSR1)
             beats = 0
 
     signal.signal(signal.SIGUSR1, signal_handler_noop)
 
     pid = os.fork()
     if pid == 0:
+        # I am the monitor job.  Send bpm heartbeats to main process
+        # and make sure it is still responding every minute.  If not,
+        # first kill, then terminate it.
         parentid = os.getppid()
+        t0 = cgpt.time()
+        
+        def signal_handler_monitor(sig, frame):
+            global t0
+            t0 = cgpt.time()
+            
+        signal.signal(signal.SIGUSR1, signal_handler_monitor)
+
         while True:
             time.sleep(60 / bpm)
             try:
-                os.kill(parentid, signal.SIGUSR1)
+                t = cgpt.time()
+                if t - t0 > 60*4:
+                    os.write(sys.stderr.fileno(), f"Process {parentid} on {socket.gethostname()} froze, send KILL signal\n".encode("utf-8"))
+                    os.kill(parentid, signal.SIGKILL)
+                elif t - t0 > 60*5:
+                    os.write(sys.stderr.fileno(), f"Process {parentid} on {socket.gethostname()} froze, send TERM signal\n".encode("utf-8"))
+                    os.kill(parentid, signal.SIGTERM)
+                else:
+                    os.kill(parentid, signal.SIGUSR1)
             except ProcessLookupError:
                 sys.exit(0)
 
+
+# monitor all signals and respond with backtrace
 if gpt.default.is_verbose("all_signals_backtrace"):
     for s in [
         signal.SIGBUS,
