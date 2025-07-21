@@ -98,6 +98,10 @@ if gpt.default.has("--signal-heartbeat"):
 
     pid = os.fork()
     if pid == 0:
+
+        # wait for 60 seconds to let main job finish initialization
+        time.sleep(60)
+        
         # I am the monitor job.  Send bpm heartbeats to main process
         # and make sure it is still responding every minute.  If not,
         # first kill, then terminate it.
@@ -111,7 +115,6 @@ if gpt.default.has("--signal-heartbeat"):
         signal.signal(signal.SIGUSR1, signal_handler_monitor)
 
         while True:
-            time.sleep(60 / bpm)
             try:
                 t = cgpt.time()
                 if t - t0 > 60*4:
@@ -124,6 +127,7 @@ if gpt.default.has("--signal-heartbeat"):
                     os.kill(parentid, signal.SIGUSR1)
             except ProcessLookupError:
                 sys.exit(0)
+            time.sleep(60 / bpm)
 
 
 # monitor all signals and respond with backtrace
