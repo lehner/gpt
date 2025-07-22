@@ -27,6 +27,7 @@ import gpt.qis
 import gpt.ml
 import gpt.ad
 import gpt.jobs
+import gpt.signals
 import gpt.terminal
 import socket
 import cgpt
@@ -57,3 +58,6 @@ class GPTModule(types.ModuleType):
 
 
 sys.modules[__name__].__class__ = GPTModule
+
+# setup signals just before handing over to user
+gpt.signals.setup()

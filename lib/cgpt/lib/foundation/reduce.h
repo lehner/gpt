@@ -40,19 +40,7 @@
       sycl::range<3> local {1,1,nsimd};				\
       sycl::range<3> global{unum1_divisible_by,1,nsimd};		\
       sycl::local_accessor<shared_type> shm_acc(sycl::range<1>(nsimd), cgh); \
-      if (unum1 != unum1_divisible_by) {				\
-	cgh.parallel_for(						\
-			 sycl::nd_range<3>(global,local),		\
-			 [=] (sycl::nd_item<3> item)		\
-			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
-			 {						\
-			   auto iter1    = item.get_global_id(0);	\
-			   auto lane     = item.get_global_id(2);	\
-			   shared_type* shared_name = shm_acc.get_pointer(); \
-			   { if (iter1 < unum1) { __VA_ARGS__ } };	\
-			 });						\
-      } else {								\
-	cgh.parallel_for(						\
+      cgh.parallel_for(							\
 			 sycl::nd_range<3>(global,local),		\
 			 [=] (sycl::nd_item<3> item)		\
 			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
@@ -62,7 +50,6 @@
 			   shared_type* shared_name = shm_acc.get_pointer(); \
 			   { __VA_ARGS__ };				\
 			 });						\
-      }									\
     });									\
   }
 
@@ -118,9 +105,10 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	uint64_t t0 = kb*n_left*n_right;
 
 	for (int kl=0;kl<n_left;kl++) {
+	  // NOTE: no guarantee for shared version that work < n_outer, need to check manually;
+	  //       reason is coherent synchronization; applies for now to SYCL only
 	  accelerator_forNB_with_shared(work, n_outer, n_coalesce, ComplexD, vc, {
 	      scalar_type* a = (scalar_type*)left_v[l0 + kl*n_virtual + i];	    
-	      int lane = acceleratorSIMTlane(n_coalesce);
 	      uint64_t idx0 = work * n_per_thread * n_coalesce;
 
 	      // avoid inner *if* for as long as possible
@@ -178,8 +166,6 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 
       accelerator_forNB_with_shared(work, n_stride_prime, n_coalesce, ComplexD, vc, {
 	    
-	  int lane = acceleratorSIMTlane(n_coalesce);
-
 	  uint64_t idx0 = work * n_coalesce + lane;
 	  bool active = idx0 < n_stride;
 	  
@@ -219,17 +205,6 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
     }
   }
 }
-
-class tensor_ComplexD : public ComplexD {
-public:
-  typedef tensor_ComplexD scalar_objectD;
-  typedef tensor_ComplexD scalar_object;
-  typedef tensor_ComplexD scalar_type;
-  typedef tensor_ComplexD vector_type;
-  accelerator tensor_ComplexD() : ComplexD() {};
-  accelerator_inline tensor_ComplexD(const Zero &z) { *(ComplexD*)this = 0.0; };
-  static accelerator_inline constexpr int Nsimd(void) { return 1; } 
-};
 
 template<class vobj>
 inline void rankInnerProductGPU(ComplexD* result, 
