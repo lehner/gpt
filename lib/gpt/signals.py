@@ -43,8 +43,13 @@ def backtrace_signal_handler(sig, frame):
     fout.close()
 
 
-def setup():
+beats = None
+pid = None
+t0 = None
 
+def setup():
+    global beats, pid, t0
+    
     signal.signal(signal.SIGUSR2, backtrace_signal_handler)
 
     # signal heartbeats for machines that are prone to hangs
@@ -54,22 +59,10 @@ def setup():
         bpm = gpt.default.get_int("--signal-heartbeat-bpm", 1)
         beats = 0
 
-        pid = None
-        def signal_handler_noop(sig, frame):
-            global beats, pid
-            beats += 1
-            if beats >= bpm:
-                if gpt.rank() == 0:
-                    # report heartbeats every minite to stdout
-                    msg = f"GPT : {gpt.time():14.6f} s : {beats} heartbeat(s) received\n"
-                    os.write(sys.stdout.fileno(), msg.encode("utf-8"))
-                # and tell the monitor that we are still alive
-                os.kill(pid, signal.SIGUSR1)
-                beats = 0
-
-        signal.signal(signal.SIGUSR1, signal_handler_noop)
-
         pid = os.fork()
+
+        gpt.message(f"Heartbeat setup with {bpm} bpm, pid = {pid} is here")
+        
         if pid == 0:
 
             # wait for 30 seconds before starting
@@ -101,6 +94,22 @@ def setup():
                 except ProcessLookupError:
                     sys.exit(0)
                 time.sleep(60 / bpm)
+
+        else:
+
+            def signal_handler_noop(sig, frame):
+                global beats, pid
+                beats += 1
+                if beats >= bpm:
+                    if gpt.rank() == 0:
+                        # report heartbeats every minite to stdout
+                        msg = f"GPT : {gpt.time():14.6f} s : {beats} heartbeat(s) received, send signal to {pid}\n"
+                        os.write(sys.stdout.fileno(), msg.encode("utf-8"))
+                    # and tell the monitor that we are still alive
+                    os.kill(pid, signal.SIGUSR1)
+                    beats = 0
+
+            signal.signal(signal.SIGUSR1, signal_handler_noop)
 
 
     # monitor all signals and respond with backtrace
