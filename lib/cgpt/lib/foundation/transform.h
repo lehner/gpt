@@ -28,9 +28,9 @@ void cgpt_scale_per_coordinate(Lattice<T>& dst,Lattice<T>& src,ComplexD* s,int d
 
   int L = grid->_gdimensions[dim];
     
-  autoView(dst_v, dst, AcceleratorWriteDiscard);
   autoView(src_v, src, AcceleratorRead);
-
+  autoView(dst_v, dst, AcceleratorWriteDiscard);
+  
   auto dst_p = &dst_v[0];
   auto src_p = &src_v[0];
 
@@ -236,10 +236,10 @@ void cgpt_axpy(Lattice<vobj> &ret,sobj a,const Lattice<vobj> &x,const Lattice<vo
   ret.Checkerboard() = x.Checkerboard();
   conformable(ret,x);
   conformable(x,y);
-  autoView( ret_v , ret, AcceleratorWriteDiscard);
   autoView( x_v , x, AcceleratorRead);
   autoView( y_v , y, AcceleratorRead);
-
+  autoView( ret_v , ret, AcceleratorWriteDiscard);
+  
   accelerator_forNB(ss,x_v.size(),vobj::Nsimd(),{
     auto tmp = a*coalescedRead(x_v[ss])+coalescedRead(y_v[ss]);
     coalescedWrite(ret_v[ss],tmp);

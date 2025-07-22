@@ -272,9 +272,9 @@ inline void vectorizableBlockPromote(PVector<Lattice<iVector<CComplex, basis_vir
 
   auto rlut_v = lut.ReverseView();
 
-  VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorWriteDiscard);
   VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorRead);
-
+  VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorWriteDiscard);
+  
   void* basis_access_args = basis_access.get_args();
   typename basis_access_t::static_functions static_access;
 
@@ -422,9 +422,9 @@ inline void vectorizableBlockEmbed(PVector<Lattice<vobj>>&                      
   auto lut_v = lut.View();
   auto sizes_v = lut.Sizes();
 
-  VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorWriteDiscard);
   VECTOR_VIEW_OPEN(coarse,coarse_v,AcceleratorRead);
-
+  VECTOR_VIEW_OPEN(fine,fine_v,AcceleratorWriteDiscard);
+  
   accelerator_for(_idx, coarse_osites*vec_n, vobj::Nsimd(), {
       auto idx = _idx;
       auto vec_i = idx % vec_n; idx /= vec_n;

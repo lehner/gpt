@@ -28,9 +28,9 @@ template<class vobj> inline void cgpt_pickCheckerboard(int cb,Lattice<vobj> &hal
 {
   half.Checkerboard() = cb;
 
-  autoView( half_v, half, AcceleratorWriteDiscard);
   autoView( full_v, full, AcceleratorRead);
-
+  autoView( half_v, half, AcceleratorWriteDiscard);
+  
   auto half_p = &half_v[0];
   auto full_p = &full_v[0];
 
@@ -92,8 +92,8 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
   constexpr int n_elem = GridTypeMapper<VobjOut>::count;
   ASSERT(n_elem == GridTypeMapper<VobjIn>::count);
     
-  autoView( out_v , out, AcceleratorWriteDiscard);
   autoView( in_v , in, AcceleratorRead);
+  autoView( out_v , out, AcceleratorWriteDiscard);
   auto out_p = &out_v[0];
   auto in_p = &in_v[0];
 

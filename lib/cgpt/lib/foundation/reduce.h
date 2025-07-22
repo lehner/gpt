@@ -143,7 +143,8 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 		  v = 0.0;
 		  for (int j=0;j<n_coalesce;j++)
 		    v+=vc[j];
-		  c[work] = v;
+		  if (work < n_outer)
+		    c[work] = v;
 		}
 		
 		accelerator_threads_sync();
@@ -185,7 +186,8 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	      v = 0.0;
 	      for (int ii=0;ii<n_coalesce;ii++)
 		v+=vc[ii];
-	      dst_base[i*n_stride_prime + work] = v;
+	      if (work < n_stride_prime)
+		dst_base[i*n_stride_prime + work] = v;
 	    }
 	    
 	    accelerator_threads_sync();

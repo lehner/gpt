@@ -32,8 +32,9 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
 
 #ifndef GRID_HAS_ACCELERATOR
 
-  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
   VECTOR_VIEW_OPEN(basis,basis_v,CpuRead);
+  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
+
 
   typedef typename std::remove_const<decltype(coalescedRead(basis_v[0][0]))>::type vobj;
 
@@ -60,7 +61,7 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
     });
   ComplexD * Qt_j = Qt_jv.toDevice();
 
-  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWriteDiscard);
+  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWrite);
   for (long basis_i0=0;basis_i0<n_basis;basis_i0+=basis_n_block) {
     long basis_i1 = std::min(basis_i0 + basis_n_block,n_basis);
     long basis_block = basis_i1 - basis_i0;
@@ -114,10 +115,10 @@ void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &r
 
 #ifndef GRID_HAS_ACCELERATOR
 
-  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
   VECTOR_VIEW_OPEN(left_basis,left_basis_v,CpuRead);
   VECTOR_VIEW_OPEN(right_basis,right_basis_v,CpuRead);
-
+  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
+  
   typedef typename std::remove_const<decltype(coalescedRead(left_basis_v[0][0]))>::type vobj;
 
   thread_for(ss, grid->oSites(),{
@@ -154,9 +155,9 @@ void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &r
   int * left_indices_j = left_indices_jv.toDevice();
   int * right_indices_j = right_indices_jv.toDevice();
 
-  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWriteDiscard);
   VECTOR_VIEW_OPEN(left_basis,left_basis_v,AcceleratorRead);
   VECTOR_VIEW_OPEN(right_basis,right_basis_v,AcceleratorRead);
+  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWriteDiscard);
 
   long Nsimd = grid->Nsimd();
   long oSites = grid->oSites();
