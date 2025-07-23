@@ -46,7 +46,7 @@
 			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
 			 {						\
 			   auto iter1    = item.get_global_id(0);	\
-			   auto lane     = item.get_global_id(2);	\
+			   auto _lane    = item.get_global_id(2);	\
 			   shared_type* shared_name = shm_acc.get_pointer(); \
 			   { __VA_ARGS__ };				\
 			 });						\
@@ -108,6 +108,7 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	  // NOTE: no guarantee for shared version that work < n_outer, need to check manually;
 	  //       reason is coherent synchronization; applies for now to SYCL only
 	  accelerator_forNB_with_shared(work, n_outer, n_coalesce, ComplexD, vc, {
+	      int lane = acceleratorSIMTlane(n_coalesce);
 	      scalar_type* a = (scalar_type*)left_v[l0 + kl*n_virtual + i];	    
 	      uint64_t idx0 = work * n_per_thread * n_coalesce;
 
@@ -166,7 +167,7 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
       uint64_t n_stride_prime = (n_stride + n_coalesce - 1) / n_coalesce;
 
       accelerator_forNB_with_shared(work, n_stride_prime, n_coalesce, ComplexD, vc, {
-	    
+	  int lane = acceleratorSIMTlane(n_coalesce);	    
 	  uint64_t idx0 = work * n_coalesce + lane;
 	  bool active = idx0 < n_stride;
 	  
