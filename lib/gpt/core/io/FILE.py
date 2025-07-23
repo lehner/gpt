@@ -86,10 +86,6 @@ class FILE_base:
         assert self.f is not None
         assert cgpt.fseek(self.f, offset, whence) == 0
 
-    def datasync(self):
-        assert self.f is not None
-        return cgpt.fdatasync(self.f)
-
     def read(self, sz=None):
         if sz is None:
             pos = self.tell()
