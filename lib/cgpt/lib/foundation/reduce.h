@@ -46,7 +46,7 @@
 			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
 			 {						\
 			   auto iter1    = item.get_global_id(0);	\
-			   auto _lane    = item.get_global_id(2);	\
+			   auto lane    = item.get_global_id(2);	\
 			   shared_type* shared_name = shm_acc.get_pointer(); \
 			   { __VA_ARGS__ };				\
 			 });						\
