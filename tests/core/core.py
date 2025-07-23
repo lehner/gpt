@@ -199,6 +199,16 @@ for lattice_object in [
 
 
 ################################################################################
+# g.sum on large tensors
+################################################################################
+x = rng.cnormal(g.mspincolor(grid_dp))
+msc = g.sum(x).array
+msc_ref = grid_dp.globalsum(np.sum(x[:], axis=0))
+eps = np.linalg.norm(msc - msc_ref) / np.linalg.norm(msc_ref)
+assert eps < 1e-12
+
+
+################################################################################
 # Test FFT
 ################################################################################
 fft_l_sp = g.eval(g.fft() * l_sp)
