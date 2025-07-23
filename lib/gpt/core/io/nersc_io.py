@@ -363,7 +363,7 @@ END_HEADER
 
     grid.barrier()
 
-    f = gpt.FILE(file, "r+b")
+    f = gpt.FILE(file, "W")
 
     offset = grid.globalsum(offset)
 

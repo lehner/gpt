@@ -176,7 +176,6 @@ def load(file, params):
 
         dt_crc -= g.time()
         scidac_checksum_a, scidac_checksum_b = scidac.checksums(data, grid, pos)
-        checksum = None
         dt_crc += g.time()
 
         dt_misc -= g.time()

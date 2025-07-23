@@ -85,6 +85,7 @@ EXPORT(fopen,{
     bool write = (md.find("w") != std::string::npos);
     bool append = (md.find("a") != std::string::npos);
     bool readwrite = (md.find("+") != std::string::npos);
+    bool write_nocreate = (md.find("W") != std::string::npos);
 
     ASSERT(_FILE_OFFSET_BITS >=  64);
     ASSERT(sizeof(off_t) >= 8);
@@ -104,6 +105,9 @@ EXPORT(fopen,{
       file->write = false;
     } else if (write) {
       flags |= O_WRONLY|O_TRUNC;
+      file->write = true;
+    } else if (write_nocreate) {
+      flags |= O_WRONLY|O_DIRECT;
       file->write = true;
     } else if (append) {
       flags |= O_WRONLY;
@@ -131,6 +135,23 @@ EXPORT(fopen,{
     }
     
     return PyLong_FromVoidPtr(file);
+  });
+
+EXPORT(fdatasync,{
+    cgpt_FILE* _file;
+    if (!PyArg_ParseTuple(args, "l", &_file)) {
+      return NULL;
+    }
+
+    int err;
+    if (_file->write) {
+      while ((err = fdatasync(_file->fd)) == EINTR);
+
+      if (err)
+	ERR("fdatasync failed: %d\n", err);
+    }
+    
+    return PyLong_FromLong(0);
   });
 
 EXPORT(fclose,{
