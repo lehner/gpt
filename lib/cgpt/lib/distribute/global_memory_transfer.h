@@ -654,12 +654,6 @@ void global_memory_transfer<offset_t,rank_t,index_t>::print() {
 template<typename offset_t, typename rank_t, typename index_t>
 void global_memory_transfer<offset_t,rank_t,index_t>::bcopy(const std::vector<bcopy_arg_t>& args) {
 
-  struct bcopy_ptr_arg_t {
-    const blocks_t & blocks;
-    char* p_dst;
-    const char* p_src;
-  };
-
   std::unordered_map<size_t,std::vector<bcopy_ptr_arg_t>> bca;
 
 #define bcopy_map_idx(mt_dst, mt_src) (mt_dst * mt_int_len + mt_src)

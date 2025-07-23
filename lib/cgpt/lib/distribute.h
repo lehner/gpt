@@ -415,34 +415,14 @@ class global_memory_transfer : public global_transfer<rank_t> {
     memory_view& base_dst; 
     const memory_view& base_src;
   };
-  void bcopy(const std::vector<bcopy_arg_t>& args);
 
-  template<typename T, typename vT, typename blocks_t>
-  bool bcopy_accelerator_accelerator(size_t bs, size_t alignment, const std::vector<blocks_t> & arg) {
-    
-    if ((bs % sizeof(vT) != 0) || (alignment % sizeof(vT) != 0))
-      return false;
-    
-    size_t npb = bs / sizeof(vT);
-    
-    for (auto & a : arg) {
-      auto & b = a.blocks;
-      auto * pb = b.device;
-      
-      vT* dst = (vT*)a.p_dst;
-      const vT* src = (const vT*)a.p_src;
-      
-      accelerator_for(i, npb * b.size(), sizeof(vT)/sizeof(T), {
-	  auto & x = pb[i / npb];
-	  size_t i_dst = x.start_dst / sizeof(vT);
-	  size_t i_src = x.start_src / sizeof(vT);
-	  size_t j = i % npb;
-	  
-	  coalescedWrite(dst[i_dst + j], coalescedRead(src[i_src + j]));
-	});
-    }
-    return true;
-  }
+  struct bcopy_ptr_arg_t {
+    const blocks_t & blocks;
+    char* p_dst;
+    const char* p_src;
+  };
+
+void bcopy(const std::vector<bcopy_arg_t>& args);
 };
 
 typedef global_memory_view<uint64_t,int,uint32_t> gm_view;
