@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import os, time, datetime, sys, shutil
+import os, time, datetime, sys, shutil, tempfile
 import gpt as g
 
 
@@ -68,14 +68,28 @@ class scheduler_slurm:
         return stat
 
 
+
 class scheduler_pbs:
     def __init__(self, env):
         self.env = env
+        if g.rank() == 0:
+            self.job_file = tempfile.NamedTemporaryFile(delete=True, delete_on_close=True, dir=".", prefix=".gpt-job-file.")
+
+        self.job_file = g.broadcast(0, self.job_file)
 
     def get_step(self):
-        return self.env["PBS_JOBID"].split(".")[0]
+        return self.env["PBS_JOBID"].split(".")[0] + "//" + self.job_file
 
-    def is_step_running(self, step):
+    def is_step_running(self, step_all):
+        step_all = step_all.split("//")
+        step = step_all[0]
+
+        if len(step_all) > 1:
+            test_job_file = step_all[1]
+            if not os.path.exists(test_job_file):
+                g.message(f"Scheduler PBS: job {step} is no longer running because jobfile {test_job_file} is absent")
+                return False
+        
         field = "'{ print $5 }'"
         # setup in a manner that an error in calling qstat translates to the job being presumed running
         stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -qv R") != 0
