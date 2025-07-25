@@ -92,12 +92,18 @@ class scheduler_pbs:
             if not os.path.exists(test_job_file):
                 g.message(f"Scheduler PBS: job {step} is no longer running because jobfile {test_job_file} is absent")
                 return False
-
             
         field = "'{ print $5 }'"
         # setup in a manner that an error in calling qstat translates to the job being presumed running
         stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -qv R") != 0
         g.message(f"Scheduler PBS: job {step} is running {stat}")
+
+        # if the job is not running but the job file is still present, clean it up
+        if not stat and len(step_all) > 1:
+            test_job_file = step_all[1]
+            if os.path.exists(test_job_file) and g.rank() == 0:
+                os.unlink(test_job_file)
+
         return stat
 
 

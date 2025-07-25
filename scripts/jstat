@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+import glob, sys, os, re
+import numpy as np
+from datetime import datetime, timedelta
+
+if len(sys.argv) == 1:
+    print("GPT job statistics expects job directories as arguments")
+    sys.exit(1)
+
+skip_level = 0
+start_datetime = None
+end_datetime = None
+i=1
+while i < len(sys.argv):
+    if sys.argv[i] == "-i":
+        skip_level=int(sys.argv[i+1])
+        del sys.argv[i:i+2]
+    elif sys.argv[i] == "-s":
+        if sys.argv[i+1][0] == "-":
+            start_datetime = datetime.now() - timedelta(days=int(sys.argv[i+1][1:]))
+            print("Consider only events after", start_datetime)
+        del sys.argv[i:i+2]
+    elif sys.argv[i] == "-e":
+        if sys.argv[i+1][0] == "-":
+            end_datetime = datetime.now() - timedelta(days=int(sys.argv[i+1][1:]))
+            print("Consider only events before", end_datetime)
+        del sys.argv[i:i+2]
+    else:
+        i+=1
+
+stats = {
+    "ndir" : 0,
+    "jdir" : 0,
+    "fdir" : 0,
+    "tags" : {}
+}
+def analyze_directory(d):
+    global stats
+
+    stats["ndir"] += 1
+    
+    if os.path.exists(f"{d}/.started"):
+        stats["jdir"] += 1
+
+        start = open(f"{d}/.started").read().split("\n")
+        start_time = datetime.strptime(start[0], '%a %b %d %H:%M:%S %Y')
+        if start_datetime is not None:
+            if start_time < start_datetime:
+                return
+        
+        if os.path.exists(f"{d}/.completed"):
+            end = open(f"{d}/.completed").read().split("\n")
+            end_time = datetime.strptime(end[0], '%a %b %d %H:%M:%S %Y')
+            if end_datetime is not None:
+                if end_time > end_datetime:
+                    return
+        
+            dt = (end_time - start_time).total_seconds()
+
+            stats["fdir"] += 1
+
+            # remove all numbers from d and replace them by single #
+            tag = re.sub(r'\d+', '#', d)
+            tag = "/".join(tag.split("/")[skip_level:])
+            if tag not in stats["tags"]:
+                stats["tags"][tag] = [dt]
+            else:
+                stats["tags"][tag].append(dt)
+
+    else:
+        for sd in os.scandir(d):
+            if sd.is_dir():
+                analyze_directory(sd.path)
+
+for d in sys.argv[1:]:
+    analyze_directory(d)
+        
+print(f"Analyzed {stats['fdir']} out of {stats['jdir']} job directories out of {stats['ndir']} scanned directories:")
+print("-" * 120)
+
+for tag in stats["tags"]:
+    dt = stats["tags"][tag]
+    dt_min = f"{min(dt):g}"
+    dt_max = f"{max(dt):g}"
+    dt_mean = f"{np.mean(dt):g}"
+    dt_median = f"{np.median(dt):g}"
+    print(f"{tag:50s} : {dt_min:>10s} - {dt_max:>10s} s  :  mean={dt_mean:>10s}    median={dt_median:>10s}")
