@@ -336,7 +336,11 @@ public:
     autoView(l_v, l, AcceleratorRead);
     uint64_t* pdata = (uint64_t*)&l_v[0];
     uint64_t n = l.oSites() * sizeof(l_v[0]) / sizeof(uint64_t);
+#ifdef GRID_SYCL
     return checksum_gpu(pdata, n);
+#else
+    return 0;
+#endif
   }
 };
 
