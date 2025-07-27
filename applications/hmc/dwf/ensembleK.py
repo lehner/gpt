@@ -999,7 +999,8 @@ for conf in conf_range:
     for stream in all_streams:
         if stream in streams:
             continue
-        if not os.path.exists(f"{root_output}/{ensemble_tag}{stream}/ckpoint_lat.{conf}"):
+        #if not os.path.exists(f"{root_output}/{ensemble_tag}{stream}/ckpoint_lat.{conf}.gluonic"):
+        if not os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf}_measure_glue/verify/.checked"):
             streams.append(stream)
     if len(streams) == len(all_streams):
         break
@@ -1024,11 +1025,6 @@ for stream in streams:
                 latest_conf = conf
                 g.message(f"Allowed complete {conf}")
     if latest_conf is not None:
-        # measure glue on latest existing configuration
-        job_glue = [job_measure_glue(stream, latest_conf - 1, latest_conf, r, []) for r in run_replicas]
-        job_verify = [job_reproduction_verify(job_glue)]
-        jobs = jobs + job_glue + job_verify
-
         # first load checkpoint into a state and cleanup non-unitary errors
         job_ckp = [job_checkpoint(stream, latest_conf, r, []) for r in run_replicas]
         job_verify = [job_reproduction_verify(job_ckp)]
@@ -1093,6 +1089,13 @@ for stream in streams:
                 f"{ensemble_tag}{stream}/{latest_conf}_draw/0/state.draw"
             ], job_verify[0])
         ]
+
+        # measure glue on latest existing configuration
+        job_glue = [job_measure_glue(stream, latest_conf, latest_conf + 1, r, [j.name for j in job_verify]) for r in run_replicas]
+        job_verify = [job_reproduction_verify(job_glue)]
+        jobs = jobs + job_glue + job_verify
+
+
 
 
 ################################################################################

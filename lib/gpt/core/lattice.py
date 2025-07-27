@@ -312,3 +312,7 @@ class lattice(factor, foundation_base):
 
     def __gt__(self, other):
         return other.__lt__(self)
+
+    def rank_checksum(self):
+        return [cgpt.lattice_checksum(o) for o in self.v_obj]
+    

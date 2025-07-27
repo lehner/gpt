@@ -21,7 +21,7 @@
 import gpt as g
 
 
-fingerprint = g.default.get_int("--fingerprint", 0) > 1
+fingerprint = g.default.get_int("--fingerprint", 0) > 2
 
 
 class MMdag:

@@ -97,17 +97,25 @@ class log:
                     self(f"{first}.{i}", x)
             elif isinstance(second, g.lattice):
                 # create fingerprint
-                tag = f"{second.otype.__name__}.{second.grid}"
-                if tag not in fingerprints:
-                    fingerprint_global_timer("create fingerprint field")
-                    fingerprints[tag] = g.random(tag).cnormal(g.lattice(second))
+                if False:
+                    tag = f"{second.otype.__name__}.{second.grid}"
+                    if tag not in fingerprints:
+                        fingerprint_global_timer("create fingerprint field")
+                        fingerprints[tag] = g.random(tag).cnormal(g.lattice(second))
+                        fingerprint_global_timer()
+
+                    fingerprint_global_timer("compute fingerprint field")
+                    fp = [g.rank_inner_product(fingerprints[tag], second)]
                     fingerprint_global_timer()
 
-                fingerprint_global_timer("compute fingerprint field")
-                fp = [g.rank_inner_product(fingerprints[tag], second)]
-                fingerprint_global_timer()
+                    self(first, np.array(fp, dtype=np.complex128))
+                else:
+                    fingerprint_global_timer("rank_checksum")
+                    fp = second.rank_checksum()
+                    fingerprint_global_timer()
+                    self(first, np.array(fp, dtype=np.uint64))
                 
-                self(first, np.array(fp, dtype=np.complex128))
+
             elif isinstance(second, g.tensor):
                 self(first, second.array)
             else:

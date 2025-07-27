@@ -28,6 +28,9 @@ local_stout_parallel_projector = g.default.get_int("--local-stout-parallel-proje
 plaquette_stencil_cache = {}
 
 
+fingerprint = g.default.get_int("--fingerprint", 0) > 1
+
+
 def create_adjoint_projector(D, B, generators, nfactors):
     ng = len(generators)
     code = []
@@ -206,16 +209,12 @@ class local_stout(local_diffeomorphism):
         return g(st * fm), U, fm
 
     def __call__(self, fields):
-        #l = g.fingerprint.log()
-        #l("fields", fields)
         C_mu, U, fm = self.get_C(fields)
         mu = self.params["dimension"]
         U_prime = g.copy(U)
         U_prime[mu] @= g(
             g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(C_mu * g.adj(U[mu]))) * U[mu]
         )
-        #l("U_prime", U_prime)
-        #l()
         return U_prime
 
     def inv(self, fields, max_iter=100):
@@ -245,11 +244,6 @@ class local_stout(local_diffeomorphism):
         nd = fields[0].grid.nd
         U_prime = fields_prime[0:nd]
 
-        #l = g.fingerprint.log()
-        #l("src", src)
-        #l("fields", fields)
-        #l("fields_prime", fields_prime)
-
         t = g.timer("local_stout_jacobian")
 
         t("local")
@@ -271,8 +265,13 @@ class local_stout(local_diffeomorphism):
         iQ_mu = g.qcd.gauge.project.traceless_anti_hermitian(C_mu * g.adj(U[mu]))
         exp_iQ_mu, Lambda_mu = g.matrix.exp.function_and_gradient(iQ_mu, U_Sigma_prime_mu)
 
-        #l("exp_iQ_mu", exp_iQ_mu)
-        #l("Lambda_mu", Lambda_mu)
+        if fingerprint:
+            l = g.fingerprint.log()
+            l("iQ_mu", iQ_mu)
+            l("U_Sigma_prime_mu", U_Sigma_prime_mu)
+            l("exp_iQ_mu", exp_iQ_mu)
+            l("Lambda_mu", Lambda_mu)
+            l()
 
         Lambda_mu *= fm
 
@@ -335,8 +334,6 @@ class local_stout(local_diffeomorphism):
         if self.verbose:
             g.message(t)
 
-        #l("dst", dst)
-        #l()
         return dst
 
     def jacobian_components(self, fields, cache_ab):

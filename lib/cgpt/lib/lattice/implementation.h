@@ -331,6 +331,13 @@ public:
   virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, PyObject* segments, long local) {
     return cgpt_stencil_tensor_create<T>(grid, shifts, code, segments, local);
   }
+
+  virtual uint64_t checksum() {
+    autoView(l_v, l, AcceleratorRead);
+    uint64_t* pdata = (uint64_t*)&l_v[0];
+    uint64_t n = l.oSites() * sizeof(l_v[0]) / sizeof(uint64_t);
+    return checksum_gpu(pdata, n);
+  }
 };
 
 // prevent implicit instantiation of cgpt_Lattice<>
