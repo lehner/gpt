@@ -80,13 +80,19 @@ def setup():
             
             signal.signal(signal.SIGUSR1, signal_handler_monitor)
 
+            sig_state = 0
             while True:
                 try:
                     t = cgpt.time()
-                    if t - t0 > 60*4:
+                    if t - t0 > 60*4 and sig_state == 0:
+                        os.write(sys.stderr.fileno(), f"Process {parentid} on {socket.gethostname()} froze, send BACKTRACE signal\n".encode("utf-8"))
+                        os.kill(parentid, signal.SIGUSR2)
+                        sig_state = 1
+                    elif t - t0 > 60*5 and sig_state == 1:
                         os.write(sys.stderr.fileno(), f"Process {parentid} on {socket.gethostname()} froze, send KILL signal\n".encode("utf-8"))
                         os.kill(parentid, signal.SIGKILL)
-                    elif t - t0 > 60*5:
+                        sig_state = 2
+                    elif t - t0 > 60*6 and sig_state == 2:
                         os.write(sys.stderr.fileno(), f"Process {parentid} on {socket.gethostname()} froze, send TERM signal\n".encode("utf-8"))
                         os.kill(parentid, signal.SIGTERM)
                     else:
