@@ -45,7 +45,7 @@ path.f = path.forward
 path.b = path.backward
 
 
-class parallel_transport:
+class parallel_transport_legacy:
     def __init__(self, links, paths, site_fields=None):
         self.paths = paths
         self.dim = len(links)
@@ -115,3 +115,17 @@ class parallel_transport:
                     buffers[self.site_fields_indices[i][tuple(d)]]
                     for i in range(self.n_site_fields)
                 ]
+
+
+
+def parallel_transport(links, paths, site_fields=None):
+    if site_fields is not None:
+        return parallel_transport_legacy(links, paths, site_fields)
+
+    code = [(mu, -1, 1.0, paths[mu]) for mu in range(len(paths))]
+    ptm = g.parallel_transport_matrix(links, code, len(paths))
+
+    def _wrap(links):
+        return g.util.to_list(ptm(links))
+
+    return _wrap
