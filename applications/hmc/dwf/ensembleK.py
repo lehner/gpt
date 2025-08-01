@@ -41,7 +41,7 @@ nsteps_hamiltonian = 10
 
 run_replicas = [0,1] # run with reproduction replica
 all_streams = ["a","d","b","c"]
-conf_range = range(635, 642)
+conf_range = range(638, 645)
 ensemble_tag = "ensemble-K"
 
 pc = g.qcd.fermion.preconditioner
@@ -531,6 +531,8 @@ class job_reproduction_verify(g.jobs.base):
                 B = g.util.to_list(g.load(fn_rep))
                 if not self.recursive_verify(root, A, B):
                     self.log(root, f"Failure to verify file {fn_ref} against {fn_rep}")
+                    self.log(root, open(f"{root}/{self.name}/../{ref.replica}/.started").read())
+                    self.log(root, open(f"{root}/{self.name}/../{rep.replica}/.started").read())
                     verified = False
 
         if verified:
@@ -952,6 +954,121 @@ class job_measure_glue(job_reproduction_base):
 
 
 
+################################################################################
+# Job - Q measurements
+################################################################################
+class job_measure_Q(job_reproduction_base):
+    def __init__(self, stream, conf, name, replica, dependencies):
+        self.stream = stream
+        self.conf = conf
+        self.tag = name
+        super().__init__(
+            f"{ensemble_tag}{stream}/{conf}_measure_Q",
+            ["Q"],
+            replica,
+            dependencies
+        )
+        self.weight = 1.0
+
+    def perform_inner(self, root):
+        global U, U_mom, css
+
+        config = f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}"
+
+        eps = 0.01
+        nsteps = 1000
+        ntop = 200
+
+        U = g.load(config)
+
+        vol3d = float(np.prod(U[0].grid.gdimensions[0:3]))
+
+        if self.replica != 0:
+            config = config + "." + str(self.replica)
+
+        if g.rank() == 0:
+            fQ = open(f"{config}.Q.alternatives","wt")
+        else:
+            fQ = None
+
+        res = []
+        
+        w = g.corr_io.writer(f"{config}.topology")
+
+        action_dbw2 = g.qcd.gauge.action.dbw2(2.0 * U[0].otype.shape[0] / 3.0)
+        action_iwasaki = g.qcd.gauge.action.iwasaki(2.0 * U[0].otype.shape[0] / 3.0)
+
+        wilson_flow = g.qcd.gauge.smear.wilson_flow
+
+        def dbw2_flow(U, epsilon, tau):
+            return g.qcd.gauge.smear.gradient_flow(U, epsilon, action_dbw2)
+
+        def iwasaki_flow(U, epsilon, tau):
+            return g.qcd.gauge.smear.gradient_flow(U, epsilon, action_iwasaki)
+
+        def wilson_iwasaki_dbw2_flow(U, epsilon, tau):
+            if tau < 3.0:
+                return wilson_flow(U, epsilon)
+            elif tau < 6.0:
+                return iwasaki_flow(U, epsilon, 0.0)
+            else:
+                return dbw2_flow(U, epsilon, 0.0)
+
+        def dbw2_iwasaki_wilson_flow(U, epsilon, tau):
+            if tau < 3.0:
+                return dbw2_flow(U, epsilon, 0.0)
+            elif tau < 6.0:
+                return iwasaki_flow(U, epsilon, 0.0)
+            else:
+                return wilson_flow(U, epsilon)
+
+        res = []
+        for flow_tag, flow in [
+                ("wilson_iwasaki_dbw2", wilson_iwasaki_dbw2_flow),
+                ("dbw2_iwasaki_wilson", dbw2_iwasaki_wilson_flow),
+                ("dbw2", dbw2_flow),
+                ("iwasaki", iwasaki_flow),
+        ]:
+
+            U_wf = U
+            U_wf = flow(U_wf, epsilon=eps, tau=0.0)
+            U_wf = flow(U_wf, epsilon=-eps, tau=0.0)
+            g.message(f"Test result {flow_tag}: {(g.norm2(U[0]-U_wf[0])/g.norm2(U[0]))**0.5}")
+
+            tau = 0.0
+            U_wf = U
+            c = {}
+            for i in range(nsteps):
+        
+                U_wf = flow(U_wf, eps, tau)
+                tau += eps
+                g.message("%g - %s" % (tau, flow_tag))
+
+                if i % ntop == ntop-1 or i == nsteps - 1:
+                    g.message("Topology")
+                    Q = g.slice(g.qcd.gauge.topological_charge_5LI(U_wf, cache=c, field=True) / vol3d, 3)
+                    w.write("Q(%s,%g)" % (flow_tag,tau), Q)
+                    res.append(Q)
+
+                    Q = sum(Q).real / len(Q)
+                    if fQ is not None:
+                        fQ.write("%s %g %.15g\n" % (flow_tag, tau, Q))
+                        fQ.flush()
+
+        g.save(f"{root}/{self.name}/Q", res)
+        
+    def check(self, root):
+        if self.replica != 0:
+            return True
+        
+        config = f"{root}/{ensemble_tag}{self.stream}/ckpoint_lat.{self.tag}"
+        n = g.corr_io.count(f"{config}.topology")
+        g.message("Checking", n)
+        #return n == 1207
+        return True
+
+
+
 
 
 
@@ -999,8 +1116,10 @@ for conf in conf_range:
     for stream in all_streams:
         if stream in streams:
             continue
-        #if not os.path.exists(f"{root_output}/{ensemble_tag}{stream}/ckpoint_lat.{conf}.gluonic"):
-        if not os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf}_measure_glue/verify/.checked"):
+        # fn = f"{root_output}/{ensemble_tag}{stream}/{conf}_measure_glue/verify/.checked"
+        fn = f"{root_output}/{ensemble_tag}{stream}/{conf}_measure_Q/verify/.checked"
+        if not os.path.exists(fn):
+            g.message(f"Still to do: {fn}")
             streams.append(stream)
     if len(streams) == len(all_streams):
         break
@@ -1019,6 +1138,7 @@ for stream in streams:
                 g.message(f"Allowed import {conf}")
             elif (
                     os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_write_checkpoint_79/verify/.checked")
+                    and os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_measure_Q/verify/.checked")
                     and os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_measure_glue/verify/.checked")
             ):
                 # if we wrote it, insist that it is verified
@@ -1092,8 +1212,13 @@ for stream in streams:
 
         # measure glue on latest existing configuration
         job_glue = [job_measure_glue(stream, latest_conf, latest_conf + 1, r, [j.name for j in job_verify]) for r in run_replicas]
-        job_verify = [job_reproduction_verify(job_glue)]
-        jobs = jobs + job_glue + job_verify
+        job_verify2 = [job_reproduction_verify(job_glue)]
+        jobs = jobs + job_glue + job_verify2
+
+        # measure topology
+        job_Q = [job_measure_Q(stream, latest_conf, latest_conf + 1, r, [j.name for j in job_verify]) for r in run_replicas]
+        job_verify2 = [job_reproduction_verify(job_Q)]
+        jobs = jobs + job_Q + job_verify2
 
 
 
@@ -1101,7 +1226,7 @@ for stream in streams:
 ################################################################################
 # Execute one job at a time ;  allow for nodefile shuffle outside
 ################################################################################
-for i in range(6):
+for i in range(8):
     g.jobs.next(root_output, jobs, max_weight=100.0, stale_seconds=3600 * 2)
 
 sys.exit(0)
