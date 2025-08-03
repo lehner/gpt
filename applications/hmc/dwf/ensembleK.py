@@ -1116,9 +1116,17 @@ for conf in conf_range:
     for stream in all_streams:
         if stream in streams:
             continue
-        # fn = f"{root_output}/{ensemble_tag}{stream}/{conf}_measure_glue/verify/.checked"
-        fn = f"{root_output}/{ensemble_tag}{stream}/{conf}_measure_Q/verify/.checked"
+        fn = f"{root_output}/{ensemble_tag}{stream}/ckpoint_lat.{conf}"
         if not os.path.exists(fn):
+            g.message(f"Still to do: {fn}")
+            streams.append(stream)
+        elif (
+                os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_checkpoint/verify/.checked") and
+                not (
+                    os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_measure_Q/verify/.checked") and
+                    os.path.exists(f"{root_output}/{ensemble_tag}{stream}/{conf-1}_measure_Q/verify/.checked")
+                )
+        ):
             g.message(f"Still to do: {fn}")
             streams.append(stream)
     if len(streams) == len(all_streams):
