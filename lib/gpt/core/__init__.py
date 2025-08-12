@@ -96,6 +96,7 @@ from gpt.core.coordinates import (
     coordinate_mask,
     local_coordinates,
     correlate,
+    parity,
 )
 from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report, accelerator, host

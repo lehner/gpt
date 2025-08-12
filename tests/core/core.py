@@ -260,6 +260,20 @@ eps = abs(g.correlate(A, B)[1, 0, 3, 2] - correlate_test_4d(A, B, [1, 0, 3, 2]))
 g.message(f"Test correlate 4d: {eps}")
 assert eps < 1e-13
 
+X = g.correlate(A, B, parity=True)
+Y = g.parity(g.correlate(A, B))
+Z = g.parity(Y)
+
+eps = g.norm2(X - Y) / g.norm2(X)
+g.message(f"Test correlate/parity: {eps}")
+assert eps < 1e-28
+
+dms = grid_dp.fdimensions
+eps = abs(Z[1, 0, 3, 2] - Y[dms[0] - 1, 0, dms[2] - 3, dms[3] - 2])
+g.message(f"Test parity: {eps}")
+assert eps < 1e-14
+
+
 ################################################################################
 # Test vcomplex
 ################################################################################
@@ -339,8 +353,12 @@ for grid in [grid_dp, grid_sp]:
         assert eps < 1e-13
         for i in range(2):
             for j in range(3):
-                host_result_individual = g.rank_inner_product(left[i], right[j], 1, use_accelerator=False)
-                acc_result_individual = g.rank_inner_product(left[i], right[j], use_accelerator=True)
+                host_result_individual = g.rank_inner_product(
+                    left[i], right[j], 1, use_accelerator=False
+                )
+                acc_result_individual = g.rank_inner_product(
+                    left[i], right[j], use_accelerator=True
+                )
                 eps = abs(host_result_individual - host_result[i, j]) / abs(host_result[i, j])
                 assert eps < 1e-13
                 eps = abs(acc_result_individual - acc_result[i, j]) / abs(acc_result[i, j])
