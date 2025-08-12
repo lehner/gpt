@@ -171,6 +171,10 @@ class local_stout(local_diffeomorphism):
             dtype=np.float64,
         )
 
+        if fingerprint:
+            l = g.fingerprint.log()
+            l("U", U)
+
         if grid in self.cache:
             masks = self.cache[grid]
         else:
@@ -200,13 +204,25 @@ class local_stout(local_diffeomorphism):
                 if nu == self.params["dimension"]:
                     continue
                 st += self.params["rho"] * g.qcd.gauge.staple(U, self.params["dimension"], nu)
+
+                if fingerprint:
+                    l(f"st.{nu}", st)
+
             # stref = g.qcd.gauge.staple_sum(U, mu=self.params["dimension"], rho=rho)[0]
             # g.message("TEST", g.norm2(st), g.norm2(st-stref))
             # sys.exit(0)
         sf = self.params["staple_field"]
         if sf is not None:
             st = sf(st)
-        return g(st * fm), U, fm
+
+        res = g(st * fm)
+
+        if fingerprint:
+            l("st.final", st)
+            l("res", res)
+            l()
+
+        return res, U, fm
 
     def __call__(self, fields):
         C_mu, U, fm = self.get_C(fields)
