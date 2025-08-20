@@ -16,6 +16,7 @@ for precision in [g.single, g.double]:
     N = g.default.get_int("--N", 1000)
     Ls = g.default.get_int("--Ls", 8)
     full = g.default.has("--full")
+    sloppy_comms = g.default.has("--sloppy-comms")
 
     g.message(
         f"""
@@ -23,6 +24,7 @@ DWF Dslash Benchmark with
     fdimensions  : {grid.fdimensions}
     precision    : {precision.__name__}
     Ls           : {Ls}
+    sloppy comms : {sloppy_comms}
 """
     )
 
@@ -36,6 +38,7 @@ DWF Dslash Benchmark with
             "c": 0.5,
             "Ls": Ls,
             "boundary_phases": [1.0, 1.0, 1.0, 1.0],
+            "sloppy_comms": sloppy_comms
         },
     )
 

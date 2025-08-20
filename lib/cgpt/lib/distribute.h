@@ -163,6 +163,8 @@ class global_transfer {
 #ifndef ACCELERATOR_AWARE_MPI
   struct hostBounceBuffer_t { void* host; void * device; size_t size; size_t reserved; memory_type device_mt; int tag; rank_t sender; };
   std::vector<hostBounceBuffer_t> host_bounce_buffer;
+
+#ifdef GRID_CHECKSUM_COMMS
   std::map<uint64_t, uint64_t> host_checksum_index;
 
   uint64_t host_checksum_increment(rank_t sender, rank_t receiver) {
@@ -175,7 +177,8 @@ class global_transfer {
       return 0;
     }
   }
-
+#endif
+  
   void host_bounce_cleanup() {
     for (auto & b : host_bounce_buffer) {
       	acceleratorFreeCpu(b.host);
@@ -190,6 +193,7 @@ class global_transfer {
     }
   }
 
+#ifdef GRID_CHECKSUM_COMMS
   uint64_t host_bounce_checksum(uint64_t* pdata, size_t n, memory_type mt) {
     if (mt == mt_accelerator) {
       return checksum_gpu(pdata, n);
@@ -210,7 +214,8 @@ class global_transfer {
       return v;
     }
   }
-
+#endif
+  
   void* host_bounce_allocate(size_t sz, void* device, memory_type device_mt, int tag, rank_t sender) {
     for (auto & b : host_bounce_buffer) {
       if (b.size == 0) {

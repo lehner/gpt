@@ -11,25 +11,15 @@ def register(reg, op):
     reg.Mdiag = lambda dst, src: op.apply_unary_operator(2009, dst, src)
     reg.Dminus = lambda dst, src: op.apply_unary_operator(2010, dst, src)
     reg.DminusDag = lambda dst, src: op.apply_unary_operator(2011, dst, src)
-    reg.ImportPhysicalFermionSource = lambda dst, src: op.apply_unary_operator(
-        2012, dst, src
-    )
-    reg.ImportUnphysicalFermion = lambda dst, src: op.apply_unary_operator(
-        2013, dst, src
-    )
-    reg.ExportPhysicalFermionSolution = lambda dst, src: op.apply_unary_operator(
-        2014, dst, src
-    )
-    reg.ExportPhysicalFermionSource = lambda dst, src: op.apply_unary_operator(
-        2015, dst, src
-    )
+    reg.ImportPhysicalFermionSource = lambda dst, src: op.apply_unary_operator(2012, dst, src)
+    reg.ImportUnphysicalFermion = lambda dst, src: op.apply_unary_operator(2013, dst, src)
+    reg.ExportPhysicalFermionSolution = lambda dst, src: op.apply_unary_operator(2014, dst, src)
+    reg.ExportPhysicalFermionSource = lambda dst, src: op.apply_unary_operator(2015, dst, src)
     reg.Dhop = lambda dst, src: op.apply_unary_operator(3001, dst, src)
     reg.DhopDag = lambda dst, src: op.apply_unary_operator(4001, dst, src)
     reg.DhopEO = lambda dst, src: op.apply_unary_operator(3002, dst, src)
     reg.DhopEODag = lambda dst, src: op.apply_unary_operator(4002, dst, src)
-    reg.Mdir = lambda dst, src, dir, disp: op.apply_dirdisp_operator(
-        5001, dst, src, dir, disp
-    )
+    reg.Mdir = lambda dst, src, dir, disp: op.apply_dirdisp_operator(5001, dst, src, dir, disp)
     reg.MDeriv = lambda mat, dst, src: op.apply_deriv_operator(6001, mat, dst, src)
     reg.MDerivDag = lambda mat, dst, src: op.apply_deriv_operator(7001, mat, dst, src)
     reg.MoeDeriv = lambda mat, dst, src: op.apply_deriv_operator(6002, mat, dst, src)
@@ -37,14 +27,8 @@ def register(reg, op):
     reg.MeoDeriv = lambda mat, dst, src: op.apply_deriv_operator(6003, mat, dst, src)
     reg.MeoDerivDag = lambda mat, dst, src: op.apply_deriv_operator(7003, mat, dst, src)
     reg.DhopDeriv = lambda mat, dst, src: op.apply_deriv_operator(6004, mat, dst, src)
-    reg.DhopDerivDag = lambda mat, dst, src: op.apply_deriv_operator(
-        7004, mat, dst, src
-    )
+    reg.DhopDerivDag = lambda mat, dst, src: op.apply_deriv_operator(7004, mat, dst, src)
     reg.DhopDerivEO = lambda mat, dst, src: op.apply_deriv_operator(6005, mat, dst, src)
-    reg.DhopDerivEODag = lambda mat, dst, src: op.apply_deriv_operator(
-        7005, mat, dst, src
-    )
+    reg.DhopDerivEODag = lambda mat, dst, src: op.apply_deriv_operator(7005, mat, dst, src)
     reg.DhopDerivOE = lambda mat, dst, src: op.apply_deriv_operator(6006, mat, dst, src)
-    reg.DhopDerivOEDag = lambda mat, dst, src: op.apply_deriv_operator(
-        7006, mat, dst, src
-    )
+    reg.DhopDerivOEDag = lambda mat, dst, src: op.apply_deriv_operator(7006, mat, dst, src)
