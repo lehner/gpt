@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import itertools
+import numpy as np
 
 
 class diagrams:
@@ -62,17 +63,44 @@ class diagrams:
 
     def coefficients(self, names):
         coefs = {}
+        names_permutations = names_including_index_permutations(names)
         for coef, diag in self.graph:
             ms = match_string(diag)
-            if ms in names:
-                name = names[ms]
+            if ms in names_permutations:
+                name = names_permutations[ms]
             else:
                 name = ms
             if name in coefs:
                 coefs[name] += coef
             else:
                 coefs[name] = coef
+        for c in coefs:
+            n = float(np.round(coefs[c].real))
+            if abs(n - coefs[c]) < 1e-13:
+                coefs[c] = n
         return coefs
+
+
+def names_including_index_permutations(names):
+    names_permutations = {}
+    for name in names:
+        name_split = [f.split("_") for f in name.split("/")]
+        ic = list(set([x for f in name_split for x in f[1:] if x[0] == "*"]))
+        for icp in itertools.permutations(ic):
+            ic_map = {}
+            for i in range(len(ic)):
+                ic_map[ic[i]] = icp[i]
+            name_p = []
+            for f in name_split:
+                a = f[0]
+                b = ic_map[f[1]] if f[1] in ic_map else f[1]
+                c = ic_map[f[2]] if f[2] in ic_map else f[2]
+                if a.isupper():
+                    b, c = sorted([b, c])
+                name_p.append("_".join([a, b, c]))
+            name_p = "/".join(sorted(name_p))
+            names_permutations[name_p] = names[name]
+    return names_permutations
 
 
 def match_string(diag):

@@ -58,7 +58,7 @@ class expression:
                     indices.add(int(f[1][1:]))
         return indices
 
-    def replace_index(self, src, dst):
+    def replace_coordinate(self, src, dst):
         return expression(
             [(a[0], a[1], [(x[0], dst if x[1] == src else x[1]) for x in a[2]]) for a in self.graph]
         )
@@ -71,11 +71,14 @@ class expression:
             if m in avoid:
                 while available in mine or available in avoid:
                     available += 1
-                new = new.replace_index(f"*{m}", f"*{available}")
+                new = new.replace_coordinate(f"*{m}", f"*{available}")
         return new
 
     def __add__(self, other):
         return expression(self.graph + other.graph)
+
+    def __sub__(self, other):
+        return self + (-1) * other
 
     def __pow__(self, n):
         assert isinstance(n, int)

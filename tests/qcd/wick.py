@@ -11,17 +11,19 @@ f.expression.discard = 2
 
 pionPlusX = 1j * f.field("upbar", "x") * f.field("down", "x")
 pionMinusY = 1j * f.field("downbar", "y") * f.field("up", "y")
-action = f.e * (1j) * f.field("downbar", "*1") @ f.field("down", "*1") @ f.field(
-    "A", "*1"
-) + f.e * (1j) * f.field("upbar", "*1") @ f.field("up", "*1") @ f.field("A", "*1")
-expAction = f.one + action + action**2 * 0.5
 
-diags = (
-    f.contract(pionPlusX * pionMinusY * expAction)
-    .replace("up", "light")
-    .replace("down", "light")
-    .simplify()
+pion0X = (
+    1j
+    / 2**0.5
+    * (f.field("upbar", "x") * f.field("up", "x") - f.field("downbar", "x") * f.field("down", "x"))
 )
+pion0Y = pion0X.replace_coordinate("x", "y")
+
+action = (
+    + f.e * (1j) * f.field("downbar", "*1") @ f.field("down", "*1") @ f.field("A", "*1")
+    + f.e * (1j) * f.field("upbar", "*1") @ f.field("up", "*1") @ f.field("A", "*1")
+)
+expAction = f.one + action + action**2 * 0.5
 
 names = {
     "light_x_y/light_y_x": "C0",
@@ -34,7 +36,21 @@ names = {
     "A_*0_*1/light_*0_x/light_*1_y/light_x_*1/light_y_*0": "V",
 }
 
-coef = diags.coefficients(names)
+coef = (
+    f.contract(pionPlusX * pionMinusY * expAction)
+    .replace("up", "light")
+    .replace("down", "light")
+    .simplify()
+    .coefficients(names)
+)
+coef2 = (
+    f.contract(pion0X * pion0Y * expAction)
+    .replace("up", "light")
+    .replace("down", "light")
+    .simplify()
+    .coefficients(names)
+)
+
 coef_ref = {
     "C0": (1 - 0j),
     "D2": (-2 + 0j),
@@ -45,8 +61,12 @@ coef_ref = {
 }
 
 for c in coef:
-    g.message(f"Contraction gave coefficient {coef[c]} for diagram {c}")
+    g.message(f"Contraction I=1, I3=1 gave coefficient {coef[c]} for diagram {c}")
     assert abs(coef[c] - coef_ref[c]) < 1e-13
+
+for c in coef2:
+    g.message(f"Contraction I=1, I3=0 gave coefficient {coef2[c]} for diagram {c}")
+    assert abs(coef2[c] - coef_ref[c]) < 1e-13
 
 #
 # Now test wick routines that automatically evaluate diagrams numerically
