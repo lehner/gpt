@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2022  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2022  Raphael Lehner (raphael.lehner@physik.uni-regensburg.de)
+#    Copyright (C) 2022-24  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2022-24  Raphael Lehner (raphael.lehner@physik.uni-regensburg.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@
 #    You should have received a copy of the GNU General Public License along
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+#    Reference: https://doi.org/10.1137/140979927
 #
 
 import gpt as g
@@ -118,7 +120,7 @@ class multi_shift_fgmres(base_iterative):
         shifts=[],
         checkres=True,
         prec=None,
-        rhos=False,
+        saverhos=False,
     )
     def __init__(self, params):
         super().__init__()
@@ -129,7 +131,8 @@ class multi_shift_fgmres(base_iterative):
         self.shifts = params["shifts"]
         self.checkres = params["checkres"]
         self.prec = params["prec"]
-        self.rhos = params["rhos"]
+        self.saverhos = params["saverhos"]
+        self.rhos = None
 
     def arnoldi(self, mat, V, rlen, mmp, sfgmres, prec, idx, t):
         H = []
@@ -139,7 +142,8 @@ class multi_shift_fgmres(base_iterative):
                 Z = [sfgmres[j].Z[i] for j in idx] + [mmp]
                 for z in Z:
                     z[:] = 0
-                rhos = prec(Z, [V[i]])
+                prec(Z, V[i])
+                rhos = self.prec.rhos
                 for j, rho in zip(idx, rhos[0:-1]):
                     sfgmres[j].gamma[i] = rho / rhos[-1]
 
@@ -162,20 +166,20 @@ class multi_shift_fgmres(base_iterative):
         if self.prec is not None:
             prec_shifts = self.shifts + [0.0]
             self.prec.shifts = prec_shifts
-            self.prec.rhos = True
-            return self.prec(mat).mat
+            self.prec.saverhos = True
+            return self.prec(mat)
         return None
 
-    def restart_prec(self, mat, sfgmres):
-        shifts_prec = [self.shifts[0]]
-        idx = [0]
-        for j, fgmres in enumerate(sfgmres[1:]):
-            if fgmres.converged is False:
+    def restart_prec(self, mat, sfgmres, s0):
+        shifts_prec = []
+        idx = []
+        for j, fgmres in enumerate(sfgmres):
+            if fgmres.converged is False or j == s0:
                 shifts_prec += [fgmres.s]
-                idx += [j + 1]
+                idx += [j]
         shifts_prec += [0.0]
         self.prec.shifts = shifts_prec
-        prec = self.prec(mat).mat
+        prec = self.prec(mat)
         return prec, idx
 
     def __call__(self, mat):
@@ -214,7 +218,10 @@ class multi_shift_fgmres(base_iterative):
             # prec
             prec = self.setup_prec(mat)
             plen = len(self.shifts)
-            idx = [i for i in range(plen)]
+            pidx = [i for i in range(plen)]
+
+            # sorted shifts
+            sidx = np.argsort(self.shifts)
 
             # shifted systems
             sfgmres = []
@@ -225,15 +232,15 @@ class multi_shift_fgmres(base_iterative):
             V = [g.copy(src) for i in range(rlen + 1)]
             V[0] /= r2**0.5
 
-            # return rhos for prec fgmres
-            rr = self.rhos
+            # save rhos for prec multi_shift_fgmres
+            sr = self.saverhos
 
             for k in range(0, self.maxiter, rlen):
                 # arnoldi
-                H = self.arnoldi(mat, V, rlen, mmp, sfgmres, prec, idx, t)
+                H = self.arnoldi(mat, V, rlen, mmp, sfgmres, prec, pidx, t)
 
                 t("hessenberg")
-                fgmres = sfgmres[0]
+                fgmres = sfgmres[sidx[0]]
                 Hs = fgmres.hessenberg(H, prec)
 
                 t("qr")
@@ -252,8 +259,9 @@ class multi_shift_fgmres(base_iterative):
                 t("other")
                 self.log_convergence((k, 0), r2_new, rsq)
 
-                for j, fgmres in enumerate(sfgmres[1:]):
-                    if fgmres.converged is False or rr:
+                for j, i in enumerate(sidx[1:]):
+                    fgmres = sfgmres[i]
+                    if fgmres.converged is False or sr is True:
                         t("hessenberg")
                         Hs = fgmres.hessenberg(H, prec)
                         Hs.append(vr.copy())
@@ -268,7 +276,8 @@ class multi_shift_fgmres(base_iterative):
                         self.log_convergence((k, j + 1), fgmres.r2, rsq)
 
                 t("other")
-                for fgmres in sfgmres:
+                for i in sidx:
+                    fgmres = sfgmres[i]
                     msg = fgmres.check(rsq)
                     if msg:
                         msg += f" at iteration {k+rlen}"
@@ -281,23 +290,26 @@ class multi_shift_fgmres(base_iterative):
 
                 if all([fgmres.converged for fgmres in sfgmres]):
                     self.log(f"converged in {k+rlen} iterations")
-                    return [fgmres.rho for fgmres in sfgmres] if rr else None
+                    if sr is True:
+                        self.rhos = [fgmres.rho for fgmres in sfgmres]
+                    return
 
                 if self.maxiter != rlen:
                     t("restart")
                     r2 = g.norm2(r)
                     V[0] @= r / r2**0.5
 
-                    if prec is not None and rr is False:
+                    if prec is not None and sr is False:
                         t("restart_prec")
                         plen_new = sum([not fgmres.converged for fgmres in sfgmres[1:]]) + 1
                         if plen_new != plen:
                             plen = plen_new
-                            prec, idx = self.restart_prec(mat, sfgmres)
+                            prec, pidx = self.restart_prec(mat, sfgmres, sidx[0])
                     self.debug("performed restart")
 
             t("other")
-            for fgmres in sfgmres:
+            for i in sidx:
+                fgmres = sfgmres[i]
                 if fgmres.converged is False:
                     msg = f"shift {fgmres.s} NOT converged in {k+rlen} iterations"
                     if self.maxiter != rlen:
@@ -309,7 +321,8 @@ class multi_shift_fgmres(base_iterative):
             cs = sum([fgmres.converged for fgmres in sfgmres if True])
             ns = len(self.shifts)
             self.log(f"NOT converged in {k+rlen} iterations; {cs} / {ns} converged shifts")
-            return [fgmres.rho for fgmres in sfgmres] if rr else None
+            if sr is True:
+                self.rhos = [fgmres.rho for fgmres in sfgmres]
 
         return g.matrix_operator(
             mat=inv,
