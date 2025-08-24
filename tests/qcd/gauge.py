@@ -19,6 +19,8 @@ U_quad = g.convert(U, g.double_quadruple)
 
 # reference plaquette
 P = g.qcd.gauge.plaquette(U)
+P2 = g.sum(g.qcd.gauge.plaquette(U, field=True)) / grid.gsites
+assert abs(P - P2) < 1e-13
 
 # invariant distance (test axioms)
 ds = g.group.invariant_distance(U[0], U[1])

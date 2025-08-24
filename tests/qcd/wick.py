@@ -1,6 +1,59 @@
 #!/usr/bin/env python3
 import gpt as g
 
+#
+# First test feynman diagram features
+#
+f = g.qcd.feynman
+
+# discard higher powers of f.e
+f.expression.discard = 2
+
+pionPlusX = 1j * f.field("upbar", "x") * f.field("down", "x")
+pionMinusY = 1j * f.field("downbar", "y") * f.field("up", "y")
+action = f.e * (1j) * f.field("downbar", "*1") @ f.field("down", "*1") @ f.field(
+    "A", "*1"
+) + f.e * (1j) * f.field("upbar", "*1") @ f.field("up", "*1") @ f.field("A", "*1")
+expAction = f.one + action + action**2 * 0.5
+
+diags = (
+    f.contract(pionPlusX * pionMinusY * expAction)
+    .replace("up", "light")
+    .replace("down", "light")
+    .simplify()
+)
+
+names = {
+    "light_x_y/light_y_x": "C0",
+    "A_*0_*1/light_*0_*0/light_*1_*1/light_x_y/light_y_x": "D2",
+    "A_*0_*1/light_*0_*1/light_*1_*0/light_x_y/light_y_x": "D1",
+    "A_*0_*1/light_*0_*0/light_*1_y/light_x_*1/light_y_x": "T",  # Tup == T
+    "A_*0_*1/light_*0_y/light_*1_*0/light_x_*1/light_y_x": "S",  # Sup == S
+    "A_*0_*1/light_*0_x/light_*1_*1/light_x_y/light_y_*0": "T",  # Tdown == T
+    "A_*0_*1/light_*0_*1/light_*1_x/light_x_y/light_y_*0": "S",  # Sdown == S
+    "A_*0_*1/light_*0_x/light_*1_y/light_x_*1/light_y_*0": "V",
+}
+
+coef = diags.coefficients(names)
+coef_ref = {
+    "C0": (1 - 0j),
+    "D2": (-2 + 0j),
+    "D1": (1 + 0j),
+    "T": (4 + 0j),
+    "S": (-2 + 0j),
+    "V": (-1 + 0j),
+}
+
+for c in coef:
+    g.message(f"Contraction gave coefficient {coef[c]} for diagram {c}")
+    assert abs(coef[c] - coef_ref[c]) < 1e-13
+
+#
+# Now test wick routines that automatically evaluate diagrams numerically
+# TODO: remove redundant contraction code in feynman/wick, keep current feynman
+# contraction code as reference implementation but add graph-based code to speed up
+# generation (not needed for current purpose)
+#
 grid = g.grid([8, 8, 8, 16], g.double)
 rng = g.random("d")
 prop = g.mspincolor(grid)
