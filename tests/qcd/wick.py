@@ -20,7 +20,7 @@ pion0X = (
 pion0Y = pion0X.replace_coordinate("x", "y")
 
 action = (
-    + f.e * (1j) * f.field("downbar", "*1") @ f.field("down", "*1") @ f.field("A", "*1")
+    f.e * (1j) * f.field("downbar", "*1") @ f.field("down", "*1") @ f.field("A", "*1")
     + f.e * (1j) * f.field("upbar", "*1") @ f.field("up", "*1") @ f.field("A", "*1")
 )
 expAction = f.one + action + action**2 * 0.5

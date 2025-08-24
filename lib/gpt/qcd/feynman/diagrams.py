@@ -74,11 +74,22 @@ class diagrams:
                 coefs[name] += coef
             else:
                 coefs[name] = coef
+
+        clean_coefs = {}
         for c in coefs:
-            n = float(np.round(coefs[c].real))
-            if abs(n - coefs[c]) < 1e-13:
-                coefs[c] = n
-        return coefs
+            if abs(coefs[c]) > 1e-13:
+
+                clean_coefs[c] = coefs[c]
+                
+                n = float(np.round(coefs[c].real))
+                if abs(n - coefs[c]) < 1e-13:
+                    clean_coefs[c] = n
+
+                n = 1j*float(np.round(coefs[c].imag))
+                if abs(n - coefs[c]) < 1e-13:
+                    clean_coefs[c] = n
+
+        return clean_coefs
 
 
 def names_including_index_permutations(names):
