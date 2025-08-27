@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import os, time, datetime, sys, shutil, tempfile
+import os, time, datetime, sys, shutil, tempfile, subprocess
 import gpt as g
 
 
@@ -80,6 +80,25 @@ class scheduler_pbs:
 
         self.job_file_name = g.broadcast(0, job_file_name)
 
+        if g.rank() == 0:
+            self.qstat_last_update = -1000
+            self.update_qstat()
+
+    def update_qstat(self):
+        if g.time() - self.qstat_last_update < 4:
+            return
+        self.qstat_last_update = g.time()
+        
+        process = subprocess.Popen(["qstat"], stdout=subprocess.PIPE)
+
+        self.running_jobs = []
+        for line in process.stdout:
+            args = [y for y in line.decode("utf-8").split(' ') if y != '']
+            if len(args) > 4 and args[4] == "R":
+                self.running_jobs.append(args[0].split(".")[0])
+                
+        process.wait()
+
     def get_step(self):
         return self.env["PBS_JOBID"].split(".")[0] + "|||" + self.job_file_name
 
@@ -92,11 +111,11 @@ class scheduler_pbs:
             if not os.path.exists(test_job_file):
                 g.message(f"Scheduler PBS: job {step} is no longer running because jobfile {test_job_file} is absent")
                 return False
+
+        self.update_qstat()
             
-        field = "'{ print $5 }'"
-        # setup in a manner that an error in calling qstat translates to the job being presumed running
-        stat = os.system(f"qstat {step} 2>&1 | grep {step} | awk {field} | grep -qv R") != 0
-        g.message(f"Scheduler PBS: job {step} is running {stat}")
+        stat = step in self.running_jobs
+        g.message(f"Scheduler PBS: job {step} is running {stat} (all: {self.running_jobs})")
 
         # if the job is not running but the job file is still present, clean it up
         if not stat and len(step_all) > 1:
