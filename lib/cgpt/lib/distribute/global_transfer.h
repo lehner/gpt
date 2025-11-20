@@ -17,6 +17,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#define CGPT_MPI_TAG_PERIOD 32059
+
 template<typename rank_t>
 global_transfer<rank_t>::global_transfer(rank_t _rank, Grid_MPI_Comm _comm) : rank(_rank), comm(_comm) {
 
@@ -228,7 +230,8 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
 #endif
     
     MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Isend(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],tag,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Isend(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],tag % CGPT_MPI_TAG_PERIOD,
+				    comm,&r));
     requests.push_back(r);
 #endif
     
@@ -268,7 +271,8 @@ void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz, m
     
     //printf("Recv from %d to %d, %d bytes to %p\n",other_rank,this->rank,(int)sz,pdata);
     MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Irecv(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],tag,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Irecv(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],tag % CGPT_MPI_TAG_PERIOD,
+				    comm,&r));
     requests.push_back(r);
 #endif
   } else {
