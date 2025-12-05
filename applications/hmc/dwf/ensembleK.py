@@ -41,7 +41,7 @@ nsteps_hamiltonian = 10
 
 run_replicas = [0,1] # run with reproduction replica
 all_streams = ["a","d","b","c"]
-conf_range = range(638, 645)
+conf_range = range(643, 650)
 ensemble_tag = "ensemble-K"
 
 pc = g.qcd.fermion.preconditioner
@@ -496,12 +496,14 @@ class job_reproduction_verify(g.jobs.base):
         super().__init__(f"{rep.reproduction_tag}/verify", [j.name for j in replica_jobs])
         self.weight = 1.0
         self.replica_jobs = replica_jobs
-
+        self.flog = None
+            
     def log(self, root, msg):
         if g.rank() == 0:
-            f = open(f"{root}/{self.name}/log", "at")
-            f.write(f"{msg}\n")
-            f.close()
+            if self.flog is None:
+                self.flog = open(f"{root}/{self.name}/log", "at")
+            self.flog.write(f"{msg}\n")
+            self.flog.flush()
 
     def recursive_verify(self, root, A, B):
         if isinstance(A, list):

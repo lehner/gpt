@@ -5,10 +5,11 @@ import sys
 import socket
 
 arg_grid = g.default.get_ivec("--grid", None, 4)
+arg_fingerprint = g.default.get_int("--fingerprint-id", 0)
 
 assert arg_grid is not None
 
-g.fingerprint.start("fingerprints/manual")
+g.fingerprint.start(f"fingerprints/manual/{arg_fingerprint}")
 
 g.default.set_verbose("random", False)
 rng = g.random(

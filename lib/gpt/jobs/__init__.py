@@ -178,7 +178,12 @@ class base:
     def is_running(self, root):
         if not os.path.exists(f"{root}/{self.name}/.started"):
             return False
-        step = open(f"{root}/{self.name}/.started").read().split("\n")[2]
+        step = open(f"{root}/{self.name}/.started").read().split("\n")
+        if len(step) < 3:
+            # This can only occur if .started file was corrupted, e.g., via lacking disk space.
+            # Assume job is no longer running.
+            return False
+        step = step[2]
         return scd.is_step_running(step)
     
     def has_failed(self, root):
