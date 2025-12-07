@@ -37,7 +37,7 @@ A_mom = g.group.cartesian(A)  # conjugate momenta
 
 a_qed = g.qcd.gauge.action.non_compact.qed_l(grid)
 
-# no fourier acceleration, only masking (remove spatial zero modes)
+# using fourier acceleration and re-scaling of time
 fa = a_qed.base.fourier_sqrt_inv_mass_field
 for mu in range(4):
     for nu in range(4):
