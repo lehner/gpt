@@ -177,7 +177,65 @@ diff_E = dE.functional(*adU)
 diff_E.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 assert abs(E - diff_E(U)) < 1e-13
 
-# Test gauge actions
+
+# Test non-compact gauge actions
+def estimate_photon_prop(A, N, eps):
+    mn = [[g.real(grid) for mu in range(4)] for nu in range(4)]
+    for mu in range(4):
+        for nu in range(4):
+            mn[mu][nu][:] = 0
+    ref = A.propagator()
+    for i in range(N):
+        A.draw(photon, rng)
+        for mu in range(4):
+            for nu in range(4):
+                mn[mu][nu] += g.correlate(photon[mu], photon[nu])
+    for mu in range(4):
+        for nu in range(4):
+            mn[mu][nu] /= N
+
+            eps_est = g.norm2(ref[mu][nu] - mn[mu][nu]) / g.norm2(ref[0][0])
+            g.message(
+                f"Estimating photon propagator[{mu}][{nu}] with {N} samples: {eps_est} < {eps}"
+            )
+            assert eps_est < eps
+
+
+photon = [g.real(grid) for i in range(4)]
+for action, ips_ref in [
+    (
+        g.qcd.gauge.action.non_compact.qed_l(grid),
+        [
+            [
+                -1.315264888368073 + 40.40388185161923j,
+                -31.23597715385646 + 51.163883179578924j,
+                21.032778854865622 - 50.12103762406292j,
+                -4.98403550167072 + 14.900231260519679j,
+            ]
+        ],
+    )
+]:
+    val = action.draw(photon, rng)
+    val2 = action(photon)
+    assert abs(val / val2 - 1) < 1e-14
+    assert g.norm2(g.component.imag(photon[0])) / g.norm2(photon[0]) < 1e-28
+    action.assert_gradient_error(rng, photon, photon, 1e-3, 1e-6)
+    ips = g.inner_product(rng.cnormal(g.complex(grid)), photon)
+    if ips_ref is not None:
+        eps = np.linalg.norm(ips - np.array(ips_ref))
+        g.message(f"Fingerprint test of QED action: {eps}")
+        assert eps < 1e-13
+    else:
+        np.set_printoptions(precision=15)
+        g.message(ips)
+
+    estimate_photon_prop(action, 10, 1 / 8)
+    # estimate_photon_prop(action, 40, 1/32)
+    # estimate_photon_prop(action, 160, 1/128)
+    # estimate_photon_prop(action, 640, 1/512)
+
+
+# Test compact gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:
     # test action double precision versus quadruple precision
     a_ref = action(U)
