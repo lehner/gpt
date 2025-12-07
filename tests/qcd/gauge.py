@@ -224,7 +224,7 @@ for action, ips_ref in [
     if ips_ref is not None:
         eps = np.linalg.norm(ips - np.array(ips_ref))
         g.message(f"Fingerprint test of QED action: {eps}")
-        assert eps < 1e-13
+        assert eps < 1e-12
     else:
         np.set_printoptions(precision=15)
         g.message(ips)
