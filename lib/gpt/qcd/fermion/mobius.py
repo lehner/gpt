@@ -25,6 +25,8 @@ from gpt.qcd.fermion.operator import differentiable_fine_operator
 
 class mobius_class_operator(differentiable_fine_operator):
     def __init__(self, name, U, params, otype=None, daggered=False):
+
+        # default parameters
         if params["mass"] is not None:
             params["mass_plus"] = params["mass"]
             params["mass_minus"] = params["mass"]
@@ -316,6 +318,7 @@ class mobius_class_operator(differentiable_fine_operator):
     M5=None,
     boundary_phases=None,
     Ls=None,
+    e=None
 )
 def mobius(U, params):
     params = copy.deepcopy(params)  # save current parameters

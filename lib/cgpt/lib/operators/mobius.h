@@ -43,11 +43,35 @@ cgpt_fermion_operator_base* cgpt_create_mobius(PyObject* args) {
     PokeIndex<LorentzIndex>(U,Umu,mu);
   }
 
-  auto f = new MobiusFermion<WI>(U,*grid5,*grid5_rb,*grid4,*grid4_rb,
-				  mass_plus,M5,b,c,wp);
+  long num_gauge_fields = PyList_Size(get_key(args,"U"));
+  if (num_gauge_fields == Nd*2) {
+    Lattice<iSpinMatrix<vCoeff_t>> Aslashed(grid4);
+    Aslashed = Zero();
+    RealD e = get_float(args,"e");
+    for (int mu=0;mu<Nd;mu++) {
+      auto l = get_pointer<cgpt_Lattice_base>(args,"U",Nd + mu);
+      auto& Amu = compatible<iSinglet<vCoeff_t>>(l)->l;
+      iSpinMatrix<vCoeff_t> one = (Coeff_t)1.0;
+      one = one * Gamma::gmu[mu];
+      Aslashed += Coeff_t(0.0, e) * one * Amu;
+    }
+    
+    auto f = new MobiusFermionWithVectorField<WI, iSpinMatrix<vCoeff_t> >(U,Aslashed,*grid5,*grid5_rb,*grid4,*grid4_rb,
+									  mass_plus,M5,b,c,wp);
 
-  if (mass_plus != mass_minus)
-    f->SetMass(mass_plus, mass_minus);
+    if (mass_plus != mass_minus)
+      f->SetMass(mass_plus, mass_minus);
 
-  return new cgpt_fermion_operator<MobiusFermion<WI>>(f);
+    return new cgpt_fermion_operator<MobiusFermionWithVectorField<WI, iSpinMatrix<vCoeff_t>>>(f);
+    
+  } else {
+
+    auto f = new MobiusFermion<WI>(U,*grid5,*grid5_rb,*grid4,*grid4_rb,
+				   mass_plus,M5,b,c,wp);
+
+    if (mass_plus != mass_minus)
+      f->SetMass(mass_plus, mass_minus);
+
+    return new cgpt_fermion_operator<MobiusFermion<WI>>(f);
+  }
 }

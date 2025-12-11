@@ -416,6 +416,23 @@ test_suite = {
             ".Mdiag": [(-4967.102993398692 - 2525.589904941078j)],
         },
     },
+    "mobius_Aslash_axial_mass": {
+        "fermion": g.qcd.fermion.mobius,
+        "params": {
+            "mass_plus": 0.08,
+            "mass_minus": 0.11,
+            "M5": 1.8,
+            "b": 1.5,
+            "c": 0.5,
+            "Ls": 12,
+            "e":0.1,
+            "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+        },
+        "matrices": {
+            "": None, #[(-8690.547330400455 - 4127.148886222195j)],
+            ".Mdiag": None # [(-4967.102993398692 - 2525.589904941078j)],
+        },
+    },
     "wilson": {
         "fermion": g.qcd.fermion.wilson_clover,
         "params": wilson_params,
@@ -569,14 +586,20 @@ def verify_daggered(rng, fermion, fermion_daggered):
                 ref_list = a(lhs, rhs)
                 cmp_list = a_daggered.adj()(lhs, rhs)
                 for r, c in zip(ref_list, cmp_list):
-                    eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
+                    if g.norm2(r) == 0.0:
+                        eps = g.norm2(r - c) ** 0.5
+                    else:
+                        eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
                     g.message(f"Verify operator <> daggered for {atag}: {eps}")
                     assert eps < eps_ref
                 # then test adjoint matrix
                 ref_list = a.adj()(rhs, lhs)
                 cmp_list = a_daggered(rhs, lhs)
                 for r, c in zip(ref_list, cmp_list):
-                    eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
+                    if g.norm2(r) == 0.0:
+                        eps = g.norm2(r - c) ** 0.5
+                    else:
+                        eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
                     g.message(f"Verify operator <> daggered for {atag}.adj(): {eps}")
                     assert eps < eps_ref
 
@@ -772,11 +795,17 @@ def verify_matrix_element(fermion, dst, src, tag):
 
 g.default.set_verbose("random", False)
 
+# create a Aslashed field
+grid_double = g.grid([8, 8, 8, 16], g.double)
+A = [g.real(grid_double) for mu in range(len(U))]
+rng.cnormal(A)
+
+
 # test suite
 for name in test_suite:
     # load configuration
     rng = g.random("finger_print")
-    U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
+    U = g.qcd.gauge.random(grid_double, rng)
 
     # default grid
     grid = U[0].grid
@@ -787,6 +816,10 @@ for name in test_suite:
     # params
     test = test_suite[name]
     g.message(f"\n\nStarting test suite for {name}")
+
+    # if we have a photon field, add it
+    if "e" in test["params"]:
+        U = U + A
 
     # create fermion
     fermion_dp = test["fermion"](U, test["params"])
@@ -832,10 +865,11 @@ for name in test_suite:
             g.message(f"Test {matrix} fingerprint: {eps}")
             assert eps < grid.precision.eps * finger_print_tolerance
 
+    # test daggering entire fermion operator
+    verify_daggered(rng, fermion_dp, fermion_dp.adj())
+
     # test single versus double precision
     if isinstance(fermion_dp, g.qcd.fermion.fine_operator):
         fermion_sp = fermion_dp.converted(g.single)
         verify_single_versus_double_precision(rng, fermion_dp, fermion_sp)
 
-    # test daggering entire fermion operator
-    verify_daggered(rng, fermion_dp, fermion_dp.adj())
