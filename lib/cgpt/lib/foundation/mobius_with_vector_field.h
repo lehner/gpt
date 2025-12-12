@@ -251,10 +251,9 @@ public:
 	  accelerator_for(sss,oSites,1,{
 	      long _s = sss % Ls;
 	      long os = sss / Ls;
-	      auto v = coalescedRead(src[sss]);
 	      for (long ln=0;ln<Simd::Nsimd();ln++) {
 		long ss = os * Simd::Nsimd() + ln;
-		auto vs = extractLane(ln, v);
+		auto vs = extractLane(ln, src[sss]);
 		for (int spinp=0;spinp<Ns;spinp++)
 		  dst[ss*ldim*ldim + (_s*Ns + spinp)*ldim + (s*Ns + spin)] = vs._internal._internal[spinp]._internal[0];
 	      }
