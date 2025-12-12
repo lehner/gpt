@@ -25,7 +25,7 @@ void cgpt_create_aslashed(Lattice<T>& Aslashed, PyObject* args) {
   for (int mu=0;mu<Nd;mu++) {
     auto l = get_pointer<cgpt_Lattice_base>(args,"U",Nd + mu);
     auto& Amu = compatible<iSinglet<vCoeff_t>>(l)->l;
-    iSpinMatrix<vCoeff_t> one = (Coeff_t)1.0;
+    iSpinMatrix<Coeff_t> one = (Coeff_t)1.0;
     one = one * Gamma::gmu[mu];
     Aslashed += Coeff_t(0.0, e) * one * Amu;
   }
