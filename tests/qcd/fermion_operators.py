@@ -483,10 +483,6 @@ test_suite = {
     },
 }
 
-for t in list(test_suite.keys()):  # TODO: remove
-    if "Aslash" not in t:
-        del test_suite[t]
-
 
 finger_print_tolerance = 100.0
 
