@@ -227,12 +227,13 @@ public:
 	  autoView(v_tmp_i , tmp_i,AcceleratorWriteDiscard);
 	  typedef decltype(coalescedRead(v_tmp_i[0])) spinor;
 	  
-	  spinor src = Zero();
-	  src._internal._internal[spin]._internal[0] = 1;
-	  
 	  auto dst = &v_tmp_i[0];
 	  accelerator_for(sss,oSites,Simd::Nsimd(),{
 	      int _s = sss % Ls;
+
+	      spinor src = Zero();
+	      src._internal._internal[spin]._internal[0] = 1;
+	  
 	      coalescedWrite(dst[sss], ((_s == s) ? (1.0) : (0.0)) * src);
 	    });
 	}
