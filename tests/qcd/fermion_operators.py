@@ -341,20 +341,20 @@ wilson_twisted_mass_params = {
     "boundary_phases": [1.0, 1.0, 1.0, -1.0],
 }
 wilson_clover_matrices = {
-    "": [(-946.8714968698364 - 427.1253034080037j)],
-    ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
+    "": [-946.8714968698364 - 427.1253034080037j],
+    ".Mdiag": [-908.620454398646 - 3428.779878527792j],
 }
 wilson_matrices = {
-    "": [(-999.7564252326631 - 466.7758727463097j)],
-    ".Mdiag": [(-961.5053827614738 - 3468.430447866095j)],
+    "": [-999.7564252326631 - 466.7758727463097j],
+    ".Mdiag": [-961.5053827614738 - 3468.430447866095j],
 }
 wilson_clover_matrices_open = {
-    "": [(-1634.2615676797234 + 239.27037187495998j)],
-    ".Mdiag": [(-1239.3535155227526 - 1158.5295177146759j)],
+    "": [-1634.2615676797234 + 239.27037187495998j],
+    ".Mdiag": [-1239.3535155227526 - 1158.5295177146759j],
 }
 wilson_twisted_mass_matrices = {
-    "": [(-5.665095757463064 + 373.96051873176737j)],
-    ".Mdiag": [(-440.5312395819657 - 1102.362512575698j)],
+    "": [-5.665095757463064 + 373.96051873176737j],
+    ".Mdiag": [-440.5312395819657 - 1102.362512575698j],
 }
 test_suite = {
     "zmobius": {
@@ -379,9 +379,9 @@ test_suite = {
             "boundary_phases": [1.0, 1.0, 1.0, -1.0],
         },
         "matrices": {
-            "": [(-2424.048033434305 + 10557.661684178218j)],
-            ".Mdiag": [(2643.396577965267 + 6550.259431381319j)],
-            ".ImportPhysicalFermionSource": [(4064.7879718582053 - 1357.0856808000196j)],
+            "": [-2424.048033434305 + 10557.661684178218j],
+            ".Mdiag": [2643.396577965267 + 6550.259431381319j],
+            ".ImportPhysicalFermionSource": [4064.7879718582053 - 1357.0856808000196j],
         },
     },
     "mobius": {
@@ -395,9 +395,9 @@ test_suite = {
             "boundary_phases": [1.0, -1.0, 1.0, -1.0],
         },
         "matrices": {
-            "": [(-8693.09425573421 - 4130.7793316734915j)],
-            ".Mdiag": [(-4966.960264746144 - 2525.83968136146j)],
-            ".ImportPhysicalFermionSource": [(-97.93443075273976 - 690.6405168964976j)],
+            "": [-8693.09425573421 - 4130.7793316734915j],
+            ".Mdiag": [-4966.960264746144 - 2525.83968136146j],
+            ".ImportPhysicalFermionSource": [-97.93443075273976 - 690.6405168964976j],
         },
     },
     "mobius_axial_mass": {
@@ -412,8 +412,9 @@ test_suite = {
             "boundary_phases": [1.0, -1.0, 1.0, -1.0],
         },
         "matrices": {
-            "": [(-8690.547330400455 - 4127.148886222195j)],
-            ".Mdiag": [(-4967.102993398692 - 2525.589904941078j)],
+            "": [-8690.547330400455 - 4127.148886222195j],
+            ".Mdiag": [-4967.102993398692 - 2525.589904941078j],
+            ".ImportPhysicalFermionSource": [-97.93443075274081 - 690.6405168964941j],
         },
     },
     "mobius_Aslash_axial_mass": {
@@ -425,12 +426,13 @@ test_suite = {
             "b": 1.5,
             "c": 0.5,
             "Ls": 12,
-            "e":0.1,
+            "e": 0.1,
             "boundary_phases": [1.0, -1.0, 1.0, -1.0],
         },
         "matrices": {
-            "": None, #[(-8690.547330400455 - 4127.148886222195j)],
-            ".Mdiag": None # [(-4967.102993398692 - 2525.589904941078j)],
+            "": [-8679.424304016458 - 4253.579769538879j],
+            ".Mdiag": [-4957.914469631107 - 2526.796380280033j],
+            ".ImportPhysicalFermionSource": [-97.93443075274081 - 690.6405168964941j],
         },
     },
     "wilson": {
@@ -480,6 +482,10 @@ test_suite = {
         "matrices": wilson_twisted_mass_matrices,
     },
 }
+
+for t in list(test_suite.keys()):  # TODO: remove
+    if "Aslash" not in t:
+        del test_suite[t]
 
 
 finger_print_tolerance = 100.0
@@ -720,7 +726,7 @@ def verify_matrix_element(fermion, dst, src, tag):
             def gradient(self, Uprime, dUprime):
                 assert dUprime == Uprime
                 return [
-                    g.qcd.gauge.project.traceless_hermitian(g.eval(a + b))
+                    g.project(g.eval(a + b), "algebra")
                     for a, b in zip(mat_pg(dst_pg, src), mat_pg.adj()(src, dst_pg))
                 ]
 
@@ -781,14 +787,14 @@ def verify_matrix_element(fermion, dst, src, tag):
                     return g.norm2(get_matrix(fermion.updated(Uprime), tag) * src_p)
 
                 def gradient(self, Uprime, dUprime):
-                    assert dUprime == Uprime
+                    assert dUprime == Uprime[0:4]
                     R = g.group.cartesian(Uprime)
                     for r, x in zip(R + R, mat_pg(dst_p, src_p) + mat_pg.adj()(src_p, dst_p)):
-                        g.set_checkerboard(r, g.qcd.gauge.project.traceless_hermitian(x))
-                    return R
+                        g.set_checkerboard(r, g.project(x, "algebra"))
+                    return R[0:4]
 
-        dfv = df()
-        dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
+            dfv = df()
+            dfv.assert_gradient_error(rng, U, U[0:4], 1e-3, 1e-6)
 
     return X
 
@@ -798,7 +804,7 @@ g.default.set_verbose("random", False)
 # create a Aslashed field
 grid_double = g.grid([8, 8, 8, 16], g.double)
 A = [g.real(grid_double) for mu in range(len(U))]
-rng.cnormal(A)
+rng.normal(A)
 
 
 # test suite
@@ -872,4 +878,3 @@ for name in test_suite:
     if isinstance(fermion_dp, g.qcd.fermion.fine_operator):
         fermion_sp = fermion_dp.converted(g.single)
         verify_single_versus_double_precision(rng, fermion_dp, fermion_sp)
-

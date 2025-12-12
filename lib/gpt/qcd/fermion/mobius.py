@@ -20,7 +20,7 @@
 #
 import gpt, copy
 import numpy as np
-from gpt.qcd.fermion.operator import differentiable_fine_operator
+from gpt.qcd.fermion.operator import differentiable_fine_operator, coupled_to_vector_field
 
 
 class mobius_class_operator(differentiable_fine_operator):
@@ -45,7 +45,9 @@ class mobius_class_operator(differentiable_fine_operator):
             [params["b"] - params["c"] + c for c in params["c_s"]], dtype=np.complex128
         )
 
-        differentiable_fine_operator.__init__(self, name, U, params, otype, daggered)
+        differentiable_fine_operator.__init__(
+            self, name, U, params, otype, daggered, extend=coupled_to_vector_field.extend(U)
+        )
 
         separate_cache = {}
         self.separate_cache = separate_cache
@@ -318,7 +320,7 @@ class mobius_class_operator(differentiable_fine_operator):
     M5=None,
     boundary_phases=None,
     Ls=None,
-    e=None
+    e=None,
 )
 def mobius(U, params):
     params = copy.deepcopy(params)  # save current parameters

@@ -16,6 +16,21 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+template<typename T>
+void cgpt_create_aslashed(Lattice<T>& Aslashed, PyObject* args) {
+  typedef typename T::vector_type vCoeff_t;
+  typedef typename T::scalar_type Coeff_t;
+  Aslashed = Zero();
+  RealD e = get_float(args,"e");
+  for (int mu=0;mu<Nd;mu++) {
+    auto l = get_pointer<cgpt_Lattice_base>(args,"U",Nd + mu);
+    auto& Amu = compatible<iSinglet<vCoeff_t>>(l)->l;
+    iSpinMatrix<vCoeff_t> one = (Coeff_t)1.0;
+    one = one * Gamma::gmu[mu];
+    Aslashed += Coeff_t(0.0, e) * one * Amu;
+  }
+}
+
 template<typename vCoeff_t>
 cgpt_fermion_operator_base* cgpt_create_mobius(PyObject* args) {
 
@@ -46,15 +61,7 @@ cgpt_fermion_operator_base* cgpt_create_mobius(PyObject* args) {
   long num_gauge_fields = PyList_Size(get_key(args,"U"));
   if (num_gauge_fields == Nd*2) {
     Lattice<iSpinMatrix<vCoeff_t>> Aslashed(grid4);
-    Aslashed = Zero();
-    RealD e = get_float(args,"e");
-    for (int mu=0;mu<Nd;mu++) {
-      auto l = get_pointer<cgpt_Lattice_base>(args,"U",Nd + mu);
-      auto& Amu = compatible<iSinglet<vCoeff_t>>(l)->l;
-      iSpinMatrix<vCoeff_t> one = (Coeff_t)1.0;
-      one = one * Gamma::gmu[mu];
-      Aslashed += Coeff_t(0.0, e) * one * Amu;
-    }
+    cgpt_create_aslashed(Aslashed, args);
     
     auto f = new MobiusFermionWithVectorField<WI, iSpinMatrix<vCoeff_t> >(U,Aslashed,*grid5,*grid5_rb,*grid4,*grid4_rb,
 									  mass_plus,M5,b,c,wp);
@@ -62,7 +69,7 @@ cgpt_fermion_operator_base* cgpt_create_mobius(PyObject* args) {
     if (mass_plus != mass_minus)
       f->SetMass(mass_plus, mass_minus);
 
-    return new cgpt_fermion_operator<MobiusFermionWithVectorField<WI, iSpinMatrix<vCoeff_t>>>(f);
+    return new cgpt_fermion_operator_with_vector_field<MobiusFermionWithVectorField<WI, iSpinMatrix<vCoeff_t>>>(f);
     
   } else {
 

@@ -29,11 +29,11 @@ def _get_projected_operator(U, derivative_grid, functor):
         nd = len(U)
         assert N == len(right)
 
-        ot = U[0].otype.cartesian()
         cb = left[0].checkerboard()
-        ders = [gpt.lattice(derivative_grid, ot).checkerboard(cb) for _ in range(nd * N)]
-        for x in ders:
-            x[:] = 0
+        ders = [
+            gpt.lattice(derivative_grid, U[i % nd].otype.cartesian()).checkerboard(cb)
+            for i in range(nd * N)
+        ]
         for i in range(N):
             functor(ders[i * nd : (i + 1) * nd], left[i], right[i])
 
@@ -71,8 +71,11 @@ def _combined_eooe(Meo, Moe):
 
 
 class differentiable_fine_operator(fine_operator):
-    def __init__(self, name, U, params, otype=None, daggered=False):
+    def __init__(self, name, U, params, otype=None, daggered=False, extend=None):
         super().__init__(name, U, params, otype, daggered)
+
+        if extend is not None:
+            extend(self)
 
         self.M_projected_gradient = _get_projected_matrix_operator(
             self.U,
