@@ -54,7 +54,10 @@ class gpt_io:
 
         if gpt.rank() == 0:
             if write:
-                os.makedirs(self.root, exist_ok=True)
+                try:
+                    os.makedirs(self.root, exist_ok=True)
+                except FileExistsError:
+                    pass
                 self.glb = gpt.FILE(root + "/global", "wb")
                 for f in glob.glob("%s/??/*.field" % self.root):
                     os.unlink(f)
@@ -129,7 +132,10 @@ class gpt_io:
 
         if tag not in self.loc:
             if write and dn is not None:
-                os.makedirs(dn, exist_ok=True)
+                try:
+                    os.makedirs(dn, exist_ok=True)
+                except FileExistsError:
+                    pass
             self.loc[tag] = gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
             if write and fn is not None:
                 # seek immediately to have proper .tell result

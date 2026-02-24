@@ -109,9 +109,8 @@ class cg(base_iterative):
             )
 
             if self.fail_if_not_converged:
-                g.message("FATAL error: CG not converged")
-                import sys
-                sys.exit(1)
+                raise ValueError("FATAL error: CG not converged")
+                
 
         return g.matrix_operator(
             mat=inv, inv_mat=mat, accept_guess=(True, False), vector_space=vector_space

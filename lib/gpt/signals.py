@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, sys, os, signal, datetime, socket, cgpt
+import gpt, sys, os, signal, datetime, socket, cgpt, threading, time, ctypes
 from inspect import getframeinfo, stack
 
 
@@ -46,15 +46,26 @@ def backtrace_signal_handler(sig, frame):
 beats = None
 pid = None
 t0 = None
+last_alive_t = None
+
+# determine if pid is in a syscall
+def get_syscall(pid):
+    try:
+        with open(f"/proc/{pid}/syscall") as f:
+            return f.read().strip()
+    except:
+        return None
+
+
+
 
 def setup():
-    global beats, pid, t0
-    
+    global beats, pid, t0, last_alive_t
+
     signal.signal(signal.SIGUSR2, backtrace_signal_handler)
 
     # signal heartbeats for machines that are prone to hangs
     if gpt.default.has("--signal-heartbeat"):
-        import time
 
         bpm = gpt.default.get_int("--signal-heartbeat-bpm", 1)
         beats = 0
@@ -65,57 +76,72 @@ def setup():
         
         if pid == 0:
 
-            # wait for 30 seconds before starting
-            time.sleep(30)
+            # wait for 10 seconds before starting
+            time.sleep(10)
         
-            # I am the monitor job.  Send bpm heartbeats to main process
-            # and make sure it is still responding every minute.  If not,
-            # first kill, then terminate it.
+            # I am the monitor job.  See if other job is stuck in syscall.
             parentid = os.getppid()
-            t0 = cgpt.time()
         
-            def signal_handler_monitor(sig, frame):
-                global t0
-                t0 = cgpt.time()
-            
-            signal.signal(signal.SIGUSR1, signal_handler_monitor)
-
             sig_state = 0
-            while True:
+            sc_last = ""
+            last_alive_t = cgpt.time()
+
+            def abort():
+                os.write(sys.stdout.fileno(), f"{gpt.rank()} pid={parentid} ABORT\n".encode("utf-8"))
                 try:
-                    t = cgpt.time()
-                    if t - t0 > 60*4 and sig_state == 0:
-                        os.write(sys.stderr.fileno(), f"Process {parentid} on {socket.gethostname()} froze, send BACKTRACE signal\n".encode("utf-8"))
-                        os.kill(parentid, signal.SIGUSR2)
-                        sig_state = 1
-                    elif t - t0 > 60*5 and sig_state == 1:
-                        os.write(sys.stderr.fileno(), f"Process {parentid} on {socket.gethostname()} froze, send KILL signal\n".encode("utf-8"))
-                        os.kill(parentid, signal.SIGKILL)
-                        sig_state = 2
-                    elif t - t0 > 60*6 and sig_state == 2:
-                        os.write(sys.stderr.fileno(), f"Process {parentid} on {socket.gethostname()} froze, send TERM signal\n".encode("utf-8"))
-                        os.kill(parentid, signal.SIGTERM)
-                    else:
-                        os.kill(parentid, signal.SIGUSR1)
+                    os.kill(parentid, signal.SIGKILL)
+
+                    # this is crude and should be improved!
+                    os.system("killall python3")
                 except ProcessLookupError:
-                    sys.exit(0)
+                    pass
+                sys.exit(1)
+                
+            def signal_handler_alive(sig, frame):
+                global last_alive_t
+                last_alive_t = cgpt.time()
+
+            signal.signal(signal.SIGUSR1, signal_handler_alive)
+
+            while True:
+                t1 = cgpt.time()
+                if t1 - last_alive_t > 150 and sig_state == 1:
+                    # keep track of how many signals we have sent and give up/abort job after a while
+                    # if job does not respond, we may need to find another way to abort it; maybe send signals to all other
+                    # ranks on same node to kill?
+                    abort()
+
+                elif t1 - last_alive_t > 60 and sig_state == 0:
+                    sc = get_syscall(parentid)
+                    if sc is None:
+                        # sc = "dead"
+                        abort()
+                    if sc.split(" ")[0].strip() == "-1":
+                        sc = "running"
+                    os.write(sys.stdout.fileno(), f"{gpt.rank()} {sc} pid={parentid} syscall warning last_alive_dt={cgpt.time() - last_alive_t}\n".encode("utf-8"))
+
+                    # send backtrace signal both GPTs and Grids to document where we are; 
+                    os.kill(parentid, signal.SIGUSR2)
+                    os.kill(parentid, signal.SIGHUP)
+                    sig_state = 1
+
                 time.sleep(60 / bpm)
 
         else:
 
-            def signal_handler_noop(sig, frame):
-                global beats, pid
-                beats += 1
-                if beats >= bpm:
-                    if gpt.rank() == 0:
-                        # report heartbeats every minite to stdout
-                        msg = f"GPT : {gpt.time():14.6f} s : {beats} heartbeat(s) received, send signal to {pid}\n"
-                        os.write(sys.stdout.fileno(), msg.encode("utf-8"))
-                    # and tell the monitor that we are still alive
+            # send heartbeats to the monitor job to indicate that we are still alive,
+            # if the monitor job stops receiving heartbeats, it should investigate
+            def i_am_alive():
+                global pid
+                while True:
+                    time.sleep(60 / bpm)
                     os.kill(pid, signal.SIGUSR1)
-                    beats = 0
 
-            signal.signal(signal.SIGUSR1, signal_handler_noop)
+            # in CPython with a GIL, this does exactly what we want, i.e., queues
+            # a call to i_am_alive in the main interpreter; if it is stuck, the monitor
+            # will notice; without the GIL this would just keep running...
+            thread = threading.Thread(target=i_am_alive, args=(), daemon=True)
+            thread.start()
 
 
     # monitor all signals and respond with backtrace
@@ -123,15 +149,13 @@ def setup():
         for s in [
                 signal.SIGBUS,
                 signal.SIGFPE,
-                signal.SIGHUP,
+                # signal.SIGHUP,  <-- leave this for Grid
                 signal.SIGINT,
                 signal.SIGTERM,
                 signal.SIGSEGV,
         ]:
             signal.signal(s, backtrace_signal_handler)
             
-        import ctypes
-
         c_globals = ctypes.CDLL(None)
 
         @ctypes.CFUNCTYPE(None, ctypes.c_int)
@@ -139,3 +163,16 @@ def setup():
             backtrace_signal_handler(sig, sys._getframe(0))
 
         c_globals.signal(signal.SIGABRT, sigabrt_handler)
+
+    # if one rank exits, trigger mpi abort (mpich workaround)
+    if gpt.default.has("--abort-on-exit"):
+
+        class aborter:
+            def __init__(self):
+                pass
+
+        def __del__(self):
+            gpt.abort()
+
+        global global_aborter
+        global_aborter = aborter()

@@ -74,3 +74,18 @@ EXPORT(barrier,{
     return PyLong_FromLong(0);
 
   });
+
+EXPORT(global_abort,{
+
+    long code;
+    if (!PyArg_ParseTuple(args, "l", &code)) {
+      return NULL;
+    }
+
+#if defined (GRID_COMMS_MPI3)
+    MPI_Abort(CartesianCommunicator::communicator_world, code);
+#endif
+
+    return PyLong_FromLong(0);
+
+  });

@@ -46,3 +46,8 @@ def broadcast(root, data):
 # barrier
 def barrier():
     return cgpt.barrier()
+
+
+# global abort
+def abort():
+    return cgpt.global_abort(3)
