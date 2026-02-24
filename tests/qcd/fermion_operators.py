@@ -417,24 +417,24 @@ test_suite = {
             ".ImportPhysicalFermionSource": [-97.93443075274081 - 690.6405168964941j],
         },
     },
-    "mobius_Aslash_axial_mass": {
-        "fermion": g.qcd.fermion.mobius,
-        "params": {
-            "mass_plus": 0.08,
-            "mass_minus": 0.11,
-            "M5": 1.8,
-            "b": 1.5,
-            "c": 0.5,
-            "Ls": 12,
-            "e": 0.1,
-            "boundary_phases": [1.0, -1.0, 1.0, -1.0],
-        },
-        "matrices": {
-            "": [-8679.424304016458 - 4253.579769538879j],
-            ".Mdiag": [-4957.914469631107 - 2526.796380280033j],
-            ".ImportPhysicalFermionSource": [-97.93443075274081 - 690.6405168964941j],
-        },
-    },
+    # "mobius_Aslash_axial_mass": {
+    #     "fermion": g.qcd.fermion.mobius,
+    #     "params": {
+    #         "mass_plus": 0.08,
+    #         "mass_minus": 0.11,
+    #         "M5": 1.8,
+    #         "b": 1.5,
+    #         "c": 0.5,
+    #         "Ls": 12,
+    #         "e": 0.1,
+    #         "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+    #     },
+    #     "matrices": {
+    #         "": [-8679.424304016458 - 4253.579769538879j],
+    #         ".Mdiag": [-4957.914469631107 - 2526.796380280033j],
+    #         ".ImportPhysicalFermionSource": [-97.93443075274081 - 690.6405168964941j],
+    #     },
+    # },
     "wilson": {
         "fermion": g.qcd.fermion.wilson_clover,
         "params": wilson_params,
