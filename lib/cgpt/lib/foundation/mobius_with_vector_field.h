@@ -157,8 +157,153 @@ public:
   }
 
 
-  void MooeeInv(const FermionField& in, FermionField& out) {
-    long oSites = in.Grid()->oSites();
+#if 1
+  typedef iSpinMatrix<scalar_type> spin_matrix_type;
+
+  spin_matrix_type spin_inverse(const spin_matrix_type& in) {
+    spin_matrix_type out;
+    Eigen::MatrixXcd e_in = Eigen::MatrixXcd::Zero(Ns,Ns);
+    for (int a=0;a<Ns;a++)
+      for (int b=0;b<Ns;b++)
+	e_in(a,b) = in._internal._internal[a][b]._internal;
+    Eigen::MatrixXcd e_out = e_in.inverse();
+    for (int a=0;a<Ns;a++)
+      for (int b=0;b<Ns;b++)
+	out._internal._internal[a][b]._internal = e_out(a,b);
+    return out;
+  }
+  
+  void MooeeInv(const FermionField& psi_i, FermionField& chi_i) {
+    chi_i.Checkerboard()=psi_i.Checkerboard();
+    GridBase *grid=psi_i.Grid();
+    
+    autoView(psi , psi_i,AcceleratorRead);
+    autoView(chi , chi_i,AcceleratorWriteDiscard);
+    
+    int Ls=this->Ls;
+
+    std::vector<spin_matrix_type> lee, dee, inv_dee, leem, uee, ueem;
+    deviceVector<spin_matrix_type> d_lee, d_dee, d_inv_dee, d_uee, d_leem, d_ueem;
+
+    // next step: bee needs to be a spin field, therefore ALL components need to be spin fields
+
+    std::vector<spin_matrix_type> bee(Ls), inv_bee(Ls);
+    for (int i=0;i<Ls;i++) {
+      bee[i] = this->bee[i];
+      //if (i == 0) {
+      //	bee[i] += Gamma::Gamma5 * Aslashed
+      //}
+      inv_bee[i] = spin_inverse(bee[i]);
+    }
+
+    dee.resize(Ls);
+    inv_dee.resize(Ls);
+    lee.resize(Ls);
+    leem.resize(Ls);
+    uee.resize(Ls);
+    ueem.resize(Ls);
+
+    for(int i=0;i<Ls;i++){
+      
+      dee[i] = bee[i];
+      
+      if ( i < Ls-1 ) {
+
+	lee[i] =-this->cee[i+1]*inv_bee[i]; // sub-diag entry on the ith column
+	
+	leem[i]=this->mass_minus*this->cee[Ls-1]*inv_bee[0];
+	for(int j=0;j<i;j++) {
+	  leem[i]*= this->aee[j]*inv_bee[j+1];
+	}
+	
+	uee[i] =-this->aee[i]*inv_bee[i];   // up-diag entry on the ith row
+	
+	ueem[i]=this->mass_plus;
+	for(int j=1;j<=i;j++) ueem[i]*= this->cee[j]*inv_bee[j];
+	ueem[i]*= this->aee[0]*inv_bee[0];
+	
+      } else { 
+	lee[i] =0.0;
+	leem[i]=0.0;
+	uee[i] =0.0;
+	ueem[i]=0.0;
+      }
+    }
+    
+    { 
+      spin_matrix_type delta_d=(spin_matrix_type)this->mass_minus*this->cee[Ls-1];
+      for(int j=0;j<Ls-1;j++) {
+	delta_d *= this->cee[j]*inv_bee[j];
+      }
+      dee[Ls-1] += delta_d;
+    }
+
+    for (int i=0;i<Ls;i++)
+      inv_dee[i] = spin_inverse(dee[i]);
+
+    std::cout << GridLogMessage << "Test2" << std::endl;
+
+    d_dee.resize(Ls);
+    d_inv_dee.resize(Ls);
+    d_lee.resize(Ls);
+    d_uee.resize(Ls);
+    d_leem.resize(Ls);
+    d_ueem.resize(Ls);
+    
+    acceleratorCopyToDevice(&lee[0],&d_lee[0],Ls*sizeof(lee[0]));
+    acceleratorCopyToDevice(&dee[0],&d_dee[0],Ls*sizeof(lee[0]));
+    acceleratorCopyToDevice(&inv_dee[0],&d_inv_dee[0],Ls*sizeof(lee[0]));
+    acceleratorCopyToDevice(&uee[0],&d_uee[0],Ls*sizeof(lee[0]));
+    acceleratorCopyToDevice(&leem[0],&d_leem[0],Ls*sizeof(lee[0]));
+    acceleratorCopyToDevice(&ueem[0],&d_ueem[0],Ls*sizeof(lee[0]));
+    
+    auto plee  = & d_lee [0];
+    auto pdee  = & d_dee [0];
+    auto p_inv_dee  = & d_inv_dee [0];
+    auto puee  = & d_uee [0];
+    auto pleem = & d_leem[0];
+    auto pueem = & d_ueem[0];
+    
+    uint64_t nloop = grid->oSites()/Ls;
+    accelerator_for(sss,nloop,Simd::Nsimd(),{
+	uint64_t ss=sss*Ls;
+	typedef decltype(coalescedRead(psi[0])) spinor;
+	spinor tmp, acc, res;
+	
+	// X = Nc*Ns
+	// flops = 2X + (Ls-2)(4X + 4X) + 6X + 1 + 2X + (Ls-1)(10X + 1) = -16X + Ls(1+18X) = -192 + 217*Ls flops
+	// Apply (L^{\prime})^{-1} L_m^{-1}
+	res = psi(ss);
+	spProj5m(tmp,res);
+	acc = pleem[0]*tmp;
+	spProj5p(tmp,res);
+	coalescedWrite(chi[ss],res);
+	
+	for(int s=1;s<Ls-1;s++){
+	  res = psi(ss+s);
+	  res -= plee[s-1]*tmp;
+	  spProj5m(tmp,res);
+	  acc += pleem[s]*tmp;
+	  spProj5p(tmp,res);
+	  coalescedWrite(chi[ss+s],res);
+	}
+	res = psi(ss+Ls-1) - plee[Ls-2]*tmp - acc;
+	
+	// Apply U_m^{-1} D^{-1} U^{-1}
+	res = (p_inv_dee[Ls-1])*res;
+	coalescedWrite(chi[ss+Ls-1],res);
+	spProj5p(acc,res);
+	spProj5m(tmp,res);
+	for (int s=Ls-2;s>=0;s--){
+	  res = (p_inv_dee[s])*chi(ss+s) - puee[s]*tmp - pueem[s]*acc;
+	  spProj5m(tmp,res);
+	  coalescedWrite(chi[ss+s],res);
+	}
+      });
+
+#else
+void MooeeInv(const FermionField& in, FermionField& out) {
+  long oSites = in.Grid()->oSites();
     int Ls = this->Ls;
    
     autoView(v_o , out, AcceleratorWriteDiscard);
@@ -180,7 +325,7 @@ public:
 	  d += coalescedRead(SM[os * Ls * Ls + s*Ls + sp]) * coalescedRead(p_i[os * Ls + sp]);
 	coalescedWrite(p_o[os * Ls + s], d);
       });
-    
+#endif    
   }
 
   void MooeeInvDag(const FermionField& in, FermionField& out) {
