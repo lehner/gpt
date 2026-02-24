@@ -26,3 +26,4 @@ from gpt.qcd.gauge.action.improved_with_rectangle import (
     differentiable_improved_with_rectangle,
     differentiable_iwasaki,
 )
+import gpt.qcd.gauge.action.non_compact

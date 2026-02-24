@@ -44,8 +44,14 @@ class mass_term(differentiable_functional):
 
 
 class fourier_mass_term(differentiable_functional):
-    def __init__(self, fourier_sqrt_inv_mass_field):
+    def __init__(self, fourier_sqrt_inv_mass_field, mask=None):
         self.n = len(fourier_sqrt_inv_mass_field)
+
+        if mask is None:
+            mask = g.lattice(fourier_sqrt_inv_mass_field[0][0])
+            mask[:] = 1
+
+        self.mask = mask
 
         self.fourier_sqrt_inv_mass_field = fourier_sqrt_inv_mass_field
         self.fourier_inv_mass_field = [
@@ -83,8 +89,6 @@ class fourier_mass_term(differentiable_functional):
                 self.fourier_inv_sqrt_inv_mass_field[i][j][:] = np.ascontiguousarray(isqrt[:, j, i])
 
         self.__name__ = f"fourier_mass_term({self.n} x {self.n})"
-        L = self.fourier_inv_mass_field[0][0].grid.gdimensions
-        self.scale_unitary = float(np.prod(L)) ** 0.5
         self.fft = g.fft()
 
     def __call__(self, pi):
@@ -92,25 +96,23 @@ class fourier_mass_term(differentiable_functional):
         fft_pi = g(self.fft * pi)
         for mu in range(self.n):
             for nu in range(self.n):
-                x = g(self.scale_unitary**2 * self.fourier_inv_mass_field[mu][nu] * fft_pi[nu])
-                A += g.inner_product(fft_pi[mu], x)
+                x = g(self.fft.inv() * self.mask * self.fourier_inv_mass_field[mu][nu] * fft_pi[nu])
+                A += g.group.inner_product(pi[mu], x) * 0.5
         return A.real
 
     def draw(self, pi, rng):
         # P(pi) = e^{-sum(trace(pi^dag scale^2 fft^dag mass fft pi)) * 2 / 2}    # fft^dag fft = 1/scale^2 ; inv(fft) = fft^dag / scale^2
         rng.normal_element(pi)
 
-        value = g.group.inner_product(pi, pi) * 0.5
-
-        pi_mom = [g(self.scale_unitary * self.fft * p) for p in pi]
+        pi_mom = [g(self.fft * p) for p in pi]
         for mu in range(self.n):
             r = g.lattice(pi_mom[mu])
             r[:] = 0
             for nu in range(self.n):
                 r += self.fourier_inv_sqrt_inv_mass_field[mu][nu] * pi_mom[nu]
-            pi[mu] @= g.inv(self.fft) * r / self.scale_unitary
+            pi[mu] @= g.inv(self.fft) * r * self.mask
 
-        return value
+        return self(pi)
 
     @differentiable_functional.multi_field_gradient
     def gradient(self, pi, dpi):
@@ -124,7 +126,7 @@ class fourier_mass_term(differentiable_functional):
             for nu in range(self.n):
                 ret += self.fourier_inv_mass_field[mu][nu] * fft_pi[nu]
 
-            ret @= g.inv(self.fft) * ret
+            ret @= g.inv(self.fft) * ret * self.mask
 
             ret = g(0.5 * (ret + g.adj(ret)))
             dS.append(ret)

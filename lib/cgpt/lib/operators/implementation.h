@@ -85,3 +85,17 @@ public:
   }
 
 };
+
+template<typename T>
+class cgpt_fermion_operator_with_vector_field : public cgpt_fermion_operator<T> {
+public:
+  cgpt_fermion_operator_with_vector_field(T* _op) : cgpt_fermion_operator<T>(_op) {
+  }
+
+  virtual void update(PyObject* args) {
+    long num_gauge_fields = PyList_Size(get_key(args,"U"));
+    if (num_gauge_fields == Nd*2)
+      cgpt_create_aslashed(this->op->Aslashed, args);
+    cgpt_fermion_operator<T>::update(args);
+  }
+};
