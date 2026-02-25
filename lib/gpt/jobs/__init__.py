@@ -73,7 +73,10 @@ class scheduler_pbs:
     def __init__(self, env):
         self.env = env
         if g.rank() == 0:
-            self.job_file = tempfile.NamedTemporaryFile(delete=True, dir=".", prefix=".gpt-job-file.")
+            prefix = ".gpt-job-file."
+            if "GPT_SUBJOB_ID" in self.env:
+                prefix = prefix + self.env["GPT_SUBJOB_ID"] + "."
+            self.job_file = tempfile.NamedTemporaryFile(delete=True, dir=".", prefix=prefix)
             job_file_name = self.job_file.name
         else:
             job_file_name = ""
