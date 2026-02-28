@@ -60,7 +60,7 @@ def get_syscall(pid):
 
 
 def setup():
-    global beats, pid, t0, last_alive_t
+    global beats, pid, t0, last_alive_t, global_aborter
 
     signal.signal(signal.SIGUSR2, backtrace_signal_handler)
 
@@ -121,6 +121,7 @@ def setup():
                     os.write(sys.stdout.fileno(), f"{gpt.rank()} {sc} pid={parentid} syscall warning last_alive_dt={cgpt.time() - last_alive_t}\n".encode("utf-8"))
 
                     # send backtrace signal both GPTs and Grids to document where we are; 
+                    os.system(f"module load gdb ; echo -e \"bt\ndetatch\nquit\" | gdb -p {parentid}")
                     os.kill(parentid, signal.SIGUSR2)
                     os.kill(parentid, signal.SIGHUP)
                     sig_state = 1

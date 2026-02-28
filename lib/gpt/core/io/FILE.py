@@ -19,12 +19,24 @@
 import cgpt, gpt, os, sys, shutil, zipfile, time
 
 
+def os_path_exists(fn):
+    if os.path.exists(fn):
+        return True
+
+    # on parallel filesystems, metadata may be out of sync
+    f = cgpt.fopen(fn, "r")
+    if f == 0:
+        return False
+    cgpt.fclose(f)
+    return True
+
+
 def cache_file(root, src, md):
     if md != "rb":
         return src
     dst = "%s/%s" % (root, src.replace("/", "_"))
     src_size = os.stat(src).st_size
-    if os.path.exists(dst):
+    if os_path_exists(dst):
         if os.stat(dst).st_size == src_size:
             return dst
         else:
@@ -42,14 +54,14 @@ def zip_split(fn):
     fn_partial = fn_split[0]
     for i, fn_part in enumerate(fn_split[1:]):
         zip_candidate = fn_partial + ".zip"
-        if os.path.exists(zip_candidate):
+        if os_path_exists(zip_candidate):
             return zip_candidate, "/".join(fn_split[i:])
         fn_partial = f"{fn_partial}/{fn_part}"
     return None, None
 
 
 def FILE_exists(fn):
-    if os.path.exists(fn):
+    if os_path_exists(fn):
         return True
 
     fn_zip, fn_element = zip_split(fn)
@@ -146,11 +158,13 @@ class FILE_windowed_reader:
 
 
 def FILE(fn, mode):
-    if mode[0] != "r" or "+" in mode or os.path.exists(fn):
+    if mode[0] != "r" or "+" in mode or os_path_exists(fn):
         return FILE_base(fn, mode)
 
     # if file does not exists but should be read, try zip route
     fn_zip, fn_element = zip_split(fn)
+    if fn_zip is None:
+        raise Exception(f"{fn} is not a file but also not a zip file!")
     zip_file = zipfile.ZipFile(fn_zip, "r")
     f = zip_file.open(fn_element, "r")
     if f._compress_type != zipfile.ZIP_STORED:
