@@ -40,9 +40,9 @@ class checkpointer:
         directory = "%s/%2.2d" % (root, gpt.rank() // 32)
         os.makedirs(directory, exist_ok=True)
         self.filename = "%s/%10.10d" % (directory, gpt.rank())
-        try:
+        if gpt.FILE_exists(self.filename):
             self.f = gpt.FILE(self.filename, "r+b")
-        except FileNotFoundError:
+        else:
             self.f = gpt.FILE(self.filename, "w+b")
         self.f.seek(0, 1)
         self.verbose = gpt.default.is_verbose("checkpointer")

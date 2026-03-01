@@ -1,2 +1,5 @@
 #!/bin/bash
 git ls-files | egrep "\.(py|h|cc)$" | xargs wc -l
+# count characters to estimate how many tokens it would take
+# an llm to ingest the entire repository
+# git ls-files | egrep "\.(py|h|cc)$" | xargs wc -c
