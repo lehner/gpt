@@ -76,10 +76,18 @@ class FILE_base:
         # do not support appending
         if cache_root is not None:
             fn = cache_file(cache_root, fn, md)
+        self.f = None
         self.f = cgpt.fopen(fn, md)
         if self.f == 0:
-            self.f = None
-            raise FileNotFoundError("Can not open file %s" % fn)
+            print("Warning: second attempt to open", fn, md)
+            time.sleep(1)
+            self.f = cgpt.fopen(fn, md)
+            if self.f == 0:
+                print("Warning: final attempt to open", fn, md)
+                time.sleep(10)
+                self.f = cgpt.fopen(fn, md)
+                if self.f == 0:
+                    raise FileNotFoundError("Can not open file %s" % fn)
 
     def __del__(self):
         if self.f is not None:

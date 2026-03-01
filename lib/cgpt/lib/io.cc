@@ -118,16 +118,19 @@ EXPORT(fopen,{
     file->fd = open(fn.c_str(), flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     file->pos = 0;
 
-    if (append) {
-      file->pos = lseek(file->fd, 0, SEEK_END);
-      if (file->pos == (off_t)-1) {
-	ERR("Could not determine file offset in append mode for %s", fn.c_str());
-      }
-    }
-      
     if (file->fd == -1) {
       delete file;
       file = 0;
+    } else {
+
+      if (append) {
+	file->pos = lseek(file->fd, 0, SEEK_END);
+	if (file->pos == (off_t)-1) {
+	  int err = errno;
+	  ERR("Could not determine file offset in append mode for %s (%s)", fn.c_str(), strerror(err));
+	}
+      }
+      
     }
     
     return PyLong_FromVoidPtr(file);
