@@ -240,6 +240,12 @@ class expr:
         else:
             return self.__add__(expr(l))
 
+    def __radd__(self, l):
+        # this makes sum( ... ) work
+        if isinstance(l, int) and l == 0:
+            return self
+        raise Exception("Do not know how to add {type(l)} + expr()")
+
     def __sub__(self, l):
         return self.__add__(l.__neg__())
 

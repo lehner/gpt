@@ -168,6 +168,12 @@ class tensor(foundation_base):
         self.array += other.array
         return self
 
+    def __radd__(self, other):
+        # this makes sum( ... ) work
+        if isinstance(other, int) and other == 0:
+            return self
+        raise Exception("Do not know how to add {type(other)} + tensor()")
+
     def __isub__(self, other):
         assert self.otype.__name__ == other.otype.__name__
         self.array -= other.array
