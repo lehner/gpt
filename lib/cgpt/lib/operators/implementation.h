@@ -72,21 +72,11 @@ public:
   virtual void update(PyObject* args) {
     GaugeField U(op->GaugeGrid());
     typedef typename GaugeField::vector_type vCoeff_t;
-    typedef typename vCoeff_t::scalar_type Coeff_t;
-    
     for (int mu=0;mu<Nd;mu++) {
       auto l = get_pointer<cgpt_Lattice_base>(args,"U",mu);
       auto& Umu = compatible<iColourMatrix<vCoeff_t>>(l)->l;
       PokeIndex<LorentzIndex>(U,Umu,mu);
     }
-
-    if (sizeof(Coeff_t) == 8) {
-      std::cout << GridLogMessage << "Allowed single precision sloppy comms" << std::endl;
-      op->SloppyComms(get_bool(args,"sloppy_comms"));
-    } else {
-      op->SloppyComms(false);
-    }
-
     op->ImportGauge(U);
   }
 

@@ -62,7 +62,8 @@ cgpt_fermion_operator_base* cgpt_create_mobius(PyObject* args) {
   if (num_gauge_fields == Nd*2) {
     Lattice<iSpinMatrix<vCoeff_t>> Aslashed(grid4);
     cgpt_create_aslashed(Aslashed, args);
-    
+
+    /*
     auto f = new MobiusFermionWithVectorField<WI, iSpinMatrix<vCoeff_t> >(U,Aslashed,*grid5,*grid5_rb,*grid4,*grid4_rb,
 									  mass_plus,M5,b,c,wp);
 
@@ -70,6 +71,8 @@ cgpt_fermion_operator_base* cgpt_create_mobius(PyObject* args) {
       f->SetMass(mass_plus, mass_minus);
 
     return new cgpt_fermion_operator_with_vector_field<MobiusFermionWithVectorField<WI, iSpinMatrix<vCoeff_t>>>(f);
+    */
+    return 0;
     
   } else {
 

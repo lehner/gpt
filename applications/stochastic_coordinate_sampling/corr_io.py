@@ -2,6 +2,8 @@
 #    GPT - Grid Python Toolkit
 #    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
+#    Standalone correlatior IO module
+#
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation; either version 2 of the License, or
@@ -16,16 +18,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import sys, os, struct, binascii, fnmatch, numpy, gpt
+import sys, os, struct, binascii, fnmatch, numpy
 
 
 class writer:
     def __init__(self, fn):
-        if gpt.rank() == 0:
-            self.f = open(fn, "w+b")
-        else:
-            self.f = None
-
+        self.f = open(fn, "w+b")
+        
     def write(self, t, cc):
         if self.f is not None:
             tag_data = (t + "\0").encode("utf-8")
@@ -39,33 +38,12 @@ class writer:
             self.f.write(bindata)
             self.f.flush()
 
-        gpt.barrier()
-
     def close(self):
         if self.f is not None:
             self.f.close()
             self.f = None
 
-        gpt.barrier()
-
-
-def count(fn):
-    n = 0
-    f = open(fn, "r+b")
-    while True:
-        rd = f.read(4)
-        if len(rd) == 0:
-            break
-        ntag = struct.unpack("i", rd)[0]
-        f.read(ntag).decode("utf-8")
-        (crc32, ln) = struct.unpack("II", f.read(4 * 2))
-
-        f.read(16 * ln)
-        n += 1
-    f.close()
-    return n
-
-
+            
 class reader:
     def __init__(self, fn):
         self.tags = {}
