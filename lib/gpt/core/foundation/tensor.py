@@ -83,3 +83,39 @@ def component_multiply(a, b):
 def copy(a, b):
     for i in range(len(a)):
         a[i].array[:] = b[i].array[:]
+
+
+def convert(first, second):
+    if isinstance(second, gpt.ot_base):
+        if first.otype.__name__ == second.__name__:
+            return first.copy()
+        return convert(gpt.tensor(second), first)
+
+    elif isinstance(first, gpt.tensor):
+        # if otypes differ, attempt otype conversion first
+        if first.otype.__name__ != second.otype.__name__:
+            assert first.otype.__name__ in second.otype.ctab
+            tmp = first.copy()
+            second.otype.ctab[first.otype.__name__](tmp, second)
+            second = tmp
+            assert first.otype.__name__ == second.otype.__name__
+
+        first.array[:] = second.array
+        return first
+
+    else:
+        assert 0
+
+
+class matrix:
+    class exp:
+        def function(t):
+            A = t.array
+            w, V = numpy.linalg.eig(A)
+            Vinv = numpy.linalg.inv(V)
+            A = (V * numpy.exp(w)) @ Vinv
+            return gpt.tensor(A, t.otype)
+
+
+    def det(t):
+        return numpy.linalg.det(t.array)

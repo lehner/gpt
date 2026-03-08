@@ -99,7 +99,7 @@ class container:
         r = self.representative()
         if isinstance(r, g.lattice):
             r[:] = 0
-        elif isinstance(r, g.tensor):
+        elif isinstance(r, (g.tensor, np.ndarray)):
             r *= 0
         elif isinstance(r, complex):
             r = 0.0
@@ -130,6 +130,8 @@ def get_container(x):
         return container(g.lattice, x.grid, x.otype)
     elif isinstance(x, g.tensor):
         return container(g.tensor, x.otype)
+    elif isinstance(x, np.ndarray):
+        return container(np.ndarray, x.shape, x.dtype)
     elif g.util.is_num(x):
         return container(complex)
     else:

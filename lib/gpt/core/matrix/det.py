@@ -21,4 +21,4 @@ import gpt
 
 def det(A):
     A = gpt.eval(A)
-    return A.__class__.foundation.matrix_det(A)
+    return A.__class__.foundation.matrix.det(A)

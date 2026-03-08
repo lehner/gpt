@@ -204,13 +204,6 @@ def convert(first, second):
         assert 0
 
 
-def matrix_det(A):
-    r = gpt.complex(A.grid)
-    to_list = gpt.util.to_list
-    cgpt.determinant(r.v_obj[0], to_list(A))
-    return r
-
-
 def component_multiply(a, b):
     a = gpt(a)
     b = gpt(b)

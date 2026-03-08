@@ -16,7 +16,8 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, numpy
+import cgpt, gpt
+import numpy as np
 
 
 def cshift(first, second, third, fourth=None):
@@ -94,6 +95,10 @@ def inner_product(a, b, n_block=1, use_accelerator=True):
 
 
 def norm2(l):
+    if gpt.util.is_num(l):
+        return abs(l)**2
+    elif isinstance(l, np.ndarray):
+        return np.linalg.norm(l)**2
     return call_unary_a_num(lambda la: la[0].__class__.foundation.norm2(la), l)
 
 
@@ -166,7 +171,7 @@ def identity(src):
 
 
 def infinitesimal_to_cartesian(src, dsrc):
-    if gpt.util.is_num(src):
+    if gpt.util.is_num(src) or isinstance(src, np.ndarray):
         return dsrc
     return dsrc.__class__.foundation.infinitesimal_to_cartesian(src, dsrc)
 

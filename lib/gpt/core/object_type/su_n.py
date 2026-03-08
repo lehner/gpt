@@ -189,7 +189,10 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
         super().__init__(Nc, Nc, f"ot_matrix_su_n_fundamental_algebra({Nc})")
 
         def _convert(dst, src):
-            dst @= gpt.matrix.exp(src * 1j)
+            src = gpt.matrix.exp(src * 1j)
+            if isinstance(src, gpt.tensor):
+                src.otype = dst.otype
+            dst @= src
 
         self.ctab = {f"ot_matrix_su_n_fundamental_group({Nc})": _convert}
         self.CA = Nc

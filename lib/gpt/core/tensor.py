@@ -172,7 +172,7 @@ class tensor(foundation_base):
         # this makes sum( ... ) work
         if isinstance(other, int) and other == 0:
             return self
-        raise Exception("Do not know how to add {type(other)} + tensor()")
+        raise Exception(f"Do not know how to add {type(other)} + tensor()")
 
     def __isub__(self, other):
         assert self.otype.__name__ == other.otype.__name__
