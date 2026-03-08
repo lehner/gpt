@@ -6,7 +6,7 @@
 #
 import gpt as g
 import socket as s
-import sys
+
 
 n = g.default.get_int("--n", 10)
 nwarm = 10
@@ -59,19 +59,20 @@ for i in range(N):
                         for b in info[a]:
                             assert info[a][b]["blocks"] == 1
 
-                    for l in range(nwarm):
+                    for _ in range(nwarm):
                         plan(lat, lat)
 
                     g.barrier()
                     t0 = g.time()
-                    for l in range(n):
+                    for _ in range(n):
                         plan(lat, lat)
                     g.barrier()
                     t1 = g.time()
 
                     msg = (
                         msg
-                        + f"{ngb/(t1-t0):.3g} GB/s ({tag}->{tag},use_buf={use_communication_buffers})   "
+                        + f"{ngb / (t1 - t0):.3g} GB/s ({tag}->{tag}"
+                        + f",use_buf={use_communication_buffers})   "
                     )
 
             g.message(f"{hosts[i]} -> {hosts[j]} : {msg}")

@@ -1,5 +1,5 @@
 #!/bin/bash
-FILES=$(git ls-files | egrep "\.py$")
+FILES=$(git ls-files | egrep "\.py$" | grep -v applications)
 
 # Remember git hypberblame; .git-blame-ignore-revs file
 
@@ -9,7 +9,7 @@ for f in ${FILES}
 do
 
 python3 -m black -t py36 --line-length 100 ${f}
-python3 -m flake8 --ignore=E401 ${f}
+python3 -m flake8 --ignore=E401,W503 ${f}
 if [[ "$?" != "0" ]];
 then
     echo "Need to fix $f"

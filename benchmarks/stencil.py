@@ -22,7 +22,7 @@ for precision in [g.single, g.double]:
     fdimensions  : {grid.fdimensions}
     precision    : {precision.__name__}
 """
-        )
+    )
 
     # plaquette
     U = g.qcd.gauge.random(grid, rng, scale=0.5)
@@ -58,7 +58,7 @@ for precision in [g.single, g.double]:
     st(P, *U)
     pl = g.sum(g.trace(P)).real / P.grid.gsites / 3 / 2 / 3
     assert abs(g.qcd.gauge.plaquette(U) - pl) < precision.eps * 100
-    
+
     # Flops
     gauge_otype = U[0].otype
     Nc = gauge_otype.shape[0]
@@ -66,24 +66,24 @@ for precision in [g.single, g.double]:
     flops_per_site = 3 * flops_per_matrix_multiply * 4 * 3
     flops = flops_per_site * P.grid.gsites * N
     nbytes = (5 * Nc * Nc * 2) * precision.nbytes * P.grid.gsites * N
-    
+
     # Warmup
     for n in range(5):
         st(P, *U)
-        
+
     # Time
     t0 = g.time()
     for n in range(N):
         st(P, *U)
     t1 = g.time()
-        
+
     # Report
     GFlopsPerSec = flops / (t1 - t0) / 1e9
     GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""
 {N} applications of plaquette stencil
-    Time to complete            : {t1-t0:.2f} s
+    Time to complete            : {t1 - t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
     )
@@ -107,7 +107,7 @@ for precision in [g.single, g.double]:
     # test laplace
     dst = g.lattice(src)
     st(U + UdagShift, [dst, src])
-    
+
     lap = g.create.smear.laplace(g.covariant.shift(U, boundary_phases=[1] * 4), [0, 1, 2, 3])
     dst2 = lap(src)
     eps2 = g.norm2(dst - dst2) / g.norm2(dst)
@@ -122,7 +122,7 @@ for precision in [g.single, g.double]:
     flops_per_site = 8 * flops_per_matrix_vector_multiply + 8 * flops_per_vector_add
     flops = flops_per_site * src.grid.gsites * N
     nbytes = (8 * Nc * Nc * 2 + Nc * Ns * 2) * precision.nbytes * src.grid.gsites * N
-    
+
     # Warmup
     for n in range(5):
         st(U + UdagShift, [dst, src])
@@ -139,7 +139,7 @@ for precision in [g.single, g.double]:
     g.message(
         f"""
 {N} applications of laplace stencil
-    Time to complete            : {t1-t0:.2f} s
+    Time to complete            : {t1 - t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
     )

@@ -6,8 +6,6 @@
 # Desc.: Benchmark blocking operators
 #
 import gpt as g
-import numpy as np
-import sys
 
 g.default.set_verbose("random", False)
 rng = g.random("benchmark")
@@ -65,8 +63,8 @@ Blocking Benchmark with
         flops = flops_per_fine_site * fine[0].grid.gsites * N * nvec
         nbytes = (
             (
-                (nbasis + 1) * fine_floats * fine[0].grid.gsites  # read
-                + coarse_floats * coarse[0].grid.gsites  # write
+                (nbasis + 1) * fine_floats * fine[0].grid.gsites
+                + coarse_floats * coarse[0].grid.gsites
             )
             * precision.nbytes
             * N
@@ -88,7 +86,7 @@ Blocking Benchmark with
         GBPerSec = nbytes / (t1 - t0) / 1e9
         g.message(
             f"""{N} applications of block_project
-            Time to complete            : {t1-t0:.2f} s
+            Time to complete            : {t1 - t0:.2f} s
             Total performance           : {GFlopsPerSec:.2f} GFlops/s
             Effective memory bandwidth  : {GBPerSec:.2f} GB/s
             """
@@ -127,7 +125,7 @@ Blocking Benchmark with
         GBPerSec = nbytes / (t1 - t0) / 1e9
         g.message(
             f"""{N} applications of block_promote
-            Time to complete            : {t1-t0:.2f} s
+            Time to complete            : {t1 - t0:.2f} s
             Total performance           : {GFlopsPerSec:.2f} GFlops/s
             Effective memory bandwidth  : {GBPerSec:.2f} GB/s
             """
