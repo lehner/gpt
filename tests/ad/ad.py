@@ -472,3 +472,83 @@ err2 = abs((ref_a_grad - num_a_grad)[1]) ** 2 + abs((ref_a_grad - num_a_grad)[db
 err2 += abs((ref_b_grad - num_b_grad)[1]) ** 2 + abs((ref_b_grad - num_b_grad)[dbeta]) ** 2
 g.message(f"Simple combined forward/reverse test: {err2}")
 assert err2 < 1e-12
+
+# now test reverse ad + optimizers for non-lattice data types as well
+rng = g.random("test")
+V = rad.node(g.mcolor(grid))
+W = rad.node(g.mcolor(grid))
+
+c = g.norm2(g.adj(W) - V)
+
+rng.element(V.value)
+rng.element(W.value)
+
+# simple gradient descent to find g.adj(W)
+for i in range(100):
+    c()
+    V.value @= g.group.compose(V.value, -0.5 * V.gradient)
+
+assert g.norm2(V.value - g.adj(W.value)) < 1e-12
+
+# now learn a single real parameter
+weight = rad.node(0.0)
+c = g.norm2(g.adj(W) - weight * V)
+for i in range(10):
+    c()
+    weight.value -= 0.005 * weight.gradient
+
+assert g.norm2(V.value - g.adj(W.value)) < 1e-12
+
+# now through differentiable functionals
+weight = rad.node(0.15)
+cf = g.norm2(g.adj(W) - weight * V).functional(weight)
+
+# use Adam tuned to do a simple gradient descent
+opt = g.algorithms.optimize.adam(
+    maxiter=40,
+    eps=1e-7,
+    eps_regulator=1e8,
+    alpha=0.0005 * 1e8,
+    beta1=0,
+    beta2=1 - 1e-8,
+    log_functional_every=10,
+)
+vals = [0.0]
+opt(cf)(vals, vals)
+assert abs(vals[0] - 1) < 1e-6
+
+# now repeat with tensor group objects as weights
+weight = rad.node(g.mcolor(np.diag([1, -1j, 1j])))
+cf = g.norm2(g.adj(W) - weight * V).functional(weight)
+vals = [weight.value]
+opt = g.algorithms.optimize.adam(
+    maxiter=40,
+    eps=1e-15,
+    eps_regulator=1e8,
+    alpha=0.005 * 1e8,
+    beta1=0,
+    beta2=1 - 1e-8,
+    log_functional_every=10,
+)
+opt(cf)(vals, vals)
+eps = np.linalg.norm(vals[0].array - np.eye(3))
+g.message(f"Tensor SU(3) fundamental epsilon: {eps}")
+assert eps < 1e-8
+
+# now, numpy arrays
+weight = rad.node(np.array([0.1, 0.2]))
+cf = g.norm2(g.adj(W) - weight[0] * V).functional(weight)
+vals = [np.array([0.1, 0.2 + 0j])]
+opt = g.algorithms.optimize.adam(
+    maxiter=40,
+    eps=1e-9,
+    eps_regulator=1e8,
+    alpha=0.0009 * 1e8,
+    beta1=0,
+    beta2=1 - 1e-8,
+    log_functional_every=10,
+)
+opt(cf)(vals, vals)
+eps = abs(vals[0][0] - 1)
+g.message(f"Numpy array epsilon: {eps}")
+assert eps < 1e-10
