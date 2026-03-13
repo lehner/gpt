@@ -74,7 +74,7 @@ class container:
 
     def set_otype(self, otype):
         if len(self.tag) > 1:
-            self.tag[-1] = otype
+            self.tag = list(self.tag[:-1]) + [otype]
         else:
             raise Exception("Container does not have an otype")
 

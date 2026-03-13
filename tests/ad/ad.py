@@ -536,7 +536,7 @@ g.message(f"Tensor SU(3) fundamental epsilon: {eps}")
 assert eps < 1e-8
 
 # now, numpy arrays
-weight = rad.node(np.array([0.1, 0.2]))
+weight = rad.node(np.array([0.1, 0.2 + 0j]))
 cf = g.norm2(g.adj(W) - weight[0] * V).functional(weight)
 vals = [np.array([0.1, 0.2 + 0j])]
 opt = g.algorithms.optimize.adam(
@@ -552,3 +552,9 @@ opt(cf)(vals, vals)
 eps = abs(vals[0][0] - 1)
 g.message(f"Numpy array epsilon: {eps}")
 assert eps < 1e-10
+
+# test astype
+V_in = rad.node(g.complex(grid))
+V_out = rad.node(g.u1(grid))
+c = g.norm2(V_in - g.astype(V_out, V_in.otype))
+c()

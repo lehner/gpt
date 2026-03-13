@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.util import container, get_unary_container
+from gpt.ad.reverse.util import container, get_unary_container, get_container
 import gpt.ad.reverse.foundation.matrix
 
 
@@ -133,4 +133,25 @@ def identity(x):
         (x,),
         _container=x._container,
         _tag="identity(" + str(x._container) + ")",
+    )
+
+
+def astype(x, y):
+    def _forward():
+        return g.astype(g(x.value), y)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if x.with_gradient:
+            x.gradient += z.gradient
+
+    z_container = get_container(x.value)
+    z_container.set_otype(y)
+
+    return g.ad.reverse.node_base(
+        _forward,
+        _backward,
+        (x,),
+        _container=z_container,
+        _tag="astype(" + str(x._container) + "," + str(y) + ")",
     )

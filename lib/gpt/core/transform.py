@@ -20,7 +20,7 @@ import cgpt, gpt
 import numpy as np
 
 
-def cshift(first, second, third, fourth=None):
+def cshift(first, second, third=None, fourth=None):
     if isinstance(first, gpt.expr):
         first = gpt.eval(first)
     if isinstance(first, gpt.expr):
@@ -41,6 +41,12 @@ def copy(first, second=None):
     if not return_list:
         return t[0]
     return t
+
+
+def astype(first, second):
+    if isinstance(first, list):
+        return [astype(x, second) for x in first]
+    return first.__class__.foundation.astype(first, second)
 
 
 def eval_list(a):
@@ -84,21 +90,27 @@ def call_unary_a_num(functional, a):
 
 def rank_inner_product(a, b, n_block=1, use_accelerator=True):
     return call_binary_aa_num(
-        lambda la, lb: la[0].__class__.foundation.rank_inner_product(la, lb, n_block, use_accelerator), a, b
+        lambda la, lb: la[0].__class__.foundation.rank_inner_product(
+            la, lb, n_block, use_accelerator
+        ),
+        a,
+        b,
     )
 
 
 def inner_product(a, b, n_block=1, use_accelerator=True):
     return call_binary_aa_num(
-        lambda la, lb: la[0].__class__.foundation.inner_product(la, lb, n_block, use_accelerator), a, b
+        lambda la, lb: la[0].__class__.foundation.inner_product(la, lb, n_block, use_accelerator),
+        a,
+        b,
     )
 
 
 def norm2(l):
     if gpt.util.is_num(l):
-        return abs(l)**2
+        return abs(l) ** 2
     elif isinstance(l, np.ndarray):
-        return np.linalg.norm(l)**2
+        return np.linalg.norm(l) ** 2
     return call_unary_a_num(lambda la: la[0].__class__.foundation.norm2(la), l)
 
 

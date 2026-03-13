@@ -131,6 +131,9 @@ class ot_vector_color(ot_base):
     def infinitesimal_to_cartesian(self, a, da):
         return da
 
+    def cartesian(self):
+        return self
+
 
 ###
 # Matrices and vectors of spin
@@ -292,6 +295,9 @@ class ot_vector_spin_color(ot_base):
 
     def infinitesimal_to_cartesian(self, a, da):
         return da
+
+    def cartesian(self):
+        return self
 
     def distribute(self, mat, dst, src, zero_lhs):
         src, dst = gpt.util.to_list(src), gpt.util.to_list(dst)

@@ -52,7 +52,7 @@ cshift_plans = {}
 
 
 def cshift_gpt(t, l, d, o):
-    global cshift_plans
+    # global cshift_plans
     tag = f"{t.otype.__name__}_{t.grid}_{t.checkerboard().__name__}_{d}_{o}"
     if tag not in cshift_plans:
         plan = gpt.cshift_plan()
@@ -216,3 +216,9 @@ def component_multiply(a, b):
     for i in range(n):
         cgpt.binary(res.v_obj[i], a.v_obj[i], b.v_obj[i], params)
     return res
+
+
+def astype(first, second):
+    r = gpt.copy(first)
+    r.otype = second
+    return r
