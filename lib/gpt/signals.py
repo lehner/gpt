@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, sys, os, signal, datetime, socket, cgpt, threading, time, ctypes
+import gpt, sys, os, signal, datetime, socket, cgpt, threading, time, ctypes, multiprocessing
 from inspect import getframeinfo, stack
 
 
@@ -70,6 +70,7 @@ def setup():
         bpm = gpt.default.get_int("--signal-heartbeat-bpm", 1)
         beats = 0
 
+        last_alive_t = multiprocessing.Value('d', 0)
         pid = os.fork()
 
         gpt.message(f"Heartbeat setup with {bpm} bpm, pid = {pid} is here")
@@ -84,7 +85,7 @@ def setup():
         
             sig_state = 0
             sc_last = ""
-            last_alive_t = cgpt.time()
+            last_alive_t.value = cgpt.time()
 
             def abort():
                 os.write(sys.stdout.fileno(), f"{gpt.rank()} pid={parentid} ABORT\n".encode("utf-8"))
@@ -97,28 +98,22 @@ def setup():
                     pass
                 sys.exit(1)
                 
-            def signal_handler_alive(sig, frame):
-                global last_alive_t
-                last_alive_t = cgpt.time()
-
-            signal.signal(signal.SIGUSR1, signal_handler_alive)
-
             while True:
                 t1 = cgpt.time()
-                if t1 - last_alive_t > 150 and sig_state == 1:
+                if t1 - last_alive_t.value > 300 and sig_state == 1:
                     # keep track of how many signals we have sent and give up/abort job after a while
                     # if job does not respond, we may need to find another way to abort it; maybe send signals to all other
                     # ranks on same node to kill?
                     abort()
 
-                elif t1 - last_alive_t > 60 and sig_state == 0:
+                elif t1 - last_alive_t.value > 120 and sig_state == 0:
                     sc = get_syscall(parentid)
                     if sc is None:
                         # sc = "dead"
                         abort()
                     if sc.split(" ")[0].strip() == "-1":
                         sc = "running"
-                    os.write(sys.stdout.fileno(), f"{gpt.rank()} {sc} pid={parentid} syscall warning last_alive_dt={cgpt.time() - last_alive_t}\n".encode("utf-8"))
+                    os.write(sys.stdout.fileno(), f"{gpt.rank()} {sc} pid={parentid} syscall warning last_alive_dt={cgpt.time() - last_alive_t.value}\n".encode("utf-8"))
 
                     # send backtrace signal both GPTs and Grids to document where we are; 
                     os.system(f"module load gdb ; echo -e \"bt\ndetatch\nquit\" | gdb -p {parentid}")
@@ -133,10 +128,10 @@ def setup():
             # send heartbeats to the monitor job to indicate that we are still alive,
             # if the monitor job stops receiving heartbeats, it should investigate
             def i_am_alive():
-                global pid
+                global last_alive_t
                 while True:
                     time.sleep(60 / bpm)
-                    os.kill(pid, signal.SIGUSR1)
+                    last_alive_t.value = cgpt.time()
 
             # in CPython with a GIL, this does exactly what we want, i.e., queues
             # a call to i_am_alive in the main interpreter; if it is stuck, the monitor
