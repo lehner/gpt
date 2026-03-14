@@ -77,6 +77,16 @@ class accelerator_buffer:
             assert False
         return sites
 
+    def transpose(self, *axes):
+        # verify that axes is a permutation of shape
+        axes = tuple(axes)
+        assert len(axes) == len(self.shape)
+        assert set(axes) == set(range(len(axes)))
+        copy = self.empty_clone()
+        copy.shape = tuple(self.shape[i] for i in axes)
+        cgpt.transpose_device_memory_view(copy.view, self.view, self.shape, axes)
+        return copy
+
     def merged_axes(self, axes0, axes1):
         if axes0 < 0:
             axes0 += len(self.shape)
@@ -86,6 +96,16 @@ class accelerator_buffer:
         shape = tuple(
             shape[0:axes0] + [int(np.prod(shape[axes0 : axes1 + 1]))] + shape[axes1 + 1 :]
         )
+        copy = accelerator_buffer(self)
+        copy.shape = shape
+        return copy
+
+    def split_axis(self, axis, first, second):
+        if axis < 0:
+            axis += len(self.shape)
+        shape = list(self.shape)
+        assert shape[axis] == first * second
+        shape = tuple(shape[0:axis] + [first, second] + shape[axis + 1 :])
         copy = accelerator_buffer(self)
         copy.shape = shape
         return copy

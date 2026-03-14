@@ -32,7 +32,11 @@ def test_mm_blas(nc, nrhs, precision):
     bB = pB.to_accelerator_buffer(margin=margin)
     bC = pC.to_accelerator_buffer()
 
-    bA = bA.merged_axes(-3, -2)
+    bA = bA.merged_axes(-3, -2).split_axis(-1, 4, 3).merged_axes(-2, -1)
+
+    # test transposition on device versus on host
+    eps = np.linalg.norm(bA.transpose(4, 5, 3, 2, 1, 0).to_array() - bA.to_array().transpose(4, 5, 3, 2, 1, 0))
+    assert eps == 0.0
 
     cA = bA.coordinates(range(4))
     cB = bB.coordinates(range(4))
