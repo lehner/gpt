@@ -285,8 +285,8 @@ class ot_vector_spin_color(ot_base):
             "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
-            "ot_matrix_spin(%d)" % (spin_ndim): (lambda: self, None),  # TODO: add proper indices
-            "ot_matrix_color(%d)" % (color_ndim): (lambda: self, None),  # TODO: add proper indices
+            "ot_matrix_spin(%d)" % (spin_ndim): (lambda: self, (1, 0)),
+            "ot_matrix_color(%d)" % (color_ndim): (lambda: self, (1, 1), (1, 0)),
             "ot_singlet": (lambda: self, None),
         }
 
