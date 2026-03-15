@@ -18,6 +18,7 @@
 #
 import gpt, cgpt
 from gpt.params import params_convention
+import os
 
 
 # load through cgpt backend (openQCD, ...)
@@ -25,7 +26,7 @@ def load_cgpt(*a):
     result = []
     r, metadata = cgpt.load(*a, gpt.default.is_verbose("io"))
     if r is None:
-        raise gpt.LoadError()
+        raise gpt.LoadError(f"file: {a[0]}")
     for gr in r:
         grid = gpt.grid(gr[1], eval("gpt." + gr[2]), eval("gpt." + gr[3]), gr[0])
         result_grid = []
@@ -66,6 +67,16 @@ def load(fn, **p):
             # give parameters that are not known by file format,
             # rules this one out as well
             pass
+
+    if not os.path.exists(fn):
+        # XXX: when implementing non-file URLs, change this error message.
+        raise FileNotFoundError(f"[Errno 2] No such file or directory: '{fn}'")
+
+    if os.path.isfile(fn):
+        if not os.access(fn, os.R_OK):
+            raise PermissionError(f"[Errno 13] Permission denied: '{fn}'")
+    if os.path.isdir(fn):
+        raise gpt.LoadError(f"Error: '{fn}' is a directory and gpt_io failed to process it (permissions[+x] ok? wrong path?).")
 
     a = [fn]
     if len(p) > 0:
