@@ -234,3 +234,14 @@ EXPORT(lattice_transfer_scalar_device_buffer,{
     dst[0]->transfer_scalar_device_buffer(dst, n_virtual, r, ptr, size, padding, offset, exp, threads);
     return PyLong_FromLong(0);
   });
+
+EXPORT(lattice_checksum,{
+    void* _dst;
+    if (!PyArg_ParseTuple(args, "l", &_dst)) {
+      return NULL;
+    }
+    cgpt_Lattice_base* dst = (cgpt_Lattice_base*)_dst;
+
+    ASSERT(sizeof(uint64_t) == sizeof(size_t));
+    return PyLong_FromSize_t(dst->checksum());
+  });

@@ -27,6 +27,9 @@ def split_key_to_coordinates_and_indices(grid, key):
     if any([isinstance(key, t) for t in list_types]):
         return key, None
 
+    if isinstance(key, int):
+        key=(key,)
+
     # all other keys need to be a tuple
     assert isinstance(key, tuple)
 

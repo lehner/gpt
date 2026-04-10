@@ -52,8 +52,8 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
   typedef CartesianStencil<T, T, SimpleStencilParams> CartesianStencil_t;
   typedef CartesianStencilView<T, T, SimpleStencilParams> CartesianStencilView_t;
   
-  Vector<cgpt_stencil_matrix_code_offload_t> code;
-  Vector<cgpt_stencil_matrix_factor_t> factors;
+  HostDeviceVector<cgpt_stencil_matrix_code_offload_t> code;
+  HostDeviceVector<cgpt_stencil_matrix_factor_t> factors;
     
   int n_code_parallel_block_size, n_code_parallel_blocks;
   int local;
@@ -88,8 +88,8 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       code[i].accumulate = _code[i].accumulate;
       code[i].weight = _code[i].weight;
       code[i].size = (int)_code[i].factor.size();
-      code[i].factor = &factors[nfactors];
-      memcpy(code[i].factor, &_code[i].factor[0], sizeof(cgpt_stencil_matrix_factor_t) * code[i].size);
+      code[i].factor = &factors.device[nfactors];
+      memcpy(&factors[nfactors], &_code[i].factor[0], sizeof(cgpt_stencil_matrix_factor_t) * code[i].size);
       nfactors += code[i].size;
     }
 
@@ -113,7 +113,8 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       compressor = new SimpleCompressor<T>();
     }
 
-
+    factors.toDevice();
+    code.toDevice();
   }
 
   virtual ~cgpt_stencil_matrix() {
@@ -130,7 +131,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     VECTOR_VIEW_OPEN(fields,fields_v,AcceleratorWrite);
 
     int n_code = code.size();
-    const cgpt_stencil_matrix_code_offload_t* p_code = &code[0];
+    const cgpt_stencil_matrix_code_offload_t* p_code = code.device;
 
     typedef decltype(coalescedRead(fields_v[0][0])) obj_t;
 
@@ -146,7 +147,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     if (local) {
 
       auto sview = general_local_stencil->View(AcceleratorRead);
-      
+
       accelerator_for(ss_block,osites * _npb,T::Nsimd(),{
 	  
           uint64_t ss, oblock;
@@ -176,11 +177,11 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	  }
 	  
 	});
-      
+
     } else {
 
       CGPT_CARTESIAN_STENCIL_HALO_EXCHANGE(T,);
-      
+
       // now loop
       accelerator_for(ss_block,fields[0].Grid()->oSites() * _npb,T::Nsimd(),{
 
@@ -214,7 +215,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
       // and cleanup
       CGPT_CARTESIAN_STENCIL_CLEANUP(T,);
-      
+
     }
 
     VECTOR_VIEW_CLOSE(fields_v);

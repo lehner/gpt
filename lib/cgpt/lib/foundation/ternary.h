@@ -30,11 +30,11 @@ inline void cgpt_where(Lattice<T>& answer, const Lattice<S>& question, const Lat
   typedef typename Lattice<T>::scalar_object T_sobj;
   typedef typename Lattice<T>::vector_object T_vobj;
   
-  autoView(answer_v, answer, CpuWriteDiscard);
   autoView(question_v, question, CpuRead);
   autoView(yes_v, yes, CpuRead);
   autoView(no_v, no, CpuRead);
-
+  autoView(answer_v, answer, CpuWriteDiscard);
+  
   auto oSites = grid->oSites();
   auto Nsimd = grid->Nsimd();
 

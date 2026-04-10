@@ -171,8 +171,6 @@ public:
     ::coalescedWrite(d, r);
   }
 
-  static constexpr ViewMode AcceleratorWriteMode = AcceleratorWrite;
-
 };
 
 class AccumulatorNoBase {
@@ -190,8 +188,6 @@ public:
     ::coalescedWrite(d, v);
   }
 
-  static constexpr ViewMode AcceleratorWriteMode = AcceleratorWriteDiscard;
-  
 };
 
 template<typename Base, typename T>

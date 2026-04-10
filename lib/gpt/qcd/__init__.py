@@ -23,5 +23,6 @@ import gpt.qcd.scalar
 import gpt.qcd.pseudofermion
 import gpt.qcd.baryon
 import gpt.qcd.sparse_propagator
+import gpt.qcd.feynman
 from gpt.qcd.utils import ferm_to_prop, prop_to_ferm
 from gpt.qcd.wick import wick

@@ -73,9 +73,11 @@ class ot_matrix_su_n_base(ot_matrix_color):
         self.mtab = {
             self.__name__: (lambda: self, (1, 0)),
             f"ot_vector_color({Ndim})": (lambda: ot_vector_color(Ndim), (1, 0)),
+            "ot_complex_additive_group": (lambda: self, None),
             "ot_singlet": (lambda: self, None),
         }
         self.rmtab = {
+            "ot_complex_additive_group": (lambda: self, None),
             "ot_singlet": (lambda: self, None),
         }
 
@@ -189,7 +191,10 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
         super().__init__(Nc, Nc, f"ot_matrix_su_n_fundamental_algebra({Nc})")
 
         def _convert(dst, src):
-            dst @= gpt.matrix.exp(src * 1j)
+            src = gpt.matrix.exp(src * 1j)
+            if isinstance(src, gpt.tensor):
+                src.otype = dst.otype
+            dst @= src
 
         self.ctab = {f"ot_matrix_su_n_fundamental_group({Nc})": _convert}
         self.CA = Nc

@@ -40,9 +40,9 @@ class checkpointer:
         directory = "%s/%2.2d" % (root, gpt.rank() // 32)
         os.makedirs(directory, exist_ok=True)
         self.filename = "%s/%10.10d" % (directory, gpt.rank())
-        try:
+        if gpt.FILE_exists(self.filename):
             self.f = gpt.FILE(self.filename, "r+b")
-        except FileNotFoundError:
+        else:
             self.f = gpt.FILE(self.filename, "w+b")
         self.f.seek(0, 1)
         self.verbose = gpt.default.is_verbose("checkpointer")
@@ -66,7 +66,6 @@ class checkpointer:
             self.f.write(gpt.crc32(obj).to_bytes(4, "little"))
             t1 = gpt.time()
             self.f.write(obj)
-            self.f.flush()
             t2 = gpt.time()
             if self.verbose:
                 if self.grid is None:
@@ -123,6 +122,7 @@ class checkpointer:
         self.f.seek(0, 2)
         flags = numpy.array([0.0, 1.0, 0.0], dtype=numpy.float64)
         t0 = gpt.time()
+
         if self.f.tell() != pos:
             self.f.seek(pos, 0)
             # try to read

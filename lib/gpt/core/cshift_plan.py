@@ -18,20 +18,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import cgpt
-
-
-class cshift_executer:
-    def __init__(self, buffer_descriptions, plan):
-        self.buffer_descriptions = buffer_descriptions
-        self.plan = plan
-
-    def __call__(self, fields):
-        buffers = [g.lattice(b[0], b[1]) for b in self.buffer_descriptions]
-        for i in range(len(self.buffer_descriptions)):
-            buffers[i].checkerboard(self.buffer_descriptions[i][2])
-        self.plan(buffers, fields)
-        return buffers
 
 
 class cshift_plan:
@@ -45,24 +31,7 @@ class cshift_plan:
     def add(self, field, displacements):
         self.sources.append(field)
         self.displacements.append(displacements)
-        indices = {}
-        for d in displacements:
-            indices[d] = self.index
-            self.destinations.append(g.lattice(field))
-            self.index += 1
-        self.indices.append(indices)
-        return indices
+        return field.foundation.cshift_plan_add(self, field, displacements)
 
     def __call__(self):
-        plan = g.copy_plan(self.destinations, self.sources)
-        buffer_descriptions = []
-        for i in range(len(self.sources)):
-            src = self.sources[i]
-            src_cb = src.checkerboard()
-            coordinates = g.coordinates(src)
-            L = src.grid.fdimensions
-            for x in self.displacements[i]:
-                buffer_descriptions.append((src.grid, src.otype, src_cb))
-                plan.destination += self.destinations[self.indices[i][x]].view[:]
-                plan.source += src.view[cgpt.coordinates_shift(coordinates, x, L)]
-        return cshift_executer(buffer_descriptions, plan())
+        return self.sources[0].foundation.cshift_plan_execute(self)

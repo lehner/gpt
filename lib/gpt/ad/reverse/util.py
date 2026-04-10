@@ -52,6 +52,9 @@ class container:
             if otype.__name__ == "ot_singlet":
                 self.tag = [complex]
 
+    def copy(self):
+        return container(*[x for x in self.tag])
+        
     def is_field(self):
         return self.tag[0] == g.lattice
 
@@ -74,7 +77,7 @@ class container:
 
     def set_otype(self, otype):
         if len(self.tag) > 1:
-            self.tag[-1] = otype
+            self.tag = list(self.tag[:-1]) + [otype]
         else:
             raise Exception("Container does not have an otype")
 
@@ -99,7 +102,7 @@ class container:
         r = self.representative()
         if isinstance(r, g.lattice):
             r[:] = 0
-        elif isinstance(r, g.tensor):
+        elif isinstance(r, (g.tensor, np.ndarray)):
             r *= 0
         elif isinstance(r, complex):
             r = 0.0
@@ -120,6 +123,8 @@ class container:
 
 
 def get_container(x):
+    if isinstance(x, g.expr):
+        x = g(x)
     if isinstance(x, g.ad.reverse.node_base):
         return get_container(x.value)
     elif isinstance(x, g.ad.forward.series):
@@ -130,6 +135,8 @@ def get_container(x):
         return container(g.lattice, x.grid, x.otype)
     elif isinstance(x, g.tensor):
         return container(g.tensor, x.otype)
+    elif isinstance(x, np.ndarray):
+        return container(np.ndarray, x.shape, x.dtype)
     elif g.util.is_num(x):
         return container(complex)
     else:

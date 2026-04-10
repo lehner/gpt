@@ -190,7 +190,8 @@ class exact_one_flavor_ratio(action_base):
         for f in dfields:
             mu = fields.index(f)
             if mu < len(fields) - 1:
-                dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
+                # dS.append(g.qcd.gauge.project.traceless_hermitian(frc[mu]))
+                dS.append(g.project(frc[mu], "algebra"))
             else:
                 # not yet implemented
                 dS.append(None)

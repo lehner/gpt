@@ -22,7 +22,7 @@ import gpt as g
 default_plaquette_cache = {}
 
 
-def plaquette(U, cache=default_plaquette_cache):
+def plaquette(U, field=False, cache=default_plaquette_cache):
     vol = float(U[0].grid.fsites)
     Nd = len(U)
     ndim = U[0].otype.shape[0]
@@ -39,4 +39,7 @@ def plaquette(U, cache=default_plaquette_cache):
 
     P = cache[tag](U)
 
-    return 2 * g.sum(g.trace(P)).real / vol / Nd / (Nd - 1) / ndim
+    if field:
+        return g(2 * g.component.real(g.trace(P)) / Nd / (Nd - 1) / ndim)
+    else:
+        return 2 * g.sum(g.trace(P)).real / vol / Nd / (Nd - 1) / ndim

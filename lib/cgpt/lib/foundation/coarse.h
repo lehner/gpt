@@ -261,7 +261,7 @@ private: // member data ///////////////////////////////////////////////////////
   FermionField tmpEvenMultiArg_;
   FermionField tmpOddMultiArg_;
 
-  Vector<RealD> dag_factor_;
+  HostDeviceVector<RealD> dag_factor_;
 
   double MCalls;
   double MMiscTime;
@@ -1019,7 +1019,7 @@ public: // kernel functions TODO: move somewhere else ////////////////////////
     autoView(stencilMultiArg_v, stencilMultiArg_, AcceleratorRead);
     auto tmpMultiArg_p = &tmpMultiArg_v[0];
     VECTOR_VIEW_OPEN(out, out_v, AcceleratorWrite);
-    RealD* dag_factor_p = &dag_factor_[0];
+    RealD* dag_factor_p = dag_factor_.toDevice();
     auto nbasis_global__ = nbasis_global_; // auto-offloading problem of member function
     std::cout << GridLogMessage << dag_factor_.size() << " versus " << nbasis_global_ << std::endl;
     MViewTime += usecond();

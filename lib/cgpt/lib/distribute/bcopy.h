@@ -20,13 +20,6 @@
 #define BCOPY_MEM_ALIGN   (sizeof(vComplexF))
 #define BCOPY_ALIGN(sz) ( ( ( (sz) + BCOPY_MEM_ALIGN - 1 ) / BCOPY_MEM_ALIGN ) * BCOPY_MEM_ALIGN )
 
-template<typename block_t>
-struct bcopy_ptr_arg_t {
-  const Vector<block_t> & blocks;
-  char* p_dst;
-  const char* p_src;
-};
-
 template<typename T, typename blocks_t>
 bool bcopy_host_host(size_t bs, size_t alignment, const std::vector<blocks_t> & arg) {
   
@@ -75,25 +68,25 @@ accelerator_inline void coalescedWrite(TComplexF& x, const TComplexF & y) {
 
 template<typename T, typename vT, typename blocks_t>
 bool bcopy_accelerator_accelerator(size_t bs, size_t alignment, const std::vector<blocks_t> & arg) {
-
+    
   if ((bs % sizeof(vT) != 0) || (alignment % sizeof(vT) != 0))
     return false;
-
+    
   size_t npb = bs / sizeof(vT);
-
+    
   for (auto & a : arg) {
     auto & b = a.blocks;
-    auto * pb = &b[0];
-
+    auto * pb = b.device;
+      
     vT* dst = (vT*)a.p_dst;
     const vT* src = (const vT*)a.p_src;
-    
+      
     accelerator_for(i, npb * b.size(), sizeof(vT)/sizeof(T), {
 	auto & x = pb[i / npb];
 	size_t i_dst = x.start_dst / sizeof(vT);
 	size_t i_src = x.start_src / sizeof(vT);
 	size_t j = i % npb;
-	
+	  
 	coalescedWrite(dst[i_dst + j], coalescedRead(src[i_src + j]));
       });
   }

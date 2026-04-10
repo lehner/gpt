@@ -79,3 +79,21 @@ def set_checkerboard(dst, src):
     assert len(src.v_obj) == len(dst.v_obj)
     for i in src.otype.v_idx:
         cgpt.lattice_set_checkerboard(src.v_obj[i], dst.v_obj[i])
+
+
+def even_odd_projectors(grid):
+    even, odd = [gpt.complex(grid) for _ in range(2)]
+
+    one_half = gpt.pick_checkerboard(gpt.even, even)
+    one_half[:] = 1
+
+    even[:] = 0
+    odd[:] = 0
+
+    one_half.checkerboard(gpt.even)
+    gpt.set_checkerboard(even, one_half)
+
+    one_half.checkerboard(gpt.odd)
+    gpt.set_checkerboard(odd, one_half)
+
+    return even, odd

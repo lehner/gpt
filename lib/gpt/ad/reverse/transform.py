@@ -31,3 +31,29 @@ def relu(x, a=0.0):
             x.gradient += g.component.multiply(active, z.gradient)
 
     return node_base(_forward, _backward, (x,), _container=x._container)
+
+
+def sin(x):
+    def _forward():
+        return g.component.sin(x.value)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if x.with_gradient:
+            active = g.component.cos(x.value)
+            x.gradient += g.component.multiply(active, z.gradient)
+
+    return node_base(_forward, _backward, (x,), _container=x._container)
+
+
+def cos(x):
+    def _forward():
+        return g.component.cos(x.value)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if x.with_gradient:
+            active = g.component.sin(x.value)
+            x.gradient -= g.component.multiply(active, z.gradient)
+
+    return node_base(_forward, _backward, (x,), _container=x._container)

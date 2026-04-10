@@ -30,6 +30,14 @@ from gpt.qcd.pseudofermion.action.schur_differentiable_operator import *
 # dS = - (phi, (M Mdag)^-1 (dM Mdag + M dMdag) (M Mdag)^-1 phi)
 #    = - (chi, dM psi) - (psi, dMdag chi)
 class two_flavor_base(action_base):
+    def __init__(self, M, inverter, operator):
+        super().__init__(M, inverter, operator)
+        for m in self.M:
+            # do not support photons for now
+            # would need to add Mooee derivatives but also Meooe derivatives then result in both even and odd contributions
+            # would generalize this quite a lot
+            assert len(m.U) == m.U[0].grid.nd
+
     def __call__(self, fields):
         M, U, phi = self._updated(fields)
 

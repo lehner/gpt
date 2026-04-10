@@ -12,6 +12,9 @@ import sys, cgpt
 # random
 rng = g.random("test")
 
+# enable fingerprinting
+g.fingerprint.start("core")
+
 # grid
 L = [8, 12, 24, 24]
 for rb in [g.redblack, g.full]:
@@ -196,6 +199,16 @@ for lattice_object in [
 
 
 ################################################################################
+# g.sum on large tensors
+################################################################################
+x = rng.cnormal(g.mspincolor(grid_dp))
+msc = g.sum(x).array
+msc_ref = grid_dp.globalsum(np.sum(x[:], axis=0))
+eps = np.linalg.norm(msc - msc_ref) / np.linalg.norm(msc_ref)
+assert eps < 1e-12
+
+
+################################################################################
 # Test FFT
 ################################################################################
 fft_l_sp = g.eval(g.fft() * l_sp)
@@ -247,6 +260,20 @@ eps = abs(g.correlate(A, B)[1, 0, 3, 2] - correlate_test_4d(A, B, [1, 0, 3, 2]))
 g.message(f"Test correlate 4d: {eps}")
 assert eps < 1e-13
 
+X = g.correlate(A, B, parity=True)
+Y = g.parity(g.correlate(A, B))
+Z = g.parity(Y)
+
+eps = g.norm2(X - Y) / g.norm2(X)
+g.message(f"Test correlate/parity: {eps}")
+assert eps < 1e-28
+
+dms = grid_dp.fdimensions
+eps = abs(Z[1, 0, 3, 2] - Y[dms[0] - 1, 0, dms[2] - 3, dms[3] - 2])
+g.message(f"Test parity: {eps}")
+assert eps < 1e-14
+
+
 ################################################################################
 # Test vcomplex
 ################################################################################
@@ -258,6 +285,7 @@ va @= 0.5 * va + 0.5 * vb
 assert abs(va[0, 0, 0, 0][3] - 0.75) < 1e-6
 assert abs(va[0, 0, 0, 0][18] - 0.75) < 1e-6
 assert abs(va[0, 0, 0, 0][28] - 0.35) < 1e-6
+
 
 ################################################################################
 # MPI
@@ -309,6 +337,7 @@ dst = g.cshift(src, 0, 1)
 # dst[x] = src[x+1] -> src[0] == dst[15]
 assert abs(dst[7, 0, 0, 0] - complex(2, 1)) < 1e-6
 
+
 ################################################################################
 # Test multi inner_product
 ################################################################################
@@ -324,8 +353,12 @@ for grid in [grid_dp, grid_sp]:
         assert eps < 1e-13
         for i in range(2):
             for j in range(3):
-                host_result_individual = g.rank_inner_product(left[i], right[j], 1, use_accelerator=False)
-                acc_result_individual = g.rank_inner_product(left[i], right[j], use_accelerator=True)
+                host_result_individual = g.rank_inner_product(
+                    left[i], right[j], 1, use_accelerator=False
+                )
+                acc_result_individual = g.rank_inner_product(
+                    left[i], right[j], use_accelerator=True
+                )
                 eps = abs(host_result_individual - host_result[i, j]) / abs(host_result[i, j])
                 assert eps < 1e-13
                 eps = abs(acc_result_individual - acc_result[i, j]) / abs(acc_result[i, j])
@@ -337,6 +370,7 @@ for grid in [grid_dp, grid_sp]:
                     )
                     eps = abs(host_result_individual - ref) / abs(ref)
                     assert eps < 1e-12
+
 
 ################################################################################
 # Test multi linear_combination against expression engine

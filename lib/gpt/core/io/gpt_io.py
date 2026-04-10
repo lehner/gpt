@@ -54,7 +54,10 @@ class gpt_io:
 
         if gpt.rank() == 0:
             if write:
-                os.makedirs(self.root, exist_ok=True)
+                try:
+                    os.makedirs(self.root, exist_ok=True)
+                except FileExistsError:
+                    pass
                 self.glb = gpt.FILE(root + "/global", "wb")
                 for f in glob.glob("%s/??/*.field" % self.root):
                     os.unlink(f)
@@ -129,7 +132,10 @@ class gpt_io:
 
         if tag not in self.loc:
             if write and dn is not None:
-                os.makedirs(dn, exist_ok=True)
+                try:
+                    os.makedirs(dn, exist_ok=True)
+                except FileExistsError:
+                    pass
             self.loc[tag] = gpt.FILE(fn, "a+b" if write else "rb") if fn is not None else None
             if write and fn is not None:
                 # seek immediately to have proper .tell result
@@ -167,7 +173,8 @@ class gpt_io:
 
         # performance
         dt_distr, dt_crc, dt_write = 0.0, 0.0, 0.0
-        # g.barrier()
+
+        g.barrier()
         t0 = gpt.time()
         szGB = 0.0
 
@@ -202,13 +209,12 @@ class gpt_io:
                     f.write(g.mpi[i].to_bytes(4, byteorder="little"))
                 f.write(len(mv).to_bytes(8, byteorder="little"))
                 f.write(mv)
-                f.flush()
                 dt_write += gpt.time()
                 szGB += len(mv) / 1024.0**3.0
 
-        t1 = gpt.time()
-
         szGB = g.globalsum(szGB)
+        t1 = gpt.time()
+        
         if self.verbose and dt_crc != 0.0:
             gpt.message(
                 "Wrote %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for checksum, %g GB/s for writing, %d views per node)"
@@ -245,6 +251,7 @@ class gpt_io:
         # performance
         dt_distr, dt_crc, dt_read = 0.0, 0.0, 0.0
         szGB = 0.0
+
         g.barrier()
         t0 = gpt.time()
 
@@ -273,7 +280,8 @@ class gpt_io:
                 dt_crc -= gpt.time()
                 crc_comp = gpt.crc32(data)
                 dt_crc += gpt.time()
-                assert crc_comp == crc_exp
+                if crc_comp != crc_exp:
+                    raise IOError(f"Checksum verification failed {crc_comp} <> {crc_exp}")
                 sys.stdout.flush()
                 szGB += len(data) / 1024.0**3.0
             else:
@@ -287,10 +295,10 @@ class gpt_io:
             g.barrier()
             dt_distr += gpt.time()
 
-        g.barrier()
-        t1 = gpt.time()
 
         szGB = g.globalsum(szGB)
+        t1 = gpt.time()
+
         if self.verbose and dt_crc != 0.0:
             gpt.message(
                 "Read %g GB at %g GB/s (%g GB/s for distribution, %g GB/s for reading + checksum, %g GB/s for checksum, %d views per node)"

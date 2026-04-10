@@ -69,6 +69,7 @@ def count(fn):
 class reader:
     def __init__(self, fn):
         self.tags = {}
+        self.tags_with_duplicates = []
         f = open(fn, "rb")
         while True:
             rd = f.read(4)
@@ -84,7 +85,9 @@ class reader:
             if crc32comp != crc32:
                 raise Exception("Data corrupted!")
 
-            self.tags[tag[0:-1]] = numpy.frombuffer(data, dtype=numpy.complex128, count=ln)
+            tag = tag[0:-1]
+            self.tags[tag] = numpy.frombuffer(data, dtype=numpy.complex128, count=ln)
+            self.tags_with_duplicates.append(tag)
         f.close()
 
     def glob(self, pattern):

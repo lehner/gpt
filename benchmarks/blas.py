@@ -7,7 +7,7 @@ import numpy as np
 
 g.default.set_verbose("random", False)
 rng = g.random("benchmark", "vectorized_ranlux24_24_64")
-L = g.default.get_ivec("--grid", [16,16,16,32], 4)
+L = g.default.get_ivec("--grid", [16, 16, 16, 32], 4)
 N = g.default.get_int("--N", 100)
 m = g.default.get_int("--m", 40)
 k = g.default.get_int("--k", 40)
@@ -15,7 +15,7 @@ n = g.default.get_int("--n", 12)
 
 for precision in [g.single, g.double]:
     grid = g.grid(L, precision)
-    
+
     g.message(
         f"""
 
@@ -28,9 +28,9 @@ for precision in [g.single, g.double]:
     precision    : {precision.__name__}
 """
     )
-    
+
     # test matrix-matrix multiplication
-    flops_per_matrix_vector_multiply = m * (k * 6 + (k - 1) * 2) 
+    flops_per_matrix_vector_multiply = m * (k * 6 + (k - 1) * 2)
     flops = flops_per_matrix_vector_multiply * grid.gsites * N * n
     nbytes = (m * k + k * n + m * n) * precision.nbytes * 2 * N * grid.gsites
 
@@ -76,10 +76,11 @@ for precision in [g.single, g.double]:
     g.message(
         f"""
 {N} applications of A_mk B_kn = C_mn
-    Time to complete            : {t1-t0:.2f} s
+    Time to complete            : {t1 - t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Total bandwidth             : {GBPerSec:.2f} GB/s
-    """)
+    """
+    )
 
     j = g.blas().gemm(1.0, A_T[idx].H, B[idx], 0.0, C[idx])
 
@@ -97,11 +98,12 @@ for precision in [g.single, g.double]:
     GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""
-{N} applications of adj(A)_mk B_kn = C_mn 
-    Time to complete            : {t1-t0:.2f} s
+{N} applications of adj(A)_mk B_kn = C_mn
+    Time to complete            : {t1 - t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Total bandwidth             : {GBPerSec:.2f} GB/s
-    """)
+    """
+    )
 
     j = g.blas().gemm(1.0, A[idx], B_T[idx].H, 0.0, C[idx])
 
@@ -119,8 +121,9 @@ for precision in [g.single, g.double]:
     GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""
-{N} applications of A_mk adj(B)_kn = C_mn 
-    Time to complete            : {t1-t0:.2f} s
+{N} applications of A_mk adj(B)_kn = C_mn
+    Time to complete            : {t1 - t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Total bandwidth             : {GBPerSec:.2f} GB/s
-    """)
+    """
+    )

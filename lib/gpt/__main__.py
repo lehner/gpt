@@ -27,3 +27,12 @@ if "--cgpt-tests" in sys.argv:
 if "--cgpt-benchmarks" in sys.argv:
     gpt.message("Running cgpt benchmarks")
     cgpt.benchmarks()
+
+
+if "--terminal" in sys.argv:
+    import time
+    while True:
+        gpt.terminal.terminal_handler(None, None)
+        time.sleep(10)
+        
+    

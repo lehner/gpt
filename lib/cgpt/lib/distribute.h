@@ -106,6 +106,12 @@ class global_transfer {
  public:
   global_transfer(rank_t rank, Grid_MPI_Comm comm);
 
+  ~global_transfer() {
+#ifndef ACCELERATOR_AWARE_MPI
+    host_bounce_cleanup();
+#endif
+  }
+
   const size_t size_mpi_max = INT_MAX;
   rank_t rank;
   Grid_MPI_Comm comm;
@@ -139,20 +145,108 @@ class global_transfer {
 		       std::map<rank_t, comm_message>& recv);
 
 
-  void isend(rank_t other_rank, const void* pdata, size_t sz);
-  void irecv(rank_t other_rank, void* pdata, size_t sz);
+  void isend(rank_t other_rank, const void* pdata, size_t sz, memory_type type);
+  void irecv(rank_t other_rank, void* pdata, size_t sz, memory_type type);
 
   template<typename vec_t>
   void isend(rank_t other_rank, const vec_t& data) {
-    isend(other_rank,&data[0],data.size()*sizeof(data[0]));
+    isend(other_rank,&data[0],data.size()*sizeof(data[0]), mt_host);
   }
 
   template<typename vec_t>
   void irecv(rank_t other_rank, vec_t& data) {
-    irecv(other_rank,&data[0],data.size()*sizeof(data[0]));
+    irecv(other_rank,&data[0],data.size()*sizeof(data[0]), mt_host);
   }
 
   void waitall();
+
+#ifndef ACCELERATOR_AWARE_MPI
+  struct hostBounceBuffer_t { void* host; void * device; size_t size; size_t reserved; memory_type device_mt; int tag; rank_t sender; };
+  std::vector<hostBounceBuffer_t> host_bounce_buffer;
+
+#ifdef GRID_CHECKSUM_COMMS
+  std::map<uint64_t, uint64_t> host_checksum_index;
+
+  uint64_t host_checksum_increment(rank_t sender, rank_t receiver) {
+    uint64_t tg = ((uint64_t)sender << (uint64_t)32) ^ ((uint64_t)receiver);
+    if (auto search = host_checksum_index.find(tg); search != host_checksum_index.end()) {
+      search->second ++;
+      return search->second;
+    } else {
+      host_checksum_index[tg] = 0;
+      return 0;
+    }
+  }
+#endif
+  
+  void host_bounce_cleanup() {
+    for (auto & b : host_bounce_buffer) {
+      	acceleratorFreeCpu(b.host);
+    }
+    host_bounce_buffer.clear();
+  }
+  
+  void host_bounce_reset() {
+    for (auto & b : host_bounce_buffer) {
+      b.size = 0;
+      b.device = 0;
+    }
+  }
+
+#ifdef GRID_CHECKSUM_COMMS
+  uint64_t host_bounce_checksum(uint64_t* pdata, size_t n, memory_type mt) {
+    if (mt == mt_accelerator) {
+      return checksum_gpu(pdata, n);
+    } else {
+      uint64_t v = 0;
+      thread_region
+	{
+	  uint64_t vt = 0;
+	  thread_for_in_region(i, n, {
+	      auto l = i % 61;
+	      vt ^= pdata[i]<<l | pdata[i]>>(64-l);
+	    });
+	  thread_critical
+	    {
+	      v ^= vt;
+	    }
+	}
+      return v;
+    }
+  }
+#endif
+  
+  void* host_bounce_allocate(size_t sz, void* device, memory_type device_mt, int tag, rank_t sender) {
+    for (auto & b : host_bounce_buffer) {
+      if (b.size == 0) {
+	if (b.reserved < sz) {
+	  acceleratorFreeCpu(b.host);
+	  b.host = acceleratorAllocCpu(sz);
+	  b.reserved = sz;
+	}
+	b.size = sz;
+	b.device = device;
+	b.device_mt = device_mt;
+	b.tag = tag;
+	b.sender = sender;
+	return b.host;
+      }
+    }
+
+    hostBounceBuffer_t bb;
+    host_bounce_buffer.push_back(bb);
+
+    auto & b = host_bounce_buffer.back();
+    b.host = acceleratorAllocCpu(sz);
+    b.reserved = sz;
+    b.device = device;
+    b.size = sz;
+    b.device_mt = device_mt;
+    b.tag = tag;
+    b.sender = sender;
+    return b.host;
+  }
+#endif
 
 };
 
@@ -196,7 +290,7 @@ class global_memory_transfer : public global_transfer<rank_t> {
     }
   };
 
-  typedef Vector<block_t> blocks_t;
+  typedef HostDeviceVector<block_t> blocks_t;
   typedef std::vector<block_t> thread_blocks_t;
 
   struct abstract_blocks_t {
@@ -265,7 +359,8 @@ class global_memory_transfer : public global_transfer<rank_t> {
   std::vector<memory_buffer> buffers;
   std::map<rank_t, memory_view> send_buffers, recv_buffers;
   memory_type comm_buffers_type;
-  std::map<rank_t, std::map< index_t, blocks_t > > send_blocks, recv_blocks;
+  std::map<rank_t, std::map< index_t, thread_blocks_t > > send_blocks, recv_blocks;
+  std::map<rank_t, std::map< index_t, blocks_t > > send_blocks_hd, recv_blocks_hd;
 
   // bounds and alignment
   std::vector<offset_t> bounds_dst, bounds_src, alignment;
@@ -275,7 +370,24 @@ class global_memory_transfer : public global_transfer<rank_t> {
   global_memory_transfer(rank_t rank, Grid_MPI_Comm comm);
 
   offset_t block_size;
-  std::map< rank_pair_t , std::map< index_pair_t, blocks_t > > blocks;
+  std::map< rank_pair_t , std::map< index_pair_t, thread_blocks_t > > blocks;
+  std::map< rank_pair_t , std::map< index_pair_t, blocks_t > > blocks_hd;
+
+  template<typename A, typename B>
+  void populate_hd(std::map<A, std::map<B, blocks_t>>& b_hd,
+		   const std::map<A, std::map<B, thread_blocks_t>>& b) {
+    for (auto & ta : b) {
+      auto & da = b_hd[ta.first];
+      for (auto & tb : ta.second) {
+	auto & db = da[tb.first];
+	db.resize(tb.second.size());
+	thread_for(i, tb.second.size(), {
+	    db[i] = tb.second[i];
+	  });
+	db.toDevice();
+      }
+    }
+  }
 
   void create(const view_t& dst, const view_t& src,
 	      memory_type use_comm_buffers_of_type = mt_none,
@@ -290,8 +402,8 @@ class global_memory_transfer : public global_transfer<rank_t> {
   void fill_blocks_from_view_pair(const view_t& dst, const view_t& src, bool local_only);
   void gather_my_blocks();
   void optimize();
-  long optimize(blocks_t& blocks);
-  void skip(blocks_t& blocks, long gcd);
+  long optimize(thread_blocks_t& blocks);
+  void skip(thread_blocks_t& blocks, long gcd);
   void create_bounds_and_alignment();
   void create_comm_buffers(memory_type mt);
 
@@ -301,7 +413,6 @@ class global_memory_transfer : public global_transfer<rank_t> {
 
   template<typename K, typename V1, typename V2>
   void distribute_merge_into(std::map<K,V1> & target, const std::map<K,V2> & src);
-  void distribute_merge_into(blocks_t & target, const thread_blocks_t & src);
   void distribute_merge_into(thread_blocks_t & target, const thread_blocks_t & src);
 
   struct bcopy_arg_t {
@@ -309,7 +420,14 @@ class global_memory_transfer : public global_transfer<rank_t> {
     memory_view& base_dst; 
     const memory_view& base_src;
   };
-  void bcopy(const std::vector<bcopy_arg_t>& args);
+
+  struct bcopy_ptr_arg_t {
+    const blocks_t & blocks;
+    char* p_dst;
+    const char* p_src;
+  };
+
+void bcopy(const std::vector<bcopy_arg_t>& args);
 };
 
 typedef global_memory_view<uint64_t,int,uint32_t> gm_view;

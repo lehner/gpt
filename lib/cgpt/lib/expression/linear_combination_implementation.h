@@ -152,12 +152,12 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
   pc = &_c->l;
 
   int n = (int)f.size();
-  Vector<Coeff_t> b(n);
-  Vector<LatticeView<T>> v(n);
-  Vector<T*> a(n);
+  HostDeviceVector<Coeff_t> b(n);
+  std::vector<LatticeView<T>> v; v.reserve(n);
+  HostDeviceVector<T*> a(n);
   for (int i=0;i<n;i++) {
     b[i] = (Coeff_t)f[i].get_coef();
-    v[i] = compatible<T>(f[i].get_lat())->l.View(AcceleratorRead);
+    v.push_back(compatible<T>(f[i].get_lat())->l.View(AcceleratorRead));
     a[i] = &v[i][0];
   }
   
@@ -170,8 +170,8 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
   
     Accumulator<AccumulatorBase,R> ac(1.0,&c_v[0],&c_v[0]);
 
-    auto p_b = &b[0];
-    auto p_a = &a[0];
+    auto p_b = b.toDevice();
+    auto p_a = a.toDevice();
 
     Timer("loop");
 

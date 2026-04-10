@@ -40,29 +40,16 @@
       sycl::range<3> local {1,1,nsimd};				\
       sycl::range<3> global{unum1_divisible_by,1,nsimd};		\
       sycl::local_accessor<shared_type> shm_acc(sycl::range<1>(nsimd), cgh); \
-      if (unum1 != unum1_divisible_by) {				\
-	cgh.parallel_for(						\
+      cgh.parallel_for(							\
 			 sycl::nd_range<3>(global,local),		\
 			 [=] (sycl::nd_item<3> item)		\
 			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
 			 {						\
 			   auto iter1    = item.get_global_id(0);	\
-			   auto lane     = item.get_global_id(2);	\
-			   shared_type* shared_name = shm_acc.get_pointer(); \
-			   { if (iter1 < unum1) { __VA_ARGS__ } };	\
-			 });						\
-      } else {								\
-	cgh.parallel_for(						\
-			 sycl::nd_range<3>(global,local),		\
-			 [=] (sycl::nd_item<3> item)		\
-			 [[intel::reqd_sub_group_size(SYCL_SIMD_WIDTH)]] \
-			 {						\
-			   auto iter1    = item.get_global_id(0);	\
-			   auto lane     = item.get_global_id(2);	\
+			   auto lane    = item.get_global_id(2);	\
 			   shared_type* shared_name = shm_acc.get_pointer(); \
 			   { __VA_ARGS__ };				\
 			 });						\
-      }									\
     });									\
   }
 
@@ -104,10 +91,9 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
     n_total_stride += n_stride;
   }
 
-  Vector<ComplexD> inner_tmp;
-  inner_tmp.resize(n_total_stride * n_inner);
+  HostDeviceVector<ComplexD> inner_tmp(n_total_stride * n_inner);
   
-  auto inner_tmp_v = &inner_tmp[0];
+  auto inner_tmp_v = inner_tmp.device;
 
   Timer("rip: loop");
   {
@@ -119,11 +105,11 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	uint64_t t0 = kb*n_left*n_right;
 
 	for (int kl=0;kl<n_left;kl++) {
-	  scalar_type* a = (scalar_type*)left_v[l0 + kl*n_virtual + i];
-
+	  // NOTE: no guarantee for shared version that work < n_outer, need to check manually;
+	  //       reason is coherent synchronization; applies for now to SYCL only
 	  accelerator_forNB_with_shared(work, n_outer, n_coalesce, ComplexD, vc, {
-	    
 	      int lane = acceleratorSIMTlane(n_coalesce);
+	      scalar_type* a = (scalar_type*)left_v[l0 + kl*n_virtual + i];	    
 	      uint64_t idx0 = work * n_per_thread * n_coalesce;
 
 	      // avoid inner *if* for as long as possible
@@ -158,7 +144,8 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 		  v = 0.0;
 		  for (int j=0;j<n_coalesce;j++)
 		    v+=vc[j];
-		  c[work] = v;
+		  if (work < n_outer)
+		    c[work] = v;
 		}
 		
 		accelerator_threads_sync();
@@ -167,19 +154,20 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	}
       }
     }
+
     // now reduce from n_outer -> n_outer / n_coalesce
     uint64_t n_stride = n_outer * n_virtual;
-    ComplexD* src_base = &inner_tmp_v[0];
+    uint64_t idx_base = 0;
+
     while (n_stride > 1) {
 
-      ComplexD* dst_base = &src_base[n_inner * n_stride];
+      ComplexD* src_base = &inner_tmp_v[idx_base];
+      ComplexD* dst_base = &inner_tmp_v[idx_base + n_inner * n_stride];
       
       uint64_t n_stride_prime = (n_stride + n_coalesce - 1) / n_coalesce;
 
       accelerator_forNB_with_shared(work, n_stride_prime, n_coalesce, ComplexD, vc, {
-	    
-	  int lane = acceleratorSIMTlane(n_coalesce);
-
+	  int lane = acceleratorSIMTlane(n_coalesce);	    
 	  uint64_t idx0 = work * n_coalesce + lane;
 	  bool active = idx0 < n_stride;
 	  
@@ -199,34 +187,27 @@ inline void rankInnerProductGPU_reduce(uint64_t n_total, ComplexD* result, uint6
 	      v = 0.0;
 	      for (int ii=0;ii<n_coalesce;ii++)
 		v+=vc[ii];
-	      dst_base[i*n_stride_prime + work] = v;
+	      if (work < n_stride_prime)
+		dst_base[i*n_stride_prime + work] = v;
 	    }
 	    
 	    accelerator_threads_sync();
 	  }
 	});
       
+      idx_base += n_inner * n_stride;
       n_stride = n_stride_prime;
-      src_base = dst_base;
     }
     accelerator_barrier();
+
+    inner_tmp.toHost(idx_base, idx_base + n_inner);
+    
     // results are now here:
     for (int i=0;i<n_inner;i++) {
-      result[i] = src_base[i];
+      result[i] = inner_tmp[idx_base + i];
     }
   }
 }
-
-class tensor_ComplexD : public ComplexD {
-public:
-  typedef tensor_ComplexD scalar_objectD;
-  typedef tensor_ComplexD scalar_object;
-  typedef tensor_ComplexD scalar_type;
-  typedef tensor_ComplexD vector_type;
-  accelerator tensor_ComplexD() : ComplexD() {};
-  accelerator_inline tensor_ComplexD(const Zero &z) { *(ComplexD*)this = 0.0; };
-  static accelerator_inline constexpr int Nsimd(void) { return 1; } 
-};
 
 template<class vobj>
 inline void rankInnerProductGPU(ComplexD* result, 
@@ -263,7 +244,7 @@ inline void rankInnerProductGPU(ComplexD* result,
   {
     rankInnerProductGPU_reduce<n_reduction_min,vobj::Nsimd()>(n_total, result, n_left, n_right, n_virtual, n_block, left_v, right_v);
   }
-  
+
   Timer("rip: view");
   VECTOR_VIEW_CLOSE(left_v);
   VECTOR_VIEW_CLOSE(right_v);
@@ -295,8 +276,8 @@ inline void rankInnerProductCpu(ComplexD* result,
   const uint64_t words = grid->oSites() * words_per_osite;
   const uint64_t max_parallel = thread_max();
 
-  VECTOR_VIEW_OPEN(multi_left,left_v,CpuRead);
-  VECTOR_VIEW_OPEN(multi_right,right_v,CpuRead);
+  VECTOR_VIEW_OPEN_CPU(multi_left,left_v,CpuRead);
+  VECTOR_VIEW_OPEN_CPU(multi_right,right_v,CpuRead);
   
   {
     size_t stride = n_left*n_right*n_block;

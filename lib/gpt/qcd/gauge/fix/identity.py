@@ -19,6 +19,11 @@
 import gpt as g
 
 
+# -------------
+#
+#
+#
+# -------------
 def identity(U, mu=3):
     # U'(x) = V(x) U_mu(x) Vdag(x+mu)
     # V = [1, U[0], U[0] U[1], U[0] U[1] U[2], ...]
@@ -28,3 +33,24 @@ def identity(U, mu=3):
     for n in range(N - 1):
         V_n.append(g(V_n[n] * U_n[n]))
     return g.merge(V_n, mu)
+
+
+# +------------
+# |
+# |
+# |
+# +------------
+def tree(U, origin, dimensions):
+    E = g.identity(U[0])
+    V = g.lattice(U[0])
+    V[:] = 0
+    V[tuple(origin)] = E[tuple(origin)]
+    L = V.grid.gdimensions
+
+    for mu in dimensions:
+        V0 = g.copy(V)
+        U_mu_shift = g.cshift(U[mu], mu, -1)
+        for step in range(L[mu] - 1):
+            V0 @= g.cshift(V0, mu, -1) * U_mu_shift
+            V += V0
+    return V

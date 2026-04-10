@@ -25,6 +25,8 @@ def _simple_map(operator, numpy_operator=None, extra_params={}):
     def _mat(first, second=None):
         if isinstance(first, list):
             return [_mat(x) for x in first]
+        if gpt.util.is_num(first) or isinstance(first, numpy.ndarray):
+            return numpy_operator(first)
         if isinstance(first, gpt.expr):
             first = gpt(first)
         if isinstance(second, gpt.expr):
@@ -76,4 +78,6 @@ def mod(n):
 
 
 def multiply(a, b):
+    if gpt.util.is_num(a) or isinstance(a, numpy.ndarray):
+        return a*b
     return a.__class__.foundation.component_multiply(a, b)

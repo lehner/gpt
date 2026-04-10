@@ -28,9 +28,9 @@ template<class vobj> inline void cgpt_pickCheckerboard(int cb,Lattice<vobj> &hal
 {
   half.Checkerboard() = cb;
 
-  autoView( half_v, half, AcceleratorWriteDiscard);
   autoView( full_v, full, AcceleratorRead);
-
+  autoView( half_v, half, AcceleratorWriteDiscard);
+  
   auto half_p = &half_v[0];
   auto full_p = &full_v[0];
 
@@ -92,8 +92,8 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
   constexpr int n_elem = GridTypeMapper<VobjOut>::count;
   ASSERT(n_elem == GridTypeMapper<VobjIn>::count);
     
-  autoView( out_v , out, AcceleratorWriteDiscard);
   autoView( in_v , in, AcceleratorRead);
+  autoView( out_v , out, AcceleratorWriteDiscard);
   auto out_p = &out_v[0];
   auto in_p = &in_v[0];
 
@@ -102,13 +102,14 @@ template<class VobjOut, class VobjIn> void cgpt_precisionChange(Lattice<VobjOut>
 
   int ndim = out_grid->Nd();
 
-  Vector<Coordinate> _in_icoor(in_grid->Nsimd());
-  Coordinate* in_icoor = &_in_icoor[0];
+  HostDeviceVector<Coordinate> _in_icoor(in_grid->Nsimd());
 
   for(int lane=0; lane < in_grid->Nsimd(); lane++){
-    in_icoor[lane].resize(ndim);
-    in_grid->iCoorFromIindex(in_icoor[lane], lane);
+    _in_icoor[lane].resize(ndim);
+    in_grid->iCoorFromIindex(_in_icoor[lane], lane);
   }
+
+  Coordinate* in_icoor = _in_icoor.toDevice();
 
   int in_nsimd = in_grid->Nsimd();
   int out_nsimd = out_grid->Nsimd();

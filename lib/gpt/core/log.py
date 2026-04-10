@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, sys, os, signal, datetime, socket
+import gpt, sys, os, signal, datetime, socket, cgpt
 from inspect import getframeinfo, stack
 
 verbose = gpt.default.is_verbose("message_context")
@@ -49,47 +49,3 @@ def message(*a, force_output=False):
         sys.stdout.flush()
 
 
-def backtrace_signal_handler(sig, frame):
-
-    now = datetime.datetime.now()
-    log_directory = "log/" + now.strftime("%Y-%m-%d")
-    if not os.path.exists(log_directory):
-        os.makedirs(log_directory, exist_ok=True)
-
-    log_filename = f"{log_directory}/backtrace.{gpt.rank()}." + now.strftime("%H-%M-%f")
-    sys.stderr.write(f"Requested GPT backtrace {sig}; saved in {log_filename}\n")
-    sys.stderr.flush()
-
-    fout = open(log_filename, "wt")
-    fout.write(f"Host: {socket.gethostname()}\n")
-
-    while frame is not None:
-        caller = getframeinfo(frame)
-        fout.write(f"{caller.filename}:{caller.lineno}\n")
-        frame = frame.f_back
-
-    fout.close()
-
-
-signal.signal(signal.SIGUSR2, backtrace_signal_handler)
-
-if gpt.default.is_verbose("all_signals_backtrace"):
-    for s in [
-        signal.SIGBUS,
-        signal.SIGFPE,
-        signal.SIGHUP,
-        signal.SIGINT,
-        signal.SIGTERM,
-        signal.SIGSEGV,
-    ]:
-        signal.signal(s, backtrace_signal_handler)
-
-    import ctypes
-
-    c_globals = ctypes.CDLL(None)
-
-    @ctypes.CFUNCTYPE(None, ctypes.c_int)
-    def sigabrt_handler(sig):
-        backtrace_signal_handler(sig, sys._getframe(0))
-
-    c_globals.signal(signal.SIGABRT, sigabrt_handler)

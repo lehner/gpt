@@ -28,6 +28,7 @@
 #include "operators/wilson_twisted_mass.h"
 #include "operators/zmobius.h"
 #include "operators/mobius.h"
+#include "operators/staggered.h"
 #include "operators/create.h"
     
 EXPORT(create_fermion_operator,{

@@ -21,3 +21,5 @@ from gpt.qcd.scalar.action.phi4 import phi4
 from gpt.qcd.scalar.action.cpn import cpn
 from gpt.qcd.scalar.action.mass_term import mass_term, fourier_mass_term, general_mass_term
 from gpt.qcd.scalar.action.coupling import coupling
+import gpt.qcd.scalar.action.hermitian_kernel
+from gpt.qcd.scalar.action.stencil_transformation import stencil_transformation

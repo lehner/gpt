@@ -45,7 +45,7 @@ def distribute_cartesian_file(fdimensions, grid, cb):
     while found:
         found = False
         for p in primes:
-            if ldimensions[dimdiv] % p == 0 and nreader * p <= grid.Nprocessors:
+            if ldimensions[dimdiv] % p == 0 and nreader * p <= min(grid.Nprocessors, gpt.default.max_io_nodes):
                 nreader *= p
                 ldimensions[dimdiv] //= p
                 if ldimensions[dimdiv] == 1 and dimdiv > 0:

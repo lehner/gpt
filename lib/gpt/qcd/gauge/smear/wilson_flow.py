@@ -25,6 +25,9 @@ def gradient_flow(U, epsilon, action):
     )
 
 
+action_cache = None
 def wilson_flow(U, epsilon):
-    action = g.qcd.gauge.action.wilson(2.0 * U[0].otype.shape[0])
-    return gradient_flow(U, epsilon, action)
+    global action_cache
+    if action_cache is None:
+        action_cache = g.qcd.gauge.action.wilson(2.0 * U[0].otype.shape[0])
+    return gradient_flow(U, epsilon, action_cache)

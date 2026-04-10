@@ -135,10 +135,10 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
     Accumulator<AccumulatorBase,T> ac(coef, &c_v[0], &d_v[0]);
     auto * p_a = &a_v[0];
     
-    Vector<T2> v_b(1);
+    static HostDeviceVector<T2> v_b(1);
     v_b[0] = b;
     
-    auto * p_b = &v_b[0];
+    auto * p_b = v_b.toDevice();
     
 #ifndef GRID_HAS_ACCELERATOR
     accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {

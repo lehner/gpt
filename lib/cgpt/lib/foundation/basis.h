@@ -32,8 +32,9 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
 
 #ifndef GRID_HAS_ACCELERATOR
 
-  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
   VECTOR_VIEW_OPEN(basis,basis_v,CpuRead);
+  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
+
 
   typedef typename std::remove_const<decltype(coalescedRead(basis_v[0][0]))>::type vobj;
 
@@ -54,13 +55,13 @@ void cgpt_linear_combination(VLattice &result,VLattice &basis,ComplexD* Qt,long 
   VECTOR_VIEW_CLOSE(basis_v);
   VECTOR_VIEW_CLOSE(result_v);
 #else
-  Vector<ComplexD> Qt_jv(n_basis*n_vec);
-  ComplexD * Qt_j = & Qt_jv[0];
+  HostDeviceVector<ComplexD> Qt_jv(n_basis*n_vec);
   thread_for(k,n_basis*n_vec,{
-      Qt_j[k]=Qt[k];
+      Qt_jv[k]=Qt[k];
     });
+  ComplexD * Qt_j = Qt_jv.toDevice();
 
-  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWriteDiscard);
+  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWrite);
   for (long basis_i0=0;basis_i0<n_basis;basis_i0+=basis_n_block) {
     long basis_i1 = std::min(basis_i0 + basis_n_block,n_basis);
     long basis_block = basis_i1 - basis_i0;
@@ -114,10 +115,10 @@ void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &r
 
 #ifndef GRID_HAS_ACCELERATOR
 
-  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
   VECTOR_VIEW_OPEN(left_basis,left_basis_v,CpuRead);
   VECTOR_VIEW_OPEN(right_basis,right_basis_v,CpuRead);
-
+  VECTOR_VIEW_OPEN(result,result_v,CpuWriteDiscard);
+  
   typedef typename std::remove_const<decltype(coalescedRead(left_basis_v[0][0]))>::type vobj;
 
   thread_for(ss, grid->oSites(),{
@@ -141,21 +142,22 @@ void cgpt_bilinear_combination(VLattice &result,VLattice &left_basis,VLattice &r
   VECTOR_VIEW_CLOSE(result_v);
 
 #else
-  Vector<ComplexD> Qt_jv(n_elements*n_vec);
-  Vector<int> left_indices_jv(n_elements*n_vec);
-  Vector<int> right_indices_jv(n_elements*n_vec);
-  ComplexD * Qt_j = & Qt_jv[0];
-  int * left_indices_j = & left_indices_jv[0];
-  int * right_indices_j = & right_indices_jv[0];
+  HostDeviceVector<ComplexD> Qt_jv(n_elements*n_vec);
+  HostDeviceVector<int> left_indices_jv(n_elements*n_vec);
+  HostDeviceVector<int> right_indices_jv(n_elements*n_vec);
   thread_for(k,n_elements*n_vec,{
-      Qt_j[k]=Qt[k];
-      left_indices_j[k]=left_indices[k];
-      right_indices_j[k]=right_indices[k];
+      Qt_jv[k]=Qt[k];
+      left_indices_jv[k]=left_indices[k];
+      right_indices_jv[k]=right_indices[k];
     });
 
-  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWriteDiscard);
+  ComplexD * Qt_j = Qt_jv.toDevice();
+  int * left_indices_j = left_indices_jv.toDevice();
+  int * right_indices_j = right_indices_jv.toDevice();
+
   VECTOR_VIEW_OPEN(left_basis,left_basis_v,AcceleratorRead);
   VECTOR_VIEW_OPEN(right_basis,right_basis_v,AcceleratorRead);
+  VECTOR_VIEW_OPEN(result,result_v,AcceleratorWriteDiscard);
 
   long Nsimd = grid->Nsimd();
   long oSites = grid->oSites();
@@ -198,7 +200,7 @@ void cgpt_basis_rotate_cpu(VField &basis,Matrix& Qt,int j0, int j1, int k0,int k
   typedef decltype(basis[0]) Field;
   typedef decltype(basis[0].View(CpuRead)) View;
 
-  Vector<View> basis_v; basis_v.reserve(basis.size());
+  std::vector<View> basis_v; basis_v.reserve(basis.size());
   typedef typename std::remove_reference<decltype(basis_v[0][0])>::type vobj;
   typedef typename std::remove_reference<decltype(Qt(0,0))>::type Coeff_t;
   GridBase* grid = basis[0].Grid();
@@ -208,7 +210,7 @@ void cgpt_basis_rotate_cpu(VField &basis,Matrix& Qt,int j0, int j1, int k0,int k
   }
 
   int max_threads = thread_max();
-  Vector < vobj > Bt(Nm * max_threads);
+  AlignedVector < vobj > Bt(Nm * max_threads);
   thread_region
     {
       vobj* B = &Bt[Nm * thread_num()];

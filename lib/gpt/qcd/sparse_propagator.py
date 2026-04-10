@@ -88,9 +88,14 @@ class flavor_multi:
 
         self.cache_size = cache_size
         self.cache_line_size = cache_line_size
+        self.cache_line_order(list(range(self.source_domain.sampled_sites)))
+
+    def cache_line_order(self, permutation):
         self.cache = []
         self.cache_hits = 0
         self.cache_misses = 0
+        self.permutation = permutation
+        self.inverse_permutation = np.argsort(self.permutation)
 
     def sink_domain_update(self, min_source_sampled_sites):
         self.cache = []
@@ -101,6 +106,8 @@ class flavor_multi:
 
     def get_propagator_full(self, i):
 
+        i = self.inverse_permutation[i]
+       
         # find my cache line index
         cache_line_idx = i // self.cache_line_size
         cache_line_offset = cache_line_idx * self.cache_line_size
@@ -117,7 +124,7 @@ class flavor_multi:
         # if not in cache, create
         i0 = cache_line_offset
         i1 = min(i0 + self.cache_line_size, self.source_domain.sampled_sites)
-        ilist = list(range(i0, i1))
+        ilist = [self.permutation[i] for i in range(i0, i1)]
 
         self.cache_misses += len(ilist)
 

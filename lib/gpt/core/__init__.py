@@ -53,6 +53,7 @@ from gpt.core.transform import (
     project,
     where,
     scale_per_coordinate,
+    astype,
 )
 from gpt.core.copy_plan import copy_plan, lattice_view, global_memory_view
 from gpt.core.checkerboard import (
@@ -62,6 +63,7 @@ from gpt.core.checkerboard import (
     odd,
     none,
     str_to_cb,
+    even_odd_projectors,
 )
 from gpt.core.operator import *
 from gpt.core.object_type import *
@@ -96,6 +98,7 @@ from gpt.core.coordinates import (
     coordinate_mask,
     local_coordinates,
     correlate,
+    parity,
 )
 from gpt.core.random import random, sha256
 from gpt.core.mem import mem_info, mem_report, accelerator, host

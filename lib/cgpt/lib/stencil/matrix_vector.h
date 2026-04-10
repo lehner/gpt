@@ -58,8 +58,8 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
   typedef CartesianStencil<V, V, SimpleStencilParams> CartesianStencil_vector_t;
   typedef CartesianStencilView<V, V, SimpleStencilParams> CartesianStencilView_vector_t;
   
-  Vector<cgpt_stencil_matrix_vector_code_offload_t> code;
-  Vector<cgpt_stencil_matrix_vector_factor_t> factors;
+  HostDeviceVector<cgpt_stencil_matrix_vector_code_offload_t> code;
+  HostDeviceVector<cgpt_stencil_matrix_vector_factor_t> factors;
   int n_code_parallel_block_size, n_code_parallel_blocks;
   int local;
 
@@ -98,8 +98,8 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
       code[i].source_point = _code[i].source_point;
       code[i].weight = _code[i].weight;
       code[i].size = (int)_code[i].factor.size();
-      code[i].factor = &factors[nfactors];
-      memcpy(code[i].factor, &_code[i].factor[0], sizeof(cgpt_stencil_matrix_vector_factor_t) * code[i].size);
+      code[i].factor = &factors.device[nfactors];
+      memcpy(&factors[nfactors], &_code[i].factor[0], sizeof(cgpt_stencil_matrix_vector_factor_t) * code[i].size);
       nfactors += code[i].size;
     }
 
@@ -133,6 +133,10 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
       compressor_vector = new SimpleCompressor<V>();
     }
 
+    code.toDevice();
+    factors.toDevice();
+
+
   }
 
   virtual ~cgpt_stencil_matrix_vector() {
@@ -152,7 +156,7 @@ class cgpt_stencil_matrix_vector : public cgpt_stencil_matrix_vector_base {
     VECTOR_VIEW_OPEN(fields_vector,fields_v_v,AcceleratorWrite);
 
     int n_code = code.size();
-    const cgpt_stencil_matrix_vector_code_offload_t* p_code = &code[0];
+    const cgpt_stencil_matrix_vector_code_offload_t* p_code = code.device;
 
     typedef decltype(coalescedRead(fields_v_v[0][0])) obj_v_t;
     typedef decltype(coalescedRead(fields_m_v[0][0])) obj_m_t;

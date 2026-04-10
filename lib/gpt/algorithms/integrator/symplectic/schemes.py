@@ -29,7 +29,12 @@ def complete_coefficients(r):
 
 
 def generic(N, ia, r, q, tag):
-    s = symplectic_base(f"{tag}({N}, {ia[0].__name__}, {ia[1].__name__})")
+    explicit = all([x.scheme[0][0][2] for x in ia])
+    s = symplectic_base(f"{tag}({N}, {ia[0].__name__}, {ia[1].__name__}, explicit={explicit})")
+
+    if not explicit:
+        N0 = N
+        N = 1
 
     for j in range(N):
         for i in range(len(r) // 2):
@@ -47,6 +52,13 @@ def generic(N, ia, r, q, tag):
     s.simplify()
 
     s.add_directions()
+
+    if not explicit and N0 > 1:
+        new_scheme = []
+        for r in range(N0):
+            for op, step, direction in s.scheme:
+                new_scheme.append((op, step / N0, direction))
+        s.scheme = new_scheme
 
     return s
 

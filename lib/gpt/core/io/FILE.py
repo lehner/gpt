@@ -16,7 +16,19 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import cgpt, gpt, os, shutil, zipfile
+import cgpt, gpt, os, sys, shutil, zipfile, time
+
+
+def os_path_exists(fn):
+    if os.path.exists(fn):
+        return True
+
+    # on parallel filesystems, metadata may be out of sync
+    f = cgpt.fopen(fn, "r")
+    if f == 0:
+        return False
+    cgpt.fclose(f)
+    return True
 
 
 def cache_file(root, src, md):
@@ -24,7 +36,7 @@ def cache_file(root, src, md):
         return src
     dst = "%s/%s" % (root, src.replace("/", "_"))
     src_size = os.stat(src).st_size
-    if os.path.exists(dst):
+    if os_path_exists(dst):
         if os.stat(dst).st_size == src_size:
             return dst
         else:
@@ -42,14 +54,14 @@ def zip_split(fn):
     fn_partial = fn_split[0]
     for i, fn_part in enumerate(fn_split[1:]):
         zip_candidate = fn_partial + ".zip"
-        if os.path.exists(zip_candidate):
+        if os_path_exists(zip_candidate):
             return zip_candidate, "/".join(fn_split[i:])
         fn_partial = f"{fn_partial}/{fn_part}"
     return None, None
 
 
 def FILE_exists(fn):
-    if os.path.exists(fn):
+    if os_path_exists(fn):
         return True
 
     fn_zip, fn_element = zip_split(fn)
@@ -61,20 +73,25 @@ def FILE_exists(fn):
 
 class FILE_base:
     def __init__(self, fn, md):
+        # do not support appending
         if cache_root is not None:
             fn = cache_file(cache_root, fn, md)
+        self.f = None
         self.f = cgpt.fopen(fn, md)
         if self.f == 0:
-            self.f = None
-            raise FileNotFoundError("Can not open file %s" % fn)
+            print("Warning: second attempt to open", fn, md)
+            time.sleep(1)
+            self.f = cgpt.fopen(fn, md)
+            if self.f == 0:
+                print("Warning: final attempt to open", fn, md)
+                time.sleep(10)
+                self.f = cgpt.fopen(fn, md)
+                if self.f == 0:
+                    raise FileNotFoundError("Can not open file %s" % fn)
 
     def __del__(self):
         if self.f is not None:
             cgpt.fclose(self.f)
-
-    def unbuffer(self):
-        assert self.f is not None
-        cgpt.funbuffer(self.f)
 
     def close(self):
         assert self.f is not None
@@ -83,13 +100,11 @@ class FILE_base:
 
     def tell(self):
         assert self.f is not None
-        r = cgpt.ftell(self.f)
-        return r
+        return cgpt.ftell(self.f)
 
     def seek(self, offset, whence):
         assert self.f is not None
-        r = cgpt.fseek(self.f, offset, whence)
-        return r
+        assert cgpt.fseek(self.f, offset, whence) == 0
 
     def read(self, sz=None):
         if sz is None:
@@ -100,7 +115,10 @@ class FILE_base:
             return self.read(size - pos)
 
         assert self.f is not None
-        t = bytes(sz)
+        try:
+            t = bytes(sz)
+        except OverflowError:
+            raise IOError(f"Cannot allocate {sz} bytes")
         if sz > 0:
             if cgpt.fread(self.f, sz, memoryview(t)) != 1:
                 t = bytes(0)
@@ -111,10 +129,6 @@ class FILE_base:
         if not isinstance(d, memoryview):
             d = memoryview(d)
         assert cgpt.fwrite(self.f, len(d), d) == 1
-
-    def flush(self):
-        assert self.f is not None
-        cgpt.fflush(self.f)
 
 
 class FILE_windowed_reader:
@@ -152,11 +166,13 @@ class FILE_windowed_reader:
 
 
 def FILE(fn, mode):
-    if mode[0] != "r" or "+" in mode or os.path.exists(fn):
+    if mode[0] != "r" or "+" in mode or os_path_exists(fn):
         return FILE_base(fn, mode)
 
     # if file does not exists but should be read, try zip route
     fn_zip, fn_element = zip_split(fn)
+    if fn_zip is None:
+        raise Exception(f"{fn} is not a file but also not a zip file!")
     zip_file = zipfile.ZipFile(fn_zip, "r")
     f = zip_file.open(fn_element, "r")
     if f._compress_type != zipfile.ZIP_STORED:

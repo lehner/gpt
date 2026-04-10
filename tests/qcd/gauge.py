@@ -19,6 +19,8 @@ U_quad = g.convert(U, g.double_quadruple)
 
 # reference plaquette
 P = g.qcd.gauge.plaquette(U)
+P2 = g.sum(g.qcd.gauge.plaquette(U, field=True)) / grid.gsites
+assert abs(P - P2) < 1e-13
 
 # invariant distance (test axioms)
 ds = g.group.invariant_distance(U[0], U[1])
@@ -175,7 +177,72 @@ diff_E = dE.functional(*adU)
 diff_E.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 assert abs(E - diff_E(U)) < 1e-13
 
-# Test gauge actions
+
+# Test non-compact gauge actions
+def estimate_photon_prop(A, N, eps):
+    mn = [[g.real(grid) for mu in range(4)] for nu in range(4)]
+    for mu in range(4):
+        for nu in range(4):
+            mn[mu][nu][:] = 0
+    ref = A.propagator()
+    for i in range(N):
+        A.draw(photon, rng)
+        for mu in range(4):
+            for nu in range(4):
+                mn[mu][nu] += g.correlate(photon[mu], photon[nu])
+    for mu in range(4):
+        for nu in range(4):
+            mn[mu][nu] /= N
+
+            eps_est = g.norm2(ref[mu][nu] - mn[mu][nu]) / g.norm2(ref[0][0])
+            g.message(
+                f"Estimating photon propagator[{mu}][{nu}] with {N} samples: {eps_est} < {eps}"
+            )
+            assert eps_est < eps
+
+
+photon = [g.real(grid) for i in range(4)]
+for action, ips_ref in [
+    (
+        g.qcd.gauge.action.non_compact.qed_l(grid),
+        [
+            [
+                -1.315264888368073 + 40.40388185161923j,
+                -31.23597715385646 + 51.163883179578924j,
+                21.032778854865622 - 50.12103762406292j,
+                -4.98403550167072 + 14.900231260519679j,
+            ]
+        ],
+    )
+]:
+    val = action.draw(photon, rng)
+    val2 = action(photon)
+    assert abs(val / val2 - 1) < 1e-14
+    assert g.norm2(g.component.imag(photon[0])) / g.norm2(photon[0]) < 1e-28
+    action.assert_gradient_error(rng, photon, photon, 1e-3, 1e-6)
+    ips = g.inner_product(rng.cnormal(g.complex(grid)), photon)
+    if ips_ref is not None:
+        eps = np.linalg.norm(ips - np.array(ips_ref))
+        g.message(f"Fingerprint test of QED action: {eps}")
+        assert eps < 1e-12
+    else:
+        np.set_printoptions(precision=15)
+        g.message(ips)
+
+    estimate_photon_prop(action, 10, 1 / 8)
+    # estimate_photon_prop(action, 40, 1/32)
+    # estimate_photon_prop(action, 160, 1/128)
+    # estimate_photon_prop(action, 640, 1/512)
+
+
+# test topology action
+sm = g.qcd.gauge.smear.stout(rho=0.136)
+action_top = g.qcd.gauge.action.topology(U, 2, 0.5, [1.5, 2.3, 1.2])
+action_top = action_top.transformed(sm)
+action_top.assert_gradient_error(rng, U, U, 1e-3, 1e-7)
+
+
+# Test compact gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:
     # test action double precision versus quadruple precision
     a_ref = action(U)
@@ -188,7 +255,6 @@ for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)
     action.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 
     # test stout smearing chain rule
-    sm = g.qcd.gauge.smear.stout(rho=0.136)
     action_sm = action.transformed(sm)
     action_sm.assert_gradient_error(rng, U, U, 1e-3, 1e-7)
 
@@ -307,6 +373,25 @@ for t in range(grid.gdimensions[3] - 1):
     g.message(f"Test temporal gauge at t={t}: {eps2}")
     assert eps2 < 1e-25
 
+# test full tree gauge
+origin = [2, 1, 3, 2]
+V = g.qcd.gauge.fix.tree(U, origin, [0, 1, 2, 3])
+
+Up = g.qcd.gauge.transformed(U, V)
+
+for t in range(grid.gdimensions[3]):
+    if t != origin[3] - 1:
+        eps2 = g.norm2(Up[3][0, 0, 0, t] - ref)
+        g.message(f"Test tree gauge at t={t}: {eps2}")
+        assert eps2 < 1e-25
+
+# spot tests within growing tree branches
+spots = [([2, 1, 3, 2], 0), ([4, 1, 3, 2], 1), ([4, 4, 3, 2], 2), ([4, 4, 5, 2], 3)]
+for spot in spots:
+    eps2 = g.norm2(Up[spot[-1]][tuple(spot[0])] - ref)
+    g.message(f"Test tree gauge at spot={spot}: {eps2}")
+    assert eps2 < 1e-25
+
 # test reversibility of local_stout
 for rho in [0.05, 0.1, 0.124, 0.25]:
     for mu in range(4):
@@ -388,3 +473,26 @@ if True:
         eps2 = g.norm2(U0[mu] - U[mu]) / g.norm2(U[mu])
         g.message("Test invertibility:", eps2)
         assert eps2 < 1e-25
+
+# test stout smearing against general parallel_transport smearing
+pt = g.qcd.gauge.smear.parallel_transport(
+    U,
+    [
+        [(0.1, g.path().f(nu).f(mu).b(nu).b(mu)) for nu in range(4) if mu != nu]
+        + [(0.1, g.path().b(nu).f(mu).f(nu).b(mu)) for nu in range(4) if mu != nu]
+        for mu in range(4)
+    ],
+)
+st = g.qcd.gauge.smear.stout(rho=0.1)
+st0 = pt(U)
+st1 = st(U)
+A = [g.group.cartesian(U[0]) for _ in range(4)]
+rng.element(A)
+Aprime1 = st.jacobian(U, st1, A)
+Aprime0 = pt.jacobian(U, st0, A)
+eps = sum(g.norm2(x - y) for x, y in zip(st0, st1)) / sum(g.norm2(x) for x in st0)
+g.message(f"Parallel transport version of stout - smearing: {eps}")
+assert eps < 1e-25
+eps = sum(g.norm2(x - y) for x, y in zip(Aprime0, Aprime1)) / sum(g.norm2(x) for x in Aprime0)
+g.message(f"Parallel transport version of stout - jacobian: {eps}")
+assert eps < 1e-25

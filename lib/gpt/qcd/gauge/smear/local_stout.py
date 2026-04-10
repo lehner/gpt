@@ -28,6 +28,9 @@ local_stout_parallel_projector = g.default.get_int("--local-stout-parallel-proje
 plaquette_stencil_cache = {}
 
 
+fingerprint = g.default.get_int("--fingerprint", 0) > 1
+
+
 def create_adjoint_projector(D, B, generators, nfactors):
     ng = len(generators)
     code = []
@@ -168,6 +171,10 @@ class local_stout(local_diffeomorphism):
             dtype=np.float64,
         )
 
+        if fingerprint:
+            l = g.fingerprint.log()
+            l("U", U)
+
         if grid in self.cache:
             masks = self.cache[grid]
         else:
@@ -197,13 +204,25 @@ class local_stout(local_diffeomorphism):
                 if nu == self.params["dimension"]:
                     continue
                 st += self.params["rho"] * g.qcd.gauge.staple(U, self.params["dimension"], nu)
+
+                if fingerprint:
+                    l(f"st.{nu}", st)
+
             # stref = g.qcd.gauge.staple_sum(U, mu=self.params["dimension"], rho=rho)[0]
             # g.message("TEST", g.norm2(st), g.norm2(st-stref))
             # sys.exit(0)
         sf = self.params["staple_field"]
         if sf is not None:
             st = sf(st)
-        return g(st * fm), U, fm
+
+        res = g(st * fm)
+
+        if fingerprint:
+            l("st.final", st)
+            l("res", res)
+            l()
+
+        return res, U, fm
 
     def __call__(self, fields):
         C_mu, U, fm = self.get_C(fields)
@@ -261,6 +280,14 @@ class local_stout(local_diffeomorphism):
 
         iQ_mu = g.qcd.gauge.project.traceless_anti_hermitian(C_mu * g.adj(U[mu]))
         exp_iQ_mu, Lambda_mu = g.matrix.exp.function_and_gradient(iQ_mu, U_Sigma_prime_mu)
+
+        if fingerprint:
+            l = g.fingerprint.log()
+            l("iQ_mu", iQ_mu)
+            l("U_Sigma_prime_mu", U_Sigma_prime_mu)
+            l("exp_iQ_mu", exp_iQ_mu)
+            l("Lambda_mu", Lambda_mu)
+            l()
 
         Lambda_mu *= fm
 

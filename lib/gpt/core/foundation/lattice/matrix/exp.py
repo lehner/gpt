@@ -23,6 +23,8 @@ import numpy as np
 
 c = {}
 
+fingerprint = g.default.get_int("--fingerprint", 0) > 1
+
 
 def cayley_hamilton_function_and_gradient_3(iQ, gradient_prime, c):
     # For now use Cayley Hamilton Decomposition for traceless Hermitian 3x3 matrices,
@@ -55,6 +57,18 @@ def cayley_hamilton_function_and_gradient_3(iQ, gradient_prime, c):
 
     emiu = g(g.component.cos(u) - 1j * g.component.sin(u))
     e2iu = g(g.component.cos(2.0 * u) + 1j * g.component.sin(2.0 * u))
+
+    if fingerprint:
+        l = g.fingerprint.log()
+        l("cosw", cosw)
+        l("u", u)
+        l("w", w)
+        l("c0max", c0max)
+        l("theta", theta)
+        l("fden", fden)
+        l("xi0", xi0)
+        l("xi1", xi1)
+        l()
 
     # can do in stencil:
     with c.code() as cc:
@@ -108,6 +122,16 @@ def cayley_hamilton_function_and_gradient_3(iQ, gradient_prime, c):
         b22 *= fden2
 
     c.execute()
+
+    if fingerprint:
+        l = g.fingerprint.log()
+        l("b10", b10)
+        l("b11", b11)
+        l("b12", b12)
+        l("b20", b20)
+        l("b21", b21)
+        l("b22", b22)
+        l()
 
     # assemble results
     B1 = g(b10 * I + b11 * Q + b12 * Q2)

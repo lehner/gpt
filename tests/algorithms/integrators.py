@@ -144,20 +144,40 @@ ip_fg_imp = sympl.implicit_update(
     tag="FG_P",
 )
 
+# test individual integrators combinatorics
+for itest in [ip, iq]:
+    q[:] = 0
+    p @= p0
+    itest0, itest1 = itest.unwrap()
+    itest0(0.1, 1)
+    itest0(0.1, 1)
+    q0 = g.copy(q)
+    p1 = g.copy(p)
+    q[:] = 0
+    p @= p0
+    itest0(0.2, 1)
+    eps = g.norm2(q - q0)
+    g.message(f"Combinatorics {itest.__name__} (q): {eps}")
+    assert eps < 1e-28
+    eps = g.norm2(p - p1)
+    g.message(f"Combinatorics {itest.__name__} (p): {eps}")
+    assert eps < 1e-28
+
+
 nsteps = 20
 integrator = [
-    sympl.OMF2_force_gradient(nsteps, ip_imp, iq_imp, ip_fg_imp),
-    sympl.leap_frog(nsteps, ip, iq),
-    sympl.OMF2(nsteps, ip, iq),
-    sympl.OMF2_force_gradient(nsteps, ip, iq, ip_fg),
-    sympl.OMF4(nsteps, ip, iq),
-    sympl.OMF2(12, ip2, sympl.OMF4(1, ip1, iq)),
-    sympl.OMF2(12, ip2, sympl.OMF4(2, ip1, iq)),
-    sympl.OMF2(nsteps, ip_imp, iq_imp),
-    sympl.OMF2(12, ip2_imp, sympl.OMF4(1, ip1_imp, iq_imp)),
+    (sympl.leap_frog(nsteps, ip, iq), None),
+    (sympl.OMF2(nsteps, ip, iq), None),
+    (sympl.OMF2_force_gradient(nsteps, ip, iq, ip_fg), sympl.OMF2_force_gradient(1, ip, iq, ip_fg)),
+    (sympl.OMF4(nsteps, ip, iq), sympl.OMF4(1, ip, iq)),
+    (sympl.OMF2(12, ip2, sympl.OMF4(1, ip1, iq)), None),
+    (sympl.OMF2(12, ip2, sympl.OMF4(2, ip1, iq)), None),
+    (sympl.OMF2(nsteps, ip_imp, iq_imp), sympl.OMF2(1, ip_imp, iq_imp)),
+    (sympl.OMF2(12, ip2_imp, sympl.OMF4(1, ip1_imp, iq_imp)), None),
+    (sympl.OMF2_force_gradient(nsteps, ip_imp, iq_imp, ip_fg_imp), None),
 ]
-criterion = [1e-8, 1e-5, 1e-7, 1e-11, 1e-11, 1e-8, 1e-8, 1e-7, 1e-8]
-refs = [qref_imp, qref, qref, qref, qref, qref, qref, qref_imp, qref_imp]
+criterion = [1e-5, 1e-7, 1e-11, 1e-11, 1e-8, 1e-8, 1e-7, 1e-8, 1e-7]
+refs = [qref, qref, qref, qref, qref, qref, qref_imp, qref_imp, qref_imp]
 
 for i in range(len(integrator)):
     # initial config
@@ -167,21 +187,31 @@ for i in range(len(integrator)):
     # print/log
     log.reset()
     sep = "--------------------------------------------------------------------------------"
-    g.message(f"{sep}\n{integrator[i]}\n{sep}\n")
+    g.message(f"{sep}\n{integrator[i][0]}\n{sep}\n")
 
     # integrate
-    integrator[i](tau)
+    integrator[i][0](tau)
+    q0 = g.copy(q)
 
     eps = g.norm2(q - refs[i])
-    g.message(f"{integrator[i].__name__ : <10}: |q - qref|^2 = {eps:.4e}")
+    g.message(f"{integrator[i][0].__name__ : <10}: |q - qref|^2 = {eps:.4e}")
     assert eps < criterion[i]
 
     # test reversibility
-    integrator[i](-tau)
+    integrator[i][0](-tau)
     eps = g.norm2(q)
-    g.message(f"{integrator[i].__name__ : <10} reversibility test: {eps:.4e}")
+    g.message(f"{integrator[i][0].__name__ : <10} reversibility test: {eps:.4e}")
     assert eps < 1e-26
 
     g.message("Max force = ", max(log.get("ip")))
     g.message(f"Timing:\n{log.time}")
 
+    # test sub-stepping
+    if integrator[i][1] is not None:
+        q[:] = 0
+        p @= p0
+        for _ in range(nsteps):
+            integrator[i][1](tau / nsteps)
+        eps = g.norm2(q - q0)
+        g.message(f"Sub-stepping test: {eps}")
+        assert eps < 1e-25

@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 
 
 def defect(field):
@@ -50,6 +51,9 @@ def inverse(left):
 
 
 def compose(left, right):
+    if g.util.is_num(left) or isinstance(left, np.ndarray):
+        return left + right
+    
     as_list = isinstance(left, list)
 
     left = g.util.to_list(g(left))

@@ -32,10 +32,10 @@ inline void cgpt_lower_than(Lattice<iSinglet<vtype>>& answer, const Lattice<iSin
 
   typedef typename Lattice<iSinglet<vtype>>::scalar_type stype;
   
-  autoView(answer_v, answer, CpuWriteDiscard);
   autoView(a_v, a, CpuRead);
   autoView(b_v, b, CpuRead);
-
+  autoView(answer_v, answer, CpuWriteDiscard);
+  
   auto oSites = grid->oSites();
   auto Nsimd = grid->Nsimd();
   thread_for(i, oSites, {
@@ -58,9 +58,10 @@ inline void cgpt_component_wise_multiply(Lattice<T>& answer, const Lattice<T>& a
 
   typedef typename Lattice<T>::vector_type vtype;
 
-  autoView(answer_v, answer, AcceleratorWriteDiscard);
   autoView(a_v, a, AcceleratorRead);
   autoView(b_v, b, AcceleratorRead);
+  autoView(answer_v, answer, AcceleratorWriteDiscard);
+
   auto answer_p = (vtype*)&answer_v[0];
   auto a_p = (vtype*)&a_v[0];
   auto b_p = (vtype*)&b_v[0];

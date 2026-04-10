@@ -297,6 +297,34 @@ assert eps < 1e-6
 # test instantiation of other actions
 rhq = g.qcd.fermion.rhq_columbia(U, mass=4.0, cp=3.0, zeta=2.5, boundary_phases=[1, 1, 1, -1])
 
+# test staggered propagator (provide thin and fat links in combined first argument)
+stag = g.qcd.fermion.staggered(
+    U + g.qcd.gauge.smear.stout(rho=0.1)(U), mass=0.1, c1=9.0 / 8.0, c2=-1.0 / 24.0, u0=1
+)
+prop = stag.propagator(inv.preconditioned(pc.eo3(), cg)) # For staggered already eo3 is Hermitian!
+src = rng.cnormal(g.mcolor(grid))
+src /= g.norm2(src) ** 0.5
+dst = g(prop * src)
+fp = g.inner_product(dst, rng.cnormal(g.mcolor(grid)))
+eps = abs(fp - (0.1265602889719839+1.2472178166078551j))
+g.message(f"Staggered fingerprint test: {eps}")
+assert eps < 1e-3
+eps = g.norm2(stag * dst - src) / g.norm2(src)
+g.message(f"Staggered inversion test: {eps}")
+assert eps < 1e-5
+
+# test of proper distribution
+for i in range(3):
+    distribute_test = g(stag * dst)
+    dst_c = g.vcolor(grid)
+    dst_c[:, :, :, :, :] = dst[:, :, :, :, :, 0]
+    distribute_test_c = g(stag * dst_c)
+    src_c = g.vcolor(grid)
+    src_c[:, :, :, :, :] = distribute_test[:, :, :, :, :, 0]
+    eps = g.norm2(src_c - distribute_test_c)
+    g.message(f"Staggered distribution test: {i} -> {eps}")
+    assert eps == 0.0
+
 
 #########################################################################
 # Test fermion operators against known results
@@ -341,22 +369,34 @@ wilson_twisted_mass_params = {
     "boundary_phases": [1.0, 1.0, 1.0, -1.0],
 }
 wilson_clover_matrices = {
-    "": [(-946.8714968698364 - 427.1253034080037j)],
-    ".Mdiag": [(-908.620454398646 - 3428.779878527792j)],
+    "": [-946.8714968698364 - 427.1253034080037j],
+    ".Mdiag": [-908.620454398646 - 3428.779878527792j],
 }
 wilson_matrices = {
-    "": [(-999.7564252326631 - 466.7758727463097j)],
-    ".Mdiag": [(-961.5053827614738 - 3468.430447866095j)],
+    "": [-999.7564252326631 - 466.7758727463097j],
+    ".Mdiag": [-961.5053827614738 - 3468.430447866095j],
 }
 wilson_clover_matrices_open = {
-    "": [(-1634.2615676797234 + 239.27037187495998j)],
-    ".Mdiag": [(-1239.3535155227526 - 1158.5295177146759j)],
+    "": [-1634.2615676797234 + 239.27037187495998j],
+    ".Mdiag": [-1239.3535155227526 - 1158.5295177146759j],
 }
 wilson_twisted_mass_matrices = {
-    "": [(-5.665095757463064 + 373.96051873176737j)],
-    ".Mdiag": [(-440.5312395819657 - 1102.362512575698j)],
+    "": [-5.665095757463064 + 373.96051873176737j],
+    ".Mdiag": [-440.5312395819657 - 1102.362512575698j],
 }
 test_suite = {
+    # "staggered": {
+    #     "fermion": g.qcd.fermion.staggered,
+    #     "params" : {
+    #         "mass": 0.1,
+    #         "c1": 9.0/8.0,
+    #         "c2": -1.0/24.0,
+    #         "u0": 1.0
+    #     },
+    #     "matrices": {
+    #         "": None
+    #     }
+    # },
     "zmobius": {
         "fermion": g.qcd.fermion.zmobius,
         "params": {
@@ -379,9 +419,9 @@ test_suite = {
             "boundary_phases": [1.0, 1.0, 1.0, -1.0],
         },
         "matrices": {
-            "": [(-2424.048033434305 + 10557.661684178218j)],
-            ".Mdiag": [(2643.396577965267 + 6550.259431381319j)],
-            ".ImportPhysicalFermionSource": [(4064.7879718582053 - 1357.0856808000196j)],
+            "": [-2424.048033434305 + 10557.661684178218j],
+            ".Mdiag": [2643.396577965267 + 6550.259431381319j],
+            ".ImportPhysicalFermionSource": [4064.7879718582053 - 1357.0856808000196j],
         },
     },
     "mobius": {
@@ -395,9 +435,9 @@ test_suite = {
             "boundary_phases": [1.0, -1.0, 1.0, -1.0],
         },
         "matrices": {
-            "": [(-8693.09425573421 - 4130.7793316734915j)],
-            ".Mdiag": [(-4966.960264746144 - 2525.83968136146j)],
-            ".ImportPhysicalFermionSource": [(-97.93443075273976 - 690.6405168964976j)],
+            "": [-8693.09425573421 - 4130.7793316734915j],
+            ".Mdiag": [-4966.960264746144 - 2525.83968136146j],
+            ".ImportPhysicalFermionSource": [-97.93443075273976 - 690.6405168964976j],
         },
     },
     "mobius_axial_mass": {
@@ -412,10 +452,29 @@ test_suite = {
             "boundary_phases": [1.0, -1.0, 1.0, -1.0],
         },
         "matrices": {
-            "": [(-8690.547330400455 - 4127.148886222195j)],
-            ".Mdiag": [(-4967.102993398692 - 2525.589904941078j)],
+            "": [-8690.547330400455 - 4127.148886222195j],
+            ".Mdiag": [-4967.102993398692 - 2525.589904941078j],
+            ".ImportPhysicalFermionSource": [-97.93443075274081 - 690.6405168964941j],
         },
     },
+    # "mobius_Aslash_axial_mass": {
+    #     "fermion": g.qcd.fermion.mobius,
+    #     "params": {
+    #         "mass_plus": 0.08,
+    #         "mass_minus": 0.11,
+    #         "M5": 1.8,
+    #         "b": 1.5,
+    #         "c": 0.5,
+    #         "Ls": 12,
+    #         "e": 0.1,
+    #         "boundary_phases": [1.0, -1.0, 1.0, -1.0],
+    #     },
+    #     "matrices": {
+    #         "": [-8679.424304016458 - 4253.579769538879j],
+    #         ".Mdiag": [-4957.914469631107 - 2526.796380280033j],
+    #         ".ImportPhysicalFermionSource": [-97.93443075274081 - 690.6405168964941j],
+    #     },
+    # },
     "wilson": {
         "fermion": g.qcd.fermion.wilson_clover,
         "params": wilson_params,
@@ -569,14 +628,20 @@ def verify_daggered(rng, fermion, fermion_daggered):
                 ref_list = a(lhs, rhs)
                 cmp_list = a_daggered.adj()(lhs, rhs)
                 for r, c in zip(ref_list, cmp_list):
-                    eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
+                    if g.norm2(r) == 0.0:
+                        eps = g.norm2(r - c) ** 0.5
+                    else:
+                        eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
                     g.message(f"Verify operator <> daggered for {atag}: {eps}")
                     assert eps < eps_ref
                 # then test adjoint matrix
                 ref_list = a.adj()(rhs, lhs)
                 cmp_list = a_daggered(rhs, lhs)
                 for r, c in zip(ref_list, cmp_list):
-                    eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
+                    if g.norm2(r) == 0.0:
+                        eps = g.norm2(r - c) ** 0.5
+                    else:
+                        eps = g.norm2(r - c) ** 0.5 / g.norm2(r) ** 0.5
                     g.message(f"Verify operator <> daggered for {atag}.adj(): {eps}")
                     assert eps < eps_ref
 
@@ -697,7 +762,7 @@ def verify_matrix_element(fermion, dst, src, tag):
             def gradient(self, Uprime, dUprime):
                 assert dUprime == Uprime
                 return [
-                    g.qcd.gauge.project.traceless_hermitian(g.eval(a + b))
+                    g.project(g.eval(a + b), "algebra")
                     for a, b in zip(mat_pg(dst_pg, src), mat_pg.adj()(src, dst_pg))
                 ]
 
@@ -758,25 +823,31 @@ def verify_matrix_element(fermion, dst, src, tag):
                     return g.norm2(get_matrix(fermion.updated(Uprime), tag) * src_p)
 
                 def gradient(self, Uprime, dUprime):
-                    assert dUprime == Uprime
+                    assert dUprime == Uprime[0:4]
                     R = g.group.cartesian(Uprime)
                     for r, x in zip(R + R, mat_pg(dst_p, src_p) + mat_pg.adj()(src_p, dst_p)):
-                        g.set_checkerboard(r, g.qcd.gauge.project.traceless_hermitian(x))
-                    return R
+                        g.set_checkerboard(r, g.project(x, "algebra"))
+                    return R[0:4]
 
-        dfv = df()
-        dfv.assert_gradient_error(rng, U, U, 1e-3, 1e-6)
+            dfv = df()
+            dfv.assert_gradient_error(rng, U, U[0:4], 1e-3, 1e-6)
 
     return X
 
 
 g.default.set_verbose("random", False)
 
+# create a Aslashed field
+grid_double = g.grid([8, 8, 8, 16], g.double)
+A = [g.real(grid_double) for mu in range(len(U))]
+rng.normal(A)
+
+
 # test suite
 for name in test_suite:
     # load configuration
     rng = g.random("finger_print")
-    U = g.qcd.gauge.random(g.grid([8, 8, 8, 16], g.double), rng)
+    U = g.qcd.gauge.random(grid_double, rng)
 
     # default grid
     grid = U[0].grid
@@ -787,6 +858,10 @@ for name in test_suite:
     # params
     test = test_suite[name]
     g.message(f"\n\nStarting test suite for {name}")
+
+    # if we have a photon field, add it
+    if "e" in test["params"]:
+        U = U + A
 
     # create fermion
     fermion_dp = test["fermion"](U, test["params"])
@@ -809,7 +884,7 @@ for name in test_suite:
             dst[grid] = rng.cnormal(g.vspincolor(grid))
 
     # apply open boundaries to fields if necessary
-    if test["params"]["boundary_phases"][-1] == 0.0:
+    if "boundary_phases" in test["params"] and test["params"]["boundary_phases"][-1] == 0.0:
         for grid in src:
             g.qcd.fermion.apply_open_boundaries(src[grid])
             g.qcd.fermion.apply_open_boundaries(dst[grid])
@@ -832,10 +907,10 @@ for name in test_suite:
             g.message(f"Test {matrix} fingerprint: {eps}")
             assert eps < grid.precision.eps * finger_print_tolerance
 
+    # test daggering entire fermion operator
+    verify_daggered(rng, fermion_dp, fermion_dp.adj())
+
     # test single versus double precision
     if isinstance(fermion_dp, g.qcd.fermion.fine_operator):
         fermion_sp = fermion_dp.converted(g.single)
         verify_single_versus_double_precision(rng, fermion_dp, fermion_sp)
-
-    # test daggering entire fermion operator
-    verify_daggered(rng, fermion_dp, fermion_dp.adj())

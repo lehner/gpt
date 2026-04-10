@@ -32,21 +32,31 @@ class lime_writer:
         self.comm = comm
 
         if self.comm.processor == 0:
-            self.f = g.FILE(fn, "wb")
+            # first create and truncate file
+            f = g.FILE(fn, "wb")
+            del f
 
         self.comm.barrier()
 
-        if self.comm.processor != 0:
-            self.f = g.FILE(fn, "r+b")
+        # then all ranks reopen in same mode
+        #self.f = g.FILE(fn, "r+b")
 
-        self.f.unbuffer()
+        #self.comm.barrier()
+
         self.append_offset = 0
 
         self.index = {}
 
+    def close(self):
+        self.f = None
+
+    def reopen(self):
+        self.f = g.FILE(self.fn, "r+b")
+
     def create_tag(self, tag, size):
         size = int(size)
         if self.comm.processor == 0:
+            self.reopen()
             self.f.seek(self.append_offset, 0)
             self.f.write(struct.pack(">L", self.magic))
             self.f.write(struct.pack(">H", 1))
@@ -59,6 +69,8 @@ class lime_writer:
 
             self.f.seek(0, 1)
             offset = int(self.f.tell())
+            self.close()
+
         else:
             offset = 0
             size = 0
@@ -80,8 +92,10 @@ class lime_writer:
         tag_offset, size = self.index[tag]
         assert element_offset + len(data) <= size
 
+        self.reopen()
         self.f.seek(tag_offset + element_offset, 0)
         self.f.write(data)
+        self.close()
 
     def write_text(self, tag, text):
         assert isinstance(text, str)
@@ -124,7 +138,7 @@ def save(file, objects, params):
     # performance
     dt_distr, dt_crc, dt_write, dt_misc = 0.0, 0.0, 0.0, 0.0
     szGB = 0.0
-    g.barrier()
+    grid.barrier()
     t0 = g.time()
     dt_write -= g.time()
 
@@ -155,7 +169,7 @@ def save(file, objects, params):
             len(pos),
             len(objects),
         )
-
+            
         if sys.byteorder != "big":
             cgpt.munge_byte_order(data, data, 8)
 
@@ -164,12 +178,13 @@ def save(file, objects, params):
         dt_crc -= g.time()
         scidac_checksum_a, scidac_checksum_b = scidac.checksums(data, grid, pos)
         dt_crc += g.time()
-
+            
         sz = size * len(pos)
         w.write(params["binary_data_tag"], grid.processor * sz, data)
         szGB += len(data) / 1024.0**3.0
 
-    g.barrier()
+    grid.barrier()
+
     dt_write += g.time()
 
     crc_comp_a, crc_comp_b = scidac.checksums_reduce(

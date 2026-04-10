@@ -17,6 +17,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#define CGPT_MPI_TAG_PERIOD 32059
+
 template<typename rank_t>
 global_transfer<rank_t>::global_transfer(rank_t _rank, Grid_MPI_Comm _comm) : rank(_rank), comm(_comm) {
 
@@ -33,6 +35,7 @@ global_transfer<rank_t>::global_transfer(rank_t _rank, Grid_MPI_Comm _comm) : ra
   mpi_rank_map.push_back(0);
   ASSERT(rank == 0);
 #endif
+
 }
 
 template<typename rank_t>
@@ -155,22 +158,87 @@ void global_transfer<rank_t>::waitall() {
   std::vector<MPI_Status> stat(requests.size());
   ASSERT(MPI_SUCCESS == MPI_Waitall((int)requests.size(), &requests[0], &stat[0]));
   requests.clear();
+
+#ifndef ACCELERATOR_AWARE_MPI
+
+  for (auto & b : host_bounce_buffer) {
+    if (b.device) {
+#ifdef GRID_CHECKSUM_COMMS
+      if (b.device_mt == mt_accelerator) {
+	acceleratorCopyToDevice(b.host, b.device, b.size - 8*3);
+      } else {
+	memcpy(b.device, b.host, b.size - 8*3);
+      }
+      uint64_t computed_cs = host_bounce_checksum((uint64_t*)b.device, b.size / 8 - 1*3, b.device_mt);// ^ (13 + *0 + 1000 * b.tag);
+      uint64_t expected_cs = *(uint64_t*)(((char*)b.host) + b.size - 8*3);
+      uint64_t tag = *(uint64_t*)(((char*)b.host) + b.size - 8*2);
+      uint64_t inc = *(uint64_t*)(((char*)b.host) + b.size - 8*1);
+      uint64_t inc_exp = host_checksum_increment(b.sender, rank);
+      
+      if (computed_cs != expected_cs || inc != inc_exp || tag != b.tag)
+	ERR("Packet receive checksum mismatch: %ld != %ld, tag %ld != %ld, inc %ld != %ld, bsender,rank = %ld, %ld", (long)computed_cs, (long)expected_cs,
+	    (long)tag, (long)b.tag, inc, inc_exp,(long)b.sender, (long)rank);
+#else
+      acceleratorCopyToDevice(b.host, b.device, b.size);
+#endif
+    }
+  }
+  host_bounce_reset();
+
+#endif
+
 #endif
 }
 
 template<typename rank_t>
-void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t sz) {
+void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t sz, memory_type type) {
   if (sz <= size_mpi_max) {
 #ifdef CGPT_USE_MPI
+    int tag = other_rank * 65100 + rank;
     //printf("Send from %d to %d, %d bytes from %p (%g double)\n",this->rank,other_rank,(int)sz,pdata,*(double*)pdata);
+
+#ifndef ACCELERATOR_AWARE_MPI
+
+    if (type == mt_accelerator
+#ifdef GRID_CHECKSUM_COMMS
+	|| true
+#endif
+	) {
+
+#ifdef GRID_CHECKSUM_COMMS
+      void* host = host_bounce_allocate(sz + 8*3, 0, type, tag, rank);
+      if (type == mt_accelerator) {
+	acceleratorCopyFromDevice(pdata, host, sz);
+      } else {
+	memcpy(host, pdata, sz);
+      }
+
+      ASSERT(sz % 8 == 0);
+      *(uint64_t*)(((char*)host) + sz) = host_bounce_checksum((uint64_t*)pdata, sz / 8, type);// ^ (13 + host_checksum_increment(rank, other_rank)*0 + 1000 * tag);
+      *(uint64_t*)(((char*)host) + sz + 8) = tag;
+      *(uint64_t*)(((char*)host) + sz + 16) = host_checksum_increment(rank, other_rank);
+      pdata = host;
+      sz += 8*3;
+#else
+      void* host = host_bounce_allocate(sz, 0, type, tag, rank);
+      acceleratorCopyFromDevice(pdata, host, sz);
+      pdata = host;
+#endif
+
+    }
+    
+#endif
+    
     MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Isend(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Isend(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],tag % CGPT_MPI_TAG_PERIOD,
+				    comm,&r));
     requests.push_back(r);
 #endif
+    
   } else {
     while (sz) {
       size_t sz_block = std::min(sz,size_mpi_max);
-      isend(other_rank,pdata,sz_block);
+      isend(other_rank,pdata,sz_block,type);
       sz -= sz_block;
       pdata = (void*)((char*)pdata + sz_block);
     }
@@ -178,18 +246,39 @@ void global_transfer<rank_t>::isend(rank_t other_rank, const void* pdata, size_t
 }
 
 template<typename rank_t>
-void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz) {
+void global_transfer<rank_t>::irecv(rank_t other_rank, void* pdata, size_t sz, memory_type type) {
   if (sz <= size_mpi_max) {
 #ifdef CGPT_USE_MPI
+    int tag = rank * 65100 + other_rank;
+    
+#ifndef ACCELERATOR_AWARE_MPI
+  
+    if (type == mt_accelerator
+#ifdef GRID_CHECKSUM_COMMS
+	|| true
+#endif
+	) {
+
+#ifdef GRID_CHECKSUM_COMMS
+      sz += 8*3;
+#endif
+
+      void* host = host_bounce_allocate(sz, pdata, type, tag, other_rank);
+      pdata = host;
+    }
+    
+#endif
+    
     //printf("Recv from %d to %d, %d bytes to %p\n",other_rank,this->rank,(int)sz,pdata);
     MPI_Request r;
-    ASSERT(MPI_SUCCESS == MPI_Irecv(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],0x3,comm,&r));
+    ASSERT(MPI_SUCCESS == MPI_Irecv(pdata,sz,MPI_CHAR,mpi_rank_map[other_rank],tag % CGPT_MPI_TAG_PERIOD,
+				    comm,&r));
     requests.push_back(r);
 #endif
   } else {
     while (sz) {
       size_t sz_block = std::min(sz,size_mpi_max);
-      irecv(other_rank,pdata,sz_block);
+      irecv(other_rank,pdata,sz_block,type);
       sz -= sz_block;
       pdata = (void*)((char*)pdata + sz_block);
     }

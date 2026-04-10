@@ -82,7 +82,7 @@ DWF Dslash Benchmark with
     GBPerSec = nbytes / (t1 - t0) / 1e9
     g.message(
         f"""{N} applications of Dhop
-    Time to complete            : {t1-t0:.2f} s
+    Time to complete            : {t1 - t0:.2f} s
     Total performance           : {GFlopsPerSec:.2f} GFlops/s
     Effective memory bandwidth  : {GBPerSec:.2f} GB/s"""
     )

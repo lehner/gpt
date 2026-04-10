@@ -33,6 +33,7 @@ from gpt.qcd.fermion.boundary_conditions import *
 from gpt.qcd.fermion.zmobius import zmobius
 from gpt.qcd.fermion.mobius import mobius
 from gpt.qcd.fermion.wilson import wilson_clover, wilson_twisted_mass
+from gpt.qcd.fermion.staggered import staggered
 
 
 # abbreviations / short-cuts

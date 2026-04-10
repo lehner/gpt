@@ -27,6 +27,8 @@ for f in files:
 
 cache_params = (16, 4)
 
+np.random.seed(13)
+
 for tag in ["e", "s", "ems", "l", "sml"]:
 
     g.message(
@@ -49,14 +51,26 @@ for tag in ["e", "s", "ems", "l", "sml"]:
 
     coordinates = quark.sink_domain.coordinates
     nsrc = quark.source_domain.sampled_sites
-
+    tag0 = weight[0][1][0]
+    
     g.message(f"Has {nsrc} source points and {quark.sink_domain.sampled_sites} sink points")
+
+    # allow for re-ordered cache lines
+    refs = [quark(tag0, 0, i) for i in range(nsrc)]
+    
+    perm = np.random.permutation(nsrc).tolist()
+    quark.cache_line_order(perm)
+    g.message(f"Cache line permutation {perm}")
+
+    refs2 = [quark(tag0, 0, i) for i in range(nsrc)]
+    for i in range(nsrc):
+        assert g.norm2(refs[i] - refs2[i]) == 0.0
 
     # test cache optimized sampler
     rng = g.random("test")
     to_sample = [[rng.uniform_int(min=0, max=nsrc - 1) for i in range(3)] for j in range(20)]
     sampled = []
-    tag0 = weight[0][1][0]
+
     for s in g.qcd.sparse_propagator.cache_optimized_sampler([quark], to_sample):
         q0 = quark[tag0, s[0]]
         q1 = quark[tag0, s[1]]

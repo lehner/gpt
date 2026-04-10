@@ -167,7 +167,7 @@ EXPORT(test_grid,{
     w.writeScidacFieldRecord(Umu, record, 0, Grid::BinaryIO::BINARYIO_LEXICOGRAPHIC);
     w.close();
 
-#else
+#elif 0
     
     std::vector<cgpt_Lattice_base*> fields;
     cgpt_basis_fill(fields,_fields);

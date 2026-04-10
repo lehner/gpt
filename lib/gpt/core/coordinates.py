@@ -141,11 +141,24 @@ def coordinate_mask(field, mask):
     field[x] = mask.astype(field.grid.precision.complex_dtype).reshape((len(mask), 1))
 
 
-def correlate(a, b, dims=None):
-    # c[x] = (1/vol) sum_y a[y]*adj(b[y+x])
+def correlate(a, b, dims=None, parity=False):
+    # c[x] = (1/vol) sum_y a[y]*adj(b[y+x])   if parity == False
+    # c[x] = (1/vol) sum_y a[y]*adj(b[y-x])   if parity == True
     F = gpt.fft(dims=dims)
     if dims is not None:
         norm = numpy.prod([a.grid.gdimensions[d] for d in dims])
     else:
         norm = a.grid.fsites
-    return F(gpt(float(norm) * F(a) * gpt.adj(F(b))))
+    if parity:
+        return F.inv()(gpt(F(a) * gpt.adj(F(b))))
+    else:
+        return F(gpt(float(norm) * F(a) * gpt.adj(F(b))))
+
+
+def parity(a, dims=None):
+    F = gpt.fft(dims=dims)
+    if dims is not None:
+        norm = numpy.prod([a.grid.gdimensions[d] for d in dims])
+    else:
+        norm = a.grid.fsites
+    return gpt(norm * F * F * a)

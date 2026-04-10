@@ -232,3 +232,48 @@ for otype, cart in [(U[0].otype, False), (U_mom[0].otype, True)]:
     fields = [g.lattice(grid, otype) for i in range(8)]
     rng.element(fields)
     A3.assert_gradient_error(rng, fields, fields, 1e-3, 1e-8)
+
+
+# kernel mass terms
+even, odd = g.even_odd_projectors(U[0].grid)
+
+g.default.push_verbose("block_cg", True)
+aP = g.qcd.scalar.action.hermitian_kernel.mass_term(
+    g.qcd.scalar.action.hermitian_kernel.complement(
+        U,
+        g.qcd.gauge.algebra_laplace_polynomial(U, 10, [1 / 2 + 1 / 16] * 3),
+        [odd] * 4,
+        [even] * 4,
+    ),
+    g.algorithms.inverter.block_cg({"eps": 1e-15, "maxiter": 300}),
+)
+
+aP.assert_gradient_error(rng, U + U_mom, U + U_mom, 1e-3, 1e-8)
+
+v0 = aP.draw(U + U_mom, rng)
+v1 = aP(U + U_mom)
+eps = abs(v0 - v1) / abs(v0)
+g.message(f"Draw consistency of kernel action: {eps}")
+assert eps < 1e-12
+
+rng.element(U_mom)
+aP = g.qcd.scalar.action.hermitian_kernel.mass_term(
+    g.qcd.scalar.action.hermitian_kernel.complement(
+        U,
+        g.qcd.scalar.action.stencil_transformation(
+            g.group.cartesian(U),
+            [(1.0, (0, 0, 0, 0)), (1 / 6, (1, 0, 0, 0)), (1 / 6, (-1, 0, 0, 0))],
+        ),
+        [odd] * 4,
+        [even] * 4,
+    ),
+    g.algorithms.inverter.block_cg({"eps": 1e-15, "maxiter": 300}),
+)
+
+aP.assert_gradient_error(rng, U + U_mom, U_mom, 1e-3, 1e-8)
+
+v0 = aP.draw(U + U_mom, rng)
+v1 = aP(U + U_mom)
+eps = abs(v0 - v1) / abs(v0)
+g.message(f"Draw consistency of kernel action: {eps}")
+assert eps < 1e-12

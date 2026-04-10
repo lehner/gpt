@@ -39,14 +39,16 @@ struct cgpt_project_identity {
   void* get_args() { return 0; }
 
   cgpt_project_identity(PyObject* args) { }
-  
-  static accelerator_inline obj projector(obj x, long idx, void* args) {
-    return x;
-  }
 
-  static accelerator_inline tensor_t projector(tensor_t x, long idx, void* args) {
-    return x;
-  }
+  struct static_functions {
+    static accelerator_inline obj projector(obj x, long idx, void* args) {
+      return x;
+    }
+    
+    static accelerator_inline tensor_t projector(tensor_t x, long idx, void* args) {
+      return x;
+    }
+  };
 
 };
 
@@ -56,10 +58,10 @@ struct cgpt_project_tensor {
   typedef typename obj::scalar_type scalar_t;
   typedef typename obj::vector_type vector_t;
   
-  Vector<tensor_t> tensors;
+  HostDeviceVector<tensor_t> tensors;
 
   void* get_args() {
-    return (void*)&tensors[0];
+    return (void*)tensors.toDevice();
   }
 
   void cgpt_convert(PyObject* src, tensor_t& dst) {
@@ -74,25 +76,27 @@ struct cgpt_project_tensor {
       cgpt_convert(PyList_GetItem(args,i),tensors[i]);
   }
 
-  static accelerator_inline obj projector(obj x, long idx, void* args) {
-    tensor_t* p_tensor = (tensor_t*)args;
-
-    vector_t* s = (vector_t*)&x;
-    scalar_t* t = (scalar_t*)&p_tensor[idx];
-    for (int i=0;i<sizeof(tensor_t) / sizeof(scalar_t);i++)
-      s[i] *= t[i];
-    return x;
-  }
-
-  static accelerator_inline tensor_t projector(tensor_t x, long idx, void* args) {
-    tensor_t* p_tensor = (tensor_t*)args;
-
-    scalar_t* s = (scalar_t*)&x;
-    scalar_t* t = (scalar_t*)&p_tensor[idx];
-    for (int i=0;i<sizeof(tensor_t) / sizeof(scalar_t);i++)
-      s[i] *= t[i];
-    return x;
-  }
+  struct static_functions {
+    static accelerator_inline obj projector(obj x, long idx, void* args) {
+      tensor_t* p_tensor = (tensor_t*)args;
+      
+      vector_t* s = (vector_t*)&x;
+      scalar_t* t = (scalar_t*)&p_tensor[idx];
+      for (int i=0;i<sizeof(tensor_t) / sizeof(scalar_t);i++)
+	s[i] *= t[i];
+      return x;
+    }
+    
+    static accelerator_inline tensor_t projector(tensor_t x, long idx, void* args) {
+      tensor_t* p_tensor = (tensor_t*)args;
+      
+      scalar_t* s = (scalar_t*)&x;
+      scalar_t* t = (scalar_t*)&p_tensor[idx];
+      for (int i=0;i<sizeof(tensor_t) / sizeof(scalar_t);i++)
+	s[i] *= t[i];
+      return x;
+    }
+  };
 };
 
 template<class T, class C, typename projector_t>

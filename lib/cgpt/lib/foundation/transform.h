@@ -28,17 +28,17 @@ void cgpt_scale_per_coordinate(Lattice<T>& dst,Lattice<T>& src,ComplexD* s,int d
 
   int L = grid->_gdimensions[dim];
     
-  autoView(dst_v, dst, AcceleratorWriteDiscard);
   autoView(src_v, src, AcceleratorRead);
-
+  autoView(dst_v, dst, AcceleratorWriteDiscard);
+  
   auto dst_p = &dst_v[0];
   auto src_p = &src_v[0];
 
-  Vector<ComplexD> _S(L);
-  ComplexD* S = &_S[0];
+  HostDeviceVector<ComplexD> _S(L);
   thread_for(idx, L, {
-      S[idx] = s[idx];
+      _S[idx] = s[idx];
     });
+  ComplexD* S = _S.toDevice();
 
   if (dim == 0 && grid->_simd_layout[0] == 1) {
     accelerator_for(idx, grid->oSites(), T::Nsimd(), {
@@ -84,8 +84,11 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
   while (eblock * rd < min_block)
     eblock *= 2;
 
-  Vector<vobj> lvSum(rd * eblock * Nbasis);         // will locally sum vectors first
-  Vector<sobj> lsSum(ld * Nbasis, Zero()); // sum across these down to scalars
+  HostDeviceVector<vobj> lvSum(rd * eblock * Nbasis);         // will locally sum vectors first
+  AlignedVector<sobj> lsSum(ld * Nbasis);
+  thread_for(i, ld*Nbasis,{
+      lsSum[i] = Zero();
+    });
   result.resize(fd * Nbasis);              // And then global sum to return the same vector to every node
 
   size_t   e1 = grid->_slice_nblock[orthogdim];
@@ -97,7 +100,7 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
   // sum over reduced dimension planes, breaking out orthog dir
   // Parallel over orthog direction
   VECTOR_VIEW_OPEN(Data, Data_v, AcceleratorRead);
-  auto lvSum_p = &lvSum[0];
+  auto lvSum_p = lvSum.device;
   typedef decltype(coalescedRead(Data_v[0][0])) CalcElem;
 
   accelerator_for(rr, rd * eblock * Nbasis, (size_t)grid->Nsimd(), {
@@ -119,6 +122,8 @@ inline void cgpt_rank_slice_sum(const PVector<Lattice<vobj>> &Data,
     coalescedWrite(lvSum_p[rr], elem);
   });
   VECTOR_VIEW_CLOSE(Data_v);
+
+  lvSum.toHost();
 
   thread_for(n_base, Nbasis, {
     // Sum across simd lanes in the plane, breaking out orthog dir.
@@ -167,8 +172,8 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
 
   size_t index_osites_per_block = (grid->oSites() + len - 1) / len;
 
-  Vector<sobj> lsSum(index_osites_per_block * len * Nbasis);
-  auto lsSum_p = &lsSum[0];
+  HostDeviceVector<sobj> lsSum(index_osites_per_block * len * Nbasis);
+  auto lsSum_p = lsSum.device;
   
   // first zero blocks
   accelerator_for(ss, lsSum.size(), 1, {
@@ -209,6 +214,8 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
       }	
   });
 
+  lsSum.toHost();
+
   Timer("ris: view");
   VECTOR_VIEW_CLOSE(Data_v);
 
@@ -216,7 +223,7 @@ inline void cgpt_rank_indexed_sum(const PVector<Lattice<vobj>> &Data,
   thread_for(i, result.size(), {
       sobj x = Zero();
       for (size_t j=0;j<index_osites_per_block;j++)
-	x = x + lsSum_p[i*index_osites_per_block + j];
+	x = x + lsSum[i*index_osites_per_block + j];
       result[i] = x;
     });
 
@@ -229,42 +236,10 @@ void cgpt_axpy(Lattice<vobj> &ret,sobj a,const Lattice<vobj> &x,const Lattice<vo
   ret.Checkerboard() = x.Checkerboard();
   conformable(ret,x);
   conformable(x,y);
-  autoView( ret_v , ret, AcceleratorWrite);
   autoView( x_v , x, AcceleratorRead);
   autoView( y_v , y, AcceleratorRead);
-
-  /*
-  static GridBLAS theBLAS;
-
-  Vector<ComplexF> a_p(1);
-  a_p[0] = a;
-
-  int n = GridTypeMapper<vobj>::count * vobj::Nsimd();
-  auto err = cublasCaxpy(theBLAS.gridblasHandle, n,
-			 (const cuComplex *)&a_p[0],
-			 (const cuComplex *)&x_v[0], 1,
-                         (cuComplex *)&ret_v[0], 1);
-  assert(err==CUBLAS_STATUS_SUCCESS);
-
-  theBLAS.synchronise();
-  */
+  autoView( ret_v , ret, AcceleratorWriteDiscard);
   
-  /*
-    int n_elements_inner = GridTypeMapper<vobj>::count;
-    int n_elements_outer = 5;
-    n_elements_inner /= n_elements_outer;
-    
-    accelerator_forNB(gg,x_v.size()*n_elements_outer,vobj::Nsimd(),{
-    size_t ss = gg / n_elements_outer;
-    size_t o = gg % n_elements_outer;
-    for (int i=0;i<n_elements_inner;i++) {
-      int e = n_elements_outer * i + o;
-      auto tmp = a*coalescedReadElement(x_v[ss], e)+coalescedReadElement(y_v[ss], e);
-      coalescedWriteElement(ret_v[ss],tmp, e);
-    }
-  });
-  */
-
   accelerator_forNB(ss,x_v.size(),vobj::Nsimd(),{
     auto tmp = a*coalescedRead(x_v[ss])+coalescedRead(y_v[ss]);
     coalescedWrite(ret_v[ss],tmp);
@@ -273,7 +248,9 @@ void cgpt_axpy(Lattice<vobj> &ret,sobj a,const Lattice<vobj> &x,const Lattice<vo
 }
 
 
-/*template<class sobj,class vobj> inline
+/*
+
+template<class sobj,class vobj> inline
 void cgpt_axpy(PVector<Lattice<vobj>> &ret,std::vector<sobj>& a,const PVector<Lattice<vobj>> &x,const PVector<Lattice<vobj>> &y) {
 
   double t0 = usecond();
@@ -289,7 +266,7 @@ void cgpt_axpy(PVector<Lattice<vobj>> &ret,std::vector<sobj>& a,const PVector<La
   
   const int Nbasis = ret.size();
   ASSERT(Nbasis == x.size() && Nbasis == y.size() && Nbasis == a.size());
-  Vector<Coeff_t> A(Nbasis);
+  HostDeviceVector<Coeff_t> A(Nbasis);
   
   size_t sz = x[0].oSites();
   thread_for(i, A.size(), {
@@ -323,4 +300,5 @@ void cgpt_axpy(PVector<Lattice<vobj>> &ret,std::vector<sobj>& a,const PVector<La
 	    << "LOOP: " << (t3-t2) << std::endl
     	    << "VECTOR_VIEW_CLOSE: " << (t4-t3) << std::endl;
 }
+
 */

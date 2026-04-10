@@ -103,8 +103,9 @@ void cgpt_unary(cgpt_Lattice<T> * pc, int unary) {
   r.Checkerboard() = pc->l.Checkerboard();
 
   {
+    autoView(l_v, pc->l, AcceleratorRead); // always do read first (if pc->l == r)
     autoView(r_v, r, AcceleratorWriteDiscard);
-    autoView(l_v, pc->l, AcceleratorRead);
+
     
     auto p_r = &r_v[0];
     auto p_l = &l_v[0];

@@ -17,3 +17,13 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt.core.foundation.lattice.matrix.exp
+import gpt, cgpt
+
+
+def det(A):
+    r = gpt.complex(A.grid)
+    to_list = gpt.util.to_list
+    cgpt.determinant(r.v_obj[0], to_list(A))
+    return r
+
+

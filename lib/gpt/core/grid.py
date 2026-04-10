@@ -268,7 +268,7 @@ class grid:
         assert d == self.nd
         return coordinates @ np.array(l)
 
-    def reduce(self, array, functor):
+    def reduce_binary_tree(self, array, functor):
         me = np.copy(array)
         other = np.copy(array)
 
@@ -283,3 +283,17 @@ class grid:
         self.broadcast(0, me)
 
         return me
+
+    def reduce_dimensional_reduction(self, array, functor):
+        accumulator = np.copy(array)
+        for d in range(self.nd):
+            gather = np.ndarray(shape=[self.mpi[d]] + list(array.shape), dtype=array.dtype)
+            cgpt.grid_gather_dimension(self.obj, accumulator, gather, d)
+            for i in range(1, self.mpi[d]):
+                functor(accumulator, gather[i])
+        self.broadcast(0, accumulator)
+
+        return accumulator
+
+    def reduce(self, array, functor):
+        return self.reduce_binary_tree(array, functor)

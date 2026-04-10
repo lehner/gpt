@@ -47,7 +47,7 @@ template<>
 cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, Lattice< iVSpin4Color8<vComplexD> >& la,int unary_b, cgpt_Lattice_base* b, int unary_expr, ComplexD coef) {
   typedef vComplexD vtype;
   _COMPATIBLE_(iSinglet);
-  //_OUTER_PRODUCT_(iVSpin4Color8);
+  _OUTER_PRODUCT_(iVSpin4Color8);
   _INNER_PRODUCT_(iVSpin4Color8);
   ERR("Not implemented");
 }

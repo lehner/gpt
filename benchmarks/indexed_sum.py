@@ -58,7 +58,6 @@ Indexed Sum Benchmark with
                 if it >= Nwarmup:
                     rank_dt += g.time()
 
-
             # Report
             GBPerSec = nbytes / dt / 1e9
             rank_GBPerSec = nbytes / rank_dt / 1e9
@@ -75,5 +74,4 @@ Indexed Sum Benchmark with
 
      {cgpt_t}
 """
-                )
-
+            )

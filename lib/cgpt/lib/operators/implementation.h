@@ -44,6 +44,11 @@ template<typename WI> void cgpt_fermion_set_mass(CayleyFermion5D<WI>& op, PyObje
   op.SetMass(mass_plus, mass_minus);
 }
 
+template<typename SI> void cgpt_fermion_set_mass(ImprovedStaggeredFermion<SI>& op, PyObject* args) {
+  RealD mass = get_float(args,"mass");
+  op.mass = mass;
+}
+
 template<typename T>
 class cgpt_fermion_operator : public cgpt_fermion_operator_base {
 public:
@@ -84,4 +89,38 @@ public:
     cgpt_fermion_set_mass(*op, args);
   }
 
+};
+
+template<typename T>
+class cgpt_fermion_operator_staggered : public cgpt_fermion_operator<T> {
+public:
+  typedef typename T::GaugeField GaugeField;
+  
+  cgpt_fermion_operator_staggered(T* _op) : cgpt_fermion_operator<T>(_op) {
+  }
+
+  virtual void update(PyObject* args) {
+    GaugeField U(this->op->GaugeGrid()), U2(this->op->GaugeGrid());
+    typedef typename GaugeField::vector_type vCoeff_t;
+    for (int mu=0;mu<Nd;mu++) {
+      PokeIndex<LorentzIndex>(U,compatible<iColourMatrix<vCoeff_t>>(get_pointer<cgpt_Lattice_base>(args,"U",mu))->l,mu);
+      PokeIndex<LorentzIndex>(U2,compatible<iColourMatrix<vCoeff_t>>(get_pointer<cgpt_Lattice_base>(args,"U",mu+Nd))->l,mu);
+    }
+    this->op->ImportGauge(U, U2);
+  }
+
+};
+
+template<typename T>
+class cgpt_fermion_operator_with_vector_field : public cgpt_fermion_operator<T> {
+public:
+  cgpt_fermion_operator_with_vector_field(T* _op) : cgpt_fermion_operator<T>(_op) {
+  }
+
+  virtual void update(PyObject* args) {
+    long num_gauge_fields = PyList_Size(get_key(args,"U"));
+    if (num_gauge_fields == Nd*2)
+      cgpt_create_aslashed(this->op->Aslashed, args);
+    cgpt_fermion_operator<T>::update(args);
+  }
 };

@@ -71,6 +71,8 @@ class base_iterative(base):
         super().__init__(name)
         self.verbose_convergence = gpt.default.is_verbose(self.name + "_convergence")
         self.verbose_log_convergence = gpt.default.is_verbose(self.name + "_log_convergence")
+        self.verbose_log_period = gpt.default.get_float("--" + self.name + "_log_period", 0.0)
+        self.log_time = 0.0
         self.converged = None
 
     def get_log_file(self):
@@ -105,6 +107,10 @@ class base_iterative(base):
             self.converged = None
 
         if self.verbose_convergence:
+            time = gpt.time()
+            if time < self.log_time:
+                return
+            self.log_time = time + self.verbose_log_period
             if target is None:
                 # expect to log a value that can be converted to a string
                 gpt.message(f"{self.name}: iteration {iteration}: {value}")

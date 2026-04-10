@@ -206,15 +206,15 @@ EXPORT(create_device_memory_view,{
     
     deviceVector<float>* devVec = new deviceVector<float>(nfloat);
 
-    if (cgpt_verbose_memory_view)
-      std::cout << GridLogMessage << "cgpt::device_memory_create ptr=" << std::hex << &(*devVec)[0] << " for " << std::dec << bytes << " bytes" << std::endl;
+    //if (cgpt_verbose_memory_view)
+    //  std::cout << GridLogMessage << "cgpt::device_memory_create ptr=" << std::hex << &(*devVec)[0] << " for " << std::dec << bytes << " bytes" << std::endl;
 
     PyObject* r = PyMemoryView_FromMemory((char*)&(*devVec)[0],bytes,PyBUF_WRITE);
 
     PyObject *capsule = PyCapsule_New((void*)devVec, NULL, [] (PyObject *capsule) -> void {
       deviceVector<float>* devVec = (deviceVector<float>*)PyCapsule_GetPointer(capsule, NULL);
-      if (cgpt_verbose_memory_view)
-	std::cout << GridLogMessage << "cgpt::device_memory_free ptr=" << std::hex << &(*devVec)[0] << std::endl;
+      //if (cgpt_verbose_memory_view)
+      //	std::cout << GridLogMessage << "cgpt::device_memory_free ptr=" << std::hex << &(*devVec)[0] << std::endl;
       delete devVec;
     });
 
@@ -249,6 +249,44 @@ EXPORT(transfer_array_device_memory_view,{
       acceleratorCopyFromDevice(data_dmv, data_array, size_dmv);
     } else {
       acceleratorCopyToDevice(data_array, data_dmv, size_dmv);
+    }
+
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(transpose_device_memory_view,{
+    
+    PyObject* smv, *dmv, *_shape, *_axes;
+    if (!PyArg_ParseTuple(args, "OOOO", &dmv,&smv,&_shape, &_axes)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(smv));
+    ASSERT(PyMemoryView_Check(dmv));
+
+    std::vector<long> shape, axes;
+    cgpt_convert(_shape, shape);
+    cgpt_convert(_axes, axes);
+
+    Py_buffer* dbuf = PyMemoryView_GET_BUFFER(dmv);
+    Py_buffer* sbuf = PyMemoryView_GET_BUFFER(smv);
+    ASSERT(PyBuffer_IsContiguous(dbuf,'C'));
+    ASSERT(PyBuffer_IsContiguous(sbuf,'C'));
+    void* data_dmv = dbuf->buf;
+    void* data_smv = sbuf->buf;
+    ASSERT(dbuf->len == sbuf->len);
+    long element_size = (long)sbuf->len;
+    for (int i=0;i<shape.size();i++) { ASSERT(element_size % shape[i] == 0); element_size /= shape[i]; }
+
+    switch (element_size) {
+    case sizeof(float):
+      cgpt_transpose_device_memory_view<float>(data_dmv, data_smv, shape, axes); break;
+    case sizeof(double):
+      cgpt_transpose_device_memory_view<double>(data_dmv, data_smv, shape, axes); break;
+    case sizeof(ComplexD):
+      cgpt_transpose_device_memory_view<ComplexD>(data_dmv, data_smv, shape, axes); break;
+    default:
+      ERR("Unknown element_size = %ld", element_size);
     }
 
     return PyLong_FromLong(0);
@@ -297,4 +335,45 @@ EXPORT(profile_range,{
 EXPORT(accelerator_barrier,{
     accelerator_barrier();
     return PyLong_FromLong(0);
+  });
+
+EXPORT(view_log_trigger,{
+    
+    long start;
+    if (!PyArg_ParseTuple(args, "l", &start)) {
+      return NULL;
+    }
+
+#ifdef GRID_LOG_VIEWS
+    if (start) {
+      ViewLogger::Begin();
+      return PyLong_FromLong(0);
+    } else {
+      ViewLogger::End();
+
+      size_t n = ViewLogger::LogVector.size();
+      PyObject* ret = PyList_New(n);
+      for (size_t i=0;i<n;i++) {
+	char buf[512];
+	const char* fn_head = strrchr(ViewLogger::LogVector[i].filename, '/');
+	ASSERT(fn_head);
+	snprintf(buf, sizeof(buf), "%s:%d:%d %ld %ld", fn_head+1,
+		ViewLogger::LogVector[i].line,
+		ViewLogger::LogVector[i].index,
+		ViewLogger::LogVector[i].head,
+		ViewLogger::LogVector[i].tail);
+	PyList_SetItem(ret,i,PyUnicode_FromStringAndSize(buf,strlen(buf)));
+      }
+      return ret;
+    }
+
+#else
+    if (start) {
+      return PyLong_FromLong(1);
+    } else {
+      return PyList_New(0);
+    }
+
+#endif
+    
   });
