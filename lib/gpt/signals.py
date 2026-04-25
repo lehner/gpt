@@ -101,7 +101,7 @@ def setup():
                 
             while True:
                 t1 = cgpt.time()
-                if t1 - last_alive_t.value > 300 and sig_state == 1:
+                if t1 - last_alive_t.value > 1*300 and sig_state == 1:
                     # keep track of how many signals we have sent and give up/abort job after a while
                     # if job does not respond, we may need to find another way to abort it; maybe send signals to all other
                     # ranks on same node to kill?
@@ -118,6 +118,7 @@ def setup():
 
                     # send backtrace signal both GPTs and Grids to document where we are; 
                     os.system(f"module load gdb ; echo -e \"bt\ndetatch\nquit\" | gdb -p {parentid}")
+                    os.system(f"export ZET_ENABLE_PROGRAM_DEBUGGING=1 ; echo -e \"info threads -stopped\nbt\ndetatch\nquit\" | gdb-oneapi -p {parentid}")
                     os.kill(parentid, signal.SIGUSR2)
                     os.kill(parentid, signal.SIGHUP)
                     sig_state = 1
