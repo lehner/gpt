@@ -250,7 +250,7 @@ def setup(tag):
     hasenbusch_ratios = []
 
     hb_l = [1.0, 0.65, 0.28, 0.11, 0.017, 0.004, 0.0019]
-    hb_l = [x for x in hb_l if x > m_l]
+    hb_l = [x for x in hb_l if x > m_l*1.1]
 
     for i in range(len(hb_l) - 1):
         fields.append((U + [g.vspincolor(F_grid_eo)]))
