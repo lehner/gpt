@@ -87,7 +87,7 @@ jk.add("sqrt_t0", jk_sqrt_t0)
 # add fermionic
 tags = ["ss.G5G5", "mres.ss.G5G5"]
 if "cc.G5G5.0" in fermionic[0]:
-    tags = tags + ["cc.G5G5", "mres.cc.G5G5"]
+    tags = tags + ["cc.G5G5", "mres.cc.G5G5", "cs.G5G5"]
 
 for tag in tags:
     m=jks.measurements(dict([ (str(iconf) + "/" + str(t), fold(fermionic[iconf][f"{tag}.{t}"]).real.tolist()) for t in Ts for iconf in range(len(gluonic)) ]))
@@ -97,19 +97,46 @@ for tag in tags:
 # strange mass
 jk_m0 = jk.apply(lambda r: [np.mean(emp_cosh(r["ss.G5G5"])[-T//4:]) * r["sqrt_t0"][0]])
 jk_m1 = jk.apply(lambda r: [np.mean(emp_cosh(r["ss.G5G5"])[-T//4+T//8:]) * r["sqrt_t0"][0]])
-
 jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
 jk.add("sqrtt0_mss", jk_m0)
 
 # strange mres
 jk_m0 = jk.apply(lambda r: [np.mean((r["mres.ss.G5G5"].real / r["ss.G5G5"].real).tolist()[-T//4:])])
 jk_m1 = jk.apply(lambda r: [np.mean((r["mres.ss.G5G5"].real / r["ss.G5G5"].real).tolist()[-T//4+T//8:])])
-
 jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
 jk.add("mres_mss", jk_m0)
 
+if "cc.G5G5.0" in fermionic[0]:
+    # charm mass
+    jk_m0 = jk.apply(lambda r: [np.mean(emp_cosh(r["cc.G5G5"])[-T//4:]) * r["sqrt_t0"][0]])
+    jk_m1 = jk.apply(lambda r: [np.mean(emp_cosh(r["cc.G5G5"])[-T//4+T//8:]) * r["sqrt_t0"][0]])
+    jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
+    jk.add("sqrtt0_mcc", jk_m0)
+
+    # charm-strange mass
+    jk_m0 = jk.apply(lambda r: [np.mean(emp_cosh(r["cs.G5G5"])[-T//4:]) * r["sqrt_t0"][0]])
+    jk_m1 = jk.apply(lambda r: [np.mean(emp_cosh(r["cs.G5G5"])[-T//4+T//8:]) * r["sqrt_t0"][0]])
+    jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
+    jk.add("sqrtt0_mcs", jk_m0)
+
+    # charm mres
+    jk_m0 = jk.apply(lambda r: [np.mean((r["mres.cc.G5G5"].real / r["cc.G5G5"].real).tolist()[-T//4:])])
+    jk_m1 = jk.apply(lambda r: [np.mean((r["mres.cc.G5G5"].real / r["cc.G5G5"].real).tolist()[-T//4+T//8:])])
+    jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
+    jk.add("mres_mcc", jk_m0)
+
+
 #jk.save("test.jks")
-print(
-    jk.get("sqrtt0_mss").mean()[0], jk.get("sqrtt0_mss").cov()[0][0]**0.5,
-    jk.get("mres_mss").mean()[0], jk.get("mres_mss").cov()[0][0]**0.5
-)
+if "cc.G5G5.0" in fermionic[0]:
+    print(
+        jk.get("sqrtt0_mss").mean()[0], jk.get("sqrtt0_mss").cov()[0][0]**0.5,
+        jk.get("mres_mss").mean()[0], jk.get("mres_mss").cov()[0][0]**0.5,
+        jk.get("sqrtt0_mcc").mean()[0], jk.get("sqrtt0_mcc").cov()[0][0]**0.5,
+        jk.get("mres_mcc").mean()[0], jk.get("mres_mcc").cov()[0][0]**0.5,
+        jk.get("sqrtt0_mcs").mean()[0], jk.get("sqrtt0_mcs").cov()[0][0]**0.5,
+    )
+else:
+    print(
+        jk.get("sqrtt0_mss").mean()[0], jk.get("sqrtt0_mss").cov()[0][0]**0.5,
+        jk.get("mres_mss").mean()[0], jk.get("mres_mss").cov()[0][0]**0.5
+    )
