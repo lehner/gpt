@@ -14,6 +14,17 @@ select = g.default.get("--select", None)
 #Q_therm_SF = (0, 0.25/4, 12)
 #0.016715
 
+ensembles_X = {
+    # explore towards a 10 GeV lattice
+    "explore-0" : { "L" : [24]*4, "beta" :  2.9, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 4800, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+    "explore-1" : { "L" : [24]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 4800, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+    "explore-2" : { "L" : [24]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 4800, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+
+}
+
 ensembles_S = {
     # 32 cubed 3 flavor Fine ensembles #  
     "32F3fl-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.0088, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
@@ -31,7 +42,7 @@ ensembles_S = {
     # added this one to also get ms dependence
 
     # 32 cubed 4 flavor Fine ensembles #
-    "32F4fc1-1" : { "L" : [32]*3 + [48], "beta" : 2.39, "ml" :  0.016715, "ms" : 0.016715, "mc" : 0.187, "Ls": 12, "b" : 1.25, "c" : 0.25,
+    "32F4fc1-1" : { "L" : [32]*3 + [48], "beta" : 2.39, "ml" :  0.016715, "ms" : 0.016715, "mc" : 0.207, "Ls": 12, "b" : 1.25, "c" : 0.25,
                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
 
     # 48^4 3 flavor Fine ensembles #
@@ -41,7 +52,7 @@ ensembles_S = {
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
 
     # 48^4 4 flavor Fine ensembles #
-    "48F4fh-1" : { "L" : [48]*4, "beta" : 2.39, "ml" :  0.016715, "ms" : 0.016715, "mc" : 0.187, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+    "48F4fh-1" : { "L" : [48]*4, "beta" : 2.39, "ml" :  0.016715, "ms" : 0.016715, "mc" : 0.207, "Ls" : 12, "b" : 1.25, "c" : 0.25,
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
 
     # 48^4 VF 3 flavor ensembles #
@@ -83,7 +94,8 @@ ensembles_XL = {
 ensembles = {
     "S" : ensembles_S,
     "L" : ensembles_L,
-    "XL" : ensembles_XL
+    "XL" : ensembles_XL,
+    "X" : ensembles_X
 }[category]
 
 if select is not None:
@@ -953,6 +965,9 @@ class job_measure_glue(job_reproduction_base):
             ms = ensembles[self.stream]["ms"]
             mc = ensembles[self.stream]["mc"]
             w = g.corr_io.writer(f"{config}.fermionic")
+            if "mc_valence" in ensembles[self.stream]:
+                mc = ensembles[self.stream]["mc_valence"]
+                w.write("mass", [ms, mc])
             slv = inv.defect_correcting(
                 inv.mixed_precision(inv.preconditioned(pc.eo2_ne(), cg_e_inner), g.single, g.double),
                 eps=exact_prec,
