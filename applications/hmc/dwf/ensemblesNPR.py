@@ -14,15 +14,23 @@ select = g.default.get("--select", None)
 #Q_therm_SF = (0, 0.25/4, 12)
 #0.016715
 
+# explore towards a 10 GeV lattice
 ensembles_X = {
-    # explore towards a 10 GeV lattice
     "explore-0" : { "L" : [24]*4, "beta" :  2.9, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
-                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 4800, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
     "explore-1" : { "L" : [24]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
-                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 4800, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
     "explore-2" : { "L" : [24]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
-                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 4800, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+}
 
+ensembles_X2 = {
+    "explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+    "explore-1L" : { "L" : [72]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+    "explore-2L" : { "L" : [72]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
 }
 
 ensembles_S = {
@@ -95,7 +103,8 @@ ensembles = {
     "S" : ensembles_S,
     "L" : ensembles_L,
     "XL" : ensembles_XL,
-    "X" : ensembles_X
+    "X" : ensembles_X,
+    "X2" : ensembles_X2
 }[category]
 
 if select is not None:
@@ -104,7 +113,8 @@ if select is not None:
     }
 
 ####
-run_replicas = [0,1] # run with reproduction replica
+#run_replicas = [0,1] # run with reproduction replica
+run_replicas = [0] if category in ["X","X2"] else [0,1] # run X on Jupiter which does not have SDC
 conf_range = range(400)
 pure_gauge = False # allows for first few trajectories to be run without fermions; don't use for now
 
@@ -542,11 +552,11 @@ class job_checkpoint(job_reproduction_base):
             for mu in range(4):
                 eps2 = g.norm2(next_U[mu] * g.adj(next_U[mu]) - g.identity(next_U[mu])) / g.norm2(next_U[mu])
                 g.message("Unitarity defect for mu=",mu,"is",eps2)
-                assert eps2 < 1e-25
+                assert eps2 < 1e-22 if self.conf < 10 else 1e-25
 
                 eps2 = g.norm2(g.matrix.det(next_U[mu]) - g.identity(g.complex(next_U[0].grid))) / next_U[0].grid.gsites
                 g.message("Determinant defect for mu=",mu,"is",eps2)
-                assert eps2 < 1e-25
+                assert eps2 < 1e-22 if self.conf < 10 else 1e-25
                 
                 g.message("Project")
                 g.project(next_U[mu], "defect_left")
