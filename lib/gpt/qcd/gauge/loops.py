@@ -174,7 +174,7 @@ def field_strength(U, mu, nu):
     return F
 
 
-def differentiable_topology(aU):
+def differentiable_topology(aU, field=False):
     Bx = field_strength(aU, 1, 2)
     By = field_strength(aU, 2, 0)
     Bz = field_strength(aU, 0, 1)
@@ -185,7 +185,10 @@ def differentiable_topology(aU):
 
     coeff = 8.0 / (32.0 * np.pi**2)
 
-    Q = g.sum(g.trace(Bx * Ex) + g.trace(By * Ey) + g.trace(Bz * Ez)) * coeff
+    if field == False:
+        Q = g.sum(g.trace(Bx * Ex) + g.trace(By * Ey) + g.trace(Bz * Ez)) * coeff
+    else:
+        Q = g(g.trace(Bx * Ex) + g.trace(By * Ey) + g.trace(Bz * Ez)) * coeff
 
     return Q
 

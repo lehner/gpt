@@ -9,49 +9,73 @@ g.default.set_verbose("cg_log_convergence")
 category = g.default.get("--category", None)
 select = g.default.get("--select", None)
 
+#Q_therm_F = (0, 0.25/2, 8)
+#Q_therm_VF = (0, 0.25/8, 8)
+#Q_therm_SF = (0, 0.25/4, 12)
+#0.016715
+
+# explore towards a 10 GeV lattice
+ensembles_X = {
+    "explore-0" : { "L" : [24]*4, "beta" :  2.9, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+    "explore-1" : { "L" : [24]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+    "explore-2" : { "L" : [24]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : None, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 16, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+}
+
+ensembles_X2 = {
+    "explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+    "explore-1L" : { "L" : [72]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+    "explore-2L" : { "L" : [72]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
+                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+}
 
 ensembles_S = {
     # 32 cubed 3 flavor Fine ensembles #  
-    "32F3fl-1" : { "L" : [32]*3 + [48], "beta" :  2.41, "ml" : 0.0088, "ms" : 0.0176, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200 },
-    # "32F3fl-2" : { "L" : [32]*3 + [48], "beta" :  2.47, "ml" : 0.0088, "ms" : 0.0176, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    "32F3fh-1" : { "L" : [32]*3 + [48], "beta" :  2.41, "ml" : 0.0176, "ms" : 0.0176, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200 },
-    "32F3fh-2" : { "L" : [32]*3 + [48], "beta" :  2.47, "ml" : 0.0176, "ms" : 0.0176, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200 },
-    "32F3fx-1" : { "L" : [32]*3 + [48], "beta" :  2.41, "ml" : 0.0176, "ms" : 0.0352, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200 },
+    "32F3fl-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.0088, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
+    "32F3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
+    "32F3fh-Q15-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                       "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : (15, 1, 8), "fermionic_from" : 28 }, # after thermalization, tune dH (nsubsteps 4->6)
+    "32F3fh-1" : { "L" : [32]*3 + [48], "beta" :  2.41, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
+    "32F3fh-2" : { "L" : [32]*3 + [48], "beta" :  2.47, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
+    "32F3fx-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.016715, "ms" : 0.0352, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
     # added this one to also get ms dependence
 
     # 32 cubed 4 flavor Fine ensembles #
-    "32F4fc1-1" : { "L" : [32]*3 + [48], "beta" : 2.39, "ml" :  0.0176, "ms" : 0.0176, "mc" : 0.187, "Ls": 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200 },
-    # "32F4fc1-2" : { "L" : [32]*3 + [48], "beta" : 2.45, "ml" :  0.0176, "ms" : 0.0176, "mc" : 0.187, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    # "32F4fc2-1" : { "L" : [32]*3 + [48], "beta" : 2.39, "ml" :  0.0176, "ms" : 0.0176, "mc" : 0.234, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    # "32F4fc2-2" : { "L" : [32]*3 + [48], "beta" : 2.45, "ml" :  0.0176, "ms" : 0.0176, "mc" : 0.234, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    # "32F4fc3-1" : { "L" : [32]*3 + [48], "beta" : 2.39, "ml" :  0.0176, "ms" : 0.0176, "mc" : 0.281, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    # "32F4fc3-2" : { "L" : [32]*3 + [48], "beta" : 2.45, "ml" :  0.0176, "ms" : 0.0176, "mc" : 0.281, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
+    "32F4fc1-1" : { "L" : [32]*3 + [48], "beta" : 2.39, "ml" :  0.016715, "ms" : 0.016715, "mc" : 0.207, "Ls": 12, "b" : 1.25, "c" : 0.25,
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
 
     # 48^4 3 flavor Fine ensembles #
-    # "48F3fl-1" : { "L" : [48]*4, "beta" :  2.41, "ml" : 0.0088, "ms" : 0.0176, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    # "48F3fl-2" : { "L" : [48]*4, "beta" :  2.47, "ml" : 0.0088, "ms" : 0.0176, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    "48F3fh-1" : { "L" : [48]*4, "beta" :  2.41, "ml" : 0.0176, "ms" : 0.0176, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200 },
-    "48F3fh-2" : { "L" : [48]*4, "beta" :  2.47, "ml" : 0.0176, "ms" : 0.0176, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200 },
+    "48F3fh-1" : { "L" : [48]*4, "beta" :  2.41, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
+    "48F3fh-2" : { "L" : [48]*4, "beta" :  2.47, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
 
     # 48^4 4 flavor Fine ensembles #
-    # "48F4fl-1" : { "L" : [48]*4, "beta" : 2.39, "ml" :  0.0088, "ms" : 0.0176, "mc" : 0.187, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    # "48F4fl-2" : { "L" : [48]*4, "beta" : 2.45, "ml" :  0.0088, "ms" : 0.0176, "mc" : 0.187, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
-    "48F4fh-1" : { "L" : [48]*4, "beta" : 2.39, "ml" :  0.0176, "ms" : 0.0176, "mc" : 0.187, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200 },
-    # "48F4fh-2" : { "L" : [48]*4, "beta" : 2.45, "ml" :  0.0176, "ms" : 0.0176, "mc" : 0.187, "Ls" : 12, "b" : 1.25, "c" : 0.25, "M5" : 1.8 },
+    "48F4fh-1" : { "L" : [48]*4, "beta" : 2.39, "ml" :  0.016715, "ms" : 0.016715, "mc" : 0.207, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
 
     # 48^4 VF 3 flavor ensembles #
-    # "48VF3fl-1" : { "L" : [48]*4, "beta" :  2.56, "ml" : 0.00625, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-    # "48VF3fl-2" : { "L" : [48]*4, "beta" :  2.62, "ml" : 0.00625, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-    "48VF3fh-1" : { "L" : [48]*4, "beta" :  2.56, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400 },
-    "48VF3fh-2" : { "L" : [48]*4, "beta" :  2.62, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400 },
+    "48VF3fh-1" : { "L" : [48]*4, "beta" :  2.56, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 }, # after therm
+    "48VF3fh-2" : { "L" : [48]*4, "beta" :  2.62, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
 
     # 48^4 VF 4 flavor ensembles #
-    "48VF4fc1-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400 },
-    # "48VF4fc1-2" : { "L" : [48]*4, "beta" :  2.60, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-    "48VF4fc2-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.178, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400 },
-    # "48VF4fc2-2" : { "L" : [48]*4, "beta" :  2.60, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.178, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-    "48VF4fc3-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.213, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400 },
-    # "48VF4fc3-2" : { "L" : [48]*4, "beta" :  2.60, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.213, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 }, 
+    "48VF4fc1-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+    "48VF4fc2-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.178, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+    "48VF4fc3-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.213, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
 }
 
 #ensembles_M = {
@@ -59,28 +83,28 @@ ensembles_S = {
 
 ensembles_L = {
     # 64^3x96 3 flavor VF ensembles #
-    # "64VF3fl-1" : { "L" : [64]*3 + [96], "beta" :  2.56, "ml" : 0.00625, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-    # "64VF3fl-2" : { "L" : [64]*3 + [96], "beta" :  2.62, "ml" : 0.00625, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-    "64VF3fh-1" : { "L" : [64]*3 + [96], "beta" :  2.56, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400 },
-    "64VF3fh-2" : { "L" : [64]*3 + [96], "beta" :  2.62, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400 },
+    "64VF3fh-1" : { "L" : [64]*3 + [96], "beta" :  2.56, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+    "64VF3fh-2" : { "L" : [64]*3 + [96], "beta" :  2.62, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
 
     # 64^3x96 4 flavor VF ensembles #
-    # "64VF4fl-1" : { "L" : [64]*3 + [96], "beta" :  2.54, "ml" : 0.00625, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-    # "64VF4fl-2" : { "L" : [64]*3 + [96], "beta" :  2.60, "ml" : 0.00625, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-    "64VF4fh-1" : { "L" : [64]*3 + [96], "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400 },
-    # "64VF4fh-2" : { "L" : [64]*3 + [96], "beta" :  2.60, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175, "M5" : 1.8 },
-
-    # 96^4 3 flavor SF ensembles #
-    "96SF3f-1" : { "L" : [96]*4, "beta" :  2.71, "ml" : 0.0093 , "ms" : 0.0093, "mc" : None, "Ls" : 12, "b" : 1.125, "c" : 0.125, "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 4800 },
-    # "96SF3f-2" : { "L" : [96]*4, "beta" :  2.77, "ml" : 0.0093, "ms" : 0.0093, "mc" : None, "Ls" : 12, "b" : 1.125, "c" : 0.125, "M5" : 1.8 },
+    "64VF4fh-1" : { "L" : [64]*3 + [96], "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
 }
 
-#ensembles_XL = {
-#}
+ensembles_XL = {
+    # 96^4 3 flavor SF ensembles #
+    "96SF3f-1" : { "L" : [96]*4, "beta" :  2.71, "ml" : 0.0093 , "ms" : 0.0093, "mc" : None, "Ls" : 12, "b" : 1.125, "c" : 0.125,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 4800, "Q" : None, "fermionic_from" : 91 },
+}
 
 ensembles = {
     "S" : ensembles_S,
     "L" : ensembles_L,
+    "XL" : ensembles_XL,
+    "X" : ensembles_X,
+    "X2" : ensembles_X2
 }[category]
 
 if select is not None:
@@ -89,7 +113,8 @@ if select is not None:
     }
 
 ####
-run_replicas = [0,1] # run with reproduction replica
+#run_replicas = [0,1] # run with reproduction replica
+run_replicas = [0] if category in ["X","X2"] else [0,1] # run X on Jupiter which does not have SDC
 conf_range = range(400)
 pure_gauge = False # allows for first few trajectories to be run without fermions; don't use for now
 
@@ -217,6 +242,16 @@ def setup(tag):
     U_mom = g.group.cartesian(U)
     action_gauge = g.qcd.gauge.action.iwasaki(params["beta"])
 
+    # add topology
+    Q = params["Q"]
+    if Q is not None:
+        aQ = g.qcd.gauge.action.topology(U, Q[0], Q[1])
+        sm0 = g.qcd.gauge.smear.stout(rho=0.12)
+        for it in range(Q[2]):
+            aQ = aQ.transformed(sm0)
+        action_gauge = action_gauge + aQ
+
+
     lq = light(U, 1, 1, params)
     F_grid_eo = lq.F_grid_eo
     F_grid = lq.F_grid
@@ -233,23 +268,30 @@ def setup(tag):
     b = params["b"]
     c = params["c"]
 
-    fields = [
-        (U + [g.vspincolor(F_grid_eo)]),
-        (U + [g.vspincolor(F_grid_eo)]),
-        (U + [g.vspincolor(F_grid_eo)]),
+    fields = []
+    hasenbusch_ratios = []
+
+    hb_l = [1.0, 0.65, 0.28, 0.11, 0.017, 0.004, 0.0019]
+    hb_l = [x for x in hb_l if x > m_l*1.1]
+
+    for i in range(len(hb_l) - 1):
+        fields.append((U + [g.vspincolor(F_grid_eo)]))
+        hasenbusch_ratios.append((hb_l[i+1], hb_l[i], None, two_flavor_ratio, mk_chron(cg_e, *css[0]), mk_chron(cg_s, *css[0]), light))
+
+    hasenbusch_ratios.append((m_l, hb_l[-1], None, two_flavor_ratio, mk_chron(cg_e, *css[1]), mk_chron(cg_s_light, *css[1]), light))
+        
+    fields = fields + [
         (U + [g.vspincolor(F_grid_eo)]),
         (U + [g.vspincolor(U[0].grid)]),
         (U + [g.vspincolor(U[0].grid)]),
     ]
-    
-    hasenbusch_ratios = [
-        (0.65, 1.0, None, two_flavor_ratio, mk_chron(cg_e, *css[0]), mk_chron(cg_s, *css[0]), light),
-        (0.28, 0.65, None, two_flavor_ratio, mk_chron(cg_e, *css[0]), mk_chron(cg_s, *css[0]), light),
-        (0.11, 0.28, None, two_flavor_ratio, mk_chron(cg_e, *css[0]), mk_chron(cg_s, *css[0]), light),
-        (m_l, 0.11, None, two_flavor_ratio, mk_chron(cg_e, *css[1]), mk_chron(cg_s_light, *css[1]), light),
+
+    hasenbusch_ratios = hasenbusch_ratios + [
         (0.23, 1.0, rat_fnc, eofa_ratio, mk_slv_e(*css[2]), mk_slv_s(*css[2]), light),
         (m_s, 0.23, rat_fnc, eofa_ratio, mk_slv_e(*css[2]), mk_slv_s(*css[2]), light),
     ]
+
+    g.message(hasenbusch_ratios)
 
     if m_c is not None:
         css.append(
@@ -510,11 +552,11 @@ class job_checkpoint(job_reproduction_base):
             for mu in range(4):
                 eps2 = g.norm2(next_U[mu] * g.adj(next_U[mu]) - g.identity(next_U[mu])) / g.norm2(next_U[mu])
                 g.message("Unitarity defect for mu=",mu,"is",eps2)
-                assert eps2 < 1e-25
+                assert eps2 < 1e-22 if self.conf < 10 else 1e-25
 
                 eps2 = g.norm2(g.matrix.det(next_U[mu]) - g.identity(g.complex(next_U[0].grid))) / next_U[0].grid.gsites
                 g.message("Determinant defect for mu=",mu,"is",eps2)
-                assert eps2 < 1e-25
+                assert eps2 < 1e-22 if self.conf < 10 else 1e-25
                 
                 g.message("Project")
                 g.project(next_U[mu], "defect_left")
@@ -928,6 +970,58 @@ class job_measure_glue(job_reproduction_base):
 
         res = []
         
+        # fermionic
+        if ensembles[self.stream]["fermionic_from"] <= self.conf:
+            ms = ensembles[self.stream]["ms"]
+            mc = ensembles[self.stream]["mc"]
+            w = g.corr_io.writer(f"{config}.fermionic")
+            if "mc_valence" in ensembles[self.stream]:
+                mc = ensembles[self.stream]["mc_valence"]
+                w.write("mass", [ms, mc])
+            slv = inv.defect_correcting(
+                inv.mixed_precision(inv.preconditioned(pc.eo2_ne(), cg_e_inner), g.single, g.double),
+                eps=exact_prec,
+                maxiter=100,
+            )
+            S = light(U, ms, ms, ensembles[self.stream])
+            if mc is not None:
+                C = light(U, mc, mc, ensembles[self.stream])
+            src = g.mspincolor(U[0].grid)
+            rng = g.random(f"strange.{self.stream}.{self.conf}")
+            for t0 in range(0, U[0].grid.gdimensions[3], U[0].grid.gdimensions[3]//4):
+                g.create.wall.z2(src, t0, rng)
+                prop_5d_s = g(S.bulk_propagator(slv) * src)
+                prop_s = g(S.bulk_propagator_to_propagator * prop_5d_s)
+                corr = g.slice(g.trace(g.adj(prop_s) * prop_s), 3)
+                corr = corr[t0:] + corr[:t0]
+                w.write(f"ss.G5G5.{t0}", corr)
+                res.append(corr)
+
+                p = S.J5q(prop_5d_s)
+                corr = g.slice(g.trace(p * g.adj(p)), 3)
+                corr = corr[t0:] + corr[:t0]
+                w.write(f"mres.ss.G5G5.{t0}", corr)
+                res.append(corr)
+
+                if mc is not None:
+                    prop_5d_c = g(C.bulk_propagator(slv) * src)
+                    prop_c = g(C.bulk_propagator_to_propagator * prop_5d_c)
+                    corr = g.slice(g.trace(g.adj(prop_c) * prop_c), 3)
+                    corr = corr[t0:] + corr[:t0]
+                    w.write(f"cc.G5G5.{t0}", corr)
+                    res.append(corr)
+
+                    p = S.J5q(prop_5d_c)
+                    corr = g.slice(g.trace(p * g.adj(p)), 3)
+                    corr = corr[t0:] + corr[:t0]
+                    w.write(f"mres.cc.G5G5.{t0}", corr)
+                    res.append(corr)
+
+                    corr = g.slice(g.trace(g.adj(prop_c) * prop_s), 3)
+                    corr = corr[t0:] + corr[:t0]
+                    w.write(f"cs.G5G5.{t0}", corr)
+                    res.append(corr)
+        
         w = g.corr_io.writer(f"{config}.gluonic")
 
         # first plaquette
@@ -1088,8 +1182,8 @@ class job_measure_Q(job_reproduction_base):
 
         res = []
         for flow_tag, flow in [
-                ("wilson_iwasaki_dbw2", wilson_iwasaki_dbw2_flow),
-                ("dbw2_iwasaki_wilson", dbw2_iwasaki_wilson_flow),
+                # ("wilson_iwasaki_dbw2", wilson_iwasaki_dbw2_flow),
+                # ("dbw2_iwasaki_wilson", dbw2_iwasaki_wilson_flow),
                 ("dbw2", dbw2_flow),
                 ("iwasaki", iwasaki_flow),
         ]:

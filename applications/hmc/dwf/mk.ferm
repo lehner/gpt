@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+import jks, corr_io, sys, numpy as np, math
+
+def fold(c):
+    return np.array([ (c[i] + c[-i])*0.5 for i in range(len(c)//2+1) ])
+
+def emp_cosh_f(x,xp,xpp):
+    r=(x+xpp)/xp/2.0
+    if r <= 1:
+        return float("nan")
+    return math.acosh(r)
+
+def emp_cosh(c):
+    return [ emp_cosh_f(c[i],c[i+1],c[i+2]) for i in range(len(c)-2) ]
+
+def interpolate(y,y_val,x,order):
+    sign_prev = 0
+    for i in range(len(y)):
+        sign = 1 if y[i] > y_val else -1
+        if sign_prev * sign < 0:
+            # we have crossed the value
+            if order == 1:
+                # y[i-1] + lam*(y[i]-y[i-1]) == y_val
+                # ->
+                # lam = (y_val - y[i-1]) / (y[i] - y[i-1])
+                lam = (y_val - y[i-1]) / (y[i] - y[i-1])
+                x = x[i-1] + lam*(x[i]-x[i-1])
+                return np.array([x])
+            elif order == 2:
+                # solution is between i-1 and i, find out which is closer
+                lam = (y_val - y[i-1]) / (y[i] - y[i-1])
+                if lam > 0.5:
+                    i0 = i
+                    lam -= 1.0
+                else:
+                    i0 = i-1
+                c1 = (y[i0 + 1] - y[i0 - 1])/2.
+                c2 = (y[i0 + 1] + y[i0 - 1] - 2*y[i0])/4.
+                c0 = y[i0] - y_val
+
+                def Q(l):
+                    return c0 + c1*l + c2*l**2.
+
+                def Qp(l):
+                    return c1 + 2.0*c2*l
+
+                # two steps of Newton
+                for i in range(2):
+                    lam -= Q(lam)/Qp(lam)
+
+                x = x[i0] + lam*(x[i0] - x[i0-1])
+                return np.array([x])
+            else:
+                return np.array([float("nan")])
+
+        sign_prev = sign
+    return np.array([float("nan")])
+
+def process_gluonic(tags, T, N):
+    tmax = max([ t for t in range(100) if f"E({t})" in tags])
+    ts = np.array([0.01*(x+1) for x in range(tmax*100)])
+    Tb = T // N
+    ret = {}
+    for i in range(N):
+        Es = np.array([np.mean(tags["E(%g)" % t].real.tolist()[Tb*i:Tb*(i+1)]) for t in ts])
+        t2E = ts**2 * Es
+        ret[f"t2E.{i*Tb}"] = t2E
+    return ret
+    
+fn=sys.argv[1:]
+fermionic = [corr_io.reader(x + ".fermionic").tags for x in fn]
+jk=jks.resamples()
+T = len(fermionic[0]["ss.G5G5.0"])
+N = 4
+assert T % N == 0
+Ts = list(range(0, T, T//N))
+gluonic = [process_gluonic(corr_io.reader(x + ".gluonic").tags, T, N) for x in fn]
+
+# add gluonic
+m=jks.measurements(dict([ (str(iconf) + "/" + str(t), gluonic[iconf][f"t2E.{t}"].tolist()) for t in Ts for iconf in range(len(gluonic)) ]))
+jk2=m.jackknife().prepare(lambda mi: mi.mean())
+jk.add("t2E",jk2)
+ts = [0.01*(x+1) for x in range(len(jk2.mean()))]
+jk_sqrt_t0 = jk.apply(lambda r: [interpolate(r["t2E"],0.3,ts,1)[0]**0.5])
+jk.add("sqrt_t0", jk_sqrt_t0)
+
+# add fermionic
+tags = ["ss.G5G5", "mres.ss.G5G5"]
+if "cc.G5G5.0" in fermionic[0]:
+    tags = tags + ["cc.G5G5", "mres.cc.G5G5", "cs.G5G5"]
+
+for tag in tags:
+    m=jks.measurements(dict([ (str(iconf) + "/" + str(t), fold(fermionic[iconf][f"{tag}.{t}"]).real.tolist()) for t in Ts for iconf in range(len(gluonic)) ]))
+    jk2=m.jackknife().prepare(lambda mi: mi.mean())
+    jk.add(tag,jk2)
+
+# strange mass
+jk_m0 = jk.apply(lambda r: [np.mean(emp_cosh(r["ss.G5G5"])[-T//4:]) * r["sqrt_t0"][0]])
+jk_m1 = jk.apply(lambda r: [np.mean(emp_cosh(r["ss.G5G5"])[-T//4+T//8:]) * r["sqrt_t0"][0]])
+jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
+jk.add("sqrtt0_mss", jk_m0)
+
+# strange mres
+jk_m0 = jk.apply(lambda r: [np.mean((r["mres.ss.G5G5"].real / r["ss.G5G5"].real).tolist()[-T//4:])])
+jk_m1 = jk.apply(lambda r: [np.mean((r["mres.ss.G5G5"].real / r["ss.G5G5"].real).tolist()[-T//4+T//8:])])
+jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
+jk.add("mres_mss", jk_m0)
+
+if "cc.G5G5.0" in fermionic[0]:
+    # charm mass
+    jk_m0 = jk.apply(lambda r: [np.mean(emp_cosh(r["cc.G5G5"])[-T//4:]) * r["sqrt_t0"][0]])
+    jk_m1 = jk.apply(lambda r: [np.mean(emp_cosh(r["cc.G5G5"])[-T//4+T//8:]) * r["sqrt_t0"][0]])
+    jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
+    jk.add("sqrtt0_mcc", jk_m0)
+
+    # charm-strange mass
+    jk_m0 = jk.apply(lambda r: [np.mean(emp_cosh(r["cs.G5G5"])[-T//4:]) * r["sqrt_t0"][0]])
+    jk_m1 = jk.apply(lambda r: [np.mean(emp_cosh(r["cs.G5G5"])[-T//4+T//8:]) * r["sqrt_t0"][0]])
+    jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
+    jk.add("sqrtt0_mcs", jk_m0)
+
+    # charm mres
+    jk_m0 = jk.apply(lambda r: [np.mean((r["mres.cc.G5G5"].real / r["cc.G5G5"].real).tolist()[-T//4:])])
+    jk_m1 = jk.apply(lambda r: [np.mean((r["mres.cc.G5G5"].real / r["cc.G5G5"].real).tolist()[-T//4+T//8:])])
+    jk_m0 = jk_m0.addvar("e",jk_m1.mean(),"e")
+    jk.add("mres_mcc", jk_m0)
+
+
+#jk.save("test.jks")
+if "cc.G5G5.0" in fermionic[0]:
+    print(
+        jk.get("sqrtt0_mss").mean()[0], jk.get("sqrtt0_mss").cov()[0][0]**0.5,
+        jk.get("mres_mss").mean()[0], jk.get("mres_mss").cov()[0][0]**0.5,
+        jk.get("sqrtt0_mcc").mean()[0], jk.get("sqrtt0_mcc").cov()[0][0]**0.5,
+        jk.get("mres_mcc").mean()[0], jk.get("mres_mcc").cov()[0][0]**0.5,
+        jk.get("sqrtt0_mcs").mean()[0], jk.get("sqrtt0_mcs").cov()[0][0]**0.5,
+    )
+else:
+    print(
+        jk.get("sqrtt0_mss").mean()[0], jk.get("sqrtt0_mss").cov()[0][0]**0.5,
+        jk.get("mres_mss").mean()[0], jk.get("mres_mss").cov()[0][0]**0.5
+    )

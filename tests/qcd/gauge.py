@@ -241,6 +241,12 @@ action_top = g.qcd.gauge.action.topology(U, 2, 0.5, [1.5, 2.3, 1.2])
 action_top = action_top.transformed(sm)
 action_top.assert_gradient_error(rng, U, U, 1e-3, 1e-7)
 
+action_top = g.qcd.gauge.action.topology_field(U, 2)
+action_top = action_top.transformed(sm, indices=[0,1,2,3])
+Qf = [g.real(U[0].grid)]
+rng.element(Qf)
+action_top.assert_gradient_error(rng, U + Qf, U + Qf, 1e-3, 1e-7)
+
 
 # Test compact gauge actions
 for action in [g.qcd.gauge.action.wilson(5.43), g.qcd.gauge.action.iwasaki(5.41)]:

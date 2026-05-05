@@ -43,7 +43,7 @@ def orthogonalize(w, basis, ips=None, nblock=4):
         t("global_sum")
         grid.globalsum(lip)
         t("create expression")
-        lip = [-complex(x) for x in lip]
+        lip = [-complex(x[0]) for x in lip]
         if ips is not None:
             for j in range(len(lip)):
                 ips[i + j] = -lip[j]

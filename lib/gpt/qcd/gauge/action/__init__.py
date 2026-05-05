@@ -27,4 +27,4 @@ from gpt.qcd.gauge.action.improved_with_rectangle import (
     differentiable_iwasaki,
 )
 import gpt.qcd.gauge.action.non_compact
-from gpt.qcd.gauge.action.topology import topology
+from gpt.qcd.gauge.action.topology import topology, topology_field
