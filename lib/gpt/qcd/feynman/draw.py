@@ -19,6 +19,7 @@
 try:
     from feynman import Diagram
 except ImportError:
+
     def Diagram(ax):
         raise ImportError("Need to install feynman python package to use this feature")
 
@@ -40,10 +41,15 @@ def draw(ax, cmd, ops, flavors):
 
     v = {}
     for op in v_used:
-        a, b, t, dx, dy = ops[op]
-        v[op] = diagram.vertex(xy=(a, b))
-        v[op].scale(0.5)
-        v[op].text(t, dx, dy)
+        if len(ops[op]) == 5:
+            a, b, t, dx, dy = ops[op]
+            v[op] = diagram.vertex(xy=(a, b))
+            v[op].scale(0.5)
+            v[op].text(t, dx, dy)
+        else:
+            a, b = ops[op]
+            v[op] = diagram.vertex(xy=(a, b))
+            v[op].scale(0.5)
 
     pairs = {}
     pairs_partial = {}
@@ -70,11 +76,21 @@ def draw(ax, cmd, ops, flavors):
             el = (-1) ** pp * (0.15 * (pp // 2 + 1)) * (-1 if a < b else 1)
             pairs_partial[pair] = pp + 1
 
-        if el != 0:
-            diagram.line(
-                v[b], v[a], arrow=f[0].islower(), shape="elliptic", ellipse_spread=el, **flavors[f]
-            ).scale_width(0.4)
+        if a != b:
+            if el != 0:
+                diagram.line(
+                    v[b],
+                    v[a],
+                    arrow=f[0].islower(),
+                    shape="elliptic",
+                    ellipse_spread=el,
+                    **flavors[f],
+                ).scale_width(0.4)
+            else:
+                diagram.line(v[b], v[a], arrow=f[0].islower(), **flavors[f]).scale_width(0.4)
         else:
-            diagram.line(v[b], v[a], arrow=f[0].islower(), **flavors[f]).scale_width(0.4)
+            diagram.line(
+                v[b], v[a], arrow=f[0].islower(), shape="circular", **flavors[f]
+            ).scale_width(0.4)
 
     diagram.plot()
