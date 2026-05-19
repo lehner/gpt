@@ -22,6 +22,11 @@ class expression:
     def __init__(self, graph):
         self.graph = graph
 
+    def __radd__(self, other):
+        if other == 0:
+            return self
+        return other + self
+
     def __rmul__(self, other):
         if isinstance(other, (float, complex, int)):
             return expression([(a[0] * other, a[1], a[2]) for a in self.graph])

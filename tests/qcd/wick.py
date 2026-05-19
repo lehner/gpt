@@ -19,10 +19,9 @@ pion0X = (
 )
 pion0Y = pion0X.replace_coordinate("x", "y")
 
-action = (
-    f.e * (1j) * f.field("downbar", "*1") @ f.field("down", "*1") @ f.field("A", "*1")
-    + f.e * (1j) * f.field("upbar", "*1") @ f.field("up", "*1") @ f.field("A", "*1")
-)
+action = f.e * (1j) * f.field("downbar", "*1") @ f.field("down", "*1") @ f.field(
+    "A", "*1"
+) + f.e * (1j) * f.field("upbar", "*1") @ f.field("up", "*1") @ f.field("A", "*1")
 expAction = f.one + action + action**2 * 0.5
 
 names = {
@@ -67,6 +66,55 @@ for c in coef:
 for c in coef2:
     g.message(f"Contraction I=1, I3=0 gave coefficient {coef2[c]} for diagram {c}")
     assert abs(coef2[c] - coef_ref[c]) < 1e-13
+
+#
+# Test isospin
+#
+assert f.isospin.clebsch_gordan(3 / 2, 3 / 2, 0) == [
+    [(-1.5, 1.5, -0.5), (-0.5, 0.5, 0.5), (0.5, -0.5, -0.5), (1.5, -1.5, 0.5)]
+]
+assert f.isospin.clebsch_gordan(2, 1, 1) == [
+    [(0, 1, 0.3162277660168383), (1, 0, -0.5477225575051657), (2, -1, 0.7745966692414834)],
+    [(-1, 1, 0.5477225575051666), (0, 0, -0.6324555320336747), (1, -1, 0.5477225575051664)],
+    [(-2, 1, 0.7745966692414841), (-1, 0, -0.5477225575051633), (0, -1, 0.31622776601683944)],
+]
+
+# test diagonality
+ops1 = [
+    f.isospin.piP("x"),
+    f.isospin.pi0("x"),
+    f.isospin.eta("x"),
+    f.isospin.pipi("x1", "x2", 1, 1),
+    f.isospin.pipi("x1", "x2", 2, 1),
+    #f.isospin.multiplet(f.isospin.two_pions("x1", "x2", 1), f.isospin.two_pions("x3", "x4", 1), 2)[
+    #    2
+    #],
+]
+ops2 = [
+    f.isospin.piM("y"),
+    f.isospin.pi0("y"),
+    f.isospin.eta("x"),
+    f.isospin.pipi("x1", "x2", 1, -1),
+    f.isospin.pipi("x1", "x2", 2, -1),
+    #f.isospin.multiplet(f.isospin.two_pions("y1", "y2", 1), f.isospin.two_pions("y3", "y4", 1), 2)[
+    #    -2
+    #],
+]
+for i, op1 in enumerate(ops1):
+    for j, op2 in enumerate(ops2):
+        coef2 = len(
+            f.contract(op1 * op2)
+            .replace("up", "light")
+            .replace("down", "light")
+            .simplify()
+            .coefficients({})
+        )
+        g.message("Operator diagonality test", i, j, coef2)
+        if i == j:
+            assert coef2 != 0
+        else:
+            assert coef2 == 0
+
 
 #
 # Now test wick routines that automatically evaluate diagrams numerically

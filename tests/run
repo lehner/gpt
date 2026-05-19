@@ -66,6 +66,7 @@ for f in \
     ${test_path}/algorithms/polynomials.py \
     ${test_path}/algorithms/rational.py \
     ${test_path}/algorithms/multi_grid.py \
+    ${test_path}/algorithms/group.py \
     ${test_path}/markov/metropolis.py \
     ${test_path}/markov/pure_gauge.py \
     ${test_path}/markov/u1_gauge.py \

@@ -19,6 +19,8 @@
 from gpt.qcd.feynman.expression import expression
 from gpt.qcd.feynman.diagrams import diagrams
 from gpt.qcd.feynman.contract import contract
+from gpt.qcd.feynman.draw import draw
+import gpt.qcd.feynman.isospin
 
 
 def field(name, pos):
