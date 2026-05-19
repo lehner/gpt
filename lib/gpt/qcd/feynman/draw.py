@@ -16,7 +16,11 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from feynman import Diagram
+try:
+    from feynman import Diagram
+except ImportError:
+    def Diagram(ax):
+        raise ImportError("Need to install feynman python package to use this feature")
 
 
 def draw(ax, cmd, ops, flavors):
