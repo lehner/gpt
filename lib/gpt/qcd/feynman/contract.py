@@ -66,6 +66,7 @@ def contract(self):
     for c, p, fac in self.graph:
         facs = contract_factor(fac)
         for rf, re in facs:
-            if abs(rf * c) > 1e-13:
-                graph.append((rf * c, re))
+            x = rf * c
+            if g.qcd.feynman.is_nonzero(x):
+                graph.append((x, re))
     return g.qcd.feynman.diagrams(graph)
