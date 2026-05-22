@@ -125,10 +125,20 @@ public:
   }
 
   virtual void fft_from(cgpt_Lattice_base* src, const std::vector<int> & dims, int sign) {
-    FFT fft((GridCartesian*)l.Grid());
+    static std::map<std::string, PlannedFFT<T>*> cache;
+    char key[256];
+    sprintf(key, "%p-%s", l.Grid(), type().c_str());
+    auto f = cache.find(key);
+    if (f == cache.end()) {
+      auto x = cache.insert( std::pair<std::string, PlannedFFT<T>*>(key, new PlannedFFT<T>((GridCartesian*)l.Grid())) );
+      f = x.first;
+      ASSERT(x.second);
+    }
+    
+    auto fft = f->second;
     Lattice<T> tmp = compatible<T>(src)->l;
     for (long i=0;i<dims.size();i++) {
-      fft.FFT_dim(l,tmp,dims[i],sign);
+      fft->FFT_dim(l,tmp,dims[i],sign);
       if (i != dims.size()-1)
 	tmp = l;
     }

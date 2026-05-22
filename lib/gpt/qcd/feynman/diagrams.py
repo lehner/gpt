@@ -18,6 +18,7 @@
 #
 import itertools
 import numpy as np
+import gpt as g
 
 
 class diagrams:
@@ -77,17 +78,8 @@ class diagrams:
 
         clean_coefs = {}
         for c in coefs:
-            if abs(coefs[c]) > 1e-13:
-
-                clean_coefs[c] = coefs[c]
-                
-                n = float(np.round(coefs[c].real))
-                if abs(n - coefs[c]) < 1e-13:
-                    clean_coefs[c] = n
-
-                n = 1j*float(np.round(coefs[c].imag))
-                if abs(n - coefs[c]) < 1e-13:
-                    clean_coefs[c] = n
+            if g.qcd.feynman.is_nonzero(coefs[c]):
+                clean_coefs[c] = g.qcd.feynman.simplify_coefficient(coefs[c])
 
         return clean_coefs
 
@@ -160,4 +152,4 @@ def simplify_group(group):
         if add:
             new_group.append([coef, diag])
     # remove if zero coefficient
-    return [(coef, diag) for coef, diag in new_group if abs(coef) > 1e-13]
+    return [(coef, diag) for coef, diag in new_group if g.qcd.feynman.is_nonzero(coef)]

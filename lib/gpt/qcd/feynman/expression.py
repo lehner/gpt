@@ -22,13 +22,18 @@ class expression:
     def __init__(self, graph):
         self.graph = graph
 
+    def __radd__(self, other):
+        if other == 0:
+            return self
+        return other + self
+
     def __rmul__(self, other):
-        if isinstance(other, (float, complex, int)):
+        if not isinstance(other, expression):
             return expression([(a[0] * other, a[1], a[2]) for a in self.graph])
         return other * self
 
     def __mul__(self, other):
-        if isinstance(other, (float, complex, int)):
+        if not isinstance(other, expression):
             return expression([(a[0] * other, a[1], a[2]) for a in self.graph])
         other = other.unique_indices(self.indices())
         return expression(
