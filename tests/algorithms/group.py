@@ -23,3 +23,4 @@ minmom = [
 for i in range(3):
     rops = [len(g.algorithms.group.full_octahedral.t1u_all(mm, i)) for mm in minmom]
     assert rops == [1, 1, 1, 1, 2, 2, 1, 2, 1, 2, 2, 3, 3]
+    g.message(f"Checked T1-_{i}")
