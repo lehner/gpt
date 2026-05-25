@@ -219,18 +219,20 @@ class sparse:
 
     def restricted(self, positions):
         # get emb_coor of wanted positions on each rank to build mask
-        idx_full = self.unique_embedded_coordinates(positions)
+        idx_full = self.kernel.embedding_grid.lexicographic_index(
+            self.unique_embedded_coordinates(positions)
+        )
 
-        # creates full mask
-        mask = self.lattice(gpt.ot_real_additive_group())
-        mask[:] = 0
-        mask[idx_full] = 1
-
-        # creates mask for local rank
-        idx_local = self.kernel.embedded_coordinates
-        mask_local = [m[0]==1 for m in mask[idx_local][:]]
-
+        # should avoid using sdomain.local_coordinates, using coordinate_lattices safer
         cl = self.coordinate_lattices(mark_empty=-1)
+        local_coordinates = np.hstack(tuple([x[:].real.astype(np.int32) for x in cl]))
+        idx_local = self.kernel.embedding_grid.lexicographic_index(
+            self.unique_embedded_coordinates(local_coordinates)
+            )
+
+        # slow, not to be called often
+        mask_local = [idx in idx_full for idx in idx_local]
+
         return sparse(
             self.kernel.grid,
             self.local_coordinates,
