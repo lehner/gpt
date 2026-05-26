@@ -217,6 +217,7 @@ class sparse:
             mask=mask,
         )
 
+    # every rank must pass the same list of positions, otherwise code breaks
     def restricted(self, positions):
         # get emb_coor of wanted positions on each rank to build mask
         idx_full = self.kernel.embedding_grid.lexicographic_index(
@@ -225,17 +226,17 @@ class sparse:
 
         # should avoid using sdomain.local_coordinates, using coordinate_lattices safer
         cl = self.coordinate_lattices(mark_empty=-1)
-        local_coordinates = np.hstack(tuple([x[:].real.astype(np.int32) for x in cl]))
-        idx_local = self.kernel.embedding_grid.lexicographic_index(
-            self.unique_embedded_coordinates(local_coordinates)
-            )
+        mask = (cl[0][:] >= 0)[:, 0]
+        local_coordinates = np.hstack(tuple([x[:][mask].real.astype(np.int32) for x in cl]))
 
-        # slow, not to be called often
+        idx_local = self.kernel.embedding_grid.lexicographic_index(
+            self.kernel.embedded_coordinates
+        )
         mask_local = [idx in idx_full for idx in idx_local]
 
         return sparse(
             self.kernel.grid,
-            self.local_coordinates,
+            local_coordinates,
             dimensions_divisible_by=cl[0].grid.fdimensions,
             mask = mask_local
         )
