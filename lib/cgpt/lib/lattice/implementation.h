@@ -126,8 +126,9 @@ public:
 
   virtual void fft_from(cgpt_Lattice_base* src, const std::vector<int> & dims, int sign) {
     static std::map<std::string, PlannedFFT<T>*> cache;
-    char key[256];
-    sprintf(key, "%p-%s", l.Grid(), type().c_str());
+    std::ostringstream oss;
+    oss << l.Grid() << "-" << type();
+    std::string key = oss.str();
     auto f = cache.find(key);
     if (f == cache.end()) {
       auto x = cache.insert( std::pair<std::string, PlannedFFT<T>*>(key, new PlannedFFT<T>((GridCartesian*)l.Grid())) );
