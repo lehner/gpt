@@ -105,18 +105,17 @@ class sparse_kernel:
         return gpt.indexed_sum(fields, self.coordinate_lattices()[ortho_dim], length)
 
     def global_coordinates(self):
-        nlc = np.array([0.] * self.grid.Nprocessors)
-        nlc[gpt.rank()] = len(self.local_coordinates)
-        self.grid.globalsum(nlc)
+        # broadcast below uses grid.processor not gpt.rank()
+        rank_id = self.grid.processor
 
         # this function is mostly used for tests, so it is not performance critical
         for rank in range(self.grid.Nprocessors):
-            #nlc = np.array([len(self.local_coordinates)])
-            #self.grid.broadcast(rank, nlc)
-            if rank == gpt.rank():
+            nlc = np.array([len(self.local_coordinates)])
+            self.grid.broadcast(rank, nlc)
+            if rank == rank_id:
                 local_coordinates = np.copy(self.local_coordinates)
             else:
-                local_coordinates = np.zeros((int(nlc[rank]), self.grid.nd), dtype=self.local_coordinates.dtype)
+                local_coordinates = np.zeros((nlc[0], self.grid.nd), dtype=self.local_coordinates.dtype)
             self.grid.broadcast(rank, local_coordinates)
             if rank == 0:
                 global_coordinates = local_coordinates
