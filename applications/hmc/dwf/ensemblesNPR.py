@@ -61,21 +61,28 @@ ensembles_S = {
 
     # 48^4 4 flavor Fine ensembles #
     "48F4fh-1" : { "L" : [48]*4, "beta" : 2.39, "ml" :  0.016715, "ms" : 0.016715, "mc" : 0.207, "Ls" : 12, "b" : 1.25, "c" : 0.25,
-                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
 
     # 48^4 VF 3 flavor ensembles #
+    # mres tuning
+    # 1,0 -> 2.3e-4
+    # 1.1,0.1 -> 8.6e-05
+    # 1.15,0.15 -> 5.9e-05
+    # 1.175,0.175 -> 5.2e-05
+    # 1.2,0.2 -> 5.3e-05
     "48VF3fh-1" : { "L" : [48]*4, "beta" :  2.56, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175,
                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 }, # after therm
     "48VF3fh-2" : { "L" : [48]*4, "beta" :  2.62, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175,
-                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
 
     # 48^4 VF 4 flavor ensembles #
     "48VF4fc1-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175,
-                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
     "48VF4fc2-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.178, "Ls" : 12, "b" : 1.175, "c" : 0.175,
-                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
-    "48VF4fc3-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.213, "Ls" : 12, "b" : 1.175, "c" : 0.175,
-                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+    "48VF4fc3-1" : { "L" : [48]*4, "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.106, "Ls" : 12, "b" : 1.175, "c" : 0.175,
+                     "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+    #0.213 -> 0.106
 }
 
 #ensembles_M = {

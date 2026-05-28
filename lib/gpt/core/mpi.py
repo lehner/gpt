@@ -32,7 +32,9 @@ def ranks():
 
 # broadcast
 def broadcast(root, data):
-    if isinstance(data, int):
+    if isinstance(data, bool):
+        return bool(broadcast(root, str(data)))
+    elif isinstance(data, int):
         return int(broadcast(root, str(data)))
     elif isinstance(data, str):
         return broadcast(root, data.encode("utf-8")).decode("utf-8")

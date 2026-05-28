@@ -251,8 +251,11 @@ EXPORT(fwrite,{
       if (n == (size_t)-1) {
 	if (errno == EAGAIN || errno == EINTR)
 	  continue;
-	else
-	  ERR("Error in write of %ld bytes: %d\n", (long)size, errno);
+	else if (errno == E2BIG) {
+	  fprintf(stderr, "Warning: E2BIG error, retry!\n");
+	  continue;
+	} else
+	  ERR("Error in write of %ld bytes: %d = %s\n", (long)size, errno, strerror(errno));
       }
 
       ASSERT(n <= size);
