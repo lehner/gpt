@@ -26,11 +26,11 @@ ensembles_X = {
 
 ensembles_X2 = {
     "explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
-                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
     "explore-1L" : { "L" : [72]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
-                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
-    "explore-2L" : { "L" : [72]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
-                   "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (-3,0.05,14), "fermionic_from" : 100 },
+    #"explore-2L" : { "L" : [72]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
+    #               "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
 }
 
 ensembles_S = {
@@ -902,11 +902,20 @@ class job_write_checkpoint(job_reproduction_base):
         
         plaq = g.qcd.gauge.plaquette(l_U)
         plaqft = g.qcd.gauge.plaquette(Uft)
+        Q = []
+        sm0 = g.qcd.gauge.smear.stout(rho=0.12)
+        Usm = Uft
+        for i in range(20):
+            Usm = sm0(Usm)
+            Q.append(g.qcd.gauge.differentiable_topology(Usm))
+        
         if g.rank() == 0:
             flog = open(f"{root}/{self.stream}/ckpoint_lat.{self.tag}.log","wt")
             flog.write(f"dH {dH}\n")
             flog.write(f"P {plaqft}\n")
             flog.write(f"Pft {plaq}\n")
+            for i, q in enumerate(Q):
+                flog.write(f"Q_{i} {q}\n")
             flog.close()
 
         if self.replica == 0:
