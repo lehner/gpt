@@ -172,6 +172,7 @@ def function(i, cache=default_exp_cache):
         x = g.copy(i)
 
     n = g.object_rank_norm2(x) ** 0.5 / x.grid.gsites * x.grid.Nprocessors
+    n = n.item()
     maxn = 0.01
     ns = 0
     if n > maxn:
