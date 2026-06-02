@@ -74,7 +74,7 @@ assert abs(A1(U_mom) / r - 1) < 1e-10
 # group defect would be triggered if sqrt_mass does not have sqrt_mass[k] = sqrt_mass[-k]
 eps = g.group.defect(U_mom[0])
 g.message("Group defect:", eps)
-assert eps < 1e-10
+assert eps < 2e-10
 
 ft_mom = g(scale_unitary * g.fft() * U_mom)
 

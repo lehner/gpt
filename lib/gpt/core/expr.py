@@ -214,7 +214,7 @@ class expr:
                     lhs = lhs.conj()
                 res = gpt.tensor(np.tensordot(lhs, l.array, axes=mt[1]), mt[0]())
                 if isinstance(res.otype, gpt.ot_singlet):
-                    res = complex(res.array)
+                    res = gpt.util.to_complex(res.array)
                 return res
             assert 0
         else:

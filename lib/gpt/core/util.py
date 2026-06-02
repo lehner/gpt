@@ -50,11 +50,19 @@ def to_num(x):
     return x
 
 
+# convert to complex if compatible
+def to_complex(real, imag=0.0):
+    if isinstance(real, np.ndarray):
+        real = real[0]
+    if isinstance(imag, np.ndarray):
+        imag = imag[0]
+    return complex(real, imag)
+
+
 # tensor
 def value_to_tensor(val, otype):
     if isinstance(otype.data_otype(), gpt.ot_singlet):
-        # this is not ideal, can we do a subclass of complex that preserves otype info?
-        return complex(val)
+        return to_complex(val)
     return gpt.tensor(val, otype)
 
 

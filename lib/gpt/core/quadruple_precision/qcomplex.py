@@ -18,6 +18,7 @@
 #
 from gpt.core.quadruple_precision.gcomplex import gcomplex
 from gpt.core.quadruple_precision.qfloat import qfloat
+import gpt as g
 
 
 class qcomplex(gcomplex):
@@ -34,4 +35,4 @@ class qcomplex(gcomplex):
         super().__init__(x, y)
 
     def leading(self):
-        return complex(self.real.leading(), self.imag.leading())
+        return g.util.to_complex(self.real.leading(), self.imag.leading())

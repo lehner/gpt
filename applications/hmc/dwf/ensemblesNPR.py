@@ -26,9 +26,9 @@ ensembles_X = {
 
 ensembles_X2 = {
     "explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
-                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
+                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 100 }, #(0,0.5,8)
     "explore-1L" : { "L" : [72]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
-                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (-3,0.05,14), "fermionic_from" : 100 },
+                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 100 }, #(-3,0.05,14)
     #"explore-2L" : { "L" : [72]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
     #               "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
 }
@@ -1256,7 +1256,8 @@ for conf in conf_range:
         fn = f"{root_output}/{tag}/ckpoint_lat.{conf}"
         if not os.path.exists(fn):
             g.message(f"Still to do: {fn}")
-            tags.append(tag)
+            if tag not in tags:
+                tags.append(tag)
         elif (
                 os.path.exists(f"{root_output}/{tag}/{conf-1}_checkpoint/verify/.checked") and
                 not (
@@ -1265,7 +1266,8 @@ for conf in conf_range:
                 )
         ):
             g.message(f"Still to do: {fn}")
-            tags.append(tag)
+            if tag not in tags:
+                tags.append(tag)
     if len(tags) >= len(ensembles):
         break
 
