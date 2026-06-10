@@ -188,3 +188,8 @@ def cshift_plan_execute(self):
         return ret
 
     return _executer
+
+def group_inner_product(left, right):
+    # inner product over group's real vector space
+    left_type = left.otype
+    return left_type.inner_product(left, right)

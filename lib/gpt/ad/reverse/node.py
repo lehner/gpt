@@ -26,7 +26,7 @@ from gpt.ad.reverse.util import (
 )
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
-
+import numpy as np
 verbose_memory = g.default.is_verbose("ad_memory")
 
 
@@ -225,7 +225,14 @@ class node_base(base):
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                setter(x.gradient, getter(x.gradient) + z.gradient)
+                set_to = getter(x.gradient) + z.gradient
+                
+                #passing immutables to the setter results in the output not being set
+                #work around this by directly assigning numerical types
+                if isinstance(x.gradient, (int, float, complex, np.generic)):
+                    x.gradient = set_to
+                else:
+                    setter(x.gradient, set_to)
 
         z_container = get_unary_container(x._container, getter)
 
