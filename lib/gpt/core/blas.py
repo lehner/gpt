@@ -89,6 +89,8 @@ class blas:
         cgpt.blas_contract(
             self.obj, [x.view for x in tensors], strides, dimensions, conjugate, dtype
         )
+
+        # TODO: contract needs to detect simple gemm cases and use it in this case; seems should work after contract_plan
         return self
 
     def gemm(self, alpha, bv_A, bv_B, beta, bv_C, precision=None):
