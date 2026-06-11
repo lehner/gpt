@@ -35,7 +35,9 @@ def test_mm_blas(nc, nrhs, precision):
     bA = bA.merged_axes(-3, -2).split_axis(-1, 4, 3).merged_axes(-2, -1)
 
     # test transposition on device versus on host
-    eps = np.linalg.norm(bA.transpose(4, 5, 3, 2, 1, 0).to_array() - bA.to_array().transpose(4, 5, 3, 2, 1, 0))
+    eps = np.linalg.norm(
+        bA.transpose(4, 5, 3, 2, 1, 0).to_array() - bA.to_array().transpose(4, 5, 3, 2, 1, 0)
+    )
     assert eps == 0.0
 
     cA = bA.coordinates(range(4))
@@ -145,11 +147,69 @@ def run_gemm_versus_numpy(m, k, n, dtype, eps_ref):
 run_gemm_versus_numpy(4, 6, 8, np.complex128, 1e-14)
 run_gemm_versus_numpy(4, 6, 8, np.complex64, 1e-6)
 
+# test tensor <> accelerator_buffer
+for i in [0, 1, 2, 3, 5]:
+    eps = np.linalg.norm(
+        g.accelerator_buffer(g.gamma[i].tensor()).to_array() - g.gamma[i].tensor().array
+    )
+    g.message(f"Tensor <> accelerator_buffer test: {eps}")
+    assert eps < 1e-13
+
 # test matrix inverse
 L = [16, 16, 16, 32]
 rng = g.random("test")
 for precision in [g.single, g.double]:
     grid = g.grid(L, precision)
+
+    # test indexed sum
+    M = g.mcolor(grid)
+    rng.cnormal(M)
+    A = g.pack(M).to_accelerator_buffer()
+    indices = g.accelerator_buffer(A.coordinates(range(4))[:, 1].reshape(32, 16, 16, 16))
+    target = g.accelerator_buffer(np.zeros(shape=(16,), dtype=A.dtype))
+    tr = g.accelerator_buffer(shape=(32, 16, 16, 16), dtype=A.dtype)
+    blas = g.blas()
+    blas.indexed_sum(A, indices, target)
+    blas.indexed_sum(A, indices, target, accumulate=True)
+    blas()
+
+    ab_is = target.to_array()
+    ref_is = [2 * np.sum(x.array) for x in g.slice(M, 2)]
+    eps = np.linalg.norm(ab_is - np.array(ref_is)) / np.linalg.norm(ab_is)
+    g.message(f"Test indexed sum: {eps}")
+    assert eps < precision.eps * 50
+
+    # test contraction with complex conjugation
+    blas = g.blas()
+    blas.contract(
+        (tr, "x", "y", "z", "t"),
+        (A, "x", "y", "z", "t", "n", "c1", "c2"),
+        (A, "x", "y", "z", "t", "n", "c1", "c2", "*"),
+    )
+    blas()
+
+    es = g.einsum("aa->", M, g.complex(grid))
+    x = es(M)
+
+    es = g.einsum(
+        "xyztncc->xyzt",
+        g.accelerator_buffer(M),
+        g.accelerator_buffer(shape=tr.shape, dtype=grid.precision.complex_dtype),
+    )
+    y = es(g.accelerator_buffer(M))
+
+    eps = (
+        g.norm2(g.trace(M * g.adj(M)) - g.pack(g.complex(grid)).from_accelerator_buffer(tr)) ** 0.5
+        / g.norm2(g.trace(M * g.adj(M))) ** 0.5
+    )
+    g.message(f"Test expression <> contract: {eps}")
+    assert eps < precision.eps * 50
+
+    eps = g.norm2(x - g.pack(g.complex(grid)).from_accelerator_buffer(y))
+    g.message(f"Test einsum(accelerator_buffer) <> einsum(lattice): {eps}")
+    assert eps < precision.eps * 50
+
+    # test complex matrix
     M = g.mcomplex(grid, 16)
     rng.cnormal(M)
 
@@ -183,11 +243,11 @@ for precision in [g.single, g.double]:
     # test inverse
     A = g.pack(M).to_accelerator_buffer()
     idx = A.indices([0, 1, 2, 3])
-    
+
     t = g.timer("inverse")
     t("blas_setup")
     C = A.empty_clone()
-    blas = g.blas().inv(A[idx], C[idx]) # inv and det do not guarantee that A remains unchanged
+    blas = g.blas().inv(A[idx], C[idx])  # inv and det do not guarantee that A remains unchanged
     t("blas_exec")
     blas()
     t("blas_setup")
@@ -201,5 +261,66 @@ for precision in [g.single, g.double]:
     eps2 = g.norm2(M * Minv - g.identity(M)) / g.norm2(M)
     g.message("INVERSE", eps2)
     assert eps2 < precision.eps**2 * 100
-    
 
+
+# test general tensor contractions
+
+tmp = g.accelerator_buffer_manager()
+target = g.accelerator_buffer(shape=(18,), dtype=np.complex128)
+prop = g.accelerator_buffer(shape=(18, 4, 3, 4, 3), dtype=np.complex128)
+S = g.accelerator_buffer(shape=(4, 4, 4), dtype=np.complex128)
+C = g.accelerator_buffer(shape=(3, 3, 3), dtype=np.complex128)
+
+np.random.seed(13)
+prop.from_array(np.random.normal(size=prop.shape).astype(prop.dtype))
+S.from_array(np.random.normal(size=S.shape).astype(S.dtype))
+C.from_array(np.random.normal(size=C.shape).astype(C.dtype))
+
+plan = g.contract_plan(
+    tmp,
+    (target, "x"),
+    (prop, "x", "s1", "c1", "s2", "c2"),
+    (prop, "x", "s3", "c3", "s4", "c4"),
+    (prop, "x", "s5", "c5", "s6", "c6"),
+    (S, "s1", "s3", "s5"),
+    (S, "s2", "s4", "s6"),
+    (C, "c1", "c3", "c5"),
+    (C, "c2", "c4", "c6"),
+)
+
+# do it again to test re-use in tmp
+plan = g.contract_plan(
+    tmp,
+    (target, "x"),
+    (prop, "x", "s1", "c1", "s2", "c2"),
+    (prop, "x", "s3", "c3", "s4", "c4"),
+    (prop, "x", "s5", "c5", "s6", "c6"),
+    (S, "s1", "s3", "s5"),
+    (S, "s2", "s4", "s6"),
+    (C, "c1", "c3", "c5"),
+    (C, "c2", "c4", "c6"),
+)
+
+g.message(plan)
+g.message(tmp)
+
+t = g.timer()
+t("slow")
+blas = g.blas()
+plan(blas, optimal=False)
+blas()
+t()
+
+res1 = target.to_array()
+
+t("fast")
+blas = g.blas()
+plan(blas)
+blas()
+t()
+
+res2 = target.to_array()
+g.message(t)
+eps = np.linalg.norm(res1 - res2) / np.linalg.norm(res1 + res2)
+g.message(f"Test proton 2pt contraction: {eps}")
+assert eps < 1e-13
