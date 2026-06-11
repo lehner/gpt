@@ -78,6 +78,7 @@ class pack(auto_tuned_class):
     def from_accelerator_buffer(self, buffer, margin=None, top_margin=None, bottom_margin=None):
         padding, offset = margin_to_padding_offset(margin, top_margin, bottom_margin)
         self.transfer_accelerator_buffer(buffer, False, padding, offset)
+        return g.util.from_list(self.lattices)
 
     @auto_tuned_method(skip_snapshot=True)
     def transfer_accelerator_buffer(self, threads, buffer, export, padding, offset):

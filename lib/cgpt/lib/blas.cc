@@ -70,6 +70,92 @@ EXPORT(blas_accumulate,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(blas_indexed_sum,{
+    void* p;
+    long id, ts, acc;
+    PyObject* sv, *iv, *tv, *_dtype;
+    PyObject* ss;
+
+    if (!PyArg_ParseTuple(args, "lOOOlOlOl", &p, &sv, &ss,
+			  &iv, &id, &tv, &ts, &_dtype, &acc)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(sv));
+    ASSERT(PyMemoryView_Check(tv));
+    ASSERT(PyMemoryView_Check(iv));
+
+    Py_buffer* sb = PyMemoryView_GET_BUFFER(sv);
+    Py_buffer* tb = PyMemoryView_GET_BUFFER(tv);
+    Py_buffer* ib = PyMemoryView_GET_BUFFER(iv);
+    ASSERT(PyBuffer_IsContiguous(sb,'C'));
+    ASSERT(PyBuffer_IsContiguous(ib,'C'));
+    ASSERT(PyBuffer_IsContiguous(tb,'C'));
+
+    void* sp = sb->buf;
+    void* tp = tb->buf;
+    void* ip = ib->buf;
+
+    ASSERT(PyType_Check(_dtype));
+    const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
+
+    std::vector<long> _ss;
+    cgpt_convert(ss, _ss);
+
+    if (!strcmp(__dtype,"numpy.complex64")) {
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexF>(sp,tp,ip,_ss,ts,id,acc));
+    } else if (!strcmp(__dtype,"numpy.complex128")) {
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexD>(sp,tp,ip,_ss,ts,id,acc));
+    } else {
+      ERR("Unknown dtype = %s\n", __dtype);
+    }
+    return PyLong_FromLong(0);
+  });
+
+EXPORT(blas_contract,{
+    void* p;
+    PyObject* _tensors, *_strides, *_dimensions, *_conjugate, *_dtype;
+
+    std::vector<void*> tensors;
+    std::vector<std::vector<long>> strides;
+    std::vector<long> dimensions;
+    std::vector<long> conjugate;
+
+    if (!PyArg_ParseTuple(args, "lOOOOO", &p,
+			  &_tensors, &_strides, &_dimensions,
+			  &_conjugate, &_dtype)) {
+      return NULL;
+    }
+
+    ASSERT(PyList_Check(_tensors));
+    size_t ntensors = PyList_Size(_tensors);
+    tensors.resize(ntensors);
+    for (int _i=0;_i<ntensors;_i++) {
+      PyObject* v = PyList_GetItem(_tensors,_i);
+      ASSERT(PyMemoryView_Check(v));
+      Py_buffer* b = PyMemoryView_GET_BUFFER(v);
+      ASSERT(PyBuffer_IsContiguous(b,'C'));
+      void* p = b->buf;
+      tensors[_i] = p;
+    }
+    
+    ASSERT(PyType_Check(_dtype));
+    const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
+
+    cgpt_convert(_strides, strides);
+    cgpt_convert(_dimensions, dimensions);
+    cgpt_convert(_conjugate, conjugate);
+
+    if (!strcmp(__dtype,"numpy.complex64")) {
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_contract_job<ComplexF>(tensors, strides, dimensions, conjugate));
+    } else if (!strcmp(__dtype,"numpy.complex128")) {
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_contract_job<ComplexD>(tensors, strides, dimensions, conjugate));
+    } else {
+      ERR("Unknown dtype = %s\n", __dtype);
+    }
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(blas_gemm,{
     void* p;
     long m,n,k,oA,oB,oC;

@@ -33,6 +33,8 @@ from gpt.core.log import message
 from gpt.core.auto_tune import auto_tuned_class, auto_tuned_method
 from gpt.core.pin import pin
 from gpt.core.stack import get_call_stack
+from gpt.core.buffer_manager import accelerator_buffer_manager
+from gpt.core.contract_plan import contract_plan
 from gpt.core.convert import convert
 from gpt.core.cshift_plan import cshift_plan
 from gpt.core.parallel_transport import path, parallel_transport, parallel_transport_matrix

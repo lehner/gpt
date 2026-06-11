@@ -48,6 +48,29 @@ class accelerator_buffer:
             self.dtype = nbytes.dtype
             return
 
+        # if isinstance(nbytes, list):
+        #    if all(isinstance(x, accelerator_buffer) for x in nbytes):
+        #        assert all(x.shape == nbytes[0].shape for x in nbytes[1:])
+        #        assert all(x.dtype is nbytes[0].dtype for x in nbytes[1:])
+
+        if isinstance(nbytes, gpt.lattice):
+            buf = gpt.pack(nbytes).to_accelerator_buffer()
+            self.view = buf.view
+            self.shape = buf.shape
+            self.dtype = buf.dtype
+            return
+
+        if isinstance(nbytes, gpt.tensor):
+            nbytes = nbytes.array
+
+        array_init = None
+        if isinstance(nbytes, np.ndarray):
+            shape = tuple(int(x) for x in nbytes.shape)
+            dtype = np.dtype(nbytes.dtype).type
+            assert dtype == nbytes.dtype
+            array_init = nbytes
+            nbytes = None
+
         if nbytes is None:
             nbytes = self.calculate_size(shape, dtype)
 
@@ -58,6 +81,9 @@ class accelerator_buffer:
             shape = (len(self.view),)
         self.shape = shape
         self.dtype = dtype
+
+        if array_init is not None:
+            self.from_array(array_init)
 
     def empty_clone(self, shape=None):
         if shape is None:
@@ -73,6 +99,8 @@ class accelerator_buffer:
             sites *= 16
         elif dtype is np.int8:
             sites *= 1
+        elif dtype is np.int64:
+            sites *= 8
         else:
             assert False
         return sites

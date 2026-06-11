@@ -19,7 +19,25 @@
 import gpt as g
 
 
+def accelerator_buffer_einsum(fmt, *bufs):
+    fmt_src, fmt_dst = fmt.split("->")
+    fmt = [fmt_dst] + fmt_src.split(",")
+    target = bufs[-1]
+    shape = target.shape
+    dtype = target.dtype
+
+    def exec(*sources):
+        bufs = [g.accelerator_buffer(shape=shape, dtype=dtype)] + list(sources)
+        g.blas().contract(*[(b, *[c for c in f]) for b, f in zip(bufs, fmt)])()
+        return bufs[0]
+
+    return exec
+
+
 def einsum(contraction, *tensors):
+    if isinstance(tensors[-1], g.accelerator_buffer):
+        return accelerator_buffer_einsum(contraction, *tensors)
+
     contraction = contraction.split("->")
     if len(contraction) != 2:
         raise Exception(f"{contraction} needs to be explicit, i.e., of the form ...->...")
