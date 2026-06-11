@@ -161,19 +161,25 @@ rng = g.random("test")
 for precision in [g.single, g.double]:
     grid = g.grid(L, precision)
 
+    local_buffer_shape = list(reversed(grid.ldimensions))
+
     # test indexed sum
     M = g.mcolor(grid)
     rng.cnormal(M)
     A = g.pack(M).to_accelerator_buffer()
-    indices = g.accelerator_buffer(A.coordinates(range(4))[:, 1].reshape(32, 16, 16, 16))
-    target = g.accelerator_buffer(np.zeros(shape=(16,), dtype=A.dtype))
-    tr = g.accelerator_buffer(shape=(32, 16, 16, 16), dtype=A.dtype)
+    indices_numpy = (
+        A.coordinates(range(4))[:, 1].reshape(local_buffer_shape)
+        + grid.processor_coor[2] * grid.ldimensions[2]
+    )
+    indices = g.accelerator_buffer(indices_numpy)
+    target = g.accelerator_buffer(np.zeros(shape=(grid.gdimensions[2],), dtype=A.dtype))
+    tr = g.accelerator_buffer(shape=local_buffer_shape, dtype=A.dtype)
     blas = g.blas()
     blas.indexed_sum(A, indices, target)
     blas.indexed_sum(A, indices, target, accumulate=True)
     blas()
 
-    ab_is = target.to_array()
+    ab_is = grid.globalsum(target.to_array())
     ref_is = [2 * np.sum(x.array) for x in g.slice(M, 2)]
     eps = np.linalg.norm(ab_is - np.array(ref_is)) / np.linalg.norm(ab_is)
     g.message(f"Test indexed sum: {eps}")
