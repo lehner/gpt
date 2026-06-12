@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import gpt as g
 import numpy as np
-import os, sys, shutil, socket, time
+import os, sys, shutil, socket, time, glob
 
 g.default.set_verbose("defect_correcting_convergence")
 g.default.set_verbose("cg_log_convergence")
@@ -122,7 +122,7 @@ if select is not None:
 ####
 #run_replicas = [0,1] # run with reproduction replica
 run_replicas = [0] if category in ["X","X2"] else [0,1] # run X on Jupiter which does not have SDC
-conf_range = range(400)
+conf_range = range(18, 400)
 pure_gauge = False # allows for first few trajectories to be run without fermions; don't use for now
 
 def light(U0, m_plus, m_minus, params):
@@ -815,7 +815,13 @@ class job_md(job_reproduction_base):
         )
         
     def check(self, root):
-        return True
+        # if we do not have replicas, this is not redundant
+        n=len(glob.glob(f"{root}/{self.name}/state.0/*/*.field"))
+        g.message(f"Check MD: {n} {g.ranks()}")
+        if not os.path.exists(f"{root}/{self.name}/state.0/index.crc32"):
+            g.message("index.crc32 is missing")
+            return False
+        return n == g.ranks()
 
 
 ################################################################################
