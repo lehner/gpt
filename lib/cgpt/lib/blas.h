@@ -32,6 +32,8 @@ class cgpt_blas_job_base {
   }
 
   virtual void execute(GridBLAS& blas) = 0;
+
+  virtual std::string description() = 0;
 };
 
 #include "blas/gemm.h"
@@ -47,6 +49,7 @@ class cgpt_blas {
  public:
 
   std::vector<cgpt_blas_job_base*> jobs;
+  std::vector<std::string> desc;
   GridBLAS blas;
 
   cgpt_blas() {
@@ -58,8 +61,18 @@ class cgpt_blas {
   }
 
   void execute() {
-    for (auto j : jobs)
-      j->execute(blas);
+    if (!desc.size()) {
+      desc.resize(jobs.size());
+      for (size_t i=0;i<jobs.size();i++)
+	desc[i] = jobs[i]->description();
+    }
+    
+    for (size_t i=0;i<jobs.size();i++) {
+      Timer(desc[i]);
+      jobs[i]->execute(blas);
+    }
+
+    Timer();
 
     blas.synchronise();
   }

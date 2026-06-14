@@ -49,6 +49,12 @@ class cgpt_indexed_sum_job : public cgpt_blas_job_base {
     ortho = (total + parallel - 1) / parallel;
   }
   
+  std::string description() {
+    std::ostringstream oss;
+    oss << "IndexedSum(" << ss << ")";
+    return oss.str();
+  }
+
   virtual ~cgpt_indexed_sum_job() {
   }
 

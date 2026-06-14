@@ -42,6 +42,13 @@ class cgpt_det_job : public cgpt_blas_job_base {
   virtual ~cgpt_det_job() {
   }
 
+
+  std::string description() {
+    std::ostringstream oss;
+    oss << "Det(" << n << ") x " << BLAS_A.size();
+    return oss.str();
+  }
+
   virtual void execute(GridBLAS& blas) {
     blas.determinantBatched(n, BLAS_A, BLAS_C);
   }

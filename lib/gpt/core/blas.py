@@ -25,6 +25,7 @@ class blas:
     def __init__(self):
         self.obj = cgpt.create_blas()
         self.references = []
+        self.verbose = g.default.is_verbose("blas")
 
     def __del__(self):
         cgpt.delete_blas(self.obj)
@@ -249,5 +250,11 @@ class blas:
         return self
 
     def __call__(self):
+        if self.verbose:
+            cgpt.timer_begin()
         cgpt.blas_execute(self.obj)
+        if self.verbose:
+            t_cgpt = g.timer("cgpt_blas_execute", True)
+            t_cgpt += cgpt.timer_end()
+            g.message(t_cgpt)
         return self

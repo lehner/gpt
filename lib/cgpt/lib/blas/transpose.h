@@ -30,6 +30,12 @@ class cgpt_transpose_device_memory_view_job : public cgpt_blas_job_base {
   
   virtual ~cgpt_transpose_device_memory_view_job() { }
 
+  std::string description() {
+    std::ostringstream oss;
+    oss << "Transpose(" << shape << ")";
+    return oss.str();
+  }
+
   virtual void execute(GridBLAS& blas) {
     blas.synchronise();
     cgpt_transpose_device_memory_view<dtype>(dst, src, shape, axes);

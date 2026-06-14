@@ -84,19 +84,27 @@ class contract_plan_general:
     def optimize_general(self, code, temporary_manager, split):
         code_use = code
         codes = []
-        temp_release = None
+        temporaries = set([])
         while True:
             code_def, code_use = split(code_use, temporary_manager)
             if code_def is None:
                 break
-            if temp_release is not None and temporary_manager is not None:
-                temporary_manager.release(temp_release)
-            temp_release = code_def[0][0]
+            temporaries.add(code_def[0][0])
             codes.append(code_def)
+
+            # see if I can remove temporaries
+            still_used = set(x[0] for x in code_use if x[0] in temporaries)
+            removable = temporaries - still_used
+            if temporary_manager is not None:
+                for t in removable:
+                    temporary_manager.release(t)
+                    temporaries.remove(t)
+
         codes.append(code_use)
 
-        if temp_release is not None and temporary_manager is not None:
-            temporary_manager.release(temp_release)
+        if temporary_manager is not None:
+            for t in temporaries:
+                temporary_manager.release(t)
         return codes
 
     def optimize_greedy(self, code, temporary_manager):
@@ -217,6 +225,12 @@ class contract_plan_general:
     def commit_single_contract(self, blas, code, bm, use_gemm):
         verbose = g.default.is_verbose("contract_plan")
 
+        # target may need a re-shape if temporary memory was re-used
+        target_shape = tuple(self.tags[i][1] for i in code[0][1:])
+        assert int(np.prod(code[0][0].shape)) == int(np.prod(target_shape))
+        if code[0][0].shape != target_shape:
+            code[0][0].reshape(target_shape)
+
         # can I fall back on faster gemm?
         if len(code) == 3 and use_gemm:
             C = code[0][1:]
@@ -282,14 +296,38 @@ class contract_plan_general:
         blas.contract(*code)
 
     def __call__(self, blas, optimal=True, use_gemm=True):
+        # auto = g.default.has("--auto-tune")
+        
         if optimal:
             bm = g.accelerator_buffer_manager()
 
-            # TODO:
-            # Could optimize below for cache re-use by making blas.contract accept the list directly and perform the operation in a cache-optimal manner.
-            # Alternative first approach: see if I can map contractions to gemm.  May be fastest in practice!
             for c in self.codes:
-                self.commit_single_contract(blas, c, bm, use_gemm)
+
+                this_use_gemm = use_gemm
+                # if auto and use_gemm:
+                #     g.default.push_verbose("blas", False)
+                #     g.default.push_verbose("contract_plan", False)
+
+                #     # Time
+                #     test_blas = g.blas()
+                #     self.commit_single_contract(test_blas, c, bm, False)
+                #     t0 = -g.time()
+                #     test_blas()
+                #     t0 += g.time()
+
+                #     test_blas = g.blas()
+                #     self.commit_single_contract(test_blas, c, bm, True)
+                #     t1 = -g.time()
+                #     test_blas()
+                #     t1 += g.time()
+
+                #     g.default.pop_verbose()
+                #     g.default.pop_verbose()
+
+                #     if t0 < t1:
+                #         this_use_gemm = False
+
+                self.commit_single_contract(blas, c, bm, this_use_gemm)
         else:
             blas.contract(*self.code)
         return blas

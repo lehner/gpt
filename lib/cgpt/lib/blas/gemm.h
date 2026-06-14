@@ -83,6 +83,12 @@ class cgpt_gemm_job : public cgpt_blas_job_base {
       ERR("Unknown precision for compute of gemm: %s", _precision.c_str());
     }
   }
+
+  std::string description() {
+    std::ostringstream oss;
+    oss << "GEMM(" << m << "," << n << "," << k << ") x " << BLAS_A.size();
+    return oss.str();
+  }
   
   virtual ~cgpt_gemm_job() {
   }

@@ -27,7 +27,7 @@ class accelerator_buffer_manager:
 
     def request(self, shape, dtype):
         tag = (int(np.prod(shape)), dtype)
-        if tag in self.avail:
+        if tag in self.avail and len(self.avail[tag]) > 0:
             self.stats["reuse"] += 1
             return self.avail[tag].pop().reshape(shape)
         self.stats["new"] += 1

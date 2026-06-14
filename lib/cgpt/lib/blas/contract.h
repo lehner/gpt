@@ -100,6 +100,12 @@ class cgpt_contract_job : public cgpt_blas_job_base {
   virtual ~cgpt_contract_job() {
   }
 
+  std::string description() {
+    std::ostringstream oss;
+    oss << "Contract(" << total << ")";
+    return oss.str();
+  }
+
   virtual void execute(GridBLAS& blas) {
     blas.synchronise();
 

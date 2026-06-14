@@ -38,6 +38,12 @@ class cgpt_accumulate_job : public cgpt_blas_job_base {
   virtual ~cgpt_accumulate_job() {
   }
 
+  std::string description() {
+    std::ostringstream oss;
+    oss << "Accumulate(" << n << ") x " << BLAS_A.size();
+    return oss.str();
+  }
+
   virtual void execute(GridBLAS& blas) {
     constexpr int Nsimd = sizeof(vComplexF) / sizeof(ComplexF);
     dtype** p = &BLAS_A[0];

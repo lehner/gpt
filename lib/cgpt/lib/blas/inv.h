@@ -41,6 +41,12 @@ class cgpt_inv_job : public cgpt_blas_job_base {
   virtual ~cgpt_inv_job() {
   }
 
+  std::string description() {
+    std::ostringstream oss;
+    oss << "Inv(" << n << ") x " << BLAS_A.size();
+    return oss.str();
+  }
+
   virtual void execute(GridBLAS& blas) {
     blas.inverseBatched(n, BLAS_A, BLAS_C);
   }
