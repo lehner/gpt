@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+from gpt.core import auto_tuned_class, auto_tuned_method
 import numpy as np
 
 
@@ -296,36 +297,41 @@ class contract_plan_general:
         blas.contract(*code)
 
     def __call__(self, blas, optimal=True, use_gemm=True):
-        # auto = g.default.has("--auto-tune")
-        
         if optimal:
             bm = g.accelerator_buffer_manager()
 
             for c in self.codes:
 
-                this_use_gemm = use_gemm
-                # if auto and use_gemm:
-                #     g.default.push_verbose("blas", False)
-                #     g.default.push_verbose("contract_plan", False)
+                tag = str([(str(x[0]), x[1:]) for x in c])
+                atc = auto_tuned_class(tag, [False, True], use_gemm)
+                this_use_gemm = atc.get_tuned_parameters()
+                if this_use_gemm is None:
+                    # do tuning
 
-                #     # Time
-                #     test_blas = g.blas()
-                #     self.commit_single_contract(test_blas, c, bm, False)
-                #     t0 = -g.time()
-                #     test_blas()
-                #     t0 += g.time()
+                    g.default.push_verbose("blas", False)
+                    g.default.push_verbose("contract_plan", False)
 
-                #     test_blas = g.blas()
-                #     self.commit_single_contract(test_blas, c, bm, True)
-                #     t1 = -g.time()
-                #     test_blas()
-                #     t1 += g.time()
+                    # Time
+                    test_blas = g.blas()
+                    self.commit_single_contract(test_blas, c, bm, False)
+                    test_blas()  # warmup
+                    t0 = -g.time()
+                    test_blas()
+                    t0 += g.time()
 
-                #     g.default.pop_verbose()
-                #     g.default.pop_verbose()
+                    test_blas = g.blas()
+                    self.commit_single_contract(test_blas, c, bm, True)
+                    test_blas()  # warmup
+                    t1 = -g.time()
+                    test_blas()
+                    t1 += g.time()
 
-                #     if t0 < t1:
-                #         this_use_gemm = False
+                    g.default.pop_verbose()
+                    g.default.pop_verbose()
+
+                    this_use_gemm = t1 < t0
+
+                    atc.save_tuned_parameters(this_use_gemm)
 
                 self.commit_single_contract(blas, c, bm, this_use_gemm)
         else:

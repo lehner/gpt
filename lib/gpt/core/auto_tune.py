@@ -78,7 +78,11 @@ def auto_tuned_method(skip_snapshot=False):
                 g.message(f"- {self.at_params[i]} took {dts[i]:g} s")
             imin = min(range(len(dts)), key=dts.__getitem__)
             imin = g.broadcast(0, imin)
-            self.at_tuned_params = {"tag": self.at_tag, "params": self.at_params[imin], "results": dts}
+            self.at_tuned_params = {
+                "tag": self.at_tag,
+                "params": self.at_params[imin],
+                "results": dts,
+            }
             g.message(f"Tuning result (use {self.at_tuned_params} will be saved in {self.at_fn}")
             save_cache(self.at_fn, self.at_tuned_params)
 
@@ -118,3 +122,15 @@ class auto_tuned_class:
 
         if len(self.at_tuned_params) == 0:
             self.at_tuned_params = None
+
+    def get_tuned_parameters(self):
+        if not self.at_active:
+            return self.at_default_param
+        if self.at_tuned_params is None:
+            return None
+        return self.at_tuned_params["params"]
+
+    def save_tuned_parameters(self, params):
+        self.at_tuned_params = {"tag": self.at_tag, "params": params, "results": []}
+        g.message(f"Tuning result (use {self.at_tuned_params} will be saved in {self.at_fn}")
+        save_cache(self.at_fn, self.at_tuned_params)
