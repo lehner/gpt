@@ -816,12 +816,14 @@ class job_md(job_reproduction_base):
         
     def check(self, root):
         # if we do not have replicas, this is not redundant
-        n=len(glob.glob(f"{root}/{self.name}/state.0/*/*.field"))
-        g.message(f"Check MD: {n} {g.ranks()}")
+        files=glob.glob(f"{root}/{self.name}/state.0/*/*.field")
+        n=len(files)
+        sizes=set([os.path.getsize(f) for f in files])
+        g.message(f"Check MD: {n} {g.ranks()} {sizes} {len(sizes)}")
         if not os.path.exists(f"{root}/{self.name}/state.0/index.crc32"):
             g.message("index.crc32 is missing")
             return False
-        return n == g.ranks()
+        return n == g.ranks() and len(sizes) == 1
 
 
 ################################################################################
