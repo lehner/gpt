@@ -40,6 +40,8 @@ class cgpt_blas_job_base {
 #include "blas/accumulate.h"
 #include "blas/indexed_sum.h"
 #include "blas/contract.h"
+#include "blas/transpose.h"
+
 
 class cgpt_blas {
  public:

@@ -40,6 +40,13 @@ def test_mm_blas(nc, nrhs, precision):
     )
     assert eps == 0.0
 
+    # self-consistent transposition with blas
+    tr = bA.transpose(4, 5, 3, 2, 1, 0)
+    tr2 = g.accelerator_buffer(tr)
+    g.blas().transpose(tr2, bA, (4, 5, 3, 2, 1, 0))()
+    eps = np.linalg.norm(tr.to_array() - tr2.to_array())
+    assert eps == 0.0
+
     cA = bA.coordinates(range(4))
     cB = bB.coordinates(range(4))
 

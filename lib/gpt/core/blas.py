@@ -54,6 +54,16 @@ class blas:
             source.dtype,
             1 if accumulate else 0,
         )
+        return self
+
+    def transpose(self, dst, src, axes):
+        axes = tuple(axes)
+        assert len(axes) == len(src.shape) and len(src.shape) == len(dst.shape)
+        assert set(axes) == set(range(len(axes)))
+        assert dst.shape == tuple(src.shape[i] for i in axes)
+        assert dst.dtype is src.dtype
+        cgpt.blas_transpose_device_memory_view(self.obj, dst.view, src.view, src.shape, axes)
+        return self
 
     def contract(self, *code):
         assert all(isinstance(x, (list, tuple)) for x in code)

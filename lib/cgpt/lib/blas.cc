@@ -312,6 +312,45 @@ PyObject* blas_unary(PyObject* args, bool to_scalar) {
   return PyLong_FromLong(0);
 }
 
+EXPORT(blas_transpose_device_memory_view,{
+    
+    PyObject* smv, *dmv, *_shape, *_axes;
+    void* p;
+    if (!PyArg_ParseTuple(args, "lOOOO", &p, &dmv,&smv,&_shape, &_axes)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(smv));
+    ASSERT(PyMemoryView_Check(dmv));
+
+    std::vector<long> shape, axes;
+    cgpt_convert(_shape, shape);
+    cgpt_convert(_axes, axes);
+
+    Py_buffer* dbuf = PyMemoryView_GET_BUFFER(dmv);
+    Py_buffer* sbuf = PyMemoryView_GET_BUFFER(smv);
+    ASSERT(PyBuffer_IsContiguous(dbuf,'C'));
+    ASSERT(PyBuffer_IsContiguous(sbuf,'C'));
+    void* data_dmv = dbuf->buf;
+    void* data_smv = sbuf->buf;
+    ASSERT(dbuf->len == sbuf->len);
+    long element_size = (long)sbuf->len;
+    for (int i=0;i<shape.size();i++) { ASSERT(element_size % shape[i] == 0); element_size /= shape[i]; }
+
+    switch (element_size) {
+    case sizeof(float):
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<float>(data_dmv, data_smv, shape, axes)); break;
+    case sizeof(double):
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<double>(data_dmv, data_smv, shape, axes)); break;
+    case sizeof(ComplexD):
+      ((cgpt_blas*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<ComplexD>(data_dmv, data_smv, shape, axes)); break;
+    default:
+      ERR("Unknown element_size = %ld", element_size);
+    }
+
+    return PyLong_FromLong(0);
+  });
+
 EXPORT(blas_inv,{
     return blas_unary<cgpt_inv_job<ComplexF>, cgpt_inv_job<ComplexD> >(args, false);
   });

@@ -85,6 +85,11 @@ class accelerator_buffer:
         if array_init is not None:
             self.from_array(array_init)
 
+    def reshape(self, shape):
+        assert np.prod(self.shape) == np.prod(shape)
+        self.shape = shape
+        return self
+
     def empty_clone(self, shape=None):
         if shape is None:
             shape = self.shape

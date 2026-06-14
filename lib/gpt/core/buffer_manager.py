@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 
 
 class accelerator_buffer_manager:
@@ -25,15 +26,15 @@ class accelerator_buffer_manager:
         self.stats = {"new": 0, "reuse": 0}
 
     def request(self, shape, dtype):
-        tag = (shape, dtype)
+        tag = (int(np.prod(shape)), dtype)
         if tag in self.avail:
             self.stats["reuse"] += 1
-            return self.avail[tag].pop()
+            return self.avail[tag].pop().reshape(shape)
         self.stats["new"] += 1
         return g.accelerator_buffer(shape=shape, dtype=dtype)
 
     def release(self, buf):
-        tag = (buf.shape, buf.dtype)
+        tag = (int(np.prod(buf.shape)), buf.dtype)
         if tag not in self.avail:
             self.avail[tag] = []
         self.avail[tag].append(buf)
