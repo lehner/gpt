@@ -160,7 +160,7 @@ class contract_plan_general:
         participants = sorted(
             [c for c in code[1:] if d in c[1:]],
             key=lambda x: sum(
-                sort_basis**-i * self.sorted_dimensions.index(y) for i, y in enumerate(x[1:])
+                sort_basis**-i * self.sorted_dimensions.index(y) for i, y in enumerate(x[1:]) if y != "*"
             ),
         )
 

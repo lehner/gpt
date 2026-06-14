@@ -47,10 +47,13 @@ plan_meson_2pt = g.contract_plan(
     (G, "s2", "s4"),
 )
 
+# g.contract_plan_general(tmp, 10000,
+# <-- gives 10% faster path than greedy strategy but has overall startup cost; could create a cache that is stored to disk so that we can afford
+# exploring more paths; not sure if it is worth it
 plan_K2pipi = g.contract_plan(
     tmp,
     (target, "x"),
-    (prop, "x", "s1", "c1", "s2", "c2"),
+    (prop, "x", "s1", "c1", "s2", "c2","*"),
     (prop, "x", "s3", "c1", "s4", "c4"),
     (prop, "x", "s5", "c5", "s6", "c6"),
     (prop, "x", "s7", "c5", "s8", "c8"),
