@@ -31,6 +31,9 @@ for prec in [g.double]:
     # use additive group instead of matrix multiplication
     u1 = rad.node(g.mcolor(grid), infinitesimal_to_cartesian=False)
 
+    # test group algebra
+    A = rad.node(g.group.cartesian(g.mcolor(grid)), infinitesimal_to_cartesian=False)
+
     # relu without leakage
     relu = g.component.relu()
 
@@ -44,6 +47,11 @@ for prec in [g.double]:
     # test a few simple models
     nid = 0
     for c, learn_rate, args in [
+        (
+            g.group.inner_product(A, A),
+            1e-1,
+            [A]
+        ),
         (
             g.norm2(b1 + 1j * b2)
             + g.inner_product(a1 + 1j * a2, a1 - 1j * a2)

@@ -1,6 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2023  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2023-2026  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2026       Christopher Kelly
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -188,3 +189,9 @@ def cshift_plan_execute(self):
         return ret
 
     return _executer
+
+
+def group_inner_product(left, right):
+    # inner product over group's real vector space
+    left_type = left.otype
+    return left_type.inner_product(left, right)
