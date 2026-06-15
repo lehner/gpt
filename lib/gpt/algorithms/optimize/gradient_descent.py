@@ -19,6 +19,7 @@
 import gpt as g
 from gpt.algorithms import base_iterative
 from gpt.algorithms.optimize import line_search_none
+from gpt.algorithms.optimize.adam import set_element, nfloats
 
 
 class gradient_descent(base_iterative):
@@ -42,35 +43,41 @@ class gradient_descent(base_iterative):
         def opt(x, dx, t):
             x = g.util.to_list(x)
             dx = g.util.to_list(dx)
+            dx_indices = [x.index(y) for y in dx]
             for i in range(self.maxiter):
+                dx = [x[i] for i in dx_indices]
                 d = f.gradient(x, dx)
 
                 c = self.line_search(d, x, dx, d, f.gradient, -self.step)
 
-                for nu, x_mu in enumerate(dx):
-                    x_mu @= g.group.compose(-self.step * c * d[nu], x_mu)
+                for nu in range(len(dx)):
+                    set_element(
+                        x,
+                        dx_indices[nu],
+                        g.group.compose(-self.step * c * d[nu], x[dx_indices[nu]]),
+                    )
 
                 if self.eps is None:
                     continue
 
-                rs = (sum([g.norm2(x) for x in d]) / sum([s.nfloats() for s in d])) ** 0.5
+                rs = (sum([g.norm2(x) for x in d]) / sum([nfloats(s) for s in d])) ** 0.5
 
                 self.log_convergence(i, rs, self.eps)
 
                 if i % self.nf == 0:
                     self.log(
-                        f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, step = {c*self.step}"
+                        f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, step = {c * self.step}"
                     )
 
                 if rs <= self.eps:
                     self.log(
-                        f"converged in {i+1} iterations: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}"
+                        f"converged in {i + 1} iterations: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}"
                     )
                     return True
 
             if self.eps is not None:
                 self.log(
-                    f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
+                    f"NOT converged in {i + 1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
                 )
             return False
 

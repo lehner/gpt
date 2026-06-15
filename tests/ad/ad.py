@@ -47,11 +47,7 @@ for prec in [g.double]:
     # test a few simple models
     nid = 0
     for c, learn_rate, args in [
-        (
-            g.group.inner_product(A, A) ** 4,
-            1e-3,
-            [A]
-        ),
+        (g.group.inner_product(A, A) ** 4, 1e-3, [A]),
         (
             g.norm2(b1 + 1j * b2)
             + g.inner_product(a1 + 1j * a2, a1 - 1j * a2)
@@ -513,7 +509,7 @@ assert g.norm2(V.value - g.adj(W.value)) < 1e-12
 
 # now through differentiable functionals
 weight = rad.node(0.15)
-cf = g.norm2(g.adj(W) - weight * V).functional(weight)
+cf = g.norm2(g.adj(W) - weight * V).functional(V, weight)
 
 # use Adam tuned to do a simple gradient descent
 opt = g.algorithms.optimize.adam(
@@ -525,9 +521,19 @@ opt = g.algorithms.optimize.adam(
     beta2=1 - 1e-8,
     log_functional_every=10,
 )
-vals = [0.0]
-opt(cf)(vals, vals)
-assert abs(vals[0] - 1) < 1e-6
+vals = [V.value, 0.0]
+opt(cf)(vals, [vals[1]])
+assert abs(vals[1] - 1) < 1e-6
+
+# use gradient_descent
+opt = g.algorithms.optimize.gradient_descent(
+    maxiter=40,
+    eps=1e-7,
+    log_functional_every=10,
+)
+vals = [V.value, 0.0]
+opt(cf)(vals, [vals[1]])
+assert abs(vals[1] - 1) < 1e-6
 
 # now repeat with tensor group objects as weights
 weight = rad.node(g.mcolor(np.diag([1, -1j, 1j])))
