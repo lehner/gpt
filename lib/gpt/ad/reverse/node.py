@@ -181,6 +181,25 @@ class node_base(base):
 
         return node_base(_forward, _backward, (x, y), _container=z_container, _tag="*")
 
+    def __pow__(x, n):
+        if not isinstance(x, node_base):
+            x = node_base(x, with_gradient=False)
+
+        assert g.util.is_num(n)
+        
+        z_container = x._container
+
+        def _forward():
+            return x.value ** n
+
+        # not allowed to capture z, otherwise have reference loop!
+        def _backward(z):
+            # z = x**n -> dz = n*x**(n-1) dx
+            if x.with_gradient:
+                x.gradient += z.gradient * n * x.value ** (n-1)
+
+        return node_base(_forward, _backward, (x,), _container=z_container, _tag="**")
+
     def __rmul__(x, y):
         return node_base.__mul__(y, x)
 

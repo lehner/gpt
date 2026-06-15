@@ -48,8 +48,8 @@ for prec in [g.double]:
     nid = 0
     for c, learn_rate, args in [
         (
-            g.group.inner_product(A, A),
-            1e-1,
+            g.group.inner_product(A, A) ** 4,
+            1e-3,
             [A]
         ),
         (
