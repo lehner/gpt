@@ -215,6 +215,7 @@ class node_base(base):
 
         def setter(y, z):
             y[item] = z
+            return y
 
         return x.project(getter, setter)
 
@@ -225,7 +226,7 @@ class node_base(base):
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                setter(x.gradient, getter(x.gradient) + z.gradient)
+                x.gradient = setter(x.gradient, getter(x.gradient) + z.gradient)
 
         z_container = get_unary_container(x._container, getter)
 
@@ -374,7 +375,11 @@ class node_base(base):
             return y.real
 
         def setter(y, z):
-            y @= z
+            if g.util.is_num(y):
+                y = z.real
+            else:
+                y @= z.real
+            return y
 
         return self.project(getter, setter)
 

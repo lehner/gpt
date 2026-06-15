@@ -75,7 +75,7 @@ for prec in [g.double]:
             1e-1,
             [b1, b2, a1, a2, t1, x],
         ),
-        (g.sum(g.trace(g.matrix.exp(a1))), 1e-1, [a1]),
+        (g.sum(g.trace(g.matrix.exp(a1))).real, 1e-1, [a1]),
         (g.norm2(s1 * x + s2 * x), 1e-1, [s1, s2, x]),
         (g.norm2((s1 + s2) * x), 1e-1, [s1, s2, x]),
         (g.norm2(s1 + s2), 1e-1, [s1, s2]),
