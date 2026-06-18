@@ -10,6 +10,8 @@ n = g.default.get_int("--n", 16**4)
 g.message("Using n =",n)
 
 tmp = g.accelerator_buffer_manager()
+
+
 target = g.accelerator_buffer(shape=(n,), dtype=np.complex128)
 prop = g.accelerator_buffer(shape=(n, 4, 3, 4, 3), dtype=np.complex128)
 S = g.accelerator_buffer(shape=(4, 4, 4), dtype=np.complex128)

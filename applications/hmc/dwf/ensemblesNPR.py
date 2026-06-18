@@ -25,10 +25,21 @@ ensembles_X = {
 }
 
 ensembles_X2 = {
-    "explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
-                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 100 }, #(0,0.5,8)
+    "explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.0038 , "ms" : 0.0038, "mc" : 0.073, "Ls" : 16, "b" : 1.05, "c" : 0.05,
+                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 30 }, #(0,0.5,8)
+
+    # mres tuning (target 5.2e-5 * (4.5/10)**2 = 1e-5)
+    # Ls 12
+    # 1,0 -> 6.8e-05
+    # 1.05,0.05 -> 4.65e-05
+    # 1.1,0.1 -> 5.0e-05
+    # 1.15,0.15 -> 8.2e-5
+    # Target unreachable with Mobius Ls=12
+    # Ls 14 -> 1.4918562829217665e-05
+    # Ls 16 ->
+    
     "explore-1L" : { "L" : [72]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
-                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 100 }, #(-3,0.05,14)
+                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 30 }, #(-3,0.05,14)
     #"explore-2L" : { "L" : [72]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
     #               "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
 }
@@ -1376,7 +1387,9 @@ for tag in tags:
         job_verify2 = [job_reproduction_verify(job_Q)]
         jobs = jobs + job_Q + job_verify2
 
-
+if True:
+    # force re-measure with new valence parameters
+    jobs = [job_measure_glue("explore-0L", 30, 31, 0, [])] + jobs
 
 
 ################################################################################
