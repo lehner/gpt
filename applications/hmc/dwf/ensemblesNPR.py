@@ -102,13 +102,13 @@ ensembles_S = {
 ensembles_L = {
     # 64^3x96 3 flavor VF ensembles #
     "64VF3fh-1" : { "L" : [64]*3 + [96], "beta" :  2.56, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175,
-                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
     "64VF3fh-2" : { "L" : [64]*3 + [96], "beta" :  2.62, "ml" : 0.0125, "ms" : 0.0125, "mc" : None, "Ls" : 12, "b" : 1.175, "c" : 0.175,
-                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
 
     # 64^3x96 4 flavor VF ensembles #
     "64VF4fh-1" : { "L" : [64]*3 + [96], "beta" :  2.54, "ml" : 0.0125, "ms" : 0.0125, "mc" : 0.142, "Ls" : 12, "b" : 1.175, "c" : 0.175,
-                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
+                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 2400, "Q" : None, "fermionic_from" : 48 },
 }
 
 ensembles_XL = {
