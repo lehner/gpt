@@ -26,7 +26,7 @@ ensembles_X = {
 
 ensembles_X2 = {
     "explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.0038 , "ms" : 0.0038, "mc" : 0.073, "Ls" : 16, "b" : 1.05, "c" : 0.05,
-                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 30 }, #(0,0.5,8)
+                     "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 6, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 30 }, #(0,0.5,8)
 
     # mres tuning (target 5.2e-5 * (4.5/10)**2 = 1e-5)
     # Ls 12
@@ -38,7 +38,7 @@ ensembles_X2 = {
     # Ls 14 -> 1.4918562829217665e-05
     # Ls 16 ->
     
-    "explore-1L" : { "L" : [72]*4, "beta" :  3.0, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
+    "explore-1L" : { "L" : [72]*4, "beta" :  3.0, "ml" : 0.0038 , "ms" : 0.0038, "mc" : 0.073, "Ls" : 12, "b" : 1.05, "c" : 0.05,
                      "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 30 }, #(-3,0.05,14)
     #"explore-2L" : { "L" : [72]*4, "beta" :  3.1, "ml" : 0.00585025 , "ms" : 0.00585025, "mc" : 0.073, "Ls" : 12, "b" : 1, "c" : 0,
     #               "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 4, "tau" : 32, "nwf_max" : 6400, "Q" : (0,0.5,8), "fermionic_from" : 100 },
