@@ -20,13 +20,16 @@
 #
 #      P(U) = e^{ Re Tr adj(staple) U } dU
 #
-#    based on 1985 Kennedy and Pendleton paper (PLB 156 p393-399)
+#    based on 1985 Kennedy and Pendleton paper (https://doi.org/10.1016/0370-2693(85)91632-6)
 import gpt as g
 import numpy as np
 import sys
 
 
 class su2_heat_bath:
+    """
+    Based on https://doi.org/10.1016/0370-2693(85)91632-6.
+    """
     @g.params_convention(project_method="defect", niter=20)
     def __init__(self, rng, params):
         self.rng = rng
