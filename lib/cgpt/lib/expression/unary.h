@@ -78,7 +78,7 @@ cgpt_Lattice_base* lattice_lat(cgpt_Lattice_base* dst, bool ac, const A& lat, Co
 template<typename A>
 cgpt_Lattice_base* lattice_unary_lat(cgpt_Lattice_base* dst, bool ac, const A& la,int unary_expr,ComplexD coef) {
   if (unary_expr == 0) {
-    return lattice_lat(dst, ac, la, coef);
+    return lattice_lat(dst, ac, closure(ToSinglet(la)), coef);
   } else if (unary_expr == (BIT_SPINTRACE|BIT_COLORTRACE)) {
     return lattice_expr(dst, ac, coef*ToSinglet(trace(la)));
   } else if (unary_expr == BIT_SPINTRACE) {
