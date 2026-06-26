@@ -289,7 +289,7 @@ prop.from_array(np.random.normal(size=prop.shape).astype(prop.dtype))
 S.from_array(np.random.normal(size=S.shape).astype(S.dtype))
 C.from_array(np.random.normal(size=C.shape).astype(C.dtype))
 
-plan = g.contract_plan(
+plan = g.contract.plan(
     tmp,
     (target, "x"),
     (prop, "x", "s1", "c1", "s2", "c2"),
@@ -302,7 +302,7 @@ plan = g.contract_plan(
 )
 
 # do it again to test re-use in tmp
-plan = g.contract_plan(
+plan = g.contract.plan(
     tmp,
     (target, "x"),
     (prop, "x", "s1", "c1", "s2", "c2"),

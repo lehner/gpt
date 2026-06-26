@@ -10,6 +10,7 @@ n = g.default.get_int("--n", 16**4)
 g.message("Using n =",n)
 
 tmp = g.accelerator_buffer_manager()
+corr = g.accelerator_buffer(shape=(16,), dtype=np.complex128)
 target = g.accelerator_buffer(shape=(n,), dtype=np.complex128)
 prop = g.accelerator_buffer(shape=(n, 4, 3, 4, 3), dtype=np.complex128)
 S = g.accelerator_buffer(shape=(4, 4, 4), dtype=np.complex128)
@@ -26,7 +27,7 @@ C.from_array(np.random.normal(size=C.shape).astype(C.dtype))
 S2.from_array(np.random.normal(size=S2.shape).astype(S2.dtype))
 C2.from_array(np.random.normal(size=C2.shape).astype(C2.dtype))
 
-plan_proton_2pt = g.contract_plan(
+plan_proton_2pt = g.contract.plan(
     tmp,
     (target, "x"),
     (prop, "x", "s1", "c1", "s2", "c2"),
@@ -38,7 +39,32 @@ plan_proton_2pt = g.contract_plan(
     (C, "c2", "c4", "c6"),
 )
 
-plan_meson_2pt = g.contract_plan(
+slice_t = g.contract.indexed_sum(
+    index=target.indices(range(1)) % 16,
+    length=16
+)
+
+plan_proton_2pt_corr = g.contract.plan(
+    tmp,
+    (corr, "t"),
+    (slice_t, "t", "x"),
+    (prop, "x", "s1", "c1", "s2", "c2"),
+    (prop, "x", "s3", "c3", "s4", "c4"),
+    (prop, "x", "s5", "c5", "s6", "c6"),
+    (S, "s1", "s3", "s5"),
+    (S, "s2", "s4", "s6"),
+    (C, "c1", "c3", "c5"),
+    (C, "c2", "c4", "c6"),
+)
+
+g.message(plan_proton_2pt_corr)
+blas = g.blas()
+plan_proton_2pt_corr(blas)
+blas()
+
+sys.exit(0)
+
+plan_meson_2pt = g.contract.plan(
     tmp,
     (target, "x"),
     (prop, "x", "s1", "c1", "s2", "c2"),
@@ -47,10 +73,10 @@ plan_meson_2pt = g.contract_plan(
     (G, "s2", "s4"),
 )
 
-# g.contract_plan_general(tmp, 10000,
+# g.contract.plan_general(tmp, 10000,
 # <-- gives 10% faster path than greedy strategy but has overall startup cost; could create a cache that is stored to disk so that we can afford
 # exploring more paths; not sure if it is worth it
-plan_K2pipi = g.contract_plan(
+plan_K2pipi = g.contract.plan(
     tmp,
     (target, "x"),
     (prop, "x", "s1", "c1", "s2", "c2","*"),

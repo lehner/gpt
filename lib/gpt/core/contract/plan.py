@@ -19,49 +19,23 @@
 import gpt as g
 from gpt.core import auto_tuned_class, auto_tuned_method
 import numpy as np
-
-
-def contract_plan(temporary_manager, *code):
-    return contract_plan_general(temporary_manager, 0, *code)
+from gpt.core.contract.util import util, linear_map
 
 
 class contract_plan_general:
-    def __init__(self, temporary_manager, nramdom, *code):
+    def __init__(self, temporary_manager, nrandom, *code):
         self.temporary_manager = temporary_manager
-        assert all(isinstance(x, (list, tuple)) for x in code)
-        assert all(isinstance(x[0], g.accelerator_buffer) for x in code)
-        assert all(isinstance(y, str) for x in code for y in x[1:])
-        tensors = [x[0] for x in code]
-        tags = {}
-        dimensions = []
-        for t in range(len(tensors)):
-            indices = tuple(x for x in code[t][1:] if x != "*")
-            assert len(indices) == len(tensors[t].shape)
-            for d in range(len(indices)):
-                if indices[d] not in tags:
-                    nd = tensors[t].shape[d]
-                    tags[indices[d]] = (len(dimensions), nd)
-                    dimensions.append(nd)
-                else:
-                    assert tags[indices[d]][1] == tensors[t].shape[d]
-
-        self.tags = tags
-        self.dimensions = dimensions
-
-        # sorted dimensions
-        self.sorted_dimensions = [None] * len(dimensions)
-        for t in tags:
-            self.sorted_dimensions[tags[t][0]] = t
-
+        self.util = util(code)
+        
         # try random optimization parts in addition to greedy
-        if nramdom == 0:
+        if nrandom == 0:
             # use greedy algorithm
             codes = self.optimize_greedy(code, temporary_manager)
 
         else:
             ibest = -1
             cost_greedy = sum(self.code_to_cost(c) for c in self.optimize_greedy(code, None))
-            for i in range(nramdom):
+            for i in range(nrandom):
                 g.default.push_verbose("random", False)
                 rng = g.random("random-contraction-" + str(i))
                 g.default.pop_verbose()
@@ -82,46 +56,20 @@ class contract_plan_general:
         self.code = code
         self.codes = codes
 
-    def optimize_general(self, code, temporary_manager, split):
-        code_use = code
-        codes = []
-        temporaries = set([])
-        while True:
-            code_def, code_use = split(code_use, temporary_manager)
-            if code_def is None:
-                break
-            temporaries.add(code_def[0][0])
-            codes.append(code_def)
-
-            # see if I can remove temporaries
-            still_used = set(x[0] for x in code_use if x[0] in temporaries)
-            removable = temporaries - still_used
-            if temporary_manager is not None:
-                for t in removable:
-                    temporary_manager.release(t)
-                    temporaries.remove(t)
-
-        codes.append(code_use)
-
-        if temporary_manager is not None:
-            for t in temporaries:
-                temporary_manager.release(t)
-        return codes
-
     def optimize_greedy(self, code, temporary_manager):
-        return self.optimize_general(code, temporary_manager, lambda c, t: self.optimal_split(c, t))
+        return self.util.optimize_general(code, temporary_manager, lambda c, t: self.optimal_split(c, t))
 
     def optimize_random(self, code, temporary_manager, rng):
-        return self.optimize_general(
+        return self.util.optimize_general(
             code, temporary_manager, lambda c, t: self.random_split(c, t, rng)
         )
 
     def random_split(self, code, manager, rng):
-        sd = self.splittable_dimensions(code)
+        sd = self.util.splittable_dimensions(code)
         if len(code) <= 3 or len(sd) < 1:
             return None, code
         ud = rng.choice(sd, 1)[0]
-        return self.split_code(code, ud, manager)
+        return self.util.split_code(code, ud, manager)
 
     def optimal_split(self, code, manager):
         best_cost = None
@@ -130,81 +78,23 @@ class contract_plan_general:
         best_dim = None
         if len(code) <= 3:
             return None, code
-        for ud in self.splittable_dimensions(code):
-            code_def, code_use = self.split_code(code, ud, None)
-            cost1 = self.code_to_cost(code_def) + self.code_to_cost(code_use)
+        for ud in self.util.splittable_dimensions(code):
+            code_def, code_use = self.util.split_code(code, ud, None)
+            cost1 = self.util.code_to_cost(code_def) + self.util.code_to_cost(code_use)
             if best_cost is None or cost1 < best_cost:
                 best_cost = cost1
                 best_code_def = code_def
                 best_code_use = code_use
                 best_dim = ud
-        best_code_def, best_code_use = self.split_code(code, best_dim, manager)
+        best_code_def, best_code_use = self.util.split_code(code, best_dim, manager)
         return best_code_def, best_code_use
-
-    def shape_from_dimensions(self, dimensions):
-        return tuple(self.tags[x][1] for x in dimensions)
-
-    def split_code(self, code, d, manager):
-
-        # cannot split over an index that needs to go into the target
-        assert d not in code[0][1:]
-
-        # get a list of all used dimensions in factors that we need for split
-        ud = self.used_dimensions([x for x in code if d in x])
-
-        # remove CC and split dimension; this keeps genuine external indices to split
-        ud = [x for x in ud if x not in [d, "*"]]
-
-        # re-order participants such that those come first with lower indices w.r.t. initial contraction order
-        sort_basis = len(self.sorted_dimensions)
-        participants = sorted(
-            [c for c in code[1:] if d in c[1:]],
-            key=lambda x: sum(
-                sort_basis**-i * self.sorted_dimensions.index(y) for i, y in enumerate(x[1:]) if y != "*"
-            ),
-        )
-
-        # other factors that are not part of split are called witnesses
-        witnesses = [c for c in code[1:] if d not in c[1:]]
-
-        # create an ordered list of indices for definition of new tensor; prioritize common indices, then in order of participants
-        ud_ordered = [x for x in ud if all(x in y[1:] for y in participants)]
-        for c in participants:
-            ud_new = list((set(c[1:]) & set(ud)) - set(ud_ordered))
-            ud_ordered.extend([x for x in ud if x in ud_new])
-
-        # trivial steps
-        if manager is None:
-            temp = None
-        else:
-            temp = manager.request(self.shape_from_dimensions(ud_ordered), dtype=code[0][0].dtype)
-        code_new = [[temp] + ud_ordered]
-        code_def = code_new + participants
-        code_use = [code[0]] + witnesses + code_new
-        return code_def, code_use
-
-    def code_to_str(self, code):
-        return " @ ".join([",".join(x[1:]) for x in code[1:]]) + " -> " + ",".join(code[0][1:])
-
-    def used_dimensions(self, code):
-        # preserve order
-        ud_set = set(y for x in code for y in x[1:] if y != "*")
-        return [y for y in self.sorted_dimensions if y in ud_set]
-
-    def splittable_dimensions(self, code):
-        ud = self.used_dimensions(code)
-        target_indices = code[0][1:]
-        return [x for x in ud if x not in target_indices]
-
-    def code_to_cost(self, code):
-        return np.prod([self.tags[x][1] for x in self.used_dimensions(code)])
 
     def __str__(self):
         lines = ""
         total_cst = 0
-        orig_cst = self.code_to_cost(self.code)
-        code_strs = [self.code_to_str(c) for c in self.codes]
-        code_csts = [self.code_to_cost(c) for c in self.codes]
+        orig_cst = self.util.code_to_cost(self.code)
+        code_strs = [self.util.code_to_str(c) for c in self.codes]
+        code_csts = [self.util.code_to_cost(c) for c in self.codes]
         nm = max(len(s) for s in code_strs)
         for i in range(len(code_csts)):
             total_cst += code_csts[i]
@@ -215,7 +105,7 @@ class contract_plan_general:
         return f"""
  Direct contraction:
 
-  {self.code_to_str(self.code)}   at cost = {orig_cst:.2e}
+  {self.util.code_to_str(self.code)}   at cost = {orig_cst:.2e}
 
  Optimal contraction path:
 
@@ -227,18 +117,33 @@ class contract_plan_general:
         verbose = g.default.is_verbose("contract_plan")
 
         # target may need a re-shape if temporary memory was re-used
-        target_shape = tuple(self.tags[i][1] for i in code[0][1:])
+        target_shape = tuple(self.util.tags[i][1] for i in code[0][1:])
         assert int(np.prod(code[0][0].shape)) == int(np.prod(target_shape))
         if code[0][0].shape != target_shape:
             code[0][0].reshape(target_shape)
 
         # can I fall back on faster gemm?
-        if len(code) == 3 and use_gemm:
+        if len(code) == 3:
             C = code[0][1:]
             A = code[1][1:]
             B = code[2][1:]
             contraction_indices = (set(A) | set(B)) - set(C)
-            if len(contraction_indices) == 1:
+            if isinstance(code[2][0], linear_map) and isinstance(code[1][0], g.accelerator_buffer):
+                code[1], code[2] = code[2], code[1]
+            if isinstance(code[1][0], linear_map):
+
+                # double-linear map contraction not supported!
+                assert not isinstance(code[2][0], linear_map)
+                
+                mp = code[1][0]
+                g.message(C, A, B, "XX")
+                # TODO: all cases A linmap, B linmap AB linmap
+                # can AB linmap occur? IS_{t,x} IS_{t',x} -> in principle well defined but not via g.indexed_sum
+                # A is now indexed sum, ask it for the contraction index
+                g.message(mp.get_dimension(code[1]), "dim")
+                # then can remove this dimension from contraction_indices ; if there are more than one left, perform these first, then perform
+                # mp
+            elif len(contraction_indices) == 1 and use_gemm and all(isinstance(c[0], g.accelerator_buffer) for c in code):
                 i = contraction_indices.pop()
                 # now test that contraction index only appears once in A and B each and split them
                 if A.count(i) == 1 and B.count(i) == 1:
@@ -252,8 +157,8 @@ class contract_plan_general:
                     AB_rest = A_reordered[0:-1] + B_reordered[ncommon:-1]
                     if AB_rest == C:
                         target = code[0][0]
-                        A_reshape = tuple(self.tags[i][1] for i in A_reordered)
-                        B_reshape = tuple(self.tags[i][1] for i in B_reordered)
+                        A_reshape = tuple(self.util.tags[i][1] for i in A_reordered)
+                        B_reshape = tuple(self.util.tags[i][1] for i in B_reordered)
 
                         A_transposed = bm.request(shape=A_reshape, dtype=target.dtype)
                         B_transposed = bm.request(shape=B_reshape, dtype=target.dtype)
@@ -294,6 +199,8 @@ class contract_plan_general:
                         bm.release(B_transposed)
                         return
 
+        # submit contraction if no linear operator is present
+        assert all(isinstance(c[0], g.accelerator_buffer) for c in code)
         blas.contract(*code)
 
     def __call__(self, blas, optimal=True, use_gemm=True):
@@ -303,6 +210,7 @@ class contract_plan_general:
             for c in self.codes:
 
                 tag = str([(str(x[0]), x[1:]) for x in c])
+                g.message("DEBUG tag", tag)
                 atc = auto_tuned_class(tag, [False, True], use_gemm)
                 this_use_gemm = atc.get_tuned_parameters()
                 if this_use_gemm is None:
@@ -335,5 +243,7 @@ class contract_plan_general:
 
                 self.commit_single_contract(blas, c, bm, this_use_gemm)
         else:
+            # submit contraction if no linear operator is present
+            assert all(isinstance(c[0], g.accelerator_buffer) for c in self.code)
             blas.contract(*self.code)
         return blas
