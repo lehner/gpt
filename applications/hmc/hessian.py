@@ -128,7 +128,12 @@ if True:
     print(g.group.inner_product(dA, H_dA2))
 
     print("Covariant Hessian symmetry test")
-    H_dA = Hessian_vec_cov(dA)
-    H_dA2 = Hessian_vec_cov(dA2)
-    print(g.group.inner_product(dA2, H_dA))
-    print(g.group.inner_product(dA, H_dA2))
+    covH_dA = Hessian_vec_cov(dA)
+    covH_dA2 = Hessian_vec_cov(dA2)
+    print(g.group.inner_product(dA2, covH_dA))
+    print(g.group.inner_product(dA, covH_dA2))
+
+    print("The symmetric piece of the Hessian and covariant Hessian agree:")
+    print(g.group.inner_product(dA, H_dA))
+    print(g.group.inner_product(dA, covH_dA))
+    
