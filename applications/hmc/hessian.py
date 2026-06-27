@@ -53,30 +53,33 @@ def Hessian_vec_cov(src):
 cache = {}
 
 
-def Hessian_vec_5d(dst5d, src5d):
+def Hessian_vec_cov_5d(dst5d, src5d):
     src = g.separate(src5d, 4, cache)
-    dst = Hessian_vec(src)
+    dst = Hessian_vec_cov(src)
     dst5d @= g.merge(dst)
 
 
-H = g.matrix_operator(mat=Hessian_vec_5d)
+H = g.matrix_operator(mat=Hessian_vec_cov_5d)
 
 test_src = g.merge(g.group.cartesian(U))
 g.random("test").element(test_src)
 
+test2_src = g.merge(g.group.cartesian(U))
+g.random("test2").element(test2_src)
+
 # now run Lanczos
 irl = g.algorithms.eigen.irl(
     Nk=5,
-    Nstop=5,
-    Nm=30,
-    resid=1e-8,
+    Nstop=1,
+    Nm=15,
+    resid=1e-5,
     betastp=1e-5,
     maxiter=30,
     Nminres=0,
     sort_eigenvalues=lambda x: sorted(x),
 )
 
-if False:
+if True:
     # upper edge of spectrum
     evec, evals = irl(H, test_src)
     g.message(evals)
@@ -85,12 +88,12 @@ if False:
         np.savetxt("H_eval_max", evals)
         np.savetxt("H_evec_max_2d", evec_max_norm2[:, :, 0, 0, 0].real.reshape(8, 8))
 
-eval_max = 11.27393345529601
+eval_max = 22.14571849233337
 if use_unit:
-    eval_max = 15
+    eval_max = 28.69759996439271
 H_inv = g.matrix_operator(mat=lambda dst, src: g.eval(dst, eval_max * src - H * src))
 
-if False:
+if True:
     # upper edge of spectrum
     evec, evals = irl(H_inv, test_src)
     g.message(evals)
