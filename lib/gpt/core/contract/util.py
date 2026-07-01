@@ -18,6 +18,8 @@
 #
 import gpt as g
 import numpy as np
+from gpt.core.contract.linear_map import linear_map
+
 
 class util:
     def __init__(self, code):
@@ -55,7 +57,9 @@ class util:
         participants = sorted(
             [c for c in code[1:] if d in c[1:]],
             key=lambda x: sum(
-                sort_basis**-i * self.sorted_dimensions.index(y) for i, y in enumerate(x[1:]) if y != "*"
+                sort_basis**-i * self.sorted_dimensions.index(y)
+                for i, y in enumerate(x[1:])
+                if y != "*"
             ),
         )
 
@@ -106,10 +110,19 @@ class util:
         ud_set = set(y for x in code for y in x[1:] if y != "*")
         return [y for y in self.sorted_dimensions if y in ud_set]
 
+    def is_splittable(self, code, c):
+        p, w = self.participants_witnesses(code, c)
+        if any(isinstance(x[0], linear_map) for x in p):
+            # need one linear_map and one accelerator_buffer
+            if len(p) == 2 and any(isinstance(x[0], g.core.accelerator_buffer) for x in p):
+                return True
+            return False
+        return True
+
     def splittable_dimensions(self, code):
         ud = self.used_dimensions(code)
         target_indices = code[0][1:]
-        return [x for x in ud if x not in target_indices]
+        return [x for x in ud if x not in target_indices and self.is_splittable(code, x)]
 
     def code_to_cost(self, code):
         return np.prod([self.tags[x][1] for x in self.used_dimensions(code)])
@@ -139,6 +152,3 @@ class util:
             for t in temporaries:
                 temporary_manager.release(t)
         return codes
-
-class linear_map:
-    pass

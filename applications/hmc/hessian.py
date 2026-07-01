@@ -22,6 +22,8 @@ action(nnU)()
 nU = [rad.node(u) for u in U]
 action(nU)()
 
+
+# (f(e^{iTa eps}U) - f(U)) / eps Ta = gradient
 def Hessian_vec(src):
     # then create expression for inner product with right-hand side
     for mu in range(4):
@@ -33,6 +35,7 @@ def Hessian_vec(src):
     # i.e., the Hessian applied to the vector src
     return [nnU[mu].value.gradient for mu in range(4)]
 
+
 def Hessian_vec_cov(src):
     # then create expression for inner product with right-hand side
     for mu in range(4):
@@ -43,11 +46,10 @@ def Hessian_vec_cov(src):
     # this now is \partial <\partial S / \partial U, src> / \partial U,
     # i.e., the Hessian applied to the vector src
     return [
-        g(
-            nnU[mu].value.gradient -0.5j * (nU[mu].gradient*src[mu] - src[mu]*nU[mu].gradient)
-        )
+        g(nnU[mu].value.gradient - 0.5j * (nU[mu].gradient * src[mu] - src[mu] * nU[mu].gradient))
         for mu in range(4)
     ]
+
 
 # create operator that stacks Lorentz index in 4-th dimension
 cache = {}
@@ -79,7 +81,7 @@ irl = g.algorithms.eigen.irl(
     sort_eigenvalues=lambda x: sorted(x),
 )
 
-if True:
+if False:
     # upper edge of spectrum
     evec, evals = irl(H, test_src)
     g.message(evals)
@@ -93,7 +95,7 @@ if use_unit:
     eval_max = 28.69759996439271
 H_inv = g.matrix_operator(mat=lambda dst, src: g.eval(dst, eval_max * src - H * src))
 
-if True:
+if False:
     # upper edge of spectrum
     evec, evals = irl(H_inv, test_src)
     g.message(evals)
@@ -115,7 +117,7 @@ if True:
     dA_H_dA = g.group.inner_product(dA, H_dA)
     print((a1 - a0) / eps)
     print((a1 - a0 - eps * F_dA) / eps)
-    print((a1 - a0 - eps * F_dA - (eps**2/2) * dA_H_dA) / eps)
+    print((a1 - a0 - eps * F_dA - (eps**2 / 2) * dA_H_dA) / eps)
 
 if True:
     # Note: Hessian on curved Manifold is not symmetric!!
@@ -126,7 +128,7 @@ if True:
     H_dA2 = Hessian_vec(dA2)
 
     print("Hessian symmetry tests")
-    
+
     print(g.group.inner_product(dA2, H_dA))
     print(g.group.inner_product(dA, H_dA2))
 
@@ -139,4 +141,3 @@ if True:
     print("The symmetric piece of the Hessian and covariant Hessian agree:")
     print(g.group.inner_product(dA, H_dA))
     print(g.group.inner_product(dA, covH_dA))
-    

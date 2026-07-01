@@ -32,6 +32,7 @@ class blas:
 
     def accumulate(self, buffers):
         assert all([buffers[0].shape == b.shape for b in buffers])
+        self.references.append([x.view for x in buffers])
         cgpt.blas_accumulate(
             self.obj, int(np.prod(buffers[0].shape)), [x.view for x in buffers], buffers[0].dtype
         )
@@ -42,6 +43,9 @@ class blas:
         assert index.dtype is np.int64
         assert len(target.shape) == 1
         assert len(index.shape) <= len(source.shape)
+        self.references.append(source)
+        self.references.append(index)
+        self.references.append(target)
         for i in range(len(index.shape)):
             assert index.shape[i] == source.shape[i]
         cgpt.blas_indexed_sum(
@@ -63,6 +67,8 @@ class blas:
         assert set(axes) == set(range(len(axes)))
         assert dst.shape == tuple(src.shape[i] for i in axes)
         assert dst.dtype is src.dtype
+        self.references.append(src)
+        self.references.append(dst)
         cgpt.blas_transpose_device_memory_view(self.obj, dst.view, src.view, src.shape, axes)
         return self
 
@@ -70,6 +76,9 @@ class blas:
         assert all(isinstance(x, (list, tuple)) for x in code)
         assert all(isinstance(x[0], g.accelerator_buffer) for x in code)
         assert all(isinstance(y, str) for x in code for y in x[1:])
+
+        # add references so that memory used will not be deallocated
+        self.references.append([x[0].view for x in code])
 
         tensors = [x[0] for x in code]
         dtype = tensors[0].dtype

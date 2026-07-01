@@ -19,14 +19,15 @@
 import gpt as g
 from gpt.core import auto_tuned_class, auto_tuned_method
 import numpy as np
-from gpt.core.contract.util import util, linear_map
+from gpt.core.contract.util import util
+from gpt.core.contract.linear_map import linear_map
 
 
 class contract_plan_general:
     def __init__(self, temporary_manager, nrandom, *code):
         self.temporary_manager = temporary_manager
         self.util = util(code)
-        
+
         # try random optimization parts in addition to greedy
         if nrandom == 0:
             # use greedy algorithm
@@ -57,7 +58,9 @@ class contract_plan_general:
         self.codes = codes
 
     def optimize_greedy(self, code, temporary_manager):
-        return self.util.optimize_general(code, temporary_manager, lambda c, t: self.optimal_split(c, t))
+        return self.util.optimize_general(
+            code, temporary_manager, lambda c, t: self.optimal_split(c, t)
+        )
 
     def optimize_random(self, code, temporary_manager, rng):
         return self.util.optimize_general(
@@ -131,19 +134,15 @@ class contract_plan_general:
             if isinstance(code[2][0], linear_map) and isinstance(code[1][0], g.accelerator_buffer):
                 code[1], code[2] = code[2], code[1]
             if isinstance(code[1][0], linear_map):
-
-                # double-linear map contraction not supported!
-                assert not isinstance(code[2][0], linear_map)
-                
-                mp = code[1][0]
-                g.message(C, A, B, "XX")
-                # TODO: all cases A linmap, B linmap AB linmap
-                # can AB linmap occur? IS_{t,x} IS_{t',x} -> in principle well defined but not via g.indexed_sum
-                # A is now indexed sum, ask it for the contraction index
-                g.message(mp.get_dimension(code[1]), "dim")
-                # then can remove this dimension from contraction_indices ; if there are more than one left, perform these first, then perform
-                # mp
-            elif len(contraction_indices) == 1 and use_gemm and all(isinstance(c[0], g.accelerator_buffer) for c in code):
+                if code[1][0].commit_single_contract(self.util, blas, code, bm):
+                    if verbose:
+                        g.message(f"Perform linear map {str(code[1][0])}")
+                    return
+            elif (
+                len(contraction_indices) == 1
+                and use_gemm
+                and all(isinstance(c[0], g.accelerator_buffer) for c in code)
+            ):
                 i = contraction_indices.pop()
                 # now test that contraction index only appears once in A and B each and split them
                 if A.count(i) == 1 and B.count(i) == 1:
@@ -210,7 +209,6 @@ class contract_plan_general:
             for c in self.codes:
 
                 tag = str([(str(x[0]), x[1:]) for x in c])
-                g.message("DEBUG tag", tag)
                 atc = auto_tuned_class(tag, [False, True], use_gemm)
                 this_use_gemm = atc.get_tuned_parameters()
                 if this_use_gemm is None:
