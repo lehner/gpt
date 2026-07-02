@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2025  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2025-26  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,11 +21,11 @@ import cgpt
 import numpy as np
 
 
-class blas:
+class kernel:
     def __init__(self):
         self.obj = cgpt.create_blas()
         self.references = []
-        self.verbose = g.default.is_verbose("blas")
+        self.verbose = g.default.is_verbose("kernel")
 
     def __del__(self):
         cgpt.delete_blas(self.obj)
@@ -74,7 +74,7 @@ class blas:
 
     def contract(self, *code):
         assert all(isinstance(x, (list, tuple)) for x in code)
-        assert all(isinstance(x[0], g.accelerator_buffer) for x in code)
+        assert all(isinstance(x[0], g.accelerator.buffer) for x in code)
         assert all(isinstance(y, str) for x in code for y in x[1:])
 
         # add references so that memory used will not be deallocated
@@ -270,3 +270,22 @@ class blas:
 
     def __str__(self):
         return cgpt.blas_str(self.obj)
+
+    # need to add comms to blas
+    # this really needs to be renamed accelerator_kernels
+    # make a module g.accelerator.buffer
+    # g.accelerator.kernel
+    def communicate_expand(self, buffer_dimension, grid_dimension, grid):
+        assert self.shape[buffer_dimension] == grid.ldimensions[grid_dimension]
+        assert grid.cg.n == 1
+        # TODO
+        return new_buffer
+
+    def restrict(self, global_buffer, buffer_dimension, grid_dimension, grid):
+        assert global_buffer.shape[buffer_dimension] == grid.gdimensions[grid_dimension]
+        assert self.shape[buffer_dimension] == grid.ldimensions[grid_dimension]
+        assert all(global_buffer.shape[i] == self.shape[i] for i in range(len(self.shape)) if i != buffer_dimension)
+        assert global_buffer.dtype is self.dtype
+        assert len(global_buffer.shape) == len(self.shape)
+        assert grid.cg.n == 1
+        # TODO

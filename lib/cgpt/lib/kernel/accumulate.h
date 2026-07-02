@@ -18,26 +18,52 @@
 */
 
 
-template<typename dtype>
-class cgpt_transpose_device_memory_view_job : public cgpt_blas_job_base {
- public:
 
-  void* dst, *src;
-  std::vector<long> shape, axes;
+template<typename dtype>
+class cgpt_accumulate_job : public cgpt_kernel_job_base {
+ public:
   
-  cgpt_transpose_device_memory_view_job(void* _dst, void* _src, std::vector<long>& _shape, std::vector<long>& _axes) :
-    dst(_dst), src(_src), shape(_shape), axes(_axes) { }
+  deviceVector<dtype*> BLAS_A;
+  long n;
   
-  virtual ~cgpt_transpose_device_memory_view_job() { }
+  cgpt_accumulate_job(long _n,
+		      std::vector<void*>& _data_A) :
+    BLAS_A(_data_A.size()),
+    n(_n) {
+
+    acceleratorCopyToDevice(&_data_A[0], &BLAS_A[0], sizeof(dtype*)*BLAS_A.size());
+
+  }
+  
+  virtual ~cgpt_accumulate_job() {
+  }
 
   std::string description() {
     std::ostringstream oss;
-    oss << "Transpose(" << shape << ")";
+    oss << "Accumulate(" << n << ") x " << BLAS_A.size();
     return oss.str();
   }
 
   virtual void execute(GridBLAS& blas) {
+    constexpr int Nsimd = sizeof(vComplexF) / sizeof(ComplexF);
+    dtype** p = &BLAS_A[0];
+    ASSERT(n % Nsimd == 0);
+    long m = BLAS_A.size();
+
     blas.synchronise();
-    cgpt_transpose_device_memory_view<dtype>(dst, src, shape, axes);
+
+    accelerator_for(i,n/Nsimd,Nsimd,{
+#ifdef GRID_SIMT
+	long j = acceleratorSIMTlane(Nsimd);
+#else
+	for (long j=0;j<Nsimd;j++) {
+#endif
+	long l = i * Nsimd + j;
+	for (long k=1;k<m;k++)
+	  p[0][l] += p[k][l];
+#ifndef GRID_SIMT
+	}
+#endif
+      });
   }
 };

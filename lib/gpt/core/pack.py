@@ -60,7 +60,7 @@ class pack(auto_tuned_class):
                 padding = padding + [0] * (len(shape) - len(padding))
             shape = [x + y for x, y in zip(shape, padding)]
             bytes_scale_num = int(np.prod(shape))
-        return g.accelerator_buffer(
+        return g.accelerator.buffer(
             (self.rank_bytes() * bytes_scale_num) // bytes_scale_denom,
             tuple(shape),
             self.grid.precision.complex_dtype,

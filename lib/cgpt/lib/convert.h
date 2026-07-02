@@ -102,6 +102,11 @@ static void cgpt_convert(PyObject* in, uint64_t& out) {
 static void cgpt_convert(PyObject* in,  std::string& s) {
   if (PyType_Check(in)) {
     s=((PyTypeObject*)in)->tp_name;
+  } else if (PyModule_Check(in)) {
+    s=PyModule_GetName(in);
+    size_t pos = s.rfind('.');
+    if (pos != std::string::npos)
+      s=s.substr(pos + 1);
   } else if (PyBytes_Check(in)) {
     s=PyBytes_AsString(in);
   } else if (PyUnicode_Check(in)) {

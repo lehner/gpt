@@ -31,7 +31,7 @@ class indexed_sum(linear_map):
     def __str__(self):
         return f"indexed_sum({self.shape}, {self.index.shape})"
 
-    def commit_single_contract_after_trace(self, traced_source_buffer, target_buffer, blas):
+    def commit_single_contract_after_trace(self, traced_source_buffer, target_buffer, kernel):
         # now create index buffer
         traced_source_shape = traced_source_buffer.shape
         stride = int(np.prod(traced_source_shape[1:]))
@@ -39,7 +39,7 @@ class indexed_sum(linear_map):
 
         index_tag = (stride, tsize)
         if index_tag not in self.cache:
-            buffer_index = g.accelerator_buffer(
+            buffer_index = g.accelerator.buffer(
                 shape=(tsize,), dtype=np.dtype(self.index.dtype).type
             )
             buffer_index_array = np.repeat(self.index, stride) * stride + np.tile(
@@ -56,5 +56,5 @@ class indexed_sum(linear_map):
 
         target_buffer_shape = target_buffer.shape
         target_buffer.reshape((int(np.prod(target_buffer_shape)),))
-        blas.indexed_sum(traced_source_buffer, buffer_index, target_buffer)
+        kernel.indexed_sum(traced_source_buffer, buffer_index, target_buffer)
         target_buffer.reshape(target_buffer_shape)

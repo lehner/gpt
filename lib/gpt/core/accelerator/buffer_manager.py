@@ -20,7 +20,7 @@ import gpt as g
 import numpy as np
 
 
-class accelerator_buffer_manager:
+class buffer_manager:
     def __init__(self):
         self.avail = {}
         self.stats = {"new": 0, "reuse": 0}
@@ -31,7 +31,7 @@ class accelerator_buffer_manager:
             self.stats["reuse"] += 1
             return self.avail[tag].pop().reshape(shape)
         self.stats["new"] += 1
-        return g.accelerator_buffer(shape=shape, dtype=dtype)
+        return g.accelerator.buffer(shape=shape, dtype=dtype)
 
     def release(self, buf):
         tag = (int(np.prod(buf.shape)), buf.dtype)

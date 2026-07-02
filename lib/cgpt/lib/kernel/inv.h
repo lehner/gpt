@@ -17,53 +17,37 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-
-
 template<typename dtype>
-class cgpt_accumulate_job : public cgpt_blas_job_base {
+class cgpt_inv_job : public cgpt_kernel_job_base {
  public:
   
-  deviceVector<dtype*> BLAS_A;
+  deviceVector<dtype*> BLAS_A, BLAS_C;
   long n;
   
-  cgpt_accumulate_job(long _n,
-		      std::vector<void*>& _data_A) :
-    BLAS_A(_data_A.size()),
+  cgpt_inv_job(long _n,
+		void* _data_A, int64_t* idxA,
+		void* _data_C, int64_t* idxC,
+		long num_elements) :
+  
+    BLAS_A(num_elements),
+    BLAS_C(num_elements),
     n(_n) {
-
-    acceleratorCopyToDevice(&_data_A[0], &BLAS_A[0], sizeof(dtype*)*BLAS_A.size());
+    
+    fill_pointers(&BLAS_A[0], (dtype*)_data_A, idxA, num_elements, n*n);
+    fill_pointers(&BLAS_C[0], (dtype*)_data_C, idxC, num_elements, n*n);
 
   }
   
-  virtual ~cgpt_accumulate_job() {
+  virtual ~cgpt_inv_job() {
   }
 
   std::string description() {
     std::ostringstream oss;
-    oss << "Accumulate(" << n << ") x " << BLAS_A.size();
+    oss << "Inv(" << n << ") x " << BLAS_A.size();
     return oss.str();
   }
 
   virtual void execute(GridBLAS& blas) {
-    constexpr int Nsimd = sizeof(vComplexF) / sizeof(ComplexF);
-    dtype** p = &BLAS_A[0];
-    ASSERT(n % Nsimd == 0);
-    long m = BLAS_A.size();
-
-    blas.synchronise();
-
-    accelerator_for(i,n/Nsimd,Nsimd,{
-#ifdef GRID_SIMT
-	long j = acceleratorSIMTlane(Nsimd);
-#else
-	for (long j=0;j<Nsimd;j++) {
-#endif
-	long l = i * Nsimd + j;
-	for (long k=1;k<m;k++)
-	  p[0][l] += p[k][l];
-#ifndef GRID_SIMT
-	}
-#endif
-      });
+    blas.inverseBatched(n, BLAS_A, BLAS_C);
   }
 };

@@ -19,7 +19,7 @@
 
 
 template<typename dtype>
-class cgpt_det_job : public cgpt_blas_job_base {
+class cgpt_det_job : public cgpt_kernel_job_base {
  public:
   
   deviceVector<dtype*> BLAS_A, BLAS_C;

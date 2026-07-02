@@ -42,8 +42,8 @@ def test_mm_blas(nc, nrhs, precision):
 
     # self-consistent transposition with blas
     tr = bA.transpose(4, 5, 3, 2, 1, 0)
-    tr2 = g.accelerator_buffer(tr)
-    g.blas().transpose(tr2, bA, (4, 5, 3, 2, 1, 0))()
+    tr2 = g.accelerator.buffer(tr)
+    g.accelerator.kernel().transpose(tr2, bA, (4, 5, 3, 2, 1, 0))()
     eps = np.linalg.norm(tr.to_array() - tr2.to_array())
     assert eps == 0.0
 
@@ -66,7 +66,7 @@ def test_mm_blas(nc, nrhs, precision):
         g.message(f"Test cshift with {sh}: {eps}")
         assert eps < 1e-14
 
-    g.blas().gemm(1.0, bA[idxA], bB[idxB].T, 0.0, bC[idxA].T)()
+    g.accelerator.kernel().gemm(1.0, bA[idxA], bB[idxB].T, 0.0, bC[idxA].T)()
 
     pC.from_accelerator_buffer(bC)
 
@@ -94,11 +94,11 @@ test_mm_blas(12, 8, g.double)
 def run_gemm_versus_numpy(m, k, n, dtype, eps_ref):
 
     g.message(f"blas versus numpy for {m}x{k}x{n} with dtype={dtype.__name__}")
-    A = g.accelerator_buffer(shape=(2, m, k), dtype=dtype)
-    A_T = g.accelerator_buffer(shape=(2, k, m), dtype=dtype)
-    B = g.accelerator_buffer(shape=(2, k, n), dtype=dtype)
-    B_T = g.accelerator_buffer(shape=(2, n, k), dtype=dtype)
-    C = g.accelerator_buffer(shape=(2, m, n), dtype=dtype)
+    A = g.accelerator.buffer(shape=(2, m, k), dtype=dtype)
+    A_T = g.accelerator.buffer(shape=(2, k, m), dtype=dtype)
+    B = g.accelerator.buffer(shape=(2, k, n), dtype=dtype)
+    B_T = g.accelerator.buffer(shape=(2, n, k), dtype=dtype)
+    C = g.accelerator.buffer(shape=(2, m, n), dtype=dtype)
     _A = A.to_array()
     _B = B.to_array()
     _C = C.to_array()
@@ -123,31 +123,31 @@ def run_gemm_versus_numpy(m, k, n, dtype, eps_ref):
         assert eps < eps_ref
 
     _AB = np.einsum("xij,xjk->xik", _A, _B)
-    g.blas().gemm(1.0, A[idx], B[idx], 0.0, C[idx])()
+    g.accelerator.kernel().gemm(1.0, A[idx], B[idx], 0.0, C[idx])()
     check("A B = C")
 
     _AB = np.einsum("xji,xjk->xik", _A_T, _B)
-    g.blas().gemm(1.0, A_T[idx].T, B[idx], 0.0, C[idx])()
+    g.accelerator.kernel().gemm(1.0, A_T[idx].T, B[idx], 0.0, C[idx])()
     check("A.T B = C")
 
     _AB = np.einsum("xji,xkj->xik", _A_T, _B_T)
-    g.blas().gemm(1.0, A_T[idx].T, B_T[idx].T, 0.0, C[idx])()
+    g.accelerator.kernel().gemm(1.0, A_T[idx].T, B_T[idx].T, 0.0, C[idx])()
     check("A.T B.T = C")
 
     _AB = np.einsum("xij,xkj->xik", _A, _B_T)
-    g.blas().gemm(1.0, A[idx], B_T[idx].T, 0.0, C[idx])()
+    g.accelerator.kernel().gemm(1.0, A[idx], B_T[idx].T, 0.0, C[idx])()
     check("A B.T = C")
 
     _AB = np.einsum("xji,xjk->xik", np.conjugate(_A_T), _B)
-    g.blas().gemm(1.0, A_T[idx].H, B[idx], 0.0, C[idx])()
+    g.accelerator.kernel().gemm(1.0, A_T[idx].H, B[idx], 0.0, C[idx])()
     check("A.H B = C")
 
     _AB = np.einsum("xij,xkj->xik", _A, np.conjugate(_B_T))
-    g.blas().gemm(1.0, A[idx], B_T[idx].H, 0.0, C[idx])()
+    g.accelerator.kernel().gemm(1.0, A[idx], B_T[idx].H, 0.0, C[idx])()
     check("A B.H = C")
 
     _AB = np.einsum("xji,xkj->xik", np.conjugate(_A_T), np.conjugate(_B_T))
-    g.blas().gemm(1.0, A_T[idx].H, B_T[idx].H, 0.0, C[idx])()
+    g.accelerator.kernel().gemm(1.0, A_T[idx].H, B_T[idx].H, 0.0, C[idx])()
     check("A.H B.H = C")
 
 
@@ -157,7 +157,7 @@ run_gemm_versus_numpy(4, 6, 8, np.complex64, 1e-6)
 # test tensor <> accelerator_buffer
 for i in [0, 1, 2, 3, 5]:
     eps = np.linalg.norm(
-        g.accelerator_buffer(g.gamma[i].tensor()).to_array() - g.gamma[i].tensor().array
+        g.accelerator.buffer(g.gamma[i].tensor()).to_array() - g.gamma[i].tensor().array
     )
     g.message(f"Tensor <> accelerator_buffer test: {eps}")
     assert eps < 1e-13
@@ -178,10 +178,10 @@ for precision in [g.single, g.double]:
         A.coordinates(range(4))[:, 1].reshape(local_buffer_shape)
         + grid.processor_coor[2] * grid.ldimensions[2]
     )
-    indices = g.accelerator_buffer(indices_numpy)
-    target = g.accelerator_buffer(np.zeros(shape=(grid.gdimensions[2],), dtype=A.dtype))
-    tr = g.accelerator_buffer(shape=local_buffer_shape, dtype=A.dtype)
-    blas = g.blas()
+    indices = g.accelerator.buffer(indices_numpy)
+    target = g.accelerator.buffer(np.zeros(shape=(grid.gdimensions[2],), dtype=A.dtype))
+    tr = g.accelerator.buffer(shape=local_buffer_shape, dtype=A.dtype)
+    blas = g.accelerator.kernel()
     blas.indexed_sum(A, indices, target)
     blas.indexed_sum(A, indices, target, accumulate=True)
     blas()
@@ -193,7 +193,7 @@ for precision in [g.single, g.double]:
     assert eps < precision.eps * 50
 
     # test contraction with complex conjugation
-    blas = g.blas()
+    blas = g.accelerator.kernel()
     blas.contract(
         (tr, "x", "y", "z", "t"),
         (A, "x", "y", "z", "t", "n", "c1", "c2"),
@@ -206,10 +206,10 @@ for precision in [g.single, g.double]:
 
     es = g.einsum(
         "xyztncc->xyzt",
-        g.accelerator_buffer(M),
-        g.accelerator_buffer(shape=tr.shape, dtype=grid.precision.complex_dtype),
+        g.accelerator.buffer(M),
+        g.accelerator.buffer(shape=tr.shape, dtype=grid.precision.complex_dtype),
     )
-    y = es(g.accelerator_buffer(M))
+    y = es(g.accelerator.buffer(M))
 
     eps = (
         g.norm2(g.trace(M * g.adj(M)) - g.pack(g.complex(grid)).from_accelerator_buffer(tr)) ** 0.5
@@ -224,18 +224,18 @@ for precision in [g.single, g.double]:
 
     # test indexed sum
     sref = g.slice(g.trace(M * g.adj(M)), 3)
-    blas = g.blas()
-    corr = g.accelerator_buffer(shape=(grid.gdimensions[3],), dtype=grid.precision.complex_dtype)
+    blas = g.accelerator.kernel()
+    corr = g.accelerator.buffer(shape=(grid.gdimensions[3],), dtype=grid.precision.complex_dtype)
     pln = g.contract.plan(
-        g.accelerator_buffer_manager(),
+        g.accelerator.buffer_manager(),
         (corr, "t_global"),
         (
             g.contract.indexed_sum(index=grid.local_indices(3), length=corr.shape[0]),
             "t_global",
             "t",
         ),
-        (g.accelerator_buffer(M), "t", "z", "y", "x", "n", "c1", "c2"),
-        (g.accelerator_buffer(M), "t", "z", "y", "x", "n", "c1", "c2", "*"),
+        (g.accelerator.buffer(M), "t", "z", "y", "x", "n", "c1", "c2"),
+        (g.accelerator.buffer(M), "t", "z", "y", "x", "n", "c1", "c2", "*"),
     )
     g.message(pln)
     pln(blas)
@@ -251,19 +251,19 @@ for precision in [g.single, g.double]:
 
     # second indexed sum test
     sref = g.slice(M, 3)
-    blas = g.blas()
-    corr = g.accelerator_buffer(
+    blas = g.accelerator.kernel()
+    corr = g.accelerator.buffer(
         shape=(grid.gdimensions[3], 3, 3), dtype=grid.precision.complex_dtype
     )
     pln = g.contract.plan(
-        g.accelerator_buffer_manager(),
+        g.accelerator.buffer_manager(),
         (corr, "t_global", "c1", "c2"),
         (
             g.contract.indexed_sum(index=grid.local_indices(3), length=corr.shape[0]),
             "t_global",
             "t",
         ),
-        (g.accelerator_buffer(M), "t", "z", "y", "x", "n", "c1", "c2"),
+        (g.accelerator.buffer(M), "t", "z", "y", "x", "n", "c1", "c2"),
     )
     g.message(pln)
     pln(blas)
@@ -288,7 +288,7 @@ for precision in [g.single, g.double]:
     t = g.timer("determinant")
     t("blas")
     C = A.empty_clone(A.shape[0:-2])
-    g.blas().det(A[idx], C[idx])()
+    g.accelerator.kernel().det(A[idx], C[idx])()
     Mdet = g.complex(grid)
     g.pack(Mdet).from_accelerator_buffer(C)
 
@@ -315,7 +315,7 @@ for precision in [g.single, g.double]:
     t = g.timer("inverse")
     t("blas_setup")
     C = A.empty_clone()
-    blas = g.blas().inv(A[idx], C[idx])  # inv and det do not guarantee that A remains unchanged
+    blas = g.accelerator.kernel().inv(A[idx], C[idx])  # inv and det do not guarantee that A remains unchanged
     t("blas_exec")
     blas()
     t("blas_setup")
@@ -333,11 +333,11 @@ for precision in [g.single, g.double]:
 
 # test general tensor contractions
 
-tmp = g.accelerator_buffer_manager()
-target = g.accelerator_buffer(shape=(18,), dtype=np.complex128)
-prop = g.accelerator_buffer(shape=(18, 4, 3, 4, 3), dtype=np.complex128)
-S = g.accelerator_buffer(shape=(4, 4, 4), dtype=np.complex128)
-C = g.accelerator_buffer(shape=(3, 3, 3), dtype=np.complex128)
+tmp = g.accelerator.buffer_manager()
+target = g.accelerator.buffer(shape=(18,), dtype=np.complex128)
+prop = g.accelerator.buffer(shape=(18, 4, 3, 4, 3), dtype=np.complex128)
+S = g.accelerator.buffer(shape=(4, 4, 4), dtype=np.complex128)
+C = g.accelerator.buffer(shape=(3, 3, 3), dtype=np.complex128)
 
 np.random.seed(13)
 prop.from_array(np.random.normal(size=prop.shape).astype(prop.dtype))
@@ -374,7 +374,7 @@ g.message(tmp)
 
 t = g.timer()
 t("slow")
-blas = g.blas()
+blas = g.accelerator.kernel()
 plan(blas, optimal=False)
 blas()
 t()
@@ -382,7 +382,7 @@ t()
 res1 = target.to_array()
 
 t("fast")
-blas = g.blas()
+blas = g.accelerator.kernel()
 plan(blas)
 blas()
 t()

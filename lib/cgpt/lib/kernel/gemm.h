@@ -18,7 +18,7 @@
 */
 
 template<typename dtype>
-class cgpt_gemm_job : public cgpt_blas_job_base {
+class cgpt_gemm_job : public cgpt_kernel_job_base {
  public:
   
   deviceVector<dtype*> BLAS_A, BLAS_B, BLAS_C;

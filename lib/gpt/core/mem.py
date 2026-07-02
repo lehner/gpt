@@ -19,10 +19,6 @@
 import resource, gpt, cgpt, os
 
 
-class accelerator:
-    pass
-
-
 class host:
     pass
 

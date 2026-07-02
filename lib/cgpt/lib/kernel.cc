@@ -17,23 +17,23 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "lib.h"
-#include "blas.h"
+#include "kernel.h"
 
-EXPORT(create_blas,{
-    return PyLong_FromVoidPtr((void*)new cgpt_blas());
+EXPORT(create_kernel,{
+    return PyLong_FromVoidPtr((void*)new cgpt_kernel());
   });
 
-EXPORT(delete_blas,{
+EXPORT(delete_kernel,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {
       return NULL;
     }
     
-    delete ((cgpt_blas*)p);
+    delete ((cgpt_kernel*)p);
     return PyLong_FromLong(0);
   });
 
-EXPORT(blas_accumulate,{
+EXPORT(kernel_accumulate,{
     long n;
     void* p;
     PyObject* v, *_dtype;
@@ -61,16 +61,16 @@ EXPORT(blas_accumulate,{
     const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
 
     if (!strcmp(__dtype,"numpy.complex64")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexF>(n,a_data));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexF>(n,a_data));
     } else if (!strcmp(__dtype,"numpy.complex128")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexD>(n,a_data));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexD>(n,a_data));
     } else {
       ERR("Unknown dtype = %s\n", __dtype);
     }
     return PyLong_FromLong(0);
   });
 
-EXPORT(blas_indexed_sum,{
+EXPORT(kernel_indexed_sum,{
     void* p;
     long id, ts, acc;
     PyObject* sv, *iv, *tv, *_dtype;
@@ -103,16 +103,16 @@ EXPORT(blas_indexed_sum,{
     cgpt_convert(ss, _ss);
 
     if (!strcmp(__dtype,"numpy.complex64")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexF>(sp,tp,ip,_ss,ts,id,acc));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexF>(sp,tp,ip,_ss,ts,id,acc));
     } else if (!strcmp(__dtype,"numpy.complex128")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexD>(sp,tp,ip,_ss,ts,id,acc));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexD>(sp,tp,ip,_ss,ts,id,acc));
     } else {
       ERR("Unknown dtype = %s\n", __dtype);
     }
     return PyLong_FromLong(0);
   });
 
-EXPORT(blas_contract,{
+EXPORT(kernel_contract,{
     void* p;
     PyObject* _tensors, *_strides, *_dimensions, *_conjugate, *_dtype;
 
@@ -147,16 +147,16 @@ EXPORT(blas_contract,{
     cgpt_convert(_conjugate, conjugate);
 
     if (!strcmp(__dtype,"numpy.complex64")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_contract_job<ComplexF>(tensors, strides, dimensions, conjugate));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_contract_job<ComplexF>(tensors, strides, dimensions, conjugate));
     } else if (!strcmp(__dtype,"numpy.complex128")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_contract_job<ComplexD>(tensors, strides, dimensions, conjugate));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_contract_job<ComplexD>(tensors, strides, dimensions, conjugate));
     } else {
       ERR("Unknown dtype = %s\n", __dtype);
     }
     return PyLong_FromLong(0);
   });
 
-EXPORT(blas_gemm,{
+EXPORT(kernel_gemm,{
     void* p;
     long m,n,k,oA,oB,oC;
     PyObject* _alpha, *_beta, *vA, *vB, *vC, *iA, *iB, *iC, *_dtype, *_precision;
@@ -245,9 +245,9 @@ EXPORT(blas_gemm,{
     const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
 
     if (!strcmp(__dtype,"numpy.complex64")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_gemm_job<ComplexF>(m,n,k,alpha,a_data_A, a_idxA, oA,a_data_B,a_idxB, oB,beta,a_data_C,a_idxC,a_n,precision));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_gemm_job<ComplexF>(m,n,k,alpha,a_data_A, a_idxA, oA,a_data_B,a_idxB, oB,beta,a_data_C,a_idxC,a_n,precision));
     } else if (!strcmp(__dtype,"numpy.complex128")) {
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_gemm_job<ComplexD>(m,n,k,alpha,a_data_A, a_idxA, oA,a_data_B,a_idxB, oB,beta,a_data_C,a_idxC,a_n,precision));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_gemm_job<ComplexD>(m,n,k,alpha,a_data_A, a_idxA, oA,a_data_B,a_idxB, oB,beta,a_data_C,a_idxC,a_n,precision));
     } else {
       ERR("Unknown dtype = %s\n", __dtype);
     }
@@ -255,7 +255,7 @@ EXPORT(blas_gemm,{
   });
 
 template<typename jobCF, typename jobCD>
-PyObject* blas_unary(PyObject* args, bool to_scalar) {
+PyObject* kernel_unary(PyObject* args, bool to_scalar) {
   void* p;
   long n;
   PyObject* vA, *vC, *iA, *iC, *_dtype;
@@ -303,16 +303,16 @@ PyObject* blas_unary(PyObject* args, bool to_scalar) {
   const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
   
   if (!strcmp(__dtype,"numpy.complex64")) {
-    ((cgpt_blas*)p)->jobs.push_back(new jobCF(n,data_A, idxA, data_C,idxC,nA));
+    ((cgpt_kernel*)p)->jobs.push_back(new jobCF(n,data_A, idxA, data_C,idxC,nA));
   } else if (!strcmp(__dtype,"numpy.complex128")) {
-    ((cgpt_blas*)p)->jobs.push_back(new jobCD(n,data_A, idxA, data_C,idxC,nA));
+    ((cgpt_kernel*)p)->jobs.push_back(new jobCD(n,data_A, idxA, data_C,idxC,nA));
   } else {
     ERR("Unknown dtype = %s\n", __dtype);
   }
   return PyLong_FromLong(0);
 }
 
-EXPORT(blas_transpose_device_memory_view,{
+EXPORT(kernel_transpose_device_memory_view,{
     
     PyObject* smv, *dmv, *_shape, *_axes;
     void* p;
@@ -339,11 +339,11 @@ EXPORT(blas_transpose_device_memory_view,{
 
     switch (element_size) {
     case sizeof(float):
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<float>(data_dmv, data_smv, shape, axes)); break;
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<float>(data_dmv, data_smv, shape, axes)); break;
     case sizeof(double):
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<double>(data_dmv, data_smv, shape, axes)); break;
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<double>(data_dmv, data_smv, shape, axes)); break;
     case sizeof(ComplexD):
-      ((cgpt_blas*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<ComplexD>(data_dmv, data_smv, shape, axes)); break;
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_transpose_device_memory_view_job<ComplexD>(data_dmv, data_smv, shape, axes)); break;
     default:
       ERR("Unknown element_size = %ld", element_size);
     }
@@ -351,30 +351,30 @@ EXPORT(blas_transpose_device_memory_view,{
     return PyLong_FromLong(0);
   });
 
-EXPORT(blas_inv,{
-    return blas_unary<cgpt_inv_job<ComplexF>, cgpt_inv_job<ComplexD> >(args, false);
+EXPORT(kernel_inv,{
+    return kernel_unary<cgpt_inv_job<ComplexF>, cgpt_inv_job<ComplexD> >(args, false);
   });
 
-EXPORT(blas_det,{
-    return blas_unary<cgpt_det_job<ComplexF>, cgpt_det_job<ComplexD> >(args, false);
+EXPORT(kernel_det,{
+    return kernel_unary<cgpt_det_job<ComplexF>, cgpt_det_job<ComplexD> >(args, false);
   });
 
-EXPORT(blas_execute,{
+EXPORT(kernel_execute,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {
       return NULL;
     }
     
-    ((cgpt_blas*)p)->execute();
+    ((cgpt_kernel*)p)->execute();
     
     return PyLong_FromLong(0);
   });
 
-EXPORT(blas_str,{
+EXPORT(kernel_str,{
     void* p;
     if (!PyArg_ParseTuple(args, "l", &p)) {
       return NULL;
     }
     
-    return PyUnicode_FromString(((cgpt_blas*)p)->str().c_str());
+    return PyUnicode_FromString(((cgpt_kernel*)p)->str().c_str());
   });

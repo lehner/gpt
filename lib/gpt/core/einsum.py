@@ -27,15 +27,15 @@ def accelerator_buffer_einsum(fmt, *bufs):
     dtype = target.dtype
 
     def exec(*sources):
-        bufs = [g.accelerator_buffer(shape=shape, dtype=dtype)] + list(sources)
-        g.blas().contract(*[(b, *[c for c in f]) for b, f in zip(bufs, fmt)])()
+        bufs = [g.accelerator.buffer(shape=shape, dtype=dtype)] + list(sources)
+        g.accelerator.kernel().contract(*[(b, *[c for c in f]) for b, f in zip(bufs, fmt)])()
         return bufs[0]
 
     return exec
 
 
 def einsum(contraction, *tensors):
-    if isinstance(tensors[-1], g.accelerator_buffer):
+    if isinstance(tensors[-1], g.accelerator.buffer):
         return accelerator_buffer_einsum(contraction, *tensors)
 
     contraction = contraction.split("->")

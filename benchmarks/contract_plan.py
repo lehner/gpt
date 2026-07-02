@@ -2,8 +2,6 @@
 import gpt as g
 import numpy as np
 
-g.mem_report(details=True)
-
 g.default.set_verbose("blas", True)
 g.default.set_verbose("contract_plan", True)
 
@@ -45,8 +43,7 @@ plan_proton_2pt = g.contract.plan(
 
 slice_t = g.contract.indexed_sum(index=target.indices(range(1)) % 16, length=16)
 
-g.mem_report(details=True)
-
+# what do I need
 plan_proton_2pt_corr = g.contract.plan(
     tmp,
     (corr, "t", "ext_spin"),

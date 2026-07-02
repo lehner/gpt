@@ -95,7 +95,7 @@ def create_stencil_operator_n_rhs(points, ip, n_rhs, ocb, packed_right_hand_side
     cR = bR.coordinates(range(nd - dim_offset))
     bulkR = bR.bulk(cR, margin=margin_reduced)
 
-    blas = g.blas()
+    blas = g.accelerator.kernel()
     for a in range(npoints_parallel):
         A = []
         B = []

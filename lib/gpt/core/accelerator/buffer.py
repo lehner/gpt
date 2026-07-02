@@ -20,7 +20,7 @@ import gpt, cgpt, sys
 import numpy as np
 
 
-class accelerator_buffer_view:
+class buffer_view:
     op_N = 0
     op_T = 1
     op_C = 2
@@ -32,24 +32,24 @@ class accelerator_buffer_view:
 
     @property
     def T(self):
-        return accelerator_buffer_view(self.buffer, self.idx, self.op ^ self.op_T)
+        return buffer_view(self.buffer, self.idx, self.op ^ self.op_T)
 
     @property
     def H(self):
-        return accelerator_buffer_view(self.buffer, self.idx, self.op ^ (self.op_T | self.op_C))
+        return buffer_view(self.buffer, self.idx, self.op ^ (self.op_T | self.op_C))
 
 
-class accelerator_buffer:
+class buffer:
     def __init__(self, nbytes=None, shape=None, dtype=None):
 
-        if isinstance(nbytes, accelerator_buffer):
+        if isinstance(nbytes, buffer):
             self.view = nbytes.view
             self.shape = nbytes.shape
             self.dtype = nbytes.dtype
             return
 
         # if isinstance(nbytes, list):
-        #    if all(isinstance(x, accelerator_buffer) for x in nbytes):
+        #    if all(isinstance(x, buffer) for x in nbytes):
         #        assert all(x.shape == nbytes[0].shape for x in nbytes[1:])
         #        assert all(x.dtype is nbytes[0].dtype for x in nbytes[1:])
 
@@ -94,7 +94,7 @@ class accelerator_buffer:
         if shape is None:
             shape = self.shape
         nbytes = self.calculate_size(shape, self.dtype)
-        return accelerator_buffer(nbytes, shape, self.dtype)
+        return buffer(nbytes, shape, self.dtype)
 
     def calculate_size(self, shape, dtype):
         sites = int(np.prod(shape))
@@ -129,7 +129,7 @@ class accelerator_buffer:
         shape = tuple(
             shape[0:axes0] + [int(np.prod(shape[axes0 : axes1 + 1]))] + shape[axes1 + 1 :]
         )
-        copy = accelerator_buffer(self)
+        copy = buffer(self)
         copy.shape = shape
         return copy
 
@@ -139,19 +139,19 @@ class accelerator_buffer:
         shape = list(self.shape)
         assert shape[axis] == first * second
         shape = tuple(shape[0:axis] + [first, second] + shape[axis + 1 :])
-        copy = accelerator_buffer(self)
+        copy = buffer(self)
         copy.shape = shape
         return copy
 
     def __getitem__(self, idx):
-        return accelerator_buffer_view(self, idx)
+        return buffer_view(self, idx)
 
     def check_size(self):
         if self.shape is not None and self.dtype is not None:
             assert len(self.view) == self.calculate_size(self.shape, self.dtype)
 
     def __str__(self):
-        return f"accelerator_buffer({len(self.view)}, {self.shape}, {self.dtype.__name__})"
+        return f"accelerator.buffer({len(self.view)}, {self.shape}, {self.dtype.__name__})"
 
     def to_array(self):
         self.check_size()

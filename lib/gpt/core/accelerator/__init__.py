@@ -16,16 +16,6 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt as g
-from gpt.core.contract.plan import contract_plan_general
-from gpt.core.contract.indexed_sum import indexed_sum
-# next: fft, or just general matrix_operator?
-# matrix operator which knows its domain should work
-
-
-def plan(temporary_manager, *code):
-    return contract_plan_general(temporary_manager, 0, *code)
-
-
-def plan_general(temporary_manager, nrandom, *code):
-    return contract_plan_general(temporary_manager, nrandom, *code)
+from gpt.core.accelerator.buffer_manager import buffer_manager
+from gpt.core.accelerator.buffer import buffer
+from gpt.core.accelerator.kernel import kernel

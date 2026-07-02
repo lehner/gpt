@@ -33,7 +33,7 @@ from gpt.core.log import message
 from gpt.core.auto_tune import auto_tuned_class, auto_tuned_method
 from gpt.core.pin import pin
 from gpt.core.stack import get_call_stack
-from gpt.core.buffer_manager import accelerator_buffer_manager
+import gpt.core.accelerator
 from gpt.core.convert import convert
 from gpt.core.cshift_plan import cshift_plan
 from gpt.core.parallel_transport import path, parallel_transport, parallel_transport_matrix
@@ -102,8 +102,7 @@ from gpt.core.coordinates import (
     parity,
 )
 from gpt.core.random import random, sha256
-from gpt.core.mem import mem_info, mem_report, accelerator, host
-from gpt.core.accelerator_buffer import accelerator_buffer
+from gpt.core.mem import mem_info, mem_report, host
 from gpt.core.merge import *
 from gpt.core.split import *
 import gpt.core.domain
@@ -122,5 +121,4 @@ import gpt.core.stencil
 from gpt.core.einsum import einsum
 import gpt.core.global_sum
 from gpt.core.pack import pack
-from gpt.core.blas import blas
 import gpt.core.fingerprint

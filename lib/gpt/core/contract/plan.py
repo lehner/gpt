@@ -116,7 +116,7 @@ class contract_plan_general:
  Total cost of optimal path = {total_cst:.2e} or a {orig_cst / total_cst:.2e} speedup
         """
 
-    def commit_single_contract(self, blas, code, bm, use_gemm):
+    def commit_single_contract(self, kernel, code, bm, use_gemm):
         verbose = g.default.is_verbose("contract_plan")
 
         # target may need a re-shape if temporary memory was re-used
@@ -131,17 +131,17 @@ class contract_plan_general:
             A = code[1][1:]
             B = code[2][1:]
             contraction_indices = (set(A) | set(B)) - set(C) - set("*")
-            if isinstance(code[2][0], linear_map) and isinstance(code[1][0], g.accelerator_buffer):
+            if isinstance(code[2][0], linear_map) and isinstance(code[1][0], g.accelerator.buffer):
                 code[1], code[2] = code[2], code[1]
             if isinstance(code[1][0], linear_map):
-                if code[1][0].commit_single_contract(self.util, blas, code, bm):
+                if code[1][0].commit_single_contract(self.util, kernel, code, bm):
                     if verbose:
                         g.message(f"Perform linear map {str(code[1][0])}")
                     return
             elif (
                 len(contraction_indices) == 1
                 and use_gemm
-                and all(isinstance(c[0], g.accelerator_buffer) for c in code)
+                and all(isinstance(c[0], g.accelerator.buffer) for c in code)
             ):
                 i = contraction_indices.pop()
                 # now test that contraction index only appears once in A and B each and split them
@@ -170,8 +170,8 @@ class contract_plan_general:
                         A_transposed = bm.request(shape=A_reshape, dtype=target.dtype)
                         B_transposed = bm.request(shape=B_reshape, dtype=target.dtype)
 
-                        blas.transpose(A_transposed, code[1][0], A_order)
-                        blas.transpose(B_transposed, code[2][0], B_order)
+                        kernel.transpose(A_transposed, code[1][0], A_order)
+                        kernel.transpose(B_transposed, code[2][0], B_order)
 
                         A_transposed.reshape(
                             A_reshape[0:ncommon]
@@ -193,9 +193,9 @@ class contract_plan_general:
 
                         idx = A_transposed.indices(range(ncommon))
                         if not A_dag and not B_dag:
-                            blas.gemm(1.0, A_transposed[idx], B_transposed[idx].T, 0.0, target[idx])
+                            kernel.gemm(1.0, A_transposed[idx], B_transposed[idx].T, 0.0, target[idx])
                         elif not A_dag and B_dag:
-                            blas.gemm(1.0, A_transposed[idx], B_transposed[idx].H, 0.0, target[idx])
+                            kernel.gemm(1.0, A_transposed[idx], B_transposed[idx].H, 0.0, target[idx])
                         else:
                             raise ValueError(f"GEMM {A_dag} - {B_dag} not yet implemented")
 
@@ -212,12 +212,12 @@ class contract_plan_general:
                         return
 
         # submit contraction if no linear operator is present
-        assert all(isinstance(c[0], g.accelerator_buffer) for c in code)
-        blas.contract(*code)
+        assert all(isinstance(c[0], g.accelerator.buffer) for c in code)
+        kernel.contract(*code)
 
-    def __call__(self, blas, optimal=True, use_gemm=True):
+    def __call__(self, kernel, optimal=True, use_gemm=True):
         if optimal:
-            bm = g.accelerator_buffer_manager()
+            bm = g.accelerator.buffer_manager()
 
             for c in self.codes:
 
@@ -227,22 +227,22 @@ class contract_plan_general:
                 if this_use_gemm is None:
                     # do tuning
 
-                    g.default.push_verbose("blas", False)
+                    g.default.push_verbose("kernel", False)
                     g.default.push_verbose("contract_plan", False)
 
                     # Time
-                    test_blas = g.blas()
-                    self.commit_single_contract(test_blas, c, bm, False)
-                    test_blas()  # warmup
+                    test_kernel = g.kernel()
+                    self.commit_single_contract(test_kernel, c, bm, False)
+                    test_kernel()  # warmup
                     t0 = -g.time()
-                    test_blas()
+                    test_kernel()
                     t0 += g.time()
 
-                    test_blas = g.blas()
-                    self.commit_single_contract(test_blas, c, bm, True)
-                    test_blas()  # warmup
+                    test_kernel = g.kernel()
+                    self.commit_single_contract(test_kernel, c, bm, True)
+                    test_kernel()  # warmup
                     t1 = -g.time()
-                    test_blas()
+                    test_kernel()
                     t1 += g.time()
 
                     g.default.pop_verbose()
@@ -252,9 +252,9 @@ class contract_plan_general:
 
                     atc.save_tuned_parameters(this_use_gemm)
 
-                self.commit_single_contract(blas, c, bm, this_use_gemm)
+                self.commit_single_contract(kernel, c, bm, this_use_gemm)
         else:
             # submit contraction if no linear operator is present
-            assert all(isinstance(c[0], g.accelerator_buffer) for c in self.code)
-            blas.contract(*self.code)
-        return blas
+            assert all(isinstance(c[0], g.accelerator.buffer) for c in self.code)
+            kernel.contract(*self.code)
+        return kernel

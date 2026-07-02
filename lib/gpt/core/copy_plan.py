@@ -60,7 +60,7 @@ class copy_plan_view:
             self.memory_layout[id(x)] = n
             if isinstance(x, gpt.lattice):
                 n += len(x.v_obj)
-            elif isinstance(x, gpt.accelerator_buffer):
+            elif isinstance(x, gpt.accelerator.buffer):
                 n += 1
             elif isinstance(x, memoryview):
                 n += 1

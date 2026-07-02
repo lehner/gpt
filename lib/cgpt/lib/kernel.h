@@ -16,9 +16,9 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-class cgpt_blas_job_base {
+class cgpt_kernel_job_base {
  public:
-  virtual ~cgpt_blas_job_base() {
+  virtual ~cgpt_kernel_job_base() {
   }
 
   template<typename dtype>
@@ -36,26 +36,26 @@ class cgpt_blas_job_base {
   virtual std::string description() = 0;
 };
 
-#include "blas/gemm.h"
-#include "blas/det.h"
-#include "blas/inv.h"
-#include "blas/accumulate.h"
-#include "blas/indexed_sum.h"
-#include "blas/contract.h"
-#include "blas/transpose.h"
+#include "kernel/gemm.h"
+#include "kernel/det.h"
+#include "kernel/inv.h"
+#include "kernel/accumulate.h"
+#include "kernel/indexed_sum.h"
+#include "kernel/contract.h"
+#include "kernel/transpose.h"
 
 
-class cgpt_blas {
+class cgpt_kernel {
  public:
 
-  std::vector<cgpt_blas_job_base*> jobs;
+  std::vector<cgpt_kernel_job_base*> jobs;
   std::vector<std::string> desc;
   GridBLAS blas;
 
-  cgpt_blas() {
+  cgpt_kernel() {
   }
 
-  ~cgpt_blas() {
+  ~cgpt_kernel() {
     for (auto j : jobs)
       delete j;
   }

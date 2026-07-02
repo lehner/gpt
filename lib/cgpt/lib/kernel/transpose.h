@@ -17,37 +17,27 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-template<typename dtype>
-class cgpt_inv_job : public cgpt_blas_job_base {
- public:
-  
-  deviceVector<dtype*> BLAS_A, BLAS_C;
-  long n;
-  
-  cgpt_inv_job(long _n,
-		void* _data_A, int64_t* idxA,
-		void* _data_C, int64_t* idxC,
-		long num_elements) :
-  
-    BLAS_A(num_elements),
-    BLAS_C(num_elements),
-    n(_n) {
-    
-    fill_pointers(&BLAS_A[0], (dtype*)_data_A, idxA, num_elements, n*n);
-    fill_pointers(&BLAS_C[0], (dtype*)_data_C, idxC, num_elements, n*n);
 
-  }
+template<typename dtype>
+class cgpt_transpose_device_memory_view_job : public cgpt_kernel_job_base {
+ public:
+
+  void* dst, *src;
+  std::vector<long> shape, axes;
   
-  virtual ~cgpt_inv_job() {
-  }
+  cgpt_transpose_device_memory_view_job(void* _dst, void* _src, std::vector<long>& _shape, std::vector<long>& _axes) :
+    dst(_dst), src(_src), shape(_shape), axes(_axes) { }
+  
+  virtual ~cgpt_transpose_device_memory_view_job() { }
 
   std::string description() {
     std::ostringstream oss;
-    oss << "Inv(" << n << ") x " << BLAS_A.size();
+    oss << "Transpose(" << shape << ")";
     return oss.str();
   }
 
   virtual void execute(GridBLAS& blas) {
-    blas.inverseBatched(n, BLAS_A, BLAS_C);
+    blas.synchronise();
+    cgpt_transpose_device_memory_view<dtype>(dst, src, shape, axes);
   }
 };

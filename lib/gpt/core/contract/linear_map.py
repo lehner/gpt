@@ -20,7 +20,7 @@ import gpt as g
 
 
 class linear_map:
-    def commit_single_contract(self, util, blas, code, bm):
+    def commit_single_contract(self, util, kernel, code, bm):
         assert len(code) == 3
         target, index, source = code
         assert len(index) == 3
@@ -28,8 +28,8 @@ class linear_map:
         assert index_op is self
 
         # make sure we have target and source buffers
-        assert isinstance(target[0], g.accelerator_buffer)
-        assert isinstance(source[0], g.accelerator_buffer)
+        assert isinstance(target[0], g.accelerator.buffer)
+        assert isinstance(source[0], g.accelerator.buffer)
 
         target_buffer = target[0]
         target_indices = target[1:]
@@ -51,9 +51,9 @@ class linear_map:
         traced_source_shape = util.shape_from_dimensions(traced_source_indices)
 
         traced_source_buffer = bm.request(shape=traced_source_shape, dtype=target_buffer.dtype)
-        blas.contract((traced_source_buffer, *traced_source_indices), source)
+        kernel.contract((traced_source_buffer, *traced_source_indices), source)
 
-        self.commit_single_contract_after_trace(traced_source_buffer, target_buffer, blas)
+        self.commit_single_contract_after_trace(traced_source_buffer, target_buffer, kernel)
 
         bm.release(traced_source_buffer)
         return True
