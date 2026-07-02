@@ -130,7 +130,7 @@ class contract_plan_general:
             C = code[0][1:]
             A = code[1][1:]
             B = code[2][1:]
-            contraction_indices = (set(A) | set(B)) - set(C)
+            contraction_indices = (set(A) | set(B)) - set(C) - set("*")
             if isinstance(code[2][0], linear_map) and isinstance(code[1][0], g.accelerator_buffer):
                 code[1], code[2] = code[2], code[1]
             if isinstance(code[1][0], linear_map):
@@ -146,11 +146,19 @@ class contract_plan_general:
                 i = contraction_indices.pop()
                 # now test that contraction index only appears once in A and B each and split them
                 if A.count(i) == 1 and B.count(i) == 1:
+                    A_dag = "*" in A
+                    B_dag = "*" in B
+                    if A_dag:
+                        A_dag, B_dag = B_dag, A_dag
+                        A, B = B, A
+                    A = [x for x in A if x != "*"]
+                    B = [x for x in B if x != "*"]
                     A_order = [A.index(x) for x in C + [i] if x in A]
                     B_order = [B.index(x) for x in C + [i] if x in B]
                     assert len(A_order) == len(A)
                     assert len(B_order) == len(B)
                     ncommon = len(A) + len(B) - len(C) - 2
+                    assert "*" not in C
                     A_reordered = [A[i] for i in A_order]
                     B_reordered = [B[i] for i in B_order]
                     AB_rest = A_reordered[0:-1] + B_reordered[ncommon:-1]
@@ -184,7 +192,12 @@ class contract_plan_general:
                         )
 
                         idx = A_transposed.indices(range(ncommon))
-                        blas.gemm(1.0, A_transposed[idx], B_transposed[idx].T, 0.0, target[idx])
+                        if not A_dag and not B_dag:
+                            blas.gemm(1.0, A_transposed[idx], B_transposed[idx].T, 0.0, target[idx])
+                        elif not A_dag and B_dag:
+                            blas.gemm(1.0, A_transposed[idx], B_transposed[idx].H, 0.0, target[idx])
+                        else:
+                            raise ValueError(f"GEMM {A_dag} - {B_dag} not yet implemented")
 
                         if verbose:
                             g.message(

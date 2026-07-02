@@ -267,3 +267,6 @@ class blas:
             t_cgpt += cgpt.timer_end()
             g.message(t_cgpt)
         return self
+
+    def __str__(self):
+        return cgpt.blas_str(self.obj)

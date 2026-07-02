@@ -166,6 +166,14 @@ class grid:
             parent=parent,
         )
 
+    def local_indices(self, *dimensions):
+        assert len(dimensions) == 1
+        # multi dimensions later
+        return (
+            np.arange(self.ldimensions[dimensions[0]])
+            + self.processor_coor[dimensions[0]] * self.ldimensions[dimensions[0]]
+        )
+
     def checkerboarded(self, cb):
         if cb == self.cb:
             return self

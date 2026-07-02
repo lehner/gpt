@@ -60,12 +60,16 @@ class cgpt_blas {
       delete j;
   }
 
-  void execute() {
-    if (!desc.size()) {
+  void ensure_desc() {
+    if (desc.size() != jobs.size()) {
       desc.resize(jobs.size());
       for (size_t i=0;i<jobs.size();i++)
 	desc[i] = jobs[i]->description();
     }
+  }
+  
+  void execute() {
+    ensure_desc();
     
     for (size_t i=0;i<jobs.size();i++) {
       Timer(desc[i]);
@@ -75,5 +79,14 @@ class cgpt_blas {
     Timer();
 
     blas.synchronise();
+  }
+
+  std::string str() {
+    ensure_desc();
+	
+    std::ostringstream oss;
+    for (size_t i=0;i<jobs.size();i++)
+      oss << "Step[" << i << "] = " << desc[i] << std::endl;
+    return oss.str();
   }
 };

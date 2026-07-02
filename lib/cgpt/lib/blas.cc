@@ -369,3 +369,12 @@ EXPORT(blas_execute,{
     
     return PyLong_FromLong(0);
   });
+
+EXPORT(blas_str,{
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+    
+    return PyUnicode_FromString(((cgpt_blas*)p)->str().c_str());
+  });
