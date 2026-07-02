@@ -23,17 +23,17 @@ import numpy as np
 
 class kernel:
     def __init__(self):
-        self.obj = cgpt.create_blas()
+        self.obj = cgpt.create_kernel()
         self.references = []
         self.verbose = g.default.is_verbose("kernel")
 
     def __del__(self):
-        cgpt.delete_blas(self.obj)
+        cgpt.delete_kernel(self.obj)
 
     def accumulate(self, buffers):
         assert all([buffers[0].shape == b.shape for b in buffers])
         self.references.append([x.view for x in buffers])
-        cgpt.blas_accumulate(
+        cgpt.kernel_accumulate(
             self.obj, int(np.prod(buffers[0].shape)), [x.view for x in buffers], buffers[0].dtype
         )
         return self
@@ -48,7 +48,7 @@ class kernel:
         self.references.append(target)
         for i in range(len(index.shape)):
             assert index.shape[i] == source.shape[i]
-        cgpt.blas_indexed_sum(
+        cgpt.kernel_indexed_sum(
             self.obj,
             source.view,
             source.shape,
@@ -69,7 +69,7 @@ class kernel:
         assert dst.dtype is src.dtype
         self.references.append(src)
         self.references.append(dst)
-        cgpt.blas_transpose_device_memory_view(self.obj, dst.view, src.view, src.shape, axes)
+        cgpt.kernel_transpose_device_memory_view(self.obj, dst.view, src.view, src.shape, axes)
         return self
 
     def contract(self, *code):
@@ -106,11 +106,12 @@ class kernel:
             tstrides = [int(np.prod(tensors[t].shape[i + 1 :])) for i in range(len(indices))]
             for d in range(len(indices)):
                 strides[t][tags[indices[d]][0]] += tstrides[d]
-        cgpt.blas_contract(
+        cgpt.kernel_contract(
             self.obj, [x.view for x in tensors], strides, dimensions, conjugate, dtype
         )
 
-        # TODO: contract needs to detect simple gemm cases and use it in this case; seems should work after contract_plan
+        # TODO: need multi_contract version which can do multiple at the same time if they
+        # share parallel indices
         return self
 
     def gemm(self, alpha, bv_A, bv_B, beta, bv_C, precision=None):
@@ -183,7 +184,7 @@ class kernel:
         if precision is None:
             precision = "default"
 
-        cgpt.blas_gemm(
+        cgpt.kernel_gemm(
             self.obj,
             i,
             k,
@@ -220,7 +221,7 @@ class kernel:
 
         assert n1 == n2 and n1 == n3 and n1 == n4
 
-        cgpt.blas_inv(
+        cgpt.kernel_inv(
             self.obj,
             n1,
             bv_A.buffer.view,
@@ -247,7 +248,7 @@ class kernel:
 
         assert n1 == n2
 
-        cgpt.blas_det(
+        cgpt.kernel_det(
             self.obj,
             n1,
             bv_A.buffer.view,
@@ -261,20 +262,17 @@ class kernel:
     def __call__(self):
         if self.verbose:
             cgpt.timer_begin()
-        cgpt.blas_execute(self.obj)
+        cgpt.kernel_execute(self.obj)
         if self.verbose:
-            t_cgpt = g.timer("cgpt_blas_execute", True)
+            t_cgpt = g.timer("cgpt_kernel_execute", True)
             t_cgpt += cgpt.timer_end()
             g.message(t_cgpt)
         return self
 
     def __str__(self):
-        return cgpt.blas_str(self.obj)
+        return cgpt.kernel_str(self.obj)
 
-    # need to add comms to blas
-    # this really needs to be renamed accelerator_kernels
-    # make a module g.accelerator.buffer
-    # g.accelerator.kernel
+    # add comms
     def communicate_expand(self, buffer_dimension, grid_dimension, grid):
         assert self.shape[buffer_dimension] == grid.ldimensions[grid_dimension]
         assert grid.cg.n == 1
