@@ -102,7 +102,13 @@ class cgpt_contract_job : public cgpt_blas_job_base {
 
   std::string description() {
     std::ostringstream oss;
-    oss << "Contract(" << total << ")";
+    oss << "Contract(" << total << "; ";
+    for (long d=0;d<ndimensions;d++) {
+      if (d != 0)
+	oss << ((d == target_dimensions) ? " | " : ", ");
+      oss << dimensions[d];
+    }
+    oss << ")" ;    
     return oss.str();
   }
 

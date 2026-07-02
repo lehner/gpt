@@ -51,7 +51,7 @@ class cgpt_indexed_sum_job : public cgpt_blas_job_base {
   
   std::string description() {
     std::ostringstream oss;
-    oss << "IndexedSum(" << ss << ")";
+    oss << "IndexedSum(" << ss << "; " << parallel << " | " << ortho << ")";
     return oss.str();
   }
 

@@ -249,6 +249,34 @@ for precision in [g.single, g.double]:
         g.message(f"Test indexed sum in contract.plan: {eps}")
         assert eps < grid.precision.eps * 50
 
+    # second indexed sum test
+    sref = g.slice(M, 3)
+    blas = g.blas()
+    corr = g.accelerator_buffer(
+        shape=(grid.gdimensions[3], 3, 3), dtype=grid.precision.complex_dtype
+    )
+    pln = g.contract.plan(
+        g.accelerator_buffer_manager(),
+        (corr, "t_global", "c1", "c2"),
+        (
+            g.contract.indexed_sum(index=grid.local_indices(3), length=corr.shape[0]),
+            "t_global",
+            "t",
+        ),
+        (g.accelerator_buffer(M), "t", "z", "y", "x", "n", "c1", "c2"),
+    )
+    g.message(pln)
+    pln(blas)
+    # string representation of kernels queued up in blas
+    g.message(f"Blas plan:\n{blas}")
+    # execut kernels
+    blas()
+    scon = grid.globalsum(corr.to_array())
+    for x, y in zip(sref, scon):
+        eps = np.linalg.norm(x.array - y) / np.linalg.norm(y)
+        g.message(f"Test indexed sum (2) in contract.plan: {eps}")
+        assert eps < grid.precision.eps * 50
+
     # test complex matrix
     M = g.mcomplex(grid, 16)
     rng.cnormal(M)
