@@ -378,3 +378,36 @@ EXPORT(kernel_str,{
     
     return PyUnicode_FromString(((cgpt_kernel*)p)->str().c_str());
   });
+
+EXPORT(kernel_fft,{
+    void* p;
+    long howmany, size, sign;
+    PyObject* s, *d, *_dtype;
+
+    if (!PyArg_ParseTuple(args, "lOOOlll", &p, &s, &d, &_dtype, &howmany, &size, &sign)) {
+      return NULL;
+    }
+
+    ASSERT(PyMemoryView_Check(s));
+    ASSERT(PyMemoryView_Check(d));
+
+    Py_buffer* _buf_s = PyMemoryView_GET_BUFFER(s);
+    Py_buffer* _buf_d = PyMemoryView_GET_BUFFER(d);
+    ASSERT(PyBuffer_IsContiguous(_buf_s,'C'));
+    ASSERT(PyBuffer_IsContiguous(_buf_d,'C'));
+
+    void* _s = _buf_s->buf;
+    void* _d = _buf_d->buf;
+    
+    ASSERT(PyType_Check(_dtype));
+    const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
+
+    if (!strcmp(__dtype,"numpy.complex64")) {
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_fft_job<ComplexF>(_s, _d, howmany, size, sign));
+    } else if (!strcmp(__dtype,"numpy.complex128")) {
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_fft_job<ComplexD>(_s, _d, howmany, size, sign));
+    } else {
+      ERR("Unknown dtype = %s\n", __dtype);
+    }
+    return PyLong_FromLong(0);
+  });

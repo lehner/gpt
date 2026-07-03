@@ -5,6 +5,25 @@ import numpy as np
 # TODO: test blas for inner_products, block project/promote
 # for this need blas routine to work on flat lattice.mview(g.accelerator)
 
+# rank_fft test
+np.random.seed(13)
+bufa = np.random.normal(size=(4, 3, 48)).astype(np.complex128)
+buf = g.accelerator.buffer(bufa)
+tar = g.accelerator.buffer(bufa)
+k = g.accelerator.kernel().rank_fft(buf, tar, True)()
+tara = np.fft.fft(bufa)
+
+eps = np.linalg.norm(tar.to_array() - tara) / np.linalg.norm(tara)
+g.message(f"FFT test: {eps}")
+assert eps < 1e-13
+
+k = g.accelerator.kernel().rank_fft(buf, tar, False)()
+tara = np.fft.ifft(bufa, norm="forward")
+
+eps = np.linalg.norm(tar.to_array() - tara) / np.linalg.norm(tara)
+g.message(f"iFFT test: {eps}")
+assert eps < 1e-13
+
 
 def test_mm_blas(nc, nrhs, precision):
     g.message(f"Test MM {nc}x{nc} with {nrhs} right-hand sides with precision {precision.__name__}")
@@ -315,7 +334,9 @@ for precision in [g.single, g.double]:
     t = g.timer("inverse")
     t("blas_setup")
     C = A.empty_clone()
-    blas = g.accelerator.kernel().inv(A[idx], C[idx])  # inv and det do not guarantee that A remains unchanged
+    blas = g.accelerator.kernel().inv(
+        A[idx], C[idx]
+    )  # inv and det do not guarantee that A remains unchanged
     t("blas_exec")
     blas()
     t("blas_setup")

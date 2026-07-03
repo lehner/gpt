@@ -18,31 +18,19 @@
 #
 import gpt as g
 import cgpt
+import numpy as np
 
 
-class kernel:
-    from gpt.core.accelerator.kernel_blas import gemm, inv, det
-    from gpt.core.accelerator.kernel_core import accumulate, indexed_sum, contract, transpose
-    from gpt.core.accelerator.kernel_comm import copy, expand_to_global, restrict_to_local
-    from gpt.core.accelerator.kernel_fft import rank_fft, fft
+def rank_fft(self, source, target, forward=True):
+    assert source.shape == target.shape
+    assert source.dtype is target.dtype
+    howmany = int(np.prod(source.shape[0:-1]))
+    size = source.shape[-1]
+    cgpt.kernel_fft(
+        self.obj, source.view, target.view, target.dtype, howmany, size, 1 if forward else -1
+    )
+    return self
 
-    def __init__(self):
-        self.obj = cgpt.create_kernel()
-        self.references = []
-        self.verbose = g.default.is_verbose("kernel")
 
-    def __del__(self):
-        cgpt.delete_kernel(self.obj)
-
-    def __call__(self):
-        if self.verbose:
-            cgpt.timer_begin()
-        cgpt.kernel_execute(self.obj)
-        if self.verbose:
-            t_cgpt = g.timer("cgpt_kernel_execute", True)
-            t_cgpt += cgpt.timer_end()
-            g.message(t_cgpt)
-        return self
-
-    def __str__(self):
-        return cgpt.kernel_str(self.obj)
+def fft(self, source, target, dimension, forward=True):
+    return self

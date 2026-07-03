@@ -39,6 +39,7 @@ class cgpt_kernel_job_base {
 #include "kernel/gemm.h"
 #include "kernel/det.h"
 #include "kernel/inv.h"
+#include "kernel/fft.h"
 #include "kernel/accumulate.h"
 #include "kernel/indexed_sum.h"
 #include "kernel/contract.h"

@@ -18,31 +18,18 @@
 #
 import gpt as g
 import cgpt
+import numpy as np
 
 
-class kernel:
-    from gpt.core.accelerator.kernel_blas import gemm, inv, det
-    from gpt.core.accelerator.kernel_core import accumulate, indexed_sum, contract, transpose
-    from gpt.core.accelerator.kernel_comm import copy, expand_to_global, restrict_to_local
-    from gpt.core.accelerator.kernel_fft import rank_fft, fft
+def copy(self, plan, dst, src):
+    self.references.append((plan, dst, src))
+    # cgpt.kernel_copy(plan.obj, dst, src)
+    return self
 
-    def __init__(self):
-        self.obj = cgpt.create_kernel()
-        self.references = []
-        self.verbose = g.default.is_verbose("kernel")
 
-    def __del__(self):
-        cgpt.delete_kernel(self.obj)
+def expand_to_global(self):
+    return self
 
-    def __call__(self):
-        if self.verbose:
-            cgpt.timer_begin()
-        cgpt.kernel_execute(self.obj)
-        if self.verbose:
-            t_cgpt = g.timer("cgpt_kernel_execute", True)
-            t_cgpt += cgpt.timer_end()
-            g.message(t_cgpt)
-        return self
 
-    def __str__(self):
-        return cgpt.kernel_str(self.obj)
+def restrict_to_local(self):
+    return self
