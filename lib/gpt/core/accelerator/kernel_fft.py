@@ -21,13 +21,14 @@ import cgpt
 import numpy as np
 
 
-def rank_fft(self, source, target, forward=True):
+def rank_fft(self, source, target, sign):
+    # target_{*x} = e^{sign i (2pi/L) n x} source_{*n}
     assert source.shape == target.shape
     assert source.dtype is target.dtype
     howmany = int(np.prod(source.shape[0:-1]))
     size = source.shape[-1]
     cgpt.kernel_fft(
-        self.obj, source.view, target.view, target.dtype, howmany, size, 1 if forward else -1
+        self.obj, source.view, target.view, target.dtype, howmany, size, sign
     )
     return self
 

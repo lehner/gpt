@@ -10,19 +10,41 @@ np.random.seed(13)
 bufa = np.random.normal(size=(4, 3, 48)).astype(np.complex128)
 buf = g.accelerator.buffer(bufa)
 tar = g.accelerator.buffer(bufa)
-k = g.accelerator.kernel().rank_fft(buf, tar, True)()
+g.accelerator.kernel().rank_fft(buf, tar, -1)()
 tara = np.fft.fft(bufa)
 
-eps = np.linalg.norm(tar.to_array() - tara) / np.linalg.norm(tara)
+# np.fft.fft has exp(-1j*x*p) for forward transformation
+# g.fft()    has exp(+1j*x*p) for forward transformation
+# rank_fft   has exp(sign * 1j*x*p) with sign being the last parameter
+
+resa = tar.to_array()
+eps = np.linalg.norm(resa - tara) / np.linalg.norm(tara)
 g.message(f"FFT test: {eps}")
 assert eps < 1e-13
 
-k = g.accelerator.kernel().rank_fft(buf, tar, False)()
-tara = np.fft.ifft(bufa, norm="forward")
+# spot check
+ft_7 = np.sum(np.exp(-1j*(2*np.pi/bufa.shape[2])*7*np.arange(bufa.shape[2])) * bufa, axis=2)
+eps = np.linalg.norm(resa[:,:,7] - ft_7) / np.linalg.norm(ft_7)
+g.message(f"FFT spot check: {eps}")
+assert eps < 1e-13
 
-eps = np.linalg.norm(tar.to_array() - tara) / np.linalg.norm(tara)
+# and inverse check
+g.accelerator.kernel().rank_fft(g.accelerator.buffer(tara), tar, +1)()
+eps = np.linalg.norm(tar.to_array()/bufa.shape[2] - bufa) / np.linalg.norm(bufa)
 g.message(f"iFFT test: {eps}")
 assert eps < 1e-13
+
+# check lattice fft versus accelerator buffer (lattice fft has +1 sign for forward operation)
+# lat = g.random("test").cnormal(g.complex(g.grid([48,4,4], g.double)))
+# lat_buf = g.accelerator.buffer(lat).reshape((4,4,48))
+# mom_lat = g(g.fft(dims=[0]) * lat)
+# mom_lat_buf = g.accelerator.buffer(mom_lat).reshape((4,4,48))
+# tar = g.accelerator.buffer(shape=(4,4,48), dtype=np.complex128)
+# g.accelerator.kernel().rank_fft(lat_buf, tar, +1)()
+
+# eps = np.linalg.norm(tar.to_array()/48 - mom_lat_buf.to_array()) / np.linalg.norm(mom_lat_buf.to_array())
+# g.message(f"Lattice FFT <> accelerator.buffer: {eps}")
+# assert eps < 1e-13
 
 
 def test_mm_blas(nc, nrhs, precision):

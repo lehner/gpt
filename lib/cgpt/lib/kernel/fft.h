@@ -32,12 +32,10 @@ class cgpt_fft_job : public cgpt_kernel_job_base {
   cgpt_fft_job(void* _s, void* _d, long _count, long _size, long _sign) :
     s((scalar*)_s), d((scalar*)_d), count(_count), size(_size), sign(_sign) {
 
-    deviceVector<dtype> dummy(2);
-    scalar* buf = (scalar*)&dummy[0];
     ASSERT(size < ((long)1 << 31));
     int n[]     = {(int)size};
 
-    plan = FFTW<dtype>::fftw_plan_many_dft(1, n, count, buf, n, 1, size, buf, n, 1, size, (sign > 0) ? FFTW_FORWARD : FFTW_BACKWARD,  FFTW_ESTIMATE);
+    plan = FFTW<dtype>::fftw_plan_many_dft(1, n, count, s, n, 1, size, d, n, 1, size, (sign < 0) ? FFTW_FORWARD : FFTW_BACKWARD,  FFTW_ESTIMATE);
   }
 
   std::string description() {
@@ -52,6 +50,6 @@ class cgpt_fft_job : public cgpt_kernel_job_base {
 
   virtual void execute(GridBLAS& blas) {
     blas.synchronise();
-    FFTW<dtype>::fftw_execute_dft(plan,s,d,(sign > 0) ? FFTW_FORWARD : FFTW_BACKWARD);
+    FFTW<dtype>::fftw_execute_dft(plan,s,d,(sign < 0) ? FFTW_FORWARD : FFTW_BACKWARD);
   }
 };
