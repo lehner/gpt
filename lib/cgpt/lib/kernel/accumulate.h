@@ -26,11 +26,12 @@ class cgpt_accumulate_job : public cgpt_kernel_job_base {
   deviceVector<dtype*> BLAS_A;
   deviceVector<dtype> scales;
   long n;
+  bool zero;
   
   cgpt_accumulate_job(long _n,
-		      std::vector<void*>& _data_A, dtype* _scales) :
+		      std::vector<void*>& _data_A, dtype* _scales, bool _zero) :
     BLAS_A(_data_A.size()), scales(_data_A.size() - 1),
-    n(_n) {
+    n(_n), zero(_zero) {
 
     acceleratorCopyToDevice(&_data_A[0], &BLAS_A[0], sizeof(dtype*)*BLAS_A.size());
     acceleratorCopyToDevice(&_scales[0], &scales[0], sizeof(dtype)*scales.size());
@@ -52,6 +53,7 @@ class cgpt_accumulate_job : public cgpt_kernel_job_base {
     ASSERT(n % Nsimd == 0);
     long m = BLAS_A.size();
     dtype* s = &scales[0];
+    bool z = zero;
 
     blas.synchronise();
 
@@ -62,6 +64,8 @@ class cgpt_accumulate_job : public cgpt_kernel_job_base {
 	for (long j=0;j<Nsimd;j++) {
 #endif
 	long l = i * Nsimd + j;
+	if (z)
+	  p[0][l] = 0.0;
 	for (long k=1;k<m;k++)
 	  p[0][l] += p[k][l] * s[k-1];
 #ifndef GRID_SIMT

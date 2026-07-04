@@ -25,6 +25,11 @@ eps = np.linalg.norm(tara - bufa)
 g.message(f"Copy test: {eps}")
 assert eps == 0.0
 
+# accumulate test
+k = g.accelerator.kernel().accumulate([tar, buf], np.array([2j]).astype(np.complex128), True)()
+eps = np.linalg.norm(tar.to_array() - 2j*buf.to_array()) / np.linalg.norm(tar.to_array())
+g.message(f"Accumulate test: {eps}")
+assert eps < 1e-13
 
 # rank_fft test
 k = g.accelerator.kernel().rank_fft(buf, tar, -1)

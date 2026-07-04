@@ -34,11 +34,11 @@ EXPORT(delete_kernel,{
   });
 
 EXPORT(kernel_accumulate,{
-    long n;
+    long n, _zero;
     void* p;
     PyObject* v, *_dtype, *_scales;
 
-    if (!PyArg_ParseTuple(args, "llOOO", &p, &n, &v, &_dtype, &_scales)) {
+    if (!PyArg_ParseTuple(args, "llOOOl", &p, &n, &v, &_dtype, &_scales, &_zero)) {
       return NULL;
     }
 
@@ -68,14 +68,14 @@ EXPORT(kernel_accumulate,{
       cgpt_numpy_import_vector(_scales,scales,Nm);
       ASSERT(Nm == (int)n_buf - 1);
 
-      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexF>(n,a_data,scales));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexF>(n,a_data,scales,_zero));
     } else if (!strcmp(__dtype,"numpy.complex128")) {
 
       ComplexD* scales;
       cgpt_numpy_import_vector(_scales,scales,Nm);
       ASSERT(Nm == (int)n_buf - 1);
       
-      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexD>(n,a_data,scales));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexD>(n,a_data,scales,_zero));
     } else {
       ERR("Unknown dtype = %s\n", __dtype);
     }
