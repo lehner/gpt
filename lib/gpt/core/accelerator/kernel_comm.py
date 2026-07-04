@@ -22,8 +22,10 @@ import numpy as np
 
 
 def copy(self, plan, dst, src):
+    dst = g.util.to_list(dst)
+    src = g.util.to_list(src)
     self.references.append((plan, dst, src))
-    # cgpt.kernel_copy(plan.obj, dst, src)
+    cgpt.kernel_copy(self.obj, plan.obj, dst, src, g.accelerator)
     return self
 
 

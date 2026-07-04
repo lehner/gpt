@@ -21,11 +21,21 @@ import cgpt
 import numpy as np
 
 
-def accumulate(self, buffers):
+def accumulate(self, buffers, scales=None):
     assert all([buffers[0].shape == b.shape for b in buffers])
+    assert all([buffers[0].dtype == b.dtype for b in buffers])
+    if scales is None:
+        scales = np.array([1] * (len(buffers) - 1), dtype=buffers[0].dtype)
+    assert isinstance(scales, np.ndarray)
+    assert scales.shape == (len(buffers) - 1,)
+    assert scales.dtype is buffers[0].dtype
     self.references.append([x.view for x in buffers])
     cgpt.kernel_accumulate(
-        self.obj, int(np.prod(buffers[0].shape)), [x.view for x in buffers], buffers[0].dtype
+        self.obj,
+        int(np.prod(buffers[0].shape)),
+        [x.view for x in buffers],
+        buffers[0].dtype,
+        scales,
     )
     return self
 

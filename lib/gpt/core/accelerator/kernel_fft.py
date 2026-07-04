@@ -23,15 +23,16 @@ import numpy as np
 
 def rank_fft(self, source, target, sign):
     # target_{*x} = e^{sign i (2pi/L) n x} source_{*n}
+    # no normalization, acts on fastest running dimension
     assert source.shape == target.shape
     assert source.dtype is target.dtype
     howmany = int(np.prod(source.shape[0:-1]))
     size = source.shape[-1]
-    cgpt.kernel_fft(
-        self.obj, source.view, target.view, target.dtype, howmany, size, sign
-    )
+    cgpt.kernel_fft(self.obj, source.view, target.view, target.dtype, howmany, size, sign)
     return self
 
 
 def fft(self, source, target, dimension, forward=True):
+    # will match gpt convention of having forward transformation with +1 sign
+    # need function to transpose one dimension to fastest running one, then expand to global and to undo this
     return self

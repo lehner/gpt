@@ -16,57 +16,52 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+#include "../copy.h"
 
-
-
-template<typename dtype>
-class cgpt_accumulate_job : public cgpt_kernel_job_base {
+class cgpt_copy_job : public cgpt_kernel_job_base {
  public:
-  
-  deviceVector<dtype*> BLAS_A;
-  deviceVector<dtype> scales;
-  long n;
-  
-  cgpt_accumulate_job(long _n,
-		      std::vector<void*>& _data_A, dtype* _scales) :
-    BLAS_A(_data_A.size()), scales(_data_A.size() - 1),
-    n(_n) {
 
-    acceleratorCopyToDevice(&_data_A[0], &BLAS_A[0], sizeof(dtype*)*BLAS_A.size());
-    acceleratorCopyToDevice(&_scales[0], &scales[0], sizeof(dtype)*scales.size());
-
-  }
+  gm_transfer* plan;
+  std::vector<gm_transfer::memory_view> vdst, vsrc;
   
-  virtual ~cgpt_accumulate_job() {
+  cgpt_copy_job(gm_transfer* _plan,
+		const std::vector<gm_transfer::memory_view>& _vdst,
+		const std::vector<gm_transfer::memory_view>& _vsrc) : plan(_plan),
+								      vdst(_vdst),
+								      vsrc(_vsrc)
+  {
   }
 
   std::string description() {
     std::ostringstream oss;
-    oss << "Accumulate(" << n << ") x " << BLAS_A.size();
+
+    oss << "COPY(block_size=" << plan->block_size << ", align=" << plan->global_alignment;
+
+    for (auto & rank : plan->blocks) {
+      auto rank_dst = rank.first.dst_rank;
+      auto rank_src = rank.first.src_rank;
+
+      size_t total_size = 0;
+      for (auto & index : rank.second) {
+	auto index_dst = index.first.dst_index;
+	auto index_src = index.first.src_index;
+	size_t blocks = index.second.size();
+	size_t size = plan->block_size * blocks;
+	total_size += size;
+      }
+
+      oss << " | " << total_size << " bytes " << rank_src << " -> " << rank_dst;
+    }
+
+    oss << ")";
     return oss.str();
+  }
+  
+  virtual ~cgpt_copy_job() {
   }
 
   virtual void execute(GridBLAS& blas) {
-    constexpr int Nsimd = sizeof(vComplexF) / sizeof(ComplexF);
-    dtype** p = &BLAS_A[0];
-    ASSERT(n % Nsimd == 0);
-    long m = BLAS_A.size();
-    dtype* s = &scales[0];
-
     blas.synchronise();
-
-    accelerator_for(i,n/Nsimd,Nsimd,{
-#ifdef GRID_SIMT
-	long j = acceleratorSIMTlane(Nsimd);
-#else
-	for (long j=0;j<Nsimd;j++) {
-#endif
-	long l = i * Nsimd + j;
-	for (long k=1;k<m;k++)
-	  p[0][l] += p[k][l] * s[k-1];
-#ifndef GRID_SIMT
-	}
-#endif
-      });
+    plan->execute(vdst, vsrc);
   }
 };

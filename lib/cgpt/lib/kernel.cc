@@ -36,9 +36,9 @@ EXPORT(delete_kernel,{
 EXPORT(kernel_accumulate,{
     long n;
     void* p;
-    PyObject* v, *_dtype;
+    PyObject* v, *_dtype, *_scales;
 
-    if (!PyArg_ParseTuple(args, "llOO", &p, &n, &v, &_dtype)) {
+    if (!PyArg_ParseTuple(args, "llOOO", &p, &n, &v, &_dtype, &_scales)) {
       return NULL;
     }
 
@@ -60,10 +60,22 @@ EXPORT(kernel_accumulate,{
     ASSERT(PyType_Check(_dtype));
     const char* __dtype = ((PyTypeObject*)_dtype)->tp_name;
 
+    int Nm;
+    
     if (!strcmp(__dtype,"numpy.complex64")) {
-      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexF>(n,a_data));
+
+      ComplexF* scales;
+      cgpt_numpy_import_vector(_scales,scales,Nm);
+      ASSERT(Nm == (int)n_buf - 1);
+
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexF>(n,a_data,scales));
     } else if (!strcmp(__dtype,"numpy.complex128")) {
-      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexD>(n,a_data));
+
+      ComplexD* scales;
+      cgpt_numpy_import_vector(_scales,scales,Nm);
+      ASSERT(Nm == (int)n_buf - 1);
+      
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_accumulate_job<ComplexD>(n,a_data,scales));
     } else {
       ERR("Unknown dtype = %s\n", __dtype);
     }
@@ -410,4 +422,34 @@ EXPORT(kernel_fft,{
       ERR("Unknown dtype = %s\n", __dtype);
     }
     return PyLong_FromLong(0);
+  });
+
+EXPORT(kernel_copy,{
+    long _plan;
+    void* p;
+    PyObject* _dst,* _src,* _lattice_view_location;
+    std::string lattice_view_location;
+    
+    if (!PyArg_ParseTuple(args, "llOOO", &p, &_plan, &_dst, &_src, &_lattice_view_location)) {
+      return NULL;
+    }
+
+    cgpt_convert(_lattice_view_location, lattice_view_location);
+    memory_type lattice_view_mt = cgpt_memory_type_from_string(lattice_view_location);
+
+    gm_transfer* plan = (gm_transfer*)_plan;
+
+    std::vector<gm_transfer::memory_view> vdst, vsrc;
+
+    std::vector<PyObject*> lattice_views;
+
+    cgpt_copy_add_memory_views(vdst, _dst, lattice_views, lattice_view_mt);
+    cgpt_copy_add_memory_views(vsrc, _src, lattice_views, lattice_view_mt);
+
+    ((cgpt_kernel*)p)->jobs.push_back(new cgpt_copy_job(plan, vdst, vsrc));
+
+    for (auto v : lattice_views)
+      Py_XDECREF(v);
+
+    return PyLong_FromVoidPtr(0);
   });

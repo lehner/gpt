@@ -2,15 +2,34 @@
 import gpt as g
 import numpy as np
 
-# TODO: test blas for inner_products, block project/promote
-# for this need blas routine to work on flat lattice.mview(g.accelerator)
-
-# rank_fft test
+# test buffer copy
 np.random.seed(13)
 bufa = np.random.normal(size=(4, 3, 48)).astype(np.complex128)
 buf = g.accelerator.buffer(bufa)
-tar = g.accelerator.buffer(bufa)
-g.accelerator.kernel().rank_fft(buf, tar, -1)()
+tar = g.accelerator.buffer(np.zeros(shape=buf.shape).astype(np.complex128))
+
+grid = g.grid([8, 8, 8, 8], g.double)
+cp = g.copy_plan(tar, buf)
+cp.source += g.global_memory_view(
+    grid, np.array([[grid.processor, 0, 0, len(buf.view)]], dtype=np.int64)
+)
+cp.destination += g.global_memory_view(
+    grid, np.array([[grid.processor, 0, 0, len(tar.view)]], dtype=np.int64)
+)
+cp = cp()
+k = g.accelerator.kernel().copy(cp, tar, buf)
+g.message(k)
+k()
+tara = tar.to_array()
+eps = np.linalg.norm(tara - bufa)
+g.message(f"Copy test: {eps}")
+assert eps == 0.0
+
+
+# rank_fft test
+k = g.accelerator.kernel().rank_fft(buf, tar, -1)
+g.message(k)
+k()
 tara = np.fft.fft(bufa)
 
 # np.fft.fft has exp(-1j*x*p) for forward transformation
@@ -23,14 +42,16 @@ g.message(f"FFT test: {eps}")
 assert eps < 1e-13
 
 # spot check
-ft_7 = np.sum(np.exp(-1j*(2*np.pi/bufa.shape[2])*7*np.arange(bufa.shape[2])) * bufa, axis=2)
-eps = np.linalg.norm(resa[:,:,7] - ft_7) / np.linalg.norm(ft_7)
+ft_7 = np.sum(
+    np.exp(-1j * (2 * np.pi / bufa.shape[2]) * 7 * np.arange(bufa.shape[2])) * bufa, axis=2
+)
+eps = np.linalg.norm(resa[:, :, 7] - ft_7) / np.linalg.norm(ft_7)
 g.message(f"FFT spot check: {eps}")
 assert eps < 1e-13
 
 # and inverse check
 g.accelerator.kernel().rank_fft(g.accelerator.buffer(tara), tar, +1)()
-eps = np.linalg.norm(tar.to_array()/bufa.shape[2] - bufa) / np.linalg.norm(bufa)
+eps = np.linalg.norm(tar.to_array() / bufa.shape[2] - bufa) / np.linalg.norm(bufa)
 g.message(f"iFFT test: {eps}")
 assert eps < 1e-13
 

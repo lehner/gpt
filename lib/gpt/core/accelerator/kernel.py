@@ -45,4 +45,4 @@ class kernel:
         return self
 
     def __str__(self):
-        return cgpt.kernel_str(self.obj)
+        return cgpt.kernel_str(self.obj).strip()
