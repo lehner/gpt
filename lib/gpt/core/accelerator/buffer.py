@@ -172,6 +172,9 @@ class buffer:
         args = [slice(0, L[i]) for i in range(nd)]
         return np.mgrid[tuple(args)].reshape(nd, -1).T
 
+    def strides(self):
+        return np.concatenate((np.flip(np.cumprod(np.flip(self.shape))[0:-1]), [1]))
+
     def indices(self, dimensions, shift=None):
         dimensions = list(dimensions)
         nd = len(dimensions)

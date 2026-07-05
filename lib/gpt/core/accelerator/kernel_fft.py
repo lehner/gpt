@@ -21,7 +21,7 @@ import cgpt
 import numpy as np
 
 
-def rank_fft(self, source, target, sign):
+def rank_fft(self, target, source, sign):
     # target_{*x} = e^{sign i (2pi/L) n x} source_{*n}
     # no normalization, acts on fastest running dimension
     assert source.shape == target.shape
@@ -32,7 +32,24 @@ def rank_fft(self, source, target, sign):
     return self
 
 
-def fft(self, source, target, dimension, forward=True):
+def fft(self, bm, target, source, dimension, grid, grid_dimension, forward=True):
     # will match gpt convention of having forward transformation with +1 sign
-    # need function to transpose one dimension to fastest running one, then expand to global and to undo this
+    assert source.shape == target.shape
+    assert source.dtype is target.dtype
+    nd = len(source.shape)
+    temp_shape = tuple(
+        [source.shape[i] for i in range(nd) if i != dimension]
+        + [source.shape[dimension] * grid.mpi[grid_dimension]]
+    )
+    temp = bm.request(shape=temp_shape, dtype=target.dtype)
+    temp2 = bm.request(shape=temp_shape, dtype=target.dtype)
+    self.expand_to_global_and_transpose(temp, source, dimension, grid, grid_dimension)
+    self.rank_fft(temp2, temp, +1 if forward else -1)
+    self.restrict_to_local_and_transpose(target, temp2, dimension, grid, grid_dimension)
+    if forward:
+        self.accumulate(
+            [target, target], np.array([1 / temp.shape[-1]], dtype=target.dtype), zero=True
+        )
+    bm.release(temp)
+    bm.release(temp2)
     return self

@@ -3,10 +3,48 @@ import gpt as g
 import numpy as np
 
 # test buffer copy
-np.random.seed(13)
+np.random.seed(13 + g.rank())
 bufa = np.random.normal(size=(4, 3, 48)).astype(np.complex128)
 buf = g.accelerator.buffer(bufa)
 tar = g.accelerator.buffer(np.zeros(shape=buf.shape).astype(np.complex128))
+
+
+# test fft
+# grid = g.grid([24, 30, 48], g.double)
+
+# # create reference fft
+# v = g.random("test").cnormal(g.mcolor(grid))
+
+# for dim in range(grid.nd):
+
+#     tt = g.timer("fft")
+
+#     tt("lattice")
+#     v2 = g(g.fft(dims=[dim]) * v)
+#     tt()
+
+#     tar = g.accelerator.buffer(v)
+#     k = g.accelerator.kernel().fft(
+#         g.accelerator.buffer_manager(), tar, g.accelerator.buffer(v), grid.nd - dim - 1, grid, dim
+#     )
+
+#     tt("buffer")
+#     k()
+#     tt()
+
+#     t = g.mcolor(grid)
+#     t[:] = 0
+#     g.pack(t).from_accelerator_buffer(tar)
+
+#     eps = g.norm2(t - v2) / g.norm2(v2)
+#     g.message(f"FFT[{dim}] test: {eps}")
+#     assert eps < 1e-13
+
+#     g.message(tt)
+
+# import sys
+# sys.exit(0)
+
 
 grid = g.grid([8, 8, 8, 8], g.double)
 cp = g.copy_plan(tar, buf)
@@ -27,12 +65,12 @@ assert eps == 0.0
 
 # accumulate test
 k = g.accelerator.kernel().accumulate([tar, buf], np.array([2j]).astype(np.complex128), True)()
-eps = np.linalg.norm(tar.to_array() - 2j*buf.to_array()) / np.linalg.norm(tar.to_array())
+eps = np.linalg.norm(tar.to_array() - 2j * buf.to_array()) / np.linalg.norm(tar.to_array())
 g.message(f"Accumulate test: {eps}")
 assert eps < 1e-13
 
 # rank_fft test
-k = g.accelerator.kernel().rank_fft(buf, tar, -1)
+k = g.accelerator.kernel().rank_fft(tar, buf, -1)
 g.message(k)
 k()
 tara = np.fft.fft(bufa)
@@ -55,12 +93,13 @@ g.message(f"FFT spot check: {eps}")
 assert eps < 1e-13
 
 # and inverse check
-g.accelerator.kernel().rank_fft(g.accelerator.buffer(tara), tar, +1)()
+g.accelerator.kernel().rank_fft(tar, g.accelerator.buffer(tara), +1)()
 eps = np.linalg.norm(tar.to_array() / bufa.shape[2] - bufa) / np.linalg.norm(bufa)
 g.message(f"iFFT test: {eps}")
 assert eps < 1e-13
 
 # check lattice fft versus accelerator buffer (lattice fft has +1 sign for forward operation)
+# commented out since only appropriate on single rank
 # lat = g.random("test").cnormal(g.complex(g.grid([48,4,4], g.double)))
 # lat_buf = g.accelerator.buffer(lat).reshape((4,4,48))
 # mom_lat = g(g.fft(dims=[0]) * lat)
@@ -324,7 +363,7 @@ for precision in [g.single, g.double]:
     )
     pln = g.contract.plan(
         g.accelerator.buffer_manager(),
-        (corr, "t_global", "c1", "c2"),
+        (corr, "t_global", "c1", "c2"),  # TODO: do I need to guarantee that t_global is first???
         (
             g.contract.indexed_sum(index=grid.local_indices(3), length=corr.shape[0]),
             "t_global",

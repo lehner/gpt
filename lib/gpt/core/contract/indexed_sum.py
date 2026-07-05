@@ -31,7 +31,15 @@ class indexed_sum(linear_map):
     def __str__(self):
         return f"indexed_sum({self.shape}, {self.index.shape})"
 
-    def commit_single_contract_after_trace(self, traced_source_buffer, target_buffer, kernel):
+    def commit_single_contract_after_trace(
+        self, traced_source_buffer, target_buffer, target_dimension, kernel, bm
+    ):
+
+        # TODO: generalize the following
+        # could easily do this just with transpositions, maybe this is sufficient?  better would be to just adjust the index
+        # calculation below
+        assert target_dimension == 0
+
         # now create index buffer
         traced_source_shape = traced_source_buffer.shape
         stride = int(np.prod(traced_source_shape[1:]))

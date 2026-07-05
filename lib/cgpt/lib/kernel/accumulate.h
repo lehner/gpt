@@ -64,10 +64,10 @@ class cgpt_accumulate_job : public cgpt_kernel_job_base {
 	for (long j=0;j<Nsimd;j++) {
 #endif
 	long l = i * Nsimd + j;
-	if (z)
-	  p[0][l] = 0.0;
+	dtype acc = (z) ? 0.0 : p[0][l];
 	for (long k=1;k<m;k++)
-	  p[0][l] += p[k][l] * s[k-1];
+	  acc += p[k][l] * s[k-1];
+	p[0][l] = acc;
 #ifndef GRID_SIMT
 	}
 #endif

@@ -17,14 +17,26 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.core.contract.plan import contract_plan_general
-from gpt.core.contract.indexed_sum import indexed_sum
-from gpt.core.contract.fft import fft
+import numpy as np
+from gpt.core.contract.linear_map import linear_map
 
 
-def plan(temporary_manager, *code):
-    return contract_plan_general(temporary_manager, 0, *code)
+class fft(linear_map):
+    def __init__(self, dimension, grid, forward=True, grid_dimension=None):
+        if grid_dimension is None:
+            grid_dimension = grid.nd - dimension - 1
+        self.grid_dimension = grid_dimension
+        self.grid = grid
+        self.forward = forward
+        self.shape = (grid.fdimensions[grid_dimension], grid.fdimensions[grid_dimension])
 
+    def __str__(self):
+        return f"fft({self.shape})"
 
-def plan_general(temporary_manager, nrandom, *code):
-    return contract_plan_general(temporary_manager, nrandom, *code)
+    def commit_single_contract_after_trace(
+        self, traced_source_buffer, target_buffer, target_dimension, kernel, bm
+    ):
+        assert target_dimension == 0
+        kernel.fft(
+            bm, target_buffer, traced_source_buffer, 0, self.grid, self.grid_dimension, self.forward
+        )

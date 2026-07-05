@@ -37,6 +37,12 @@ class cgpt_copy_job : public cgpt_kernel_job_base {
 
     oss << "COPY(block_size=" << plan->block_size << ", align=" << plan->global_alignment;
 
+    size_t total_local = 0;
+    size_t total_send = 0;
+    size_t total_receive = 0;
+    size_t n_sender = 0;
+    size_t n_receiver = 0;
+    
     for (auto & rank : plan->blocks) {
       auto rank_dst = rank.first.dst_rank;
       auto rank_src = rank.first.src_rank;
@@ -50,10 +56,21 @@ class cgpt_copy_job : public cgpt_kernel_job_base {
 	total_size += size;
       }
 
-      oss << " | " << total_size << " bytes " << rank_src << " -> " << rank_dst;
+      if (rank_dst == rank_src) {
+	total_local += total_size;
+      } else if (rank_dst == plan->rank) {
+	total_receive += total_size;
+	n_receiver += 1;
+      } else if (rank_src == plan->rank) {
+	total_send += total_size;
+	n_sender += 1;
+      } else {
+	ERR("Should not happen");
+      }
     }
 
-    oss << ")";
+    oss << ", local=" << total_local << ", send=" << total_send << " (" << n_sender
+	<< " ranks), receive=" << total_receive << " (" << n_receiver << " ranks))";
     return oss.str();
   }
   

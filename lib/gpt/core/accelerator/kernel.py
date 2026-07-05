@@ -23,7 +23,11 @@ import cgpt
 class kernel:
     from gpt.core.accelerator.kernel_blas import gemm, inv, det
     from gpt.core.accelerator.kernel_core import accumulate, indexed_sum, contract, transpose
-    from gpt.core.accelerator.kernel_comm import copy, expand_to_global, restrict_to_local
+    from gpt.core.accelerator.kernel_comm import (
+        copy,
+        expand_to_global_and_transpose,
+        restrict_to_local_and_transpose,
+    )
     from gpt.core.accelerator.kernel_fft import rank_fft, fft
 
     def __init__(self):

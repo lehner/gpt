@@ -140,6 +140,9 @@ class grid:
         ) = cgpt.grid_get_processor(self.obj)
         self.gsites = np.prod(self.gdimensions)
 
+        # make sure Grid does not change conventions
+        assert self.mpi_strides() @ self.processor_coor == self.processor
+
     def describe(
         self,
     ):  # creates a string without spaces that can be used to construct it again, this should only describe the grid geometry not the mpi
@@ -241,10 +244,18 @@ class grid:
             parent=parent,
         )
 
+    def mpi_strides(self):
+        # Grid's mpi strides such that mpi_strides @ processor_coor == processor
+        return np.flip(np.concatenate(([1], np.cumprod(np.flip(self.mpi))[:-1])))
+
     def cartesian_rank(self):
+        # cartesian rank with x running fastests
+        # this is used for IO file index mapping
+        # this does not agree with Grid's mapping
         rank = 0
         for i in reversed(range(self.nd)):
             rank = rank * self.mpi[i] + self.processor_coor[i]
+        # rank = coor[3] * size[2] * size[1] * size[0] + coor[2] * size[1] * size[0] + coor[1] * size[0] + coor[0]
         return rank
 
     def __str__(self):

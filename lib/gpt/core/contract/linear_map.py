@@ -53,7 +53,13 @@ class linear_map:
         traced_source_buffer = bm.request(shape=traced_source_shape, dtype=target_buffer.dtype)
         kernel.contract((traced_source_buffer, *traced_source_indices), source)
 
-        self.commit_single_contract_after_trace(traced_source_buffer, target_buffer, kernel)
+        # TODO: each map should be able to request if index_dst is fastest or slowest in target_indices
+        # index_sum wants slowest
+        # fft wants fastest
+        # can then guarantee this also for traced_source indices above!!!
+        self.commit_single_contract_after_trace(
+            traced_source_buffer, target_buffer, target_indices.index(index_dst), kernel, bm
+        )
 
         bm.release(traced_source_buffer)
         return True
