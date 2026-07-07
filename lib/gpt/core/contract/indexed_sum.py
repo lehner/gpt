@@ -44,7 +44,7 @@ class indexed_sum(linear_map):
         traced_source_shape = traced_source_buffer.shape
         index_tag = tuple(traced_source_shape)
         if index_tag not in self.cache:
-            strides = traced_source_buffer.strides()
+            strides = target_buffer.strides()
             coor = traced_source_buffer.coordinates(range(n))
             coor[:, dimension] = self.index[coor[:, dimension]]
             indices = coor @ strides
