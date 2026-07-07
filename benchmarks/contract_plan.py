@@ -9,16 +9,16 @@ n = g.default.get_int("--n", 16**4)
 
 g.message("Using n =", n)
 
-tmp = g.accelerator_buffer_manager()
-corr = g.accelerator_buffer(shape=(16, 5), dtype=np.complex128)
-target = g.accelerator_buffer(shape=(n,), dtype=np.complex128)
-prop = g.accelerator_buffer(shape=(n, 4, 3, 4, 3), dtype=np.complex128)
-S = g.accelerator_buffer(shape=(4, 4, 4), dtype=np.complex128)
-Sx = g.accelerator_buffer(shape=(4, 4, 4, 5), dtype=np.complex128)
-C = g.accelerator_buffer(shape=(3, 3, 3), dtype=np.complex128)
-G = g.accelerator_buffer(shape=(4, 4), dtype=np.complex128)
-S2 = g.accelerator_buffer(shape=(4, 4, 4, 4), dtype=np.complex128)
-C2 = g.accelerator_buffer(shape=(3, 3, 3, 3), dtype=np.complex128)
+tmp = g.accelerator.buffer_manager()
+corr = g.accelerator.buffer(shape=(16, 5), dtype=np.complex128)
+target = g.accelerator.buffer(shape=(n,), dtype=np.complex128)
+prop = g.accelerator.buffer(shape=(n, 4, 3, 4, 3), dtype=np.complex128)
+S = g.accelerator.buffer(shape=(4, 4, 4), dtype=np.complex128)
+Sx = g.accelerator.buffer(shape=(4, 4, 4, 5), dtype=np.complex128)
+C = g.accelerator.buffer(shape=(3, 3, 3), dtype=np.complex128)
+G = g.accelerator.buffer(shape=(4, 4), dtype=np.complex128)
+S2 = g.accelerator.buffer(shape=(4, 4, 4, 4), dtype=np.complex128)
+C2 = g.accelerator.buffer(shape=(3, 3, 3, 3), dtype=np.complex128)
 
 np.random.seed(13)
 prop.from_array(np.random.normal(size=prop.shape).astype(prop.dtype))
@@ -58,7 +58,7 @@ plan_proton_2pt_corr = g.contract.plan(
 )
 
 g.message(plan_proton_2pt_corr)
-blas = g.blas()
+blas = g.accelerator.kernel()
 plan_proton_2pt_corr(blas)
 blas()
 
@@ -109,7 +109,7 @@ for tag, plan in [
     g.message(plan)
 
     t = g.timer()
-    blas = g.blas()
+    blas = g.accelerator.kernel()
     plan(blas, use_gemm=False)
     blas()  # warmup
 
@@ -119,7 +119,7 @@ for tag, plan in [
 
     res1 = target.to_array()
 
-    blas = g.blas()
+    blas = g.accelerator.kernel()
     plan(blas, use_gemm=True)
     blas()  # warmup
 

@@ -179,7 +179,22 @@ EXPORT(grid_get_processor,{
     return Py_BuildValue("(l,l,N,N,N,l,l)",rank,ranks,coor,gdims,ldims,srank,sranks);
     
   });
- 
+
+EXPORT(grid_get_simd,{
+    
+    void* p;
+    if (!PyArg_ParseTuple(args, "l", &p)) {
+      return NULL;
+    }
+    
+    GridBase* grid = (GridBase*)p;
+    size_t nd = grid->_simd_layout.size();
+    PyObject* r = PyList_New(nd);
+    for (size_t i=0;i<nd;i++)
+      PyList_SetItem(r, i, PyLong_FromLong(grid->_simd_layout[i]));
+    return r;    
+  });
+
 EXPORT(grid_broadcast,{
 
     long root;

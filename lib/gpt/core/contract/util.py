@@ -49,7 +49,7 @@ class util:
             self.sorted_dimensions[tags[t][0]] = t
 
     def shape_from_dimensions(self, dimensions):
-        return tuple(self.tags[x][1] for x in dimensions)
+        return tuple(self.tags[x][1] for x in dimensions if x != "*")
 
     def participants_witnesses(self, code, d):
         # re-order participants such that those come first with lower indices w.r.t. initial contraction order
@@ -68,19 +68,30 @@ class util:
         return participants, witnesses
 
     def participants_dimensions(self, participants, d):
-        # get a list of all used dimensions in factors that we need for split
-        ud = self.used_dimensions(participants)
+        # for all other cases, need a strategy, where we may want to treat matrices differently
+        # create an ordered list of indices for definition of new tensor
+        weight = [np.prod(self.shape_from_dimensions(x[1:])) for x in participants]
+        weight_idx = np.argsort(weight)[::-1]
 
-        # remove CC and split dimension; this keeps genuine external indices to split
-        ud = [x for x in ud if x not in [d, "*"]]
+        # start with the heaviest tensor, find d in it and then add at the position of d all other tensors in decreasing weight
+        used = set([])
+        ud_left = []
+        ud_right = []
+        for i in weight_idx:
+            left = True
+            for x in participants[i][1:]:
+                if x == "*":
+                    pass
+                elif x == d:
+                    left = False
+                elif x not in used:
+                    used.add(x)
+                    if left:
+                        ud_left.append(x)
+                    else:
+                        ud_right.append(x)
 
-        # create an ordered list of indices for definition of new tensor; prioritize common indices, then in order of participants
-        ud_ordered = [x for x in ud if all(x in y[1:] for y in participants)]
-        for c in participants:
-            ud_new = list((set(c[1:]) & set(ud)) - set(ud_ordered))
-            ud_ordered.extend([x for x in ud if x in ud_new])
-
-        return ud_ordered
+        return ud_left + ud_right
 
     def split_code(self, code, d, manager):
         # cannot split over an index that needs to go into the target
@@ -106,7 +117,6 @@ class util:
         return " @ ".join([",".join(x[1:]) for x in code[1:]]) + " -> " + ",".join(code[0][1:])
 
     def used_dimensions(self, code):
-        # preserve order
         ud_set = set(y for x in code for y in x[1:] if y != "*")
         return [y for y in self.sorted_dimensions if y in ud_set]
 
@@ -114,7 +124,7 @@ class util:
         p, w = self.participants_witnesses(code, c)
         if any(isinstance(x[0], linear_map) for x in p):
             # need one linear_map and one accelerator_buffer
-            if len(p) == 2 and any(isinstance(x[0], g.core.accelerator_buffer) for x in p):
+            if len(p) == 2 and any(isinstance(x[0], g.core.accelerator.buffer) for x in p):
                 return True
             return False
         return True

@@ -36,11 +36,11 @@ for precision in [g.single, g.double]:
 
     dtype = precision.complex_dtype
     sites = int(grid.gsites // grid.Nprocessors)
-    A = g.accelerator_buffer(shape=(sites, m, k), dtype=dtype)
-    A_T = g.accelerator_buffer(shape=(sites, k, m), dtype=dtype)
-    B = g.accelerator_buffer(shape=(sites, k, n), dtype=dtype)
-    B_T = g.accelerator_buffer(shape=(sites, n, k), dtype=dtype)
-    C = g.accelerator_buffer(shape=(sites, m, n), dtype=dtype)
+    A = g.accelerator.buffer(shape=(sites, m, k), dtype=dtype)
+    A_T = g.accelerator.buffer(shape=(sites, k, m), dtype=dtype)
+    B = g.accelerator.buffer(shape=(sites, k, n), dtype=dtype)
+    B_T = g.accelerator.buffer(shape=(sites, n, k), dtype=dtype)
+    C = g.accelerator.buffer(shape=(sites, m, n), dtype=dtype)
     _A = A.to_array()
     _B = B.to_array()
     _C = C.to_array()
@@ -59,7 +59,7 @@ for precision in [g.single, g.double]:
     B_T.from_array(_B_T)
     idx = np.arange(sites, dtype=np.int64)
 
-    j = g.blas().gemm(1.0, A[idx], B[idx], 0.0, C[idx])
+    j = g.accelerator.kernel().gemm(1.0, A[idx], B[idx], 0.0, C[idx])
 
     # warmup
     for _ in range(5):
@@ -82,7 +82,7 @@ for precision in [g.single, g.double]:
     """
     )
 
-    j = g.blas().gemm(1.0, A_T[idx].H, B[idx], 0.0, C[idx])
+    j = g.accelerator.kernel().gemm(1.0, A_T[idx].H, B[idx], 0.0, C[idx])
 
     # warmup
     for _ in range(5):
@@ -105,7 +105,7 @@ for precision in [g.single, g.double]:
     """
     )
 
-    j = g.blas().gemm(1.0, A[idx], B_T[idx].H, 0.0, C[idx])
+    j = g.accelerator.kernel().gemm(1.0, A[idx], B_T[idx].H, 0.0, C[idx])
 
     # warmup
     for _ in range(5):

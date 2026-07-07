@@ -35,7 +35,7 @@ class linear_map:
         target_indices = target[1:]
 
         source_buffer = source[0]
-        source_indices = source[1:]
+        source_indices = tuple(source[1:])
 
         assert target_buffer.dtype is source_buffer.dtype
 
@@ -45,21 +45,21 @@ class linear_map:
         assert index_dst in target_indices
         assert index_src not in target_indices
 
-        traced_source_indices = [index_src] + [
-            x for x in util.used_dimensions([target]) if x != index_dst
-        ]
-        traced_source_shape = util.shape_from_dimensions(traced_source_indices)
+        traced_source_indices = tuple([x if x != index_dst else index_src for x in target_indices])
 
-        traced_source_buffer = bm.request(shape=traced_source_shape, dtype=target_buffer.dtype)
-        kernel.contract((traced_source_buffer, *traced_source_indices), source)
+        if traced_source_indices == source_indices:
+            self.commit_single_contract_after_trace(
+                source_buffer, target_buffer, target_indices.index(index_dst), kernel, bm
+            )
+        else:
 
-        # TODO: each map should be able to request if index_dst is fastest or slowest in target_indices
-        # index_sum wants slowest
-        # fft wants fastest
-        # can then guarantee this also for traced_source indices above!!!
-        self.commit_single_contract_after_trace(
-            traced_source_buffer, target_buffer, target_indices.index(index_dst), kernel, bm
-        )
+            traced_source_shape = util.shape_from_dimensions(traced_source_indices)
+            traced_source_buffer = bm.request(shape=traced_source_shape, dtype=target_buffer.dtype)
+            kernel.contract((traced_source_buffer, *traced_source_indices), source)
 
-        bm.release(traced_source_buffer)
+            self.commit_single_contract_after_trace(
+                traced_source_buffer, target_buffer, target_indices.index(index_dst), kernel, bm
+            )
+
+            bm.release(traced_source_buffer)
         return True

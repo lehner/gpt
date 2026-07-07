@@ -32,35 +32,35 @@ class indexed_sum(linear_map):
         return f"indexed_sum({self.shape}, {self.index.shape})"
 
     def commit_single_contract_after_trace(
-        self, traced_source_buffer, target_buffer, target_dimension, kernel, bm
+        self, traced_source_buffer, target_buffer, dimension, kernel, bm
     ):
 
-        # TODO: generalize the following
-        # could easily do this just with transpositions, maybe this is sufficient?  better would be to just adjust the index
-        # calculation below
-        assert target_dimension == 0
+        n = len(traced_source_buffer.shape)
+        S1 = [traced_source_buffer.shape[i] for i in range(1, n) if i != dimension]
+        S2 = [target_buffer.shape[i] for i in range(1, n) if i != dimension]
+        assert S1 == S2
 
         # now create index buffer
         traced_source_shape = traced_source_buffer.shape
-        stride = int(np.prod(traced_source_shape[1:]))
-        tsize = int(np.prod(traced_source_shape))
-
-        index_tag = (stride, tsize)
+        index_tag = tuple(traced_source_shape)
         if index_tag not in self.cache:
+            strides = traced_source_buffer.strides()
+            coor = traced_source_buffer.coordinates(range(n))
+            coor[:, dimension] = self.index[coor[:, dimension]]
+            indices = coor @ strides
+
+            assert 0 <= np.min(indices)
+            assert np.max(indices) < np.prod(target_buffer.shape)
+
             buffer_index = g.accelerator.buffer(
-                shape=(tsize,), dtype=np.dtype(self.index.dtype).type
+                shape=(len(indices),), dtype=np.dtype(self.index.dtype).type
             )
-            buffer_index_array = np.repeat(self.index, stride) * stride + np.tile(
-                np.arange(stride), tsize // stride
-            )
-            assert 0 <= np.min(buffer_index_array)
-            assert np.max(buffer_index_array) < np.prod(target_buffer.shape)
-            buffer_index.from_array(buffer_index_array)
+            buffer_index.from_array(indices)
             self.cache[index_tag] = buffer_index
         else:
             buffer_index = self.cache[index_tag]
 
-        traced_source_buffer.reshape((tsize,))
+        traced_source_buffer.flatten()
 
         target_buffer_shape = target_buffer.shape
         target_buffer.reshape((int(np.prod(target_buffer_shape)),))

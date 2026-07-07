@@ -177,6 +177,9 @@ class grid:
             + self.processor_coor[dimensions[0]] * self.ldimensions[dimensions[0]]
         )
 
+    def simd(self):
+        return cgpt.grid_get_simd(self.obj)
+
     def checkerboarded(self, cb):
         if cb == self.cb:
             return self

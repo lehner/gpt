@@ -153,14 +153,19 @@ class contract_plan_general:
                         A, B = B, A
                     A = [x for x in A if x != "*"]
                     B = [x for x in B if x != "*"]
+                    assert len(set(A)) == len(A)
+                    assert len(set(B)) == len(B)
+                    assert len(set(C)) == len(C)
                     A_order = [A.index(x) for x in C + [i] if x in A]
                     B_order = [B.index(x) for x in C + [i] if x in B]
                     assert len(A_order) == len(A)
                     assert len(B_order) == len(B)
-                    ncommon = len(A) + len(B) - len(C) - 2
                     assert "*" not in C
                     A_reordered = [A[i] for i in A_order]
                     B_reordered = [B[i] for i in B_order]
+                    for ncommon in range(min(len(A_reordered), len(B_reordered))):
+                        if A_reordered[ncommon] != B_reordered[ncommon]:
+                            break
                     AB_rest = A_reordered[0:-1] + B_reordered[ncommon:-1]
                     if AB_rest == C:
                         target = code[0][0]
@@ -193,9 +198,13 @@ class contract_plan_general:
 
                         idx = A_transposed.indices(range(ncommon))
                         if not A_dag and not B_dag:
-                            kernel.gemm(1.0, A_transposed[idx], B_transposed[idx].T, 0.0, target[idx])
+                            kernel.gemm(
+                                1.0, A_transposed[idx], B_transposed[idx].T, 0.0, target[idx]
+                            )
                         elif not A_dag and B_dag:
-                            kernel.gemm(1.0, A_transposed[idx], B_transposed[idx].H, 0.0, target[idx])
+                            kernel.gemm(
+                                1.0, A_transposed[idx], B_transposed[idx].H, 0.0, target[idx]
+                            )
                         else:
                             raise ValueError(f"GEMM {A_dag} - {B_dag} not yet implemented")
 
@@ -215,7 +224,7 @@ class contract_plan_general:
         assert all(isinstance(c[0], g.accelerator.buffer) for c in code)
         kernel.contract(*code)
 
-    def __call__(self, kernel, optimal=True, use_gemm=True):
+    def __call__(self, kernel, optimal=True, use_gemm=True, paranoid_eps=None):
         if optimal:
             bm = g.accelerator.buffer_manager()
 
@@ -231,14 +240,14 @@ class contract_plan_general:
                     g.default.push_verbose("contract_plan", False)
 
                     # Time
-                    test_kernel = g.kernel()
+                    test_kernel = g.accelerator.kernel()
                     self.commit_single_contract(test_kernel, c, bm, False)
                     test_kernel()  # warmup
                     t0 = -g.time()
                     test_kernel()
                     t0 += g.time()
 
-                    test_kernel = g.kernel()
+                    test_kernel = g.accelerator.kernel()
                     self.commit_single_contract(test_kernel, c, bm, True)
                     test_kernel()  # warmup
                     t1 = -g.time()
@@ -253,6 +262,18 @@ class contract_plan_general:
                     atc.save_tuned_parameters(this_use_gemm)
 
                 self.commit_single_contract(kernel, c, bm, this_use_gemm)
+
+                # if paranoid, do immediate test
+                if paranoid_eps is not None and isinstance(c[0], g.accelerator.buffer):
+                    tker = g.accelerator.kernel()
+                    self.commit_single_contract(tker, c, g.accelerator.buffer_manager(), True)
+                    tker()
+                    ref = c[0][0].to_array()
+                    tker = g.accelerator.kernel()
+                    self.commit_single_contract(tker, c, g.accelerator.buffer_manager(), False)
+                    tker()
+                    eps = np.linalg.norm(ref - c[0][0].to_array()) / np.linalg.norm(ref)
+                    assert eps < paranoid_eps
         else:
             # submit contraction if no linear operator is present
             assert all(isinstance(c[0], g.accelerator.buffer) for c in self.code)

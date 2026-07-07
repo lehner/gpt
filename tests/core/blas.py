@@ -2,48 +2,66 @@
 import gpt as g
 import numpy as np
 
+# test zero-copy accelerator_buffer_view
+grid = g.grid([8, 12, 24, 24], g.single)
+v = g.random("test").cnormal(g.mcolor(grid))
+vv = v.accelerator_buffer_view()
+refa = v[:]
+eps = np.linalg.norm(
+    refa - vv.transpose(6, 0, 7, 1, 8, 2, 9, 3, 4, 5).merged_axes(0, 7).to_array()
+) / np.linalg.norm(refa)
+g.message(f"Zero-copy accelerator_buffer_view test: {eps}")
+assert eps == 0.0
+
 # test buffer copy
 np.random.seed(13 + g.rank())
 bufa = np.random.normal(size=(4, 3, 48)).astype(np.complex128)
 buf = g.accelerator.buffer(bufa)
 tar = g.accelerator.buffer(np.zeros(shape=buf.shape).astype(np.complex128))
 
-
 # test fft
-# grid = g.grid([24, 30, 48], g.double)
+# create reference fft
+grid = g.grid([8, 12, 24, 24], g.double)
 
-# # create reference fft
-# v = g.random("test").cnormal(g.mcolor(grid))
+# create reference fft
+v = g.random("test").cnormal(g.mcolor(grid))
 
-# for dim in range(grid.nd):
+tt = g.timer("fft")
+tt("lattice")
+v2 = g(g.fft() * v)
+tt()
 
-#     tt = g.timer("fft")
+bufFFT = g.accelerator.buffer(v)
+tarFFT = g.accelerator.buffer(v)
+pln = g.contract.plan(
+    g.accelerator.buffer_manager(),
+    (tarFFT, "pt", "pz", "py", "px", "n", "c1", "c2"),
+    (g.contract.fft(0, grid), "pt", "t"),
+    (g.contract.fft(1, grid), "pz", "z"),
+    (g.contract.fft(2, grid), "py", "y"),
+    (g.contract.fft(3, grid), "px", "x"),
+    (bufFFT, "t", "z", "y", "x", "n", "c1", "c2"),
+)
+g.message(pln)
+blas = g.accelerator.kernel()
+pln(blas)
+# string representation of kernels queued up in blas
+g.message(f"Blas plan:\n{blas}")
+# execut kernels
+blas()
+tt("blas")
+blas()
+tt()
 
-#     tt("lattice")
-#     v2 = g(g.fft(dims=[dim]) * v)
-#     tt()
+t = g.mcolor(grid)
+t[:] = 0
+g.pack(t).from_accelerator_buffer(tarFFT)
 
-#     tar = g.accelerator.buffer(v)
-#     k = g.accelerator.kernel().fft(
-#         g.accelerator.buffer_manager(), tar, g.accelerator.buffer(v), grid.nd - dim - 1, grid, dim
-#     )
+eps = (g.norm2(t - v2) / g.norm2(v2)) ** 0.5
+g.message(f"FFT test: {eps}")
+assert eps < 1e-13
 
-#     tt("buffer")
-#     k()
-#     tt()
-
-#     t = g.mcolor(grid)
-#     t[:] = 0
-#     g.pack(t).from_accelerator_buffer(tar)
-
-#     eps = g.norm2(t - v2) / g.norm2(v2)
-#     g.message(f"FFT[{dim}] test: {eps}")
-#     assert eps < 1e-13
-
-#     g.message(tt)
-
-# import sys
-# sys.exit(0)
+g.message(tt)
 
 
 grid = g.grid([8, 8, 8, 8], g.double)
@@ -336,7 +354,7 @@ for precision in [g.single, g.double]:
         g.accelerator.buffer_manager(),
         (corr, "t_global"),
         (
-            g.contract.indexed_sum(index=grid.local_indices(3), length=corr.shape[0]),
+            g.contract.indexed_sum(index=grid.local_indices(3), length=grid.gdimensions[3]),
             "t_global",
             "t",
         ),
@@ -359,13 +377,13 @@ for precision in [g.single, g.double]:
     sref = g.slice(M, 3)
     blas = g.accelerator.kernel()
     corr = g.accelerator.buffer(
-        shape=(grid.gdimensions[3], 3, 3), dtype=grid.precision.complex_dtype
+        shape=(3, grid.gdimensions[3], 3), dtype=grid.precision.complex_dtype
     )
     pln = g.contract.plan(
         g.accelerator.buffer_manager(),
-        (corr, "t_global", "c1", "c2"),  # TODO: do I need to guarantee that t_global is first???
+        (corr, "c1", "t_global", "c2"),
         (
-            g.contract.indexed_sum(index=grid.local_indices(3), length=corr.shape[0]),
+            g.contract.indexed_sum(index=grid.local_indices(3), length=grid.gdimensions[3]),
             "t_global",
             "t",
         ),
@@ -377,7 +395,7 @@ for precision in [g.single, g.double]:
     g.message(f"Blas plan:\n{blas}")
     # execut kernels
     blas()
-    scon = grid.globalsum(corr.to_array())
+    scon = grid.globalsum(corr.to_array()).swapaxes(0, 1)
     for x, y in zip(sref, scon):
         eps = np.linalg.norm(x.array - y) / np.linalg.norm(y)
         g.message(f"Test indexed sum (2) in contract.plan: {eps}")

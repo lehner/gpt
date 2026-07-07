@@ -86,7 +86,7 @@ class cgpt_gemm_job : public cgpt_kernel_job_base {
 
   std::string description() {
     std::ostringstream oss;
-    oss << "GEMM(" << m << "," << n << "," << k << ") x " << BLAS_A.size();
+    oss << "GEMM(" << m << "," << k << " x " << k << "," << n << ") x " << BLAS_A.size();
     return oss.str();
   }
   

@@ -28,15 +28,22 @@ class fft(linear_map):
         self.grid_dimension = grid_dimension
         self.grid = grid
         self.forward = forward
-        self.shape = (grid.fdimensions[grid_dimension], grid.fdimensions[grid_dimension])
+        self.shape = (grid.ldimensions[grid_dimension], grid.ldimensions[grid_dimension])
 
     def __str__(self):
         return f"fft({self.shape})"
 
     def commit_single_contract_after_trace(
-        self, traced_source_buffer, target_buffer, target_dimension, kernel, bm
+        self, traced_source_buffer, target_buffer, dimension, kernel, bm
     ):
-        assert target_dimension == 0
+        assert traced_source_buffer.shape == target_buffer.shape
+
         kernel.fft(
-            bm, target_buffer, traced_source_buffer, 0, self.grid, self.grid_dimension, self.forward
+            bm,
+            target_buffer,
+            traced_source_buffer,
+            dimension,
+            self.grid,
+            self.grid_dimension,
+            self.forward,
         )

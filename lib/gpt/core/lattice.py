@@ -266,6 +266,22 @@ class lattice(factor, foundation_base):
     def mview(self, location=host):
         return [cgpt.lattice_memory_view(self, o, location) for o in self.v_obj]
 
+    def accelerator_buffer_view(self):
+        assert len(self.otype.v_otype) == 1  # otherwise need to adjust shape below
+        oshape = self.otype.shape
+        nsimd = self.grid.simd()
+        shape = (
+            list(reversed([self.grid.ldimensions[i] // nsimd[i] for i in range(self.grid.nd)]))
+            + list(oshape)
+            + list(reversed(nsimd))
+        )
+        return gpt.util.from_list(
+            [
+                gpt.accelerator.buffer(x, shape, self.grid.precision.complex_dtype)
+                for x in self.mview(gpt.accelerator)
+            ]
+        )
+
     def __repr__(self):
         return "lattice(%s,%s)" % (self.otype.__name__, self.grid.precision.__name__)
 
@@ -315,4 +331,3 @@ class lattice(factor, foundation_base):
 
     def rank_checksum(self):
         return [cgpt.lattice_checksum(o) for o in self.v_obj]
-    

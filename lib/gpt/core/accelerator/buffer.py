@@ -42,6 +42,15 @@ class buffer_view:
 class buffer:
     def __init__(self, nbytes=None, shape=None, dtype=None):
 
+        if isinstance(nbytes, memoryview):
+            self.view = nbytes
+            self.shape = shape
+            self.dtype = dtype
+            return
+
+        if isinstance(shape, list):
+            shape = tuple(shape)
+
         if isinstance(nbytes, buffer):
             self.view = nbytes.view
             self.shape = nbytes.shape
@@ -84,6 +93,9 @@ class buffer:
 
         if array_init is not None:
             self.from_array(array_init)
+
+    def flatten(self):
+        return self.reshape((int(np.prod(self.shape)),))
 
     def reshape(self, shape):
         assert np.prod(self.shape) == np.prod(shape)
