@@ -22,14 +22,18 @@ from gpt.core.contract.linear_map import linear_map
 
 
 class indexed_sum(linear_map):
-    def __init__(self, index, length):
+    def __init__(self, index, length, communicator=None):
         self.shape = (length,) + index.shape
         self.index = index
         self.cache = {}
+        self.communicator = communicator
         assert len(index.shape) == 1
 
     def __str__(self):
-        return f"indexed_sum({self.shape}, {self.index.shape})"
+        if self.communicator is not None:
+            return f"indexed_sum({self.shape}, {self.index.shape}, comm={self.communicator.processor}/{self.communicator.Nprocessors})"
+        else:
+            return f"indexed_sum({self.shape}, {self.index.shape})"
 
     def commit_single_contract_after_trace(
         self, traced_source_buffer, target_buffer, dimension, kernel, bm
@@ -64,5 +68,7 @@ class indexed_sum(linear_map):
 
         target_buffer_shape = target_buffer.shape
         target_buffer.reshape((int(np.prod(target_buffer_shape)),))
-        kernel.indexed_sum(traced_source_buffer, buffer_index, target_buffer)
+        kernel.indexed_sum(
+            traced_source_buffer, buffer_index, target_buffer, communicator=self.communicator
+        )
         target_buffer.reshape(target_buffer_shape)

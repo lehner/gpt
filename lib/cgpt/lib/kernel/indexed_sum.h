@@ -27,15 +27,18 @@ class cgpt_indexed_sum_job : public cgpt_kernel_job_base {
   std::vector<long> ss;
   long ts, id, stride, total, parallel, ortho;
   bool accumulate;
+  GridBase* grid;
 
   cgpt_indexed_sum_job(void* _sp,void* _tp,void* _ip,
 		       std::vector<long>& _ss,
-		       long _ts, long _id, bool _accumulate) :
+		       long _ts, long _id, bool _accumulate,
+		       GridBase* _grid) :
     sp((dtype*)_sp),
     tp((dtype*)_tp),
     ip((int64_t*)_ip),
     ss(_ss), ts(_ts), id(_id),
-    accumulate(_accumulate) {
+    accumulate(_accumulate),
+    grid(_grid) {
 
     stride = 1;
     for (long i=id;i<(long)ss.size();i++)
@@ -51,7 +54,7 @@ class cgpt_indexed_sum_job : public cgpt_kernel_job_base {
   
   std::string description() {
     std::ostringstream oss;
-    oss << "IndexedSum(" << ss << "; " << parallel << " | " << ortho << ")";
+    oss << "IndexedSum(" << ss << "; " << parallel << " | " << ortho << " | grid = " << grid << ")";
     return oss.str();
   }
 
@@ -91,5 +94,16 @@ class cgpt_indexed_sum_job : public cgpt_kernel_job_base {
 	  x += _tp_thread[s*_parallel + p];
 	_tp[s] = x;
       });
+
+    if (grid) {
+#ifndef ACCELERATOR_AWARE_MPI
+      hostVector<dtype> bounce(ts);
+      acceleratorCopyFromDevice(tp, &bounce[0], ts*sizeof(dtype));
+      grid->GlobalSumVector(&bounce[0], ts);
+      acceleratorCopyToDevice(&bounce[0], tp, ts*sizeof(dtype));
+#else
+      grid->GlobalSumVector(tp, ts);
+#endif
+    }
   }
 };

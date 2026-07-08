@@ -307,10 +307,10 @@ for precision in [g.single, g.double]:
     tr = g.accelerator.buffer(shape=local_buffer_shape, dtype=A.dtype)
     blas = g.accelerator.kernel()
     blas.indexed_sum(A, indices, target)
-    blas.indexed_sum(A, indices, target, accumulate=True)
+    blas.indexed_sum(A, indices, target, accumulate=True, communicator=grid)
     blas()
 
-    ab_is = grid.globalsum(target.to_array())
+    ab_is = target.to_array()
     ref_is = [2 * np.sum(x.array) for x in g.slice(M, 2)]
     eps = np.linalg.norm(ab_is - np.array(ref_is)) / np.linalg.norm(ab_is)
     g.message(f"Test indexed sum: {eps}")
@@ -354,7 +354,9 @@ for precision in [g.single, g.double]:
         g.accelerator.buffer_manager(),
         (corr, "t_global"),
         (
-            g.contract.indexed_sum(index=grid.local_indices(3), length=grid.gdimensions[3]),
+            g.contract.indexed_sum(
+                index=grid.local_indices(3), length=grid.gdimensions[3], communicator=grid
+            ),
             "t_global",
             "t",
         ),
@@ -367,7 +369,7 @@ for precision in [g.single, g.double]:
     g.message(f"Blas plan:\n{blas}")
     # execut kernels
     blas()
-    scon = grid.globalsum(corr.to_array())
+    scon = corr.to_array()
     for x, y in zip(sref, scon):
         eps = abs(x - y) / abs(x)
         g.message(f"Test indexed sum in contract.plan: {eps}")
@@ -383,7 +385,9 @@ for precision in [g.single, g.double]:
         g.accelerator.buffer_manager(),
         (corr, "c1", "t_global", "c2"),
         (
-            g.contract.indexed_sum(index=grid.local_indices(3), length=grid.gdimensions[3]),
+            g.contract.indexed_sum(
+                index=grid.local_indices(3), length=grid.gdimensions[3], communicator=grid
+            ),
             "t_global",
             "t",
         ),
@@ -395,7 +399,7 @@ for precision in [g.single, g.double]:
     g.message(f"Blas plan:\n{blas}")
     # execut kernels
     blas()
-    scon = grid.globalsum(corr.to_array()).swapaxes(0, 1)
+    scon = corr.to_array().swapaxes(0, 1)
     for x, y in zip(sref, scon):
         eps = np.linalg.norm(x.array - y) / np.linalg.norm(y)
         g.message(f"Test indexed sum (2) in contract.plan: {eps}")

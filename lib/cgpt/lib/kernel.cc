@@ -84,14 +84,16 @@ EXPORT(kernel_accumulate,{
 
 EXPORT(kernel_indexed_sum,{
     void* p;
-    long id, ts, acc;
+    long id, ts, acc, _grid;
     PyObject* sv, *iv, *tv, *_dtype;
     PyObject* ss;
 
-    if (!PyArg_ParseTuple(args, "lOOOlOlOl", &p, &sv, &ss,
-			  &iv, &id, &tv, &ts, &_dtype, &acc)) {
+    if (!PyArg_ParseTuple(args, "lOOOlOlOll", &p, &sv, &ss,
+			  &iv, &id, &tv, &ts, &_dtype, &acc, &_grid)) {
       return NULL;
     }
+
+    GridBase* grid = (GridBase*)_grid;
 
     ASSERT(PyMemoryView_Check(sv));
     ASSERT(PyMemoryView_Check(tv));
@@ -115,9 +117,9 @@ EXPORT(kernel_indexed_sum,{
     cgpt_convert(ss, _ss);
 
     if (!strcmp(__dtype,"numpy.complex64")) {
-      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexF>(sp,tp,ip,_ss,ts,id,acc));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexF>(sp,tp,ip,_ss,ts,id,acc,grid));
     } else if (!strcmp(__dtype,"numpy.complex128")) {
-      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexD>(sp,tp,ip,_ss,ts,id,acc));
+      ((cgpt_kernel*)p)->jobs.push_back(new cgpt_indexed_sum_job<ComplexD>(sp,tp,ip,_ss,ts,id,acc,grid));
     } else {
       ERR("Unknown dtype = %s\n", __dtype);
     }

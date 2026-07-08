@@ -35,12 +35,13 @@ def accumulate(self, buffers, scales=None, zero=False):
         int(np.prod(buffers[0].shape)),
         [x.view for x in buffers],
         buffers[0].dtype,
-        scales, 1 if zero else 0
+        scales,
+        1 if zero else 0,
     )
     return self
 
 
-def indexed_sum(self, source, index, target, accumulate=False):
+def indexed_sum(self, source, index, target, accumulate=False, communicator=None):
     assert source.dtype is target.dtype
     assert index.dtype is np.int64
     assert len(target.shape) == 1
@@ -60,6 +61,7 @@ def indexed_sum(self, source, index, target, accumulate=False):
         target.shape[0],
         source.dtype,
         1 if accumulate else 0,
+        communicator.obj if communicator is not None else 0,
     )
     return self
 
