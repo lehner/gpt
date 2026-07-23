@@ -50,6 +50,9 @@ ensembles_S = {
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
     "32F3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
+    "32F3fh-0-pp" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
+                      "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28,
+                      "fthmc" : [0.12, 0.12]},
     "32F3fh-Q15-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
                        "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : (15, 1, 8), "fermionic_from" : 28 }, # after thermalization, tune dH (nsubsteps 4->6)
     "32F3fh-1" : { "L" : [32]*3 + [48], "beta" :  2.41, "ml" : 0.016715, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
@@ -113,8 +116,11 @@ ensembles_L = {
 
 ensembles_XL = {
     # 96^4 3 flavor SF ensembles #
-    "96SF3f-1" : { "L" : [96]*4, "beta" :  2.71, "ml" : 0.0093 , "ms" : 0.0093, "mc" : None, "Ls" : 12, "b" : 1.125, "c" : 0.125,
+    #"96SF3f-1" : { "L" : [96]*4, "beta" :  2.71, "ml" : 0.0093 , "ms" : 0.0093, "mc" : None, "Ls" : 12, "b" : 1.125, "c" : 0.125,
+    #               "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 4800, "Q" : None, "fermionic_from" : 91 },
+    "96SF3f-2" : { "L" : [96]*4, "beta" :  2.805, "ml" : 0.0093 , "ms" : 0.0093, "mc" : None, "Ls" : 12, "b" : 1.12, "c" : 0.12,
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 4800, "Q" : None, "fermionic_from" : 91 },
+    # TODO: go to 16 steps, tau 16
 }
 
 ensembles = {
@@ -168,11 +174,6 @@ inv = g.algorithms.inverter
 eofa_ratio = g.qcd.pseudofermion.action.exact_one_flavor_ratio
 
 # FT
-rho = 0.12
-sm = [
-    g.qcd.gauge.smear.local_stout(rho=rho, dimension=mu, checkerboard=p) for mu in range(4) for p in [g.even, g.odd]
-]
-
 
 pc = g.qcd.fermion.preconditioner
 inv = g.algorithms.inverter
@@ -252,13 +253,23 @@ def transform(aa, s, i):
 
 
 def setup(tag):
-    global U, U_mom, action_gauge, hasenbusch_ratios, fields, action_fermions_e, action_fermions_s, ensemble_tag, css, a_log_det, mdint
+    global U, U_mom, action_gauge, hasenbusch_ratios, fields, action_fermions_e, action_fermions_s, ensemble_tag, css, a_log_det, mdint, sm
 
     params = ensembles[tag]
     
     U = g.qcd.gauge.unit(g.grid(params["L"], g.double))
     U_mom = g.group.cartesian(U)
     action_gauge = g.qcd.gauge.action.iwasaki(params["beta"])
+
+    # FTHMC
+    rhos = [0.12]
+    if "fthmc" in params:
+        rhos = params["fthmc"]
+    sm = []
+    for rho in rhos:
+        for mu in range(4):
+            for p in [g.even, g.odd]:
+                sm.append(g.qcd.gauge.smear.local_stout(rho=rho, dimension=mu, checkerboard=p))
 
     # add topology
     Q = params["Q"]
@@ -1387,7 +1398,7 @@ for tag in tags:
         job_verify2 = [job_reproduction_verify(job_Q)]
         jobs = jobs + job_Q + job_verify2
 
-if True:
+if False:
     # force re-measure with new valence parameters
     jobs = [job_measure_glue("explore-0L", 30, 31, 0, [])] + jobs
 
