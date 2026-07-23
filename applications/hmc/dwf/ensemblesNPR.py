@@ -925,6 +925,8 @@ class job_write_checkpoint(job_reproduction_base):
     def perform_inner(self, root):
         global U, U_mom, css
 
+        setup(self.stream)
+
         fn = f"{root}/{self.stream}/{self.conf}_md_{self.step}/0/state.0"
 
         l_css, l_U, l_U_mom = g.load(fn)
