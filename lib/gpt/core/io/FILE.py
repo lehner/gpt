@@ -106,7 +106,7 @@ class FILE_base:
         assert self.f is not None
         assert cgpt.fseek(self.f, offset, whence) == 0
 
-    def read(self, sz=None):
+    def read(self, sz=None, allow_eof=False):
         if sz is None:
             pos = self.tell()
             self.seek(0, 2)
@@ -121,7 +121,10 @@ class FILE_base:
             raise IOError(f"Cannot allocate {sz} bytes")
         if sz > 0:
             if cgpt.fread(self.f, sz, memoryview(t)) != 1:
-                t = bytes(0)
+                if allow_eof:
+                    t = bytes(0)
+                else:
+                    raise IOError(f"Cannot read {sz} bytes")
         return t
 
     def write(self, d):
@@ -139,14 +142,14 @@ class FILE_windowed_reader:
         self.size = size
         self.f.seek(self.offset, 0)
 
-    def read(self, sz=None):
+    def read(self, sz=None, allow_eof=False):
         left = self.size - self.pos
         assert left >= 0
         if sz is None:
             sz = left
         if sz > left:
             sz = left
-        data = self.f.read(sz)
+        data = self.f.read(sz, allow_eof)
         self.pos += sz
         return data
 

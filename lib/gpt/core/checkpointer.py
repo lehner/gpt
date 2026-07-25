@@ -126,12 +126,12 @@ class checkpointer:
         if self.f.tell() != pos:
             self.f.seek(pos, 0)
             # try to read
-            sz = int.from_bytes(self.f.read(8), "little")
+            sz = int.from_bytes(self.f.read(8, allow_eof=True), "little")
             szGB = sz / 1024.0**3
             flags[2] = szGB
-            crc32_expected = int.from_bytes(self.f.read(4), "little")
+            crc32_expected = int.from_bytes(self.f.read(4, allow_eof=True), "little")
             if len(obj) == sz:
-                data = self.f.read(sz)
+                data = self.f.read(sz, allow_eof=True)
                 if len(data) == sz:
                     obj[:] = data
                     crc32 = gpt.crc32(obj)

@@ -32,7 +32,7 @@ class lime_reader:
         if not os.path.isfile(fn):
             return False
         f = g.FILE(fn, "rb")
-        magic = f.read(4)
+        magic = f.read(4, allow_eof=True)
         if len(magic) == 0:
             return False
         return struct.unpack(">L", magic)[0] == cls.magic
@@ -44,7 +44,7 @@ class lime_reader:
         self.index = {}
 
         while True:
-            magic = self.f.read(4)
+            magic = self.f.read(4, allow_eof=True)
             if len(magic) == 0:
                 break
             assert struct.unpack(">L", magic)[0] == self.magic

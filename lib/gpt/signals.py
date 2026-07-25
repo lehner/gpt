@@ -101,13 +101,13 @@ def setup():
                 
             while True:
                 t1 = cgpt.time()
-                if t1 - last_alive_t.value > 1*300 and sig_state == 1:
+                if t1 - last_alive_t.value > 1*500 and sig_state == 1:
                     # keep track of how many signals we have sent and give up/abort job after a while
                     # if job does not respond, we may need to find another way to abort it; maybe send signals to all other
                     # ranks on same node to kill?
                     abort()
 
-                elif t1 - last_alive_t.value > 120 and sig_state == 0:
+                elif t1 - last_alive_t.value > 180 and sig_state == 0:
                     sc = get_syscall(parentid)
                     if sc is None:
                         # sc = "dead"
