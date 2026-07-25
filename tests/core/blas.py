@@ -33,8 +33,9 @@ tt()
 
 bufFFT = g.accelerator.buffer(v)
 tarFFT = g.accelerator.buffer(v)
+bm = g.accelerator.buffer_manager()
 pln = g.contract.plan(
-    g.accelerator.buffer_manager(),
+    bm,
     (tarFFT, "pt", "pz", "py", "px", "n", "c1", "c2"),
     (g.contract.fft(0, grid), "pt", "t"),
     (g.contract.fft(1, grid), "pz", "z"),
@@ -393,6 +394,8 @@ for precision in [g.single, g.double]:
         ),
         (g.accelerator.buffer(M), "t", "z", "y", "x", "n", "c1", "c2"),
     )
+    # Right now: index right now is 1d -> index
+    # TODO: index is nd -> nd' ; allow tuples "dt", ("t1", "t2") as parameters
     g.message(pln)
     pln(blas)
     # string representation of kernels queued up in blas

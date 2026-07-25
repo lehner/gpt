@@ -53,7 +53,7 @@ def count(fn):
     n = 0
     f = open(fn, "r+b")
     while True:
-        rd = f.read(4, allow_eof=True)
+        rd = f.read(4)
         if len(rd) == 0:
             break
         ntag = struct.unpack("i", rd)[0]
@@ -72,7 +72,7 @@ class reader:
         self.tags_with_duplicates = []
         f = open(fn, "rb")
         while True:
-            rd = f.read(4, allow_eof=True)
+            rd = f.read(4)
             if len(rd) == 0:
                 break
             ntag = struct.unpack("i", rd)[0]
