@@ -119,7 +119,7 @@ ensembles_XL = {
     #"96SF3f-1" : { "L" : [96]*4, "beta" :  2.71, "ml" : 0.0093 , "ms" : 0.0093, "mc" : None, "Ls" : 12, "b" : 1.125, "c" : 0.125,
     #               "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 4800, "Q" : None, "fermionic_from" : 91 },
     "96SF3f-2" : { "L" : [96]*4, "beta" :  2.805, "ml" : 0.0093 , "ms" : 0.0093, "mc" : None, "Ls" : 12, "b" : 1.12, "c" : 0.12,
-                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 4, "tau" : 8, "nwf_max" : 4800, "Q" : None, "fermionic_from" : 91 },
+                   "M5" : 1.8, "nsteps" : 16, "nsubsteps" : 4, "tau" : 16, "nwf_max" : 4800, "Q" : None, "fermionic_from" : 91 },
     # TODO: go to 16 steps, tau 16
 }
 
