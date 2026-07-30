@@ -156,7 +156,7 @@ def adjoint_to_fundamental(fund, adj, generators):
 
 
 class local_stout(local_diffeomorphism):
-    @params_convention(dimension=None, checkerboard=None, rho=None, staple_field=None)
+    @params_convention(dimension=None, checkerboard=None, rho=None)
     def __init__(self, params):
         self.params = params
         self.cache = {}
@@ -166,10 +166,6 @@ class local_stout(local_diffeomorphism):
         grid = fields[0].grid
         nd = grid.nd
         U = fields[0:nd]
-        rho = np.array(
-            [[0.0 if (self.params["dimension"] == nu) else self.params["rho"] for nu in range(nd)]],
-            dtype=np.float64,
-        )
 
         if fingerprint:
             l = g.fingerprint.log()
@@ -195,25 +191,15 @@ class local_stout(local_diffeomorphism):
         mask, imask = masks[self.params["checkerboard"]], masks[self.params["checkerboard"].inv()]
 
         fm = g(mask + 1e-15 * imask)
-        if False:
-            st = g.qcd.gauge.staple_sum(U, mu=self.params["dimension"], rho=rho)[0]
-        else:
-            st = g.lattice(U[0])
-            st[:] = 0
-            for nu in range(len(U)):
-                if nu == self.params["dimension"]:
-                    continue
-                st += self.params["rho"] * g.qcd.gauge.staple(U, self.params["dimension"], nu)
+        st = g.lattice(U[0])
+        st[:] = 0
+        for nu in range(len(U)):
+            if nu == self.params["dimension"]:
+                continue
+            st += self.params["rho"] * g.qcd.gauge.staple(U, self.params["dimension"], nu)
 
-                if fingerprint:
-                    l(f"st.{nu}", st)
-
-            # stref = g.qcd.gauge.staple_sum(U, mu=self.params["dimension"], rho=rho)[0]
-            # g.message("TEST", g.norm2(st), g.norm2(st-stref))
-            # sys.exit(0)
-        sf = self.params["staple_field"]
-        if sf is not None:
-            st = sf(st)
+            if fingerprint:
+                l(f"st.{nu}", st)
 
         res = g(st * fm)
 
