@@ -352,7 +352,7 @@ jobs:
     - name: Install Ubuntu packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y autoconf clang-14 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev python3-mpmath
+        sudo apt-get install -y autoconf clang-14 libmpfr-dev libgmp-dev libssl-dev zlib1g-dev libmpich-dev libopenmpi-dev libfftw3-dev
 
     - name: Set compiler alternatives to clang
       if: matrix.compiler == 'clang'
@@ -378,7 +378,7 @@ jobs:
 
     - name: Setup python dependencies
       run: |
-        pip install numpy coverage h5py
+        pip install numpy coverage h5py mpmath
 
     - name: Download prebuild python-gpt
       uses: actions/download-artifact@v4
