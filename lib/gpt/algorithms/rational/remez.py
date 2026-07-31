@@ -72,10 +72,6 @@ class RemezApproximation:
 
         return yn / yd
 
-    def approxBounds(self):
-        """Return the bounds of the approximation"""
-        return (self.lo, self.hi)
-
 
 def remez(
     func: callable, lo: float, hi: float, degree: int, tolerance=1e-15, precision=50
