@@ -129,3 +129,20 @@ rrn = rn(mat)
 eps2 = g.norm2(mat * rrn * rrn * src - src) / g.norm2(src)
 g.message(f"Test neuberger 1/sqrt(mat) approximation: {eps2}")
 assert eps2 < 1e-12
+
+# test remez inverse square root (note different convention for low/high)
+rm = rat.remez(lambda x: x**-0.5, 0.1**2, 4.5**2, 10, precision=200)
+g.message(rm)
+
+rn = rat.rational_function(rm.zeros, rm.poles, rm.norm, mscg)
+g.message(rn)
+
+eps = max([abs(rn(x * x) * x - 1.0) for x in numpy.arange(0.1, 4.5, 0.05)])
+g.message(f"Maximal tested error of Remez: {eps}")
+
+rrn = rn(mat)
+
+# test fundamental definition
+eps2 = g.norm2(mat * rrn * rrn * src - src) / g.norm2(src)
+g.message(f"Test remez 1/sqrt(mat) approximation: {eps2}")
+assert eps2 < 1e-12

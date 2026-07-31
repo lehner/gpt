@@ -93,7 +93,7 @@ def zolotarev_approx_inverse_square_root(n, eps):
     return [A, a[0::2], a[1::2], delta]
 
 
-# approximate g(x) = 1/sqrt(x^2) in the range ra < x < rb,
+# approximate g(x) = 1/sqrt(x^2) in the range low < x < high,
 # with A \prod_i (x*x - u_i) / (x*x - v_i)
 class zolotarev_inverse_square_root:
     def __init__(self, low, high, order):

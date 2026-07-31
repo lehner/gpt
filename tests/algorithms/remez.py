@@ -10,35 +10,37 @@ approx = Remez(1,2, 0.1,1,10, precision=200)
 x = np.linspace(approx.lo,approx.hi,500)
 expect = approx.func(x)
 got = approx.approx(x)
-print(f"Test rational approximation of x^(1/2): {np.linalg.norm(expect-got)} (expect 0)")
+g.message(f"Test rational approximation of x^(1/2): {np.linalg.norm(expect-got)} (expect 0)")
 
 #Test partial-fraction expansion
 pfe_approx = RemezPFE(approx, precision=100)
 got = pfe_approx.approx(x)
-print(f"Test PFE of rational approximation of x^(1/2): {np.linalg.norm(expect-got)} (expect 0)")
+g.message(f"Test PFE of rational approximation of x^(1/2): {np.linalg.norm(expect-got)} (expect 0)")
 
 #Test rational_function wrapper
 rat = pfe_approx.rationalFunction()
 assert isinstance(rat, rational_function)
 got = np.array([ rat(xx) for xx in x ])
-print(f"Test PFE of rational approximation of x^(1/2) via rational_function: {np.linalg.norm(expect-got)} (expect 0)")
+g.message(f"Test PFE of rational approximation of x^(1/2) via rational_function: {np.linalg.norm(expect-got)} (expect 0)")
 
 #Test PFE of inverse
 expect = x**(-1/2)
 got = pfe_approx.approx(x, inv=True)
 n2 = np.linalg.norm(expect-got)
-print(f"Test PFE of rational approximation of x^(-1/2): {n2} (expect 0)")
+g.message(f"Test PFE of rational approximation of x^(-1/2): {n2} (expect 0)")
 
 #Test rational_function wrapper
 rat_inv = pfe_approx.rationalFunction(inv=True)
 assert isinstance(rat_inv, rational_function)
 got = np.array([ rat_inv(xx) for xx in x ])
-print(f"Test PFE of rational approximation of x^(-1/2) via rational_function: {np.linalg.norm(expect-got)} (expect 0)")
+g.message(f"Test PFE of rational approximation of x^(-1/2) via rational_function: {np.linalg.norm(expect-got)} (expect 0)")
 
 rat_inv = rat.inv()
 assert isinstance(rat_inv, rational_function)
 got = np.array([ rat_inv(xx) for xx in x ])
-print(f"Test PFE of rational approximation of x^(1/2) via rational_function.inv: {np.linalg.norm(expect-got)} (expect 0)")
+eps = np.linalg.norm(expect-got)
+g.message(f"Test PFE of rational approximation of x^(1/2) via rational_function.inv: {eps} (expect 0)")
+assert eps < 1e-13
 
 #Demonstrate rational function applied to lattice-matrix via rational_function
 grid = g.grid([4, 4, 4, 4], g.double)
@@ -63,5 +65,5 @@ out = g.copy(v)
 ratA(out, v)
 
 d=out[(0,0,0,0)][0] - np.complex128(math.sqrt(2))
-print(f"Test A^(1/2) for A=diag(2,2,2,2): {d} (expect 0)")
-
+g.message(f"Test A^(1/2) for A=diag(2,2,2,2): {d} (expect 0)")
+assert abs(d) < 1e-14

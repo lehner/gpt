@@ -21,3 +21,4 @@
 from gpt.algorithms.rational.neuberger import neuberger_inverse_square_root
 from gpt.algorithms.rational.zolotarev import zolotarev_inverse_square_root
 from gpt.algorithms.rational.rational_function import rational_function
+from gpt.algorithms.rational.remez import remez
