@@ -49,6 +49,9 @@ class parallel_transport(dft_diffeomorphism):
             sm = [None] * nd
             for i in range(nd):
                 for weight, path in description[i]:
+                    if isinstance(weight, g.ad.reverse.node_base):
+                        if not isinstance(sU[idx], g.ad.reverse.node_base):
+                            weight = weight.value
                     xp = g(weight * sU[idx])
                     if P1 is not None:
                         xp *= P1[i]

@@ -64,7 +64,10 @@ class rational_function:
         out = f"Rational function of degree {self.npoles}\n"
         out += f"{self.norm:g}({self.pf0} + "
         for i, r in enumerate(self.r):
-            out += f"\n+ {r:g} / (x - {self.poles[i]:g})"
+            if self.poles[i] >= 0:
+                out += f"\n+ {r:g} / (x - {self.poles[i]:g})"
+            else:
+                out += f"\n+ {r:g} / (x + {-self.poles[i]:g})"
         out += "\n)"
         return out
 

@@ -143,7 +143,11 @@ class expr:
         self.unary = unary
 
     def is_adj(self):
-        b = len(self.val) == 1 and len(self.val[0][1]) == 1 and self.val[0][1][0][0] == factor_unary.ADJ
+        b = (
+            len(self.val) == 1
+            and len(self.val[0][1]) == 1
+            and self.val[0][1][0][0] == factor_unary.ADJ
+        )
         return b
 
     def is_single(self, t=None):
@@ -294,7 +298,13 @@ class factor:
         return expr(self) * (1.0 / l)
 
     def __add__(self, l):
+        if isinstance(l, int) and l == 0:
+            return self
         return expr(self) + expr(l)
+
+    def __radd__(self, l):
+        # addition should always commute
+        return self.__add__(l)
 
     def __sub__(self, l):
         return expr(self) - expr(l)
