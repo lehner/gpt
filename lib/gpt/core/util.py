@@ -73,6 +73,9 @@ def tensor_to_value(value, dtype=np.complex128):
             value = dtype(value)
     elif is_num(value):
         value = np.array([value], dtype=dtype)
+    elif isinstance(value, np.ndarray):
+        if value.dtype != dtype:
+            value = value.astype(dtype)
     return value
 
 
