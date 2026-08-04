@@ -26,14 +26,20 @@ def inner_product(sx, sy, n_block, use_accelerator):
     assert len(sx) == 1 and len(sy) == 1
     sx = sx[0]
     sy = sy[0]
-    return {(0, 0): sx.distribute2(sy, lambda a, b: g.inner_product(a, b, n_block, use_accelerator))}
+    return {
+        (0, 0): sx.distribute2(sy, lambda a, b: g.inner_product(a, b, n_block, use_accelerator))
+    }
 
 
 def rank_inner_product(sx, sy, n_block, use_accelerator):
     assert len(sx) == 1 and len(sy) == 1
     sx = sx[0]
     sy = sy[0]
-    return {(0, 0): sx.distribute2(sy, lambda a, b: g.rank_inner_product(a, b, n_block, use_accelerator))}
+    return {
+        (0, 0): sx.distribute2(
+            sy, lambda a, b: g.rank_inner_product(a, b, n_block, use_accelerator)
+        )
+    }
 
 
 def norm2(sx):
@@ -74,6 +80,10 @@ def identity(sx):
 
 def infinitesimal_to_cartesian(src, dsrc):
     return dsrc[1].otype.infinitesimal_to_cartesian(src, dsrc)
+
+
+def cartesian_to_infinitesimal(src, dsrc):
+    return dsrc[1].otype.cartesian_to_infinitesimal(src, dsrc)
 
 
 def group_inner_product(left, right):

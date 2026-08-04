@@ -188,6 +188,12 @@ def infinitesimal_to_cartesian(src, dsrc):
     return dsrc.__class__.foundation.infinitesimal_to_cartesian(src, dsrc)
 
 
+def cartesian_to_infinitesimal(src, dsrc):
+    if gpt.util.is_num(src) or isinstance(src, np.ndarray):
+        return dsrc
+    return dsrc.__class__.foundation.cartesian_to_infinitesimal(src, dsrc)
+
+
 def project(src, method):
     otype = src.otype
     otype.project(src, method)

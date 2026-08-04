@@ -202,6 +202,9 @@ class ot_matrix_su_n_fundamental_algebra(ot_matrix_su_n_algebra):
     def project(self, A, method):
         A @= gpt.qcd.gauge.project.traceless_hermitian(A)
 
+    def cartesian_to_infinitesimal(self, U, dU):
+        return gpt(2j * dU * U)
+
     def generators(self, dt):
         r = []
 

@@ -51,6 +51,7 @@ from gpt.core.transform import (
     indexed_sum,
     identity,
     infinitesimal_to_cartesian,
+    cartesian_to_infinitesimal,
     project,
     where,
     scale_per_coordinate,

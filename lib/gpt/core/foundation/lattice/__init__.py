@@ -149,6 +149,10 @@ def infinitesimal_to_cartesian(src, dsrc):
     return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)
 
 
+def cartesian_to_infinitesimal(src, dsrc):
+    return dsrc.otype.cartesian_to_infinitesimal(src, dsrc)
+
+
 def group_inner_product(left, right):
     # inner product over group's real vector space
     left_type = left.otype

@@ -58,6 +58,9 @@ class ot_complex_additive_group(ot_singlet):
     def generators(self, dt):
         return [complex(1.0, 0.0), complex(0.0, 1.0)]
 
+    def cartesian_to_infinitesimal(self, U, dU):
+        return dU
+
     def inner_product(self, left, right):
         # (left_r + i left_i)^* (right_r + i right_i)
         # = left_r right_r + left_i right_i + i (left_r right_i - left_i right_r)

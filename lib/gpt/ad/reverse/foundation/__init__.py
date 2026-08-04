@@ -129,6 +129,12 @@ def infinitesimal_to_cartesian(src, dsrc):
     return src.value.otype.infinitesimal_to_cartesian(src, dsrc)
 
 
+def cartesian_to_infinitesimal(src, dsrc):
+    if gpt.util.is_num(src.value) or isinstance(src.value, np.ndarray):
+        return dsrc
+    return src.value.otype.cartesian_to_infinitesimal(src, dsrc)
+
+
 def identity(x):
     def _forward():
         return g.identity(x.value)
