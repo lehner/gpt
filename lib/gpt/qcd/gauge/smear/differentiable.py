@@ -37,8 +37,8 @@ class dft_diffeomorphism(diffeomorphism):
     def __call__(self, fields):
         # ft needs to be callable with a node or a lattice
         res = self.ft(fields)
-        for x in res:
-            x.otype = fields[0].otype
+        for i, x in enumerate(res):
+            x.otype = fields[i].otype
         return res
 
     def jacobian(self, fields, fields_prime, dfields):
@@ -51,13 +51,16 @@ class dft_diffeomorphism(diffeomorphism):
             self.aU[mu].value = fields[mu]
         gradient = [None] * N
         for mu in range(N):
+            # make sure all gradients are reset
+            for nu in range(N):
+                self.aU[nu].zero_gradient()
             self.aUft[mu](initial_gradient=aU_prime[mu])
             for nu in range(N):
                 if gradient[nu] is None:
                     gradient[nu] = self.aU[nu].gradient
                 else:
                     gradient[nu] = g(gradient[nu] + self.aU[nu].gradient)
-                gradient[nu].otype = dfields[0].otype
+                gradient[nu].otype = dfields[nu].otype
 
         return gradient
 

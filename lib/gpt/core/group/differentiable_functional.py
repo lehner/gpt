@@ -110,8 +110,8 @@ class differentiable_functional:
                 g.message(f"Error: cartesian defect: {eps} > {epsilon_assert}")
                 assert False
 
-    def transformed(self, t, indices=None):
-        return transformed(self, t, indices)
+    def transformed(self, t, indices=None, projection=None):
+        return transformed(self, t, indices, projection)
 
     def __add__(self, other):
         return added(self, other)
@@ -163,18 +163,21 @@ class scaled(differentiable_functional):
 
 
 class transformed(differentiable_functional):
-    def __init__(self, f, t, indices):
+    def __init__(self, f, t, indices, projection):
         self.f = f
         self.t = t
         self.indices = indices
+        self.projection = projection
+        # apply t only to indices, after applying t, keep only projection
 
     def __call__(self, fields):
         indices = self.indices if self.indices is not None else range(len(fields))
+        projection = self.projection if self.projection is not None else range(len(fields))
         fields_indices = [fields[i] for i in indices]
         fields_transformed = self.t(fields_indices)
-        fields_prime = [None if i in indices else fields[i] for i in range(len(fields))]
-        for i, j in zip(range(len(indices)), indices):
-            fields_prime[j] = fields_transformed[i]
+        fields_prime = [
+            fields_transformed[indices.index(i)] if i in indices else fields[i] for i in projection
+        ]
         return self.f(fields_prime)
 
     def gradient(self, fields, dfields):
@@ -184,22 +187,30 @@ class transformed(differentiable_functional):
 
         # do the forward pass
         indices = self.indices if self.indices is not None else range(len(fields))
+        projection = self.projection if self.projection is not None else range(len(fields))
         fields_indices = [fields[i] for i in indices]
         fields_transformed = self.t(fields_indices)
-
-        fields_prime = [None if i in indices else fields[i] for i in range(len(fields))]
-        for i, j in zip(range(len(indices)), indices):
-            fields_prime[j] = fields_transformed[i]
+        fields_prime = [
+            fields_transformed[indices.index(i)] if i in indices else fields[i] for i in projection
+        ]
 
         # start the backwards pass with a calculation of the gradient with the transformed fields
         gradient_prime = self.f.gradient(fields_prime, fields_prime)
 
+        src_gradient = [None] * len(fields_transformed)
+        for i in indices:
+            j = indices.index(i)
+            if j < len(gradient_prime) and i < len(src_gradient):
+                src_gradient[i] = gradient_prime[j]
+        for i in range(len(fields_transformed)):
+            if src_gradient[i] is None:
+                src_gradient[i] = g.group.cartesian(fields_transformed[i])
+                src_gradient[i][:] = 0
+
         # now apply the jacobian to the transformed gradients
-        gradient_transformed = self.t.jacobian(
-            fields_indices, fields_transformed, [gradient_prime[i] for i in indices]
-        )
+        gradient_transformed = self.t.jacobian(fields_indices, fields_transformed, src_gradient)
 
-        for i, j in zip(range(len(indices)), indices):
-            gradient_prime[j] = gradient_transformed[i]
-
-        return [gradient_prime[i] for i in derivative_indices]
+        return [
+            gradient_transformed[indices.index(i)] if i in indices else gradient_prime[i]
+            for i in derivative_indices
+        ]
