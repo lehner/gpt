@@ -201,3 +201,30 @@ def group_inner_product(left, right):
     # inner product over group's real vector space
     left_type = left.otype
     return left_type.inner_product(left, right)
+
+
+def where(first, second, third, fourth):
+    assert fourth is None
+    question = first
+    yes = second
+    no = third
+
+    def _forward():
+        return g.where(question, yes.value, no.value)
+
+    # not allowed to capture z, otherwise have reference loop!
+    def _backward(z):
+        if yes.with_gradient:
+            yes.gradient += g.where(question, z.gradient, g(0 * yes.gradient))
+        if no.with_gradient:
+            no.gradient += g.where(question, g(0 * no.gradient), z.gradient)
+
+    z_container = yes._container
+
+    return g.ad.reverse.node_base(
+        _forward,
+        _backward,
+        (yes, no),
+        _container=z_container,
+        _tag="where(" + str(yes._container) + ")",
+    )

@@ -124,9 +124,16 @@ class directional_parallel_transport(dft_diffeomorphism):
         return dpt_action_log_det_jacobian(self)
 
     def diagonal_jacobian_gradient(self, fields, fields_prime, left, right):
+
+        # aU_prime_mu = g.cartesian_to_infinitesimal(fields_prime[mu], dfields_mu)
+        # for nu in range(len(fields)):
+        # self.aU[nu].value = fields[nu]
+        # self.aUft[mu](initial_gradient=aU_prime_mu)
+        # self.aU[mu].gradient.otype = dfields_mu.otype
+        # return g(self.aU[mu].gradient * self.P1)
+
         # Compute \partial_rho left (\partial_U f) right
         rad = g.ad.reverse
-        left = rad.node(left, with_gradient=False)
 
         mu = self.mu
         N = len(fields_prime)
@@ -135,46 +142,61 @@ class directional_parallel_transport(dft_diffeomorphism):
             g.cartesian_to_infinitesimal(fields_prime[mu], right), with_gradient=False
         )
         aaU = [rad.node(u) for u in self.aU]
-        aaUft = self.ft(aaU)
-        aaUft[mu](initial_gradient=aU_prime_mu)
-        ip = g.inner_product(left, aaU[mu].gradient)
 
         for nu in range(len(aaU)):
             aaU[nu].value.value = fields[nu]
 
-        ip()
+        # for nu in range(len(aaU)):
+        #    aaU[nu].zero_gradient()
 
-        assert False
+        # aaUft = self.ft(aaU)
+        aaUft = aaU
+        aaUft[mu](initial_gradient=aU_prime_mu)
 
-        self.aU[mu].gradient.otype = dfields_mu.otype
-        return g(self.aU[mu].gradient * self.P1)
+        print(aaU[mu].gradient)
+        # for nu in range(len(aaU)):
+        #    aaU[nu].value.zero_gradient()
+
+        left = rad.node(left, with_gradient=False)
+        ip = g.inner_product(left, rad.node(self.P1, with_gradient=False) * aaU[mu].gradient)
+        val = ip()
+        print(val)
+
+        return [aaU[nu].value.gradient for nu in range(len(aaU))]
 
     def action_log_det_jacobian_gradient(self, fields, dfields):
         # det(J_{ab} + drho_c \partial_{rho_c} J_{ab}) = det(J) (1 + J^-1_{ba} drho_c \partial_{rho_c} J_{ab})
         # -> \partial_{rho_c} det(J) = det(J) J^-1_{ba} \partial_{rho_c} J_{ab}
+        # \partial -\log \det(J) = -1/det(J) \partial det(J)
         # Compute tr[\partial_rho (\partial_U f) M]
+
+        J = self.jacobian_matrix(fields)
+        Jinv = g.matrix.inv(J)
+
         fields_prime = self(fields)
+
         grid = fields[0].grid
         dt = grid.precision.complex_dtype
         otype = fields[0].otype
         otype_cartesian = otype.cartesian()
         generators = otype_cartesian.generators(dt)
-        src = g.group.cartesian(fields[0])
-        M = g.lattice(grid, g.ot_matrix_su_n_adjoint_algebra(otype.Nc))
+        right = g.group.cartesian(fields[0])
+        left = g.group.cartesian(fields[0])
+
+        Jinv = g.separate_color(Jinv)
 
         for a in range(len(generators)):
-            src @= self.P1 * generators[a]
-            dst = self.diagonal_jacobian(fields, fields_prime, src)
-            coor = otype_cartesian.coordinates(dst)
-            for b in range(len(generators)):
-                M[:, :, :, :, a, b] = coor[b][:]
+            left @= self.P1 * generators[a]
+            # right = g.where(self.P1, right, g(0*left))
+            right @= sum(-Jinv[b, a] * generators[b] for b in range(len(generators)))
+            gr = self.diagonal_jacobian_gradient(fields, fields_prime, left, right)
+            if a == 0:
+                gr_sum = gr
+            else:
+                for nu in range(len(gr)):
+                    gr_sum[nu] += gr[nu]
 
-        M_det = g.matrix.det(M)
-        M_log_det = g.component.log(M_det)
-        zero = g.lattice(M_log_det)
-        zero[:] = 0
-        M_log_det = g.where(self.P1, M_log_det, zero)
-        return g.sum(M_log_det)
+        return [gr_sum[fields.index(d)] for d in dfields]
 
 
 class dpt_action_log_det_jacobian(differentiable_functional):

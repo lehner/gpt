@@ -226,3 +226,33 @@ def astype(first, second):
     r = gpt.copy(first)
     r.otype = second
     return r
+
+
+def where(first, second, third, fourth):
+    if fourth is None:
+        question = first
+        yes = second
+        no = third
+        answer = None
+    else:
+        question = second
+        yes = third
+        no = fourth
+        answer = first
+
+    question = gpt.eval(question)
+    yes = gpt.eval(yes)
+    no = gpt.eval(no)
+    if answer is None:
+        answer = gpt.lattice(yes)
+
+    assert len(question.v_obj) == 1
+    assert len(yes.v_obj) == len(no.v_obj)
+    assert len(answer.v_obj) == len(yes.v_obj)
+
+    params = {"operator": "?:"}
+
+    for a, y, n in zip(answer.v_obj, yes.v_obj, no.v_obj):
+        cgpt.ternary(a, question.v_obj[0], y, n, params)
+
+    return answer
