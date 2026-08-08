@@ -1,7 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                        Mattia Bruno
+#    Copyright (C) 2026  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,13 +16,14 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt.qcd.gauge
-import gpt.qcd.fermion
-import gpt.qcd.scalar
-import gpt.qcd.pseudofermion
-import gpt.qcd.baryon
-import gpt.qcd.sparse_propagator
-import gpt.qcd.feynman
-from gpt.qcd.utils import ferm_to_prop, prop_to_ferm
-from gpt.qcd.wick import wick
-from gpt.qcd.honeycomb import honeycomb
+import gpt as g
+import numpy as np
+from gpt.qcd.honeycomb.gauge import plaquette
+
+
+def wilson(self, beta, grid):
+    rad = g.ad.reverse
+    aU = [rad.node(g.mcolor(grid)) for _ in range(24)]
+    act = (1 - plaquette(self, aU)) * grid.gsites * beta / 2 * 32
+    act = act.functional(*aU)
+    return act

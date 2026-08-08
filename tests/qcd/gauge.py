@@ -14,6 +14,32 @@ U = g.qcd.gauge.random(grid, rng)
 V = rng.element(g.lattice(U[0]))
 U_transformed = g.qcd.gauge.transformed(U, V)
 
+
+# honeycomb
+hc = g.qcd.honeycomb()
+rnghc = g.random("test")
+Uhc = [g.mcolor(grid) for _ in range(hc.number_of_link_fields)]
+rnghc.normal_element(Uhc, scale=0.3)
+Vhc = [rnghc.element(g.mcolor(grid)) for _ in range(hc.number_of_subsets)]
+Uhc_transformed = hc.gauge.transformed(Uhc, Vhc)
+
+Uhc_id = [g.identity(u) for u in Uhc]
+P = hc.gauge.plaquette(Uhc_id)
+eps = abs(1 - P)
+g.message(f"Honeycomb plaquette in unit gauge: {P} : {eps}")
+assert eps < 1e-13
+
+P = hc.gauge.plaquette(Uhc)
+Pt = hc.gauge.plaquette(Uhc_transformed)
+eps = abs(P - Pt)
+g.message(f"Honeycomb plaquette gauge invariance: {P} <> {Pt} : {eps}")
+assert eps < 1e-13
+
+# wilson action on honeycomb
+a1 = hc.gauge.action.wilson(26, grid)
+a1.assert_gradient_error(rnghc, Uhc, Uhc, 1e-3, 1e-8)
+
+
 # quadruple precision global sum version
 U_quad = g.convert(U, g.double_quadruple)
 
@@ -242,7 +268,7 @@ action_top = action_top.transformed(sm)
 action_top.assert_gradient_error(rng, U, U, 1e-3, 1e-7)
 
 action_top = g.qcd.gauge.action.topology_field(U, 2)
-action_top = action_top.transformed(sm, indices=[0,1,2,3])
+action_top = action_top.transformed(sm, indices=[0, 1, 2, 3])
 Qf = [g.real(U[0].grid)]
 rng.element(Qf)
 action_top.assert_gradient_error(rng, U + Qf, U + Qf, 1e-3, 1e-7)
