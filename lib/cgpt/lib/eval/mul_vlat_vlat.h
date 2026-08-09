@@ -59,9 +59,9 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 
   // VV -> S/M
   if (lhs_singlet_rank == 1 && rhs_singlet_rank == 1) {
+    ASSERT(lhs_singlet_dim == rhs_singlet_dim);
     if (lhs_unary == 0 && rhs_unary == (BIT_TRANS|BIT_CONJ)) {
       // outer product -> M
-      ASSERT(lhs_singlet_dim == rhs_singlet_dim);
       dst_vl.resize(lhs_singlet_dim*rhs_singlet_dim, 0);
       for (int i=0;i<lhs_singlet_dim;i++) {
 	for (int j=0;j<rhs_singlet_dim;j++) {
@@ -71,9 +71,8 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
       }
       return;
     } else if (lhs_unary == (BIT_TRANS|BIT_CONJ) && rhs_unary == 0) {
-      ERR("Not implemented");
+      //ERR("Not implemented");
       // inner product -> S
-      /*ASSERT(lhs_singlet_dim == rhs_singlet_dim);
       dst_vl.resize(1, 0);
       bool _ac = ac;
       for (int i=0;i<lhs_singlet_dim;i++) {
@@ -82,7 +81,7 @@ void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 	  _ac = true;
 	}
       }
-      return;*/
+      return;
     } else {
       ERR("Invalid combination of two vectors");
     }
