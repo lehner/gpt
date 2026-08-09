@@ -1,7 +1,7 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2022  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
-#                  2022  Raphael Lehner (raphael.lehner@physik.uni-regensburg.de)
+#    Copyright (C) 2022-24  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#                  2022-24  Raphael Lehner (raphael.lehner@physik.uni-regensburg.de)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ class multi_shift_fom(base_iterative):
         restartlen=20,
         shifts=[],
         checkres=True,
-        rhos=False,
+        saverhos=False,
     )
     def __init__(self, params):
         super().__init__()
@@ -89,7 +89,8 @@ class multi_shift_fom(base_iterative):
         self.restartlen = params["restartlen"]
         self.shifts = params["shifts"]
         self.checkres = params["checkres"]
-        self.rhos = params["rhos"]
+        self.saverhos = params["saverhos"]
+        self.rhos = None
 
     def arnoldi(self, mat, V, rlen):
         H = []
@@ -155,15 +156,15 @@ class multi_shift_fom(base_iterative):
             V = [g.copy(src) for i in range(rlen + 1)]
             V[0] /= r2**0.5
 
-            # return rhos for prec fgmres
-            rr = self.rhos
+            # save rhos for prec multi_shift_fgmres
+            sr = self.saverhos
 
             for k in range(0, self.maxiter, rlen):
                 t("arnoldi")
                 H = self.arnoldi(mat, V, rlen)
 
                 for j, fom in enumerate(sfoms):
-                    if fom.converged is False or rr:
+                    if fom.converged is False or sr is True:
                         t("solve_hessenberg")
                         fom.solve_hessenberg(H, r2)
 
@@ -187,7 +188,9 @@ class multi_shift_fom(base_iterative):
 
                 if all([fom.converged for fom in sfoms]):
                     self.log(f"converged in {k+rlen} iterations")
-                    return [fom.rho for fom in sfoms] if rr else None
+                    if sr is True:
+                        self.rhos = [fom.rho for fom in sfoms]
+                    return
 
                 if self.maxiter != rlen:
                     t("restart")
@@ -207,7 +210,8 @@ class multi_shift_fom(base_iterative):
             cs = sum([fom.converged for fom in sfoms if True])
             ns = len(self.shifts)
             self.log(f"NOT converged in {k+rlen} iterations; {cs} / {ns} converged shifts")
-            return [fom.rho for fom in sfoms] if rr else None
+            if sr is True:
+                self.rhos = [fom.rho for fom in sfoms]
 
         return g.matrix_operator(
             mat=inv,
