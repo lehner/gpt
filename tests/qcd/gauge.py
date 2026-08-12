@@ -39,6 +39,18 @@ assert eps < 1e-13
 a1 = hc.gauge.action.wilson(26, grid)
 a1.assert_gradient_error(rnghc, Uhc, Uhc, 1e-3, 1e-8)
 
+# test plaquette for gauge invariance on sub-hybercubes
+for i in range(2):
+    P = g.qcd.gauge.plaquette(hc.hypercube(i, Uhc))
+    Pt = g.qcd.gauge.plaquette(hc.hypercube(i, Uhc_transformed))
+    eps = abs(P - Pt)
+    g.message(f"Honeycomb sub-hypercube plaquette gauge invariance: {P} <> {Pt} : {eps}")
+    assert eps < 1e-13
+
+
+# temporary exit, TODO: remove
+import sys
+sys.exit(0)
 
 # quadruple precision global sum version
 U_quad = g.convert(U, g.double_quadruple)

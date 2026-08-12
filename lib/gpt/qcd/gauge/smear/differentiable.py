@@ -45,6 +45,9 @@ class dft_diffeomorphism(diffeomorphism):
         N = len(fields_prime)
         assert len(fields) == N
         assert len(dfields) == N
+        for mu in range(N):
+            if isinstance(fields_prime[mu], g.ad.reverse.node_base):
+                print(type(fields_prime[mu].value))
         aU_prime = [g.cartesian_to_infinitesimal(fields_prime[mu], dfields[mu]) for mu in range(N)]
         for mu in range(N):
             assert_compatible(self.aU[mu].value, fields[mu])

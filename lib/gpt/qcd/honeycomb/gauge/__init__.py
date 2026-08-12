@@ -23,7 +23,8 @@ import numpy as np
 def cshift(fld, offset):
     for mu in range(4):
         if float(offset[mu]) != 0.0:
-            fld = g.cshift(fld, mu, offset[mu])
+            assert abs(offset[mu] - int(offset[mu])) < 1e-10
+            fld = g.cshift(fld, mu, int(offset[mu]))
     return fld
 
 
@@ -34,7 +35,7 @@ def plaquette(self, U):
     for inst in geo.plaquette_instructions:
         P = None
         for subset, dag, offset, index in inst:
-            fac = U[subset*12 + index]
+            fac = U[subset * 12 + index]
             if dag:
                 fac = g(g.adj(fac))
             fac = cshift(fac, offset)
@@ -48,17 +49,25 @@ def plaquette(self, U):
             Ptot += P
     return g(g.sum(g.trace(Ptot))).real / fac.grid.gsites / 3 / len(geo.plaquette_instructions)
 
+
 def transformed(self, U, V):
     geo = self.geo
     assert len(V) == 2
     assert len(U) == geo.number_of_link_fields
 
     return [
-        g(V[subset] * U[subset*12 + idx] * g.adj(
-            cshift(
-                V[geo.positive_subset[subset][idx]],
-                geo.sub_offset[subset] + np.array(geo.positive[idx]) - geo.sub_offset[geo.positive_subset[subset][idx]]
+        g(
+            V[subset]
+            * U[subset * 12 + idx]
+            * g.adj(
+                cshift(
+                    V[(subset + geo.cross_grids[idx]) % 2],
+                    geo.sub_offset[subset]
+                    + np.array(geo.positive[idx])
+                    - geo.sub_offset[(subset + geo.cross_grids[idx]) % 2],
+                )
             )
-        ))
-        for subset in [0,1] for idx in range(len(geo.positive))
+        )
+        for subset in [0, 1]
+        for idx in range(len(geo.positive))
     ]

@@ -40,3 +40,7 @@ class honeycomb:
         self.number_of_link_fields = self.geo.number_of_link_fields
         self.number_of_subsets = self.geo.number_of_subsets
         self.gauge = gauge(self.geo)
+
+    def hypercube(self, subset, U):
+        assert len(U) == 24
+        return [U[subset * 12 + self.geo.link_hypercube_indices[mu]] for mu in range(4)]
