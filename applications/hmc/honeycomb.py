@@ -76,7 +76,7 @@ for i in range(latest + 1, nmax):
             step = 0.05
             tau = 0
             f = open(f"{root}/ckpoint_lat.{i}.E{j}", "wt")
-            for n in range(40):
+            for n in range(80):
                 tau += step
                 g.message(tau)
                 Uhc = g.qcd.gauge.smear.wilson_flow(Uhc, step)

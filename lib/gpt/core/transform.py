@@ -202,6 +202,8 @@ def project(src, method):
 
 
 def where(first, second, third, fourth=None):
+    if isinstance(third, gpt.expr):
+        third = gpt.eval(third)
     return third.__class__.foundation.where(first, second, third, fourth)
 
 
