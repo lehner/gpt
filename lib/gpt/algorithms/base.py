@@ -74,6 +74,7 @@ class base_iterative(base):
         self.verbose_log_period = gpt.default.get_float("--" + self.name + "_log_period", 0.0)
         self.log_time = 0.0
         self.converged = None
+        self.history = []
 
     def get_log_file(self):
         if not self.verbose_log_convergence or gpt.rank() != 0:
