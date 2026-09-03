@@ -41,6 +41,6 @@ cgpt_Lattice_base* cgpt_lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a
   typedef vComplexD vtype;
   _COMPATIBLE_MSR_(iSinglet);
   _OUTER_PRODUCT_(iVSinglet10);
-  //  _INNER_PRODUCT_(iVSinglet10);
+  _INNER_PRODUCT_(iVSinglet10);
   ERR("Not implemented");
 }
