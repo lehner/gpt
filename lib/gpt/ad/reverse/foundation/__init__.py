@@ -124,15 +124,17 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
 
 
 def infinitesimal_to_cartesian(src, dsrc):
-    if gpt.util.is_num(src.value) or isinstance(src.value, np.ndarray):
+    # dispatch on the perturbation's otype, as in the lattice and forward-AD
+    # foundations; node.value may be None for unevaluated (or freed) nodes
+    if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
-    return src.value.otype.infinitesimal_to_cartesian(src, dsrc)
+    return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)
 
 
 def cartesian_to_infinitesimal(src, dsrc):
-    if gpt.util.is_num(src.value) or isinstance(src.value, np.ndarray):
+    if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
-    return src.value.otype.cartesian_to_infinitesimal(src, dsrc)
+    return dsrc.otype.cartesian_to_infinitesimal(src, dsrc)
 
 
 def identity(x):

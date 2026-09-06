@@ -50,7 +50,7 @@ for i in range(2):
 
 # temporary exit, TODO: remove
 import sys
-sys.exit(0)
+# sys.exit(0)
 
 # quadruple precision global sum version
 U_quad = g.convert(U, g.double_quadruple)
