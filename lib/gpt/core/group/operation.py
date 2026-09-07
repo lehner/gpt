@@ -40,10 +40,30 @@ def projected_convert(x, otype):
     return g.project(g.convert(x, otype), "defect")
 
 
+def _group_foundation(left, right):
+    # first-operand foundation, except when the first is on the base lattice
+    # foundation and the second on a derived one (e.g. rev-AD); the lattice
+    # foundation cannot evaluate mixed-foundation pairs.  A symbolic-expr
+    # operand has no foundation and defers to the other operand's.
+
+    def _found(op):
+        return getattr(op.__class__, "foundation", None)
+
+    fa = _found(left)
+    fb = _found(right)
+    if fa is None:
+        return fb
+    if fb is None:
+        return fa
+    if fa is not fb and fa is g.lattice.foundation:
+        return fb
+    return fa
+
+
 def inner_product(left, right):
     if isinstance(left, list):
         return sum([inner_product(x, y) for x, y in zip(left, right)])
-    return left.__class__.foundation.group_inner_product(left, right)
+    return _group_foundation(left, right).group_inner_product(left, right)
 
 
 def inverse(left):

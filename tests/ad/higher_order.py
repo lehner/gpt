@@ -646,3 +646,30 @@ fd3 = (f3_of_t(2 * h3) - 2 * f3_of_t(h3) + 2 * f3_of_t(-h3) - f3_of_t(-2 * h3)) 
 err = abs(dA_d2S_dA - fd3) / (abs(dA_d2S_dA) + abs(fd3) + 1e-30)
 g.message(f"gauge d3S(A,A,A) vs 4-point FD of action: {err}")
 assert err < 1e-3, "gauge d3S(A,A,A) vs 4-point FD of action"
+
+#####################################
+# group_inner_product symmetry (C2)
+#
+# The gauge group contraction must be symmetric in its arguments: the
+# reversed slots give the same (real) value and the same gradient, and a
+# plain operand is promoted to a constant node.  Checked on a gauge
+# Cartesian field (the otype that actually has an inner_product).
+g.message("group_inner_product symmetry (reversed contraction)")
+c0g = g.group.cartesian(Ug[0])
+ag = rngg.normal_element(g.group.cartesian(Ug))[0]
+
+n1g = rad.node(c0g)
+S1g = g.group.inner_product(n1g, ag)  # node first
+S1g()
+n2g = rad.node(c0g)
+S2g = g.group.inner_product(ag, n2g)  # plain first
+S2g()
+assert_close(
+    resolve_value(S1g), resolve_value(S2g), 1e-13, "group inner_product symmetry value"
+)
+assert_field_close(
+    resolve_value(n1g.gradient),
+    resolve_value(n2g.gradient),
+    1e-13,
+    "group inner_product symmetry grad",
+)

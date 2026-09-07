@@ -211,7 +211,10 @@ def cshift_plan_execute(self):
 
 
 def group_inner_product(left, right):
-    # inner product over group's real vector space
+    # inner product over group's real vector space; symmetric in its
+    # arguments, so plain operands are promoted to constant nodes (a node's
+    # children must be nodes)
+    left, right = nodify(left, right)
     left_type = left.otype
     return left_type.inner_product(left, right)
 
