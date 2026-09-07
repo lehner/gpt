@@ -136,8 +136,9 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
     raise Exception(f"component-wise operator {operator} not implemented in rev-AD")
 
 
-def infinitesimal_to_cartesian(src, dsrc):
-    # dispatch on the perturbation's otype, as in the lattice and forward-AD
+def _group_conversion(src, dsrc, method):
+    # dispatch on the perturbation's otype conversion method (infinitesimal_to_
+    # cartesian or cartesian_to_infinitesimal), as in the lattice and forward-AD
     # foundations; node.value may be None for unevaluated (or freed) nodes
     if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
@@ -145,29 +146,23 @@ def infinitesimal_to_cartesian(src, dsrc):
         # a nested gradient is a lazy compute graph; the otype conversion is
         # linear in the gradient and runs as graph operations (including the
         # container otype update); containers without an otype, or otypes
-        # without a conversion, pass through
+        # without the conversion, pass through
         try:
             otype = dsrc.otype
         except Exception:
             return dsrc
-        if not hasattr(otype, "infinitesimal_to_cartesian"):
+        if not hasattr(otype, method):
             return dsrc
-        return otype.infinitesimal_to_cartesian(src, dsrc)
-    return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)
+        return getattr(otype, method)(src, dsrc)
+    return getattr(dsrc.otype, method)(src, dsrc)
+
+
+def infinitesimal_to_cartesian(src, dsrc):
+    return _group_conversion(src, dsrc, "infinitesimal_to_cartesian")
 
 
 def cartesian_to_infinitesimal(src, dsrc):
-    if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
-        return dsrc
-    if is_node(dsrc):
-        try:
-            otype = dsrc.otype
-        except Exception:
-            return dsrc
-        if not hasattr(otype, "cartesian_to_infinitesimal"):
-            return dsrc
-        return otype.cartesian_to_infinitesimal(src, dsrc)
-    return dsrc.otype.cartesian_to_infinitesimal(src, dsrc)
+    return _group_conversion(src, dsrc, "cartesian_to_infinitesimal")
 
 
 def identity(x):
