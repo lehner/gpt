@@ -197,12 +197,11 @@ class node_base(base):
 
         # backprop second factor: z = x**n -> dz/dx = n*x**(n-1).  The
         # framework gradient is conjugate-linear (see __mul__, which applies
-        # g.adj to the cofactor), so the lattice contribution is
-        # adj(n*x**(n-1)) * flow.  The scalar __pow__ convention (no adj) is
-        # preserved so existing scalar behavior stays bit-identical.
+        # g.adj to the cofactor), so the contribution is adj(n*x**(n-1)) * flow.
+        # This holds for both lattice and scalar data; for real values the adj
+        # is the identity, so real-data results are unchanged.
         def _bp(v):
-            p = _p(v, n - 1)
-            return g.adj(p) if lattice else p
+            return g.adj(_p(v, n - 1))
 
         # z = x**n -> dz = n*x**(n-1) dx
         return node_op(

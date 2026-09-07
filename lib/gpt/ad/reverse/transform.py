@@ -18,7 +18,7 @@
 #
 import gpt as g
 from gpt.ad.reverse import node_op
-from gpt.ad.reverse.util import value_of
+from gpt.ad.reverse.util import product, value_of
 
 
 def relu(x, a=0.0):
@@ -34,7 +34,11 @@ def sin(x):
     return node_op(
         (x,),
         lambda: g.component.sin(value_of(x)),
-        (lambda z: (1, g.component.multiply(g.component.cos(value_of(x)), z.gradient)),),
+        # conjugate-linear convention (matches __mul__): adj(cos(x)) * flow.
+        # g.adj(lattice) is a symbolic expr, so use product (which handles
+        # expr via the symbolic path, as __mul__ does) rather than
+        # g.component.multiply (which requires a concrete lattice operand).
+        (lambda z: (1, product(z.gradient, g.adj(g.component.cos(value_of(x))))),),
         x._container,
     )
 
@@ -43,6 +47,7 @@ def cos(x):
     return node_op(
         (x,),
         lambda: g.component.cos(value_of(x)),
-        (lambda z: (-1, g.component.multiply(g.component.sin(value_of(x)), z.gradient)),),
+        # conjugate-linear convention (matches __mul__): adj(-sin(x)) * flow
+        (lambda z: (-1, product(z.gradient, g.adj(g.component.sin(value_of(x))))),),
         x._container,
     )

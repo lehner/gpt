@@ -434,6 +434,43 @@ hvp_ad = pow_hvp(s0, nb)
 hvp_fd = (pow_first(g(s0 + eps * b0)) - pow_first(g(s0 - eps * b0))) / (2 * eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "pow HVP vs FD of 1st derivative")
 
+# --- conjugate-linear gradient convention: every backprop applies g.adj to
+# its cofactor (matching __mul__), so gradient = conj(Wirtinger d/dx).  This
+# is only observable for COMPLEX data and in the imaginary part (ig=1.0j);
+# real data and real-valued actions are unaffected (adj = identity).
+g.message("conjugate-linear convention: complex-data checks")
+
+# (a) scalar **: n**2 and n*n are the same function, so their gradients must
+# agree; both are conjugate-linear (2*adj(x0)), not holomorphic (2*x0).
+x0c = 0.7 + 0.4j
+np1 = rad.node(x0c); (np1**2)()
+np2 = rad.node(x0c); (np2*np2)()
+assert_close(np1.gradient, 2 * g.adj(x0c), 1e-14, "scalar ** grad (conj-linear)")
+assert_close(np1.gradient, np2.gradient, 1e-14, "scalar ** == scalar * grad")
+
+# (b) sin on a complex lattice: a complex-valued action, checked against finite
+# differences at both initial gradients (ig=1.0j is the distinguishing case)
+def conv_action(n):
+    return g.sum(g.component.sin(n))
+
+
+n = rad.node(s0)
+cact = conv_action(n)
+for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
+    cact(initial_gradient=ig)
+    eps = 1e-6
+    lt = rng_l.normal(g.real(grid))
+    n.value = g(s0 + lt * eps)
+    v1 = part(cact(with_gradients=False))
+    n.value = g(s0 - lt * eps)
+    v2 = part(cact(with_gradients=False))
+    n.value = g(s0)
+    num_result = (v1 - v2) / eps / 2.0
+    ad_result = g.inner_product(lt, n.gradient).real
+    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
+    g.message(f"convention sin 1st derivative (ig={ig}): {err}")
+    assert err < 1e-4, f"convention sin 1st derivative (ig={ig})"
+
 #####################################
 # stage 2: SU(3) gauge-field HVP (2nd derivative)
 #
