@@ -17,43 +17,32 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse import node_base
+from gpt.ad.reverse import node_op
+from gpt.ad.reverse.util import value_of, product
 
 
 def relu(x, a=0.0):
-    def _forward():
-        return g.component.relu(a)(x.value)
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:
-            active = g.component.drelu(a)(x.value)
-            x.gradient += g.component.multiply(active, z.gradient)
-
-    return node_base(_forward, _backward, (x,), _container=x._container)
+    return node_op(
+        (x,),
+        lambda: g.component.relu(a)(value_of(x)),
+        (lambda z: (1, product(g.component.drelu(a)(value_of(x)), z.gradient)),),
+        x._container,
+    )
 
 
 def sin(x):
-    def _forward():
-        return g.component.sin(x.value)
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:
-            active = g.component.cos(x.value)
-            x.gradient += g.component.multiply(active, z.gradient)
-
-    return node_base(_forward, _backward, (x,), _container=x._container)
+    return node_op(
+        (x,),
+        lambda: g.component.sin(value_of(x)),
+        (lambda z: (1, product(g.component.cos(value_of(x)), z.gradient)),),
+        x._container,
+    )
 
 
 def cos(x):
-    def _forward():
-        return g.component.cos(x.value)
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:
-            active = g.component.sin(x.value)
-            x.gradient -= g.component.multiply(active, z.gradient)
-
-    return node_base(_forward, _backward, (x,), _container=x._container)
+    return node_op(
+        (x,),
+        lambda: g.component.cos(value_of(x)),
+        (lambda z: (-1, product(g.component.sin(value_of(x)), z.gradient)),),
+        x._container,
+    )

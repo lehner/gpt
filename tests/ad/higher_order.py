@@ -153,6 +153,50 @@ assert_field_close(
 )
 
 
+# --- trigonometric action: exercises the rev-AD transform ops (sin/cos) in a
+# nested setting.  For real data the exact derivatives of S = sum cos(s) are
+# -sin, -cos*a, sin*a*b element-wise.  (For complex data the 3rd derivative
+# carries the framework's contraction convention adj(a)*b instead of a*b.)
+g.message("cos action: exact derivatives (nested transform ops)")
+
+s_r = g.complex(grid)
+rng_l.normal(s_r)
+a_r = g.complex(grid)
+rng_l.normal(a_r)
+b_r = g.complex(grid)
+rng_l.normal(b_r)
+nar = rad.node(a_r, with_gradient=False)
+nbr = rad.node(b_r, with_gradient=False)
+
+
+def cos_action(n):
+    return g.sum(g.component.cos(n))
+
+
+nct = rad.node(s_r)
+cos_action(nct)()
+assert_field_close(nct.gradient, -g.component.sin(s_r), 1e-13, "cos action dS/ds")
+
+n2ct = rad.node(rad.node(s_r))
+cos_action(n2ct)()
+c2ct = g.inner_product(nar, n2ct.gradient)
+c2ct()
+assert_field_close(n2ct.value.gradient, -g.component.cos(s_r) * a_r, 1e-12, "cos action HVP")
+
+n3ct = rad.node(rad.node(rad.node(s_r)))
+cos_action(n3ct)()
+c3ct = g.inner_product(nar, n3ct.gradient)
+c3ct()
+c3ctb = g.inner_product(nbr, n3ct.value.gradient)
+c3ctb()
+assert_field_close(
+    n3ct.value.value.gradient,
+    g.component.sin(s_r) * a_r * b_r,
+    1e-11,
+    "cos action 3rd derivative",
+)
+
+
 # --- second action with a cshift, checked via finite differences ---
 g.message("hopping + quartic action: finite-difference checks")
 rho = 0.3
