@@ -24,12 +24,9 @@ from gpt.ad.reverse.util import (
     get_unary_container,
     get_container,
     product,
-    add,
-    sub,
-    div,
     accum,
-    accum_sub,
     value_of,
+    is_node,
 )
 import gpt.ad.reverse.foundation.matrix
 
@@ -43,9 +40,7 @@ def inner_product(x, y, n_block, use_accelerator):
         vx, vy = value_of(x), value_of(y)
         # dispatch is on the first argument; a node-typed second argument must
         # stay in the node world, so wrap a plain first argument as a node
-        if isinstance(vy, g.ad.reverse.node_base) and not isinstance(
-            vx, g.ad.reverse.node_base
-        ):
+        if is_node(vy) and not is_node(vx):
             vx = g.ad.reverse.node_base(vx, with_gradient=False)
         return g.inner_product(vx, vy, n_block, use_accelerator)
 
@@ -146,7 +141,7 @@ def infinitesimal_to_cartesian(src, dsrc):
     # foundations; node.value may be None for unevaluated (or freed) nodes
     if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
-    if isinstance(dsrc, g.ad.reverse.node_base):
+    if is_node(dsrc):
         # a nested gradient is a lazy compute graph; the otype conversion is
         # linear in the gradient and runs as graph operations (including the
         # container otype update); containers without an otype, or otypes
@@ -164,7 +159,7 @@ def infinitesimal_to_cartesian(src, dsrc):
 def cartesian_to_infinitesimal(src, dsrc):
     if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
-    if isinstance(dsrc, g.ad.reverse.node_base):
+    if is_node(dsrc):
         try:
             otype = dsrc.otype
         except Exception:

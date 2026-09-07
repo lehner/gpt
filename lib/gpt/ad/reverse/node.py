@@ -28,7 +28,6 @@ from gpt.ad.reverse.util import (
     sub,
     div,
     accum,
-    accum_sub,
     value_of,
 )
 from gpt.ad.reverse import foundation
@@ -230,9 +229,10 @@ class node_base(base):
             if x.with_gradient:
                 accum(x, div(z.gradient, g.adj(value_of(y))))
             if y.with_gradient:
-                accum_sub(
+                accum(
                     y,
                     product(div(div(g.adj(value_of(x)), value_of(y)), value_of(y)), z.gradient),
+                    -1,
                 )
 
         return node_base(_forward, _backward, (x, y), _container=z_container, _tag="/")
@@ -310,7 +310,7 @@ class node_base(base):
             if x.with_gradient:
                 accum(x, z.gradient)
             if y.with_gradient:
-                accum_sub(y, z.gradient)
+                accum(y, z.gradient, -1)
 
         return node_base(_forward, _backward, (x, y), _container=_container, _tag="-")
 

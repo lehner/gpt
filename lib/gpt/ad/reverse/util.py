@@ -18,6 +18,7 @@
 #
 import gpt as g
 import numpy as np
+import operator
 
 
 def accumulate_compatible(a, b):
@@ -143,6 +144,11 @@ def get_container(x):
         raise Exception(f"Unknown object type {type(x)}")
 
 
+def is_node(x):
+    # deferred reference: node_base lives in node.py, which imports util
+    return isinstance(x, g.ad.reverse.node_base)
+
+
 def value_of(x):
     # the raw (possibly node-typed) value of x; a node that was freed after a
     # previous pass (value = None) is re-evaluated in place.  The value is NOT
@@ -156,65 +162,62 @@ def value_of(x):
 def _promote(a, b):
     # wrap plain operands as constant nodes so node-typed (lazy) values can be
     # combined with them without leaving the node world
-    if not isinstance(a, g.ad.reverse.node_base):
+    if not is_node(a):
         a = g.ad.reverse.node_base(a, with_gradient=False)
-    if not isinstance(b, g.ad.reverse.node_base):
+    if not is_node(b):
         b = g.ad.reverse.node_base(b, with_gradient=False)
     return a, b
 
 
-def product(a, b):
-    # node-aware product, preserving operand order
-    if isinstance(a, g.ad.reverse.node_base) or isinstance(b, g.ad.reverse.node_base):
+def _binop(a, b, op):
+    # node-aware binary operation: if either side is a node, both stay in the
+    # node world (plain operands are promoted to constant nodes); otherwise
+    # it dispatches exactly as plain arithmetic
+    if is_node(a) or is_node(b):
         a, b = _promote(a, b)
-        return a * b
-    return a * b
+    return op(a, b)
+
+
+def product(a, b):
+    return _binop(a, b, operator.mul)
 
 
 def add(a, b):
-    if isinstance(a, g.ad.reverse.node_base) or isinstance(b, g.ad.reverse.node_base):
-        a, b = _promote(a, b)
-        return a + b
-    return a + b
+    return _binop(a, b, operator.add)
 
 
 def sub(a, b):
-    if isinstance(a, g.ad.reverse.node_base) or isinstance(b, g.ad.reverse.node_base):
-        a, b = _promote(a, b)
-        return a - b
-    return a - b
+    return _binop(a, b, operator.sub)
 
 
 def div(a, b):
-    if isinstance(a, g.ad.reverse.node_base) or isinstance(b, g.ad.reverse.node_base):
-        a, b = _promote(a, b)
-        return a / b
-    return a / b
+    return _binop(a, b, operator.truediv)
 
 
-def accum(n, r):
-    # accumulate r into n.gradient; in place for plain values, node-aware
-    # otherwise.  A node term into a plain gradient is evaluated to a field
-    # (the term graph is linear in the flow), which keeps the result in the
-    # plain world as in single-pass AD
-    if isinstance(n.gradient, g.ad.reverse.node_base):
-        n.gradient = add(n.gradient, r)
-    elif isinstance(r, g.ad.reverse.node_base):
-        n.gradient += value_of(r)
-    else:
-        n.gradient += r
-
-
-def accum_sub(n, r):
-    # accumulate -r into n.gradient (see accum); node gradients with
-    # incompatible containers are evaluated to fields
-    if isinstance(n.gradient, g.ad.reverse.node_base):
-        if isinstance(r, g.ad.reverse.node_base) and n.gradient._container != r._container:
+def accum(n, r, sign=1):
+    # accumulate sign * r into n.gradient:
+    #   plain gradient +- plain term   in place
+    #   plain gradient +- node term    the term graph is linear in the flow,
+    #                                  so it is evaluated to a field, keeping
+    #                                  the result in the plain world as in
+    #                                  single-pass AD
+    #   node gradient  +- plain/node   builds the (lazy) compute graph; a
+    #   term                     subtraction with incompatible containers is
+    #                                  evaluated to a field
+    if is_node(n.gradient):
+        if sign > 0:
+            n.gradient = add(n.gradient, r)
+        elif is_node(r) and n.gradient._container != r._container:
             n.gradient = value_of(n.gradient) - value_of(r)
         else:
             n.gradient = sub(n.gradient, r)
-    elif isinstance(r, g.ad.reverse.node_base):
-        n.gradient -= value_of(r)
+    elif is_node(r):
+        if sign > 0:
+            n.gradient += value_of(r)
+        else:
+            n.gradient -= value_of(r)
+    elif sign > 0:
+        n.gradient += r
     else:
         n.gradient -= r
 
@@ -304,8 +307,8 @@ def convert_container(v, x, y, operand):
             if backward_sum:
                 gradient = g.sum(gradient)
 
-            if (backward_trace or backward_color_trace or backward_spin_trace) and not isinstance(
-                gradient, g.ad.reverse.node_base
+            if (backward_trace or backward_color_trace or backward_spin_trace) and not is_node(
+                gradient
             ):
                 gradient = g(gradient)
 
