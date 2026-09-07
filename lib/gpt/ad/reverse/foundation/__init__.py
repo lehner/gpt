@@ -44,16 +44,17 @@ def inner_product(x, y, n_block, use_accelerator):
             vx = g.ad.reverse.node_base(vx, with_gradient=False)
         return g.inner_product(vx, vy, n_block, use_accelerator)
 
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:  # z = adj(x) y   ->    x z = y  -> x = y adj(z)
-            accum(x, product(value_of(y), g.adj(z.gradient)))
-        if y.with_gradient:  # z = adj(x) y   ->    y = x z
-            accum(y, product(value_of(x), z.gradient))
-
+    # z = adj(x) y   ->   x = y adj(z)   and   y = x z
     return {
-        (0, 0): g.ad.reverse.node_base(
-            _forward, _backward, (x, y), _container=container(complex), _tag="inner_product"
+        (0, 0): g.ad.reverse.node_op(
+            (x, y),
+            _forward,
+            (
+                lambda z: (1, product(value_of(y), g.adj(z.gradient))),
+                lambda z: (1, product(value_of(x), z.gradient)),
+            ),
+            container(complex),
+            "inner_product",
         )
     }
 
@@ -66,60 +67,42 @@ def norm2(x):
 def cshift(x, direction, displacement, none):
     assert none is None
 
-    def _forward():
-        return g.cshift(value_of(x), direction, displacement)
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:
-            accum(x, g.cshift(z.gradient, direction, -displacement))
-
-    return g.ad.reverse.node_base(
-        _forward,
-        _backward,
+    return g.ad.reverse.node_op(
         (x,),
-        _container=x._container,
-        _tag="cshift(" + str(direction) + ", " + str(displacement) + ")",
+        lambda: g.cshift(value_of(x), direction, displacement),
+        (lambda z: (1, g.cshift(z.gradient, direction, -displacement)),),
+        x._container,
+        "cshift(" + str(direction) + ", " + str(displacement) + ")",
     )
 
 
 def adj(x):
-    def _forward():
-        return g.adj(value_of(x))
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:
-            accum(x, g.adj(z.gradient))
-
-    return g.ad.reverse.node_base(_forward, _backward, (x,), _container=x._container, _tag="adj")
+    return g.ad.reverse.node_op(
+        (x,),
+        lambda: g.adj(value_of(x)),
+        (lambda z: (1, g.adj(z.gradient)),),
+        x._container,
+        "adj",
+    )
 
 
 def trace(x, t):
-    def _forward():
-        return g.trace(value_of(x), t)
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:
-            accum(x, product(g.identity(value_of(x)), z.gradient))
-
     z_container = get_unary_container(x._container, lambda v: g.trace(v, t))
 
-    return g.ad.reverse.node_base(_forward, _backward, (x,), _container=z_container)
+    return g.ad.reverse.node_op(
+        (x,),
+        lambda: g.trace(value_of(x), t),
+        (lambda z: (1, product(g.identity(value_of(x)), z.gradient)),),
+        z_container,
+    )
 
 
 def sum(x):
-    def _forward():
-        return g.sum(value_of(x))
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:
-            accum(x, product(g.identity(value_of(x)), z.gradient))
-
-    return g.ad.reverse.node_base(
-        _forward, _backward, (x,), _container=x._container.lattice_to_tensor()
+    return g.ad.reverse.node_op(
+        (x,),
+        lambda: g.sum(value_of(x)),
+        (lambda z: (1, product(g.identity(value_of(x)), z.gradient)),),
+        x._container.lattice_to_tensor(),
     )
 
 
@@ -174,37 +157,25 @@ def identity(x):
             v = g(v)
         return g.identity(v)
 
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        pass
-
-    return g.ad.reverse.node_base(
-        _forward,
-        _backward,
+    return g.ad.reverse.node_op(
         (x,),
-        _container=x._container,
-        _tag="identity(" + str(x._container) + ")",
+        _forward,
+        (None,),
+        x._container,
+        "identity(" + str(x._container) + ")",
     )
 
 
 def astype(x, y):
-    def _forward():
-        return g.astype(g(value_of(x)), y)
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if x.with_gradient:
-            x.gradient += z.gradient
-
     z_container = x._container.copy()
     z_container.set_otype(y)
 
-    return g.ad.reverse.node_base(
-        _forward,
-        _backward,
+    return g.ad.reverse.node_op(
         (x,),
-        _container=z_container,
-        _tag="astype(" + str(x._container) + "," + str(y) + ")",
+        lambda: g.astype(g(value_of(x)), y),
+        (lambda z: (1, z.gradient),),
+        z_container,
+        "astype(" + str(x._container) + "," + str(y) + ")",
     )
 
 
@@ -244,22 +215,15 @@ def where(first, second, third, fourth):
     yes = second
     no = third
 
-    def _forward():
-        return g.where(question, yes.value, no.value)
-
-    # not allowed to capture z, otherwise have reference loop!
-    def _backward(z):
-        if yes.with_gradient:
-            yes.gradient += g.where(question, z.gradient, g(0 * yes.gradient))
-        if no.with_gradient:
-            no.gradient += g.where(question, g(0 * no.gradient), z.gradient)
-
     z_container = yes._container
 
-    return g.ad.reverse.node_base(
-        _forward,
-        _backward,
+    return g.ad.reverse.node_op(
         (yes, no),
-        _container=z_container,
-        _tag="where(" + str(yes._container) + ")",
+        lambda: g.where(question, value_of(yes), value_of(no)),
+        (
+            lambda z: (1, g.where(question, z.gradient, yes._container.zero())),
+            lambda z: (1, g.where(question, no._container.zero(), z.gradient)),
+        ),
+        z_container,
+        "where(" + str(yes._container) + ")",
     )
