@@ -159,6 +159,23 @@ def value_of(x):
     return x.value
 
 
+def resolve(x):
+    # evaluate a value that may be a chain of (lazy) nodes down to a plain
+    # value; node values are evaluated in place
+    while is_node(x):
+        x = value_of(x)
+    return x
+
+
+def value_depth(x):
+    # number of nested node levels below x
+    depth = 0
+    while is_node(x):
+        x = value_of(x)
+        depth += 1
+    return depth
+
+
 def _promote(a, b):
     # wrap plain operands as constant nodes so node-typed (lazy) values can be
     # combined with them without leaving the node world

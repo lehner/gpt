@@ -29,6 +29,7 @@ from gpt.ad.reverse.util import (
     div,
     accum,
     value_of,
+    value_depth,
 )
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
@@ -155,11 +156,7 @@ class node_base(base):
                 gradient.terms[t] = self.gradient
             self.gradient = gradient
 
-        value = self.value
-        while isinstance(value, node_base):
-            if value.value is None and value._forward is not None:
-                value.value = value._forward()
-            value = value.value
+        for _ in range(value_depth(self.value)):
             self.gradient = node_base(self.gradient)
 
     def __mul__(x, y):

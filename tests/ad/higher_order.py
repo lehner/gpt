@@ -28,19 +28,10 @@
 #    applications/hmc/hessian.py.
 #
 import gpt as g
+from gpt.ad.reverse.util import resolve as resolve_value
 
 rng = g.random("test")
 rad = g.ad.reverse
-
-
-def resolve_value(v):
-    """evaluate a value that may be a chain of (lazy) reverse-AD nodes down
-    to a plain value; node values are evaluated in place"""
-    while isinstance(v, rad.node_base):
-        if v.value is None:
-            v.value = v._forward()
-        v = v.value
-    return v
 
 
 def assert_close(val, ref, tol, msg):
