@@ -679,12 +679,8 @@ HVP_A4 = [nnU4[mu].value.gradient for mu in range(4)]
 # the Hessian bilinear form as a node; not evaluated here -- the functional's
 # gradient() below evaluates it and takes its force in one pass
 S4 = sum(g.group.inner_product(nB4[mu], HVP_A4[mu]) for mu in range(4))
-G3_fun = [
-    resolve_value(x)
-    for x in S4.functional(*[nnU4[mu].value.value for mu in range(4)]).gradient(
-        Ug, Ug
-    )
-]
+f4 = S4.functional(*[nnU4[mu].value.value for mu in range(4)])
+G3_fun = [resolve_value(x) for x in f4.gradient(Ug, Ug)]
 dA_d2S_dA_fun = sum(g.group.inner_product(dA[mu], G3_fun[mu]) for mu in range(4))
 
 err = abs(dA_d2S_dA_fun - dA_d2S_dA) / (
@@ -697,6 +693,16 @@ for mu in range(4):
     err = g.norm2(G3_fun[mu] - G3[mu]) / g.norm2(G3[mu])
     g.message(f"gauge 3rd derivative functional field mu={mu} vs stage 3: {err}")
     assert err < 1e-14, f"gauge 3rd derivative functional field mu={mu} vs stage 3"
+
+# the Hessian bilinear form is a genuine differentiable action of U, so the
+# standard force-mechanism FD cross-check applies to its 3rd-derivative force:
+# assert_gradient_error compares the AD gradient (the 3rd derivative) against
+# a 4th-order FD of the bilinear form along the group flow, and checks that the
+# force lives in the cartesian (Lie algebra) representation.  (Unlike the gauge
+# *action* functional, whose gradient is the 1st derivative and is covered by
+# ad.py, this functional's gradient is the 3rd derivative.)
+rng_hf = g.random("gauge_test_hessian_force")
+f4.assert_gradient_error(rng_hf, Ug, Ug, 1e-3, 1e-6)
 
 #####################################
 # group_inner_product symmetry (C2)
