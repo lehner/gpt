@@ -104,9 +104,6 @@ def str_traverse(node, indent=0):
         return ret
 
 
-# gctr = 0
-
-
 class node_base(base):
     foundation = foundation
 
@@ -121,8 +118,6 @@ class node_base(base):
         _container=None,
         _tag=None,
     ):
-        # global gctr
-        # gctr+=1
         if not callable(_forward) or isinstance(_forward, node_base):
             self._forward = None
             self.value = _forward
@@ -140,11 +135,6 @@ class node_base(base):
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         self.gradient = None
         self._tag = _tag
-
-    # def __del__(self):
-    # global gctr
-    # gctr-=1
-    # print(gctr)
 
     def __str__(self):
         return str_traverse(self)
@@ -303,8 +293,8 @@ class node_base(base):
                     # be re-evaluated with modified leaf values, so values are
                     # re-computed as before
                     n.value = n._forward()
-                fields_allocated += 1
-                max_fields_allocated = max(max_fields_allocated, fields_allocated)
+                    fields_allocated += 1
+                    max_fields_allocated = max(max_fields_allocated, fields_allocated)
                 if free is not None:
                     free_n = free[n]
                     for m in free_n:
@@ -328,12 +318,6 @@ class node_base(base):
                 raise Exception(
                     "Expression evaluates to a field.  Gradient calculation is not unique."
                 )
-            # if isinstance(self._container[0], complex) and abs(self.value.imag) > 1e-12 * abs(
-            #            self.value.real
-            # ):
-            #        raise Exception(
-            #            f"Expression does not evaluate to a real number ({self.value}).  Gradient calculation is not unique."
-            #        )
             initial_gradient = 1.0
         self.zero_gradient()
         self.gradient += initial_gradient
@@ -367,7 +351,6 @@ class node_base(base):
         self.forward(nodes, free=forward_free if not with_gradients else None)
         if with_gradients:
             self.backward(nodes, first_gradient=forward_free, initial_gradient=initial_gradient)
-        nodes = None
         return self.value
 
     def functional(self, *arguments):

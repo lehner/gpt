@@ -21,7 +21,9 @@ import numpy as np
 import operator
 
 
-def accumulate_compatible(a, b):
+def otype_compatible(a, b):
+    # otype-level check (distinct from container.accumulate_compatible, which
+    # also compares the lattice grid); resolves data aliases before comparing
     if a == complex:
         a = g.ot_singlet()
     if b == complex:
@@ -283,26 +285,25 @@ def convert_container(v, x, y, operand):
 
         if rhs_otype.spintrace[2] is not None:
             rhs_spintrace_otype = rhs_otype.spintrace[2]()
-            if accumulate_compatible(lhs_otype, rhs_spintrace_otype):
+            if otype_compatible(lhs_otype, rhs_spintrace_otype):
                 backward_spin_trace = True
                 rhs_otype = rhs_spintrace_otype
             elif rhs_spintrace_otype.colortrace[2] is not None:
                 rhs_trace_otype = rhs_spintrace_otype.colortrace[2]()
-                if accumulate_compatible(lhs_otype, rhs_trace_otype):
+                if otype_compatible(lhs_otype, rhs_trace_otype):
                     backward_trace = True
                     rhs_otype = rhs_trace_otype
         if rhs_otype.colortrace[2] is not None:
             rhs_colortrace_otype = rhs_otype.colortrace[2]()
-            if accumulate_compatible(lhs_otype, rhs_colortrace_otype):
+            if otype_compatible(lhs_otype, rhs_colortrace_otype):
                 backward_color_trace = True
                 rhs_otype = rhs_colortrace_otype
 
-        if not accumulate_compatible(rhs_otype, lhs_otype):
+        if not otype_compatible(rhs_otype, lhs_otype):
             raise Exception(
                 "Conversion incomplete:" + rhs_otype.__name__ + ":" + lhs_otype.__name__
             )
 
-    # g.message("Need to modify to",v._container,"from",c,":",backward_sum, backward_trace, backward_spin_trace, backward_color_trace)
     assert backward_trace or backward_color_trace or backward_spin_trace or backward_sum
 
     def _forward():
@@ -332,8 +333,6 @@ def convert_container(v, x, y, operand):
                 gradient = g(gradient)
 
             accum(v, gradient)
-
-            # print("Ran conversion with sum/tr",backward_sum,backward_trace,backward_spin_trace,backward_color_trace)
 
     return g.ad.reverse.node_base(
         _forward,
