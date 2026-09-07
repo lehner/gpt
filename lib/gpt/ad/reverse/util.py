@@ -149,6 +149,19 @@ def is_node(x):
     return isinstance(x, g.ad.reverse.node_base)
 
 
+def nodify(*args):
+    # promote plain operands to constant nodes so they can be combined with
+    # node-typed (lazy) values without leaving the node world.  All-plain
+    # input passes through unchanged, so plain arithmetic keeps its exact
+    # (non-node) dispatch.  Returns the (possibly wrapped) argument for a
+    # single argument, otherwise a tuple.
+    if any(is_node(a) for a in args):
+        args = tuple(
+            a if is_node(a) else g.ad.reverse.node_base(a, with_gradient=False) for a in args
+        )
+    return args[0] if len(args) == 1 else args
+
+
 def value_of(x):
     # the raw (possibly node-typed) value of x; a node that was freed after a
     # previous pass (value = None) is re-evaluated in place.  The value is NOT
@@ -176,22 +189,11 @@ def value_depth(x):
     return depth
 
 
-def _promote(a, b):
-    # wrap plain operands as constant nodes so node-typed (lazy) values can be
-    # combined with them without leaving the node world
-    if not is_node(a):
-        a = g.ad.reverse.node_base(a, with_gradient=False)
-    if not is_node(b):
-        b = g.ad.reverse.node_base(b, with_gradient=False)
-    return a, b
-
-
 def _binop(a, b, op):
     # node-aware binary operation: if either side is a node, both stay in the
     # node world (plain operands are promoted to constant nodes); otherwise
     # it dispatches exactly as plain arithmetic
-    if is_node(a) or is_node(b):
-        a, b = _promote(a, b)
+    a, b = nodify(a, b)
     return op(a, b)
 
 

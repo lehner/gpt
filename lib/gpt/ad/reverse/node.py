@@ -30,6 +30,7 @@ from gpt.ad.reverse.util import (
     accum,
     value_of,
     value_depth,
+    nodify,
 )
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
@@ -160,11 +161,7 @@ class node_base(base):
             self.gradient = node_base(self.gradient)
 
     def __mul__(x, y):
-        if not isinstance(x, node_base):
-            x = node_base(x, with_gradient=False)
-
-        if not isinstance(y, node_base):
-            y = node_base(y, with_gradient=False)
+        x, y = nodify(x, y)
 
         z_container = get_mul_container(x._container, y._container)
 
@@ -186,8 +183,7 @@ class node_base(base):
         )
 
     def __pow__(x, n):
-        if not isinstance(x, node_base):
-            x = node_base(x, with_gradient=False)
+        x = nodify(x)
 
         assert g.util.is_num(n)
         
@@ -206,11 +202,7 @@ class node_base(base):
         return node_base.__mul__(y, x)
 
     def __truediv__(x, y):
-        if not isinstance(x, node_base):
-            x = node_base(x, with_gradient=False)
-
-        if not isinstance(y, node_base):
-            y = node_base(y, with_gradient=False)
+        x, y = nodify(x, y)
 
         z_container = get_div_container(x._container, y._container)
 
@@ -260,11 +252,7 @@ class node_base(base):
         return node_base(_forward, _backward, (x,), _container=z_container)
 
     def __add__(x, y):
-        if not isinstance(x, node_base):
-            x = node_base(x, with_gradient=False)
-
-        if not isinstance(y, node_base):
-            y = node_base(y, with_gradient=False)
+        x, y = nodify(x, y)
 
         if not x._container.accumulate_compatible(y._container):
             raise Exception(
@@ -281,11 +269,7 @@ class node_base(base):
         )
 
     def __sub__(x, y):
-        if not isinstance(x, node_base):
-            x = node_base(x, with_gradient=False)
-
-        if not isinstance(y, node_base):
-            y = node_base(y, with_gradient=False)
+        x, y = nodify(x, y)
 
         assert x._container == y._container
         _container = x._container

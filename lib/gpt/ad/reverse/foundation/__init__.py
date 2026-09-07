@@ -27,31 +27,19 @@ from gpt.ad.reverse.util import (
     accum,
     value_of,
     is_node,
+    nodify,
 )
 import gpt.ad.reverse.foundation.matrix
 
 
 def inner_product(x, y, n_block, use_accelerator):
     assert len(x) == 1 and len(y) == 1 and n_block == 1
-    x, y = x[0], y[0]
-    # the contraction is symmetric in its arguments: promote plain operands
-    # to constant nodes so both slots are treated identically (a node's
-    # children must be nodes)
-    if not is_node(x):
-        x = g.ad.reverse.node_base(x, with_gradient=False)
-    if not is_node(y):
-        y = g.ad.reverse.node_base(y, with_gradient=False)
+    # the contraction is symmetric in its arguments: plain operands are
+    # promoted to constant nodes (a node's children must be nodes)
+    x, y = nodify(x[0], y[0])
 
     def _forward():
-        vx, vy = value_of(x), value_of(y)
-        # a node-typed value must stay in the node world; dispatch is on the
-        # first argument, so wrap plain operands as constant nodes and
-        # re-enter this node-aware inner_product
-        if is_node(vx) or is_node(vy):
-            if not is_node(vx):
-                vx = g.ad.reverse.node_base(vx, with_gradient=False)
-            if not is_node(vy):
-                vy = g.ad.reverse.node_base(vy, with_gradient=False)
+        vx, vy = nodify(value_of(x), value_of(y))
         return g.inner_product(vx, vy, n_block, use_accelerator)
 
     # z = adj(x) y   ->   x = y adj(z)   and   y = x z
