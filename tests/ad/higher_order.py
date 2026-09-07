@@ -748,3 +748,55 @@ assert_field_close(Aa.gradient, ident4, 1e-14, "astype 1st gradient = 1")
 A2a = rad.node(rad.node(a_s))
 g.sum(g.astype(A2a, real_ot))()  # nested (2-deep)
 assert_field_close(A2a.gradient, ident4, 1e-14, "astype nested 1st gradient = 1")
+
+#####################################
+# adj op: the conjugate, exercised explicitly.  It also underlies the __mul__
+# backprop (covered everywhere via the conjugate-linear convention), but the
+# op itself was never tested directly.  The forward is the conjugate and the
+# backprop is the double-adjoint (d(adj x)/dx = adj, so the flow back to x is
+# conj(flow)).  The 1st derivative is exact (S = sum(adj n * m) with a
+# constant m -> dS/dn = m); the 2nd derivative (HVP) of a nonlinear adj action
+# is checked against finite differences.
+g.message("adj op: explicit nested checks")
+
+s_adj = g.complex(grid)
+rng_l.cnormal(s_adj)
+m_adj = g.complex(grid)
+rng_l.cnormal(m_adj)
+nm_adj = rad.node(m_adj, with_gradient=False)
+
+n1a = rad.node(s_adj)
+g.sum(g.adj(n1a) * nm_adj)()
+assert_field_close(n1a.gradient, m_adj, 1e-14, "adj 1st gradient")
+
+n2a = rad.node(rad.node(s_adj))
+g.sum(g.adj(n2a) * nm_adj)()
+assert_field_close(n2a.gradient, m_adj, 1e-14, "adj nested 1st gradient")
+
+
+def adj_action(n):
+    return g.sum(g.adj(n) * n * n)
+
+
+def adj_first(s_):
+    nn = rad.node(s_)
+    adj_action(nn)()
+    return nn.gradient
+
+
+def adj_hvp(s_, a_node):
+    nn = rad.node(rad.node(s_))
+    adj_action(nn)()
+    c = g.inner_product(a_node, nn.gradient)
+    c()
+    return nn.value.gradient
+
+
+a0_adj = rng_l.cnormal(g.complex(grid))
+na_adj = rad.node(a0_adj, with_gradient=False)
+eps = 1e-5
+hvp_ad = adj_hvp(s_adj, na_adj)
+hvp_fd = (adj_first(g(s_adj + eps * a0_adj)) - adj_first(g(s_adj - eps * a0_adj))) / (
+    2 * eps
+)
+assert_field_close(hvp_ad, hvp_fd, 1e-5, "adj HVP vs FD of 1st derivative")
