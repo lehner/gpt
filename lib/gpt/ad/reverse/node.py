@@ -309,7 +309,16 @@ class node_base(base):
         fields_allocated = 0
         for n in nodes:
             if n._forward is not None:
-                n.value = n._forward()
+                if n.value is None or free is not None:
+                    # in a backward pass (free is None) a node's value is a
+                    # deterministic function of its children's values, which
+                    # are immutable; nested passes re-enter the previous
+                    # pass's graph, so a value that survived the backward
+                    # (e.g. the root, which is never freed) is kept instead of
+                    # re-computed.  In a forward-only pass the same graph may
+                    # be re-evaluated with modified leaf values, so values are
+                    # re-computed as before
+                    n.value = n._forward()
                 fields_allocated += 1
                 max_fields_allocated = max(max_fields_allocated, fields_allocated)
                 if free is not None:
