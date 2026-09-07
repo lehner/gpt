@@ -386,6 +386,54 @@ hvp_ad = div_hvp(s0, nb)
 hvp_fd = (div_first(g(s0 + eps * b0)) - div_first(g(s0 - eps * b0))) / (2 * eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "div HVP vs FD of 1st derivative")
 
+# --- integer power on lattice data: the C++ core has no power op, so
+# node ** int is built from repeated multiplication (A1).  Checked to 2nd
+# order via finite differences (S = sum n^4, a complex action so both the
+# real and imaginary parts are exercised).
+g.message("integer power (lattice): finite-difference checks")
+
+
+def pow_action(n):
+    return g.sum(n ** 4)
+
+
+def pow_first(s):
+    nn = rad.node(s)
+    pow_action(nn)()
+    return nn.gradient
+
+
+def pow_hvp(s, a_node):
+    nn = rad.node(rad.node(s))
+    pow_action(nn)()
+    c = g.inner_product(a_node, nn.gradient)
+    c()
+    return nn.value.gradient
+
+
+n = rad.node(s0)
+pact = pow_action(n)
+for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
+    pact(initial_gradient=ig)
+    eps = 1e-6
+    lt = rng_l.normal(g.real(grid))
+    n.value = g(s0 + lt * eps)
+    v1 = part(pact(with_gradients=False))
+    n.value = g(s0 - lt * eps)
+    v2 = part(pact(with_gradients=False))
+    n.value = g(s0)
+    num_result = (v1 - v2) / eps / 2.0
+    ad_result = g.inner_product(lt, n.gradient).real
+    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
+    g.message(f"pow 1st derivative real (ig={ig}): {err}")
+    assert err < 1e-4, "pow 1st derivative real"
+
+# 2nd derivative: HVP (direction b) vs finite difference of the 1st derivative
+eps = 1e-5
+hvp_ad = pow_hvp(s0, nb)
+hvp_fd = (pow_first(g(s0 + eps * b0)) - pow_first(g(s0 - eps * b0))) / (2 * eps)
+assert_field_close(hvp_ad, hvp_fd, 1e-5, "pow HVP vs FD of 1st derivative")
+
 #####################################
 # stage 2: SU(3) gauge-field HVP (2nd derivative)
 #

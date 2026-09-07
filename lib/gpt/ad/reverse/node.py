@@ -176,14 +176,39 @@ class node_base(base):
         x = nodify(x)
 
         assert g.util.is_num(n)
-        
+
         z_container = x._container
+
+        # lattice data has no C++ power op, so integer powers are built from
+        # repeated multiplication (field * field is supported); scalars and
+        # tensors keep the native **.  In a nested pass value_of(x) is a node
+        # and * dispatches on the type, so the product stays in the node world.
+        lattice = x._container.tag[0] == g.lattice
+
+        def _p(v, k):
+            if not lattice:
+                return v ** k
+            if k == 0:
+                return 1
+            r = v
+            for _ in range(k - 1):
+                r = r * v
+            return r
+
+        # backprop second factor: z = x**n -> dz/dx = n*x**(n-1).  The
+        # framework gradient is conjugate-linear (see __mul__, which applies
+        # g.adj to the cofactor), so the lattice contribution is
+        # adj(n*x**(n-1)) * flow.  The scalar __pow__ convention (no adj) is
+        # preserved so existing scalar behavior stays bit-identical.
+        def _bp(v):
+            p = _p(v, n - 1)
+            return g.adj(p) if lattice else p
 
         # z = x**n -> dz = n*x**(n-1) dx
         return node_op(
             (x,),
-            lambda: value_of(x) ** n,
-            (lambda z: (1, product(z.gradient * n, value_of(x) ** (n - 1))),),
+            lambda: _p(value_of(x), n),
+            (lambda z: (1, product(z.gradient * n, _bp(value_of(x)))),),
             z_container,
             "**",
         )
