@@ -220,7 +220,10 @@ class node_base(base):
 
         z_container = get_div_container(x._container, y._container)
 
-        # z = x / y -> dz = dx/y - x/y^2 dy
+        # z = x / y -> dz = dx/y - x/y^2 dy.  The cofactor to x is 1/y
+        # (pointwise); the cofactor to y is -x/y^2, a lattice while y is a
+        # scalar, so its contribution is a contraction (inner_product is
+        # conjugate-linear in the cofactor, which is where adj is applied).
         return node_op(
             (x, y),
             lambda: div(value_of(x), value_of(y)),
@@ -228,7 +231,7 @@ class node_base(base):
                 lambda z: (1, div(z.gradient, g.adj(value_of(y)))),
                 lambda z: (
                     -1,
-                    product(div(div(g.adj(value_of(x)), value_of(y)), value_of(y)), z.gradient),
+                    g.inner_product(value_of(x) / value_of(y) ** 2, z.gradient),
                 ),
             ),
             z_container,

@@ -386,6 +386,37 @@ hvp_ad = div_hvp(s0, nb)
 hvp_fd = (div_first(g(s0 + eps * b0)) - div_first(g(s0 - eps * b0))) / (2 * eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "div HVP vs FD of 1st derivative")
 
+# --- division by a gradient-carrying COMPLEX scalar denominator: exercises
+# the to-y backprop (dS/dy = -sum(x)/y^2, conjugate-linear -> a scalar flow).
+# x is a constant, so S = X/y with X = sum(x); checked against finite
+# differences of the scalar action at both initial gradients.
+g.message("division by a complex scalar denominator (to-y backprop)")
+xd = g.complex(grid)
+rng_l.cnormal(xd)
+yd0 = 1.5 + 0.7j
+xnd = rad.node(xd, with_gradient=False)
+
+
+def S_div(y):
+    return g.sum(xd / y)  # lattice / scalar -> lattice; sum -> scalar
+
+
+def dy_action(yn):
+    return g.sum(xnd / yn)
+
+
+eps = 1e-6
+dS_dy = (S_div(yd0 + eps) - S_div(yd0 - eps)) / (2 * eps)
+for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
+    ynd = rad.node(yd0)
+    dyact = dy_action(ynd)
+    dyact(initial_gradient=ig)
+    num_result = part(dS_dy)
+    ad_result = ynd.gradient.real
+    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
+    g.message(f"div to-y 1st derivative (ig={ig}): {err}")
+    assert err < 1e-4, f"div to-y 1st derivative (ig={ig})"
+
 # --- integer power on lattice data: the C++ core has no power op, so
 # node ** int is built from repeated multiplication (A1).  Checked to 2nd
 # order via finite differences (S = sum n^4, a complex action so both the
