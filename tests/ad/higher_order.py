@@ -648,6 +648,57 @@ g.message(f"gauge d3S(A,A,A) vs 4-point FD of action: {err}")
 assert err < 1e-3, "gauge d3S(A,A,A) vs 4-point FD of action"
 
 #####################################
+# stage 4: 3rd derivative via the functional force mechanism
+#
+# The Hessian bilinear form d^2 S(A, B) = IP(B, H(U) A) is itself a
+# differentiable scalar function of the gauge field.  With the 3-deep node
+# the HVP H(U) A is kept as a lazy node, so the bilinear form
+#     S = sum_mu group.inner_product(nB[mu], HVP_A[mu])
+# is a node (a compute graph over the gauge field) rather than a plain
+# scalar.  Its force w.r.t. U -- via node_differentiable_functional
+# .gradient, the same reusable-graph force mechanism the production action
+# uses -- is the 3rd derivative:
+#     G3_fun = S.functional(*[nnU[mu].value.value]).gradient(U, U)
+# The single reverse pass through S both evaluates the bilinear form and
+# accumulates this force, so it must agree exactly with the nested-node
+# result of stage 3 (G3 / dA_d2S_dA), which builds the same graph and
+# reads nnnU[mu].value.value.gradient after evaluating it.
+
+nnU4 = [rad.node(rad.node(rad.node(u))) for u in Ug]
+action_g(nnU4)()
+nA4 = [rad.node(g.group.cartesian(u)) for u in Ug]
+nB4 = [rad.node(g.group.cartesian(u)) for u in Ug]
+for mu in range(4):
+    nA4[mu].value @= dA[mu]
+    nB4[mu].value @= dA[mu]
+cb4 = sum(
+    g.group.inner_product(nnU4[mu].gradient, nA4[mu]) for mu in range(4)
+)
+cb4()
+HVP_A4 = [nnU4[mu].value.gradient for mu in range(4)]
+# the Hessian bilinear form as a node; not evaluated here -- the functional's
+# gradient() below evaluates it and takes its force in one pass
+S4 = sum(g.group.inner_product(nB4[mu], HVP_A4[mu]) for mu in range(4))
+G3_fun = [
+    resolve_value(x)
+    for x in S4.functional(*[nnU4[mu].value.value for mu in range(4)]).gradient(
+        Ug, Ug
+    )
+]
+dA_d2S_dA_fun = sum(g.group.inner_product(dA[mu], G3_fun[mu]) for mu in range(4))
+
+err = abs(dA_d2S_dA_fun - dA_d2S_dA) / (
+    abs(dA_d2S_dA_fun) + abs(dA_d2S_dA) + 1e-30
+)
+g.message(f"gauge 3rd derivative functional vs nested-node (stage 3): {err}")
+assert err < 1e-14, "gauge 3rd derivative functional vs nested-node (stage 3)"
+
+for mu in range(4):
+    err = g.norm2(G3_fun[mu] - G3[mu]) / g.norm2(G3[mu])
+    g.message(f"gauge 3rd derivative functional field mu={mu} vs stage 3: {err}")
+    assert err < 1e-14, f"gauge 3rd derivative functional field mu={mu} vs stage 3"
+
+#####################################
 # group_inner_product symmetry (C2)
 #
 # The gauge group contraction must be symmetric in its arguments: the
