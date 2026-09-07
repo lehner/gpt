@@ -18,14 +18,14 @@
 #
 import gpt as g
 from gpt.ad.reverse import node_op
-from gpt.ad.reverse.util import value_of, product
+from gpt.ad.reverse.util import value_of
 
 
 def relu(x, a=0.0):
     return node_op(
         (x,),
         lambda: g.component.relu(a)(value_of(x)),
-        (lambda z: (1, product(g.component.drelu(a)(value_of(x)), z.gradient)),),
+        (lambda z: (1, g.component.multiply(g.component.drelu(a)(value_of(x)), z.gradient)),),
         x._container,
     )
 
@@ -34,7 +34,7 @@ def sin(x):
     return node_op(
         (x,),
         lambda: g.component.sin(value_of(x)),
-        (lambda z: (1, product(g.component.cos(value_of(x)), z.gradient)),),
+        (lambda z: (1, g.component.multiply(g.component.cos(value_of(x)), z.gradient)),),
         x._container,
     )
 
@@ -43,6 +43,6 @@ def cos(x):
     return node_op(
         (x,),
         lambda: g.component.cos(value_of(x)),
-        (lambda z: (-1, product(g.component.sin(value_of(x)), z.gradient)),),
+        (lambda z: (-1, g.component.multiply(g.component.sin(value_of(x)), z.gradient)),),
         x._container,
     )

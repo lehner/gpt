@@ -119,6 +119,15 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
     raise Exception(f"component-wise operator {operator} not implemented in rev-AD")
 
 
+def component_multiply(a, b):
+    """Element-wise product; node-aware, with the plain case kept on the
+    lattice foundation's component kernel (which covers more otypes than
+    plain multiplication)"""
+    if not is_node(a) and not is_node(b):
+        return g.lattice.foundation.component_multiply(a, b)
+    return product(a, b)
+
+
 def _group_conversion(src, dsrc, method):
     # dispatch on the perturbation's otype conversion method (infinitesimal_to_
     # cartesian or cartesian_to_infinitesimal), as in the lattice and forward-AD
