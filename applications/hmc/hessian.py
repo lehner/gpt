@@ -4,7 +4,9 @@ import numpy as np
 
 rad = g.ad.reverse
 
-U = g.load("cdrhmc_16_0.5625x3/ckpoint_lat.99")
+#U = g.load("cdrhmc_16_0.5625x3/ckpoint_lat.99")
+grid = g.grid([4,4,4,4],g.double)
+U = g.qcd.gauge.random(grid, g.random("d"))
 
 use_unit = False
 
