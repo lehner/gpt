@@ -196,6 +196,41 @@ assert_field_close(
     "cos action 3rd derivative",
 )
 
+# --- the contraction is symmetric in its arguments: the reversed slots must
+# give the same (real) values and derivatives; a plain operand is promoted
+# to a constant node ---
+g.message("inner_product symmetry (reversed contraction)")
+
+n2s = rad.node(rad.node(s_r))
+cos_action(n2s)()
+c2s = g.inner_product(n2s.gradient, nar)
+c2s()
+assert_close(c2s.value, c2ct.value, 1e-13, "reversed HVP value")
+assert_field_close(
+    n2s.value.gradient, -g.component.cos(s_r) * a_r, 1e-12, "reversed HVP field"
+)
+
+n3s = rad.node(rad.node(rad.node(s_r)))
+cos_action(n3s)()
+c3s = g.inner_product(n3s.gradient, nar)
+c3s()
+c3sb = g.inner_product(n3s.value.gradient, nbr)
+c3sb()
+assert_field_close(
+    n3s.value.value.gradient,
+    g.component.sin(s_r) * a_r * b_r,
+    1e-11,
+    "reversed 3rd derivative",
+)
+
+n2m = rad.node(rad.node(s_r))
+cos_action(n2m)()
+c2m = g.inner_product(n2m.gradient, a_r)
+c2m()
+assert_close(
+    c2m.value, c2ct.value, 1e-13, "mixed-argument contraction value"
+)
+
 
 # --- second action with a cshift, checked via finite differences ---
 g.message("hopping + quartic action: finite-difference checks")
