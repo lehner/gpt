@@ -334,6 +334,58 @@ t3_b = hop_third(s0, nb, nb)
 ad = g.inner_product(b0, t3_b).real
 assert_close(ad, fd, 1e-5, "hop d3S/dt^3 vs FD of action")
 
+# --- division by a scalar constant: the only division the C++ core supports
+# (field / scalar == field * (1/scalar)).  node / node and scalar / node
+# would need a pointwise-reciprocal kernel (A2), so they are not tested here.
+# Checked to 2nd order via finite differences, reusing the graph on modified
+# leaf values (the node_differentiable_functional path) for the 1st derivative.
+g.message("division by a scalar: finite-difference checks")
+cdiv = 2.0 + 0.5j
+
+
+def div_action(n):
+    q = n / cdiv
+    C = q * g.adj(q)
+    return g.sum(C * C)
+
+
+def div_first(s):
+    nn = rad.node(s)
+    div_action(nn)()
+    return nn.gradient
+
+
+def div_hvp(s, a_node):
+    nn = rad.node(rad.node(s))
+    div_action(nn)()
+    c = g.inner_product(a_node, nn.gradient)
+    c()
+    return nn.value.gradient
+
+
+n = rad.node(s0)
+dact = div_action(n)
+for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
+    dact(initial_gradient=ig)
+    eps = 1e-6
+    lt = rng_l.normal(g.real(grid))
+    n.value = g(s0 + lt * eps)
+    v1 = part(dact(with_gradients=False))
+    n.value = g(s0 - lt * eps)
+    v2 = part(dact(with_gradients=False))
+    n.value = g(s0)
+    num_result = (v1 - v2) / eps / 2.0
+    ad_result = g.inner_product(lt, n.gradient).real
+    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
+    g.message(f"div 1st derivative real (ig={ig}): {err}")
+    assert err < 1e-4, "div 1st derivative real"
+
+# 2nd derivative: HVP (direction b) vs finite difference of the 1st derivative
+eps = 1e-5
+hvp_ad = div_hvp(s0, nb)
+hvp_fd = (div_first(g(s0 + eps * b0)) - div_first(g(s0 - eps * b0))) / (2 * eps)
+assert_field_close(hvp_ad, hvp_fd, 1e-5, "div HVP vs FD of 1st derivative")
+
 #####################################
 # stage 2: SU(3) gauge-field HVP (2nd derivative)
 #
