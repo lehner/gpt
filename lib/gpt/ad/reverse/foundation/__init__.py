@@ -227,12 +227,20 @@ def where(first, second, third, fourth):
 
     z_container = yes._container
 
+    # node-aware: nodify the operands so a nested pair (a nested value or a
+    # node flow) routes to the rev-AD where instead of the plain foundation,
+    # which cannot build a lattice from a node.
+
+    def _forward():
+        vy, vn = nodify(value_of(yes), value_of(no))
+        return g.where(question, vy, vn)
+
     return g.ad.reverse.node_op(
         (yes, no),
-        lambda: g.where(question, value_of(yes), value_of(no)),
+        _forward,
         (
-            lambda z: (1, g.where(question, z.gradient, yes._container.zero())),
-            lambda z: (1, g.where(question, no._container.zero(), z.gradient)),
+            lambda z: (1, g.where(question, *nodify(z.gradient, yes._container.zero()))),
+            lambda z: (1, g.where(question, *nodify(no._container.zero(), z.gradient))),
         ),
         z_container,
         "where(" + str(yes._container) + ")",

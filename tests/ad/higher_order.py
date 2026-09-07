@@ -673,3 +673,78 @@ assert_field_close(
     1e-13,
     "group inner_product symmetry grad",
 )
+
+#####################################
+# foundational passthrough ops: where (mask routing) and astype (type cast)
+#
+# where routes the constant "yes"/"no" branch per mask and its backprop
+# routes the flow the same way; astype is a type cast that passes the flow
+# straight through.  Both are checked to exact 1st order on constant all-1 /
+# all-0 masks, and -- the case that used to crash -- on nested (2-deep)
+# nodes, where a mixed-depth pair must route to the rev-AD op (via nodify)
+# instead of the plain foundation (which cannot build a lattice from a node).
+# The 2nd derivative (HVP) of a nested where is checked against the plain
+# quartic-norm HVP (reusing quartic_norm from stage 1).
+g.message("foundational passthrough ops: where / astype")
+
+w_s = g.complex(grid)
+rng_l.cnormal(w_s)
+w_t = g.complex(grid)
+rng_l.cnormal(w_t)
+ident4 = g.identity(g.complex(grid))
+zeros4 = w_s * 0.0
+
+# --- where: 1st-order mask routing (constant all-1 / all-0 masks) ---
+Aw = rad.node(w_s)
+Bw = rad.node(w_t)
+g.sum(g.where(ident4, Aw, Bw))()  # all-1: selects the "yes" branch
+assert_field_close(Aw.gradient, ident4, 1e-14, "where all-1 yes gradient = 1")
+assert g.norm2(Bw.gradient) < 1e-14, "where all-1 no gradient = 0"
+
+Aw = rad.node(w_s)
+Bw = rad.node(w_t)
+g.sum(g.where(zeros4, Aw, Bw))()  # all-0: selects the "no" branch
+assert g.norm2(Aw.gradient) < 1e-14, "where all-0 yes gradient = 0"
+assert_field_close(Bw.gradient, ident4, 1e-14, "where all-0 no gradient = 1")
+
+# --- where: nested (2-deep) nodes ---
+A2w = rad.node(rad.node(w_s))
+Bw = rad.node(w_t)
+g.sum(g.where(ident4, A2w, Bw))()  # all-1: the 1st-level gradient (a node)
+assert_field_close(A2w.gradient, ident4, 1e-14, "where nested yes 1st gradient")
+assert g.norm2(Bw.gradient) < 1e-14, "where nested no gradient = 0"
+
+# 2nd derivative (HVP) of a nested where: all-1 mask == the "yes" branch, so
+# S = sum |where(mask, A, B)|^4 = sum |A|^4 and the HVP is the plain
+# quartic-norm HVP of w_s.
+a0w = rng_l.cnormal(g.complex(grid))
+naw = rad.node(a0w, with_gradient=False)
+A2w = rad.node(rad.node(w_s))
+quartic_norm(g.where(ident4, A2w, rad.node(w_t)))()
+c = g.inner_product(naw, A2w.gradient)
+c()
+C0w = w_s * g.adj(w_s)
+ref_h = 4 * C0w * a0w + 4 * (g.adj(w_s) * a0w + w_s * g.adj(a0w)) * w_s
+assert_field_close(A2w.value.gradient, ref_h, 1e-12, "where nested quartic HVP")
+
+# all-0 mask with a nested "no" branch: the flow routes to the "no" branch
+B2w = rad.node(rad.node(w_t))
+quartic_norm(g.where(zeros4, rad.node(w_s), B2w))()
+c = g.inner_product(naw, B2w.gradient)
+c()
+C0t = w_t * g.adj(w_t)
+ref_ht = 4 * C0t * a0w + 4 * (g.adj(w_t) * a0w + w_t * g.adj(a0w)) * w_t
+assert_field_close(B2w.value.gradient, ref_ht, 1e-12, "where nested no-branch quartic HVP")
+
+# --- astype: type-cast passthrough (complex -> real) ---
+real_ot = g.real(grid).otype
+a_s = g.complex(grid)
+rng_l.cnormal(a_s)
+
+Aa = rad.node(a_s)
+g.sum(g.astype(Aa, real_ot))()
+assert_field_close(Aa.gradient, ident4, 1e-14, "astype 1st gradient = 1")
+
+A2a = rad.node(rad.node(a_s))
+g.sum(g.astype(A2a, real_ot))()  # nested (2-deep)
+assert_field_close(A2a.gradient, ident4, 1e-14, "astype nested 1st gradient = 1")
