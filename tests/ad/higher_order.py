@@ -800,3 +800,24 @@ hvp_fd = (adj_first(g(s_adj + eps * a0_adj)) - adj_first(g(s_adj - eps * a0_adj)
     2 * eps
 )
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "adj HVP vs FD of 1st derivative")
+
+#####################################
+# node_differentiable_functional: the reusable-graph force mechanism
+# (node.functional(...)), tested at 2-deep (nested).  It is a 1st-derivative
+# mechanism: gradient() overrides each leaf's value with a plain lattice and
+# evaluates, so it always returns the force (a plain lattice) regardless of
+# the node's depth -- the 2nd/3rd derivatives use the nested-node mechanism
+# (gauge stages 2-3 above), not this one.  (The production force path, e.g.
+# the honeycomb action, topology, and smear, all use this mechanism.)
+g.message("node_differentiable_functional: nested (2-deep) force")
+
+s_fun = g.complex(grid)
+rng_l.cnormal(s_fun)
+n_fun = rad.node(rad.node(s_fun))
+f_fun = quartic_norm(n_fun).functional(n_fun)
+val_fun = f_fun([s_fun])  # the action value (a Python float, the real part)
+C_fun = s_fun * g.adj(s_fun)
+ref_val = float(g.sum(C_fun * C_fun).real)
+assert_close(val_fun, ref_val, 1e-13, "functional nested value")
+grad_fun = f_fun.gradient([s_fun], [s_fun])  # the force (a plain lattice)
+assert_field_close(grad_fun[0], 4 * C_fun * s_fun, 1e-14, "functional nested force")
