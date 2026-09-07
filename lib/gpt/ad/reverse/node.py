@@ -174,17 +174,16 @@ class node_base(base):
         if y.with_gradient:
             y = convert_container(y, x._container, z_container, lambda a, b: g.adj(a) * b)
 
-        def _forward():
-            return product(value_of(x), value_of(y))
-
-        # not allowed to capture z, otherwise have reference loop!
-        def _backward(z):
-            if x.with_gradient:
-                accum(x, product(z.gradient, g.adj(value_of(y))))
-            if y.with_gradient:
-                accum(y, product(g.adj(value_of(x)), z.gradient))
-
-        return node_base(_forward, _backward, (x, y), _container=z_container, _tag="*")
+        return node_op(
+            (x, y),
+            lambda: product(value_of(x), value_of(y)),
+            (
+                lambda z: (1, product(z.gradient, g.adj(value_of(y)))),
+                lambda z: (1, product(g.adj(value_of(x)), z.gradient)),
+            ),
+            z_container,
+            "*",
+        )
 
     def __pow__(x, n):
         if not isinstance(x, node_base):
@@ -194,16 +193,14 @@ class node_base(base):
         
         z_container = x._container
 
-        def _forward():
-            return value_of(x) ** n
-
-        # not allowed to capture z, otherwise have reference loop!
-        def _backward(z):
-            # z = x**n -> dz = n*x**(n-1) dx
-            if x.with_gradient:
-                accum(x, product(z.gradient * n, value_of(x) ** (n-1)))
-
-        return node_base(_forward, _backward, (x,), _container=z_container, _tag="**")
+        # z = x**n -> dz = n*x**(n-1) dx
+        return node_op(
+            (x,),
+            lambda: value_of(x) ** n,
+            (lambda z: (1, product(z.gradient * n, value_of(x) ** (n - 1))),),
+            z_container,
+            "**",
+        )
 
     def __rmul__(x, y):
         return node_base.__mul__(y, x)
@@ -217,22 +214,20 @@ class node_base(base):
 
         z_container = get_div_container(x._container, y._container)
 
-        def _forward():
-            return div(value_of(x), value_of(y))
-
-        # not allowed to capture z, otherwise have reference loop!
-        def _backward(z):
-            # z = x / y -> dz = dx/y - x/y^2 dy
-            if x.with_gradient:
-                accum(x, div(z.gradient, g.adj(value_of(y))))
-            if y.with_gradient:
-                accum(
-                    y,
-                    product(div(div(g.adj(value_of(x)), value_of(y)), value_of(y)), z.gradient),
+        # z = x / y -> dz = dx/y - x/y^2 dy
+        return node_op(
+            (x, y),
+            lambda: div(value_of(x), value_of(y)),
+            (
+                lambda z: (1, div(z.gradient, g.adj(value_of(y)))),
+                lambda z: (
                     -1,
-                )
-
-        return node_base(_forward, _backward, (x, y), _container=z_container, _tag="/")
+                    product(div(div(g.adj(value_of(x)), value_of(y)), value_of(y)), z.gradient),
+                ),
+            ),
+            z_container,
+            "/",
+        )
 
     def __neg__(self):
         return (-1.0) * self
@@ -277,17 +272,13 @@ class node_base(base):
             )
         _container = x._container
 
-        def _forward():
-            return add(value_of(x), value_of(y))
-
-        # not allowed to capture z, otherwise have reference loop!
-        def _backward(z):
-            if x.with_gradient:
-                accum(x, z.gradient)
-            if y.with_gradient:
-                accum(y, z.gradient)
-
-        return node_base(_forward, _backward, (x, y), _container=_container, _tag="+")
+        return node_op(
+            (x, y),
+            lambda: add(value_of(x), value_of(y)),
+            (lambda z: (1, z.gradient), lambda z: (1, z.gradient)),
+            _container,
+            "+",
+        )
 
     def __sub__(x, y):
         if not isinstance(x, node_base):
@@ -299,17 +290,13 @@ class node_base(base):
         assert x._container == y._container
         _container = x._container
 
-        def _forward():
-            return sub(value_of(x), value_of(y))
-
-        # not allowed to capture z, otherwise have reference loop!
-        def _backward(z):
-            if x.with_gradient:
-                accum(x, z.gradient)
-            if y.with_gradient:
-                accum(y, z.gradient, -1)
-
-        return node_base(_forward, _backward, (x, y), _container=_container, _tag="-")
+        return node_op(
+            (x, y),
+            lambda: sub(value_of(x), value_of(y)),
+            (lambda z: (1, z.gradient), lambda z: (-1, z.gradient)),
+            _container,
+            "-",
+        )
 
     def __rsub__(x, y):
         return node_base.__sub__(y, x)
@@ -420,6 +407,21 @@ class node_base(base):
     grid = property(get_grid)
     otype = property(get_otype, set_otype)
     real = property(get_real)
+
+
+def node_op(children, forward, backards, container, tag=None):
+    # build a node from a forward closure and per-child backward closures.
+    # backards[i](z) returns (sign, term) or None (no gradient for that
+    # child); the with_gradient check and gradient accumulation are handled
+    # here.  Backward closures receive z as an argument and must not capture
+    # it, otherwise there is a reference loop.
+    def _backward(z):
+        for c, f in zip(children, backards):
+            if f is not None and c.with_gradient:
+                sign, term = f(z)
+                accum(c, term, sign)
+
+    return node_base(forward, _backward, children, _container=container, _tag=tag)
 
 
 def node(x, with_gradient=True, infinitesimal_to_cartesian=True):
