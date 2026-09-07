@@ -84,13 +84,19 @@ def adj(x):
     )
 
 
+def _reduction_backward(x):
+    # adjoint of a sum-like reduction (trace/sum): broadcast the scalar flow
+    # back to x's lattice via identity(x); conjugate-linear in the flow
+    return (lambda z: (1, product(g.identity(value_of(x)), z.gradient)),)
+
+
 def trace(x, t):
     z_container = get_unary_container(x._container, lambda v: g.trace(v, t))
 
     return g.ad.reverse.node_op(
         (x,),
         lambda: g.trace(value_of(x), t),
-        (lambda z: (1, product(g.identity(value_of(x)), z.gradient)),),
+        _reduction_backward(x),
         z_container,
     )
 
@@ -99,7 +105,7 @@ def sum(x):
     return g.ad.reverse.node_op(
         (x,),
         lambda: g.sum(value_of(x)),
-        (lambda z: (1, product(g.identity(value_of(x)), z.gradient)),),
+        _reduction_backward(x),
         x._container.lattice_to_tensor(),
     )
 
