@@ -19,7 +19,18 @@
 #
 import gpt as g
 import numpy as np
-from gpt.ad.reverse.util import container, get_unary_container, get_container
+from gpt.ad.reverse.util import (
+    container,
+    get_unary_container,
+    get_container,
+    product,
+    add,
+    sub,
+    div,
+    accum,
+    accum_sub,
+    value_of,
+)
 import gpt.ad.reverse.foundation.matrix
 
 
@@ -29,14 +40,21 @@ def inner_product(x, y, n_block, use_accelerator):
     y = y[0]
 
     def _forward():
-        return g.inner_product(x.value, y.value, n_block, use_accelerator)
+        vx, vy = value_of(x), value_of(y)
+        # dispatch is on the first argument; a node-typed second argument must
+        # stay in the node world, so wrap a plain first argument as a node
+        if isinstance(vy, g.ad.reverse.node_base) and not isinstance(
+            vx, g.ad.reverse.node_base
+        ):
+            vx = g.ad.reverse.node_base(vx, with_gradient=False)
+        return g.inner_product(vx, vy, n_block, use_accelerator)
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:  # z = adj(x) y   ->    x z = y  -> x = y adj(z)
-            x.gradient += y.value * g.adj(z.gradient)  # y.value * g.adj(z.gradient)
+            accum(x, product(value_of(y), g.adj(z.gradient)))
         if y.with_gradient:  # z = adj(x) y   ->    y = x z
-            y.gradient += x.value * z.gradient
+            accum(y, product(value_of(x), z.gradient))
 
     return {
         (0, 0): g.ad.reverse.node_base(
@@ -54,12 +72,12 @@ def cshift(x, direction, displacement, none):
     assert none is None
 
     def _forward():
-        return g.cshift(x.value, direction, displacement)
+        return g.cshift(value_of(x), direction, displacement)
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            x.gradient += g.cshift(z.gradient, direction, -displacement)
+            accum(x, g.cshift(z.gradient, direction, -displacement))
 
     return g.ad.reverse.node_base(
         _forward,
@@ -72,24 +90,24 @@ def cshift(x, direction, displacement, none):
 
 def adj(x):
     def _forward():
-        return g.adj(x.value)
+        return g.adj(value_of(x))
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            x.gradient += g.adj(z.gradient)
+            accum(x, g.adj(z.gradient))
 
     return g.ad.reverse.node_base(_forward, _backward, (x,), _container=x._container, _tag="adj")
 
 
 def trace(x, t):
     def _forward():
-        return g.trace(x.value, t)
+        return g.trace(value_of(x), t)
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            x.gradient += g.identity(x.value) * z.gradient
+            accum(x, product(g.identity(value_of(x)), z.gradient))
 
     z_container = get_unary_container(x._container, lambda v: g.trace(v, t))
 
@@ -98,12 +116,12 @@ def trace(x, t):
 
 def sum(x):
     def _forward():
-        return g.sum(x.value)
+        return g.sum(value_of(x))
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
         if x.with_gradient:
-            x.gradient += g.identity(x.value) * z.gradient
+            accum(x, product(g.identity(value_of(x)), z.gradient))
 
     return g.ad.reverse.node_base(
         _forward, _backward, (x,), _container=x._container.lattice_to_tensor()
@@ -128,18 +146,43 @@ def infinitesimal_to_cartesian(src, dsrc):
     # foundations; node.value may be None for unevaluated (or freed) nodes
     if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
+    if isinstance(dsrc, g.ad.reverse.node_base):
+        # a nested gradient is a lazy compute graph; the otype conversion is
+        # linear in the gradient and runs as graph operations (including the
+        # container otype update); containers without an otype, or otypes
+        # without a conversion, pass through
+        try:
+            otype = dsrc.otype
+        except Exception:
+            return dsrc
+        if not hasattr(otype, "infinitesimal_to_cartesian"):
+            return dsrc
+        return otype.infinitesimal_to_cartesian(src, dsrc)
     return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)
 
 
 def cartesian_to_infinitesimal(src, dsrc):
     if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
+    if isinstance(dsrc, g.ad.reverse.node_base):
+        try:
+            otype = dsrc.otype
+        except Exception:
+            return dsrc
+        if not hasattr(otype, "cartesian_to_infinitesimal"):
+            return dsrc
+        return otype.cartesian_to_infinitesimal(src, dsrc)
     return dsrc.otype.cartesian_to_infinitesimal(src, dsrc)
 
 
 def identity(x):
     def _forward():
-        return g.identity(x.value)
+        # a plain (expr) value at the bottom of a (lazy) chain has no
+        # foundation to dispatch on; evaluate it to a field first
+        v = value_of(x)
+        if isinstance(v, g.expr):
+            v = g(v)
+        return g.identity(v)
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):
@@ -156,7 +199,7 @@ def identity(x):
 
 def astype(x, y):
     def _forward():
-        return g.astype(g(x.value), y)
+        return g.astype(g(value_of(x)), y)
 
     # not allowed to capture z, otherwise have reference loop!
     def _backward(z):

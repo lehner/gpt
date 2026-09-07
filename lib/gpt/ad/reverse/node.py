@@ -23,6 +23,13 @@ from gpt.ad.reverse.util import (
     get_mul_container,
     get_div_container,
     convert_container,
+    product,
+    add,
+    sub,
+    div,
+    accum,
+    accum_sub,
+    value_of,
 )
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
@@ -151,6 +158,8 @@ class node_base(base):
 
         value = self.value
         while isinstance(value, node_base):
+            if value.value is None and value._forward is not None:
+                value.value = value._forward()
             value = value.value
             self.gradient = node_base(self.gradient)
 
@@ -170,14 +179,14 @@ class node_base(base):
             y = convert_container(y, x._container, z_container, lambda a, b: g.adj(a) * b)
 
         def _forward():
-            return x.value * y.value
+            return product(value_of(x), value_of(y))
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                x.gradient += z.gradient * g.adj(y.value)
+                accum(x, product(z.gradient, g.adj(value_of(y))))
             if y.with_gradient:
-                y.gradient += g.adj(x.value) * z.gradient
+                accum(y, product(g.adj(value_of(x)), z.gradient))
 
         return node_base(_forward, _backward, (x, y), _container=z_container, _tag="*")
 
@@ -190,13 +199,13 @@ class node_base(base):
         z_container = x._container
 
         def _forward():
-            return x.value ** n
+            return value_of(x) ** n
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             # z = x**n -> dz = n*x**(n-1) dx
             if x.with_gradient:
-                x.gradient += z.gradient * n * x.value ** (n-1)
+                accum(x, product(z.gradient * n, value_of(x) ** (n-1)))
 
         return node_base(_forward, _backward, (x,), _container=z_container, _tag="**")
 
@@ -213,15 +222,18 @@ class node_base(base):
         z_container = get_div_container(x._container, y._container)
 
         def _forward():
-            return x.value / y.value
+            return div(value_of(x), value_of(y))
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             # z = x / y -> dz = dx/y - x/y^2 dy
             if x.with_gradient:
-                x.gradient += z.gradient / g.adj(y.value)
+                accum(x, div(z.gradient, g.adj(value_of(y))))
             if y.with_gradient:
-                y.gradient -= g.adj(x.value) / y.value / y.value * z.gradient
+                accum_sub(
+                    y,
+                    product(div(div(g.adj(value_of(x)), value_of(y)), value_of(y)), z.gradient),
+                )
 
         return node_base(_forward, _backward, (x, y), _container=z_container, _tag="/")
 
@@ -233,6 +245,10 @@ class node_base(base):
             return y[item]
 
         def setter(y, z):
+            if isinstance(y, node_base):
+                # a node gradient is an immutable graph: rebuild it with the
+                # selected component (already contained in z) replaced
+                return (y - y[item]) + z
             y[item] = z
             return y
 
@@ -240,7 +256,7 @@ class node_base(base):
 
     def project(x, getter, setter):
         def _forward():
-            return getter(x.value)
+            return getter(value_of(x))
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
@@ -265,14 +281,14 @@ class node_base(base):
         _container = x._container
 
         def _forward():
-            return x.value + y.value
+            return add(value_of(x), value_of(y))
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                x.gradient += z.gradient
+                accum(x, z.gradient)
             if y.with_gradient:
-                y.gradient += z.gradient
+                accum(y, z.gradient)
 
         return node_base(_forward, _backward, (x, y), _container=_container, _tag="+")
 
@@ -287,14 +303,14 @@ class node_base(base):
         _container = x._container
 
         def _forward():
-            return x.value - y.value
+            return sub(value_of(x), value_of(y))
 
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
-                x.gradient += z.gradient
+                accum(x, z.gradient)
             if y.with_gradient:
-                y.gradient -= z.gradient
+                accum_sub(y, z.gradient)
 
         return node_base(_forward, _backward, (x, y), _container=_container, _tag="-")
 
@@ -394,6 +410,8 @@ class node_base(base):
             return y.real
 
         def setter(y, z):
+            if isinstance(y, node_base):
+                return (y - y.real) + z
             if g.util.is_num(y):
                 y = z.real
             else:

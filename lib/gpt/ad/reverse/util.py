@@ -143,6 +143,82 @@ def get_container(x):
         raise Exception(f"Unknown object type {type(x)}")
 
 
+def value_of(x):
+    # the raw (possibly node-typed) value of x; a node that was freed after a
+    # previous pass (value = None) is re-evaluated in place.  The value is NOT
+    # resolved across (nested) nodes: node-typed values carry the
+    # differentiation dependencies needed by deeper reverse passes
+    if x.value is None and x._forward is not None:
+        x.value = x._forward()
+    return x.value
+
+
+def _promote(a, b):
+    # wrap plain operands as constant nodes so node-typed (lazy) values can be
+    # combined with them without leaving the node world
+    if not isinstance(a, g.ad.reverse.node_base):
+        a = g.ad.reverse.node_base(a, with_gradient=False)
+    if not isinstance(b, g.ad.reverse.node_base):
+        b = g.ad.reverse.node_base(b, with_gradient=False)
+    return a, b
+
+
+def product(a, b):
+    # node-aware product, preserving operand order
+    if isinstance(a, g.ad.reverse.node_base) or isinstance(b, g.ad.reverse.node_base):
+        a, b = _promote(a, b)
+        return a * b
+    return a * b
+
+
+def add(a, b):
+    if isinstance(a, g.ad.reverse.node_base) or isinstance(b, g.ad.reverse.node_base):
+        a, b = _promote(a, b)
+        return a + b
+    return a + b
+
+
+def sub(a, b):
+    if isinstance(a, g.ad.reverse.node_base) or isinstance(b, g.ad.reverse.node_base):
+        a, b = _promote(a, b)
+        return a - b
+    return a - b
+
+
+def div(a, b):
+    if isinstance(a, g.ad.reverse.node_base) or isinstance(b, g.ad.reverse.node_base):
+        a, b = _promote(a, b)
+        return a / b
+    return a / b
+
+
+def accum(n, r):
+    # accumulate r into n.gradient; in place for plain values, node-aware
+    # otherwise.  A node term into a plain gradient is evaluated to a field
+    # (the term graph is linear in the flow), which keeps the result in the
+    # plain world as in single-pass AD
+    if isinstance(n.gradient, g.ad.reverse.node_base):
+        n.gradient = add(n.gradient, r)
+    elif isinstance(r, g.ad.reverse.node_base):
+        n.gradient += value_of(r)
+    else:
+        n.gradient += r
+
+
+def accum_sub(n, r):
+    # accumulate -r into n.gradient (see accum); node gradients with
+    # incompatible containers are evaluated to fields
+    if isinstance(n.gradient, g.ad.reverse.node_base):
+        if isinstance(r, g.ad.reverse.node_base) and n.gradient._container != r._container:
+            n.gradient = value_of(n.gradient) - value_of(r)
+        else:
+            n.gradient = sub(n.gradient, r)
+    elif isinstance(r, g.ad.reverse.node_base):
+        n.gradient -= value_of(r)
+    else:
+        n.gradient -= r
+
+
 def get_mul_container(x, y):
     rx = x.representative()
     ry = y.representative()
@@ -208,15 +284,9 @@ def convert_container(v, x, y, operand):
     assert backward_trace or backward_color_trace or backward_spin_trace or backward_sum
 
     def _forward():
-        value = v.value
-
-        # if backward_sum:
-        #    r = c.representative()
-        #    r[:] = value
-        #    value = r
-        #    print("test",backward_trace,backward_spin_trace,backward_color_trace)
-
-        return value
+        # v.value may be a (lazy) node or None if v was freed after a
+        # previous pass
+        return value_of(v)
 
     def _backward(z):
         if v.with_gradient:
@@ -234,11 +304,12 @@ def convert_container(v, x, y, operand):
             if backward_sum:
                 gradient = g.sum(gradient)
 
-            v.gradient += (
-                g(gradient)
-                if backward_trace or backward_color_trace or backward_spin_trace
-                else gradient
-            )
+            if (backward_trace or backward_color_trace or backward_spin_trace) and not isinstance(
+                gradient, g.ad.reverse.node_base
+            ):
+                gradient = g(gradient)
+
+            accum(v, gradient)
 
             # print("Ran conversion with sum/tr",backward_sum,backward_trace,backward_spin_trace,backward_color_trace)
 
