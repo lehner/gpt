@@ -98,9 +98,19 @@ def rank_inner_product(a, b, n_block=1, use_accelerator=True):
     )
 
 
+def _foundation(la, lb):
+    # first-argument foundation dispatch, except when the first argument is
+    # on the base lattice foundation and the second on a derived one (e.g.
+    # rev-AD); the lattice foundation cannot evaluate mixed-foundation pairs
+    fa, fb = la[0].__class__.foundation, lb[0].__class__.foundation
+    if fa is not fb and fa is gpt.lattice.foundation:
+        return fb
+    return fa
+
+
 def inner_product(a, b, n_block=1, use_accelerator=True):
     return call_binary_aa_num(
-        lambda la, lb: la[0].__class__.foundation.inner_product(la, lb, n_block, use_accelerator),
+        lambda la, lb: _foundation(la, lb).inner_product(la, lb, n_block, use_accelerator),
         a,
         b,
     )

@@ -231,6 +231,14 @@ assert_close(
     c2m.value, c2ct.value, 1e-13, "mixed-argument contraction value"
 )
 
+n2p = rad.node(rad.node(s_r))
+cos_action(n2p)()
+c2p = g.inner_product(a_r, n2p.gradient)
+c2p()
+assert_close(
+    c2p.value, c2ct.value, 1e-13, "plain-first contraction value"
+)
+
 
 # --- second action with a cshift, checked via finite differences ---
 g.message("hopping + quartic action: finite-difference checks")
