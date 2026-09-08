@@ -142,27 +142,25 @@ class directional_parallel_transport(dft_diffeomorphism):
         mu = self.mu
         N = len(fields_prime)
         assert len(fields) == N
-
-        otype = fields[0].otype
-        otype_cart = otype.cartesian()
-        generators = otype_cart.generators(fields[0].grid.precision.complex_dtype)
-        gen_a = generators[a]
-
+        aU_prime_mu = rad.node(
+            g.cartesian_to_infinitesimal(fields_prime[mu], right), with_gradient=False
+        )
         aaU = [rad.node(u) for u in self.aU]
 
         for nu in range(len(aaU)):
             aaU[nu].value.value = fields[nu]
 
+        for nu in range(len(aaU)):
+            aaU[nu].zero_gradient()
+
         aaUft = self.ft(aaU)
+        aaUft[mu](initial_gradient=aU_prime_mu)
 
-        # pass 1: scalar functional (default seed), gen_a baked in as a constant
-        t = g.trace(aaUft[mu] * gen_a)
-        S = g.sum(t * self.P1)
-        S()
+        #for nu in range(len(aaU)):
+        #    aaU[nu].value.zero_gradient()
 
-        # pass 2: HVP contraction in the right direction
-        nRight = rad.node(right, with_gradient=False)
-        ip = g.group.inner_product(nRight, aaU[mu].gradient)
+        left = rad.node(left, with_gradient=False)
+        ip = g.inner_product(left, rad.node(self.P1, with_gradient=False) * aaU[mu].gradient)
         ip()
 
         # resolve to plain lattices so the (expensive) nested node graphs are
@@ -193,12 +191,15 @@ class directional_parallel_transport(dft_diffeomorphism):
         otype_cartesian = otype.cartesian()
         generators = otype_cartesian.generators(dt)
         right = g.group.cartesian(fields[0])
+        left = g.group.cartesian(fields[0])
 
         Jinv = g.separate_color(Jinv)
 
         for a in range(len(generators)):
+            left @= self.P1 * generators[a]
             right @= sum(-Jinv[b, a] * generators[b] for b in range(len(generators)))
-            gr = self.diagonal_jacobian_gradient(fields, fields_prime, a, right)
+            right = g.where(self.P1, right, g(0*left))
+            gr = self.diagonal_jacobian_gradient(fields, fields_prime, left, right)
             if a == 0:
                 gr_sum = gr
             else:
@@ -206,7 +207,6 @@ class directional_parallel_transport(dft_diffeomorphism):
                     gr_sum[nu] += gr[nu]
 
         return [gr_sum[fields.index(d)] for d in dfields]
-
 
 class dpt_action_log_det_jacobian(differentiable_functional):
     def __init__(self, parent):
