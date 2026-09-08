@@ -43,7 +43,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         def ft(xU):
             assert len(xU) == ntot
 
-            cache_key = f"{type(xU[0])}"
+            cache_key = f"{type(xU[0])}_depth{g.ad.reverse.util.value_depth(xU[0])}"
             if cache_key not in cache:
                 paths = [y[1] for y in description_mu]
                 cache[cache_key] = g.parallel_transport(xU[0:nd], paths)
@@ -149,8 +149,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         # for nu in range(len(aaU)):
         #    aaU[nu].zero_gradient()
 
-        # aaUft = self.ft(aaU)
-        aaUft = aaU
+        aaUft = self.ft(aaU)
         aaUft[mu](initial_gradient=aU_prime_mu)
 
         print(aaU[mu].gradient)
