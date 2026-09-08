@@ -74,7 +74,12 @@ class directional_parallel_transport(dft_diffeomorphism):
             assert sm is not None
 
             if P1 is not None:
-                sm *= P1
+                if isinstance(sm, g.ad.reverse.node_base):
+                    # a matrix x scalar node-graph breaks the trace contraction
+                    # downstream; mask with a where to keep the matrix otype
+                    sm = g.where(P1, sm, g.ad.reverse.node(sm._container.zero(), with_gradient=False))
+                else:
+                    sm *= P1
 
             sm = g(g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(sm)) * xU[mu])
             return [sm if i == mu else xU[i] for i in range(nd)] + xparams
@@ -123,45 +128,54 @@ class directional_parallel_transport(dft_diffeomorphism):
     def action_log_det_jacobian(self):
         return dpt_action_log_det_jacobian(self)
 
-    def diagonal_jacobian_gradient(self, fields, fields_prime, left, right):
-
-        # aU_prime_mu = g.cartesian_to_infinitesimal(fields_prime[mu], dfields_mu)
-        # for nu in range(len(fields)):
-        # self.aU[nu].value = fields[nu]
-        # self.aUft[mu](initial_gradient=aU_prime_mu)
-        # self.aU[mu].gradient.otype = dfields_mu.otype
-        # return g(self.aU[mu].gradient * self.P1)
-
-        # Compute \partial_rho left (\partial_U f) right
+    def diagonal_jacobian_gradient(self, fields, fields_prime, a, right):
+        # Compute gen_a . (d_U J_x) . right  on-site (P1-masked), where
+        # J_x = d_U f[mu] | on-site is the site-local Jacobian block.
+        # Option (a) recipe (2-deep + 1 contraction, the validated HVP shape):
+        #   pass 1: scalar S = sum(P1 * Tr[f[mu] * gen_a])  (default seed;
+        #            gen_a is a constant gpt_object generator, so the 1st
+        #            derivative is the a-row of the on-site Jacobian block)
+        #   pass 2: group.inner_product(nRight, aaU[mu].gradient)()  (HVP in
+        #            the pointwise `right` direction)
+        #   -> aaU[mu].value.gradient = gen_a . (d_U J_x) . right
         rad = g.ad.reverse
 
         mu = self.mu
         N = len(fields_prime)
         assert len(fields) == N
-        aU_prime_mu = rad.node(
-            g.cartesian_to_infinitesimal(fields_prime[mu], right), with_gradient=False
-        )
+
+        otype = fields[0].otype
+        otype_cart = otype.cartesian()
+        generators = otype_cart.generators(fields[0].grid.precision.complex_dtype)
+        gen_a = generators[a]
+
         aaU = [rad.node(u) for u in self.aU]
 
         for nu in range(len(aaU)):
             aaU[nu].value.value = fields[nu]
 
-        # for nu in range(len(aaU)):
-        #    aaU[nu].zero_gradient()
-
         aaUft = self.ft(aaU)
-        aaUft[mu](initial_gradient=aU_prime_mu)
 
-        print(aaU[mu].gradient)
-        # for nu in range(len(aaU)):
-        #    aaU[nu].value.zero_gradient()
+        # pass 1: scalar functional (default seed), gen_a baked in as a constant
+        t = g.trace(aaUft[mu] * gen_a)
+        S = g.sum(t * self.P1)
+        S()
 
-        left = rad.node(left, with_gradient=False)
-        ip = g.inner_product(left, rad.node(self.P1, with_gradient=False) * aaU[mu].gradient)
-        val = ip()
-        print(val)
+        # pass 2: HVP contraction in the right direction
+        nRight = rad.node(right, with_gradient=False)
+        ip = g.group.inner_product(nRight, aaU[mu].gradient)
+        ip()
 
-        return [aaU[nu].value.gradient for nu in range(len(aaU))]
+        # resolve to plain lattices so the (expensive) nested node graphs are
+        # released before the caller accumulates over the generators
+        from gpt.ad.reverse.util import is_node, value_of
+        def _res(x):
+            while is_node(x):
+                x = value_of(x)
+            if isinstance(x, g.expr):
+                x = g(x)
+            return x
+        return [_res(aaU[nu].value.gradient) for nu in range(len(aaU))]
 
     def action_log_det_jacobian_gradient(self, fields, dfields):
         # det(J_{ab} + drho_c \partial_{rho_c} J_{ab}) = det(J) (1 + J^-1_{ba} drho_c \partial_{rho_c} J_{ab})
@@ -180,15 +194,12 @@ class directional_parallel_transport(dft_diffeomorphism):
         otype_cartesian = otype.cartesian()
         generators = otype_cartesian.generators(dt)
         right = g.group.cartesian(fields[0])
-        left = g.group.cartesian(fields[0])
 
         Jinv = g.separate_color(Jinv)
 
         for a in range(len(generators)):
-            left @= self.P1 * generators[a]
-            # right = g.where(self.P1, right, g(0*left))
             right @= sum(-Jinv[b, a] * generators[b] for b in range(len(generators)))
-            gr = self.diagonal_jacobian_gradient(fields, fields_prime, left, right)
+            gr = self.diagonal_jacobian_gradient(fields, fields_prime, a, right)
             if a == 0:
                 gr_sum = gr
             else:
