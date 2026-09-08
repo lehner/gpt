@@ -128,16 +128,15 @@ class directional_parallel_transport(dft_diffeomorphism):
     def action_log_det_jacobian(self):
         return dpt_action_log_det_jacobian(self)
 
-    def diagonal_jacobian_gradient(self, fields, fields_prime, a, right):
-        # Compute gen_a . (d_U J_x) . right  on-site (P1-masked), where
-        # J_x = d_U f[mu] | on-site is the site-local Jacobian block.
-        # Option (a) recipe (2-deep + 1 contraction, the validated HVP shape):
-        #   pass 1: scalar S = sum(P1 * Tr[f[mu] * gen_a])  (default seed;
-        #            gen_a is a constant gpt_object generator, so the 1st
-        #            derivative is the a-row of the on-site Jacobian block)
-        #   pass 2: group.inner_product(nRight, aaU[mu].gradient)()  (HVP in
-        #            the pointwise `right` direction)
-        #   -> aaU[mu].value.gradient = gen_a . (d_U J_x) . right
+    def diagonal_jacobian_gradient(self, fields, fields_prime, left, right):
+        # aU_prime_mu = g.cartesian_to_infinitesimal(fields_prime[mu], dfields_mu)
+        # for nu in range(len(fields)):
+        # self.aU[nu].value = fields[nu]
+        # self.aUft[mu](initial_gradient=aU_prime_mu)
+        # self.aU[mu].gradient.otype = dfields_mu.otype
+        # return g(self.aU[mu].gradient * self.P1)
+
+        # Compute \partial_rho left (\partial_U f) right
         rad = g.ad.reverse
 
         mu = self.mu
