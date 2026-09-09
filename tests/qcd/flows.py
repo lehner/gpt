@@ -4,6 +4,7 @@
 #
 
 import gpt as g
+import numpy as np
 
 # general setup
 rng = g.random("test")
@@ -17,7 +18,20 @@ none = g(0 * full)
 
 # plaquette-type flow (P-FTHMC with local weights)
 rho = g.complex(even.grid)
-rho[:] = 0.12
+
+# regress = True
+regress = False
+
+L = np.array(even.grid.gdimensions)
+coor = g.coordinates(even)
+coor = (coor + L//2) % L - L//2
+r2 = np.sum(coor*coor, axis=1)
+
+if regress:
+    rho[:] = 0.12
+else:
+    rho[:] = 0.12*np.exp(-r2)
+
 params = [rho]
 
 description = [
@@ -54,20 +68,13 @@ pt_o = [
 ]
 
 
-#L = np.array(even.grid.gdimensions)
-#coor = g.coordinates(even)
-#coor = (coor + L//2) % L - L//2
-#r2 = np.sum(coor*coor, axis=1)
-#rho[:] = 0.12*np.exp(-r2)
-#rho = rad.node(rho)
-#rho = 0.12
-
 # first establish agreement with specialized local_stout
-Uprime0 = pt_e[1](U + params)[0:4]
-Uprime1 = g.qcd.gauge.smear.local_stout(rho=0.12, dimension=1, checkerboard=g.even)(U)
-eps2 = sum(g.norm2(x - y) / g.norm2(x) for x, y in zip(Uprime0, Uprime1))
-g.message(f"Test agreement with P-FTHMC: {eps2}")
-assert eps2 < 1e-28
+if regress:
+    Uprime0 = pt_e[1](U + params)[0:4]
+    Uprime1 = g.qcd.gauge.smear.local_stout(rho=0.12, dimension=1, checkerboard=g.even)(U)
+    eps2 = sum(g.norm2(x - y) / g.norm2(x) for x, y in zip(Uprime0, Uprime1))
+    g.message(f"Test agreement with P-FTHMC: {eps2}")
+    assert eps2 < 1e-28
 
 # next test that it works in the Jacobian
 # version with separate parameters for the layers
@@ -98,13 +105,23 @@ a1.assert_gradient_error(rng, U + params2, U + params2, 1e-4, 1e-7)
 act1 = g.qcd.gauge.smear.local_stout(rho=0.12, dimension=0, checkerboard=g.odd).action_log_det_jacobian()
 act2 = pt_o[0].action_log_det_jacobian()
 
-v1 = act1(U)
-v2 = act2(U + params)
-eps = abs(v1 - v2) / abs(v1)
-g.message(f"Log-det-jacobian agreement: {eps}")
-assert eps < 1e-13
+if regress:
+    v1 = act1(U)
+    v2 = act2(U + params)
+    eps = abs(v1 - v2) / abs(v1)
+    g.message(f"Log-det-jacobian agreement: {eps}")
+    assert eps < 1e-13
 
 
 # finally check the force terms of the log-det-jacobian
 act2.assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
 
+
+# next: look at timing and improve AD speed
+# t = g.timer("d")
+# t("orig")
+# act1.gradient(U, U)
+# t("ad")
+# act2.gradient(U + params, U)
+# t()
+# print(t)
