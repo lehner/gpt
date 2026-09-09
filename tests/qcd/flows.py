@@ -7,7 +7,7 @@ import gpt as g
 
 # general setup
 rng = g.random("test")
-U = g.qcd.gauge.random(g.grid([4,4,4,4], g.double), rng)
+U = g.qcd.gauge.random(g.grid([4,4,4,8], g.double), rng)
 rad = g.ad.reverse
 
 # specific even/odd pattern
