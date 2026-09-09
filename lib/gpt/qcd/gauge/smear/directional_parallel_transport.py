@@ -43,7 +43,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         def ft(xU):
             assert len(xU) == ntot
 
-            cache_key = f"{type(xU[0])}"
+            cache_key = f"{type(xU[0])}_depth{g.ad.reverse.util.value_depth(xU[0])}"
             if cache_key not in cache:
                 paths = [y[1] for y in description_mu]
                 cache[cache_key] = g.parallel_transport(xU[0:nd], paths)
@@ -74,7 +74,12 @@ class directional_parallel_transport(dft_diffeomorphism):
             assert sm is not None
 
             if P1 is not None:
-                sm *= P1
+                if isinstance(sm, g.ad.reverse.node_base):
+                    # a matrix x scalar node-graph breaks the trace contraction
+                    # downstream; mask with a where to keep the matrix otype
+                    sm = g.where(P1, sm, g.ad.reverse.node(sm._container.zero(), with_gradient=False))
+                else:
+                    sm *= P1
 
             sm = g(g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(sm)) * xU[mu])
             return [sm if i == mu else xU[i] for i in range(nd)] + xparams
@@ -124,51 +129,77 @@ class directional_parallel_transport(dft_diffeomorphism):
         return dpt_action_log_det_jacobian(self)
 
     def diagonal_jacobian_gradient(self, fields, fields_prime, left, right):
-
-        # aU_prime_mu = g.cartesian_to_infinitesimal(fields_prime[mu], dfields_mu)
-        # for nu in range(len(fields)):
-        # self.aU[nu].value = fields[nu]
-        # self.aUft[mu](initial_gradient=aU_prime_mu)
-        # self.aU[mu].gradient.otype = dfields_mu.otype
-        # return g(self.aU[mu].gradient * self.P1)
-
-        # Compute \partial_rho left (\partial_U f) right
+        # Compute \partial_rho [ left . (\partial f_mu / \partial U_mu) . right ]
+        # for each field rho, i.e. the gradient of the mu->mu Jacobian block
+        # bilinearly contracted with the fixed test function `left` (output)
+        # and direction `right` (input).
+        #
+        # Build left . (\partial f_mu/\partial U_mu) . right as a 1-deep functional
+        # over (fields, left, right) and take its 1-deep gradient.  The mu->mu
+        # block is obtained with the "apply Jacobian to a direction" reverse pass
+        # on a 2-deep graph (a 1-deep node seed), which yields a 1-deep
+        # 1st-derivative graph; differentiating that 1-deep graph is a true 1st
+        # derivative, so the result is correctly differentiable.
+        #
+        # (The earlier 2-deep implementation did the 2nd reverse directly on the
+        # "apply Jacobian to a direction" graph, whose U-dependence is not the
+        # correctly trivialized one, giving a wrong derivative.)
+        #
+        # The nested reverse applies the infinitesimal_to_cartesian symmetrization
+        # 0.5*(x + adj(x)) at the group leaf, which halves the derivative of the
+        # 1st-derivative graph; the factor of 2 below compensates for it.
         rad = g.ad.reverse
 
         mu = self.mu
-        N = len(fields_prime)
+        N = len(fields)
         assert len(fields) == N
-        aU_prime_mu = rad.node(
-            g.cartesian_to_infinitesimal(fields_prime[mu], right), with_gradient=False
-        )
-        aaU = [rad.node(u) for u in self.aU]
 
-        for nu in range(len(aaU)):
-            aaU[nu].value.value = fields[nu]
+        _U = [rad.node(g.copy(u)) for u in fields]
+        _left = rad.node(g.copy(left), with_gradient=False)
+        _right = rad.node(g.copy(right), with_gradient=False)
 
-        # for nu in range(len(aaU)):
-        #    aaU[nu].zero_gradient()
+        # 1-deep transform graph (for the seed) and 2-deep graph (for the reverse)
+        _Up = self.ft(_U)
+        aU = [rad.node(_U[i]) for i in range(N)]
+        aUft = self.ft(aU)
 
-        # aaUft = self.ft(aaU)
-        aaUft = aaU
-        aaUft[mu](initial_gradient=aU_prime_mu)
+        seed = g.cartesian_to_infinitesimal(_Up[mu], _right)
+        aUft[mu](initial_gradient=seed)          # 1st reverse: 2-deep -> 1-deep graph
+        J_right_mu = aU[mu].gradient             # 1-deep graph = (\partial f_mu/\partial U_mu) . right
 
-        print(aaU[mu].gradient)
-        # for nu in range(len(aaU)):
-        #    aaU[nu].value.zero_gradient()
+        act = g.inner_product(_left, rad.node(self.P1, with_gradient=False) * J_right_mu)
+        func = act.functional(*(_U + [_left, _right]))
+        grads = func.gradient(fields + [left, right], fields)   # 1-deep gradient w.r.t. _U
 
-        left = rad.node(left, with_gradient=False)
-        ip = g.inner_product(left, rad.node(self.P1, with_gradient=False) * aaU[mu].gradient)
-        val = ip()
-        print(val)
-
-        return [aaU[nu].value.gradient for nu in range(len(aaU))]
+        # resolve to plain lattices so the (expensive) nested node graphs are
+        # released before the caller accumulates over the generators.
+        # non-contributing fields (links not in the path) have a None gradient;
+        # replace those with zero.
+        from gpt.ad.reverse.util import is_node, value_of
+        def _res(x):
+            if x is None:
+                return None
+            while is_node(x):
+                x = value_of(x)
+            if isinstance(x, g.expr):
+                x = g(x)
+            return x
+        zero = g(0 * left)
+        out = []
+        for x in grads:
+            r = _res(x)
+            out.append(g(zero) if r is None else g(2.0 * r))
+        return out
 
     def action_log_det_jacobian_gradient(self, fields, dfields):
-        # det(J_{ab} + drho_c \partial_{rho_c} J_{ab}) = det(J) (1 + J^-1_{ba} drho_c \partial_{rho_c} J_{ab})
-        # -> \partial_{rho_c} det(J) = det(J) J^-1_{ba} \partial_{rho_c} J_{ab}
-        # \partial -\log \det(J) = -1/det(J) \partial det(J)
-        # Compute tr[\partial_rho (\partial_U f) M]
+        # The mu->mu block M (see jacobian_matrix) satisfies M[a,b] = (d f_mu/d U_mu)[b,a],
+        # i.e. M is the transpose of the Jacobian block J in the (output, input) basis.
+        # The action is -log det(J) = -log det(M), so
+        #   \partial_rho (-log det M) = -tr(M^{-1} dM/drho)
+        #                              = -sum_{a,b} M^{-1}[a,b] (dM/drho)[a,b].
+        # Each term is \partial_rho <left, M.right> with left = P1*gen[a] and
+        # right = -sum_b M^{-1}[a,b] gen[b] (the P1-masked site-dependent vector),
+        # evaluated by diagonal_jacobian_gradient.
 
         J = self.jacobian_matrix(fields)
         Jinv = g.matrix.inv(J)
@@ -187,8 +218,8 @@ class directional_parallel_transport(dft_diffeomorphism):
 
         for a in range(len(generators)):
             left @= self.P1 * generators[a]
-            # right = g.where(self.P1, right, g(0*left))
-            right @= sum(-Jinv[b, a] * generators[b] for b in range(len(generators)))
+            right @= sum(-Jinv[a, b] * generators[b] for b in range(len(generators)))
+            right = g.where(self.P1, right, g(0*left))
             gr = self.diagonal_jacobian_gradient(fields, fields_prime, left, right)
             if a == 0:
                 gr_sum = gr
@@ -197,7 +228,6 @@ class directional_parallel_transport(dft_diffeomorphism):
                     gr_sum[nu] += gr[nu]
 
         return [gr_sum[fields.index(d)] for d in dfields]
-
 
 class dpt_action_log_det_jacobian(differentiable_functional):
     def __init__(self, parent):
