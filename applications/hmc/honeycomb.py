@@ -7,7 +7,7 @@ hc = g.qcd.honeycomb()
 beta = g.default.get_float("--beta", None)
 L = g.default.get_int("--L", None)
 nsteps = g.default.get_int("--nsteps", 5)
-nmax = 1000
+nmax = 2000
 grid = g.grid([L] * 4, g.double)
 
 U = [g.mcolor(grid) for _ in range(hc.number_of_link_fields)]
