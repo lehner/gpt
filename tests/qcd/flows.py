@@ -106,5 +106,5 @@ assert eps < 1e-13
 
 
 # finally check the force terms of the log-det-jacobian
-act2.assert_gradient_error(rng, U + params, U, 1e-4, 1e-7)
+act2.assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
 
