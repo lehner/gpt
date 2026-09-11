@@ -67,7 +67,7 @@ g.message(npval)
 npval_func = npval.functional(*nU)
 npval_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 
-# probe how many stencils a backwards pass has
+# second derivative
 nPs = rad.node(Ps)
 nU = [rad.node(u) for u in U]
 nnPs = rad.node(nPs)
@@ -79,3 +79,25 @@ g.sum(g.trace(nnPs))()
 nip = g.inner_product(nnU[0].gradient, nnU[1].gradient)
 nup_func = nip.functional(*nU)
 nup_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+
+
+# third derivative
+nPs = rad.node(Ps)
+nU = [rad.node(u) for u in U]
+nnPs = rad.node(nPs)
+nnU = [rad.node(u) for u in nU]
+nnnPs = rad.node(nnPs)
+nnnU = [rad.node(u) for u in nnU]
+
+stencil_plaquette(nnnPs, *nnnU)
+g.sum(g.trace(nnnPs))()
+
+nnip = g.inner_product(nnnU[0].gradient, nnnU[1].gradient)
+nnip()
+
+nip = g.inner_product(nnU[0].gradient, nnU[1].gradient)
+nip()
+
+nnup_func = nip.functional(*nU)
+nnup_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+
