@@ -78,6 +78,7 @@ for f in \
     ${test_path}/qis/qis.py \
     ${test_path}/ad/ad.py \
     ${test_path}/ad/higher_order.py \
+    ${test_path}/ad/stencil.py \
     ${test_path}/ml/sequence.py \
     ${test_path}/ml/parallel_transport_pooling.py
 do

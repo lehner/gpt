@@ -30,6 +30,8 @@ from gpt.ad.reverse.util import (
     nodify,
 )
 import gpt.ad.reverse.foundation.matrix
+import gpt.ad.reverse.foundation.stencil
+import gpt.ad.reverse.foundation.local_stencil
 
 
 def inner_product(x, y, n_block, use_accelerator):

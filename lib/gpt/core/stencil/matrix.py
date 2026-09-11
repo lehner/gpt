@@ -41,36 +41,7 @@ class matrix_padded:
         self.cache_fields = cache_fields
 
     def __call__(self, *fields):
-        if self.write_fields is None:
-            raise Exception(
-                "Generalized matrix stencil needs more information.  Call stencil.data_access_hints."
-            )
-        if self.verbose_performance:
-            t = g.timer("stencil.matrix")
-            t("create fields")
-        padded_fields = []
-        padded_field = None
-        for i in range(len(fields)):
-            if i in self.read_fields:
-                padded_field = self.padding(fields[i])
-                padded_fields.append(padded_field)
-            else:
-                padded_fields.append(None)
-        assert padded_field is not None
-        for i in range(len(fields)):
-            if padded_fields[i] is None:
-                padded_fields[i] = g.lattice(padded_field)
-        if self.verbose_performance:
-            t("local stencil")
-        self.local_stencil(*padded_fields)
-        if self.verbose_performance:
-            t("extract")
-        for i in self.write_fields:
-            self.padding.extract(fields[i], padded_fields[i])
-        if self.verbose_performance:
-            t()
-            g.message(t)
-        # todo: make use of cache_fields
+        fields[0].foundation.stencil.matrix(self, *fields)
 
 
 def matrix(lat, points, code, code_parallel_block_size=None):

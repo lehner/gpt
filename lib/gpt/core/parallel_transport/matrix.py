@@ -38,8 +38,9 @@ class parallel_transport_matrix:
         self.verbose = g.default.is_verbose("parallel_transport_matrix_performance")
 
         Nd = len(U)
+        Nd_grid = U[0].grid.nd
         Ntarget = n_target
-        point_set = set([(0,) * Nd])
+        point_set = set([(0,) * Nd_grid])
 
         # next parse code for temporaries
         Ntemporary = 0
@@ -54,7 +55,7 @@ class parallel_transport_matrix:
                 paths.append(c[-1])
             else:
                 for f in c[-1]:
-                    assert isinstance(f[1], tuple) and len(f[1]) == Nd
+                    assert isinstance(f[1], tuple) and len(f[1]) == Nd_grid
                     point_set.add(f[1])
 
         # save parameters
@@ -64,7 +65,7 @@ class parallel_transport_matrix:
 
         # first get list of all points
         for p in paths:
-            coor = [0] * Nd
+            coor = [0] * Nd_grid
             for d in p.path:
                 if d[1] > 0:
                     for i in range(d[1]):
@@ -84,7 +85,7 @@ class parallel_transport_matrix:
         self.code = []
         for c in code:
             if isinstance(c[-1], g.path):
-                coor = [0] * Nd
+                coor = [0] * Nd_grid
                 factors = []
                 for d in c[-1].path:
                     if d[1] > 0:

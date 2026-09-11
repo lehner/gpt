@@ -48,8 +48,11 @@ class matrix(auto_tuned_class):
         super().__init__(tag, [0, 1], 0)
 
     @auto_tuned_method()
-    def __call__(self, fast_osites, *fields):
+    def _exec(self, fast_osites, *fields):
         cgpt.stencil_matrix_execute(self.obj, list(fields), fast_osites)
+
+    def __call__(self, *fields):
+        return fields[0].foundation.local_stencil.matrix(self, *fields)
 
     def __del__(self):
         cgpt.stencil_matrix_delete(self.obj)

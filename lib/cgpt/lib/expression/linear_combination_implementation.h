@@ -134,7 +134,7 @@ struct UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_SPINTRACE|BIT_COLORTRA
   UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_COLORTRACE> {};
 
 template<typename T,int unary_expr,typename AccumulatorBase>
-cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term>& f, int unary_factor) {
+cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term>& f, int unary_factor, bool conjugate_coef = false) {
 
   Timer("create lat");
   GridBase* grid = f[0].get_lat()->get_grid();
@@ -156,7 +156,11 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
   std::vector<LatticeView<T>> v; v.reserve(n);
   HostDeviceVector<T*> a(n);
   for (int i=0;i<n;i++) {
-    b[i] = (Coeff_t)f[i].get_coef();
+    // The unary (when present) is applied to the combined result below; if it
+    // conjugates, the coefficients must be pre-conjugated, since the adjoint
+    // does not distribute over complex coefficients:
+    //   adj(sum c_i L_i) = sum conj(c_i) adj(L_i)
+    b[i] = (Coeff_t)(conjugate_coef ? conjugate(f[i].get_coef()) : f[i].get_coef());
     v.push_back(compatible<T>(f[i].get_lat())->l.View(AcceleratorRead));
     a[i] = &v[i][0];
   }
@@ -205,7 +209,7 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_latt
     }
   } else {
 
-    cgpt_Lattice_base* _lc = cgpt_lc<T,unary_expr,AccumulatorNoBase>(0,f,0);
+    cgpt_Lattice_base* _lc = cgpt_lc<T,unary_expr,AccumulatorNoBase>(0,f,0,(unary_factor & BIT_CONJ) != 0);
     auto lc = compatible<R>(_lc);
     cgpt_unary(lc,unary_factor);
 
