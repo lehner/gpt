@@ -23,18 +23,21 @@
 # computed nodes whose
 #   - forward runs the compiled kernel on the plain values, and
 #   - backward runs the compiled ADJOINT stencil derived from the same code
-#     (gpt.core.local_stencil.adjoint), one kernel per level.
+#     (gpt.core.local_stencil.adjoint), one fused kernel per stage (see the
+#     stage-assignment rules in adjoint_code).
 #
 # Current limitations (plain level only):
-#   - a single target field, which must be a node
-#   - the first write of the target must be fresh (accumulate = -1), so the
-#     target's old value is not part of the computation
+#   - a single output target field, which must be a node; other (temp) target
+#     fields must be plain and are allocated by the caller
+#   - the first write of the target must not read the target's own old value
+#     (accumulate = -1, or acc = input/temp), so the scratch's old value is
+#     not part of the computation
 #   - the target's old value must be plain (no nested nodes)
 #   - node values/flows must be plain when the kernels run (a 1-deep graph
 #     reversed with plain flow); nested (multi-deep) use raises
 #
 import gpt as g
-from gpt.ad.reverse.util import value_of, is_node, nodify, accum
+from gpt.ad.reverse.util import value_of, is_node, accum
 
 
 def adjoint_code(code, n_fields, outputs, ndim, temps=()):
@@ -63,22 +66,32 @@ def adjoint_code(code, n_fields, outputs, ndim, temps=()):
     # except the output entries themselves, whose backprops read the
     # supplied flow).
     #
-    # Levels: a compiled stencil snapshots all read fields before executing
-    # its entries, so an entry reading a running slot must run in a later
-    # stencil than the entries that write that slot.  Entries are emitted in
-    # reverse forward order and assigned to levels: an entry reading no
-    # slots is level 0; otherwise level = 1 + max(level of the already
-    # emitted entries writing the slots it reads).  The caller compiles one
-    # stencil per level and runs them in level order with persistent slot
-    # lattices.  (Codes without temps are single-level.)
+    # Stages: entries are emitted in reverse forward order and grouped into
+    # stages; the caller compiles one stencil per stage and runs them in
+    # stage order with persistent slot lattices.  Within a stage, entries
+    # execute in code order, per site.
+    #
+    # Slot reads come in two flavors (see the compiled kernel):
+    #   - zero-shift factor reads and the in-place accumulate read are LIVE
+    #     (they see earlier stages plus same-stage, earlier-in-code writes),
+    #   - non-zero-shift factor reads are SNAPSHOTs staged at the start of
+    #     the call (they see only earlier stages).
+    # So an entry may share a stage with the writers of the slots it
+    # live-reads (as long as they precede it in code order), but must run in
+    # a strictly later stage than the writers of the slots it reads with a
+    # non-zero shift.  The stage of an entry is the longest such dependency
+    # path (weight 1 per stage barrier, weight 0 per live, code-ordered
+    # dependency).  (Codes without temps, or where temp flows are only
+    # consumed at zero shift, fuse to a single stage.)
     #
     # returns (entries, computed, outs) where
-    #   entries  : list of (level, (target_slot, accumulate, weight, flist))
+    #   entries  : list of (stage, (target_slot, accumulate, weight, flist))
+    #              in code order
     #   computed : slot order = [inputs..., "v:<temp>:<version>"...]; the
     #              adjoint field layout is [slot_i for i in computed]
     #              + [psi_t for t in outs] + [f_i for i in range(n_fields)]
-    #   levels are per entry as documented above; the caller runs one
-    #              compiled stencil per level, in level order, with
+    #   stages are per entry as documented above; the caller runs one
+    #              compiled stencil per stage, in stage order, with
     #              persistent (zero-initialized) slot lattices
     zero = (0,) * ndim
     outs = sorted(set(outputs))
@@ -91,32 +104,6 @@ def adjoint_code(code, n_fields, outputs, ndim, temps=()):
     writers = {s: [i for i in range(len(code)) if code[i][0] == s] for s in tmps}
     for s in tmps:
         assert len(writers[s]) > 0, "temp %d is never written" % s
-
-    def version_readers(s, k):
-        # forward entries reading version (s, k)
-        w_k = writers[s][k]
-        w_next = writers[s][k + 1] if k + 1 < len(writers[s]) else None
-        rs = [
-            i for i in range(w_k + 1, len(code) if w_next is None else w_next)
-            if code[i][1] == s and code[i][1] != code[i][0]
-        ]
-        if w_next is not None and code[w_next][1] == s:
-            rs.append(w_next)  # self-acc rewrite reads the previous version
-        return rs
-
-    # levels: the entries of a version's writer read the version's flow
-    # slot, which is completed by all of the version's readers
-    L = [0] * len(code)
-    changed = True
-    while changed:
-        changed = False
-        for s in tmps:
-            for k in range(len(writers[s])):
-                need = 1 + max([L[r] for r in version_readers(s, k)], default=-1)
-                e = writers[s][k]
-                if L[e] < need:
-                    L[e] = need
-                    changed = True
 
     # slot assignment: input flows first, then one slot per temp version
     computed = list(inputs)
@@ -135,17 +122,21 @@ def adjoint_code(code, n_fields, outputs, ndim, temps=()):
     F = lambda i: n_comp + n_out + i
 
     entries = []
+    slot_reads = []
 
-    def emit(level, target, weight, flist):
+    def emit(target, weight, flist):
         # every entry accumulates into its slot; the caller
         # zero-initializes the slot lattices
-        entries.append([level, (target, target, weight, flist)])
+        entries.append((target, target, weight, flist))
+        # reads of slots (written by emitted entries): (slot, live), where
+        # live means zero shift (in-place read, see stage rules above);
+        # psi and forward-value fields are never written, no dependency
+        slot_reads.append([(f, p == zero) for (f, p, a) in flist if f < n_comp])
         return len(entries) - 1
 
     for i in range(len(code) - 1, -1, -1):
         target, acc, weight, factors = code[i]
         k = len(factors)
-        level = L[i]
         if target in tmps:
             kv = writers[target].index(i)
             phi = (slot[("v", target, kv)], 0, 0)
@@ -168,21 +159,45 @@ def adjoint_code(code, n_fields, outputs, ndim, temps=()):
                 flist += [phi_ref]
                 flist += [(F(factors[l][0]), rel(l), factors[l][2]) for l in range(m)]
                 w = weight
-            emit(level, slot[("in", i_m)], w, flist)
+            emit(slot[("in", i_m)], w, flist)
         if acc != -1 and acc != target:
             if acc in inputs:
-                emit(level, slot[("in", acc)], 1.0, [(phi[0], zero, 0)])
+                emit(slot[("in", acc)], 1.0, [(phi[0], zero, 0)])
             elif acc in tmps:
                 # read the version of the last writer before this entry
                 ks = [kk for kk in range(len(writers[acc])) if writers[acc][kk] < i]
                 assert ks, "acc reads temp %d before it is written" % acc
-                emit(level, slot[("v", acc, ks[-1])], 1.0, [(phi[0], zero, 0)])
+                emit(slot[("v", acc, ks[-1])], 1.0, [(phi[0], zero, 0)])
         if target in tmps and acc == target:
             kv = writers[target].index(i)
             if kv > 0:
                 # self-acc handoff: flow of the previous version receives
                 # the flow of this version
-                emit(level, slot[("v", target, kv - 1)], 1.0, [(phi[0], zero, 0)])
+                emit(slot[("v", target, kv - 1)], 1.0, [(phi[0], zero, 0)])
+
+    # stage assignment: longest dependency path over the emitted entries
+    # (see the stage rules in the docstring)
+    writers_of = {}
+    for j, e in enumerate(entries):
+        writers_of.setdefault(e[0], []).append(j)
+    stage = [0] * len(entries)
+    changed = True
+    iters = 0
+    while changed:
+        changed = False
+        iters += 1
+        assert iters <= len(entries) + 1, "adjoint stage dependency cycle"
+        for j in range(len(entries)):
+            for (s, live) in slot_reads[j]:
+                for i in writers_of.get(s, ()):
+                    if i == j:
+                        continue
+                    need = stage[i] + (0 if (live and i < j) else 1)
+                    if stage[j] < need:
+                        stage[j] = need
+                        changed = True
+
+    entries = [[stage[j], e] for j, e in enumerate(entries)]
     return entries, computed, outs
 
 
@@ -198,21 +213,34 @@ def matrix(stencil, *fields):
     ndim = grid.nd
     n = len(fields)
     targets = sorted({e[0] for e in raw})
-    assert len(targets) == 1, "stencil node mode currently supports a single target"
-    t = targets[0]
-    assert is_node(fields[t]), "stencil target must be a node"
+    node_targets = [x for x in targets if is_node(fields[x])]
+    assert len(node_targets) == 1, (
+        "stencil node mode: exactly one target (the output) must be a node")
+    t = node_targets[0]
+    temps = [x for x in targets if x != t]
+    for x in temps:
+        assert not is_node(fields[x]), "stencil node mode: temps must be plain"
     first = {}
     for (tt, ac, w, fl) in raw:
         first.setdefault(tt, ac)
-    assert first[t] == -1, (
-        "stencil node mode: first write of the target must be fresh (acc=-1)")
+        for (f, p, a) in fl:
+            assert f not in targets, (
+                "stencil node mode: factors must reference input fields")
+    assert first[t] != t, (
+        "stencil node mode: first write of the target must not read its own "
+        "old value (acc=-1, or acc=input/temp)")
 
     tv = value_of(fields[t])
     assert not is_node(tv), "stencil node mode: target's old value must be plain"
     otype_t = tv.otype
 
     inputs = [i for i in range(n) if i != t]
-    children = [nodify(fields[i]) for i in inputs]
+    # plain operands (e.g. temps) are promoted to constant nodes; note that
+    # nodify on a single plain argument passes through unwrapped
+    children = [
+        fields[i] if is_node(fields[i]) else g.ad.reverse.node_base(fields[i], with_gradient=False)
+        for i in inputs
+    ]
     referenced = set()
     for (tt, ac, w, fl) in raw:
         referenced.update(f for (f, p, a) in fl)
@@ -220,10 +248,10 @@ def matrix(stencil, *fields):
             referenced.add(ac)
     referenced = {i for i in referenced if i in inputs}
 
-    # compiled adjoint stencils (one per level), cached on the stencil object
+    # compiled adjoint stencils (one per stage), cached on the stencil object
     adj = getattr(stencil, "_node_adj", None)
     if adj is None:
-        entries, computed, _outs = adjoint_code(raw, n, outputs=(t,), ndim=ndim)
+        entries, computed, _outs = adjoint_code(raw, n, outputs=(t,), ndim=ndim, temps=tuple(temps))
         levels = {}
         for lv, e in entries:
             levels.setdefault(lv, []).append(e)

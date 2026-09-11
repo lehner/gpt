@@ -66,3 +66,16 @@ g.message(npval)
 # now test functional
 npval_func = npval.functional(*nU)
 npval_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+
+# probe how many stencils a backwards pass has
+nPs = rad.node(Ps)
+nU = [rad.node(u) for u in U]
+nnPs = rad.node(nPs)
+nnU = [rad.node(u) for u in nU]
+
+stencil_plaquette(nnPs, *nnU)
+nnPs()
+
+nip = g.inner_product(nU[0].gradient, nU[1].gradient)
+nup_func = nip.functional(*nU)
+npval_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
