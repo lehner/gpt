@@ -24,7 +24,10 @@
 #   - forward runs the compiled kernel on the plain values, and
 #   - backward runs the compiled ADJOINT stencil derived from the same code
 #     (gpt.core.local_stencil.adjoint), one fused kernel per stage (see the
-#     stage-assignment rules in adjoint_code).
+#     stage-assignment rules in adjoint_code).  In a nested (multi-deep)
+#     pass the flow is a lazy node graph and cannot be fed to the kernels;
+#     the adjoint code is then evaluated in the node domain one level down
+#     with versioned slot accumulators instead.
 #
 # Current limitations (plain level only):
 #   - a single output target field, which must be a node; other (temp) target
@@ -33,8 +36,10 @@
 #     (accumulate = -1, or acc = input/temp), so the scratch's old value is
 #     not part of the computation
 #   - the target's old value must be plain (no nested nodes)
-#   - node values/flows must be plain when the kernels run (a 1-deep graph
-#     reversed with plain flow); nested (multi-deep) use raises
+#   - nested (multi-deep) graphs are supported: the compiled kernels run on
+#     fully resolved plain values, and the backwards pass evaluates the
+#     adjoint code in the node domain one level down, so the 1st derivative
+#     is a lazy graph over the inner nodes
 #
 import gpt as g
 from gpt.ad.reverse.util import value_of, is_node, accum
@@ -231,8 +236,13 @@ def matrix(stencil, *fields):
         "old value (acc=-1, or acc=input/temp)")
 
     tv = value_of(fields[t])
-    assert not is_node(tv), "stencil node mode: target's old value must be plain"
-    otype_t = tv.otype
+    # the old value is not part of the computation (first write is fresh,
+    # asserted above); resolve the (possibly nested) chain only to read
+    # the otype
+    tval = tv
+    while is_node(tval):
+        tval = value_of(tval)
+    otype_t = tval.otype
 
     inputs = [i for i in range(n) if i != t]
     # plain operands (e.g. temps) are promoted to constant nodes; note that
@@ -247,6 +257,15 @@ def matrix(stencil, *fields):
         if ac != -1 and ac != tt:
             referenced.add(ac)
     referenced = {i for i in referenced if i in inputs}
+
+    # node depth: gradient-carrying children must be uniform (constants
+    # such as temps are plain at any depth and carry no inner dependency)
+    node_vals = [is_node(value_of(c)) for c in children if c.with_gradient]
+    nested = any(node_vals)
+    assert all(node_vals) or not any(node_vals), (
+        "stencil node mode: gradient-carrying children must have uniform "
+        "node depth"
+    )
 
     # compiled adjoint stencils (one per stage), cached on the stencil object
     adj = getattr(stencil, "_node_adj", None)
@@ -267,9 +286,11 @@ def matrix(stencil, *fields):
             n_adj_fields = n_comp + 1 + n
             K.data_access_hints(written, [i for i in range(n_adj_fields) if i not in written], [])
             compiled.append(K)
-        adj = (computed, compiled)
+        # code-ordered entries with point tuples for the node-domain path
+        adj_entries = [e for (_lv, e) in entries]
+        adj = (computed, compiled, adj_entries, _outs)
         stencil._node_adj = adj
-    computed, compiled = adj
+    computed, compiled, adj_entries, _outs = adj
     n_comp = len(computed)
 
     def _fwd():
@@ -278,9 +299,10 @@ def matrix(stencil, *fields):
         full[t] = scratch
         for k, i in enumerate(inputs):
             full[i] = value_of(children[k])
-            if is_node(full[i]):
-                raise NotImplementedError(
-                    "stencil node mode: nested (non-plain) values are not supported yet")
+            # nested values resolve down to plain (the kernels run in the
+            # plain world at any depth)
+            while is_node(full[i]):
+                full[i] = value_of(full[i])
         stencil(*full)
         return scratch
 
@@ -306,10 +328,85 @@ def matrix(stencil, *fields):
             z._stencil_adj = cached
         return cached[1][computed.index(ci)]
 
+    def _mul(a, b):
+        # node-aware multiply, node-first (plain * node is not dispatchable)
+        return a * b if is_node(a) else b * a if is_node(b) else a * b
+
+    def _add(a, b):
+        # node-aware add, node-first; plain + plain is a lazy expr, which
+        # the plain-world slots must not become
+        return a + b if is_node(a) else b + a if is_node(b) else g(a + b)
+
+    def _plain(x):
+        # keep plain operands materialized (g.adj of a plain is an expr)
+        if is_node(x) or not isinstance(x, g.expr):
+            return x
+        return g(x)
+
+    def _shift(x, p):
+        # shift by a point; multi-direction points are composed
+        for d in range(ndim):
+            if p[d] != 0:
+                x = _plain(g.cshift(x, d, p[d]))
+        return x
+
+    def _adj_flow_nodes(z):
+        # nested pass: the flow z.gradient is a (lazy) node graph one level
+        # down and cannot be fed to the compiled kernels.  Evaluate the
+        # adjoint code in that node domain instead: forward values and the
+        # flow keep their node dependencies (exactly one level of value_of),
+        # and the slots are versioned accumulators read by later entries,
+        # which reproduces the kernels' live in-place semantics in code
+        # order (no staging, hence no stages).  A slot version that was
+        # never written is zero, which kills the whole entry (every emitted
+        # entry accumulates into its own slot, so the acc read adds nothing
+        # back).
+        cached = getattr(z, "_stencil_adj", None)
+        if cached is not None and cached[0] is z.gradient:
+            return cached[1]
+        vals = [None] * n
+        for k, i in enumerate(inputs):
+            vals[i] = value_of(children[k])
+        slots = [None] * n_comp
+        n_off = n_comp + len(_outs)
+        for (tt, ac, w, fl) in adj_entries:
+            assert ac == tt, "stencil node mode: adjoint entries must self-accumulate"
+            prod = None
+            for (f, p, a) in fl:
+                # adjoint layout: [slots] + [flow of t] + [forward values]
+                x = slots[f] if f < n_comp else (
+                    z.gradient if f < n_off else vals[f - n_off]
+                )
+                if x is None:
+                    prod = None  # zero factor: the entry contributes nothing
+                    break
+                if p != (0,) * ndim:
+                    x = _shift(x, p)
+                if a:
+                    x = _plain(g.adj(x))
+                prod = x if prod is None else _mul(prod, x)
+            if prod is None:
+                continue
+            tval = _mul(prod, w)
+            if slots[tt] is not None:
+                tval = _add(tval, slots[tt])
+            slots[tt] = tval
+        cached = (z.gradient, slots)
+        z._stencil_adj = cached
+        return slots
+
     def _backward(z):
-        for c, ci in zip(children, inputs):
-            if c.with_gradient and ci in referenced:
-                accum(c, _adj_flow(z, ci), 1)
+        if nested:
+            slots = _adj_flow_nodes(z)
+            for c, ci in zip(children, inputs):
+                if c.with_gradient and ci in referenced:
+                    s = slots[computed.index(ci)]
+                    if s is not None:
+                        accum(c, s, 1)
+        else:
+            for c, ci in zip(children, inputs):
+                if c.with_gradient and ci in referenced:
+                    accum(c, _adj_flow(z, ci), 1)
 
     z = fields[t]
     z._forward = _fwd

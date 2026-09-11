@@ -74,8 +74,8 @@ nnPs = rad.node(nPs)
 nnU = [rad.node(u) for u in nU]
 
 stencil_plaquette(nnPs, *nnU)
-nnPs()
+g.sum(g.trace(nnPs))()
 
-nip = g.inner_product(nU[0].gradient, nU[1].gradient)
+nip = g.inner_product(nnU[0].gradient, nnU[1].gradient)
 nup_func = nip.functional(*nU)
-npval_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+nup_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
