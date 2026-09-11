@@ -65,6 +65,18 @@ g.message(npval)
 
 # now test functional
 npval_func = npval.functional(*nU)
+act = g.qcd.gauge.action.wilson(6)
+t = g.timer("d")
+npval_func.gradient(U, U)
+act.gradient(U, U)
+
+t("AD")
+npval_func.gradient(U, U)
+t("wilson")
+act.gradient(U, U)
+t()
+g.message(t)
+
 npval_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 
 # second derivative
