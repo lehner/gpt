@@ -30,8 +30,13 @@
 #     with versioned slot accumulators instead.
 #
 # Current limitations (plain level only):
-#   - a single output target field, which must be a node; other (temp) target
-#     fields must be plain and are allocated by the caller
+#   - one or more output target fields, each a node; other (temp) target
+#     fields must be plain and are allocated by the caller.  With multiple
+#     outputs the fused kernel is run once per pass (shared forward,
+#     cached on the identity of the input values), and the adjoint run is
+#     shared as well: the first output node processed in a pass triggers it
+#     with both flows active (the sibling's flow is still alive then), and
+#     the sibling reuses the cached slots
 #   - the first write of the target must not read the target's own old value
 #     (accumulate = -1, or acc = input/temp), so the scratch's old value is
 #     not part of the computation
@@ -218,11 +223,11 @@ def matrix(stencil, *fields):
     ndim = grid.nd
     n = len(fields)
     targets = sorted({e[0] for e in raw})
-    node_targets = [x for x in targets if is_node(fields[x])]
-    assert len(node_targets) == 1, (
-        "stencil node mode: exactly one target (the output) must be a node")
-    t = node_targets[0]
-    temps = [x for x in targets if x != t]
+    outputs = [x for x in targets if is_node(fields[x])]
+    assert len(outputs) > 0, (
+        "stencil node mode: at least one target (an output) must be a node")
+    outputs.sort()
+    temps = [x for x in targets if x not in outputs]
     for x in temps:
         assert not is_node(fields[x]), "stencil node mode: temps must be plain"
     first = {}
@@ -231,20 +236,28 @@ def matrix(stencil, *fields):
         for (f, p, a) in fl:
             assert f not in targets, (
                 "stencil node mode: factors must reference input fields")
-    assert first[t] != t, (
-        "stencil node mode: first write of the target must not read its own "
-        "old value (acc=-1, or acc=input/temp)")
+    for t in outputs:
+        assert first[t] != t, (
+            "stencil node mode: first write of the target must not read its "
+            "own old value (acc=-1, or acc=input/temp)")
 
-    tv = value_of(fields[t])
-    # the old value is not part of the computation (first write is fresh,
-    # asserted above); resolve the (possibly nested) chain only to read
-    # the otype
-    tval = tv
-    while is_node(tval):
-        tval = value_of(tval)
-    otype_t = tval.otype
+    def _plain_value(x):
+        # the old value is not part of the computation (first write is
+        # fresh, asserted above); resolve the (possibly nested) chain only
+        # to read the otype
+        v = value_of(x)
+        while is_node(v):
+            v = value_of(v)
+        return v
 
-    inputs = [i for i in range(n) if i != t]
+    otype_t = _plain_value(fields[outputs[0]]).otype
+    for t in outputs[1:]:
+        tv = _plain_value(fields[t])
+        assert tv.otype == otype_t, (
+            "stencil node mode: outputs must have a common otype")
+        assert tv.grid == grid, "stencil node mode: outputs must share the grid"
+
+    inputs = [i for i in range(n) if i not in outputs]
     # plain operands (e.g. temps) are promoted to constant nodes; note that
     # nodify on a single plain argument passes through unwrapped
     children = [
@@ -270,7 +283,8 @@ def matrix(stencil, *fields):
     # compiled adjoint stencils (one per stage), cached on the stencil object
     adj = getattr(stencil, "_node_adj", None)
     if adj is None:
-        entries, computed, _outs = adjoint_code(raw, n, outputs=(t,), ndim=ndim, temps=tuple(temps))
+        entries, computed, _outs = adjoint_code(
+            raw, n, outputs=tuple(outputs), ndim=ndim, temps=tuple(temps))
         levels = {}
         for lv, e in entries:
             levels.setdefault(lv, []).append(e)
@@ -283,7 +297,7 @@ def matrix(stencil, *fields):
             ccode = [(tt, ac, w, [(f, pm[p], a) for (f, p, a) in fl]) for (tt, ac, w, fl) in lvl]
             written = sorted({tt for (tt, ac, w, fl) in lvl})
             K = g.stencil.matrix(g.lattice(grid, otype_t), pts, ccode)
-            n_adj_fields = n_comp + 1 + n
+            n_adj_fields = n_comp + len(_outs) + n
             K.data_access_hints(written, [i for i in range(n_adj_fields) if i not in written], [])
             compiled.append(K)
         # code-ordered entries with point tuples for the node-domain path
@@ -292,41 +306,86 @@ def matrix(stencil, *fields):
         stencil._node_adj = adj
     computed, compiled, adj_entries, _outs = adj
     n_comp = len(computed)
+    zero = (0,) * ndim
 
-    def _fwd():
-        scratch = g.lattice(grid, otype_t)
+    def _forward_values():
         full = [None] * n
-        full[t] = scratch
+        key = []
         for k, i in enumerate(inputs):
-            full[i] = value_of(children[k])
+            v = value_of(children[k])
             # nested values resolve down to plain (the kernels run in the
             # plain world at any depth)
-            while is_node(full[i]):
-                full[i] = value_of(full[i])
-        stencil(*full)
-        return scratch
+            while is_node(v):
+                v = value_of(v)
+            full[i] = v
+            key.append(id(v))
+        return tuple(key), full
 
-    def _adj_flow(z, ci):
-        cached = getattr(z, "_stencil_adj", None)
-        if cached is None or cached[0] is not z.gradient:
-            slots = [g.lattice(grid, otype_t) for _ in range(n_comp)]
-            for s in slots:
-                s[:] = 0
-            vals = [None] * n
-            vals[t] = z.value
-            for k, i in enumerate(inputs):
-                vals[i] = value_of(children[k])
-                if is_node(vals[i]):
-                    raise NotImplementedError(
-                        "stencil node mode: nested (non-plain) values are not supported yet")
-            if is_node(z.gradient):
+    # shared forward run: the fused kernel computes all outputs; the first
+    # output node's _forward triggers it and the rest reuse the scratches.
+    # Cached on the identity of the input values: within a pass the inputs
+    # are immutable, and across passes a hit is only possible for identical
+    # (hence same-content) input objects, for which the result is
+    # deterministic.
+    # shared adjoint run: one compiled kernel per stage with a psi slot per
+    # output, run once per backward pass.  A pass token makes this safe
+    # despite the backward bookkeeping: the first output node processed in
+    # a pass still sees the sibling's flow alive (flows are only nulled
+    # after a node's own backward), so it triggers the kernels with both
+    # psi slots active and stores its own flow object as the token; the
+    # sibling reuses the cached slots.  run_fwd invalidates the token: a
+    # fresh forward precedes every backward pass, and the token reference
+    # keeps the flow object alive so it cannot be matched stale.
+    fwd_cache = [None, None]
+    adj_cache = [None, None]  # (token, slots)
+    # a placeholder for an output's forward value once it has been freed by
+    # the backward pass; the adjoint code never reads an output's forward
+    # value (the regime asserts factors reference inputs and first writes
+    # are fresh), but the kernel padding plan needs a valid lattice at
+    # every read slot
+    dummy = g.lattice(grid, otype_t)
+
+    def run_fwd():
+        adj_cache[0] = None
+        key, full = _forward_values()
+        if fwd_cache[0] != key:
+            scratches = [g.lattice(grid, otype_t) for _ in outputs]
+            for k, t in enumerate(outputs):
+                full[t] = scratches[k]
+            stencil(*full)
+            fwd_cache[0] = key
+            fwd_cache[1] = scratches
+        return fwd_cache[1]
+
+    def run_adj_plain(z):
+        if adj_cache[0] is not None and adj_cache[0] is not z.gradient:
+            return adj_cache[1], False
+        slots = [g.lattice(grid, otype_t) for _ in range(n_comp)]
+        for s in slots:
+            s[:] = 0
+        full = [None] * n
+        for k, i in enumerate(inputs):
+            full[i] = value_of(children[k])
+            if is_node(full[i]):
+                raise NotImplementedError(
+                    "stencil node mode: nested (non-plain) values are not supported yet")
+        for t in outputs:
+            full[t] = fields[t].value if fields[t].value is not None else dummy
+        grads = []
+        for t in outputs:
+            gr = fields[t].gradient
+            if gr is None:
+                gr = g.lattice(grid, otype_t)
+                gr[:] = 0
+            elif is_node(gr):
                 raise NotImplementedError(
                     "stencil node mode: nested (non-plain) flows are not supported yet")
-            for K in compiled:
-                K(*(slots + [z.gradient] + vals))
-            cached = (z.gradient, slots)
-            z._stencil_adj = cached
-        return cached[1][computed.index(ci)]
+            grads.append(gr)
+        for K in compiled:
+            K(*(slots + grads + full))
+        adj_cache[0] = z.gradient
+        adj_cache[1] = slots
+        return slots, True
 
     def _mul(a, b):
         # node-aware multiply, node-first (plain * node is not dispatchable)
@@ -350,37 +409,37 @@ def matrix(stencil, *fields):
                 x = _plain(g.cshift(x, d, p[d]))
         return x
 
-    def _adj_flow_nodes(z):
-        # nested pass: the flow z.gradient is a (lazy) node graph one level
-        # down and cannot be fed to the compiled kernels.  Evaluate the
-        # adjoint code in that node domain instead: forward values and the
-        # flow keep their node dependencies (exactly one level of value_of),
-        # and the slots are versioned accumulators read by later entries,
-        # which reproduces the kernels' live in-place semantics in code
-        # order (no staging, hence no stages).  A slot version that was
-        # never written is zero, which kills the whole entry (every emitted
-        # entry accumulates into its own slot, so the acc read adds nothing
-        # back).
-        cached = getattr(z, "_stencil_adj", None)
-        if cached is not None and cached[0] is z.gradient:
-            return cached[1]
+    def run_adj_nodes(z):
+        # nested pass: the flow is a (lazy) node graph one level down and
+        # cannot be fed to the compiled kernels.  Evaluate the adjoint code
+        # in that node domain instead: forward values and the flow keep
+        # their node dependencies (exactly one level of value_of), and the
+        # slots are versioned accumulators read by later entries, which
+        # reproduces the kernels' live in-place semantics in code order (no
+        # staging, hence no stages).  A slot version that was never written
+        # is zero, which kills the whole entry (every emitted entry
+        # accumulates into its own slot, so the acc read adds nothing back);
+        # likewise a missing flow kills the entries fed by it.
+        if adj_cache[0] is not None and adj_cache[0] is not z.gradient:
+            return adj_cache[1], False
         vals = [None] * n
         for k, i in enumerate(inputs):
             vals[i] = value_of(children[k])
+        grads = [fields[t].gradient for t in outputs]
         slots = [None] * n_comp
         n_off = n_comp + len(_outs)
         for (tt, ac, w, fl) in adj_entries:
             assert ac == tt, "stencil node mode: adjoint entries must self-accumulate"
             prod = None
             for (f, p, a) in fl:
-                # adjoint layout: [slots] + [flow of t] + [forward values]
+                # adjoint layout: [slots] + [flow of each output] + [forward values]
                 x = slots[f] if f < n_comp else (
-                    z.gradient if f < n_off else vals[f - n_off]
+                    grads[f - n_comp] if f < n_off else vals[f - n_off]
                 )
                 if x is None:
                     prod = None  # zero factor: the entry contributes nothing
                     break
-                if p != (0,) * ndim:
+                if p != zero:
                     x = _shift(x, p)
                 if a:
                     x = _plain(g.adj(x))
@@ -391,28 +450,29 @@ def matrix(stencil, *fields):
             if slots[tt] is not None:
                 tval = _add(tval, slots[tt])
             slots[tt] = tval
-        cached = (z.gradient, slots)
-        z._stencil_adj = cached
-        return slots
+        adj_cache[0] = z.gradient
+        adj_cache[1] = slots
+        return slots, True
 
     def _backward(z):
-        if nested:
-            slots = _adj_flow_nodes(z)
-            for c, ci in zip(children, inputs):
-                if c.with_gradient and ci in referenced:
-                    s = slots[computed.index(ci)]
-                    if s is not None:
-                        accum(c, s, 1)
-        else:
-            for c, ci in zip(children, inputs):
-                if c.with_gradient and ci in referenced:
-                    accum(c, _adj_flow(z, ci), 1)
+        # the slots hold the combined input flow of all outputs; only the
+        # node that triggered the adjoint run deposits them (the siblings
+        # share the same children, so depositing once is depositing for all)
+        slots, triggered = run_adj_nodes(z) if nested else run_adj_plain(z)
+        if not triggered:
+            return
+        for c, ci in zip(children, inputs):
+            if c.with_gradient and ci in referenced:
+                s = slots[computed.index(ci)]
+                if s is not None:
+                    accum(c, s, 1)
 
-    z = fields[t]
-    z._forward = _fwd
-    z._children = children
-    z._backward = _backward
-    z.value = None
-    z.gradient = None
-    z._tag = f"stencil({len(points)} points, {len(stencil.code)} lines of code)"
-    return z
+    for k, t in enumerate(outputs):
+        z = fields[t]
+        z._forward = (lambda k: lambda: run_fwd()[k])(k)
+        z._children = children
+        z._backward = _backward
+        z.value = None
+        z.gradient = None
+        z._tag = f"stencil({len(points)} points, {len(stencil.code)} lines of code)"
+    return fields[outputs[0]]

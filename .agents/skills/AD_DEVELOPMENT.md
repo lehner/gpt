@@ -282,6 +282,15 @@ mechanism.
   accumulates into `.gradient` (call `zero_gradient()` first if reusing),
   and second reverse passes over an already-consumed 1-deep graph can
   produce nan. Build fresh nodes per pass when in doubt.
+- **Stencil `accumulate` is a field index, not a flag**: with several
+  targets in one fused stencil, each target's rewrites must accumulate
+  into *its own* field index (target 1 uses `accumulate: 1`, not `0`).
+- **Functional calls leave leaf values stale**: `node_differentiable_functional`
+  `__call__`/`gradient` overwrite each leaf's `.value` with whatever fields
+  they were handed, and `assert_gradient_error` ends on finite-difference
+  *composed* lattices. Reusing those leaf nodes in a later section silently
+  differentiates the perturbed fields (small, confusing reference
+  mismatches). Re-wrap fresh `rad.node(...)` leaves per section.
 - **Initial gradients must match the node depth**: a 1-deep node's
   `initial_gradient` must be a *plain* lattice; a constant direction used in
   a *contraction* of a 2-deep root must be a `rad.node(dir,
@@ -297,7 +306,8 @@ mechanism.
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; `matrix/exp.py` |
 | `lib/gpt/core/local_stencil/adjoint.py` | generic adjoint-stencil code derivation for compiled matrix stencils (see §5.2) |
 | `lib/gpt/ad/reverse/stencil.py` | fused differentiable parallel transport (stage 0 of the differentiable-stencil work) |
-| `tests/ad/stencil.py`, `tests/ad/stencil_adjoint.py` | stencil AD toy + random-code adjoint validation |
+| `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils: supports multiple node outputs in one fused call (shared forward run; one adjoint run per output, which is what keeps the sibling zero-gradient ordering safe) |
+| `tests/ad/stencil.py` | stencil AD toy: fused two-output stencil (plaquette + adjoint plaquette), validated at 1st/2nd/3rd order |
 | `lib/gpt/ad/forward/` | series / Landau differential algebra |
 | `lib/gpt/core/group/operation.py` | inner_product/compose dispatch |
 | `lib/gpt/core/group/differentiable_functional.py` | action functional + `assert_gradient_error` |
