@@ -130,7 +130,7 @@ def random_real_u1():
     return np.array([[rng.normal()]], dtype=np.complex128)
 
 
-def make_implicit_box_aU(integrator, dt, NL, mode, lam=0.5, c=None, picard_eps=1e-13):
+def make_implicit_box_aU(integrator, integrator_is_fg, dt, NL, mode, lam=0.5, c=None, picard_eps=1e-13):
     # A(U) kinetic  K = 1/2 <A(U)^-1 p, p>  + V(U),  GPT implicit integrator
     # (fixed add_directions), cold started.  modes:
     #   "su3"    : A(U) = I + lam/2 (Ad_U + Ad_U^T)   (U-dependent, v3 form)
@@ -208,7 +208,19 @@ def make_implicit_box_aU(integrator, dt, NL, mode, lam=0.5, c=None, picard_eps=1
     _iq = sympl.update_q(U, velocity, "iq")
     ip_imp = sympl.implicit_update(p, p2, _ip, eps=picard_eps, tag="P")
     iq_imp = sympl.implicit_update(U, U2, _iq, eps=picard_eps, tag="Q")
-    integrator1 = integrator(1, ip_imp, iq_imp)
+
+    # for test of implicit integrators
+    if integrator_is_fg:
+        ip_fg_imp = sympl.implicit_update(
+            U + p,
+            U2 + p2,
+            sympl.update_p_force_gradient(U + U2, _iq, p + p2, _ip, _ip, "P_FG"),
+            eps=1e-16,
+            tag="FG_P",
+        )
+        integrator1 = integrator(1, ip_imp, iq_imp, ip_fg_imp)
+    else:
+        integrator1 = integrator(1, ip_imp, iq_imp)
 
     def read(lat):
         v = lat[x]
@@ -244,7 +256,12 @@ gen = g.mcolor(grid).otype.cartesian().generators(grid.precision.complex_dtype)
 G = np.stack([np.asarray(gen[a].array) for a in range(8)])
 h = symplectic_harness(G)
 
-integrators = [sympl.leap_frog, sympl.OMF2, sympl.OMF4]
+integrators = [
+    (sympl.leap_frog, False),
+    (sympl.OMF2, False),
+    (sympl.OMF4, False),
+    (sympl.OMF2_force_gradient, True)
+]
 
 NL = 4
 B = [random_hermitian_su3() for _ in range(NL)]
@@ -254,7 +271,7 @@ for mu in range(NL):
     U[mu, 0] = random_su3()
     p[mu, 0] = random_hermitian_su3()
 
-for integrator in [sympl.leap_frog, sympl.OMF2, sympl.OMF4]:
+for integrator, integrator_is_fg in integrators:
     g.message(f"Run test for {integrator.__name__}")
     # ------------------------------------------------------------------
     # A(U) kinetic  K = 1/2 <A(U)^-1 p, p>,  group as a parameter
@@ -291,13 +308,11 @@ for integrator in [sympl.leap_frog, sympl.OMF2, sympl.OMF4]:
         ha = symplectic_harness(Ga)
         g.message(f"A(U) mode={mode:<7} ({desc})   [expect {expct}]  ({NL_a} links)")
         prev = None
-        for dt in [0.1, 0.05]:
-            box = make_implicit_box_aU(integrator, dt, NL_a, mode, lam=lam)
+        for dt in [0.1, 0.05, 0.025]:
+            box = make_implicit_box_aU(integrator, integrator_is_fg, dt, NL_a, mode, lam=lam)
             res, detj = ha.pullback(Ua, pa, box)
             # the scaling ratio is only meaningful for the failing modes
-            sc = f"  x{prev / res:.1f}" if (prev and expct == "fail") else ""
-            g.message(f"  dt={dt:<6} pullback {res:<16.3e} det J {detj:.10f}{sc}")
-            prev = res
+            g.message(f"  dt={dt:<6} pullback={res:<16.3e} det(J)-1={detj-1:16.3e}")
             if expct == "pass":
                 assert res < 1e-6, (mode, dt, res)
                 assert abs(detj - 1) < 1e-6, (mode, dt, detj)
