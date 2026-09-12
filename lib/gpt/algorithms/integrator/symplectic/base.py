@@ -80,6 +80,10 @@ class symplectic_base:
         return op[1], op[2]
 
     def add_directions(self):
+        # Apply implicit scheme from Norman's QNote64
+        #
+
+        # symmetrize in middle
         n = len(self.scheme)
         if n % 2 == 1:
             pos = (n - 1) // 2
@@ -88,13 +92,32 @@ class symplectic_base:
                 mid = [(i, step / 2, +1), (i, step / 2, -1)]
                 self.scheme = self.scheme[0:pos] + mid + self.scheme[pos + 1 :]
 
+        # symplectic splits
+        n = len(self.scheme)
+        scheme = []
+        for pos in range(n):
+            assert isinstance(self.scheme[pos], tuple)
+            i, step, direction = self.scheme[pos]
+            if pos + 1 < n and not i[-2] and not self.scheme[pos + 1][0][-2]:
+                i2, step2, direction2 = self.scheme[pos + 1]
+                if i[-1] != i2[-1] and step2 != step:
+                    scheme.append((i, step, 0))
+                    scheme.append((i2, step, 0))
+                    self.scheme[pos + 1] = (i2, step2 - step, 0)
+                    continue
+
+            if abs(step) > 1e-13:
+                scheme.append((i, step, 0))
+        self.scheme = scheme
+
+        # alternating directions for symplectic integrators
         n = len(self.scheme)
         for pos in range(n // 2):
             if isinstance(self.scheme[pos], tuple) and not self.scheme[pos][0][-2]:
                 i, step, direction = self.scheme[pos]
-                self.scheme[pos] = (i, step, +1)
+                self.scheme[pos] = (i, step, (-1) ** (pos + 1))
                 i, step, direction = self.scheme[n - pos - 1]
-                self.scheme[n - pos - 1] = (i, step, -1)
+                self.scheme[n - pos - 1] = (i, step, (-1) ** (pos + 0))
 
     def __call__(self, tau):
         verbose = gpt.default.is_verbose(self.__name__)
