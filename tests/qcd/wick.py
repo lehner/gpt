@@ -70,14 +70,19 @@ for c in coef2:
 #
 # Test isospin
 #
-assert f.isospin.clebsch_gordan(3 / 2, 3 / 2, 0) == [
+def same(a, b):
+    if isinstance(a, (list, tuple)):
+        return all(same(x, y) for x, y in zip(a, b))
+    return abs(a - b) < 1e-13
+
+assert same(f.isospin.clebsch_gordan(3 / 2, 3 / 2, 0), [
     [(-1.5, 1.5, -0.5), (-0.5, 0.5, 0.5), (0.5, -0.5, -0.5), (1.5, -1.5, 0.5)]
-]
-assert f.isospin.clebsch_gordan(2, 1, 1) == [
+])
+assert same(f.isospin.clebsch_gordan(2, 1, 1), [
     [(0, 1, 0.3162277660168383), (1, 0, -0.5477225575051657), (2, -1, 0.7745966692414834)],
     [(-1, 1, 0.5477225575051666), (0, 0, -0.6324555320336747), (1, -1, 0.5477225575051664)],
     [(-2, 1, 0.7745966692414841), (-1, 0, -0.5477225575051633), (0, -1, 0.31622776601683944)],
-]
+])
 
 # test diagonality
 ops1 = [
