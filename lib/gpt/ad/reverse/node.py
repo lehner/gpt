@@ -458,6 +458,14 @@ class node_base(base):
     otype = property(get_otype, set_otype)
     real = property(get_real)
 
+    def new(self):
+        # a fresh node of the same type, zero-initialized.  Built from the
+        # container so it works for any node value type (lattice, tensor,
+        # number, list, ...), not just lattices.  Mirrors lattice.new(); the
+        # producer (e.g. a stencil) overwrites the contents, so zero-init
+        # is fine.
+        return node(self._container.zero())
+
 
 def node_op(children, forward, backards, container, tag=None):
     # build a node from a forward closure and per-child backward closures.

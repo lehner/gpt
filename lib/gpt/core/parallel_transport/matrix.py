@@ -112,8 +112,12 @@ class parallel_transport_matrix:
         self.stencil.data_access_hints(write_fields, read_fields, [])
 
     def __call__(self, U):
-        T = [g.lattice(U[0]) for i in range(self.Ntarget)]
-        Temp = [g.lattice(U[0]) for i in range(self.Ntemporary)]
+        # x.new() allocates a fresh object of the same type (grid/otype), for
+        # both plain lattices and reverse-AD nodes (the latter resolves the
+        # stencil call to the AD foundation); the stencil overwrites the
+        # targets, so the initial contents are irrelevant
+        T = [U[0].new() for i in range(self.Ntarget)]
+        Temp = [U[0].new() for i in range(self.Ntemporary)]
         self.stencil(*T, *Temp, *U)
 
         if self.Ntarget == 1:

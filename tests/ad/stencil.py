@@ -238,7 +238,9 @@ f1 = S1.functional(nU1)
 f1.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
 g.message("single-output plaquette (list input): OK")
 
+#####################################
 # performance test
+#####################################
 f1.gradient([U], [U])
 act=g.qcd.gauge.action.wilson(6)
 act.gradient(U, U)
@@ -250,5 +252,49 @@ t("Wilson")
 act.gradient(U, U)
 t()
 g.message(t)
+
+#####################################
+# path-based stencil via g.parallel_transport_matrix
+#####################################
+# the same single-output plaquette as the sub-case above, but specified in
+# terms of g.path objects and wrapped by g.parallel_transport_matrix, which
+# expands each path into the sequence of single-link factors (and manages the
+# point set / field layout itself).  Exercises the
+# parallel_transport_matrix -> matrix-stencil -> AD-foundation pipeline.
+# Lowest order for now; 2nd/3rd derivatives to follow.
+pcode = []
+for mu in range(Nd):
+    for nu in range(mu):
+        pcode.append((0, -1 if len(pcode) == 0 else 0, 1.0,
+                      g.path().f(mu).f(nu).b(mu).b(nu)))
+ptm = g.parallel_transport_matrix(U, pcode, 1)
+# plain forward via the __call__ convention: ptm(U) allocates the target
+# itself and returns it (no .stencil extraction)
+P0p = ptm(U)
+pp = 2 * g.sum(g.trace(P0p)).real / gsites / 4 / 3 / 3
+eps = abs(float(pp) - float(Pref))
+g.message(f"path-based plaquette: {pp} versus reference {Pref}: {eps}")
+assert eps < 1e-14
+# node forward + 1st derivative via the __call__ convention: the input link
+# nodes are passed and __call__ allocates the target node (resolving the
+# stencil call to the AD foundation)
+nU = [rad.node(u) for u in U]
+nT = ptm(nU)
+S = 2 * g.sum(g.trace(nT)).real
+S()
+f = S.functional(*nU)
+# 4 link-node arguments -> fields/dfields are the 4-link list U (not [U])
+f.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+# cross-check against the hand-written single-output plaquette (same
+# computation, different code specification -> gradients must be identical)
+nP1b = rad.node(g.copy(P0))
+nU1b = [rad.node(u) for u in U]
+stencil1(nP1b, *nU1b)
+S1b = 2 * g.sum(g.trace(nP1b)).real
+S1b()
+diff = max(n2(nU1b[mu].gradient - nU[mu].gradient) for mu in range(Nd))
+g.message(f"path vs hand-written single-output plaquette 1st deriv: {diff}")
+assert diff < 1e-16
+g.message("path-based plaquette 1st derivative: OK")
 
 
