@@ -141,6 +141,20 @@ class node_base(base):
         return str_traverse(self)
 
     def zero_gradient(self):
+        if self._container.tag[0] is list:
+            # a list leaf's gradient is a plain list, one entry per element,
+            # each element independently wrapped to the nesting depth -- so at
+            # a nested depth the gradient is a list of node graphs (one per
+            # element), never a node wrapping a list
+            elem = self._container.tag[1]
+            depth = value_depth(self.value)
+            self.gradient = []
+            for i in range(self._container.tag[2]):
+                e = elem.zero()
+                for _ in range(depth):
+                    e = node_base(e)
+                self.gradient.append(e)
+            return
         self.gradient = self._container.zero()
         if isinstance(self.value, g.ad.forward.series):
             gradient = 0.0 * self.value
@@ -254,11 +268,16 @@ class node_base(base):
             def _backward(z):
                 if not x.with_gradient:
                     return
-                if is_node(x.gradient) or is_node(z.gradient):
-                    raise NotImplementedError(
-                        "nested list-node element gradients are not supported yet"
-                    )
-                x.gradient[item] += z.gradient
+                cur = x.gradient[item]
+                flow = z.gradient
+                if is_node(cur) or is_node(flow):
+                    # nested: the element gradient is / becomes a lazy node
+                    # graph one level down; accumulate node-aware
+                    x.gradient[item] = add(cur, flow)
+                else:
+                    # plain: in place (a plain `a + b` is a lazy expr, which
+                    # the gradient list must not become)
+                    cur += flow
 
             z_container = get_unary_container(x._container, lambda y: y[item])
             return node_base(_forward, _backward, (x,), _container=z_container)
@@ -275,6 +294,13 @@ class node_base(base):
             return y
 
         return x.project(getter, setter)
+
+    def __len__(self):
+        # a list node (e.g. the 4 gauge links) reports its length so it can be
+        # consumed like the Python-list-of-nodes convention (len(U), U[i])
+        if self._container.tag[0] is list:
+            return self._container.tag[2]
+        raise TypeError(f"object of type '{type(self).__name__}' has no len()")
 
     def project(x, getter, setter):
         def _forward():
