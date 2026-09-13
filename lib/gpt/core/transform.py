@@ -195,12 +195,18 @@ def identity(src):
 def infinitesimal_to_cartesian(src, dsrc):
     if gpt.util.is_num(src) or isinstance(src, np.ndarray):
         return dsrc
+    if isinstance(src, list):
+        # a list field (e.g. the 4 gauge links): convert element-wise
+        return [infinitesimal_to_cartesian(s, d) for s, d in zip(src, dsrc)]
     return dsrc.__class__.foundation.infinitesimal_to_cartesian(src, dsrc)
 
 
 def cartesian_to_infinitesimal(src, dsrc):
     if gpt.util.is_num(src) or isinstance(src, np.ndarray):
         return dsrc
+    if isinstance(src, list):
+        # a list field (e.g. the 4 gauge links): convert element-wise
+        return [cartesian_to_infinitesimal(s, d) for s, d in zip(src, dsrc)]
     return dsrc.__class__.foundation.cartesian_to_infinitesimal(src, dsrc)
 
 

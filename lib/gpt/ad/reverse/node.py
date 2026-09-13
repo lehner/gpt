@@ -31,6 +31,7 @@ from gpt.ad.reverse.util import (
     value_of,
     value_depth,
     nodify,
+    is_node,
 )
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
@@ -242,6 +243,26 @@ class node_base(base):
         return (-1.0) * self
 
     def __getitem__(x, item):
+        # list node (e.g. the 4 gauge links): element access.  The element's
+        # gradient accumulates in place into the list's gradient, mirroring
+        # accum's plain path (a plain `a + b` is a lazy expr, which the
+        # gradient list must not become)
+        if x._container.tag[0] is list:
+            def _forward():
+                return value_of(x)[item]
+
+            def _backward(z):
+                if not x.with_gradient:
+                    return
+                if is_node(x.gradient) or is_node(z.gradient):
+                    raise NotImplementedError(
+                        "nested list-node element gradients are not supported yet"
+                    )
+                x.gradient[item] += z.gradient
+
+            z_container = get_unary_container(x._container, lambda y: y[item])
+            return node_base(_forward, _backward, (x,), _container=z_container)
+
         def getter(y):
             return y[item]
 

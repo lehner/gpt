@@ -59,32 +59,52 @@ class container:
         return container(*[x for x in self.tag])
         
     def is_field(self):
+        if self.tag[0] is list:
+            return self.tag[1].is_field()
         return self.tag[0] == g.lattice
 
     def representative(self):
+        if self.tag[0] is list:
+            _, elem, n = self.tag
+            return [elem.representative() for _ in range(n)]
         return self.tag[0](*self.tag[1:])
 
     def lattice_to_tensor(self):
+        if self.tag[0] is list:
+            return container(list, self.tag[1].lattice_to_tensor(), self.tag[2])
         assert self.tag[0] == g.lattice
         return container(g.tensor, self.tag[2])
 
     def get_grid(self):
+        if self.tag[0] is list:
+            return self.tag[1].get_grid()
         if len(self.tag) > 2:
             return self.tag[1]
         raise Exception("Container does not have a grid")
 
     def get_otype(self):
+        if self.tag[0] is list:
+            return self.tag[1].get_otype()
         if len(self.tag) > 1:
             return self.tag[-1]
         raise Exception("Container does not have an otype")
 
     def set_otype(self, otype):
+        if self.tag[0] is list:
+            self.tag[1].set_otype(otype)
+            return
         if len(self.tag) > 1:
             self.tag = list(self.tag[:-1]) + [otype]
         else:
             raise Exception("Container does not have an otype")
 
     def accumulate_compatible(self, other):
+        if self.tag[0] is list or other.tag[0] is list:
+            if self.tag[0] is list and other.tag[0] is list:
+                return self.tag[2] == other.tag[2] and self.tag[1].accumulate_compatible(
+                    other.tag[1]
+                )
+            return False
         if len(self.tag) > 1 and len(other.tag) > 1:
             if len(self.tag) != len(other.tag):
                 return False
@@ -103,6 +123,11 @@ class container:
 
     def zero(self):
         r = self.representative()
+        if isinstance(r, list):
+            return [self._zero_one(e) for e in r]
+        return self._zero_one(r)
+
+    def _zero_one(self, r):
         if isinstance(r, g.lattice):
             r[:] = 0
         elif isinstance(r, (g.tensor, np.ndarray)):
@@ -117,6 +142,8 @@ class container:
         return str(self) == str(other)
 
     def __str__(self):
+        if self.tag[0] is list:
+            return "list[%d](%s)" % (self.tag[2], str(self.tag[1]))
         r = str(self.tag[0].__name__)
         if len(self.tag) > 1:
             r = r + ";" + self.tag[-1].__name__
@@ -134,6 +161,18 @@ def get_container(x):
         for t in x.terms:
             return get_container(x[t])
         raise Exception("Empty series")
+    elif isinstance(x, list):
+        # a uniform list of fields (e.g. the 4 gauge links) is one list node
+        if len(x) == 0:
+            raise Exception("empty list has no container")
+        elem = get_container(x[0])
+        for e in x[1:]:
+            ce = get_container(e)
+            if not ce.accumulate_compatible(elem):
+                raise Exception(
+                    "list elements must be mutually compatible: %s vs %s" % (elem, ce)
+                )
+        return container(list, elem, len(x))
     elif isinstance(x, g.lattice):
         return container(g.lattice, x.grid, x.otype)
     elif isinstance(x, g.tensor):

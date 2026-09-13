@@ -26,6 +26,15 @@ approximation_scheme_4 = [
 ]
 
 
+def _scaled(c, w):
+    # list-aware scalar scale: a single field may itself be a list of
+    # lattices (e.g. the 4 gauge links of a gauge field node).  Materialize
+    # to lattices so g.group.compose (which does g(left)) sees plain fields.
+    if isinstance(w, list):
+        return [_scaled(c, x) for x in w]
+    return g(c * w)
+
+
 class differentiable_functional:
     def __init__(self):
         return
@@ -71,7 +80,11 @@ class differentiable_functional:
                 * self(
                     [
                         (
-                            g(g.group.compose((dd * epsilon) * weights[dfields.index(f)], f))
+                            g(
+                                g.group.compose(
+                                    _scaled(dd * epsilon, weights[dfields.index(f)]), f
+                                )
+                            )
                             if f in dfields
                             else f
                         )
@@ -99,16 +112,18 @@ class differentiable_functional:
         if eps > epsilon_assert:
             g.message(f"Error: gradient = {a} <> approximate_gradient = {b}")
             assert False
-        # the gradient needs to live in cartesian
+        # the gradient needs to live in cartesian.  A single field may itself
+        # be a list of lattices (e.g. a gauge-field node), so inspect element-wise
         for gr, ww in zip(gradient, weights):
-            if gr.otype.__name__ != ww.otype.__name__:
-                g.message(
-                    f"Gradient has incorrect object type: {gr.otype.__name__} != {ww.otype.__name__}"
-                )
-            eps = g.group.defect(gr)
-            if eps > epsilon_assert:
-                g.message(f"Error: cartesian defect: {eps} > {epsilon_assert}")
-                assert False
+            for gr_i, ww_i in zip(g.util.to_list(gr), g.util.to_list(ww)):
+                if gr_i.otype.__name__ != ww_i.otype.__name__:
+                    g.message(
+                        f"Gradient has incorrect object type: {gr_i.otype.__name__} != {ww_i.otype.__name__}"
+                    )
+                eps = g.group.defect(gr_i)
+                if eps > epsilon_assert:
+                    g.message(f"Error: cartesian defect: {eps} > {epsilon_assert}")
+                    assert False
 
     def transformed(self, t, indices=None, projection=None):
         return transformed(self, t, indices, projection)
