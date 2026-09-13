@@ -478,11 +478,17 @@ def matrix(stencil, *fields):
             # so on up the tower.
             A_output = g.ad.reverse.node(
                 [g.lattice(grid, otype_t) for _ in range(n_comp)])
-            A_inputs = (
-                list(_psi())
-                + list(z.value if z.value is not None else [dummy] * m)
-                + list(children)
-            )
+            # z.value is a list of m forward outputs for a list-node target but
+            # a single lattice/node for an m=1 target -- normalize to a list of
+            # m entries (never `list(z.value)` on a bare field, which would
+            # iterate its sites)
+            if z.value is None:
+                z_vals = [dummy] * m
+            elif m == 1:
+                z_vals = [z.value]
+            else:
+                z_vals = list(z.value)
+            A_inputs = list(_psi()) + z_vals + list(children)
             A = matrix(compiled[0], A_output, *A_inputs)
             for i, c in enumerate(children):
                 ci = m + i

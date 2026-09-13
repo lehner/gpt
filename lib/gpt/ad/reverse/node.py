@@ -459,11 +459,15 @@ class node_base(base):
     real = property(get_real)
 
     def new(self):
-        # a fresh node of the same type, zero-initialized.  Built from the
-        # container so it works for any node value type (lattice, tensor,
-        # number, list, ...), not just lattices.  Mirrors lattice.new(); the
-        # producer (e.g. a stencil) overwrites the contents, so zero-init
-        # is fine.
+        # a fresh node at the SAME DEPTH as self, zero-initialized, for any
+        # node value type (lattice, tensor, number, list, ...).  Preserves
+        # nesting: a node wrapping a node recurses; a node wrapping a plain
+        # value uses the container to build a fresh zeroed value.  This is what
+        # lets parallel_transport_matrix.__call__ allocate a target whose depth
+        # matches the (possibly 2nd/3rd-derivative) input.  The producer (e.g.
+        # a stencil) overwrites the contents, so zero-init is fine.
+        if isinstance(self.value, node_base):
+            return node(self.value.new())
         return node(self._container.zero())
 
 

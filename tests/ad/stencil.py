@@ -261,7 +261,9 @@ g.message(t)
 # expands each path into the sequence of single-link factors (and manages the
 # point set / field layout itself).  Exercises the
 # parallel_transport_matrix -> matrix-stencil -> AD-foundation pipeline.
-# Lowest order for now; 2nd/3rd derivatives to follow.
+# Every derivative order is cross-checked against the equivalent hand-written
+# single-output plaquette (stencil1): same computation, different code
+# specification -> bit-identical.
 pcode = []
 for mu in range(Nd):
     for nu in range(mu):
@@ -296,5 +298,59 @@ diff = max(n2(nU1b[mu].gradient - nU[mu].gradient) for mu in range(Nd))
 g.message(f"path vs hand-written single-output plaquette 1st deriv: {diff}")
 assert diff < 1e-16
 g.message("path-based plaquette 1st derivative: OK")
+
+# 2nd derivative (HVP): path-based vs hand-written single-output plaquette
+# (dA / link_dirs are defined in the fused-plaquette sections above)
+nA1 = link_dirs(dA, 1)
+# path-based
+nnU = [rad.node(rad.node(u)) for u in U]
+T2 = ptm(nnU)
+S2 = 2 * g.sum(g.trace(T2)).real
+S2()
+c = sum(g.group.inner_product(nnU[mu].gradient, nA1[mu]) for mu in range(Nd))
+c()
+H_path = [g(nnU[mu].value.gradient) for mu in range(Nd)]
+# hand-written
+nnU1 = [rad.node(rad.node(u)) for u in U]
+T1 = rad.node(g.copy(P0))
+stencil1(T1, *nnU1)
+S2b = 2 * g.sum(g.trace(T1)).real
+S2b()
+c = sum(g.group.inner_product(nnU1[mu].gradient, nA1[mu]) for mu in range(Nd))
+c()
+H_hw = [g(nnU1[mu].value.gradient) for mu in range(Nd)]
+diff = max(n2(H_path[mu] - H_hw[mu]) for mu in range(Nd))
+g.message(f"path vs hand-written 2nd deriv (HVP): {diff}")
+assert diff < 1e-16
+g.message("path-based plaquette 2nd derivative: OK")
+
+# 3rd derivative: path-based vs hand-written single-output plaquette
+nA2 = link_dirs(dA, 2)
+nB1 = link_dirs(dB, 1)
+# path-based
+nnnU = [rad.node(rad.node(rad.node(u))) for u in U]
+T3 = ptm(nnnU)
+S3 = 2 * g.sum(g.trace(T3)).real
+S3()
+c = sum(g.group.inner_product(nnnU[mu].gradient, nA2[mu]) for mu in range(Nd))
+c()
+c = sum(g.group.inner_product(nnnU[mu].value.gradient, nB1[mu]) for mu in range(Nd))
+c()
+G_path = [g(nnnU[mu].value.value.gradient) for mu in range(Nd)]
+# hand-written
+nnnU1 = [rad.node(rad.node(rad.node(u))) for u in U]
+T3b = rad.node(g.copy(P0))
+stencil1(T3b, *nnnU1)
+S3b = 2 * g.sum(g.trace(T3b)).real
+S3b()
+c = sum(g.group.inner_product(nnnU1[mu].gradient, nA2[mu]) for mu in range(Nd))
+c()
+c = sum(g.group.inner_product(nnnU1[mu].value.gradient, nB1[mu]) for mu in range(Nd))
+c()
+G_hw = [g(nnnU1[mu].value.value.gradient) for mu in range(Nd)]
+diff = max(n2(G_path[mu] - G_hw[mu]) for mu in range(Nd))
+g.message(f"path vs hand-written 3rd deriv: {diff}")
+assert diff < 1e-16
+g.message("path-based plaquette 3rd derivative: OK")
 
 
