@@ -42,6 +42,9 @@ def inner_product(x, y, n_block, use_accelerator):
 
     def _forward():
         vx, vy = nodify(value_of(x), value_of(y))
+        if gpt.util.is_num(vx) and gpt.util.is_num(vy):
+            # support for "0d vectors"
+            return gpt.adj(vx) * vy
         return g.inner_product(vx, vy, n_block, use_accelerator)
 
     # z = adj(x) y   ->   x = y adj(z)   and   y = x z
