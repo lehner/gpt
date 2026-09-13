@@ -1,7 +1,26 @@
 #!/usr/bin/env python3
 #
-# AD of stencils: a fused stencil computing the plaquette (target 0) and the
-# adjoint plaquette (target 1) as two node outputs of one kernel
+# AD of compiled matrix stencils that map a list of input fields to a (list
+# of) output field(s), with both sides represented as nodes:
+#
+#     stencil(output, *inputs)
+#
+# `output` is field(s) 0..m-1: a single node (one output) or a LIST node (a
+# fused kernel with several outputs).  Each input argument is a single node,
+# a LIST node (expanding to one input field per element, e.g. the 4 gauge
+# links as one node), or a plain lattice (a constant/temp).  The inputs
+# occupy fields m..n-1.
+#
+# The forward is a single kernel pass computing all m outputs.  The backward
+# runs the ADJOINT of the stencil code, which is a stencil in closed form
+# (the product rule per factor, the m output flows as extra inputs).  For a
+# temp-free code the adjoint reads no flow slot, so it fuses to a single
+# stage: the backward is also a single kernel pass.
+#
+# The flagship case is the fused two-output plaquette (P and P^dagger) as
+# stencil(nP_listnode, nU_listnode).  Every derivative order is cross-checked
+# against the equivalent per-link-node inputs, and the 1st derivative against
+# finite differences.
 #
 import gpt as g
 
@@ -10,20 +29,53 @@ rad = g.ad.reverse
 grid = g.grid([4, 4, 4, 8], g.double)
 rng = g.random("stencil")
 U = g.qcd.gauge.random(grid, rng)
-Udag = [g(g.adj(u)) for u in U]
-P = [g.copy(U[0]), g.copy(U[0])]
-Ps = [g.copy(P[0]), g.copy(P[1])]
 Pref = g.qcd.gauge.plaquette(U)
-
-# create a stencil for the plaquette (target 0) and the adjoint plaquette
-# (target 1): P(x) = U_mu(x) U_nu(x+mu) U_mu(x+nu)^dagger U_nu(x)^dagger
-# P^dagger(x) = U_nu(x) U_mu(x+nu) U_nu(x+mu)^dagger U_mu(x)^dagger
+Nd = len(U)
+gsites = U[0].grid.gsites
+# points / field conventions: the output(s) are field 0..m-1, the links are
+# the following fields, the shifts are single-direction points
 _P = 0
 _U = [2, 3, 4, 5]
 _Sp = [1, 2, 3, 4]
+pts = [(0, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)]
 
+
+def n2(x):
+    return float(g.inner_product(x, x).real)
+
+
+def list_dir(dA, depth):
+    # a `depth`-deep list node holding the direction dA (plain links)
+    cU = g.group.cartesian(U)
+    for mu in range(Nd):
+        cU[mu] @= dA[mu]
+    nd = rad.node(cU)
+    for _ in range(depth - 1):
+        nd = rad.node(nd)
+    return nd
+
+
+def link_dirs(dA, depth):
+    # the same direction as `depth`-deep per-link nodes
+    cU = [g.group.cartesian(u) for u in U]
+    for mu in range(Nd):
+        cU[mu] @= dA[mu]
+    nds = [rad.node(c) for c in cU]
+    for _ in range(depth - 1):
+        nds = [rad.node(x) for x in nds]
+    return nds
+
+
+#####################################
+# fused two-output plaquette: list node -> list node
+#####################################
+# P(x)     = U_mu(x) U_nu(x+mu) U_mu(x+nu)^dagger U_nu(x)^dagger   (target 0)
+# P^dag(x) = U_nu(x) U_mu(x+nu) U_nu(x+mu)^dagger U_mu(x)^dagger   (target 1)
+P0 = g.copy(U[0])
+P1 = g.copy(U[0])
+Ps0 = g.copy(P0)
+Ps1 = g.copy(P1)
 code = []
-code0 = []
 for mu in range(4):
     for nu in range(mu):
         code.append(
@@ -52,10 +104,115 @@ for mu in range(4):
                 ],
             }
         )
-        code0.append(
+stencil = g.stencil.matrix(P0, pts, code)
+
+# plain fused forward (one kernel pass computes both outputs)
+stencil(Ps0, Ps1, *U)
+S_plain = 2 * g.sum(g.trace(Ps0 + 1j * Ps1)).real
+p0 = 2 * g.sum(g.trace(Ps0)).real / gsites / 4 / 3 / 3
+p1 = 2 * g.sum(g.trace(Ps1)).real / gsites / 4 / 3 / 3
+g.message(f"fused P: {p0}, fused P^dag: {p1}, reference: {Pref}")
+assert abs(float(p0) - float(Pref)) < 1e-14
+assert abs(float(p1) - float(Pref)) < 1e-14
+
+# node fused: list-node output (2) + list-node input (4)
+nP = rad.node([Ps0, Ps1])
+nU = rad.node(U)
+stencil(nP, nU)
+S = 2 * g.sum(g.trace(nP[0] + 1j * nP[1])).real
+pval = S(with_gradients=False)
+eps = abs(float(pval) - float(S_plain))
+g.message(f"fused forward node: {pval} versus {S_plain}: {eps}")
+assert eps < 1e-12
+# temp-free: the adjoint fuses to a single compiled kernel (one backward pass)
+nstages = len(stencil._node_adj[(2, ())][1])
+g.message(f"adjoint stages (backward passes): {nstages}")
+assert nstages == 1
+
+# 1st derivative: finite differences + fused list input vs per-link inputs
+f = S.functional(nU)
+f.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
+nPg = rad.node([g.copy(Ps0), g.copy(Ps1)])
+nUg = [rad.node(u) for u in U]
+stencil(nPg, *nUg)
+T = 2 * g.sum(g.trace(nPg[0] + 1j * nPg[1])).real
+T()
+diff = max(n2(nU.gradient[mu] - nUg[mu].gradient) for mu in range(Nd))
+g.message(f"1st deriv: fused list input vs per-link inputs: {diff}")
+assert diff < 1e-16
+g.message("fused plaquette 1st derivative: OK")
+
+# 2nd derivative (HVP)
+dA = rng.normal_element(g.group.cartesian(U))
+nnP = rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)]))
+nnU = rad.node(rad.node(U))
+nA = list_dir(dA, 1)
+stencil(nnP, nnU)
+2 * g.sum(g.trace(nnP[0] + 1j * nnP[1])).real()
+# the 1st-derivative slots (nnU.gradient) are ADJOINT stencil nodes -- a
+# different-code stencil acting on nodes again -- not cshift/mul expressions;
+# the recursion is a tower of stencils with no cshift
+slot_str = str(nnU.gradient[0])
+assert "stencil" in slot_str and "cshift" not in slot_str, (
+    "nested slot should be a stencil node, not a cshift expression")
+g.message("2nd deriv: nested slots are stencil nodes (no cshift)")
+c = sum(g.group.inner_product(nnU.gradient[mu], nA[mu]) for mu in range(Nd))
+c()
+H_list = [g(x) for x in nnU.value.gradient]
+nnPg = rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)]))
+nnUg = [rad.node(rad.node(u)) for u in U]
+nAg = link_dirs(dA, 1)
+stencil(nnPg, *nnUg)
+2 * g.sum(g.trace(nnPg[0] + 1j * nnPg[1])).real()
+c = sum(g.group.inner_product(nnUg[mu].gradient, nAg[mu]) for mu in range(Nd))
+c()
+H_link = [g(nnUg[mu].value.gradient) for mu in range(Nd)]
+diff = max(n2(H_list[mu] - H_link[mu]) for mu in range(Nd))
+g.message(f"2nd deriv (HVP): fused list input vs per-link inputs: {diff}")
+assert diff < 1e-16
+g.message("fused plaquette 2nd derivative: OK")
+
+# 3rd derivative
+dB = g.random("stencil_3rd").normal_element(g.group.cartesian(U))
+nnnP = rad.node(rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)])))
+nnnU = rad.node(rad.node(rad.node(U)))
+nA = list_dir(dA, 2)
+nB = list_dir(dB, 1)
+stencil(nnnP, nnnU)
+2 * g.sum(g.trace(nnnP[0] + 1j * nnnP[1])).real()
+c = sum(g.group.inner_product(nnnU.gradient[mu], nA[mu]) for mu in range(Nd))
+c()
+nnU = nnnU.value
+c = sum(g.group.inner_product(nnU.gradient[mu], nB[mu]) for mu in range(Nd))
+c()
+G_list = [g(x) for x in nnU.value.gradient]
+nnnPg = rad.node(rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)])))
+nnnUg = [rad.node(rad.node(rad.node(u))) for u in U]
+nAg = link_dirs(dA, 2)
+nBg = link_dirs(dB, 1)
+stencil(nnnPg, *nnnUg)
+2 * g.sum(g.trace(nnnPg[0] + 1j * nnnPg[1])).real()
+c = sum(g.group.inner_product(nnnUg[mu].gradient, nAg[mu]) for mu in range(Nd))
+c()
+c = sum(g.group.inner_product(nnnUg[mu].value.gradient, nBg[mu]) for mu in range(Nd))
+c()
+G_link = [g(nnnUg[mu].value.value.gradient) for mu in range(Nd)]
+diff = max(n2(G_list[mu] - G_link[mu]) for mu in range(Nd))
+g.message(f"3rd deriv: fused list input vs per-link inputs: {diff}")
+assert diff < 1e-16
+g.message("fused plaquette 3rd derivative: OK")
+
+#####################################
+# single-output sub-case: one node output + list node input (m = 1)
+#####################################
+# the same plaquette, single output (field 0), links at fields 1..4
+code1 = []
+for mu in range(4):
+    for nu in range(mu):
+        code1.append(
             {
                 "target": 0,
-                "accumulate": -1 if len(code0) == 0 else 0,
+                "accumulate": -1 if len(code1) == 0 else 0,
                 "weight": 1.0,
                 "factor": [
                     (_U[mu] - 1, _P, 0),
@@ -65,139 +222,33 @@ for mu in range(4):
                 ],
             }
         )
-
-
-stencil_plaquette = g.stencil.matrix(
-    P[0],
-    [(0, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)],
-    code,
-)
-
-stencil_plaquette0 = g.stencil.matrix(
-    P[0],
-    [(0, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)],
-    code0,
-)
-
-stencil_plaquette(Ps[0], Ps[1], *U)
-pval0 = 2 * g.sum(g.trace(Ps[0])).real / P[0].grid.gsites / 4 / 3 / 3
-pval1 = 2 * g.sum(g.trace(Ps[1])).real / P[0].grid.gsites / 4 / 3 / 3
-eps = abs(Pref - pval0)
-g.message(f"Stencil plaquette: {pval0} versus reference {Pref}: {eps}")
+stencil1 = g.stencil.matrix(P0, pts, code1)
+P1s = g.copy(P0)
+stencil1(P1s, *U)
+p1v = 2 * g.sum(g.trace(P1s)).real / gsites / 4 / 3 / 3
+eps = abs(float(p1v) - float(Pref))
+g.message(f"single-output plaquette: {p1v} versus reference {Pref}: {eps}")
 assert eps < 1e-14
-eps = abs(Pref - pval1)
-g.message(f"Stencil adjoint plaquette: {pval1} versus reference {Pref}: {eps}")
-assert eps < 1e-14
+nP1 = rad.node(P1s)
+nU1 = rad.node(U)
+stencil1(nP1, nU1)
+S1 = 2 * g.sum(g.trace(nP1)).real
+S1()
+f1 = S1.functional(nU1)
+f1.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
+g.message("single-output plaquette (list input): OK")
 
-# now run it on nodes (both targets are node outputs of the fused stencil)
-nPs = [rad.node(Ps[0]), rad.node(Ps[1])]
-nU = [rad.node(u) for u in U]
-
-stencil_plaquette(nPs[0], nPs[1], *nU)
-# the plain reference for the combined scalar: the real part of
-# trace(P + i P^dagger) is sum(Re P) - sum(Im P)
-pref_val = (
-    2 * g.sum(g.trace(Ps[0] + 1j * Ps[1])).real / P[0].grid.gsites / 4 / 3 / 3
-)
-npval = (
-    2 * g.sum(g.trace(nPs[0] + 1j * nPs[1])).real / P[0].grid.gsites / 4 / 3 / 3
-)
-pval = npval(with_gradients=False)
-eps = abs(pref_val - pval)
-g.message(f"Stencil plaquette forward node: {pval} versus reference {pref_val}: {eps}")
-assert eps < 1e-14
-
-# print graph
-g.message(npval)
-
-# now test functional
-npval_func = npval.functional(*nU)
-act = g.qcd.gauge.action.wilson(6)
-t = g.timer("d")
-npval_func.gradient(U, U)
+# performance test
+f1.gradient([U], [U])
+act=g.qcd.gauge.action.wilson(6)
 act.gradient(U, U)
 
-t("2 x AD")
-for _ in range(10):
-    npval_func.gradient(U, U)
-t("wilson")
-for _ in range(10):
-    act.gradient(U, U)
-t()
-g.message(t)
-
-npval_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
-
-
-# second derivative
-nPs = [rad.node(Ps[0]), rad.node(Ps[1])]
-nU = [rad.node(u) for u in U]
-nnPs = [rad.node(p) for p in nPs]
-nnU = [rad.node(u) for u in nU]
-
-stencil_plaquette(nnPs[0], nnPs[1], *nnU)
-g.sum(g.trace(nnPs[0] + 1j * nnPs[1]))()
-
-nip = g.inner_product(nnU[0].gradient, nnU[1].gradient)
-nup_func = nip.functional(*nU)
-nup_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
-
-
-# third derivative
-nPs = [rad.node(Ps[0]), rad.node(Ps[1])]
-nU = [rad.node(u) for u in U]
-nnPs = [rad.node(p) for p in nPs]
-nnU = [rad.node(u) for u in nU]
-nnnPs = [rad.node(p) for p in nnPs]
-nnnU = [rad.node(u) for u in nnU]
-
-stencil_plaquette(nnnPs[0], nnnPs[1], *nnnU)
-g.sum(g.trace(nnnPs[0] + 1j * nnnPs[1]))()
-
-nnip = g.inner_product(nnnU[0].gradient, nnnU[1].gradient)
-nnip()
-
-nip = g.inner_product(nnU[0].gradient, nnU[1].gradient)
-nip()
-
-nnup_func = nip.functional(*nU)
-nnup_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
-
-
-
-# now test functional of only the action (fresh nodes: the previous
-# section's assert_gradient_error leaves the nU leaf values pointing at
-# the last finite-difference composed lattice, not at U)
-nPs = rad.node(Ps[0])
-nU = [rad.node(u) for u in U]
-stencil_plaquette0(nPs, *nU)
-# the plain reference for the combined scalar: the real part of
-# trace(P + i P^dagger) is sum(Re P) - sum(Im P)
-pref_val = (
-    2 * g.sum(g.trace(Ps[0])).real / P[0].grid.gsites / 4 / 3 / 3
-)
-npval = (
-    2 * g.sum(g.trace(nPs)).real / P[0].grid.gsites / 4 / 3 / 3
-)
-pval = npval(with_gradients=False)
-eps = abs(pref_val - pval)
-g.message(f"Stencil plaquette0 forward node: {pval} versus reference {pref_val}: {eps}")
-assert eps < 1e-14
-
-# now test functional
-npval_func = npval.functional(*nU)
-act = g.qcd.gauge.action.wilson(6)
 t = g.timer("d")
-npval_func.gradient(U, U)
-act.gradient(U, U)
-
 t("AD")
-for _ in range(10):
-    npval_func.gradient(U, U)
-t("wilson")
-for _ in range(10):
-    act.gradient(U, U)
+f1.gradient([U], [U])
+t("Wilson")
+act.gradient(U, U)
 t()
 g.message(t)
 
-npval_func.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+
