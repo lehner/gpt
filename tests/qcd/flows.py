@@ -8,7 +8,7 @@ import numpy as np
 
 # general setup
 rng = g.random("test")
-U = g.qcd.gauge.random(g.grid([4,4,4,8], g.double), rng)
+U = g.qcd.gauge.random(g.grid([8,8,8,8], g.double), rng)
 rad = g.ad.reverse
 
 # specific even/odd pattern
@@ -118,10 +118,10 @@ act2.assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
 
 
 # next: look at timing and improve AD speed
-# t = g.timer("d")
-# t("orig")
-# act1.gradient(U, U)
-# t("ad")
-# act2.gradient(U + params, U)
-# t()
-# print(t)
+t = g.timer("d")
+t("orig")
+act1.gradient(U, U)
+t("ad")
+act2.gradient(U + params, U)
+t()
+print(t)

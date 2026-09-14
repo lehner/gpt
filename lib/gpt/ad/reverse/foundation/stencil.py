@@ -248,14 +248,13 @@ def matrix(stencil, *fields):
          [(f, points[p], a) for (f, p, a) in e["factor"]])
         for e in inner.code
     ]
-    # number of fields the code operates on
+    # highest field index the code touches
     fidx = set()
     for (tt, ac, w, fl) in raw:
         fidx.add(tt)
         if ac != -1:
             fidx.add(ac)
         fidx.update(f for (f, p, a) in fl)
-    n_fields = max(fidx) + 1
 
     # the output is field(s) 0..m-1: a single node (m=1) or a list node (m)
     output = fields[0]
@@ -275,9 +274,15 @@ def matrix(stencil, *fields):
             children.append(arg)
         else:
             children.append(g.ad.reverse.node_base(arg, with_gradient=False))
-    assert len(children) == n_fields - m, (
-        "stencil node mode: the input arguments must expand to fields %d..%d "
-        "(got %d)" % (m, n_fields - 1, len(children)))
+
+    # the field count comes from the ARGUMENTS, not from the highest index the
+    # code happens to reference: a caller may legitimately pass fields the code
+    # never reads (g.parallel_transport hands over all links, whatever
+    # directions the paths use), exactly as the compiled kernel allows
+    n_fields = m + len(children)
+    assert max(fidx) < n_fields, (
+        "stencil node mode: the code references field %d but only fields "
+        "0..%d were passed" % (max(fidx), n_fields - 1))
 
     # field classification: outputs are 0..m-1, the other targets are temps,
     # the rest are inputs.  An output the code never writes is valid (it stays
@@ -314,13 +319,18 @@ def matrix(stencil, *fields):
     referenced = {i for i in referenced if i in inputs}
 
     # node depth: gradient-carrying children must be uniform (constants such
-    # as temps are plain at any depth and carry no inner dependency)
-    node_vals = [is_node(value_of(c)) for c in children if c.with_gradient]
-    nested = any(node_vals)
-    assert all(node_vals) or not any(node_vals), (
-        "stencil node mode: gradient-carrying children must have uniform "
-        "node depth"
-    )
+    # as temps are plain at any depth and carry no inner dependency).  This is
+    # decided in the backward pass, not here: `value_of` evaluates a computed
+    # child, and a value cached before the graph is first run would then be
+    # reused by node.forward (which only recomputes values that are None)
+    # instead of being rebuilt from the updated leaves.
+    def _nested():
+        node_vals = [is_node(value_of(c)) for c in children if c.with_gradient]
+        assert all(node_vals) or not any(node_vals), (
+            "stencil node mode: gradient-carrying children must have uniform "
+            "node depth"
+        )
+        return any(node_vals)
 
     # the adjoint code, in closed form (another stencil): entries in code
     # order, its field layout, and the per-stage split for the compiled
@@ -369,15 +379,31 @@ def matrix(stencil, *fields):
         return output.gradient if m > 1 else [output.gradient]
 
     def run_fwd():
-        # forward: one kernel pass computes all m outputs
-        outs = [g.lattice(grid, otype_t) for _ in range(m)]
-        full = list(outs)
+        # forward: one kernel pass computes all m outputs.  The operands are
+        # resolved exactly ONE level down (value_of, not all the way to plain):
+        # a lazy expr is materialized because the kernel needs lattices.
+        ops = []
         for c in children:
             v = value_of(c)
-            while is_node(v):
-                v = value_of(v)
-            full.append(v)
-        stencil(*full)
+            if isinstance(v, g.expr):
+                v = g(v)
+            ops.append(v)
+
+        if any(is_node(v) for v in ops):
+            # nested pass: the VALUE of this node must itself be a stencil
+            # node one level down, not a plain field.  Consumers backpropagate
+            # with value_of(this node), so a plain value would hand them plain
+            # operands and the flow psi that reaches this node would carry no
+            # dependence on the inputs -- a nonlinear consumer then loses the
+            # dpsi/dU half of the 2nd derivative.  So the forward recurses:
+            # the same self-similar tower as the backward, bottoming out at
+            # plain operands, where the compiled kernel runs.
+            inner = [g.lattice(grid, otype_t) for _ in range(m)]
+            inner = g.ad.reverse.node(inner if m > 1 else inner[0])
+            return matrix(stencil, inner, *ops)
+
+        outs = [g.lattice(grid, otype_t) for _ in range(m)]
+        stencil(*(outs + ops))
         return outs[0] if m == 1 else outs
 
     def run_adj_plain():
@@ -460,6 +486,7 @@ def matrix(stencil, *fields):
         return slots
 
     def _backward(z):
+        nested = _nested()
         if not nested:
             # plain flows: the compiled adjoint kernel(s) on plain slot lattices
             slots = run_adj_plain()
@@ -488,7 +515,11 @@ def matrix(stencil, *fields):
                 z_vals = [z.value]
             else:
                 z_vals = list(z.value)
-            A_inputs = list(_psi()) + z_vals + list(children)
+            # the adjoint graph lives ONE LEVEL DOWN: its operands are the
+            # children's values (the inner nodes), exactly as node.__mul__
+            # backpropagates with value_of(y).  The gradients still
+            # accumulate into the children themselves (below).
+            A_inputs = list(_psi()) + z_vals + [value_of(c) for c in children]
             A = matrix(compiled[0], A_output, *A_inputs)
             for i, c in enumerate(children):
                 ci = m + i

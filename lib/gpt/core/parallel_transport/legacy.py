@@ -118,7 +118,7 @@ class parallel_transport_legacy:
 
 
 def parallel_transport(links, paths, site_fields=None):
-    if site_fields is not None or not isinstance(links[0], g.lattice):
+    if site_fields is not None:
         return parallel_transport_legacy(links, paths, site_fields)
 
     code = [(mu, -1, 1.0, paths[mu]) for mu in range(len(paths))]

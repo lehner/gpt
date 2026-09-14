@@ -244,7 +244,7 @@ mechanism.
 - `ad/reverse/transform.py` — transcendental transforms (sin, cos, ...) as
   node ops.
 - `ad/reverse/util.py` — `nodify`, `product`, `value_of`, `is_node`,
-  `value_depth`, `get_*_container`.
+  `value_depth_static`, `get_*_container`.
 - `ad/reverse/foundation/` — the "foundation" layer: lattice-level
   implementations of ops the node layer dispatches to (trace/sum
   backprops, `where`, `astype`, group conversions), plus

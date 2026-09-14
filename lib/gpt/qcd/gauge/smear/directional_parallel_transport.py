@@ -43,7 +43,10 @@ class directional_parallel_transport(dft_diffeomorphism):
         def ft(xU):
             assert len(xU) == ntot
 
-            cache_key = f"{type(xU[0])}_depth{g.ad.reverse.util.value_depth(xU[0])}"
+            # static: ft() may be handed computed nodes, and resolving their depth
+            # here would cache a value that node.forward then reuses instead of
+            # rebuilding it from the updated leaves
+            cache_key = f"{type(xU[0])}_depth{g.ad.reverse.util.value_depth_static(xU[0])}"
             if cache_key not in cache:
                 paths = [y[1] for y in description_mu]
                 cache[cache_key] = g.parallel_transport(xU[0:nd], paths)

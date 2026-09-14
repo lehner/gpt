@@ -29,7 +29,7 @@ from gpt.ad.reverse.util import (
     div,
     accum,
     value_of,
-    value_depth,
+    value_depth_static,
     nodify,
     is_node,
 )
@@ -147,7 +147,7 @@ class node_base(base):
             # a nested depth the gradient is a list of node graphs (one per
             # element), never a node wrapping a list
             elem = self._container.tag[1]
-            depth = value_depth(self.value)
+            depth = value_depth_static(self.value)
             self.gradient = []
             for i in range(self._container.tag[2]):
                 e = elem.zero()
@@ -162,7 +162,11 @@ class node_base(base):
                 gradient.terms[t] = self.gradient
             self.gradient = gradient
 
-        for _ in range(value_depth(self.value)):
+        # measuring the depth must not re-run a forward closure: this is
+        # called from backward(), which frees each computed node's value as it
+        # goes, so resolving the depth by evaluating would re-materialize
+        # fields that were just released
+        for _ in range(value_depth_static(self.value)):
             self.gradient = node_base(self.gradient)
 
     def __mul__(x, y):
@@ -460,15 +464,22 @@ class node_base(base):
 
     def new(self):
         # a fresh node at the SAME DEPTH as self, zero-initialized, for any
-        # node value type (lattice, tensor, number, list, ...).  Preserves
-        # nesting: a node wrapping a node recurses; a node wrapping a plain
-        # value uses the container to build a fresh zeroed value.  This is what
-        # lets parallel_transport_matrix.__call__ allocate a target whose depth
+        # node value type (lattice, tensor, number, list, ...).  The container
+        # is the innermost one, so it builds the plain zeroed value and one
+        # node wraps it per nesting level.  This is what lets
+        # parallel_transport_matrix.__call__ allocate a target whose depth
         # matches the (possibly 2nd/3rd-derivative) input.  The producer (e.g.
         # a stencil) overwrites the contents, so zero-init is fine.
-        if isinstance(self.value, node_base):
-            return node(self.value.new())
-        return node(self._container.zero())
+        #
+        # The depth is read statically: a COMPUTED node has value None until
+        # its graph is first run, so recursing on self.value would report
+        # depth 1 whatever the real nesting is -- while resolving it by
+        # evaluating would cache a value that node.forward then reuses rather
+        # than rebuilding it from the updated leaves.
+        r = self._container.zero()
+        for _ in range(value_depth_static(self)):
+            r = node(r)
+        return r
 
 
 def node_op(children, forward, backards, container, tag=None):

@@ -19,8 +19,18 @@
 #
 # The flagship case is the fused two-output plaquette (P and P^dagger) as
 # stencil(nP_listnode, nU_listnode).  Every derivative order is cross-checked
-# against the equivalent per-link-node inputs, and the 1st derivative against
-# finite differences.
+# against the equivalent per-link-node inputs, and the 1st and 2nd derivatives
+# against finite differences.
+#
+# The consumers of the stencil output are deliberately NONLINEAR (quadratic in
+# the outputs).  With a linear consumer the flow that reaches the output does
+# not depend on the input links at all, so the d(flow)/dU half of every
+# derivative beyond the first is never exercised: a stencil whose nested
+# forward drops that dependence still reproduces every cross-check here
+# exactly.  The cross-checks compare two ways of SPECIFYING the same
+# computation, so both sides run through this foundation and a defect they
+# share is invisible -- hence the finite-difference reference for the 2nd
+# derivative as well.
 #
 import gpt as g
 
@@ -42,6 +52,51 @@ pts = [(0, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)]
 
 def n2(x):
     return float(g.norm2(x))
+
+
+def act_fused(a, b):
+    # the action consumed from the fused two-output stencil, NONLINEAR in the
+    # outputs (see the header): the same combination the linear version used,
+    # applied to their SQUARES.  (tr(X X) with X = P + i P^dagger is not
+    # usable: target 1 is the exact pointwise adjoint of target 0, so the two
+    # squares cancel and the action vanishes identically.)
+    return 2 * g.sum(g.trace(a * a + 1j * (b * b))).real
+
+
+def act_single(a):
+    # the same, for a single-output stencil: tr(P P)
+    return 2 * g.sum(g.trace(a * a)).real
+
+
+def flowed_links(t, dA):
+    # U(t) = exp(t dA) U, the group flow the finite differences run along
+    return [g(g.group.compose(g(t * dA[mu]), U[mu])) for mu in range(Nd)]
+
+
+def contract(a, b):
+    return sum(g.group.inner_product(a[mu], b[mu]) for mu in range(Nd))
+
+
+def hvp_fd(build, dA, eps=1e-4):
+    # <dA, dS/dU>(U(t)) differentiated by a central difference at t = 0, i.e.
+    # an independent reference for the contracted 2nd derivative.  The 1st
+    # derivative it differentiates is itself checked against finite
+    # differences by assert_gradient_error.
+    def F(t):
+        n = [rad.node(u) for u in flowed_links(t, dA)]
+        build(n)()
+        return contract(dA, [g(n[mu].gradient) for mu in range(Nd)])
+
+    return (F(eps) - F(-eps)) / (2.0 * eps)
+
+
+def assert_hvp_vs_fd(H, build, dA, tag, tol=1e-6):
+    # H[mu] = d/dU_mu <dA, dS/dU>, as produced by the nested (2-deep) pass
+    q_ad = contract(dA, H)
+    q_fd = hvp_fd(build, dA)
+    rel = abs(q_ad - q_fd) / abs(q_fd)
+    g.message(f"2nd deriv vs finite differences ({tag}): {q_ad} versus {q_fd}: {rel}")
+    assert rel < tol
 
 
 def list_dir(dA, depth):
@@ -108,7 +163,7 @@ stencil = g.stencil.matrix(P0, pts, code)
 
 # plain fused forward (one kernel pass computes both outputs)
 stencil(Ps0, Ps1, *U)
-S_plain = 2 * g.sum(g.trace(Ps0 + 1j * Ps1)).real
+S_plain = act_fused(Ps0, Ps1)
 p0 = 2 * g.sum(g.trace(Ps0)).real / gsites / 4 / 3 / 3
 p1 = 2 * g.sum(g.trace(Ps1)).real / gsites / 4 / 3 / 3
 g.message(f"fused P: {p0}, fused P^dag: {p1}, reference: {Pref}")
@@ -119,9 +174,10 @@ assert abs(float(p1) - float(Pref)) < 1e-14
 nP = rad.node([Ps0, Ps1])
 nU = rad.node(U)
 stencil(nP, nU)
-S = 2 * g.sum(g.trace(nP[0] + 1j * nP[1])).real
+S = act_fused(nP[0], nP[1])
 pval = S(with_gradients=False)
-eps = abs(float(pval) - float(S_plain))
+# relative: the nonlinear action is O(volume), not O(1)
+eps = abs(float(pval) - float(S_plain)) / abs(float(S_plain))
 g.message(f"fused forward node: {pval} versus {S_plain}: {eps}")
 assert eps < 1e-12
 # temp-free: the adjoint fuses to a single compiled kernel (one backward pass)
@@ -135,7 +191,7 @@ f.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
 nPg = rad.node([g.copy(Ps0), g.copy(Ps1)])
 nUg = [rad.node(u) for u in U]
 stencil(nPg, *nUg)
-T = 2 * g.sum(g.trace(nPg[0] + 1j * nPg[1])).real
+T = act_fused(nPg[0], nPg[1])
 T()
 diff = max(n2(nU.gradient[mu] - nUg[mu].gradient) for mu in range(Nd))
 g.message(f"1st deriv: fused list input vs per-link inputs: {diff}")
@@ -148,7 +204,7 @@ nnP = rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)]))
 nnU = rad.node(rad.node(U))
 nA = list_dir(dA, 1)
 stencil(nnP, nnU)
-2 * g.sum(g.trace(nnP[0] + 1j * nnP[1])).real()
+act_fused(nnP[0], nnP[1])()
 # the 1st-derivative slots (nnU.gradient) are ADJOINT stencil nodes -- a
 # different-code stencil acting on nodes again -- not cshift/mul expressions;
 # the recursion is a tower of stencils with no cshift
@@ -163,13 +219,23 @@ nnPg = rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)]))
 nnUg = [rad.node(rad.node(u)) for u in U]
 nAg = link_dirs(dA, 1)
 stencil(nnPg, *nnUg)
-2 * g.sum(g.trace(nnPg[0] + 1j * nnPg[1])).real()
+act_fused(nnPg[0], nnPg[1])()
 c = sum(g.group.inner_product(nnUg[mu].gradient, nAg[mu]) for mu in range(Nd))
 c()
 H_link = [g(nnUg[mu].value.gradient) for mu in range(Nd)]
 diff = max(n2(H_list[mu] - H_link[mu]) for mu in range(Nd))
 g.message(f"2nd deriv (HVP): fused list input vs per-link inputs: {diff}")
 assert diff < 1e-16
+
+
+def build_fused(n):
+    # the fused two-output action over four per-link nodes of any depth
+    out = rad.node([g.lattice(grid, U[0].otype) for _ in range(2)])
+    stencil(out, *n)
+    return act_fused(out[0], out[1])
+
+
+assert_hvp_vs_fd(H_list, build_fused, dA, "fused plaquette")
 g.message("fused plaquette 2nd derivative: OK")
 
 # 3rd derivative
@@ -179,7 +245,7 @@ nnnU = rad.node(rad.node(rad.node(U)))
 nA = list_dir(dA, 2)
 nB = list_dir(dB, 1)
 stencil(nnnP, nnnU)
-2 * g.sum(g.trace(nnnP[0] + 1j * nnnP[1])).real()
+act_fused(nnnP[0], nnnP[1])()
 c = sum(g.group.inner_product(nnnU.gradient[mu], nA[mu]) for mu in range(Nd))
 c()
 nnU = nnnU.value
@@ -191,7 +257,7 @@ nnnUg = [rad.node(rad.node(rad.node(u))) for u in U]
 nAg = link_dirs(dA, 2)
 nBg = link_dirs(dB, 1)
 stencil(nnnPg, *nnnUg)
-2 * g.sum(g.trace(nnnPg[0] + 1j * nnnPg[1])).real()
+act_fused(nnnPg[0], nnnPg[1])()
 c = sum(g.group.inner_product(nnnUg[mu].gradient, nAg[mu]) for mu in range(Nd))
 c()
 c = sum(g.group.inner_product(nnnUg[mu].value.gradient, nBg[mu]) for mu in range(Nd))
@@ -232,7 +298,7 @@ assert eps < 1e-14
 nP1 = rad.node(P1s)
 nU1 = rad.node(U)
 stencil1(nP1, nU1)
-S1 = 2 * g.sum(g.trace(nP1)).real
+S1 = act_single(nP1)
 S1()
 f1 = S1.functional(nU1)
 f1.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
@@ -282,7 +348,7 @@ assert eps < 1e-14
 # stencil call to the AD foundation)
 nU = [rad.node(u) for u in U]
 nT = ptm(nU)
-S = 2 * g.sum(g.trace(nT)).real
+S = act_single(nT)
 S()
 f = S.functional(*nU)
 # 4 link-node arguments -> fields/dfields are the 4-link list U (not [U])
@@ -292,7 +358,7 @@ f.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 nP1b = rad.node(g.copy(P0))
 nU1b = [rad.node(u) for u in U]
 stencil1(nP1b, *nU1b)
-S1b = 2 * g.sum(g.trace(nP1b)).real
+S1b = act_single(nP1b)
 S1b()
 diff = max(n2(nU1b[mu].gradient - nU[mu].gradient) for mu in range(Nd))
 g.message(f"path vs hand-written single-output plaquette 1st deriv: {diff}")
@@ -305,7 +371,7 @@ nA1 = link_dirs(dA, 1)
 # path-based
 nnU = [rad.node(rad.node(u)) for u in U]
 T2 = ptm(nnU)
-S2 = 2 * g.sum(g.trace(T2)).real
+S2 = act_single(T2)
 S2()
 c = sum(g.group.inner_product(nnU[mu].gradient, nA1[mu]) for mu in range(Nd))
 c()
@@ -314,7 +380,7 @@ H_path = [g(nnU[mu].value.gradient) for mu in range(Nd)]
 nnU1 = [rad.node(rad.node(u)) for u in U]
 T1 = rad.node(g.copy(P0))
 stencil1(T1, *nnU1)
-S2b = 2 * g.sum(g.trace(T1)).real
+S2b = act_single(T1)
 S2b()
 c = sum(g.group.inner_product(nnU1[mu].gradient, nA1[mu]) for mu in range(Nd))
 c()
@@ -322,6 +388,15 @@ H_hw = [g(nnU1[mu].value.gradient) for mu in range(Nd)]
 diff = max(n2(H_path[mu] - H_hw[mu]) for mu in range(Nd))
 g.message(f"path vs hand-written 2nd deriv (HVP): {diff}")
 assert diff < 1e-16
+
+
+def build_path(n):
+    # the single-output action over four per-link nodes of any depth, with the
+    # target allocated by parallel_transport_matrix.__call__
+    return act_single(ptm(n))
+
+
+assert_hvp_vs_fd(H_path, build_path, dA, "path-based plaquette")
 g.message("path-based plaquette 2nd derivative: OK")
 
 # 3rd derivative: path-based vs hand-written single-output plaquette
@@ -330,7 +405,7 @@ nB1 = link_dirs(dB, 1)
 # path-based
 nnnU = [rad.node(rad.node(rad.node(u))) for u in U]
 T3 = ptm(nnnU)
-S3 = 2 * g.sum(g.trace(T3)).real
+S3 = act_single(T3)
 S3()
 c = sum(g.group.inner_product(nnnU[mu].gradient, nA2[mu]) for mu in range(Nd))
 c()
@@ -341,7 +416,7 @@ G_path = [g(nnnU[mu].value.value.gradient) for mu in range(Nd)]
 nnnU1 = [rad.node(rad.node(rad.node(u))) for u in U]
 T3b = rad.node(g.copy(P0))
 stencil1(T3b, *nnnU1)
-S3b = 2 * g.sum(g.trace(T3b)).real
+S3b = act_single(T3b)
 S3b()
 c = sum(g.group.inner_product(nnnU1[mu].gradient, nA2[mu]) for mu in range(Nd))
 c()

@@ -33,6 +33,21 @@ class point_manager:
         return idx
 
 
+def new_target_list(prototype, n):
+    # A fresh target for n outputs of one fused stencil call, at the same
+    # reverse-AD nesting depth as `prototype`.  The AD stencil foundation
+    # represents the m outputs of a fused call as ONE list node per nesting
+    # level (not m sibling nodes), see lib/gpt/ad/reverse/foundation/stencil.py.
+    #
+    # The depth is read statically: resolving it by evaluating would force a
+    # forward pass on a computed prototype and cache a value that a later
+    # backward pass then reuses instead of recomputing it from updated leaves.
+    r = [g.lattice(prototype.grid, prototype.otype) for i in range(n)]
+    for i in range(g.ad.reverse.util.value_depth_static(prototype)):
+        r = g.ad.reverse.node(r)
+    return r
+
+
 class parallel_transport_matrix:
     def __init__(self, U, code, n_target):
         self.verbose = g.default.is_verbose("parallel_transport_matrix_performance")
@@ -108,10 +123,27 @@ class parallel_transport_matrix:
         write_fields = list(range(Ntarget))
         read_fields = list(range(Ntarget + Ntemporary, Ntarget + Ntemporary + Nd))
 
-        self.stencil = g.stencil.matrix(U[0], points.points, self.code)
+        # the stencil only needs a prototype lattice (grid/otype); U may be a
+        # reverse-AD node, whose grid/otype are those of the value it wraps
+        prototype = g.lattice(U[0].grid, U[0].otype)
+        self.stencil = g.stencil.matrix(prototype, points.points, self.code)
         self.stencil.data_access_hints(write_fields, read_fields, [])
 
     def __call__(self, U):
+        if isinstance(U[0], g.ad.reverse.node_base) and self.Ntarget > 1:
+            # node mode with several outputs: the AD foundation expects them as
+            # a single LIST node, not Ntarget sibling nodes.  Hand the caller
+            # the elements of that node so the interface matches the plain case.
+            # Only g.parallel_transport reaches this (one target per path, no
+            # temporaries); a code with temporaries would additionally have to
+            # pass them as gradient-free constants.
+            assert self.Ntemporary == 0, (
+                "parallel_transport_matrix: node mode with several outputs does "
+                "not support temporaries")
+            T = new_target_list(U[0], self.Ntarget)
+            self.stencil(T, *U)
+            return [T[i] for i in range(self.Ntarget)]
+
         # x.new() allocates a fresh object of the same type (grid/otype), for
         # both plain lattices and reverse-AD nodes (the latter resolves the
         # stencil call to the AD foundation); the stencil overwrites the

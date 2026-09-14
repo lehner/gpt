@@ -213,12 +213,46 @@ def value_of(x):
     return x.value
 
 
-def value_depth(x):
-    # number of nested node levels below x
+def value_depth_static(x):
+    # number of nested node levels below x, WITHOUT forcing a forward
+    # evaluation.  This is the only depth measure: resolving the depth by
+    # EVALUATING computed nodes (the obvious `while is_node(x): x = value_of(x)`)
+    # is a trap that has bitten twice -- before a graph is first run it caches
+    # a value that node.forward (which only recomputes values that are None)
+    # then reuses instead of rebuilding it from the updated leaves, and inside
+    # backward() it re-materializes fields that pass has just freed.  Measuring
+    # a depth is never a reason to run a forward closure.
+    #
+    # This runs on every node of every backward pass (zero_gradient), so it
+    # walks a SINGLE path: down the .value chain while a value is available,
+    # and sideways through one child of a computed node whose value is not
+    # built yet.  One child settles it because a node op combines operands of
+    # equal depth; a gradient-carrying one is authoritative, since a constant
+    # promoted by nodify may be shallower.  Taking the max over ALL children
+    # instead re-traverses shared subgraphs and is exponential in a DAG --
+    # that cost 82M calls and a 24x slowdown of the flows.py force.
     depth = 0
     while is_node(x):
-        x = value_of(x)
-        depth += 1
+        v = x.value
+        if v is not None:
+            depth += 1
+            x = v
+            continue
+        # computed node, value not built yet: same depth as its children
+        nxt = None
+        for c in x._children:
+            if c.with_gradient:
+                nxt = c
+                break
+        if nxt is not None:
+            x = nxt
+            continue
+        if len(x._children) == 0:
+            return depth + 1
+        # a pure-constant expression: no child is authoritative, take the
+        # deepest (constants may legitimately differ in depth).  Rare, and
+        # never on the hot path.
+        return depth + max(value_depth_static(c) for c in x._children)
     return depth
 
 
