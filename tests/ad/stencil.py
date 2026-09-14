@@ -41,7 +41,7 @@ pts = [(0, 0, 0, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)]
 
 
 def n2(x):
-    return float(g.inner_product(x, x).real)
+    return float(g.norm2(x))
 
 
 def list_dir(dA, depth):
@@ -49,8 +49,8 @@ def list_dir(dA, depth):
     cU = g.group.cartesian(U)
     for mu in range(Nd):
         cU[mu] @= dA[mu]
-    nd = rad.node(cU)
-    for _ in range(depth - 1):
+    nd = cU
+    for _ in range(depth):
         nd = rad.node(nd)
     return nd
 
@@ -60,8 +60,8 @@ def link_dirs(dA, depth):
     cU = [g.group.cartesian(u) for u in U]
     for mu in range(Nd):
         cU[mu] @= dA[mu]
-    nds = [rad.node(c) for c in cU]
-    for _ in range(depth - 1):
+    nds = cU
+    for _ in range(depth):
         nds = [rad.node(x) for x in nds]
     return nds
 
