@@ -30,6 +30,7 @@ from gpt.ad.reverse.util import (
     accum,
     value_of,
     value_depth_static,
+    adopt_zero,
     nodify,
     is_node,
 )
@@ -135,6 +136,10 @@ class node_base(base):
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         self.gradient = None
+        # set when this node IS a structural zero produced by zero_gradient:
+        # the first contribution may then replace it instead of building an
+        # add whose zero operand costs a field op and a backward visit
+        self._pristine_zero = False
         self._tag = _tag
 
     def __str__(self):
@@ -153,6 +158,8 @@ class node_base(base):
                 e = elem.zero()
                 for _ in range(depth):
                     e = node_base(e)
+                if depth > 0:
+                    e._pristine_zero = True
                 self.gradient.append(e)
             return
         self.gradient = self._container.zero()
@@ -166,8 +173,11 @@ class node_base(base):
         # called from backward(), which frees each computed node's value as it
         # goes, so resolving the depth by evaluating would re-materialize
         # fields that were just released
-        for _ in range(value_depth_static(self.value)):
+        depth = value_depth_static(self.value)
+        for _ in range(depth):
             self.gradient = node_base(self.gradient)
+        if depth > 0:
+            self.gradient._pristine_zero = True
 
     def __mul__(x, y):
         x, y = nodify(x, y)
@@ -277,7 +287,10 @@ class node_base(base):
                 if is_node(cur) or is_node(flow):
                     # nested: the element gradient is / becomes a lazy node
                     # graph one level down; accumulate node-aware
-                    x.gradient[item] = add(cur, flow)
+                    if adopt_zero(cur, flow):
+                        x.gradient[item] = flow
+                    else:
+                        x.gradient[item] = add(cur, flow)
                 else:
                     # plain: in place (a plain `a + b` is a lazy expr, which
                     # the gradient list must not become)

@@ -280,6 +280,23 @@ def div(a, b):
     return _binop(a, b, operator.truediv)
 
 
+def adopt_zero(current, term):
+    # May `term` simply REPLACE `current` as a gradient?  True when current is
+    # the structural zero that zero_gradient just installed and term is a node
+    # graph of the very same container.  Adding to that zero would build an
+    # add node whose zero operand is evaluated (a field add) and then
+    # differentiated (a backward visit into a dead leaf, plus its own
+    # zero_gradient and infinitesimal_to_cartesian) -- all to add nothing.
+    # The container must match exactly: otype is load-bearing at the leaf
+    # conversion, and add() would have kept current's container.
+    return (
+        is_node(current)
+        and current._pristine_zero
+        and is_node(term)
+        and current._container == term._container
+    )
+
+
 def accum(n, r, sign=1):
     # accumulate sign * r into n.gradient:
     #   plain gradient +- plain term   in place
@@ -291,7 +308,9 @@ def accum(n, r, sign=1):
     #   term                     subtraction with incompatible containers is
     #                                  evaluated to a field
     if is_node(n.gradient):
-        if sign > 0:
+        if sign > 0 and adopt_zero(n.gradient, r):
+            n.gradient = r
+        elif sign > 0:
             n.gradient = add(n.gradient, r)
         elif is_node(r) and n.gradient._container != r._container:
             n.gradient = value_of(n.gradient) - value_of(r)
