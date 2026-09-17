@@ -156,3 +156,60 @@ class parallel_transport_matrix:
             return T[0]
 
         return T
+
+
+def parallel_transport_weighted(links, entries, keys=None):
+    # entries: [(weight, path), ...] -- one weighted transported product each,
+    # as the gauge smears describe a staple sum.
+    #
+    # Entries that SHARE a weight are accumulated into a single stencil target,
+    # so N paths cost one output field instead of N, and the weighted sum the
+    # caller would otherwise build from N node multiplies and N-1 node adds
+    # collapses to (at most) one multiply per distinct weight.  That removes
+    # those ops from the primal graph AND from the several-times-larger
+    # derivative graph a reverse pass builds out of it.
+    #
+    # A numeric weight is folded into the kernel's own coefficient and costs
+    # nothing at all.  A field- or node-valued weight cannot be: it is applied
+    # once to the accumulated group instead.  Note it must NOT be folded in as
+    # an extra stencil FACTOR -- the adjoint of a k-factor entry is k entries
+    # of k factors, so one more factor grows the adjoint's arithmetic
+    # quadratically (for these 4-link paths, 24 entries/72 multiplies would
+    # become 30/120, and one level deeper 288 would become ~600).
+    #
+    # `keys` optionally tags each entry; entries merge only when their key AND
+    # their weight agree.  A smear whose description spans several directions
+    # in one stencil passes the direction index, so directions stay separate.
+    #
+    # Returns (transport, group_info): transport(links) yields one field per
+    # group in group order, and group_info[k] is (key, post_weight) for group
+    # k, where post_weight is None when the weight is already folded into the
+    # kernel and otherwise the weight to apply to that group.
+    if keys is None:
+        keys = [None] * len(entries)
+    assert len(keys) == len(entries)
+
+    groups = []
+    group_info = []
+    index = {}
+    for (weight, path), key in zip(entries, keys):
+        numeric = g.util.is_num(weight)
+        ident = (key, "numeric" if numeric else id(weight))
+        if ident not in index:
+            index[ident] = len(groups)
+            groups.append([])
+            group_info.append((key, None if numeric else weight))
+        groups[index[ident]].append((complex(weight) if numeric else 1.0, path))
+
+    code = []
+    for target, group in enumerate(groups):
+        for k, (w, path) in enumerate(group):
+            # the first write of a target is fresh; the rest accumulate into it
+            code.append((target, -1 if k == 0 else target, w, path))
+
+    ptm = parallel_transport_matrix(links, code, len(groups))
+
+    def transport(links):
+        return g.util.to_list(ptm(links))
+
+    return transport, group_info

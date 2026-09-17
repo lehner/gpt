@@ -36,7 +36,12 @@ from gpt.core.stack import get_call_stack
 import gpt.core.accelerator
 from gpt.core.convert import convert
 from gpt.core.cshift_plan import cshift_plan
-from gpt.core.parallel_transport import path, parallel_transport, parallel_transport_matrix
+from gpt.core.parallel_transport import (
+    path,
+    parallel_transport,
+    parallel_transport_matrix,
+    parallel_transport_weighted,
+)
 from gpt.core.transform import (
     cshift,
     copy,

@@ -35,37 +35,53 @@ class parallel_transport(dft_diffeomorphism):
         def ft(xU):
             cache_key = f"{type(xU[0])}"
             if cache_key not in cache:
-                paths = [y[1] for x in description for y in x]
-                cache[cache_key] = g.parallel_transport(xU, paths)
+                # paths that share a direction AND a weight are summed inside
+                # the stencil, so the staple sum below costs one multiply per
+                # distinct weight per direction rather than one multiply and
+                # one add per path -- in the primal graph and in the larger
+                # derivative graph built from it
+                entries = [y for x in description for y in x]
+                keys = [i for i, x in enumerate(description) for y in x]
+                cache[cache_key] = g.parallel_transport_weighted(xU, entries, keys)
 
-            pt = cache[cache_key]
+            pt, group_info = cache[cache_key]
             if P0 is not None:
                 xU_P0 = [g(xU[i] * P0[i]) for i in range(nd)]
             else:
                 xU_P0 = xU
 
             sU = list(pt(xU_P0))
-            idx = 0
+            assert len(sU) == len(group_info)
+
+            terms = [[] for _ in range(nd)]
+            for k, (i, weight) in enumerate(group_info):
+                if weight is None:
+                    # numeric weight: already folded into the kernel
+                    # coefficient, so sU[k] IS the accumulated staple sum
+                    xp = sU[k]
+                else:
+                    if isinstance(weight, g.ad.reverse.node_base):
+                        if not isinstance(sU[k], g.ad.reverse.node_base):
+                            weight = weight.value
+                    xp = g(weight * sU[k])
+                if P1 is not None:
+                    xp = g(xp * P1[i])
+                terms[i].append(xp)
+
             sm = [None] * nd
             for i in range(nd):
-                for weight, path in description[i]:
-                    if isinstance(weight, g.ad.reverse.node_base):
-                        if not isinstance(sU[idx], g.ad.reverse.node_base):
-                            weight = weight.value
-                    xp = g(weight * sU[idx])
-                    if P1 is not None:
-                        xp *= P1[i]
-                    if sm[i] is None:
-                        sm[i] = xp
-                    else:
-                        sm[i] += xp
-                    idx += 1
-                if sm[i] is None:
+                if not terms[i]:
                     sm[i] = xU[i]
-                else:
-                    sm[i] = g(
-                        g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(sm[i])) * xU[i]
-                    )
+                    continue
+                # never accumulate in place: a folded-weight term IS the
+                # stencil's own target field, and mutating it would corrupt
+                # the stencil output
+                acc = terms[i][0]
+                for t in terms[i][1:]:
+                    acc = acc + t
+                sm[i] = g(
+                    g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(acc)) * xU[i]
+                )
             return sm
 
         super().__init__(U, ft)

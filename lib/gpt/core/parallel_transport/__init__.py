@@ -18,4 +18,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.core.parallel_transport.legacy import path, parallel_transport
-from gpt.core.parallel_transport.matrix import parallel_transport_matrix
+from gpt.core.parallel_transport.matrix import (
+    parallel_transport_matrix,
+    parallel_transport_weighted,
+)

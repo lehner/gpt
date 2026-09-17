@@ -48,10 +48,12 @@ class directional_parallel_transport(dft_diffeomorphism):
             # rebuilding it from the updated leaves
             cache_key = f"{type(xU[0])}_depth{g.ad.reverse.util.value_depth_static(xU[0])}"
             if cache_key not in cache:
-                paths = [y[1] for y in description_mu]
-                cache[cache_key] = g.parallel_transport(xU[0:nd], paths)
+                # paths sharing a weight are summed inside the stencil, so the
+                # staple sum below costs one multiply per distinct weight
+                # instead of one multiply and one add per path
+                cache[cache_key] = g.parallel_transport_weighted(xU[0:nd], description_mu)
 
-            pt = cache[cache_key]
+            pt, group_info = cache[cache_key]
             if P0 is not None:
                 xU_P0 = [g(xU[i] * P0) if i == mu else xU[i] for i in range(nd)]
             else:
@@ -61,20 +63,26 @@ class directional_parallel_transport(dft_diffeomorphism):
             assert len(xparams) == np
 
             sU = list(pt(xU_P0))
-            sm = None
-            idx = 0
-            for weight, path in description_mu:
-                if weight in parameters:
-                    assert not isinstance(weight, g.ad.reverse.node_base)
-                    weight = xparams[parameter_indices[idx]]
-                xp = g(weight * sU[idx])
-                if sm is None:
-                    sm = xp
+            assert len(sU) == len(group_info)
+            terms = []
+            for k, (_key, weight) in enumerate(group_info):
+                if weight is None:
+                    # numeric weight: already folded into the kernel
+                    # coefficient, so sU[k] IS the accumulated staple sum
+                    xp = sU[k]
                 else:
-                    sm += xp
-                idx += 1
+                    if weight in parameters:
+                        assert not isinstance(weight, g.ad.reverse.node_base)
+                        weight = xparams[parameters.index(weight)]
+                    xp = g(weight * sU[k])
+                terms.append(xp)
 
-            assert sm is not None
+            assert terms
+            # never accumulate in place: a folded-weight term IS the stencil's
+            # own target field, and mutating it would corrupt the stencil output
+            sm = terms[0]
+            for t in terms[1:]:
+                sm = sm + t
 
             if P1 is not None:
                 if isinstance(sm, g.ad.reverse.node_base):
