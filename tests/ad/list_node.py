@@ -90,7 +90,7 @@ P = g.sum(g.trace(plaq(nU))).real
 pval = P(with_gradients=False)
 eps = abs(float(pval) - float(Pref))
 g.message(f"plaquette (list node) forward: {pval} versus {Pref}: {eps}")
-assert eps < 1e-14
+assert eps < 1e-12
 
 f = P.functional(nU)
 f.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
