@@ -191,4 +191,4 @@ wait
 clean_files
 
 # Link
-${CXXLD} --shared $(ls -t ${BUILD}/objs/*.o) ${LDFLAGS} ${LIBS} -lGrid -o ${BUILD}/cgpt.so ${CGPT_EXTRA_LDFLAGS}
+${CXXLD} --shared $(ls -t ${BUILD}/objs/*.o) ${LDFLAGS} -lGrid ${LIBS} -o ${BUILD}/cgpt.so ${CGPT_EXTRA_LDFLAGS}
