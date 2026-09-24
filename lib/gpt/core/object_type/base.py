@@ -31,6 +31,7 @@ class ot_base:
     data_alias = None  # ot can be cast as fundamental type data_alias (such as SU(3) -> 3x3 matrix)
     mtab = {}  # x's multiplication table for x * y
     rmtab = {}  # y's multiplication table for x * y
+    atab = {}  # addition lookup table
 
     # only vectors shall define otab/itab
     otab = None  # x's outer product multiplication table for x * adj(y)
@@ -47,3 +48,13 @@ class ot_base:
 
     def is_self_dual(self):
         return False
+
+    def automatic_embedding(self, other):
+        if isinstance(other, complex):
+            return ot_singlet()
+        return None
+
+    def explicit_cast(self, other):
+        if isinstance(other, ot_base):
+            return other
+        return None
