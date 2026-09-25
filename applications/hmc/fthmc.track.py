@@ -8,7 +8,7 @@ import gpt as g
 import sys, os
 import numpy as np
 
-noutersteps = 5
+noutersteps = 1
 beta = 2.95
 seed = "test2"
 
