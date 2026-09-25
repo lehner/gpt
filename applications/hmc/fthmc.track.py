@@ -105,6 +105,14 @@ def analyze(mom0, mom, tag):
     )
 
     for i in range(1, 4):
+        # diagonal
+        p = [2*np.pi / grid.gdimensions[nu] * i for nu in range(4)]
+        analyze_single(
+            [g.sum(g.exp_ixp(p=np.array(p)) * x) for x in mom0],
+            [g.sum(g.exp_ixp(p=np.array(p)) * x) for x in mom],
+            f"{tag} pd{i}"
+        )
+
         # momentum lorentz index breaks symmetry, so should
         # separate parallel and orthogonal
 

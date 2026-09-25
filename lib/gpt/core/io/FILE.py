@@ -66,7 +66,10 @@ def FILE_exists(fn):
 
     fn_zip, fn_element = zip_split(fn)
     if fn_zip is not None:
-        return True
+        try:
+            return fn_element in zipfile.ZipFile(fn_zip, "r").namelist()
+        except:
+            return False
 
     return False
 
