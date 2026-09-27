@@ -372,3 +372,36 @@ for mu in range(4):
             eps2 = g.norm2(reference - out) / g.norm2(reference)
             g.message(f"{p.__name__} {mu} {nu} {eps2}")
             assert eps2 < 1e-12
+
+
+# local matrix stencils with per-site temporaries: the same code with its
+# temporaries marked (cache-blocked, only one block of each temporary is
+# used) must give bitwise identical results, for several block sizes
+# including one that does not divide the volume
+for precision in [g.double, g.single]:
+    grid = g.grid([4, 4, 4, 8], precision)
+    U = g.qcd.gauge.random(grid, rng)
+    A, B = rng.cnormal([g.mcolor(grid), g.mcolor(grid)])
+    points = [(0, 0, 0, 0), (1, 0, 0, 0), (0, 0, 0, -1)]
+    # fields: 0 = output, 1-3 = temporaries, 4 = A, 5 = B, 6 = U_0, 7 = U_3
+    code = [
+        (1, -1, 0.5, [(4, 0, 0), (5, 0, 0)]),  # t1 = 0.5 A B
+        (2, -1, 1.0, [(1, 0, 1), (6, 1, 0)]),  # t2 = t1^dag U_0(x + 0)
+        (2, 2, -0.25j, [(7, 2, 0), (4, 0, 1)]),  # t2 += c U_3(x - 3) A^dag
+        (3, -1, 1.0, [(2, 0, 0), (1, 0, 0)]),  # t3 = t2 t1
+        (3, 3, 2.0, [(5, 0, 1)]),  # t3 += 2 B^dag
+        (0, -1, 1.0, [(3, 0, 0), (2, 0, 1)]),  # out = t3 t2^dag
+        (0, 0, 0.5, [(1, 0, 0)]),  # out += 0.5 t1
+    ]
+    def fresh_fields():
+        # new output and temporaries for every run, shared read-only inputs
+        return [g.lattice(A) for _ in range(4)] + [A, B, U[0], U[3]]
+
+    f_ref = fresh_fields()
+    g.local_stencil.matrix(A, points, code)(*f_ref)
+    for block in [0, 1, 7, 64, 10**6]:
+        f = fresh_fields()
+        g.local_stencil.matrix(A, points, code, temporaries=[1, 2, 3], osites_per_cache_block=block)(*f)
+        ok = np.array_equal(f[0][:], f_ref[0][:])
+        g.message(f"local stencil with temporaries, {precision.__name__}, block {block}: {'ok' if ok else 'MISMATCH'}")
+        assert ok

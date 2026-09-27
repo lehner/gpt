@@ -181,7 +181,11 @@ def _evaluate(x, h, outputs):
     tag = f"{x.otype.__name__}_{x.grid}_{k}_{n}_{s}_{outputs}"
     if tag not in _kernels:
         code, n_temps, n_products = _code(k, n, s, outputs)
-        _kernels[tag] = (g.local_stencil.matrix(x, [(0,) * x.grid.nd], code), n_temps)
+        m = len(outputs)
+        kernel = g.local_stencil.matrix(
+            x, [(0,) * x.grid.nd], code, temporaries=list(range(m, m + n_temps))
+        )
+        _kernels[tag] = (kernel, n_temps)
     kernel, n_temps = _kernels[tag]
 
     out = [g.lattice(x) for _ in outputs]

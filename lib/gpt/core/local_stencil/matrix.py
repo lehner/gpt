@@ -33,18 +33,39 @@ def parse(c):
 
 
 class matrix(auto_tuned_class):
-    def __init__(self, lat, points, code, code_parallel_block_size=None, local=1):
+    # temporaries: indices of fields used as per-site temporaries (read and
+    # written only at the zero shift).  The kernel then runs in blocks of
+    # osites_per_cache_block outer sites and only touches the first block's
+    # worth of each temporary, which therefore stays in cache (0: default
+    # size chosen by the kernel).
+    def __init__(
+        self,
+        lat,
+        points,
+        code,
+        code_parallel_block_size=None,
+        local=1,
+        temporaries=(),
+        osites_per_cache_block=0,
+    ):
         self.points = points
         self.code = [parse(c) for c in code]
         self.code_parallel_block_size = code_parallel_block_size
         if code_parallel_block_size is None:
             code_parallel_block_size = len(code)
         self.obj = cgpt.stencil_matrix_create(
-            lat.v_obj[0], lat.grid.obj, points, self.code, code_parallel_block_size, local
+            lat.v_obj[0],
+            lat.grid.obj,
+            points,
+            self.code,
+            code_parallel_block_size,
+            local,
+            list(temporaries),
+            osites_per_cache_block,
         )
 
         # auto tuner
-        tag = f"local_matrix({lat.otype.__name__}, {lat.grid.describe()}, {str(points)}, {code_parallel_block_size}, {hash_code(code)}, {local})"
+        tag = f"local_matrix({lat.otype.__name__}, {lat.grid.describe()}, {str(points)}, {code_parallel_block_size}, {hash_code(code)}, {local}, {sorted(temporaries)}, {osites_per_cache_block})"
         super().__init__(tag, [0, 1], 0)
 
     @auto_tuned_method()

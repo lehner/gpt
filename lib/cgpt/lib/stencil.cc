@@ -22,11 +22,12 @@ EXPORT(stencil_matrix_create,{
 
     void* _grid;
     void* _lattice;
-    PyObject* _shifts, * _code;
+    PyObject* _shifts, * _code, * _temporaries;
     long _code_parallel_block_size;
     long _local;
-    if (!PyArg_ParseTuple(args, "llOOll", &_lattice, &_grid, &_shifts, &_code,
-			  &_code_parallel_block_size, &_local)) {
+    long _osites_per_cache_block;
+    if (!PyArg_ParseTuple(args, "llOOllOl", &_lattice, &_grid, &_shifts, &_code,
+			  &_code_parallel_block_size, &_local, &_temporaries, &_osites_per_cache_block)) {
       return NULL;
     }
     
@@ -35,7 +36,7 @@ EXPORT(stencil_matrix_create,{
 
     return PyLong_FromVoidPtr(lattice->stencil_matrix(grid, _shifts, _code,
 						      _code_parallel_block_size,
-						      _local));
+						      _local, _temporaries, _osites_per_cache_block));
   });
 
 EXPORT(stencil_matrix_vector_create,{
