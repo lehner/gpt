@@ -17,6 +17,32 @@
     51 Franklin Street, Fifth Floor, Boston, MA 021basis_virtual_size-1n_virtual_red01 USA.
 */
 
+// norm2(q) != 0 evaluated in the precision of q, exactly as the previous
+// norm2(iSinglet) predicate (so |q| below ~1e-23 counts as zero in single
+// precision)
+template<typename C>
+accelerator_inline bool cgpt_where_nonzero(const C& q) {
+  auto re = q.real();
+  auto im = q.imag();
+  return re*re + im*im != 0;
+}
+
+// per-lane select, same predicate as before (norm2 != 0); the
+// selected value is copied exactly (no arithmetic blending, so non-finite
+// values in the branch that is not taken cannot leak)
+template<typename C>
+accelerator_inline C cgpt_select(const C& q, const C& y, const C& n) {
+  return cgpt_where_nonzero(q) ? y : n;
+}
+
+template<class S, class V>
+accelerator_inline Grid_simd<S,V> cgpt_select(const Grid_simd<S,V>& q, const Grid_simd<S,V>& y, const Grid_simd<S,V>& n) {
+  Grid_simd<S,V> r;
+  for (int l=0;l<Grid_simd<S,V>::Nsimd();l++)
+    r.putlane(cgpt_where_nonzero(q.getlane(l)) ? y.getlane(l) : n.getlane(l), l);
+  return r;
+}
+
 template<typename S, typename T>
 inline void cgpt_where(Lattice<T>& answer, const Lattice<S>& question, const Lattice<T>& yes, const Lattice<T>& no) {
 
@@ -25,35 +51,23 @@ inline void cgpt_where(Lattice<T>& answer, const Lattice<S>& question, const Lat
   conformable(grid, yes.Grid());
   conformable(grid, no.Grid());
 
-  typedef typename Lattice<S>::scalar_object S_sobj;
-  typedef typename Lattice<S>::vector_object S_vobj;
-  typedef typename Lattice<T>::scalar_object T_sobj;
-  typedef typename Lattice<T>::vector_object T_vobj;
-  
-  autoView(question_v, question, CpuRead);
-  autoView(yes_v, yes, CpuRead);
-  autoView(no_v, no, CpuRead);
-  autoView(answer_v, answer, CpuWriteDiscard);
-  
-  auto oSites = grid->oSites();
-  auto Nsimd = grid->Nsimd();
+  // question is a singlet of the same SIMD type as the elements of T
+  static_assert(GridTypeMapper<S>::count == 1, "where: question must be a singlet");
+  static constexpr int n_elements = GridTypeMapper<T>::count;
 
-  thread_for(i, oSites, {
+  autoView(question_v, question, AcceleratorRead);
+  autoView(yes_v, yes, AcceleratorRead);
+  autoView(no_v, no, AcceleratorRead);
+  autoView(answer_v, answer, AcceleratorWriteDiscard);
 
-      ExtractBuffer<S_sobj> vquestion(Nsimd);
-      ExtractBuffer<T_sobj> vyes(Nsimd);
-      ExtractBuffer<T_sobj> vno(Nsimd);
-      ExtractBuffer<T_sobj> vanswer(Nsimd);
-
-      extract<S_vobj,S_sobj>(question_v[i],vquestion);
-      extract<T_vobj,T_sobj>(yes_v[i],vyes);
-      extract<T_vobj,T_sobj>(no_v[i],vno);
-
-      for(int s=0;s<Nsimd;s++){
-	vanswer[s] = (norm2(vquestion[s]) != 0.0) ? vyes[s] : vno[s];
+  accelerator_for(ss, grid->oSites(), grid->Nsimd(), {
+      auto q = coalescedReadElement(question_v[ss], 0);
+      for (int e=0;e<n_elements;e++) {
+	coalescedWriteElement(answer_v[ss],
+			      cgpt_select(q,
+					  coalescedReadElement(yes_v[ss], e),
+					  coalescedReadElement(no_v[ss], e)), e);
       }
-
-      merge<T_vobj,T_sobj>(answer_v[i],vanswer);
     });
 
 }
