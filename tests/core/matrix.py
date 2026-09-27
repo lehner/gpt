@@ -124,3 +124,29 @@ for grid, eps in [(grid_dp, 1e-14), (grid_sp, 1e-6)]:
         eps2 = g.norm2(g.matrix.log(g.matrix.det(g.matrix.exp(m))) - g.trace(m)) / g.norm2(m)
         g.message(f"log(det(exp(m))) == tr(m): {eps2}")
         assert eps2 < eps**2.0 * 1e3
+
+
+# exp of anti-hermitian matrices against an independent reference over the
+# full lattice, for site norms well beyond the small-argument regime.  The
+# accuracy must not depend on the lattice volume or on how the norm is
+# distributed over the sites (a field that is large on a few sites only must
+# still be scaled for those sites).
+for precision, tol in [(g.double, 1e-13), (g.single, 1e-5)]:
+    grid = g.grid([8, 8, 8, 8], precision)
+    rng = g.random("exp")
+    localized = g.complex(grid)
+    localized[:] = 0.01
+    localized[[[i, i, i, i] for i in range(8)]] = 1.0
+    for scale, profile in [(0.1, None), (1.0, None), (3.0, None), (6.0, None), (3.0, localized), (6.0, localized)]:
+        x = g(scale * g.qcd.gauge.project.traceless_anti_hermitian(rng.cnormal(g.mcolor(grid))))
+        if profile is not None:
+            x = g(profile * x)
+        # exp(x) = V exp(i lambda) V^dag with -i x = V lambda V^dag hermitian
+        xs = x[:].astype(np.complex128)
+        lam, V = np.linalg.eigh(-1j * xs)
+        ref = np.einsum("sij,sj,skj->sik", V, np.exp(1j * lam), V.conj())
+        site_norm = np.max(np.linalg.norm(xs, axis=(1, 2)))
+        err = np.max(np.abs(g.matrix.exp(x)[:] - ref))
+        label = "localized" if profile is not None else "uniform"
+        g.message(f"exp of anti-hermitian x, {precision.__name__}, {label}, max site norm {site_norm:.1f}: {err}")
+        assert err < tol
