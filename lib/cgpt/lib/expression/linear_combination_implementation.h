@@ -133,68 +133,6 @@ template<typename T1, int N>
 struct UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_SPINTRACE|BIT_COLORTRACE> :
   UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_COLORTRACE> {};
 
-template<typename T,int unary_expr,typename AccumulatorBase>
-cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term>& f, int unary_factor, bool conjugate_coef = false) {
-
-  Timer("create lat");
-  GridBase* grid = f[0].get_lat()->get_grid();
-
-  typedef UnaryLinearCombination<T,unary_expr> U;
-  typedef typename U::result_type R;
-  typedef typename R::scalar_type Coeff_t;
-
-  Lattice<R>* pc = 0;
-  if (!__c) {
-    __c = new cgpt_Lattice<R>(grid);
-  }
-
-  cgpt_Lattice<R> * _c = compatible<R>(__c);
-  pc = &_c->l;
-
-  int n = (int)f.size();
-  HostDeviceVector<Coeff_t> b(n);
-  std::vector<LatticeView<T>> v; v.reserve(n);
-  HostDeviceVector<T*> a(n);
-  for (int i=0;i<n;i++) {
-    // The unary (when present) is applied to the combined result below; if it
-    // conjugates, the coefficients must be pre-conjugated, since the adjoint
-    // does not distribute over complex coefficients:
-    //   adj(sum c_i L_i) = sum conj(c_i) adj(L_i)
-    b[i] = (Coeff_t)(conjugate_coef ? conjugate(f[i].get_coef()) : f[i].get_coef());
-    v.push_back(compatible<T>(f[i].get_lat())->l.View(AcceleratorRead));
-    a[i] = &v[i][0];
-  }
-  
-  Timer("view");
-
-  pc->Checkerboard() = f[0].get_lat()->get_checkerboard();
-
-  {
-    autoView(c_v, (*pc), AcceleratorWrite);
-  
-    Accumulator<AccumulatorBase,R> ac(1.0,&c_v[0],&c_v[0]);
-
-    auto p_b = b.toDevice();
-    auto p_a = a.toDevice();
-
-    Timer("loop");
-
-    accelerator_for(ss, grid->oSites() * U::n_elements, (size_t)grid->Nsimd(), {
-	auto osite = ss / U::n_elements;
-	auto j = ss - osite * U::n_elements;
-	U::eval(ac, osite, p_a, p_b, n, j);
-      });
-
-    Timer();
-  }
-
-  for (int i=0;i<n;i++)
-    v[i].ViewClose();
-
-  return _c;
-
-}
-
 // Flat element permutation of the transpose: element e of trans(x) is element
 // perm[e] of x.  Obtained once per type by transposing a site object whose
 // elements hold their own index, so it covers every nesting of
@@ -219,76 +157,89 @@ HostDeviceVector<int>& cgpt_transpose_permutation() {
   return *perm;
 }
 
-// sum_i c_i unary_i(L_i) in a single pass, each term's factor unary applied
-// on read (transpose = permuted element, conjugation = conjugated element),
-// without temporaries.  Requires unary_expr == 0 and a single-v_obj type.
-template<typename T,typename AccumulatorBase>
-cgpt_Lattice_base* cgpt_lc_per_term(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term>& f) {
+// per_term: sum_i c_i unary_i(L_i), each term's factor unary applied on read
+// (transpose = permuted element, conjugation = conjugated element), so terms
+// with different unary operators combine in a single pass without
+// temporaries.  Used for unary_expr == 0 and single-v_obj types.
+template<typename T,int unary_expr,typename AccumulatorBase,bool per_term = false>
+cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term>& f, bool conjugate_coef = false) {
 
+  Timer("create lat");
   GridBase* grid = f[0].get_lat()->get_grid();
-  typedef typename T::scalar_type Coeff_t;
-  static constexpr int n_elements = GridTypeMapper<T>::count;
 
-  // a transposed read of the target itself would read elements of a site
-  // that this kernel has already overwritten: compute into a fresh lattice
-  bool alias = false;
-  for (auto& t : f)
-    if (t.get_lat() == __c && (t.get_unary() & BIT_TRANS))
-      alias = true;
+  typedef UnaryLinearCombination<T,unary_expr> U;
+  typedef typename U::result_type R;
+  typedef typename R::scalar_type Coeff_t;
 
-  cgpt_Lattice_base* _out = (__c && !alias) ? __c : new cgpt_Lattice<T>(grid);
-  Lattice<T>* pc = __c ? &compatible<T>(__c)->l : &compatible<T>(_out)->l;
-  Lattice<T>* pd = &compatible<T>(_out)->l;
+  Lattice<R>* pc = 0;
+  if (!__c) {
+    __c = new cgpt_Lattice<R>(grid);
+  }
+
+  cgpt_Lattice<R> * _c = compatible<R>(__c);
+  pc = &_c->l;
 
   int n = (int)f.size();
   HostDeviceVector<Coeff_t> b(n);
-  HostDeviceVector<int> u(n);
+  HostDeviceVector<int> u;
+  if constexpr (per_term)
+    u.resize(n);
   std::vector<LatticeView<T>> v; v.reserve(n);
   HostDeviceVector<T*> a(n);
   for (int i=0;i<n;i++) {
-    b[i] = (Coeff_t)f[i].get_coef();
-    u[i] = f[i].get_unary();
+    if constexpr (per_term)
+      u[i] = f[i].get_unary();
+    // The unary (when present) is applied to the combined result below; if it
+    // conjugates, the coefficients must be pre-conjugated, since the adjoint
+    // does not distribute over complex coefficients:
+    //   adj(sum c_i L_i) = sum conj(c_i) adj(L_i)
+    b[i] = (Coeff_t)(conjugate_coef ? conjugate(f[i].get_coef()) : f[i].get_coef());
     v.push_back(compatible<T>(f[i].get_lat())->l.View(AcceleratorRead));
     a[i] = &v[i][0];
   }
+  
+  Timer("view");
 
-  pd->Checkerboard() = f[0].get_lat()->get_checkerboard();
+  pc->Checkerboard() = f[0].get_lat()->get_checkerboard();
 
   {
-    autoView(c_v, (*pc), AcceleratorRead);
-    autoView(d_v, (*pd), AcceleratorWrite);
-
-    Accumulator<AccumulatorBase,T> ac(1.0,&c_v[0],&d_v[0]);
+    autoView(c_v, (*pc), AcceleratorWrite);
+  
+    Accumulator<AccumulatorBase,R> ac(1.0,&c_v[0],&c_v[0]);
 
     auto p_b = b.toDevice();
     auto p_a = a.toDevice();
-    auto p_u = u.toDevice();
-    auto p_perm = cgpt_transpose_permutation<T>().toDevice();
+    auto p_u = per_term ? u.toDevice() : (int*)0;
+    auto p_perm = per_term ? cgpt_transpose_permutation<T>().toDevice() : (int*)0;
 
-    accelerator_for(ss, grid->oSites() * n_elements, (size_t)grid->Nsimd(), {
-	auto osite = ss / n_elements;
-	auto e = ss - osite * n_elements;
-	typedef T result_type;
-	DEF_z();
-	for (int i=0;i<n;i++) {
-	  auto x = coalescedReadElement(p_a[i][osite], (p_u[i] & BIT_TRANS) ? p_perm[e] : (int)e);
-	  if (p_u[i] & BIT_CONJ)
-	    x = conjugate(x);
-	  v += x * p_b[i];
+    Timer("loop");
+
+    accelerator_for(ss, grid->oSites() * U::n_elements, (size_t)grid->Nsimd(), {
+	auto osite = ss / U::n_elements;
+	auto j = ss - osite * U::n_elements;
+	if constexpr (per_term) {
+	  typedef T result_type;
+	  DEF_z();
+	  for (int i=0;i<n;i++) {
+	    auto x = coalescedReadElement(p_a[i][osite], (p_u[i] & BIT_TRANS) ? p_perm[j] : (int)j);
+	    if (p_u[i] & BIT_CONJ)
+	      x = conjugate(x);
+	    v += x * p_b[i];
+	  }
+	  ac.coalescedWriteElement(osite, v, j);
+	} else {
+	  U::eval(ac, osite, p_a, p_b, n, j);
 	}
-	ac.coalescedWriteElement(osite, v, e);
       });
+
+    Timer();
   }
 
   for (int i=0;i<n;i++)
     v[i].ViewClose();
 
-  if (__c && alias) {
-    compatible<T>(__c)->l = *pd;
-    delete _out;
-    return __c;
-  }
-  return _out;
+  return _c;
+
 }
 
 template<typename T,int unary_expr>
@@ -296,46 +247,29 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* dst,bool ac, std::vector<cgpt_latt
 
   if (unary_factor == UNARY_PER_TERM) {
     ASSERT(unary_expr == 0);
-    if (ac) {
-      ASSERT(dst);
-      return cgpt_lc_per_term<T,AccumulatorYesBase>(dst,f);
-    } else {
-      return cgpt_lc_per_term<T,AccumulatorNoBase>(dst,f);
-    }
+    if (ac)
+      return cgpt_lc<T,0,AccumulatorYesBase,true>(dst,f);
+    return cgpt_lc<T,0,AccumulatorNoBase,true>(dst,f);
   }
-
-  typedef UnaryLinearCombination<T,unary_expr> U;
-  typedef typename U::result_type R;
 
   if (unary_factor == 0) {
-    if (ac) {
-      return cgpt_lc<T,unary_expr,AccumulatorYesBase>(dst,f,0);
-    } else {
-      return cgpt_lc<T,unary_expr,AccumulatorNoBase>(dst,f,0);
-    }
-  } else {
-
-    cgpt_Lattice_base* _lc = cgpt_lc<T,unary_expr,AccumulatorNoBase>(0,f,0,(unary_factor & BIT_CONJ) != 0);
-    auto lc = compatible<R>(_lc);
-    cgpt_unary(lc,unary_factor);
-
-    if (ac) {
-
-      compatible<R>(dst)->l += lc->l;
-      delete lc;
-      return dst;
-      
-    } else {
-      if (dst) {
-	compatible<R>(dst)->l = lc->l;
-	delete lc;
-	return dst;
-      } else {
-	return _lc;
-      }
-    }
-    
+    if (ac)
+      return cgpt_lc<T,unary_expr,AccumulatorYesBase>(dst,f);
+    return cgpt_lc<T,unary_expr,AccumulatorNoBase>(dst,f);
   }
+
+  typedef typename UnaryLinearCombination<T,unary_expr>::result_type R;
+  cgpt_Lattice_base* _lc = cgpt_lc<T,unary_expr,AccumulatorNoBase>(0,f,(unary_factor & BIT_CONJ) != 0);
+  auto lc = compatible<R>(_lc);
+  cgpt_unary(lc,unary_factor);
+  if (!dst)
+    return _lc;
+  if (ac)
+    compatible<R>(dst)->l += lc->l;
+  else
+    compatible<R>(dst)->l = lc->l;
+  delete lc;
+  return dst;
 }
 
 template<typename T>

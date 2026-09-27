@@ -240,15 +240,51 @@ void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>
   // single-v_obj terms without a term unary: all factor-unary groups in one
   // fused pass (the factor unary is applied on read, see cgpt_lc_per_term)
   bool fuse = (unary == 0);
-  int n_groups = 0;
+  int n_groups = 0, last_group = -1;
   for (int j=0;j<NUM_FACTOR_UNARY;j++) {
     if (terms_a[j].size() > 0) {
       n_groups++;
+      last_group = j;
       if (terms_a[j].size() != 1)
 	fuse = false;
     }
   }
   fuse = fuse && n_groups > 0 && !(n_groups == 1 && terms_a[0].size() > 0);
+
+  // In-place evaluation: an operand that is also a destination lattice is
+  // unsafe if it is read after (a part of) the destination was written.  A
+  // single pass reading each destination lattice at the index it writes is
+  // safe; transposed reads (in the fused pass) and evaluations split into
+  // several passes (several unary groups, or transposes across the v_obj of
+  // a multi-v_obj type) are not.  Such operands are read from a copy taken
+  // before anything is written.
+  std::vector<cgpt_Lattice_base*> snapshots;
+  if (dst.size() > 0 && n_groups > 0) {
+    bool single_pass = !fuse && n_groups == 1 && !(last_group & BIT_TRANS);
+    std::map<cgpt_Lattice_base*, cgpt_Lattice_base*> copy_of;
+    for (auto d : dst)
+      if (d)
+	copy_of[d] = 0;
+    for (int j=0;j<NUM_FACTOR_UNARY;j++) {
+      bool hazard = fuse ? ((j & BIT_TRANS) != 0) : !single_pass;
+      if (!hazard)
+	continue;
+      for (auto& vterms : terms_a[j]) {
+	for (auto& t : vterms) {
+	  auto c = copy_of.find(t.get_lat());
+	  if (c == copy_of.end())
+	    continue;
+	  if (!c->second) {
+	    c->second = t.get_lat()->create_lattice_of_same_type();
+	    c->second->copy_from(t.get_lat());
+	    snapshots.push_back(c->second);
+	  }
+	  t = cgpt_lattice_term(t.get_coef(), c->second, false);
+	}
+      }
+    }
+  }
+
   if (fuse) {
     std::vector<cgpt_lattice_term> merged;
     for (int j=0;j<NUM_FACTOR_UNARY;j++)
@@ -325,6 +361,8 @@ void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>
   for (auto& vterm : terms_b)
     for (auto& term : vterm)
       term.release();
+  for (auto l : snapshots)
+    delete l;
 }
 
 static inline void simplify(_eval_term_& term) {
