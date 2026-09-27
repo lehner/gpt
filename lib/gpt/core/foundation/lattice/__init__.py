@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt
+import gpt.default
 import cgpt
 import numpy
 import gpt.core.foundation.lattice.matrix
