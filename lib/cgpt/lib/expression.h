@@ -21,6 +21,8 @@
 #define BIT_CONJ 2
 #define BITS_ADJ (BIT_TRANS|BIT_CONJ)
 #define NUM_FACTOR_UNARY 4
+// linear combination whose terms carry their own factor unary
+#define UNARY_PER_TERM (-1)
 
 // term unary
 #define BIT_SPINTRACE 1

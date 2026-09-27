@@ -237,6 +237,35 @@ void eval_general(std::vector<cgpt_Lattice_base*>& dst, std::vector<_eval_term_>
     }
   }
 
+  // single-v_obj terms without a term unary: all factor-unary groups in one
+  // fused pass (the factor unary is applied on read, see cgpt_lc_per_term)
+  bool fuse = (unary == 0);
+  int n_groups = 0;
+  for (int j=0;j<NUM_FACTOR_UNARY;j++) {
+    if (terms_a[j].size() > 0) {
+      n_groups++;
+      if (terms_a[j].size() != 1)
+	fuse = false;
+    }
+  }
+  fuse = fuse && n_groups > 0 && !(n_groups == 1 && terms_a[0].size() > 0);
+  if (fuse) {
+    std::vector<cgpt_lattice_term> merged;
+    for (int j=0;j<NUM_FACTOR_UNARY;j++)
+      if (terms_a[j].size() > 0)
+	for (auto& t : terms_a[j][0])
+	  merged.push_back(cgpt_lattice_term(t.get_coef(), t.get_lat(), false, j));
+    if (dst.size() == 0)
+      dst.resize(1,0);
+    ASSERT(dst.size() == 1);
+    Timer("linear combination");
+    dst[0] = merged[0].get_lat()->compatible_linear_combination(dst[0], ac, merged, UNARY_PER_TERM, 0);
+    Timer("prepare");
+    ac = true;
+    for (int j=0;j<NUM_FACTOR_UNARY;j++)
+      terms_a[j].clear();
+  }
+
   for (int j=0;j<NUM_FACTOR_UNARY;j++) {
     auto & a = terms_a[j];
     if (a.size() > 0) {

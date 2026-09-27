@@ -21,10 +21,12 @@ private:
   ComplexD coef;
   cgpt_Lattice_base* lat;
   bool managed;
+  int unary; // factor unary (BIT_TRANS|BIT_CONJ), used with UNARY_PER_TERM
 public:
-  cgpt_lattice_term(ComplexD _coef, cgpt_Lattice_base* _lat, bool _managed) : coef(_coef), lat(_lat), managed(_managed) { };
+  cgpt_lattice_term(ComplexD _coef, cgpt_Lattice_base* _lat, bool _managed, int _unary = 0) : coef(_coef), lat(_lat), managed(_managed), unary(_unary) { };
   ~cgpt_lattice_term() { };
   void release() { if (managed)delete lat; };
   cgpt_Lattice_base* get_lat() { return lat; };
   ComplexD get_coef() { return coef; };
+  int get_unary() { return unary; };
 };  
