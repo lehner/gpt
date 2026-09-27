@@ -31,6 +31,7 @@ struct cgpt_stencil_matrix_code_offload_t {
   int accumulate;
   int target_temporary;
   int accumulate_temporary;
+  int unit_weight; // weight == 1: skip the multiplication
   ComplexD weight;
   int size;
   cgpt_stencil_matrix_factor_t* factor;
@@ -109,6 +110,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       code[i].target_temporary = is_temporary(_code[i].target);
       code[i].accumulate_temporary = _code[i].accumulate != -1 && is_temporary(_code[i].accumulate);
       code[i].weight = _code[i].weight;
+      code[i].unit_weight = _code[i].weight == ComplexD(1.0, 0.0);
       code[i].size = (int)_code[i].factor.size();
       code[i].factor = &factors.device[nfactors];
       memcpy(&factors[nfactors], &_code[i].factor[0], sizeof(cgpt_stencil_matrix_factor_t) * code[i].size);
@@ -234,10 +236,11 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 		  t = t * f;
 		}
 
-		obj_t r = p_code[i].weight * t;
+		if (!p_code[i].unit_weight)
+		  t = p_code[i].weight * t;
 		if (p_code[i].accumulate != -1)
-		  r += coalescedRead(fields_v[p_code[i].accumulate][p_code[i].accumulate_temporary ? ss_in_block : ss]);
-		coalescedWrite(fields_v[p_code[i].target][p_code[i].target_temporary ? ss_in_block : ss], r);
+		  t += coalescedRead(fields_v[p_code[i].accumulate][p_code[i].accumulate_temporary ? ss_in_block : ss]);
+		coalescedWrite(fields_v[p_code[i].target][p_code[i].target_temporary ? ss_in_block : ss], t);
 	      }
 
 	    });
@@ -267,10 +270,11 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	      t = t * f;
 	    }
 	    
-	    obj_t r = p_code[i].weight * t;
+	    if (!p_code[i].unit_weight)
+	      t = p_code[i].weight * t;
 	    if (p_code[i].accumulate != -1)
-	      r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
-	    coalescedWrite(fields_v[p_code[i].target][ss], r);
+	      t += coalescedRead(fields_v[p_code[i].accumulate][ss]);
+	    coalescedWrite(fields_v[p_code[i].target][ss], t);
 	  }
 	  
 	});
@@ -306,10 +310,11 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	      t = t * f;
 	    }
 	    
-	    obj_t r = p_code[i].weight * t;
+	    if (!p_code[i].unit_weight)
+	      t = p_code[i].weight * t;
 	    if (p_code[i].accumulate != -1)
-	      r += coalescedRead(fields_v[p_code[i].accumulate][ss]);
-	    coalescedWrite(fields_v[p_code[i].target][ss], r);
+	      t += coalescedRead(fields_v[p_code[i].accumulate][ss]);
+	    coalescedWrite(fields_v[p_code[i].target][ss], t);
 	  }
 	  
 	});
