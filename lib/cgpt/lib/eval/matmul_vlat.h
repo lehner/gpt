@@ -18,7 +18,7 @@
 */
 static
 void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
-		      std::vector<cgpt_Lattice_base*> & lhs_vl,
+		      std::vector<cgpt_Lattice_base*> & _lhs_vl,
 		      int lhs_unary, 
 		      PyArrayObject* rhs_array, 
 		      std::vector<std::string> & rhs_v_otype, 
@@ -28,7 +28,11 @@ void eval_matmul_vlat(std::vector<cgpt_Lattice_base*> & dst_vl,
 		      bool ac,
 		      ComplexD coef) {
 
-  ASSERT(lhs_vl.size() > 0);
+  ASSERT(_lhs_vl.size() > 0);
+
+  // in-place evaluation of block-wise products, see cgpt_vlat_snapshots
+  cgpt_vlat_snapshots snapshots;
+  std::vector<cgpt_Lattice_base*> lhs_vl = _lhs_vl.size() > 1 ? snapshots.of(_lhs_vl, dst_vl) : _lhs_vl;
 
   // learn singlet tensor structure
   int lhs_singlet_rank = lhs_vl[0]->singlet_rank();

@@ -133,6 +133,20 @@ template<typename T1, int N>
 struct UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_SPINTRACE|BIT_COLORTRACE> :
   UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_COLORTRACE> {};
 
+// flat transpose permutation of T as a device table (in the per-term kernel
+// below, a table lookup is measurably cheaper than evaluating the map)
+template<typename T>
+HostDeviceVector<int>& cgpt_transpose_permutation() {
+  static HostDeviceVector<int>* perm = 0;
+  if (!perm) {
+    constexpr int n = GridTypeMapper<T>::count;
+    perm = new HostDeviceVector<int>(n);
+    for (int e=0;e<n;e++)
+      (*perm)[e] = cgpt_transpose_index<T>::map(e);
+  }
+  return *perm;
+}
+
 // per_term: sum_i c_i unary_i(L_i), each term's factor unary applied on read,
 // so that terms with different unary operators combine in a single pass
 // without temporaries (unary_expr == 0, single-v_obj types).  The branch is
@@ -187,6 +201,7 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
     auto p_b = b.toDevice();
     auto p_a = a.toDevice();
     auto p_u = per_term ? u.toDevice() : (int*)0;
+    auto p_perm = per_term ? cgpt_transpose_permutation<T>().toDevice() : (int*)0;
 
     Timer("loop");
 
@@ -194,10 +209,15 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
       accelerator_for(ss, grid->oSites() * U::n_elements, (size_t)grid->Nsimd(), {
 	  auto osite = ss / U::n_elements;
 	  auto j = ss - osite * U::n_elements;
+	  int jt = p_perm[j];
 	  typedef T result_type;
 	  DEF_z();
-	  for (int i=0;i<n;i++)
-	    v += coalescedReadElement(cgpt_unary_ref<T>{p_a[i][osite], p_u[i]}, (int)j) * p_b[i];
+	  for (int i=0;i<n;i++) {
+	    auto x = coalescedReadElement(p_a[i][osite], (p_u[i] & BIT_TRANS) ? jt : (int)j);
+	    if (p_u[i] & BIT_CONJ)
+	      x = conjugate(x);
+	    v += x * p_b[i];
+	  }
 	  ac.coalescedWriteElement(osite, v, j);
 	});
     } else {

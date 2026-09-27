@@ -16,17 +16,49 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+// In-place evaluation of block-wise (multi-v_obj) products: the block loops
+// write destination blocks while later reading operand blocks, and a block
+// multiplication whose target aliases an operand replaces (deletes) that
+// target, fatal where a loop accumulates into a block without taking the
+// returned pointer.  Operand blocks that alias a destination block are
+// therefore read from copies taken up front (released on return).
+struct cgpt_vlat_snapshots {
+  std::vector<cgpt_Lattice_base*> copies;
+  std::vector<cgpt_Lattice_base*> of(const std::vector<cgpt_Lattice_base*> & vl, const std::vector<cgpt_Lattice_base*> & dst) {
+    std::vector<cgpt_Lattice_base*> r = vl;
+    for (auto & l : r) {
+      if (std::find(dst.begin(), dst.end(), l) != dst.end()) {
+	auto c = l->create_lattice_of_same_type();
+	c->copy_from(l);
+	copies.push_back(c);
+	l = c;
+      }
+    }
+    return r;
+  }
+  ~cgpt_vlat_snapshots() {
+    for (auto c : copies)
+      delete c;
+  }
+};
+
 static
 void eval_mul_vlat_vlat(std::vector<cgpt_Lattice_base*> & dst_vl, 
-			std::vector<cgpt_Lattice_base*> & lhs_vl, 
+			std::vector<cgpt_Lattice_base*> & _lhs_vl, 
 			int lhs_unary, 
-			std::vector<cgpt_Lattice_base*> & rhs_vl, 
+			std::vector<cgpt_Lattice_base*> & _rhs_vl, 
 			int rhs_unary, 
 			int unary,
 			bool ac, ComplexD coef) {
 
   // need at least one for lhs and rhs
-  ASSERT(lhs_vl.size() > 0 && rhs_vl.size() > 0);
+  ASSERT(_lhs_vl.size() > 0 && _rhs_vl.size() > 0);
+
+  // single blocks: the block multiplication handles an aliased target itself
+  bool blocks = _lhs_vl.size() > 1 || _rhs_vl.size() > 1;
+  cgpt_vlat_snapshots snapshots;
+  std::vector<cgpt_Lattice_base*> lhs_vl = blocks ? snapshots.of(_lhs_vl, dst_vl) : _lhs_vl;
+  std::vector<cgpt_Lattice_base*> rhs_vl = blocks ? snapshots.of(_rhs_vl, dst_vl) : _rhs_vl;
 
   // learn singlet tensor structure
   int lhs_singlet_rank = lhs_vl[0]->singlet_rank();
