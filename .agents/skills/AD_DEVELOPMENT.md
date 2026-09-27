@@ -248,8 +248,13 @@ mechanism.
 - `ad/reverse/foundation/` — the "foundation" layer: lattice-level
   implementations of ops the node layer dispatches to (trace/sum
   backprops, `where`, `astype`, group conversions), plus
-  `foundation/matrix/exp.py` — **`matrix.exp` backward is pure Python**
-  (Taylor/scaling-squaring built from div/add/multiply), not C++.
+  `foundation/matrix/exp.py` — **`matrix.exp` on lattice nodes is a tower
+  of fused kernels**: exp is D_0 of the family D_k(X; H_1..H_k) =
+  d^k exp_X(H_1..H_k), whose reverse flows are again D's at X^dag
+  (D_{k+1} into X, D_k into H_i), so the gradient of exp is exp.  Each
+  plain D_k is one compiled local stencil (multi-dual scaling-squaring +
+  Horner Taylor).  Non-lattice (tensor/scalar) nodes still use the
+  node-op Taylor graph.
 - "Foundation" is a per-class attribute (`g.lattice.foundation`, the
   node foundation, ...). Mixed-operand dispatch helpers (e.g.
   `_group_foundation` in `core/group/operation.py`) pick the operand whose
