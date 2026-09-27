@@ -179,19 +179,20 @@ class directional_parallel_transport(dft_diffeomorphism):
         mu, P1 = self.mu, self.P1
         C = self._staple(fields)
         U_mu = fields[mu]
-        U_prime_mu = self._local_ft(U_mu, C)
 
         grid = U_mu.grid
         otype = U_mu.otype
         otype_cartesian = otype.cartesian()
         generators = otype_cartesian.generators(grid.precision.complex_dtype)
+        # one forward shared by the 8 reverse passes
         aU = rad.node(U_mu)
         aUft = self._local_ft(aU, rad.node(C, with_gradient=False))
+        U_prime_mu = aUft(with_gradients=False, retain_values=True)
         src = g.group.cartesian(U_mu)
         coor = {}
         for a in range(len(generators)):
             src @= P1 * generators[a]
-            aUft(initial_gradient=g.cartesian_to_infinitesimal(U_prime_mu, src))
+            aUft(initial_gradient=g.cartesian_to_infinitesimal(U_prime_mu, src), retain_values=True)
             aU.gradient.otype = src.otype
             for b, c in enumerate(otype_cartesian.coordinates(g(aU.gradient * P1))):
                 coor[a, b] = c
@@ -334,10 +335,12 @@ class directional_parallel_transport(dft_diffeomorphism):
             _left = rad.node(g.copy(left), with_gradient=False)
             _right = rad.node(g.copy(right), with_gradient=False)
 
-            # 2-deep "apply Jacobian block to right" (see diagonal_jacobian_gradient)
-            _Up = self._local_ft(_U, _C)
+            # 2-deep "apply Jacobian block to right" (see diagonal_jacobian_gradient);
+            # the seed is built from the forward's own (retained) 1-deep
+            # value, so the derivative graph and the seed share its nodes
             aU = rad.node(_U)
             aUft = self._local_ft(aU, rad.node(_C, with_gradient=False))
+            _Up = aUft(with_gradients=False, retain_values=True)
             aUft(initial_gradient=g.cartesian_to_infinitesimal(_Up, _right))
 
             act = g.inner_product(_left, P1_node * aU.gradient)

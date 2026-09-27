@@ -391,7 +391,7 @@ class node_base(base):
                 f"Forward propagation through graph with {len(nodes)} nodes with maximum allocated fields: {max_fields_allocated}"
             )
 
-    def backward(self, nodes, first_gradient, initial_gradient):
+    def backward(self, nodes, first_gradient, initial_gradient, retain_values=False):
         fields_allocated = len(nodes)  # .values
         max_fields_allocated = fields_allocated
         if initial_gradient is None:
@@ -416,7 +416,7 @@ class node_base(base):
             if n._forward is not None:
                 n.gradient = None
                 fields_allocated -= 1
-                if n is not self:
+                if n is not self and not retain_values:
                     n.value = None
                     fields_allocated -= 1
             else:
@@ -430,12 +430,24 @@ class node_base(base):
             )
 
     # TODO: allow for lists of initial_gradients (could save forward runs at sake of more memory)
-    def __call__(self, with_gradients=True, initial_gradient=None):
+    def __call__(self, with_gradients=True, initial_gradient=None, retain_values=False):
+        # retain_values keeps the forward values of the graph: with gradients,
+        # the backward does not free them, so repeated reverse passes (e.g.
+        # one per seed direction) over unchanged leaves share one forward;
+        # without, the forward keeps all intermediate values, so a following
+        # reverse pass reuses exactly these nodes (in a nested graph, the
+        # returned value is then part of the next pass's derivative graph)
         nodes = []
         forward_free = traverse(nodes, self)
-        self.forward(nodes, free=forward_free if not with_gradients else None)
+        free = forward_free if not (with_gradients or retain_values) else None
+        self.forward(nodes, free=free)
         if with_gradients:
-            self.backward(nodes, first_gradient=forward_free, initial_gradient=initial_gradient)
+            self.backward(
+                nodes,
+                first_gradient=forward_free,
+                initial_gradient=initial_gradient,
+                retain_values=retain_values,
+            )
         return self.value
 
     def functional(self, *arguments):

@@ -283,10 +283,16 @@ mechanism.
   Resolve results to plain lattices (`value_of` loop) to release graphs as
   soon as you're done reading them; use the smallest grid that exercises the
   code path; avoid holding multiple deep graphs alive at once.
-- **Don't evaluate the same graph twice** expecting fresh state: backward
-  accumulates into `.gradient` (call `zero_gradient()` first if reusing),
-  and second reverse passes over an already-consumed 1-deep graph can
-  produce nan. Build fresh nodes per pass when in doubt.
+- **Re-running a graph**: each backward pass starts every gradient at
+  `None` (an unbuilt zero, see `util.accumulate`), so gradients do not carry
+  over between passes; read a leaf's `.gradient` before the next pass.  By
+  default the backward frees forward values, so each call re-runs the
+  forward.  `root(initial_gradient=..., retain_values=True)` keeps them: repeated reverse
+  passes (one per seed) over unchanged leaves share one forward, and
+  `root(with_gradients=False, retain_values=True)` returns the root value
+  with all intermediates kept, so a seed built from it shares nodes with the
+  following reverse pass (as `directional_parallel_transport` does).  Only
+  retain values while the leaves are unchanged.
 - **Stencil `accumulate` is a field index, not a flag**: with several
   targets in one fused stencil, each target's rewrites must accumulate
   into *its own* field index (target 1 uses `accumulate: 1`, not `0`).
