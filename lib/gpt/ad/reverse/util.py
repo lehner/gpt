@@ -280,51 +280,65 @@ def div(a, b):
     return _binop(a, b, operator.truediv)
 
 
-def adopt_zero(current, term):
-    # May `term` simply REPLACE `current` as a gradient?  True when current is
-    # the structural zero that zero_gradient just installed and term is a node
-    # graph of the very same container.  Adding to that zero would build an
-    # add node whose zero operand is evaluated (a field add) and then
-    # differentiated (a backward visit into a dead leaf, plus its own
-    # zero_gradient and infinitesimal_to_cartesian) -- all to add nothing.
-    # The container must match exactly: otype is load-bearing at the leaf
-    # conversion, and add() would have kept current's container.
-    return (
-        is_node(current)
-        and current._pristine_zero
-        and is_node(term)
-        and current._container == term._container
-    )
+def zero_of(container, depth):
+    # an explicit zero for a gradient of this container at this node depth
+    z = container.zero()
+    for _ in range(depth):
+        z = g.ad.reverse.node_base(z)
+    return z
 
 
-def accum(n, r, sign=1):
-    # accumulate sign * r into n.gradient:
+def accumulate(cur, r, sign, container, depth):
+    # returns cur + sign * r, where cur = None is a zero that has not been
+    # built (every gradient starts out as None in a backward pass):
+    #   first contribution             assigned into a fresh field of the
+    #                                  container (plain) or adopted (a node
+    #                                  graph of the same container; graphs
+    #                                  are immutable); a plain flow is never
+    #                                  adopted, it is often shared (both
+    #                                  children of an add receive z.gradient)
+    #                                  and gradients accumulate in place
     #   plain gradient +- plain term   in place
     #   plain gradient +- node term    the term graph is linear in the flow,
     #                                  so it is evaluated to a field, keeping
     #                                  the result in the plain world as in
     #                                  single-pass AD
     #   node gradient  +- plain/node   builds the (lazy) compute graph; a
-    #   term                     subtraction with incompatible containers is
-    #                                  evaluated to a field
-    if is_node(n.gradient):
-        if sign > 0 and adopt_zero(n.gradient, r):
-            n.gradient = r
-        elif sign > 0:
-            n.gradient = add(n.gradient, r)
-        elif is_node(r) and n.gradient._container != r._container:
-            n.gradient = value_of(n.gradient) - value_of(r)
-        else:
-            n.gradient = sub(n.gradient, r)
-    elif is_node(r):
+    #   term                           subtraction with incompatible
+    #                                  containers is evaluated to a field
+    # `depth` is a callable: the depth is only needed for a first contribution
+    if cur is None:
+        d = depth()
+        if d > 0:
+            if sign > 0 and is_node(r) and r._container == container:
+                return r
+        elif container.tag[0] == g.lattice:
+            r = value_of(r) if is_node(r) else r
+            dst = g.lattice(container.get_grid(), container.get_otype())
+            dst @= r if sign > 0 else -r
+            return dst
+        cur = zero_of(container, d)
+    if is_node(cur):
         if sign > 0:
-            n.gradient += value_of(r)
-        else:
-            n.gradient -= value_of(r)
-    elif sign > 0:
-        n.gradient += r
+            return add(cur, r)
+        if is_node(r) and cur._container != r._container:
+            return value_of(cur) - value_of(r)
+        return sub(cur, r)
+    r = value_of(r) if is_node(r) else r
+    if sign > 0:
+        cur += r
     else:
-        n.gradient -= r
+        cur -= r
+    return cur
+
+
+def accum(n, r, sign=1):
+    # accumulate sign * r into n.gradient (see accumulate)
+    if n.gradient is None and isinstance(n.value, g.ad.forward.series):
+        n.zero_gradient()
+    n.gradient = accumulate(
+        n.gradient, r, sign, n._container, lambda: value_depth_static(n.value)
+    )
 
 
 def get_mul_container(x, y):

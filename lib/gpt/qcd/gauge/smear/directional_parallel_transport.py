@@ -51,6 +51,14 @@ def _staple_description(description_mu, mu, nd):
     return staple
 
 
+def _adjoint_matrix(grid, Nc, coor):
+    # M[a, b] = coor[a, b] as one adjoint-algebra matrix field; a single
+    # (cached) copy plan on the fields' memory instead of per-component
+    # host-side slice assignments
+    M = g.lattice(grid, g.ot_matrix_su_n_adjoint_algebra(Nc))
+    return g.merge_color(M, coor)
+
+
 class directional_parallel_transport(dft_diffeomorphism):
     def __init__(self, U, description_mu, mu, P0=None, P1=None, parameters=[]):
         self.description_mu = description_mu
@@ -177,19 +185,17 @@ class directional_parallel_transport(dft_diffeomorphism):
         otype = U_mu.otype
         otype_cartesian = otype.cartesian()
         generators = otype_cartesian.generators(grid.precision.complex_dtype)
-        M = g.lattice(grid, g.ot_matrix_su_n_adjoint_algebra(otype.Nc))
-
         aU = rad.node(U_mu)
         aUft = self._local_ft(aU, rad.node(C, with_gradient=False))
         src = g.group.cartesian(U_mu)
+        coor = {}
         for a in range(len(generators)):
             src @= P1 * generators[a]
             aUft(initial_gradient=g.cartesian_to_infinitesimal(U_prime_mu, src))
             aU.gradient.otype = src.otype
-            coor = otype_cartesian.coordinates(g(aU.gradient * P1))
-            for b in range(len(generators)):
-                M[:, :, :, :, a, b] = coor[b][:]
-        return M, C
+            for b, c in enumerate(otype_cartesian.coordinates(g(aU.gradient * P1))):
+                coor[a, b] = c
+        return _adjoint_matrix(grid, otype.Nc, coor), C
 
     def _jacobian_matrix_generic(self, fields):
         fields_prime = self(fields)
@@ -199,15 +205,13 @@ class directional_parallel_transport(dft_diffeomorphism):
         otype_cartesian = otype.cartesian()
         generators = otype_cartesian.generators(dt)
         src = g.group.cartesian(fields[0])
-        M = g.lattice(grid, g.ot_matrix_su_n_adjoint_algebra(otype.Nc))
-
+        coor = {}
         for a in range(len(generators)):
             src @= self.P1 * generators[a]
             dst = self.diagonal_jacobian(fields, fields_prime, src)
-            coor = otype_cartesian.coordinates(dst)
-            for b in range(len(generators)):
-                M[:, :, :, :, a, b] = coor[b][:]
-        return M
+            for b, c in enumerate(otype_cartesian.coordinates(dst)):
+                coor[a, b] = c
+        return _adjoint_matrix(grid, otype.Nc, coor)
 
     def log_det_jacobian(self, fields):
         M = self.jacobian_matrix(fields)

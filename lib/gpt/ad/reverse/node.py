@@ -30,7 +30,8 @@ from gpt.ad.reverse.util import (
     accum,
     value_of,
     value_depth_static,
-    adopt_zero,
+    accumulate,
+    zero_of,
     nodify,
     is_node,
 )
@@ -136,31 +137,33 @@ class node_base(base):
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         self.gradient = None
-        # set when this node IS a structural zero produced by zero_gradient:
-        # the first contribution may then replace it instead of building an
-        # add whose zero operand costs a field op and a backward visit
-        self._pristine_zero = False
         self._tag = _tag
 
     def __str__(self):
         return str_traverse(self)
 
+    def materialize_gradient(self):
+        # a None gradient (or list element) is a zero not built yet
+        if self.gradient is None:
+            self.zero_gradient()
+        elif self._container.tag[0] is list and None in self.gradient:
+            depth = value_depth_static(self.value)
+            elem = self._container.tag[1]
+            self.gradient = [zero_of(elem, depth) if e is None else e for e in self.gradient]
+
     def zero_gradient(self):
+        # measuring the depth must not re-run a forward closure: this is
+        # called from backward(), which frees each computed node's value as it
+        # goes, so resolving the depth by evaluating would re-materialize
+        # fields that were just released
+        depth = value_depth_static(self.value)
         if self._container.tag[0] is list:
             # a list leaf's gradient is a plain list, one entry per element,
             # each element independently wrapped to the nesting depth -- so at
             # a nested depth the gradient is a list of node graphs (one per
             # element), never a node wrapping a list
             elem = self._container.tag[1]
-            depth = value_depth_static(self.value)
-            self.gradient = []
-            for i in range(self._container.tag[2]):
-                e = elem.zero()
-                for _ in range(depth):
-                    e = node_base(e)
-                if depth > 0:
-                    e._pristine_zero = True
-                self.gradient.append(e)
+            self.gradient = [zero_of(elem, depth) for _ in range(self._container.tag[2])]
             return
         self.gradient = self._container.zero()
         if isinstance(self.value, g.ad.forward.series):
@@ -168,16 +171,8 @@ class node_base(base):
             for t in gradient.terms:
                 gradient.terms[t] = self.gradient
             self.gradient = gradient
-
-        # measuring the depth must not re-run a forward closure: this is
-        # called from backward(), which frees each computed node's value as it
-        # goes, so resolving the depth by evaluating would re-materialize
-        # fields that were just released
-        depth = value_depth_static(self.value)
         for _ in range(depth):
             self.gradient = node_base(self.gradient)
-        if depth > 0:
-            self.gradient._pristine_zero = True
 
     def __mul__(x, y):
         x, y = nodify(x, y)
@@ -272,9 +267,7 @@ class node_base(base):
 
     def __getitem__(x, item):
         # list node (e.g. the 4 gauge links): element access.  The element's
-        # gradient accumulates in place into the list's gradient, mirroring
-        # accum's plain path (a plain `a + b` is a lazy expr, which the
-        # gradient list must not become)
+        # gradient accumulates into its entry of the list's gradient
         if x._container.tag[0] is list:
             def _forward():
                 return value_of(x)[item]
@@ -282,19 +275,15 @@ class node_base(base):
             def _backward(z):
                 if not x.with_gradient:
                     return
-                cur = x.gradient[item]
-                flow = z.gradient
-                if is_node(cur) or is_node(flow):
-                    # nested: the element gradient is / becomes a lazy node
-                    # graph one level down; accumulate node-aware
-                    if adopt_zero(cur, flow):
-                        x.gradient[item] = flow
-                    else:
-                        x.gradient[item] = add(cur, flow)
-                else:
-                    # plain: in place (a plain `a + b` is a lazy expr, which
-                    # the gradient list must not become)
-                    cur += flow
+                if x.gradient is None:
+                    x.gradient = [None] * len(x)
+                x.gradient[item] = accumulate(
+                    x.gradient[item],
+                    z.gradient,
+                    1,
+                    x._container.tag[1],
+                    lambda: value_depth_static(x.value),
+                )
 
             z_container = get_unary_container(x._container, lambda y: y[item])
             return node_base(_forward, _backward, (x,), _container=z_container)
@@ -326,6 +315,7 @@ class node_base(base):
         # not allowed to capture z, otherwise have reference loop!
         def _backward(z):
             if x.with_gradient:
+                x.materialize_gradient()
                 x.gradient = setter(x.gradient, getter(x.gradient) + z.gradient)
 
         z_container = get_unary_container(x._container, getter)
@@ -410,16 +400,19 @@ class node_base(base):
                     "Expression evaluates to a field.  Gradient calculation is not unique."
                 )
             initial_gradient = 1.0
-        self.zero_gradient()
-        self.gradient += initial_gradient
+        # a gradient of None is a zero that is not built (see accumulate)
+        self.gradient = None
+        accum(self, initial_gradient)
         for n in reversed(nodes):
             first_gradient_n = first_gradient[n]
             for m in first_gradient_n:
                 if m is not self:
-                    m.zero_gradient()
+                    m.gradient = None
                     fields_allocated += 1
                     max_fields_allocated = max(max_fields_allocated, fields_allocated)
-            n._backward(n)
+            if n.gradient is not None:
+                # (a zero flow contributes nothing to the children)
+                n._backward(n)
             if n._forward is not None:
                 n.gradient = None
                 fields_allocated -= 1
@@ -427,6 +420,7 @@ class node_base(base):
                     n.value = None
                     fields_allocated -= 1
             else:
+                n.materialize_gradient()
                 if n.with_gradient and n.infinitesimal_to_cartesian:
                     n.gradient = g.infinitesimal_to_cartesian(n.value, n.gradient)
 

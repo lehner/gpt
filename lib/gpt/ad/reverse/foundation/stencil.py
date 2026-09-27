@@ -375,7 +375,8 @@ def matrix(stencil, *fields):
 
     def _psi():
         # the m output flows; a single output node has one flow, a list node
-        # a list of m
+        # a list of m (outputs that received no flow are zero)
+        output.materialize_gradient()
         return output.gradient if m > 1 else [output.gradient]
 
     def run_fwd():

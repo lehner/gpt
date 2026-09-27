@@ -55,7 +55,17 @@ _kernels = {}
 
 
 def _max_site_norm(x):
+    # upper bound on the largest site norm |x|_F, computed on the device:
+    # (sum_x |x|_F^16)^(1/16) >= max_x |x|_F, and overestimates it by at most
+    # V^(1/16) (a factor 2 at 16^4), i.e., by at most one extra squaring
     n2 = g(g.trace(g.adj(x) * x))
+    y = n2
+    for _ in range(3):
+        y = g(y * y)
+    bound = g.sum(y).real ** (1.0 / 16.0)
+    if np.isfinite(bound):
+        return bound
+    # |x|^16 overflowed (huge arguments in single precision): exact maximum
     local = float(np.max(n2[:].real)) if n2.grid.gsites > 0 else 0.0
     grid = x.grid
     per_rank = np.zeros(grid.Nprocessors, dtype=np.float64)
