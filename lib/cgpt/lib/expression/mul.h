@@ -17,5 +17,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "macros.h"
+#include "unary_read.h"
 #include "multiplication_table.h"
 #include "mul_implementation.h"

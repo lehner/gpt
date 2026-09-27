@@ -121,36 +121,39 @@ typename T::scalar_type coalescedReadElement(const T & __restrict__ c, int e) {
 #endif
 
 
+// flat element index of a multi-index element access (row-major at each
+// tensor level; iScalar levels are transparent)
 template<typename T, int n>
-accelerator_inline
-auto coalescedReadElement(const iMatrix<T,n> & c, int a, int b) -> decltype(coalescedReadElement(c,0)) {
-  return coalescedReadElement(c,a*n + b);
+accelerator_inline int cgpt_element_index(const iMatrix<T,n> & c, int a, int b) {
+  return a*n + b;
 }
 
 template<typename T, int n1, int n2>
-accelerator_inline
-auto coalescedReadElement(const iVector<iVector<T,n2>,n1> & c, int a, int b) -> decltype(coalescedReadElement(c,0)) {
-  return coalescedReadElement(c,a*n2 + b);
+accelerator_inline int cgpt_element_index(const iVector<iVector<T,n2>,n1> & c, int a, int b) {
+  return a*n2 + b;
 }
 
 template<typename T, int n1, int n2>
-accelerator_inline
-auto coalescedReadElement(const iMatrix<iMatrix<T,n2>,n1> & c, int a1, int b1, int a2, int b2) -> decltype(coalescedReadElement(c,0)) {
-  return coalescedReadElement(c,a2*n2 + b2 + n2*n2*(a1*n1 + b1));
+accelerator_inline int cgpt_element_index(const iMatrix<iMatrix<T,n2>,n1> & c, int a1, int b1, int a2, int b2) {
+  return a2*n2 + b2 + n2*n2*(a1*n1 + b1);
+}
+
+template<typename T, typename... I>
+accelerator_inline int cgpt_element_index(const iScalar<T> & c, I... idx) {
+  return cgpt_element_index(c(), idx...);
 }
 
 template<typename T>
 accelerator_inline
-auto coalescedReadElement(const iScalar<T> & c, int a, int b) -> decltype(coalescedReadElement(c(),0)) {
-  return coalescedReadElement(c(),a,b);
+auto coalescedReadElement(const T & c, int a, int b) -> decltype(coalescedReadElement(c, cgpt_element_index(c,a,b))) {
+  return coalescedReadElement(c, cgpt_element_index(c,a,b));
 }
 
 template<typename T>
 accelerator_inline
-auto coalescedReadElement(const iScalar<T> & c, int a1, int b1, int a2, int b2) -> decltype(coalescedReadElement(c(),0)) {
-  return coalescedReadElement(c(),a1,b1,a2,b2);
+auto coalescedReadElement(const T & c, int a1, int b1, int a2, int b2) -> decltype(coalescedReadElement(c, cgpt_element_index(c,a1,b1,a2,b2))) {
+  return coalescedReadElement(c, cgpt_element_index(c,a1,b1,a2,b2));
 }
-
 
 class AccumulatorYesBase {
 public:

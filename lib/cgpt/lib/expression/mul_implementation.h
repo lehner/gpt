@@ -17,11 +17,70 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// Product loops with the factor unaries applied on read (cgpt_unary_ref),
+// only for unary_expr == 0 (traced products with unary factors use
+// temporaries).  Selected by tag dispatch rather than if-constexpr, which CUDA
+// extended lambdas reject.
+template<typename MT, typename T1, typename T2, typename Ac>
+void cgpt_mul_unary_loop(std::true_type, GridBase* grid, Ac & ac, const T1* p_a, const T2* p_b, int unary_a, int unary_b) {
+#ifndef GRID_HAS_ACCELERATOR
+  accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
+      PREFETCH(p_a[osite]);
+      PREFETCH(p_b[osite]);
+      cgpt_unary_ref<T1> ra{p_a[osite], unary_a};
+      cgpt_unary_ref<T2> rb{p_b[osite], unary_b};
+      for (int j=0;j<MT::n_elements;j++) {
+	MT::eval(ac, osite, ra, rb, j);
+      }
+    });
+#else
+  accelerator_for(ss, grid->oSites() * MT::n_elements, (size_t)grid->Nsimd(), {
+      auto osite = ss / MT::n_elements;
+      auto j = ss - osite * MT::n_elements;
+      cgpt_unary_ref<T1> ra{p_a[osite], unary_a};
+      cgpt_unary_ref<T2> rb{p_b[osite], unary_b};
+      MT::eval(ac, osite, ra, rb, j);
+    });
+#endif
+}
+
+template<typename MT, typename T1, typename T2, typename Ac>
+void cgpt_mul_unary_loop(std::false_type, GridBase* grid, Ac & ac, const T1* p_a, const T2* p_b, int unary_a, int unary_b) {
+  ERR("Unary factors in a traced product are not applied on read");
+}
+
+template<typename MT, typename T1, typename T2, typename Ac>
+void cgpt_mul_unary_const_loop(std::true_type, GridBase* grid, Ac & ac, const T1* p_a, const T2* p_b, int unary_a) {
+#ifndef GRID_HAS_ACCELERATOR
+  accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
+      PREFETCH(p_a[osite]);
+      cgpt_unary_ref<T1> ra{p_a[osite], unary_a};
+      for (int j=0;j<MT::n_elements;j++) {
+	MT::eval(ac, osite, ra, *p_b, j);
+      }
+    });
+#else
+  accelerator_for(ss, grid->oSites() * MT::n_elements, (size_t)grid->Nsimd(), {
+      auto osite = ss / MT::n_elements;
+      auto j = ss - osite * MT::n_elements;
+      cgpt_unary_ref<T1> ra{p_a[osite], unary_a};
+      MT::eval(ac, osite, ra, *p_b, j);
+    });
+#endif
+}
+
+template<typename MT, typename T1, typename T2, typename Ac>
+void cgpt_mul_unary_const_loop(std::false_type, GridBase* grid, Ac & ac, const T1* p_a, const T2* p_b, int unary_a) {
+  ERR("Unary factors in a traced product are not applied on read");
+}
+
+// unary_a/unary_b (BIT_TRANS|BIT_CONJ) are applied to the operands on read
+// (cgpt_unary_ref), without temporaries; only for unary_expr == 0
 template<typename AccumulatorBase, int unary_expr, bool rev, typename T1, typename T2, typename Enable = void>
 cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 				      const Lattice<T1> & a,
 				      const Lattice<T2> & b,
-				      ComplexD coef) {
+				      ComplexD coef, int unary_a = 0, int unary_b = 0) {
 
   Timer("create lat");
   GridBase* grid = a.Grid();
@@ -68,6 +127,9 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 
     Timer("loop");
     
+    if (unary_a || unary_b) {
+      cgpt_mul_unary_loop<MT,T1,T2>(std::integral_constant<bool, unary_expr == 0>(), grid, ac, p_a, p_b, unary_a, unary_b);
+    } else {
     // TODO: if c==a or c==b, need to copy to new memory region
 #ifndef GRID_HAS_ACCELERATOR
     accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
@@ -84,6 +146,7 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 	MT::eval(ac, osite, p_a[osite], p_b[osite], j);
       });
 #endif
+    }
 
     Timer();
   }
@@ -97,7 +160,7 @@ template<typename AccumulatorBase, int unary_expr, bool rev, typename T1, typena
 cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 				      const Lattice<T1> & a,
 				      const T2 & b,
-				      ComplexD coef) {
+				      ComplexD coef, int unary_a = 0, int unary_b = 0) {
     
   GridBase* grid = a.Grid();
 
@@ -140,6 +203,10 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
     
     auto * p_b = v_b.toDevice();
     
+    ASSERT(!unary_b);
+    if (unary_a) {
+      cgpt_mul_unary_const_loop<MT,T1,T2>(std::integral_constant<bool, unary_expr == 0>(), grid, ac, p_a, p_b, unary_a);
+    } else {
 #ifndef GRID_HAS_ACCELERATOR
     accelerator_for(osite, grid->oSites(), (size_t)grid->Nsimd(), {
 	PREFETCH(p_a[osite]);
@@ -155,6 +222,7 @@ cgpt_Lattice_base* cgpt_mul_acc_unary(cgpt_Lattice_base* _c,
 	MT::eval(ac, osite, p_a[osite], *p_b, j);
       });
 #endif
+    }
   }
 
   if (_d != _c)
@@ -167,17 +235,17 @@ cgpt_Lattice_base* cgpt_mul_acc(cgpt_Lattice_base* _c,
 				const T1 & a,
 				const T2 & b,
 				int unary_expr,
-				ComplexD coef) {
+				ComplexD coef, int unary_a, int unary_b) {
 
   switch (unary_expr) {
   case 0:
-    return cgpt_mul_acc_unary<AccumulatorBase,0,rev>(_c,a,b,coef);
+    return cgpt_mul_acc_unary<AccumulatorBase,0,rev>(_c,a,b,coef,unary_a,unary_b);
   case BIT_SPINTRACE:
-    return cgpt_mul_acc_unary<AccumulatorBase,BIT_SPINTRACE,rev>(_c,a,b,coef);
+    return cgpt_mul_acc_unary<AccumulatorBase,BIT_SPINTRACE,rev>(_c,a,b,coef,unary_a,unary_b);
   case BIT_COLORTRACE:
-    return cgpt_mul_acc_unary<AccumulatorBase,BIT_COLORTRACE,rev>(_c,a,b,coef);
+    return cgpt_mul_acc_unary<AccumulatorBase,BIT_COLORTRACE,rev>(_c,a,b,coef,unary_a,unary_b);
   case BIT_COLORTRACE|BIT_SPINTRACE:
-    return cgpt_mul_acc_unary<AccumulatorBase,BIT_SPINTRACE|BIT_COLORTRACE,rev>(_c,a,b,coef);
+    return cgpt_mul_acc_unary<AccumulatorBase,BIT_SPINTRACE|BIT_COLORTRACE,rev>(_c,a,b,coef,unary_a,unary_b);
   default:
     ERR("Unknown unary %d", unary_expr);
   }
@@ -188,13 +256,13 @@ cgpt_Lattice_base* cgpt_mul(cgpt_Lattice_base* _c, bool ac,
 			    const T1 & a,
 			    const T2 & b,
 			    int unary_expr,
-			    ComplexD coef) {
+			    ComplexD coef, int unary_a = 0, int unary_b = 0) {
 
   if (ac) {
     ASSERT(_c);
-    return cgpt_mul_acc<AccumulatorYesBase,rev>(_c,a,b,unary_expr,coef);
+    return cgpt_mul_acc<AccumulatorYesBase,rev>(_c,a,b,unary_expr,coef,unary_a,unary_b);
   } else {
-    return cgpt_mul_acc<AccumulatorNoBase,rev>(_c,a,b,unary_expr,coef);
+    return cgpt_mul_acc<AccumulatorNoBase,rev>(_c,a,b,unary_expr,coef,unary_a,unary_b);
   }
 }
 
@@ -225,6 +293,12 @@ template<typename A, typename B>
 cgpt_Lattice_base* lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, int unary_b, const B& lb,int unary_expr,ComplexD coef) {
   ASSERT(la.Grid() == lb.Grid());
   Timer("lattice_mul");
+  if (unary_expr == 0) {
+    // unary factors applied on read (no temporaries)
+    cgpt_Lattice_base* ret = cgpt_mul<false>(dst, ac, la, lb, 0, coef, unary_a, unary_b);
+    Timer();
+    return ret;
+  }
   const A * pa;
   const B * pb;
   cgpt_unary(pa,la,unary_a);
@@ -240,6 +314,8 @@ cgpt_Lattice_base* lattice_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, con
 
 template<typename A, typename B>
 cgpt_Lattice_base* lattice_unary_mul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr,ComplexD coef) {
+  if (unary_expr == 0)
+    return cgpt_mul<false>(dst, ac, la, ab, 0, coef, unary_a, 0);
   const A * pa;
   cgpt_unary(pa,la,unary_a);
   cgpt_Lattice_base* ret = cgpt_mul<false>(dst, ac, *pa, ab, unary_expr,coef);
@@ -250,6 +326,8 @@ cgpt_Lattice_base* lattice_unary_mul(cgpt_Lattice_base* dst, bool ac, int unary_
 
 template<typename A, typename B>
 cgpt_Lattice_base* lattice_unary_rmul(cgpt_Lattice_base* dst, bool ac, int unary_a, const A& la, const B& ab,int unary_expr, ComplexD coef) {
+  if (unary_expr == 0)
+    return cgpt_mul<true>(dst, ac, la, ab, 0, coef, unary_a, 0);
   const A * pa;
   cgpt_unary(pa,la,unary_a);
   cgpt_Lattice_base* ret = cgpt_mul<true>(dst, ac, *pa, ab, unary_expr,coef);

@@ -133,34 +133,11 @@ template<typename T1, int N>
 struct UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_SPINTRACE|BIT_COLORTRACE> :
   UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_COLORTRACE> {};
 
-// Flat element permutation of the transpose: element e of trans(x) is element
-// perm[e] of x.  Obtained once per type by transposing a site object whose
-// elements hold their own index, so it covers every nesting of
-// iScalar/iVector/iMatrix.
-template<typename T>
-HostDeviceVector<int>& cgpt_transpose_permutation() {
-  static HostDeviceVector<int>* perm = 0;
-  if (!perm) {
-    typedef typename T::scalar_object sobj;
-    typedef typename T::scalar_type scalar;
-    constexpr int n = GridTypeMapper<T>::count;
-    sobj x, xt;
-    scalar* px = (scalar*)&x;
-    scalar* pxt = (scalar*)&xt;
-    for (int e=0;e<n;e++)
-      px[e] = scalar(e);
-    cgpt_trans(xt, x);
-    perm = new HostDeviceVector<int>(n);
-    for (int e=0;e<n;e++)
-      (*perm)[e] = (int)real(pxt[e]);
-  }
-  return *perm;
-}
-
-// per_term: sum_i c_i unary_i(L_i), each term's factor unary applied on read
-// (transpose = permuted element, conjugation = conjugated element), so terms
-// with different unary operators combine in a single pass without
-// temporaries.  Used for unary_expr == 0 and single-v_obj types.
+// per_term: sum_i c_i unary_i(L_i), each term's factor unary applied on read,
+// so that terms with different unary operators combine in a single pass
+// without temporaries (unary_expr == 0, single-v_obj types).  The branch is
+// taken outside the kernels (CUDA extended lambdas cannot first-capture in an
+// if-constexpr context).
 template<typename T,int unary_expr,typename AccumulatorBase,bool per_term = false>
 cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term>& f, bool conjugate_coef = false) {
 
@@ -182,12 +159,12 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
   int n = (int)f.size();
   HostDeviceVector<Coeff_t> b(n);
   HostDeviceVector<int> u;
-  if constexpr (per_term)
+  if (per_term)
     u.resize(n);
   std::vector<LatticeView<T>> v; v.reserve(n);
   HostDeviceVector<T*> a(n);
   for (int i=0;i<n;i++) {
-    if constexpr (per_term)
+    if (per_term)
       u[i] = f[i].get_unary();
     // The unary (when present) is applied to the combined result below; if it
     // conjugates, the coefficients must be pre-conjugated, since the adjoint
@@ -210,27 +187,26 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
     auto p_b = b.toDevice();
     auto p_a = a.toDevice();
     auto p_u = per_term ? u.toDevice() : (int*)0;
-    auto p_perm = per_term ? cgpt_transpose_permutation<T>().toDevice() : (int*)0;
 
     Timer("loop");
 
-    accelerator_for(ss, grid->oSites() * U::n_elements, (size_t)grid->Nsimd(), {
-	auto osite = ss / U::n_elements;
-	auto j = ss - osite * U::n_elements;
-	if constexpr (per_term) {
+    if (per_term) {
+      accelerator_for(ss, grid->oSites() * U::n_elements, (size_t)grid->Nsimd(), {
+	  auto osite = ss / U::n_elements;
+	  auto j = ss - osite * U::n_elements;
 	  typedef T result_type;
 	  DEF_z();
-	  for (int i=0;i<n;i++) {
-	    auto x = coalescedReadElement(p_a[i][osite], (p_u[i] & BIT_TRANS) ? p_perm[j] : (int)j);
-	    if (p_u[i] & BIT_CONJ)
-	      x = conjugate(x);
-	    v += x * p_b[i];
-	  }
+	  for (int i=0;i<n;i++)
+	    v += coalescedReadElement(cgpt_unary_ref<T>{p_a[i][osite], p_u[i]}, (int)j) * p_b[i];
 	  ac.coalescedWriteElement(osite, v, j);
-	} else {
+	});
+    } else {
+      accelerator_for(ss, grid->oSites() * U::n_elements, (size_t)grid->Nsimd(), {
+	  auto osite = ss / U::n_elements;
+	  auto j = ss - osite * U::n_elements;
 	  U::eval(ac, osite, p_a, p_b, n, j);
-	}
-      });
+	});
+    }
 
     Timer();
   }

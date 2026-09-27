@@ -49,7 +49,7 @@ struct MultiplicationTable<T1,iSinglet<vtype2>,unary_expr> {
   typedef typename tensorMultType<T1,vtype2>::type result_type;
   typedef iSinglet<vtype2> T2;
   static constexpr int n_elements = GridTypeMapper<result_type>::count;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     ac.coalescedWriteElement(osite, coalescedReadElement(a, e) * coalescedReadElement(b, 0), e);
   }
 };
@@ -60,7 +60,7 @@ struct MultiplicationTable<iSinglet<vtype1>,T2,unary_expr,
   typedef typename tensorMultType<T2,vtype1>::type result_type;
   typedef iSinglet<vtype1> T1;
   static constexpr int n_elements = GridTypeMapper<result_type>::count;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     ac.coalescedWriteElement(osite, coalescedReadElement(b, e) * coalescedReadElement(a, 0), e);
   }
 };
@@ -72,7 +72,7 @@ struct MultiplicationTable<iMatrix<iSinglet<vtype1>,n>, iMatrix<iSinglet<vtype2>
   typedef iMatrix<iSinglet<vtype2>,n> T2;
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     DEF_z();
     for (int i=0;i<n;i++)
       for (int j=0;j<n;j++)
@@ -91,7 +91,7 @@ struct MultiplicationTable<iMatrix<iSinglet<vtype1>,n>, iMatrix<iSinglet<vtype2>
   typedef iMatrix<iSinglet<vtype2>,n> T2;
   typedef iMatrix<iSinglet<decltype(vtype1()*vtype2())>,n> result_type;
   static constexpr int n_elements = n*n;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int i = e / n;
     int j = e % n;
     DEF_z();
@@ -108,7 +108,7 @@ struct MultiplicationTable<iVector<iSinglet<vtype1>,n>, iVector<iSinglet<vtype2>
   typedef iVector<iSinglet<vtype2>,n> T2;
   typedef iVector<iSinglet<decltype(vtype1()*vtype2())>,n> result_type;
   static constexpr int n_elements = n;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, i, coalescedReadElement(a,i) * coalescedReadElement(b,i));
   }
 };
@@ -120,7 +120,7 @@ struct MultiplicationTable<iMatrix<iSinglet<vtype1>,n>, iVector<iSinglet<vtype2>
   typedef iVector<iSinglet<vtype2>,n> T2;
   typedef iVector<iSinglet<decltype(vtype1()*vtype2())>,n> result_type;
   static constexpr int n_elements = n;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     DEF_z();
     for (int j=0;j<n;j++)
       v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j);
@@ -137,7 +137,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,n>>>, iScalar<iScalar<
 
 #ifdef GRID_HAS_ACCELERATOR
   static constexpr int n_elements = n*n;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int i = e / n;
     int j = e % n;
     DEF_z();
@@ -147,7 +147,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,n>>>, iScalar<iScalar<
   }
 #else
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     ac.coalescedWrite(osite, coalescedRead(a)*coalescedRead(b));
   }
 #endif
@@ -159,7 +159,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,n>>>, iScalar<iScalar<
   typedef iScalar<iScalar<iMatrix<vtype2,n>>> T2;
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     DEF_z();
     for (int i=0;i<n;i++)
       for (int j=0;j<n;j++)
@@ -179,7 +179,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,n>>>, iScalar<iScalar<
   typedef iScalar<iScalar<iVector<vtype2,n>>> T2;
   typedef iScalar<iScalar<iVector<decltype(vtype1()*vtype2()),n>>> result_type;
   static constexpr int n_elements = n;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     DEF_z();
     for (int j=0;j<n;j++)
       v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j);
@@ -195,7 +195,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, iScalar<iMatrix<
   typedef iScalar<iMatrix<iScalar<decltype(vtype1()*vtype2())>,n>> result_type;
 #ifdef GRID_HAS_ACCELERATOR
   static constexpr int n_elements = n*n;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int i = e / n;
     int j = e % n;
     DEF_z();
@@ -205,7 +205,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, iScalar<iMatrix<
   }
 #else
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     ac.coalescedWrite(osite, coalescedRead(a)*coalescedRead(b));
   }
 #endif
@@ -217,7 +217,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, iScalar<iMatrix<
   typedef iScalar<iMatrix<iScalar<vtype2>,n>> T2;
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     DEF_z();
     for (int i=0;i<n;i++)
       for (int j=0;j<n;j++)
@@ -238,7 +238,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, iScalar<iVector<
   typedef iScalar<iVector<iScalar<vtype2>,n>> T2;
   typedef iScalar<iVector<iScalar<decltype(vtype1()*vtype2())>,n>> result_type;
   static constexpr int n_elements = n;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     DEF_z();
     for (int j=0;j<n;j++)
       v += coalescedReadElement(a,i,j) * coalescedReadElement(b,j);
@@ -253,7 +253,7 @@ struct MultiplicationTable<Gamma, iScalar<iVector<iScalar<vtype2>,n>>, unary_exp
   typedef iScalar<iVector<iScalar<vtype2>,n>> T2;
   typedef iScalar<iVector<iScalar<vtype2>,n>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, a * coalescedRead(b));
   }
 };
@@ -265,7 +265,7 @@ struct MultiplicationTable<Gamma, iScalar<iMatrix<iScalar<vtype2>,n>>, unary_exp
   typedef iScalar<iMatrix<iScalar<vtype2>,n>> T2;
   typedef iScalar<iMatrix<iScalar<vtype2>,n>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, a * coalescedRead(b));
   }
 };
@@ -276,7 +276,7 @@ struct MultiplicationTable<Gamma, iScalar<iMatrix<iScalar<vtype2>,n>>, BIT_SPINT
   typedef iScalar<iMatrix<iScalar<vtype2>,n>> T2;
   typedef iScalar<iScalar<iScalar<vtype2>>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, traceIndex<SpinIndex>(a * coalescedRead(b)));
   }
 };
@@ -293,7 +293,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,n>>, Gamma, unary_exp
   typedef Gamma T2;
   typedef iScalar<iMatrix<iScalar<vtype1>,n>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, coalescedRead(a) * b);
   }
 };
@@ -304,7 +304,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype2>,n>>, Gamma, BIT_SPINT
   typedef Gamma T2;
   typedef iScalar<iScalar<iScalar<vtype2>>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, traceIndex<SpinIndex>(coalescedRead(a) * b));
   }
 };
@@ -321,7 +321,7 @@ struct MultiplicationTable<Gamma, iScalar<iVector<iVector<vtype2,nc>,ns>>, unary
   typedef iScalar<iVector<iVector<vtype2,nc>,ns>> T2;
   typedef iScalar<iVector<iVector<vtype2,nc>,ns>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, a * coalescedRead(b));
   }
 };
@@ -333,7 +333,7 @@ struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, 0> {
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, a * coalescedRead(b));
   }
 };
@@ -344,7 +344,7 @@ struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, BIT_S
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iScalar<iMatrix<vtype2,nc>>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, traceIndex<SpinIndex>(a * coalescedRead(b)));
   }
 };
@@ -355,7 +355,7 @@ struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, BIT_C
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iScalar<vtype2>,ns>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, traceIndex<ColourIndex>(a * coalescedRead(b)));
   }
 };
@@ -366,7 +366,7 @@ struct MultiplicationTable<Gamma, iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>, BIT_S
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iScalar<iScalar<vtype2>>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, trace(a * coalescedRead(b)));
   }
 };
@@ -378,7 +378,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>,Gamma, 0> {
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T1;
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, coalescedRead(a) * b);
   }
 };
@@ -389,7 +389,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>,Gamma, BIT_SP
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T1;
   typedef iScalar<iScalar<iMatrix<vtype2,nc>>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, traceIndex<SpinIndex>(coalescedRead(a) * b));
   }
 };
@@ -400,7 +400,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>,Gamma, BIT_CO
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T1;
   typedef iScalar<iMatrix<iScalar<vtype2>,ns>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, traceIndex<ColourIndex>(coalescedRead(a) * b));
   }
 };
@@ -411,7 +411,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype2,nc>,ns>>,Gamma, BIT_SP
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T1;
   typedef iScalar<iScalar<iScalar<vtype2>>> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int i) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int i) {
     ac.coalescedWrite(osite, trace(coalescedRead(a) * b));
   }
 };
@@ -423,7 +423,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iVector
   typedef iScalar<iVector<iVector<vtype2,nc>,ns>> T2;
   typedef iScalar<iVector<iVector<decltype(vtype1()*vtype2()),nc>,ns>> result_type;
   static constexpr int n_elements = nc*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / nc;
     int ic = e % nc;
     DEF_z();
@@ -440,7 +440,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iMatrix
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iMatrix<decltype(vtype1()*vtype2()),nc>,ns>> result_type;
   static constexpr int n_elements = nc*ns*nc*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ie = e % (nc * ns);
     int je = e / (nc * ns);
       
@@ -463,7 +463,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iMatrix
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iScalar<decltype(vtype1()*vtype2())>,ns>> result_type;
   static constexpr int n_elements = ns*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / ns;
     int js = e % ns;
     
@@ -481,7 +481,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iMatrix
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iScalar<iMatrix<decltype(vtype1()*vtype2()),nc>>> result_type;
   static constexpr int n_elements = nc*nc;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ic = e % nc;
     int jc = e / nc;
 
@@ -499,7 +499,7 @@ struct MultiplicationTable<iScalar<iScalar<iMatrix<vtype1,nc>>>, iScalar<iMatrix
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     DEF_z();
     for (int ic=0;ic<nc;ic++)
       for (int ls=0;ls<ns;ls++)
@@ -516,7 +516,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iSca
   typedef iScalar<iScalar<iMatrix<vtype2,nc>>> T2;
   typedef iScalar<iMatrix<iMatrix<decltype(vtype1()*vtype2()),nc>,ns>> result_type;
   static constexpr int n_elements = nc*ns*nc*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ie = e % (nc * ns);
     int je = e / (nc * ns);
       
@@ -539,7 +539,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iSca
   typedef iScalar<iScalar<iMatrix<vtype2,nc>>> T2;
   typedef iScalar<iMatrix<iScalar<decltype(vtype1()*vtype2())>,ns>> result_type;
   static constexpr int n_elements = ns*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / ns;
     int js = e % ns;
     
@@ -557,7 +557,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iSca
   typedef iScalar<iScalar<iMatrix<vtype2,nc>>> T2;
   typedef iScalar<iScalar<iMatrix<decltype(vtype1()*vtype2()),nc>>> result_type;
   static constexpr int n_elements = nc*nc;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ic = e / nc;
     int jc = e % nc;
     
@@ -575,7 +575,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iSca
   typedef iScalar<iScalar<iMatrix<vtype2,nc>>> T2;
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     
     DEF_z();
     for (int lc=0;lc<nc;lc++)
@@ -594,7 +594,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iVector
   typedef iScalar<iVector<iVector<vtype2,nc>,ns>> T2;
   typedef iScalar<iVector<iVector<decltype(vtype1()*vtype2()),nc>,ns>> result_type;
   static constexpr int n_elements = nc*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / nc;
     int ic = e % nc;
     DEF_z();
@@ -611,7 +611,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iMatrix
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iMatrix<decltype(vtype1()*vtype2()),nc>,ns>> result_type;
   static constexpr int n_elements = nc*ns*nc*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ie = e % (nc * ns);
     int je = e / (nc * ns);
       
@@ -634,7 +634,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iMatrix
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iScalar<decltype(vtype1()*vtype2())>,ns>> result_type;
   static constexpr int n_elements = ns*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / ns;
     int js = e % ns;
     
@@ -652,7 +652,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iMatrix
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iScalar<iMatrix<decltype(vtype1()*vtype2()),nc>>> result_type;
   static constexpr int n_elements = nc*nc;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ic = e / nc;
     int jc = e % nc;
     
@@ -670,7 +670,7 @@ struct MultiplicationTable<iScalar<iMatrix<iScalar<vtype1>,ns>>, iScalar<iMatrix
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     
     DEF_z();
     for (int ls=0;ls<ns;ls++)
@@ -690,7 +690,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iScalar<iMatrix<iScalar<vtype2>,ns>> T2;
   typedef iScalar<iMatrix<iMatrix<decltype(vtype1()*vtype2()),nc>,ns>> result_type;
   static constexpr int n_elements = nc*ns*nc*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ie = e % (nc * ns);
     int je = e / (nc * ns);
       
@@ -713,7 +713,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iScalar<iMatrix<iScalar<vtype2>,ns>> T2;
   typedef iScalar<iScalar<iMatrix<decltype(vtype1()*vtype2()),nc>>> result_type;
   static constexpr int n_elements = nc*nc;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ic = e / nc;
     int jc = e % nc;
     
@@ -731,7 +731,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iScalar<iMatrix<iScalar<vtype2>,ns>> T2;
   typedef iScalar<iMatrix<iScalar<decltype(vtype1()*vtype2())>,ns>> result_type;
   static constexpr int n_elements = ns*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / ns;
     int js = e % ns;
 
@@ -749,7 +749,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iScalar<iMatrix<iScalar<vtype2>,ns>> T2;
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     DEF_z();
     for (int ls=0;ls<ns;ls++)
       for (int ic=0;ic<nc;ic++)
@@ -766,7 +766,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iMatrix<decltype(vtype1()*vtype2()),nc>,ns>> result_type;
   static constexpr int n_elements = ns*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / ns; // % QP4 benchmark: this order better, L2 prefetching current 212, 217 GB/s
     int js = e % ns;
 
@@ -797,7 +797,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iScalar<iMatrix<decltype(vtype1()*vtype2()),nc>>> result_type;
   static constexpr int n_elements = nc*nc;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int ic = e / nc;
     int jc = e % nc;
     
@@ -816,7 +816,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iScalar<iMatrix<iScalar<decltype(vtype1()*vtype2())>,ns>> result_type;
   static constexpr int n_elements = ns*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / ns;
     int js = e % ns;
     
@@ -835,7 +835,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iMat
   typedef iScalar<iMatrix<iMatrix<vtype2,nc>,ns>> T2;
   typedef iSinglet<decltype(vtype1()*vtype2())> result_type;
   static constexpr int n_elements = 1;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     
     DEF_z();
     for (int ls=0;ls<ns;ls++)
@@ -854,7 +854,7 @@ struct MultiplicationTable<iScalar<iMatrix<iMatrix<vtype1,nc>,ns>>, iScalar<iVec
   typedef iScalar<iVector<iVector<vtype2,nc>,ns>> T2;
   typedef iScalar<iVector<iVector<decltype(vtype1()*vtype2()),nc>,ns>> result_type;
   static constexpr int n_elements = nc*ns;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     int is = e / nc;
     int ic = e % nc;
     
@@ -875,7 +875,7 @@ struct MultiplicationTableRev<T1,T2,unary_expr,false> {
   typedef MultiplicationTable<T1,T2,unary_expr> type;
   typedef typename type::result_type result_type;
   static constexpr int n_elements = type::n_elements;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     return type::eval(ac,osite,a,b,e);
   }
 };
@@ -885,7 +885,7 @@ struct MultiplicationTableRev<T1,T2,unary_expr,true> {
   typedef MultiplicationTable<T2,T1,unary_expr> type;
   typedef typename type::result_type result_type;
   static constexpr int n_elements = type::n_elements;
-  template<typename Accumulator> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const T1 & a, const T2 & b, int e) {
+  template<typename Accumulator, typename A = T1, typename B = T2> static accelerator_inline void eval(Accumulator & ac, uint64_t osite, const A & a, const B & b, int e) {
     return type::eval(ac,osite,b,a,e);
   }
 };

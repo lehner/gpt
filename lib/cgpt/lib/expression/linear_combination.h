@@ -17,5 +17,6 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 #include "macros.h"
+#include "unary_read.h"
 #include "unary_implementation.h"
 #include "linear_combination_implementation.h"

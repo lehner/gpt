@@ -340,6 +340,43 @@ def test_multiply(a, b):
         assert eps2 < 1e-11
 
 
+# products with unary operators on either factor (applied on read by the
+# multiplication kernels): full set of unaries against numpy at several
+# sites, with a coefficient and accumulation, and in place versus out of
+# place (bitwise) over the full lattice
+def test_multiply_unary(a, b):
+    unaries = {"id": lambda x: x, "conj": g.conj}
+    unaries_a = dict(unaries)
+    unaries_b = dict(unaries)
+    if a.otype.transposed is not None:
+        unaries_a.update({"adj": g.adj, "transpose": g.transpose})
+    if b.otype.transposed is not None:
+        unaries_b.update({"adj": g.adj, "transpose": g.transpose})
+    sites = [(0, 0, 0, 0), (1, 2, 3, 4), tuple(x - 1 for x in a.grid.fdimensions)]
+    coef = 0.3 - 0.7j
+    for na, ua in unaries_a.items():
+        for nb, ub in unaries_b.items():
+            label = f"{na}({a.otype.__name__}) * {nb}({b.otype.__name__})"
+            mul_lat = g(ua(a) * ub(b))
+            acc_lat = g.copy(mul_lat)
+            acc_lat += coef * ua(a) * ub(b)
+            for site in sites:
+                mul_np = ua(a[site]) * ub(b[site])
+                for lat, ref in [(mul_lat, mul_np), (acc_lat, mul_np + coef * mul_np)]:
+                    eps2 = g.norm2(lat[site] - ref) / g.norm2(ref)
+                    assert eps2 < 1e-11, f"{label} at {site}: {eps2}"
+            g.message(f"Test {label} (with coefficient and accumulation): ok")
+
+            if mul_lat.otype.__name__ == a.otype.__name__:
+                ta = g.copy(a)
+                ta @= ua(ta) * ub(b)
+                assert np.array_equal(ta[:], mul_lat[:]), f"in place {label}"
+            if mul_lat.otype.__name__ == b.otype.__name__:
+                tb = g.copy(b)
+                tb @= ua(a) * ub(tb)
+                assert np.array_equal(tb[:], mul_lat[:]), f"in place {label}"
+
+
 # test numpy versus lattice tensor multiplication
 for a_type in [
     g.ot_matrix_spin(4),
@@ -357,6 +394,7 @@ for a_type in [
             a = rng.cnormal(g.lattice(grid, a_type))
             b = rng.cnormal(g.lattice(grid, b_type))
             test_multiply(a, b)
+            test_multiply_unary(a, b)
 
             # if appropriate, test adjoint versions
             if a_type.transposed is not None:
