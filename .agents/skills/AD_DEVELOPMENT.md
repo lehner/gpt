@@ -306,6 +306,16 @@ mechanism.
   `initial_gradient` must be a *plain* lattice; a constant direction used in
   a *contraction* of a 2-deep root must be a `rad.node(dir,
   with_gradient=False)`.
+- **Flows are adopted, not copied**: the first plain contribution to a
+  gradient is adopted as is (`util.accumulate`), so the same field can be
+  the gradient of several nodes (both children of an add receive
+  `z.gradient`).  Ownership is tracked per gradient slot
+  (`node_base._borrowed`): an adopted gradient is copied before an in-place
+  update, and leaf gradients are copied if still borrowed when handed out.
+  Consequences for new code: a backward closure must return fields it does
+  not reuse or overwrite later (no persistent scratch buffers as results),
+  and code that writes into a node's gradient in place must call
+  `own_gradient()` first (as `project` does).
 
 ## 5. File map (AD-relevant)
 
