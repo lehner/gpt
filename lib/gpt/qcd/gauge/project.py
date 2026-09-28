@@ -25,6 +25,9 @@ def traceless_anti_hermitian(src):
         return [traceless_anti_hermitian(x) for x in src]
     if isinstance(src, g.expr):
         src = g.eval(src)
+    foundation = src.__class__.foundation
+    if hasattr(foundation, "traceless_anti_hermitian"):
+        return foundation.traceless_anti_hermitian(src)
     N = src.otype.shape[0]
     ret = g(0.5 * src - 0.5 * g.adj(src))
     ret -= g.identity_constant(src) * g.trace(ret) / N
@@ -36,6 +39,9 @@ def traceless_hermitian(src):
         return [traceless_hermitian(x) for x in src]
 
     src = g.eval(src)
+    foundation = src.__class__.foundation
+    if hasattr(foundation, "traceless_hermitian"):
+        return foundation.traceless_hermitian(src)
     N = src.otype.shape[0]
     ret = g(0.5 * src + 0.5 * g.adj(src))
     ret -= g.identity_constant(src) * g.trace(ret) / N

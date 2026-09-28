@@ -137,6 +137,31 @@ def component_multiply(a, b):
     return product(a, b)
 
 
+def _self_adjoint_projection(x, name):
+    # a real-linear projection P that is self-adjoint w.r.t. Re tr(a^dag b)
+    # (the traceless (anti-)hermitian parts): the flow into x is P(flow), so
+    # the backward is again the projection (one level down for nested flows)
+    # and the node replaces the graph of its adj, sums, trace and identity
+    def _project(v):
+        return getattr(g.qcd.gauge.project, name)(v)
+
+    return g.ad.reverse.node_op(
+        (x,),
+        lambda: _project(value_of(x)),
+        (lambda z: (1, _project(z.gradient)),),
+        x._container,
+        name,
+    )
+
+
+def traceless_anti_hermitian(x):
+    return _self_adjoint_projection(x, "traceless_anti_hermitian")
+
+
+def traceless_hermitian(x):
+    return _self_adjoint_projection(x, "traceless_hermitian")
+
+
 def _group_conversion(src, dsrc, method):
     # dispatch on the perturbation's otype conversion method (infinitesimal_to_
     # cartesian or cartesian_to_infinitesimal), as in the lattice and forward-AD

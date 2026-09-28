@@ -87,6 +87,14 @@ for prec in [g.double]:
         (g.norm2((s1 * s2) * x), 1e-1, [s1, s2, x]),
         (g.norm2(u1 * x), 1e-1, [x, u1]),
         (g.norm2(m1 * x + u1 * x), 1e-1, [m1, x, u1]),
+        (
+            g.norm2(
+                g.qcd.gauge.project.traceless_anti_hermitian(u1 * u1)
+                + 2.0 * g.qcd.gauge.project.traceless_hermitian(u1 * g.adj(u1) * u1)
+            ),
+            1e-1,
+            [u1],
+        ),
     ]:
         # randomize values
         rng.cnormal([vv.value for vv in args])

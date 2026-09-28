@@ -887,3 +887,43 @@ ref_val = float(g.sum(C_fun * C_fun).real)
 assert_close(val_fun, ref_val, 1e-13, "functional nested value")
 grad_fun = f_fun.gradient([s_fun], [s_fun])  # the force (a plain lattice)
 assert_field_close(grad_fun[0], 4 * C_fun * s_fun, 1e-14, "functional nested force")
+
+
+# -----------------------------------------------------------------------------
+# traceless (anti-)hermitian projections: single nodes whose backward is the
+# projection of the flow, i.e. a projection node one level down in a nested
+# pass.  HVP vs finite difference of the 1st derivative.  The mcolor leaves
+# are additive (no conversion of their gradients to the group algebra).
+# -----------------------------------------------------------------------------
+g.message("traceless projections: HVP vs finite difference")
+P = g.qcd.gauge.project
+m0 = rng_l.cnormal(g.mcolor(grid))
+mb = rng_l.cnormal(g.mcolor(grid))
+nmb = rad.node(mb, with_gradient=False)
+
+
+def proj_action(n):
+    q = P.traceless_anti_hermitian(n * n) + P.traceless_hermitian(n * g.adj(n))
+    return g.sum(g.trace(q * q * n))
+
+
+def proj_first(s):
+    nn = rad.node(s, infinitesimal_to_cartesian=False)
+    proj_action(nn)()
+    return nn.gradient
+
+
+def proj_hvp(s, a_node):
+    nn = rad.node(
+        rad.node(s, infinitesimal_to_cartesian=False), infinitesimal_to_cartesian=False
+    )
+    proj_action(nn)()
+    c = g.inner_product(a_node, nn.gradient)
+    c()
+    return nn.value.gradient
+
+
+eps = 1e-5
+hvp_ad = proj_hvp(m0, nmb)
+hvp_fd = (proj_first(g(m0 + eps * mb)) - proj_first(g(m0 - eps * mb))) / (2 * eps)
+assert_field_close(hvp_ad, hvp_fd, 1e-12, "projection HVP vs FD of 1st derivative")
