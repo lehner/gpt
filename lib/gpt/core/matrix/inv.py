@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import gpt, cgpt
+import gpt
 import numpy as np
 
 
@@ -44,13 +44,7 @@ def inv(A):
 
     assert isinstance(A, gpt.lattice)
 
-    to_list = gpt.util.to_list
-
-    Al = to_list(A)
-
-    if Al[0].otype.shape == (1,):
+    if A.otype.shape == (1,):
         return gpt.component.inv(A)
 
-    A_inv = gpt.lattice(A)
-    cgpt.invert_matrix(to_list(A_inv), Al)
-    return A_inv
+    return A.__class__.foundation.matrix.inv(A)

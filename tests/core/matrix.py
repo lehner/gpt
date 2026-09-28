@@ -150,3 +150,44 @@ for precision, tol in [(g.double, 1e-13), (g.single, 1e-5)]:
         label = "localized" if profile is not None else "uniform"
         g.message(f"exp of anti-hermitian x, {precision.__name__}, {label}, max site norm {site_norm:.1f}: {err}")
         assert err < tol
+
+
+# inv and det against numpy per site, on full and checkerboarded grids and for
+# otypes stored in one and in several v_obj (the lattice versions run as one
+# batched BLAS call on the packed site-major layout)
+def as_matrices(a):
+    if a.ndim == 3:
+        return a
+    n1, n2 = a.shape[1], a.shape[3]
+    return np.swapaxes(a, 2, 3).reshape(a.shape[0], n1 * n2, n1 * n2)
+
+
+for precision, tol in [(g.double, 1e-12), (g.single, 1e-6)]:
+    grid = g.grid([4, 4, 4, 8], precision)
+    for sub in [grid, grid.checkerboarded(g.redblack)]:
+        for name, otype in [
+            ("mcolor", g.ot_matrix_color(3)),
+            ("adjoint_su3", g.ot_matrix_su_n_adjoint_algebra(3)),
+            ("mspincolor", g.ot_matrix_spin_color(4, 3)),
+            ("mcomplex16", g.ot_matrix_singlet(16)),
+        ]:
+            rng = g.random("inv_det")
+            m = rng.cnormal(g.lattice(sub, otype))
+            if sub is not grid:
+                m.checkerboard(g.odd)
+            ref = as_matrices(m[:].astype(np.complex128))
+
+            minv = g.matrix.inv(m)
+            assert minv.checkerboard() is m.checkerboard()
+            eps = np.max(np.abs(as_matrices(minv[:]) - np.linalg.inv(ref))) / np.max(
+                np.abs(np.linalg.inv(ref))
+            )
+            g.message(f"inv vs numpy, {precision.__name__} {name} on {sub.describe()}: {eps}")
+            assert eps < tol
+
+            mdet = g.matrix.det(m)
+            assert mdet.checkerboard() is m.checkerboard()
+            rdet = np.linalg.det(ref)
+            eps = np.max(np.abs(mdet[:][:, 0] - rdet) / np.abs(rdet))
+            g.message(f"det vs numpy, {precision.__name__} {name} on {sub.describe()}: {eps}")
+            assert eps < tol
