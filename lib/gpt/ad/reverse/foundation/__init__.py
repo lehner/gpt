@@ -96,7 +96,7 @@ def _reduction_backward(x):
 
 
 def trace(x, t):
-    z_container = get_unary_container(x._container, lambda v: g.trace(v, t))
+    z_container = get_unary_container(x._container, lambda v: g.trace(v, t), ("trace", t))
 
     return g.ad.reverse.node_op(
         (x,),

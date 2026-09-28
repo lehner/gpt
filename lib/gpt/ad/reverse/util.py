@@ -56,6 +56,8 @@ class container:
                 self.tag = [complex]
 
     def copy(self):
+        if self.tag[0] is list:
+            return container(list, self.tag[1].copy(), self.tag[2])
         return container(*[x for x in self.tag])
         
     def is_field(self):
@@ -281,24 +283,28 @@ def div(a, b):
 
 
 def zero_of(container, depth):
-    # an explicit zero for a gradient of this container at this node depth
+    # an explicit zero for a gradient of this container at this node depth; it
+    # depends on no leaf, so at a nested depth it is a constant node
     z = container.zero()
     for _ in range(depth):
-        z = g.ad.reverse.node_base(z)
+        z = g.ad.reverse.node_base(z, with_gradient=False)
     return z
 
 
-def accumulate(cur, r, sign, container, depth):
-    # returns cur + sign * r, where cur = None is a zero that has not been
-    # built (every gradient starts out as None in a backward pass):
-    #   first contribution             assigned into a fresh field of the
-    #                                  container (plain) or adopted (a node
-    #                                  graph of the same container; graphs
-    #                                  are immutable); a plain flow is never
-    #                                  adopted, it is often shared (both
-    #                                  children of an add receive z.gradient)
-    #                                  and gradients accumulate in place
-    #   plain gradient +- plain term   in place
+def accumulate(cur, r, sign, container, depth, adopt=True, owned=True):
+    # returns (cur + sign * r, owned), where cur = None is a zero that has not
+    # been built (every gradient starts out as None in a backward pass) and
+    # owned tells whether the returned plain field may be updated in place:
+    #   first contribution             adopted if it is a node graph of the
+    #                                  same container (graphs are immutable)
+    #                                  or a plain field of the container
+    #                                  (adopt=True); a plain flow is often
+    #                                  shared (both children of an add
+    #                                  receive z.gradient), so an adopted
+    #                                  field is not owned; otherwise assigned
+    #                                  into a fresh (owned) field
+    #   plain gradient +- plain term   in place if owned, else into a fresh
+    #                                  field
     #   plain gradient +- node term    the term graph is linear in the flow,
     #                                  so it is evaluated to a field, keeping
     #                                  the result in the plain world as in
@@ -306,63 +312,102 @@ def accumulate(cur, r, sign, container, depth):
     #   node gradient  +- plain/node   builds the (lazy) compute graph; a
     #   term                           subtraction with incompatible
     #                                  containers is evaluated to a field
-    # `depth` is a callable: the depth is only needed for a first contribution
+    # `depth` is a callable: the depth is only needed for a first contribution.
+    #
+    # Ownership is tracked per gradient slot (node_base._borrowed), not on the
+    # field.  Adopting is safe since a node never writes into its gradient
+    # after passing it on: the backward pass runs in reverse topological
+    # order, so all contributions to a node arrive before its own backward
+    # hands the gradient to its children, after which it is released.  It
+    # also requires that backward closures return fields they do not reuse.
     if cur is None:
         d = depth()
         if d > 0:
             if sign > 0 and is_node(r) and r._container == container:
-                return r
+                return r, True
         elif container.tag[0] == g.lattice:
             r = value_of(r) if is_node(r) else r
+            if (
+                adopt
+                and sign > 0
+                and isinstance(r, g.lattice)
+                and r.grid.obj == container.get_grid().obj
+                and r.otype.__name__ == container.get_otype().__name__
+            ):
+                return r, False
             dst = g.lattice(container.get_grid(), container.get_otype())
             dst @= r if sign > 0 else -r
-            return dst
+            return dst, True
         cur = zero_of(container, d)
+        owned = True
     if is_node(cur):
         if sign > 0:
-            return add(cur, r)
+            return add(cur, r), True
         if is_node(r) and cur._container != r._container:
-            return value_of(cur) - value_of(r)
-        return sub(cur, r)
+            return value_of(cur) - value_of(r), True
+        return sub(cur, r), True
     r = value_of(r) if is_node(r) else r
+    if not owned:
+        return g(cur + r if sign > 0 else cur - r), True
     if sign > 0:
         cur += r
     else:
         cur -= r
-    return cur
+    return cur, True
 
 
-def accum(n, r, sign=1):
+def accum(n, r, sign=1, adopt=True):
     # accumulate sign * r into n.gradient (see accumulate)
     if n.gradient is None and isinstance(n.value, g.ad.forward.series):
         n.zero_gradient()
-    n.gradient = accumulate(
-        n.gradient, r, sign, n._container, lambda: value_depth_static(n.value)
+    n.gradient, owned = accumulate(
+        n.gradient,
+        r,
+        sign,
+        n._container,
+        lambda: value_depth_static(n.value),
+        adopt,
+        None not in n._borrowed,
     )
+    n.set_owned(None, owned)
+
+
+# The container of an operation's result is derived by applying the operation
+# to representatives, which are full fields; the type algebra is therefore
+# memoized per (operation key, operand containers).  str(container) encodes
+# kind, otype and grid (the cached container keeps its grid alive, so the grid
+# pointer in the key stays unique); a copy is handed out since containers are
+# mutable (set_otype).
+_inferred = {}
+
+
+def infer_container(key, containers, operation):
+    k = (key,) + tuple(str(c) for c in containers)
+    c = _inferred.get(k)
+    if c is None:
+        c = container(g.expr(operation(*[x.representative() for x in containers])).container())
+        _inferred[k] = c
+    return c.copy()
 
 
 def get_mul_container(x, y):
-    rx = x.representative()
-    ry = y.representative()
-    return container((g.expr(rx) * g.expr(ry)).container())
+    return infer_container("*", (x, y), lambda a, b: g.expr(a) * g.expr(b))
 
 
 def get_div_container(x, y):
-    assert isinstance(y.representative(), complex)
+    assert y.tag[0] is complex
     return x
 
 
-def get_unary_container(x, unary):
-    rx = x.representative()
-    return container(g.expr(unary(rx)).container())
+def get_unary_container(x, unary, key=None):
+    # key: a hashable name of unary; without it the result is not memoized
+    if key is None:
+        return container(g.expr(unary(x.representative())).container())
+    return infer_container(key, (x,), unary)
 
 
-def convert_container(v, x, y, operand):
-    rx = x.representative()
-    ry = y.representative()
-
-    r = g.expr(operand(rx, ry))
-    c = container(r.container())
+def convert_container(v, x, y, operand, key):
+    c = infer_container(key, (x, y), operand)
 
     if v._container.accumulate_compatible(c):
         return v

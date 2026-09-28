@@ -137,10 +137,38 @@ class node_base(base):
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         self.gradient = None
+        # gradient slots (None: the gradient, i: element i of a list gradient)
+        # holding an adopted field that is not owned (see accumulate)
+        self._borrowed = set()
         self._tag = _tag
 
     def __str__(self):
         return str_traverse(self)
+
+    def set_owned(self, slot, owned):
+        if owned:
+            self._borrowed.discard(slot)
+        else:
+            self._borrowed.add(slot)
+
+    def own_gradient(self):
+        # make the plain gradient (list elements) exclusively owned: copies of
+        # adopted fields, e.g., before it is updated in place or handed out
+        if None in self._borrowed:
+            self.gradient = g.copy(self.gradient)
+        for i in self._borrowed - {None}:
+            self.gradient[i] = g.copy(self.gradient[i])
+        self._borrowed.clear()
+
+    def forget_replaced(self, previous):
+        # slots whose field was replaced by a new one (e.g., a conversion) are
+        # owned again
+        def at(x, slot):
+            return x if slot is None else x[slot]
+
+        for slot in list(self._borrowed):
+            if at(self.gradient, slot) is not at(previous, slot):
+                self._borrowed.discard(slot)
 
     def materialize_gradient(self):
         # a None gradient (or list element) is a zero not built yet
@@ -157,6 +185,7 @@ class node_base(base):
         # goes, so resolving the depth by evaluating would re-materialize
         # fields that were just released
         depth = value_depth_static(self.value)
+        self._borrowed.clear()
         if self._container.tag[0] is list:
             # a list leaf's gradient is a plain list, one entry per element,
             # each element independently wrapped to the nesting depth -- so at
@@ -172,7 +201,7 @@ class node_base(base):
                 gradient.terms[t] = self.gradient
             self.gradient = gradient
         for _ in range(depth):
-            self.gradient = node_base(self.gradient)
+            self.gradient = node_base(self.gradient, with_gradient=False)
 
     def __mul__(x, y):
         x, y = nodify(x, y)
@@ -180,10 +209,14 @@ class node_base(base):
         z_container = get_mul_container(x._container, y._container)
 
         if x.with_gradient:
-            x = convert_container(x, z_container, y._container, lambda a, b: a * g.adj(b))
+            x = convert_container(
+                x, z_container, y._container, lambda a, b: a * g.adj(b), "a*adj(b)"
+            )
 
         if y.with_gradient:
-            y = convert_container(y, x._container, z_container, lambda a, b: g.adj(a) * b)
+            y = convert_container(
+                y, x._container, z_container, lambda a, b: g.adj(a) * b, "adj(a)*b"
+            )
 
         return node_op(
             (x, y),
@@ -277,15 +310,21 @@ class node_base(base):
                     return
                 if x.gradient is None:
                     x.gradient = [None] * len(x)
-                x.gradient[item] = accumulate(
+                    x._borrowed.clear()
+                x.gradient[item], owned = accumulate(
                     x.gradient[item],
                     z.gradient,
                     1,
                     x._container.tag[1],
                     lambda: value_depth_static(x.value),
+                    True,
+                    item not in x._borrowed,
                 )
+                x.set_owned(item, owned)
 
-            z_container = get_unary_container(x._container, lambda y: y[item])
+            z_container = get_unary_container(
+                x._container, lambda y: y[item], ("getitem", repr(item))
+            )
             return node_base(_forward, _backward, (x,), _container=z_container)
 
         def getter(y):
@@ -316,6 +355,8 @@ class node_base(base):
         def _backward(z):
             if x.with_gradient:
                 x.materialize_gradient()
+                # (the setter may write into the gradient)
+                x.own_gradient()
                 x.gradient = setter(x.gradient, getter(x.gradient) + z.gradient)
 
         z_container = get_unary_container(x._container, getter)
@@ -401,13 +442,17 @@ class node_base(base):
                 )
             initial_gradient = 1.0
         # a gradient of None is a zero that is not built (see accumulate)
+        # (never adopt the caller's initial gradient: it could come back as a
+        # leaf gradient or be updated in place)
         self.gradient = None
-        accum(self, initial_gradient)
+        self._borrowed.clear()
+        accum(self, initial_gradient, adopt=False)
         for n in reversed(nodes):
             first_gradient_n = first_gradient[n]
             for m in first_gradient_n:
                 if m is not self:
                     m.gradient = None
+                    m._borrowed.clear()
                     fields_allocated += 1
                     max_fields_allocated = max(max_fields_allocated, fields_allocated)
             if n.gradient is not None:
@@ -419,10 +464,15 @@ class node_base(base):
                 if n is not self and not retain_values:
                     n.value = None
                     fields_allocated -= 1
-            else:
+            elif n.with_gradient:
+                # (constant leaves keep gradient None: nothing reads it)
                 n.materialize_gradient()
-                if n.with_gradient and n.infinitesimal_to_cartesian:
+                if n.infinitesimal_to_cartesian:
+                    adopted = n.gradient
                     n.gradient = g.infinitesimal_to_cartesian(n.value, n.gradient)
+                    n.forget_replaced(adopted)
+                # (a gradient handed out never aliases another gradient)
+                n.own_gradient()
 
         if verbose_memory:
             g.message(

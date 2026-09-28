@@ -576,3 +576,36 @@ V_in = rad.node(g.complex(grid))
 V_out = rad.node(g.u1(grid))
 c = g.norm2(V_in - g.astype(V_out, V_in.otype))
 c()
+
+# gradients adopt flows instead of copying them (a flow is often shared, e.g.
+# both children of an add receive it): check that no gradient aliases another
+# gradient or the initial gradient, and that an in-place accumulation into an
+# adopted flow does not leak into the other receivers of that flow
+rng = g.random("adopt")
+# (no leaf conversion, which would create new fields and hide aliasing)
+A = rad.node(rng.cnormal(g.mcolor(grid)), infinitesimal_to_cartesian=False)
+B = rad.node(rng.cnormal(g.mcolor(grid)), infinitesimal_to_cartesian=False)
+G = rng.cnormal(g.mcolor(grid))
+G0 = g.copy(G)
+y = (A + B) + A
+y(initial_gradient=G)
+eps2 = g.norm2(A.gradient - 2 * G0) / g.norm2(G0) + g.norm2(B.gradient - G0) / g.norm2(G0)
+g.message(f"Adopted flows: gradients of (A + B) + A: {eps2}")
+assert eps2 < 1e-28
+assert g.norm2(G - G0) == 0.0
+assert A.gradient is not B.gradient and A.gradient is not G and B.gradient is not G
+B.gradient *= 2.0
+assert g.norm2(A.gradient - 2 * G0) / g.norm2(G0) < 1e-28
+y = A + B
+y(initial_gradient=G)
+assert A.gradient is not B.gradient and A.gradient is not G and B.gradient is not G
+# the same for the elements of a list node (e.g. the gauge links)
+C = rad.node([g.copy(A.value), g.copy(B.value)], infinitesimal_to_cartesian=False)
+y = (C[0] + C[1]) + C[0]
+y(initial_gradient=G)
+eps2 = g.norm2(C.gradient[0] - 2 * G0) / g.norm2(G0) + g.norm2(C.gradient[1] - G0) / g.norm2(G0)
+g.message(f"Adopted flows: gradients of (C[0] + C[1]) + C[0]: {eps2}")
+assert eps2 < 1e-28
+assert g.norm2(G - G0) == 0.0
+assert C.gradient[0] is not C.gradient[1] and C.gradient[1] is not G
+g.message("Adopted flows: no aliasing")
