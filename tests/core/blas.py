@@ -5,8 +5,8 @@ import numpy as np
 # test zero-copy accelerator_buffer_view
 grid = g.grid([8, 12, 24, 24], g.single)
 v = g.random("test").cnormal(g.mcolor(grid))
-vv = v.accelerator_buffer_view()
 refa = v[:]
+vv = v.accelerator_buffer_view()
 eps = np.linalg.norm(
     refa - vv.transpose(6, 0, 7, 1, 8, 2, 9, 3, 4, 5).merged_axes(0, 7).to_array()
 ) / np.linalg.norm(refa)
