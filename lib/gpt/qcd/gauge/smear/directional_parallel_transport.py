@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.qcd.gauge.smear.differentiable import dft_diffeomorphism
 from .differentiable import assert_compatible
 from gpt.core.group import differentiable_functional
@@ -57,6 +58,78 @@ def _adjoint_matrix(grid, Nc, coor):
     # host-side slice assignments
     M = g.lattice(grid, g.ot_matrix_su_n_adjoint_algebra(Nc))
     return g.merge_color(M, coor)
+
+
+class _generator_kernels:
+    # site-local tensor kernels between algebra fields (N x N) and
+    # adjoint-algebra matrices (ng x ng), with the generators T_b as constant
+    # fields (read as kernel temporaries, as in local_stout):
+    #   rows(M, l)    M[a, b] = tr(l_a T_b) / tr(T_b T_b)   (coordinates of l_a)
+    #   combine(r, K) r_a     = -sum_b K[a, b] T_b
+    # one kernel each instead of ng^2 (coordinates) or ng^2 (products) kernels
+    def __init__(self, grid, otype_cartesian):
+        N = otype_cartesian.shape[0]
+        generators = otype_cartesian.generators(grid.precision.complex_dtype)
+        ng = len(generators)
+        norm = [complex(np.trace(t.array @ t.array)) for t in generators]
+        # (the scale is applied once per element, so all norms must agree)
+        assert all(abs(n - norm[0]) < 1e-14 for n in norm)
+        ti = g.stencil.tensor_instructions
+        self.N, self.ng = N, ng
+        self.fgenerators = [g.lattice(grid, otype_cartesian) for _ in range(ng)]
+        for f, t in zip(self.fgenerators, generators):
+            f[:] = t
+        nonzero = [
+            [(i, j) for i in range(N) for j in range(N) if abs(t.array[i, j]) != 0.0]
+            for t in generators
+        ]
+
+        # fields: M, l_0..l_{ng-1}, T_0..T_{ng-1}
+        code = []
+        for a in range(ng):
+            for b in range(ng):
+                for k, (j, i) in enumerate(nonzero[b]):
+                    code.append(
+                        (0, a * ng + b, ti.mov if k == 0 else ti.inc, 1.0,
+                         [(1 + a, 0, i * N + j), (-(1 + ng + b), 0, j * N + i)])
+                    )
+                code.append((0, a * ng + b, ti.mul, 1.0 / norm[0], [(0, 0, a * ng + b)]))
+        M = g.lattice(grid, g.ot_matrix_su_n_adjoint_algebra(N))
+        self._rows = g.stencil.tensor(M, [(0,) * grid.nd], code, [(len(code), 1)])
+
+        # fields: r_0..r_{ng-1}, K, T_0..T_{ng-1}
+        code = []
+        for a in range(ng):
+            first = {}
+            for b in range(ng):
+                for i, j in nonzero[b]:
+                    code.append(
+                        (a, i * N + j, ti.inc if (i, j) in first else ti.mov, 1.0,
+                         [(ng, 0, a * ng + b), (-(ng + 1 + b), 0, i * N + j)])
+                    )
+                    first[i, j] = True
+            # (every element is covered by some generator)
+            assert len(first) == N * N
+            for e in range(N * N):
+                code.append((a, e, ti.mul, -1.0, [(a, 0, e)]))
+        self._combine = g.stencil.tensor(self.fgenerators[0], [(0,) * grid.nd], code, [(len(code), 1)])
+
+    def rows(self, M, l):
+        self._rows(M, *l, *self.fgenerators)
+        return M
+
+    def combine(self, r, K):
+        self._combine(*r, K, *self.fgenerators)
+        return r
+
+
+def _get_generator_kernels(grid, otype_cartesian):
+    # one set per (grid, algebra type), kept on the grid
+    cache = grid.__dict__.setdefault("_dpt_generator_kernels", {})
+    key = otype_cartesian.__name__
+    if key not in cache:
+        cache[key] = _generator_kernels(grid, otype_cartesian)
+    return cache[key]
 
 
 class directional_parallel_transport(dft_diffeomorphism):
@@ -184,14 +257,15 @@ class directional_parallel_transport(dft_diffeomorphism):
         aUft = self._local_ft(aU, rad.node(C, with_gradient=False))
         U_prime_mu = aUft(with_gradients=False, retain_values=True)
         src = g.group.cartesian(U_mu)
-        coor = {}
+        rows = []
         for a in range(len(generators)):
             src @= P1 * generators[a]
             aUft(initial_gradient=g.cartesian_to_infinitesimal(U_prime_mu, src), retain_values=True)
             aU.gradient.otype = src.otype
-            for b, c in enumerate(otype_cartesian.coordinates(g(aU.gradient * P1))):
-                coor[a, b] = c
-        return _adjoint_matrix(grid, otype.Nc, coor), C
+            rows.append(g(aU.gradient * P1))
+        # M[a, b] = coordinate b of row a, all in one kernel
+        M = g.lattice(grid, g.ot_matrix_su_n_adjoint_algebra(otype.Nc))
+        return _get_generator_kernels(grid, otype_cartesian).rows(M, rows), C
 
     def _jacobian_matrix_generic(self, fields):
         fields_prime = self(fields)
@@ -306,29 +380,36 @@ class directional_parallel_transport(dft_diffeomorphism):
 
         mu, P1 = self.mu, self.P1
         M, C = self._local_jacobian_matrix(fields)
-        Jinv = g.separate_color(g.matrix.inv(M))
 
         U_mu = fields[mu]
-        generators = U_mu.otype.cartesian().generators(U_mu.grid.precision.complex_dtype)
+        otype_cartesian = U_mu.otype.cartesian()
+        generators = otype_cartesian.generators(U_mu.grid.precision.complex_dtype)
         ng = len(generators)
+        # right_a = -P1 sum_b Jinv[a, b] T_b for all a in one kernel; M
+        # vanishes outside P1, so its inverse is masked with a where (a mask
+        # multiplication would turn the non-finite entries there into nan)
+        Jinv = g.matrix.inv(M)
+        zero = g.lattice(Jinv)
+        zero[:] = 0
+        Jinv = g.where(P1, Jinv, zero)
+        right = [g.lattice(U_mu.grid, otype_cartesian) for _ in range(ng)]
+        _get_generator_kernels(U_mu.grid, otype_cartesian).combine(right, Jinv)
         left = g.group.cartesian(U_mu)
-        right = g.group.cartesian(U_mu)
-        zero = g(0 * left)
         P1_node = rad.node(P1, with_gradient=False)
 
         grad_U = None
         grad_C = None
         for a in range(ng):
             left @= P1 * generators[a]
-            right @= sum(-Jinv[a, b] * generators[b] for b in range(ng))
-            right = g.where(P1, right, zero)
 
             # 1-deep leaves; the staple leaf is a plain matrix (not a group
-            # element), so its gradient is not converted to the algebra
-            _U = rad.node(g.copy(U_mu))
-            _C = rad.node(g.copy(C), infinitesimal_to_cartesian=False)
-            _left = rad.node(g.copy(left), with_gradient=False)
-            _right = rad.node(g.copy(right), with_gradient=False)
+            # element), so its gradient is not converted to the algebra.  The
+            # leaf values are never modified (and the functional below sets
+            # them to the same fields), so no copies are needed
+            _U = rad.node(U_mu)
+            _C = rad.node(C, infinitesimal_to_cartesian=False)
+            _left = rad.node(left, with_gradient=False)
+            _right = rad.node(right[a], with_gradient=False)
 
             # 2-deep "apply Jacobian block to right" (see diagonal_jacobian_gradient);
             # the seed is built from the forward's own (retained) 1-deep
@@ -340,7 +421,7 @@ class directional_parallel_transport(dft_diffeomorphism):
 
             act = g.inner_product(_left, P1_node * aU.gradient)
             gU, gC = act.functional(_U, _C, _left, _right).gradient(
-                [U_mu, C, left, right], [U_mu, C]
+                [U_mu, C, left, right[a]], [U_mu, C]
             )
             gU, gC = _res(gU), _res(gC)
             grad_U = gU if grad_U is None else g(grad_U + gU)
