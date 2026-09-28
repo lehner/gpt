@@ -63,11 +63,14 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
   int n_code_parallel_block_size, n_code_parallel_blocks;
   int local;
 
-  // per-site temporaries: the kernel runs in blocks of osites_per_cache_block
-  // outer sites and addresses temporaries relative to the block start, so
-  // only one block's worth of each temporary is touched (and stays cached)
+  // per-site temporaries: owned by the stencil (a device-only buffer of one
+  // block of osites_per_cache_block outer sites per temporary, allocated
+  // once); the kernel runs block by block and addresses temporaries relative
+  // to the block start.  The caller passes only the other fields.
   bool has_temporaries;
   uint64_t osites_per_cache_block;
+  T* temp_buffer;
+  size_t temp_bytes;
 
   // local == true
   cgpt_GeneralLocalStencil* general_local_stencil;
@@ -104,9 +107,24 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       ASSERT(_local);
       ASSERT(n_code_parallel_blocks == 1);
     }
+
+    // index remapping: temporaries to their buffer slot, all other fields to
+    // their position among the fields the caller passes (in index order)
+    int n_indices = 0;
+    for (auto & c : _code) {
+      n_indices = std::max(n_indices, std::max(c.target, c.accumulate) + 1);
+      for (auto & f : c.factor)
+	n_indices = std::max(n_indices, f.index + 1);
+    }
+    for (auto t : temporaries)
+      n_indices = std::max(n_indices, t + 1);
+    std::vector<int> remap(n_indices);
+    int n_passed = 0, n_temporaries = 0;
+    for (int f=0;f<n_indices;f++)
+      remap[f] = is_temporary(f) ? n_temporaries++ : n_passed++;
     for (int i=0;i<_code.size();i++) {
-      code[i].target = _code[i].target;
-      code[i].accumulate = _code[i].accumulate;
+      code[i].target = remap[_code[i].target];
+      code[i].accumulate = _code[i].accumulate == -1 ? -1 : remap[_code[i].accumulate];
       code[i].target_temporary = is_temporary(_code[i].target);
       code[i].accumulate_temporary = _code[i].accumulate != -1 && is_temporary(_code[i].accumulate);
       code[i].weight = _code[i].weight;
@@ -123,6 +141,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	f.temporary = is_temporary(f.index);
 	if (f.temporary)
 	  ASSERT(zero); // temporaries are per site
+	f.index = remap[f.index];
       }
       nfactors += code[i].size;
     }
@@ -132,8 +151,8 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
       osites_per_cache_block = (uint64_t)_osites_per_cache_block;
     } else {
 #ifdef GRID_HAS_ACCELERATOR
-      // the whole volume per launch (enough parallelism); tune if needed
-      osites_per_cache_block = osites;
+      // large launches for parallelism, bounded to limit the buffer size
+      osites_per_cache_block = 65536;
 #else
       // about 2 MB of temporaries per block
       uint64_t bytes = (uint64_t)std::max((size_t)1, temporaries.size()) * sizeof(T);
@@ -141,6 +160,9 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 #endif
     }
     osites_per_cache_block = std::min(osites_per_cache_block, osites);
+
+    temp_bytes = (size_t)n_temporaries * osites_per_cache_block * sizeof(T);
+    temp_buffer = temp_bytes ? (T*)MemoryManager::AcceleratorAllocate(temp_bytes) : 0;
 
     if (local) {
       general_local_stencil = new cgpt_GeneralLocalStencil(grid,shifts,-1);
@@ -167,6 +189,8 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
   }
 
   virtual ~cgpt_stencil_matrix() {
+    if (temp_buffer)
+      MemoryManager::AcceleratorFree(temp_buffer, temp_bytes);
     if (local) {
       delete general_local_stencil;
     } else {
@@ -199,9 +223,12 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
       // factor fetch: temporaries (relative to the cache block) and the zero
       // shift are read directly, other points through the local stencil
+      T* p_temp = temp_buffer;
+      uint64_t block = osites_per_cache_block;
+
 #define fetch_local(obj, _f, site, site_in_block) {			\
 	if ((_f)->temporary) {						\
-	  obj = coalescedRead(fields_v[(_f)->index][site_in_block]);	\
+	  obj = coalescedRead(p_temp[(_f)->index * block + site_in_block]); \
 	  if ((_f)->adj)						\
 	    obj = adj(obj);						\
 	} else if ((_f)->zero_point) {					\
@@ -215,7 +242,6 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
       if (has_temporaries) {
 
-	uint64_t block = osites_per_cache_block;
 	for (uint64_t s0 = 0; s0 < osites; s0 += block) {
 	  uint64_t nsites = std::min(block, osites - s0);
 	  accelerator_for(ss_in_block,nsites,T::Nsimd(),{
@@ -239,8 +265,12 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 		if (!p_code[i].unit_weight)
 		  t = p_code[i].weight * t;
 		if (p_code[i].accumulate != -1)
-		  t += coalescedRead(fields_v[p_code[i].accumulate][p_code[i].accumulate_temporary ? ss_in_block : ss]);
-		coalescedWrite(fields_v[p_code[i].target][p_code[i].target_temporary ? ss_in_block : ss], t);
+		  t += coalescedRead(p_code[i].accumulate_temporary ?
+				     p_temp[p_code[i].accumulate * block + ss_in_block] :
+				     fields_v[p_code[i].accumulate][ss]);
+		coalescedWrite(p_code[i].target_temporary ?
+			       p_temp[p_code[i].target * block + ss_in_block] :
+			       fields_v[p_code[i].target][ss], t);
 	      }
 
 	    });

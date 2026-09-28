@@ -189,7 +189,6 @@ def _evaluate(x, h, outputs):
     kernel, n_temps = _kernels[tag]
 
     out = [g.lattice(x) for _ in outputs]
-    temps = [g.lattice(x) for _ in range(n_temps)]
     # the kernel runs on the matrix storage; directions of a different
     # (e.g. algebra) otype are re-labelled to X's otype
     hx = []
@@ -199,7 +198,8 @@ def _evaluate(x, h, outputs):
             z @= y
             y = z
         hx.append(y)
-    kernel(*out, *temps, g.identity(x), x, *hx)
+    # (the temporaries are owned by the kernel)
+    kernel(*out, g.identity(x), x, *hx)
     return out
 
 

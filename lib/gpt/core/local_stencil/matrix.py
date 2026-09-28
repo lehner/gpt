@@ -33,11 +33,11 @@ def parse(c):
 
 
 class matrix(auto_tuned_class):
-    # temporaries: indices of fields used as per-site temporaries (read and
-    # written only at the zero shift).  The kernel then runs in blocks of
-    # osites_per_cache_block outer sites and only touches the first block's
-    # worth of each temporary, which therefore stays in cache (0: default
-    # size chosen by the kernel).
+    # temporaries: field indices used as per-site temporaries (read and
+    # written only at the zero shift).  They are owned by the stencil (a
+    # buffer of one block of osites_per_cache_block outer sites each,
+    # allocated once; 0: default block size) and NOT passed by the caller,
+    # who passes the remaining fields in index order.
     def __init__(
         self,
         lat,
