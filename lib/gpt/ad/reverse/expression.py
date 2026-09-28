@@ -53,50 +53,6 @@ max_terms = 16
 max_factors = 8
 
 
-def _is_number_leaf(x):
-    return x._forward is None and g.util.is_num(x.value)
-
-
-def _is_constant_tensor_leaf(x):
-    return x._forward is None and not x.with_gradient and isinstance(x.value, g.tensor)
-
-
-def _is_lattice(x):
-    return x._container.tag[0] == g.lattice
-
-
-def _absorbable(x):
-    return getattr(x, "_terms", None) is not None and x.value is None
-
-
-def _operand(x, op):
-    # (children, terms) of an operand: absorbed expression, coefficient, or
-    # input.  As for plain expressions, a sum inside a product is evaluated
-    # first (it is an input), products are never distributed over sums
-    if _absorbable(x) and (op != "*" or len(x._terms) == 1):
-        return list(x._children), list(x._terms)
-    if _is_number_leaf(x):
-        return [], [(complex(x.value), ())]
-    return [x], [(1.0, ((0, False),))]
-
-
-def _merge(ca, cb):
-    # children list of both operands (by identity) and the index map for b
-    children = list(ca)
-    index = {id(c): i for i, c in enumerate(children)}
-    remap = []
-    for c in cb:
-        if id(c) not in index:
-            index[id(c)] = len(children)
-            children.append(c)
-        remap.append(index[id(c)])
-    return children, remap
-
-
-def _remap(terms, remap):
-    return [(c, tuple((remap[i], a) for i, a in f)) for c, f in terms]
-
-
 def _matrix_like(otype):
     # singlets and square matrices (also spin x color): any product order of
     # such factors is typed, so terms can be expanded and adjoints reversed
@@ -112,71 +68,116 @@ def _matrix_like(otype):
     return False
 
 
-def _supported(x, allow_number):
-    if _is_number_leaf(x):
-        return allow_number
-    if not (_is_lattice(x) or _is_constant_tensor_leaf(x)):
-        return False
-    return _matrix_like(x._container.get_otype())
+_NUMBER, _FACTOR, _OTHER = 1, 2, 3
 
 
-def _combine(op, operands, container):
-    ch, terms = [], []
-    parts = []
-    for x in operands:
-        cx, tx = _operand(x, op)
-        ch, remap = _merge(ch, cx)
-        parts.append(_remap(tx, remap))
+def _kind(x):
+    # a number (coefficient), a factor (lattice or constant tensor of a
+    # supported otype), or other; cached on the node
+    k = x.__dict__.get("_ek")
+    if k is None:
+        if x._forward is None and g.util.is_num(x.value):
+            k = _NUMBER
+        elif (
+            x._container.tag[0] == g.lattice
+            or (x._forward is None and not x.with_gradient and isinstance(x.value, g.tensor))
+        ) and _matrix_like(x._container.get_otype()):
+            k = _FACTOR
+        else:
+            k = _OTHER
+        x._ek = k
+    return k
+
+
+def _input(x):
+    # (children, terms, max factors) of x as an input or a coefficient
+    if x._ek == _NUMBER:
+        return (), ((complex(x.value), ()),), 0
+    return (x,), ((1.0, ((0, False),)),), 1
+
+
+def _operand(x, op):
+    # an absorbed expression (its value is not computed yet), a coefficient,
+    # or an input.  As for plain expressions, a sum inside a product is
+    # evaluated first (it is an input): products are never distributed over
+    # sums
+    t = x.__dict__.get("_terms")
+    if t is not None and x.value is None and (op != "*" or len(t) == 1):
+        return x._children, t, x._nmax
+    return _input(x)
+
+
+def _merge(ca, cb):
+    # children of both operands (by identity) and the index map for b
+    # (None: b's indices are unchanged)
+    if not ca:
+        return list(cb), None
+    children = list(ca)
+    remap = []
+    for c in cb:
+        for i, d in enumerate(children):
+            if d is c:
+                remap.append(i)
+                break
+        else:
+            remap.append(len(children))
+            children.append(c)
+    return children, remap
+
+
+def _terms_of(op, parts):
     if op == "*":
         a, b = parts
-        terms = [(ca * cb, fa + fb) for ca, fa in a for cb, fb in b]
-    elif op in ("+", "-"):
-        a, b = parts
-        s = 1.0 if op == "+" else -1.0
-        terms = a + [(s * c, f) for c, f in b]
-    elif op == "adj":
+        return tuple((ca * cb, fa + fb) for ca, fa in a for cb, fb in b)
+    if op == "adj":
         (a,) = parts
-        terms = [(complex(c).conjugate(), tuple((i, not adj) for i, adj in reversed(f))) for c, f in a]
-    else:
-        raise Exception(f"unknown expression operation {op}")
-    return ch, terms
+        return tuple(
+            (complex(c).conjugate(), tuple((i, not adj) for i, adj in reversed(f))) for c, f in a
+        )
+    a, b = parts
+    sign = 1.0 if op == "+" else -1.0
+    return tuple(a) + tuple((sign * c, f) for c, f in b)
 
 
-def _too_large(terms):
-    return len(terms) > max_terms or any(len(f) > max_factors for c, f in terms)
+def _size(op, info):
+    # (number of terms, max factors) of the result
+    if op == "*":
+        (_, ta, na), (_, tb, nb) = info
+        return len(ta) * len(tb), na + nb
+    if op == "adj":
+        return len(info[0][1]), info[0][2]
+    (_, ta, na), (_, tb, nb) = info
+    return len(ta) + len(tb), max(na, nb)
 
 
 def combine(op, operands, container):
     # an expression node for op(operands), or None (not an expression case)
     if not enabled or container.tag[0] != g.lattice:
         return None
-    allow_number = op == "*"
-    if not all(_supported(x, allow_number) for x in operands):
+    n_numbers = 0
+    for x in operands:
+        k = _kind(x)
+        if k == _OTHER or (k == _NUMBER and op != "*"):
+            return None
+        n_numbers += k == _NUMBER
+    if n_numbers == len(operands):
         return None
-    if op == "*" and all(_is_number_leaf(x) for x in operands):
-        return None
-    children, terms = _combine(op, operands, container)
-    if _too_large(terms):
+    info = [_operand(x, op) for x in operands]
+    nt, nf = _size(op, info)
+    if nt > max_terms or nf > max_factors:
         # keep the operands as inputs
-        saved = [getattr(x, "_terms", None) for x in operands]
-        children, terms = [], None
-        parts = []
-        for x in operands:
-            if _is_number_leaf(x):
-                parts.append([(complex(x.value), ())])
-                continue
-            children, remap = _merge(children, [x])
-            parts.append([(1.0, ((remap[0], False),))])
-        if op == "*":
-            terms = [(ca * cb, fa + fb) for ca, fa in parts[0] for cb, fb in parts[1]]
-        elif op in ("+", "-"):
-            s = 1.0 if op == "+" else -1.0
-            terms = parts[0] + [(s * c, f) for c, f in parts[1]]
-        else:
-            terms = [(complex(c).conjugate(), tuple((i, not a) for i, a in reversed(f))) for c, f in parts[0]]
+        info = [_input(x) for x in operands]
+        nt, nf = _size(op, info)
+    children, remap = (), None
+    parts = []
+    for cx, tx, _ in info:
+        children, remap = _merge(children, cx)
+        if remap is not None:
+            tx = tuple((c, tuple((remap[i], a) for i, a in f)) for c, f in tx)
+        parts.append(tx)
     if len(children) == 0:
         return None
-    return node(children, terms, container)
+    return node(children, _terms_of(op, parts), nf, container)
 
 
 def _is_node(v):
@@ -240,7 +241,7 @@ def _flow(values, terms, i, w):
 
 
 
-def _flows_plain(values, terms, need, w):
+def _flows_plain(values, terms, occurrences, need, w):
     # all input flows of a plain node at once.  In a term F_0 ... F_{n-1}
     # with several gradient-carrying occurrences, the flow at occurrence k,
     # X_k = adj(F_0 ... F_{k-1}) w adj(F_{k+1} ... F_{n-1}) = L_k Q_k, is
@@ -249,43 +250,52 @@ def _flows_plain(values, terms, need, w):
     #   L_0 = 1,      L_{k+1} = adj(F_k) L_k      (materialized, L_1 lazy)
     # i.e. about 3n products per term instead of n(n-1); each input's
     # contributions are summed in one g.eval
-    parts = {i: [] for i in need}
-    for c, f in terms:
-        ks = [k for k, (j, a) in enumerate(f) if j in parts]
+    parts = {}
+    for (c, f), occ in zip(terms, occurrences):
+        ks = [o for o in occ if o[1] in need]
         if not ks:
             continue
         n = len(f)
-        F = [_factor(values[j], a) for j, a in f]
-        if len(ks) == 1 or n <= 2:
-            X = {}
-            for k in ks:
-                X[k] = _product(
-                    [g.adj(F[m]) for m in reversed(range(k))]
-                    + [w]
-                    + [g.adj(F[m]) for m in reversed(range(k + 1, n))]
-                )
+        if n == 1:
+            X = {0: w}
         else:
-            Q = {n - 1: w}
-            for k in range(n - 1, min(ks), -1):
-                Q[k - 1] = g(Q[k] * g.adj(F[k]))
-            L = {0: None, 1: g.adj(F[0])}
-            for k in range(1, max(ks)):
-                L[k + 1] = g(g.adj(F[k]) * L[k])
-            X = {k: Q[k] if L[k] is None else L[k] * Q[k] for k in ks}
-        for k in ks:
-            j, a = f[k]
+            F = [_factor(values[j], a) for j, a in f]
+            if len(ks) == 1 or n == 2:
+                X = {}
+                for k, j, a in ks:
+                    X[k] = _product(
+                        [g.adj(F[m]) for m in reversed(range(k))]
+                        + [w]
+                        + [g.adj(F[m]) for m in reversed(range(k + 1, n))]
+                    )
+            else:
+                kmin = ks[0][0]
+                kmax = ks[-1][0]
+                Q = {n - 1: w}
+                for k in range(n - 1, kmin, -1):
+                    Q[k - 1] = g(Q[k] * g.adj(F[k]))
+                L = {0: None, 1: g.adj(F[0])}
+                for k in range(1, kmax):
+                    L[k + 1] = g(g.adj(F[k]) * L[k])
+                X = {k: Q[k] if L[k] is None else L[k] * Q[k] for k, j, a in ks}
+        for k, j, a in ks:
             if not a:
                 cc = complex(c).conjugate()
                 p = X[k]
             else:
                 cc = complex(c)
                 p = g.adj(X[k])
-            parts[j].append(p if cc == 1.0 else cc * p)
-    return {i: g(_sum(p)) for i, p in parts.items() if p}
+            parts.setdefault(j, []).append(p if cc == 1.0 else cc * p)
+    return {i: g(_sum(p)) for i, p in parts.items()}
 
 
-def node(children, terms, container):
+def node(children, terms, nmax, container):
     children = tuple(children)
+    # occurrences (position, input, adjoint) per term, for the backward
+    occurrences = tuple(tuple((k, j, a) for k, (j, a) in enumerate(f)) for c, f in terms)
+    # nested (node-valued) or plain: fixed by the depth of the inputs,
+    # decided at the first backward
+    nested = [None]
 
     def _forward():
         # (node.forward evaluates a plain expression; a lone adj stays lazy)
@@ -293,16 +303,20 @@ def node(children, terms, container):
 
     def _backward(z):
         w = z.gradient
-        values = _nodify_values([value_of(c) for c in children], (w,))
-        need = [i for i, c in enumerate(children) if c.with_gradient]
-        if _is_node(w) or any(_is_node(v) for v in values):
+        values = [value_of(c) for c in children]
+        if nested[0] is None or _is_node(w):
+            nested[0] = _is_node(w) or any(_is_node(v) for v in values)
+        need = {i for i, c in enumerate(children) if c.with_gradient}
+        if nested[0]:
             # nested: the flows are expression nodes one level down
+            values = _nodify_values(values, (w,))
             flows = {i: _flow(values, terms, i, w) for i in need}
         else:
-            flows = _flows_plain(values, terms, need, w)
+            flows = _flows_plain(values, terms, occurrences, need, w)
         for i, v in flows.items():
             g.ad.reverse.util.accum(children[i], v, 1)
 
     n = g.ad.reverse.node_base(_forward, _backward, children, _container=container, _tag="expr")
     n._terms = terms
+    n._nmax = nmax
     return n

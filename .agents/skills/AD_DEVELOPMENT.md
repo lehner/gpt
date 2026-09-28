@@ -51,7 +51,9 @@ the reverse-accumulation AD framework with lazy evaluation graphs works.
   3) the force lives in the cartesian (Lie algebra) representation.
 - **Adding a new test**: append its path to the list in `tests/run`.
 - Known pre-existing failure on this box: `tests/qcd/coarsen.py` OOMs
-  (15 GB RAM). Everything else should pass.
+  (15 GB RAM) at its default size; it passes at half size in every
+  dimension (`--fgrid 8.8.16.8 --cgrid 4.4.4.4 --ccgrid 2.2.2.4`), which
+  still covers the padded 33-point stencil. Everything else should pass.
 - Reproducibility: RNGs are seeded by name (`g.random("test")`), so results
   are bit-reproducible across runs on the same machine. When refactoring,
   compare reported numbers (relative errors) across the change — they should
@@ -253,8 +255,26 @@ mechanism.
   d^k exp_X(H_1..H_k), whose reverse flows are again D's at X^dag
   (D_{k+1} into X, D_k into H_i), so the gradient of exp is exp.  Each
   plain D_k is one compiled local stencil (multi-dual scaling-squaring +
-  Horner Taylor).  Non-lattice (tensor/scalar) nodes still use the
-  node-op Taylor graph.
+  Paterson-Stockmeyer Taylor).  All D_k of one tower (the user's exp node
+  and the flows built from it, at any depth) share a `_tower`: X is
+  identified by identity, and its scaling (the norm bound, which is the same
+  for X and X^dag) and the materialized X^dag are computed once.  Non-lattice
+  (tensor/scalar) nodes still use the node-op Taylor graph.
+- `ad/reverse/foundation/__init__.py` also holds single-node
+  **projections**: `traceless_anti_hermitian` / `traceless_hermitian` (the
+  `qcd.gauge.project` functions dispatch here for nodes).  They are
+  self-adjoint w.r.t. Re tr(a^dag b), so the backward is the same projection
+  (one level down for nested flows).  The su(N) group conversions
+  (`infinitesimal_to_cartesian`) are written with them.
+- `ad/reverse/expression.py` — **expression nodes**: arithmetic on nodes
+  (`*`, `+`, `-`, `adj`, `/` and `*` by numbers) builds ONE node holding a
+  sum of products of its inputs (hooks in `node.py` and `foundation.adj`,
+  after `convert_container`).  An operand that is an expression node without
+  a computed value is absorbed (its terms are copied; the operand stays a
+  valid node, a second use recomputes it).  The flow into an input is again
+  a sum of products (an expression node one level down for nested flows);
+  plain flows of a node are computed together with running products from
+  both ends of each term.  Switch: `g.ad.reverse.expression.enabled`.
 - "Foundation" is a per-class attribute (`g.lattice.foundation`, the
   node foundation, ...). Mixed-operand dispatch helpers (e.g.
   `_group_foundation` in `core/group/operation.py`) pick the operand whose
@@ -276,9 +296,38 @@ mechanism.
   a symbolic `expr` that may not know how to handle a node
   (`Exception: Unknown type ...node_base`). Node-first invokes the
   adjoint-linear node `__mul__`.
-- **Matrix × scalar node graphs**: a matrix-valued node graph multiplied by a
-  scalar can break downstream trace contractions; route through
-  `g.where(mask, x, zero)` for node graphs instead of in-place `x *= mask`.
+- **Masks**: a matrix-valued node times a real 0/1 field is fine as a plain
+  product (`g(sm * P1)`, as in `directional_parallel_transport._update`); the
+  former `g.where(mask, x, zero)` workaround is no longer needed (its
+  backward allocated a zero field per call).  But `0 * x` and `x * mask`
+  stay nan where x is not finite (e.g. the inverse of a matrix that vanishes
+  outside the mask): use `g.where` with an explicitly zeroed field there.
+- **Expression nodes follow plain GPT semantics**: a sum inside a product is
+  evaluated first (it becomes an input), products are never distributed over
+  sums -- distributing multiplies the product chains in every flow.  Only
+  singlets and square matrices (color, spin, spin-color) form expressions:
+  expanding products or reversing them under `adj` can create untyped
+  products for other otypes (row vector x matrix).  Other types keep one
+  node per operation.
+- **`g.identity_constant(x)`** returns an identity shared per (grid, otype,
+  checkerboard) that must NOT be modified (operands of expressions, kernel
+  inputs, node values).  `g.identity(x)` returns a fresh field; some callers
+  modify it (e.g. the plain exp Taylor fallback), so it must not be cached.
+- **`g.mcolor` leaves are group elements**: their gradients are converted to
+  the algebra (`infinitesimal_to_cartesian`).  Finite-difference checks of
+  derivatives w.r.t. general complex matrices (e.g. an HVP) need leaves
+  with `infinitesimal_to_cartesian=False`.
+- **Padded stencils trust `data_access_hints`**: `g.stencil.matrix` with
+  multi-direction points copies fields into halo-padded fields.  Fields the
+  code does not reference share one scratch field, and declared write fields
+  whose first write is fresh are not copied; every field read as a factor
+  must be declared as read (referenced but undeclared fields, e.g.
+  temporaries, are still copied).
+- **Peak memory**: large fields and retained graphs live as long as a Python
+  name refers to them.  In long drivers (e.g. a loop of reverse passes)
+  `del` each pass's graph before building the next, and release large
+  temporaries (ng x ng adjoint matrices are 7x a color matrix for SU(3))
+  right after their last use.
 - **Memory**: nested (2-deep/3-deep) graphs over gauge fields are expensive.
   Resolve results to plain lattices (`value_of` loop) to release graphs as
   soon as you're done reading them; use the smallest grid that exercises the
@@ -324,7 +373,8 @@ mechanism.
 | `lib/gpt/ad/reverse/node.py` | node, node_op, forward/backward, functional |
 | `lib/gpt/ad/reverse/util.py` | nodify, product, value_of, containers |
 | `lib/gpt/ad/reverse/transform.py` | sin/cos/... node transforms |
-| `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; `matrix/exp.py` |
+| `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
+| `lib/gpt/ad/reverse/expression.py` | expression nodes (fused sums of products, see §4.5) |
 | `lib/gpt/core/local_stencil/adjoint.py` | generic adjoint-stencil code derivation for compiled matrix stencils (see §5.2) |
 | `lib/gpt/ad/reverse/stencil.py` | fused differentiable parallel transport (stage 0 of the differentiable-stencil work) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils: supports multiple node outputs in one fused call (shared forward run; one adjoint run per output, which is what keeps the sibling zero-gradient ordering safe) |
@@ -352,3 +402,9 @@ mechanism.
    `tests/ad/higher_order.py` (or a dedicated test added to `tests/run`).
 5. Run `bash tests/run` (no args) for the full suite; expect only the
    pre-existing `qcd/coarsen.py` OOM on the 15 GB box.
+6. To compare against an earlier version, extract it with
+   `git archive <commit> lib/gpt | tar -x -C <scratch>` and run with
+   `PYTHONPATH=<scratch>/lib:$PYTHONPATH` (valid while `lib/cgpt` is
+   unchanged).  Do not use `git stash` / `git stash pop` for this: on a clean
+   tree the stash saves nothing and the pop applies an older, unrelated
+   stash.
