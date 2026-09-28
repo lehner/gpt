@@ -36,11 +36,22 @@ def matrix(self, *fields):
         else:
             padded_fields.append(None)
     assert padded_field is not None
+    dummy = None
     for i in range(len(fields)):
-        if padded_fields[i] is None:
+        if padded_fields[i] is not None:
+            continue
+        if i not in self.referenced:
+            # not used by the code: one shared scratch field
+            if dummy is None:
+                dummy = g.lattice(padded_field)
+            padded_fields[i] = dummy
+        elif i in self.write_fields and i in self.fresh_targets:
+            # the first write is fresh, so the previous content is not needed
+            padded_fields[i] = g.lattice(padded_field)
+        else:
             # start from the caller's current value (not fresh scratch)
-            # so that accumulate entries build on it; fresh-write
-            # entries (accumulate=-1) overwrite it anyway
+            # so that accumulate entries build on it (also for referenced
+            # fields that are not declared, e.g. temporaries)
             padded_fields[i] = self.padding(fields[i])
     if self.verbose_performance:
         t("local stencil")

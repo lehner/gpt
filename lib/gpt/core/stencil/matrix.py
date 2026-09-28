@@ -32,6 +32,21 @@ class matrix_padded:
         self.local_stencil = g.local_stencil.matrix(
             self.padding(lat), points, code, code_parallel_block_size
         )
+        # from the code: the referenced fields, and the targets whose first
+        # write is fresh (accumulate = -1) and not preceded by a read of them;
+        # their previous content is never used
+        first, read_before = {}, set()
+        self.referenced = set()
+        for c in self.local_stencil.code:
+            for f in c["factor"]:
+                if f[0] not in first:
+                    read_before.add(f[0])
+                self.referenced.add(f[0])
+            first.setdefault(c["target"], c["accumulate"])
+            self.referenced.add(c["target"])
+            if c["accumulate"] != -1:
+                self.referenced.add(c["accumulate"])
+        self.fresh_targets = {t for t, a in first.items() if a == -1 and t not in read_before}
         self.write_fields = None
         self.verbose_performance = g.default.is_verbose("stencil_performance")
 

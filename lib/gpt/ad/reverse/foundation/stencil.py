@@ -357,7 +357,11 @@ def matrix(stencil, *fields):
             written = sorted({tt for (tt, ac, w, fl) in lvl})
             K = g.stencil.matrix(g.lattice(grid, otype_t), pts, ccode)
             n_adj_fields = n_comp + len(_outs) + n_fields
-            K.data_access_hints(written, [i for i in range(n_adj_fields) if i not in written], [])
+            # the fields read as factors (the dummy entries of the output
+            # layout and unreferenced fields are not read, so the padded
+            # stencil need not copy them)
+            read = sorted({f for (tt, ac, w, fl) in lvl for (f, p, a) in fl})
+            K.data_access_hints(written, read, [])
             compiled.append(K)
         # code-ordered entries with point tuples for the node-domain path
         adj_entries = [e for (_lv, e) in entries]

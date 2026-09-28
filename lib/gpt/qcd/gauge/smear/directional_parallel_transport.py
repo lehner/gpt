@@ -388,12 +388,17 @@ class directional_parallel_transport(dft_diffeomorphism):
         # right_a = -P1 sum_b Jinv[a, b] T_b for all a in one kernel; M
         # vanishes outside P1, so its inverse is masked with a where (a mask
         # multiplication would turn the non-finite entries there into nan)
+        # (the ng x ng matrices are 7x a color matrix for SU(3) and are not
+        # needed in the passes below: release each as soon as possible)
         Jinv = g.matrix.inv(M)
+        del M
         zero = g.lattice(Jinv)
         zero[:] = 0
         Jinv = g.where(P1, Jinv, zero)
+        del zero
         right = [g.lattice(U_mu.grid, otype_cartesian) for _ in range(ng)]
         _get_generator_kernels(U_mu.grid, otype_cartesian).combine(right, Jinv)
+        del Jinv
         left = g.group.cartesian(U_mu)
         P1_node = rad.node(P1, with_gradient=False)
 
@@ -427,10 +432,20 @@ class directional_parallel_transport(dft_diffeomorphism):
             grad_U = gU if grad_U is None else g(grad_U + gU)
             grad_C = gC if grad_C is None else g(grad_C + gC)
 
+            # release this pass's graph (its retained values) before the next
+            # pass builds its own, and right_a
+            del act, aU, aUft, _Up, _U, _C, _left, _right, gU, gC
+            right[a] = None
+
+        del left, right, C, P1_node
+
         # chain rule through the staple; the factor 2 is the one explained in
         # diagonal_jacobian_gradient
         nodes = [rad.node(x) for x in fields]
-        self._staple(nodes)(initial_gradient=g(2.0 * grad_C))
+        seed = g(2.0 * grad_C)
+        del grad_C
+        self._staple(nodes)(initial_gradient=seed)
+        del seed
         out = []
         for i, n in enumerate(nodes):
             r = g(0 * fields[i]) if n.gradient is None else g(n.gradient)
