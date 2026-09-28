@@ -8,6 +8,8 @@ import numpy as np
 
 # general setup
 rng = g.random("test")
+
+#U = g.qcd.gauge.random(g.grid([8*2,8*2,8*4,8*4], g.double), rng)
 U = g.qcd.gauge.random(g.grid([8,8,8,8], g.double), rng)
 rad = g.ad.reverse
 
@@ -115,7 +117,8 @@ if regress:
 
 # finally check the force terms of the log-det-jacobian
 act2.assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
-
+act1.gradient(U, U)
+act2.gradient(U + params, U)
 
 # next: look at timing and improve AD speed
 t = g.timer("d")
@@ -124,4 +127,4 @@ act1.gradient(U, U)
 t("ad")
 act2.gradient(U + params, U)
 t()
-print(t)
+g.message(t)
