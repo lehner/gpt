@@ -42,27 +42,81 @@ import gpt as g
 from gpt.ad.reverse.util import is_node, nodify, value_of
 
 
-def _plain(x, h):
-    # the fused multi-dual kernels live in the lattice foundation
-    return g.lattice.foundation.matrix.exp.derivative(x, h)
+def _plain_base(x):
+    # x = L or x = adj(L) for a plain lattice L: (L, adjoint?); else (None, None).
+    # Flows at X^dag are the lazy expression adj(X) (also when built at node
+    # level, where adj stays unevaluated), and adj(adj(X)) is X
+    if isinstance(x, g.lattice):
+        return x, False
+    if isinstance(x, g.expr) and x.unary == g.expr_unary.NONE and len(x.val) == 1:
+        coef, term = x.val[0]
+        if coef == 1.0 and len(term) == 1 and isinstance(term[0][1], g.lattice):
+            unary = term[0][0]
+            if unary == g.factor_unary.NONE:
+                return term[0][1], False
+            if unary == g.factor_unary.ADJ:
+                return term[0][1], True
+    return None, None
 
 
-def derivative(x, h):
+class _tower:
+    # the plain X shared by all D_k nodes of one exp tower (the node exp(X)
+    # and the flows built from it, at any nesting depth): every plain D_k is
+    # evaluated at X or X^dag, which have the same scaling s, so s and the
+    # materialized X^dag are computed once.  X is identified by identity; the
+    # user-created root resets the tower whenever it recomputes its value, so
+    # a leaf modified in place between evaluations is never served stale
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.x = None
+        self.s = None
+        self.xdag = None
+
+    def plain(self, x, h):
+        base, dag = _plain_base(x)
+        if base is None:
+            return g.lattice.foundation.matrix.exp.derivative(x, h)
+        if base is not self.x:
+            self.x = base
+            self.s = g.lattice.foundation.matrix.exp.scaling(base)
+            self.xdag = None
+        if dag:
+            if self.xdag is None:
+                self.xdag = g(g.adj(base))
+            base = self.xdag
+        return g.lattice.foundation.matrix.exp.derivative(base, h, self.s)
+
+
+def derivative(x, h, tower=None):
     # D_k(x; h_1..h_k); plain values run the fused kernel, node values build a
-    # node whose backward is again a D (one level down)
+    # node whose backward is again a D (one level down), in the same tower
     args = [x] + list(h)
     if not any(is_node(a) for a in args):
-        return _plain(x, h)
+        # (fused kernels live in the lattice foundation)
+        return (tower or _tower()).plain(x, h)
 
     args = nodify(*args) if len(args) > 1 else (args[0],)
     xn, hn = args[0], list(args[1:])
     k = len(hn)
+    root = tower is None
+    if root:
+        tower = _tower()
+
+    def _forward():
+        if root:
+            tower.reset()
+        return derivative(value_of(xn), [value_of(c) for c in hn], tower)
 
     def _adj(v):
         return g.adj(v)
 
     def _backward_x(z):
-        return (1, derivative(_adj(value_of(xn)), [_adj(value_of(c)) for c in hn] + [z.gradient]))
+        return (
+            1,
+            derivative(_adj(value_of(xn)), [_adj(value_of(c)) for c in hn] + [z.gradient], tower),
+        )
 
     def _backward_h(i):
         def _b(z):
@@ -71,6 +125,7 @@ def derivative(x, h):
                 derivative(
                     _adj(value_of(xn)),
                     [z.gradient if j == i else _adj(value_of(c)) for j, c in enumerate(hn)],
+                    tower,
                 ),
             )
 
@@ -78,7 +133,7 @@ def derivative(x, h):
 
     return g.ad.reverse.node_op(
         tuple(args),
-        lambda: derivative(value_of(xn), [value_of(c) for c in hn]),
+        _forward,
         (_backward_x,) + tuple(_backward_h(i) for i in range(k)),
         xn._container,
         f"exp_d{k}",

@@ -169,14 +169,22 @@ def _code(k, n, s, outputs):
     return code, best.n_temps, best.n_products
 
 
-def _evaluate(x, h, outputs):
-    # the multi-dual components `outputs` (subset masks) of exp(x + sum eps_i h_i)
+def scaling(x):
+    # number of squarings s such that |x| / 2^s <= theta at every site; the
+    # bound is invariant under x -> x^dag
+    nrm = max_site_norm(x)
+    return 0 if nrm <= theta else int(np.ceil(np.log2(nrm / theta)))
+
+
+def _evaluate(x, h, outputs, s=None):
+    # the multi-dual components `outputs` (subset masks) of exp(x + sum eps_i h_i);
+    # s is the scaling (computed from x if not given)
     x = g(x)
     h = [g(y) for y in h]
     k = len(h)
     n = order_base + k
-    nrm = max_site_norm(x)
-    s = 0 if nrm <= theta else int(np.ceil(np.log2(nrm / theta)))
+    if s is None:
+        s = scaling(x)
 
     tag = f"{x.otype.__name__}_{x.grid}_{k}_{n}_{s}_{outputs}"
     if tag not in _kernels:
@@ -203,9 +211,11 @@ def _evaluate(x, h, outputs):
     return out
 
 
-def derivative(x, h):
-    # D_k(x; h_1..h_k) for plain lattices (k = len(h); k = 0 is exp(x))
-    return _evaluate(x, h, [2 ** len(h) - 1])[0]
+def derivative(x, h, s=None):
+    # D_k(x; h_1..h_k) for plain lattices (k = len(h); k = 0 is exp(x)); a
+    # caller evaluating several D_k at the same x (or x^dag) may pass the
+    # scaling s = scaling(x) once
+    return _evaluate(x, h, [2 ** len(h) - 1], s)[0]
 
 
 def function(i):
@@ -216,8 +226,7 @@ def function(i):
     else:
         # types stored in several v_obj: scaled Taylor series in lattice
         # operations, with the same scaling rule and order
-        nrm = max_site_norm(x)
-        s = 0 if nrm <= theta else int(np.ceil(np.log2(nrm / theta)))
+        s = scaling(x)
         xs = g(x * (1.0 / 2**s))
         o = g.identity(x)
         xn = g.copy(xs)
