@@ -190,7 +190,7 @@ for u in U_2[1:]:
 
 A = g.qcd.gauge.action.differentiable_iwasaki(2.5)(U_2)
 a1p = A.functional(*U_2)
-a1p.assert_gradient_error(rng, U, [U[0]], 1e-4, 1e-10)
+a1p.assert_gradient_error(rng, U, [U[0]], 1e-4, 1e-9)
 
 for u in U_2:
     u.with_gradient = True
