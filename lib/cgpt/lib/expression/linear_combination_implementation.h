@@ -133,18 +133,25 @@ template<typename T1, int N>
 struct UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_SPINTRACE|BIT_COLORTRACE> :
   UnaryLinearCombination<iMatrix<iSinglet<T1>,N>,BIT_COLORTRACE> {};
 
-// flat transpose permutation of T as a device table (in the per-term kernel
-// below, a table lookup is measurably cheaper than evaluating the map)
+// flat transpose permutation of T as a device table, uploaded once (in the
+// per-term kernel below, a table lookup is measurably cheaper than evaluating
+// the map)
 template<typename T>
-HostDeviceVector<int>& cgpt_transpose_permutation() {
+int* cgpt_transpose_permutation() {
   static HostDeviceVector<int>* perm = 0;
   if (!perm) {
     constexpr int n = GridTypeMapper<T>::count;
     perm = new HostDeviceVector<int>(n);
     for (int e=0;e<n;e++)
       (*perm)[e] = cgpt_transpose_index<T>::map(e);
+    perm->toDevice();
   }
-  return *perm;
+  return perm->device;
+}
+
+inline cgpt_parameter_block& cgpt_lc_parameters() {
+  static cgpt_parameter_block* p = new cgpt_parameter_block();
+  return *p;
 }
 
 // per_term: sum_i c_i unary_i(L_i), each term's factor unary applied on read,
@@ -170,13 +177,17 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
   cgpt_Lattice<R> * _c = compatible<R>(__c);
   pc = &_c->l;
 
+  // coefficients, operand pointers and per-term unary flags in one upload
   int n = (int)f.size();
-  HostDeviceVector<Coeff_t> b(n);
-  HostDeviceVector<int> u;
-  if (per_term)
-    u.resize(n);
+  cgpt_parameter_block& P = cgpt_lc_parameters();
+  P.clear();
+  size_t o_b = P.add<Coeff_t>(n);
+  size_t o_a = P.add<T*>(n);
+  size_t o_u = per_term ? P.add<int>(n) : 0;
+  Coeff_t* b = P.on_host<Coeff_t>(o_b);
+  T** a = P.on_host<T*>(o_a);
+  int* u = P.on_host<int>(o_u);
   std::vector<LatticeView<T>> v; v.reserve(n);
-  HostDeviceVector<T*> a(n);
   for (int i=0;i<n;i++) {
     if (per_term)
       u[i] = f[i].get_unary();
@@ -198,10 +209,11 @@ cgpt_Lattice_base* cgpt_lc(cgpt_Lattice_base* __c, std::vector<cgpt_lattice_term
   
     Accumulator<AccumulatorBase,R> ac(1.0,&c_v[0],&c_v[0]);
 
-    auto p_b = b.toDevice();
-    auto p_a = a.toDevice();
-    auto p_u = per_term ? u.toDevice() : (int*)0;
-    auto p_perm = per_term ? cgpt_transpose_permutation<T>().toDevice() : (int*)0;
+    char* p = P.toDevice();
+    auto p_b = (Coeff_t*)(p + o_b);
+    auto p_a = (T**)(p + o_a);
+    auto p_u = per_term ? (int*)(p + o_u) : (int*)0;
+    auto p_perm = per_term ? cgpt_transpose_permutation<T>() : (int*)0;
 
     Timer("loop");
 

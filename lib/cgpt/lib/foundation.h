@@ -104,6 +104,50 @@ public:
 };
 
 
+// Small per-call kernel parameters (coefficients, pointer tables, flags) are
+// staged on the host and uploaded with ONE copy into a device buffer that is
+// kept, and grown when needed, across calls.  One user at a time: the kernels
+// reading the block must have completed before it is filled again, which
+// holds since accelerator_for synchronizes.  Fill after all add() calls
+// (add may reallocate the host staging area).
+class cgpt_parameter_block {
+public:
+  std::vector<char> host;
+  size_t capacity = 0;
+  char* device = 0;
+
+  void clear() {
+    host.clear();
+  }
+
+  template<typename T>
+  size_t add(size_t n) {
+    size_t offset = (host.size() + 15) & ~(size_t)15;
+    host.resize(offset + n * sizeof(T));
+    return offset;
+  }
+
+  template<typename T>
+  T* on_host(size_t offset) {
+    return (T*)&host[offset];
+  }
+
+  char* toDevice() {
+#ifdef GRID_HAS_ACCELERATOR
+    if (host.size() > capacity) {
+      if (device)
+        MemoryManager::AcceleratorFree(device, capacity);
+      capacity = 2 * host.size();
+      device = (char*)MemoryManager::AcceleratorAllocate(capacity);
+    }
+    acceleratorCopyToDevice(host.data(), device, host.size());
+    return device;
+#else
+    return host.data();
+#endif
+  }
+};
+
 #define VECTOR_VIEW_OPEN(l,v,mode)					\
   std::vector< decltype(l[0].View(mode)) > __ ## v; __ ## v.reserve(l.size()); \
   HostDeviceVector< decltype(&l[0].View(mode)[0]) > _ ## v(l.size());	\
