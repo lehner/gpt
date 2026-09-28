@@ -27,7 +27,7 @@ def traceless_anti_hermitian(src):
         src = g.eval(src)
     N = src.otype.shape[0]
     ret = g(0.5 * src - 0.5 * g.adj(src))
-    ret -= g.identity(src) * g.trace(ret) / N
+    ret -= g.identity_constant(src) * g.trace(ret) / N
     return ret
 
 
@@ -38,5 +38,5 @@ def traceless_hermitian(src):
     src = g.eval(src)
     N = src.otype.shape[0]
     ret = g(0.5 * src + 0.5 * g.adj(src))
-    ret -= g.identity(src) * g.trace(ret) / N
+    ret -= g.identity_constant(src) * g.trace(ret) / N
     return ret

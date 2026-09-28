@@ -92,7 +92,7 @@ def adj(x):
 def _reduction_backward(x):
     # adjoint of a sum-like reduction (trace/sum): broadcast the scalar flow
     # back to x's lattice via identity(x); conjugate-linear in the flow
-    return (lambda z: (1, product(g.identity(value_of(x)), z.gradient)),)
+    return (lambda z: (1, product(g.identity_constant(value_of(x)), z.gradient)),)
 
 
 def trace(x, t):
@@ -173,7 +173,8 @@ def identity(x):
         v = value_of(x)
         if isinstance(v, g.expr):
             v = g(v)
-        return g.identity(v)
+        # (node values are never modified, so the identity can be shared)
+        return g.identity_constant(v)
 
     return g.ad.reverse.node_op(
         (x,),

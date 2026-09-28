@@ -55,6 +55,7 @@ from gpt.core.transform import (
     slice,
     indexed_sum,
     identity,
+    identity_constant,
     infinitesimal_to_cartesian,
     cartesian_to_infinitesimal,
     project,

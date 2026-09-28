@@ -192,6 +192,15 @@ def identity(src):
     return src.__class__.foundation.identity(src)
 
 
+def identity_constant(src):
+    # like identity(src), but possibly a shared object that must not be
+    # modified (read-only uses: operands of expressions, kernel inputs)
+    foundation = src.__class__.foundation
+    if hasattr(foundation, "identity_constant"):
+        return foundation.identity_constant(src)
+    return foundation.identity(src)
+
+
 def infinitesimal_to_cartesian(src, dsrc):
     if gpt.util.is_num(src) or isinstance(src, np.ndarray):
         return dsrc

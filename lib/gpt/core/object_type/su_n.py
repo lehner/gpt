@@ -106,7 +106,7 @@ class ot_matrix_su_n_algebra(ot_matrix_su_n_base):
     def infinitesimal_to_cartesian(self, A, dA):
         N = self.shape[0]
         ret = gpt(0.5 * dA + 0.5 * gpt.adj(dA))
-        ret -= gpt.identity(dA) * gpt.trace(ret) / N
+        ret -= gpt.identity_constant(dA) * gpt.trace(ret) / N
         ret.otype = self
         ret *= 0.5
         return ret
@@ -157,7 +157,7 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
         src = gpt(dU * gpt.adj(U) / 2j)
         N = self.shape[0]
         ret = gpt(0.5 * src + 0.5 * gpt.adj(src))
-        ret -= gpt.identity(src) * gpt.trace(ret) / N
+        ret -= gpt.identity_constant(src) * gpt.trace(ret) / N
         ret.otype = self.cartesian()
         return ret
 

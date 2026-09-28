@@ -207,7 +207,7 @@ def _evaluate(x, h, outputs, s=None):
             y = z
         hx.append(y)
     # (the temporaries are owned by the kernel)
-    kernel(*out, g.identity(x), x, *hx)
+    kernel(*out, g.identity_constant(x), x, *hx)
     return out
 
 
