@@ -218,6 +218,10 @@ class node_base(base):
                 y, x._container, z_container, lambda a, b: g.adj(a) * b, "adj(a)*b"
             )
 
+        z = g.ad.reverse.expression.combine("*", (x, y), z_container)
+        if z is not None:
+            return z
+
         return node_op(
             (x, y),
             lambda: product(value_of(x), value_of(y)),
@@ -276,6 +280,14 @@ class node_base(base):
         x, y = nodify(x, y)
 
         z_container = get_div_container(x._container, y._container)
+
+        if y._forward is None and g.util.is_num(y.value) and not y.with_gradient:
+            # division by a constant number is a coefficient
+            z = g.ad.reverse.expression.combine(
+                "*", (x, node_base(1.0 / y.value, with_gradient=False)), z_container
+            )
+            if z is not None:
+                return z
 
         # z = x / y -> dz = dx/y - x/y^2 dy.  The cofactor to x is 1/y
         # (pointwise); the cofactor to y is -x/y^2, a lattice while y is a
@@ -372,6 +384,10 @@ class node_base(base):
             )
         _container = x._container
 
+        z = g.ad.reverse.expression.combine("+", (x, y), _container)
+        if z is not None:
+            return z
+
         return node_op(
             (x, y),
             lambda: add(value_of(x), value_of(y)),
@@ -385,6 +401,10 @@ class node_base(base):
 
         assert x._container == y._container
         _container = x._container
+
+        z = g.ad.reverse.expression.combine("-", (x, y), _container)
+        if z is not None:
+            return z
 
         return node_op(
             (x, y),

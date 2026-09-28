@@ -80,6 +80,9 @@ def cshift(x, direction, displacement, none):
 
 
 def adj(x):
+    z = g.ad.reverse.expression.combine("adj", (x,), x._container)
+    if z is not None:
+        return z
     return g.ad.reverse.node_op(
         (x,),
         lambda: g.adj(value_of(x)),
