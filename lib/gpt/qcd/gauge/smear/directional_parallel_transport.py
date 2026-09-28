@@ -402,41 +402,44 @@ class directional_parallel_transport(dft_diffeomorphism):
         left = g.group.cartesian(U_mu)
         P1_node = rad.node(P1, with_gradient=False)
 
+        # 1-deep leaves (never modified, no copies needed); the staple leaf is
+        # a plain matrix (not a group element), so its gradient is not
+        # converted to the algebra
+        _U = rad.node(U_mu)
+        _C = rad.node(C, infinitesimal_to_cartesian=False)
+
+        # 2-deep "apply Jacobian block to right" (see diagonal_jacobian_gradient);
+        # the forward does not depend on the generator, so it runs once and
+        # its (1-deep) values are shared by all passes.  The seed is built
+        # from the forward's own (retained) 1-deep value, so the derivative
+        # graph and the seed share its nodes.
+        aU = rad.node(_U)
+        aUft = self._local_ft(aU, rad.node(_C, with_gradient=False))
+        _Up = aUft(with_gradients=False, retain_values=True)
+
         grad_U = None
         grad_C = None
         for a in range(ng):
             left @= P1 * generators[a]
-
-            # 1-deep leaves; the staple leaf is a plain matrix (not a group
-            # element), so its gradient is not converted to the algebra.  The
-            # leaf values are never modified (and the functional below sets
-            # them to the same fields), so no copies are needed
-            _U = rad.node(U_mu)
-            _C = rad.node(C, infinitesimal_to_cartesian=False)
             _left = rad.node(left, with_gradient=False)
             _right = rad.node(right[a], with_gradient=False)
 
-            # 2-deep "apply Jacobian block to right" (see diagonal_jacobian_gradient);
-            # the seed is built from the forward's own (retained) 1-deep
-            # value, so the derivative graph and the seed share its nodes
-            aU = rad.node(_U)
-            aUft = self._local_ft(aU, rad.node(_C, with_gradient=False))
-            _Up = aUft(with_gradients=False, retain_values=True)
-            aUft(initial_gradient=g.cartesian_to_infinitesimal(_Up, _right))
-
-            act = g.inner_product(_left, P1_node * aU.gradient)
-            gU, gC = act.functional(_U, _C, _left, _right).gradient(
-                [U_mu, C, left, right[a]], [U_mu, C]
+            # both reverse passes retain the shared forward values; the
+            # per-generator part of the graph is released with act
+            aUft(
+                initial_gradient=g.cartesian_to_infinitesimal(_Up, _right),
+                retain_values=True,
             )
-            gU, gC = _res(gU), _res(gC)
+            act = g.inner_product(_left, P1_node * aU.gradient)
+            act(retain_values=True)
+            gU, gC = _res(_U.gradient), _res(_C.gradient)
             grad_U = gU if grad_U is None else g(grad_U + gU)
             grad_C = gC if grad_C is None else g(grad_C + gC)
 
-            # release this pass's graph (its retained values) before the next
-            # pass builds its own, and right_a
-            del act, aU, aUft, _Up, _U, _C, _left, _right, gU, gC
+            del act, _left, _right, gU, gC
             right[a] = None
 
+        del aU, aUft, _Up, _U, _C
         del left, right, C, P1_node
 
         # chain rule through the staple; the factor 2 is the one explained in

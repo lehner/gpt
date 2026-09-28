@@ -46,7 +46,7 @@ from functools import reduce
 from gpt.ad.reverse.util import value_of
 
 # switch for A/B comparisons
-enabled = True
+enabled = False
 
 # expansion limits (beyond them the operands stay inputs)
 max_terms = 16
@@ -289,6 +289,143 @@ def _flows_plain(values, terms, occurrences, need, w):
     return {i: g(_sum(p)) for i, p in parts.items()}
 
 
+# ---------------------------------------------------------------------------
+# generated kernels (plain values): one local stencil for the forward and one
+# multi-output local stencil for all input flows of a node.  A code entry
+# multiplies any number of fields (with per-factor adjoints) and a complex
+# weight, and accumulates into its target, so every term (forward) and every
+# occurrence (backward) is one entry; products that the g.eval path
+# materializes (pairwise temporaries, the running products L_k and Q_k) are
+# recomputed per site in registers.  All fields of a kernel share one
+# storage type; other cases use the g.eval path.
+kernels = True
+_kernels = {}
+
+
+def _field(v):
+    # (lattice, adjoint) for a plain value: a lattice or a lone adj of one
+    if isinstance(v, g.lattice):
+        return v, False
+    if isinstance(v, g.expr) and v.unary == g.expr_unary.NONE and len(v.val) == 1:
+        c, f = v.val[0]
+        if c == 1.0 and len(f) == 1 and isinstance(f[0][1], g.lattice):
+            if f[0][0] == g.factor_unary.NONE:
+                return f[0][1], False
+            if f[0][0] == g.factor_unary.ADJ:
+                return f[0][1], True
+    return None, None
+
+
+def _kernel_fields(values):
+    # the lattices and adjoint flags of the values, if one kernel can use them
+    fields, flags = [], []
+    for v in values:
+        x, a = _field(v)
+        if x is None or len(x.v_obj) != 1:
+            return None, None
+        fields.append(x)
+        flags.append(a)
+    v0 = fields[0]
+    for x in fields[1:]:
+        if x.otype.v_otype != v0.otype.v_otype or x.grid.obj != v0.grid.obj:
+            return None, None
+    return fields, flags
+
+
+def _kernel(key, prototype, code):
+    k = _kernels.get(key)
+    if k is None:
+        k = g.local_stencil.matrix(prototype, [(0,) * prototype.grid.nd], code)
+        _kernels[key] = k
+    return k
+
+
+def _forward_kernel(values, terms):
+    # the value as one kernel, or None
+    fields, flags = _kernel_fields(values)
+    if fields is None:
+        return None
+    # the result type from the type algebra, once per structure
+    tkey = ("fwd-otype", terms, tuple(x.otype.__name__ for x in fields), tuple(flags))
+    otype = _kernels.get(tkey)
+    if otype is None:
+        otype = g.expr(_evaluate(values, terms)).container()[1]
+        _kernels[tkey] = otype
+    if otype.v_otype != fields[0].otype.v_otype:
+        return None
+    code = []
+    for t, (c, f) in enumerate(terms):
+        code.append((0, -1 if t == 0 else 0, complex(c), [(1 + j, 0, int(a != flags[j])) for j, a in f]))
+    key = ("fwd", terms, tuple(flags), fields[0].otype.v_otype[0], fields[0].grid.obj)
+    out = g.lattice(fields[0].grid, otype)
+    _kernel(key, out, code)(out, *fields)
+    return out
+
+
+def _backward_kernel(values, terms, occurrences, need, w, children):
+    # {input: flow} with one kernel for all non-trivial flows, or None
+    fields, flags = _kernel_fields(list(values) + [w])
+    if fields is None:
+        return None
+    wf, wa = fields[-1], flags[-1]
+    fields, flags = fields[:-1], flags[:-1]
+    n_in = len(fields)
+    # per input: its occurrences (term, position)
+    occ = {}
+    for t, o in enumerate(occurrences):
+        for k, j, a in o:
+            if j in need:
+                occ.setdefault(j, []).append((t, k, a))
+    flows = {}
+    # a flow that is just w (one single-factor, unit-coefficient, non-adjoint
+    # occurrence) needs no kernel (as in the g.eval path it is adopted)
+    trivial = [
+        j
+        for j, oc in occ.items()
+        if len(oc) == 1
+        and len(terms[oc[0][0]][1]) == 1
+        and terms[oc[0][0]][0] == 1.0
+        and not oc[0][2]
+        and not wa
+    ]
+    for j in trivial:
+        flows[j] = w
+    outputs = [j for j in sorted(occ) if j not in flows]
+    if not outputs:
+        return flows
+    otypes = [children[j]._container.get_otype() for j in outputs]
+    if any(ot.v_otype != fields[0].otype.v_otype for ot in otypes):
+        return None
+    m = len(outputs)
+    # field layout: outputs, w, inputs
+    iw = m
+    code = []
+    for o, j in enumerate(outputs):
+        first = True
+        for t, k, a in occ[j]:
+            c, f = terms[t]
+            prefix = [(1 + m + i, b != flags[i]) for i, b in f[:k]]
+            suffix = [(1 + m + i, b != flags[i]) for i, b in f[k + 1 :]]
+            if not a:
+                # conj(c) adj(prefix) w adj(suffix)
+                factors = [(i, not b) for i, b in reversed(prefix)] + [(iw, wa)] + [
+                    (i, not b) for i, b in reversed(suffix)
+                ]
+                weight = complex(c).conjugate()
+            else:
+                # c suffix adj(w) prefix
+                factors = suffix + [(iw, not wa)] + prefix
+                weight = complex(c)
+            code.append((o, -1 if first else o, weight, [(i, 0, int(b)) for i, b in factors]))
+            first = False
+    key = ("bwd", terms, tuple(outputs), tuple(flags), wa, fields[0].otype.v_otype[0], fields[0].grid.obj)
+    outs = [g.lattice(fields[0].grid, ot) for ot in otypes]
+    _kernel(key, outs[0], code)(*outs, wf, *fields)
+    for j, x in zip(outputs, outs):
+        flows[j] = x
+    return flows
+
+
 def node(children, terms, nmax, container):
     children = tuple(children)
     # occurrences (position, input, adjoint) per term, for the backward
@@ -297,9 +434,16 @@ def node(children, terms, nmax, container):
     # decided at the first backward
     nested = [None]
 
+    trivial_value = len(terms) == 1 and len(terms[0][1]) == 1 and terms[0][0] == 1.0
+
     def _forward():
         # (node.forward evaluates a plain expression; a lone adj stays lazy)
-        return _evaluate(_nodify_values([value_of(c) for c in children]), terms)
+        values = _nodify_values([value_of(c) for c in children])
+        if kernels and not trivial_value and not any(_is_node(v) for v in values):
+            v = _forward_kernel(values, terms)
+            if v is not None:
+                return v
+        return _evaluate(values, terms)
 
     def _backward(z):
         w = z.gradient
@@ -312,7 +456,11 @@ def node(children, terms, nmax, container):
             values = _nodify_values(values, (w,))
             flows = {i: _flow(values, terms, i, w) for i in need}
         else:
-            flows = _flows_plain(values, terms, occurrences, need, w)
+            flows = None
+            if kernels:
+                flows = _backward_kernel(values, terms, occurrences, need, w, children)
+            if flows is None:
+                flows = _flows_plain(values, terms, occurrences, need, w)
         for i, v in flows.items():
             g.ad.reverse.util.accum(children[i], v, 1)
 
