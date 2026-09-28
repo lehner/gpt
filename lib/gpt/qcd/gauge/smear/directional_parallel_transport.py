@@ -137,12 +137,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         # U_mu' = exp(TA(P1 sm)) U_mu
         P1 = self.P1
         if P1 is not None:
-            if isinstance(sm, g.ad.reverse.node_base):
-                # a matrix x scalar node-graph breaks the trace contraction
-                # downstream; mask with a where to keep the matrix otype
-                sm = g.where(P1, sm, g.ad.reverse.node(sm._container.zero(), with_gradient=False))
-            else:
-                sm = g(sm * P1)
+            sm = g(sm * P1)
         return g(g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(sm)) * xU_mu)
 
     def _staple(self, xfields):
