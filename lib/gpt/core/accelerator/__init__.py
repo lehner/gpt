@@ -16,6 +16,27 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import cgpt
 from gpt.core.accelerator.buffer_manager import buffer_manager
 from gpt.core.accelerator.buffer import buffer
 from gpt.core.accelerator.kernel import kernel
+
+
+def backend():
+    # accelerator backend of this build: "cuda", "hip", "sycl", or "none"
+    return cgpt.accelerator_backend()
+
+
+class threads:
+    # temporarily set the threads per block of Grid's accelerator_for
+    # (besides the SIMD lanes; Grid's default is --accelerator-threads);
+    # n <= 0 keeps the current value
+    def __init__(self, n):
+        self.n = n
+
+    def __enter__(self):
+        self.previous = cgpt.accelerator_threads(self.n)
+        return self
+
+    def __exit__(self, *args):
+        cgpt.accelerator_threads(self.previous)

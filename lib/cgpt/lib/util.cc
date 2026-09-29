@@ -337,6 +337,36 @@ EXPORT(accelerator_barrier,{
     return PyLong_FromLong(0);
   });
 
+EXPORT(accelerator_backend,{
+
+    // the accelerator backend this build of Grid uses
+#if defined(GRID_CUDA)
+    return PyUnicode_FromString("cuda");
+#elif defined(GRID_HIP)
+    return PyUnicode_FromString("hip");
+#elif defined(GRID_SYCL)
+    return PyUnicode_FromString("sycl");
+#else
+    return PyUnicode_FromString("none");
+#endif
+  });
+
+EXPORT(accelerator_threads,{
+
+    // threads per block of accelerator_for (besides the SIMD lanes); returns
+    // the previous value, threads > 0 sets a new one
+    long threads;
+    if (!PyArg_ParseTuple(args, "l", &threads)) {
+      return NULL;
+    }
+
+    long previous = (long)acceleratorThreads();
+    if (threads > 0)
+      acceleratorThreads((uint32_t)threads);
+
+    return PyLong_FromLong(previous);
+  });
+
 EXPORT(view_log_trigger,{
     
     long start;

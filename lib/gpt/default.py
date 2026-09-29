@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-import sys, gpt
+import sys, gpt, cgpt
 
 
 def get_all(tag, default):
@@ -70,6 +70,16 @@ get = get_single
 
 # IO parameters
 max_io_nodes = get_int("--max_io_nodes", 256)
+
+# threads per block of accelerator_for tried by the auto tuner (0: the
+# current value, --accelerator-threads; without an accelerator the value
+# has no effect)
+auto_tune_threads = [
+    int(x)
+    for x in get(
+        "--auto-tune-threads", "4.8.16.32" if cgpt.accelerator_backend() != "none" else "0"
+    ).split(".")
+]
 
 # verbosity
 verbose_default = (

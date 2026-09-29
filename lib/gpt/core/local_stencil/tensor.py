@@ -50,15 +50,21 @@ class tensor(auto_tuned_class):
 
         # auto tuner
         lsites = int(lat.grid.gsites) // int(lat.grid.Nprocessors)
-        tag = f"local_tensor({lat.otype.__name__}, {lat.grid.describe()}, {hash_code(code)}, {len(segments)}, {local})"
+        # (osites per instruction, osites per cache block, threads per block of
+        # accelerator_for with 0 = the current value, i.e., --accelerator-threads)
+        tag = f"local_tensor({lat.otype.__name__}, {lat.grid.describe()}, {hash_code(code)}, {len(segments)}, {local}, threads)"
         super().__init__(tag, [
-            (opi, opi * opcb) for opi in [2, 4, 8, 16, 32, 64, 128, 256] for opcb in [256, 1024, 8192, lsites]
-        ], (4, lsites))
+            (opi, opi * opcb, threads)
+            for opi in [2, 4, 8, 16, 32, 64, 128, 256]
+            for opcb in [256, 1024, 8192, lsites]
+            for threads in g.default.auto_tune_threads
+        ], (4, lsites, 0))
 
     @auto_tuned_method()
     def __call__(self, performance_args, *fields):
-        opi, opcb = performance_args
-        cgpt.stencil_tensor_execute(self.obj, list(fields), opi, opcb)
+        opi, opcb, threads = performance_args
+        with g.accelerator.threads(threads):
+            cgpt.stencil_tensor_execute(self.obj, list(fields), opi, opcb)
 
     def __del__(self):
         cgpt.stencil_tensor_delete(self.obj)

@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import cgpt
+import gpt as g
 from gpt.core import auto_tuned_class, auto_tuned_method
 import hashlib
 
@@ -64,13 +65,20 @@ class matrix(auto_tuned_class):
             osites_per_cache_block,
         )
 
-        # auto tuner
-        tag = f"local_matrix({lat.otype.__name__}, {lat.grid.describe()}, {str(points)}, {code_parallel_block_size}, {hash_code(code)}, {local}, {sorted(temporaries)}, {osites_per_cache_block})"
-        super().__init__(tag, [0, 1], 0)
+        # auto tuner: (fast_osites, threads per block of accelerator_for, 0 =
+        # the current value, i.e., --accelerator-threads)
+        tag = f"local_matrix({lat.otype.__name__}, {lat.grid.describe()}, {str(points)}, {code_parallel_block_size}, {hash_code(code)}, {local}, {sorted(temporaries)}, {osites_per_cache_block}, threads)"
+        super().__init__(
+            tag,
+            [(fast_osites, threads) for fast_osites in [0, 1] for threads in g.default.auto_tune_threads],
+            (0, 0),
+        )
 
     @auto_tuned_method()
-    def _exec(self, fast_osites, *fields):
-        cgpt.stencil_matrix_execute(self.obj, list(fields), fast_osites)
+    def _exec(self, params, *fields):
+        fast_osites, threads = params
+        with g.accelerator.threads(threads):
+            cgpt.stencil_matrix_execute(self.obj, list(fields), fast_osites)
 
     def __call__(self, *fields):
         return fields[0].foundation.local_stencil.matrix(self, *fields)
