@@ -97,13 +97,17 @@ def adj(x):
 
 def _reduction_identity(x):
     # identity(x) for the backward of a reduction.  Only the type of x is
-    # needed: if its value was not computed (see needed_values) and it is a
-    # plain lattice on a full grid, it is taken from the container instead of
-    # evaluating x
-    if x.value is None and x._forward is not None and value_depth_static(x) == 1:
-        c = x._container
-        if c.tag[0] is g.lattice and c.get_grid().cb.n == 1:
-            return g.identity_constant(g.lattice(c.get_grid(), c.get_otype()))
+    # needed, never its value: for a lattice on a full grid it is taken from
+    # the container (a plain constant at any depth; evaluating x would add
+    # its forward, one level down in a nested pass, to the graph)
+    # (a forward-AD series value keeps its own identity type)
+    c = x._container
+    if (
+        c.tag[0] is g.lattice
+        and c.get_grid().cb.n == 1
+        and not isinstance(x.value, g.ad.forward.series)
+    ):
+        return g.identity_constant(g.lattice(c.get_grid(), c.get_otype()))
     return g.identity_constant(value_of(x))
 
 
@@ -180,6 +184,7 @@ def _self_adjoint_projection(x, name):
         (lambda z: (1, _project(z.gradient)),),
         x._container,
         name,
+        reads=((),),
     )
 
 
