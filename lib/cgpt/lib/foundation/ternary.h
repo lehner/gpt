@@ -60,7 +60,7 @@ inline void cgpt_where(Lattice<T>& answer, const Lattice<S>& question, const Lat
   autoView(no_v, no, AcceleratorRead);
   autoView(answer_v, answer, AcceleratorWriteDiscard);
 
-  accelerator_for(ss, grid->oSites(), grid->Nsimd(), {
+  accelerator_for(ss, (size_t)grid->oSites(), (size_t)grid->Nsimd(), {
       auto q = coalescedReadElement(question_v[ss], 0);
       for (int e=0;e<n_elements;e++) {
 	coalescedWriteElement(answer_v[ss],
