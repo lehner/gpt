@@ -17,10 +17,11 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.qcd.gauge.action import base
+from gpt.core.group import differentiable_functional
+from gpt.qcd.gauge.action.staple_stencil import staple_stencil_action
 
 
-class improved_with_rectangle(base):
+class improved_with_rectangle(differentiable_functional):
     def __init__(self, beta, c1, c0=None):
         self.beta = beta
         self.c1 = c1
@@ -28,20 +29,17 @@ class improved_with_rectangle(base):
             c0 = 1.0 - 8 * c1
         self.c0 = c0
         self.cache = {}
+        self.stencil_action = staple_stencil_action(beta, c0, c1)
         self.__name__ = f"improved_with_rectangle({beta},{c1})"
 
     def __call__(self, U):
-        Nd = len(U)
-        vol = U[0].grid.gsites
-        P = g.qcd.gauge.plaquette(U)
-        R = g.qcd.gauge.rectangle(
-            U, [[(mu, 2, nu, 1) for mu in range(Nd) for nu in range(Nd) if mu != nu]]
-        )
-        return (
-            vol
-            * self.beta
-            * (self.c0 * (1.0 - P) * (Nd - 1) * Nd / 2.0 + self.c1 * (1.0 - R) * (Nd - 1) * Nd)
-        )
+        return self.stencil_action(U)
+
+    def gradient(self, U, dU):
+        return self.stencil_action.gradient(U, dU)
+
+    def staple(self, U, mu):
+        return self.staples(U, mu_target=mu)[0]
 
     def staples(self, U, mu_target=None):
         Nd = len(U)

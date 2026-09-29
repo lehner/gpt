@@ -187,9 +187,13 @@ def _is_node(v):
 def _nodify_values(values, extra=()):
     # nested case (some value or the flow is a node): plain values become
     # constant nodes, so that the arithmetic stays in the node world
+    # (None: a value the flows do not read, see node)
     if not any(_is_node(v) for v in list(values) + list(extra)):
         return values
-    return [v if _is_node(v) else g.ad.reverse.node_base(v, with_gradient=False) for v in values]
+    return [
+        v if (v is None or _is_node(v)) else g.ad.reverse.node_base(v, with_gradient=False)
+        for v in values
+    ]
 
 
 def _factor(v, adj):
@@ -436,6 +440,13 @@ def node(children, terms, nmax, container):
 
     trivial_value = len(terms) == 1 and len(terms[0][1]) == 1 and terms[0][0] == 1.0
 
+    # the values the flow into input i reads: the other factors of the terms
+    # input i occurs in (a single-factor term reads none)
+    reads = [set() for _ in children]
+    for c, f in terms:
+        for k, (j, a) in enumerate(f):
+            reads[j].update(jj for kk, (jj, aa) in enumerate(f) if kk != k)
+
     def _forward():
         # (node.forward evaluates a plain expression; a lone adj stays lazy)
         values = _nodify_values([value_of(c) for c in children])
@@ -447,10 +458,14 @@ def node(children, terms, nmax, container):
 
     def _backward(z):
         w = z.gradient
-        values = [value_of(c) for c in children]
+        need = {i for i, c in enumerate(children) if c.with_gradient}
+        # only the values the flows read (the others need not be computed)
+        read = set()
+        for i in need:
+            read |= reads[i]
+        values = [value_of(c) if i in read else None for i, c in enumerate(children)]
         if nested[0] is None or _is_node(w):
             nested[0] = _is_node(w) or any(_is_node(v) for v in values)
-        need = {i for i, c in enumerate(children) if c.with_gradient}
         if nested[0]:
             # nested: the flows are expression nodes one level down
             values = _nodify_values(values, (w,))
@@ -458,13 +473,22 @@ def node(children, terms, nmax, container):
         else:
             flows = None
             if kernels:
-                flows = _backward_kernel(values, terms, occurrences, need, w, children)
+                # an unread value is not referenced by the kernel code: any
+                # field of the same type holds its place in the layout
+                proto = next((v for v in values if isinstance(v, g.lattice)), None)
+                kvalues = values
+                if proto is not None and any(v is None for v in values):
+                    kvalues = [proto if v is None else v for v in values]
+                if proto is not None or not any(v is None for v in values):
+                    flows = _backward_kernel(kvalues, terms, occurrences, need, w, children)
             if flows is None:
                 flows = _flows_plain(values, terms, occurrences, need, w)
         for i, v in flows.items():
             g.ad.reverse.util.accum(children[i], v, 1)
 
     n = g.ad.reverse.node_base(_forward, _backward, children, _container=container, _tag="expr")
+    n._reads_children = tuple(tuple(sorted(r)) for r in reads)
+    n._reads_self = False
     n._terms = terms
     n._nmax = nmax
     return n

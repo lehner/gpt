@@ -88,7 +88,7 @@ class node_differentiable_functional(g.group.differentiable_functional):
             self.arguments[i].with_gradient = True
         for i in range(len(fields)):
             self.arguments[i].value = fields[i]
-        self.node()
+        self.node(with_value=False)
         return [self.arguments[i].gradient for i in indices]
 
 
@@ -141,6 +141,16 @@ class node_base(base):
         # holding an adopted field that is not owned (see accumulate)
         self._borrowed = set()
         self._tag = _tag
+        # which values the backward reads (see needed_values): _reads_children
+        # is None (all children) or, per child i, the indices of the children
+        # whose values the flow into child i reads; _reads_self: whether the
+        # backward reads this node's own value.  The default is conservative.
+        self._reads_children = None
+        self._reads_self = True
+        # (gradient, c): the gradient is exactly c times the identity (see
+        # util.identity_flow_scale); valid only while self.gradient is that
+        # object and no other contribution was accumulated into it
+        self._flow_identity = None
 
     def __str__(self):
         return str_traverse(self)
@@ -231,6 +241,7 @@ class node_base(base):
             ),
             z_container,
             "*",
+            reads=((1,), (0,)),
         )
 
     def __pow__(x, n):
@@ -337,7 +348,10 @@ class node_base(base):
             z_container = get_unary_container(
                 x._container, lambda y: y[item], ("getitem", repr(item))
             )
-            return node_base(_forward, _backward, (x,), _container=z_container)
+            z = node_base(_forward, _backward, (x,), _container=z_container)
+            z._reads_children = ((),)
+            z._reads_self = False
+            return z
 
         def getter(y):
             return y[item]
@@ -370,10 +384,14 @@ class node_base(base):
                 # (the setter may write into the gradient)
                 x.own_gradient()
                 x.gradient = setter(x.gradient, getter(x.gradient) + z.gradient)
+                x._flow_identity = None
 
         z_container = get_unary_container(x._container, getter)
 
-        return node_base(_forward, _backward, (x,), _container=z_container)
+        z = node_base(_forward, _backward, (x,), _container=z_container)
+        z._reads_children = ((),)
+        z._reads_self = False
+        return z
 
     def __add__(x, y):
         x, y = nodify(x, y)
@@ -394,6 +412,7 @@ class node_base(base):
             (lambda z: (1, z.gradient), lambda z: (1, z.gradient)),
             _container,
             "+",
+            reads=((), ()),
         )
 
     def __sub__(x, y):
@@ -412,6 +431,7 @@ class node_base(base):
             (lambda z: (1, z.gradient), lambda z: (-1, z.gradient)),
             _container,
             "-",
+            reads=((), ()),
         )
 
     def __rsub__(x, y):
@@ -420,11 +440,15 @@ class node_base(base):
     def __radd__(x, y):
         return node_base.__add__(y, x)
 
-    def forward(self, nodes, eager=True, free=None):
+    def forward(self, nodes, eager=True, free=None, needed=None):
         max_fields_allocated = 0
         fields_allocated = 0
         for n in nodes:
             if n._forward is not None:
+                if needed is not None and n not in needed:
+                    # no backward reads this value (see needed_values); a
+                    # read that was not declared evaluates it lazily
+                    continue
                 if n.value is None or free is not None:
                     # in a backward pass (free is None) a node's value is a
                     # deterministic function of its children's values, which
@@ -500,7 +524,12 @@ class node_base(base):
             )
 
     # TODO: allow for lists of initial_gradients (could save forward runs at sake of more memory)
-    def __call__(self, with_gradients=True, initial_gradient=None, retain_values=False):
+    def __call__(
+        self, with_gradients=True, initial_gradient=None, retain_values=False, with_value=True
+    ):
+        # with_value=False (with gradients, without retain_values): the value
+        # of the root is not needed, so only the values some backward reads
+        # are computed (see needed_values); the return value is then None
         # retain_values keeps the forward values of the graph: with gradients,
         # the backward does not free them, so repeated reverse passes (e.g.
         # one per seed direction) over unchanged leaves share one forward;
@@ -510,7 +539,10 @@ class node_base(base):
         nodes = []
         forward_free = traverse(nodes, self)
         free = forward_free if not (with_gradients or retain_values) else None
-        self.forward(nodes, free=free)
+        needed = None
+        if with_gradients and not retain_values and not with_value:
+            needed = needed_values(nodes)
+        self.forward(nodes, free=free, needed=needed)
         if with_gradients:
             self.backward(
                 nodes,
@@ -518,7 +550,7 @@ class node_base(base):
                 initial_gradient=initial_gradient,
                 retain_values=retain_values,
             )
-        return self.value
+        return self.value if needed is None else None
 
     def functional(self, *arguments):
         return node_differentiable_functional(self, arguments)
@@ -571,7 +603,34 @@ class node_base(base):
         return r
 
 
-def node_op(children, forward, backards, container, tag=None):
+def needed_values(nodes):
+    # the computed nodes whose values a reverse pass reads when the value of
+    # the root (nodes[-1]) is not needed: the values the backward closures
+    # read (as declared by _reads_children / _reads_self), and everything
+    # their forward closures need.  nodes is in topological order (children
+    # first), so every consumer of a node is visited before the node.
+    needed = set()
+    for n in reversed(nodes):
+        if n._forward is None:
+            continue
+        if n.with_gradient:
+            if n._reads_self:
+                needed.add(n)
+            if n._reads_children is None:
+                needed.update(n._children)
+            else:
+                for c, reads in zip(n._children, n._reads_children):
+                    if c.with_gradient:
+                        needed.update(n._children[j] for j in reads)
+        if n in needed:
+            needed.update(n._children)
+    return needed
+
+
+def node_op(children, forward, backards, container, tag=None, reads=None):
+    # reads: None (conservative) or, per child i, the indices of the children
+    # whose values the backward closure of child i reads; a node_op's backward
+    # never reads its own value
     # build a node from a forward closure and per-child backward closures.
     # backards[i](z) returns (sign, term) or None (no gradient for that
     # child); the with_gradient check and gradient accumulation are handled
@@ -583,7 +642,11 @@ def node_op(children, forward, backards, container, tag=None):
                 sign, term = f(z)
                 accum(c, term, sign)
 
-    return node_base(forward, _backward, children, _container=container, _tag=tag)
+    z = node_base(forward, _backward, children, _container=container, _tag=tag)
+    if reads is not None:
+        z._reads_children = tuple(tuple(r) for r in reads)
+        z._reads_self = False
+    return z
 
 
 def node(x, with_gradient=True, infinitesimal_to_cartesian=True):

@@ -18,13 +18,21 @@
 #
 import gpt as g
 import numpy as np
-from gpt.qcd.gauge.action import base
+from gpt.core.group import differentiable_functional
+from gpt.qcd.gauge.action.staple_stencil import staple_stencil_action
 
 
-class wilson(base):
+class wilson(differentiable_functional):
     def __init__(self, beta):
         self.beta = beta
+        self.stencil_action = staple_stencil_action(beta, 1.0, 0.0)
         self.__name__ = f"wilson({beta})"
+
+    def gradient(self, U, dU):
+        return self.stencil_action.gradient(U, dU)
+
+    def staple(self, U, mu):
+        return self.staples(U, mu_target=mu)[0]
 
     def __call__(self, U):
         # Let beta = 2 ndim_repr / g^2
@@ -35,9 +43,7 @@ class wilson(base):
         #      = -2/g^2 sum_{mu,nu} Re[Tr[staple_{mu,nu}^dag U_mu]]
         #
         # since   P_{mu,nu} = staple_{mu,nu}^dag U_mu + staple_{mu,nu} U_mu^dag = 2 Re[staple^dag * U]
-        Nd = len(U)
-        vol = U[0].grid.gsites
-        return self.beta * (1.0 - g.qcd.gauge.plaquette(U)) * (Nd - 1) * Nd * vol / 2.0
+        return self.stencil_action(U)
 
     def staples(self, U, mu_target=None):
         st = g.lattice(U[0])

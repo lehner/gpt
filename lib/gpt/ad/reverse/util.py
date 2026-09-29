@@ -370,6 +370,20 @@ def accum(n, r, sign=1, adopt=True):
         None not in n._borrowed,
     )
     n.set_owned(None, owned)
+    # any contribution invalidates a scaled-identity record (the reductions
+    # that create one set it after their accum, see identity_flow_scale)
+    n._flow_identity = None
+
+
+def identity_flow_scale(n):
+    # c if the (plain) gradient of node n is exactly c times the identity, as
+    # recorded by the reductions trace/sum (a scalar flow broadcast back to a
+    # field); None if unknown.  Consumers may exploit it (e.g. a stencil
+    # adjoint folds c into its weights instead of multiplying by the field).
+    rec = n._flow_identity
+    if rec is None or rec[0] is not n.gradient:
+        return None
+    return rec[1]
 
 
 # The container of an operation's result is derived by applying the operation

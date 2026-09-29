@@ -28,6 +28,8 @@ from gpt.ad.reverse.util import (
     value_of,
     is_node,
     nodify,
+    value_depth_static,
+    identity_flow_scale,
 )
 import gpt.ad.reverse.foundation.matrix
 import gpt.ad.reverse.foundation.stencil
@@ -89,33 +91,57 @@ def adj(x):
         (lambda z: (1, g.adj(z.gradient)),),
         x._container,
         "adj",
+        reads=((),),
     )
 
 
-def _reduction_backward(x):
-    # adjoint of a sum-like reduction (trace/sum): broadcast the scalar flow
-    # back to x's lattice via identity(x); conjugate-linear in the flow
-    return (lambda z: (1, product(g.identity_constant(value_of(x)), z.gradient)),)
+def _reduction_identity(x):
+    # identity(x) for the backward of a reduction.  Only the type of x is
+    # needed: if its value was not computed (see needed_values) and it is a
+    # plain lattice on a full grid, it is taken from the container instead of
+    # evaluating x
+    if x.value is None and x._forward is not None and value_depth_static(x) == 1:
+        c = x._container
+        if c.tag[0] is g.lattice and c.get_grid().cb.n == 1:
+            return g.identity_constant(g.lattice(c.get_grid(), c.get_otype()))
+    return g.identity_constant(value_of(x))
+
+
+def _reduction_node(x, forward, container):
+    # a sum-like reduction (trace/sum).  Its adjoint broadcasts the flow back
+    # to x's lattice via identity(x) (conjugate-linear in the flow).  If that
+    # flow is a scalar c, or itself c times the identity, the flow into x is
+    # exactly c times the identity, which is recorded for the consumers of
+    # x's gradient (see util.identity_flow_scale).
+    def _backward(z):
+        if not x.with_gradient:
+            return
+        w = z.gradient
+        if is_node(w):
+            c = None
+        elif g.util.is_num(w):
+            c = complex(w)
+        else:
+            c = identity_flow_scale(z)
+        first = x.gradient is None
+        accum(x, product(_reduction_identity(x), w), 1)
+        if first and c is not None and not is_node(x.gradient):
+            x._flow_identity = (x.gradient, c)
+
+    z = g.ad.reverse.node_base(forward, _backward, (x,), _container=container)
+    z._reads_children = ((),)
+    z._reads_self = False
+    return z
 
 
 def trace(x, t):
     z_container = get_unary_container(x._container, lambda v: g.trace(v, t), ("trace", t))
 
-    return g.ad.reverse.node_op(
-        (x,),
-        lambda: g.trace(value_of(x), t),
-        _reduction_backward(x),
-        z_container,
-    )
+    return _reduction_node(x, lambda: g.trace(value_of(x), t), z_container)
 
 
 def sum(x):
-    return g.ad.reverse.node_op(
-        (x,),
-        lambda: g.sum(value_of(x)),
-        _reduction_backward(x),
-        x._container.lattice_to_tensor(),
-    )
+    return _reduction_node(x, lambda: g.sum(value_of(x)), x._container.lattice_to_tensor())
 
 
 def component_simple_map(operator, numpy_operator, extra_params, first, second):

@@ -19,7 +19,7 @@
 import gpt as g
 
 
-def matrix(self, *fields):
+def matrix(self, *fields, padded=None):
     if self.write_fields is None:
         raise Exception(
             "Generalized matrix stencil needs more information.  Call stencil.data_access_hints."
@@ -30,7 +30,12 @@ def matrix(self, *fields):
     padded_fields = []
     padded_field = None
     for i in range(len(fields)):
-        if i in self.read_fields:
+        if padded is not None and i in padded:
+            # a padded copy the caller holds (read-only, never written)
+            assert i not in self.write_fields
+            padded_field = padded[i]
+            padded_fields.append(padded_field)
+        elif i in self.read_fields:
             padded_field = self.padding(fields[i])
             padded_fields.append(padded_field)
         else:
@@ -64,3 +69,4 @@ def matrix(self, *fields):
         t()
         g.message(t)
     # todo: make use of cache_fields
+    return padded_fields

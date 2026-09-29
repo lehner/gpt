@@ -51,6 +51,7 @@ class matrix(auto_tuned_class):
     ):
         self.points = points
         self.code = [parse(c) for c in code]
+        self.temporaries = tuple(sorted(temporaries))
         self.code_parallel_block_size = code_parallel_block_size
         if code_parallel_block_size is None:
             code_parallel_block_size = len(code)

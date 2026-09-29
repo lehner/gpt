@@ -429,3 +429,75 @@ assert diff < 1e-16
 g.message("path-based plaquette 3rd derivative: OK")
 
 
+
+#####################################
+# local temporaries (kernel-owned per-site fields) in node mode
+#####################################
+# The improved gauge action as ONE stencil whose up/down staples are local
+# temporaries shared by the plaquette and rectangle terms
+# (g.qcd.gauge.action.staple_stencil).  Its adjoint is two stencils (stage A
+# with local temporaries, stage B without), so every derivative order stays
+# a stencil.  Cross-checked against the cshift node graph of
+# differentiable_improved_with_rectangle at 1st, 2nd and 3rd order.
+from gpt.qcd.gauge.action.staple_stencil import staple_stencil_action
+
+beta, c1 = 2.95, -0.331
+act_st = staple_stencil_action(beta, 1.0 - 8.0 * c1, c1)
+act_cs = g.qcd.gauge.action.differentiable_improved_with_rectangle(beta, c1)
+
+v_st, v_cs = act_st(U), g(act_cs(U))
+eps = abs(v_st - complex(v_cs).real) / abs(v_st)
+g.message(f"local temporaries: action value vs cshift graph: {eps}")
+assert eps < 1e-14
+
+# 1st derivative (functional force), and with_value=False gives the same
+# gradient without computing the root value
+nU = [rad.node(g.copy(u)) for u in U]
+S_st = act_st(nU)
+F_st = S_st.functional(*nU).gradient(U, U)
+nU2 = [rad.node(g.copy(u)) for u in U]
+F_cs = act_cs(nU2).functional(*nU2).gradient(U, U)
+diff = max(n2(F_st[mu] - F_cs[mu]) / n2(F_cs[mu]) for mu in range(Nd))
+g.message(f"local temporaries: force vs cshift graph: {diff}")
+assert diff < 1e-28
+nU3 = [rad.node(g.copy(u)) for u in U]
+S3n = act_st(nU3)
+assert S3n(with_value=False) is None
+diff = max(n2(nU3[mu].gradient - F_st[mu]) / n2(F_st[mu]) for mu in range(Nd))
+g.message(f"with_value=False: gradient vs functional force: {diff}")
+assert diff < 1e-28
+act_st.gradient(U, U)
+g.qcd.gauge.action.iwasaki(beta).assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+
+
+def hvp_of(action, dir_nodes):
+    nnU = [rad.node(rad.node(u)) for u in U]
+    action(nnU)(with_value=False)
+    c = sum(g.group.inner_product(nnU[mu].gradient, dir_nodes[mu]) for mu in range(Nd))
+    c(with_value=False)
+    return [g(nnU[mu].value.gradient) for mu in range(Nd)]
+
+
+H_st = hvp_of(act_st, link_dirs(dA, 1))
+H_cs = hvp_of(act_cs, link_dirs(dA, 1))
+diff = max(n2(H_st[mu] - H_cs[mu]) / n2(H_cs[mu]) for mu in range(Nd))
+g.message(f"local temporaries: HVP vs cshift graph: {diff}")
+assert diff < 1e-28
+
+
+def d3_of(action):
+    nnnU = [rad.node(rad.node(rad.node(u))) for u in U]
+    action(nnnU)()
+    c = sum(g.group.inner_product(nnnU[mu].gradient, link_dirs(dA, 2)[mu]) for mu in range(Nd))
+    c()
+    c = sum(g.group.inner_product(nnnU[mu].value.gradient, link_dirs(dB, 1)[mu]) for mu in range(Nd))
+    c()
+    return [g(nnnU[mu].value.value.gradient) for mu in range(Nd)]
+
+
+G_st = d3_of(act_st)
+G_cs = d3_of(act_cs)
+diff = max(n2(G_st[mu] - G_cs[mu]) / n2(G_cs[mu]) for mu in range(Nd))
+g.message(f"local temporaries: 3rd derivative vs cshift graph: {diff}")
+assert diff < 1e-28
+g.message("local temporaries in node mode: OK")

@@ -101,6 +101,11 @@ Key concepts:
 - **Gauge actions** implement `__call__` (action value) and
   `gradient(fields, dfields)` (force). `act.transformed(diffeomorphism,
   indices, projection)` composes an action with a field transformation.
+  `wilson` and `improved_with_rectangle` (iwasaki, symanzik, dbw2) take
+  value and force from the AD stencil action in
+  `qcd/gauge/action/staple_stencil.py` (see §4.7); their hand-written
+  `staples()` / `staple()` remain for the heatbath.  `g.qcd.gauge.smear.local_stout`
+  is a thin wrapper around `directional_parallel_transport`.
 - `g.even_odd_projectors(grid)` gives the checkerboard masks `even`, `odd`.
 - Finite differences of gauge actions along the group flow:
   `U(t) = [g.group.compose(g(t * dA[mu]), U[mu]) for mu in range(4)]`,
@@ -165,6 +170,11 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
     scalar-valued graphs; a *plain* lattice seed for field-valued graphs,
     e.g. `aUft[mu](initial_gradient=dU)` to apply the Jacobian to a
     direction `dU`).
+  - `with_value=False` (with gradients, without `retain_values`): the root
+    value is not needed, so only the values some backward reads are
+    computed and `None` is returned (see §4.8).  `functional.gradient` uses
+    it; pass it for contractions whose value you do not read, e.g. an HVP
+    pass `c(with_value=False)`.
 - `value_of(x)` (in `ad/reverse/util.py`) evaluates a (possibly nested) node
   down to a plain value. To **release** a graph's memory after reading a
   result, repeatedly resolve `x = value_of(x)` while `is_node(x)`, then
@@ -355,6 +365,21 @@ mechanism.
   `initial_gradient` must be a *plain* lattice; a constant direction used in
   a *contraction* of a 2-deep root must be a `rad.node(dir,
   with_gradient=False)`.
+- **Node graphs are reference cycles**: the backward closures refer back to
+  their nodes, so a graph built per call is only released by Python's cyclic
+  garbage collector, which counts objects, not bytes -- large fields pile up
+  between collections (seen as +75 MB per call at 16^4).  For a repeated
+  operation build the graph once and swap the leaf values (as
+  `dft_diffeomorphism` and `directional_parallel_transport._local_vjp` do);
+  clear root values before re-running (the backward keeps the root's value,
+  and `forward` reuses any value that is not None).
+- **In-place writes into a gradient** outside `util.accum` must clear
+  `node._flow_identity` (as `project` does), or a stale scaled-identity
+  record survives (§4.8).
+- **Self-accumulating targets are not reads** in `data_access_hints`:
+  listing them as read makes the padded stencil copy them in before the
+  kernel overwrites them (the padded wrapper already starts a non-fresh
+  target from the caller's value).
 - **Flows are adopted, not copied**: the first plain contribution to a
   gradient is adopted as is (`util.accumulate`), so the same field can be
   the gradient of several nodes (both children of an add receive
@@ -366,6 +391,78 @@ mechanism.
   and code that writes into a node's gradient in place must call
   `own_gradient()` first (as `project` does).
 
+### 4.7 Stencil nodes (`ad/reverse/foundation/stencil.py`)
+
+A compiled matrix stencil called with node fields (`stencil(out_node,
+*input_nodes)`, or `g.parallel_transport_matrix(...)(nodes)`) becomes one
+computed node.  Its forward is the compiled kernel; its backward is the
+**adjoint code**, derived in closed form as another stencil (the product
+rule per factor, shifts negated/relativized, adjoint flags adjusted), so the
+gradient of a stencil is a stencil and the tower is self-similar at any
+depth.  Three regimes:
+
+- **Temp-free** (factors read inputs only): the adjoint is one kernel; in a
+  nested pass the backward is the adjoint stencil as a node again.
+- **Accumulation temps** (fields passed as plain constants and used only as
+  partial sums): versioned flow slots and a staged adjoint; nested passes
+  interpret the adjoint in the node domain (cshift fallback, slow).
+- **Local temporaries** (kernel-owned per-site fields, declared with
+  `g.stencil.matrix(..., temporaries=[...])`; they are not passed by the
+  caller, whose fields and `data_access_hints` are the remaining ones in index
+  order).  Rules: (R1) temporaries are written and read at the zero point
+  only; (R2) an entry that reads a temporary reads *all* its factors at the
+  zero point; temporaries are built from inputs only (no chains), all writes
+  of a temporary precede its reads, outputs are never read.  The adjoint
+  (`adjoint_code_local`) is two stencils: **stage A** (again with local
+  temporaries) recomputes the temporaries and computes the flows of the
+  entries that read them (local by R2), writing each temporary's flow
+  lambda_T to memory; **stage B** (temp-free) pushes lambda_T, read at shifted
+  points, through the temporary definitions into the inputs.  In nested
+  passes both stages are node stencils of the same kinds, so higher
+  derivatives stay in stencils.  Temporaries force the padded kernel (the
+  C++ kernel supports them only in local mode).  Use them where a
+  subproduct is **shared** (the up/down staples of plaquettes and
+  rectangles, `staple_stencil_code`); without sharing they only add a stage
+  barrier and the lambda_T memory traffic (the Wilson action is faster as a
+  plain plaquette-loop stencil).
+
+Plain-run optimizations:
+
+- **Seedless adjoints**: if the flow into a single-output stencil is exactly
+  `c * identity` (see §4.8), the adjoint kernels are compiled once per c
+  with the flow factor dropped and c (conj(c) for an adjointed read) folded
+  into the weights (`seedless_code`).  For a traced loop sum this removes one
+  of k matrix products per k-link entry (72 -> 48 for the Wilson force).
+- **Shared padding**: the forward's halo-padded input copies are handed to
+  the adjoint kernels (same padding domain) instead of being copied again;
+  use-once, tied to the forward value, checked by object identity
+  (switch: `share_padded`).
+
+### 4.8 Value needs and structured flows
+
+- **Which values a backward reads** is declared per node:
+  `_reads_children` (None = all children, else per child i the child
+  indices the flow into child i reads) and `_reads_self` (default True).
+  `node_op(..., reads=...)` sets both (a node_op never reads its own value).
+  Declared: products, sums, adj, trace, sum, list-element access, `project`,
+  expression nodes (the other factors of the terms an input occurs in), and
+  stencil nodes (the inputs, never the output).  `needed_values` walks the
+  graph from the root and `forward` skips every computed node nothing
+  needs (only with `with_value=False`).  **Safety net**: `value_of`
+  evaluates a missing value on demand, so an undeclared read is still
+  correct -- but it cascades (the recomputation needs its own inputs) and
+  silently loses the saving.  So a backward must not call `value_of` on
+  inputs it does not really need: trace/sum build their identity from the
+  container (`_reduction_identity`), expression nodes evaluate only the
+  values their flows read.
+- **Scaled-identity flows**: trace and sum record when the flow they pass
+  down is exactly `c * identity` (a scalar flow broadcast back to a field):
+  `node._flow_identity = (gradient_object, c)`, read with
+  `util.identity_flow_scale(node)`.  It is valid only while `node.gradient`
+  is that very object: `util.accum` clears it on every contribution and
+  `project` clears it after its in-place update.  Consumers may exploit it
+  (the stencil seedless adjoints); all others see an ordinary field.
+
 ## 5. File map (AD-relevant)
 
 | Path | Role |
@@ -375,15 +472,16 @@ mechanism.
 | `lib/gpt/ad/reverse/transform.py` | sin/cos/... node transforms |
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
 | `lib/gpt/ad/reverse/expression.py` | expression nodes (fused sums of products, see §4.5) |
-| `lib/gpt/core/local_stencil/adjoint.py` | generic adjoint-stencil code derivation for compiled matrix stencils (see §5.2) |
-| `lib/gpt/ad/reverse/stencil.py` | fused differentiable parallel transport (stage 0 of the differentiable-stencil work) |
-| `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils: supports multiple node outputs in one fused call (shared forward run; one adjoint run per output, which is what keeps the sibling zero-gradient ordering safe) |
-| `tests/ad/stencil.py` | stencil AD toy: fused two-output stencil (plaquette + adjoint plaquette), validated at 1st/2nd/3rd order |
+| `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, `adjoint_code_local`), multi-output list nodes, local temporaries, seedless adjoints, shared padding |
+| `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils; padded wrapper; `temporaries=` |
+| `tests/ad/stencil.py` | stencil AD: fused two-output stencil, path-based stencils, local temporaries (staple action vs cshift graph) at 1st/2nd/3rd order, `with_value=False` |
+| `lib/gpt/qcd/gauge/action/staple_stencil.py` | gauge action value/force as AD stencils (plaquette loop, or staples as local temporaries with rectangles) |
+| `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple, log-det and its force, `inv` |
 | `lib/gpt/ad/forward/` | series / Landau differential algebra |
 | `lib/gpt/core/group/operation.py` | inner_product/compose dispatch |
 | `lib/gpt/core/group/differentiable_functional.py` | action functional + `assert_gradient_error` |
 | `lib/gpt/core/object_type/su_n.py` | SU(N) group/algebra otypes, generators, conversions |
-| `lib/gpt/qcd/gauge/action/wilson.py` | reference gauge action |
+| `lib/gpt/qcd/gauge/action/wilson.py` | Wilson action (AD stencil value/force; hand-written staples for the heatbath) |
 | `lib/gpt/qcd/gauge/smear/differentiable.py` | `dft_diffeomorphism` (Jacobian machinery) |
 | `tests/ad/ad.py` | 1st-derivative force checks (first-order tests belong here) |
 | `tests/ad/higher_order.py` | 2nd/3rd-order nested-node reference (executable spec) |
