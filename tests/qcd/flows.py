@@ -117,14 +117,3 @@ if regress:
 
 # finally check the force terms of the log-det-jacobian
 act2.assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
-act1.gradient(U, U)
-act2.gradient(U + params, U)
-
-# next: look at timing and improve AD speed
-t = g.timer("d")
-t("orig")
-act1.gradient(U, U)
-t("ad")
-act2.gradient(U + params, U)
-t()
-g.message(t)

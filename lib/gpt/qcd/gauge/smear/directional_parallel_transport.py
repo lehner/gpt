@@ -73,7 +73,7 @@ class _generator_kernels:
         ng = len(generators)
         norm = [complex(np.trace(t.array @ t.array)) for t in generators]
         # (the scale is applied once per element, so all norms must agree)
-        assert all(abs(n - norm[0]) < 1e-14 for n in norm)
+        assert all(abs(n - norm[0]) < 10 * grid.precision.eps for n in norm)
         ti = g.stencil.tensor_instructions
         self.N, self.ng = N, ng
         self.fgenerators = [g.lattice(grid, otype_cartesian) for _ in range(ng)]
@@ -156,6 +156,7 @@ class directional_parallel_transport(dft_diffeomorphism):
 
         self.description_staple = _staple_description(description_mu, mu, nd)
         self._staple_cache = {}
+        self._vjp = None
 
         super().__init__(fields, ft)
 
@@ -208,10 +209,7 @@ class directional_parallel_transport(dft_diffeomorphism):
 
     def _update(self, sm, xU_mu):
         # U_mu' = exp(TA(P1 sm)) U_mu
-        P1 = self.P1
-        if P1 is not None:
-            sm = g(sm * P1)
-        return g(g.matrix.exp(g.qcd.gauge.project.traceless_anti_hermitian(sm)) * xU_mu)
+        return g(g.matrix.exp(self._project(sm)) * xU_mu)
 
     def _staple(self, xfields):
         # the weighted staple C with transported loop = C U_mu^dag (P0 applied)
@@ -221,6 +219,79 @@ class directional_parallel_transport(dft_diffeomorphism):
         # the site-local map U_mu' = f(U_mu, C) for a fixed staple C
         xU_P0 = g(xU_mu * self.P0) if self.P0 is not None else xU_mu
         return self._update(g(xC * g.adj(xU_P0)), xU_mu)
+
+    def jacobian(self, fields, fields_prime, dfields):
+        # only output mu is transformed, every other output is the identity
+        # map, whose Jacobian passes its direction through: one reverse pass
+        # (for output mu) instead of one per output
+        mu = self.mu
+        N = len(fields)
+        assert len(fields_prime) == N and len(dfields) == N
+        seed = g.cartesian_to_infinitesimal(fields_prime[mu], dfields[mu])
+        if self.description_staple is not None:
+            grads = self._local_vjp(fields, seed)
+        else:
+            for nu in range(N):
+                assert_compatible(self.aU[nu].value, fields[nu])
+                self.aU[nu].value = fields[nu]
+                self.aU[nu].zero_gradient()
+            self.aUft[mu](initial_gradient=seed)
+            grads = [self.aU[nu].gradient for nu in range(N)]
+        gradient = []
+        for nu in range(N):
+            gr = grads[nu]
+            if nu != mu:
+                gr = g.copy(dfields[nu]) if gr is None else g(gr + dfields[nu])
+            elif gr is None:
+                gr = g(0 * dfields[nu])
+            gr.otype = dfields[nu].otype
+            gradient.append(gr)
+        return gradient
+
+    def _local_vjp(self, fields, seed):
+        # the VJP of output mu through the site-local map f(U_mu, C) and the
+        # staple C (see _staple_description): the staple stencil and its
+        # adjoint carry one link fewer per path than the transported loop
+        rad = g.ad.reverse
+        mu = self.mu
+        # the graphs are built once and re-used with new leaf values: node
+        # graphs are reference cycles, so graphs built per call would only be
+        # released by the cyclic garbage collector, which does not see the
+        # size of the fields they hold
+        plain = not any(isinstance(x, rad.node_base) for x in fields)
+        if plain and self._vjp is not None:
+            nodes, aC, _U, _C, aF = self._vjp
+            for n, x in zip(nodes, fields):
+                assert_compatible(n.value, x)
+                n.value = x
+        else:
+            nodes = [rad.node(x) for x in fields]
+            aC = self._staple(nodes)
+            _U = rad.node(fields[mu])
+            # a plain matrix (not a group element): no conversion to the algebra
+            _C = rad.node(g.lattice(fields[mu]), infinitesimal_to_cartesian=False)
+            aF = self._local_ft(_U, _C)
+            if plain:
+                self._vjp = (nodes, aC, _U, _C, aF)
+        # the roots keep their values after a reverse pass
+        aC.value = None
+        aF.value = None
+        # one staple forward, shared by the local pass and the staple's reverse
+        _C.value = aC(with_gradients=False, retain_values=True)
+        _U.value = fields[mu]
+        aF(initial_gradient=seed)
+        grad_U, grad_C = _U.gradient, _C.gradient
+        aC(initial_gradient=grad_C)
+        grads = [n.gradient for n in nodes]
+        grads[mu] = grad_U if grads[mu] is None else g(grads[mu] + grad_U)
+        # release the fields held by the graph until the next call
+        aC.value = None
+        aF.value = None
+        _C.value = None
+        for n in nodes + [_U, _C]:
+            n.gradient = None
+            n._borrowed.clear()
+        return grads
 
     def diagonal_jacobian(self, fields, fields_prime, dfields_mu):
         mu = self.mu
@@ -283,14 +354,55 @@ class directional_parallel_transport(dft_diffeomorphism):
                 coor[a, b] = c
         return _adjoint_matrix(grid, otype.Nc, coor)
 
-    def log_det_jacobian(self, fields):
+    def inv(self, fields, max_iter=100):
+        # invert U_mu' = exp(TA(P1 C U_mu^dag)) U_mu by the fixed-point
+        # iteration U_mu <- exp(-TA(P1 C U_mu^dag)) U_mu'.  The staple C is
+        # evaluated once on the smeared fields: this requires that it does
+        # not depend on the updated links (e.g. a checkerboard P1 with
+        # plaquette staples), which is verified at the end.
+        assert self.description_staple is not None
+        mu, nd = self.mu, self.nd
+        C = self._staple(fields)
+        U_prime_mu = fields[mu]
+        U_mu = g.copy(U_prime_mu)
+        eps = U_mu.grid.precision.eps
+        for it in range(max_iter):
+            U_mu_last = g.copy(U_mu)
+            xU_P0 = g(U_mu * self.P0) if self.P0 is not None else U_mu
+            U_mu @= g.matrix.exp(-self._project(g(C * g.adj(xU_P0)))) * U_prime_mu
+            eps2 = g.norm2(U_mu_last - U_mu) / U_mu.grid.gsites
+            if eps2 < eps**2:
+                break
+        if it == max_iter - 1:
+            g.message(
+                f"Warning: directional_parallel_transport could not be inverted; last eps^2 = {eps2} after {max_iter} iterations"
+            )
+            return None
+        U = [U_mu if i == mu else fields[i] for i in range(len(fields))]
+        # the staple of the result must be the one used above (where it
+        # enters the update)
+        C_check = self._staple(U)
+        eps2 = g.norm2(self.P1 * (C_check - C)) / max(g.norm2(self.P1 * C), 1e-300)
+        assert eps2 < 1e4 * eps**2, f"staple depends on the updated links ({eps2})"
+        return U
+
+    def _project(self, sm):
+        # TA(P1 sm), the generator of the update
+        if self.P1 is not None:
+            sm = g(sm * self.P1)
+        return g.qcd.gauge.project.traceless_anti_hermitian(sm)
+
+    def log_det_jacobian_field(self, fields):
+        # the site-local log det of the mu->mu block (zero outside P1)
         M = self.jacobian_matrix(fields)
         M_det = g.matrix.det(M)
         M_log_det = g.component.log(M_det)
         zero = g.lattice(M_log_det)
         zero[:] = 0
-        M_log_det = g.where(self.P1, M_log_det, zero)
-        return g.sum(M_log_det)
+        return g.where(self.P1, M_log_det, zero)
+
+    def log_det_jacobian(self, fields):
+        return g.sum(self.log_det_jacobian_field(fields))
 
     def action_log_det_jacobian(self):
         return dpt_action_log_det_jacobian(self)
