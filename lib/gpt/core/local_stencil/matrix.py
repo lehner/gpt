@@ -19,6 +19,7 @@
 import cgpt
 import gpt as g
 from gpt.core import auto_tuned_class, auto_tuned_method
+from gpt.core.local_stencil.cse import cse as _cse
 import hashlib
 
 
@@ -39,6 +40,11 @@ class matrix(auto_tuned_class):
     # buffer of one block of osites_per_cache_block outer sites each,
     # allocated once; 0: default block size) and NOT passed by the caller,
     # who passes the remaining fields in index order.
+    #
+    # cse: combine common subexpressions (see local_stencil/cse.py) in the
+    # executed kernel (True, or the minimal number of uses of a temporary).
+    # The stencil keeps its original points/code/temporaries (they define its
+    # meaning, e.g. for the AD derivation); the executed plan is `executed`.
     def __init__(
         self,
         lat,
@@ -48,18 +54,29 @@ class matrix(auto_tuned_class):
         local=1,
         temporaries=(),
         osites_per_cache_block=0,
+        cse=False,
     ):
         self.points = points
         self.code = [parse(c) for c in code]
         self.temporaries = tuple(sorted(temporaries))
         self.code_parallel_block_size = code_parallel_block_size
+        # the executed plan (temporaries need the local kernel and a single
+        # code-parallel block)
+        self.executed = None
+        if cse and local and code_parallel_block_size in (None, len(code)):
+            self.executed = _cse(points, self.code, self.temporaries, 2 if cse is True else cse)
+        if self.executed is not None:
+            points, code, temporaries = self.executed
+            code = [parse(c) for c in code]
+        else:
+            code = self.code
         if code_parallel_block_size is None:
             code_parallel_block_size = len(code)
         self.obj = cgpt.stencil_matrix_create(
             lat.v_obj[0],
             lat.grid.obj,
             points,
-            self.code,
+            code,
             code_parallel_block_size,
             local,
             list(temporaries),

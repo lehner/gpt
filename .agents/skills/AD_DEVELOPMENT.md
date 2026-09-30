@@ -437,6 +437,25 @@ Plain-run optimizations:
   the adjoint kernels (same padding domain) instead of being copied again;
   use-once, tied to the forward value, checked by object identity
   (switch: `share_padded`).
+- **Common-subexpression elimination of the executed kernels**:
+  `g.stencil.matrix(..., cse=...)` / `g.local_stencil.matrix(..., cse=...)`
+  compiles an execution plan in which repeated adjacent factor pairs (a pair
+  and its adjoint reversal share one) become per-site temporaries, possibly
+  built from temporaries (`core/local_stencil/cse.py`, greedy Re-Pair).  The
+  stencil object keeps its original `points`/`code`/`temporaries` (the
+  executed plan is `executed`), so the AD derivation -- including the nested
+  tower's `matrix(compiled[0], ...)` -- still derives from uncombined codes,
+  while every plain run at any level uses the plan.  Fields the kernel writes
+  are combined only at the zero point and per write version (live reads).
+  A plan is used only if it saves >= 15% of the products
+  (`min_saving_default`): the kernels are dominated by factor fetches, so a
+  temporary costs about what it saves (measured: >= 18% fewer products ->
+  4-14% faster kernels, <= 12% -> neutral or slower).  Enabled for the AD
+  adjoint kernels (switch: `cse` in `foundation/stencil.py`); cartesian-only
+  kernels run unpadded without temporaries and are never combined.  Effect:
+  fused-loop iwasaki force -13%, iwasaki HVP -3..-4%, 3rd derivative
+  -2..-5%; the production forces and local_stout are below the threshold and
+  bit-identical.
 
 ### 4.8 Value needs and structured flows
 
@@ -473,7 +492,8 @@ Plain-run optimizations:
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
 | `lib/gpt/ad/reverse/expression.py` | expression nodes (fused sums of products, see §4.5) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, `adjoint_code_local`), multi-output list nodes, local temporaries, seedless adjoints, shared padding |
-| `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils; padded wrapper; `temporaries=` |
+| `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils; padded wrapper; `temporaries=`; `cse=` |
+| `lib/gpt/core/local_stencil/cse.py` | common-subexpression elimination of a kernel's execution plan (tested in `tests/core/stencil.py`) |
 | `tests/ad/stencil.py` | stencil AD: fused two-output stencil, path-based stencils, local temporaries (staple action vs cshift graph) at 1st/2nd/3rd order, `with_value=False` |
 | `lib/gpt/qcd/gauge/action/staple_stencil.py` | gauge action value/force as AD stencils (plaquette loop, or staples as local temporaries with rectangles) |
 | `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple, log-det and its force, `inv` |

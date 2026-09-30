@@ -406,3 +406,41 @@ for precision in [g.double, g.single]:
         ok = np.array_equal(f[0][:], f_ref[0][:])
         g.message(f"local stencil with temporaries, {precision.__name__}, block {block}: {'ok' if ok else 'MISMATCH'}")
         assert ok
+
+# common-subexpression elimination of the executed plan (cse=): the same
+# results up to rounding.  The code repeats pairs (also as their adjoint
+# reversal, and inside a repeated triple, so temporaries are built from
+# temporaries) and reads fields the kernel writes -- a passed field W and a
+# temporary t, each rewritten between reads of the same pair -- which may
+# only be combined per write version.
+for precision in [g.double, g.single]:
+    grid = g.grid([4, 4, 4, 8], precision)
+    U = g.qcd.gauge.random(grid, rng)
+    A, B, W0 = rng.cnormal([g.mcolor(grid), g.mcolor(grid), g.mcolor(grid)])
+    points = [(0, 0, 0, 0), (1, 0, 0, 0), (1, 1, 0, 0)]
+    # fields: 0 = out, 1 = W (read and rewritten), 2 = A, 3 = B, 4 = U_0,
+    # 5 = U_1, 6 = temporary t
+    code = [
+        (6, -1, 1.0, [(2, 0, 0), (3, 0, 0)]),  # t = A B
+        (0, -1, 1.0, [(2, 0, 0), (4, 1, 0), (5, 2, 1), (1, 0, 0), (6, 0, 0)]),
+        (0, 0, 0.5j, [(5, 2, 0), (4, 1, 1), (2, 0, 1), (1, 0, 0), (6, 0, 0)]),
+        (1, 1, 1.0, [(1, 0, 0), (3, 0, 0)]),  # W += W B
+        (6, 6, -1.0, [(6, 0, 0), (2, 0, 0)]),  # t -= t A
+        (0, 0, 2.0, [(2, 0, 0), (4, 1, 0), (5, 2, 1), (1, 0, 0), (6, 0, 0)]),
+        (0, 0, 1.0, [(1, 0, 0), (6, 0, 0), (2, 0, 0), (4, 1, 0)]),
+        (1, 1, 0.25, [(1, 0, 0), (6, 0, 0), (2, 0, 0), (4, 1, 0)]),
+    ]
+    res = []
+    for cse in [False, True]:
+        W = g.copy(W0)
+        out = g.lattice(A)
+        K = g.local_stencil.matrix(A, points, code, temporaries=[6], cse=cse)
+        if cse:
+            assert K.executed is not None and len(K.executed[2]) > 2
+        K(out, W, A, B, U[0], U[1])
+        res.append((out, W))
+    eps = max(
+        (g.norm2(x - y) / g.norm2(x)) ** 0.5 for x, y in zip(res[0], res[1])
+    )
+    g.message(f"local stencil cse, {precision.__name__}: {eps}")
+    assert eps < precision.eps * 100

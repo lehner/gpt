@@ -74,6 +74,12 @@ from gpt.ad.reverse.util import value_of, is_node, accum, identity_flow_scale
 # run (see _keep_padded in matrix); a switch for tests and comparisons
 share_padded = True
 
+# combine common subexpressions in the executed adjoint kernels (the minimal
+# number of uses of a per-site temporary, see core/local_stencil/cse.py;
+# False: off).  Only the execution plan changes: the adjoint codes the tower
+# derives from are the uncombined ones.
+cse = 2
+
 
 def _padding_domain(K):
     # the halo-padding domain a compiled stencil runs on (None: not padded)
@@ -398,7 +404,7 @@ def _compile(grid, otype, code, temporaries=()):
     pts = sorted({(0,) * ndim} | {p for (tt, ac, w, fl) in code for (f, p, a) in fl})
     pm = {p: i for i, p in enumerate(pts)}
     ccode = [(tt, ac, w, [(f, pm[p], a) for (f, p, a) in fl]) for (tt, ac, w, fl) in code]
-    K = g.stencil.matrix(g.lattice(grid, otype), pts, ccode, temporaries=temps)
+    K = g.stencil.matrix(g.lattice(grid, otype), pts, ccode, temporaries=temps, cse=cse)
     written = sorted({pos(tt) for (tt, ac, w, fl) in code if tt not in temps})
     # (a target accumulating into itself is not a read: the padded stencil
     # starts a target from the caller's value unless its first write is fresh)
@@ -661,7 +667,7 @@ def matrix(stencil, *fields):
             pm = {p: i for i, p in enumerate(pts)}
             ccode = [(tt, ac, w, [(f, pm[p], a) for (f, p, a) in fl]) for (tt, ac, w, fl) in lvl]
             written = sorted({tt for (tt, ac, w, fl) in lvl})
-            K = g.stencil.matrix(g.lattice(grid, otype_t), pts, ccode)
+            K = g.stencil.matrix(g.lattice(grid, otype_t), pts, ccode, cse=cse)
             n_adj_fields = n_comp + len(_outs) + n_fields
             # the fields read as factors (the dummy entries of the output
             # layout and unreferenced fields are not read, so the padded

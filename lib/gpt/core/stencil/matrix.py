@@ -23,7 +23,7 @@ class matrix_padded:
     # temporaries: per-site temporaries owned by the kernel (see
     # g.local_stencil.matrix); they are not passed by the caller, whose fields
     # (and data access hints) are the remaining ones in index order
-    def __init__(self, lat, points, code, code_parallel_block_size=None, temporaries=()):
+    def __init__(self, lat, points, code, code_parallel_block_size=None, temporaries=(), cse=False):
         margin = [0] * lat.grid.nd
         for p in points:
             for i in range(lat.grid.nd):
@@ -33,7 +33,7 @@ class matrix_padded:
 
         self.padding = g.padded_local_fields(lat, margin)
         self.local_stencil = g.local_stencil.matrix(
-            self.padding(lat), points, code, code_parallel_block_size, temporaries=temporaries
+            self.padding(lat), points, code, code_parallel_block_size, temporaries=temporaries, cse=cse
         )
         temps = self.local_stencil.temporaries
 
@@ -79,12 +79,13 @@ class matrix_padded:
         return fields[0].foundation.stencil.matrix(self, *fields, padded=padded)
 
 
-def matrix(lat, points, code, code_parallel_block_size=None, temporaries=()):
+def matrix(lat, points, code, code_parallel_block_size=None, temporaries=(), cse=False):
     # kernel-owned temporaries need the local (padded) kernel
     if len(temporaries) > 0:
-        return matrix_padded(lat, points, code, code_parallel_block_size, temporaries)
+        return matrix_padded(lat, points, code, code_parallel_block_size, temporaries, cse)
     # check if all points are cartesian
     for p in points:
         if len([s for s in p if s != 0]) > 1:
-            return matrix_padded(lat, points, code, code_parallel_block_size)
+            return matrix_padded(lat, points, code, code_parallel_block_size, cse=cse)
+    # (a cartesian kernel runs unpadded, without temporaries: no cse)
     return g.local_stencil.matrix(lat, points, code, code_parallel_block_size, local=0)
