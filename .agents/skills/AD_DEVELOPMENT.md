@@ -276,15 +276,13 @@ mechanism.
   self-adjoint w.r.t. Re tr(a^dag b), so the backward is the same projection
   (one level down for nested flows).  The su(N) group conversions
   (`infinitesimal_to_cartesian`) are written with them.
-- `ad/reverse/expression.py` — **expression nodes**: arithmetic on nodes
-  (`*`, `+`, `-`, `adj`, `/` and `*` by numbers) builds ONE node holding a
-  sum of products of its inputs (hooks in `node.py` and `foundation.adj`,
-  after `convert_container`).  An operand that is an expression node without
-  a computed value is absorbed (its terms are copied; the operand stays a
-  valid node, a second use recomputes it).  The flow into an input is again
-  a sum of products (an expression node one level down for nested flows);
-  plain flows of a node are computed together with running products from
-  both ends of each term.  Switch: `g.ad.reverse.expression.enabled`.
+- (Removed 2026-09-30: *expression nodes*, one node per sum of products
+  with generated kernels, `ad/reverse/expression.py`.  In a clean comparison
+  against the per-operation graph they won only on the cshift-graph HVP at
+  8^4 (-14%), lost at 16^4 (+17%) and were neutral to +9% slower elsewhere;
+  absorbing operands at construction also duplicated shared
+  subexpressions (2.7x the products).  The last version is in git history
+  (commit b7e27c86); do not re-add without a new idea.)
 - "Foundation" is a per-class attribute (`g.lattice.foundation`, the
   node foundation, ...). Mixed-operand dispatch helpers (e.g.
   `_group_foundation` in `core/group/operation.py`) pick the operand whose
@@ -312,16 +310,9 @@ mechanism.
   backward allocated a zero field per call).  But `0 * x` and `x * mask`
   stay nan where x is not finite (e.g. the inverse of a matrix that vanishes
   outside the mask): use `g.where` with an explicitly zeroed field there.
-- **Expression nodes follow plain GPT semantics**: a sum inside a product is
-  evaluated first (it becomes an input), products are never distributed over
-  sums -- distributing multiplies the product chains in every flow.  Only
-  singlets and square matrices (color, spin, spin-color) form expressions:
-  expanding products or reversing them under `adj` can create untyped
-  products for other otypes (row vector x matrix).  Other types keep one
-  node per operation.
 - **`g.identity_constant(x)`** returns an identity shared per (grid, otype,
-  checkerboard) that must NOT be modified (operands of expressions, kernel
-  inputs, node values).  `g.identity(x)` returns a fresh field; some callers
+  checkerboard) that must NOT be modified (kernel inputs, node
+  values).  `g.identity(x)` returns a fresh field; some callers
   modify it (e.g. the plain exp Taylor fallback), so it must not be cached.
 - **`g.mcolor` leaves are group elements**: their gradients are converted to
   the algebra (`infinitesimal_to_cartesian`).  Finite-difference checks of
@@ -464,16 +455,14 @@ Plain-run optimizations:
   indices the flow into child i reads) and `_reads_self` (default True).
   `node_op(..., reads=...)` sets both (a node_op never reads its own value).
   Declared: products, sums, adj, trace, sum, list-element access, `project`,
-  expression nodes (the other factors of the terms an input occurs in), and
-  stencil nodes (the inputs, never the output).  `needed_values` walks the
+  and stencil nodes (the inputs, never the output).  `needed_values` walks the
   graph from the root and `forward` skips every computed node nothing
   needs (only with `with_value=False`).  **Safety net**: `value_of`
   evaluates a missing value on demand, so an undeclared read is still
   correct -- but it cascades (the recomputation needs its own inputs) and
   silently loses the saving.  So a backward must not call `value_of` on
   inputs it does not really need: trace/sum build their identity from the
-  container (`_reduction_identity`), expression nodes evaluate only the
-  values their flows read.
+  container (`_reduction_identity`).
 - **Scaled-identity flows**: trace and sum record when the flow they pass
   down is exactly `c * identity` (a scalar flow broadcast back to a field):
   `node._flow_identity = (gradient_object, c)`, read with
@@ -490,7 +479,6 @@ Plain-run optimizations:
 | `lib/gpt/ad/reverse/util.py` | nodify, product, value_of, containers |
 | `lib/gpt/ad/reverse/transform.py` | sin/cos/... node transforms |
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
-| `lib/gpt/ad/reverse/expression.py` | expression nodes (fused sums of products, see §4.5) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, `adjoint_code_local`), multi-output list nodes, local temporaries, seedless adjoints, shared padding |
 | `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils; padded wrapper; `temporaries=`; `cse=` |
 | `lib/gpt/core/local_stencil/cse.py` | common-subexpression elimination of a kernel's execution plan (tested in `tests/core/stencil.py`) |

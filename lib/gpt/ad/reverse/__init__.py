@@ -19,4 +19,3 @@
 from gpt.ad.reverse.node import node, node_base, node_op
 import gpt.ad.reverse.transform
 import gpt.ad.reverse.foundation
-import gpt.ad.reverse.expression
