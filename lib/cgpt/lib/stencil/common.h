@@ -62,39 +62,55 @@
       obj = adj(obj);							\
   }
 
-// general local stencil fetch
+// read of view[_SE->_offset] with the SIMD permute _SE->_permute (local
+// stencil entries)
 #ifndef GRID_HAS_ACCELERATOR
 
-// cpu fetch version
-#define fetch(obj, point, site, view, do_adj) {				\
-    auto _SE = sview.GetEntry(point,site);				\
-    obj = coalescedRead(view[_SE->_offset]);				\
+// cpu version
+#define fetch_permuted(obj, _SE, view) {				\
+    obj = coalescedRead(view[(_SE)->_offset]);				\
     auto tmp = obj;							\
-    if (_SE->_permute)							\
+    if ((_SE)->_permute)						\
       for (int d=0;d<nd;d++)						\
-	if (_SE->_permute & (0x1 << d)) { permute(obj,tmp,d); tmp=obj;}	\
-    if (do_adj)								\
-      obj = adj(obj);							\
+	if ((_SE)->_permute & (0x1 << d)) { permute(obj,tmp,d); tmp=obj;} \
   }
 
 #else
 
-// gpu fetch version
-#define fetch(obj, point, site, view, do_adj) {				\
-    auto _SE = sview.GetEntry(point,site);				\
-    if (_SE->_permute) {						\
-      obj = coalescedReadGeneralPermute(view[_SE->_offset], _SE->_permute,nd); \
+// gpu version
+#define fetch_permuted(obj, _SE, view) {				\
+    if ((_SE)->_permute) {						\
+      obj = coalescedReadGeneralPermute(view[(_SE)->_offset], (_SE)->_permute,nd); \
     } else {								\
-      obj = coalescedRead(view[_SE->_offset]);				\
+      obj = coalescedRead(view[(_SE)->_offset]);			\
     }									\
-    acceleratorSynchronise();						\
-    if (do_adj)								\
-      obj = adj(obj);							\
   }
 
 // maybe also try only calling GeneralPermute for _permute == 0 case without sync
 
 #endif
+
+// general local stencil fetch
+#define fetch(obj, point, site, view, do_adj) {				\
+    auto _SE = sview.GetEntry(point,site);				\
+    fetch_permuted(obj, _SE, view);					\
+    acceleratorSynchronise();						\
+    if (do_adj)								\
+      obj = adj(obj);							\
+  }
+
+// general stencil fetch (sv: cgpt_general_stencil_view of the field)
+#define fetch_general(obj, sv, point, site, view, do_adj) {		\
+    auto _SE = &(sv).entries[(site) * (sv).npoints + (point)];		\
+    if (_SE->_is_local) {						\
+      fetch_permuted(obj, _SE, view);					\
+    } else {								\
+      obj = coalescedRead((sv).buffer[_SE->_offset]);			\
+    }									\
+    acceleratorSynchronise();						\
+    if (do_adj)								\
+      obj = adj(obj);							\
+  }
 
 // forward declarations
 template<typename T>

@@ -21,6 +21,52 @@ the reverse-accumulation AD framework with lazy evaluation graphs works.
   source lib/cgpt/build/source.sh
   ```
 - Quick sanity check: `python3 -c "import gpt as g; print('ok')"`.
+- **Two builds exist side by side** (`lib/cgpt/make` names its output dir
+  after the Grid build dir's basename):
+
+  | Grid build | cgpt build | comms |
+  |---|---|---|
+  | `~/GPT/Grid/build` | `lib/cgpt/build` | none (single rank; default, sourced by `~/.bashrc`) |
+  | `~/GPT/Grid/build-mpi` | `lib/cgpt/build-mpi` | MPI (MPICH, `mpi3`) |
+
+  The system MPI is **MPICH** (`mpicxx`/`mpirun` → `*.mpich`), not OpenMPI.
+  The MPI build was made with:
+  ```bash
+  cd ~/GPT/Grid && mkdir build-mpi && cd build-mpi
+  ../configure --prefix=$HOME/GPT/local-mpi --enable-simd=NEONv8 \
+      --enable-comms=mpi-auto CXX=mpicxx CXXFLAGS=-fPIC
+  cd Grid && make -j4            # library only; no `make install` needed
+  cd ~/GPT/gpt/lib/cgpt && ./make ~/GPT/Grid/build-mpi 2
+  ```
+  Running under MPI (reset `PYTHONPATH` first, since `~/.bashrc` already put
+  the non-MPI build on it):
+  ```bash
+  cd ~/GPT/gpt
+  export PYTHONPATH=; source lib/cgpt/build-mpi/source.sh
+  mpirun -np 2 python3 tests/core/core.py --mpi 1.1.1.2
+  mpirun -np 4 python3 tests/ad/ad.py --mpi 1.1.2.2
+  ```
+  The product of `--mpi` must equal `-np`.  Grid's stencil communication
+  uses MPI also within a node by default (`--shm-mpi 1`); `--shm-mpi 0`
+  switches to puts into the peers' shared-memory windows, so test
+  communication changes in both modes. Each rank allocates a 1 GB comms
+  buffer by default, which matters with 15 GB RAM at `-np 4`.
+- **Compile times on this box** (4 cores, 15 GB, measured 2026-10-01):
+  - Grid `configure`: ~1 min.
+  - Grid library only (`make -j4` inside `<build>/Grid`): ~11.5 min. `-j4`
+    is fine memory-wise. A top-level `make` also builds tests/benchmarks,
+    which GPT does not need.
+  - cgpt (`./make <grid-build> 2`, 176 sources): ~25 min at 2 jobs. Each
+    file takes ~20–40 s. Do not raise the job count much: the default of 16
+    gets the build OOM-killed.
+  - A full rebuild of both from scratch therefore takes about 40 min.
+  - Partial rebuilds: `./make` recompiles a source only if it is newer
+    than its object (header changes are not tracked).  To iterate on one
+    type, `touch lib/instantiate/lattice_double_iMColor3.cc` (and
+    `..._single_...`, the only precision with SIMD lanes on NEON) and run
+    `./make <grid-build> 2` (~20 s each).  This links with stale objects, so
+    keep virtual interfaces and shared struct layouts unchanged meanwhile,
+    and finish with a full rebuild (`touch lib/*.cc lib/instantiate/*.cc`).
 - **Stale bytecode bites:** after editing `lib/gpt`, clear caches before
   re-running tests, or you can get false regressions from old `.pyc` files:
   ```bash
@@ -318,12 +364,33 @@ mechanism.
   the algebra (`infinitesimal_to_cartesian`).  Finite-difference checks of
   derivatives w.r.t. general complex matrices (e.g. an HVP) need leaves
   with `infinitesimal_to_cartesian=False`.
-- **Padded stencils trust `data_access_hints`**: `g.stencil.matrix` with
-  multi-direction points copies fields into halo-padded fields.  Fields the
-  code does not reference share one scratch field, and declared write fields
-  whose first write is fresh are not copied; every field read as a factor
-  must be declared as read (referenced but undeclared fields, e.g.
-  temporaries, are still copied).
+- **Stencil kinds** (`g.stencil.matrix`, `comm_type` of
+  `g.local_stencil.matrix`): points on the axes only and no temporaries ->
+  Grid's cartesian stencil (`comm_type=0`); any other points, or kernel-owned
+  temporaries -> the **general stencil** (`comm_type=2`,
+  `lib/cgpt/lib/foundation/general_stencil.h`): a lookup table per (point,
+  site) into the local field (offset and SIMD permute) or into a comm buffer
+  filled by a halo exchange, which uses Grid's `StencilSendToRecvFrom`
+  interface (transfer buffers in Grid's shared-memory heap; every remote site
+  is sent once per rank pair; all fields of a kernel call share one
+  communication phase).  Same products in the same order as the padded
+  stencil, so results are bit-identical.  `comm_type=1` (no communication)
+  is the plain local kernel (single point, padded fields).
+- **Padded stencils** remain only for checkerboarded grids (and with
+  `core/stencil/matrix.py`'s switch `use_padded = True`, for comparisons).
+  They trust `data_access_hints`: fields are copied into halo-padded fields,
+  fields the code does not reference share one scratch field, and declared
+  write fields whose first write is fresh are not copied; every field read
+  as a factor must be declared as read (referenced but undeclared fields,
+  e.g. temporaries, are still copied).  The general stencil ignores the
+  hints, but callers keep declaring them for the padded case.
+- **Allocator effects in benchmarks**: the padded path frees fields larger
+  than a lattice, which raises glibc's dynamic mmap threshold, so later
+  lattices of a run are served from the heap without page faults.  Without
+  that, a 16^4 color-matrix lattice (9.4 MB) is mmapped and unmapped per
+  allocation: local_stout E4 looked 6% slower on the general stencil
+  although its stencil kernels got faster.  Compare such runs with
+  `MALLOC_MMAP_THRESHOLD_=268435456 MALLOC_TRIM_THRESHOLD_=1073741824`.
 - **Peak memory**: large fields and retained graphs live as long as a Python
   name refers to them.  In long drivers (e.g. a loop of reverse passes)
   `del` each pass's graph before building the next, and release large
@@ -368,9 +435,9 @@ mechanism.
   `node._flow_identity` (as `project` does), or a stale scaled-identity
   record survives (§4.8).
 - **Self-accumulating targets are not reads** in `data_access_hints`:
-  listing them as read makes the padded stencil copy them in before the
-  kernel overwrites them (the padded wrapper already starts a non-fresh
-  target from the caller's value).
+  listing them as read makes the padded stencil (checkerboarded grids) copy
+  them in before the kernel overwrites them (the padded wrapper already
+  starts a non-fresh target from the caller's value).
 - **Flows are adopted, not copied**: the first plain contribution to a
   gradient is adopted as is (`util.accumulate`), so the same field can be
   the gradient of several nodes (both children of an add receive
@@ -410,8 +477,9 @@ depth.  Three regimes:
   lambda_T to memory; **stage B** (temp-free) pushes lambda_T, read at shifted
   points, through the temporary definitions into the inputs.  In nested
   passes both stages are node stencils of the same kinds, so higher
-  derivatives stay in stencils.  Temporaries force the padded kernel (the
-  C++ kernel supports them only in local mode).  Use them where a
+  derivatives stay in stencils.  Temporaries need a kernel without
+  communication inside (the general stencil exchanges halos before the
+  kernel; `comm_type` 1 or 2), never Grid's cartesian stencil.  Use them where a
   subproduct is **shared** (the up/down staples of plaquettes and
   rectangles, `staple_stencil_code`); without sharing they only add a stage
   barrier and the lambda_T memory traffic (the Wilson action is faster as a
@@ -424,8 +492,9 @@ Plain-run optimizations:
   with the flow factor dropped and c (conj(c) for an adjointed read) folded
   into the weights (`seedless_code`).  For a traced loop sum this removes one
   of k matrix products per k-link entry (72 -> 48 for the Wilson force).
-- **Shared padding**: the forward's halo-padded input copies are handed to
-  the adjoint kernels (same padding domain) instead of being copied again;
+- **Shared padding** (padded stencils only, i.e. checkerboarded grids): the
+  forward's halo-padded input copies are handed to the adjoint kernels (same
+  padding domain) instead of being copied again;
   use-once, tied to the forward value, checked by object identity
   (switch: `share_padded`).
 - **Common-subexpression elimination of the executed kernels**:
@@ -480,7 +549,8 @@ Plain-run optimizations:
 | `lib/gpt/ad/reverse/transform.py` | sin/cos/... node transforms |
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, `adjoint_code_local`), multi-output list nodes, local temporaries, seedless adjoints, shared padding |
-| `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils; padded wrapper; `temporaries=`; `cse=` |
+| `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils (kind selection, `comm_type`); padded wrapper (checkerboarded grids); `temporaries=`; `cse=` |
+| `lib/cgpt/lib/foundation/general_stencil.h` | general stencil: geometry (lookup table, halo transfer plan), per-field halo, batched exchange via Grid's `StencilSendToRecvFrom`, manager (field point sets); used by `stencil/matrix.h` (`comm_type == 2`, kernel loops in `stencil/matrix_loops.h`) |
 | `lib/gpt/core/local_stencil/cse.py` | common-subexpression elimination of a kernel's execution plan (tested in `tests/core/stencil.py`) |
 | `tests/ad/stencil.py` | stencil AD: fused two-output stencil, path-based stencils, local temporaries (staple action vs cshift graph) at 1st/2nd/3rd order, `with_value=False` |
 | `lib/gpt/qcd/gauge/action/staple_stencil.py` | gauge action value/force as AD stencils (plaquette loop, or staples as local temporaries with rectangles) |

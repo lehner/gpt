@@ -23,7 +23,7 @@ struct cgpt_stencil_matrix_factor_t {
   int point; // index of shift
   int adj; // adjoint of matrix
   int temporary; // field is a per-site temporary (set at creation)
-  int zero_point; // shift is zero (set at creation, local stencils)
+  int zero_point; // shift is zero (set at creation, comm_type 1 and 2)
 };
 
 struct cgpt_stencil_matrix_code_offload_t {
@@ -61,7 +61,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
   HostDeviceVector<cgpt_stencil_matrix_factor_t> factors;
     
   int n_code_parallel_block_size, n_code_parallel_blocks;
-  int local;
+  int comm_type; // 0: cartesian stencil, 1: no communication, 2: general stencil
 
   // per-site temporaries: owned by the stencil (a device-only buffer of one
   // block of osites_per_cache_block outer sites per temporary, allocated
@@ -72,10 +72,13 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
   T* temp_buffer;
   size_t temp_bytes;
 
-  // local == true
+  // comm_type == 1: local stencil (no communication)
   cgpt_GeneralLocalStencil* general_local_stencil;
 
-  // local == false
+  // comm_type == 2: general stencil (arbitrary points, halo exchange)
+  cgpt_general_stencil_manager<T>* gsm;
+
+  // comm_type == 0: cartesian stencil
   SimpleCompressor<T>* compressor;
   CartesianStencilManager<CartesianStencil_t>* sm;
   
@@ -83,10 +86,10 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 		      const std::vector<Coordinate>& shifts,
 		      const std::vector<cgpt_stencil_matrix_code_t>& _code,
 		      int _n_code_parallel_block_size,
-		      int _local,
+		      int _comm_type,
 		      const std::vector<int>& temporaries,
 		      long _osites_per_cache_block) :
-    code(_code.size()), local(_local),
+    code(_code.size()), comm_type(_comm_type),
     n_code_parallel_block_size(_n_code_parallel_block_size) {
 
     ASSERT(_code.size() % n_code_parallel_block_size == 0);
@@ -104,7 +107,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     };
     has_temporaries = temporaries.size() > 0;
     if (has_temporaries) {
-      ASSERT(_local);
+      ASSERT(_comm_type != 0);
       ASSERT(n_code_parallel_blocks == 1);
     }
 
@@ -137,7 +140,7 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	bool zero = true;
 	for (auto x : shifts[f.point])
 	  zero = zero && (x == 0);
-	f.zero_point = local && zero;
+	f.zero_point = comm_type != 0 && zero;
 	f.temporary = is_temporary(f.index);
 	if (f.temporary)
 	  ASSERT(zero); // temporaries are per site
@@ -164,8 +167,21 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
     temp_bytes = (size_t)n_temporaries * osites_per_cache_block * sizeof(T);
     temp_buffer = temp_bytes ? (T*)MemoryManager::AcceleratorAllocate(temp_bytes) : 0;
 
-    if (local) {
+    if (comm_type == 1) {
       general_local_stencil = new cgpt_GeneralLocalStencil(grid,shifts,-1);
+    } else if (comm_type == 2) {
+
+      gsm = new cgpt_general_stencil_manager<T>(grid, shifts);
+
+      // (temporaries are read at the zero point, which needs no stencil)
+      for (int i=0;i<nfactors;i++)
+	gsm->register_point(factors[i].index, factors[i].point);
+
+      gsm->create_stencils(n_passed);
+
+      for (int i=0;i<nfactors;i++)
+	factors[i].point = gsm->map_point(factors[i].index, factors[i].point);
+
     } else {
 
       sm = new CartesianStencilManager<CartesianStencil_t>(grid, shifts);
@@ -191,8 +207,10 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
   virtual ~cgpt_stencil_matrix() {
     if (temp_buffer)
       MemoryManager::AcceleratorFree(temp_buffer, temp_bytes);
-    if (local) {
+    if (comm_type == 1) {
       delete general_local_stencil;
+    } else if (comm_type == 2) {
+      delete gsm;
     } else {
       delete compressor;
       delete sm;
@@ -217,12 +235,11 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 
     int _fast_osites = fast_osites;
     
-    if (local) {
-
-      auto sview = general_local_stencil->View(AcceleratorRead);
+    if (comm_type != 0) {
 
       // factor fetch: temporaries (relative to the cache block) and the zero
-      // shift are read directly, other points through the local stencil
+      // shift are read directly, other points through the local (comm_type == 1)
+      // or general (comm_type == 2) stencil
       T* p_temp = temp_buffer;
       uint64_t block = osites_per_cache_block;
 
@@ -236,78 +253,27 @@ class cgpt_stencil_matrix : public cgpt_stencil_matrix_base {
 	  if ((_f)->adj)						\
 	    obj = adj(obj);						\
 	} else {							\
-	  fetch(obj, (_f)->point, site, fields_v[(_f)->index], (_f)->adj); \
+	  fetch_shifted(obj, _f, site);					\
 	}								\
       }
 
-      if (has_temporaries) {
+      if (comm_type == 1) {
 
-	for (uint64_t s0 = 0; s0 < osites; s0 += block) {
-	  uint64_t nsites = std::min(block, osites - s0);
-	  accelerator_for(ss_in_block,nsites,T::Nsimd(),{
-
-	      uint64_t ss = s0 + ss_in_block;
-
-	      for (int i=0;i<n_code;i++) {
-
-		obj_t t;
-
-		const auto _f0 = &p_code[i].factor[0];
-		fetch_local(t, _f0, ss, ss_in_block);
-
-		for (int j=1;j<p_code[i].size;j++) {
-		  obj_t f;
-		  const auto _f = &p_code[i].factor[j];
-		  fetch_local(f, _f, ss, ss_in_block);
-		  t = t * f;
-		}
-
-		if (!p_code[i].unit_weight)
-		  t = p_code[i].weight * t;
-		if (p_code[i].accumulate != -1)
-		  t += coalescedRead(p_code[i].accumulate_temporary ?
-				     p_temp[p_code[i].accumulate * block + ss_in_block] :
-				     fields_v[p_code[i].accumulate][ss]);
-		coalescedWrite(p_code[i].target_temporary ?
-			       p_temp[p_code[i].target * block + ss_in_block] :
-			       fields_v[p_code[i].target][ss], t);
-	      }
-
-	    });
-	}
+	auto sview = general_local_stencil->View(AcceleratorRead);
+#define fetch_shifted(obj, _f, site) fetch(obj, (_f)->point, site, fields_v[(_f)->index], (_f)->adj)
+#include "matrix_loops.h"
+#undef fetch_shifted
 
       } else {
 
-      accelerator_for(ss_block,osites * _npb,T::Nsimd(),{
-	  
-          uint64_t ss, oblock;
-					      
-	  MAP_INDEXING(ss, oblock);
-	  
-	  for (int iblock=0;iblock<_npbs;iblock++) {
-	    
-	    int i = oblock * _npbs + iblock;
-	    
-	    obj_t t;
-	    
-	    const auto _f0 = &p_code[i].factor[0];
-	    fetch_local(t, _f0, ss, ss);
-	    
-	    for (int j=1;j<p_code[i].size;j++) {
-	      obj_t f;
-	      const auto _f = &p_code[i].factor[j];
-	      fetch_local(f, _f, ss, ss);
-	      t = t * f;
-	    }
-	    
-	    if (!p_code[i].unit_weight)
-	      t = p_code[i].weight * t;
-	    if (p_code[i].accumulate != -1)
-	      t += coalescedRead(fields_v[p_code[i].accumulate][ss]);
-	    coalescedWrite(fields_v[p_code[i].target][ss], t);
-	  }
-	  
-	});
+	// halo exchange of all fields read at non-zero points, then the
+	// kernel reads the local fields or the comm buffers
+	ASSERT(fields.size() >= gsm->views.size());
+	gsm->exchange(fields);
+	auto p_gsview = gsm->views.device;
+#define fetch_shifted(obj, _f, site) fetch_general(obj, p_gsview[(_f)->index], (_f)->point, site, fields_v[(_f)->index], (_f)->adj)
+#include "matrix_loops.h"
+#undef fetch_shifted
 
       }
 
@@ -388,7 +354,7 @@ static void cgpt_convert(PyObject* in, cgpt_stencil_matrix_code_t& out) {
 template<typename T>
 NotEnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
 cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts,
-			   PyObject* _code, long code_parallel_block_size, long local,
+			   PyObject* _code, long code_parallel_block_size, long comm_type,
 			   PyObject* _temporaries, long osites_per_cache_block) {
   ERR("cgpt_stencil_matrix not implemented for type %s",typeid(T).name());
 }
@@ -397,7 +363,7 @@ cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts,
 template<typename T>
 EnableIf<isEndomorphism<T>,cgpt_stencil_matrix_base*>
 cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts,
-			   PyObject* _code, long code_parallel_block_size, long local,
+			   PyObject* _code, long code_parallel_block_size, long comm_type,
 			   PyObject* _temporaries, long osites_per_cache_block) {
 
   std::vector<Coordinate> shifts;
@@ -409,5 +375,5 @@ cgpt_stencil_matrix_create(GridBase* grid, PyObject* _shifts,
   std::vector<int> temporaries;
   cgpt_convert(_temporaries,temporaries);
 
-  return new cgpt_stencil_matrix<T>(grid,shifts,code,code_parallel_block_size, local, temporaries, osites_per_cache_block);
+  return new cgpt_stencil_matrix<T>(grid,shifts,code,code_parallel_block_size, comm_type, temporaries, osites_per_cache_block);
 }

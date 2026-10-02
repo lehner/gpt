@@ -330,8 +330,8 @@ public:
     return l.Grid();
   }
 
-  virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local, PyObject* temporaries, long osites_per_cache_block) {
-    return cgpt_stencil_matrix_create<T>(grid, shifts, code, code_parallel_block_size, local, temporaries, osites_per_cache_block);
+  virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long comm_type, PyObject* temporaries, long osites_per_cache_block) {
+    return cgpt_stencil_matrix_create<T>(grid, shifts, code, code_parallel_block_size, comm_type, temporaries, osites_per_cache_block);
   }
 
   virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local,

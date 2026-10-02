@@ -73,7 +73,7 @@ public:
   virtual void invert_matrix(std::vector<cgpt_Lattice_base*>& matrix_inv, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0;
   virtual void determinant(cgpt_Lattice_base* det, std::vector<cgpt_Lattice_base*>& matrix, long n_virtual) = 0; // this determines type of matrix[0]
   virtual GridBase* get_grid() = 0;
-  virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local, PyObject* temporaries, long osites_per_cache_block) = 0;
+  virtual cgpt_stencil_matrix_base* stencil_matrix(GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long comm_type, PyObject* temporaries, long osites_per_cache_block) = 0;
   virtual cgpt_stencil_matrix_vector_base* stencil_matrix_vector(cgpt_Lattice_base* matrix, GridBase* grid, PyObject* shifts, PyObject* code, long code_parallel_block_size, long local,
 								 int matrix_vector, int vector_parity) = 0;
   virtual cgpt_stencil_tensor_base* stencil_tensor(GridBase* grid, PyObject* shifts, PyObject* code, PyObject* segments, long local) = 0;

@@ -79,13 +79,20 @@ class matrix_padded:
         return fields[0].foundation.stencil.matrix(self, *fields, padded=padded)
 
 
+# Stencils with points off the axes (or with kernel-owned temporaries) run
+# on the general stencil (comm_type=2: a halo exchange into a comm buffer, see
+# lib/cgpt/lib/foundation/general_stencil.h).  Checkerboarded grids still use
+# the padded stencil; use_padded is a switch for tests and comparisons.
+use_padded = False
+
+
 def matrix(lat, points, code, code_parallel_block_size=None, temporaries=(), cse=False):
-    # kernel-owned temporaries need the local (padded) kernel
-    if len(temporaries) > 0:
-        return matrix_padded(lat, points, code, code_parallel_block_size, temporaries, cse)
-    # check if all points are cartesian
-    for p in points:
-        if len([s for s in p if s != 0]) > 1:
-            return matrix_padded(lat, points, code, code_parallel_block_size, cse=cse)
-    # (a cartesian kernel runs unpadded, without temporaries: no cse)
-    return g.local_stencil.matrix(lat, points, code, code_parallel_block_size, local=0)
+    cartesian = all(len([s for s in p if s != 0]) <= 1 for p in points)
+    if cartesian and len(temporaries) == 0:
+        # (a cartesian kernel runs without temporaries: no cse)
+        return g.local_stencil.matrix(lat, points, code, code_parallel_block_size, comm_type=0)
+    if not use_padded and lat.grid.cb.n == 1:
+        return g.local_stencil.matrix(
+            lat, points, code, code_parallel_block_size, comm_type=2, temporaries=temporaries, cse=cse
+        )
+    return matrix_padded(lat, points, code, code_parallel_block_size, temporaries, cse)

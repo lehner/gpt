@@ -35,6 +35,11 @@ def parse(c):
 
 
 class matrix(auto_tuned_class):
+    # comm_type: 0 = cartesian stencil (points on the axes, Grid's halo
+    # exchange), 1 = no communication (the shifts wrap around within the
+    # local fields, e.g. for halo-padded fields), 2 = general stencil (any
+    # points, halo exchange of cgpt's foundation layer)
+    #
     # temporaries: field indices used as per-site temporaries (read and
     # written only at the zero shift).  They are owned by the stencil (a
     # buffer of one block of osites_per_cache_block outer sites each,
@@ -51,7 +56,7 @@ class matrix(auto_tuned_class):
         points,
         code,
         code_parallel_block_size=None,
-        local=1,
+        comm_type=1,
         temporaries=(),
         osites_per_cache_block=0,
         cse=False,
@@ -60,10 +65,10 @@ class matrix(auto_tuned_class):
         self.code = [parse(c) for c in code]
         self.temporaries = tuple(sorted(temporaries))
         self.code_parallel_block_size = code_parallel_block_size
-        # the executed plan (temporaries need the local kernel and a single
-        # code-parallel block)
+        # the executed plan (temporaries need a kernel without communication
+        # in the kernel, comm_type 1 or 2, and a single code-parallel block)
         self.executed = None
-        if cse and local and code_parallel_block_size in (None, len(code)):
+        if cse and comm_type != 0 and code_parallel_block_size in (None, len(code)):
             self.executed = _cse(points, self.code, self.temporaries, 2 if cse is True else cse)
         if self.executed is not None:
             points, code, temporaries = self.executed
@@ -78,14 +83,14 @@ class matrix(auto_tuned_class):
             points,
             code,
             code_parallel_block_size,
-            local,
+            comm_type,
             list(temporaries),
             osites_per_cache_block,
         )
 
         # auto tuner: (fast_osites, threads per block of accelerator_for, 0 =
         # the current value, i.e., --accelerator-threads)
-        tag = f"local_matrix({lat.otype.__name__}, {lat.grid.describe()}, {str(points)}, {code_parallel_block_size}, {hash_code(code)}, {local}, {sorted(temporaries)}, {osites_per_cache_block}, threads)"
+        tag = f"local_matrix({lat.otype.__name__}, {lat.grid.describe()}, {str(points)}, {code_parallel_block_size}, {hash_code(code)}, {comm_type}, {sorted(temporaries)}, {osites_per_cache_block}, threads)"
         super().__init__(
             tag,
             [(fast_osites, threads) for fast_osites in [0, 1] for threads in g.default.auto_tune_threads],

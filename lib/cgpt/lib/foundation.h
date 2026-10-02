@@ -208,6 +208,7 @@ template<class T> using AlignedVector = std::vector<T,alignedAllocator<T> >;
 #include "foundation/coarse.h"
 #include "foundation/transform.h"
 #include "foundation/general_local_stencil.h"
+#include "foundation/general_stencil.h"
 #include "foundation/mobius_with_vector_field.h"
 
 
