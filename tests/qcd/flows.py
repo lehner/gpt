@@ -117,3 +117,82 @@ if regress:
 
 # finally check the force terms of the log-det-jacobian
 act2.assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
+
+
+# a non-trivial function of the weighted loop sum, U_mu' = exp(TA(P1 f(sm))) U_mu
+def loop_function(sm):
+    return sm + sm * sm * 0.5 + sm * g.adj(sm) * sm * 0.25
+
+
+def make_pt(mu, P1, f, generic=False):
+    pt = g.qcd.gauge.smear.directional_parallel_transport(
+        U, description[mu], mu, full, P1, params, loop_function=f
+    )
+    if generic:
+        # force the generic graph path (no staple factorization)
+        pt.description_staple = None
+    return pt
+
+
+# the identity as loop function reproduces the default
+pt_f = make_pt(0, odd, loop_function)
+Uprime0 = make_pt(0, odd, None)(U + params)[0:4]
+Uprime1 = make_pt(0, odd, lambda sm: sm)(U + params)[0:4]
+eps2 = sum(g.norm2(x - y) / g.norm2(x) for x, y in zip(Uprime0, Uprime1))
+g.message(f"Identity loop function agreement: {eps2}")
+assert eps2 < 1e-28
+Uprime1 = pt_f(U + params)[0:4]
+eps2 = g.norm2(Uprime0[0] - Uprime1[0]) / g.norm2(Uprime0[0])
+g.message(f"Loop function changes the flow: {eps2}")
+assert eps2 > 1e-8
+
+# local and generic paths agree
+pt_f_generic = make_pt(0, odd, loop_function, generic=True)
+M0 = pt_f.jacobian_matrix(U + params)
+M1 = pt_f_generic.jacobian_matrix(U + params)
+eps2 = g.norm2(M0 - M1) / g.norm2(M0)
+g.message(f"Loop function: local vs generic Jacobian block: {eps2}")
+assert eps2 < 1e-25
+
+v0 = pt_f.log_det_jacobian(U + params)
+v1 = pt_f_generic.log_det_jacobian(U + params)
+eps = abs(v0 - v1) / abs(v0)
+g.message(f"Loop function: local vs generic log-det: {eps}")
+assert eps < 1e-12
+
+gr0 = pt_f.action_log_det_jacobian().gradient(U + params, U + params)
+gr1 = pt_f_generic.action_log_det_jacobian().gradient(U + params, U + params)
+for x, y in zip(gr0, gr1):
+    eps2 = g.norm2(x - y) / g.norm2(x)
+    g.message(f"Loop function: local vs generic log-det force: {eps2}")
+    assert eps2 < 1e-20
+
+# inverse
+Uprime = pt_f(U + params)
+Uinv = pt_f.inv(Uprime[0:4] + params)
+eps2 = g.norm2(Uinv[0] - U[0]) / g.norm2(U[0])
+g.message(f"Loop function: inverse: {eps2}")
+assert eps2 < 1e-25
+
+# Jacobian (local VJP and generic graph) in a flow
+for generic in [False, True]:
+    a1 = g.qcd.gauge.action.iwasaki(6)
+    a1 = a1.transformed(
+        make_pt(0, odd, loop_function, generic), indices=[0, 1, 2, 3, 4], projection=[0, 1, 2, 3]
+    )
+    a1 = a1.transformed(
+        make_pt(0, even, loop_function, generic), indices=[0, 1, 2, 3, 4], projection=[0, 1, 2, 3, 4]
+    )
+    a1.assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
+
+# log-det-jacobian force (local and generic)
+pt_f.action_log_det_jacobian().assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
+pt_f_generic.action_log_det_jacobian().assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
+
+# local_stout passes it through; with a uniform rho = 0.12 the loop sum is
+# O(1) everywhere and loop_function above makes the Jacobian singular on some
+# sites (no longer a diffeomorphism), so use a weaker function here
+act1 = g.qcd.gauge.smear.local_stout(
+    rho=0.12, dimension=0, checkerboard=g.odd, loop_function=lambda sm: sm + sm * sm * 0.05
+)
+act1.action_log_det_jacobian().assert_gradient_error(rng, U, U, 1e-4, 1e-7)

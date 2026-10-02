@@ -133,12 +133,19 @@ def _get_generator_kernels(grid, otype_cartesian):
 
 
 class directional_parallel_transport(dft_diffeomorphism):
-    def __init__(self, U, description_mu, mu, P0=None, P1=None, parameters=[]):
+    def __init__(
+        self, U, description_mu, mu, P0=None, P1=None, parameters=[], loop_function=None
+    ):
+        # loop_function: an optional site-local map f of the weighted loop
+        # sum, U_mu' = exp(TA(P1 f(sm))) U_mu (default: the identity).  It must
+        # work on plain fields and on nodes of any depth and be gauge
+        # covariant (products of sm and adj(sm), traces, fixed coefficients).
         self.description_mu = description_mu
         self.mu = mu
         self.P0 = P0
         self.P1 = P1
         self.parameters = parameters
+        self.loop_function = loop_function
 
         nd = len(U)
         np = len(parameters)
@@ -208,7 +215,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         return sm
 
     def _update(self, sm, xU_mu):
-        # U_mu' = exp(TA(P1 sm)) U_mu
+        # U_mu' = exp(TA(P1 f(sm))) U_mu
         return g(g.matrix.exp(self._project(sm)) * xU_mu)
 
     def _staple(self, xfields):
@@ -355,8 +362,8 @@ class directional_parallel_transport(dft_diffeomorphism):
         return _adjoint_matrix(grid, otype.Nc, coor)
 
     def inv(self, fields, max_iter=100):
-        # invert U_mu' = exp(TA(P1 C U_mu^dag)) U_mu by the fixed-point
-        # iteration U_mu <- exp(-TA(P1 C U_mu^dag)) U_mu'.  The staple C is
+        # invert U_mu' = exp(TA(P1 f(C U_mu^dag))) U_mu by the fixed-point
+        # iteration U_mu <- exp(-TA(P1 f(C U_mu^dag))) U_mu'.  The staple C is
         # evaluated once on the smeared fields: this requires that it does
         # not depend on the updated links (e.g. a checkerboard P1 with
         # plaquette staples), which is verified at the end.
@@ -387,7 +394,10 @@ class directional_parallel_transport(dft_diffeomorphism):
         return U
 
     def _project(self, sm):
-        # TA(P1 sm), the generator of the update
+        # TA(P1 f(sm)), the generator of the update; every path (the graph
+        # of ft, the site-local map and inv) builds its update here
+        if self.loop_function is not None:
+            sm = g(self.loop_function(sm))
         if self.P1 is not None:
             sm = g(sm * self.P1)
         return g.qcd.gauge.project.traceless_anti_hermitian(sm)

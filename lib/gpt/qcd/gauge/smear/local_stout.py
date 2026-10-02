@@ -25,7 +25,7 @@ class local_stout(local_diffeomorphism):
     # checkerboarded stout smearing of the links in one direction, expressed
     # as a directional_parallel_transport of the plaquettes through the link
     # (AD path); one transport is built per grid and gauge group on first use
-    @params_convention(dimension=None, checkerboard=None, rho=None)
+    @params_convention(dimension=None, checkerboard=None, rho=None, loop_function=None)
     def __init__(self, params):
         self.params = params
         self.cache = {}
@@ -43,7 +43,8 @@ class local_stout(local_diffeomorphism):
                 (rho, g.path().f(nu).f(mu).b(nu).b(mu)) for nu in range(nd) if nu != mu
             ] + [(rho, g.path().b(nu).f(mu).f(nu).b(mu)) for nu in range(nd) if nu != mu]
             self.cache[key] = g.qcd.gauge.smear.directional_parallel_transport(
-                U, description, mu, g(even + odd), P1
+                U, description, mu, g(even + odd), P1,
+                loop_function=self.params["loop_function"],
             )
         return self.cache[key], U
 
