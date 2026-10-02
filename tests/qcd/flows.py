@@ -269,3 +269,68 @@ for generic in [False, True]:
     a2 = (pt_p_generic if generic else pt_p).action_log_det_jacobian()
     a2.assert_gradient_error(rng, U + params_p, U + params_p, 1e-4, 1e-7)
     a2.assert_gradient_error(rng, U + params_p, [p], 3e-3, 1e-7)
+
+
+# the p-gradient of a contraction of the force of the combined action
+#   S = S_gauge(Phi_2(Phi_1(U))) - log det J_1(U) - log det J_2(Phi_1(U))
+# with Q(U, p) = sum_mu <v_mu, F_mu(U, p)>, F = dS/dU.  Since Q is the
+# derivative of S along the group flow U(eps) = exp(eps v) U at eps = 0 and
+# mixed partials commute,
+#   dQ/dp = d/deps [dS/dp](U(eps), p) at eps = 0,
+# which needs only the first-order parameter force.
+from gpt.core.group.differentiable_functional import approximation_scheme_4
+
+# (with rho above, the even layer is nearly singular at the origin, where rho
+# peaks: det of its Jacobian block is 1e-3 without and ~0 with the loop
+# function, so the log det is ill-conditioned there; use a smaller rho)
+rho_s = g(0.25 * rho)
+params_s = [rho_s, p]
+description_s = [(rho_s, path) for _, path in description[0]]
+
+
+def make_layer(P1):
+    return g.qcd.gauge.smear.directional_parallel_transport(
+        U, description_s, 0, full, P1, params_s, loop_function=loop_function_p
+    )
+
+
+phi_1 = make_layer(odd)
+phi_2 = make_layer(even)
+indices = [0, 1, 2, 3, 4, 5]
+a_gauge = g.qcd.gauge.action.iwasaki(6)
+a_gauge = a_gauge.transformed(phi_2, indices=indices, projection=[0, 1, 2, 3])
+a_gauge = a_gauge.transformed(phi_1, indices=indices, projection=indices)
+a_ld_1 = phi_1.action_log_det_jacobian()
+a_ld_2 = phi_2.action_log_det_jacobian().transformed(phi_1, indices=indices, projection=indices)
+a_total = a_gauge + a_ld_1 + a_ld_2
+a_total.assert_gradient_error(rng, U + params_s, U + params_s, 1e-4, 1e-7)
+
+v = rng.normal_element(g.group.cartesian(U))
+
+
+def force_contraction(fields):
+    F = a_total.gradient(fields, fields[0:4])
+    return sum(g.group.inner_product(x, y) for x, y in zip(v, F)).real
+
+
+def flowed_links(eps):
+    return [g(g.group.compose(g(eps * v[mu]), U[mu])) for mu in range(4)]
+
+
+eps = 1e-3
+dQ_dp = None
+for cc, dd in approximation_scheme_4:
+    gr = a_total.gradient(flowed_links(dd * eps) + params_s, [p])[0]
+    dQ_dp = g((cc / eps) * gr) if dQ_dp is None else g(dQ_dp + (cc / eps) * gr)
+
+# cross-check along a random direction dp with a difference of Q in p
+dp = rng.normal_element(g.group.cartesian(p))
+a = g.group.inner_product(dp, dQ_dp).real
+t = 1e-2
+b = sum(
+    (cc / t) * force_contraction(U + [rho_s, g(g.group.compose(g(dd * t * dp), p))])
+    for cc, dd in approximation_scheme_4
+)
+eps = abs(a - b) / abs(b)
+g.message(f"p-gradient of the force contraction: {a} vs {b}, rel {eps}")
+assert eps < 1e-7
