@@ -43,7 +43,7 @@ class gradient_descent(base_iterative):
         def opt(x, dx, t):
             x = g.util.to_list(x)
             dx = g.util.to_list(dx)
-            dx_indices = [x.index(y) for y in dx]
+            dx_indices = [g.util.index_by_identity(x, y) for y in dx]
             for i in range(self.maxiter):
                 dx = [x[i] for i in dx_indices]
                 d = f.gradient(x, dx)

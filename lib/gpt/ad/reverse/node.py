@@ -82,7 +82,7 @@ class node_differentiable_functional(g.group.differentiable_functional):
     def gradient(self, fields, dfields):
         for a in self.arguments:
             a.with_gradient = False
-        indices = [fields.index(df) for df in dfields]
+        indices = [g.util.index_by_identity(fields, df) for df in dfields]
         for i in indices:
             self.arguments[i].gradient = None
             self.arguments[i].with_gradient = True

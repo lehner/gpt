@@ -24,7 +24,7 @@ def line_search_quadratic(s, x, dx, dv0, df, step):
     xp = g.copy(x)
     dxp = []
     for dx_mu, s_mu in g.util.to_list(dx, s):
-        mu = x.index(dx_mu)
+        mu = g.util.index_by_identity(x, dx_mu)
         xp[mu] @= g(g.group.compose(step * s_mu, xp[mu]))
         dxp.append(xp[mu])
 

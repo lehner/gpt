@@ -90,6 +90,15 @@ def to_list(*values):
         return [value]
 
 
+def index_by_identity(values, x):
+    # the position of the object x in values; list.index compares with ==,
+    # which confuses equal numbers (e.g. two weights with the same value)
+    for i, v in enumerate(values):
+        if v is x:
+            return i
+    raise ValueError("object not in list")
+
+
 def from_list(value):
     if isinstance(value, list) and len(value) == 1:
         return value[0]
