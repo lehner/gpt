@@ -120,11 +120,11 @@ act2.assert_gradient_error(rng, U + params, U + params, 1e-4, 1e-7)
 
 
 # a non-trivial function of the weighted loop sum, U_mu' = exp(TA(P1 f(sm))) U_mu
-def loop_function(sm):
+def loop_function(sm, xparams):
     return sm + sm * sm * 0.5 + sm * g.adj(sm) * sm * 0.25
 
 
-def make_pt(mu, P1, f, generic=False):
+def make_pt(mu, P1, f, generic=False, params=params):
     pt = g.qcd.gauge.smear.directional_parallel_transport(
         U, description[mu], mu, full, P1, params, loop_function=f
     )
@@ -137,7 +137,7 @@ def make_pt(mu, P1, f, generic=False):
 # the identity as loop function reproduces the default
 pt_f = make_pt(0, odd, loop_function)
 Uprime0 = make_pt(0, odd, None)(U + params)[0:4]
-Uprime1 = make_pt(0, odd, lambda sm: sm)(U + params)[0:4]
+Uprime1 = make_pt(0, odd, lambda sm, xparams: sm)(U + params)[0:4]
 eps2 = sum(g.norm2(x - y) / g.norm2(x) for x, y in zip(Uprime0, Uprime1))
 g.message(f"Identity loop function agreement: {eps2}")
 assert eps2 < 1e-28
@@ -193,6 +193,79 @@ pt_f_generic.action_log_det_jacobian().assert_gradient_error(rng, U + params, U 
 # O(1) everywhere and loop_function above makes the Jacobian singular on some
 # sites (no longer a diffeomorphism), so use a weaker function here
 act1 = g.qcd.gauge.smear.local_stout(
-    rho=0.12, dimension=0, checkerboard=g.odd, loop_function=lambda sm: sm + sm * sm * 0.05
+    rho=0.12, dimension=0, checkerboard=g.odd, loop_function=lambda sm, xparams: sm + sm * sm * 0.05
 )
 act1.action_log_det_jacobian().assert_gradient_error(rng, U, U, 1e-4, 1e-7)
+
+
+# a trainable parameter field in the loop function, f(P) = P + p P^2
+p = g.complex(even.grid)
+rng.normal(p)
+p[:] = 0.5 + 0.1 * p[:]
+params_p = [rho, p]
+
+
+def loop_function_p(sm, xparams):
+    return sm + sm * sm * xparams[1]
+
+
+pt_p = make_pt(0, odd, loop_function_p, params=params_p)
+pt_p_generic = make_pt(0, odd, loop_function_p, generic=True, params=params_p)
+
+# p = 0 reproduces the identity
+p0 = g(0 * p)
+Uprime0 = make_pt(0, odd, None)(U + params)[0:4]
+Uprime1 = pt_p(U + [rho, p0])[0:4]
+eps2 = sum(g.norm2(x - y) / g.norm2(x) for x, y in zip(Uprime0, Uprime1))
+g.message(f"Parameter loop function at p = 0: {eps2}")
+assert eps2 < 1e-28
+
+# local and generic paths agree, including the parameter gradients
+dirs = [rng.normal_element(g.group.cartesian(x)) for x in U + params_p]
+for name, gr0, gr1 in [
+    (
+        "log-det force",
+        pt_p.action_log_det_jacobian().gradient(U + params_p, U + params_p),
+        pt_p_generic.action_log_det_jacobian().gradient(U + params_p, U + params_p),
+    ),
+    (
+        "Jacobian",
+        pt_p.jacobian(U + params_p, pt_p(U + params_p), dirs),
+        pt_p_generic.jacobian(U + params_p, pt_p(U + params_p), dirs),
+    ),
+]:
+    for x, y in zip(gr0, gr1):
+        eps2 = g.norm2(x - y) / g.norm2(x)
+        g.message(f"Parameter loop function: local vs generic {name}: {eps2}")
+        assert eps2 < 1e-20
+
+# inverse
+Uprime = pt_p(U + params_p)
+Uinv = pt_p.inv(Uprime[0:4] + params_p)
+eps2 = g.norm2(Uinv[0] - U[0]) / g.norm2(U[0])
+g.message(f"Parameter loop function: inverse: {eps2}")
+assert eps2 < 1e-25
+
+# gradients w.r.t. links, rho and p (local and generic): a flow of two
+# layers sharing the parameters, and the log-det-jacobian
+for generic in [False, True]:
+    a1 = g.qcd.gauge.action.iwasaki(6)
+    a1 = a1.transformed(
+        make_pt(0, odd, loop_function_p, generic, params_p),
+        indices=[0, 1, 2, 3, 4, 5],
+        projection=[0, 1, 2, 3],
+    )
+    a1 = a1.transformed(
+        make_pt(0, even, loop_function_p, generic, params_p),
+        indices=[0, 1, 2, 3, 4, 5],
+        projection=[0, 1, 2, 3, 4, 5],
+    )
+    a1.assert_gradient_error(rng, U + params_p, U + params_p, 1e-4, 1e-7)
+    # the p-derivative is small compared to the action (and can be O(0.1)
+    # along a random direction): a larger step keeps the roundoff of the
+    # (4th-order) difference small, the tolerance allows for the cancellation
+    a1.assert_gradient_error(rng, U + params_p, [p], 1e-2, 1e-6)
+
+    a2 = (pt_p_generic if generic else pt_p).action_log_det_jacobian()
+    a2.assert_gradient_error(rng, U + params_p, U + params_p, 1e-4, 1e-7)
+    a2.assert_gradient_error(rng, U + params_p, [p], 3e-3, 1e-7)

@@ -136,10 +136,12 @@ class directional_parallel_transport(dft_diffeomorphism):
     def __init__(
         self, U, description_mu, mu, P0=None, P1=None, parameters=[], loop_function=None
     ):
-        # loop_function: an optional site-local map f of the weighted loop
-        # sum, U_mu' = exp(TA(P1 f(sm))) U_mu (default: the identity).  It must
-        # work on plain fields and on nodes of any depth and be gauge
-        # covariant (products of sm and adj(sm), traces, fixed coefficients).
+        # loop_function: an optional site-local map f(sm, xparams) of the
+        # weighted loop sum, U_mu' = exp(TA(P1 f(sm, xparams))) U_mu (default:
+        # the identity), where xparams are the parameters (plain fields or
+        # nodes, in the order of `parameters`).  It must work on plain fields
+        # and on nodes of any depth (node-first products: sm * p, not p * sm)
+        # and be gauge covariant (products of sm and adj(sm), traces).
         self.description_mu = description_mu
         self.mu = mu
         self.P0 = P0
@@ -158,7 +160,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         def ft(xU):
             assert len(xU) == ntot
             sm = self._weighted_transport(cache, description_mu, xU)
-            sm = self._update(sm, xU[mu])
+            sm = self._update(sm, xU[mu], xU[nd:])
             return [sm if i == mu else xU[i] for i in range(nd)] + xU[nd:]
 
         self.description_staple = _staple_description(description_mu, mu, nd)
@@ -214,18 +216,18 @@ class directional_parallel_transport(dft_diffeomorphism):
             sm = sm + t
         return sm
 
-    def _update(self, sm, xU_mu):
+    def _update(self, sm, xU_mu, xparams):
         # U_mu' = exp(TA(P1 f(sm))) U_mu
-        return g(g.matrix.exp(self._project(sm)) * xU_mu)
+        return g(g.matrix.exp(self._project(sm, xparams)) * xU_mu)
 
     def _staple(self, xfields):
         # the weighted staple C with transported loop = C U_mu^dag (P0 applied)
         return g(self._weighted_transport(self._staple_cache, self.description_staple, xfields))
 
-    def _local_ft(self, xU_mu, xC):
-        # the site-local map U_mu' = f(U_mu, C) for a fixed staple C
+    def _local_ft(self, xU_mu, xC, xparams):
+        # the site-local map U_mu' = F(U_mu, C, params) for a fixed staple C
         xU_P0 = g(xU_mu * self.P0) if self.P0 is not None else xU_mu
-        return self._update(g(xC * g.adj(xU_P0)), xU_mu)
+        return self._update(g(xC * g.adj(xU_P0)), xU_mu, xparams)
 
     def jacobian(self, fields, fields_prime, dfields):
         # only output mu is transformed, every other output is the identity
@@ -266,9 +268,10 @@ class directional_parallel_transport(dft_diffeomorphism):
         # released by the cyclic garbage collector, which does not see the
         # size of the fields they hold
         plain = not any(isinstance(x, rad.node_base) for x in fields)
+        nd = self.nd
         if plain and self._vjp is not None:
-            nodes, aC, _U, _C, aF = self._vjp
-            for n, x in zip(nodes, fields):
+            nodes, aC, _U, _C, _P, aF = self._vjp
+            for n, x in zip(nodes + _P, fields + fields[nd:]):
                 assert_compatible(n.value, x)
                 n.value = x
         else:
@@ -277,9 +280,12 @@ class directional_parallel_transport(dft_diffeomorphism):
             _U = rad.node(fields[mu])
             # a plain matrix (not a group element): no conversion to the algebra
             _C = rad.node(g.lattice(fields[mu]), infinitesimal_to_cartesian=False)
-            aF = self._local_ft(_U, _C)
+            # separate parameter leaves for the local map (the staple pass
+            # below would reset gradients deposited in shared leaves)
+            _P = [rad.node(x) for x in fields[nd:]]
+            aF = self._local_ft(_U, _C, _P)
             if plain:
-                self._vjp = (nodes, aC, _U, _C, aF)
+                self._vjp = (nodes, aC, _U, _C, _P, aF)
         # the roots keep their values after a reverse pass
         aC.value = None
         aF.value = None
@@ -288,14 +294,17 @@ class directional_parallel_transport(dft_diffeomorphism):
         _U.value = fields[mu]
         aF(initial_gradient=seed)
         grad_U, grad_C = _U.gradient, _C.gradient
+        grad_P = [n.gradient for n in _P]
         aC(initial_gradient=grad_C)
         grads = [n.gradient for n in nodes]
-        grads[mu] = grad_U if grads[mu] is None else g(grads[mu] + grad_U)
+        for i, gr in [(mu, grad_U)] + [(nd + i, gr) for i, gr in enumerate(grad_P)]:
+            if gr is not None:
+                grads[i] = gr if grads[i] is None else g(grads[i] + gr)
         # release the fields held by the graph until the next call
         aC.value = None
         aF.value = None
         _C.value = None
-        for n in nodes + [_U, _C]:
+        for n in nodes + [_U, _C] + _P:
             n.gradient = None
             n._borrowed.clear()
         return grads
@@ -332,7 +341,8 @@ class directional_parallel_transport(dft_diffeomorphism):
         generators = otype_cartesian.generators(grid.precision.complex_dtype)
         # one forward shared by the 8 reverse passes
         aU = rad.node(U_mu)
-        aUft = self._local_ft(aU, rad.node(C, with_gradient=False))
+        xparams = [rad.node(x, with_gradient=False) for x in fields[self.nd :]]
+        aUft = self._local_ft(aU, rad.node(C, with_gradient=False), xparams)
         U_prime_mu = aUft(with_gradients=False, retain_values=True)
         src = g.group.cartesian(U_mu)
         rows = []
@@ -370,13 +380,14 @@ class directional_parallel_transport(dft_diffeomorphism):
         assert self.description_staple is not None
         mu, nd = self.mu, self.nd
         C = self._staple(fields)
+        xparams = fields[nd:]
         U_prime_mu = fields[mu]
         U_mu = g.copy(U_prime_mu)
         eps = U_mu.grid.precision.eps
         for it in range(max_iter):
             U_mu_last = g.copy(U_mu)
             xU_P0 = g(U_mu * self.P0) if self.P0 is not None else U_mu
-            U_mu @= g.matrix.exp(-self._project(g(C * g.adj(xU_P0)))) * U_prime_mu
+            U_mu @= g.matrix.exp(-self._project(g(C * g.adj(xU_P0)), xparams)) * U_prime_mu
             eps2 = g.norm2(U_mu_last - U_mu) / U_mu.grid.gsites
             if eps2 < eps**2:
                 break
@@ -393,11 +404,11 @@ class directional_parallel_transport(dft_diffeomorphism):
         assert eps2 < 1e4 * eps**2, f"staple depends on the updated links ({eps2})"
         return U
 
-    def _project(self, sm):
-        # TA(P1 f(sm)), the generator of the update; every path (the graph
-        # of ft, the site-local map and inv) builds its update here
+    def _project(self, sm, xparams):
+        # TA(P1 f(sm, params)), the generator of the update; every path (the
+        # graph of ft, the site-local map and inv) builds its update here
         if self.loop_function is not None:
-            sm = g(self.loop_function(sm))
+            sm = g(self.loop_function(sm, xparams))
         if self.P1 is not None:
             sm = g(sm * self.P1)
         return g.qcd.gauge.project.traceless_anti_hermitian(sm)
@@ -529,6 +540,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         # converted to the algebra
         _U = rad.node(U_mu)
         _C = rad.node(C, infinitesimal_to_cartesian=False)
+        _P = [rad.node(x) for x in fields[self.nd :]]
 
         # 2-deep "apply Jacobian block to right" (see diagonal_jacobian_gradient);
         # the forward does not depend on the generator, so it runs once and
@@ -536,11 +548,14 @@ class directional_parallel_transport(dft_diffeomorphism):
         # from the forward's own (retained) 1-deep value, so the derivative
         # graph and the seed share its nodes.
         aU = rad.node(_U)
-        aUft = self._local_ft(aU, rad.node(_C, with_gradient=False))
+        aUft = self._local_ft(
+            aU, rad.node(_C, with_gradient=False), [rad.node(x, with_gradient=False) for x in _P]
+        )
         _Up = aUft(with_gradients=False, retain_values=True)
 
         grad_U = None
         grad_C = None
+        grad_P = [None] * len(_P)
         for a in range(ng):
             left @= P1 * generators[a]
             _left = rad.node(left, with_gradient=False)
@@ -557,11 +572,16 @@ class directional_parallel_transport(dft_diffeomorphism):
             gU, gC = _res(_U.gradient), _res(_C.gradient)
             grad_U = gU if grad_U is None else g(grad_U + gU)
             grad_C = gC if grad_C is None else g(grad_C + gC)
+            for i, n in enumerate(_P):
+                if n.gradient is not None:
+                    gP = _res(n.gradient)
+                    grad_P[i] = gP if grad_P[i] is None else g(grad_P[i] + gP)
+                    del gP
 
             del act, _left, _right, gU, gC
             right[a] = None
 
-        del aU, aUft, _Up, _U, _C
+        del aU, aUft, _Up, _U, _C, _P
         del left, right, C, P1_node
 
         # chain rule through the staple; the factor 2 is the one explained in
@@ -576,6 +596,8 @@ class directional_parallel_transport(dft_diffeomorphism):
             r = g(0 * fields[i]) if n.gradient is None else g(n.gradient)
             if i == mu:
                 r = g(r + 2.0 * grad_U)
+            elif i >= self.nd and grad_P[i - self.nd] is not None:
+                r = g(r + 2.0 * grad_P[i - self.nd])
             out.append(r)
         return [out[fields.index(d)] for d in dfields]
 
