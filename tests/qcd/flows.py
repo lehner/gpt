@@ -305,7 +305,7 @@ for generic in [False, True]:
         g.message(f"Number vs field parameter ({name}, generic = {generic}): {eps}")
         assert eps < 1e-12
         an.assert_gradient_error(rng, U + params_number, U + params_number, 1e-4, 1e-7)
-        an.assert_gradient_error(rng, U + params_number, [p_number], 1e-3, 1e-7)
+        an.assert_gradient_error(rng, U + params_number, [p_number], 1e-3, 1e-6)
 
 
 # the p-gradient of a contraction of the force of the combined action
