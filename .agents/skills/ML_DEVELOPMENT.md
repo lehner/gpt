@@ -186,6 +186,27 @@ net = g.ml.pack(y=y, z=z).function(inputs=[x2, x1])   # or explicit
   name and function class.  `describe()` always shows names (they key the
   parameters and must stay identifiers).
 
+### Serialization
+
+```python
+g.save(filename, net.state())
+net.set_state(g.load(filename))
+```
+
+`state()` returns `{"parameters": {name: value}, "constants": {name: value},
+"graph": describe()}` with the flat names of `parameter_names()` /
+`constant_names()` and the live values (no copies), which `g.save` writes
+directly (numbers, numpy arrays, tensors, lattices).  `set_state(state,
+strict=True)` assigns by name (lattices and tensors in place, also from a
+loaded lattice on a new grid object of the same layout; numbers and arrays
+replaced; composites write through to their functions).  Strict: the names
+must agree exactly (missing and unknown names are listed); `strict=False`
+assigns the names present in both.  Types are checked in any case (lattices
+by grid description and otype, arrays by shape).  A different graph text
+only warns (internal names may change).  Optimizer state (checkpoints) is
+kept outside this.  `g.load(fn, grids={grid.describe(): grid})` puts loaded
+lattices on the caller's grid.
+
 ## 4. Training
 
 ```python

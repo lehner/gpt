@@ -284,3 +284,40 @@ eps2 = g.norm2(y_o - y_r) / g.norm2(y_r) + g.norm2(u_o - outer["post.a"].real * 
 g.message(f"Nested evaluation: {eps2}")
 assert eps2 < 1e-28
 
+
+# serialization: the state holds the live values by name (and the graph as
+# text); g.save / g.load round trip, strict name and type checks
+import os
+
+state = net.state()
+assert list(state["parameters"]) == net.parameter_names() and list(state["constants"]) == net.constant_names()
+assert state["parameters"]["sp.b"] is net["sp.b"] and state["graph"] == net.describe()
+filename = os.path.join(os.environ.get("WORK_DIR", "."), "ml_graph_state")
+g.save(filename, state)
+reference_out = net([x1, x2])
+reference_values = [g.copy(v) if isinstance(v, g.lattice) else v for v in net.parameters()]
+for i, v in enumerate(list(net.parameters())):
+    net.parameters()[i] = rng.cnormal(g.lattice(v)) if isinstance(v, g.lattice) else 0.123 + 0j
+loaded = g.load(filename)
+net.set_state(loaded)
+assert all(
+    (g.norm2(a - b) == 0.0) if isinstance(a, g.lattice) else a == b
+    for a, b in zip(net.parameters(), reference_values)
+)
+assert all(g.norm2(a - b) == 0.0 for a, b in zip(net([x1, x2]), reference_out))
+g.message("State round trip: ok")
+
+missing = {**loaded, "parameters": {k: v for k, v in loaded["parameters"].items() if k != "s1.a"}}
+unknown = {**loaded, "parameters": {**loaded["parameters"], "nope.a": 0j}}
+wrong = {**loaded, "parameters": {**loaded["parameters"], "sp.b": 0j}}
+expect(KeyError, lambda: net.set_state(missing))
+expect(KeyError, lambda: net.set_state(unknown))
+expect(TypeError, lambda: net.set_state(wrong))
+net["s1.a"] = 0.5 + 0j
+net.set_state(missing, strict=False)  # loads the others, keeps s1.a
+assert net["s1.a"] == 0.5 and g.norm2(net["mx.w"] - reference_values[2]) == 0.0
+net.set_state({**loaded, "graph": "something else"})  # warns only
+f = scale()
+f.initialize(rng)
+f.set_state({"parameters": {"a": 0.25 + 0j}, "constants": {}, "graph": "scale"})
+assert f["a"] == 0.25 and f.state()["graph"] == "scale"

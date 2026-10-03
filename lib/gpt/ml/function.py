@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.ad.reverse.util import container, get_container, is_node
 from gpt.ad.reverse.node import node_base
 
@@ -182,6 +183,27 @@ def _assign(values, i, value):
         values[i] = value
 
 
+def _same_type(a, b):
+    # loaded values may live on new (equal) grid objects: compare layouts
+    if g.util.is_num(a) or g.util.is_num(b):
+        return g.util.is_num(a) and g.util.is_num(b)
+    if isinstance(a, np.ndarray) or isinstance(b, np.ndarray):
+        return isinstance(a, np.ndarray) and isinstance(b, np.ndarray) and a.shape == b.shape
+    if isinstance(a, g.lattice) and isinstance(b, g.lattice):
+        return a.grid.describe() == b.grid.describe() and a.otype.__name__ == b.otype.__name__
+    if isinstance(a, g.tensor) and isinstance(b, g.tensor):
+        return a.otype.__name__ == b.otype.__name__
+    return False
+
+
+def _type_text(x):
+    if isinstance(x, g.lattice):
+        return f"lattice({x.otype.__name__}, {x.grid.describe()})"
+    if isinstance(x, np.ndarray):
+        return f"array{x.shape}"
+    return type(x).__name__
+
+
 class function:
     """A function of named inputs to named outputs, with named parameters it
     owns (trained) and named constants (fixed, e.g. calibrated references).
@@ -264,6 +286,43 @@ class function:
         assert isinstance(value, list) and len(value) == n
         for i, v in enumerate(value):
             _assign(storage.values, offset + i, v)
+
+    # serialization: g.save(filename, f.state()) and f.set_state(g.load(filename))
+    def describe(self):
+        return type(self).__name__
+
+    def state(self):
+        # the live values (no copies) by name, and the graph as text
+        return {
+            "parameters": dict(zip(self.parameter_names(), self.parameters())),
+            "constants": dict(zip(self.constant_names(), self.constants())),
+            "graph": self.describe(),
+        }
+
+    def set_state(self, state, strict=True):
+        # assigns the values of state by name (lattices and tensors in place).
+        # strict: the names must agree exactly, otherwise the names present in
+        # both are assigned; the types must agree in any case.  A different
+        # graph text only warns.  (A prefix for loading the state of a
+        # sub-network into a composite, e.g. "inner.", may be added later.)
+        for kind, names in [("parameters", self.parameter_names()), ("constants", self.constant_names())]:
+            values = state.get(kind, {})
+            missing = [n for n in names if n not in values]
+            unknown = [n for n in values if n not in names]
+            if strict and (missing or unknown):
+                raise KeyError(f"set_state: {kind} missing {missing}, unknown {unknown}")
+            for name in names:
+                if name in values and not _same_type(self[name], values[name]):
+                    raise TypeError(
+                        f"set_state: {name} is {_type_text(values[name])}, expected {_type_text(self[name])}"
+                    )
+        for kind, names in [("parameters", self.parameter_names()), ("constants", self.constant_names())]:
+            values = state.get(kind, {})
+            for name in names:
+                if name in values:
+                    self[name] = values[name]
+        if "graph" in state and state["graph"] != self.describe():
+            g.message("set_state: warning: the graph differs from the one the state was saved from")
 
     # to be implemented by subclasses
     def initialize(self, rng):
