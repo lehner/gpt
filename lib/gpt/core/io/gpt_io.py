@@ -47,7 +47,9 @@ class gpt_io:
         self.verbose = gpt.default.is_verbose("io")
         self.verbose_paths = gpt.default.is_verbose("io_paths")
 
-        # escape paths
+        # escape paths (a single pattern may be given as a string)
+        if isinstance(self.params["paths"], str):
+            self.params["paths"] = [self.params["paths"]]
         if self.params["paths"] is not None:
             replace = str.maketrans({"[": "[[]", "]": "[]]"})
             self.params["paths"] = [p.translate(replace) for p in self.params["paths"]]
@@ -410,8 +412,6 @@ class gpt_io:
         if self.params["paths"] is None:
             return True
         paths = self.params["paths"]
-        if isinstance(paths, str):
-            paths = [paths]
         if self.verbose_paths:
             gpt.message(f"Found path {ctx}")
         return sum([1 if fnmatch.fnmatch(ctx, p) else 0 for p in paths]) != 0

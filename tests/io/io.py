@@ -155,6 +155,7 @@ for tries in range(n_tries):
 
     # check load out2 with fixed mpi
     res = g.load(f"{work_dir}/out2", paths="/U/*")
+    assert res["np"] is None and res["S"] is None and res["tu"] is None  # only /U/* is read
     for i in range(4):
         eps2 = g.norm2(res["U"][i] - U[i])
         g.message("Test second restore of U[%d]:" % i, eps2)
