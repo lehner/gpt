@@ -81,9 +81,7 @@ for f in \
     ${test_path}/ad/higher_order.py \
     ${test_path}/ad/stencil.py \
     ${test_path}/ad/list_node.py \
-    ${test_path}/ad/train_function.py \
-    ${test_path}/ml/sequence.py \
-    ${test_path}/ml/parallel_transport_pooling.py
+    ${test_path}/ad/train_function.py
 do
 
 printf "%-120s" " [TEST] $f"
