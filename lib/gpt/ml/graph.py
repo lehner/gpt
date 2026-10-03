@@ -122,16 +122,17 @@ class _layout:
     # the parameters and constants of a set of calls: each function once, in
     # the order of its first call, whose name prefixes its slots; a parameter
     # slot is owned if at least one call of its function leaves it
-    # unconnected.  index[id(f)][j] is the position of slot j of f.
+    # unconnected.  index[id(f)][j] is the position of slot j of f, prefix[id(f)]
+    # the name of its first call.
     def __init__(self, calls):
-        first = {}
+        self.prefix = {}
         for c in calls:
-            first.setdefault(id(c.function), c)
-        self.functions = [c.function for c in first.values()]
+            self.prefix.setdefault(id(c.function), c.name)
+        self.functions = list({id(c.function): c.function for c in calls}.values())
         self.names, self.entries, self.index = [], [], {}
-        self.constant_names, self.constant_entries, self.constant_index = [], [], {}
-        for c in first.values():
-            f, prefix = c.function, c.name
+        self.constant_names, self.constant_entries = [], []
+        for f in self.functions:
+            prefix = self.prefix[id(f)]
             f_calls = [d for d in calls if d.function is f]
             owned = [
                 j
@@ -141,10 +142,8 @@ class _layout:
             self.index[id(f)] = {j: len(self.entries) + k for k, j in enumerate(owned)}
             self.names += [f"{prefix}.{f._parameters.names[j]}" for j in owned]
             self.entries += [_entry(f._parameters.values, j) for j in owned]
-            n = len(f._constants.values)
-            self.constant_index[id(f)] = {j: len(self.constant_entries) + j for j in range(n)}
             self.constant_names += [f"{prefix}.{name}" for name in f._constants.names]
-            self.constant_entries += [_entry(f._constants.values, j) for j in range(n)]
+            self.constant_entries += [_entry(f._constants.values, j) for j in range(len(f._constants.values))]
 
 
 class pack:
@@ -208,9 +207,9 @@ class pack:
                 for j, (s, k) in sorted(c.connections.items())
             ]
             call = f"{type(f).__name__}({', '.join(args)}{'; ' + ', '.join(connected) if connected else ''})"
-            index = layout.index[id(f)]
-            stored = [layout.names[index[j]] for j in range(len(f._parameters.values)) if j not in c.connections]
-            constants = [layout.constant_names[k] for k in layout.constant_index[id(f)].values()]
+            prefix = layout.prefix[id(f)]
+            stored = [f"{prefix}.{n}" for j, n in enumerate(f._parameters.names) if j not in c.connections]
+            constants = [f"{prefix}.{n}" for n in f._constants.names]
             rows.append((c.name, call, stored, constants))
         w0 = max([len(r[0]) for r in rows], default=0)
         w1 = max([len(r[1]) for r in rows], default=0)
@@ -252,11 +251,9 @@ class composite(function):
         self._output_symbols = list(graph.outputs.values())
         self._calls = calls
         self._functions = {c.name: c.function for c in calls}
-        layout = _layout(calls)
+        self._layout = layout = _layout(calls)
         self._parameters = _named_storage.shared(layout.names, layout.entries)
         self._constants = _named_storage.shared(layout.constant_names, layout.constant_entries)
-        self._owner_index = layout.index
-        self._unique_functions = layout.functions
 
     def graph(self):
         return self._graph
@@ -271,7 +268,7 @@ class composite(function):
         return self._graph.draw(ax)
 
     def initialize(self, rng):
-        for f in self._unique_functions:
+        for f in self._layout.functions:
             f.initialize(rng)
 
     def _lookup_function(self, name):
@@ -297,7 +294,7 @@ class composite(function):
             return v if k is None else v[k]
 
         for c in self._calls:
-            index = self._owner_index[id(c.function)]
+            index = self._layout.index[id(c.function)]
             p = [
                 value(*c.connections[j]) if j in c.connections else parameters[index[j]]
                 for j in range(len(c.function._parameters.values))

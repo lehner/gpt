@@ -112,10 +112,24 @@ class random:
         if isinstance(out, list):
             return [self.element(x, p) for x in out]
 
-        t = gpt.timer("element")
-
         scale = p["scale"]
         normal = p["normal"]
+
+        if gpt.util.is_num(out) or isinstance(out, numpy.ndarray):
+            # numbers and arrays are complex additive (generators 1 and i);
+            # numbers are returned, arrays are filled
+            def draw():
+                r = self.normal() if normal else self.uniform_real(min=-0.5, max=0.5)
+                return scale * complex(r).real
+
+            if gpt.util.is_num(out):
+                return complex(draw(), draw())
+            for i in numpy.ndindex(out.shape):
+                out[i] = complex(draw(), draw())
+            return out
+
+        t = gpt.timer("element")
+
         grid = out.grid
 
         t("complex")

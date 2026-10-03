@@ -11,6 +11,15 @@ grid = g.grid([4, 4, 4, 4], g.double)
 field = g.complex(grid)
 
 
+def expect(exception, call):
+    try:
+        call()
+    except exception as e:
+        g.message(f"Rejected: {e}")
+        return
+    assert False, f"expected {exception.__name__}"
+
+
 class scale(g.ml.function):
     # y = Re(a) x
     def __init__(self):
@@ -116,11 +125,7 @@ assert net.describe() == expected and net.graph().describe() == expected
 assert sym["q"].describe() == """inputs: x1, x2
   sp = split(x=x2; e=x1)  parameters: sp.b
 outputs: sp.q"""
-try:
-    net.draw()
-    assert False
-except NotImplementedError as e:
-    g.message(f"draw: {e}")
+expect(NotImplementedError, net.draw)
 
 # the composite holds no values: it reads and writes its functions' storage
 sc["a"] = 0.7 + 0j
@@ -132,11 +137,7 @@ assert sc["a"] == 0.8
 b = sp["b"]
 net["sp.b"] = rng.cnormal(g.complex(grid))
 assert sp["b"] is b and net.parameters()[1] is b
-try:
-    net.parameters().append(0.0)
-    assert False
-except TypeError as e:
-    g.message(f"Rejected: {e}")
+expect(TypeError, lambda: net.parameters().append(0.0))
 g.message("Names and shared storage: ok")
 
 # default call names (class names) and explicit inputs
@@ -144,11 +145,7 @@ u, v = g.ml.symbols("u", "v")
 f1, f2 = scale(), scale()
 (a,) = f1([u])
 (b,) = f2([v])
-try:
-    g.ml.pack(a=a, b=b).function()
-    assert False
-except ValueError as e:
-    g.message(f"Rejected: {e}")
+expect(ValueError, lambda: g.ml.pack(a=a, b=b).function())
 (b,) = f2([v], name="second")
 h = g.ml.pack(a=a, b=b).function(inputs=[v, u])
 assert h.input_names() == ["v", "u"] and h.parameter_names() == ["scale.a", "second.a"]
@@ -157,23 +154,16 @@ ha, hb = h([x2, x1])
 assert g.norm2(ha - f1["a"].real * x1) == 0.0 and g.norm2(hb - f2["a"].real * x2) == 0.0
 
 # errors
-for call, expected in [
-    (lambda: scale()([u], name="f.g"), ValueError),  # invalid call name
-    (lambda: scale()([u, v]), ValueError),  # input count
-    (lambda: scale()([u], parameters={"nope": v}), KeyError),
-    (lambda: mix()([u, v], parameters={"c": u, "c.1": v}), ValueError),  # connected twice
-    (lambda: scale()([x1], parameters={"a": u}), TypeError),  # symbols and values
-    (lambda: scale()([x1], name="s"), ValueError),  # name of a concrete call
-    (lambda: g.ml.pack(a=[a]), TypeError),  # a list instead of a symbol
-    (lambda: g.ml.pack(a=a).function(inputs=[u, v]), ValueError),  # v not used
-    (lambda: g.ml.pack(a=b).function(inputs=[]), ValueError),  # v used, not an input
-    (lambda: g.ml.pack(a=a).function(inputs=[a]), TypeError),  # not a free symbol
-]:
-    try:
-        call()
-        assert False
-    except expected as e:
-        g.message(f"Rejected: {e}")
+expect(ValueError, lambda: scale()([u], name="f.g"))  # invalid call name
+expect(ValueError, lambda: scale()([u, v]))  # input count
+expect(KeyError, lambda: scale()([u], parameters={"nope": v}))
+expect(ValueError, lambda: mix()([u, v], parameters={"c": u, "c.1": v}))  # connected twice
+expect(TypeError, lambda: scale()([x1], parameters={"a": u}))  # symbols and values
+expect(ValueError, lambda: scale()([x1], name="s"))  # name of a concrete call
+expect(TypeError, lambda: g.ml.pack(a=[a]))  # a list instead of a symbol
+expect(ValueError, lambda: g.ml.pack(a=a).function(inputs=[u, v]))  # v not used
+expect(ValueError, lambda: g.ml.pack(a=b).function(inputs=[]))  # v used, not an input
+expect(TypeError, lambda: g.ml.pack(a=a).function(inputs=[a]))  # not a free symbol
 
 # plain evaluation
 out = net([x1, x2])
@@ -193,43 +183,15 @@ assert eps2 < 1e-28
 (x,) = g.ml.symbols("x")
 (y,) = scale()([x], parameters={"a": x})
 bad = g.ml.pack(y=y).function()
-try:
-    bad([rad.node(x1)])
-    assert False
-except TypeError as e:
-    g.message(f"Rejected: {e}")
+expect(TypeError, lambda: bad([rad.node(x1)]))
 
 # gradient w.r.t. all composite parameters
 t1, t2 = rng.cnormal(g.complex(grid)), rng.cnormal(g.complex(grid))
-
-
-def loss(parameters):
-    y, t = net([x1, x2], parameters)
-    return g.norm2(y - t1) + g.norm2(t - t2)
-
-
 leaves = [rad.node(v) for v in net.parameters()]
-loss(leaves)()
-gradients = [n.gradient for n in leaves]
-assert gradients[0].imag == 0.0
-directions = [0.3 - 0.2j] + [rng.cnormal(g.complex(grid)) for _ in range(4)]
-a = g.group.inner_product(gradients, directions)
-
-
-def shifted(h):
-    return [
-        g(v + h * d) if isinstance(v, g.lattice) else v + h * d
-        for v, d in zip(net.parameters(), directions)
-    ]
-
-
-h = 1e-4
-b = (-loss(shifted(2 * h)) + 8 * loss(shifted(h)) - 8 * loss(shifted(-h)) + loss(shifted(-2 * h))) / (
-    12 * h
-)
-eps = abs(a - b) / abs(b)
-g.message(f"Gradient: {a} vs {b}, rel {eps}")
-assert eps < 1e-8
+y, t = net([x1, x2], leaves)
+cf = (g.norm2(y - t1) + g.norm2(t - t2)).functional(*leaves)
+cf.assert_gradient_error(rng, net.parameters(), net.parameters(), 1e-4, 1e-8)
+assert cf.gradient(net.parameters(), net.parameters())[0].imag == 0.0
 
 # a second composite of the same functions: the output y alone (a subset of
 # the calls), and a third with a new call that leaves mx's w unconnected

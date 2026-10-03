@@ -11,6 +11,15 @@ rng = g.random("test")
 grid = g.grid([4, 4, 4, 4], g.double)
 
 
+def expect(exception, call):
+    try:
+        call()
+    except exception as e:
+        g.message(f"Rejected: {e}")
+        return
+    assert False, f"expected {exception.__name__}"
+
+
 class example(g.ml.function):
     # y = Re(a) x + b + s c_0 c_1 x + d_0 x x + d_1 x
     # with a real scalar a, a complex field b, a list slot c of two complex
@@ -79,11 +88,7 @@ for parameters, constants in [
     ([("a", 0j)], [("a", 1.0)]),
     ([("", 0j)], []),
 ]:
-    try:
-        g.ml.function([], [], parameters, constants)
-        assert False
-    except ValueError as e:
-        g.message(f"Rejected: {e}")
+    expect(ValueError, lambda: g.ml.function([], [], parameters, constants))
 
 # plain evaluation
 x = rng.cnormal(g.complex(grid))
@@ -103,53 +108,19 @@ assert eps2 < 1e-28
 # types are checked for nodes, not for plain values
 xr = g.real(grid)
 xr[:] = 1
-for call, expected in [
-    (lambda: f([rad.node(xr)]), TypeError),
-    (lambda: f([nx], [rad.node(g.real(grid))] + leaves[1:]), TypeError),
-    (lambda: f([nx], leaves[:-1]), ValueError),
-    (lambda: f([nx, nx]), ValueError),
-]:
-    try:
-        call()
-        assert False
-    except expected as e:
-        g.message(f"Rejected: {e}")
+expect(TypeError, lambda: f([rad.node(xr)]))
+expect(TypeError, lambda: f([nx], [rad.node(g.real(grid))] + leaves[1:]))
+expect(ValueError, lambda: f([nx], leaves[:-1]))
+expect(ValueError, lambda: f([nx, nx]))
 f([xr])
 
-# gradients w.r.t. all parameters: the leaf gradient is dL/dRe + i dL/dIm, so
-# the derivative along a direction v is Re <gradient, v>
+# gradients w.r.t. all parameters (numbers, fields, arrays); the real
+# parameter a gets no gradient in its imaginary part
 t = rng.cnormal(g.complex(grid))
-
-
-def loss(parameters, x=x):
-    return g.norm2(f([x], parameters)[0] - t)
-
-
 leaves = [rad.node(v) for v in f.parameters()]
-loss(leaves)()
-gradients = [n.gradient for n in leaves]
-assert gradients[0].imag == 0.0
-directions = [
-    0.3 - 0.2j,
-    rng.cnormal(g.complex(grid)),
-    rng.cnormal(g.complex(grid)),
-    rng.cnormal(g.complex(grid)),
-    np.array([0.4 + 0.1j, -0.2 + 0.3j]),
-]
-a = g.group.inner_product(gradients, directions)
-
-
-def shifted(h):
-    return [g(v + h * dv) if isinstance(v, g.lattice) else v + h * dv for v, dv in zip(f.parameters(), directions)]
-
-
-h = 1e-4
-b = (-loss(shifted(2 * h)) + 8 * loss(shifted(h)) - 8 * loss(shifted(-h)) + loss(shifted(-2 * h))) / (
-    12 * h
-)
-eps = abs(a - b) / abs(b)
-g.message(f"Gradient: {a} vs {b}, rel {eps}; Im of the gradient of the real a: {gradients[0].imag}")
-assert eps < 1e-8
+cf = g.norm2(f([x], leaves)[0] - t).functional(*leaves)
+cf.assert_gradient_error(rng, f.parameters(), f.parameters(), 1e-4, 1e-8)
+assert cf.gradient(f.parameters(), f.parameters())[0].imag == 0.0
 
 # training through the optimizers: the functional's arguments are the live
 # parameter list, so the optimizer updates the function's own storage

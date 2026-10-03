@@ -33,6 +33,9 @@ def invariant_distance(field, field_prime):
 def cartesian(field):
     if isinstance(field, list):
         return [cartesian(f) for f in field]
+    if g.util.is_num(field) or isinstance(field, np.ndarray):
+        # numbers and arrays are complex additive (as in compose)
+        return 0j if g.util.is_num(field) else np.zeros_like(field)
     return g.lattice(field.grid, field.otype.cartesian()).checkerboard(field.checkerboard())
 
 

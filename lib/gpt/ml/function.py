@@ -66,14 +66,6 @@ def _container_of(x):
     return get_container(x)
 
 
-def _as_container(x):
-    # a declared type: None (unchecked), an AD container, or a representative
-    # value (lattice, tensor, numpy array, number, or a list of these)
-    if x is None or isinstance(x, container):
-        return x
-    return _container_of(x)
-
-
 class _storage_list(list):
     # the storage of a composite: a fixed-length list whose element k lives in
     # the storage of a function, entry k = (storage list, index).  Reads and
@@ -211,8 +203,11 @@ class function:
             raise ValueError(f"Names used for parameters and constants: {sorted(common)}")
 
     def _typed_slot(self, x):
+        # a declared type: None (unchecked), an AD container, or a
+        # representative value (lattice, tensor, numpy array, number, or a
+        # list of these)
         name, t = x if isinstance(x, tuple) else (x, None)
-        return name, _as_container(t)
+        return name, t if t is None or isinstance(t, container) else _container_of(t)
 
     # names
     def input_names(self):
@@ -250,11 +245,10 @@ class function:
     def __setitem__(self, name, value):
         storage, (offset, n) = self._lookup(name)
         if n is None:
-            _assign(storage.values, offset, value)
-        else:
-            assert isinstance(value, list) and len(value) == n
-            for i, v in enumerate(value):
-                _assign(storage.values, offset + i, v)
+            n, value = 1, [value]
+        assert isinstance(value, list) and len(value) == n
+        for i, v in enumerate(value):
+            _assign(storage.values, offset + i, v)
 
     # to be implemented by subclasses
     def initialize(self, rng):
@@ -284,21 +278,17 @@ class function:
                 f"Expected {len(self._parameters.values)} parameters, got {len(parameters)}"
             )
 
-        # types are checked when a graph is built (node arguments); plain
-        # evaluations are assumed to have been checked then
+        # node mode: types are checked when a graph is built (plain
+        # evaluations are assumed to have been checked then), and evaluate
+        # sees nodes only (plain values become constant nodes, so that
+        # products need no operand ordering)
+        constants = self._constants.values
         check = _has_node(inputs) or _has_node(parameters)
         if check:
             for (name, t), x in zip(self._inputs, inputs):
                 self._check_type("input", name, t, x)
-            for name, x, ref in zip(
-                self._parameters.names, parameters, self._parameters.values
-            ):
+            for name, x, ref in zip(self._parameters.names, parameters, self._parameters.values):
                 self._check_type("parameter", name, _container_of(ref), x)
-
-        constants = self._constants.values
-        if check:
-            # node mode: evaluate sees nodes only (plain values become
-            # constant nodes, so that products need no operand ordering)
             inputs = [_promote(x) for x in inputs]
             parameters = [_promote(x) for x in parameters]
             constants = [_promote(x) for x in constants]

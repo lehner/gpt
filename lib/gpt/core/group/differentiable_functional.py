@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 
 approximation_scheme_4 = [
     (-1.0 / 12.0, +2.0),
@@ -74,21 +75,16 @@ class differentiable_functional:
         dfields = g.util.to_list(dfields)
         weights = g.util.to_list(weights)
         assert len(dfields) == len(weights)
+        # the weight of each field (fields are found by identity: equal
+        # numbers are different parameters)
+        w = [next((x for d, x in zip(dfields, weights) if d is f), None) for f in fields]
         return sum(
             [
                 (cc / epsilon)
                 * self(
                     [
-                        (
-                            g(
-                                g.group.compose(
-                                    _scaled(dd * epsilon, weights[dfields.index(f)]), f
-                                )
-                            )
-                            if f in dfields
-                            else f
-                        )
-                        for f in fields
+                        f if wf is None else g(g.group.compose(_scaled(dd * epsilon, wf), f))
+                        for f, wf in zip(fields, w)
                     ]
                 )
                 for cc, dd in scheme
@@ -116,6 +112,8 @@ class differentiable_functional:
         # be a list of lattices (e.g. a gauge-field node), so inspect element-wise
         for gr, ww in zip(gradient, weights):
             for gr_i, ww_i in zip(g.util.to_list(gr), g.util.to_list(ww)):
+                if g.util.is_num(gr_i) or isinstance(gr_i, np.ndarray):
+                    continue  # complex additive, no otype
                 if gr_i.otype.__name__ != ww_i.otype.__name__:
                     g.message(
                         f"Gradient has incorrect object type: {gr_i.otype.__name__} != {ww_i.otype.__name__}"
