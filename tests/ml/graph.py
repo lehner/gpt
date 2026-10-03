@@ -146,6 +146,16 @@ if matplotlib is not None:
     assert sum(isinstance(p, FancyArrowPatch) for p in ax.patches) == 12
     assert net.graph().draw() is not None and sym["q"].draw() is not None
 
+    # labels (display only, mathtext allowed) replace name and class in the
+    # box; the annotation of a shared call follows the label of the first call
+    (u,) = g.ml.symbols("u")
+    (a,) = sc([u], name="l1", label=r"$S_1$")
+    (b,) = sc([a], name="l2")
+    labeled = g.ml.pack(b=b)
+    texts = [t.get_text() for t in labeled.draw().axes[0].texts]
+    assert r"$S_1$" in texts and "l1" not in texts and "l2" in texts and r"shares $S_1$" in texts
+    assert labeled.function().describe().splitlines()[1].split()[0] == "l1"  # names in describe
+
 # the composite holds no values: it reads and writes its functions' storage
 sc["a"] = 0.7 + 0j
 assert net.parameters()[0] == 0.7 and net["s1.a"] == 0.7
@@ -179,6 +189,7 @@ expect(KeyError, lambda: scale()([u], parameters={"nope": v}))
 expect(ValueError, lambda: mix()([u, v], parameters={"c": u, "c.1": v}))  # connected twice
 expect(TypeError, lambda: scale()([x1], parameters={"a": u}))  # symbols and values
 expect(ValueError, lambda: scale()([x1], name="s"))  # name of a concrete call
+expect(ValueError, lambda: scale()([x1], label="s"))  # label of a concrete call
 expect(TypeError, lambda: g.ml.pack(a=[a]))  # a list instead of a symbol
 expect(ValueError, lambda: g.ml.pack(a=a).function(inputs=[u, v]))  # v not used
 expect(ValueError, lambda: g.ml.pack(a=b).function(inputs=[]))  # v used, not an input

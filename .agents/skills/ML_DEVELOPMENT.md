@@ -132,7 +132,8 @@ net = g.ml.pack(y=y, z=z).function()           # inputs [x1, x2] (creation order
 net = g.ml.pack(y=y, z=z).function(inputs=[x2, x1])   # or explicit
 ```
 
-- **Calls** always return lists (consistent with concrete calls).  `name=`
+- **Calls** always return lists (consistent with concrete calls).  `label=`
+  (optional) is a display string for `draw()`.  `name=`
   defaults to the class name; two reachable calls with the same name are an
   error in `function()` (name them explicitly).  Parameter connections name a
   list slot (`"c"`) or one element (`"c.1"`).
@@ -179,7 +180,11 @@ net = g.ml.pack(y=y, z=z).function(inputs=[x2, x1])   # or explicit
   at slot ports (inputs, then connected parameters, dashed), labeled with the
   slot (and the output if a call has several).  Calls of a shared function
   share a border color (categorical slots 1-3, the all-pairs-safe ones) and
-  name the call they share with; text uses ink colors only.
+  name the call they share with; text uses ink colors only.  A box shows the
+  call's `label` if it has one (`f([x], name="readout", label=r"$\oplus$")`:
+  display only, matplotlib mathtext allowed, for figures in papers), else its
+  name and function class.  `describe()` always shows names (they key the
+  parameters and must stay identifiers).
 
 ## 4. Training
 

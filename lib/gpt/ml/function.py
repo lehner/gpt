@@ -277,18 +277,19 @@ class function:
         # default: nothing to calibrate
         pass
 
-    def __call__(self, inputs, parameters=None, name=None):
+    def __call__(self, inputs, parameters=None, name=None, label=None):
         # parameters: a flat list in the order of parameter_names(), e.g.
         # node leaves for a training graph; default: the owned values.
         # Called on symbols (see g.ml.symbols), the call is recorded instead:
         # parameters is then a dict {slot: symbol} of connected parameter
-        # slots, and name (default: the class name) names the call.
+        # slots, name (default: the class name) names the call, and label
+        # (optional, may contain matplotlib mathtext) is shown by draw().
         from gpt.ml.graph import is_symbolic, record_call
 
         if is_symbolic(inputs, parameters):
-            return record_call(self, inputs, parameters, name)
-        if name is not None:
-            raise ValueError("A name is only given to symbolic calls")
+            return record_call(self, inputs, parameters, name, label)
+        if name is not None or label is not None:
+            raise ValueError("A name or label is only given to symbolic calls")
         if len(inputs) != len(self._inputs):
             raise ValueError(f"Expected {len(self._inputs)} inputs, got {len(inputs)}")
         if parameters is None:

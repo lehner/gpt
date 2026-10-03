@@ -30,6 +30,7 @@
 # depend on and returns a g.ml.composite.
 #
 import itertools
+import re
 from gpt.ml.function import function, _check_name, _check_names, _named_storage, _storage_list
 
 _creation = itertools.count()
@@ -60,8 +61,9 @@ class _symbol:
 
 
 class _call:
-    def __init__(self, name, function, inputs, connections):
+    def __init__(self, name, function, inputs, connections, label=None):
         self.name = name
+        self.label = label
         self.function = function
         self.inputs = inputs
         # flat parameter index of the function -> (symbol, list element or None)
@@ -79,7 +81,7 @@ def is_symbolic(inputs, parameters):
     return isinstance(parameters, dict) or any(isinstance(x, _symbol) for x in inputs)
 
 
-def record_call(f, inputs, parameters, name):
+def record_call(f, inputs, parameters, name, label=None):
     name = type(f).__name__ if name is None else name
     _check_name(name)
     parameters = {} if parameters is None else parameters
@@ -100,7 +102,7 @@ def record_call(f, inputs, parameters, name):
             if j in connections:
                 raise ValueError(f"{name}: parameter {slot!r} connected twice")
             connections[j] = (s, k)
-    return _call(name, f, list(inputs), connections).outputs
+    return _call(name, f, list(inputs), connections, label).outputs
 
 
 def _subgraph(roots):
@@ -273,7 +275,10 @@ class pack:
         width = {("in", s.id): max(1.0, 0.09 * len(s.label()) + 0.4) for s in inputs}
         width.update({("out", n): max(1.0, 0.09 * len(n) + 0.4) for n in self.outputs})
         for c in calls:
-            width[("call", c.id)] = max(1.8, 0.09 * len(c.name) + 0.4, 0.072 * len(type(c.function).__name__) + 0.4)
+            if c.label is not None:
+                width[("call", c.id)] = max(1.0, 0.11 * _visible_length(c.label) + 0.5)
+            else:
+                width[("call", c.id)] = max(1.8, 0.09 * len(c.name) + 0.4, 0.072 * len(type(c.function).__name__) + 0.4)
         for n, e in enumerate(edges):
             e["via"] = []
             for col in range(column[e["a"]] + 1, column[e["b"]]):
@@ -353,10 +358,14 @@ class pack:
         for c in calls:
             fid = id(c.function)
             color = palette[shared.index(fid)] if fid in shared and shared.index(fid) < len(palette) else frame
-            text = [(0.11, c.name, dict(color=ink, fontsize=10, fontweight="bold")),
-                    (-0.13, type(c.function).__name__, dict(color=ink2, fontsize=8))]
+            if c.label is not None:
+                text = [(0.0, c.label, dict(color=ink, fontsize=12))]
+            else:
+                text = [(0.11, c.name, dict(color=ink, fontsize=10, fontweight="bold")),
+                        (-0.13, type(c.function).__name__, dict(color=ink2, fontsize=8))]
             if fid in shared and first[fid] is not c:
-                text.append((-0.43, f"shares {first[fid].name}", dict(color=muted, fontsize=7)))
+                shown = first[fid].label if first[fid].label is not None else first[fid].name
+                text.append((-0.43, f"shares {shown}", dict(color=muted, fontsize=7)))
             box(("call", c.id), text, color, 2.0 if fid in shared else 1.5, 0.08)
 
         def port(k, i, n, side):
@@ -474,6 +483,12 @@ class composite(function):
                 calibrated.add(id(c.function))
             for v in values:
                 self._run(c, v, self.parameters())
+
+
+def _visible_length(label):
+    # the approximate number of characters a (mathtext) label shows: no $,
+    # a command such as \oplus counts as one character
+    return len(re.sub(r"\\[a-zA-Z]+", "x", label.replace("$", "")))
 
 
 def _draw_edge(a, s, b, port, n_ports, slot, k, style):
