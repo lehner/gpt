@@ -18,6 +18,7 @@
 #
 import gpt as g
 from gpt.ad.reverse.util import container, get_container, is_node
+from gpt.ad.reverse.node import node_base
 
 
 def _check_name(name):
@@ -45,6 +46,13 @@ def _has_node(x):
     return is_node(x)
 
 
+def _promote(x):
+    # a plain value as a constant node (as the AD's nodify does)
+    if isinstance(x, list):
+        return [_promote(y) for y in x]
+    return x if is_node(x) else node_base(x, with_gradient=False)
+
+
 def _container_of(x):
     # the type of a value without evaluating it (a computed node has no value
     # until its graph runs, but always a container)
@@ -66,6 +74,52 @@ def _as_container(x):
     return _container_of(x)
 
 
+class _storage_list(list):
+    # the storage of a composite: a fixed-length list whose element k lives in
+    # the storage of a function, entry k = (storage list, index).  Reads and
+    # writes go to that storage, so any number of composites share the values
+    # of their functions (optimizers replace numbers in the list they are
+    # given).  It is a list (GPT checks isinstance(x, list)); the list's own
+    # buffer stays empty, and every list method that would use it raises.
+    def __init__(self, entries):
+        super().__init__()
+        self.entries = entries
+
+    def __len__(self):
+        return len(self.entries)
+
+    def __iter__(self):
+        return (s[i] for s, i in self.entries)
+
+    def __getitem__(self, k):
+        if isinstance(k, slice):
+            return [self[j] for j in range(*k.indices(len(self)))]
+        s, i = self.entries[k]
+        return s[i]
+
+    def __setitem__(self, k, value):
+        s, i = self.entries[k]
+        s[i] = value
+
+    def __contains__(self, x):
+        return any(x is y for y in self)
+
+    def __bool__(self):
+        return len(self.entries) > 0
+
+    def __repr__(self):
+        return repr(list(self))
+
+    def _fixed(self, *args, **kwargs):
+        raise TypeError("the parameter storage of a composite has a fixed layout")
+
+    append = extend = insert = pop = remove = clear = sort = reverse = _fixed
+    __delitem__ = __iadd__ = __imul__ = _fixed
+    copy = index = count = __add__ = __radd__ = __mul__ = __rmul__ = __reversed__ = _fixed
+    __eq__ = __ne__ = __lt__ = __le__ = __gt__ = __ge__ = _fixed
+    __hash__ = None
+
+
 class _named_storage:
     # named slots, each holding a value or a list of values, stored in one
     # flat list (the list elements of a slot U are named U.0, U.1, ...)
@@ -84,6 +138,16 @@ class _named_storage:
                 self.slots.append((name, len(self.values), None))
                 self.values.append(value)
                 self.names.append(name)
+
+    @classmethod
+    def shared(cls, names, entries):
+        # single-element slots with dotted names whose values live in other
+        # storages (a composite's), see _storage_list
+        r = cls([])
+        r.slots = [(name, i, None) for i, name in enumerate(names)]
+        r.names = list(names)
+        r.values = _storage_list(entries)
+        return r
 
     def group(self, values):
         # flat list -> one value (or list) per slot
@@ -121,7 +185,9 @@ class function:
       initialize(self, rng)
 
     evaluate receives one value per slot (a list for a list slot) and must
-    work on plain values and on nodes of any depth (node-first products).
+    work on plain values and on nodes of any depth.  If any input or
+    parameter is a node, all of them (and the constants) are passed as
+    nodes, plain values as constant nodes.
     Inputs and outputs are declared as names or (name, type) pairs, with the
     type an AD container or a representative value (None: unchecked).
     Parameters and constants are (name, value) pairs with the allocated
@@ -197,9 +263,18 @@ class function:
     def evaluate(self, inputs, parameters, constants):
         raise NotImplementedError()
 
-    def __call__(self, inputs, parameters=None):
+    def __call__(self, inputs, parameters=None, name=None):
         # parameters: a flat list in the order of parameter_names(), e.g.
-        # node leaves for a training graph; default: the owned values
+        # node leaves for a training graph; default: the owned values.
+        # Called on symbols (see g.ml.symbols), the call is recorded instead:
+        # parameters is then a dict {slot: symbol} of connected parameter
+        # slots, and name (default: the class name) names the call.
+        from gpt.ml.graph import is_symbolic, record_call
+
+        if is_symbolic(inputs, parameters):
+            return record_call(self, inputs, parameters, name)
+        if name is not None:
+            raise ValueError("A name is only given to symbolic calls")
         if len(inputs) != len(self._inputs):
             raise ValueError(f"Expected {len(self._inputs)} inputs, got {len(inputs)}")
         if parameters is None:
@@ -220,10 +295,18 @@ class function:
             ):
                 self._check_type("parameter", name, _container_of(ref), x)
 
+        constants = self._constants.values
+        if check:
+            # node mode: evaluate sees nodes only (plain values become
+            # constant nodes, so that products need no operand ordering)
+            inputs = [_promote(x) for x in inputs]
+            parameters = [_promote(x) for x in parameters]
+            constants = [_promote(x) for x in constants]
+
         outputs = self.evaluate(
             list(inputs),
             self._parameters.group(parameters),
-            self._constants.group(self._constants.values),
+            self._constants.group(constants),
         )
 
         if len(outputs) != len(self._outputs):
