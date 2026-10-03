@@ -17,8 +17,9 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.ad.reverse import node_op
-from gpt.ad.reverse.util import product, value_of
+from gpt.ad.reverse.util import product, value_of, is_node
 
 
 def relu(x, a=0.0):
@@ -49,5 +50,46 @@ def cos(x):
         lambda: g.component.cos(value_of(x)),
         # conjugate-linear convention (matches __mul__): adj(-sin(x)) * flow
         (lambda z: (-1, product(z.gradient, g.adj(g.component.sin(value_of(x))))),),
+        x._container,
+    )
+
+
+def _part(v, part):
+    # the real or imaginary part in the container of v (numbers stay complex
+    # and arrays keep their dtype, so the node container is unchanged)
+    if g.util.is_num(v):
+        return complex(getattr(complex(v), part))
+    if isinstance(v, np.ndarray):
+        return getattr(v, part).astype(v.dtype)
+    return getattr(g.component, part)(v)
+
+
+def _real_flow(f):
+    # the real part of a flow, as a node at deeper nesting
+    return real(f) if is_node(f) else _part(f, "real")
+
+
+def real(x):
+    # z = Re x depends on Re x only: with the gradient convention
+    # dL/dRe + i dL/dIm, the flow into x is the real part of the flow into z
+    return node_op(
+        (x,),
+        lambda: _part(value_of(x), "real"),
+        (lambda z: (1, _real_flow(z.gradient)),),
+        x._container,
+    )
+
+
+def imag(x):
+    # z = Im x: dL/dIm x = dL/dRe z, so the flow into x is i times the real
+    # part of the flow into z
+    def _flow(z):
+        f = _real_flow(z.gradient)
+        return (1, g(1j * f) if isinstance(f, g.lattice) else f * 1j)
+
+    return node_op(
+        (x,),
+        lambda: _part(value_of(x), "imag"),
+        (_flow,),
         x._container,
     )

@@ -927,3 +927,38 @@ eps = 1e-5
 hvp_ad = proj_hvp(m0, nmb)
 hvp_fd = (proj_first(g(m0 + eps * mb)) - proj_first(g(m0 - eps * mb))) / (2 * eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-12, "projection HVP vs FD of 1st derivative")
+
+
+#####################################
+# real and imaginary parts at 2-deep: the Hessian-vector product of
+# S = |f(z)^2 c - c|^2 (f = Re or Im) vs a difference of the gradient
+c = rng.cnormal(g.complex(grid))
+for op in ["real", "imag"]:
+    f = getattr(g.component, op)
+    z0 = rng.cnormal(g.complex(grid))
+    v = rng.cnormal(g.complex(grid))
+
+    def S(z):
+        return g.norm2(f(z) * f(z) * c - c)
+
+    n2 = rad.node(rad.node(z0))
+    S(n2)()
+    g.inner_product(rad.node(v, with_gradient=False), n2.gradient)()
+    hvp = resolve_value(n2.value.gradient)
+
+    def first(z):
+        n = rad.node(z)
+        S(n)()
+        return n.gradient
+
+    eps = 1e-4
+    hvp_fd = g(
+        (
+            -1.0 * first(g(z0 + 2 * eps * v))
+            + 8.0 * first(g(z0 + eps * v))
+            - 8.0 * first(g(z0 - eps * v))
+            + first(g(z0 - 2 * eps * v))
+        )
+        * (1.0 / (12 * eps))
+    )
+    assert_field_close(hvp, hvp_fd, 1e-16, f"component.{op} HVP vs FD of 1st derivative")

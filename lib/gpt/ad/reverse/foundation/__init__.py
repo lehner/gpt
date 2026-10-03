@@ -155,6 +155,12 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
     elif operator == "cos":
         assert second is None
         return g.ad.reverse.transform.cos(first)
+    elif operator == "real":
+        assert second is None
+        return g.ad.reverse.transform.real(first)
+    elif operator == "imag":
+        assert second is None
+        return g.ad.reverse.transform.imag(first)
     raise Exception(f"component-wise operator {operator} not implemented in rev-AD")
 
 

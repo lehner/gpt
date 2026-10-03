@@ -318,10 +318,12 @@ def flowed_links(eps):
 
 
 eps = 1e-3
-dQ_dp = None
-for cc, dd in approximation_scheme_4:
-    gr = a_total.gradient(flowed_links(dd * eps) + params_s, [p])[0]
-    dQ_dp = g((cc / eps) * gr) if dQ_dp is None else g(dQ_dp + (cc / eps) * gr)
+dQ_dp = g(
+    sum(
+        (cc / eps) * a_total.gradient(flowed_links(dd * eps) + params_s, [p])[0]
+        for cc, dd in approximation_scheme_4
+    )
+)
 
 # cross-check along a random direction dp with a difference of Q in p
 dp = rng.normal_element(g.group.cartesian(p))

@@ -68,6 +68,10 @@ def traverse(nodes, n, visited=None):
         return forward_free
 
 
+def _is_zero(x):
+    return g.util.is_num(x) and x == 0
+
+
 class node_differentiable_functional(g.group.differentiable_functional):
     def __init__(self, node, arguments):
         self.node = node
@@ -382,6 +386,12 @@ class node_base(base):
         return z
 
     def __add__(x, y):
+        # an exact numeric zero is the neutral element (so that python's sum,
+        # which starts from 0, works on nodes)
+        if _is_zero(y):
+            return x
+        if _is_zero(x):
+            return y
         x, y = nodify(x, y)
 
         if not x._container.accumulate_compatible(y._container):

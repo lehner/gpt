@@ -120,16 +120,14 @@ def standardization(q):
 
 def loop_sum(U, mu, rho):
     # rho * sum_nu (plaquettes at x through the link (x, mu), ending with b(mu))
-    staple = None
-    for nu in range(len(U)):
-        if nu == mu:
-            continue
+    def staples(nu):
         U_mu_nu = g.cshift(U[mu], nu, 1)
         up = U[nu] * U_mu_nu * g.adj(g.cshift(U[nu], mu, 1))
         U_nu_m = g.cshift(U[nu], nu, -1)
         down = g.adj(U_nu_m) * g.cshift(U[mu], nu, -1) * g.cshift(U_nu_m, mu, 1)
-        s = g(up + down)
-        staple = s if staple is None else g(staple + s)
+        return g(up + down)
+
+    staple = g(sum(staples(nu) for nu in range(len(U)) if nu != mu))
     return g(rho * staple * g.adj(U[mu]))
 
 
@@ -187,12 +185,13 @@ def build_loss(net, w0, project, T=T):
     nid = rad.node(identity, with_gradient=False)
     none = rad.node(one, with_gradient=False)
     norm = sum(g.norm2(g(F(t) - F(p))) for p, t in zip(P, T))
-    loss = None
-    for p, t in zip(P, T):
-        np_ = rad.node(p, with_gradient=False)
-        nt = rad.node(g(F(t)), with_gradient=False)
-        term = g.norm2(F(net(np_, nw, nid, none)) - nt)
-        loss = term if loss is None else loss + term
+    loss = sum(
+        g.norm2(
+            F(net(rad.node(p, with_gradient=False), nw, nid, none))
+            - rad.node(g(F(t)), with_gradient=False)
+        )
+        for p, t in zip(P, T)
+    )
     return loss * (1.0 / norm), nw
 
 

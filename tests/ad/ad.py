@@ -617,3 +617,39 @@ assert eps2 < 1e-28
 assert g.norm2(G - G0) == 0.0
 assert C.gradient[0] is not C.gradient[1] and C.gradient[1] is not G
 g.message("Adopted flows: no aliasing")
+
+# real and imaginary parts: z = Re x (Im x) depends on Re x (Im x) only, so
+# the leaf gradient dL/dRe + i dL/dIm is real (imaginary); numbers, numpy
+# arrays (through element access) and lattices
+rad = g.ad.reverse
+rng = g.random("real_imag")
+grid = g.grid([4, 4, 4, 4], g.double)
+c = rng.cnormal(g.complex(grid))
+w = 0.3 + 0.7j
+
+
+for op in ["real", "imag"]:
+    f = getattr(g.component, op)
+    for name, x0, dx, build in [
+        ("number", 0.4 - 0.2j, 1.0 + 0.5j, lambda z: (f(z) * w - 1.0) * g.adj(f(z) * w - 1.0) + f(z) * f(z) * 0.3),
+        (
+            "numpy",
+            np.array([0.4 - 0.2j, 1.1 + 0.3j]),
+            np.array([1.0 + 0.5j, -0.2 + 0.9j]),
+            lambda z: (lambda y: (y[0] * w - 1.0) * g.adj(y[0] * w - 1.0) + y[1] * y[0] * 0.7)(f(z)),
+        ),
+        ("lattice", rng.cnormal(g.complex(grid)), rng.cnormal(g.complex(grid)), lambda z: g.norm2(f(z) * f(z) * c - c)),
+    ]:
+        n = rad.node(x0)
+        build(n)()
+        a = g.group.inner_product(n.gradient, dx)
+
+        def val(h):
+            x = g(x0 + h * dx) if isinstance(x0, g.lattice) else x0 + h * dx
+            return build(rad.node(x, with_gradient=False))(with_gradients=False).real
+
+        h = 1e-4
+        b = (-val(2 * h) + 8 * val(h) - 8 * val(-h) + val(-2 * h)) / (12 * h)
+        eps = abs(a - b) / abs(b)
+        g.message(f"component.{op} ({name}): {a} vs {b}, rel {eps}")
+        assert eps < 1e-9

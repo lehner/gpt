@@ -63,6 +63,10 @@ def _group_foundation(left, right):
 def inner_product(left, right):
     if isinstance(left, list):
         return sum([inner_product(x, y) for x, y in zip(left, right)])
+    if g.util.is_num(left) or isinstance(left, np.ndarray):
+        # numbers and arrays have no foundation; they are complex additive
+        # (as in compose), so the cartesian inner product is Re(conj(a) b)
+        return np.vdot(left, right).real
     return _group_foundation(left, right).group_inner_product(left, right)
 
 

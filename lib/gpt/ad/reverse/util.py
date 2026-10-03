@@ -147,6 +147,8 @@ class container:
         if self.tag[0] is list:
             return "list[%d](%s)" % (self.tag[2], str(self.tag[1]))
         r = str(self.tag[0].__name__)
+        if self.tag[0] is np.ndarray:
+            return r + ";" + str(self.tag[1]) + ";" + str(self.tag[2])
         if len(self.tag) > 1:
             r = r + ";" + self.tag[-1].__name__
         if len(self.tag) == 3:
