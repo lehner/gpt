@@ -11,7 +11,8 @@ import gpt as g
 
 rad = g.ad.reverse
 rng = g.random("test")
-grid = g.grid([4, 4, 4, 4], g.double)
+# (8 in time: with --mpi 1.1.1.2 the local extent must allow SIMD and checkerboarding)
+grid = g.grid([4, 4, 4, 8], g.double)
 
 # by default a few training steps (the loss decreases); --stringent: more
 stringent = g.default.has("--stringent")
