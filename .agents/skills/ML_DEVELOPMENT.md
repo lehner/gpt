@@ -28,8 +28,15 @@ over time.  Known AD gaps that limit `g.ml` are collected in
 | `tests/ml/graph.py` | symbolic composition, ownership, sharing, nesting, `describe` |
 | `tests/ml/local_covariant_matrix.py` | the covariant network: covariance, gradients, training, exact threshold solution |
 | `tests/ml/loop_function.py` | a network as learnable loop function of two flow layers, trained on squared force contractions |
+| `documentation/tutorials/advanced/ml-graphs.ipynb` | tutorial: functions, symbolic graphs, sharing, `describe`, covariance, training |
 | `lib/gpt/ad/reverse/functional_node.py` | `g.ad.reverse.functional_node` (a functional as a node, first order) |
 | `lib/gpt/core/group/differentiable_functional.py` | `g.group.directional_derivative` (and the functional base classes) |
+
+The tutorial notebook is stored executed (outputs included, the import cell
+without output).  After editing, re-run it in place with
+`jupyter nbconvert --to notebook --execute --inplace <notebook>` from a shell
+in which `lib/cgpt/build/source.sh` was sourced (the kernel inherits the
+environment); the tutorials use the kernel name `python3-default`.
 
 Run a test with `python3 tests/ml/<name>.py`.  Long training runs are behind
 `--stringent` (`g.default.has("--stringent")`): by default a test trains a few
