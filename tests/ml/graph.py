@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # Composing g.ml.functions: symbolic calls, pack, composites sharing
-# functions, nesting, and the explicit builder g.ml.graph.
+# functions, nesting, and inspection.
 #
 import gpt as g
 
@@ -290,12 +290,3 @@ eps2 = g.norm2(y_o - y_r) / g.norm2(y_r) + g.norm2(u_o - outer["post.a"].real * 
 g.message(f"Nested evaluation: {eps2}")
 assert eps2 < 1e-28
 
-# the explicit builder is a thin layer over symbolic calls
-G = g.ml.graph(inputs=["x1", "x2"])
-gx1, gx2 = G.inputs
-(a,) = G("s1", sc, [gx1])
-(p, q) = G("sp", sp, [gx2], parameters={"e": gx1})
-(y,) = G("mx", mx, [a, p], parameters={"w": q})
-net_g = G.function(outputs={"y": y})
-assert net_g.parameter_names() == net_y.parameter_names()
-assert g.norm2(net_g([x1, x2])[0] - net_y([x1, x2])[0]) == 0.0

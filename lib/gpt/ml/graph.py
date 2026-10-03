@@ -236,23 +236,6 @@ class pack:
         raise NotImplementedError("g.ml: draw is planned; use describe() for now")
 
 
-class graph:
-    """An explicit builder over the symbolic calls:
-
-    G = g.ml.graph(inputs=["x"]); x, = G.inputs
-    y, = G("f", f, [x]); net = G.function(outputs={"y": y})
-    """
-
-    def __init__(self, inputs):
-        self.inputs = symbols(*inputs)
-
-    def __call__(self, name, f, inputs, parameters={}):
-        return f(inputs, dict(parameters), name=name)
-
-    def function(self, outputs):
-        return pack(**outputs).function(inputs=self.inputs)
-
-
 class composite(function):
     """The function of a pack (see g.ml.pack).  Its parameters are the
     parameter slots of its functions that at least one call leaves
