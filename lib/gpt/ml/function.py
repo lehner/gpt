@@ -257,6 +257,11 @@ class function:
     def evaluate(self, inputs, parameters, constants):
         raise NotImplementedError()
 
+    def calibrate(self, samples):
+        # data-dependent constants from samples (each a list of plain inputs);
+        # default: nothing to calibrate
+        pass
+
     def __call__(self, inputs, parameters=None, name=None):
         # parameters: a flat list in the order of parameter_names(), e.g.
         # node leaves for a training graph; default: the owned values.

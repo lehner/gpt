@@ -3,6 +3,8 @@
 Notes for development sessions on the automatic-differentiation (AD) framework
 and its QCD applications. Covers: using GPT, running the test suite, and how
 the reverse-accumulation AD framework with lazy evaluation graphs works.
+The ML framework built on it (`g.ml`: learnable functions, composition,
+training) has its own guide: `ML_DEVELOPMENT.md` (same directory).
 
 ---
 

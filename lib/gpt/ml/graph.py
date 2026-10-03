@@ -285,23 +285,39 @@ class composite(function):
         f, rest = self._lookup_function(name)
         f[rest] = value
 
-    def evaluate(self, inputs, parameters, constants):
-        # parameters: flat (the composite's slots are single elements)
-        values = {s.id: x for s, x in zip(self._input_symbols, inputs)}
-
+    def _run(self, c, values, parameters):
+        # evaluate call c: values maps symbol ids to values, parameters is
+        # flat in the order of the composite's slots
         def value(s, k=None):
             v = values[s.id]
             return v if k is None else v[k]
 
+        index = self._layout.index[id(c.function)]
+        p = [
+            value(*c.connections[j]) if j in c.connections else parameters[index[j]]
+            for j in range(len(c.function._parameters.values))
+        ]
+        for s, y in zip(c.outputs, c.function([value(s) for s in c.inputs], p)):
+            values[s.id] = y
+
+    def evaluate(self, inputs, parameters, constants):
+        values = {s.id: x for s, x in zip(self._input_symbols, inputs)}
         for c in self._calls:
-            index = self._layout.index[id(c.function)]
-            p = [
-                value(*c.connections[j]) if j in c.connections else parameters[index[j]]
-                for j in range(len(c.function._parameters.values))
-            ]
-            for s, y in zip(c.outputs, c.function([value(s) for s in c.inputs], p)):
-                values[s.id] = y
-        return [value(s) for s in self._output_symbols]
+            self._run(c, values, parameters)
+        return [values[s.id] for s in self._output_symbols]
+
+    def calibrate(self, samples):
+        # the calls in order: each function is calibrated (at its first call)
+        # on the inputs it receives from the samples, then evaluated, so later
+        # functions see calibrated earlier ones
+        values = [{s.id: x for s, x in zip(self._input_symbols, inputs)} for inputs in samples]
+        calibrated = set()
+        for c in self._calls:
+            if id(c.function) not in calibrated:
+                c.function.calibrate([[v[s.id] for s in c.inputs] for v in values])
+                calibrated.add(id(c.function))
+            for v in values:
+                self._run(c, v, self.parameters())
 
 
 def _entry(values, j):

@@ -1,6 +1,6 @@
 #
 #    GPT - Grid Python Toolkit
-#    Copyright (C) 2020-26  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#    Copyright (C) 2026  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,6 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.ml.function import function
-from gpt.ml.graph import composite, symbols, pack
-import gpt.ml.layer
+from gpt.ml.layer.basic import replicate, linear_combination
+from gpt.ml.layer.local_covariant_matrix import local_covariant_matrix
