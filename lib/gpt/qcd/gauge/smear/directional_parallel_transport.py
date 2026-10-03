@@ -202,9 +202,9 @@ class directional_parallel_transport(dft_diffeomorphism):
                 # coefficient, so sU[k] IS the accumulated staple sum
                 xp = sU[k]
             else:
-                if weight in parameters:
+                if any(weight is p for p in parameters):
                     assert not isinstance(weight, g.ad.reverse.node_base)
-                    weight = xparams[parameters.index(weight)]
+                    weight = xparams[g.util.index_by_identity(parameters, weight)]
                 xp = g(weight * sU[k])
             terms.append(xp)
 
@@ -253,7 +253,8 @@ class directional_parallel_transport(dft_diffeomorphism):
                 gr = g.copy(dfields[nu]) if gr is None else g(gr + dfields[nu])
             elif gr is None:
                 gr = g(0 * dfields[nu])
-            gr.otype = dfields[nu].otype
+            if isinstance(gr, g.lattice):
+                gr.otype = dfields[nu].otype
             gradient.append(gr)
         return gradient
 
@@ -484,11 +485,14 @@ class directional_parallel_transport(dft_diffeomorphism):
             if isinstance(x, g.expr):
                 x = g(x)
             return x
-        zero = g(0 * left)
+        # (a field without gradient gets a zero of its own type: links in the
+        # algebra, parameters as they are)
         out = []
-        for x in grads:
+        for i, x in enumerate(grads):
             r = _res(x)
-            out.append(g(zero) if r is None else g(2.0 * r))
+            if r is None:
+                r = g(0 * (left if i < self.nd else fields[i]))
+            out.append(g(2.0 * r))
         return out
 
     def action_log_det_jacobian_gradient(self, fields, dfields):
@@ -599,7 +603,7 @@ class directional_parallel_transport(dft_diffeomorphism):
             elif i >= self.nd and grad_P[i - self.nd] is not None:
                 r = g(r + 2.0 * grad_P[i - self.nd])
             out.append(r)
-        return [out[fields.index(d)] for d in dfields]
+        return [out[g.util.index_by_identity(fields, d)] for d in dfields]
 
     def _action_log_det_jacobian_gradient_generic(self, fields, dfields):
         # The mu->mu block M (see jacobian_matrix) satisfies M[a,b] = (d f_mu/d U_mu)[b,a],
@@ -637,7 +641,7 @@ class directional_parallel_transport(dft_diffeomorphism):
                 for nu in range(len(gr)):
                     gr_sum[nu] += gr[nu]
 
-        return [gr_sum[fields.index(d)] for d in dfields]
+        return [gr_sum[g.util.index_by_identity(fields, d)] for d in dfields]
 
 class dpt_action_log_det_jacobian(differentiable_functional):
     def __init__(self, parent):

@@ -106,7 +106,9 @@ class adam(base_iterative):
                     set_value(context.v, 0)
                     set_value(context.epsfield, self.eps_regulator)
                 else:
-                    assert type(context.m[0]) == type(gt[0])
+                    # (numbers may change type, e.g. complex -> numpy.complex128)
+                    m0, g0 = context.m[0], gt[0]
+                    assert (g.util.is_num(m0) and g.util.is_num(g0)) or type(m0) == type(g0)
 
                 for a in gt:
                     ar = g(g.component.real(a))

@@ -27,6 +27,9 @@ over time.  Known AD gaps that limit `g.ml` are collected in
 | `tests/ml/function.py` | slots, names, storage, plain/node evaluation, type checks, gradients, training |
 | `tests/ml/graph.py` | symbolic composition, ownership, sharing, nesting, `describe` |
 | `tests/ml/local_covariant_matrix.py` | the covariant network: covariance, gradients, training, exact threshold solution |
+| `tests/ml/loop_function.py` | a network as learnable loop function of two flow layers, trained on squared force contractions |
+| `lib/gpt/ad/reverse/functional_node.py` | `g.ad.reverse.functional_node` (a functional as a node, first order) |
+| `lib/gpt/core/group/differentiable_functional.py` | `g.group.directional_derivative` (and the functional base classes) |
 
 Run a test with `python3 tests/ml/<name>.py`.  Long training runs are behind
 `--stringent` (`g.default.has("--stringent")`): by default a test trains a few
@@ -190,12 +193,54 @@ g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.pa
 - Adam returns the last iterate, not the best; a too large `alpha` can end on
   an overshoot (5e-3 works for the covariant network).
 
+### Actions and other functionals in a loss
+
+Actions, flows and log-dets are `differentiable_functional`s with their own
+(often non-node) gradient machinery.  They enter `g.ml` training through:
+
+- **`g.ad.reverse.functional_node(S, fields)`**: the value `S(fields)` as a
+  node (plain fields are constants), so it can be combined with other nodes.
+  Its backward is `S.gradient` (converted to the infinitesimal convention),
+  i.e. first order only.
+- **`g.group.directional_derivative(S, v, along)`**: Q = <v, grad_along S>
+  for a fixed cartesian direction v (one element per field index in
+  `along`), itself a `differentiable_functional`.  Its gradient w.r.t. any
+  field is d/de grad S(exp(e v) fields_along) at e = 0, a 4-point difference
+  of `S.gradient` (symmetry of second derivatives); for SU(N) fields along v
+  the non-commuting flows add -i [v, grad S].  Loss on force contractions:
+  `sum(q * q for q in [functional_node(Q_i, U + leaves) ...])`.
+- **`g.ml.fields(*lists)`**: one write-through list over several lists (e.g.
+  `g.ml.fields(U, net.parameters())`), for functionals that take all fields
+  as one list while an optimizer or a check must update the function's own
+  storage.
+
+Numbers and numpy arrays work as fields of the action pipeline
+(`transformed`, `added`, `directional_parallel_transport` with local and
+generic Jacobians, log-det forces); all derivative fields are found by
+identity.
+
+**Learnable loop function** of `directional_parallel_transport`
+(`tests/ml/loop_function.py`): the network's weights are the transport
+parameters, and the transport calls the network on its loop sums:
+
+```python
+dpt(U, description, mu, P0, P1, list(net.parameters()),
+    loop_function=lambda sm, xp: net([sm], xp)[0])
+```
+
 ## 5. Layers (`g.ml.layer`)
 
 - `replicate(template, n)`: `x -> X = [x] * n`.
 - `linear_combination(template, n, scale=0.01)`: `(x, X) -> x + sum_c w_c X_c`
   (a residual readout; small, nonzero initial `w` so earlier functions get
   gradients).
+- `broadcast(template, value=0.0, real=False)`: no inputs, `y = value 1` (the
+  unit element of the template's type; `Re(value)` with `real=True`).  Its
+  backward sums the flow over the sites, so a global number can feed
+  anything that takes a field, e.g. the field-valued description weight
+  `rho` of `directional_parallel_transport` (`tests/ml/loop_function.py`:
+  `rho_fn([], [rho_leaf])` in the loss graph, with the optimizer working on
+  `g.ml.fields(rho_fn.parameters(), net.parameters())`).
 - `local_covariant_matrix(template, n_channels, gate=False, scale=0.1)`: a
   residual block on C channels of N x N matrix fields with
   `X_c(x) -> V(x) X_c(x) V(x)^dag`:
@@ -235,7 +280,9 @@ Writing a new layer:
   collapse to all-on or all-off per channel.
 - **Invertibility.**  As a `loop_function` of `directional_parallel_transport`
   the map must keep the Jacobian away from det = 0; strong functions or large
-  rho make the log det ill-conditioned.
+  rho make the log det ill-conditioned.  Training can drive the weights there
+  (the log-det force diverges and the loss explodes): keep the step size
+  small enough.
 - **`functional.gradient`** leaves `with_gradient=False` on leaves not in
   `dfields`: do not reuse its graph for plain reverse passes afterwards.
 
@@ -261,7 +308,7 @@ Open / planned:
 - Symbol types (declared input types), symbolic element access of list
   symbols (`U[0]`).
 - Serialization (by the hierarchical names).
-- Using a `g.ml.function` as `loop_function` of
-  `directional_parallel_transport` (its parameters as transport parameters).
+- `functional_node` beyond first order; `directional_derivative` for
+  non-abelian groups other than SU(N) fundamental.
 - Fused (stencil) versions of layers for speed and a self-similar derivative
   tower (see AD_DEVELOPMENT.md §4.7).

@@ -16,5 +16,5 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.ml.layer.basic import replicate, linear_combination
+from gpt.ml.layer.basic import replicate, linear_combination, broadcast
 from gpt.ml.layer.local_covariant_matrix import local_covariant_matrix

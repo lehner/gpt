@@ -52,3 +52,24 @@ class linear_combination(function):
         x, X = inputs
         (w,) = parameters
         return [g(x + sum(wc * xc for wc, xc in zip(w, X)))]
+
+
+class broadcast(function):
+    """y = value 1: a global number as a field (the unit element of the
+    template's type times value; Re(value) with real=True, so that the
+    parameter stays real).  No inputs.  Its backward sums the flow over the
+    sites, so a global parameter can feed functions that take fields."""
+
+    def __init__(self, template, value=0.0, real=False):
+        self.value, self.real = value, real
+        self.unit = g.identity(template)
+        super().__init__([], [("y", template)], [("value", 0j)])
+
+    def initialize(self, rng):
+        self["value"] = complex(self.value)
+
+    def evaluate(self, inputs, parameters, constants):
+        (value,) = parameters
+        if self.real:
+            value = g.component.real(value)
+        return [g(value * self.unit)]

@@ -271,6 +271,43 @@ for generic in [False, True]:
     a2.assert_gradient_error(rng, U + params_p, [p], 3e-3, 1e-7)
 
 
+# a global number p in f(P) = P + p P^2 (parameters may be numbers): the
+# actions and their gradients agree with a site-constant field p, whose
+# gradient summed over the sites is the gradient of the number
+p_number = 0.5 + 0.1j
+p_field = g.complex(even.grid)
+p_field[:] = p_number
+params_number = [rho, p_number]
+params_field = [rho, p_field]
+
+
+def actions(pt_odd, pt_even):
+    a_gauge = g.qcd.gauge.action.iwasaki(6)
+    a_gauge = a_gauge.transformed(pt_even, indices=[0, 1, 2, 3, 4, 5], projection=[0, 1, 2, 3])
+    a_gauge = a_gauge.transformed(pt_odd, indices=[0, 1, 2, 3, 4, 5], projection=[0, 1, 2, 3, 4, 5])
+    return a_gauge, pt_odd.action_log_det_jacobian()
+
+
+for generic in [False, True]:
+    a_number = actions(
+        make_pt(0, odd, loop_function_p, generic, params_number),
+        make_pt(0, even, loop_function_p, generic, params_number),
+    )
+    a_field = actions(
+        make_pt(0, odd, loop_function_p, generic, params_field),
+        make_pt(0, even, loop_function_p, generic, params_field),
+    )
+    for name, an, af in zip(["gauge", "log det"], a_number, a_field):
+        vn, vf = an(U + params_number), af(U + params_field)
+        gn = an.gradient(U + params_number, [p_number])[0]
+        gf = g.sum(af.gradient(U + params_field, [p_field])[0])
+        eps = abs(vn - vf) / abs(vf) + abs(gn - gf) / abs(gf)
+        g.message(f"Number vs field parameter ({name}, generic = {generic}): {eps}")
+        assert eps < 1e-12
+        an.assert_gradient_error(rng, U + params_number, U + params_number, 1e-4, 1e-7)
+        an.assert_gradient_error(rng, U + params_number, [p_number], 1e-3, 1e-7)
+
+
 # the p-gradient of a contraction of the force of the combined action
 #   S = S_gauge(Phi_2(Phi_1(U))) - log det J_1(U) - log det J_2(Phi_1(U))
 # with Q(U, p) = sum_mu <v_mu, F_mu(U, p)>, F = dS/dU.  Since Q is the
@@ -306,33 +343,20 @@ a_total = a_gauge + a_ld_1 + a_ld_2
 a_total.assert_gradient_error(rng, U + params_s, U + params_s, 1e-4, 1e-7)
 
 v = rng.normal_element(g.group.cartesian(U))
-
-
-def force_contraction(fields):
-    F = a_total.gradient(fields, fields[0:4])
-    return sum(g.group.inner_product(x, y) for x, y in zip(v, F)).real
-
-
-def flowed_links(eps):
-    return [g(g.group.compose(g(eps * v[mu]), U[mu])) for mu in range(4)]
-
-
-eps = 1e-3
-dQ_dp = g(
-    sum(
-        (cc / eps) * a_total.gradient(flowed_links(dd * eps) + params_s, [p])[0]
-        for cc, dd in approximation_scheme_4
-    )
-)
+Q = g.group.directional_derivative(a_total, v, along=[0, 1, 2, 3])
+dQ_dp = Q.gradient(U + params_s, [p])[0]
 
 # cross-check along a random direction dp with a difference of Q in p
 dp = rng.normal_element(g.group.cartesian(p))
-a = g.group.inner_product(dp, dQ_dp).real
+a = g.group.inner_product(dp, dQ_dp)
 t = 1e-2
 b = sum(
-    (cc / t) * force_contraction(U + [rho_s, g(g.group.compose(g(dd * t * dp), p))])
+    (cc / t) * Q(U + [rho_s, g(g.group.compose(g(dd * t * dp), p))])
     for cc, dd in approximation_scheme_4
 )
 eps = abs(a - b) / abs(b)
 g.message(f"p-gradient of the force contraction: {a} vs {b}, rel {eps}")
 assert eps < 1e-7
+
+# and the gradient w.r.t. all fields (links: with the commutator term)
+Q.assert_gradient_error(rng, U + params_s, U + params_s, 1e-3, 1e-7)

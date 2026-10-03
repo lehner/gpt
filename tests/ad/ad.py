@@ -653,3 +653,35 @@ for op in ["real", "imag"]:
         eps = abs(a - b) / abs(b)
         g.message(f"component.{op} ({name}): {a} vs {b}, rel {eps}")
         assert eps < 1e-9
+
+# a differentiable_functional as a node (first order): combined with other
+# node operations, the leaf gradients follow from the functional's gradient
+rad = g.ad.reverse
+rng = g.random("functional_node")
+grid = g.grid([4, 4, 4, 4], g.double)
+U = g.qcd.gauge.random(grid, rng, scale=0.5)
+S = g.qcd.gauge.action.iwasaki(5.5)
+leaves = [rad.node(u) for u in U]
+s = rad.functional_node(S, leaves)
+L = s * 3.0 + s * s
+L()
+s0 = S(U)
+F = S.gradient(U, U)
+eps2 = sum(g.norm2(n.gradient - (3.0 + 2.0 * s0) * f) for n, f in zip(leaves, F)) / sum(g.norm2(f) for f in F)
+g.message(f"functional_node (gauge action, links): {eps2}")
+assert abs(L(with_gradients=False).real - (3 * s0 + s0 * s0)) < 1e-10 * abs(s0 * s0) and eps2 < 1e-24
+
+# numbers and fields: the bridge reproduces the gradients of a direct graph
+x0 = rng.cnormal(g.complex(grid))
+a0 = 0.3 - 0.4j
+nx, na = rad.node(x0), rad.node(a0)
+T = (g.norm2(nx * na - x0) + g.norm2(nx)).functional(nx, na)
+lx, la = rad.node(g.copy(x0)), rad.node(a0)
+s = rad.functional_node(T, [lx, la])
+(s * s)()
+dx, da = rad.node(g.copy(x0)), rad.node(a0)
+t = g.norm2(dx * da - x0) + g.norm2(dx)
+(t * t)()
+eps = g.norm2(lx.gradient - dx.gradient) / g.norm2(dx.gradient) + abs(la.gradient - da.gradient) / abs(da.gradient)
+g.message(f"functional_node (field and number) vs direct graph: {eps}")
+assert eps < 1e-12

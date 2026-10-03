@@ -22,6 +22,8 @@ from gpt.ad import reverse as rad
 
 
 def assert_compatible(a, b, tag=""):
+    if g.util.is_num(a) and g.util.is_num(b):
+        return  # e.g. complex and numpy.complex128 (optimizer updates)
     if type(a) is not type(b):
         raise Exception(f"Incompatible types: {type(a)} and {type(b)}{tag}")
     if isinstance(a, rad.node_base):
@@ -38,7 +40,8 @@ class dft_diffeomorphism(diffeomorphism):
         # ft needs to be callable with a node or a lattice
         res = self.ft(fields)
         for i, x in enumerate(res):
-            x.otype = fields[i].otype
+            if isinstance(x, g.lattice):
+                x.otype = fields[i].otype
         return res
 
     def jacobian(self, fields, fields_prime, dfields):
@@ -60,7 +63,8 @@ class dft_diffeomorphism(diffeomorphism):
                     gradient[nu] = self.aU[nu].gradient
                 else:
                     gradient[nu] = g(gradient[nu] + self.aU[nu].gradient)
-                gradient[nu].otype = dfields[nu].otype
+                if isinstance(gradient[nu], g.lattice):
+                    gradient[nu].otype = dfields[nu].otype
 
         return gradient
 

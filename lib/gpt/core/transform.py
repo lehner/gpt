@@ -30,6 +30,10 @@ def cshift(first, second, third=None, fourth=None):
 
 def copy(first, second=None):
     return_list = isinstance(first, list)
+    if second is None and any(_is_plain(x) for x in gpt.util.to_list(first)):
+        # numbers (immutable) and arrays have no foundation, also in mixed lists
+        r = [(x if gpt.util.is_num(x) else x.copy()) if _is_plain(x) else copy(x) for x in gpt.util.to_list(first)]
+        return r if return_list else r[0]
     if second is not None:
         t = gpt.util.to_list(first)
         l = gpt.util.to_list(second)
@@ -41,6 +45,10 @@ def copy(first, second=None):
     if not return_list:
         return t[0]
     return t
+
+
+def _is_plain(x):
+    return gpt.util.is_num(x) or isinstance(x, np.ndarray)
 
 
 def astype(first, second):

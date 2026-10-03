@@ -25,5 +25,5 @@ from gpt.core.group.operation import (
     inverse,
     invariant_distance,
 )
-from gpt.core.group.differentiable_functional import differentiable_functional
+from gpt.core.group.differentiable_functional import differentiable_functional, directional_derivative
 from gpt.core.group.diffeomorphism import diffeomorphism, local_diffeomorphism

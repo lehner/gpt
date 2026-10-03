@@ -67,8 +67,9 @@ def _container_of(x):
 
 
 class _storage_list(list):
-    # the storage of a composite: a fixed-length list whose element k lives in
-    # the storage of a function, entry k = (storage list, index).  Reads and
+    # a write-through list (the storage of a composite, g.ml.fields): a
+    # fixed-length list whose element k lives in another list, entry k =
+    # (storage list, index).  Reads and
     # writes go to that storage, so any number of composites share the values
     # of their functions (optimizers replace numbers in the list they are
     # given).  It is a list (GPT checks isinstance(x, list)); the list's own
@@ -103,13 +104,27 @@ class _storage_list(list):
         return repr(list(self))
 
     def _fixed(self, *args, **kwargs):
-        raise TypeError("the parameter storage of a composite has a fixed layout")
+        raise TypeError("a write-through list has a fixed layout")
 
     append = extend = insert = pop = remove = clear = sort = reverse = _fixed
     __delitem__ = __iadd__ = __imul__ = _fixed
     copy = index = count = __add__ = __radd__ = __mul__ = __rmul__ = __reversed__ = _fixed
     __eq__ = __ne__ = __lt__ = __le__ = __gt__ = __ge__ = _fixed
     __hash__ = None
+
+
+def fields(*lists):
+    """One write-through list over several lists (e.g. the links, other fields
+    and a function's parameters()): reading and writing an element reads and
+    writes the list it comes from, so an optimizer working on the result
+    updates the function's storage."""
+    entries = []
+    for values in lists:
+        if isinstance(values, _storage_list):
+            entries += values.entries
+        else:
+            entries += [(values, j) for j in range(len(values))]
+    return _storage_list(entries)
 
 
 class _named_storage:
