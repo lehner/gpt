@@ -170,8 +170,16 @@ net = g.ml.pack(y=y, z=z).function(inputs=[x2, x1])   # or explicit
   `mx2 = mix(u=s2.y, v=x1; c.1=sp.q)  parameters: mx.w, mx.c.0  constants: mx.s`
   (computed parameters after `;`, stored ones by composite name, so sharing is
   visible).  Nested composites are single lines (describe them directly).
-  `draw(ax=None)` is planned (matplotlib imported inside it only, optional
-  dependency) and raises `NotImplementedError` for now.
+  `draw(ax=None)` draws the same graph with matplotlib (imported inside it
+  only, an optional dependency; returns the figure): a layered layout with
+  inputs left and outputs right in their signature order, calls in the column
+  after their latest source, edges across several columns through waypoints
+  (free lanes), rows ordered by alternating one-sided barycenter sweeps at the
+  ports.  Boxes are sized to their text; edges leave at output ports and enter
+  at slot ports (inputs, then connected parameters, dashed), labeled with the
+  slot (and the output if a call has several).  Calls of a shared function
+  share a border color (categorical slots 1-3, the all-pairs-safe ones) and
+  name the call they share with; text uses ink colors only.
 
 ## 4. Training
 
@@ -308,8 +316,8 @@ Principles:
 - Type checks happen in node mode, inside the functions.
 
 Open / planned:
-- `draw()` with matplotlib (layered layout, boxes per call, solid input and
-  dashed parameter edges, markers for shared functions).
+- `draw()` refinements: port order chosen to reduce crossings, dark mode,
+  larger graphs (collapsing repeated blocks).
 - Parameters as numpy arrays (needs numpy-node arithmetic) and eventually as
   `g.lattice`; `g.group.compose` for tensors; accelerator buffers as nodes.
 - Symbol types (declared input types), symbolic element access of list

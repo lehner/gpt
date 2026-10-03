@@ -125,7 +125,20 @@ assert net.describe() == expected and net.graph().describe() == expected
 assert sym["q"].describe() == """inputs: x1, x2
   sp = split(x=x2; e=x1)  parameters: sp.b
 outputs: sp.q"""
-expect(NotImplementedError, net.draw)
+
+# draw: a box per call and per input/output, one arrow per edge (inputs,
+# connected parameters, outputs), the shared calls annotated
+import matplotlib
+
+matplotlib.use("Agg")
+from matplotlib.patches import FancyArrowPatch
+
+ax = net.draw().axes[0]
+texts = [t.get_text() for t in ax.texts]
+for label in ["x1", "x2", "y", "t", "s1", "sp", "mx", "s2", "mx2", "shares s1", "shares mx"]:
+    assert label in texts, label
+assert sum(isinstance(p, FancyArrowPatch) for p in ax.patches) == 12
+assert net.graph().draw() is not None and sym["q"].draw() is not None
 
 # the composite holds no values: it reads and writes its functions' storage
 sc["a"] = 0.7 + 0j
@@ -235,6 +248,7 @@ y, t = net([u1, u2], name="inner")
 outer_scale = scale()
 (w,) = outer_scale([t], name="post")
 outer = g.ml.pack(y=y, u=w).function(inputs=[u2, u1])
+assert "inner" in [t.get_text() for t in outer.draw().axes[0].texts]  # a single box
 assert outer.describe() == """inputs: x2, x1
   inner = composite(x1=x1, x2=x2)  parameters: inner.s1.a, inner.sp.b, inner.mx.w, inner.mx.c.0, inner.mx.c.1  constants: inner.mx.s
   post  = scale(x=inner.t)         parameters: post.a
