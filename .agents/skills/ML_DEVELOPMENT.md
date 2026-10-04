@@ -235,6 +235,10 @@ g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.pa
   lists.
 - Training several runs from the same start: save `list(net.parameters())`
   and write it back element-wise (numbers are replaced in the storage).
+- Training in rounds (e.g. to record the loss): create the optimizer run
+  once, `run = opt(f)`, and call `run(x, dx)` per round.  `opt(f)` starts a
+  new run, i.e. restarts Adam's moments and bias correction, which makes
+  each round begin with a full-size step.
 - Adam returns the last iterate, not the best; a too large `alpha` can end on
   an overshoot (5e-3 works for the covariant network).
 
