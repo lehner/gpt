@@ -235,10 +235,19 @@ g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.pa
   lists.
 - Training several runs from the same start: save `list(net.parameters())`
   and write it back element-wise (numbers are replaced in the storage).
-- Training in rounds (e.g. to record the loss): create the optimizer run
-  once, `run = opt(f)`, and call `run(x, dx)` per round.  `opt(f)` starts a
-  new run, i.e. restarts Adam's moments and bias correction, which makes
-  each round begin with a full-size step.
+- **`opt.on(x, dx=None)`** binds an optimizer to the fields `x` and the
+  updated subset `dx` (default: all of `x`, the usual case for weights) and
+  returns a run; `run(f)` iterates (`maxiter`, set at construction) with
+  the functional `f`
+  and keeps the optimizer's state (Adam's moments and step count) across
+  calls, also when `f` changes from call to call: a cost drawn anew for
+  every step is `run(make_cost(rng))` in a loop with an optimizer
+  constructed with `maxiter=1`.  `opt(f)(x, dx)`
+  is the same as `opt.on(x, dx)(f)` (repeated calls of one `opt(f)` keep
+  its state as well).  A new `opt.on` / `opt(f)` starts a new state, i.e.
+  restarts Adam's moments and bias correction (each restart begins with a
+  full-size step).  Non-linear CG keeps its search direction within one call
+  only (it belongs to `f`); gradient descent has no state.
 - Adam returns the last iterate, not the best; a too large `alpha` can end on
   an overshoot (5e-3 works for the covariant network).
 

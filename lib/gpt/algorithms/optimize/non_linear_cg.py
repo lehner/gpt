@@ -18,7 +18,7 @@
 #
 import gpt as g
 import numpy as np
-from gpt.algorithms import base_iterative
+from gpt.algorithms.optimize.optimizer import optimizer
 from gpt.algorithms.optimize import line_search_quadratic
 
 
@@ -35,7 +35,7 @@ def polak_ribiere(d, d_last):
     return max([0.0, (ip_dd - ip_dl) / ip_ll])
 
 
-class non_linear_cg(base_iterative):
+class non_linear_cg(optimizer):
     @g.params_convention(
         eps=1e-8,
         maxiter=1000,
@@ -55,61 +55,60 @@ class non_linear_cg(base_iterative):
         self.beta = params["beta"]
         self.max_abs_step = params["max_abs_step"]
 
-    def __call__(self, f):
-        @self.timed_function
-        def opt(x, dx, t):
-            x = g.util.to_list(x)
-            dx = g.util.to_list(dx)
-            d_last = None
-            s_last = None
-            for i in range(self.maxiter):
-                d = f.gradient(x, dx)
-                assert isinstance(d, list)
+    def iterate(self, f, x, dx_indices, state, t):
+        # (the search direction is kept within one call only: it belongs to f)
+        dx = [x[i] for i in dx_indices]
+        d_last = None
+        s_last = None
+        for i in range(self.maxiter):
+            d = f.gradient(x, dx)
+            assert isinstance(d, list)
 
-                if i == 0:
-                    beta = 0
-                    s = d
-                else:
-                    beta = self.beta(d, d_last)
-                    for nu in range(len(s)):
-                        s[nu] = g(d[nu] + beta * s_last[nu])
+            if i == 0:
+                beta = 0
+                s = d
+            else:
+                beta = self.beta(d, d_last)
+                for nu in range(len(s)):
+                    s[nu] = g(d[nu] + beta * s_last[nu])
 
-                next_step = self.line_search(s, x, dx, d, f.gradient, -self.step) * self.step
-                if abs(next_step) > self.max_abs_step:
-                    self.log(f"max_abs_step adjustment for step = {next_step}")
-                    next_step *= self.max_abs_step / abs(next_step)
-                    beta = 0
+            next_step = self.line_search(s, x, dx, d, f.gradient, -self.step) * self.step
+            if abs(next_step) > self.max_abs_step:
+                self.log(f"max_abs_step adjustment for step = {next_step}")
+                next_step *= self.max_abs_step / abs(next_step)
+                beta = 0
 
-                if np.isnan(next_step):
-                    self.log(f"nan adjustment for step, beta = {beta}")
-                    next_step = self.max_abs_step
-                    beta = 0
-                    for nu in range(len(s)):
-                        s[nu] @= d[nu]
+            if np.isnan(next_step):
+                self.log(f"nan adjustment for step, beta = {beta}")
+                next_step = self.max_abs_step
+                beta = 0
+                for nu in range(len(s)):
+                    s[nu] @= d[nu]
 
-                for nu, x_mu in enumerate(dx):
-                    x_mu @= g.group.compose(-next_step * s[nu], x_mu)
+            for nu, x_mu in enumerate(dx):
+                x_mu @= g.group.compose(-next_step * s[nu], x_mu)
 
-                rs = (sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])) ** 0.5
+            rs = (sum(g.norm2(d)) / sum([s.grid.gsites * s.otype.nfloats for s in d])) ** 0.5
 
-                self.log_convergence(i, rs, self.eps)
+            self.log_convergence(i, rs, self.eps)
 
-                if i % self.nf == 0:
-                    self.log(
-                        f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step = {next_step}"
-                    )
+            if i % self.nf == 0:
+                self.log(
+                    f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, beta = {beta}, step = {next_step}"
+                )
 
-                if rs <= self.eps:
-                    self.log(
-                        f"converged in {i+1} iterations: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}"
-                    )
-                    return True
+            if rs <= self.eps:
+                self.log(
+                    f"converged in {i + 1} iterations: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}"
+                )
+                return True
 
-                # keep last search direction
-                d_last = d
-                s_last = s
+            # keep last search direction
+            d_last = d
+            s_last = s
 
-            self.log(f"NOT converged in {i+1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}")
-            return False
-
-        return opt
+        if self.maxiter > 1:
+            self.log(
+                f"NOT converged in {i + 1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
+            )
+        return False

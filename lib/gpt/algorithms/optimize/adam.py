@@ -20,7 +20,7 @@
 #
 import gpt as g
 import numpy as np
-from gpt.algorithms import base_iterative
+from gpt.algorithms.optimize.optimizer import optimizer
 
 
 def new(a):
@@ -55,7 +55,7 @@ def set_value(a, b):
         set_element(a, i, b)
 
 
-class adam(base_iterative):
+class adam(optimizer):
     @g.params_convention(
         eps=1e-8,
         maxiter=1000,
@@ -75,96 +75,86 @@ class adam(base_iterative):
         self.eps_regulator = params["eps_regulator"]
         self.nf = params["log_functional_every"]
 
-    def __call__(self, f):
+    def new_state(self):
+        # the moments and the step count (kept across the calls of a run)
         class context:
             m = None
             t = 0
 
-        @self.timed_function
-        def opt(x, dx, t):
-            x = g.util.to_list(x)
-            dx = g.util.to_list(dx)
-            dx_indices = [g.util.index_by_identity(x, y) for y in dx]
+        return context
 
-            for i in range(self.maxiter):
-                context.t += 1
+    def iterate(self, f, x, dx_indices, context, t):
 
-                # x = theta(t-1)
-                dx = [x[i] for i in dx_indices]
-                gt = f.gradient(x, dx)
-                gt2 = []
+        for i in range(self.maxiter):
+            context.t += 1
 
-                # momentum vectors
-                if context.m is None:
-                    context.m = [new(a) for a in gt]
-                    context.v = [new(a) for a in gt]
-                    context.mhat = [new(a) for a in gt]
-                    context.vhat = [new(a) for a in gt]
-                    context.epsfield = [new(a) for a in gt]
+            # x = theta(t-1)
+            dx = [x[i] for i in dx_indices]
+            gt = f.gradient(x, dx)
+            gt2 = []
 
-                    set_value(context.m, 0)
-                    set_value(context.v, 0)
-                    set_value(context.epsfield, self.eps_regulator)
-                else:
-                    # (numbers may change type, e.g. complex -> numpy.complex128)
-                    m0, g0 = context.m[0], gt[0]
-                    assert (g.util.is_num(m0) and g.util.is_num(g0)) or type(m0) == type(g0)
+            # momentum vectors
+            if context.m is None:
+                context.m = [new(a) for a in gt]
+                context.v = [new(a) for a in gt]
+                context.mhat = [new(a) for a in gt]
+                context.vhat = [new(a) for a in gt]
+                context.epsfield = [new(a) for a in gt]
 
-                for a in gt:
-                    ar = g(g.component.real(a))
-                    ai = g(g.component.imag(a))
-                    gt2.append(g(g.component.multiply(ar, ar) + 1j * g.component.multiply(ai, ai)))
+                set_value(context.m, 0)
+                set_value(context.v, 0)
+                set_value(context.epsfield, self.eps_regulator)
+            else:
+                # (numbers may change type, e.g. complex -> numpy.complex128)
+                m0, g0 = context.m[0], gt[0]
+                assert (g.util.is_num(m0) and g.util.is_num(g0)) or type(m0) is type(g0)
 
-                for nu in range(len(dx)):
-                    set_element(
-                        context.m, nu, self.beta1 * context.m[nu] + (1 - self.beta1) * gt[nu]
-                    )
-                    set_element(
-                        context.v, nu, self.beta2 * context.v[nu] + (1 - self.beta2) * gt2[nu]
-                    )
+            for a in gt:
+                ar = g(g.component.real(a))
+                ai = g(g.component.imag(a))
+                gt2.append(g(g.component.multiply(ar, ar) + 1j * g.component.multiply(ai, ai)))
 
-                    set_element(
-                        context.mhat, nu, (1.0 / (1.0 - self.beta1**context.t)) * context.m[nu]
-                    )
-                    set_element(
-                        context.vhat, nu, (1.0 / (1.0 - self.beta2**context.t)) * context.v[nu]
-                    )
+            for nu in range(len(dx)):
+                set_element(context.m, nu, self.beta1 * context.m[nu] + (1 - self.beta1) * gt[nu])
+                set_element(context.v, nu, self.beta2 * context.v[nu] + (1 - self.beta2) * gt2[nu])
 
-                    vhat_nu_real = g(g.component.sqrt(g.component.real(context.vhat[nu])))
-                    vhat_nu_imag = g(g.component.sqrt(g.component.imag(context.vhat[nu])))
+                set_element(context.mhat, nu, (1.0 / (1.0 - self.beta1**context.t)) * context.m[nu])
+                set_element(context.vhat, nu, (1.0 / (1.0 - self.beta2**context.t)) * context.v[nu])
 
-                    reg_mhat_real = g.component.multiply(
-                        g.component.real(context.mhat[nu]),
-                        g.component.inv(context.epsfield[nu] + vhat_nu_real),
-                    )
-                    reg_mhat_imag = g.component.multiply(
-                        g.component.imag(context.mhat[nu]),
-                        g.component.inv(context.epsfield[nu] + vhat_nu_imag),
-                    )
+                vhat_nu_real = g(g.component.sqrt(g.component.real(context.vhat[nu])))
+                vhat_nu_imag = g(g.component.sqrt(g.component.imag(context.vhat[nu])))
 
-                    # make sure object type is correct
-                    tmp = [new(gt[nu])]
-                    set_element(tmp, 0, -self.alpha * (reg_mhat_real + 1j * reg_mhat_imag))
-                    set_element(x, dx_indices[nu], g.group.compose(tmp[0], x[dx_indices[nu]]))
+                reg_mhat_real = g.component.multiply(
+                    g.component.real(context.mhat[nu]),
+                    g.component.inv(context.epsfield[nu] + vhat_nu_real),
+                )
+                reg_mhat_imag = g.component.multiply(
+                    g.component.imag(context.mhat[nu]),
+                    g.component.inv(context.epsfield[nu] + vhat_nu_imag),
+                )
 
-                rs = (sum([g.norm2(x) for x in gt]) / sum([nfloats(s) for s in gt])) ** 0.5
+                # make sure object type is correct
+                tmp = [new(gt[nu])]
+                set_element(tmp, 0, -self.alpha * (reg_mhat_real + 1j * reg_mhat_imag))
+                set_element(x, dx_indices[nu], g.group.compose(tmp[0], x[dx_indices[nu]]))
 
-                self.log_convergence(i, rs, self.eps)
+            rs = (sum([g.norm2(x) for x in gt]) / sum([nfloats(s) for s in gt])) ** 0.5
 
-                if i % self.nf == 0:
-                    self.log(
-                        f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, alpha = {self.alpha}, beta1 = {self.beta1}, beta2 = {self.beta2}"
-                    )
+            self.log_convergence(i, rs, self.eps)
 
-                if rs <= self.eps:
-                    self.log(
-                        f"converged in {i + 1} iterations: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}"
-                    )
-                    return True
+            if i % self.nf == 0:
+                self.log(
+                    f"iteration {i}: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}, alpha = {self.alpha}, beta1 = {self.beta1}, beta2 = {self.beta2}"
+                )
 
+            if rs <= self.eps:
+                self.log(
+                    f"converged in {i + 1} iterations: f(x) = {f(x):.15e}, |df|/sqrt(dof) = {rs:e}"
+                )
+                return True
+
+        if self.maxiter > 1:
             self.log(
                 f"NOT converged in {i + 1} iterations;  |df|/sqrt(dof) = {rs:e} / {self.eps:e}"
             )
-            return False
-
-        return opt
+        return False

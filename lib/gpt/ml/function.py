@@ -305,7 +305,10 @@ class function:
         # both are assigned; the types must agree in any case.  A different
         # graph text only warns.  (A prefix for loading the state of a
         # sub-network into a composite, e.g. "inner.", may be added later.)
-        for kind, names in [("parameters", self.parameter_names()), ("constants", self.constant_names())]:
+        for kind, names in [
+            ("parameters", self.parameter_names()),
+            ("constants", self.constant_names()),
+        ]:
             values = state.get(kind, {})
             missing = [n for n in names if n not in values]
             unknown = [n for n in values if n not in names]
@@ -316,7 +319,10 @@ class function:
                     raise TypeError(
                         f"set_state: {name} is {_type_text(values[name])}, expected {_type_text(self[name])}"
                     )
-        for kind, names in [("parameters", self.parameter_names()), ("constants", self.constant_names())]:
+        for kind, names in [
+            ("parameters", self.parameter_names()),
+            ("constants", self.constant_names()),
+        ]:
             values = state.get(kind, {})
             for name in names:
                 if name in values:

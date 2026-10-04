@@ -76,6 +76,50 @@ for gd in [
     gd(f)([U1, V1], [U1, V1])
     assert f([U1, V1]) < 1e-5
 
+# opt.on(x, dx)(f) is opt(f)(x, dx); a run created by opt.on keeps the
+# optimizer's state across calls, also with a different f in each call
+for opt in [
+    g.algorithms.optimize.gradient_descent(maxiter=10, eps=1e-7, step=1e-1, line_search=ls2),
+    g.algorithms.optimize.non_linear_cg(maxiter=10, eps=1e-7, step=1e-1, line_search=ls2, beta=pr),
+    g.algorithms.optimize.adam(maxiter=10, eps=1e-7, alpha=1e-1, beta1=0.05, beta2=0.99, eps_regulator=0.1),
+]:
+    U1, V1 = g.copy([U0, V0])
+    U2, V2 = g.copy([U0, V0])
+    opt(f)([U1, V1], [U1, V1])
+    opt.on([U2, V2])(f)
+    assert g.norm2(U1 - U2) == 0.0 and g.norm2(V1 - V2) == 0.0
+
+adam = g.algorithms.optimize.adam(maxiter=40, eps=1e-15, alpha=1e-1, beta1=0.05, beta2=0.99, eps_regulator=0.1)
+adam_1 = g.algorithms.optimize.adam(maxiter=1, eps=1e-15, alpha=1e-1, beta1=0.05, beta2=0.99, eps_regulator=0.1)
+U1, V1 = g.copy([U0, V0])
+U2, V2 = g.copy([U0, V0])
+adam.on([U1, V1])(f)  # 40 steps in one call
+run = adam_1.on([U2, V2])
+for i in range(40):
+    run(f)  # 40 calls of one step: the moments are kept
+assert g.norm2(U1 - U2) == 0.0 and g.norm2(V1 - V2) == 0.0
+g.message("adam: 40 steps in one call and in 40 calls agree")
+
+# repeated calls of opt(f) keep its state as well
+U3, V3 = g.copy([U0, V0])
+U4, V4 = g.copy([U0, V0])
+call = adam(f)
+run = adam.on([U4, V4])
+for i in range(3):
+    call([U3, V3], [U3, V3])
+    run(f)
+assert g.norm2(U3 - U4) == 0.0 and g.norm2(V3 - V4) == 0.0
+
+# a different functional in each step (here alternating f and 2 f, which have
+# the same minimum) with one Adam state
+U2, V2 = g.copy([U0, V0])
+run = adam_1.on([U2, V2])
+f2 = 2.0 * f
+for i in range(40):
+    run(f if i % 2 == 0 else f2)
+g.message(f"adam with alternating functionals: {f([U0, V0])} -> {f([U2, V2])}")
+assert f([U2, V2]) < 1e-2 * f([U0, V0])
+
 # test symmetric update functional
 s = g.algorithms.group.symmetric_functional(f)
 U1 = g.copy(U0)

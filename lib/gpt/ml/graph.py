@@ -146,7 +146,9 @@ class _layout:
             self.names += [f"{prefix}.{f._parameters.names[j]}" for j in owned]
             self.entries += [_entry(f._parameters.values, j) for j in owned]
             self.constant_names += [f"{prefix}.{name}" for name in f._constants.names]
-            self.constant_entries += [_entry(f._constants.values, j) for j in range(len(f._constants.values))]
+            self.constant_entries += [
+                _entry(f._constants.values, j) for j in range(len(f._constants.values))
+            ]
 
 
 class pack:
@@ -211,7 +213,9 @@ class pack:
             ]
             call = f"{type(f).__name__}({', '.join(args)}{'; ' + ', '.join(connected) if connected else ''})"
             prefix = layout.prefix[id(f)]
-            stored = [f"{prefix}.{n}" for j, n in enumerate(f._parameters.names) if j not in c.connections]
+            stored = [
+                f"{prefix}.{n}" for j, n in enumerate(f._parameters.names) if j not in c.connections
+            ]
             constants = [f"{prefix}.{n}" for n in f._constants.names]
             rows.append((c.name, call, stored, constants))
         w0 = max([len(r[0]) for r in rows], default=0)
@@ -256,18 +260,33 @@ class pack:
         edges = []
         for c in calls:
             f = c.function
-            n_out = len(f.output_names())
             ports = [(slot, s, None, "solid") for slot, s in zip(f.input_names(), c.inputs)]
-            ports += [(f._parameters.names[j], s, k, "dashed") for j, (s, k) in sorted(c.connections.items())]
+            ports += [
+                (f._parameters.names[j], s, k, "dashed")
+                for j, (s, k) in sorted(c.connections.items())
+            ]
             for i, (slot, s, k, style) in enumerate(ports):
-                edges.append(_draw_edge(source(s), s, ("call", c.id), i, len(ports), slot if len(ports) > 1 or style == "dashed" else None, k, style))
+                edges.append(
+                    _draw_edge(
+                        source(s),
+                        s,
+                        ("call", c.id),
+                        i,
+                        len(ports),
+                        slot if len(ports) > 1 or style == "dashed" else None,
+                        k,
+                        style,
+                    )
+                )
         for name, s in self.outputs.items():
             edges.append(_draw_edge(source(s), s, ("out", name), 0, 1, None, None, "solid"))
 
         # columns (longest path) and waypoints of edges across several columns
         column = {("in", s.id): 0 for s in inputs}
         for c in calls:
-            column[("call", c.id)] = 1 + max([column[e["a"]] for e in edges if e["b"] == ("call", c.id)], default=0)
+            column[("call", c.id)] = 1 + max(
+                [column[e["a"]] for e in edges if e["b"] == ("call", c.id)], default=0
+            )
         last = 1 + max(column.values(), default=0)
         for name in self.outputs:
             column[("out", name)] = last
@@ -279,7 +298,9 @@ class pack:
             if c.label is not None:
                 width[("call", c.id)] = max(1.0, 0.11 * _visible_length(c.label) + 0.5)
             else:
-                width[("call", c.id)] = max(1.8, 0.09 * len(c.name) + 0.4, 0.072 * len(type(c.function).__name__) + 0.4)
+                width[("call", c.id)] = max(
+                    1.8, 0.09 * len(c.name) + 0.4, 0.072 * len(type(c.function).__name__) + 0.4
+                )
         for n, e in enumerate(edges):
             e["via"] = []
             for col in range(column[e["a"]] + 1, column[e["b"]]):
@@ -346,9 +367,18 @@ class pack:
 
         def box(k, text, edge, lw, rounding):
             w, h = width[k], height[k]
-            ax.add_patch(FancyBboxPatch((x[k] - w / 2, y[k] - h / 2), w, h,
-                                        boxstyle=f"round,pad=0,rounding_size={rounding}",
-                                        facecolor=surface, edgecolor=edge, linewidth=lw, zorder=2))
+            ax.add_patch(
+                FancyBboxPatch(
+                    (x[k] - w / 2, y[k] - h / 2),
+                    w,
+                    h,
+                    boxstyle=f"round,pad=0,rounding_size={rounding}",
+                    facecolor=surface,
+                    edgecolor=edge,
+                    linewidth=lw,
+                    zorder=2,
+                )
+            )
             for dy, t, kw in text:
                 ax.text(x[k], y[k] + dy, t, ha="center", va="center", zorder=3, **kw)
 
@@ -358,12 +388,18 @@ class pack:
             box(("out", name), [(0, name, dict(color=ink, fontsize=10))], frame, 1.5, 0.2)
         for c in calls:
             fid = id(c.function)
-            color = palette[shared.index(fid)] if fid in shared and shared.index(fid) < len(palette) else frame
+            color = (
+                palette[shared.index(fid)]
+                if fid in shared and shared.index(fid) < len(palette)
+                else frame
+            )
             if c.label is not None:
                 text = [(0.0, c.label, dict(color=ink, fontsize=12))]
             else:
-                text = [(0.11, c.name, dict(color=ink, fontsize=10, fontweight="bold")),
-                        (-0.13, type(c.function).__name__, dict(color=ink2, fontsize=8))]
+                text = [
+                    (0.11, c.name, dict(color=ink, fontsize=10, fontweight="bold")),
+                    (-0.13, type(c.function).__name__, dict(color=ink2, fontsize=8)),
+                ]
             if fid in shared and first[fid] is not c:
                 shown = first[fid].label if first[fid].label is not None else first[fid].name
                 text.append((-0.43, f"shares {shown}", dict(color=muted, fontsize=7)))
@@ -382,15 +418,40 @@ class pack:
                 d = (x1 - x0) / 2
                 verts += [(x0 + d, y0), (x1 - d, y1), (x1, y1)]
                 codes += [Path.CURVE4] * 3
-            ax.add_patch(FancyArrowPatch(path=Path(verts, codes), arrowstyle="-|>", mutation_scale=10,
-                                         color=ink2, linewidth=1.0, linestyle=e["style"], zorder=1))
+            ax.add_patch(
+                FancyArrowPatch(
+                    path=Path(verts, codes),
+                    arrowstyle="-|>",
+                    mutation_scale=10,
+                    color=ink2,
+                    linewidth=1.0,
+                    linestyle=e["style"],
+                    zorder=1,
+                )
+            )
             if e["slot"]:
-                ax.text(pts[-1][0] - 0.08, pts[-1][1] + 0.09, e["slot"], ha="right", va="center",
-                        color=ink2, fontsize=7, zorder=3)
+                ax.text(
+                    pts[-1][0] - 0.08,
+                    pts[-1][1] + 0.09,
+                    e["slot"],
+                    ha="right",
+                    va="center",
+                    color=ink2,
+                    fontsize=7,
+                    zorder=3,
+                )
             if e["output"] and (e["a"], e["out"]) not in labeled:
                 labeled.add((e["a"], e["out"]))
-                ax.text(pts[0][0] + 0.08, pts[0][1] + 0.09, e["output"], ha="left", va="center",
-                        color=ink2, fontsize=7, zorder=3)
+                ax.text(
+                    pts[0][0] + 0.08,
+                    pts[0][1] + 0.09,
+                    e["output"],
+                    ha="left",
+                    va="center",
+                    color=ink2,
+                    fontsize=7,
+                    zorder=3,
+                )
 
         ax.set_xlim(-col_width[0] / 2 - 0.3, col_x[-1] + col_width[-1] / 2 + 0.3)
         ax.set_ylim(min(y.values()) - 0.6, max(y.values()) + 0.6)
@@ -510,7 +571,17 @@ def _draw_edge(a, s, b, port, n_ports, slot, k, style):
     if k is not None:
         output = f"{output or ''}[{k}]"
     out = 0 if s.call is None else s.index
-    return dict(a=a, out=out, n_out=n_out, b=b, port=port, n_ports=n_ports, slot=slot, output=output, style=style)
+    return dict(
+        a=a,
+        out=out,
+        n_out=n_out,
+        b=b,
+        port=port,
+        n_ports=n_ports,
+        slot=slot,
+        output=output,
+        style=style,
+    )
 
 
 def _entry(values, j):

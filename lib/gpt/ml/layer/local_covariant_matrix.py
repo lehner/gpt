@@ -54,7 +54,12 @@ class local_covariant_matrix(function):
         self.identity = g.identity(template)
         self.one = g.complex(template.grid)
         self.one[:] = 1
-        parameters = [("a", [0j] * (C * C)), ("b", [0j] * (C * C)), ("beta", [0j] * C), ("gain", [0j] * C)]
+        parameters = [
+            ("a", [0j] * (C * C)),
+            ("b", [0j] * (C * C)),
+            ("beta", [0j] * C),
+            ("gain", [0j] * C),
+        ]
         constants = []
         if gate:
             parameters += [("alpha", [0j] * C), ("gamma", [0j] * C)]
@@ -72,7 +77,11 @@ class local_covariant_matrix(function):
             return [shift + sigma * rng.normal_element(0j) / np.sqrt(2) for _ in range(n)]
 
         fan_in = np.sqrt(2 * C + 1)
-        self["a"], self["b"], self["beta"] = r(C * C, 1 / fan_in), r(C * C, 1 / fan_in), r(C, 1 / fan_in)
+        self["a"], self["b"], self["beta"] = (
+            r(C * C, 1 / fan_in),
+            r(C * C, 1 / fan_in),
+            r(C, 1 / fan_in),
+        )
         self["gain"] = r(C, scale)
         if self.gate:
             self["alpha"], self["gamma"] = r(C, 0.1), r(C, 0.1, 1.0)
@@ -81,7 +90,8 @@ class local_covariant_matrix(function):
         C = self.C
         Xa = [g.adj(x) for x in X]
         return [
-            sum(a[c * C + d] * X[d] + b[c * C + d] * Xa[d] for d in range(C)) + beta[c] * self.identity
+            sum(a[c * C + d] * X[d] + b[c * C + d] * Xa[d] for d in range(C))
+            + beta[c] * self.identity
             for c in range(C)
         ]
 
@@ -115,7 +125,10 @@ class local_covariant_matrix(function):
             mean, inv_std = constants
             for c, q in enumerate(self._invariants(Y)):
                 # alpha (q - mean) inv_std + gamma
-                s = g(alpha[c] * q * inv_std[c] + (gamma[c] - alpha[c] * mean[c] * inv_std[c]) * self.one)
+                s = g(
+                    alpha[c] * q * inv_std[c]
+                    + (gamma[c] - alpha[c] * mean[c] * inv_std[c]) * self.one
+                )
                 Z[c] = g.component.relu()(s) * Z[c]
         gain = parameters[3]
         return [[g(x + gc * z) for x, gc, z in zip(X, gain, Z)]]

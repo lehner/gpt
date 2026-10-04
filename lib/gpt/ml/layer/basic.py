@@ -44,11 +44,15 @@ class linear_combination(function):
 
     def __init__(self, template, n, scale=0.01):
         self.n, self.scale = n, scale
-        super().__init__([("x", template), ("X", [template] * n)], [("y", template)], [("w", [0j] * n)])
+        super().__init__(
+            [("x", template), ("X", [template] * n)], [("y", template)], [("w", [0j] * n)]
+        )
 
     def initialize(self, rng, scale=None):
         scale = self.scale if scale is None else scale
-        self["w"] = [scale / np.sqrt(self.n) * rng.normal_element(0j) / np.sqrt(2) for _ in range(self.n)]
+        self["w"] = [
+            scale / np.sqrt(self.n) * rng.normal_element(0j) / np.sqrt(2) for _ in range(self.n)
+        ]
 
     def evaluate(self, inputs, parameters, constants):
         x, X = inputs
