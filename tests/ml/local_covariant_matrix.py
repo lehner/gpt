@@ -152,6 +152,7 @@ for layer in range(2):
     net[f"layer{layer}.a"] = [complex(c == d) for c in range(C) for d in range(C)]
     for slot in ["b", "beta", "alpha", "gamma"]:
         net[f"layer{layer}.{slot}"] = [0j] * len(net[f"layer{layer}.{slot}"])
+    net[f"layer{layer}.gain"] = [1 + 0j] * C
 net["layer0.alpha.0"] = 1 + 0j
 net["readout.w"] = [0.1 + 0j, -0.1 + 0j, 0j, 0j]
 net.calibrate([[x] for x in P])

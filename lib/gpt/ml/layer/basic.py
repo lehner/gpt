@@ -28,7 +28,7 @@ class replicate(function):
         self.n = n
         super().__init__([("x", template)], [("X", [template] * n)], [])
 
-    def initialize(self, rng):
+    def initialize(self, rng, scale=None):
         pass
 
     def evaluate(self, inputs, parameters, constants):
@@ -38,15 +38,17 @@ class replicate(function):
 
 class linear_combination(function):
     """y = x + sum_c w_c X_c with complex numbers w (a residual readout of n
-    channels)."""
+    channels; the identity in x for w = 0).  initialize draws w at
+    scale / sqrt(n), so that for similar channels the deviation from the
+    identity is of order scale."""
 
     def __init__(self, template, n, scale=0.01):
         self.n, self.scale = n, scale
         super().__init__([("x", template), ("X", [template] * n)], [("y", template)], [("w", [0j] * n)])
 
-    def initialize(self, rng):
-        # small, not zero: with zero weights, earlier functions get no gradient
-        self["w"] = [self.scale * rng.normal_element(0j) / np.sqrt(2) for _ in range(self.n)]
+    def initialize(self, rng, scale=None):
+        scale = self.scale if scale is None else scale
+        self["w"] = [scale / np.sqrt(self.n) * rng.normal_element(0j) / np.sqrt(2) for _ in range(self.n)]
 
     def evaluate(self, inputs, parameters, constants):
         x, X = inputs
@@ -65,7 +67,8 @@ class broadcast(function):
         self.unit = g.identity(template)
         super().__init__([], [("y", template)], [("value", 0j)])
 
-    def initialize(self, rng):
+    def initialize(self, rng, scale=None):
+        # (a fixed initial value; scale does not apply)
         self["value"] = complex(self.value)
 
     def evaluate(self, inputs, parameters, constants):

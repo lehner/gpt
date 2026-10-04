@@ -160,7 +160,11 @@ net = g.ml.pack(y=y, z=z).function(inputs=[x2, x1])   # or explicit
   list slots, constants, and every call name of a shared function).
 - **Nesting.**  A composite is a function: call it on symbols in another
   graph (`net([u1, u2], name="inner")` → names `inner.s1.a`).
-- **`initialize(rng)`** initializes each function once.  **`calibrate(samples)`**
+- **`initialize(rng, scale=None)`** initializes each function once, each
+  from its own stream `g.random(f"{rng.seed}/{prefix}")` (its first call's
+  name): a function's initial values depend only on the seed and its name,
+  not on the other functions (editing the graph keeps them).  `scale` is
+  passed on to the functions if given.  **`calibrate(samples)`**
   replays the calls in order on the samples, calibrating each function (at its
   first call) on its call's inputs before evaluating it, so later functions
   see calibrated earlier ones.
@@ -287,8 +291,19 @@ dpt(U, description, mu, P0, P1, list(net.parameters()),
   `X_c(x) -> V(x) X_c(x) V(x)^dag`:
   `Y_c = sum_d (a_cd X_d + b_cd X_d^dag) + beta_c 1`, `Z_c = Y_c Y_{c+1}`,
   optional gate `relu(alpha_c (q_c - mean_c) inv_std_c + gamma_c)` with the
-  invariant `q_c = tr(Y_c Y_c^dag)/N`, `X_c <- X_c + Z_c`.  Network: replicate
+  invariant `q_c = tr(Y_c Y_c^dag)/N`, `X_c <- X_c + gain_c Z_c`.  Network: replicate
   -> L blocks -> linear_combination (see `tests/ml/local_covariant_matrix.py`).
+
+**Initialization convention.**  A layer is parameterized so that zero
+(or a designated part of its parameters) gives the identity (or the neutral
+element); `initialize(rng, scale=None)` draws around it with `scale` the
+distance from the identity (None: the layer's default; 0: exactly the
+identity).  Random scales follow the fan-in (sigma / sqrt(n) for a sum of n
+terms).  Corrections that are quadratic in the weights get an output factor
+initialized at `scale` (ReZero style, `local_covariant_matrix.gain`): at
+`scale = 0` the block is the identity while the gradient w.r.t. the factor
+is nonzero (inner weights at O(1)).  Stacked zero factors start learning
+from the outside in (the readout first, then the blocks).
 
 Writing a new layer:
 
@@ -296,8 +311,8 @@ Writing a new layer:
    `g.ml.function`: `g.ml` does not exist yet while `gpt` imports its layers).
 2. Declare typed slots from a template; build grid-dependent helpers (unit
    matrix, unit field) at construction as plain attributes, not slots.
-3. Initialize near a known-good map (identity/residual), small random weights,
-   nothing exactly zero that would block gradients.
+3. Initialize near the identity following the convention above
+   (`initialize(rng, scale=None)`).
 4. Use only gauge-covariant operations if the layer claims covariance:
    scalar coefficients, products, adjoints, the identity, traces, and
    componentwise maps of invariants; `g.matrix.exp` commutes with conjugation.

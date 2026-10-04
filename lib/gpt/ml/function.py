@@ -211,7 +211,7 @@ class function:
     Subclasses call __init__ with the slots and implement
 
       evaluate(self, inputs, parameters, constants) -> list of outputs
-      initialize(self, rng)
+      initialize(self, rng, scale=None)
 
     evaluate receives one value per slot (a list for a list slot) and must
     work on plain values and on nodes of any depth.  If any input or
@@ -325,7 +325,9 @@ class function:
             g.message("set_state: warning: the graph differs from the one the state was saved from")
 
     # to be implemented by subclasses
-    def initialize(self, rng):
+    def initialize(self, rng, scale=None):
+        # set the parameters (convention: near the identity / neutral
+        # element, scale = the distance from it, None = the default)
         raise NotImplementedError()
 
     def evaluate(self, inputs, parameters, constants):

@@ -31,6 +31,7 @@
 #
 import itertools
 import re
+import gpt as g
 from gpt.ml.function import function, _check_name, _check_names, _named_storage, _storage_list
 
 _creation = itertools.count()
@@ -432,9 +433,17 @@ class composite(function):
     def draw(self, ax=None):
         return self._graph.draw(ax, self._input_symbols)
 
-    def initialize(self, rng):
+    def initialize(self, rng, scale=None):
+        # each function from its own stream, seeded by the seed of rng and the
+        # function's name (its first call), so that its initial values do not
+        # depend on the other functions; scale (the distance from the
+        # identity, None: the functions' defaults) is passed on if given
         for f in self._layout.functions:
-            f.initialize(rng)
+            sub = g.random(f"{rng.seed}/{self._layout.prefix[id(f)]}", rng.engine)
+            if scale is None:
+                f.initialize(sub)
+            else:
+                f.initialize(sub, scale=scale)
 
     def _lookup_function(self, name):
         call, _, rest = name.partition(".")

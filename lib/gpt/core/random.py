@@ -31,6 +31,8 @@ class random:
             if engine is None:
                 engine = "vectorized_ranlux24_389_64"
 
+        # kept so that independent streams can be derived (e.g. g.ml initialization)
+        self.seed, self.engine = s, engine
         self.verbose = gpt.default.is_verbose("random")
         self.verbose_performance = gpt.default.is_verbose("random_performance")
         t0 = gpt.time()
