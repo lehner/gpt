@@ -277,6 +277,15 @@ Numbers and numpy arrays work as fields of the action pipeline
 generic Jacobians, log-det forces); all derivative fields are found by
 identity.
 
+- **Preimages as nodes**: `directional_parallel_transport.inv(fields)` accepts
+  nodes (`g.ad.reverse.preimage`: plain inverse forward, backward from the
+  transport's Jacobian by one small solve per step), so a latent field
+  U(theta) = Phi_theta^-1(U0) of a fixed configuration U0 is an ordinary node
+  value: `x = U0; for phi in steps: x = phi.inv(x + p)[0:4]` with the
+  transport parameters `p` as nodes, then `functional_node(Q, x + p)`.  The
+  gradient then includes the dependence of the latent field on the parameters
+  (`applications/hmc/fthmc-learn.py --stage learn_rho`).
+
 **Learnable loop function** of `directional_parallel_transport`
 (`tests/ml/loop_function.py`): the network's weights are the transport
 parameters, and the transport calls the network on its loop sums:

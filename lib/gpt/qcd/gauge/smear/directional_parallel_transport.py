@@ -373,6 +373,11 @@ class directional_parallel_transport(dft_diffeomorphism):
         return _adjoint_matrix(grid, otype.Nc, coor)
 
     def inv(self, fields, max_iter=100):
+        # with nodes: the preimage as a node (its backward from the Jacobian
+        # of this transport, see g.ad.reverse.preimage)
+        if any(isinstance(x, g.ad.reverse.node_base) for x in fields):
+            (u,) = g.ad.reverse.preimage(self, fields, [self.mu], lambda v: self.inv(v, max_iter))
+            return [u if i == self.mu else fields[i] for i in range(len(fields))]
         # invert U_mu' = exp(TA(P1 f(C U_mu^dag))) U_mu by the fixed-point
         # iteration U_mu <- exp(-TA(P1 f(C U_mu^dag))) U_mu'.  The staple C is
         # evaluated once on the smeared fields: this requires that it does

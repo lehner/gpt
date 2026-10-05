@@ -360,3 +360,34 @@ assert eps < 1e-7
 
 # and the gradient w.r.t. all fields (links: with the commutator term)
 Q.assert_gradient_error(rng, U + params_s, U + params_s, 1e-3, 1e-7)
+
+
+# the preimage as nodes: inv accepts nodes, its backward follows from the
+# Jacobian of the transport (g.ad.reverse.preimage); a gauge action of the
+# preimage of two steps, w.r.t. the links and rho (the differences use the
+# plain inverse)
+grid4 = g.grid([4, 4, 4, 4], g.double)
+rho_pre = g.complex(grid4)
+rho_pre[:] = 0.07
+U_pre = g.qcd.gauge.random(grid4, rng, scale=0.5)
+even4, odd4 = g.even_odd_projectors(grid4)
+description_pre = [(rho_pre, g.path().f(nu).f(0).b(nu).b(0)) for nu in range(1, 4)] + [
+    (rho_pre, g.path().b(nu).f(0).f(nu).b(0)) for nu in range(1, 4)
+]
+steps_pre = [
+    g.qcd.gauge.smear.directional_parallel_transport(U_pre, description_pre, 0, g(even4 + odd4), P1, [rho_pre])
+    for P1 in [odd4, even4]
+]
+leaves_U = [rad.node(u) for u in U_pre]
+leaf_rho = rad.node(rho_pre)
+x_pre, x_plain = leaves_U, list(U_pre)
+for phi in steps_pre:
+    x_pre = phi.inv(x_pre + [leaf_rho])[0:4]
+    x_plain = phi.inv(x_plain + [rho_pre])[0:4]
+a_pre = g.qcd.gauge.action.iwasaki(5.5)
+cost_pre = rad.functional_node(a_pre, x_pre).functional(*leaves_U, leaf_rho)
+eps = abs(cost_pre(U_pre + [rho_pre]) - a_pre(x_plain)) / abs(a_pre(x_plain))
+g.message(f"Preimage nodes: value vs plain inverse: {eps}")
+assert eps < 1e-14
+cost_pre.assert_gradient_error(rng, U_pre + [rho_pre], U_pre + [rho_pre], 1e-4, 1e-8)
+cost_pre.assert_gradient_error(rng, U_pre + [rho_pre], [rho_pre], 1e-4, 1e-8)

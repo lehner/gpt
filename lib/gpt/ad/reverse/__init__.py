@@ -20,3 +20,4 @@ from gpt.ad.reverse.node import node, node_base, node_op
 import gpt.ad.reverse.transform
 import gpt.ad.reverse.foundation
 from gpt.ad.reverse.functional_node import functional_node
+from gpt.ad.reverse.preimage import preimage
