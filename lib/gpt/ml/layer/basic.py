@@ -80,3 +80,28 @@ class broadcast(function):
         if self.real:
             value = g.component.real(value)
         return [g(value * self.unit)]
+
+
+class polynomial(function):
+    """y = x + sum_{k=2}^{degree} c_k x^k with complex numbers c: a site-local
+    polynomial of a matrix field, covariant (x -> V x V^dag gives
+    y -> V y V^dag).  The identity for c = 0, where the gradients w.r.t. c do
+    not vanish; initialize draws c at scale (default 0: the identity)."""
+
+    def __init__(self, template, degree, scale=0.0):
+        assert degree >= 2
+        self.degree, self.scale = degree, scale
+        super().__init__([("x", template)], [("y", template)], [("c", [0j] * (degree - 1))])
+
+    def initialize(self, rng, scale=None):
+        scale = self.scale if scale is None else scale
+        self["c"] = [scale * rng.normal_element(0j) / np.sqrt(2) for _ in range(self.degree - 1)]
+
+    def evaluate(self, inputs, parameters, constants):
+        (x,) = inputs
+        (c,) = parameters
+        y, power = x, x
+        for ck in c:
+            power = g(power * x)
+            y = g(y + ck * power)
+        return [y]

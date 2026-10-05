@@ -86,7 +86,8 @@ for f in \
     ${test_path}/ml/graph.py \
     ${test_path}/ml/local_covariant_matrix.py \
     ${test_path}/ml/loop_function.py \
-    ${test_path}/ml/monitor.py
+    ${test_path}/ml/monitor.py \
+    ${test_path}/ml/layers.py
 do
 
 printf "%-120s" " [TEST] $f"
