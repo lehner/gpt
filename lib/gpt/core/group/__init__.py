@@ -19,6 +19,7 @@
 from gpt.core.group.operation import (
     defect,
     cartesian,
+    zero,
     inner_product,
     compose,
     projected_convert,
@@ -27,3 +28,4 @@ from gpt.core.group.operation import (
 )
 from gpt.core.group.differentiable_functional import differentiable_functional, directional_derivative
 from gpt.core.group.diffeomorphism import diffeomorphism, local_diffeomorphism
+from gpt.core.group.algebra_kernels import algebra_kernels

@@ -21,4 +21,5 @@ from gpt.core.parallel_transport.legacy import path, parallel_transport
 from gpt.core.parallel_transport.matrix import (
     parallel_transport_matrix,
     parallel_transport_weighted,
+    staple_description,
 )

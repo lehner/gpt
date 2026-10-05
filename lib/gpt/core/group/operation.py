@@ -39,6 +39,17 @@ def cartesian(field):
     return g.lattice(field.grid, field.otype.cartesian()).checkerboard(field.checkerboard())
 
 
+def zero(field):
+    # the zero of the cartesian space of field (a lattice of the algebra for
+    # a group field, 0 for numbers and arrays)
+    if isinstance(field, list):
+        return [zero(f) for f in field]
+    z = cartesian(field)
+    if isinstance(z, g.lattice):
+        z[:] = 0
+    return z
+
+
 def projected_convert(x, otype):
     return g.project(g.convert(x, otype), "defect")
 

@@ -41,6 +41,7 @@ from gpt.core.parallel_transport import (
     parallel_transport,
     parallel_transport_matrix,
     parallel_transport_weighted,
+    staple_description,
 )
 from gpt.core.transform import (
     cshift,

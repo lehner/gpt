@@ -49,9 +49,7 @@ class dft_diffeomorphism(diffeomorphism):
         assert len(fields) == N
         assert len(dfields) == N
         aU_prime = [g.cartesian_to_infinitesimal(fields_prime[mu], dfields[mu]) for mu in range(N)]
-        for mu in range(N):
-            assert_compatible(self.aU[mu].value, fields[mu])
-            self.aU[mu].value = fields[mu]
+        self._set_leaves(fields)
         gradient = [None] * N
         for mu in range(N):
             # make sure all gradients are reset
@@ -67,6 +65,12 @@ class dft_diffeomorphism(diffeomorphism):
                     gradient[nu].otype = dfields[nu].otype
 
         return gradient
+
+    def _set_leaves(self, fields):
+        # the leaves of the graph aUft take the values of fields
+        for leaf, x in zip(self.aU, fields):
+            assert_compatible(leaf.value, x)
+            leaf.value = x
 
     def adjoint_jacobian(self, fields, dfields):
         N = len(fields)

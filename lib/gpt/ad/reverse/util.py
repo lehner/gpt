@@ -217,6 +217,17 @@ def value_of(x):
     return x.value
 
 
+def resolve(x):
+    # the plain value of a result of a finished pass: nested nodes unwrapped
+    # (value_of keeps them, see there), expressions evaluated, None passed
+    # through.  Not for values that deeper passes still differentiate.
+    if x is None:
+        return None
+    while is_node(x):
+        x = value_of(x)
+    return g(x) if isinstance(x, g.expr) else x
+
+
 def value_depth_static(x):
     # number of nested node levels below x, WITHOUT forcing a forward
     # evaluation.  This is the only depth measure: resolving the depth by

@@ -547,7 +547,7 @@ Plain-run optimizations:
 | Path | Role |
 |---|---|
 | `lib/gpt/ad/reverse/node.py` | node, node_op, forward/backward, functional |
-| `lib/gpt/ad/reverse/util.py` | nodify, product, value_of, containers |
+| `lib/gpt/ad/reverse/util.py` | nodify, product, value_of, `resolve` (plain value of a finished pass's result), containers |
 | `lib/gpt/ad/reverse/transform.py` | sin/cos/... node transforms |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order; used by `g.ml` losses) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
@@ -558,9 +558,11 @@ Plain-run optimizations:
 | `lib/gpt/core/local_stencil/cse.py` | common-subexpression elimination of a kernel's execution plan (tested in `tests/core/stencil.py`) |
 | `tests/ad/stencil.py` | stencil AD: fused two-output stencil, path-based stencils, local temporaries (staple action vs cshift graph) at 1st/2nd/3rd order, `with_value=False` |
 | `lib/gpt/qcd/gauge/action/staple_stencil.py` | gauge action value/force as AD stencils (plaquette loop, or staples as local temporaries with rectangles) |
-| `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple, log-det and its force, `inv` |
+| `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple (`g.staple_description`), the per-site Jacobian block (`jacobian_matrix`, optionally at a prescribed staple), log-det and its force (also weighted per site), `inv` (fixed point, then site-local Newton steps; `inverse_history`) |
 | `lib/gpt/ad/forward/` | series / Landau differential algebra |
-| `lib/gpt/core/group/operation.py` | inner_product/compose dispatch |
+| `lib/gpt/core/group/operation.py` | inner_product/compose dispatch, `zero` (cartesian zero) |
+| `lib/gpt/core/group/algebra_kernels.py` | `g.group.algebra_kernels`: site-local kernels between SU(N) algebra fields and adjoint matrices (coordinates as rows, combinations of generators) |
+| `lib/gpt/core/parallel_transport/matrix.py` | weighted parallel transports; `g.staple_description` (the staple of a link in a loop description) |
 | `lib/gpt/core/group/differentiable_functional.py` | action functional + `assert_gradient_error` |
 | `lib/gpt/core/object_type/su_n.py` | SU(N) group/algebra otypes, generators, conversions |
 | `lib/gpt/qcd/gauge/action/wilson.py` | Wilson action (AD stencil value/force; hand-written staples for the heatbath) |

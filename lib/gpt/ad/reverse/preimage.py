@@ -21,14 +21,6 @@ from gpt.ad.reverse.node import node_base, node_op
 from gpt.ad.reverse.util import container, is_node, value_of
 
 
-def _zero(x):
-    if isinstance(x, g.lattice):
-        z = g.group.cartesian(x)
-        z[:] = 0
-        return z
-    return g.group.cartesian(x)
-
-
 def preimage(dfm, fields, indices, inverse, inverter=None):
     """The preimage x = phi^-1(y) of a map phi (a diffeomorphism with
     jacobian) as nodes.  phi updates the fields at indices and keeps the others
@@ -66,7 +58,7 @@ def preimage(dfm, fields, indices, inverse, inverter=None):
         # the vector-Jacobian product of phi at x for a cotangent lam on the
         # updated fields (zero on the others)
         x, y = state["x"], state["y"]
-        d = [_zero(v) for v in x]
+        d = [g.group.zero(v) for v in x]
         for i, l in zip(indices, lam):
             d[i] = l
         return dfm.jacobian(x, y, d)
@@ -75,7 +67,7 @@ def preimage(dfm, fields, indices, inverse, inverter=None):
         x, y = state["x"], state["y"]
         c = z.gradient if len(indices) > 1 else [z.gradient]
         c = [
-            _zero(x[i]) if ci is None else g.infinitesimal_to_cartesian(x[i], ci)
+            g.group.zero(x[i]) if ci is None else g.infinitesimal_to_cartesian(x[i], ci)
             for i, ci in zip(indices, c)
         ]
         if len(indices) == 1:

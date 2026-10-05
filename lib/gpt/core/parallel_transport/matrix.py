@@ -213,3 +213,33 @@ def parallel_transport_weighted(links, entries, keys=None):
         return g.util.to_list(ptm(links))
 
     return transport, group_info
+
+
+def staple_description(description_mu, mu, nd):
+    # The staple of the link (x, mu) in a weighted description (pairs
+    # (weight, g.path)).  If every path is a closed loop at x whose ONLY traversal of the updated
+    # link (x, mu) is its final b(mu) step, the transported loop factorizes as
+    # C(x) U_mu(x)^dag with a staple C that does not depend on U_mu(x).  The
+    # mu->mu Jacobian block of a transport updating U_mu is then a site-local
+    # function of (U_mu(x), C(x)) (see directional_parallel_transport).  Returns
+    # the staple description (paths with the final b(mu) removed), or None if
+    # the factorization does not apply.
+    staple = []
+    for weight, p in description_mu:
+        steps = [(nu, 1 if d > 0 else -1) for nu, d in p.path for _ in range(abs(d))]
+        pos = [0] * nd
+        touched = []
+        for i, (nu, s) in enumerate(steps):
+            if nu == mu and ((s == 1 and all(x == 0 for x in pos)) or (
+                s == -1 and all(pos[k] == (1 if k == mu else 0) for k in range(nd))
+            )):
+                touched.append(i)
+            pos[nu] += s
+        if any(x != 0 for x in pos) or touched != [len(steps) - 1] or steps[-1] != (mu, -1):
+            return None
+        head = list(p.path[:-1])
+        nu, d = p.path[-1]
+        if d != -1:
+            head.append((nu, d + 1))
+        staple.append((weight, g.path(head)))
+    return staple
