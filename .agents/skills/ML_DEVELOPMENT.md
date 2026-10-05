@@ -22,11 +22,13 @@ over time.  Known AD gaps that limit `g.ml` are collected in
 |---|---|
 | `lib/gpt/ml/function.py` | `g.ml.function` (base class), named storage, `_storage_list` |
 | `lib/gpt/ml/graph.py` | symbols, symbolic calls, `g.ml.pack`, `g.ml.composite`, `describe` |
+| `lib/gpt/ml/monitor.py` | diagnostics: `snapshot`, `displacement`, `activity`, `gradient_noise` |
 | `lib/gpt/ml/layer/basic.py` | `replicate`, `linear_combination` |
 | `lib/gpt/ml/layer/local_covariant_matrix.py` | gauge-covariant residual block on matrix channels |
 | `tests/ml/function.py` | slots, names, storage, plain/node evaluation, type checks, gradients, training |
 | `tests/ml/graph.py` | symbolic composition, ownership, sharing, nesting, `describe` |
 | `tests/ml/local_covariant_matrix.py` | the covariant network: covariance, gradients, training, exact threshold solution |
+| `tests/ml/monitor.py` | the diagnostics against hand-computed values |
 | `tests/ml/loop_function.py` | a network as learnable loop function of two flow layers, trained on squared force contractions |
 | `documentation/tutorials/advanced/ml-graphs.ipynb` | tutorial: functions, symbolic graphs, sharing, `describe`, covariance, training |
 | `lib/gpt/ad/reverse/functional_node.py` | `g.ad.reverse.functional_node` (a functional as a node, first order) |
@@ -251,6 +253,29 @@ g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.pa
 - Adam returns the last iterate, not the best; a too large `alpha` can end on
   an overshoot (5e-3 works for the covariant network).
 
+### Diagnostics (`lib/gpt/ml/monitor.py`)
+
+Whether a model trains, or still sits at its initialization:
+
+- **`g.ml.gradient_noise(cost, fields, n, names=None)`**: `cost()` draws a
+  new stochastic cost functional at the current fields; returns
+  `{name: (|mean|, std, snr)}` of each field's gradient over n draws, with
+  `snr = |mean|^2 / std^2` per draw.  At snr below about one a single draw's
+  gradient sign is mostly noise, and Adam does a random walk of its step size
+  (`alpha` per step, whatever the true gradient).  Fixes: average more draws
+  per step, a smaller `alpha`, or a lower-variance estimator (for a force
+  norm: the direction v = F / |F|, below).
+- **`g.ml.snapshot(f)` / `g.ml.displacement(f, reference)`**: copies of the
+  parameters by name, and `{name: (|p - p_ref|, relative)}` against them.
+  Moves of the order of `alpha` per step mean the parameter is driven by
+  noise or not at all.
+- **`g.ml.activity(f, inputs)`**: on plain inputs, for each call of a
+  composite `|y - x| / |x|` (its first output against its first input of
+  the same type: the residual branch relative to the skip connection; None
+  if there is none, e.g. `replicate`), and `""` for the function as a whole.
+  A block can have moving parameters and still contribute nothing (e.g. a
+  quadratic term with two small factors, gain times a readout weight).
+
 ### Actions and other functionals in a loss
 
 Actions, flows and log-dets are `differentiable_functional`s with their own
@@ -267,6 +292,12 @@ Actions, flows and log-dets are `differentiable_functional`s with their own
   of `S.gradient` (symmetry of second derivatives); for SU(N) fields along v
   the non-commuting flows add -i [v, grad S].  Loss on force contractions:
   `sum(q * q for q in [functional_node(Q_i, U + leaves) ...])`.
+- **Force norm without noise.**  For |F|^2 with F the force of an action,
+  the cost `<v, F>^2` with the single fixed direction v = F / |F| (computed
+  at the current parameters) has the value |F|^2 and the gradient of |F|^2
+  (the dependence of v drops out to first order): an exact gradient at the
+  cost of one random direction.  It is a different functional at every
+  point, so check gradients with random directions.
 - **`g.ml.fields(*lists)`**: one write-through list over several lists (e.g.
   `g.ml.fields(U, net.parameters())`), for functionals that take all fields
   as one list while an optimizer or a check must update the function's own
@@ -284,7 +315,10 @@ identity.
   value: `x = U0; for phi in steps: x = phi.inv(x + p)[0:4]` with the
   transport parameters `p` as nodes, then `functional_node(Q, x + p)`.  The
   gradient then includes the dependence of the latent field on the parameters
-  (`applications/hmc/fthmc-learn.py --stage learn_rho`).
+  (`applications/hmc/fthmc-learn.py --stage learn_rho`).  The inverse raises
+  a `RuntimeError` (with the contraction rate of its fixed-point iteration)
+  if it does not converge: training can drive a transport to where it is no
+  longer invertible, so a training loop catches it and keeps its best point.
 
 **Learnable loop function** of `directional_parallel_transport`
 (`tests/ml/loop_function.py`): the network's weights are the transport
@@ -315,6 +349,11 @@ dpt(U, description, mu, P0, P1, list(net.parameters()),
   optional gate `relu(alpha_c (q_c - mean_c) inv_std_c + gamma_c)` with the
   invariant `q_c = tr(Y_c Y_c^dag)/N`, `X_c <- X_c + gain_c Z_c`.  Network: replicate
   -> L blocks -> linear_combination (see `tests/ml/local_covariant_matrix.py`).
+  With a readout, the block's correction to the output is `w_c gain_c Z_c`,
+  a product of two small initial factors (slow to start), and the readout's
+  `w_c X_c ~ w_c x` duplicates any scale already in the input (e.g. rho of a
+  loop function).  A single channel without readout (`replicate(P, 1)` ->
+  block, output the list) has a correction linear in gain.
 
 **Initialization convention.**  A layer is parameterized so that zero
 (or a designated part of its parameters) gives the identity (or the neutral

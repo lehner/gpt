@@ -366,7 +366,7 @@ Q.assert_gradient_error(rng, U + params_s, U + params_s, 1e-3, 1e-7)
 # Jacobian of the transport (g.ad.reverse.preimage); a gauge action of the
 # preimage of two steps, w.r.t. the links and rho (the differences use the
 # plain inverse)
-grid4 = g.grid([4, 4, 4, 4], g.double)
+grid4 = g.grid([4, 4, 4, 8], g.double)
 rho_pre = g.complex(grid4)
 rho_pre[:] = 0.07
 U_pre = g.qcd.gauge.random(grid4, rng, scale=0.5)

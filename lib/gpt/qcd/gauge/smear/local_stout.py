@@ -52,9 +52,9 @@ class local_stout(local_diffeomorphism):
         t, U = self.transport(fields)
         return t(U)
 
-    def inv(self, fields, max_iter=100):
+    def inv(self, fields, max_iter=100, eps=None):
         t, U = self.transport(fields)
-        return t.inv(U, max_iter=max_iter)
+        return t.inv(U, max_iter=max_iter, eps=eps)
 
     def jacobian(self, fields, fields_prime, src):
         t, U = self.transport(fields)

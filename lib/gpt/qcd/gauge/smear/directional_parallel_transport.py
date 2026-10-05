@@ -372,42 +372,54 @@ class directional_parallel_transport(dft_diffeomorphism):
                 coor[a, b] = c
         return _adjoint_matrix(grid, otype.Nc, coor)
 
-    def inv(self, fields, max_iter=100):
+    def inv(self, fields, max_iter=100, eps=None):
         # with nodes: the preimage as a node (its backward from the Jacobian
         # of this transport, see g.ad.reverse.preimage)
         if any(isinstance(x, g.ad.reverse.node_base) for x in fields):
-            (u,) = g.ad.reverse.preimage(self, fields, [self.mu], lambda v: self.inv(v, max_iter))
+            (u,) = g.ad.reverse.preimage(
+                self, fields, [self.mu], lambda v: self.inv(v, max_iter, eps)
+            )
             return [u if i == self.mu else fields[i] for i in range(len(fields))]
         # invert U_mu' = exp(TA(P1 f(C U_mu^dag))) U_mu by the fixed-point
         # iteration U_mu <- exp(-TA(P1 f(C U_mu^dag))) U_mu'.  The staple C is
         # evaluated once on the smeared fields: this requires that it does
         # not depend on the updated links (e.g. a checkerboard P1 with
-        # plaquette staples), which is verified at the end.
+        # plaquette staples), which is verified at the end.  Converged when
+        # the change per site is below eps (default: ten times the precision,
+        # above the rounding floor of the update); raises otherwise.
         assert self.description_staple is not None
         mu, nd = self.mu, self.nd
         C = self._staple(fields)
         xparams = fields[nd:]
         U_prime_mu = fields[mu]
         U_mu = g.copy(U_prime_mu)
-        eps = U_mu.grid.precision.eps
+        precision = U_mu.grid.precision.eps
+        if eps is None:
+            eps = 10 * precision
+        history = []
         for it in range(max_iter):
             U_mu_last = g.copy(U_mu)
             xU_P0 = g(U_mu * self.P0) if self.P0 is not None else U_mu
             U_mu @= g.matrix.exp(-self._project(g(C * g.adj(xU_P0)), xparams)) * U_prime_mu
-            eps2 = g.norm2(U_mu_last - U_mu) / U_mu.grid.gsites
-            if eps2 < eps**2:
+            history.append(g.norm2(U_mu_last - U_mu) / U_mu.grid.gsites)
+            if history[-1] < eps**2:
                 break
-        if it == max_iter - 1:
-            g.message(
-                f"Warning: directional_parallel_transport could not be inverted; last eps^2 = {eps2} after {max_iter} iterations"
+        else:
+            # the contraction rate (the ratio of successive changes) tells a
+            # slow iteration (close to 1: the update is close to not
+            # invertible) from a stalled one (rounding)
+            rate = (history[-1] / history[-11]) ** (1 / 20) if len(history) > 10 else None
+            raise RuntimeError(
+                f"directional_parallel_transport could not be inverted: change^2 per site "
+                f"{history[-1]:.3e} > {eps**2:.3e} after {max_iter} iterations "
+                f"(contraction rate {rate})"
             )
-            return None
         U = [U_mu if i == mu else fields[i] for i in range(len(fields))]
         # the staple of the result must be the one used above (where it
         # enters the update)
         C_check = self._staple(U)
         eps2 = g.norm2(self.P1 * (C_check - C)) / max(g.norm2(self.P1 * C), 1e-300)
-        assert eps2 < 1e4 * eps**2, f"staple depends on the updated links ({eps2})"
+        assert eps2 < 1e4 * precision**2, f"staple depends on the updated links ({eps2})"
         return U
 
     def _project(self, sm, xparams):

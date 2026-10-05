@@ -18,4 +18,5 @@
 #
 from gpt.ml.function import function, fields
 from gpt.ml.graph import composite, symbols, pack
+from gpt.ml.monitor import snapshot, displacement, activity, gradient_noise
 import gpt.ml.layer
