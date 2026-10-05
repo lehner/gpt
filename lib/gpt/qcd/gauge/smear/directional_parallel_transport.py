@@ -322,18 +322,22 @@ class directional_parallel_transport(dft_diffeomorphism):
         self.aU[mu].gradient.otype = dfields_mu.otype
         return g(self.aU[mu].gradient * self.P1)
 
-    def jacobian_matrix(self, fields):
+    def jacobian_matrix(self, fields, staple=None):
+        # staple(fields): a staple other than the transport's own (local
+        # transports only), e.g. prescribed sample staples
         if self.description_staple is not None:
-            return self._local_jacobian_matrix(fields)[0]
+            return self._local_jacobian_matrix(fields, None if staple is None else g(staple(fields)))[0]
+        assert staple is None
         return self._jacobian_matrix_generic(fields)
 
-    def _local_jacobian_matrix(self, fields):
+    def _local_jacobian_matrix(self, fields, C=None):
         # the mu->mu block from VJPs through the stencil-free local map
-        # f(U_mu, C) at fixed staple C (see _staple_description); returns the
-        # block and the staple
+        # f(U_mu, C) at fixed staple C (default: the staple of fields, see
+        # _staple_description); returns the block and the staple
         rad = g.ad.reverse
         mu, P1 = self.mu, self.P1
-        C = self._staple(fields)
+        if C is None:
+            C = self._staple(fields)
         U_mu = fields[mu]
 
         grid = U_mu.grid
@@ -372,20 +376,24 @@ class directional_parallel_transport(dft_diffeomorphism):
                 coor[a, b] = c
         return _adjoint_matrix(grid, otype.Nc, coor)
 
-    def inv(self, fields, max_iter=100, eps=None):
+    def inv(self, fields, max_iter=100, eps=None, newton_rate=0.5):
         # with nodes: the preimage as a node (its backward from the Jacobian
         # of this transport, see g.ad.reverse.preimage)
         if any(isinstance(x, g.ad.reverse.node_base) for x in fields):
             (u,) = g.ad.reverse.preimage(
-                self, fields, [self.mu], lambda v: self.inv(v, max_iter, eps)
+                self, fields, [self.mu], lambda v: self.inv(v, max_iter, eps, newton_rate)
             )
             return [u if i == self.mu else fields[i] for i in range(len(fields))]
         # invert U_mu' = exp(TA(P1 f(C U_mu^dag))) U_mu by the fixed-point
         # iteration U_mu <- exp(-TA(P1 f(C U_mu^dag))) U_mu'.  The staple C is
         # evaluated once on the smeared fields: this requires that it does
         # not depend on the updated links (e.g. a checkerboard P1 with
-        # plaquette staples), which is verified at the end.  Converged when
-        # the change per site is below eps (default: ten times the precision,
+        # plaquette staples), which is verified at the end.  If the iteration
+        # contracts slowly (a rate above newton_rate, None: never), it
+        # continues with site-local Newton steps (see _newton_step), which
+        # also converge where the fixed-point iteration does not (a site map
+        # that is a bijection but not a contraction).  Converged when the
+        # change per site is below eps (default: ten times the precision,
         # above the rounding floor of the update); raises otherwise.
         assert self.description_staple is not None
         mu, nd = self.mu, self.nd
@@ -396,14 +404,24 @@ class directional_parallel_transport(dft_diffeomorphism):
         precision = U_mu.grid.precision.eps
         if eps is None:
             eps = 10 * precision
-        history = []
+        # the change^2 per site of each iteration of the last inverse (a
+        # diagnostic: its ratios give the contraction rate)
+        history = self.inverse_history = []
+        self.inverse_newton_iterations = 0
+        newton = False
         for it in range(max_iter):
             U_mu_last = g.copy(U_mu)
-            xU_P0 = g(U_mu * self.P0) if self.P0 is not None else U_mu
-            U_mu @= g.matrix.exp(-self._project(g(C * g.adj(xU_P0)), xparams)) * U_prime_mu
+            if newton:
+                U_mu @= self._newton_step(fields, U_mu, U_prime_mu, C, xparams)
+                self.inverse_newton_iterations += 1
+            else:
+                xU_P0 = g(U_mu * self.P0) if self.P0 is not None else U_mu
+                U_mu @= g.matrix.exp(-self._project(g(C * g.adj(xU_P0)), xparams)) * U_prime_mu
             history.append(g.norm2(U_mu_last - U_mu) / U_mu.grid.gsites)
             if history[-1] < eps**2:
                 break
+            if not newton and newton_rate is not None and len(history) >= 5:
+                newton = (history[-1] / history[-5]) ** (1 / 8) > newton_rate
         else:
             # the contraction rate (the ratio of successive changes) tells a
             # slow iteration (close to 1: the update is close to not
@@ -415,12 +433,69 @@ class directional_parallel_transport(dft_diffeomorphism):
                 f"(contraction rate {rate})"
             )
         U = [U_mu if i == mu else fields[i] for i in range(len(fields))]
+        if self.inverse_newton_iterations > 0:
+            # Newton finds a preimage, which is the preimage only if the site
+            # map is a bijection; a solution on the other side of a fold has
+            # det M <= 0 (the map of a bijection connected to the identity
+            # has det M > 0 everywhere)
+            det = g.matrix.det(self._local_jacobian_matrix(U, C)[0])
+            one = g.complex(det.grid)
+            one[:] = 1
+            det = g.where(self.P1, det, one)[:].real
+            if det.min() <= 0:
+                raise RuntimeError(
+                    f"directional_parallel_transport could not be inverted: the Newton solution has "
+                    f"det M <= 0 at {int((det <= 0).sum())} sites (the site map is not a bijection)"
+                )
         # the staple of the result must be the one used above (where it
         # enters the update)
         C_check = self._staple(U)
         eps2 = g.norm2(self.P1 * (C_check - C)) / max(g.norm2(self.P1 * C), 1e-300)
         assert eps2 < 1e4 * precision**2, f"staple depends on the updated links ({eps2})"
         return U
+
+    def _newton_step(self, fields, U_mu, U_prime_mu, C, xparams):
+        # one site-local Newton step for F(U_mu) = U_mu' (F the local map at
+        # the fixed staple C): the residual r = TA(U_mu' F(U_mu)^dag) (the log
+        # up to third order), the Jacobian block M (see jacobian_matrix) and
+        # U_mu <- exp(d) U_mu with d = M^-1 c in the coordinates c of r
+        # (converges quadratically).  The step is halved while the residual
+        # grows.
+        mu, P1 = self.mu, self.P1
+        otype_cartesian = U_mu.otype.cartesian()
+        kernels = _get_generator_kernels(U_mu.grid, otype_cartesian)
+        TA = g.qcd.gauge.project.traceless_anti_hermitian
+
+        def residual(U):
+            return TA(g(U_prime_mu * g.adj(self._local_ft(U, C, xparams))))
+
+        r = residual(U_mu)
+        M, _ = self._local_jacobian_matrix(
+            [U_mu if i == mu else fields[i] for i in range(len(fields))], C
+        )
+        Minv = g.matrix.inv(M)
+        del M
+        # (combine contracts the second index: transposed for d = M^-1 c)
+        Minv = g(g.transpose(Minv))
+        zero = g.lattice(Minv)
+        zero[:] = 0
+        Minv = g.where(P1, Minv, zero)
+        right = [g.lattice(U_mu.grid, otype_cartesian) for _ in range(kernels.ng)]
+        kernels.combine(right, Minv)
+        del Minv
+        # (right_a = -sum_b M^-1[b, a] T_b, so d = -sum_a c_a right_a)
+        d = g.lattice(r)
+        d[:] = 0
+        for T, ra in zip(kernels.fgenerators, right):
+            c = g(g.trace(r * T) * (1.0 / complex(g.sum(g.trace(T * T)) / T.grid.gsites).real))
+            d -= c * ra
+        r2 = g.norm2(r)
+        for _ in range(8):
+            U_new = g(g.matrix.exp(d) * U_mu)
+            if g.norm2(residual(U_new)) < r2:
+                break
+            d = g(0.5 * d)
+        return U_new
 
     def _project(self, sm, xparams):
         # TA(P1 f(sm, params)), the generator of the update; every path (the
@@ -431,9 +506,9 @@ class directional_parallel_transport(dft_diffeomorphism):
             sm = g(sm * self.P1)
         return g.qcd.gauge.project.traceless_anti_hermitian(sm)
 
-    def log_det_jacobian_field(self, fields):
+    def log_det_jacobian_field(self, fields, staple=None):
         # the site-local log det of the mu->mu block (zero outside P1)
-        M = self.jacobian_matrix(fields)
+        M = self.jacobian_matrix(fields, staple)
         M_det = g.matrix.det(M)
         M_log_det = g.component.log(M_det)
         zero = g.lattice(M_log_det)
@@ -517,7 +592,15 @@ class directional_parallel_transport(dft_diffeomorphism):
             return self._local_action_log_det_jacobian_gradient(fields, dfields)
         return self._action_log_det_jacobian_gradient_generic(fields, dfields)
 
-    def _local_action_log_det_jacobian_gradient(self, fields, dfields):
+    def weighted_log_det_jacobian_gradient(self, fields, dfields, weight, staple=None):
+        # the gradient of -sum_x weight(x) log det J(x) (weight: a real
+        # complex field, fixed; staple(fields): a staple other than the
+        # transport's own, e.g. prescribed sample staples depending on the
+        # weights' parameters); local transports only
+        assert self.description_staple is not None
+        return self._local_action_log_det_jacobian_gradient(fields, dfields, weight, staple)
+
+    def _local_action_log_det_jacobian_gradient(self, fields, dfields, weight=None, staple=None):
         # Same contraction as the generic version below, but the Jacobian
         # block is a site-local function of (U_mu, C): the 8 second-order
         # passes run over the stencil-free local map f(U_mu, C) and yield
@@ -533,7 +616,7 @@ class directional_parallel_transport(dft_diffeomorphism):
             return g(x)
 
         mu, P1 = self.mu, self.P1
-        M, C = self._local_jacobian_matrix(fields)
+        M, C = self._local_jacobian_matrix(fields, None if staple is None else g(staple(fields)))
 
         U_mu = fields[mu]
         otype_cartesian = U_mu.otype.cartesian()
@@ -550,6 +633,8 @@ class directional_parallel_transport(dft_diffeomorphism):
         zero[:] = 0
         Jinv = g.where(P1, Jinv, zero)
         del zero
+        if weight is not None:
+            Jinv = g(weight * Jinv)
         right = [g.lattice(U_mu.grid, otype_cartesian) for _ in range(ng)]
         _get_generator_kernels(U_mu.grid, otype_cartesian).combine(right, Jinv)
         del Jinv
@@ -610,11 +695,19 @@ class directional_parallel_transport(dft_diffeomorphism):
         nodes = [rad.node(x) for x in fields]
         seed = g(2.0 * grad_C)
         del grad_C
-        self._staple(nodes)(initial_gradient=seed)
+        (self._staple if staple is None else staple)(nodes)(initial_gradient=seed)
         del seed
         out = []
         for i, n in enumerate(nodes):
-            r = g(0 * fields[i]) if n.gradient is None else g(n.gradient)
+            if n.gradient is not None:
+                r = g(n.gradient)
+            elif i < self.nd:
+                # (a link the staple does not depend on, e.g. a prescribed
+                # staple: a zero in the algebra)
+                r = g.group.cartesian(fields[i])
+                r[:] = 0
+            else:
+                r = g(0 * fields[i])
             if i == mu:
                 r = g(r + 2.0 * grad_U)
             elif i >= self.nd and grad_P[i - self.nd] is not None:

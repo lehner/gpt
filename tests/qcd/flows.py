@@ -391,3 +391,58 @@ g.message(f"Preimage nodes: value vs plain inverse: {eps}")
 assert eps < 1e-14
 cost_pre.assert_gradient_error(rng, U_pre + [rho_pre], U_pre + [rho_pre], 1e-4, 1e-8)
 cost_pre.assert_gradient_error(rng, U_pre + [rho_pre], [rho_pre], 1e-4, 1e-8)
+
+# the inverse continues with site-local Newton steps where the fixed-point
+# iteration contracts slowly: a strong loop function, for which the
+# fixed-point iteration alone does not converge
+U_n = g.qcd.gauge.random(grid4, rng, scale=0.3)
+rho_n = g.complex(grid4)
+rho_n[:] = 0.25
+description_n = [(rho_n, g.path().f(nu).f(0).b(nu).b(0)) for nu in range(1, 4)] + [
+    (rho_n, g.path().b(nu).f(0).f(nu).b(0)) for nu in range(1, 4)
+]
+t_n = g.qcd.gauge.smear.directional_parallel_transport(
+    U_n, description_n, 0, g(even4 + odd4), even4, [rho_n],
+    loop_function=lambda sm, xp: g(sm - 0.75 * sm * sm),
+)
+Up_n = t_n(U_n + [rho_n])
+try:
+    t_n.inv(Up_n[0:4] + [rho_n], newton_rate=None)
+    assert False
+except RuntimeError as e:
+    g.message(f"Fixed-point iteration only: {e}")
+x_n = t_n.inv(Up_n[0:4] + [rho_n])
+eps = g.norm2(x_n[0] - U_n[0]) / g.norm2(U_n[0])
+g.message(
+    f"Newton inverse: {len(t_n.inverse_history)} iterations ({t_n.inverse_newton_iterations} Newton), |U - inv(U')|^2 / |U|^2 = {eps}"
+)
+assert t_n.inverse_newton_iterations > 0 and eps < 1e-28
+
+
+# the weighted log det with a prescribed staple (e.g. samples of staples):
+# -sum_x w(x) log det J(x) with C = sum_j rho W_j, its gradient w.r.t. the
+# link, rho and a number parameter of the loop function
+class weighted_log_det(g.group.differentiable_functional):
+    def __init__(self, t, w, staple):
+        self.t, self.w, self.staple = t, w, staple
+
+    def __call__(self, fields):
+        ld = self.t.log_det_jacobian_field(fields, self.staple)
+        return -complex(g.sum(g(self.w * g.component.real(ld)))).real
+
+    def gradient(self, fields, dfields):
+        return self.t.weighted_log_det_jacobian_gradient(fields, dfields, self.w, self.staple)
+
+
+p_w = 0.1 + 0j
+W_w = [g.mcolor(grid4) for _ in range(6)]
+rng.element(W_w, scale=3.0)
+w_w = g.complex(grid4)
+rng.uniform_real(w_w)
+t_w = g.qcd.gauge.smear.directional_parallel_transport(
+    U_pre, description_pre, 0, g(even4 + odd4), even4, [rho_pre, p_w],
+    loop_function=lambda sm, xp: g(sm + xp[1] * sm * sm),
+)
+staple_w = lambda fs: sum(fs[4] * W for W in W_w)
+lw = weighted_log_det(t_w, w_w, staple_w)
+lw.assert_gradient_error(rng, U_pre + [rho_pre, p_w], [U_pre[0], rho_pre, p_w], 1e-4, 1e-8)
