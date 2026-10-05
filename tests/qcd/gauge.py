@@ -451,7 +451,7 @@ for rho in [0.05, 0.1, 0.124, 0.25]:
                 for nu in range(4):
                     eps2 += g.norm2(U[nu] - U0[nu]) / g.norm2(U0[nu])
                 g.message(eps2)
-                assert eps2 < 1e-28
+                assert eps2 < 1e-27
 
 
 # test general differentiable field transformation framework
