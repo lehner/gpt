@@ -105,19 +105,23 @@ class mlp(function):
     complex and initialized at scale (default 0: the output is zero, with
     nonzero gradients w.r.t. the output layer), the hidden layers at
     O(1) / sqrt(fan-in).  (sin: a smooth activation available as a node
-    operation at any nesting depth.)"""
+    operation at any nesting depth.)
+
+    Parameters: W<l>, an n_out_l x (n_in_l + 1) array per layer whose last
+    column is the bias b_l (the input list is extended by the unit field).
+    Each layer is one g.ad.reverse.matrix_vector of the list of fields (a
+    gemm over the sites on the packed list), whose weight gradient is an
+    outer_sum over the sites."""
 
     def __init__(self, template, n_in, n_out, width=16, depth=2, scale=0.0):
         self.n_in, self.n_out, self.width, self.depth, self.scale = n_in, n_out, width, depth, scale
         self.one = _unit(template)
         sizes = [n_in] + [width] * depth + [n_out]
         self.sizes = sizes
-        parameters = []
-        for l in range(len(sizes) - 1):
-            parameters += [
-                (f"W{l}", [0j] * (sizes[l] * sizes[l + 1])),
-                (f"b{l}", [0j] * sizes[l + 1]),
-            ]
+        parameters = [
+            (f"W{l}", np.zeros((sizes[l + 1], sizes[l] + 1), dtype=np.complex128))
+            for l in range(len(sizes) - 1)
+        ]
         s = g.lattice(self.one)
         super().__init__([("x", [s] * n_in)], [("y", [s] * n_out)], parameters)
 
@@ -127,30 +131,27 @@ class mlp(function):
         for l in range(L):
             n0, n1 = self.sizes[l], self.sizes[l + 1]
             if l < L - 1:
-                self[f"W{l}"] = [complex(rng.normal().real / np.sqrt(n0)) for _ in range(n0 * n1)]
-                self[f"b{l}"] = [complex(rng.normal().real) for _ in range(n1)]
+                W = [complex(rng.normal().real / np.sqrt(n0)) for _ in range(n0 * n1)]
+                b = [complex(rng.normal().real) for _ in range(n1)]
             else:
-                self[f"W{l}"] = [
-                    scale * rng.normal_element(0j) / np.sqrt(2 * n0) for _ in range(n0 * n1)
-                ]
-                self[f"b{l}"] = [scale * rng.normal_element(0j) / np.sqrt(2) for _ in range(n1)]
+                W = [scale * rng.normal_element(0j) / np.sqrt(2 * n0) for _ in range(n0 * n1)]
+                b = [scale * rng.normal_element(0j) / np.sqrt(2) for _ in range(n1)]
+            Wb = np.zeros((n1, n0 + 1), dtype=np.complex128)
+            Wb[:, :n0] = np.array(W).reshape(n1, n0)
+            Wb[:, n0] = b
+            self[f"W{l}"] = Wb
 
     def evaluate(self, inputs, parameters, constants):
+        rad = g.ad.reverse
         (x,) = inputs
         L = len(self.sizes) - 1
         for l in range(L):
-            W, b = parameters[2 * l], parameters[2 * l + 1]
-            n0, n1 = self.sizes[l], self.sizes[l + 1]
+            W = parameters[l]
             hidden = l < L - 1
-            w = (lambda p: g.component.real(p)) if hidden else (lambda p: p)
-            y = []
-            for j in range(n1):
-                acc = w(b[j]) * self.one
-                for i in range(n0):
-                    acc = acc + x[i] * w(W[j * n0 + i])
-                acc = g(acc)
-                y.append(g.component.sin(acc) if hidden else acc)
-            x = y
+            if hidden:
+                W = g.component.real(W)
+            y = rad.matrix_vector(W, list(x) + [self.one])
+            x = [g.component.sin(y[j]) if hidden else y[j] for j in range(self.sizes[l + 1])]
         return [x]
 
 

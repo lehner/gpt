@@ -130,10 +130,14 @@ class container:
         return self._zero_one(r)
 
     def _zero_one(self, r):
+        # (assigned, not multiplied: a representative may be uninitialized
+        # memory, and 0 times nan or inf is nan)
         if isinstance(r, g.lattice):
             r[:] = 0
-        elif isinstance(r, (g.tensor, np.ndarray)):
-            r *= 0
+        elif isinstance(r, np.ndarray):
+            r[...] = 0
+        elif isinstance(r, g.tensor):
+            r.array[...] = 0
         elif isinstance(r, complex):
             r = 0.0
         else:
@@ -333,6 +337,21 @@ def accumulate(cur, r, sign, container, depth, adopt=True, owned=True):
     # order, so all contributions to a node arrive before its own backward
     # hands the gradient to its children, after which it is released.  It
     # also requires that backward closures return fields they do not reuse.
+    if (
+        container.tag[0] is list
+        and isinstance(r, list)
+        and (cur is None or isinstance(cur, list))
+    ):
+        # a whole list flowing into a list node: element by element (None:
+        # no flow into that element), each element in a fresh field (the
+        # ownership of list elements is not tracked on this path)
+        cur = [None] * len(r) if cur is None else cur
+        result = []
+        for c, x in zip(cur, r):
+            if x is not None:
+                c, _ = accumulate(c, x, sign, container.tag[1], depth, False, False)
+            result.append(c)
+        return result, True
     if cur is None:
         d = depth()
         if d > 0:

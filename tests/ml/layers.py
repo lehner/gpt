@@ -61,10 +61,8 @@ for k, q in enumerate(I_P):
     assert abs(m) < 1e-12 and abs(s - 1) < 1e-10, (k, m, s)
 # the identity at initialization
 assert g.norm2(net([P])[0] - P) == 0.0
-# a nonzero output layer: covariance and gradients
-for i, w in enumerate(net.parameters()):
-    if net.parameter_names()[i].startswith("mlp.W2") or net.parameter_names()[i].startswith("mlp.b2"):
-        net.parameters()[i] = 0.1 * rng.normal_element(0j)
+# a nonzero output layer (an array, the last column the bias): covariance and gradients
+net["mlp.W2"] = 0.1 * rng.normal_element(np.zeros_like(net["mlp.W2"]))
 (y,) = net([P])
 (yV,) = net([g(V * P * g.adj(V))])
 eps = g.norm2(yV - g(V * y * g.adj(V))) / g.norm2(y)
