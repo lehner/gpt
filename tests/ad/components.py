@@ -61,7 +61,10 @@ Wf[:] = W0
 bf[:] = b0
 y = g.component.sin(g(Wf * h + bf))
 ya = y[:].reshape(-1, n, n)
-ref = sum(np.sum(np.abs(ya[:, k, 0] - t[:].reshape(-1)) ** 2) for k, t in enumerate(targets))
+# (the local sites of this rank, summed over the ranks)
+ref = grid.globalsum(
+    float(sum(np.sum(np.abs(ya[:, k, 0] - t[:].reshape(-1)) ** 2) for k, t in enumerate(targets)))
+)
 leaves = [rad.node(x) for x in s0] + [rad.node(W0), rad.node(b0)]
 f = S(leaves[:n_in], leaves[n_in], leaves[n_in + 1]).functional(*leaves)
 fields = s0 + [W0, b0]
