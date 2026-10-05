@@ -338,6 +338,24 @@ dpt(U, description, mu, P0, P1, list(net.parameters()),
     loop_function=lambda sm, xp: net([sm], xp)[0])
 ```
 
+With fixed loops (`loops=[g.path, ...]`, closed loops at x through no link
+the step updates, e.g. the 2x1 rectangles around U_mu(x) for a checkerboard
+P1) the loop function takes the list of loop fields as a third argument; a
+network with inputs P and L (a list symbol; see `matrix_invariants` below and
+`tests/ml/layers.py`):
+
+```python
+x, l = g.ml.symbols("P", "L")
+inv = g.ml.layer.matrix_invariants(P, len(loops))
+(I,) = inv([x, l], name="invariants")
+(c,) = g.ml.layer.mlp(P, inv.n, g.ml.layer.matrix_words.n)([I], name="mlp")
+(f,) = g.ml.layer.matrix_words(P)([x, c], name="words")
+net = g.ml.pack(f=f).function()              # inputs [P, L]
+net.calibrate([[P, L]])                      # L: a list of loop fields
+dpt(U, description, mu, P0, P1, [rho] + list(net.parameters()), loops=loops,
+    loop_function=lambda sm, xp, L: net([sm, L], xp[1:])[0])
+```
+
 ## 5. Layers (`g.ml.layer`)
 
 - `replicate(template, n)`: `x -> X = [x] * n`.
@@ -351,6 +369,16 @@ dpt(U, description, mu, P0, P1, list(net.parameters()),
   `rho` of `directional_parallel_transport` (`tests/ml/loop_function.py`:
   `rho_fn([], [rho_leaf])` in the loss graph, with the optimizer working on
   `g.ml.fields(rho_fn.parameters(), net.parameters())`).
+- `matrix_invariants(template, n_loops=0)`, `mlp(template, n_in, n_out,
+  width, depth, scale=0.0)`, `matrix_words(template)` (`layer/mlp.py`): the
+  covariant model f(P) = P + sum_w c_w(I) w(P) with standardized invariants
+  I (calibrated mean and inverse std, frozen), an MLP on them and covariant
+  words in P, P^dag.  With `n_loops > 0` the invariants take a second input
+  L (a list of n_loops matrix fields, the fixed loops of
+  `directional_parallel_transport`) and add Re tr L_k / N, Im tr L_k / N per
+  loop (`n = 5 + 2 n_loops`; for SU(3) loops tr L determines the eigenvalues,
+  tr L L^dag = N is constant).  One layer rather than a separate loop layer:
+  the mlp takes a single list input, and there is no concatenation layer.
 - `local_covariant_matrix(template, n_channels, gate=False, scale=0.1)`: a
   residual block on C channels of N x N matrix fields with
   `X_c(x) -> V(x) X_c(x) V(x)^dag`:

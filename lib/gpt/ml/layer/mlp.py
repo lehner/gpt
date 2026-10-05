@@ -39,19 +39,32 @@ def _unit(template):
 class matrix_invariants(function):
     """I = the standardized invariants of a matrix field P (N x N), per site:
     Re tr P / N, Im tr P / N, tr P P^dag / N, Re tr P^2 / N, Im tr P^2 / N,
-    each as (q - mean) inv_std (real complex fields).  Constants: mean,
+    and with n_loops > 0 of each field L_k of a second input L (a list of
+    n_loops N x N fields, e.g. the fixed loops of
+    directional_parallel_transport): Re tr L_k / N, Im tr L_k / N (for SU(2)
+    and SU(3) loops these determine the eigenvalues; tr L L^dag / N = 1).
+    Each as (q - mean) inv_std (real complex fields).  Constants: mean,
     inv_std (set by calibrate to the mean and inverse standard deviation over
     the sites of the calibration samples, 1 for an invariant that is
     constant; frozen, to keep the layer site-local).  No parameters."""
 
-    n = 5
+    # invariants of P, per loop, and in total without loops (an instance
+    # has its own total n)
+    n_P = 5
+    n_L = 2
+    n = n_P
 
-    def __init__(self, template):
+    def __init__(self, template, n_loops=0):
         self.N = template.otype.shape[0]
+        self.n_loops = n_loops
+        self.n = self.n_P + self.n_L * n_loops
         self.one = _unit(template)
         s = g.lattice(self.one)
+        inputs = [("P", template)]
+        if n_loops > 0:
+            inputs.append(("L", [template] * n_loops))
         super().__init__(
-            [("P", template)],
+            inputs,
             [("I", [s] * self.n)],
             [],
             [("mean", [0.0] * self.n), ("inv_std", [1.0] * self.n)],
@@ -60,20 +73,24 @@ class matrix_invariants(function):
     def initialize(self, rng, scale=None):
         pass
 
-    def _raw(self, P):
+    def _raw(self, P, L=[]):
         r = 1.0 / self.N
         t1 = g(g.trace(P) * r)
         t2 = g(g.trace(P * P) * r)
-        return [
+        q = [
             g.component.real(t1),
             g.component.imag(t1),
             g.component.real(g(g.trace(P * g.adj(P)) * r)),
             g.component.real(t2),
             g.component.imag(t2),
         ]
+        for L_k in L:
+            t = g(g.trace(L_k) * r)
+            q += [g.component.real(t), g.component.imag(t)]
+        return q
 
     def calibrate(self, samples):
-        q = [[g(x) for x in self._raw(P)] for (P,) in samples]
+        q = [[g(x) for x in self._raw(*inputs)] for inputs in samples]
         mean, inv_std = [], []
         for k in range(self.n):
             n = sum(x[k].grid.gsites for x in q)
@@ -86,13 +103,12 @@ class matrix_invariants(function):
         self["mean"], self["inv_std"] = mean, inv_std
 
     def evaluate(self, inputs, parameters, constants):
-        (P,) = inputs
         mean, inv_std = constants
         # (a sum: node subtraction requires identical containers)
         return [
             [
                 g(q * inv_std[k] + (-mean[k] * inv_std[k]) * self.one)
-                for k, q in enumerate(self._raw(P))
+                for k, q in enumerate(self._raw(*inputs))
             ]
         ]
 
