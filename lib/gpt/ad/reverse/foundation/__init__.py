@@ -170,7 +170,7 @@ def component_multiply(a, b):
     plain multiplication)"""
     if not is_node(a) and not is_node(b):
         return g.lattice.foundation.component_multiply(a, b)
-    return product(a, b)
+    return g.ad.reverse.transform.multiply(a, b)
 
 
 def _self_adjoint_projection(x, name):

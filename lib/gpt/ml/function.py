@@ -177,9 +177,12 @@ class _named_storage:
 
 def _assign(values, i, value):
     # in place for lattices and tensors (keeps the object), else replace
+    # (arrays keep their shape)
     if isinstance(values[i], (g.lattice, g.tensor)):
         values[i] @= value
     else:
+        if isinstance(values[i], np.ndarray) and np.shape(value) != values[i].shape:
+            raise ValueError(f"array of shape {np.shape(value)} assigned to {values[i].shape}")
         values[i] = value
 
 

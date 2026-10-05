@@ -19,7 +19,7 @@
 import gpt as g
 import numpy as np
 from gpt.ad.reverse import node_op
-from gpt.ad.reverse.util import product, value_of, is_node
+from gpt.ad.reverse.util import value_of, is_node, nodify
 
 
 def relu(x, a=0.0):
@@ -31,32 +31,79 @@ def relu(x, a=0.0):
     )
 
 
+def _conj(v):
+    if is_node(v):
+        return conj(v)
+    if g.util.is_num(v):
+        return complex(v).conjugate()
+    if isinstance(v, np.ndarray):
+        return np.conj(v)
+    return g(g.conj(v))
+
+
+def conj(x):
+    # the componentwise complex conjugate (no transpose); with the gradient
+    # convention dL/dRe + i dL/dIm the flow into x is conj(flow)
+    return node_op(
+        (x,),
+        lambda: _conj(value_of(x)),
+        (lambda z: (1, _conj(z.gradient)),),
+        x._container,
+        "conj",
+        reads=((),),
+    )
+
+
+def _multiply(a, b):
+    if is_node(a) or is_node(b):
+        return multiply(a, b)
+    if g.util.is_num(a) or isinstance(a, np.ndarray):
+        return a * b
+    return g.lattice.foundation.component_multiply(g(a), g(b))
+
+
+def multiply(a, b):
+    # the componentwise product (for scalar types the ordinary product):
+    # flows conj(b) * flow into a and conj(a) * flow into b, componentwise
+    a, b = nodify(a, b)
+    return node_op(
+        (a, b),
+        lambda: _multiply(value_of(a), value_of(b)),
+        (
+            lambda z: (1, _multiply(z.gradient, _conj(value_of(b)))),
+            lambda z: (1, _multiply(_conj(value_of(a)), z.gradient)),
+        ),
+        a._container,
+        "multiply",
+    )
+
+
 def sin(x):
+    # the flow into x is conj(cos x) * flow, componentwise
     return node_op(
         (x,),
         lambda: g.component.sin(value_of(x)),
-        # conjugate-linear convention (matches __mul__): adj(cos(x)) * flow.
-        # g.adj(lattice) is a symbolic expr, so use product (which handles
-        # expr via the symbolic path, as __mul__ does) rather than
-        # g.component.multiply (which requires a concrete lattice operand).
-        (lambda z: (1, product(z.gradient, g.adj(g.component.cos(value_of(x))))),),
+        (lambda z: (1, _multiply(z.gradient, _conj(g.component.cos(value_of(x))))),),
         x._container,
     )
 
 
 def cos(x):
+    # the flow into x is -conj(sin x) * flow, componentwise
     return node_op(
         (x,),
         lambda: g.component.cos(value_of(x)),
-        # conjugate-linear convention (matches __mul__): adj(-sin(x)) * flow
-        (lambda z: (-1, product(z.gradient, g.adj(g.component.sin(value_of(x))))),),
+        (lambda z: (-1, _multiply(z.gradient, _conj(g.component.sin(value_of(x))))),),
         x._container,
     )
 
 
 def _part(v, part):
     # the real or imaginary part in the container of v (numbers stay complex
-    # and arrays keep their dtype, so the node container is unchanged)
+    # and arrays keep their dtype, so the node container is unchanged); a
+    # node value (a nested pass) gives the node operation one level down
+    if is_node(v):
+        return real(v) if part == "real" else imag(v)
     if g.util.is_num(v):
         return complex(getattr(complex(v), part))
     if isinstance(v, np.ndarray):
