@@ -103,9 +103,11 @@ class differentiable_functional:
         gradient = self.gradient(fields, dfields)
         a = sum([g.group.inner_product(w, gr) for gr, w in zip(gradient, weights)])
         b = self.approximate_gradient(fields, dfields, weights, epsilon=epsilon_approx)
-        eps = abs(a - b) / abs(b)
+        # relative error (absolute for a vanishing difference quotient, e.g.
+        # a functional that is constant here); a non-finite error fails
+        eps = abs(a - b) / abs(b) if b != 0 else abs(a - b)
         g.message(f"Assert gradient error: {eps} < {epsilon_assert}")
-        if eps > epsilon_assert:
+        if not eps <= epsilon_assert:
             g.message(f"Error: gradient = {a} <> approximate_gradient = {b}")
             assert False
         # the gradient needs to live in cartesian.  A single field may itself
