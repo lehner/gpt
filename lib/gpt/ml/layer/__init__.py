@@ -18,3 +18,4 @@
 #
 from gpt.ml.layer.basic import replicate, linear_combination, broadcast, polynomial
 from gpt.ml.layer.local_covariant_matrix import local_covariant_matrix
+from gpt.ml.layer.mlp import matrix_invariants, mlp, matrix_words
