@@ -65,6 +65,7 @@ for f in \
     ${test_path}/algorithms/solvers.py \
     ${test_path}/algorithms/integrators.py \
     ${test_path}/algorithms/optimize.py \
+    ${test_path}/algorithms/nonlinear.py \
     ${test_path}/algorithms/polynomials.py \
     ${test_path}/algorithms/rational.py \
     ${test_path}/algorithms/multi_grid.py \

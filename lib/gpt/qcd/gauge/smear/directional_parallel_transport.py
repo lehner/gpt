@@ -295,43 +295,32 @@ class directional_parallel_transport(dft_diffeomorphism):
         # also converge where the fixed-point iteration does not (a site map
         # that is a bijection but not a contraction).  Converged when the
         # change per site is below eps (default: ten times the precision,
-        # above the rounding floor of the update); raises otherwise.
+        # above the rounding floor of the update); raises otherwise (see
+        # g.algorithms.nonlinear.fixed_point, whose history and number of
+        # Newton steps are kept as inverse_history and
+        # inverse_newton_iterations).
         assert self.description_staple is not None
         mu, nd = self.mu, self.nd
         C = self._staple(fields)
         xparams = fields[nd:]
         U_prime_mu = fields[mu]
-        U_mu = g.copy(U_prime_mu)
-        precision = U_mu.grid.precision.eps
-        if eps is None:
-            eps = 10 * precision
-        # the change^2 per site of each iteration of the last inverse (a
-        # diagnostic: its ratios give the contraction rate)
-        history = self.inverse_history = []
-        self.inverse_newton_iterations = 0
-        newton = False
-        for it in range(max_iter):
-            U_mu_last = g.copy(U_mu)
-            if newton:
-                U_mu @= self._newton_step(fields, U_mu, U_prime_mu, C, xparams)
-                self.inverse_newton_iterations += 1
-            else:
-                U_mu @= g.matrix.exp(g(-1.0 * self._local_generator(U_mu, C, xparams))) * U_prime_mu
-            history.append(g.norm2(U_mu_last - U_mu) / U_mu.grid.gsites)
-            if history[-1] < eps**2:
-                break
-            if not newton and newton_rate is not None and len(history) >= 5:
-                newton = (history[-1] / history[-5]) ** (1 / 8) > newton_rate
-        else:
-            # the contraction rate (the ratio of successive changes) tells a
-            # slow iteration (close to 1: the update is close to not
-            # invertible) from a stalled one (rounding)
-            rate = (history[-1] / history[-11]) ** (1 / 20) if len(history) > 10 else None
-            raise RuntimeError(
-                f"directional_parallel_transport could not be inverted: change^2 per site "
-                f"{history[-1]:.3e} > {eps**2:.3e} after {max_iter} iterations "
-                f"(contraction rate {rate})"
-            )
+        precision = U_prime_mu.grid.precision.eps
+
+        def step(x):
+            x[0] @= g.matrix.exp(g(-1.0 * self._local_generator(x[0], C, xparams))) * U_prime_mu
+
+        newton_step = self._newton(fields, U_prime_mu, C, xparams)
+        fp = g.algorithms.nonlinear.fixed_point(
+            eps=10 * precision if eps is None else eps,
+            maxiter=max_iter,
+            accelerate_rate=newton_rate,
+        )
+        name = "the inverse of directional_parallel_transport"
+        try:
+            (U_mu,) = fp([g.copy(U_prime_mu)], step, newton_step, name=name)
+        finally:
+            self.inverse_history = fp.history
+            self.inverse_newton_iterations = fp.accelerated_iterations
         U = _with(fields, mu, U_mu)
         if self.inverse_newton_iterations > 0:
             # Newton finds a preimage, which is the preimage only if the site
@@ -367,36 +356,34 @@ class directional_parallel_transport(dft_diffeomorphism):
         right = [g.lattice(U_mu.grid, otype_cartesian) for _ in range(kernels.ng)]
         return kernels.combine(right, K)
 
-    def _newton_step(self, fields, U_mu, U_prime_mu, C, xparams):
-        # one site-local Newton step for F(U_mu) = U_mu' (F the local map at
-        # the fixed staple C): the residual r = TA(U_mu' F(U_mu)^dag) (the log
-        # up to third order), the Jacobian block M (see jacobian_matrix) and
-        # U_mu <- exp(d) U_mu with d = M^-1 c in the coordinates c of r
-        # (converges quadratically).  The step is halved while the residual
-        # grows.
+    def _newton(self, fields, U_prime_mu, C, xparams):
+        # site-local Newton steps for F(U_mu) = U_mu' (F the local map at the
+        # fixed staple C, see g.algorithms.nonlinear.fixed_point.newton): the
+        # residual r = TA(U_mu' F(U_mu)^dag) (the log up to third order), the
+        # Jacobian block M (see jacobian_matrix) and U_mu <- exp(d) U_mu with
+        # d = M^-1 c in the coordinates c of r (converges quadratically)
         TA = g.qcd.gauge.project.traceless_anti_hermitian
-        kernels = g.group.algebra_kernels(U_mu.grid, U_mu.otype.cartesian())
 
-        def residual(U):
-            return TA(g(U_prime_mu * g.adj(self._local_ft(U, C, xparams))))
+        def residual(x):
+            return [TA(g(U_prime_mu * g.adj(self._local_ft(x[0], C, xparams))))]
 
-        r = residual(U_mu)
-        M, _ = self._local_jacobian_matrix(_with(fields, self.mu, U_mu), C)
-        # (combine contracts the second index: transposed for d = M^-1 c;
-        # right_a = -sum_b M^-1[b, a] T_b, so d = -sum_a c_a right_a)
-        right = self._inverse_directions(M, U_mu, transpose=True)
-        del M
-        d = g.lattice(r)
-        d[:] = 0
-        for T, ra in zip(kernels.fgenerators, right):
-            d -= g(g.trace(r * T) * (1.0 / kernels.norm)) * ra
-        r2 = g.norm2(r)
-        for _ in range(8):
-            U_new = g(g.matrix.exp(d) * U_mu)
-            if g.norm2(residual(U_new)) < r2:
-                break
-            d = g(0.5 * d)
-        return U_new
+        def solve(x, r):
+            (U_mu,), (r,) = x, r
+            kernels = g.group.algebra_kernels(U_mu.grid, U_mu.otype.cartesian())
+            M, _ = self._local_jacobian_matrix(_with(fields, self.mu, U_mu), C)
+            # (combine contracts the second index: transposed for d = M^-1 c;
+            # right_a = -sum_b M^-1[b, a] T_b, so d = -sum_a c_a right_a)
+            right = self._inverse_directions(M, U_mu, transpose=True)
+            del M
+            d = g.lattice(r)
+            d[:] = 0
+            for T, ra in zip(kernels.fgenerators, right):
+                d -= g(g.trace(r * T) * (1.0 / kernels.norm)) * ra
+            return [d]
+
+        return g.algorithms.nonlinear.fixed_point.newton(
+            residual, solve, compose=lambda d, U: g.matrix.exp(d) * U
+        )
 
     def _project(self, sm, xparams):
         # TA(P1 f(sm, params)), the generator of the update; every path (the
