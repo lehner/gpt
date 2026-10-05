@@ -443,15 +443,17 @@ for rho in [0.05, 0.1, 0.124, 0.25]:
             g.message(f"Testing reversibility for rho={rho}, mu={mu}, cb={cb.__name__}")
             lsm = g.qcd.gauge.smear.local_stout(rho=rho, dimension=mu, checkerboard=cb)
             Uprime = lsm(U)
-            U0 = lsm.inv(Uprime)
-            if U0 is None:
+            try:
+                U0 = lsm.inv(Uprime)
+            except RuntimeError as e:
+                g.message(e)
                 assert rho > 1 / 8
-            else:
-                eps2 = 0.0
-                for nu in range(4):
-                    eps2 += g.norm2(U[nu] - U0[nu]) / g.norm2(U0[nu])
-                g.message(eps2)
-                assert eps2 < 1e-27
+                continue
+            eps2 = 0.0
+            for nu in range(4):
+                eps2 += g.norm2(U[nu] - U0[nu]) / g.norm2(U0[nu])
+            g.message(eps2)
+            assert eps2 < 1e-27
 
 
 # test general differentiable field transformation framework
