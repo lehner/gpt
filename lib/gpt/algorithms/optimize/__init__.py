@@ -26,3 +26,4 @@ from gpt.algorithms.optimize.non_linear_cg import (
 )
 import gpt.algorithms.optimize.fourier_accelerate
 from gpt.algorithms.optimize.adam import adam
+from gpt.algorithms.optimize.lbfgs import lbfgs

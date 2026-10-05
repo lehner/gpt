@@ -226,7 +226,7 @@ g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.pa
 - Build the loss graph **once** and let the functional swap leaf values (graphs
   are reference cycles; see AD_DEVELOPMENT.md §4.6).  `sum(...)` works on
   nodes (`0 + node` is the node).
-- The optimizers (`adam`, `gradient_descent`, `non_linear_cg`, line search)
+- The optimizers (`adam`, `gradient_descent`, `non_linear_cg`, `lbfgs`, line search)
   and the node functional find parameters **by identity**
   (`g.util.index_by_identity`), so equal values are distinct parameters.  The
   same object twice is still one parameter; note `complex(z)` returns `z`
@@ -249,7 +249,16 @@ g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.pa
   its state as well).  A new `opt.on` / `opt(f)` starts a new state, i.e.
   restarts Adam's moments and bias correction (each restart begins with a
   full-size step).  Non-linear CG keeps its search direction within one call
-  only (it belongs to `f`); gradient descent has no state.
+  only (it belongs to `f`); gradient descent has no state; L-BFGS keeps its
+  (s, y) pairs across the calls of a run.
+- **`lbfgs`** (limited-memory BFGS in GPT operations: two-loop recursion with
+  `g.group.inner_product`, strong-Wolfe line search, updates by
+  `g.group.compose`) for deterministic costs, e.g. the force norm with
+  v = F / |F|; it converges in far fewer evaluations than Adam.  The
+  functional is evaluated at the fields as the optimizer sets them (in
+  place), so a functional that reads a function's storage works.
+  `failure_value` turns a `RuntimeError` at a trial point (a transport that
+  cannot be inverted there) into a failed trial.
 - Adam returns the last iterate, not the best; a too large `alpha` can end on
   an overshoot (5e-3 works for the covariant network).
 

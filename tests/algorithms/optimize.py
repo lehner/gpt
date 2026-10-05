@@ -3,6 +3,7 @@
 # Authors: Christoph Lehner 2021
 #
 import gpt as g
+import numpy as np
 from gpt.core.group import differentiable_functional
 
 # load configuration
@@ -65,6 +66,7 @@ for gd in [
     g.algorithms.optimize.adam(
         maxiter=40, eps=1e-7, alpha=1e-1, beta1=0.05, beta2=0.99, eps_regulator=0.1
     ),
+    g.algorithms.optimize.lbfgs(maxiter=40, eps=1e-7, step=1e-1),
 ]:
     U1, V1 = g.copy([U0, V0])
     assert f([U1, V1]) > 1e2
@@ -119,6 +121,85 @@ for i in range(40):
     run(f if i % 2 == 0 else f2)
 g.message(f"adam with alternating functionals: {f([U0, V0])} -> {f([U2, V2])}")
 assert f([U2, V2]) < 1e-2 * f([U0, V0])
+
+# L-BFGS on numbers, numpy arrays and lattices (group fields: above)
+class rosenbrock(differentiable_functional):
+    # (1 - Re a)^2 + 100 (Re b - (Re a)^2)^2 + (Im a)^2 + (Im b)^2, minimum at a = b = 1
+    def __call__(self, fields):
+        a, b = fields
+        return (1 - a.real) ** 2 + 100 * (b.real - a.real**2) ** 2 + a.imag**2 + b.imag**2
+
+    def gradient(self, fields, dfields):
+        # dL/dRe + i dL/dIm
+        a, b = fields
+        r = []
+        for d in dfields:
+            if d is a:
+                r.append(-2 * (1 - a.real) - 400 * a.real * (b.real - a.real**2) + 2j * a.imag)
+            else:
+                r.append(200 * (b.real - a.real**2) + 2j * b.imag)
+        return r
+
+
+opt = g.algorithms.optimize.lbfgs(maxiter=200, eps=1e-10)
+x = [complex(-1.2, 0.3), complex(1.0, -0.2)]
+assert opt(rosenbrock())(x, x)
+g.message(f"lbfgs rosenbrock: {x}")
+assert abs(x[0] - 1) < 1e-8 and abs(x[1] - 1) < 1e-8
+
+z_ref = g.complex(grid)
+rng.cnormal(z_ref)
+w_ref = np.array([1.0 + 2.0j, -0.5j])
+
+
+class quadratic(differentiable_functional):
+    # |z - z_ref|^2 + |w - w_ref|^2 (z a complex lattice, w a numpy array)
+    def __call__(self, fields):
+        z, w = fields
+        return g.norm2(z - z_ref) + float(np.sum(np.abs(w - w_ref) ** 2))
+
+    def gradient(self, fields, dfields):
+        z, w = fields
+        return [g(2.0 * (z - z_ref)) if d is z else 2.0 * (w - w_ref) for d in dfields]
+
+
+z = g.complex(grid)
+z[:] = 0
+x = [z, np.zeros(2, dtype=np.complex128)]
+q = quadratic()
+q.assert_gradient_error(rng, x, x, 1e-4, 1e-8)
+assert g.algorithms.optimize.lbfgs(maxiter=50, eps=1e-10)(q)(x, x)
+assert x[0] is z and q(x) < 1e-16
+
+# a run keeps its pairs: calls of 5 iterations follow one call of many
+x = [complex(-1.2, 0.3), complex(1.0, -0.2)]
+x1 = list(x)
+g.algorithms.optimize.lbfgs(maxiter=40, eps=0.0)(rosenbrock())(x1, x1)
+run = g.algorithms.optimize.lbfgs(maxiter=5, eps=0.0).on(x)
+for i in range(8):
+    run(rosenbrock())
+assert x == x1
+x = [complex(-1.2, 0.3), complex(1.0, -0.2)]
+run = g.algorithms.optimize.lbfgs(maxiter=5, eps=1e-10).on(x)
+for i in range(60):
+    if run(rosenbrock()):
+        break
+g.message(f"lbfgs rosenbrock in calls of 5 iterations: {x} after {i + 1} calls")
+assert abs(x[0] - 1) < 1e-8 and abs(x[1] - 1) < 1e-8
+
+
+# failure_value: a RuntimeError at a trial point (here: outside |a| < 3) is a
+# large value, the line search steps back
+class guarded(rosenbrock):
+    def __call__(self, fields):
+        if abs(fields[0]) > 3:
+            raise RuntimeError("outside")
+        return super().__call__(fields)
+
+
+x = [complex(-1.2, 0.3), complex(1.0, -0.2)]
+assert g.algorithms.optimize.lbfgs(maxiter=200, eps=1e-10, failure_value=1e10)(guarded())(x, x)
+assert abs(x[0] - 1) < 1e-8 and abs(x[1] - 1) < 1e-8
 
 # test symmetric update functional
 s = g.algorithms.group.symmetric_functional(f)
