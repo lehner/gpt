@@ -42,7 +42,10 @@ class matrix_invariants(function):
     and with n_loops > 0 of each field L_k of a second input L (a list of
     n_loops N x N fields, e.g. the fixed loops of
     directional_parallel_transport): Re tr L_k / N, Im tr L_k / N (for SU(2)
-    and SU(3) loops these determine the eigenvalues; tr L L^dag / N = 1).
+    and SU(3) loops these determine the eigenvalues; tr L L^dag / N = 1), or
+    with loop_imag=False Re tr L_k / N only (e.g. for sums of loops over
+    orbits of a symmetry that reverses orientations, and even under charge
+    conjugation).
     Each as (q - mean) inv_std (real complex fields).  Constants: mean,
     inv_std (set by calibrate to the mean and inverse standard deviation over
     the sites of the calibration samples, 1 for an invariant that is
@@ -54,10 +57,10 @@ class matrix_invariants(function):
     n_L = 2
     n = n_P
 
-    def __init__(self, template, n_loops=0):
+    def __init__(self, template, n_loops=0, loop_imag=True):
         self.N = template.otype.shape[0]
-        self.n_loops = n_loops
-        self.n = self.n_P + self.n_L * n_loops
+        self.n_loops, self.loop_imag = n_loops, loop_imag
+        self.n = self.n_P + (self.n_L if loop_imag else 1) * n_loops
         self.one = _unit(template)
         s = g.lattice(self.one)
         inputs = [("P", template)]
@@ -86,7 +89,7 @@ class matrix_invariants(function):
         ]
         for L_k in L:
             t = g(g.trace(L_k) * r)
-            q += [g.component.real(t), g.component.imag(t)]
+            q += [g.component.real(t)] + ([g.component.imag(t)] if self.loop_imag else [])
         return q
 
     def calibrate(self, samples):

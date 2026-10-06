@@ -95,6 +95,13 @@ for k, q in enumerate(I_P):
     m = g.sum(q).real / grid.gsites
     s = g.sum(g(q * q)).real / grid.gsites
     assert abs(m) < 1e-12 and abs(s - 1) < 1e-10, (k, m, s)
+# loop_imag=False: Re tr L_k / 3 only, the same as the corresponding entries
+inv_r = g.ml.layer.matrix_invariants(P, n_loops, loop_imag=False)
+assert inv_r.n == 5 + n_loops
+inv_r.calibrate([[P, L]])
+(I_r,) = inv_r([P, L])
+for j, k in enumerate(list(range(5)) + [5 + 2 * i for i in range(n_loops)]):
+    assert g.norm2(I_r[j] - I_P[k]) < 1e-24 * max(g.norm2(I_P[k]), 1.0)
 # the raw loop invariants (Re, Im tr L_k / 3)
 for k, L_k in enumerate(L):
     t = g(g.trace(L_k) * (1.0 / 3.0))
