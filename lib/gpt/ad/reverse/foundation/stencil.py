@@ -430,6 +430,9 @@ def _matrix_local_temporaries(stencil, inner, fields):
     output = fields[0]
     assert is_node(output), "stencil node mode: the output must be a node"
     m = len(output) if output._container.tag[0] is list else 1
+    # (a list node keeps its list semantics with a single output, e.g. the
+    # adjoint of a stencil with one input field)
+    listed = output._container.tag[0] is list
     grid = output.grid
     otype_t = output.otype
 
@@ -484,7 +487,7 @@ def _matrix_local_temporaries(stencil, inner, fields):
 
     def _psi():
         output.materialize_gradient()
-        return output.gradient if m > 1 else [output.gradient]
+        return output.gradient if listed else [output.gradient]
 
     def run_fwd():
         ops = []
@@ -496,11 +499,11 @@ def _matrix_local_temporaries(stencil, inner, fields):
         if any(is_node(v) for v in ops):
             # nested: the value is this stencil one level down (see matrix)
             inner_out = [g.lattice(grid, otype_t) for _ in range(m)]
-            inner_out = g.ad.reverse.node(inner_out if m > 1 else inner_out[0])
+            inner_out = g.ad.reverse.node(inner_out if listed else inner_out[0])
             return matrix(stencil, inner_out, *ops)
         outs = [g.lattice(grid, otype_t) for _ in range(m)]
         stencil(*(outs + ops))
-        return outs[0] if m == 1 else outs
+        return outs if listed else outs[0]
 
     def _backward(z):
         vals = [value_of(c) for c in children]
@@ -510,7 +513,7 @@ def _matrix_local_temporaries(stencil, inner, fields):
             for r in unwritten_A:
                 slots[r][:] = 0
             K = KA
-            if m == 1:
+            if not listed:
                 c = identity_flow_scale(output)
                 if c is not None:
                     K = _KA_for(c)
@@ -572,6 +575,9 @@ def matrix(stencil, *fields):
     output = fields[0]
     assert is_node(output), "stencil node mode: the output must be a node"
     m = len(output) if output._container.tag[0] is list else 1
+    # (a list node keeps its list semantics with a single output, e.g. the
+    # adjoint of a stencil with one input field)
+    listed = output._container.tag[0] is list
     grid = output.grid
     ndim = grid.nd
     otype_t = output.otype
@@ -765,7 +771,7 @@ def matrix(stencil, *fields):
         v = z.value
         if out is None or v is None:
             return {}
-        if m > 1:
+        if listed:
             if not isinstance(v, list) or len(v) != m:
                 return {}
             v = v[0]
@@ -781,7 +787,7 @@ def matrix(stencil, *fields):
         # the m output flows; a single output node has one flow, a list node
         # a list of m (outputs that received no flow are zero)
         output.materialize_gradient()
-        return output.gradient if m > 1 else [output.gradient]
+        return output.gradient if listed else [output.gradient]
 
     def run_fwd():
         # forward: one kernel pass computes all m outputs.  The operands are
@@ -804,7 +810,7 @@ def matrix(stencil, *fields):
             # the same self-similar tower as the backward, bottoming out at
             # plain operands, where the compiled kernel runs.
             inner = [g.lattice(grid, otype_t) for _ in range(m)]
-            inner = g.ad.reverse.node(inner if m > 1 else inner[0])
+            inner = g.ad.reverse.node(inner if listed else inner[0])
             return matrix(stencil, inner, *ops)
 
         outs = [g.lattice(grid, otype_t) for _ in range(m)]
@@ -818,7 +824,7 @@ def matrix(stencil, *fields):
             _keep_padded(outs, raw, stencil(*(outs + ops)))
         else:
             stencil(*(outs + ops))
-        return outs[0] if m == 1 else outs
+        return outs if listed else outs[0]
 
     def run_adj_plain(z):
         # backward, plain flows: the compiled adjoint kernel(s), one per
@@ -843,7 +849,7 @@ def matrix(stencil, *fields):
         # use-once (see above): the adjoint run below holds its own references
         shared.clear()
         kernels = compiled
-        if m == 1:
+        if not listed:
             c = identity_flow_scale(output)
             if c is not None:
                 kernels = _compiled_for(c)
@@ -942,7 +948,7 @@ def matrix(stencil, *fields):
             # iterate its sites)
             if z.value is None:
                 z_vals = [dummy] * m
-            elif m == 1:
+            elif not listed:
                 z_vals = [z.value]
             else:
                 z_vals = list(z.value)
