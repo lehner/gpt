@@ -164,3 +164,77 @@ Uinv = pt.inv(Up[0:4] + params)
 eps2 = g.norm2(Uinv[0] - U[0]) / g.norm2(U[0])
 g.message(f"loop invariants: transport inverse {eps2}")
 assert eps2 < 1e-25
+
+# words linear in the loops: matrix_words(P, n_loops) with the words L_k,
+# P L_k, L_k P (and L_k^dag), and the mixed invariants tr P L_k
+Lw = [L[0], g(0.5 * (L[1] + g.adj(L[1])))]  # the second loop hermitian
+words = g.ml.layer.matrix_words(P, n_loops, loop_adjoint=[True, False])
+assert words.n == 6 + 4 + 3 and g.ml.layer.matrix_words.n == 6
+cw = [g.complex(grid) for _ in range(words.n)]
+for z in cw:
+    rng.cnormal(z, sigma=0.1)
+(y,) = words([P, cw, Lw])
+Pd, P2 = g(g.adj(P)), g(P * P)
+expected = [P2, Pd, g(P * Pd), g(Pd * P), g(P2 * P), g(P2 * Pd)]
+expected += [Lw[0], g(P * Lw[0]), g(Lw[0] * P), g(g.adj(Lw[0])), Lw[1], g(P * Lw[1]), g(Lw[1] * P)]
+y_ref = P
+for z, w in zip(cw, expected):
+    y_ref = g(y_ref + z * w)
+eps = g.norm2(y - y_ref) / g.norm2(y_ref)
+g.message(f"loop words: value {eps}")
+assert eps < 1e-28
+
+inv_w = g.ml.layer.matrix_invariants(P, n_loops, loop_imag=[True, False], mixed=True)
+assert inv_w.n == 5 + 3 + 4
+x, l = g.ml.symbols("P", "L")
+(I,) = inv_w([x, l], name="invariants")
+(c,) = g.ml.layer.mlp(P, inv_w.n, words.n, width=4, depth=2)([I], name="mlp")
+(fP,) = g.ml.layer.matrix_words(P, n_loops, loop_adjoint=[True, False])([x, c, l], name="words")
+net_w = g.ml.pack(f=fP).function()
+net_w.initialize(rng)
+net_w.calibrate([[P, Lw]])
+# the raw mixed invariants (Re, Im tr P L_k / 3)
+(I_w,) = inv_w([P, Lw])
+for k, L_k in enumerate(Lw):
+    t = g(g.trace(P * L_k) * (1.0 / 3.0))
+    for j, part in enumerate([g.component.real(t), g.component.imag(t)]):
+        i = 8 + 2 * k + j
+        q = g(I_w[i] * (1.0 / inv_w["inv_std"][i]) + inv_w["mean"][i] * inv_w.one)
+        assert g.norm2(q - part) < 1e-24 * g.norm2(part)
+assert g.norm2(net_w([P, Lw])[0] - P) == 0.0
+net_w["mlp.W2"] = 0.1 * rng.normal_element(np.zeros_like(net_w["mlp.W2"]))
+(y,) = net_w([P, Lw])
+(yV,) = net_w([g(V * P * g.adj(V)), [g(V * L_k * g.adj(V)) for L_k in Lw]])
+eps = g.norm2(yV - g(V * y * g.adj(V))) / g.norm2(y)
+g.message(f"loop words: covariance {eps}")
+assert eps < 1e-26
+leaves = [rad.node(w) for w in net_w.parameters()]
+x = rad.node(P)
+l = [rad.node(L_k) for L_k in Lw]
+(yn,) = net_w([x, l], leaves)
+loss = g.norm2(yn - rad.node(T, with_gradient=False)).functional(x, *l, *leaves)
+fields = [P] + Lw + list(net_w.parameters())
+eps = abs(loss(fields) - g.norm2(y - T)) / g.norm2(y - T)
+g.message(f"loop words: node vs plain {eps}")
+assert eps < 1e-14
+loss.assert_gradient_error(rng, fields, fields, 1e-5, 1e-7)
+
+# as the loop function of the transport above
+params = [rho] + list(net_w.parameters())
+pt = g.qcd.gauge.smear.directional_parallel_transport(
+    U,
+    description,
+    0,
+    g(even + odd),
+    odd,
+    params,
+    loop_function=lambda sm, xp, L: net_w([sm, [L[0], g(0.5 * (L[1] + g.adj(L[1])))]], xp[1:])[0],
+    loops=loops,
+)
+fields = g.ml.fields(U, [rho], net_w.parameters())
+pt.action_log_det_jacobian().assert_gradient_error(rng, fields, fields, 1e-4, 1e-7)
+Up = pt(fields)
+Uinv = pt.inv(Up[0:4] + params)
+eps2 = g.norm2(Uinv[0] - U[0]) / g.norm2(U[0])
+g.message(f"loop words: transport inverse {eps2}")
+assert eps2 < 1e-25

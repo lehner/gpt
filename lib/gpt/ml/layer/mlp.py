@@ -45,7 +45,8 @@ class matrix_invariants(function):
     and SU(3) loops these determine the eigenvalues; tr L L^dag / N = 1), or
     with loop_imag=False Re tr L_k / N only (e.g. for sums of loops over
     orbits of a symmetry that reverses orientations, and even under charge
-    conjugation).
+    conjugation; loop_imag may also be a list, one flag per loop), and with
+    mixed=True further Re tr P L_k / N, Im tr P L_k / N per loop.
     Each as (q - mean) inv_std (real complex fields).  Constants: mean,
     inv_std (set by calibrate to the mean and inverse standard deviation over
     the sites of the calibration samples, 1 for an invariant that is
@@ -57,10 +58,13 @@ class matrix_invariants(function):
     n_L = 2
     n = n_P
 
-    def __init__(self, template, n_loops=0, loop_imag=True):
+    def __init__(self, template, n_loops=0, loop_imag=True, mixed=False):
         self.N = template.otype.shape[0]
-        self.n_loops, self.loop_imag = n_loops, loop_imag
-        self.n = self.n_P + (self.n_L if loop_imag else 1) * n_loops
+        if not isinstance(loop_imag, (list, tuple)):
+            loop_imag = [loop_imag] * n_loops
+        assert len(loop_imag) == n_loops
+        self.n_loops, self.loop_imag, self.mixed = n_loops, list(loop_imag), mixed
+        self.n = self.n_P + sum(2 if x else 1 for x in self.loop_imag) + (2 * n_loops if mixed else 0)
         self.one = _unit(template)
         s = g.lattice(self.one)
         inputs = [("P", template)]
@@ -87,9 +91,13 @@ class matrix_invariants(function):
             g.component.real(t2),
             g.component.imag(t2),
         ]
-        for L_k in L:
+        for L_k, imag in zip(L, self.loop_imag):
             t = g(g.trace(L_k) * r)
-            q += [g.component.real(t)] + ([g.component.imag(t)] if self.loop_imag else [])
+            q += [g.component.real(t)] + ([g.component.imag(t)] if imag else [])
+        if self.mixed:
+            for L_k in L:
+                t = g(g.trace(P * L_k) * r)
+                q += [g.component.real(t), g.component.imag(t)]
         return q
 
     def calibrate(self, samples):
@@ -178,23 +186,43 @@ class matrix_words(function):
     """f = P + sum_w c_w w(P) for the covariant words P^2, P^dag, P P^dag,
     P^dag P, P^3, P^2 P^dag of a matrix field P and coefficient fields c
     (complex scalar fields, per site).  No parameters: the coefficients are
-    inputs (e.g. the output of an mlp of the invariants of P)."""
+    inputs (e.g. the output of an mlp of the invariants of P).
+
+    With n_loops > 0 a third input L (a list of n_loops N x N fields that
+    transform like P, e.g. fixed loops at x) and the words linear in L
+    after those of P: per loop L_k, P L_k, L_k P, and L_k^dag if
+    loop_adjoint (a flag, or a list of flags per loop; e.g. False for a
+    hermitian L_k)."""
 
     names = ["P^2", "P^dag", "P P^dag", "P^dag P", "P^3", "P^2 P^dag"]
     n = len(names)
 
-    def __init__(self, template):
+    def __init__(self, template, n_loops=0, loop_adjoint=True):
+        if not isinstance(loop_adjoint, (list, tuple)):
+            loop_adjoint = [loop_adjoint] * n_loops
+        assert len(loop_adjoint) == n_loops
+        self.n_loops, self.loop_adjoint = n_loops, list(loop_adjoint)
+        self.names = list(matrix_words.names)
+        for k, adjoint in enumerate(self.loop_adjoint):
+            self.names += [f"L{k}", f"P L{k}", f"L{k} P"] + ([f"L{k}^dag"] if adjoint else [])
+        self.n = len(self.names)
         s = g.lattice(_unit(template))
-        super().__init__([("P", template), ("c", [s] * self.n)], [("f", template)], [])
+        inputs = [("P", template), ("c", [s] * self.n)]
+        if n_loops > 0:
+            inputs.append(("L", [template] * n_loops))
+        super().__init__(inputs, [("f", template)], [])
 
     def initialize(self, rng, scale=None):
         pass
 
     def evaluate(self, inputs, parameters, constants):
-        P, c = inputs
+        P, c = inputs[0:2]
+        L = inputs[2] if self.n_loops > 0 else []
         Pd = g.adj(P)
         P2 = g(P * P)
         words = [P2, g(Pd), g(P * Pd), g(Pd * P), g(P2 * P), g(P2 * Pd)]
+        for L_k, adjoint in zip(L, self.loop_adjoint):
+            words += [L_k, g(P * L_k), g(L_k * P)] + ([g(g.adj(L_k))] if adjoint else [])
         f = P
         for ci, w in zip(c, words):
             f = g(f + w * ci)

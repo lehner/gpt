@@ -379,6 +379,13 @@ dpt(U, description, mu, P0, P1, [rho] + list(net.parameters()), loops=loops,
   loop (`n = 5 + 2 n_loops`; for SU(3) loops tr L determines the eigenvalues,
   tr L L^dag = N is constant).  One layer rather than a separate loop layer:
   the mlp takes a single list input, and there is no concatenation layer.
+  `loop_imag` (a flag or one per loop) drops Im tr L_k (e.g. for hermitian
+  L_k); `mixed=True` adds Re tr P L_k / N, Im tr P L_k / N per loop.
+  `matrix_words(template, n_loops, loop_adjoint)` takes L as a third input
+  (`words([x, c, l])`) and adds the words linear in the loops, L_k, P L_k,
+  L_k P (and L_k^dag if `loop_adjoint`), after those of P; its instance
+  attribute `n` (and `names`) counts them (the class attribute
+  `matrix_words.n` is the 6 words of P).
 - `local_covariant_matrix(template, n_channels, gate=False, scale=0.1)`: a
   residual block on C channels of N x N matrix fields with
   `X_c(x) -> V(x) X_c(x) V(x)^dag`:
