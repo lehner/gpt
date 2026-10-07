@@ -71,8 +71,8 @@ a_ld_2 = phi_2.action_log_det_jacobian().transformed(phi_1, indices=indices, pro
 S = a_gauge + phi_1.action_log_det_jacobian() + a_ld_2
 
 # the combined action and its gradient w.r.t. links, the rho field and the
-# weights; g.ml.fields makes one list of them (with the network's own storage)
-fields = g.ml.fields(U, [rho], net.parameters())
+# weights, one list of them (the network's values are updated in place)
+fields = U + [rho] + net.parameters()
 S.assert_gradient_error(rng, fields, fields, 1e-4, 1e-7)
 
 # the loss: sum_i Q_i^2 with Q_i = <v_i, F>, as a node graph over the weights;
@@ -83,8 +83,8 @@ Qs = [
     for _ in range(2)
 ]
 # the trained parameters: rho (a global number, broadcast to the transport's
-# field) and the weights, in their own storage
-weights = g.ml.fields(rho_fn.parameters(), net.parameters())
+# field) and the weights (the functions' values, updated in place)
+weights = rho_fn.parameters() + net.parameters()
 leaves = [rad.node(w) for w in weights]
 (rho_node,) = rho_fn([], leaves[0:1])
 loss = sum(q * q for q in [rad.functional_node(Q, U + [rho_node] + leaves[1:]) for Q in Qs])

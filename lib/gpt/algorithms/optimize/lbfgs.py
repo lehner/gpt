@@ -147,8 +147,10 @@ class lbfgs(optimizer):
                 alpha = self.step / (_ip(d, d) ** 0.5)
                 dphi0 = _ip(d, p)
 
+            # (arrays are updated in place, see set_element: copied)
             x0 = [
-                v if g.util.is_num(v) or isinstance(v, np.ndarray) else g.copy(v) for v in fields()
+                v if g.util.is_num(v) else np.copy(v) if isinstance(v, np.ndarray) else g.copy(v)
+                for v in fields()
             ]
 
             def phi(a):

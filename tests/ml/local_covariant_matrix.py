@@ -70,12 +70,12 @@ def network(n_channels, n_layers, gate):
 
 
 nets = {gate: network(4, 2, gate) for gate in [False, True]}
-initial = {gate: list(net.parameters()) for gate, net in nets.items()}
+initial = {gate: g.ml.snapshot(net) for gate, net in nets.items()}
 
 
 def reset(net, values):
-    for i, v in enumerate(values):
-        net.parameters()[i] = v
+    for name, v in values.items():
+        net[name] = v
 
 
 # (1) gauge covariance

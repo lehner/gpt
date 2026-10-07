@@ -41,11 +41,16 @@ def nfloats(a):
 
 
 def set_element(a, i, b):
+    # fields and arrays are updated in place (others may hold them, e.g. the
+    # functions of g.ml and the composites that share their parameters);
+    # numbers are replaced
     if isinstance(a[i], (g.lattice, g.tensor)):
         if g.util.is_num(b):
             a[i][:] = b
         else:
             a[i] @= b
+    elif isinstance(a[i], np.ndarray):
+        a[i][...] = b
     else:
         a[i] = b
 

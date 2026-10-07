@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.ad.reverse.util import (
     get_container,
     get_unary_container,
@@ -342,6 +343,10 @@ class node_base(base):
             z._reads_children = ((),)
             z._reads_self = False
             return z
+
+        if x._container.tag[0] is np.ndarray:
+            # array element access (see linear.element)
+            return g.ad.reverse.linear.element(x, item)
 
         def getter(y):
             return y[item]

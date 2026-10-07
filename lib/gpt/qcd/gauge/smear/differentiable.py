@@ -17,13 +17,20 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.core.group import diffeomorphism, differentiable_functional
 from gpt.ad import reverse as rad
 
 
+def _is_number(x):
+    # a number or a 0-d array (a number stored in place, e.g. a g.ml
+    # parameter; numpy arithmetic on it gives numbers)
+    return g.util.is_num(x) or (isinstance(x, np.ndarray) and x.ndim == 0)
+
+
 def assert_compatible(a, b, tag=""):
-    if g.util.is_num(a) and g.util.is_num(b):
-        return  # e.g. complex and numpy.complex128 (optimizer updates)
+    if _is_number(a) and _is_number(b):
+        return  # e.g. complex, numpy.complex128 and 0-d arrays (optimizer updates)
     if type(a) is not type(b):
         raise Exception(f"Incompatible types: {type(a)} and {type(b)}{tag}")
     if isinstance(a, rad.node_base):

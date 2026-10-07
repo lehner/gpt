@@ -18,7 +18,7 @@
 #
 import gpt as g
 import numpy as np
-from gpt.ml.function import function
+from gpt.ml.function import function, _unbox
 from gpt.ml.layer.util import unit_scalar, standardization, embed
 
 
@@ -103,7 +103,7 @@ class local_covariant_matrix(function):
         # (plain inputs) at the current weights
         if not self.gate:
             return
-        a, b, beta = self._parameters.group(self.parameters())[0:3]
+        a, b, beta = self._parameters.group([_unbox(p) for p in self.parameters()])[0:3]
         q = [self._invariants(self._mix(X, a, b, beta)) for (X,) in samples]
         self["mean"], self["inv_std"] = standardization(q)
 

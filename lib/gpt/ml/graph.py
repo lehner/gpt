@@ -32,7 +32,7 @@
 import itertools
 import re
 import gpt as g
-from gpt.ml.function import function, _check_name, _check_names, _named_storage, _entry
+from gpt.ml.function import function, _check_name, _check_names, _named_storage
 
 _creation = itertools.count()
 
@@ -132,8 +132,8 @@ class _layout:
         for c in calls:
             self.prefix.setdefault(id(c.function), c.name)
         self.functions = list({id(c.function): c.function for c in calls}.values())
-        self.names, self.entries, self.index = [], [], {}
-        self.constant_names, self.constant_entries = [], []
+        self.names, self.values, self.index = [], [], {}
+        self.constant_names, self.constant_values = [], []
         for f in self.functions:
             prefix = self.prefix[id(f)]
             f_calls = [d for d in calls if d.function is f]
@@ -142,13 +142,11 @@ class _layout:
                 for j in range(len(f._parameters.values))
                 if any(j not in d.connections for d in f_calls)
             ]
-            self.index[id(f)] = {j: len(self.entries) + k for k, j in enumerate(owned)}
+            self.index[id(f)] = {j: len(self.values) + k for k, j in enumerate(owned)}
             self.names += [f"{prefix}.{f._parameters.names[j]}" for j in owned]
-            self.entries += [_entry(f._parameters.values, j) for j in owned]
+            self.values += [f._parameters.values[j] for j in owned]
             self.constant_names += [f"{prefix}.{name}" for name in f._constants.names]
-            self.constant_entries += [
-                _entry(f._constants.values, j) for j in range(len(f._constants.values))
-            ]
+            self.constant_values += list(f._constants.values)
 
 
 class pack:
@@ -466,10 +464,10 @@ class composite(function):
     """The function of a pack (see g.ml.pack).  Its parameters are the
     parameter slots of its functions that at least one call leaves
     unconnected, named call.slot with the first call of each function; its
-    constants are all constants of its functions.  It holds no values: its
-    storage lists point into the storages of its functions, so any number of
-    composites share the values of a function.  f["call.name"] addresses the
-    function of a call."""
+    constants are all constants of its functions.  It owns no values: its
+    lists hold the value objects of its functions (updated in place, never
+    replaced), so any number of composites share the values of a function.
+    f["call.name"] addresses the function of a call."""
 
     def __init__(self, graph, inputs, calls):
         super().__init__([s.name for s in inputs], list(graph.outputs.keys()), [])
@@ -479,8 +477,8 @@ class composite(function):
         self._calls = calls
         self._functions = {c.name: c.function for c in calls}
         self._layout = layout = _layout(calls)
-        self._parameters = _named_storage.shared(layout.names, layout.entries)
-        self._constants = _named_storage.shared(layout.constant_names, layout.constant_entries)
+        self._parameters = _named_storage.shared(layout.names, layout.values)
+        self._constants = _named_storage.shared(layout.constant_names, layout.constant_values)
 
     def graph(self):
         return self._graph

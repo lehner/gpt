@@ -26,27 +26,33 @@
 #   g.ml.gradient_noise(make_cost, fields, n=8)    # signal-to-noise of stochastic gradients
 #
 import gpt as g
+import numpy as np
 from gpt.ad.reverse.util import get_container
 
 
 def _norm2(x):
     if isinstance(x, list):
         return sum(_norm2(y) for y in x)
-    if g.util.is_num(x):
-        return abs(x) ** 2
+    if g.util.is_num(x) or isinstance(x, np.ndarray):
+        return float(np.sum(np.abs(x) ** 2))
     return g.norm2(x)
 
 
 def _difference(a, b):
     if isinstance(a, list):
         return [_difference(x, y) for x, y in zip(a, b)]
-    if g.util.is_num(a):
+    if g.util.is_num(a) or isinstance(a, np.ndarray):
         return a - b
     return g(a - b)
 
 
 def _copy(x):
-    return x if g.util.is_num(x) else g.copy(x)
+    # (values are updated in place: a snapshot copies them)
+    if g.util.is_num(x):
+        return x
+    if isinstance(x, np.ndarray):
+        return np.copy(x)
+    return g.copy(x)
 
 
 def snapshot(f):
@@ -114,7 +120,7 @@ def gradient_noise(cost, fields, n, names=None):
     result = {}
     for i, name in enumerate(names):
         gs = [d[i] for d in draws]
-        if g.util.is_num(gs[0]):
+        if g.util.is_num(gs[0]) or isinstance(gs[0], np.ndarray):
             mean = sum(gs) / n
         else:
             mean = g(sum(gs[1:], gs[0]) * (1.0 / n))

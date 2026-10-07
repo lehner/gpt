@@ -53,8 +53,7 @@ class example(g.ml.function):
 
 
 def reference(f, x):
-    a, b, c0, c1, d = f.parameters()
-    s = f["s"]
+    a, b, (c0, c1), d, s = f["a"], f["b"], f["c"], f["d"], f["s"]
     return g(a.real * x + b + s * c0 * c1 * x + d[0] * x * x + d[1] * x)
 
 
@@ -69,13 +68,17 @@ p = f.parameters()
 assert f["c"][0] is p[2] and f["c"][1] is p[3] and f["c.1"] is p[3] and f["d"] is p[4]
 assert f["s"] == 0.5
 
-# assignment: in place for fields, replacement for numbers and arrays
+# assignment: in place (numbers are stored as 0-d arrays, read as numbers);
+# the values are never replaced, which the value lists enforce
 b = f["b"]
 new_b = rng.cnormal(g.complex(grid))
 f["b"] = new_b
 assert f["b"] is b and g.norm2(b - new_b) == 0.0
+a = p[0]
 f["a"] = 0.7 + 0j
-assert f.parameters()[0] == 0.7
+assert p[0] is a and a.shape == () and f["a"] == 0.7 and isinstance(f["a"], complex)
+expect(TypeError, lambda: p.__setitem__(0, 0.7 + 0j))
+expect(TypeError, lambda: p.append(0.0))
 f["c"] = [g.copy(f["c.1"]), g.copy(f["c.0"])]
 assert f["c"][0] is p[2]
 g.message("Names and storage: ok")

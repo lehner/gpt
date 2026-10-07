@@ -20,7 +20,7 @@ over time.  Known AD gaps that limit `g.ml` are collected in
 
 | Path | Role |
 |---|---|
-| `lib/gpt/ml/function.py` | `g.ml.function` (base class), named storage, `_storage_list` |
+| `lib/gpt/ml/function.py` | `g.ml.function` (base class), named storage (`_values`: value objects updated in place; numbers boxed as 0-d arrays) |
 | `lib/gpt/ml/graph.py` | symbols, symbolic calls, `g.ml.pack`, `g.ml.composite`, `describe` |
 | `lib/gpt/ml/monitor.py` | diagnostics: `snapshot`, `displacement`, `activity`, `gradient_noise` |
 | `lib/gpt/ml/layer/basic.py` | `replicate`, `linear_combination`, `broadcast`, `polynomial` |
@@ -85,11 +85,18 @@ class scale(g.ml.function):
 - **Names** are mandatory (they will key serialization): non-empty, no `.`
   (separator of list elements and composite levels), not pure integers
   (reserved for list elements), unique; parameters and constants share one
-  namespace.  `f["c"]` is the list slot, `f["c.1"]` one element; assignment
-  is in place (`@=`) for lattices/tensors, replacement for numbers/arrays.
-- **Storage.**  `f.parameters()` / `f.constants()` are the live flat lists in
-  the order of `parameter_names()` / `constant_names()`.  An optimizer given
-  `f.parameters()` updates the function itself.
+  namespace.  `f["c"]` is the list slot, `f["c.1"]` one element (a number
+  for a number slot, else the live object); assignment is in place.
+- **Storage.**  `f.parameters()` / `f.constants()` are the flat lists of the
+  value objects in the order of `parameter_names()` / `constant_names()`.
+  Values are updated in place and never replaced: numbers are stored as 0-d
+  numpy arrays (of their dtype) and enter `evaluate` as numbers (plain:
+  `.item()`; nodes: `g.ad.reverse.linear.element`, so a leaf of a 0-d array
+  works at any depth), arrays and fields are updated in place by
+  assignments and by the optimizers (`set_element`).  The lists (`_values`)
+  reject replacing an element (`x[i] @= y` reassigns the same object, which
+  is allowed).  An optimizer given `f.parameters()` updates the function
+  itself; to keep values, copy them (`g.ml.snapshot`).
 - **Values** are numbers, numpy arrays, lattices or tensors (and lists of
   them).  Numpy-array parameters work through the site-constant linear maps
   of `g.ad.reverse` (`mlp`'s weights `W<l>` with `matrix_vector`, see
@@ -156,14 +163,13 @@ net = g.ml.pack(y=y, z=z).function(inputs=[x2, x1])   # or explicit
   first call (`s1.a`, also used by `s2`); constants likewise (`mx.s`).
   Ownership is decided per composite.
 - **Storage.**  Functions are the only owners of values.  A composite's
-  `parameters()`/`constants()` are `_storage_list`s: fixed-length lists whose
-  elements are read and written in the functions' storages (entries point
-  through nested composites to the functions).  Hence any number of
-  composites may share functions (e.g. a training and an evaluation network),
-  and `initialize`, assignments and optimizers act on the same values through
-  any of them.  `_storage_list` subclasses `list` (GPT checks
-  `isinstance(x, list)`), keeps its own buffer empty and raises on every list
-  method that would use it or change the length.
+  `parameters()`/`constants()` hold the same value objects as its functions
+  (also through nested composites).  Since values are only updated in place,
+  any number of composites may share functions (e.g. a training and an
+  evaluation network), and `initialize`, assignments and optimizers act on
+  the same values through any of them.  Lists of several functions'
+  parameters (and other fields) are plain concatenations, e.g.
+  `U + [rho] + net.parameters()`.
 - **Lookup.**  `net["call.slot"]` delegates to the call's function (works for
   list slots, constants, and every call name of a shared function).
 - **Nesting.**  A composite is a function: call it on symbols in another
@@ -211,7 +217,8 @@ net.set_state(g.load(filename))
 directly (numbers, numpy arrays, tensors, lattices).  `set_state(state,
 strict=True)` assigns by name (lattices and tensors in place, also from a
 loaded lattice on a new grid object of the same layout; numbers and arrays
-replaced; composites write through to their functions).  Strict: the names
+in place, numbers also from 0-d arrays; composites through their
+functions).  Strict: the names
 must agree exactly (missing and unknown names are listed); `strict=False`
 assigns the names present in both.  Types are checked in any case (lattices
 by grid description and otype, arrays by shape).  A different graph text
@@ -234,15 +241,16 @@ g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.pa
   nodes (`0 + node` is the node).
 - The optimizers (`adam`, `gradient_descent`, `non_linear_cg`, `lbfgs`, line search)
   and the node functional find parameters **by identity**
-  (`g.util.index_by_identity`), so equal values are distinct parameters.  The
-  same object twice is still one parameter; note `complex(z)` returns `z`
-  itself for a complex `z`.
+  (`g.util.index_by_identity`), so equal values are distinct parameters (the
+  value objects of a function are distinct; the same object twice is still
+  one parameter).
 - `assert_gradient_error`, `g.group.cartesian`, `g.group.inner_product` and
   `rng.normal_element`/`uniform_element` handle numbers and numpy arrays
   (complex additive), so the generic gradient check covers mixed parameter
   lists.
-- Training several runs from the same start: save `list(net.parameters())`
-  and write it back element-wise (numbers are replaced in the storage).
+- Training several runs from the same start: `ref = g.ml.snapshot(net)`
+  (copies by name), restore with `net[name] = value` for each entry.  Do not
+  keep `list(net.parameters())`: it holds the live objects.
 - **`opt.on(x, dx=None)`** binds an optimizer to the fields `x` and the
   updated subset `dx` (default: all of `x`, the usual case for weights) and
   returns a run; `run(f)` iterates (`maxiter`, set at construction) with
@@ -313,10 +321,11 @@ Actions, flows and log-dets are `differentiable_functional`s with their own
   (the dependence of v drops out to first order): an exact gradient at the
   cost of one random direction.  It is a different functional at every
   point, so check gradients with random directions.
-- **`g.ml.fields(*lists)`**: one write-through list over several lists (e.g.
-  `g.ml.fields(U, net.parameters())`), for functionals that take all fields
-  as one list while an optimizer or a check must update the function's own
-  storage.
+- **Fields and weights in one list**: a plain concatenation, e.g.
+  `U + net.parameters()`; optimizers and checks update the functions'
+  values in place through it.  Numpy arithmetic on 0-d arrays gives numbers,
+  so trial points of checks and line searches mix numbers and 0-d arrays;
+  both are the same kind of field (`differentiable.assert_compatible`).
 
 Numbers and numpy arrays work as fields of the action pipeline
 (`transformed`, `added`, `directional_parallel_transport` with local and
@@ -374,7 +383,7 @@ dpt(U, description, mu, P0, P1, [rho] + list(net.parameters()), loops=loops,
   anything that takes a field, e.g. the field-valued description weight
   `rho` of `directional_parallel_transport` (`tests/ml/loop_function.py`:
   `rho_fn([], [rho_leaf])` in the loss graph, with the optimizer working on
-  `g.ml.fields(rho_fn.parameters(), net.parameters())`).
+  `rho_fn.parameters() + net.parameters()`).
 - `polynomial(template, degree, scale=0.0)`: `x -> x + sum_{k=2}^{degree}
   c_k x^k` with numbers c, a covariant site-local polynomial as one compiled
   stencil (`word_sum`; coefficients enter as factor fields `c 1`).

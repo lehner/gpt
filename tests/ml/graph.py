@@ -4,6 +4,7 @@
 # functions, nesting, and inspection.
 #
 import gpt as g
+import numpy as np
 
 rad = g.ad.reverse
 rng = g.random("test")
@@ -87,7 +88,7 @@ def build():
 
 
 def reference(net, x1, x2):
-    a, b, w, c0, c1 = net.parameters()
+    a, b, w, c0, c1 = [net[name] for name in net.parameter_names()]
     s = net["mx.s"]
     ya = a.real * x1
     p = b * x2
@@ -156,13 +157,15 @@ if matplotlib is not None:
     assert r"$S_1$" in texts and "l1" not in texts and "l2" in texts and r"shares $S_1$" in texts
     assert labeled.function().describe().splitlines()[1].split()[0] == "l1"  # names in describe
 
-# the composite holds no values: it reads and writes its functions' storage
+# the composite owns no values: it holds its functions' value objects, which
+# are updated in place (and never replaced)
 sc["a"] = 0.7 + 0j
 assert net.parameters()[0] == 0.7 and net["s1.a"] == 0.7
 net["s2.a"] = 0.9 + 0j
 assert sc["a"] == 0.9 and sc.parameters()[0] == 0.9
-net.parameters()[0] = 0.8 + 0j
+net.parameters()[0][...] = 0.8 + 0j
 assert sc["a"] == 0.8
+expect(TypeError, lambda: net.parameters().__setitem__(0, 0.8 + 0j))
 b = sp["b"]
 net["sp.b"] = rng.cnormal(g.complex(grid))
 assert sp["b"] is b and net.parameters()[1] is b
@@ -276,7 +279,7 @@ assert outer.parameter_names() == [f"inner.{n}" for n in net.parameter_names()] 
 assert outer.constant_names() == ["inner.mx.s"]
 sc["a"] = 0.6 + 0j
 assert outer["inner.s1.a"] == 0.6 and outer.parameters()[0] == 0.6
-outer.parameters()[0] = 0.65 + 0j
+outer.parameters()[0][...] = 0.65 + 0j
 assert sc["a"] == 0.65 and net["s1.a"] == 0.65
 y_o, u_o = outer([x2, x1])
 y_r, t_r = reference(net, x1, x2)
@@ -295,9 +298,12 @@ assert state["parameters"]["sp.b"] is net["sp.b"] and state["graph"] == net.desc
 filename = os.path.join(os.environ.get("WORK_DIR", "."), "ml_graph_state")
 g.save(filename, state)
 reference_out = net([x1, x2])
-reference_values = [g.copy(v) if isinstance(v, g.lattice) else v for v in net.parameters()]
-for i, v in enumerate(list(net.parameters())):
-    net.parameters()[i] = rng.cnormal(g.lattice(v)) if isinstance(v, g.lattice) else 0.123 + 0j
+reference_values = [g.copy(v) if isinstance(v, g.lattice) else np.copy(v) for v in net.parameters()]
+for v in net.parameters():
+    if isinstance(v, g.lattice):
+        rng.cnormal(v)
+    else:
+        v[...] = 0.123 + 0j
 loaded = g.load(filename)
 net.set_state(loaded)
 assert all(

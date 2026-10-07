@@ -53,66 +53,40 @@ def _promote(x):
     return constant(x)
 
 
-class _storage_list(list):
-    # a write-through list (the storage of a composite, g.ml.fields): a
-    # fixed-length list whose element k lives in another list, entry k =
-    # (storage list, index).  Reads and
-    # writes go to that storage, so any number of composites share the values
-    # of their functions (optimizers replace numbers in the list they are
-    # given).  It is a list (GPT checks isinstance(x, list)); the list's own
-    # buffer stays empty, and every list method that would use it raises.
-    def __init__(self, entries):
-        super().__init__()
-        self.entries = entries
+def _box(v):
+    # a number is stored as a 0-d array (of its dtype), so that every value
+    # of a function is updated in place and never replaced
+    return np.array(v) if g.util.is_num(v) else v
 
-    def __len__(self):
-        return len(self.entries)
 
-    def __iter__(self):
-        return (s[i] for s, i in self.entries)
+def _unbox(x):
+    # the value a stored (or passed) value has in evaluate: a number for a
+    # 0-d array, plain or as a node (linear.element)
+    if isinstance(x, np.ndarray) and x.ndim == 0:
+        return x.item()
+    if is_node(x) and x._container.tag[0] is np.ndarray and x._container.tag[1] == ():
+        return x[()]
+    return x
 
-    def __getitem__(self, k):
-        if isinstance(k, slice):
-            return [self[j] for j in range(*k.indices(len(self)))]
-        s, i = self.entries[k]
-        return s[i]
 
+class _values(list):
+    # the values of a function or composite: fixed objects, updated in place
+    # (f[name] = value, the optimizers), so that composites share them by
+    # holding the same objects.  Replacing an element raises (augmented
+    # assignments such as x[i] @= y reassign the same object, which is
+    # allowed); a list (GPT checks isinstance(x, list)).
     def __setitem__(self, k, value):
-        s, i = self.entries[k]
-        s[i] = value
-
-    def __contains__(self, x):
-        return any(x is y for y in self)
-
-    def __bool__(self):
-        return len(self.entries) > 0
-
-    def __repr__(self):
-        return repr(list(self))
+        if isinstance(k, slice) or value is not list.__getitem__(self, k):
+            raise TypeError(
+                "the values of a g.ml function are updated in place (f[name] = value), "
+                "not replaced"
+            )
 
     def _fixed(self, *args, **kwargs):
-        raise TypeError("a write-through list has a fixed layout")
+        raise TypeError("the values of a g.ml function have a fixed layout")
 
     append = extend = insert = pop = remove = clear = sort = reverse = _fixed
     __delitem__ = __iadd__ = __imul__ = _fixed
-    copy = index = count = __add__ = __radd__ = __mul__ = __rmul__ = __reversed__ = _fixed
-    __eq__ = __ne__ = __lt__ = __le__ = __gt__ = __ge__ = _fixed
-    __hash__ = None
-
-
-def fields(*lists):
-    """One write-through list over several lists (e.g. the links, other fields
-    and a function's parameters()): reading and writing an element reads and
-    writes the list it comes from, so an optimizer working on the result
-    updates the function's storage."""
-    return _storage_list([_entry(values, j) for values in lists for j in range(len(values))])
-
-
-def _entry(values, j):
-    # where element j of a storage lives (a write-through list points through)
-    if isinstance(values, _storage_list):
-        return values.entries[j]
-    return (values, j)
 
 
 class _named_storage:
@@ -121,27 +95,28 @@ class _named_storage:
     def __init__(self, slots):
         _check_names([name for name, _ in slots])
         self.slots = []
-        self.values = []
+        values = []
         self.names = []
         for name, value in slots:
             if isinstance(value, list):
-                self.slots.append((name, len(self.values), len(value)))
+                self.slots.append((name, len(values), len(value)))
                 for i, v in enumerate(value):
-                    self.values.append(v)
+                    values.append(_box(v))
                     self.names.append(f"{name}.{i}")
             else:
-                self.slots.append((name, len(self.values), None))
-                self.values.append(value)
+                self.slots.append((name, len(values), None))
+                values.append(_box(value))
                 self.names.append(name)
+        self.values = _values(values)
 
     @classmethod
-    def shared(cls, names, entries):
-        # single-element slots with dotted names whose values live in other
-        # storages (a composite's), see _storage_list
+    def shared(cls, names, values):
+        # single-element slots with dotted names holding the values of other
+        # storages (a composite's)
         r = cls([])
         r.slots = [(name, i, None) for i, name in enumerate(names)]
         r.names = list(names)
-        r.values = _storage_list(entries)
+        r.values = _values(values)
         return r
 
     def group(self, values):
@@ -163,20 +138,21 @@ class _named_storage:
 
 
 def _assign(values, i, value):
-    # in place for lattices and tensors (keeps the object), else replace
-    # (arrays keep their shape)
-    if isinstance(values[i], (g.lattice, g.tensor)):
-        values[i] @= value
+    # in place (the object is kept, see _values); arrays (and numbers, stored
+    # as 0-d arrays) keep their shape
+    x = values[i]
+    if isinstance(x, np.ndarray):
+        if np.shape(value) != x.shape:
+            raise ValueError(f"array of shape {np.shape(value)} assigned to {x.shape}")
+        x[...] = value
     else:
-        if isinstance(values[i], np.ndarray) and np.shape(value) != values[i].shape:
-            raise ValueError(f"array of shape {np.shape(value)} assigned to {values[i].shape}")
-        values[i] = value
+        x @= value
 
 
 def _same_type(a, b):
-    # loaded values may live on new (equal) grid objects: compare layouts
-    if g.util.is_num(a) or g.util.is_num(b):
-        return g.util.is_num(a) and g.util.is_num(b)
+    # loaded values may live on new (equal) grid objects: compare layouts; a
+    # number is a 0-d array
+    a, b = _box(a), _box(b)
     if isinstance(a, np.ndarray) or isinstance(b, np.ndarray):
         return isinstance(a, np.ndarray) and isinstance(b, np.ndarray) and a.shape == b.shape
     if isinstance(a, g.lattice) and isinstance(b, g.lattice):
@@ -190,7 +166,7 @@ def _type_text(x):
     if isinstance(x, g.lattice):
         return f"lattice({x.otype.__name__}, {x.grid.describe()})"
     if isinstance(x, np.ndarray):
-        return f"array{x.shape}"
+        return "number" if x.ndim == 0 else f"array{x.shape}"
     return type(x).__name__
 
 
@@ -213,7 +189,9 @@ class function:
     storage; a list value makes a list slot whose elements are named
     name.0, name.1, ...  Values are numbers, numpy arrays, lattices or
     tensors; their otype selects the update (g.group.compose) of a
-    parameter, numbers and arrays are complex additive.  A real parameter is
+    parameter, numbers and arrays are complex additive.  Values are updated
+    in place, never replaced (numbers are stored as 0-d arrays and passed to
+    evaluate as numbers), so composites share them.  A real parameter is
     expressed in evaluate by g.component.real(p), so that no gradient flows
     into its imaginary part.
     """
@@ -249,7 +227,8 @@ class function:
     def constant_names(self):
         return list(self._constants.names)
 
-    # storage: the live flat lists (an optimizer updates parameters() in place)
+    # storage: the flat lists of the value objects (updated in place by
+    # assignments f[name] = value and by the optimizers; see _values)
     def parameters(self):
         return self._parameters.values
 
@@ -264,10 +243,11 @@ class function:
         raise KeyError(f"No parameter or constant {name!r}")
 
     def __getitem__(self, name):
+        # the value (a number for a number, else the live object)
         storage, (offset, n) = self._lookup(name)
         if n is None:
-            return storage.values[offset]
-        return storage.values[offset : offset + n]
+            return _unbox(storage.values[offset])
+        return [_unbox(x) for x in storage.values[offset : offset + n]]
 
     def __setitem__(self, name, value):
         storage, (offset, n) = self._lookup(name)
@@ -362,13 +342,15 @@ class function:
         # evaluations are assumed to have been checked then), and evaluate
         # sees nodes only (plain values become constant nodes, so that
         # products need no operand ordering)
-        constants = self._constants.values
+        # numbers are stored as 0-d arrays and enter evaluate as numbers
+        constants = [_unbox(x) for x in self._constants.values]
         check = _has_node(inputs) or _has_node(parameters)
+        parameters = [_unbox(x) for x in parameters]
         if check:
             for (name, t), x in zip(self._inputs, inputs):
                 self._check_type("input", name, t, x)
             for name, x, ref in zip(self._parameters.names, parameters, self._parameters.values):
-                self._check_type("parameter", name, get_container(ref), x)
+                self._check_type("parameter", name, get_container(_unbox(ref)), x)
             inputs = [_promote(x) for x in inputs]
             parameters = [_promote(x) for x in parameters]
             constants = [_promote(x) for x in constants]

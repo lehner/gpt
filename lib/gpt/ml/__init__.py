@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.ml.function import function, fields
+from gpt.ml.function import function
 from gpt.ml.graph import composite, symbols, pack
 from gpt.ml.monitor import snapshot, displacement, activity, gradient_noise
 import gpt.ml.layer

@@ -157,7 +157,7 @@ pt = g.qcd.gauge.smear.directional_parallel_transport(
     loop_function=lambda sm, xp, L: net_l([sm, L], xp[1:])[0],
     loops=loops,
 )
-fields = g.ml.fields(U, [rho], net_l.parameters())
+fields = U + [rho] + net_l.parameters()
 pt.action_log_det_jacobian().assert_gradient_error(rng, fields, fields, 1e-4, 1e-7)
 Up = pt(fields)
 Uinv = pt.inv(Up[0:4] + params)
@@ -231,7 +231,7 @@ pt = g.qcd.gauge.smear.directional_parallel_transport(
     loop_function=lambda sm, xp, L: net_w([sm, [L[0], g(0.5 * (L[1] + g.adj(L[1])))]], xp[1:])[0],
     loops=loops,
 )
-fields = g.ml.fields(U, [rho], net_w.parameters())
+fields = U + [rho] + net_w.parameters()
 pt.action_log_det_jacobian().assert_gradient_error(rng, fields, fields, 1e-4, 1e-7)
 Up = pt(fields)
 Uinv = pt.inv(Up[0:4] + params)
