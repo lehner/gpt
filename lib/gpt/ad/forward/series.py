@@ -121,7 +121,8 @@ class series(base):
             return self.__mul__(other)
         raise Exception("Not implemented")
 
-    def __add__(self, other):
+    def _merge(self, other, sign):
+        # self + other (sign > 0) or self - other
         other = promote(other, self.landau_O)
         # first merge landau_Os
         landau_O = self.landau_O + other.landau_O
@@ -134,30 +135,18 @@ class series(base):
         for t2 in other.terms:
             if not landau_O.accept(t2):
                 continue
+            v = other.terms[t2]
             if t2 not in terms:
-                terms[t2] = other.terms[t2]
+                terms[t2] = v if sign > 0 else -v
             else:
-                terms[t2] = g(terms[t2] + other.terms[t2])
+                terms[t2] = g(terms[t2] + v) if sign > 0 else g(terms[t2] - v)
         return series(terms, landau_O)
 
+    def __add__(self, other):
+        return self._merge(other, 1)
+
     def __sub__(self, other):
-        other = promote(other, self.landau_O)
-        # first merge landau_Os
-        landau_O = self.landau_O + other.landau_O
-        # then merge terms
-        terms = {}
-        for t1 in self.terms:
-            if not landau_O.accept(t1):
-                continue
-            terms[t1] = self.terms[t1]
-        for t2 in other.terms:
-            if not landau_O.accept(t2):
-                continue
-            if t2 not in terms:
-                terms[t2] = -other.terms[t2]
-            else:
-                terms[t2] = g(terms[t2] - other.terms[t2])
-        return series(terms, landau_O)
+        return self._merge(other, -1)
 
     def __rsub__(self, other):
         other = promote(other, self.landau_O)

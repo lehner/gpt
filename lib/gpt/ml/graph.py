@@ -32,7 +32,7 @@
 import itertools
 import re
 import gpt as g
-from gpt.ml.function import function, _check_name, _check_names, _named_storage, _storage_list
+from gpt.ml.function import function, _check_name, _check_names, _named_storage, _entry
 
 _creation = itertools.count()
 
@@ -520,6 +520,20 @@ class composite(function):
         f, rest = self._lookup_function(name)
         f[rest] = value
 
+    def _bind(self, inputs):
+        # symbol ids -> values, starting from the inputs
+        return {s.id: x for s, x in zip(self._input_symbols, inputs)}
+
+    def _replay(self, inputs, parameters, after=None):
+        # the calls in order on inputs; after(c, values) follows each call;
+        # returns the outputs
+        values = self._bind(inputs)
+        for c in self._calls:
+            self._run(c, values, parameters)
+            if after is not None:
+                after(c, values)
+        return [values[s.id] for s in self._output_symbols]
+
     def _run(self, c, values, parameters):
         # evaluate call c: values maps symbol ids to values, parameters is
         # flat in the order of the composite's slots
@@ -536,16 +550,13 @@ class composite(function):
             values[s.id] = y
 
     def evaluate(self, inputs, parameters, constants):
-        values = {s.id: x for s, x in zip(self._input_symbols, inputs)}
-        for c in self._calls:
-            self._run(c, values, parameters)
-        return [values[s.id] for s in self._output_symbols]
+        return self._replay(inputs, parameters)
 
     def calibrate(self, samples):
         # the calls in order: each function is calibrated (at its first call)
         # on the inputs it receives from the samples, then evaluated, so later
         # functions see calibrated earlier ones
-        values = [{s.id: x for s, x in zip(self._input_symbols, inputs)} for inputs in samples]
+        values = [self._bind(inputs) for inputs in samples]
         calibrated = set()
         for c in self._calls:
             if id(c.function) not in calibrated:
@@ -582,10 +593,3 @@ def _draw_edge(a, s, b, port, n_ports, slot, k, style):
         output=output,
         style=style,
     )
-
-
-def _entry(values, j):
-    # where element j of a storage lives (a composite's entries point through)
-    if isinstance(values, _storage_list):
-        return values.entries[j]
-    return (values, j)

@@ -233,10 +233,10 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
     computed and `None` is returned (see §4.8).  `functional.gradient` uses
     it; pass it for contractions whose value you do not read, e.g. an HVP
     pass `c(with_value=False)`.
-- `value_of(x)` (in `ad/reverse/util.py`) evaluates a (possibly nested) node
-  down to a plain value. To **release** a graph's memory after reading a
-  result, repeatedly resolve `x = value_of(x)` while `is_node(x)`, then
-  `g(x)` if it is an `expr`.
+- `value_of(x)` (in `ad/reverse/util.py`) evaluates a node one level down
+  (a nested node's value is again a node).  `resolve(x)` gives the plain
+  value of a finished pass's result (all levels, expressions evaluated);
+  use it to **release** a graph's memory after reading a result.
 
 ### 4.2 Conventions
 
@@ -313,8 +313,9 @@ mechanism.
   `node_op`, `backward`, `functional`.
 - `ad/reverse/transform.py` — transcendental transforms (sin, cos, ...) as
   node ops.
-- `ad/reverse/util.py` — `nodify`, `product`, `value_of`, `is_node`,
-  `value_depth_static`, `get_*_container`.
+- `ad/reverse/util.py` — `constant` (a plain value as a constant node),
+  `nodify`, `product`, `value_of`, `resolve`, `is_node`,
+  `value_depth_static`, `get_*_container`, `list_container`.
 - `ad/reverse/foundation/` — the "foundation" layer: lattice-level
   implementations of ops the node layer dispatches to (trace/sum
   backprops, `where`, `astype`, group conversions), plus
@@ -567,7 +568,9 @@ Plain-run optimizations:
 | `lib/gpt/ad/reverse/node.py` | node, node_op, forward/backward, functional |
 | `lib/gpt/ad/reverse/util.py` | nodify, product, value_of, `resolve` (plain value of a finished pass's result), containers |
 | `lib/gpt/ad/reverse/transform.py` | sin/cos/... node transforms |
-| `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order; used by `g.ml` losses) |
+| `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order; used by `g.ml` losses); `joint_node` (first-order nodes whose backward computes all flows at once, also used by `preimage`) |
+| `lib/gpt/ad/reverse/components.py` | mutually adjoint node pairs between arrays, site-constant fields and field components (`broadcast_array`/`sum_to_array`, `component`/`embed`) |
+| `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites), used by `g.ml.layer.mlp` |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, `adjoint_code_local`), multi-output list nodes, local temporaries, seedless adjoints, shared padding |

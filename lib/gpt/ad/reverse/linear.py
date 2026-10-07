@@ -36,8 +36,8 @@
 #
 import gpt as g
 import numpy as np
-from gpt.ad.reverse.node import node_base, node_op
-from gpt.ad.reverse.util import container, get_container, is_node, value_of
+from gpt.ad.reverse.node import node_op
+from gpt.ad.reverse.util import constant, container, is_node, value_of
 
 
 def _array(x):
@@ -129,19 +129,8 @@ def _plain_outer_sum(a, b):
     return a[0].grid.globalsum(S)
 
 
-def _node(x):
-    return x if is_node(x) else node_base(x, with_gradient=False)
-
-
 def _is_list_node(x):
     return is_node(x) and x._container.tag[0] is list
-
-
-def _values(h):
-    # the values of a list node or of a list of fields (plain or nodes)
-    if is_node(h):
-        return value_of(h)
-    return [value_of(x) if is_node(x) else x for x in h]
 
 
 def _flows(z):
@@ -157,8 +146,8 @@ def stack(h):
     if _is_list_node(h):
         return h
     if not any(is_node(x) for x in h):
-        return node_base(list(h), with_gradient=False)
-    h = [_node(x) for x in h]
+        return constant(list(h))
+    h = [constant(x) for x in h]
 
     def forward():
         v = [value_of(x) for x in h]
@@ -166,20 +155,18 @@ def stack(h):
 
     def backward(j):
         def _backward(z):
-            f = z.gradient
-            fj = f[j] if is_node(f) else f[j]
+            fj = z.gradient[j]
             if fj is None:
                 return None
             return (1, fj)
 
         return _backward
 
-    elem = get_container(_values(h)[0]) if not is_node(h[0]) else h[0]._container
     return node_op(
         tuple(h),
         forward,
         tuple(backward(j) for j in range(len(h))),
-        container(list, elem, len(h)),
+        container(list, h[0]._container, len(h)),
         "stack",
     )
 
@@ -205,7 +192,7 @@ def dagger(W):
 def matrix_vector(W, h):
     if not is_node(W) and not is_node(h) and not any(is_node(x) for x in h):
         return _plain_matrix_vector(W, h)
-    W, h = _node(W), stack(h)
+    W, h = constant(W), stack(h)
     m = W._container.tag[1][0]
 
     def forward():

@@ -18,8 +18,7 @@
 #
 import gpt as g
 import numpy as np
-from gpt.ad.reverse.util import container, get_container, is_node
-from gpt.ad.reverse.node import node_base
+from gpt.ad.reverse.util import constant, container, get_container, is_node, list_container
 
 
 def _check_name(name):
@@ -51,7 +50,7 @@ def _promote(x):
     # a plain value as a constant node (as the AD's nodify does)
     if isinstance(x, list):
         return [_promote(y) for y in x]
-    return x if is_node(x) else node_base(x, with_gradient=False)
+    return constant(x)
 
 
 def _container_of(x):
@@ -60,10 +59,7 @@ def _container_of(x):
     if is_node(x):
         return x._container
     if isinstance(x, list):
-        elem = [_container_of(y) for y in x]
-        if len(elem) == 0 or any(not e.accumulate_compatible(elem[0]) for e in elem[1:]):
-            raise TypeError(f"Not a uniform list: {[str(e) for e in elem]}")
-        return container(list, elem[0], len(elem))
+        return list_container([_container_of(y) for y in x])
     return get_container(x)
 
 
@@ -119,13 +115,14 @@ def fields(*lists):
     and a function's parameters()): reading and writing an element reads and
     writes the list it comes from, so an optimizer working on the result
     updates the function's storage."""
-    entries = []
-    for values in lists:
-        if isinstance(values, _storage_list):
-            entries += values.entries
-        else:
-            entries += [(values, j) for j in range(len(values))]
-    return _storage_list(entries)
+    return _storage_list([_entry(values, j) for values in lists for j in range(len(values))])
+
+
+def _entry(values, j):
+    # where element j of a storage lives (a write-through list points through)
+    if isinstance(values, _storage_list):
+        return values.entries[j]
+    return (values, j)
 
 
 class _named_storage:
@@ -214,7 +211,7 @@ class function:
     Subclasses call __init__ with the slots and implement
 
       evaluate(self, inputs, parameters, constants) -> list of outputs
-      initialize(self, rng, scale=None)
+      initialize(self, rng, scale=None)   (if it has parameters)
 
     evaluate receives one value per slot (a list for a list slot) and must
     work on plain values and on nodes of any depth.  If any input or
@@ -336,8 +333,10 @@ class function:
     # to be implemented by subclasses
     def initialize(self, rng, scale=None):
         # set the parameters (convention: near the identity / neutral
-        # element, scale = the distance from it, None = the default)
-        raise NotImplementedError()
+        # element, scale = the distance from it, None = the default);
+        # nothing to do for a function without parameters
+        if len(self._parameters.values) > 0:
+            raise NotImplementedError()
 
     def evaluate(self, inputs, parameters, constants):
         raise NotImplementedError()

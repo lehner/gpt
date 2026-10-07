@@ -113,13 +113,7 @@ class container:
             if len(self.tag) > 2:
                 if self.get_grid().obj != other.get_grid().obj:
                     return False
-            a = self.get_otype()
-            b = other.get_otype()
-            if a.data_alias is not None:
-                a = a.data_alias()
-            if b.data_alias is not None:
-                b = b.data_alias()
-            return a.__name__ == b.__name__
+            return otype_compatible(self.get_otype(), other.get_otype())
 
         return self.__eq__(other)
 
@@ -171,16 +165,7 @@ def get_container(x):
         raise Exception("Empty series")
     elif isinstance(x, list):
         # a uniform list of fields (e.g. the 4 gauge links) is one list node
-        if len(x) == 0:
-            raise Exception("empty list has no container")
-        elem = get_container(x[0])
-        for e in x[1:]:
-            ce = get_container(e)
-            if not ce.accumulate_compatible(elem):
-                raise Exception(
-                    "list elements must be mutually compatible: %s vs %s" % (elem, ce)
-                )
-        return container(list, elem, len(x))
+        return list_container([get_container(e) for e in x])
     elif isinstance(x, g.lattice):
         return container(g.lattice, x.grid, x.otype)
     elif isinstance(x, g.tensor):
@@ -193,9 +178,21 @@ def get_container(x):
         raise Exception(f"Unknown object type {type(x)}")
 
 
+def list_container(elems):
+    # the container of a list whose elements have the containers elems
+    if len(elems) == 0 or any(not e.accumulate_compatible(elems[0]) for e in elems[1:]):
+        raise TypeError(f"Not a uniform list: {[str(e) for e in elems]}")
+    return container(list, elems[0], len(elems))
+
+
 def is_node(x):
     # deferred reference: node_base lives in node.py, which imports util
     return isinstance(x, g.ad.reverse.node_base)
+
+
+def constant(x):
+    # x as a node: a plain value is promoted to a constant node (no gradient)
+    return x if is_node(x) else g.ad.reverse.node_base(x, with_gradient=False)
 
 
 def nodify(*args):
@@ -205,9 +202,7 @@ def nodify(*args):
     # (non-node) dispatch.  Returns the (possibly wrapped) argument for a
     # single argument, otherwise a tuple.
     if any(is_node(a) for a in args):
-        args = tuple(
-            a if is_node(a) else g.ad.reverse.node_base(a, with_gradient=False) for a in args
-        )
+        args = tuple(constant(a) for a in args)
     return args[0] if len(args) == 1 else args
 
 

@@ -17,8 +17,8 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.node import node_base, node_op
-from gpt.ad.reverse.util import container, is_node, value_of
+from gpt.ad.reverse.util import container
+from gpt.ad.reverse.functional_node import joint_node
 
 
 def preimage(dfm, fields, indices, inverse, inverter=None):
@@ -37,18 +37,9 @@ def preimage(dfm, fields, indices, inverse, inverter=None):
     (the vector-Jacobian product in the cartesian representation)."""
     if inverter is None:
         inverter = g.algorithms.inverter.fgcr(eps=1e-12, maxiter=1000, restartlen=30)
-    children = tuple(x if is_node(x) else node_base(x, with_gradient=False) for x in fields)
     state = {}
-    pending = {}
 
-    def values():
-        v = [value_of(c) for c in children]
-        if any(is_node(x) for x in v):
-            raise NotImplementedError("preimage supports first derivatives only")
-        return v
-
-    def forward():
-        y = values()
+    def forward(y):
         x = inverse(y)
         state["y"], state["x"] = y, x
         out = [x[i] for i in indices]
@@ -63,7 +54,7 @@ def preimage(dfm, fields, indices, inverse, inverter=None):
             d[i] = l
         return dfm.jacobian(x, y, d)
 
-    def compute_flows(z):
+    def flows(values, z, needed):
         x, y = state["x"], state["y"]
         c = z.gradient if len(indices) > 1 else [z.gradient]
         c = [
@@ -84,30 +75,20 @@ def preimage(dfm, fields, indices, inverse, inverter=None):
 
             lam = g.separate(inverter(mat)(g.merge(c, dimension=0)), dimension=0)
         jl = jacobian(lam)
-        for j, child in enumerate(children):
-            if not child.with_gradient:
-                continue
+        result = {}
+        for j in needed:
             if j in indices:
                 flow = lam[indices.index(j)]
             else:
                 flow = g(-1.0 * jl[j]) if isinstance(jl[j], g.lattice) else -jl[j]
-            pending[j] = g.cartesian_to_infinitesimal(y[j], flow)
+            result[j] = g.cartesian_to_infinitesimal(y[j], flow)
+        return result
 
-    def flow(j):
-        def _backward(z):
-            if is_node(z.gradient):
-                raise NotImplementedError("preimage supports first derivatives only")
-            if not pending:
-                compute_flows(z)
-            return (1, pending.pop(j))
+    def z_container(children):
+        c = children[indices[0]]._container
+        return c if len(indices) == 1 else container(list, c, len(indices))
 
-        return _backward
-
-    if len(indices) == 1:
-        z_container = children[indices[0]]._container
-    else:
-        z_container = container(list, children[indices[0]]._container, len(indices))
-    z = node_op(children, forward, [flow(j) for j in range(len(children))], z_container)
+    z = joint_node(fields, forward, flows, z_container, "preimage")
     if len(indices) == 1:
         return [z]
     return [z[k] for k in range(len(indices))]

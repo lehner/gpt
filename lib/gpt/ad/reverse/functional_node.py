@@ -17,8 +17,42 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.node import node_base, node_op
-from gpt.ad.reverse.util import container, is_node, value_of
+from gpt.ad.reverse.node import node_op
+from gpt.ad.reverse.util import constant, container, is_node, value_of
+
+
+def joint_node(fields, forward, flows, z_container, name):
+    """A node of fields (nodes; plain values are constants) whose backward
+    computes the flows into all children at once, first order only (plain
+    values and flows): forward(values) -> value; flows(values, z, needed) ->
+    {child index: flow} for the indices in needed (the children with a
+    gradient); z_container(children) -> the container of the value."""
+    children = tuple(constant(x) for x in fields)
+    pending = {}
+
+    def values():
+        v = [value_of(c) for c in children]
+        if any(is_node(x) for x in v):
+            raise NotImplementedError(f"{name} supports first derivatives only")
+        return v
+
+    def flow(j):
+        def _backward(z):
+            if is_node(z.gradient):
+                raise NotImplementedError(f"{name} supports first derivatives only")
+            if not pending:
+                needed = [i for i, c in enumerate(children) if c.with_gradient]
+                pending.update(flows(values(), z, needed))
+            return (1, pending.pop(j))
+
+        return _backward
+
+    return node_op(
+        children,
+        lambda: forward(values()),
+        [flow(j) for j in range(len(children))],
+        z_container(children),
+    )
 
 
 def functional_node(f, fields):
@@ -28,34 +62,16 @@ def functional_node(f, fields):
     are constants).  The flow into each field is f's cartesian gradient,
     converted to the infinitesimal convention of the flows and scaled by the
     flow into the result."""
-    children = tuple(x if is_node(x) else node_base(x, with_gradient=False) for x in fields)
-    pending = {}
 
-    def values():
-        v = [value_of(c) for c in children]
-        if any(is_node(x) for x in v):
-            raise NotImplementedError("functional_node supports first derivatives only")
-        return v
+    def flows(v, z, needed):
+        # one gradient evaluation for all fields that need one
+        seed = complex(z.gradient).real
+        result = {}
+        for j, gr in zip(needed, f.gradient(v, [v[j] for j in needed])):
+            r = g.cartesian_to_infinitesimal(v[j], gr)
+            result[j] = g(seed * r) if isinstance(r, g.lattice) else seed * r
+        return result
 
-    def flow(i):
-        def _backward(z):
-            if is_node(z.gradient):
-                raise NotImplementedError("functional_node supports first derivatives only")
-            if not pending:
-                # one gradient evaluation for all fields that need one
-                v = values()
-                needed = [j for j, c in enumerate(children) if c.with_gradient]
-                for j, gr in zip(needed, f.gradient(v, [v[j] for j in needed])):
-                    pending[j] = g.cartesian_to_infinitesimal(v[j], gr)
-            seed = complex(z.gradient).real
-            r = pending.pop(i)
-            return (1, g(seed * r) if isinstance(r, g.lattice) else seed * r)
-
-        return _backward
-
-    return node_op(
-        children,
-        lambda: complex(f(values())),
-        [flow(i) for i in range(len(children))],
-        container(complex),
+    return joint_node(
+        fields, lambda v: complex(f(v)), flows, lambda c: container(complex), "functional_node"
     )

@@ -29,9 +29,6 @@ class replicate(function):
         self.n = n
         super().__init__([("x", template)], [("X", [template] * n)], [])
 
-    def initialize(self, rng, scale=None):
-        pass
-
     def evaluate(self, inputs, parameters, constants):
         (x,) = inputs
         return [[x] * self.n]
@@ -92,7 +89,11 @@ class polynomial(function):
     def __init__(self, template, degree, scale=0.0):
         assert degree >= 2
         self.degree, self.scale = degree, scale
-        self.template, self.words = g.lattice(template), None
+        self.template = g.lattice(template)
+        self.words = word_sum(
+            [(1.0, [(0, False)])]
+            + [(1.0, [(1 + k, False)] + [(0, False)] * (k + 2)) for k in range(degree - 1)]
+        )
         super().__init__([("x", template)], [("y", template)], [("c", [0j] * (degree - 1))])
 
     def initialize(self, rng, scale=None):
@@ -103,9 +104,4 @@ class polynomial(function):
         # one stencil: x + sum_k (c_k 1) x^k (see word_sum)
         (x,) = inputs
         (c,) = parameters
-        if self.words is None:
-            self.words = word_sum(
-                [(1.0, [(0, False)])]
-                + [(1.0, [(1 + k, False)] + [(0, False)] * (k + 2)) for k in range(self.degree - 1)]
-            )
         return [self.words([x] + [embed(ck, self.template) for ck in c])]

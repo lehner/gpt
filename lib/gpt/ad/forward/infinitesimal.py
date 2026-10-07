@@ -58,9 +58,6 @@ class infinitesimal:
     def __eq__(self, other):
         return self.__str__() == other.__str__()
 
-    def __cmp__(self, other):
-        return self.__str__().__cmp__(other.__str__())
-
     def symbols(self):
         return tuple(sorted(list(self.value.keys())))
 

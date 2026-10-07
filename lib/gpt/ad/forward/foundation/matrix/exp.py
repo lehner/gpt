@@ -17,10 +17,11 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import numpy as np
 
 
 def function(x):
+    # scaling and squaring with a Taylor series; generic in the type of x
+    # (also the reverse AD's fallback for non-lattice nodes)
     fac = 1.0
     base = 128.0
     nbase = 7
@@ -37,7 +38,3 @@ def function(x):
 
 
 # gives 1e-14 / 1e-15 errors up to at least |x| < 10
-
-
-def function_and_gradient(x, dx):
-    assert False

@@ -33,7 +33,6 @@ from gpt.ad.reverse.util import (
     accumulate,
     zero_of,
     nodify,
-    is_node,
 )
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
@@ -208,14 +207,14 @@ class node_base(base):
             elem = self._container.tag[1]
             self.gradient = [zero_of(elem, depth) for _ in range(self._container.tag[2])]
             return
-        self.gradient = self._container.zero()
         if isinstance(self.value, g.ad.forward.series):
-            gradient = 0.0 * self.value
-            for t in gradient.terms:
-                gradient.terms[t] = self.gradient
-            self.gradient = gradient
-        for _ in range(depth):
-            self.gradient = node_base(self.gradient, with_gradient=False)
+            # (a series value is plain, depth 0)
+            zero = self._container.zero()
+            self.gradient = 0.0 * self.value
+            for t in self.gradient.terms:
+                self.gradient.terms[t] = zero
+            return
+        self.gradient = zero_of(self._container, depth)
 
     def __mul__(x, y):
         x, y = nodify(x, y)
@@ -430,7 +429,7 @@ class node_base(base):
     def __radd__(x, y):
         return node_base.__add__(y, x)
 
-    def forward(self, nodes, eager=True, free=None, needed=None):
+    def forward(self, nodes, free=None, needed=None):
         max_fields_allocated = 0
         fields_allocated = 0
         for n in nodes:
@@ -457,7 +456,7 @@ class node_base(base):
                         if m._forward is not None:
                             m.value = None
                             fields_allocated -= 1
-                if eager and isinstance(n.value, g.expr):
+                if isinstance(n.value, g.expr):
                     if not n.value.is_adj():
                         n.value = g(n.value)
 

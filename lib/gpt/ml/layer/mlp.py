@@ -26,14 +26,7 @@
 import gpt as g
 import numpy as np
 from gpt.ml.function import function
-
-
-def _unit(template):
-    # the unit scalar field, of the type of traces of the template (the
-    # scalar type of all slots below)
-    one = g(g.trace(g.identity(template)))
-    one[:] = 1
-    return one
+from gpt.ml.layer.util import unit_scalar, standardization
 
 
 class matrix_invariants(function):
@@ -65,7 +58,7 @@ class matrix_invariants(function):
         assert len(loop_imag) == n_loops
         self.n_loops, self.loop_imag, self.mixed = n_loops, list(loop_imag), mixed
         self.n = self.n_P + sum(2 if x else 1 for x in self.loop_imag) + (2 * n_loops if mixed else 0)
-        self.one = _unit(template)
+        self.one = unit_scalar(template)
         s = g.lattice(self.one)
         inputs = [("P", template)]
         if n_loops > 0:
@@ -76,9 +69,6 @@ class matrix_invariants(function):
             [],
             [("mean", [0.0] * self.n), ("inv_std", [1.0] * self.n)],
         )
-
-    def initialize(self, rng, scale=None):
-        pass
 
     def _raw(self, P, L=[]):
         r = 1.0 / self.N
@@ -102,16 +92,7 @@ class matrix_invariants(function):
 
     def calibrate(self, samples):
         q = [[g(x) for x in self._raw(*inputs)] for inputs in samples]
-        mean, inv_std = [], []
-        for k in range(self.n):
-            n = sum(x[k].grid.gsites for x in q)
-            m = sum(g.sum(x[k]).real for x in q) / n
-            m2 = sum(g.sum(g(x[k] * x[k])).real for x in q) / n
-            mean.append(m)
-            # (a constant invariant is only shifted)
-            var = m2 - m**2
-            inv_std.append(1.0 / np.sqrt(var) if var > 1e-20 * (1.0 + m**2) else 1.0)
-        self["mean"], self["inv_std"] = mean, inv_std
+        self["mean"], self["inv_std"] = standardization(q)
 
     def evaluate(self, inputs, parameters, constants):
         mean, inv_std = constants
@@ -142,7 +123,7 @@ class mlp(function):
 
     def __init__(self, template, n_in, n_out, width=16, depth=2, scale=0.0):
         self.n_in, self.n_out, self.width, self.depth, self.scale = n_in, n_out, width, depth, scale
-        self.one = _unit(template)
+        self.one = unit_scalar(template)
         sizes = [n_in] + [width] * depth + [n_out]
         self.sizes = sizes
         parameters = [
@@ -206,14 +187,11 @@ class matrix_words(function):
         for k, adjoint in enumerate(self.loop_adjoint):
             self.names += [f"L{k}", f"P L{k}", f"L{k} P"] + ([f"L{k}^dag"] if adjoint else [])
         self.n = len(self.names)
-        s = g.lattice(_unit(template))
+        s = g.lattice(unit_scalar(template))
         inputs = [("P", template), ("c", [s] * self.n)]
         if n_loops > 0:
             inputs.append(("L", [template] * n_loops))
         super().__init__(inputs, [("f", template)], [])
-
-    def initialize(self, rng, scale=None):
-        pass
 
     def evaluate(self, inputs, parameters, constants):
         P, c = inputs[0:2]

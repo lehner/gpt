@@ -19,6 +19,7 @@
 import gpt as g
 import numpy as np
 from gpt.ml.function import function
+from gpt.ml.layer.util import unit_scalar, standardization
 
 
 class local_covariant_matrix(function):
@@ -49,11 +50,10 @@ class local_covariant_matrix(function):
         C = n_channels
         self.C, self.gate, self.scale = C, gate, scale
         self.N = template.otype.shape[0]
-        # the unit matrix and the unit complex field (no slots: they follow
+        # the unit matrix and the unit scalar field (no slots: they follow
         # from the template)
         self.identity = g.identity(template)
-        self.one = g.complex(template.grid)
-        self.one[:] = 1
+        self.one = unit_scalar(template)
         parameters = [
             ("a", [0j] * (C * C)),
             ("b", [0j] * (C * C)),
@@ -105,15 +105,7 @@ class local_covariant_matrix(function):
             return
         a, b, beta = self._parameters.group(self.parameters())[0:3]
         q = [self._invariants(self._mix(X, a, b, beta)) for (X,) in samples]
-        mean, inv_std = [], []
-        for c in range(self.C):
-            qc = [x[c] for x in q]
-            n = sum(x.grid.gsites for x in qc)
-            m = sum(g.sum(x).real for x in qc) / n
-            m2 = sum(g.sum(g(x * x)).real for x in qc) / n
-            mean.append(m)
-            inv_std.append(1.0 / np.sqrt(m2 - m**2))
-        self["mean"], self["inv_std"] = mean, inv_std
+        self["mean"], self["inv_std"] = standardization(q)
 
     def evaluate(self, inputs, parameters, constants):
         (X,) = inputs

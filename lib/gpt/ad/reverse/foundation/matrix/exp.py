@@ -140,31 +140,9 @@ def derivative(x, h, tower=None):
     )
 
 
-def _taylor_graph(x):
-    # generic node-op fallback for non-lattice (tensor / scalar) values
-    fac = 1.0
-    base = 128.0
-    nbase = 7
-    x = x / base
-    c = x
-    r = g.identity(x)
-    for i in range(1, 10):
-        fac /= float(i)
-        r = r + fac * c
-        c = c * x
-    for i in range(nbase):
-        r = r * r
-    return r
-
-
-# gives 1e-14 / 1e-15 errors up to at least |x| < 10
-
-
 def function(x):
     if x._container.tag[0] != g.lattice:
-        return _taylor_graph(x)
+        # non-lattice (tensor / scalar) values: the generic scaling-and-
+        # squaring Taylor series of the forward AD, as a graph of node ops
+        return g.ad.forward.foundation.matrix.exp.function(x)
     return derivative(x, [])
-
-
-def function_and_gradient(x, dx):
-    assert False

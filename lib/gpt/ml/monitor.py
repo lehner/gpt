@@ -88,11 +88,11 @@ def activity(f, inputs):
 
     result = {}
     if isinstance(f, composite):
-        values = {s.id: x for s, x in zip(f._input_symbols, inputs)}
-        for c in f._calls:
-            f._run(c, values, f.parameters())
+
+        def after(c, values):
             result[c.name] = ratio([values[s.id] for s in c.inputs], values[c.outputs[0].id])
-        output = values[f._output_symbols[0].id]
+
+        output = f._replay(inputs, f.parameters(), after)[0]
     else:
         output = f(inputs)[0]
     result[""] = ratio(inputs, output)

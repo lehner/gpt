@@ -23,12 +23,16 @@ over time.  Known AD gaps that limit `g.ml` are collected in
 | `lib/gpt/ml/function.py` | `g.ml.function` (base class), named storage, `_storage_list` |
 | `lib/gpt/ml/graph.py` | symbols, symbolic calls, `g.ml.pack`, `g.ml.composite`, `describe` |
 | `lib/gpt/ml/monitor.py` | diagnostics: `snapshot`, `displacement`, `activity`, `gradient_noise` |
-| `lib/gpt/ml/layer/basic.py` | `replicate`, `linear_combination` |
+| `lib/gpt/ml/layer/basic.py` | `replicate`, `linear_combination`, `broadcast`, `polynomial` |
 | `lib/gpt/ml/layer/local_covariant_matrix.py` | gauge-covariant residual block on matrix channels |
+| `lib/gpt/ml/layer/mlp.py` | `matrix_invariants`, `mlp`, `matrix_words` (the covariant model f(P)) |
+| `lib/gpt/ml/layer/word_sum.py` | site-local sums of products of matrix fields as one compiled stencil (used by `polynomial`) |
+| `lib/gpt/ml/layer/util.py` | helpers shared by layers: `unit_scalar`, `standardization` (calibrated mean / inverse std) |
 | `tests/ml/function.py` | slots, names, storage, plain/node evaluation, type checks, gradients, training |
 | `tests/ml/graph.py` | symbolic composition, ownership, sharing, nesting, `describe` |
 | `tests/ml/local_covariant_matrix.py` | the covariant network: covariance, gradients, training, exact threshold solution |
 | `tests/ml/monitor.py` | the diagnostics against hand-computed values |
+| `tests/ml/layers.py` | `polynomial`, `matrix_invariants` / `mlp` / `matrix_words` (also with loops), as loop functions of transports |
 | `tests/ml/loop_function.py` | a network as learnable loop function of two flow layers, trained on squared force contractions |
 | `documentation/tutorials/advanced/ml-graphs.ipynb` | tutorial: functions, symbolic graphs, sharing, `describe`, covariance, training |
 | `lib/gpt/ad/reverse/functional_node.py` | `g.ad.reverse.functional_node` (a functional as a node, first order) |
@@ -87,8 +91,10 @@ class scale(g.ml.function):
   the order of `parameter_names()` / `constant_names()`.  An optimizer given
   `f.parameters()` updates the function itself.
 - **Values** are numbers, numpy arrays, lattices or tensors (and lists of
-  them).  Long term numpy arrays and `g.lattice` parameters are wanted; today
-  layers use list slots of numbers (numpy nodes support element access only).
+  them).  Numpy-array parameters work through the site-constant linear maps
+  of `g.ad.reverse` (`mlp`'s weights `W<l>` with `matrix_vector`, see
+  `ad/reverse/linear.py`); other layers use list slots of numbers.  Long term
+  `g.lattice` parameters are wanted.
 - **Types select the update.**  There is no per-parameter type metadata: the
   optimizers update every parameter with `g.group.compose(step, x)`, which
   dispatches on the otype (additive groups add, U(1)/SU(N) exponentiate and
@@ -369,6 +375,9 @@ dpt(U, description, mu, P0, P1, [rho] + list(net.parameters()), loops=loops,
   `rho` of `directional_parallel_transport` (`tests/ml/loop_function.py`:
   `rho_fn([], [rho_leaf])` in the loss graph, with the optimizer working on
   `g.ml.fields(rho_fn.parameters(), net.parameters())`).
+- `polynomial(template, degree, scale=0.0)`: `x -> x + sum_{k=2}^{degree}
+  c_k x^k` with numbers c, a covariant site-local polynomial as one compiled
+  stencil (`word_sum`; coefficients enter as factor fields `c 1`).
 - `matrix_invariants(template, n_loops=0)`, `mlp(template, n_in, n_out,
   width, depth, scale=0.0)`, `matrix_words(template)` (`layer/mlp.py`): the
   covariant model f(P) = P + sum_w c_w(I) w(P) with standardized invariants
@@ -417,7 +426,7 @@ Writing a new layer:
 2. Declare typed slots from a template; build grid-dependent helpers (unit
    matrix, unit field) at construction as plain attributes, not slots.
 3. Initialize near the identity following the convention above
-   (`initialize(rng, scale=None)`).
+   (`initialize(rng, scale=None)`; a function without parameters needs none).
 4. Use only gauge-covariant operations if the layer claims covariance:
    scalar coefficients, products, adjoints, the identity, traces, and
    componentwise maps of invariants; `g.matrix.exp` commutes with conjugation.
@@ -428,11 +437,14 @@ Writing a new layer:
 
 - **Field + scalar** is not an expression (plain or node): multiply a unit
   field (`gamma * one`) or the identity matrix instead.
-- **Numpy-array nodes** support element access only (`d[0]`), no whole-array
-  arithmetic.
+- **Numpy-array nodes** support element access (`d[0]`), `g.component.real`
+  / `imag` and the linear maps of `ad/reverse/linear.py` and
+  `components.py` (`matrix_vector`, `outer_sum`, `dagger`, `broadcast_array`,
+  `sum_to_array`); no general whole-array arithmetic.
 - **No `__rtruediv__` on nodes**: store reciprocals as constants (`inv_std`)
   instead of dividing by a node.
-- **Componentwise node ops** are only relu, sin, cos, real, imag; `relu` on a
+- **Componentwise node ops** are only relu, sin, cos, real, imag and
+  `g.component.multiply`; `relu` on a
   complex z is z for Re z > 0, else a z.  Smooth gates need new node ops.
 - **Gates need standardized invariants.**  Invariants such as tr(P P^dag)/N
   vary little between sites relative to their mean, so gate on
@@ -464,12 +476,15 @@ Principles:
 Open / planned:
 - `draw()` refinements: port order chosen to reduce crossings, dark mode,
   larger graphs (collapsing repeated blocks).
-- Parameters as numpy arrays (needs numpy-node arithmetic) and eventually as
-  `g.lattice`; `g.group.compose` for tensors; accelerator buffers as nodes.
+- General numpy-node arithmetic, parameters as `g.lattice`;
+  `g.group.compose` for tensors; accelerator buffers as nodes.
 - Symbol types (declared input types), symbolic element access of list
   symbols (`U[0]`).
-- Serialization (by the hierarchical names).
 - `functional_node` beyond first order; `directional_derivative` for
   non-abelian groups other than SU(N) fundamental.
 - Fused (stencil) versions of layers for speed and a self-similar derivative
-  tower (see AD_DEVELOPMENT.md §4.7).
+  tower (see AD_DEVELOPMENT.md §4.7).  Tried 2026-10-07 for `matrix_words`
+  via `word_sum` (coefficients as `embed`ded factor fields c 1): at 16^4,
+  14 words, plain evaluation -25% but value + gradient +12% (each
+  coefficient becomes a matrix field, and its flow is traced back), so not
+  adopted; a stencil taking the scalar coefficients directly would be needed.
