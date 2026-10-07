@@ -19,7 +19,8 @@
 import gpt as g
 import numpy as np
 from gpt.ad.reverse import node_op
-from gpt.ad.reverse.util import value_of, is_node, nodify
+from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse.util import value_of
 
 
 def relu(x, a=0.0):
@@ -31,9 +32,7 @@ def relu(x, a=0.0):
     )
 
 
-def _conj(v):
-    if is_node(v):
-        return conj(v)
+def _plain_conj(v):
     if g.util.is_num(v):
         return complex(v).conjugate()
     if isinstance(v, np.ndarray):
@@ -41,43 +40,37 @@ def _conj(v):
     return g(g.conj(v))
 
 
-def conj(x):
-    # the componentwise complex conjugate (no transpose); with the gradient
-    # convention dL/dRe + i dL/dIm the flow into x is conj(flow)
-    return node_op(
-        (x,),
-        lambda: _conj(value_of(x)),
-        (lambda z: (1, _conj(z.gradient)),),
-        x._container,
-        "conj",
-        reads=((),),
-    )
+# the componentwise complex conjugate (no transpose); with the gradient
+# convention dL/dRe + i dL/dIm the flow into x is conj(flow)
+conj = primitive(
+    "conj",
+    _plain_conj,
+    lambda x: x,
+    vjp=lambda i, flow, x: conj(flow),
+    reads=((),),
+)
 
 
-def component_multiply(a, b):
-    # the componentwise product of plain values or nodes (a node operation
-    # if either is a node)
-    if is_node(a) or is_node(b):
-        return multiply(a, b)
+def _plain_multiply(a, b):
     if g.util.is_num(a) or isinstance(a, np.ndarray):
         return a * b
     return g.lattice.foundation.component_multiply(g(a), g(b))
 
 
-def multiply(a, b):
-    # the componentwise product (for scalar types the ordinary product):
-    # flows conj(b) * flow into a and conj(a) * flow into b, componentwise
-    a, b = nodify(a, b)
-    return node_op(
-        (a, b),
-        lambda: component_multiply(value_of(a), value_of(b)),
-        (
-            lambda z: (1, component_multiply(z.gradient, _conj(value_of(b)))),
-            lambda z: (1, component_multiply(_conj(value_of(a)), z.gradient)),
-        ),
-        a._container,
-        "multiply",
-    )
+# the componentwise product (for scalar types the ordinary product): flows
+# conj(b) * flow into a and conj(a) * flow into b, componentwise
+multiply = primitive(
+    "multiply",
+    _plain_multiply,
+    lambda a, b: a,
+    vjp=lambda i, flow, a, b: multiply(flow, conj(b)) if i == 0 else multiply(conj(a), flow),
+)
+
+
+def component_multiply(a, b):
+    # the componentwise product of plain values or nodes (a node operation
+    # if either is a node)
+    return multiply(a, b)
 
 
 def sin(x):
@@ -85,7 +78,7 @@ def sin(x):
     return node_op(
         (x,),
         lambda: g.component.sin(value_of(x)),
-        (lambda z: (1, component_multiply(z.gradient, _conj(g.component.cos(value_of(x))))),),
+        (lambda z: (1, multiply(z.gradient, conj(g.component.cos(value_of(x))))),),
         x._container,
     )
 
@@ -95,17 +88,14 @@ def cos(x):
     return node_op(
         (x,),
         lambda: g.component.cos(value_of(x)),
-        (lambda z: (-1, component_multiply(z.gradient, _conj(g.component.sin(value_of(x))))),),
+        (lambda z: (-1, multiply(z.gradient, conj(g.component.sin(value_of(x))))),),
         x._container,
     )
 
 
-def _part(v, part):
+def _plain_part(v, part):
     # the real or imaginary part in the container of v (numbers stay complex
-    # and arrays keep their dtype, so the node container is unchanged); a
-    # node value (a nested pass) gives the node operation one level down
-    if is_node(v):
-        return real(v) if part == "real" else imag(v)
+    # and arrays keep their dtype, so the node container is unchanged)
     if g.util.is_num(v):
         return complex(getattr(complex(v), part))
     if isinstance(v, np.ndarray):
@@ -113,32 +103,26 @@ def _part(v, part):
     return getattr(g.component, part)(v)
 
 
-def _real_flow(f):
-    # the real part of a flow, as a node at deeper nesting
-    return real(f) if is_node(f) else _part(f, "real")
+# z = Re x depends on Re x only: with the gradient convention dL/dRe + i
+# dL/dIm, the flow into x is the real part of the flow into z
+real = primitive(
+    "real",
+    lambda x: _plain_part(x, "real"),
+    lambda x: x,
+    vjp=lambda i, flow, x: real(flow),
+)
 
 
-def real(x):
-    # z = Re x depends on Re x only: with the gradient convention
-    # dL/dRe + i dL/dIm, the flow into x is the real part of the flow into z
-    return node_op(
-        (x,),
-        lambda: _part(value_of(x), "real"),
-        (lambda z: (1, _real_flow(z.gradient)),),
-        x._container,
-    )
-
-
-def imag(x):
+def _imag_vjp(i, flow, x):
     # z = Im x: dL/dIm x = dL/dRe z, so the flow into x is i times the real
     # part of the flow into z
-    def _flow(z):
-        f = _real_flow(z.gradient)
-        return (1, g(1j * f) if isinstance(f, g.lattice) else f * 1j)
+    f = real(flow)
+    return g(1j * f) if isinstance(f, g.lattice) else f * 1j
 
-    return node_op(
-        (x,),
-        lambda: _part(value_of(x), "imag"),
-        (_flow,),
-        x._container,
-    )
+
+imag = primitive(
+    "imag",
+    lambda x: _plain_part(x, "imag"),
+    lambda x: x,
+    vjp=_imag_vjp,
+)

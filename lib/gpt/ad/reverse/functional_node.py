@@ -17,8 +17,8 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-from gpt.ad.reverse.node import node_op
-from gpt.ad.reverse.util import constant, container, is_node, value_of
+from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse.util import container
 
 
 def joint_node(fields, forward, flows, z_container, name):
@@ -26,33 +26,15 @@ def joint_node(fields, forward, flows, z_container, name):
     computes the flows into all children at once, first order only (plain
     values and flows): forward(values) -> value; flows(values, z, needed) ->
     {child index: flow} for the indices in needed (the children with a
-    gradient); z_container(children) -> the container of the value."""
-    children = tuple(constant(x) for x in fields)
-    pending = {}
-
-    def values():
-        v = [value_of(c) for c in children]
-        if any(is_node(x) for x in v):
-            raise NotImplementedError(f"{name} supports first derivatives only")
-        return v
-
-    def flow(j):
-        def _backward(z):
-            if is_node(z.gradient):
-                raise NotImplementedError(f"{name} supports first derivatives only")
-            if not pending:
-                needed = [i for i, c in enumerate(children) if c.with_gradient]
-                pending.update(flows(values(), z, needed))
-            return (1, pending.pop(j))
-
-        return _backward
-
-    return node_op(
-        children,
-        lambda: forward(values()),
-        [flow(j) for j in range(len(children))],
-        z_container(children),
+    gradient); z_container(containers) -> the container of the value."""
+    op = primitive(
+        name,
+        lambda *v: forward(list(v)),
+        lambda *c: z_container(c),
+        joint_vjp=lambda z, needed, *v: flows(list(v), z, needed),
+        order=1,
     )
+    return op.node(*fields)
 
 
 def functional_node(f, fields):

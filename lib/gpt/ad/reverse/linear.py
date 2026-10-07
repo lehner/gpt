@@ -36,8 +36,8 @@
 #
 import gpt as g
 import numpy as np
-from gpt.ad.reverse.node import node_op
-from gpt.ad.reverse.util import constant, container, is_node, value_of
+from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse.util import constant, container, is_node
 
 
 def _array(x):
@@ -133,12 +133,18 @@ def _is_list_node(x):
     return is_node(x) and x._container.tag[0] is list
 
 
-def _flows(z):
+def _flows(f):
     # the flow into a list node as a list (missing entries None)
-    f = z.gradient
-    if is_node(f):
-        return f
-    return list(f)
+    return f if is_node(f) else list(f)
+
+
+_stack = primitive(
+    "stack",
+    lambda *h: list(h),
+    lambda *c: container(list, c[0], len(c)),
+    vjp=lambda j, flow, *h: flow[j],
+    reads=lambda n: ((),) * n,
+)
 
 
 def stack(h):
@@ -147,86 +153,43 @@ def stack(h):
         return h
     if not any(is_node(x) for x in h):
         return constant(list(h))
-    h = [constant(x) for x in h]
-
-    def forward():
-        v = [value_of(x) for x in h]
-        return stack(v) if any(is_node(x) for x in v) else v
-
-    def backward(j):
-        def _backward(z):
-            fj = z.gradient[j]
-            if fj is None:
-                return None
-            return (1, fj)
-
-        return _backward
-
-    return node_op(
-        tuple(h),
-        forward,
-        tuple(backward(j) for j in range(len(h))),
-        container(list, h[0]._container, len(h)),
-        "stack",
-    )
+    return _stack(*h)
 
 
-def dagger(W):
-    if not is_node(W):
-        return np.conj(_array(W)).T.copy()
-
-    def forward():
-        return dagger(value_of(W))
-
-    m, n = W._container.tag[1]
-    return node_op(
-        (W,),
-        forward,
-        (lambda z: (1, dagger(z.gradient)),),
-        container(np.ndarray, (n, m), np.complex128),
-        "dagger",
-        reads=((),),
-    )
+def _matrix_vector_vjp(i, flow, W, h):
+    if i == 0:
+        return outer_sum(_flows(flow), h)
+    return matrix_vector(dagger(W), _flows(flow))
 
 
-def matrix_vector(W, h):
-    if not is_node(W) and not is_node(h) and not any(is_node(x) for x in h):
-        return _plain_matrix_vector(W, h)
-    W, h = constant(W), stack(h)
-    m = W._container.tag[1][0]
-
-    def forward():
-        return matrix_vector(value_of(W), value_of(h))
-
-    return node_op(
-        (W, h),
-        forward,
-        (
-            lambda z: (1, outer_sum(_flows(z), value_of(h))),
-            lambda z: (1, matrix_vector(dagger(value_of(W)), _flows(z))),
-        ),
-        container(list, h._container.tag[1], m),
-        "matrix_vector",
-    )
+matrix_vector = primitive(
+    "matrix_vector",
+    lambda W, h: _plain_matrix_vector(W, h),
+    lambda W, h: container(list, h.tag[1], W.tag[1][0]),
+    vjp=_matrix_vector_vjp,
+    lift=(constant, stack),
+)
 
 
-def outer_sum(a, b):
-    plain = lambda x: not is_node(x) and not any(is_node(y) for y in x)
-    if plain(a) and plain(b):
-        return _plain_outer_sum(a, b)
-    a, b = stack(a), stack(b)
-    m, n = a._container.tag[2], b._container.tag[2]
+def _outer_sum_vjp(i, flow, a, b):
+    if i == 0:
+        return matrix_vector(flow, b)
+    return matrix_vector(dagger(flow), a)
 
-    def forward():
-        return outer_sum(value_of(a), value_of(b))
 
-    return node_op(
-        (a, b),
-        forward,
-        (
-            lambda z: (1, matrix_vector(z.gradient, value_of(b))),
-            lambda z: (1, matrix_vector(dagger(z.gradient), value_of(a))),
-        ),
-        container(np.ndarray, (m, n), np.complex128),
-        "outer_sum",
-    )
+outer_sum = primitive(
+    "outer_sum",
+    lambda a, b: _plain_outer_sum(a, b),
+    lambda a, b: container(np.ndarray, (a.tag[2], b.tag[2]), np.complex128),
+    vjp=_outer_sum_vjp,
+    lift=(stack, stack),
+)
+
+
+dagger = primitive(
+    "dagger",
+    lambda W: np.conj(_array(W)).T.copy(),
+    lambda W: container(np.ndarray, tuple(reversed(W.tag[1])), np.complex128),
+    vjp=lambda i, flow, W: dagger(flow),
+    reads=((),),
+)

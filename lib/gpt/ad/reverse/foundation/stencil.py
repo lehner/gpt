@@ -61,7 +61,8 @@
 #
 import weakref
 import gpt as g
-from gpt.ad.reverse.util import value_of, is_node, accum, identity_flow_scale, constant
+from gpt.ad.reverse.primitive import primitive, has_node
+from gpt.ad.reverse.util import container, is_node, identity_flow_scale, constant
 
 
 # share the padded inputs of a stencil node's forward run with its adjoint
@@ -305,420 +306,315 @@ def _compile(grid, otype, code, temporaries=()):
     return K
 
 
-class _node_setup:
-    # what both node modes (matrix, _matrix_local_temporaries) share: the
-    # code with point tuples, the output field(s) 0..m-1 (a single node, or a
-    # list node, which keeps its list semantics with a single output, e.g.
-    # the adjoint of a stencil with one input field) and the inputs (a list
-    # node expands to one child per element, a plain value to a constant
-    # node)
-    def __init__(self, stencil, inner, fields):
-        self.stencil = stencil
+def _cache(obj, name):
+    # a dict cached on obj (the adjoint codes, kernels and primitives of a
+    # stencil)
+    cache = getattr(obj, name, None)
+    if cache is None:
+        cache = {}
+        setattr(obj, name, cache)
+    return cache
+
+
+def _lattice_list(grid, otype, n):
+    return container(list, container(g.lattice, grid, otype), n)
+
+
+def _op(stencil, out, n_inputs):
+    # the primitive of a compiled stencil for the output container out (a
+    # lattice, or a list of m lattices) and n_inputs input fields
+    cache = _cache(stencil, "_node_ops")
+    key = (str(out), n_inputs)
+    if key not in cache:
+        cache[key] = _stencil_op(stencil, out, n_inputs)
+    return cache[key].op
+
+
+class _stencil_op:
+    # A compiled stencil as a primitive: inputs (the fields m..n-1) -> the
+    # output field(s) 0..m-1 (a lattice, or a list of m lattices).  Its plain
+    # implementation is the kernel; its vjp is the adjoint stencil (adjoint_code
+    # or, with local temporaries, the two stages of adjoint_code_local),
+    # applied as a primitive again: with plain flows it runs the compiled
+    # adjoint kernel, in a nested pass it is a stencil node one level down
+    # whose vjp is the adjoint of the adjoint, and so on (a self-similar tower
+    # of stencils, with no cshift: the shifts live in the kernels' points)
+    def __init__(self, stencil, out, n_inputs):
+        inner = getattr(stencil, "local_stencil", stencil)
         points = inner.points
+        self.stencil = stencil
         self.raw = [
             (e["target"], e["accumulate"], e["weight"],
              [(f, points[p], a) for (f, p, a) in e["factor"]])
             for e in inner.code
         ]
-        output = fields[0]
-        assert is_node(output), "stencil node mode: the output must be a node"
-        self.output = output
-        self.listed = output._container.tag[0] is list
-        self.m = len(output) if self.listed else 1
-        self.grid = output.grid
-        self.otype = output.otype
-        self.children = []
-        for arg in fields[1:]:
-            if is_node(arg) and arg._container.tag[0] is list:
-                self.children.extend(arg[i] for i in range(len(arg)))
-            else:
-                self.children.append(constant(arg))
-
-    def cache(self, name):
-        # the adjoint codes and kernels, cached on the stencil object
-        cache = getattr(self.stencil, name, None)
-        if cache is None:
-            cache = {}
-            setattr(self.stencil, name, cache)
-        return cache
-
-    def nested(self):
-        # node depth: gradient-carrying children must be uniform (constants
-        # are plain at any depth and carry no inner dependency).
-        # This is decided in the backward pass, not at construction:
-        # `value_of` evaluates a computed child, and a value cached before the
-        # graph is first run would then be reused by node.forward (which only
-        # recomputes values that are None) instead of being rebuilt from the
-        # updated leaves.
-        node_vals = [is_node(value_of(c)) for c in self.children if c.with_gradient]
-        assert all(node_vals) or not any(node_vals), (
-            "stencil node mode: gradient-carrying children must have uniform node depth")
-        return any(node_vals)
-
-    def psi(self):
-        # the m output flows; a single output node has one flow, a list node
-        # a list of m (outputs that received no flow are zero)
-        self.output.materialize_gradient()
-        return self.output.gradient if self.listed else [self.output.gradient]
+        # (a list output keeps its list semantics with a single element,
+        # e.g. the adjoint of a stencil with one flowed input)
+        self.listed = out.tag[0] is list
+        self.m = out.tag[2] if self.listed else 1
+        elem = out.tag[1] if self.listed else out
+        self.grid, self.otype = elem.get_grid(), elem.get_otype()
+        self.n_inputs = n_inputs
+        self.temps = list(getattr(inner, "temporaries", ()))
+        self.fwd_domain = _padding_domain(stencil)
+        # whether the adjoint kernels run on the forward's padding domain
+        # (None: not known yet)
+        self.pad_match = None
+        container = lambda *c, **static: out.copy()
+        if self.temps:
+            self._setup_local()
+            self.op = primitive(
+                f"stencil({self.m} output, {len(self.temps)} local temporaries, {len(inner.code)} lines of code)",
+                self._plain,
+                container,
+                joint_vjp=self._vjp_local,
+            )
+        else:
+            self._setup()
+            self.op = primitive(
+                f"stencil({self.m} output, {len(inner.points)} points, {len(inner.code)} lines of code)",
+                self._plain,
+                container,
+                joint_vjp=self._vjp,
+                fwd=self._fwd if share_padded and self.fwd_domain is not None else None,
+            )
 
     def lattices(self, n):
         return [g.lattice(self.grid, self.otype) for _ in range(n)]
 
-    def forward(self, run):
-        # forward: one kernel pass computes all m outputs, run(outs, ops) on
-        # plain operands.  The operands are resolved exactly ONE level down
-        # (value_of, not all the way to plain): a lazy expr is materialized
-        # because the kernel needs lattices.
-        ops = []
-        for c in self.children:
-            v = value_of(c)
-            if isinstance(v, g.expr):
-                v = g(v)
-            ops.append(v)
+    def psi(self, z):
+        # the m output flows; a single output node has one flow, a list node
+        # a list of m (outputs that received no flow are zero)
+        z.materialize_gradient()
+        return list(z.gradient) if self.listed else [z.gradient]
 
-        if any(is_node(v) for v in ops):
-            # nested pass: the VALUE of this node must itself be a stencil
-            # node one level down, not a plain field.  Consumers backpropagate
-            # with value_of(this node), so a plain value would hand them plain
-            # operands and the flow psi that reaches this node would carry no
-            # dependence on the inputs -- a nonlinear consumer then loses the
-            # dpsi/dU half of the 2nd derivative.  So the forward recurses:
-            # the same self-similar tower as the backward, bottoming out at
-            # plain operands, where the compiled kernel runs.
-            inner = self.lattices(self.m)
-            inner = g.ad.reverse.node(inner if self.listed else inner[0])
-            return matrix(self.stencil, inner, *ops)
-
+    def _run(self, inputs, padded=None):
+        # one kernel pass computes all m outputs (lazy expressions are
+        # materialized: the kernel needs lattices); returns the outputs and
+        # the padded fields the kernel ran on (padded stencils only)
+        ops = [g(v) if isinstance(v, g.expr) else v for v in inputs]
         outs = self.lattices(self.m)
-        run(outs, ops)
-        return outs if self.listed else outs[0]
+        if padded:
+            pads = self.stencil(*(outs + ops), padded=padded)
+        else:
+            pads = self.stencil(*(outs + ops))
+        return (outs if self.listed else outs[0]), outs, pads
 
-    def install(self, forward, backward, tag):
-        # the output node becomes the computed node
-        output = self.output
-        output._forward = forward
-        output._children = self.children
-        output._backward = backward
-        output.value = None
-        output.gradient = None
-        output._tag = tag
-        # the backward reads the inputs, never the output value (the nested
-        # and padding-sharing paths accept a missing value)
-        output._reads_children = None
-        output._reads_self = False
-        return output
+    def _plain(self, *inputs, padded=None):
+        return self._run(inputs, padded)[0]
 
+    # temp-free stencils (adjoint_code)
+    def _setup(self):
+        # regime: only outputs are written, factors reference only inputs, the
+        # first write of each output does not read its own old value.  An output
+        # the code never writes is valid (it stays at its initial value) -- this
+        # happens for derived adjoint stencils, whose inputs include forward
+        # values the adjoint code never references.  The field count comes
+        # from the arguments, not from the highest index the code references: a
+        # caller may pass fields the code never reads (g.parallel_transport
+        # hands over all links, whatever directions the paths use)
+        m, n_fields = self.m, self.m + self.n_inputs
+        first = {}
+        referenced = set()
+        for (tt, ac, w, fl) in self.raw:
+            assert tt < m, (
+                "stencil node mode: only outputs are written (field %d is not an "
+                "output; per-site temporaries are local temporaries)" % tt)
+            first.setdefault(tt, ac)
+            for (f, p, a) in fl:
+                assert m <= f < n_fields, (
+                    "stencil node mode: factors must reference input fields 0..%d "
+                    "(field %d)" % (n_fields - 1, f))
+                referenced.add(f)
+            if ac != -1 and ac != tt:
+                assert m <= ac < n_fields, (
+                    "stencil node mode: accumulate reads an input field (field %d)" % ac)
+                referenced.add(ac)
+        for t, ac in first.items():
+            assert ac != t, (
+                "stencil node mode: first write of output %d must not read its "
+                "own old value (acc=-1, or acc=input)" % t)
+        self.referenced = referenced
+        # the adjoint never reads an output's forward value (factors reference
+        # inputs, first writes are fresh), but the kernel padding plan needs a
+        # valid lattice at every read slot
+        self.dummy = g.lattice(self.grid, self.otype)
 
-def _matrix_local_temporaries(stencil, inner, fields):
-    # node mode for a stencil with kernel-owned local temporaries (see
-    # adjoint_code_local): the forward is the compiled kernel as always, the
-    # backward is stage A (with local temporaries) followed by stage B
-    ns = _node_setup(stencil, inner, fields)
-    raw, output, m, listed, children = ns.raw, ns.output, ns.m, ns.listed, ns.children
-    grid, otype_t = ns.grid, ns.otype
-    temps = list(inner.temporaries)
+    def _adjoint(self, flowed):
+        # the adjoint code of the flowed inputs, in closed form (another
+        # stencil), compiled; cached on the stencil object, keyed by the output
+        # count and the flowed inputs
+        cache = _cache(self.stencil, "_node_adj")
+        key = (self.m, flowed)
+        if key not in cache:
+            code = adjoint_code(self.raw, list(range(self.m)), flowed, self.grid.nd)
+            cache[key] = (code, _compile(self.grid, self.otype, code))
+        return cache, key
 
-    # code index of each passed field (the temporaries are not passed)
-    n_passed = m + len(children)
-    full = [i for i in range(n_passed + len(temps)) if i not in temps]
-    assert len(full) == n_passed
-    outputs = full[:m]
-    inputs = full[m:]
-    for (tt, ac, w, fl) in raw:
-        assert tt in outputs or tt in temps, "stencil node mode: inputs must not be written"
-    referenced = {f for (tt, ac, w, fl) in raw for (f, p, a) in fl if f in inputs}
+    def _fwd(self, *inputs):
+        # the plain value of a node, keeping the halo-padded copies of its
+        # read-only inputs for the adjoint run (same padding domain), so they
+        # are not copied again.  The residual belongs to ONE forward value and
+        # is used by at most one adjoint run (see primitive); it is emptied
+        # when that value dies (e.g. a forward-only pass releases it), and is
+        # only used while every shared input's value is the object that was
+        # padded (so leaf values replaced between calls are never served
+        # stale; as for retained forward values in general, fields must not be
+        # modified in place while the values live)
+        value, outs, padded = self._run(inputs)
+        pads = {}
+        if padded is not None and self.pad_match is not False:
+            read_only = set(self.stencil.read_fields) - set(self.stencil.write_fields)
+            for i in sorted(self.referenced & read_only):
+                try:
+                    pads[i] = (weakref.ref(inputs[i - self.m]), padded[i])
+                except TypeError:
+                    continue
+        if not pads:
+            return value, None
+        residual = {"pads": pads}
+        residual["out"] = weakref.ref(outs[0], lambda _r, d=residual: d.clear())
+        return value, residual
 
-    cache = ns.cache("_node_adj_local")
-    key = (m, n_passed)
-    if key not in cache:
-        A, locA, B_fresh, B_acc, written_A, written_B = adjoint_code_local(
-            raw, outputs, temps, inputs, grid.nd)
-        KA = _compile(grid, otype_t, A, locA)
-        KB_fresh = _compile(grid, otype_t, B_fresh) if B_fresh else None
-        KB_acc = _compile(grid, otype_t, B_acc) if B_acc else None
-        nI, nT = len(inputs), len(temps)
-        # A's outputs that it never writes but stage B_acc or the caller reads
-        unwritten_A = [r for r in range(nI + nT) if r not in written_A]
-        cache[key] = (KA, KB_fresh, KB_acc, written_A, written_B, unwritten_A, A, locA)
-    KA, KB_fresh, KB_acc, written_A, written_B, unwritten_A, A_code, locA = cache[key]
-    nI, nT = len(inputs), len(temps)
+    def _shared_pads(self, z, values, residual, K, n_off):
+        # the forward's padded inputs that are still valid for z, in the
+        # adjoint kernel's layout (forward value i is field n_off + i)
+        self.pad_match = _padding_domain(K) is self.fwd_domain
+        if not residual or not self.pad_match:
+            return None
+        out = residual["out"]()
+        v = z.value
+        if self.listed and isinstance(v, list) and len(v) == self.m:
+            v = v[0]
+        if out is None or v is not out:
+            return None
+        read = K.read_fields
+        pre = {}
+        for i, (ref, P) in residual["pads"].items():
+            if ref() is values[i - self.m] and (n_off + i) in read:
+                pre[n_off + i] = P
+        return pre or None
 
-    def _KA_for(c):
-        # stage A for a flow c * identity (m = 1, see seedless_code); psi is
-        # the field after the slots and the temporary flows
-        return _seedless_kernels(
-            cache, key, c, lambda c: _compile(grid, otype_t, seedless_code(A_code, nI + nT, c), locA))
+    def _vjp(self, z, needed, *values, residual=None):
+        # the inputs whose flow is needed (referenced, gradient-carrying): the
+        # adjoint computes only their slots, so constant inputs cost nothing
+        m = self.m
+        flowed = tuple(m + k for k in needed if m + k in self.referenced)
+        if not flowed:
+            return {}
+        cache, key = self._adjoint(flowed)
+        code, K = cache[key]
+        n_comp = len(flowed)
+        if not self.listed:
+            c = identity_flow_scale(z)
+            if c is not None:
+                # a flow c * identity (see seedless_code)
+                K = _seedless_kernels(
+                    cache, key, c,
+                    lambda c: _compile(self.grid, self.otype, seedless_code(code, n_comp, c)))
+        # the adjoint's fields: [slots] + [the m output flows] + [the m forward
+        # values, never read] + [the input values]
+        args = self.psi(z) + [self.dummy] * m + list(values)
+        static = {}
+        if self.fwd_domain is not None and not has_node(args):
+            pre = self._shared_pads(z, values, residual, K, n_comp + m)
+            if pre:
+                static["padded"] = pre
+        A = _op(K, _lattice_list(self.grid, self.otype, n_comp), len(args))(*args, **static)
+        return {i - m: A[r] for r, i in enumerate(flowed)}
 
-    def run_fwd():
-        return ns.forward(lambda outs, ops: stencil(*(outs + ops)))
+    # stencils with local temporaries (adjoint_code_local)
+    def _setup_local(self):
+        m, temps = self.m, self.temps
+        # code index of each passed field (the temporaries are not passed)
+        n_passed = m + self.n_inputs
+        full = [i for i in range(n_passed + len(temps)) if i not in temps]
+        assert len(full) == n_passed
+        self.outputs, self.inputs = full[:m], full[m:]
+        for (tt, ac, w, fl) in self.raw:
+            assert tt in self.outputs or tt in temps, "stencil node mode: inputs must not be written"
+        self.referenced = {f for (tt, ac, w, fl) in self.raw for (f, p, a) in fl if f in self.inputs}
+        cache = _cache(self.stencil, "_node_adj_local")
+        key = (m, n_passed)
+        if key not in cache:
+            A, locA, B_fresh, B_acc, written_A, written_B = adjoint_code_local(
+                self.raw, self.outputs, temps, self.inputs, self.grid.nd)
+            KA = _compile(self.grid, self.otype, A, locA)
+            KB_fresh = _compile(self.grid, self.otype, B_fresh) if B_fresh else None
+            KB_acc = _compile(self.grid, self.otype, B_acc) if B_acc else None
+            nI, nT = len(self.inputs), len(temps)
+            # A's outputs that it never writes but stage B_acc or the caller reads
+            unwritten_A = [r for r in range(nI + nT) if r not in written_A]
+            cache[key] = (KA, KB_fresh, KB_acc, written_A, written_B, unwritten_A, A, locA)
+        self.local_cache, self.local_key = cache, key
 
-    def _backward(z):
-        vals = [value_of(c) for c in children]
-        psi = list(ns.psi())
-        if not ns.nested():
-            slots = ns.lattices(nI + nT)
+    def _vjp_local(self, z, needed, *values):
+        # stage A (with local temporaries) followed by stage B (temp-free)
+        KA, KB_fresh, KB_acc, written_A, written_B, unwritten_A, A_code, locA = self.local_cache[
+            self.local_key]
+        nI, nT = len(self.inputs), len(self.temps)
+        needed = [k for k in needed if self.inputs[k] in self.referenced]
+        psi = self.psi(z)
+        if not has_node(psi) and not has_node(values):
+            # plain: one fused run, stage B accumulating into the slots of A
+            slots = self.lattices(nI + nT)
             for r in unwritten_A:
                 slots[r][:] = 0
             K = KA
-            if not listed:
-                c = identity_flow_scale(output)
+            if not self.listed:
+                c = identity_flow_scale(z)
                 if c is not None:
-                    K = _KA_for(c)
-            K(*(slots + psi + vals))
+                    # a flow c * identity (m = 1, see seedless_code); psi is
+                    # the field after the slots and the temporary flows
+                    K = _seedless_kernels(
+                        self.local_cache, self.local_key, c,
+                        lambda c: _compile(
+                            self.grid, self.otype, seedless_code(A_code, nI + nT, c), locA))
+            K(*(slots + psi + list(values)))
             if KB_acc is not None:
-                KB_acc(*(slots + vals))
-            for k, c in enumerate(children):
-                if c.with_gradient and inputs[k] in referenced:
-                    accum(c, slots[k], 1)
-            return
+                KB_acc(*(slots + list(values)))
+            return {k: slots[k] for k in needed}
         # nested: both stages as stencil nodes one level down; stage A has
-        # local temporaries (this function again), stage B is temp-free
-        A_out = g.ad.reverse.node(ns.lattices(nI + nT))
-        Anode = matrix(KA, A_out, *psi, *vals)
-        Bnode = None
+        # local temporaries, stage B is temp-free
+        A = _op(KA, _lattice_list(self.grid, self.otype, nI + nT), len(psi) + len(values))(
+            *psi, *values)
+        B = None
         if KB_fresh is not None:
-            B_out = g.ad.reverse.node(ns.lattices(nI))
-            Bnode = matrix(KB_fresh, B_out, *[Anode[nI + t] for t in range(nT)], *vals)
-        for k, c in enumerate(children):
-            if not (c.with_gradient and inputs[k] in referenced):
-                continue
-            flow = Anode[k] if k in written_A else None
-            if Bnode is not None and k in written_B:
-                flow = Bnode[k] if flow is None else flow + Bnode[k]
+            B = _op(KB_fresh, _lattice_list(self.grid, self.otype, nI), nT + len(values))(
+                *[A[nI + t] for t in range(nT)], *values)
+        flows = {}
+        for k in needed:
+            flow = A[k] if k in written_A else None
+            if B is not None and k in written_B:
+                flow = B[k] if flow is None else flow + B[k]
             if flow is not None:
-                accum(c, flow, 1)
-
-    return ns.install(
-        run_fwd,
-        _backward,
-        f"stencil({m} output, {len(temps)} local temporaries, {len(inner.code)} lines of code)",
-    )
+                flows[k] = flow
+        return flows
 
 
 def matrix(stencil, *fields):
-    inner = getattr(stencil, "local_stencil", stencil)
-    if getattr(inner, "temporaries", ()):
-        return _matrix_local_temporaries(stencil, inner, fields)
-    ns = _node_setup(stencil, inner, fields)
-    raw, output, m, listed, children = ns.raw, ns.output, ns.m, ns.listed, ns.children
-    grid, otype_t = ns.grid, ns.otype
-    ndim = grid.nd
-
-    # the inputs occupy fields m..n_fields-1; the field count comes from the
-    # ARGUMENTS, not from the highest index the code happens to reference: a
-    # caller may legitimately pass fields the code never reads
-    # (g.parallel_transport hands over all links, whatever directions the
-    # paths use), exactly as the compiled kernel allows
-    n_fields = m + len(children)
-    outputs = list(range(m))
-
-    # regime: only outputs are written, factors reference only inputs, the
-    # first write of each output does not read its own old value.  An output
-    # the code never writes is valid (it stays at its zero-initialized value)
-    # -- this happens for derived adjoint stencils, whose inputs include
-    # forward values the adjoint code never references.
-    first = {}
-    referenced = set()
-    for (tt, ac, w, fl) in raw:
-        assert tt < m, (
-            "stencil node mode: only outputs are written (field %d is not an "
-            "output; per-site temporaries are local temporaries)" % tt)
-        first.setdefault(tt, ac)
-        for (f, p, a) in fl:
-            assert m <= f < n_fields, (
-                "stencil node mode: factors must reference input fields 0..%d "
-                "(field %d)" % (n_fields - 1, f))
-            referenced.add(f)
-        if ac != -1 and ac != tt:
-            assert m <= ac < n_fields, (
-                "stencil node mode: accumulate reads an input field (field %d)" % ac)
-            referenced.add(ac)
-    for t, ac in first.items():
-        assert ac != t, (
-            "stencil node mode: first write of output %d must not read its "
-            "own old value (acc=-1, or acc=input)" % t)
-
-    # the inputs whose flow is needed (referenced, gradient-carrying): the
-    # adjoint computes only their slots, so constant inputs cost nothing in
-    # the backward at any level
-    flowed = tuple(m + k for k, c in enumerate(children) if c.with_gradient and m + k in referenced)
-    slot_of = {ci: r for r, ci in enumerate(flowed)}
-    n_comp = len(flowed)
-    n_off = n_comp + m
-
-    # the adjoint code, in closed form (another stencil), compiled; cached on
-    # the stencil object, keyed by the output count and the flowed inputs
-    cache = ns.cache("_node_adj")
-    key = (m, flowed)
-    if key not in cache:
-        code = adjoint_code(raw, outputs, flowed, ndim)
-        cache[key] = (code, _compile(grid, otype_t, code) if code else None)
-    adj_code, compiled = cache[key]
-
-    def _compiled_for(c):
-        # the adjoint kernel for a flow c * identity (m = 1, see seedless_code)
-        return _seedless_kernels(
-            cache, key, c, lambda c: _compile(grid, otype_t, seedless_code(adj_code, n_comp, c)))
-
-    # the adjoint never reads an output's forward value (the regime asserts
-    # factors reference inputs and first writes are fresh), but the kernel
-    # padding plan needs a valid lattice at every read slot
-    dummy = g.lattice(grid, otype_t)
-
-    # Padded inputs shared between the forward run and the adjoint run.
-    # A padded (multi-direction) stencil copies each input into a halo-padded
-    # field; the adjoint reads the same forward values, so when both kernels
-    # run on the same padding domain, the forward's padded inputs are handed
-    # to the adjoint kernel instead of being copied again.  Invalidation:
-    #   - the padded copies belong to ONE forward value and are used by at
-    #     most ONE adjoint run: they are dropped after the first backward of
-    #     this node, when that value object dies (weakref callback, e.g. the
-    #     graph releases its forward values), or when the next forward run
-    #     replaces them.  (Use-once: the root's value is never freed by the
-    #     backward and a graph is a reference cycle, so copies tied only to
-    #     the value would live until the cyclic garbage collection; further
-    #     reverse passes over retained values pad again, as without sharing.)
-    #   - they are used only while this node's value is still that object and
-    #     every shared input's current value is the very object that was
-    #     padded (so a re-run forward, or leaf values replaced between calls,
-    #     are never served stale); as for retained forward values in general,
-    #     the fields must not be modified in place while the values live.
-    # Only the plain (compiled) path shares; nested passes build new nodes.
-    # Memory: up to one padded copy per read input is held from the forward
-    # to the node's backward (the adjoint allocated the same copies anyway,
-    # but only during its run).
-    fwd_domain = _padding_domain(stencil)
-    shared = {}
-
-    def _forget(token):
-        if shared.get("token") is token:
-            shared.clear()
-
-    def _keep_padded(outs, raw, padded_fields):
-        shared.clear()
-        if padded_fields is None:
-            return
-        read_only = set(stencil.read_fields) - set(stencil.write_fields)
-        pads, refs = {}, {}
-        for k, v in enumerate(raw):
-            i = m + k
-            if i not in read_only or i not in referenced:
-                continue
-            try:
-                refs[i] = weakref.ref(v)
-            except TypeError:
-                continue
-            pads[i] = padded_fields[i]
-        if not pads:
-            return
-        token = object()
-        shared["token"] = token
-        shared["out"] = weakref.ref(outs[0], lambda _r, t=token: _forget(t))
-        shared["pads"] = pads
-        shared["refs"] = refs
-
-    def _shared_pads(z):
-        # the forward's padded inputs if they are still valid for z (see above)
-        if not shared:
-            return {}
-        out = shared["out"]()
-        v = z.value
-        if out is None or v is None:
-            return {}
-        if listed:
-            if not isinstance(v, list) or len(v) != m:
-                return {}
-            v = v[0]
-        if v is not out:
-            return {}
-        pads = {}
-        for i, P in shared["pads"].items():
-            if shared["refs"][i]() is value_of(children[i - m]):
-                pads[i] = P
-        return pads
-
-    def run_plain(outs, ops):
-        if share_padded and fwd_domain is not None and _padding_domain(compiled) is fwd_domain:
-            # keep the padded inputs for the adjoint run, see _keep_padded
-            raw = [value_of(c) for c in children]
-            _keep_padded(outs, raw, stencil(*(outs + ops)))
+    # stencil(output, *inputs) with an output node: the output node becomes
+    # the computed node of the stencil's primitive.  Each input is a node, a
+    # LIST node (one input field per element) or a plain value (a constant)
+    output = fields[0]
+    assert is_node(output), "stencil node mode: the output must be a node"
+    children = []
+    for arg in fields[1:]:
+        if is_node(arg) and arg._container.tag[0] is list:
+            children.extend(arg[i] for i in range(len(arg)))
         else:
-            stencil(*(outs + ops))
-
-    def run_fwd():
-        return ns.forward(run_plain)
-
-    def run_adj_plain(z):
-        # backward, plain flows: the compiled adjoint kernel, one pass, on
-        # fresh slot lattices (the first write of every slot is fresh)
-        slots = ns.lattices(n_comp)
-        full = [dummy] * m  # output forward values are not read
-        for c in children:
-            v = value_of(c)
-            if is_node(v):
-                raise NotImplementedError(
-                    "stencil node mode: nested (non-plain) values are not supported yet")
-            full.append(v)
-        for fl in ns.psi():
-            if is_node(fl):
-                raise NotImplementedError(
-                    "stencil node mode: nested (non-plain) flows are not supported yet")
-        pads = _shared_pads(z)
-        # use-once (see above): the adjoint run below holds its own references
-        shared.clear()
-        K = compiled
-        if not listed:
-            c = identity_flow_scale(output)
-            if c is not None:
-                K = _compiled_for(c)
-        pre = None
-        if pads and _padding_domain(K) is fwd_domain:
-            # forward values: field n_off + i of the adjoint layout
-            read = K.read_fields
-            pre = {n_off + i: P for i, P in pads.items() if (n_off + i) in read}
-        if pre:
-            K(*(slots + ns.psi() + full), padded=pre)
-        else:
-            K(*(slots + ns.psi() + full))
-        return slots
-
-    def _backward(z):
-        if n_comp == 0:
-            # no gradient-carrying input is referenced
-            return
-        if not ns.nested():
-            # plain flows: the compiled adjoint kernel on plain slot lattices
-            slots = run_adj_plain(z)
-            for ci, r in slot_of.items():
-                accum(children[ci - m], slots[r], 1)
-            return
-        # nested: the adjoint is a single-pass stencil, so the backward IS
-        # that stencil acting on nodes again -- the recursion, with no
-        # cshift.  A's fields are [slots] + [the m output flows] + [the n
-        # forward values]; the flows become A's children, so differentiating
-        # a slot runs the adjoint-of-adjoint stencil, and so on up the tower.
-        A_output = g.ad.reverse.node(ns.lattices(n_comp))
-        # z.value is a list of m forward outputs for a list-node target but
-        # a single lattice/node for an m=1 target -- normalize to a list of
-        # m entries (never `list(z.value)` on a bare field, which would
-        # iterate its sites)
-        if z.value is None:
-            z_vals = [dummy] * m
-        elif not listed:
-            z_vals = [z.value]
-        else:
-            z_vals = list(z.value)
-        # the adjoint graph lives ONE LEVEL DOWN: its operands are the
-        # children's values (the inner nodes), exactly as node.__mul__
-        # backpropagates with value_of(y).  The gradients still accumulate
-        # into the children themselves (below).
-        A_inputs = list(ns.psi()) + z_vals + [value_of(c) for c in children]
-        A = matrix(compiled, A_output, *A_inputs)
-        for ci, r in slot_of.items():
-            accum(children[ci - m], A[r], 1)
-
-    return ns.install(
-        run_fwd,
-        _backward,
-        f"stencil({m} output, {len(inner.points)} points, {len(inner.code)} lines of code)",
-    )
+            children.append(constant(arg))
+    z = _op(stencil, output._container, len(children)).node(*children)
+    for name in [
+        "_forward",
+        "_backward",
+        "_children",
+        "_tag",
+        "_reads_children",
+        "_reads_self",
+        "with_gradient",
+    ]:
+        setattr(output, name, getattr(z, name))
+    output.value = None
+    output.gradient = None
+    return output

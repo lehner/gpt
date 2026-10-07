@@ -39,7 +39,7 @@
 # of a multi-dual number, one compiled kernel per D_k).
 #
 import gpt as g
-from gpt.ad.reverse.util import is_node, nodify, value_of
+from gpt.ad.reverse.primitive import primitive
 
 
 def _plain_base(x):
@@ -64,7 +64,7 @@ class _tower:
     # and the flows built from it, at any nesting depth): every plain D_k is
     # evaluated at X or X^dag, which have the same scaling s, so s and the
     # materialized X^dag are computed once.  X is identified by identity; the
-    # user-created root resets the tower whenever it recomputes its value, so
+    # user-created root resets the tower in every pass (see derivative), so
     # a leaf modified in place between evaluations is never served stale
     def __init__(self):
         self.reset()
@@ -89,52 +89,44 @@ class _tower:
         return g.lattice.foundation.matrix.exp.derivative(base, h, self.s)
 
 
+def _plain(x, *h, tower, root):
+    # (fused kernels live in the lattice foundation)
+    if root:
+        tower.reset()
+    return tower.plain(x, list(h))
+
+
+def _fwd(x, *h, tower, root):
+    # a node's plain value; the residual records that the root has reset the
+    # tower in this pass
+    return _plain(x, *h, tower=tower, root=root), True
+
+
+def _vjp(i, flow, x, *h, tower, root, residual):
+    # the flows are D's at X^dag in the same tower (W at slot i, or appended
+    # for the flow into X).  A root whose value was not computed in this pass
+    # (with_value=False) resets the tower here, before its first use
+    if root and residual is None:
+        tower.reset()
+    hd = [g.adj(c) for c in h]
+    if i == 0:
+        hd.append(flow)
+    else:
+        hd[i - 1] = flow
+    return _D(g.adj(x), *hd, tower=tower, root=False)
+
+
+_D = primitive("exp_d", _plain, lambda x, *h, **static: x, vjp=_vjp, fwd=_fwd)
+
+
 def derivative(x, h, tower=None):
     # D_k(x; h_1..h_k); plain values run the fused kernel, node values build a
-    # node whose backward is again a D (one level down), in the same tower
-    args = [x] + list(h)
-    if not any(is_node(a) for a in args):
-        # (fused kernels live in the lattice foundation)
-        return (tower or _tower()).plain(x, h)
-
-    args = nodify(*args) if len(args) > 1 else (args[0],)
-    xn, hn = args[0], list(args[1:])
-    k = len(hn)
+    # node whose backward is again a D (one level down), in the same tower.
+    # The user-created root resets the tower in every pass (when it computes
+    # a plain value, or else in its backward), so a leaf modified in place
+    # between passes is never served stale
     root = tower is None
-    if root:
-        tower = _tower()
-
-    def _forward():
-        if root:
-            tower.reset()
-        return derivative(value_of(xn), [value_of(c) for c in hn], tower)
-
-    def _backward_x(z):
-        return (
-            1,
-            derivative(g.adj(value_of(xn)), [g.adj(value_of(c)) for c in hn] + [z.gradient], tower),
-        )
-
-    def _backward_h(i):
-        def _b(z):
-            return (
-                1,
-                derivative(
-                    g.adj(value_of(xn)),
-                    [z.gradient if j == i else g.adj(value_of(c)) for j, c in enumerate(hn)],
-                    tower,
-                ),
-            )
-
-        return _b
-
-    return g.ad.reverse.node_op(
-        tuple(args),
-        _forward,
-        (_backward_x,) + tuple(_backward_h(i) for i in range(k)),
-        xn._container,
-        f"exp_d{k}",
-    )
+    return _D(x, *h, tower=_tower() if root else tower, root=root)
 
 
 def function(x):

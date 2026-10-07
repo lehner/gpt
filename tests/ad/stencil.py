@@ -179,13 +179,13 @@ pval = S(with_gradients=False)
 eps = abs(float(pval) - float(S_plain)) / abs(float(S_plain))
 g.message(f"fused forward node: {pval} versus {S_plain}: {eps}")
 assert eps < 1e-12
-# the adjoint is a single compiled kernel (one backward pass); the cache key
-# is (output count, flowed inputs)
-assert any(k[0] == 2 and v[1] is not None for k, v in stencil._node_adj.items())
 
 # 1st derivative: finite differences + fused list input vs per-link inputs
 f = S.functional(nU)
 f.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
+# the adjoint is a single compiled kernel (one backward pass), compiled at
+# the first backward; the cache key is (output count, flowed inputs)
+assert any(k[0] == 2 and v[1] is not None for k, v in stencil._node_adj.items())
 nPg = rad.node([g.copy(Ps0), g.copy(Ps1)])
 nUg = [rad.node(u) for u in U]
 stencil(nPg, *nUg)

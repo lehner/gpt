@@ -84,8 +84,8 @@ def preimage(dfm, fields, indices, inverse, inverter=None):
             result[j] = g.cartesian_to_infinitesimal(y[j], flow)
         return result
 
-    def z_container(children):
-        c = children[indices[0]]._container
+    def z_container(containers):
+        c = containers[indices[0]]
         return c if len(indices) == 1 else container(list, c, len(indices))
 
     z = joint_node(fields, forward, flows, z_container, "preimage")

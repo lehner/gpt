@@ -238,6 +238,34 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
   value of a finished pass's result (all levels, expressions evaluated);
   use it to **release** a graph's memory after reading a result.
 
+**Primitives** (`ad/reverse/primitive.py`): an operation closed under
+differentiation is declared once, by its plain implementation and its vjp
+written in terms of primitives (itself or others):
+
+```python
+dagger = primitive("dagger", plain, container, vjp=lambda i, flow, W: dagger(flow), reads=((),))
+```
+
+Called on plain arguments it runs `plain`; with a node among the arguments
+it returns a node whose forward is the op on the children's values (plain:
+the kernel; nested: a node one level down) and whose backward is the vjp,
+which -- made of primitives -- runs plain kernels on plain flows and builds
+nodes one level down in a nested pass.  So no op writes separate plain and
+nested code; the self-similar towers (exp, stencils, the linear maps) are
+the primitive's own recursion.  Options: `joint_vjp(z, needed, *values)`
+(all flows at once, e.g. one adjoint kernel for all inputs), `lift` (how an
+argument becomes a child, e.g. `stack` for a list of fields), `reads` (the
+vjp receives only the declared values, the others are None), static keyword
+arguments (not differentiated, passed on to every level), `fwd` (the plain
+value of a node plus a *residual* handed once to that node's vjp: the
+stencils' shared padded inputs, the exp tower's reset), `order=1` (external
+first-order nodes: `joint_node`, `functional_node`, `preimage`).  Built on
+it: `linear.py`, `transform.conj/real/imag/multiply`, `matrix/exp.py`,
+`foundation/stencil.py`, `joint_node`.  A primitive's node never reads its
+own value (`_reads_self = False`), so with `with_value=False` its forward is
+skipped when nothing reads the value: state that a forward would refresh
+must be refreshed in the vjp as well (the exp tower: see §4.5).
+
 ### 4.2 Conventions
 
 - **Conjugate-linear (Wirtinger) convention:** the accumulated gradient is
@@ -322,7 +350,10 @@ mechanism.
   Paterson-Stockmeyer Taylor).  All D_k of one tower (the user's exp node
   and the flows built from it, at any depth) share a `_tower`: X is
   identified by identity, and its scaling (the norm bound, which is the same
-  for X and X^dag) and the materialized X^dag are computed once.  Non-lattice
+  for X and X^dag) and the materialized X^dag are computed once.  The user's
+  root D_0 resets the tower once per pass (in its plain forward, or -- if the
+  forward was skipped, `with_value=False` -- in its vjp, signalled by the
+  forward's residual), so a leaf updated in place is never served stale.  Non-lattice
   (tensor/scalar) nodes still use the node-op Taylor graph.
 - `ad/reverse/foundation/__init__.py` also holds single-node
   **projections**: `traceless_anti_hermitian` / `traceless_hermitian` (the
@@ -454,7 +485,12 @@ mechanism.
 
 A compiled matrix stencil called with node fields (`stencil(out_node,
 *input_nodes)`, or `g.parallel_transport_matrix(...)(nodes)`) becomes one
-computed node.  Its forward is the compiled kernel; its backward is the
+computed node: the node of the stencil's primitive (`_stencil_op`, cached on
+the stencil per output container and input count), installed into the
+output node.  Its vjp applies the adjoint stencil's primitive, so the plain
+and the nested backward are the same code; the adjoint kernels are compiled
+at the first backward (cache `stencil._node_adj`, key (output count, flowed
+inputs)).  Its forward is the compiled kernel; its backward is the
 **adjoint code**, derived in closed form as another stencil (the product
 rule per factor, shifts negated/relativized, adjoint flags adjusted), so the
 gradient of a stencil is a stencil and the tower is self-similar at any
@@ -502,9 +538,11 @@ Plain-run optimizations:
   of k matrix products per k-link entry (72 -> 48 for the Wilson force).
 - **Shared padding** (padded stencils only, i.e. checkerboarded grids): the
   forward's halo-padded input copies are handed to the adjoint kernels (same
-  padding domain) instead of being copied again;
-  use-once, tied to the forward value, checked by object identity
-  (switch: `share_padded`).
+  padding domain) instead of being copied again: the residual of the
+  primitive's `fwd`, use-once, emptied when the forward value dies, checked by
+  object identity (switch: `share_padded`).  Test with padding forced:
+  `sys.modules["gpt.core.stencil.matrix"].use_padded = True` (the package
+  attribute `gpt.core.stencil.matrix` is the function, not the module).
 - **Common-subexpression elimination of the executed kernels**:
   `g.stencil.matrix(..., cse=...)` / `g.local_stencil.matrix(..., cse=...)`
   compiles an execution plan in which repeated adjacent factor pairs (a pair
@@ -553,6 +591,7 @@ Plain-run optimizations:
 | Path | Role |
 |---|---|
 | `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/...), `node_op`, forward/backward, `functional` |
+| `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/nested dispatch, joint vjps, residuals, first-order ops), §4.1 |
 | `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `product`, `value_of`, `resolve` (plain value of a finished pass's result), `is_node`, `value_depth_static`, containers (`get_container`, `get_*_container`, `list_container`) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, sin, cos, real, imag, conj, `multiply` (and the node-aware `component_multiply`) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order; used by `g.ml` losses); `joint_node` (first-order nodes whose backward computes all flows at once, also used by `preimage`) |
