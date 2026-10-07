@@ -501,3 +501,75 @@ diff = max(n2(G_st[mu] - G_cs[mu]) / n2(G_cs[mu]) for mu in range(Nd))
 g.message(f"local temporaries: 3rd derivative vs cshift graph: {diff}")
 assert diff < 1e-28
 g.message("local temporaries in node mode: OK")
+
+# a stencil with a single input field (all factors at the zero point): the
+# cubic f(X) = X + a X^2 + b X^3 of a general complex matrix field (the
+# word sums of g.ml.layer.word_sum).  The adjoint of a one-input stencil has a
+# single flow slot, a one-element list node in nested passes.  HVP and 3rd
+# derivative of the nonlinear Re sum tr f(X) f(X) against the node graph
+X = g.mcolor(grid)
+rng.cnormal(X, sigma=0.3)
+DX, DY = g.mcolor(grid), g.mcolor(grid)
+rng.cnormal([DX, DY])
+ca, cb = 0.3 - 0.1j, -0.2 + 0.05j
+zero = (0,) * Nd
+cubic = g.stencil.matrix(X, [zero], [(0, -1, 1.0, [(1, 0, 0)]), (0, 0, ca, [(1, 0, 0)] * 2), (0, 0, cb, [(1, 0, 0)] * 3)])
+
+
+def cubic_st(x):
+    out = g.lattice(X)
+    for _ in range(g.ad.reverse.util.value_depth_static(x)):
+        out = rad.node(out)
+    cubic(out, x)
+    return out
+
+
+def cubic_graph(x):
+    x2 = x * x
+    return x + x2 * ca + x2 * x * cb
+
+
+def act_cubic(f, x):
+    y = f(x)
+    return g.sum(g.trace(y * y)).real
+
+
+def leaf(x, depth):
+    for _ in range(depth):
+        x = rad.node(x, infinitesimal_to_cartesian=False)
+    return x
+
+
+def contract_dir(grad, d):
+    # Re sum tr(d^dag grad), d a constant direction node
+    return g.sum(g.trace(g.adj(d) * grad)).real
+
+
+def derivatives_cubic(f):
+    # gradient, HVP along DX, 3rd derivative along DX, DY
+    n1 = leaf(X, 1)
+    act_cubic(f, n1)()
+    G = g(n1.gradient)
+    n2_ = leaf(X, 2)
+    act_cubic(f, n2_)(with_value=False)
+    c = contract_dir(n2_.gradient, rad.node(DX, with_gradient=False))
+    c(with_value=False)
+    H = g(n2_.value.gradient)
+    n3 = leaf(X, 3)
+    act_cubic(f, n3)()
+    c = contract_dir(n3.gradient, rad.node(rad.node(DX, with_gradient=False), with_gradient=False))
+    c()
+    c = contract_dir(n3.value.gradient, rad.node(DY, with_gradient=False))
+    c()
+    D3 = g(n3.value.value.gradient)
+    return G, H, D3
+
+
+plain = cubic_st(X)
+eps = n2(plain - g(cubic_graph(X))) / n2(plain)
+g.message(f"single-input stencil: value vs graph {eps}")
+assert eps < 1e-28
+for name, a, b in zip(["gradient", "HVP", "3rd derivative"], derivatives_cubic(cubic_st), derivatives_cubic(cubic_graph)):
+    eps = n2(a - b) / n2(b)
+    g.message(f"single-input stencil: {name} vs graph {eps}")
+    assert eps < 1e-26
