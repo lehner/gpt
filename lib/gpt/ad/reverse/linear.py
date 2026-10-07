@@ -195,47 +195,55 @@ dagger = primitive(
 )
 
 
-# element access of an array (a number for a single element) and its
-# transpose, the array with one element set (zero elsewhere): a pair of
-# primitives whose vjps are each other.  A number parameter of g.ml is
-# stored as a 0-d array (updated in place) and enters a function as
+# element access a[index] of an indexable value (an array, a tensor, ...; a
+# number for a single element) and its transpose, the zero of the value's
+# type with one element set: a pair of primitives whose vjps are each other.
+# A node's __getitem__ (other than of a list node) is element; a number
+# parameter of g.ml is stored as a 0-d array and enters a function as
 # element(box, ()).
 
 
-def _plain_element(a, index):
-    v = np.asarray(a)[index]
-    return v.item() if np.ndim(v) == 0 else np.array(v)
+def _plain_element(a, index, c):
+    if c.tag[0] is np.ndarray:
+        # (a number may stand for a 0-d array, e.g. a trial point of a check)
+        a = np.asarray(a)
+    v = a[index]
+    if isinstance(v, np.ndarray):
+        return v.item() if v.ndim == 0 else np.array(v)
+    return v.item() if isinstance(v, np.generic) else v
 
 
-def _plain_scatter(v, index, shape, dtype):
-    z = np.zeros(shape, dtype=dtype)
-    z[index] = v if np.issubdtype(dtype, np.complexfloating) else np.real(v)
+def _plain_scatter(v, index, c):
+    z = c.zero()
+    if isinstance(z, np.ndarray) and not np.iscomplexobj(z):
+        v = np.real(v)
+    z[index] = v
     return z
 
 
 _element = primitive(
     "element",
-    lambda a, index, shape, dtype: _plain_element(a, index),
-    lambda a, index, shape, dtype: get_container(_plain_element(a.representative(), index)),
-    vjp=lambda i, flow, a, index, shape, dtype: scatter(flow, index, shape, dtype),
+    _plain_element,
+    lambda a, index, c: get_container(_plain_element(c.representative(), index, c)),
+    vjp=lambda i, flow, a, index, c: scatter(flow, index, c),
     reads=((),),
 )
 
 _scatter = primitive(
     "scatter",
     _plain_scatter,
-    lambda v, index, shape, dtype: container(np.ndarray, shape, dtype),
-    vjp=lambda i, flow, v, index, shape, dtype: element(flow, index),
+    lambda v, index, c: c.copy(),
+    vjp=lambda i, flow, v, index, c: element(flow, index),
     reads=((),),
 )
 
 
 def element(a, index):
-    # a[index] of an array (plain or a node)
-    c = a._container if is_node(a) else get_container(np.asarray(a))
-    return _element(a, index=index, shape=c.tag[1], dtype=c.tag[2])
+    # a[index] (plain or a node)
+    c = a._container if is_node(a) else get_container(a)
+    return _element(a, index=index, c=c.copy())
 
 
-def scatter(v, index, shape, dtype):
-    # the array of the shape with v at index, zero elsewhere
-    return _scatter(v, index=index, shape=shape, dtype=dtype)
+def scatter(v, index, c):
+    # the zero of the container c with v at index
+    return _scatter(v, index=index, c=c)

@@ -17,7 +17,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import numpy as np
 from gpt.ad.reverse.util import (
     get_container,
     get_unary_container,
@@ -344,22 +343,9 @@ class node_base(base):
             z._reads_self = False
             return z
 
-        if x._container.tag[0] is np.ndarray:
-            # array element access (see linear.element)
-            return g.ad.reverse.linear.element(x, item)
-
-        def getter(y):
-            return y[item]
-
-        def setter(y, z):
-            if isinstance(y, node_base):
-                # a node gradient is an immutable graph: rebuild it with the
-                # selected component (already contained in z) replaced
-                return (y - y[item]) + z
-            y[item] = z
-            return y
-
-        return x.project(getter, setter)
+        # element access (arrays, tensors, ...; see linear.element), at any
+        # nesting depth (its vjp is the scatter, whose vjp is again element)
+        return g.ad.reverse.linear.element(x, item)
 
     def __len__(self):
         # a list node (e.g. the 4 gauge links) reports its length so it can be
@@ -367,25 +353,6 @@ class node_base(base):
         if self._container.tag[0] is list:
             return self._container.tag[2]
         raise TypeError(f"object of type '{type(self).__name__}' has no len()")
-
-    def project(x, getter, setter):
-        def _forward():
-            return getter(value_of(x))
-
-        # not allowed to capture z, otherwise have reference loop!
-        def _backward(z):
-            if x.with_gradient:
-                x.materialize_gradient()
-                # (the setter may write into the gradient)
-                x.own_gradient()
-                x.gradient = setter(x.gradient, getter(x.gradient) + z.gradient)
-
-        z_container = get_unary_container(x._container, getter)
-
-        z = node_base(_forward, _backward, (x,), _container=z_container)
-        z._reads_children = ((),)
-        z._reads_self = False
-        return z
 
     def __add__(x, y):
         # an exact numeric zero is the neutral element (so that python's sum,
@@ -555,19 +522,8 @@ class node_base(base):
         self._container.set_otype(v)
 
     def get_real(self):
-        def getter(y):
-            return y.real
-
-        def setter(y, z):
-            if isinstance(y, node_base):
-                return (y - y.real) + z
-            if g.util.is_num(y):
-                y = z.real
-            else:
-                y @= z.real
-            return y
-
-        return self.project(getter, setter)
+        # Re x (componentwise; the flow into x is the real part of the flow)
+        return g.ad.reverse.transform.real(self)
 
     grid = property(get_grid)
     otype = property(get_otype, set_otype)

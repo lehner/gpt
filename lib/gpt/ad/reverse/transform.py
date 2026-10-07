@@ -94,10 +94,11 @@ def cos(x):
 
 
 def _plain_part(v, part):
-    # the real or imaginary part in the container of v (numbers stay complex
-    # and arrays keep their dtype, so the node container is unchanged)
+    # the real or imaginary part in the container of v (a number gives a
+    # float, whose container is that of numbers; arrays keep their dtype, so
+    # the node container is unchanged)
     if g.util.is_num(v):
-        return complex(getattr(complex(v), part))
+        return getattr(complex(v), part)
     if isinstance(v, np.ndarray):
         return getattr(v, part).astype(v.dtype)
     return getattr(g.component, part)(v)

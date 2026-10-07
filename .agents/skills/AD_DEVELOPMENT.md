@@ -491,7 +491,7 @@ mechanism.
   Consequences for new code: a backward closure must return fields it does
   not reuse or overwrite later (no persistent scratch buffers as results),
   and code that writes into a node's gradient in place must call
-  `own_gradient()` first (as `project` does).  `node.gradient` is a property
+  `own_gradient()` first.  `node.gradient` is a property
   (the flow's value; a list gradient is a fresh list per read, so assign
   `n.gradient = ...` rather than writing into `n.gradient[i]`).
 
@@ -501,45 +501,49 @@ A compiled matrix stencil called with node fields (`stencil(out_node,
 *input_nodes)`, or `g.parallel_transport_matrix(...)(nodes)`) becomes one
 computed node: the node of the stencil's primitive (`_stencil_op`, cached on
 the stencil per output container and input count), installed into the
-output node.  Its vjp applies the adjoint stencil's primitive, so the plain
-and the nested backward are the same code; the adjoint kernels are compiled
-at the first backward (cache `stencil._node_adj`, key (output count, flowed
-inputs)).  Its forward is the compiled kernel; its backward is the
-**adjoint code**, derived in closed form as another stencil (the product
-rule per factor, shifts negated/relativized, adjoint flags adjusted), so the
-gradient of a stencil is a stencil and the tower is self-similar at any
-depth.  Two regimes:
+output node.  Its forward is the compiled kernel; its backward is the
+**adjoint code** (`adjoint_code`), derived in closed form as stencils (the
+product rule per factor, shifts negated/relativized, adjoint flags
+adjusted), so the gradient of a stencil is a stencil and the tower is
+self-similar at any depth.  The adjoint kernels are compiled at the first
+backward (cache `stencil._node_adj`, key (output count, flowed inputs)).
 
-- **Temp-free** (only outputs are written, factors read inputs only): the
-  adjoint is one kernel; in a nested pass the backward is the adjoint
-  stencil as a node again.  (Scratch fields passed by the caller as
-  constants are rejected; the former staged adjoint for them, with a cshift
-  fallback in nested passes, was removed 2026-10-07 as unused.)
-- **Local temporaries** (kernel-owned per-site fields, declared with
-  `g.stencil.matrix(..., temporaries=[...])`; they are not passed by the
-  caller, whose fields and `data_access_hints` are the remaining ones in index
-  order).  Rules: (R1) temporaries are written and read at the zero point
-  only; (R2) an entry that reads a temporary reads *all* its factors at the
-  zero point; temporaries are built from inputs only (no chains), all writes
-  of a temporary precede its reads, outputs are never read.  The adjoint
-  (`adjoint_code_local`) is two stencils: **stage A** (again with local
-  temporaries) recomputes the temporaries and computes the flows of the
-  entries that read them (local by R2), writing each temporary's flow
-  lambda_T to memory; **stage B** (temp-free) pushes lambda_T, read at shifted
-  points, through the temporary definitions into the inputs.  In nested
-  passes both stages are node stencils of the same kinds, so higher
-  derivatives stay in stencils.  Temporaries need a kernel without
-  communication inside (the general stencil exchanges halos before the
-  kernel; `comm_type` 1 or 2), never Grid's cartesian stencil.  Use them where a
-  subproduct is **shared** (the up/down staples of plaquettes and
-  rectangles, `staple_stencil_code`); without sharing they only add a stage
-  barrier and the lambda_T memory traffic (the Wilson action is faster as a
-  plain plaquette-loop stencil).
+- **Regime**: only outputs and local temporaries are written; outputs are
+  never read; the first write of an output does not read its old value
+  (fresh, or adding an input).  **Local temporaries** are kernel-owned
+  per-site fields, declared with `g.stencil.matrix(..., temporaries=[...])`;
+  they are not passed by the caller, whose fields and `data_access_hints`
+  are the remaining ones in index order.  Rules: (R1) temporaries are written
+  and read at the zero point only; (R2) an entry that reads a temporary reads
+  *all* its factors at the zero point; temporaries are built from inputs only
+  (no chains), all writes of a temporary precede its reads, and they are
+  written fresh or accumulating into themselves.  (Scratch fields passed by
+  the caller as constants are rejected.)
+- **One derivation** for any number of temporaries: **stage A** (with the
+  local temporaries, if any) recomputes the temporaries and runs the reverse
+  sweep over the entries writing outputs; by R2 the flows of entries reading
+  temporaries are local, so they go into the input slots and into each
+  temporary's flow lambda_T (written to memory); **stage B** (temp-free, only
+  with temporaries) pushes lambda_T, read at shifted points, through the
+  temporary definitions into the inputs.  Only flowed inputs get slots, and
+  only temporaries defined from a flowed input get a lambda_T.  Layouts:
+  A = [slots][lambda_T][output flows][values of all passed fields][local T],
+  B = [slots][lambda_T][values]; without temporaries A is the classic single
+  adjoint kernel.  Plain flows: one fused run (B accumulating into A's
+  slots); nested: both stages are stencil nodes of the same kinds, so
+  higher derivatives stay in stencils.
+- Temporaries need a kernel without communication inside (the general
+  stencil exchanges halos before the kernel; `comm_type` 1 or 2), never
+  Grid's cartesian stencil.  Use them where a subproduct is **shared** (the
+  up/down staples of plaquettes and rectangles, `staple_stencil_code`);
+  without sharing they only add a stage barrier and the lambda_T memory
+  traffic (the Wilson action is faster as a plain plaquette-loop stencil).
 
 Plain-run optimizations:
 
-- **Flowed inputs only**: a temp-free stencil node's adjoint computes the
-  slots of the inputs that carry a gradient and are referenced (the cache
+- **Flowed inputs only**: a stencil node's adjoint (with or without local
+  temporaries) computes the slots of the inputs that carry a gradient and are
+  referenced (the cache
   key includes them); the entries of other slots are dropped and the slots
   renumbered, in the plain run and in the nested adjoint nodes.  Constant
   inputs (e.g. coefficient fields of a pass that does not differentiate
@@ -554,7 +558,8 @@ Plain-run optimizations:
   forward's halo-padded input copies are handed to the adjoint kernels (same
   padding domain) instead of being copied again: the residual of the
   primitive's `fwd`, use-once, emptied when the forward value dies, checked by
-  object identity (switch: `share_padded`).  Test with padding forced:
+  object identity (switch: `share_padded`); also for stencils with local
+  temporaries (stage A reads the same forward values).  Test with padding forced:
   `sys.modules["gpt.core.stencil.matrix"].use_padded = True` (the package
   attribute `gpt.core.stencil.matrix` is the function, not the module).
 - **Common-subexpression elimination of the executed kernels**:
@@ -583,7 +588,7 @@ Plain-run optimizations:
   `_reads_children` (None = all children, else per child i the child
   indices the flow into child i reads) and `_reads_self` (default True).
   `node_op(..., reads=...)` sets both (a node_op never reads its own value).
-  Declared: products, sums, adj, trace, sum, list-element access, `project`,
+  Declared: products, sums, adj, trace, sum, list-element access, element access,
   and stencil nodes (the inputs, never the output).  `needed_values` walks the
   graph from the root and `forward` skips every computed node nothing
   needs (only with `with_value=False`).  **Safety net**: `value_of`
@@ -621,7 +626,7 @@ Plain-run optimizations:
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
-| `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, `adjoint_code_local`), multi-output list nodes, local temporaries, seedless adjoints, shared padding |
+| `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, with or without local temporaries), multi-output list nodes, local temporaries, seedless adjoints, shared padding |
 | `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils (kind selection, `comm_type`); padded wrapper (checkerboarded grids); `temporaries=`; `cse=` |
 | `lib/cgpt/lib/foundation/general_stencil.h` | general stencil: geometry (lookup table, halo transfer plan), per-field halo, batched exchange via Grid's `StencilSendToRecvFrom`, manager (field point sets); used by `stencil/matrix.h` (`comm_type == 2`, kernel loops in `stencil/matrix_loops.h`) |
 | `lib/gpt/core/local_stencil/cse.py` | common-subexpression elimination of a kernel's execution plan (tested in `tests/core/stencil.py`) |
