@@ -4,7 +4,6 @@
 #
 import gpt as g
 import numpy as np
-import sys
 
 # random
 rng = g.random("test")
@@ -32,7 +31,6 @@ def stencil_cshift(src, direction1, direction2):
             {"target": 0, "accumulate": 0, "weight": 1.0, "factor": [(2, 2, 0)]},
         ],
     )
-    stencil.data_access_hints([0], [1, 2, 3, 4], [])
     dst = g.lattice(src)
     stencil(dst, src, src)
     return dst
@@ -59,8 +57,7 @@ g.message(f"Test matrix stencil versus cshift for displacement = (0,2,1,1): {eps
 assert eps2 < 1e-25
 
 
-# test general stencil (points off the axes, halo exchange) versus the padded
-# stencil (same products, so bit-identical) and cshift
+# test general stencil (points off the axes, halo exchange) versus cshift
 def stencil_reference(fields, points, code):
     fields = [g.copy(f) for f in fields]
     for c in code:
@@ -82,30 +79,19 @@ def stencil_reference(fields, points, code):
 rng_general_stencil = g.random("general stencil")
 
 
-def test_general_stencil(tag, prec, points, code, n_fields, write_fields, temporaries=(), cse=False):
+def test_general_stencil(tag, prec, points, code, n_fields, temporaries=(), cse=False):
     grid_prec = g.grid([4, 4, 4, 8], prec)
     fields = [g.mcolor(grid_prec) for i in range(n_fields)]
     rng_general_stencil.element(fields)
     passed = [i for i in range(n_fields) if i not in temporaries]
     ref = stencil_reference(fields, points, code)
-    results = []
-    matrix_module = sys.modules["gpt.core.stencil.matrix"]
-    for padded in [False, True]:
-        matrix_module.use_padded = padded
-        stencil = g.stencil.matrix(fields[0], points, code, temporaries=temporaries, cse=cse)
-        stencil.data_access_hints(write_fields, [i for i in range(len(passed)) if i not in write_fields], [])
-        f = [g.copy(fields[i]) for i in passed]
-        stencil(*f)
-        results.append(f)
-    matrix_module.use_padded = False
+    stencil = g.stencil.matrix(fields[0], points, code, temporaries=temporaries, cse=cse)
+    f = [g.copy(fields[i]) for i in passed]
+    stencil(*f)
     for k, i in enumerate(passed):
-        eps = (g.norm2(results[0][k] - ref[i]) / g.norm2(ref[i])) ** 0.5
-        diff = g.norm2(results[0][k] - results[1][k])
-        g.message(
-            f"Test general stencil ({tag}, {prec.__name__}) field {i}: versus cshift {eps}, versus padded {diff}"
-        )
+        eps = (g.norm2(f[k] - ref[i]) / g.norm2(ref[i])) ** 0.5
+        g.message(f"Test general stencil ({tag}, {prec.__name__}) field {i}: versus cshift {eps}")
         assert eps < prec.eps * 100
-        assert diff == 0.0
 
 
 for prec in [g.double, g.single]:
@@ -119,7 +105,6 @@ for prec in [g.double, g.single]:
             {"target": 3, "accumulate": -1, "weight": 2.0, "factor": [(2, 5, 0), (1, 6, 1), (2, 3, 0)]},
         ],
         4,
-        [0, 3],
     )
     test_general_stencil(
         "long shifts",
@@ -127,7 +112,6 @@ for prec in [g.double, g.single]:
         [(0, 0, 0, 0), (5, 0, 0, 0), (-3, 4, 0, 0), (0, 0, 7, -9), (4, 4, 4, 8)],
         [{"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 1, 0), (1, 2, 1), (1, 3, 0), (1, 4, 1)]}],
         2,
-        [0],
     )
     # points that skip ranks and wind around the lattice several times
     test_general_stencil(
@@ -136,7 +120,6 @@ for prec in [g.double, g.single]:
         [(0, 0, 0, 0), (0, 0, 0, 9), (0, 0, 0, -13), (1, -2, 3, -17), (0, 0, 0, 16), (13, -9, 6, -21)],
         [{"target": 0, "accumulate": -1, "weight": 1.0, "factor": [(1, 1, 0), (1, 2, 1), (1, 3, 0), (1, 4, 1), (1, 5, 0)]}],
         2,
-        [0],
     )
     # more fields read at shifted points than one communication batch holds
     n_many = 40
@@ -149,7 +132,6 @@ for prec in [g.double, g.single]:
             for i in range(n_many)
         ],
         1 + n_many,
-        [0],
     )
     for cse in [False, True]:
         test_general_stencil(
@@ -162,8 +144,7 @@ for prec in [g.double, g.single]:
                 {"target": 0, "accumulate": 0, "weight": 1.0, "factor": [(3, 0, 1), (1, 3, 0), (2, 4, 1)]},
             ],
             4,
-            [0],
-            temporaries=[3],
+                temporaries=[3],
             cse=cse,
         )
 

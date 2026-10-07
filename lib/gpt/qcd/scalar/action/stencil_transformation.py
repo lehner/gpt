@@ -46,7 +46,6 @@ class stencil_transformation:
 
         # stencil
         self.st = g.stencil.matrix(U[0], vecs, code)
-        self.st.data_access_hints(_dU + _dV, _sU + _sV, [])
 
     def inverse(self, inverter):
         return g.qcd.gauge.algebra_laplace.inverse(self, inverter)

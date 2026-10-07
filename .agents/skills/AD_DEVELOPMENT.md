@@ -101,7 +101,7 @@ training) has its own guide: `ML_DEVELOPMENT.md` (same directory).
 - Known pre-existing failure on this box: `tests/qcd/coarsen.py` OOMs
   (15 GB RAM) at its default size; it passes at half size in every
   dimension (`--fgrid 8.8.16.8 --cgrid 4.4.4.4 --ccgrid 2.2.2.4`), which
-  still covers the padded 33-point stencil. Everything else should pass.
+  still covers the 33-point (padded `matrix_vector`) stencil. Everything else should pass.
 - Reproducibility: RNGs are seeded by name (`g.random("test")`), so results
   are bit-reproducible across runs on the same machine. When refactoring,
   compare reported numbers (relative errors) across the change — they should
@@ -258,7 +258,7 @@ argument becomes a child, e.g. `stack` for a list of fields), `reads` (the
 vjp receives only the declared values, the others are None), static keyword
 arguments (not differentiated, passed on to every level), `fwd` (the plain
 value of a node plus a *residual* handed once to that node's vjp: the
-stencils' shared padded inputs, the exp tower's reset), `order=1` (external
+exp tower's reset), `order=1` (external
 first-order nodes: `joint_node`, `functional_node`, `preimage`).  Built on
 it: `linear.py`, `transform.conj/real/imag/multiply`, `matrix/exp.py`,
 `foundation/stencil.py`, `joint_node`.  A primitive's node never reads its
@@ -421,23 +421,21 @@ mechanism.
   filled by a halo exchange, which uses Grid's `StencilSendToRecvFrom`
   interface (transfer buffers in Grid's shared-memory heap; every remote site
   is sent once per rank pair; all fields of a kernel call share one
-  communication phase).  Same products in the same order as the padded
-  stencil, so results are bit-identical.  `comm_type=1` (no communication)
-  is the plain local kernel (single point, padded fields).
-- **Padded stencils** remain only for checkerboarded grids (and with
-  `core/stencil/matrix.py`'s switch `use_padded = True`, for comparisons).
-  They trust `data_access_hints`: fields are copied into halo-padded fields,
-  fields the code does not reference share one scratch field, and declared
-  write fields whose first write is fresh are not copied; every field read
-  as a factor must be declared as read (referenced but undeclared fields,
-  e.g. temporaries, are still copied).  The general stencil ignores the
-  hints, but callers keep declaring them for the padded case.
-- **Allocator effects in benchmarks**: the padded path frees fields larger
-  than a lattice, which raises glibc's dynamic mmap threshold, so later
-  lattices of a run are served from the heap without page faults.  Without
-  that, a 16^4 color-matrix lattice (9.4 MB) is mmapped and unmapped per
-  allocation: local_stout E4 looked 6% slower on the general stencil
-  although its stencil kernels got faster.  Compare such runs with
+  communication phase).  The general stencil supports full grids only: a
+  non-axis matrix stencil (or one with temporaries) on a checkerboarded grid
+  raises `NotImplementedError` (the former padded matrix stencil for them
+  was removed 2026-10-07; nothing used it).  Matrix stencils need no
+  `data_access_hints` (the method is a no-op); `g.stencil.matrix_vector`
+  (Dirac-type operators, block maps) still runs on halo-padded fields
+  (`g.padded_local_fields`) and needs its hints.  `comm_type=1` (no
+  communication) is the plain local kernel (single point, padded fields).
+- **Allocator effects in benchmarks**: a run that frees fields larger than a
+  lattice (e.g. halo-padded copies) raises glibc's dynamic mmap threshold,
+  so later lattices of the run are served from the heap without page
+  faults.  Without that, a 16^4 color-matrix lattice (9.4 MB) is mmapped and
+  unmapped per allocation: local_stout E4 looked 6% slower on the general
+  stencil than on the former padded one although its stencil kernels got
+  faster.  Compare such runs with
   `MALLOC_MMAP_THRESHOLD_=268435456 MALLOC_TRIM_THRESHOLD_=1073741824`.
 - **Memory**: large fields and retained graphs live as long as a Python
   name refers to them, and nested (2-deep/3-deep) graphs over gauge fields
@@ -478,10 +476,6 @@ mechanism.
   operation build the graph once and swap the leaf values (as
   `dft_diffeomorphism` and `directional_parallel_transport._local_vjp` do)
   and clear the root value before re-running (see "Re-running a graph").
-- **Self-accumulating targets are not reads** in `data_access_hints`:
-  listing them as read makes the padded stencil (checkerboarded grids) copy
-  them in before the kernel overwrites them (the padded wrapper already
-  starts a non-fresh target from the caller's value).
 - **Flows are adopted, not copied**: the first plain contribution to a
   gradient is adopted as is (`flow.accumulate`), so the same field can be
   the gradient of several nodes (both children of an add receive
@@ -512,8 +506,8 @@ backward (cache `stencil._node_adj`, key (output count, flowed inputs)).
   never read; the first write of an output does not read its old value
   (fresh, or adding an input).  **Local temporaries** are kernel-owned
   per-site fields, declared with `g.stencil.matrix(..., temporaries=[...])`;
-  they are not passed by the caller, whose fields and `data_access_hints`
-  are the remaining ones in index order.  Rules: (R1) temporaries are written
+  they are not passed by the caller, whose fields are the remaining ones in
+  index order.  Rules: (R1) temporaries are written
   and read at the zero point only; (R2) an entry that reads a temporary reads
   *all* its factors at the zero point; temporaries are built from inputs only
   (no chains), all writes of a temporary precede its reads, and they are
@@ -554,14 +548,6 @@ Plain-run optimizations:
   with the flow factor dropped and c (conj(c) for an adjointed read) folded
   into the weights (`seedless_code`).  For a traced loop sum this removes one
   of k matrix products per k-link entry (72 -> 48 for the Wilson force).
-- **Shared padding** (padded stencils only, i.e. checkerboarded grids): the
-  forward's halo-padded input copies are handed to the adjoint kernels (same
-  padding domain) instead of being copied again: the residual of the
-  primitive's `fwd`, use-once, emptied when the forward value dies, checked by
-  object identity (switch: `share_padded`); also for stencils with local
-  temporaries (stage A reads the same forward values).  Test with padding forced:
-  `sys.modules["gpt.core.stencil.matrix"].use_padded = True` (the package
-  attribute `gpt.core.stencil.matrix` is the function, not the module).
 - **Common-subexpression elimination of the executed kernels**:
   `g.stencil.matrix(..., cse=...)` / `g.local_stencil.matrix(..., cse=...)`
   compiles an execution plan in which repeated adjacent factor pairs (a pair
@@ -577,7 +563,7 @@ Plain-run optimizations:
   temporary costs about what it saves (measured: >= 18% fewer products ->
   4-14% faster kernels, <= 12% -> neutral or slower).  Enabled for the AD
   adjoint kernels (switch: `cse` in `foundation/stencil.py`); cartesian-only
-  kernels run unpadded without temporaries and are never combined.  Effect:
+  kernels run without temporaries and are never combined.  Effect:
   fused-loop iwasaki force -13%, iwasaki HVP -3..-4%, 3rd derivative
   -2..-5%; the production forces and local_stout are below the threshold and
   bit-identical.
@@ -626,8 +612,8 @@ Plain-run optimizations:
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
-| `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, with or without local temporaries), multi-output list nodes, local temporaries, seedless adjoints, shared padding |
-| `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils (kind selection, `comm_type`); padded wrapper (checkerboarded grids); `temporaries=`; `cse=` |
+| `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, with or without local temporaries), multi-output list nodes, local temporaries, seedless adjoints |
+| `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils (kind selection, `comm_type`; full grids for non-axis points); `temporaries=`; `cse=` |
 | `lib/cgpt/lib/foundation/general_stencil.h` | general stencil: geometry (lookup table, halo transfer plan), per-field halo, batched exchange via Grid's `StencilSendToRecvFrom`, manager (field point sets); used by `stencil/matrix.h` (`comm_type == 2`, kernel loops in `stencil/matrix_loops.h`) |
 | `lib/gpt/core/local_stencil/cse.py` | common-subexpression elimination of a kernel's execution plan (tested in `tests/core/stencil.py`) |
 | `tests/ad/stencil.py` | stencil AD: fused two-output stencil, path-based stencils, local temporaries (staple action vs cshift graph) at 1st/2nd/3rd order, `with_value=False` |

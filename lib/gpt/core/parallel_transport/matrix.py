@@ -120,14 +120,10 @@ class parallel_transport_matrix:
 
         self.ncode = len(self.code)
 
-        write_fields = list(range(Ntarget))
-        read_fields = list(range(Ntarget + Ntemporary, Ntarget + Ntemporary + Nd))
-
         # the stencil only needs a prototype lattice (grid/otype); U may be a
         # reverse-AD node, whose grid/otype are those of the value it wraps
         prototype = g.lattice(U[0].grid, U[0].otype)
         self.stencil = g.stencil.matrix(prototype, points.points, self.code)
-        self.stencil.data_access_hints(write_fields, read_fields, [])
 
     def __call__(self, U):
         if isinstance(U[0], g.ad.reverse.node_base) and self.Ntarget > 1:

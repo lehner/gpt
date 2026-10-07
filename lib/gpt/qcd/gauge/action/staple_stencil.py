@@ -95,9 +95,8 @@ class staple_stencil_action:
             pts = sorted({(0,) * Nd} | {p for (t, a, w, fl) in code for (f, p, aa) in fl})
             pm = {p: i for i, p in enumerate(pts)}
             ccode = [(t, a, w, [(f, pm[p], aa) for (f, p, aa) in fl]) for (t, a, w, fl) in code]
-            st = g.stencil.matrix(g.lattice(v.grid, v.otype), pts, ccode, temporaries=temps)
             # passed fields: 0 = O, 1..Nd = links
-            st.data_access_hints([0], list(range(1, Nd + 1)), [])
+            st = g.stencil.matrix(g.lattice(v.grid, v.otype), pts, ccode, temporaries=temps)
             self.cache[key] = st
         return self.cache[key]
 
