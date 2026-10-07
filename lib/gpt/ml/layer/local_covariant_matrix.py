@@ -19,7 +19,7 @@
 import gpt as g
 import numpy as np
 from gpt.ml.function import function
-from gpt.ml.layer.util import unit_scalar, standardization
+from gpt.ml.layer.util import unit_scalar, standardization, embed
 
 
 class local_covariant_matrix(function):
@@ -50,9 +50,9 @@ class local_covariant_matrix(function):
         C = n_channels
         self.C, self.gate, self.scale = C, gate, scale
         self.N = template.otype.shape[0]
-        # the unit matrix and the unit scalar field (no slots: they follow
+        # the template and the unit scalar field (no slots: they follow
         # from the template)
-        self.identity = g.identity(template)
+        self.template = g.lattice(template)
         self.one = unit_scalar(template)
         parameters = [
             ("a", [0j] * (C * C)),
@@ -91,7 +91,7 @@ class local_covariant_matrix(function):
         Xa = [g.adj(x) for x in X]
         return [
             sum(a[c * C + d] * X[d] + b[c * C + d] * Xa[d] for d in range(C))
-            + beta[c] * self.identity
+            + embed(beta[c], self.template)
             for c in range(C)
         ]
 

@@ -27,7 +27,7 @@ over time.  Known AD gaps that limit `g.ml` are collected in
 | `lib/gpt/ml/layer/local_covariant_matrix.py` | gauge-covariant residual block on matrix channels |
 | `lib/gpt/ml/layer/mlp.py` | `matrix_invariants`, `mlp`, `matrix_words` (the covariant model f(P)) |
 | `lib/gpt/ml/layer/word_sum.py` | site-local sums of products of matrix fields as one compiled stencil (used by `polynomial`) |
-| `lib/gpt/ml/layer/util.py` | helpers shared by layers: `unit_scalar`, `standardization` (calibrated mean / inverse std) |
+| `lib/gpt/ml/layer/util.py` | helpers shared by layers: `unit_scalar`, `embed` (c 1: a coefficient times the unit matrix, or a number as a field), `standardization` (calibrated mean / inverse std) |
 | `tests/ml/function.py` | slots, names, storage, plain/node evaluation, type checks, gradients, training |
 | `tests/ml/graph.py` | symbolic composition, ownership, sharing, nesting, `describe` |
 | `tests/ml/local_covariant_matrix.py` | the covariant network: covariance, gradients, training, exact threshold solution |
@@ -438,9 +438,8 @@ Writing a new layer:
 - **Field + scalar** is not an expression (plain or node): multiply a unit
   field (`gamma * one`) or the identity matrix instead.
 - **Numpy-array nodes** support element access (`d[0]`), `g.component.real`
-  / `imag` and the linear maps of `ad/reverse/linear.py` and
-  `components.py` (`matrix_vector`, `outer_sum`, `dagger`, `broadcast_array`,
-  `sum_to_array`); no general whole-array arithmetic.
+  / `imag` and the linear maps of `ad/reverse/linear.py` (`matrix_vector`,
+  `outer_sum`, `dagger`); no general whole-array arithmetic.
 - **No `__rtruediv__` on nodes**: store reciprocals as constants (`inv_std`)
   instead of dividing by a node.
 - **Componentwise node ops** are only relu, sin, cos, real, imag and

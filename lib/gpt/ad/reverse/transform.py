@@ -54,7 +54,9 @@ def conj(x):
     )
 
 
-def _multiply(a, b):
+def component_multiply(a, b):
+    # the componentwise product of plain values or nodes (a node operation
+    # if either is a node)
     if is_node(a) or is_node(b):
         return multiply(a, b)
     if g.util.is_num(a) or isinstance(a, np.ndarray):
@@ -68,10 +70,10 @@ def multiply(a, b):
     a, b = nodify(a, b)
     return node_op(
         (a, b),
-        lambda: _multiply(value_of(a), value_of(b)),
+        lambda: component_multiply(value_of(a), value_of(b)),
         (
-            lambda z: (1, _multiply(z.gradient, _conj(value_of(b)))),
-            lambda z: (1, _multiply(_conj(value_of(a)), z.gradient)),
+            lambda z: (1, component_multiply(z.gradient, _conj(value_of(b)))),
+            lambda z: (1, component_multiply(_conj(value_of(a)), z.gradient)),
         ),
         a._container,
         "multiply",
@@ -83,7 +85,7 @@ def sin(x):
     return node_op(
         (x,),
         lambda: g.component.sin(value_of(x)),
-        (lambda z: (1, _multiply(z.gradient, _conj(g.component.cos(value_of(x))))),),
+        (lambda z: (1, component_multiply(z.gradient, _conj(g.component.cos(value_of(x))))),),
         x._container,
     )
 
@@ -93,7 +95,7 @@ def cos(x):
     return node_op(
         (x,),
         lambda: g.component.cos(value_of(x)),
-        (lambda z: (-1, _multiply(z.gradient, _conj(g.component.sin(value_of(x))))),),
+        (lambda z: (-1, component_multiply(z.gradient, _conj(g.component.sin(value_of(x))))),),
         x._container,
     )
 

@@ -18,7 +18,7 @@
 #
 import gpt as g
 import numpy as np
-from gpt.ad.reverse.util import constant, container, get_container, is_node, list_container
+from gpt.ad.reverse.util import constant, container, get_container, is_node
 
 
 def _check_name(name):
@@ -51,16 +51,6 @@ def _promote(x):
     if isinstance(x, list):
         return [_promote(y) for y in x]
     return constant(x)
-
-
-def _container_of(x):
-    # the type of a value without evaluating it (a computed node has no value
-    # until its graph runs, but always a container)
-    if is_node(x):
-        return x._container
-    if isinstance(x, list):
-        return list_container([_container_of(y) for y in x])
-    return get_container(x)
 
 
 class _storage_list(list):
@@ -244,7 +234,7 @@ class function:
         # representative value (lattice, tensor, numpy array, number, or a
         # list of these)
         name, t = x if isinstance(x, tuple) else (x, None)
-        return name, t if t is None or isinstance(t, container) else _container_of(t)
+        return name, t if t is None or isinstance(t, container) else get_container(t)
 
     # names
     def input_names(self):
@@ -378,7 +368,7 @@ class function:
             for (name, t), x in zip(self._inputs, inputs):
                 self._check_type("input", name, t, x)
             for name, x, ref in zip(self._parameters.names, parameters, self._parameters.values):
-                self._check_type("parameter", name, _container_of(ref), x)
+                self._check_type("parameter", name, get_container(ref), x)
             inputs = [_promote(x) for x in inputs]
             parameters = [_promote(x) for x in parameters]
             constants = [_promote(x) for x in constants]
@@ -399,6 +389,6 @@ class function:
     def _check_type(self, kind, name, t, x):
         if t is None:
             return
-        c = _container_of(x)
+        c = get_container(x)
         if c != t:
             raise TypeError(f"{self.__class__.__name__}: {kind} {name!r} is {c}, expected {t}")

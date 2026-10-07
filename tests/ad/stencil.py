@@ -8,14 +8,13 @@
 # `output` is field(s) 0..m-1: a single node (one output) or a LIST node (a
 # fused kernel with several outputs).  Each input argument is a single node,
 # a LIST node (expanding to one input field per element, e.g. the 4 gauge
-# links as one node), or a plain lattice (a constant/temp).  The inputs
+# links as one node), or a plain lattice (a constant).  The inputs
 # occupy fields m..n-1.
 #
 # The forward is a single kernel pass computing all m outputs.  The backward
 # runs the ADJOINT of the stencil code, which is a stencil in closed form
-# (the product rule per factor, the m output flows as extra inputs).  For a
-# temp-free code the adjoint reads no flow slot, so it fuses to a single
-# stage: the backward is also a single kernel pass.
+# (the product rule per factor, the m output flows as extra inputs).  The
+# adjoint reads no flow slot, so the backward is also a single kernel pass.
 #
 # The flagship case is the fused two-output plaquette (P and P^dagger) as
 # stencil(nP_listnode, nU_listnode).  Every derivative order is cross-checked
@@ -180,11 +179,9 @@ pval = S(with_gradients=False)
 eps = abs(float(pval) - float(S_plain)) / abs(float(S_plain))
 g.message(f"fused forward node: {pval} versus {S_plain}: {eps}")
 assert eps < 1e-12
-# temp-free: the adjoint fuses to a single compiled kernel (one backward pass)
-# (the cache key: output count, temps, flowed inputs)
-nstages = len(next(v for k, v in stencil._node_adj.items() if k[0:2] == (2, ()))[1])
-g.message(f"adjoint stages (backward passes): {nstages}")
-assert nstages == 1
+# the adjoint is a single compiled kernel (one backward pass); the cache key
+# is (output count, flowed inputs)
+assert any(k[0] == 2 and v[1] is not None for k, v in stencil._node_adj.items())
 
 # 1st derivative: finite differences + fused list input vs per-link inputs
 f = S.functional(nU)
@@ -615,6 +612,6 @@ for name, a, b in zip(["gradient", "HVP", "3rd derivative"], derivatives_cubic(m
     g.message(f"constant stencil inputs: {name} vs graph {eps}")
     assert eps < 1e-26
 # the adjoint of the first level has a single flow slot (X)
-flowed = [k[2] for k in mixed._node_adj if k[0] == 1]
+flowed = [k[1] for k in mixed._node_adj if k[0] == 1]
 g.message(f"constant stencil inputs: flowed inputs of the cached adjoints {flowed}")
 assert (1,) in flowed

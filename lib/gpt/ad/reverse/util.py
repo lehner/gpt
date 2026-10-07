@@ -158,7 +158,9 @@ def get_container(x):
     if isinstance(x, g.expr):
         x = g(x)
     if isinstance(x, g.ad.reverse.node_base):
-        return get_container(x.value)
+        # (without evaluating it: a computed node has no value until its
+        # graph runs, but always a container)
+        return x._container
     elif isinstance(x, g.ad.forward.series):
         for t in x.terms:
             return get_container(x[t])

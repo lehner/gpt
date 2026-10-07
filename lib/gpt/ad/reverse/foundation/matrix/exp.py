@@ -109,13 +109,10 @@ def derivative(x, h, tower=None):
             tower.reset()
         return derivative(value_of(xn), [value_of(c) for c in hn], tower)
 
-    def _adj(v):
-        return g.adj(v)
-
     def _backward_x(z):
         return (
             1,
-            derivative(_adj(value_of(xn)), [_adj(value_of(c)) for c in hn] + [z.gradient], tower),
+            derivative(g.adj(value_of(xn)), [g.adj(value_of(c)) for c in hn] + [z.gradient], tower),
         )
 
     def _backward_h(i):
@@ -123,8 +120,8 @@ def derivative(x, h, tower=None):
             return (
                 1,
                 derivative(
-                    _adj(value_of(xn)),
-                    [z.gradient if j == i else _adj(value_of(c)) for j, c in enumerate(hn)],
+                    g.adj(value_of(xn)),
+                    [z.gradient if j == i else g.adj(value_of(c)) for j, c in enumerate(hn)],
                     tower,
                 ),
             )

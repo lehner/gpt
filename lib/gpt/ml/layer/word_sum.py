@@ -25,19 +25,10 @@
 # one kernel forward, its adjoint (again a stencil) backward, and stencils at
 # any nesting depth -- instead of a node graph with one node per product and
 # sum.  Site-dependent or trained coefficients enter as factor fields c 1
-# (embed).
+# (layer.util.embed).
 #
 import gpt as g
 from gpt.ad.reverse.util import is_node, value_depth_static
-
-
-def embed(c, template):
-    # the matrix field c(x) 1 of a number or complex scalar field c (plain or
-    # a node; the backward is the trace)
-    one = g.identity_constant(template)
-    if is_node(c):
-        return c * one
-    return g(c * one)
 
 
 class word_sum:
@@ -65,10 +56,7 @@ class word_sum:
             out = g.lattice(inputs[0])
             self.stencil(out.grid, out.otype)(out, *inputs)
             return out
-        depth = max(value_depth_static(x) for x in nodes)
-        template = nodes[0]
-        out = g.lattice(template.grid, template.otype)
-        for _ in range(depth):
-            out = g.ad.reverse.node(out)
-        self.stencil(template.grid, template.otype)(out, *inputs)
+        # a zero output at the depth of the deepest input
+        out = max(nodes, key=value_depth_static).new()
+        self.stencil(out.grid, out.otype)(out, *inputs)
         return out

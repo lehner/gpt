@@ -19,7 +19,8 @@
 import gpt as g
 import numpy as np
 from gpt.ml.function import function
-from gpt.ml.layer.word_sum import word_sum, embed
+from gpt.ml.layer.word_sum import word_sum
+from gpt.ml.layer.util import embed
 
 
 class replicate(function):
@@ -66,7 +67,7 @@ class broadcast(function):
 
     def __init__(self, template, value=0.0, real=False):
         self.value, self.real = value, real
-        self.unit = g.identity(template)
+        self.template = g.lattice(template)
         super().__init__([], [("y", template)], [("value", 0j)])
 
     def initialize(self, rng, scale=None):
@@ -77,7 +78,7 @@ class broadcast(function):
         (value,) = parameters
         if self.real:
             value = g.component.real(value)
-        return [g(value * self.unit)]
+        return [embed(value, self.template)]
 
 
 class polynomial(function):

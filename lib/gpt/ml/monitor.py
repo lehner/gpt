@@ -26,7 +26,7 @@
 #   g.ml.gradient_noise(make_cost, fields, n=8)    # signal-to-noise of stochastic gradients
 #
 import gpt as g
-from gpt.ml.function import _container_of
+from gpt.ad.reverse.util import get_container
 
 
 def _norm2(x):
@@ -80,9 +80,9 @@ def activity(f, inputs):
     from gpt.ml.graph import composite
 
     def ratio(xs, y):
-        t = _container_of(y)
+        t = get_container(y)
         for x in xs:
-            if _container_of(x) == t:
+            if get_container(x) == t:
                 return (_norm2(_difference(y, x)) / max(_norm2(x), 1e-300)) ** 0.5
         return None
 

@@ -74,13 +74,7 @@ class series(base):
         return series(terms, landau_O)
 
     def distribute1(self, functional):
-        # then merge terms
-        terms = {}
-        for t1 in self.terms:
-            if t1 not in terms:
-                terms[t1] = g(functional(self.terms[t1]))
-            else:
-                terms[t1] += functional(self.terms[t1])
+        terms = {t1: g(functional(self.terms[t1])) for t1 in self.terms}
         return series(terms, self.landau_O)
 
     def function(self, functional):

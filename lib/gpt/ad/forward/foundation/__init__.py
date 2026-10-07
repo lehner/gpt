@@ -120,8 +120,7 @@ def matrix_det(sx):
         # exp tr[...]  = det(sx) * (1 + tr[sx^-1 dsx] + 1/2 * tr[sx^-1 dsx]^2) * (1 - 1/2 tr[sx^-1 dsx sx^-1 dsx])
         # det(sx + dsx)= det(sx) * (1 + tr[sx^-1 dsx] + 1/2 * tr[sx^-1 dsx]^2) * (1 - 1/2 tr[sx^-1 dsx sx^-1 dsx])
         v0 = g.ad.forward.series(g.matrix.det(x), dx.landau_O)
-        if maxn >= 0:
-            v = v0
+        v = v0
         if maxn >= 2:
             adjx = dx * g.matrix.inv(x)
             tr_adjx = g.trace(adjx)

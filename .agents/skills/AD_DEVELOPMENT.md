@@ -309,13 +309,8 @@ mechanism.
 
 ### 4.5 Where operations are implemented
 
-- `ad/reverse/node.py` — `node`, `node_base.__mul__/__pow__/__truediv__/...`,
-  `node_op`, `backward`, `functional`.
-- `ad/reverse/transform.py` — transcendental transforms (sin, cos, ...) as
-  node ops.
-- `ad/reverse/util.py` — `constant` (a plain value as a constant node),
-  `nodify`, `product`, `value_of`, `resolve`, `is_node`,
-  `value_depth_static`, `get_*_container`, `list_container`.
+(Module roles: see the file map, §5.)
+
 - `ad/reverse/foundation/` — the "foundation" layer: lattice-level
   implementations of ops the node layer dispatches to (trace/sum
   backprops, `where`, `astype`, group conversions), plus
@@ -336,12 +331,8 @@ mechanism.
   (one level down for nested flows).  The su(N) group conversions
   (`infinitesimal_to_cartesian`) are written with them.
 - (Removed 2026-09-30: *expression nodes*, one node per sum of products
-  with generated kernels, `ad/reverse/expression.py`.  In a clean comparison
-  against the per-operation graph they won only on the cshift-graph HVP at
-  8^4 (-14%), lost at 16^4 (+17%) and were neutral to +9% slower elsewhere;
-  absorbing operands at construction also duplicated shared
-  subexpressions (2.7x the products).  The last version is in git history
-  (commit b7e27c86); do not re-add without a new idea.)
+  with generated kernels; no net gain over the per-operation graph and
+  shared subexpressions duplicated.  Last version: commit b7e27c86.)
 - "Foundation" is a per-class attribute (`g.lattice.foundation`, the
   node foundation, ...). Mixed-operand dispatch helpers (e.g.
   `_group_foundation` in `core/group/operation.py`) pick the operand whose
@@ -404,15 +395,13 @@ mechanism.
   allocation: local_stout E4 looked 6% slower on the general stencil
   although its stencil kernels got faster.  Compare such runs with
   `MALLOC_MMAP_THRESHOLD_=268435456 MALLOC_TRIM_THRESHOLD_=1073741824`.
-- **Peak memory**: large fields and retained graphs live as long as a Python
-  name refers to them.  In long drivers (e.g. a loop of reverse passes)
-  `del` each pass's graph before building the next, and release large
-  temporaries (ng x ng adjoint matrices are 7x a color matrix for SU(3))
-  right after their last use.
-- **Memory**: nested (2-deep/3-deep) graphs over gauge fields are expensive.
-  Resolve results to plain lattices (`value_of` loop) to release graphs as
-  soon as you're done reading them; use the smallest grid that exercises the
-  code path; avoid holding multiple deep graphs alive at once.
+- **Memory**: large fields and retained graphs live as long as a Python
+  name refers to them, and nested (2-deep/3-deep) graphs over gauge fields
+  are expensive.  `resolve` results to plain values and `del` each pass's
+  graph before building the next (e.g. in a loop of reverse passes);
+  release large temporaries (ng x ng adjoint matrices are 7x a color matrix
+  for SU(3)) right after their last use; avoid holding several deep graphs
+  alive at once; test on the smallest grid that exercises the code path.
 - **Re-running a graph**: each backward pass starts every gradient at
   `None` (an unbuilt zero, see `util.accumulate`), so gradients do not carry
   over between passes; read a leaf's `.gradient` before the next pass.  By
@@ -422,7 +411,9 @@ mechanism.
   `root(with_gradients=False, retain_values=True)` returns the root value
   with all intermediates kept, so a seed built from it shares nodes with the
   following reverse pass (as `directional_parallel_transport` does).  Only
-  retain values while the leaves are unchanged.
+  retain values while the leaves are unchanged.  The backward always keeps
+  the root's value, and `forward` reuses any value that is not None: clear
+  it before re-running a graph with new leaf values.
 - **Stencil `accumulate` is a field index, not a flag**: with several
   targets in one fused stencil, each target's rewrites must accumulate
   into *its own* field index (target 1 uses `accumulate: 1`, not `0`).
@@ -441,12 +432,8 @@ mechanism.
   garbage collector, which counts objects, not bytes -- large fields pile up
   between collections (seen as +75 MB per call at 16^4).  For a repeated
   operation build the graph once and swap the leaf values (as
-  `dft_diffeomorphism` and `directional_parallel_transport._local_vjp` do);
-  clear root values before re-running (the backward keeps the root's value,
-  and `forward` reuses any value that is not None).
-- **In-place writes into a gradient** outside `util.accum` must clear
-  `node._flow_identity` (as `project` does), or a stale scaled-identity
-  record survives (§4.8).
+  `dft_diffeomorphism` and `directional_parallel_transport._local_vjp` do)
+  and clear the root value before re-running (see "Re-running a graph").
 - **Self-accumulating targets are not reads** in `data_access_hints`:
   listing them as read makes the padded stencil (checkerboarded grids) copy
   them in before the kernel overwrites them (the padded wrapper already
@@ -460,7 +447,8 @@ mechanism.
   Consequences for new code: a backward closure must return fields it does
   not reuse or overwrite later (no persistent scratch buffers as results),
   and code that writes into a node's gradient in place must call
-  `own_gradient()` first (as `project` does).
+  `own_gradient()` first and clear `node._flow_identity` afterwards (as
+  `project` does; otherwise a stale scaled-identity record survives, §4.8).
 
 ### 4.7 Stencil nodes (`ad/reverse/foundation/stencil.py`)
 
@@ -470,13 +458,13 @@ computed node.  Its forward is the compiled kernel; its backward is the
 **adjoint code**, derived in closed form as another stencil (the product
 rule per factor, shifts negated/relativized, adjoint flags adjusted), so the
 gradient of a stencil is a stencil and the tower is self-similar at any
-depth.  Three regimes:
+depth.  Two regimes:
 
-- **Temp-free** (factors read inputs only): the adjoint is one kernel; in a
-  nested pass the backward is the adjoint stencil as a node again.
-- **Accumulation temps** (fields passed as plain constants and used only as
-  partial sums): versioned flow slots and a staged adjoint; nested passes
-  interpret the adjoint in the node domain (cshift fallback, slow).
+- **Temp-free** (only outputs are written, factors read inputs only): the
+  adjoint is one kernel; in a nested pass the backward is the adjoint
+  stencil as a node again.  (Scratch fields passed by the caller as
+  constants are rejected; the former staged adjoint for them, with a cshift
+  fallback in nested passes, was removed 2026-10-07 as unused.)
 - **Local temporaries** (kernel-owned per-site fields, declared with
   `g.stencil.matrix(..., temporaries=[...])`; they are not passed by the
   caller, whose fields and `data_access_hints` are the remaining ones in index
@@ -505,8 +493,7 @@ Plain-run optimizations:
   key includes them); the entries of other slots are dropped and the slots
   renumbered, in the plain run and in the nested adjoint nodes.  Constant
   inputs (e.g. coefficient fields of a pass that does not differentiate
-  them) cost nothing in the backward.  Codes with accumulation temps keep
-  all slots.  (Tested in `tests/ad/stencil.py`, also a single-input stencil,
+  them) cost nothing in the backward.  (Tested in `tests/ad/stencil.py`, also a single-input stencil,
   whose nested adjoint is a one-element list node.)
 - **Seedless adjoints**: if the flow into a single-output stencil is exactly
   `c * identity` (see §4.8), the adjoint kernels are compiled once per c
@@ -565,11 +552,10 @@ Plain-run optimizations:
 
 | Path | Role |
 |---|---|
-| `lib/gpt/ad/reverse/node.py` | node, node_op, forward/backward, functional |
-| `lib/gpt/ad/reverse/util.py` | nodify, product, value_of, `resolve` (plain value of a finished pass's result), containers |
-| `lib/gpt/ad/reverse/transform.py` | sin/cos/... node transforms |
+| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/...), `node_op`, forward/backward, `functional` |
+| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `product`, `value_of`, `resolve` (plain value of a finished pass's result), `is_node`, `value_depth_static`, containers (`get_container`, `get_*_container`, `list_container`) |
+| `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, sin, cos, real, imag, conj, `multiply` (and the node-aware `component_multiply`) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order; used by `g.ml` losses); `joint_node` (first-order nodes whose backward computes all flows at once, also used by `preimage`) |
-| `lib/gpt/ad/reverse/components.py` | mutually adjoint node pairs between arrays, site-constant fields and field components (`broadcast_array`/`sum_to_array`, `component`/`embed`) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites), used by `g.ml.layer.mlp` |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |

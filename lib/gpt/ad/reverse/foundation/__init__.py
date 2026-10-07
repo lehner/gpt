@@ -22,13 +22,11 @@ import numpy as np
 from gpt.ad.reverse.util import (
     container,
     get_unary_container,
-    get_container,
     product,
     accum,
     value_of,
     is_node,
     nodify,
-    value_depth_static,
     identity_flow_scale,
 )
 import gpt.ad.reverse.foundation.matrix
@@ -165,12 +163,10 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
 
 
 def component_multiply(a, b):
-    """Element-wise product; node-aware, with the plain case kept on the
-    lattice foundation's component kernel (which covers more otypes than
-    plain multiplication)"""
-    if not is_node(a) and not is_node(b):
-        return g.lattice.foundation.component_multiply(a, b)
-    return g.ad.reverse.transform.multiply(a, b)
+    # element-wise product, node-aware (plain lattices on the lattice
+    # foundation's component kernel, which covers more otypes than plain
+    # multiplication)
+    return g.ad.reverse.transform.component_multiply(a, b)
 
 
 def _self_adjoint_projection(x, name):
