@@ -134,7 +134,13 @@ class directional_parallel_transport(dft_diffeomorphism):
 
         self.description_staple = g.staple_description(description_mu, mu, nd)
         self._staple_cache = {}
-        self._vjp = None
+        # the cached VJP graphs, with and without gradient-carrying parameter
+        # leaves
+        self._vjp = {}
+        # every output but U_mu is the identity map of its input (see
+        # g.group.transformed: their gradients are needed only when requested,
+        # and jacobian accepts the needed inputs)
+        self.identity_outputs = [i for i in range(nd + len(parameters)) if i != mu]
 
         super().__init__(fields, ft)
 
@@ -282,16 +288,20 @@ class directional_parallel_transport(dft_diffeomorphism):
         # C and fixed loops L
         return g(g.matrix.exp(self._local_generator(xU_mu, xC, xparams, xloops)) * xU_mu)
 
-    def jacobian(self, fields, fields_prime, dfields):
+    def jacobian(self, fields, fields_prime, dfields, inputs=None):
         # only output mu is transformed, every other output is the identity
         # map, whose Jacobian passes its direction through: one reverse pass
-        # (for output mu) instead of one per output
+        # (for output mu) instead of one per output.  inputs: the positions of
+        # the fields whose gradient is needed (None: all); the parameters'
+        # flows are computed only if one of them is needed (else their
+        # gradients are only the identity part)
         mu = self.mu
         N = len(fields)
         assert len(fields_prime) == N and len(dfields) == N
         seed = g.cartesian_to_infinitesimal(fields_prime[mu], dfields[mu])
         if self.description_staple is not None:
-            grads = self._local_vjp(fields, seed)
+            params = inputs is None or any(i >= self.nd for i in inputs)
+            grads = self._local_vjp(fields, seed, params)
         else:
             self._set_leaves(fields)
             for leaf in self.aU:
@@ -310,7 +320,7 @@ class directional_parallel_transport(dft_diffeomorphism):
             gradient.append(gr)
         return gradient
 
-    def _local_vjp(self, fields, seed):
+    def _local_vjp(self, fields, seed, params=True):
         # the VJP of output mu through the site-local map f(U_mu, C, L), the
         # staple C (see g.staple_description) and the loops L: the staple
         # stencil and its adjoint carry one link fewer per path than the
@@ -323,8 +333,8 @@ class directional_parallel_transport(dft_diffeomorphism):
         # size of the fields they hold
         plain = not any(isinstance(x, rad.node_base) for x in fields)
         nd = self.nd
-        if plain and self._vjp is not None:
-            nodes, aC, aL, _U, _C, _L, _P, aF = self._vjp
+        if plain and params in self._vjp:
+            nodes, aC, aL, _U, _C, _L, _P, aF = self._vjp[params]
             for n, x in zip(nodes + _P, fields + fields[nd:]):
                 assert_compatible(n.value, x)
                 n.value = x
@@ -344,10 +354,10 @@ class directional_parallel_transport(dft_diffeomorphism):
                 ]
             # separate parameter leaves for the local map (the staple pass
             # below would reset gradients deposited in shared leaves)
-            _P = [rad.node(x) for x in fields[nd:]]
+            _P = [rad.node(x, with_gradient=params) for x in fields[nd:]]
             aF = self._local_ft(_U, _C, _P, _L if aL is not None else None)
             if plain:
-                self._vjp = (nodes, aC, aL, _U, _C, _L, _P, aF)
+                self._vjp[params] = (nodes, aC, aL, _U, _C, _L, _P, aF)
         roots = [aC, aF] + ([] if aL is None else [aL])
         # the roots keep their values after a reverse pass
         for r in roots:
@@ -686,7 +696,9 @@ class directional_parallel_transport(dft_diffeomorphism):
         # converted to the algebra
         _U = rad.node(U_mu)
         _C = rad.node(C, infinitesimal_to_cartesian=False)
-        _P = [rad.node(x) for x in fields[self.nd :]]
+        # (parameter flows only if a parameter is requested)
+        params = any(g.util.index_by_identity(fields, d) >= self.nd for d in dfields)
+        _P = [rad.node(x, with_gradient=params) for x in fields[self.nd :]]
         _L = None if L is None else [rad.node(x, infinitesimal_to_cartesian=False) for x in L]
 
         # 2-deep "apply Jacobian block to right" (see diagonal_jacobian_gradient);

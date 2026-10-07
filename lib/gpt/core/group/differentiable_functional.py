@@ -213,8 +213,25 @@ class transformed(differentiable_functional):
             fields_transformed[indices.index(i)] if i in indices else fields[i] for i in projection
         ]
 
-        # start the backwards pass with a calculation of the gradient with the transformed fields
-        gradient_prime = self.f.gradient(fields_prime, fields_prime)
+        # start the backwards pass with a calculation of the gradient with the
+        # transformed fields, only where it is needed: at the outputs of t
+        # that are not identity maps (t.identity_outputs, positions within
+        # indices; a t declaring them accepts jacobian(..., inputs=)) and at
+        # the requested fields (an identity output passes its gradient only to
+        # its own input, a field outside indices is not transformed)
+        identity = set(getattr(self.t, "identity_outputs", ()))
+
+        def needed(i):
+            if i in indices:
+                return indices.index(i) not in identity or i in derivative_indices
+            return i in derivative_indices
+
+        needed_p = [p for p, i in enumerate(projection) if needed(i)]
+        gradient_prime = [None] * len(projection)
+        if needed_p:
+            grads = self.f.gradient(fields_prime, [fields_prime[p] for p in needed_p])
+            for p, gr in zip(needed_p, grads):
+                gradient_prime[p] = gr
 
         src_gradient = [None] * len(fields_transformed)
         for i in indices:
@@ -228,7 +245,13 @@ class transformed(differentiable_functional):
                     src_gradient[i][:] = 0
 
         # now apply the jacobian to the transformed gradients
-        gradient_transformed = self.t.jacobian(fields_indices, fields_transformed, src_gradient)
+        if hasattr(self.t, "identity_outputs"):
+            inputs = [indices.index(i) for i in derivative_indices if i in indices]
+            gradient_transformed = self.t.jacobian(
+                fields_indices, fields_transformed, src_gradient, inputs=inputs
+            )
+        else:
+            gradient_transformed = self.t.jacobian(fields_indices, fields_transformed, src_gradient)
 
         return [
             gradient_transformed[indices.index(i)] if i in indices else gradient_prime[i]

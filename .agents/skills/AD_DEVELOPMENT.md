@@ -149,6 +149,16 @@ Key concepts:
 - **Gauge actions** implement `__call__` (action value) and
   `gradient(fields, dfields)` (force). `act.transformed(diffeomorphism,
   indices, projection)` composes an action with a field transformation.
+  Its gradient differentiates the inner functional only where needed: at
+  the outputs of the transformation that are not identity maps and at the
+  requested fields.  A diffeomorphism declares its identity outputs with
+  `identity_outputs` (positions within `indices`) and then accepts
+  `jacobian(fields, fields_prime, dfields, inputs=)` (the positions whose
+  gradient is needed); `directional_parallel_transport` does (every output
+  but U_mu), so a force (links only) computes no parameter flows in any
+  step.  Chain a flow with its log dets as one chain,
+  `S = S.transformed(s_k) + ld_k` per step, not each log det transformed
+  through all later steps (quadratic in the number of steps).
   `wilson` and `improved_with_rectangle` (iwasaki, symanzik, dbw2) take
   value and force from the AD stencil action in
   `qcd/gauge/action/staple_stencil.py` (see §4.7); their hand-written
@@ -489,6 +499,14 @@ depth.  Three regimes:
 
 Plain-run optimizations:
 
+- **Flowed inputs only**: a temp-free stencil node's adjoint computes the
+  slots of the inputs that carry a gradient and are referenced (the cache
+  key includes them); the entries of other slots are dropped and the slots
+  renumbered, in the plain run and in the nested adjoint nodes.  Constant
+  inputs (e.g. coefficient fields of a pass that does not differentiate
+  them) cost nothing in the backward.  Codes with accumulation temps keep
+  all slots.  (Tested in `tests/ad/stencil.py`, also a single-input stencil,
+  whose nested adjoint is a one-element list node.)
 - **Seedless adjoints**: if the flow into a single-output stencil is exactly
   `c * identity` (see §4.8), the adjoint kernels are compiled once per c
   with the flow factor dropped and c (conj(c) for an adjointed read) folded

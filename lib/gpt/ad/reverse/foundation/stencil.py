@@ -395,6 +395,25 @@ def adjoint_code_local(code, outputs, temps, inputs, ndim):
     return A, locA, B_fresh, B_acc, written_A, written_B
 
 
+def _restrict_slots(entries, computed, keep):
+    # the adjoint of a temp-free code restricted to the slots of the inputs in
+    # keep: the entries writing other slots are dropped and the slots
+    # renumbered (the layout [slots] + [psi] + [values] shifts accordingly).
+    # A temp-free adjoint reads no slots, so no kept entry depends on a
+    # dropped one.
+    n_comp = len(computed)
+    kept = [r for r, c in enumerate(computed) if c in keep]
+    new = {r: j for j, r in enumerate(kept)}
+    shift = n_comp - len(kept)
+    out = []
+    for stage, (tt, ac, w, fl) in entries:
+        if tt not in new:
+            continue
+        assert all(f >= n_comp for (f, p, a) in fl), "temp-free adjoint entries read no slots"
+        out.append([stage, (new[tt], -1 if ac == -1 else new[ac], w, [(f - shift, p, a) for (f, p, a) in fl])])
+    return out, [computed[r] for r in kept]
+
+
 def _compile(grid, otype, code, temporaries=()):
     # a compiled matrix stencil for code with point tuples; the data access
     # hints are in the positions of the passed fields (without temporaries)
@@ -650,18 +669,29 @@ def matrix(stencil, *fields):
         )
         return any(node_vals)
 
+    # the inputs whose flow is needed (referenced, gradient-carrying): for a
+    # temp-free code the adjoint computes only their slots (the entries of the
+    # other slots are dropped and the slots renumbered), so constant inputs
+    # cost nothing in the backward at any level.  A code with temps keeps all
+    # slots (its staged adjoint reads the temp-version slots).
+    flowed = None
+    if not temps:
+        flowed = tuple(m + k for k, c in enumerate(children) if c.with_gradient and m + k in referenced)
+
     # the adjoint code, in closed form (another stencil): entries in code
     # order, its field layout, and the per-stage split for the compiled
-    # (plain) run.  Cached on the stencil object, keyed by the output count
-    # and temps (which the caller's arguments determine).
+    # (plain) run.  Cached on the stencil object, keyed by the output count,
+    # temps (which the caller's arguments determine) and the flowed inputs.
     cache = getattr(stencil, "_node_adj", None)
     if cache is None:
         cache = {}
         stencil._node_adj = cache
-    key = (m, tuple(temps))
+    key = (m, tuple(temps), flowed)
     if key not in cache:
         entries, computed, _outs = adjoint_code(
             raw, n_fields, outputs=tuple(outputs), ndim=ndim, temps=tuple(temps))
+        if flowed is not None:
+            entries, computed = _restrict_slots(entries, computed, flowed)
         levels = {}
         for lv, e in entries:
             levels.setdefault(lv, []).append(e)
@@ -940,6 +970,8 @@ def matrix(stencil, *fields):
             # + [the n forward values]; the flows become A's children, so
             # differentiating a slot runs the adjoint-of-adjoint stencil, and
             # so on up the tower.
+            if n_comp == 0:
+                return
             A_output = g.ad.reverse.node(
                 [g.lattice(grid, otype_t) for _ in range(n_comp)])
             # z.value is a list of m forward outputs for a list-node target but

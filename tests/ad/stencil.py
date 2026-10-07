@@ -181,7 +181,8 @@ eps = abs(float(pval) - float(S_plain)) / abs(float(S_plain))
 g.message(f"fused forward node: {pval} versus {S_plain}: {eps}")
 assert eps < 1e-12
 # temp-free: the adjoint fuses to a single compiled kernel (one backward pass)
-nstages = len(stencil._node_adj[(2, ())][1])
+# (the cache key: output count, temps, flowed inputs)
+nstages = len(next(v for k, v in stencil._node_adj.items() if k[0:2] == (2, ()))[1])
 g.message(f"adjoint stages (backward passes): {nstages}")
 assert nstages == 1
 
@@ -573,3 +574,47 @@ for name, a, b in zip(["gradient", "HVP", "3rd derivative"], derivatives_cubic(c
     eps = n2(a - b) / n2(b)
     g.message(f"single-input stencil: {name} vs graph {eps}")
     assert eps < 1e-26
+
+# constant inputs: the adjoint computes only the flows of gradient-carrying
+# inputs (the other slots are dropped).  f(X; C, D) = X + C X X + X D X with C
+# a plain constant and D a node without gradient, against the node graph at
+# 1st to 3rd order
+C = g.mcolor(grid)
+D = g.mcolor(grid)
+rng.cnormal([C, D], sigma=0.3)
+mixed = g.stencil.matrix(
+    X,
+    [zero],
+    [(0, -1, 1.0, [(1, 0, 0)]), (0, 0, 1.0, [(2, 0, 0), (1, 0, 0), (1, 0, 0)]), (0, 0, ca, [(1, 0, 0), (3, 0, 0), (1, 0, 0)])],
+)
+
+
+def mixed_st(x):
+    depth = g.ad.reverse.util.value_depth_static(x)
+    out = g.lattice(X)
+    d = D
+    for _ in range(depth):
+        out = rad.node(out)
+        d = rad.node(d, with_gradient=False)
+    mixed(out, x, C, d)
+    return out
+
+
+def mixed_graph(x):
+    depth = g.ad.reverse.util.value_depth_static(x)
+    c, d = C, D
+    for _ in range(depth):
+        c = rad.node(c, with_gradient=False)
+        d = rad.node(d, with_gradient=False)
+    return x + c * x * x + x * d * x * ca
+
+
+before = len(mixed._node_adj) if hasattr(mixed, "_node_adj") else 0
+for name, a, b in zip(["gradient", "HVP", "3rd derivative"], derivatives_cubic(mixed_st), derivatives_cubic(mixed_graph)):
+    eps = n2(a - b) / n2(b)
+    g.message(f"constant stencil inputs: {name} vs graph {eps}")
+    assert eps < 1e-26
+# the adjoint of the first level has a single flow slot (X)
+flowed = [k[2] for k in mixed._node_adj if k[0] == 1]
+g.message(f"constant stencil inputs: flowed inputs of the cached adjoints {flowed}")
+assert (1,) in flowed
