@@ -305,116 +305,6 @@ def zero_of(container, depth):
     return z
 
 
-def accumulate(cur, r, sign, container, depth, adopt=True, owned=True):
-    # returns (cur + sign * r, owned), where cur = None is a zero that has not
-    # been built (every gradient starts out as None in a backward pass) and
-    # owned tells whether the returned plain field may be updated in place:
-    #   first contribution             adopted if it is a node graph of the
-    #                                  same container (graphs are immutable)
-    #                                  or a plain field of the container
-    #                                  (adopt=True); a plain flow is often
-    #                                  shared (both children of an add
-    #                                  receive z.gradient), so an adopted
-    #                                  field is not owned; otherwise assigned
-    #                                  into a fresh (owned) field
-    #   plain gradient +- plain term   in place if owned, else into a fresh
-    #                                  field
-    #   plain gradient +- node term    the term graph is linear in the flow,
-    #                                  so it is evaluated to a field, keeping
-    #                                  the result in the plain world as in
-    #                                  single-pass AD
-    #   node gradient  +- plain/node   builds the (lazy) compute graph; a
-    #   term                           subtraction with incompatible
-    #                                  containers is evaluated to a field
-    # `depth` is a callable: the depth is only needed for a first contribution.
-    #
-    # Ownership is tracked per gradient slot (node_base._borrowed), not on the
-    # field.  Adopting is safe since a node never writes into its gradient
-    # after passing it on: the backward pass runs in reverse topological
-    # order, so all contributions to a node arrive before its own backward
-    # hands the gradient to its children, after which it is released.  It
-    # also requires that backward closures return fields they do not reuse.
-    if (
-        container.tag[0] is list
-        and isinstance(r, list)
-        and (cur is None or isinstance(cur, list))
-    ):
-        # a whole list flowing into a list node: element by element (None:
-        # no flow into that element), each element in a fresh field (the
-        # ownership of list elements is not tracked on this path)
-        cur = [None] * len(r) if cur is None else cur
-        result = []
-        for c, x in zip(cur, r):
-            if x is not None:
-                c, _ = accumulate(c, x, sign, container.tag[1], depth, False, False)
-            result.append(c)
-        return result, True
-    if cur is None:
-        d = depth()
-        if d > 0:
-            if sign > 0 and is_node(r) and r._container == container:
-                return r, True
-        elif container.tag[0] == g.lattice:
-            r = value_of(r) if is_node(r) else r
-            if (
-                adopt
-                and sign > 0
-                and isinstance(r, g.lattice)
-                and r.grid.obj == container.get_grid().obj
-                and r.otype.__name__ == container.get_otype().__name__
-            ):
-                return r, False
-            dst = g.lattice(container.get_grid(), container.get_otype())
-            dst @= r if sign > 0 else -r
-            return dst, True
-        cur = zero_of(container, d)
-        owned = True
-    if is_node(cur):
-        if sign > 0:
-            return add(cur, r), True
-        if is_node(r) and cur._container != r._container:
-            return value_of(cur) - value_of(r), True
-        return sub(cur, r), True
-    r = value_of(r) if is_node(r) else r
-    if not owned:
-        return g(cur + r if sign > 0 else cur - r), True
-    if sign > 0:
-        cur += r
-    else:
-        cur -= r
-    return cur, True
-
-
-def accum(n, r, sign=1, adopt=True):
-    # accumulate sign * r into n.gradient (see accumulate)
-    if n.gradient is None and isinstance(n.value, g.ad.forward.series):
-        n.zero_gradient()
-    n.gradient, owned = accumulate(
-        n.gradient,
-        r,
-        sign,
-        n._container,
-        lambda: value_depth_static(n.value),
-        adopt,
-        None not in n._borrowed,
-    )
-    n.set_owned(None, owned)
-    # any contribution invalidates a scaled-identity record (the reductions
-    # that create one set it after their accum, see identity_flow_scale)
-    n._flow_identity = None
-
-
-def identity_flow_scale(n):
-    # c if the (plain) gradient of node n is exactly c times the identity, as
-    # recorded by the reductions trace/sum (a scalar flow broadcast back to a
-    # field); None if unknown.  Consumers may exploit it (e.g. a stencil
-    # adjoint folds c into its weights instead of multiplying by the field).
-    rec = n._flow_identity
-    if rec is None or rec[0] is not n.gradient:
-        return None
-    return rec[1]
-
-
 # The container of an operation's result is derived by applying the operation
 # to representatives, which are full fields; the type algebra is therefore
 # memoized per (operation key, operand containers).  str(container) encodes
@@ -518,7 +408,7 @@ def convert_container(v, x, y, operand, key):
             ):
                 gradient = g(gradient)
 
-            accum(v, gradient)
+            g.ad.reverse.flow.accum(v, gradient)
 
     return g.ad.reverse.node_base(
         _forward,

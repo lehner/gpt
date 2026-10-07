@@ -62,7 +62,8 @@
 import weakref
 import gpt as g
 from gpt.ad.reverse.primitive import primitive, has_node
-from gpt.ad.reverse.util import container, is_node, identity_flow_scale, constant
+from gpt.ad.reverse.util import container, is_node, constant
+from gpt.ad.reverse import flow as flows
 
 
 # share the padded inputs of a stencil node's forward run with its adjoint
@@ -171,7 +172,7 @@ def adjoint_code(code, outputs, flowed, ndim):
 
 
 def seedless_code(code, psi_index, c):
-    # the code for a flow psi = c * identity (see util.identity_flow_scale):
+    # the code for a flow psi = c * identity (a scaled_identity flow, see flow.py):
     # the psi factor of each entry is dropped and c (conj(c) for an adjointed
     # read) folded into the weight -- psi is constant, so its point does not
     # matter.  An entry whose only factor is psi keeps it (psi is still a
@@ -193,12 +194,21 @@ seedless_cache_size = 8
 
 
 def _seedless_kernels(cache, key, c, build):
+    # (kernel, whether it still reads psi): the seedless code keeps psi only
+    # in entries where it is the only factor; otherwise the flow field is
+    # never built (any field of the type can take its place)
     variants = cache.setdefault(("seedless",) + key, {})
     if c not in variants:
         if len(variants) >= seedless_cache_size:
             variants.pop(next(iter(variants)))
         variants[c] = build(c)
     return variants[c]
+
+
+def _seedless_compiled(grid, otype, code, psi_index, c, temporaries=()):
+    code = seedless_code(code, psi_index, c)
+    reads_psi = any(f == psi_index for (tt, ac, w, fl) in code for (f, p, a) in fl)
+    return _compile(grid, otype, code, temporaries), reads_psi
 
 
 def adjoint_code_local(code, outputs, temps, inputs, ndim):
@@ -505,16 +515,20 @@ class _stencil_op:
         cache, key = self._adjoint(flowed)
         code, K = cache[key]
         n_comp = len(flowed)
-        if not self.listed:
-            c = identity_flow_scale(z)
-            if c is not None:
-                # a flow c * identity (see seedless_code)
-                K = _seedless_kernels(
-                    cache, key, c,
-                    lambda c: _compile(self.grid, self.otype, seedless_code(code, n_comp, c)))
+        # (a scaled identity is a plain flow, also in a nested pass, where it
+        # is a constant; the seedless kernels are for plain values)
+        c = None if self.listed or has_node(values) else flows.scale(z.flow)
+        if c is None:
+            psi = self.psi(z)
+        else:
+            # a flow c * identity (see seedless_code)
+            K, reads_psi = _seedless_kernels(
+                cache, key, c,
+                lambda c: _seedless_compiled(self.grid, self.otype, code, n_comp, c))
+            psi = [z.gradient if reads_psi else self.dummy]
         # the adjoint's fields: [slots] + [the m output flows] + [the m forward
         # values, never read] + [the input values]
-        args = self.psi(z) + [self.dummy] * m + list(values)
+        args = psi + [self.dummy] * m + list(values)
         static = {}
         if self.fwd_domain is not None and not has_node(args):
             pre = self._shared_pads(z, values, residual, K, n_comp + m)
@@ -547,6 +561,8 @@ class _stencil_op:
             unwritten_A = [r for r in range(nI + nT) if r not in written_A]
             cache[key] = (KA, KB_fresh, KB_acc, written_A, written_B, unwritten_A, A, locA)
         self.local_cache, self.local_key = cache, key
+        # a field of the type for a flow the seedless kernels do not read
+        self.dummy = g.lattice(self.grid, self.otype)
 
     def _vjp_local(self, z, needed, *values):
         # stage A (with local temporaries) followed by stage B (temp-free)
@@ -554,22 +570,21 @@ class _stencil_op:
             self.local_key]
         nI, nT = len(self.inputs), len(self.temps)
         needed = [k for k in needed if self.inputs[k] in self.referenced]
-        psi = self.psi(z)
+        c = None if self.listed or has_node(values) else flows.scale(z.flow)
+        if c is not None:
+            # a flow c * identity (m = 1, see seedless_code); psi is the field
+            # after the slots and the temporary flows
+            K, reads_psi = _seedless_kernels(
+                self.local_cache, self.local_key, c,
+                lambda c: _seedless_compiled(self.grid, self.otype, A_code, nI + nT, c, locA))
+            psi = [z.gradient if reads_psi else self.dummy]
+        else:
+            K, psi = KA, self.psi(z)
         if not has_node(psi) and not has_node(values):
             # plain: one fused run, stage B accumulating into the slots of A
             slots = self.lattices(nI + nT)
             for r in unwritten_A:
                 slots[r][:] = 0
-            K = KA
-            if not self.listed:
-                c = identity_flow_scale(z)
-                if c is not None:
-                    # a flow c * identity (m = 1, see seedless_code); psi is
-                    # the field after the slots and the temporary flows
-                    K = _seedless_kernels(
-                        self.local_cache, self.local_key, c,
-                        lambda c: _compile(
-                            self.grid, self.otype, seedless_code(A_code, nI + nT, c), locA))
             K(*(slots + psi + list(values)))
             if KB_acc is not None:
                 KB_acc(*(slots + list(values)))
@@ -582,14 +597,14 @@ class _stencil_op:
         if KB_fresh is not None:
             B = _op(KB_fresh, _lattice_list(self.grid, self.otype, nI), nT + len(values))(
                 *[A[nI + t] for t in range(nT)], *values)
-        flows = {}
+        result = {}
         for k in needed:
             flow = A[k] if k in written_A else None
             if B is not None and k in written_B:
                 flow = B[k] if flow is None else flow + B[k]
             if flow is not None:
-                flows[k] = flow
-        return flows
+                result[k] = flow
+        return result
 
 
 def matrix(stencil, *fields):

@@ -23,12 +23,13 @@ from gpt.ad.reverse.util import (
     container,
     get_unary_container,
     product,
-    accum,
     value_of,
+    value_depth_static,
     is_node,
     nodify,
-    identity_flow_scale,
 )
+from gpt.ad.reverse import flow as flows
+from gpt.ad.reverse.flow import accum
 import gpt.ad.reverse.foundation.matrix
 import gpt.ad.reverse.foundation.stencil
 import gpt.ad.reverse.foundation.local_stencil
@@ -109,23 +110,23 @@ def _reduction_identity(x):
 def _reduction_node(x, forward, container):
     # a sum-like reduction (trace/sum).  Its adjoint broadcasts the flow back
     # to x's lattice via identity(x) (conjugate-linear in the flow).  If that
-    # flow is a scalar c, or itself c times the identity, the flow into x is
-    # exactly c times the identity, which is recorded for the consumers of
-    # x's gradient (see util.identity_flow_scale).
+    # flow is a scalar c, or itself c times the identity, the flow into a
+    # plain lattice x is exactly c times the identity: a scaled_identity flow
+    # (see flow.py), built into a field only if a consumer reads it
     def _backward(z):
         if not x.with_gradient:
             return
-        w = z.gradient
-        if is_node(w):
-            c = None
-        elif g.util.is_num(w):
-            c = complex(w)
-        else:
-            c = identity_flow_scale(z)
-        first = x.gradient is None
-        accum(x, product(_reduction_identity(x), w), 1)
-        if first and c is not None and not is_node(x.gradient):
-            x._flow_identity = (x.gradient, c)
+        c = flows.scale(z.flow)
+        if c is None and g.util.is_num(z.flow.value):
+            c = complex(z.flow.value)
+        if (
+            c is not None
+            and x._container.tag[0] is g.lattice
+            and value_depth_static(x.value) == 0
+        ):
+            accum(x, flows.scaled_identity(c, _reduction_identity(x)))
+            return
+        accum(x, product(_reduction_identity(x), z.gradient), 1)
 
     z = g.ad.reverse.node_base(forward, _backward, (x,), _container=container)
     z._reads_children = ((),)

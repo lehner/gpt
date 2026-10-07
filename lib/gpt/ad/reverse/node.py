@@ -27,13 +27,13 @@ from gpt.ad.reverse.util import (
     add,
     sub,
     div,
-    accum,
     value_of,
     value_depth_static,
-    accumulate,
     zero_of,
     nodify,
 )
+from gpt.ad.reverse import flow as flows
+from gpt.ad.reverse.flow import accum, accum_element
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
 
@@ -139,10 +139,8 @@ class node_base(base):
             with_gradient = any([c.with_gradient for c in _children])
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
-        self.gradient = None
-        # gradient slots (None: the gradient, i: element i of a list gradient)
-        # holding an adopted field that is not owned (see accumulate)
-        self._borrowed = set()
+        # the typed gradient (see flow.py); .gradient is its value
+        self.flow = None
         self._tag = _tag
         # which values the backward reads (see needed_values): _reads_children
         # is None (all children) or, per child i, the indices of the children
@@ -150,47 +148,41 @@ class node_base(base):
         # backward reads this node's own value.  The default is conservative.
         self._reads_children = None
         self._reads_self = True
-        # (gradient, c): the gradient is exactly c times the identity (see
-        # util.identity_flow_scale); valid only while self.gradient is that
-        # object and no other contribution was accumulated into it
-        self._flow_identity = None
 
     def __str__(self):
         return str_traverse(self)
 
-    def set_owned(self, slot, owned):
-        if owned:
-            self._borrowed.discard(slot)
-        else:
-            self._borrowed.add(slot)
+    @property
+    def gradient(self):
+        # the value of the flow (None: no flow); a scaled identity is built
+        # into a field on reading
+        if isinstance(self.flow, flows.scaled_identity):
+            self.flow = flows.built(
+                self.flow, self._container, lambda: value_depth_static(self.value)
+            )
+        return flows.value(self.flow)
+
+    @gradient.setter
+    def gradient(self, v):
+        self.flow = flows.wrap(v, self._container)
 
     def own_gradient(self):
         # make the plain gradient (list elements) exclusively owned: copies of
         # adopted fields, e.g., before it is updated in place or handed out
-        if None in self._borrowed:
-            self.gradient = g.copy(self.gradient)
-        for i in self._borrowed - {None}:
-            self.gradient[i] = g.copy(self.gradient[i])
-        self._borrowed.clear()
-
-    def forget_replaced(self, previous):
-        # slots whose field was replaced by a new one (e.g., a conversion) are
-        # owned again
-        def at(x, slot):
-            return x if slot is None else x[slot]
-
-        for slot in list(self._borrowed):
-            if at(self.gradient, slot) is not at(previous, slot):
-                self._borrowed.discard(slot)
+        self.flow = flows.owned(self.flow)
 
     def materialize_gradient(self):
-        # a None gradient (or list element) is a zero not built yet
-        if self.gradient is None:
+        # a missing flow (or list element) is a zero not built yet
+        if self.flow is None:
             self.zero_gradient()
-        elif self._container.tag[0] is list and None in self.gradient:
+        elif isinstance(self.flow, flows.flow_list) and None in self.flow.elements:
             depth = value_depth_static(self.value)
             elem = self._container.tag[1]
-            self.gradient = [zero_of(elem, depth) if e is None else e for e in self.gradient]
+            self.flow = flows.flow_list(
+                [flows.dense(zero_of(elem, depth), True) if e is None else e for e in self.flow.elements]
+            )
+        else:
+            self.gradient
 
     def zero_gradient(self):
         # measuring the depth must not re-run a forward closure: this is
@@ -198,7 +190,6 @@ class node_base(base):
         # goes, so resolving the depth by evaluating would re-materialize
         # fields that were just released
         depth = value_depth_static(self.value)
-        self._borrowed.clear()
         if self._container.tag[0] is list:
             # a list leaf's gradient is a plain list, one entry per element,
             # each element independently wrapped to the nesting depth -- so at
@@ -320,21 +311,8 @@ class node_base(base):
                 return value_of(x)[item]
 
             def _backward(z):
-                if not x.with_gradient:
-                    return
-                if x.gradient is None:
-                    x.gradient = [None] * len(x)
-                    x._borrowed.clear()
-                x.gradient[item], owned = accumulate(
-                    x.gradient[item],
-                    z.gradient,
-                    1,
-                    x._container.tag[1],
-                    lambda: value_depth_static(x.value),
-                    True,
-                    item not in x._borrowed,
-                )
-                x.set_owned(item, owned)
+                if x.with_gradient:
+                    accum_element(x, item, z.gradient)
 
             z_container = get_unary_container(
                 x._container, lambda y: y[item], ("getitem", repr(item))
@@ -375,7 +353,6 @@ class node_base(base):
                 # (the setter may write into the gradient)
                 x.own_gradient()
                 x.gradient = setter(x.gradient, getter(x.gradient) + z.gradient)
-                x._flow_identity = None
 
         z_container = get_unary_container(x._container, getter)
 
@@ -477,22 +454,20 @@ class node_base(base):
         # a gradient of None is a zero that is not built (see accumulate)
         # (never adopt the caller's initial gradient: it could come back as a
         # leaf gradient or be updated in place)
-        self.gradient = None
-        self._borrowed.clear()
+        self.flow = None
         accum(self, initial_gradient, adopt=False)
         for n in reversed(nodes):
             first_gradient_n = first_gradient[n]
             for m in first_gradient_n:
                 if m is not self:
-                    m.gradient = None
-                    m._borrowed.clear()
+                    m.flow = None
                     fields_allocated += 1
                     max_fields_allocated = max(max_fields_allocated, fields_allocated)
-            if n.gradient is not None:
+            if n.flow is not None:
                 # (a zero flow contributes nothing to the children)
                 n._backward(n)
             if n._forward is not None:
-                n.gradient = None
+                n.flow = None
                 fields_allocated -= 1
                 if n is not self and not retain_values:
                     n.value = None
@@ -501,9 +476,9 @@ class node_base(base):
                 # (constant leaves keep gradient None: nothing reads it)
                 n.materialize_gradient()
                 if n.infinitesimal_to_cartesian:
-                    adopted = n.gradient
-                    n.gradient = g.infinitesimal_to_cartesian(n.value, n.gradient)
-                    n.forget_replaced(adopted)
+                    n.flow = flows.replaced(
+                        n.flow, g.infinitesimal_to_cartesian(n.value, n.gradient)
+                    )
                 # (a gradient handed out never aliases another gradient)
                 n.own_gradient()
 

@@ -53,7 +53,6 @@ def _reset_gradients(nodes):
     # leaf outside its graph would keep the gradient of an earlier pass
     for x in nodes:
         x.gradient = None
-        x._borrowed.clear()
 
 
 def _link_offsets(path, nd, mu):
@@ -392,7 +391,6 @@ class directional_parallel_transport(dft_diffeomorphism):
             n.value = None
         for n in nodes + [_U, _C] + _L + _P:
             n.gradient = None
-            n._borrowed.clear()
         return grads
 
     def jacobian_matrix(self, fields, staple=None, loops=None):

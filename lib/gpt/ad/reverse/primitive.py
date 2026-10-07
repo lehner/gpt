@@ -60,7 +60,8 @@
 # to plain, container, fwd, the vjp, and to the nodes built at deeper levels.
 #
 import gpt as g
-from gpt.ad.reverse.util import accum, constant, is_node, value_of
+from gpt.ad.reverse.util import constant, is_node, value_of
+from gpt.ad.reverse.flow import accum
 
 
 def has_node(x):

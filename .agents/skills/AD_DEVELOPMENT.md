@@ -434,7 +434,7 @@ mechanism.
   for SU(3)) right after their last use; avoid holding several deep graphs
   alive at once; test on the smallest grid that exercises the code path.
 - **Re-running a graph**: each backward pass starts every gradient at
-  `None` (an unbuilt zero, see `util.accumulate`), so gradients do not carry
+  `None` (an unbuilt zero, see `flow.py`), so gradients do not carry
   over between passes; read a leaf's `.gradient` before the next pass.  By
   default the backward frees forward values, so each call re-runs the
   forward.  `root(initial_gradient=..., retain_values=True)` keeps them: repeated reverse
@@ -470,16 +470,17 @@ mechanism.
   them in before the kernel overwrites them (the padded wrapper already
   starts a non-fresh target from the caller's value).
 - **Flows are adopted, not copied**: the first plain contribution to a
-  gradient is adopted as is (`util.accumulate`), so the same field can be
+  gradient is adopted as is (`flow.accumulate`), so the same field can be
   the gradient of several nodes (both children of an add receive
-  `z.gradient`).  Ownership is tracked per gradient slot
-  (`node_base._borrowed`): an adopted gradient is copied before an in-place
-  update, and leaf gradients are copied if still borrowed when handed out.
+  `z.gradient`).  Ownership travels with the value (`flow.dense.owned`, per
+  element for lists): an adopted gradient is copied before an in-place
+  update, and leaf gradients are copied if still adopted when handed out.
   Consequences for new code: a backward closure must return fields it does
   not reuse or overwrite later (no persistent scratch buffers as results),
   and code that writes into a node's gradient in place must call
-  `own_gradient()` first and clear `node._flow_identity` afterwards (as
-  `project` does; otherwise a stale scaled-identity record survives, §4.8).
+  `own_gradient()` first (as `project` does).  `node.gradient` is a property
+  (the flow's value; a list gradient is a fresh list per read, so assign
+  `n.gradient = ...` rather than writing into `n.gradient[i]`).
 
 ### 4.7 Stencil nodes (`ad/reverse/foundation/stencil.py`)
 
@@ -578,13 +579,21 @@ Plain-run optimizations:
   silently loses the saving.  So a backward must not call `value_of` on
   inputs it does not really need: trace/sum build their identity from the
   container (`_reduction_identity`).
-- **Scaled-identity flows**: trace and sum record when the flow they pass
-  down is exactly `c * identity` (a scalar flow broadcast back to a field):
-  `node._flow_identity = (gradient_object, c)`, read with
-  `util.identity_flow_scale(node)`.  It is valid only while `node.gradient`
-  is that very object: `util.accum` clears it on every contribution and
-  `project` clears it after its in-place update.  Consumers may exploit it
-  (the stencil seedless adjoints); all others see an ordinary field.
+- **Typed flows** (`ad/reverse/flow.py`): a node's gradient is held as
+  `node.flow`, one of `None` (no flow yet), `dense(value, owned)`,
+  `scaled_identity(c, identity)` or `flow_list(elements)`; `node.gradient`
+  is its value.  Trace and sum pass down `scaled_identity(c)` when the flow
+  they broadcast is exactly `c * identity` (a scalar flow, or a scaled
+  identity of their own) into a plain lattice; it is built into a field only
+  when someone reads `.gradient` (`flow.built`), and adds as a scaled
+  identity to another scaled identity, as a field to anything else.
+  Consumers test `flow.scale(node.flow)`: the stencil seedless adjoints fold
+  c into their weights and pass a dummy for the flow field when the seedless
+  kernel no longer reads it, so the c 1 field is never allocated (Wilson
+  force at 16^4: -5%).  In a nested pass with `with_value=False` a scaled
+  identity can reach a node whose children have node values (it is a
+  constant there); consumers apply their plain-only shortcuts only for plain
+  values.
 
 ## 5. File map (AD-relevant)
 
@@ -592,6 +601,7 @@ Plain-run optimizations:
 |---|---|
 | `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/...), `node_op`, forward/backward, `functional` |
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/nested dispatch, joint vjps, residuals, first-order ops), §4.1 |
+| `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `accumulate`, `accum`, `accum_element`, §4.8 |
 | `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `product`, `value_of`, `resolve` (plain value of a finished pass's result), `is_node`, `value_depth_static`, containers (`get_container`, `get_*_container`, `list_container`) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, sin, cos, real, imag, conj, `multiply` (and the node-aware `component_multiply`) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order; used by `g.ml` losses); `joint_node` (first-order nodes whose backward computes all flows at once, also used by `preimage`) |
