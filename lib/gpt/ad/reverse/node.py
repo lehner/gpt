@@ -28,7 +28,6 @@ from gpt.ad.reverse.util import (
     sub,
     div,
     value_of,
-    value_depth_static,
     zero_of,
     nodify,
 )
@@ -110,7 +109,27 @@ def str_traverse(node, indent=0):
         return ret
 
 
+class _value_slot:
+    # node.value: read as a plain attribute (no __get__), checked on writes.
+    # A node's depth is fixed at construction, so a value must have the
+    # depth below it (None: no value); the one place where this is enforced
+    # for every writer (forward, functionals and other leaf swaps)
+    def __set__(self, n, v):
+        if v is not None and _depth(v) != n.depth - 1:
+            raise ValueError(
+                f"a value of depth {_depth(v)} assigned to a node of depth {n.depth} "
+                f"(the value of a node of depth d has depth d - 1; node depths are "
+                f"fixed at construction)"
+            )
+        n.__dict__["value"] = v
+
+
+def _depth(x):
+    return x.depth if isinstance(x, node_base) else 0
+
+
 class node_base(base):
+    value = _value_slot()
     foundation = foundation
 
     # TODO: deprecate infinitesimal_to_cartesian and make it default
@@ -124,13 +143,19 @@ class node_base(base):
         _container=None,
         _tag=None,
     ):
+        # depth: the number of nested node levels, fixed at construction (see
+        # _value_slot): a leaf is one level above its value; a computed node
+        # has the depth of its deepest child (a node op promotes shallower
+        # operands, e.g. constants, to the depth of the others)
         if not callable(_forward) or isinstance(_forward, node_base):
             self._forward = None
-            self.value = _forward
+            self.depth = 1 + _depth(_forward)
+            self.__dict__["value"] = _forward
             _container = get_container(_forward)
         else:
             self._forward = _forward
-            self.value = None
+            self.depth = max([c.depth for c in _children], default=1)
+            self.__dict__["value"] = None
             assert _container is not None
         self._container = _container
         self._backward = _backward
@@ -158,7 +183,7 @@ class node_base(base):
         # into a field on reading
         if isinstance(self.flow, flows.scaled_identity):
             self.flow = flows.built(
-                self.flow, self._container, lambda: value_depth_static(self.value)
+                self.flow, self._container, lambda: self.depth - 1
             )
         return flows.value(self.flow)
 
@@ -176,7 +201,7 @@ class node_base(base):
         if self.flow is None:
             self.zero_gradient()
         elif isinstance(self.flow, flows.flow_list) and None in self.flow.elements:
-            depth = value_depth_static(self.value)
+            depth = self.depth - 1
             elem = self._container.tag[1]
             self.flow = flows.flow_list(
                 [flows.dense(zero_of(elem, depth), True) if e is None else e for e in self.flow.elements]
@@ -185,11 +210,7 @@ class node_base(base):
             self.gradient
 
     def zero_gradient(self):
-        # measuring the depth must not re-run a forward closure: this is
-        # called from backward(), which frees each computed node's value as it
-        # goes, so resolving the depth by evaluating would re-materialize
-        # fields that were just released
-        depth = value_depth_static(self.value)
+        depth = self.depth - 1
         if self._container.tag[0] is list:
             # a list leaf's gradient is a plain list, one entry per element,
             # each element independently wrapped to the nesting depth -- so at
@@ -555,14 +576,8 @@ class node_base(base):
         # parallel_transport_matrix.__call__ allocate a target whose depth
         # matches the (possibly 2nd/3rd-derivative) input.  The producer (e.g.
         # a stencil) overwrites the contents, so zero-init is fine.
-        #
-        # The depth is read statically: a COMPUTED node has value None until
-        # its graph is first run, so recursing on self.value would report
-        # depth 1 whatever the real nesting is -- while resolving it by
-        # evaluating would cache a value that node.forward then reuses rather
-        # than rebuilding it from the updated leaves.
         r = self._container.zero()
-        for _ in range(value_depth_static(self)):
+        for _ in range(self.depth):
             r = node(r)
         return r
 

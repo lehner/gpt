@@ -28,7 +28,7 @@
 # (layer.util.embed).
 #
 import gpt as g
-from gpt.ad.reverse.util import is_node, value_depth_static
+from gpt.ad.reverse.util import is_node
 
 
 class word_sum:
@@ -57,6 +57,6 @@ class word_sum:
             self.stencil(out.grid, out.otype)(out, *inputs)
             return out
         # a zero output at the depth of the deepest input
-        out = max(nodes, key=value_depth_static).new()
+        out = max(nodes, key=lambda x: x.depth).new()
         self.stencil(out.grid, out.otype)(out, *inputs)
         return out

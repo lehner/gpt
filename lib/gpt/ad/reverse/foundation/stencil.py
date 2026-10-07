@@ -619,7 +619,10 @@ def matrix(stencil, *fields):
             children.extend(arg[i] for i in range(len(arg)))
         else:
             children.append(constant(arg))
+    # (the output node is constructed anew: its old value is discarded, its
+    # depth is the computed node's)
     z = _op(stencil, output._container, len(children)).node(*children)
+    output.value = None
     for name in [
         "_forward",
         "_backward",
@@ -628,8 +631,8 @@ def matrix(stencil, *fields):
         "_reads_children",
         "_reads_self",
         "with_gradient",
+        "depth",
     ]:
         setattr(output, name, getattr(z, name))
-    output.value = None
     output.gradient = None
     return output

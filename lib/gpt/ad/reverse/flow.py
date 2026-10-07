@@ -39,7 +39,7 @@
 # element.
 #
 import gpt as g
-from gpt.ad.reverse.util import value_of, value_depth_static, is_node, zero_of, product, add, sub
+from gpt.ad.reverse.util import value_of, is_node, zero_of, product, add, sub
 
 
 class dense:
@@ -199,7 +199,7 @@ def accum(n, r, sign=1, adopt=True):
     if n.flow is None and isinstance(n.value, g.ad.forward.series):
         n.zero_gradient()
     n.flow = accumulate(
-        n.flow, r, sign, n._container, lambda: value_depth_static(n.value), adopt
+        n.flow, r, sign, n._container, lambda: n.depth - 1, adopt
     )
 
 
@@ -208,5 +208,5 @@ def accum_element(n, i, r):
     if n.flow is None:
         n.flow = flow_list([None] * len(n))
     n.flow.elements[i] = accumulate(
-        n.flow.elements[i], r, 1, n._container.tag[1], lambda: value_depth_static(n.value)
+        n.flow.elements[i], r, 1, n._container.tag[1], lambda: n.depth - 1
     )

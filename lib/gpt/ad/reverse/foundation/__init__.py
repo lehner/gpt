@@ -24,7 +24,6 @@ from gpt.ad.reverse.util import (
     get_unary_container,
     product,
     value_of,
-    value_depth_static,
     is_node,
     nodify,
 )
@@ -122,7 +121,7 @@ def _reduction_node(x, forward, container):
         if (
             c is not None
             and x._container.tag[0] is g.lattice
-            and value_depth_static(x.value) == 0
+            and x.depth == 1
         ):
             accum(x, flows.scaled_identity(c, _reduction_identity(x)))
             return

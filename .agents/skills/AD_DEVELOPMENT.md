@@ -327,6 +327,19 @@ inner_product(b, n3.value.gradient)()
   the 1-deep graph*, depositing `d2S/dx2 · a` as a plain value in
   `n2.value.gradient` (the inner leaf).
 - Pass 3 (for `n3`): the same, one level deeper.
+- **Depth**: `node.depth` is the number of nested node levels (an
+  attribute, fixed at construction: a leaf is one level above its value, a
+  computed node has the depth of its deepest child; `util.value_depth_static(x)`
+  is the same for any x, 0 for plain values).  Every write to `node.value`
+  is checked (`node._value_slot`): a value must have depth `node.depth - 1`
+  (or be None), else `ValueError`.  So swapping leaf values (functionals,
+  the transports' reused graphs) must keep the depth: a functional over a
+  nested graph takes its innermost leaves as arguments (stage 4 of
+  `tests/ad/higher_order.py`), and cannot flatten a 2-deep graph by
+  overriding a 2-deep leaf with a plain field.  The stencil node mode
+  constructs the computed node into the caller's output node, which takes
+  the computed depth.  Gradient code uses `n.depth - 1`, also for computed
+  nodes whose value was not computed (`with_value=False`).
 - The core recursion is depth-general; no framework change is needed to go
   deeper, only memory (each level roughly doubles graph size).
 
