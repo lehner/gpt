@@ -92,51 +92,6 @@ def copy(dst, src):
         dst[i] @= src[i]
 
 
-def convert(first, second):
-    if isinstance(second, g.ot_base) and first.otype.__name__ != second.__name__:
-        assert second.__name__ in first.otype.ctab
-        tmp = g.ad.forward.series(
-            {t: g.lattice(first.grid, second) for t in first.terms}, first.landau_O
-        )
-        first.otype.ctab[second.__name__](tmp, first)
-        tmp.otype = second
-        return tmp
-
-    raise Exception(f"Not yet implemented for {type(first)} x {type(second)}")
-
-
-def matrix_det(sx):
-    def df(x, dx, maxn):
-        # det(sx + dsx) = det(sx(1 + sx^-1 dsx))
-        #               = det(sx) det(1 + sx^-1 dsx)
-        #               = det(sx) (1 + tr(sx^-1 dsx) + O(dsx^2))
-        # higher-order:
-        # det(A) = exp ln det(A) = exp tr ln A
-        # det(sx + dsx) = exp tr ln (sx + dsx)
-        # ln(sx + dsx) = ln(sx) + ln(1 + sx^-1 dsx)    | correct under exp tr
-        #              = ln(sx) + sx^-1 dsx - (1/2) sx^-1 dsx sx^-1 dsx + O(dsx^2)
-        # tr[...]      = tr[ln(sx)] + tr[sx^-1 dsx] - 1/2 tr[sx^-1 dsx sx^-1 dsx] + ...
-        # exp tr[...]  = det(sx) * exp(tr[sx^-1 dsx]) * exp(- 1/2 tr[sx^-1 dsx sx^-1 dsx]) * ...
-        # exp tr[...]  = det(sx) * (1 + tr[sx^-1 dsx] + 1/2 * tr[sx^-1 dsx]^2) * (1 - 1/2 tr[sx^-1 dsx sx^-1 dsx])
-        # det(sx + dsx)= det(sx) * (1 + tr[sx^-1 dsx] + 1/2 * tr[sx^-1 dsx]^2) * (1 - 1/2 tr[sx^-1 dsx sx^-1 dsx])
-        v0 = g.ad.forward.series(g.matrix.det(x), dx.landau_O)
-        v = v0
-        if maxn >= 2:
-            adjx = dx * g.matrix.inv(x)
-            tr_adjx = g.trace(adjx)
-            v += v0 * tr_adjx
-        if maxn >= 3:
-            adjx2 = adjx * adjx
-            tr_adjx2 = g.trace(adjx2)
-            v += v0 * (tr_adjx * tr_adjx - tr_adjx2) / 2.0
-        if maxn >= 4:
-            raise Exception(f"{maxn - 1}-derivative of g.matrix.det not yet implemented")
-        v.otype = v0.otype
-        return v
-
-    return sx.function(df)
-
-
 def component_simple_map(operator, numpy_operator, extra_params, first, second):
     if operator == "pow":
         assert second is None

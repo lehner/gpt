@@ -19,8 +19,6 @@
 #
 import gpt as g
 
-# import cProfile as prof
-
 
 class path:
     def __init__(self, path=None):
@@ -45,82 +43,9 @@ path.f = path.forward
 path.b = path.backward
 
 
-class parallel_transport_legacy:
-    def __init__(self, links, paths, site_fields=None):
-        self.paths = paths
-        self.dim = len(links)
-
-        if site_fields is None:
-            site_fields = []
-
-        self.n_site_fields = len(site_fields)
-
-        link_displacements = [set() for mu in range(self.dim)]
-        site_displacements = set()
-        for p in paths:
-            d = [0] * self.dim
-            for mu, distance in p.path:
-                assert mu >= 0 and mu < self.dim
-                for step in range(abs(distance)):
-                    if distance > 0:
-                        link_displacements[mu].add(tuple(d))
-                    d[mu] += distance // abs(distance)
-                    if distance < 0:
-                        link_displacements[mu].add(tuple(d))
-            site_displacements.add(tuple(d))
-
-        plan = g.cshift_plan()
-
-        self.link_indices = []
-        for mu in range(self.dim):
-            self.link_indices.append(plan.add(links[mu], link_displacements[mu]))
-
-        self.site_fields_indices = []
-        for i in range(self.n_site_fields):
-            self.site_fields_indices.append(plan.add(site_fields[i], site_displacements))
-
-        self.cshifts = plan()
-
-    def __call__(self, links, site_fields=[]):
-        assert len(site_fields) == self.n_site_fields
-        assert len(links) == self.dim
-
-        buffers = self.cshifts(links + site_fields)
-
-        for p in self.paths:
-            d = [0 for mu in range(self.dim)]
-            r = None
-            # pr = prof.Profile(timer=lambda: g.time()*100000.0)
-            # pr.enable()
-            for mu, distance in p.path:
-                for step in range(abs(distance)):
-                    factor = None
-                    if distance > 0:
-                        factor = buffers[self.link_indices[mu][tuple(d)]]
-                    d[mu] += distance // abs(distance)
-                    if distance < 0:
-                        factor = g.adj(buffers[self.link_indices[mu][tuple(d)]])
-                    assert factor is not None
-                    if r is None:
-                        r = factor
-                    else:
-                        r = r * factor
-            # pr.disable()
-            # pr.print_stats(sort="cumulative")
-            assert r is not None
-            if self.n_site_fields == 0:
-                yield g.eval(r)
-            else:
-                yield g.eval(r), [
-                    buffers[self.site_fields_indices[i][tuple(d)]]
-                    for i in range(self.n_site_fields)
-                ]
-
-
-def parallel_transport(links, paths, site_fields=None):
-    if site_fields is not None:
-        return parallel_transport_legacy(links, paths, site_fields)
-
+def parallel_transport(links, paths):
+    # the transports along paths, as a function of the links (one
+    # parallel_transport_matrix stencil)
     code = [(mu, -1, 1.0, paths[mu]) for mu in range(len(paths))]
     ptm = g.parallel_transport_matrix(links, code, len(paths))
 

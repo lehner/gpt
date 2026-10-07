@@ -36,9 +36,6 @@ from gpt.ad.reverse.flow import accum, accum_element
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
 
-verbose_memory = g.default.is_verbose("ad_memory")
-
-
 def traverse(nodes, n, visited=None):
     # forward(children) = value
     # last usage
@@ -400,8 +397,6 @@ class node_base(base):
         return node_base.__add__(y, x)
 
     def forward(self, nodes, free=None, needed=None):
-        max_fields_allocated = 0
-        fields_allocated = 0
         for n in nodes:
             if n._forward is not None:
                 if needed is not None and n not in needed:
@@ -418,26 +413,15 @@ class node_base(base):
                     # be re-evaluated with modified leaf values, so values are
                     # re-computed as before
                     n.value = n._forward()
-                    fields_allocated += 1
-                    max_fields_allocated = max(max_fields_allocated, fields_allocated)
                 if free is not None:
-                    free_n = free[n]
-                    for m in free_n:
+                    for m in free[n]:
                         if m._forward is not None:
                             m.value = None
-                            fields_allocated -= 1
                 if isinstance(n.value, g.expr):
                     if not n.value.is_adj():
                         n.value = g(n.value)
 
-        if verbose_memory:
-            g.message(
-                f"Forward propagation through graph with {len(nodes)} nodes with maximum allocated fields: {max_fields_allocated}"
-            )
-
     def backward(self, nodes, first_gradient, initial_gradient, retain_values=False):
-        fields_allocated = len(nodes)  # .values
-        max_fields_allocated = fields_allocated
         if initial_gradient is None:
             if self._container.is_field():
                 raise Exception(
@@ -450,21 +434,16 @@ class node_base(base):
         self.flow = None
         accum(self, initial_gradient, adopt=False)
         for n in reversed(nodes):
-            first_gradient_n = first_gradient[n]
-            for m in first_gradient_n:
+            for m in first_gradient[n]:
                 if m is not self:
                     m.flow = None
-                    fields_allocated += 1
-                    max_fields_allocated = max(max_fields_allocated, fields_allocated)
             if n.flow is not None:
                 # (a zero flow contributes nothing to the children)
                 n._backward(n)
             if n._forward is not None:
                 n.flow = None
-                fields_allocated -= 1
                 if n is not self and not retain_values:
                     n.value = None
-                    fields_allocated -= 1
             elif n.with_gradient:
                 # (constant leaves keep gradient None: nothing reads it)
                 n.materialize_gradient()
@@ -474,11 +453,6 @@ class node_base(base):
                     )
                 # (a gradient handed out never aliases another gradient)
                 n.own_gradient()
-
-        if verbose_memory:
-            g.message(
-                f"Backward propagation through graph with {len(nodes)} nodes with maximum allocated fields: {max_fields_allocated}"
-            )
 
     # TODO: allow for lists of initial_gradients (could save forward runs at sake of more memory)
     def __call__(

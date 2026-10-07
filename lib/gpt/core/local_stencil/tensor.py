@@ -69,5 +69,3 @@ class tensor(auto_tuned_class):
     def __del__(self):
         cgpt.stencil_tensor_delete(self.obj)
 
-    def data_access_hints(self, *hints):
-        pass
