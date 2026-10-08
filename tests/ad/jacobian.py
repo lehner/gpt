@@ -12,7 +12,7 @@ import gpt as g
 import numpy as np
 
 rad = g.ad.reverse
-grid = g.grid([4, 4, 4, 4], g.double)
+grid = g.grid([4, 4, 4, 8], g.double)
 rng = g.random("jacobian")
 U = g.qcd.gauge.random(grid, rng, scale=0.5)
 x0 = U[0]
