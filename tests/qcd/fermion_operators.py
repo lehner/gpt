@@ -297,7 +297,11 @@ assert eps < 1e-6
 # test instantiation of other actions
 rhq = g.qcd.fermion.rhq_columbia(U, mass=4.0, cp=3.0, zeta=2.5, boundary_phases=[1, 1, 1, -1])
 
-# test staggered propagator (provide thin and fat links in combined first argument)
+# test staggered propagator (provide long and fat links in combined first argument, here
+# only the fingerprint matters to flag unintended code changes, so for now I just pass
+# think links in the long-link slot.  this needs to be cleaned up.  the current test is indeed
+# not gauge covariant which does not matter for the purpose of the current test but should
+# be fixed.)
 stag = g.qcd.fermion.staggered(
     U + g.qcd.gauge.smear.stout(rho=0.1)(U), mass=0.1, c1=9.0 / 8.0, c2=-1.0 / 24.0, u0=1
 )
