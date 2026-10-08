@@ -353,7 +353,7 @@ class directional_parallel_transport(dft_diffeomorphism):
             if plain:
                 self._vjp[params] = (nodes, aC, aL, _U, _C, _L, _P, aF)
         roots = [aC, aF] + ([] if aL is None else [aL])
-        # the roots keep their values after a reverse pass
+        # (values a previous call retained, see the release below)
         for r in roots:
             r.value = None
         # one staple (loops) forward, shared by the local pass and the

@@ -23,13 +23,6 @@ from gpt.ad.reverse.primitive import primitive
 from gpt.ad.reverse.util import value_of
 
 
-def relu(x, a=0.0):
-    return node_op(
-        (x,),
-        lambda: g.component.relu(a)(value_of(x)),
-        (lambda z: (1, g.component.multiply(g.component.drelu(a)(value_of(x)), z.gradient)),),
-        x._container,
-    )
 
 
 def _plain_conj(v):
@@ -65,6 +58,28 @@ multiply = primitive(
     lambda a, b: a,
     vjp=lambda i, flow, a, b: multiply(flow, conj(b)) if i == 0 else multiply(conj(a), flow),
 )
+
+
+# the derivative of relu, piecewise constant: no flow
+drelu = primitive(
+    "drelu",
+    lambda x, a: g.component.drelu(a)(x),
+    lambda x, a: x,
+    vjp=lambda i, flow, x, a: None,
+    reads=((),),
+)
+
+# relu: the flow into x is drelu(x) * flow, componentwise (drelu is real)
+_relu = primitive(
+    "relu",
+    lambda x, a: g.component.relu(a)(x),
+    lambda x, a: x,
+    vjp=lambda i, flow, x, a: multiply(flow, drelu(x, a=a)),
+)
+
+
+def relu(x, a=0.0):
+    return _relu(x, a=a)
 
 
 def component_multiply(a, b):

@@ -487,9 +487,11 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   `root(with_gradients=False, retain_values=True)` returns the root value
   with all intermediates kept, so a seed built from it shares nodes with the
   following reverse pass (as `directional_parallel_transport` does).  Only
-  retain values while the leaves are unchanged.  The backward always keeps
-  the root's value, and `forward` reuses any value that is not None: clear
-  it before re-running a graph with new leaf values.
+  retain values while the leaves are unchanged (`forward` reuses any value
+  that is not None).  Without `retain_values` no value survives a pass, the
+  root's included, so re-running a graph after changing leaf values is safe
+  (since 2026-10-08; before, the root kept its value and a re-run returned
+  it stale).
 - **Stencil `accumulate` is a field index, not a flag**: with several
   targets in one fused stencil, each target's rewrites must accumulate
   into *its own* field index (target 1 uses `accumulate: 1`, not `0`).

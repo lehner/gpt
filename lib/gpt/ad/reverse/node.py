@@ -396,14 +396,12 @@ class node_base(base):
                     # read that was not declared evaluates it lazily
                     continue
                 if n.value is None or free is not None:
-                    # in a backward pass (free is None) a node's value is a
-                    # deterministic function of its children's values, which
-                    # are immutable; a pass over a recorded graph re-enters
-                    # the previous pass's graph, so a value that survived the
-                    # backward (retained, or the root, which is never freed)
-                    # is kept instead of re-computed.  In a forward-only pass
-                    # the same graph may be re-evaluated with modified leaf
-                    # values, so values are re-computed as before
+                    # in a backward pass (free is None) a value that survived
+                    # a previous pass (retain_values) is kept instead of
+                    # re-computed: the caller retains values only while the
+                    # leaves are unchanged.  In a forward-only pass the same
+                    # graph may be re-evaluated with modified leaf values, so
+                    # values are re-computed
                     n.value = n._forward()
                 if free is not None:
                     for m in free[n]:
@@ -479,11 +477,12 @@ class node_base(base):
         # with_value=False (with gradients, without retain_values): the value
         # of the root is not needed, so only the values some backward reads
         # are computed (see needed_values); the return value is then None
-        # retain_values keeps the forward values of the graph: with gradients,
-        # the backward does not free them, so repeated reverse passes (e.g.
-        # one per seed direction) over unchanged leaves share one forward;
-        # without, the forward keeps all intermediate values, so a following
-        # reverse pass reuses exactly these values
+        # retain_values keeps the forward values of the graph (the root's
+        # included): with gradients, the backward does not free them, so
+        # repeated reverse passes (e.g. one per seed direction) over
+        # unchanged leaves share one forward; without, the forward keeps all
+        # intermediate values, so a following reverse pass reuses exactly
+        # these values.  Without retain_values no value survives the pass
         nodes = []
         forward_free = traverse(nodes, self)
         saved = None
@@ -512,7 +511,12 @@ class node_base(base):
                     n.with_gradient = w
                 for n in added:
                     del _structural[n]
-        return self.value if needed is None else None
+        value = self.value if needed is None else None
+        if not retain_values:
+            # values survive a pass only with retain_values (else a later
+            # pass with modified leaf values would reuse a stale root value)
+            self.value = None
+        return value
 
     def backward(
         self,

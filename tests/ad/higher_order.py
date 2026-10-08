@@ -882,3 +882,35 @@ for op in ["real", "imag"]:
         * (1.0 / (12 * eps))
     )
     assert_field_close(hvp, hvp_fd, 1e-16, f"component.{op} HVP vs FD of 1st derivative")
+
+
+#####################################
+# relu in recorded passes (relu and its derivative drelu are primitives):
+# S = sum relu(z)^2 relu(z) (real data), HVP vs a difference of the gradient
+g.message("relu: HVP vs FD of 1st derivative")
+z0 = rng.normal(g.complex(grid))
+v = rng.normal(g.complex(grid))
+
+
+def S_relu(z):
+    r = g.component.relu(0.1)(z)
+    return g.sum(r * r * r)
+
+
+def relu_first(z):
+    n = rad.node(z)
+    S_relu(n).backward()
+    return n.gradient
+
+
+eps = 1e-4
+hvp_fd = g(
+    (
+        -1.0 * relu_first(g(z0 + 2 * eps * v))
+        + 8.0 * relu_first(g(z0 + eps * v))
+        - 8.0 * relu_first(g(z0 - eps * v))
+        + relu_first(g(z0 - 2 * eps * v))
+    )
+    * (1.0 / (12 * eps))
+)
+assert_field_close(hvp_of(S_relu, z0, v), hvp_fd, 1e-12, "relu HVP vs FD of 1st derivative")

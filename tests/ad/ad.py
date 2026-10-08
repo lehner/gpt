@@ -767,3 +767,14 @@ try:
     assert False
 except TypeError as e:
     g.message(f"wrt: computed node rejected: {e}")
+
+# no value survives a pass without retain_values: re-running a graph after
+# a leaf value changed gives the new value (also the root's)
+x0, x1 = rng.cnormal(g.complex(grid)), rng.cnormal(g.complex(grid))
+n = rad.node(x0)
+y = g.norm2(n * n)
+y()
+n.value = x1
+eps = abs(y() - g.norm2(g(x1 * x1))) / abs(g.norm2(g(x1 * x1)))
+g.message(f"re-run after a leaf change: {eps}")
+assert eps < 1e-14
