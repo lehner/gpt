@@ -41,7 +41,7 @@ def inner_product(x, y, n_block, use_accelerator):
     x, y = nodify(x[0], y[0])
 
     def _forward():
-        vx, vy = nodify(value_of(x), value_of(y))
+        vx, vy = value_of(x), value_of(y)
         if gpt.util.is_num(vx) and gpt.util.is_num(vy):
             # support for "0d vectors"
             return gpt.adj(vx) * vy
@@ -165,7 +165,7 @@ def component_multiply(a, b):
     # element-wise product, node-aware (plain lattices on the lattice
     # foundation's component kernel, which covers more otypes than plain
     # multiplication)
-    return g.ad.reverse.transform.component_multiply(a, b)
+    return g.ad.reverse.transform.multiply(a, b)
 
 
 def _self_adjoint_projection(x, name):

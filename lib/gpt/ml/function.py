@@ -19,6 +19,7 @@
 import gpt as g
 import numpy as np
 from gpt.ad.reverse.util import constant, container, get_container, is_node
+from gpt.ad.reverse.primitive import has_node
 
 
 def _check_name(name):
@@ -38,12 +39,6 @@ def _check_names(names):
         _check_name(name)
     if len(set(names)) != len(names):
         raise ValueError(f"Duplicate names in {names}")
-
-
-def _has_node(x):
-    if isinstance(x, list):
-        return any(_has_node(y) for y in x)
-    return is_node(x)
 
 
 def _promote(x):
@@ -340,11 +335,11 @@ class function:
 
         # node mode: types are checked when a graph is built (plain
         # evaluations are assumed to have been checked then), and evaluate
-        # sees nodes only (plain values become constant nodes, so that
-        # products need no operand ordering)
+        # sees nodes only (plain values become constant nodes: one kind of
+        # value inside evaluate)
         # numbers are stored as 0-d arrays and enter evaluate as numbers
         constants = [_unbox(x) for x in self._constants.values]
-        check = _has_node(inputs) or _has_node(parameters)
+        check = has_node(inputs) or has_node(parameters)
         parameters = [_unbox(x) for x in parameters]
         if check:
             for (name, t), x in zip(self._inputs, inputs):

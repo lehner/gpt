@@ -17,7 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # Site-constant linear maps on lists of scalar fields, as node operations
-# closed under their backward (so that they nest to any order):
+# closed under their vjp (so that recorded passes reach any order):
 #
 #   stack(h)              a list of field nodes -> one list node
 #   matrix_vector(W, h)   M x N array W, list h of N scalar fields -> the list
@@ -240,8 +240,7 @@ _scatter = primitive(
 
 def element(a, index):
     # a[index] (plain or a node)
-    c = a._container if is_node(a) else get_container(a)
-    return _element(a, index=index, c=c.copy())
+    return _element(a, index=index, c=get_container(a).copy())
 
 
 def scatter(v, index, c):

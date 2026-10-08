@@ -37,31 +37,33 @@ from gpt.ad.reverse.flow import accum, accum_element
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
 
-def traverse(nodes, n, visited=None):
-    # forward(children) = value
-    # last usage
-    root = visited is None
-    if root:
-        visited = set([])
-    if n not in visited:
-        visited.add(n)
-        for c in n._children:
-            traverse(nodes, c, visited)
-        nodes.append(n)
+def traverse(nodes, root):
+    # appends the nodes of the graph of root to nodes in topological order
+    # (children first, depth-first in child order; iterative, since recorded
+    # graphs are deep) and returns, per node, the nodes whose last use it is
+    # (when their values can be released in a forward pass)
+    visited = {root}
+    stack = [(root, iter(root._children))]
+    while stack:
+        n, children = stack[-1]
+        for c in children:
+            if c not in visited:
+                visited.add(c)
+                stack.append((c, iter(c._children)))
+                break
+        else:
+            stack.pop()
+            nodes.append(n)
 
-    if root:
-        last_need = {}
-        for n in nodes:
-            for x in n._children:
-                last_need[x] = n
+    last_need = {}
+    for n in nodes:
+        for x in n._children:
+            last_need[x] = n
 
-        forward_free = dict([(x, []) for x in nodes])
-        for x in last_need:
-            forward_free[last_need[x]].append(x)
-
-        # forward free contains information for when we can
-        # release the node.value for forward propagation
-        return forward_free
+    forward_free = dict([(x, []) for x in nodes])
+    for x in last_need:
+        forward_free[last_need[x]].append(x)
+    return forward_free
 
 
 def _is_zero(x):

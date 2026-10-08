@@ -112,8 +112,8 @@ class mlp(function):
     that sin sees real arguments for real inputs), the output layer is
     complex and initialized at scale (default 0: the output is zero, with
     nonzero gradients w.r.t. the output layer), the hidden layers at
-    O(1) / sqrt(fan-in).  (sin: a smooth activation available as a node
-    operation at any nesting depth.)
+    O(1) / sqrt(fan-in).  (sin: a smooth activation, a node operation
+    differentiable to any order.)
 
     Parameters: W<l>, an n_out_l x (n_in_l + 1) array per layer whose last
     column is the bias b_l (the input list is extended by the unit field).

@@ -127,7 +127,8 @@ class scale(g.ml.function):
    (inputs, outputs) and the storage (parameters), using the nodes'
    `_container` (a computed node has no value before its graph runs); all
    plain inputs, parameters and constants are promoted to constant nodes, so
-   `evaluate` sees nodes only and needs no node-first product ordering.
+   `evaluate` sees nodes only (one kind of value; mixed plain/node
+   arithmetic would also work, see AD_DEVELOPMENT.md §4.6).
 3. **Symbolic** (symbols as inputs, or a dict as parameters): the call is
    recorded, see §3.
 
@@ -453,8 +454,10 @@ Writing a new layer:
 - **No `__rtruediv__` on nodes**: store reciprocals as constants (`inv_std`)
   instead of dividing by a node.
 - **Componentwise node ops** are only relu, sin, cos, real, imag and
-  `g.component.multiply`; `relu` on a
-  complex z is z for Re z > 0, else a z.  Smooth gates need new node ops.
+  `g.component.multiply` (primitives in `ad/reverse/transform.py`, so they
+  work in recorded passes; relu's derivative drelu is a primitive without
+  flow); `relu` on a complex z is z for Re z > 0, else a z.  Smooth gates
+  need new node ops (as primitives, with a vjp written in primitives).
 - **Gates need standardized invariants.**  Invariants such as tr(P P^dag)/N
   vary little between sites relative to their mean, so gate on
   `(q - mean)/std` with frozen calibrated references (frozen, not a live

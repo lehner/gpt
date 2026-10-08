@@ -397,7 +397,12 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   for X and X^dag) and the materialized X^dag are computed once.  The user's
   root D_0 resets the tower once per pass (in its plain forward, or -- if the
   forward was skipped, `with_value=False` -- in its vjp, signalled by the
-  forward's residual), so a leaf updated in place is never served stale.  Non-lattice
+  forward's residual), so a leaf updated in place is never served stale.
+  Caveat for recorded graphs: the recorded D_k flows are evaluated in a
+  later pass, possibly without the root's forward (the tower identifies X
+  by object identity); swapping leaf values by assignment (functionals) is
+  safe, but do not modify a leaf that feeds exp directly in place
+  (`leaf.value @= ...`) between passes over a recorded graph.  Non-lattice
   (tensor/scalar) nodes still use the node-op Taylor graph.
 - `ad/reverse/foundation/__init__.py` also holds single-node
   **projections**: `traceless_anti_hermitian` / `traceless_hermitian` (the

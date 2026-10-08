@@ -351,8 +351,6 @@ def convert_container(v, x, y, operand, key):
     assert backward_trace or backward_color_trace or backward_spin_trace or backward_sum
 
     def _forward():
-        # v.value may be a (lazy) node or None if v was freed after a
-        # previous pass
         return value_of(v)
 
     def _backward(z):

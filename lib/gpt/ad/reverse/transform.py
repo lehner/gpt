@@ -18,9 +18,13 @@
 #
 import gpt as g
 import numpy as np
-from gpt.ad.reverse import node_op
 from gpt.ad.reverse.primitive import primitive
-from gpt.ad.reverse.util import value_of
+
+
+def _same(x, **static):
+    # the container of a componentwise map: that of its argument (a copy:
+    # containers are mutable, see node.set_otype)
+    return x.copy()
 
 
 
@@ -38,7 +42,7 @@ def _plain_conj(v):
 conj = primitive(
     "conj",
     _plain_conj,
-    lambda x: x,
+    _same,
     vjp=lambda i, flow, x: conj(flow),
     reads=((),),
 )
@@ -55,7 +59,7 @@ def _plain_multiply(a, b):
 multiply = primitive(
     "multiply",
     _plain_multiply,
-    lambda a, b: a,
+    lambda a, b: a.copy(),
     vjp=lambda i, flow, a, b: multiply(flow, conj(b)) if i == 0 else multiply(conj(a), flow),
 )
 
@@ -64,7 +68,7 @@ multiply = primitive(
 drelu = primitive(
     "drelu",
     lambda x, a: g.component.drelu(a)(x),
-    lambda x, a: x,
+    _same,
     vjp=lambda i, flow, x, a: None,
     reads=((),),
 )
@@ -73,8 +77,9 @@ drelu = primitive(
 _relu = primitive(
     "relu",
     lambda x, a: g.component.relu(a)(x),
-    lambda x, a: x,
+    _same,
     vjp=lambda i, flow, x, a: multiply(flow, drelu(x, a=a)),
+    reads=((0,),),
 )
 
 
@@ -82,30 +87,23 @@ def relu(x, a=0.0):
     return _relu(x, a=a)
 
 
-def component_multiply(a, b):
-    # the componentwise product of plain values or nodes (a node operation
-    # if either is a node)
-    return multiply(a, b)
+# sin and cos: each other's derivatives; the flow into x is conj(cos x) *
+# flow (sin) and -conj(sin x) * flow (cos), componentwise
+sin = primitive(
+    "sin",
+    lambda x: g.component.sin(x),
+    _same,
+    vjp=lambda i, flow, x: multiply(flow, conj(cos(x))),
+    reads=((0,),),
+)
 
-
-def sin(x):
-    # the flow into x is conj(cos x) * flow, componentwise
-    return node_op(
-        (x,),
-        lambda: g.component.sin(value_of(x)),
-        (lambda z: (1, multiply(z.gradient, conj(g.component.cos(value_of(x))))),),
-        x._container,
-    )
-
-
-def cos(x):
-    # the flow into x is -conj(sin x) * flow, componentwise
-    return node_op(
-        (x,),
-        lambda: g.component.cos(value_of(x)),
-        (lambda z: (-1, multiply(z.gradient, conj(g.component.sin(value_of(x))))),),
-        x._container,
-    )
+cos = primitive(
+    "cos",
+    lambda x: g.component.cos(x),
+    _same,
+    vjp=lambda i, flow, x: -multiply(flow, conj(sin(x))),
+    reads=((0,),),
+)
 
 
 def _plain_part(v, part):
@@ -124,7 +122,7 @@ def _plain_part(v, part):
 real = primitive(
     "real",
     lambda x: _plain_part(x, "real"),
-    lambda x: x,
+    _same,
     vjp=lambda i, flow, x: real(flow),
 )
 
@@ -139,6 +137,6 @@ def _imag_vjp(i, flow, x):
 imag = primitive(
     "imag",
     lambda x: _plain_part(x, "imag"),
-    lambda x: x,
+    _same,
     vjp=_imag_vjp,
 )
