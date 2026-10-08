@@ -39,9 +39,12 @@ def assert_compatible(a, b, tag=""):
 
 class dft_diffeomorphism(diffeomorphism):
     def __init__(self, U, ft):
+        # the graph aUft = ft(aU) of the reverse passes (jacobian) is built
+        # at the first use, from the plain fields it is called with (U may be
+        # nodes, e.g. when the transformation is applied in a graph)
         self.ft = ft
-        self.aU = [rad.node(u) for u in U]
-        self.aUft = ft(self.aU)
+        self.aU = None
+        self.aUft = None
 
     def __call__(self, fields):
         # ft needs to be callable with a node or a lattice
@@ -62,7 +65,7 @@ class dft_diffeomorphism(diffeomorphism):
             # make sure all gradients are reset
             for nu in range(N):
                 self.aU[nu].zero_gradient()
-            self.aUft[mu](initial_gradient=aU_prime[mu])
+            self.aUft[mu].backward(initial_gradient=aU_prime[mu])
             for nu in range(N):
                 if gradient[nu] is None:
                     gradient[nu] = self.aU[nu].gradient
@@ -75,6 +78,10 @@ class dft_diffeomorphism(diffeomorphism):
 
     def _set_leaves(self, fields):
         # the leaves of the graph aUft take the values of fields
+        if self.aU is None:
+            self.aU = [rad.node(x) for x in fields]
+            self.aUft = self.ft(self.aU)
+            return
         for leaf, x in zip(self.aU, fields):
             assert_compatible(leaf.value, x)
             leaf.value = x
@@ -99,26 +106,30 @@ class dft_diffeomorphism(diffeomorphism):
 
 
 class dft_action_log_det_jacobian(differentiable_functional):
-    def __init__(self, U, ft, dfm, dfm_node, inverter_force, inverter_action):
+    def __init__(self, U, ft, dfm, inverter_force, inverter_action):
         self.dfm = dfm
-        self.dfm_node = dfm_node
         self.inverter_force = inverter_force
         self.inverter_action = inverter_action
         self.N = len(U)
         mom = [g.group.cartesian(u) for u in U]
 
+        # left . J . right as a functional over (U, left, right): the
+        # Jacobian applied to right (as dfm.jacobian: one reverse pass per
+        # output mu, summed) is recorded (create_graph), a graph over the
+        # leaves _U, so its reverse pass is a derivative w.r.t. U
         _U = [rad.node(g.copy(u)) for u in U]
         _left = [rad.node(g.copy(u), with_gradient=False) for u in mom]
         _right = [rad.node(g.copy(u), with_gradient=False) for u in mom]
-        _Up = dfm_node(_U)
-        J_right = dfm_node.jacobian(_U, _Up, _right)
-
-        act = None
+        _Up = ft(_U)
+        J_right = [None] * self.N
         for mu in range(self.N):
-            if mu == 0:
-                act = g.inner_product(_left[mu], J_right[mu])
-            else:
-                act = g(act + g.inner_product(_left[mu], J_right[mu]))
+            seed = g.cartesian_to_infinitesimal(_Up[mu], _right[mu])
+            _Up[mu].backward(initial_gradient=seed, create_graph=True, wrt=_U)
+            for nu in range(self.N):
+                gr = _U[nu].gradient
+                J_right[nu] = gr if J_right[nu] is None else rad.util.add(J_right[nu], gr)
+
+        act = sum(g.inner_product(_left[mu], J_right[mu]) for mu in range(self.N))
 
         self.left_J_right = act.functional(*(_U + _left + _right))
 
@@ -197,7 +208,6 @@ class differentiable_field_transformation:
         self.ft = ft
         self.U = U
         self.dfm = dft_diffeomorphism(self.U, self.ft)
-        self.dfm_node = dft_diffeomorphism([rad.node(u) for u in self.U], self.ft)
         self.inverter_force = inverter_force
         self.inverter_action = inverter_action
         self.optimizer = optimizer
@@ -216,5 +226,5 @@ class differentiable_field_transformation:
 
     def action_log_det_jacobian(self):
         return dft_action_log_det_jacobian(
-            self.U, self.ft, self.dfm, self.dfm_node, self.inverter_force, self.inverter_action
+            self.U, self.ft, self.dfm, self.inverter_force, self.inverter_action
         )

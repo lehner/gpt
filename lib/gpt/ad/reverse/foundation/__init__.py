@@ -93,8 +93,8 @@ def adj(x):
 def _reduction_identity(x):
     # identity(x) for the backward of a reduction.  Only the type of x is
     # needed, never its value: for a lattice on a full grid it is taken from
-    # the container (a plain constant at any depth; evaluating x would add
-    # its forward, one level down in a nested pass, to the graph)
+    # the container (a plain constant; evaluating x would cost its forward,
+    # and in a recorded pass add x to the flow's graph)
     # (a forward-AD series value keeps its own identity type)
     c = x._container
     if (
@@ -118,11 +118,7 @@ def _reduction_node(x, forward, container):
         c = flows.scale(z.flow)
         if c is None and g.util.is_num(z.flow.value):
             c = complex(z.flow.value)
-        if (
-            c is not None
-            and x._container.tag[0] is g.lattice
-            and x.depth == 1
-        ):
+        if c is not None and x._container.tag[0] is g.lattice:
             accum(x, flows.scaled_identity(c, _reduction_identity(x)))
             return
         accum(x, product(_reduction_identity(x), z.gradient), 1)
@@ -172,7 +168,8 @@ def component_multiply(a, b):
 def _self_adjoint_projection(x, name):
     # a real-linear projection P that is self-adjoint w.r.t. Re tr(a^dag b)
     # (the traceless (anti-)hermitian parts): the flow into x is P(flow), so
-    # the backward is again the projection (one level down for nested flows)
+    # the backward is again the projection (a projection node in a recorded
+    # pass)
     # and the node replaces the graph of its adj, sums, trace and identity
     def _project(v):
         return getattr(g.qcd.gauge.project, name)(v)
@@ -202,7 +199,7 @@ def _group_conversion(src, dsrc, method):
     if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
     if is_node(dsrc):
-        # a nested gradient is a lazy compute graph; the otype conversion is
+        # a recorded gradient is a lazy compute graph; the otype conversion is
         # linear in the gradient and runs as graph operations (including the
         # container otype update); containers without an otype, or otypes
         # without the conversion, pass through
@@ -273,13 +270,12 @@ def where(first, second, third, fourth):
 
     z_container = yes._container
 
-    # node-aware: nodify the operands so a nested pair (a nested value or a
-    # node flow) routes to the rev-AD where instead of the plain foundation,
-    # which cannot build a lattice from a node.
+    # node-aware backward: nodify the operands so a pair with a node (a
+    # recorded flow) routes to the rev-AD where instead of the plain
+    # foundation, which cannot build a lattice from a node.
 
     def _forward():
-        vy, vn = nodify(value_of(yes), value_of(no))
-        return g.where(question, vy, vn)
+        return g.where(question, value_of(yes), value_of(no))
 
     return g.ad.reverse.node_op(
         (yes, no),

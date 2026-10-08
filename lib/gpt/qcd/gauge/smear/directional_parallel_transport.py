@@ -20,7 +20,6 @@ import gpt as g
 from gpt.qcd.gauge.smear.differentiable import dft_diffeomorphism
 from .differentiable import assert_compatible
 from gpt.core.group import differentiable_functional
-from gpt.ad.reverse.util import resolve
 from gpt.core.parallel_transport.matrix import new_target_list
 
 
@@ -95,7 +94,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         # weighted loop sum, U_mu' = exp(TA(P1 f(sm, xparams))) U_mu (default:
         # the identity), where xparams are the parameters (plain fields or
         # nodes, in the order of `parameters`).  It must work on plain fields
-        # and on nodes of any depth (node-first products: sm * p, not p * sm)
+        # and on nodes (node-first products: sm * p, not p * sm)
         # and be gauge covariant (products of sm and adj(sm), traces).
         #
         # loops: an optional (non-empty) list of closed g.path loops at x,
@@ -145,13 +144,10 @@ class directional_parallel_transport(dft_diffeomorphism):
 
     def _weighted_transport(self, cache, description, xU):
         # sum_k weight_k * transport_k(U), with P0 applied to U_mu; works for
-        # plain fields and for nodes of any depth
+        # plain fields and for nodes
         nd, mu, P0, parameters = self.nd, self.mu, self.P0, self.parameters
 
-        # static: may be handed computed nodes, and resolving their depth
-        # here would cache a value that node.forward then reuses instead of
-        # rebuilding it from the updated leaves
-        cache_key = f"{type(xU[0])}_depth{g.ad.reverse.util.value_depth_static(xU[0])}"
+        cache_key = str(type(xU[0]))
         if cache_key not in cache:
             # paths sharing a weight are summed inside the stencil, so the
             # staple sum below costs one multiply per distinct weight
@@ -210,15 +206,14 @@ class directional_parallel_transport(dft_diffeomorphism):
                     )
 
     def _loop_transport(self, xfields):
-        # the loops L_k of the links in xfields (plain fields or nodes of any
-        # depth) in one stencil; returns (root, L), root the stencil's output
+        # the loops L_k of the links in xfields (plain fields or nodes) in one
+        # stencil; returns (root, L), root the stencil's output
         # node (for nodes, a list node for several loops, None for plain
         # fields with several loops), whose reverse pass takes one flow per
         # loop
         nd, K, mu, P0 = self.nd, len(self.loops), self.mu, self.P0
         links = xfields[0:nd]
-        # static depth, as in _weighted_transport
-        key = f"{type(links[0])}_depth{g.ad.reverse.util.value_depth_static(links[0])}"
+        key = str(type(links[0]))
         # (P0 applied to U_mu, as for the staple)
         if P0 is not None:
             links = [g(links[i] * P0) if i == mu else links[i] for i in range(nd)]
@@ -262,7 +257,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         for root, flow in passes:
             _reset_gradients(nodes)
             # (prescribed loops: the passes share one forward)
-            root(initial_gradient=flow, retain_values=loops is not None)
+            root.backward(initial_gradient=flow, retain_values=loops is not None)
             for i, x in enumerate(nodes):
                 if x.gradient is not None:
                     grads[i] = _add(grads[i], x.gradient)
@@ -305,7 +300,7 @@ class directional_parallel_transport(dft_diffeomorphism):
             self._set_leaves(fields)
             for leaf in self.aU:
                 leaf.zero_gradient()
-            self.aUft[mu](initial_gradient=seed)
+            self.aUft[mu].backward(initial_gradient=seed)
             grads = [self.aU[nu].gradient for nu in range(N)]
         gradient = []
         for nu in range(N):
@@ -368,16 +363,16 @@ class directional_parallel_transport(dft_diffeomorphism):
             for n, x in zip(_L, g.util.to_list(aL(with_gradients=False, retain_values=True))):
                 n.value = x
         _U.value = fields[mu]
-        aF(initial_gradient=seed)
+        aF.backward(initial_gradient=seed)
         grad_U, grad_C = _U.gradient, _C.gradient
         grad_P = [n.gradient for n in _P]
         grad_L = [n.gradient for n in _L]
-        aC(initial_gradient=grad_C)
+        aC.backward(initial_gradient=grad_C)
         grads = [n.gradient for n in nodes]
         if any(x is not None for x in grad_L):
             flows = [_zero_like(_L[0].value) if x is None else x for x in grad_L]
             _reset_gradients(nodes)
-            aL(initial_gradient=flows if len(flows) > 1 else flows[0])
+            aL.backward(initial_gradient=flows if len(flows) > 1 else flows[0])
             for i, n in enumerate(nodes):
                 if n.gradient is not None:
                     grads[i] = _add(grads[i], n.gradient)
@@ -459,7 +454,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         self._set_leaves(fields)
 
         def vjp(seed):
-            self.aUft[mu](initial_gradient=seed)
+            self.aUft[mu].backward(initial_gradient=seed)
             return self.aU[mu].gradient
 
         return self._block(fields[mu], fields_prime[mu], vjp), fields_prime
@@ -612,47 +607,40 @@ class directional_parallel_transport(dft_diffeomorphism):
         # bilinearly contracted with the fixed test function `left` (output)
         # and direction `right` (input).
         #
-        # Build left . (\partial f_mu/\partial U_mu) . right as a 1-deep functional
-        # over (fields, left, right) and take its 1-deep gradient.  The mu->mu
-        # block is obtained with the "apply Jacobian to a direction" reverse pass
-        # on a 2-deep graph (a 1-deep node seed), which yields a 1-deep
-        # 1st-derivative graph; differentiating that 1-deep graph is a true 1st
-        # derivative, so the result is correctly differentiable.  (A second
-        # reverse pass directly on the "apply Jacobian to a direction" graph
-        # would differentiate a U-dependence that is not the correctly
-        # trivialized one.)
+        # Build left . (\partial f_mu/\partial U_mu) . right as a functional
+        # over (fields, left, right) and take its gradient.  The mu->mu block
+        # is the "apply Jacobian to a direction" reverse pass w.r.t. U_mu,
+        # recorded (create_graph), with a seed built on the transport's own
+        # node; the recorded gradient is a graph over the same leaves, whose
+        # reverse pass is a true 1st derivative, so the result is correctly
+        # differentiable.  (A second reverse pass directly on the "apply
+        # Jacobian to a direction" graph would differentiate a U-dependence
+        # that is not the correctly trivialized one.)
         #
-        # The nested reverse applies the infinitesimal_to_cartesian symmetrization
-        # 0.5*(x + adj(x)) at the group leaf, which halves the derivative of the
-        # 1st-derivative graph; the factor of 2 below compensates for it.
+        # The recorded reverse applies the infinitesimal_to_cartesian
+        # symmetrization 0.5*(x + adj(x)) at the group leaf, which halves the
+        # derivative of the 1st-derivative graph; the factor of 2 below
+        # compensates for it.
         rad = g.ad.reverse
 
         mu = self.mu
-        N = len(fields)
         _U = [rad.node(g.copy(u)) for u in fields]
         _left = rad.node(g.copy(left), with_gradient=False)
         _right = rad.node(g.copy(right), with_gradient=False)
 
-        # 1-deep transform graph (for the seed) and 2-deep graph (for the reverse)
         _Up = self.ft(_U)
-        aU = [rad.node(_U[i]) for i in range(N)]
-        aUft = self.ft(aU)
-
         seed = g.cartesian_to_infinitesimal(_Up[mu], _right)
-        aUft[mu](initial_gradient=seed)          # 1st reverse: 2-deep -> 1-deep graph
-        J_right_mu = aU[mu].gradient             # 1-deep graph = (\partial f_mu/\partial U_mu) . right
+        _Up[mu].backward(initial_gradient=seed, create_graph=True, wrt=[_U[mu]])
+        J_right_mu = _U[mu].gradient             # graph = (\partial f_mu/\partial U_mu) . right
 
         act = g.inner_product(_left, rad.node(self.P1, with_gradient=False) * J_right_mu)
         func = act.functional(*(_U + [_left, _right]))
-        grads = func.gradient(fields + [left, right], fields)   # 1-deep gradient w.r.t. _U
+        grads = func.gradient(fields + [left, right], fields)   # gradient w.r.t. _U
 
-        # resolved to plain values, so that the (expensive) nested node graphs
-        # are released before the caller accumulates over the generators; a
-        # field without gradient (a link not in the paths) gets a zero
+        # (a field without gradient, a link not in the paths, gets a zero)
         out = []
         for x, f in zip(grads, fields):
-            r = resolve(x)
-            out.append(g(2.0 * (g.group.zero(f) if r is None else r)))
+            out.append(g(2.0 * (g.group.zero(f) if x is None else x)))
         return out
 
     def action_log_det_jacobian_gradient(self, fields, dfields):
@@ -689,8 +677,8 @@ class directional_parallel_transport(dft_diffeomorphism):
         left = g.group.cartesian(U_mu)
         P1_node = rad.node(P1, with_gradient=False)
 
-        # 1-deep leaves (never modified, no copies needed); the staple leaf is
-        # a plain matrix (not a group element), so its gradient is not
+        # leaves (never modified, no copies needed); the staple leaf is a
+        # plain matrix (not a group element), so its gradient is not
         # converted to the algebra
         _U = rad.node(U_mu)
         _C = rad.node(C, infinitesimal_to_cartesian=False)
@@ -699,19 +687,13 @@ class directional_parallel_transport(dft_diffeomorphism):
         _P = [rad.node(x, with_gradient=params) for x in fields[self.nd :]]
         _L = None if L is None else [rad.node(x, infinitesimal_to_cartesian=False) for x in L]
 
-        # 2-deep "apply Jacobian block to right" (see diagonal_jacobian_gradient);
-        # the forward does not depend on the generator, so it runs once and
-        # its (1-deep) values are shared by all passes.  The seed is built
-        # from the forward's own (retained) 1-deep value, so the derivative
-        # graph and the seed share its nodes.
-        aU = rad.node(_U)
-        aUft = self._local_ft(
-            aU,
-            rad.node(_C, with_gradient=False),
-            [rad.node(x, with_gradient=False) for x in _P],
-            None if _L is None else [rad.node(x, with_gradient=False) for x in _L],
-        )
-        _Up = aUft(with_gradients=False, retain_values=True)
+        # "apply Jacobian block to right" recorded w.r.t. U_mu (see
+        # diagonal_jacobian_gradient); the forward does not depend on the
+        # generator, so it runs once and its values are shared by all
+        # passes.  The seed is built on the transport's own node, so the
+        # derivative graph and the seed share its nodes.
+        aUft = self._local_ft(_U, _C, _P, _L)
+        aUft(with_gradients=False, retain_values=True)
 
         grad_U = None
         grad_C = None
@@ -724,25 +706,27 @@ class directional_parallel_transport(dft_diffeomorphism):
 
             # both reverse passes retain the shared forward values; the
             # per-generator part of the graph is released with act
-            aUft(
-                initial_gradient=g.cartesian_to_infinitesimal(_Up, _right),
+            aUft.backward(
+                initial_gradient=g.cartesian_to_infinitesimal(aUft, _right),
                 retain_values=True,
+                create_graph=True,
+                wrt=[_U],
             )
-            act = g.inner_product(_left, P1_node * aU.gradient)
-            act(retain_values=True)
-            grad_U = _add(grad_U, resolve(_U.gradient))
-            grad_C = _add(grad_C, resolve(_C.gradient))
+            act = g.inner_product(_left, P1_node * _U.gradient)
+            act.backward(retain_values=True)
+            grad_U = _add(grad_U, _U.gradient)
+            grad_C = _add(grad_C, _C.gradient)
             for i, n in enumerate(_P + (_L or [])):
                 if n.gradient is not None:
                     if i < len(_P):
-                        grad_P[i] = _add(grad_P[i], resolve(n.gradient))
+                        grad_P[i] = _add(grad_P[i], n.gradient)
                     else:
-                        grad_L[i - len(_P)] = _add(grad_L[i - len(_P)], resolve(n.gradient))
+                        grad_L[i - len(_P)] = _add(grad_L[i - len(_P)], n.gradient)
 
             del act, _left, _right
             right[a] = None
 
-        del aU, aUft, _Up, _U, _C, _P, _L
+        del aUft, _U, _C, _P, _L
         del left, right, C, L, P1_node
 
         # chain rule through the staple and the loops; the factor 2 is the
@@ -750,7 +734,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         nodes = [rad.node(x) for x in fields]
         seed = g(2.0 * grad_C)
         del grad_C
-        (self._staple if staple is None else staple)(nodes)(initial_gradient=seed)
+        (self._staple if staple is None else staple)(nodes).backward(initial_gradient=seed)
         del seed
         grads = [n.gradient for n in nodes]
         if self.loops is not None:

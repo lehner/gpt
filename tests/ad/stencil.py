@@ -24,8 +24,8 @@
 # The consumers of the stencil output are deliberately NONLINEAR (quadratic in
 # the outputs).  With a linear consumer the flow that reaches the output does
 # not depend on the input links at all, so the d(flow)/dU half of every
-# derivative beyond the first is never exercised: a stencil whose nested
-# forward drops that dependence still reproduces every cross-check here
+# derivative beyond the first is never exercised: a stencil whose recorded
+# reverse pass drops that dependence still reproduces every cross-check here
 # exactly.  The cross-checks compare two ways of SPECIFYING the same
 # computation, so both sides run through this foundation and a defect they
 # share is invisible -- hence the finite-difference reference for the 2nd
@@ -90,34 +90,12 @@ def hvp_fd(build, dA, eps=1e-4):
 
 
 def assert_hvp_vs_fd(H, build, dA, tag, tol=1e-6):
-    # H[mu] = d/dU_mu <dA, dS/dU>, as produced by the nested (2-deep) pass
+    # H[mu] = d/dU_mu <dA, dS/dU>, as produced by a recorded reverse pass
     q_ad = contract(dA, H)
     q_fd = hvp_fd(build, dA)
     rel = abs(q_ad - q_fd) / abs(q_fd)
     g.message(f"2nd deriv vs finite differences ({tag}): {q_ad} versus {q_fd}: {rel}")
     assert rel < tol
-
-
-def list_dir(dA, depth):
-    # a `depth`-deep list node holding the direction dA (plain links)
-    cU = g.group.cartesian(U)
-    for mu in range(Nd):
-        cU[mu] @= dA[mu]
-    nd = cU
-    for _ in range(depth):
-        nd = rad.node(nd)
-    return nd
-
-
-def link_dirs(dA, depth):
-    # the same direction as `depth`-deep per-link nodes
-    cU = [g.group.cartesian(u) for u in U]
-    for mu in range(Nd):
-        cU[mu] @= dA[mu]
-    nds = cU
-    for _ in range(depth):
-        nds = [rad.node(x) for x in nds]
-    return nds
 
 
 #####################################
@@ -196,38 +174,36 @@ g.message(f"1st deriv: fused list input vs per-link inputs: {diff}")
 assert diff < 1e-16
 g.message("fused plaquette 1st derivative: OK")
 
-# 2nd derivative (HVP)
+# 2nd derivative (HVP): the reverse pass of S is recorded (create_graph=True),
+# nU2.gradient is a node graph over the same leaf; the backward of its
+# contraction with the plain direction dA deposits d/dU <dA, dS/dU>
 dA = rng.normal_element(g.group.cartesian(U))
-nnP = rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)]))
-nnU = rad.node(rad.node(U))
-nA = list_dir(dA, 1)
-stencil(nnP, nnU)
-act_fused(nnP[0], nnP[1])()
-# the 1st-derivative slots (nnU.gradient) are ADJOINT stencil nodes -- a
-# different-code stencil acting on nodes again -- not cshift/mul expressions;
-# the recursion is a tower of stencils with no cshift
-slot_str = str(nnU.gradient[0])
+nP2 = rad.node([g.copy(Ps0), g.copy(Ps1)])
+nU2 = rad.node(U)
+stencil(nP2, nU2)
+act_fused(nP2[0], nP2[1]).backward(create_graph=True)
+# the recorded 1st-derivative slots (nU2.gradient) are ADJOINT stencil nodes
+# -- a different-code stencil acting on nodes again -- not cshift/mul
+# expressions; the recursion is a tower of stencils with no cshift
+slot_str = str(nU2.gradient[0])
 assert "stencil" in slot_str and "cshift" not in slot_str, (
-    "nested slot should be a stencil node, not a cshift expression")
-g.message("2nd deriv: nested slots are stencil nodes (no cshift)")
-c = sum(g.group.inner_product(nnU.gradient[mu], nA[mu]) for mu in range(Nd))
-c()
-H_list = [g(x) for x in nnU.value.gradient]
-nnPg = rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)]))
-nnUg = [rad.node(rad.node(u)) for u in U]
-nAg = link_dirs(dA, 1)
-stencil(nnPg, *nnUg)
-act_fused(nnPg[0], nnPg[1])()
-c = sum(g.group.inner_product(nnUg[mu].gradient, nAg[mu]) for mu in range(Nd))
-c()
-H_link = [g(nnUg[mu].value.gradient) for mu in range(Nd)]
+    "recorded slot should be a stencil node, not a cshift expression")
+g.message("2nd deriv: recorded slots are stencil nodes (no cshift)")
+contract(nU2.gradient, dA).backward()
+H_list = [g(x) for x in nU2.gradient]
+nP2g = rad.node([g.copy(Ps0), g.copy(Ps1)])
+nU2g = [rad.node(u) for u in U]
+stencil(nP2g, *nU2g)
+act_fused(nP2g[0], nP2g[1]).backward(create_graph=True)
+contract([x.gradient for x in nU2g], dA).backward()
+H_link = [g(nU2g[mu].gradient) for mu in range(Nd)]
 diff = max(n2(H_list[mu] - H_link[mu]) for mu in range(Nd))
 g.message(f"2nd deriv (HVP): fused list input vs per-link inputs: {diff}")
 assert diff < 1e-16
 
 
 def build_fused(n):
-    # the fused two-output action over four per-link nodes of any depth
+    # the fused two-output action over four per-link nodes
     out = rad.node([g.lattice(grid, U[0].otype) for _ in range(2)])
     stencil(out, *n)
     return act_fused(out[0], out[1])
@@ -236,31 +212,23 @@ def build_fused(n):
 assert_hvp_vs_fd(H_list, build_fused, dA, "fused plaquette")
 g.message("fused plaquette 2nd derivative: OK")
 
-# 3rd derivative
+# 3rd derivative: two recorded passes, the backward of the contraction with
+# dA deposits the (recorded) HVP, its contraction with dB the 3rd derivative
 dB = g.random("stencil_3rd").normal_element(g.group.cartesian(U))
-nnnP = rad.node(rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)])))
-nnnU = rad.node(rad.node(rad.node(U)))
-nA = list_dir(dA, 2)
-nB = list_dir(dB, 1)
-stencil(nnnP, nnnU)
-act_fused(nnnP[0], nnnP[1])()
-c = sum(g.group.inner_product(nnnU.gradient[mu], nA[mu]) for mu in range(Nd))
-c()
-nnU = nnnU.value
-c = sum(g.group.inner_product(nnU.gradient[mu], nB[mu]) for mu in range(Nd))
-c()
-G_list = [g(x) for x in nnU.value.gradient]
-nnnPg = rad.node(rad.node(rad.node([g.copy(Ps0), g.copy(Ps1)])))
-nnnUg = [rad.node(rad.node(rad.node(u))) for u in U]
-nAg = link_dirs(dA, 2)
-nBg = link_dirs(dB, 1)
-stencil(nnnPg, *nnnUg)
-act_fused(nnnPg[0], nnnPg[1])()
-c = sum(g.group.inner_product(nnnUg[mu].gradient, nAg[mu]) for mu in range(Nd))
-c()
-c = sum(g.group.inner_product(nnnUg[mu].value.gradient, nBg[mu]) for mu in range(Nd))
-c()
-G_link = [g(nnnUg[mu].value.value.gradient) for mu in range(Nd)]
+nP3 = rad.node([g.copy(Ps0), g.copy(Ps1)])
+nU3 = rad.node(U)
+stencil(nP3, nU3)
+act_fused(nP3[0], nP3[1]).backward(create_graph=True)
+contract(nU3.gradient, dA).backward(create_graph=True)
+contract(nU3.gradient, dB).backward()
+G_list = [g(x) for x in nU3.gradient]
+nP3g = rad.node([g.copy(Ps0), g.copy(Ps1)])
+nU3g = [rad.node(u) for u in U]
+stencil(nP3g, *nU3g)
+act_fused(nP3g[0], nP3g[1]).backward(create_graph=True)
+contract([x.gradient for x in nU3g], dA).backward(create_graph=True)
+contract([x.gradient for x in nU3g], dB).backward()
+G_link = [g(nU3g[mu].gradient) for mu in range(Nd)]
 diff = max(n2(G_list[mu] - G_link[mu]) for mu in range(Nd))
 g.message(f"3rd deriv: fused list input vs per-link inputs: {diff}")
 assert diff < 1e-16
@@ -364,32 +332,26 @@ assert diff < 1e-16
 g.message("path-based plaquette 1st derivative: OK")
 
 # 2nd derivative (HVP): path-based vs hand-written single-output plaquette
-# (dA / link_dirs are defined in the fused-plaquette sections above)
-nA1 = link_dirs(dA, 1)
+# (dA is defined in the fused-plaquette sections above)
 # path-based
-nnU = [rad.node(rad.node(u)) for u in U]
-T2 = ptm(nnU)
-S2 = act_single(T2)
-S2()
-c = sum(g.group.inner_product(nnU[mu].gradient, nA1[mu]) for mu in range(Nd))
-c()
-H_path = [g(nnU[mu].value.gradient) for mu in range(Nd)]
+nU2 = [rad.node(u) for u in U]
+act_single(ptm(nU2)).backward(create_graph=True)
+contract([x.gradient for x in nU2], dA).backward()
+H_path = [g(nU2[mu].gradient) for mu in range(Nd)]
 # hand-written
-nnU1 = [rad.node(rad.node(u)) for u in U]
+nU21 = [rad.node(u) for u in U]
 T1 = rad.node(g.copy(P0))
-stencil1(T1, *nnU1)
-S2b = act_single(T1)
-S2b()
-c = sum(g.group.inner_product(nnU1[mu].gradient, nA1[mu]) for mu in range(Nd))
-c()
-H_hw = [g(nnU1[mu].value.gradient) for mu in range(Nd)]
+stencil1(T1, *nU21)
+act_single(T1).backward(create_graph=True)
+contract([x.gradient for x in nU21], dA).backward()
+H_hw = [g(nU21[mu].gradient) for mu in range(Nd)]
 diff = max(n2(H_path[mu] - H_hw[mu]) for mu in range(Nd))
 g.message(f"path vs hand-written 2nd deriv (HVP): {diff}")
 assert diff < 1e-16
 
 
 def build_path(n):
-    # the single-output action over four per-link nodes of any depth, with the
+    # the single-output action over four per-link nodes, with the
     # target allocated by parallel_transport_matrix.__call__
     return act_single(ptm(n))
 
@@ -398,29 +360,20 @@ assert_hvp_vs_fd(H_path, build_path, dA, "path-based plaquette")
 g.message("path-based plaquette 2nd derivative: OK")
 
 # 3rd derivative: path-based vs hand-written single-output plaquette
-nA2 = link_dirs(dA, 2)
-nB1 = link_dirs(dB, 1)
 # path-based
-nnnU = [rad.node(rad.node(rad.node(u))) for u in U]
-T3 = ptm(nnnU)
-S3 = act_single(T3)
-S3()
-c = sum(g.group.inner_product(nnnU[mu].gradient, nA2[mu]) for mu in range(Nd))
-c()
-c = sum(g.group.inner_product(nnnU[mu].value.gradient, nB1[mu]) for mu in range(Nd))
-c()
-G_path = [g(nnnU[mu].value.value.gradient) for mu in range(Nd)]
+nU3 = [rad.node(u) for u in U]
+act_single(ptm(nU3)).backward(create_graph=True)
+contract([x.gradient for x in nU3], dA).backward(create_graph=True)
+contract([x.gradient for x in nU3], dB).backward()
+G_path = [g(nU3[mu].gradient) for mu in range(Nd)]
 # hand-written
-nnnU1 = [rad.node(rad.node(rad.node(u))) for u in U]
+nU31 = [rad.node(u) for u in U]
 T3b = rad.node(g.copy(P0))
-stencil1(T3b, *nnnU1)
-S3b = act_single(T3b)
-S3b()
-c = sum(g.group.inner_product(nnnU1[mu].gradient, nA2[mu]) for mu in range(Nd))
-c()
-c = sum(g.group.inner_product(nnnU1[mu].value.gradient, nB1[mu]) for mu in range(Nd))
-c()
-G_hw = [g(nnnU1[mu].value.value.gradient) for mu in range(Nd)]
+stencil1(T3b, *nU31)
+act_single(T3b).backward(create_graph=True)
+contract([x.gradient for x in nU31], dA).backward(create_graph=True)
+contract([x.gradient for x in nU31], dB).backward()
+G_hw = [g(nU31[mu].gradient) for mu in range(Nd)]
 diff = max(n2(G_path[mu] - G_hw[mu]) for mu in range(Nd))
 g.message(f"path vs hand-written 3rd deriv: {diff}")
 assert diff < 1e-16
@@ -468,30 +421,26 @@ act_st.gradient(U, U)
 g.qcd.gauge.action.iwasaki(beta).assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 
 
-def hvp_of(action, dir_nodes):
-    nnU = [rad.node(rad.node(u)) for u in U]
-    action(nnU)(with_value=False)
-    c = sum(g.group.inner_product(nnU[mu].gradient, dir_nodes[mu]) for mu in range(Nd))
-    c(with_value=False)
-    return [g(nnU[mu].value.gradient) for mu in range(Nd)]
+def hvp_of(action, d):
+    nU = [rad.node(u) for u in U]
+    action(nU).backward(create_graph=True)
+    contract([x.gradient for x in nU], d).backward()
+    return [g(nU[mu].gradient) for mu in range(Nd)]
 
 
-H_st = hvp_of(act_st, link_dirs(dA, 1))
-H_cs = hvp_of(act_cs, link_dirs(dA, 1))
+H_st = hvp_of(act_st, dA)
+H_cs = hvp_of(act_cs, dA)
 diff = max(n2(H_st[mu] - H_cs[mu]) / n2(H_cs[mu]) for mu in range(Nd))
 g.message(f"local temporaries: HVP vs cshift graph: {diff}")
 assert diff < 1e-28
 
 
 def d3_of(action):
-    nnnU = [rad.node(rad.node(rad.node(u))) for u in U]
-    action(nnnU)()
-    c = sum(g.group.inner_product(nnnU[mu].gradient, link_dirs(dA, 2)[mu]) for mu in range(Nd))
-    c()
-    c = sum(g.group.inner_product(nnnU[mu].value.gradient, link_dirs(dB, 1)[mu]) for mu in range(Nd))
-    c()
-    return [g(nnnU[mu].value.value.gradient) for mu in range(Nd)]
-
+    nU = [rad.node(u) for u in U]
+    action(nU).backward(create_graph=True)
+    contract([x.gradient for x in nU], dA).backward(create_graph=True)
+    contract([x.gradient for x in nU], dB).backward()
+    return [g(nU[mu].gradient) for mu in range(Nd)]
 
 G_st = d3_of(act_st)
 G_cs = d3_of(act_cs)
@@ -503,7 +452,7 @@ g.message("local temporaries in node mode: OK")
 # a stencil with a single input field (all factors at the zero point): the
 # cubic f(X) = X + a X^2 + b X^3 of a general complex matrix field (the
 # word sums of g.ml.layer.word_sum).  The adjoint of a one-input stencil has a
-# single flow slot, a one-element list node in nested passes.  HVP and 3rd
+# single flow slot, a one-element list node in recorded passes.  HVP and 3rd
 # derivative of the nonlinear Re sum tr f(X) f(X) against the node graph
 X = g.mcolor(grid)
 rng.cnormal(X, sigma=0.3)
@@ -516,7 +465,7 @@ cubic = g.stencil.matrix(X, [zero], [(0, -1, 1.0, [(1, 0, 0)]), (0, 0, ca, [(1, 
 
 def cubic_st(x):
     out = g.lattice(X)
-    for _ in range(g.ad.reverse.util.value_depth_static(x)):
+    if isinstance(x, rad.node_base):
         out = rad.node(out)
     cubic(out, x)
     return out
@@ -532,36 +481,30 @@ def act_cubic(f, x):
     return g.sum(g.trace(y * y)).real
 
 
-def leaf(x, depth):
-    for _ in range(depth):
-        x = rad.node(x, infinitesimal_to_cartesian=False)
-    return x
+def leaf(x):
+    return rad.node(x, infinitesimal_to_cartesian=False)
 
 
 def contract_dir(grad, d):
-    # Re sum tr(d^dag grad), d a constant direction node
+    # Re sum tr(d^dag grad), d a plain direction
     return g.sum(g.trace(g.adj(d) * grad)).real
 
 
 def derivatives_cubic(f):
     # gradient, HVP along DX, 3rd derivative along DX, DY
-    n1 = leaf(X, 1)
-    act_cubic(f, n1)()
+    n1 = leaf(X)
+    act_cubic(f, n1).backward()
     G = g(n1.gradient)
-    n2_ = leaf(X, 2)
-    act_cubic(f, n2_)(with_value=False)
-    c = contract_dir(n2_.gradient, rad.node(DX, with_gradient=False))
-    c(with_value=False)
-    H = g(n2_.value.gradient)
-    n3 = leaf(X, 3)
-    act_cubic(f, n3)()
-    c = contract_dir(n3.gradient, rad.node(rad.node(DX, with_gradient=False), with_gradient=False))
-    c()
-    c = contract_dir(n3.value.gradient, rad.node(DY, with_gradient=False))
-    c()
-    D3 = g(n3.value.value.gradient)
+    n2_ = leaf(X)
+    act_cubic(f, n2_).backward(create_graph=True)
+    contract_dir(n2_.gradient, DX).backward()
+    H = g(n2_.gradient)
+    n3 = leaf(X)
+    act_cubic(f, n3).backward(create_graph=True)
+    contract_dir(n3.gradient, DX).backward(create_graph=True)
+    contract_dir(n3.gradient, DY).backward()
+    D3 = g(n3.gradient)
     return G, H, D3
-
 
 plain = cubic_st(X)
 eps = n2(plain - g(cubic_graph(X))) / n2(plain)
@@ -587,10 +530,8 @@ mixed = g.stencil.matrix(
 
 
 def mixed_st(x):
-    depth = g.ad.reverse.util.value_depth_static(x)
-    out = g.lattice(X)
-    d = D
-    for _ in range(depth):
+    out, d = g.lattice(X), D
+    if isinstance(x, rad.node_base):
         out = rad.node(out)
         d = rad.node(d, with_gradient=False)
     mixed(out, x, C, d)
@@ -598,13 +539,11 @@ def mixed_st(x):
 
 
 def mixed_graph(x):
-    depth = g.ad.reverse.util.value_depth_static(x)
     c, d = C, D
-    for _ in range(depth):
+    if isinstance(x, rad.node_base):
         c = rad.node(c, with_gradient=False)
         d = rad.node(d, with_gradient=False)
     return x + c * x * x + x * d * x * ca
-
 
 before = len(mixed._node_adj) if hasattr(mixed, "_node_adj") else 0
 for name, a, b in zip(["gradient", "HVP", "3rd derivative"], derivatives_cubic(mixed_st), derivatives_cubic(mixed_graph)):

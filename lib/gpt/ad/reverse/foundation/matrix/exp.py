@@ -31,8 +31,8 @@
 #
 # i.e., the adjoint of a derivative of exp is a derivative of exp at X^dag.
 # (For k=0 this is the familiar int_0^1 e^{s X^dag} W e^{(1-s) X^dag} ds.)
-# So, as for stencils, the gradient of exp is exp: a nested pass builds D_k
-# nodes one level down, and at the plain level each D_k is ONE compiled local
+# So, as for stencils, the gradient of exp is exp: a recorded pass builds D_k
+# nodes, and at the plain level each D_k is ONE compiled local
 # kernel instead of a graph of O(100) elementwise node operations.
 #
 # Plain evaluation: gpt.core.foundation.lattice.matrix.exp.derivative (exp
@@ -61,7 +61,7 @@ def _plain_base(x):
 
 class _tower:
     # the plain X shared by all D_k nodes of one exp tower (the node exp(X)
-    # and the flows built from it, at any nesting depth): every plain D_k is
+    # and the flows built from it, to any order): every plain D_k is
     # evaluated at X or X^dag, which have the same scaling s, so s and the
     # materialized X^dag are computed once.  X is identified by identity; the
     # user-created root resets the tower in every pass (see derivative), so
@@ -121,7 +121,7 @@ _D = primitive("exp_d", _plain, lambda x, *h, **static: x, vjp=_vjp, fwd=_fwd)
 
 def derivative(x, h, tower=None):
     # D_k(x; h_1..h_k); plain values run the fused kernel, node values build a
-    # node whose backward is again a D (one level down), in the same tower.
+    # node whose backward is again a D, in the same tower.
     # The user-created root resets the tower in every pass (when it computes
     # a plain value, or else in its backward), so a leaf modified in place
     # between passes is never served stale

@@ -42,9 +42,9 @@
 # The adjoint reads only the (never-written) forward values and output flows,
 # never a flow slot, so each stage is a single kernel pass.
 #
-# In a nested (multi-deep) pass the flows are lazy node graphs and cannot be
-# fed to the kernels.  The backward is then the ADJOINT STENCIL acting on
-# nodes again: each stage is a stencil node (the primitive of its compiled
+# In a recorded pass (create_graph) the flows are lazy node graphs and
+# cannot be fed to the kernels.  The backward is then the ADJOINT STENCIL
+# acting on nodes again: each stage is a stencil node (the primitive of its compiled
 # kernel) whose backward is again derived by adjoint_code.  So the recursion
 # is a self-similar tower of stencils -- S, A = adjoint(S), A' = adjoint(A),
 # ... -- with NO cshift: the shifts live in the compiled kernels' points.
@@ -279,8 +279,8 @@ class _stencil_op:
     # output field(s) 0..m-1 (a lattice, or a list of m lattices).  Its plain
     # implementation is the kernel; its vjp is the adjoint (adjoint_code),
     # applied as primitives again: with plain flows one fused run of the
-    # compiled adjoint kernels, in a nested pass stencil nodes one level down
-    # whose vjps are the adjoints of the adjoint, and so on (a self-similar
+    # compiled adjoint kernels, in a recorded pass stencil nodes whose vjps
+    # are the adjoints of the adjoint, and so on (a self-similar
     # tower of stencils, with no cshift: the shifts live in the kernels'
     # points)
     def __init__(self, stencil, out, n_inputs):
@@ -405,8 +405,8 @@ class _stencil_op:
         cache, key = self._adjoint(flowed)
         adj, KA, KB_fresh, KB_acc = cache[key]
         nS, nL, m = adj["nS"], adj["nL"], self.m
-        # (a scaled identity is a plain flow, also in a nested pass, where it
-        # is a constant; the seedless kernels are for plain values)
+        # (a scaled identity is a plain flow, also in a recorded pass, where
+        # it is a constant; the seedless kernels are for plain values)
         c = None if self.listed or has_node(values) else flows.scale(z.flow)
         if c is None:
             psi = self.psi(z)
@@ -430,7 +430,7 @@ class _stencil_op:
             if KB_acc is not None:
                 KB_acc(*(slots + values))
             return {k: slots[r] for r, k in enumerate(self._children_of(flowed))}
-        # nested: both stages as stencil nodes one level down
+        # recorded: both stages as stencil nodes
         A = _op(KA, _lattice_list(self.grid, self.otype, nS + nL), len(psi) + len(values))(
             *psi, *values)
         B = None
@@ -463,8 +463,7 @@ def matrix(stencil, *fields):
             children.extend(arg[i] for i in range(len(arg)))
         else:
             children.append(constant(arg))
-    # (the output node is constructed anew: its old value is discarded, its
-    # depth is the computed node's)
+    # (the output node is constructed anew: its old value is discarded)
     z = _op(stencil, output._container, len(children)).node(*children)
     output.value = None
     for name in [
@@ -475,7 +474,6 @@ def matrix(stencil, *fields):
         "_reads_children",
         "_reads_self",
         "with_gradient",
-        "depth",
     ]:
         setattr(output, name, getattr(z, name))
     output.gradient = None

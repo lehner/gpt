@@ -112,6 +112,14 @@ def get_otype_from_expression(e):
 # - an object could be a spin or a gauge matrix
 
 
+def _operand(x):
+    # whether x is an operand of the expression algebra (else an operator
+    # returns NotImplemented, so that Python asks the other operand, e.g. a
+    # type of another foundation such as an AD node, for the reflected
+    # operation)
+    return isinstance(x, (expr, factor, gpt.tensor, list)) or gpt.util.is_num(x) or x is None
+
+
 class expr:
     auto_closure_stack = []
 
@@ -221,12 +229,16 @@ class expr:
                     res = gpt.util.to_complex(res.array)
                 return res
             assert 0
+        elif not _operand(l):
+            return NotImplemented
         else:
             return self.__mul__(expr(l))
 
     def __rmul__(self, l):
         if isinstance(l, expr):
             return l.__mul__(self)
+        elif not _operand(l):
+            return NotImplemented
         else:
             return self.__rmul__(expr(l))
 
@@ -241,6 +253,8 @@ class expr:
                 return expr(self.val + l.val, self.unary)
             else:
                 return expr(gpt.apply_expr_unary(self).val + gpt.apply_expr_unary(l).val)
+        elif not _operand(l):
+            return NotImplemented
         else:
             return self.__add__(expr(l))
 
@@ -251,6 +265,8 @@ class expr:
         raise Exception("Do not know how to add {type(l)} + expr()")
 
     def __sub__(self, l):
+        if not _operand(l):
+            return NotImplemented
         return self.__add__(l.__neg__())
 
     def __neg__(self):
@@ -288,9 +304,13 @@ class expr:
 
 class factor:
     def __rmul__(self, l):
+        if not _operand(l):
+            return NotImplemented
         return expr(l) * expr(self)
 
     def __mul__(self, l):
+        if not _operand(l):
+            return NotImplemented
         return expr(self) * expr(l)
 
     def __truediv__(self, l):
@@ -300,6 +320,8 @@ class factor:
     def __add__(self, l):
         if isinstance(l, int) and l == 0:
             return self
+        if not _operand(l):
+            return NotImplemented
         return expr(self) + expr(l)
 
     def __radd__(self, l):
@@ -307,6 +329,8 @@ class factor:
         return self.__add__(l)
 
     def __sub__(self, l):
+        if not _operand(l):
+            return NotImplemented
         return expr(self) - expr(l)
 
     def __neg__(self):

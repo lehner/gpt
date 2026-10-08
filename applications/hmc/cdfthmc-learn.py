@@ -66,14 +66,19 @@ for epoch in range(20):
     # unsmear
     _U = apply_smearing(U0, rho_val, True)
 
-    # first create cost function graph with integration variable as leaf
-    # mark inner node as infinitesimal instead of cartesian (dU versus dU U^dagger)
-    # since we want to re-use its gradient as an initial value to propagate through
-    # the initial inverse smearing
-    nnU0 = [rad.node(rad.node(u, infinitesimal_to_cartesian=False)) for u in _U]
+    # first create cost function graph with integration variable as leaf:
+    # the force w.r.t. the integration variable, recorded (create_graph) and
+    # converted to the cartesian representation; the leaf itself is marked
+    # infinitesimal instead of cartesian (dU versus dU U^dagger) since we want
+    # to re-use its gradient in the cost function's pass as an initial value
+    # to propagate through the initial inverse smearing
+    nU0l = [rad.node(u, infinitesimal_to_cartesian=False) for u in _U]
     rho = rad.node(rho_val)
-    g.qcd.gauge.action.differentiable_iwasaki(beta)(apply_smearing(nnU0, rad.node(rho), False))()
-    c = sum(g.norm2(nnU0[mu].gradient) for mu in range(4)) / 4 / full.grid.fsites / 8 / 3
+    g.qcd.gauge.action.differentiable_iwasaki(beta)(apply_smearing(nU0l, rho, False)).backward(
+        create_graph=True, wrt=nU0l
+    )
+    force = [g.infinitesimal_to_cartesian(x, x.gradient) for x in nU0l]
+    c = sum(g.norm2(force[mu]) for mu in range(4)) / 4 / full.grid.fsites / 8 / 3
 
     # then create a graph from physical field to integration variable as leaf
     nU = [rad.node(u) for u in U0]
@@ -85,7 +90,7 @@ for epoch in range(20):
 
     # there is also a gradient on the physical fields that needs to be propagated to the rho in the inverse smearing
     for mu in range(4):
-        nU0[mu](initial_gradient=nnU0[mu].value.gradient)
+        nU0[mu].backward(initial_gradient=nU0l[mu].gradient)
         rho_gradients.append(rho2.gradient)
 
     g.message(

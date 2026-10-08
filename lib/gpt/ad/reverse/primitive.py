@@ -26,14 +26,14 @@
 # plain arguments it runs plain(*args, **static).  Called with a node among
 # its arguments it returns a node whose
 #
-#   forward  is op(*values of the children)     (plain: the implementation;
-#                                                nested: a node one level down)
+#   forward  is the implementation on the values of the children
 #   backward is the vjp at the values of the children
 #
 # Since the vjp is again made of primitives, it is evaluated in the same way:
-# with plain flows it runs plain implementations, with node flows (a nested
-# pass) it builds nodes one level down.  So every primitive is differentiable
-# to any order without separate plain and nested code (the self-similar
+# in a plain pass it runs plain implementations; in a recorded pass
+# (create_graph) it sees the children nodes instead of their values and
+# builds nodes of the same graph.  So every primitive is differentiable to
+# any order without separate plain and recording code (the self-similar
 # derivative towers of exp and of the stencils).
 #
 #   plain(*args, **static)                -> the value on plain arguments
@@ -54,13 +54,13 @@
 #             node's value, with a residual that is handed to the vjp of that
 #             node (keyword residual; once: None in later passes)
 #   order     the highest supported derivative order (None: any); with
-#             order=1 nested values and flows raise NotImplementedError
+#             order=1 a recorded pass raises NotImplementedError
 #
 # The static keyword arguments are not differentiated; they are passed on
-# to plain, container, fwd, the vjp, and to the nodes built at deeper levels.
+# to plain, container, fwd, the vjp, and to the nodes the vjp builds.
 #
 import gpt as g
-from gpt.ad.reverse.util import constant, is_node, value_of
+from gpt.ad.reverse.util import constant, is_node, value_of, recording
 from gpt.ad.reverse.flow import accum
 
 
@@ -113,14 +113,10 @@ class primitive:
 
         def forward():
             values = [value_of(c) for c in children]
-            if not has_node(values):
-                if self.fwd is None:
-                    return self.plain(*values, **static)
-                value, cell["residual"] = self.fwd(*values, **static)
-                return value
-            if self.order == 1:
-                raise NotImplementedError(f"{self.name} supports first derivatives only")
-            return self(*values, **static)
+            if self.fwd is None:
+                return self.plain(*values, **static)
+            value, cell["residual"] = self.fwd(*values, **static)
+            return value
 
         def values_for(indices):
             # the values the flows into the children indices read
@@ -133,7 +129,7 @@ class primitive:
             needed = [i for i, c in enumerate(children) if c.with_gradient]
             if not needed:
                 return
-            if self.order == 1 and is_node(z.gradient):
+            if self.order == 1 and recording():
                 raise NotImplementedError(f"{self.name} supports first derivatives only")
             extra = {}
             if self.fwd is not None:

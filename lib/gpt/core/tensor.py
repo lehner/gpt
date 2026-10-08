@@ -150,6 +150,9 @@ class tensor(foundation_base):
             return other.__mul__(self)
 
     def __add__(self, other):
+        if not isinstance(other, tensor):
+            # (e.g. an AD node: Python asks it for the reflected operation)
+            return NotImplemented
         assert self.otype.__name__ == other.otype.__name__
         return tensor(self.array + other.array, self.otype)
 
@@ -160,6 +163,8 @@ class tensor(foundation_base):
         return tensor(-self.array, self.otype)
 
     def __sub__(self, other):
+        if not isinstance(other, tensor):
+            return NotImplemented
         assert self.otype.__name__ == other.otype.__name__
         return tensor(self.array - other.array, self.otype)
 

@@ -34,16 +34,14 @@ class point_manager:
 
 
 def new_target_list(prototype, n):
-    # A fresh target for n outputs of one fused stencil call, at the same
-    # reverse-AD nesting depth as `prototype`.  The AD stencil foundation
-    # represents the m outputs of a fused call as ONE list node per nesting
-    # level (not m sibling nodes), see lib/gpt/ad/reverse/foundation/stencil.py.
-    #
-    # The depth is read statically: resolving it by evaluating would force a
-    # forward pass on a computed prototype and cache a value that a later
-    # backward pass then reuses instead of recomputing it from updated leaves.
+    # A fresh target for n outputs of one fused stencil call: plain lattices,
+    # or for a node prototype ONE list node (the AD stencil foundation
+    # represents the m outputs of a fused call as one list node, not m
+    # sibling nodes, see lib/gpt/ad/reverse/foundation/stencil.py).  The
+    # prototype is not evaluated (that would force a forward pass on a
+    # computed prototype).
     r = [g.lattice(prototype.grid, prototype.otype) for i in range(n)]
-    for i in range(g.ad.reverse.util.value_depth_static(prototype)):
+    if isinstance(prototype, g.ad.reverse.node_base):
         r = g.ad.reverse.node(r)
     return r
 

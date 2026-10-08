@@ -180,7 +180,7 @@ class function:
       initialize(self, rng, scale=None)   (if it has parameters)
 
     evaluate receives one value per slot (a list for a list slot) and must
-    work on plain values and on nodes of any depth.  If any input or
+    work on plain values and on nodes.  If any input or
     parameter is a node, all of them (and the constants) are passed as
     nodes, plain values as constant nodes.
     Inputs and outputs are declared as names or (name, type) pairs, with the

@@ -22,8 +22,8 @@
 #   y(x) = sum_t w_t X_{t,1}(x) X_{t,2}(x) ... ,   X = an input or its adjoint
 #
 # On nodes the stencil is a stencil node (g.ad.reverse.foundation.stencil):
-# one kernel forward, its adjoint (again a stencil) backward, and stencils at
-# any nesting depth -- instead of a node graph with one node per product and
+# one kernel forward, its adjoint (again a stencil) backward, and stencils to
+# any order -- instead of a node graph with one node per product and
 # sum.  Site-dependent or trained coefficients enter as factor fields c 1
 # (layer.util.embed).
 #
@@ -56,7 +56,7 @@ class word_sum:
             out = g.lattice(inputs[0])
             self.stencil(out.grid, out.otype)(out, *inputs)
             return out
-        # a zero output at the depth of the deepest input
-        out = max(nodes, key=lambda x: x.depth).new()
+        # a zero output node
+        out = nodes[0].new()
         self.stencil(out.grid, out.otype)(out, *inputs)
         return out

@@ -6,7 +6,7 @@ optimizers.  `g.ml` is built on the reverse AD only.
 
 **Read first:** `AD_DEVELOPMENT.md` (same directory) for the environment
 (`source lib/cgpt/build/source.sh`, clearing `__pycache__`), the test suite,
-and the AD itself (nodes, nested derivatives, functionals, conventions,
+and the AD itself (nodes, recorded higher derivatives, functionals, conventions,
 pitfalls).  This file covers only what is specific to `g.ml`.
 
 Goal of the framework: everything that is node-wrappable works in `g.ml`
@@ -92,7 +92,7 @@ class scale(g.ml.function):
   Values are updated in place and never replaced: numbers are stored as 0-d
   numpy arrays (of their dtype) and enter `evaluate` as numbers (plain:
   `.item()`; nodes: `g.ad.reverse.linear.element`, so a leaf of a 0-d array
-  works at any depth), arrays and fields are updated in place by
+  works to any order), arrays and fields are updated in place by
   assignments and by the optimizers (`set_element`).  The lists (`_values`)
   reject replacing an element (`x[i] @= y` reassigns the same object, which
   is allowed).  An optimizer given `f.parameters()` updates the function
@@ -131,7 +131,8 @@ class scale(g.ml.function):
 3. **Symbolic** (symbols as inputs, or a dict as parameters): the call is
    recorded, see §3.
 
-`evaluate` must work on plain values and on nodes of any depth.  Plain
+`evaluate` must work on plain values and on nodes (also in recorded
+passes, where its backward closures see nodes).  Plain
 internal fields (e.g. a unit matrix built at construction) multiplied by
 nodes are fine.
 

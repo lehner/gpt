@@ -4,26 +4,25 @@
 # Acknowledgements: Qwen 3.8 27b in Pi Coding Agent
 #
 # Desc.: Higher-order (2nd and 3rd) derivatives in the reverse-accumulation
-#        AD framework via nested nodes.
+#        AD framework: recorded reverse passes (create_graph=True).
 #
-# A k-th order derivative is obtained with k nested rad.node() wraps
-# n_k = node(node(...node(x)...)).  After evaluating the action graph
-# S(n_k)(), the leaf's .gradient is a (lazy) compute graph for dS/dx.
-# Contracting that graph with a constant direction node (created with
-# with_gradient=False) and evaluating the result runs the next reverse
-# pass, depositing the next derivative into the next-inner leaf's
-# .gradient, e.g. for n3 = node(node(node(x))):
+# A reverse pass with create_graph=True records the backward: the leaf's
+# .gradient is then a (lazy) node graph for dS/dx over the same leaves.
+# Contracting it with a direction gives an ordinary scalar node, whose
+# reverse pass deposits the next derivative into the leaf's .gradient; the
+# order is chosen per pass, e.g. for n = node(x):
 #
-#   S(n3)()                          -> n3.gradient           graph for dS/dx
-#   inner_product(na, n3.gradient)() -> n3.value.gradient     graph for d2S/dx2 * a
-#   inner_product(nb, n3.value.gradient)()
-#                                     -> n3.value.value.gradient = d3S/dx3 * a * b
+#   S(n).backward(create_graph=True)                -> n.gradient: graph for dS/dx
+#   inner_product(a, n.gradient).backward(create_graph=True)
+#                                                    -> n.gradient: graph for d2S/dx2 a
+#   inner_product(b, n.gradient).backward()          -> n.gradient = d3S/dx3 a b
 #
 # Conventions:
 #  - the contraction must be linear in the gradient argument.  For lattice
 #    nodes, g.inner_product(direction, gradient) puts the gradient in the
-#    linear (second) slot; for scalar nodes use g.adj(direction_node) *
-#    gradient (node __mul__ is adjoint-linear in its first argument).
+#    linear (second) slot; for scalar nodes use g.adj(direction) * gradient
+#    (node __mul__ is adjoint-linear in its first argument).  Directions are
+#    plain values (constants).
 #  - for SU(N) gauge fields, contract with g.group.inner_product as in
 #    applications/hmc/hessian.py.
 #
@@ -35,12 +34,30 @@ rad = g.ad.reverse
 
 
 def resolve_value(x):
-    # evaluate a value that may be a chain of (lazy) nodes down to a plain
-    # value; node values are evaluated in place  (test-local helper, moved
-    # out of the reverse-AD core module, which does not use it internally)
-    while is_node(x):
+    # the plain value of a result that may be a (lazy) node, e.g. a recorded
+    # gradient
+    if is_node(x):
         x = value_of(x)
-    return x
+    return g(x) if isinstance(x, g.expr) else x
+
+
+def hvp_of(S, x, a, contract=None, **leaf):
+    # d/dx <a, dS/dx>: a recorded pass and a reverse pass of the contraction
+    contract = contract or g.inner_product
+    n = rad.node(x, **leaf)
+    S(n).backward(create_graph=True)
+    contract(a, n.gradient).backward()
+    return n.gradient
+
+
+def third_of(S, x, a, b, contract=None):
+    # d/dx <b, d/dx <a, dS/dx>>: two recorded passes and a reverse pass
+    contract = contract or g.inner_product
+    n = rad.node(x)
+    S(n).backward(create_graph=True)
+    contract(a, n.gradient).backward(create_graph=True)
+    contract(b, n.gradient).backward()
+    return n.gradient
 
 
 def assert_close(val, ref, tol, msg):
@@ -80,26 +97,17 @@ for x0 in [1.333, -0.7, 0.3]:
     S()
     assert_close(n.gradient, 4 * x0**3 + 6 * x0, 1e-14, "scalar dS/dx")
 
-    n2 = rad.node(rad.node(x0))
-    S2 = n2**4 + 3.0 * n2**2
-    S2()
-    na = rad.node(a, with_gradient=False)
-    c2 = g.adj(na) * n2.gradient
-    c2()
-    assert_close(
-        n2.value.gradient, (12 * x0**2 + 6) * a, 1e-13, "scalar d2S/dx2 * a"
-    )
+    def S_scalar(m):
+        return m**4 + 3.0 * m**2
 
-    n3 = rad.node(rad.node(rad.node(x0)))
-    S3 = n3**4 + 3.0 * n3**2
-    S3()
-    nb = rad.node(b, with_gradient=False)
-    c3 = g.adj(na) * n3.gradient
-    c3()
-    c3b = g.adj(nb) * n3.value.gradient
-    c3b()
+    def scalar_contract(d, gr):
+        return g.adj(d) * gr
+
     assert_close(
-        n3.value.value.gradient, 24 * x0 * a * b, 1e-12, "scalar d3S/dx3 * a * b"
+        hvp_of(S_scalar, x0, a, scalar_contract), (12 * x0**2 + 6) * a, 1e-13, "scalar d2S/dx2 * a"
+    )
+    assert_close(
+        third_of(S_scalar, x0, a, b, scalar_contract), 24 * x0 * a * b, 1e-12, "scalar d3S/dx3 * a * b"
     )
 
 
@@ -115,8 +123,6 @@ s0 = g.complex(grid)
 rng_l.cnormal(s0)
 a0 = rng_l.cnormal(g.complex(grid))
 b0 = rng_l.cnormal(g.complex(grid))
-na = rad.node(a0, with_gradient=False)
-nb = rad.node(b0, with_gradient=False)
 
 # --- exact case: S = sum |s|^4, with C = s * adj(s) (real) ---
 # exact derivatives (dS = Re sum adj(G) ds):
@@ -140,33 +146,30 @@ n = rad.node(s0)
 quartic_norm(n)()
 assert_field_close(n.gradient, 4 * C0 * s0, 1e-13, "quartic norm dS/ds")
 
-n2 = rad.node(rad.node(s0))
-quartic_norm(n2)()
-c2 = g.inner_product(na, n2.gradient)
-c2()
 ref_h = 4 * C0 * a0 + 4 * (g.adj(s0) * a0 + s0 * g.adj(a0)) * s0
-assert_field_close(n2.value.gradient, ref_h, 1e-12, "quartic norm HVP")
+assert_field_close(hvp_of(quartic_norm, s0, a0), ref_h, 1e-12, "quartic norm HVP")
 
-n3 = rad.node(rad.node(rad.node(s0)))
-quartic_norm(n3)()
-c3 = g.inner_product(na, n3.gradient)
-c3()
-c3b = g.inner_product(nb, n3.value.gradient)
-c3b()
 ref_t = (
     4 * (2 * g.adj(s0) * a0 + g.adj(a0) * s0 + s0 * g.adj(a0)) * b0
     + 4 * (s0 * a0 + a0 * s0) * g.adj(b0)
 )
 assert_field_close(
-    n3.value.value.gradient, ref_t, 1e-11, "quartic norm 3rd derivative"
+    third_of(quartic_norm, s0, a0, b0), ref_t, 1e-11, "quartic norm 3rd derivative"
 )
 
+# the recorded gradient is a graph over the same leaf: evaluating it gives
+# the 1st derivative
+n = rad.node(s0)
+quartic_norm(n).backward(create_graph=True)
+assert is_node(n.gradient)
+assert_field_close(n.gradient, 4 * C0 * s0, 1e-13, "quartic norm recorded dS/ds")
 
-# --- trigonometric action: exercises the rev-AD transform ops (sin/cos) in a
-# nested setting.  For real data the exact derivatives of S = sum cos(s) are
+
+# --- trigonometric action: exercises the rev-AD transform ops (sin/cos) in
+# recorded passes.  For real data the exact derivatives of S = sum cos(s) are
 # -sin, -cos*a, sin*a*b element-wise.  (For complex data the 3rd derivative
 # carries the framework's contraction convention adj(a)*b instead of a*b.)
-g.message("cos action: exact derivatives (nested transform ops)")
+g.message("cos action: exact derivatives (recorded transform ops)")
 
 s_r = g.complex(grid)
 rng_l.normal(s_r)
@@ -174,8 +177,6 @@ a_r = g.complex(grid)
 rng_l.normal(a_r)
 b_r = g.complex(grid)
 rng_l.normal(b_r)
-nar = rad.node(a_r, with_gradient=False)
-nbr = rad.node(b_r, with_gradient=False)
 
 
 def cos_action(n):
@@ -186,20 +187,14 @@ nct = rad.node(s_r)
 cos_action(nct)()
 assert_field_close(nct.gradient, -g.component.sin(s_r), 1e-13, "cos action dS/ds")
 
-n2ct = rad.node(rad.node(s_r))
-cos_action(n2ct)()
-c2ct = g.inner_product(nar, n2ct.gradient)
-c2ct()
-assert_field_close(n2ct.value.gradient, -g.component.cos(s_r) * a_r, 1e-12, "cos action HVP")
+n2ct = rad.node(s_r)
+cos_action(n2ct).backward(create_graph=True)
+c2ct = g.inner_product(a_r, n2ct.gradient)
+c2ct_value = c2ct()
+assert_field_close(n2ct.gradient, -g.component.cos(s_r) * a_r, 1e-12, "cos action HVP")
 
-n3ct = rad.node(rad.node(rad.node(s_r)))
-cos_action(n3ct)()
-c3ct = g.inner_product(nar, n3ct.gradient)
-c3ct()
-c3ctb = g.inner_product(nbr, n3ct.value.gradient)
-c3ctb()
 assert_field_close(
-    n3ct.value.value.gradient,
+    third_of(cos_action, s_r, a_r, b_r),
     g.component.sin(s_r) * a_r * b_r,
     1e-11,
     "cos action 3rd derivative",
@@ -207,45 +202,34 @@ assert_field_close(
 
 # --- the contraction is symmetric in its arguments: the reversed slots must
 # give the same (real) values and derivatives; a plain operand is promoted
-# to a constant node ---
+# to a constant node (either slot) ---
 g.message("inner_product symmetry (reversed contraction)")
 
-n2s = rad.node(rad.node(s_r))
-cos_action(n2s)()
-c2s = g.inner_product(n2s.gradient, nar)
-c2s()
-assert_close(c2s.value, c2ct.value, 1e-13, "reversed HVP value")
+
+def reversed_contract(d, gr):
+    return g.inner_product(gr, d)
+
+
+n2s = rad.node(s_r)
+cos_action(n2s).backward(create_graph=True)
+c2s = g.inner_product(n2s.gradient, a_r)
+assert_close(c2s(), c2ct_value, 1e-13, "reversed HVP value")
 assert_field_close(
-    n2s.value.gradient, -g.component.cos(s_r) * a_r, 1e-12, "reversed HVP field"
+    n2s.gradient, -g.component.cos(s_r) * a_r, 1e-12, "reversed HVP field"
 )
 
-n3s = rad.node(rad.node(rad.node(s_r)))
-cos_action(n3s)()
-c3s = g.inner_product(n3s.gradient, nar)
-c3s()
-c3sb = g.inner_product(n3s.value.gradient, nbr)
-c3sb()
 assert_field_close(
-    n3s.value.value.gradient,
+    third_of(cos_action, s_r, a_r, b_r, reversed_contract),
     g.component.sin(s_r) * a_r * b_r,
     1e-11,
     "reversed 3rd derivative",
 )
 
-n2m = rad.node(rad.node(s_r))
-cos_action(n2m)()
-c2m = g.inner_product(n2m.gradient, a_r)
-c2m()
+n2m = rad.node(s_r)
+cos_action(n2m).backward(create_graph=True)
+c2m = g.inner_product(n2m.gradient, rad.node(a_r, with_gradient=False))
 assert_close(
-    c2m.value, c2ct.value, 1e-13, "mixed-argument contraction value"
-)
-
-n2p = rad.node(rad.node(s_r))
-cos_action(n2p)()
-c2p = g.inner_product(a_r, n2p.gradient)
-c2p()
-assert_close(
-    c2p.value, c2ct.value, 1e-13, "plain-first contraction value"
+    c2m(), c2ct_value, 1e-13, "constant-node contraction value"
 )
 
 
@@ -265,22 +249,12 @@ def hop_first(s):
     return nn.gradient
 
 
-def hop_hvp(s, a_node):
-    nn = rad.node(rad.node(s))
-    hop_action(nn)()
-    c = g.inner_product(a_node, nn.gradient)
-    c()
-    return nn.value.gradient
+def hop_hvp(s, a):
+    return hvp_of(hop_action, s, a)
 
 
-def hop_third(s, a_node, b_node):
-    nn = rad.node(rad.node(rad.node(s)))
-    hop_action(nn)()
-    c = g.inner_product(a_node, nn.gradient)
-    c()
-    c2 = g.inner_product(b_node, nn.value.gradient)
-    c2()
-    return nn.value.value.gradient
+def hop_third(s, a, b):
+    return third_of(hop_action, s, a, b)
 
 
 # 1st derivative vs finite difference of the action (ad.py pattern:
@@ -318,13 +292,13 @@ for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
 # 2nd derivative: HVP (direction b) vs finite difference of the 1st derivative
 # in the same direction
 eps = 1e-5
-hvp_ad = hop_hvp(s0, nb)
+hvp_ad = hop_hvp(s0, b0)
 hvp_fd = (hop_first(g(s0 + eps * b0)) - hop_first(g(s0 - eps * b0))) / (2 * eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "hop HVP vs FD of 1st derivative")
 
 # 3rd derivative vs finite difference of the HVP field
-t3_ad = hop_third(s0, na, nb)
-t3_fd = (hop_hvp(g(s0 + eps * b0), na) - hop_hvp(g(s0 - eps * b0), na)) / (2 * eps)
+t3_ad = hop_third(s0, a0, b0)
+t3_fd = (hop_hvp(g(s0 + eps * b0), a0) - hop_hvp(g(s0 - eps * b0), a0)) / (2 * eps)
 assert_field_close(t3_ad, t3_fd, 1e-5, "hop 3rd derivative vs FD of HVP")
 
 # symmetric scalar cross-check: d^3 S(s + t b)/dt^3 vs a 4-point 3rd-order
@@ -339,7 +313,7 @@ def f_of_t(t):
 fd = (f_of_t(2 * h) - 2 * f_of_t(h) + 2 * f_of_t(-h) - f_of_t(-2 * h)) / (
     2 * h**3
 )
-t3_b = hop_third(s0, nb, nb)
+t3_b = hop_third(s0, b0, b0)
 ad = g.inner_product(b0, t3_b).real
 assert_close(ad, fd, 1e-5, "hop d3S/dt^3 vs FD of action")
 
@@ -364,12 +338,8 @@ def div_first(s):
     return nn.gradient
 
 
-def div_hvp(s, a_node):
-    nn = rad.node(rad.node(s))
-    div_action(nn)()
-    c = g.inner_product(a_node, nn.gradient)
-    c()
-    return nn.value.gradient
+def div_hvp(s, a):
+    return hvp_of(div_action, s, a)
 
 
 n = rad.node(s0)
@@ -391,7 +361,7 @@ for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
 
 # 2nd derivative: HVP (direction b) vs finite difference of the 1st derivative
 eps = 1e-5
-hvp_ad = div_hvp(s0, nb)
+hvp_ad = div_hvp(s0, b0)
 hvp_fd = (div_first(g(s0 + eps * b0)) - div_first(g(s0 - eps * b0))) / (2 * eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "div HVP vs FD of 1st derivative")
 
@@ -443,12 +413,8 @@ def pow_first(s):
     return nn.gradient
 
 
-def pow_hvp(s, a_node):
-    nn = rad.node(rad.node(s))
-    pow_action(nn)()
-    c = g.inner_product(a_node, nn.gradient)
-    c()
-    return nn.value.gradient
+def pow_hvp(s, a):
+    return hvp_of(pow_action, s, a)
 
 
 n = rad.node(s0)
@@ -470,7 +436,7 @@ for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
 
 # 2nd derivative: HVP (direction b) vs finite difference of the 1st derivative
 eps = 1e-5
-hvp_ad = pow_hvp(s0, nb)
+hvp_ad = pow_hvp(s0, b0)
 hvp_fd = (pow_first(g(s0 + eps * b0)) - pow_first(g(s0 - eps * b0))) / (2 * eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "pow HVP vs FD of 1st derivative")
 
@@ -516,9 +482,10 @@ for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
 #
 # Production convention (applications/hmc/hessian.py):  for an algebra
 # direction dA the group flow is U(t) = compose(exp(t dA), U); the HVP
-# HVP(dA) = nnU.value.gradient after evaluating
-#     c = sum_mu group.inner_product(nnU[mu].gradient, nA[mu]);  c()
-# and must satisfy the Taylor identity
+# HVP(dA) = nU.gradient after
+#     action(nU).backward(create_graph=True)            (recorded once)
+#     c = sum_mu group.inner_product(gradient[mu], dA[mu]);  c.backward()
+# (gradient: the recorded nU[mu].gradient) and must satisfy the Taylor identity
 #     S(U(t)) = S(U) + t IP(F, dA) + t^2/2 IP(dA, HVP(dA)) + O(t^3)
 # with F the 1st derivative.  The covariant Hessian
 #     covHVP = HVP - 0.5j (F dA - dA F)
@@ -529,17 +496,16 @@ rngg = g.random("gauge_test")
 Ug = g.qcd.gauge.random(gridg, rngg, scale=2.0)
 action_g = g.qcd.gauge.action.differentiable_iwasaki(2.95)
 
-nnUg = [rad.node(rad.node(u)) for u in Ug]
-nAg = [rad.node(g.group.cartesian(u)) for u in Ug]
-action_g(nnUg)()
+# the gradient graph is recorded once and contracted per direction
+nUg = [rad.node(u) for u in Ug]
+action_g(nUg).backward(create_graph=True)
+grad_g = [x.gradient for x in nUg]
 
 
 def gauge_hvp(dA):
-    for mu in range(4):
-        nAg[mu].value @= dA[mu]
-    c = sum(g.group.inner_product(nnUg[mu].gradient, nAg[mu]) for mu in range(4))
-    c()
-    return [resolve_value(nnUg[mu].value.gradient) for mu in range(4)]
+    c = sum(g.group.inner_product(grad_g[mu], dA[mu]) for mu in range(4))
+    c.backward()
+    return [nUg[mu].gradient for mu in range(4)]
 
 
 dA = rngg.normal_element(g.group.cartesian(Ug))
@@ -587,8 +553,7 @@ assert err < 1e-6, "gauge covariant Hessian symmetry"
 #####################################
 # stage 3: 3rd derivative of the gauge action (gradient of the Hessian)
 #
-# With nnnU = node(node(node(U))), three reverse passes give
-#   G3[mu] = nnnU[mu].value.value.gradient
+# Two recorded passes and a reverse pass give G3[mu] = nU[mu].gradient,
 # the gradient with respect to the gauge field of the Hessian bilinear
 # form d^2 S(A, B):  IP(C, G3) = d^3 S(C, A, B).  Cross-checks:
 #  - FD of the HVP field along the group flow in direction A:
@@ -596,36 +561,23 @@ assert err < 1e-6, "gauge covariant Hessian symmetry"
 #  - 4-point 3rd-order FD of the action for A = B = C:
 #    IP(A, G3) = f'''(0),  f(t) = S(compose(exp(t A), U))
 
-nnnUg = [rad.node(rad.node(rad.node(u))) for u in Ug]
-action_g(nnnUg)()
-nA3 = [rad.node(g.group.cartesian(u)) for u in Ug]
-nB3 = [rad.node(g.group.cartesian(u)) for u in Ug]
-for mu in range(4):
-    nA3[mu].value @= dA[mu]
-    nB3[mu].value @= dA[mu]
-cb3 = sum(
-    g.group.inner_product(nnnUg[mu].gradient, nB3[mu]) for mu in range(4)
+nU3 = [rad.node(u) for u in Ug]
+action_g(nU3).backward(create_graph=True)
+sum(g.group.inner_product(nU3[mu].gradient, dA[mu]) for mu in range(4)).backward(
+    create_graph=True
 )
-cb3()
-ca3 = sum(
-    g.group.inner_product(nnnUg[mu].value.gradient, nA3[mu]) for mu in range(4)
-)
-ca3()
-G3 = [resolve_value(nnnUg[mu].value.value.gradient) for mu in range(4)]
+sum(g.group.inner_product(nU3[mu].gradient, dA[mu]) for mu in range(4)).backward()
+G3 = [nU3[mu].gradient for mu in range(4)]
 dA_d2S_dA = sum(g.group.inner_product(dA[mu], G3[mu]) for mu in range(4))
 
 # FD of the HVP field along the group flow
 
 
 def gauge_hvp_field(Ucfg, dAd):
-    nnU = [rad.node(rad.node(u)) for u in Ucfg]
-    nD = [rad.node(g.group.cartesian(u)) for u in Ucfg]
-    action_g(nnU)()
-    for mu in range(4):
-        nD[mu].value @= dAd[mu]
-    c = sum(g.group.inner_product(nnU[mu].gradient, nD[mu]) for mu in range(4))
-    c()
-    return [resolve_value(nnU[mu].value.gradient) for mu in range(4)]
+    nU = [rad.node(u) for u in Ucfg]
+    action_g(nU).backward(create_graph=True)
+    sum(g.group.inner_product(nU[mu].gradient, dAd[mu]) for mu in range(4)).backward()
+    return [nU[mu].gradient for mu in range(4)]
 
 
 eps3 = 1e-4
@@ -660,43 +612,38 @@ assert err < 1e-3, "gauge d3S(A,A,A) vs 4-point FD of action"
 # stage 4: 3rd derivative via the functional force mechanism
 #
 # The Hessian bilinear form d^2 S(A, B) = IP(B, H(U) A) is itself a
-# differentiable scalar function of the gauge field.  With the 3-deep node
-# the HVP H(U) A is kept as a lazy node, so the bilinear form
-#     S = sum_mu group.inner_product(nB[mu], HVP_A[mu])
+# differentiable scalar function of the gauge field.  With two recorded
+# passes the HVP H(U) A is a lazy node over the leaves, so the bilinear form
+#     S = sum_mu group.inner_product(B[mu], HVP_A[mu])
 # is a node (a compute graph over the gauge field) rather than a plain
 # scalar.  Its force w.r.t. U -- via node_differentiable_functional
 # .gradient, the same reusable-graph force mechanism the production action
 # uses -- is the 3rd derivative:
-#     G3_fun = S.functional(*[nnU[mu].value.value]).gradient(U, U)
+#     G3_fun = S.functional(*nU).gradient(U, U)
 # The single reverse pass through S both evaluates the bilinear form and
-# accumulates this force, so it must agree exactly with the nested-node
-# result of stage 3 (G3 / dA_d2S_dA), which builds the same graph and
-# reads nnnU[mu].value.value.gradient after evaluating it.
+# accumulates this force, so it must agree exactly with stage 3 (G3 /
+# dA_d2S_dA), which builds the same graph.  The functional swaps the leaf
+# values, so the recorded graph is re-evaluated at other gauge fields
+# (assert_gradient_error below) without re-recording.
 
-nnU4 = [rad.node(rad.node(rad.node(u))) for u in Ug]
-action_g(nnU4)()
-nA4 = [rad.node(g.group.cartesian(u)) for u in Ug]
-nB4 = [rad.node(g.group.cartesian(u)) for u in Ug]
-for mu in range(4):
-    nA4[mu].value @= dA[mu]
-    nB4[mu].value @= dA[mu]
-cb4 = sum(
-    g.group.inner_product(nnU4[mu].gradient, nA4[mu]) for mu in range(4)
+nU4 = [rad.node(g.copy(u)) for u in Ug]
+action_g(nU4).backward(create_graph=True)
+sum(g.group.inner_product(nU4[mu].gradient, dA[mu]) for mu in range(4)).backward(
+    create_graph=True
 )
-cb4()
-HVP_A4 = [nnU4[mu].value.gradient for mu in range(4)]
+HVP_A4 = [nU4[mu].gradient for mu in range(4)]
 # the Hessian bilinear form as a node; not evaluated here -- the functional's
 # gradient() below evaluates it and takes its force in one pass
-S4 = sum(g.group.inner_product(nB4[mu], HVP_A4[mu]) for mu in range(4))
-f4 = S4.functional(*[nnU4[mu].value.value for mu in range(4)])
-G3_fun = [resolve_value(x) for x in f4.gradient(Ug, Ug)]
+S4 = sum(g.group.inner_product(dA[mu], HVP_A4[mu]) for mu in range(4))
+f4 = S4.functional(*nU4)
+G3_fun = f4.gradient(Ug, Ug)
 dA_d2S_dA_fun = sum(g.group.inner_product(dA[mu], G3_fun[mu]) for mu in range(4))
 
 err = abs(dA_d2S_dA_fun - dA_d2S_dA) / (
     abs(dA_d2S_dA_fun) + abs(dA_d2S_dA) + 1e-30
 )
-g.message(f"gauge 3rd derivative functional vs nested-node (stage 3): {err}")
-assert err < 1e-14, "gauge 3rd derivative functional vs nested-node (stage 3)"
+g.message(f"gauge 3rd derivative functional vs recorded passes (stage 3): {err}")
+assert err < 1e-14, "gauge 3rd derivative functional vs recorded passes (stage 3)"
 
 for mu in range(4):
     err = g.norm2(G3_fun[mu] - G3[mu]) / g.norm2(G3[mu])
@@ -746,11 +693,11 @@ assert_field_close(
 # where routes the constant "yes"/"no" branch per mask and its backprop
 # routes the flow the same way; astype is a type cast that passes the flow
 # straight through.  Both are checked to exact 1st order on constant all-1 /
-# all-0 masks, and -- the case that used to crash -- on nested (2-deep)
-# nodes, where a mixed-depth pair must route to the rev-AD op (via nodify)
-# instead of the plain foundation (which cannot build a lattice from a node).
-# The 2nd derivative (HVP) of a nested where is checked against the plain
-# quartic-norm HVP (reusing quartic_norm from stage 1).
+# all-0 masks, and in recorded passes, where the flow (a node) must route to
+# the rev-AD op (via nodify) instead of the plain foundation (which cannot
+# build a lattice from a node).  The 2nd derivative (HVP) through where is
+# checked against the plain quartic-norm HVP (reusing quartic_norm from
+# stage 1).
 g.message("foundational passthrough ops: where / astype")
 
 w_s = g.complex(grid)
@@ -773,34 +720,35 @@ g.sum(g.where(zeros4, Aw, Bw))()  # all-0: selects the "no" branch
 assert g.norm2(Aw.gradient) < 1e-14, "where all-0 yes gradient = 0"
 assert_field_close(Bw.gradient, ident4, 1e-14, "where all-0 no gradient = 1")
 
-# --- where: nested (2-deep) nodes ---
-A2w = rad.node(rad.node(w_s))
+# --- where: recorded passes ---
+Aw = rad.node(w_s)
 Bw = rad.node(w_t)
-g.sum(g.where(ident4, A2w, Bw))()  # all-1: the 1st-level gradient (a node)
-assert_field_close(A2w.gradient, ident4, 1e-14, "where nested yes 1st gradient")
-assert g.norm2(Bw.gradient) < 1e-14, "where nested no gradient = 0"
+g.sum(g.where(ident4, Aw, Bw)).backward(create_graph=True)  # all-1: recorded gradients
+assert_field_close(Aw.gradient, ident4, 1e-14, "where recorded yes 1st gradient")
+assert g.norm2(resolve_value(Bw.gradient)) < 1e-14, "where recorded no gradient = 0"
 
-# 2nd derivative (HVP) of a nested where: all-1 mask == the "yes" branch, so
+# 2nd derivative (HVP) through where: all-1 mask == the "yes" branch, so
 # S = sum |where(mask, A, B)|^4 = sum |A|^4 and the HVP is the plain
 # quartic-norm HVP of w_s.
 a0w = rng_l.cnormal(g.complex(grid))
-naw = rad.node(a0w, with_gradient=False)
-A2w = rad.node(rad.node(w_s))
-quartic_norm(g.where(ident4, A2w, rad.node(w_t)))()
-c = g.inner_product(naw, A2w.gradient)
-c()
 C0w = w_s * g.adj(w_s)
 ref_h = 4 * C0w * a0w + 4 * (g.adj(w_s) * a0w + w_s * g.adj(a0w)) * w_s
-assert_field_close(A2w.value.gradient, ref_h, 1e-12, "where nested quartic HVP")
+assert_field_close(
+    hvp_of(lambda A: quartic_norm(g.where(ident4, A, rad.node(w_t))), w_s, a0w),
+    ref_h,
+    1e-12,
+    "where recorded quartic HVP",
+)
 
-# all-0 mask with a nested "no" branch: the flow routes to the "no" branch
-B2w = rad.node(rad.node(w_t))
-quartic_norm(g.where(zeros4, rad.node(w_s), B2w))()
-c = g.inner_product(naw, B2w.gradient)
-c()
+# all-0 mask: the flow routes to the "no" branch
 C0t = w_t * g.adj(w_t)
 ref_ht = 4 * C0t * a0w + 4 * (g.adj(w_t) * a0w + w_t * g.adj(a0w)) * w_t
-assert_field_close(B2w.value.gradient, ref_ht, 1e-12, "where nested no-branch quartic HVP")
+assert_field_close(
+    hvp_of(lambda B: quartic_norm(g.where(zeros4, rad.node(w_s), B)), w_t, a0w),
+    ref_ht,
+    1e-12,
+    "where recorded no-branch quartic HVP",
+)
 
 # --- astype: type-cast passthrough (complex -> real) ---
 real_ot = g.real(grid).otype
@@ -811,9 +759,9 @@ Aa = rad.node(a_s)
 g.sum(g.astype(Aa, real_ot))()
 assert_field_close(Aa.gradient, ident4, 1e-14, "astype 1st gradient = 1")
 
-A2a = rad.node(rad.node(a_s))
-g.sum(g.astype(A2a, real_ot))()  # nested (2-deep)
-assert_field_close(A2a.gradient, ident4, 1e-14, "astype nested 1st gradient = 1")
+A2a = rad.node(a_s)
+g.sum(g.astype(A2a, real_ot)).backward(create_graph=True)  # recorded
+assert_field_close(A2a.gradient, ident4, 1e-14, "astype recorded 1st gradient = 1")
 
 #####################################
 # adj op: the conjugate, exercised explicitly.  It also underlies the __mul__
@@ -823,7 +771,7 @@ assert_field_close(A2a.gradient, ident4, 1e-14, "astype nested 1st gradient = 1"
 # conj(flow)).  The 1st derivative is exact (S = sum(adj n * m) with a
 # constant m -> dS/dn = m); the 2nd derivative (HVP) of a nonlinear adj action
 # is checked against finite differences.
-g.message("adj op: explicit nested checks")
+g.message("adj op: explicit checks (also recorded)")
 
 s_adj = g.complex(grid)
 rng_l.cnormal(s_adj)
@@ -835,9 +783,9 @@ n1a = rad.node(s_adj)
 g.sum(g.adj(n1a) * nm_adj)()
 assert_field_close(n1a.gradient, m_adj, 1e-14, "adj 1st gradient")
 
-n2a = rad.node(rad.node(s_adj))
-g.sum(g.adj(n2a) * nm_adj)()
-assert_field_close(n2a.gradient, m_adj, 1e-14, "adj nested 1st gradient")
+n2a = rad.node(s_adj)
+g.sum(g.adj(n2a) * nm_adj).backward(create_graph=True)
+assert_field_close(n2a.gradient, m_adj, 1e-14, "adj recorded 1st gradient")
 
 
 def adj_action(n):
@@ -850,54 +798,41 @@ def adj_first(s_):
     return nn.gradient
 
 
-def adj_hvp(s_, a_node):
-    nn = rad.node(rad.node(s_))
-    adj_action(nn)()
-    c = g.inner_product(a_node, nn.gradient)
-    c()
-    return nn.value.gradient
-
-
 a0_adj = rng_l.cnormal(g.complex(grid))
-na_adj = rad.node(a0_adj, with_gradient=False)
 eps = 1e-5
-hvp_ad = adj_hvp(s_adj, na_adj)
+hvp_ad = hvp_of(adj_action, s_adj, a0_adj)
 hvp_fd = (adj_first(g(s_adj + eps * a0_adj)) - adj_first(g(s_adj - eps * a0_adj))) / (
     2 * eps
 )
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "adj HVP vs FD of 1st derivative")
 
 #####################################
-# node depths are fixed at construction: a value of another depth cannot be
-# assigned to a node.  So the reusable-graph force mechanism
-# (node.functional(...), a 1st-derivative mechanism that overrides its leaves'
-# values) cannot turn a nested graph into a plain one by overriding a 2-deep
-# leaf with a plain field; it takes its arguments at the innermost level
-# (stage 4 above).
-g.message("node depth: a value of another depth is rejected")
+# the values of nodes are plain values (or forward-AD series), never nodes:
+# a node as the value of a leaf, or assigned as a value, is rejected
+g.message("node values: a node as a value is rejected")
 
 s_fun = g.complex(grid)
 rng_l.cnormal(s_fun)
-n_fun = rad.node(rad.node(s_fun))
-f_fun = quartic_norm(n_fun).functional(n_fun)
-try:
-    f_fun([s_fun])
-    raise AssertionError("a plain value was assigned to a 2-deep leaf")
-except ValueError as e:
-    g.message(f"rejected: {e}")
+for attempt in ["construct", "assign"]:
+    try:
+        if attempt == "construct":
+            rad.node(rad.node(s_fun))
+        else:
+            rad.node(s_fun).value = rad.node(s_fun)
+        raise AssertionError(f"a node value was accepted ({attempt})")
+    except ValueError as e:
+        g.message(f"rejected ({attempt}): {e}")
 
 
 # -----------------------------------------------------------------------------
 # traceless (anti-)hermitian projections: single nodes whose backward is the
-# projection of the flow, i.e. a projection node one level down in a nested
-# pass.  HVP vs finite difference of the 1st derivative.  The mcolor leaves
+# projection of the flow, i.e. a projection node in a recorded pass.  HVP vs finite difference of the 1st derivative.  The mcolor leaves
 # are additive (no conversion of their gradients to the group algebra).
 # -----------------------------------------------------------------------------
 g.message("traceless projections: HVP vs finite difference")
 P = g.qcd.gauge.project
 m0 = rng_l.cnormal(g.mcolor(grid))
 mb = rng_l.cnormal(g.mcolor(grid))
-nmb = rad.node(mb, with_gradient=False)
 
 
 def proj_action(n):
@@ -911,24 +846,14 @@ def proj_first(s):
     return nn.gradient
 
 
-def proj_hvp(s, a_node):
-    nn = rad.node(
-        rad.node(s, infinitesimal_to_cartesian=False), infinitesimal_to_cartesian=False
-    )
-    proj_action(nn)()
-    c = g.inner_product(a_node, nn.gradient)
-    c()
-    return nn.value.gradient
-
-
 eps = 1e-5
-hvp_ad = proj_hvp(m0, nmb)
+hvp_ad = hvp_of(proj_action, m0, mb, infinitesimal_to_cartesian=False)
 hvp_fd = (proj_first(g(m0 + eps * mb)) - proj_first(g(m0 - eps * mb))) / (2 * eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-12, "projection HVP vs FD of 1st derivative")
 
 
 #####################################
-# real and imaginary parts at 2-deep: the Hessian-vector product of
+# real and imaginary parts in recorded passes: the Hessian-vector product of
 # S = |f(z)^2 c - c|^2 (f = Re or Im) vs a difference of the gradient
 c = rng.cnormal(g.complex(grid))
 for op in ["real", "imag"]:
@@ -939,10 +864,7 @@ for op in ["real", "imag"]:
     def S(z):
         return g.norm2(f(z) * f(z) * c - c)
 
-    n2 = rad.node(rad.node(z0))
-    S(n2)()
-    g.inner_product(rad.node(v, with_gradient=False), n2.gradient)()
-    hvp = resolve_value(n2.value.gradient)
+    hvp = hvp_of(S, z0, v)
 
     def first(z):
         n = rad.node(z)

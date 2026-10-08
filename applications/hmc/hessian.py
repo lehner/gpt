@@ -15,42 +15,28 @@ if use_unit:
 
 action = g.qcd.gauge.action.differentiable_iwasaki(2.95)
 
-nnU = [rad.node(rad.node(u)) for u in U]
-nA = [rad.node(g.group.cartesian(u)) for u in U]
-
-# First create compute graph and \partial S / \partial U, stored in nnU[mu].gradient
-action(nnU)()
-
 nU = [rad.node(u) for u in U]
-action(nU)()
+
+# the force (plain) and the recorded compute graph of \partial S / \partial U
+action(nU).backward()
+F = [g.copy(x.gradient) for x in nU]
+action(nU).backward(create_graph=True)
+dS = [x.gradient for x in nU]
 
 
 # (f(e^{iTa eps}U) - f(U)) / eps Ta = gradient
 def Hessian_vec(src):
-    # then create expression for inner product with right-hand side
-    for mu in range(4):
-        nA[mu].value @= src[mu]
-    c = sum(g.group.inner_product(nnU[mu].gradient, nA[mu]) for mu in range(4))
-    # and do forward and backward propagation
-    c()
-    # this now is \partial <\partial S / \partial U, src> / \partial U,
+    # contract the recorded gradient with the right-hand side and run its
+    # reverse pass: \partial <\partial S / \partial U, src> / \partial U,
     # i.e., the Hessian applied to the vector src
-    return [nnU[mu].value.gradient for mu in range(4)]
+    c = sum(g.group.inner_product(dS[mu], src[mu]) for mu in range(4))
+    c.backward()
+    return [g.copy(nU[mu].gradient) for mu in range(4)]
 
 
 def Hessian_vec_cov(src):
-    # then create expression for inner product with right-hand side
-    for mu in range(4):
-        nA[mu].value @= src[mu]
-    c = sum(g.group.inner_product(nnU[mu].gradient, nA[mu]) for mu in range(4))
-    # and do forward and backward propagation
-    c()
-    # this now is \partial <\partial S / \partial U, src> / \partial U,
-    # i.e., the Hessian applied to the vector src
-    return [
-        g(nnU[mu].value.gradient - 0.5j * (nU[mu].gradient * src[mu] - src[mu] * nU[mu].gradient))
-        for mu in range(4)
-    ]
+    H = Hessian_vec(src)
+    return [g(H[mu] - 0.5j * (F[mu] * src[mu] - src[mu] * F[mu])) for mu in range(4)]
 
 
 # create operator that stacks Lorentz index in 4-th dimension

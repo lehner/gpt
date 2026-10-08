@@ -3,7 +3,7 @@
 # Site-constant linear maps on lists of scalar fields (g.ad.reverse.stack /
 # matrix_vector / outer_sum / dagger, gemm kernels on packed lists): values,
 # first derivatives, a mixed second derivative through a two-layer network,
-# and the nested computation against numpy reference kernels
+# and the recorded computation against numpy reference kernels
 #
 import gpt as g
 import numpy as np
@@ -81,22 +81,21 @@ def F_plain(W):
     return sum(g.inner_product(dj, x.gradient) for dj, x in zip(d, h1)).real
 
 
-def F_nested():
-    W1n = rad.node(W1)
-    h2 = [rad.node(rad.node(x)) for x in h0]
-    S_(
-        h2,
-        rad.node(W1n, with_gradient=False),
-        rad.node(rad.node(W2, with_gradient=False), with_gradient=False),
-    )()
-    F = sum(g.inner_product(rad.node(dj, with_gradient=False), x.gradient) for dj, x in zip(d, h2))
-    value = complex(rad.util.resolve(F())).real
-    return value, rad.util.resolve(W1n.gradient)
+def F_recorded():
+    # the reverse pass of S is recorded (create_graph=True, restricted to the
+    # h leaves): h.gradient is a node graph over the same leaves, W1 among
+    # them, so the backward of <d, grad_h S> deposits d/dW1 F into lW1
+    lW1 = rad.node(W1)
+    lh = [rad.node(x) for x in h0]
+    S_(lh, lW1, rad.node(W2, with_gradient=False)).backward(create_graph=True, wrt=lh)
+    F = sum(g.inner_product(dj, x.gradient) for dj, x in zip(d, lh))
+    value = complex(F()).real
+    return value, lW1.gradient
 
 
-value, gradient = F_nested()
+value, gradient = F_recorded()
 eps = abs(value - F_plain(W1)) / abs(F_plain(W1))
-g.message(f"linear: nested value vs plain {eps}")
+g.message(f"linear: recorded value vs plain {eps}")
 assert eps < 1e-12
 dW = matrix(n_hidden, n_in)
 analytic = np.vdot(dW, gradient).real
@@ -111,7 +110,7 @@ eps = abs(analytic - numeric) / abs(numeric)
 g.message(f"linear: mixed second derivative {analytic} vs {numeric}: {eps}")
 assert eps < 1e-8 and np.all(np.isfinite(gradient))
 
-# the nested computation with numpy reference kernels (the fields read on the
+# the recorded computation with numpy reference kernels (the fields read on the
 # host) gives the same value and gradient as the gemm kernels on packed buffers
 kernels = (linear._plain_matrix_vector, linear._plain_outer_sum)
 
@@ -131,13 +130,13 @@ def os_reference(a, b):
 
 
 linear._plain_matrix_vector, linear._plain_outer_sum = mv_reference, os_reference
-value_ref, gradient_ref = F_nested()
+value_ref, gradient_ref = F_recorded()
 linear._plain_matrix_vector, linear._plain_outer_sum = kernels
 eps = max(
     abs(value - value_ref) / abs(value_ref),
     np.max(np.abs(gradient - gradient_ref)) / np.max(np.abs(gradient_ref)),
 )
-g.message(f"linear: gemm kernels vs numpy reference in the nested computation {eps}")
+g.message(f"linear: gemm kernels vs numpy reference in the recorded computation {eps}")
 assert eps < 1e-12
 
 # the zero of an array (or tensor) gradient is assigned, not multiplied: a

@@ -101,7 +101,7 @@ class staple_stencil_action:
         return self.cache[key]
 
     def loops(self, U):
-        # the weighted sum of the loops O (plain links or nodes of any depth)
+        # the weighted sum of the loops O (plain links or nodes)
         st = self.stencil(U)
         if isinstance(st, g.parallel_transport_matrix):
             return st(U)
@@ -115,7 +115,7 @@ class staple_stencil_action:
         return float(self.beta * vol * (self.c0 * Nd * (Nd - 1) / 2 + self.c1 * Nd * (Nd - 1)))
 
     def __call__(self, aU):
-        # plain links: the value; links as nodes (any depth): a node
+        # plain links: the value; links as nodes: a node
         if isinstance(aU, rad.node_base):
             aU = [aU[mu] for mu in range(len(aU))]
         if not isinstance(aU[0], rad.node_base):

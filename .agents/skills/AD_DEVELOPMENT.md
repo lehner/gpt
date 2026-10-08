@@ -143,9 +143,9 @@ Key concepts:
   convert between tangent-space perturbations and forces.
 - **Expressions are lazy**: arithmetic on containers builds symbolic
   `g.expr` trees; evaluation happens at `g(x)`, `.real`, reductions, etc.
-  Expressions do *not* know about AD nodes — mixing a plain container
-  first-operand with a node second-operand (`plain * node`) can fail;
-  prefer node-first order (`node * plain`) for node-aware dispatch.
+  Expressions do *not* know about AD nodes: for an operand they do not
+  know they return `NotImplemented`, so `plain * node` is handled by the
+  node's reflected operator (see §4.6).
 - **Gauge actions** implement `__call__` (action value) and
   `gradient(fields, dfields)` (force). `act.transformed(diffeomorphism,
   indices, projection)` composes an action with a field transformation.
@@ -205,7 +205,10 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
   a **constant** (no gradient accumulated for it; still participates in the
   graph as a fixed operand).
 - Every node has:
-  - `.value` — the value it holds (a container, or another node when nested);
+  - `.value` — the value it holds: a plain value (lattice, tensor, number,
+    numpy array, list of these) or a forward-AD series, never a node
+    (checked on every write, `node._value_slot`; `rad.node(rad.node(x))`
+    raises);
   - `.gradient` — accumulated gradient (set by `backward`, reset by
     `zero_gradient()`);
   - `._forward` / `._backward` — set for *computed* nodes (built by
@@ -215,7 +218,12 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
   `value_of(child)`; `backwards` is one lambda per child producing the flow
   contribution. `container` fixes the result's type/otype (often via
   `get_mul_container` etc. in `util.py`).
-- `S.__call__(with_gradients=True, initial_gradient=None)`:
+- `S()` (`__call__(with_gradients=True, initial_gradient=None,
+  retain_values=False, with_value=True, create_graph=False, wrt=None)`) runs
+  the forward and the reverse pass and returns the value;
+  `S.backward(...)` is the same with `with_value=False` (returns None, or the
+  gradients of `wrt`).  Use `.backward()` wherever the value of a reverse
+  pass is not read (user convention, 2026-10-08).  The passes:
   1. `traverse(nodes, self)` collects every node in the graph and records the
      dependency map;
   2. `forward(nodes)` evaluates each computed node once (values cached);
@@ -230,13 +238,18 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
     direction `dU`).
   - `with_value=False` (with gradients, without `retain_values`): the root
     value is not needed, so only the values some backward reads are
-    computed and `None` is returned (see §4.8).  `functional.gradient` uses
-    it; pass it for contractions whose value you do not read, e.g. an HVP
-    pass `c(with_value=False)`.
-- `value_of(x)` (in `ad/reverse/util.py`) evaluates a node one level down
-  (a nested node's value is again a node).  `resolve(x)` gives the plain
-  value of a finished pass's result (all levels, expressions evaluated);
-  use it to **release** a graph's memory after reading a result.
+    computed and `None` is returned (see §4.8); this is `S.backward()`.
+  - `wrt=[leaves]`: the pass differentiates only these leaves (the others
+    are constants for this pass and keep their gradients); per pass a node
+    is active iff structurally differentiable and a selected leaf or with
+    an active child, the structural flags are restored afterwards
+    (`node._select`).  `wrt` only restricts: a leaf constructed with
+    `with_gradient=False` (a constant) raises ValueError.
+    `S.backward(wrt=[x, u])` returns `[x.gradient, u.gradient]`.
+  - `create_graph=True`: records the reverse pass, see §4.4.
+- `value_of(x)` (in `ad/reverse/util.py`) gives a node's value, evaluating a
+  freed computed node in place; while a pass is recorded it returns the node
+  itself (§4.4).
 
 **Primitives** (`ad/reverse/primitive.py`): an operation closed under
 differentiation is declared once, by its plain implementation and its vjp
@@ -247,12 +260,11 @@ dagger = primitive("dagger", plain, container, vjp=lambda i, flow, W: dagger(flo
 ```
 
 Called on plain arguments it runs `plain`; with a node among the arguments
-it returns a node whose forward is the op on the children's values (plain:
-the kernel; nested: a node one level down) and whose backward is the vjp,
-which -- made of primitives -- runs plain kernels on plain flows and builds
-nodes one level down in a nested pass.  So no op writes separate plain and
-nested code; the self-similar towers (exp, stencils, the linear maps) are
-the primitive's own recursion.  Options: `joint_vjp(z, needed, *values)`
+it returns a node whose forward is the kernel on the children's values and
+whose backward is the vjp, which -- made of primitives -- runs plain kernels
+on plain flows and, in a recorded pass, builds nodes of the same graph.  So
+no op writes separate plain and recording code; the self-similar towers
+(exp, stencils, the linear maps) are the primitive's own recursion.  Options: `joint_vjp(z, needed, *values)`
 (all flows at once, e.g. one adjoint kernel for all inputs), `lift` (how an
 argument becomes a child, e.g. `stack` for a list of fields), `reads` (the
 vjp receives only the declared values, the others are None), static keyword
@@ -292,61 +304,80 @@ Production actions use `node.functional(...)` →
 `node_differentiable_functional` (`node.py`):
 
 ```python
-n = rad.node(U)                       # or nested, see 4.4
+n = rad.node(U)
 f = S(n).functional(n)                # wraps the graph
 val = f([U])                          # evaluate the value (re-evaluates graph)
 gr  = f.gradient(U, U)                # force: plain lattices
 ```
 
-`gradient()` overrides each leaf's value with a plain lattice and runs the
-graph once, returning the **first** derivative only — regardless of node
-depth. It is the force mechanism for actions, smears, etc., and is what
-`differentiable_functional.assert_gradient_error` exercises. (2nd/3rd
-derivatives use the nested-node mechanism below, *not* this one.)
+`gradient()` overrides each leaf's value with a plain lattice and runs
+`node.backward(wrt=[requested leaves])`, returning the gradient of the
+graph's root. It is the force mechanism for actions, smears, etc., and is
+what `differentiable_functional.assert_gradient_error` exercises.  The root
+may itself be a contraction of a recorded gradient (§4.4), so the
+functional of a Hessian bilinear form gives the 3rd derivative, and swapping
+leaf values re-evaluates the recorded graph without re-recording.
 
-### 4.4 Higher-order derivatives: nested nodes
+### 4.4 Higher-order derivatives: recorded reverse passes
 
-A k-th derivative uses k nested wraps. Each **reverse pass deposits the next
-derivative into the next-inner leaf's `.gradient`**:
+`S.backward(create_graph=True)` records the reverse pass: the backward
+closures see the children *nodes* instead of their values (`util.record`;
+`value_of` returns the node itself while recording), so the flows -- and the
+leaf gradients -- are lazy nodes of the same graph, over the same leaves.  A
+contraction of a recorded gradient is an ordinary scalar node; its reverse
+pass gives the next derivative.  The order is chosen per pass:
 
 ```
-n2 = rad.node(rad.node(x))
-S(n2)()                          -> n2.gradient         graph for dS/dx
-inner_product(a, n2.gradient)()  -> n2.value.gradient   d2S/dx2 * a  (plain)
+n = rad.node(x)
+S(n).backward(create_graph=True)                     -> n.gradient: graph for dS/dx
+g.inner_product(a, n.gradient).backward()            -> n.gradient = d2S/dx2 a   (plain)
 
-n3 = rad.node(rad.node(rad.node(x)))
-S(n3)()                          -> n3.gradient          dS/dx (node graph)
-inner_product(a, n3.gradient)()  -> n3.value.gradient    d2S/dx2 * a (node graph)
-inner_product(b, n3.value.gradient)()
-                                 -> n3.value.value.gradient = d3S/dx3 * a * b
+S(n).backward(create_graph=True)
+g.inner_product(a, n.gradient).backward(create_graph=True)
+g.inner_product(b, n.gradient).backward()            -> n.gradient = d3S/dx3 a b
 ```
 
-- Pass 1 (`S(n2)()`): the root gradient `n2.gradient` is itself a **lazy
-  graph** (the 1st derivative as a function of the 1-deep nodes).
-- Pass 2: evaluating a contraction of that graph runs a reverse pass *over
-  the 1-deep graph*, depositing `d2S/dx2 · a` as a plain value in
-  `n2.value.gradient` (the inner leaf).
-- Pass 3 (for `n3`): the same, one level deeper.
-- **Depth**: `node.depth` is the number of nested node levels (an
-  attribute, fixed at construction: a leaf is one level above its value, a
-  computed node has the depth of its deepest child; `util.value_depth_static(x)`
-  is the same for any x, 0 for plain values).  Every write to `node.value`
-  is checked (`node._value_slot`): a value must have depth `node.depth - 1`
-  (or be None), else `ValueError`.  So swapping leaf values (functionals,
-  the transports' reused graphs) must keep the depth: a functional over a
-  nested graph takes its innermost leaves as arguments (stage 4 of
-  `tests/ad/higher_order.py`), and cannot flatten a 2-deep graph by
-  overriding a 2-deep leaf with a plain field.  The stencil node mode
-  constructs the computed node into the caller's output node, which takes
-  the computed depth.  Gradient code uses `n.depth - 1`, also for computed
-  nodes whose value was not computed (`with_value=False`).
-- The core recursion is depth-general; no framework change is needed to go
-  deeper, only memory (each level roughly doubles graph size).
+- Directions and constants are plain values (or `rad.node(c,
+  with_gradient=False)`); there is no depth matching.  Gauge fields contract
+  with `g.group.inner_product` (applications/hmc/hessian.py).
+- **Record once, contract many times**: the recorded gradient (keep a
+  reference, `dS = [x.gradient for x in n]`; a later pass overwrites
+  `x.gradient` but not the recorded node objects) can be contracted with
+  any number of directions (HVPs, Lanczos), and swapping leaf values
+  re-evaluates it (functionals, §4.3).
+- **Values**: the recording reads no values.  `S(n)(create_graph=True)`
+  runs a plain forward first (the returned value) whose intermediate values
+  the reverse pass frees, so the next pass recomputes them: use
+  `S(n).backward(create_graph=True)` (no forward at all) unless the value is
+  needed (benchmark: +10-14% for an HVP otherwise).  `retain_values=True`
+  keeps the forward values for the following passes over the recorded graph
+  (the log-det force: one forward shared by 8 generators).  Only retain
+  values while the leaves are unchanged.
+- **Mixed derivatives**: differentiate the contraction w.r.t. other leaves
+  (`d/dW <d, dS/dh>`); `wrt` restricts the recorded pass (e.g. the
+  Jacobian block of U_mu only, `directional_parallel_transport`), the next
+  pass differentiates all leaves.  Nodes built during a pass restricted by
+  `wrt` (the recorded flows) take the *structural* flags of their children
+  (`node._structural`), so the recording keeps the graph's dependencies.
+- **Leaf conversion**: a recorded group-leaf gradient is converted
+  (`infinitesimal_to_cartesian`) by node operations at the leaf, so the
+  conversion is differentiated (it halves the derivative of the gradient
+  graph: the factor 2 in the log-det forces).  A leaf created with
+  `infinitesimal_to_cartesian=False` can convert its recorded gradient
+  explicitly (`g.infinitesimal_to_cartesian(x, x.gradient)`, see
+  applications/hmc/cdfthmc-learn.py).
+- First-order-only primitives (`order=1`: `functional_node`, `preimage`,
+  `joint_node`) raise in a recorded pass.
+- Forward mode composes with this as values: a leaf value may be a forward-AD
+  series (reverse over forward, `tests/ad/ad.py`).
 
 Reference implementations: `tests/ad/higher_order.py` (scalars, lattices,
-gauge HVP at 2-deep, gauge 3rd derivative at 3-deep, functional-force
-mechanism at 2/3-deep) — this file is the executable specification of the
-mechanism.
+gauge HVP, gauge 3rd derivative, the functional of a Hessian bilinear form,
+node values rejected) -- the executable specification; `tests/ad/ad.py` (end:
+`wrt`, mixed second derivatives under `wrt`).  History: until 2026-10-08
+higher orders used nested nodes (`rad.node(rad.node(x))`, `.value.gradient`,
+static depths); the recorded passes gave bit-identical results and replaced
+them (`~/GPT/TODOs/ad_single_level_reverse.md`).
 
 ### 4.5 Where operations are implemented
 
@@ -361,7 +392,7 @@ mechanism.
   (D_{k+1} into X, D_k into H_i), so the gradient of exp is exp.  Each
   plain D_k is one compiled local stencil (multi-dual scaling-squaring +
   Paterson-Stockmeyer Taylor).  All D_k of one tower (the user's exp node
-  and the flows built from it, at any depth) share a `_tower`: X is
+  and the flows built from it, to any order) share a `_tower`: X is
   identified by identity, and its scaling (the norm bound, which is the same
   for X and X^dag) and the materialized X^dag are computed once.  The user's
   root D_0 resets the tower once per pass (in its plain forward, or -- if the
@@ -372,7 +403,7 @@ mechanism.
   **projections**: `traceless_anti_hermitian` / `traceless_hermitian` (the
   `qcd.gauge.project` functions dispatch here for nodes).  They are
   self-adjoint w.r.t. Re tr(a^dag b), so the backward is the same projection
-  (one level down for nested flows).  The su(N) group conversions
+  (a projection node in a recorded pass).  The su(N) group conversions
   (`infinitesimal_to_cartesian`) are written with them.
 - (Removed 2026-09-30: *expression nodes*, one node per sum of products
   with generated kernels; no net gain over the per-operation graph and
@@ -394,10 +425,13 @@ mechanism.
   `AttributeError: 'ot_matrix_color' object has no attribute
   'infinitesimal_to_cartesian'`. Watch products of group elements with
   algebra elements / generators.
-- **`plain * node` vs `node * plain`**: a plain lattice first-operand builds
-  a symbolic `expr` that may not know how to handle a node
-  (`Exception: Unknown type ...node_base`). Node-first invokes the
-  adjoint-linear node `__mul__`.
+- **Plain operands next to nodes**: `plain * node`, `plain + node`,
+  `plain - node` work (and give the same as an explicit constant node): the
+  core expression algebra (`core/expr.py`, `core/tensor.py`) returns
+  `NotImplemented` for operands it does not know, so Python calls the
+  node's reflected operator.  Keep it that way: the core does not know about
+  AD; a new operand type gets its arithmetic through its own (reflected)
+  operators.  (`plain / node` is not supported: no node `__rtruediv__`.)
 - **Masks**: a matrix-valued node times a real 0/1 field is fine as a plain
   product (`g(sm * P1)`, as in `directional_parallel_transport._update`); the
   former `g.where(mask, x, zero)` workaround is no longer needed (its
@@ -438,12 +472,12 @@ mechanism.
   faster.  Compare such runs with
   `MALLOC_MMAP_THRESHOLD_=268435456 MALLOC_TRIM_THRESHOLD_=1073741824`.
 - **Memory**: large fields and retained graphs live as long as a Python
-  name refers to them, and nested (2-deep/3-deep) graphs over gauge fields
-  are expensive.  `resolve` results to plain values and `del` each pass's
-  graph before building the next (e.g. in a loop of reverse passes);
+  name refers to them, and recorded graphs over gauge fields are expensive.
+  `del` each pass's graph (and recorded gradients) before building the next
+  (e.g. in a loop of reverse passes);
   release large temporaries (ng x ng adjoint matrices are 7x a color matrix
-  for SU(3)) right after their last use; avoid holding several deep graphs
-  alive at once; test on the smallest grid that exercises the code path.
+  for SU(3)) right after their last use; avoid holding several recorded
+  graphs alive at once; test on the smallest grid that exercises the code path.
 - **Re-running a graph**: each backward pass starts every gradient at
   `None` (an unbuilt zero, see `flow.py`), so gradients do not carry
   over between passes; read a leaf's `.gradient` before the next pass.  By
@@ -465,10 +499,10 @@ mechanism.
   *composed* lattices. Reusing those leaf nodes in a later section silently
   differentiates the perturbed fields (small, confusing reference
   mismatches). Re-wrap fresh `rad.node(...)` leaves per section.
-- **Initial gradients must match the node depth**: a 1-deep node's
-  `initial_gradient` must be a *plain* lattice; a constant direction used in
-  a *contraction* of a 2-deep root must be a `rad.node(dir,
-  with_gradient=False)`.
+- **Initial gradients**: a plain lattice for a field-valued root; in a
+  recorded pass the seed may be a node (e.g. built on the root itself,
+  `cartesian_to_infinitesimal(root, right)` in the log-det forces), and
+  its dependencies are differentiated by the next pass.
 - **Node graphs are reference cycles**: the backward closures refer back to
   their nodes, so a graph built per call is only released by Python's cyclic
   garbage collector, which counts objects, not bytes -- large fields pile up
@@ -499,7 +533,7 @@ output node.  Its forward is the compiled kernel; its backward is the
 **adjoint code** (`adjoint_code`), derived in closed form as stencils (the
 product rule per factor, shifts negated/relativized, adjoint flags
 adjusted), so the gradient of a stencil is a stencil and the tower is
-self-similar at any depth.  The adjoint kernels are compiled at the first
+self-similar to any order.  The adjoint kernels are compiled at the first
 backward (cache `stencil._node_adj`, key (output count, flowed inputs)).
 
 - **Regime**: only outputs and local temporaries are written; outputs are
@@ -524,7 +558,7 @@ backward (cache `stencil._node_adj`, key (output count, flowed inputs)).
   A = [slots][lambda_T][output flows][values of all passed fields][local T],
   B = [slots][lambda_T][values]; without temporaries A is the classic single
   adjoint kernel.  Plain flows: one fused run (B accumulating into A's
-  slots); nested: both stages are stencil nodes of the same kinds, so
+  slots); recorded: both stages are stencil nodes of the same kinds, so
   higher derivatives stay in stencils.
 - Temporaries need a kernel without communication inside (the general
   stencil exchanges halos before the kernel; `comm_type` 1 or 2), never
@@ -539,10 +573,10 @@ Plain-run optimizations:
   temporaries) computes the slots of the inputs that carry a gradient and are
   referenced (the cache
   key includes them); the entries of other slots are dropped and the slots
-  renumbered, in the plain run and in the nested adjoint nodes.  Constant
+  renumbered, in the plain run and in the recorded adjoint nodes.  Constant
   inputs (e.g. coefficient fields of a pass that does not differentiate
   them) cost nothing in the backward.  (Tested in `tests/ad/stencil.py`, also a single-input stencil,
-  whose nested adjoint is a one-element list node.)
+  whose recorded adjoint is a one-element list node.)
 - **Seedless adjoints**: if the flow into a single-output stencil is exactly
   `c * identity` (see §4.8), the adjoint kernels are compiled once per c
   with the flow factor dropped and c (conj(c) for an adjointed read) folded
@@ -554,7 +588,7 @@ Plain-run optimizations:
   and its adjoint reversal share one) become per-site temporaries, possibly
   built from temporaries (`core/local_stencil/cse.py`, greedy Re-Pair).  The
   stencil object keeps its original `points`/`code`/`temporaries` (the
-  executed plan is `executed`), so the AD derivation -- including the nested
+  executed plan is `executed`), so the AD derivation -- including the recorded
   tower's `matrix(compiled[0], ...)` -- still derives from uncombined codes,
   while every plain run at any level uses the plan.  Fields the kernel writes
   are combined only at the zero point and per write version (live reads).
@@ -594,19 +628,20 @@ Plain-run optimizations:
   Consumers test `flow.scale(node.flow)`: the stencil seedless adjoints fold
   c into their weights and pass a dummy for the flow field when the seedless
   kernel no longer reads it, so the c 1 field is never allocated (Wilson
-  force at 16^4: -5%).  In a nested pass with `with_value=False` a scaled
-  identity can reach a node whose children have node values (it is a
-  constant there); consumers apply their plain-only shortcuts only for plain
-  values.
+  force at 16^4: -5%).  In a recorded pass a scaled identity with a plain
+  c (the seed's path) is a constant; the flows into trace/sum are nodes
+  otherwise (dense flows).  Consumers apply their plain-only shortcuts only
+  for plain values.  (Possible optimisation: a scaled identity with a node
+  c; a seedless stencil adjoint with c is c times the one with 1.)
 
 ## 5. File map (AD-relevant)
 
 | Path | Role |
 |---|---|
 | `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/...), `node_op`, forward/backward, `functional` |
-| `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/nested dispatch, joint vjps, residuals, first-order ops), §4.1 |
+| `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops), §4.1 |
 | `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `accumulate`, `accum`, `accum_element`, §4.8 |
-| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `product`, `value_of`, `resolve` (plain value of a finished pass's result), `is_node`, `value_depth_static`, containers (`get_container`, `get_*_container`, `list_container`) |
+| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `product`, `value_of`, `record`/`recording` (recorded passes), `is_node`, containers (`get_container`, `get_*_container`, `list_container`) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, sin, cos, real, imag, conj, `multiply` (and the node-aware `component_multiply`) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order; used by `g.ml` losses); `joint_node` (first-order nodes whose backward computes all flows at once, also used by `preimage`) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
@@ -629,7 +664,7 @@ Plain-run optimizations:
 | `lib/gpt/qcd/gauge/action/wilson.py` | Wilson action (AD stencil value/force; hand-written staples for the heatbath) |
 | `lib/gpt/qcd/gauge/smear/differentiable.py` | `dft_diffeomorphism` (Jacobian machinery) |
 | `tests/ad/ad.py` | 1st-derivative force checks (first-order tests belong here) |
-| `tests/ad/higher_order.py` | 2nd/3rd-order nested-node reference (executable spec) |
+| `tests/ad/higher_order.py` | 2nd/3rd-order reference of recorded passes (executable spec) |
 | `tests/qcd/gauge.py` | gauge action + Hessian production conventions |
 | `applications/hmc/hessian.py` | production Hessian/HVP convention |
 

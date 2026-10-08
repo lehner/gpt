@@ -685,3 +685,85 @@ t = g.norm2(dx * da - x0) + g.norm2(dx)
 eps = g.norm2(lx.gradient - dx.gradient) / g.norm2(dx.gradient) + abs(la.gradient - da.gradient) / abs(da.gradient)
 g.message(f"functional_node (field and number) vs direct graph: {eps}")
 assert eps < 1e-12
+
+
+# per-pass selection of the leaves to differentiate: y.backward(wrt=[...])
+# returns their gradients (a plain list for a list leaf); the other leaves are
+# constants for the pass and keep their gradients; the structural flags are
+# restored after the pass; a leaf constructed as a constant cannot be selected
+x0, y0 = rng.cnormal(g.complex(grid)), rng.cnormal(g.complex(grid))
+nx, ny = rad.node(x0), rad.node(y0)
+nc = rad.node(rng.cnormal(g.complex(grid)), with_gradient=False)
+t = g.norm2(nx * ny + nc) + g.norm2(nx)
+t()
+gx, gy = g.copy(nx.gradient), g.copy(ny.gradient)
+ny.gradient = None
+(gx_only,) = t.backward(wrt=[nx])
+assert ny.gradient is None and nx.with_gradient and ny.with_gradient
+eps = g.norm2(gx_only - gx) / g.norm2(gx)
+gy_only, gx_also = t.backward(wrt=[ny, nx])
+eps += g.norm2(gy_only - gy) / g.norm2(gy) + g.norm2(gx_also - gx) / g.norm2(gx)
+g.message(f"wrt: selected gradients vs full pass: {eps}")
+assert eps < 1e-28
+try:
+    t.backward(wrt=[nc])
+    assert False
+except ValueError as e:
+    g.message(f"wrt: constant rejected: {e}")
+assert t(with_gradients=False) == t()  # (flags restored: full pass again)
+nU = rad.node(U)
+(gU,) = g.qcd.gauge.action.differentiable_iwasaki(5.5)(nU).backward(wrt=[nU])
+F = g.qcd.gauge.action.iwasaki(5.5).gradient(U, U)
+eps2 = sum(g.norm2(a - b) for a, b in zip(gU, F)) / sum(g.norm2(b) for b in F)
+g.message(f"wrt: list leaf gradient vs gauge force: {eps2}")
+assert isinstance(gU, list) and eps2 < 1e-24
+
+# a recorded pass restricted by wrt keeps the structure of the graph: the
+# recorded flows depend on the other leaves, so a second pass differentiates
+# them too.  S = sum (x y)^2 (real fields): <a, dS/dx> = sum 2 a x y^2, its
+# gradient is 2 a y^2 (x) and 4 a x y (y)
+xr, yr, ar = [rng.normal(g.complex(grid)) for _ in range(3)]
+nx, ny = rad.node(xr), rad.node(yr)
+p = nx * ny
+g.sum(p * p).backward(create_graph=True, wrt=[nx])
+assert ny.gradient is None or not rad.util.is_node(ny.gradient)
+g.inner_product(ar, nx.gradient).backward()
+eps = g.norm2(nx.gradient - 2 * ar * yr * yr) / g.norm2(2 * ar * yr * yr)
+eps += g.norm2(ny.gradient - 4 * ar * xr * yr) / g.norm2(4 * ar * xr * yr)
+g.message(f"wrt + create_graph: mixed second derivatives: {eps}")
+assert eps < 1e-28
+
+# a plain operand on the left of a node: the core expression algebra returns
+# NotImplemented for operands it does not know, so Python asks the node for
+# the reflected operation (node.__rmul__ etc.); same values and gradients as
+# with an explicit constant node
+am, xm = rng.cnormal(g.mcolor(grid)), rng.cnormal(g.mcolor(grid))
+ca = rad.node(am, with_gradient=False)
+for name, f, ref in [
+    ("a * n", lambda n: am * n, lambda n: ca * n),
+    ("adj(a) * n", lambda n: g.adj(am) * n, lambda n: g.adj(ca) * n),
+    ("a + n", lambda n: am + n, lambda n: ca + n),
+    ("a - n", lambda n: am - n, lambda n: ca - n),
+]:
+    n1, n2 = rad.node(xm), rad.node(xm)
+    v1 = g.sum(g.trace(f(n1) * f(n1)))()
+    v2 = g.sum(g.trace(ref(n2) * ref(n2)))()
+    eps = abs(v1 - v2) + g.norm2(n1.gradient - n2.gradient)
+    g.message(f"plain operand on the left: {name}: {eps}")
+    assert eps == 0.0
+
+# guards: a first-order-only primitive (functional_node) raises in a recorded
+# pass; wrt takes leaves only
+lU = [rad.node(u) for u in U]
+s = rad.functional_node(S, lU)
+try:
+    (s * s).backward(create_graph=True)
+    assert False
+except NotImplementedError as e:
+    g.message(f"first-order primitive in a recorded pass rejected: {e}")
+t = g.norm2(nx * ny)
+try:
+    t.backward(wrt=[nx * ny])
+    assert False
+except TypeError as e:
+    g.message(f"wrt: computed node rejected: {e}")

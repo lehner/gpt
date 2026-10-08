@@ -46,6 +46,10 @@ class container:
             else:
                 tag = [g.lattice, tag[0], tag[1]]
 
+        if tag[0] is np.ndarray:
+            # (one spelling of shape and dtype: containers compare by str)
+            tag = [np.ndarray, tuple(tag[1]), np.dtype(tag[2])]
+
         self.tag = tag
 
         if self.tag[0] == g.tensor:
@@ -107,6 +111,8 @@ class container:
                     other.tag[1]
                 )
             return False
+        if self.tag[0] is np.ndarray or other.tag[0] is np.ndarray:
+            return self.__eq__(other)
         if len(self.tag) > 1 and len(other.tag) > 1:
             if len(self.tag) != len(other.tag):
                 return False
@@ -208,31 +214,39 @@ def nodify(*args):
     return args[0] if len(args) == 1 else args
 
 
+class _recording_state:
+    # set while a reverse pass records its backward (create_graph=True): the
+    # backward closures then see the children nodes instead of their values,
+    # so the flows they build are nodes of the same graph
+    active = False
+
+
+def recording():
+    return _recording_state.active
+
+
+class record:
+    # context: backward closures run in recording mode
+    def __init__(self, active=True):
+        self.active = active
+
+    def __enter__(self):
+        self.saved = _recording_state.active
+        _recording_state.active = self.active
+
+    def __exit__(self, *args):
+        _recording_state.active = self.saved
+
+
 def value_of(x):
-    # the raw (possibly node-typed) value of x; a node that was freed after a
-    # previous pass (value = None) is re-evaluated in place.  The value is NOT
-    # resolved across (nested) nodes: node-typed values carry the
-    # differentiation dependencies needed by deeper reverse passes
+    # the value of the node x (a plain value or a forward-AD series); a node
+    # that was freed after a previous pass (value = None) is re-evaluated in
+    # place.  While a backward is recorded, the node itself (see record)
+    if _recording_state.active:
+        return x
     if x.value is None and x._forward is not None:
         x.value = x._forward()
     return x.value
-
-
-def resolve(x):
-    # the plain value of a result of a finished pass: nested nodes unwrapped
-    # (value_of keeps them, see there), expressions evaluated, None passed
-    # through.  Not for values that deeper passes still differentiate.
-    if x is None:
-        return None
-    while is_node(x):
-        x = value_of(x)
-    return g(x) if isinstance(x, g.expr) else x
-
-
-def value_depth_static(x):
-    # the number of nested node levels at x (0 for a plain value; node depths
-    # are fixed at construction, see node_base)
-    return x.depth if is_node(x) else 0
 
 
 def _binop(a, b, op):
@@ -257,15 +271,6 @@ def sub(a, b):
 
 def div(a, b):
     return _binop(a, b, operator.truediv)
-
-
-def zero_of(container, depth):
-    # an explicit zero for a gradient of this container at this node depth; it
-    # depends on no leaf, so at a nested depth it is a constant node
-    z = container.zero()
-    for _ in range(depth):
-        z = g.ad.reverse.node_base(z, with_gradient=False)
-    return z
 
 
 # The container of an operation's result is derived by applying the operation

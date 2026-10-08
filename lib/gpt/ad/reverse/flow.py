@@ -20,7 +20,7 @@
 #
 #   None                  no flow yet (a zero that has not been built)
 #   dense(value, owned)   a value: a plain field, number, array, tensor or
-#                         series, or a node graph (a nested pass); owned
+#                         series, or a node graph (a recorded pass); owned
 #                         tells whether the gradient may update it in place
 #                         (an adopted contribution is shared, e.g. both
 #                         children of an add receive z's flow, and is copied
@@ -39,7 +39,7 @@
 # element.
 #
 import gpt as g
-from gpt.ad.reverse.util import value_of, is_node, zero_of, product, add, sub
+from gpt.ad.reverse.util import value_of, is_node, product, add, sub, recording
 
 
 class dense:
@@ -89,10 +89,10 @@ def wrap(v, container):
     return dense(v, True)
 
 
-def built(flow, container, depth):
+def built(flow, container):
     # the flow with a scaled identity built into a field
     if isinstance(flow, scaled_identity):
-        return accumulate(None, product(flow.identity, flow.c), 1, container, depth)
+        return accumulate(None, product(flow.identity, flow.c), 1, container)
     return flow
 
 
@@ -115,24 +115,21 @@ def replaced(flow, v):
     return dense(v, flow.owned or v is not flow.value)
 
 
-def accumulate(cur, r, sign, container, depth, adopt=True):
+def accumulate(cur, r, sign, container, adopt=True):
     # the flow cur + sign * r, for a contribution r (a value, a node graph, a
     # list of values, or a scaled_identity) to a gradient of the container:
     #   first contribution             adopted if it is a node graph of the
-    #                                  same container (graphs are immutable)
-    #                                  or a plain field of the container
-    #                                  (adopt=True), as not owned; otherwise
-    #                                  assigned into a fresh (owned) field
+    #                                  same container while recording (graphs
+    #                                  are immutable) or a plain field of the
+    #                                  container (adopt=True), as not owned;
+    #                                  otherwise assigned into a fresh
+    #                                  (owned) field
     #   plain gradient +- plain term   in place if owned, else into a fresh
     #                                  field
-    #   plain gradient +- node term    the term graph is linear in the flow,
-    #                                  so it is evaluated to a field, keeping
-    #                                  the result in the plain world as in
-    #                                  single-pass AD
-    #   node gradient  +- plain/node   builds the (lazy) compute graph; a
-    #   term                           subtraction with incompatible
-    #                                  containers is evaluated to a field
-    # `depth` is a callable: the depth is only needed for a first contribution.
+    #   recording: a node on either    builds the (lazy) compute graph (a
+    #   side                           plain side is a constant)
+    #   not recording: a node term     the term graph is evaluated to a field
+    #                                  (e.g. a node seed of a plain pass)
     #
     # Adopting is safe since a node never writes into its gradient after
     # passing it on: the backward pass runs in reverse topological order, so
@@ -147,7 +144,7 @@ def accumulate(cur, r, sign, container, depth, adopt=True):
         if isinstance(cur, scaled_identity):
             return scaled_identity(cur.c + r.c, cur.identity)
         r, sign = product(r.identity, r.c), 1
-    cur = built(cur, container, depth)
+    cur = built(cur, container)
     if container.tag[0] is list and isinstance(r, list):
         # a whole list flowing into a list node: element by element (None:
         # no flow into that element)
@@ -155,13 +152,13 @@ def accumulate(cur, r, sign, container, depth, adopt=True):
         elements = [None] * len(r) if cur is None else list(cur.elements)
         for i, x in enumerate(r):
             if x is not None:
-                elements[i] = accumulate(elements[i], x, sign, container.tag[1], depth, adopt)
+                elements[i] = accumulate(elements[i], x, sign, container.tag[1], adopt)
         return flow_list(elements)
     assert not isinstance(cur, flow_list), "a list flow receives a list"
+    graph = recording()
     if cur is None:
-        d = depth()
-        if d > 0:
-            if sign > 0 and is_node(r) and r._container == container:
+        if graph and is_node(r):
+            if sign > 0 and r._container == container:
                 return dense(r, True)
         elif container.tag[0] == g.lattice:
             r = value_of(r) if is_node(r) else r
@@ -176,14 +173,10 @@ def accumulate(cur, r, sign, container, depth, adopt=True):
             dst = g.lattice(container.get_grid(), container.get_otype())
             dst @= r if sign > 0 else -r
             return dense(dst, True)
-        cur = dense(zero_of(container, d), True)
+        cur = dense(container.zero(), True)
     v = cur.value
-    if is_node(v):
-        if sign > 0:
-            return dense(add(v, r), True)
-        if is_node(r) and v._container != r._container:
-            return dense(value_of(v) - value_of(r), True)
-        return dense(sub(v, r), True)
+    if graph and (is_node(v) or is_node(r)):
+        return dense(add(v, r) if sign > 0 else sub(v, r), True)
     r = value_of(r) if is_node(r) else r
     if not cur.owned:
         return dense(g(v + r if sign > 0 else v - r), True)
@@ -199,7 +192,7 @@ def accum(n, r, sign=1, adopt=True):
     if n.flow is None and isinstance(n.value, g.ad.forward.series):
         n.zero_gradient()
     n.flow = accumulate(
-        n.flow, r, sign, n._container, lambda: n.depth - 1, adopt
+        n.flow, r, sign, n._container, adopt
     )
 
 
@@ -208,5 +201,5 @@ def accum_element(n, i, r):
     if n.flow is None:
         n.flow = flow_list([None] * len(n))
     n.flow.elements[i] = accumulate(
-        n.flow.elements[i], r, 1, n._container.tag[1], lambda: n.depth - 1
+        n.flow.elements[i], r, 1, n._container.tag[1]
     )

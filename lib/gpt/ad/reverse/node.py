@@ -28,8 +28,9 @@ from gpt.ad.reverse.util import (
     sub,
     div,
     value_of,
-    zero_of,
     nodify,
+    is_node,
+    record,
 )
 from gpt.ad.reverse import flow as flows
 from gpt.ad.reverse.flow import accum, accum_element
@@ -79,16 +80,10 @@ class node_differentiable_functional(g.group.differentiable_functional):
         return self.node(with_gradients=False).real
 
     def gradient(self, fields, dfields):
-        for a in self.arguments:
-            a.with_gradient = False
         indices = [g.util.index_by_identity(fields, df) for df in dfields]
-        for i in indices:
-            self.arguments[i].gradient = None
-            self.arguments[i].with_gradient = True
         for i in range(len(fields)):
             self.arguments[i].value = fields[i]
-        self.node(with_value=False)
-        return [self.arguments[i].gradient for i in indices]
+        return self.node.backward(wrt=[self.arguments[i] for i in indices])
 
 
 def str_traverse(node, indent=0):
@@ -106,23 +101,25 @@ def str_traverse(node, indent=0):
         return ret
 
 
+def _check_value(v):
+    # the value of a node is a plain value (lattice, tensor, number, array, a
+    # list of these) or a forward-AD series, never a node: higher reverse
+    # orders are recorded passes over one graph (create_graph), not nested
+    # nodes
+    if isinstance(v, node_base):
+        raise ValueError(
+            "the value of a node is a plain value or a forward-AD series, not a node "
+            "(higher derivatives: y.backward(create_graph=True))"
+        )
+
+
 class _value_slot:
-    # node.value: read as a plain attribute (no __get__), checked on writes.
-    # A node's depth is fixed at construction, so a value must have the
-    # depth below it (None: no value); the one place where this is enforced
-    # for every writer (forward, functionals and other leaf swaps)
+    # node.value: read as a plain attribute (no __get__), checked on writes;
+    # the one place where this is enforced for every writer (forward,
+    # functionals and other leaf swaps)
     def __set__(self, n, v):
-        if v is not None and _depth(v) != n.depth - 1:
-            raise ValueError(
-                f"a value of depth {_depth(v)} assigned to a node of depth {n.depth} "
-                f"(the value of a node of depth d has depth d - 1; node depths are "
-                f"fixed at construction)"
-            )
+        _check_value(v)
         n.__dict__["value"] = v
-
-
-def _depth(x):
-    return x.depth if isinstance(x, node_base) else 0
 
 
 class node_base(base):
@@ -140,25 +137,26 @@ class node_base(base):
         _container=None,
         _tag=None,
     ):
-        # depth: the number of nested node levels, fixed at construction (see
-        # _value_slot): a leaf is one level above its value; a computed node
-        # has the depth of its deepest child (a node op promotes shallower
-        # operands, e.g. constants, to the depth of the others)
         if not callable(_forward) or isinstance(_forward, node_base):
+            # a leaf with the value _forward
+            _check_value(_forward)
             self._forward = None
-            self.depth = 1 + _depth(_forward)
             self.__dict__["value"] = _forward
             _container = get_container(_forward)
         else:
             self._forward = _forward
-            self.depth = max([c.depth for c in _children], default=1)
             self.__dict__["value"] = None
             assert _container is not None
         self._container = _container
         self._backward = _backward
         self._children = _children
         if len(_children) > 0:
-            with_gradient = any([c.with_gradient for c in _children])
+            if _structural:
+                # (built during a pass restricted by wrt, e.g. a recorded
+                # flow: from the children's structural flags, see _select)
+                with_gradient = any([_structural.get(c, c.with_gradient) for c in _children])
+            else:
+                with_gradient = any([c.with_gradient for c in _children])
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         # the typed gradient (see flow.py); .gradient is its value
@@ -179,9 +177,7 @@ class node_base(base):
         # the value of the flow (None: no flow); a scaled identity is built
         # into a field on reading
         if isinstance(self.flow, flows.scaled_identity):
-            self.flow = flows.built(
-                self.flow, self._container, lambda: self.depth - 1
-            )
+            self.flow = flows.built(self.flow, self._container)
         return flows.value(self.flow)
 
     @gradient.setter
@@ -198,32 +194,28 @@ class node_base(base):
         if self.flow is None:
             self.zero_gradient()
         elif isinstance(self.flow, flows.flow_list) and None in self.flow.elements:
-            depth = self.depth - 1
             elem = self._container.tag[1]
             self.flow = flows.flow_list(
-                [flows.dense(zero_of(elem, depth), True) if e is None else e for e in self.flow.elements]
+                [flows.dense(elem.zero(), True) if e is None else e for e in self.flow.elements]
             )
         else:
             self.gradient
 
     def zero_gradient(self):
-        depth = self.depth - 1
         if self._container.tag[0] is list:
-            # a list leaf's gradient is a plain list, one entry per element,
-            # each element independently wrapped to the nesting depth -- so at
-            # a nested depth the gradient is a list of node graphs (one per
-            # element), never a node wrapping a list
+            # a list leaf's gradient is a plain list, one entry per element
+            # (in a recorded pass a list of node graphs, never a node
+            # wrapping a list)
             elem = self._container.tag[1]
-            self.gradient = [zero_of(elem, depth) for _ in range(self._container.tag[2])]
+            self.gradient = [elem.zero() for _ in range(self._container.tag[2])]
             return
         if isinstance(self.value, g.ad.forward.series):
-            # (a series value is plain, depth 0)
             zero = self._container.zero()
             self.gradient = 0.0 * self.value
             for t in self.gradient.terms:
                 self.gradient.terms[t] = zero
             return
-        self.gradient = zero_of(self._container, depth)
+        self.gradient = self._container.zero()
 
     def __mul__(x, y):
         x, y = nodify(x, y)
@@ -261,8 +253,8 @@ class node_base(base):
 
         # lattice data has no C++ power op, so integer powers are built from
         # repeated multiplication (field * field is supported); scalars and
-        # tensors keep the native **.  In a nested pass value_of(x) is a node
-        # and * dispatches on the type, so the product stays in the node world.
+        # tensors keep the native **.  In a recorded pass value_of(x) is the
+        # node and * dispatches on the type, so the product stays a node.
         lattice = x._container.tag[0] == g.lattice
 
         def _p(v, k):
@@ -340,8 +332,8 @@ class node_base(base):
             z._reads_self = False
             return z
 
-        # element access (arrays, tensors, ...; see linear.element), at any
-        # nesting depth (its vjp is the scatter, whose vjp is again element)
+        # element access (arrays, tensors, ...; see linear.element), to any
+        # order (its vjp is the scatter, whose vjp is again element)
         return g.ad.reverse.linear.element(x, item)
 
     def __len__(self):
@@ -406,12 +398,12 @@ class node_base(base):
                 if n.value is None or free is not None:
                     # in a backward pass (free is None) a node's value is a
                     # deterministic function of its children's values, which
-                    # are immutable; nested passes re-enter the previous
-                    # pass's graph, so a value that survived the backward
-                    # (e.g. the root, which is never freed) is kept instead of
-                    # re-computed.  In a forward-only pass the same graph may
-                    # be re-evaluated with modified leaf values, so values are
-                    # re-computed as before
+                    # are immutable; a pass over a recorded graph re-enters
+                    # the previous pass's graph, so a value that survived the
+                    # backward (retained, or the root, which is never freed)
+                    # is kept instead of re-computed.  In a forward-only pass
+                    # the same graph may be re-evaluated with modified leaf
+                    # values, so values are re-computed as before
                     n.value = n._forward()
                 if free is not None:
                     for m in free[n]:
@@ -421,7 +413,18 @@ class node_base(base):
                     if not n.value.is_adj():
                         n.value = g(n.value)
 
-    def backward(self, nodes, first_gradient, initial_gradient, retain_values=False):
+    def _reverse(
+        self, nodes, first_gradient, initial_gradient, retain_values=False, create_graph=False
+    ):
+        # create_graph: the backward closures are recorded (see util.record):
+        # they see the children nodes instead of their values, so the flows,
+        # and the leaf gradients, are nodes of the same graph (nothing is
+        # evaluated); a contraction of a leaf gradient is then an ordinary
+        # node whose reverse pass gives the next derivative
+        with record(create_graph):
+            self._reverse_pass(nodes, first_gradient, initial_gradient, retain_values)
+
+    def _reverse_pass(self, nodes, first_gradient, initial_gradient, retain_values):
         if initial_gradient is None:
             if self._container.is_field():
                 raise Exception(
@@ -448,16 +451,31 @@ class node_base(base):
                 # (constant leaves keep gradient None: nothing reads it)
                 n.materialize_gradient()
                 if n.infinitesimal_to_cartesian:
+                    # (value_of: while recording, the leaf node itself, so
+                    # that the conversion is differentiated)
                     n.flow = flows.replaced(
-                        n.flow, g.infinitesimal_to_cartesian(n.value, n.gradient)
+                        n.flow, g.infinitesimal_to_cartesian(value_of(n), n.gradient)
                     )
                 # (a gradient handed out never aliases another gradient)
                 n.own_gradient()
 
     # TODO: allow for lists of initial_gradients (could save forward runs at sake of more memory)
     def __call__(
-        self, with_gradients=True, initial_gradient=None, retain_values=False, with_value=True
+        self,
+        with_gradients=True,
+        initial_gradient=None,
+        retain_values=False,
+        with_value=True,
+        create_graph=False,
+        wrt=None,
     ):
+        # wrt: a list of leaves; the pass computes their gradients only (the
+        # other leaves are constants for this pass and keep their gradients)
+        # y() runs the forward and the reverse pass and returns the value of y;
+        # y.backward() is the same without the value (see there).
+        # create_graph=True: record the reverse pass (see _reverse); the leaf
+        # gradients are then lazy nodes.  The recording reads no values, so
+        # with with_value=False no forward runs at all
         # with_value=False (with gradients, without retain_values): the value
         # of the root is not needed, so only the values some backward reads
         # are computed (see needed_values); the return value is then None
@@ -465,23 +483,60 @@ class node_base(base):
         # the backward does not free them, so repeated reverse passes (e.g.
         # one per seed direction) over unchanged leaves share one forward;
         # without, the forward keeps all intermediate values, so a following
-        # reverse pass reuses exactly these nodes (in a nested graph, the
-        # returned value is then part of the next pass's derivative graph)
+        # reverse pass reuses exactly these values
         nodes = []
         forward_free = traverse(nodes, self)
-        free = forward_free if not (with_gradients or retain_values) else None
-        needed = None
-        if with_gradients and not retain_values and not with_value:
-            needed = needed_values(nodes)
-        self.forward(nodes, free=free, needed=needed)
-        if with_gradients:
-            self.backward(
-                nodes,
-                first_gradient=forward_free,
-                initial_gradient=initial_gradient,
-                retain_values=retain_values,
-            )
+        saved = None
+        if with_gradients and wrt is not None:
+            saved, added = _select(nodes, wrt)
+            for x in wrt:
+                # (a selected leaf the root does not depend on: no gradient)
+                x.flow = None
+        try:
+            free = forward_free if not (with_gradients or retain_values) else None
+            needed = None
+            if with_gradients and not retain_values and not with_value:
+                needed = set() if create_graph else needed_values(nodes)
+            self.forward(nodes, free=free, needed=needed)
+            if with_gradients:
+                self._reverse(
+                    nodes,
+                    first_gradient=forward_free,
+                    initial_gradient=initial_gradient,
+                    retain_values=retain_values,
+                    create_graph=create_graph,
+                )
+        finally:
+            if saved is not None:
+                for n, w in saved:
+                    n.with_gradient = w
+                for n in added:
+                    del _structural[n]
         return self.value if needed is None else None
+
+    def backward(
+        self,
+        initial_gradient=None,
+        retain_values=False,
+        with_value=False,
+        create_graph=False,
+        wrt=None,
+    ):
+        # the gradients without the value of y: y(with_value=False), so the
+        # forward computes only the values a backward reads (none at all when
+        # recording, create_graph=True).  Use it wherever the value of a
+        # reverse pass is not read.  With wrt, returns the gradients of the
+        # leaves wrt (as .gradient: a list for a list leaf; None for a leaf
+        # the root does not depend on)
+        self(
+            initial_gradient=initial_gradient,
+            retain_values=retain_values,
+            with_value=with_value,
+            create_graph=create_graph,
+            wrt=wrt,
+        )
+        if wrt is not None:
+            return [x.gradient for x in wrt]
 
     def functional(self, *arguments):
         return node_differentiable_functional(self, arguments)
@@ -504,17 +559,48 @@ class node_base(base):
     real = property(get_real)
 
     def new(self):
-        # a fresh node at the SAME DEPTH as self, zero-initialized, for any
-        # node value type (lattice, tensor, number, list, ...).  The container
-        # is the innermost one, so it builds the plain zeroed value and one
-        # node wraps it per nesting level.  This is what lets
-        # parallel_transport_matrix.__call__ allocate a target whose depth
-        # matches the (possibly 2nd/3rd-derivative) input.  The producer (e.g.
-        # a stencil) overwrites the contents, so zero-init is fine.
-        r = self._container.zero()
-        for _ in range(self.depth):
-            r = node(r)
-        return r
+        # a fresh leaf of the same type as self, zero-initialized, for any
+        # node value type (lattice, tensor, number, list, ...): e.g. the
+        # output node of a stencil (which overwrites it, so zero-init is fine)
+        return node(self._container.zero())
+
+
+# the structural with_gradient flags of the nodes whose flags a running pass
+# has restricted (see _select); nodes built meanwhile derive their flags from
+# these, so a recorded flow keeps the structure of the graph
+_structural = {}
+
+
+def _select(nodes, wrt):
+    # restrict a pass to the leaves wrt: the with_gradient flags of the
+    # graph's nodes for this pass (a leaf: whether it is in wrt; a computed
+    # node: whether it has a selected child), returned with the structural
+    # flags for restoring and the nodes it entered into _structural.  wrt
+    # only restricts: a leaf constructed as a constant (with_gradient=False)
+    # cannot be selected
+    for x in wrt:
+        if not isinstance(x, node_base) or x._forward is not None:
+            raise TypeError("wrt: the leaves of the graph (rad.node(...)) to differentiate")
+        if not x.with_gradient:
+            raise ValueError(
+                "wrt: a leaf constructed with with_gradient=False is a constant; "
+                "construct it with with_gradient=True to differentiate it"
+            )
+    wrt = set(wrt)
+    saved = [(n, n.with_gradient) for n in nodes]
+    # (a pass inside another restricted pass, e.g. in a backward closure,
+    # keeps the outer pass's structural flags)
+    added = [n for n, w in saved if n not in _structural]
+    for n, w in saved:
+        if n not in _structural:
+            _structural[n] = w
+    for n in nodes:
+        # (children first: their flags are already the pass's)
+        if n._forward is None:
+            n.with_gradient = n in wrt
+        elif n.with_gradient:
+            n.with_gradient = any(c.with_gradient for c in n._children)
+    return saved, added
 
 
 def needed_values(nodes):
