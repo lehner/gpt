@@ -22,3 +22,5 @@ import gpt.ad.reverse.foundation
 from gpt.ad.reverse.functional_node import functional_node
 from gpt.ad.reverse.preimage import preimage
 from gpt.ad.reverse.linear import stack, matrix_vector, outer_sum, dagger
+from gpt.ad.reverse.jacobian import jacobian, identity
+from gpt.ad.reverse.jacobian import log_det, det, inv

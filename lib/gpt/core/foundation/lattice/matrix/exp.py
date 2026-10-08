@@ -25,6 +25,12 @@ import numpy as np
 # X + sum_i eps_i H_i (eps_i^2 = 0), whose eps_1...eps_k coefficient is D_k.
 # A component is kept per subset S of {1..k} (k = 0 is exp itself).
 #
+# Jets (jet below): only the components of a downward-closed family of
+# subsets are kept, and the outputs are sums of components, e.g. the family
+# {0, e_1, ..., e_k} gives exp(X) and D_1(X; H_i) for k tangents in one kernel
+# (the forward tangents of g.ad.reverse.jacobian).  D_k is the family of all
+# subsets.
+#
 # Scaling and squaring, exp(Y) = exp(Y / 2^s)^(2^s), with the scale folded
 # into the Taylor coefficients, and the Taylor polynomial evaluated by
 # Paterson-Stockmeyer: p = sum_b C_b y^b with y = x^q and C_b a linear
@@ -64,11 +70,23 @@ def max_site_norm(x):
     return float(np.max(per_rank)) ** 0.5
 
 
+def _submasks(S):
+    # the subsets T of S, from S down to 0
+    T = S
+    while True:
+        yield T
+        if T == 0:
+            return
+        T = (T - 1) & S
+
+
 class _multi_dual_code:
     # symbolic multi-dual algebra emitting local-stencil code; a multi-dual
-    # value is a dict {subset mask: field}, absent components are zero
-    def __init__(self, k):
-        self.k = k
+    # value is a dict {subset mask: field}, absent components are zero; only
+    # the components of the (downward-closed) family are kept
+    def __init__(self, family):
+        self.family = family
+        self.members = set(family)
         self.code = []
         self.n_temps = 0
         self.n_products = 0
@@ -86,7 +104,7 @@ class _multi_dual_code:
     def combine(self, targets, lincomb, product):
         # result[S] = sum_i c_i A_i[S] (+ c_I at S = 0) + sum_T P[T] Y[S \ T]
         result = {}
-        for S in range(2**self.k):
+        for S in self.family:
             terms = []
             if S == 0 and lincomb[0] != 0.0:
                 terms.append((lincomb[0], ["I"]))
@@ -95,13 +113,9 @@ class _multi_dual_code:
                     terms.append((c, [A[S]]))
             if product is not None:
                 P, Y = product
-                T = S
-                while True:
+                for T in _submasks(S):
                     if T in P and (S ^ T) in Y:
                         terms.append((1.0, [P[T], Y[S ^ T]]))
-                    if T == 0:
-                        break
-                    T = (T - 1) & S
             if terms:
                 result[S] = targets(S)
                 self.emit(result[S], terms)
@@ -111,11 +125,12 @@ class _multi_dual_code:
         return self.combine(targets or (lambda S: self.temp()), (0.0, []), (A, B))
 
 
-def _generate(k, n, s, q, outputs):
-    md = _multi_dual_code(k)
+def _generate(family, k, n, s, q, outputs):
+    md = _multi_dual_code(family)
     x = {0: "X"}
     for i in range(k):
-        x[1 << i] = ("H", i)
+        if (1 << i) in md.members:
+            x[1 << i] = ("H", i)
     # coefficients of the scaled Taylor polynomial, c_j = 2^(-s j) / j!
     c = [1.0]
     for j in range(1, n + 1):
@@ -124,7 +139,7 @@ def _generate(k, n, s, q, outputs):
     for _ in range(2, q + 1):
         powers.append(md.mul(powers[-1], x))
     y = powers[q]
-    banks = [{S: md.temp() for S in range(2**k)} for _ in range(2)]
+    banks = [{S: md.temp() for S in family} for _ in range(2)]
 
     def block(b):
         # C_b = sum_{i < q} c_{bq+i} x^i  as (coefficient of I, [(c, x^i)])
@@ -141,15 +156,15 @@ def _generate(k, n, s, q, outputs):
     for _ in range(s):
         cur = 1 - cur
         P = md.mul(P, P, lambda S: banks[cur][S])
-    for i, S in enumerate(outputs):
-        md.emit(("out", i), [(1.0, [P[S]])])
+    for i, L in enumerate(outputs):
+        md.emit(("out", i), [(1.0, [P[S]]) for S in L])
     return md
 
 
-def _code(k, n, s, outputs):
+def _code(family, k, n, s, outputs):
     # Paterson-Stockmeyer block size, see above
     best = min(
-        (_generate(k, n, s, q, outputs) for q in range(1, n + 1)),
+        (_generate(family, k, n, s, q, outputs) for q in range(1, n + 1)),
         key=lambda md: len(md.code) + md.n_temps,
     )
     # field layout: outputs, temporaries, identity, X, H_1..H_k
@@ -176,19 +191,24 @@ def scaling(x):
     return 0 if nrm <= theta else int(np.ceil(np.log2(nrm / theta)))
 
 
-def _evaluate(x, h, outputs, s=None):
-    # the multi-dual components `outputs` (subset masks) of exp(x + sum eps_i h_i);
-    # s is the scaling (computed from x if not given)
+def _evaluate(x, h, outputs, s=None, family=None):
+    # the multi-dual components `outputs` (subset masks, or lists of subset
+    # masks for sums of components) of exp(x + sum eps_i h_i), keeping the
+    # components of family (default: all subsets); s is the scaling
+    # (computed from x if not given)
     x = g(x)
     h = [g(y) for y in h]
     k = len(h)
-    n = order_base + k
+    outputs = [L if isinstance(L, list) else [L] for L in outputs]
+    if family is None:
+        family = list(range(2**k))
+    n = order_base + max(bin(S).count("1") for S in family)
     if s is None:
         s = scaling(x)
 
-    tag = f"{x.otype.__name__}_{x.grid}_{k}_{n}_{s}_{outputs}"
+    tag = f"{x.otype.__name__}_{x.grid}_{k}_{n}_{s}_{outputs}_{family}"
     if tag not in _kernels:
-        code, n_temps, n_products = _code(k, n, s, outputs)
+        code, n_temps, n_products = _code(family, k, n, s, outputs)
         m = len(outputs)
         kernel = g.local_stencil.matrix(
             x, [(0,) * x.grid.nd], code, temporaries=list(range(m, m + n_temps))
@@ -209,6 +229,13 @@ def _evaluate(x, h, outputs, s=None):
     # (the temporaries are owned by the kernel)
     kernel(*out, g.identity_constant(x), x, *hx)
     return out
+
+
+def jet(x, h, family, outputs, s=None):
+    # the outputs (lists of subset masks: sums of components) of
+    # exp(x + sum_i eps_i h_i) with the components of the downward-closed
+    # family only, in one kernel (plain lattices)
+    return _evaluate(x, h, outputs, s, family)
 
 
 def derivative(x, h, s=None):

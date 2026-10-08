@@ -138,12 +138,25 @@ def _flows(f):
     return f if is_node(f) else list(f)
 
 
+def _stack_jvp(z, children, tangents):
+    # the stack of the tangents (zeros for constant entries)
+    k = len(next(t for t in tangents if t is not None))
+
+    def entry(i, j):
+        if tangents[i] is not None:
+            return tangents[i][j]
+        return constant(children[i]._container.zero())
+
+    return [_stack(*[entry(i, j) for i in range(len(children))]) for j in range(k)]
+
+
 _stack = primitive(
     "stack",
     lambda *h: list(h),
     lambda *c: container(list, c[0], len(c)),
     vjp=lambda j, flow, *h: flow[j],
     reads=lambda n: ((),) * n,
+    jvp=_stack_jvp,
 )
 
 
@@ -154,6 +167,27 @@ def stack(h):
     if not any(is_node(x) for x in h):
         return constant(list(h))
     return _stack(*h)
+
+
+def _bilinear_jvp(op):
+    # the tangent rule of z = op(a, b), bilinear: dz = op(da, b) + op(a, db)
+    def _jvp(z, children, tangents):
+        (a, b), (ta, tb) = children, tangents
+        k = len(ta if ta is not None else tb)
+        out = []
+        for j in range(k):
+            terms = ([] if ta is None else [op(ta[j], b)]) + ([] if tb is None else [op(a, tb[j])])
+            out.append(terms[0] if len(terms) == 1 else _add_lists(terms[0], terms[1]))
+        return out
+
+    return _jvp
+
+
+def _add_lists(x, y):
+    # the sum of two list nodes (elementwise), or of two values
+    if _is_list_node(x):
+        return _stack(*[x[i] + y[i] for i in range(len(x))])
+    return x + y
 
 
 def _matrix_vector_vjp(i, flow, W, h):
@@ -169,6 +203,7 @@ matrix_vector = primitive(
     vjp=_matrix_vector_vjp,
     lift=(constant, stack),
     reads=((1,), (0,)),
+    jvp=_bilinear_jvp(lambda W, h: matrix_vector(W, h)),
 )
 
 
@@ -185,6 +220,7 @@ outer_sum = primitive(
     vjp=_outer_sum_vjp,
     lift=(stack, stack),
     reads=((1,), (0,)),
+    jvp=_bilinear_jvp(lambda a, b: outer_sum(a, b)),
 )
 
 
@@ -194,6 +230,7 @@ dagger = primitive(
     lambda W: container(np.ndarray, tuple(reversed(W.tag[1])), np.complex128),
     vjp=lambda i, flow, W: dagger(flow),
     reads=((),),
+    jvp=lambda z, children, tangents: [dagger(t) for t in tangents[0]],
 )
 
 
@@ -229,6 +266,7 @@ _element = primitive(
     lambda a, index, c: get_container(_plain_element(c.representative(), index, c)),
     vjp=lambda i, flow, a, index, c: scatter(flow, index, c),
     reads=((),),
+    jvp=lambda z, children, tangents, index, c: [element(t, index) for t in tangents[0]],
 )
 
 _scatter = primitive(
@@ -237,6 +275,7 @@ _scatter = primitive(
     lambda v, index, c: c.copy(),
     vjp=lambda i, flow, v, index, c: element(flow, index),
     reads=((),),
+    jvp=lambda z, children, tangents, index, c: [scatter(t, index, c) for t in tangents[0]],
 )
 
 

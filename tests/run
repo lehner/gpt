@@ -82,6 +82,7 @@ for f in \
     ${test_path}/ad/ad.py \
     ${test_path}/ad/higher_order.py \
     ${test_path}/ad/stencil.py \
+    ${test_path}/ad/jacobian.py \
     ${test_path}/ad/list_node.py \
     ${test_path}/ad/linear.py \
     ${test_path}/ml/function.py \

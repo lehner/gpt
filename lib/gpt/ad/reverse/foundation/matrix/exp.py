@@ -35,11 +35,28 @@
 # nodes, and at the plain level each D_k is ONE compiled local
 # kernel instead of a graph of O(100) elementwise node operations.
 #
-# Plain evaluation: gpt.core.foundation.lattice.matrix.exp.derivative (exp
-# of a multi-dual number, one compiled kernel per D_k).
+# All members are JETS: exp(X + sum_b eps_b H_b) with eps_b^2 = 0, restricted
+# to a downward-closed family of components (subsets S of the
+# infinitesimals; the S component is D_|S|(X; H_S)), the outputs sums of
+# components, ONE fused kernel per jet.  D_k is the jet of all subsets with
+# the top component as its output.  The rule above for a jet: for the flow
+# W_j into output O_j = sum_{S in L_j} comp_S, with a new infinitesimal d_j
+# along W_j,
+#
+#     flow into X   = sum_j sum_{S in L_j} comp_{S + d_j}
+#     flow into H_b = sum_j sum_{S in L_j, b in S} comp_{S - b + d_j}
+#
+# at X^dag (directions H^dag), again one jet: the flows into X and all H_b in
+# one kernel.  Forward tangents (g.ad.reverse.jacobian) along X are new
+# infinitesimals as well: dO_j along T_a = sum_{S in L_j} comp_{S + e_a}, all
+# outputs and directions in one kernel.
+#
+# Plain evaluation: gpt.core.foundation.lattice.matrix.exp.jet (exp of a
+# sparse multi-dual number, one compiled kernel per jet).
 #
 import gpt as g
 from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse.util import container
 
 
 def _plain_base(x):
@@ -60,8 +77,8 @@ def _plain_base(x):
 
 
 class _tower:
-    # the plain X shared by all D_k nodes of one exp tower (the node exp(X)
-    # and the flows built from it, to any order): every plain D_k is
+    # the plain X shared by all jets of one exp tower (the node exp(X) and
+    # the flows and tangents built from it, to any order): every plain jet is
     # evaluated at X or X^dag, which have the same scaling s, so s and the
     # materialized X^dag are computed once.  X is identified by identity; the
     # user-created root resets the tower in every pass (see derivative), so
@@ -74,10 +91,12 @@ class _tower:
         self.s = None
         self.xdag = None
 
-    def plain(self, x, h):
+    def base(self, x):
+        # (the plain lattice of x = X or X^dag, its scaling); a value that is
+        # neither is evaluated, with its own scaling
         base, dag = _plain_base(x)
         if base is None:
-            return g.lattice.foundation.matrix.exp.derivative(x, h)
+            return g(x), None
         if base is not self.x:
             self.x = base
             self.s = g.lattice.foundation.matrix.exp.scaling(base)
@@ -86,47 +105,125 @@ class _tower:
             if self.xdag is None:
                 self.xdag = g(g.adj(base))
             base = self.xdag
-        return g.lattice.foundation.matrix.exp.derivative(base, h, self.s)
+        return base, self.s
 
 
-def _plain(x, *h, tower, root):
+def _closure(components):
+    # the downward closure (all subsets) of the components
+    family = set()
+    for S in components:
+        family.update(g.lattice.foundation.matrix.exp._submasks(S))
+    return sorted(family)
+
+
+def _plain(x, *h, family, outputs, listed, tower, root):
     # (fused kernels live in the lattice foundation)
     if root:
         tower.reset()
-    return tower.plain(x, list(h))
+    base, s = tower.base(x)
+    out = g.lattice.foundation.matrix.exp.jet(base, list(h), family, outputs, s)
+    return out if listed else out[0]
 
 
-def _fwd(x, *h, tower, root):
+def _fwd(x, *h, **static):
     # a node's plain value; the residual records that the root has reset the
     # tower in this pass
-    return _plain(x, *h, tower=tower, root=root), True
+    return _plain(x, *h, **static), True
 
 
-def _vjp(i, flow, x, *h, tower, root, residual):
-    # the flows are D's at X^dag in the same tower (W at slot i, or appended
-    # for the flow into X).  A root whose value was not computed in this pass
-    # (with_value=False) resets the tower here, before its first use
+def _vjp(z, needed, x, *h, family, outputs, listed, tower, root, residual):
+    # one jet at X^dag for all needed flows (see above).  A root whose value
+    # was not computed in this pass (with_value=False) resets the tower here,
+    # before its first use
     if root and residual is None:
         tower.reset()
-    hd = [g.adj(c) for c in h]
-    if i == 0:
-        hd.append(flow)
-    else:
-        hd[i - 1] = flow
-    return _D(g.adj(x), *hd, tower=tower, root=False)
+    flows = z.gradient if listed else [z.gradient]
+    nb = len(h)
+    dirs = [g.adj(y) for y in h]
+    to_x, to_h = [], [[] for _ in range(nb)]
+    for j, L in enumerate(outputs):
+        if flows[j] is None:
+            continue
+        d = 1 << len(dirs)
+        dirs.append(flows[j])
+        for S in L:
+            to_x.append(S | d)
+            for b in range(nb):
+                if S & (1 << b):
+                    to_h[b].append((S & ~(1 << b)) | d)
+    out, owners = [], []
+    if 0 in needed and to_x:
+        out.append(to_x)
+        owners.append(0)
+    for b in range(nb):
+        if (b + 1) in needed and to_h[b]:
+            out.append(to_h[b])
+            owners.append(b + 1)
+    if not out:
+        return {}
+    r = jet(g.adj(x), dirs, _closure([S for L in out for S in L]), out, tower)
+    return {o: r[i] for i, o in enumerate(owners)}
 
 
-_D = primitive("exp_d", _plain, lambda x, *h, **static: x, vjp=_vjp, fwd=_fwd)
+def _jvp(z, children, tangents, family, outputs, listed, tower, root):
+    # the forward tangents along X: a new infinitesimal per direction,
+    # dO_j = sum_{S in L_j} comp_{S + e_a}, all in one jet
+    if any(t is not None for t in tangents[1:]):
+        raise NotImplementedError("jacobian: tangents of the directions of exp derivatives")
+    t = tangents[0]
+    k, nb = len(t), len(children) - 1
+    e = [1 << (nb + a) for a in range(k)]
+    out = [[S | ea for S in L] for ea in e for L in outputs]
+    r = jet(children[0], list(children[1:]) + list(t), _closure([S for L in out for S in L]), out, tower)
+    m = len(outputs)
+    if not listed:
+        return [r[a] for a in range(k)]
+    return [g.ad.reverse.linear.stack([r[a * m + j] for j in range(m)]) for a in range(k)]
+
+
+def _container(x, *h, family, outputs, listed, tower, root):
+    return container(list, x, len(outputs)) if listed else x
+
+
+_J = primitive("exp_jet", _plain, _container, joint_vjp=_vjp, fwd=_fwd, jvp=_jvp)
+
+
+def jet(x, h, family, outputs, tower=None, listed=True):
+    # the outputs (lists of subset masks of the infinitesimals along h) of
+    # exp(x + sum_b eps_b h_b) restricted to the downward-closed family; x
+    # may be adj(X) of the tower's X.  Directions outside the family are
+    # dropped.  Returns a list (plain) or a list node; listed=False: the
+    # single output itself.  Without a tower, the jet is the user's root of
+    # a new tower
+    used = 0
+    for S in family:
+        used |= S
+    bits = [b for b in range(len(h)) if used & (1 << b)]
+
+    def remap(S):
+        return sum(1 << i for i, b in enumerate(bits) if S & (1 << b))
+
+    root = tower is None
+    return _J(
+        x,
+        *[h[b] for b in bits],
+        family=sorted(remap(S) for S in family),
+        outputs=[[remap(S) for S in L] for L in outputs],
+        listed=listed,
+        tower=_tower() if root else tower,
+        root=root,
+    )
 
 
 def derivative(x, h, tower=None):
-    # D_k(x; h_1..h_k); plain values run the fused kernel, node values build a
-    # node whose backward is again a D, in the same tower.
-    # The user-created root resets the tower in every pass (when it computes
-    # a plain value, or else in its backward), so a leaf modified in place
-    # between passes is never served stale
-    root = tower is None
-    return _D(x, *h, tower=_tower() if root else tower, root=root)
+    # D_k(x; h_1..h_k): the jet of all subsets, the top component; plain
+    # values run the fused kernel, node values build a node whose backward is
+    # again a jet, in the same tower.  The user-created root resets the tower
+    # in every pass (when it computes a plain value, or else in its
+    # backward), so a leaf modified in place between passes is never served
+    # stale
+    k = len(h)
+    return jet(x, h, list(range(2**k)), [[2**k - 1]], tower, listed=False)
 
 
 def function(x):

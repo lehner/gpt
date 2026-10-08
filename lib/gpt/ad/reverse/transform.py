@@ -27,6 +27,32 @@ def _same(x, **static):
     return x.copy()
 
 
+def _linear_jvp(op):
+    # the tangent rule of a (real-)linear componentwise map: dz = op(dx)
+    return lambda z, children, tangents, **static: [op(t, **static) for t in tangents[0]]
+
+
+def _chain_jvp(derivative):
+    # the tangent rule of a componentwise function: dz = f'(x) dx
+    # (componentwise), derivative(x, **static) -> f'(x)
+    def _jvp(z, children, tangents, **static):
+        d = derivative(children[0], **static)
+        return [multiply(d, t) for t in tangents[0]]
+
+    return _jvp
+
+
+def _multiply_jvp(z, children, tangents):
+    # d(a b) = da b + a db, componentwise
+    (a, b), (ta, tb) = children, tangents
+    k = len(ta if ta is not None else tb)
+    out = []
+    for j in range(k):
+        terms = ([] if ta is None else [multiply(ta[j], b)]) + ([] if tb is None else [multiply(a, tb[j])])
+        out.append(terms[0] if len(terms) == 1 else terms[0] + terms[1])
+    return out
+
+
 
 
 def _plain_conj(v):
@@ -45,6 +71,7 @@ conj = primitive(
     _same,
     vjp=lambda i, flow, x: conj(flow),
     reads=((),),
+    jvp=_linear_jvp(lambda t: conj(t)),
 )
 
 
@@ -62,6 +89,7 @@ multiply = primitive(
     lambda a, b: a.copy(),
     vjp=lambda i, flow, a, b: multiply(flow, conj(b)) if i == 0 else multiply(conj(a), flow),
     reads=((1,), (0,)),
+    jvp=_multiply_jvp,
 )
 
 
@@ -72,6 +100,7 @@ drelu = primitive(
     _same,
     vjp=lambda i, flow, x, a: None,
     reads=((),),
+    jvp=lambda z, children, tangents, a: [None] * len(tangents[0]),
 )
 
 # relu: the flow into x is drelu(x) * flow, componentwise (drelu is real)
@@ -81,6 +110,7 @@ _relu = primitive(
     _same,
     vjp=lambda i, flow, x, a: multiply(flow, drelu(x, a=a)),
     reads=((0,),),
+    jvp=_chain_jvp(lambda x, a: drelu(x, a=a)),
 )
 
 
@@ -96,6 +126,7 @@ sin = primitive(
     _same,
     vjp=lambda i, flow, x: multiply(flow, conj(cos(x))),
     reads=((0,),),
+    jvp=_chain_jvp(lambda x: cos(x)),
 )
 
 cos = primitive(
@@ -104,6 +135,7 @@ cos = primitive(
     _same,
     vjp=lambda i, flow, x: -multiply(flow, conj(sin(x))),
     reads=((0,),),
+    jvp=_chain_jvp(lambda x: -sin(x)),
 )
 
 
@@ -126,6 +158,7 @@ real = primitive(
     _same,
     vjp=lambda i, flow, x: real(flow),
     reads=((),),
+    jvp=_linear_jvp(lambda t: real(t)),
 )
 
 
@@ -142,4 +175,5 @@ imag = primitive(
     _same,
     vjp=_imag_vjp,
     reads=((),),
+    jvp=_linear_jvp(lambda t: imag(t)),
 )

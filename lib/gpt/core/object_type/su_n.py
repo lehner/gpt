@@ -152,6 +152,21 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
     def inverse(self, U):
         return gpt.adj(U)
 
+    # the coordinates of g.ad.reverse.jacobian: a field U varies along
+    # U -> exp(i e T_a) U (T_a the generators of the cartesian algebra), and
+    # the variation dV of a field V has the coordinates of the algebra element
+    # -i dV V^dag (its left-trivialized tangent); the Jacobian is an ng x ng
+    # real matrix per site
+    def jacobian_directions(self, U, generators):
+        return [1j * T * U for T in generators]
+
+    def jacobian_coordinates(self, V, dV):
+        Vd = gpt.adj(V)
+        return [-1j * t * Vd for t in dV]
+
+    def jacobian_otype(self):
+        return ot_matrix_su_n_adjoint_algebra(self.Nc)
+
     def infinitesimal_to_cartesian(self, U, dU):
         # the traceless hermitian part of dU U^dag / 2i (one node for AD values)
         ret = gpt.qcd.gauge.project.traceless_hermitian(dU * gpt.adj(U) / 2j)

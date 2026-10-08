@@ -274,6 +274,76 @@ def _op(stencil, out, n_inputs):
     return cache[key].op
 
 
+def tangent_code(raw, inputs, fiber, k):
+    # The forward tangents of a single-output stencil along the inputs fiber
+    # (positions in inputs), for k directions at once: the site-diagonal
+    # product rule (only zero-point reads of a fiber input contribute; a
+    # shifted read raises: not site-local), FACTORED so that the tangent map
+    # is built once per site.  The product rule gives pairs w prefix t
+    # suffix; grouped by suffix (or by prefix, whichever needs fewer products
+    # per tangent), the sum of a group's prefixes (and a suffix of two or more
+    # factors) is a local temporary, and each tangent costs the factors of
+    # G t S.  Field layout: the k outputs, the temporaries, the inputs, the
+    # identity (for an empty word), the k * len(fiber) tangents (direction
+    # major).  Returns (code, temporaries), or None without a dependence on
+    # the fiber.
+    zero = None
+    pairs = []
+    for t, acc, w, fl in raw:
+        zero = zero or (0,) * len(fl[0][1])
+        word = [(inputs.index(f), a) for f, p, a in fl]
+        for i, (f, p, a) in enumerate(fl):
+            if inputs.index(f) in fiber:
+                if tuple(p) != zero:
+                    raise ValueError("jacobian: a stencil reads the varying field at a shifted point (not site-local)")
+                pairs.append((w, tuple(word[:i]), word[i], tuple(word[i + 1 :])))
+    if not pairs:
+        return None
+
+    def groups(by_suffix):
+        out = {}
+        for w, pre, tf, suf in pairs:
+            key = (tf, suf) if by_suffix else (tf, pre)
+            out.setdefault(key, []).append((w, pre if by_suffix else suf))
+        return out
+
+    def cost(gr):
+        # products per tangent
+        return sum((len(items[0][1]) if len(items) == 1 else 1) + min(len(key[1]), 1) for key, items in gr.items())
+
+    by_suffix = cost(groups(True)) <= cost(groups(False))
+    plan, defs = [], []
+    for (tf, word), items in groups(by_suffix).items():
+        if len(items) == 1:
+            w, side = items[0][0], [("in", f, a) for f, a in items[0][1]]
+        else:
+            defs.append(items)
+            w, side = 1.0, [("tmp", len(defs) - 1, 0)]
+        if len(word) > 1:
+            defs.append([(1.0, word)])
+            fixed = [("tmp", len(defs) - 1, 0)]
+        else:
+            fixed = [("in", f, a) for f, a in word]
+        plan.append((w, side, tf, fixed))
+    nt, n = len(defs), len(inputs)
+
+    def field(x):
+        kind, f, a = x
+        return (k + f if kind == "tmp" else k + nt + f, 0, a)
+
+    code = []
+    for ti, items in enumerate(defs):
+        for i, (w, word) in enumerate(items):
+            fl = [field(("in", f, a)) for f, a in word] or [(k + nt + n, 0, 0)]
+            code.append((k + ti, -1 if i == 0 else k + ti, w, fl))
+    for j in range(k):
+        for i, (w, side, (tf, ta), fixed) in enumerate(plan):
+            tangent = (k + nt + n + 1 + j * len(fiber) + fiber.index(tf), 0, ta)
+            left, right = (side, fixed) if by_suffix else (fixed, side)
+            code.append((j, -1 if i == 0 else j, w, [field(x) for x in left] + [tangent] + [field(x) for x in right]))
+    return code, list(range(k, k + nt))
+
+
 class _stencil_op:
     # A compiled stencil as a primitive: inputs (the fields m..n-1) -> the
     # output field(s) 0..m-1 (a lattice, or a list of m lattices).  Its plain
@@ -309,6 +379,7 @@ class _stencil_op:
             self._plain,
             lambda *c, **static: out.copy(),
             joint_vjp=self._vjp,
+            jvp=self._jvp,
         )
 
     def _setup(self, n_inputs):
@@ -447,6 +518,30 @@ class _stencil_op:
                 result[k] = flow
         return result
 
+    def _jvp(self, z, children, tangents):
+        # the forward tangents (see tangent_code): one stencil with k outputs
+        if self.m != 1 or self.temps:
+            raise NotImplementedError("jacobian: tangents of multi-output stencils or stencils with local temporaries")
+        fiber = [i for i, t in enumerate(tangents) if t is not None]
+        k = len(tangents[fiber[0]])
+        cache = _cache(self.stencil, "_node_jvp")
+        key = (tuple(fiber), k)
+        if key not in cache:
+            r = tangent_code(self.raw, self.inputs, fiber, k)
+            cache[key] = None if r is None else g.stencil.matrix(
+                g.lattice(self.grid, self.otype), [(0,) * self.grid.nd], r[0], temporaries=r[1]
+            )
+        st = cache[key]
+        if st is None:
+            return [None] * k
+        from gpt.core.parallel_transport.matrix import new_target_list
+
+        one = g.identity_constant(g.lattice(self.grid, self.otype))
+        inputs = list(children) + [one] + [tangents[i][j] for j in range(k) for i in fiber]
+        T = new_target_list(z, k) if k > 1 else z.new()
+        st(T, *inputs)
+        return [T[j] for j in range(k)] if k > 1 else [T]
+
     def _children_of(self, flowed):
         # the child (input position) of each flowed field
         return [self.inputs.index(i) for i in flowed]
@@ -474,6 +569,7 @@ def matrix(stencil, *fields):
         "_tag",
         "_reads_children",
         "_reads_self",
+        "_jvp",
         "with_gradient",
     ]:
         setattr(output, name, getattr(z, name))

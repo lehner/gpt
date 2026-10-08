@@ -172,6 +172,11 @@ class node_base(base):
         # backward reads this node's own value.  The default is conservative.
         self._reads_children = None
         self._reads_self = True
+        # the tangent rule (see g.ad.reverse.jacobian): None, or
+        # _jvp(z, children, tangents) -> the k tangents of z, given per child
+        # None (constant) or its k tangents; z and children are the nodes that
+        # stand for the values (the node's own, or a replay's copies)
+        self._jvp = None
 
     def __str__(self):
         return str_traverse(self)
@@ -246,6 +251,7 @@ class node_base(base):
             z_container,
             "*",
             reads=((1,), (0,)),
+            jvp=_mul_jvp,
         )
 
     def __pow__(x, n):
@@ -271,22 +277,75 @@ class node_base(base):
                 r = r * v
             return r
 
+        # (matrix fields do not commute: dz = sum_i x^i dx x^(n-1-i))
+        otype = x._container.get_otype() if lattice else None
+        matrix = otype is not None and len(otype.shape) == 2 and otype.shape[0] > 1
+
         # backprop second factor: z = x**n -> dz/dx = n*x**(n-1).  The
         # framework gradient is conjugate-linear (see __mul__, which applies
         # g.adj to the cofactor), so the contribution is adj(n*x**(n-1)) * flow.
         # This holds for both lattice and scalar data; for real values the adj
-        # is the identity, so real-data results are unchanged.
+        # is the identity, so real-data results are unchanged.  For matrices
+        # the flow is sum_i adj(x^i) flow adj(x^(n-1-i)).
         def _bp(v):
             return g.adj(_p(v, n - 1))
 
+        def _between(left, middle, right, mul):
+            # left middle right with the factors of power 0 left out
+            r = middle
+            if left is not None:
+                r = mul(left, r)
+            if right is not None:
+                r = mul(r, right)
+            return r
+
+        def _backward(z):
+            v = value_of(x)
+            if not matrix:
+                return (1, product(z.gradient * n, _bp(v)))
+            return (
+                1,
+                _sum(
+                    [
+                        _between(
+                            g.adj(_p(v, i)) if i > 0 else None,
+                            z.gradient,
+                            g.adj(_p(v, n - 1 - i)) if i < n - 1 else None,
+                            product,
+                        )
+                        for i in range(n)
+                    ]
+                ),
+            )
+
         # z = x**n -> dz = n*x**(n-1) dx
+        def _jvp(z, children, tangents):
+            (x,), (t,) = children, tangents
+            if not matrix:
+                return [n * _p(x, n - 1) * dx for dx in t]
+            return [
+                _sum(
+                    [
+                        _between(
+                            _p(x, i) if i > 0 else None,
+                            dx,
+                            _p(x, n - 1 - i) if i < n - 1 else None,
+                            lambda a, b: a * b,
+                        )
+                        for i in range(n)
+                    ]
+                )
+                for dx in t
+            ]
+
         return node_op(
             (x,),
             lambda: _p(value_of(x), n),
-            (lambda z: (1, product(z.gradient * n, _bp(value_of(x)))),),
+            (_backward,),
             z_container,
             "**",
             reads=((0,),),
+            jvp=_jvp if n >= 2 else None,
         )
 
     def __rmul__(x, y):
@@ -336,6 +395,7 @@ class node_base(base):
             z = node_base(_forward, _backward, (x,), _container=z_container)
             z._reads_children = ((),)
             z._reads_self = False
+            z._jvp = lambda z, children, tangents: [t[item] for t in tangents[0]]
             return z
 
         # element access (arrays, tensors, ...; see linear.element), to any
@@ -371,6 +431,7 @@ class node_base(base):
             _container,
             "+",
             reads=((), ()),
+            jvp=_sum_jvp(1.0),
         )
 
     def __sub__(x, y):
@@ -386,6 +447,7 @@ class node_base(base):
             _container,
             "-",
             reads=((), ()),
+            jvp=_sum_jvp(-1.0),
         )
 
     def __rsub__(x, y):
@@ -631,10 +693,45 @@ def needed_values(nodes):
     return needed
 
 
-def node_op(children, forward, backards, container, tag=None, reads=None):
+def _sum(terms):
+    # the sum of the terms that are not None (None: no term)
+    result = None
+    for t in terms:
+        if t is not None:
+            result = t if result is None else result + t
+    return result
+
+
+def _k(tangents):
+    # the number of tangents (of the children that have tangents)
+    return len(next(t for t in tangents if t is not None))
+
+
+def _mul_jvp(z, children, tangents):
+    # d(x y) = dx y + x dy
+    (x, y), (tx, ty) = children, tangents
+    return [
+        _sum([None if tx is None else tx[j] * y, None if ty is None else x * ty[j]])
+        for j in range(_k(tangents))
+    ]
+
+
+def _sum_jvp(sign):
+    # z = x + sign y: dz = dx + sign dy (a constant contributes nothing)
+    def _jvp(z, children, tangents):
+        (tx, ty) = tangents
+        return [
+            _sum([None if tx is None else tx[j], None if ty is None else (ty[j] if sign == 1.0 else sign * ty[j])])
+            for j in range(_k(tangents))
+        ]
+
+    return _jvp
+
+
+def node_op(children, forward, backards, container, tag=None, reads=None, jvp=None):
     # reads: None (conservative) or, per child i, the indices of the children
     # whose values the backward closure of child i reads; a node_op's backward
-    # never reads its own value
+    # never reads its own value; jvp: the tangent rule (see node_base._jvp)
     # build a node from a forward closure and per-child backward closures.
     # backards[i](z) returns (sign, term) or None (no gradient for that
     # child); the with_gradient check and gradient accumulation are handled
@@ -650,6 +747,7 @@ def node_op(children, forward, backards, container, tag=None, reads=None):
     if reads is not None:
         z._reads_children = tuple(tuple(r) for r in reads)
         z._reads_self = False
+    z._jvp = jvp
     return z
 
 

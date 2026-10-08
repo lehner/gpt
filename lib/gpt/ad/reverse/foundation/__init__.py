@@ -81,6 +81,11 @@ def cshift(x, direction, displacement, none):
     )
 
 
+def _unary_jvp(op):
+    # the tangent rule of a linear unary op: dz = op(dx)
+    return lambda z, children, tangents: [op(t) for t in tangents[0]]
+
+
 def adj(x):
     return g.ad.reverse.node_op(
         (x,),
@@ -89,6 +94,7 @@ def adj(x):
         x._container,
         "adj",
         reads=((),),
+        jvp=_unary_jvp(g.adj),
     )
 
 
@@ -134,7 +140,10 @@ def _reduction_node(x, forward, container):
 def trace(x, t):
     z_container = get_unary_container(x._container, lambda v: g.trace(v, t), ("trace", t))
 
-    return _reduction_node(x, lambda: g.trace(value_of(x), t), z_container)
+    z = _reduction_node(x, lambda: g.trace(value_of(x), t), z_container)
+    # (the trace is site-local and linear; the sum over sites is not)
+    z._jvp = _unary_jvp(lambda v: trace(v, t))
+    return z
 
 
 def sum(x):
@@ -186,6 +195,7 @@ def _self_adjoint_projection(x, name):
         x._container,
         name,
         reads=((),),
+        jvp=_unary_jvp(_project),
     )
 
 
@@ -243,6 +253,8 @@ def identity(x):
         x._container,
         "identity(" + str(x._container) + ")",
         reads=((),),
+        # (a constant of x's type: no tangent)
+        jvp=lambda z, children, tangents: [None] * len(tangents[0]),
     )
 
 
@@ -257,6 +269,7 @@ def astype(x, y):
         z_container,
         "astype(" + str(x._container) + "," + str(y) + ")",
         reads=((),),
+        jvp=_unary_jvp(lambda v: astype(v, y)),
     )
 
 

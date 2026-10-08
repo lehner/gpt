@@ -363,7 +363,11 @@ def convert_container(v, x, y, operand, key):
             )
 
     assert backward_trace or backward_color_trace or backward_spin_trace or backward_sum
+    return _converted(v, c, backward_trace, backward_color_trace, backward_spin_trace, backward_sum)
 
+
+def _converted(v, c, backward_trace, backward_color_trace, backward_spin_trace, backward_sum):
+    # the node of v in the container c (same value; the backward reduces)
     def _forward():
         return value_of(v)
 
@@ -400,4 +404,7 @@ def convert_container(v, x, y, operand, key):
     # (the backward reads no value)
     z._reads_children = ((),)
     z._reads_self = False
+    # (the conversion is linear: the tangents are converted alike)
+    flags = (backward_trace, backward_color_trace, backward_spin_trace, backward_sum)
+    z._jvp = lambda z, children, tangents: [_converted(t, c, *flags) for t in tangents[0]]
     return z

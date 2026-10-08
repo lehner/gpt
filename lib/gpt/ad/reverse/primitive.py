@@ -55,6 +55,10 @@
 #             node (keyword residual; once: None in later passes)
 #   order     the highest supported derivative order (None: any); with
 #             order=1 a recorded pass raises NotImplementedError
+#   jvp(z, children, tangents, **static) -> the k tangents of z: the
+#             optional tangent rule used by g.ad.reverse.jacobian, given per
+#             child None (constant) or its k tangents, written in primitives
+#             (see node_base._jvp)
 #
 # The static keyword arguments are not differentiated; they are passed on
 # to plain, container, fwd, the vjp, and to the nodes the vjp builds.
@@ -83,6 +87,7 @@ class primitive:
         reads=None,
         fwd=None,
         order=None,
+        jvp=None,
     ):
         assert (vjp is None) != (joint_vjp is None), "a primitive has a vjp or a joint_vjp"
         self.name = name
@@ -94,6 +99,7 @@ class primitive:
         self.reads = reads
         self.fwd = fwd
         self.order = order
+        self.jvp = jvp
 
     def __call__(self, *args, **static):
         if not any(has_node(a) for a in args):
@@ -157,4 +163,8 @@ class primitive:
         z._reads_children = reads
         # (the vjp sees the values of the children, never the node's own)
         z._reads_self = False
+        if self.jvp is not None:
+            jvp = self.jvp
+            # (static only: the rule must not capture the node)
+            z._jvp = lambda z, children, tangents: jvp(z, children, tangents, **static)
         return z
