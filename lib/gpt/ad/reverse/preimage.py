@@ -21,7 +21,7 @@ from gpt.ad.reverse.util import container
 from gpt.ad.reverse.functional_node import joint_node
 
 
-def preimage(dfm, fields, indices, inverse, inverter=None):
+def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
     """The preimage x = phi^-1(y) of a map phi (a diffeomorphism with
     jacobian) as nodes.  phi updates the fields at indices and keeps the others
     (e.g. its parameters) fixed; fields = y (nodes; plain values are
@@ -34,7 +34,9 @@ def preimage(dfm, fields, indices, inverse, inverter=None):
     block of the updated fields; solved with inverter), the flow into the
     inputs at indices is lambda, the flow into the other inputs is
     -(d phi / d others)^T lambda.  Both products are one dfm.jacobian call
-    (the vector-Jacobian product in the cartesian representation)."""
+    (the vector-Jacobian product in the cartesian representation).  solve(x,
+    y, c) -> lambda: a direct solution of J_xx^T lambda = c (one index; e.g.
+    from the structure of J_xx) instead of the inverter."""
     if inverter is None:
         inverter = g.algorithms.inverter.fgcr(eps=1e-12, maxiter=1000, restartlen=30)
     state = {}
@@ -55,13 +57,21 @@ def preimage(dfm, fields, indices, inverse, inverter=None):
         return dfm.jacobian(x, y, d)
 
     def flows(values, z, needed):
+        y = state.get("y")
+        if y is None or any(a is not b for a, b in zip(y, values)):
+            # (the forward did not run in this pass: nothing read the value,
+            # with_value=False)
+            forward(values)
         x, y = state["x"], state["y"]
         c = z.gradient if len(indices) > 1 else [z.gradient]
         c = [
             g.group.zero(x[i]) if ci is None else g.infinitesimal_to_cartesian(x[i], ci)
             for i, ci in zip(indices, c)
         ]
-        if len(indices) == 1:
+        if solve is not None:
+            assert len(indices) == 1
+            lam = [solve(x, y, c[0])]
+        elif len(indices) == 1:
 
             def mat(dst, src):
                 dst @= jacobian([src])[indices[0]]

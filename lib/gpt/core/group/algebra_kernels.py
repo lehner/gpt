@@ -37,8 +37,8 @@ class _algebra_kernels:
         ti = g.stencil.tensor_instructions
         self.N, self.ng = N, ng
         self.norm = complex(norm[0]).real
-        self.fgenerators = [g.lattice(grid, otype_cartesian) for _ in range(ng)]
-        for f, t in zip(self.fgenerators, generators):
+        self.field_generators = [g.lattice(grid, otype_cartesian) for _ in range(ng)]
+        for f, t in zip(self.field_generators, generators):
             f[:] = t
         nonzero = [
             [(i, j) for i in range(N) for j in range(N) if abs(t.array[i, j]) != 0.0]
@@ -84,15 +84,15 @@ class _algebra_kernels:
             for e in range(N * N):
                 code.append((a, e, ti.mul, -1.0, [(a, 0, e)]))
         self._combine = g.stencil.tensor(
-            self.fgenerators[0], [(0,) * grid.nd], code, [(len(code), 1)]
+            self.field_generators[0], [(0,) * grid.nd], code, [(len(code), 1)]
         )
 
     def rows(self, M, l):
-        self._rows(M, *l, *self.fgenerators)
+        self._rows(M, *l, *self.field_generators)
         return M
 
     def combine(self, r, K):
-        self._combine(*r, K, *self.fgenerators)
+        self._combine(*r, K, *self.field_generators)
         return r
 
 
@@ -104,7 +104,7 @@ def algebra_kernels(grid, otype_cartesian):
       rows(M, l)    M[a, b] = tr(l_a T_b) / tr(T_b T_b)  (coordinates of l_a)
       combine(r, K) r_a     = -sum_b K[a, b] T_b
 
-    with the generators T_b as constant fields (fgenerators), their common
+    with the generators T_b as constant fields (field_generators), their common
     norm tr(T_b T_b) (norm) and number (ng)."""
     cache = grid.__dict__.setdefault("_algebra_kernels", {})
     key = otype_cartesian.__name__

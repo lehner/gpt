@@ -295,7 +295,10 @@ def tangent_code(raw, inputs, fiber, k):
         for i, (f, p, a) in enumerate(fl):
             if inputs.index(f) in fiber:
                 if tuple(p) != zero:
-                    raise ValueError("jacobian: a stencil reads the varying field at a shifted point (not site-local)")
+                    raise ValueError(
+                        "jacobian: a stencil reads the varying field at a shifted point "
+                        "(not site-local)"
+                    )
                 pairs.append((w, tuple(word[:i]), word[i], tuple(word[i + 1 :])))
     if not pairs:
         return None
@@ -309,7 +312,10 @@ def tangent_code(raw, inputs, fiber, k):
 
     def cost(gr):
         # products per tangent
-        return sum((len(items[0][1]) if len(items) == 1 else 1) + min(len(key[1]), 1) for key, items in gr.items())
+        return sum(
+            (len(items[0][1]) if len(items) == 1 else 1) + min(len(key[1]), 1)
+            for key, items in gr.items()
+        )
 
     by_suffix = cost(groups(True)) <= cost(groups(False))
     plan, defs = [], []
@@ -340,7 +346,8 @@ def tangent_code(raw, inputs, fiber, k):
         for i, (w, side, (tf, ta), fixed) in enumerate(plan):
             tangent = (k + nt + n + 1 + j * len(fiber) + fiber.index(tf), 0, ta)
             left, right = (side, fixed) if by_suffix else (fixed, side)
-            code.append((j, -1 if i == 0 else j, w, [field(x) for x in left] + [tangent] + [field(x) for x in right]))
+            factors = [field(x) for x in left] + [tangent] + [field(x) for x in right]
+            code.append((j, -1 if i == 0 else j, w, factors))
     return code, list(range(k, k + nt))
 
 
@@ -521,7 +528,9 @@ class _stencil_op:
     def _jvp(self, z, children, tangents):
         # the forward tangents (see tangent_code): one stencil with k outputs
         if self.m != 1 or self.temps:
-            raise NotImplementedError("jacobian: tangents of multi-output stencils or stencils with local temporaries")
+            raise NotImplementedError(
+                "jacobian: tangents of multi-output stencils or stencils with local temporaries"
+            )
         fiber = [i for i, t in enumerate(tangents) if t is not None]
         k = len(tangents[fiber[0]])
         cache = _cache(self.stencil, "_node_jvp")

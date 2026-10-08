@@ -174,7 +174,9 @@ def _jvp(z, children, tangents, family, outputs, listed, tower, root):
     k, nb = len(t), len(children) - 1
     e = [1 << (nb + a) for a in range(k)]
     out = [[S | ea for S in L] for ea in e for L in outputs]
-    r = jet(children[0], list(children[1:]) + list(t), _closure([S for L in out for S in L]), out, tower)
+    r = jet(
+        children[0], list(children[1:]) + list(t), _closure([S for L in out for S in L]), out, tower
+    )
     m = len(outputs)
     if not listed:
         return [r[a] for a in range(k)]

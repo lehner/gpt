@@ -89,6 +89,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         parameters=[],
         loop_function=None,
         loops=None,
+        jacobian_chunk=4,
     ):
         # loop_function: an optional site-local map f(sm, xparams) of the
         # weighted loop sum, U_mu' = exp(TA(P1 f(sm, xparams))) U_mu (default:
@@ -107,12 +108,20 @@ class directional_parallel_transport(dft_diffeomorphism):
         # inv.  This is checked here (ValueError otherwise), e.g. the 2x1
         # rectangle around U_mu(x) (the two plaquettes sharing it) with a
         # checkerboard P1.
+        #
+        # jacobian_chunk: the log-det force replays the forward tangents of
+        # the local map this many directions at a time (see
+        # g.ad.reverse.jacobian; None: all at once, faster, more memory).
         self.description_mu = description_mu
         self.mu = mu
         self.P0 = P0
         self.P1 = P1
         self.parameters = parameters
         self.loop_function = loop_function
+        self.jacobian_chunk = jacobian_chunk
+        # the cached log-det graphs (unweighted, weighted), see
+        # _local_action_log_det_jacobian_gradient
+        self._log_det = {}
 
         nd = len(U)
         self.nd = nd
@@ -232,36 +241,6 @@ class directional_parallel_transport(dft_diffeomorphism):
     def _loops(self, xfields):
         # the list of loops (None without loops)
         return None if self.loops is None else self._loop_transport(xfields)[1]
-
-    def _loop_vjp(self, fields, flows, loops=None):
-        # the gradients w.r.t. the fields of the loops with the flows (one
-        # per loop, None: zero): one reverse pass of the loops' stencil, or of
-        # prescribed loops(fields), one pass per loop; None for a field that
-        # receives nothing
-        rad = g.ad.reverse
-        nodes = [rad.node(x) for x in fields]
-        grads = [None] * len(fields)
-        if all(x is None for x in flows):
-            return grads
-        if loops is None:
-            root, _ = self._loop_transport(nodes)
-            template = next(x for x in flows if x is not None)
-            flows = [_zero_like(template) if x is None else x for x in flows]
-            passes = [(root, flows if len(flows) > 1 else flows[0])]
-        else:
-            passes = [
-                (L_k, flow)
-                for L_k, flow in zip(loops(nodes), flows)
-                if flow is not None and isinstance(L_k, rad.node_base)
-            ]
-        for root, flow in passes:
-            _reset_gradients(nodes)
-            # (prescribed loops: the passes share one forward)
-            root.backward(initial_gradient=flow, retain_values=loops is not None)
-            for i, x in enumerate(nodes):
-                if x.gradient is not None:
-                    grads[i] = _add(grads[i], x.gradient)
-        return grads
 
     def _update(self, sm, xU_mu, xparams, xloops=None):
         # U_mu' = exp(TA(P1 f(sm))) U_mu
@@ -414,7 +393,7 @@ class directional_parallel_transport(dft_diffeomorphism):
         kernels = g.group.algebra_kernels(U_mu.grid, otype_cartesian)
         src = g.group.cartesian(U_mu)
         rows = []
-        for T in kernels.fgenerators:
+        for T in kernels.field_generators:
             src @= P1 * T
             gr = vjp(g.cartesian_to_infinitesimal(U_prime_mu, src))
             gr.otype = src.otype
@@ -422,29 +401,33 @@ class directional_parallel_transport(dft_diffeomorphism):
         M = g.lattice(U_mu.grid, g.ot_matrix_su_n_adjoint_algebra(U_mu.otype.Nc))
         return kernels.rows(M, rows)
 
-    def _local_jacobian_matrix(self, fields, C=None, L=None):
-        # the block from VJPs through the stencil-free local map f(U_mu, C, L)
-        # at fixed staple C (default: the staple of fields, see
-        # g.staple_description) and fixed loops L (default: the loops of
-        # fields), one forward shared by the passes; returns the block, the
-        # staple and the loops
+    def _local_jacobian(self, nodes, C=None, L=None, chunk=None):
+        # the Jacobian of the stencil-free local map f(U_mu, C, L), J(x) =
+        # d U_mu'(x) / d U_mu(x) at the staple C and the loops L (default:
+        # those of the nodes), as a node (g.ad.reverse.jacobian: generator
+        # coordinates, the identity outside P1).  The staple and the loops
+        # read U_mu at other sites only, so the local map takes U_mu through an
+        # identity node of its own
         rad = g.ad.reverse
+        if C is None:
+            C = self._staple(nodes)
+        if L is None and self.loops is not None:
+            L = self._loops(nodes)
+        U_mu = rad.identity(nodes[self.mu])
+        return rad.jacobian(self._local_ft(U_mu, C, nodes[self.nd :], L), U_mu, chunk)
+
+    def _local_jacobian_matrix(self, fields, C=None, L=None):
+        # the block of the local map at the fixed staple C (default: the staple
+        # of fields, see g.staple_description) and fixed loops L (default: the
+        # loops of fields), zero outside P1; returns the block, the staple and
+        # the loops
         if C is None:
             C = self._staple(fields)
         if L is None:
             L = self._loops(fields)
-        U_mu = fields[self.mu]
-        aU = rad.node(U_mu)
-        xparams = [rad.node(x, with_gradient=False) for x in fields[self.nd :]]
-        xloops = None if L is None else [rad.node(x, with_gradient=False) for x in L]
-        aUft = self._local_ft(aU, rad.node(C, with_gradient=False), xparams, xloops)
-        U_prime_mu = aUft(with_gradients=False, retain_values=True)
-
-        def vjp(seed):
-            aUft(initial_gradient=seed, retain_values=True)
-            return aU.gradient
-
-        return self._block(U_mu, U_prime_mu, vjp), C, L
+        nodes = [g.ad.reverse.node(x, with_gradient=False) for x in fields]
+        J = self._local_jacobian(nodes, C, L)(with_gradients=False)
+        return g(self.P1 * J), C, L
 
     def _jacobian_matrix_generic(self, fields):
         # the block from VJPs through the full transport graph; returns the
@@ -464,7 +447,11 @@ class directional_parallel_transport(dft_diffeomorphism):
         # of this transport, see g.ad.reverse.preimage)
         if any(isinstance(x, g.ad.reverse.node_base) for x in fields):
             (u,) = g.ad.reverse.preimage(
-                self, fields, [self.mu], lambda v: self.inv(v, max_iter, eps, newton_rate)
+                self,
+                fields,
+                [self.mu],
+                lambda v: self.inv(v, max_iter, eps, newton_rate),
+                solve=self._preimage_solve if self.description_staple is not None else None,
             )
             return _with(fields, self.mu, u)
         # invert U_mu' = exp(TA(P1 f(C U_mu^dag))) U_mu by the fixed-point
@@ -548,6 +535,38 @@ class directional_parallel_transport(dft_diffeomorphism):
         right = [g.lattice(U_mu.grid, otype_cartesian) for _ in range(kernels.ng)]
         return kernels.combine(right, K)
 
+    def _block_solve(self, M, U_mu, c, transposed=False):
+        # the solution d of M d = c (M^T d = c if transposed) per site of P1,
+        # zero elsewhere, in the generator coordinates of the cartesian field
+        # c (M the block, released by the caller as soon as possible).
+        # (combine contracts the second index: for d = M^-1 c, right_a =
+        # -sum_b M^-1[b, a] T_b and d = -sum_a c_a right_a)
+        kernels = g.group.algebra_kernels(U_mu.grid, U_mu.otype.cartesian())
+        right = self._inverse_directions(M, U_mu, transpose=not transposed)
+        d = g.lattice(c)
+        d[:] = 0
+        for T, ra in zip(kernels.field_generators, right):
+            d -= g(g.trace(c * T) * (1.0 / kernels.norm)) * ra
+        return d
+
+    def _preimage_solve(self, x, y, c):
+        # J_xx^T lambda = c for the backward of the preimage (see
+        # g.ad.reverse.preimage; x the preimage, y = self(x), c cartesian):
+        # J_xx is block triangular on the sites (P1, not P1) of U_mu, [[M, K],
+        # [0, 1]] (the staple and the loops at P1 read U_mu outside P1 only),
+        # so lambda = M^-T c on P1, per site, and c - K^T lambda outside P1,
+        # with K^T lambda from one VJP
+        mu = self.mu
+        M = self._local_jacobian_matrix(x)[0]
+        lam = self._block_solve(M, x[mu], c, transposed=True)
+        del M
+        d = [g.group.zero(v) for v in x]
+        d[mu] = lam
+        v = self.jacobian(x, y, d, inputs=[mu])[mu]
+        lam = g.where(self.P1, lam, g(c - v))
+        lam.otype = c.otype
+        return lam
+
     def _newton(self, fields, U_prime_mu, C, xparams, L=None):
         # site-local Newton steps for F(U_mu) = U_mu' (F the local map at the
         # fixed staple C and loops L, see g.algorithms.nonlinear.fixed_point.newton): the
@@ -561,17 +580,8 @@ class directional_parallel_transport(dft_diffeomorphism):
 
         def solve(x, r):
             (U_mu,), (r,) = x, r
-            kernels = g.group.algebra_kernels(U_mu.grid, U_mu.otype.cartesian())
             M = self._local_jacobian_matrix(_with(fields, self.mu, U_mu), C, L)[0]
-            # (combine contracts the second index: transposed for d = M^-1 c;
-            # right_a = -sum_b M^-1[b, a] T_b, so d = -sum_a c_a right_a)
-            right = self._inverse_directions(M, U_mu, transpose=True)
-            del M
-            d = g.lattice(r)
-            d[:] = 0
-            for T, ra in zip(kernels.fgenerators, right):
-                d -= g(g.trace(r * T) * (1.0 / kernels.norm)) * ra
-            return [d]
+            return [self._block_solve(M, U_mu, r)]
 
         return g.algorithms.nonlinear.fixed_point.newton(
             residual, solve, compose=lambda d, U: g.matrix.exp(d) * U
@@ -659,102 +669,39 @@ class directional_parallel_transport(dft_diffeomorphism):
     def _local_action_log_det_jacobian_gradient(
         self, fields, dfields, weight=None, staple=None, loops=None
     ):
-        # Same contraction as the generic version below, but the Jacobian
-        # block is a site-local function of (U_mu, C, L): the 8 second-order
-        # passes run over the stencil-free local map f(U_mu, C, L) and yield
-        # gradients w.r.t. U_mu, C and the loops L.  The C (L) gradient is
-        # linear, so it is summed over the generators first and pushed through
-        # the staple (loops) stencil by ONE first-order reverse pass.
+        # the gradient of -sum_x weight(x) log det J(x) (weight None: 1) with J
+        # the Jacobian of the local map as a node (see _local_jacobian): one
+        # reverse pass gives the gradient w.r.t. all fields, through U_mu, the
+        # staple, the loops and the parameters (the second derivatives of the
+        # local map come from differentiating its forward tangents).  The
+        # graphs of the transport's own staple and loops are built once (per
+        # weighted / unweighted) and re-used with new leaf values; prescribed
+        # staples or loops (functions of the fields) are built per call.
         rad = g.ad.reverse
-        mu, P1 = self.mu, self.P1
-        M, C, L = self._local_jacobian_matrix(fields, *self._prescribed(fields, staple, loops))
-
-        U_mu = fields[mu]
-        generators = g.group.algebra_kernels(U_mu.grid, U_mu.otype.cartesian()).fgenerators
-        ng = len(generators)
-        right = self._inverse_directions(M, U_mu, weight=weight)
-        del M
-        left = g.group.cartesian(U_mu)
-        P1_node = rad.node(P1, with_gradient=False)
-
-        # leaves (never modified, no copies needed); the staple leaf is a
-        # plain matrix (not a group element), so its gradient is not
-        # converted to the algebra
-        _U = rad.node(U_mu)
-        _C = rad.node(C, infinitesimal_to_cartesian=False)
-        # (parameter flows only if a parameter is requested)
-        params = any(g.util.index_by_identity(fields, d) >= self.nd for d in dfields)
-        _P = [rad.node(x, with_gradient=params) for x in fields[self.nd :]]
-        _L = None if L is None else [rad.node(x, infinitesimal_to_cartesian=False) for x in L]
-
-        # "apply Jacobian block to right" recorded w.r.t. U_mu (see
-        # diagonal_jacobian_gradient); the forward does not depend on the
-        # generator, so it runs once and its values are shared by all
-        # passes.  The seed is built on the transport's own node, so the
-        # derivative graph and the seed share its nodes.
-        aUft = self._local_ft(_U, _C, _P, _L)
-        aUft(with_gradients=False, retain_values=True)
-
-        grad_U = None
-        grad_C = None
-        grad_P = [None] * len(_P)
-        grad_L = [None] * (0 if _L is None else len(_L))
-        for a in range(ng):
-            left @= P1 * generators[a]
-            _left = rad.node(left, with_gradient=False)
-            _right = rad.node(right[a], with_gradient=False)
-
-            # both reverse passes retain the shared forward values; the
-            # per-generator part of the graph is released with act
-            aUft.backward(
-                initial_gradient=g.cartesian_to_infinitesimal(aUft, _right),
-                retain_values=True,
-                create_graph=True,
-                wrt=[_U],
-            )
-            act = g.inner_product(_left, P1_node * _U.gradient)
-            act.backward(retain_values=True)
-            grad_U = _add(grad_U, _U.gradient)
-            grad_C = _add(grad_C, _C.gradient)
-            for i, n in enumerate(_P + (_L or [])):
-                if n.gradient is not None:
-                    if i < len(_P):
-                        grad_P[i] = _add(grad_P[i], n.gradient)
-                    else:
-                        grad_L[i - len(_P)] = _add(grad_L[i - len(_P)], n.gradient)
-
-            del act, _left, _right
-            right[a] = None
-
-        del aUft, _U, _C, _P, _L
-        del left, right, C, L, P1_node
-
-        # chain rule through the staple and the loops; the factor 2 is the
-        # one explained in diagonal_jacobian_gradient
-        nodes = [rad.node(x) for x in fields]
-        seed = g(2.0 * grad_C)
-        del grad_C
-        (self._staple if staple is None else staple)(nodes).backward(initial_gradient=seed)
-        del seed
-        grads = [n.gradient for n in nodes]
-        if self.loops is not None:
-            flows = [None if x is None else g(2.0 * x) for x in grad_L]
-            del grad_L
-            for i, gr in enumerate(self._loop_vjp(fields, flows, loops)):
-                if gr is not None:
-                    grads[i] = _add(grads[i], gr)
-            del flows
-        out = []
-        for i, gr in enumerate(grads):
-            # (a field the staple does not depend on, e.g. with a prescribed
-            # staple, gets a zero)
-            r = g.group.zero(fields[i]) if gr is None else g(gr)
-            if i == mu:
-                r = g(r + 2.0 * grad_U)
-            elif i >= self.nd and grad_P[i - self.nd] is not None:
-                r = g(r + 2.0 * grad_P[i - self.nd])
-            out.append(r)
-        return [out[g.util.index_by_identity(fields, d)] for d in dfields]
+        prescribed = staple is not None or loops is not None
+        key = weight is not None
+        if prescribed or key not in self._log_det:
+            nodes = [rad.node(x) for x in fields]
+            C = None if staple is None else staple(nodes)
+            L = None if loops is None else list(loops(nodes))
+            ld = rad.log_det(self._local_jacobian(nodes, C, L, self.jacobian_chunk))
+            w = None
+            if weight is not None:
+                w = rad.node(weight, with_gradient=False)
+                ld = w * ld
+            S = g.component.real(g.sum(ld)) * (-1.0)
+            entry = (S.functional(*nodes), w)
+            if not prescribed:
+                self._log_det[key] = entry
+        else:
+            entry = self._log_det[key]
+        functional, w = entry
+        if w is not None:
+            w.value = weight
+        gradients = functional.gradient(fields, dfields)
+        # (a field the log det does not depend on, e.g. with a prescribed
+        # staple, gets a zero)
+        return [g.group.zero(d) if x is None else x for x, d in zip(gradients, dfields)]
 
     def _action_log_det_jacobian_gradient_generic(self, fields, dfields):
         # The action is -log det M (see jacobian_matrix), so
@@ -769,7 +716,8 @@ class directional_parallel_transport(dft_diffeomorphism):
         del M
         left = g.group.cartesian(U_mu)
         gr_sum = None
-        for T, ra in zip(g.group.algebra_kernels(U_mu.grid, U_mu.otype.cartesian()).fgenerators, right):
+        kernels = g.group.algebra_kernels(U_mu.grid, U_mu.otype.cartesian())
+        for T, ra in zip(kernels.field_generators, right):
             left @= self.P1 * T
             gr = self.diagonal_jacobian_gradient(fields, fields_prime, left, ra)
             gr_sum = gr if gr_sum is None else [g(x + y) for x, y in zip(gr_sum, gr)]

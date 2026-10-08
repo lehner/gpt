@@ -720,10 +720,11 @@ def _sum_jvp(sign):
     # z = x + sign y: dz = dx + sign dy (a constant contributes nothing)
     def _jvp(z, children, tangents):
         (tx, ty) = tangents
-        return [
-            _sum([None if tx is None else tx[j], None if ty is None else (ty[j] if sign == 1.0 else sign * ty[j])])
-            for j in range(_k(tangents))
-        ]
+        out = []
+        for j in range(_k(tangents)):
+            dy = None if ty is None else (ty[j] if sign == 1.0 else sign * ty[j])
+            out.append(_sum([None if tx is None else tx[j], dy]))
+        return out
 
     return _jvp
 

@@ -48,7 +48,8 @@ def _multiply_jvp(z, children, tangents):
     k = len(ta if ta is not None else tb)
     out = []
     for j in range(k):
-        terms = ([] if ta is None else [multiply(ta[j], b)]) + ([] if tb is None else [multiply(a, tb[j])])
+        terms = [] if ta is None else [multiply(ta[j], b)]
+        terms += [] if tb is None else [multiply(a, tb[j])]
         out.append(terms[0] if len(terms) == 1 else terms[0] + terms[1])
     return out
 
