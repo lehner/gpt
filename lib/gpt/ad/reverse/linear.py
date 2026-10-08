@@ -168,6 +168,7 @@ matrix_vector = primitive(
     lambda W, h: container(list, h.tag[1], W.tag[1][0]),
     vjp=_matrix_vector_vjp,
     lift=(constant, stack),
+    reads=((1,), (0,)),
 )
 
 
@@ -183,6 +184,7 @@ outer_sum = primitive(
     lambda a, b: container(np.ndarray, (a.tag[2], b.tag[2]), np.complex128),
     vjp=_outer_sum_vjp,
     lift=(stack, stack),
+    reads=((1,), (0,)),
 )
 
 

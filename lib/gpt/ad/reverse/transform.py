@@ -61,6 +61,7 @@ multiply = primitive(
     _plain_multiply,
     lambda a, b: a.copy(),
     vjp=lambda i, flow, a, b: multiply(flow, conj(b)) if i == 0 else multiply(conj(a), flow),
+    reads=((1,), (0,)),
 )
 
 
@@ -124,6 +125,7 @@ real = primitive(
     lambda x: _plain_part(x, "real"),
     _same,
     vjp=lambda i, flow, x: real(flow),
+    reads=((),),
 )
 
 
@@ -139,4 +141,5 @@ imag = primitive(
     lambda x: _plain_part(x, "imag"),
     _same,
     vjp=_imag_vjp,
+    reads=((),),
 )

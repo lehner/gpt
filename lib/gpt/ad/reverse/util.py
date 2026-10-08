@@ -238,11 +238,25 @@ class record:
         _recording_state.active = self.saved
 
 
+# the structural with_gradient flags of the nodes whose flags a running pass
+# has restricted (node._select); nodes built meanwhile derive their flags
+# from these, so a recorded flow keeps the structure of the graph
+_structural = {}
+
+
+def differentiable(x):
+    # whether the node x depends on a gradient-carrying leaf (its structural
+    # flag, also during a pass restricted by wrt)
+    return _structural.get(x, x.with_gradient)
+
+
 def value_of(x):
     # the value of the node x (a plain value or a forward-AD series); a node
     # that was freed after a previous pass (value = None) is re-evaluated in
-    # place.  While a backward is recorded, the node itself (see record)
-    if _recording_state.active:
+    # place.  While a backward is recorded, the node itself if it is
+    # differentiable (see record; a constant has no derivative, so its plain
+    # value keeps the recorded flows small, and plain where possible)
+    if _recording_state.active and differentiable(x):
         return x
     if x.value is None and x._forward is not None:
         x.value = x._forward()
@@ -376,10 +390,14 @@ def convert_container(v, x, y, operand, key):
 
             g.ad.reverse.flow.accum(v, gradient)
 
-    return g.ad.reverse.node_base(
+    z = g.ad.reverse.node_base(
         _forward,
         _backward,
         (v,),
         _container=c,
         _tag="change to " + str(c) + " from " + str(v._container),
     )
+    # (the backward reads no value)
+    z._reads_children = ((),)
+    z._reads_self = False
+    return z

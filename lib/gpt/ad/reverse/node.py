@@ -31,6 +31,8 @@ from gpt.ad.reverse.util import (
     nodify,
     is_node,
     record,
+    _structural,
+    differentiable,
 )
 from gpt.ad.reverse import flow as flows
 from gpt.ad.reverse.flow import accum, accum_element
@@ -156,7 +158,7 @@ class node_base(base):
             if _structural:
                 # (built during a pass restricted by wrt, e.g. a recorded
                 # flow: from the children's structural flags, see _select)
-                with_gradient = any([_structural.get(c, c.with_gradient) for c in _children])
+                with_gradient = any([differentiable(c) for c in _children])
             else:
                 with_gradient = any([c.with_gradient for c in _children])
         self.with_gradient = with_gradient
@@ -284,6 +286,7 @@ class node_base(base):
             (lambda z: (1, product(z.gradient * n, _bp(value_of(x)))),),
             z_container,
             "**",
+            reads=((0,),),
         )
 
     def __rmul__(x, y):
@@ -310,6 +313,7 @@ class node_base(base):
             ),
             z_container,
             "/",
+            reads=((1,), (0, 1)),
         )
 
     def __neg__(self):
@@ -565,16 +569,10 @@ class node_base(base):
     real = property(get_real)
 
     def new(self):
-        # a fresh leaf of the same type as self, zero-initialized, for any
-        # node value type (lattice, tensor, number, list, ...): e.g. the
-        # output node of a stencil (which overwrites it, so zero-init is fine)
-        return node(self._container.zero())
-
-
-# the structural with_gradient flags of the nodes whose flags a running pass
-# has restricted (see _select); nodes built meanwhile derive their flags from
-# these, so a recorded flow keeps the structure of the graph
-_structural = {}
+        # a fresh zero of the same type as self (lattice, tensor, number,
+        # list, ...), lazy: the output node of a stencil, into which the
+        # stencil installs its computed node, so the zero is never built
+        return zero(self._container)
 
 
 def _select(nodes, wrt):
@@ -653,6 +651,11 @@ def node_op(children, forward, backards, container, tag=None, reads=None):
         z._reads_children = tuple(tuple(r) for r in reads)
         z._reads_self = False
     return z
+
+
+def zero(container):
+    # a lazy zero of the container (a constant; built only if evaluated)
+    return node_base(container.zero, _container=container, with_gradient=False)
 
 
 def node(x, with_gradient=True, infinitesimal_to_cartesian=True):

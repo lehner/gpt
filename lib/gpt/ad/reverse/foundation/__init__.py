@@ -58,6 +58,7 @@ def inner_product(x, y, n_block, use_accelerator):
             ),
             container(complex),
             "inner_product",
+            reads=((1,), (0,)),
         )
     }
 
@@ -76,6 +77,7 @@ def cshift(x, direction, displacement, none):
         (lambda z: (1, g.cshift(z.gradient, direction, -displacement)),),
         x._container,
         "cshift(" + str(direction) + ", " + str(displacement) + ")",
+        reads=((),),
     )
 
 
@@ -240,6 +242,7 @@ def identity(x):
         (None,),
         x._container,
         "identity(" + str(x._container) + ")",
+        reads=((),),
     )
 
 
@@ -253,6 +256,7 @@ def astype(x, y):
         (lambda z: (1, z.gradient),),
         z_container,
         "astype(" + str(x._container) + "," + str(y) + ")",
+        reads=((),),
     )
 
 
@@ -289,4 +293,5 @@ def where(first, second, third, fourth):
         ),
         z_container,
         "where(" + str(yes._container) + ")",
+        reads=((), ()),
     )

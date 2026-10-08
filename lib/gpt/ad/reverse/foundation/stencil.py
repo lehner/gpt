@@ -405,9 +405,10 @@ class _stencil_op:
         cache, key = self._adjoint(flowed)
         adj, KA, KB_fresh, KB_acc = cache[key]
         nS, nL, m = adj["nS"], adj["nL"], self.m
-        # (a scaled identity is a plain flow, also in a recorded pass, where
-        # it is a constant; the seedless kernels are for plain values)
-        c = None if self.listed or has_node(values) else flows.scale(z.flow)
+        # a flow c * identity (a plain number c, also in a recorded pass:
+        # there the seedless kernel is the recorded stage A, whose adjoint is
+        # derived from its own code like any stencil's)
+        c = None if self.listed else flows.scale(z.flow)
         if c is None:
             psi = self.psi(z)
         else:

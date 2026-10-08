@@ -40,10 +40,11 @@ def new_target_list(prototype, n):
     # sibling nodes, see lib/gpt/ad/reverse/foundation/stencil.py).  The
     # prototype is not evaluated (that would force a forward pass on a
     # computed prototype).
-    r = [g.lattice(prototype.grid, prototype.otype) for i in range(n)]
     if isinstance(prototype, g.ad.reverse.node_base):
-        r = g.ad.reverse.node(r)
-    return r
+        # (a lazy zero: the stencil installs its computed node into it)
+        c = g.ad.reverse.util.list_container([prototype._container] * n)
+        return g.ad.reverse.zero(c)
+    return [g.lattice(prototype.grid, prototype.otype) for i in range(n)]
 
 
 class parallel_transport_matrix:
@@ -138,10 +139,11 @@ class parallel_transport_matrix:
             self.stencil(T, *U)
             return [T[i] for i in range(self.Ntarget)]
 
-        # x.new() allocates a fresh object of the same type (grid/otype), for
+        # x.new() gives a fresh object of the same type (grid/otype), for
         # both plain lattices and reverse-AD nodes (the latter resolves the
-        # stencil call to the AD foundation); the stencil overwrites the
-        # targets, so the initial contents are irrelevant
+        # stencil call to the AD foundation; a lazy zero, never built); the
+        # stencil overwrites the targets, so the initial contents are
+        # irrelevant
         T = [U[0].new() for i in range(self.Ntarget)]
         Temp = [U[0].new() for i in range(self.Ntemporary)]
         self.stencil(*T, *Temp, *U)
