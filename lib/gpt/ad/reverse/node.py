@@ -37,6 +37,7 @@ from gpt.ad.reverse.util import (
 from gpt.ad.reverse import flow as flows
 from gpt.ad.reverse.flow import accum
 from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse import tangent
 from gpt.ad.reverse import foundation
 from gpt.core.foundation import base
 
@@ -484,6 +485,17 @@ class node_base(base):
     otype = property(get_otype, set_otype)
     real = property(get_real)
 
+    def _become(self, z):
+        # this node becomes the computed node z (e.g. the output node a
+        # stencil installs its node into): everything that describes the
+        # computation is z's; the node keeps its identity, its container and
+        # its leaf conversion flag, its old value and flow are discarded
+        for name, v in z.__dict__.items():
+            if name not in ("value", "flow", "_container", "infinitesimal_to_cartesian"):
+                self.__dict__[name] = v
+        self.__dict__["value"] = None
+        self.flow = None
+
     def new(self):
         # a fresh zero of the same type as self (lattice, tensor, number,
         # list, ...), lazy: the output node of a stencil, into which the
@@ -547,32 +559,9 @@ def needed_values(nodes):
     return needed
 
 
-def _sum(terms):
-    # the sum of the terms that are not None (None: no term)
-    result = None
-    for t in terms:
-        if t is not None:
-            result = t if result is None else result + t
-    return result
-
-
-def _k(tangents):
-    # the number of tangents (of the children that have tangents)
-    return len(next(t for t in tangents if t is not None))
-
-
 # The arithmetic of nodes, as primitives (see primitive.py).  The gradient
 # is conjugate-linear: the flow into a factor is the flow times the adjoint
 # of its cofactor.
-
-
-def _mul_jvp(z, children, tangents, c):
-    # d(x y) = dx y + x dy
-    (x, y), (tx, ty) = children, tangents
-    return [
-        _sum([None if tx is None else tx[j] * y, None if ty is None else x * ty[j]])
-        for j in range(_k(tangents))
-    ]
 
 
 # x * y with the container c of the product
@@ -582,21 +571,25 @@ _mul = primitive(
     lambda x, y, c: c,
     vjp=lambda i, flow, x, y, c: product(flow, g.adj(y)) if i == 0 else product(g.adj(x), flow),
     reads=((1,), (0,)),
-    jvp=_mul_jvp,
+    jvp=tangent.bilinear(lambda x, y, c: x * y),
 )
 
 
 def _sum_jvp(sign):
     # z = x + sign y: dz = dx + sign dy (a constant contributes nothing)
-    def _jvp(z, children, tangents):
+    def rule(z, children, tangents):
         (tx, ty) = tangents
-        out = []
-        for j in range(_k(tangents)):
-            dy = None if ty is None else (ty[j] if sign == 1.0 else sign * ty[j])
-            out.append(_sum([None if tx is None else tx[j], dy]))
-        return out
+        return [
+            tangent.total(
+                [
+                    None if tx is None else tx[j],
+                    None if ty is None else (ty[j] if sign == 1.0 else sign * ty[j]),
+                ]
+            )
+            for j in range(tangent.count(tangents))
+        ]
 
-    return _jvp
+    return rule
 
 
 _add = primitive(
@@ -666,7 +659,7 @@ def _pow_vjp(i, flow, x, n, lattice, matrix):
     # sum_i adj(x^i) flow adj(x^(n-1-i))
     if not matrix:
         return product(flow * n, g.adj(_power(x, n - 1, lattice)))
-    return _sum(
+    return tangent.total(
         [
             _between(
                 g.adj(_power(x, j, lattice)) if j > 0 else None,
@@ -683,11 +676,11 @@ def _pow_jvp(z, children, tangents, n, lattice, matrix):
     # z = x**n -> dz = n*x**(n-1) dx (matrices: sum_i x^i dx x^(n-1-i))
     (x,), (t,) = children, tangents
     if n == 0:
-        return [None] * len(t)
+        return tangent.constant(z, children, tangents)
     if not matrix:
         return [n * _power(x, n - 1, lattice) * dx for dx in t]
     return [
-        _sum(
+        tangent.total(
             [
                 _between(
                     _power(x, j, lattice) if j > 0 else None,
@@ -720,7 +713,7 @@ _list_element = primitive(
     lambda x, index, n: x.tag[1].copy(),
     vjp=lambda i, flow, x, index, n: [flow if j == index else None for j in range(n)],
     reads=((),),
-    jvp=lambda z, children, tangents, index, n: [t[index] for t in tangents[0]],
+    jvp=tangent.linear(lambda t, index, n: t[index]),
 )
 
 
@@ -741,9 +734,7 @@ _convert = primitive(
     vjp=lambda i, flow, v, c, reductions: _reduced(flow, reductions),
     reads=((),),
     # (the conversion is linear: the tangents are converted alike)
-    jvp=lambda z, children, tangents, c, reductions: [
-        _convert(t, c=c, reductions=reductions) for t in tangents[0]
-    ],
+    jvp=tangent.linear(lambda t, c, reductions: _convert(t, c=c, reductions=reductions)),
 )
 
 

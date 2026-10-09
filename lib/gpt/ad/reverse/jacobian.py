@@ -48,7 +48,8 @@
 #
 import gpt as g
 from gpt.ad.reverse.primitive import primitive
-from gpt.ad.reverse.util import container, is_node, constant
+from gpt.ad.reverse.util import container, constant
+from gpt.ad.reverse import tangent
 
 # x as a new node of the same value (the boundary of a local map, see above)
 identity = primitive(
@@ -57,7 +58,7 @@ identity = primitive(
     lambda c: c.copy(),
     vjp=lambda i, flow, x: flow,
     reads=((),),
-    jvp=lambda z, children, tangents: tangents[0],
+    jvp=tangent.linear(lambda t: t),
 )
 
 

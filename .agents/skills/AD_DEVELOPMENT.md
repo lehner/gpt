@@ -538,7 +538,8 @@ A compiled matrix stencil called with node fields (`stencil(out_node,
 *input_nodes)`, or `g.parallel_transport_matrix(...)(nodes)`) becomes one
 computed node: the node of the stencil's primitive (`_stencil_op`, cached on
 the stencil per output container and input count), installed into the
-output node.  Its forward is the compiled kernel; its backward is the
+output node (`node_base._become`: the output node keeps its identity and
+container, everything describing the computation is the primitive node's).  Its forward is the compiled kernel; its backward is the
 **adjoint code** (`adjoint_code`), derived in closed form as stencils (the
 product rule per factor, shifts negated/relativized, adjoint flags
 adjusted), so the gradient of a stencil is a stencil and the tower is
@@ -649,6 +650,7 @@ Plain-run optimizations:
 |---|---|
 | `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives), forward/backward, `functional` |
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops), §4.1 |
+| `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
 | `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `negative`, `accumulate`, `accum`, §4.8 |
 | `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `product`, `value_of`, `record`/`recording` (recorded passes), `is_node`, containers (`get_container`, `get_*_container`, `list_container`) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, sin, cos, real, imag, conj, `multiply` (and the node-aware `component_multiply`) |

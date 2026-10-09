@@ -568,19 +568,6 @@ def matrix(stencil, *fields):
             children.extend(arg[i] for i in range(len(arg)))
         else:
             children.append(constant(arg))
-    # (the output node is constructed anew: its old value is discarded)
-    z = _op(stencil, output._container, len(children)).node(*children)
-    output.value = None
-    for name in [
-        "_forward",
-        "_backward",
-        "_children",
-        "_tag",
-        "_reads_children",
-        "_reads_self",
-        "_jvp",
-        "with_gradient",
-    ]:
-        setattr(output, name, getattr(z, name))
-    output.gradient = None
+    # (the output node becomes the stencil's node: its old value is discarded)
+    output._become(_op(stencil, output._container, len(children)).node(*children))
     return output

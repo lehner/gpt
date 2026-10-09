@@ -19,17 +19,13 @@
 import gpt as g
 import numpy as np
 from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse import tangent
 
 
 def _same(x, **static):
     # the container of a componentwise map: that of its argument (a copy:
     # containers are mutable, see node.set_otype)
     return x.copy()
-
-
-def _linear_jvp(op):
-    # the tangent rule of a (real-)linear componentwise map: dz = op(dx)
-    return lambda z, children, tangents, **static: [op(t, **static) for t in tangents[0]]
 
 
 def _chain_jvp(derivative):
@@ -40,20 +36,6 @@ def _chain_jvp(derivative):
         return [multiply(d, t) for t in tangents[0]]
 
     return _jvp
-
-
-def _multiply_jvp(z, children, tangents):
-    # d(a b) = da b + a db, componentwise
-    (a, b), (ta, tb) = children, tangents
-    k = len(ta if ta is not None else tb)
-    out = []
-    for j in range(k):
-        terms = [] if ta is None else [multiply(ta[j], b)]
-        terms += [] if tb is None else [multiply(a, tb[j])]
-        out.append(terms[0] if len(terms) == 1 else terms[0] + terms[1])
-    return out
-
-
 
 
 def _plain_conj(v):
@@ -72,7 +54,7 @@ conj = primitive(
     _same,
     vjp=lambda i, flow, x: conj(flow),
     reads=((),),
-    jvp=_linear_jvp(lambda t: conj(t)),
+    jvp=tangent.linear(lambda t: conj(t)),
 )
 
 
@@ -90,7 +72,7 @@ multiply = primitive(
     lambda a, b: a.copy(),
     vjp=lambda i, flow, a, b: multiply(flow, conj(b)) if i == 0 else multiply(conj(a), flow),
     reads=((1,), (0,)),
-    jvp=_multiply_jvp,
+    jvp=tangent.bilinear(lambda a, b: multiply(a, b)),
 )
 
 
@@ -101,7 +83,7 @@ drelu = primitive(
     _same,
     vjp=lambda i, flow, x, a: None,
     reads=((),),
-    jvp=lambda z, children, tangents, a: [None] * len(tangents[0]),
+    jvp=tangent.constant,
 )
 
 # relu: the flow into x is drelu(x) * flow, componentwise (drelu is real)
@@ -159,7 +141,7 @@ real = primitive(
     _same,
     vjp=lambda i, flow, x: real(flow),
     reads=((),),
-    jvp=_linear_jvp(lambda t: real(t)),
+    jvp=tangent.linear(lambda t: real(t)),
 )
 
 
@@ -176,5 +158,5 @@ imag = primitive(
     _same,
     vjp=_imag_vjp,
     reads=((),),
-    jvp=_linear_jvp(lambda t: imag(t)),
+    jvp=tangent.linear(lambda t: imag(t)),
 )

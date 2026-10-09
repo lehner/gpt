@@ -30,6 +30,7 @@ from gpt.ad.reverse.util import (
 )
 from gpt.ad.reverse import flow as flows
 from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse import tangent
 import gpt.ad.reverse.foundation.matrix
 import gpt.ad.reverse.foundation.stencil
 import gpt.ad.reverse.foundation.local_stencil
@@ -89,18 +90,13 @@ def cshift(x, direction, displacement, none):
     return _cshift.node(x, direction=direction, displacement=displacement)
 
 
-def _linear_jvp(op):
-    # the tangent rule of a linear unary op: dz = op(dx)
-    return lambda z, children, tangents, **static: [op(t, **static) for t in tangents[0]]
-
-
 _adj = primitive(
     "adj",
     lambda x: g.adj(x),
     _same,
     vjp=lambda i, flow, x: g.adj(flow),
     reads=((),),
-    jvp=_linear_jvp(g.adj),
+    jvp=tangent.linear(g.adj),
 )
 
 
@@ -147,7 +143,7 @@ _trace = primitive(
     joint_vjp=_reduction_vjp,
     reads=((),),
     # (the trace is site-local and linear; the sum over sites is not)
-    jvp=_linear_jvp(lambda v, t: trace(v, t)),
+    jvp=tangent.linear(lambda v, t: trace(v, t)),
 )
 
 
@@ -211,7 +207,7 @@ _projection = primitive(
     _same,
     vjp=lambda i, flow, x, name: _project(flow, name),
     reads=((),),
-    jvp=_linear_jvp(_project),
+    jvp=tangent.linear(_project),
 )
 
 
@@ -268,7 +264,7 @@ _identity = primitive(
     _same,
     vjp=lambda i, flow, x: None,
     reads=((),),
-    jvp=lambda z, children, tangents: [None] * len(tangents[0]),
+    jvp=tangent.constant,
 )
 
 
@@ -288,7 +284,7 @@ _astype = primitive(
     _astype_container,
     vjp=lambda i, flow, x, otype: flow,
     reads=((),),
-    jvp=_linear_jvp(lambda v, otype: astype(v, otype)),
+    jvp=tangent.linear(lambda v, otype: astype(v, otype)),
 )
 
 
