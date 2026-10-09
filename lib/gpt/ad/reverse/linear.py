@@ -32,11 +32,15 @@
 #
 # The plain kernels pack a list of fields into one contiguous accelerator
 # buffer (site-major, the fields of a site contiguous: a sites x N matrix) and
-# compute one gemm over all sites.
+# compute one gemm over all sites.  Packing costs more than the gemm, so the
+# plain backward of matrix_vector packs each list once: one joint vjp packs
+# the flow once for both flows, the weight flow reads the h packed by the
+# forward (a residual), and only the entries of h that carry a gradient get
+# a flow (not, e.g., a constant bias field).
 #
 import gpt as g
 import numpy as np
-from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse.primitive import primitive, has_node
 from gpt.ad.reverse import tangent
 from gpt.ad.reverse.util import constant, container, get_container, is_node
 
@@ -56,26 +60,6 @@ def _plain_list(h, template=None):
             x[:] = 0
         result.append(x)
     return result
-
-
-_kernels = {}
-
-
-def _gemm(key, shape_a, shape_b, shape_c, op_a, op_b):
-    # a cached gemm C = op(A) op(B) on fixed buffers (C zero-initialized:
-    # with beta = 0 an implementation may still read C)
-    if key not in _kernels:
-        a = g.accelerator.buffer(shape=(1,) + shape_a, dtype=np.complex128)
-        b = g.accelerator.buffer(shape=(1,) + shape_b, dtype=np.complex128)
-        c = g.accelerator.buffer(np.zeros((1,) + shape_c, dtype=np.complex128))
-        idx = np.array([0], dtype=np.int64)
-        kernel = g.accelerator.kernel()
-        va, vb = a[idx], b[idx]
-        kernel.gemm(
-            1.0, [va.H if op_a == "H" else va], [vb.H if op_b == "H" else vb], 0.0, [c[idx]]
-        )
-        _kernels[key] = (a, b, c, kernel)
-    return _kernels[key]
 
 
 def _pack_shape(fields):
@@ -101,33 +85,65 @@ def _sites(field):
     return int(np.prod(field.grid.ldimensions))
 
 
-def _plain_matrix_vector(W, h):
-    W = _array(W)
-    h = _plain_list(h)
-    m, n = W.shape
-    assert len(h) == n
-    sites = _sites(h[0])
-    key = ("matrix_vector", m, n, h[0].describe(), h[0].grid.describe())
-    # Y (sites x m) = H (sites x n) W^T (n x m)
-    a, b, c, kernel = _gemm(key, (sites, n), (n, m), (sites, m), "N", "N")
-    _packed(h, a)
-    b.from_array(np.ascontiguousarray(W.T).reshape((1, n, m)))
+def _pack(fields):
+    # the fields packed into a new buffer (1, sites, n) (allocating a buffer
+    # is cheap, packing is not)
+    buffer = g.accelerator.buffer(shape=(1, _sites(fields[0]), len(fields)), dtype=np.complex128)
+    _packed(fields, buffer)
+    return buffer
+
+
+# the output buffers of the gemms, per shape, reused (zero-initialized at
+# creation: with beta = 0 an implementation may still read the output)
+_outputs = {}
+
+
+def _gemm(a, b, shape_c, op_a="N", op_b="N"):
+    # op(a) op(b) for buffers (1, rows, columns) (op: "N" or "H"), in the
+    # output buffer of shape_c, which the next gemm of that shape overwrites
+    # (a kernel per call: building one is cheap)
+    if shape_c not in _outputs:
+        _outputs[shape_c] = g.accelerator.buffer(np.zeros((1,) + shape_c, dtype=np.complex128))
+    c = _outputs[shape_c]
+    idx = np.array([0], dtype=np.int64)
+    va, vb = a[idx], b[idx]
+    kernel = g.accelerator.kernel()
+    kernel.gemm(1.0, [va.H if op_a == "H" else va], [vb.H if op_b == "H" else vb], 0.0, [c[idx]])
     kernel()
-    return _unpacked([g.lattice(h[0]) for _ in range(m)], c)
+    return c
+
+
+def _fields_times(X, M, template):
+    # the l fields of X M for packed fields X (1, sites, k) and a k x l array M
+    k, l = M.shape
+    b = g.accelerator.buffer(np.ascontiguousarray(M, dtype=np.complex128).reshape((1, k, l)))
+    return _unpacked([g.lattice(template) for _ in range(l)], _gemm(X, b, (X.shape[1], l)))
+
+
+def _outer(B, A, grid):
+    # the M x N array sum_x a_i(x) conj(b_j(x)) of packed fields A (M), B (N):
+    # its transpose is B^H A
+    c = _gemm(B, A, (B.shape[2], A.shape[2]), "H", "N")
+    S = np.ascontiguousarray(np.asarray(c.to_array())[0].T, dtype=np.complex128)
+    return grid.globalsum(S)
+
+
+def _fwd_matrix_vector(W, h):
+    # Y (sites x m) = H (sites x n) W^T (n x m); the packed H is the residual
+    # (the weight flow reads it)
+    W, h = _array(W), _plain_list(h)
+    assert len(h) == W.shape[1]
+    H = _pack(h)
+    return _fields_times(H, W.T, h[0]), H
+
+
+def _plain_matrix_vector(W, h):
+    return _fwd_matrix_vector(W, h)[0]
 
 
 def _plain_outer_sum(a, b):
     a, b = _plain_list(a), _plain_list(b)
-    m, n = len(a), len(b)
-    sites = _sites(a[0])
-    key = ("outer_sum", m, n, a[0].describe(), a[0].grid.describe())
-    # S^T (n x m) = B^H (n x sites) A (sites x m)
-    ba, bb, bc, kernel = _gemm(key, (sites, n), (sites, m), (n, m), "H", "N")
-    _packed(b, ba)
-    _packed(a, bb)
-    kernel()
-    S = np.ascontiguousarray(np.asarray(bc.to_array())[0].T, dtype=np.complex128)
-    return a[0].grid.globalsum(S)
+    return _outer(_pack(b), _pack(a), a[0].grid)
 
 
 def _is_list_node(x):
@@ -177,17 +193,47 @@ def _add_lists(x, y):
     return x + y
 
 
-def _matrix_vector_vjp(i, flow, W, h):
-    if i == 0:
-        return outer_sum(_flows(flow), h)
-    return matrix_vector(dagger(W), _flows(flow))
+def _matrix_vector_vjp(z, needed, W, h, residual):
+    # W: outer_sum(flow, h), h: matrix_vector(W^dag, flow)
+    flow = z.gradient
+    if has_node(flow) or is_node(W) or has_node(h):
+        # recorded: the flows as primitives (nodes)
+        flow = _flows(flow)
+        result = {}
+        if 0 in needed:
+            result[0] = outer_sum(flow, h)
+        if 1 in needed:
+            result[1] = matrix_vector(dagger(W), flow)
+        return result
+    # plain: the flow packed once for both flows
+    flow = _plain_list(flow)
+    F = _pack(flow)
+    result = {}
+    if 0 in needed:
+        # (no residual: the forward did not run in this pass)
+        H = _pack(_plain_list(h)) if residual is None else residual
+        result[0] = _outer(H, F, flow[0].grid)
+    hn = z._children[1]
+    n = hn._container.tag[2]
+    cols = list(range(n))
+    if hn._tag == "stack":
+        # the flows of the entries of h that carry a gradient
+        cols = [j for j, c in enumerate(hn._children) if c.with_gradient]
+    if 1 in needed and cols:
+        y = _fields_times(F, np.conj(_array(W)[:, cols]), flow[0])
+        r = [None] * n
+        for j, x in zip(cols, y):
+            r[j] = x
+        result[1] = r
+    return result
 
 
 matrix_vector = primitive(
     "matrix_vector",
     lambda W, h: _plain_matrix_vector(W, h),
     lambda W, h: container(list, h.tag[1], W.tag[1][0]),
-    vjp=_matrix_vector_vjp,
+    joint_vjp=_matrix_vector_vjp,
+    fwd=lambda W, h: _fwd_matrix_vector(W, h),
     lift=(constant, stack),
     reads=((1,), (0,)),
     jvp=tangent.bilinear(lambda W, h: matrix_vector(W, h), _add_lists),
