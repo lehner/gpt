@@ -21,6 +21,7 @@ import gpt as g
 import numpy as np
 from gpt.ad.reverse.util import (
     container,
+    get_container,
     get_unary_container,
     product,
     value_of,
@@ -28,37 +29,38 @@ from gpt.ad.reverse.util import (
     nodify,
 )
 from gpt.ad.reverse import flow as flows
-from gpt.ad.reverse.flow import accum
+from gpt.ad.reverse.primitive import primitive
 import gpt.ad.reverse.foundation.matrix
 import gpt.ad.reverse.foundation.stencil
 import gpt.ad.reverse.foundation.local_stencil
+
+
+def _plain_inner_product(x, y, n_block, use_accelerator):
+    if gpt.util.is_num(x) and gpt.util.is_num(y):
+        # support for "0d vectors"
+        return gpt.adj(x) * y
+    return g.inner_product(x, y, n_block, use_accelerator)
+
+
+# z = adj(x) y   ->   x = y adj(z)   and   y = x z
+_inner_product = primitive(
+    "inner_product",
+    _plain_inner_product,
+    lambda x, y, **static: container(complex),
+    vjp=lambda i, flow, x, y, **static: (
+        product(y, g.adj(flow)) if i == 0 else product(x, flow)
+    ),
+    reads=((1,), (0,)),
+)
 
 
 def inner_product(x, y, n_block, use_accelerator):
     assert len(x) == 1 and len(y) == 1 and n_block == 1
     # the contraction is symmetric in its arguments: plain operands are
     # promoted to constant nodes (a node's children must be nodes)
-    x, y = nodify(x[0], y[0])
-
-    def _forward():
-        vx, vy = value_of(x), value_of(y)
-        if gpt.util.is_num(vx) and gpt.util.is_num(vy):
-            # support for "0d vectors"
-            return gpt.adj(vx) * vy
-        return g.inner_product(vx, vy, n_block, use_accelerator)
-
-    # z = adj(x) y   ->   x = y adj(z)   and   y = x z
     return {
-        (0, 0): g.ad.reverse.node_op(
-            (x, y),
-            _forward,
-            (
-                lambda z: (1, product(value_of(y), g.adj(z.gradient))),
-                lambda z: (1, product(value_of(x), z.gradient)),
-            ),
-            container(complex),
-            "inner_product",
-            reads=((1,), (0,)),
+        (0, 0): _inner_product.node(
+            x[0], y[0], n_block=n_block, use_accelerator=use_accelerator
         )
     }
 
@@ -68,34 +70,42 @@ def norm2(x):
     return [g.inner_product(x, x)[0, 0]]
 
 
+def _same(x, **static):
+    # the container of a map that keeps the type
+    return x
+
+
+_cshift = primitive(
+    "cshift",
+    lambda x, direction, displacement: g.cshift(x, direction, displacement),
+    _same,
+    vjp=lambda i, flow, x, direction, displacement: g.cshift(flow, direction, -displacement),
+    reads=((),),
+)
+
+
 def cshift(x, direction, displacement, none):
     assert none is None
-
-    return g.ad.reverse.node_op(
-        (x,),
-        lambda: g.cshift(value_of(x), direction, displacement),
-        (lambda z: (1, g.cshift(z.gradient, direction, -displacement)),),
-        x._container,
-        "cshift(" + str(direction) + ", " + str(displacement) + ")",
-        reads=((),),
-    )
+    return _cshift.node(x, direction=direction, displacement=displacement)
 
 
-def _unary_jvp(op):
+def _linear_jvp(op):
     # the tangent rule of a linear unary op: dz = op(dx)
-    return lambda z, children, tangents: [op(t) for t in tangents[0]]
+    return lambda z, children, tangents, **static: [op(t, **static) for t in tangents[0]]
+
+
+_adj = primitive(
+    "adj",
+    lambda x: g.adj(x),
+    _same,
+    vjp=lambda i, flow, x: g.adj(flow),
+    reads=((),),
+    jvp=_linear_jvp(g.adj),
+)
 
 
 def adj(x):
-    return g.ad.reverse.node_op(
-        (x,),
-        lambda: g.adj(value_of(x)),
-        (lambda z: (1, g.adj(z.gradient)),),
-        x._container,
-        "adj",
-        reads=((),),
-        jvp=_unary_jvp(g.adj),
-    )
+    return _adj.node(x)
 
 
 def _reduction_identity(x):
@@ -114,40 +124,48 @@ def _reduction_identity(x):
     return g.identity_constant(value_of(x))
 
 
-def _reduction_node(x, forward, container):
+def _reduction_vjp(z, needed, x, **static):
     # a sum-like reduction (trace/sum).  Its adjoint broadcasts the flow back
     # to x's lattice via identity(x) (conjugate-linear in the flow).  If that
     # flow is a scalar c, or itself c times the identity, the flow into a
     # plain lattice x is exactly c times the identity: a scaled_identity flow
-    # (see flow.py), built into a field only if a consumer reads it
-    def _backward(z):
-        if not x.with_gradient:
-            return
-        c = flows.scale(z.flow)
-        if c is None and g.util.is_num(z.flow.value):
-            c = complex(z.flow.value)
-        if c is not None and x._container.tag[0] is g.lattice:
-            accum(x, flows.scaled_identity(c, _reduction_identity(x)))
-            return
-        accum(x, product(_reduction_identity(x), z.gradient), 1)
+    # (see flow.py), built into a field only if a consumer reads it.  (The
+    # type of x, not its value: the node x itself)
+    (x,) = z._children
+    c = flows.scale(z.flow)
+    if c is None and g.util.is_num(z.flow.value):
+        c = complex(z.flow.value)
+    if c is not None and x._container.tag[0] is g.lattice:
+        return {0: flows.scaled_identity(c, _reduction_identity(x))}
+    return {0: product(_reduction_identity(x), z.gradient)}
 
-    z = g.ad.reverse.node_base(forward, _backward, (x,), _container=container)
-    z._reads_children = ((),)
-    z._reads_self = False
-    return z
+
+_trace = primitive(
+    "trace",
+    lambda x, t: g.trace(x, t),
+    lambda x, t: get_unary_container(x, lambda v: g.trace(v, t), ("trace", t)),
+    joint_vjp=_reduction_vjp,
+    reads=((),),
+    # (the trace is site-local and linear; the sum over sites is not)
+    jvp=_linear_jvp(lambda v, t: trace(v, t)),
+)
 
 
 def trace(x, t):
-    z_container = get_unary_container(x._container, lambda v: g.trace(v, t), ("trace", t))
+    return _trace.node(x, t=t)
 
-    z = _reduction_node(x, lambda: g.trace(value_of(x), t), z_container)
-    # (the trace is site-local and linear; the sum over sites is not)
-    z._jvp = _unary_jvp(lambda v: trace(v, t))
-    return z
+
+_sum = primitive(
+    "sum",
+    lambda x: g.sum(x),
+    lambda x: x.lattice_to_tensor(),
+    joint_vjp=_reduction_vjp,
+    reads=((),),
+)
 
 
 def sum(x):
-    return _reduction_node(x, lambda: g.sum(value_of(x)), x._container.lattice_to_tensor())
+    return _sum.node(x)
 
 
 def component_simple_map(operator, numpy_operator, extra_params, first, second):
@@ -179,32 +197,30 @@ def component_multiply(a, b):
     return g.ad.reverse.transform.multiply(a, b)
 
 
-def _self_adjoint_projection(x, name):
-    # a real-linear projection P that is self-adjoint w.r.t. Re tr(a^dag b)
-    # (the traceless (anti-)hermitian parts): the flow into x is P(flow), so
-    # the backward is again the projection (a projection node in a recorded
-    # pass)
-    # and the node replaces the graph of its adj, sums, trace and identity
-    def _project(v):
-        return getattr(g.qcd.gauge.project, name)(v)
+def _project(v, name):
+    return getattr(g.qcd.gauge.project, name)(v)
 
-    return g.ad.reverse.node_op(
-        (x,),
-        lambda: _project(value_of(x)),
-        (lambda z: (1, _project(z.gradient)),),
-        x._container,
-        name,
-        reads=((),),
-        jvp=_unary_jvp(_project),
-    )
+
+# a real-linear projection P that is self-adjoint w.r.t. Re tr(a^dag b) (the
+# traceless (anti-)hermitian parts): the flow into x is P(flow), so the
+# backward is again the projection (a projection node in a recorded pass),
+# and the node replaces the graph of its adj, sums, trace and identity
+_projection = primitive(
+    "projection",
+    _project,
+    _same,
+    vjp=lambda i, flow, x, name: _project(flow, name),
+    reads=((),),
+    jvp=_linear_jvp(_project),
+)
 
 
 def traceless_anti_hermitian(x):
-    return _self_adjoint_projection(x, "traceless_anti_hermitian")
+    return _projection.node(x, name="traceless_anti_hermitian")
 
 
 def traceless_hermitian(x):
-    return _self_adjoint_projection(x, "traceless_hermitian")
+    return _projection.node(x, name="traceless_hermitian")
 
 
 def _group_conversion(src, dsrc, method):
@@ -236,41 +252,48 @@ def cartesian_to_infinitesimal(src, dsrc):
     return _group_conversion(src, dsrc, "cartesian_to_infinitesimal")
 
 
-def identity(x):
-    def _forward():
-        # a plain (expr) value at the bottom of a (lazy) chain has no
-        # foundation to dispatch on; evaluate it to a field first
-        v = value_of(x)
-        if isinstance(v, g.expr):
-            v = g(v)
-        # (node values are never modified, so the identity can be shared)
-        return g.identity_constant(v)
+def _plain_identity(x):
+    # a plain (expr) value at the bottom of a (lazy) chain has no foundation
+    # to dispatch on; evaluate it to a field first
+    if isinstance(x, g.expr):
+        x = g(x)
+    # (node values are never modified, so the identity can be shared)
+    return g.identity_constant(x)
 
-    return g.ad.reverse.node_op(
-        (x,),
-        _forward,
-        (None,),
-        x._container,
-        "identity(" + str(x._container) + ")",
-        reads=((),),
-        # (a constant of x's type: no tangent)
-        jvp=lambda z, children, tangents: [None] * len(tangents[0]),
-    )
+
+# the identity of x's type: a constant (no flow, no tangent)
+_identity = primitive(
+    "identity",
+    _plain_identity,
+    _same,
+    vjp=lambda i, flow, x: None,
+    reads=((),),
+    jvp=lambda z, children, tangents: [None] * len(tangents[0]),
+)
+
+
+def identity(x):
+    return _identity.node(x)
+
+
+def _astype_container(x, otype):
+    c = x.copy()
+    c.set_otype(otype)
+    return c
+
+
+_astype = primitive(
+    "astype",
+    lambda x, otype: g.astype(g(x), otype),
+    _astype_container,
+    vjp=lambda i, flow, x, otype: flow,
+    reads=((),),
+    jvp=_linear_jvp(lambda v, otype: astype(v, otype)),
+)
 
 
 def astype(x, y):
-    z_container = x._container.copy()
-    z_container.set_otype(y)
-
-    return g.ad.reverse.node_op(
-        (x,),
-        lambda: g.astype(g(value_of(x)), y),
-        (lambda z: (1, z.gradient),),
-        z_container,
-        "astype(" + str(x._container) + "," + str(y) + ")",
-        reads=((),),
-        jvp=_unary_jvp(lambda v: astype(v, y)),
-    )
+    return _astype.node(x, otype=y)
 
 
 def group_inner_product(left, right):
@@ -282,29 +305,25 @@ def group_inner_product(left, right):
     return left_type.inner_product(left, right)
 
 
+def _where_vjp(i, flow, yes, no, question, branch):
+    # the flow where the branch is taken, zero elsewhere (branch: the
+    # container of both branches).  Node-aware: a recorded flow routes to the
+    # rev-AD where, not to the plain foundation, which cannot build a lattice
+    # from a node
+    if i == 0:
+        return g.where(question, *nodify(flow, branch.zero()))
+    return g.where(question, *nodify(branch.zero(), flow))
+
+
+_where = primitive(
+    "where",
+    lambda yes, no, question, branch: g.where(question, yes, no),
+    lambda yes, no, question, branch: yes,
+    vjp=_where_vjp,
+    reads=((), ()),
+)
+
+
 def where(first, second, third, fourth):
     assert fourth is None
-    question = first
-    yes = second
-    no = third
-
-    z_container = yes._container
-
-    # node-aware backward: nodify the operands so a pair with a node (a
-    # recorded flow) routes to the rev-AD where instead of the plain
-    # foundation, which cannot build a lattice from a node.
-
-    def _forward():
-        return g.where(question, value_of(yes), value_of(no))
-
-    return g.ad.reverse.node_op(
-        (yes, no),
-        _forward,
-        (
-            lambda z: (1, g.where(question, *nodify(z.gradient, yes._container.zero()))),
-            lambda z: (1, g.where(question, *nodify(no._container.zero(), z.gradient))),
-        ),
-        z_container,
-        "where(" + str(yes._container) + ")",
-        reads=((), ()),
-    )
+    return _where.node(second, third, question=first, branch=get_container(second))

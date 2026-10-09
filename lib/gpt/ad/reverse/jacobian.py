@@ -27,7 +27,7 @@
 # The subgraph between x and y is replayed on k forward tangents (one per
 # direction): the values are the nodes of the graph (nothing is recomputed),
 # the tangents are new nodes built by the nodes' tangent rules (_jvp: the
-# optional jvp of primitives and node_ops), batched over the k directions
+# optional jvp of the primitives), batched over the k directions
 # where an op has a fused rule (one stencil with k outputs for a zero-point
 # stencil, one jet kernel for exp).  J is an ordinary node of the same graph,
 # so a function of J (log_det, ...) is differentiated w.r.t. everything by

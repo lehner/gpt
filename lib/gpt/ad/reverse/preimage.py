@@ -18,7 +18,7 @@
 #
 import gpt as g
 from gpt.ad.reverse.util import container
-from gpt.ad.reverse.functional_node import joint_node
+from gpt.ad.reverse.primitive import primitive
 
 
 def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
@@ -39,30 +39,29 @@ def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
     from the structure of J_xx) instead of the inverter."""
     if inverter is None:
         inverter = g.algorithms.inverter.fgcr(eps=1e-12, maxiter=1000, restartlen=30)
-    state = {}
 
-    def forward(y):
-        x = inverse(y)
-        state["y"], state["x"] = y, x
+    def outputs(x):
         out = [x[i] for i in indices]
         return out[0] if len(indices) == 1 else out
 
-    def jacobian(lam):
+    def fwd(*y):
+        # the value, and the preimage of all fields as the residual
+        x = inverse(list(y))
+        return outputs(x), x
+
+    def jacobian(x, y, lam):
         # the vector-Jacobian product of phi at x for a cotangent lam on the
         # updated fields (zero on the others)
-        x, y = state["x"], state["y"]
         d = [g.group.zero(v) for v in x]
         for i, l in zip(indices, lam):
             d[i] = l
         return dfm.jacobian(x, y, d)
 
-    def flows(values, z, needed):
-        y = state.get("y")
-        if y is None or any(a is not b for a, b in zip(y, values)):
-            # (the forward did not run in this pass: nothing read the value,
-            # with_value=False)
-            forward(values)
-        x, y = state["x"], state["y"]
+    def joint_vjp(z, needed, *y, residual):
+        y = list(y)
+        # (no residual: the forward did not run in this pass, nothing read
+        # the value, with_value=False)
+        x = inverse(y) if residual is None else residual
         c = z.gradient if len(indices) > 1 else [z.gradient]
         c = [
             g.group.zero(x[i]) if ci is None else g.infinitesimal_to_cartesian(x[i], ci)
@@ -74,17 +73,17 @@ def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
         elif len(indices) == 1:
 
             def mat(dst, src):
-                dst @= jacobian([src])[indices[0]]
+                dst @= jacobian(x, y, [src])[indices[0]]
 
             lam = [inverter(mat)(c[0])]
         else:
 
             def mat(dst, src):
                 lam = g.separate(src, dimension=0)
-                dst @= g.merge([jacobian(lam)[i] for i in indices], dimension=0)
+                dst @= g.merge([jacobian(x, y, lam)[i] for i in indices], dimension=0)
 
             lam = g.separate(inverter(mat)(g.merge(c, dimension=0)), dimension=0)
-        jl = jacobian(lam)
+        jl = jacobian(x, y, lam)
         result = {}
         for j in needed:
             if j in indices:
@@ -94,11 +93,19 @@ def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
             result[j] = g.cartesian_to_infinitesimal(y[j], flow)
         return result
 
-    def z_container(containers):
+    def z_container(*containers):
         c = containers[indices[0]]
         return c if len(indices) == 1 else container(list, c, len(indices))
 
-    z = joint_node(fields, forward, flows, z_container, "preimage")
+    op = primitive(
+        "preimage",
+        lambda *y: fwd(*y)[0],
+        z_container,
+        joint_vjp=joint_vjp,
+        fwd=fwd,
+        order=1,
+    )
+    z = op.node(*fields)
     if len(indices) == 1:
         return [z]
     return [z[k] for k in range(len(indices))]

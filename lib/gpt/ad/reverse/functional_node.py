@@ -21,22 +21,6 @@ from gpt.ad.reverse.primitive import primitive
 from gpt.ad.reverse.util import container
 
 
-def joint_node(fields, forward, flows, z_container, name):
-    """A node of fields (nodes; plain values are constants) whose backward
-    computes the flows into all children at once, first order only (plain
-    values and flows): forward(values) -> value; flows(values, z, needed) ->
-    {child index: flow} for the indices in needed (the children with a
-    gradient); z_container(containers) -> the container of the value."""
-    op = primitive(
-        name,
-        lambda *v: forward(list(v)),
-        lambda *c: z_container(c),
-        joint_vjp=lambda z, needed, *v: flows(list(v), z, needed),
-        order=1,
-    )
-    return op.node(*fields)
-
-
 def functional_node(f, fields):
     """The value f(fields) of a g.group.differentiable_functional f as a node,
     so that it can be combined with other nodes (first order only: its
@@ -45,8 +29,9 @@ def functional_node(f, fields):
     converted to the infinitesimal convention of the flows and scaled by the
     flow into the result."""
 
-    def flows(v, z, needed):
+    def joint_vjp(z, needed, *v):
         # one gradient evaluation for all fields that need one
+        v = list(v)
         seed = complex(z.gradient).real
         result = {}
         for j, gr in zip(needed, f.gradient(v, [v[j] for j in needed])):
@@ -54,6 +39,11 @@ def functional_node(f, fields):
             result[j] = g(seed * r) if isinstance(r, g.lattice) else seed * r
         return result
 
-    return joint_node(
-        fields, lambda v: complex(f(v)), flows, lambda c: container(complex), "functional_node"
+    op = primitive(
+        "functional_node",
+        lambda *v: complex(f(list(v))),
+        lambda *c: container(complex),
+        joint_vjp=joint_vjp,
+        order=1,
     )
+    return op.node(*fields)

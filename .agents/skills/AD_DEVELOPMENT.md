@@ -211,13 +211,15 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
     raises);
   - `.gradient` — accumulated gradient (set by `backward`, reset by
     `zero_gradient()`);
-  - `._forward` / `._backward` — set for *computed* nodes (built by
-    `node_op`); `None` for leaves.
-- `node_op(children, forward, backwards, container, tag)` is the constructor
-  for computed nodes. `forward` is a zero-arg lambda producing the value from
-  `value_of(child)`; `backwards` is one lambda per child producing the flow
-  contribution. `container` fixes the result's type/otype (often via
-  `get_mul_container` etc. in `util.py`).
+  - `._forward` / `._backward` — set for *computed* nodes (built by a
+    primitive, see below); `None` for leaves.
+- Every computed node is the node of a **primitive** (below): the node
+  arithmetic (`*`, `+`, `-`, `/`, `**`, list-element access, the container
+  conversion of a factor) in `node.py`, the foundation ops (adj, trace, sum,
+  cshift, inner_product, projections, identity, astype, where), and the
+  rest (`linear.py`, `transform.py`, exp, stencils, ...).  The container
+  fixes the result's type/otype (often via `get_mul_container` etc. in
+  `util.py`).
 - `S()` (`__call__(with_gradients=True, initial_gradient=None,
   retain_values=False, with_value=True, create_graph=False, wrt=None)`) runs
   the forward and the reverse pass and returns the value;
@@ -270,10 +272,10 @@ argument becomes a child, e.g. `stack` for a list of fields), `reads` (the
 vjp receives only the declared values, the others are None), static keyword
 arguments (not differentiated, passed on to every level), `fwd` (the plain
 value of a node plus a *residual* handed once to that node's vjp: the
-exp tower's reset), `order=1` (external
-first-order nodes: `joint_node`, `functional_node`, `preimage`).  Built on
-it: `linear.py`, `transform.conj/real/imag/multiply`, `matrix/exp.py`,
-`foundation/stencil.py`, `joint_node`.  A primitive's node never reads its
+exp tower's reset, and `preimage`'s inverse), `order=1` (external
+first-order nodes: `functional_node`, `preimage`, the chunked `jacobian`).
+A vjp returns a flow, None (no flow) or `flow.negative(r)` (-r, subtracted
+without being built, also for a list flow).  A primitive's node never reads its
 own value (`_reads_self = False`), so with `with_value=False` its forward is
 skipped when nothing reads the value: state that a forward would refresh
 must be refreshed in the vjp as well (the exp tower: see §4.5).
@@ -282,7 +284,7 @@ must be refreshed in the vjp as well (the exp tower: see §4.5).
 
 - **Conjugate-linear (Wirtinger) convention:** the accumulated gradient is
   `conj(dS/dx)` — every backprop applies `g.adj` to its cofactor (visible in
-  `__mul__`: `product(z.gradient, g.adj(value_of(y)))`). For real data or
+  the vjp of `*` in `node.py`: `product(flow, g.adj(y))`). For real data or
   skew-Hermitian (effectively real) gauge directions this is invisible; for
   complex data it matters. When in doubt, test at `initial_gradient=1.0j`
   too, as `tests/ad/ad.py` does.
@@ -366,8 +368,8 @@ g.inner_product(b, n.gradient).backward()            -> n.gradient = d3S/dx3 a b
   `infinitesimal_to_cartesian=False` can convert its recorded gradient
   explicitly (`g.infinitesimal_to_cartesian(x, x.gradient)`, see
   applications/hmc/cdfthmc-learn.py).
-- First-order-only primitives (`order=1`: `functional_node`, `preimage`,
-  `joint_node`) raise in a recorded pass.
+- First-order-only primitives (`order=1`: `functional_node`, `preimage`)
+  raise in a recorded pass.
 - Forward mode composes with this as values: a leaf value may be a forward-AD
   series (reverse over forward, `tests/ad/ad.py`).
 
@@ -614,7 +616,7 @@ Plain-run optimizations:
 - **Which values a backward reads** is declared per node:
   `_reads_children` (None = all children, else per child i the child
   indices the flow into child i reads) and `_reads_self` (default True).
-  `node_op(..., reads=...)` sets both (a node_op never reads its own value).
+  A primitive's `reads=` sets both (a primitive never reads its own value).
   Declared: products, sums, adj, trace, sum, list-element access, element access,
   and stencil nodes (the inputs, never the output).  `needed_values` walks the
   graph from the root and `forward` skips every computed node nothing
@@ -645,12 +647,12 @@ Plain-run optimizations:
 
 | Path | Role |
 |---|---|
-| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/...), `node_op`, forward/backward, `functional` |
+| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives), forward/backward, `functional` |
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops), §4.1 |
-| `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `accumulate`, `accum`, `accum_element`, §4.8 |
+| `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `negative`, `accumulate`, `accum`, §4.8 |
 | `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `product`, `value_of`, `record`/`recording` (recorded passes), `is_node`, containers (`get_container`, `get_*_container`, `list_container`) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, sin, cos, real, imag, conj, `multiply` (and the node-aware `component_multiply`) |
-| `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order; used by `g.ml` losses); `joint_node` (first-order nodes whose backward computes all flows at once, also used by `preimage`) |
+| `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order, a joint-vjp primitive; used by `g.ml` losses) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
 | `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |

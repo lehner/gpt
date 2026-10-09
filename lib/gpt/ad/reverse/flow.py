@@ -33,6 +33,10 @@
 #                         fold c into their weights) never allocate it
 #   flow_list(elements)   the flow of a list node, per element a flow or None
 #
+# A contribution (what a vjp returns) is a value, a list of values, a
+# scaled_identity, or negative(contribution): its negative, subtracted without
+# being built (e.g. the flow into y of x - y, also for a list).
+#
 # node.flow is the typed flow, node.gradient its value (built on reading).
 # accumulate adds a contribution to a flow: None + r adopts r, scaled +
 # scaled stays scaled, scaled + dense builds the field, lists add element by
@@ -63,6 +67,14 @@ class flow_list:
 
     def __init__(self, elements):
         self.elements = elements
+
+
+class negative:
+    # the contribution -value (see above)
+    __slots__ = ("value",)
+
+    def __init__(self, value):
+        self.value = value
 
 
 def scale(flow):
@@ -136,6 +148,8 @@ def accumulate(cur, r, sign, container, adopt=True):
     # all contributions to a node arrive before its own backward hands the
     # gradient to its children, after which it is released.  It also requires
     # that backward closures return fields they do not reuse.
+    if isinstance(r, negative):
+        r, sign = r.value, -sign
     if isinstance(r, scaled_identity):
         if sign < 0:
             r = scaled_identity(-r.c, r.identity)
@@ -191,15 +205,4 @@ def accum(n, r, sign=1, adopt=True):
     # accumulate sign * r into the flow of node n
     if n.flow is None and isinstance(n.value, g.ad.forward.series):
         n.zero_gradient()
-    n.flow = accumulate(
-        n.flow, r, sign, n._container, adopt
-    )
-
-
-def accum_element(n, i, r):
-    # accumulate r into the flow of element i of list node n
-    if n.flow is None:
-        n.flow = flow_list([None] * len(n))
-    n.flow.elements[i] = accumulate(
-        n.flow.elements[i], r, 1, n._container.tag[1]
-    )
+    n.flow = accumulate(n.flow, r, sign, n._container, adopt)

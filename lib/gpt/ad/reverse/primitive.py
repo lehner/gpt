@@ -39,7 +39,7 @@
 #   plain(*args, **static)                -> the value on plain arguments
 #   container(*containers, **static)      -> the container of the value
 #   vjp(i, flow, *values, **static)       -> the flow into child i (None: no
-#                                            flow), or
+#                                            flow; flow.negative(r): -r), or
 #   joint_vjp(z, needed, *values, **static) -> {i: flow} for all children i
 #                                            in needed at once (z: the node,
 #                                            whose gradient is the flow)
@@ -75,6 +75,10 @@ def has_node(x):
     return is_node(x)
 
 
+def _tuples(reads):
+    return tuple(tuple(r) for r in reads)
+
+
 class primitive:
     def __init__(
         self,
@@ -96,7 +100,7 @@ class primitive:
         self.vjp = vjp
         self.joint_vjp = joint_vjp
         self.lift = lift
-        self.reads = reads
+        self.reads = reads if reads is None or callable(reads) else _tuples(reads)
         self.fwd = fwd
         self.order = order
         self.jvp = jvp
@@ -108,11 +112,12 @@ class primitive:
 
     def node(self, *args, **static):
         # the node of op(*args), also for plain arguments (as constants)
-        lift = self.lift if isinstance(self.lift, (list, tuple)) else [self.lift] * len(args)
-        children = tuple(l(a) for l, a in zip(lift, args))
-        reads = self.reads(len(children)) if callable(self.reads) else self.reads
-        if reads is not None:
-            reads = tuple(tuple(r) for r in reads)
+        lift = self.lift
+        if isinstance(lift, (list, tuple)):
+            children = tuple(l(a) for l, a in zip(lift, args))
+        else:
+            children = tuple(lift(a) for a in args)
+        reads = _tuples(self.reads(len(children))) if callable(self.reads) else self.reads
         # the residual of the last plain forward (shared by the two closures,
         # which must not capture the node: a reference loop)
         cell = {}
@@ -128,7 +133,7 @@ class primitive:
             # the values the flows into the children indices read
             if reads is None:
                 return [value_of(c) for c in children]
-            r = set(j for i in indices for j in reads[i])
+            r = reads[indices[0]] if len(indices) == 1 else set(j for i in indices for j in reads[i])
             return [value_of(c) if j in r else None for j, c in enumerate(children)]
 
         def backward(z):
@@ -137,19 +142,19 @@ class primitive:
                 return
             if self.order == 1 and recording():
                 raise NotImplementedError(f"{self.name} supports first derivatives only")
-            extra = {}
+            extra = static
             if self.fwd is not None:
-                extra["residual"] = cell.pop("residual", None)
+                extra = dict(static, residual=cell.pop("residual", None))
             if self.joint_vjp is not None:
-                flows = self.joint_vjp(z, needed, *values_for(needed), **extra, **static)
-            else:
-                flows = {
-                    i: self.vjp(i, z.gradient, *values_for([i]), **extra, **static)
-                    for i in needed
-                }
-            for i, flow in flows.items():
-                if flow is not None:
-                    accum(children[i], flow, 1)
+                for i, flow in self.joint_vjp(z, needed, *values_for(needed), **extra).items():
+                    if flow is not None:
+                        accum(children[i], flow, 1)
+                return
+            flow = z.gradient
+            for i in needed:
+                r = self.vjp(i, flow, *values_for((i,)), **extra)
+                if r is not None:
+                    accum(children[i], r, 1)
 
         # (deferred reference: node.py imports the foundation, which defines
         # primitives)
@@ -163,7 +168,9 @@ class primitive:
         z._reads_children = reads
         # (the vjp sees the values of the children, never the node's own)
         z._reads_self = False
-        if self.jvp is not None:
+        if self.jvp is not None and not static:
+            z._jvp = self.jvp
+        elif self.jvp is not None:
             jvp = self.jvp
             # (static only: the rule must not capture the node)
             z._jvp = lambda z, children, tangents: jvp(z, children, tangents, **static)
