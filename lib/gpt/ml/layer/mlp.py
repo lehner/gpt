@@ -96,10 +96,9 @@ class matrix_invariants(function):
 
     def evaluate(self, inputs, parameters, constants):
         mean, inv_std = constants
-        # (a sum: node subtraction requires identical containers)
         return [
             [
-                g(q * inv_std[k] + (-mean[k] * inv_std[k]) * self.one)
+                g(q * inv_std[k] - (mean[k] * inv_std[k]) * self.one)
                 for k, q in enumerate(self._raw(*inputs))
             ]
         ]

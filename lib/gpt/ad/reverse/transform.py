@@ -148,8 +148,7 @@ real = primitive(
 def _imag_vjp(i, flow, x):
     # z = Im x: dL/dIm x = dL/dRe z, so the flow into x is i times the real
     # part of the flow into z
-    f = real(flow)
-    return g(1j * f) if isinstance(f, g.lattice) else f * 1j
+    return g(1j * real(flow))
 
 
 imag = primitive(

@@ -89,7 +89,7 @@ def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
             if j in indices:
                 flow = lam[indices.index(j)]
             else:
-                flow = g(-1.0 * jl[j]) if isinstance(jl[j], g.lattice) else -jl[j]
+                flow = g(-1.0 * jl[j])
             result[j] = g.cartesian_to_infinitesimal(y[j], flow)
         return result
 

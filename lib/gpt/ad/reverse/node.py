@@ -70,6 +70,14 @@ def traverse(nodes, root):
     return forward_free
 
 
+def _check_compatible(x, y, operation):
+    # the operands of a sum or difference (the result has the container of x)
+    if not x._container.accumulate_compatible(y._container):
+        raise Exception(
+            f"Containers incompatible in {operation}: {x._container} and {y._container}"
+        )
+
+
 def _is_zero(x):
     return g.util.is_num(x) and x == 0
 
@@ -292,17 +300,12 @@ class node_base(base):
         if _is_zero(x):
             return y
         x, y = nodify(x, y)
-
-        if not x._container.accumulate_compatible(y._container):
-            raise Exception(
-                f"Containers incompatible in addition: {x._container} and {y._container}"
-            )
+        _check_compatible(x, y, "addition")
         return _add.node(x, y)
 
     def __sub__(x, y):
         x, y = nodify(x, y)
-
-        assert x._container == y._container
+        _check_compatible(x, y, "subtraction")
         return _sub.node(x, y)
 
     def __rsub__(x, y):

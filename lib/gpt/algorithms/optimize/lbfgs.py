@@ -22,13 +22,6 @@ from gpt.algorithms.optimize.optimizer import optimizer
 from gpt.algorithms.optimize.adam import set_element, nfloats
 
 
-def _axpy(a, c, b):
-    # a + c b for numbers, numpy arrays and lattices
-    if g.util.is_num(a) or isinstance(a, np.ndarray):
-        return a + c * b
-    return g(a + c * b)
-
-
 def _ip(a, b):
     return float(np.real(g.group.inner_product(a, b)))
 
@@ -91,15 +84,15 @@ class lbfgs(optimizer):
         alphas = []
         for s, y, rho in reversed(pairs):
             a = rho * _ip(s, q)
-            q = [_axpy(qi, -a, yi) for qi, yi in zip(q, y)]
+            q = [g(qi - a * yi) for qi, yi in zip(q, y)]
             alphas.append(a)
         s, y, rho = pairs[-1]
         gamma = 1.0 / (rho * _ip(y, y))
-        r = [gamma * qi if g.util.is_num(qi) else g(gamma * qi) for qi in q]
+        r = [g(gamma * qi) for qi in q]
         for (s, y, rho), a in zip(pairs, reversed(alphas)):
             b = rho * _ip(y, r)
-            r = [_axpy(ri, a - b, si) for ri, si in zip(r, s)]
-        return [-ri if g.util.is_num(ri) or isinstance(ri, np.ndarray) else g(-ri) for ri in r]
+            r = [g(ri + (a - b) * si) for ri, si in zip(r, s)]
+        return [g(-ri) for ri in r]
 
     def iterate(self, f, x, dx_indices, state, t):
         pairs = state["pairs"]
@@ -136,14 +129,14 @@ class lbfgs(optimizer):
                 p = self.direction(d, pairs)
                 alpha = 1.0
             else:
-                p = [-di if g.util.is_num(di) or isinstance(di, np.ndarray) else g(-di) for di in d]
+                p = [g(-di) for di in d]
                 alpha = self.step / (_ip(d, d) ** 0.5)
             dphi0 = _ip(d, p)
             if dphi0 >= 0:
                 # not a descent direction: restart from the gradient
                 self.log("not a descent direction: pairs dropped")
                 pairs.clear()
-                p = [-di if g.util.is_num(di) or isinstance(di, np.ndarray) else g(-di) for di in d]
+                p = [g(-di) for di in d]
                 alpha = self.step / (_ip(d, d) ** 0.5)
                 dphi0 = _ip(d, p)
 
@@ -156,7 +149,7 @@ class lbfgs(optimizer):
             def phi(a):
                 # f and its derivative along p at x0 + a p (x set to it)
                 for k, j in enumerate(dx_indices):
-                    set_element(x, j, g.group.compose(_scaled(a, p[k]), x0[k]))
+                    set_element(x, j, g.group.compose(g(a * p[k]), x0[k]))
                 r = evaluate()
                 if r is None:
                     return None
@@ -170,8 +163,8 @@ class lbfgs(optimizer):
                 return False
             alpha, value, d_new = result
 
-            s = [_scaled(alpha, pk) for pk in p]
-            y = [_axpy(a, -1.0, b) for a, b in zip(d_new, d)]
+            s = [g(alpha * pk) for pk in p]
+            y = [g(a - b) for a, b in zip(d_new, d)]
             sy = _ip(s, y)
             if sy > 1e-12 * (_ip(s, s) * _ip(y, y)) ** 0.5:
                 pairs.append((s, y, 1.0 / sy))
@@ -243,7 +236,3 @@ class lbfgs(optimizer):
         return result
 
 
-def _scaled(a, x):
-    if g.util.is_num(x) or isinstance(x, np.ndarray):
-        return a * x
-    return g(a * x)

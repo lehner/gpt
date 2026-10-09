@@ -36,7 +36,7 @@ def functional_node(f, fields):
         result = {}
         for j, gr in zip(needed, f.gradient(v, [v[j] for j in needed])):
             r = g.cartesian_to_infinitesimal(v[j], gr)
-            result[j] = g(seed * r) if isinstance(r, g.lattice) else seed * r
+            result[j] = g(seed * r)
         return result
 
     op = primitive(
