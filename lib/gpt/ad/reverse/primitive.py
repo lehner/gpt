@@ -59,13 +59,68 @@
 #             optional tangent rule used by g.ad.reverse.jacobian, given per
 #             child None (constant) or its k tangents, written in primitives
 #             (see node_base._jvp)
+#   involution  op(op(x)) = x: op of a node built by op is its child
+#   fresh     every call builds a new node (not shared, see below), e.g. a
+#             node that marks a boundary by its identity
 #
 # The static keyword arguments are not differentiated; they are passed on
 # to plain, container, fwd, the vjp, and to the nodes the vjp builds.
 #
+# Shared nodes: op(*children, **static) of the same op on the same children
+# (by identity) with the same statics is the node built before, as long as it
+# is alive, holds no value (a value retained by a pass on another graph may
+# be stale for this one) and has the same gradient flag.  So a computation
+# built twice (by the user, or by the vjps of a recorded pass, which build
+# the same cofactors once per consumer) is evaluated once.  A plain argument
+# becomes a new constant node, so it is not shared.
+#
+import weakref
 import gpt as g
-from gpt.ad.reverse.util import constant, is_node, value_of, recording
+from gpt.ad.reverse.util import constant, is_node, value_of, recording, gradient_flag, container
 from gpt.ad.reverse.flow import accum
+
+# switches (for comparisons and debugging) and counters of the shared and
+# simplified nodes
+share = True
+simplify = True
+stats = {"shared": 0, "simplified": 0}
+
+# (op, ids of the children, statics) -> node; the node holds its children and
+# statics, so the ids in a live entry are unique
+_nodes = weakref.WeakValueDictionary()
+
+
+_plain_types = (int, float, complex, str, bool, type(None))
+
+
+def _static_key(static):
+    # (in the order given: another order only means that a node is not
+    # shared)
+    if not static:
+        return ()
+    key = []
+    for k, v in static.items():
+        t = type(v)
+        if t in _plain_types:
+            # (the type too: 2 and 2.0 are equal but not interchangeable)
+            key.append((k, t, v))
+        elif t is container:
+            # (containers compare by str)
+            key.append((k, str(v)))
+        else:
+            try:
+                hash(v)
+                key.append((k, t, v))
+            except TypeError:
+                key.append((k, id(v)))
+    return tuple(key)
+
+
+def forget(z):
+    # z is no longer shared (e.g. retyped)
+    key = z.__dict__.get("_key")
+    if key is not None and _nodes.get(key) is z:
+        del _nodes[key]
 
 
 def has_node(x):
@@ -92,6 +147,8 @@ class primitive:
         fwd=None,
         order=None,
         jvp=None,
+        involution=False,
+        fresh=False,
     ):
         assert (vjp is None) != (joint_vjp is None), "a primitive has a vjp or a joint_vjp"
         self.name = name
@@ -104,6 +161,8 @@ class primitive:
         self.fwd = fwd
         self.order = order
         self.jvp = jvp
+        self.involution = involution
+        self.fresh = fresh
 
     def __call__(self, *args, **static):
         if not any(has_node(a) for a in args):
@@ -112,11 +171,28 @@ class primitive:
 
     def node(self, *args, **static):
         # the node of op(*args), also for plain arguments (as constants)
+        if (
+            simplify
+            and self.involution
+            and len(args) == 1
+            and not static
+            and is_node(args[0])
+            and args[0].__dict__.get("_primitive") is self
+        ):
+            stats["simplified"] += 1
+            return args[0]._children[0]
         lift = self.lift
         if isinstance(lift, (list, tuple)):
             children = tuple(l(a) for l, a in zip(lift, args))
         else:
             children = tuple(lift(a) for a in args)
+        key = None
+        if share and not self.fresh:
+            key = (self, tuple(map(id, children)), _static_key(static))
+            z = _nodes.get(key)
+            if z is not None and z.value is None and z.with_gradient == gradient_flag(children):
+                stats["shared"] += 1
+                return z
         reads = _tuples(self.reads(len(children))) if callable(self.reads) else self.reads
         # the residual of the last plain forward (shared by the two closures,
         # which must not capture the node: a reference loop)
@@ -168,6 +244,10 @@ class primitive:
         z._reads_children = reads
         # (the static arguments, for printing: see node_str)
         z._static = static
+        z._primitive = self
+        if key is not None:
+            z._key = key
+            _nodes[key] = z
         # (the vjp sees the values of the children, never the node's own)
         z._reads_self = False
         if self.jvp is not None and not static:

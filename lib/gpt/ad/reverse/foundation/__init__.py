@@ -96,6 +96,7 @@ _adj = primitive(
     vjp=lambda i, flow, x: g.adj(flow),
     reads=((),),
     jvp=tangent.linear(g.adj),
+    involution=True,
 )
 
 

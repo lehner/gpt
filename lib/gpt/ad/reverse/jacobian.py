@@ -59,6 +59,7 @@ identity = primitive(
     vjp=lambda i, flow, x: flow,
     reads=((),),
     jvp=tangent.linear(lambda t: t),
+    fresh=True,
 )
 
 

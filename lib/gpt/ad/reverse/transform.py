@@ -55,6 +55,7 @@ conj = primitive(
     vjp=lambda i, flow, x: conj(flow),
     reads=((),),
     jvp=tangent.linear(lambda t: conj(t)),
+    involution=True,
 )
 
 

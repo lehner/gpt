@@ -29,11 +29,11 @@ from gpt.ad.reverse.util import (
     is_node,
     record,
     _structural,
-    differentiable,
+    gradient_flag,
 )
 from gpt.ad.reverse import flow as flows
 from gpt.ad.reverse.flow import accum
-from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse.primitive import primitive, forget
 from gpt.ad.reverse import tangent
 from gpt.ad.reverse import foundation
 from gpt.ad.reverse.node_str import node_str
@@ -160,12 +160,7 @@ class node_base(base):
         self._backward = _backward
         self._children = _children
         if len(_children) > 0:
-            if _structural:
-                # (built during a pass restricted by wrt, e.g. a recorded
-                # flow: from the children's structural flags, see _select)
-                with_gradient = any([differentiable(c) for c in _children])
-            else:
-                with_gradient = any([c.with_gradient for c in _children])
+            with_gradient = gradient_flag(_children)
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         # the typed gradient (see flow.py); .gradient is its value
@@ -462,6 +457,8 @@ class node_base(base):
         return self._container.get_otype()
 
     def set_otype(self, v):
+        # (a retyped node no longer stands for the op that built it)
+        forget(self)
         self._container.set_otype(v)
 
     def get_real(self):

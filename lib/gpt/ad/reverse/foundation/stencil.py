@@ -498,7 +498,9 @@ class _stencil_op:
             psi = [z.gradient if reads_psi else self.dummy]
         # the fields after the slots and temporary flows: [the m output flows]
         # + [the m forward values, never read] + [the input values]
-        values = [self.dummy] * m + list(values)
+        # (lazy expressions are materialized, as in _plain: a node's value may
+        # be one, e.g. adj(x))
+        values = [self.dummy] * m + [g(v) if isinstance(v, g.expr) else v for v in values]
         if not has_node(psi) and not has_node(values):
             # plain: one fused run, stage B accumulating into the slots of A
             slots = self.lattices(nS + nL)

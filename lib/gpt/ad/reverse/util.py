@@ -20,9 +20,22 @@ import gpt as g
 import numpy as np
 
 
+_otype_compatible = {}
+
+
 def otype_compatible(a, b):
     # otype-level check (distinct from container.accumulate_compatible, which
-    # also compares the lattice grid); resolves data aliases before comparing
+    # also compares the lattice grid); resolves data aliases before comparing.
+    # Memoized by name (an otype is determined by its name; resolving an
+    # alias builds a new otype)
+    key = (a.__name__, b.__name__)
+    r = _otype_compatible.get(key)
+    if r is None:
+        r = _otype_compatible[key] = _resolved_otype_compatible(a, b)
+    return r
+
+
+def _resolved_otype_compatible(a, b):
     if a == complex:
         a = g.ot_singlet()
     if b == complex:
@@ -50,6 +63,9 @@ class container:
             tag = [np.ndarray, tuple(tag[1]), np.dtype(tag[2])]
 
         self.tag = tag
+        # str(self) of a non-list container, computed once (the tag only
+        # changes in set_otype)
+        self._str = None
 
         if self.tag[0] == g.tensor:
             otype = self.tag[1]
@@ -61,8 +77,10 @@ class container:
     def copy(self):
         if self.tag[0] is list:
             return container(list, self.tag[1].copy(), self.tag[2])
-        return container(*[x for x in self.tag])
-        
+        r = container(*[x for x in self.tag])
+        r._str = self._str
+        return r
+
     def is_field(self):
         if self.tag[0] is list:
             return self.tag[1].is_field()
@@ -100,6 +118,7 @@ class container:
             return
         if len(self.tag) > 1:
             self.tag = list(self.tag[:-1]) + [otype]
+            self._str = None
         else:
             raise Exception("Container does not have an otype")
 
@@ -148,7 +167,13 @@ class container:
 
     def __str__(self):
         if self.tag[0] is list:
+            # (not cached: the element container may be retyped)
             return "list[%d](%s)" % (self.tag[2], str(self.tag[1]))
+        if self._str is None:
+            self._str = self._format()
+        return self._str
+
+    def _format(self):
         r = str(self.tag[0].__name__)
         if self.tag[0] is np.ndarray:
             return r + ";" + str(self.tag[1]) + ";" + str(self.tag[2])
@@ -247,6 +272,15 @@ def differentiable(x):
     # whether the node x depends on a gradient-carrying leaf (its structural
     # flag, also during a pass restricted by wrt)
     return _structural.get(x, x.with_gradient)
+
+
+def gradient_flag(children):
+    # the with_gradient flag of a node computed from children (during a pass
+    # restricted by wrt, e.g. a recorded flow: from the children's structural
+    # flags, see node._select)
+    if _structural:
+        return any(differentiable(c) for c in children)
+    return any(c.with_gradient for c in children)
 
 
 def value_of(x):
