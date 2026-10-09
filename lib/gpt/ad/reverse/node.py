@@ -36,6 +36,7 @@ from gpt.ad.reverse.flow import accum
 from gpt.ad.reverse.primitive import primitive
 from gpt.ad.reverse import tangent
 from gpt.ad.reverse import foundation
+from gpt.ad.reverse.node_str import node_str
 from gpt.core.foundation import base
 
 def traverse(nodes, root):
@@ -105,21 +106,6 @@ class node_differentiable_functional(g.group.differentiable_functional):
         return self.node.backward(wrt=[self.arguments[i] for i in indices])
 
 
-def str_traverse(node, indent=0):
-    if not callable(node._forward):
-        return (" " * indent) + "leaf(" + str(node._container) + ")"
-    else:
-        pre = " " * indent
-        if node._tag is not None:
-            tag = node._tag
-        else:
-            tag = str(node._forward)
-        ret = pre + "(" + tag + "):"
-        for x in node._children:
-            ret = ret + "\n" + str_traverse(x, indent + 1)
-        return ret
-
-
 def _check_value(v):
     # the value of a node is a plain value (lattice, tensor, number, array, a
     # list of these) or a forward-AD series, never a node: higher reverse
@@ -158,6 +144,7 @@ class node_base(base):
         infinitesimal_to_cartesian=True,
         _container=None,
         _tag=None,
+        _name=None,
     ):
         if not callable(_forward) or isinstance(_forward, node_base):
             # a leaf with the value _forward
@@ -184,6 +171,8 @@ class node_base(base):
         # the typed gradient (see flow.py); .gradient is its value
         self.flow = None
         self._tag = _tag
+        # a name for printing (see node_str)
+        self._name = _name
         # which values the backward reads (see needed_values): _reads_children
         # is None (all children) or, per child i, the indices of the children
         # whose values the flow into child i reads; _reads_self: whether the
@@ -197,7 +186,7 @@ class node_base(base):
         self._jvp = None
 
     def __str__(self):
-        return str_traverse(self)
+        return node_str(self)
 
     @property
     def gradient(self):
@@ -486,10 +475,11 @@ class node_base(base):
     def _become(self, z):
         # this node becomes the computed node z (e.g. the output node a
         # stencil installs its node into): everything that describes the
-        # computation is z's; the node keeps its identity, its container and
-        # its leaf conversion flag, its old value and flow are discarded
+        # computation is z's; the node keeps its identity, its container, its
+        # name and its leaf conversion flag, its old value and flow are
+        # discarded
         for name, v in z.__dict__.items():
-            if name not in ("value", "flow", "_container", "infinitesimal_to_cartesian"):
+            if name not in ("value", "flow", "_container", "infinitesimal_to_cartesian", "_name"):
                 self.__dict__[name] = v
         self.__dict__["value"] = None
         self.flow = None
@@ -751,7 +741,11 @@ def zero(container):
     return node_base(container.zero, _container=container, with_gradient=False)
 
 
-def node(x, with_gradient=True, infinitesimal_to_cartesian=True):
+def node(x, with_gradient=True, infinitesimal_to_cartesian=True, name=None):
+    # name: how the leaf is printed (str(node), see node_str)
     return node_base(
-        x, with_gradient=with_gradient, infinitesimal_to_cartesian=infinitesimal_to_cartesian
+        x,
+        with_gradient=with_gradient,
+        infinitesimal_to_cartesian=infinitesimal_to_cartesian,
+        _name=name,
     )

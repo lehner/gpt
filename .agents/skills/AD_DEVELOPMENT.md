@@ -203,7 +203,15 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
 
 - `node(x, with_gradient=True)` creates a leaf. `with_gradient=False` marks
   a **constant** (no gradient accumulated for it; still participates in the
-  graph as a fixed operand).
+  graph as a fixed operand). `name="U0"` names the leaf for printing.
+- `print(y)` shows the graph's cost (`node_str.py`): the leaves, then one
+  line per temporary (shared nodes, the root, long expressions hoisted;
+  single-use nodes inlined) with `[k]` lattice ops per line, `used Nx`, and
+  `RECOMPUTES tK` for structurally identical nodes built twice; then op
+  counts per op/type and the peak live lattice values (forward only / kept
+  for the backward).  `print(x.gradient)` after `backward(create_graph=True)`
+  shows the cost of the recorded reverse pass.  Primitive nodes keep their
+  static arguments as `._static` for this.
 - Every node has:
   - `.value` — the value it holds: a plain value (lattice, tensor, number,
     numpy array, list of these) or a forward-AD series, never a node
@@ -671,6 +679,7 @@ Plain-run optimizations:
 | Path | Role |
 |---|---|
 | `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives; `_left_operand`: numpy scalars on the left), forward/backward, `functional`, `_become` (an output node takes over a computed node) |
+| `lib/gpt/ad/reverse/node_str.py` | `str(node)`: the graph as a listing of temporaries with lattice-op costs, sharing, recomputed subexpressions and memory peaks (§4.1) |
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops), §4.1 |
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
 | `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `negative`, `accumulate`, `accum`, §4.8 |

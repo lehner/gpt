@@ -166,6 +166,8 @@ class primitive:
             _tag=self.name,
         )
         z._reads_children = reads
+        # (the static arguments, for printing: see node_str)
+        z._static = static
         # (the vjp sees the values of the children, never the node's own)
         z._reads_self = False
         if self.jvp is not None and not static:
