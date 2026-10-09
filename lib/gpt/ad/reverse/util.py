@@ -67,12 +67,10 @@ class container:
         # changes in set_otype)
         self._str = None
 
-        if self.tag[0] == g.tensor:
-            otype = self.tag[1]
-            while otype.data_alias is not None:
-                otype = otype.data_alias()
-            if otype.__name__ == "ot_singlet":
-                self.tag = [complex]
+        if self.tag[0] == g.tensor and self.tag[1].cast_to_complex:
+            # (a tensor that is a plain number; an otype with a group
+            # structure, e.g. U(1), stays a tensor)
+            self.tag = [complex]
 
     def copy(self):
         if self.tag[0] is list:

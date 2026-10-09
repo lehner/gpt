@@ -33,6 +33,7 @@ from gpt.core.object_type import (
 # (\mathbb{C},+)
 class ot_complex_additive_group(ot_singlet):
     Ndim = 1
+    cast_to_complex = True
 
     def __init__(self):
         self.__name__ = "ot_complex_additive_group"

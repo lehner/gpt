@@ -39,6 +39,9 @@ class ot_base:
     # list of object types to which I can convert and converter function
     ctab = {}
 
+    # cast to complex
+    cast_to_complex = False
+
     # safe cast of data_alias
     def data_otype(self):
         if self.data_alias is not None:

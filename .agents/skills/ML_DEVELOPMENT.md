@@ -494,7 +494,8 @@ Open / planned:
 - `draw()` refinements: port order chosen to reduce crossings, dark mode,
   larger graphs (collapsing repeated blocks).
 - General numpy-node arithmetic, parameters as `g.lattice`;
-  `g.group.compose` for tensors; accelerator buffers as nodes.
+  `g.group.compose` for tensors (U(1) tensors work: cartesian, random
+  elements, compose, inner product); accelerator buffers as nodes.
 - Symbol types (declared input types), symbolic element access of list
   symbols (`U[0]`).
 - `functional_node` beyond first order; `directional_derivative` for

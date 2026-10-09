@@ -793,3 +793,21 @@ V0 = rng.element(g.mcolor(grid))
 T = rng.cnormal(g.mcolor(grid))
 nV = rad.node(V0)
 g.norm2(square(nV) - T).functional(nV).assert_gradient_error(rng, [V0], [V0], 1e-3, 1e-8)
+
+# tensors need to stay tensors even if their data container is a singlet
+# if they have a group structure worth preserving
+x = rad.node(g.tensor(1j, g.ot_u_1_group()), name="x")
+y = rad.node(g.tensor(-1j, g.ot_u_1_group()), name="y")
+z = x*x*y*x
+z()
+
+# the gradients live in the u(1) algebra (the trace contracts z to a number)
+X = g.tensor(np.exp(0.7j), g.ot_u_1_group())
+Y = g.tensor(np.exp(-1.3j), g.ot_u_1_group())
+for seed in [1.0, 1.0j]:
+    x, y = rad.node(X), rad.node(Y)
+    z = 0.5 * x * x + 2 * x * y + 1.7 * y * y
+    assert z._container.tag[0] is g.tensor
+    g.trace(np.conj(seed) * z).functional(x, y).assert_gradient_error(
+        rng, [X, Y], [X, Y], 1e-4, 1e-8
+    )

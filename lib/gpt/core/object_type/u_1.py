@@ -28,6 +28,10 @@ from gpt.core.object_type import ot_singlet
 class ot_u_1_base(ot_singlet):
     Nc = 1
     Ndim = 1
+    # (a group element or algebra element, not a plain number)
+    cast_to_complex = False
+    # (a 1x1 element is its own transpose: adj is conj)
+    transposed = (0,)
 
     def identity(self):
         return complex(1.0, 0.0)

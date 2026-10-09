@@ -130,6 +130,18 @@ class random:
                 out[i] = complex(draw(), draw())
             return out
 
+        if isinstance(out, gpt.tensor):
+            # a tensor: the same combination of generators with numbers
+            cartesian_space = gpt.group.cartesian(out)
+            for ta in cartesian_space.otype.generators(numpy.complex128):
+                if gpt.util.is_num(ta):
+                    # (a one-component generator given as a number)
+                    ta = gpt.tensor(numpy.array([ta]), cartesian_space.otype)
+                r = self.normal() if normal else self.uniform_real(min=-0.5, max=0.5)
+                cartesian_space += (scale * complex(r).real) * ta
+            gpt.convert(out, cartesian_space)
+            return out
+
         t = gpt.timer("element")
 
         grid = out.grid

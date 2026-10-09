@@ -36,6 +36,9 @@ def cartesian(field):
     if g.util.is_num(field) or isinstance(field, np.ndarray):
         # numbers and arrays are complex additive (as in compose)
         return 0j if g.util.is_num(field) else np.zeros_like(field)
+    if isinstance(field, g.tensor):
+        # (a zero tensor of the algebra)
+        return g.tensor(field.otype.cartesian())
     return g.lattice(field.grid, field.otype.cartesian()).checkerboard(field.checkerboard())
 
 

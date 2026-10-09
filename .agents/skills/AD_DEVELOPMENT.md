@@ -459,7 +459,11 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   `ot_matrix_color` will crash the leaf conversion with
   `AttributeError: 'ot_matrix_color' object has no attribute
   'infinitesimal_to_cartesian'`. Watch products of group elements with
-  algebra elements / generators.
+  algebra elements / generators.  Likewise a tensor becomes a plain number
+  (container `complex`) only if its otype has `cast_to_complex` (singlets,
+  the additive groups); a U(1) element stays a one-component tensor, so its
+  gradient is converted to the u(1) algebra (a number seed of such a root is
+  promoted to a tensor, `node._reverse`).
 - **Plain operands next to nodes**: `plain * node`, `plain + node`,
   `plain - node` work (and give the same as an explicit constant node): the
   core expression algebra (`core/expr.py`, `core/tensor.py`) returns

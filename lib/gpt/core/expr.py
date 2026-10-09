@@ -262,7 +262,9 @@ class expr:
         # this makes sum( ... ) work
         if isinstance(l, int) and l == 0:
             return self
-        raise Exception("Do not know how to add {type(l)} + expr()")
+        if isinstance(l, float) and l == 0.0:
+            return self
+        raise Exception(f"Do not know how to add {type(l)} + expr()")
 
     def __sub__(self, l):
         if not _operand(l):
@@ -361,6 +363,15 @@ def expr_eval(first, second=None, ac=False):
     # or remain an expression if it cannot do so
 
     t("prepare")
+    if second is not None and gpt.util.is_list_instance(second, gpt.tensor):
+        # tensors are evaluated eagerly: assign the values (dst keeps its otype)
+        for dst_i, src_i in zip(gpt.util.to_list(first), gpt.util.to_list(second)):
+            if ac:
+                dst_i.array += src_i.array
+            else:
+                dst_i.array[...] = src_i.array
+        return first
+
     if second is not None:
         dst = gpt.util.to_list(first)
         e = expr(second)

@@ -27,7 +27,8 @@ from gpt.core.object_type import ot_singlet, ot_matrix_singlet, ot_vector_single
 # (\mathbb{R},+)
 class ot_real_additive_group(ot_singlet):
     Ndim = 1
-
+    cast_to_complex = True
+    
     def __init__(self):
         self.__name__ = "ot_real_additive_group"
         self.data_alias = lambda: ot_singlet()

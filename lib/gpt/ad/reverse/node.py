@@ -336,6 +336,15 @@ class node_base(base):
                     "Expression evaluates to a field.  Gradient calculation is not unique."
                 )
             initial_gradient = 1.0
+        if g.util.is_num(initial_gradient) and self._container.tag[0] is g.tensor:
+            # a number seeds a tensor of a single component (e.g. a U(1)
+            # element, which is not cast to a number, see container)
+            otype = self._container.get_otype()
+            if otype.shape != (1,):
+                raise Exception(
+                    "Expression evaluates to a tensor.  Gradient calculation is not unique."
+                )
+            initial_gradient = g.tensor(np.array([initial_gradient], dtype=np.complex128), otype)
         # a gradient of None is a zero that is not built (see accumulate)
         # (never adopt the caller's initial gradient: it could come back as a
         # leaf gradient or be updated in place)
