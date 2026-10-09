@@ -230,6 +230,15 @@ class function:
     def constants(self):
         return self._constants.values
 
+    def stored(self):
+        # the stored parameters and constants as evaluate receives them in a
+        # plain call: one value per slot (a list for a list slot), numbers as
+        # numbers
+        return (
+            self._parameters.group([_unbox(x) for x in self._parameters.values]),
+            self._constants.group([_unbox(x) for x in self._constants.values]),
+        )
+
     def _lookup(self, name):
         for storage in [self._parameters, self._constants]:
             r = storage.find(name)
@@ -270,6 +279,7 @@ class function:
         # both are assigned; the types must agree in any case.  A different
         # graph text only warns.  (A prefix for loading the state of a
         # sub-network into a composite, e.g. "inner.", may be added later.)
+        assignments = []
         for kind, names in [
             ("parameters", self.parameter_names()),
             ("constants", self.constant_names()),
@@ -280,18 +290,15 @@ class function:
             if strict and (missing or unknown):
                 raise KeyError(f"set_state: {kind} missing {missing}, unknown {unknown}")
             for name in names:
-                if name in values and not _same_type(self[name], values[name]):
-                    raise TypeError(
-                        f"set_state: {name} is {_type_text(values[name])}, expected {_type_text(self[name])}"
-                    )
-        for kind, names in [
-            ("parameters", self.parameter_names()),
-            ("constants", self.constant_names()),
-        ]:
-            values = state.get(kind, {})
-            for name in names:
                 if name in values:
-                    self[name] = values[name]
+                    if not _same_type(self[name], values[name]):
+                        raise TypeError(
+                            f"set_state: {name} is {_type_text(values[name])}, expected {_type_text(self[name])}"
+                        )
+                    assignments.append((name, values[name]))
+        # (only after all checks: a failed check assigns nothing)
+        for name, value in assignments:
+            self[name] = value
         if "graph" in state and state["graph"] != self.describe():
             g.message("set_state: warning: the graph differs from the one the state was saved from")
 

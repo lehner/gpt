@@ -23,7 +23,6 @@ from gpt.ad.reverse.util import (
     container,
     get_container,
     get_unary_container,
-    product,
     value_of,
     is_node,
     nodify,
@@ -49,7 +48,7 @@ _inner_product = primitive(
     _plain_inner_product,
     lambda x, y, **static: container(complex),
     vjp=lambda i, flow, x, y, **static: (
-        product(y, g.adj(flow)) if i == 0 else product(x, flow)
+        y * g.adj(flow) if i == 0 else x * flow
     ),
     reads=((1,), (0,)),
 )
@@ -133,7 +132,7 @@ def _reduction_vjp(z, needed, x, **static):
         c = complex(z.flow.value)
     if c is not None and x._container.tag[0] is g.lattice:
         return {0: flows.scaled_identity(c, _reduction_identity(x))}
-    return {0: product(_reduction_identity(x), z.gradient)}
+    return {0: _reduction_identity(x) * z.gradient}
 
 
 _trace = primitive(
@@ -164,26 +163,15 @@ def sum(x):
     return _sum.node(x)
 
 
+# the componentwise maps that are node primitives (in transform.py, by name)
+_component_maps = {"relu", "drelu", "sin", "cos", "real", "imag"}
+
+
 def component_simple_map(operator, numpy_operator, extra_params, first, second):
-    if operator == "relu":
-        assert second is None
-        return g.ad.reverse.transform.relu(first, a=extra_params["a"])
-    elif operator == "drelu":
-        assert second is None
-        return g.ad.reverse.transform.drelu(first, a=extra_params["a"])
-    elif operator == "sin":
-        assert second is None
-        return g.ad.reverse.transform.sin(first)
-    elif operator == "cos":
-        assert second is None
-        return g.ad.reverse.transform.cos(first)
-    elif operator == "real":
-        assert second is None
-        return g.ad.reverse.transform.real(first)
-    elif operator == "imag":
-        assert second is None
-        return g.ad.reverse.transform.imag(first)
-    raise Exception(f"component-wise operator {operator} not implemented in rev-AD")
+    assert second is None
+    if operator not in _component_maps:
+        raise Exception(f"component-wise operator {operator} not implemented in rev-AD")
+    return getattr(g.ad.reverse.transform, operator)(first, **extra_params)
 
 
 def component_multiply(a, b):

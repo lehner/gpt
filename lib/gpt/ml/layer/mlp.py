@@ -45,11 +45,8 @@ class matrix_invariants(function):
     the sites of the calibration samples, 1 for an invariant that is
     constant; frozen, to keep the layer site-local).  No parameters."""
 
-    # invariants of P, per loop, and in total without loops (an instance
-    # has its own total n)
+    # the number of invariants of P (an instance's total is its n)
     n_P = 5
-    n_L = 2
-    n = n_P
 
     def __init__(self, template, n_loops=0, loop_imag=True, mixed=False):
         self.N = template.otype.shape[0]

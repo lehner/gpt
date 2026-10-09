@@ -22,6 +22,7 @@ over time.  Known AD gaps that limit `g.ml` are collected in
 |---|---|
 | `lib/gpt/ml/function.py` | `g.ml.function` (base class), named storage (`_values`: value objects updated in place; numbers boxed as 0-d arrays) |
 | `lib/gpt/ml/graph.py` | symbols, symbolic calls, `g.ml.pack`, `g.ml.composite`, `describe` |
+| `lib/gpt/ml/draw.py` | `draw()` of a pack, symbol or composite (matplotlib) |
 | `lib/gpt/ml/monitor.py` | diagnostics: `snapshot`, `displacement`, `activity`, `gradient_noise` |
 | `lib/gpt/ml/layer/basic.py` | `replicate`, `linear_combination`, `broadcast`, `polynomial` |
 | `lib/gpt/ml/layer/local_covariant_matrix.py` | gauge-covariant residual block on matrix channels |
@@ -88,7 +89,9 @@ class scale(g.ml.function):
   namespace.  `f["c"]` is the list slot, `f["c.1"]` one element (a number
   for a number slot, else the live object); assignment is in place.
 - **Storage.**  `f.parameters()` / `f.constants()` are the flat lists of the
-  value objects in the order of `parameter_names()` / `constant_names()`.
+  value objects in the order of `parameter_names()` / `constant_names()`;
+  `f.stored()` gives them as `evaluate` receives them in a plain call (per
+  slot, numbers as numbers), e.g. for `calibrate`.
   Values are updated in place and never replaced: numbers are stored as 0-d
   numpy arrays (of their dtype) and enter `evaluate` as numbers (plain:
   `.item()`; nodes: `g.ad.reverse.linear.element`, so a leaf of a 0-d array

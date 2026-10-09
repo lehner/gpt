@@ -127,7 +127,7 @@ class dft_action_log_det_jacobian(differentiable_functional):
             _Up[mu].backward(initial_gradient=seed, create_graph=True, wrt=_U)
             for nu in range(self.N):
                 gr = _U[nu].gradient
-                J_right[nu] = gr if J_right[nu] is None else rad.util.add(J_right[nu], gr)
+                J_right[nu] = gr if J_right[nu] is None else J_right[nu] + gr
 
         act = sum(g.inner_product(_left[mu], J_right[mu]) for mu in range(self.N))
 

@@ -43,7 +43,7 @@
 # element.
 #
 import gpt as g
-from gpt.ad.reverse.util import value_of, is_node, product, add, sub, recording
+from gpt.ad.reverse.util import value_of, is_node, recording
 
 
 class dense:
@@ -104,7 +104,7 @@ def wrap(v, container):
 def built(flow, container):
     # the flow with a scaled identity built into a field
     if isinstance(flow, scaled_identity):
-        return accumulate(None, product(flow.identity, flow.c), 1, container)
+        return accumulate(None, flow.identity * flow.c, 1, container)
     return flow
 
 
@@ -157,7 +157,7 @@ def accumulate(cur, r, sign, container, adopt=True):
             return r
         if isinstance(cur, scaled_identity):
             return scaled_identity(cur.c + r.c, cur.identity)
-        r, sign = product(r.identity, r.c), 1
+        r, sign = r.identity * r.c, 1
     cur = built(cur, container)
     if container.tag[0] is list and isinstance(r, list):
         # a whole list flowing into a list node: element by element (None:
@@ -190,7 +190,7 @@ def accumulate(cur, r, sign, container, adopt=True):
         cur = dense(container.zero(), True)
     v = cur.value
     if graph and (is_node(v) or is_node(r)):
-        return dense(add(v, r) if sign > 0 else sub(v, r), True)
+        return dense(v + r if sign > 0 else v - r, True)
     r = value_of(r) if is_node(r) else r
     if not cur.owned:
         return dense(g(v + r if sign > 0 else v - r), True)

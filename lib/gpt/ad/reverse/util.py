@@ -18,7 +18,6 @@
 #
 import gpt as g
 import numpy as np
-import operator
 
 
 def otype_compatible(a, b):
@@ -261,30 +260,6 @@ def value_of(x):
     if x.value is None and x._forward is not None:
         x.value = x._forward()
     return x.value
-
-
-def _binop(a, b, op):
-    # node-aware binary operation: if either side is a node, both stay in the
-    # node world (plain operands are promoted to constant nodes); otherwise
-    # it dispatches exactly as plain arithmetic
-    a, b = nodify(a, b)
-    return op(a, b)
-
-
-def product(a, b):
-    return _binop(a, b, operator.mul)
-
-
-def add(a, b):
-    return _binop(a, b, operator.add)
-
-
-def sub(a, b):
-    return _binop(a, b, operator.sub)
-
-
-def div(a, b):
-    return _binop(a, b, operator.truediv)
 
 
 # The container of an operation's result is derived by applying the operation

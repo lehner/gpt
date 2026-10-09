@@ -284,7 +284,7 @@ must be refreshed in the vjp as well (the exp tower: see §4.5).
 
 - **Conjugate-linear (Wirtinger) convention:** the accumulated gradient is
   `conj(dS/dx)` — every backprop applies `g.adj` to its cofactor (visible in
-  the vjp of `*` in `node.py`: `product(flow, g.adj(y))`). For real data or
+  the vjp of `*` in `node.py`: `flow * g.adj(y)`). For real data or
   skew-Hermitian (effectively real) gauge directions this is invisible; for
   complex data it matters. When in doubt, test at `initial_gradient=1.0j`
   too, as `tests/ad/ad.py` does.
@@ -436,9 +436,14 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   `plain - node` work (and give the same as an explicit constant node): the
   core expression algebra (`core/expr.py`, `core/tensor.py`) returns
   `NotImplemented` for operands it does not know, so Python calls the
-  node's reflected operator.  Keep it that way: the core does not know about
-  AD; a new operand type gets its arithmetic through its own (reflected)
-  operators.  (`plain / node` is not supported: no node `__rtruediv__`.)
+  node's reflected operator.  The same holds for numpy (`node_base` sets
+  `__array_ufunc__ = None`; a numpy scalar or 0-d array on the left is taken
+  as the Python number, `node._left_operand`) and for forward-AD series
+  (a series combines with series, infinitesimals and plain values only).
+  So vjps write plain operators (`flow * g.adj(y)`), plain or recorded.
+  Keep it that way: the core does not know about AD; a new operand type
+  gets its arithmetic through its own (reflected) operators.  (`plain /
+  node` is not supported: no node `__rtruediv__`.)
 - **Masks**: a matrix-valued node times a real 0/1 field is fine as a plain
   product (`g(sm * P1)`, as in `directional_parallel_transport._update`); the
   former `g.where(mask, x, zero)` workaround is no longer needed (its
@@ -652,7 +657,7 @@ Plain-run optimizations:
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops), §4.1 |
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
 | `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `negative`, `accumulate`, `accum`, §4.8 |
-| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `product`, `value_of`, `record`/`recording` (recorded passes), `is_node`, containers (`get_container`, `get_*_container`, `list_container`) |
+| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `value_of`, `record`/`recording` (recorded passes), `is_node`, containers (`get_container`, `get_*_container`, `list_container`) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, sin, cos, real, imag, conj, `multiply` (and the node-aware `component_multiply`) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order, a joint-vjp primitive; used by `g.ml` losses) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
