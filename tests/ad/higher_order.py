@@ -914,3 +914,47 @@ hvp_fd = g(
     * (1.0 / (12 * eps))
 )
 assert_field_close(hvp_of(S_relu, z0, v), hvp_fd, 1e-12, "relu HVP vs FD of 1st derivative")
+
+#####################################
+# a user-defined operation (g.ad.reverse.primitive, its vjp written in node
+# arithmetic) in recorded passes: S = |square(square(x)) - T|^2 for general
+# complex matrices, HVP vs a difference of the gradient
+g.message("user-defined primitive: HVP vs FD of 1st derivative")
+square = rad.primitive(
+    "square",
+    lambda x: g(x * x),
+    lambda c: c.copy(),
+    vjp=lambda i, flow, x: flow * g.adj(x) + g.adj(x) * flow,
+    reads=((0,),),
+)
+x0 = rng.cnormal(g.mcolor(grid))
+v = rng.cnormal(g.mcolor(grid))
+T = rng.cnormal(g.mcolor(grid))
+
+
+def S_square(x):
+    return g.norm2(square(square(x)) - T)
+
+
+def square_first(x):
+    n = rad.node(x, infinitesimal_to_cartesian=False)
+    S_square(n).backward()
+    return n.gradient
+
+
+eps = 1e-4
+hvp_fd = g(
+    (
+        -1.0 * square_first(g(x0 + 2 * eps * v))
+        + 8.0 * square_first(g(x0 + eps * v))
+        - 8.0 * square_first(g(x0 - eps * v))
+        + square_first(g(x0 - 2 * eps * v))
+    )
+    * (1.0 / (12 * eps))
+)
+assert_field_close(
+    hvp_of(S_square, x0, v, infinitesimal_to_cartesian=False),
+    hvp_fd,
+    1e-10,
+    "user-defined primitive HVP vs FD of 1st derivative",
+)

@@ -778,3 +778,18 @@ n.value = x1
 eps = abs(y() - g.norm2(g(x1 * x1))) / abs(g.norm2(g(x1 * x1)))
 g.message(f"re-run after a leaf change: {eps}")
 assert eps < 1e-14
+
+# a user-defined operation, g.ad.reverse.primitive: the matrix square x x,
+# given by its plain implementation and its vjp written in node arithmetic
+# (so that recorded passes reach any order, see tests/ad/higher_order.py)
+square = rad.primitive(
+    "square",
+    lambda x: g(x * x),
+    lambda c: c.copy(),
+    vjp=lambda i, flow, x: flow * g.adj(x) + g.adj(x) * flow,
+    reads=((0,),),
+)
+V0 = rng.element(g.mcolor(grid))
+T = rng.cnormal(g.mcolor(grid))
+nV = rad.node(V0)
+g.norm2(square(nV) - T).functional(nV).assert_gradient_error(rng, [V0], [V0], 1e-3, 1e-8)

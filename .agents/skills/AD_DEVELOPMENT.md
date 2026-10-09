@@ -253,9 +253,12 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
   freed computed node in place; while a pass is recorded it returns the node
   itself (§4.4).
 
-**Primitives** (`ad/reverse/primitive.py`): an operation closed under
-differentiation is declared once, by its plain implementation and its vjp
-written in terms of primitives (itself or others):
+**Primitives** (`ad/reverse/primitive.py`, exported as
+`g.ad.reverse.primitive` for user-defined operations: the "Defining new
+operators" section of `documentation/tutorials/advanced/ad-reverse.ipynb`,
+tested in `tests/ad/ad.py` and `tests/ad/higher_order.py`): an operation
+closed under differentiation is declared once, by its plain implementation
+and its vjp written in terms of primitives (itself or others):
 
 ```python
 dagger = primitive("dagger", plain, container, vjp=lambda i, flow, W: dagger(flow), reads=((),))
