@@ -229,7 +229,7 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
   1. `traverse(nodes, self)` collects every node in the graph and records the
      dependency map;
   2. `forward(nodes)` evaluates each computed node once (values cached);
-  3. `backward(nodes, ...)` walks the graph in reverse topological order,
+  3. `_reverse(nodes, ...)` walks the graph in reverse topological order,
      calling each node's `_backward` to scatter flows into
      `child.gradient`; leaf gradients are finally converted with
      `infinitesimal_to_cartesian(leaf.value, leaf.gradient)` so forces land
@@ -273,7 +273,9 @@ vjp receives only the declared values, the others are None), static keyword
 arguments (not differentiated, passed on to every level), `fwd` (the plain
 value of a node plus a *residual* handed once to that node's vjp: the
 exp tower's reset, and `preimage`'s inverse), `order=1` (external
-first-order nodes: `functional_node`, `preimage`, the chunked `jacobian`).
+first-order nodes: `functional_node`, `preimage`, the Jacobian node of
+`jacobian`), `jvp` (the tangent rule used by `g.ad.reverse.jacobian`,
+usually built from `tangent.py`: `linear(op)`, `bilinear(op)`, `constant`).
 A vjp returns a flow, None (no flow) or `flow.negative(r)` (-r, subtracted
 without being built, also for a list flow).  A primitive's node never reads its
 own value (`_reads_self = False`), so with `with_value=False` its forward is
@@ -368,8 +370,10 @@ g.inner_product(b, n.gradient).backward()            -> n.gradient = d3S/dx3 a b
   `infinitesimal_to_cartesian=False` can convert its recorded gradient
   explicitly (`g.infinitesimal_to_cartesian(x, x.gradient)`, see
   applications/hmc/cdfthmc-learn.py).
-- First-order-only primitives (`order=1`: `functional_node`, `preimage`)
-  raise in a recorded pass.
+- First-order-only primitives (`order=1`: `functional_node`, `preimage`,
+  the Jacobian node of `jacobian`) raise in a recorded pass; a function of
+  J (`log_det`, ...) is differentiated w.r.t. everything by one ordinary
+  reverse pass.
 - Forward mode composes with this as values: a leaf value may be a forward-AD
   series (reverse over forward, `tests/ad/ad.py`).
 
@@ -385,9 +389,10 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
 
 (Module roles: see the file map, §5.)
 
-- `ad/reverse/foundation/` — the "foundation" layer: lattice-level
-  implementations of ops the node layer dispatches to (trace/sum
-  backprops, `where`, `astype`, group conversions), plus
+- `ad/reverse/foundation/` — the "foundation" layer: the node versions of
+  the core ops the node layer dispatches to, as primitives (adj, trace,
+  sum, cshift, inner_product, `where`, `astype`, identity, componentwise
+  maps, group conversions), plus
   `foundation/matrix/exp.py` — **`matrix.exp` on lattice nodes is a tower
   of fused kernels**: exp is D_0 of the family D_k(X; H_1..H_k) =
   d^k exp_X(H_1..H_k), whose reverse flows are again D's at X^dag
@@ -405,7 +410,8 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   by object identity); swapping leaf values by assignment (functionals) is
   safe, but do not modify a leaf that feeds exp directly in place
   (`leaf.value @= ...`) between passes over a recorded graph.  Non-lattice
-  (tensor/scalar) nodes still use the node-op Taylor graph.
+  (tensor/scalar) nodes use the forward AD's scaling-and-squaring Taylor
+  series as a graph of node arithmetic.
 - `ad/reverse/foundation/__init__.py` also holds single-node
   **projections**: `traceless_anti_hermitian` / `traceless_hermitian` (the
   `qcd.gauge.project` functions dispatch here for nodes).  They are
@@ -517,20 +523,26 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   recorded pass the seed may be a node (e.g. built on the root itself,
   `cartesian_to_infinitesimal(root, right)` in the log-det forces), and
   its dependencies are differentiated by the next pass.
-- **Node graphs are reference cycles**: the backward closures refer back to
-  their nodes, so a graph built per call is only released by Python's cyclic
-  garbage collector, which counts objects, not bytes -- large fields pile up
-  between collections (seen as +75 MB per call at 16^4).  For a repeated
-  operation build the graph once and swap the leaf values (as
-  `dft_diffeomorphism` and `directional_parallel_transport._local_vjp` do)
-  and clear the root value before re-running (see "Re-running a graph").
+- **Graph lifetime**: a graph is freed by reference counting as soon as no
+  name refers to it (checked 2026-10-09 for products, exp, stencil actions
+  and `functional_node`): a primitive's closures receive their node as an
+  argument and never capture it.  Keep it that way: a closure or attribute
+  that refers to its own node makes the graph a reference cycle, released
+  only by Python's cyclic garbage collector, which counts objects, not
+  bytes -- large fields pile up between collections (seen as +75 MB per
+  call at 16^4).  One cycle exists by design: a leaf with a recorded
+  gradient (leaf -> flow -> recorded graph -> leaf); drop the leaf, or reset
+  `leaf.flow = None`, when done.  For a repeated operation still build the
+  graph once and swap the leaf values (as `dft_diffeomorphism` and
+  `directional_parallel_transport._local_vjp` do): it saves the graph
+  construction.
 - **Flows are adopted, not copied**: the first plain contribution to a
   gradient is adopted as is (`flow.accumulate`), so the same field can be
   the gradient of several nodes (both children of an add receive
   `z.gradient`).  Ownership travels with the value (`flow.dense.owned`, per
   element for lists): an adopted gradient is copied before an in-place
   update, and leaf gradients are copied if still adopted when handed out.
-  Consequences for new code: a backward closure must return fields it does
+  Consequences for new code: a vjp must return fields it does
   not reuse or overwrite later (no persistent scratch buffers as results),
   and code that writes into a node's gradient in place must call
   `own_gradient()` first.  `node.gradient` is a property
@@ -623,8 +635,10 @@ Plain-run optimizations:
   `_reads_children` (None = all children, else per child i the child
   indices the flow into child i reads) and `_reads_self` (default True).
   A primitive's `reads=` sets both (a primitive never reads its own value).
-  Declared: products, sums, adj, trace, sum, list-element access, element access,
-  and stencil nodes (the inputs, never the output).  `needed_values` walks the
+  Declared by the node arithmetic, the foundation ops, `transform.py`,
+  `linear.py` and the stencil nodes (the inputs, never the output); the
+  matrix functions of `jacobian.py` and the first-order external nodes
+  read all children.  `needed_values` walks the
   graph from the root and `forward` skips every computed node nothing
   needs (only with `with_value=False`).  **Safety net**: `value_of`
   evaluates a missing value on demand, so an undeclared read is still
@@ -653,16 +667,17 @@ Plain-run optimizations:
 
 | Path | Role |
 |---|---|
-| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives), forward/backward, `functional` |
+| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives; `_left_operand`: numpy scalars on the left), forward/backward, `functional`, `_become` (an output node takes over a computed node) |
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops), §4.1 |
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
 | `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `negative`, `accumulate`, `accum`, §4.8 |
 | `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `value_of`, `record`/`recording` (recorded passes), `is_node`, containers (`get_container`, `get_*_container`, `list_container`) |
-| `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, sin, cos, real, imag, conj, `multiply` (and the node-aware `component_multiply`) |
+| `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, drelu, sin, cos, real, imag, conj, `multiply` (the foundation's `component_simple_map` / `component_multiply` dispatch here) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order, a joint-vjp primitive; used by `g.ml` losses) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
+| `lib/gpt/ad/reverse/jacobian.py` | `g.ad.reverse.jacobian(y, x, chunk=None)`: the site-diagonal Jacobian J(s) = dy(s)/dx(s) as a node (forward tangents replayed by the nodes' `jvp`, batched over the generators; `chunk`: fewer at a time), `identity` (x as a new node: the boundary of a local map), self-similar `inv`, `det`, `log_det` of J (tests in `tests/ad/jacobian.py`) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
-| `lib/gpt/ad/reverse/foundation/` | lattice-level op backprops; projection nodes; `matrix/exp.py` (exp tower) |
+| `lib/gpt/ad/reverse/foundation/` | the node versions of the core ops as primitives, projection nodes, group conversions; `matrix/exp.py` (exp tower) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, with or without local temporaries), multi-output list nodes, local temporaries, seedless adjoints |
 | `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils (kind selection, `comm_type`; full grids for non-axis points); `temporaries=`; `cse=` |
 | `lib/cgpt/lib/foundation/general_stencil.h` | general stencil: geometry (lookup table, halo transfer plan), per-field halo, batched exchange via Grid's `StencilSendToRecvFrom`, manager (field point sets); used by `stencil/matrix.h` (`comm_type == 2`, kernel loops in `stencil/matrix_loops.h`) |

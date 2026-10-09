@@ -194,8 +194,9 @@ net = g.ml.pack(y=y, z=z).function(inputs=[x2, x1])   # or explicit
   `mx2 = mix(u=s2.y, v=x1; c.1=sp.q)  parameters: mx.w, mx.c.0  constants: mx.s`
   (computed parameters after `;`, stored ones by composite name, so sharing is
   visible).  Nested composites are single lines (describe them directly).
-  `draw(ax=None)` draws the same graph with matplotlib (imported inside it
-  only, an optional dependency; returns the figure): a layered layout with
+  `draw(ax=None)` (`ml/draw.py`) draws the same graph with matplotlib
+  (imported inside it only, an optional dependency; returns the figure): a
+  layered layout with
   inputs left and outputs right in their signature order, calls in the column
   after their latest source, edges across several columns through waypoints
   (free lanes), rows ordered by alternating one-sided barycenter sweeps at the
@@ -241,8 +242,9 @@ cf.assert_gradient_error(rng, net.parameters(), net.parameters(), 1e-4, 1e-8)
 g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.parameters())
 ```
 
-- Build the loss graph **once** and let the functional swap leaf values (graphs
-  are reference cycles; see AD_DEVELOPMENT.md §4.6).  `sum(...)` works on
+- Build the loss graph **once** and let the functional swap leaf values (it
+  saves the graph construction per step; see AD_DEVELOPMENT.md §4.6, graph
+  lifetime).  `sum(...)` works on
   nodes (`0 + node` is the node).
 - The optimizers (`adam`, `gradient_descent`, `non_linear_cg`, `lbfgs`, line search)
   and the node functional find parameters **by identity**
