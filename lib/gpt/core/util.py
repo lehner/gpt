@@ -61,7 +61,7 @@ def to_complex(real, imag=0.0):
 
 # tensor
 def value_to_tensor(val, otype):
-    if isinstance(otype.data_otype(), gpt.ot_singlet):
+    if otype.cast_to_complex:
         return to_complex(val)
     return gpt.tensor(val, otype)
 

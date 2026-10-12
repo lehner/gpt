@@ -18,12 +18,24 @@
 #
 import gpt as g
 import numpy as np
-import operator
+
+
+_otype_compatible = {}
 
 
 def otype_compatible(a, b):
     # otype-level check (distinct from container.accumulate_compatible, which
-    # also compares the lattice grid); resolves data aliases before comparing
+    # also compares the lattice grid); resolves data aliases before comparing.
+    # Memoized by name (an otype is determined by its name; resolving an
+    # alias builds a new otype)
+    key = (a.__name__, b.__name__)
+    r = _otype_compatible.get(key)
+    if r is None:
+        r = _otype_compatible[key] = _resolved_otype_compatible(a, b)
+    return r
+
+
+def _resolved_otype_compatible(a, b):
     if a == complex:
         a = g.ot_singlet()
     if b == complex:
@@ -51,19 +63,22 @@ class container:
             tag = [np.ndarray, tuple(tag[1]), np.dtype(tag[2])]
 
         self.tag = tag
+        # str(self) of a non-list container, computed once (the tag only
+        # changes in set_otype)
+        self._str = None
 
-        if self.tag[0] == g.tensor:
-            otype = self.tag[1]
-            while otype.data_alias is not None:
-                otype = otype.data_alias()
-            if otype.__name__ == "ot_singlet":
-                self.tag = [complex]
+        if self.tag[0] == g.tensor and self.tag[1].cast_to_complex:
+            # (a tensor that is a plain number; an otype with a group
+            # structure, e.g. U(1), stays a tensor)
+            self.tag = [complex]
 
     def copy(self):
         if self.tag[0] is list:
             return container(list, self.tag[1].copy(), self.tag[2])
-        return container(*[x for x in self.tag])
-        
+        r = container(*[x for x in self.tag])
+        r._str = self._str
+        return r
+
     def is_field(self):
         if self.tag[0] is list:
             return self.tag[1].is_field()
@@ -101,6 +116,7 @@ class container:
             return
         if len(self.tag) > 1:
             self.tag = list(self.tag[:-1]) + [otype]
+            self._str = None
         else:
             raise Exception("Container does not have an otype")
 
@@ -149,7 +165,13 @@ class container:
 
     def __str__(self):
         if self.tag[0] is list:
+            # (not cached: the element container may be retyped)
             return "list[%d](%s)" % (self.tag[2], str(self.tag[1]))
+        if self._str is None:
+            self._str = self._format()
+        return self._str
+
+    def _format(self):
         r = str(self.tag[0].__name__)
         if self.tag[0] is np.ndarray:
             return r + ";" + str(self.tag[1]) + ";" + str(self.tag[2])
@@ -250,6 +272,15 @@ def differentiable(x):
     return _structural.get(x, x.with_gradient)
 
 
+def gradient_flag(children):
+    # the with_gradient flag of a node computed from children (during a pass
+    # restricted by wrt, e.g. a recorded flow: from the children's structural
+    # flags, see node._select)
+    if _structural:
+        return any(differentiable(c) for c in children)
+    return any(c.with_gradient for c in children)
+
+
 def value_of(x):
     # the value of the node x (a plain value or a forward-AD series); a node
     # that was freed after a previous pass (value = None) is re-evaluated in
@@ -261,30 +292,6 @@ def value_of(x):
     if x.value is None and x._forward is not None:
         x.value = x._forward()
     return x.value
-
-
-def _binop(a, b, op):
-    # node-aware binary operation: if either side is a node, both stay in the
-    # node world (plain operands are promoted to constant nodes); otherwise
-    # it dispatches exactly as plain arithmetic
-    a, b = nodify(a, b)
-    return op(a, b)
-
-
-def product(a, b):
-    return _binop(a, b, operator.mul)
-
-
-def add(a, b):
-    return _binop(a, b, operator.add)
-
-
-def sub(a, b):
-    return _binop(a, b, operator.sub)
-
-
-def div(a, b):
-    return _binop(a, b, operator.truediv)
 
 
 # The container of an operation's result is derived by applying the operation
@@ -321,11 +328,12 @@ def get_unary_container(x, unary, key=None):
     return infer_container(key, (x,), unary)
 
 
-def convert_container(v, x, y, operand, key):
-    c = infer_container(key, (x, y), operand)
-
-    if v._container.accumulate_compatible(c):
-        return v
+def container_reductions(source, target):
+    # the reductions (names of g functions, applied in order) that take a
+    # flow of the container target to the container source, e.g. the trace
+    # for a number times a matrix field; () if no conversion is needed
+    if source.accumulate_compatible(target):
+        return ()
 
     # conversions from tensor to matrix
     backward_sum = False
@@ -333,13 +341,13 @@ def convert_container(v, x, y, operand, key):
     backward_color_trace = False
     backward_trace = False
 
-    if v._container.tag[0] != g.lattice and c.tag[0] == g.lattice:
+    if source.tag[0] != g.lattice and target.tag[0] == g.lattice:
         backward_sum = True
 
     # now check otypes
-    if v._container.tag[-1].__name__ != c.tag[-1].__name__:
-        rhs_otype = c.tag[-1]
-        lhs_otype = v._container.tag[-1]
+    if source.tag[-1].__name__ != target.tag[-1].__name__:
+        rhs_otype = target.tag[-1]
+        lhs_otype = source.tag[-1]
 
         if rhs_otype.spintrace[2] is not None:
             rhs_spintrace_otype = rhs_otype.spintrace[2]()
@@ -362,49 +370,15 @@ def convert_container(v, x, y, operand, key):
                 "Conversion incomplete:" + rhs_otype.__name__ + ":" + lhs_otype.__name__
             )
 
-    assert backward_trace or backward_color_trace or backward_spin_trace or backward_sum
-    return _converted(v, c, backward_trace, backward_color_trace, backward_spin_trace, backward_sum)
-
-
-def _converted(v, c, backward_trace, backward_color_trace, backward_spin_trace, backward_sum):
-    # the node of v in the container c (same value; the backward reduces)
-    def _forward():
-        return value_of(v)
-
-    def _backward(z):
-        if v.with_gradient:
-            gradient = z.gradient
-
-            if backward_trace:
-                gradient = g.trace(gradient)
-
-            if backward_color_trace:
-                gradient = g.color_trace(gradient)
-
-            if backward_spin_trace:
-                gradient = g.spin_trace(gradient)
-
-            if backward_sum:
-                gradient = g.sum(gradient)
-
-            if (backward_trace or backward_color_trace or backward_spin_trace) and not is_node(
-                gradient
-            ):
-                gradient = g(gradient)
-
-            g.ad.reverse.flow.accum(v, gradient)
-
-    z = g.ad.reverse.node_base(
-        _forward,
-        _backward,
-        (v,),
-        _container=c,
-        _tag="change to " + str(c) + " from " + str(v._container),
+    reductions = tuple(
+        name
+        for name, flag in [
+            ("trace", backward_trace),
+            ("color_trace", backward_color_trace),
+            ("spin_trace", backward_spin_trace),
+            ("sum", backward_sum),
+        ]
+        if flag
     )
-    # (the backward reads no value)
-    z._reads_children = ((),)
-    z._reads_self = False
-    # (the conversion is linear: the tangents are converted alike)
-    flags = (backward_trace, backward_color_trace, backward_spin_trace, backward_sum)
-    z._jvp = lambda z, children, tangents: [_converted(t, c, *flags) for t in tangents[0]]
-    return z
+    assert reductions
+    return reductions

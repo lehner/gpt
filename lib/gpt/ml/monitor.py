@@ -41,8 +41,6 @@ def _norm2(x):
 def _difference(a, b):
     if isinstance(a, list):
         return [_difference(x, y) for x, y in zip(a, b)]
-    if g.util.is_num(a) or isinstance(a, np.ndarray):
-        return a - b
     return g(a - b)
 
 
@@ -120,10 +118,7 @@ def gradient_noise(cost, fields, n, names=None):
     result = {}
     for i, name in enumerate(names):
         gs = [d[i] for d in draws]
-        if g.util.is_num(gs[0]) or isinstance(gs[0], np.ndarray):
-            mean = sum(gs) / n
-        else:
-            mean = g(sum(gs[1:], gs[0]) * (1.0 / n))
+        mean = g(sum(gs[1:], gs[0]) * (1.0 / n))
         var = sum(_norm2(_difference(x, mean)) for x in gs) / max(n - 1, 1)
         m2 = _norm2(mean)
         result[name] = (m2**0.5, var**0.5, m2 / var if var > 0 else float("inf"))

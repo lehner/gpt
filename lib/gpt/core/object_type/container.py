@@ -67,7 +67,8 @@ class ot_singlet(ot_base):
     mtab = {
         "ot_singlet": (lambda: ot_singlet(), None),
     }
-
+    cast_to_complex = True
+    
     def data_otype(self):
         return ot_singlet()
 

@@ -57,6 +57,33 @@ L = sum(
 )
 L.functional(*la, *lb).assert_gradient_error(rng, a + b, a + b, 1e-5, 1e-8)
 
+# the plain backward of matrix_vector: flows only into the entries of h that
+# carry a gradient (here not the constant last entry, e.g. a bias field), and
+# a second pass over retained values (without the packed h of the forward)
+# gives the same gradients as the first
+m, n = 4, 3
+h, t, W = fields(n), fields(m), matrix(m, n)
+lW, lh = rad.node(W), [rad.node(x) for x in h[:-1]] + [rad.node(h[-1], with_gradient=False)]
+y = rad.matrix_vector(lW, lh)
+L = sum(g.norm2(y[i] - rad.node(t[i], with_gradient=False)) for i in range(m))
+L(retain_values=True)
+first = [lW.gradient] + [x.gradient for x in lh[:-1]]
+assert lh[-1].gradient is None
+L.backward(retain_values=True)
+second = [lW.gradient] + [x.gradient for x in lh[:-1]]
+assert np.array_equal(first[0], second[0])
+for x, z in zip(first[1:], second[1:]):
+    assert g.norm2(x - z) == 0.0
+# and they agree with the gradients of the pass that differentiates every entry
+lh_all = [rad.node(x) for x in h]
+lW_all = rad.node(W)
+y = rad.matrix_vector(lW_all, lh_all)
+sum(g.norm2(y[i] - rad.node(t[i], with_gradient=False)) for i in range(m)).backward()
+assert np.array_equal(first[0], lW_all.gradient)
+for x, z in zip(first[1:], lh_all[:-1]):
+    assert g.norm2(x - z.gradient) == 0.0
+g.message("linear: plain backward (flowed entries, without residual) ok")
+
 
 # a two-layer network S(h, W1, W2) = sum_k |sin(W2 sin(W1 h))_k - t_k|^2 and the
 # mixed second derivative F(W1) = <d, grad_h S>, d/dW1 F through the backward
@@ -110,28 +137,24 @@ eps = abs(analytic - numeric) / abs(numeric)
 g.message(f"linear: mixed second derivative {analytic} vs {numeric}: {eps}")
 assert eps < 1e-8 and np.all(np.isfinite(gradient))
 
-# the recorded computation with numpy reference kernels (the fields read on the
-# host) gives the same value and gradient as the gemm kernels on packed buffers
-kernels = (linear._plain_matrix_vector, linear._plain_outer_sum)
+# the recorded computation with a numpy reference gemm (the packed buffers read
+# on the host; the packing itself is checked by the values above) gives the
+# same value and gradient as the gemm kernels
+kernel = linear._gemm
 
 
-def mv_reference(W, h):
-    h = linear._plain_list(h)
-    Y = columns(h) @ linear._array(W).T
-    y = [g.lattice(h[0]) for _ in range(Y.shape[1])]
-    for i, x in enumerate(y):
-        x[:] = np.ascontiguousarray(Y[:, i]).reshape(x[:].shape)
-    return y
+def gemm_reference(a, b, shape_c, op_a="N", op_b="N"):
+    A, B = np.asarray(a.to_array())[0], np.asarray(b.to_array())[0]
+    A = np.conj(A).T if op_a == "H" else A
+    B = np.conj(B).T if op_b == "H" else B
+    C = A @ B
+    assert C.shape == shape_c
+    return g.accelerator.buffer(np.ascontiguousarray(C).reshape((1,) + shape_c))
 
 
-def os_reference(a, b):
-    a, b = linear._plain_list(a), linear._plain_list(b)
-    return a[0].grid.globalsum(np.ascontiguousarray(columns(a).T @ np.conj(columns(b))))
-
-
-linear._plain_matrix_vector, linear._plain_outer_sum = mv_reference, os_reference
+linear._gemm = gemm_reference
 value_ref, gradient_ref = F_recorded()
-linear._plain_matrix_vector, linear._plain_outer_sum = kernels
+linear._gemm = kernel
 eps = max(
     abs(value - value_ref) / abs(value_ref),
     np.max(np.abs(gradient - gradient_ref)) / np.max(np.abs(gradient_ref)),

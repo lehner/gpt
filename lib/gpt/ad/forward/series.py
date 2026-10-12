@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.ad.forward import infinitesimal
 from gpt.ad.forward import foundation
 from gpt.core.foundation import base
@@ -29,6 +30,16 @@ def promote(other, landau_O):
         return other
 
     return series({infinitesimal({}): other}, landau_O)
+
+
+def _foreign(other):
+    # an operand that is neither a series, an infinitesimal nor a plain value
+    # (e.g. a reverse-AD node): its own (reflected) operators combine it with
+    # a series, as the core expressions do for operands they do not know
+    return not (
+        isinstance(other, (series, infinitesimal, g.lattice, g.tensor, g.expr, np.ndarray))
+        or g.util.is_num(other)
+    )
 
 
 class series(base):
@@ -102,6 +113,8 @@ class series(base):
         return self
 
     def __mul__(self, other):
+        if _foreign(other):
+            return NotImplemented
         return self.distribute2(other, lambda a, b: a * b)
 
     def __imul__(self, other):
@@ -111,6 +124,8 @@ class series(base):
         return self
 
     def __rmul__(self, other):
+        if _foreign(other):
+            return NotImplemented
         if g.util.is_num(other):
             return self.__mul__(other)
         raise Exception("Not implemented")
@@ -137,12 +152,18 @@ class series(base):
         return series(terms, landau_O)
 
     def __add__(self, other):
+        if _foreign(other):
+            return NotImplemented
         return self._merge(other, 1)
 
     def __sub__(self, other):
+        if _foreign(other):
+            return NotImplemented
         return self._merge(other, -1)
 
     def __rsub__(self, other):
+        if _foreign(other):
+            return NotImplemented
         other = promote(other, self.landau_O)
         return other - self
 
@@ -150,9 +171,13 @@ class series(base):
         return (-1.0) * self
 
     def __truediv__(self, other):
+        if _foreign(other):
+            return NotImplemented
         return (1.0 / other) * self
 
     def __radd__(self, other):
+        if _foreign(other):
+            return NotImplemented
         other = promote(other, self.landau_O)
         return other + self
 

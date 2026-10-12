@@ -40,6 +40,8 @@ class tensor(foundation_base):
             array, otype = first, second
             if isinstance(otype, str):
                 otype = gpt.str_to_otype(otype)
+            if not isinstance(array, np.ndarray):
+                array = np.array(array, dtype=np.complex128)
         else:
             otype = first
             array = np.zeros(otype.shape, dtype=np.complex128)
@@ -120,7 +122,10 @@ class tensor(foundation_base):
             if mt is None:
                 mt = get_mt_entry(self.otype.data_otype(), other.otype.data_otype())
                 assert mt is not None
-            a = np.tensordot(self.array, other.array, axes=mt[1])
+            if mt[1] is not None:
+                a = np.tensordot(self.array, other.array, axes=mt[1])
+            else:
+                a = self.array * other.array
             if len(mt) > 2:
                 a = np.transpose(a, mt[2])
             return tensor(a, mt[0]())

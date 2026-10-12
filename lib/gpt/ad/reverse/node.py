@@ -17,26 +17,26 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
+import numpy as np
 from gpt.ad.reverse.util import (
     get_container,
-    get_unary_container,
     get_mul_container,
     get_div_container,
-    convert_container,
-    product,
-    add,
-    sub,
-    div,
+    infer_container,
+    container_reductions,
     value_of,
     nodify,
     is_node,
     record,
     _structural,
-    differentiable,
+    gradient_flag,
 )
 from gpt.ad.reverse import flow as flows
-from gpt.ad.reverse.flow import accum, accum_element
+from gpt.ad.reverse.flow import accum
+from gpt.ad.reverse.primitive import primitive, forget
+from gpt.ad.reverse import tangent
 from gpt.ad.reverse import foundation
+from gpt.ad.reverse.node_str import node_str
 from gpt.core.foundation import base
 
 def traverse(nodes, root):
@@ -68,6 +68,22 @@ def traverse(nodes, root):
     return forward_free
 
 
+def _left_operand(y):
+    # a plain operand on the left of a node; a numpy scalar (or 0-d array)
+    # is the Python number (numpy defers to the node, see __array_ufunc__)
+    if isinstance(y, np.generic) or (isinstance(y, np.ndarray) and y.ndim == 0):
+        return y.item()
+    return y
+
+
+def _check_compatible(x, y, operation):
+    # the operands of a sum or difference (the result has the container of x)
+    if not x._container.accumulate_compatible(y._container):
+        raise Exception(
+            f"Containers incompatible in {operation}: {x._container} and {y._container}"
+        )
+
+
 def _is_zero(x):
     return g.util.is_num(x) and x == 0
 
@@ -88,21 +104,6 @@ class node_differentiable_functional(g.group.differentiable_functional):
         for i in range(len(fields)):
             self.arguments[i].value = fields[i]
         return self.node.backward(wrt=[self.arguments[i] for i in indices])
-
-
-def str_traverse(node, indent=0):
-    if not callable(node._forward):
-        return (" " * indent) + "leaf(" + str(node._container) + ")"
-    else:
-        pre = " " * indent
-        if node._tag is not None:
-            tag = node._tag
-        else:
-            tag = str(node._forward)
-        ret = pre + "(" + tag + "):"
-        for x in node._children:
-            ret = ret + "\n" + str_traverse(x, indent + 1)
-        return ret
 
 
 def _check_value(v):
@@ -129,6 +130,9 @@ class _value_slot:
 class node_base(base):
     value = _value_slot()
     foundation = foundation
+    # (numpy defers to the reflected operators: array * node is a node, see
+    # _left_operand)
+    __array_ufunc__ = None
 
     # TODO: deprecate infinitesimal_to_cartesian and make it default
     def __init__(
@@ -140,6 +144,7 @@ class node_base(base):
         infinitesimal_to_cartesian=True,
         _container=None,
         _tag=None,
+        _name=None,
     ):
         if not callable(_forward) or isinstance(_forward, node_base):
             # a leaf with the value _forward
@@ -155,17 +160,14 @@ class node_base(base):
         self._backward = _backward
         self._children = _children
         if len(_children) > 0:
-            if _structural:
-                # (built during a pass restricted by wrt, e.g. a recorded
-                # flow: from the children's structural flags, see _select)
-                with_gradient = any([differentiable(c) for c in _children])
-            else:
-                with_gradient = any([c.with_gradient for c in _children])
+            with_gradient = gradient_flag(_children)
         self.with_gradient = with_gradient
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         # the typed gradient (see flow.py); .gradient is its value
         self.flow = None
         self._tag = _tag
+        # a name for printing (see node_str)
+        self._name = _name
         # which values the backward reads (see needed_values): _reads_children
         # is None (all children) or, per child i, the indices of the children
         # whose values the flow into child i reads; _reads_self: whether the
@@ -179,7 +181,7 @@ class node_base(base):
         self._jvp = None
 
     def __str__(self):
-        return str_traverse(self)
+        return node_str(self)
 
     @property
     def gradient(self):
@@ -231,149 +233,35 @@ class node_base(base):
 
         z_container = get_mul_container(x._container, y._container)
 
+        # (a factor whose flow has another type than the factor, e.g. a
+        # number times a field, receives the flow reduced to its type)
         if x.with_gradient:
-            x = convert_container(
-                x, z_container, y._container, lambda a, b: a * g.adj(b), "a*adj(b)"
-            )
+            x = _converted(x, ("a*adj(b)", (z_container, y._container), lambda a, b: a * g.adj(b)))
 
         if y.with_gradient:
-            y = convert_container(
-                y, x._container, z_container, lambda a, b: g.adj(a) * b, "adj(a)*b"
-            )
+            y = _converted(y, ("adj(a)*b", (x._container, z_container), lambda a, b: g.adj(a) * b))
 
-        return node_op(
-            (x, y),
-            lambda: product(value_of(x), value_of(y)),
-            (
-                lambda z: (1, product(z.gradient, g.adj(value_of(y)))),
-                lambda z: (1, product(g.adj(value_of(x)), z.gradient)),
-            ),
-            z_container,
-            "*",
-            reads=((1,), (0,)),
-            jvp=_mul_jvp,
-        )
+        return _mul.node(x, y, c=z_container)
 
     def __pow__(x, n):
         x = nodify(x)
 
         assert g.util.is_num(n)
 
-        z_container = x._container
-
         # lattice data has no C++ power op, so integer powers are built from
         # repeated multiplication (field * field is supported); scalars and
-        # tensors keep the native **.  In a recorded pass value_of(x) is the
-        # node and * dispatches on the type, so the product stays a node.
+        # tensors keep the native **.  Matrix fields do not commute, see
+        # _pow_vjp
         lattice = x._container.tag[0] == g.lattice
-
-        def _p(v, k):
-            if not lattice:
-                return v ** k
-            if k == 0:
-                return 1
-            r = v
-            for _ in range(k - 1):
-                r = r * v
-            return r
-
-        # (matrix fields do not commute: dz = sum_i x^i dx x^(n-1-i))
         otype = x._container.get_otype() if lattice else None
         matrix = otype is not None and len(otype.shape) == 2 and otype.shape[0] > 1
-
-        # backprop second factor: z = x**n -> dz/dx = n*x**(n-1).  The
-        # framework gradient is conjugate-linear (see __mul__, which applies
-        # g.adj to the cofactor), so the contribution is adj(n*x**(n-1)) * flow.
-        # This holds for both lattice and scalar data; for real values the adj
-        # is the identity, so real-data results are unchanged.  For matrices
-        # the flow is sum_i adj(x^i) flow adj(x^(n-1-i)).
-        def _bp(v):
-            return g.adj(_p(v, n - 1))
-
-        def _between(left, middle, right, mul):
-            # left middle right with the factors of power 0 left out
-            r = middle
-            if left is not None:
-                r = mul(left, r)
-            if right is not None:
-                r = mul(r, right)
-            return r
-
-        def _backward(z):
-            v = value_of(x)
-            if not matrix:
-                return (1, product(z.gradient * n, _bp(v)))
-            return (
-                1,
-                _sum(
-                    [
-                        _between(
-                            g.adj(_p(v, i)) if i > 0 else None,
-                            z.gradient,
-                            g.adj(_p(v, n - 1 - i)) if i < n - 1 else None,
-                            product,
-                        )
-                        for i in range(n)
-                    ]
-                ),
-            )
-
-        # z = x**n -> dz = n*x**(n-1) dx
-        def _jvp(z, children, tangents):
-            (x,), (t,) = children, tangents
-            if not matrix:
-                return [n * _p(x, n - 1) * dx for dx in t]
-            return [
-                _sum(
-                    [
-                        _between(
-                            _p(x, i) if i > 0 else None,
-                            dx,
-                            _p(x, n - 1 - i) if i < n - 1 else None,
-                            lambda a, b: a * b,
-                        )
-                        for i in range(n)
-                    ]
-                )
-                for dx in t
-            ]
-
-        return node_op(
-            (x,),
-            lambda: _p(value_of(x), n),
-            (_backward,),
-            z_container,
-            "**",
-            reads=((0,),),
-            jvp=_jvp if n >= 2 else None,
-        )
+        return _pow.node(x, n=n, lattice=lattice, matrix=matrix)
 
     def __rmul__(x, y):
-        return node_base.__mul__(y, x)
+        return node_base.__mul__(_left_operand(y), x)
 
     def __truediv__(x, y):
-        x, y = nodify(x, y)
-
-        z_container = get_div_container(x._container, y._container)
-
-        # z = x / y -> dz = dx/y - x/y^2 dy.  The cofactor to x is 1/y
-        # (pointwise); the cofactor to y is -x/y^2, a lattice while y is a
-        # scalar, so its contribution is a contraction (inner_product is
-        # conjugate-linear in the cofactor, which is where adj is applied).
-        return node_op(
-            (x, y),
-            lambda: div(value_of(x), value_of(y)),
-            (
-                lambda z: (1, div(z.gradient, g.adj(value_of(y)))),
-                lambda z: (
-                    -1,
-                    g.inner_product(value_of(x) / value_of(y) ** 2, z.gradient),
-                ),
-            ),
-            z_container,
-            "/",
-            reads=((1,), (0, 1)),
-        )
+        return _div.node(*nodify(x, y))
 
     def __neg__(self):
         return (-1.0) * self
@@ -382,21 +270,8 @@ class node_base(base):
         # list node (e.g. the 4 gauge links): element access.  The element's
         # gradient accumulates into its entry of the list's gradient
         if x._container.tag[0] is list:
-            def _forward():
-                return value_of(x)[item]
-
-            def _backward(z):
-                if x.with_gradient:
-                    accum_element(x, item, z.gradient)
-
-            z_container = get_unary_container(
-                x._container, lambda y: y[item], ("getitem", repr(item))
-            )
-            z = node_base(_forward, _backward, (x,), _container=z_container)
-            z._reads_children = ((),)
-            z._reads_self = False
-            z._jvp = lambda z, children, tangents: [t[item] for t in tangents[0]]
-            return z
+            n = len(x)
+            return _list_element.node(x, index=range(n)[item], n=n)
 
         # element access (arrays, tensors, ...; see linear.element), to any
         # order (its vjp is the scatter, whose vjp is again element)
@@ -417,44 +292,19 @@ class node_base(base):
         if _is_zero(x):
             return y
         x, y = nodify(x, y)
-
-        if not x._container.accumulate_compatible(y._container):
-            raise Exception(
-                f"Containers incompatible in addition: {x._container} and {y._container}"
-            )
-        _container = x._container
-
-        return node_op(
-            (x, y),
-            lambda: add(value_of(x), value_of(y)),
-            (lambda z: (1, z.gradient), lambda z: (1, z.gradient)),
-            _container,
-            "+",
-            reads=((), ()),
-            jvp=_sum_jvp(1.0),
-        )
+        _check_compatible(x, y, "addition")
+        return _add.node(x, y)
 
     def __sub__(x, y):
         x, y = nodify(x, y)
-
-        assert x._container == y._container
-        _container = x._container
-
-        return node_op(
-            (x, y),
-            lambda: sub(value_of(x), value_of(y)),
-            (lambda z: (1, z.gradient), lambda z: (-1, z.gradient)),
-            _container,
-            "-",
-            reads=((), ()),
-            jvp=_sum_jvp(-1.0),
-        )
+        _check_compatible(x, y, "subtraction")
+        return _sub.node(x, y)
 
     def __rsub__(x, y):
-        return node_base.__sub__(y, x)
+        return node_base.__sub__(_left_operand(y), x)
 
     def __radd__(x, y):
-        return node_base.__add__(y, x)
+        return node_base.__add__(_left_operand(y), x)
 
     def forward(self, nodes, free=None, needed=None):
         for n in nodes:
@@ -479,24 +329,22 @@ class node_base(base):
                     if not n.value.is_adj():
                         n.value = g(n.value)
 
-    def _reverse(
-        self, nodes, first_gradient, initial_gradient, retain_values=False, create_graph=False
-    ):
-        # create_graph: the backward closures are recorded (see util.record):
-        # they see the children nodes instead of their values, so the flows,
-        # and the leaf gradients, are nodes of the same graph (nothing is
-        # evaluated); a contraction of a leaf gradient is then an ordinary
-        # node whose reverse pass gives the next derivative
-        with record(create_graph):
-            self._reverse_pass(nodes, first_gradient, initial_gradient, retain_values)
-
-    def _reverse_pass(self, nodes, first_gradient, initial_gradient, retain_values):
+    def _reverse(self, nodes, first_gradient, initial_gradient, retain_values):
         if initial_gradient is None:
             if self._container.is_field():
                 raise Exception(
                     "Expression evaluates to a field.  Gradient calculation is not unique."
                 )
             initial_gradient = 1.0
+        if g.util.is_num(initial_gradient) and self._container.tag[0] is g.tensor:
+            # a number seeds a tensor of a single component (e.g. a U(1)
+            # element, which is not cast to a number, see container)
+            otype = self._container.get_otype()
+            if otype.shape != (1,):
+                raise Exception(
+                    "Expression evaluates to a tensor.  Gradient calculation is not unique."
+                )
+            initial_gradient = g.tensor(np.array([initial_gradient], dtype=np.complex128), otype)
         # a gradient of None is a zero that is not built (see accumulate)
         # (never adopt the caller's initial gradient: it could come back as a
         # leaf gradient or be updated in place)
@@ -539,9 +387,12 @@ class node_base(base):
         # other leaves are constants for this pass and keep their gradients)
         # y() runs the forward and the reverse pass and returns the value of y;
         # y.backward() is the same without the value (see there).
-        # create_graph=True: record the reverse pass (see _reverse); the leaf
-        # gradients are then lazy nodes.  The recording reads no values, so
-        # with with_value=False no forward runs at all
+        # create_graph=True: record the reverse pass: the backward closures
+        # see the children nodes instead of their values (util.record), so
+        # the flows are nodes of the same graph and a contraction of a leaf
+        # gradient is an ordinary node whose reverse pass gives the next
+        # derivative.  The recording reads no values, so with
+        # with_value=False no forward runs at all
         # with_value=False (with gradients, without retain_values): the value
         # of the root is not needed, so only the values some backward reads
         # are computed (see needed_values); the return value is then None
@@ -566,13 +417,8 @@ class node_base(base):
                 needed = set() if create_graph else needed_values(nodes)
             self.forward(nodes, free=free, needed=needed)
             if with_gradients:
-                self._reverse(
-                    nodes,
-                    first_gradient=forward_free,
-                    initial_gradient=initial_gradient,
-                    retain_values=retain_values,
-                    create_graph=create_graph,
-                )
+                with record(create_graph):
+                    self._reverse(nodes, forward_free, initial_gradient, retain_values)
         finally:
             if saved is not None:
                 for n, w in saved:
@@ -620,6 +466,8 @@ class node_base(base):
         return self._container.get_otype()
 
     def set_otype(self, v):
+        # (a retyped node no longer stands for the op that built it)
+        forget(self)
         self._container.set_otype(v)
 
     def get_real(self):
@@ -629,6 +477,18 @@ class node_base(base):
     grid = property(get_grid)
     otype = property(get_otype, set_otype)
     real = property(get_real)
+
+    def _become(self, z):
+        # this node becomes the computed node z (e.g. the output node a
+        # stencil installs its node into): everything that describes the
+        # computation is z's; the node keeps its identity, its container, its
+        # name and its leaf conversion flag, its old value and flow are
+        # discarded
+        for name, v in z.__dict__.items():
+            if name not in ("value", "flow", "_container", "infinitesimal_to_cartesian", "_name"):
+                self.__dict__[name] = v
+        self.__dict__["value"] = None
+        self.flow = None
 
     def new(self):
         # a fresh zero of the same type as self (lattice, tensor, number,
@@ -693,63 +553,193 @@ def needed_values(nodes):
     return needed
 
 
-def _sum(terms):
-    # the sum of the terms that are not None (None: no term)
-    result = None
-    for t in terms:
-        if t is not None:
-            result = t if result is None else result + t
-    return result
+# The arithmetic of nodes, as primitives (see primitive.py).  The gradient
+# is conjugate-linear: the flow into a factor is the flow times the adjoint
+# of its cofactor.
 
 
-def _k(tangents):
-    # the number of tangents (of the children that have tangents)
-    return len(next(t for t in tangents if t is not None))
-
-
-def _mul_jvp(z, children, tangents):
-    # d(x y) = dx y + x dy
-    (x, y), (tx, ty) = children, tangents
-    return [
-        _sum([None if tx is None else tx[j] * y, None if ty is None else x * ty[j]])
-        for j in range(_k(tangents))
-    ]
+# x * y with the container c of the product
+_mul = primitive(
+    "*",
+    lambda x, y, c: x * y,
+    lambda x, y, c: c,
+    vjp=lambda i, flow, x, y, c: flow * g.adj(y) if i == 0 else g.adj(x) * flow,
+    reads=((1,), (0,)),
+    jvp=tangent.bilinear(lambda x, y, c: x * y),
+)
 
 
 def _sum_jvp(sign):
     # z = x + sign y: dz = dx + sign dy (a constant contributes nothing)
-    def _jvp(z, children, tangents):
+    def rule(z, children, tangents):
         (tx, ty) = tangents
-        out = []
-        for j in range(_k(tangents)):
-            dy = None if ty is None else (ty[j] if sign == 1.0 else sign * ty[j])
-            out.append(_sum([None if tx is None else tx[j], dy]))
-        return out
+        return [
+            tangent.total(
+                [
+                    None if tx is None else tx[j],
+                    None if ty is None else (ty[j] if sign == 1.0 else sign * ty[j]),
+                ]
+            )
+            for j in range(tangent.count(tangents))
+        ]
 
-    return _jvp
+    return rule
 
 
-def node_op(children, forward, backards, container, tag=None, reads=None, jvp=None):
-    # reads: None (conservative) or, per child i, the indices of the children
-    # whose values the backward closure of child i reads; a node_op's backward
-    # never reads its own value; jvp: the tangent rule (see node_base._jvp)
-    # build a node from a forward closure and per-child backward closures.
-    # backards[i](z) returns (sign, term) or None (no gradient for that
-    # child); the with_gradient check and gradient accumulation are handled
-    # here.  Backward closures receive z as an argument and must not capture
-    # it, otherwise there is a reference loop.
-    def _backward(z):
-        for c, f in zip(children, backards):
-            if f is not None and c.with_gradient:
-                sign, term = f(z)
-                accum(c, term, sign)
+_add = primitive(
+    "+",
+    lambda x, y: x + y,
+    lambda x, y: x,
+    vjp=lambda i, flow, x, y: flow,
+    reads=((), ()),
+    jvp=_sum_jvp(1.0),
+)
 
-    z = node_base(forward, _backward, children, _container=container, _tag=tag)
-    if reads is not None:
-        z._reads_children = tuple(tuple(r) for r in reads)
-        z._reads_self = False
-    z._jvp = jvp
-    return z
+_sub = primitive(
+    "-",
+    lambda x, y: x - y,
+    lambda x, y: x,
+    vjp=lambda i, flow, x, y: flow if i == 0 else flows.negative(flow),
+    reads=((), ()),
+    jvp=_sum_jvp(-1.0),
+)
+
+
+def _div_vjp(i, flow, x, y):
+    # z = x / y -> dz = dx/y - x/y^2 dy.  The cofactor to x is 1/y
+    # (pointwise); the cofactor to y is -x/y^2, a lattice while y is a
+    # scalar, so its contribution is a contraction (inner_product is
+    # conjugate-linear in the cofactor, which is where adj is applied)
+    if i == 0:
+        return flow / g.adj(y)
+    return flows.negative(g.inner_product(x / y**2, flow))
+
+
+_div = primitive(
+    "/",
+    lambda x, y: x / y,
+    get_div_container,
+    vjp=_div_vjp,
+    reads=((1,), (0, 1)),
+)
+
+
+def _power(v, k, lattice):
+    # v**k (repeated multiplication for lattices; in a recorded pass v is a
+    # node and * dispatches on the type, so the product stays a node)
+    if not lattice:
+        return v**k
+    if k == 0:
+        return 1
+    r = v
+    for _ in range(k - 1):
+        r = r * v
+    return r
+
+
+def _between(left, middle, right, mul):
+    # left middle right with the factors of power 0 left out
+    r = middle
+    if left is not None:
+        r = mul(left, r)
+    if right is not None:
+        r = mul(r, right)
+    return r
+
+
+def _pow_vjp(i, flow, x, n, lattice, matrix):
+    # z = x**n -> dz/dx = n*x**(n-1), so the flow is adj(n*x**(n-1)) * flow
+    # (for real values the adj is the identity).  For matrices the flow is
+    # sum_i adj(x^i) flow adj(x^(n-1-i))
+    if not matrix:
+        return flow * n * g.adj(_power(x, n - 1, lattice))
+    return tangent.total(
+        [
+            _between(
+                g.adj(_power(x, j, lattice)) if j > 0 else None,
+                flow,
+                g.adj(_power(x, n - 1 - j, lattice)) if j < n - 1 else None,
+                lambda a, b: a * b,
+            )
+            for j in range(n)
+        ]
+    )
+
+
+def _pow_jvp(z, children, tangents, n, lattice, matrix):
+    # z = x**n -> dz = n*x**(n-1) dx (matrices: sum_i x^i dx x^(n-1-i))
+    (x,), (t,) = children, tangents
+    if n == 0:
+        return tangent.constant(z, children, tangents)
+    if not matrix:
+        return [n * _power(x, n - 1, lattice) * dx for dx in t]
+    return [
+        tangent.total(
+            [
+                _between(
+                    _power(x, j, lattice) if j > 0 else None,
+                    dx,
+                    _power(x, n - 1 - j, lattice) if j < n - 1 else None,
+                    lambda a, b: a * b,
+                )
+                for j in range(n)
+            ]
+        )
+        for dx in t
+    ]
+
+
+_pow = primitive(
+    "**",
+    lambda x, n, lattice, matrix: _power(x, n, lattice),
+    lambda x, n, lattice, matrix: x,
+    vjp=_pow_vjp,
+    reads=((0,),),
+    jvp=_pow_jvp,
+)
+
+
+# element index of a list node of n elements: the flow into the list is the
+# flow at index (no flow into the other elements)
+_list_element = primitive(
+    "list_element",
+    lambda x, index, n: x[index],
+    lambda x, index, n: x.tag[1].copy(),
+    vjp=lambda i, flow, x, index, n: [flow if j == index else None for j in range(n)],
+    reads=((),),
+    jvp=tangent.linear(lambda t, index, n: t[index]),
+)
+
+
+def _reduced(flow, reductions):
+    # the flow reduced by the functions reductions (names of g, in order)
+    for name in reductions:
+        flow = getattr(g, name)(flow)
+    if any(name != "sum" for name in reductions) and not is_node(flow):
+        flow = g(flow)
+    return flow
+
+
+# v in the container c (the same value; the flow is reduced to v's type)
+_convert = primitive(
+    "convert",
+    lambda v, c, reductions: v,
+    lambda v, c, reductions: c,
+    vjp=lambda i, flow, v, c, reductions: _reduced(flow, reductions),
+    reads=((),),
+    # (the conversion is linear: the tangents are converted alike)
+    jvp=tangent.linear(lambda t, c, reductions: _convert(t, c=c, reductions=reductions)),
+)
+
+
+def _converted(v, inferred):
+    # v converted to the container infer_container(*inferred) (v itself if it
+    # has that type already)
+    c = infer_container(*inferred)
+    reductions = container_reductions(v._container, c)
+    if not reductions:
+        return v
+    return _convert.node(v, c=c, reductions=reductions)
 
 
 def zero(container):
@@ -757,7 +747,11 @@ def zero(container):
     return node_base(container.zero, _container=container, with_gradient=False)
 
 
-def node(x, with_gradient=True, infinitesimal_to_cartesian=True):
+def node(x, with_gradient=True, infinitesimal_to_cartesian=True, name=None):
+    # name: how the leaf is printed (str(node), see node_str)
     return node_base(
-        x, with_gradient=with_gradient, infinitesimal_to_cartesian=infinitesimal_to_cartesian
+        x,
+        with_gradient=with_gradient,
+        infinitesimal_to_cartesian=infinitesimal_to_cartesian,
+        _name=name,
     )

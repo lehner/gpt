@@ -270,6 +270,13 @@ f1 = S1.functional(nU1)
 f1.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
 g.message("single-output plaquette (list input): OK")
 
+# inputs whose values are lazy expressions (adj): the adjoint materializes them
+nUa = [rad.node(u) for u in U]
+nPa = rad.node(g.copy(P1s))
+stencil1(nPa, *[g.adj(x) for x in nUa])
+act_single(nPa).functional(*nUa).assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+g.message("single-output plaquette (adj inputs): OK")
+
 #####################################
 # performance test
 #####################################

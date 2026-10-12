@@ -48,7 +48,10 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
 
 def identity(t):
     e = gpt.tensor(t.otype)
-    if len(e.array.shape) == 2:
+    if e.array.shape == (1,):
+        # (a one-component tensor, e.g. a U(1) element)
+        e.array[0] = 1.0
+    elif len(e.array.shape) == 2:
         e.array = numpy.eye(dtype=e.array.dtype, N=e.array.shape[0])
     elif len(e.array.shape) == 4:
         n1 = e.array.shape[0]
@@ -68,6 +71,11 @@ def adj(l):
     if l.transposable():
         return l.adj()
     return gpt.adj(gpt.expr(l))
+
+
+def group_inner_product(left, right):
+    # inner product over group's real vector space
+    return left.otype.inner_product(left, right)
 
 
 def infinitesimal_to_cartesian(src, dsrc):

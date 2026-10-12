@@ -778,3 +778,36 @@ n.value = x1
 eps = abs(y() - g.norm2(g(x1 * x1))) / abs(g.norm2(g(x1 * x1)))
 g.message(f"re-run after a leaf change: {eps}")
 assert eps < 1e-14
+
+# a user-defined operation, g.ad.reverse.primitive: the matrix square x x,
+# given by its plain implementation and its vjp written in node arithmetic
+# (so that recorded passes reach any order, see tests/ad/higher_order.py)
+square = rad.primitive(
+    "square",
+    lambda x: g(x * x),
+    lambda c: c.copy(),
+    vjp=lambda i, flow, x: flow * g.adj(x) + g.adj(x) * flow,
+    reads=((0,),),
+)
+V0 = rng.element(g.mcolor(grid))
+T = rng.cnormal(g.mcolor(grid))
+nV = rad.node(V0)
+g.norm2(square(nV) - T).functional(nV).assert_gradient_error(rng, [V0], [V0], 1e-3, 1e-8)
+
+# tensors need to stay tensors even if their data container is a singlet
+# if they have a group structure worth preserving
+x = rad.node(g.tensor(1j, g.ot_u_1_group()), name="x")
+y = rad.node(g.tensor(-1j, g.ot_u_1_group()), name="y")
+z = x*x*y*x
+z()
+
+# the gradients live in the u(1) algebra (the trace contracts z to a number)
+X = g.tensor(np.exp(0.7j), g.ot_u_1_group())
+Y = g.tensor(np.exp(-1.3j), g.ot_u_1_group())
+for seed in [1.0, 1.0j]:
+    x, y = rad.node(X), rad.node(Y)
+    z = 0.5 * x * x + 2 * x * y + 1.7 * y * y
+    assert z._container.tag[0] is g.tensor
+    g.trace(np.conj(seed) * z).functional(x, y).assert_gradient_error(
+        rng, [X, Y], [X, Y], 1e-4, 1e-8
+    )

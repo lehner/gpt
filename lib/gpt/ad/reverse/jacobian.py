@@ -27,7 +27,7 @@
 # The subgraph between x and y is replayed on k forward tangents (one per
 # direction): the values are the nodes of the graph (nothing is recomputed),
 # the tangents are new nodes built by the nodes' tangent rules (_jvp: the
-# optional jvp of primitives and node_ops), batched over the k directions
+# optional jvp of the primitives), batched over the k directions
 # where an op has a fused rule (one stencil with k outputs for a zero-point
 # stencil, one jet kernel for exp).  J is an ordinary node of the same graph,
 # so a function of J (log_det, ...) is differentiated w.r.t. everything by
@@ -48,7 +48,8 @@
 #
 import gpt as g
 from gpt.ad.reverse.primitive import primitive
-from gpt.ad.reverse.util import container, is_node, constant
+from gpt.ad.reverse.util import container, constant
+from gpt.ad.reverse import tangent
 
 # x as a new node of the same value (the boundary of a local map, see above)
 identity = primitive(
@@ -57,7 +58,8 @@ identity = primitive(
     lambda c: c.copy(),
     vjp=lambda i, flow, x: flow,
     reads=((),),
-    jvp=lambda z, children, tangents: tangents[0],
+    jvp=tangent.linear(lambda t: t),
+    fresh=True,
 )
 
 

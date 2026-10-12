@@ -54,7 +54,10 @@ def max_site_norm(x):
     # upper bound on the largest site norm |x|_F, computed on the device:
     # (sum_x |x|_F^16)^(1/16) >= max_x |x|_F, and overestimates it by at most
     # V^(1/16) (a factor 2 at 16^4), i.e., by at most one extra squaring
-    n2 = g(g.trace(g.adj(x) * x))
+    # (a number field: for a one-component otype such as U(1) the trace keeps
+    # the otype, which is not a number, see cast_to_complex)
+    n2 = g.lattice(x.grid, g.ot_singlet()).checkerboard(x.checkerboard())
+    n2 @= g.trace(g.adj(x) * x)
     y = n2
     for _ in range(3):
         y = g(y * y)

@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-from gpt.ad.reverse.node import node, node_base, node_op, zero
+from gpt.ad.reverse.node import node, node_base, zero
 import gpt.ad.reverse.transform
 import gpt.ad.reverse.foundation
 from gpt.ad.reverse.functional_node import functional_node
@@ -24,3 +24,4 @@ from gpt.ad.reverse.preimage import preimage
 from gpt.ad.reverse.linear import stack, matrix_vector, outer_sum, dagger
 from gpt.ad.reverse.jacobian import jacobian, identity
 from gpt.ad.reverse.jacobian import log_det, det, inv
+from gpt.ad.reverse.primitive import primitive

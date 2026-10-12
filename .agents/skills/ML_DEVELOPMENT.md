@@ -22,6 +22,7 @@ over time.  Known AD gaps that limit `g.ml` are collected in
 |---|---|
 | `lib/gpt/ml/function.py` | `g.ml.function` (base class), named storage (`_values`: value objects updated in place; numbers boxed as 0-d arrays) |
 | `lib/gpt/ml/graph.py` | symbols, symbolic calls, `g.ml.pack`, `g.ml.composite`, `describe` |
+| `lib/gpt/ml/draw.py` | `draw()` of a pack, symbol or composite (matplotlib) |
 | `lib/gpt/ml/monitor.py` | diagnostics: `snapshot`, `displacement`, `activity`, `gradient_noise` |
 | `lib/gpt/ml/layer/basic.py` | `replicate`, `linear_combination`, `broadcast`, `polynomial` |
 | `lib/gpt/ml/layer/local_covariant_matrix.py` | gauge-covariant residual block on matrix channels |
@@ -88,7 +89,9 @@ class scale(g.ml.function):
   namespace.  `f["c"]` is the list slot, `f["c.1"]` one element (a number
   for a number slot, else the live object); assignment is in place.
 - **Storage.**  `f.parameters()` / `f.constants()` are the flat lists of the
-  value objects in the order of `parameter_names()` / `constant_names()`.
+  value objects in the order of `parameter_names()` / `constant_names()`;
+  `f.stored()` gives them as `evaluate` receives them in a plain call (per
+  slot, numbers as numbers), e.g. for `calibrate`.
   Values are updated in place and never replaced: numbers are stored as 0-d
   numpy arrays (of their dtype) and enter `evaluate` as numbers (plain:
   `.item()`; nodes: `g.ad.reverse.linear.element`, so a leaf of a 0-d array
@@ -191,8 +194,9 @@ net = g.ml.pack(y=y, z=z).function(inputs=[x2, x1])   # or explicit
   `mx2 = mix(u=s2.y, v=x1; c.1=sp.q)  parameters: mx.w, mx.c.0  constants: mx.s`
   (computed parameters after `;`, stored ones by composite name, so sharing is
   visible).  Nested composites are single lines (describe them directly).
-  `draw(ax=None)` draws the same graph with matplotlib (imported inside it
-  only, an optional dependency; returns the figure): a layered layout with
+  `draw(ax=None)` (`ml/draw.py`) draws the same graph with matplotlib
+  (imported inside it only, an optional dependency; returns the figure): a
+  layered layout with
   inputs left and outputs right in their signature order, calls in the column
   after their latest source, edges across several columns through waypoints
   (free lanes), rows ordered by alternating one-sided barycenter sweeps at the
@@ -238,8 +242,9 @@ cf.assert_gradient_error(rng, net.parameters(), net.parameters(), 1e-4, 1e-8)
 g.algorithms.optimize.adam(maxiter=300, alpha=5e-3)(cf)(net.parameters(), net.parameters())
 ```
 
-- Build the loss graph **once** and let the functional swap leaf values (graphs
-  are reference cycles; see AD_DEVELOPMENT.md §4.6).  `sum(...)` works on
+- Build the loss graph **once** and let the functional swap leaf values (it
+  saves the graph construction per step; see AD_DEVELOPMENT.md §4.6, graph
+  lifetime).  `sum(...)` works on
   nodes (`0 + node` is the node).
 - The optimizers (`adam`, `gradient_descent`, `non_linear_cg`, `lbfgs`, line search)
   and the node functional find parameters **by identity**
@@ -489,7 +494,8 @@ Open / planned:
 - `draw()` refinements: port order chosen to reduce crossings, dark mode,
   larger graphs (collapsing repeated blocks).
 - General numpy-node arithmetic, parameters as `g.lattice`;
-  `g.group.compose` for tensors; accelerator buffers as nodes.
+  `g.group.compose` for tensors (U(1) tensors work: cartesian, random
+  elements, compose, inner product); accelerator buffers as nodes.
 - Symbol types (declared input types), symbolic element access of list
   symbols (`U[0]`).
 - `functional_node` beyond first order; `directional_derivative` for
