@@ -104,18 +104,30 @@ class sparse_kernel:
         length = self.grid.gdimensions[ortho_dim]
         return gpt.indexed_sum(fields, self.coordinate_lattices()[ortho_dim], length)
 
-    def weight(self):
-        if self.weight_cache is not None:
-            return self.weight_cache
+    def global_coordinates(self):
+        # broadcast below uses grid.processor not gpt.rank()
+        rank_id = self.grid.processor
 
         # this function is mostly used for tests, so it is not performance critical
         for rank in range(self.grid.Nprocessors):
-            local_coordinates = np.copy(self.local_coordinates)
+            nlc = np.array([len(self.local_coordinates)])
+            self.grid.broadcast(rank, nlc)
+            if rank == rank_id:
+                local_coordinates = np.copy(self.local_coordinates)
+            else:
+                local_coordinates = np.zeros((nlc[0], self.grid.nd), dtype=self.local_coordinates.dtype)
             self.grid.broadcast(rank, local_coordinates)
             if rank == 0:
                 global_coordinates = local_coordinates
             else:
                 global_coordinates = np.concatenate((global_coordinates, local_coordinates))
+        return global_coordinates
+    
+    def weight(self):
+        if self.weight_cache is not None:
+            return self.weight_cache
+
+        global_coordinates = self.global_coordinates()
 
         unique_coordinates, count = np.unique(global_coordinates, axis=0, return_counts=True)
         unique_coordinates = unique_coordinates.view(type(global_coordinates))
@@ -206,6 +218,27 @@ class sparse:
             local_coordinates,
             dimensions_divisible_by=cl[0].grid.fdimensions,
             mask=mask,
+        )
+
+    # every rank must pass the same list of positions, otherwise code breaks
+    def restricted(self, positions):
+        # get emb_coor of wanted positions on each rank to build mask
+        ec = self.unique_embedded_coordinates(positions)
+        
+        # creates full mask
+        mask = self.lattice(gpt.ot_real_additive_group())
+        mask[:] = 0
+        mask[ec] = 1
+        
+        cl = self.coordinate_lattices(mark_empty=-1)
+        local_coordinates = np.hstack(tuple([x[:].real.astype(np.int32) for x in cl]))
+        mask_local = [m[0]==1 for m in mask[:]]
+        
+        return gpt.core.domain.sparse(
+            self.kernel.grid,
+            local_coordinates,
+            dimensions_divisible_by=cl[0].grid.fdimensions,
+            mask = mask_local
         )
 
     def weight(self):
