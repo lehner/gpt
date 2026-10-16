@@ -85,6 +85,7 @@ for f in \
     ${test_path}/ad/jacobian.py \
     ${test_path}/ad/list_node.py \
     ${test_path}/ad/linear.py \
+    ${test_path}/ad/linear_solve.py \
     ${test_path}/ml/function.py \
     ${test_path}/ml/graph.py \
     ${test_path}/ml/local_covariant_matrix.py \
