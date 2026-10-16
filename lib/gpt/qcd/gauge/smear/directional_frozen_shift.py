@@ -17,7 +17,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import gpt as g
-import numpy as np
 from gpt.qcd.gauge.smear.differentiable import dft_diffeomorphism
 from gpt.core.group import differentiable_functional
 
@@ -127,37 +126,36 @@ class directional_frozen_shift(dft_diffeomorphism):
         return zero_functional()
 
     def check_frozen(self, fields, rng=None, eps=None):
-        # (1) U_mu on P1 replaced by nan: Omega on P1 stays finite (the
-        # generator reads no updated link: nan propagates through every read),
-        # (2) U_mu on P1 replaced by random links: Omega is unchanged.  Raises
-        # otherwise; returns the change of (2)
-        mu, P1 = self.mu, self.P1
+        # the generator reads no updated link: Omega on P1 is the same for the
+        # frozen view (zeros at U_mu on P1) and for the frozen view with random
+        # links at U_mu on P1 (any read of these sites changes it; reading the
+        # zeros instead would not break the exact inverse or log det = 0, but
+        # gauge covariance and smoothness).  Raises otherwise; returns the
+        # relative change.  (Not a nan fill: it would flag generators that
+        # read a link and remove it with a mask product, nan * 0 = nan, which
+        # are exactly frozen.)
+        mu, nd, P1 = self.mu, self.nd, self.P1
         zero = g.lattice(fields[mu].grid, fields[mu].otype.cartesian())
         zero[:] = 0
 
-        def on_P1(x):
-            return g.where(P1, x, zero)
+        def generator_on_P1(F):
+            M = self.generator(F, fields[nd:])
+            return g.where(P1, g.qcd.gauge.project.traceless_anti_hermitian(M), zero)
 
-        def generator_on_P1(U_mu):
-            M = self.generator(self._frozen(_with(fields, mu, U_mu)), fields[self.nd :])
-            return on_P1(g.qcd.gauge.project.traceless_anti_hermitian(M))
-
-        poison = g.lattice(fields[mu])
-        poison[:] = float("nan")
-        n = g.norm2(generator_on_P1(g.where(P1, poison, fields[mu])))
-        if not np.isfinite(n):
-            raise ValueError(f"directional_frozen_shift: the generator reads U_{mu} on the updated sites")
         if rng is None:
             rng = g.random("directional_frozen_shift.check_frozen")
         other = g.lattice(fields[mu])
         rng.element(other)
-        O0 = generator_on_P1(fields[mu])
-        O1 = generator_on_P1(g.where(P1, other, fields[mu]))
-        change = (g.norm2(O1 - O0) / g.norm2(O0)) ** 0.5
+        F = self._frozen(fields)
+        F_random = _with(F, mu, g(F[mu] + other * P1))
+        O0 = generator_on_P1(F)
+        O1 = generator_on_P1(F_random)
+        n0 = g.norm2(O0)
+        change = (g.norm2(O1 - O0) / (n0 if n0 > 0 else 1.0)) ** 0.5
         if eps is None:
             eps = 100 * fields[mu].grid.precision.eps
         if not change <= eps:
-            raise ValueError(f"directional_frozen_shift: the generator depends on U_{mu} on the updated sites ({change})")
+            raise ValueError(f"directional_frozen_shift: the generator reads U_{mu} on the updated sites ({change})")
         return change
 
 
