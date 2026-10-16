@@ -26,8 +26,9 @@ class frozen_shift(local_diffeomorphism):
     # checkerboarded volume-preserving shift of the links in one direction by
     # a generator of the frozen links (see directional_frozen_shift, of which
     # this is a thin wrapper with the interface of local_stout); the fields
-    # are the links followed by the generator's parameters; one transform is
-    # built per grid and gauge group on first use
+    # are the links followed by the generator's parameters (as local_stout,
+    # further fields are not returned); one transform is built per grid and
+    # gauge group on first use
     @params_convention(dimension=None, checkerboard=None, generator=None, parameters=[])
     def __init__(self, params):
         self.params = params
