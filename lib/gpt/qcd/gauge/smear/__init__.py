@@ -22,3 +22,5 @@ from gpt.qcd.gauge.smear.wilson_flow import wilson_flow, gradient_flow
 from gpt.qcd.gauge.smear.differentiable import differentiable_field_transformation
 from gpt.qcd.gauge.smear.parallel_transport import parallel_transport
 from gpt.qcd.gauge.smear.directional_parallel_transport import directional_parallel_transport
+from gpt.qcd.gauge.smear.directional_frozen_shift import directional_frozen_shift
+from gpt.qcd.gauge.smear.frozen_shift import frozen_shift
