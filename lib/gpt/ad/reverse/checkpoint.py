@@ -1,0 +1,127 @@
+#
+#    GPT - Grid Python Toolkit
+#    Copyright (C) 2026  Christoph Lehner (christoph.lehner@ur.de, https://github.com/lehner/gpt)
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License along
+#    with this program; if not, write to the Free Software Foundation, Inc.,
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+# Gradient checkpointing (Griewank-Walther): y = checkpoint(f, x) is f(x) as
+# ONE node of the graph.  Its forward evaluates f on plain values without
+# recording a graph, so the graph keeps only the inputs (the node's children),
+# not the intermediates of f.  Its backward re-runs f on fresh leaves with the
+# input values and back-propagates the flows through this local graph, which
+# is freed afterwards: memory of one f instead of the whole chain, for about one
+# extra forward of f per backward.
+#
+# Self-similar to any order: the flow into the inputs is again a checkpoint,
+# of the vjp of f, h(x, c) = (dy/dx)^T c, a local reverse pass over f.  In a
+# plain pass it is evaluated at once; in a recorded pass (create_graph) it is
+# a lazy checkpoint node of the recorded graph, so higher derivatives stay
+# checkpointed.  Called on nodes (the leaves of the local pass of the next
+# level), h builds f and records its local reverse pass over them, so the
+# vjp of h is the vjp of a recorded gradient, an ordinary local graph.
+#
+# f maps a list of fields to a list of fields of one container (e.g. the nd
+# links of a smoothing step; an input may be passed through) and must work
+# on plain fields and on nodes.  Every primitive inside f must support the
+# derivative order used (e.g. linear_solve: first order only).  No tangent
+# rule: a checkpoint on a path of g.ad.reverse.jacobian raises.
+#
+import gpt as g
+from gpt.ad.reverse.primitive import primitive
+from gpt.ad.reverse.util import constant, get_container, is_node, list_container
+
+
+def _contraction(seeds, y):
+    # real(sum_j <c_j, y_j>): its reverse pass gives the vjp with the flows c
+    # (the contraction of jacobian._chunked)
+    L = None
+    for c, yj in zip(seeds, y):
+        t = g.inner_product(constant(c), yj)
+        L = t if L is None else L + t
+    return g.component.real(L)
+
+
+def _flow(leaf, c, node):
+    # a leaf's gradient, or a zero of its container if it received none (a
+    # lazy zero node in a recorded pass)
+    gr = leaf.gradient
+    if gr is not None:
+        return gr
+    return g.ad.reverse.zero(c) if node else c.zero()
+
+
+def _vjp_function(f, n, needed, outputs):
+    # h(x_0, ..., x_{n-1}, c_0, ...) = the flows into x_i (i in needed) for the
+    # flows c_k into the outputs y_{outputs[k]} of f
+    def h(args):
+        x, seeds = list(args[:n]), list(args[n:])
+        if not any(is_node(a) for a in args):
+            # plain: one local reverse pass over f on fresh leaves (all with
+            # a gradient flag, restricted by wrt, so that a node-mode f of the
+            # next level can record gradients w.r.t. any of them)
+            leaves = [g.ad.reverse.node(v, infinitesimal_to_cartesian=False) for v in x]
+            y = f(leaves)
+            _contraction(seeds, [y[j] for j in outputs]).backward(wrt=[leaves[i] for i in needed])
+            return [_flow(leaves[i], get_container(x[i]), False) for i in needed]
+        # nodes (the leaves of a local pass of the next level): f and its
+        # recorded local reverse pass over them
+        y = f(x)
+        L = _contraction(seeds, [y[j] for j in outputs])
+        L.backward(create_graph=True, wrt=[x[i] for i in needed])
+        flows = [_flow(x[i], x[i]._container, True) for i in needed]
+        for i in needed:
+            # (no leaf -> flow -> recorded graph -> leaf cycle)
+            x[i].flow = None
+        return flows
+
+    return h
+
+
+def _plain(*values, f, containers):
+    return list(f(list(values)))
+
+
+def _container(*children, f, containers):
+    return list_container(list(containers))
+
+
+def _joint_vjp(z, needed, *values, f, containers):
+    seeds = z.gradient
+    outputs = [j for j, c in enumerate(seeds) if c is not None]
+    if not outputs:
+        return {}
+    h = _vjp_function(f, len(values), needed, outputs)
+    flow_containers = [get_container(values[i]) for i in needed]
+    r = checkpoint(h, list(values) + [seeds[j] for j in outputs], flow_containers)
+    return {i: r[k] for k, i in enumerate(needed)}
+
+
+_checkpoint = primitive("checkpoint", _plain, _container, joint_vjp=_joint_vjp, fresh=True)
+
+
+def checkpoint(f, inputs, containers=None):
+    """f(inputs) (a list of fields of one container) as a checkpoint node:
+    the graph keeps the inputs only, the backward re-runs f (see above).
+    Plain inputs: f(inputs).  containers: those of the outputs (default: from
+    f built on lazy zeros of the inputs' containers, without evaluation)."""
+    inputs = list(inputs)
+    if not any(is_node(x) for x in inputs):
+        return list(f(inputs))
+    if containers is None:
+        proxies = [g.ad.reverse.zero(get_container(x)) for x in inputs]
+        containers = [get_container(y) for y in f(proxies)]
+    containers = tuple(containers)
+    z = _checkpoint.node(*inputs, f=f, containers=containers)
+    return [z[k] for k in range(len(containers))]

@@ -76,9 +76,28 @@ class transverse_staples:
 
 
 class _transverse_flow:
-    def __init__(self, mu):
+    def __init__(self, mu, checkpoint=None):
+        # checkpoint = k: on nodes, every k steps form one g.ad.reverse.checkpoint
+        # (the graph keeps the links between the segments only; the backward
+        # re-runs a segment), None: no checkpoints
         self.mu = mu
         self.staples = transverse_staples(mu)
+        assert checkpoint is None or checkpoint >= 1
+        self.checkpoint = checkpoint
+
+    def _steps(self, F, n):
+        raise NotImplementedError()
+
+    def __call__(self, F):
+        k = self.checkpoint
+        if k is None or not any(isinstance(x, g.ad.reverse.node_base) for x in F):
+            return self._steps(F, self.n)
+        done = 0
+        while done < self.n:
+            m = min(k, self.n - done)
+            F = g.ad.reverse.checkpoint(lambda X, m=m: self._steps(X, m), F)
+            done += m
+        return F
 
     def Z(self, F):
         # TA(C_nu V_nu^dag) for nu != mu (the Euler direction of the Wilson
@@ -100,14 +119,15 @@ class transverse_stout(_transverse_flow):
     # n steps of stout smearing of the links nu != mu in the planes transverse
     # to mu, V_nu -> exp(rho TA(C_nu V_nu^dag)) V_nu (as g.qcd.gauge.smear.stout
     # with orthogonal_dimension = mu, but without reading V_mu); returns the
-    # list of nd links with F[mu] unchanged
-    def __init__(self, mu, rho, n=1):
-        super().__init__(mu)
+    # list of nd links with F[mu] unchanged; checkpoint = k: see
+    # _transverse_flow
+    def __init__(self, mu, rho, n=1, checkpoint=None):
+        super().__init__(mu, checkpoint)
         self.rho = rho
         self.n = n
 
-    def __call__(self, F):
-        for _ in range(self.n):
+    def _steps(self, F, n):
+        for _ in range(n):
             F = self._step(F, [g(self.rho * z) for z in self.Z(F)])
         return F
 
@@ -117,15 +137,15 @@ class transverse_wilson_flow(_transverse_flow):
     # the planes transverse to mu, by Luescher's third-order Runge-Kutta scheme
     # (arXiv:1006.4518, appendix C) with Z(V) = TA(C V^dag) (so an Euler step
     # is transverse_stout with rho = epsilon); returns the list of nd links
-    # with F[mu] unchanged
-    def __init__(self, mu, epsilon, n=1):
-        super().__init__(mu)
+    # with F[mu] unchanged; checkpoint = k: see _transverse_flow
+    def __init__(self, mu, epsilon, n=1, checkpoint=None):
+        super().__init__(mu, checkpoint)
         self.epsilon = epsilon
         self.n = n
 
-    def __call__(self, F):
+    def _steps(self, F, n):
         e = self.epsilon
-        for _ in range(self.n):
+        for _ in range(n):
             Z0 = self.Z(F)
             W1 = self._step(F, [g((e / 4) * z0) for z0 in Z0])
             Z1 = self.Z(W1)
