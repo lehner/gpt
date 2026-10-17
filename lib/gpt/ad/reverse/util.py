@@ -260,6 +260,35 @@ class record:
         _recording_state.active = self.saved
 
 
+class _pass_state:
+    # the depth of nested passes (node.__call__, e.g. the chunked tangent
+    # replays inside a backward) and the objects whose pass-scoped caches
+    # are released when the outermost pass ends
+    depth = 0
+    release = []
+
+
+class pass_scope:
+    # context of one pass (node.__call__): at the end of the outermost pass
+    # the caches registered with release_at_pass_end are released, so that a
+    # cached graph keeps no fields of its last pass alive
+    def __enter__(self):
+        _pass_state.depth += 1
+
+    def __exit__(self, *args):
+        _pass_state.depth -= 1
+        if _pass_state.depth == 0:
+            objects, _pass_state.release = _pass_state.release, []
+            for x in objects:
+                x.release()
+
+
+def release_at_pass_end(x):
+    # x.release() at the end of the outermost pass (outside a pass: at the
+    # end of the next one)
+    _pass_state.release.append(x)
+
+
 # the structural with_gradient flags of the nodes whose flags a running pass
 # has restricted (node._select); nodes built meanwhile derive their flags
 # from these, so a recorded flow keeps the structure of the graph

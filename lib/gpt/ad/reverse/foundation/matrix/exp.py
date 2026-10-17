@@ -54,9 +54,10 @@
 # Plain evaluation: gpt.core.foundation.lattice.matrix.exp.jet (exp of a
 # sparse multi-dual number, one compiled kernel per jet).
 #
+import weakref
 import gpt as g
 from gpt.ad.reverse.primitive import primitive
-from gpt.ad.reverse.util import container
+from gpt.ad.reverse.util import container, release_at_pass_end
 
 
 def _plain_base(x):
@@ -82,13 +83,21 @@ class _tower:
     # evaluated at X or X^dag, which have the same scaling s, so s and the
     # materialized X^dag are computed once.  X is identified by identity; the
     # user-created root resets the tower in every pass (see derivative), so
-    # a leaf modified in place between evaluations is never served stale
+    # a leaf modified in place between evaluations is never served stale.
+    # The tower keeps no field alive beyond its pass: X is referenced weakly
+    # (it is the value of a node, freed by the pass), and X^dag is released
+    # when the outermost pass ends (nested passes, e.g. the chunked tangent
+    # replays of a log-det force, share it); a cached graph's towers would
+    # otherwise hold two fields per exp node between passes
     def __init__(self):
         self.reset()
 
     def reset(self):
-        self.x = None
+        self._x = None
         self.s = None
+        self.xdag = None
+
+    def release(self):
         self.xdag = None
 
     def base(self, x):
@@ -97,13 +106,14 @@ class _tower:
         base, dag = _plain_base(x)
         if base is None:
             return g(x), None
-        if base is not self.x:
-            self.x = base
+        if self._x is None or base is not self._x():
+            self._x = weakref.ref(base)
             self.s = g.lattice.foundation.matrix.exp.scaling(base)
             self.xdag = None
         if dag:
             if self.xdag is None:
                 self.xdag = g(g.adj(base))
+                release_at_pass_end(self)
             base = self.xdag
         return base, self.s
 

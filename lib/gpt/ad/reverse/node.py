@@ -28,6 +28,7 @@ from gpt.ad.reverse.util import (
     nodify,
     is_node,
     record,
+    pass_scope,
     _structural,
     gradient_flag,
 )
@@ -401,7 +402,13 @@ class node_base(base):
         # repeated reverse passes (e.g. one per seed direction) over
         # unchanged leaves share one forward; without, the forward keeps all
         # intermediate values, so a following reverse pass reuses exactly
-        # these values.  Without retain_values no value survives the pass
+        # these values.  Without retain_values no value survives the pass.
+        # Pass-scoped caches (util.release_at_pass_end, e.g. the exp towers'
+        # X^dag) are released when the outermost pass ends
+        with pass_scope():
+            return self._call(with_gradients, initial_gradient, retain_values, with_value, create_graph, wrt)
+
+    def _call(self, with_gradients, initial_gradient, retain_values, with_value, create_graph, wrt):
         nodes = []
         forward_free = traverse(nodes, self)
         saved = None
