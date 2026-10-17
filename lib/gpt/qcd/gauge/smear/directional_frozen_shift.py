@@ -112,6 +112,10 @@ class directional_frozen_shift(dft_diffeomorphism):
             if isinstance(gr, g.lattice):
                 gr.otype = dfields[nu].otype
             gradient.append(gr)
+        # (the cached leaves keep no gradient until the next call: the returned
+        # list holds its own references; else four fields per step stay alive)
+        for leaf in self.aU:
+            leaf.gradient = None
         return gradient
 
     def log_det_jacobian_field(self, fields):
