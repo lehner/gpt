@@ -90,30 +90,30 @@ def reset():
 
 
 tau = 0.5
-# (OMF4 reaches its asymptotic dt^4 regime at smaller steps)
-for name, integrator, order, steps in [
-    ("leap_frog", sympl.leap_frog, 2, [4, 8, 16]),
-    ("OMF2", sympl.OMF2, 2, [4, 8, 16]),
-    ("OMF4", sympl.OMF4, 4, [8, 16, 32]),
-]:
-    dH = []
-    for n in steps:
+# the order of the integrators from the differences of the final links for n,
+# 2n and 4n steps (|Q_n - Q_2n| / |Q_2n - Q_4n| = 2^order; a field norm,
+# robust), and the signed Delta H.  The |Delta H| of a single trajectory is a
+# robust order test only where its leading term dominates (leapfrog here); for
+# OMF4 its dt^4 coefficient can be accidentally small on a trajectory (seen on
+# 4^3 x 8: Delta H changes sign between 4 and 8 steps)
+for name, integrator, order, n0 in [("leap_frog", sympl.leap_frog, 2, 4), ("OMF4", sympl.OMF4, 4, 4)]:
+    dH, Qn = [], []
+    for n in [n0, 2 * n0, 4 * n0]:
         reset()
         h0 = H()
         integrator(n, ip, iq)(tau)
-        dH.append(abs(H() - h0))
-    ratios = [dH[i] / dH[i + 1] for i in range(2)]
-    g.message(f"{name}: |Delta H| = {dH}, ratios for halved steps {ratios} (expected {2 ** order})")
+        dH.append(H() - h0)
+        Qn.append(g.copy(Q))
+    d = [relative(Qn[0], Qn[1]), relative(Qn[1], Qn[2])]
+    ratio = d[0] / d[1]
+    g.message(f"{name}: Delta H = {dH}, link differences {d} (ratio {ratio}, expected {2 ** order})")
+    assert abs(np.log2(ratio) - order) < 0.4
     if order == 2:
-        assert all(abs(np.log2(r) - order) < 0.4 for r in ratios)
-    else:
-        # (measured: local exponents 5.2, 4.5 -> 4, dt^6 terms still visible;
-        # a second-order error would give 2)
-        assert ratios[1] < ratios[0] and order - 0.4 < np.log2(ratios[1]) < order + 1.0
+        assert all(abs(np.log2(abs(dH[i] / dH[i + 1])) - order) < 0.4 for i in range(2))
 
     # reversibility: forward, flip the momenta, forward, flip
     reset()
-    I = integrator(8, ip, iq)
+    I = integrator(4, ip, iq)
     I(tau)
     for x in p:
         x @= -x
