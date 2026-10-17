@@ -427,6 +427,14 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   root D_0 resets the tower once per pass (in its plain forward, or -- if the
   forward was skipped, `with_value=False` -- in its vjp, signalled by the
   forward's residual), so a leaf updated in place is never served stale.
+  The tower keeps no field alive beyond its pass (since 2026-10-17): X is
+  referenced weakly (it is a node value, freed by the pass) and X^dag is
+  released when the outermost pass ends (`util.release_at_pass_end`, see
+  §4.6 "Pass-scoped caches"); nested passes inside a backward (the chunked
+  tangent replays of a log-det force) still share it.  Before, every exp
+  node of a cached graph (e.g. a `dft_diffeomorphism`'s `aUft`) held two
+  fields between passes (2.5-3.7 GB for a round of smoothed flow steps at
+  16^4; `~/GPT/TODOs/ad_memory_checkpoint_report.md`).
   Caveat for recorded graphs: the recorded D_k flows are evaluated in a
   later pass, possibly without the root's forward (the tower identifies X
   by object identity); swapping leaf values by assignment (functionals) is
@@ -522,6 +530,17 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   release large temporaries (ng x ng adjoint matrices are 7x a color matrix
   for SU(3)) right after their last use; avoid holding several recorded
   graphs alive at once; test on the smallest grid that exercises the code path.
+  To find where memory goes: GPT books every live lattice in
+  `sys.modules["gpt.core.lattice"].mem_book` (allocated in `lattice.__init__`,
+  removed in `__del__`); a dict subclass that counts bytes on `__setitem__` /
+  `__delitem__` gives exact live and peak lattice memory per call, and
+  `--verbose lattice_creation` records each lattice's creation stack (group
+  the survivors by it).  Compare with the resident set before / after
+  `malloc_trim(0)` (ctypes) to separate freed heap memory kept by glibc and
+  C++-side data from live fields; `gc.collect()` before / after shows
+  reference cycles.  Scripts: `~/GPT/TODOs/ad_memory_checkpoint_study/`
+  (`prof_mem.py`, `cycles.py`).  For deep chains (smoothing) use checkpoints
+  (§4.9).
 - **Re-running a graph**: each backward pass starts every gradient at
   `None` (an unbuilt zero, see `flow.py`), so gradients do not carry
   over between passes; read a leaf's `.gradient` before the next pass.  By
@@ -556,12 +575,27 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   that refers to its own node makes the graph a reference cycle, released
   only by Python's cyclic garbage collector, which counts objects, not
   bytes -- large fields pile up between collections (seen as +75 MB per
-  call at 16^4).  One cycle exists by design: a leaf with a recorded
-  gradient (leaf -> flow -> recorded graph -> leaf); drop the leaf, or reset
-  `leaf.flow = None`, when done.  For a repeated operation still build the
-  graph once and swap the leaf values (as `dft_diffeomorphism` and
+  call at 16^4).  The same holds for an object whose bound methods are a
+  primitive's plain/vjp: it must not store that primitive (node ->
+  primitive -> bound method -> object -> primitive is a cycle; it kept every
+  per-call log-det graph of `jacobian._chunked` alive until a collection;
+  fixed 2026-10-17: build the primitive in a method and return only the
+  node, `_chunked.node()`).  One cycle exists by design: a leaf with a
+  recorded gradient (leaf -> flow -> recorded graph -> leaf); drop the leaf,
+  or reset `leaf.flow = None`, when done.  For a repeated operation still
+  build the graph once and swap the leaf values (as `dft_diffeomorphism` and
   `directional_parallel_transport._local_vjp` do): it saves the graph
-  construction.
+  construction.  A cached graph then must not keep fields of its last pass:
+  reset its leaves' gradients after reading them (`leaf.gradient = None`;
+  the caller's list keeps its own references), else every cached step of a
+  flow holds its leaf gradients (4 fields at 16^4 = 38 MB per step).
+- **Pass-scoped caches**: `node.__call__` runs inside `util.pass_scope`
+  (a depth counter: the passes nested inside a backward, e.g. the chunked
+  tangent replays, count as one).  `util.release_at_pass_end(obj)` calls
+  `obj.release()` when the outermost pass ends.  Use it for any value a
+  primitive caches beyond its node's value (the exp tower's X^dag), so that a
+  cached graph keeps nothing alive between passes while all sharing within a
+  pass is kept.
 - **Flows are adopted, not copied**: the first plain contribution to a
   gradient is adopted as is (`flow.accumulate`), so the same field can be
   the gradient of several nodes (both children of an add receive
@@ -689,6 +723,40 @@ Plain-run optimizations:
   for plain values.  (Possible optimisation: a scaled identity with a node
   c; a seedless stencil adjoint with c is c times the one with 1.)
 
+### 4.9 Checkpoints (`ad/reverse/checkpoint.py`)
+
+`outputs = g.ad.reverse.checkpoint(f, inputs)` is `f(inputs)` as one
+node (gradient checkpointing).  `f` maps a list of fields to a list of fields
+of one container (an input may be passed through) and works on plain fields
+and on nodes; plain inputs give `f(inputs)`.  The node's forward runs `f` on
+plain values without a graph, so the outer graph keeps only the inputs (its
+children); its backward re-runs `f` on fresh leaves and back-propagates the
+flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
+`jacobian._chunked`), which is freed afterwards.  Cost: one extra forward of
+`f` per backward.
+
+- **Any order, self-similar**: the flow into the inputs is again a
+  checkpoint, of `h(x, c)` = the vjp of `f`.  In a plain pass it is evaluated
+  at once; in a recorded pass it is a lazy node of the recorded graph (no
+  recording happens inside), so higher derivatives stay checkpointed.  Called
+  on nodes (the leaves of the local pass of the next level), `h` builds `f`
+  and records its local reverse pass over them; so every level is an
+  ordinary local graph.  The local passes create gradient-carrying leaves and
+  restrict themselves with `wrt`.
+- Limits: an `order=1` primitive inside `f` (`linear_solve`) raises when the
+  second derivative is computed (not in the recorded pass, which only builds
+  the lazy node); no tangent rule (a checkpoint on a `g.ad.reverse.jacobian`
+  path raises); the outputs form one list node, so they must share one
+  container.
+- Use: `frozen_generators.transverse_stout(..., checkpoint=k)` /
+  `transverse_wilson_flow(..., checkpoint=k)` checkpoint every k smoothing
+  steps (default `None`: unchanged).  16^4: the pull-back of a frozen-shift
+  step with a 20-step smoothed generator +3.45 -> +0.88 GB peak lattices at
+  +30% time (k = 1; larger k saved less: the checkpoints, nd links per
+  segment, are cheaper than one step's graph).  Tested in
+  `tests/ad/checkpoint.py` (values and gradients bit-identical, Hessian-vector
+  products and third derivatives to rounding).
+
 ## 5. File map (AD-relevant)
 
 | Path | Role |
@@ -698,11 +766,13 @@ Plain-run optimizations:
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops, shared nodes, involutions), §4.1 |
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
 | `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `negative`, `accumulate`, `accum`, §4.8 |
-| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `value_of`, `record`/`recording` (recorded passes), `is_node`, containers (`get_container`, `get_*_container`, `list_container`; a container's str is cached, so its tag changes only through `set_otype`; `otype_compatible` is memoized by otype name) |
+| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `value_of`, `record`/`recording` (recorded passes), `pass_scope` / `release_at_pass_end` (pass-scoped caches, §4.6), `is_node`, containers (`get_container`, `get_*_container`, `list_container`; a container's str is cached, so its tag changes only through `set_otype`; `otype_compatible` is memoized by otype name) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, drelu, sin, cos, real, imag, conj, `multiply` (the foundation's `component_simple_map` / `component_multiply` dispatch here) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order, a joint-vjp primitive; used by `g.ml` losses) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites; packing costs more than the gemm, so the plain backward of `matrix_vector` packs the flow once for both flows, reads the h packed by the forward (a `fwd` residual) and computes flows only for the entries of h with a gradient, not a constant bias: -11% for the loop-function network value + gradient at 16^4), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
 | `lib/gpt/ad/reverse/jacobian.py` | `g.ad.reverse.jacobian(y, x, chunk=None)`: the site-diagonal Jacobian J(s) = dy(s)/dx(s) as a node (forward tangents replayed by the nodes' `jvp`, batched over the generators; `chunk`: fewer at a time), `identity` (x as a new node: the boundary of a local map), self-similar `inv`, `det`, `log_det` of J (tests in `tests/ad/jacobian.py`) |
+| `lib/gpt/ad/reverse/checkpoint.py` | `g.ad.reverse.checkpoint(f, inputs)`: gradient checkpointing, any order (§4.9) |
+| `lib/gpt/ad/reverse/linear_solve.py` | `g.ad.reverse.linear_solve(op, rhs, solver, parameters=[], adj_op=None)`: the solution of a function op linear in x as a node (first order; backward: one adjoint solve, parameter flows by a local reverse pass of op) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
 | `lib/gpt/ad/reverse/foundation/` | the node versions of the core ops as primitives, projection nodes, group conversions; `matrix/exp.py` (exp tower) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, with or without local temporaries), multi-output list nodes, local temporaries, seedless adjoints |
