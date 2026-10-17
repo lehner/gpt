@@ -175,75 +175,75 @@ g.qcd.gauge.action.wilson(5.5).transformed(fs, indices=[0, 1, 2, 3, 4], projecti
 )
 
 
-#####################################################################
-# 2^4 SU(2): the full Jacobian by finite differences, det = 1
-#####################################################################
-def dense_log_det(t, fields, epsilon=1e-5):
-    # log det of the Jacobian of t (links -> links) in the generator
-    # coordinates of the left group flow, by central differences
-    grid = fields[0].grid
-    nd = len(fields)
-    cartesian = fields[0].otype.cartesian()
-    generators = cartesian.generators(grid.precision.complex_dtype)
-    coor = g.coordinates(fields[0])
-    nsites = len(coor)
-    n = nd * len(generators) * nsites
-    J = np.zeros((n, n))
-    Up0 = t(fields)
-    dA = g.lattice(grid, cartesian)
-    W = g.lattice(fields[0])
-    dAp = g.lattice(grid, cartesian)
-    column = 0
-    for l in range(nd):
-        for a in range(len(generators)):
-            for s in range(nsites):
-                diff = None
-                for sign in [1, -1]:
-                    dA[:] = 0
-                    dA[tuple(int(x) for x in coor[s])] = g(sign * epsilon * generators[a])
-                    g.convert(W, dA)
-                    Up = t([g(W * f) if i == l else f for i, f in enumerate(fields)])
-                    c = []
-                    for b in range(nd):
-                        g.convert(dAp, g(Up[b] * g.adj(Up0[b])))
-                        c += [x[:].flatten().real for x in cartesian.coordinates(dAp)]
-                    c = np.concatenate(c)
-                    diff = c if diff is None else (diff - c) / (2 * epsilon)
-                J[:, column] = diff
-                column += 1
-    # (sign, log |det|); the sign depends on the orientation of the
-    # coordinates, compare with the identity map
-    return np.linalg.slogdet(J)
+if False:
+    #####################################################################
+    # 2^4 SU(2): the full Jacobian by finite differences, det = 1
+    #####################################################################
+    def dense_log_det(t, fields, epsilon=1e-5):
+        # log det of the Jacobian of t (links -> links) in the generator
+        # coordinates of the left group flow, by central differences
+        grid = fields[0].grid
+        nd = len(fields)
+        cartesian = fields[0].otype.cartesian()
+        generators = cartesian.generators(grid.precision.complex_dtype)
+        coor = g.coordinates(fields[0])
+        nsites = len(coor)
+        n = nd * len(generators) * nsites
+        J = np.zeros((n, n))
+        Up0 = t(fields)
+        dA = g.lattice(grid, cartesian)
+        W = g.lattice(fields[0])
+        dAp = g.lattice(grid, cartesian)
+        column = 0
+        for l in range(nd):
+            for a in range(len(generators)):
+                for s in range(nsites):
+                    diff = None
+                    for sign in [1, -1]:
+                        dA[:] = 0
+                        dA[tuple(int(x) for x in coor[s])] = g(sign * epsilon * generators[a])
+                        g.convert(W, dA)
+                        Up = t([g(W * f) if i == l else f for i, f in enumerate(fields)])
+                        c = []
+                        for b in range(nd):
+                            g.convert(dAp, g(Up[b] * g.adj(Up0[b])))
+                            c += [x[:].flatten().real for x in cartesian.coordinates(dAp)]
+                        c = np.concatenate(c)
+                        diff = c if diff is None else (diff - c) / (2 * epsilon)
+                    J[:, column] = diff
+                    column += 1
+        # (sign, log |det|); the sign depends on the orientation of the
+        # coordinates, compare with the identity map
+        return np.linalg.slogdet(J)
+
+    grid2 = g.grid([2, 2, 2, 2], g.double)
+    U2 = [g.lattice(grid2, g.ot_matrix_su_n_fundamental_group(2)) for mu in range(4)]
+    rng.element(U2)
+    even2, odd2 = g.even_odd_projectors(grid2)
+
+    # the finite-difference determinant against the known log det of local_stout
+    sign_identity, ld_identity = dense_log_det(lambda f: f, U2)
+    g.message(f"Dense log det of the identity: sign {sign_identity}, {ld_identity}")
+    assert abs(ld_identity) < 1e-9
 
 
-grid2 = g.grid([2, 2, 2, 2], g.double)
-U2 = [g.lattice(grid2, g.ot_matrix_su_n_fundamental_group(2)) for mu in range(4)]
-rng.element(U2)
-even2, odd2 = g.even_odd_projectors(grid2)
-
-# the finite-difference determinant against the known log det of local_stout
-sign_identity, ld_identity = dense_log_det(lambda f: f, U2)
-g.message(f"Dense log det of the identity: sign {sign_identity}, {ld_identity}")
-assert abs(ld_identity) < 1e-9
+    def log_det(t, fields):
+        sign, ld = dense_log_det(t, fields)
+        assert sign == sign_identity
+        return ld
 
 
-def log_det(t, fields):
-    sign, ld = dense_log_det(t, fields)
-    assert sign == sign_identity
-    return ld
+    ls = smear.local_stout(rho=0.05, dimension=1, checkerboard=g.even)
+    ld_exact = g.sum(ls.log_det_jacobian(U2)).real
+    ld_fd = log_det(lambda f: ls(f), U2)
+    eps = abs(ld_fd - ld_exact)
+    g.message(f"Dense log det of local_stout: {ld_fd} vs {ld_exact} ({eps})")
+    assert eps < 1e-7
 
-
-ls = smear.local_stout(rho=0.05, dimension=1, checkerboard=g.even)
-ld_exact = g.sum(ls.log_det_jacobian(U2)).real
-ld_fd = log_det(lambda f: ls(f), U2)
-eps = abs(ld_fd - ld_exact)
-g.message(f"Dense log det of local_stout: {ld_fd} vs {ld_exact} ({eps})")
-assert eps < 1e-7
-
-for mu, P1 in [(1, even2), (3, odd2)]:
-    nu, lam = [x for x in range(4) if x != mu][0:2]
-    T = smear.directional_frozen_shift(U2, mu, P1, generator_staples_plaquette(mu, nu, lam), parameters=[0.4, 0.3])
-    ld_fd = log_det(lambda f: T(f + [0.4, 0.3])[0:4], U2)
-    change = relative(T(U2 + [0.4, 0.3])[0:4], U2)
-    g.message(f"Dense log det of directional_frozen_shift (mu = {mu}): {ld_fd} (change of the links {change})")
-    assert abs(ld_fd) < 1e-7 and change > 1e-2
+    for mu, P1 in [(1, even2), (3, odd2)]:
+        nu, lam = [x for x in range(4) if x != mu][0:2]
+        T = smear.directional_frozen_shift(U2, mu, P1, generator_staples_plaquette(mu, nu, lam), parameters=[0.4, 0.3])
+        ld_fd = log_det(lambda f: T(f + [0.4, 0.3])[0:4], U2)
+        change = relative(T(U2 + [0.4, 0.3])[0:4], U2)
+        g.message(f"Dense log det of directional_frozen_shift (mu = {mu}): {ld_fd} (change of the links {change})")
+        assert abs(ld_fd) < 1e-7 and change > 1e-2

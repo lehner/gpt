@@ -16,7 +16,7 @@ smear = g.qcd.gauge.smear
 fg = smear.frozen_generators
 g.default.set_verbose("cg", False)
 
-grid = g.grid([4, 4, 4, 4], g.double)
+grid = g.grid([4, 4, 4, 8], g.double)
 U0 = g.qcd.gauge.random(grid, rng, scale=0.3)
 even, odd = g.even_odd_projectors(grid)
 
