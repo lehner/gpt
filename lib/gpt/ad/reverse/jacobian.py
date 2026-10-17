@@ -188,10 +188,18 @@ class _chunked:
         self.primal = primal
         T = coordinates.kernels.field_generators
         self.chunks = [(a, T[a : a + chunk]) for a in range(0, len(T), chunk)]
-        c = container(g.lattice, coordinates.grid, coordinates.otype)
-        self.op = primitive(
+
+    def node(self):
+        # J as the node of a primitive of this object's methods.  The
+        # primitive is not stored on the object: the node holds the primitive,
+        # the primitive this object (its bound methods), so a reference back
+        # would make every such graph a reference cycle (released only by the
+        # cyclic garbage collector, with the fields of its primal subgraph)
+        c = container(g.lattice, self.coordinates.grid, self.coordinates.otype)
+        op = primitive(
             "jacobian(chunked)", self._plain, lambda *v: c.copy(), joint_vjp=self._vjp, order=1
         )
+        return op(*self.primal)
 
     def _leaves(self, values, needed=()):
         # internal leaves of the primal values (raw flows: no conversion), in
@@ -240,8 +248,7 @@ def jacobian(y, x, chunk=None):
     coordinates, otype = _coordinates_of(x)
     T = coordinates.kernels.field_generators
     if chunk is not None and chunk < len(T):
-        c = _chunked(y, x, chunk, coordinates, otype)
-        return c.op(*c.primal)
+        return _chunked(y, x, chunk, coordinates, otype).node()
     return coordinates.op(*_columns(y, x, _subgraph(y, x), T, otype))
 
 
