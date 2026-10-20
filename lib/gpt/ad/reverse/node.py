@@ -31,6 +31,7 @@ from gpt.ad.reverse.util import (
     pass_scope,
     _structural,
     gradient_flag,
+    container,
 )
 from gpt.ad.reverse import flow as flows
 from gpt.ad.reverse.flow import accum
@@ -259,6 +260,10 @@ class node_base(base):
         return _pow.node(x, n=n, lattice=lattice, matrix=matrix)
 
     def __rmul__(x, y):
+        if isinstance(y, g.matrix_operator):
+            # a linear operator applied to the node (the operator's __mul__
+            # returns NotImplemented for operands it does not know)
+            return _apply.node(x, operator=y)
         return node_base.__mul__(_left_operand(y), x)
 
     def __truediv__(x, y):
@@ -609,6 +614,34 @@ _sub = primitive(
     vjp=lambda i, flow, x, y: flow if i == 0 else flows.negative(flow),
     reads=((), ()),
     jvp=_sum_jvp(-1.0),
+)
+
+
+def _apply_container(x, operator):
+    # the container of operator(x) without applying it (the allocation of
+    # the result in matrix_operator.__call__)
+    if x.tag[0] is not g.lattice:
+        raise NotImplementedError(f"A matrix_operator applied to a node of {x}")
+    grid, otype = x.get_grid(), x.get_otype()
+    vector_space = operator.vector_space[0]
+    if not operator.vector_space[1].match_otype(otype):
+        vector_space = vector_space.replaced_otype(otype)
+    return container(
+        g.lattice,
+        grid if vector_space.grid is None else vector_space.grid,
+        otype if vector_space.otype is None else vector_space.otype,
+    )
+
+
+# operator * x for a linear g.matrix_operator: the flow into x is
+# operator^dag flow (an operator without adj_mat has no backward)
+_apply = primitive(
+    "matrix_operator",
+    lambda x, operator: operator(x),
+    _apply_container,
+    vjp=lambda i, flow, x, operator: _apply(flow, operator=operator.adj()),
+    reads=((),),
+    jvp=tangent.linear(lambda t, operator: _apply(t, operator=operator)),
 )
 
 

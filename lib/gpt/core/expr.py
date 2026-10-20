@@ -147,7 +147,7 @@ class expr:
         elif val is None:
             self.val = []
         else:
-            raise Exception("Unknown type " + str(type(val)))
+            raise NotImplementedError("Unknown type " + str(type(val)))
         self.unary = unary
 
     def is_adj(self):

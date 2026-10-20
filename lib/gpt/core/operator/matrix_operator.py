@@ -120,7 +120,10 @@ class matrix_operator(factor):
         if isinstance(other, matrix_operator):
             return matrix_operator_product([self, other])
         else:
-            return gpt.expr(other).__rmul__(self)
+            try:
+                return gpt.expr(other).__rmul__(self)
+            except NotImplementedError:
+                return NotImplemented
 
     def __rmul__(self, other):
         return gpt.expr(other).__mul__(self)
