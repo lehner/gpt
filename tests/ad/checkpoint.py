@@ -180,3 +180,34 @@ for k in [None, 1]:
 eps = rel(ld_forces[1], ld_forces[0])
 g.message(f"prescribed-staple log-det force with checkpoint=1 vs without: {eps}")
 assert eps < 1e-14
+
+#####################################################################
+# memory: the local passes of a chain of checkpoints keep no fields
+# alive beyond their own pass (regression: the materialized X^dag of the
+# exp towers of every local pass lived until the outermost pass ended, one
+# field per exp and step).  A probe between the checkpoints counts, when
+# the backward reaches it, the exp towers that still hold an X^dag; the
+# count must not grow with the number of steps back-propagated.
+#####################################################################
+import gc
+from gpt.ad.reverse.foundation.matrix.exp import _tower
+
+held = []
+
+
+def count_held():
+    held.append(sum(1 for o in gc.get_objects() if isinstance(o, _tower) and o.xdag is not None))
+
+
+probe = rad.primitive(
+    "probe", lambda x: g.copy(x), lambda c: c, vjp=lambda i, flow, X: (count_held(), flow)[1], reads=((),)
+)
+n_steps = 8
+aU = [rad.node(g.copy(u)) for u in U]
+F = aU
+for _ in range(n_steps):
+    F = rad.checkpoint(fg.transverse_stout(2, 0.1, 1), F)
+    F = [probe(F[0])] + F[1:]
+action(F).backward()
+g.message(f"exp towers holding X^dag during the backward of {n_steps} checkpoints: {held}")
+assert len(held) == n_steps and max(held) <= held[0]
