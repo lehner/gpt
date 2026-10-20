@@ -87,6 +87,10 @@ def group_inner_product(left, right):
     return left.distribute2(right, lambda a, b: g.group.inner_product(a, b))
 
 
+def group_compose(left, right):
+    return g.core.group.operation.plain_compose(left, right)
+
+
 def copy(dst, src):
     for i in range(len(dst)):
         dst[i] @= src[i]

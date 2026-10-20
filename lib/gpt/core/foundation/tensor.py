@@ -78,6 +78,10 @@ def group_inner_product(left, right):
     return left.otype.inner_product(left, right)
 
 
+def group_compose(left, right):
+    return gpt.core.group.operation.plain_compose(left, right)
+
+
 def infinitesimal_to_cartesian(src, dsrc):
     return dsrc.otype.infinitesimal_to_cartesian(src, dsrc)
 

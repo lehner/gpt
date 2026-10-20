@@ -290,6 +290,32 @@ def group_inner_product(left, right):
     return left_type.inner_product(left, right)
 
 
+def _retyped(x, otype):
+    # (a product of group elements is a plain matrix: retype it)
+    return x if x.otype.__name__ == otype.__name__ else astype(x, otype)
+
+
+def group_compose(left, right):
+    # g.group.compose by node operations: left and right of the same type
+    # (otype.compose), or left in the cartesian space of an SU(N) right,
+    # exp(i left) right (the plain path also projects the exponential onto the
+    # group against rounding; on the group that projection has the identity
+    # as derivative)
+    if isinstance(left, list):
+        return [group_compose(x, y) for x, y in zip(left, g.util.to_list(right))]
+    left, right = nodify(*[g(x) if isinstance(x, g.expr) else x for x in (left, right)])
+    left_type, right_type = left.otype, right.otype
+    if left_type.__name__ == right_type.__name__:
+        return _retyped(left_type.compose(left, right), left_type)
+    if left_type.__name__ == right_type.cartesian().__name__ and isinstance(
+        right_type, g.ot_matrix_su_n_group
+    ):
+        return _retyped(g.matrix.exp(1j * left) * right, right_type)
+    raise NotImplementedError(
+        f"group compose of nodes of {left_type.__name__} and {right_type.__name__}"
+    )
+
+
 def _where_vjp(i, flow, yes, no, question, branch):
     # the flow where the branch is taken, zero elsewhere (branch: the
     # container of both branches).  Node-aware: a recorded flow routes to the

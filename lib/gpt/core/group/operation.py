@@ -94,7 +94,18 @@ def inverse(left):
 def compose(left, right):
     if g.util.is_num(left) or isinstance(left, np.ndarray):
         return left + right
-    
+    # dispatched on the (first) operands, as inner_product
+    first_left = left[0] if isinstance(left, list) else left
+    first_right = right[0] if isinstance(right, list) else right
+    foundation = _group_foundation(first_left, first_right)
+    if foundation is None:
+        # (two symbolic expressions)
+        return plain_compose(left, right)
+    return foundation.group_compose(left, right)
+
+
+def plain_compose(left, right):
+    # group_compose of the plain foundations (lattices, tensors, series)
     as_list = isinstance(left, list)
 
     left = g.util.to_list(g(left))

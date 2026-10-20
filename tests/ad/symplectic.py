@@ -55,7 +55,7 @@ class scaled(g.core.group.differentiable_functional):
         return [complex(self.S(U)) if d is c else g(c.real * self.S.gradient(U, [d])[0]) for d in dfields]
 
 
-grid = g.grid([4, 4, 4, 4], g.double)
+grid = g.grid([4, 4, 4, 8], g.double)
 a0 = g.qcd.scalar.action.mass_term()
 w1 = g.qcd.gauge.action.wilson(1.0)
 

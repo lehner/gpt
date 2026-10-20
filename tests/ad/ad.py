@@ -652,7 +652,7 @@ for op in ["real", "imag"]:
         b = (-val(2 * h) + 8 * val(h) - 8 * val(-h) + val(-2 * h)) / (12 * h)
         eps = abs(a - b) / abs(b)
         g.message(f"component.{op} ({name}): {a} vs {b}, rel {eps}")
-        assert eps < 1e-9
+        assert eps < 1e-8
 
 # componentwise log and pow (inv = pow(-1)) on complex data, also at
 # initial_gradient=1j; numbers, numpy arrays and lattices

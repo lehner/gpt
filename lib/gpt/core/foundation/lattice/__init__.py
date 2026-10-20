@@ -172,6 +172,10 @@ def group_inner_product(left, right):
     return left_type.inner_product(left, right)
 
 
+def group_compose(left, right):
+    return gpt.core.group.operation.plain_compose(left, right)
+
+
 def copy(dst, src):
     for j in range(len(dst)):
         for i in dst[j].otype.v_idx:
