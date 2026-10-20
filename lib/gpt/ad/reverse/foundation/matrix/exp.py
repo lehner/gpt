@@ -113,9 +113,22 @@ class _tower:
         if dag:
             if self.xdag is None:
                 self.xdag = g(g.adj(base))
+                # X^dag lives as long as X: a pass nested in a backward (the
+                # local passes of checkpoints) frees its X at its end, and
+                # holding X^dag until the outermost pass ends would keep one
+                # field per exp of every such pass alive at once
+                weakref.finalize(base, _tower._drop, weakref.ref(self))
                 release_at_pass_end(self)
             base = self.xdag
         return base, self.s
+
+    @staticmethod
+    def _drop(tower):
+        # X was freed: drop its X^dag (unless the tower has moved on to
+        # another X meanwhile)
+        t = tower()
+        if t is not None and (t._x is None or t._x() is None):
+            t.xdag = None
 
 
 def _closure(components):
