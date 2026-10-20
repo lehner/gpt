@@ -40,13 +40,21 @@ training) has its own guide: `ML_DEVELOPMENT.md` (same directory).
   cd Grid && make -j4            # library only; no `make install` needed
   cd ~/GPT/gpt/lib/cgpt && ./make ~/GPT/Grid/build-mpi 2
   ```
-  Running under MPI (reset `PYTHONPATH` first, since `~/.bashrc` already put
-  the non-MPI build on it):
+  Running under MPI: preferably with `tests/run.mpi` (2 ranks, sources the
+  MPI build, sets `OMP_NUM_THREADS=2`, passes the `--mpi` layouts):
+  ```bash
+  cd ~/GPT/gpt
+  export PYTHONPATH=; bash tests/run.mpi python3 tests/ad/ad.py
+  ```
+  or by hand (reset `PYTHONPATH` first, since `~/.bashrc` already put the
+  non-MPI build on it), **always with `OMP_NUM_THREADS` set so that ranks x
+  threads does not exceed the 4 cores** -- each rank otherwise starts one
+  OpenMP thread per core, and the overcommitted ranks run very slowly:
   ```bash
   cd ~/GPT/gpt
   export PYTHONPATH=; source lib/cgpt/build-mpi/source.sh
-  mpirun -np 2 python3 tests/core/core.py --mpi 1.1.1.2
-  mpirun -np 4 python3 tests/ad/ad.py --mpi 1.1.2.2
+  OMP_NUM_THREADS=2 mpirun -np 2 python3 tests/core/core.py --mpi 1.1.1.2
+  OMP_NUM_THREADS=1 mpirun -np 4 python3 tests/ad/ad.py --mpi 1.1.2.2
   ```
   The product of `--mpi` must equal `-np`.  Grid's stencil communication
   uses MPI also within a node by default (`--shm-mpi 1`); `--shm-mpi 0`
@@ -461,7 +469,13 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   `_group_foundation` in `core/group/operation.py`) pick the operand whose
   foundation can handle both sides — a plain lattice foundation cannot
   evaluate a mixed lattice/node pair, so it defers to the node foundation
-  (via `nodify`).
+  (via `nodify`).  `g.group.inner_product` and `g.group.compose` dispatch
+  this way (`group_inner_product`, `group_compose`); the plain foundations'
+  `group_compose` is `operation.plain_compose` (the former body of compose,
+  bit-identical), the node foundation's composes by node operations (same
+  type: `otype.compose`, retyped by `astype`; an algebra element into an
+  SU(N) group: `exp(i a) b`, without the plain path's defect projection,
+  whose derivative on the group is the identity).
 
 ### 4.6 Pitfalls (learned the hard way)
 
@@ -762,6 +776,56 @@ flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
   `tests/ad/checkpoint.py` (values and gradients bit-identical, Hessian-vector
   products and third derivatives to rounding).
 
+### 4.10 Differentiable symplectic integrators (`ad/reverse/symplectic.py`)
+
+`g.algorithms.integrator.symplectic` updates fields in place (closures,
+`@=`).  `g.ad.reverse.symplectic` has the same schemes as pure maps of a flat
+list of fields, `fields_prime = md(fields, tau)`, on plain fields (a plain
+run, bit-identical to the in-place integrators) or nodes (the trajectory as a
+graph):
+
+```python
+sympl = g.ad.reverse.symplectic
+iU, iP = [0, 1, 2, 3], [4, 5, 6, 7]                       # fields U + P + [rho]
+ip = sympl.update_p(iP, sympl.gradient_finite_difference(S, 4), iU + [8])
+iq = sympl.update_q(iU, lambda P: P, iP)                   # mass term
+md = sympl.OMF2(N, ip, iq)                                 # leap_frog, OMF4, nesting
+x = [rad.node(f) for f in U + P + [rho]]
+E(md(x, tau)).backward()                                   # x[i].gradient
+```
+
+- `update_p(dst, force, src)` / `update_q`: fields[dst] <- g.group.compose(-/+
+  eps force(fields[src]), fields[dst]); dst, src are indices.  An update is a
+  `symplectic_base` whose op is a pure function, so
+  `g.algorithms.integrator.symplectic.schemes` builds the step sequence and
+  `integrator` (also a `symplectic_base`, nestable) runs it.  The module holds
+  no node checks besides the checkpoint's local pass: plain/node dispatch is
+  the foundations' and the primitives'.
+- Parameters of the actions (beta, transformation parameters such as rho,
+  network weights) are further fields: read by the force (in `src`), never
+  updated; their flows from all force evaluations add up.  Real parameters
+  enter the action as `g.component.real(p)`.
+- Forces of an action S w.r.t. its first n fields (the rest: parameters):
+  `gradient(S, n)`, for S accepting nodes: a checkpoint (§4.9), forward the
+  plain `S.gradient`, backward through a recorded gradient of S on local
+  leaves (converted by `infinitesimal_to_cartesian`); any order.
+  `gradient_finite_difference(S, n, epsilon=1e-3)`, for any
+  `differentiable_functional` whose gradient covers all its fields
+  (transformed actions, log dets): an `order=1` primitive whose backward is
+  the gradient of `g.group.directional_derivative(S, v, along)` with v the
+  flows into the forces (symmetry of second derivatives; 4 full gradients of
+  S per force, O(epsilon^4)).
+- Graph memory: the fields at each force evaluation (one checkpoint or
+  primitive node per force).
+- Limits: second order through `gradient(S, n)` needs uniform force inputs
+  (links only): the recorded vjp of the checkpoint is a checkpoint whose
+  outputs are the input flows, which must form one list container; with a
+  number parameter among them it raises.  No force-gradient or implicit
+  updates; node compose only for additive groups and SU(N).
+- Tested in `tests/ad/symplectic.py` (plain bit-identical to the in-place
+  integrators, gradients against finite differences, reversibility, dE/dbeta
+  and dE/drho, the two forces against each other, second order).
+
 ## 5. File map (AD-relevant)
 
 | Path | Role |
@@ -777,6 +841,7 @@ flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites; packing costs more than the gemm, so the plain backward of `matrix_vector` packs the flow once for both flows, reads the h packed by the forward (a `fwd` residual) and computes flows only for the entries of h with a gradient, not a constant bias: -11% for the loop-function network value + gradient at 16^4), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
 | `lib/gpt/ad/reverse/jacobian.py` | `g.ad.reverse.jacobian(y, x, chunk=None)`: the site-diagonal Jacobian J(s) = dy(s)/dx(s) as a node (forward tangents replayed by the nodes' `jvp`, batched over the generators; `chunk`: fewer at a time), `identity` (x as a new node: the boundary of a local map), self-similar `inv`, `det`, `log_det` of J (tests in `tests/ad/jacobian.py`) |
 | `lib/gpt/ad/reverse/checkpoint.py` | `g.ad.reverse.checkpoint(f, inputs)`: gradient checkpointing, any order (§4.9) |
+| `lib/gpt/ad/reverse/symplectic.py` | `g.ad.reverse.symplectic`: differentiable symplectic integrators `md(fields, tau)` (`update_p`, `update_q`, `leap_frog`, `OMF2`, `OMF4`) and the forces `gradient` (checkpointed recorded gradient) and `gradient_finite_difference` (first order, any functional) (§4.10; tests in `tests/ad/symplectic.py`) |
 | `lib/gpt/ad/reverse/linear_solve.py` | `g.ad.reverse.linear_solve(op, rhs, solver, parameters=[], adj_op=None)`: the solution of a function op linear in x as a node (first order; backward: one adjoint solve, parameter flows by a local reverse pass of op) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
 | `lib/gpt/ad/reverse/foundation/` | the node versions of the core ops as primitives, projection nodes, group conversions; `matrix/exp.py` (exp tower) |
@@ -789,7 +854,7 @@ flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
 | `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple (`g.staple_description`), the per-site Jacobian block (`jacobian_matrix`, optionally at a prescribed staple and loops), log-det and its force (also weighted per site), `inv` (`g.algorithms.nonlinear.fixed_point` with site-local Newton steps; `inverse_history`).  `loops=[g.path, ...]`: fixed closed loops at x as further inputs `f(sm, xparams, L)` of the loop function (one fused stencil, `_loop_transport`); the constructor rejects (ValueError) a loop through U_mu(x + s) if P1(x) P1(x + s) != 0 for some x, `inv` re-checks numerically.  Like the staple they are constants of the local map; their flows are pushed back through their own stencil (one list-node reverse pass; tests in `tests/qcd/flows_loops.py`) |
 | `lib/gpt/qcd/gauge/smear/spectral_loop.py` | the spectral single-loop step U_mu' = exp(TA(P1 F(P))) U_mu, F(P) = sum_k c_k P^k, P = T0 U_mu^dag (SU(3)): map, `inv` and jacobian through a single-loop `directional_parallel_transport`; coefficients fixed (`{k: c_k}`) or learnable fields (`{k, ...}`: fields U + [c_k], plain or nodes); analytic log det as a node graph of traces (power sums of tr P, shift-invariant discriminant for numerical stability), any order; `fused_action`, `latent_action` (tests in `tests/qcd/spectral_loop.py`) |
 | `lib/gpt/ad/forward/` | series / Landau differential algebra |
-| `lib/gpt/core/group/operation.py` | inner_product/compose dispatch, `zero` (cartesian zero) |
+| `lib/gpt/core/group/operation.py` | inner_product/compose dispatch (`group_inner_product`, `group_compose` of the foundations; `plain_compose`), `zero` (cartesian zero) |
 | `lib/gpt/algorithms/nonlinear/fixed_point.py` | `g.algorithms.nonlinear.fixed_point`: iteration control of x = Phi(x) (history, contraction rate, switch to an accelerated step, failure), `fixed_point.newton(residual, solve)` Newton steps; used by `directional_parallel_transport.inv` |
 | `lib/gpt/core/group/algebra_kernels.py` | `g.group.algebra_kernels`: site-local kernels between SU(N) algebra fields and adjoint matrices (coordinates as rows, combinations of generators) |
 | `lib/gpt/core/parallel_transport/matrix.py` | weighted parallel transports; `g.staple_description` (the staple of a link in a loop description) |
