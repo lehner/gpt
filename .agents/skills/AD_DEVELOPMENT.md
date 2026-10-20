@@ -163,7 +163,12 @@ Key concepts:
   value and force from the AD stencil action in
   `qcd/gauge/action/staple_stencil.py` (see §4.7); their hand-written
   `staples()` / `staple()` remain for the heatbath.  `g.qcd.gauge.smear.local_stout`
-  is a thin wrapper around `directional_parallel_transport`.
+  is a thin wrapper around `directional_parallel_transport`, and so is
+  `g.qcd.gauge.smear.spectral_loop` (one loop, loop function sum_k c_k P^k,
+  analytic log det).  Its `fused_action(inner)` is `inner.transformed(step) +
+  step.action_log_det_jacobian()` with one reverse pass for the pull-back
+  and the log-det force (`g.qcd.gauge.smear.latent_action(action, steps)`
+  builds a chain with it).
 - `g.even_odd_projectors(grid)` gives the checkerboard masks `even`, `odd`.
 - Finite differences of gauge actions along the group flow:
   `U(t) = [g.group.compose(g(t * dA[mu]), U[mu]) for mu in range(4)]`,
@@ -767,7 +772,7 @@ flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
 | `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `negative`, `accumulate`, `accum`, §4.8 |
 | `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `value_of`, `record`/`recording` (recorded passes), `pass_scope` / `release_at_pass_end` (pass-scoped caches, §4.6), `is_node`, containers (`get_container`, `get_*_container`, `list_container`; a container's str is cached, so its tag changes only through `set_otype`; `otype_compatible` is memoized by otype name) |
-| `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, drelu, sin, cos, real, imag, conj, `multiply` (the foundation's `component_simple_map` / `component_multiply` dispatch here) |
+| `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, drelu, sin, cos, real, imag, conj, log, pow (`g.component.inv` is pow(-1)), `multiply` (the foundation's `component_simple_map` / `component_multiply` dispatch here) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order, a joint-vjp primitive; used by `g.ml` losses) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites; packing costs more than the gemm, so the plain backward of `matrix_vector` packs the flow once for both flows, reads the h packed by the forward (a `fwd` residual) and computes flows only for the entries of h with a gradient, not a constant bias: -11% for the loop-function network value + gradient at 16^4), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
 | `lib/gpt/ad/reverse/jacobian.py` | `g.ad.reverse.jacobian(y, x, chunk=None)`: the site-diagonal Jacobian J(s) = dy(s)/dx(s) as a node (forward tangents replayed by the nodes' `jvp`, batched over the generators; `chunk`: fewer at a time), `identity` (x as a new node: the boundary of a local map), self-similar `inv`, `det`, `log_det` of J (tests in `tests/ad/jacobian.py`) |
@@ -782,6 +787,7 @@ flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
 | `tests/ad/stencil.py` | stencil AD: fused two-output stencil, path-based stencils, local temporaries (staple action vs cshift graph) at 1st/2nd/3rd order, `with_value=False` |
 | `lib/gpt/qcd/gauge/action/staple_stencil.py` | gauge action value/force as AD stencils (plaquette loop, or staples as local temporaries with rectangles) |
 | `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple (`g.staple_description`), the per-site Jacobian block (`jacobian_matrix`, optionally at a prescribed staple and loops), log-det and its force (also weighted per site), `inv` (`g.algorithms.nonlinear.fixed_point` with site-local Newton steps; `inverse_history`).  `loops=[g.path, ...]`: fixed closed loops at x as further inputs `f(sm, xparams, L)` of the loop function (one fused stencil, `_loop_transport`); the constructor rejects (ValueError) a loop through U_mu(x + s) if P1(x) P1(x + s) != 0 for some x, `inv` re-checks numerically.  Like the staple they are constants of the local map; their flows are pushed back through their own stencil (one list-node reverse pass; tests in `tests/qcd/flows_loops.py`) |
+| `lib/gpt/qcd/gauge/smear/spectral_loop.py` | the spectral single-loop step U_mu' = exp(TA(P1 F(P))) U_mu, F(P) = sum_k c_k P^k, P = T0 U_mu^dag (SU(3)): map, `inv` and jacobian through a single-loop `directional_parallel_transport`; coefficients fixed (`{k: c_k}`) or learnable fields (`{k, ...}`: fields U + [c_k], plain or nodes); analytic log det as a node graph of traces (power sums of tr P, shift-invariant discriminant for numerical stability), any order; `fused_action`, `latent_action` (tests in `tests/qcd/spectral_loop.py`) |
 | `lib/gpt/ad/forward/` | series / Landau differential algebra |
 | `lib/gpt/core/group/operation.py` | inner_product/compose dispatch, `zero` (cartesian zero) |
 | `lib/gpt/algorithms/nonlinear/fixed_point.py` | `g.algorithms.nonlinear.fixed_point`: iteration control of x = Phi(x) (history, contraction rate, switch to an accelerated step, failure), `fixed_point.newton(residual, solve)` Newton steps; used by `directional_parallel_transport.inv` |

@@ -457,9 +457,9 @@ Writing a new layer:
   / `imag` and the linear maps of `ad/reverse/linear.py` (`matrix_vector`,
   `outer_sum`, `dagger`); no general whole-array arithmetic.
 - **No `__rtruediv__` on nodes**: store reciprocals as constants (`inv_std`)
-  instead of dividing by a node.
-- **Componentwise node ops** are only relu, sin, cos, real, imag and
-  `g.component.multiply` (primitives in `ad/reverse/transform.py`, so they
+  or use `g.component.inv(x)` instead of dividing by a node.
+- **Componentwise node ops** are only relu, sin, cos, real, imag, log,
+  pow (and inv = pow(-1)) and `g.component.multiply` (primitives in `ad/reverse/transform.py`, so they
   work in recorded passes; relu's derivative drelu is a primitive without
   flow); `relu` on a complex z is z for Re z > 0, else a z.  Smooth gates
   need new node ops (as primitives, with a vjp written in primitives).
