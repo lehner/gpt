@@ -25,3 +25,4 @@ from gpt.qcd.gauge.smear.directional_parallel_transport import directional_paral
 from gpt.qcd.gauge.smear.directional_frozen_shift import directional_frozen_shift
 from gpt.qcd.gauge.smear.frozen_shift import frozen_shift
 from gpt.qcd.gauge.smear import frozen_generators
+from gpt.qcd.gauge.smear.spectral_loop import spectral_loop
