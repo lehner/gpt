@@ -113,23 +113,33 @@ def exp_ixp(p, origin=None):
 
 
 def fft(dims=None):
-    def mat(dst, src, sign):
+    # forward: (1/N) sum_x e^{+ikx}, inverse: sum_k e^{-ikx}, adjoint: inverse / N
+    def mat(dst, src, sign, scale):
         d = dims if dims is not None else list(range(src.grid.nd))
         assert dst.otype.__name__ == src.otype.__name__
         for i in dst.otype.v_idx:
             cgpt.fft(dst.v_obj[i], src.v_obj[i], d, sign)
+        if scale:
+            N = numpy.prod([src.grid.gdimensions[mu] for mu in d])
+            dst @= float(N) ** scale * dst
 
     def mat_forward(dst, src):
-        mat(dst, src, 1)
+        mat(dst, src, 1, 0)
 
     def mat_backward(dst, src):
-        mat(dst, src, -1)
+        mat(dst, src, -1, 0)
+
+    def adj_mat(dst, src):
+        mat(dst, src, -1, -1)
+
+    def adj_inv_mat(dst, src):
+        mat(dst, src, 1, 1)
 
     return gpt.matrix_operator(
         mat=mat_forward,
-        adj_mat=mat_backward,
+        adj_mat=adj_mat,
         inv_mat=mat_backward,
-        adj_inv_mat=mat_forward,
+        adj_inv_mat=adj_inv_mat,
     )
 
 

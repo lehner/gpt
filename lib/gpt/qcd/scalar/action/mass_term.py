@@ -101,7 +101,7 @@ class fourier_mass_term(differentiable_functional):
         return A.real
 
     def draw(self, pi, rng):
-        # P(pi) = e^{-sum(trace(pi^dag scale^2 fft^dag mass fft pi)) * 2 / 2}    # fft^dag fft = 1/scale^2 ; inv(fft) = fft^dag / scale^2
+        # P(pi) = e^{-sum(trace(pi^dag scale^2 fft^dag mass fft pi)) * 2 / 2}    # fft^dag fft = 1/scale^2 ; inv(fft) = scale^2 fft^dag
         rng.normal_element(pi)
 
         pi_mom = [g(self.fft * p) for p in pi]

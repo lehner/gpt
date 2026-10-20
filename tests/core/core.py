@@ -212,9 +212,21 @@ assert eps < 1e-12
 # Test FFT
 ################################################################################
 fft_l_sp = g.eval(g.fft() * l_sp)
-eps = g.norm2(g.adj(g.fft()) * fft_l_sp - l_sp) / g.norm2(l_sp)
+eps = g.norm2(g.inv(g.fft()) * fft_l_sp - l_sp) / g.norm2(l_sp)
 g.message("FFTinv * FFT:", eps)
 assert eps < 1e-12
+
+for dims in [None, [0, 3]]:
+    F = g.fft(dims)
+    a = rng.cnormal(g.vcomplex(grid_dp, 8))
+    b = rng.cnormal(g.vcomplex(grid_dp, 8))
+    ip = g.inner_product(b, F * a)
+    eps = abs(ip - g.inner_product(g.adj(F) * b, a)) / abs(ip)
+    g.message(f"FFT adjoint test (dims={dims}):", eps)
+    assert eps < 1e-12
+    eps = g.norm2(g.inv(g.adj(F)) * g(g.adj(F) * b) - b) / g.norm2(b)
+    g.message(f"FFT adjoint inverse test (dims={dims}):", eps)
+    assert eps < 1e-12
 
 eps = g.norm2(g.sum(exp_ixp * l_sp) / np.prod(L) - fft_l_sp[1, 2, 3, 4])
 g.message("FFT forward test:", eps)
