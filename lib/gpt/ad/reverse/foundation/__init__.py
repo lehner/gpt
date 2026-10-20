@@ -165,7 +165,7 @@ def sum(x):
 
 
 # the componentwise maps that are node primitives (in transform.py, by name)
-_component_maps = {"relu", "drelu", "sin", "cos", "real", "imag"}
+_component_maps = {"relu", "drelu", "sin", "cos", "real", "imag", "pow", "log"}
 
 
 def component_simple_map(operator, numpy_operator, extra_params, first, second):

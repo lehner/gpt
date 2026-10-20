@@ -654,6 +654,36 @@ for op in ["real", "imag"]:
         g.message(f"component.{op} ({name}): {a} vs {b}, rel {eps}")
         assert eps < 1e-9
 
+# componentwise log and pow (inv = pow(-1)) on complex data, also at
+# initial_gradient=1j; numbers, numpy arrays and lattices
+x0 = g.complex(grid)
+rng.cnormal(x0, mu=2.0, sigma=0.3)
+for op, f in [("log", g.component.log), ("inv", g.component.inv), ("pow(2.5)", g.component.pow(2.5))]:
+    for name, x0, dx, build in [
+        ("number", 1.3 - 0.4j, 0.4 - 0.9j, lambda z: f(z) * g.adj(f(z)) * 0.3 + f(z) * 0.7j),
+        (
+            "numpy",
+            np.array([1.3 - 0.4j, 0.7 + 0.2j]),
+            np.array([0.3 + 0.1j, -0.5 + 0.2j]),
+            lambda z: (lambda y: y[0] * g.adj(y[0]) * 0.3 + y[1] * y[0])(f(z)),
+        ),
+        ("lattice", x0, rng.cnormal(g.complex(grid)), lambda z: g.inner_product(c, f(z)) + g.norm2(f(z))),
+    ]:
+        for seed in [1.0, 1j]:
+            n = rad.node(x0)
+            build(n)(initial_gradient=seed)
+            a = g.group.inner_product(n.gradient, dx)
+
+            def val(h):
+                x = g(x0 + h * dx) if isinstance(x0, g.lattice) else x0 + h * dx
+                return (np.conj(seed) * build(rad.node(x, with_gradient=False))(with_gradients=False)).real
+
+            h = 1e-4
+            b = (-val(2 * h) + 8 * val(h) - 8 * val(-h) + val(-2 * h)) / (12 * h)
+            eps = abs(a - b) / abs(b)
+            g.message(f"component.{op} ({name}, seed {seed}): {a} vs {b}, rel {eps}")
+            assert eps < 1e-9
+
 # a differentiable_functional as a node (first order): combined with other
 # node operations, the leaf gradients follow from the functional's gradient
 rad = g.ad.reverse

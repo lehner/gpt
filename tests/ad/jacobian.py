@@ -252,3 +252,24 @@ for P1, name in [(even, "even"), (odd, "odd")]:
     g.message(f"dpt {name}: preimage, exact vs fgcr: {err:.2e}")
     assert err < 1e-20
     exact.assert_gradient_error(rng, y, y, 1e-5, 1e-7)
+
+# componentwise log and pow in the site map: their tangent rules (J against
+# the VJP rows) and the log-det force through them (own random stream)
+rng_c = g.random("jacobian_componentwise")
+
+
+def componentwise(p, xp):
+    q = g.trace(p * g.adj(p))
+    return p + p * g.component.log(q) * 0.05 + p * g.component.pow(-1.5)(q) * 0.001
+
+
+fields = [x0, C0]
+nodes = [rad.node(v) for v in fields]
+J = jacobian_node(nodes, componentwise)(with_gradients=False)
+M = reference(fields, componentwise)
+err = g.norm2(J - M) / g.norm2(M)
+g.message(f"componentwise: J vs VJP rows: {err:.2e}")
+assert err < 1e-26
+nodes = [rad.node(v) for v in fields]
+S = g.component.real(g.sum(rad.log_det(jacobian_node(nodes, componentwise)))) * (-1.0)
+S.functional(*nodes).assert_gradient_error(rng_c, fields, fields, 1e-4, 1e-8)

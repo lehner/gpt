@@ -200,6 +200,36 @@ assert_field_close(
     "cos action 3rd derivative",
 )
 
+# --- log and pow (inv = pow(-1)): S = sum log(s) has the derivatives 1/s,
+# -a/s^2, 2ab/s^3, S = sum pow(s, p) has p s^(p-1), p(p-1) s^(p-2) a,
+# p(p-1)(p-2) s^(p-3) a b (positive real data) ---
+g.message("log and pow actions: exact derivatives (recorded transform ops)")
+
+s_p = g(g.component.exp(g(0.3 * s_r)))
+
+
+def scaled_pow(c, p):
+    # c s^p (reference derivatives)
+    return g(c * g.component.pow(p)(s_p))
+
+
+for name, f, (d1, d2, d3) in [
+    ("log", g.component.log, [scaled_pow(1.0, -1.0), scaled_pow(-1.0, -2.0), scaled_pow(2.0, -3.0)]),
+    ("inv", g.component.inv, [scaled_pow(-1.0, -2.0), scaled_pow(2.0, -3.0), scaled_pow(-6.0, -4.0)]),
+    ("pow(2.5)", g.component.pow(2.5), [scaled_pow(2.5, 1.5), scaled_pow(3.75, 0.5), scaled_pow(1.875, -0.5)]),
+]:
+
+    def component_action(n):
+        return g.sum(f(n))
+
+    n1 = rad.node(s_p)
+    component_action(n1)()
+    assert_field_close(n1.gradient, d1, 1e-13, f"{name} action dS/ds")
+    assert_field_close(hvp_of(component_action, s_p, a_r), g(d2 * a_r), 1e-12, f"{name} action HVP")
+    assert_field_close(
+        third_of(component_action, s_p, a_r, b_r), g(d3 * a_r * b_r), 1e-11, f"{name} action 3rd derivative"
+    )
+
 # --- the contraction is symmetric in its arguments: the reversed slots must
 # give the same (real) values and derivatives; a plain operand is promoted
 # to a constant node (either slot) ---

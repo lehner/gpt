@@ -123,6 +123,37 @@ cos = primitive(
 )
 
 
+# pow and log: the flow into x is conj(p x^(p-1)) * flow (pow) and
+# conj(x^-1) * flow (log), componentwise; the derivatives are pows again
+# (g.component.inv is pow with exponent -1)
+def _pow_derivative(x, exponent):
+    return g(exponent * _pow(x, exponent=exponent - 1))
+
+
+_pow = primitive(
+    "pow",
+    lambda x, exponent: g.component.pow(exponent)(x),
+    _same,
+    vjp=lambda i, flow, x, exponent: multiply(flow, conj(_pow_derivative(x, exponent))),
+    reads=((0,),),
+    jvp=_chain_jvp(_pow_derivative),
+)
+
+
+def pow(x, exponent):
+    return _pow(x, exponent=exponent)
+
+
+log = primitive(
+    "log",
+    lambda x: g.component.log(x),
+    _same,
+    vjp=lambda i, flow, x: multiply(flow, conj(pow(x, -1.0))),
+    reads=((0,),),
+    jvp=_chain_jvp(lambda x: pow(x, -1.0)),
+)
+
+
 def _plain_part(v, part):
     # the real or imaginary part in the container of v (a number gives a
     # float, whose container is that of numbers; arrays keep their dtype, so
