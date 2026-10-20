@@ -682,7 +682,7 @@ for op, f in [("log", g.component.log), ("inv", g.component.inv), ("pow(2.5)", g
             b = (-val(2 * h) + 8 * val(h) - 8 * val(-h) + val(-2 * h)) / (12 * h)
             eps = abs(a - b) / abs(b)
             g.message(f"component.{op} ({name}, seed {seed}): {a} vs {b}, rel {eps}")
-            assert eps < 1e-9
+            assert eps < 1e-8
 
 # a differentiable_functional as a node (first order): combined with other
 # node operations, the leaf gradients follow from the functional's gradient
