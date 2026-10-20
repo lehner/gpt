@@ -464,13 +464,45 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
 - (Removed 2026-09-30: *expression nodes*, one node per sum of products
   with generated kernels; no net gain over the per-operation graph and
   shared subexpressions duplicated.  Last version: commit b7e27c86.)
-- "Foundation" is a per-class attribute (`g.lattice.foundation`, the
-  node foundation, ...). Mixed-operand dispatch helpers (e.g.
-  `_group_foundation` in `core/group/operation.py`) pick the operand whose
-  foundation can handle both sides — a plain lattice foundation cannot
-  evaluate a mixed lattice/node pair, so it defers to the node foundation
-  (via `nodify`).  `g.group.inner_product` and `g.group.compose` dispatch
-  this way (`group_inner_product`, `group_compose`); the plain foundations'
+- **Foundation dispatch.**  The core does not know about AD.  A core
+  function on containers dispatches on its operand's class attribute
+  `foundation` (`first.__class__.foundation.<op>(...)`), whose module
+  implements the op for that class: `core/foundation/lattice/__init__.py`
+  (`g.lattice`), `core/foundation/tensor.py` (`g.tensor`) and
+  `ad/reverse/foundation/__init__.py` (`node_base`, the same names, as
+  primitives).  Entry points: `g.cshift`, `g.copy`, `g.astype`, `g.where`,
+  `g.identity` / `g.identity_constant`, `g.infinitesimal_to_cartesian` /
+  `cartesian_to_infinitesimal`, `g.inner_product`, `g.norm2`, `g.sum`
+  (`core/transform.py`), `g.adj`, `g.trace` (`core/operator/unary.py`),
+  `g.component.*` (`component_simple_map`, `component_multiply`),
+  `g.convert`, `local_stencil.matrix` (`fields[0].foundation.local_stencil`).
+  **Mixed operands**: the first operand's foundation decides, except when
+  it is the plain lattice foundation and the other operand's is a derived
+  one (a node): the plain foundation cannot evaluate a mixed pair, so the
+  node foundation takes it and promotes the plain operand to a constant
+  (`nodify`); `_foundation` in `core/transform.py` (inner products) and
+  `_group_foundation` in `core/group/operation.py` (also: a symbolic
+  expression has no foundation and defers to the other operand).
+  **Adding a node-capable core op**: the core function dispatches through
+  the foundation; the plain body moves to the lattice (and tensor)
+  foundation unchanged; the node foundation implements it as a primitive
+  with its vjp in primitives (and `reads`, `jvp` where they apply).
+  **Operators and expressions** do not use the foundations but Python's
+  reflected operators: an expression (`core/expr.py`) and a
+  `g.matrix_operator` return `NotImplemented` for an operand they do not
+  know (`gpt.expr(x)` raises `NotImplementedError`, which
+  `matrix_operator.__mul__` turns into `NotImplemented`), so `A * node`
+  arrives at `node_base.__rmul__`.  For a `g.matrix_operator` it builds the
+  primitive `_apply` (`node.py`): forward `A(x)`, vjp `A.adj()` applied to
+  the flow (again `_apply`, so any order), container from the operator's
+  `vector_space` as `matrix_operator.__call__` allocates it.  So any linear
+  operator with an `adj_mat` (e.g. `g.fft()`, its `adj`, `inv`,
+  `adj().inv()`) works on lattice nodes; its adjoint must be the true
+  adjoint (the gradient is A^dag applied to the flow).  List nodes and
+  Python lists of nodes are not supported there yet.
+- Mixed-operand dispatch helpers for groups: `g.group.inner_product` and
+  `g.group.compose` dispatch through `_group_foundation`
+  (`group_inner_product`, `group_compose`); the plain foundations'
   `group_compose` is `operation.plain_compose` (the former body of compose,
   bit-identical), the node foundation's composes by node operations (same
   type: `otype.compose`, retyped by `astype`; an algebra element into an
@@ -830,7 +862,7 @@ E(md(x, tau)).backward()                                   # x[i].gradient
 
 | Path | Role |
 |---|---|
-| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives; `_left_operand`: numpy scalars on the left), forward/backward, `functional`, `_become` (an output node takes over a computed node) |
+| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives; `_left_operand`: numpy scalars on the left; `_apply`: a `g.matrix_operator` times a node, §4.5), forward/backward, `functional`, `_become` (an output node takes over a computed node) |
 | `lib/gpt/ad/reverse/node_str.py` | `str(node)`: the graph as a listing of temporaries with lattice-op costs, sharing, recomputed subexpressions and memory peaks (§4.1) |
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops, shared nodes, involutions), §4.1 |
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |

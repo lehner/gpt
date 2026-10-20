@@ -841,3 +841,29 @@ for seed in [1.0, 1.0j]:
     g.trace(np.conj(seed) * z).functional(x, y).assert_gradient_error(
         rng, [X, Y], [X, Y], 1e-4, 1e-8
     )
+
+# a linear g.matrix_operator applied to a node (operator * node, through
+# node.__rmul__): the flow is the adjoint operator applied to the flow, so
+# grad |A x - c|^2 = 2 A^dag (A x - c); the FFT over two dimensions, its
+# adjoint, inverse and inverse adjoint
+grid_fft = g.grid([4, 4, 4, 8], g.double)
+X = rng.cnormal(g.complex(grid_fft))
+C = rng.cnormal(g.complex(grid_fft))
+F = g.fft([0, 3])
+for name, A in [("fft", F), ("adj", g.adj(F)), ("inv", g.inv(F)), ("adj.inv", F.adj().inv())]:
+    n = rad.node(X)
+    y = g(A * n)
+    assert isinstance(y, rad.node_base)
+    eps = g.norm2(y(with_gradients=False) - g(A * X)) / g.norm2(X)
+    g.message(f"matrix_operator {name} on a node, value: {eps}")
+    assert eps < 1e-28
+
+    n = rad.node(X)
+    g.norm2(A * n - C).backward()
+    ref = g(2.0 * g.adj(A) * g(A * X - C))
+    eps = g.norm2(n.gradient - ref) / g.norm2(ref)
+    g.message(f"matrix_operator {name} on a node, gradient: {eps}")
+    assert eps < 1e-28
+
+    n = rad.node(X)
+    g.norm2(A * n - C).functional(n).assert_gradient_error(rng, [X], [X], 1e-3, 1e-8)

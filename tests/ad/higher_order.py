@@ -988,3 +988,38 @@ assert_field_close(
     1e-10,
     "user-defined primitive HVP vs FD of 1st derivative",
 )
+
+#####################################
+# a linear g.matrix_operator on a node (the FFT, its adjoint, inverse and
+# inverse adjoint): the vjp is again an operator node, so recorded passes
+# reach any order.  HVP of S = |A x - c|^4 vs FD of the 1st derivative
+#####################################
+grid_fft = g.grid([4, 4, 4, 8], g.double)
+x0 = rng.cnormal(g.vcolor(grid_fft))
+c0 = rng.cnormal(g.vcolor(grid_fft))
+v = rng.cnormal(g.vcolor(grid_fft))
+F = g.fft([0, 3])
+for name, A in [("fft", F), ("adj", g.adj(F)), ("inv", g.inv(F)), ("adj.inv", F.adj().inv())]:
+
+    def S_op(x):
+        y = A * x - c0
+        return g.norm2(y) * g.norm2(y)
+
+    def op_first(x):
+        n = rad.node(x)
+        S_op(n).backward()
+        return n.gradient
+
+    eps = 1e-4
+    hvp_fd = g(
+        (
+            -1.0 * op_first(g(x0 + 2 * eps * v))
+            + 8.0 * op_first(g(x0 + eps * v))
+            - 8.0 * op_first(g(x0 - eps * v))
+            + op_first(g(x0 - 2 * eps * v))
+        )
+        * (1.0 / (12 * eps))
+    )
+    assert_field_close(
+        hvp_of(S_op, x0, v), hvp_fd, 1e-10, f"matrix_operator {name} HVP vs FD of 1st derivative"
+    )
