@@ -64,6 +64,37 @@ for name, coefficients, cs in cases:
         ) + step.action_log_det_jacobian()
         W.assert_gradient_error(rng, fields, fields, 1e-4, 1e-8)
 
+        # the same latent action fused (one reverse pass for the pull-back and
+        # the log det): values and gradients (all fields, links only, the
+        # coefficients only) against the plain chain
+        Wf = step.fused_action(
+            g.qcd.gauge.action.iwasaki(2.95), indices=list(range(len(fields))), projection=[0, 1, 2, 3]
+        )
+        eps = abs(Wf(fields) - W(fields)) / abs(W(fields))
+        for dfields in [fields, fields[0:4], fields[4:]]:
+            if dfields:
+                eps2 = rel(Wf.gradient(fields, dfields), W.gradient(fields, dfields))
+                g.message(f"{tag}: fused vs plain chain, {len(dfields)} fields: value {eps}, gradient {eps2}")
+                assert eps < 1e-14 and eps2 < 1e-26
+
+# a chain of steps (spectral steps fused, a local_stout step as transformed
+# plus its log det) against the plain chain
+steps = [
+    g.qcd.gauge.smear.spectral_loop(dimension=0, checkerboard=g.even, nu0=1, coefficients={1: 0.12, 2: 0.03}),
+    g.qcd.gauge.smear.local_stout(dimension=1, checkerboard=g.odd, rho=0.1),
+    g.qcd.gauge.smear.spectral_loop(dimension=3, checkerboard=g.odd, nu0=2, forward=False, coefficients={1: 0.1}),
+]
+S = g.qcd.gauge.action.iwasaki(2.95)
+Wf = g.qcd.gauge.smear.latent_action(S, steps)
+W = S
+for s in steps:
+    W = W.transformed(s) + s.action_log_det_jacobian()
+eps = abs(Wf(U) - W(U)) / abs(W(U))
+eps2 = rel(Wf.gradient(U, U), W.gradient(U, U))
+g.message(f"latent_action chain vs plain chain: value {eps}, gradient {eps2}")
+assert eps < 1e-14 and eps2 < 1e-26
+Wf.assert_gradient_error(rng, U, U, 1e-4, 1e-8)
+
 # learnable coefficients equal to fixed ones give the same map and log det
 fixed = g.qcd.gauge.smear.spectral_loop(dimension=1, checkerboard=g.odd, nu0=3, coefficients={1: 0.1, 2: 0.04})
 learn = g.qcd.gauge.smear.spectral_loop(dimension=1, checkerboard=g.odd, nu0=3, coefficients={1, 2})

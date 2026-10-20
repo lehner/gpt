@@ -19,6 +19,7 @@
 import gpt as g
 import numpy as np
 from gpt.core.group import local_diffeomorphism, differentiable_functional
+from gpt.core.group.differentiable_functional import transformed
 
 
 def _number(x):
@@ -238,6 +239,57 @@ class spectral_loop(local_diffeomorphism):
     def action_log_det_jacobian(self):
         return spectral_loop_action_log_det_jacobian(self)
 
+    def fused_action(self, inner, indices=None, projection=None):
+        # W(fields) = inner(fields') - sum_x log det J(x), fields' the fields
+        # with the step applied to indices (projection as in transformed):
+        # the same as inner.transformed(self, indices, projection) +
+        # self.action_log_det_jacobian(), but its gradient pulls the inner
+        # force back and adds the log-det force in one reverse pass, which
+        # shares the staple and U_mu'.  (For a chain of forces evaluated
+        # together; separate chains, e.g. on the levels of a nested
+        # integrator, fuse per chain: ld = step.fused_action(ld).)
+        return _fused_action(inner, _fused_map(self), indices, projection)
+
+    def _fused_jacobian(self, fields, fields_prime, dfields, inputs=None):
+        # the jacobian (pull-back of dfields) plus the gradient of -sum log
+        # det, for the inputs (None: all), from one reverse pass of
+        # L = Re sum tr(seed^dag U_mu') - Re sum log det
+        rad = g.ad.reverse
+        mu = self.mu
+        _, _, _, _, graphs = self.transport(fields)
+        if "fused" not in graphs:
+            leaves = [rad.node(x) for x in fields]
+            seed = rad.node(fields[mu], with_gradient=False)
+            t = self.transport(leaves)[0]
+            nd, U, cs = self._split(leaves)
+            C = t._staple(leaves)
+            U_prime_mu = t._local_ft(U[mu], C, cs)
+            L = g.component.real(g.sum(g.trace(g.adj(seed) * U_prime_mu))) - g.component.real(
+                g.sum(self._log_det(leaves, C, U_prime_mu))
+            )
+            graphs["fused"] = (L, leaves, seed)
+        L, leaves, seed = graphs["fused"]
+        for n, x in zip(leaves, fields):
+            n.value = x
+        seed.value = g.cartesian_to_infinitesimal(fields_prime[mu], dfields[mu])
+        needed = list(range(len(fields))) if inputs is None else sorted(set(inputs))
+        gradients = L.backward(wrt=[leaves[i] for i in needed])
+        # (the cached graph keeps no fields of its last pass)
+        for n in leaves + [seed]:
+            n.value = None
+            n.gradient = None
+        result = [None] * len(fields)
+        for i, gr in zip(needed, gradients):
+            if gr is None:
+                gr = g.group.zero(dfields[i])
+            if i != mu:
+                # the identity output passes its direction through
+                gr = g(gr + dfields[i]) if isinstance(gr, g.lattice) else gr + dfields[i]
+            if isinstance(gr, g.lattice):
+                gr.otype = dfields[i].otype
+            result[i] = gr
+        return result
+
 
 class spectral_loop_action_log_det_jacobian(differentiable_functional):
     # -sum_x log det J(x): one cached node graph per transport (leaves swapped
@@ -262,3 +314,39 @@ class spectral_loop_action_log_det_jacobian(differentiable_functional):
             x.gradient = None
         # (a field the log det does not depend on gets a zero)
         return [g.group.zero(d) if x is None else x for x, d in zip(gradients, dfields)]
+
+
+class _fused_map:
+    # the step as seen by _fused_action: its map and identity outputs, and a
+    # jacobian that adds the log-det force
+    def __init__(self, step):
+        self.step = step
+
+    def __call__(self, fields):
+        return self.step(fields)
+
+    @property
+    def identity_outputs(self):
+        return self.step.identity_outputs
+
+    def jacobian(self, fields, fields_prime, dfields, inputs=None):
+        return self.step._fused_jacobian(fields, fields_prime, dfields, inputs)
+
+
+class _fused_action(transformed):
+    def __call__(self, fields):
+        indices = self.indices if self.indices is not None else range(len(fields))
+        log_det = self.t.step.log_det_jacobian([fields[i] for i in indices])
+        return super().__call__(fields) - g.sum(log_det).real
+
+
+def latent_action(action, steps):
+    # the latent action of a flow, one chain: a spectral_loop step fused with
+    # its log det (fused_action), any other step as transformed plus its log
+    # det; every step acts on the full list of fields
+    for s in steps:
+        if isinstance(s, spectral_loop):
+            action = s.fused_action(action)
+        else:
+            action = action.transformed(s) + s.action_log_det_jacobian()
+    return action
