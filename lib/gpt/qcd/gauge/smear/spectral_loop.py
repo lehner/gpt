@@ -207,25 +207,25 @@ class spectral_loop(local_diffeomorphism):
             C = t._staple(fields)
         if U_prime_mu is None:
             U_prime_mu = t._local_ft(U[mu], C, cs)
-        P = g(C * g.adj(U[mu]))
-        Pp = g(C * g.adj(U_prime_mu))
         if "log_det" not in graphs:
             graphs["log_det"] = g.local_program(
                 self._log_det_terms,
-                inputs=[g.ot_matrix_color(3)] * 2 + [one.otype] * (1 + self.n_parameters),
+                inputs=[g.ot_matrix_color(3)] * 3 + [one.otype] * (1 + self.n_parameters),
                 outputs=[one.otype] * 3,
             )
         coefficients = [] if self.fixed is not None else [_field(c, one) for c in self._coefficients(cs)]
-        a, mdisc_Pp, mdisc_P = graphs["log_det"](P, Pp, P1, *coefficients)
+        a, mdisc_Pp, mdisc_P = graphs["log_det"](C, U[mu], U_prime_mu, P1, *coefficients)
         log = g.component.log
         v = log(a) + log(mdisc_Pp) - log(mdisc_P)
         return g(g.component.real(g(v * P1)))
 
-    def _log_det_terms(self, P, Pp, P1, *cs):
+    def _log_det_terms(self, C, U, Up, P1, *cs):
         # the local program of the log det (symbolic site values, see
-        # core/local_program.py): a, -Disc(P'), -Disc(P) from P, P', the mask
-        # P1 and the learnable coefficients (fixed ones are weights)
+        # core/local_program.py): a, -Disc(P'), -Disc(P) from the staple C,
+        # U_mu, U_mu', the mask P1 and the learnable coefficients (fixed ones
+        # are weights); P = C U_mu^dag, P' = C U_mu'^dag
         lp = g.local_program
+        P, Pp = C * U.adj(), C * Up.adj()
         conj, real = lp.conj, lp.real
         c = [self.fixed[k] for k in self.degrees] if self.fixed is not None else list(cs)
         # tr B and tr B^2 from the power sums s_n = tr P^n (Newton's

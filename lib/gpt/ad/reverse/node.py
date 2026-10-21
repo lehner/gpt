@@ -28,6 +28,7 @@ from gpt.ad.reverse.util import (
     nodify,
     is_node,
     record,
+    recording,
     pass_scope,
     enter_pass,
     leave_pass,
@@ -400,6 +401,16 @@ class node_base(base):
                 n.value = None
         elif n.with_gradient:
             # (constant leaves keep gradient None: nothing reads it)
+            if (
+                n.flow is None
+                and n.infinitesimal_to_cartesian
+                and isinstance(n.value, g.lattice)
+                and not recording()
+            ):
+                # no flow reached the leaf (e.g. a link a local map does not
+                # read): the cartesian zero, without converting a zero
+                n.flow = flows.dense(g.group.zero(n.value), True)
+                return
             n.materialize_gradient()
             if n.infinitesimal_to_cartesian:
                 # (value_of: while recording, the leaf node itself, so

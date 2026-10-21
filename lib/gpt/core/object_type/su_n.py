@@ -168,7 +168,11 @@ class ot_matrix_su_n_group(ot_matrix_su_n_base):
         return ot_matrix_su_n_adjoint_algebra(self.Nc)
 
     def infinitesimal_to_cartesian(self, U, dU):
-        # the traceless hermitian part of dU U^dag / 2i (one node for AD values)
+        # the traceless hermitian part of dU U^dag / 2i (one node for AD
+        # values, one kernel for plain fields)
+        project = gpt.qcd.gauge.project
+        if project._fused(U, dU) and U.grid.obj == dU.grid.obj:
+            return project._program("infinitesimal_to_cartesian", dU.otype, self.cartesian())(dU, U)[0]
         ret = gpt.qcd.gauge.project.traceless_hermitian(dU * gpt.adj(U) / 2j)
         ret.otype = self.cartesian()
         return ret
