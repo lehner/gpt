@@ -666,6 +666,9 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   primitive caches beyond its node's value (the exp tower's X^dag), so that a
   cached graph keeps nothing alive between passes while all sharing within a
   pass is kept.
+- **Leaves without flow**: in a plain pass a lattice leaf that received no
+  flow (e.g. a link a local map does not read) gets the cartesian zero
+  (`g.group.zero`) directly, without building and converting a zero field.
 - **Flows are adopted, not copied**: the first plain contribution to a
   gradient is adopted as is (`flow.accumulate`), so the same field can be
   the gradient of several nodes (both children of an add receive
@@ -907,7 +910,13 @@ returns the list of output fields.  Use it where a chain of many small
 site-local ops on traces and singlets (each a cgpt.eval forward and several
 backward, each a kernel launch on GPUs) would otherwise be a node graph:
 `spectral_loop._log_det_terms` (271 -> 50 evaluations per step, the force of
-one round 0.31 -> 0.19 s at 8^4).
+one round 0.31 -> 0.19 s at 8^4; it forms P = C U_mu^dag and P' = C U_mu'^dag
+itself), and the plain projections `traceless_hermitian` /
+`traceless_anti_hermitian` and the SU(N) `infinitesimal_to_cartesian` (one
+kernel each instead of 3-4 evaluations, for single-block N x N fields on full
+grids; `qcd/gauge/project.py`, `_fused` / `_program`, otherwise the
+expression code), so the projection nodes' forward and backward and every
+leaf conversion of an SU(N) gradient are one kernel.
 
 - **Tracer**: symbolic scalars are hash-consed (one node per distinct
   subexpression; constant folding, weights pulled to the front), so the
@@ -977,7 +986,7 @@ one round 0.31 -> 0.19 s at 8^4).
 | `tests/ad/stencil.py` | stencil AD: fused two-output stencil, path-based stencils, local temporaries (staple action vs cshift graph) at 1st/2nd/3rd order, `with_value=False` |
 | `lib/gpt/qcd/gauge/action/staple_stencil.py` | gauge action value/force as AD stencils (plaquette loop, or staples as local temporaries with rectangles) |
 | `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple (`g.staple_description`), the per-site Jacobian block (`jacobian_matrix`, optionally at a prescribed staple and loops), log-det and its force (also weighted per site), `inv` (`g.algorithms.nonlinear.fixed_point` with site-local Newton steps; `inverse_history`).  `loops=[g.path, ...]`: fixed closed loops at x as further inputs `f(sm, xparams, L)` of the loop function (one fused stencil, `_loop_transport`); the constructor rejects (ValueError) a loop through U_mu(x + s) if P1(x) P1(x + s) != 0 for some x, `inv` re-checks numerically.  Like the staple they are constants of the local map; their flows are pushed back through their own stencil (one list-node reverse pass; tests in `tests/qcd/flows_loops.py`) |
-| `lib/gpt/qcd/gauge/smear/spectral_loop.py` | the spectral single-loop step U_mu' = exp(TA(P1 F(P))) U_mu, F(P) = sum_k c_k P^k, P = T0 U_mu^dag (SU(3)): map, `inv` and jacobian through a single-loop `directional_parallel_transport`; coefficients fixed (`{k: c_k}`) or learnable fields (`{k, ...}`: fields U + [c_k], plain or nodes); analytic log det as one `g.local_program` (power sums of tr P, tr B, tr B^2, shift-invariant discriminant for numerical stability) and three logs, any order; learnable number coefficients enter node graphs as fields c_k 1 (`_coefficient_fields`, shared by F and the log det); `fused_action`, `latent_action` (tests in `tests/qcd/spectral_loop.py`) |
+| `lib/gpt/qcd/gauge/smear/spectral_loop.py` | the spectral single-loop step U_mu' = exp(TA(P1 F(P))) U_mu, F(P) = sum_k c_k P^k, P = T0 U_mu^dag (SU(3)): map, `inv` and jacobian through a single-loop `directional_parallel_transport`; coefficients fixed (`{k: c_k}`) or learnable fields (`{k, ...}`: fields U + [c_k], plain or nodes); analytic log det as one `g.local_program` of (C, U_mu, U_mu', P1, coefficients) (P and P', power sums of tr P, tr B, tr B^2, shift-invariant discriminant for numerical stability) and three logs, any order; learnable number coefficients enter node graphs as fields c_k 1 (`_coefficient_fields`, shared by F and the log det); `fused_action`, `latent_action` (tests in `tests/qcd/spectral_loop.py`) |
 | `lib/gpt/ad/forward/` | series / Landau differential algebra |
 | `lib/gpt/core/group/operation.py` | inner_product/compose dispatch (`group_inner_product`, `group_compose` of the foundations; `plain_compose`), `zero` (cartesian zero) |
 | `lib/gpt/algorithms/nonlinear/fixed_point.py` | `g.algorithms.nonlinear.fixed_point`: iteration control of x = Phi(x) (history, contraction rate, switch to an accelerated step, failure), `fixed_point.newton(residual, solve)` Newton steps; used by `directional_parallel_transport.inv` |
