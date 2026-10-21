@@ -545,6 +545,13 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   checkerboard) that must NOT be modified (kernel inputs, node
   values).  `g.identity(x)` returns a fresh field; some callers
   modify it (e.g. the plain exp Taylor fallback), so it must not be cached.
+- **Caches must not capture call arguments**: state cached across calls
+  (transports, constants, graphs) is built plain from (grid, otype), or
+  derived inside each graph from that graph's own nodes
+  (`g.identity_constant(Q)` is a constant node of Q's graph), never from the
+  fields of the call that happened to come first: a node of another graph
+  captured there pulls that graph into every later pass (re-evaluated, its
+  flows reset).
 - **`g.mcolor` leaves are group elements**: their gradients are converted to
   the algebra (`infinitesimal_to_cartesian`).  Finite-difference checks of
   derivatives w.r.t. general complex matrices (e.g. an HVP) need leaves

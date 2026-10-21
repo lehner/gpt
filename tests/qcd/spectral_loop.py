@@ -184,3 +184,78 @@ leaves = [rad.node(v) for v in U + [w]]
 c = [g.component.real(leaves[4]) * 0.1, leaves[4] * leaves[4] * 0.05]
 S = latent(leaves[0:4] + c)
 S.functional(*leaves).assert_gradient_error(rng, U + [w], U + [w], 1e-4, 1e-8)
+
+# the transports are built by their first call, here with nodes: the
+# preimages of a latent chain with coefficient leaves.  The cached state must
+# not capture these (formerly the identity of the log det became a node of
+# that graph: the force of the latent action, evaluated inside the outer
+# reverse pass, reset its flows).  Loss: L(c) = Re sum_x [sum_mu tr(F_mu w_mu)
+# + tr V_0], F = grad_V W(V, c) (gradient_finite_difference), V = latent(U, c)
+nd = 4
+cvals = [0.10, 0.03, 0.01]
+dirs = [1.0, -0.7, 0.4]
+one = g.complex(grid)
+one[:] = 1.0
+cfields = [g(v * one) for v in cvals]
+w = [rng.normal_element(g.group.cartesian(u)) for u in U]
+
+
+def latent_chain():
+    steps = [
+        g.qcd.gauge.smear.spectral_loop(0, g.even, 1, True, coefficients={1, 2, 3}),
+        g.qcd.gauge.smear.spectral_loop(1, g.odd, 2, False, coefficients={1, 2, 3}),
+    ]
+    W = g.qcd.gauge.action.wilson(5.5)
+    for k, s in enumerate(steps):
+        W = s.fused_action(W, projection=list(range(nd)) if k == 0 else None)
+    return steps, W
+
+
+def preimage(steps, cs):
+    x = list(U)
+    for s in steps:
+        x = s.inv(x + list(cs), max_iter=200)[0:nd]
+    return x
+
+
+def loss_plain(cs):
+    steps, W = latent_chain()
+    V = preimage(steps, cs)
+    F = W.gradient(V + cs, V)
+    return sum(g.sum(g.trace(F[mu] * w[mu])).real for mu in range(nd)) + g.sum(g.trace(V[0])).real
+
+
+steps, W = latent_chain()
+r = [rad.node(g.copy(c)) for c in cfields]
+V = preimage(steps, r)
+F = rad.symplectic.gradient_finite_difference(W, nd)(V + r)
+wn = [rad.node(x, with_gradient=False) for x in w]
+L = None
+for mu in range(nd):
+    t = g.component.real(g.sum(g.trace(F[mu] * wn[mu])))
+    L = t if L is None else L + t
+L = L + g.component.real(g.sum(g.trace(V[0])))
+L.backward()
+ad = sum(d * g.sum(x.gradient).real for d, x in zip(dirs, r))
+h = 1e-5
+fd = (
+    loss_plain([g(c + (h * d) * one) for c, d in zip(cfields, dirs)])
+    - loss_plain([g(c - (h * d) * one) for c, d in zip(cfields, dirs)])
+) / (2 * h)
+err = abs(ad / fd - 1)
+g.message(f"transports built from nodes: dL/dc along dc {ad} vs central difference {fd}: {err}")
+assert err < 1e-6
+for s in steps:
+    t = s.cache[next(iter(s.cache))][0]
+    assert not any(isinstance(p, rad.node_base) for p in t.parameters)
+Vp = [rad.util.value_of(v) if isinstance(v, rad.node_base) else v for v in V]
+assert not isinstance(W(Vp + cfields), rad.node_base)
+
+# directional_parallel_transport rejects node parameters (templates only)
+try:
+    g.qcd.gauge.smear.directional_parallel_transport(
+        U, [(1.0, g.path().f(1).f(0).b(1).b(0))], 0, None, even, [rad.node(cfields[0])]
+    )
+    assert False
+except ValueError as e:
+    g.message(f"rejected: {e}")

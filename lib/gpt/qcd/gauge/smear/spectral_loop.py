@@ -95,11 +95,13 @@ class spectral_loop(local_diffeomorphism):
                 path = g.path().b(nu).f(mu).f(nu).b(mu)
             one = g.complex(U[0].grid)
             one[:] = 1.0
-            identity = g.identity(U[0])
+            # (the coefficients come with the fields of each call; dpt uses
+            # its parameter list only for its length and to match
+            # field-valued path weights, of which this transport has none)
             t = g.qcd.gauge.smear.directional_parallel_transport(
-                U, [(1.0, path)], mu, None, P1, cs, loop_function=self._F
+                U, [(1.0, path)], mu, None, P1, [None] * len(cs), loop_function=self._F
             )
-            self.cache[key] = (t, P1, one, identity, {})
+            self.cache[key] = (t, P1, one, {})
         return self.cache[key]
 
     def _coefficients(self, xparams):
@@ -177,7 +179,7 @@ class spectral_loop(local_diffeomorphism):
         # the site-local log det (plain fields or nodes), zero outside P1; C
         # and U_prime_mu: the staple and the updated link if already built
         # (shared with the graph of the map)
-        t, P1, one, identity, _ = self.transport(fields)
+        t, P1, one, _ = self.transport(fields)
         nd, U, cs = self._split(fields)
         mu = self.mu
         if C is None:
@@ -217,8 +219,12 @@ class spectral_loop(local_diffeomorphism):
 
         def disc(Q):
             # the discriminant of the traceless part A = Q - tr(Q)/3:
-            # -4 p^3 - 27 q^2, p = -tr(A^2)/2, q = -tr(A^3)/3
-            A = g(Q - identity * g(g.trace(Q) * (1.0 / 3.0)))
+            # -4 p^3 - 27 q^2, p = -tr(A^2)/2, q = -tr(A^3)/3.  The identity
+            # is derived from Q (for a node Q: a constant node of Q's graph),
+            # never cached from the fields of an earlier call: an identity
+            # built from a node of another graph would pull that graph into
+            # every log det
+            A = g(Q - g.identity_constant(Q) * g(g.trace(Q) * (1.0 / 3.0)))
             A2 = g(A * A)
             p = g(g.trace(A2) * (-0.5))
             q = g(g.trace(g(A2 * A)) * (-1.0 / 3.0))
@@ -256,7 +262,7 @@ class spectral_loop(local_diffeomorphism):
         # L = Re sum tr(seed^dag U_mu') - Re sum log det
         rad = g.ad.reverse
         mu = self.mu
-        _, _, _, _, graphs = self.transport(fields)
+        _, _, _, graphs = self.transport(fields)
         if "fused" not in graphs:
             leaves = [rad.node(x) for x in fields]
             seed = rad.node(fields[mu], with_gradient=False)
@@ -301,7 +307,7 @@ class spectral_loop_action_log_det_jacobian(differentiable_functional):
         return -g.sum(self.step.log_det_jacobian(fields)).real
 
     def gradient(self, fields, dfields):
-        _, _, _, _, graphs = self.step.transport(fields)
+        _, _, _, graphs = self.step.transport(fields)
         if "action" not in graphs:
             leaves = [g.ad.reverse.node(x) for x in fields]
             S = g.component.real(g.sum(self.step.log_det_jacobian(leaves))) * (-1.0)

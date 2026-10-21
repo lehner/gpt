@@ -116,6 +116,13 @@ class directional_parallel_transport(dft_diffeomorphism):
         self.mu = mu
         self.P0 = P0
         self.P1 = P1
+        # (parameters are templates, never values: a node kept here would tie
+        # the transport to the graph of its first call)
+        if any(isinstance(p, g.ad.reverse.node_base) for p in parameters):
+            raise ValueError(
+                "directional_parallel_transport: parameters are templates (their number and "
+                "field-valued path weights), not values: pass node values with the fields"
+            )
         self.parameters = parameters
         self.loop_function = loop_function
         self.jacobian_chunk = jacobian_chunk
