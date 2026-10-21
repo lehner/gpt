@@ -74,6 +74,56 @@ def assert_field_close(f, ref, tol, msg):
     assert err < tol, msg
 
 
+def first_of(S, x, **leaf):
+    # dS/dx: one reverse pass
+    n = rad.node(x, **leaf)
+    S(n)()
+    return n.gradient
+
+
+def central_difference(f, x, v, eps):
+    # (f(x + eps v) - f(x - eps v)) / (2 eps)
+    return (f(g(x + eps * v)) - f(g(x - eps * v))) / (2 * eps)
+
+
+def four_point_difference(f, x, v, eps):
+    # the derivative of f along v at x by a 4-point difference (error O(eps^4))
+    return g(
+        (
+            -1.0 * f(g(x + 2 * eps * v))
+            + 8.0 * f(g(x + eps * v))
+            - 8.0 * f(g(x - eps * v))
+            + f(g(x - 2 * eps * v))
+        )
+        * (1.0 / (12 * eps))
+    )
+
+
+def check_first_derivative(c, n, s0, rng, tag, imaginary=False):
+    # the gradient of the scalar node c w.r.t. the leaf n (value s0) against
+    # central differences along a random real direction, at both initial
+    # gradients (the real or imaginary part of c); imaginary: also along the
+    # imaginary direction
+    directions = [("real", 1.0, lambda x: x.real)]
+    if imaginary:
+        directions.append(("imag", 1.0j, lambda x: x.imag))
+    for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
+        c(initial_gradient=ig)
+        eps = 1e-6
+        lt = rng.normal(g.real(s0.grid))
+        for name, unit, component in directions:
+            n.value = g(s0 + lt * eps * unit)
+            v1 = part(c(with_gradients=False))
+            n.value = g(s0 - lt * eps * unit)
+            v2 = part(c(with_gradients=False))
+            n.value = g(s0)
+            num_result = (v1 - v2) / eps / 2.0
+            ad_result = component(g.inner_product(lt, n.gradient))
+            err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
+            g.message(f"{tag} 1st derivative {name} (ig={ig}): {err}")
+            assert err < 1e-4, f"{tag} 1st derivative {name}"
+
+
 #####################################
 # stage 0: complex scalar
 #####################################
@@ -273,62 +323,24 @@ def hop_action(s):
     return (g.sum(C * C) + rho * g.sum(g.adj(s) * g.cshift(s, 0, 1))).real
 
 
-def hop_first(s):
-    nn = rad.node(s)
-    hop_action(nn)()
-    return nn.gradient
-
-
-def hop_hvp(s, a):
-    return hvp_of(hop_action, s, a)
-
-
-def hop_third(s, a, b):
-    return third_of(hop_action, s, a, b)
-
-
 # 1st derivative vs finite difference of the action (ad.py pattern:
 # real direction, imag part perturbed by 1j)
 n = rad.node(s0)
 cc = (
     g.sum(n * g.adj(n) * n * g.adj(n)) + rho * g.sum(g.adj(n) * g.cshift(n, 0, 1))
 )
-for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
-    cc(initial_gradient=ig)
-    eps = 1e-6
-    lt = rng_l.normal(g.real(grid))
-    n.value = g(s0 + lt * eps)
-    v1 = part(cc(with_gradients=False))
-    n.value = g(s0 - lt * eps)
-    v2 = part(cc(with_gradients=False))
-    n.value = g(s0)
-    num_result = (v1 - v2) / eps / 2.0
-    ad_result = g.inner_product(lt, n.gradient).real
-    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
-    g.message(f"hop 1st derivative real (ig={ig}): {err}")
-    assert err < 1e-4, "hop 1st derivative real"
-
-    n.value = g(s0 + lt * eps * 1.0j)
-    v1 = part(cc(with_gradients=False))
-    n.value = g(s0 - lt * eps * 1.0j)
-    v2 = part(cc(with_gradients=False))
-    n.value = g(s0)
-    num_result = (v1 - v2) / eps / 2.0
-    ad_result = g.inner_product(lt, n.gradient).imag
-    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
-    g.message(f"hop 1st derivative imag (ig={ig}): {err}")
-    assert err < 1e-4, "hop 1st derivative imag"
+check_first_derivative(cc, n, s0, rng_l, "hop", imaginary=True)
 
 # 2nd derivative: HVP (direction b) vs finite difference of the 1st derivative
 # in the same direction
 eps = 1e-5
-hvp_ad = hop_hvp(s0, b0)
-hvp_fd = (hop_first(g(s0 + eps * b0)) - hop_first(g(s0 - eps * b0))) / (2 * eps)
+hvp_ad = hvp_of(hop_action, s0, b0)
+hvp_fd = central_difference(lambda s: first_of(hop_action, s), s0, b0, eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "hop HVP vs FD of 1st derivative")
 
 # 3rd derivative vs finite difference of the HVP field
-t3_ad = hop_third(s0, a0, b0)
-t3_fd = (hop_hvp(g(s0 + eps * b0), a0) - hop_hvp(g(s0 - eps * b0), a0)) / (2 * eps)
+t3_ad = third_of(hop_action, s0, a0, b0)
+t3_fd = central_difference(lambda s: hvp_of(hop_action, s, a0), s0, b0, eps)
 assert_field_close(t3_ad, t3_fd, 1e-5, "hop 3rd derivative vs FD of HVP")
 
 # symmetric scalar cross-check: d^3 S(s + t b)/dt^3 vs a 4-point 3rd-order
@@ -343,7 +355,7 @@ def f_of_t(t):
 fd = (f_of_t(2 * h) - 2 * f_of_t(h) + 2 * f_of_t(-h) - f_of_t(-2 * h)) / (
     2 * h**3
 )
-t3_b = hop_third(s0, b0, b0)
+t3_b = third_of(hop_action, s0, b0, b0)
 ad = g.inner_product(b0, t3_b).real
 assert_close(ad, fd, 1e-5, "hop d3S/dt^3 vs FD of action")
 
@@ -362,37 +374,13 @@ def div_action(n):
     return g.sum(C * C)
 
 
-def div_first(s):
-    nn = rad.node(s)
-    div_action(nn)()
-    return nn.gradient
-
-
-def div_hvp(s, a):
-    return hvp_of(div_action, s, a)
-
-
 n = rad.node(s0)
-dact = div_action(n)
-for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
-    dact(initial_gradient=ig)
-    eps = 1e-6
-    lt = rng_l.normal(g.real(grid))
-    n.value = g(s0 + lt * eps)
-    v1 = part(dact(with_gradients=False))
-    n.value = g(s0 - lt * eps)
-    v2 = part(dact(with_gradients=False))
-    n.value = g(s0)
-    num_result = (v1 - v2) / eps / 2.0
-    ad_result = g.inner_product(lt, n.gradient).real
-    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
-    g.message(f"div 1st derivative real (ig={ig}): {err}")
-    assert err < 1e-4, "div 1st derivative real"
+check_first_derivative(div_action(n), n, s0, rng_l, "div")
 
 # 2nd derivative: HVP (direction b) vs finite difference of the 1st derivative
 eps = 1e-5
-hvp_ad = div_hvp(s0, b0)
-hvp_fd = (div_first(g(s0 + eps * b0)) - div_first(g(s0 - eps * b0))) / (2 * eps)
+hvp_ad = hvp_of(div_action, s0, b0)
+hvp_fd = central_difference(lambda s: first_of(div_action, s), s0, b0, eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "div HVP vs FD of 1st derivative")
 
 # --- division by a gradient-carrying COMPLEX scalar denominator: exercises
@@ -437,37 +425,13 @@ def pow_action(n):
     return g.sum(n ** 4)
 
 
-def pow_first(s):
-    nn = rad.node(s)
-    pow_action(nn)()
-    return nn.gradient
-
-
-def pow_hvp(s, a):
-    return hvp_of(pow_action, s, a)
-
-
 n = rad.node(s0)
-pact = pow_action(n)
-for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
-    pact(initial_gradient=ig)
-    eps = 1e-6
-    lt = rng_l.normal(g.real(grid))
-    n.value = g(s0 + lt * eps)
-    v1 = part(pact(with_gradients=False))
-    n.value = g(s0 - lt * eps)
-    v2 = part(pact(with_gradients=False))
-    n.value = g(s0)
-    num_result = (v1 - v2) / eps / 2.0
-    ad_result = g.inner_product(lt, n.gradient).real
-    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
-    g.message(f"pow 1st derivative real (ig={ig}): {err}")
-    assert err < 1e-4, "pow 1st derivative real"
+check_first_derivative(pow_action(n), n, s0, rng_l, "pow")
 
 # 2nd derivative: HVP (direction b) vs finite difference of the 1st derivative
 eps = 1e-5
-hvp_ad = pow_hvp(s0, b0)
-hvp_fd = (pow_first(g(s0 + eps * b0)) - pow_first(g(s0 - eps * b0))) / (2 * eps)
+hvp_ad = hvp_of(pow_action, s0, b0)
+hvp_fd = central_difference(lambda s: first_of(pow_action, s), s0, b0, eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "pow HVP vs FD of 1st derivative")
 
 # --- conjugate-linear gradient convention: every backprop applies g.adj to
@@ -491,21 +455,7 @@ def conv_action(n):
 
 
 n = rad.node(s0)
-cact = conv_action(n)
-for ig, part in [(1.0, lambda x: x.real), (1.0j, lambda x: x.imag)]:
-    cact(initial_gradient=ig)
-    eps = 1e-6
-    lt = rng_l.normal(g.real(grid))
-    n.value = g(s0 + lt * eps)
-    v1 = part(cact(with_gradients=False))
-    n.value = g(s0 - lt * eps)
-    v2 = part(cact(with_gradients=False))
-    n.value = g(s0)
-    num_result = (v1 - v2) / eps / 2.0
-    ad_result = g.inner_product(lt, n.gradient).real
-    err = abs(num_result - ad_result) / (abs(num_result) + abs(ad_result) + 1)
-    g.message(f"convention sin 1st derivative (ig={ig}): {err}")
-    assert err < 1e-4, f"convention sin 1st derivative (ig={ig})"
+check_first_derivative(conv_action(n), n, s0, rng_l, "convention sin")
 
 #####################################
 # stage 2: SU(3) gauge-field HVP (2nd derivative)
@@ -822,18 +772,10 @@ def adj_action(n):
     return g.sum(g.adj(n) * n * n)
 
 
-def adj_first(s_):
-    nn = rad.node(s_)
-    adj_action(nn)()
-    return nn.gradient
-
-
 a0_adj = rng_l.cnormal(g.complex(grid))
 eps = 1e-5
 hvp_ad = hvp_of(adj_action, s_adj, a0_adj)
-hvp_fd = (adj_first(g(s_adj + eps * a0_adj)) - adj_first(g(s_adj - eps * a0_adj))) / (
-    2 * eps
-)
+hvp_fd = central_difference(lambda s: first_of(adj_action, s), s_adj, a0_adj, eps)
 assert_field_close(hvp_ad, hvp_fd, 1e-5, "adj HVP vs FD of 1st derivative")
 
 #####################################
@@ -870,15 +812,11 @@ def proj_action(n):
     return g.sum(g.trace(q * q * n))
 
 
-def proj_first(s):
-    nn = rad.node(s, infinitesimal_to_cartesian=False)
-    proj_action(nn)()
-    return nn.gradient
-
-
 eps = 1e-5
 hvp_ad = hvp_of(proj_action, m0, mb, infinitesimal_to_cartesian=False)
-hvp_fd = (proj_first(g(m0 + eps * mb)) - proj_first(g(m0 - eps * mb))) / (2 * eps)
+hvp_fd = central_difference(
+    lambda s: first_of(proj_action, s, infinitesimal_to_cartesian=False), m0, mb, eps
+)
 assert_field_close(hvp_ad, hvp_fd, 1e-12, "projection HVP vs FD of 1st derivative")
 
 
@@ -895,22 +833,7 @@ for op in ["real", "imag"]:
         return g.norm2(f(z) * f(z) * c - c)
 
     hvp = hvp_of(S, z0, v)
-
-    def first(z):
-        n = rad.node(z)
-        S(n)()
-        return n.gradient
-
-    eps = 1e-4
-    hvp_fd = g(
-        (
-            -1.0 * first(g(z0 + 2 * eps * v))
-            + 8.0 * first(g(z0 + eps * v))
-            - 8.0 * first(g(z0 - eps * v))
-            + first(g(z0 - 2 * eps * v))
-        )
-        * (1.0 / (12 * eps))
-    )
+    hvp_fd = four_point_difference(lambda z: first_of(S, z), z0, v, 1e-4)
     assert_field_close(hvp, hvp_fd, 1e-16, f"component.{op} HVP vs FD of 1st derivative")
 
 
@@ -927,22 +850,7 @@ def S_relu(z):
     return g.sum(r * r * r)
 
 
-def relu_first(z):
-    n = rad.node(z)
-    S_relu(n).backward()
-    return n.gradient
-
-
-eps = 1e-4
-hvp_fd = g(
-    (
-        -1.0 * relu_first(g(z0 + 2 * eps * v))
-        + 8.0 * relu_first(g(z0 + eps * v))
-        - 8.0 * relu_first(g(z0 - eps * v))
-        + relu_first(g(z0 - 2 * eps * v))
-    )
-    * (1.0 / (12 * eps))
-)
+hvp_fd = four_point_difference(lambda z: first_of(S_relu, z), z0, v, 1e-4)
 assert_field_close(hvp_of(S_relu, z0, v), hvp_fd, 1e-12, "relu HVP vs FD of 1st derivative")
 
 #####################################
@@ -966,21 +874,8 @@ def S_square(x):
     return g.norm2(square(square(x)) - T)
 
 
-def square_first(x):
-    n = rad.node(x, infinitesimal_to_cartesian=False)
-    S_square(n).backward()
-    return n.gradient
-
-
-eps = 1e-4
-hvp_fd = g(
-    (
-        -1.0 * square_first(g(x0 + 2 * eps * v))
-        + 8.0 * square_first(g(x0 + eps * v))
-        - 8.0 * square_first(g(x0 - eps * v))
-        + square_first(g(x0 - 2 * eps * v))
-    )
-    * (1.0 / (12 * eps))
+hvp_fd = four_point_difference(
+    lambda x: first_of(S_square, x, infinitesimal_to_cartesian=False), x0, v, 1e-4
 )
 assert_field_close(
     hvp_of(S_square, x0, v, infinitesimal_to_cartesian=False),
@@ -1005,21 +900,7 @@ for name, A in [("fft", F), ("adj", g.adj(F)), ("inv", g.inv(F)), ("adj.inv", F.
         y = A * x - c0
         return g.norm2(y) * g.norm2(y)
 
-    def op_first(x):
-        n = rad.node(x)
-        S_op(n).backward()
-        return n.gradient
-
-    eps = 1e-4
-    hvp_fd = g(
-        (
-            -1.0 * op_first(g(x0 + 2 * eps * v))
-            + 8.0 * op_first(g(x0 + eps * v))
-            - 8.0 * op_first(g(x0 - eps * v))
-            + op_first(g(x0 - 2 * eps * v))
-        )
-        * (1.0 / (12 * eps))
-    )
+    hvp_fd = four_point_difference(lambda x: first_of(S_op, x), x0, v, 1e-4)
     assert_field_close(
         hvp_of(S_op, x0, v), hvp_fd, 1e-10, f"matrix_operator {name} HVP vs FD of 1st derivative"
     )

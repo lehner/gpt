@@ -76,6 +76,29 @@ def contract(a, b):
     return sum(g.group.inner_product(a[mu], b[mu]) for mu in range(Nd))
 
 
+def gradients(leaves):
+    # the gradients of the links: of a list node, or one per link node
+    if isinstance(leaves, rad.node_base):
+        return leaves.gradient
+    return [x.gradient for x in leaves]
+
+
+def derivative(build, leaves, directions, recorded=None):
+    # d/dU <d_k, ... d/dU <d_1, dS/dU>> for S = build(leaves): the reverse
+    # pass of S and of each contraction but the last recorded;
+    # recorded(gradients) inspects the recorded 1st derivative
+    build(leaves).backward(create_graph=True)
+    if recorded is not None:
+        recorded(gradients(leaves))
+    for k, d in enumerate(directions):
+        contract(gradients(leaves), d).backward(create_graph=k + 1 < len(directions))
+    return [g(x) for x in gradients(leaves)]
+
+
+def max_n2_diff(a, b):
+    return max(n2(a[mu] - b[mu]) for mu in range(Nd))
+
+
 def hvp_fd(build, dA, eps=1e-4):
     # <dA, dS/dU>(U(t)) differentiated by a central difference at t = 0, i.e.
     # an independent reference for the contracted 2nd derivative.  The 1st
@@ -164,72 +187,53 @@ f.assert_gradient_error(rng, [U], [U], 1e-3, 1e-8)
 # the adjoint is a single compiled kernel (one backward pass), compiled at
 # the first backward; the cache key is (output count, flowed inputs)
 assert any(k[0] == 2 and v[1] is not None for k, v in stencil._node_adj.items())
-nPg = rad.node([g.copy(Ps0), g.copy(Ps1)])
+
+
+def build_fused(n):
+    # the fused two-output action over the links (a list node, or four
+    # per-link nodes)
+    out = rad.node([g.lattice(grid, U[0].otype) for _ in range(2)])
+    stencil(out, *g.util.to_list(n))
+    return act_fused(out[0], out[1])
+
+
 nUg = [rad.node(u) for u in U]
-stencil(nPg, *nUg)
-T = act_fused(nPg[0], nPg[1])
-T()
-diff = max(n2(nU.gradient[mu] - nUg[mu].gradient) for mu in range(Nd))
+build_fused(nUg)()
+diff = max_n2_diff(nU.gradient, gradients(nUg))
 g.message(f"1st deriv: fused list input vs per-link inputs: {diff}")
 assert diff < 1e-16
 g.message("fused plaquette 1st derivative: OK")
 
+
+def check_stencil_slots(gradient):
+    # the recorded 1st-derivative slots are ADJOINT stencil nodes -- a
+    # different-code stencil acting on nodes again -- not cshift/mul
+    # expressions; the recursion is a tower of stencils with no cshift
+    slot_str = str(gradient[0])
+    assert "stencil" in slot_str and "cshift" not in slot_str, (
+        "recorded slot should be a stencil node, not a cshift expression")
+    g.message("2nd deriv: recorded slots are stencil nodes (no cshift)")
+
+
 # 2nd derivative (HVP): the reverse pass of S is recorded (create_graph=True),
-# nU2.gradient is a node graph over the same leaf; the backward of its
-# contraction with the plain direction dA deposits d/dU <dA, dS/dU>
+# the gradient of the list node is a node graph over the same leaf; the
+# backward of its contraction with the plain direction dA deposits
+# d/dU <dA, dS/dU>
 dA = rng.normal_element(g.group.cartesian(U))
-nP2 = rad.node([g.copy(Ps0), g.copy(Ps1)])
-nU2 = rad.node(U)
-stencil(nP2, nU2)
-act_fused(nP2[0], nP2[1]).backward(create_graph=True)
-# the recorded 1st-derivative slots (nU2.gradient) are ADJOINT stencil nodes
-# -- a different-code stencil acting on nodes again -- not cshift/mul
-# expressions; the recursion is a tower of stencils with no cshift
-slot_str = str(nU2.gradient[0])
-assert "stencil" in slot_str and "cshift" not in slot_str, (
-    "recorded slot should be a stencil node, not a cshift expression")
-g.message("2nd deriv: recorded slots are stencil nodes (no cshift)")
-contract(nU2.gradient, dA).backward()
-H_list = [g(x) for x in nU2.gradient]
-nP2g = rad.node([g.copy(Ps0), g.copy(Ps1)])
-nU2g = [rad.node(u) for u in U]
-stencil(nP2g, *nU2g)
-act_fused(nP2g[0], nP2g[1]).backward(create_graph=True)
-contract([x.gradient for x in nU2g], dA).backward()
-H_link = [g(nU2g[mu].gradient) for mu in range(Nd)]
-diff = max(n2(H_list[mu] - H_link[mu]) for mu in range(Nd))
+H_list = derivative(build_fused, rad.node(U), [dA], recorded=check_stencil_slots)
+H_link = derivative(build_fused, [rad.node(u) for u in U], [dA])
+diff = max_n2_diff(H_list, H_link)
 g.message(f"2nd deriv (HVP): fused list input vs per-link inputs: {diff}")
 assert diff < 1e-16
-
-
-def build_fused(n):
-    # the fused two-output action over four per-link nodes
-    out = rad.node([g.lattice(grid, U[0].otype) for _ in range(2)])
-    stencil(out, *n)
-    return act_fused(out[0], out[1])
-
-
 assert_hvp_vs_fd(H_list, build_fused, dA, "fused plaquette")
 g.message("fused plaquette 2nd derivative: OK")
 
 # 3rd derivative: two recorded passes, the backward of the contraction with
 # dA deposits the (recorded) HVP, its contraction with dB the 3rd derivative
 dB = g.random("stencil_3rd").normal_element(g.group.cartesian(U))
-nP3 = rad.node([g.copy(Ps0), g.copy(Ps1)])
-nU3 = rad.node(U)
-stencil(nP3, nU3)
-act_fused(nP3[0], nP3[1]).backward(create_graph=True)
-contract(nU3.gradient, dA).backward(create_graph=True)
-contract(nU3.gradient, dB).backward()
-G_list = [g(x) for x in nU3.gradient]
-nP3g = rad.node([g.copy(Ps0), g.copy(Ps1)])
-nU3g = [rad.node(u) for u in U]
-stencil(nP3g, *nU3g)
-act_fused(nP3g[0], nP3g[1]).backward(create_graph=True)
-contract([x.gradient for x in nU3g], dA).backward(create_graph=True)
-contract([x.gradient for x in nU3g], dB).backward()
-G_link = [g(nU3g[mu].gradient) for mu in range(Nd)]
-diff = max(n2(G_list[mu] - G_link[mu]) for mu in range(Nd))
+G_list = derivative(build_fused, rad.node(U), [dA, dB])
+G_link = derivative(build_fused, [rad.node(u) for u in U], [dA, dB])
+diff = max_n2_diff(G_list, G_link)
 g.message(f"3rd deriv: fused list input vs per-link inputs: {diff}")
 assert diff < 1e-16
 g.message("fused plaquette 3rd derivative: OK")
@@ -319,69 +323,48 @@ assert eps < 1e-14
 # node forward + 1st derivative via the __call__ convention: the input link
 # nodes are passed and __call__ allocates the target node (resolving the
 # stencil call to the AD foundation)
-nU = [rad.node(u) for u in U]
-nT = ptm(nU)
-S = act_single(nT)
-S()
-f = S.functional(*nU)
-# 4 link-node arguments -> fields/dfields are the 4-link list U (not [U])
-f.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
-# cross-check against the hand-written single-output plaquette (same
-# computation, different code specification -> gradients must be identical)
-nP1b = rad.node(g.copy(P0))
-nU1b = [rad.node(u) for u in U]
-stencil1(nP1b, *nU1b)
-S1b = act_single(nP1b)
-S1b()
-diff = max(n2(nU1b[mu].gradient - nU[mu].gradient) for mu in range(Nd))
-g.message(f"path vs hand-written single-output plaquette 1st deriv: {diff}")
-assert diff < 1e-16
-g.message("path-based plaquette 1st derivative: OK")
-
-# 2nd derivative (HVP): path-based vs hand-written single-output plaquette
-# (dA is defined in the fused-plaquette sections above)
-# path-based
-nU2 = [rad.node(u) for u in U]
-act_single(ptm(nU2)).backward(create_graph=True)
-contract([x.gradient for x in nU2], dA).backward()
-H_path = [g(nU2[mu].gradient) for mu in range(Nd)]
-# hand-written
-nU21 = [rad.node(u) for u in U]
-T1 = rad.node(g.copy(P0))
-stencil1(T1, *nU21)
-act_single(T1).backward(create_graph=True)
-contract([x.gradient for x in nU21], dA).backward()
-H_hw = [g(nU21[mu].gradient) for mu in range(Nd)]
-diff = max(n2(H_path[mu] - H_hw[mu]) for mu in range(Nd))
-g.message(f"path vs hand-written 2nd deriv (HVP): {diff}")
-assert diff < 1e-16
-
-
 def build_path(n):
     # the single-output action over four per-link nodes, with the
     # target allocated by parallel_transport_matrix.__call__
     return act_single(ptm(n))
 
 
+def build_hand_written(n):
+    # the same with the hand-written single-output plaquette (stencil1)
+    out = rad.node(g.copy(P0))
+    stencil1(out, *n)
+    return act_single(out)
+
+
+nU = [rad.node(u) for u in U]
+S = build_path(nU)
+S()
+f = S.functional(*nU)
+# 4 link-node arguments -> fields/dfields are the 4-link list U (not [U])
+f.assert_gradient_error(rng, U, U, 1e-3, 1e-8)
+# cross-check against the hand-written single-output plaquette (same
+# computation, different code specification -> gradients must be identical)
+nU1b = [rad.node(u) for u in U]
+build_hand_written(nU1b)()
+diff = max_n2_diff(gradients(nU1b), gradients(nU))
+g.message(f"path vs hand-written single-output plaquette 1st deriv: {diff}")
+assert diff < 1e-16
+g.message("path-based plaquette 1st derivative: OK")
+
+# 2nd derivative (HVP): path-based vs hand-written single-output plaquette
+# (dA is defined in the fused-plaquette sections above)
+H_path = derivative(build_path, [rad.node(u) for u in U], [dA])
+H_hw = derivative(build_hand_written, [rad.node(u) for u in U], [dA])
+diff = max_n2_diff(H_path, H_hw)
+g.message(f"path vs hand-written 2nd deriv (HVP): {diff}")
+assert diff < 1e-16
 assert_hvp_vs_fd(H_path, build_path, dA, "path-based plaquette")
 g.message("path-based plaquette 2nd derivative: OK")
 
 # 3rd derivative: path-based vs hand-written single-output plaquette
-# path-based
-nU3 = [rad.node(u) for u in U]
-act_single(ptm(nU3)).backward(create_graph=True)
-contract([x.gradient for x in nU3], dA).backward(create_graph=True)
-contract([x.gradient for x in nU3], dB).backward()
-G_path = [g(nU3[mu].gradient) for mu in range(Nd)]
-# hand-written
-nU31 = [rad.node(u) for u in U]
-T3b = rad.node(g.copy(P0))
-stencil1(T3b, *nU31)
-act_single(T3b).backward(create_graph=True)
-contract([x.gradient for x in nU31], dA).backward(create_graph=True)
-contract([x.gradient for x in nU31], dB).backward()
-G_hw = [g(nU31[mu].gradient) for mu in range(Nd)]
-diff = max(n2(G_path[mu] - G_hw[mu]) for mu in range(Nd))
+G_path = derivative(build_path, [rad.node(u) for u in U], [dA, dB])
+G_hw = derivative(build_hand_written, [rad.node(u) for u in U], [dA, dB])
+diff = max_n2_diff(G_path, G_hw)
 g.message(f"path vs hand-written 3rd deriv: {diff}")
 assert diff < 1e-16
 g.message("path-based plaquette 3rd derivative: OK")
@@ -428,29 +411,14 @@ act_st.gradient(U, U)
 g.qcd.gauge.action.iwasaki(beta).assert_gradient_error(rng, U, U, 1e-3, 1e-8)
 
 
-def hvp_of(action, d):
-    nU = [rad.node(u) for u in U]
-    action(nU).backward(create_graph=True)
-    contract([x.gradient for x in nU], d).backward()
-    return [g(nU[mu].gradient) for mu in range(Nd)]
-
-
-H_st = hvp_of(act_st, dA)
-H_cs = hvp_of(act_cs, dA)
+H_st = derivative(act_st, [rad.node(u) for u in U], [dA])
+H_cs = derivative(act_cs, [rad.node(u) for u in U], [dA])
 diff = max(n2(H_st[mu] - H_cs[mu]) / n2(H_cs[mu]) for mu in range(Nd))
 g.message(f"local temporaries: HVP vs cshift graph: {diff}")
 assert diff < 1e-28
 
-
-def d3_of(action):
-    nU = [rad.node(u) for u in U]
-    action(nU).backward(create_graph=True)
-    contract([x.gradient for x in nU], dA).backward(create_graph=True)
-    contract([x.gradient for x in nU], dB).backward()
-    return [g(nU[mu].gradient) for mu in range(Nd)]
-
-G_st = d3_of(act_st)
-G_cs = d3_of(act_cs)
+G_st = derivative(act_st, [rad.node(u) for u in U], [dA, dB])
+G_cs = derivative(act_cs, [rad.node(u) for u in U], [dA, dB])
 diff = max(n2(G_st[mu] - G_cs[mu]) / n2(G_cs[mu]) for mu in range(Nd))
 g.message(f"local temporaries: 3rd derivative vs cshift graph: {diff}")
 assert diff < 1e-28

@@ -119,23 +119,31 @@ def contract(a, b):
     return sum(g.group.inner_product(a[mu], b[mu]) for mu in range(Nd))
 
 
+def derivative(leaves, directions):
+    # d/dU <d_k, ... d/dU <d_1, dS/dU>> of the action: the reverse pass of S
+    # and of each contraction but the last recorded; leaves: a list node or
+    # per-link nodes
+    def gradients():
+        return leaves.gradient if isinstance(leaves, rad.node_base) else [x.gradient for x in leaves]
+
+    action(leaves).backward(create_graph=True)
+    for k, d in enumerate(directions):
+        contract(gradients(), d).backward(create_graph=k + 1 < len(directions))
+    return [g(x) for x in gradients()]
+
+
+def compare_list_and_links(directions, tag):
+    # the derivative with the links as one list node and as per-link nodes
+    D_list = derivative(rad.node(Ug), directions)
+    D_link = derivative([rad.node(u) for u in Ug], directions)
+    diff = max(n2(D_list[mu] - D_link[mu]) for mu in range(Nd))
+    g.message(f"{tag} list node vs per-link nodes: {diff}")
+    assert diff < 1e-16
+    return D_list
+
+
 dA = rngg.normal_element(g.group.cartesian(Ug))
-
-# list node
-nU = rad.node(Ug)
-action(nU).backward(create_graph=True)
-contract(nU.gradient, dA).backward()
-H_list = [g(x) for x in nU.gradient]
-
-# per-link nodes
-nUg = [rad.node(u) for u in Ug]
-action(nUg).backward(create_graph=True)
-contract([x.gradient for x in nUg], dA).backward()
-H_link = [g(nUg[mu].gradient) for mu in range(Nd)]
-
-diff = max(n2(H_list[mu] - H_link[mu]) for mu in range(Nd))
-g.message(f"HVP list node vs per-link nodes: {diff}")
-assert diff < 1e-16
+H_list = compare_list_and_links([dA], "HVP")
 
 # Taylor identity: S(U + eps A) = S + eps IP(F,A) + eps^2/2 IP(A,H) + O(eps^3)
 F = g.qcd.gauge.action.iwasaki(2.95).gradient(Ug, Ug)
@@ -160,22 +168,5 @@ g.message("list node second derivative (HVP): OK")
 # Cross-checked against per-link leaves (which higher_order.py validates
 # against finite differences).
 dB = g.random("list_node_gauge2").normal_element(g.group.cartesian(Ug))
-
-# list node
-nU = rad.node(Ug)
-action(nU).backward(create_graph=True)
-contract(nU.gradient, dA).backward(create_graph=True)
-contract(nU.gradient, dB).backward()
-G_list = [g(x) for x in nU.gradient]
-
-# per-link nodes
-nUg = [rad.node(u) for u in Ug]
-action(nUg).backward(create_graph=True)
-contract([x.gradient for x in nUg], dA).backward(create_graph=True)
-contract([x.gradient for x in nUg], dB).backward()
-G_link = [g(nUg[mu].gradient) for mu in range(Nd)]
-
-diff = max(n2(G_list[mu] - G_link[mu]) for mu in range(Nd))
-g.message(f"3rd derivative list node vs per-link nodes: {diff}")
-assert diff < 1e-16
+compare_list_and_links([dA, dB], "3rd derivative")
 g.message("list node third derivative: OK")
