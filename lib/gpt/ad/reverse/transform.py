@@ -20,12 +20,7 @@ import gpt as g
 import numpy as np
 from gpt.ad.reverse.primitive import primitive
 from gpt.ad.reverse import tangent
-
-
-def _same(x, **static):
-    # the container of a componentwise map: that of its argument (a copy:
-    # containers are mutable, see node.set_otype)
-    return x.copy()
+from gpt.ad.reverse.util import same_container
 
 
 def _chain_jvp(derivative):
@@ -51,7 +46,7 @@ def _plain_conj(v):
 conj = primitive(
     "conj",
     _plain_conj,
-    _same,
+    same_container,
     vjp=lambda i, flow, x: conj(flow),
     reads=((),),
     jvp=tangent.linear(lambda t: conj(t)),
@@ -70,7 +65,7 @@ def _plain_multiply(a, b):
 multiply = primitive(
     "multiply",
     _plain_multiply,
-    lambda a, b: a.copy(),
+    same_container,
     vjp=lambda i, flow, a, b: multiply(flow, conj(b)) if i == 0 else multiply(conj(a), flow),
     reads=((1,), (0,)),
     jvp=tangent.bilinear(lambda a, b: multiply(a, b)),
@@ -81,7 +76,7 @@ multiply = primitive(
 drelu = primitive(
     "drelu",
     lambda x, a: g.component.drelu(a)(x),
-    _same,
+    same_container,
     vjp=lambda i, flow, x, a: None,
     reads=((),),
     jvp=tangent.constant,
@@ -91,7 +86,7 @@ drelu = primitive(
 _relu = primitive(
     "relu",
     lambda x, a: g.component.relu(a)(x),
-    _same,
+    same_container,
     vjp=lambda i, flow, x, a: multiply(flow, drelu(x, a=a)),
     reads=((0,),),
     jvp=_chain_jvp(lambda x, a: drelu(x, a=a)),
@@ -107,7 +102,7 @@ def relu(x, a=0.0):
 sin = primitive(
     "sin",
     lambda x: g.component.sin(x),
-    _same,
+    same_container,
     vjp=lambda i, flow, x: multiply(flow, conj(cos(x))),
     reads=((0,),),
     jvp=_chain_jvp(lambda x: cos(x)),
@@ -116,7 +111,7 @@ sin = primitive(
 cos = primitive(
     "cos",
     lambda x: g.component.cos(x),
-    _same,
+    same_container,
     vjp=lambda i, flow, x: -multiply(flow, conj(sin(x))),
     reads=((0,),),
     jvp=_chain_jvp(lambda x: -sin(x)),
@@ -133,7 +128,7 @@ def _pow_derivative(x, exponent):
 _pow = primitive(
     "pow",
     lambda x, exponent: g.component.pow(exponent)(x),
-    _same,
+    same_container,
     vjp=lambda i, flow, x, exponent: multiply(flow, conj(_pow_derivative(x, exponent))),
     reads=((0,),),
     jvp=_chain_jvp(_pow_derivative),
@@ -147,7 +142,7 @@ def pow(x, exponent):
 log = primitive(
     "log",
     lambda x: g.component.log(x),
-    _same,
+    same_container,
     vjp=lambda i, flow, x: multiply(flow, conj(pow(x, -1.0))),
     reads=((0,),),
     jvp=_chain_jvp(lambda x: pow(x, -1.0)),
@@ -170,7 +165,7 @@ def _plain_part(v, part):
 real = primitive(
     "real",
     lambda x: _plain_part(x, "real"),
-    _same,
+    same_container,
     vjp=lambda i, flow, x: real(flow),
     reads=((),),
     jvp=tangent.linear(lambda t: real(t)),
@@ -186,7 +181,7 @@ def _imag_vjp(i, flow, x):
 imag = primitive(
     "imag",
     lambda x: _plain_part(x, "imag"),
-    _same,
+    same_container,
     vjp=_imag_vjp,
     reads=((),),
     jvp=tangent.linear(lambda t: imag(t)),

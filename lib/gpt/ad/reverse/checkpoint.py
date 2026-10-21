@@ -40,26 +40,19 @@
 #
 import gpt as g
 from gpt.ad.reverse.primitive import primitive
-from gpt.ad.reverse.util import constant, get_container, is_node, list_container
+from gpt.ad.reverse.util import (
+    contraction,
+    get_container,
+    is_node,
+    list_container,
+    recorded_gradients,
+)
 
 
-def _contraction(seeds, y):
-    # real(sum_j <c_j, y_j>): its reverse pass gives the vjp with the flows c
-    # (the contraction of jacobian._chunked)
-    L = None
-    for c, yj in zip(seeds, y):
-        t = g.inner_product(constant(c), yj)
-        L = t if L is None else L + t
-    return g.component.real(L)
-
-
-def _flow(leaf, c, node):
-    # a leaf's gradient, or a zero of its container if it received none (a
-    # lazy zero node in a recorded pass)
+def _flow(leaf, c):
+    # a leaf's gradient, or a zero of its container if it received none
     gr = leaf.gradient
-    if gr is not None:
-        return gr
-    return g.ad.reverse.zero(c) if node else c.zero()
+    return c.zero() if gr is None else gr
 
 
 def _vjp_function(f, n, needed, outputs):
@@ -73,18 +66,12 @@ def _vjp_function(f, n, needed, outputs):
             # next level can record gradients w.r.t. any of them)
             leaves = [g.ad.reverse.node(v, infinitesimal_to_cartesian=False) for v in x]
             y = f(leaves)
-            _contraction(seeds, [y[j] for j in outputs]).backward(wrt=[leaves[i] for i in needed])
-            return [_flow(leaves[i], get_container(x[i]), False) for i in needed]
+            contraction(seeds, [y[j] for j in outputs]).backward(wrt=[leaves[i] for i in needed])
+            return [_flow(leaves[i], get_container(x[i])) for i in needed]
         # nodes (the leaves of a local pass of the next level): f and its
         # recorded local reverse pass over them
         y = f(x)
-        L = _contraction(seeds, [y[j] for j in outputs])
-        L.backward(create_graph=True, wrt=[x[i] for i in needed])
-        flows = [_flow(x[i], x[i]._container, True) for i in needed]
-        for i in needed:
-            # (no leaf -> flow -> recorded graph -> leaf cycle)
-            x[i].flow = None
-        return flows
+        return recorded_gradients(contraction(seeds, [y[j] for j in outputs]), [x[i] for i in needed])
 
     return h
 

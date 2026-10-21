@@ -34,6 +34,7 @@ from gpt.ad.reverse.util import (
     _structural,
     gradient_flag,
     container,
+    same_container,
 )
 from gpt.ad.reverse import flow as flows
 from gpt.ad.reverse.flow import accum
@@ -607,7 +608,7 @@ def _sum_jvp(sign):
 _add = primitive(
     "+",
     lambda x, y: x + y,
-    lambda x, y: x,
+    same_container,
     vjp=lambda i, flow, x, y: flow,
     reads=((), ()),
     jvp=_sum_jvp(1.0),
@@ -616,7 +617,7 @@ _add = primitive(
 _sub = primitive(
     "-",
     lambda x, y: x - y,
-    lambda x, y: x,
+    same_container,
     vjp=lambda i, flow, x, y: flow if i == 0 else flows.negative(flow),
     reads=((), ()),
     jvp=_sum_jvp(-1.0),
@@ -737,7 +738,7 @@ def _pow_jvp(z, children, tangents, n, lattice, matrix):
 _pow = primitive(
     "**",
     lambda x, n, lattice, matrix: _power(x, n, lattice),
-    lambda x, n, lattice, matrix: x,
+    same_container,
     vjp=_pow_vjp,
     reads=((0,),),
     jvp=_pow_jvp,

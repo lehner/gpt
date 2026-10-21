@@ -46,7 +46,7 @@ import gpt as g
 from gpt.algorithms.integrator.symplectic import symplectic_base, schemes
 from gpt.ad.reverse.primitive import primitive
 from gpt.ad.reverse.checkpoint import checkpoint
-from gpt.ad.reverse.util import get_container, is_node, list_container
+from gpt.ad.reverse.util import get_container, is_node, list_container, recorded_gradients
 
 
 class _update:
@@ -123,41 +123,41 @@ def _cartesian(c):
     return c
 
 
+def _count(fields, n):
+    # the number of fields with a force (n; None: all)
+    return len(fields) if n is None else n
+
+
+def _plain_force(S, n, fields):
+    # the plain force of S w.r.t. its first n fields
+    return g.util.to_list(S.gradient(fields, fields[: _count(fields, n)]))
+
+
 def gradient(S, n=None):
     # the force of the action S (a functional of a list of fields accepting
     # nodes) w.r.t. its first n fields (default all); the remaining fields
     # are parameters of S (differentiated through, no force returned)
-    def plain(fields):
-        m = len(fields) if n is None else n
-        return g.util.to_list(S.gradient(fields, fields[:m]))
-
     def recorded(leaves):
         # leaves of a local pass (infinitesimal_to_cartesian=False): record the
         # gradient and convert it explicitly, so that the conversion is
         # differentiated as well
-        m = len(leaves) if n is None else n
-        x = leaves[:m]
-        S(leaves).backward(create_graph=True, wrt=x)
-        frc = []
-        for xi in x:
-            gr = xi.gradient
-            if gr is None:
-                gr = g.ad.reverse.zero(xi._container)
-            frc.append(g.infinitesimal_to_cartesian(xi, gr))
-            # (no leaf -> flow -> recorded graph -> leaf cycle)
-            xi.flow = None
-        return frc
+        x = leaves[: _count(leaves, n)]
+        return [
+            g.infinitesimal_to_cartesian(xi, gr)
+            for xi, gr in zip(x, recorded_gradients(S(leaves), x))
+        ]
 
     def f(fields):
         # the checkpoint's forward (plain) and its local passes (leaves)
         if any(is_node(x) for x in fields):
             return recorded(fields)
-        return plain(fields)
+        return _plain_force(S, n, fields)
 
     def force(fields):
         fields = list(fields)
-        m = len(fields) if n is None else n
-        return checkpoint(f, fields, [_cartesian(get_container(x)) for x in fields[:m]])
+        return checkpoint(
+            f, fields, [_cartesian(get_container(x)) for x in fields[: _count(fields, n)]]
+        )
 
     force.recorded = recorded
     return force
@@ -181,17 +181,14 @@ def gradient_finite_difference(S, n=None, epsilon=1e-3, **scheme):
     # 4 evaluations of the full gradient of S per force in the backward pass
     # (scheme=...: another scheme of directional_derivative).
     def plain(*fields):
-        fields = list(fields)
-        m = len(fields) if n is None else n
-        return g.util.to_list(S.gradient(fields, fields[:m]))
+        return _plain_force(S, n, list(fields))
 
     def container(*containers):
-        m = len(containers) if n is None else n
-        return list_container([_cartesian(c) for c in containers[:m]])
+        return list_container([_cartesian(c) for c in containers[: _count(containers, n)]])
 
     def joint_vjp(z, needed, *fields):
         fields = list(fields)
-        m = len(fields) if n is None else n
+        m = _count(fields, n)
         flows = z.gradient
         if all(c is None for c in flows):
             return {}
@@ -211,8 +208,7 @@ def gradient_finite_difference(S, n=None, epsilon=1e-3, **scheme):
 
     def force(fields):
         fields = list(fields)
-        m = len(fields) if n is None else n
         z = op(*fields)
-        return [z[k] for k in range(m)]
+        return [z[k] for k in range(_count(fields, n))]
 
     return force

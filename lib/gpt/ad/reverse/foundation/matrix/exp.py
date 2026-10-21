@@ -207,7 +207,7 @@ def _jvp(z, children, tangents, family, outputs, listed, tower, root):
 
 
 def _container(x, *h, family, outputs, listed, tower, root):
-    return container(list, x, len(outputs)) if listed else x
+    return container(list, x.copy(), len(outputs)) if listed else x.copy()
 
 
 _J = primitive("exp_jet", _plain, _container, joint_vjp=_vjp, fwd=_fwd, jvp=_jvp)

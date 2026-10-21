@@ -170,7 +170,7 @@ def _stack_jvp(z, children, tangents):
 _stack = primitive(
     "stack",
     lambda *h: list(h),
-    lambda *c: container(list, c[0], len(c)),
+    lambda *c: container(list, c[0].copy(), len(c)),
     vjp=lambda j, flow, *h: flow[j],
     reads=lambda n: ((),) * n,
     jvp=_stack_jvp,
@@ -231,7 +231,7 @@ def _matrix_vector_vjp(z, needed, W, h, residual):
 matrix_vector = primitive(
     "matrix_vector",
     lambda W, h: _plain_matrix_vector(W, h),
-    lambda W, h: container(list, h.tag[1], W.tag[1][0]),
+    lambda W, h: container(list, h.tag[1].copy(), W.tag[1][0]),
     joint_vjp=_matrix_vector_vjp,
     fwd=lambda W, h: _fwd_matrix_vector(W, h),
     lift=(constant, stack),

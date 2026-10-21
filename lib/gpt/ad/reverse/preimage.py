@@ -102,7 +102,7 @@ def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
 
     def z_container(*containers):
         c = containers[indices[0]]
-        return c if len(indices) == 1 else container(list, c, len(indices))
+        return c.copy() if len(indices) == 1 else container(list, c.copy(), len(indices))
 
     op = primitive(
         "preimage",

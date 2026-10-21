@@ -26,6 +26,7 @@ from gpt.ad.reverse.util import (
     value_of,
     is_node,
     nodify,
+    same_container,
 )
 from gpt.ad.reverse import flow as flows
 from gpt.ad.reverse.primitive import primitive
@@ -36,9 +37,9 @@ import gpt.ad.reverse.foundation.local_stencil
 
 
 def _plain_inner_product(x, y, n_block, use_accelerator):
-    if gpt.util.is_num(x) and gpt.util.is_num(y):
+    if g.util.is_num(x) and g.util.is_num(y):
         # support for "0d vectors"
-        return gpt.adj(x) * y
+        return g.adj(x) * y
     return g.inner_product(x, y, n_block, use_accelerator)
 
 
@@ -47,7 +48,7 @@ def _inner_product_vjp(i, flow, x, y, **static):
     # recorded pass (a plain 1) gives the cofactor node itself (no product
     # with 1 in the recorded graph)
     cofactor = y if i == 0 else x
-    if is_node(cofactor) and gpt.util.is_num(flow) and flow == 1:
+    if is_node(cofactor) and g.util.is_num(flow) and flow == 1:
         return cofactor
     return y * g.adj(flow) if i == 0 else x * flow
 
@@ -77,15 +78,10 @@ def norm2(x):
     return [g.inner_product(x, x)[0, 0]]
 
 
-def _same(x, **static):
-    # the container of a map that keeps the type
-    return x
-
-
 _cshift = primitive(
     "cshift",
     lambda x, direction, displacement: g.cshift(x, direction, displacement),
-    _same,
+    same_container,
     vjp=lambda i, flow, x, direction, displacement: g.cshift(flow, direction, -displacement),
     reads=((),),
 )
@@ -99,7 +95,7 @@ def cshift(x, direction, displacement, none):
 _adj = primitive(
     "adj",
     lambda x: g.adj(x),
-    _same,
+    same_container,
     vjp=lambda i, flow, x: g.adj(flow),
     reads=((),),
     jvp=tangent.linear(g.adj),
@@ -200,7 +196,7 @@ def _project(v, name):
 _projection = primitive(
     "projection",
     _project,
-    _same,
+    same_container,
     vjp=lambda i, flow, x, name: _project(flow, name),
     reads=((),),
     jvp=tangent.linear(_project),
@@ -219,7 +215,7 @@ def _group_conversion(src, dsrc, method):
     # dispatch on the perturbation's otype conversion method (infinitesimal_to_
     # cartesian or cartesian_to_infinitesimal), as in the lattice and forward-AD
     # foundations; node.value may be None for unevaluated (or freed) nodes
-    if gpt.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
+    if g.util.is_num(dsrc.value) or isinstance(dsrc.value, np.ndarray):
         return dsrc
     if is_node(dsrc):
         # a recorded gradient is a lazy compute graph; the otype conversion is
@@ -257,7 +253,7 @@ def _plain_identity(x):
 _identity = primitive(
     "identity",
     _plain_identity,
-    _same,
+    same_container,
     vjp=lambda i, flow, x: None,
     reads=((),),
     jvp=tangent.constant,
@@ -349,7 +345,7 @@ def _zero_constant(c):
 _where = primitive(
     "where",
     lambda yes, no, question, branch: g.where(question, yes, no),
-    lambda yes, no, question, branch: yes,
+    same_container,
     vjp=_where_vjp,
     reads=((), ()),
 )

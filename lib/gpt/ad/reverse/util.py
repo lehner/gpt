@@ -212,7 +212,7 @@ def list_container(elems):
     # the container of a list whose elements have the containers elems
     if len(elems) == 0 or any(not e.accumulate_compatible(elems[0]) for e in elems[1:]):
         raise TypeError(f"Not a uniform list: {[str(e) for e in elems]}")
-    return container(list, elems[0], len(elems))
+    return container(list, elems[0].copy(), len(elems))
 
 
 def is_node(x):
@@ -234,6 +234,31 @@ def nodify(*args):
     if any(is_node(a) for a in args):
         args = tuple(constant(a) for a in args)
     return args[0] if len(args) == 1 else args
+
+
+def contraction(seeds, y):
+    # real(sum_j <c_j, y_j>) for plain seeds c_j: its reverse pass gives the
+    # vector-Jacobian product of the y_j with the flows c_j (the local passes
+    # of checkpoints and of chunked Jacobians)
+    L = None
+    for c, yj in zip(seeds, y):
+        t = g.inner_product(constant(c), yj)
+        L = t if L is None else L + t
+    return g.component.real(L)
+
+
+def recorded_gradients(root, leaves):
+    # the gradients of the leaves by a recorded reverse pass of root
+    # (create_graph=True, restricted to the leaves), a lazy zero for a leaf
+    # that receives none; the leaves' flows are reset (no leaf -> flow ->
+    # recorded graph -> leaf cycle)
+    root.backward(create_graph=True, wrt=leaves)
+    gradients = []
+    for x in leaves:
+        gr = x.gradient
+        gradients.append(g.ad.reverse.zero(x._container) if gr is None else gr)
+        x.flow = None
+    return gradients
 
 
 class _recording_state:
@@ -377,7 +402,14 @@ def get_mul_container(x, y):
 
 def get_div_container(x, y):
     assert y.tag[0] is complex
-    return x
+    return x.copy()
+
+
+def same_container(x, *others, **static):
+    # the container of an operation whose result has the type of its first
+    # argument: a copy (containers are mutable, see node.set_otype, so a node
+    # never shares its container with a child)
+    return x.copy()
 
 
 def get_unary_container(x, unary, key=None):

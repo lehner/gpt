@@ -48,14 +48,14 @@
 #
 import gpt as g
 from gpt.ad.reverse.primitive import primitive
-from gpt.ad.reverse.util import container, constant
+from gpt.ad.reverse.util import container, contraction, same_container
 from gpt.ad.reverse import tangent
 
 # x as a new node of the same value (the boundary of a local map, see above)
 identity = primitive(
     "identity",
     lambda x: x,
-    lambda c: c.copy(),
+    same_container,
     vjp=lambda i, flow, x: flow,
     reads=((),),
     jvp=tangent.linear(lambda t: t),
@@ -227,11 +227,7 @@ class _chunked:
         flows = {}
         for a, T in self.chunks:
             leaves = self._leaves(values, needed)
-            L = None
-            for i, h in enumerate(self._chunk_columns(leaves, T)):
-                t = g.inner_product(constant(r[a + i]), h)
-                L = t if L is None else L + t
-            g.component.real(L).backward()
+            contraction(r[a : a + len(T)], self._chunk_columns(leaves, T)).backward()
             for i in needed:
                 gr = leaves[id(self.primal[i])].gradient
                 if gr is not None:
@@ -271,7 +267,7 @@ def _inv_vjp(i, flow, M):
 inv = primitive(
     "matrix_inv",
     lambda M: g.matrix.inv(M),
-    lambda c: c.copy(),
+    same_container,
     vjp=_inv_vjp,
 )
 
