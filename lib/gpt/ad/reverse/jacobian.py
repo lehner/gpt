@@ -123,11 +123,10 @@ class _coordinates:
     def matrix(self, H):
         cols = []
         for h in H:
+            x = g.lattice(self.grid, self.cartesian)
             if h is None:
-                x = g.lattice(self.grid, self.cartesian)
                 x[:] = 0
             else:
-                x = g.lattice(self.grid, self.cartesian)
                 x @= h
             cols.append(x)
         M = g.lattice(self.grid, self.otype)
@@ -216,15 +215,12 @@ class _chunked:
         return _columns(self.y, self.x, self.order, generators, self.otype, lambda n: leaves[id(n)])
 
     def _plain(self, *values):
-        coordinates = self.coordinates
-        ng = coordinates.kernels.ng
-        M = g.lattice(coordinates.grid, coordinates.otype)
-        M[:] = 0
+        # the columns of all chunks, then the matrix once
+        H = []
         for a, T in self.chunks:
             leaves = self._leaves(values)
-            H = g.ad.reverse.linear.stack(self._chunk_columns(leaves, T))(with_gradients=False)
-            M += coordinates.matrix([None] * a + list(H) + [None] * (ng - a - len(H)))
-        return g(g.transpose(M))
+            H += g.ad.reverse.linear.stack(self._chunk_columns(leaves, T))(with_gradients=False)
+        return self.coordinates._plain(*H)
 
     def _vjp(self, z, needed, *values):
         r = self.coordinates.flows(z.gradient)
@@ -239,8 +235,19 @@ class _chunked:
             for i in needed:
                 gr = leaves[id(self.primal[i])].gradient
                 if gr is not None:
-                    flows[i] = gr if i not in flows else g(flows[i] + gr)
+                    flows[i] = gr if i not in flows else _added(flows[i], gr)
         return flows
+
+
+def _added(a, b):
+    # a + b for flows of the chunks (a leaf gradient, owned: a lattice is
+    # updated in place; a list leaf's gradient element by element)
+    if isinstance(a, list):
+        return [_added(x, y) for x, y in zip(a, b)]
+    if isinstance(a, g.lattice):
+        a += b
+        return a
+    return g(a + b)
 
 
 def jacobian(y, x, chunk=None):

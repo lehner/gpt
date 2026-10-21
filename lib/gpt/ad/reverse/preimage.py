@@ -49,12 +49,16 @@ def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
         x = inverse(list(y))
         return outputs(x), x
 
-    def jacobian(x, y, lam):
+    def jacobian(x, y, lam, inputs):
         # the vector-Jacobian product of phi at x for a cotangent lam on the
-        # updated fields (zero on the others)
+        # updated fields (zero on the others); inputs: the positions whose
+        # flows are read (passed on if phi declares its identity outputs, as
+        # differentiable_functional.transformed does)
         d = [g.group.zero(v) for v in x]
         for i, l in zip(indices, lam):
             d[i] = l
+        if hasattr(dfm, "identity_outputs"):
+            return dfm.jacobian(x, y, d, inputs=inputs)
         return dfm.jacobian(x, y, d)
 
     def joint_vjp(z, needed, *y, residual):
@@ -73,17 +77,20 @@ def preimage(dfm, fields, indices, inverse, inverter=None, solve=None):
         elif len(indices) == 1:
 
             def mat(dst, src):
-                dst @= jacobian(x, y, [src])[indices[0]]
+                dst @= jacobian(x, y, [src], indices)[indices[0]]
 
             lam = [inverter(mat)(c[0])]
         else:
 
             def mat(dst, src):
                 lam = g.separate(src, dimension=0)
-                dst @= g.merge([jacobian(x, y, lam)[i] for i in indices], dimension=0)
+                jl = jacobian(x, y, lam, indices)
+                dst @= g.merge([jl[i] for i in indices], dimension=0)
 
             lam = g.separate(inverter(mat)(g.merge(c, dimension=0)), dimension=0)
-        jl = jacobian(x, y, lam)
+        # (the flows into the other inputs: only if one of them is needed)
+        others = [j for j in needed if j not in indices]
+        jl = jacobian(x, y, lam, others) if others else None
         result = {}
         for j in needed:
             if j in indices:

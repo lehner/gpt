@@ -261,11 +261,15 @@ class _listing:
         # the lattice values alive at once in a forward-only pass (values
         # freed after their last use), and the ones a reverse pass keeps for
         # the backward (see needed_values)
-        live, peak = set(), 0
+        live, n_live, peak = set(), 0, 0
         for n in computed:
             live.add(n)
-            peak = max(peak, sum(1 for m in live if _is_lattice(m._container)))
-            live -= set(self.free[n])
+            n_live += _is_lattice(n._container)
+            peak = max(peak, n_live)
+            for m in self.free[n]:
+                if m in live:
+                    live.remove(m)
+                    n_live -= _is_lattice(m._container)
         kept = [
             n
             for n in self.needed_values(self.nodes)

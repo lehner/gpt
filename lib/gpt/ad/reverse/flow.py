@@ -132,7 +132,8 @@ def accumulate(cur, r, sign, container, adopt=True):
     # list of values, or a scaled_identity) to a gradient of the container:
     #   first contribution             adopted if it is a node graph of the
     #                                  same container while recording (graphs
-    #                                  are immutable) or a plain field of the
+    #                                  are immutable; a negative lattice one
+    #                                  as -1 * graph) or a plain field of the
     #                                  container (adopt=True), as not owned;
     #                                  otherwise assigned into a fresh
     #                                  (owned) field
@@ -172,8 +173,15 @@ def accumulate(cur, r, sign, container, adopt=True):
     graph = recording()
     if cur is None:
         if graph and is_node(r):
-            if sign > 0 and r._container == container:
-                return dense(r, True)
+            if r._container == container:
+                if sign > 0:
+                    return dense(r, True)
+                if container.tag[0] == g.lattice:
+                    # (-1 * r rather than zero - r: no zero field held by
+                    # the recorded graph)
+                    r_neg = (-1.0) * r
+                    if r_neg._container == container:
+                        return dense(r_neg, True)
         elif container.tag[0] == g.lattice:
             r = value_of(r) if is_node(r) else r
             if (

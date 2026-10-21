@@ -693,23 +693,34 @@ def _between(left, middle, right, mul):
     return r
 
 
+def _powers(x, n):
+    # [None, x, x^2, ..., x^(n-1)] (the first n entries; None for x^0), one
+    # product each (plain products are evaluated, so that they are reused)
+    p = [None, x]
+    for _ in range(n - 2):
+        r = p[-1] * x
+        p.append(r if is_node(r) else g(r))
+    return p[:n]
+
+
+def _matrix_power_terms(p, middle):
+    # sum_j p[j] middle p[n-1-j] for the powers p of _powers (x^0 left out)
+    n = len(p)
+    return tangent.total(
+        [
+            _between(p[j], middle, p[n - 1 - j], lambda a, b: a * b)
+            for j in range(n)
+        ]
+    )
+
+
 def _pow_vjp(i, flow, x, n, lattice, matrix):
     # z = x**n -> dz/dx = n*x**(n-1), so the flow is adj(n*x**(n-1)) * flow
     # (for real values the adj is the identity).  For matrices the flow is
     # sum_i adj(x^i) flow adj(x^(n-1-i))
     if not matrix:
         return flow * n * g.adj(_power(x, n - 1, lattice))
-    return tangent.total(
-        [
-            _between(
-                g.adj(_power(x, j, lattice)) if j > 0 else None,
-                flow,
-                g.adj(_power(x, n - 1 - j, lattice)) if j < n - 1 else None,
-                lambda a, b: a * b,
-            )
-            for j in range(n)
-        ]
-    )
+    return _matrix_power_terms([None if v is None else g.adj(v) for v in _powers(x, n)], flow)
 
 
 def _pow_jvp(z, children, tangents, n, lattice, matrix):
@@ -719,20 +730,8 @@ def _pow_jvp(z, children, tangents, n, lattice, matrix):
         return tangent.constant(z, children, tangents)
     if not matrix:
         return [n * _power(x, n - 1, lattice) * dx for dx in t]
-    return [
-        tangent.total(
-            [
-                _between(
-                    _power(x, j, lattice) if j > 0 else None,
-                    dx,
-                    _power(x, n - 1 - j, lattice) if j < n - 1 else None,
-                    lambda a, b: a * b,
-                )
-                for j in range(n)
-            ]
-        )
-        for dx in t
-    ]
+    p = _powers(x, n)
+    return [_matrix_power_terms(p, dx) for dx in t]
 
 
 _pow = primitive(

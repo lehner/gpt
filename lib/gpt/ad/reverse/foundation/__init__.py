@@ -42,14 +42,21 @@ def _plain_inner_product(x, y, n_block, use_accelerator):
     return g.inner_product(x, y, n_block, use_accelerator)
 
 
-# z = adj(x) y   ->   x = y adj(z)   and   y = x z
+def _inner_product_vjp(i, flow, x, y, **static):
+    # z = adj(x) y   ->   x = y adj(z)   and   y = x z.  The seed of a
+    # recorded pass (a plain 1) gives the cofactor node itself (no product
+    # with 1 in the recorded graph)
+    cofactor = y if i == 0 else x
+    if is_node(cofactor) and gpt.util.is_num(flow) and flow == 1:
+        return cofactor
+    return y * g.adj(flow) if i == 0 else x * flow
+
+
 _inner_product = primitive(
     "inner_product",
     _plain_inner_product,
     lambda x, y, **static: container(complex),
-    vjp=lambda i, flow, x, y, **static: (
-        y * g.adj(flow) if i == 0 else x * flow
-    ),
+    vjp=_inner_product_vjp,
     reads=((1,), (0,)),
 )
 
@@ -321,9 +328,22 @@ def _where_vjp(i, flow, yes, no, question, branch):
     # container of both branches).  Node-aware: a recorded flow routes to the
     # rev-AD where, not to the plain foundation, which cannot build a lattice
     # from a node
+    zero = _zero_constant(branch)
     if i == 0:
-        return g.where(question, *nodify(flow, branch.zero()))
-    return g.where(question, *nodify(branch.zero(), flow))
+        return g.where(question, *nodify(flow, zero))
+    return g.where(question, *nodify(zero, flow))
+
+
+def _zero_constant(c):
+    # the zero of the container c; for a lattice shared per type on its grid
+    # (as g.identity_constant), so it must not be modified (an operand only)
+    if c.tag[0] is not g.lattice:
+        return c.zero()
+    cache = c.get_grid().__dict__.setdefault("_zero_constant", {})
+    key = str(c)
+    if key not in cache:
+        cache[key] = c.zero()
+    return cache[key]
 
 
 _where = primitive(

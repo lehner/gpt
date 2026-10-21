@@ -84,9 +84,23 @@ class _transverse_flow:
         self.staples = transverse_staples(mu)
         assert checkpoint is None or checkpoint >= 1
         self.checkpoint = checkpoint
+        # the output containers of m steps per input containers (types only)
+        self.output_containers = {}
 
     def _steps(self, F, n):
         raise NotImplementedError()
+
+    def _output_containers(self, F, m):
+        # the containers of the outputs of m steps, inferred once per input
+        # types as checkpoint would (the steps on lazy zeros), so that the
+        # checkpoint of a segment builds no graph for them
+        get_container = g.ad.reverse.util.get_container
+        inputs = [get_container(x) for x in F]
+        key = (tuple(str(c) for c in inputs), m)
+        if key not in self.output_containers:
+            proxies = [g.ad.reverse.zero(c) for c in inputs]
+            self.output_containers[key] = [get_container(y) for y in self._steps(proxies, m)]
+        return [c.copy() for c in self.output_containers[key]]
 
     def __call__(self, F):
         k = self.checkpoint
@@ -95,7 +109,9 @@ class _transverse_flow:
         done = 0
         while done < self.n:
             m = min(k, self.n - done)
-            F = g.ad.reverse.checkpoint(lambda X, m=m: self._steps(X, m), F)
+            F = g.ad.reverse.checkpoint(
+                lambda X, m=m: self._steps(X, m), F, self._output_containers(F, m)
+            )
             done += m
         return F
 
