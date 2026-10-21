@@ -42,6 +42,7 @@ for f in \
     ${test_path}/core/orthogonalize.py \
     ${test_path}/core/matrix.py \
     ${test_path}/core/split.py \
+    ${test_path}/core/auto_tune.py \
     ${test_path}/core/other_representations.py \
     ${test_path}/core/quadruple_precision.py \
     ${test_path}/random/simple.py \

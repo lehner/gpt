@@ -50,6 +50,10 @@ def set_element(a, i, b):
         else:
             a[i] @= b
     elif isinstance(a[i], np.ndarray):
+        if not np.iscomplexobj(a[i]) and np.iscomplexobj(b):
+            # real parameters: the updates are complex with vanishing imaginary part
+            assert not np.any(np.abs(np.imag(b)) > 0)
+            b = np.real(b)
         a[i][...] = b
     else:
         a[i] = b

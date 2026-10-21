@@ -95,6 +95,7 @@ class matrix(auto_tuned_class):
             tag,
             [(fast_osites, threads) for fast_osites in [0, 1] for threads in g.default.auto_tune_threads],
             (0, 0),
+            lat.grid,
         )
 
     @auto_tuned_method()

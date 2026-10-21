@@ -58,7 +58,7 @@ class tensor(auto_tuned_class):
             for opi in [2, 4, 8, 16, 32, 64, 128, 256]
             for opcb in [256, 1024, 8192, lsites]
             for threads in g.default.auto_tune_threads
-        ], (4, lsites, 0))
+        ], (4, lsites, 0), lat.grid)
 
     @auto_tuned_method()
     def __call__(self, performance_args, *fields):
