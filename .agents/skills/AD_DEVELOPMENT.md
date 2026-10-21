@@ -792,6 +792,23 @@ Plain-run optimizations:
   otherwise (dense flows).  Consumers apply their plain-only shortcuts only
   for plain values.  (Possible optimisation: a scaled identity with a node
   c; a seedless stencil adjoint with c is c times the one with 1.)
+- **Deferred reductions** (`flow.pending_sum`, plain passes only): a number
+  used in a lattice operation is converted (`_convert` in `node.py`), whose
+  vjp sums the lattice flow over the sites.  In a plain pass it keeps the
+  rank-local sum (`rank_sum`, no communication); the number's flow is then
+  base + (the sum over the ranks of partial).  `_reverse` sets aside the nodes
+  whose flow is pending and every node below them, continues the sweep,
+  reduces all pending sums of the pass in one global sum per grid
+  (`flow.flush`, an array of the partials), then processes the nodes set
+  aside in their order (repeated if these produce new pending sums, e.g. a
+  number computed from a lattice and used again).  A spectral_loop step's
+  pass: 3 global sums -> 1.  Results are those of the undeferred pass up to
+  the association of several contributions to one number.  Each reverse
+  pass keeps its own list of pending nodes (a pass nested in a backward
+  reduces its own); reading a pending gradient reduces at once; an
+  exception reduces nothing (a global sum is collective).  Recorded passes
+  keep their sum nodes.  A tensor-valued sum is reduced at once.  Switch:
+  `g.ad.reverse.flow.defer` (tested in `tests/ad/ad.py`, end).
 
 ### 4.9 Checkpoints (`ad/reverse/checkpoint.py`)
 
@@ -940,7 +957,7 @@ one round 0.31 -> 0.19 s at 8^4).
 | `lib/gpt/ad/reverse/node_str.py` | `str(node)`: the graph as a listing of temporaries with lattice-op costs, sharing, recomputed subexpressions and memory peaks (§4.1) |
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops, shared nodes, involutions), §4.1 |
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
-| `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`), `negative`, `accumulate`, `accum`, §4.8 |
+| `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`, `pending_sum`: deferred reductions, `flush`), `negative`, `accumulate`, `accum`, §4.8 |
 | `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `value_of`, `record`/`recording` (recorded passes), `pass_scope` / `release_at_pass_end` (pass-scoped caches, §4.6), `is_node`, containers (`get_container`, `get_*_container`, `list_container`, `same_container`: a copy of the first argument's container, the rule of every type-preserving primitive, since a node never shares its container with a child; a container's str is cached, so its tag changes only through `set_otype`; `otype_compatible` is memoized by otype name), local passes (`contraction`: real(sum_j <c_j, y_j>) whose reverse pass is a vjp; `recorded_gradients`: the recorded gradients of leaves, lazy zeros for none, flows reset) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, drelu, sin, cos, real, imag, conj, log, pow (`g.component.inv` is pow(-1)), `multiply` (the foundation's `component_simple_map` / `component_multiply` dispatch here) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order, a joint-vjp primitive; used by `g.ml` losses) |

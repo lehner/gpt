@@ -32,6 +32,16 @@
 #                         consumers that exploit it (the stencil adjoints
 #                         fold c into their weights) never allocate it
 #   flow_list(elements)   the flow of a list node, per element a flow or None
+#   pending_sum(partial, base, grid)
+#                         a number's flow base + (the sum over the ranks of
+#                         partial), partial the rank-local sum of its lattice
+#                         contributions: a deferred reduction (plain passes
+#                         only).  The reverse pass sets aside the nodes whose
+#                         flow is pending (and the nodes below them), reduces
+#                         all pending sums of the pass in one global sum per
+#                         grid (flush), then processes the nodes set aside;
+#                         so a pass needs one all-reduce instead of one per
+#                         product of a number with a lattice
 #
 # A contribution (what a vjp returns) is a value, a list of values, a
 # scaled_identity, or negative(contribution): its negative, subtracted without
@@ -43,6 +53,7 @@
 # element.
 #
 import gpt as g
+import numpy as np
 from gpt.ad.reverse.util import value_of, is_node, recording
 
 
@@ -69,6 +80,57 @@ class flow_list:
         self.elements = elements
 
 
+class pending_sum:
+    __slots__ = ("partial", "base", "grid", "result")
+
+    def __init__(self, partial, base, grid):
+        self.partial = partial
+        self.base = base
+        self.grid = grid
+        # (the value, once reduced)
+        self.result = None
+
+
+# the nodes with a pending flow, one list per running reverse pass (a pass
+# nested in a backward reduces its own); defer: switch (for comparisons)
+_pending = []
+defer = True
+
+
+def begin_pass():
+    _pending.append([])
+
+
+def end_pass():
+    # (the reverse pass reduces its pending sums before it ends; after an
+    # exception nothing is reduced: a global sum is collective)
+    _pending.pop()
+
+
+def deferring():
+    # whether a plain reverse pass runs (sums into numbers may be deferred)
+    return defer and bool(_pending) and not recording()
+
+
+def flush():
+    # reduce the pending flows of the running pass: one global sum per grid
+    nodes = _pending[-1] if _pending else []
+    if not nodes:
+        return
+    by_grid = {}
+    for n in nodes:
+        f = n.flow
+        if isinstance(f, pending_sum) and f.result is None:
+            by_grid.setdefault(f.grid.obj, (f.grid, []))[1].append(n)
+    for grid, group in by_grid.values():
+        total = grid.globalsum(np.array([n.flow.partial for n in group], dtype=np.complex128))
+        for n, t in zip(group, total):
+            f = n.flow
+            f.result = f.base + complex(t)
+            n.flow = dense(f.result, True)
+    nodes.clear()
+
+
 class negative:
     # the contribution -value (see above)
     __slots__ = ("value",)
@@ -87,6 +149,11 @@ def value(flow):
     # flow gives the list of its element values
     if flow is None:
         return None
+    if isinstance(flow, pending_sum):
+        # (read before the pass reduced it: reduce now)
+        if flow.result is None:
+            flush()
+        return flow.result
     if isinstance(flow, flow_list):
         return [None if e is None else e.value for e in flow.elements]
     return flow.value
@@ -151,6 +218,8 @@ def accumulate(cur, r, sign, container, adopt=True):
     # that backward closures return fields they do not reuse.
     if isinstance(r, negative):
         r, sign = r.value, -sign
+    if isinstance(r, pending_sum) or isinstance(cur, pending_sum):
+        return _accumulate_pending(cur, r, sign)
     if isinstance(r, scaled_identity):
         if sign < 0:
             r = scaled_identity(-r.c, r.identity)
@@ -209,8 +278,24 @@ def accumulate(cur, r, sign, container, adopt=True):
     return dense(v, True)
 
 
+def _accumulate_pending(cur, r, sign):
+    # a number flow with a pending part (see pending_sum)
+    if isinstance(cur, dense):
+        cur = pending_sum(0.0, cur.value, r.grid)
+    if isinstance(r, pending_sum):
+        if cur is None:
+            return pending_sum(sign * r.partial, r.base * sign, r.grid)
+        assert cur.grid.obj == r.grid.obj, "pending sums of one number on one grid"
+        return pending_sum(cur.partial + sign * r.partial, cur.base + sign * r.base, cur.grid)
+    r = value_of(r) if is_node(r) else r
+    return pending_sum(cur.partial, cur.base + sign * r, cur.grid)
+
+
 def accum(n, r, sign=1, adopt=True):
     # accumulate sign * r into the flow of node n
     if n.flow is None and isinstance(n.value, g.ad.forward.series):
         n.zero_gradient()
+    was_pending = isinstance(n.flow, pending_sum)
     n.flow = accumulate(n.flow, r, sign, n._container, adopt)
+    if not was_pending and isinstance(n.flow, pending_sum):
+        _pending[-1].append(n)

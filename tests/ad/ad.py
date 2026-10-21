@@ -904,3 +904,53 @@ for broken in [False, True]:
         assert broken
         g.message(f"nested pass reaching the enclosing graph: {e}")
 assert not rad.util._pass_state.running
+
+# deferred reductions (flows.pending_sum): the flows of numbers used in
+# lattice products are rank-local sums until the pass reduces them together.
+# Several contributions to one number, a number flow with a lattice and a
+# number contribution, and a number computed from a lattice and used again
+# (reduced in a second round), against the pass without deferral and
+# against finite differences; fewer global sums
+grid = g.grid([4, 4, 4, 8], g.double)
+rng = g.random("deferred reductions")
+xv = rng.cnormal(g.complex(grid))
+av, bv = np.array(0.3 + 0.2j), np.array(-0.4 + 0.1j)
+
+
+def deferred_graph():
+    x, a, b = rad.node(g.copy(xv)), rad.node(np.copy(av)), rad.node(np.copy(bv))
+    a0, b0 = a[()], b[()]
+    y = x * a0 + x * x * b0 * a0
+    s = g.sum(y * g.adj(x))
+    z = y * s + x * (a0 * b0)
+    return g.component.real(g.sum(z * g.adj(z))) + g.component.real(a0 * b0 * b0), [x, a, b]
+
+
+globalsums = [0]
+grid_globalsum = g.grid.globalsum
+
+
+def counting_globalsum(self, x):
+    globalsums[0] += 1
+    return grid_globalsum(self, x)
+
+
+g.grid.globalsum = counting_globalsum
+results = {}
+for defer in [True, False]:
+    rad.flow.defer = defer
+    S, leaves = deferred_graph()
+    globalsums[0] = 0
+    gradients = S.backward(wrt=leaves)
+    results[defer] = (gradients, globalsums[0])
+rad.flow.defer = True
+g.grid.globalsum = grid_globalsum
+(ga, na), (gb, nb) = results[True], results[False]
+err = max(
+    g.norm2(ga[0] - gb[0]) / g.norm2(gb[0]),
+    *[abs(complex(np.asarray(p)) - complex(np.asarray(q))) ** 2 / abs(complex(np.asarray(q))) ** 2 for p, q in zip(ga[1:], gb[1:])],
+)
+g.message(f"deferred reductions: gradients vs undeferred {err:.2e}, global sums {na} vs {nb}")
+assert err < 1e-28 and na < nb
+S, leaves = deferred_graph()
+S.functional(*leaves).assert_gradient_error(rng, [xv, av, bv], [xv, av, bv], 1e-4, 1e-8)

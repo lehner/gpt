@@ -359,30 +359,56 @@ class node_base(base):
         # a gradient of None is a zero that is not built (see accumulate)
         # (never adopt the caller's initial gradient: it could come back as a
         # leaf gradient or be updated in place)
-        self.flow = None
-        accum(self, initial_gradient, adopt=False)
-        for n in reversed(nodes):
-            for m in first_gradient[n]:
-                if m is not self:
-                    m.flow = None
-            if n.flow is not None:
-                # (a zero flow contributes nothing to the children)
-                n._backward(n)
-            if n._forward is not None:
-                n.flow = None
-                if n is not self and not retain_values:
-                    n.value = None
-            elif n.with_gradient:
-                # (constant leaves keep gradient None: nothing reads it)
-                n.materialize_gradient()
-                if n.infinitesimal_to_cartesian:
-                    # (value_of: while recording, the leaf node itself, so
-                    # that the conversion is differentiated)
-                    n.flow = flows.replaced(
-                        n.flow, g.infinitesimal_to_cartesian(value_of(n), n.gradient)
-                    )
-                # (a gradient handed out never aliases another gradient)
-                n.own_gradient()
+        flows.begin_pass()
+        try:
+            self.flow = None
+            accum(self, initial_gradient, adopt=False)
+            # (reverse topological order; a node whose flow is a pending sum
+            # (flows.pending_sum) and the nodes below it are set aside until
+            # the pending sums of the pass are reduced together, then
+            # processed in the same order)
+            order = list(reversed(nodes))
+            reset = set()
+            while order:
+                deferred, blocked = [], set()
+                for n in order:
+                    if id(n) not in reset:
+                        # (the first consumer in reverse order: before any
+                        # contribution to these nodes)
+                        reset.add(id(n))
+                        for m in first_gradient[n]:
+                            if m is not self:
+                                m.flow = None
+                    if id(n) in blocked or isinstance(n.flow, flows.pending_sum):
+                        deferred.append(n)
+                        blocked.update(id(c) for c in n._children)
+                        continue
+                    self._reverse_node(n, retain_values)
+                if deferred:
+                    flows.flush()
+                order = deferred
+        finally:
+            flows.end_pass()
+
+    def _reverse_node(self, n, retain_values):
+        if n.flow is not None:
+            # (a zero flow contributes nothing to the children)
+            n._backward(n)
+        if n._forward is not None:
+            n.flow = None
+            if n is not self and not retain_values:
+                n.value = None
+        elif n.with_gradient:
+            # (constant leaves keep gradient None: nothing reads it)
+            n.materialize_gradient()
+            if n.infinitesimal_to_cartesian:
+                # (value_of: while recording, the leaf node itself, so
+                # that the conversion is differentiated)
+                n.flow = flows.replaced(
+                    n.flow, g.infinitesimal_to_cartesian(value_of(n), n.gradient)
+                )
+            # (a gradient handed out never aliases another gradient)
+            n.own_gradient()
 
     # TODO: allow for lists of initial_gradients (could save forward runs at sake of more memory)
     def __call__(
@@ -758,7 +784,19 @@ _list_element = primitive(
 
 
 def _reduced(flow, reductions):
-    # the flow reduced by the functions reductions (names of g, in order)
+    # the flow reduced by the functions reductions (names of g, in order).
+    # In a plain reverse pass a final sum over the sites into a number is
+    # deferred (flows.pending_sum: the rank-local sum now, the global sum
+    # batched with the other pending sums of the pass)
+    if reductions[-1] == "sum" and not is_node(flow) and flows.deferring():
+        for name in reductions[:-1]:
+            flow = getattr(g, name)(flow)
+        if isinstance(flow, g.expr):
+            flow = g(flow)
+        partial = flow.__class__.foundation.rank_sum(flow)
+        if g.util.is_num(partial):
+            return flows.pending_sum(complex(partial), 0.0, flow.grid)
+        return flow.grid.globalsum(partial)
     for name in reductions:
         flow = getattr(g, name)(flow)
     if any(name != "sum" for name in reductions) and not is_node(flow):
