@@ -156,7 +156,9 @@ Key concepts:
   node's reflected operator (see §4.6).
 - **Gauge actions** implement `__call__` (action value) and
   `gradient(fields, dfields)` (force). `act.transformed(diffeomorphism,
-  indices, projection)` composes an action with a field transformation.
+  indices, projection)` composes an action with a field transformation
+  (applied to the fields `indices`; the action reads the fields
+  `projection`; both any subsets, gradients mapped by field).
   Its gradient differentiates the inner functional only where needed: at
   the outputs of the transformation that are not identity maps and at the
   requested fields.  A diffeomorphism declares its identity outputs with
@@ -169,14 +171,17 @@ Key concepts:
   through all later steps (quadratic in the number of steps).
   `wilson` and `improved_with_rectangle` (iwasaki, symanzik, dbw2) take
   value and force from the AD stencil action in
-  `qcd/gauge/action/staple_stencil.py` (see §4.7); their hand-written
+  `qcd/gauge/action/staple_stencil.py` (see §4.7), which takes the links
+  only (ValueError for further fields); their hand-written
   `staples()` / `staple()` remain for the heatbath.  `g.qcd.gauge.smear.local_stout`
   is a thin wrapper around `directional_parallel_transport`, and so is
   `g.qcd.gauge.smear.spectral_loop` (one loop, loop function sum_k c_k P^k,
   analytic log det).  Its `fused_action(inner)` is `inner.transformed(step) +
   step.action_log_det_jacobian()` with one reverse pass for the pull-back
   and the log-det force (`g.qcd.gauge.smear.latent_action(action, steps)`
-  builds a chain with it).
+  builds a chain with it: fields U + the learnable coefficients of the
+  steps in list order, each step reads its own; other steps act on the
+  links only; the action reads the links only).
 - `g.even_odd_projectors(grid)` gives the checkerboard masks `even`, `odd`.
 - Finite differences of gauge actions along the group flow:
   `U(t) = [g.group.compose(g(t * dA[mu]), U[mu]) for mu in range(4)]`,

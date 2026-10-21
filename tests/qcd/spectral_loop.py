@@ -276,3 +276,42 @@ W2.assert_gradient_error(rng, fields, fields, 1e-4, 1e-8)
 # B's log det after A: f reads the links and cb (projection not a prefix)
 W3 = B.action_log_det_jacobian().transformed(A, indices=[0, 1, 2, 3, 4], projection=[0, 1, 2, 3, 5])
 W3.assert_gradient_error(rng, fields, fields, 1e-4, 1e-8)
+
+# latent_action with learnable coefficients: fields U + the coefficients of
+# the spectral_loop steps in the order of steps; a chain of two learnable
+# steps with different sets, a fixed step and a local_stout step (links only),
+# against the plain composition of the maps and log dets
+steps = [
+    g.qcd.gauge.smear.spectral_loop(0, g.even, 1, True, coefficients={1, 2}),
+    g.qcd.gauge.smear.local_stout(dimension=2, checkerboard=g.even, rho=0.05),
+    g.qcd.gauge.smear.spectral_loop(1, g.odd, 2, False, coefficients={1: 0.08}),
+    g.qcd.gauge.smear.spectral_loop(3, g.odd, 0, True, coefficients={1}),
+]
+coefficients = [[g(0.1 * one), g(0.02 * one)], [], [], [g(0.06 * one)]]
+S = g.qcd.gauge.action.iwasaki(2.95)
+Wl = g.qcd.gauge.smear.latent_action(S, steps)
+fields = list(U) + [c for cs in coefficients for c in cs]
+
+
+def latent_plain(fields):
+    x, cs, k, total = list(fields[0:4]), [], 4, 0.0
+    for c in coefficients:
+        cs.append(fields[k : k + len(c)])
+        k += len(c)
+    for s, c in reversed(list(zip(steps, cs))):
+        total += s.action_log_det_jacobian()(x + c)
+        x = s(x + c)[0:4]
+    return S(x) + total
+
+
+eps = abs(Wl(fields) - latent_plain(fields)) / abs(latent_plain(fields))
+g.message(f"latent_action with learnable coefficients vs plain composition: {eps}")
+assert eps < 1e-13
+Wl.assert_gradient_error(rng, fields, fields, 1e-4, 1e-8)
+
+# the gauge actions take the links only
+try:
+    S(fields)
+    assert False
+except ValueError as e:
+    g.message(f"rejected: {e}")

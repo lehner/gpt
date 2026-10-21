@@ -346,13 +346,42 @@ class _fused_action(transformed):
         return super().__call__(fields) - g.sum(log_det).real
 
 
-def latent_action(action, steps):
-    # the latent action of a flow, one chain: a spectral_loop step fused with
-    # its log det (fused_action), any other step as transformed plus its log
-    # det; every step acts on the full list of fields
-    for s in steps:
+class _on_links(differentiable_functional):
+    # a functional f of the links (the first nd fields) as a functional of
+    # all fields (zero gradient for the others)
+    def __init__(self, f, nd):
+        self.f, self.nd = f, nd
+
+    def __call__(self, fields):
+        return self.f(fields[0 : self.nd])
+
+    def gradient(self, fields, dfields):
+        links = fields[0 : self.nd]
+        positions = [g.util.index_by_identity(fields, d) for d in dfields]
+        needed = [i for i in positions if i < self.nd]
+        gradients = dict(zip(needed, self.f.gradient(links, [links[i] for i in needed]) if needed else []))
+        return [gradients[i] if i in gradients else g.group.zero(fields[i]) for i in positions]
+
+
+def latent_action(action, steps, nd=4):
+    # the latent action of a flow, one chain: steps[0] is the innermost level
+    # (applied last to the latent fields), i.e. W = action(s_0(s_1(...))) +
+    # log dets.  The fields are the nd links followed by the learnable
+    # coefficients of the spectral_loop steps, in the order of steps (a step
+    # with fixed coefficients has none).  A spectral_loop step acts on the
+    # links and its own coefficients and is fused with its log det
+    # (fused_action); any other step acts on the links only (transformed plus
+    # its log det).  The action reads the links only.
+    links = list(range(nd))
+    offset = nd
+    for k, s in enumerate(steps):
+        projection = links if k == 0 else None
         if isinstance(s, spectral_loop):
-            action = s.fused_action(action)
+            indices = links + list(range(offset, offset + s.n_parameters))
+            offset += s.n_parameters
+            action = s.fused_action(action, indices=indices, projection=projection)
         else:
-            action = action.transformed(s) + s.action_log_det_jacobian()
+            action = action.transformed(s, indices=links, projection=projection) + _on_links(
+                s.action_log_det_jacobian(), nd
+            )
     return action

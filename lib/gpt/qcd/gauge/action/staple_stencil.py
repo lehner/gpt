@@ -73,7 +73,15 @@ class staple_stencil_action:
         self.c1 = c1
         self.cache = {}
 
+    def _check(self, U):
+        # the links only (e.g. not the parameters of a transformed action)
+        if len(U) != U[0].grid.nd:
+            raise ValueError(
+                f"gauge action: {len(U)} fields for {U[0].grid.nd} dimensions (expected the links only)"
+            )
+
     def stencil(self, U):
+        self._check(U)
         v = U[0]
         key = (v.grid, v.otype.__name__, len(U))
         if key not in self.cache:
@@ -110,6 +118,7 @@ class staple_stencil_action:
         return O
 
     def constant(self, U):
+        self._check(U)
         Nd = len(U)
         vol = U[0].grid.gsites
         return float(self.beta * vol * (self.c0 * Nd * (Nd - 1) / 2 + self.c1 * Nd * (Nd - 1)))
