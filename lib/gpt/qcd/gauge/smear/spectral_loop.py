@@ -109,6 +109,17 @@ class spectral_loop(local_diffeomorphism):
             return [self.fixed[k] for k in self.degrees]
         return [_number(c) for c in xparams]
 
+    def _coefficient_fields(self, cs, one):
+        # number nodes as the fields c_k 1 (the lattice products then need no
+        # reduction of their flows: one lattice sum per coefficient instead of
+        # one per product with a number; see _fused_jacobian); plain values and
+        # fields as they are
+        cs = [_number(c) for c in cs]
+        return [
+            c * one if isinstance(c, g.ad.reverse.node_base) and c._container.tag[0] is not g.lattice else c
+            for c in cs
+        ]
+
     def _powers(self, P):
         # P^k for k = 1..max degree (plain or nodes)
         powers = [P]
@@ -175,13 +186,15 @@ class spectral_loop(local_diffeomorphism):
     def jacobian(self, fields, fields_prime, dfields, inputs=None):
         return self.transport(fields)[0].jacobian(fields, fields_prime, dfields, inputs)
 
-    def _log_det(self, fields, C=None, U_prime_mu=None):
-        # the site-local log det (plain fields or nodes), zero outside P1; C
-        # and U_prime_mu: the staple and the updated link if already built
-        # (shared with the graph of the map)
+    def _log_det(self, fields, C=None, U_prime_mu=None, cs=None):
+        # the site-local log det (plain fields or nodes), zero outside P1; C,
+        # U_prime_mu and cs: the staple, the updated link and the coefficient
+        # fields if already built (shared with the graph of the map)
         t, P1, one, _ = self.transport(fields)
-        nd, U, cs = self._split(fields)
+        nd, U, xparams = self._split(fields)
         mu = self.mu
+        if cs is None:
+            cs = self._coefficient_fields(xparams, one)
         if C is None:
             C = t._staple(fields)
         if U_prime_mu is None:
@@ -204,14 +217,21 @@ class spectral_loop(local_diffeomorphism):
         def s_(n):
             return s[n] if n >= 0 else conj(s[-n])
 
-        c = list(zip(self.degrees, self._coefficients(cs)))
+        # (factorized with w_k = k c_k: tr B^2 = (1/2) Re sum_k w_k sum_l
+        # (w_l s_{k+l} + conj(w_l) s_{k-l}), so that coefficient fields enter
+        # as few lattice products as coefficient numbers)
+        w = [(k, ck if k == 1 else ck * k) for k, ck in zip(self.degrees, self._coefficients(cs))]
+        wc = [conj(wl) for _, wl in w]
         sB = sB2 = None
-        for k, ck in c:
-            x = g(s[k] * (ck * k))
+        for k, wk in w:
+            x = g(s[k] * wk)
             sB = x if sB is None else g(sB + x)
-            for l, cl in c:
-                x = g(s_(k + l) * (ck * cl * (k * l)) + s_(k - l) * (ck * conj(cl) * (k * l)))
-                sB2 = x if sB2 is None else g(sB2 + x)
+            inner = None
+            for (l, wl), wcl in zip(w, wc):
+                x = g(s_(k + l) * wl + s_(k - l) * wcl)
+                inner = x if inner is None else g(inner + x)
+            x = g(inner * wk)
+            sB2 = x if sB2 is None else g(sB2 + x)
         # (masked: outside P1 the coefficients are not bounded, there a = 1)
         trB = g(g.component.real(sB) * P1 * (-1.0))
         trB2 = g(g.component.real(sB2) * P1 * 0.5)
@@ -266,12 +286,13 @@ class spectral_loop(local_diffeomorphism):
         if "fused" not in graphs:
             leaves = [rad.node(x) for x in fields]
             seed = rad.node(fields[mu], with_gradient=False)
-            t = self.transport(leaves)[0]
-            nd, U, cs = self._split(leaves)
+            t, _, one, _ = self.transport(leaves)
+            nd, U, xparams = self._split(leaves)
+            cs = self._coefficient_fields(xparams, one)
             C = t._staple(leaves)
             U_prime_mu = t._local_ft(U[mu], C, cs)
             L = g.component.real(g.sum(g.trace(g.adj(seed) * U_prime_mu))) - g.component.real(
-                g.sum(self._log_det(leaves, C, U_prime_mu))
+                g.sum(self._log_det(leaves, C, U_prime_mu, cs))
             )
             graphs["fused"] = (L, leaves, seed)
         L, leaves, seed = graphs["fused"]
