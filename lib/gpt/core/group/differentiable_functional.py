@@ -220,6 +220,10 @@ class transformed(differentiable_functional):
         # the requested fields (an identity output passes its gradient only to
         # its own input, a field outside indices is not transformed)
         identity = set(getattr(self.t, "identity_outputs", ()))
+        # three kinds of positions: i (a field), j (its position in indices:
+        # an output of t), p (its position in projection: a field of f)
+        assert len(set(projection)) == len(projection), "transformed: a field projected twice"
+        position = {i: p for p, i in enumerate(projection)}
 
         def needed(i):
             if i in indices:
@@ -233,11 +237,12 @@ class transformed(differentiable_functional):
             for p, gr in zip(needed_p, grads):
                 gradient_prime[p] = gr
 
+        # the gradients at the outputs of t: those of the fields of f they
+        # became (zero for an output f does not read)
         src_gradient = [None] * len(fields_transformed)
-        for i in indices:
-            j = indices.index(i)
-            if j < len(gradient_prime) and i < len(src_gradient):
-                src_gradient[i] = gradient_prime[j]
+        for j, i in enumerate(indices):
+            if i in position:
+                src_gradient[j] = gradient_prime[position[i]]
         for i in range(len(fields_transformed)):
             if src_gradient[i] is None:
                 src_gradient[i] = g.group.cartesian(fields_transformed[i])
@@ -253,8 +258,13 @@ class transformed(differentiable_functional):
         else:
             gradient_transformed = self.t.jacobian(fields_indices, fields_transformed, src_gradient)
 
+        # a field outside indices reaches f directly, or not at all
         return [
-            gradient_transformed[indices.index(i)] if i in indices else gradient_prime[i]
+            (
+                gradient_transformed[indices.index(i)]
+                if i in indices
+                else gradient_prime[position[i]] if i in position else g.group.zero(fields[i])
+            )
             for i in derivative_indices
         ]
 

@@ -259,3 +259,20 @@ try:
     assert False
 except ValueError as e:
     g.message(f"rejected: {e}")
+
+# transformed with indices and projections that are not prefixes: two steps
+# with a coefficient each, fields U + [ca, cb], step A reads ca (field 4),
+# step B reads cb (field 5)
+ca, cb = g(0.1 * one), g(0.05 * one)
+fields = list(U) + [ca, cb]
+A = g.qcd.gauge.smear.spectral_loop(0, g.even, 1, True, coefficients={1})
+B = g.qcd.gauge.smear.spectral_loop(1, g.odd, 2, False, coefficients={1})
+W1 = g.qcd.gauge.action.wilson(5.5).transformed(A, indices=[0, 1, 2, 3, 4], projection=[0, 1, 2, 3])
+# (cb reaches neither A nor the action)
+assert g.norm2(W1.gradient(fields, [cb])[0]) == 0.0
+# a chain: B on the links and cb (indices not a prefix)
+W2 = W1.transformed(B, indices=[0, 1, 2, 3, 5], projection=None)
+W2.assert_gradient_error(rng, fields, fields, 1e-4, 1e-8)
+# B's log det after A: f reads the links and cb (projection not a prefix)
+W3 = B.action_log_det_jacobian().transformed(A, indices=[0, 1, 2, 3, 4], projection=[0, 1, 2, 3, 5])
+W3.assert_gradient_error(rng, fields, fields, 1e-4, 1e-8)
