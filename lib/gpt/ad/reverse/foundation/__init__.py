@@ -34,6 +34,7 @@ from gpt.ad.reverse import tangent
 import gpt.ad.reverse.foundation.matrix
 import gpt.ad.reverse.foundation.stencil
 import gpt.ad.reverse.foundation.local_stencil
+import gpt.ad.reverse.foundation.program
 
 
 def _plain_inner_product(x, y, n_block, use_accelerator):
@@ -354,3 +355,7 @@ _where = primitive(
 def where(first, second, third, fourth):
     assert fourth is None
     return _where.node(second, third, question=first, branch=get_container(second))
+
+
+def local_program(program, *fields):
+    return g.ad.reverse.foundation.program.local_program(program, *fields)

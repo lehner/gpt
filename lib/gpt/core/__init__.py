@@ -126,6 +126,7 @@ import gpt.core.local_stencil
 import gpt.core.contract
 from gpt.core.padding import padded_local_fields
 import gpt.core.stencil
+from gpt.core.local_program import local_program
 from gpt.core.einsum import einsum
 import gpt.core.global_sum
 from gpt.core.pack import pack

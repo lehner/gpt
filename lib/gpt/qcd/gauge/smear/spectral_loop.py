@@ -22,6 +22,15 @@ from gpt.core.group import local_diffeomorphism, differentiable_functional
 from gpt.core.group.differentiable_functional import transformed
 
 
+def _field(c, one):
+    # a coefficient as a field: c 1 for a number (plain or a node)
+    if isinstance(c, g.ad.reverse.node_base):
+        return c if c._container.tag[0] is g.lattice else c * one
+    if isinstance(c, g.lattice):
+        return c
+    return g(complex(c) * one)
+
+
 def _number(x):
     # a number parameter stored as a 0-d array enters as its element (plain
     # or node); fields and numbers as they are
@@ -49,7 +58,8 @@ class spectral_loop(local_diffeomorphism):
     #   B = (1/2) sum_k k (c_k P^k + h.c.),   e2(A) = ((tr A)^2 - tr A^2)/2,   P' = T0 U_mu'^dag,
     #   Disc(P) = |e1|^4 - 4 (e1^3 + conj(e1)^3) + 18 |e1|^2 - 27 <= 0,   e1 = tr P,
     #
-    # a node graph of traces of matrix polynomials (any derivative order).
+    # traces of matrix polynomials as one g.local_program (any derivative
+    # order) and three logs.
     #
     # coefficients: a dict {k: c_k} of numbers (fixed), or a set of degrees
     # {k, ...} (learnable): the fields are then U + [c_k for k in sorted
@@ -114,11 +124,7 @@ class spectral_loop(local_diffeomorphism):
         # reduction of their flows: one lattice sum per coefficient instead of
         # one per product with a number; see _fused_jacobian); plain values and
         # fields as they are
-        cs = [_number(c) for c in cs]
-        return [
-            c * one if isinstance(c, g.ad.reverse.node_base) and c._container.tag[0] is not g.lattice else c
-            for c in cs
-        ]
+        return [_field(c, one) if isinstance(c, g.ad.reverse.node_base) else c for c in map(_number, cs)]
 
     def _powers(self, P):
         # P^k for k = 1..max degree (plain or nodes)
@@ -189,8 +195,10 @@ class spectral_loop(local_diffeomorphism):
     def _log_det(self, fields, C=None, U_prime_mu=None, cs=None):
         # the site-local log det (plain fields or nodes), zero outside P1; C,
         # U_prime_mu and cs: the staple, the updated link and the coefficient
-        # fields if already built (shared with the graph of the map)
-        t, P1, one, _ = self.transport(fields)
+        # fields if already built (shared with the graph of the map).  The
+        # traces and their polynomials are one local program (_log_det_terms);
+        # the three logs stay componentwise ops
+        t, P1, one, graphs = self.transport(fields)
         nd, U, xparams = self._split(fields)
         mu = self.mu
         if cs is None:
@@ -201,62 +209,67 @@ class spectral_loop(local_diffeomorphism):
             U_prime_mu = t._local_ft(U[mu], C, cs)
         P = g(C * g.adj(U[mu]))
         Pp = g(C * g.adj(U_prime_mu))
+        if "log_det" not in graphs:
+            graphs["log_det"] = g.local_program(
+                self._log_det_terms,
+                inputs=[g.ot_matrix_color(3)] * 2 + [one.otype] * (1 + self.n_parameters),
+                outputs=[one.otype] * 3,
+            )
+        coefficients = [] if self.fixed is not None else [_field(c, one) for c in self._coefficients(cs)]
+        a, mdisc_Pp, mdisc_P = graphs["log_det"](P, Pp, P1, *coefficients)
+        log = g.component.log
+        v = log(a) + log(mdisc_Pp) - log(mdisc_P)
+        return g(g.component.real(g(v * P1)))
+
+    def _log_det_terms(self, P, Pp, P1, *cs):
+        # the local program of the log det (symbolic site values, see
+        # core/local_program.py): a, -Disc(P'), -Disc(P) from P, P', the mask
+        # P1 and the learnable coefficients (fixed ones are weights)
+        lp = g.local_program
+        conj, real = lp.conj, lp.real
+        c = [self.fixed[k] for k in self.degrees] if self.fixed is not None else list(cs)
         # tr B and tr B^2 from the power sums s_n = tr P^n (Newton's
         # identities for SU(3): s_n = e1 s_{n-1} - conj(e1) s_{n-2} + s_{n-3},
         # s_0 = 3, s_{-n} = conj(s_n)), so no matrix B:
         #   tr B = -Re sum_k k c_k s_k,
         #   tr B^2 = (1/2) Re sum_kl k l (c_k c_l s_{k+l} + c_k conj(c_l) s_{k-l})
-        conj = g.ad.reverse.transform.conj
-        e1 = g(g.trace(P))
+        e1 = P.trace()
         e1c = conj(e1)
-        s = [g(3.0 * one), e1]
+        s = [lp.const(3.0), e1]
         for n in range(2, 2 * self.degrees[-1] + 1):
-            r = g(e1 * s[n - 1] - e1c * s[n - 2])
-            s.append(g(r + (e1c if n == 2 else s[n - 3])))
+            s.append(e1 * s[n - 1] - e1c * s[n - 2] + (e1c if n == 2 else s[n - 3]))
 
         def s_(n):
             return s[n] if n >= 0 else conj(s[-n])
 
         # (factorized with w_k = k c_k: tr B^2 = (1/2) Re sum_k w_k sum_l
-        # (w_l s_{k+l} + conj(w_l) s_{k-l}), so that coefficient fields enter
-        # as few lattice products as coefficient numbers)
-        w = [(k, ck if k == 1 else ck * k) for k, ck in zip(self.degrees, self._coefficients(cs))]
-        wc = [conj(wl) for _, wl in w]
-        sB = sB2 = None
+        # (w_l s_{k+l} + conj(w_l) s_{k-l}))
+        w = [(k, ck * k) for k, ck in zip(self.degrees, c)]
+        sB = sB2 = lp.const(0)
         for k, wk in w:
-            x = g(s[k] * wk)
-            sB = x if sB is None else g(sB + x)
-            inner = None
-            for (l, wl), wcl in zip(w, wc):
-                x = g(s_(k + l) * wl + s_(k - l) * wcl)
-                inner = x if inner is None else g(inner + x)
-            x = g(inner * wk)
-            sB2 = x if sB2 is None else g(sB2 + x)
+            sB = sB + s[k] * wk
+            inner = lp.const(0)
+            for l, wl in w:
+                inner = inner + s_(k + l) * wl + s_(k - l) * conj(wl)
+            sB2 = sB2 + inner * wk
         # (masked: outside P1 the coefficients are not bounded, there a = 1)
-        trB = g(g.component.real(sB) * P1 * (-1.0))
-        trB2 = g(g.component.real(sB2) * P1 * 0.5)
-        a = g((6.0 * one + 4.0 * trB + g(trB * trB) - trB2) * (1.0 / 6.0))
+        trB = real(sB) * P1 * (-1.0)
+        trB2 = real(sB2) * P1 * 0.5
+        a = (6.0 + 4.0 * trB + trB * trB - trB2) * (1.0 / 6.0)
 
         def disc(Q):
             # the discriminant of the traceless part A = Q - tr(Q)/3:
-            # -4 p^3 - 27 q^2, p = -tr(A^2)/2, q = -tr(A^3)/3.  The identity
-            # is derived from Q (for a node Q: a constant node of Q's graph),
-            # never cached from the fields of an earlier call: an identity
-            # built from a node of another graph would pull that graph into
-            # every log det
-            A = g(Q - g.identity_constant(Q) * g(g.trace(Q) * (1.0 / 3.0)))
-            A2 = g(A * A)
-            p = g(g.trace(A2) * (-0.5))
-            q = g(g.trace(g(A2 * A)) * (-1.0 / 3.0))
-            return g(g(g(p * p) * p) * (-4.0) - g(q * q) * 27.0)
+            # -4 p^3 - 27 q^2, p = -tr(A^2)/2, q = -tr(A^3)/3
+            A = Q - lp.matrix.identity(3) * (Q.trace() * (1.0 / 3.0))
+            A2 = A * A
+            p = A2.trace() * (-0.5)
+            q = (A2 * A).trace() * (-1.0 / 3.0)
+            return p * p * p * (-4.0) - q * q * 27.0
 
         # (shift-invariant for numerical stability: no cancellation of O(1)
         # terms when eigenvalues of P are close; check stability before
         # changing this form)
-
-        log = g.component.log
-        v = log(a) + log(g(-1.0 * disc(Pp))) - log(g(-1.0 * disc(P)))
-        return g(g.component.real(g(v * P1)))
+        return [a, disc(Pp) * (-1.0), disc(P) * (-1.0)]
 
     def log_det_jacobian(self, fields):
         # the real field log det J(x) (zero outside P1); a node for nodes

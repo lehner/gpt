@@ -132,6 +132,11 @@ def sum(l):
     return l.grid.globalsum(rank_sum(l))
 
 
+def local_program(program, *fields):
+    # a site-local program on plain fields (core/local_program.py)
+    return program.plain(*fields)
+
+
 def identity(src):
     eye = gpt.lattice(src)
     # identity only works for matrix types

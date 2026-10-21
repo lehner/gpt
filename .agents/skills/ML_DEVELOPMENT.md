@@ -506,3 +506,10 @@ Open / planned:
   14 words, plain evaluation -25% but value + gradient +12% (each
   coefficient becomes a matrix field, and its flow is traced back), so not
   adopted; a stencil taking the scalar coefficients directly would be needed.
+  `g.local_program` (AD_DEVELOPMENT.md §4.11) is such a kernel for
+  site-local scalar chains: singlet coefficient inputs, traces and products
+  of traces, adjoint and batched tangent programs (so it works in the
+  jacobian replay of a loop function).  Candidates, not ported yet:
+  `matrix_invariants` (traces, scalings, real/imag, standardization; ~24
+  nodes plus ~17 per loop), `matrix_words`, `local_covariant_matrix` without
+  the gate (relu and sin are not program ops).

@@ -481,7 +481,8 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   `cartesian_to_infinitesimal`, `g.inner_product`, `g.norm2`, `g.sum`
   (`core/transform.py`), `g.adj`, `g.trace` (`core/operator/unary.py`),
   `g.component.*` (`component_simple_map`, `component_multiply`),
-  `g.convert`, `local_stencil.matrix` (`fields[0].foundation.local_stencil`).
+  `g.convert`, `local_stencil.matrix` (`fields[0].foundation.local_stencil`),
+  `g.local_program` (the first field on a derived foundation, §4.11).
   **Mixed operands**: the first operand's foundation decides, except when
   it is the plain lattice foundation and the other operand's is a derived
   one (a node): the plain foundation cannot evaluate a mixed pair, so the
@@ -876,6 +877,61 @@ E(md(x, tau)).backward()                                   # x[i].gradient
   integrators, gradients against finite differences, reversibility, dE/dbeta
   and dE/drho, the two forces against each other, second order).
 
+### 4.11 Local programs (`core/local_program.py`, `ad/reverse/foundation/program.py`)
+
+`g.local_program(function, inputs=[otype, ...], outputs=[otype, ...])` is a
+site-local straight-line program of complex scalar operations (sums,
+products, weights, conj; `real`/`imag` are built from them) on the
+components of a few fields, run as ONE tensor-stencil kernel
+(`g.stencil.tensor`, zero point only).  `function` receives symbolic inputs
+(`local_program.matrix` for an n x n otype, a `scalar` for a singlet, a list
+for a vector) and returns one symbolic value per output; `prog(*fields)`
+returns the list of output fields.  Use it where a chain of many small
+site-local ops on traces and singlets (each a cgpt.eval forward and several
+backward, each a kernel launch on GPUs) would otherwise be a node graph:
+`spectral_loop._log_det_terms` (271 -> 50 evaluations per step, the force of
+one round 0.31 -> 0.19 s at 8^4).
+
+- **Tracer**: symbolic scalars are hash-consed (one node per distinct
+  subexpression; constant folding, weights pulled to the front), so the
+  program evaluates each subexpression once and only what the outputs depend
+  on (a matrix product of which only the trace is used costs its diagonal).
+  Serial numbers make the code deterministic for a deterministic build.
+- **Lowering**: sums of single-use products become one `mov` and `inc`/`dec`
+  per term (a single-use conj folds into the `_cc` instructions, which
+  conjugate the first factor); weights need a `mul` instruction (the tensor
+  stencil reads weights only there); at most two factors per instruction.
+  Intermediates live in per-site registers (`vcomplex(30)` scratch fields,
+  temporaries of the kernel, allocated by liveness, cached per grid); a unit
+  field provides constants.
+- **Mixed otypes**: one kernel reads fields of different otypes (matrices,
+  singlets, the registers); the C++ opens each field's view with its own
+  element count, the vector type is that of the first field, so all fields
+  must share one grid and precision (asserted).  Every GPT lattice is
+  stored as complex numbers (real ones too), so real masks enter directly.
+- **Derived programs** (symbolic, cached on the program): `adjoint(needed)`
+  (inputs + one flow per output -> the flows of the needed inputs, the
+  conjugate-linear convention: flow of a in c = a b is conj(b) flow_c, of a
+  in c = conj(a) conj(flow_c), of a in c = w a conj(w) flow_c), recomputing
+  the forward values in the same kernel; `tangent(fiber, k)` (inputs + k
+  tangents of the inputs fiber -> k tangents of the outputs, direction
+  major, one kernel); `select(outputs)`.  They are programs again.
+- **Node version**: with a node among the fields, one primitive node per
+  group of outputs of one otype (a list node for several: a list node has
+  one element container; outputs of two otypes give two nodes).  Its vjp
+  calls the adjoint program (plain flows: its kernel, all needed flows at
+  once even of different otypes; recorded: its nodes, whose vjp is the
+  adjoint of the adjoint), its jvp the tangent program, so it is
+  differentiable to any order and works inside `g.ad.reverse.jacobian`.
+- Limits: site-local only (no shifts), no transcendental ops (logs, exp,
+  inverses stay node ops outside), complex weights only.  Coefficients that
+  are learnable numbers enter as fields c 1 (one lattice sum per coefficient
+  in the backward, not one per product with a number).
+- Tested in `tests/ad/local_program.py` (plain values, gradients against the
+  node graph of the same formula, complex seed, wrt, second and third
+  derivatives, two output otypes, a program over three register fields, the
+  tangent program in `jacobian` and its log-det force).
+
 ## 5. File map (AD-relevant)
 
 | Path | Role |
@@ -895,6 +951,8 @@ E(md(x, tau)).backward()                                   # x[i].gradient
 | `lib/gpt/ad/reverse/linear_solve.py` | `g.ad.reverse.linear_solve(op, rhs, solver, parameters=[], adj_op=None)`: the solution of a function op linear in x as a node (first order; backward: one adjoint solve, parameter flows by a local reverse pass of op) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
 | `lib/gpt/ad/reverse/foundation/` | the node versions of the core ops as primitives, projection nodes, group conversions; `matrix/exp.py` (exp tower) |
+| `lib/gpt/core/local_program.py` | `g.local_program`: site-local straight-line programs on components as one tensor-stencil kernel (tracer, lowering with registers, derived `adjoint` / `tangent` / `select` programs), §4.11 |
+| `lib/gpt/ad/reverse/foundation/program.py` | node version of `g.local_program` (one primitive per output otype; vjp and jvp as derived programs) (§4.11; tests in `tests/ad/local_program.py`) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, with or without local temporaries), multi-output list nodes, local temporaries, seedless adjoints |
 | `lib/gpt/core/stencil/matrix.py`, `lib/gpt/core/local_stencil/matrix.py` | compiled matrix stencils (kind selection, `comm_type`; full grids for non-axis points); `temporaries=`; `cse=` |
 | `lib/cgpt/lib/foundation/general_stencil.h` | general stencil: geometry (lookup table, halo transfer plan), per-field halo, batched exchange via Grid's `StencilSendToRecvFrom`, manager (field point sets); used by `stencil/matrix.h` (`comm_type == 2`, kernel loops in `stencil/matrix_loops.h`) |
@@ -902,7 +960,7 @@ E(md(x, tau)).backward()                                   # x[i].gradient
 | `tests/ad/stencil.py` | stencil AD: fused two-output stencil, path-based stencils, local temporaries (staple action vs cshift graph) at 1st/2nd/3rd order, `with_value=False` |
 | `lib/gpt/qcd/gauge/action/staple_stencil.py` | gauge action value/force as AD stencils (plaquette loop, or staples as local temporaries with rectangles) |
 | `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple (`g.staple_description`), the per-site Jacobian block (`jacobian_matrix`, optionally at a prescribed staple and loops), log-det and its force (also weighted per site), `inv` (`g.algorithms.nonlinear.fixed_point` with site-local Newton steps; `inverse_history`).  `loops=[g.path, ...]`: fixed closed loops at x as further inputs `f(sm, xparams, L)` of the loop function (one fused stencil, `_loop_transport`); the constructor rejects (ValueError) a loop through U_mu(x + s) if P1(x) P1(x + s) != 0 for some x, `inv` re-checks numerically.  Like the staple they are constants of the local map; their flows are pushed back through their own stencil (one list-node reverse pass; tests in `tests/qcd/flows_loops.py`) |
-| `lib/gpt/qcd/gauge/smear/spectral_loop.py` | the spectral single-loop step U_mu' = exp(TA(P1 F(P))) U_mu, F(P) = sum_k c_k P^k, P = T0 U_mu^dag (SU(3)): map, `inv` and jacobian through a single-loop `directional_parallel_transport`; coefficients fixed (`{k: c_k}`) or learnable fields (`{k, ...}`: fields U + [c_k], plain or nodes); analytic log det as a node graph of traces (power sums of tr P, shift-invariant discriminant for numerical stability), any order; `fused_action`, `latent_action` (tests in `tests/qcd/spectral_loop.py`) |
+| `lib/gpt/qcd/gauge/smear/spectral_loop.py` | the spectral single-loop step U_mu' = exp(TA(P1 F(P))) U_mu, F(P) = sum_k c_k P^k, P = T0 U_mu^dag (SU(3)): map, `inv` and jacobian through a single-loop `directional_parallel_transport`; coefficients fixed (`{k: c_k}`) or learnable fields (`{k, ...}`: fields U + [c_k], plain or nodes); analytic log det as one `g.local_program` (power sums of tr P, tr B, tr B^2, shift-invariant discriminant for numerical stability) and three logs, any order; learnable number coefficients enter node graphs as fields c_k 1 (`_coefficient_fields`, shared by F and the log det); `fused_action`, `latent_action` (tests in `tests/qcd/spectral_loop.py`) |
 | `lib/gpt/ad/forward/` | series / Landau differential algebra |
 | `lib/gpt/core/group/operation.py` | inner_product/compose dispatch (`group_inner_product`, `group_compose` of the foundations; `plain_compose`), `zero` (cartesian zero) |
 | `lib/gpt/algorithms/nonlinear/fixed_point.py` | `g.algorithms.nonlinear.fixed_point`: iteration control of x = Phi(x) (history, contraction rate, switch to an accelerated step, failure), `fixed_point.newton(residual, solve)` Newton steps; used by `directional_parallel_transport.inv` |
