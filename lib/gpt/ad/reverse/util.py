@@ -266,6 +266,9 @@ class _pass_state:
     # are released when the outermost pass ends
     depth = 0
     release = []
+    # the ids of the running passes (enter_pass) and the last id issued
+    running = set()
+    last = 0
 
 
 class pass_scope:
@@ -281,6 +284,33 @@ class pass_scope:
             objects, _pass_state.release = _pass_state.release, []
             for x in objects:
                 x.release()
+
+
+def enter_pass(nodes):
+    # a pass over the nodes of a graph (node._call) begins: stamps the nodes
+    # with the id of the pass and returns it (end with leave_pass).  A pass
+    # started while another one runs (e.g. inside a backward) must not reach
+    # a node of an enclosing graph: it would re-evaluate it and reset its
+    # flow.  Such a node is the sign of an object caching a node of an
+    # earlier graph (AD_DEVELOPMENT.md 4.6, caches must not capture call
+    # arguments), so it raises
+    running = _pass_state.running
+    _pass_state.last += 1
+    i = _pass_state.last
+    for n in nodes:
+        if n._pass in running:
+            kind = "computed node" if n._forward is not None else "leaf"
+            raise RuntimeError(
+                f"a pass started inside another pass reaches a {kind} ({n._container}) of the enclosing "
+                "graph: an object probably caches a node of an earlier graph"
+            )
+        n._pass = i
+    running.add(i)
+    return i
+
+
+def leave_pass(i):
+    _pass_state.running.discard(i)
 
 
 def release_at_pass_end(x):

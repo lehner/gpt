@@ -867,3 +867,40 @@ for name, A in [("fft", F), ("adj", g.adj(F)), ("inv", g.inv(F)), ("adj.inv", F.
 
     n = rad.node(X)
     g.norm2(A * n - C).functional(n).assert_gradient_error(rng, [X], [X], 1e-3, 1e-8)
+
+# a pass started inside another pass (here: a functional's gradient in the
+# backward of functional_node) must not reach a node of the enclosing graph;
+# the functional below (deliberately wrong) builds its gradient graph with a
+# node w of the outer graph, as an object caching a node of an earlier call
+from gpt.core.group import differentiable_functional
+
+
+class weighted_norm(differentiable_functional):
+    # S(y) = |w y|^2 (value from the plain w0, gradient graph with w)
+    def __init__(self, w, w0):
+        self.w, self.w0 = w, w0
+
+    def __call__(self, fields):
+        return g.norm2(self.w0 * fields[0])
+
+    def gradient(self, fields, dfields):
+        y = rad.node(g.copy(fields[0]))
+        g.norm2(self.w * y).backward()
+        return [y.gradient]
+
+
+x0 = rng.cnormal(g.complex(grid))
+for broken in [False, True]:
+    a = rad.node(g.copy(x0))
+    w = g(a * 2.0)
+    y = rad.node(g.copy(x0))
+    T = weighted_norm(w if broken else g(2.0 * x0), g(2.0 * x0))
+    L = rad.functional_node(T, [y]) + g.norm2(w)
+    try:
+        L()
+        assert not broken
+        g.message("nested pass on its own graph: fine")
+    except RuntimeError as e:
+        assert broken
+        g.message(f"nested pass reaching the enclosing graph: {e}")
+assert not rad.util._pass_state.running

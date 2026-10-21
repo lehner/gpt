@@ -29,6 +29,8 @@ from gpt.ad.reverse.util import (
     is_node,
     record,
     pass_scope,
+    enter_pass,
+    leave_pass,
     _structural,
     gradient_flag,
     container,
@@ -167,6 +169,8 @@ class node_base(base):
         self.infinitesimal_to_cartesian = infinitesimal_to_cartesian
         # the typed gradient (see flow.py); .gradient is its value
         self.flow = None
+        # the id of the last pass that reached the node (util.enter_pass)
+        self._pass = None
         self._tag = _tag
         # a name for printing (see node_str)
         self._name = _name
@@ -416,13 +420,14 @@ class node_base(base):
     def _call(self, with_gradients, initial_gradient, retain_values, with_value, create_graph, wrt):
         nodes = []
         forward_free = traverse(nodes, self)
+        pass_id = enter_pass(nodes)
         saved = None
-        if with_gradients and wrt is not None:
-            saved, added = _select(nodes, wrt)
-            for x in wrt:
-                # (a selected leaf the root does not depend on: no gradient)
-                x.flow = None
         try:
+            if with_gradients and wrt is not None:
+                saved, added = _select(nodes, wrt)
+                for x in wrt:
+                    # (a selected leaf the root does not depend on: no gradient)
+                    x.flow = None
             free = forward_free if not (with_gradients or retain_values) else None
             needed = None
             if with_gradients and not retain_values and not with_value:
@@ -432,6 +437,7 @@ class node_base(base):
                 with record(create_graph):
                     self._reverse(nodes, forward_free, initial_gradient, retain_values)
         finally:
+            leave_pass(pass_id)
             if saved is not None:
                 for n, w in saved:
                     n.with_gradient = w

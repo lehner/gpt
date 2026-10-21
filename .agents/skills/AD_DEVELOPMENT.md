@@ -253,7 +253,8 @@ Mechanics (see `lib/gpt/ad/reverse/node.py`):
   gradients of `wrt`).  Use `.backward()` wherever the value of a reverse
   pass is not read (user convention, 2026-10-08).  The passes:
   1. `traverse(nodes, self)` collects every node in the graph and records the
-     dependency map;
+     dependency map; `util.enter_pass` stamps them with the pass id (a pass
+     nested in a running pass must not reach its nodes, §4.6);
   2. `forward(nodes)` evaluates each computed node once (values cached);
   3. `_reverse(nodes, ...)` walks the graph in reverse topological order,
      calling each node's `_backward` to scatter flows into
@@ -556,7 +557,12 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   (`g.identity_constant(Q)` is a constant node of Q's graph), never from the
   fields of the call that happened to come first: a node of another graph
   captured there pulls that graph into every later pass (re-evaluated, its
-  flows reset).
+  flows reset).  Guard: a pass started while another pass runs (inside a
+  backward) raises if it reaches any node of an enclosing graph
+  (`util.enter_pass`: every pass stamps its nodes with its id; legitimate
+  nested passes -- chunked tangent replays, checkpoint and recorded local
+  passes, functional gradients -- build their own graphs on fresh leaves
+  and share no node, constants included).
 - **`g.mcolor` leaves are group elements**: their gradients are converted to
   the algebra (`infinitesimal_to_cartesian`).  Finite-difference checks of
   derivatives w.r.t. general complex matrices (e.g. an HVP) need leaves
