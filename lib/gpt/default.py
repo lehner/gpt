@@ -193,6 +193,12 @@ def process_flags():
  --max_io_nodes n
 
    Set maximal number of simultaneous IO nodes.
+
+ --lattice_pool
+
+   Keep the memory of deleted lattices and reuse it for
+   new lattices of the same grid and type instead of
+   allocating new memory.
 """
         )
         sys.exit(0)

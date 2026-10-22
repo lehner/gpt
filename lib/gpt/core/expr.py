@@ -412,6 +412,10 @@ def expr_eval(first, second=None, ac=False):
     if verbose_performance:
         cgpt.timer_begin()
 
+    if dst is None and gpt.core.lattice_pool.use_pool:
+        # evaluate into lattices from the pool instead of new cgpt objects
+        dst = [gpt.lattice(grid, otype) for _ in range(nlat)]
+
     if dst is not None:
         t("cgpt.eval")
         for i, dst_i in enumerate(dst):

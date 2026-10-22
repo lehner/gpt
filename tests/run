@@ -32,6 +32,7 @@ for f in \
     ${test_path}/core/jobs.py \
     ${test_path}/core/tensors.py \
     ${test_path}/core/expression_aliasing.py \
+    ${test_path}/core/lattice_pool.py \
     ${test_path}/core/blas.py \
     ${test_path}/core/sparse_tensor.py \
     ${test_path}/core/gamma.py \

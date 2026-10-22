@@ -20,6 +20,7 @@ import cgpt, gpt, numpy
 from gpt.default import is_verbose
 from gpt.core.expr import factor
 from gpt.core.mem import host
+from gpt.core.lattice_pool import create_lattice_obj, delete_lattice_obj
 from gpt.core.foundation import lattice as foundation, base as foundation_base
 
 mem_book = {}
@@ -70,7 +71,7 @@ class lattice(factor, foundation_base):
                 self.otype = gpt.str_to_otype(p[0])
                 cb = gpt.str_to_cb(p[1])
                 self.v_obj = [
-                    cgpt.create_lattice(self.grid.obj, t, self.grid.precision.cgpt_dtype)
+                    create_lattice_obj(self.grid, t)
                     for t in self.otype.v_otype
                 ]
             else:
@@ -79,7 +80,7 @@ class lattice(factor, foundation_base):
                     self.v_obj = third
                 else:
                     self.v_obj = [
-                        cgpt.create_lattice(self.grid.obj, t, self.grid.precision.cgpt_dtype)
+                        create_lattice_obj(self.grid, t)
                         for t in self.otype.v_otype
                     ]
         elif isinstance(first, gpt.lattice):
@@ -87,7 +88,7 @@ class lattice(factor, foundation_base):
             self.grid = first.grid
             self.otype = first.otype
             self.v_obj = [
-                cgpt.create_lattice(self.grid.obj, t, self.grid.precision.cgpt_dtype)
+                create_lattice_obj(self.grid, t)
                 for t in self.otype.v_otype
             ]
             cb = first.checkerboard()
@@ -118,8 +119,8 @@ class lattice(factor, foundation_base):
             global water_mark
             water_mark -= self.global_bytes()
         del mem_book[self.v_obj[0]]
-        for o in self.v_obj:
-            cgpt.delete_lattice(o)
+        for t, o in zip(self.otype.v_otype, self.v_obj):
+            delete_lattice_obj(self.grid, t, o)
 
     def new(self):
         return lattice(self)
