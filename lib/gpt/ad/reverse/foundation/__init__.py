@@ -265,6 +265,41 @@ def identity(x):
     return _identity.node(x)
 
 
+def _apply_container(x, operator):
+    # the container of operator(x) without applying it (the allocation of
+    # the result in matrix_operator.evaluate)
+    if x.tag[0] is not g.lattice:
+        raise NotImplementedError(f"A matrix_operator applied to a node of {x}")
+    grid, otype = x.get_grid(), x.get_otype()
+    vector_space = operator.vector_space[0]
+    if not operator.vector_space[1].match_otype(otype):
+        vector_space = vector_space.replaced_otype(otype)
+    return container(
+        g.lattice,
+        grid if vector_space.grid is None else vector_space.grid,
+        otype if vector_space.otype is None else vector_space.otype,
+    )
+
+
+# operator * x for a linear g.matrix_operator: the flow into x is
+# operator^dag flow (an operator without adj_mat has no backward)
+_apply = primitive(
+    "matrix_operator",
+    lambda x, operator: operator(x),
+    _apply_container,
+    vjp=lambda i, flow, x, operator: _apply(flow, operator=operator.adj()),
+    reads=((),),
+    jvp=tangent.linear(lambda t, operator: _apply(t, operator=operator)),
+)
+
+
+def matrix_operator(operator, x):
+    # operator(x) and operator * x for a node x
+    if isinstance(x, list):
+        raise NotImplementedError("A matrix_operator applied to a list of nodes")
+    return _apply.node(x, operator=operator)
+
+
 def _astype_container(x, otype):
     c = x.copy()
     c.set_otype(otype)

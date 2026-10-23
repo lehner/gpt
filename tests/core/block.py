@@ -165,3 +165,51 @@ for fine_grid, cb in [
                     err2 += g.norm2(cc - ref_bsum) / len(block_data)
                 g.message(f"Error^2 in embed: {err2}")
                 assert err2 < 1e-12
+
+# sublattices: restrict / prolong (strided picks with offsets and their
+# adjoints), block sum / broadcast, also with a factor per direction and a
+# coarse grid in another rank layout (with more than one rank)
+fine_grid = g.grid([8, 4, 8, 16], g.double)
+rng = g.random("sublattice")
+fc = g.coordinates(fine_grid)
+for factor, mpi in [(2, None), ([2, 1, 2, 4], None), (2, list(reversed(fine_grid.mpi)))]:
+    f = [factor] * 4 if isinstance(factor, int) else factor
+    coarse = None if mpi is None else g.grid([d // b for d, b in zip(fine_grid.fdimensions, f)], g.double, mpi=mpi)
+    sl = g.block.sublattice(fine_grid, factor, coarse)
+    cc = g.coordinates(sl.coarse_grid)
+    for x, y in [
+        (g.mcolor(fine_grid), g.mcolor(sl.coarse_grid)),
+        (g.complex(fine_grid), g.complex(sl.coarse_grid)),
+    ]:
+        rng.cnormal([x, y])
+        for offset in [(0, 0, 0, 0), (1, 0, 1, 3), (0, 0, 1, 2)]:
+            if any(o >= b for o, b in zip(offset, f)):
+                continue
+            R, P = sl.restrict(offset), sl.prolong(offset)
+            Rx = g(R * x)
+            ref = x[np.ascontiguousarray(cc * np.array(f, dtype=cc.dtype) + np.array(offset, dtype=cc.dtype))]
+            assert np.max(np.abs(Rx[cc] - ref)) == 0.0
+            a, b = g.inner_product(Rx, y), g.inner_product(x, g(P * y))
+            assert abs(a - b) < 1e-13 * abs(a)
+            assert abs(g.norm2(g(P * y)) - g.norm2(y)) < 1e-13 * g.norm2(y)
+        Sx = g(sl.sum * x)
+        ref = g.copy(Sx)
+        ref[:] = 0
+        for offset in np.ndindex(*f):
+            ref += sl.restrict(offset) * x
+        err = g.norm2(Sx - ref) / g.norm2(ref)
+        a, b = g.inner_product(Sx, y), g.inner_product(x, g(sl.broadcast * y))
+        g.message(f"sublattice {factor} {sl.coarse_grid.mpi}, {x.otype.__name__}: block sum vs picks {err}, adjoint {abs(a - b) / abs(a)}")
+        assert err < 1e-28 and abs(a - b) < 1e-13 * abs(a)
+
+    # blocked links: typed like U, the products of the picked links
+    U = g.qcd.gauge.random(fine_grid, rng)
+    V = g.qcd.gauge.blocked_links(U, sl)
+    for mu in range(4):
+        assert V[mu].otype.__name__ == U[mu].otype.__name__
+        ref = g.identity(V[mu])
+        Us = U[mu]
+        for k in range(f[mu]):
+            ref = g(ref * (sl.restrict() * Us))
+            Us = g.cshift(Us, mu, 1)
+        assert g.norm2(V[mu] - ref) < 1e-26 * g.norm2(ref)

@@ -17,6 +17,7 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 from gpt.qcd.gauge.create import random, unit
+from gpt.qcd.gauge.block import blocked_links
 from gpt.qcd.gauge.loops import (
     rectangle,
     field_strength,

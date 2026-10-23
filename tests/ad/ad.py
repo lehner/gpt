@@ -954,3 +954,25 @@ g.message(f"deferred reductions: gradients vs undeferred {err:.2e}, global sums 
 assert err < 1e-28 and na < nb
 S, leaves = deferred_graph()
 S.functional(*leaves).assert_gradient_error(rng, [xv, av, bv], [xv, av, bv], 1e-4, 1e-8)
+
+# sublattices on nodes (g.matrix_operators: A(x) and A * x of a node x are the
+# same node of the foundation's matrix_operator primitive): a functional of the
+# blocked links after a coarse Wilson flow step plus the block sum of a fine
+# scalar density, gradient vs finite differences along a group flow
+grid = g.grid([4, 4, 4, 8], g.double)
+rng = g.random("sublattice")
+sl = g.block.sublattice(grid, 2)
+U = g.qcd.gauge.random(grid, rng, scale=0.5)
+w = rng.cnormal(g.complex(sl.coarse_grid))
+flow = g.qcd.gauge.smear.frozen_generators.transverse_wilson_flow(None, 0.05, 1)
+
+
+def blocked_action(Un):
+    V = flow(g.qcd.gauge.blocked_links(Un, sl))
+    s = sl.sum * g.trace(Un[0] * Un[1] + Un[2] * g.adj(Un[3]))
+    return g.qcd.gauge.action.differentiable_iwasaki(2.5)(V) + g.component.real(g.sum(w * s))
+
+
+Un = [rad.node(u) for u in U]
+assert sl.restrict()(Un[0]) is sl.restrict() * Un[0]
+blocked_action(Un).functional(*Un).assert_gradient_error(rng, U, U, 1e-4, 1e-8)

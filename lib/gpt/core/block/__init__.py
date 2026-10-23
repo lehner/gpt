@@ -19,6 +19,7 @@
 import gpt
 from gpt.core.block.map import map
 from gpt.core.block.transfer import transfer
+from gpt.core.block.sublattice import sublattice
 import gpt.core.block.matrix_operator
 
 

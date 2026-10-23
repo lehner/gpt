@@ -499,14 +499,36 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   `g.matrix_operator` return `NotImplemented` for an operand they do not
   know (`gpt.expr(x)` raises `NotImplementedError`, which
   `matrix_operator.__mul__` turns into `NotImplemented`), so `A * node`
-  arrives at `node_base.__rmul__`.  For a `g.matrix_operator` it builds the
-  primitive `_apply` (`node.py`): forward `A(x)`, vjp `A.adj()` applied to
-  the flow (again `_apply`, so any order), container from the operator's
-  `vector_space` as `matrix_operator.__call__` allocates it.  So any linear
+  arrives at `node_base.__rmul__`.  The call `A(x)` dispatches on the
+  foundation of x (`matrix_operator.__call__` -> `foundation.matrix_operator(A,
+  x)`; the plain foundations and expressions run the plain body,
+  `matrix_operator.evaluate`), so code written for plain fields and nodes
+  alike calls operators directly.  For a node both forms (`__rmul__` too)
+  build the primitive `_apply` (`ad/reverse/foundation/__init__.py`): forward
+  `A(x)`, vjp `A.adj()` applied to the flow (again `_apply`, so any order),
+  container from the operator's `vector_space` as `matrix_operator.evaluate`
+  allocates it; `A(x)` and `A * x` are one shared node.  So any linear
   operator with an `adj_mat` (e.g. `g.fft()`, its `adj`, `inv`,
   `adj().inv()`) works on lattice nodes; its adjoint must be the true
   adjoint (the gradient is A^dag applied to the flow).  List nodes and
   Python lists of nodes are not supported there yet.
+- **Blocking fine -> coarse** (`g.block.sublattice(fine_grid, factor,
+  coarse_grid=None)`, `core/block/sublattice.py`; factor per direction,
+  full grids, any otype): `restrict(offset)` y(c) = x(b c + o) and its
+  adjoint `prolong(offset)` (zero fill) are cached `g.copy_plan`s, which
+  pull each coarse site from the rank holding it (any rank layouts of the
+  two grids); `sum` / `broadcast` are cgpt's rank-local `block_sum` /
+  `block_embed` (a coarse grid in another rank layout goes through a
+  repartition copy).  All four are `g.matrix_operator`s paired so that
+  `R.adj()` is `P` (one object, so the nodes the vjps build are shared),
+  hence any order on nodes (`A(x)` or `A * x`).
+  `g.qcd.gauge.blocked_links(U, sublattice)` gives V_mu(c) = prod_{k < b_mu}
+  U_mu(b c + k mu), typed like U: it picks the links before multiplying
+  them on the coarse grid (no fine products or shifts; 10x faster than
+  restricting U_mu cshift(U_mu) at 16^4, and the blocking costs < 1% of a
+  coarse Wilson-flow chain).  Tests: plain in `tests/core/block.py`,
+  gradient in `tests/ad/ad.py`, HVP in `tests/ad/higher_order.py` (end);
+  benchmarks `~/GPT/TODOs/ad_blocking_study/`.
 - Mixed-operand dispatch helpers for groups: `g.group.inner_product` and
   `g.group.compose` dispatch through `_group_foundation`
   (`group_inner_product`, `group_compose`); the plain foundations'
@@ -962,7 +984,7 @@ leaf conversion of an SU(N) gradient are one kernel.
 
 | Path | Role |
 |---|---|
-| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives; `_left_operand`: numpy scalars on the left; `_apply`: a `g.matrix_operator` times a node, §4.5), forward/backward, `functional`, `_become` (an output node takes over a computed node) |
+| `lib/gpt/ad/reverse/node.py` | `node`, `node_base` (`__mul__`/`__pow__`/`__truediv__`/... as primitives; `_left_operand`: numpy scalars on the left; `__rmul__` of a `g.matrix_operator`: the foundation's `_apply`, §4.5), forward/backward, `functional`, `_become` (an output node takes over a computed node) |
 | `lib/gpt/ad/reverse/node_str.py` | `str(node)`: the graph as a listing of temporaries with lattice-op costs, sharing, recomputed subexpressions and memory peaks (§4.1) |
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops, shared nodes, involutions), §4.1 |
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
@@ -976,7 +998,7 @@ leaf conversion of an SU(N) gradient are one kernel.
 | `lib/gpt/ad/reverse/symplectic.py` | `g.ad.reverse.symplectic`: differentiable symplectic integrators `md(fields, tau)` (`update_p`, `update_q`, `leap_frog`, `OMF2`, `OMF4`) and the forces `gradient` (checkpointed recorded gradient) and `gradient_finite_difference` (first order, any functional) (§4.10; tests in `tests/ad/symplectic.py`) |
 | `lib/gpt/ad/reverse/linear_solve.py` | `g.ad.reverse.linear_solve(op, rhs, solver, parameters=[], adj_op=None)`: the solution of a function op linear in x as a node (first order; backward: one adjoint solve, parameter flows by a local reverse pass of op) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |
-| `lib/gpt/ad/reverse/foundation/` | the node versions of the core ops as primitives, projection nodes, group conversions; `matrix/exp.py` (exp tower) |
+| `lib/gpt/ad/reverse/foundation/` | the node versions of the core ops as primitives (also `matrix_operator`: `_apply`, a `g.matrix_operator` on a node, §4.5), projection nodes, group conversions; `matrix/exp.py` (exp tower) |
 | `lib/gpt/core/local_program.py` | `g.local_program`: site-local straight-line programs on components as one tensor-stencil kernel (tracer, lowering with registers, derived `adjoint` / `tangent` / `select` programs), §4.11 |
 | `lib/gpt/ad/reverse/foundation/program.py` | node version of `g.local_program` (one primitive per output otype; vjp and jvp as derived programs) (§4.11; tests in `tests/ad/local_program.py`) |
 | `lib/gpt/ad/reverse/foundation/stencil.py` | node foundation for compiled matrix stencils (§4.7): adjoint derivation (`adjoint_code`, with or without local temporaries), multi-output list nodes, local temporaries, seedless adjoints |
@@ -988,6 +1010,7 @@ leaf conversion of an SU(N) gradient are one kernel.
 | `lib/gpt/qcd/gauge/smear/directional_parallel_transport.py` | checkerboarded smearing (behind `local_stout`): local jacobian/VJP via the staple (`g.staple_description`), the per-site Jacobian block (`jacobian_matrix`, optionally at a prescribed staple and loops), log-det and its force (also weighted per site), `inv` (`g.algorithms.nonlinear.fixed_point` with site-local Newton steps; `inverse_history`).  `loops=[g.path, ...]`: fixed closed loops at x as further inputs `f(sm, xparams, L)` of the loop function (one fused stencil, `_loop_transport`); the constructor rejects (ValueError) a loop through U_mu(x + s) if P1(x) P1(x + s) != 0 for some x, `inv` re-checks numerically.  Like the staple they are constants of the local map; their flows are pushed back through their own stencil (one list-node reverse pass; tests in `tests/qcd/flows_loops.py`) |
 | `lib/gpt/qcd/gauge/smear/spectral_loop.py` | the spectral single-loop step U_mu' = exp(TA(P1 F(P))) U_mu, F(P) = sum_k c_k P^k, P = T0 U_mu^dag (SU(3)): map, `inv` and jacobian through a single-loop `directional_parallel_transport`; coefficients fixed (`{k: c_k}`) or learnable fields (`{k, ...}`: fields U + [c_k], plain or nodes); analytic log det as one `g.local_program` of (C, U_mu, U_mu', P1, coefficients) (P and P', power sums of tr P, tr B, tr B^2, shift-invariant discriminant for numerical stability) and three logs, any order; learnable number coefficients enter node graphs as fields c_k 1 (`_coefficient_fields`, shared by F and the log det); `fused_action`, `latent_action` (tests in `tests/qcd/spectral_loop.py`) |
 | `lib/gpt/ad/forward/` | series / Landau differential algebra |
+| `lib/gpt/core/block/sublattice.py`, `lib/gpt/qcd/gauge/block.py` | `g.block.sublattice`: restrict / prolong (copy plans) and block sum / broadcast between a fine grid and its blocks as paired `g.matrix_operator`s; `g.qcd.gauge.blocked_links` (§4.5) |
 | `lib/gpt/core/group/operation.py` | inner_product/compose dispatch (`group_inner_product`, `group_compose` of the foundations; `plain_compose`), `zero` (cartesian zero) |
 | `lib/gpt/algorithms/nonlinear/fixed_point.py` | `g.algorithms.nonlinear.fixed_point`: iteration control of x = Phi(x) (history, contraction rate, switch to an accelerated step, failure), `fixed_point.newton(residual, solve)` Newton steps; used by `directional_parallel_transport.inv` |
 | `lib/gpt/core/group/algebra_kernels.py` | `g.group.algebra_kernels`: site-local kernels between SU(N) algebra fields and adjoint matrices (coordinates as rows, combinations of generators) |

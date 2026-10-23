@@ -904,3 +904,41 @@ for name, A in [("fft", F), ("adj", g.adj(F)), ("inv", g.inv(F)), ("adj.inv", F.
     assert_field_close(
         hvp_of(S_op, x0, v), hvp_fd, 1e-10, f"matrix_operator {name} HVP vs FD of 1st derivative"
     )
+
+#####################################
+# sublattices (g.block.sublattice operators and g.qcd.gauge.blocked_links)
+# on nodes: HVP of a functional of the coarse flowed blocked links and of
+# the block sum of a fine density vs 4-point FD of the 1st derivative
+#####################################
+grid_sl = g.grid([4, 4, 4, 8], g.double)
+rng_sl = g.random("sublattice")
+sl = g.block.sublattice(grid_sl, 2)
+U_sl = g.qcd.gauge.random(grid_sl, rng_sl, scale=0.5)
+w_sl = rng_sl.cnormal(g.complex(sl.coarse_grid))
+flow_sl = g.qcd.gauge.smear.frozen_generators.transverse_wilson_flow(None, 0.05, 1)
+
+
+def blocked_action(Un):
+    V = flow_sl(g.qcd.gauge.blocked_links(Un, sl))
+    s = sl.sum * g.trace(Un[0] * Un[1] + Un[2] * g.adj(Un[3]))
+    return g.qcd.gauge.action.differentiable_iwasaki(2.5)(V) + g.component.real(g.sum(w_sl * s))
+
+
+Un = [rad.node(u) for u in U_sl]
+blocked_action(Un).backward(create_graph=True)
+dS_sl = [x.gradient for x in Un]
+dA = rng_sl.normal_element(g.group.cartesian(U_sl))
+dB = rng_sl.normal_element(g.group.cartesian(U_sl))
+sum(g.group.inner_product(dA[mu], dS_sl[mu]) for mu in range(4)).backward()
+hvp = sum(g.group.inner_product(dB[mu], Un[mu].gradient) for mu in range(4)).real
+f_sl = blocked_action(Un).functional(*Un)
+
+
+def gradient_along_dA(t):
+    Ut = [g(g.group.compose(g(t * dB[mu]), U_sl[mu])) for mu in range(4)]
+    return sum(g.group.inner_product(dA[mu], x) for mu, x in enumerate(f_sl.gradient(Ut, Ut))).real
+
+
+eps = 1e-3
+fd = (8 * (gradient_along_dA(eps) - gradient_along_dA(-eps)) - (gradient_along_dA(2 * eps) - gradient_along_dA(-2 * eps))) / (12 * eps)
+assert_close(hvp, fd, 1e-9, "sublattice blocked links HVP vs FD of 1st derivative")

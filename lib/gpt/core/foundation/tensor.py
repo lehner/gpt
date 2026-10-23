@@ -131,3 +131,7 @@ class matrix:
 
     def det(t):
         return numpy.linalg.det(t.array)
+
+
+def matrix_operator(operator, first):
+    return operator.evaluate(first)

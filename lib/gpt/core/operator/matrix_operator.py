@@ -257,6 +257,17 @@ class matrix_operator(factor):
         return self
 
     def __call__(self, first, second=None):
+        # A(x) dispatches on the foundation of x (expressions have none and
+        # are evaluated here): a node gets the node of A applied to it
+        if second is None:
+            x = first[0] if isinstance(first, list) else first
+            foundation = getattr(x.__class__, "foundation", None)
+            if foundation is not None:
+                return foundation.matrix_operator(self, first)
+        return self.evaluate(first, second)
+
+    def evaluate(self, first, second=None):
+        # A(x) or A(dst, x) on plain fields
         assert self.mat is not None
 
         return_list = isinstance(first, list)

@@ -121,3 +121,7 @@ def component_simple_map(operator, numpy_operator, extra_params, first, second):
 
 def component_multiply(sx, sy):
     return sx.distribute2(sy, lambda a, b: g.component.multiply(a, b))
+
+
+def matrix_operator(operator, first):
+    return operator.evaluate(first)

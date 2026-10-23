@@ -278,3 +278,7 @@ def where(first, second, third, fourth):
         cgpt.ternary(a, question.v_obj[0], y, n, params)
 
     return answer
+
+
+def matrix_operator(operator, first):
+    return operator.evaluate(first)
