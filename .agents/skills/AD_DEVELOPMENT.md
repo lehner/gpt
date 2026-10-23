@@ -855,6 +855,15 @@ flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
   and records its local reverse pass over them; so every level is an
   ordinary local graph.  The local passes create gradient-carrying leaves and
   restrict themselves with `wrt`.
+- `inline_nested=True`: checkpoints called on nodes while a local pass of
+  this checkpoint runs are `f` inline (no node).  A nested checkpoint in a
+  recorded local pass re-runs its `f` once per level of its own tower (its
+  vjp's value, the replay of that vjp, its own backward), so a
+  Hessian-vector product through a checkpointed gradient whose `f` holds
+  checkpointed smoothing steps runs each step 1 plain + 3 node times; inline
+  once (node).  Costs the memory of the whole local graph of `f`.  Used by
+  `slow_sector_shift` (md_loss_multigrid): 16^4 pull-back 3.87 -> 2.61 s
+  (4.1 -> 3.0 plain gradients of Psi), peak RSS 6.4 -> ~9 GB.
 - Limits: an `order=1` primitive inside `f` (`linear_solve`) raises when the
   second derivative is computed (not in the recorded pass, which only builds
   the lazy node); no tangent rule (a checkpoint on a `g.ad.reverse.jacobian`
@@ -867,7 +876,8 @@ flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
   +30% time (k = 1; larger k saved less: the checkpoints, nd links per
   segment, are cheaper than one step's graph).  Tested in
   `tests/ad/checkpoint.py` (values and gradients bit-identical, Hessian-vector
-  products and third derivatives to rounding).
+  products and third derivatives to rounding; `inline_nested`: the same, and
+  the replay counts).
 
 ### 4.10 Differentiable symplectic integrators (`ad/reverse/symplectic.py`)
 
@@ -994,7 +1004,7 @@ leaf conversion of an SU(N) gradient are one kernel.
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order, a joint-vjp primitive; used by `g.ml` losses) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites; packing costs more than the gemm, so the plain backward of `matrix_vector` packs the flow once for both flows, reads the h packed by the forward (a `fwd` residual) and computes flows only for the entries of h with a gradient, not a constant bias: -11% for the loop-function network value + gradient at 16^4), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |
 | `lib/gpt/ad/reverse/jacobian.py` | `g.ad.reverse.jacobian(y, x, chunk=None)`: the site-diagonal Jacobian J(s) = dy(s)/dx(s) as a node (forward tangents replayed by the nodes' `jvp`, batched over the generators; `chunk`: fewer at a time), `identity` (x as a new node: the boundary of a local map), self-similar `inv`, `det`, `log_det` of J (tests in `tests/ad/jacobian.py`) |
-| `lib/gpt/ad/reverse/checkpoint.py` | `g.ad.reverse.checkpoint(f, inputs)`: gradient checkpointing, any order (§4.9) |
+| `lib/gpt/ad/reverse/checkpoint.py` | `g.ad.reverse.checkpoint(f, inputs, containers, inline_nested)`: gradient checkpointing, any order (§4.9) |
 | `lib/gpt/ad/reverse/symplectic.py` | `g.ad.reverse.symplectic`: differentiable symplectic integrators `md(fields, tau)` (`update_p`, `update_q`, `leap_frog`, `OMF2`, `OMF4`) and the forces `gradient` (checkpointed recorded gradient) and `gradient_finite_difference` (first order, any functional) (§4.10; tests in `tests/ad/symplectic.py`) |
 | `lib/gpt/ad/reverse/linear_solve.py` | `g.ad.reverse.linear_solve(op, rhs, solver, parameters=[], adj_op=None)`: the solution of a function op linear in x as a node (first order; backward: one adjoint solve, parameter flows by a local reverse pass of op) |
 | `lib/gpt/ad/reverse/preimage.py` | the preimage x = phi^-1(y) of a diffeomorphism as nodes (first order; backward: solve J_xx^T lambda = c with `dfm.jacobian`, flows lambda and -(dphi/d others)^T lambda); `directional_parallel_transport.inv` accepts nodes through it |

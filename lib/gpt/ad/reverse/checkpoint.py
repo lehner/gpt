@@ -38,6 +38,15 @@
 # derivative order used (e.g. linear_solve: first order only).  No tangent
 # rule: a checkpoint on a path of g.ad.reverse.jacobian raises.
 #
+# inline_nested: checkpoints called on nodes while a local pass of this one
+# runs (h at any order) are not nodes but f inline, so the local graph is
+# that of f without nested checkpoints.  A nested checkpoint inside a
+# recorded local pass re-runs its f once per level of its own tower (the
+# value of its vjp, the replay of that vjp, its own backward): inline, f
+# runs once, at the memory of the whole local graph (e.g. a Hessian-vector
+# product through a checkpointed gradient whose f contains checkpointed
+# smoothing steps).
+#
 import gpt as g
 from gpt.ad.reverse.primitive import primitive
 from gpt.ad.reverse.util import (
@@ -49,16 +58,30 @@ from gpt.ad.reverse.util import (
 )
 
 
+class _inline_state:
+    # the number of running local passes of checkpoints with inline_nested
+    depth = 0
+
+
 def _flow(leaf, c):
     # a leaf's gradient, or a zero of its container if it received none
     gr = leaf.gradient
     return c.zero() if gr is None else gr
 
 
-def _vjp_function(f, n, needed, outputs):
+def _vjp_function(f, n, needed, outputs, inline_nested):
     # h(x_0, ..., x_{n-1}, c_0, ...) = the flows into x_i (i in needed) for the
     # flows c_k into the outputs y_{outputs[k]} of f
     def h(args):
+        if not inline_nested:
+            return local_pass(args)
+        _inline_state.depth += 1
+        try:
+            return local_pass(args)
+        finally:
+            _inline_state.depth -= 1
+
+    def local_pass(args):
         x, seeds = list(args[:n]), list(args[n:])
         if not any(is_node(a) for a in args):
             # plain: one local reverse pass over f on fresh leaves (all with
@@ -76,39 +99,41 @@ def _vjp_function(f, n, needed, outputs):
     return h
 
 
-def _plain(*values, f, containers):
+def _plain(*values, f, containers, inline_nested):
     return list(f(list(values)))
 
 
-def _container(*children, f, containers):
+def _container(*children, f, containers, inline_nested):
     return list_container(list(containers))
 
 
-def _joint_vjp(z, needed, *values, f, containers):
+def _joint_vjp(z, needed, *values, f, containers, inline_nested):
     seeds = z.gradient
     outputs = [j for j, c in enumerate(seeds) if c is not None]
     if not outputs:
         return {}
-    h = _vjp_function(f, len(values), needed, outputs)
+    h = _vjp_function(f, len(values), needed, outputs, inline_nested)
     flow_containers = [get_container(values[i]) for i in needed]
-    r = checkpoint(h, list(values) + [seeds[j] for j in outputs], flow_containers)
+    r = checkpoint(h, list(values) + [seeds[j] for j in outputs], flow_containers, inline_nested)
     return {i: r[k] for k, i in enumerate(needed)}
 
 
 _checkpoint = primitive("checkpoint", _plain, _container, joint_vjp=_joint_vjp, fresh=True)
 
 
-def checkpoint(f, inputs, containers=None):
+def checkpoint(f, inputs, containers=None, inline_nested=False):
     """f(inputs) (a list of fields of one container) as a checkpoint node:
     the graph keeps the inputs only, the backward re-runs f (see above).
     Plain inputs: f(inputs).  containers: those of the outputs (default: from
-    f built on lazy zeros of the inputs' containers, without evaluation)."""
+    f built on lazy zeros of the inputs' containers, without evaluation).
+    inline_nested: checkpoints inside the local passes of this one run
+    inline (see above).  Inside such a local pass, this is f(inputs)."""
     inputs = list(inputs)
-    if not any(is_node(x) for x in inputs):
+    if _inline_state.depth > 0 or not any(is_node(x) for x in inputs):
         return list(f(inputs))
     if containers is None:
         proxies = [g.ad.reverse.zero(get_container(x)) for x in inputs]
         containers = [get_container(y) for y in f(proxies)]
     containers = tuple(containers)
-    z = _checkpoint.node(*inputs, f=f, containers=containers)
+    z = _checkpoint.node(*inputs, f=f, containers=containers, inline_nested=inline_nested)
     return [z[k] for k in range(len(containers))]
