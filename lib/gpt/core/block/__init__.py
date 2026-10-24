@@ -32,5 +32,6 @@ def grid(fgrid, nblock):
         [fgrid.fdimensions[i] // nblock[i] for i in range(fgrid.nd)],
         fgrid.precision,
         gpt.full,
+        mpi=fgrid.mpi if fgrid.parent is not None else None,
         parent=fgrid.parent,
     )
