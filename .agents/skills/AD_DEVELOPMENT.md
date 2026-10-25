@@ -106,10 +106,6 @@ training) has its own guide: `ML_DEVELOPMENT.md` (same directory).
   difference of the action along a random group-flow direction, and
   3) the force lives in the cartesian (Lie algebra) representation.
 - **Adding a new test**: append its path to the list in `tests/run`.
-- Known pre-existing failure on this box: `tests/qcd/coarsen.py` OOMs
-  (15 GB RAM) at its default size; it passes at half size in every
-  dimension (`--fgrid 8.8.16.8 --cgrid 4.4.4.4 --ccgrid 2.2.2.4`), which
-  still covers the 33-point (padded `matrix_vector`) stencil. Everything else should pass.
 - Reproducibility: RNGs are seeded by name (`g.random("test")`), so results
   are bit-reproducible across runs on the same machine. When refactoring,
   compare reported numbers (relative errors) across the change — they should
@@ -1044,8 +1040,7 @@ leaf conversion of an SU(N) gradient are one kernel.
    differences *before* touching production classes.
 4. Add first-derivative checks to `tests/ad/ad.py`; 2nd/3rd-order checks to
    `tests/ad/higher_order.py` (or a dedicated test added to `tests/run`).
-5. Run `bash tests/run` (no args) for the full suite; expect only the
-   pre-existing `qcd/coarsen.py` OOM on the 15 GB box.
+5. Run `bash tests/run` (no args) for the full suite; every test should pass.
 6. To compare against an earlier version, extract it with
    `git archive <commit> lib/gpt | tar -x -C <scratch>` and run with
    `PYTHONPATH=<scratch>/lib:$PYTHONPATH` (valid while `lib/cgpt` is
