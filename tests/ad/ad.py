@@ -28,6 +28,9 @@ for prec in [g.double]:
     s2 = rad.node(g.complex(grid))
     m1 = rad.node(g.mspin(grid))
 
+    # s1 and s2 also enter expressions that do not list them as arguments
+    rng.cnormal([s1.value, s2.value])
+
     # use additive group instead of matrix multiplication
     u1 = rad.node(g.mcolor(grid), infinitesimal_to_cartesian=False)
 
