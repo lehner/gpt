@@ -31,7 +31,7 @@ public:
 private:
   GridBase*                       coarse_;
   GridBase*                       fine_;
-  std::vector<HostDeviceVector<index_type>> lut_vec_;
+  HostDeviceVector<index_type>              lut_vec_; // block_v entries per coarse site, one allocation
   HostDeviceVector<index_type*>             lut_ptr_;
   HostDeviceVector<size_type>               sizes_;
   HostDeviceVector<index_type>              reverse_lut_vec_;
@@ -45,7 +45,6 @@ public:
   cgpt_block_lookup_table(GridBase* coarse, const Lattice<T_singlet> & mask)
     : coarse_(coarse)
     , fine_(mask.Grid())
-    , lut_vec_(coarse_->oSites())
     , lut_ptr_(coarse_->oSites())
     , sizes_(coarse_->oSites())
     , reverse_lut_vec_(fine_->oSites()) {
@@ -88,8 +87,8 @@ private:
     }
     assert(block_v == fine_->oSites()/coarse_->oSites());
 
+    lut_vec_.resize(coarse_->oSites() * block_v);
     for(index_type sc = 0; sc < coarse_->oSites(); ++sc) {
-      lut_vec_[sc].resize(block_v);
       sizes_[sc]  = 0;
     }
 
@@ -121,17 +120,18 @@ private:
 	for (int lane=1;lane<Nsimd;lane++)
 	  ASSERT(bset == (fmask[lane] != zz));
         if(bset) {
-          lut_vec_[sc][count] = sf;
+          lut_vec_[sc * block_v + count] = sf;
           sizes_[sc]++;
           count++;
         }
         reverse_lut_vec_[sf] = sc; // reverse table will never have holes
       }
-      ASSERT(lut_vec_[sc].size() >= sizes_[sc]);
+      ASSERT(block_v >= sizes_[sc]);
     });
 
+    index_type* lut_device = lut_vec_.toDevice();
     for(index_type sc = 0; sc < coarse_->oSites(); ++sc) {
-      lut_ptr_[sc] = lut_vec_[sc].toDevice();
+      lut_ptr_[sc] = lut_device + sc * block_v;
     }
     
     lut_ptr_.toDevice();
