@@ -201,6 +201,43 @@ x = [complex(-1.2, 0.3), complex(1.0, -0.2)]
 assert g.algorithms.optimize.lbfgs(maxiter=200, eps=1e-10, failure_value=1e10)(guarded())(x, x)
 assert abs(x[0] - 1) < 1e-8 and abs(x[1] - 1) < 1e-8
 
+
+# adam's report on a stochastic cost: a[0] linear (drift), a[1] at its optimum with batch noise (noise, explained by
+# the batch), a[2] without gradient (dead), a[3] at its optimum with a gradient that changes sign between steps and
+# little batch noise (noise, not explained by the batch)
+class stochastic(differentiable_functional):
+    def __init__(self, rng, step):
+        self.rng, self.step = rng, step
+
+    def __call__(self, fields):
+        return 0.0
+
+    def gradient(self, fields, dfields):
+        a = fields[0]
+        z = self.rng.normal(size=2)
+        return [np.array([1.0, a[1] + z[0], 0.0, a[3] + (-1) ** self.step + 0.1 * z[1]])]
+
+
+nrng = np.random.default_rng(1)
+a = np.zeros(4)
+run = g.algorithms.optimize.adam(maxiter=1, alpha=1e-3).on([a])
+assert str(run.report()) == "adam report: no steps yet"
+for i in range(200):
+    run(stochastic(nrng, i))
+rep = run.report(groups=["lin", "opt", "none", "data"], names=["a0", "a1", "a2", "a3"],
+                 batch_var=[np.array([0.0, 1.0, 0.0, 0.01])])
+g.message(rep)
+assert rep.params["cls"] == ["drift", "noise", "dead", "noise"]
+assert rep.groups["opt"]["batch_share"] > 0.5 and rep.groups["data"]["batch_share"] < 0.2
+# lattice fields: one parameter per field
+U1, V1 = g.copy([U0, V0])
+run = adam_1.on([U1, V1])
+for i in range(10):
+    run(f)
+rep = run.report(names=["U", "V"])
+g.message(rep)
+assert len(rep.params["sqrt_r"]) == 2 and rep.as_dict()["groups"]["all"]["n"] == 2
+
 # test symmetric update functional
 s = g.algorithms.group.symmetric_functional(f)
 U1 = g.copy(U0)

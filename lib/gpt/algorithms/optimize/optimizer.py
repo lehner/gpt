@@ -31,7 +31,8 @@ class optimizer(base_iterative):
     A run created by opt.on keeps the optimizer's state (e.g. Adam's moments)
     across its calls, also with a different f in each call (e.g. a cost drawn
     anew for every step, with maxiter=1 at construction).  opt(f) keeps one
-    state for all its calls.  Subclasses implement new_state() and
+    state for all its calls.  run.report(...) summarizes the state of a run
+    (optimizers that implement it, e.g. adam).  Subclasses implement new_state() and
     iterate(f, x, dx_indices, state, t)."""
 
     def on(self, x, dx=None):
@@ -51,6 +52,9 @@ class optimizer(base_iterative):
     def iterate(self, f, x, dx_indices, state, t):
         raise NotImplementedError()
 
+    def report(self, state, **kwargs):
+        raise NotImplementedError(f"{type(self).__name__} has no report")
+
 
 class _run:
     # an optimizer bound to fields x and the updated subset dx (by position
@@ -67,3 +71,6 @@ class _run:
         result = self.opt.iterate(f, self.x, self.dx_indices, self.state, t)
         self.opt.timed_end(t)
         return result
+
+    def report(self, **kwargs):
+        return self.opt.report(self.state, **kwargs)
