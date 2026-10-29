@@ -212,9 +212,12 @@ class node_base(base):
         if self.flow is None:
             self.zero_gradient()
         elif isinstance(self.flow, flows.flow_list) and None in self.flow.elements:
-            elem = self._container.tag[1]
+            elems = self._container.elements()
             self.flow = flows.flow_list(
-                [flows.dense(elem.zero(), True) if e is None else e for e in self.flow.elements]
+                [
+                    flows.dense(c.zero(), True) if e is None else e
+                    for e, c in zip(self.flow.elements, elems)
+                ]
             )
         else:
             self.gradient
@@ -224,8 +227,7 @@ class node_base(base):
             # a list leaf's gradient is a plain list, one entry per element
             # (in a recorded pass a list of node graphs, never a node
             # wrapping a list)
-            elem = self._container.tag[1]
-            self.gradient = [elem.zero() for _ in range(self._container.tag[2])]
+            self.gradient = [c.zero() for c in self._container.elements()]
             return
         if isinstance(self.value, g.ad.forward.series):
             zero = self._container.zero()
@@ -292,7 +294,7 @@ class node_base(base):
         # a list node (e.g. the 4 gauge links) reports its length so it can be
         # consumed like the Python-list-of-nodes convention (len(U), U[i])
         if self._container.tag[0] is list:
-            return self._container.tag[2]
+            return len(self._container.elements())
         raise TypeError(f"object of type '{type(self).__name__}' has no len()")
 
     def __add__(x, y):
@@ -758,7 +760,7 @@ _pow = primitive(
 _list_element = primitive(
     "list_element",
     lambda x, index, n: x[index],
-    lambda x, index, n: x.tag[1].copy(),
+    lambda x, index, n: x.elements()[index].copy(),
     vjp=lambda i, flow, x, index, n: [flow if j == index else None for j in range(n)],
     reads=((),),
     jvp=tangent.linear(lambda t, index, n: t[index]),

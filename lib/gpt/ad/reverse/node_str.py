@@ -46,7 +46,10 @@ _hidden_statics = {"n_block", "use_accelerator", "c", "reductions", "lattice", "
 def _type(c, grids):
     t = c.tag
     if t[0] is list:
-        return f"list[{t[2]}]({_type(t[1], grids)})"
+        elems = [_type(e, grids) for e in t[1]]
+        if all(e == elems[0] for e in elems[1:]):
+            return f"list[{len(elems)}]({elems[0]})"
+        return f"list({', '.join(elems)})"
     if t[0] is np.ndarray:
         return f"array{tuple(t[1])}"
     if t[0] is complex:
@@ -61,7 +64,7 @@ def _type(c, grids):
 
 def _is_lattice(c):
     t = c.tag
-    return t[0] is g.lattice or (t[0] is list and t[1].tag[0] is g.lattice)
+    return t[0] is g.lattice or (t[0] is list and any(_is_lattice(e) for e in t[1]))
 
 
 def _lattice_op(n):

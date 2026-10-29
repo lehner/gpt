@@ -170,7 +170,7 @@ def _stack_jvp(z, children, tangents):
 _stack = primitive(
     "stack",
     lambda *h: list(h),
-    lambda *c: container(list, c[0].copy(), len(c)),
+    lambda *c: container(list, [x.copy() for x in c]),
     vjp=lambda j, flow, *h: flow[j],
     reads=lambda n: ((),) * n,
     jvp=_stack_jvp,
@@ -214,7 +214,7 @@ def _matrix_vector_vjp(z, needed, W, h, residual):
         H = _pack(_plain_list(h)) if residual is None else residual
         result[0] = _outer(H, F, flow[0].grid)
     hn = z._children[1]
-    n = hn._container.tag[2]
+    n = len(hn._container.elements())
     cols = list(range(n))
     if hn._tag == "stack":
         # the flows of the entries of h that carry a gradient
@@ -231,7 +231,7 @@ def _matrix_vector_vjp(z, needed, W, h, residual):
 matrix_vector = primitive(
     "matrix_vector",
     lambda W, h: _plain_matrix_vector(W, h),
-    lambda W, h: container(list, h.tag[1].copy(), W.tag[1][0]),
+    lambda W, h: container(list, [h.element().copy() for _ in range(W.tag[1][0])]),
     joint_vjp=_matrix_vector_vjp,
     fwd=lambda W, h: _fwd_matrix_vector(W, h),
     lift=(constant, stack),
@@ -249,7 +249,7 @@ def _outer_sum_vjp(i, flow, a, b):
 outer_sum = primitive(
     "outer_sum",
     lambda a, b: _plain_outer_sum(a, b),
-    lambda a, b: container(np.ndarray, (a.tag[2], b.tag[2]), np.complex128),
+    lambda a, b: container(np.ndarray, (len(a.elements()), len(b.elements())), np.complex128),
     vjp=_outer_sum_vjp,
     lift=(stack, stack),
     reads=((1,), (0,)),
