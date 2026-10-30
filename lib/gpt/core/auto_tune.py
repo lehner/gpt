@@ -58,6 +58,11 @@ def save_cache(fn, data, grid):
         tmp = f"{fn}.{g.rank()}.tmp"
         with open(tmp, "wt") as fout:
             json.dump(data, fout)
+        try:
+            # force FS sync
+            open(tmp, "rt")
+        except:
+            pass
         os.replace(tmp, fn)
     runtime_tune_cache[fn] = data
 
