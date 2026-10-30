@@ -261,7 +261,7 @@ def _cache(obj, name):
 
 
 def _lattice_list(grid, otype, n):
-    return container(list, container(g.lattice, grid, otype), n)
+    return container(list, [container(g.lattice, grid, otype) for _ in range(n)])
 
 
 def _op(stencil, out, n_inputs):
@@ -372,8 +372,8 @@ class _stencil_op:
         # (a list output keeps its list semantics with a single element,
         # e.g. the adjoint of a stencil with one flowed input)
         self.listed = out.tag[0] is list
-        self.m = out.tag[2] if self.listed else 1
-        elem = out.tag[1] if self.listed else out
+        self.m = len(out.elements()) if self.listed else 1
+        elem = out.element() if self.listed else out
         self.grid, self.otype = elem.get_grid(), elem.get_otype()
         self.temps = sorted(getattr(inner, "temporaries", ()))
         self._setup(n_inputs)

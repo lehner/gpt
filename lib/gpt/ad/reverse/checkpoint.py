@@ -32,9 +32,10 @@
 # level), h builds f and records its local reverse pass over them, so the
 # vjp of h is the vjp of a recorded gradient, an ordinary local graph.
 #
-# f maps a list of fields to a list of fields of one container (e.g. the nd
-# links of a smoothing step; an input may be passed through) and must work
-# on plain fields and on nodes.  Every primitive inside f must support the
+# f maps a list of fields to a list of fields of any types (e.g. the nd links
+# of a smoothing step, or the links, momenta and parameters of an MD step: the
+# outputs are one list node with one container per element; an input may be
+# passed through) and must work on plain fields and on nodes.  Every primitive inside f must support the
 # derivative order used (e.g. linear_solve: first order only).  No tangent
 # rule: a checkpoint on a path of g.ad.reverse.jacobian raises.
 #
@@ -122,7 +123,7 @@ _checkpoint = primitive("checkpoint", _plain, _container, joint_vjp=_joint_vjp, 
 
 
 def checkpoint(f, inputs, containers=None, inline_nested=False):
-    """f(inputs) (a list of fields of one container) as a checkpoint node:
+    """f(inputs) (a list of fields of any types) as a checkpoint node:
     the graph keeps the inputs only, the backward re-runs f (see above).
     Plain inputs: f(inputs).  containers: those of the outputs (default: from
     f built on lazy zeros of the inputs' containers, without evaluation).

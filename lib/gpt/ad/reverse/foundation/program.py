@@ -51,7 +51,7 @@ class _program_op:
 
     def _container(self, *children):
         elem = container(g.lattice, children[0].get_grid(), self.program.outputs[0])
-        return container(list, elem, self.m) if self.listed else elem
+        return container(list, [elem.copy() for _ in range(self.m)]) if self.listed else elem
 
     def _plain(self, *values):
         outs = self.program.plain(*values)

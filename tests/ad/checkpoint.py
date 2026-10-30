@@ -4,8 +4,9 @@
 #
 # g.ad.reverse.checkpoint: values and derivatives (first, second and third
 # order) identical to the graph without checkpoints; segments, nesting, an
-# order=1 primitive inside, and the smoothers of frozen_generators with
-# checkpoint=k in a frozen-shift force and a prescribed-staple log-det force
+# order=1 primitive inside, the smoothers of frozen_generators with
+# checkpoint=k in a frozen-shift force and a prescribed-staple log-det force,
+# and outputs of several types (an MD step: links, momenta, a number)
 #
 import gpt as g
 import numpy as np
@@ -224,6 +225,122 @@ for k in [None, 1]:
 eps = rel(ld_forces[1], ld_forces[0])
 g.message(f"prescribed-staple log-det force with checkpoint=1 vs without: {eps}")
 assert eps < 1e-14
+
+#####################################################################
+# outputs of several types (a list node with one container per element):
+# one leapfrog step [U (SU(3)), P (algebra), beta (number)] -> [U', P', x]
+# with the force of beta S_wilson (itself a checkpoint, whose vjp has the
+# flows into links and beta as outputs); value and derivatives to third
+# order against the same step without checkpoint and finite differences
+#####################################################################
+class scaled(g.core.group.differentiable_functional):
+    # Re(c) S(U) with c the last field
+    def __init__(self, S):
+        self.S = S
+        self.__name__ = f"scaled({S.__name__})"
+
+    def __call__(self, fields):
+        return g.component.real(fields[-1]) * self.S(fields[:-1])
+
+    def gradient(self, fields, dfields):
+        U, c = fields[:-1], fields[-1]
+        return [complex(self.S(U)) if d is c else g(c.real * self.S.gradient(U, [d])[0]) for d in dfields]
+
+
+dsympl = g.ad.reverse.symplectic
+w1 = g.qcd.gauge.action.wilson(1.0)
+iU, iP = list(range(4)), list(range(4, 8))
+leapfrog = dsympl.leap_frog(
+    1, dsympl.update_p(iP, dsympl.gradient(scaled(w1), 4), iU + [8]), dsympl.update_q(iU, lambda f: f, iP)
+)
+
+
+def md_step(x):
+    return leapfrog(x, 0.2)[0:8] + [x[8] * x[8] + 0.5 * x[8]]
+
+
+P = g.group.cartesian(U)
+g.qcd.scalar.action.mass_term().draw(P, rng)
+beta = 0.7
+cP = rng.normal_element(g.group.cartesian(U))
+directions = [[rng.normal_element(g.group.cartesian(U)) for _ in range(2)] for _ in range(2)]
+directions = [(a, b, db) for (a, b), db in zip(directions, [0.3, -0.7])]
+
+
+def md_observable(y):
+    momenta = sum(g.component.real(g.sum(g.trace(c * p))) for c, p in zip(cP, y[4:8]))
+    return w1(y[0:4]) + momenta + g.component.real(y[8] * y[8])
+
+
+def md_contract(direction, gr):
+    a, b, db = direction
+    return g.group.inner_product(a + b, gr[0:8]) + g.component.real(db * gr[8])
+
+
+def md_leaves():
+    return [rad.node(g.copy(f)) for f in U + P] + [rad.node(beta)]
+
+
+def md_derivatives(step):
+    # value, gradient, Hessian-vector product, third derivative
+    x = md_leaves()
+    value = md_observable(step(x))()
+    gradient = [x[i].gradient for i in range(9)]
+    hvp, third = None, None
+    for order in [2, 3]:
+        x = md_leaves()
+        md_observable(step(x)).backward(create_graph=True)
+        for k in range(order - 1):
+            gr = [n.gradient for n in x]
+            for n in x:
+                n.flow = None
+            md_contract(directions[k], gr).backward(create_graph=k < order - 2)
+        if order == 2:
+            hvp = [n.gradient for n in x]
+        else:
+            third = md_contract(directions[0], [n.gradient for n in x])
+    return value, gradient, hvp, third
+
+
+step_variants = [
+    ("none", md_step),
+    ("checkpoint", lambda x: rad.checkpoint(md_step, x)),
+]
+md_ref = None
+for name, step in step_variants:
+    r = md_derivatives(step)
+    if md_ref is None:
+        md_ref = r
+        g.message(f"mixed outputs: container {rad.checkpoint(md_step, md_leaves())[0]._children[0]._container}")
+        continue
+    e = [
+        abs(r[0] - md_ref[0]) / abs(md_ref[0]),
+        rel(r[1][0:8], md_ref[1][0:8]),
+        abs(r[1][8] - md_ref[1][8]) / abs(md_ref[1][8]),
+        rel(r[2][0:8], md_ref[2][0:8]),
+        abs(r[2][8] - md_ref[2][8]) / abs(md_ref[2][8]),
+        abs(r[3] - md_ref[3]) / abs(md_ref[3]),
+    ]
+    g.message(
+        f"mixed outputs, {name}: value {e[0]}, gradient U+P {e[1]}, beta {e[2]}, "
+        f"Hessian-vector U+P {e[3]}, beta {e[4]}, third derivative {e[5]}"
+    )
+    assert max(e) < 1e-13
+
+
+def md_at(h):
+    a, b, db = directions[0]
+    x = [g(u) for u in g.group.compose([g(h * ai) for ai in a], U)] + [g(p + h * bi) for bi, p in zip(b, P)]
+    return complex(md_observable(rad.checkpoint(md_step, x + [beta + h * db]))).real
+
+
+h = 1e-3
+fd = [(md_at(h) - md_at(-h)) / (2 * h), (md_at(h) - 2 * md_at(0.0) + md_at(-h)) / h**2]
+ad = [md_contract(directions[0], md_ref[1]), md_contract(directions[0], md_ref[2])]
+for k in range(2):
+    eps = abs(ad[k] - fd[k]) / abs(fd[k])
+    g.message(f"mixed outputs: derivative {k + 1} along (U, P, beta) {ad[k]} vs finite difference {fd[k]}: {eps}")
+    assert eps < 1e-5
 
 #####################################################################
 # memory: the local passes of a chain of checkpoints keep no fields

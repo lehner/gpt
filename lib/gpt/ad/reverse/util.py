@@ -62,6 +62,11 @@ class container:
             # (one spelling of shape and dtype: containers compare by str)
             tag = [np.ndarray, tuple(tag[1]), np.dtype(tag[2])]
 
+        if tag[0] is list:
+            # one container per element (the elements may differ in type,
+            # e.g. links, momenta and a number)
+            tag = [list, tuple(tag[1])]
+
         self.tag = tag
         # str(self) of a non-list container, computed once (the tag only
         # changes in set_otype)
@@ -74,45 +79,61 @@ class container:
 
     def copy(self):
         if self.tag[0] is list:
-            return container(list, self.tag[1].copy(), self.tag[2])
+            return container(list, [e.copy() for e in self.tag[1]])
         r = container(*[x for x in self.tag])
         r._str = self._str
         return r
 
+    def elements(self):
+        # the containers of the elements of a list
+        assert self.tag[0] is list
+        return self.tag[1]
+
+    def element(self):
+        # the container shared by all elements of a list (e.g. the links of a
+        # gauge field), for operations defined on uniform lists only
+        elems = self.elements()
+        if any(not e.accumulate_compatible(elems[0]) for e in elems[1:]):
+            raise TypeError(f"Not a uniform list: {self}")
+        return elems[0]
+
     def is_field(self):
         if self.tag[0] is list:
-            return self.tag[1].is_field()
+            return any(e.is_field() for e in self.tag[1])
         return self.tag[0] == g.lattice
 
     def representative(self):
         if self.tag[0] is list:
-            _, elem, n = self.tag
-            return [elem.representative() for _ in range(n)]
+            return [e.representative() for e in self.tag[1]]
         return self.tag[0](*self.tag[1:])
 
     def lattice_to_tensor(self):
         if self.tag[0] is list:
-            return container(list, self.tag[1].lattice_to_tensor(), self.tag[2])
+            return container(list, [e.lattice_to_tensor() for e in self.tag[1]])
         assert self.tag[0] == g.lattice
         return container(g.tensor, self.tag[2])
 
     def get_grid(self):
         if self.tag[0] is list:
-            return self.tag[1].get_grid()
-        if len(self.tag) > 2:
+            # (of the first element on a grid)
+            for e in self.tag[1]:
+                if len(e.tag) > 2:
+                    return e.get_grid()
+        elif len(self.tag) > 2:
             return self.tag[1]
         raise Exception("Container does not have a grid")
 
     def get_otype(self):
         if self.tag[0] is list:
-            return self.tag[1].get_otype()
+            return self.element().get_otype()
         if len(self.tag) > 1:
             return self.tag[-1]
         raise Exception("Container does not have an otype")
 
     def set_otype(self, otype):
         if self.tag[0] is list:
-            self.tag[1].set_otype(otype)
+            for e in self.tag[1]:
+                e.set_otype(otype)
             return
         if len(self.tag) > 1:
             self.tag = list(self.tag[:-1]) + [otype]
@@ -123,8 +144,8 @@ class container:
     def accumulate_compatible(self, other):
         if self.tag[0] is list or other.tag[0] is list:
             if self.tag[0] is list and other.tag[0] is list:
-                return self.tag[2] == other.tag[2] and self.tag[1].accumulate_compatible(
-                    other.tag[1]
+                return len(self.tag[1]) == len(other.tag[1]) and all(
+                    a.accumulate_compatible(b) for a, b in zip(self.tag[1], other.tag[1])
                 )
             return False
         if self.tag[0] is np.ndarray or other.tag[0] is np.ndarray:
@@ -165,8 +186,11 @@ class container:
 
     def __str__(self):
         if self.tag[0] is list:
-            # (not cached: the element container may be retyped)
-            return "list[%d](%s)" % (self.tag[2], str(self.tag[1]))
+            # (not cached: the element containers may be retyped)
+            elems = [str(e) for e in self.tag[1]]
+            if all(e == elems[0] for e in elems[1:]):
+                return "list[%d](%s)" % (len(elems), elems[0])
+            return "list(%s)" % ",".join(elems)
         if self._str is None:
             self._str = self._format()
         return self._str
@@ -194,7 +218,7 @@ def get_container(x):
             return get_container(x[t])
         raise Exception("Empty series")
     elif isinstance(x, list):
-        # a uniform list of fields (e.g. the 4 gauge links) is one list node
+        # a list of fields (e.g. the 4 gauge links) is one list node
         return list_container([get_container(e) for e in x])
     elif isinstance(x, g.lattice):
         return container(g.lattice, x.grid, x.otype)
@@ -209,10 +233,11 @@ def get_container(x):
 
 
 def list_container(elems):
-    # the container of a list whose elements have the containers elems
-    if len(elems) == 0 or any(not e.accumulate_compatible(elems[0]) for e in elems[1:]):
-        raise TypeError(f"Not a uniform list: {[str(e) for e in elems]}")
-    return container(list, elems[0].copy(), len(elems))
+    # the container of a list whose elements have the containers elems (of
+    # any types, e.g. the outputs of a checkpoint: links, momenta, numbers)
+    if len(elems) == 0:
+        raise TypeError("Not a list container: no elements")
+    return container(list, [e.copy() for e in elems])
 
 
 def is_node(x):

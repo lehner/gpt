@@ -835,8 +835,9 @@ Plain-run optimizations:
 
 `outputs = g.ad.reverse.checkpoint(f, inputs)` is `f(inputs)` as one
 node (gradient checkpointing).  `f` maps a list of fields to a list of fields
-of one container (an input may be passed through) and works on plain fields
-and on nodes; plain inputs give `f(inputs)`.  The node's forward runs `f` on
+of any types (an input may be passed through; e.g. an MD step: links,
+momenta, numbers -> links, momenta) and works on plain fields and on nodes;
+plain inputs give `f(inputs)`.  The node's forward runs `f` on
 plain values without a graph, so the outer graph keeps only the inputs (its
 children); its backward re-runs `f` on fresh leaves and back-propagates the
 flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
@@ -863,8 +864,11 @@ flows through this local graph (contraction `real(sum_j <c_j, y_j>)`, as
 - Limits: an `order=1` primitive inside `f` (`linear_solve`) raises when the
   second derivative is computed (not in the recorded pass, which only builds
   the lazy node); no tangent rule (a checkpoint on a `g.ad.reverse.jacobian`
-  path raises); the outputs form one list node, so they must share one
-  container.
+  path raises).  The outputs form one list node, whose container holds one
+  container per element (`util.list_container`), so they may differ in
+  type, as may the flows into the inputs (the outputs of the vjp
+  checkpoint); tested with an MD step [U, P, beta] -> [U', P', x] to third
+  order.
 - Use: `frozen_generators.transverse_stout(..., checkpoint=k)` /
   `transverse_wilson_flow(..., checkpoint=k)` checkpoint every k smoothing
   steps (default `None`: unchanged).  16^4: the pull-back of a frozen-shift
@@ -916,14 +920,17 @@ E(md(x, tau)).backward()                                   # x[i].gradient
   S per force, O(epsilon^4)).
 - Graph memory: the fields at each force evaluation (one checkpoint or
   primitive node per force).
-- Limits: second order through `gradient(S, n)` needs uniform force inputs
-  (links only): the recorded vjp of the checkpoint is a checkpoint whose
-  outputs are the input flows, which must form one list container; with a
-  number parameter among them it raises.  No force-gradient or implicit
+- Any order through `gradient(S, n)`, also with parameters (numbers) among
+  the force inputs: the recorded vjp of the checkpoint is a checkpoint whose
+  outputs are the flows into links and parameters (a list node of mixed
+  element types).  Limits: `gradient(S, n)` inside a checkpoint with
+  `inline_nested=True` raises (inline, its `f` runs on computed nodes, and
+  its recorded gradient needs leaves).  No force-gradient or implicit
   updates; node compose only for additive groups and SU(N).
 - Tested in `tests/ad/symplectic.py` (plain bit-identical to the in-place
   integrators, gradients against finite differences, reversibility, dE/dbeta
-  and dE/drho, the two forces against each other, second order).
+  and dE/drho, the two forces against each other, second order, also with
+  beta among the differentiated fields).
 
 ### 4.11 Local programs (`core/local_program.py`, `ad/reverse/foundation/program.py`)
 
@@ -971,8 +978,9 @@ leaf conversion of an SU(N) gradient are one kernel.
   tangents of the inputs fiber -> k tangents of the outputs, direction
   major, one kernel); `select(outputs)`.  They are programs again.
 - **Node version**: with a node among the fields, one primitive node per
-  group of outputs of one otype (a list node for several: a list node has
-  one element container; outputs of two otypes give two nodes).  Its vjp
+  group of outputs of one otype (a list node for several; outputs of two
+  otypes give two nodes, although a list node may hold elements of several
+  types, §4.9).  Its vjp
   calls the adjoint program (plain flows: its kernel, all needed flows at
   once even of different otypes; recorded: its nodes, whose vjp is the
   adjoint of the adjoint), its jvp the tangent program, so it is
@@ -995,7 +1003,7 @@ leaf conversion of an SU(N) gradient are one kernel.
 | `lib/gpt/ad/reverse/primitive.py` | `primitive`: an op from its plain implementation and its vjp in primitives (plain/recorded dispatch, joint vjps, residuals, first-order ops, shared nodes, involutions), §4.1 |
 | `lib/gpt/ad/reverse/tangent.py` | shared tangent rules (jvp) of the primitives: `linear`, `bilinear`, `constant`, `count`, `total` (used by `g.ad.reverse.jacobian`) |
 | `lib/gpt/ad/reverse/flow.py` | typed flows (`dense`, `scaled_identity`, `flow_list`, `pending_sum`: deferred reductions, `flush`), `negative`, `accumulate`, `accum`, §4.8 |
-| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `value_of`, `record`/`recording` (recorded passes), `pass_scope` / `release_at_pass_end` (pass-scoped caches, §4.6), `is_node`, containers (`get_container`, `get_*_container`, `list_container`, `same_container`: a copy of the first argument's container, the rule of every type-preserving primitive, since a node never shares its container with a child; a container's str is cached, so its tag changes only through `set_otype`; `otype_compatible` is memoized by otype name), local passes (`contraction`: real(sum_j <c_j, y_j>) whose reverse pass is a vjp; `recorded_gradients`: the recorded gradients of leaves, lazy zeros for none, flows reset) |
+| `lib/gpt/ad/reverse/util.py` | `constant` (a plain value as a constant node), `nodify`, `value_of`, `record`/`recording` (recorded passes), `pass_scope` / `release_at_pass_end` (pass-scoped caches, §4.6), `is_node`, containers (`get_container`, `get_*_container`, `list_container`: one container per element, `elements()`, `element()` the common container of a uniform list (TypeError otherwise), `same_container`: a copy of the first argument's container, the rule of every type-preserving primitive, since a node never shares its container with a child; a container's str is cached, so its tag changes only through `set_otype`; `otype_compatible` is memoized by otype name), local passes (`contraction`: real(sum_j <c_j, y_j>) whose reverse pass is a vjp; `recorded_gradients`: the recorded gradients of leaves, lazy zeros for none, flows reset) |
 | `lib/gpt/ad/reverse/transform.py` | componentwise node ops: relu, drelu, sin, cos, real, imag, conj, log, pow (`g.component.inv` is pow(-1)), `multiply` (the foundation's `component_simple_map` / `component_multiply` dispatch here) |
 | `lib/gpt/ad/reverse/functional_node.py` | a `differentiable_functional` as a node (first order, a joint-vjp primitive; used by `g.ml` losses) |
 | `lib/gpt/ad/reverse/linear.py` | site-constant linear maps on lists of scalar fields (`stack`, `matrix_vector`, `outer_sum`, `dagger`; one gemm over the sites; packing costs more than the gemm, so the plain backward of `matrix_vector` packs the flow once for both flows, reads the h packed by the forward (a `fwd` residual) and computes flows only for the entries of h with a gradient, not a constant bias: -11% for the loop-function network value + gradient at 16^4), used by `g.ml.layer.mlp`; array element access `element` / `scatter` (each other's vjp; node `__getitem__` of arrays, the unboxing of `g.ml` numbers) |

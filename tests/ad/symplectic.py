@@ -231,9 +231,7 @@ for name in ["leap_frog", "OMF2"]:
 
 # second order on the gauge field: d^2/dh^2 E(md(x(h))) along x(h) = (exp(h a) U,
 # P + h b) from the recorded gradient (contracted twice) and from a finite
-# difference.  beta is fixed here: in a recorded pass the vjp of the force
-# checkpoint is a checkpoint whose outputs are the flows into its inputs, and
-# checkpoint outputs must share one container (links and a number do not)
+# difference, with beta fixed (the action wilson(beta))
 md = dsympl.OMF2(2, dsympl.update_p(iP, dsympl.gradient(g.qcd.gauge.action.wilson(beta)), iU), iq_d)
 a = rng.normal_element(g.group.cartesian(U0))
 b = rng.normal_element(g.group.cartesian(U0))
@@ -256,6 +254,31 @@ d2_ad = g.group.inner_product(d, [n.gradient for n in x])
 h = 3e-4
 d2_fd = (E_at(h) - 2 * E_at(0.0) + E_at(-h)) / h**2
 check(f"SU(3) OMF2: second derivative {d2_ad} vs finite difference {d2_fd}", abs(d2_ad - d2_fd) / abs(d2_fd), 1e-6)
+
+# the same with beta a field, differentiated along x(h) = (exp(h a) U, P + h b,
+# beta + h db): in the recorded pass the vjp of the force checkpoint is a
+# checkpoint whose outputs are the flows into its inputs, links and a number
+# (a list node with one container per element)
+md = dsympl.OMF2(2, dsympl.update_p(iP, dsympl.gradient(Sg, 4), iU + [8]), iq_d)
+db = 0.4
+
+
+def E_at(h):
+    U = [g(u) for u in g.group.compose([g(h * ai) for ai in a], U0)]
+    P = [g(p + h * bi) for bi, p in zip(b, P0)]
+    return gauge_observable(md(U + P + [beta + h * db], tau))
+
+
+x = leaves(U0 + P0 + [beta])
+gauge_observable(md(x, tau)).backward(create_graph=True)
+gr = [n.gradient for n in x]
+for n in x:
+    n.flow = None
+(g.group.inner_product(d, gr[0:8]) + g.component.real(db * gr[8])).backward()
+hvp = [n.gradient for n in x]
+d2_ad = g.group.inner_product(d, hvp[0:8]) + (db * hvp[8]).real
+d2_fd = (E_at(h) - 2 * E_at(0.0) + E_at(-h)) / h**2
+check(f"SU(3) OMF2 with beta: second derivative {d2_ad} vs finite difference {d2_fd}", abs(d2_ad - d2_fd) / abs(d2_fd), 1e-6)
 
 #
 # 3) an action without node-capable value: two transport layers (rho a field

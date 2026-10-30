@@ -236,7 +236,7 @@ def accumulate(cur, r, sign, container, adopt=True):
         elements = [None] * len(r) if cur is None else list(cur.elements)
         for i, x in enumerate(r):
             if x is not None:
-                elements[i] = accumulate(elements[i], x, sign, container.tag[1], adopt)
+                elements[i] = accumulate(elements[i], x, sign, container.elements()[i], adopt)
         return flow_list(elements)
     assert not isinstance(cur, flow_list), "a list flow receives a list"
     graph = recording()
