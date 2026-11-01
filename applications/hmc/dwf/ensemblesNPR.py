@@ -25,9 +25,10 @@ ensembles_X = {
 }
 
 ensembles_X2 = {
-    "explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.0038 , "ms" : 0.0038, "mc" : 0.073, "Ls" : 16, "b" : 1.05, "c" : 0.05,
+    #"explore-0L" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.0038 , "ms" : 0.0038, "mc" : 0.073, "Ls" : 16, "b" : 1.05, "c" : 0.05,
+    #                 "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 6, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 30 }, #(0,0.5,8)
+    "explore-0L-s" : { "L" : [72]*4, "beta" :  2.9, "ml" : 0.00526, "ms" : 0.00526, "mc" : 0.073, "Ls" : 16, "b" : 1.05, "c" : 0.05,
                      "M5" : 1.8, "nsteps" : 32, "nsubsteps" : 6, "tau" : 32, "nwf_max" : 6400, "Q" : None, "fermionic_from" : 30 }, #(0,0.5,8)
-
     # mres tuning (target 5.2e-5 * (4.5/10)**2 = 1e-5)
     # Ls 12
     # 1,0 -> 6.8e-05
