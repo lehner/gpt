@@ -18,7 +18,7 @@
 #
 import gpt as g
 import numpy as np
-import json, hashlib, os, pickle, sys
+import json, hashlib, os, pickle, sys, uuid
 
 
 runtime_tune_cache = {}
@@ -52,10 +52,11 @@ def _barrier(grid):
 
 def save_cache(fn, data, grid):
     if _is_root(grid):
-        # roots of several groups may write the same file: write a private
-        # temporary and rename it (atomic), so readers never see a partial file
+        # roots of several groups, or of several jobs sharing the working
+        # directory, may write the same file: write a temporary private to this
+        # process and rename it (atomic), so readers never see a partial file
         os.makedirs(".gpt_auto_tune", exist_ok=True)
-        tmp = f"{fn}.{g.rank()}.tmp"
+        tmp = f"{fn}.{uuid.uuid4().hex}.tmp"
         with open(tmp, "wt") as fout:
             json.dump(data, fout)
         try:
