@@ -46,6 +46,9 @@ ensembles_X2 = {
 }
 
 ensembles_S = {
+    # 96I companion
+    "32C3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.31, "ml" : 0.02132, "ms" : 0.02132, "mc" : None, "Ls" : 12, "b" : 1.5, "c" : 0.5,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 800, "Q" : None, "fermionic_from" : 28 },
     # 32 cubed 3 flavor Fine ensembles #  
     "32F3fl-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.0088, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
