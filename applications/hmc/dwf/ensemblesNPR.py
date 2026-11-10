@@ -47,9 +47,9 @@ ensembles_X2 = {
 
 ensembles_S = {
     # 48I, 64I, 96I companion
-    "24SC3fh-0" : { "L" : [24]*3 + [48], "beta" :  2.13, "ml" : 0.0362, "ms" : 0.0362, "mc" : None, "Ls" : 24, "b" : 1.5, "c" : 0.5,
+    "32SC3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.13, "ml" : 0.0362, "ms" : 0.0362, "mc" : None, "Ls" : 24, "b" : 1.5, "c" : 0.5,
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 800, "Q" : None, "fermionic_from" : 28 },
-    "24VC3fh-0" : { "L" : [24]*3 + [48], "beta" :  2.25, "ml" : 0.0257, "ms" : 0.0257, "mc" : None, "Ls" : 12, "b" : 1.5, "c" : 0.5,
+    "32VC3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.25, "ml" : 0.0257, "ms" : 0.0257, "mc" : None, "Ls" : 12, "b" : 1.5, "c" : 0.5,
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 800, "Q" : None, "fermionic_from" : 28 },
     "32C3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.31, "ml" : 0.02132, "ms" : 0.02132, "mc" : None, "Ls" : 12, "b" : 1.5, "c" : 0.5,
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 800, "Q" : None, "fermionic_from" : 28 },
