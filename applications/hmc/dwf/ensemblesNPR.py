@@ -46,6 +46,13 @@ ensembles_X2 = {
 }
 
 ensembles_S = {
+    # 48I, 64I, 96I companion
+    "32SC3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.13, "ml" : 0.0362, "ms" : 0.0362, "mc" : None, "Ls" : 24, "b" : 1.5, "c" : 0.5,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 800, "Q" : None, "fermionic_from" : 28 },
+    "32VC3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.25, "ml" : 0.0257, "ms" : 0.0257, "mc" : None, "Ls" : 12, "b" : 1.5, "c" : 0.5,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 800, "Q" : None, "fermionic_from" : 28 },
+    "32C3fh-0" : { "L" : [32]*3 + [48], "beta" :  2.31, "ml" : 0.02132, "ms" : 0.02132, "mc" : None, "Ls" : 12, "b" : 1.5, "c" : 0.5,
+                   "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 800, "Q" : None, "fermionic_from" : 28 },
     # 32 cubed 3 flavor Fine ensembles #  
     "32F3fl-0" : { "L" : [32]*3 + [48], "beta" :  2.44, "ml" : 0.0088, "ms" : 0.016715, "mc" : None, "Ls" : 12, "b" : 1.25, "c" : 0.25,
                    "M5" : 1.8, "nsteps" : 8, "nsubsteps" : 6, "tau" : 8, "nwf_max" : 1200, "Q" : None, "fermionic_from" : 28 },
@@ -161,7 +168,7 @@ if select is not None:
 ####
 #run_replicas = [0,1] # run with reproduction replica
 run_replicas = [0] if category in ["X","X2"] else [0,1] # run X on Jupiter which does not have SDC
-conf_range = range(18, 400)
+conf_range = range(0, 400)
 pure_gauge = False # allows for first few trajectories to be run without fermions; don't use for now
 
 def light(U0, m_plus, m_minus, params):
