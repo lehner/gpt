@@ -147,6 +147,9 @@ Key concepts:
   convert between tangent-space perturbations and forces.
 - **Expressions are lazy**: arithmetic on containers builds symbolic
   `g.expr` trees; evaluation happens at `g(x)`, `.real`, reductions, etc.
+  Python's `sum()` works on lattices and expressions (`0 + x` is `x`), e.g.
+  `F_mu = g(sum(F_i[mu] for F_i in forces))`; no manual accumulation loop
+  is needed.
   Expressions do *not* know about AD nodes: for an operand they do not
   know they return `NotImplemented`, so `plain * node` is handled by the
   node's reflected operator (see §4.6).
