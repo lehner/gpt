@@ -18,6 +18,99 @@
 #
 import cgpt, gpt
 import numpy as np
+import gc, sys, types
+
+
+# Per-grid state (constant fields, kernels, workspaces) of the whole process.
+# The key is (grid.cache_key(),) + tag, so identical python grids share
+# entries (see grid.cache_key).  Grids never refer to this cache (a
+# grid holding lattices on itself is a reference cycle that the lattice
+# memory book keeps alive), and cgpt never frees a grid either: entries live
+# until grid_cache_clear().
+_grid_cache = {}
+
+
+def grid_cache(grid, tag, create):
+    # the entry for (grid.cache_key(),) + tag, created by create() on first use
+    key = (grid.cache_key(),) + tuple(tag)
+    x = _grid_cache.get(key)
+    if x is None:
+        x = create()
+        _grid_cache[key] = x
+    return x
+
+
+def grid_cache_clear():
+    _grid_cache.clear()
+
+
+def _cache_referents(x):
+    # the references followed from inside the cache: containers, instance
+    # attributes and closures; never types, modules, code, grids, and not into
+    # lattices (the leaves)
+    if isinstance(x, gpt.lattice) or isinstance(x, grid):
+        return []
+    if isinstance(x, (type, types.ModuleType, types.CodeType, types.BuiltinFunctionType)):
+        return []
+    if isinstance(x, types.FunctionType):
+        return [c.cell_contents for c in (x.__closure__ or ()) if _cell_filled(c)]
+    if isinstance(x, types.MethodType):
+        return [x.__self__, x.__func__]
+    return [r for r in gc.get_referents(x) if not isinstance(r, type)]
+
+
+def _cell_filled(c):
+    try:
+        c.cell_contents
+        return True
+    except ValueError:
+        return False
+
+
+def grid_cache_bytes():
+    # (held, freeable): bytes of the lattice fields on all ranks reachable from
+    # g.grid_cache, and the part that g.grid_cache_clear() would release, i.e.
+    # not also reachable from a reference outside the cache.  An object is
+    # referenced from outside if its reference count exceeds the references
+    # found inside; references the walk does not see count as outside, so
+    # freeable is a lower bound.
+    objs = {}
+    edges = {}
+    internal = {}
+    stack = []
+
+    def visit(refs):
+        # count the references; walk the objects that can hold others
+        for r in refs:
+            internal[id(r)] = internal.get(id(r), 0) + 1
+            if id(r) not in objs and gc.is_tracked(r):
+                objs[id(r)] = r
+                stack.append(id(r))
+
+    visit(list(_grid_cache.values()))
+    while stack:
+        k = stack.pop()
+        refs = _cache_referents(objs[k])
+        edges[k] = [id(r) for r in refs]
+        visit(refs)
+        del refs
+    # (no other local refers to them here: 2 = the argument of getrefcount
+    # and objs)
+    held = [k for k in objs if sys.getrefcount(objs[k]) - 2 > internal[k]]
+    reached = set(held)
+    while held:
+        k = held.pop()
+        for r in edges.get(k, []):
+            if r in objs and r not in reached:
+                reached.add(r)
+                held.append(r)
+    total, freeable = 0, 0
+    for k, x in objs.items():
+        if isinstance(x, gpt.lattice):
+            total += x.global_bytes()
+            if k not in reached:
+                freeable += x.global_bytes()
+    return total, freeable
 
 
 class full:
@@ -142,6 +235,13 @@ class grid:
 
         # make sure Grid does not change conventions
         assert self.mpi_strides() @ self.processor_coor == self.processor
+
+    def cache_key(self):
+        # the key of caches of per-grid state: cgpt hands identical grids
+        # (dimensions, simd layout, checkerboard mask, mpi layout, parent) one
+        # shared Grid object (same obj), which has no precision; a gpt grid is
+        # that layout plus a precision
+        return (self.obj, self.precision)
 
     def describe(
         self,

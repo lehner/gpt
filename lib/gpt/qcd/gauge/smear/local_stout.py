@@ -33,7 +33,7 @@ class local_stout(local_diffeomorphism):
     def transport(self, fields):
         nd = fields[0].grid.nd
         U = fields[0:nd]
-        key = (U[0].grid, U[0].otype.__name__)
+        key = (U[0].grid.cache_key(), U[0].otype.__name__)
         if key not in self.cache:
             mu = self.params["dimension"]
             rho = self.params["rho"]

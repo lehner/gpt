@@ -154,13 +154,9 @@ def identity(src):
 
 def identity_constant(src):
     # identity(src) shared per (otype, checkerboard) on src's grid; callers
-    # must not modify it.  Kept on the grid, so it lives as long as the grid.
-    grid = src.grid
-    cache = grid.__dict__.setdefault("_identity_constant", {})
-    key = (src.otype.__name__, src.checkerboard().__name__)
-    if key not in cache:
-        cache[key] = identity(src)
-    return cache[key]
+    # must not modify it (in g.grid_cache, shared by identical grids)
+    tag = ("identity_constant", src.otype.__name__, src.checkerboard().__name__)
+    return gpt.grid_cache(src.grid, tag, lambda: identity(src))
 
 
 def infinitesimal_to_cartesian(src, dsrc):

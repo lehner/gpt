@@ -371,11 +371,7 @@ def _zero_constant(c):
     # (as g.identity_constant), so it must not be modified (an operand only)
     if c.tag[0] is not g.lattice:
         return c.zero()
-    cache = c.get_grid().__dict__.setdefault("_zero_constant", {})
-    key = str(c)
-    if key not in cache:
-        cache[key] = c.zero()
-    return cache[key]
+    return g.grid_cache(c.get_grid(), ("zero_constant", str(c)), c.zero)
 
 
 _where = primitive(

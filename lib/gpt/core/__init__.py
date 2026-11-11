@@ -19,7 +19,16 @@
 #
 import gpt.core.foundation
 from gpt.core.quadruple_precision import qfloat, qfloat_array, qcomplex, qcomplex_array
-from gpt.core.grid import grid, grid_from_description, full, redblack, general
+from gpt.core.grid import (
+    grid,
+    grid_from_description,
+    full,
+    redblack,
+    general,
+    grid_cache,
+    grid_cache_clear,
+    grid_cache_bytes,
+)
 from gpt.core.precision import single, double, double_quadruple, precision, str_to_precision
 from gpt.core.expr import expr, factor, expr_unary, factor_unary, expr_eval
 from gpt.core.compiler import compiler

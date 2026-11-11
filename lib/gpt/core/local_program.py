@@ -430,22 +430,22 @@ def _lower(roots, field_of_input, n_in_fields):
 # ---------------------------------------------------------------------------
 # programs
 # ---------------------------------------------------------------------------
-_ones = {}
-_scratch = {}
 
 
 def _unit_field(grid):
-    # a plain complex singlet 1 per grid (kernel workspace, never modified)
-    if grid not in _ones:
+    # a plain complex singlet 1 per grid (kernel workspace, never modified;
+    # in g.grid_cache, shared by identical grids)
+    def create():
         one = g.complex(grid)
         one[:] = 1.0
-        _ones[grid] = one
-    return _ones[grid]
+        return one
+
+    return g.grid_cache(grid, ("local_program_one",), create)
 
 
 def _scratch_fields(grid, n):
     # kernel-owned register fields per grid (only alive during one kernel)
-    fields = _scratch.setdefault(grid, [])
+    fields = g.grid_cache(grid, ("local_program_scratch",), list)
     while len(fields) < n:
         fields.append(g.vcomplex(grid, registers_per_field))
     return fields[0:n]
@@ -483,13 +483,14 @@ class local_program:
         return foundation.local_program(self, *fields)
 
     def _kernel(self, grid):
-        if grid not in self._kernels:
+        key = grid.cache_key()
+        if key not in self._kernels:
             n_in = len(self.inputs)
             code, n_scratch = _lower(self.roots, lambda i, e: (len(self.outputs) + i, e), n_in)
             template = g.lattice(grid, self.outputs[0])
             st = g.stencil.tensor(template, [(0,) * grid.nd], code, [(len(code), 1)]) if code else None
-            self._kernels[grid] = (st, n_scratch, len(code))
-        return self._kernels[grid]
+            self._kernels[key] = (st, n_scratch, len(code))
+        return self._kernels[key]
 
     def plain(self, *fields):
         # the outputs on plain lattices

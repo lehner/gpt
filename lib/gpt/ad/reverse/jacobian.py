@@ -149,19 +149,16 @@ class _coordinates:
         return {a: r[a] for a in needed}
 
 
-_coordinates_cache = {}
-
-
 def _coordinates_of(x):
     c = x._container
     grid, otype = c.get_grid(), c.get_otype()
     for name in ["jacobian_directions", "jacobian_coordinates", "jacobian_otype"]:
         if not hasattr(otype, name):
             raise NotImplementedError(f"jacobian: the otype {otype.__name__} has no {name}")
-    key = (grid, otype.__name__)
-    if key not in _coordinates_cache:
-        _coordinates_cache[key] = _coordinates(grid, otype)
-    return _coordinates_cache[key], otype
+    coordinates = g.grid_cache(
+        grid, ("jacobian_coordinates", otype.__name__), lambda: _coordinates(grid, otype)
+    )
+    return coordinates, otype
 
 
 def _columns(y, x, order, generators, otype, node_of=None):

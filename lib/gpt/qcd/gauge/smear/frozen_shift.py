@@ -38,7 +38,7 @@ class frozen_shift(local_diffeomorphism):
         nd = fields[0].grid.nd
         n = nd + len(self.params["parameters"])
         U = fields[0:n]
-        key = (U[0].grid, U[0].otype.__name__)
+        key = (U[0].grid.cache_key(), U[0].otype.__name__)
         if key not in self.cache:
             even, odd = g.even_odd_projectors(U[0].grid)
             P1 = even if self.params["checkerboard"] is g.even else odd

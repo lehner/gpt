@@ -106,8 +106,8 @@ def algebra_kernels(grid, otype_cartesian):
 
     with the generators T_b as constant fields (field_generators), their common
     norm tr(T_b T_b) (norm) and number (ng)."""
-    cache = grid.__dict__.setdefault("_algebra_kernels", {})
-    key = otype_cartesian.__name__
-    if key not in cache:
-        cache[key] = _algebra_kernels(grid, otype_cartesian)
-    return cache[key]
+    return g.grid_cache(
+        grid,
+        ("algebra_kernels", otype_cartesian.__name__),
+        lambda: _algebra_kernels(grid, otype_cartesian),
+    )

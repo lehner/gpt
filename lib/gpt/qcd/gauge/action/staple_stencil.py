@@ -83,7 +83,7 @@ class staple_stencil_action:
     def stencil(self, U):
         self._check(U)
         v = U[0]
-        key = (v.grid, v.otype.__name__, len(U))
+        key = (v.grid.cache_key(), v.otype.__name__, len(U))
         if key not in self.cache:
             Nd = len(U)
             N = v.otype.shape[0]
@@ -136,7 +136,7 @@ class staple_stencil_action:
         # one reusable graph per (grid, otype); the functional replaces the
         # leaf values with U
         v = U[0]
-        key = ("functional", v.grid, v.otype.__name__, len(U))
+        key = ("functional", v.grid.cache_key(), v.otype.__name__, len(U))
         if key not in self.cache:
             nU = [rad.node(g.copy(u)) for u in U]
             self.cache[key] = self(nU).functional(*nU)

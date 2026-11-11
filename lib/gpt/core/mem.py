@@ -116,6 +116,9 @@ def mem_report(details=True, after_time=0):
     )
     gpt.message(" %-39s %g GB" % ("Lattice fields on all ranks", g_tot_gb))
     gpt.message(" %-39s %g GB" % ("Lattice fields per rank", l_tot_gb))
+    c_tot, c_free = gpt.grid_cache_bytes()
+    gpt.message(" %-39s %g GB" % ("Held by g.grid_cache (all ranks)", c_tot / 1024.0**3.0))
+    gpt.message(" %-39s %g GB" % ("Freeable by g.grid_cache_clear()", c_free / 1024.0**3.0))
     gpt.message(" %-39s %g GB" % ("Resident memory per rank", info["maxrss"] / 1024**3.0))
     gpt.message(
         " %-39s %g GB" % ("Total memory available (host)", info["host_available"] / 1024**3.0)

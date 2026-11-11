@@ -94,7 +94,7 @@ class spectral_loop(local_diffeomorphism):
         # one per grid and gauge group, built at the first use
         nd, U, cs = self._split(fields)
         self.nd = nd
-        key = (U[0].grid, U[0].otype.__name__)
+        key = (U[0].grid.cache_key(), U[0].otype.__name__)
         if key not in self.cache:
             assert U[0].otype.Nc == 3, "spectral_loop: the log det assumes SU(3)"
             mu, nu = self.mu, self.nu0

@@ -39,7 +39,7 @@ class word_sum:
         self.stencils = {}
 
     def stencil(self, grid, otype):
-        key = (grid, otype.__name__)
+        key = (grid.cache_key(), otype.__name__)
         if key not in self.stencils:
             zero = (0,) * grid.nd
             code = [

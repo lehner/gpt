@@ -159,7 +159,7 @@ class sublattice:
     def repartition(self, dst, src):
         # dst = src between the coarse grid and the coarse grid in the fine
         # rank layout (either way)
-        key = (src.otype.__name__, "repartition", dst.grid is self.coarse_grid)
+        key = (src.otype.__name__, "repartition", dst.grid.cache_key() == self.coarse_grid.cache_key())
         if key not in self.plans:
             plan = gpt.copy_plan(dst, src, embed_in_communicator=self.fine_grid)
             cc = gpt.coordinates(dst.grid)

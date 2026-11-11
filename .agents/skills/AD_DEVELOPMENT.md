@@ -585,6 +585,22 @@ them (`~/GPT/TODOs/ad_single_level_reverse.md`).
   nested passes -- chunked tangent replays, checkpoint and recorded local
   passes, functional gradients -- build their own graphs on fresh leaves
   and share no node, constants included).
+- **Cache keys use `grid.cache_key()`, not the grid**: cgpt hands identical grids
+  (same dimensions, simd layout, checkerboard, mpi layout, parent) one shared
+  Grid object, so two separately built `g.grid(...)` instances have the same
+  `grid.obj` but are different python objects (not `==`, different hashes).
+  A cache keyed by the python grid then misses for every new instance of the
+  same grid (rebuilt kernels, plans, constant fields).  The cgpt Grid object
+  has no precision (Grid cares only about the simd layout), a gpt grid does:
+  key caches on `grid.cache_key()` = `(grid.obj, grid.precision)`.  (Layout
+  checks such as `f.grid.obj == grid.obj` compare obj only.)  Per-grid
+  state (constant fields, kernels, workspaces) goes in
+  `g.grid_cache(grid, tag, create)` (key `(grid.cache_key(),) + tag`, process
+  lifetime, `g.grid_cache_clear()`; `g.mem_report()` lists the bytes it
+  holds and how many a clear would free), never on the grid object: a grid
+  holding lattices on itself is a cycle that `mem_book` (which holds each
+  live lattice's grid) keeps alive forever.  cgpt never frees a grid, so an
+  `obj` is never reused for another one.
 - **`g.mcolor` leaves are group elements**: their gradients are converted to
   the algebra (`infinitesimal_to_cartesian`).  Finite-difference checks of
   derivatives w.r.t. general complex matrices (e.g. an HVP) need leaves
@@ -966,8 +982,8 @@ leaf conversion of an SU(N) gradient are one kernel.
   conjugate the first factor); weights need a `mul` instruction (the tensor
   stencil reads weights only there); at most two factors per instruction.
   Intermediates live in per-site registers (`vcomplex(30)` scratch fields,
-  temporaries of the kernel, allocated by liveness, cached per grid); a unit
-  field provides constants.
+  temporaries of the kernel, allocated by liveness, cached in
+  `g.grid_cache`); a unit field provides constants.
 - **Mixed otypes**: one kernel reads fields of different otypes (matrices,
   singlets, the registers); the C++ opens each field's view with its own
   element count, the vector type is that of the first field, so all fields
